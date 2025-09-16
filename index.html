@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信用卡篩選小幫手</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>信用卡篩選小幫手</h1>
+            <p>找出最高回饋的信用卡</p>
+            <div class="supported-cards" id="supported-cards">
+                <p>支援的信用卡：</p>
+                <div class="card-chips" id="card-chips">
+                    <!-- Cards will be populated by JavaScript -->
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <div class="input-row-with-button">
+                    <div class="form-group compact">
+                        <label for="merchant-input">消費商家/項目</label>
+                        <input type="text" id="merchant-input" placeholder="輸入消費的商家或項目名稱..." />
+                    </div>
+                    
+                    <div class="form-group compact">
+                        <label for="amount-input">消費金額 (NT$)</label>
+                        <input type="number" id="amount-input" placeholder="輸入消費金額..." min="1" step="1" />
+                    </div>
+                    
+                    <div class="form-group compact button-group">
+                        <label>&nbsp;</label>
+                        <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
+                    </div>
+                </div>
+
+                <div class="matched-item-row">
+                    <div class="matched-item" id="matched-item" style="display: none;"></div>
+                </div>
+            </section>
+
+            <section class="results-section" id="results-section" style="display: none;">
+                <h2>計算結果</h2>
+                <div class="results-container" id="results-container">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
