@@ -130,6 +130,7 @@ const matchedItemDiv = document.getElementById('matched-item');
 document.addEventListener('DOMContentLoaded', () => {
     populateCardChips();
     setupEventListeners();
+    setupAuthentication();
 });
 
 // Populate card chips in header
@@ -434,4 +435,63 @@ function formatCurrency(amount) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     }).format(amount);
+}
+
+// Authentication setup
+function setupAuthentication() {
+    // Wait for Firebase to load
+    const checkFirebaseReady = () => {
+        if (typeof window.firebaseAuth !== 'undefined') {
+            initializeAuth();
+        } else {
+            setTimeout(checkFirebaseReady, 100);
+        }
+    };
+    checkFirebaseReady();
+}
+
+function initializeAuth() {
+    const signInBtn = document.getElementById('sign-in-btn');
+    const signOutBtn = document.getElementById('sign-out-btn');
+    const userInfo = document.getElementById('user-info');
+    const userPhoto = document.getElementById('user-photo');
+    const userName = document.getElementById('user-name');
+    
+    // Sign in function
+    signInBtn.addEventListener('click', async () => {
+        try {
+            const result = await window.signInWithPopup(window.firebaseAuth, window.googleProvider);
+            console.log('Sign in successful:', result.user);
+        } catch (error) {
+            console.error('Sign in failed:', error);
+            alert('登入失敗：' + error.message);
+        }
+    });
+    
+    // Sign out function
+    signOutBtn.addEventListener('click', async () => {
+        try {
+            await window.signOut(window.firebaseAuth);
+            console.log('Sign out successful');
+        } catch (error) {
+            console.error('Sign out failed:', error);
+        }
+    });
+    
+    // Listen for authentication state changes
+    window.onAuthStateChanged(window.firebaseAuth, (user) => {
+        if (user) {
+            // User is signed in
+            console.log('User signed in:', user);
+            signInBtn.style.display = 'none';
+            userInfo.style.display = 'inline-flex';
+            userPhoto.src = user.photoURL || '';
+            userName.textContent = user.displayName || user.email;
+        } else {
+            // User is signed out
+            console.log('User signed out');
+            signInBtn.style.display = 'inline-block';
+            userInfo.style.display = 'none';
+        }
+    });
 }
