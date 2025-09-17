@@ -456,7 +456,7 @@ function formatCurrency(amount) {
 function setupAuthentication() {
     // Wait for Firebase to load
     const checkFirebaseReady = () => {
-        if (typeof window.firebaseAuth !== 'undefined') {
+        if (typeof window.firebaseAuth !== 'undefined' && typeof window.firebaseDb !== 'undefined') {
             initializeAuth();
         } else {
             setTimeout(checkFirebaseReady, 100);
@@ -507,11 +507,12 @@ function initializeAuth() {
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
             
-            // Load user's selected cards
-            await loadUserCards();
-            
-            // Update card chips display
-            populateCardChips();
+            // Load user's selected cards (with small delay to ensure Firebase is ready)
+            setTimeout(async () => {
+                await loadUserCards();
+                // Update card chips display
+                populateCardChips();
+            }, 500);
         } else {
             // User is signed out
             console.log('User signed out');
@@ -534,17 +535,30 @@ function initializeAuth() {
 
 // Load user's selected cards from Firestore
 async function loadUserCards() {
-    if (!currentUser || !window.firebaseDb) return;
+    if (!currentUser) {
+        console.log('No current user, skipping load');
+        return;
+    }
+    
+    if (!window.firebaseDb) {
+        console.log('Firestore not ready, skipping load');
+        return;
+    }
     
     try {
+        console.log('Loading cards for user:', currentUser.uid);
+        
         const userDocRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
         const userDoc = await window.firestoreGetDoc(userDocRef);
         
         if (userDoc.exists()) {
             const userData = userDoc.data();
-            userSelectedCards = new Set(userData.selectedCards || []);
+            const savedCards = userData.selectedCards || [];
+            userSelectedCards = new Set(savedCards);
+            console.log('Loaded user cards:', savedCards);
         } else {
             // First time user - select all cards by default
+            console.log('First time user, selecting all cards');
             userSelectedCards = new Set(cardsData.cards.map(card => card.id));
             await saveUserCards();
         }
@@ -557,18 +571,27 @@ async function loadUserCards() {
 
 // Save user's selected cards to Firestore
 async function saveUserCards() {
-    if (!currentUser || !window.firebaseDb) return;
+    if (!currentUser) {
+        throw new Error('User not logged in');
+    }
+    
+    if (!window.firebaseDb) {
+        throw new Error('Firestore not initialized');
+    }
     
     try {
+        console.log('Saving cards for user:', currentUser.uid, 'Cards:', Array.from(userSelectedCards));
+        
         const userDocRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
         await window.firestoreSetDoc(userDocRef, {
             selectedCards: Array.from(userSelectedCards),
-            lastUpdated: new Date()
+            lastUpdated: new Date().toISOString()
         });
+        
         console.log('User cards saved successfully');
     } catch (error) {
         console.error('Error saving user cards:', error);
-        alert('儲存失敗，請稍後再試');
+        throw error;
     }
 }
 
@@ -589,9 +612,12 @@ function setupManageCardsModal() {
         openManageCardsModal();
     });
     
-    // Close modal
+    // Close modal function
     const closeModal = () => {
         modal.style.display = 'none';
+        // Reset button state if needed
+        saveBtn.disabled = false;
+        saveBtn.textContent = '儲存設定';
     };
     
     closeBtn.addEventListener('click', closeModal);
@@ -604,19 +630,43 @@ function setupManageCardsModal() {
     
     // Save cards
     saveBtn.addEventListener('click', async () => {
-        const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
-        const newSelection = new Set();
-        
-        checkboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                newSelection.add(checkbox.value);
+        try {
+            // Disable button during save
+            saveBtn.disabled = true;
+            saveBtn.textContent = '儲存中...';
+            
+            const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
+            const newSelection = new Set();
+            
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    newSelection.add(checkbox.value);
+                }
+            });
+            
+            // Validate at least one card is selected
+            if (newSelection.size === 0) {
+                alert('請至少選擇一張信用卡');
+                return;
             }
-        });
-        
-        userSelectedCards = newSelection;
-        await saveUserCards();
-        populateCardChips();
-        closeModal();
+            
+            userSelectedCards = newSelection;
+            await saveUserCards();
+            
+            // Update UI
+            populateCardChips();
+            
+            // Close modal
+            closeModal();
+            
+        } catch (error) {
+            console.error('Error saving cards:', error);
+            alert('儲存失敗，請稍後再試');
+        } finally {
+            // Re-enable button
+            saveBtn.disabled = false;
+            saveBtn.textContent = '儲存設定';
+        }
     });
 }
 
