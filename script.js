@@ -651,7 +651,10 @@ function openManageCardsModal() {
     // Populate cards selection
     cardsSelection.innerHTML = '';
     
-    cardsData.cards.forEach(card => {
+    // Sort cards by name
+    const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
+    
+    sortedCards.forEach(card => {
         const isSelected = userSelectedCards.has(card.id);
         
         const cardDiv = document.createElement('div');
