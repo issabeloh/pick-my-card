@@ -354,10 +354,17 @@ function calculateCardCashback(card, searchTerm, amount) {
     if (bestRate > 0) {
         // Apply cap if exists
         if (applicableCap && amount > applicableCap) {
-            effectiveAmount = applicableCap;
+            // Special rate for capped amount
+            const cappedCashback = Math.floor(applicableCap * bestRate / 100);
+            // Basic rate for remaining amount
+            const remainingAmount = amount - applicableCap;
+            const basicCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            
+            cashbackAmount = cappedCashback + basicCashback;
+            effectiveAmount = applicableCap; // Keep this for display purposes
+        } else {
+            cashbackAmount = Math.floor(effectiveAmount * bestRate / 100);
         }
-        
-        cashbackAmount = Math.floor(effectiveAmount * bestRate / 100);
     }
     
     return {

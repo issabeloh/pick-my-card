@@ -115,24 +115,22 @@ header p {
 }
 
 .manage-cards-btn {
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(255, 255, 255, 1);
-    color: #4f46e5;
-    padding: 8px;
-    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .manage-cards-btn:hover {
-    background: white;
-    color: #3730a3;
-    transform: scale(1.1) rotate(90deg);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 .card-chips {
@@ -209,6 +207,17 @@ input[type="number"] {
     border-radius: 12px;
     font-size: 16px;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
 }
 
 input[type="text"]:focus,
