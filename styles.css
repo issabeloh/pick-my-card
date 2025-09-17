@@ -115,9 +115,9 @@ header p {
 }
 
 .manage-cards-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    color: rgba(255, 255, 255, 0.8);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
     padding: 6px;
     border-radius: 6px;
     cursor: pointer;
@@ -128,9 +128,9 @@ header p {
 }
 
 .manage-cards-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     color: white;
-    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
 }
 
 .card-chips {
