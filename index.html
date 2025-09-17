@@ -24,7 +24,15 @@
                 </div>
             </div>
             <div class="supported-cards" id="supported-cards">
-                <p>支援的信用卡：</p>
+                <div class="cards-header">
+                    <p>支援的信用卡：</p>
+                    <button id="manage-cards-btn" class="manage-cards-btn" title="管理我的信用卡" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                        </svg>
+                    </button>
+                </div>
                 <div class="card-chips" id="card-chips">
                     <!-- Cards will be populated by JavaScript -->
                 </div>
@@ -62,6 +70,26 @@
                 </div>
             </section>
         </main>
+        
+        <!-- Manage Cards Modal -->
+        <div id="manage-cards-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>管理我的信用卡</h3>
+                    <button class="close-modal" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">選擇你擁有的信用卡，只有選中的卡片會出現在比較結果中。</p>
+                    <div class="cards-selection" id="cards-selection">
+                        <!-- Card checkboxes will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
+                    <button id="cancel-cards-btn" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
@@ -72,6 +100,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       
       // Your web app's Firebase configuration
       const firebaseConfig = {
@@ -88,14 +117,19 @@
       const app = initializeApp(firebaseConfig);
       const analytics = getAnalytics(app);
       const auth = getAuth(app);
+      const db = getFirestore(app);
       const provider = new GoogleAuthProvider();
       
-      // Make auth available globally
+      // Make Firebase services available globally
       window.firebaseAuth = auth;
+      window.firebaseDb = db;
       window.googleProvider = provider;
       window.signInWithPopup = signInWithPopup;
       window.signOut = signOut;
       window.onAuthStateChanged = onAuthStateChanged;
+      window.firestoreDoc = doc;
+      window.firestoreGetDoc = getDoc;
+      window.firestoreSetDoc = setDoc;
     </script>
 </body>
 </html>

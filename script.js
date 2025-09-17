@@ -1,4 +1,6 @@
 // Global variables
+let currentUser = null;
+let userSelectedCards = new Set(); // Store user's selected card IDs
 let cardsData = {
   "cards": [
     {
@@ -138,7 +140,15 @@ function populateCardChips() {
     const cardChipsContainer = document.getElementById('card-chips');
     if (!cardChipsContainer) return;
     
-    cardsData.cards.forEach(card => {
+    // Clear existing chips
+    cardChipsContainer.innerHTML = '';
+    
+    // Show cards based on user selection or all cards if not logged in
+    const cardsToShow = currentUser ? 
+        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards;
+    
+    cardsToShow.forEach(card => {
         const chip = document.createElement('div');
         chip.className = 'card-chip';
         chip.textContent = card.name;
@@ -254,10 +264,15 @@ function calculateCashback() {
     let results;
     let isBasicCashback = false;
     
+    // Get cards to compare (user selected or all)
+    const cardsToCompare = currentUser ? 
+        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards;
+    
     if (currentMatchedItem) {
         // User input matched specific items - show special cashback rates
         const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-        results = cardsData.cards.map(card => {
+        results = cardsToCompare.map(card => {
             const result = calculateCardCashback(card, searchTerm, amount);
             return {
                 ...result,
@@ -270,9 +285,9 @@ function calculateCashback() {
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
             showNoMatchMessage();
-            // Show basic cashback for all cards when no special rates found
+            // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
-            results = cardsData.cards.map(card => {
+            results = cardsToCompare.map(card => {
                 const basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
                 return {
                     rate: card.basicCashback,
@@ -286,9 +301,9 @@ function calculateCashback() {
             });
         }
     } else {
-        // No match found or no input - show basic cashback for all cards
+        // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
-        results = cardsData.cards.map(card => {
+        results = cardsToCompare.map(card => {
             const basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
             return {
                 rate: card.basicCashback,
@@ -479,19 +494,159 @@ function initializeAuth() {
     });
     
     // Listen for authentication state changes
-    window.onAuthStateChanged(window.firebaseAuth, (user) => {
+    window.onAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
             // User is signed in
             console.log('User signed in:', user);
+            currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
             userPhoto.src = user.photoURL || '';
             userName.textContent = user.displayName || user.email;
+            
+            // Show manage cards button
+            document.getElementById('manage-cards-btn').style.display = 'block';
+            
+            // Load user's selected cards
+            await loadUserCards();
+            
+            // Update card chips display
+            populateCardChips();
         } else {
             // User is signed out
             console.log('User signed out');
+            currentUser = null;
+            userSelectedCards.clear();
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
+            
+            // Hide manage cards button
+            document.getElementById('manage-cards-btn').style.display = 'none';
+            
+            // Show all cards when signed out
+            populateCardChips();
         }
     });
+    
+    // Setup manage cards modal
+    setupManageCardsModal();
+}
+
+// Load user's selected cards from Firestore
+async function loadUserCards() {
+    if (!currentUser || !window.firebaseDb) return;
+    
+    try {
+        const userDocRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+        const userDoc = await window.firestoreGetDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            userSelectedCards = new Set(userData.selectedCards || []);
+        } else {
+            // First time user - select all cards by default
+            userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+            await saveUserCards();
+        }
+    } catch (error) {
+        console.error('Error loading user cards:', error);
+        // Default to all cards if error
+        userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+    }
+}
+
+// Save user's selected cards to Firestore
+async function saveUserCards() {
+    if (!currentUser || !window.firebaseDb) return;
+    
+    try {
+        const userDocRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid);
+        await window.firestoreSetDoc(userDocRef, {
+            selectedCards: Array.from(userSelectedCards),
+            lastUpdated: new Date()
+        });
+        console.log('User cards saved successfully');
+    } catch (error) {
+        console.error('Error saving user cards:', error);
+        alert('儲存失敗，請稍後再試');
+    }
+}
+
+// Setup manage cards modal
+function setupManageCardsModal() {
+    const manageBtn = document.getElementById('manage-cards-btn');
+    const modal = document.getElementById('manage-cards-modal');
+    const closeBtn = document.getElementById('close-modal');
+    const cancelBtn = document.getElementById('cancel-cards-btn');
+    const saveBtn = document.getElementById('save-cards-btn');
+    
+    // Open modal
+    manageBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            alert('請先登入才能管理信用卡');
+            return;
+        }
+        openManageCardsModal();
+    });
+    
+    // Close modal
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+    
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    
+    // Save cards
+    saveBtn.addEventListener('click', async () => {
+        const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
+        const newSelection = new Set();
+        
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                newSelection.add(checkbox.value);
+            }
+        });
+        
+        userSelectedCards = newSelection;
+        await saveUserCards();
+        populateCardChips();
+        closeModal();
+    });
+}
+
+// Open manage cards modal
+function openManageCardsModal() {
+    const modal = document.getElementById('manage-cards-modal');
+    const cardsSelection = document.getElementById('cards-selection');
+    
+    // Populate cards selection
+    cardsSelection.innerHTML = '';
+    
+    cardsData.cards.forEach(card => {
+        const isSelected = userSelectedCards.has(card.id);
+        
+        const cardDiv = document.createElement('div');
+        cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
+        
+        cardDiv.innerHTML = `
+            <input type="checkbox" id="card-${card.id}" value="${card.id}" ${isSelected ? 'checked' : ''}>
+            <label for="card-${card.id}" class="card-checkbox-label">${card.name}</label>
+        `;
+        
+        // Update visual state on checkbox change
+        const checkbox = cardDiv.querySelector('input');
+        checkbox.addEventListener('change', () => {
+            cardDiv.classList.toggle('selected', checkbox.checked);
+        });
+        
+        cardsSelection.appendChild(cardDiv);
+    });
+    
+    modal.style.display = 'flex';
 }
