@@ -1,6 +1,8 @@
 // Global variables
 let currentUser = null;
 let userSelectedCards = new Set(); // Store user's selected card IDs
+let auth = null;
+let db = null;
 let cardsData = {
   "cards": [
     {
@@ -911,7 +913,9 @@ function formatCurrency(amount) {
 function setupAuthentication() {
     // Wait for Firebase to load
     const checkFirebaseReady = () => {
-        if (typeof window.firebaseAuth !== 'undefined') {
+        if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
+            auth = window.firebaseAuth;
+            db = window.db;
             initializeAuth();
         } else {
             setTimeout(checkFirebaseReady, 100);
@@ -930,7 +934,7 @@ function initializeAuth() {
     // Sign in function
     signInBtn.addEventListener('click', async () => {
         try {
-            const result = await window.signInWithPopup(window.firebaseAuth, window.googleProvider);
+            const result = await window.signInWithPopup(auth, window.googleProvider);
             console.log('Sign in successful:', result.user);
         } catch (error) {
             console.error('Sign in failed:', error);
@@ -941,7 +945,7 @@ function initializeAuth() {
     // Sign out function
     signOutBtn.addEventListener('click', async () => {
         try {
-            await window.signOut(window.firebaseAuth);
+            await window.signOut(auth);
             console.log('Sign out successful');
         } catch (error) {
             console.error('Sign out failed:', error);
@@ -949,7 +953,7 @@ function initializeAuth() {
     });
     
     // Listen for authentication state changes
-    window.onAuthStateChanged(window.firebaseAuth, async (user) => {
+    window.onAuthStateChanged(auth, (user) => {
         if (user) {
             // User is signed in
             console.log('User signed in:', user);
@@ -1376,8 +1380,9 @@ async function loadUserNotes(cardId) {
     }
     
     try {
-        const docRef = doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`);
-        const docSnap = await getDoc(docRef);
+        const docRef = window.doc ? window.doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+        const docSnap = await window.getDoc(docRef);
         const notes = docSnap.exists() ? docSnap.data().notes : '';
         
         // 更新本地快取和記錄
@@ -1426,8 +1431,9 @@ async function saveUserNotes(cardId, notes) {
         btnText.textContent = '儲存中...';
         saveIndicator.textContent = '';
         
-        const docRef = doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`);
-        await setDoc(docRef, {
+        const docRef = window.doc ? window.doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+        await window.setDoc(docRef, {
             notes: notes,
             updatedAt: new Date(),
             cardId: cardId
@@ -1506,9 +1512,9 @@ async function loadFeeWaiverStatus(cardId) {
     if (!auth.currentUser) return false;
     
     try {
-        const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-        const docRef = doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`);
-        const docSnap = await getDoc(docRef);
+        const docRef = window.doc ? window.doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+        const docSnap = await window.getDoc(docRef);
         return docSnap.exists() ? docSnap.data().isWaived : false;
     } catch (error) {
         console.log('讀取免年費狀態失敗:', error);
@@ -1525,9 +1531,9 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
     if (!auth.currentUser) return;
     
     try {
-        const { setDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-        const docRef = doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`);
-        await setDoc(docRef, {
+        const docRef = window.doc ? window.doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+        await window.setDoc(docRef, {
             isWaived: isWaived,
             updatedAt: new Date(),
             cardId: cardId
@@ -1577,9 +1583,9 @@ async function loadBillingDates(cardId) {
     }
     
     try {
-        const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-        const docRef = doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`);
-        const docSnap = await getDoc(docRef);
+        const docRef = window.doc ? window.doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+        const docSnap = await window.getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
             return {
@@ -1609,9 +1615,9 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
     if (!auth.currentUser) return;
     
     try {
-        const { setDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
-        const docRef = doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`);
-        await setDoc(docRef, {
+        const docRef = window.doc ? window.doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+        await window.setDoc(docRef, {
             ...dateData,
             updatedAt: new Date(),
             cardId: cardId

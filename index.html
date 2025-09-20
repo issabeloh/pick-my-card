@@ -229,6 +229,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       
       // Your web app's Firebase configuration
       const firebaseConfig = {
@@ -248,14 +249,19 @@
       const app = initializeApp(firebaseConfig);
       const analytics = getAnalytics(app);
       const auth = getAuth(app);
+      const db = getFirestore(app);
       const provider = new GoogleAuthProvider();
       
       // Make Firebase services available globally
       window.firebaseAuth = auth;
+      window.db = db;
       window.googleProvider = provider;
       window.signInWithPopup = signInWithPopup;
       window.signOut = signOut;
       window.onAuthStateChanged = onAuthStateChanged;
+      window.doc = doc;
+      window.getDoc = getDoc;
+      window.setDoc = setDoc;
     </script>
 </body>
 </html>
