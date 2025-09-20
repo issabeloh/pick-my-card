@@ -404,7 +404,6 @@ function calculateCardCashback(card, searchTerm, amount) {
                 }
             }
         }
-        }
     }
     
     let cashbackAmount = 0;
