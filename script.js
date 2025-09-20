@@ -7,7 +7,6 @@ let cardsData = {
       "id": "taishin-richart",
       "name": "台新Richart卡",
       "basicCashback": 0.3,
-      "billingDate": "20日",
       "cashbackRates": [
         {
           "rate": 3.8,
@@ -25,9 +24,8 @@ let cardsData = {
     },
     {
       "id": "yushan-unicard",
-      "name": "玉山UniCard",
+      "name": "玉山Uni卡",
       "basicCashback": 1.0,
-      "billingDate": "7日",
       "cashbackRates": [
         {
           "rate": 3.5,
@@ -42,7 +40,6 @@ let cardsData = {
       "id": "cathay-cube",
       "name": "國泰CUBE卡",
       "basicCashback": 0.3,
-      "billingDate": "15日",
       "cashbackRates": [
         {
           "rate": 2.0,
@@ -54,16 +51,94 @@ let cardsData = {
       ],
       "couponCashbacks": [
         {
-          "merchant": "全聯",
-          "rate": 10.0,
-          "conditions": "每月登錄",
-          "period": "2024/12/1-2024/12/31"
+          "merchant": "屈臣氏",
+          "rate": 1.2,
+          "conditions": "需註冊",
+          "period": "2025/07/01-2025/12/31"
         },
         {
-          "merchant": "好市多",
+          "merchant": "大丸福岡天神店",
+          "rate": 4.5,
+          "conditions": "無特殊條件",
+          "period": "2025/07/01-2025/12/31"
+        },
+        {
+          "merchant": "MITSUI木更津港高臺",
+          "rate": 6.3,
+          "conditions": "無特殊條件",
+          "period": "2025/07/07-2025/10/31"
+        },
+        {
+          "merchant": "星巴克線上/自動儲值",
           "rate": 8.0,
-          "conditions": "週末限定，單筆滿1000元",
-          "period": "2024/11/15-2024/12/15"
+          "conditions": "無特殊條件",
+          "period": "2025/07/01-2025/12/31"
+        },
+        {
+          "merchant": "昇恆昌",
+          "rate": 3.0,
+          "conditions": "單筆消費滿NT$300",
+          "period": "2025/09/17-2025/12/31"
+        },
+        {
+          "merchant": "台北和逸飯店",
+          "rate": 8.0,
+          "conditions": "無特殊條件",
+          "period": "2025/04/01-2025/09/30"
+        },
+        {
+          "merchant": "大樹藥局",
+          "rate": 5.0,
+          "conditions": "無特殊條件",
+          "period": "2025/09/01-2025/09/30"
+        },
+        {
+          "merchant": "蘇軒飯店",
+          "rate": 11.0,
+          "conditions": "無特殊條件",
+          "period": "2025/04/01-2025/09/30"
+        },
+        {
+          "merchant": "全球連流車",
+          "rate": 3.8,
+          "conditions": "透過CUBE App完成領取",
+          "period": "2025/01/01-2025/12/31"
+        },
+        {
+          "merchant": "桃園捷運機場",
+          "rate": 5.0,
+          "conditions": "透過CUBE App完成領取",
+          "period": "2025/07/01-2025/09/30"
+        },
+        {
+          "merchant": "Hotels.com",
+          "rate": 5.0,
+          "conditions": "透過CUBE App完成領取優惠券",
+          "period": "2025/03/15-2025/12/31"
+        },
+        {
+          "merchant": "Expedia",
+          "rate": 5.0,
+          "conditions": "透過CUBE App完成領取優惠券",
+          "period": "2024/08/31-2025/12/31"
+        },
+        {
+          "merchant": "屈臣氏官方網路商店",
+          "rate": 2.0,
+          "conditions": "需註冊",
+          "period": "2025/07/01-2025/12/31"
+        },
+        {
+          "merchant": "韓國實體消費",
+          "rate": 5.0,
+          "conditions": "實體NT$50,000或網路NT$2,000消費門檧",
+          "period": "2025/09/17-2025/12/31"
+        },
+        {
+          "merchant": "CASETIFY台灣官網",
+          "rate": 3.5,
+          "conditions": "透過CUBE App完成領取",
+          "period": "2025/09/11-2025/11/30"
         }
       ]
     },
@@ -71,7 +146,6 @@ let cardsData = {
       "id": "sinopac-sport",
       "name": "永豐Sport卡",
       "basicCashback": 1.0,
-      "billingDate": "12日",
       "cashbackRates": [
         {
           "rate": 7.0,
@@ -86,7 +160,6 @@ let cardsData = {
       "id": "sinopac-green",
       "name": "永豐Green卡",
       "basicCashback": 1.0,
-      "billingDate": "12日",
       "cashbackRates": [
         {
           "rate": 5.0,
@@ -101,7 +174,6 @@ let cardsData = {
       "id": "sinopac-daway",
       "name": "永豐DAWAY卡",
       "basicCashback": 0.5,
-      "billingDate": "12日",
       "cashbackRates": [
         {
           "rate": 4.0,
@@ -119,7 +191,6 @@ let cardsData = {
       "id": "yushan-ubear",
       "name": "玉山ubear卡",
       "basicCashback": 1.0,
-      "billingDate": "7日",
       "cashbackRates": [
         {
           "rate": 3.0,
@@ -132,9 +203,8 @@ let cardsData = {
     },
     {
       "id": "febank-lejia",
-      "name": "遠東商業銀行樂家+信用卡",
+      "name": "遠東樂家+卡",
       "basicCashback": 0.5,
-      "billingDate": "25日",
       "cashbackRates": [
         {
           "rate": 3.0,
@@ -143,19 +213,59 @@ let cardsData = {
             "全聯", "頂好", "松青", "jasons", "city super", "美廉社", "a-mart", "家樂福", "大潤發", "愛買", "好市多", "特力屋", "hola", "ikea", "宜得利", "生活工場", "無印良品", "麥當勞", "肯德基", "摩斯", "漢堡王", "拿坡里", "必勝客", "85度c", "星巴克", "路易莎", "cama", "怡客", "丹堤", "伯朗", "全家咖啡", "7-11咖啡", "屈臣氏", "康是美", "寶雅", "美華泰", "小三美日", "86小舖", "tomod's", "松本清", "大樹藥局", "啄木鳥", "丁丁藥局", "維康", "躍獅連鎖藥局", "新高橋藥局", "杏一", "uber eats", "foodpanda", "uber", "yoxi", "台灣大車隊", "linepay", "街口支付", "悠遊付", "全支付", "apple pay", "google pay", "samsung pay"
           ]
         }
-      ],
-      "couponCashbacks": [
+      ]
+    },
+    {
+      "id": "tbb-chaotian",
+      "name": "企銀朝天宮卡",
+      "basicCashback": 0.3,
+      "overseasCashback": 1.5,
+      "cashbackRates": [
         {
-          "merchant": "家樂福",
-          "rate": 12.0,
-          "conditions": "週三限定，需登錄",
-          "period": "2024/12/1-2025/1/31"
+          "rate": 6.0,
+          "cap": 8772,
+          "conditions": "使用電子帳單+登錄一次",
+          "period": "2024/10/01-2025/12/31",
+          "items": [
+            "uber eats", "foodpanda", "屈臣氏", "康是美", "poya寶雅", "j-mart佳瑪", "唐吉訶德", "維康醫療用品", "大樹藥局", "啄木鳥藥師藥局", "杏一醫療用品", "丁丁藥局", "躍獅連鎖藥局", "新高橋藥局", "松本清", "tomod's特美事", "日藥本舖", "小三美日", "札幌藥妝", "高鐵", "台鐵", "uber", "台灣大車隊", "大都會車隊", "line go", "yoxi", "和運租車", "格上租車"
+          ]
         },
         {
-          "merchant": "全聯",
-          "rate": 15.0,
-          "conditions": "滿500元，每月限回饋500元",
-          "period": "2024/11/1-2024/12/31"
+          "rate": 1.5,
+          "cap": 6667,
+          "conditions": "綁定台灣Pay行動支付",
+          "period": "2025/01/01-2025/12/31",
+          "items": [
+            "企銀朝天宮+台灣pay"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hsbc-liveplus",
+      "name": "滙豐Live+卡",
+      "basicCashback": 0.88,
+      "autoBillCashback": 1.0,
+      "autoBillCap": 20000,
+      "overseasBonusRate": 1.0,
+      "overseasBonusCap": 20000,
+      "basicPeriod": "2025/07/01-2025/12/31",
+      "cashbackRates": [
+        {
+          "rate": 3.0,
+          "cap": 29600,
+          "period": "2025/07/01-2025/12/31",
+          "items": [
+            "餐飲mcc", "購物mcc", "娛樂mcc", "蝦皮購物", "pchome 24h購物", "酷澎", "ebay", "amazon", "friday購物", "gomaji", "麥當勞", "星巴克", "王品集團", "享鴨", "夏慕尼", "王品", "西堤", "石二鍋", "陶板屋", "青花驕", "饗賓餐旅", "享享", "開飯", "瓦城", "鼎泰豐", "富王大飯店文公館", "教父牛排", "山海樓", "鹽之華", "牡丹tempura", "吉兆割烹壽司", "明壽司", "logy", "inita", "海底撈", "金大鋄壽喜燒", "築間幸福鍋物", "壽司郎", "藏壽司", "爭鮮", "金色三麥", "貴族世家", "莫凡彼", "春大直", "貳樓", "涵豆腐", "hooters", "勝田日式豬排", "必勝客", "達美樂", "ikea", "台北101", "三井outlet", "微風南山", "微風南京", "微風信義", "微風松高", "微風廣場", "微風三總", "微風北車", "遠東sogo百貨", "漢神巨蛋", "華泰名品城", "新光三越", "skm park outlet", "att 4 fun", "美麗華百樂園", "南紡購物中心", "統一時代百貨", "ifg遠雄廣場", "京站時尚廣場", "citylink", "夢時代購物中心", "lalaport台中", "大葉高島屋百貨", "中友百貨", "遠企購物中心", "麗寶outlet", "比漾廣場", "大江國際購物中心", "遠東巨城", "遠東百貨", "global mall", "漢神名店百貨", "義大世界購物廣場", "台茂購物中心", "寶雅", "無印良品", "bellavita", "宏匯廣場", "義享時尚廣場", "noke忠泰樂生活", "大魯閣湳雅廣場", "明曜百貨", "新光影城", "威秀影城", "國賓影城", "秀泰影城", "環球影城", "迪士尼樂園", "吉卜力公園", "樂天世界", "legoland", "safari world", "兒童新樂園", "x park", "小人國", "六福村", "大魯閣", "遠雄海洋公園", "麗寶樂園", "劍湖山世界", "九族文化村", "尚順育樂世界", "義大遊樂世界", "巧虎夢想樂園", "台北市立動物園", "國立海洋生物博物館", "奇美博物館", "小叮當科學主題樂園", "野柳海洋世界", "星夢森林劇場", "埔心牧場", "飛牛牧場", "頑皮世界", "自行車文化館", "桃園市立美術館", "烏來台車", "日月潭纜車", "和平島公園", "台南十鼓仁糖文創園區", "太平山遊樂區", "阿里山國家森林遊樂區", "大雪山森林遊樂區", "墓丁國家森林遊樂區", "內洞國家森林遊樂區", "momo", "肯德基", "摩斯漢堡"
+          ]
+        },
+        {
+          "rate": 1.0,
+          "cap": 20000,
+          "period": "2025/07/01-2025/12/31",
+          "items": [
+            "日本當地實體餐飲mcc", "新加坡當地實體餐飲mcc", "馬來西亞當地實體餐飲mcc", "越南當地實體餐飲mcc", "菲律賓當地實體餐飲mcc", "印度當地實體餐飲mcc", "斯里蘭卡當地實體餐飲mcc"
+          ]
         }
       ]
     }
@@ -333,9 +443,23 @@ function calculateCashback() {
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
             results = cardsToCompare.map(card => {
-                const basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+                let basicCashbackAmount = 0;
+                let effectiveRate = card.basicCashback;
+                
+                // Handle complex cards like HSBC Live+ with multiple basic rates
+                if (card.autoBillCashback && card.autoBillCap) {
+                    const autoBillAmount = Math.min(amount, card.autoBillCap);
+                    const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
+                    const normalAmount = amount - autoBillAmount;
+                    const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
+                    basicCashbackAmount = autoBillCashback + normalCashback;
+                    effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
+                } else {
+                    basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+                }
+                
                 return {
-                    rate: card.basicCashback,
+                    rate: effectiveRate,
                     cashbackAmount: basicCashbackAmount,
                     cap: null,
                     matchedItem: null,
@@ -349,9 +473,23 @@ function calculateCashback() {
         // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
         results = cardsToCompare.map(card => {
-            const basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+            let basicCashbackAmount = 0;
+            let effectiveRate = card.basicCashback;
+            
+            // Handle complex cards like HSBC Live+ with multiple basic rates
+            if (card.autoBillCashback && card.autoBillCap) {
+                const autoBillAmount = Math.min(amount, card.autoBillCap);
+                const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
+                const normalAmount = amount - autoBillAmount;
+                const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
+                basicCashbackAmount = autoBillCashback + normalCashback;
+                effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
+            } else {
+                basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+            }
+            
             return {
-                rate: card.basicCashback,
+                rate: effectiveRate,
                 cashbackAmount: basicCashbackAmount,
                 cap: null,
                 matchedItem: null,
@@ -404,11 +542,23 @@ function calculateCardCashback(card, searchTerm, amount) {
         if (applicableCap && amount > applicableCap) {
             // Special rate for capped amount
             const cappedCashback = Math.floor(applicableCap * bestRate / 100);
-            // Basic rate for remaining amount
+            // Basic rate for remaining amount  
             const remainingAmount = amount - applicableCap;
-            const basicCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            let basicRate = card.basicCashback;
             
-            cashbackAmount = cappedCashback + basicCashback;
+            // Handle complex cards like HSBC Live+ with multiple basic rates
+            if (card.autoBillCashback && card.autoBillCap) {
+                const autoBillAmount = Math.min(remainingAmount, card.autoBillCap);
+                const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
+                const normalAmount = remainingAmount - autoBillAmount;
+                const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
+                const basicCashback = autoBillCashback + normalCashback;
+                
+                cashbackAmount = cappedCashback + basicCashback;
+            } else {
+                const basicCashback = Math.floor(remainingAmount * basicRate / 100);
+                cashbackAmount = cappedCashback + basicCashback;
+            }
             effectiveAmount = applicableCap; // Keep this for display purposes
         } else {
             cashbackAmount = Math.floor(effectiveAmount * bestRate / 100);
@@ -555,8 +705,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
             </div>
             <div class="detail-item">
-                <div class="detail-label">${isBasicCashback ? '結帳日' : '消費限制'}</div>
-                <div class="detail-value">${isBasicCashback ? result.card.billingDate : capText}</div>
+                <div class="detail-label">消費限制</div>
+                <div class="detail-value">${capText}</div>
             </div>
         </div>
         ${isBasicCashback ? `
