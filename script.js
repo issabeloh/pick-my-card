@@ -1319,9 +1319,6 @@ function showCardDetail(cardId) {
         saveUserNotes(card.id, currentNotes);
     };
     
-    // 設置範本功能
-    setupNotesTemplates(notesTextarea);
-    
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
     
@@ -1674,55 +1671,6 @@ async function setupBillingDates(cardId) {
             let value = parseInt(e.target.value);
             if (value > 31) e.target.value = 31;
             if (value < 1 && e.target.value !== '') e.target.value = 1;
-        };
-    });
-}
-
-// 設置筆記範本功能
-function setupNotesTemplates(textarea) {
-    const toggleBtn = document.getElementById('toggle-templates-btn');
-    const templatesContent = document.getElementById('templates-content');
-    const templateItems = document.querySelectorAll('.template-item');
-    
-    let isTemplatesVisible = false;
-    
-    // 切換範本顯示/隱藏
-    toggleBtn.onclick = () => {
-        isTemplatesVisible = !isTemplatesVisible;
-        templatesContent.style.display = isTemplatesVisible ? 'block' : 'none';
-        toggleBtn.textContent = isTemplatesVisible ? '隱藏範本' : '顯示範本';
-    };
-    
-    // 範本點擊事件
-    templateItems.forEach(item => {
-        item.onclick = () => {
-            const templateText = item.querySelector('.template-text').textContent;
-            const currentValue = textarea.value;
-            
-            // 如果當前有內容且不是空白，在新行加入範本
-            let newValue = currentValue;
-            if (currentValue.trim() !== '') {
-                newValue += '\n\n' + templateText;
-            } else {
-                newValue = templateText;
-            }
-            
-            textarea.value = newValue;
-            
-            // 觸發 input 事件以更新按鈕狀態
-            const event = new Event('input', { bubbles: true });
-            textarea.dispatchEvent(event);
-            
-            // 焦點移至輸入框
-            textarea.focus();
-            
-            // 游標移至末尾
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            
-            // 自動收起範本
-            templatesContent.style.display = 'none';
-            toggleBtn.textContent = '顯示範本';
-            isTemplatesVisible = false;
         };
     });
 }

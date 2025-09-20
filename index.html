@@ -110,7 +110,6 @@
                 </div>
                 <div class="modal-body">
                     <div class="card-info-section">
-                        <h4>基本資訊</h4>
                         <div class="info-grid-2col">
                             <div class="info-item">
                                 <span class="info-label">卡片全名:</span>
@@ -169,28 +168,8 @@
                     <div class="card-info-section">
                         <h4>📝 我的筆記</h4>
                         <div class="user-notes-container">
-                            <div class="notes-templates" id="notes-templates">
-                                <div class="templates-header">
-                                    <span>💡 常用筆記範本</span>
-                                    <button class="toggle-templates-btn" id="toggle-templates-btn">顯示範本</button>
-                                </div>
-                                <div class="templates-content" id="templates-content" style="display: none;">
-                                    <div class="template-item" data-template="spending">
-                                        <span class="template-icon">💰</span>
-                                        <span class="template-text">本期已消費: NT$ [    ]</span>
-                                    </div>
-                                    <div class="template-item" data-template="usage">
-                                        <span class="template-icon">🎯</span>
-                                        <span class="template-text">主要用途: [ 網購 / 加油 / 餐廳 / 其他 ]</span>
-                                    </div>
-                                    <div class="template-item" data-template="notes">
-                                        <span class="template-icon">📝</span>
-                                        <span class="template-text">備註: </span>
-                                    </div>
-                                </div>
-                            </div>
                             <textarea id="user-notes-input" 
-                                      placeholder="點擊上方範本快速新增內容，或直接輸入你的筆記..."
+                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
                                       class="user-notes-textarea"></textarea>
                             <div class="notes-status" id="notes-status">
                                 <button class="save-notes-btn" id="save-notes-btn" disabled>
