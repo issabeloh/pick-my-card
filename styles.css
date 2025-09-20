@@ -1192,3 +1192,24 @@ input[type="number"]:focus {
     padding: 5px 6px !important;
     font-size: 13px !important;
 }
+
+/* 內聯日期輸入樣式 */
+.dates-inline-wrapper {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.date-input-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-label-small {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+}
