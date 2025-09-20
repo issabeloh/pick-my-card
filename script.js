@@ -297,6 +297,32 @@ let cardsData = {
           ]
         }
       ]
+    },
+    {
+      "id": "sinopac-coin",
+      "name": "永豐幣倍",
+      "basicCashback": 1.0,
+      "domesticBonusRate": 1.0,
+      "domesticBonusCap": 20000,
+      "overseasCashback": 3.0,
+      "overseasBonusRate": 4.0,
+      "overseasBonusCap": 7500,
+      "cashbackRates": [
+        {
+          "rate": 4.0,
+          "cap": 7500,
+          "items": [
+            "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
+          ]
+        },
+        {
+          "rate": 3.0,
+          "cap": null,
+          "items": [
+            "海外"
+          ]
+        }
+      ]
     }
   ]
 };
@@ -483,6 +509,13 @@ function calculateCashback() {
                     const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
                     basicCashbackAmount = autoBillCashback + normalCashback;
                     effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
+                } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                    // Handle 永豐幣倍 type cards with domestic bonus
+                    const bonusAmount = Math.min(amount, card.domesticBonusCap);
+                    const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
+                    const basicCashback = Math.floor(amount * card.basicCashback / 100);
+                    basicCashbackAmount = bonusCashback + basicCashback;
+                    effectiveRate = card.basicCashback + card.domesticBonusRate;
                 } else {
                     basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
                 }
@@ -513,6 +546,13 @@ function calculateCashback() {
                 const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
                 basicCashbackAmount = autoBillCashback + normalCashback;
                 effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
+            } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                // Handle 永豐幣倍 type cards with domestic bonus
+                const bonusAmount = Math.min(amount, card.domesticBonusCap);
+                const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
+                const basicCashback = Math.floor(amount * card.basicCashback / 100);
+                basicCashbackAmount = bonusCashback + basicCashback;
+                effectiveRate = card.basicCashback + card.domesticBonusRate;
             } else {
                 basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
             }
@@ -580,18 +620,59 @@ function calculateCardCashback(card, searchTerm, amount) {
         
         specialCashback = Math.floor(effectiveSpecialAmount * bestRate / 100);
         
+        // Determine basic rate and additional bonuses based on card type and merchant
+        let basicRate = card.basicCashback;
+        let bonusRate = 0;
+        
+        // Handle special cards like 永豐幣倍 with different domestic/overseas rates
+        if (matchedItem === '海外' && card.overseasCashback) {
+            basicRate = card.overseasCashback;
+            if (card.overseasBonusRate && card.overseasBonusCap) {
+                bonusRate = card.overseasBonusRate;
+            }
+        } else if (card.domesticBonusRate && card.domesticBonusCap) {
+            bonusRate = card.domesticBonusRate;
+        }
+        
         // Add basic cashback for the same amount (layered rewards)
-        let basicCashback = Math.floor(effectiveSpecialAmount * card.basicCashback / 100);
+        let basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+        
+        // Add bonus cashback if applicable
+        let bonusCashback = 0;
+        if (bonusRate > 0) {
+            let bonusAmount = effectiveSpecialAmount;
+            if (matchedItem === '海外' && card.overseasBonusCap) {
+                bonusAmount = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
+            } else if (card.domesticBonusCap) {
+                bonusAmount = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
+            }
+            bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
+        }
         
         // Handle remaining amount if capped
         let remainingCashback = 0;
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
-            remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            remainingCashback = Math.floor(remainingAmount * basicRate / 100);
+            
+            // Add bonus for remaining amount if applicable
+            if (bonusRate > 0) {
+                let remainingBonusAmount = remainingAmount;
+                if (matchedItem === '海外' && card.overseasBonusCap) {
+                    const usedBonus = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
+                    const remainingBonusCapacity = Math.max(0, card.overseasBonusCap - usedBonus);
+                    remainingBonusAmount = Math.min(remainingAmount, remainingBonusCapacity);
+                } else if (card.domesticBonusCap) {
+                    const usedBonus = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
+                    const remainingBonusCapacity = Math.max(0, card.domesticBonusCap - usedBonus);
+                    remainingBonusAmount = Math.min(remainingAmount, remainingBonusCapacity);
+                }
+                remainingCashback += Math.floor(remainingBonusAmount * bonusRate / 100);
+            }
         }
         
-        cashbackAmount = specialCashback + basicCashback + remainingCashback;
-        totalRate = bestRate + card.basicCashback;
+        cashbackAmount = specialCashback + basicCashback + bonusCashback + remainingCashback;
+        totalRate = bestRate + basicRate + bonusRate;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
@@ -699,6 +780,10 @@ function createCouponResultElement(coupon, amount) {
                 <div class="coupon-detail-value">NT$${coupon.potentialCashback.toLocaleString()}</div>
             </div>
             <div class="coupon-detail-row">
+                <div class="coupon-detail-label">回饋消費上限:</div>
+                <div class="coupon-detail-value">無上限</div>
+            </div>
+            <div class="coupon-detail-row">
                 <div class="coupon-detail-label">回饋條件:</div>
                 <div class="coupon-detail-value">${coupon.conditions}</div>
             </div>
@@ -744,7 +829,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
             </div>
             <div class="detail-item">
-                <div class="detail-label">消費限制</div>
+                <div class="detail-label">回饋消費上限</div>
                 <div class="detail-value">${capText}</div>
             </div>
         </div>
