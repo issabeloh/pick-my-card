@@ -916,11 +916,11 @@ function showCardDetail(cardId) {
     basicCashbackDiv.innerHTML = basicContent;
     
     // Handle CUBE card level selection
-    const cubeLevelItem = document.getElementById('cube-level-item');
+    const cubeLevelSection = document.getElementById('cube-level-section');
     const cubeLevelSelect = document.getElementById('cube-level-select');
     
     if (card.hasLevels && card.id === 'cathay-cube') {
-        cubeLevelItem.style.display = 'block';
+        cubeLevelSection.style.display = 'block';
         
         // Load saved level or default to level1
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
@@ -932,7 +932,7 @@ function showCardDetail(cardId) {
             updateCubeSpecialCashback(card);
         };
     } else {
-        cubeLevelItem.style.display = 'none';
+        cubeLevelSection.style.display = 'none';
     }
     
     // Update special cashback

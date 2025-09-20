@@ -112,38 +112,11 @@
                     <div class="card-info-section">
                         <div class="info-grid-2col">
                             <div class="info-item">
-                                <span class="info-label">卡片全名:</span>
-                                <span class="info-value card-full-name-bold"><a id="card-full-name-link" target="_blank" rel="noopener"></a></span>
+                                <div class="info-label">卡片全名:</div>
+                                <div class="info-value card-full-name-bold"><a id="card-full-name-link" target="_blank" rel="noopener"></a></div>
                             </div>
-                            <div class="info-item fee-annual-section">
-                                <div class="fee-annual-item">
-                                    <span class="info-label">年費:</span>
-                                    <span class="info-value info-value-small" id="card-annual-fee"></span>
-                                </div>
-                                <div class="fee-waiver-item">
-                                    <span class="info-label">免年費條件:</span>
-                                    <span class="info-value info-value-small" id="card-fee-waiver"></span>
-                                    <div class="fee-waiver-status">
-                                        <label class="fee-waiver-checkbox">
-                                            <input type="checkbox" id="fee-waiver-checked">
-                                            <span class="checkmark"></span>
-                                            <span class="checkbox-label">我已過免年費門檻</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="info-item cube-level-item" id="cube-level-item" style="display: none;">
-                                <span class="info-label">🎯 國泰CUBE等級設定:</span>
-                                <div class="cube-level-inline">
-                                    <select id="cube-level-select" class="level-select-inline">
-                                        <option value="level1">Level 1 - 特定通路 2%</option>
-                                        <option value="level2">Level 2 - 特定通路 3%</option>
-                                        <option value="level3">Level 3 - 特定通路 3.3%</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="info-item important-dates-item">
-                                <span class="info-label">📅 重要日期 (選填):</span>
+                            <div class="info-item">
+                                <div class="info-label">📅 重要日期 (選填):</div>
                                 <div class="dates-inline-wrapper">
                                     <div class="date-input-inline">
                                         <span class="date-label-small">結帳日:</span>
@@ -167,6 +140,38 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="info-item fee-annual-section">
+                                <div class="fee-annual-item">
+                                    <div class="info-label">年費:</div>
+                                    <div class="info-value info-value-small" id="card-annual-fee"></div>
+                                </div>
+                                <div class="fee-waiver-item">
+                                    <div class="info-label">免年費條件:</div>
+                                    <div class="info-value info-value-small" id="card-fee-waiver"></div>
+                                    <div class="fee-waiver-status">
+                                        <label class="fee-waiver-checkbox">
+                                            <input type="checkbox" id="fee-waiver-checked">
+                                            <span class="checkmark"></span>
+                                            <span class="checkbox-label">我已過免年費門檻</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item empty-placeholder"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- CUBE等級設定區域 -->
+                    <div class="card-info-section" id="cube-level-section" style="display: none;">
+                        <h4>🎯 國泰CUBE等級設定</h4>
+                        <div class="cube-level-selector">
+                            <label for="cube-level-select" class="level-label">請選擇您的CUBE等級：</label>
+                            <select id="cube-level-select" class="level-select">
+                                <option value="level1">Level 1 - 特定通路 2%</option>
+                                <option value="level2">Level 2 - 特定通路 3%</option>
+                                <option value="level3">Level 3 - 特定通路 3.3%</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <!-- 用戶筆記區域 -->

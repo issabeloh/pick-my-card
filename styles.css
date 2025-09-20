@@ -1037,15 +1037,16 @@ input[type="number"]:focus {
 
 .user-notes-textarea {
     width: 100%;
-    min-height: 80px;
-    max-height: 160px;
+    min-height: 60px; /* 縮小初始高度 */
+    height: 60px; /* 設定預設高度 */
+    max-height: 200px; /* 增加最大高度 */
     padding: 12px;
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    resize: vertical;
+    resize: vertical; /* 保持可拉伸功能 */
     transition: border-color 0.2s;
 }
 
@@ -1295,48 +1296,7 @@ input[type="number"]:focus {
     font-weight: 500;
 }
 
-/* 內聯CUBE等級選擇器樣式 */
-.cube-level-item {
-    grid-column: span 2; /* 佔據兩列 */
-}
-
-.cube-level-inline {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 4px;
-}
-
-.level-select-inline {
-    width: auto;
-    min-width: 200px;
-    padding: 6px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 13px;
-    background: white;
-    color: #374151;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.level-select-inline:hover {
-    border-color: #6bb6ff;
-}
-
-.level-select-inline:focus {
-    outline: none;
-    border-color: #6bb6ff;
-    box-shadow: 0 0 0 2px rgba(107, 182, 255, 0.1);
-}
-
-/* 調整重要日期項目的間距 */
-.important-dates-item {
-    margin-top: 8px;
-}
-
-/* 確保2列網格的正確顯示 */
+/* 修復信息網格佈局 */
 .info-grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1344,24 +1304,41 @@ input[type="number"]:focus {
     align-items: start;
 }
 
-/* 當CUBE等級設定顯示時，調整網格佈局 */
-.info-grid-2col:has(.cube-level-item[style*="block"]) {
-    grid-template-columns: 1fr;
-    gap: 16px;
+/* 信息項目樣式 - 標題和內容上下排列 */
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.info-grid-2col:has(.cube-level-item[style*="block"]) .info-item:not(.cube-level-item) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    grid-column: span 1;
+.info-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
 }
 
-.info-grid-2col:has(.cube-level-item[style*="block"]) .cube-level-item {
-    grid-column: span 1;
-    margin: 12px 0;
-    padding: 12px;
-    background: #f8fafc;
-    border-radius: 6px;
-    border: 1px solid #e5e7eb;
+.info-value {
+    font-size: 14px;
+    color: #111827;
+    line-height: 1.4;
 }
+
+/* 空的占位元素 */
+.empty-placeholder {
+    display: none;
+}
+
+/* 年費和免年費條件在同一列 */
+.fee-annual-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fee-annual-item, .fee-waiver-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
