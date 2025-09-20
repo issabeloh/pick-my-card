@@ -6,7 +6,11 @@ let cardsData = {
     {
       "id": "taishin-richart",
       "name": "台新Richart卡",
+      "fullName": "台新銀行Richart信用卡",
       "basicCashback": 0.3,
+      "annualFee": "正卡每卡年NT$1,500、附卡每卡每年NT$750",
+      "feeWaiver": "首年免年費，次年起使用台新電子/行動簡訊帳單且生效，享免年費優惠",
+      "website": "https://www.taishinbank.com.tw/TSB/personal/credit/intro/overview/cg047/card001/",
       "cashbackRates": [
         {
           "rate": 3.8,
@@ -25,7 +29,11 @@ let cardsData = {
     {
       "id": "yushan-unicard",
       "name": "玉山Uni卡",
+      "fullName": "玉山銀行UniCard信用卡",
       "basicCashback": 1.0,
+      "annualFee": "御璽卡NT$3,000、附卡免年費",
+      "feeWaiver": "首年免年費，(1)每年有消費，年年免年費。(2)使用玉山帳戶自動扣繳信用卡款或帳單e化期間享免年費優惠",
+      "website": "https://www.esunbank.com/zh-tw/personal/credit-card/intro/bank-card/unicard",
       "cashbackRates": [
         {
           "rate": 3.5,
@@ -39,7 +47,11 @@ let cardsData = {
     {
       "id": "cathay-cube",
       "name": "國泰CUBE卡",
+      "fullName": "國泰世華CUBE信用卡",
       "basicCashback": 0.3,
+      "annualFee": "首年免年費，次年起年費NT$1,800",
+      "feeWaiver": "申辦電子帳單、前年度消費12次、前一年累積消費達18萬(三擇一)即可減免年費",
+      "website": "https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube",
       "cashbackRates": [
         {
           "rate": 2.0,
@@ -139,7 +151,11 @@ let cardsData = {
     {
       "id": "sinopac-sport",
       "name": "永豐Sport卡",
+      "fullName": "永豐銀行Sport信用卡",
       "basicCashback": 1.0,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "申請信用卡電子化帳單（電子帳單/行動帳單）且取消實體帳單，或：(鈷金卡Visa/Mastercard)前一年刷敥3.6萬元或12筆消費；(御璽卡Titanium/Signature)前一年刷斗12萬元或12筆消費",
+      "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/sportcard.html",
       "cashbackRates": [
         {
           "rate": 7.0,
@@ -153,7 +169,11 @@ let cardsData = {
     {
       "id": "sinopac-green",
       "name": "永豐Green卡",
+      "fullName": "永豐銀行Green信用卡",
       "basicCashback": 1.0,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "申請電子帳單或前一年刷斗15萬元或12筆消費",
+      "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/cashcard.html",
       "cashbackRates": [
         {
           "rate": 5.0,
@@ -167,7 +187,11 @@ let cardsData = {
     {
       "id": "sinopac-daway",
       "name": "永豐DAWAY卡",
+      "fullName": "永豐銀行DAWAY信用卡",
       "basicCashback": 0.5,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "申請電子帳單且取消實體帳單，或前一年刷斗15萬元或12筆消費",
+      "website": "https://bank.sinopac.com/sinopacbt/personal/credit-card/introduction/bankcard/DAWAY.html",
       "cashbackRates": [
         {
           "rate": 4.0,
@@ -184,7 +208,11 @@ let cardsData = {
     {
       "id": "yushan-ubear",
       "name": "玉山ubear卡",
+      "fullName": "玉山銀行ubear信用卡",
       "basicCashback": 1.0,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "前一年度有刷卡消費紀錄或申請電子賬單",
+      "website": "https://www.esunbank.com/zh-tw/personal/credit-card/intro/bank-card/u-bear",
       "cashbackRates": [
         {
           "rate": 3.0,
@@ -198,7 +226,11 @@ let cardsData = {
     {
       "id": "febank-lejia",
       "name": "遠東樂家+卡",
+      "fullName": "遠東商業銀行樂家+信用卡",
       "basicCashback": 0.5,
+      "annualFee": "首年免年費，次年起年費NT$2,000",
+      "feeWaiver": "前一年刷卡遜6萬元或12筆消費，或設定電子帳單+遠銀帳戶自扣且刷3筆",
+      "website": "https://www.feib.com.tw/upload/creditcard/YACard/index.html",
       "overseasCashback": 2.5,
       "exclusions": [
         "遠東百貨", "遠東sogo百貨", "遠東巨城購物中心", "遠企購物中心", "代扣繳遠傳電信帳單", "愛買量販", "遠東香格里拉", "mega50", "city'super", "friday購物"
@@ -247,7 +279,11 @@ let cardsData = {
     {
       "id": "tbb-chaotian",
       "name": "企銀朝天宮卡",
+      "fullName": "台灣企銀北港朝天宮認同卡",
       "basicCashback": 0.3,
+      "annualFee": "首年免年費，次年起年費NT$2,400",
+      "feeWaiver": "有消費，或申辦電子帳單並取消實體帳單",
+      "website": "https://www.tbb.com.tw/zh-tw/personal/cards/products/overview/chaotiangong-creditcard",
       "overseasCashback": 1.5,
       "cashbackRates": [
         {
@@ -273,7 +309,11 @@ let cardsData = {
     {
       "id": "hsbc-liveplus",
       "name": "滙豐Live+卡",
+      "fullName": "滙豐 Live+ 現金回饋卡",
       "basicCashback": 1.88,
+      "annualFee": "首年免年費，次年起年費NT$2,000",
+      "feeWaiver": "消費滿NT$80,000或12筆，或申請電子/行動帳單，就可終身免年費",
+      "website": "https://www.hsbc.com.tw/credit-cards/products/liveplus/",
       "autoBillCashback": 0,
       "autoBillCap": 0,
       "overseasBonusRate": 1.0,
@@ -300,8 +340,12 @@ let cardsData = {
     },
     {
       "id": "sinopac-coin",
-      "name": "永豐幣倍",
+      "name": "永豐幣倍卡",
+      "fullName": "永豐銀行幣倍卡",
       "basicCashback": 1.0,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費斗36,000元或消費12次",
+      "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "domesticBonusRate": 1.0,
       "domesticBonusCap": 20000,
       "overseasCashback": 3.0,
@@ -360,8 +404,9 @@ function populateCardChips() {
     
     cardsToShow.forEach(card => {
         const chip = document.createElement('div');
-        chip.className = 'card-chip';
+        chip.className = 'card-chip chip-clickable';
         chip.textContent = card.name;
+        chip.addEventListener('click', () => showCardDetail(card.id));
         cardChipsContainer.appendChild(chip);
     });
 }
@@ -811,7 +856,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     // Format rate display for complex cards
     let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
     if (result.specialRate && result.basicRate && result.specialRate > 0) {
-        rateDisplay = `${result.specialRate}%+${result.basicRate}%`;
+        const totalRate = result.specialRate + result.basicRate;
+        rateDisplay = `${totalRate}% (${result.specialRate}%+基本${result.basicRate}%)`;
     }
     
     cardDiv.innerHTML = `
@@ -1043,6 +1089,29 @@ function setupManageCardsModal() {
         // Close modal
         closeModal();
     });
+    
+    // Toggle all cards button
+    const toggleAllBtn = document.getElementById('toggle-all-cards');
+    toggleAllBtn.addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        if (allChecked) {
+            // Uncheck all
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                checkbox.parentElement.classList.remove('selected');
+            });
+            toggleAllBtn.textContent = '全選';
+        } else {
+            // Check all
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = true;
+                checkbox.parentElement.classList.add('selected');
+            });
+            toggleAllBtn.textContent = '全不選';
+        }
+    });
 }
 
 // Open manage cards modal
@@ -1076,5 +1145,122 @@ function openManageCardsModal() {
         cardsSelection.appendChild(cardDiv);
     });
     
+    // Update toggle button state
+    const toggleAllBtn = document.getElementById('toggle-all-cards');
+    const allSelected = sortedCards.every(card => userSelectedCards.has(card.id));
+    toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
+    
     modal.style.display = 'flex';
+}
+
+// Show card detail modal
+function showCardDetail(cardId) {
+    const card = cardsData.cards.find(c => c.id === cardId);
+    if (!card) return;
+    
+    const modal = document.getElementById('card-detail-modal');
+    
+    // Update basic information
+    document.getElementById('card-detail-title').textContent = card.name + ' 詳情';
+    document.getElementById('card-full-name').textContent = card.fullName || card.name;
+    document.getElementById('card-annual-fee').textContent = card.annualFee || '無資料';
+    document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '無資料';
+    
+    const websiteLink = document.getElementById('card-website');
+    if (card.website) {
+        websiteLink.href = card.website;
+        websiteLink.style.display = 'inline';
+    } else {
+        websiteLink.style.display = 'none';
+    }
+    
+    // Update basic cashback
+    const basicCashbackDiv = document.getElementById('card-basic-cashback');
+    let basicContent = `<div class="cashback-detail-item">`;
+    basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+    
+    if (card.overseasCashback) {
+        basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+    }
+    
+    if (card.domesticBonusRate) {
+        basicContent += `<div class="cashback-rate">國內加碼回饋: +${card.domesticBonusRate}% (上限NT$${card.domesticBonusCap?.toLocaleString()})</div>`;
+    }
+    
+    if (card.overseasBonusRate) {
+        basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}% (上限NT$${card.overseasBonusCap?.toLocaleString()})</div>`;
+    }
+    
+    basicContent += `</div>`;
+    basicCashbackDiv.innerHTML = basicContent;
+    
+    // Update special cashback
+    const specialCashbackDiv = document.getElementById('card-special-cashback');
+    let specialContent = '';
+    
+    if (card.cashbackRates && card.cashbackRates.length > 0) {
+        card.cashbackRates.forEach(rate => {
+            specialContent += `<div class="cashback-detail-item">`;
+            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
+            
+            if (rate.cap) {
+                specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+            }
+            
+            if (rate.category) {
+                specialContent += `<div class="cashback-condition">類別: ${rate.category}</div>`;
+            }
+            
+            if (rate.conditions) {
+                specialContent += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
+            }
+            
+            if (rate.period) {
+                specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
+            }
+            
+            if (rate.items && rate.items.length > 0) {
+                const merchantsList = rate.items.slice(0, 20).join('、'); // 只顯示前20個
+                const moreCount = rate.items.length > 20 ? `... 等${rate.items.length}個通路` : '';
+                specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}${moreCount}</div>`;
+            }
+            
+            specialContent += `</div>`;
+        });
+    } else {
+        specialContent = '<div class="cashback-detail-item">無指定通路回饋</div>';
+    }
+    
+    specialCashbackDiv.innerHTML = specialContent;
+    
+    // Update coupon cashback
+    const couponSection = document.getElementById('card-coupon-section');
+    const couponCashbackDiv = document.getElementById('card-coupon-cashback');
+    
+    if (card.couponCashbacks && card.couponCashbacks.length > 0) {
+        let couponContent = '';
+        card.couponCashbacks.forEach(coupon => {
+            couponContent += `<div class="cashback-detail-item">`;
+            couponContent += `<div class="cashback-rate">${coupon.merchant}: ${coupon.rate}% 回饋</div>`;
+            couponContent += `<div class="cashback-condition">條件: ${coupon.conditions}</div>`;
+            couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
+            couponContent += `</div>`;
+        });
+        couponCashbackDiv.innerHTML = couponContent;
+        couponSection.style.display = 'block';
+    } else {
+        couponSection.style.display = 'none';
+    }
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Setup close events
+    const closeBtn = document.getElementById('close-card-detail');
+    const closeModal = () => modal.style.display = 'none';
+    
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
 }

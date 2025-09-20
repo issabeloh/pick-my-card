@@ -87,6 +87,9 @@
                 </div>
                 <div class="modal-body">
                     <p class="modal-description">選擇你擁有的信用卡，只有選中的卡片會出現在比較結果中。</p>
+                    <div class="modal-controls">
+                        <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
+                    </div>
                     <div class="cards-selection" id="cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
                     </div>
@@ -97,8 +100,56 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Card Detail Modal -->
+        <div id="card-detail-modal" class="modal" style="display: none;">
+            <div class="modal-content card-detail-content">
+                <div class="modal-header">
+                    <h3 id="card-detail-title">卡片詳情</h3>
+                    <button class="close-modal" id="close-card-detail">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="card-info-section">
+                        <h4>基本資訊</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">卡片全名:</span>
+                                <span class="info-value" id="card-full-name"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">年費:</span>
+                                <span class="info-value" id="card-annual-fee"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">免年費條件:</span>
+                                <span class="info-value" id="card-fee-waiver"></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">官網:</span>
+                                <span class="info-value"><a id="card-website" target="_blank" rel="noopener">查看官網</a></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-info-section">
+                        <h4>一般回饋</h4>
+                        <div id="card-basic-cashback"></div>
+                    </div>
+                    
+                    <div class="card-info-section">
+                        <h4>指定通路回饋</h4>
+                        <div id="card-special-cashback"></div>
+                    </div>
+                    
+                    <div class="card-info-section" id="card-coupon-section">
+                        <h4>其他回饋活動</h4>
+                        <div id="card-coupon-cashback"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
+    
     <script src="script.js"></script>
     
     <!-- Firebase Configuration -->
