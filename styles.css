@@ -9,7 +9,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
     color: #333;
-    background: linear-gradient(135deg, #a7c7e7 0%, #87ceeb 100%);
+    background: linear-gradient(135deg, #4a90b8 0%, #2c5aa0 100%);
     min-height: 100vh;
     padding: 20px;
 }
@@ -25,7 +25,7 @@ body {
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #7db3e8 0%, #6bb6ff 100%);
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
     color: white;
     padding: 20px;
 }
@@ -65,7 +65,7 @@ header {
 
 .auth-btn.primary {
     background: white;
-    color: #6bb6ff;
+    color: #3b82f6;
     border-color: white;
 }
 
@@ -250,7 +250,7 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: linear-gradient(135deg, #7db3e8 0%, #6bb6ff 100%);
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -271,7 +271,7 @@ input[type="number"]:focus {
 
 .calculate-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(107, 182, 255, 0.3);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 }
 
 .calculate-btn:disabled {
@@ -279,6 +279,15 @@ input[type="number"]:focus {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+}
+
+.calculate-btn.compact {
+    width: auto;
+    padding: 16px 24px;
+    font-size: 16px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    height: 56px;
 }
 
 /* Results section */
@@ -291,6 +300,96 @@ input[type="number"]:focus {
     margin-bottom: 16px;
     color: #111827;
     font-size: 1.5rem;
+}
+
+/* Coupon results section */
+.coupon-results-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+
+.coupon-results-section h2 {
+    margin-bottom: 16px;
+    color: #111827;
+    font-size: 1.5rem;
+}
+
+.coupon-results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Coupon card styling */
+.coupon-item {
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    transition: all 0.3s ease;
+}
+
+.coupon-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.coupon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.coupon-merchant {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #92400e;
+}
+
+.coupon-rate {
+    background: #f59e0b;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.coupon-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.coupon-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 4px 0;
+}
+
+.coupon-detail-label {
+    font-size: 13px;
+    color: #92400e;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.coupon-detail-value {
+    font-size: 13px;
+    color: #451a03;
+    text-align: right;
+    flex: 1;
+    margin-left: 8px;
+}
+
+.coupon-card-name {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #92400e;
+    font-style: italic;
 }
 
 .results-container {
@@ -383,17 +482,11 @@ input[type="number"]:focus {
 }
 
 .matched-merchant strong {
-    color: #6bb6ff;
+    color: #3b82f6;
 }
 
-/* No results */
+/* No results styling */
 .no-results {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-}
-
-.no-results h3 {
     color: #374151;
     margin-bottom: 12px;
     font-size: 1.2rem;
@@ -452,6 +545,10 @@ input[type="number"]:focus {
     }
     
     .results-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .coupon-results-container {
         grid-template-columns: 1fr;
     }
     

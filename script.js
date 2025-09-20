@@ -51,6 +51,20 @@ let cardsData = {
             "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple 媒體服務", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "蝦皮", "momo", "pchome", "小樹購", "淘寶/天貓", "遠東sogo百貨", "遠東garden city", "太平洋百貨", "新光三越", "skm park", "bellavita", "微風廣場", "遠東百貨", "big city遠東巨城購物中心", "誠品生活", "環球購物中心", "citylink", "統一時代台北店", "台北101", "att 4 fun", "明曜百貨", "京站", "美麗華", "大葉高島屋", "比漾廣場", "大江國際購物中心", "中友百貨", "廣三sogo", "tiger city", "勤美誠品綠園道", "大魯閣新時代", "耐斯廣場", "南紡購物中心", "夢時代", "漢神百貨", "漢神巨蛋", "mitsui outlet park", "mitsui shopping park lalaport", "義大世界購物廣場", "華泰名品城", "義享天地", "麗寶outlet mall", "秀泰生活", "台茂購物中心", "新月廣場", "三創生活", "宏匯廣場", "noke忠泰樂生活", "uber eats", "foodpanda", "國內餐飲", "麥當勞", "康是美", "屈臣氏", "海外實體消費", "東京迪士尼樂園", "東京華納兄弟哈利波特影城", "大阪環球影城", "apple錢包指定交通卡", "uber", "grab", "台灣高鐵", "yoxi", "台灣大車隊", "irent", "和運租車", "格上租車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "阿聯酋航空", "酷航", "捷星航空", "日本航空", "ana全日空", "亞洲航空", "聯合航空", "新加坡航空", "越捷航空", "大韓航空", "達美航空", "土耳其航空", "卡達航空", "法國航空", "星野集團", "全球迪士尼飯店", "東橫inn", "國內飯店住宿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravel易遊網", "雄獅旅遊", "可樂旅遊", "東南旅遊", "五福旅遊", "燦星旅遊", "山富旅遊", "長汎假期", "鳳凰旅行社", "ezfly易飛網", "理想旅遊", "永利旅行社", "三賀旅行社", "家樂福", "lopia台灣", "全聯福利中心", "台灣中油-直營站", "7-11", "全家", "ikea", "linepay"
           ]
         }
+      ],
+      "couponCashbacks": [
+        {
+          "merchant": "全聯",
+          "rate": 10.0,
+          "conditions": "每月登錄",
+          "period": "2024/12/1-2024/12/31"
+        },
+        {
+          "merchant": "好市多",
+          "rate": 8.0,
+          "conditions": "週末限定，單筆滿1000元",
+          "period": "2024/11/15-2024/12/15"
+        }
       ]
     },
     {
@@ -115,6 +129,35 @@ let cardsData = {
           ]
         }
       ]
+    },
+    {
+      "id": "febank-lejia",
+      "name": "遠東商業銀行樂家+信用卡",
+      "basicCashback": 0.5,
+      "billingDate": "25日",
+      "cashbackRates": [
+        {
+          "rate": 3.0,
+          "cap": 15000,
+          "items": [
+            "全聯", "頂好", "松青", "jasons", "city super", "美廉社", "a-mart", "家樂福", "大潤發", "愛買", "好市多", "特力屋", "hola", "ikea", "宜得利", "生活工場", "無印良品", "麥當勞", "肯德基", "摩斯", "漢堡王", "拿坡里", "必勝客", "85度c", "星巴克", "路易莎", "cama", "怡客", "丹堤", "伯朗", "全家咖啡", "7-11咖啡", "屈臣氏", "康是美", "寶雅", "美華泰", "小三美日", "86小舖", "tomod's", "松本清", "大樹藥局", "啄木鳥", "丁丁藥局", "維康", "躍獅連鎖藥局", "新高橋藥局", "杏一", "uber eats", "foodpanda", "uber", "yoxi", "台灣大車隊", "linepay", "街口支付", "悠遊付", "全支付", "apple pay", "google pay", "samsung pay"
+          ]
+        }
+      ],
+      "couponCashbacks": [
+        {
+          "merchant": "家樂福",
+          "rate": 12.0,
+          "conditions": "週三限定，需登錄",
+          "period": "2024/12/1-2025/1/31"
+        },
+        {
+          "merchant": "全聯",
+          "rate": 15.0,
+          "conditions": "滿500元，每月限回饋500元",
+          "period": "2024/11/1-2024/12/31"
+        }
+      ]
     }
   ]
 };
@@ -126,6 +169,8 @@ const amountInput = document.getElementById('amount-input');
 const calculateBtn = document.getElementById('calculate-btn');
 const resultsSection = document.getElementById('results-section');
 const resultsContainer = document.getElementById('results-container');
+const couponResultsSection = document.getElementById('coupon-results-section');
+const couponResultsContainer = document.getElementById('coupon-results-container');
 const matchedItemDiv = document.getElementById('matched-item');
 
 // Initialize the application
@@ -327,6 +372,9 @@ function calculateCashback() {
     
     // Display results
     displayResults(results, amount, currentMatchedItem ? currentMatchedItem.originalItem : merchantValue, isBasicCashback);
+    
+    // Display coupon cashbacks
+    displayCouponCashbacks(amount, merchantValue);
 }
 
 // Calculate cashback for a specific card
@@ -400,6 +448,86 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     
     resultsSection.style.display = 'block';
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Display coupon cashback results
+function displayCouponCashbacks(amount, merchantValue) {
+    couponResultsContainer.innerHTML = '';
+    
+    // Get cards to check (user selected or all)
+    const cardsToCheck = currentUser ? 
+        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards;
+    
+    // Collect all coupon cashbacks that match the merchant
+    const matchingCoupons = [];
+    
+    cardsToCheck.forEach(card => {
+        if (card.couponCashbacks) {
+            card.couponCashbacks.forEach(coupon => {
+                const merchantLower = merchantValue.toLowerCase();
+                const couponMerchantLower = coupon.merchant.toLowerCase();
+                
+                // Check if merchant matches coupon merchant
+                if (merchantLower.includes(couponMerchantLower) || 
+                    couponMerchantLower.includes(merchantLower)) {
+                    matchingCoupons.push({
+                        ...coupon,
+                        cardName: card.name,
+                        cardId: card.id,
+                        potentialCashback: Math.floor(amount * coupon.rate / 100)
+                    });
+                }
+            });
+        }
+    });
+    
+    // If no matching coupons, hide the section
+    if (matchingCoupons.length === 0) {
+        couponResultsSection.style.display = 'none';
+        return;
+    }
+    
+    // Sort by cashback rate (highest first)
+    matchingCoupons.sort((a, b) => b.rate - a.rate);
+    
+    // Display coupon results
+    matchingCoupons.forEach(coupon => {
+        const couponElement = createCouponResultElement(coupon, amount);
+        couponResultsContainer.appendChild(couponElement);
+    });
+    
+    couponResultsSection.style.display = 'block';
+}
+
+// Create coupon result element
+function createCouponResultElement(coupon, amount) {
+    const couponDiv = document.createElement('div');
+    couponDiv.className = 'coupon-item fade-in';
+    
+    couponDiv.innerHTML = `
+        <div class="coupon-header">
+            <div class="coupon-merchant">${coupon.merchant}</div>
+            <div class="coupon-rate">${coupon.rate}%</div>
+        </div>
+        <div class="coupon-details">
+            <div class="coupon-detail-row">
+                <div class="coupon-detail-label">預估回饋:</div>
+                <div class="coupon-detail-value">NT$${coupon.potentialCashback.toLocaleString()}</div>
+            </div>
+            <div class="coupon-detail-row">
+                <div class="coupon-detail-label">回饋條件:</div>
+                <div class="coupon-detail-value">${coupon.conditions}</div>
+            </div>
+            <div class="coupon-detail-row">
+                <div class="coupon-detail-label">活動期間:</div>
+                <div class="coupon-detail-value">${coupon.period}</div>
+            </div>
+        </div>
+        <div class="coupon-card-name">${coupon.cardName}</div>
+    `;
+    
+    return couponDiv;
 }
 
 // Create card result element
