@@ -1566,7 +1566,6 @@ async function setupFeeWaiverStatus(cardId) {
                 checkboxLabel.style.color = '';
             }, 1000);
         }
-        };
     };
 }
 
