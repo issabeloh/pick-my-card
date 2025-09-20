@@ -51,12 +51,6 @@ let cardsData = {
       ],
       "couponCashbacks": [
         {
-          "merchant": "屈臣氏",
-          "rate": 1.2,
-          "conditions": "需註冊",
-          "period": "2025/07/01-2025/12/31"
-        },
-        {
           "merchant": "大丸福岡天神店",
           "rate": 4.5,
           "conditions": "無特殊條件",
@@ -205,12 +199,38 @@ let cardsData = {
       "id": "febank-lejia",
       "name": "遠東樂家+卡",
       "basicCashback": 0.5,
+      "overseasCashback": 2.5,
+      "exclusions": [
+        "遠東百貨", "遠東sogo百貨", "遠東巨城購物中心", "遠企購物中心", "代扣繳遠傳電信帳單", "愛買量販", "遠東香格里拉", "mega50", "city'super", "friday購物"
+      ],
+      "overseasExclusions": [
+        "歐洲實體商店", "海外交易清算手續費", "預借現金", "學雜費", "etoro", "境外投資交易平臺"
+      ],
       "cashbackRates": [
         {
-          "rate": 3.0,
-          "cap": 15000,
+          "rate": 10.0,
+          "cap": 5263,
+          "period": "2025/07/01-2026/03/31",
           "items": [
-            "全聯", "頂好", "松青", "jasons", "city super", "美廉社", "a-mart", "家樂福", "大潤發", "愛買", "好市多", "特力屋", "hola", "ikea", "宜得利", "生活工場", "無印良品", "麥當勞", "肯德基", "摩斯", "漢堡王", "拿坡里", "必勝客", "85度c", "星巴克", "路易莎", "cama", "怡客", "丹堤", "伯朗", "全家咖啡", "7-11咖啡", "屈臣氏", "康是美", "寶雅", "美華泰", "小三美日", "86小舖", "tomod's", "松本清", "大樹藥局", "啄木鳥", "丁丁藥局", "維康", "躍獅連鎖藥局", "新高橋藥局", "杏一", "uber eats", "foodpanda", "uber", "yoxi", "台灣大車隊", "linepay", "街口支付", "悠遊付", "全支付", "apple pay", "google pay", "samsung pay"
+            "寵物公園", "東森寵物", "魚中魚寵物水族", "大樹寵物", "凱朝寵物", "貓狗隊長", "毛孩市集", "金吉利寵物精品", "好狗命寵物幸福生活城", "好狗運貓狗福利中心", "金王子寵物", "愛貓園", "福壽寵物旗艦館", "動物醫院", "寵物醫院"
+          ]
+        },
+        {
+          "rate": 4.0,
+          "maxCashback": 200,
+          "period": "2025/07/01-2026/03/31",
+          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
+          "items": [
+            "國內餐廳", "大樹連鎖藥局", "杏一醫療用品", "維康醫療用品", "躍獅連鎖藥局", "媽咪樂居家服務", "潔客幫", "卡多摩嬰童館", "宜兒樂婦嬰用品", "營養銀行", "麗兒采家", "ikea", "環球購物中心", "秀泰生活", "故宮博物院", "統一時代百貨", "大葉高島屋", "美麗華百樂園", "citylink", "宏匯廣場", "ifg遠雄廣場", "新月廣場", "台茂購物中心", "大江國際購物中心", "桃知道geleven plaza", "小人國主題樂園", "六福村主題遊樂園", "大魯閣湳雅廣場", "尚順育樂世界", "台中lalaport", "麗寶樂園渡假區", "岡山樂購廣場", "南紡購物中心", "skmpark", "統一夢時代購物中心"
+          ]
+        },
+        {
+          "rate": 4.0,
+          "maxCashback": 200,
+          "period": "2025/07/01-2026/03/31",
+          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
+          "items": [
+            "愛買", "家樂福", "美廉社", "小北百貨", "大買家", "喜互惠", "聖德科斯", "棉花田", "永豐餘生技", "green&safe", "里仁", "台灣主婦聯盟", "健康食彩", "安麗", "葡眾", "美樂家", "國內加油", "gogoro", "tesla", "台灣大車隊", "yoxi", "uber", "goshare", "irent", "wemo scooter", "代扣遠傳電信", "代扣台灣大哥大帳單", "台灣虨屋", "tsutaya bookstore", "巨匠電腦", "聯成電腦", "朱宗慶打擊樂教室", "雲門舞蹈教室", "誠品書店", "誠品生活", "博客來網路商店", "金石堂書店", "健身工場", "worldgym", "beingspa", "beingsport", "curves可爾姿", "佐登妮絲"
           ]
         }
       ]
@@ -657,12 +677,12 @@ function createCouponResultElement(coupon, amount) {
     
     couponDiv.innerHTML = `
         <div class="coupon-header">
-            <div class="coupon-merchant">${coupon.merchant}</div>
+            <div class="coupon-merchant">${coupon.cardName}</div>
             <div class="coupon-rate">${coupon.rate}%</div>
         </div>
         <div class="coupon-details">
             <div class="coupon-detail-row">
-                <div class="coupon-detail-label">預估回饋:</div>
+                <div class="coupon-detail-label">回饋金額:</div>
                 <div class="coupon-detail-value">NT$${coupon.potentialCashback.toLocaleString()}</div>
             </div>
             <div class="coupon-detail-row">
@@ -674,7 +694,7 @@ function createCouponResultElement(coupon, amount) {
                 <div class="coupon-detail-value">${coupon.period}</div>
             </div>
         </div>
-        <div class="coupon-card-name">${coupon.cardName}</div>
+        <div class="coupon-card-name">匹配項目: ${coupon.merchant}</div>
     `;
     
     return couponDiv;
