@@ -53,85 +53,85 @@ let cardsData = {
         {
           "merchant": "大丸福岡天神店",
           "rate": 4.5,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/07/01-2025/12/31"
         },
         {
           "merchant": "MITSUI木更津港高臺",
           "rate": 6.3,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/07/07-2025/10/31"
         },
         {
           "merchant": "星巴克線上/自動儲值",
           "rate": 8.0,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/07/01-2025/12/31"
         },
         {
           "merchant": "昇恆昌",
           "rate": 3.0,
-          "conditions": "單筆消費滿NT$300",
+          "conditions": "需透過CUBE App領取優惠券，單筆消費滿NT$300",
           "period": "2025/09/17-2025/12/31"
         },
         {
           "merchant": "台北和逸飯店",
           "rate": 8.0,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/04/01-2025/09/30"
         },
         {
           "merchant": "大樹藥局",
           "rate": 5.0,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/09/01-2025/09/30"
         },
         {
           "merchant": "蘇軒飯店",
           "rate": 11.0,
-          "conditions": "無特殊條件",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/04/01-2025/09/30"
         },
         {
           "merchant": "全球連流車",
           "rate": 3.8,
-          "conditions": "透過CUBE App完成領取",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/01/01-2025/12/31"
         },
         {
           "merchant": "桃園捷運機場",
           "rate": 5.0,
-          "conditions": "透過CUBE App完成領取",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/07/01-2025/09/30"
         },
         {
           "merchant": "Hotels.com",
           "rate": 5.0,
-          "conditions": "透過CUBE App完成領取優惠券",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/03/15-2025/12/31"
         },
         {
           "merchant": "Expedia",
           "rate": 5.0,
-          "conditions": "透過CUBE App完成領取優惠券",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2024/08/31-2025/12/31"
         },
         {
           "merchant": "屈臣氏官方網路商店",
           "rate": 2.0,
-          "conditions": "需註冊",
+          "conditions": "需透過CUBE App領取優惠券，需註冊",
           "period": "2025/07/01-2025/12/31"
         },
         {
           "merchant": "韓國實體消費",
           "rate": 5.0,
-          "conditions": "實體NT$50,000或網路NT$2,000消費門檧",
+          "conditions": "需透過CUBE App領取優惠券，實體NT$50,000或網路NT$2,000消費門檧",
           "period": "2025/09/17-2025/12/31"
         },
         {
           "merchant": "CASETIFY台灣官網",
           "rate": 3.5,
-          "conditions": "透過CUBE App完成領取",
+          "conditions": "需透過CUBE App領取優惠券",
           "period": "2025/09/11-2025/11/30"
         }
       ]
@@ -216,9 +216,17 @@ let cardsData = {
           ]
         },
         {
+          "rate": 2.5,
+          "cap": null,
+          "items": [
+            "海外"
+          ]
+        },
+        {
           "rate": 4.0,
-          "maxCashback": 200,
+          "cap": 5714,
           "period": "2025/07/01-2026/03/31",
+          "category": "大小安心刷",
           "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
           "items": [
             "國內餐廳", "大樹連鎖藥局", "杏一醫療用品", "維康醫療用品", "躍獅連鎖藥局", "媽咪樂居家服務", "潔客幫", "卡多摩嬰童館", "宜兒樂婦嬰用品", "營養銀行", "麗兒采家", "ikea", "環球購物中心", "秀泰生活", "故宮博物院", "統一時代百貨", "大葉高島屋", "美麗華百樂園", "citylink", "宏匯廣場", "ifg遠雄廣場", "新月廣場", "台茂購物中心", "大江國際購物中心", "桃知道geleven plaza", "小人國主題樂園", "六福村主題遊樂園", "大魯閣湳雅廣場", "尚順育樂世界", "台中lalaport", "麗寶樂園渡假區", "岡山樂購廣場", "南紡購物中心", "skmpark", "統一夢時代購物中心"
@@ -226,8 +234,9 @@ let cardsData = {
         },
         {
           "rate": 4.0,
-          "maxCashback": 200,
+          "cap": 5714,
           "period": "2025/07/01-2026/03/31",
+          "category": "生活禮遇",
           "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
           "items": [
             "愛買", "家樂福", "美廉社", "小北百貨", "大買家", "喜互惠", "聖德科斯", "棉花田", "永豐餘生技", "green&safe", "里仁", "台灣主婦聯盟", "健康食彩", "安麗", "葡眾", "美樂家", "國內加油", "gogoro", "tesla", "台灣大車隊", "yoxi", "uber", "goshare", "irent", "wemo scooter", "代扣遠傳電信", "代扣台灣大哥大帳單", "台灣虨屋", "tsutaya bookstore", "巨匠電腦", "聯成電腦", "朱宗慶打擊樂教室", "雲門舞蹈教室", "誠品書店", "誠品生活", "博客來網路商店", "金石堂書店", "健身工場", "worldgym", "beingspa", "beingsport", "curves可爾姿", "佐登妮絲"
@@ -264,9 +273,9 @@ let cardsData = {
     {
       "id": "hsbc-liveplus",
       "name": "滙豐Live+卡",
-      "basicCashback": 0.88,
-      "autoBillCashback": 1.0,
-      "autoBillCap": 20000,
+      "basicCashback": 1.88,
+      "autoBillCashback": 0,
+      "autoBillCap": 0,
       "overseasBonusRate": 1.0,
       "overseasBonusCap": 20000,
       "basicPeriod": "2025/07/01-2025/12/31",
@@ -540,6 +549,7 @@ function calculateCardCashback(card, searchTerm, amount) {
     let bestRate = 0;
     let applicableCap = null;
     let matchedItem = null;
+    let matchedCategory = null;
     
     for (const rateGroup of card.cashbackRates) {
         for (const item of rateGroup.items) {
@@ -549,6 +559,7 @@ function calculateCardCashback(card, searchTerm, amount) {
                     bestRate = rateGroup.rate;
                     applicableCap = rateGroup.cap;
                     matchedItem = item;
+                    matchedCategory = rateGroup.category || null;
                 }
             }
         }
@@ -556,40 +567,42 @@ function calculateCardCashback(card, searchTerm, amount) {
     
     let cashbackAmount = 0;
     let effectiveAmount = amount;
+    let totalRate = bestRate;
     
     if (bestRate > 0) {
-        // Apply cap if exists
+        // Calculate special rate cashback
+        let specialCashback = 0;
+        let effectiveSpecialAmount = amount;
+        
         if (applicableCap && amount > applicableCap) {
-            // Special rate for capped amount
-            const cappedCashback = Math.floor(applicableCap * bestRate / 100);
-            // Basic rate for remaining amount  
-            const remainingAmount = amount - applicableCap;
-            let basicRate = card.basicCashback;
-            
-            // Handle complex cards like HSBC Live+ with multiple basic rates
-            if (card.autoBillCashback && card.autoBillCap) {
-                const autoBillAmount = Math.min(remainingAmount, card.autoBillCap);
-                const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
-                const normalAmount = remainingAmount - autoBillAmount;
-                const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
-                const basicCashback = autoBillCashback + normalCashback;
-                
-                cashbackAmount = cappedCashback + basicCashback;
-            } else {
-                const basicCashback = Math.floor(remainingAmount * basicRate / 100);
-                cashbackAmount = cappedCashback + basicCashback;
-            }
-            effectiveAmount = applicableCap; // Keep this for display purposes
-        } else {
-            cashbackAmount = Math.floor(effectiveAmount * bestRate / 100);
+            effectiveSpecialAmount = applicableCap;
         }
+        
+        specialCashback = Math.floor(effectiveSpecialAmount * bestRate / 100);
+        
+        // Add basic cashback for the same amount (layered rewards)
+        let basicCashback = Math.floor(effectiveSpecialAmount * card.basicCashback / 100);
+        
+        // Handle remaining amount if capped
+        let remainingCashback = 0;
+        if (applicableCap && amount > applicableCap) {
+            const remainingAmount = amount - applicableCap;
+            remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+        }
+        
+        cashbackAmount = specialCashback + basicCashback + remainingCashback;
+        totalRate = bestRate + card.basicCashback;
+        effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
     return {
-        rate: bestRate,
+        rate: totalRate,
+        specialRate: bestRate,
+        basicRate: card.basicCashback,
         cashbackAmount: cashbackAmount,
         cap: applicableCap,
         matchedItem: matchedItem,
+        matchedCategory: matchedCategory,
         effectiveAmount: effectiveAmount
     };
 }
@@ -710,6 +723,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         `NT$${result.cashbackAmount.toLocaleString()}` : 
                         '無回饋';
     
+    // Format rate display for complex cards
+    let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
+    if (result.specialRate && result.basicRate && result.specialRate > 0) {
+        rateDisplay = `${result.specialRate}%+${result.basicRate}%`;
+    }
+    
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name">${result.card.name}</div>
@@ -718,7 +737,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${result.rate > 0 ? `${result.rate}%` : '0%'}</div>
+                <div class="detail-value">${rateDisplay}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
@@ -735,7 +754,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
         ` : (result.matchedItem ? `
             <div class="matched-merchant">
-                匹配項目: <strong>${result.matchedItem}</strong>
+                匹配項目: <strong>${result.matchedItem}</strong>${result.matchedCategory ? ` (類別: ${result.matchedCategory})` : ''}
             </div>
         ` : `
             <div class="matched-merchant">
