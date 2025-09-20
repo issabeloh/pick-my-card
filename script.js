@@ -139,6 +139,7 @@ function handleMerchantInput() {
 function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
     
+    const searchLower = searchTerm.toLowerCase().trim();
     let allMatches = [];
     
     // Collect all possible matches
@@ -146,14 +147,18 @@ function findMatchingItem(searchTerm) {
         for (const rateGroup of card.cashbackRates) {
             for (const item of rateGroup.items) {
                 const itemLower = item.toLowerCase();
-                const searchLower = searchTerm.toLowerCase();
                 
+                // Only add if there's a match
                 if (itemLower.includes(searchLower) || searchLower.includes(itemLower)) {
                     allMatches.push({
                         originalItem: item,
                         searchTerm: searchTerm,
                         itemLower: itemLower,
-                        searchLower: searchLower
+                        searchLower: searchLower,
+                        // Calculate match quality
+                        isExactMatch: itemLower === searchLower,
+                        isFullContainment: itemLower.includes(searchLower),
+                        length: itemLower.length
                     });
                 }
             }
@@ -162,30 +167,36 @@ function findMatchingItem(searchTerm) {
     
     if (allMatches.length === 0) return null;
     
-    // Prioritize exact matches
-    const exactMatches = allMatches.filter(match => 
-        match.itemLower === match.searchLower
-    );
-    
-    if (exactMatches.length > 0) {
-        return exactMatches[0];
+    // Remove duplicates (same item appearing in multiple cards)
+    const uniqueMatches = [];
+    const seenItems = new Set();
+    for (const match of allMatches) {
+        if (!seenItems.has(match.itemLower)) {
+            seenItems.add(match.itemLower);
+            uniqueMatches.push(match);
+        }
     }
     
-    // If no exact match, prioritize shorter items (more specific)
-    // This helps "uber" not match to "uber eats"
-    allMatches.sort((a, b) => {
-        // First priority: items that are contained within search term
-        const aContainedInSearch = a.searchLower.includes(a.itemLower);
-        const bContainedInSearch = b.searchLower.includes(b.itemLower);
+    // Sort by match quality
+    uniqueMatches.sort((a, b) => {
+        // 1. Exact matches first
+        if (a.isExactMatch && !b.isExactMatch) return -1;
+        if (!a.isExactMatch && b.isExactMatch) return 1;
         
-        if (aContainedInSearch && !bContainedInSearch) return -1;
-        if (!aContainedInSearch && bContainedInSearch) return 1;
+        // 2. Full containment (search term fully contained in item)
+        if (a.isFullContainment && !b.isFullContainment) return -1;
+        if (!a.isFullContainment && b.isFullContainment) return 1;
         
-        // Second priority: shorter items (more specific)
-        return a.itemLower.length - b.itemLower.length;
+        // 3. For non-exact matches, prefer shorter items (more specific)
+        if (!a.isExactMatch && !b.isExactMatch) {
+            return a.length - b.length;
+        }
+        
+        return 0;
     });
     
-    return allMatches[0];
+    // Return the best match
+    return uniqueMatches[0];
 }
 
 // Show matched item
@@ -278,10 +289,16 @@ function calculateCashback() {
                     basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
                 }
                 
+                // Determine cap for display
+                let displayCap = null;
+                if (card.domesticBonusRate && card.domesticBonusCap) {
+                    displayCap = card.domesticBonusCap;
+                }
+                
                 return {
                     rate: effectiveRate,
                     cashbackAmount: basicCashbackAmount,
-                    cap: null,
+                    cap: displayCap,
                     matchedItem: null,
                     effectiveAmount: amount,
                     card: card,
@@ -315,10 +332,16 @@ function calculateCashback() {
                 basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
             }
             
+            // Determine cap for display
+            let displayCap = null;
+            if (card.domesticBonusRate && card.domesticBonusCap) {
+                displayCap = card.domesticBonusCap;
+            }
+            
             return {
                 rate: effectiveRate,
                 cashbackAmount: basicCashbackAmount,
-                cap: null,
+                cap: displayCap,
                 matchedItem: null,
                 effectiveAmount: amount,
                 card: card,
@@ -354,15 +377,8 @@ function calculateCardCashback(card, searchTerm, amount) {
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
         const levelSettings = card.levelSettings[savedLevel];
         
-        // Check if merchant matches special items - use exact match first
+        // Check if merchant matches special items - ONLY use exact match
         let matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === searchTerm);
-        if (!matchedSpecialItem) {
-            // If no exact match, use the best partial match
-            matchedSpecialItem = card.specialItems.find(item => 
-                item.toLowerCase().includes(searchTerm) || 
-                searchTerm.includes(item.toLowerCase())
-            );
-        }
         
         if (matchedSpecialItem) {
             bestRate = levelSettings.specialRate;
@@ -376,32 +392,14 @@ function calculateCardCashback(card, searchTerm, amount) {
         }
         applicableCap = null; // CUBE card has no cap
     } else {
-        // Improved logic for other cards - prioritize exact matches
+        // ONLY use exact matches for other cards
         for (const rateGroup of card.cashbackRates) {
-            // First, look for exact matches
             let exactMatch = rateGroup.items.find(item => item.toLowerCase() === searchTerm);
             if (exactMatch && rateGroup.rate > bestRate) {
                 bestRate = rateGroup.rate;
                 applicableCap = rateGroup.cap;
                 matchedItem = exactMatch;
                 matchedCategory = rateGroup.category || null;
-            }
-        }
-        
-        // If no exact match found, use partial matching
-        if (bestRate === 0) {
-            for (const rateGroup of card.cashbackRates) {
-                for (const item of rateGroup.items) {
-                    if (item.toLowerCase().includes(searchTerm) || 
-                        searchTerm.includes(item.toLowerCase())) {
-                        if (rateGroup.rate > bestRate) {
-                            bestRate = rateGroup.rate;
-                            applicableCap = rateGroup.cap;
-                            matchedItem = item;
-                            matchedCategory = rateGroup.category || null;
-                        }
-                    }
-                }
             }
         }
     }
@@ -645,7 +643,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
         ` : (result.matchedItem ? `
             <div class="matched-merchant">
-                匹配項目: <strong>${result.matchedItem}</strong>${result.matchedCategory ? ` (類別: ${result.matchedCategory})` : ''}
+                匹配項目: <strong>${result.matchedItem}</strong>${result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (類別: ${result.matchedCategory})` : ''}
             </div>
         ` : `
             <div class="matched-merchant">

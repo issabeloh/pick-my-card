@@ -1329,16 +1329,28 @@ input[type="number"]:focus {
     display: none;
 }
 
-/* 年費和免年費條件在同一列 */
+/* 年費訊息合併顯示 */
 .fee-annual-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
 }
 
-.fee-annual-item, .fee-waiver-item {
+.fee-combined-info {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
+}
+
+.fee-waiver-text {
+    margin-top: 6px;
+    font-style: italic;
+}
+
+.fee-waiver-text::before {
+    content: '免年費條件: ';
+    font-weight: 600;
+    color: #374151;
+    font-style: normal;
 }
 
