@@ -41,7 +41,7 @@ let cardsData = {
           "rate": 3.5,
           "cap": 20000,
           "items": [
-            "linepay", "街口", "悠遊付", "全盈支付", "全支付", "橘子支付", "momo購物網", "蝦皮購物", "淘寶", "coupang", "東森購物", "博客來", "新光三越", "台北101", "華泰名品城", "三井outlet", "京站", "美麗華", "秀泰生活", "lalaport", "統領廣場", "采盟", "昇恆昌", "太平洋百貨", "統一時代百貨", "遠東百貨", "遠東sogo", "遠東巨城", "大遠百", "漢神百貨", "微風廣場", "微風信義", "微風南京", "微風南山", "微風台北車站", "誠品生活", "誠品線上", "誠品書店", "家樂福", "屈臣氏", "特力屋", "hola", "hoi好好生活", "uniqlo", "net", "大樹藥局", "丁丁藥妝", "uber eats", "ubereats", "foodpanda", "eztable", "王品瘋美食", "摩斯", "路易莎", "饗食天堂", "果然匯", "加集", "開飯", "響泰多", "真珠", "瓦城", "非常泰", "時時香", "1010湘", "大心", "乾杯燒肉居酒屋", "老乾杯", "漢來海港", "島語", "漢來蔬食", "漢來名人坊", "東方樓", "漢來上海湯包", "溜溜酸菜", "魚專賣店", "上菜片皮鴨", "翠園", "漢來軒", "焰", "pavo", "精瀲海鮮火鍋", "日本料理弁慶", "福園台菜海鮮", "日日烘焙坊", "糕餅小舖", "台北漢來大廳酒廊", "hi lai cafe", "台灣中油", "台灣大車隊", "台鐵", "高鐵", "yoxi", "桃園機場捷運", "中華航空", "長榮航空", "日本航空", "台灣虎航", "樂桃航空", "酷航", "立榮航空", "華信航空", "trip.com", "booking.com", "hotels.com", "asiayo", "expedia", "kkday", "klook", "雄獅旅", "可樂旅", "東南旅行社", "apple直營", "小米台灣", "全國電子", "燦坤", "迪卡儂", "寵物公園", "youbike2.0", "youbike 2.0"
+            "linepay", "街口", "悠遊付", "全盈支付", "全支付", "橘子支付", "momo購物網", "蝦皮購物", "淘寶", "coupang", "東森購物", "博客來", "新光三越", "台北101", "華泰名品城", "三井outlet", "京站", "美麗華", "秀泰生活", "lalaport", "統領廣場", "采盟", "昇恆昌", "太平洋百貨", "統一時代百貨", "遠東百貨", "遠東sogo", "遠東巨城", "大遠百", "漢神百貨", "微風廣場", "微風信義", "微風南京", "微風南山", "微風台北車站", "誠品生活", "誠品線上", "誠品書店", "家樂福", "屈臣氏", "特力屋", "hola", "hoi好好生活", "uniqlo", "net", "大樹藥局", "丁丁藥妝", "uber eats", "ubereats", "foodpanda", "eztable", "王品瘋美食", "摩斯", "路易莎", "饗食天堂", "果然匯", "加集", "開飯", "響泰多", "真珠", "瓦城", "非常泰", "時時香", "1010湘", "大心", "乾杯燒肉居酒屋", "老乾杯", "漢來海港", "島語", "漢來蔬食", "漢來名人坊", "東方樓", "漢來上海湯包", "溜溜酸菜", "魚專賣店", "上菜片皮鴨", "翠園", "漢來軒", "焰", "pavo", "精瀲海鮮火鍋", "日本料理弁慶", "福園台菜海鮮", "日日烘焙坊", "糕餅小舖", "台北漢來大廳酒廊", "hi lai cafe", "台灣中油", "台灣大車隊", "台鐵", "高鐵", "yoxi", "桃園機場捷運", "中華航空", "長榮航空", "日本航空", "台灣虎航", "樂桃航空", "酷航", "立榮航空", "華信航空", "trip.com", "booking.com", "hotels.com", "asiayo", "expedia", "kkday", "klook", "雄獅旅", "可樂旅", "東南旅行社", "apple直營", "小米台灣", "全國電子", "燦坤", "迪卡儂", "寵物公園", "youbike 2.0"
           ]
         }
       ]
@@ -54,15 +54,25 @@ let cardsData = {
       "annualFee": "首年免年費，次年起年費NT$1,800",
       "feeWaiver": "申辦電子帳單、前年度消費12次、前一年累積消費達18萬(三擇一)即可減免年費",
       "website": "https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube",
-      "cashbackRates": [
-        {
-          "rate": 2.0,
-          "cap": null,
-          "items": [
-            "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple 媒體服務", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "蝦皮", "momo", "pchome", "小樹購", "淘寶/天貓", "遠東sogo百貨", "遠東garden city", "太平洋百貨", "新光三越", "skm park", "bellavita", "微風廣場", "遠東百貨", "big city遠東巨城購物中心", "誠品生活", "環球購物中心", "citylink", "統一時代台北店", "台北101", "att 4 fun", "明曜百貨", "京站", "美麗華", "大葉高島屋", "比漾廣場", "大江國際購物中心", "中友百貨", "廣三sogo", "tiger city", "勤美誠品綠園道", "大魯閣新時代", "耐斯廣場", "南紡購物中心", "夢時代", "漢神百貨", "漢神巨蛋", "mitsui outlet park", "mitsui shopping park lalaport", "義大世界購物廣場", "華泰名品城", "義享天地", "麗寶outlet mall", "秀泰生活", "台茂購物中心", "新月廣場", "三創生活", "宏匯廣場", "noke忠泰樂生活", "uber eats", "foodpanda", "國內餐飲", "麥當勞", "康是美", "屈臣氏", "海外實體消費", "東京迪士尼樂園", "東京華納兄弟哈利波特影城", "大阪環球影城", "apple錢包指定交通卡", "uber", "grab", "台灣高鐵", "yoxi", "台灣大車隊", "irent", "和運租車", "格上租車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "阿聯酋航空", "酷航", "捷星航空", "日本航空", "ana全日空", "亞洲航空", "聯合航空", "新加坡航空", "越捷航空", "大韓航空", "達美航空", "土耳其航空", "卡達航空", "法國航空", "星野集團", "全球迪士尼飯店", "東橫inn", "國內飯店住宿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravel易遊網", "雄獅旅遊", "可樂旅遊", "東南旅遊", "五福旅遊", "燦星旅遊", "山富旅遊", "長汎假期", "鳳凰旅行社", "ezfly易飛網", "理想旅遊", "永利旅行社", "三賀旅行社", "家樂福", "lopia台灣", "全聯福利中心", "台灣中油-直營站", "7-11", "全家", "ikea", "linepay"
-          ]
+      "hasLevels": true,
+      "levelSettings": {
+        "level1": {
+          "specialRate": 2.0,
+          "generalRate": 2.0
+        },
+        "level2": {
+          "specialRate": 3.0,
+          "generalRate": 2.0
+        },
+        "level3": {
+          "specialRate": 3.3,
+          "generalRate": 2.0
         }
+      },
+      "specialItems": [
+        "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple 媒體服務", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "蝦皮購物", "momo購物網", "pchome 24h購物", "小樹購", "coupang 酷澎", "淘寶/天貓", "遠東sogo百貨", "遠東garden city", "太平洋百貨", "新光三越", "skm park", "bellavita", "微風廣場", "遠東百貨", "big city遠東巨城購物中心", "誠品生活", "環球購物中心", "citylink", "統一時代台北店", "台北101", "att 4 fun", "明曜百貨", "京站", "美麗華", "大葉高島屋", "比漾廣場", "大江國際購物中心", "中友百貨", "廣三sogo", "tiger city", "勤美誠品綠園道", "大魯閣新時代", "耐斯廣場", "南紡購物中心", "夢時代", "漢神百貨", "漢神巨蛋", "mitsui outlet park", "mitsui shopping park lalaport", "義大世界購物廣場", "華泰名品城", "義享天地", "麗寶outlet mall", "秀泰生活", "台茂購物中心", "新月廣場", "三創生活", "宏匯廣場", "noke忠泰樂生活", "uber eats", "foodpanda", "國內餐飲", "麥當勞", "康是美", "屈臣氏", "大阪萬國博覽會官網", "surutto qrtto官網", "大阪美食expo", "海外實體消費", "東京迪士尼樂園", "東京華納兄弟哈利波特影城", "大阪環球影城", "apple錢包指定交通卡", "uber", "grab", "台灣高鐵", "yoxi", "台灣大車隊", "irent", "和運租車", "格上租車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "阿聯酋航空", "酷航", "捷星航空", "日本航空", "ana全日空", "亞洲航空", "聯合航空", "新加坡航空", "越捷航空", "大韓航空", "達美航空", "土耳其航空", "卡達航空", "法國航空", "星野集團", "全球迪士尼飯店", "東橫 inn", "國內飯店住宿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravel易遊網", "雄獅旅遊", "可樂旅遊", "東南旅遊", "五福旅遊", "燦星旅遊", "山富旅遊", "長汎假期", "鳳凰旅行社", "ezfly易飛網", "理想旅遊", "永利旅行社", "三賀旅行社", "家樂福", "lopia台灣", "全聯福利中心", "台灣中油直營站", "7-11", "全家", "ikea", "linepay"
       ],
+      "cashbackRates": [
       "couponCashbacks": [
         {
           "merchant": "大丸福岡天神店",
@@ -164,7 +174,7 @@ let cardsData = {
           "rate": 1.0,
           "cap": 5000,
           "period": "2025/07/01-2025/12/31",
-          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圅10次，並設定永豐帳戶自動扣繳信用卡帳款",
+          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圈１０次，並設定永豐帳戶自動扣繳信用卡帳款",
           "items": [
             "一般消費"
           ]
@@ -173,7 +183,7 @@ let cardsData = {
           "rate": 4.0,
           "cap": 7500,
           "period": "2025/07/01-2025/12/31",
-          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圅10次，並設定永豐帳戶自動扣繳信用卡帳款",
+          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圈１０次，並設定永豐帳戶自動扣繳信用卡帳款",
           "items": [
             "world gym", "健身工廠", "true yoga", "curves", "運動中心", "anytime fitness", "屈臣氏", "康是美", "寶雅", "好心肝", "杏一", "大樹藥局", "丁丁藥局", "新高橋藥局", "app store", "google play", "nintendo", "playstation", "steam", "apple pay", "google pay", "samsung pay", "garmin pay"
           ]
@@ -193,7 +203,7 @@ let cardsData = {
           "rate": 5.0,
           "cap": 7500,
           "items": [
-            "悠遊卡自動加值", "愛買", "家樂福", "大潤發", "uniqlo", "h&m", "zara", "gu", "gap", "net", "新光影城", "威秀", "喜樂時代", "藏壽司", "mos", "築間", "義美食品", "馬可先生", "寬心園", "miacucina", "小小樹食", "陽明春天", "屋馬", "熱浪島", "草蕲宴", "原素食府", "herbivore", "印度蕲食", "養心茶樓", "山海樓", "qburger", "麥味登", "一之軒", "捷絲旅", "承億", "煙波", "翰品", "希爾頓", "國賓", "福容", "新驛", "圓山", "城市商旅", "凱薩", "老爺", "kktix", "拓元售票", "全國電子", "studioa", "straighta", "o'right", "aesop", "10/10 hope", "主婦聯盟", "里仁", "棉花田", "聖德科斯", "義美生機", "統一生機", "綠藤生機", "茶籽堂", "艾瑪絲", "長康生技", "營養師輕食", "安永鮮物", "野菜村", "無毒的家", "無毒農", "健康食彩", "直接跟農夫買", "irent", "zipcar", "gosmart", "goshare", "gogoro", "wemo", "line go", "tesla 充電", "裕電促電", "evalue", "evoasis", "sharkparking", "zocha", "begin", "星舟快充", "emoving", "emoving 電池", "悠遊卡加值", "悠遊卡 自動加值"
+            "悠遊卡自動加值", "愛買", "家樂福", "大潤發", "uniqlo", "h&m", "zara", "gu", "gap", "net", "新光影城", "威秀", "喜樂時代", "藏壽司", "mos", "築間", "義美食品", "馬可先生", "寬心園", "miacucina", "小小樹食", "陽明春天", "屋馬", "熱浪島", "草蕲宴", "原素食府", "herbivore", "印度蕲食", "養心茶樓", "山海樓", "qburger", "麥味登", "一之軒", "捷絲旅", "承億", "煙波", "翰品", "希爾頓", "國賓", "福容", "新驛", "圓山", "城市商旅", "凱薩", "老爺", "kktix", "拓元售票", "全國電子", "studioa", "straighta", "o'right", "aesop", "10/10 hope", "主婦聯盟", "里仁", "棉花田", "聖德科斯", "義美生機", "統一生機", "綠藤生機", "茶籽堂", "艾瑪絲", "長康生技", "營養師輕食", "安永鮮物", "野菜村", "無毒的家", "無毒農", "健康食彩", "直接跟農夫買", "irent", "zipcar", "gosmart", "goshare", "gogoro", "wemo", "line go", "tesla 充電", "裕電促電", "evalue", "evoasis", "sharkparking", "zocha", "begin", "星舟快充", "emoving", "emoving 電池"
           ]
         }
       ]
@@ -651,15 +661,43 @@ function calculateCardCashback(card, searchTerm, amount) {
     let matchedItem = null;
     let matchedCategory = null;
     
-    for (const rateGroup of card.cashbackRates) {
-        for (const item of rateGroup.items) {
-            if (item.toLowerCase().includes(searchTerm) || 
-                searchTerm.includes(item.toLowerCase())) {
-                if (rateGroup.rate > bestRate) {
-                    bestRate = rateGroup.rate;
-                    applicableCap = rateGroup.cap;
-                    matchedItem = item;
-                    matchedCategory = rateGroup.category || null;
+    // Handle CUBE card with levels
+    if (card.hasLevels && card.id === 'cathay-cube') {
+        const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
+        const levelSettings = card.levelSettings[savedLevel];
+        
+        // Check if merchant matches special items
+        const isSpecialItem = card.specialItems.some(item => 
+            item.toLowerCase().includes(searchTerm) || 
+            searchTerm.includes(item.toLowerCase())
+        );
+        
+        if (isSpecialItem) {
+            bestRate = levelSettings.specialRate;
+            matchedItem = card.specialItems.find(item => 
+                item.toLowerCase().includes(searchTerm) || 
+                searchTerm.includes(item.toLowerCase())
+            );
+            matchedCategory = '玩數位、樂饗購、趣旅行';
+        } else {
+            // Other merchants get general rate
+            bestRate = levelSettings.generalRate;
+            matchedItem = '其他通路';
+            matchedCategory = '其他通路';
+        }
+        applicableCap = null; // CUBE card has no cap
+    } else {
+        // Original logic for other cards
+        for (const rateGroup of card.cashbackRates) {
+            for (const item of rateGroup.items) {
+                if (item.toLowerCase().includes(searchTerm) || 
+                    searchTerm.includes(item.toLowerCase())) {
+                    if (rateGroup.rate > bestRate) {
+                        bestRate = rateGroup.rate;
+                        applicableCap = rateGroup.cap;
+                        matchedItem = item;
+                        matchedCategory = rateGroup.category || null;
+                    }
                 }
             }
         }
@@ -1222,11 +1260,33 @@ function showCardDetail(cardId) {
     
     basicCashbackDiv.innerHTML = basicContent;
     
+    // Handle CUBE card level selection
+    const cubeLevelSection = document.getElementById('cube-level-section');
+    const cubeLevelSelect = document.getElementById('cube-level-select');
+    
+    if (card.hasLevels && card.id === 'cathay-cube') {
+        cubeLevelSection.style.display = 'block';
+        
+        // Load saved level or default to level1
+        const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
+        cubeLevelSelect.value = savedLevel;
+        
+        // Add change listener
+        cubeLevelSelect.onchange = function() {
+            localStorage.setItem(`cubeLevel-${card.id}`, this.value);
+            updateCubeSpecialCashback(card);
+        };
+    } else {
+        cubeLevelSection.style.display = 'none';
+    }
+    
     // Update special cashback
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     let specialContent = '';
     
-    if (card.cashbackRates && card.cashbackRates.length > 0) {
+    if (card.hasLevels && card.id === 'cathay-cube') {
+        specialContent = generateCubeSpecialContent(card);
+    } else if (card.cashbackRates && card.cashbackRates.length > 0) {
         card.cashbackRates.forEach((rate, index) => {
             // 跳過需要隱藏的項目
             if (rate.hideInDisplay) {
@@ -1357,6 +1417,50 @@ function showCardDetail(cardId) {
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
+}
+
+// Generate CUBE special content based on selected level
+function generateCubeSpecialContent(card) {
+    const selectedLevel = document.getElementById('cube-level-select').value;
+    const levelSettings = card.levelSettings[selectedLevel];
+    let content = '';
+    
+    // Special categories (玩數位、樂饗購、趣旅行)
+    content += `<div class="cashback-detail-item">`;
+    content += `<div class="cashback-rate">${levelSettings.specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
+    content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+    
+    const merchantsList = card.specialItems.join('、');
+    if (card.specialItems.length <= 30) {
+        content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+    } else {
+        const initialList = card.specialItems.slice(0, 30).join('、');
+        const fullList = merchantsList;
+        const merchantsId = `cube-merchants-${selectedLevel}`;
+        const showAllId = `cube-show-all-${selectedLevel}`;
+        
+        content += `<div class="cashback-merchants">`;
+        content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+        content += `</div>`;
+    }
+    content += `</div>`;
+    
+    // Other categories (2%)
+    content += `<div class="cashback-detail-item">`;
+    content += `<div class="cashback-rate">${levelSettings.generalRate}% 回饋 (其他通路)</div>`;
+    content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+    content += `<div class="cashback-merchants">適用通路: 除上述特殊通路外的所有消費</div>`;
+    content += `</div>`;
+    
+    return content;
+}
+
+// Update CUBE special cashback when level changes
+function updateCubeSpecialCashback(card) {
+    const specialCashbackDiv = document.getElementById('card-special-cashback');
+    const newContent = generateCubeSpecialContent(card);
+    specialCashbackDiv.innerHTML = newContent;
 }
 
 // 切換通路顯示展開/收起
