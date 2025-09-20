@@ -155,13 +155,25 @@ let cardsData = {
       "name": "永豐Sport卡",
       "fullName": "永豐銀行Sport信用卡",
       "basicCashback": 1.0,
+      "basicConditions": "汗水不白流APP有運動數據",
       "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請信用卡電子化帳單（電子帳單/行動帳單）且取消實體帳單，或：(鈷金卡Visa/Mastercard)前一年刷敥3.6萬元或12筆消費；(御璽卡Titanium/Signature)前一年刷斗12萬元或12筆消費",
+      "feeWaiver": "申請信用卡電子化帳單（電子帳單/行動帳單）且取消實體帳單，或(鑽金卡Visa/Mastercard)前一年刷滿3.6萬元或12筆消費；(御璽卡Titanium/Signature)前一年刷滿12萬元或12筆消費",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/sportcard.html",
       "cashbackRates": [
         {
-          "rate": 7.0,
+          "rate": 1.0,
+          "cap": 5000,
+          "period": "2025/07/01-2025/12/31",
+          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圅10次，並設定永豐帳戶自動扣繳信用卡帳款",
+          "items": [
+            "一般消費"
+          ]
+        },
+        {
+          "rate": 4.0,
           "cap": 7500,
+          "period": "2025/07/01-2025/12/31",
+          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圅10次，並設定永豐帳戶自動扣繳信用卡帳款",
           "items": [
             "world gym", "健身工廠", "true yoga", "curves", "運動中心", "anytime fitness", "屈臣氏", "康是美", "寶雅", "好心肝", "杏一", "大樹藥局", "丁丁藥局", "新高橋藥局", "app store", "google play", "nintendo", "playstation", "steam", "apple pay", "google pay", "samsung pay", "garmin pay"
           ]
@@ -174,14 +186,14 @@ let cardsData = {
       "fullName": "永豐銀行Green信用卡",
       "basicCashback": 1.0,
       "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請電子帳單或前一年刷斗15萬元或12筆消費",
+      "feeWaiver": "申請電子帳單或前一年刷滿15萬元或12筆消費",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/cashcard.html",
       "cashbackRates": [
         {
           "rate": 5.0,
           "cap": 7500,
           "items": [
-            "藏壽司", "mos", "築間", "義美食品", "馬可先生", "寬心園", "miacucina", "小小樹食", "陽明春天", "屋馬", "熱浪島", "草蔬宴", "原素食府", "herbivore", "印度蔬食", "養心茶樓", "山海樓", "qburger", "麥味登", "一之軒", "捷絲旅", "承億", "煙波", "翰品", "希爾頓", "國賓", "福容", "新驛", "圓山", "城市商旅", "凱薩", "老爺", "新光影城", "威秀", "喜樂時代", "kktix", "拓元售票", "全國電子", "studioa", "straighta", "大潤發", "家樂福", "愛買", "uniqlo", "h&m", "zara", "gu", "gap", "net", "o'right", "aesop", "10/10 hope", "主婦聯盟", "里仁", "棉花田", "聖德科斯", "義美生機", "統一生機", "綠藤生機", "茶籽堂", "艾瑪絲", "長庚生技", "營養師輕食", "安永鮮物", "野菜村", "無毒的家", "無毒農", "健康食彩", "直接跟農夫買", "irent", "zipcar", "gosmart", "goshare", "gogoro", "wemo", "line go", "tesla 充電", "裕電俥電", "evalue", "evoasis", "sharkparking", "zocha", "begin", "星舟快充", "emoving", "emoving 電池", "悠遊卡自動加值", "悠遊卡加值", "悠遊卡 自動加值"
+            "悠遊卡自動加值", "愛買", "家樂福", "大潤發", "uniqlo", "h&m", "zara", "gu", "gap", "net", "新光影城", "威秀", "喜樂時代", "藏壽司", "mos", "築間", "義美食品", "馬可先生", "寬心園", "miacucina", "小小樹食", "陽明春天", "屋馬", "熱浪島", "草蕲宴", "原素食府", "herbivore", "印度蕲食", "養心茶樓", "山海樓", "qburger", "麥味登", "一之軒", "捷絲旅", "承億", "煙波", "翰品", "希爾頓", "國賓", "福容", "新驛", "圓山", "城市商旅", "凱薩", "老爺", "kktix", "拓元售票", "全國電子", "studioa", "straighta", "o'right", "aesop", "10/10 hope", "主婦聯盟", "里仁", "棉花田", "聖德科斯", "義美生機", "統一生機", "綠藤生機", "茶籽堂", "艾瑪絲", "長康生技", "營養師輕食", "安永鮮物", "野菜村", "無毒的家", "無毒農", "健康食彩", "直接跟農夫買", "irent", "zipcar", "gosmart", "goshare", "gogoro", "wemo", "line go", "tesla 充電", "裕電促電", "evalue", "evoasis", "sharkparking", "zocha", "begin", "星舟快充", "emoving", "emoving 電池", "悠遊卡加值", "悠遊卡 自動加值"
           ]
         }
       ]
@@ -192,7 +204,7 @@ let cardsData = {
       "fullName": "永豐銀行DAWAY信用卡",
       "basicCashback": 0.5,
       "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請電子帳單且取消實體帳單，或前一年刷斗15萬元或12筆消費",
+      "feeWaiver": "申請電子帳單且取消實體帳單，或前一年刷滿15萬元或12筆消費",
       "website": "https://bank.sinopac.com/sinopacbt/personal/credit-card/introduction/bankcard/DAWAY.html",
       "cashbackRates": [
         {
@@ -252,6 +264,7 @@ let cardsData = {
         {
           "rate": 2.5,
           "cap": null,
+          "hideInDisplay": true,
           "items": [
             "海外"
           ]
@@ -346,7 +359,7 @@ let cardsData = {
       "fullName": "永豐銀行幣倍卡",
       "basicCashback": 1.0,
       "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費斗36,000元或消費12次",
+      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿36,000元或消費12次",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "domesticBonusRate": 1.0,
       "domesticBonusCap": 20000,
@@ -1215,6 +1228,11 @@ function showCardDetail(cardId) {
     
     if (card.cashbackRates && card.cashbackRates.length > 0) {
         card.cashbackRates.forEach((rate, index) => {
+            // 跳過需要隱藏的項目
+            if (rate.hideInDisplay) {
+                return;
+            }
+            
             specialContent += `<div class="cashback-detail-item">`;
             
             // 回饋率和是否含一般回饋的說明
