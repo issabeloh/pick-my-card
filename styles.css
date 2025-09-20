@@ -1294,3 +1294,74 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 500;
 }
+
+/* 內聯CUBE等級選擇器樣式 */
+.cube-level-item {
+    grid-column: span 2; /* 佔據兩列 */
+}
+
+.cube-level-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.level-select-inline {
+    width: auto;
+    min-width: 200px;
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+    background: white;
+    color: #374151;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.level-select-inline:hover {
+    border-color: #6bb6ff;
+}
+
+.level-select-inline:focus {
+    outline: none;
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 2px rgba(107, 182, 255, 0.1);
+}
+
+/* 調整重要日期項目的間距 */
+.important-dates-item {
+    margin-top: 8px;
+}
+
+/* 確保2列網格的正確顯示 */
+.info-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 24px;
+    align-items: start;
+}
+
+/* 當CUBE等級設定顯示時，調整網格佈局 */
+.info-grid-2col:has(.cube-level-item[style*="block"]) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.info-grid-2col:has(.cube-level-item[style*="block"]) .info-item:not(.cube-level-item) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    grid-column: span 1;
+}
+
+.info-grid-2col:has(.cube-level-item[style*="block"]) .cube-level-item {
+    grid-column: span 1;
+    margin: 12px 0;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
