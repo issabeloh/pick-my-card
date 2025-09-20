@@ -1235,8 +1235,8 @@ input[type="number"]:focus {
 
 /* 筆記區域額外間距 */
 .user-notes-section {
-    margin-top: 32px !important;
-    padding-top: 24px !important;
+    margin-top: 16px !important; /* 縮小間距 */
+    padding-top: 12px !important; /* 縮小內部間距 */
 }
 
 /* 國泰CUBE等級選擇器樣式 */

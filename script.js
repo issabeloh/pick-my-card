@@ -139,20 +139,53 @@ function handleMerchantInput() {
 function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
     
+    let allMatches = [];
+    
+    // Collect all possible matches
     for (const card of cardsData.cards) {
         for (const rateGroup of card.cashbackRates) {
             for (const item of rateGroup.items) {
-                if (item.toLowerCase().includes(searchTerm) || 
-                    searchTerm.includes(item.toLowerCase())) {
-                    return {
+                const itemLower = item.toLowerCase();
+                const searchLower = searchTerm.toLowerCase();
+                
+                if (itemLower.includes(searchLower) || searchLower.includes(itemLower)) {
+                    allMatches.push({
                         originalItem: item,
-                        searchTerm: searchTerm
-                    };
+                        searchTerm: searchTerm,
+                        itemLower: itemLower,
+                        searchLower: searchLower
+                    });
                 }
             }
         }
     }
-    return null;
+    
+    if (allMatches.length === 0) return null;
+    
+    // Prioritize exact matches
+    const exactMatches = allMatches.filter(match => 
+        match.itemLower === match.searchLower
+    );
+    
+    if (exactMatches.length > 0) {
+        return exactMatches[0];
+    }
+    
+    // If no exact match, prioritize shorter items (more specific)
+    // This helps "uber" not match to "uber eats"
+    allMatches.sort((a, b) => {
+        // First priority: items that are contained within search term
+        const aContainedInSearch = a.searchLower.includes(a.itemLower);
+        const bContainedInSearch = b.searchLower.includes(b.itemLower);
+        
+        if (aContainedInSearch && !bContainedInSearch) return -1;
+        if (!aContainedInSearch && bContainedInSearch) return 1;
+        
+        // Second priority: shorter items (more specific)
+        return a.itemLower.length - b.itemLower.length;
+    });
+    
+    return allMatches[0];
 }
 
 // Show matched item
