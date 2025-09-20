@@ -1300,7 +1300,7 @@ input[type="number"]:focus {
 .info-grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px 24px;
+    gap: 12px 24px; /* 縮小行間距從20px改瀆12px */
     align-items: start;
 }
 
@@ -1308,7 +1308,7 @@ input[type="number"]:focus {
 .info-item {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px; /* 縮小標題和內容的間距 */
 }
 
 .info-label {

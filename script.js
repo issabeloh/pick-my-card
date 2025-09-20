@@ -354,18 +354,19 @@ function calculateCardCashback(card, searchTerm, amount) {
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
         const levelSettings = card.levelSettings[savedLevel];
         
-        // Check if merchant matches special items
-        const isSpecialItem = card.specialItems.some(item => 
-            item.toLowerCase().includes(searchTerm) || 
-            searchTerm.includes(item.toLowerCase())
-        );
-        
-        if (isSpecialItem) {
-            bestRate = levelSettings.specialRate;
-            matchedItem = card.specialItems.find(item => 
+        // Check if merchant matches special items - use exact match first
+        let matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === searchTerm);
+        if (!matchedSpecialItem) {
+            // If no exact match, use the best partial match
+            matchedSpecialItem = card.specialItems.find(item => 
                 item.toLowerCase().includes(searchTerm) || 
                 searchTerm.includes(item.toLowerCase())
             );
+        }
+        
+        if (matchedSpecialItem) {
+            bestRate = levelSettings.specialRate;
+            matchedItem = matchedSpecialItem;
             matchedCategory = '玩數位、樂饗購、趣旅行';
         } else {
             // Other merchants get general rate
@@ -375,19 +376,34 @@ function calculateCardCashback(card, searchTerm, amount) {
         }
         applicableCap = null; // CUBE card has no cap
     } else {
-        // Original logic for other cards
+        // Improved logic for other cards - prioritize exact matches
         for (const rateGroup of card.cashbackRates) {
-            for (const item of rateGroup.items) {
-                if (item.toLowerCase().includes(searchTerm) || 
-                    searchTerm.includes(item.toLowerCase())) {
-                    if (rateGroup.rate > bestRate) {
-                        bestRate = rateGroup.rate;
-                        applicableCap = rateGroup.cap;
-                        matchedItem = item;
-                        matchedCategory = rateGroup.category || null;
+            // First, look for exact matches
+            let exactMatch = rateGroup.items.find(item => item.toLowerCase() === searchTerm);
+            if (exactMatch && rateGroup.rate > bestRate) {
+                bestRate = rateGroup.rate;
+                applicableCap = rateGroup.cap;
+                matchedItem = exactMatch;
+                matchedCategory = rateGroup.category || null;
+            }
+        }
+        
+        // If no exact match found, use partial matching
+        if (bestRate === 0) {
+            for (const rateGroup of card.cashbackRates) {
+                for (const item of rateGroup.items) {
+                    if (item.toLowerCase().includes(searchTerm) || 
+                        searchTerm.includes(item.toLowerCase())) {
+                        if (rateGroup.rate > bestRate) {
+                            bestRate = rateGroup.rate;
+                            applicableCap = rateGroup.cap;
+                            matchedItem = item;
+                            matchedCategory = rateGroup.category || null;
+                        }
                     }
                 }
             }
+        }
         }
     }
     
@@ -458,14 +474,15 @@ function calculateCardCashback(card, searchTerm, amount) {
         }
         
         cashbackAmount = specialCashback + basicCashback + bonusCashback + remainingCashback;
-        totalRate = bestRate + basicRate + bonusRate;
+        // Fix floating point precision issues
+        totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
     return {
-        rate: totalRate,
-        specialRate: bestRate,
-        basicRate: card.basicCashback,
+        rate: Math.round(totalRate * 10) / 10,
+        specialRate: Math.round(bestRate * 10) / 10,
+        basicRate: Math.round(card.basicCashback * 10) / 10,
         cashbackAmount: cashbackAmount,
         cap: applicableCap,
         matchedItem: matchedItem,
@@ -595,10 +612,13 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         '無回饋';
     
     // Format rate display for complex cards
-    let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
+    let rateDisplay = result.rate > 0 ? `${Math.round(result.rate * 10) / 10}%` : '0%';
     if (result.specialRate && result.basicRate && result.specialRate > 0) {
-        const totalRate = result.specialRate + result.basicRate;
-        rateDisplay = `${totalRate}% (${result.specialRate}%+基本${result.basicRate}%)`;
+        // Fix floating point precision issues
+        const totalRate = Math.round((result.specialRate + result.basicRate) * 10) / 10;
+        const specialRate = Math.round(result.specialRate * 10) / 10;
+        const basicRate = Math.round(result.basicRate * 10) / 10;
+        rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
     }
     
     cardDiv.innerHTML = `
