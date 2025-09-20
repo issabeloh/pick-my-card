@@ -946,6 +946,170 @@ input[type="number"]:focus {
     color: #1f2937;
 }
 
+/* Fee Waiver Checkbox Styles */
+.fee-waiver-status {
+    margin-top: 8px;
+}
+
+.fee-waiver-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #6b7280;
+    transition: color 0.2s;
+    opacity: 0.8;
+}
+
+.fee-waiver-checkbox:hover {
+    color: #374151;
+    opacity: 1;
+}
+
+.fee-waiver-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    position: relative;
+    background: white;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.fee-waiver-checkbox:hover .checkmark {
+    border-color: #3b82f6;
+}
+
+.fee-waiver-checkbox input:checked + .checkmark {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+.fee-waiver-checkbox input:checked + .checkmark::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-label {
+    font-weight: 500;
+    user-select: none;
+}
+
+/* Billing Dates Section Styles */
+.billing-dates-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+
+.billing-dates-section:hover {
+    opacity: 1;
+}
+
+.billing-dates-title {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.billing-dates-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.date-input-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.date-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-input {
+    width: 50px;
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    background: #fafafa;
+    transition: all 0.2s ease;
+}
+
+.date-input:hover {
+    border-color: #d1d5db;
+    background: white;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-input:not(:placeholder-shown) {
+    border-color: #10b981;
+    background: white;
+    font-weight: 600;
+}
+
+.date-input:invalid {
+    border-color: #ef4444;
+}
+
+.date-input::placeholder {
+    color: #9ca3af;
+    font-weight: normal;
+}
+
+.date-suffix {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+    .billing-dates-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
 .user-notes-textarea {
     width: 100%;
     min-height: 100px;

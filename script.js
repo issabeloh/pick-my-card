@@ -1318,6 +1318,12 @@ function showCardDetail(cardId) {
     // 設置範本功能
     setupNotesTemplates(notesTextarea);
     
+    // 設置免年費狀態功能
+    setupFeeWaiverStatus(card.id);
+    
+    // 設置結帳日期功能
+    setupBillingDates(card.id);
+    
     // Show modal
     modal.style.display = 'flex';
     
@@ -1493,6 +1499,179 @@ function updateSaveButtonState(cardId, currentNotes) {
     }
 }
 
+// 免年費狀態相關功能
+
+// 讀取免年費狀態
+async function loadFeeWaiverStatus(cardId) {
+    if (!auth.currentUser) return false;
+    
+    try {
+        const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const docRef = doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`);
+        const docSnap = await getDoc(docRef);
+        return docSnap.exists() ? docSnap.data().isWaived : false;
+    } catch (error) {
+        console.log('讀取免年費狀態失敗:', error);
+        const localKey = `feeWaiver_${auth.currentUser?.uid || 'local'}_${cardId}`;
+        return localStorage.getItem(localKey) === 'true';
+    }
+}
+
+// 儲存免年費狀態
+async function saveFeeWaiverStatus(cardId, isWaived) {
+    const localKey = `feeWaiver_${auth.currentUser?.uid || 'local'}_${cardId}`;
+    localStorage.setItem(localKey, isWaived.toString());
+    
+    if (!auth.currentUser) return;
+    
+    try {
+        const { setDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const docRef = doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`);
+        await setDoc(docRef, {
+            isWaived: isWaived,
+            updatedAt: new Date(),
+            cardId: cardId
+        });
+        console.log('免年費狀態已同步至雲端');
+    } catch (error) {
+        console.error('雲端儲存免年費狀態失敗:', error);
+    }
+}
+
+// 設置免年費狀態功能
+async function setupFeeWaiverStatus(cardId) {
+    const checkbox = document.getElementById('fee-waiver-checked');
+    if (!checkbox) return;
+    
+    // 讀取當前狀態
+    const isWaived = await loadFeeWaiverStatus(cardId);
+    checkbox.checked = isWaived;
+    
+    // 設置變更監聽
+    checkbox.onchange = (e) => {
+        const newStatus = e.target.checked;
+        saveFeeWaiverStatus(cardId, newStatus);
+        
+        // 更新視覺提示 (可選)
+        const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
+        if (newStatus) {
+            checkboxLabel.style.color = '#10b981';
+            setTimeout(() => {
+                checkboxLabel.style.color = '';
+            }, 1000);
+        }
+        };
+    };
+}
+
+// 結帳日期相關功能
+
+// 讀取結帳日期
+async function loadBillingDates(cardId) {
+    const defaultDates = { billingDate: '', statementDate: '' };
+    
+    if (!auth.currentUser) {
+        const localKey = `billingDates_local_${cardId}`;
+        const saved = localStorage.getItem(localKey);
+        return saved ? JSON.parse(saved) : defaultDates;
+    }
+    
+    try {
+        const { getDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const docRef = doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                billingDate: data.billingDate || '',
+                statementDate: data.statementDate || ''
+            };
+        }
+        return defaultDates;
+    } catch (error) {
+        console.log('讀取結帳日期失敗:', error);
+        const localKey = `billingDates_${auth.currentUser?.uid || 'local'}_${cardId}`;
+        const saved = localStorage.getItem(localKey);
+        return saved ? JSON.parse(saved) : defaultDates;
+    }
+}
+
+// 儲存結帳日期
+async function saveBillingDates(cardId, billingDate, statementDate) {
+    const dateData = {
+        billingDate: billingDate || '',
+        statementDate: statementDate || ''
+    };
+    
+    const localKey = `billingDates_${auth.currentUser?.uid || 'local'}_${cardId}`;
+    localStorage.setItem(localKey, JSON.stringify(dateData));
+    
+    if (!auth.currentUser) return;
+    
+    try {
+        const { setDoc, doc } = await import('https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js');
+        const docRef = doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`);
+        await setDoc(docRef, {
+            ...dateData,
+            updatedAt: new Date(),
+            cardId: cardId
+        });
+        console.log('結帳日期已同步至雲端');
+    } catch (error) {
+        console.error('雲端儲存結帳日期失敗:', error);
+    }
+}
+
+// 設置結帳日期功能
+async function setupBillingDates(cardId) {
+    const billingInput = document.getElementById('billing-date');
+    const statementInput = document.getElementById('statement-date');
+    
+    if (!billingInput || !statementInput) return;
+    
+    // 讀取已儲存的日期
+    const savedDates = await loadBillingDates(cardId);
+    billingInput.value = savedDates.billingDate;
+    statementInput.value = savedDates.statementDate;
+    
+    // 為有值的輸入框加上視覺強調
+    const updateInputAppearance = (input) => {
+        if (input.value.trim() !== '') {
+            input.style.borderColor = '#10b981';
+            input.style.background = 'white';
+            input.style.fontWeight = '600';
+        }
+    };
+    
+    updateInputAppearance(billingInput);
+    updateInputAppearance(statementInput);
+    
+    // 儲存功能
+    const saveDates = () => {
+        const billing = billingInput.value;
+        const statement = statementInput.value;
+        saveBillingDates(cardId, billing, statement);
+        
+        // 更新視覺狀態
+        updateInputAppearance(billingInput);
+        updateInputAppearance(statementInput);
+    };
+    
+    // 設置變更監聽
+    billingInput.onchange = saveDates;
+    billingInput.onblur = saveDates;
+    statementInput.onchange = saveDates;
+    statementInput.onblur = saveDates;
+    
+    // 輸入驗證
+    [billingInput, statementInput].forEach(input => {
+        input.oninput = (e) => {
+            let value = parseInt(e.target.value);
+            if (value > 31) e.target.value = 31;
+            if (value < 1 && e.target.value !== '') e.target.value = 1;
+        };
+    });
+}
 // 設置筆記範本功能
 function setupNotesTemplates(textarea) {
     const toggleBtn = document.getElementById('toggle-templates-btn');
