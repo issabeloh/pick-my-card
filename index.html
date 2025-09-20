@@ -111,22 +111,18 @@
                 <div class="modal-body">
                     <div class="card-info-section">
                         <h4>基本資訊</h4>
-                        <div class="info-grid">
+                        <div class="info-grid-2col">
                             <div class="info-item">
                                 <span class="info-label">卡片全名:</span>
-                                <span class="info-value" id="card-full-name"></span>
+                                <span class="info-value"><a id="card-full-name-link" target="_blank" rel="noopener"></a></span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">年費:</span>
                                 <span class="info-value" id="card-annual-fee"></span>
                             </div>
-                            <div class="info-item">
+                            <div class="info-item info-item-full">
                                 <span class="info-label">免年費條件:</span>
                                 <span class="info-value" id="card-fee-waiver"></span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">官網:</span>
-                                <span class="info-value"><a id="card-website" target="_blank" rel="noopener">查看官網</a></span>
                             </div>
                         </div>
                     </div>
@@ -144,10 +140,55 @@
                     <div class="card-info-section" id="card-coupon-section">
                         <h4>其他回饋活動</h4>
                         <div id="card-coupon-cashback"></div>
+            </div>
+            
+            <!-- 用戶筆記區域 -->
+            <div class="card-info-section">
+                <h4>📝 我的筆記</h4>
+                <div class="user-notes-container">
+                    <div class="notes-templates" id="notes-templates">
+                        <div class="templates-header">
+                            <span>💡 常用筆記範本</span>
+                            <button class="toggle-templates-btn" id="toggle-templates-btn">顯示範本</button>
+                        </div>
+                        <div class="templates-content" id="templates-content" style="display: none;">
+                            <div class="template-item" data-template="billing">
+                                <span class="template-icon">📅</span>
+                                <span class="template-text">結帳日: [  ]號　帳單日: [  ]號</span>
+                            </div>
+                            <div class="template-item" data-template="spending">
+                                <span class="template-icon">💰</span>
+                                <span class="template-text">本月已消費: NT$ [    ]</span>
+                            </div>
+                            <div class="template-item" data-template="usage">
+                                <span class="template-icon">🎯</span>
+                                <span class="template-text">主要用途: [ 網購 / 加油 / 餐廳 / 其他 ]</span>
+                            </div>
+                            <div class="template-item" data-template="reminder">
+                                <span class="template-icon">⚠️</span>
+                                <span class="template-text">提醒事項:\n- [ ] 申請免年費\n- [ ] 關注活動期限\n- [ ] 檢查消費上限</span>
+                            </div>
+                            <div class="template-item" data-template="complete">
+                                <span class="template-icon">📋</span>
+                                <span class="template-text">📅 結帳日: [  ]號  帳單日: [  ]號\n💰 本月已消費: NT$ [    ]\n🎯 主要用途: [           ]\n\n⚠️ 提醒事項:\n- [ ] \n- [ ] </span>
+                            </div>
+                        </div>
+                    </div>
+                    <textarea id="user-notes-input" 
+                              placeholder="點擊上方範本快速新增內容，或直接輸入你的筆記..."
+                              class="user-notes-textarea"></textarea>
+                    <div class="notes-status" id="notes-status">
+                        <button class="save-notes-btn" id="save-notes-btn" disabled>
+                            <span class="btn-icon">💾</span>
+                            <span class="btn-text">儲存筆記</span>
+                        </button>
+                        <span class="save-indicator" id="save-indicator"></span>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
     </div>
     
     <script src="script.js"></script>

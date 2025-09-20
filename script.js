@@ -1162,36 +1162,47 @@ function showCardDetail(cardId) {
     
     // Update basic information
     document.getElementById('card-detail-title').textContent = card.name + ' 詳情';
-    document.getElementById('card-full-name').textContent = card.fullName || card.name;
+    
+    const fullNameLink = document.getElementById('card-full-name-link');
+    fullNameLink.textContent = card.fullName || card.name;
+    if (card.website) {
+        fullNameLink.href = card.website;
+    } else {
+        fullNameLink.removeAttribute('href');
+        fullNameLink.style.textDecoration = 'none';
+        fullNameLink.style.color = 'inherit';
+    }
+    
     document.getElementById('card-annual-fee').textContent = card.annualFee || '無資料';
     document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '無資料';
-    
-    const websiteLink = document.getElementById('card-website');
-    if (card.website) {
-        websiteLink.href = card.website;
-        websiteLink.style.display = 'inline';
-    } else {
-        websiteLink.style.display = 'none';
-    }
     
     // Update basic cashback
     const basicCashbackDiv = document.getElementById('card-basic-cashback');
     let basicContent = `<div class="cashback-detail-item">`;
     basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+    basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
     
     if (card.overseasCashback) {
         basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
-    }
-    
-    if (card.domesticBonusRate) {
-        basicContent += `<div class="cashback-rate">國內加碼回饋: +${card.domesticBonusRate}% (上限NT$${card.domesticBonusCap?.toLocaleString()})</div>`;
-    }
-    
-    if (card.overseasBonusRate) {
-        basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}% (上限NT$${card.overseasBonusCap?.toLocaleString()})</div>`;
+        basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     }
     
     basicContent += `</div>`;
+    
+    if (card.domesticBonusRate) {
+        basicContent += `<div class="cashback-detail-item">`;
+        basicContent += `<div class="cashback-rate">國內加碼回饋: +${card.domesticBonusRate}%</div>`;
+        basicContent += `<div class="cashback-condition">消費上限: NT$${card.domesticBonusCap?.toLocaleString()}</div>`;
+        basicContent += `</div>`;
+    }
+    
+    if (card.overseasBonusRate) {
+        basicContent += `<div class="cashback-detail-item">`;
+        basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
+        basicContent += `<div class="cashback-condition">消費上限: NT$${card.overseasBonusCap?.toLocaleString()}</div>`;
+        basicContent += `</div>`;
+    }
+    
     basicCashbackDiv.innerHTML = basicContent;
     
     // Update special cashback
@@ -1199,12 +1210,22 @@ function showCardDetail(cardId) {
     let specialContent = '';
     
     if (card.cashbackRates && card.cashbackRates.length > 0) {
-        card.cashbackRates.forEach(rate => {
+        card.cashbackRates.forEach((rate, index) => {
             specialContent += `<div class="cashback-detail-item">`;
-            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
             
+            // 回饋率和是否含一般回饋的說明
+            const includesBasic = rate.rate > card.basicCashback;
+            if (includesBasic) {
+                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋 (含一般回饋${card.basicCashback}%)</div>`;
+            } else {
+                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
+            }
+            
+            // 消費上限
             if (rate.cap) {
                 specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+            } else {
+                specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
             
             if (rate.category) {
@@ -1220,9 +1241,23 @@ function showCardDetail(cardId) {
             }
             
             if (rate.items && rate.items.length > 0) {
-                const merchantsList = rate.items.slice(0, 20).join('、'); // 只顯示前20個
-                const moreCount = rate.items.length > 20 ? `... 等${rate.items.length}個通路` : '';
-                specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}${moreCount}</div>`;
+                const merchantsId = `merchants-${card.id}-${index}`;
+                const showAllId = `show-all-${card.id}-${index}`;
+                
+                if (rate.items.length <= 20) {
+                    // 少於20個直接顯示全部
+                    const merchantsList = rate.items.join('、');
+                    specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+                } else {
+                    // 超過20個顯示可展開的列表
+                    const initialList = rate.items.slice(0, 20).join('、');
+                    const fullList = rate.items.join('、');
+                    
+                    specialContent += `<div class="cashback-merchants">`;
+                    specialContent += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${rate.items.length}個</button>`;
+                    specialContent += `</div>`;
+                }
             }
             
             specialContent += `</div>`;
@@ -1252,15 +1287,257 @@ function showCardDetail(cardId) {
         couponSection.style.display = 'none';
     }
     
+    // Load and setup user notes
+    currentNotesCardId = card.id;
+    const notesTextarea = document.getElementById('user-notes-input');
+    const saveIndicator = document.getElementById('save-indicator');
+    
+    // 讀取當前筆記
+    loadUserNotes(card.id).then(notes => {
+        notesTextarea.value = notes;
+    });
+    
+    // 設置輸入監聽
+    notesTextarea.oninput = (e) => {
+        const notes = e.target.value;
+        
+        // 自動本地備份
+        autoBackupNotes(card.id, notes);
+        
+        // 更新按鈕狀態
+        updateSaveButtonState(card.id, notes);
+    };
+    
+    // 設置儲存按鈕監聽
+    const saveBtn = document.getElementById('save-notes-btn');
+    saveBtn.onclick = () => {
+        const currentNotes = notesTextarea.value;
+        saveUserNotes(card.id, currentNotes);
+    };
+    
+    // 設置範本功能
+    setupNotesTemplates(notesTextarea);
+    
     // Show modal
     modal.style.display = 'flex';
     
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
-    const closeModal = () => modal.style.display = 'none';
+    const closeModal = () => {
+        modal.style.display = 'none';
+        currentNotesCardId = null;
+    };
     
     closeBtn.onclick = closeModal;
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
+}
+
+// 切換通路顯示展開/收起
+function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
+    const merchantsElement = document.getElementById(merchantsId);
+    const buttonElement = document.getElementById(buttonId);
+    
+    if (!merchantsElement || !buttonElement) return;
+    
+    const isExpanded = buttonElement.textContent.includes('收起');
+    
+    if (isExpanded) {
+        // 收起
+        merchantsElement.textContent = shortList;
+        const totalCount = fullList.split('、').length;
+        buttonElement.textContent = `... 顯示全部${totalCount}個`;
+    } else {
+        // 展開
+        merchantsElement.textContent = fullList;
+        buttonElement.textContent = '收起';
+    }
+}
+
+// 用戶筆記相關功能
+let currentNotesCardId = null;
+let lastSavedNotes = new Map(); // 記錄每張卡最後儲存的內容
+
+// 讀取用戶筆記 (註: 筆記僅依賴cardId，與userSelectedCards狀態無關)
+async function loadUserNotes(cardId) {
+    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+    
+    if (!auth.currentUser) {
+        const localNotes = localStorage.getItem(cacheKey) || '';
+        lastSavedNotes.set(cardId, localNotes);
+        return localNotes;
+    }
+    
+    try {
+        const docRef = doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`);
+        const docSnap = await getDoc(docRef);
+        const notes = docSnap.exists() ? docSnap.data().notes : '';
+        
+        // 更新本地快取和記錄
+        localStorage.setItem(cacheKey, notes);
+        lastSavedNotes.set(cardId, notes);
+        
+        return notes;
+    } catch (error) {
+        console.log('讀取筆記失敗，使用本地快取:', error);
+        const localNotes = localStorage.getItem(cacheKey) || '';
+        lastSavedNotes.set(cardId, localNotes);
+        return localNotes;
+    }
+}
+
+// 本地儲存（自動備份）
+function autoBackupNotes(cardId, notes) {
+    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+    localStorage.setItem(cacheKey, notes);
+}
+
+// 手動儲存筆記
+async function saveUserNotes(cardId, notes) {
+    const saveBtn = document.getElementById('save-notes-btn');
+    const saveIndicator = document.getElementById('save-indicator');
+    const btnText = document.querySelector('.btn-text');
+    const btnIcon = document.querySelector('.btn-icon');
+    
+    if (!auth.currentUser) {
+        // 未登入時僅儲存在本地
+        autoBackupNotes(cardId, notes);
+        lastSavedNotes.set(cardId, notes);
+        
+        // 更新按鈕狀態
+        saveBtn.disabled = true;
+        saveIndicator.textContent = '已儲存在本地 (未登入)';
+        saveIndicator.style.color = '#6b7280';
+        return true;
+    }
+    
+    try {
+        // 更新按鈕為儲存中狀態
+        saveBtn.className = 'save-notes-btn saving';
+        saveBtn.disabled = true;
+        btnIcon.textContent = '⏳';
+        btnText.textContent = '儲存中...';
+        saveIndicator.textContent = '';
+        
+        const docRef = doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`);
+        await setDoc(docRef, {
+            notes: notes,
+            updatedAt: new Date(),
+            cardId: cardId
+        });
+        
+        // 也儲存在本地作為快取
+        autoBackupNotes(cardId, notes);
+        lastSavedNotes.set(cardId, notes);
+        
+        // 成功狀態
+        saveBtn.className = 'save-notes-btn success';
+        btnIcon.textContent = '✓';
+        btnText.textContent = '已儲存';
+        saveIndicator.textContent = '✓ 雲端同步成功';
+        saveIndicator.style.color = '#10b981';
+        
+        // 2秒後恢復正常狀態
+        setTimeout(() => {
+            saveBtn.className = 'save-notes-btn';
+            saveBtn.disabled = true; // 沒有變更時保持禁用
+            btnIcon.textContent = '💾';
+            btnText.textContent = '儲存筆記';
+            saveIndicator.textContent = '';
+        }, 2000);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('雲端儲存失敗:', error);
+        
+        // 失敗時仍然儲存在本地
+        autoBackupNotes(cardId, notes);
+        
+        // 錯誤狀態
+        saveBtn.className = 'save-notes-btn';
+        saveBtn.disabled = false; // 可以再次嘗試
+        btnIcon.textContent = '⚠️';
+        btnText.textContent = '重試儲存';
+        saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
+        saveIndicator.style.color = '#dc2626';
+        
+        // 5秒後恢復
+        setTimeout(() => {
+            btnIcon.textContent = '💾';
+            btnText.textContent = '儲存筆記';
+            saveIndicator.textContent = '';
+        }, 5000);
+        
+        return false;
+    }
+}
+
+// 檢查筆記是否有變更
+function hasNotesChanged(cardId, currentNotes) {
+    const lastSaved = lastSavedNotes.get(cardId) || '';
+    return currentNotes !== lastSaved;
+}
+
+// 更新儲存按鈕狀態
+function updateSaveButtonState(cardId, currentNotes) {
+    const saveBtn = document.getElementById('save-notes-btn');
+    if (!saveBtn) return;
+    
+    const hasChanged = hasNotesChanged(cardId, currentNotes);
+    saveBtn.disabled = !hasChanged;
+    
+    if (hasChanged && !saveBtn.className.includes('saving')) {
+        saveBtn.className = 'save-notes-btn';
+    }
+}
+
+// 設置筆記範本功能
+function setupNotesTemplates(textarea) {
+    const toggleBtn = document.getElementById('toggle-templates-btn');
+    const templatesContent = document.getElementById('templates-content');
+    const templateItems = document.querySelectorAll('.template-item');
+    
+    let isTemplatesVisible = false;
+    
+    // 切換範本顯示/隱藏
+    toggleBtn.onclick = () => {
+        isTemplatesVisible = !isTemplatesVisible;
+        templatesContent.style.display = isTemplatesVisible ? 'block' : 'none';
+        toggleBtn.textContent = isTemplatesVisible ? '隱藏範本' : '顯示範本';
+    };
+    
+    // 範本點擊事件
+    templateItems.forEach(item => {
+        item.onclick = () => {
+            const templateText = item.querySelector('.template-text').textContent;
+            const currentValue = textarea.value;
+            
+            // 如果當前有內容且不是空白，在新行加入範本
+            let newValue = currentValue;
+            if (currentValue.trim() !== '') {
+                newValue += '\n\n' + templateText;
+            } else {
+                newValue = templateText;
+            }
+            
+            textarea.value = newValue;
+            
+            // 觸發 input 事件以更新按鈕狀態
+            const event = new Event('input', { bubbles: true });
+            textarea.dispatchEvent(event);
+            
+            // 焦點移至輸入框
+            textarea.focus();
+            
+            // 游標移至末尾
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            
+            // 自動收起範本
+            templatesContent.style.display = 'none';
+            toggleBtn.textContent = '顯示範本';
+            isTemplatesVisible = false;
+        };
+    });
 }
