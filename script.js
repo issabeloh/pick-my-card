@@ -1678,6 +1678,7 @@ async function setupBillingDates(cardId) {
         };
     });
 }
+
 // 設置筆記範本功能
 function setupNotesTemplates(textarea) {
     const toggleBtn = document.getElementById('toggle-templates-btn');
