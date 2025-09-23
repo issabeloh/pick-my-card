@@ -848,8 +848,14 @@ function calculateCardCashback(card, searchTerm, amount) {
             bonusRate = card.domesticBonusRate;
         }
         
-        // Add basic cashback for the same amount (layered rewards)
-        let basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+        // CUBE cards already include basic rate in their special rates, don't double count
+        let basicCashback = 0;
+        if (card.hasLevels && card.id === 'cathay-cube') {
+            basicCashback = 0; // CUBE rates already include basic rate
+        } else {
+            // Add basic cashback for the same amount (layered rewards)
+            basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+        }
         
         // Add bonus cashback if applicable
         let bonusCashback = 0;
@@ -867,7 +873,13 @@ function calculateCardCashback(card, searchTerm, amount) {
         let remainingCashback = 0;
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
-            remainingCashback = Math.floor(remainingAmount * basicRate / 100);
+            
+            // For CUBE cards, remaining amount gets basic rate only
+            if (card.hasLevels && card.id === 'cathay-cube') {
+                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            } else {
+                remainingCashback = Math.floor(remainingAmount * basicRate / 100);
+            }
             
             // Add bonus for remaining amount if applicable
             if (bonusRate > 0) {
@@ -886,8 +898,13 @@ function calculateCardCashback(card, searchTerm, amount) {
         }
         
         cashbackAmount = specialCashback + basicCashback + bonusCashback + remainingCashback;
-        // Fix floating point precision issues
-        totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
+        
+        // Fix floating point precision issues for total rate
+        if (card.hasLevels && card.id === 'cathay-cube') {
+            totalRate = Math.round(bestRate * 10) / 10; // CUBE rates don't add basic rate
+        } else {
+            totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
+        }
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
@@ -1082,9 +1099,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 
                 const categoryInfo = result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (類別: ${result.matchedCategory})` : '';
                 
+                // Special handling for Yushan Uni card exclusions in search results
+                let exclusionNote = '';
+                if (result.card.id === 'yushan-unicard' && 
+                    (result.matchedItem === '街口' || result.matchedItem === '全支付')) {
+                    exclusionNote = ' <small style="color: #f59e0b; font-weight: 500;">(排除超商)</small>';
+                }
+                
                 return `
                     <div class="matched-merchant">
-                        匹配項目: <strong>${result.matchedItem}</strong>${categoryInfo}${additionalInfo}
+                        匹配項目: <strong>${result.matchedItem}</strong>${exclusionNote}${categoryInfo}${additionalInfo}
                     </div>
                 `;
             } else {
@@ -1477,6 +1501,13 @@ function showCardDetail(cardId) {
     
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = generateCubeSpecialContent(card);
+        // Add birthday month note for CUBE card
+        specialContent += `<div class="cashback-detail-item" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">`;
+        specialContent += `<div class="cashback-rate" style="color: #d97706; font-size: 14px; margin-bottom: 4px;">⚠️ 重要提醒</div>`;
+        specialContent += `<div class="cashback-condition" style="color: #92400e; font-size: 13px; line-height: 1.4;">`;
+        specialContent += `<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">慶生月</a>方案不納入此比較，生日月份請自行查詢官網優惠`;
+        specialContent += `</div>`;
+        specialContent += `</div>`;
     } else if (card.cashbackRates && card.cashbackRates.length > 0) {
         card.cashbackRates.forEach((rate, index) => {
             // 跳過需要隱藏的項目
