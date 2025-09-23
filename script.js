@@ -647,11 +647,12 @@ const fuzzySearchMap = {
     'food panda': 'foodpanda',
     'ubereats': 'uber eats',
     'uber eats': 'ubereats',
-    '三井(mitsui outlet park)': '三井outlet',
-    '三井outlet': '三井(mitsui outlet park)',
+    '三井(mitsui outlet park)': '三井',
+    '三井outlet': '三井',
     '三井': '三井(mitsui outlet park)',
-    'mitsui': '三井(mitsui outlet park)',
-    'mitsui outlet': '三井(mitsui outlet park)'
+    'mitsui': '三井',
+    'mitsui outlet': '三井',
+    'mitsui outlet park': '三井(mitsui outlet park)'
 };
 
 // Find matching item in cards database
@@ -659,29 +660,61 @@ function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
     
     let searchLower = searchTerm.toLowerCase().trim();
+    let searchTerms = [searchLower]; // Always include original search term
     
-    // Apply fuzzy search mapping
+    // Add fuzzy search mapping if exists
     if (fuzzySearchMap[searchLower]) {
-        searchLower = fuzzySearchMap[searchLower].toLowerCase();
+        const mappedTerm = fuzzySearchMap[searchLower].toLowerCase();
+        if (!searchTerms.includes(mappedTerm)) {
+            searchTerms.push(mappedTerm);
+        }
     }
+    
+    // Also add reverse mappings (find all terms that map to current search)
+    Object.entries(fuzzySearchMap).forEach(([key, value]) => {
+        if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
+            searchTerms.push(key);
+        }
+    });
+    
     let allMatches = [];
     
-    // Collect all possible matches
+    // Collect all possible matches using all search terms
     for (const card of cardsData.cards) {
         for (const rateGroup of card.cashbackRates) {
             for (const item of rateGroup.items) {
                 const itemLower = item.toLowerCase();
                 
-                // Only add if there's a match
-                if (itemLower.includes(searchLower) || searchLower.includes(itemLower)) {
+                // Check if any search term matches this item
+                let matchFound = false;
+                let bestMatchTerm = searchLower;
+                let isExactMatch = false;
+                let isFullContainment = false;
+                
+                for (const term of searchTerms) {
+                    if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
+                        matchFound = true;
+                        if (itemLower === term) {
+                            isExactMatch = true;
+                            bestMatchTerm = term;
+                            break;
+                        }
+                        if (itemLower.includes(term)) {
+                            isFullContainment = true;
+                            bestMatchTerm = term;
+                        }
+                    }
+                }
+                
+                if (matchFound) {
                     allMatches.push({
                         originalItem: item,
                         searchTerm: searchTerm,
                         itemLower: itemLower,
-                        searchLower: searchLower,
+                        searchLower: bestMatchTerm,
                         // Calculate match quality
-                        isExactMatch: itemLower === searchLower,
-                        isFullContainment: itemLower.includes(searchLower),
+                        isExactMatch: isExactMatch,
+                        isFullContainment: isFullContainment,
                         length: itemLower.length
                     });
                 }
