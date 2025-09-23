@@ -24,7 +24,8 @@ cardsData = {
         },
         {
           "rate": 3.3,
-          "cap": 480000,
+          "cap": 300000,
+          "capDescription": "您的永久信用額度+NT300,000",
           "items": [
             "華航", "長榮", "星宇", "虎航", "國泰航空", "華信", "立榮", "klook", "kkday", "airsim", "agoda", "booking.com", "trip.com", "airbnb", "hotels.com", "expedia", "雄獅旅遊", "易遊網", "東南旅遊", "海外實體", "海外線上", "蝦皮", "momo", "酷澎", "coupang", "pchome", "yahoo", "amazon", "東森", "博客來", "richart mart", "hahow", "pressplay", "amazing talker", "udemy", "kobo", "readmoo", "uniqlo", "gu", "zara", "net", "lativ", "gap", "uber eats", "foodpanda", "中油直營", "台亞直營", "全國加油", "源點evoasis", "華城電能evalue", "拓元售票", "kktix", "年代售票", "寬宏售票", "opentix兩廳院文化生活", "晶華國際酒店集團", "台灣萬豪國際集團旗下飯店", "煙波飯店", "老爺酒店集團", "福華集團", "漢來飯店事業群", "台北君悅酒店", "高雄洲際酒店", "礁溪寒沐", "義大遊樂世界", "麗寶樂園", "六福村主題遊樂園", "九族文化村", "劍湖山世界主題遊樂園", "x-park", "國立海洋生物博物館", "遠雄海洋公園", "大魯閣", "小人國主題樂園", "全台餐飲新光三越", "遠東sogo", "廣三sogo", "遠東百貨", "微風", "台北101", "遠東巨城", "南紡購物中心", "漢神百貨", "漢神巨蛋", "誠品生活", "mitsui shopping park", "lalaport", "mitsui outlet park", "華泰名品城", "skm park outlets", "ikea", "特力屋", "hola", "宜得利", "瑪黑家居", "7-11", "全家", "家樂福", "大買家", "臺鐵", "高鐵", "台灣大車隊", "linego", "yoxi", "uber", "嘟嘟房", "autopass", "城市車旅", "vivipark", "uspace", "udrive", "irent", "和運租車", "格上租車"
           ]
@@ -848,10 +849,18 @@ function calculateCardCashback(card, searchTerm, amount) {
             bonusRate = card.domesticBonusRate;
         }
         
-        // CUBE cards already include basic rate in their special rates, don't double count
+        // Handle different card types for basic cashback
         let basicCashback = 0;
         if (card.hasLevels && card.id === 'cathay-cube') {
             basicCashback = 0; // CUBE rates already include basic rate
+        } else if (card.id === 'sinopac-sport') {
+            // Sport card: basic 1% + conditional 1% (from first rate group) + special rate
+            const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
+            basicCashback = Math.floor(effectiveSpecialAmount * (basicRate + conditionalRate) / 100);
+        } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
+            // Taishin Richart 3.3% already includes 0.3% basic, only calculate the 3% portion
+            specialCashback = Math.floor(effectiveSpecialAmount * 3.0 / 100);
+            basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
         } else {
             // Add basic cashback for the same amount (layered rewards)
             basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
@@ -874,8 +883,11 @@ function calculateCardCashback(card, searchTerm, amount) {
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
             
-            // For CUBE cards, remaining amount gets basic rate only
+            // Handle remaining amount for special cards
             if (card.hasLevels && card.id === 'cathay-cube') {
+                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
+                // Remaining amount for Richart 3.3% gets only basic 0.3%
                 remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
             } else {
                 remainingCashback = Math.floor(remainingAmount * basicRate / 100);
@@ -902,6 +914,10 @@ function calculateCardCashback(card, searchTerm, amount) {
         // Fix floating point precision issues for total rate
         if (card.hasLevels && card.id === 'cathay-cube') {
             totalRate = Math.round(bestRate * 10) / 10; // CUBE rates don't add basic rate
+        } else if (card.id === 'sinopac-sport') {
+            // Sport card: basic 1% + conditional 1% + special rate
+            const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
+            totalRate = Math.round((bestRate + basicRate + conditionalRate + bonusRate) * 10) / 10;
         } else {
             totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
         }
@@ -1050,8 +1066,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         if (result.card.id === 'cathay-cube') {
             // CUBE cards show clean rates only
             rateDisplay = `${result.specialRate}%`;
-        } else if (result.card.id === 'taishin-richart') {
-            // Taishin Richart shows additive structure
+        } else if (result.card.id === 'taishin-jiekou') {
+            // Taishin Jiekou (street card) shows additive structure
             const totalRate = Math.round((result.specialRate + result.basicRate) * 10) / 10;
             const specialRate = Math.round(result.specialRate * 10) / 10;
             const basicRate = Math.round(result.basicRate * 10) / 10;
@@ -1525,25 +1541,34 @@ function showCardDetail(cardId) {
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = generateCubeSpecialContent(card);
     } else if (card.cashbackRates && card.cashbackRates.length > 0) {
-        card.cashbackRates.forEach((rate, index) => {
-            // 跳過需要隱藏的項目
-            if (rate.hideInDisplay) {
-                return;
-            }
+        // Sort rates by percentage in descending order
+        const sortedRates = [...card.cashbackRates]
+            .filter(rate => !rate.hideInDisplay)
+            .sort((a, b) => b.rate - a.rate);
             
+        sortedRates.forEach((rate, index) => {
             specialContent += `<div class="cashback-detail-item">`;
             
-            // 回饋率和是否含一般回饋的說明
-            const includesBasic = rate.rate > card.basicCashback;
-            if (includesBasic) {
-                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋 (含一般回饋${card.basicCashback}%)</div>`;
-            } else {
+            // Special handling for Sport card display text
+            if (card.id === 'sinopac-sport') {
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
+            } else {
+                // 回饋率和是否含一般回饋的說明
+                const includesBasic = rate.rate > card.basicCashback;
+                if (includesBasic) {
+                    specialContent += `<div class="cashback-rate">${rate.rate}% 回饋 (含一般回饋${card.basicCashback}%)</div>`;
+                } else {
+                    specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
+                }
             }
             
             // 消費上限
             if (rate.cap) {
-                specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+                if (rate.capDescription && card.id === 'taishin-richart') {
+                    specialContent += `<div class="cashback-condition">消費上限: ${rate.capDescription}</div>`;
+                } else {
+                    specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+                }
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
