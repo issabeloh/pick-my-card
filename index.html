@@ -115,8 +115,23 @@
                                 <div class="info-label">卡片全名:</div>
                                 <div class="info-value card-full-name-bold"><a id="card-full-name-link" target="_blank" rel="noopener"></a></div>
                             </div>
+                            <div class="info-item">
+                                <div class="info-label">📅 重要日期 (選填):</div>
+                                <div class="dates-inline-wrapper">
+                                    <div class="date-input-inline">
+                                        <span class="date-label-small">結賬日:</span>
+                                        <input type="number" 
+                                               id="billing-date" 
+                                               min="1" 
+                                               max="31" 
+                                               placeholder="日"
+                                               class="date-input">
+                                        <span class="date-suffix">號</span>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="info-item fee-annual-section">
-                                <div class="info-label">年費訊息:</div>
+                                <div class="info-label">年費及免年費條件:</div>
                                 <div class="fee-combined-info">
                                     <div class="info-value info-value-small" id="card-annual-fee"></div>
                                     <div class="info-value info-value-small fee-waiver-text" id="card-fee-waiver"></div>
@@ -126,31 +141,6 @@
                                             <span class="checkmark"></span>
                                             <span class="checkbox-label">我已過免年費門檻</span>
                                         </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="info-item">
-                                <div class="info-label">📅 重要日期 (選填):</div>
-                                <div class="dates-inline-wrapper">
-                                    <div class="date-input-inline">
-                                        <span class="date-label-small">結帳日:</span>
-                                        <input type="number" 
-                                               id="billing-date" 
-                                               min="1" 
-                                               max="31" 
-                                               placeholder="日"
-                                               class="date-input">
-                                        <span class="date-suffix">號</span>
-                                    </div>
-                                    <div class="date-input-inline">
-                                        <span class="date-label-small">帳單日:</span>
-                                        <input type="number" 
-                                               id="statement-date" 
-                                               min="1" 
-                                               max="31" 
-                                               placeholder="日"
-                                               class="date-input">
-                                        <span class="date-suffix">號</span>
                                     </div>
                                 </div>
                             </div>
