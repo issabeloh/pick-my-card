@@ -645,14 +645,24 @@ const fuzzySearchMap = {
     'thsr': '高鐵',
     'foodpanda': 'foodpanda',
     'food panda': 'foodpanda',
-    'ubereats': 'uber eats',
-    'uber eats': 'ubereats',
+    // Remove uber/uber eats cross-mapping to prevent unwanted matches
     '三井(mitsui outlet park)': '三井',
     '三井outlet': '三井',
     '三井': '三井(mitsui outlet park)',
     'mitsui': '三井',
     'mitsui outlet': '三井',
-    'mitsui outlet park': '三井(mitsui outlet park)'
+    'mitsui outlet park': '三井(mitsui outlet park)',
+    // 新增海外和國外的對應
+    '國外': '海外',
+    '海外': '國外',
+    // 新增迪卡儂相關詞彙
+    'decathlon': '迪卡儂',
+    '迪卡儂': 'decathlon',
+    // 新增宜家相關詞彙
+    'ikea': 'IKEA宜家家居',
+    '宜家': 'IKEA宜家家居',
+    '宜家家居': 'IKEA宜家家居',
+    'IKEA宜家家居': 'ikea'
 };
 
 // Find matching item in cards database
@@ -1024,10 +1034,34 @@ function calculateCardCashback(card, searchTerm, amount) {
             matchedItem = matchedSpecialItem;
             matchedCategory = '玩數位、樂饗購、趣旅行';
         } else {
-            // Other merchants get general rate
-            bestRate = levelSettings.generalRate;
-            matchedItem = '其他通路';
-            matchedCategory = '其他通路';
+            // Check if merchant matches general items (2% reward categories)
+            let matchedGeneralItem = null;
+            let matchedGeneralCategory = null;
+            
+            if (card.generalItems) {
+                for (const [category, items] of Object.entries(card.generalItems)) {
+                    for (const variant of searchVariants) {
+                        const foundItem = items.find(item => item.toLowerCase() === variant);
+                        if (foundItem) {
+                            matchedGeneralItem = foundItem;
+                            matchedGeneralCategory = category;
+                            break;
+                        }
+                    }
+                    if (matchedGeneralItem) break;
+                }
+            }
+            
+            if (matchedGeneralItem) {
+                bestRate = levelSettings.generalRate;
+                matchedItem = matchedGeneralItem;
+                matchedCategory = matchedGeneralCategory;
+            } else {
+                // No match found - CUBE card gives 0.3% basic rate only for unmatched items
+                bestRate = 0; // No special rate for unmatched items
+                matchedItem = null;
+                matchedCategory = null;
+            }
         }
         applicableCap = null; // CUBE card has no cap
     } else {
