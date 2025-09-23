@@ -242,15 +242,6 @@ cardsData = {
       "website": "https://www.esunbank.com/zh-tw/personal/credit-card/intro/bank-card/u-bear",
       "cashbackRates": [
         {
-          "rate": 10.0,
-          "cap": 1000,
-          "cashbackType": "現金回饋",
-          "conditions": "限原平台付款，經Google、PayPal等代扣不適用。不與一般/網路消費回饋併計，達上限即停止回饋。",
-          "items": [
-            "disney+", "nintendo", "playstation", "netflix"
-          ]
-        },
-        {
           "rate": 3.0,
           "cap": 7500,
           "items": [
@@ -401,27 +392,6 @@ cardsData = {
           "cap": null,
           "items": [
             "海外"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "taishin-jiekou",
-      "name": "台新街口卡",
-      "fullName": "台新銀行街口聯名卡",
-      "basicCashback": 1.0,
-      "basicCashbackType": "街口幣",
-      "annualFee": "正卡NT$4,500",
-      "feeWaiver": "採電子/行動簡訊帳單",
-      "website": "https://www.taishinbank.com.tw/",
-      "cashbackRates": [
-        {
-          "rate": 3.5,
-          "cap": 400000,
-          "cashbackType": "街口幣",
-          "period": "活動至2025/12/31",
-          "items": [
-            "日本PayPay(限於街口支付綁定)", "韓國(含實體及網路)", "易遊網", "agoda", "airbnb", "高鐵", "uber", "新光三越", "遠東百貨", "lalaport", "三井(MITSUI OUTLET PARK)", "康是美實體門市", "屈臣氏實體門市", "寶雅實體門市", "uber eats", "foodpanda", "星巴克(限實體)", "路易莎咖啡", "85度C", "cama café", "多那之", "清心福全", "迷客夏", "可不可", "麻古茶坊", "COMEBUY", "大茗", "龜記", "UG", "鮮茶道", "五桐號", "茶湯會", "TEATOP 第一味", "珍煮丹", "老賴茶棧"
           ]
         }
       ]
@@ -784,7 +754,6 @@ function calculateCardCashback(card, searchTerm, amount) {
     let applicableCap = null;
     let matchedItem = null;
     let matchedCategory = null;
-    let matchedRateGroup = null;
     
     // Handle CUBE card with levels
     if (card.hasLevels && card.id === 'cathay-cube') {
@@ -814,7 +783,6 @@ function calculateCardCashback(card, searchTerm, amount) {
                 applicableCap = rateGroup.cap;
                 matchedItem = exactMatch;
                 matchedCategory = rateGroup.category || null;
-                matchedRateGroup = rateGroup;
             }
         }
     }
@@ -899,8 +867,7 @@ function calculateCardCashback(card, searchTerm, amount) {
         cap: applicableCap,
         matchedItem: matchedItem,
         matchedCategory: matchedCategory,
-        effectiveAmount: effectiveAmount,
-        matchedRateGroup: matchedRateGroup
+        effectiveAmount: effectiveAmount
     };
 }
 
@@ -1053,41 +1020,19 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value">${capText}</div>
             </div>
         </div>
-        ${(() => {
-            if (isBasicCashback) {
-                const cashbackType = result.card.basicCashbackType || '現金回饋';
-                return `
-                    <div class="matched-merchant">
-                        一般消費回饋率 (${cashbackType})
-                    </div>
-                `;
-            } else if (result.matchedItem) {
-                let additionalInfo = '';
-                if (result.matchedRateGroup) {
-                    const cashbackType = result.matchedRateGroup.cashbackType || '現金回饋';
-                    const period = result.matchedRateGroup.period;
-                    const conditions = result.matchedRateGroup.conditions;
-                    
-                    additionalInfo += ` (${cashbackType})`;
-                    if (period) additionalInfo += `<br><small>活動期間: ${period}</small>`;
-                    if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
-                }
-                
-                const categoryInfo = result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (類別: ${result.matchedCategory})` : '';
-                
-                return `
-                    <div class="matched-merchant">
-                        匹配項目: <strong>${result.matchedItem}</strong>${categoryInfo}${additionalInfo}
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="matched-merchant">
-                        此卡無此項目回饋
-                    </div>
-                `;
-            }
-        })()}
+        ${isBasicCashback ? `
+            <div class="matched-merchant">
+                一般消費回饋率
+            </div>
+        ` : (result.matchedItem ? `
+            <div class="matched-merchant">
+                匹配項目: <strong>${result.matchedItem}</strong>${result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (類別: ${result.matchedCategory})` : ''}
+            </div>
+        ` : `
+            <div class="matched-merchant">
+                此卡無此項目回饋
+            </div>
+        `)}
     `;
     
     return cardDiv;
@@ -1371,49 +1316,8 @@ function showCardDetail(cardId) {
         fullNameLink.style.color = 'inherit';
     }
     
-    // Format the combined annual fee and fee waiver information
-    const formatFeeInfo = (card) => {
-        const annualFee = card.annualFee || '無資料';
-        const feeWaiver = card.feeWaiver || '無資料';
-        
-        // Extract fee amount from annualFee string
-        const feeMatch = annualFee.match(/(NT\$[\d,]+)|(免費)|(無年費)/);
-        let feeText = '';
-        
-        if (annualFee.includes('首年免年費') || annualFee.includes('首年免費')) {
-            feeText = '年費首年免費';
-            const nextYearMatch = annualFee.match(/次年起.*?(NT\$[\d,]+)/);
-            if (nextYearMatch) {
-                feeText += `，次年起${nextYearMatch[1]}`;
-            }
-        } else if (feeMatch) {
-            if (feeMatch[0].includes('免費') || feeMatch[0].includes('無年費')) {
-                feeText = '年費免費';
-            } else {
-                feeText = `年費${feeMatch[0]}`;
-            }
-        } else {
-            feeText = `年費${annualFee}`;
-        }
-        
-        // Format fee waiver conditions
-        let waiverText = '';
-        if (feeWaiver && feeWaiver !== '無資料') {
-            // Split conditions by common delimiters and wrap each in quotes
-            const conditions = feeWaiver.split(/[,，、或]/)
-                .map(condition => condition.trim())
-                .filter(condition => condition.length > 0)
-                .map(condition => `「${condition}」`);
-            
-            waiverText = `免年費條件為${conditions.join('或')}`;
-        }
-        
-        return waiverText ? `${feeText}。${waiverText}。` : `${feeText}。`;
-    };
-    
-    const combinedFeeInfo = formatFeeInfo(card);
-    document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
-    document.getElementById('card-fee-waiver').style.display = 'none'; // Hide the separate fee waiver line
+    document.getElementById('card-annual-fee').textContent = `年費：${card.annualFee || '無資料'}`;
+    document.getElementById('card-fee-waiver').textContent = `免年費條件：${card.feeWaiver || '無資料'}`;
     
     // Update basic cashback
     const basicCashbackDiv = document.getElementById('card-basic-cashback');
