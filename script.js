@@ -413,7 +413,7 @@ cardsData = {
       "basicCashbackType": "街口幣",
       "annualFee": "正卡NT$4,500",
       "feeWaiver": "採電子/行動簡訊帳單",
-      "website": "https://www.taishinbank.com.tw/",
+      "website": "https://www.taishinbank.com.tw/TSB/personal/credit/intro/overview/cg038/card001/",
       "cashbackRates": [
         {
           "rate": 2.5,
@@ -1042,13 +1042,24 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         '無回饋';
     
     // Format rate display for complex cards
-    let rateDisplay = result.rate > 0 ? `${Math.round(result.rate * 10) / 10}%` : '0%';
+    let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
+    
+    // Only show additive format for cards that truly have layered cashback
+    // CUBE cards show clean rates, Taishin Richart shows additive
     if (result.specialRate && result.basicRate && result.specialRate > 0) {
-        // Fix floating point precision issues
-        const totalRate = Math.round((result.specialRate + result.basicRate) * 10) / 10;
-        const specialRate = Math.round(result.specialRate * 10) / 10;
-        const basicRate = Math.round(result.basicRate * 10) / 10;
-        rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
+        if (result.card.id === 'cathay-cube') {
+            // CUBE cards show clean rates only
+            rateDisplay = `${result.specialRate}%`;
+        } else if (result.card.id === 'taishin-richart') {
+            // Taishin Richart shows additive structure
+            const totalRate = Math.round((result.specialRate + result.basicRate) * 10) / 10;
+            const specialRate = Math.round(result.specialRate * 10) / 10;
+            const basicRate = Math.round(result.basicRate * 10) / 10;
+            rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
+        } else {
+            // Other cards show just their total rate without breakdown for now
+            rateDisplay = `${result.rate}%`;
+        }
     }
     
     cardDiv.innerHTML = `
@@ -1491,6 +1502,18 @@ function showCardDetail(cardId) {
             localStorage.setItem(`cubeLevel-${card.id}`, this.value);
             updateCubeSpecialCashback(card);
         };
+        
+        // Add birthday month note after level selection
+        const levelSectionContent = cubeLevelSection.innerHTML;
+        const birthdayNote = `
+            <div class="cube-birthday-note" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">
+                <div style="color: #d97706; font-size: 14px; margin-bottom: 4px; font-weight: 600;">提醒</div>
+                <div style="color: #92400e; font-size: 13px; line-height: 1.4;">
+                    慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">官網查詢</a>哦！
+                </div>
+            </div>
+        `;
+        cubeLevelSection.innerHTML = levelSectionContent + birthdayNote;
     } else {
         cubeLevelSection.style.display = 'none';
     }
@@ -1501,13 +1524,6 @@ function showCardDetail(cardId) {
     
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = generateCubeSpecialContent(card);
-        // Add birthday month note for CUBE card
-        specialContent += `<div class="cashback-detail-item" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">`;
-        specialContent += `<div class="cashback-rate" style="color: #d97706; font-size: 14px; margin-bottom: 4px;">⚠️ 重要提醒</div>`;
-        specialContent += `<div class="cashback-condition" style="color: #92400e; font-size: 13px; line-height: 1.4;">`;
-        specialContent += `<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">慶生月</a>方案不納入此比較，生日月份請自行查詢官網優惠`;
-        specialContent += `</div>`;
-        specialContent += `</div>`;
     } else if (card.cashbackRates && card.cashbackRates.length > 0) {
         card.cashbackRates.forEach((rate, index) => {
             // 跳過需要隱藏的項目
