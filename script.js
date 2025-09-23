@@ -416,7 +416,7 @@ cardsData = {
       "website": "https://www.taishinbank.com.tw/",
       "cashbackRates": [
         {
-          "rate": 3.5,
+          "rate": 2.5,
           "cap": 400000,
           "cashbackType": "街口幣",
           "period": "活動至2025/12/31",
@@ -1047,6 +1047,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
+                ${(() => {
+                    if (isBasicCashback) {
+                        const cashbackType = result.card.basicCashbackType || '現金回饋';
+                        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+                    } else if (result.matchedRateGroup && result.matchedRateGroup.cashbackType) {
+                        const cashbackType = result.matchedRateGroup.cashbackType;
+                        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+                    }
+                    return '';
+                })()}
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
@@ -1055,20 +1065,17 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         </div>
         ${(() => {
             if (isBasicCashback) {
-                const cashbackType = result.card.basicCashbackType || '現金回饋';
                 return `
                     <div class="matched-merchant">
-                        一般消費回饋率 (${cashbackType})
+                        一般消費回饋率
                     </div>
                 `;
             } else if (result.matchedItem) {
                 let additionalInfo = '';
                 if (result.matchedRateGroup) {
-                    const cashbackType = result.matchedRateGroup.cashbackType || '現金回饋';
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
                     
-                    additionalInfo += ` (${cashbackType})`;
                     if (period) additionalInfo += `<br><small>活動期間: ${period}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                 }
@@ -1510,18 +1517,29 @@ function showCardDetail(cardId) {
                 const merchantsId = `merchants-${card.id}-${index}`;
                 const showAllId = `show-all-${card.id}-${index}`;
                 
+                // Special handling for Yushan Uni card exclusions
+                let processedItems = [...rate.items];
+                if (card.id === 'yushan-unicard') {
+                    processedItems = rate.items.map(item => {
+                        if (item === '街口' || item === '全支付') {
+                            return item + '(排除超商)';
+                        }
+                        return item;
+                    });
+                }
+                
                 if (rate.items.length <= 20) {
                     // 少於20個直接顯示全部
-                    const merchantsList = rate.items.join('、');
+                    const merchantsList = processedItems.join('、');
                     specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
                 } else {
                     // 超過20個顯示可展開的列表
-                    const initialList = rate.items.slice(0, 20).join('、');
-                    const fullList = rate.items.join('、');
+                    const initialList = processedItems.slice(0, 20).join('、');
+                    const fullList = processedItems.join('、');
                     
                     specialContent += `<div class="cashback-merchants">`;
                     specialContent += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
-                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${rate.items.length}個</button>`;
+                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
                     specialContent += `</div>`;
                 }
             }
