@@ -1180,9 +1180,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             <div class="detail-item">
                 <div class="detail-label">å›žé¥‹é‡'é¡</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
-                <div class="cashback-type-info">
-                    ${isBasicCashback ? (result.card.basicCashbackType || '群金回饋') : (result.matchedRateGroup && result.matchedRateGroup.cashbackType ? result.matchedRateGroup.cashbackType : '現金回饋')}
-                </div>
+                <div class="cashback-type-info"></div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">å›žé¥‹æ¶ˆè²»ä¸Šé™</div>
@@ -1191,6 +1189,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         </div>
         <div class="matched-merchant"></div>
     `;
+    
+    // Set cashback type info separately to avoid template literal complexity
+    const cashbackTypeDiv = cardDiv.querySelector('.cashback-type-info');
+    if (isBasicCashback) {
+        cashbackTypeDiv.textContent = `(${result.card.basicCashbackType || '現金回饋'})`;
+    } else if (result.matchedRateGroup && result.matchedRateGroup.cashbackType) {
+        cashbackTypeDiv.textContent = `(${result.matchedRateGroup.cashbackType})`;
+    } else {
+        cashbackTypeDiv.textContent = '(現金回饋)';
+    }
     
     // Set merchant info separately to avoid template literal complexity
     const merchantDiv = cardDiv.querySelector('.matched-merchant');
