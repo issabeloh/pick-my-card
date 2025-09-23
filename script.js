@@ -549,11 +549,121 @@ function handleMerchantInput() {
     validateInputs();
 }
 
+// Fuzzy search mapping for common terms
+const fuzzySearchMap = {
+    'pchome': 'pchome',
+    'pchome商店街': 'pchome',
+    'pchome24h': 'pchome 24h購物',
+    'shopee': '蝦皮購物',
+    '蝦皮': '蝦皮購物',
+    'rakuten': '樂天市場',
+    '樂天': '樂天市場',
+    'momo': 'momo購物網',
+    'yahoo': 'yahoo',
+    'yahoo購物': 'yahoo',
+    'yahoo超級商城': 'yahoo',
+    'costco': '好市多',
+    '好市多': 'costco',
+    '7-11': '7-11',
+    '7eleven': '7-11',
+    '7 11': '7-11',
+    '7-eleven': '7-11',
+    '全家': '全家',
+    'familymart': '全家',
+    '全家便利商店': '全家',
+    '萊爾富': 'ok mart',
+    '莱尔富': 'ok mart',
+    'okmart': 'ok mart',
+    'pxmart': '全聯福利中心',
+    '全聯': '全聯福利中心',
+    'carrefour': '家樂福',
+    '家樂福': 'carrefour',
+    'rt-mart': '大潤發',
+    '大潤發': 'rt-mart',
+    'mcd': '麥當勞',
+    'mcdonalds': '麥當勞',
+    '麥當勞': 'mcdonalds',
+    'starbucks': '星巴克',
+    '星巴克': 'starbucks',
+    'linepay': 'line pay',
+    'line pay': 'linepay',
+    'applepay': 'apple pay',
+    'apple pay': 'applepay',
+    'apple wallet': 'apple pay',
+    'googlepay': 'google pay',
+    'google pay': 'googlepay',
+    'samsungpay': 'samsung pay',
+    'samsung pay': 'samsungpay',
+    '街口': '街口支付',
+    '街口支付': '街口',
+    'jkopay': '街口',
+    'pi錢包': 'pi 拍錢包',
+    'pi wallet': 'pi 拍錢包',
+    '台灣支付': '台灣pay',
+    'taiwan pay': '台灣pay',
+    '台灣行動支付': '台灣pay',
+    'taiwanpay': '台灣pay',
+    '悠遊付': 'easy wallet',
+    'easywallet': '悠遊付',
+    '長榮': '長榮航空',
+    'eva air': '長榮航空',
+    'evaair': '長榮航空',
+    '華航': '中華航空',
+    'china airlines': '中華航空',
+    '立榮': 'uni air',
+    'uniaire': 'uni air',
+    '星宇': '星宇航空',
+    'starlux': '星宇航空',
+    'starlux airlines': '星宇航空',
+    '日本航空': 'japan airlines',
+    '日航': 'jal',
+    'jal': 'japan airlines',
+    '全日空': 'ana',
+    'all nippon airways': 'ana',
+    '大韓航空': 'korean air',
+    '大韓': 'korean air',
+    '韓亞航空': 'asiana airlines',
+    '韓亞': 'asiana airlines',
+    '國泰航空': 'cathay pacific',
+    '國泰': 'cathay pacific',
+    '新加坡航空': 'singapore airlines',
+    '新航': 'singapore airlines',
+    'sia': 'singapore airlines',
+    '泰國航空': 'thai airways',
+    '泰航': 'thai airways',
+    '馬來西亞航空': 'malaysia airlines',
+    '馬航': 'malaysia airlines',
+    '越南航空': 'vietnam airlines',
+    '越航': 'vietnam airlines',
+    '菲律賓航空': 'philippine airlines',
+    '菲航': 'philippine airlines',
+    '華信航空': 'mandarin airlines',
+    '華信': 'mandarin airlines',
+    '台灣高鐵': '高鐵',
+    'taiwan high speed rail': '高鐵',
+    'high speed rail': '高鐵',
+    'thsr': '高鐵',
+    'foodpanda': 'foodpanda',
+    'food panda': 'foodpanda',
+    'ubereats': 'uber eats',
+    'uber eats': 'ubereats',
+    '三井(mitsui outlet park)': '三井outlet',
+    '三井outlet': '三井(mitsui outlet park)',
+    '三井': '三井(mitsui outlet park)',
+    'mitsui': '三井(mitsui outlet park)',
+    'mitsui outlet': '三井(mitsui outlet park)'
+};
+
 // Find matching item in cards database
 function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
     
-    const searchLower = searchTerm.toLowerCase().trim();
+    let searchLower = searchTerm.toLowerCase().trim();
+    
+    // Apply fuzzy search mapping
+    if (fuzzySearchMap[searchLower]) {
+        searchLower = fuzzySearchMap[searchLower].toLowerCase();
+    }
     let allMatches = [];
     
     // Collect all possible matches
@@ -858,9 +968,8 @@ function calculateCardCashback(card, searchTerm, amount) {
             const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
             basicCashback = Math.floor(effectiveSpecialAmount * (basicRate + conditionalRate) / 100);
         } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
-            // Taishin Richart 3.3% already includes 0.3% basic, only calculate the 3% portion
-            specialCashback = Math.floor(effectiveSpecialAmount * 3.0 / 100);
-            basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+            // Taishin Richart 3.3% already includes 0.3% basic, don't add basic separately
+            basicCashback = 0; // The 3.3% already includes the basic rate
         } else {
             // Add basic cashback for the same amount (layered rewards)
             basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
@@ -918,6 +1027,9 @@ function calculateCardCashback(card, searchTerm, amount) {
             // Sport card: basic 1% + conditional 1% + special rate
             const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
             totalRate = Math.round((bestRate + basicRate + conditionalRate + bonusRate) * 10) / 10;
+        } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
+            // Richart 3.3% already includes basic rate
+            totalRate = Math.round(bestRate * 10) / 10;
         } else {
             totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
         }
@@ -1052,7 +1164,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     const cardDiv = document.createElement('div');
     cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''}`;
     
-    const capText = result.cap ? `NT$${result.cap.toLocaleString()}` : '無上限';
+    let capText = result.cap ? `NT$${result.cap.toLocaleString()}` : '無上限';
+    // Special handling for Taishin Richart card cap display
+    if (result.card.id === 'taishin-richart' && result.cap) {
+        capText = `NT$${result.cap.toLocaleString()}+`;
+    }
     const cashbackText = result.cashbackAmount > 0 ? 
                         `NT$${result.cashbackAmount.toLocaleString()}` : 
                         '無回饋';
