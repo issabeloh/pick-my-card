@@ -1178,57 +1178,41 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value">${rateDisplay}</div>
             </div>
             <div class="detail-item">
-                <div class="detail-label">å›žé¥‹é‡‘é¡</div>
+                <div class="detail-label">å›žé¥‹é‡'é¡</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
-                ${(() => {
-                    if (isBasicCashback) {
-                        const cashbackType = result.card.basicCashbackType || 'ç¾é‡‘å›žé¥‹';
-                        return `<div class="cashback-type-info">(${cashbackType})</div>`;
-                    } else if (result.matchedRateGroup && result.matchedRateGroup.cashbackType) {
-                        return `<div class="cashback-type-info">(${result.matchedRateGroup.cashbackType})</div>`;
-                    } else {
-                        return `<div class="cashback-type-info">(ç¾é‡‘å›žé¥‹)</div>`;
-                    }
-                })()}
+                <div class="cashback-type-info">
+                    ${isBasicCashback ? (result.card.basicCashbackType || '群金回饋') : (result.matchedRateGroup && result.matchedRateGroup.cashbackType ? result.matchedRateGroup.cashbackType : '現金回饋')}
+                </div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">å›žé¥‹æ¶ˆè²»ä¸Šé™</div>
                 <div class="detail-value">${capText}</div>
             </div>
         </div>
-        ${(() => {
-            if (isBasicCashback) {
-                return `
-                    <div class="matched-merchant">
-                        ä¸€èˆ¬æ¶ˆè²»å›žé¥‹çŽ‡
-                    </div>
-                `;
-            } else if (result.matchedItem) {
-                let additionalInfo = '';
-                if (result.matchedRateGroup) {
-                    const period = result.matchedRateGroup.period;
-                    const conditions = result.matchedRateGroup.conditions;
-                    
-                    if (period) additionalInfo += `<br><small>æ´»å‹•æœŸé–“: ${period}</small>`;
-                    if (conditions) additionalInfo += `<br><small>æ¢ä»¶: ${conditions}</small>`;
-                }
-                
-                const categoryInfo = result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (é¡žåˆ¥: ${result.matchedCategory})` : '';
-                
-                return `
-                    <div class="matched-merchant">
-                        åŒ¹é…é …ç›®: <strong>${result.matchedItem}</strong>${categoryInfo}${additionalInfo}
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="matched-merchant">
-                        æ­¤å¡ç„¡æ­¤é …ç›®å›žé¥‹
-                    </div>
-                `;
-            }
-        })()
+        <div class="matched-merchant"></div>
     `;
+    
+    // Set merchant info separately to avoid template literal complexity
+    const merchantDiv = cardDiv.querySelector('.matched-merchant');
+    if (isBasicCashback) {
+        merchantDiv.textContent = '一般消費回饋率';
+    } else if (result.matchedItem) {
+        let content = `匹配項目: <strong>${result.matchedItem}</strong>`;
+        if (result.matchedCategory && result.card.id !== 'cathay-cube') {
+            content += ` (類別: ${result.matchedCategory})`;
+        }
+        if (result.matchedRateGroup) {
+            if (result.matchedRateGroup.period) {
+                content += `<br><small>活動期間: ${result.matchedRateGroup.period}</small>`;
+            }
+            if (result.matchedRateGroup.conditions) {
+                content += `<br><small>條件: ${result.matchedRateGroup.conditions}</small>`;
+            }
+        }
+        merchantDiv.innerHTML = content;
+    } else {
+        merchantDiv.textContent = '此卡無此項目回饋';
+    }
     
     return cardDiv;
 }
