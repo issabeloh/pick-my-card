@@ -4,57 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
-    <link rel="stylesheet" href="styles.css?v=20250923-1">
-    <style>
-        /* 緊急快速修復 */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-        .loading-overlay h2 {
-            margin-bottom: 20px;
-        }
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .loading-fix-button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background: #4169e1;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css?v=20250920-6">
 </head>
 <body>
-    <!-- 緊急載入覆蓋層 -->
-    <div class="loading-overlay" id="loading-overlay">
-        <h2>資料載入中...</h2>
-        <div class="loading-spinner"></div>
-        <p>正在修復編碼問題</p>
-        <button class="loading-fix-button" id="fix-button">手動修復顯示</button>
-    </div>
-
     <div class="container">
         <header>
             <div class="header-top">
@@ -163,34 +115,8 @@
                                 <div class="info-label">卡片全名:</div>
                                 <div class="info-value card-full-name-bold"><a id="card-full-name-link" target="_blank" rel="noopener"></a></div>
                             </div>
-                            <div class="info-item">
-                                <div class="info-label">📅 重要日期 (選填):</div>
-                                <div class="dates-inline-wrapper">
-                                    <div class="date-input-inline">
-                                        <span class="date-label-small">結賬日:</span>
-                                        <input type="number" 
-                                               id="billing-date" 
-                                               min="1" 
-                                               max="31" 
-                                               placeholder="日"
-                                               class="date-input">
-                                        <span class="date-suffix">號</span>
-                                    </div>
-                                    <div class="date-input-inline">
-                                        <span class="date-label-small">生日月:</span>
-                                        <input type="number" 
-                                               id="birth-month" 
-                                               min="1" 
-                                               max="12" 
-                                               placeholder="月"
-                                               class="date-input">
-                                        <span class="date-suffix">月</span>
-                                        <small class="date-note">（用於慶生月回饋）</small>
-                                    </div>
-                                </div>
-                            </div>
                             <div class="info-item fee-annual-section">
-                                <div class="info-label">年費及免年費條件:</div>
+                                <div class="info-label">年費訊息:</div>
                                 <div class="fee-combined-info">
                                     <div class="info-value info-value-small" id="card-annual-fee"></div>
                                     <div class="info-value info-value-small fee-waiver-text" id="card-fee-waiver"></div>
@@ -200,6 +126,31 @@
                                             <span class="checkmark"></span>
                                             <span class="checkbox-label">我已過免年費門檻</span>
                                         </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">📅 重要日期 (選填):</div>
+                                <div class="dates-inline-wrapper">
+                                    <div class="date-input-inline">
+                                        <span class="date-label-small">結帳日:</span>
+                                        <input type="number" 
+                                               id="billing-date" 
+                                               min="1" 
+                                               max="31" 
+                                               placeholder="日"
+                                               class="date-input">
+                                        <span class="date-suffix">號</span>
+                                    </div>
+                                    <div class="date-input-inline">
+                                        <span class="date-label-small">帳單日:</span>
+                                        <input type="number" 
+                                               id="statement-date" 
+                                               min="1" 
+                                               max="31" 
+                                               placeholder="日"
+                                               class="date-input">
+                                        <span class="date-suffix">號</span>
                                     </div>
                                 </div>
                             </div>
@@ -257,69 +208,8 @@
 </div>
     </div>
     
-    <script src="script.js?v=20250923-3"></script>
+    <script src="script.js?v=20250920-7"></script>
     
-    <!-- 快速修復 JavaScript -->
-    <script>
-    // 正確的卡片中文資料
-    const cardNames = {
-        "taishin-richart": "台新Richart卡",
-        "yushan-unicard": "玉山Uni卡",
-        "cathay-cube": "國泰CUBE卡",
-        "esun-sport": "玉山Sport卡",
-        "esun-greenbean": "玉山Greenbean卡",
-        "esun-dawaho": "玉山DAWAHO卡",
-        "yushan-ubear": "玉山U Bear卡",
-        "ctbc-daone": "中信大ONE卡",
-        "hsbc-cashback": "滙豐現金回饋卡",
-        "hsbc-liveplus": "滙豐Live+卡",
-        "ctbc-taiwanera": "中信台灣大卡",
-        "ctbc-linepay": "中信LINE Pay卡",
-        "taishin-jiekou": "台新街口卡"
-    };
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const fixButton = document.getElementById('fix-button');
-        
-        // 在頁面載入後自動嘗試修復
-        setTimeout(function() {
-            fixCardDisplay();
-        }, 2000);
-        
-        // 手動修復按鈕
-        fixButton.addEventListener('click', function() {
-            fixCardDisplay();
-        });
-        
-        function fixCardDisplay() {
-            // 移除載入覆蓋層
-            loadingOverlay.style.display = 'none';
-            
-            // 強制修復卡片顯示
-            const cardChips = document.getElementById('card-chips');
-            if (!cardChips) return;
-            
-            // 清空並重新創建卡片
-            cardChips.innerHTML = '';
-            
-            // 創建卡片
-            for (const [id, name] of Object.entries(cardNames)) {
-                const chip = document.createElement('div');
-                chip.className = 'card-chip chip-clickable';
-                chip.textContent = name;
-                chip.dataset.cardId = id;
-                chip.addEventListener('click', function() {
-                    showCardDetail(id);
-                });
-                cardChips.appendChild(chip);
-            }
-            
-            console.log('✅ 已修復卡片顯示');
-        }
-    });
-    </script>
-
     <!-- Firebase Configuration -->
     <script type="module">
       // Import the functions you need from the SDKs you need
