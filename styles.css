@@ -482,6 +482,13 @@ input[type="number"]:focus {
     font-weight: normal;
 }
 
+.date-note {
+    font-size: 0.7em;
+    color: #9ca3af;
+    margin-left: 4px;
+    font-style: italic;
+}
+
 .matched-merchant {
     margin-top: 6px;
     font-size: 12px;

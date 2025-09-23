@@ -75,7 +75,64 @@ cardsData = {
       "specialItems": [
         "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple åª’é«”æœå‹™", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "è¦çš®è³¼ç‰©", "momoè³¼ç‰©ç¶²", "pchome 24hè³¼ç‰©", "å°æ¨¹è³¼", "coupang é…·æ¾Ž", "æ·˜å¯¶/å¤©è²“", "é æ±sogoç™¾è²¨", "é æ±garden city", "å¤ªå¹³æ´‹ç™¾è²¨", "æ–°å…‰ä¸‰è¶Š", "skm park", "bellavita", "å¾®é¢¨å»£å ´", "é æ±ç™¾è²¨", "big cityé æ±å·¨åŸŽè³¼ç‰©ä¸­å¿ƒ", "èª å“ç”Ÿæ´»", "ç’°çƒè³¼ç‰©ä¸­å¿ƒ", "citylink", "çµ±ä¸€æ™‚ä»£å°åŒ—åº—", "å°åŒ—101", "att 4 fun", "æ˜Žæ›œç™¾è²¨", "äº¬ç«™", "ç¾Žéº—è¯", "å¤§è‘‰é«˜å³¶å±‹", "æ¯”æ¼¾å»£å ´", "å¤§æ±Ÿåœ‹éš›è³¼ç‰©ä¸­å¿ƒ", "ä¸­å‹ç™¾è²¨", "å»£ä¸‰sogo", "tiger city", "å‹¤ç¾Žèª å“ç¶ åœ’é“", "å¤§é­¯é–£æ–°æ™‚ä»£", "è€æ–¯å»£å ´", "å—ç´¡è³¼ç‰©ä¸­å¿ƒ", "å¤¢æ™‚ä»£", "æ¼¢ç¥žç™¾è²¨", "æ¼¢ç¥žå·¨è›‹", "mitsui outlet park", "mitsui shopping park lalaport", "ç¾©å¤§ä¸–ç•Œè³¼ç‰©å»£å ´", "è¯æ³°åå“åŸŽ", "ç¾©äº«å¤©åœ°", "éº—å¯¶outlet mall", "ç§€æ³°ç”Ÿæ´»", "å°èŒ‚è³¼ç‰©ä¸­å¿ƒ", "æ–°æœˆå»£å ´", "ä¸‰å‰µç”Ÿæ´»", "å®åŒ¯å»£å ´", "nokeå¿ æ³°æ¨‚ç”Ÿæ´»", "uber eats", "foodpanda", "åœ‹å…§é¤é£²", "éº¥ç•¶å‹ž", "åº·æ˜¯ç¾Ž", "å±ˆè‡£æ°", "å¤§é˜ªè¬åœ‹åšè¦½æœƒå®˜ç¶²", "surutto qrttoå®˜ç¶²", "å¤§é˜ªç¾Žé£Ÿexpo", "æµ·å¤–å¯¦é«”æ¶ˆè²»", "æ±äº¬è¿ªå£«å°¼æ¨‚åœ’", "æ±äº¬è¯ç´å…„å¼Ÿå“ˆåˆ©æ³¢ç‰¹å½±åŸŽ", "å¤§é˜ªç’°çƒå½±åŸŽ", "appleéŒ¢åŒ…æŒ‡å®šäº¤é€šå¡", "uber", "grab", "å°ç£é«˜éµ", "yoxi", "å°ç£å¤§è»ŠéšŠ", "irent", "å’Œé‹ç§Ÿè»Š", "æ ¼ä¸Šç§Ÿè»Š", "ä¸­è¯èˆªç©º", "é•·æ¦®èˆªç©º", "æ˜Ÿå®‡èˆªç©º", "å°ç£è™Žèˆª", "åœ‹æ³°èˆªç©º", "æ¨‚æ¡ƒèˆªç©º", "é˜¿è¯é…‹èˆªç©º", "é…·èˆª", "æ•æ˜Ÿèˆªç©º", "æ—¥æœ¬èˆªç©º", "anaå…¨æ—¥ç©º", "äºžæ´²èˆªç©º", "è¯åˆèˆªç©º", "æ–°åŠ å¡èˆªç©º", "è¶Šæ·èˆªç©º", "å¤§éŸ“èˆªç©º", "é”ç¾Žèˆªç©º", "åœŸè€³å…¶èˆªç©º", "å¡é”èˆªç©º", "æ³•åœ‹èˆªç©º", "æ˜Ÿé‡Žé›†åœ˜", "å…¨çƒè¿ªå£«å°¼é£¯åº—", "æ±æ©« inn", "åœ‹å…§é£¯åº—ä½å®¿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravelæ˜“éŠç¶²", "é›„ç…æ—…éŠ", "å¯æ¨‚æ—…éŠ", "æ±å—æ—…éŠ", "äº”ç¦æ—…éŠ", "ç‡¦æ˜Ÿæ—…éŠ", "å±±å¯Œæ—…éŠ", "é•·æ±Žå‡æœŸ", "é³³å‡°æ—…è¡Œç¤¾", "ezflyæ˜“é£›ç¶²", "ç†æƒ³æ—…éŠ", "æ°¸åˆ©æ—…è¡Œç¤¾", "ä¸‰è³€æ—…è¡Œç¤¾", "å®¶æ¨‚ç¦", "lopiaå°ç£", "å…¨è¯ç¦åˆ©ä¸­å¿ƒ", "å°ç£ä¸­æ²¹ç›´ç‡Ÿç«™", "7-11", "å…¨å®¶", "ikea", "linepay"
       ],
-      "cashbackRates": [],
+      "cashbackRates": [
+        {
+          "rate": 2.0,
+          "cap": null,
+          "category": "集精選",
+          "items": [
+            "家樂福", "lopia台灣", "全聯福利中心", "台灣中油直營站", "7-11", "全家", "ikea"
+          ]
+        },
+        {
+          "rate": 2.0,
+          "cap": null,
+          "category": "來支付",
+          "items": [
+            "linepay"
+          ]
+        },
+        {
+          "rate": 10.0,
+          "cap": null,
+          "category": "童樂匯",
+          "period": "2025/8/1-2025/11/20",
+          "conditions": "每月20日(含)前客戶須符合以下2項條件，次月1日起可切換至童樂匯。條件一：客戶與其未成年子女須持有本行帳戶。條件二：客戶須持有有效CUBE信用卡正卡。",
+          "items": [
+            "大樹先生的家", "Money Jump 媽你講親子餐廳", "淘憩時光親子餐廳", "大房子親子餐廳樂園", "小島3.5度親子餐廳", "咱們小時候", "甲蟲秘境", "Zone Cafe 弄咖啡親子餐廳", "10mois台灣官網", "Mamas&Papas台灣官網", "Nuna品牌官網", "Tender Leaf台灣官網", "cybex台灣官網", "朱宗慶打擊樂教學系統", "雲門舞集舞蹈教室", "Yamaha音樂教室", "TutorABC Junior", "Cambly Kids", "Etalking Kids", "iSKI滑雪俱樂部", "汐遊寶寶", "國立臺灣科學教育館"
+          ]
+        },
+        {
+          "rate": 5.0,
+          "cap": null,
+          "category": "童樂匯",
+          "period": "2025/8/1-2025/11/20",
+          "conditions": "每月20日(含)前客戶須符合以下2項條件，次月1日起可切換至童樂匯。條件一：客戶與其未成年子女須持有本行帳戶。條件二：客戶須持有有效CUBE信用卡正卡。",
+          "items": [
+            "klook", "東京迪士尼樂園", "大阪環球影城", "麗寶樂園", "六福村主題樂園", "九族文化村", "劍湖山世界主題遊樂園", "義大遊樂世界", "小叮當科學園區主題樂園", "蘭城晶英酒店", "礁溪寒沐酒店", "大溪笠復威斯汀度假酒店", "煙波大飯店新竹湖濱館", "麗寶福容大飯店", "雲品溫泉酒店", "和逸飯店(台南西門館、桃園館)", "義大皇家酒店", "高雄洲際酒店", "高雄萬豪酒店", "增丁凱撒大飯店", "花蓮遠雄悅來大飯店", "瑞穗天合國際觀光酒店", "六福莊", "卡多摩嬰童館", "營養銀行", "安琦兒婦嬰百貨", "宜兒樂", "麗兒采家", "Taobaby濤寶日記", "媽媽好", "媽媽餵mamaway", "俏媽咪"
+          ]
+        },
+        {
+          "rate": 10.0,
+          "cap": null,
+          "category": "慶生月",
+          "period": "2025/7/1-2025/9/30",
+          "conditions": "需為用戶生日月份",
+          "items": [
+            "Onitsuka Tiger 鬼塚虎台灣官網", "東京迪士尼樂園", "大阪環球影城", "肌膚之鑽台灣官網", "Samsonite 台灣官網", "American Tourister 台灣官網", "creammm.t", "某某法式甘點", "CJSJ", "紅葉蛋糕指定網站", "畜室法式巧克力", "貓吃魚", "昭日堂燒肉", "昭日堂鍋煮", "匠屋燒肉 朝馬館", "匠屋明義本店", "Wagyu Club和牛俱樂部", "Amber Hill", "D&C Residence", "高雄Capstone Steakhouse", "路易奇電力公司Bulimia溫體牛火鍋", "山上走走日式無菜單海鮮鍋物", "山上走走燒肉專賣店", "UNCLE SHAWN 燒肉餐酒館", "大股熟成燒肉", "秘町炭火燒肉", "錢櫃KTV", "好樂辪KTV", "星聚點KTV", "享溫馨KTV", "PlayStation", "Nintendo", "巴哈姆特動畫瘋"
+          ]
+        },
+        {
+          "rate": 3.5,
+          "cap": null,
+          "category": "慶生月",
+          "period": "2025/7/1-2025/9/30",
+          "conditions": "需為用戶生日月份",
+          "items": [
+            "新光三越", "klook", "funnow", "uber eats"
+          ]
+        }
+      ],
       "couponCashbacks": [
         {
           "merchant": "å¤§ä¸¸ç¦å²¡å¤©ç¥žåº—",
@@ -788,25 +845,48 @@ function calculateCardCashback(card, searchTerm, amount) {
     let matchedCategory = null;
     let matchedRateGroup = null;
     
-    // Handle CUBE card with levels
+    // Handle CUBE card with levels and new category structure
     if (card.hasLevels && card.id === 'cathay-cube') {
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
         const levelSettings = card.levelSettings[savedLevel];
         
-        // Check if merchant matches special items - ONLY use exact match
+        // First check special items (highest tier)
         let matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === searchTerm);
         
         if (matchedSpecialItem) {
             bestRate = levelSettings.specialRate;
             matchedItem = matchedSpecialItem;
-            matchedCategory = 'çŽ©æ•¸ä½ã€æ¨‚é¥—è³¼ã€è¶£æ—…è¡Œ';
+            matchedCategory = '玩數位、樂饗購、趣旅行';
         } else {
-            // Other merchants get general rate
-            bestRate = levelSettings.generalRate;
-            matchedItem = 'å…¶ä»–é€šè·¯';
-            matchedCategory = 'å…¶ä»–é€šè·¯';
+            // Check other category items
+            for (const rateGroup of card.cashbackRates) {
+                let exactMatch = rateGroup.items.find(item => item.toLowerCase() === searchTerm);
+                if (exactMatch && rateGroup.rate >= bestRate) {
+                    // Check if it's birthday month category and user's birth month matches
+                    if (rateGroup.category === '慶生月') {
+                        const currentMonth = new Date().getMonth() + 1;
+                        const userBirthMonth = localStorage.getItem(`birthMonth-${card.id}`);
+                        if (!userBirthMonth || parseInt(userBirthMonth) !== currentMonth) {
+                            continue; // Skip if not user's birth month
+                        }
+                    }
+                    
+                    bestRate = rateGroup.rate;
+                    applicableCap = rateGroup.cap;
+                    matchedItem = exactMatch;
+                    matchedCategory = rateGroup.category;
+                    matchedRateGroup = rateGroup;
+                }
+            }
+            
+            // If no match found, use general rate
+            if (bestRate === 0) {
+                bestRate = levelSettings.generalRate;
+                matchedItem = '其他通路';
+                matchedCategory = '其他通路';
+            }
         }
-        applicableCap = null; // CUBE card has no cap
+        applicableCap = null; // CUBE card has no cap for most categories
     } else {
         // ONLY use exact matches for other cards
         for (const rateGroup of card.cashbackRates) {
@@ -850,8 +930,11 @@ function calculateCardCashback(card, searchTerm, amount) {
             bonusRate = card.domesticBonusRate;
         }
         
-        // Add basic cashback for the same amount (layered rewards)
-        let basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+        // For CUBE card, the rates already include basic cashback, so don't add it again
+        let basicCashback = 0;
+        if (card.id !== 'cathay-cube') {
+            basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
+        }
         
         // Add bonus cashback if applicable
         let bonusCashback = 0;
@@ -1530,7 +1613,7 @@ function showCardDetail(cardId) {
                     
                     specialContent += `<div class="cashback-merchants">`;
                     specialContent += `é©ç”¨é€šè·¯: <span id="${merchantsId}">${initialList}</span>`;
-                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... é¡¯ç¤ºå…¨éƒ¨${rate.items.length}å€‹</button>`;
+                    specialContent += `<button class="show-more-btn" id="${showAllId}" data-merchants-id="${merchantsId}" data-initial-list="${initialList}" data-full-list="${fullList}">... 顯示全部${rate.items.length}個</button>`;
                     specialContent += `</div>`;
                 }
             }
@@ -1599,6 +1682,32 @@ function showCardDetail(cardId) {
     // Show modal
     modal.style.display = 'flex';
     
+    // Setup event delegation for show-more buttons
+    modal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('show-more-btn')) {
+            const buttonElement = e.target;
+            const merchantsId = buttonElement.dataset.merchantsId;
+            const initialList = buttonElement.dataset.initialList;
+            const fullList = buttonElement.dataset.fullList;
+            const merchantsElement = document.getElementById(merchantsId);
+            
+            if (!merchantsElement) return;
+            
+            const isExpanded = buttonElement.textContent.includes('收起');
+            
+            if (isExpanded) {
+                // 收起
+                merchantsElement.textContent = initialList;
+                const totalCount = fullList.split('、').length;
+                buttonElement.textContent = `... 顯示全部${totalCount}個`;
+            } else {
+                // 展開
+                merchantsElement.textContent = fullList;
+                buttonElement.textContent = '收起';
+            }
+        }
+    });
+    
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
     const closeModal = () => {
@@ -1634,7 +1743,7 @@ function generateCubeSpecialContent(card) {
         
         content += `<div class="cashback-merchants">`;
         content += `é©ç”¨é€šè·¯: <span id="${merchantsId}">${initialList}</span>`;
-        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... é¡¯ç¤ºå…¨éƒ¨${card.specialItems.length}å€‹</button>`;
+        content += `<button class="show-more-btn" id="${showAllId}" data-merchants-id="${merchantsId}" data-initial-list="${initialList}" data-full-list="${fullList}">... 顯示全部${card.specialItems.length}個</button>`;
         content += `</div>`;
     }
     content += `</div>`;
@@ -1939,17 +2048,22 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
     }
 }
 
-// è¨­ç½®çµå¸³æ—¥æœŸåŠŸèƒ½
+// 設置結賬日期功能
 async function setupBillingDates(cardId) {
     const billingInput = document.getElementById('billing-date');
-    const statementInput = document.getElementById('statement-date');
+    const birthMonthInput = document.getElementById('birth-month');
     
-    if (!billingInput || !statementInput) return;
+    if (!billingInput || !birthMonthInput) return;
     
-    // è®€å–å·²å„²å­˜çš„æ—¥æœŸ
+    // 讀取已儲存的日期和生日月
     const savedDates = await loadBillingDates(cardId);
     billingInput.value = savedDates.billingDate;
-    statementInput.value = savedDates.statementDate;
+    
+    // 讀取生日月
+    const savedBirthMonth = localStorage.getItem(`birthMonth-${cardId}`);
+    if (savedBirthMonth) {
+        birthMonthInput.value = savedBirthMonth;
+    }
     
     // ç‚ºæœ‰å€¼çš„è¼¸å…¥æ¡†åŠ ä¸Šè¦–è¦ºå¼·èª¿
     const updateInputAppearance = (input) => {
@@ -1961,31 +2075,44 @@ async function setupBillingDates(cardId) {
     };
     
     updateInputAppearance(billingInput);
-    updateInputAppearance(statementInput);
+    updateInputAppearance(birthMonthInput);
     
-    // å„²å­˜åŠŸèƒ½
+    // 儲存功能
     const saveDates = () => {
         const billing = billingInput.value;
-        const statement = statementInput.value;
-        saveBillingDates(cardId, billing, statement);
+        saveBillingDates(cardId, billing, '');
         
-        // æ›´æ–°è¦–è¦ºç‹€æ…‹
+        // 更新視覺狀態
         updateInputAppearance(billingInput);
-        updateInputAppearance(statementInput);
     };
     
-    // è¨­ç½®è®Šæ›´ç›£è½
+    // 儲存生日月
+    const saveBirthMonth = () => {
+        const birthMonth = birthMonthInput.value;
+        if (birthMonth) {
+            localStorage.setItem(`birthMonth-${cardId}`, birthMonth);
+        } else {
+            localStorage.removeItem(`birthMonth-${cardId}`);
+        }
+        updateInputAppearance(birthMonthInput);
+    };
+    
+    // 設置變更監聽
     billingInput.onchange = saveDates;
     billingInput.onblur = saveDates;
-    statementInput.onchange = saveDates;
-    statementInput.onblur = saveDates;
+    birthMonthInput.onchange = saveBirthMonth;
+    birthMonthInput.onblur = saveBirthMonth;
     
-    // è¼¸å…¥é©—è­‰
-    [billingInput, statementInput].forEach(input => {
-        input.oninput = (e) => {
-            let value = parseInt(e.target.value);
-            if (value > 31) e.target.value = 31;
-            if (value < 1 && e.target.value !== '') e.target.value = 1;
-        };
-    });
+    // 輸入驗證
+    billingInput.oninput = (e) => {
+        let value = parseInt(e.target.value);
+        if (value > 31) e.target.value = 31;
+        if (value < 1 && e.target.value !== '') e.target.value = 1;
+    };
+    
+    birthMonthInput.oninput = (e) => {
+        let value = parseInt(e.target.value);
+        if (value > 12) e.target.value = 12;
+        if (value < 1 && e.target.value !== '') e.target.value = 1;
+    };
 }
