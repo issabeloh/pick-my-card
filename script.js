@@ -516,43 +516,89 @@ function showErrorMessage(message) {
 
 let currentMatchedItem = null;
 
-// DOM elements
-const merchantInput = document.getElementById('merchant-input');
-const amountInput = document.getElementById('amount-input');
-const calculateBtn = document.getElementById('calculate-btn');
-const resultsSection = document.getElementById('results-section');
-const resultsContainer = document.getElementById('results-container');
-const couponResultsSection = document.getElementById('coupon-results-section');
-const couponResultsContainer = document.getElementById('coupon-results-container');
-const matchedItemDiv = document.getElementById('matched-item');
+// DOM elements - will be initialized after DOM is loaded
+let merchantInput, amountInput, calculateBtn, resultsSection, resultsContainer, couponResultsSection, couponResultsContainer, matchedItemDiv;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 DOM loaded, initializing application...');
+    
+    // Initialize DOM elements
+    merchantInput = document.getElementById('merchant-input');
+    amountInput = document.getElementById('amount-input');
+    calculateBtn = document.getElementById('calculate-btn');
+    resultsSection = document.getElementById('results-section');
+    resultsContainer = document.getElementById('results-container');
+    couponResultsSection = document.getElementById('coupon-results-section');
+    couponResultsContainer = document.getElementById('coupon-results-container');
+    matchedItemDiv = document.getElementById('matched-item');
+    
+    // Check if essential DOM elements exist
+    if (!merchantInput || !amountInput || !calculateBtn) {
+        console.error('❌ Essential DOM elements not found!');
+        showErrorMessage('頁面載入錯誤，請重新整理頁面');
+        return;
+    }
+    
     // Load cards data first
     const dataLoaded = await loadCardsData();
     if (!dataLoaded) {
-        // If data loading fails, disable the app
+        console.error('❌ Failed to load cards data');
+        showErrorMessage('信用卡資料載入失敗');
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
     
+    console.log('✅ Cards data loaded, initializing user cards...');
+    // Initialize user cards (all cards for non-logged users)
+    loadUserCards();
+    
+    console.log('✅ Populating card chips...');
     populateCardChips();
+    
+    console.log('✅ Setting up event listeners...');
     setupEventListeners();
+    
+    console.log('✅ Setting up authentication...');
     setupAuthentication();
 });
 
 // Populate card chips in header
 function populateCardChips() {
+    console.log('🔄 populateCardChips called, currentUser:', currentUser ? currentUser.email : 'not logged in');
+    
     const cardChipsContainer = document.getElementById('card-chips');
-    if (!cardChipsContainer) return;
+    if (!cardChipsContainer) {
+        console.error('❌ card-chips container not found!');
+        return;
+    }
     
     // Clear existing chips
     cardChipsContainer.innerHTML = '';
+    
+    // Check if cards data exists
+    if (!cardsData || !cardsData.cards || cardsData.cards.length === 0) {
+        console.error('❌ No cards data available!');
+        cardChipsContainer.innerHTML = '<div style="color: red; padding: 10px;">信用卡資料載入失敗</div>';
+        return;
+    }
     
     // Show cards based on user selection or all cards if not logged in
     const cardsToShow = currentUser ? 
         cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
         cardsData.cards;
+    
+    console.log('📊 Cards to show:', cardsToShow.length, 'total cards:', cardsData.cards.length);
+    console.log('📋 Selected cards:', Array.from(userSelectedCards));
+    
+    if (cardsToShow.length === 0) {
+        if (currentUser && userSelectedCards.size === 0) {
+            cardChipsContainer.innerHTML = '<div style="color: #666; padding: 10px;">尚未選擇任何信用卡，請點擊設定按鈕選擇</div>';
+        } else {
+            cardChipsContainer.innerHTML = '<div style="color: red; padding: 10px;">找不到符合條件的信用卡</div>';
+        }
+        return;
+    }
     
     cardsToShow.forEach(card => {
         const chip = document.createElement('div');
@@ -561,6 +607,8 @@ function populateCardChips() {
         chip.addEventListener('click', () => showCardDetail(card.id));
         cardChipsContainer.appendChild(chip);
     });
+    
+    console.log('✅ Successfully populated', cardsToShow.length, 'card chips');
 }
 
 // Setup event listeners
@@ -1197,34 +1245,62 @@ function formatCurrency(amount) {
 
 // Authentication setup
 function setupAuthentication() {
+    console.log('🔐 Setting up authentication...');
+    
     // Wait for Firebase to load
     const checkFirebaseReady = () => {
+        console.log('🔍 Checking Firebase ready state...');
+        
         if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
+            console.log('✅ Firebase is ready!');
             auth = window.firebaseAuth;
             db = window.db;
             initializeAuth();
         } else {
+            console.log('⏳ Firebase not ready yet, retrying...');
             setTimeout(checkFirebaseReady, 100);
         }
     };
+    
+    // Start checking immediately
     checkFirebaseReady();
 }
 
 function initializeAuth() {
+    console.log('🛠️ Initializing authentication...');
+    
     const signInBtn = document.getElementById('sign-in-btn');
     const signOutBtn = document.getElementById('sign-out-btn');
     const userInfo = document.getElementById('user-info');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
     
+    // Check if all elements exist
+    if (!signInBtn || !signOutBtn || !userInfo) {
+        console.error('❌ Authentication elements not found!');
+        return;
+    }
+    
+    console.log('✅ Authentication elements found');
+    
     // Sign in function
     signInBtn.addEventListener('click', async () => {
+        console.log('💆 Sign in button clicked');
+        
+        // Check if Firebase functions are available
+        if (!window.signInWithPopup || !window.googleProvider) {
+            console.error('❌ Firebase auth functions not available');
+            alert('登入功能不可用，請稍後再試');
+            return;
+        }
+        
         try {
+            console.log('🚀 Attempting sign in...');
             const result = await window.signInWithPopup(auth, window.googleProvider);
-            console.log('Sign in successful:', result.user);
+            console.log('✅ Sign in successful:', result.user.email);
         } catch (error) {
-            console.error('Sign in failed:', error);
-            alert('ç™»å…¥å¤±æ•—ï¼š' + error.message);
+            console.error('❌ Sign in failed:', error);
+            alert('登入失敗：' + error.message);
         }
     });
     
@@ -1279,9 +1355,12 @@ function initializeAuth() {
 
 // Load user's selected cards from localStorage
 function loadUserCards() {
+    console.log('📚 Loading user cards, currentUser:', currentUser ? currentUser.email : 'not logged in');
+    
     if (!currentUser) {
-        console.log('No current user, using all cards');
+        console.log('ℹ️ No current user, using all cards');
         userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        console.log('✅ Set all cards for non-logged user:', Array.from(userSelectedCards));
         return;
     }
     
@@ -1291,17 +1370,18 @@ function loadUserCards() {
         
         if (savedCards) {
             userSelectedCards = new Set(JSON.parse(savedCards));
-            console.log('Loaded user cards from localStorage:', Array.from(userSelectedCards));
+            console.log('✅ Loaded user cards from localStorage:', Array.from(userSelectedCards));
         } else {
             // First time user - select all cards by default
-            console.log('First time user, selecting all cards');
+            console.log('🎆 First time user, selecting all cards');
             userSelectedCards = new Set(cardsData.cards.map(card => card.id));
             saveUserCards();
         }
     } catch (error) {
-        console.error('Error loading user cards from localStorage:', error);
+        console.error('❌ Error loading user cards from localStorage:', error);
         // Default to all cards if error
         userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        console.log('🔄 Defaulted to all cards due to error');
     }
 }
 
