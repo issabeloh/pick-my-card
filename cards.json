@@ -28,8 +28,8 @@
       "name": "玉山Uni卡",
       "fullName": "玉山銀行UniCard信用卡",
       "basicCashback": 1.0,
-      "annualFee": "御璽卡NT$3,000、附卡免年費",
-      "feeWaiver": "首年免年費，(1)每年有消費，年年免年費。(2)使用玉山帳戶自動扣繳信用卡款或帳單e化期間享免年費優惠",
+      "annualFee": "御璽卡NT$3,000",
+      "feeWaiver": "首年免年費，每年有消費年年免年費，或使用玉山帳戶自動扣繳信用卡款或帳單e化期間享免年費優惠",
       "website": "https://www.esunbank.com/zh-tw/personal/credit-card/intro/bank-card/unicard",
       "cashbackRates": [
         {

@@ -472,7 +472,21 @@ input[type="number"]:focus {
 }
 
 .no-cashback-text {
-    color: #ef4444;
+    color: #9ca3af;
+}
+
+.cashback-type-info {
+    font-size: 0.8em;
+    color: #6b7280;
+    margin-top: 4px;
+    font-weight: normal;
+}
+
+.date-note {
+    font-size: 0.7em;
+    color: #9ca3af;
+    margin-left: 4px;
+    font-style: italic;
 }
 
 .matched-merchant {
