@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信用卡回饋大師</title>
+    <link rel="stylesheet" href="styles.css?v=20250920-6">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div class="header-content">
+                    <h1>信用卡回饋大師</h1>
+                    <p>找出最高回饋的信用卡</p>
+                </div>
+                <div class="auth-section">
+                    <div id="user-info" style="display: none;">
+                        <img id="user-photo" class="user-photo" alt="User">
+                        <span id="user-name"></span>
+                        <button id="sign-out-btn" class="auth-btn secondary">登出</button>
+                    </div>
+                    <button id="sign-in-btn" class="auth-btn primary">登入</button>
+                </div>
+            </div>
+            <div class="supported-cards" id="supported-cards">
+                <div class="cards-header">
+                    <p>我的信用卡堆：</p>
+                    <button id="manage-cards-btn" class="manage-cards-btn" title="管理我的卡堆" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="card-chips" id="card-chips">
+                    <!-- Cards will be populated by JavaScript -->
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <div class="input-row-with-button">
+                    <div class="form-group compact">
+                        <label for="merchant-input">消費商家/項目</label>
+                        <input type="text" id="merchant-input" placeholder="輸入消費的商家或項目名稱..." />
+                    </div>
+                    
+                    <div class="form-group compact">
+                        <label for="amount-input">消費金額 (NT$)</label>
+                        <input type="number" id="amount-input" placeholder="輸入消費金額..." min="1" step="1" />
+                    </div>
+                    
+                    <div class="form-group compact button-group">
+                        <label>&nbsp;</label>
+                        <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
+                    </div>
+                </div>
+
+                <div class="matched-item-row">
+                    <div class="matched-item" id="matched-item" style="display: none;"></div>
+                </div>
+            </section>
+
+            <section class="results-section" id="results-section" style="display: none;">
+                <h2>一般回饋與指定通路回饋</h2>
+                <div class="results-container" id="results-container">
+                    <!-- Results will be dynamically inserted here -->
+                </div>
+            </section>
+            
+            <section class="coupon-results-section" id="coupon-results-section" style="display: none;">
+                <h2>其他回饋活動</h2>
+                <div class="coupon-results-container" id="coupon-results-container">
+                    <!-- Coupon results will be dynamically inserted here -->
+                </div>
+            </section>
+        </main>
+        
+        <!-- Manage Cards Modal -->
+        <div id="manage-cards-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>管理我的卡堆</h3>
+                    <button class="close-modal" id="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">選擇你擁有的信用卡，只有選中的卡片會出現在比較結果中。</p>
+                    <div class="modal-controls">
+                        <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
+                    </div>
+                    <div class="cards-selection" id="cards-selection">
+                        <!-- Card checkboxes will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
+                    <button id="cancel-cards-btn" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Card Detail Modal -->
+        <div id="card-detail-modal" class="modal" style="display: none;">
+            <div class="modal-content card-detail-content">
+                <div class="modal-header">
+                    <h3 id="card-detail-title">卡片詳情</h3>
+                    <button class="close-modal" id="close-card-detail">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="card-info-section">
+                        <div class="info-grid-2col">
+                            <div class="info-item">
+                                <div class="info-label">卡片全名:</div>
+                                <div class="info-value card-full-name-bold"><a id="card-full-name-link" target="_blank" rel="noopener"></a></div>
+                            </div>
+                            <div class="info-item fee-annual-section">
+                                <div class="info-label">年費訊息:</div>
+                                <div class="fee-combined-info">
+                                    <div class="info-value info-value-small" id="card-annual-fee"></div>
+                                    <div class="info-value info-value-small fee-waiver-text" id="card-fee-waiver"></div>
+                                    <div class="fee-waiver-status">
+                                        <label class="fee-waiver-checkbox">
+                                            <input type="checkbox" id="fee-waiver-checked">
+                                            <span class="checkmark"></span>
+                                            <span class="checkbox-label">我已過免年費門檻</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">📅 重要日期 (選填):</div>
+                                <div class="dates-inline-wrapper">
+                                    <div class="date-input-inline">
+                                        <span class="date-label-small">結帳日:</span>
+                                        <input type="number" 
+                                               id="billing-date" 
+                                               min="1" 
+                                               max="31" 
+                                               placeholder="日"
+                                               class="date-input">
+                                        <span class="date-suffix">號</span>
+                                    </div>
+                                    <div class="date-input-inline">
+                                        <span class="date-label-small">帳單日:</span>
+                                        <input type="number" 
+                                               id="statement-date" 
+                                               min="1" 
+                                               max="31" 
+                                               placeholder="日"
+                                               class="date-input">
+                                        <span class="date-suffix">號</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="info-item empty-placeholder"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- CUBE等級設定區域 -->
+                    <div class="card-info-section" id="cube-level-section" style="display: none;">
+                        <h4>🎯 國泰CUBE等級設定</h4>
+                        <div class="cube-level-selector">
+                            <label for="cube-level-select" class="level-label">請選擇您的CUBE等級：</label>
+                            <select id="cube-level-select" class="level-select">
+                                <option value="level1">Level 1 - 特定通路 2%</option>
+                                <option value="level2">Level 2 - 特定通路 3%</option>
+                                <option value="level3">Level 3 - 特定通路 3.3%</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 用戶筆記區域 -->
+                    <div class="card-info-section user-notes-section">
+                        <h4>📝 我的筆記</h4>
+                        <div class="user-notes-container">
+                            <textarea id="user-notes-input" 
+                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                      class="user-notes-textarea"></textarea>
+                            <div class="notes-status" id="notes-status">
+                                <button class="save-notes-btn" id="save-notes-btn" disabled>
+                                    <span class="btn-icon">💾</span>
+                                    <span class="btn-text">儲存筆記</span>
+                                </button>
+                                <span class="save-indicator" id="save-indicator"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="card-info-section">
+                        <h4>指定通路回饋</h4>
+                        <div id="card-special-cashback"></div>
+                    </div>
+                    
+                    <div class="card-info-section">
+                        <h4>一般回饋</h4>
+                        <div id="card-basic-cashback"></div>
+                    </div>
+                    
+                    <div class="card-info-section" id="card-coupon-section">
+                        <h4>其他回饋活動</h4>
+                        <div id="card-coupon-cashback"></div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+    
+    <script src="script.js?v=20250920-7"></script>
+    
+    <!-- Firebase Configuration -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyCERYFst64lYgR07OnEk-aJPbg838R7nYA",
+        authDomain: "pick-my-card-28f2a.firebaseapp.com",
+        projectId: "pick-my-card-28f2a",
+        storageBucket: "pick-my-card-28f2a.firebasestorage.app",
+        messagingSenderId: "181128376981",
+        appId: "1:181128376981:web:f9084ecdf6dddaf82e619c",
+        measurementId: "G-RW8F159L52"
+      };
+      
+      // Note: Firebase API keys are designed to be public
+      // Security is handled by Firebase Authentication and domain restrictions
+      
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const provider = new GoogleAuthProvider();
+      
+      // Make Firebase services available globally
+      window.firebaseAuth = auth;
+      window.db = db;
+      window.googleProvider = provider;
+      window.signInWithPopup = signInWithPopup;
+      window.signOut = signOut;
+      window.onAuthStateChanged = onAuthStateChanged;
+      window.doc = doc;
+      window.getDoc = getDoc;
+      window.setDoc = setDoc;
+    </script>
+</body>
+</html>

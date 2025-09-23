@@ -1,0 +1,1356 @@
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: linear-gradient(135deg, #4a90b8 0%, #2c5aa0 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* Header */
+header {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+    padding: 20px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-content h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.header-content p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+}
+
+.auth-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    cursor: pointer;
+}
+
+.auth-btn.primary {
+    background: white;
+    color: #3b82f6;
+    border-color: white;
+}
+
+.auth-btn.secondary {
+    background: transparent;
+}
+
+.user-photo {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.6);
+    margin-right: 6px;
+}
+
+#user-info {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 20px;
+}
+
+/* Supported cards */
+.cards-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.cards-header p {
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.8;
+}
+
+.manage-cards-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.manage-cards-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    transform: scale(1.05);
+}
+
+.card-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+}
+
+.card-chip {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Main content */
+main {
+    padding: 30px;
+}
+
+/* Input section */
+.input-section {
+    margin-bottom: 30px;
+}
+
+.input-row-with-button {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: end;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.button-group label {
+    margin-bottom: 8px;
+    visibility: hidden;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group.compact {
+    margin-bottom: 0;
+}
+
+/* Matched item row */
+.matched-item-row {
+    margin-top: 8px;
+    margin-bottom: 16px;
+    min-height: 24px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+}
+
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    padding: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    outline: none;
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+/* Matched item display */
+.matched-item {
+    margin-top: 0;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #64748b;
+    font-size: 12px;
+    display: inline-block;
+}
+
+.matched-item.no-match {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+
+/* Calculate button */
+.calculate-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.calculate-btn.compact {
+    width: auto;
+    padding: 16px 24px;
+    font-size: 16px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    height: 56px;
+}
+
+.calculate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+.calculate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.calculate-btn.compact {
+    width: auto;
+    padding: 16px 24px;
+    font-size: 16px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    height: 56px;
+}
+
+/* Results section */
+.results-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 20px;
+}
+
+.results-section h2 {
+    margin-bottom: 16px;
+    color: #111827;
+    font-size: 1.5rem;
+}
+
+/* Coupon results section */
+.coupon-results-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+
+.coupon-results-section h2 {
+    margin-bottom: 16px;
+    color: #111827;
+    font-size: 1.5rem;
+}
+
+.coupon-results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Coupon card styling */
+.coupon-item {
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    transition: all 0.3s ease;
+}
+
+.coupon-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.coupon-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.coupon-merchant {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #92400e;
+}
+
+.coupon-rate {
+    background: #f59e0b;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.coupon-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.coupon-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 4px 0;
+}
+
+.coupon-detail-label {
+    font-size: 13px;
+    color: #92400e;
+    font-weight: 500;
+    min-width: 60px;
+}
+
+.coupon-detail-value {
+    font-size: 13px;
+    color: #451a03;
+    text-align: right;
+    flex: 1;
+    margin-left: 8px;
+}
+
+.coupon-card-name {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #92400e;
+    font-style: italic;
+}
+
+.results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Card result styling */
+.card-result {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.card-result.best-card {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.card-result.no-cashback {
+    opacity: 0.6;
+    background: #f9fafb;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.card-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.best-badge {
+    background: #10b981;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.card-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.detail-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.cashback-amount {
+    color: #10b981;
+    font-size: 16px;
+}
+
+.no-cashback-text {
+    color: #ef4444;
+}
+
+.matched-merchant {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.matched-merchant strong {
+    color: #3b82f6;
+}
+
+/* No results styling */
+.no-results {
+    color: #374151;
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+}
+
+.no-results p {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+    body {
+        padding: 10px;
+    }
+    
+    main {
+        padding: 20px;
+    }
+    
+    header {
+        padding: 15px;
+    }
+    
+    .header-top {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 12px;
+    }
+    
+    .header-content h1 {
+        font-size: 1.8rem;
+    }
+    
+    .auth-section {
+        gap: 8px;
+    }
+    
+    .auth-btn {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+    
+    .input-row-with-button {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .button-group {
+        margin-top: 16px;
+    }
+    
+    .calculate-btn.compact {
+        width: 100%;
+    }
+    
+    .results-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .coupon-results-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-chips {
+        gap: 4px;
+    }
+    
+    .card-chip {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+    
+    .cards-selection {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-checkbox {
+        padding: 10px;
+        font-size: 13px;
+    }
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 1.25rem;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-modal:hover {
+    color: #374151;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-controls {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.toggle-all-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-all-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.toggle-all-btn:active {
+    transform: translateY(0);
+}
+
+.modal-description {
+    margin-bottom: 20px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.cards-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.card-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.card-checkbox:hover {
+    border-color: #6bb6ff;
+    background: #f8fafc;
+}
+
+.card-checkbox.selected {
+    border-color: #6bb6ff;
+    background: #f0f9ff;
+}
+
+.card-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #6bb6ff;
+    flex-shrink: 0;
+}
+
+.card-checkbox-label {
+    flex-grow: 1;
+    font-weight: 400;
+    color: #374151;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    border-top: 1px solid #e5e7eb;
+    justify-content: flex-end;
+}
+
+.save-btn, .cancel-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.save-btn {
+    background: #6bb6ff;
+    color: white;
+}
+
+.save-btn:hover {
+    background: #5aa3ff;
+}
+
+.cancel-btn {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.cancel-btn:hover {
+    background: #e5e7eb;
+}
+
+/* Card Detail Modal Styles */
+.card-detail-content {
+    max-width: 700px;
+    max-height: 90vh;
+}
+
+.card-info-section {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.card-info-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.card-info-section h4 {
+    margin: 0 0 16px 0;
+    color: #374151;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.info-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.info-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.info-item-full {
+    grid-column: 1 / -1;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.4;
+}
+
+.info-value a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.info-value a:hover {
+    text-decoration: underline;
+}
+
+.cashback-detail-item {
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid #3b82f6;
+}
+
+.cashback-detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.cashback-rate {
+    font-weight: 600;
+    color: #059669;
+    margin-bottom: 4px;
+}
+
+.cashback-condition {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.cashback-merchants {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.3;
+}
+
+.show-more-btn {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    margin-left: 5px;
+    text-decoration: underline;
+    transition: color 0.2s;
+    font-weight: 500;
+}
+
+.show-more-btn:hover {
+    color: #1d4ed8;
+}
+
+.show-more-btn:focus {
+    outline: none;
+    color: #1d4ed8;
+}
+
+/* User Notes Styles */
+.user-notes-container {
+    position: relative;
+}
+
+/* Fee Waiver Checkbox Styles */
+.fee-waiver-status {
+    margin-top: 8px;
+}
+
+.fee-waiver-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #6b7280;
+    transition: color 0.2s;
+    opacity: 0.8;
+}
+
+.fee-waiver-checkbox:hover {
+    color: #374151;
+    opacity: 1;
+}
+
+.fee-waiver-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    position: relative;
+    background: white;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.fee-waiver-checkbox:hover .checkmark {
+    border-color: #3b82f6;
+}
+
+.fee-waiver-checkbox input:checked + .checkmark {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+.fee-waiver-checkbox input:checked + .checkmark::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-label {
+    font-weight: 500;
+    user-select: none;
+}
+
+/* Billing Dates Section Styles */
+.billing-dates-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+
+.billing-dates-section:hover {
+    opacity: 1;
+}
+
+.billing-dates-title {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.billing-dates-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.date-input-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.date-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-input {
+    width: 50px;
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    background: #fafafa;
+    transition: all 0.2s ease;
+}
+
+.date-input:hover {
+    border-color: #d1d5db;
+    background: white;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-input:not(:placeholder-shown) {
+    border-color: #10b981;
+    background: white;
+    font-weight: 600;
+}
+
+.date-input:invalid {
+    border-color: #ef4444;
+}
+
+.date-input::placeholder {
+    color: #9ca3af;
+    font-weight: normal;
+}
+
+.date-suffix {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+    .billing-dates-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.user-notes-textarea {
+    width: 100%;
+    min-height: 60px; /* 縮小初始高度 */
+    height: 60px; /* 設定預設高度 */
+    max-height: 200px; /* 增加最大高度 */
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical; /* 保持可拉伸功能 */
+    transition: border-color 0.2s;
+}
+
+.user-notes-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.user-notes-textarea::placeholder {
+    color: #9ca3af;
+}
+
+.notes-status {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.save-indicator {
+    color: #059669;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.save-indicator.show {
+    opacity: 1;
+}
+
+.save-indicator.saving {
+    color: #f59e0b;
+    opacity: 1;
+}
+
+.save-indicator.error {
+    color: #dc2626;
+    opacity: 1;
+}
+
+.unsaved-indicator {
+    color: #f59e0b;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
+
+.save-notes-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 100px;
+    justify-content: center;
+}
+
+.save-notes-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.save-notes-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.save-notes-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.save-notes-btn.saving {
+    background: #f59e0b;
+    cursor: wait;
+}
+
+.save-notes-btn.success {
+    background: #10b981;
+}
+
+.btn-icon {
+    font-size: 14px;
+}
+
+.btn-text {
+    font-size: 13px;
+}
+
+.chip-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 新增的 UI 優化样式 */
+/* 卡片全名粗體 - 藍色連結 */
+.card-full-name-bold a {
+    font-weight: 700 !important;
+    color: #007bff !important;
+    text-decoration: none;
+}
+
+.card-full-name-bold a:hover {
+    text-decoration: underline;
+}
+
+/* 年費和免年費條件縮小文字 */
+.info-value-small {
+    font-size: 12px !important;
+    color: #6b7280 !important;
+    line-height: 1.3;
+}
+
+/* 調整日期輸入欄位大小 - 覆蓋原有样式 */
+.date-input {
+    width: 45px !important;
+    min-width: 45px;
+    padding: 5px 6px !important;
+    font-size: 13px !important;
+}
+
+/* 內聯日期輸入樣式 */
+.dates-inline-wrapper {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.date-input-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.date-label-small {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* 年費和免年費條件繁直排列 */
+.fee-annual-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fee-annual-item, .fee-waiver-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 筆記區域額外間距 */
+.user-notes-section {
+    margin-top: 16px !important; /* 縮小間距 */
+    padding-top: 12px !important; /* 縮小內部間距 */
+}
+
+/* 國泰CUBE等級選擇器樣式 */
+.cube-level-selector {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+.level-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.level-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    color: #374151;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.level-select:hover {
+    border-color: #6bb6ff;
+}
+
+.level-select:focus {
+    outline: none;
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+.level-description {
+    margin-top: 12px;
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4b5563;
+    margin-bottom: 0;
+}
+
+.level-description small {
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* 修復信息網格佈局 */
+.info-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px; /* 縮小行間距從20px改瀆12px */
+    align-items: start;
+}
+
+/* 信息項目樣式 - 標題和內容上下排列 */
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* 縮小標題和內容的間距 */
+}
+
+.info-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #111827;
+    line-height: 1.4;
+}
+
+/* 空的占位元素 */
+.empty-placeholder {
+    display: none;
+}
+
+/* 年費訊息合併顯示 */
+.fee-annual-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fee-combined-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fee-waiver-text {
+    margin-top: 6px;
+    font-style: italic;
+}
+
+.fee-waiver-text::before {
+    content: '免年費條件: ';
+    font-weight: 600;
+    color: #374151;
+    font-style: normal;
+}
+
