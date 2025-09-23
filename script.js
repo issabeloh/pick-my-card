@@ -1041,7 +1041,11 @@ function calculateCardCashback(card, searchTerm, amount) {
             if (card.generalItems) {
                 for (const [category, items] of Object.entries(card.generalItems)) {
                     for (const variant of searchVariants) {
-                        const foundItem = items.find(item => item.toLowerCase() === variant);
+                        // Try exact match first, then contains match
+                        const foundItem = items.find(item => {
+                            const itemLower = item.toLowerCase();
+                            return itemLower === variant || itemLower.includes(variant) || variant.includes(itemLower);
+                        });
                         if (foundItem) {
                             matchedGeneralItem = foundItem;
                             matchedGeneralCategory = category;
