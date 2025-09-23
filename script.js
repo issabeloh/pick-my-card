@@ -535,12 +535,12 @@ function handleMerchantInput() {
         return;
     }
     
-    // Find matching items
-    const matchedItem = findMatchingItem(input);
+    // Find matching items (now returns array)
+    const matchedItems = findMatchingItem(input);
     
-    if (matchedItem) {
-        showMatchedItem(matchedItem);
-        currentMatchedItem = matchedItem;
+    if (matchedItems && matchedItems.length > 0) {
+        showMatchedItem(matchedItems);
+        currentMatchedItem = matchedItems; // Now stores array of matches
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -752,13 +752,23 @@ function findMatchingItem(searchTerm) {
         return 0;
     });
     
-    // Return the best match
-    return uniqueMatches[0];
+    // Return all matches for comprehensive results
+    return uniqueMatches;
 }
 
-// Show matched item
-function showMatchedItem(matchedItem) {
-    matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItem.originalItem}</strong>`;
+// Show matched item(s)
+function showMatchedItem(matchedItems) {
+    if (Array.isArray(matchedItems)) {
+        if (matchedItems.length === 1) {
+            matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
+        } else {
+            const itemList = matchedItems.map(item => item.originalItem).join('、');
+            matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
+        }
+    } else {
+        // Backward compatibility for single item
+        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems.originalItem}</strong>`;
+    }
     matchedItemDiv.className = 'matched-item';
     matchedItemDiv.style.display = 'block';
 }
@@ -806,17 +816,47 @@ function calculateCashback() {
         cardsData.cards;
     
     if (currentMatchedItem) {
-        // User input matched specific items - show special cashback rates
-        const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-        results = cardsToCompare.map(card => {
-            const result = calculateCardCashback(card, searchTerm, amount);
-            return {
-                ...result,
-                card: card
-            };
-        })
-        // Filter out cards with no special cashback
-        .filter(result => result.cashbackAmount > 0);
+        // User input matched specific items - show special cashback rates for ALL matched items
+        let allResults = [];
+        
+        if (Array.isArray(currentMatchedItem)) {
+            // Multiple matches - calculate for all items and combine results
+            const itemResultsMap = new Map();
+            
+            currentMatchedItem.forEach(matchedItem => {
+                const searchTerm = matchedItem.originalItem.toLowerCase();
+                const itemResults = cardsToCompare.map(card => {
+                    const result = calculateCardCashback(card, searchTerm, amount);
+                    return {
+                        ...result,
+                        card: card,
+                        matchedItemName: matchedItem.originalItem
+                    };
+                }).filter(result => result.cashbackAmount > 0);
+                
+                // Add to combined results, keeping track of the best rate per card
+                itemResults.forEach(result => {
+                    const cardId = result.card.id;
+                    if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
+                        itemResultsMap.set(cardId, result);
+                    }
+                });
+            });
+            
+            allResults = Array.from(itemResultsMap.values());
+        } else {
+            // Single match - backward compatibility
+            const searchTerm = currentMatchedItem.originalItem.toLowerCase();
+            allResults = cardsToCompare.map(card => {
+                const result = calculateCardCashback(card, searchTerm, amount);
+                return {
+                    ...result,
+                    card: card
+                };
+            }).filter(result => result.cashbackAmount > 0);
+        }
+        
+        results = allResults;
         
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
@@ -915,11 +955,45 @@ function calculateCashback() {
     // Sort by cashback amount (highest first)
     results.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
     
-    // Display results
-    displayResults(results, amount, currentMatchedItem ? currentMatchedItem.originalItem : merchantValue, isBasicCashback);
+    // Display results - handle multiple matched items
+    let displayedMatchItem;
+    if (currentMatchedItem) {
+        if (Array.isArray(currentMatchedItem)) {
+            displayedMatchItem = currentMatchedItem.map(item => item.originalItem).join('、');
+        } else {
+            displayedMatchItem = currentMatchedItem.originalItem;
+        }
+    } else {
+        displayedMatchItem = merchantValue;
+    }
+    
+    displayResults(results, amount, displayedMatchItem, isBasicCashback);
     
     // Display coupon cashbacks
     displayCouponCashbacks(amount, merchantValue);
+}
+
+// Get all search term variants for comprehensive matching
+function getAllSearchVariants(searchTerm) {
+    const searchLower = searchTerm.toLowerCase().trim();
+    let searchTerms = [searchLower];
+    
+    // Add fuzzy search mapping if exists
+    if (fuzzySearchMap[searchLower]) {
+        const mappedTerm = fuzzySearchMap[searchLower].toLowerCase();
+        if (!searchTerms.includes(mappedTerm)) {
+            searchTerms.push(mappedTerm);
+        }
+    }
+    
+    // Also add reverse mappings (find all terms that map to current search)
+    Object.entries(fuzzySearchMap).forEach(([key, value]) => {
+        if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
+            searchTerms.push(key);
+        }
+    });
+    
+    return searchTerms;
 }
 
 // Calculate cashback for a specific card
@@ -930,13 +1004,20 @@ function calculateCardCashback(card, searchTerm, amount) {
     let matchedCategory = null;
     let matchedRateGroup = null;
     
+    // Get all possible search variants
+    const searchVariants = getAllSearchVariants(searchTerm);
+    
     // Handle CUBE card with levels
     if (card.hasLevels && card.id === 'cathay-cube') {
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
         const levelSettings = card.levelSettings[savedLevel];
         
-        // Check if merchant matches special items - ONLY use exact match
-        let matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === searchTerm);
+        // Check if merchant matches special items using all search variants
+        let matchedSpecialItem = null;
+        for (const variant of searchVariants) {
+            matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
+            if (matchedSpecialItem) break;
+        }
         
         if (matchedSpecialItem) {
             bestRate = levelSettings.specialRate;
@@ -950,15 +1031,18 @@ function calculateCardCashback(card, searchTerm, amount) {
         }
         applicableCap = null; // CUBE card has no cap
     } else {
-        // ONLY use exact matches for other cards
+        // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
-            let exactMatch = rateGroup.items.find(item => item.toLowerCase() === searchTerm);
-            if (exactMatch && rateGroup.rate > bestRate) {
-                bestRate = rateGroup.rate;
-                applicableCap = rateGroup.cap;
-                matchedItem = exactMatch;
-                matchedCategory = rateGroup.category || null;
-                matchedRateGroup = rateGroup;
+            // Check all search variants against all items in the rate group
+            for (const variant of searchVariants) {
+                let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+                if (exactMatch && rateGroup.rate > bestRate) {
+                    bestRate = rateGroup.rate;
+                    applicableCap = rateGroup.cap;
+                    matchedItem = exactMatch;
+                    matchedCategory = rateGroup.category || null;
+                    matchedRateGroup = rateGroup;
+                }
             }
         }
     }
@@ -1221,6 +1305,9 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             const specialRate = Math.round(result.specialRate * 10) / 10;
             const basicRate = Math.round(result.basicRate * 10) / 10;
             rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
+        } else if (result.card.id === 'sinopac-sport') {
+            // Sinopac Sport card shows additive structure: basic 1% + conditional 1% + special rate
+            rateDisplay = `${result.rate}%`;
         } else {
             // Other cards show just their total rate without breakdown for now
             rateDisplay = `${result.rate}%`;
