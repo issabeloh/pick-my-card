@@ -19,12 +19,14 @@ cardsData = {
       "cashbackRates": [
         {
           "rate": 3.8,
-          "cap": 480000,
+          "cap": 300000,
+          "capDescription": "NT$300,000 (您的永久信用額度+NT$300,000)",
           "items": ["台灣Pay場域", "超商（單筆限額最高 NT3,000元，且不含代收水電稅費/禮物卡/儲值）"]
         },
         {
           "rate": 3.3,
-          "cap": 480000,
+          "cap": 300000,
+          "capDescription": "NT$300,000 (您的永久信用額度+NT$300,000)",
           "items": [
             "華航", "長榮", "星宇", "虎航", "國泰航空", "華信", "立榮", "klook", "kkday", "airsim", "agoda", "booking.com", "trip.com", "airbnb", "hotels.com", "expedia", "雄獅旅遊", "易遊網", "東南旅遊", "海外實體", "海外線上", "蝦皮", "momo", "酷澎", "coupang", "pchome", "yahoo", "amazon", "東森", "博客來", "richart mart", "hahow", "pressplay", "amazing talker", "udemy", "kobo", "readmoo", "uniqlo", "gu", "zara", "net", "lativ", "gap", "uber eats", "foodpanda", "中油直營", "台亞直營", "全國加油", "源點evoasis", "華城電能evalue", "拓元售票", "kktix", "年代售票", "寬宏售票", "opentix兩廳院文化生活", "晶華國際酒店集團", "台灣萬豪國際集團旗下飯店", "煙波飯店", "老爺酒店集團", "福華集團", "漢來飯店事業群", "台北君悅酒店", "高雄洲際酒店", "礁溪寒沐", "義大遊樂世界", "麗寶樂園", "六福村主題遊樂園", "九族文化村", "劍湖山世界主題遊樂園", "x-park", "國立海洋生物博物館", "遠雄海洋公園", "大魯閣", "小人國主題樂園", "全台餐飲新光三越", "遠東sogo", "廣三sogo", "遠東百貨", "微風", "台北101", "遠東巨城", "南紡購物中心", "漢神百貨", "漢神巨蛋", "誠品生活", "mitsui shopping park", "lalaport", "mitsui outlet park", "華泰名品城", "skm park outlets", "ikea", "特力屋", "hola", "宜得利", "瑪黑家居", "7-11", "全家", "家樂福", "大買家", "臺鐵", "高鐵", "台灣大車隊", "linego", "yoxi", "uber", "嘟嘟房", "autopass", "城市車旅", "vivipark", "uspace", "udrive", "irent", "和運租車", "格上租車"
           ]
