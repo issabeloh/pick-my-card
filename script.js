@@ -44,7 +44,7 @@ cardsData = {
           "rate": 3.5,
           "cap": 20000,
           "items": [
-            "linepay", "街口", "悠遊付", "全盈支付", "全支付", "橘子支付", "momo購物網", "蝦皮購物", "淘寶", "coupang", "東森購物", "博客來", "新光三越", "台北101", "華泰名品城", "三井outlet", "京站", "美麗華", "秀泰生活", "lalaport", "統領廣場", "采盟", "昇恆昌", "太平洋百貨", "統一時代百貨", "遠東百貨", "遠東sogo", "遠東巨城", "大遠百", "漢神百貨", "微風廣場", "微風信義", "微風南京", "微風南山", "微風台北車站", "誠品生活", "誠品線上", "誠品書店", "家樂福", "屈臣氏", "特力屋", "hola", "hoi好好生活", "uniqlo", "net", "大樹藥局", "丁丁藥妝", "uber eats", "ubereats", "foodpanda", "eztable", "王品瘋美食", "摩斯", "路易莎", "饗食天堂", "果然匯", "加集", "開飯", "響泰多", "真珠", "瓦城", "非常泰", "時時香", "1010湘", "大心", "乾杯燒肉居酒屋", "老乾杯", "漢來海港", "島語", "漢來蔬食", "漢來名人坊", "東方樓", "漢來上海湯包", "溜溜酸菜", "魚專賣店", "上菜片皮鴨", "翠園", "漢來軒", "焰", "pavo", "精瀲海鮮火鍋", "日本料理弁慶", "福園台菜海鮮", "日日烘焙坊", "糕餅小舖", "台北漢來大廳酒廊", "hi lai cafe", "台灣中油", "台灣大車隊", "台鐵", "高鐵", "yoxi", "桃園機場捷運", "中華航空", "長榮航空", "日本航空", "台灣虎航", "樂桃航空", "酷航", "立榮航空", "華信航空", "trip.com", "booking.com", "hotels.com", "asiayo", "expedia", "kkday", "klook", "雄獅旅", "可樂旅", "東南旅行社", "apple直營", "小米台灣", "全國電子", "燦坤", "迪卡儂", "寵物公園", "youbike 2.0"
+            "linepay", "街口", "悠遊付", "全盈支付", "全支付", "橘子支付", "momo購物網", "蝦皮購物", "淘寶", "coupang", "東森購物", "博客來", "新光三越", "台北101", "華泰名品城", "三井outlet", "京站", "美麗華", "秀泰生活", "lalaport", "統領廣場", "采盟", "昇恆昌", "太平洋百貨", "統一時代百貨", "遠東百貨", "遠東sogo", "遠東巨城", "大遠百", "漢神百貨", "微風廣場", "微風信義", "微風南京", "微風南山", "微風台北車站", "誠品生活", "誠品線上", "誠品書店", "家樂福", "屈臣氏", "特力屋", "hola", "hoi好好生活", "uniqlo", "net", "大樹藥局", "丁丁藥妝", "uber eats", "ubereats", "foodpanda", "eztable", "王品瘋美食", "摩斯", "路易莎", "饗食天堂", "果然匯", "加集", "開飯", "響泰多", "真珠", "瓦城", "非常泰", "時時香", "1010湘", "大心", "乾杯燒肉居酒屋", "老乾杯", "漢來海港", "島語", "漢來蔑食", "漢來名人坊", "東方樓", "漢來上海湯包", "溜溜酸菜", "魚專賣店", "上菜片皮鴨", "翠園", "漢來軒", "焰", "pavo", "精瀦海鮮火鍋", "日本料理弁慶", "福園台菜海鮮", "日日烘焙坊", "糕餅小舖", "台北漢來大廳酒廊", "hi lai cafe", "台灣中油", "台灣大車隊", "台鐵", "高鐵", "yoxi", "桃園機場捷運", "中華航空", "長榮航空", "日本航空", "台灣虎航", "樂桃航空", "酷航", "立榮航空", "華信航空", "trip.com", "booking.com", "hotels.com", "asiayo", "expedia", "kkday", "klook", "雄獅旅遊", "可樂旅遊", "東南旅行社", "apple直營", "小米台灣", "全國電子", "燦坤", "迪卡儲", "寵物公園", "youbike 2.0"
           ]
         }
       ]
@@ -407,21 +407,25 @@ cardsData = {
       "name": "永豐幣倍卡",
       "fullName": "永豐銀行幣倍卡",
       "basicCashback": 1.0,
+      "basicCashbackType": "現金回饋",
       "annualFee": "首年免年費，次年起年費NT$3,000",
       "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿80,000元或消費12次",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "domesticBonusRate": 1.0,
+      "domesticBonusType": "現金回饋",
       "domesticBonusCap": 20000,
-      "overseasCashback": 3.0,
+      "overseasCashback": 2.0,
       "overseasCashbackType": "外幣現金回饋",
-      "overseasBonusRate": null,
+      "overseasBonusRate": 1.0,
       "overseasBonusCap": null,
       "cashbackRates": [
         {
-          "rate": 5.0,
+          "rate": 6.0,
           "cap": 7500,
+          "cashbackType": "現金回饋",
           "period": "2025/07/01-2025/12/31",
           "conditions": "a.繫定電子/行動帳單 且 設定永豐銀行臺外幣帳戶自動扣繳帳號 b.當月為永豐銀行DAWHO專屬分級制度大戶等級 或 前月客戶於永豐銀行往來資產規模月平均餘額達新臺幣10萬(含)以上",
+          "note": "若以一種約定外幣結付，並以永豐外幣帳戶自動扣繳外幣帳款，則認定為國外消費可享7%回饋(2%+1%+4%)，4%精選通路回饋消費上限NT$7,500",
           "items": [
             "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
           ]
@@ -1929,6 +1933,10 @@ function showCardDetail(cardId) {
             
             if (rate.period) {
                 specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
+            }
+            
+            if (rate.note) {
+                specialContent += `<div class="cashback-condition" style="color: #d97706; font-weight: 500;">備註: ${rate.note}</div>`;
             }
             
             if (rate.items && rate.items.length > 0) {
