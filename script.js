@@ -412,9 +412,9 @@ cardsData = {
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "domesticBonusRate": 1.0,
       "domesticBonusCap": 20000,
-      "overseasCashback": 2.0,
+      "overseasCashback": 3.0,
       "overseasCashbackType": "外幣現金回饋",
-      "overseasBonusRate": 1.0,
+      "overseasBonusRate": null,
       "overseasBonusCap": null,
       "cashbackRates": [
         {
@@ -425,16 +425,6 @@ cardsData = {
           "items": [
             "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
           ]
-        },
-        {
-          "rate": 6.0,
-          "cap": 7500,
-          "period": "2025/07/01-2025/12/31",
-          "conditions": "a.繫定電子/行動帳單 且 設定永豐銀行臺外幣帳戶自動扣繳帳號 b.當月為永豐銀行DAWHO專屬分級制度大戶等級 或 前月客戶於永豐銀行往來資產規模月平均餘額達新臺幣10萬(含)以上",
-          "items": [
-            "海外"
-          ],
-          "hideInDisplay": true
         }
       ]
     },
@@ -1798,10 +1788,15 @@ function showCardDetail(cardId) {
         // Format fee waiver conditions
         let waiverText = '';
         if (feeWaiver && feeWaiver !== '無資料') {
-            // Split conditions by common delimiters and wrap each in quotes
-            const conditions = feeWaiver.split(/[,，、或]/)
-                .map(condition => condition.trim())
-                .filter(condition => condition.length > 0)
+            // Split conditions by "或" first, then handle other delimiters but preserve number formatting
+            const conditions = feeWaiver.split(/或/)
+                .map(part => {
+                    // Further split by commas, but not those within numbers
+                    return part.split(/[,，、](?![\d])/)
+                        .map(condition => condition.trim())
+                        .filter(condition => condition.length > 0);
+                })
+                .flat()
                 .map(condition => `「${condition}」`);
             
             waiverText = `免年費條件為${conditions.join('或')}`;
