@@ -645,6 +645,11 @@ const fuzzySearchMap = {
     'thsr': '高鐵',
     'foodpanda': 'foodpanda',
     'food panda': 'foodpanda',
+    // Add uber eats variations
+    'uber eats': 'uber eats',
+    'ubereats': 'uber eats',
+    'ubereat': 'uber eats',
+    'uber eat': 'uber eats',
     // Remove uber/uber eats cross-mapping to prevent unwanted matches
     '三井(mitsui outlet park)': '三井',
     '三井outlet': '三井',
