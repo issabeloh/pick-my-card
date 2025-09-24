@@ -408,27 +408,33 @@ cardsData = {
       "fullName": "永豐銀行幣倍卡",
       "basicCashback": 1.0,
       "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿36,000元或消費12次",
+      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿80,000元或消費12次",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "domesticBonusRate": 1.0,
       "domesticBonusCap": 20000,
-      "overseasCashback": 3.0,
-      "overseasBonusRate": 4.0,
-      "overseasBonusCap": 7500,
+      "overseasCashback": 2.0,
+      "overseasCashbackType": "外幣現金回饋",
+      "overseasBonusRate": 1.0,
+      "overseasBonusCap": null,
       "cashbackRates": [
         {
-          "rate": 4.0,
+          "rate": 5.0,
           "cap": 7500,
+          "period": "2025/07/01-2025/12/31",
+          "conditions": "a.繫定電子/行動帳單 且 設定永豐銀行臺外幣帳戶自動扣繳帳號 b.當月為永豐銀行DAWHO專屬分級制度大戶等級 或 前月客戶於永豐銀行往來資產規模月平均餘額達新臺幣10萬(含)以上",
           "items": [
             "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
           ]
         },
         {
-          "rate": 3.0,
-          "cap": null,
+          "rate": 6.0,
+          "cap": 7500,
+          "period": "2025/07/01-2025/12/31",
+          "conditions": "a.繫定電子/行動帳單 且 設定永豐銀行臺外幣帳戶自動扣繳帳號 b.當月為永豐銀行DAWHO專屬分級制度大戶等級 或 前月客戶於永豐銀行往來資產規模月平均餘額達新臺幣10萬(含)以上",
           "items": [
             "海外"
-          ]
+          ],
+          "hideInDisplay": true
         }
       ]
     },
@@ -1815,8 +1821,12 @@ function showCardDetail(cardId) {
     basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
     
     if (card.overseasCashback) {
-        basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+        const overseasType = card.overseasCashbackType ? ` (${card.overseasCashbackType})` : '';
+        basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%${overseasType}</div>`;
         basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
+        if (card.id === 'sinopac-coin') {
+            basicContent += `<div class="cashback-condition">國外消費備註: 限以一種約定外幣(美元、日圓或歐元)結付，須以永豐外幣帳戶自動扣繳外幣帳款</div>`;
+        }
     }
     
     basicContent += `</div>`;
@@ -1831,7 +1841,11 @@ function showCardDetail(cardId) {
     if (card.overseasBonusRate) {
         basicContent += `<div class="cashback-detail-item">`;
         basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
-        basicContent += `<div class="cashback-condition">消費上限: NT$${card.overseasBonusCap?.toLocaleString()}</div>`;
+        const overseasCapText = card.overseasBonusCap ? `NT$${card.overseasBonusCap.toLocaleString()}` : '無上限';
+        basicContent += `<div class="cashback-condition">消費上限: ${overseasCapText}</div>`;
+        if (card.id === 'sinopac-coin') {
+            basicContent += `<div class="cashback-condition">條件: a.繫定電子/行動帳單 且 設定永豐銀行臺外幣帳戶自動扣繳帳號 b.當月為永豐銀行DAWHO專屬分級制度大戶等級 或 前月客戶於永豐銀行往來資產規模月平均餘額達新臺幣10萬(含)以上</div>`;
+        }
         basicContent += `</div>`;
     }
     
