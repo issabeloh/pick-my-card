@@ -420,7 +420,7 @@ cardsData = {
       "overseasBonusCap": null,
       "cashbackRates": [
         {
-          "rate": 6.0,
+          "rate": 4.0,
           "cap": 7500,
           "cashbackType": "現金回饋",
           "period": "2025/07/01-2025/12/31",
@@ -1468,9 +1468,15 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     exclusionNote = ' <small style="color: #f59e0b; font-weight: 500;">(排除超商)</small>';
                 }
                 
+                // Special handling for Sinopac Coin card note in search results
+                let sinopacNote = '';
+                if (result.card.id === 'sinopac-coin' && result.matchedRateGroup && result.matchedRateGroup.note) {
+                    sinopacNote = `<br><small style="color: #d97706; font-weight: 500;">備註: ${result.matchedRateGroup.note}</small>`;
+                }
+                
                 return `
                     <div class="matched-merchant">
-                        匹配項目: <strong>${result.matchedItem}</strong>${exclusionNote}${categoryInfo}${additionalInfo}
+                        匹配項目: <strong>${result.matchedItem}</strong>${exclusionNote}${categoryInfo}${additionalInfo}${sinopacNote}
                     </div>
                 `;
             } else {
@@ -1899,8 +1905,8 @@ function showCardDetail(cardId) {
         sortedRates.forEach((rate, index) => {
             specialContent += `<div class="cashback-detail-item">`;
             
-            // Special handling for Sport card display text
-            if (card.id === 'sinopac-sport') {
+            // Special handling for Sport card and Sinopac Coin card display text
+            if (card.id === 'sinopac-sport' || card.id === 'sinopac-coin') {
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
             } else {
                 // 回饋率和是否含一般回饋的說明
@@ -1935,9 +1941,6 @@ function showCardDetail(cardId) {
                 specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
             }
             
-            if (rate.note) {
-                specialContent += `<div class="cashback-condition" style="color: #d97706; font-weight: 500;">備註: ${rate.note}</div>`;
-            }
             
             if (rate.items && rate.items.length > 0) {
                 const merchantsId = `merchants-${card.id}-${index}`;
