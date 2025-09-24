@@ -689,45 +689,69 @@ function findMatchingItem(searchTerm) {
     
     let allMatches = [];
     
-    // Collect all possible matches using all search terms
-    for (const card of cardsData.cards) {
-        for (const rateGroup of card.cashbackRates) {
-            for (const item of rateGroup.items) {
-                const itemLower = item.toLowerCase();
+    // Helper function to check item matches
+    const checkItemMatches = (items, searchTerms, searchLower, allMatches, searchTerm) => {
+        for (const item of items) {
+            const itemLower = item.toLowerCase();
+            
+            // Check if any search term matches this item
+            let matchFound = false;
+            let bestMatchTerm = searchLower;
+            let isExactMatch = false;
+            let isFullContainment = false;
+            
+            for (const term of searchTerms) {
+                // Prevent uber/uber eats cross matching
+                if ((term === 'uber' && itemLower.includes('uber eats')) || 
+                    (term.includes('uber eats') && itemLower === 'uber')) {
+                    continue;
+                }
                 
-                // Check if any search term matches this item
-                let matchFound = false;
-                let bestMatchTerm = searchLower;
-                let isExactMatch = false;
-                let isFullContainment = false;
-                
-                for (const term of searchTerms) {
-                    if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
-                        matchFound = true;
-                        if (itemLower === term) {
-                            isExactMatch = true;
-                            bestMatchTerm = term;
-                            break;
-                        }
-                        if (itemLower.includes(term)) {
-                            isFullContainment = true;
-                            bestMatchTerm = term;
-                        }
+                if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
+                    matchFound = true;
+                    if (itemLower === term) {
+                        isExactMatch = true;
+                        bestMatchTerm = term;
+                        break;
+                    }
+                    if (itemLower.includes(term)) {
+                        isFullContainment = true;
+                        bestMatchTerm = term;
                     }
                 }
-                
-                if (matchFound) {
-                    allMatches.push({
-                        originalItem: item,
-                        searchTerm: searchTerm,
-                        itemLower: itemLower,
-                        searchLower: bestMatchTerm,
-                        // Calculate match quality
-                        isExactMatch: isExactMatch,
-                        isFullContainment: isFullContainment,
-                        length: itemLower.length
-                    });
-                }
+            }
+            
+            if (matchFound) {
+                allMatches.push({
+                    originalItem: item,
+                    searchTerm: searchTerm,
+                    itemLower: itemLower,
+                    searchLower: bestMatchTerm,
+                    // Calculate match quality
+                    isExactMatch: isExactMatch,
+                    isFullContainment: isFullContainment,
+                    length: itemLower.length
+                });
+            }
+        }
+    };
+    
+    // Collect all possible matches using all search terms
+    for (const card of cardsData.cards) {
+        // Check cashbackRates items
+        for (const rateGroup of card.cashbackRates) {
+            checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
+        }
+        
+        // Check specialItems for CUBE card
+        if (card.specialItems) {
+            checkItemMatches(card.specialItems, searchTerms, searchLower, allMatches, searchTerm);
+        }
+        
+        // Check generalItems for CUBE card
+        if (card.generalItems) {
+            for (const [category, items] of Object.entries(card.generalItems)) {
+                checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
             }
         }
     }
@@ -1994,12 +2018,16 @@ function generateCubeSpecialContent(card) {
     }
     content += `</div>`;
     
-    // Other categories (2%)
-    content += `<div class="cashback-detail-item">`;
-    content += `<div class="cashback-rate">${levelSettings.generalRate}% 回饋 (其他通路)</div>`;
-    content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-    content += `<div class="cashback-merchants">適用通路: 除上述特殊通路外的所有消費</div>`;
-    content += `</div>`;
+    // General categories (2%) - 集精選 and 來支付
+    if (card.generalItems) {
+        Object.entries(card.generalItems).forEach(([category, items]) => {
+            content += `<div class="cashback-detail-item">`;
+            content += `<div class="cashback-rate">${levelSettings.generalRate}% 回饋 (${category})</div>`;
+            content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+            content += `<div class="cashback-merchants">適用通路: ${items.join('、')}</div>`;
+            content += `</div>`;
+        });
+    }
     
     return content;
 }
