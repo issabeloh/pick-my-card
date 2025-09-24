@@ -24,8 +24,7 @@ cardsData = {
         },
         {
           "rate": 3.3,
-          "cap": 300000,
-          "capDescription": "您的永久信用額度+NT300,000",
+          "cap": 480000,
           "items": [
             "華航", "長榮", "星宇", "虎航", "國泰航空", "華信", "立榮", "klook", "kkday", "airsim", "agoda", "booking.com", "trip.com", "airbnb", "hotels.com", "expedia", "雄獅旅遊", "易遊網", "東南旅遊", "海外實體", "海外線上", "蝦皮", "momo", "酷澎", "coupang", "pchome", "yahoo", "amazon", "東森", "博客來", "richart mart", "hahow", "pressplay", "amazing talker", "udemy", "kobo", "readmoo", "uniqlo", "gu", "zara", "net", "lativ", "gap", "uber eats", "foodpanda", "中油直營", "台亞直營", "全國加油", "源點evoasis", "華城電能evalue", "拓元售票", "kktix", "年代售票", "寬宏售票", "opentix兩廳院文化生活", "晶華國際酒店集團", "台灣萬豪國際集團旗下飯店", "煙波飯店", "老爺酒店集團", "福華集團", "漢來飯店事業群", "台北君悅酒店", "高雄洲際酒店", "礁溪寒沐", "義大遊樂世界", "麗寶樂園", "六福村主題遊樂園", "九族文化村", "劍湖山世界主題遊樂園", "x-park", "國立海洋生物博物館", "遠雄海洋公園", "大魯閣", "小人國主題樂園", "全台餐飲新光三越", "遠東sogo", "廣三sogo", "遠東百貨", "微風", "台北101", "遠東巨城", "南紡購物中心", "漢神百貨", "漢神巨蛋", "誠品生活", "mitsui shopping park", "lalaport", "mitsui outlet park", "華泰名品城", "skm park outlets", "ikea", "特力屋", "hola", "宜得利", "瑪黑家居", "7-11", "全家", "家樂福", "大買家", "臺鐵", "高鐵", "台灣大車隊", "linego", "yoxi", "uber", "嘟嘟房", "autopass", "城市車旅", "vivipark", "uspace", "udrive", "irent", "和運租車", "格上租車"
           ]
@@ -37,8 +36,8 @@ cardsData = {
       "name": "玉山Uni卡",
       "fullName": "玉山銀行UniCard信用卡",
       "basicCashback": 1.0,
-      "annualFee": "御璽卡NT$3,000",
-      "feeWaiver": "首年免年費，每年有消費年年免年費，或使用玉山帳戶自動扣繳信用卡款或帳單e化期間享免年費優惠",
+      "annualFee": "御璽卡NT$3,000、附卡免年費",
+      "feeWaiver": "首年免年費，(1)每年有消費，年年免年費。(2)使用玉山帳戶自動扣繳信用卡款或帳單e化期間享免年費優惠",
       "website": "https://www.esunbank.com/zh-tw/personal/credit-card/intro/bank-card/unicard",
       "cashbackRates": [
         {
@@ -74,9 +73,36 @@ cardsData = {
         }
       },
       "specialItems": [
-        "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple 媒體服務", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "蝦皮購物", "momo購物網", "pchome 24h購物", "小樹購", "coupang 酷澎", "淘寶/天貓", "遠東sogo百貨", "遠東garden city", "太平洋百貨", "新光三越", "skm park", "bellavita", "微風廣場", "遠東百貨", "big city遠東巨城購物中心", "誠品生活", "環球購物中心", "citylink", "統一時代台北店", "台北101", "att 4 fun", "明曜百貨", "京站", "美麗華", "大葉高島屋", "比漾廣場", "大江國際購物中心", "中友百貨", "廣三sogo", "tiger city", "勤美誠品綠園道", "大魯閣新時代", "耐斯廣場", "南紡購物中心", "夢時代", "漢神百貨", "漢神巨蛋", "mitsui outlet park", "mitsui shopping park lalaport", "義大世界購物廣場", "華泰名品城", "義享天地", "麗寶outlet mall", "秀泰生活", "台茂購物中心", "新月廣場", "三創生活", "宏匯廣場", "noke忠泰樂生活", "uber eats", "foodpanda", "國內餐飲", "麥當勞", "康是美", "屈臣氏", "大阪萬國博覽會官網", "surutto qrtto官網", "大阪美食expo", "海外實體消費", "東京迪士尼樂園", "東京華納兄弟哈利波特影城", "大阪環球影城", "apple錢包指定交通卡", "uber", "grab", "台灣高鐵", "yoxi", "台灣大車隊", "irent", "和運租車", "格上租車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "阿聯酋航空", "酷航", "捕星航空", "日本航空", "ana全日空", "亞洲航空", "聯合航空", "新加坡航空", "越捷航空", "大韓航空", "達美航空", "土耳其航空", "卡達航空", "法國航空", "星野集團", "全球迪士尼飯店", "東橫 inn", "國內飯店住宿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravel易遊網", "雄獅旅遊", "可樂旅遊", "東南旅遊", "五福旅遊", "燦星旅遊", "山富旅遊", "長汎假期", "鳳凰旅行社", "ezfly易飛網", "理想旅遊", "永利旅行社", "三賀旅行社", "家樂福", "lopia台灣", "全聯福利中心", "台灣中油直營站", "7-11", "全家", "ikea", "linepay"
+        "chatgpt", "canva", "claude", "cursor", "duolingo", "gamma", "gemini", "notion", "perplexity", "speak", "apple 媒體服務", "google play", "disney+", "netflix", "spotify", "kkbox", "youtube premium", "max", "蝦皮購物", "momo購物網", "pchome 24h購物", "小樹購", "coupang 酷澎", "淘寶/天貓", "遠東sogo百貨", "遠東garden city", "太平洋百貨", "新光三越", "skm park", "bellavita", "微風廣場", "遠東百貨", "big city遠東巨城購物中心", "誠品生活", "環球購物中心", "citylink", "統一時代台北店", "台北101", "att 4 fun", "明曜百貨", "京站", "美麗華", "大葉高島屋", "比漾廣場", "大江國際購物中心", "中友百貨", "廣三sogo", "tiger city", "勤美誠品綠園道", "大魯閣新時代", "耐斯廣場", "南紡購物中心", "夢時代", "漢神百貨", "漢神巨蛋", "mitsui outlet park", "mitsui shopping park lalaport", "義大世界購物廣場", "華泰名品城", "義享天地", "麗寶outlet mall", "秀泰生活", "台茂購物中心", "新月廣場", "三創生活", "宏匯廣場", "noke忠泰樂生活", "uber eats", "foodpanda", "國內餐飲", "麥當勞", "康是美", "屈臣氏", "大阪萬國博覽會官網", "surutto qrtto官網", "大阪美食expo", "海外實體消費", "東京迪士尼樂園", "東京華納兄弟哈利波特影城", "大阪環球影城", "apple錢包指定交通卡", "uber", "grab", "台灣高鐵", "yoxi", "台灣大車隊", "irent", "和運租車", "格上租車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "阿聯酋航空", "酷航", "捕星航空", "日本航空", "ana全日空", "亞洲航空", "聯合航空", "新加坡航空", "越捷航空", "大韓航空", "達美航空", "土耳其航空", "卡達航空", "法國航空", "星野集團", "全球迪士尼飯店", "東橫 inn", "國內飯店住宿", "kkday", "agoda", "klook", "airbnb", "booking.com", "trip.com", "eztravel易遊網", "雄獅旅遊", "可樂旅遊", "東南旅遊", "五福旅遊", "燦星旅遊", "山富旅遊", "長汎假期", "鳳凰旅行社", "ezfly易飛網", "理想旅遊", "永利旅行社", "三賀旅行社"
       ],
-      "cashbackRates": [],
+      "generalItems": {
+        "集精選": [
+          "家樂福", "lopia台灣", "全聯福利中心", "台灣中油直營站", "7-ELEVEN (7-11) 實體門市", "全家便利商店", "IKEA宜家家居"
+        ],
+        "來支付": [
+          "line pay"
+        ]
+      },
+      "cashbackRates": [
+        {
+          "rate": 10.0,
+          "category": "童樂匯",
+          "conditions": "每月–日(含)前須符合 (i)客戶與其未成年子女須持有本行帳戶 (ii)客戶須持有有效CUBE信用卡正卡 2項條件，次月1日起可切換至童樂匯",
+          "period": "2025/8/1 - 11/20",
+          "items": [
+            "大樹先生的家", "Money Jump 媽妳講親子餐廳", "淘憩時光親子餐廳", "大房子親子餐廳樂園", "小島3.5度親子餐廳", "咱們小時候", "甲蟲秘境", "Zone Cafe 弄咖啡親子餐廳", "10mois台灣官網", "Mamas&Papas台灣官網", "Nuna品牌官網", "Tender Leaf台灣官網", "cybex台灣官網", "朱宗慶打擊樂教學系統", "雲門舞集舞蹈教室", "Yamaha音樂教室", "TutorABC Junior", "Cambly Kids", "Etalking Kids", "iSKI滑雪俱樂部", "汐游寶寶", "國立臺灣科學教育館"
+          ]
+        },
+        {
+          "rate": 5.0,
+          "category": "童樂匯",
+          "conditions": "每月–日(含)前須符合 (i)客戶與其未成年子女須持有本行帳戶 (ii)客戶須持有有效CUBE信用卡正卡 2項條件，次月1日起可切換至童樂匯",
+          "period": "2025/8/1 - 11/20",
+          "items": [
+            "Klook", "東京迪士尼樂園", "大阪環球影城(USJ)", "麗寶樂園", "六福村主題樂園", "九族文化村", "劍湖山世界主題樂園", "義大遊樂世界", "小叮噹科學園區主題樂園", "蘭城晶英酒店", "礁溪寒沐酒店", "大溪笠復威斯汀度假酒店", "煙波大飯店新竹湖濱館", "麗寶福容大飯店", "雲品溫泉酒店", "和逸飯店(台南西門館、桃園館)", "義大皇家酒店", "高雄洲際酒店", "高雄萬豪酒店", "墾丁凱撒大飯店", "花蓮遠雄悅來大飯店", "瑞穗天合國際觀光酒店", "六福莊", "卡多摩嬰童館", "營養銀行", "安琪兒婦嬰百貨", "宜兒樂", "麗兒采家", "Taobaby濤寶日記", "媽媽好", "媽媽餵mamaway", "俏媽咪"
+          ]
+        }
+      ],
       "couponCashbacks": [
         {
           "merchant": "大丸福岡天神店",
@@ -706,9 +732,13 @@ function findMatchingItem(searchTerm) {
             let isFullContainment = false;
             
                 for (const term of searchTerms) {
-                    // Prevent uber/uber eats/ubereats cross matching
-                    if ((term === 'uber' && (itemLower.includes('uber eats') || itemLower.includes('ubereats'))) || 
-                        ((term.includes('uber eats') || term.includes('ubereats')) && itemLower === 'uber')) {
+                    // Prevent uber/uber eats cross matching with more precise logic
+                    if (term === 'uber' && (itemLower.includes('uber eats') || itemLower.includes('ubereats'))) {
+                        // Skip uber eats items when searching for 'uber'
+                        continue;
+                    }
+                    if ((term === 'uber eats' || term === 'ubereats' || term === 'ubereat' || term === 'uber eat') && itemLower === 'uber') {
+                        // Skip 'uber' item when searching for uber eats variants
                         continue;
                     }
                 
