@@ -700,12 +700,12 @@ function findMatchingItem(searchTerm) {
             let isExactMatch = false;
             let isFullContainment = false;
             
-            for (const term of searchTerms) {
-                // Prevent uber/uber eats cross matching
-                if ((term === 'uber' && itemLower.includes('uber eats')) || 
-                    (term.includes('uber eats') && itemLower === 'uber')) {
-                    continue;
-                }
+                for (const term of searchTerms) {
+                    // Prevent uber/uber eats/ubereats cross matching
+                    if ((term === 'uber' && (itemLower.includes('uber eats') || itemLower.includes('ubereats'))) || 
+                        ((term.includes('uber eats') || term.includes('ubereats')) && itemLower === 'uber')) {
+                        continue;
+                    }
                 
                 if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
                     matchFound = true;
@@ -1997,7 +1997,7 @@ function generateCubeSpecialContent(card) {
     const levelSettings = card.levelSettings[selectedLevel];
     let content = '';
     
-    // Special categories (玩數位、樂饗購、趣旅行)
+    // 1. Level變動的特殊通路 (玩數位、樂饗購、趣旅行)
     content += `<div class="cashback-detail-item">`;
     content += `<div class="cashback-rate">${levelSettings.specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
     content += `<div class="cashback-condition">消費上限: 無上限</div>`;
@@ -2018,15 +2018,47 @@ function generateCubeSpecialContent(card) {
     }
     content += `</div>`;
     
-    // General categories (2%) - 集精選 and 來支付
+    // 2. 集精選和來支付 (2%)
     if (card.generalItems) {
         Object.entries(card.generalItems).forEach(([category, items]) => {
             content += `<div class="cashback-detail-item">`;
-            content += `<div class="cashback-rate">${levelSettings.generalRate}% 回饋 (${category})</div>`;
+            content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
             content += `<div class="cashback-condition">消費上限: 無上限</div>`;
             content += `<div class="cashback-merchants">適用通路: ${items.join('、')}</div>`;
             content += `</div>`;
         });
+    }
+    
+    // 3. 童樂匯 10% 回饋
+    const childrenRate10 = card.cashbackRates?.find(rate => rate.rate === 10.0 && rate.category === '童樂匯');
+    if (childrenRate10) {
+        content += `<div class="cashback-detail-item">`;
+        content += `<div class="cashback-rate">10% 回饋 (童樂匯)</div>`;
+        content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        if (childrenRate10.conditions) {
+            content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
+        }
+        if (childrenRate10.period) {
+            content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
+        }
+        content += `<div class="cashback-merchants">適用通路: ${childrenRate10.items.join('、')}</div>`;
+        content += `</div>`;
+    }
+    
+    // 4. 童樂匯 5% 回饋
+    const childrenRate5 = card.cashbackRates?.find(rate => rate.rate === 5.0 && rate.category === '童樂匯');
+    if (childrenRate5) {
+        content += `<div class="cashback-detail-item">`;
+        content += `<div class="cashback-rate">5% 回饋 (童樂匯)</div>`;
+        content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        if (childrenRate5.conditions) {
+            content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
+        }
+        if (childrenRate5.period) {
+            content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
+        }
+        content += `<div class="cashback-merchants">適用通路: ${childrenRate5.items.join('、')}</div>`;
+        content += `</div>`;
     }
     
     return content;
