@@ -1848,12 +1848,6 @@ function showCardDetail(cardId) {
         const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
         cubeLevelSelect.value = savedLevel;
         
-        // Add change listener
-        cubeLevelSelect.onchange = function() {
-            localStorage.setItem(`cubeLevel-${card.id}`, this.value);
-            updateCubeSpecialCashback(card);
-        };
-        
         // Add birthday month note after level selection
         const levelSectionContent = cubeLevelSection.innerHTML;
         const birthdayNote = `
@@ -1865,6 +1859,14 @@ function showCardDetail(cardId) {
             </div>
         `;
         cubeLevelSection.innerHTML = levelSectionContent + birthdayNote;
+        
+        // Re-get the select element after innerHTML modification and add change listener
+        const newCubeLevelSelect = document.getElementById('cube-level-select');
+        newCubeLevelSelect.value = savedLevel;
+        newCubeLevelSelect.onchange = function() {
+            localStorage.setItem(`cubeLevel-${card.id}`, this.value);
+            updateCubeSpecialCashback(card);
+        };
     } else {
         cubeLevelSection.style.display = 'none';
     }
@@ -2068,18 +2070,7 @@ function generateCubeSpecialContent(card) {
         content += `</div>`;
     }
     
-    // 3. 集精選和來支付 (2%)
-    if (card.generalItems) {
-        Object.entries(card.generalItems).forEach(([category, items]) => {
-            content += `<div class="cashback-detail-item">`;
-            content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
-            content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            content += `<div class="cashback-merchants">適用通路: ${items.join('、')}</div>`;
-            content += `</div>`;
-        });
-    }
-    
-    // 4. Level變動的特殊通路 (玩數位、樂饗購、趣旅行) - 放在最後
+    // 3. Level變動的特殊通路 (玩數位、樂饗購、趣旅行) - 移到5%童樂匯下、2%集精選上
     content += `<div class="cashback-detail-item">`;
     content += `<div class="cashback-rate">${levelSettings.specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
     content += `<div class="cashback-condition">消費上限: 無上限</div>`;
@@ -2099,6 +2090,17 @@ function generateCubeSpecialContent(card) {
         content += `</div>`;
     }
     content += `</div>`;
+    
+    // 4. 集精選和來支付 (2%) - 放在最後
+    if (card.generalItems) {
+        Object.entries(card.generalItems).forEach(([category, items]) => {
+            content += `<div class="cashback-detail-item">`;
+            content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
+            content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+            content += `<div class="cashback-merchants">適用通路: ${items.join('、')}</div>`;
+            content += `</div>`;
+        });
+    }
     
     return content;
 }
