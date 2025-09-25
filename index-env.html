@@ -9,16 +9,6 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     
-    <!-- 環境變數注入 -->
-    <script>
-        // Vercel會在構建時將環境變數注入到這裡
-        window.ENV = {
-            AIRTABLE_API_KEY: '{{AIRTABLE_API_KEY}}',
-            AIRTABLE_BASE_ID: '{{AIRTABLE_BASE_ID}}',
-            AIRTABLE_CARDS_TABLE_ID: '{{AIRTABLE_CARDS_TABLE_ID}}',
-            AIRTABLE_RATES_TABLE_ID: '{{AIRTABLE_RATES_TABLE_ID}}'
-        };
-    </script>
 </head>
 <body>
     <div class="container">
@@ -212,8 +202,8 @@
 </div>
     </div>
     
-    <script src="airtable-config-env.js"></script>
-    <script src="script-airtable.js?v=20250925-001"></script>
+    <script src="airtable-config-dynamic.js"></script>
+    <script src="script-airtable.js?v=20250925-002"></script>
     
     <!-- Firebase Configuration -->
     <script type="module">

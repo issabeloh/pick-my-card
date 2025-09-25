@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/api/substitute-env"
+      "destination": "/index-env.html"
     }
   ]
 }

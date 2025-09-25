@@ -8,10 +8,16 @@ let cardsData = null; // Will be loaded from Airtable
 // Load cards data from Airtable API
 async function loadCardsData() {
     try {
+        console.log('🔄 開始載入Airtable配置...');
+        
+        // 先載入配置
+        await loadConfig();
+        console.log('✅ 配置載入完成');
+        
         console.log('🔄 開始載入Airtable資料...');
         
         // Load Cards data
-        const cardsResponse = await fetch(getTableUrl(AIRTABLE_CONFIG.TABLES.CARDS), {
+        const cardsResponse = await fetch(getTableUrl({TABLE_NAME: 'Cards'}), {
             headers: getApiHeaders()
         });
         
@@ -23,7 +29,7 @@ async function loadCardsData() {
         console.log('✅ Cards資料載入成功:', cardsResult.records.length, '筆記錄');
         
         // Load CashbackRates data
-        const ratesResponse = await fetch(getTableUrl(AIRTABLE_CONFIG.TABLES.CASHBACK_RATES), {
+        const ratesResponse = await fetch(getTableUrl({TABLE_NAME: 'CashbackRates'}), {
             headers: getApiHeaders()
         });
         
