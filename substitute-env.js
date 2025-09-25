@@ -1,11 +1,11 @@
-import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   try {
     // 讀取HTML模板檔案
-    const htmlPath = path.join(process.cwd(), 'index-env.html');
-    let html = fs.readFileSync(htmlPath, 'utf8');
+    const htmlPath = join(process.cwd(), 'index-env.html');
+    let html = readFileSync(htmlPath, 'utf8');
     
     // 替換環境變數
     html = html.replace(/\{\{AIRTABLE_API_KEY\}\}/g, process.env.AIRTABLE_API_KEY || '');
@@ -18,9 +18,9 @@ export default function handler(req, res) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     
     // 回傳處理後的HTML
-    res.status(200).send(html);
+    return res.status(200).send(html);
   } catch (error) {
     console.error('Error processing HTML:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
