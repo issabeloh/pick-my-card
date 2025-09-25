@@ -16,29 +16,11 @@ async function loadCardsData() {
         
         console.log('🔄 開始載入Airtable資料...');
         
-        // Load Cards data
-        const cardsResponse = await fetch(getTableUrl({TABLE_NAME: 'Cards'}), {
-            headers: getApiHeaders()
-        });
+        // Load Cards data using proxy
+        const cardsResult = await fetchTableData('Cards');
         
-        if (!cardsResponse.ok) {
-            throw new Error(`載入Cards資料失敗: ${cardsResponse.status} ${cardsResponse.statusText}`);
-        }
-        
-        const cardsResult = await cardsResponse.json();
-        console.log('✅ Cards資料載入成功:', cardsResult.records.length, '筆記錄');
-        
-        // Load CashbackRates data
-        const ratesResponse = await fetch(getTableUrl({TABLE_NAME: 'CashbackRates'}), {
-            headers: getApiHeaders()
-        });
-        
-        if (!ratesResponse.ok) {
-            throw new Error(`載入CashbackRates資料失敗: ${ratesResponse.status} ${ratesResponse.statusText}`);
-        }
-        
-        const ratesResult = await ratesResponse.json();
-        console.log('✅ CashbackRates資料載入成功:', ratesResult.records.length, '筆記錄');
+        // Load CashbackRates data using proxy
+        const ratesResult = await fetchTableData('CashbackRates');
         
         // Transform Airtable data to our format
         cardsData = transformAirtableData(cardsResult.records, ratesResult.records);

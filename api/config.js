@@ -1,8 +1,23 @@
 export default function handler(req, res) {
-  // 只返回配置，不包含敏感資訊
+  // 安全檢查：不直接返回API key，而是代理請求
+  // 檢查請求方法和參數
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
+  // 檢查環境變數是否存在
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) {
+    console.error('Missing environment variables:', {
+      hasApiKey: !!process.env.AIRTABLE_API_KEY,
+      hasBaseId: !!process.env.AIRTABLE_BASE_ID
+    });
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+  
+  // 返回配置信息（不包含敏感資訊）
   const config = {
-    API_KEY: process.env.AIRTABLE_API_KEY,
-    BASE_ID: process.env.AIRTABLE_BASE_ID,
+    configured: true,
+    BASE_ID: process.env.AIRTABLE_BASE_ID, // Base ID 可以公開
     TABLES: {
       CARDS: {
         TABLE_NAME: 'Cards'
