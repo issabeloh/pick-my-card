@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "api/substitute-env.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/substitute-env"
+    }
+  ]
+}
