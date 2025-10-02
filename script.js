@@ -1328,45 +1328,13 @@ function showCardDetail(cardId) {
         fullNameLink.style.color = 'inherit';
     }
     
-    // Format the combined annual fee and fee waiver information
-    const formatFeeInfo = (card) => {
-        const annualFee = card.annualFee || '無資料';
-        const feeWaiver = card.feeWaiver || '無資料';
-        
-        // Extract fee amount from annualFee string
-        const feeMatch = annualFee.match(/(NT\$[\d,]+)|(免費)|(無年費)/);
-        let feeText = '';
-        
-        if (annualFee.includes('首年免年費') || annualFee.includes('首年免費')) {
-            feeText = '年費首年免費';
-            const nextYearMatch = annualFee.match(/次年起.*?(NT\$[\d,]+)/);
-            if (nextYearMatch) {
-                feeText += `，次年起${nextYearMatch[1]}`;
-            }
-        } else if (feeMatch) {
-            if (feeMatch[0].includes('免費') || feeMatch[0].includes('無年費')) {
-                feeText = '年費免費';
-            } else {
-                feeText = `年費${feeMatch[0]}`;
-            }
-        } else {
-            feeText = `年費${annualFee}`;
-        }
-        
-        // Format fee waiver conditions
-        let waiverText = '';
-        if (feeWaiver && feeWaiver !== '無資料') {
-            // Split conditions by common delimiters and wrap each in quotes
-            const conditions = feeWaiver.split(/[,，、或]/)
-                .map(condition => condition.trim())
-                .filter(condition => condition.length > 0)
-                .map(condition => `「${condition}」`);
-            
-            waiverText = `免年費條件為${conditions.join('或')}`;
-        }
-        
-        return waiverText ? `${feeText}。${waiverText}。` : `${feeText}。`;
-    };
+    // 直接顯示年費和免年費資訊
+const annualFeeText = card.annualFee || '無資料';
+const feeWaiverText = card.feeWaiver || '無資料';
+const combinedFeeInfo = `${annualFeeText} ${feeWaiverText}`;
+
+document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
+document.getElementById('card-fee-waiver').style.display = 'none';
     
     const combinedFeeInfo = formatFeeInfo(card);
     document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
