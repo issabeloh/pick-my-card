@@ -454,7 +454,7 @@ cardsData = {
           ]
         }
       ]
-    },
+    };
 
 // Load cards data function - now simplified since data is embedded
 async function loadCardsData() {
