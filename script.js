@@ -1335,11 +1335,7 @@ const combinedFeeInfo = `${annualFeeText} ${feeWaiverText}`;
 
 document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
 document.getElementById('card-fee-waiver').style.display = 'none';
-    
-    const combinedFeeInfo = formatFeeInfo(card);
-    document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
-    document.getElementById('card-fee-waiver').style.display = 'none'; // Hide the separate fee waiver line
-    
+        
     // Update basic cashback
     const basicCashbackDiv = document.getElementById('card-basic-cashback');
     let basicContent = `<div class="cashback-detail-item">`;
