@@ -197,9 +197,7 @@ cardsData = {
           ]
         }
       ]
-    }
-  ]
-};
+    },
     {
       "id": "yushan-unicard",
       "name": "玉山Uni卡",
