@@ -1,12 +1,5 @@
 // Global variables
 let currentUser = null;
-let userSelectedCards = new Set(); // Store user's selected card IDs
-let auth = null;
-let db = null;
-let cardsData = null;
-
-// Global variables
-let currentUser = null;
 let userSelectedCards = new Set();
 let auth = null;
 let db = null;
