@@ -5,7 +5,7 @@ let auth = null;
 let db = null;
 let cardsData = null;
 
-// Embedded cards data
+// Embedded cards data to avoid CORS issues
 cardsData = {
   "cards": [
     {
@@ -26,174 +26,7 @@ cardsData = {
           "rate": 3.3,
           "cap": 480000,
           "items": [
-            "華航", "長榮", "星宇", "虎航", "國泰航空", "華信", "立榮", "klook", "kkday", "airsim", "agoda", "booking.com", "trip.com", "airbnb", "hotels.com", "expedia", "雄獅旅遊", "易遊網", "東南旅遊", "海外實體", "海外線上", "蝦皮", "momo", "酷澎", "coupang", "pchome", "yahoo", "amazon", "東森", "博客來", "richart mart", "hahow", "pressplay", "amazing talker", "udemy", "kobo", "readmoo", "uniqlo", "gu", "zara", "net", "lativ", "gap", "uber eats", "foodpanda", "中油直營", "台亞直營", "全國加油", "源點evoasis", "華城電能evalue", "拓元售票", "kktix", "年代售票", "寬宏售票", "opentix兩廳院文化生活", "晶華國際酒店集團", "台灣萬豪國際集團旗下飯店", "煙波飯店", "老爺酒店集團", "福華集團", "漢來飯店事業群", "台北君悅酒店", "高雄洲際酒店", "礁溪寒沐", "義大遊樂世界", "麗寶樂園", "六福村主題遊樂園", "九族文化村", "劍湖山世界主題樂園", "x-park", "國立海洋生物博物館", "遠雄海洋公園", "大魯閣", "小人國主題樂園", "全台餐飲新光三越", "遠東sogo", "廣三sogo", "遠東百貨", "微風", "台北101", "遠東巨城", "南紡購物中心", "漢神百貨", "漢神巨蛋", "誠品生活", "mitsui shopping park", "lalaport", "mitsui outlet park", "華泰名品城", "skm park outlets", "ikea", "特力屋", "hola", "宜得利", "瑪黑家居", "7-11", "全家", "家樂福", "大買家", "臺鐵", "高鐵", "台灣大車隊", "linego", "yoxi", "uber", "嘟嘟房", "autopass", "城市車旅", "vivipark", "uspace", "udrive", "irent", "和運租車", "格上租車"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "febank-lejia",
-      "name": "遠東樂家+卡",
-      "fullName": "遠東商業銀行樂家+信用卡",
-      "basicCashback": 0.5,
-      "annualFee": "首年免年費，次年起年費NT$2,000",
-      "feeWaiver": "前一年刷卡遜6萬元或12筆消費，或設定電子帳單+遠銀帳戶自扣且刷3筆",
-      "website": "https://www.feib.com.tw/upload/creditcard/YACard/index.html",
-      "overseasCashback": 2.5,
-      "exclusions": [
-        "遠東百貨", "遠東sogo百貨", "遠東巨城購物中心", "遠企購物中心", "代扣繳遠傳電信帳單", "愛買量販", "遠東香格里拉", "mega50", "city'super", "friday購物"
-      ],
-      "overseasExclusions": [
-        "歐洲實體商店", "海外交易清算手續費", "預借現金", "學雜費", "etoro", "境外投資交易平臺"
-      ],
-      "cashbackRates": [
-        {
-          "rate": 10.0,
-          "cap": 5263,
-          "period": "2025/07/01-2026/03/31",
-          "items": [
-            "寵物公園", "東森寵物", "魚中魚寵物水族", "大樹寵物", "凱朝寵物", "貓狗隊長", "毛孩市集", "金吉利寵物精品", "好狗命寵物幸福生活城", "好狗運貓狗福利中心", "金王子寵物", "愛貓園", "福壽寵物旗艦館", "動物醫院", "寵物醫院"
-          ]
-        },
-        {
-          "rate": 2.5,
-          "cap": null,
-          "hideInDisplay": true,
-          "items": [
-            "海外"
-          ]
-        },
-        {
-          "rate": 4.0,
-          "cap": 5714,
-          "period": "2025/07/01-2026/03/31",
-          "category": "大小安心刷",
-          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
-          "items": [
-            "國內餐廳", "大樹連鎖藥局", "杏一醫療用品", "維康醫療用品", "躍獅連鎖藥局", "媽咪樂居家服務", "潔客幫", "卡多摩嬰童館", "宜兒樂婦嬰用品", "營養銀行", "麗兒采家", "ikea", "環球購物中心", "秀泰生活", "故宮博物院", "統一時代百貨", "大葉高島屋", "美麗華百樂園", "citylink", "宏匯廣場", "ifg遠雄廣場", "新月廣場", "台茂購物中心", "大江國際購物中心", "桃知道geleven plaza", "小人國主題樂園", "六福村主題遊樂園", "大魯閣湳雅廣場", "尚順育樂世界", "台中lalaport", "麗寶樂園渡假區", "岡山樂購廣場", "南紡購物中心", "skmpark", "統一夢時代購物中心"
-          ]
-        },
-        {
-          "rate": 4.0,
-          "cap": 5714,
-          "period": "2025/07/01-2026/03/31",
-          "category": "生活禮遇",
-          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
-          "items": [
-            "愛買", "家樂福", "美廉社", "小北百貨", "大買家", "喜互惠", "聖德科斯", "棉花田", "永豐餘生技", "green&safe", "里仁", "台灣主婦聯盟", "健康食彩", "安麗", "葡眾", "美樂家", "國內加油", "gogoro", "tesla", "台灣大車隊", "yoxi", "uber", "goshare", "irent", "wemo scooter", "代扣遠傳電信", "代扣台灣大哥大帳單", "台灣虨屋", "tsutaya bookstore", "巨匠電腦", "聯成電腦", "朱宗慶打擊樂教室", "雲門舞蹈教室", "誠品書店", "誠品生活", "博客來網路商店", "金石堂書店", "健身工場", "worldgym", "beingspa", "beingsport", "curves可爾姿", "佐登妮絲"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "tbb-chaotian",
-      "name": "企銀朝天宮卡",
-      "fullName": "台灣企銀北港朝天宮認同卡",
-      "basicCashback": 0.3,
-      "annualFee": "首年免年費，次年起年費NT$2,400",
-      "feeWaiver": "有消費，或申辦電子帳單並取消實體帳單",
-      "website": "https://www.tbb.com.tw/zh-tw/personal/cards/products/overview/chaotiangong-creditcard",
-      "overseasCashback": 1.5,
-      "cashbackRates": [
-        {
-          "rate": 6.0,
-          "cap": 8772,
-          "conditions": "使用電子帳單+登錄一次",
-          "period": "2024/10/01-2025/12/31",
-          "items": [
-            "uber eats", "foodpanda", "屈臣氏", "康是美", "poya寶雅", "j-mart佳瑪", "唐吉訶德", "維康醫療用品", "大樹藥局", "啄木鳥藥師藥局", "杏一醫療用品", "丁丁藥局", "躍獅連鎖藥局", "新高橋藥局", "松本清", "tomod's特美事", "日藥本舖", "小三美日", "札幌藥妝", "高鐵", "台鐵", "uber", "台灣大車隊", "大都會車隊", "line go", "yoxi", "和運租車", "格上租車"
-          ]
-        },
-        {
-          "rate": 1.5,
-          "cap": 6667,
-          "conditions": "綁定台灣Pay行動支付",
-          "period": "2025/01/01-2025/12/31",
-          "items": [
-            "企銀朝天宮+台灣pay"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "hsbc-liveplus",
-      "name": "滙豐Live+卡",
-      "fullName": "滙豐 Live+ 現金回饋卡",
-      "basicCashback": 1.88,
-      "annualFee": "首年免年費，次年起年費NT$2,000",
-      "feeWaiver": "消費滿NT$80,000或12筆，或申請電子/行動帳單，就可終身免年費",
-      "website": "https://www.hsbc.com.tw/credit-cards/products/liveplus/",
-      "autoBillCashback": 0,
-      "autoBillCap": 0,
-      "overseasBonusRate": 1.0,
-      "overseasBonusCap": 20000,
-      "basicPeriod": "2025/07/01-2025/12/31",
-      "cashbackRates": [
-        {
-          "rate": 3.0,
-          "cap": 29600,
-          "period": "2025/07/01-2025/12/31",
-          "items": [
-            "餐飲mcc", "購物mcc", "娛樂mcc", "蝦皮購物", "pchome 24h購物", "酷澎", "ebay", "amazon", "friday購物", "gomaji", "麥當勞", "星巴克", "王品集團", "享鴨", "夏慕尼", "王品", "西堤", "石二鍋", "陶板屋", "青花驕", "饗賓餐旅", "享享", "開飯", "瓦城", "鼎泰豐", "富王大飯店文公館", "教父牛排", "山海樓", "鹽之華", "牡丹tempura", "吉兆割烹壽司", "明壽司", "logy", "inita", "海底撈", "金大鋄壽喜燒", "築間幸福鍋物", "壽司郎", "藏壽司", "爭鮮", "金色三麥", "貴族世家", "莫凡彼", "春大直", "貳樓", "涵豆腐", "hooters", "勝田日式豬排", "必勝客", "達美樂", "ikea", "台北101", "三井outlet", "微風南山", "微風南京", "微風信義", "微風松高", "微風廣場", "微風三總", "微風北車", "遠東sogo百貨", "漢神巨蛋", "華泰名品城", "新光三越", "skm park outlet", "att 4 fun", "美麗華百樂園", "南紡購物中心", "統一時代百貨", "ifg遠雄廣場", "京站時尚廣場", "citylink", "夢時代購物中心", "lalaport台中", "大葉高島屋百貨", "中友百貨", "遠企購物中心", "麗寶outlet", "比漾廣場", "大江國際購物中心", "遠東巨城", "遠東百貨", "global mall", "漢神名店百貨", "義大世界購物廣場", "台茂購物中心", "寶雅", "無印良品", "bellavita", "宏匯廣場", "義享時尚廣場", "noke忠泰樂生活", "大魯閣湳雅廣場", "明曜百貨", "新光影城", "威秀影城", "國賓影城", "秀泰影城", "環球影城", "迪士尼樂園", "吉卜力公園", "樂天世界", "legoland", "safari world", "兒童新樂園", "x park", "小人國", "六福村", "大魯閣", "遠雄海洋公園", "麗寶樂園", "劍湖山世界", "九族文化村", "尚順育樂世界", "義大遊樂世界", "巧虎夢想樂園", "台北市立動物園", "國立海洋生物博物館", "奇美博物館", "小叮當科學主題樂園", "野柳海洋世界", "星夢森林劇場", "埔心牧場", "飛牛牧場", "頑皮世界", "自行車文化館", "桃園市立美術館", "烏來台車", "日月潭纜車", "和平島公園", "台南十鼓仁糖文創園區", "太平山遊樂區", "阿里山國家森林遊樂區", "大雪山森林遊樂區", "墓丁國家森林遊樂區", "內洞國家森林遊樂區", "momo", "肯德基", "摩斯漢堡"
-          ]
-        },
-        {
-          "rate": 1.0,
-          "cap": 20000,
-          "period": "2025/07/01-2025/12/31",
-          "items": [
-            "日本當地實體餐飲mcc", "新加坡當地實體餐飲mcc", "馬來西亞當地實體餐飲mcc", "越南當地實體餐飲mcc", "菲律賓當地實體餐飲mcc", "印度當地實體餐飲mcc", "斯里蘭卡當地實體餐飲mcc"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "sinopac-coin",
-      "name": "永豐幣倍卡",
-      "fullName": "永豐銀行幣倍卡",
-      "basicCashback": 1.0,
-      "annualFee": "首年免年費，次年起年費NT$3,000",
-      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿36,000元或消費12次",
-      "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
-      "domesticBonusRate": 1.0,
-      "domesticBonusCap": 20000,
-      "overseasCashback": 3.0,
-      "overseasBonusRate": 4.0,
-      "overseasBonusCap": 7500,
-      "cashbackRates": [
-        {
-          "rate": 4.0,
-          "cap": 7500,
-          "items": [
-            "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
-          ]
-        },
-        {
-          "rate": 3.0,
-          "cap": null,
-          "items": [
-            "海外"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "taishin-jiekou",
-      "name": "台新街口卡",
-      "fullName": "台新銀行街口聯名卡",
-      "basicCashback": 1.0,
-      "basicCashbackType": "街口幣",
-      "annualFee": "正卡NT$4,500",
-      "feeWaiver": "採電子/行動簡訊帳單",
-      "website": "https://www.taishinbank.com.tw/TSB/personal/credit/intro/overview/cg038/card001/",
-      "cashbackRates": [
-        {
-          "rate": 2.5,
-          "cap": 400000,
-          "cashbackType": "街口幣",
-          "period": "活動至2025/12/31",
-          "items": [
-            "日本PayPay(限於街口支付綁定)", "韓國(含實體及網路)", "易遊網", "agoda", "airbnb", "高鐵", "uber", "新光三越", "遠東百貨", "lalaport", "三井(MITSUI OUTLET PARK)", "康是美實體門市", "屈臣氏實體門市", "寶雅實體門市", "uber eats", "foodpanda", "星巴克(限實體)", "路易莎咖啡", "85度C", "cama café", "多那之", "清心福全", "迷客夏", "可不可", "麻古茶坊", "COMEBUY", "大茗", "龜記", "UG", "鮮茶道", "五桐號", "茶湯會", "TEATOP 第一味", "珍煮丹", "老賴茶棧"
+            "華航", "長榮", "星宇", "虎航", "國泰航空", "華信", "立榮", "klook", "kkday", "airsim", "agoda", "booking.com", "trip.com", "airbnb", "hotels.com", "expedia", "雄獅旅遊", "易遊網", "東南旅遊", "海外實體", "海外線上", "蝦皮", "momo", "酷澎", "coupang", "pchome", "yahoo", "amazon", "東森", "博客來", "richart mart", "hahow", "pressplay", "amazing talker", "udemy", "kobo", "readmoo", "uniqlo", "gu", "zara", "net", "lativ", "gap", "uber eats", "foodpanda", "中油直營", "台亞直營", "全國加油", "源點evoasis", "華城電能evalue", "拓元售票", "kktix", "年代售票", "寬宏售票", "opentix兩廳院文化生活", "晶華國際酒店集團", "台灣萬豪國際集團旗下飯店", "煙波飯店", "老爺酒店集團", "福華集團", "漢來飯店事業群", "台北君悅酒店", "高雄洲際酒店", "礁溪寒沐", "義大遊樂世界", "麗寶樂園", "六福村主題遊樂園", "九族文化村", "劍湖山世界主題遊樂園", "x-park", "國立海洋生物博物館", "遠雄海洋公園", "大魯閣", "小人國主題樂園", "全台餐飲新光三越", "遠東sogo", "廣三sogo", "遠東百貨", "微風", "台北101", "遠東巨城", "南紡購物中心", "漢神百貨", "漢神巨蛋", "誠品生活", "mitsui shopping park", "lalaport", "mitsui outlet park", "華泰名品城", "skm park outlets", "ikea", "特力屋", "hola", "宜得利", "瑪黑家居", "7-11", "全家", "家樂福", "大買家", "臺鐵", "高鐵", "台灣大車隊", "linego", "yoxi", "uber", "嘟嘟房", "autopass", "城市車旅", "vivipark", "uspace", "udrive", "irent", "和運租車", "格上租車"
           ]
         }
       ]
@@ -452,7 +285,176 @@ cardsData = {
           ]
         }
       ]
-    };
+    },
+    {
+      "id": "febank-lejia",
+      "name": "遠東樂家+卡",
+      "fullName": "遠東商業銀行樂家+信用卡",
+      "basicCashback": 0.5,
+      "annualFee": "首年免年費，次年起年費NT$2,000",
+      "feeWaiver": "前一年刷卡遜6萬元或12筆消費，或設定電子帳單+遠銀帳戶自扣且刷3筆",
+      "website": "https://www.feib.com.tw/upload/creditcard/YACard/index.html",
+      "overseasCashback": 2.5,
+      "exclusions": [
+        "遠東百貨", "遠東sogo百貨", "遠東巨城購物中心", "遠企購物中心", "代扣繳遠傳電信帳單", "愛買量販", "遠東香格里拉", "mega50", "city'super", "friday購物"
+      ],
+      "overseasExclusions": [
+        "歐洲實體商店", "海外交易清算手續費", "預借現金", "學雜費", "etoro", "境外投資交易平臺"
+      ],
+      "cashbackRates": [
+        {
+          "rate": 10.0,
+          "cap": 5263,
+          "period": "2025/07/01-2026/03/31",
+          "items": [
+            "寵物公園", "東森寵物", "魚中魚寵物水族", "大樹寵物", "凱朝寵物", "貓狗隊長", "毛孩市集", "金吉利寵物精品", "好狗命寵物幸福生活城", "好狗運貓狗福利中心", "金王子寵物", "愛貓園", "福壽寵物旗艦館", "動物醫院", "寵物醫院"
+          ]
+        },
+        {
+          "rate": 2.5,
+          "cap": null,
+          "hideInDisplay": true,
+          "items": [
+            "海外"
+          ]
+        },
+        {
+          "rate": 4.0,
+          "cap": 5714,
+          "period": "2025/07/01-2026/03/31",
+          "category": "大小安心刷",
+          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
+          "items": [
+            "國內餐廳", "大樹連鎖藥局", "杏一醫療用品", "維康醫療用品", "躍獅連鎖藥局", "媽咪樂居家服務", "潔客幫", "卡多摩嬰童館", "宜兒樂婦嬰用品", "營養銀行", "麗兒采家", "ikea", "環球購物中心", "秀泰生活", "故宮博物院", "統一時代百貨", "大葉高島屋", "美麗華百樂園", "citylink", "宏匯廣場", "ifg遠雄廣場", "新月廣場", "台茂購物中心", "大江國際購物中心", "桃知道geleven plaza", "小人國主題樂園", "六福村主題遊樂園", "大魯閣湳雅廣場", "尚順育樂世界", "台中lalaport", "麗寶樂園渡假區", "岡山樂購廣場", "南紡購物中心", "skmpark", "統一夢時代購物中心"
+          ]
+        },
+        {
+          "rate": 4.0,
+          "cap": 5714,
+          "period": "2025/07/01-2026/03/31",
+          "category": "生活禮遇",
+          "conditions": "須本期帳款以遠銀帳戶自動扣款成功,次期帳單中以本卡新增一般消費滿NT$3,000",
+          "items": [
+            "愛買", "家樂福", "美廉社", "小北百貨", "大買家", "喜互惠", "聖德科斯", "棉花田", "永豐餘生技", "green&safe", "里仁", "台灣主婦聯盟", "健康食彩", "安麗", "葡眾", "美樂家", "國內加油", "gogoro", "tesla", "台灣大車隊", "yoxi", "uber", "goshare", "irent", "wemo scooter", "代扣遠傳電信", "代扣台灣大哥大帳單", "台灣虨屋", "tsutaya bookstore", "巨匠電腦", "聯成電腦", "朱宗慶打擊樂教室", "雲門舞蹈教室", "誠品書店", "誠品生活", "博客來網路商店", "金石堂書店", "健身工場", "worldgym", "beingspa", "beingsport", "curves可爾姿", "佐登妮絲"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tbb-chaotian",
+      "name": "企銀朝天宮卡",
+      "fullName": "台灣企銀北港朝天宮認同卡",
+      "basicCashback": 0.3,
+      "annualFee": "首年免年費，次年起年費NT$2,400",
+      "feeWaiver": "有消費，或申辦電子帳單並取消實體帳單",
+      "website": "https://www.tbb.com.tw/zh-tw/personal/cards/products/overview/chaotiangong-creditcard",
+      "overseasCashback": 1.5,
+      "cashbackRates": [
+        {
+          "rate": 6.0,
+          "cap": 8772,
+          "conditions": "使用電子帳單+登錄一次",
+          "period": "2024/10/01-2025/12/31",
+          "items": [
+            "uber eats", "foodpanda", "屈臣氏", "康是美", "poya寶雅", "j-mart佳瑪", "唐吉訶德", "維康醫療用品", "大樹藥局", "啄木鳥藥師藥局", "杏一醫療用品", "丁丁藥局", "躍獅連鎖藥局", "新高橋藥局", "松本清", "tomod's特美事", "日藥本舖", "小三美日", "札幌藥妝", "高鐵", "台鐵", "uber", "台灣大車隊", "大都會車隊", "line go", "yoxi", "和運租車", "格上租車"
+          ]
+        },
+        {
+          "rate": 1.5,
+          "cap": 6667,
+          "conditions": "綁定台灣Pay行動支付",
+          "period": "2025/01/01-2025/12/31",
+          "items": [
+            "企銀朝天宮+台灣pay"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hsbc-liveplus",
+      "name": "滙豐Live+卡",
+      "fullName": "滙豐 Live+ 現金回饋卡",
+      "basicCashback": 1.88,
+      "annualFee": "首年免年費，次年起年費NT$2,000",
+      "feeWaiver": "消費滿NT$80,000或12筆，或申請電子/行動帳單，就可終身免年費",
+      "website": "https://www.hsbc.com.tw/credit-cards/products/liveplus/",
+      "autoBillCashback": 0,
+      "autoBillCap": 0,
+      "overseasBonusRate": 1.0,
+      "overseasBonusCap": 20000,
+      "basicPeriod": "2025/07/01-2025/12/31",
+      "cashbackRates": [
+        {
+          "rate": 3.0,
+          "cap": 29600,
+          "period": "2025/07/01-2025/12/31",
+          "items": [
+            "餐飲mcc", "購物mcc", "娛樂mcc", "蝦皮購物", "pchome 24h購物", "酷澎", "ebay", "amazon", "friday購物", "gomaji", "麥當勞", "星巴克", "王品集團", "享鴨", "夏慕尼", "王品", "西堤", "石二鍋", "陶板屋", "青花驕", "饗賓餐旅", "享享", "開飯", "瓦城", "鼎泰豐", "富王大飯店文公館", "教父牛排", "山海樓", "鹽之華", "牡丹tempura", "吉兆割烹壽司", "明壽司", "logy", "inita", "海底撈", "金大鋄壽喜燒", "築間幸福鍋物", "壽司郎", "藏壽司", "爭鮮", "金色三麥", "貴族世家", "莫凡彼", "春大直", "貳樓", "涵豆腐", "hooters", "勝田日式豬排", "必勝客", "達美樂", "ikea", "台北101", "三井outlet", "微風南山", "微風南京", "微風信義", "微風松高", "微風廣場", "微風三總", "微風北車", "遠東sogo百貨", "漢神巨蛋", "華泰名品城", "新光三越", "skm park outlet", "att 4 fun", "美麗華百樂園", "南紡購物中心", "統一時代百貨", "ifg遠雄廣場", "京站時尚廣場", "citylink", "夢時代購物中心", "lalaport台中", "大葉高島屋百貨", "中友百貨", "遠企購物中心", "麗寶outlet", "比漾廣場", "大江國際購物中心", "遠東巨城", "遠東百貨", "global mall", "漢神名店百貨", "義大世界購物廣場", "台茂購物中心", "寶雅", "無印良品", "bellavita", "宏匯廣場", "義享時尚廣場", "noke忠泰樂生活", "大魯閣湳雅廣場", "明曜百貨", "新光影城", "威秀影城", "國賓影城", "秀泰影城", "環球影城", "迪士尼樂園", "吉卜力公園", "樂天世界", "legoland", "safari world", "兒童新樂園", "x park", "小人國", "六福村", "大魯閣", "遠雄海洋公園", "麗寶樂園", "劍湖山世界", "九族文化村", "尚順育樂世界", "義大遊樂世界", "巧虎夢想樂園", "台北市立動物園", "國立海洋生物博物館", "奇美博物館", "小叮當科學主題樂園", "野柳海洋世界", "星夢森林劇場", "埔心牧場", "飛牛牧場", "頑皮世界", "自行車文化館", "桃園市立美術館", "烏來台車", "日月潭纜車", "和平島公園", "台南十鼓仁糖文創園區", "太平山遊樂區", "阿里山國家森林遊樂區", "大雪山森林遊樂區", "墓丁國家森林遊樂區", "內洞國家森林遊樂區", "momo", "肯德基", "摩斯漢堡"
+          ]
+        },
+        {
+          "rate": 1.0,
+          "cap": 20000,
+          "period": "2025/07/01-2025/12/31",
+          "items": [
+            "日本當地實體餐飲mcc", "新加坡當地實體餐飲mcc", "馬來西亞當地實體餐飲mcc", "越南當地實體餐飲mcc", "菲律賓當地實體餐飲mcc", "印度當地實體餐飲mcc", "斯里蘭卡當地實體餐飲mcc"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sinopac-coin",
+      "name": "永豐幣倍卡",
+      "fullName": "永豐銀行幣倍卡",
+      "basicCashback": 1.0,
+      "annualFee": "首年免年費，次年起年費NT$3,000",
+      "feeWaiver": "申請電子或行動帳單期間正附卡皆終身免年費，或任一年消費滿36,000元或消費12次",
+      "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
+      "domesticBonusRate": 1.0,
+      "domesticBonusCap": 20000,
+      "overseasCashback": 3.0,
+      "overseasBonusRate": 4.0,
+      "overseasBonusCap": 7500,
+      "cashbackRates": [
+        {
+          "rate": 4.0,
+          "cap": 7500,
+          "items": [
+            "amazon", "淘寶", "dokodemo多和夢", "lookfantastic", "selfridges", "farfetch", "casetify", "daikokudrug", "ebay", "shopbop", "zalora", "asos", "iherb", "gmarket", "yoox", "yesstyle", "航空公司", "agoda", "booking.com", "易遊網", "雄獅旅行社", "飯店類", "渡假村", "旅館民宿", "歐特儀松山機場停車", "中華航空", "長榮航空", "星宇航空", "台灣虎航", "國泰航空", "樂桃航空", "日本航空", "全日空", "大韓航空", "新加坡航空", "飯店", "渡假村", "旅館", "民宿"
+          ]
+        },
+        {
+          "rate": 3.0,
+          "cap": null,
+          "items": [
+            "海外"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "taishin-jiekou",
+      "name": "台新街口卡",
+      "fullName": "台新銀行街口聯名卡",
+      "basicCashback": 1.0,
+      "basicCashbackType": "街口幣",
+      "annualFee": "正卡NT$4,500",
+      "feeWaiver": "採電子/行動簡訊帳單",
+      "website": "https://www.taishinbank.com.tw/TSB/personal/credit/intro/overview/cg038/card001/",
+      "cashbackRates": [
+        {
+          "rate": 2.5,
+          "cap": 400000,
+          "cashbackType": "街口幣",
+          "period": "活動至2025/12/31",
+          "items": [
+            "日本PayPay(限於街口支付綁定)", "韓國(含實體及網路)", "易遊網", "agoda", "airbnb", "高鐵", "uber", "新光三越", "遠東百貨", "lalaport", "三井(MITSUI OUTLET PARK)", "康是美實體門市", "屈臣氏實體門市", "寶雅實體門市", "uber eats", "foodpanda", "星巴克(限實體)", "路易莎咖啡", "85度C", "cama café", "多那之", "清心福全", "迷客夏", "可不可", "麻古茶坊", "COMEBUY", "大茗", "龜記", "UG", "鮮茶道", "五桐號", "茶湯會", "TEATOP 第一味", "珍煮丹", "老賴茶棧"
+          ]
+        }
+      ]
+    }
+  ]
+};
 
 // Load cards data function - now simplified since data is embedded
 async function loadCardsData() {
