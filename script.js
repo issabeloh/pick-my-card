@@ -26,12 +26,6 @@ async function loadCardsData() {
     }
 }
 
-// Load cards data function - now simplified since data is embedded
-async function loadCardsData() {
-    console.log('✅ 信用卡資料已內嵌載入');
-    return true;
-}
-
 // Show error message to user
 function showErrorMessage(message) {
     const container = document.querySelector('.container');
