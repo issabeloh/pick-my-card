@@ -1391,13 +1391,6 @@ basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
     
     basicContent += `</div>`;
     
-    if (card.domesticBonusRate) {
-        basicContent += `<div class="cashback-detail-item">`;
-        basicContent += `<div class="cashback-rate">國內加碼回饋: +${card.domesticBonusRate}%</div>`;
-        basicContent += `<div class="cashback-condition">消費上限: NT$${card.domesticBonusCap?.toLocaleString()}</div>`;
-        basicContent += `</div>`;
-    }
-    
     if (card.overseasBonusRate) {
         basicContent += `<div class="cashback-detail-item">`;
         basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
