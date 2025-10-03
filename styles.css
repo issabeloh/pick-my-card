@@ -841,9 +841,11 @@ input[type="number"]:focus {
 }
 
 .cashback-condition {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: 11px;
+    font-style: italic;
+    color: #9ca3af;
     margin-bottom: 6px;
+    padding-left: 0.5em;
 }
 
 .cashback-merchants {
