@@ -124,6 +124,26 @@ function handleMerchantInput() {
         validateInputs();
         return;
     }
+
+// 特殊處理：如果輸入「海外」，直接檢查 overseasCashback
+if (input === '海外' || input === 'overseas') {
+    const cardsWithOverseas = cardsData.cards
+        .filter(card => card.overseasCashback && card.overseasCashback > 0)
+        .map(card => ({
+            cardId: card.id,
+            cardName: card.name,
+            item: '海外消費',
+            rate: card.overseasCashback,
+            isOverseas: true
+        }));
+    
+    if (cardsWithOverseas.length > 0) {
+        showMatchedItem(cardsWithOverseas);
+        currentMatchedItem = cardsWithOverseas;
+        validateInputs();
+        return;
+    }
+}
     
     // Find matching items (now returns array)
     const matchedItems = findMatchingItem(input);
@@ -1335,7 +1355,11 @@ const combinedFeeInfo = `${annualFeeText} ${feeWaiverText}`;
 
 document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
 document.getElementById('card-fee-waiver').style.display = 'none';
-        
+    
+    const combinedFeeInfo = formatFeeInfo(card);
+    document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
+    document.getElementById('card-fee-waiver').style.display = 'none'; // Hide the separate fee waiver line
+    
     // Update basic cashback
     const basicCashbackDiv = document.getElementById('card-basic-cashback');
     let basicContent = `<div class="cashback-detail-item">`;
