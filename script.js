@@ -419,7 +419,7 @@ function showMatchedItem(matchedItems) {
     // 如果所有項目名稱相同，只顯示一次
     const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
     if (uniqueItems.length === 1) {
-        matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 張卡片的 <strong>${uniqueItems[0]}</strong> 回饋`;
+        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${uniqueItems[0]}</strong>`;
     } else {
         const itemList = uniqueItems.join('、');
         matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
@@ -549,15 +549,8 @@ if (matchedItem.isOverseas) {
                 let basicCashbackAmount = 0;
                 let effectiveRate = card.basicCashback;
                 
-                // Handle complex cards like HSBC Live+ with multiple basic rates
-                if (card.autoBillCashback && card.autoBillCap) {
-                    const autoBillAmount = Math.min(amount, card.autoBillCap);
-                    const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
-                    const normalAmount = amount - autoBillAmount;
-                    const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
-                    basicCashbackAmount = autoBillCashback + normalCashback;
-                    effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
-                } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                // Handle complex cards like 永豐幣倍 with domestic bonus
+if (card.domesticBonusRate && card.domesticBonusCap) {
                     // Handle 永豐幣倍 type cards with domestic bonus
                     const bonusAmount = Math.min(amount, card.domesticBonusCap);
                     const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
@@ -592,15 +585,8 @@ if (matchedItem.isOverseas) {
             let basicCashbackAmount = 0;
             let effectiveRate = card.basicCashback;
             
-            // Handle complex cards like HSBC Live+ with multiple basic rates
-            if (card.autoBillCashback && card.autoBillCap) {
-                const autoBillAmount = Math.min(amount, card.autoBillCap);
-                const autoBillCashback = Math.floor(autoBillAmount * (card.basicCashback + card.autoBillCashback) / 100);
-                const normalAmount = amount - autoBillAmount;
-                const normalCashback = Math.floor(normalAmount * card.basicCashback / 100);
-                basicCashbackAmount = autoBillCashback + normalCashback;
-                effectiveRate = ((autoBillCashback + normalCashback) / amount * 100).toFixed(2);
-            } else if (card.domesticBonusRate && card.domesticBonusCap) {
+            // Handle complex cards like 永豐幣倍 with domestic bonus
+if (card.domesticBonusRate && card.domesticBonusCap) {
                 // Handle 永豐幣倍 type cards with domestic bonus
                 const bonusAmount = Math.min(amount, card.domesticBonusCap);
                 const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
