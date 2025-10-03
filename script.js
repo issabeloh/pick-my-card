@@ -133,6 +133,7 @@ if (input === '海外' || input === 'overseas') {
             cardId: card.id,
             cardName: card.name,
             item: '海外消費',
+            originalItem: '海外消費',  // 加上這行
             rate: card.overseasCashback,
             isOverseas: true
         }));
