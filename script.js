@@ -1380,10 +1380,13 @@ basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
 basicContent += `</div>`; // ← 這裡關閉第一個區塊
 
 if (card.overseasCashback) {
-    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
+    basicContent += `<div class="cashback-detail-item">`;
     basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+    if (card.overseasConditions) {
+        basicContent += `<div class="cashback-condition">條件: ${card.overseasConditions}</div>`;
+    }
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
-    basicContent += `</div>`; // ← 關閉海外區塊
+    basicContent += `</div>`;
 }
 
 if (card.domesticBonusRate) {

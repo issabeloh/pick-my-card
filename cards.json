@@ -1227,6 +1227,8 @@
       "feeWaiver": "申請電子或行動帳單期間，或任一年消費滿36,000元或消費12次。",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/dual-currency-card.html",
       "basicCashbackType": "現金回饋",
+      "domesticConditions": "綁定電子/行動帳單且設定永豐銀行帳戶自動扣款；當月為DAWHO大戶等級或前月資產月均餘額達NT$10萬(含)以上",
+      "overseasConditions": "其中的1%回饋需綁定電子/行動帳單且設定永豐銀行帳戶自動扣款；當月為DAWHO大戶等級或前月資產月均餘額達NT$10萬(含)以上",
       "hasLevels": false,
       "overseasCashback": 3,
       "domesticBonusRate": 1,
