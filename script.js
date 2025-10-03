@@ -416,9 +416,15 @@ function showMatchedItem(matchedItems) {
         if (matchedItems.length === 1) {
             matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
         } else {
-            const itemList = matchedItems.map(item => item.originalItem).join('、');
-            matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
-        }
+    // 如果所有項目名稱相同，只顯示一次
+    const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
+    if (uniqueItems.length === 1) {
+        matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 張卡片的 <strong>${uniqueItems[0]}</strong> 回饋`;
+    } else {
+        const itemList = uniqueItems.join('、');
+        matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
+    }
+}
     } else {
         // Backward compatibility for single item
         matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems.originalItem}</strong>`;
