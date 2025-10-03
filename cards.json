@@ -597,7 +597,6 @@
             "garmin pay"
           ],
           "cap": 7500,
-          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圈１０次，並設定永豐帳戶自動扣繳信用卡帳款",
           "period": "2025/07/01-2025/12/31"
         }
       ]
@@ -1056,8 +1055,6 @@
       "basicCashbackType": "現金積點",
       "basicConditions": "其中1%回饋需設定自動扣繳",
       "hasLevels": false,
-      "overseasBonusRate": 1,
-      "overseasBonusCap": 20000,
       "cashbackRates": [
         {
           "rate": 3,
@@ -1232,8 +1229,6 @@
       "basicCashbackType": "現金回饋",
       "hasLevels": false,
       "overseasCashback": 3,
-      "overseasBonusRate": 4,
-      "overseasBonusCap": 7500,
       "domesticBonusRate": 1,
       "domesticBonusCap": 20000,
       "cashbackRates": [

@@ -1397,10 +1397,13 @@ if (card.domesticBonusRate) {
 }
 
 if (card.overseasBonusRate) {
-    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
+    basicContent += `<div class="cashback-detail-item">`;
     basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
+    if (card.overseasConditions) {
+        basicContent += `<div class="cashback-condition">條件: ${card.overseasConditions}</div>`;
+    }
     basicContent += `<div class="cashback-condition">消費上限: NT$${card.overseasBonusCap?.toLocaleString()}</div>`;
-    basicContent += `</div>`; // ← 關閉海外加碼區塊
+    basicContent += `</div>`;
 }
 
 basicCashbackDiv.innerHTML = basicContent;
