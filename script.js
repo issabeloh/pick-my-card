@@ -1373,7 +1373,10 @@ document.getElementById('card-fee-waiver').style.display = 'none';
     const basicCashbackDiv = document.getElementById('card-basic-cashback');
     let basicContent = `<div class="cashback-detail-item">`;
     basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
-    basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
+if (card.basicConditions) {
+    basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
+}
+basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
     
     if (card.overseasCashback) {
         basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
