@@ -1370,35 +1370,40 @@ document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
 document.getElementById('card-fee-waiver').style.display = 'none';
         
     // Update basic cashback
-    const basicCashbackDiv = document.getElementById('card-basic-cashback');
-    let basicContent = `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+const basicCashbackDiv = document.getElementById('card-basic-cashback');
+let basicContent = `<div class="cashback-detail-item">`;
+basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+if (card.basicConditions) {
+    basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
+}
+basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
+basicContent += `</div>`; // ← 這裡關閉第一個區塊
+
+if (card.overseasCashback) {
+    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
+    basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+    basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
+    basicContent += `</div>`; // ← 關閉海外區塊
+}
+
 if (card.domesticBonusRate) {
-    basicContent += `<div class="cashback-detail-item">`;
+    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
     basicContent += `<div class="cashback-rate">國內加碼回饋: +${card.domesticBonusRate}%</div>`;
     if (card.domesticConditions) {
         basicContent += `<div class="cashback-condition">條件: ${card.domesticConditions}</div>`;
     }
     basicContent += `<div class="cashback-condition">消費上限: NT$${card.domesticBonusCap?.toLocaleString()}</div>`;
-    basicContent += `</div>`;
+    basicContent += `</div>`; // ← 關閉國內加碼區塊
 }
-basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-    
-    if (card.overseasCashback) {
-        basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
-        basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
-    }
-    
-    basicContent += `</div>`;
-    
-    if (card.overseasBonusRate) {
-        basicContent += `<div class="cashback-detail-item">`;
-        basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
-        basicContent += `<div class="cashback-condition">消費上限: NT$${card.overseasBonusCap?.toLocaleString()}</div>`;
-        basicContent += `</div>`;
-    }
-    
-    basicCashbackDiv.innerHTML = basicContent;
+
+if (card.overseasBonusRate) {
+    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
+    basicContent += `<div class="cashback-rate">海外加碼回饋: +${card.overseasBonusRate}%</div>`;
+    basicContent += `<div class="cashback-condition">消費上限: NT$${card.overseasBonusCap?.toLocaleString()}</div>`;
+    basicContent += `</div>`; // ← 關閉海外加碼區塊
+}
+
+basicCashbackDiv.innerHTML = basicContent;
     
     // Handle CUBE card level selection
     const cubeLevelSection = document.getElementById('cube-level-section');
