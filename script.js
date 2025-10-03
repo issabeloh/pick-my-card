@@ -273,10 +273,8 @@ const fuzzySearchMap = {
     // 新增海外和國外的對應
     '國外': '海外',
     '海外': '國外',
-    // 新增迪卡儂相關詞彙
     'decathlon': '迪卡儂',
     '迪卡儂': 'decathlon',
-    // 新增宜家相關詞彙
     'ikea': 'IKEA宜家家居',
     '宜家': 'IKEA宜家家居',
     '宜家家居': 'IKEA宜家家居',
@@ -480,6 +478,28 @@ function calculateCashback() {
             const itemResultsMap = new Map();
             
             currentMatchedItem.forEach(matchedItem => {
+// 特殊處理：如果是海外消費，使用 overseasCashback
+if (matchedItem.isOverseas) {
+    const itemResults = cardsToCompare
+        .filter(card => card.overseasCashback && card.overseasCashback > 0)
+        .map(card => ({
+            rate: card.overseasCashback,
+            cashbackAmount: Math.floor(amount * card.overseasCashback / 100),
+            cap: card.overseasBonusCap || null,
+            matchedItem: '海外消費',
+            effectiveAmount: amount,
+            card: card,
+            matchedItemName: '海外消費'
+        }));
+    
+    itemResults.forEach(result => {
+        const cardId = result.card.id;
+        if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
+            itemResultsMap.set(cardId, result);
+        }
+    });
+    return; // 跳過後續的一般處理
+}
                 const searchTerm = matchedItem.originalItem.toLowerCase();
                 const itemResults = cardsToCompare.map(card => {
                     const result = calculateCardCashback(card, searchTerm, amount);
