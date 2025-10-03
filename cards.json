@@ -561,22 +561,14 @@
       "id": "sinopac-sport",
       "name": "永豐Sport卡",
       "fullName": "永豐銀行Sport信用卡",
-      "basicCashback": 1,
+      "basicCashback": 2,
       "annualFee": "首年免年費，次年起年費NT$3,000。",
       "feeWaiver": "申請信用卡電子化帳單（電子帳單/行動帳單）且取消實體帳單，或(鑽金卡Visa/Mastercard)前一年刷滿3.6萬元或12筆消費；(御璽卡Titanium/Signature)前一年刷滿12萬元或12筆消費。",
       "website": "https://bank.sinopac.com/sinopacBT/personal/credit-card/introduction/bankcard/sportcard.html",
       "basicCashbackType": "豐點",
+      "basicConditions": "當月汗水不白流APP數據達10,000大卡或Apple Watch圓滿劃圈10次，並設定永豐帳戶自動扣繳",
       "hasLevels": false,
       "cashbackRates": [
-        {
-          "rate": 1,
-          "items": [
-            "一般消費"
-          ],
-          "cap": 5000,
-          "conditions": "當月APP數據達10,000打卡或Apple Watch圓滿劃圈１０次，並設定永豐帳戶自動扣繳信用卡帳款",
-          "period": "2025/07/01-2025/12/31"
-        },
         {
           "rate": 4,
           "items": [
@@ -1062,6 +1054,7 @@
       "feeWaiver": "消費滿NT$80,000或12筆，或申請電子/行動帳單。",
       "website": "https://www.hsbc.com.tw/credit-cards/products/liveplus/",
       "basicCashbackType": "現金積點",
+      "basicConditions": "其中1%回饋需設定自動扣繳",
       "hasLevels": false,
       "overseasBonusRate": 1,
       "overseasBonusCap": 20000,
@@ -1215,13 +1208,13 @@
         {
           "rate": 1,
           "items": [
-            "日本當地實體餐飲mcc",
-            "新加坡當地實體餐飲mcc",
-            "馬來西亞當地實體餐飲mcc",
-            "越南當地實體餐飲mcc",
-            "菲律賓當地實體餐飲mcc",
-            "印度當地實體餐飲mcc",
-            "斯里蘭卡當地實體餐飲mcc"
+            "日本實體餐飲",
+            "新加坡實體餐飲",
+            "馬來西亞實體餐飲",
+            "越南實體餐飲",
+            "菲律賓實體餐飲",
+            "印度實體餐飲",
+            "斯里蘭卡實體餐飲"
           ],
           "cap": 20000,
           "period": "2025/07/01-2025/12/31"
