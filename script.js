@@ -747,7 +747,18 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
             }
         }
     }
-    
+
+    // 如果卡片有分級且不是 CUBE 卡，使用級別設定覆蓋回饋率和上限
+    if (card.hasLevels && !card.specialItems && bestRate > 0) {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const levelData = card.levelSettings[savedLevel];
+        
+        bestRate = levelData.rate;
+        applicableCap = levelData.cap || null;
+    }
+}
+
     let cashbackAmount = 0;
     let effectiveAmount = amount;
     let totalRate = bestRate;
@@ -1006,11 +1017,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             const specialRate = Math.round(result.specialRate * 10) / 10;
             const basicRate = Math.round(result.basicRate * 10) / 10;
             rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
-        } else if (result.card.id === 'sinopac-sport') {
-            // Sinopac Sport card shows additive structure: basic 1% + conditional 1% + special rate
-            rateDisplay = `${result.rate}%`;
         } else {
-            // Other cards show just their total rate without breakdown for now
             rateDisplay = `${result.rate}%`;
         }
     }
@@ -1362,7 +1369,38 @@ function showCardDetail(cardId) {
         fullNameLink.style.textDecoration = 'none';
         fullNameLink.style.color = 'inherit';
     }
+    // 顯示級別選擇器（適用於所有有分級的卡片）
+if (card.hasLevels) {
+    const levelNames = Object.keys(card.levelSettings);
+    const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
     
+    levelSelectHTML = `
+        <div class="level-selector">
+            <label>選擇級別：</label>
+            <select id="card-level-select" onchange="updateCardLevel('${card.id}')">
+                ${levelNames.map(level => 
+                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                ).join('')}
+            </select>
+        </div>
+    `;
+}
+
+// Update card level selection (for cards with levels like Uni card)
+function updateCardLevel(cardId) {
+    const select = document.getElementById('card-level-select');
+    if (!select) return;
+    
+    const selectedLevel = select.value;
+    localStorage.setItem(`cardLevel-${cardId}`, selectedLevel);
+    
+    // 重新顯示卡片詳情
+    const card = cardsData.cards.find(c => c.id === cardId);
+    if (card) {
+        showCardDetail(card);
+    }
+}
+
     // 直接顯示年費和免年費資訊
 const annualFeeText = card.annualFee || '無資料';
 const feeWaiverText = card.feeWaiver || '無資料';
