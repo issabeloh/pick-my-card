@@ -677,9 +677,14 @@ function calculateCardCashback(card, searchTerm, amount) {
     
     // Handle CUBE card with levels
     if (card.hasLevels && card.id === 'cathay-cube') {
-        const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
+        // 動態取得預設等級（第一個等級）
+const defaultLevel = Object.keys(card.levelSettings)[0];
+const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || defaultLevel;
         const levelSettings = card.levelSettings[savedLevel];
         
+// 判斷是否有 specialRate（CUBE卡）或只有 rate（Uni卡）
+const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
+
         // Check if merchant matches special items using all search variants
         let matchedSpecialItem = null;
         for (const variant of searchVariants) {
@@ -774,7 +779,7 @@ function calculateCardCashback(card, searchTerm, amount) {
         
         // Handle different card types for basic cashback
         let basicCashback = 0;
-        if (card.hasLevels && card.id === 'cathay-cube') {
+        if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
             basicCashback = 0; // CUBE rates already include basic rate
         } else if (card.id === 'sinopac-sport') {
             // Sport card: basic 1% + conditional 1% (from first rate group) + special rate
@@ -1024,12 +1029,10 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
                 ${(() => {
-                    if (isBasicCashback) {
-                        const cashbackType = result.card.basicCashbackType || '現金回饋';
-                        return `<div class="cashback-type-label">(${cashbackType})</div>`;
-                    } else if (result.matchedRateGroup && result.matchedRateGroup.cashbackType) {
-                        const cashbackType = result.matchedRateGroup.cashbackType;
-                        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+    if (result.card.basicCashbackType) {
+        const cashbackType = result.card.basicCashbackType;
+        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+    }
                     }
                     return '';
                 })()}
@@ -1606,8 +1609,17 @@ basicCashbackDiv.innerHTML = basicContent;
 
 // Generate CUBE special content based on selected level
 function generateCubeSpecialContent(card) {
+    // 只處理有 specialItems 的卡片
+    if (!card.specialItems || card.specialItems.length === 0) {
+        return '';
+    }
+    
     const selectedLevel = document.getElementById('cube-level-select').value;
     const levelSettings = card.levelSettings[selectedLevel];
+    
+    // 使用 specialRate（如果有）或 rate
+    const specialRate = levelSettings.specialRate || levelSettings.rate;
+    
     let content = '';
     
     // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
@@ -1646,7 +1658,7 @@ function generateCubeSpecialContent(card) {
     
     // 3. Level變動的特殊通路 (玩數位、樂饗購、趣旅行) - 移到5%童樂匯下、2%集精選上
     content += `<div class="cashback-detail-item">`;
-    content += `<div class="cashback-rate">${levelSettings.specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
+    content += `<div class="cashback-rate">${specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
     content += `<div class="cashback-condition">消費上限: 無上限</div>`;
     
     const merchantsList = card.specialItems.join('、');
