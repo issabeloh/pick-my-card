@@ -1032,7 +1032,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     if (result.card.basicCashbackType) {
         const cashbackType = result.card.basicCashbackType;
         return `<div class="cashback-type-label">(${cashbackType})</div>`;
-    }
                     }
                     return '';
                 })()}
