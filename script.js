@@ -1152,7 +1152,15 @@ function initializeAuth() {
             currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
-            userPhoto.src = user.photoURL || '';
+
+            // Set user photo with fallback
+            if (user.photoURL) {
+                userPhoto.src = user.photoURL;
+                userPhoto.style.display = 'block';
+            } else {
+                userPhoto.style.display = 'none'; // Hide if no photo
+            }
+
             userName.textContent = user.displayName || user.email;
             
             // Show manage cards button
