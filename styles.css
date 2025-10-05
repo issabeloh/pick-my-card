@@ -1439,22 +1439,68 @@ input[type="number"]:focus {
     font-weight: 600;
 }
 
-/* Disclaimer Footer Styles - 低調灰色版本 */
+/* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
     max-width: 800px;
-    margin: 24px auto;
-    padding: 20px 24px;
-    color: #6b7280;
-    font-size: 12px;
-    line-height: 1.6;
+    margin: 20px auto;
+    padding: 0 24px 24px;
+    text-align: center;
+}
+
+.disclaimer-toggle {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.disclaimer-toggle:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-icon {
+    font-size: 10px;
+    transition: transform 0.3s;
+}
+
+.disclaimer-toggle.active .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.disclaimer-content-wrapper {
+    margin-top: 12px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    text-align: left;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .disclaimer-section-title {
-    color: #4b5563;
-    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
     font-weight: 600;
-    margin-top: 16px;
-    margin-bottom: 8px;
+    margin-top: 12px;
+    margin-bottom: 6px;
 }
 
 .disclaimer-section-title:first-child {
@@ -1468,27 +1514,42 @@ input[type="number"]:focus {
 }
 
 .disclaimer-list li {
-    padding: 3px 0;
-    padding-left: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 2px 0;
+    padding-left: 14px;
     position: relative;
+    font-size: 10px;
+    line-height: 1.5;
 }
 
 .disclaimer-list li::before {
     content: '•';
     position: absolute;
     left: 0;
-    color: #9ca3af;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 /* Mobile responsiveness for disclaimer */
 @media (max-width: 600px) {
     .disclaimer-footer {
-        padding: 16px 20px;
-        font-size: 11px;
+        padding: 0 16px 20px;
+    }
+
+    .disclaimer-toggle {
+        font-size: 10px;
+        padding: 6px 10px;
+    }
+
+    .disclaimer-content-wrapper {
+        padding: 12px;
     }
 
     .disclaimer-section-title {
-        font-size: 12px;
+        font-size: 10px;
+    }
+
+    .disclaimer-list li {
+        font-size: 9px;
     }
 }
 

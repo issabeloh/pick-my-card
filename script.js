@@ -115,6 +115,18 @@ function setupEventListeners() {
         });
     }
 
+    // Disclaimer toggle
+    const disclaimerToggle = document.getElementById('disclaimer-toggle');
+    const disclaimerContent = document.getElementById('disclaimer-content');
+
+    if (disclaimerToggle && disclaimerContent) {
+        disclaimerToggle.addEventListener('click', () => {
+            const isVisible = disclaimerContent.style.display !== 'none';
+            disclaimerContent.style.display = isVisible ? 'none' : 'block';
+            disclaimerToggle.classList.toggle('active', !isVisible);
+        });
+    }
+
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
     

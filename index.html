@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
-    <link rel="stylesheet" href="styles.css?v=20251005-007&t=1728125000">
+    <link rel="stylesheet" href="styles.css?v=20251005-008&t=1728126000">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -224,23 +224,30 @@
 
     <!-- 使用須知 - 放在白色框框外 -->
     <div class="disclaimer-footer">
-        <div class="disclaimer-section-title">免責聲明（Disclaimer）</div>
-        <ul class="disclaimer-list">
-            <li>本工具僅供參考，實際回饋以各銀行官網公告為準</li>
-            <li>使用者應自行確認信用卡條款，本站不對任何交易結果負責</li>
-            <li>回饋計算可能因個人條件、活動變更等因素而有差異</li>
-        </ul>
+        <button class="disclaimer-toggle" id="disclaimer-toggle">
+            使用須知與免責聲明
+            <span class="toggle-icon">▼</span>
+        </button>
 
-        <div class="disclaimer-section-title">資料收錄原則（Data Coverage Policy）</div>
-        <ul class="disclaimer-list">
-            <li>條件太多或太模糊、回饋太少、期限太短的活動不納入</li>
-            <li>以能快速達成的常態回饋為主</li>
-            <li>複雜商家（如超商）僅納入實體信用卡回饋，不納入綁行動支付回饋</li>
-            <li>不納入新戶活動</li>
-        </ul>
+        <div class="disclaimer-content-wrapper" id="disclaimer-content" style="display: none;">
+            <div class="disclaimer-section-title">免責聲明（Disclaimer）</div>
+            <ul class="disclaimer-list">
+                <li>本工具僅供參考，實際回饋以各銀行官網公告為準</li>
+                <li>使用者應自行確認信用卡條款，本站不對任何交易結果負責</li>
+                <li>回饋計算可能因個人條件、活動變更等因素而有差異</li>
+            </ul>
+
+            <div class="disclaimer-section-title">資料收錄原則（Data Coverage Policy）</div>
+            <ul class="disclaimer-list">
+                <li>條件太多或太模糊、回饋太少、期限太短的活動不納入</li>
+                <li>以能快速達成的常態回饋為主</li>
+                <li>複雜商家（如超商）僅納入實體信用卡回饋，不納入綁行動支付回饋</li>
+                <li>不納入新戶活動</li>
+            </ul>
+        </div>
     </div>
 
-    <script src="script.js?v=20251005-005&t=1728123000"></script>
+    <script src="script.js?v=20251005-008&t=1728126000"></script>
     
     <!-- Firebase Configuration -->
     <script type="module">
