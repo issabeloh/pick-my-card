@@ -1179,6 +1179,11 @@ function initializeAuth() {
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
+            // Clear user info
+            userPhoto.src = '';
+            userPhoto.style.display = 'none';
+            userName.textContent = '';
+
             // Show manage cards button even when not logged in (read-only mode)
             document.getElementById('manage-cards-btn').style.display = 'block';
 
