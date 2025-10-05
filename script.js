@@ -497,14 +497,14 @@ if (matchedItem.isOverseas) {
             card: card,
             matchedItemName: '海外消費'
         }));
-    
+
     itemResults.forEach(result => {
         const cardId = result.card.id;
         if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
             itemResultsMap.set(cardId, result);
         }
     });
-    return; // 跳過後續的一般處理
+    return; // Early return from forEach callback is allowed
 }
                 const searchTerm = matchedItem.originalItem.toLowerCase();
                 const itemResults = cardsToCompare.map(card => {
@@ -747,7 +747,18 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
             }
         }
     }
-    
+
+    // 如果卡片有分級且不是 CUBE 卡，使用級別設定覆蓋回饋率和上限
+    if (card.hasLevels && !card.specialItems && bestRate > 0) {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const levelData = card.levelSettings[savedLevel];
+        
+        bestRate = levelData.rate;
+        applicableCap = levelData.cap || null;
+    }
+}
+
     let cashbackAmount = 0;
     let effectiveAmount = amount;
     let totalRate = bestRate;
@@ -761,66 +772,33 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
             effectiveSpecialAmount = applicableCap;
         }
         
+        // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
+        // Do NOT add basicCashback on top unless it's a special case with domesticBonusRate
         specialCashback = Math.floor(effectiveSpecialAmount * bestRate / 100);
-        
-        // Determine basic rate and additional bonuses based on card type and merchant
-        let basicRate = card.basicCashback;
+
+        // Only handle additional bonus rates that are truly additive (like 永豐幣倍 domestic bonus)
         let bonusRate = 0;
-        
-        // Handle special cards like 永豐幣倍 with different domestic/overseas rates
-        if (matchedItem === '海外' && card.overseasCashback) {
-            basicRate = card.overseasCashback;
-            if (card.overseasBonusRate && card.overseasBonusCap) {
-                bonusRate = card.overseasBonusRate;
-            }
-        } else if (card.domesticBonusRate && card.domesticBonusCap) {
-            bonusRate = card.domesticBonusRate;
-        }
-        
-        // Handle different card types for basic cashback
-        let basicCashback = 0;
-        if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-            basicCashback = 0; // CUBE rates already include basic rate
-        } else if (card.id === 'sinopac-sport') {
-            // Sport card: basic 1% + conditional 1% (from first rate group) + special rate
-            const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
-            basicCashback = Math.floor(effectiveSpecialAmount * (basicRate + conditionalRate) / 100);
-        } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
-            // Taishin Richart 3.3% already includes 0.3% basic, don't add basic separately
-            basicCashback = 0; // The 3.3% already includes the basic rate
-        } else {
-            // Add basic cashback for the same amount (layered rewards)
-            basicCashback = Math.floor(effectiveSpecialAmount * basicRate / 100);
-        }
-        
-        // Add bonus cashback if applicable
         let bonusCashback = 0;
-        if (bonusRate > 0) {
-            let bonusAmount = effectiveSpecialAmount;
-            if (matchedItem === '海外' && card.overseasBonusCap) {
-                bonusAmount = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
-            } else if (card.domesticBonusCap) {
-                bonusAmount = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
-            }
+
+        // Handle special cards like 永豐幣倍 with separate domestic bonus
+        if (card.domesticBonusRate && card.domesticBonusCap && matchedItem !== '海外') {
+            bonusRate = card.domesticBonusRate;
+            let bonusAmount = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
+            bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
+        } else if (matchedItem === '海外' && card.overseasBonusRate && card.overseasBonusCap) {
+            bonusRate = card.overseasBonusRate;
+            let bonusAmount = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
             bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
         }
         
-        // Handle remaining amount if capped
+        // Handle remaining amount if capped (excess amount gets basic cashback only)
         let remainingCashback = 0;
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
-            
-            // Handle remaining amount for special cards
-            if (card.hasLevels && card.id === 'cathay-cube') {
-                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-            } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
-                // Remaining amount for Richart 3.3% gets only basic 0.3%
-                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-            } else {
-                remainingCashback = Math.floor(remainingAmount * basicRate / 100);
-            }
-            
-            // Add bonus for remaining amount if applicable
+            // Remaining amount only gets basic cashback rate
+            remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+
+            // Add bonus for remaining amount if still under bonus cap
             if (bonusRate > 0) {
                 let remainingBonusAmount = remainingAmount;
                 if (matchedItem === '海外' && card.overseasBonusCap) {
@@ -835,22 +813,13 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
                 remainingCashback += Math.floor(remainingBonusAmount * bonusRate / 100);
             }
         }
-        
-        cashbackAmount = specialCashback + basicCashback + bonusCashback + remainingCashback;
-        
-        // Fix floating point precision issues for total rate
-        if (card.hasLevels && card.id === 'cathay-cube') {
-            totalRate = Math.round(bestRate * 10) / 10; // CUBE rates don't add basic rate
-        } else if (card.id === 'sinopac-sport') {
-            // Sport card: basic 1% + conditional 1% + special rate
-            const conditionalRate = card.cashbackRates.find(rate => rate.items.includes('一般消費'))?.rate || 0;
-            totalRate = Math.round((bestRate + basicRate + conditionalRate + bonusRate) * 10) / 10;
-        } else if (card.id === 'taishin-richart' && bestRate === 3.3) {
-            // Richart 3.3% already includes basic rate
-            totalRate = Math.round(bestRate * 10) / 10;
-        } else {
-            totalRate = Math.round((bestRate + basicRate + bonusRate) * 10) / 10;
-        }
+
+        // Total cashback = special rate amount + bonus amount + remaining basic amount
+        cashbackAmount = specialCashback + bonusCashback + remainingCashback;
+
+        // Total rate is already in bestRate (no need to add basicRate)
+        // Only add bonusRate if it's truly additive
+        totalRate = Math.round((bestRate + bonusRate) * 10) / 10;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
@@ -991,29 +960,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         `NT$${result.cashbackAmount.toLocaleString()}` : 
                         '無回饋';
     
-    // Format rate display for complex cards
+    // All rates are already totaled, simply display the rate
     let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
-    
-    // Only show additive format for cards that truly have layered cashback
-    // CUBE cards show clean rates, Taishin Richart shows additive
-    if (result.specialRate && result.basicRate && result.specialRate > 0) {
-        if (result.card.id === 'cathay-cube') {
-            // CUBE cards show clean rates only
-            rateDisplay = `${result.specialRate}%`;
-        } else if (result.card.id === 'taishin-jiekou') {
-            // Taishin Jiekou (street card) shows additive structure
-            const totalRate = Math.round((result.specialRate + result.basicRate) * 10) / 10;
-            const specialRate = Math.round(result.specialRate * 10) / 10;
-            const basicRate = Math.round(result.basicRate * 10) / 10;
-            rateDisplay = `${totalRate}% (${specialRate}%+基本${basicRate}%)`;
-        } else if (result.card.id === 'sinopac-sport') {
-            // Sinopac Sport card shows additive structure: basic 1% + conditional 1% + special rate
-            rateDisplay = `${result.rate}%`;
-        } else {
-            // Other cards show just their total rate without breakdown for now
-            rateDisplay = `${result.rate}%`;
-        }
-    }
     
     cardDiv.innerHTML = `
         <div class="card-header">
@@ -1362,7 +1310,38 @@ function showCardDetail(cardId) {
         fullNameLink.style.textDecoration = 'none';
         fullNameLink.style.color = 'inherit';
     }
+    // 顯示級別選擇器（適用於所有有分級的卡片）
+if (card.hasLevels) {
+    const levelNames = Object.keys(card.levelSettings);
+    const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
     
+    levelSelectHTML = `
+        <div class="level-selector">
+            <label>選擇級別：</label>
+            <select id="card-level-select" onchange="updateCardLevel('${card.id}')">
+                ${levelNames.map(level => 
+                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                ).join('')}
+            </select>
+        </div>
+    `;
+}
+
+// Update card level selection (for cards with levels like Uni card)
+function updateCardLevel(cardId) {
+    const select = document.getElementById('card-level-select');
+    if (!select) return;
+    
+    const selectedLevel = select.value;
+    localStorage.setItem(`cardLevel-${cardId}`, selectedLevel);
+    
+    // 重新顯示卡片詳情
+    const card = cardsData.cards.find(c => c.id === cardId);
+    if (card) {
+        showCardDetail(card);
+    }
+}
+
     // 直接顯示年費和免年費資訊
 const annualFeeText = card.annualFee || '無資料';
 const feeWaiverText = card.feeWaiver || '無資料';
@@ -1461,19 +1440,9 @@ basicCashbackDiv.innerHTML = basicContent;
             
         sortedRates.forEach((rate, index) => {
             specialContent += `<div class="cashback-detail-item">`;
-            
-            // Special handling for Sport card display text
-            if (card.id === 'sinopac-sport') {
-                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
-            } else {
-                // 回饋率和是否含一般回饋的說明
-                const includesBasic = rate.rate > card.basicCashback;
-                if (includesBasic) {
-                    specialContent += `<div class="cashback-rate">${rate.rate}% 回饋 (含一般回饋${card.basicCashback}%)</div>`;
-                } else {
-                    specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
-                }
-            }
+
+            // Display rate as-is (rates are already total rates)
+            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
             
             // 消費上限
             if (rate.cap) {
