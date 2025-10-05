@@ -5,23 +5,29 @@ let auth = null;
 let db = null;
 let cardsData = null;
 
-// Load cards data from cards.json
+// Load cards data from cards.data (encoded)
 async function loadCardsData() {
     try {
         const timestamp = new Date().getTime(); // 防止快取
-        const response = await fetch(`cards.json?t=${timestamp}`);
+        const response = await fetch(`cards.data?t=${timestamp}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        cardsData = await response.json();
-        console.log('✅ 信用卡資料已從 cards.json 載入');
+        // 讀取編碼的文字
+        const encoded = await response.text();
+        
+        // 解碼函數
+        const decoded = decodeURIComponent(escape(atob(encoded)));
+        cardsData = JSON.parse(decoded);
+        
+        console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         return true;
     } catch (error) {
         console.error('❌ 載入信用卡資料失敗:', error);
-        showErrorMessage('無法載入信用卡資料，請重新整理頁面或聯絡管理員。');
+        showErrorMessage('無法載入信用卡資料,請重新整理頁面或聯絡管理員。');
         return false;
     }
 }
@@ -1291,6 +1297,8 @@ function openManageCardsModal() {
             border-radius: 8px;
             text-align: center;
             font-weight: 500;
+            grid-column: 1 / -1;
+            width: 100%;
         `;
         loginPrompt.textContent = '登入後即可選取指定卡片做比較';
         cardsSelection.appendChild(loginPrompt);
