@@ -281,6 +281,13 @@ const fuzzySearchMap = {
     'IKEA宜家家居': 'ikea'
 };
 
+// Search term exclusion rules - prevents unwanted matches
+// Format: 'searchTerm': ['excluded item 1', 'excluded item 2', ...]
+const searchExclusionMap = {
+    '街口': ['日本paypay(限於街口支付綁定)'],
+    '街口支付': ['日本paypay(限於街口支付綁定)']
+};
+
 // Find matching item in cards database
 function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
@@ -309,14 +316,26 @@ function findMatchingItem(searchTerm) {
     const checkItemMatches = (items, searchTerms, searchLower, allMatches, searchTerm) => {
         for (const item of items) {
             const itemLower = item.toLowerCase();
-            
+
+            // Check if this item is explicitly excluded for this search term
+            const exclusionList = searchExclusionMap[searchLower];
+            if (exclusionList && exclusionList.some(excluded => itemLower === excluded.toLowerCase())) {
+                continue; // Skip this item - it's excluded
+            }
+
             // Check if any search term matches this item
             let matchFound = false;
             let bestMatchTerm = searchLower;
             let isExactMatch = false;
             let isFullContainment = false;
-            
+
                 for (const term of searchTerms) {
+                    // Check exclusions for this specific term too
+                    const termExclusions = searchExclusionMap[term];
+                    if (termExclusions && termExclusions.some(excluded => itemLower === excluded.toLowerCase())) {
+                        continue;
+                    }
+
                     // Prevent uber/uber eats cross matching with more precise logic
                     if (term === 'uber' && (itemLower.includes('uber eats') || itemLower.includes('ubereats'))) {
                         // Skip uber eats items when searching for 'uber'
@@ -326,7 +345,7 @@ function findMatchingItem(searchTerm) {
                         // Skip 'uber' item when searching for uber eats variants
                         continue;
                     }
-                
+
                 if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
                     matchFound = true;
                     if (itemLower === term) {
@@ -340,7 +359,7 @@ function findMatchingItem(searchTerm) {
                     }
                 }
             }
-            
+
             if (matchFound) {
                 allMatches.push({
                     originalItem: item,
@@ -1111,10 +1130,10 @@ function initializeAuth() {
             userSelectedCards.clear();
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
-            
-            // Hide manage cards button
-            document.getElementById('manage-cards-btn').style.display = 'none';
-            
+
+            // Show manage cards button even when not logged in (read-only mode)
+            document.getElementById('manage-cards-btn').style.display = 'block';
+
             // Show all cards when signed out
             populateCardChips();
         }
@@ -1179,10 +1198,6 @@ function setupManageCardsModal() {
     
     // Open modal
     manageBtn.addEventListener('click', () => {
-        if (!currentUser) {
-            alert('請先登入才能管理信用卡');
-            return;
-        }
         openManageCardsModal();
     });
     
@@ -1255,38 +1270,78 @@ function setupManageCardsModal() {
 function openManageCardsModal() {
     const modal = document.getElementById('manage-cards-modal');
     const cardsSelection = document.getElementById('cards-selection');
-    
+    const saveBtn = document.getElementById('save-cards-btn');
+    const toggleAllBtn = document.getElementById('toggle-all-cards');
+
+    // Check if user is logged in
+    const isLoggedIn = currentUser !== null;
+
     // Populate cards selection
     cardsSelection.innerHTML = '';
-    
+
+    // Add login prompt if not logged in
+    if (!isLoggedIn) {
+        const loginPrompt = document.createElement('div');
+        loginPrompt.style.cssText = `
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        `;
+        loginPrompt.textContent = '登入後即可選取指定卡片做比較';
+        cardsSelection.appendChild(loginPrompt);
+    }
+
     // Sort cards by name
     const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
-    
+
     sortedCards.forEach(card => {
         const isSelected = userSelectedCards.has(card.id);
-        
+
         const cardDiv = document.createElement('div');
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
-        
+
         cardDiv.innerHTML = `
-            <input type="checkbox" id="card-${card.id}" value="${card.id}" ${isSelected ? 'checked' : ''}>
+            <input type="checkbox" id="card-${card.id}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
             <label for="card-${card.id}" class="card-checkbox-label">${card.name}</label>
         `;
-        
-        // Update visual state on checkbox change
+
+        // Update visual state on checkbox change (only if logged in)
         const checkbox = cardDiv.querySelector('input');
-        checkbox.addEventListener('change', () => {
-            cardDiv.classList.toggle('selected', checkbox.checked);
-        });
-        
+        if (isLoggedIn) {
+            checkbox.addEventListener('change', () => {
+                cardDiv.classList.toggle('selected', checkbox.checked);
+            });
+        }
+
         cardsSelection.appendChild(cardDiv);
     });
-    
-    // Update toggle button state
-    const toggleAllBtn = document.getElementById('toggle-all-cards');
-    const allSelected = sortedCards.every(card => userSelectedCards.has(card.id));
-    toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
-    
+
+    // Disable buttons if not logged in
+    if (!isLoggedIn) {
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.5';
+        saveBtn.style.cursor = 'not-allowed';
+        toggleAllBtn.disabled = true;
+        toggleAllBtn.style.opacity = '0.5';
+        toggleAllBtn.style.cursor = 'not-allowed';
+    } else {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+        saveBtn.style.cursor = 'pointer';
+        toggleAllBtn.disabled = false;
+        toggleAllBtn.style.opacity = '1';
+        toggleAllBtn.style.cursor = 'pointer';
+
+        // Update toggle button state
+        const allSelected = sortedCards.every(card => userSelectedCards.has(card.id));
+        toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
+    }
+
     modal.style.display = 'flex';
 }
 
