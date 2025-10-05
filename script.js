@@ -1755,8 +1755,8 @@ function generateCubeSpecialContent(card) {
     } else {
         const initialList = card.specialItems.slice(0, 30).join('、');
         const fullList = merchantsList;
-        const merchantsId = `cube-merchants-${selectedLevel}`;
-        const showAllId = `cube-show-all-${selectedLevel}`;
+        const merchantsId = `cube-merchants-${savedLevel}`;
+        const showAllId = `cube-show-all-${savedLevel}`;
         
         content += `<div class="cashback-merchants">`;
         content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
