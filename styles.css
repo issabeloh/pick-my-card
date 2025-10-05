@@ -1364,3 +1364,78 @@ input[type="number"]:focus {
     font-style: normal;
 }
 
+/* Input Guide Styles */
+.help-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    vertical-align: middle;
+}
+
+.help-btn:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.input-guide {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 12px 0;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.guide-header {
+    color: #0369a1;
+    margin-bottom: 12px;
+    font-size: 15px;
+}
+
+.guide-intro {
+    color: #0c4a6e;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.guide-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.guide-list li {
+    color: #0c4a6e;
+    font-size: 13px;
+    line-height: 1.8;
+    padding: 4px 0;
+}
+
+.guide-list li strong {
+    color: #075985;
+    font-weight: 600;
+}
+

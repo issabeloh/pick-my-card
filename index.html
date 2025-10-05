@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
-    <link rel="stylesheet" href="styles.css?v=20250924-001&t=1737783210">
+    <link rel="stylesheet" href="styles.css?v=20251005-005&t=1728123000">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -46,18 +46,38 @@
             <section class="input-section">
                 <div class="input-row-with-button">
                     <div class="form-group compact">
-                        <label for="merchant-input">消費商家/項目</label>
+                        <label for="merchant-input">
+                            消費商家/項目
+                            <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
+                        </label>
                         <input type="text" id="merchant-input" placeholder="輸入消費的商家或項目名稱..." />
                     </div>
-                    
+
                     <div class="form-group compact">
                         <label for="amount-input">消費金額 (NT$)</label>
                         <input type="number" id="amount-input" placeholder="輸入消費金額..." min="1" step="1" />
                     </div>
-                    
+
                     <div class="form-group compact button-group">
                         <label>&nbsp;</label>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
+                    </div>
+                </div>
+
+                <!-- 輸入指南提示框 -->
+                <div id="input-guide" class="input-guide" style="display: none;">
+                    <div class="guide-header">
+                        <strong>💡 輸入指南</strong>
+                    </div>
+                    <div class="guide-content">
+                        <p class="guide-intro">建議輸入順序：<strong>行動支付 → 商家 → MCC類別 → 國家 → "假日"</strong></p>
+                        <ul class="guide-list">
+                            <li><strong>行動支付</strong>：ApplePay、GooglePay、LinePay、全支付、台新Pay、台灣Pay…</li>
+                            <li><strong>商家</strong>：uber、全聯、台灣大哥大、雄獅旅遊、華航、加油、王品集團…</li>
+                            <li><strong>MCC類別</strong>：餐飲、娛樂、國內飯店、國內電影院…</li>
+                            <li><strong>國家</strong>：韓國、日本、馬來西亞、越南、斯里蘭卡…</li>
+                            <li><strong>"假日"</strong>：部分信用卡有以消費日為假日的回饋，因此特列此項</li>
+                        </ul>
                     </div>
                 </div>
 
@@ -201,7 +221,7 @@
 </div>
     </div>
     
-    <script src="script.js?v=20251005-004&t=1728122000"></script>
+    <script src="script.js?v=20251005-005&t=1728123000"></script>
     
     <!-- Firebase Configuration -->
     <script type="module">

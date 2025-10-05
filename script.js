@@ -103,6 +103,18 @@ function populateCardChips() {
 
 // Setup event listeners
 function setupEventListeners() {
+    // Input guide toggle
+    const toggleGuideBtn = document.getElementById('toggle-input-guide');
+    const inputGuide = document.getElementById('input-guide');
+
+    if (toggleGuideBtn && inputGuide) {
+        toggleGuideBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isVisible = inputGuide.style.display !== 'none';
+            inputGuide.style.display = isVisible ? 'none' : 'block';
+        });
+    }
+
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
     
