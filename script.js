@@ -753,11 +753,10 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
         const defaultLevel = Object.keys(card.levelSettings)[0];
         const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
         const levelData = card.levelSettings[savedLevel];
-        
+
         bestRate = levelData.rate;
         applicableCap = levelData.cap || null;
     }
-}
 
     let cashbackAmount = 0;
     let effectiveAmount = amount;
