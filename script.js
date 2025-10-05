@@ -699,37 +699,42 @@ function calculateCardCashback(card, searchTerm, amount) {
     
     // Get all possible search variants
     const searchVariants = getAllSearchVariants(searchTerm);
-    
-    // Handle CUBE card with levels
-    if (card.hasLevels && card.id === 'cathay-cube') {
-        // 動態取得預設等級（第一個等級）
-const defaultLevel = Object.keys(card.levelSettings)[0];
-const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || defaultLevel;
-        const levelSettings = card.levelSettings[savedLevel];
-        
-// 判斷是否有 specialRate（CUBE卡）或只有 rate（Uni卡）
-const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
 
-        // Check if merchant matches special items using all search variants
+    // Handle cards with levels and specialItems (CUBE or Uni card)
+    if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const levelSettings = card.levelSettings[savedLevel];
+
+        // Check if merchant matches special items
         let matchedSpecialItem = null;
         for (const variant of searchVariants) {
             matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
             if (matchedSpecialItem) break;
         }
-        
+
         if (matchedSpecialItem) {
-            bestRate = levelSettings.specialRate;
+            // CUBE card uses specialRate, other cards use rate
+            bestRate = levelSettings.specialRate || levelSettings.rate;
             matchedItem = matchedSpecialItem;
-            matchedCategory = '玩數位、樂饗購、趣旅行';
-        } else {
-            // Check if merchant matches general items (2% reward categories)
+
+            // Set category based on card type
+            if (card.id === 'cathay-cube') {
+                matchedCategory = '玩數位、樂饗購、趣旅行';
+            } else {
+                matchedCategory = '指定通路';
+            }
+
+            // Set cap based on card type
+            applicableCap = levelSettings.cap || null;
+        } else if (card.id === 'cathay-cube') {
+            // CUBE card: check general items for 2% reward
             let matchedGeneralItem = null;
             let matchedGeneralCategory = null;
-            
+
             if (card.generalItems) {
                 for (const [category, items] of Object.entries(card.generalItems)) {
                     for (const variant of searchVariants) {
-                        // Try exact match first, then contains match
                         const foundItem = items.find(item => {
                             const itemLower = item.toLowerCase();
                             return itemLower === variant || itemLower.includes(variant) || variant.includes(itemLower);
@@ -743,19 +748,24 @@ const hasSpecialItems = card.specialItems && card.specialItems.length > 0;
                     if (matchedGeneralItem) break;
                 }
             }
-            
+
             if (matchedGeneralItem) {
                 bestRate = levelSettings.generalRate;
                 matchedItem = matchedGeneralItem;
                 matchedCategory = matchedGeneralCategory;
             } else {
-                // No match found - CUBE card gives 0.3% basic rate only for unmatched items
-                bestRate = 0; // No special rate for unmatched items
+                // No match - CUBE card gives 0 special rate
+                bestRate = 0;
                 matchedItem = null;
                 matchedCategory = null;
             }
+            applicableCap = null; // CUBE card has no cap
+        } else {
+            // Other level-based cards (like Uni): no match means no special rate
+            bestRate = 0;
+            matchedItem = null;
+            matchedCategory = null;
         }
-        applicableCap = null; // CUBE card has no cap
     } else {
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
@@ -1480,8 +1490,46 @@ basicCashbackDiv.innerHTML = basicContent;
 
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = generateCubeSpecialContent(card);
+    } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
+        // Handle generic level-based cards with specialItems (like Uni card)
+        const levelNames = Object.keys(card.levelSettings);
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
+        const levelData = card.levelSettings[savedLevel];
+
+        specialContent += `<div class="cashback-detail-item">`;
+        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋 (${savedLevel})</div>`;
+        if (levelData.cap) {
+            specialContent += `<div class="cashback-condition">消費上限: NT$${levelData.cap.toLocaleString()}</div>`;
+        } else {
+            specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        }
+
+        // Show applicable merchants
+        if (card.specialItems.length <= 30) {
+            const merchantsList = card.specialItems.join('、');
+            specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+        } else {
+            const initialList = card.specialItems.slice(0, 30).join('、');
+            const fullList = card.specialItems.join('、');
+            const merchantsId = `uni-merchants-${card.id}`;
+            const showAllId = `uni-show-all-${card.id}`;
+
+            specialContent += `<div class="cashback-merchants">`;
+            specialContent += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+            specialContent += `</div>`;
+        }
+
+        // Show all level options for reference
+        specialContent += `<div class="cashback-condition" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">各級別回饋率：</div>`;
+        levelNames.forEach(level => {
+            const data = card.levelSettings[level];
+            specialContent += `<div class="cashback-merchants" style="font-size: 13px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
+        });
+
+        specialContent += `</div>`;
     } else if (card.hasLevels && !card.specialItems) {
-        // Handle generic level-based cards (like Uni card)
+        // Handle level-based cards without specialItems
         const levelNames = Object.keys(card.levelSettings);
         const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
         const levelData = card.levelSettings[savedLevel];
@@ -1651,9 +1699,11 @@ function generateCubeSpecialContent(card) {
     if (!card.specialItems || card.specialItems.length === 0) {
         return '';
     }
-    
-    const selectedLevel = document.getElementById('cube-level-select').value;
-    const levelSettings = card.levelSettings[selectedLevel];
+
+    // Get level from localStorage or default to first level
+    const defaultLevel = Object.keys(card.levelSettings)[0];
+    const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+    const levelSettings = card.levelSettings[savedLevel];
     
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
