@@ -1372,37 +1372,6 @@ function showCardDetail(cardId) {
         fullNameLink.style.textDecoration = 'none';
         fullNameLink.style.color = 'inherit';
     }
-    // 顯示級別選擇器（適用於所有有分級的卡片）
-if (card.hasLevels) {
-    const levelNames = Object.keys(card.levelSettings);
-    const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
-    
-    levelSelectHTML = `
-        <div class="level-selector">
-            <label>選擇級別：</label>
-            <select id="card-level-select" onchange="updateCardLevel('${card.id}')">
-                ${levelNames.map(level => 
-                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
-                ).join('')}
-            </select>
-        </div>
-    `;
-}
-
-// Update card level selection (for cards with levels like Uni card)
-function updateCardLevel(cardId) {
-    const select = document.getElementById('card-level-select');
-    if (!select) return;
-    
-    const selectedLevel = select.value;
-    localStorage.setItem(`cardLevel-${cardId}`, selectedLevel);
-    
-    // 重新顯示卡片詳情
-    const card = cardsData.cards.find(c => c.id === cardId);
-    if (card) {
-        showCardDetail(card);
-    }
-}
 
     // 直接顯示年費和免年費資訊
 const annualFeeText = card.annualFee || '無資料';
@@ -1454,35 +1423,52 @@ if (card.overseasBonusRate) {
 
 basicCashbackDiv.innerHTML = basicContent;
     
-    // Handle CUBE card level selection
+    // Handle level selection for all cards with levels
     const cubeLevelSection = document.getElementById('cube-level-section');
-    const cubeLevelSelect = document.getElementById('cube-level-select');
-    
-    if (card.hasLevels && card.id === 'cathay-cube') {
-        cubeLevelSection.style.display = 'block';
-        
-        // Load saved level or default to level1
-        const savedLevel = localStorage.getItem(`cubeLevel-${card.id}`) || 'level1';
-        cubeLevelSelect.value = savedLevel;
-        
-        // Add birthday month note after level selection
-        const levelSectionContent = cubeLevelSection.innerHTML;
-        const birthdayNote = `
-            <div class="cube-birthday-note" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">
-                <div style="color: #d97706; font-size: 14px; margin-bottom: 4px; font-weight: 600;">提醒</div>
-                <div style="color: #92400e; font-size: 13px; line-height: 1.4;">
-                    慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">官網查詢</a>哦！
-                </div>
+
+    if (card.hasLevels) {
+        const levelNames = Object.keys(card.levelSettings);
+        const defaultLevel = levelNames[0];
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+
+        // Generate level selector HTML
+        let levelSelectorHTML = `
+            <div class="level-selector" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
+                <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                    ${levelNames.map(level =>
+                        `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                    ).join('')}
+                </select>
             </div>
         `;
-        cubeLevelSection.innerHTML = levelSectionContent + birthdayNote;
-        
-        // Re-get the select element after innerHTML modification and add change listener
-        const newCubeLevelSelect = document.getElementById('cube-level-select');
-        newCubeLevelSelect.value = savedLevel;
-        newCubeLevelSelect.onchange = function() {
-            localStorage.setItem(`cubeLevel-${card.id}`, this.value);
-            updateCubeSpecialCashback(card);
+
+        // Add CUBE-specific birthday note
+        if (card.id === 'cathay-cube') {
+            levelSelectorHTML += `
+                <div class="cube-birthday-note" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">
+                    <div style="color: #d97706; font-size: 14px; margin-bottom: 4px; font-weight: 600;">提醒</div>
+                    <div style="color: #92400e; font-size: 13px; line-height: 1.4;">
+                        慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">官網查詢</a>哦！
+                    </div>
+                </div>
+            `;
+        }
+
+        cubeLevelSection.innerHTML = levelSelectorHTML;
+        cubeLevelSection.style.display = 'block';
+
+        // Add change listener
+        const levelSelect = document.getElementById('card-level-select');
+        levelSelect.onchange = function() {
+            localStorage.setItem(`cardLevel-${card.id}`, this.value);
+            // Refresh card detail display
+            if (card.id === 'cathay-cube') {
+                updateCubeSpecialCashback(card);
+            } else {
+                // For other cards, just re-render the detail
+                showCardDetail(card.id);
+            }
         };
     } else {
         cubeLevelSection.style.display = 'none';
@@ -1491,9 +1477,31 @@ basicCashbackDiv.innerHTML = basicContent;
     // Update special cashback
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     let specialContent = '';
-    
+
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = generateCubeSpecialContent(card);
+    } else if (card.hasLevels && !card.specialItems) {
+        // Handle generic level-based cards (like Uni card)
+        const levelNames = Object.keys(card.levelSettings);
+        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
+        const levelData = card.levelSettings[savedLevel];
+
+        specialContent += `<div class="cashback-detail-item">`;
+        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋 (${savedLevel})</div>`;
+        if (levelData.cap) {
+            specialContent += `<div class="cashback-condition">消費上限: NT$${levelData.cap.toLocaleString()}</div>`;
+        } else {
+            specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        }
+
+        // Show all level options for reference
+        specialContent += `<div class="cashback-condition" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">各級別回饋率：</div>`;
+        levelNames.forEach(level => {
+            const data = card.levelSettings[level];
+            specialContent += `<div class="cashback-merchants" style="font-size: 13px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
+        });
+
+        specialContent += `</div>`;
     } else if (card.cashbackRates && card.cashbackRates.length > 0) {
         // Sort rates by percentage in descending order
         const sortedRates = [...card.cashbackRates]
