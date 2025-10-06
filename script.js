@@ -1090,7 +1090,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                 }
                 
-                const categoryInfo = result.matchedCategory && result.card.id !== 'cathay-cube' ? ` (類別: ${result.matchedCategory})` : '';
+                const categoryInfo = result.matchedCategory ? ` (類別: ${result.matchedCategory})` : '';
                 
                 // Special handling for Yushan Uni card exclusions in search results
                 let exclusionNote = '';
