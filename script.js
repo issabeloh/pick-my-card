@@ -1045,7 +1045,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px;">(${levelLabel})</small>` : ''}</div>
+                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">(${levelLabel})</small>` : ''}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
