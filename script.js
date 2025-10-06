@@ -744,11 +744,21 @@ function calculateCardCashback(card, searchTerm, amount) {
             bestRate = levelSettings.specialRate || levelSettings.rate;
             matchedItem = matchedSpecialItem;
 
-            // Set category from levelSettings or default based on card type
+            // Set category from levelSettings or find from specialItemsWithCategory
             if (levelSettings.category) {
                 matchedCategory = levelSettings.category;
-            } else if (card.id === 'cathay-cube') {
-                matchedCategory = '玩數位、樂饗購、趣旅行';
+            } else if (card.id === 'cathay-cube' && card.specialItemsWithCategory) {
+                // Find which category this item belongs to
+                for (const [category, items] of Object.entries(card.specialItemsWithCategory)) {
+                    if (items.some(item => item.toLowerCase() === matchedSpecialItem.toLowerCase())) {
+                        matchedCategory = category;
+                        break;
+                    }
+                }
+                // Fallback if not found in categories
+                if (!matchedCategory) {
+                    matchedCategory = '玩數位、樂饗購、趣旅行';
+                }
             } else {
                 matchedCategory = null; // 不再寫死「指定通路」
             }
@@ -1797,26 +1807,55 @@ function generateCubeSpecialContent(card) {
         content += `</div>`;
     }
     
-    // 3. Level變動的特殊通路 (玩數位、樂饗購、趣旅行) - 移到5%童樂匯下、2%集精選上
-    content += `<div class="cashback-detail-item">`;
-    content += `<div class="cashback-rate">${specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
-    content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-    
-    const merchantsList = card.specialItems.join('、');
-    if (card.specialItems.length <= 30) {
-        content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+    // 3. Level變動的特殊通路 - 按類別分組顯示
+    if (card.specialItemsWithCategory) {
+        // 有分類資料，按類別顯示
+        const categories = ['玩數位', '樂饗購', '趣旅行'];
+        categories.forEach(category => {
+            const items = card.specialItemsWithCategory[category];
+            if (items && items.length > 0) {
+                content += `<div class="cashback-detail-item">`;
+                content += `<div class="cashback-rate">${specialRate}% 回饋 (${category})</div>`;
+                content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+
+                const merchantsList = items.join('、');
+                if (items.length <= 20) {
+                    content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+                } else {
+                    const initialList = items.slice(0, 20).join('、');
+                    const merchantsId = `cube-merchants-${category}-${savedLevel}`;
+                    const showAllId = `cube-show-all-${category}-${savedLevel}`;
+
+                    content += `<div class="cashback-merchants">`;
+                    content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${merchantsList}')">... 顯示全部${items.length}個</button>`;
+                    content += `</div>`;
+                }
+                content += `</div>`;
+            }
+        });
     } else {
-        const initialList = card.specialItems.slice(0, 30).join('、');
-        const fullList = merchantsList;
-        const merchantsId = `cube-merchants-${savedLevel}`;
-        const showAllId = `cube-show-all-${savedLevel}`;
-        
-        content += `<div class="cashback-merchants">`;
-        content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
-        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+        // 沒有分類資料，使用舊的顯示方式
+        content += `<div class="cashback-detail-item">`;
+        content += `<div class="cashback-rate">${specialRate}% 回饋 (玩數位、樂饗購、趣旅行)</div>`;
+        content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+
+        const merchantsList = card.specialItems.join('、');
+        if (card.specialItems.length <= 30) {
+            content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+        } else {
+            const initialList = card.specialItems.slice(0, 30).join('、');
+            const fullList = merchantsList;
+            const merchantsId = `cube-merchants-${savedLevel}`;
+            const showAllId = `cube-show-all-${savedLevel}`;
+
+            content += `<div class="cashback-merchants">`;
+            content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+            content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+            content += `</div>`;
+        }
         content += `</div>`;
     }
-    content += `</div>`;
     
     // 4. 集精選和來支付 (2%) - 放在最後
     if (card.generalItems) {
