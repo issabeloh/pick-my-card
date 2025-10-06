@@ -720,7 +720,8 @@ function calculateCardCashback(card, searchTerm, amount) {
     let matchedItem = null;
     let matchedCategory = null;
     let matchedRateGroup = null;
-    
+    let selectedLevel = null; // Track selected level for display
+
     // Get all possible search variants
     const searchVariants = getAllSearchVariants(searchTerm);
 
@@ -728,6 +729,7 @@ function calculateCardCashback(card, searchTerm, amount) {
     if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
         const defaultLevel = Object.keys(card.levelSettings)[0];
         const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        selectedLevel = savedLevel; // Store selected level
         const levelSettings = card.levelSettings[savedLevel];
 
         // Check if merchant matches special items
@@ -897,7 +899,8 @@ function calculateCardCashback(card, searchTerm, amount) {
         matchedItem: matchedItem,
         matchedCategory: matchedCategory,
         effectiveAmount: effectiveAmount,
-        matchedRateGroup: matchedRateGroup
+        matchedRateGroup: matchedRateGroup,
+        selectedLevel: selectedLevel // Pass selected level to display
     };
 }
 
@@ -1027,7 +1030,13 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     
     // All rates are already totaled, simply display the rate
     let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
-    
+
+    // Generate level label if card has levels and levelLabelFormat
+    let levelLabel = '';
+    if (result.card.hasLevels && result.card.levelLabelFormat && result.selectedLevel) {
+        levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
+    }
+
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name">${result.card.name}</div>
@@ -1036,7 +1045,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${rateDisplay}</div>
+                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px;">(${levelLabel})</small>` : ''}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
