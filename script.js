@@ -205,7 +205,7 @@ const fuzzySearchMap = {
     'yahoo超級商城': 'yahoo',
     'costco': '好市多',
     '好市多': 'costco',
-    '7-11': '7-11',
+    '711': '7-11',
     '7eleven': '7-11',
     '7 11': '7-11',
     '7-eleven': '7-11',
@@ -742,15 +742,22 @@ function calculateCardCashback(card, searchTerm, amount) {
             bestRate = levelSettings.specialRate || levelSettings.rate;
             matchedItem = matchedSpecialItem;
 
-            // Set category based on card type
-            if (card.id === 'cathay-cube') {
+            // Set category from levelSettings or default based on card type
+            if (levelSettings.category) {
+                matchedCategory = levelSettings.category;
+            } else if (card.id === 'cathay-cube') {
                 matchedCategory = '玩數位、樂饗購、趣旅行';
             } else {
-                matchedCategory = '指定通路';
+                matchedCategory = null; // 不再寫死「指定通路」
             }
 
             // Set cap based on card type
             applicableCap = levelSettings.cap || null;
+
+            // Set period from levelSettings if available
+            if (levelSettings.period) {
+                matchedRateGroup = { period: levelSettings.period };
+            }
         } else if (card.id === 'cathay-cube') {
             // CUBE card: check general items for 2% reward
             let matchedGeneralItem = null;
