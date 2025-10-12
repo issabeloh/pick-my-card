@@ -238,7 +238,9 @@ function setupEventListeners() {
 // Handle merchant input changes
 function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
-    
+
+    console.log('🔍 handleMerchantInput:', input);
+
     if (input.length === 0) {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -269,15 +271,19 @@ if (input === '海外' || input === 'overseas') {
     
     // Find matching items (now returns array)
     const matchedItems = findMatchingItem(input);
-    
+
+    console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
+
     if (matchedItems && matchedItems.length > 0) {
         showMatchedItem(matchedItems);
         currentMatchedItem = matchedItems; // Now stores array of matches
+        console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
+        console.log('  ❌ 無匹配，清除 currentMatchedItem');
     }
-    
+
     validateInputs();
 }
 
@@ -827,12 +833,31 @@ function calculateCardCashback(card, searchTerm, amount) {
 
     // Handle cards with levels and specialItems (CUBE or Uni card)
     if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-        const defaultLevel = Object.keys(card.levelSettings || {})[0];
-        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const availableLevels = Object.keys(card.levelSettings || {});
+        const defaultLevel = availableLevels[0];
+        let savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+
+        // Try to find matching level if savedLevel doesn't exist
+        if (!card.levelSettings?.[savedLevel]) {
+            // Try case-insensitive match
+            const matchedLevel = availableLevels.find(level =>
+                level.toLowerCase().replace(/\s+/g, '') === savedLevel.toLowerCase().replace(/\s+/g, '')
+            );
+            if (matchedLevel) {
+                savedLevel = matchedLevel;
+                // Update localStorage with correct format
+                localStorage.setItem(`cardLevel-${card.id}`, savedLevel);
+            } else {
+                // Fallback to default level
+                savedLevel = defaultLevel;
+                localStorage.setItem(`cardLevel-${card.id}`, savedLevel);
+            }
+        }
+
         selectedLevel = savedLevel; // Store selected level
         const levelSettings = card.levelSettings?.[savedLevel];
 
-        // Safety check: if levelSettings is undefined, return 0 cashback
+        // Safety check: if levelSettings is still undefined, return 0 cashback
         if (!levelSettings) {
             console.warn(`⚠️ ${card.name}: levelSettings 未定義 for level "${savedLevel}"`);
             return {
