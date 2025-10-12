@@ -1058,6 +1058,20 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     console.log('results 數量:', results.length);
     console.log('isBasicCashback:', isBasicCashback);
     resultsContainer.innerHTML = '';
+
+    // Check if searchedItem is a payment method
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+    const isPaymentMethod = paymentsData?.payments.some(payment =>
+        payment.searchTerms.some(term =>
+            searchedItem.toLowerCase().includes(term.toLowerCase()) ||
+            term.toLowerCase().includes(searchedItem.toLowerCase())
+        )
+    );
+
+    // Hide disclaimer if searching for payment method
+    if (paymentDisclaimer) {
+        paymentDisclaimer.style.display = isPaymentMethod ? 'none' : 'block';
+    }
     
     if (results.length === 0) {
         // No cards have cashback for this item
@@ -2678,10 +2692,9 @@ function showComparePaymentsModal() {
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
                     const medal = index === 0 ? '🥇' : '🥈';
-                    const capText = mc.cap ? `上限 NT$${mc.cap.toLocaleString()}` : '無上限';
                     cardsHTML += `
                         <div style="background: white; border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid ${index === 0 ? '#10b981' : '#6b7280'};">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="font-weight: 600; color: #374151;">
                                     ${medal} ${mc.card.name}
                                 </div>
@@ -2689,19 +2702,15 @@ function showComparePaymentsModal() {
                                     ${mc.rate}%
                                 </div>
                             </div>
-                            <div style="color: #6b7280; font-size: 0.875rem;">
-                                ${capText}
-                            </div>
                         </div>
                     `;
                 });
 
                 paymentCard.innerHTML = `
-                    <div style="font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: #6366f1; display: flex; align-items: center;">
+                    <div style="font-weight: 700; font-size: 1rem; color: #6366f1; display: flex; align-items: center;">
                         <span style="font-size: 1.2rem; margin-right: 6px;">💳</span>
                         ${pwc.payment.name}
                     </div>
-                    <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 8px;">行動支付</div>
                     ${cardsHTML}
                 `;
 
