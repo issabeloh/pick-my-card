@@ -827,10 +827,23 @@ function calculateCardCashback(card, searchTerm, amount) {
 
     // Handle cards with levels and specialItems (CUBE or Uni card)
     if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-        const defaultLevel = Object.keys(card.levelSettings)[0];
+        const defaultLevel = Object.keys(card.levelSettings || {})[0];
         const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
         selectedLevel = savedLevel; // Store selected level
-        const levelSettings = card.levelSettings[savedLevel];
+        const levelSettings = card.levelSettings?.[savedLevel];
+
+        // Safety check: if levelSettings is undefined, return 0 cashback
+        if (!levelSettings) {
+            console.warn(`⚠️ ${card.name}: levelSettings 未定義 for level "${savedLevel}"`);
+            return {
+                rate: 0,
+                cashbackAmount: 0,
+                cap: null,
+                matchedItem: null,
+                effectiveAmount: 0,
+                selectedLevel: null
+            };
+        }
 
         // Check if merchant matches special items
         let matchedSpecialItem = null;
