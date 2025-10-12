@@ -675,10 +675,12 @@ if (matchedItem.isOverseas) {
                     };
                 }).filter(result => result.cashbackAmount > 0);
 
-                console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋`);
-                itemResults.forEach(r => {
-                    console.log(`    - ${r.card.name}: ${r.rate}%, cashback: ${r.cashbackAmount}`);
-                });
+                if (itemResults.length > 0) {
+                    const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
+                    console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋: ${cardNames}`);
+                } else {
+                    console.log(`  ✅ 找到 0 張卡有回饋`);
+                }
 
                 // Add to combined results, keeping track of the best rate per card
                 itemResults.forEach(result => {
