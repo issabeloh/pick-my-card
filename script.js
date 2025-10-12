@@ -34,33 +34,44 @@ async function loadCardsData() {
     }
 }
 
-// Initialize payments data
+// Initialize payments data from cardsData
 function initializePaymentsData() {
-    paymentsData = {
-        payments: [
-            { id: 'linepay', name: 'LINE Pay', searchTerms: ['linepay', 'line pay'] },
-            { id: 'jkopay', name: '街口支付', searchTerms: ['街口', '街口支付', 'jkopay'] },
-            { id: 'applepay', name: 'Apple Pay', searchTerms: ['apple pay', 'applepay'] },
-            { id: 'pxpayplus', name: '全支付', searchTerms: ['全支付', 'pxpay'] },
-            { id: 'easywallet', name: '悠遊付', searchTerms: ['悠遊付', 'easy wallet', 'easywallet'] },
-            { id: 'googlepay', name: 'Google Pay', searchTerms: ['google pay', 'googlepay'] },
-            { id: 'esunwallet', name: '玉山 Wallet', searchTerms: ['玉山wallet', 'esun wallet'] },
-            { id: 'pluspay', name: '全盈+Pay', searchTerms: ['全盈+pay', '全盈支付', '全盈+', '全盈+pay'] },
-            { id: 'openwallet', name: 'OPEN 錢包', searchTerms: ['open錢包', 'open wallet'] },
-            { id: 'piwallet', name: 'Pi 拍錢包', searchTerms: ['pi錢包', 'pi 拍錢包', 'pi wallet'] },
-            { id: 'icashpay', name: 'iCash Pay', searchTerms: ['icash pay', 'icashpay'] },
-            { id: 'samsungpay', name: 'Samsung Pay', searchTerms: ['samsung pay', 'samsungpay'] },
-            { id: 'opay', name: '歐付寶行動支付', searchTerms: ['歐付寶', '歐付寶行動支付', 'opay'] },
-            { id: 'ecpay', name: '橘子支付', searchTerms: ['橘子支付', 'ecpay'] },
-            { id: 'paypal', name: 'PayPal', searchTerms: ['paypal'] },
-            { id: 'twpay', name: '台灣 Pay', searchTerms: ['台灣pay', 'taiwan pay', 'twpay', '台灣支付'] },
-            { id: 'skmpay', name: 'SKM Pay', searchTerms: ['skm pay', 'skmpay'] },
-            { id: 'hamipay', name: 'Hami Pay 掃碼付', searchTerms: ['hami pay', 'hamipay', 'hami pay掃碼付'] },
-            { id: 'cpcpay', name: '中油 Pay', searchTerms: ['中油pay', 'cpc pay'] },
-            { id: 'garminpay', name: 'Garmin Pay', searchTerms: ['garmin pay', 'garminpay'] }
-        ]
-    };
-    console.log('✅ 行動支付資料已初始化');
+    // Try to load from cardsData first (from cards.data file)
+    if (cardsData && cardsData.payments) {
+        paymentsData = {
+            payments: cardsData.payments
+        };
+        console.log('✅ 行動支付資料已從 cards.data 載入');
+        console.log(`📱 載入了 ${paymentsData.payments.length} 種行動支付`);
+    } else {
+        // Fallback to hardcoded data if not available in cards.data
+        console.warn('⚠️ cards.data 中沒有 payments 資料，使用預設資料');
+        paymentsData = {
+            payments: [
+                { id: 'linepay', name: 'LINE Pay', website: 'https://pay.line.me/portal/tw/main', searchTerms: ['linepay', 'line pay'] },
+                { id: 'jkopay', name: '街口支付', website: 'https://www.jkopay.com/', searchTerms: ['街口', '街口支付', 'jkopay'] },
+                { id: 'applepay', name: 'Apple Pay', website: 'https://www.apple.com/tw/apple-pay/', searchTerms: ['apple pay', 'applepay'] },
+                { id: 'pxpayplus', name: '全支付', website: 'https://www.pxpay.com.tw/', searchTerms: ['全支付', 'pxpay'] },
+                { id: 'easywallet', name: '悠遊付', website: 'https://easywallet.easycard.com.tw/', searchTerms: ['悠遊付', 'easy wallet', 'easywallet'] },
+                { id: 'googlepay', name: 'Google Pay', website: 'https://pay.google.com/intl/zh-TW_tw/about/', searchTerms: ['google pay', 'googlepay'] },
+                { id: 'esunwallet', name: '玉山 Wallet', website: 'https://www.esunbank.com/zh-tw/personal/deposit/ebank/wallet', searchTerms: ['玉山wallet', 'esun wallet'] },
+                { id: 'pluspay', name: '全盈+Pay', website: 'https://www.pluspay.com.tw/', searchTerms: ['全盈+pay', '全盈支付', '全盈+', '全盈+pay'] },
+                { id: 'openwallet', name: 'OPEN 錢包', website: 'https://www.openpoint.com.tw/opw/index.aspx', searchTerms: ['open錢包', 'open wallet'] },
+                { id: 'piwallet', name: 'Pi 拍錢包', website: 'https://www.piwallet.com.tw/', searchTerms: ['pi錢包', 'pi 拍錢包', 'pi wallet'] },
+                { id: 'icashpay', name: 'iCash Pay', website: 'https://www.icashpay.com.tw/', searchTerms: ['icash pay', 'icashpay'] },
+                { id: 'samsungpay', name: 'Samsung Pay', website: 'https://www.samsung.com/tw/apps/samsung-pay/', searchTerms: ['samsung pay', 'samsungpay'] },
+                { id: 'opay', name: '歐付寶行動支付', website: 'https://www.opay.tw/', searchTerms: ['歐付寶', '歐付寶行動支付', 'opay'] },
+                { id: 'ecpay', name: '橘子支付', website: 'https://www.ecpay.com.tw/', searchTerms: ['橘子支付', 'ecpay'] },
+                { id: 'paypal', name: 'PayPal', website: 'https://www.paypal.com/tw/home', searchTerms: ['paypal'] },
+                { id: 'twpay', name: '台灣 Pay', website: 'https://www.twpay.com.tw/', searchTerms: ['台灣pay', 'taiwan pay', 'twpay', '台灣支付'] },
+                { id: 'skmpay', name: 'SKM Pay', website: 'https://www.skmpay.com.tw/', searchTerms: ['skm pay', 'skmpay'] },
+                { id: 'hamipay', name: 'Hami Pay 掃碼付', website: 'https://hamipay.emome.net/', searchTerms: ['hami pay', 'hamipay', 'hami pay掃碼付'] },
+                { id: 'cpcpay', name: '中油 Pay', website: 'https://www.cpc.com.tw/', searchTerms: ['中油pay', 'cpc pay'] },
+                { id: 'garminpay', name: 'Garmin Pay', website: 'https://www.garmin.com.tw/minisite/garmin-pay/', searchTerms: ['garmin pay', 'garminpay'] }
+            ]
+        };
+        console.log('✅ 行動支付資料已初始化（預設）');
+    }
 }
 
 // Show error message to user
@@ -144,10 +155,8 @@ function populatePaymentChips() {
     // Clear existing chips
     paymentChipsContainer.innerHTML = '';
 
-    // Show payments based on user selection or all payments if not logged in
-    const paymentsToShow = currentUser ?
-        paymentsData.payments.filter(payment => userSelectedPayments.has(payment.id)) :
-        paymentsData.payments;
+    // Show payments based on user selection (both logged in and not logged in use userSelectedPayments)
+    const paymentsToShow = paymentsData.payments.filter(payment => userSelectedPayments.has(payment.id));
 
     if (paymentsToShow.length === 0) {
         const emptyMsg = document.createElement('div');
@@ -491,30 +500,50 @@ function findMatchingItem(searchTerm) {
     for (const card of cardsData.cards) {
         // Check cashbackRates items
         for (const rateGroup of card.cashbackRates) {
+            const beforeLength = allMatches.length;
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
+            // Add cardId and rate info to newly added matches
+            for (let i = beforeLength; i < allMatches.length; i++) {
+                allMatches[i].cardId = card.id;
+                allMatches[i].rate = rateGroup.rate;
+                allMatches[i].cap = rateGroup.cap;
+            }
         }
-        
+
         // Check specialItems for CUBE card
         if (card.specialItems) {
+            const beforeLength = allMatches.length;
             checkItemMatches(card.specialItems, searchTerms, searchLower, allMatches, searchTerm);
+            for (let i = beforeLength; i < allMatches.length; i++) {
+                allMatches[i].cardId = card.id;
+                allMatches[i].rate = card.levelSettings?.[Object.keys(card.levelSettings)[0]]?.specialRate || 0;
+                allMatches[i].cap = null;
+            }
         }
-        
+
         // Check generalItems for CUBE card
         if (card.generalItems) {
             for (const [category, items] of Object.entries(card.generalItems)) {
+                const beforeLength = allMatches.length;
                 checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
+                for (let i = beforeLength; i < allMatches.length; i++) {
+                    allMatches[i].cardId = card.id;
+                    allMatches[i].rate = card.levelSettings?.[Object.keys(card.levelSettings)[0]]?.generalRate || 0;
+                    allMatches[i].cap = null;
+                }
             }
         }
     }
     
     if (allMatches.length === 0) return null;
-    
-    // Remove duplicates (same item appearing in multiple cards)
+
+    // Remove duplicates (same item + same card)
     const uniqueMatches = [];
-    const seenItems = new Set();
+    const seenCombos = new Set();
     for (const match of allMatches) {
-        if (!seenItems.has(match.itemLower)) {
-            seenItems.add(match.itemLower);
+        const combo = `${match.itemLower}_${match.cardId}`;
+        if (!seenCombos.has(combo)) {
+            seenCombos.add(combo);
             uniqueMatches.push(match);
         }
     }
@@ -2397,11 +2426,16 @@ function openManagePaymentsModal() {
 
         userSelectedPayments = new Set(selectedPayments);
 
+        // Save to localStorage
+        saveUserPayments();
+
+        // Also save to Firestore if user is logged in
         if (currentUser) {
             try {
                 await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
                     selectedPayments: selectedPayments
                 }, { merge: true });
+                console.log('行動支付選擇已同步至雲端');
             } catch (error) {
                 console.error('儲存行動支付設定失敗:', error);
             }
