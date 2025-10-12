@@ -581,7 +581,7 @@ function showMatchedItem(matchedItems) {
 
 // Show no match message with red styling
 function showNoMatchMessage() {
-    matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>沒有任何匹配的項目，以下結果顯示基本回饋</strong>`;
+    matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>您選取的卡片中沒有任何匹配的項目，以下結果顯示基本回饋</strong>`;
     matchedItemDiv.className = 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
 }
