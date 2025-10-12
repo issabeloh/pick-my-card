@@ -500,50 +500,30 @@ function findMatchingItem(searchTerm) {
     for (const card of cardsData.cards) {
         // Check cashbackRates items
         for (const rateGroup of card.cashbackRates) {
-            const beforeLength = allMatches.length;
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
-            // Add cardId and rate info to newly added matches
-            for (let i = beforeLength; i < allMatches.length; i++) {
-                allMatches[i].cardId = card.id;
-                allMatches[i].rate = rateGroup.rate;
-                allMatches[i].cap = rateGroup.cap;
-            }
         }
 
         // Check specialItems for CUBE card
         if (card.specialItems) {
-            const beforeLength = allMatches.length;
             checkItemMatches(card.specialItems, searchTerms, searchLower, allMatches, searchTerm);
-            for (let i = beforeLength; i < allMatches.length; i++) {
-                allMatches[i].cardId = card.id;
-                allMatches[i].rate = card.levelSettings?.[Object.keys(card.levelSettings)[0]]?.specialRate || 0;
-                allMatches[i].cap = null;
-            }
         }
 
         // Check generalItems for CUBE card
         if (card.generalItems) {
             for (const [category, items] of Object.entries(card.generalItems)) {
-                const beforeLength = allMatches.length;
                 checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
-                for (let i = beforeLength; i < allMatches.length; i++) {
-                    allMatches[i].cardId = card.id;
-                    allMatches[i].rate = card.levelSettings?.[Object.keys(card.levelSettings)[0]]?.generalRate || 0;
-                    allMatches[i].cap = null;
-                }
             }
         }
     }
     
     if (allMatches.length === 0) return null;
 
-    // Remove duplicates (same item + same card)
+    // Remove duplicates (same item appearing in multiple cards)
     const uniqueMatches = [];
-    const seenCombos = new Set();
+    const seenItems = new Set();
     for (const match of allMatches) {
-        const combo = `${match.itemLower}_${match.cardId}`;
-        if (!seenCombos.has(combo)) {
-            seenCombos.add(combo);
+        if (!seenItems.has(match.itemLower)) {
+            seenItems.add(match.itemLower);
             uniqueMatches.push(match);
         }
     }
@@ -2494,17 +2474,15 @@ function showPaymentDetail(paymentId) {
     payment.searchTerms.forEach(term => {
         const matches = findMatchingItem(term);
         if (matches && matches.length > 0) {
-            matches.forEach(match => {
-                // Filter to only cards in cardsToCheck
-                const card = cardsToCheck.find(c => c.id === match.cardId);
-                if (card) {
+            // For each matched item, calculate cashback for all cards
+            cardsToCheck.forEach(card => {
+                const result = calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+                if (result.rate > 0) {
                     matchingCards.push({
                         card: card,
-                        rate: match.rate,
-                        cap: match.cap,
-                        rateGroup: card.cashbackRates?.find(r =>
-                            r.items.some(item => item.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(item.toLowerCase()))
-                        )
+                        rate: result.rate,
+                        cap: result.cap,
+                        rateGroup: null // Not needed for display
                     });
                 }
             });
@@ -2587,18 +2565,15 @@ function showComparePaymentsModal() {
             payment.searchTerms.forEach(term => {
                 const matches = findMatchingItem(term);
                 if (matches && matches.length > 0) {
-                    matches.forEach(match => {
-                        // Filter to only cards in cardsToCheck
-                        const card = cardsToCheck.find(c => c.id === match.cardId);
-                        if (card) {
-                            const rateGroup = card.cashbackRates?.find(r =>
-                                r.items.some(item => item.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(item.toLowerCase()))
-                            );
+                    // For each matched item, calculate cashback for all cards
+                    cardsToCheck.forEach(card => {
+                        const result = calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+                        if (result.rate > 0) {
                             matchingCards.push({
                                 card: card,
-                                rate: match.rate,
-                                cap: match.cap,
-                                rateGroup: rateGroup
+                                rate: result.rate,
+                                cap: result.cap,
+                                rateGroup: null
                             });
                         }
                     });
