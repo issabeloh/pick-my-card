@@ -637,7 +637,9 @@ function calculateCashback() {
         if (Array.isArray(currentMatchedItem)) {
             // Multiple matches - calculate for all items and combine results
             const itemResultsMap = new Map();
-            
+
+            console.log(`🔍 處理 ${currentMatchedItem.length} 個匹配項目`);
+
             currentMatchedItem.forEach(matchedItem => {
 // 特殊處理：如果是海外消費，使用 overseasCashback
 if (matchedItem.isOverseas) {
@@ -662,6 +664,8 @@ if (matchedItem.isOverseas) {
     return; // Early return from forEach callback is allowed
 }
                 const searchTerm = matchedItem.originalItem.toLowerCase();
+                console.log(`  📝 計算項目: ${matchedItem.originalItem}`);
+
                 const itemResults = cardsToCompare.map(card => {
                     const result = calculateCardCashback(card, searchTerm, amount);
                     return {
@@ -670,16 +674,20 @@ if (matchedItem.isOverseas) {
                         matchedItemName: matchedItem.originalItem
                     };
                 }).filter(result => result.cashbackAmount > 0);
-                
+
+                console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋`);
+
                 // Add to combined results, keeping track of the best rate per card
                 itemResults.forEach(result => {
                     const cardId = result.card.id;
                     if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
+                        console.log(`    💳 ${result.card.name}: ${result.rate}% (${result.matchedItemName})`);
                         itemResultsMap.set(cardId, result);
                     }
                 });
             });
-            
+
+            console.log(`📊 最終結果: ${itemResultsMap.size} 張卡`);
             allResults = Array.from(itemResultsMap.values());
         } else {
             // Single match - backward compatibility
@@ -1326,7 +1334,7 @@ function initializeAuth() {
     });
     
     // Listen for authentication state changes
-    window.onAuthStateChanged(auth, (user) => {
+    window.onAuthStateChanged(auth, async (user) => {
         if (user) {
             // User is signed in
             console.log('User signed in:', user);
@@ -1343,13 +1351,13 @@ function initializeAuth() {
             }
 
             userName.textContent = user.displayName || user.email;
-            
+
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
-            
-            // Load user's selected cards and payments from localStorage
-            loadUserCards();
-            loadUserPayments();
+
+            // Load user's selected cards and payments from Firestore (async)
+            await loadUserCards();
+            await loadUserPayments();
 
             // Update chips display
             populateCardChips();
@@ -1381,29 +1389,47 @@ function initializeAuth() {
     setupManageCardsModal();
 }
 
-// Load user's selected cards from localStorage
-function loadUserCards() {
+// Load user's selected cards from Firestore (with localStorage fallback)
+async function loadUserCards() {
     if (!currentUser) {
         console.log('No current user, using all cards');
         userSelectedCards = new Set(cardsData.cards.map(card => card.id));
         return;
     }
-    
+
     try {
+        // Try to load from Firestore first
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+
+            if (docSnap.exists() && docSnap.data().selectedCards) {
+                const cloudCards = docSnap.data().selectedCards;
+                userSelectedCards = new Set(cloudCards);
+                console.log('✅ Loaded user cards from Firestore:', Array.from(userSelectedCards));
+
+                // Sync to localStorage for offline use
+                const storageKey = `selectedCards_${currentUser.uid}`;
+                localStorage.setItem(storageKey, JSON.stringify(cloudCards));
+                return;
+            }
+        }
+
+        // Fallback to localStorage if Firestore fails or no data
         const storageKey = `selectedCards_${currentUser.uid}`;
         const savedCards = localStorage.getItem(storageKey);
-        
+
         if (savedCards) {
             userSelectedCards = new Set(JSON.parse(savedCards));
-            console.log('Loaded user cards from localStorage:', Array.from(userSelectedCards));
+            console.log('📦 Loaded user cards from localStorage (fallback):', Array.from(userSelectedCards));
         } else {
             // First time user - select all cards by default
-            console.log('First time user, selecting all cards');
+            console.log('🆕 First time user, selecting all cards');
             userSelectedCards = new Set(cardsData.cards.map(card => card.id));
             saveUserCards();
         }
     } catch (error) {
-        console.error('Error loading user cards from localStorage:', error);
+        console.error('❌ Error loading user cards:', error);
         // Default to all cards if error
         userSelectedCards = new Set(cardsData.cards.map(card => card.id));
     }
@@ -2736,7 +2762,8 @@ function showComparePaymentsModal() {
 }
 
 // Load user payments
-function loadUserPayments() {
+// Load user's selected payments from Firestore (with localStorage fallback)
+async function loadUserPayments() {
     if (!currentUser) {
         console.log('No current user, showing no payments by default');
         userSelectedPayments = new Set();
@@ -2744,20 +2771,38 @@ function loadUserPayments() {
     }
 
     try {
+        // Try to load from Firestore first
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+
+            if (docSnap.exists() && docSnap.data().selectedPayments) {
+                const cloudPayments = docSnap.data().selectedPayments;
+                userSelectedPayments = new Set(cloudPayments);
+                console.log('✅ Loaded user payments from Firestore:', Array.from(userSelectedPayments));
+
+                // Sync to localStorage for offline use
+                const storageKey = `selectedPayments_${currentUser.uid}`;
+                localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
+                return;
+            }
+        }
+
+        // Fallback to localStorage if Firestore fails or no data
         const storageKey = `selectedPayments_${currentUser.uid}`;
         const savedPayments = localStorage.getItem(storageKey);
 
         if (savedPayments) {
             userSelectedPayments = new Set(JSON.parse(savedPayments));
-            console.log('Loaded user payments from localStorage:', Array.from(userSelectedPayments));
+            console.log('📦 Loaded user payments from localStorage (fallback):', Array.from(userSelectedPayments));
         } else {
             // First time user - no payments selected by default
-            console.log('First time user, no payments selected');
+            console.log('🆕 First time user, no payments selected');
             userSelectedPayments = new Set();
             saveUserPayments();
         }
     } catch (error) {
-        console.error('Error loading user payments from localStorage:', error);
+        console.error('❌ Error loading user payments:', error);
         userSelectedPayments = new Set();
     }
 }
