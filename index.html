@@ -40,6 +40,17 @@
                     <!-- Cards will be populated by JavaScript -->
                 </div>
             </div>
+
+            <div class="header-section">
+                <div class="section-title-row">
+                    <div class="section-title">我的行動支付:</div>
+                    <button id="manage-payments-btn" class="manage-btn" aria-label="管理行動支付">⚙️</button>
+                </div>
+                <div class="payment-chips" id="payment-chips">
+                    <!-- Payments will be populated by JavaScript -->
+                </div>
+                <button id="compare-payments-btn" class="compare-payments-btn">📊 比較所有行動支付回饋</button>
+            </div>
         </header>
 
         <main>
@@ -50,7 +61,7 @@
                             消費商家/項目
                             <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
                         </label>
-                        <input type="text" id="merchant-input" placeholder="輸入消費的商家或項目名稱..." />
+                        <input type="text" id="merchant-input" placeholder="輸入一項商家名稱或類別..." />
                     </div>
 
                     <div class="form-group compact">
@@ -88,6 +99,9 @@
 
             <section class="results-section" id="results-section" style="display: none;">
                 <h2>一般回饋與指定通路回饋</h2>
+                <p style="text-align: center; color: #6b7280; font-size: 0.875rem; margin-bottom: 16px;">
+                    ※ 以下結果僅顯示直接刷卡消費，不含行動支付
+                </p>
                 <div class="results-container" id="results-container">
                     <!-- Results will be dynamically inserted here -->
                 </div>
@@ -124,7 +138,30 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- Manage Payments Modal -->
+        <div id="manage-payments-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>管理我的行動支付</h3>
+                    <button class="close-modal" id="close-payments-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">選擇你使用的行動支付方式，只有選中的支付方式會出現在清單中。</p>
+                    <div class="modal-controls">
+                        <button id="toggle-all-payments" class="toggle-all-btn">全選</button>
+                    </div>
+                    <div class="payments-selection" id="payments-selection">
+                        <!-- Payment checkboxes will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
+                    <button id="cancel-payments-btn" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Card Detail Modal -->
         <div id="card-detail-modal" class="modal" style="display: none;">
             <div class="modal-content card-detail-content">
@@ -306,5 +343,41 @@
       window.getDoc = getDoc;
       window.setDoc = setDoc;
     </script>
+
+    <!-- Payment Detail Modal -->
+    <div id="payment-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content card-detail-content">
+            <div class="modal-header">
+                <h3 id="payment-detail-title">行動支付詳情</h3>
+                <button class="close-modal" id="close-payment-detail">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="card-info-section">
+                    <div class="info-item">
+                        <div class="info-label">官方網站:</div>
+                        <div class="info-value"><a id="payment-website-link" target="_blank" rel="noopener"></a></div>
+                    </div>
+                </div>
+                <div id="payment-cashback-details" class="cashback-details-section">
+                    <!-- Payment cashback details will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Payments Modal -->
+    <div id="compare-payments-modal" class="modal" style="display: none;">
+        <div class="modal-content card-detail-content">
+            <div class="modal-header">
+                <h3>比較所有行動支付回饋</h3>
+                <button class="close-modal" id="close-compare-payments">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="compare-payments-content">
+                    <!-- Comparison content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

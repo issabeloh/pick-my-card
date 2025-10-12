@@ -1,9 +1,11 @@
 // Global variables
 let currentUser = null;
 let userSelectedCards = new Set();
+let userSelectedPayments = new Set();
 let auth = null;
 let db = null;
 let cardsData = null;
+let paymentsData = null;
 
 // Load cards data from cards.data (encoded)
 async function loadCardsData() {
@@ -30,6 +32,35 @@ async function loadCardsData() {
         showErrorMessage('無法載入信用卡資料,請重新整理頁面或聯絡管理員。');
         return false;
     }
+}
+
+// Initialize payments data
+function initializePaymentsData() {
+    paymentsData = {
+        payments: [
+            { id: 'linepay', name: 'LINE Pay', searchTerms: ['linepay', 'line pay'] },
+            { id: 'jkopay', name: '街口支付', searchTerms: ['街口', '街口支付', 'jkopay'] },
+            { id: 'applepay', name: 'Apple Pay', searchTerms: ['apple pay', 'applepay'] },
+            { id: 'allpay', name: '全支付', searchTerms: ['全支付'] },
+            { id: 'easywallet', name: '悠遊付', searchTerms: ['悠遊付', 'easy wallet', 'easywallet'] },
+            { id: 'googlepay', name: 'Google Pay', searchTerms: ['google pay', 'googlepay'] },
+            { id: 'esunwallet', name: '玉山 Wallet', searchTerms: ['玉山wallet', 'esun wallet'] },
+            { id: 'allplus', name: '全盈+Pay', searchTerms: ['全盈+pay', '全盈支付', '全盈+'] },
+            { id: 'openwallet', name: 'OPEN 錢包', searchTerms: ['open錢包', 'open wallet'] },
+            { id: 'piwallet', name: 'Pi 拍錢包', searchTerms: ['pi錢包', 'pi 拍錢包', 'pi wallet'] },
+            { id: 'icashpay', name: 'iCash Pay', searchTerms: ['icash pay', 'icashpay'] },
+            { id: 'samsungpay', name: 'Samsung Pay', searchTerms: ['samsung pay', 'samsungpay'] },
+            { id: 'opay', name: '歐付寶行動支付', searchTerms: ['歐付寶', '歐付寶行動支付', 'opay'] },
+            { id: 'ecpay', name: '橘子支付', searchTerms: ['橘子支付', 'ecpay'] },
+            { id: 'paypal', name: 'PayPal', searchTerms: ['paypal'] },
+            { id: 'twpay', name: '台灣 Pay', searchTerms: ['台灣pay', 'taiwan pay', 'twpay', '台灣支付'] },
+            { id: 'skmpay', name: 'SKM Pay', searchTerms: ['skm pay', 'skmpay'] },
+            { id: 'hamipay', name: 'Hami Pay 掃碼付', searchTerms: ['hami pay', 'hamipay', 'hami pay掃碼付'] },
+            { id: 'cpcpay', name: '中油 Pay', searchTerms: ['中油pay', 'cpc pay'] },
+            { id: 'garminpay', name: 'Garmin Pay', searchTerms: ['garmin pay', 'garminpay'] }
+        ]
+    };
+    console.log('✅ 行動支付資料已初始化');
 }
 
 // Show error message to user
@@ -73,8 +104,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
-    
+
+    // Initialize payments data
+    initializePaymentsData();
+
     populateCardChips();
+    populatePaymentChips();
     setupEventListeners();
     setupAuthentication();
 });
@@ -98,6 +133,37 @@ function populateCardChips() {
         chip.textContent = card.name;
         chip.addEventListener('click', () => showCardDetail(card.id));
         cardChipsContainer.appendChild(chip);
+    });
+}
+
+// Populate payment chips in header
+function populatePaymentChips() {
+    const paymentChipsContainer = document.getElementById('payment-chips');
+    if (!paymentChipsContainer) return;
+
+    // Clear existing chips
+    paymentChipsContainer.innerHTML = '';
+
+    // Show payments based on user selection or all payments if not logged in
+    const paymentsToShow = currentUser ?
+        paymentsData.payments.filter(payment => userSelectedPayments.has(payment.id)) :
+        paymentsData.payments;
+
+    if (paymentsToShow.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.style.color = 'rgba(255, 255, 255, 0.7)';
+        emptyMsg.style.fontSize = '0.875rem';
+        emptyMsg.textContent = '未選取行動支付，請點擊上方齒輪選取';
+        paymentChipsContainer.appendChild(emptyMsg);
+        return;
+    }
+
+    paymentsToShow.forEach(payment => {
+        const chip = document.createElement('div');
+        chip.className = 'payment-chip';
+        chip.textContent = payment.name;
+        chip.addEventListener('click', () => showPaymentDetail(payment.id));
+        paymentChipsContainer.appendChild(chip);
     });
 }
 
@@ -142,6 +208,22 @@ function setupEventListeners() {
             calculateCashback();
         }
     });
+
+    // Manage payments button
+    const managePaymentsBtn = document.getElementById('manage-payments-btn');
+    if (managePaymentsBtn) {
+        managePaymentsBtn.addEventListener('click', () => {
+            openManagePaymentsModal();
+        });
+    }
+
+    // Compare payments button
+    const comparePaymentsBtn = document.getElementById('compare-payments-btn');
+    if (comparePaymentsBtn) {
+        comparePaymentsBtn.addEventListener('click', () => {
+            showComparePaymentsModal();
+        });
+    }
 }
 
 // Handle merchant input changes
@@ -1192,16 +1274,19 @@ function initializeAuth() {
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
             
-            // Load user's selected cards from localStorage
+            // Load user's selected cards and payments from localStorage
             loadUserCards();
-            
-            // Update card chips display
+            loadUserPayments();
+
+            // Update chips display
             populateCardChips();
+            populatePaymentChips();
         } else {
             // User is signed out
             console.log('User signed out');
             currentUser = null;
             userSelectedCards.clear();
+            userSelectedPayments.clear();
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
@@ -1213,8 +1298,9 @@ function initializeAuth() {
             // Show manage cards button even when not logged in (read-only mode)
             document.getElementById('manage-cards-btn').style.display = 'block';
 
-            // Show all cards when signed out
+            // Show all cards and payments when signed out
             populateCardChips();
+            populatePaymentChips();
         }
     });
     
@@ -2211,3 +2297,384 @@ async function setupBillingDates(cardId) {
         };
     });
 }
+
+// ========== Payment Management Functions ==========
+
+// Open manage payments modal
+function openManagePaymentsModal() {
+    const modal = document.getElementById('manage-payments-modal');
+    const paymentsSelection = document.getElementById('payments-selection');
+    const saveBtn = document.getElementById('save-payments-btn');
+    const toggleAllBtn = document.getElementById('toggle-all-payments');
+
+    const isLoggedIn = currentUser !== null;
+
+    paymentsSelection.innerHTML = '';
+
+    if (!isLoggedIn) {
+        const loginPrompt = document.createElement('div');
+        loginPrompt.style.cssText = `
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            grid-column: 1 / -1;
+            width: 100%;
+        `;
+        loginPrompt.textContent = '登入後即可選取指定行動支付做比較';
+        paymentsSelection.appendChild(loginPrompt);
+    }
+
+    const sortedPayments = [...paymentsData.payments].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedPayments.forEach(payment => {
+        const isSelected = userSelectedPayments.has(payment.id);
+
+        const paymentDiv = document.createElement('div');
+        paymentDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
+
+        paymentDiv.innerHTML = `
+            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
+            <label for="payment-${payment.id}" class="card-checkbox-label">${payment.name}</label>
+        `;
+
+        const checkbox = paymentDiv.querySelector('input');
+        if (isLoggedIn) {
+            checkbox.addEventListener('change', () => {
+                paymentDiv.classList.toggle('selected', checkbox.checked);
+            });
+        }
+
+        paymentsSelection.appendChild(paymentDiv);
+    });
+
+    if (!isLoggedIn) {
+        saveBtn.disabled = true;
+        saveBtn.style.opacity = '0.5';
+        saveBtn.style.cursor = 'not-allowed';
+        toggleAllBtn.disabled = true;
+        toggleAllBtn.style.opacity = '0.5';
+    } else {
+        saveBtn.disabled = false;
+        saveBtn.style.opacity = '1';
+        saveBtn.style.cursor = 'pointer';
+        toggleAllBtn.disabled = false;
+        toggleAllBtn.style.opacity = '1';
+    }
+
+    // Toggle all payments
+    let allSelected = userSelectedPayments.size === paymentsData.payments.length;
+    toggleAllBtn.textContent = allSelected ? '取消全選' : '全選';
+    toggleAllBtn.onclick = () => {
+        allSelected = !allSelected;
+        const checkboxes = paymentsSelection.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            cb.checked = allSelected;
+            cb.closest('.card-checkbox').classList.toggle('selected', allSelected);
+        });
+        toggleAllBtn.textContent = allSelected ? '取消全選' : '全選';
+    };
+
+    // Setup modal controls
+    const closeBtn = document.getElementById('close-payments-modal');
+    const cancelBtn = document.getElementById('cancel-payments-btn');
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    closeBtn.onclick = closeModal;
+    cancelBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    saveBtn.onclick = async () => {
+        const checkboxes = paymentsSelection.querySelectorAll('input[type="checkbox"]:checked');
+        const selectedPayments = Array.from(checkboxes).map(cb => cb.value);
+
+        userSelectedPayments = new Set(selectedPayments);
+
+        if (currentUser) {
+            try {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                    selectedPayments: selectedPayments
+                }, { merge: true });
+            } catch (error) {
+                console.error('儲存行動支付設定失敗:', error);
+            }
+        }
+
+        populatePaymentChips();
+        closeModal();
+    };
+
+    modal.style.display = 'flex';
+}
+
+// Show payment detail modal
+function showPaymentDetail(paymentId) {
+    const payment = paymentsData.payments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    const modal = document.getElementById('payment-detail-modal');
+    const title = document.getElementById('payment-detail-title');
+    const websiteLink = document.getElementById('payment-website-link');
+    const detailsContainer = document.getElementById('payment-cashback-details');
+
+    title.textContent = payment.name;
+    
+    // Set website link
+    if (payment.website) {
+        websiteLink.href = payment.website;
+        websiteLink.textContent = payment.website;
+    } else {
+        websiteLink.textContent = '（待更新）';
+        websiteLink.removeAttribute('href');
+    }
+
+    // Get matching cards for this payment
+    const cardsToCheck = currentUser ?
+        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards;
+
+    let matchingCards = [];
+
+    cardsToCheck.forEach(card => {
+        // Use findMatchingItem to search
+        payment.searchTerms.forEach(term => {
+            const matches = findMatchingItem(term);
+            if (matches && matches.length > 0) {
+                matches.forEach(match => {
+                    if (match.cardId === card.id) {
+                        matchingCards.push({
+                            card: card,
+                            rate: match.rate,
+                            cap: match.cap,
+                            rateGroup: cardsData.cards.find(c => c.id === card.id).cashbackRates?.find(r => r.items.some(item => item.toLowerCase() === term.toLowerCase()))
+                        });
+                    }
+                });
+            }
+        });
+    });
+
+    // Remove duplicates
+    const uniqueCards = [];
+    const seenCardIds = new Set();
+    matchingCards.forEach(mc => {
+        if (!seenCardIds.has(mc.card.id)) {
+            seenCardIds.add(mc.card.id);
+            uniqueCards.push(mc);
+        }
+    });
+
+    // Sort by rate descending
+    uniqueCards.sort((a, b) => b.rate - a.rate);
+
+    // Display matching cards
+    detailsContainer.innerHTML = '';
+    
+    if (uniqueCards.length === 0) {
+        detailsContainer.innerHTML = '<p style="text-align: center; color: #666;">目前沒有信用卡認列此支付方式</p>';
+    } else {
+        uniqueCards.forEach(mc => {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'cashback-detail-item';
+            
+            let capText = mc.cap ? `NT$${mc.cap.toLocaleString()}` : '無上限';
+            let periodText = mc.rateGroup?.period ? `<div class="cashback-condition">活動期間: ${mc.rateGroup.period}</div>` : '';
+            let conditionsText = mc.rateGroup?.conditions ? `<div class="cashback-condition">條件: ${mc.rateGroup.conditions}</div>` : '';
+
+            cardDiv.innerHTML = `
+                <div class="cashback-rate">${mc.card.name} - ${mc.rate}%</div>
+                <div class="cashback-condition">消費上限: ${capText}</div>
+                ${periodText}
+                ${conditionsText}
+            `;
+            detailsContainer.appendChild(cardDiv);
+        });
+    }
+
+    // Setup close events
+    const closeBtn = document.getElementById('close-payment-detail');
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    modal.style.display = 'flex';
+}
+
+// Show compare payments modal
+function showComparePaymentsModal() {
+    const modal = document.getElementById('compare-payments-modal');
+    const contentContainer = document.getElementById('compare-payments-content');
+
+    const paymentsToCompare = currentUser ?
+        paymentsData.payments.filter(p => userSelectedPayments.has(p.id)) :
+        paymentsData.payments;
+
+    if (paymentsToCompare.length === 0) {
+        contentContainer.innerHTML = '<p style="text-align: center; color: #666;">請先選擇要比較的行動支付</p>';
+    } else {
+        let paymentsWithCards = [];
+
+        paymentsToCompare.forEach(payment => {
+            const cardsToCheck = currentUser ?
+                cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+                cardsData.cards;
+
+            let matchingCards = [];
+
+            cardsToCheck.forEach(card => {
+                payment.searchTerms.forEach(term => {
+                    const matches = findMatchingItem(term);
+                    if (matches && matches.length > 0) {
+                        matches.forEach(match => {
+                            if (match.cardId === card.id) {
+                                const rateGroup = card.cashbackRates?.find(r => 
+                                    r.items.some(item => item.toLowerCase() === term.toLowerCase())
+                                );
+                                matchingCards.push({
+                                    card: card,
+                                    rate: match.rate,
+                                    cap: match.cap,
+                                    rateGroup: rateGroup
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Remove duplicates and sort
+            const uniqueCards = [];
+            const seenCardIds = new Set();
+            matchingCards.forEach(mc => {
+                if (!seenCardIds.has(mc.card.id)) {
+                    seenCardIds.add(mc.card.id);
+                    uniqueCards.push(mc);
+                }
+            });
+
+            uniqueCards.sort((a, b) => b.rate - a.rate);
+
+            // Only keep top 2
+            const top2 = uniqueCards.slice(0, 2);
+
+            if (top2.length > 0) {
+                paymentsWithCards.push({
+                    payment: payment,
+                    cards: top2
+                });
+            }
+        });
+
+        // Sort payments by highest rate
+        paymentsWithCards.sort((a, b) => b.cards[0].rate - a.cards[0].rate);
+
+        // Display compact comparison
+        contentContainer.innerHTML = '';
+        
+        if (paymentsWithCards.length === 0) {
+            contentContainer.innerHTML = '<p style="text-align: center; color: #666;">目前沒有信用卡認列已選的行動支付</p>';
+        } else {
+            paymentsWithCards.forEach(pwc => {
+                const paymentSection = document.createElement('div');
+                paymentSection.style.cssText = 'margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 16px;';
+
+                let cardsHTML = '';
+                pwc.cards.forEach((mc, index) => {
+                    const medal = index === 0 ? '🥇' : '🥈';
+                    const capText = mc.cap ? `上限 NT$${mc.cap.toLocaleString()}` : '無上限';
+                    cardsHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; ${index > 0 ? 'padding-left: 24px;' : ''}">
+                            <div style="flex: 1;">
+                                <span>${medal}</span>
+                                <strong>${mc.card.name}</strong>
+                            </div>
+                            <div style="text-align: right; color: #059669; font-weight: 600; margin: 0 16px;">
+                                ${mc.rate}%
+                            </div>
+                            <div style="text-align: right; color: #6b7280; font-size: 0.875rem; min-width: 140px;">
+                                ${capText}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                paymentSection.innerHTML = `
+                    <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 8px; color: #1f2937;">
+                        ${pwc.payment.name}
+                    </div>
+                    ${cardsHTML}
+                `;
+
+                contentContainer.appendChild(paymentSection);
+            });
+        }
+    }
+
+    // Setup close events
+    const closeBtn = document.getElementById('close-compare-payments');
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+
+    modal.style.display = 'flex';
+}
+
+// Load user payments
+function loadUserPayments() {
+    if (!currentUser) {
+        console.log('No current user, showing all payments');
+        userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+        return;
+    }
+
+    try {
+        const storageKey = `selectedPayments_${currentUser.uid}`;
+        const savedPayments = localStorage.getItem(storageKey);
+
+        if (savedPayments) {
+            userSelectedPayments = new Set(JSON.parse(savedPayments));
+            console.log('Loaded user payments from localStorage:', Array.from(userSelectedPayments));
+        } else {
+            // First time user - select all payments by default
+            console.log('First time user, selecting all payments');
+            userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+            saveUserPayments();
+        }
+    } catch (error) {
+        console.error('Error loading user payments from localStorage:', error);
+        userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+    }
+}
+
+// Save user payments
+function saveUserPayments() {
+    if (!currentUser) return;
+
+    try {
+        const storageKey = `selectedPayments_${currentUser.uid}`;
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(userSelectedPayments)));
+        console.log('Saved user payments to localStorage');
+    } catch (error) {
+        console.error('Error saving user payments to localStorage:', error);
+    }
+}
+
