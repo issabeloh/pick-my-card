@@ -620,20 +620,29 @@ function validateInputs() {
 
 // Calculate cashback for all cards
 function calculateCashback() {
+    console.log('🔄 calculateCashback 被調用');
+    console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
+
     if (!cardsData) {
+        console.error('❌ cardsData 未載入，無法計算');
         return;
     }
-    
+
     const amount = parseFloat(amountInput.value);
     const merchantValue = merchantInput.value.trim();
-    
+
+    console.log('輸入：', { merchantValue, amount });
+    console.log('currentMatchedItem:', currentMatchedItem);
+
     let results;
     let isBasicCashback = false;
-    
+
     // Get cards to compare (user selected or all)
-    const cardsToCompare = currentUser ? 
+    const cardsToCompare = currentUser ?
         cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
         cardsData.cards;
+
+    console.log(`比較 ${cardsToCompare.length} 張卡片`);
     
     if (currentMatchedItem) {
         // User input matched specific items - show special cashback rates for ALL matched items
@@ -1027,6 +1036,9 @@ function calculateCardCashback(card, searchTerm, amount) {
 
 // Display calculation results
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
+    console.log('📊 displayResults 被調用');
+    console.log('results 數量:', results.length);
+    console.log('isBasicCashback:', isBasicCashback);
     resultsContainer.innerHTML = '';
     
     if (results.length === 0) {
@@ -2619,45 +2631,54 @@ function showComparePaymentsModal() {
         // Sort payments by highest rate
         paymentsWithCards.sort((a, b) => b.cards[0].rate - a.cards[0].rate);
 
-        // Display compact comparison
+        // Display compact comparison with 2-column grid
         contentContainer.innerHTML = '';
-        
+
         if (paymentsWithCards.length === 0) {
             contentContainer.innerHTML = '<p style="text-align: center; color: #666;">目前沒有信用卡認列已選的行動支付</p>';
         } else {
+            // Create grid container
+            const gridContainer = document.createElement('div');
+            gridContainer.style.cssText = 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;';
+
             paymentsWithCards.forEach(pwc => {
-                const paymentSection = document.createElement('div');
-                paymentSection.style.cssText = 'margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 16px;';
+                const paymentCard = document.createElement('div');
+                paymentCard.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;';
 
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
                     const medal = index === 0 ? '🥇' : '🥈';
                     const capText = mc.cap ? `上限 NT$${mc.cap.toLocaleString()}` : '無上限';
                     cardsHTML += `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; ${index > 0 ? 'padding-left: 24px;' : ''}">
-                            <div style="flex: 1;">
-                                <span>${medal}</span>
-                                <strong>${mc.card.name}</strong>
+                        <div style="background: white; border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid ${index === 0 ? '#10b981' : '#6b7280'};">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div style="font-weight: 600; color: #374151;">
+                                    ${medal} ${mc.card.name}
+                                </div>
+                                <div style="color: #059669; font-weight: 700; font-size: 1.1rem;">
+                                    ${mc.rate}%
+                                </div>
                             </div>
-                            <div style="text-align: right; color: #059669; font-weight: 600; margin: 0 16px;">
-                                ${mc.rate}%
-                            </div>
-                            <div style="text-align: right; color: #6b7280; font-size: 0.875rem; min-width: 140px;">
+                            <div style="color: #6b7280; font-size: 0.875rem;">
                                 ${capText}
                             </div>
                         </div>
                     `;
                 });
 
-                paymentSection.innerHTML = `
-                    <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 8px; color: #1f2937;">
+                paymentCard.innerHTML = `
+                    <div style="font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: #6366f1; display: flex; align-items: center;">
+                        <span style="font-size: 1.2rem; margin-right: 6px;">💳</span>
                         ${pwc.payment.name}
                     </div>
+                    <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 8px;">行動支付</div>
                     ${cardsHTML}
                 `;
 
-                contentContainer.appendChild(paymentSection);
+                gridContainer.appendChild(paymentCard);
             });
+
+            contentContainer.appendChild(gridContainer);
         }
     }
 
