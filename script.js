@@ -2442,8 +2442,13 @@ function openManagePaymentsModal() {
 
 // Show payment detail modal
 function showPaymentDetail(paymentId) {
+    console.log('🔍 showPaymentDetail 被調用:', paymentId);
     const payment = paymentsData.payments.find(p => p.id === paymentId);
-    if (!payment) return;
+    if (!payment) {
+        console.error('❌ 找不到 payment:', paymentId);
+        return;
+    }
+    console.log('✅ 找到 payment:', payment.name);
 
     const modal = document.getElementById('payment-detail-modal');
     const title = document.getElementById('payment-detail-title');
@@ -2471,13 +2476,19 @@ function showPaymentDetail(paymentId) {
     let matchingCards = [];
 
     // Search for matches using all payment search terms
+    console.log(`🔎 搜尋 ${payment.name} 的匹配卡片...`);
+    console.log('searchTerms:', payment.searchTerms);
+    console.log('cardsToCheck 數量:', cardsToCheck.length);
+
     payment.searchTerms.forEach(term => {
         const matches = findMatchingItem(term);
+        console.log(`  term "${term}" 找到 ${matches ? matches.length : 0} 個匹配`);
         if (matches && matches.length > 0) {
             // For each matched item, calculate cashback for all cards
             cardsToCheck.forEach(card => {
                 const result = calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
                 if (result.rate > 0) {
+                    console.log(`    ✅ ${card.name}: ${result.rate}%`);
                     matchingCards.push({
                         card: card,
                         rate: result.rate,
@@ -2542,8 +2553,14 @@ function showPaymentDetail(paymentId) {
 
 // Show compare payments modal
 function showComparePaymentsModal() {
+    console.log('📊 showComparePaymentsModal 被調用');
     const modal = document.getElementById('compare-payments-modal');
     const contentContainer = document.getElementById('compare-payments-content');
+
+    if (!modal || !contentContainer) {
+        console.error('❌ Modal 元素未找到');
+        return;
+    }
 
     const paymentsToCompare = currentUser ?
         paymentsData.payments.filter(p => userSelectedPayments.has(p.id)) :
