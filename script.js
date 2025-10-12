@@ -635,8 +635,8 @@ function calculateCashback() {
         let allResults = [];
         
         if (Array.isArray(currentMatchedItem)) {
-            // Multiple matches - calculate for all items and combine results
-            const itemResultsMap = new Map();
+            // Multiple matches - calculate for all items and show best card for EACH item
+            const allItemResults = [];
 
             console.log(`🔍 處理 ${currentMatchedItem.length} 個匹配項目`);
 
@@ -655,12 +655,11 @@ if (matchedItem.isOverseas) {
             matchedItemName: '海外消費'
         }));
 
-    itemResults.forEach(result => {
-        const cardId = result.card.id;
-        if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
-            itemResultsMap.set(cardId, result);
-        }
-    });
+    // Find best card for this item
+    if (itemResults.length > 0) {
+        itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
+        allItemResults.push(itemResults[0]);
+    }
     return; // Early return from forEach callback is allowed
 }
                 const searchTerm = matchedItem.originalItem.toLowerCase();
@@ -678,28 +677,47 @@ if (matchedItem.isOverseas) {
                 if (itemResults.length > 0) {
                     const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
                     console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋: ${cardNames}`);
+
+                    // Sort by cashback amount and take the best one for this item
+                    itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
+                    const bestForItem = itemResults[0];
+                    console.log(`    🥇 最佳: ${bestForItem.card.name} ${bestForItem.rate}%`);
+                    allItemResults.push(bestForItem);
                 } else {
                     console.log(`  ✅ 找到 0 張卡有回饋`);
                 }
-
-                // Add to combined results, keeping track of the best rate per card
-                itemResults.forEach(result => {
-                    const cardId = result.card.id;
-                    const existing = itemResultsMap.get(cardId);
-                    if (!existing) {
-                        console.log(`    ✅ 新增 ${result.card.name}: ${result.rate}% (${result.matchedItemName})`);
-                        itemResultsMap.set(cardId, result);
-                    } else if (result.cashbackAmount > existing.cashbackAmount) {
-                        console.log(`    🔄 更新 ${result.card.name}: ${existing.rate}% → ${result.rate}% (${result.matchedItemName})`);
-                        itemResultsMap.set(cardId, result);
-                    } else {
-                        console.log(`    ⏭️  跳過 ${result.card.name}: ${result.rate}% <= ${existing.rate}% (保留 ${existing.matchedItemName})`);
-                    }
-                });
             });
 
-            console.log(`📊 最終結果: ${itemResultsMap.size} 張卡`);
-            allResults = Array.from(itemResultsMap.values());
+            console.log(`📊 總共 ${allItemResults.length} 個項目有回饋結果`);
+
+            // Deduplicate by card - if same card appears multiple times, combine matched items
+            const cardResultsMap = new Map();
+            allItemResults.forEach(result => {
+                const cardId = result.card.id;
+                const existing = cardResultsMap.get(cardId);
+
+                if (!existing) {
+                    // First time seeing this card - add it with matched items as array
+                    result.matchedItems = [result.matchedItemName];
+                    cardResultsMap.set(cardId, result);
+                } else {
+                    // Card already exists - compare rates and combine matched items
+                    if (result.cashbackAmount > existing.cashbackAmount) {
+                        // Higher rate - replace but keep matched items
+                        result.matchedItems = [result.matchedItemName, ...existing.matchedItems];
+                        cardResultsMap.set(cardId, result);
+                    } else if (result.cashbackAmount === existing.cashbackAmount) {
+                        // Same rate - add to matched items list
+                        if (!existing.matchedItems.includes(result.matchedItemName)) {
+                            existing.matchedItems.push(result.matchedItemName);
+                        }
+                    }
+                    // Lower rate - ignore this result
+                }
+            });
+
+            console.log(`📊 去重後: ${cardResultsMap.size} 張不同的卡片`);
+            allResults = Array.from(cardResultsMap.values());
         } else {
             // Single match - backward compatibility
             const searchTerm = currentMatchedItem.originalItem.toLowerCase();
@@ -1273,9 +1291,15 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     exclusionNote = ' <small style="color: #f59e0b; font-weight: 500;">(排除超商)</small>';
                 }
                 
+                // If multiple items matched (e.g., multiple travel agencies), show all
+                let matchedItemsText = result.matchedItem;
+                if (result.matchedItems && result.matchedItems.length > 1) {
+                    matchedItemsText = result.matchedItems.join('、');
+                }
+
                 return `
                     <div class="matched-merchant">
-                        匹配項目: <strong>${result.matchedItem}</strong>${exclusionNote}${categoryInfo}${additionalInfo}
+                        匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}${categoryInfo}${additionalInfo}
                     </div>
                 `;
             } else {
