@@ -684,11 +684,17 @@ if (matchedItem.isOverseas) {
                     console.log(`    🥇 最佳: ${bestForItem.card.name} ${bestForItem.rate}%`);
                     allItemResults.push(bestForItem);
                 } else {
-                    console.log(`  ✅ 找到 0 張卡有回饋`);
+                    console.log(`  ⚠️ 找到 0 張卡有回饋 (可能未選取相關卡片)`);
                 }
             });
 
             console.log(`📊 總共 ${allItemResults.length} 個項目有回饋結果`);
+
+            // If some items matched but no cards have cashback, add a note
+            const unmatchedCount = currentMatchedItem.length - allItemResults.length;
+            if (unmatchedCount > 0 && currentUser) {
+                console.log(`⚠️ 有 ${unmatchedCount} 個匹配項目沒有找到回饋，可能是因為未選取相關卡片`);
+            }
 
             // Deduplicate by card - if same card appears multiple times, combine matched items
             const cardResultsMap = new Map();
