@@ -41,11 +41,11 @@ function initializePaymentsData() {
             { id: 'linepay', name: 'LINE Pay', searchTerms: ['linepay', 'line pay'] },
             { id: 'jkopay', name: '街口支付', searchTerms: ['街口', '街口支付', 'jkopay'] },
             { id: 'applepay', name: 'Apple Pay', searchTerms: ['apple pay', 'applepay'] },
-            { id: 'allpay', name: '全支付', searchTerms: ['全支付'] },
+            { id: 'pxpayplus', name: '全支付', searchTerms: ['全支付', 'pxpay'] },
             { id: 'easywallet', name: '悠遊付', searchTerms: ['悠遊付', 'easy wallet', 'easywallet'] },
             { id: 'googlepay', name: 'Google Pay', searchTerms: ['google pay', 'googlepay'] },
             { id: 'esunwallet', name: '玉山 Wallet', searchTerms: ['玉山wallet', 'esun wallet'] },
-            { id: 'allplus', name: '全盈+Pay', searchTerms: ['全盈+pay', '全盈支付', '全盈+'] },
+            { id: 'pluspay', name: '全盈+Pay', searchTerms: ['全盈+pay', '全盈支付', '全盈+', '全盈+pay'] },
             { id: 'openwallet', name: 'OPEN 錢包', searchTerms: ['open錢包', 'open wallet'] },
             { id: 'piwallet', name: 'Pi 拍錢包', searchTerms: ['pi錢包', 'pi 拍錢包', 'pi wallet'] },
             { id: 'icashpay', name: 'iCash Pay', searchTerms: ['icash pay', 'icashpay'] },
@@ -2329,9 +2329,7 @@ function openManagePaymentsModal() {
         paymentsSelection.appendChild(loginPrompt);
     }
 
-    const sortedPayments = [...paymentsData.payments].sort((a, b) => a.name.localeCompare(b.name));
-
-    sortedPayments.forEach(payment => {
+    paymentsData.payments.forEach(payment => {
         const isSelected = userSelectedPayments.has(payment.id);
 
         const paymentDiv = document.createElement('div');
@@ -2427,14 +2425,16 @@ function showPaymentDetail(paymentId) {
     const detailsContainer = document.getElementById('payment-cashback-details');
 
     title.textContent = payment.name;
-    
+
     // Set website link
     if (payment.website) {
         websiteLink.href = payment.website;
-        websiteLink.textContent = payment.website;
+        websiteLink.textContent = '點此查看官方網站';
+        websiteLink.style.display = 'inline';
     } else {
         websiteLink.textContent = '（待更新）';
         websiteLink.removeAttribute('href');
+        websiteLink.style.display = 'inline';
     }
 
     // Get matching cards for this payment
@@ -2444,34 +2444,36 @@ function showPaymentDetail(paymentId) {
 
     let matchingCards = [];
 
-    cardsToCheck.forEach(card => {
-        // Use findMatchingItem to search
-        payment.searchTerms.forEach(term => {
-            const matches = findMatchingItem(term);
-            if (matches && matches.length > 0) {
-                matches.forEach(match => {
-                    if (match.cardId === card.id) {
-                        matchingCards.push({
-                            card: card,
-                            rate: match.rate,
-                            cap: match.cap,
-                            rateGroup: cardsData.cards.find(c => c.id === card.id).cashbackRates?.find(r => r.items.some(item => item.toLowerCase() === term.toLowerCase()))
-                        });
-                    }
-                });
-            }
-        });
-    });
-
-    // Remove duplicates
-    const uniqueCards = [];
-    const seenCardIds = new Set();
-    matchingCards.forEach(mc => {
-        if (!seenCardIds.has(mc.card.id)) {
-            seenCardIds.add(mc.card.id);
-            uniqueCards.push(mc);
+    // Search for matches using all payment search terms
+    payment.searchTerms.forEach(term => {
+        const matches = findMatchingItem(term);
+        if (matches && matches.length > 0) {
+            matches.forEach(match => {
+                // Filter to only cards in cardsToCheck
+                const card = cardsToCheck.find(c => c.id === match.cardId);
+                if (card) {
+                    matchingCards.push({
+                        card: card,
+                        rate: match.rate,
+                        cap: match.cap,
+                        rateGroup: card.cashbackRates?.find(r =>
+                            r.items.some(item => item.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(item.toLowerCase()))
+                        )
+                    });
+                }
+            });
         }
     });
+
+    // Remove duplicates - keep highest rate per card
+    const cardMap = new Map();
+    matchingCards.forEach(mc => {
+        if (!cardMap.has(mc.card.id) || cardMap.get(mc.card.id).rate < mc.rate) {
+            cardMap.set(mc.card.id, mc);
+        }
+    });
+
+    const uniqueCards = Array.from(cardMap.values());
 
     // Sort by rate descending
     uniqueCards.sort((a, b) => b.rate - a.rate);
@@ -2535,36 +2537,37 @@ function showComparePaymentsModal() {
 
             let matchingCards = [];
 
-            cardsToCheck.forEach(card => {
-                payment.searchTerms.forEach(term => {
-                    const matches = findMatchingItem(term);
-                    if (matches && matches.length > 0) {
-                        matches.forEach(match => {
-                            if (match.cardId === card.id) {
-                                const rateGroup = card.cashbackRates?.find(r => 
-                                    r.items.some(item => item.toLowerCase() === term.toLowerCase())
-                                );
-                                matchingCards.push({
-                                    card: card,
-                                    rate: match.rate,
-                                    cap: match.cap,
-                                    rateGroup: rateGroup
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-
-            // Remove duplicates and sort
-            const uniqueCards = [];
-            const seenCardIds = new Set();
-            matchingCards.forEach(mc => {
-                if (!seenCardIds.has(mc.card.id)) {
-                    seenCardIds.add(mc.card.id);
-                    uniqueCards.push(mc);
+            // Search for matches using all payment search terms
+            payment.searchTerms.forEach(term => {
+                const matches = findMatchingItem(term);
+                if (matches && matches.length > 0) {
+                    matches.forEach(match => {
+                        // Filter to only cards in cardsToCheck
+                        const card = cardsToCheck.find(c => c.id === match.cardId);
+                        if (card) {
+                            const rateGroup = card.cashbackRates?.find(r =>
+                                r.items.some(item => item.toLowerCase().includes(term.toLowerCase()) || term.toLowerCase().includes(item.toLowerCase()))
+                            );
+                            matchingCards.push({
+                                card: card,
+                                rate: match.rate,
+                                cap: match.cap,
+                                rateGroup: rateGroup
+                            });
+                        }
+                    });
                 }
             });
+
+            // Remove duplicates - keep highest rate per card
+            const cardMap = new Map();
+            matchingCards.forEach(mc => {
+                if (!cardMap.has(mc.card.id) || cardMap.get(mc.card.id).rate < mc.rate) {
+                    cardMap.set(mc.card.id, mc);
+                }
+            });
+
+            const uniqueCards = Array.from(cardMap.values());
 
             uniqueCards.sort((a, b) => b.rate - a.rate);
 
@@ -2641,8 +2644,8 @@ function showComparePaymentsModal() {
 // Load user payments
 function loadUserPayments() {
     if (!currentUser) {
-        console.log('No current user, showing all payments');
-        userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+        console.log('No current user, showing no payments by default');
+        userSelectedPayments = new Set();
         return;
     }
 
@@ -2654,14 +2657,14 @@ function loadUserPayments() {
             userSelectedPayments = new Set(JSON.parse(savedPayments));
             console.log('Loaded user payments from localStorage:', Array.from(userSelectedPayments));
         } else {
-            // First time user - select all payments by default
-            console.log('First time user, selecting all payments');
-            userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+            // First time user - no payments selected by default
+            console.log('First time user, no payments selected');
+            userSelectedPayments = new Set();
             saveUserPayments();
         }
     } catch (error) {
         console.error('Error loading user payments from localStorage:', error);
-        userSelectedPayments = new Set(paymentsData.payments.map(p => p.id));
+        userSelectedPayments = new Set();
     }
 }
 

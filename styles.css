@@ -114,6 +114,19 @@ header p {
     opacity: 0.8;
 }
 
+.section-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.section-title {
+    font-size: 0.9rem;
+    margin: 0;
+    opacity: 0.8;
+}
+
 .manage-cards-btn {
     background: transparent;
     border: none;
@@ -722,6 +735,12 @@ input[type="number"]:focus {
 .cards-selection {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+#payments-selection {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
