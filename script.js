@@ -676,13 +676,22 @@ if (matchedItem.isOverseas) {
                 }).filter(result => result.cashbackAmount > 0);
 
                 console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋`);
+                itemResults.forEach(r => {
+                    console.log(`    - ${r.card.name}: ${r.rate}%, cashback: ${r.cashbackAmount}`);
+                });
 
                 // Add to combined results, keeping track of the best rate per card
                 itemResults.forEach(result => {
                     const cardId = result.card.id;
-                    if (!itemResultsMap.has(cardId) || result.cashbackAmount > itemResultsMap.get(cardId).cashbackAmount) {
-                        console.log(`    💳 ${result.card.name}: ${result.rate}% (${result.matchedItemName})`);
+                    const existing = itemResultsMap.get(cardId);
+                    if (!existing) {
+                        console.log(`    ✅ 新增 ${result.card.name}: ${result.rate}% (${result.matchedItemName})`);
                         itemResultsMap.set(cardId, result);
+                    } else if (result.cashbackAmount > existing.cashbackAmount) {
+                        console.log(`    🔄 更新 ${result.card.name}: ${existing.rate}% → ${result.rate}% (${result.matchedItemName})`);
+                        itemResultsMap.set(cardId, result);
+                    } else {
+                        console.log(`    ⏭️  跳過 ${result.card.name}: ${result.rate}% <= ${existing.rate}% (保留 ${existing.matchedItemName})`);
                     }
                 });
             });
