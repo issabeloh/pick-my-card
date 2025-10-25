@@ -702,28 +702,49 @@ input[type="number"]:focus {
 
 .modal-controls {
     margin-bottom: 16px;
-    text-align: center;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.search-modal-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.search-modal-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-modal-input::placeholder {
+    color: #9ca3af;
 }
 
 .toggle-all-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    color: white;
-    border: none;
-    padding: 8px 16px;
+    background: #e5e7eb;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+    padding: 6px 12px;
     border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 400;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .toggle-all-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    background: #d1d5db;
+    color: #374151;
 }
 
 .toggle-all-btn:active {
-    transform: translateY(0);
+    transform: none;
 }
 
 .modal-description {
@@ -800,12 +821,15 @@ input[type="number"]:focus {
 }
 
 .save-btn {
-    background: #6bb6ff;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .save-btn:hover {
-    background: #5aa3ff;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
 }
 
 .cancel-btn {
