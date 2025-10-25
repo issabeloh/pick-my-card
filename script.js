@@ -95,9 +95,10 @@ function renderQuickSearchButtons() {
     // Clear existing buttons
     container.innerHTML = '';
 
-    // If no options, hide container
+    // If no options, hide container and arrows
     if (quickSearchOptions.length === 0) {
         container.style.display = 'none';
+        hideScrollArrows();
         return;
     }
 
@@ -122,34 +123,114 @@ function renderQuickSearchButtons() {
         container.appendChild(button);
     });
 
+    // Setup scroll arrows
+    setupScrollArrows();
+
     console.log(`✅ 已渲染 ${quickSearchOptions.length} 個快捷搜索按鈕`);
+}
+
+// Setup scroll arrows
+function setupScrollArrows() {
+    const container = document.getElementById('quick-search-container');
+    const leftArrow = document.getElementById('scroll-left');
+    const rightArrow = document.getElementById('scroll-right');
+
+    if (!container || !leftArrow || !rightArrow) return;
+
+    // Check if scrolling is needed
+    const updateArrowsVisibility = () => {
+        const hasScroll = container.scrollWidth > container.clientWidth;
+        const isAtStart = container.scrollLeft === 0;
+        const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+
+        if (hasScroll) {
+            leftArrow.style.display = isAtStart ? 'none' : 'flex';
+            rightArrow.style.display = isAtEnd ? 'none' : 'flex';
+        } else {
+            leftArrow.style.display = 'none';
+            rightArrow.style.display = 'none';
+        }
+    };
+
+    // Scroll functions
+    const scrollAmount = 200;
+
+    leftArrow.onclick = () => {
+        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    };
+
+    rightArrow.onclick = () => {
+        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    };
+
+    // Update arrows on scroll
+    container.addEventListener('scroll', updateArrowsVisibility);
+
+    // Initial update
+    setTimeout(updateArrowsVisibility, 100);
+
+    // Update on window resize
+    window.addEventListener('resize', updateArrowsVisibility);
+}
+
+function hideScrollArrows() {
+    const leftArrow = document.getElementById('scroll-left');
+    const rightArrow = document.getElementById('scroll-right');
+    if (leftArrow) leftArrow.style.display = 'none';
+    if (rightArrow) rightArrow.style.display = 'none';
 }
 
 // Handle quick search button click
 function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
-    if (!merchantInput) return;
-
-    // Join merchants with spaces to search for all
-    const searchText = option.merchants.join(' ');
+    if (!merchantInput || !cardsData) return;
 
     console.log(`🔍 快捷搜索: ${option.displayName}`);
-    console.log(`   關鍵詞: ${searchText}`);
+    console.log(`   關鍵詞: ${option.merchants.join(', ')}`);
 
-    // Set the input value
-    merchantInput.value = searchText;
+    // Search for all merchants and combine results
+    const allMatches = [];
+    const processedItems = new Set(); // Avoid duplicates
 
-    // Focus on the input
-    merchantInput.focus();
-
-    // Optional: trigger calculate automatically if amount is filled
-    const amountInput = document.getElementById('amount-input');
-    if (amountInput && amountInput.value) {
-        const calculateBtn = document.getElementById('calculate-btn');
-        if (calculateBtn) {
-            calculateBtn.click();
+    option.merchants.forEach(merchant => {
+        const matches = findMatchingItem(merchant.trim());
+        if (matches && matches.length > 0) {
+            matches.forEach(match => {
+                // Use a unique key to avoid duplicates
+                const key = `${match.cardId}-${match.item}-${match.rate}`;
+                if (!processedItems.has(key)) {
+                    processedItems.add(key);
+                    allMatches.push(match);
+                }
+            });
         }
+    });
+
+    console.log(`   找到 ${allMatches.length} 個匹配結果`);
+
+    // Update UI
+    merchantInput.value = option.displayName;
+
+    if (allMatches.length > 0) {
+        showMatchedItem(allMatches);
+        currentMatchedItem = allMatches;
+
+        // Auto-trigger calculation if amount is filled
+        const amountInput = document.getElementById('amount-input');
+        if (amountInput && amountInput.value) {
+            const calculateBtn = document.getElementById('calculate-btn');
+            if (calculateBtn && !calculateBtn.disabled) {
+                calculateBtn.click();
+            }
+        }
+    } else {
+        hideMatchedItem();
+        currentMatchedItem = null;
+        console.warn(`   ⚠️ 沒有找到匹配的項目`);
     }
+
+    merchantInput.focus();
+    validateInputs();
 }
 
 // Show error message to user
