@@ -185,28 +185,38 @@ function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
     if (!merchantInput || !cardsData) return;
 
-    console.log(`🔍 快捷搜索: ${option.displayName}`);
-    console.log(`   關鍵詞: ${option.merchants.join(', ')}`);
+    console.log(`\n🔍 快捷搜索: ${option.displayName}`);
+    console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
 
     // Search for all merchants and combine results
     const allMatches = [];
     const processedItems = new Set(); // Avoid duplicates
 
-    option.merchants.forEach(merchant => {
-        const matches = findMatchingItem(merchant.trim());
+    option.merchants.forEach((merchant, index) => {
+        const trimmedMerchant = merchant.trim();
+        console.log(`   [${index + 1}/${option.merchants.length}] 搜尋: "${trimmedMerchant}"`);
+
+        const matches = findMatchingItem(trimmedMerchant);
+
         if (matches && matches.length > 0) {
+            console.log(`      ✅ 找到 ${matches.length} 個匹配項目`);
+            let addedCount = 0;
             matches.forEach(match => {
                 // Use a unique key to avoid duplicates
                 const key = `${match.cardId}-${match.item}-${match.rate}`;
                 if (!processedItems.has(key)) {
                     processedItems.add(key);
                     allMatches.push(match);
+                    addedCount++;
                 }
             });
+            console.log(`      📌 新增 ${addedCount} 個結果（已去重）`);
+        } else {
+            console.log(`      ❌ 無匹配結果 - 請檢查 Cards Data 中是否有 "${trimmedMerchant}"`);
         }
     });
 
-    console.log(`   找到 ${allMatches.length} 個匹配結果`);
+    console.log(`\n   ✨ 總計找到 ${allMatches.length} 個唯一的匹配結果\n`);
 
     // Update UI
     merchantInput.value = option.displayName;
@@ -226,7 +236,7 @@ function handleQuickSearch(option) {
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
-        console.warn(`   ⚠️ 沒有找到匹配的項目`);
+        console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
 
     merchantInput.focus();

@@ -246,6 +246,8 @@ main {
     position: relative;
     margin-top: 12px;
     width: 100%;
+    max-width: 100%;
+    overflow: visible;
 }
 
 /* Quick Search Container */
@@ -254,7 +256,8 @@ main {
     gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 4px 0 8px 0;
+    padding: 4px 32px 8px 32px; /* 左右留空間給箭頭 */
+    margin: 0 -32px; /* 負邊距補償 padding */
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
@@ -282,14 +285,13 @@ main {
 /* Scroll Arrows */
 .scroll-arrow {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 8px; /* 固定距離頂部 */
     width: 28px;
     height: 28px;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid #e5e7eb;
     border-radius: 50%;
-    display: flex;
+    display: none; /* 默認隱藏，JS 控制顯示 */
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -307,11 +309,11 @@ main {
 }
 
 .scroll-arrow-left {
-    left: -8px;
+    left: 0;
 }
 
 .scroll-arrow-right {
-    right: -8px;
+    right: 0;
 }
 
 /* Hide arrows on mobile */
