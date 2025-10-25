@@ -678,11 +678,12 @@ if (matchedItem.isOverseas) {
                     const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
                     console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋: ${cardNames}`);
 
-                    // Sort by cashback amount and take the best one for this item
+                    // Sort by cashback amount (highest first)
                     itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-                    const bestForItem = itemResults[0];
-                    console.log(`    🥇 最佳: ${bestForItem.card.name} ${bestForItem.rate}%`);
-                    allItemResults.push(bestForItem);
+                    console.log(`    🥇 最佳: ${itemResults[0].card.name} ${itemResults[0].rate}%`);
+
+                    // Add ALL cards with cashback, not just the best one
+                    allItemResults.push(...itemResults);
                 } else {
                     console.log(`  ⚠️ 找到 0 張卡有回饋 (可能未選取相關卡片)`);
                 }
