@@ -917,7 +917,14 @@ function calculateCardCashback(card, searchTerm, amount) {
         let matchedSpecialItem = null;
         for (const variant of searchVariants) {
             matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
-            if (matchedSpecialItem) break;
+            if (matchedSpecialItem) {
+                console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
+                break;
+            }
+        }
+
+        if (!matchedSpecialItem && card.id === 'cathay-cube') {
+            console.log(`⚠️ ${card.name}: 未匹配到 (搜索變體: ${searchVariants.join(', ')}, specialItems 前3項: ${card.specialItems.slice(0, 3).join(', ')})`);
         }
 
         if (matchedSpecialItem) {
@@ -2537,20 +2544,8 @@ function openManagePaymentsModal() {
 
         userSelectedPayments = new Set(selectedPayments);
 
-        // Save to localStorage
-        saveUserPayments();
-
-        // Also save to Firestore if user is logged in
-        if (currentUser) {
-            try {
-                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                    selectedPayments: selectedPayments
-                }, { merge: true });
-                console.log('行動支付選擇已同步至雲端');
-            } catch (error) {
-                console.error('儲存行動支付設定失敗:', error);
-            }
-        }
+        // Save to both localStorage and Firestore
+        await saveUserPayments();
 
         populatePaymentChips();
         closeModal();
@@ -2848,13 +2843,26 @@ async function loadUserPayments() {
 }
 
 // Save user payments
-function saveUserPayments() {
+async function saveUserPayments() {
     if (!currentUser) return;
 
     try {
         const storageKey = `selectedPayments_${currentUser.uid}`;
-        localStorage.setItem(storageKey, JSON.stringify(Array.from(userSelectedPayments)));
+        const paymentsArray = Array.from(userSelectedPayments);
+        localStorage.setItem(storageKey, JSON.stringify(paymentsArray));
         console.log('Saved user payments to localStorage');
+
+        // Also save to Firestore if available
+        if (window.db && window.doc && window.setDoc) {
+            try {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                    selectedPayments: paymentsArray
+                }, { merge: true });
+                console.log('✅ Payments saved to Firestore');
+            } catch (firestoreError) {
+                console.error('❌ Error saving payments to Firestore:', firestoreError);
+            }
+        }
     } catch (error) {
         console.error('Error saving user payments to localStorage:', error);
     }
