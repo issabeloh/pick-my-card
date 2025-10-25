@@ -623,19 +623,20 @@ input[type="number"]:focus {
     .card-chips {
         gap: 4px;
     }
-    
+
     .card-chip {
         font-size: 0.7rem;
         padding: 3px 8px;
     }
-    
+
     .cards-selection {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
     }
-    
+
     .card-checkbox {
-        padding: 10px;
-        font-size: 13px;
+        padding: 8px;
+        font-size: 12px;
     }
 }
 
@@ -1667,6 +1668,35 @@ input[type="number"]:focus {
     .disclaimer-goal {
         font-size: 9px;
         padding: 6px 10px;
+    }
+}
+
+/* Compare Payments Modal Styles */
+.compare-payments-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.compare-payment-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.compare-payment-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+/* Mobile responsiveness for compare payments */
+@media (max-width: 640px) {
+    .compare-payments-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
 }
 

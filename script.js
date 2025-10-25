@@ -2750,11 +2750,11 @@ function showComparePaymentsModal() {
         } else {
             // Create grid container
             const gridContainer = document.createElement('div');
-            gridContainer.style.cssText = 'display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;';
+            gridContainer.className = 'compare-payments-grid';
 
             paymentsWithCards.forEach(pwc => {
                 const paymentCard = document.createElement('div');
-                paymentCard.style.cssText = 'background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;';
+                paymentCard.className = 'compare-payment-card';
 
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
@@ -2774,8 +2774,7 @@ function showComparePaymentsModal() {
                 });
 
                 paymentCard.innerHTML = `
-                    <div style="font-weight: 700; font-size: 1rem; color: #6366f1; display: flex; align-items: center;">
-                        <span style="font-size: 1.2rem; margin-right: 6px;">💳</span>
+                    <div class="compare-payment-name">
                         ${pwc.payment.name}
                     </div>
                     ${cardsHTML}
