@@ -1657,6 +1657,26 @@ function openManageCardsModal() {
         toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
     }
 
+    // Setup search functionality
+    const searchInput = document.getElementById('search-cards-input');
+    searchInput.value = ''; // Clear search on open
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const cardDivs = cardsSelection.querySelectorAll('.card-checkbox');
+
+        cardDivs.forEach(cardDiv => {
+            const label = cardDiv.querySelector('.card-checkbox-label');
+            if (label) {
+                const cardName = label.textContent.toLowerCase();
+                if (cardName.includes(searchTerm)) {
+                    cardDiv.style.display = 'flex';
+                } else {
+                    cardDiv.style.display = 'none';
+                }
+            }
+        });
+    });
+
     modal.style.display = 'flex';
 }
 
@@ -2551,6 +2571,26 @@ function openManagePaymentsModal() {
         populatePaymentChips();
         closeModal();
     };
+
+    // Setup search functionality
+    const searchInput = document.getElementById('search-payments-input');
+    searchInput.value = ''; // Clear search on open
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const paymentDivs = paymentsSelection.querySelectorAll('.card-checkbox');
+
+        paymentDivs.forEach(paymentDiv => {
+            const label = paymentDiv.querySelector('.card-checkbox-label');
+            if (label) {
+                const paymentName = label.textContent.toLowerCase();
+                if (paymentName.includes(searchTerm)) {
+                    paymentDiv.style.display = 'flex';
+                } else {
+                    paymentDiv.style.display = 'none';
+                }
+            }
+        });
+    });
 
     modal.style.display = 'flex';
 }
