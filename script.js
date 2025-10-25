@@ -6,6 +6,7 @@ let auth = null;
 let db = null;
 let cardsData = null;
 let paymentsData = null;
+let quickSearchOptions = [];
 
 // Load cards data from cards.data (encoded)
 async function loadCardsData() {
@@ -74,6 +75,83 @@ function initializePaymentsData() {
     }
 }
 
+// Initialize quick search options from cardsData
+function initializeQuickSearchOptions() {
+    if (cardsData && cardsData.quickSearchOptions) {
+        quickSearchOptions = cardsData.quickSearchOptions;
+        console.log('✅ 快捷搜索選項已從 cards.data 載入');
+        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個快捷選項`);
+    } else {
+        console.warn('⚠️ cards.data 中沒有 quickSearchOptions 資料');
+        quickSearchOptions = [];
+    }
+}
+
+// Render quick search buttons
+function renderQuickSearchButtons() {
+    const container = document.getElementById('quick-search-container');
+    if (!container) return;
+
+    // Clear existing buttons
+    container.innerHTML = '';
+
+    // If no options, hide container
+    if (quickSearchOptions.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'flex';
+
+    // Create buttons
+    quickSearchOptions.forEach(option => {
+        const button = document.createElement('button');
+        button.className = 'quick-search-btn';
+        button.dataset.merchants = option.merchants.join(',');
+
+        button.innerHTML = `
+            <span class="icon">${option.icon}</span>
+            <span>${option.displayName}</span>
+        `;
+
+        // Add click event
+        button.addEventListener('click', () => {
+            handleQuickSearch(option);
+        });
+
+        container.appendChild(button);
+    });
+
+    console.log(`✅ 已渲染 ${quickSearchOptions.length} 個快捷搜索按鈕`);
+}
+
+// Handle quick search button click
+function handleQuickSearch(option) {
+    const merchantInput = document.getElementById('merchant-input');
+    if (!merchantInput) return;
+
+    // Join merchants with spaces to search for all
+    const searchText = option.merchants.join(' ');
+
+    console.log(`🔍 快捷搜索: ${option.displayName}`);
+    console.log(`   關鍵詞: ${searchText}`);
+
+    // Set the input value
+    merchantInput.value = searchText;
+
+    // Focus on the input
+    merchantInput.focus();
+
+    // Optional: trigger calculate automatically if amount is filled
+    const amountInput = document.getElementById('amount-input');
+    if (amountInput && amountInput.value) {
+        const calculateBtn = document.getElementById('calculate-btn');
+        if (calculateBtn) {
+            calculateBtn.click();
+        }
+    }
+}
+
 // Show error message to user
 function showErrorMessage(message) {
     const container = document.querySelector('.container');
@@ -119,8 +197,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize payments data
     initializePaymentsData();
 
+    // Initialize quick search options
+    initializeQuickSearchOptions();
+
     populateCardChips();
     populatePaymentChips();
+    renderQuickSearchButtons();
     setupEventListeners();
     setupAuthentication();
 });
