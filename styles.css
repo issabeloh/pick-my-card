@@ -241,17 +241,24 @@ main {
     margin-bottom: 0;
 }
 
+/* Quick Search Wrapper */
+.quick-search-wrapper {
+    position: relative;
+    margin-top: 12px;
+    width: 100%;
+}
+
 /* Quick Search Container */
 .quick-search-container {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
     overflow-x: auto;
     overflow-y: hidden;
     padding: 4px 0 8px 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
+    scroll-behavior: smooth;
 }
 
 .quick-search-container::-webkit-scrollbar {
@@ -270,6 +277,48 @@ main {
 
 .quick-search-container::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Scroll Arrows */
+.scroll-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    color: #6b7280;
+}
+
+.scroll-arrow:hover {
+    background: white;
+    border-color: #bae6fd;
+    color: #0369a1;
+    box-shadow: 0 2px 8px rgba(3, 105, 161, 0.15);
+}
+
+.scroll-arrow-left {
+    left: -8px;
+}
+
+.scroll-arrow-right {
+    right: -8px;
+}
+
+/* Hide arrows on mobile */
+@media (max-width: 768px) {
+    .scroll-arrow {
+        display: none !important;
+    }
 }
 
 .quick-search-btn {
