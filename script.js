@@ -678,11 +678,12 @@ if (matchedItem.isOverseas) {
                     const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
                     console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋: ${cardNames}`);
 
-                    // Sort by cashback amount and take the best one for this item
+                    // Sort by cashback amount (highest first)
                     itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-                    const bestForItem = itemResults[0];
-                    console.log(`    🥇 最佳: ${bestForItem.card.name} ${bestForItem.rate}%`);
-                    allItemResults.push(bestForItem);
+                    console.log(`    🥇 最佳: ${itemResults[0].card.name} ${itemResults[0].rate}%`);
+
+                    // Add ALL cards with cashback, not just the best one
+                    allItemResults.push(...itemResults);
                 } else {
                     console.log(`  ⚠️ 找到 0 張卡有回饋 (可能未選取相關卡片)`);
                 }
@@ -917,7 +918,14 @@ function calculateCardCashback(card, searchTerm, amount) {
         let matchedSpecialItem = null;
         for (const variant of searchVariants) {
             matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
-            if (matchedSpecialItem) break;
+            if (matchedSpecialItem) {
+                console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
+                break;
+            }
+        }
+
+        if (!matchedSpecialItem && card.id === 'cathay-cube') {
+            console.log(`⚠️ ${card.name}: 未匹配到 (搜索變體: ${searchVariants.join(', ')}, specialItems 前3項: ${card.specialItems.slice(0, 3).join(', ')})`);
         }
 
         if (matchedSpecialItem) {
@@ -2537,20 +2545,8 @@ function openManagePaymentsModal() {
 
         userSelectedPayments = new Set(selectedPayments);
 
-        // Save to localStorage
-        saveUserPayments();
-
-        // Also save to Firestore if user is logged in
-        if (currentUser) {
-            try {
-                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                    selectedPayments: selectedPayments
-                }, { merge: true });
-                console.log('行動支付選擇已同步至雲端');
-            } catch (error) {
-                console.error('儲存行動支付設定失敗:', error);
-            }
-        }
+        // Save to both localStorage and Firestore
+        await saveUserPayments();
 
         populatePaymentChips();
         closeModal();
@@ -2848,13 +2844,26 @@ async function loadUserPayments() {
 }
 
 // Save user payments
-function saveUserPayments() {
+async function saveUserPayments() {
     if (!currentUser) return;
 
     try {
         const storageKey = `selectedPayments_${currentUser.uid}`;
-        localStorage.setItem(storageKey, JSON.stringify(Array.from(userSelectedPayments)));
+        const paymentsArray = Array.from(userSelectedPayments);
+        localStorage.setItem(storageKey, JSON.stringify(paymentsArray));
         console.log('Saved user payments to localStorage');
+
+        // Also save to Firestore if available
+        if (window.db && window.doc && window.setDoc) {
+            try {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                    selectedPayments: paymentsArray
+                }, { merge: true });
+                console.log('✅ Payments saved to Firestore');
+            } catch (firestoreError) {
+                console.error('❌ Error saving payments to Firestore:', firestoreError);
+            }
+        }
     } catch (error) {
         console.error('Error saving user payments to localStorage:', error);
     }
