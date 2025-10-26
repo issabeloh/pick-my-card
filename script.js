@@ -615,11 +615,6 @@ function findMatchingItem(searchTerm) {
         }
     });
 
-    // Debug: Log search terms for "新加坡航空"
-    if (searchLower.includes('新加坡') || searchLower.includes('singapore')) {
-        console.log(`         🐛 DEBUG searchTerms for "${searchTerm}":`, searchTerms);
-    }
-
     let allMatches = [];
     
     // Helper function to check item matches
@@ -656,25 +651,36 @@ function findMatchingItem(searchTerm) {
                         continue;
                     }
 
-                if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
+                // Check for matches with word boundary awareness
+                const exactMatch = itemLower === term;
+                const itemContainsTerm = itemLower.includes(term);
+
+                // For term.includes(itemLower), check if it's a word boundary match
+                // to prevent "singapore airlines" from matching "gap"
+                let termContainsItem = false;
+                if (term.includes(itemLower)) {
+                    // Create word boundary regex: match itemLower as complete word(s)
+                    // Use \b for English, allow Chinese characters to match anywhere
+                    const isChinese = /[\u4e00-\u9fa5]/.test(itemLower);
+                    if (isChinese) {
+                        // For Chinese, allow substring match
+                        termContainsItem = true;
+                    } else {
+                        // For English, require word boundaries
+                        const wordBoundaryRegex = new RegExp(`(^|\\s|[^a-z])${itemLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s|[^a-z])`, 'i');
+                        termContainsItem = wordBoundaryRegex.test(term);
+                    }
+                }
+
+                if (exactMatch || itemContainsTerm || termContainsItem) {
                     matchFound = true;
 
-                    // Debug: Log unexpected matches for "gap"
-                    if (itemLower === 'gap') {
-                        console.log(`         🐛 DEBUG: "gap" matched!`);
-                        console.log(`         🐛   term: "${term}"`);
-                        console.log(`         🐛   searchTerm: "${searchTerm}"`);
-                        console.log(`         🐛   itemLower.includes(term): ${itemLower.includes(term)}`);
-                        console.log(`         🐛   term.includes(itemLower): ${term.includes(itemLower)}`);
-                        console.log(`         🐛   itemLower === term: ${itemLower === term}`);
-                    }
-
-                    if (itemLower === term) {
+                    if (exactMatch) {
                         isExactMatch = true;
                         bestMatchTerm = term;
                         break;
                     }
-                    if (itemLower.includes(term)) {
+                    if (itemContainsTerm) {
                         isFullContainment = true;
                         bestMatchTerm = term;
                     }
