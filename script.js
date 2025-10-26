@@ -140,31 +140,15 @@ function setupScrollArrows() {
         return;
     }
 
-    // Check if scrolling is needed
+    // Update arrow states (always visible on desktop, disabled when at edges)
     const updateArrowsVisibility = () => {
         const hasScroll = container.scrollWidth > container.clientWidth;
         const isAtStart = container.scrollLeft <= 0;
         const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
 
-        console.log('🔄 更新箭头状态:', {
-            scrollWidth: container.scrollWidth,
-            clientWidth: container.clientWidth,
-            hasScroll,
-            scrollLeft: container.scrollLeft,
-            isAtStart,
-            isAtEnd
-        });
-
-        if (hasScroll) {
-            leftArrow.style.display = isAtStart ? 'none' : 'flex';
-            rightArrow.style.display = isAtEnd ? 'none' : 'flex';
-            console.log('  ➡️ 左箭头:', isAtStart ? '隐藏' : '显示');
-            console.log('  ⬅️ 右箭头:', isAtEnd ? '隐藏' : '显示');
-        } else {
-            leftArrow.style.display = 'none';
-            rightArrow.style.display = 'none';
-            console.log('  ❌ 无需滚动，隐藏所有箭头');
-        }
+        // Disable/enable arrows based on scroll position
+        leftArrow.disabled = !hasScroll || isAtStart;
+        rightArrow.disabled = !hasScroll || isAtEnd;
     };
 
     // Scroll functions
@@ -220,12 +204,15 @@ function handleQuickSearch(option) {
             console.log(`      ✅ 找到 ${matches.length} 個匹配項目`);
             let addedCount = 0;
             matches.forEach(match => {
-                // Use a unique key to avoid duplicates
-                const key = `${match.cardId}-${match.item}-${match.rate}`;
+                // Use originalItem (the actual item name) as the unique key
+                const key = match.originalItem.toLowerCase();
                 if (!processedItems.has(key)) {
                     processedItems.add(key);
                     allMatches.push(match);
                     addedCount++;
+                    console.log(`         ➕ 添加: ${match.originalItem}`);
+                } else {
+                    console.log(`         ⏭️ 跳過重複: ${match.originalItem}`);
                 }
             });
             console.log(`      📌 新增 ${addedCount} 個結果（已去重）`);
