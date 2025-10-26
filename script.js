@@ -135,20 +135,35 @@ function setupScrollArrows() {
     const leftArrow = document.getElementById('scroll-left');
     const rightArrow = document.getElementById('scroll-right');
 
-    if (!container || !leftArrow || !rightArrow) return;
+    if (!container || !leftArrow || !rightArrow) {
+        console.warn('⚠️ 箭头元素未找到');
+        return;
+    }
 
     // Check if scrolling is needed
     const updateArrowsVisibility = () => {
         const hasScroll = container.scrollWidth > container.clientWidth;
-        const isAtStart = container.scrollLeft === 0;
+        const isAtStart = container.scrollLeft <= 0;
         const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+
+        console.log('🔄 更新箭头状态:', {
+            scrollWidth: container.scrollWidth,
+            clientWidth: container.clientWidth,
+            hasScroll,
+            scrollLeft: container.scrollLeft,
+            isAtStart,
+            isAtEnd
+        });
 
         if (hasScroll) {
             leftArrow.style.display = isAtStart ? 'none' : 'flex';
             rightArrow.style.display = isAtEnd ? 'none' : 'flex';
+            console.log('  ➡️ 左箭头:', isAtStart ? '隐藏' : '显示');
+            console.log('  ⬅️ 右箭头:', isAtEnd ? '隐藏' : '显示');
         } else {
             leftArrow.style.display = 'none';
             rightArrow.style.display = 'none';
+            console.log('  ❌ 无需滚动，隐藏所有箭头');
         }
     };
 
@@ -166,8 +181,11 @@ function setupScrollArrows() {
     // Update arrows on scroll
     container.addEventListener('scroll', updateArrowsVisibility);
 
-    // Initial update
-    setTimeout(updateArrowsVisibility, 100);
+    // Initial update with longer delay
+    setTimeout(updateArrowsVisibility, 300);
+
+    // Second check to ensure
+    setTimeout(updateArrowsVisibility, 1000);
 
     // Update on window resize
     window.addEventListener('resize', updateArrowsVisibility);

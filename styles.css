@@ -246,8 +246,6 @@ main {
     position: relative;
     margin-top: 12px;
     width: 100%;
-    max-width: 100%;
-    overflow: visible;
 }
 
 /* Quick Search Container */
@@ -256,8 +254,7 @@ main {
     gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 4px 32px 8px 32px; /* 左右留空間給箭頭 */
-    margin: 0 -32px; /* 負邊距補償 padding */
+    padding: 4px 0 8px 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
@@ -285,35 +282,36 @@ main {
 /* Scroll Arrows */
 .scroll-arrow {
     position: absolute;
-    top: 8px; /* 固定距離頂部 */
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.95);
+    top: 4px;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.98);
     border: 1px solid #e5e7eb;
     border-radius: 50%;
-    display: none; /* 默認隱藏，JS 控制顯示 */
+    display: none;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
     color: #6b7280;
+    pointer-events: auto;
 }
 
 .scroll-arrow:hover {
     background: white;
-    border-color: #bae6fd;
-    color: #0369a1;
-    box-shadow: 0 2px 8px rgba(3, 105, 161, 0.15);
+    border-color: #3b82f6;
+    color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .scroll-arrow-left {
-    left: 0;
+    left: -12px;
 }
 
 .scroll-arrow-right {
-    right: 0;
+    right: -12px;
 }
 
 /* Hide arrows on mobile */
