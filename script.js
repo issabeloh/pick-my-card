@@ -220,12 +220,15 @@ function handleQuickSearch(option) {
             console.log(`      ✅ 找到 ${matches.length} 個匹配項目`);
             let addedCount = 0;
             matches.forEach(match => {
-                // Use a unique key to avoid duplicates
-                const key = `${match.cardId}-${match.item}-${match.rate}`;
+                // Use originalItem (the actual item name) as the unique key
+                const key = match.originalItem.toLowerCase();
                 if (!processedItems.has(key)) {
                     processedItems.add(key);
                     allMatches.push(match);
                     addedCount++;
+                    console.log(`         ➕ 添加: ${match.originalItem}`);
+                } else {
+                    console.log(`         ⏭️ 跳過重複: ${match.originalItem}`);
                 }
             });
             console.log(`      📌 新增 ${addedCount} 個結果（已去重）`);
