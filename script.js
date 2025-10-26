@@ -596,10 +596,10 @@ const searchExclusionMap = {
 // Find matching item in cards database
 function findMatchingItem(searchTerm) {
     if (!cardsData) return null;
-    
+
     let searchLower = searchTerm.toLowerCase().trim();
     let searchTerms = [searchLower]; // Always include original search term
-    
+
     // Add fuzzy search mapping if exists
     if (fuzzySearchMap[searchLower]) {
         const mappedTerm = fuzzySearchMap[searchLower].toLowerCase();
@@ -607,14 +607,19 @@ function findMatchingItem(searchTerm) {
             searchTerms.push(mappedTerm);
         }
     }
-    
+
     // Also add reverse mappings (find all terms that map to current search)
     Object.entries(fuzzySearchMap).forEach(([key, value]) => {
         if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
             searchTerms.push(key);
         }
     });
-    
+
+    // Debug: Log search terms for "新加坡航空"
+    if (searchLower.includes('新加坡') || searchLower.includes('singapore')) {
+        console.log(`         🐛 DEBUG searchTerms for "${searchTerm}":`, searchTerms);
+    }
+
     let allMatches = [];
     
     // Helper function to check item matches
@@ -655,10 +660,13 @@ function findMatchingItem(searchTerm) {
                     matchFound = true;
 
                     // Debug: Log unexpected matches for "gap"
-                    if (itemLower === 'gap' && !term.includes('gap')) {
-                        console.log(`         🐛 DEBUG: "gap" matched by term="${term}"`);
-                        console.log(`         🐛 itemLower.includes(term): ${itemLower.includes(term)}`);
-                        console.log(`         🐛 term.includes(itemLower): ${term.includes(itemLower)}`);
+                    if (itemLower === 'gap') {
+                        console.log(`         🐛 DEBUG: "gap" matched!`);
+                        console.log(`         🐛   term: "${term}"`);
+                        console.log(`         🐛   searchTerm: "${searchTerm}"`);
+                        console.log(`         🐛   itemLower.includes(term): ${itemLower.includes(term)}`);
+                        console.log(`         🐛   term.includes(itemLower): ${term.includes(itemLower)}`);
+                        console.log(`         🐛   itemLower === term: ${itemLower === term}`);
                     }
 
                     if (itemLower === term) {
