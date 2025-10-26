@@ -246,6 +246,8 @@ main {
     position: relative;
     margin-top: 12px;
     width: 100%;
+    max-width: 100%;
+    overflow: hidden; /* 防止内容撑大父容器 */
 }
 
 /* Quick Search Container */
@@ -255,6 +257,7 @@ main {
     overflow-x: auto;
     overflow-y: hidden;
     padding: 4px 0 8px 0;
+    max-width: 100%; /* 不超出父容器 */
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
