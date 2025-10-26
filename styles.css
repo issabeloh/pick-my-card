@@ -221,6 +221,11 @@ main {
     gap: 16px;
     margin-bottom: 16px;
     align-items: end;
+    overflow: hidden; /* 防止子元素撑大容器 */
+}
+
+.input-row-with-button > .form-group {
+    min-width: 0; /* 允许 grid 子元素缩小 */
 }
 
 .button-group {
