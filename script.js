@@ -135,20 +135,35 @@ function setupScrollArrows() {
     const leftArrow = document.getElementById('scroll-left');
     const rightArrow = document.getElementById('scroll-right');
 
-    if (!container || !leftArrow || !rightArrow) return;
+    if (!container || !leftArrow || !rightArrow) {
+        console.warn('⚠️ 箭头元素未找到');
+        return;
+    }
 
     // Check if scrolling is needed
     const updateArrowsVisibility = () => {
         const hasScroll = container.scrollWidth > container.clientWidth;
-        const isAtStart = container.scrollLeft === 0;
+        const isAtStart = container.scrollLeft <= 0;
         const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
+
+        console.log('🔄 更新箭头状态:', {
+            scrollWidth: container.scrollWidth,
+            clientWidth: container.clientWidth,
+            hasScroll,
+            scrollLeft: container.scrollLeft,
+            isAtStart,
+            isAtEnd
+        });
 
         if (hasScroll) {
             leftArrow.style.display = isAtStart ? 'none' : 'flex';
             rightArrow.style.display = isAtEnd ? 'none' : 'flex';
+            console.log('  ➡️ 左箭头:', isAtStart ? '隐藏' : '显示');
+            console.log('  ⬅️ 右箭头:', isAtEnd ? '隐藏' : '显示');
         } else {
             leftArrow.style.display = 'none';
             rightArrow.style.display = 'none';
+            console.log('  ❌ 无需滚动，隐藏所有箭头');
         }
     };
 
@@ -166,8 +181,11 @@ function setupScrollArrows() {
     // Update arrows on scroll
     container.addEventListener('scroll', updateArrowsVisibility);
 
-    // Initial update
-    setTimeout(updateArrowsVisibility, 100);
+    // Initial update with longer delay
+    setTimeout(updateArrowsVisibility, 300);
+
+    // Second check to ensure
+    setTimeout(updateArrowsVisibility, 1000);
 
     // Update on window resize
     window.addEventListener('resize', updateArrowsVisibility);
@@ -185,28 +203,38 @@ function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
     if (!merchantInput || !cardsData) return;
 
-    console.log(`🔍 快捷搜索: ${option.displayName}`);
-    console.log(`   關鍵詞: ${option.merchants.join(', ')}`);
+    console.log(`\n🔍 快捷搜索: ${option.displayName}`);
+    console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
 
     // Search for all merchants and combine results
     const allMatches = [];
     const processedItems = new Set(); // Avoid duplicates
 
-    option.merchants.forEach(merchant => {
-        const matches = findMatchingItem(merchant.trim());
+    option.merchants.forEach((merchant, index) => {
+        const trimmedMerchant = merchant.trim();
+        console.log(`   [${index + 1}/${option.merchants.length}] 搜尋: "${trimmedMerchant}"`);
+
+        const matches = findMatchingItem(trimmedMerchant);
+
         if (matches && matches.length > 0) {
+            console.log(`      ✅ 找到 ${matches.length} 個匹配項目`);
+            let addedCount = 0;
             matches.forEach(match => {
                 // Use a unique key to avoid duplicates
                 const key = `${match.cardId}-${match.item}-${match.rate}`;
                 if (!processedItems.has(key)) {
                     processedItems.add(key);
                     allMatches.push(match);
+                    addedCount++;
                 }
             });
+            console.log(`      📌 新增 ${addedCount} 個結果（已去重）`);
+        } else {
+            console.log(`      ❌ 無匹配結果 - 請檢查 Cards Data 中是否有 "${trimmedMerchant}"`);
         }
     });
 
-    console.log(`   找到 ${allMatches.length} 個匹配結果`);
+    console.log(`\n   ✨ 總計找到 ${allMatches.length} 個唯一的匹配結果\n`);
 
     // Update UI
     merchantInput.value = option.displayName;
@@ -226,7 +254,7 @@ function handleQuickSearch(option) {
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
-        console.warn(`   ⚠️ 沒有找到匹配的項目`);
+        console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
 
     merchantInput.focus();
