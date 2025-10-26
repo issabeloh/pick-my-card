@@ -653,6 +653,14 @@ function findMatchingItem(searchTerm) {
 
                 if (itemLower.includes(term) || term.includes(itemLower) || itemLower === term) {
                     matchFound = true;
+
+                    // Debug: Log unexpected matches for "gap"
+                    if (itemLower === 'gap' && !term.includes('gap')) {
+                        console.log(`         🐛 DEBUG: "gap" matched by term="${term}"`);
+                        console.log(`         🐛 itemLower.includes(term): ${itemLower.includes(term)}`);
+                        console.log(`         🐛 term.includes(itemLower): ${term.includes(itemLower)}`);
+                    }
+
                     if (itemLower === term) {
                         isExactMatch = true;
                         bestMatchTerm = term;
