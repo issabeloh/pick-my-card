@@ -805,7 +805,7 @@ function validateInputs() {
 }
 
 // Calculate cashback for all cards
-function calculateCashback() {
+async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
     console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
 
@@ -1079,7 +1079,7 @@ function calculateCardCashback(card, searchTerm, amount) {
     if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
         const availableLevels = Object.keys(card.levelSettings || {});
         const defaultLevel = availableLevels[0];
-        let savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        let savedLevel = await getCardLevel(card.id, defaultLevel);
 
         // Try to find matching level if savedLevel doesn't exist
         if (!card.levelSettings?.[savedLevel]) {
@@ -1089,12 +1089,12 @@ function calculateCardCashback(card, searchTerm, amount) {
             );
             if (matchedLevel) {
                 savedLevel = matchedLevel;
-                // Update localStorage with correct format
-                localStorage.setItem(`cardLevel-${card.id}`, savedLevel);
+                // Update Firestore with correct format
+                await saveCardLevel(card.id, savedLevel);
             } else {
                 // Fallback to default level
                 savedLevel = defaultLevel;
-                localStorage.setItem(`cardLevel-${card.id}`, savedLevel);
+                await saveCardLevel(card.id, savedLevel);
             }
         }
 
@@ -1218,7 +1218,7 @@ function calculateCardCashback(card, searchTerm, amount) {
     // 如果卡片有分級且不是 CUBE 卡，使用級別設定覆蓋回饋率和上限
     if (card.hasLevels && !card.specialItems && bestRate > 0) {
         const defaultLevel = Object.keys(card.levelSettings)[0];
-        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const savedLevel = await getCardLevel(card.id, defaultLevel);
         const levelData = card.levelSettings[savedLevel];
 
         bestRate = levelData.rate;
@@ -1881,7 +1881,7 @@ function openManageCardsModal() {
 }
 
 // Show card detail modal
-function showCardDetail(cardId) {
+async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;
     
@@ -1956,7 +1956,7 @@ basicCashbackDiv.innerHTML = basicContent;
     if (card.hasLevels) {
         const levelNames = Object.keys(card.levelSettings);
         const defaultLevel = levelNames[0];
-        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+        const savedLevel = await getCardLevel(card.id, defaultLevel);
 
         // Generate level selector HTML
         let levelSelectorHTML = `
@@ -1987,14 +1987,14 @@ basicCashbackDiv.innerHTML = basicContent;
 
         // Add change listener
         const levelSelect = document.getElementById('card-level-select');
-        levelSelect.onchange = function() {
-            localStorage.setItem(`cardLevel-${card.id}`, this.value);
+        levelSelect.onchange = async function() {
+            await saveCardLevel(card.id, this.value);
             // Refresh card detail display
             if (card.id === 'cathay-cube') {
-                updateCubeSpecialCashback(card);
+                await updateCubeSpecialCashback(card);
             } else {
                 // For other cards, just re-render the detail
-                showCardDetail(card.id);
+                await showCardDetail(card.id);
             }
         };
     } else {
@@ -2006,11 +2006,11 @@ basicCashbackDiv.innerHTML = basicContent;
     let specialContent = '';
 
     if (card.hasLevels && card.id === 'cathay-cube') {
-        specialContent = generateCubeSpecialContent(card);
+        specialContent = await generateCubeSpecialContent(card);
     } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
         // Handle generic level-based cards with specialItems (like Uni card)
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
+        const savedLevel = await getCardLevel(card.id, levelNames[0]);
         const levelData = card.levelSettings[savedLevel];
 
         specialContent += `<div class="cashback-detail-item">`;
@@ -2048,7 +2048,7 @@ basicCashbackDiv.innerHTML = basicContent;
     } else if (card.hasLevels && !card.specialItems) {
         // Handle level-based cards without specialItems
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || levelNames[0];
+        const savedLevel = await getCardLevel(card.id, levelNames[0]);
         const levelData = card.levelSettings[savedLevel];
 
         specialContent += `<div class="cashback-detail-item">`;
@@ -2211,15 +2211,15 @@ basicCashbackDiv.innerHTML = basicContent;
 }
 
 // Generate CUBE special content based on selected level
-function generateCubeSpecialContent(card) {
+async function generateCubeSpecialContent(card) {
     // 只處理有 specialItems 的卡片
     if (!card.specialItems || card.specialItems.length === 0) {
         return '';
     }
 
-    // Get level from localStorage or default to first level
+    // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const savedLevel = localStorage.getItem(`cardLevel-${card.id}`) || defaultLevel;
+    const savedLevel = await getCardLevel(card.id, defaultLevel);
     const levelSettings = card.levelSettings[savedLevel];
     
     // 使用 specialRate（如果有）或 rate
@@ -2326,9 +2326,9 @@ function generateCubeSpecialContent(card) {
 }
 
 // Update CUBE special cashback when level changes
-function updateCubeSpecialCashback(card) {
+async function updateCubeSpecialCashback(card) {
     const specialCashbackDiv = document.getElementById('card-special-cashback');
-    const newContent = generateCubeSpecialContent(card);
+    const newContent = await generateCubeSpecialContent(card);
     specialCashbackDiv.innerHTML = newContent;
 }
 
@@ -2666,6 +2666,74 @@ async function setupBillingDates(cardId) {
     });
 }
 
+// ========== Card Level Management Functions ==========
+
+// Load card level from Firestore (with localStorage fallback and migration)
+async function getCardLevel(cardId, defaultLevel) {
+    // For non-level cards, return default immediately
+    if (!cardId || !defaultLevel) return defaultLevel;
+
+    // If user not logged in, use localStorage
+    if (!auth.currentUser) {
+        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+    }
+
+    try {
+        const docRef = window.doc ? window.doc(db, 'cardSettings', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+
+        const docSnap = await window.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            // Return level from Firestore
+            return docSnap.data().level || defaultLevel;
+        } else {
+            // Check localStorage for migration
+            const localLevel = localStorage.getItem(`cardLevel-${cardId}`);
+            if (localLevel && localLevel !== defaultLevel) {
+                // Migrate to Firestore
+                console.log(`Migrating level for ${cardId} from localStorage to Firestore: ${localLevel}`);
+                await saveCardLevel(cardId, localLevel);
+                return localLevel;
+            }
+            return defaultLevel;
+        }
+    } catch (error) {
+        console.log('Failed to load card level from Firestore:', error);
+        // Fallback to localStorage
+        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+    }
+}
+
+// Save card level to Firestore (with localStorage backup)
+async function saveCardLevel(cardId, level) {
+    if (!cardId || !level) return;
+
+    // Always save to localStorage as backup
+    localStorage.setItem(`cardLevel-${cardId}`, level);
+
+    // If user not logged in, only save locally
+    if (!auth.currentUser) {
+        console.log(`Card level saved locally for ${cardId}: ${level}`);
+        return;
+    }
+
+    try {
+        const docRef = window.doc ? window.doc(db, 'cardSettings', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+
+        await window.setDoc(docRef, {
+            level: level,
+            updatedAt: new Date(),
+            cardId: cardId
+        });
+
+        console.log(`Card level synced to Firestore for ${cardId}: ${level}`);
+    } catch (error) {
+        console.error('Failed to save card level to Firestore:', error);
+    }
+}
+
 // ========== Payment Management Functions ==========
 
 // Open manage payments modal
@@ -2883,7 +2951,10 @@ function showPaymentDetail(paymentId) {
             let conditionsText = mc.rateGroup?.conditions ? `<div class="cashback-condition">條件: ${mc.rateGroup.conditions}</div>` : '';
 
             cardDiv.innerHTML = `
-                <div class="cashback-rate">${mc.card.name} - ${mc.rate}%</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
+                    <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
+                </div>
                 <div class="cashback-condition">消費上限: ${capText}</div>
                 ${periodText}
                 ${conditionsText}
@@ -2995,13 +3066,14 @@ function showComparePaymentsModal() {
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
                     const medal = index === 0 ? '🥇' : '🥈';
+                    const rateColor = index === 0 ? '#059669' : '#333333'; // 第一名绿色，第二名深灰色
                     cardsHTML += `
                         <div style="background: white; border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid ${index === 0 ? '#10b981' : '#6b7280'};">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div style="font-weight: 600; color: #374151;">
                                     ${medal} ${mc.card.name}
                                 </div>
-                                <div style="color: #059669; font-weight: 700; font-size: 1.1rem;">
+                                <div style="color: ${rateColor}; font-weight: 700; font-size: 1.1rem;">
                                     ${mc.rate}%
                                 </div>
                             </div>
