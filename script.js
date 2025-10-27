@@ -865,14 +865,14 @@ if (matchedItem.isOverseas) {
                 const searchTerm = matchedItem.originalItem.toLowerCase();
                 console.log(`  📝 計算項目: ${matchedItem.originalItem}`);
 
-                const itemResults = cardsToCompare.map(card => {
-                    const result = calculateCardCashback(card, searchTerm, amount);
+                const itemResults = await Promise.all(cardsToCompare.map(async card => {
+                    const result = await calculateCardCashback(card, searchTerm, amount);
                     return {
                         ...result,
                         card: card,
                         matchedItemName: matchedItem.originalItem
                     };
-                }).filter(result => result.cashbackAmount > 0);
+                })).then(results => results.filter(result => result.cashbackAmount > 0));
 
                 if (itemResults.length > 0) {
                     const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
@@ -928,13 +928,13 @@ if (matchedItem.isOverseas) {
         } else {
             // Single match - backward compatibility
             const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-            allResults = cardsToCompare.map(card => {
-                const result = calculateCardCashback(card, searchTerm, amount);
+            allResults = await Promise.all(cardsToCompare.map(async card => {
+                const result = await calculateCardCashback(card, searchTerm, amount);
                 return {
                     ...result,
                     card: card
                 };
-            }).filter(result => result.cashbackAmount > 0);
+            })).then(results => results.filter(result => result.cashbackAmount > 0));
         }
         
         results = allResults;
@@ -1064,7 +1064,7 @@ function getAllSearchVariants(searchTerm) {
 }
 
 // Calculate cashback for a specific card
-function calculateCardCashback(card, searchTerm, amount) {
+async function calculateCardCashback(card, searchTerm, amount) {
     let bestRate = 0;
     let applicableCap = null;
     let matchedItem = null;
@@ -2864,7 +2864,7 @@ function openManagePaymentsModal() {
 }
 
 // Show payment detail modal
-function showPaymentDetail(paymentId) {
+async function showPaymentDetail(paymentId) {
     console.log('🔍 showPaymentDetail 被調用:', paymentId);
     const payment = paymentsData.payments.find(p => p.id === paymentId);
     if (!payment) {
@@ -2903,13 +2903,13 @@ function showPaymentDetail(paymentId) {
     console.log('searchTerms:', payment.searchTerms);
     console.log('cardsToCheck 數量:', cardsToCheck.length);
 
-    payment.searchTerms.forEach(term => {
+    for (const term of payment.searchTerms) {
         const matches = findMatchingItem(term);
         console.log(`  term "${term}" 找到 ${matches ? matches.length : 0} 個匹配`);
         if (matches && matches.length > 0) {
             // For each matched item, calculate cashback for all cards
-            cardsToCheck.forEach(card => {
-                const result = calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+            for (const card of cardsToCheck) {
+                const result = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
                 if (result.rate > 0) {
                     console.log(`    ✅ ${card.name}: ${result.rate}%`);
                     matchingCards.push({
@@ -2919,9 +2919,9 @@ function showPaymentDetail(paymentId) {
                         rateGroup: null // Not needed for display
                     });
                 }
-            });
+            }
         }
-    });
+    }
 
     // Remove duplicates - keep highest rate per card
     const cardMap = new Map();
@@ -2978,7 +2978,7 @@ function showPaymentDetail(paymentId) {
 }
 
 // Show compare payments modal
-function showComparePaymentsModal() {
+async function showComparePaymentsModal() {
     console.log('📊 showComparePaymentsModal 被調用');
     const modal = document.getElementById('compare-payments-modal');
     const contentContainer = document.getElementById('compare-payments-content');
@@ -3005,12 +3005,12 @@ function showComparePaymentsModal() {
             let matchingCards = [];
 
             // Search for matches using all payment search terms
-            payment.searchTerms.forEach(term => {
+            for (const term of payment.searchTerms) {
                 const matches = findMatchingItem(term);
                 if (matches && matches.length > 0) {
                     // For each matched item, calculate cashback for all cards
-                    cardsToCheck.forEach(card => {
-                        const result = calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+                    for (const card of cardsToCheck) {
+                        const result = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
                         if (result.rate > 0) {
                             matchingCards.push({
                                 card: card,
@@ -3019,9 +3019,9 @@ function showComparePaymentsModal() {
                                 rateGroup: null
                             });
                         }
-                    });
+                    }
                 }
-            });
+            }
 
             // Remove duplicates - keep highest rate per card
             const cardMap = new Map();
