@@ -2997,7 +2997,7 @@ async function showComparePaymentsModal() {
     } else {
         let paymentsWithCards = [];
 
-        paymentsToCompare.forEach(payment => {
+        for (const payment of paymentsToCompare) {
             const cardsToCheck = currentUser ?
                 cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
                 cardsData.cards;
@@ -3044,7 +3044,7 @@ async function showComparePaymentsModal() {
                     cards: top2
                 });
             }
-        });
+        }
 
         // Sort payments by highest rate
         paymentsWithCards.sort((a, b) => b.cards[0].rate - a.cards[0].rate);
