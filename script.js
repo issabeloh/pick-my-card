@@ -2076,9 +2076,10 @@ basicCashbackDiv.innerHTML = basicContent;
         sortedRates.forEach((rate, index) => {
             specialContent += `<div class="cashback-detail-item">`;
 
-            // Display rate as-is (rates are already total rates)
-            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋</div>`;
-            
+            // Display rate with category in parentheses (like Cube card style)
+            const categoryLabel = rate.category ? ` (${rate.category})` : '';
+            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+
             // 消費上限
             if (rate.cap) {
                 if (rate.capDescription && card.id === 'taishin-richart') {
@@ -2088,10 +2089,6 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-            
-            if (rate.category) {
-                specialContent += `<div class="cashback-condition">類別: ${rate.category}</div>`;
             }
             
             if (rate.conditions) {
@@ -2942,17 +2939,24 @@ async function showPaymentDetail(paymentId) {
     if (uniqueCards.length === 0) {
         detailsContainer.innerHTML = '<p style="text-align: center; color: #666;">目前沒有信用卡認列此支付方式</p>';
     } else {
-        uniqueCards.forEach(mc => {
+        const maxRate = uniqueCards[0].rate;
+
+        uniqueCards.forEach((mc, index) => {
             const cardDiv = document.createElement('div');
-            cardDiv.className = 'cashback-detail-item';
-            
+            const isBest = index === 0 && maxRate > 0;
+            cardDiv.className = `cashback-detail-item ${isBest ? 'best-cashback' : ''}`;
+
             let capText = mc.cap ? `NT$${mc.cap.toLocaleString()}` : '無上限';
             let periodText = mc.rateGroup?.period ? `<div class="cashback-condition">活動期間: ${mc.rateGroup.period}</div>` : '';
             let conditionsText = mc.rateGroup?.conditions ? `<div class="cashback-condition">條件: ${mc.rateGroup.conditions}</div>` : '';
+            let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
 
             cardDiv.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
+                        ${bestBadge}
+                    </div>
                     <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
                 </div>
                 <div class="cashback-condition">消費上限: ${capText}</div>

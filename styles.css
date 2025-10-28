@@ -1037,12 +1037,31 @@ input[type="number"]:focus {
     text-decoration: underline;
 }
 
+/* Grid layout for payment detail modal on desktop */
+#payment-cashback-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 768px) {
+    #payment-cashback-details {
+        grid-template-columns: 1fr;
+    }
+}
+
 .cashback-detail-item {
     background: #f8fafc;
     border-radius: 6px;
     padding: 12px;
-    margin-bottom: 8px;
     border-left: 3px solid #3b82f6;
+}
+
+/* Best cashback style for payment detail items */
+.cashback-detail-item.best-cashback {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 .cashback-detail-item:last-child {
