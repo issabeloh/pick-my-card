@@ -3189,272 +3189,284 @@ async function saveUserPayments() {
 // Feedback System
 // ============================================
 
-// State
-let selectedImages = [];
-const MAX_IMAGES = 5;
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+// Initialize feedback system when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // State
+    let selectedImages = [];
+    const MAX_IMAGES = 5;
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
-// DOM Elements
-const feedbackBtn = document.getElementById('feedback-btn');
-const feedbackModal = document.getElementById('feedback-modal');
-const closeFeedbackModal = document.getElementById('close-feedback-modal');
-const cancelFeedbackBtn = document.getElementById('cancel-feedback-btn');
-const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
-const feedbackForm = document.getElementById('feedback-form');
-const feedbackMessage = document.getElementById('feedback-message');
-const feedbackName = document.getElementById('feedback-name');
-const feedbackImages = document.getElementById('feedback-images');
-const imageUploadArea = document.getElementById('image-upload-area');
-const uploadPlaceholder = document.getElementById('upload-placeholder');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const feedbackStatus = document.getElementById('feedback-status');
+    // DOM Elements
+    const feedbackBtn = document.getElementById('feedback-btn');
+    const feedbackModal = document.getElementById('feedback-modal');
+    const closeFeedbackModal = document.getElementById('close-feedback-modal');
+    const cancelFeedbackBtn = document.getElementById('cancel-feedback-btn');
+    const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
+    const feedbackForm = document.getElementById('feedback-form');
+    const feedbackMessage = document.getElementById('feedback-message');
+    const feedbackImages = document.getElementById('feedback-images');
+    const imageUploadArea = document.getElementById('image-upload-area');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const feedbackStatus = document.getElementById('feedback-status');
 
-// Image Compression Function
-async function compressImage(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
+    // Check if elements exist
+    if (!feedbackBtn || !feedbackModal) {
+        console.warn('Feedback elements not found');
+        return;
+    }
 
-                // Calculate new dimensions (max 1920px)
-                const MAX_WIDTH = 1920;
-                const MAX_HEIGHT = 1920;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
+    // Image Compression Function
+    async function compressImage(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+    
+                    // Calculate new dimensions (max 1920px)
+                    const MAX_WIDTH = 1920;
+                    const MAX_HEIGHT = 1920;
+    
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
                     }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // Convert to blob with compression
-                canvas.toBlob((blob) => {
-                    resolve(blob);
-                }, file.type, 0.85); // 85% quality
+    
+                    canvas.width = width;
+                    canvas.height = height;
+    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+    
+                    // Convert to blob with compression
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, file.type, 0.85); // 85% quality
+                };
+                img.src = e.target.result;
             };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Open Feedback Modal
-feedbackBtn.addEventListener('click', () => {
-    feedbackModal.style.display = 'flex';
-
-    // Auto-fill name if user is logged in
-    if (currentUser && currentUser.displayName) {
-        feedbackName.value = currentUser.displayName;
-    }
-});
-
-// Close Feedback Modal
-function closeFeedbackModalHandler() {
-    feedbackModal.style.display = 'none';
-    resetFeedbackForm();
-}
-
-closeFeedbackModal.addEventListener('click', closeFeedbackModalHandler);
-cancelFeedbackBtn.addEventListener('click', closeFeedbackModalHandler);
-
-// Close modal when clicking outside
-feedbackModal.addEventListener('click', (e) => {
-    if (e.target === feedbackModal) {
-        closeFeedbackModalHandler();
-    }
-});
-
-// Reset Form
-function resetFeedbackForm() {
-    feedbackForm.reset();
-    selectedImages = [];
-    renderImagePreviews();
-    feedbackStatus.className = 'feedback-status';
-    feedbackStatus.textContent = '';
-    if (!currentUser || !currentUser.displayName) {
-        feedbackName.value = '';
-    }
-}
-
-// Image Upload - Click
-imageUploadArea.addEventListener('click', () => {
-    feedbackImages.click();
-});
-
-// Image Upload - File Input Change
-feedbackImages.addEventListener('change', (e) => {
-    handleImageFiles(e.target.files);
-});
-
-// Image Upload - Drag and Drop
-imageUploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    imageUploadArea.classList.add('drag-over');
-});
-
-imageUploadArea.addEventListener('dragleave', () => {
-    imageUploadArea.classList.remove('drag-over');
-});
-
-imageUploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    imageUploadArea.classList.remove('drag-over');
-    handleImageFiles(e.dataTransfer.files);
-});
-
-// Handle Image Files
-function handleImageFiles(files) {
-    const fileArray = Array.from(files);
-
-    // Filter valid image files
-    const imageFiles = fileArray.filter(file =>
-        file.type === 'image/jpeg' ||
-        file.type === 'image/png' ||
-        file.type === 'image/webp'
-    );
-
-    // Check total count
-    const remainingSlots = MAX_IMAGES - selectedImages.length;
-    const filesToAdd = imageFiles.slice(0, remainingSlots);
-
-    if (filesToAdd.length === 0 && selectedImages.length >= MAX_IMAGES) {
-        showStatus('error', `最多只能上傳 ${MAX_IMAGES} 張圖片`);
-        return;
-    }
-
-    // Add files to selectedImages
-    filesToAdd.forEach(file => {
-        selectedImages.push({
-            file: file,
-            preview: URL.createObjectURL(file),
-            size: file.size
+            reader.readAsDataURL(file);
         });
-    });
-
-    renderImagePreviews();
-}
-
-// Render Image Previews
-function renderImagePreviews() {
-    if (selectedImages.length === 0) {
-        imagePreviewContainer.innerHTML = '';
-        uploadPlaceholder.style.display = 'flex';
-        return;
     }
-
-    uploadPlaceholder.style.display = 'none';
-
-    imagePreviewContainer.innerHTML = selectedImages.map((img, index) => `
-        <div class="image-preview-item">
-            <img src="${img.preview}" alt="Preview ${index + 1}">
-            <button type="button" class="image-preview-remove" data-index="${index}">×</button>
-            ${img.size > MAX_IMAGE_SIZE ? '<div class="image-size-warning">檔案較大</div>' : ''}
-        </div>
-    `).join('');
-
-    // Add remove handlers
-    document.querySelectorAll('.image-preview-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const index = parseInt(btn.dataset.index);
-            URL.revokeObjectURL(selectedImages[index].preview);
-            selectedImages.splice(index, 1);
-            renderImagePreviews();
-        });
-    });
-}
-
-// Show Status Message
-function showStatus(type, message) {
-    feedbackStatus.className = `feedback-status ${type}`;
-    feedbackStatus.textContent = message;
-}
-
-// Submit Feedback
-submitFeedbackBtn.addEventListener('click', async () => {
-    const message = feedbackMessage.value.trim();
-    const name = feedbackName.value.trim();
-
-    // Validation
-    if (!message) {
-        showStatus('error', '請填寫問題描述');
-        return;
-    }
-
-    // Disable submit button
-    submitFeedbackBtn.disabled = true;
-    showStatus('loading', '正在上傳...');
-
-    try {
-        // Upload images to Firebase Storage
-        const imageUrls = [];
-
-        if (selectedImages.length > 0) {
-            for (let i = 0; i < selectedImages.length; i++) {
-                const imgData = selectedImages[i];
-                showStatus('loading', `正在上傳圖片 ${i + 1}/${selectedImages.length}...`);
-
-                // Compress image
-                const compressedBlob = await compressImage(imgData.file);
-
-                // Generate unique filename
-                const timestamp = Date.now();
-                const userId = currentUser?.uid || 'anonymous';
-                const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
-
-                // Upload to Firebase Storage
-                const storageReference = window.storageRef(window.storage, filename);
-                await window.uploadBytes(storageReference, compressedBlob);
-
-                // Get download URL
-                const downloadUrl = await window.getDownloadURL(storageReference);
-                imageUrls.push(downloadUrl);
-            }
+    
+    // Open Feedback Modal
+    feedbackBtn.addEventListener('click', () => {
+        // Check if user is logged in
+        if (!currentUser) {
+            alert('請先登入才能回報問題 🔐\n\n登入後可以幫助我們更好地追蹤和回覆您的回報。');
+            return;
         }
 
-        // Save to Firestore
-        showStatus('loading', '正在儲存...');
-
-        const feedbackData = {
-            message: message,
-            userName: name || (currentUser?.displayName) || 'anonymous',
-            userId: currentUser?.uid || 'anonymous',
-            userEmail: currentUser?.email || '',
-            imageUrls: imageUrls,
-            timestamp: window.serverTimestamp(),
-            createdAt: new Date().toISOString()
-        };
-
-        await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
-
-        // Success
-        showStatus('success', '✅ 回報已送出，感謝您的回饋！');
-
-        // Reset form after 2 seconds
-        setTimeout(() => {
-            closeFeedbackModalHandler();
-        }, 2000);
-
-    } catch (error) {
-        console.error('Error submitting feedback:', error);
-        showStatus('error', '❌ 送出失敗，請稍後再試');
-    } finally {
-        submitFeedbackBtn.disabled = false;
+        feedbackModal.style.display = 'flex';
+    });
+    
+    // Close Feedback Modal
+    function closeFeedbackModalHandler() {
+        feedbackModal.style.display = 'none';
+        resetFeedbackForm();
     }
-});
+    
+    closeFeedbackModal.addEventListener('click', closeFeedbackModalHandler);
+    cancelFeedbackBtn.addEventListener('click', closeFeedbackModalHandler);
+    
+    // Close modal when clicking outside
+    feedbackModal.addEventListener('click', (e) => {
+        if (e.target === feedbackModal) {
+            closeFeedbackModalHandler();
+        }
+    });
+    
+    // Reset Form
+    function resetFeedbackForm() {
+        feedbackForm.reset();
+        selectedImages = [];
+        renderImagePreviews();
+        feedbackStatus.className = 'feedback-status';
+        feedbackStatus.textContent = '';
+    }
+    
+    // Image Upload - Click
+    imageUploadArea.addEventListener('click', () => {
+        feedbackImages.click();
+    });
+    
+    // Image Upload - File Input Change
+    feedbackImages.addEventListener('change', (e) => {
+        handleImageFiles(e.target.files);
+    });
+    
+    // Image Upload - Drag and Drop
+    imageUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        imageUploadArea.classList.add('drag-over');
+    });
+    
+    imageUploadArea.addEventListener('dragleave', () => {
+        imageUploadArea.classList.remove('drag-over');
+    });
+    
+    imageUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imageUploadArea.classList.remove('drag-over');
+        handleImageFiles(e.dataTransfer.files);
+    });
+    
+    // Handle Image Files
+    function handleImageFiles(files) {
+        const fileArray = Array.from(files);
+    
+        // Filter valid image files
+        const imageFiles = fileArray.filter(file =>
+            file.type === 'image/jpeg' ||
+            file.type === 'image/png' ||
+            file.type === 'image/webp'
+        );
+    
+        // Check total count
+        const remainingSlots = MAX_IMAGES - selectedImages.length;
+        const filesToAdd = imageFiles.slice(0, remainingSlots);
+    
+        if (filesToAdd.length === 0 && selectedImages.length >= MAX_IMAGES) {
+            showStatus('error', `最多只能上傳 ${MAX_IMAGES} 張圖片`);
+            return;
+        }
+    
+        // Add files to selectedImages
+        filesToAdd.forEach(file => {
+            selectedImages.push({
+                file: file,
+                preview: URL.createObjectURL(file),
+                size: file.size
+            });
+        });
+    
+        renderImagePreviews();
+    }
+    
+    // Render Image Previews
+    function renderImagePreviews() {
+        if (selectedImages.length === 0) {
+            imagePreviewContainer.innerHTML = '';
+            uploadPlaceholder.style.display = 'flex';
+            return;
+        }
+    
+        uploadPlaceholder.style.display = 'none';
+    
+        imagePreviewContainer.innerHTML = selectedImages.map((img, index) => `
+            <div class="image-preview-item">
+                <img src="${img.preview}" alt="Preview ${index + 1}">
+                <button type="button" class="image-preview-remove" data-index="${index}">×</button>
+                ${img.size > MAX_IMAGE_SIZE ? '<div class="image-size-warning">檔案較大</div>' : ''}
+            </div>
+        `).join('');
+    
+        // Add remove handlers
+        document.querySelectorAll('.image-preview-remove').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(btn.dataset.index);
+                URL.revokeObjectURL(selectedImages[index].preview);
+                selectedImages.splice(index, 1);
+                renderImagePreviews();
+            });
+        });
+    }
+    
+    // Show Status Message
+    function showStatus(type, message) {
+        feedbackStatus.className = `feedback-status ${type}`;
+        feedbackStatus.textContent = message;
+    }
+    
+    // Submit Feedback
+    submitFeedbackBtn.addEventListener('click', async () => {
+        const message = feedbackMessage.value.trim();
+
+        // Validation
+        if (!message) {
+            showStatus('error', '請填寫問題描述');
+            return;
+        }
+
+        // Double check user is logged in
+        if (!currentUser) {
+            showStatus('error', '請先登入才能提交回報');
+            return;
+        }
+    
+        // Disable submit button
+        submitFeedbackBtn.disabled = true;
+        showStatus('loading', '正在上傳...');
+    
+        try {
+            // Upload images to Firebase Storage
+            const imageUrls = [];
+    
+            if (selectedImages.length > 0) {
+                for (let i = 0; i < selectedImages.length; i++) {
+                    const imgData = selectedImages[i];
+                    showStatus('loading', `正在上傳圖片 ${i + 1}/${selectedImages.length}...`);
+    
+                    // Compress image
+                    const compressedBlob = await compressImage(imgData.file);
+    
+                    // Generate unique filename
+                    const timestamp = Date.now();
+                    const userId = currentUser?.uid || 'anonymous';
+                    const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
+    
+                    // Upload to Firebase Storage
+                    const storageReference = window.storageRef(window.storage, filename);
+                    await window.uploadBytes(storageReference, compressedBlob);
+    
+                    // Get download URL
+                    const downloadUrl = await window.getDownloadURL(storageReference);
+                    imageUrls.push(downloadUrl);
+                }
+            }
+    
+            // Save to Firestore
+            showStatus('loading', '正在儲存...');
+
+            const feedbackData = {
+                message: message,
+                userName: currentUser.displayName || 'Unknown',
+                userId: currentUser.uid,
+                userEmail: currentUser.email || '',
+                imageUrls: imageUrls,
+                timestamp: window.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            };
+    
+            await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
+    
+            // Success
+            showStatus('success', '✅ 回報已送出，感謝您的回饋！');
+    
+            // Reset form after 2 seconds
+            setTimeout(() => {
+                closeFeedbackModalHandler();
+            }, 2000);
+    
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            showStatus('error', '❌ 送出失敗，請稍後再試');
+        } finally {
+            submitFeedbackBtn.disabled = false;
+        }
+    });
+
+}); // End of Feedback System DOMContentLoaded
 
