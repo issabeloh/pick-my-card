@@ -3204,7 +3204,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitFeedbackBtn = document.getElementById('submit-feedback-btn');
     const feedbackForm = document.getElementById('feedback-form');
     const feedbackMessage = document.getElementById('feedback-message');
-    const feedbackName = document.getElementById('feedback-name');
     const feedbackImages = document.getElementById('feedback-images');
     const imageUploadArea = document.getElementById('image-upload-area');
     const uploadPlaceholder = document.getElementById('upload-placeholder');
@@ -3263,12 +3262,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Open Feedback Modal
     feedbackBtn.addEventListener('click', () => {
-        feedbackModal.style.display = 'flex';
-    
-        // Auto-fill name if user is logged in
-        if (currentUser && currentUser.displayName) {
-            feedbackName.value = currentUser.displayName;
+        // Check if user is logged in
+        if (!currentUser) {
+            alert('請先登入才能回報問題 🔐\n\n登入後可以幫助我們更好地追蹤和回覆您的回報。');
+            return;
         }
+
+        feedbackModal.style.display = 'flex';
     });
     
     // Close Feedback Modal
@@ -3294,9 +3294,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderImagePreviews();
         feedbackStatus.className = 'feedback-status';
         feedbackStatus.textContent = '';
-        if (!currentUser || !currentUser.displayName) {
-            feedbackName.value = '';
-        }
     }
     
     // Image Upload - Click
@@ -3396,11 +3393,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Submit Feedback
     submitFeedbackBtn.addEventListener('click', async () => {
         const message = feedbackMessage.value.trim();
-        const name = feedbackName.value.trim();
-    
+
         // Validation
         if (!message) {
             showStatus('error', '請填寫問題描述');
+            return;
+        }
+
+        // Double check user is logged in
+        if (!currentUser) {
+            showStatus('error', '請先登入才能提交回報');
             return;
         }
     
@@ -3437,12 +3439,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
             // Save to Firestore
             showStatus('loading', '正在儲存...');
-    
+
             const feedbackData = {
                 message: message,
-                userName: name || (currentUser?.displayName) || 'anonymous',
-                userId: currentUser?.uid || 'anonymous',
-                userEmail: currentUser?.email || '',
+                userName: currentUser.displayName || 'Unknown',
+                userId: currentUser.uid,
+                userEmail: currentUser.email || '',
                 imageUrls: imageUrls,
                 timestamp: window.serverTimestamp(),
                 createdAt: new Date().toISOString()
