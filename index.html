@@ -103,13 +103,16 @@
                         <strong>💡 輸入指南</strong>
                     </div>
                     <div class="guide-content">
-                        <p class="guide-intro">輸入優先順序：<strong>①行動支付 → ②商家 → ③MCC類別 → ④國家 → ⑤"假日"</strong></p>
+                        <p class="guide-section-title"><strong>【付款方式決定輸入內容】</strong></p>
                         <ul class="guide-list">
-                            <li><strong>①行動支付</strong>：ApplePay、GooglePay、LinePay、全支付、台新Pay、台灣Pay…</li>
-                            <li><strong>②商家</strong>：uber、全聯、台灣大哥大、雄獅旅遊、華航、加油、王品集團…</li>
-                            <li><strong>③MCC類別</strong>：餐飲、娛樂、國內飯店、國內電影院…</li>
-                            <li><strong>④國家</strong>：韓國、日本、馬來西亞、越南、斯里蘭卡…</li>
-                            <li><strong>⑤"假日"</strong>：如在假日消費可輸入"假日"（部分信用卡有以消費日為假日的回饋，因此特列此項）</li>
+                            <li><strong>直接刷卡</strong> → 輸入商家名稱（uber、全聯、華航、王品、雄獅旅遊…）</li>
+                            <li><strong>行動支付</strong> → 輸入支付工具（Line Pay、Apple Pay、街口、全支付、台新Pay…）</li>
+                        </ul>
+                        <p class="guide-section-title"><strong>【特殊情況】</strong></p>
+                        <ul class="guide-list">
+                            <li><strong>餐廳/飯店等</strong> → 輸入類別（餐飲、國內飯店、娛樂、國內電影院…）</li>
+                            <li><strong>國外消費</strong> → 輸入"海外"或國家（日本、韓國、泰國、馬來西亞、越南…）</li>
+                            <li><strong>假日消費</strong> → 額外輸入"假日"</li>
                         </ul>
                     </div>
                 </div>
@@ -333,8 +336,9 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-      
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
+
       // Your web app's Firebase configuration
       const firebaseConfig = {
         apiKey: "AIzaSyCERYFst64lYgR07OnEk-aJPbg838R7nYA",
@@ -345,20 +349,22 @@
         appId: "1:181128376981:web:f9084ecdf6dddaf82e619c",
         measurementId: "G-RW8F159L52"
       };
-      
+
       // Note: Firebase API keys are designed to be public
       // Security is handled by Firebase Authentication and domain restrictions
-      
+
       // Initialize Firebase
       const app = initializeApp(firebaseConfig);
       const analytics = getAnalytics(app);
       const auth = getAuth(app);
       const db = getFirestore(app);
+      const storage = getStorage(app);
       const provider = new GoogleAuthProvider();
-      
+
       // Make Firebase services available globally
       window.firebaseAuth = auth;
       window.db = db;
+      window.storage = storage;
       window.googleProvider = provider;
       window.signInWithPopup = signInWithPopup;
       window.signOut = signOut;
@@ -366,6 +372,12 @@
       window.doc = doc;
       window.getDoc = getDoc;
       window.setDoc = setDoc;
+      window.addDoc = addDoc;
+      window.collection = collection;
+      window.serverTimestamp = serverTimestamp;
+      window.storageRef = ref;
+      window.uploadBytes = uploadBytes;
+      window.getDownloadURL = getDownloadURL;
     </script>
 
     <!-- Payment Detail Modal -->
@@ -400,6 +412,72 @@
                 <div id="compare-payments-content">
                     <!-- Comparison content will be populated by JavaScript -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Button -->
+    <button id="feedback-btn" class="feedback-floating-btn" title="回報問題">
+        🐛
+    </button>
+
+    <!-- Feedback Modal -->
+    <div id="feedback-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🐛 回報問題</h3>
+                <button class="close-modal" id="close-feedback-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">發現錯誤或有建議？請告訴我們！</p>
+
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-message">問題描述 <span class="required">*</span></label>
+                        <textarea
+                            id="feedback-message"
+                            class="feedback-textarea"
+                            placeholder="請描述問題或建議..."
+                            required
+                            rows="4"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="feedback-images">上傳截圖（選填，最多5張）</label>
+                        <div class="image-upload-area" id="image-upload-area">
+                            <input
+                                type="file"
+                                id="feedback-images"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                style="display: none;">
+                            <div class="upload-placeholder" id="upload-placeholder">
+                                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                </svg>
+                                <p>點擊或拖曳圖片到此處</p>
+                                <p class="upload-hint">支援 JPG, PNG, WEBP（每張最大 2MB）</p>
+                            </div>
+                            <div id="image-preview-container" class="image-preview-container"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="feedback-name">您的名字（選填）</label>
+                        <input
+                            type="text"
+                            id="feedback-name"
+                            class="feedback-input"
+                            placeholder="如果已登入會自動帶入">
+                    </div>
+
+                    <div id="feedback-status" class="feedback-status"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="submit-feedback-btn" class="save-btn">送出</button>
+                <button type="button" id="cancel-feedback-btn" class="cancel-btn">取消</button>
             </div>
         </div>
     </div>
