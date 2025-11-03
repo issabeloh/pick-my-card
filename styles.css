@@ -313,6 +313,7 @@ main {
     .quick-search-container {
         scrollbar-width: auto; /* Use default width on mobile */
         padding-bottom: 12px; /* More space for scrollbar */
+        overflow-x: scroll; /* Force scrollbar to always show */
     }
 
     .quick-search-container::-webkit-scrollbar {
@@ -328,6 +329,7 @@ main {
     .quick-search-container::-webkit-scrollbar-thumb {
         background: #9ca3af; /* More visible color */
         border-radius: 4px;
+        min-width: 40px; /* Ensure thumb is always visible */
     }
 }
 
@@ -749,8 +751,8 @@ input[type="number"]:focus {
     
     .header-top {
         flex-direction: column;
-        align-items: center;
-        text-align: center;
+        align-items: flex-start;
+        text-align: left;
         gap: 12px;
     }
     
