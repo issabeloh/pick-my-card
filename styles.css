@@ -115,6 +115,11 @@ header p {
     margin-bottom: 20px;
 }
 
+/* Hide mobile-specific line break on desktop */
+.mobile-break {
+    display: none;
+}
+
 /* Supported cards */
 .cards-header {
     display: flex;
@@ -301,6 +306,29 @@ main {
 
 .quick-search-container::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Mobile: Make scrollbar always visible and more prominent */
+@media (max-width: 768px) {
+    .quick-search-container {
+        scrollbar-width: auto; /* Use default width on mobile */
+        padding-bottom: 12px; /* More space for scrollbar */
+    }
+
+    .quick-search-container::-webkit-scrollbar {
+        height: 8px; /* Thicker scrollbar on mobile */
+        -webkit-appearance: none;
+    }
+
+    .quick-search-container::-webkit-scrollbar-track {
+        background: #e5e7eb;
+        border-radius: 4px;
+    }
+
+    .quick-search-container::-webkit-scrollbar-thumb {
+        background: #9ca3af; /* More visible color */
+        border-radius: 4px;
+    }
 }
 
 /* Scroll Arrows */
@@ -729,7 +757,12 @@ input[type="number"]:focus {
     .header-content h1 {
         font-size: 1.8rem;
     }
-    
+
+    /* Show line break on mobile for subtitle */
+    .mobile-break {
+        display: inline;
+    }
+
     .auth-section {
         gap: 8px;
     }
@@ -2148,7 +2181,14 @@ input[type="number"]:focus {
         right: 16px;
         width: 48px;
         height: 48px;
-        font-size: 20px;
+        font-size: 24px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    /* Hide text on mobile, only show icon */
+    .feedback-floating-btn span:last-child {
+        display: none;
     }
 
     .image-preview-container {
