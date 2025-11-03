@@ -1977,17 +1977,6 @@ basicCashbackDiv.innerHTML = basicContent;
             </div>
         `;
 
-        // Add CUBE-specific birthday note
-        if (card.id === 'cathay-cube') {
-            levelSelectorHTML += `
-                <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-top: 12px;">
-                    <div style="color: #9ca3af; font-size: 11px; line-height: 1.5; font-style: italic;">
-                        ※ 慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #6b7280; text-decoration: underline;">官網查詢</a>
-                    </div>
-                </div>
-            `;
-        }
-
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
 
@@ -2227,9 +2216,18 @@ async function generateCubeSpecialContent(card) {
     
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
-    
+
     let content = '';
-    
+
+    // Add CUBE-specific birthday note at the beginning
+    content += `
+        <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-bottom: 16px;">
+            <div style="color: #9ca3af; font-size: 11px; line-height: 1.5; font-style: italic;">
+                ※ 慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #6b7280; text-decoration: underline;">官網查詢</a>
+            </div>
+        </div>
+    `;
+
     // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
     
     // 1. 童樂匯 10% 回饋 (固定最高)
