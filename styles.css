@@ -1071,6 +1071,11 @@ input[type="number"]:focus {
     border-radius: 6px;
     padding: 12px;
     border-left: 3px solid #3b82f6;
+    margin-bottom: 12px;
+}
+
+.cashback-detail-item:last-child {
+    margin-bottom: 0;
 }
 
 /* Best cashback style for payment detail items */
@@ -1133,7 +1138,7 @@ input[type="number"]:focus {
 
 /* Fee Waiver Checkbox Styles */
 .fee-waiver-status {
-    margin-top: 8px;
+    margin-top: 4px; /* 減少頂部間距 */
 }
 
 .fee-waiver-checkbox {
@@ -1560,8 +1565,8 @@ input[type="number"]:focus {
 .info-grid-2col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px 24px; /* 縮小行間距從20px改瀆12px */
-    align-items: start;
+    gap: 16px 24px; /* 增加行間距讓視覺更舒適 */
+    align-items: start; /* 確保所有項目從頂部對齊 */
 }
 
 /* 信息項目樣式 - 標題和內容上下排列 */
@@ -1593,17 +1598,17 @@ input[type="number"]:focus {
 .fee-annual-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px; /* 減少內部間距 */
 }
 
 .fee-combined-info {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px; /* 減少內部間距 */
 }
 
 .fee-waiver-text {
-    margin-top: 6px;
+    margin-top: 2px; /* 減少頂部間距 */
     font-style: italic;
 }
 
