@@ -115,9 +115,11 @@ header p {
     margin-bottom: 20px;
 }
 
-/* Hide mobile-specific line break on desktop */
-.mobile-break {
-    display: none;
+/* Subtitle structure */
+#subtitle .slogan,
+#subtitle .separator,
+#subtitle .tool-info {
+    display: inline;
 }
 
 /* Supported cards */
@@ -760,9 +762,24 @@ input[type="number"]:focus {
         font-size: 1.8rem;
     }
 
-    /* Show line break on mobile for subtitle */
-    .mobile-break {
-        display: inline;
+    /* Mobile subtitle layout */
+    #subtitle .slogan,
+    #subtitle .tool-info {
+        display: block;
+    }
+
+    #subtitle .separator {
+        display: none;
+    }
+
+    #subtitle .tool-info {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+
+    #subtitle .tool-info::before {
+        content: "💳 ";
     }
 
     .auth-section {
