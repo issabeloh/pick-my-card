@@ -24,9 +24,16 @@ async function loadCardsData() {
         // 解碼函數
         const decoded = decodeURIComponent(escape(atob(encoded)));
         cardsData = JSON.parse(decoded);
-        
+
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
+
+        // Update card count in subtitle
+        const cardCountElement = document.getElementById('card-count');
+        if (cardCountElement) {
+            cardCountElement.textContent = cardsData.cards.length;
+        }
+
         return true;
     } catch (error) {
         console.error('❌ 載入信用卡資料失敗:', error);

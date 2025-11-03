@@ -42,6 +42,20 @@ header {
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.beta-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    letter-spacing: 0.5px;
 }
 
 .header-content p {
@@ -1880,30 +1894,33 @@ input[type="number"]:focus {
 /* Floating Feedback Button */
 .feedback-floating-btn {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    border-radius: 50%;
-    font-size: 24px;
+    bottom: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    background: rgba(107, 114, 128, 0.15);
+    border: 1px solid rgba(107, 114, 128, 0.2);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #6b7280;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
     z-index: 999;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
+    backdrop-filter: blur(8px);
 }
 
 .feedback-floating-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    background: rgba(107, 114, 128, 0.25);
+    border-color: rgba(107, 114, 128, 0.3);
+    color: #374151;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .feedback-floating-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.98);
 }
 
 /* Feedback Modal Specific Styles */
