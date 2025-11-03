@@ -626,6 +626,7 @@ input[type="number"]:focus {
 
 /* Card result styling */
 .card-result {
+    position: relative;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px;
@@ -1952,6 +1953,205 @@ input[type="number"]:focus {
 }
 
 /* ============================================
+   My Mappings (配卡表) Styles
+   ============================================ */
+
+/* Floating My Mappings Button */
+.my-mappings-floating-btn {
+    position: fixed;
+    bottom: 72px;
+    right: 16px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.my-mappings-floating-btn:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+}
+
+.my-mappings-floating-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Pin Badge (+1 動畫) */
+.pin-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Pin Button on Card */
+.pin-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+    padding: 4px;
+    z-index: 10;
+}
+
+.pin-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.pin-btn.pinned {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+}
+
+/* Pin Toast (提示) */
+.pin-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(16, 185, 129, 0.95);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.pin-toast.show {
+    opacity: 1;
+}
+
+/* My Mappings Modal */
+#my-mappings-modal .modal-content {
+    max-width: 600px;
+}
+
+.mappings-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+}
+
+.mappings-search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.mappings-list {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 16px;
+}
+
+.mapping-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.mapping-item:hover {
+    background: #f9fafb;
+}
+
+.mapping-item:last-child {
+    border-bottom: none;
+}
+
+.mapping-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mapping-merchant {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.mapping-arrow {
+    color: #9ca3af;
+}
+
+.mapping-card {
+    color: #4b5563;
+}
+
+.mapping-rate {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.mapping-delete-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.mapping-delete-btn:hover {
+    opacity: 1;
+}
+
+.mapping-warning {
+    width: 100%;
+    padding: 8px 12px 12px 24px;
+    font-size: 12px;
+    color: #f59e0b;
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    margin: 0 12px 8px 12px;
+}
+
+.mappings-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+}
+
+.mappings-empty svg {
+    margin: 0 auto 16px;
+    opacity: 0.5;
+}
+
+/* ============================================
    Feedback System Styles
    ============================================ */
 
@@ -2195,6 +2395,21 @@ input[type="number"]:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
+    .my-mappings-floating-btn {
+        bottom: 72px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    /* Hide text on mobile, only show icon */
+    .my-mappings-floating-btn span:last-child {
+        display: none;
+    }
+
     .feedback-floating-btn {
         bottom: 16px;
         right: 16px;
