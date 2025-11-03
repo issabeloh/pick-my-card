@@ -278,6 +278,25 @@ main {
     overflow: hidden; /* 防止内容撑大父容器 */
 }
 
+/* Fade gradient hint for mobile scrollable content */
+.quick-search-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 8px; /* Account for scrollbar height */
+    width: 40px;
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.95), transparent);
+    pointer-events: none;
+    display: none; /* Hidden by default, shown on mobile */
+}
+
+@media (max-width: 768px) {
+    .quick-search-wrapper::after {
+        display: block; /* Show gradient on mobile */
+    }
+}
+
 /* Quick Search Container */
 .quick-search-container {
     display: flex;
