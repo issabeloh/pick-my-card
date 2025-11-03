@@ -1980,10 +1980,9 @@ basicCashbackDiv.innerHTML = basicContent;
         // Add CUBE-specific birthday note
         if (card.id === 'cathay-cube') {
             levelSelectorHTML += `
-                <div class="cube-birthday-note" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 12px;">
-                    <div style="color: #d97706; font-size: 14px; margin-bottom: 4px; font-weight: 600;">提醒</div>
-                    <div style="color: #92400e; font-size: 13px; line-height: 1.4;">
-                        慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #d97706; text-decoration: underline; font-weight: 500;">官網查詢</a>哦！
+                <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-top: 12px;">
+                    <div style="color: #9ca3af; font-size: 11px; line-height: 1.5; font-style: italic;">
+                        ※ 慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #6b7280; text-decoration: underline;">官網查詢</a>
                     </div>
                 </div>
             `;
@@ -2031,7 +2030,7 @@ basicCashbackDiv.innerHTML = basicContent;
         // Show applicable merchants
         if (card.specialItems.length <= 30) {
             const merchantsList = card.specialItems.join('、');
-            specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+            specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
         } else {
             const initialList = card.specialItems.slice(0, 30).join('、');
             const fullList = card.specialItems.join('、');
@@ -2039,7 +2038,7 @@ basicCashbackDiv.innerHTML = basicContent;
             const showAllId = `uni-show-all-${card.id}`;
 
             specialContent += `<div class="cashback-merchants">`;
-            specialContent += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+            specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
             specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
             specialContent += `</div>`;
         }
@@ -2124,14 +2123,14 @@ basicCashbackDiv.innerHTML = basicContent;
                 if (rate.items.length <= 20) {
                     // 少於20個直接顯示全部
                     const merchantsList = processedItems.join('、');
-                    specialContent += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+                    specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
                     // 超過20個顯示可展開的列表
                     const initialList = processedItems.slice(0, 20).join('、');
                     const fullList = processedItems.join('、');
                     
                     specialContent += `<div class="cashback-merchants">`;
-                    specialContent += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+                    specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
                     specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
                     specialContent += `</div>`;
                 }
@@ -2245,7 +2244,7 @@ async function generateCubeSpecialContent(card) {
         if (childrenRate10.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
         }
-        content += `<div class="cashback-merchants">適用通路: ${childrenRate10.items.join('、')}</div>`;
+        content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate10.items.join('、')}</div>`;
         content += `</div>`;
     }
     
@@ -2261,7 +2260,7 @@ async function generateCubeSpecialContent(card) {
         if (childrenRate5.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
         }
-        content += `<div class="cashback-merchants">適用通路: ${childrenRate5.items.join('、')}</div>`;
+        content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate5.items.join('、')}</div>`;
         content += `</div>`;
     }
     
@@ -2278,14 +2277,14 @@ async function generateCubeSpecialContent(card) {
 
                 const merchantsList = items.join('、');
                 if (items.length <= 20) {
-                    content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+                    content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
                     const initialList = items.slice(0, 20).join('、');
                     const merchantsId = `cube-merchants-${category}-${savedLevel}`;
                     const showAllId = `cube-show-all-${category}-${savedLevel}`;
 
                     content += `<div class="cashback-merchants">`;
-                    content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+                    content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
                     content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${merchantsList}')">... 顯示全部${items.length}個</button>`;
                     content += `</div>`;
                 }
@@ -2300,7 +2299,7 @@ async function generateCubeSpecialContent(card) {
 
         const merchantsList = card.specialItems.join('、');
         if (card.specialItems.length <= 30) {
-            content += `<div class="cashback-merchants">適用通路: ${merchantsList}</div>`;
+            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
         } else {
             const initialList = card.specialItems.slice(0, 30).join('、');
             const fullList = merchantsList;
@@ -2308,7 +2307,7 @@ async function generateCubeSpecialContent(card) {
             const showAllId = `cube-show-all-${savedLevel}`;
 
             content += `<div class="cashback-merchants">`;
-            content += `適用通路: <span id="${merchantsId}">${initialList}</span>`;
+            content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
             content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
             content += `</div>`;
         }
@@ -2321,7 +2320,7 @@ async function generateCubeSpecialContent(card) {
             content += `<div class="cashback-detail-item">`;
             content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
             content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            content += `<div class="cashback-merchants">適用通路: ${items.join('、')}</div>`;
+            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${items.join('、')}</div>`;
             content += `</div>`;
         });
     }
