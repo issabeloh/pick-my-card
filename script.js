@@ -2900,9 +2900,20 @@ async function detectRateChanges() {
 
     for (let mapping of userSpendingMappings) {
         try {
-            // 如果是剛創建的（lastCheckedRate 存在且等於 cashbackRate），跳過檢測
-            if (!mapping.lastCheckedRate) {
+            // 初始化 lastCheckedRate（用於舊數據兼容）
+            if (mapping.lastCheckedRate === undefined) {
                 mapping.lastCheckedRate = mapping.cashbackRate;
+            }
+
+            // 初始化 hasChanged（預設為 false）
+            if (mapping.hasChanged === undefined) {
+                mapping.hasChanged = false;
+            }
+
+            // 檢查是否是最近創建的（5秒內），如果是則跳過檢測
+            const now = Date.now();
+            const createdRecently = (now - mapping.createdAt) < 5000; // 5秒內
+            if (createdRecently) {
                 mapping.hasChanged = false;
                 continue;
             }
@@ -2918,25 +2929,33 @@ async function detectRateChanges() {
             const currentCashback = await calculateCardCashback(card, mapping.merchant, 1000);
             const currentRate = currentCashback.rate;
 
-            // 與原始保存的回饋率比較（不是lastCheckedRate）
-            // 允許 0.1% 的誤差範圍
-            const rateChanged = Math.abs(currentRate - mapping.cashbackRate) > 0.1;
+            // 與原始保存的回饋率比較
+            // 允許 0.15% 的誤差範圍（提高容錯度）
+            const rateChanged = Math.abs(currentRate - mapping.cashbackRate) > 0.15;
 
             mapping.hasChanged = rateChanged;
 
+            // 更新最後檢查的回饋率
+            if (!rateChanged) {
+                mapping.lastCheckedRate = currentRate;
+            }
+
             if (rateChanged) {
                 hasAnyChange = true;
+                console.log(`檢測到回饋變動: ${mapping.merchant} @ ${mapping.cardName}`, {
+                    原始回饋率: mapping.cashbackRate,
+                    當前回饋率: currentRate,
+                    差異: Math.abs(currentRate - mapping.cashbackRate)
+                });
             }
         } catch (error) {
-            console.error('檢測回饋變動失敗:', error);
+            console.error('檢測回饋變動失敗:', mapping.merchant, error);
             mapping.hasChanged = false;
         }
     }
 
-    // 如果有變動，保存更新後的狀態
-    if (hasAnyChange) {
-        await saveSpendingMappings(userSpendingMappings);
-    }
+    // 總是保存更新後的狀態（包含 lastCheckedRate 和 hasChanged）
+    await saveSpendingMappings(userSpendingMappings);
 }
 
 // 更新釘選按鈕狀態

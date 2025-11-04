@@ -52,10 +52,11 @@ header {
     padding: 2px 8px;
     font-size: 0.65rem;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.25));
+    border: 1px solid rgba(139, 92, 246, 0.4);
     border-radius: 4px;
     letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .header-content p {
@@ -134,6 +135,11 @@ header p {
     font-size: 0.9rem;
     margin: 0;
     opacity: 0.8;
+}
+
+/* 行動支付區塊 */
+.header-section {
+    margin-top: 24px; /* 增加與上方信用卡區塊的間距 */
 }
 
 .section-title-row {
@@ -665,6 +671,7 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
+    margin-right: 36px; /* 為右側圖釘留出空間 */
 }
 
 .card-details {
@@ -2035,11 +2042,6 @@ input[type="number"]:focus {
 .pin-btn.pinned:hover {
     background: #fde68a;
     transform: scale(1.1);
-}
-
-/* 當有最優回饋徽章時，圖釘位置下移避免重疊 */
-.best-card .pin-btn {
-    top: 42px;
 }
 
 /* Pin Toast (提示) */
