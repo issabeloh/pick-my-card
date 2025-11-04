@@ -2095,58 +2095,99 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
-/* Merchant grouped table layout */
-.mapping-merchant-group {
-    margin-bottom: 20px;
+/* Standard table layout with drag and drop */
+.mappings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
 }
 
-.mapping-merchant-header {
+.mappings-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.mappings-table th {
+    padding: 12px;
+    text-align: left;
     font-weight: 600;
-    font-size: 15px;
-    color: #1f2937;
-    padding: 10px 12px;
-    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-    border-radius: 6px 6px 0 0;
-    border-bottom: 2px solid #667eea;
+    font-size: 13px;
 }
 
-.mapping-card-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
+.mappings-table th.drag-handle-header {
+    width: 30px;
+    padding: 12px 8px;
+}
+
+.mappings-table th.rate-column {
+    width: 80px;
+    text-align: right;
+}
+
+.mappings-table th.delete-column {
+    width: 50px;
+    text-align: center;
+}
+
+.mappings-table tbody tr {
     border-bottom: 1px solid #e5e7eb;
     transition: background 0.2s;
 }
 
-.mapping-card-row:hover {
+.mappings-table tbody tr:hover {
     background: #f9fafb;
 }
 
-.mapping-card-row:last-child {
-    border-radius: 0 0 6px 6px;
+.mappings-table tbody tr:last-child {
+    border-bottom: none;
 }
 
-.mapping-card-info {
-    flex: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+.mappings-table td {
+    padding: 12px;
 }
 
-.mapping-card-name {
-    font-size: 14px;
-    color: #4b5563;
+.mappings-table td.drag-handle {
+    cursor: grab;
+    color: #9ca3af;
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.mappings-table td.drag-handle:active {
+    cursor: grabbing;
+}
+
+.mappings-table td.merchant-cell {
     font-weight: 500;
+    color: #1f2937;
 }
 
-.mapping-card-rate {
-    font-size: 14px;
+.mappings-table td.card-cell {
+    color: #4b5563;
+}
+
+.mappings-table td.rate-cell {
     color: #10b981;
     font-weight: 600;
-    min-width: 60px;
     text-align: right;
+}
+
+.mappings-table td.delete-cell {
+    text-align: center;
+}
+
+/* Drag and drop states */
+.mapping-row.dragging {
+    opacity: 0.5;
+    background: #f3f4f6;
+}
+
+.mapping-row.drag-over {
+    background: #e0e7ff;
+    border-top: 2px solid #667eea;
 }
 
 .mapping-delete-btn {

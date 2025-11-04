@@ -2822,7 +2822,7 @@ async function openMyMappingsModal() {
     }
 }
 
-// 渲染配卡表清單（表格化，同商家分組）
+// 渲染配卡表清單（標準表格式，支援拖曳排序）
 function renderMappingsList(searchTerm = '') {
     const mappingsList = document.getElementById('mappings-list');
     if (!mappingsList) return;
@@ -2851,47 +2851,59 @@ function renderMappingsList(searchTerm = '') {
         return;
     }
 
-    // 按商家分組
-    const groupedByMerchant = {};
-    filteredMappings.forEach(mapping => {
-        const merchant = optimizeMerchantName(mapping.merchant);
-        if (!groupedByMerchant[merchant]) {
-            groupedByMerchant[merchant] = [];
+    // 確保每個 mapping 都有 order 欄位（用於拖曳排序）
+    filteredMappings.forEach((mapping, index) => {
+        if (mapping.order === undefined) {
+            mapping.order = index;
         }
-        groupedByMerchant[merchant].push(mapping);
     });
 
-    // 排序商家名稱
-    const sortedMerchants = Object.keys(groupedByMerchant).sort((a, b) =>
-        a.localeCompare(b, 'zh-TW')
-    );
+    // 按 order 排序（用戶自訂順序）
+    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 渲染表格
-    let html = '';
-    sortedMerchants.forEach(merchant => {
-        const cards = groupedByMerchant[merchant];
+    // 渲染標準表格
+    let html = `
+        <table class="mappings-table">
+            <thead>
+                <tr>
+                    <th class="drag-handle-header"></th>
+                    <th>商家</th>
+                    <th>卡片名稱</th>
+                    <th class="rate-column">回饋率</th>
+                    <th class="delete-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-        // 商家標題行
-        html += `<div class="mapping-merchant-group">`;
-        html += `<div class="mapping-merchant-header">${merchant}</div>`;
-
-        // 該商家的所有卡片
-        cards.forEach(mapping => {
-            html += `
-                <div class="mapping-card-row">
-                    <div class="mapping-card-info">
-                        <span class="mapping-card-name">${mapping.cardName}</span>
-                        <span class="mapping-card-rate">${mapping.cashbackRate}%</span>
-                    </div>
+    filteredMappings.forEach((mapping, index) => {
+        const merchant = optimizeMerchantName(mapping.merchant);
+        html += `
+            <tr class="mapping-row"
+                draggable="true"
+                data-mapping-id="${mapping.id}"
+                data-index="${index}">
+                <td class="drag-handle">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                </td>
+                <td class="merchant-cell">${merchant}</td>
+                <td class="card-cell">${mapping.cardName}</td>
+                <td class="rate-cell">${mapping.cashbackRate}%</td>
+                <td class="delete-cell">
                     <button class="mapping-delete-btn"
                             data-mapping-id="${mapping.id}"
                             title="刪除">×</button>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
+                </td>
+            </tr>
+        `;
     });
+
+    html += `
+            </tbody>
+        </table>
+    `;
 
     mappingsList.innerHTML = html;
 
@@ -2909,8 +2921,95 @@ function renderMappingsList(searchTerm = '') {
             }
         };
     });
+
+    // 綁定拖曳排序功能
+    initDragAndDrop();
 }
 
+// 初始化拖曳排序功能
+function initDragAndDrop() {
+    const rows = document.querySelectorAll('.mapping-row');
+    let draggedRow = null;
+    let draggedIndex = null;
+
+    rows.forEach(row => {
+        row.addEventListener('dragstart', function(e) {
+            draggedRow = this;
+            draggedIndex = parseInt(this.dataset.index);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (this !== draggedRow) {
+                this.classList.add('drag-over');
+            }
+        });
+
+        row.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (this !== draggedRow) {
+                const targetIndex = parseInt(this.dataset.index);
+
+                // 更新陣列順序
+                reorderMappings(draggedIndex, targetIndex);
+            }
+        });
+
+        row.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+
+            // 移除所有 drag-over class
+            rows.forEach(r => r.classList.remove('drag-over'));
+        });
+    });
+}
+
+// 重新排序配卡表
+async function reorderMappings(fromIndex, toIndex) {
+    // 取得目前的篩選結果
+    const searchTerm = document.getElementById('mappings-search')?.value || '';
+    let filteredMappings = userSpendingMappings;
+
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredMappings = userSpendingMappings.filter(m =>
+            m.merchant.toLowerCase().includes(term) ||
+            m.cardName.toLowerCase().includes(term)
+        );
+    }
+
+    // 確保有 order 欄位並排序
+    filteredMappings.forEach((mapping, index) => {
+        if (mapping.order === undefined) {
+            mapping.order = index;
+        }
+    });
+    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // 移動元素
+    const [movedItem] = filteredMappings.splice(fromIndex, 1);
+    filteredMappings.splice(toIndex, 0, movedItem);
+
+    // 重新分配 order
+    filteredMappings.forEach((mapping, index) => {
+        mapping.order = index;
+    });
+
+    // 保存並重新渲染
+    await saveSpendingMappings(userSpendingMappings);
+    renderMappingsList(searchTerm);
+}
 
 // 更新釘選按鈕狀態
 function updatePinButtonsState() {
