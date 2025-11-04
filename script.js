@@ -1486,21 +1486,24 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
     }
 
-    // 檢查是否已釘選
-    const pinned = searchedItem && !isBasicCashback ? isPinned(result.card.id, searchedItem) : false;
+    // 檢查是否已釘選（使用 matchedItem）
+    const merchantForPin = result.matchedItems && result.matchedItems.length > 0
+        ? result.matchedItems.join('、')
+        : result.matchedItem;
+    const pinned = merchantForPin && !isBasicCashback ? isPinned(result.card.id, merchantForPin) : false;
 
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
                 <div class="card-name">${result.card.name}</div>
-                ${searchedItem && !isBasicCashback ? `
+                ${merchantForPin && !isBasicCashback ? `
                     <button class="pin-btn ${pinned ? 'pinned' : ''}"
                             data-card-id="${result.card.id}"
                             data-card-name="${result.card.name}"
-                            data-merchant="${searchedItem}"
+                            data-merchant="${merchantForPin}"
                             data-rate="${result.rate}"
                             title="${pinned ? '取消釘選' : '釘選此配對'}">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
                         </svg>
                     </button>
@@ -3626,18 +3629,20 @@ async function showComparePaymentsModal() {
 
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
-                    const medal = index === 0 ? '🥇' : '🥈';
-                    const rateColor = index === 0 ? '#059669' : '#333333'; // 第一名绿色，第二名深灰色
+                    const isBest = index === 0;
+                    let capText = mc.cap ? `NT$${mc.cap.toLocaleString()}` : '無上限';
+                    let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
+
                     cardsHTML += `
-                        <div style="background: white; border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid ${index === 0 ? '#10b981' : '#6b7280'};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="font-weight: 600; color: #374151;">
-                                    ${medal} ${mc.card.name}
+                        <div class="cashback-detail-item ${isBest ? 'best-cashback' : ''}" style="margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
+                                    ${bestBadge}
                                 </div>
-                                <div style="color: ${rateColor}; font-weight: 700; font-size: 1.1rem;">
-                                    ${mc.rate}%
-                                </div>
+                                <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
                             </div>
+                            <div class="cashback-condition">消費上限: ${capText}</div>
                         </div>
                     `;
                 });
