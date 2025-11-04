@@ -2095,47 +2095,58 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
-.mapping-item {
+/* Merchant grouped table layout */
+.mapping-merchant-group {
+    margin-bottom: 20px;
+}
+
+.mapping-merchant-header {
+    font-weight: 600;
+    font-size: 15px;
+    color: #1f2937;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 6px 6px 0 0;
+    border-bottom: 2px solid #667eea;
+}
+
+.mapping-card-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px;
+    padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
-    font-size: 14px;
     transition: background 0.2s;
 }
 
-.mapping-item:hover {
+.mapping-card-row:hover {
     background: #f9fafb;
 }
 
-.mapping-item:last-child {
-    border-bottom: none;
+.mapping-card-row:last-child {
+    border-radius: 0 0 6px 6px;
 }
 
-.mapping-info {
+.mapping-card-info {
     flex: 1;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
-.mapping-merchant {
-    font-weight: 500;
-    color: #1f2937;
-}
-
-.mapping-arrow {
-    color: #9ca3af;
-}
-
-.mapping-card {
+.mapping-card-name {
+    font-size: 14px;
     color: #4b5563;
+    font-weight: 500;
 }
 
-.mapping-rate {
+.mapping-card-rate {
+    font-size: 14px;
     color: #10b981;
     font-weight: 600;
+    min-width: 60px;
+    text-align: right;
 }
 
 .mapping-delete-btn {
@@ -2151,16 +2162,6 @@ input[type="number"]:focus {
 
 .mapping-delete-btn:hover {
     opacity: 1;
-}
-
-.mapping-warning {
-    width: 100%;
-    padding: 8px 12px 12px 24px;
-    font-size: 12px;
-    color: #f59e0b;
-    background: #fffbeb;
-    border-left: 3px solid #f59e0b;
-    margin: 0 12px 8px 12px;
 }
 
 .mappings-empty {

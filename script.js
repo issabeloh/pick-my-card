@@ -2792,9 +2792,6 @@ async function openMyMappingsModal() {
 
     if (!modal || !mappingsList) return;
 
-    // 檢測回饋變動
-    await detectRateChanges();
-
     // 渲染配卡表
     renderMappingsList();
 
@@ -2825,7 +2822,7 @@ async function openMyMappingsModal() {
     }
 }
 
-// 渲染配卡表清單
+// 渲染配卡表清單（表格化，同商家分組）
 function renderMappingsList(searchTerm = '') {
     const mappingsList = document.getElementById('mappings-list');
     if (!mappingsList) return;
@@ -2839,9 +2836,6 @@ function renderMappingsList(searchTerm = '') {
             m.cardName.toLowerCase().includes(term)
         );
     }
-
-    // 排序：商家名稱排序
-    filteredMappings.sort((a, b) => a.merchant.localeCompare(b.merchant, 'zh-TW'));
 
     if (filteredMappings.length === 0) {
         mappingsList.innerHTML = `
@@ -2857,27 +2851,46 @@ function renderMappingsList(searchTerm = '') {
         return;
     }
 
+    // 按商家分組
+    const groupedByMerchant = {};
+    filteredMappings.forEach(mapping => {
+        const merchant = optimizeMerchantName(mapping.merchant);
+        if (!groupedByMerchant[merchant]) {
+            groupedByMerchant[merchant] = [];
+        }
+        groupedByMerchant[merchant].push(mapping);
+    });
+
+    // 排序商家名稱
+    const sortedMerchants = Object.keys(groupedByMerchant).sort((a, b) =>
+        a.localeCompare(b, 'zh-TW')
+    );
+
+    // 渲染表格
     let html = '';
-    filteredMappings.forEach((mapping, index) => {
-        const displayMerchant = optimizeMerchantName(mapping.merchant);
-        html += `
-            <div class="mapping-item">
-                <div class="mapping-info">
-                    <span class="mapping-merchant">${displayMerchant}</span>
-                    <span class="mapping-arrow">→</span>
-                    <span class="mapping-card">${mapping.cardName}</span>
-                    <span class="mapping-rate">(${mapping.cashbackRate}%)</span>
+    sortedMerchants.forEach(merchant => {
+        const cards = groupedByMerchant[merchant];
+
+        // 商家標題行
+        html += `<div class="mapping-merchant-group">`;
+        html += `<div class="mapping-merchant-header">${merchant}</div>`;
+
+        // 該商家的所有卡片
+        cards.forEach(mapping => {
+            html += `
+                <div class="mapping-card-row">
+                    <div class="mapping-card-info">
+                        <span class="mapping-card-name">${mapping.cardName}</span>
+                        <span class="mapping-card-rate">${mapping.cashbackRate}%</span>
+                    </div>
+                    <button class="mapping-delete-btn"
+                            data-mapping-id="${mapping.id}"
+                            title="刪除">×</button>
                 </div>
-                <button class="mapping-delete-btn"
-                        data-mapping-id="${mapping.id}"
-                        title="刪除">×</button>
-            </div>
-            ${mapping.hasChanged ? `
-                <div class="mapping-warning">
-                    ⚠️ 回饋已變動，再次查詢並釘選即可更新
-                </div>
-            ` : ''}
-        `;
+            `;
+        });
+
+        html += `</div>`;
     });
 
     mappingsList.innerHTML = html;
@@ -2898,78 +2911,6 @@ function renderMappingsList(searchTerm = '') {
     });
 }
 
-// 檢測回饋變動
-async function detectRateChanges() {
-    let hasAnyChange = false;
-    const now = Date.now();
-
-    for (let mapping of userSpendingMappings) {
-        try {
-            // 初始化 lastCheckedRate（用於舊數據兼容）
-            if (mapping.lastCheckedRate === undefined) {
-                mapping.lastCheckedRate = mapping.cashbackRate;
-            }
-
-            // 初始化 hasChanged（預設為 false）
-            if (mapping.hasChanged === undefined) {
-                mapping.hasChanged = false;
-            }
-
-            // 初始化 lastCheckedTime
-            if (!mapping.lastCheckedTime) {
-                mapping.lastCheckedTime = now;
-            }
-
-            // 檢查是否是最近創建或檢查的（60秒冷卻期）
-            const timeSinceCreated = now - mapping.createdAt;
-            const timeSinceLastCheck = now - mapping.lastCheckedTime;
-
-            if (timeSinceCreated < 60000 || timeSinceLastCheck < 60000) {
-                // 60秒內不重複檢測
-                continue;
-            }
-
-            // 尋找對應的卡片
-            const card = cardsData.cards.find(c => c.id === mapping.cardId);
-            if (!card) {
-                mapping.hasChanged = false;
-                continue;
-            }
-
-            // 計算當前回饋率
-            const currentCashback = await calculateCardCashback(card, mapping.merchant, 1000);
-            const currentRate = currentCashback.rate;
-
-            // 與原始保存的回饋率比較
-            // 允許 0.2% 的誤差範圍（提高容錯度）
-            const rateDifference = Math.abs(currentRate - mapping.cashbackRate);
-            const rateChanged = rateDifference > 0.2;
-
-            mapping.hasChanged = rateChanged;
-            mapping.lastCheckedTime = now;
-
-            // 更新最後檢查的回饋率
-            if (!rateChanged) {
-                mapping.lastCheckedRate = currentRate;
-            }
-
-            if (rateChanged) {
-                hasAnyChange = true;
-                console.log(`檢測到回饋變動: ${mapping.merchant} @ ${mapping.cardName}`, {
-                    原始回饋率: mapping.cashbackRate,
-                    當前回饋率: currentRate,
-                    差異: rateDifference.toFixed(2) + '%'
-                });
-            }
-        } catch (error) {
-            console.error('檢測回饋變動失敗:', mapping.merchant, error);
-            mapping.hasChanged = false;
-        }
-    }
-
-    // 總是保存更新後的狀態
-    await saveSpendingMappings(userSpendingMappings);
-}
 
 // 更新釘選按鈕狀態
 function updatePinButtonsState() {
