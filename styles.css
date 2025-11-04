@@ -2004,24 +2004,42 @@ input[type="number"]:focus {
     position: absolute;
     top: 12px;
     right: 12px;
-    background: none;
-    border: none;
-    font-size: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    opacity: 0.3;
+    color: #6b7280;
     transition: all 0.3s ease;
-    padding: 4px;
+    padding: 0;
     z-index: 10;
 }
 
 .pin-btn:hover {
-    opacity: 1;
-    transform: scale(1.15);
+    background: white;
+    border-color: #667eea;
+    color: #667eea;
+    transform: scale(1.1);
 }
 
 .pin-btn.pinned {
-    opacity: 1;
-    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.pin-btn.pinned:hover {
+    background: #fde68a;
+    transform: scale(1.1);
+}
+
+/* 當有最優回饋徽章時，圖釘位置下移避免重疊 */
+.best-card .pin-btn {
+    top: 42px;
 }
 
 /* Pin Toast (提示) */

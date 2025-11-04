@@ -1500,7 +1500,9 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         data-merchant="${searchedItem}"
                         data-rate="${result.rate}"
                         title="${pinned ? '取消釘選' : '釘選此配對'}">
-                    📌
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
+                    </svg>
                 </button>
             ` : ''}
         </div>
@@ -2611,7 +2613,9 @@ async function addMapping(cardId, cardName, merchant, cashbackRate) {
         cardName: cardName,
         merchant: merchant,
         cashbackRate: cashbackRate,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        lastCheckedRate: cashbackRate, // 記錄最後檢查的回饋率
+        hasChanged: false // 初始為未變動
     };
 
     userSpendingMappings.push(newMapping);
@@ -2737,6 +2741,45 @@ function showToast(message, cardElement) {
     }, 2000);
 }
 
+// 優化商家名稱顯示（去重、選擇最完整的名稱）
+function optimizeMerchantName(merchant) {
+    if (!merchant) return '';
+
+    // 如果包含頓號，說明有多個項目
+    if (merchant.includes('、')) {
+        const items = merchant.split('、').map(s => s.trim()).filter(Boolean);
+
+        // 去重
+        const uniqueItems = [...new Set(items)];
+
+        // 如果只剩一個，直接返回
+        if (uniqueItems.length === 1) {
+            return uniqueItems[0];
+        }
+
+        // 選擇最長的名稱（通常是最完整的）
+        // 例如："街口支付" vs "街口" -> 選擇 "街口支付"
+        const sorted = uniqueItems.sort((a, b) => b.length - a.length);
+
+        // 檢查是否有包含關係
+        const longest = sorted[0];
+        const filtered = sorted.filter(item => {
+            // 如果 item 被 longest 包含，則過濾掉
+            return item === longest || !longest.includes(item);
+        });
+
+        // 如果過濾後只剩一個，返回它
+        if (filtered.length === 1) {
+            return filtered[0];
+        }
+
+        // 否則返回前兩個
+        return filtered.slice(0, 2).join('、');
+    }
+
+    return merchant;
+}
+
 // 打開我的配卡表 Modal
 async function openMyMappingsModal() {
     const modal = document.getElementById('my-mappings-modal');
@@ -2812,10 +2855,11 @@ function renderMappingsList(searchTerm = '') {
 
     let html = '';
     filteredMappings.forEach((mapping, index) => {
+        const displayMerchant = optimizeMerchantName(mapping.merchant);
         html += `
             <div class="mapping-item">
                 <div class="mapping-info">
-                    <span class="mapping-merchant">${mapping.merchant}</span>
+                    <span class="mapping-merchant">${displayMerchant}</span>
                     <span class="mapping-arrow">→</span>
                     <span class="mapping-card">${mapping.cardName}</span>
                     <span class="mapping-rate">(${mapping.cashbackRate}%)</span>
@@ -2852,21 +2896,46 @@ function renderMappingsList(searchTerm = '') {
 
 // 檢測回饋變動
 async function detectRateChanges() {
+    let hasAnyChange = false;
+
     for (let mapping of userSpendingMappings) {
         try {
+            // 如果是剛創建的（lastCheckedRate 存在且等於 cashbackRate），跳過檢測
+            if (!mapping.lastCheckedRate) {
+                mapping.lastCheckedRate = mapping.cashbackRate;
+                mapping.hasChanged = false;
+                continue;
+            }
+
             // 尋找對應的卡片
             const card = cardsData.cards.find(c => c.id === mapping.cardId);
-            if (!card) continue;
+            if (!card) {
+                mapping.hasChanged = false;
+                continue;
+            }
 
             // 計算當前回饋率
             const currentCashback = await calculateCardCashback(card, mapping.merchant, 1000);
             const currentRate = currentCashback.rate;
 
-            // 比較
-            mapping.hasChanged = Math.abs(currentRate - mapping.cashbackRate) > 0.01;
+            // 與原始保存的回饋率比較（不是lastCheckedRate）
+            // 允許 0.1% 的誤差範圍
+            const rateChanged = Math.abs(currentRate - mapping.cashbackRate) > 0.1;
+
+            mapping.hasChanged = rateChanged;
+
+            if (rateChanged) {
+                hasAnyChange = true;
+            }
         } catch (error) {
             console.error('檢測回饋變動失敗:', error);
+            mapping.hasChanged = false;
         }
+    }
+
+    // 如果有變動，保存更新後的狀態
+    if (hasAnyChange) {
+        await saveSpendingMappings(userSpendingMappings);
     }
 }
 
