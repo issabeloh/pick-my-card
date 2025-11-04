@@ -1491,20 +1491,22 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
 
     cardDiv.innerHTML = `
         <div class="card-header">
-            <div class="card-name">${result.card.name}</div>
+            <div class="card-name-with-pin">
+                <div class="card-name">${result.card.name}</div>
+                ${searchedItem && !isBasicCashback ? `
+                    <button class="pin-btn ${pinned ? 'pinned' : ''}"
+                            data-card-id="${result.card.id}"
+                            data-card-name="${result.card.name}"
+                            data-merchant="${searchedItem}"
+                            data-rate="${result.rate}"
+                            title="${pinned ? '取消釘選' : '釘選此配對'}">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
             ${isBest ? '<div class="best-badge">最優回饋</div>' : ''}
-            ${searchedItem && !isBasicCashback ? `
-                <button class="pin-btn ${pinned ? 'pinned' : ''}"
-                        data-card-id="${result.card.id}"
-                        data-card-name="${result.card.name}"
-                        data-merchant="${searchedItem}"
-                        data-rate="${result.rate}"
-                        title="${pinned ? '取消釘選' : '釘選此配對'}">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
-                    </svg>
-                </button>
-            ` : ''}
         </div>
         <div class="card-details">
             <div class="detail-item">
@@ -2607,14 +2609,16 @@ async function addMapping(cardId, cardName, merchant, cashbackRate) {
         return null;
     }
 
+    const now = Date.now();
     const newMapping = {
         id: generateMappingId(),
         cardId: cardId,
         cardName: cardName,
         merchant: merchant,
         cashbackRate: cashbackRate,
-        createdAt: Date.now(),
+        createdAt: now,
         lastCheckedRate: cashbackRate, // 記錄最後檢查的回饋率
+        lastCheckedTime: now, // 記錄最後檢查的時間
         hasChanged: false // 初始為未變動
     };
 
@@ -2897,6 +2901,7 @@ function renderMappingsList(searchTerm = '') {
 // 檢測回饋變動
 async function detectRateChanges() {
     let hasAnyChange = false;
+    const now = Date.now();
 
     for (let mapping of userSpendingMappings) {
         try {
@@ -2910,11 +2915,17 @@ async function detectRateChanges() {
                 mapping.hasChanged = false;
             }
 
-            // 檢查是否是最近創建的（5秒內），如果是則跳過檢測
-            const now = Date.now();
-            const createdRecently = (now - mapping.createdAt) < 5000; // 5秒內
-            if (createdRecently) {
-                mapping.hasChanged = false;
+            // 初始化 lastCheckedTime
+            if (!mapping.lastCheckedTime) {
+                mapping.lastCheckedTime = now;
+            }
+
+            // 檢查是否是最近創建或檢查的（60秒冷卻期）
+            const timeSinceCreated = now - mapping.createdAt;
+            const timeSinceLastCheck = now - mapping.lastCheckedTime;
+
+            if (timeSinceCreated < 60000 || timeSinceLastCheck < 60000) {
+                // 60秒內不重複檢測
                 continue;
             }
 
@@ -2930,10 +2941,12 @@ async function detectRateChanges() {
             const currentRate = currentCashback.rate;
 
             // 與原始保存的回饋率比較
-            // 允許 0.15% 的誤差範圍（提高容錯度）
-            const rateChanged = Math.abs(currentRate - mapping.cashbackRate) > 0.15;
+            // 允許 0.2% 的誤差範圍（提高容錯度）
+            const rateDifference = Math.abs(currentRate - mapping.cashbackRate);
+            const rateChanged = rateDifference > 0.2;
 
             mapping.hasChanged = rateChanged;
+            mapping.lastCheckedTime = now;
 
             // 更新最後檢查的回饋率
             if (!rateChanged) {
@@ -2945,7 +2958,7 @@ async function detectRateChanges() {
                 console.log(`檢測到回饋變動: ${mapping.merchant} @ ${mapping.cardName}`, {
                     原始回饋率: mapping.cashbackRate,
                     當前回饋率: currentRate,
-                    差異: Math.abs(currentRate - mapping.cashbackRate)
+                    差異: rateDifference.toFixed(2) + '%'
                 });
             }
         } catch (error) {
@@ -2954,7 +2967,7 @@ async function detectRateChanges() {
         }
     }
 
-    // 總是保存更新後的狀態（包含 lastCheckedRate 和 hasChanged）
+    // 總是保存更新後的狀態
     await saveSpendingMappings(userSpendingMappings);
 }
 

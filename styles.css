@@ -52,11 +52,12 @@ header {
     padding: 2px 8px;
     font-size: 0.65rem;
     font-weight: 600;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.25));
-    border: 1px solid rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 4px;
     letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.95);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
 }
 
 .header-content p {
@@ -657,6 +658,12 @@ input[type="number"]:focus {
     margin-bottom: 10px;
 }
 
+.card-name-with-pin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .card-name {
     font-size: 1.2rem;
     font-weight: 700;
@@ -671,7 +678,6 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
-    margin-right: 36px; /* 為右側圖釘留出空間 */
 }
 
 .card-details {
@@ -2008,22 +2014,19 @@ input[type="number"]:focus {
 
 /* Pin Button on Card */
 .pin-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid #e5e7eb;
     border-radius: 4px;
-    width: 28px;
-    height: 28px;
-    display: flex;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     color: #6b7280;
     transition: all 0.3s ease;
     padding: 0;
-    z-index: 10;
+    flex-shrink: 0;
 }
 
 .pin-btn:hover {
