@@ -16,7 +16,7 @@
                 <div class="header-content">
                     <h1>信用卡回饋大師 <span class="beta-badge">BETA</span></h1>
                     <p id="subtitle">
-                        <span class="slogan">結賬前找出你的最佳信用卡</span><span class="separator">｜</span><span class="tool-info">收錄 <span id="card-count">13</span> 張台灣主流信用卡</span>
+                        <span class="slogan">刷卡前找出最高回饋信用卡</span><span class="separator">｜</span><span class="tool-info">收錄 <span id="card-count">13</span> 張台灣主流信用卡</span>
                     </p>
                 </div>
                 <div class="auth-section">
@@ -402,11 +402,35 @@
         </div>
     </div>
 
+    <!-- My Mappings Button -->
+    <button id="my-mappings-btn" class="my-mappings-floating-btn" title="我的消費配卡" style="display: none;">
+        <span>📋</span>
+        <span>我的配卡</span>
+    </button>
+
     <!-- Feedback Button -->
     <button id="feedback-btn" class="feedback-floating-btn" title="回報問題">
         <span>🐛</span>
         <span>回報錯誤</span>
     </button>
+
+    <!-- My Mappings Modal -->
+    <div id="my-mappings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📋 我的配卡</h3>
+                <button class="close-modal" id="close-mappings-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <input type="text" id="mappings-search" placeholder="搜尋商家..." class="mappings-search-input" />
+                </div>
+                <div id="mappings-list" class="mappings-list">
+                    <!-- 配卡清單將由 JavaScript 動態生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Feedback Modal -->
     <div id="feedback-modal" class="modal" style="display: none;">

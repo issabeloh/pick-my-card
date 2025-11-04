@@ -2,6 +2,7 @@
 let currentUser = null;
 let userSelectedCards = new Set();
 let userSelectedPayments = new Set();
+let userSpendingMappings = []; // 用戶的消費配卡表
 let auth = null;
 let db = null;
 let cardsData = null;
@@ -416,6 +417,31 @@ function setupEventListeners() {
     if (comparePaymentsBtn) {
         comparePaymentsBtn.addEventListener('click', () => {
             showComparePaymentsModal();
+        });
+    }
+
+    // 釘選按鈕事件委託
+    const resultsContainer = document.getElementById('results-container');
+    if (resultsContainer) {
+        resultsContainer.addEventListener('click', async (e) => {
+            const pinBtn = e.target.closest('.pin-btn');
+            if (pinBtn) {
+                e.preventDefault();
+                const cardId = pinBtn.dataset.cardId;
+                const cardName = pinBtn.dataset.cardName;
+                const merchant = pinBtn.dataset.merchant;
+                const rate = parseFloat(pinBtn.dataset.rate);
+
+                await togglePin(pinBtn, cardId, cardName, merchant, rate);
+            }
+        });
+    }
+
+    // 我的配卡按鈕
+    const myMappingsBtn = document.getElementById('my-mappings-btn');
+    if (myMappingsBtn) {
+        myMappingsBtn.addEventListener('click', () => {
+            openMyMappingsModal();
         });
     }
 }
@@ -1460,9 +1486,29 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
     }
 
+    // 檢查是否已釘選（使用 matchedItem）
+    const merchantForPin = result.matchedItems && result.matchedItems.length > 0
+        ? result.matchedItems.join('、')
+        : result.matchedItem;
+    const pinned = merchantForPin && !isBasicCashback ? isPinned(result.card.id, merchantForPin) : false;
+
     cardDiv.innerHTML = `
         <div class="card-header">
-            <div class="card-name">${result.card.name}</div>
+            <div class="card-name-with-pin">
+                <div class="card-name">${result.card.name}</div>
+                ${merchantForPin && !isBasicCashback ? `
+                    <button class="pin-btn ${pinned ? 'pinned' : ''}"
+                            data-card-id="${result.card.id}"
+                            data-card-name="${result.card.name}"
+                            data-merchant="${merchantForPin}"
+                            data-rate="${result.rate}"
+                            title="${pinned ? '取消釘選' : '釘選此配對'}">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
             ${isBest ? '<div class="best-badge">最優回饋</div>' : ''}
         </div>
         <div class="card-details">
@@ -1611,9 +1657,16 @@ function initializeAuth() {
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
 
+            // Show my mappings button
+            const myMappingsBtn = document.getElementById('my-mappings-btn');
+            if (myMappingsBtn) {
+                myMappingsBtn.style.display = 'flex';
+            }
+
             // Load user's selected cards and payments from Firestore (async)
             await loadUserCards();
             await loadUserPayments();
+            await loadSpendingMappings();
 
             // Update chips display
             populateCardChips();
@@ -1624,6 +1677,7 @@ function initializeAuth() {
             currentUser = null;
             userSelectedCards.clear();
             userSelectedPayments.clear();
+            userSpendingMappings = [];
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
@@ -1631,6 +1685,12 @@ function initializeAuth() {
             userPhoto.src = '';
             userPhoto.style.display = 'none';
             userName.textContent = '';
+
+            // Hide my mappings button
+            const myMappingsBtn = document.getElementById('my-mappings-btn');
+            if (myMappingsBtn) {
+                myMappingsBtn.style.display = 'none';
+            }
 
             // Show manage cards button even when not logged in (read-only mode)
             document.getElementById('manage-cards-btn').style.display = 'block';
@@ -2475,6 +2535,502 @@ async function saveUserNotes(cardId, notes) {
     }
 }
 
+// ============================================
+// 消費配卡表功能
+// ============================================
+
+// 生成唯一 ID
+function generateMappingId() {
+    return 'mapping_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// 讀取用戶的消費配卡表
+async function loadSpendingMappings() {
+    if (!auth.currentUser) {
+        // 未登入用戶
+        const localData = localStorage.getItem('spendingMappings');
+        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        return userSpendingMappings;
+    }
+
+    try {
+        const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+
+        const docSnap = await window.getDoc(docRef);
+        const mappings = docSnap.exists() ? docSnap.data().mappings : [];
+
+        // 更新本地快取
+        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
+        userSpendingMappings = mappings;
+
+        return mappings;
+    } catch (error) {
+        console.log('讀取配卡表失敗，使用本地快取:', error);
+        const localData = localStorage.getItem(`spendingMappings_${auth.currentUser.uid}`);
+        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        return userSpendingMappings;
+    }
+}
+
+// 保存用戶的消費配卡表
+async function saveSpendingMappings(mappings) {
+    userSpendingMappings = mappings;
+
+    if (!auth.currentUser) {
+        // 未登入用戶只保存在本地
+        localStorage.setItem('spendingMappings', JSON.stringify(mappings));
+        return true;
+    }
+
+    try {
+        // 保存到本地快取
+        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
+
+        // 保存到 Firestore
+        const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+
+        await window.setDoc(docRef, {
+            mappings: mappings,
+            updatedAt: new Date()
+        });
+
+        return true;
+    } catch (error) {
+        console.error('雲端儲存配卡表失敗:', error);
+        // 失敗時仍然保存在本地
+        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
+        return false;
+    }
+}
+
+// 添加配對
+async function addMapping(cardId, cardName, merchant, cashbackRate) {
+    if (!auth.currentUser) {
+        alert('請先登入才能使用此功能');
+        return null;
+    }
+
+    const now = Date.now();
+    const newMapping = {
+        id: generateMappingId(),
+        cardId: cardId,
+        cardName: cardName,
+        merchant: merchant,
+        cashbackRate: cashbackRate,
+        createdAt: now,
+        lastCheckedRate: cashbackRate, // 記錄最後檢查的回饋率
+        lastCheckedTime: now, // 記錄最後檢查的時間
+        hasChanged: false // 初始為未變動
+    };
+
+    userSpendingMappings.push(newMapping);
+    await saveSpendingMappings(userSpendingMappings);
+
+    return newMapping;
+}
+
+// 刪除配對
+async function removeMapping(mappingId) {
+    userSpendingMappings = userSpendingMappings.filter(m => m.id !== mappingId);
+    await saveSpendingMappings(userSpendingMappings);
+}
+
+// 檢查是否已釘選
+function isPinned(cardId, merchant) {
+    return userSpendingMappings.some(m =>
+        m.cardId === cardId && m.merchant === merchant
+    );
+}
+
+// 切換釘選狀態
+async function togglePin(button, cardId, cardName, merchant, rate) {
+    if (!auth.currentUser) {
+        alert('請先登入才能使用釘選功能');
+        return;
+    }
+
+    const alreadyPinned = isPinned(cardId, merchant);
+
+    if (alreadyPinned) {
+        // 取消釘選
+        const mapping = userSpendingMappings.find(m =>
+            m.cardId === cardId && m.merchant === merchant
+        );
+        if (mapping) {
+            await removeMapping(mapping.id);
+            button.classList.remove('pinned');
+            button.title = '釘選此配對';
+            showToast('已取消釘選', button.closest('.card-result'));
+        }
+    } else {
+        // 釘選
+        await addMapping(cardId, cardName, merchant, rate);
+        button.classList.add('pinned');
+        button.title = '取消釘選';
+
+        // 顯示成功動畫
+        showPinSuccessAnimation(button);
+    }
+}
+
+// 顯示釘選成功動畫
+function showPinSuccessAnimation(button) {
+    const cardElement = button.closest('.card-result');
+
+    // 1. 顯示提示
+    showToast('已加入我的配卡✓', cardElement);
+
+    // 2. 顯示 +1 徽章動畫
+    showPlusBadgeAnimation();
+}
+
+// 顯示 +1 徽章動畫
+function showPlusBadgeAnimation() {
+    const btn = document.getElementById('my-mappings-btn');
+    if (!btn) return;
+
+    // 創建 +1 徽章
+    const badge = document.createElement('span');
+    badge.className = 'pin-badge';
+    badge.textContent = '+1';
+    btn.appendChild(badge);
+
+    // 從小放大動畫
+    badge.animate([
+        { transform: 'scale(0)', opacity: 0 },
+        { transform: 'scale(1.2)', opacity: 1, offset: 0.5 },
+        { transform: 'scale(1)', opacity: 1 }
+    ], {
+        duration: 400,
+        easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+    });
+
+    // 閃爍效果
+    setTimeout(() => {
+        badge.animate([
+            { opacity: 1 },
+            { opacity: 0.6 },
+            { opacity: 1 }
+        ], {
+            duration: 300
+        });
+    }, 400);
+
+    // 1.5秒後淡出並移除
+    setTimeout(() => {
+        const fadeOut = badge.animate([
+            { opacity: 1 },
+            { opacity: 0 }
+        ], {
+            duration: 300,
+            fill: 'forwards'
+        });
+        fadeOut.onfinish = () => badge.remove();
+    }, 1500);
+}
+
+// 顯示小提示
+function showToast(message, cardElement) {
+    const toast = document.createElement('div');
+    toast.className = 'pin-toast';
+    toast.textContent = message;
+    cardElement.appendChild(toast);
+
+    // 淡入
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // 2秒後淡出並移除
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
+}
+
+// 優化商家名稱顯示（去重、選擇最完整的名稱）
+function optimizeMerchantName(merchant) {
+    if (!merchant) return '';
+
+    // 如果包含頓號，說明有多個項目
+    if (merchant.includes('、')) {
+        const items = merchant.split('、').map(s => s.trim()).filter(Boolean);
+
+        // 去重
+        const uniqueItems = [...new Set(items)];
+
+        // 如果只剩一個，直接返回
+        if (uniqueItems.length === 1) {
+            return uniqueItems[0];
+        }
+
+        // 選擇最長的名稱（通常是最完整的）
+        // 例如："街口支付" vs "街口" -> 選擇 "街口支付"
+        const sorted = uniqueItems.sort((a, b) => b.length - a.length);
+
+        // 檢查是否有包含關係
+        const longest = sorted[0];
+        const filtered = sorted.filter(item => {
+            // 如果 item 被 longest 包含，則過濾掉
+            return item === longest || !longest.includes(item);
+        });
+
+        // 如果過濾後只剩一個，返回它
+        if (filtered.length === 1) {
+            return filtered[0];
+        }
+
+        // 否則返回前兩個
+        return filtered.slice(0, 2).join('、');
+    }
+
+    return merchant;
+}
+
+// 打開我的配卡表 Modal
+async function openMyMappingsModal() {
+    const modal = document.getElementById('my-mappings-modal');
+    const mappingsList = document.getElementById('mappings-list');
+    const searchInput = document.getElementById('mappings-search');
+
+    if (!modal || !mappingsList) return;
+
+    // 渲染配卡表
+    renderMappingsList();
+
+    // 顯示 Modal
+    modal.style.display = 'flex';
+
+    // 綁定關閉按鈕
+    const closeBtn = document.getElementById('close-mappings-modal');
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+
+    // 點擊背景關閉
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    // 搜尋功能
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.oninput = () => {
+            renderMappingsList(searchInput.value.trim());
+        };
+    }
+}
+
+// 渲染配卡表清單（標準表格式，支援拖曳排序）
+function renderMappingsList(searchTerm = '') {
+    const mappingsList = document.getElementById('mappings-list');
+    if (!mappingsList) return;
+
+    // 篩選
+    let filteredMappings = userSpendingMappings;
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredMappings = userSpendingMappings.filter(m =>
+            m.merchant.toLowerCase().includes(term) ||
+            m.cardName.toLowerCase().includes(term)
+        );
+    }
+
+    if (filteredMappings.length === 0) {
+        mappingsList.innerHTML = `
+            <div class="mappings-empty">
+                <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                <p>${searchTerm ? '找不到符合的配對' : '還沒有配卡記錄'}</p>
+                <p style="font-size: 12px; margin-top: 8px;">查詢商家後，點擊結果卡片的釘選按鈕即可添加</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 確保每個 mapping 都有 order 欄位（用於拖曳排序）
+    filteredMappings.forEach((mapping, index) => {
+        if (mapping.order === undefined) {
+            mapping.order = index;
+        }
+    });
+
+    // 按 order 排序（用戶自訂順序）
+    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // 渲染標準表格
+    let html = `
+        <table class="mappings-table">
+            <thead>
+                <tr>
+                    <th class="drag-handle-header"></th>
+                    <th>商家</th>
+                    <th>卡片名稱</th>
+                    <th class="rate-column">回饋率</th>
+                    <th class="delete-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    filteredMappings.forEach((mapping, index) => {
+        const merchant = optimizeMerchantName(mapping.merchant);
+        html += `
+            <tr class="mapping-row"
+                draggable="true"
+                data-mapping-id="${mapping.id}"
+                data-index="${index}">
+                <td class="drag-handle">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                    </svg>
+                </td>
+                <td class="merchant-cell">${merchant}</td>
+                <td class="card-cell">${mapping.cardName}</td>
+                <td class="rate-cell">${mapping.cashbackRate}%</td>
+                <td class="delete-cell">
+                    <button class="mapping-delete-btn"
+                            data-mapping-id="${mapping.id}"
+                            title="刪除">×</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    mappingsList.innerHTML = html;
+
+    // 綁定刪除按鈕
+    mappingsList.querySelectorAll('.mapping-delete-btn').forEach(btn => {
+        btn.onclick = async (e) => {
+            e.preventDefault();
+            const mappingId = btn.dataset.mappingId;
+            if (confirm('確定要刪除這個配對嗎？')) {
+                await removeMapping(mappingId);
+                renderMappingsList(document.getElementById('mappings-search')?.value || '');
+
+                // 更新結果卡片的釘選狀態（如果結果還在顯示）
+                updatePinButtonsState();
+            }
+        };
+    });
+
+    // 綁定拖曳排序功能
+    initDragAndDrop();
+}
+
+// 初始化拖曳排序功能
+function initDragAndDrop() {
+    const rows = document.querySelectorAll('.mapping-row');
+    let draggedRow = null;
+    let draggedIndex = null;
+
+    rows.forEach(row => {
+        row.addEventListener('dragstart', function(e) {
+            draggedRow = this;
+            draggedIndex = parseInt(this.dataset.index);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+
+        row.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (this !== draggedRow) {
+                this.classList.add('drag-over');
+            }
+        });
+
+        row.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (this !== draggedRow) {
+                const targetIndex = parseInt(this.dataset.index);
+
+                // 更新陣列順序
+                reorderMappings(draggedIndex, targetIndex);
+            }
+        });
+
+        row.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+
+            // 移除所有 drag-over class
+            rows.forEach(r => r.classList.remove('drag-over'));
+        });
+    });
+}
+
+// 重新排序配卡表
+async function reorderMappings(fromIndex, toIndex) {
+    // 取得目前的篩選結果
+    const searchTerm = document.getElementById('mappings-search')?.value || '';
+    let filteredMappings = userSpendingMappings;
+
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredMappings = userSpendingMappings.filter(m =>
+            m.merchant.toLowerCase().includes(term) ||
+            m.cardName.toLowerCase().includes(term)
+        );
+    }
+
+    // 確保有 order 欄位並排序
+    filteredMappings.forEach((mapping, index) => {
+        if (mapping.order === undefined) {
+            mapping.order = index;
+        }
+    });
+    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // 移動元素
+    const [movedItem] = filteredMappings.splice(fromIndex, 1);
+    filteredMappings.splice(toIndex, 0, movedItem);
+
+    // 重新分配 order
+    filteredMappings.forEach((mapping, index) => {
+        mapping.order = index;
+    });
+
+    // 保存並重新渲染
+    await saveSpendingMappings(userSpendingMappings);
+    renderMappingsList(searchTerm);
+}
+
+// 更新釘選按鈕狀態
+function updatePinButtonsState() {
+    document.querySelectorAll('.pin-btn').forEach(btn => {
+        const cardId = btn.dataset.cardId;
+        const merchant = btn.dataset.merchant;
+        const pinned = isPinned(cardId, merchant);
+
+        if (pinned) {
+            btn.classList.add('pinned');
+            btn.title = '取消釘選';
+        } else {
+            btn.classList.remove('pinned');
+            btn.title = '釘選此配對';
+        }
+    });
+}
+
 // 檢查筆記是否有變更
 function hasNotesChanged(cardId, currentNotes) {
     const lastSaved = lastSavedNotes.get(cardId) || '';
@@ -3073,18 +3629,20 @@ async function showComparePaymentsModal() {
 
                 let cardsHTML = '';
                 pwc.cards.forEach((mc, index) => {
-                    const medal = index === 0 ? '🥇' : '🥈';
-                    const rateColor = index === 0 ? '#059669' : '#333333'; // 第一名绿色，第二名深灰色
+                    const isBest = index === 0;
+                    let capText = mc.cap ? `NT$${mc.cap.toLocaleString()}` : '無上限';
+                    let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
+
                     cardsHTML += `
-                        <div style="background: white; border-radius: 6px; padding: 10px; margin-top: 8px; border-left: 3px solid ${index === 0 ? '#10b981' : '#6b7280'};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="font-weight: 600; color: #374151;">
-                                    ${medal} ${mc.card.name}
+                        <div class="cashback-detail-item ${isBest ? 'best-cashback' : ''}" style="margin-top: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
+                                    ${bestBadge}
                                 </div>
-                                <div style="color: ${rateColor}; font-weight: 700; font-size: 1.1rem;">
-                                    ${mc.rate}%
-                                </div>
+                                <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
                             </div>
+                            <div class="cashback-condition">消費上限: ${capText}</div>
                         </div>
                     `;
                 });

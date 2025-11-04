@@ -52,10 +52,12 @@ header {
     padding: 2px 8px;
     font-size: 0.65rem;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, #1e40af, #3b82f6);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 4px;
     letter-spacing: 0.5px;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(30, 64, 175, 0.3);
 }
 
 .header-content p {
@@ -134,6 +136,11 @@ header p {
     font-size: 0.9rem;
     margin: 0;
     opacity: 0.8;
+}
+
+/* 行動支付區塊 */
+.header-section {
+    margin-top: 24px; /* 增加與上方信用卡區塊的間距 */
 }
 
 .section-title-row {
@@ -626,6 +633,7 @@ input[type="number"]:focus {
 
 /* Card result styling */
 .card-result {
+    position: relative;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px;
@@ -648,6 +656,12 @@ input[type="number"]:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
+}
+
+.card-name-with-pin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .card-name {
@@ -1952,6 +1966,257 @@ input[type="number"]:focus {
 }
 
 /* ============================================
+   My Mappings (配卡表) Styles
+   ============================================ */
+
+/* Floating My Mappings Button */
+.my-mappings-floating-btn {
+    position: fixed;
+    bottom: 72px;
+    right: 16px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    transition: all 0.2s ease;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.my-mappings-floating-btn:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+}
+
+.my-mappings-floating-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Pin Badge (+1 動畫) */
+.pin-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Pin Button on Card */
+.pin-btn {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: all 0.3s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.pin-btn:hover {
+    background: white;
+    border-color: #667eea;
+    color: #667eea;
+    transform: scale(1.1);
+}
+
+.pin-btn.pinned {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.pin-btn.pinned:hover {
+    background: #fde68a;
+    transform: scale(1.1);
+}
+
+/* Pin Toast (提示) */
+.pin-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(16, 185, 129, 0.95);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.pin-toast.show {
+    opacity: 1;
+}
+
+/* My Mappings Modal */
+#my-mappings-modal .modal-content {
+    max-width: 600px;
+}
+
+.mappings-search-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+}
+
+.mappings-search-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.mappings-list {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-top: 16px;
+}
+
+/* Standard table layout with drag and drop */
+.mappings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.mappings-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.mappings-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.mappings-table th.drag-handle-header {
+    width: 30px;
+    padding: 12px 8px;
+}
+
+.mappings-table th.rate-column {
+    width: 80px;
+    text-align: right;
+}
+
+.mappings-table th.delete-column {
+    width: 50px;
+    text-align: center;
+}
+
+.mappings-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background 0.2s;
+}
+
+.mappings-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.mappings-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.mappings-table td {
+    padding: 12px;
+}
+
+.mappings-table td.drag-handle {
+    cursor: grab;
+    color: #9ca3af;
+    padding: 12px 8px;
+    text-align: center;
+}
+
+.mappings-table td.drag-handle:active {
+    cursor: grabbing;
+}
+
+.mappings-table td.merchant-cell {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.mappings-table td.card-cell {
+    color: #4b5563;
+}
+
+.mappings-table td.rate-cell {
+    color: #10b981;
+    font-weight: 600;
+    text-align: right;
+}
+
+.mappings-table td.delete-cell {
+    text-align: center;
+}
+
+/* Drag and drop states */
+.mapping-row.dragging {
+    opacity: 0.5;
+    background: #f3f4f6;
+}
+
+.mapping-row.drag-over {
+    background: #e0e7ff;
+    border-top: 2px solid #667eea;
+}
+
+.mapping-delete-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.mapping-delete-btn:hover {
+    opacity: 1;
+}
+
+.mappings-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+}
+
+.mappings-empty svg {
+    margin: 0 auto 16px;
+    opacity: 0.5;
+}
+
+/* ============================================
    Feedback System Styles
    ============================================ */
 
@@ -2195,6 +2460,21 @@ input[type="number"]:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
+    .my-mappings-floating-btn {
+        bottom: 72px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    /* Hide text on mobile, only show icon */
+    .my-mappings-floating-btn span:last-child {
+        display: none;
+    }
+
     .feedback-floating-btn {
         bottom: 16px;
         right: 16px;
