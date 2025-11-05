@@ -3863,68 +3863,185 @@ async function saveUserPayments() {
 // Quick Search Options Management
 // ============================================
 
+// Temporary state for managing quick options in modal
+let tempSelectedOptions = [];
+let tempCustomOptions = [];
+
 function openManageQuickOptionsModal() {
     const modal = document.getElementById('manage-quick-options-modal');
-    const selectionContainer = document.getElementById('quick-options-selection');
 
-    if (!modal || !selectionContainer) {
-        console.error('Quick options modal elements not found');
+    if (!modal) {
+        console.error('Quick options modal not found');
         return;
     }
 
-    // Clear existing content
-    selectionContainer.innerHTML = '';
-
-    // Get all available options (default from cards.data)
-    const defaultOptions = getDefaultQuickSearchOptions();
-
-    // Get current user's selected options
-    const currentSelectedIds = quickSearchOptions.map(opt => opt.id || opt.displayName);
-
-    // Create checkbox for each option
-    defaultOptions.forEach((option, index) => {
-        const optionId = option.id || option.displayName;
-        const isSelected = currentSelectedIds.includes(optionId);
-
-        const optionDiv = document.createElement('div');
-        optionDiv.className = 'quick-option-item';
-        optionDiv.draggable = isSelected;
-        optionDiv.dataset.optionId = optionId;
-        optionDiv.dataset.index = index;
-
-        optionDiv.innerHTML = `
-            <input type="checkbox" class="quick-option-checkbox"
-                   id="quick-opt-${index}"
-                   ${isSelected ? 'checked' : ''}>
-            <label for="quick-opt-${index}" class="quick-option-info">
-                <span class="quick-option-icon">${option.icon}</span>
-                <span class="quick-option-name">${option.displayName}</span>
-            </label>
-        `;
-
-        // Add checkbox change event
-        const checkbox = optionDiv.querySelector('.quick-option-checkbox');
-        checkbox.addEventListener('change', (e) => {
-            optionDiv.draggable = e.target.checked;
-        });
-
-        selectionContainer.appendChild(optionDiv);
+    // Initialize temporary state with current options
+    tempSelectedOptions = JSON.parse(JSON.stringify(quickSearchOptions));
+    loadUserCustomOptions().then(customOpts => {
+        tempCustomOptions = customOpts || [];
+        renderQuickOptionsModal();
     });
 
-    // Setup modal close buttons
+    // Setup modal buttons
+    setupQuickOptionsModalButtons();
+
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+function renderQuickOptionsModal() {
+    renderSelectedTags();
+    renderAvailableTags();
+    renderCustomOptionsList();
+}
+
+function renderSelectedTags() {
+    const container = document.getElementById('selected-tags-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    tempSelectedOptions.forEach((option, index) => {
+        const tag = createTagElement(option, 'selected', index);
+        container.appendChild(tag);
+    });
+}
+
+function renderAvailableTags() {
+    const container = document.getElementById('available-tags-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Get all available options (default + custom)
+    const defaultOptions = getDefaultQuickSearchOptions();
+    const allOptions = [...defaultOptions, ...tempCustomOptions];
+
+    // Filter out already selected options
+    const selectedIds = tempSelectedOptions.map(opt => opt.id || opt.displayName);
+    const availableOptions = allOptions.filter(opt => !selectedIds.includes(opt.id || opt.displayName));
+
+    availableOptions.forEach((option) => {
+        const tag = createTagElement(option, 'available');
+        container.appendChild(tag);
+    });
+}
+
+function createTagElement(option, type, index) {
+    const tag = document.createElement('div');
+    tag.className = 'tag-item';
+    tag.dataset.optionId = option.id || option.displayName;
+    tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
+
+    if (type === 'selected') {
+        tag.draggable = true;
+        tag.dataset.index = index;
+        tag.innerHTML = `
+            <span class="tag-icon">${option.icon}</span>
+            <span class="tag-name">${option.displayName}</span>
+            <button class="tag-remove-btn" title="移除">×</button>
+        `;
+
+        // Remove button
+        const removeBtn = tag.querySelector('.tag-remove-btn');
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeOption(option);
+        };
+
+        // Drag and drop for reordering
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragend', handleDragEnd);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+    } else {
+        // Available tag with add button
+        tag.innerHTML = `
+            <button class="tag-add-btn" title="新增">+</button>
+            <span class="tag-icon">${option.icon}</span>
+            <span class="tag-name">${option.displayName}</span>
+        `;
+
+        const addBtn = tag.querySelector('.tag-add-btn');
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            addOption(option);
+        };
+    }
+
+    return tag;
+}
+
+function addOption(option) {
+    tempSelectedOptions.push(option);
+    renderQuickOptionsModal();
+}
+
+function removeOption(option) {
+    const optionId = option.id || option.displayName;
+    tempSelectedOptions = tempSelectedOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+    renderQuickOptionsModal();
+}
+
+// Drag and drop handlers
+let draggedElement = null;
+
+function handleDragStart(e) {
+    draggedElement = e.target;
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+
+    if (draggedElement !== e.target && e.target.classList.contains('tag-item')) {
+        const fromIndex = parseInt(draggedElement.dataset.index);
+        const toIndex = parseInt(e.target.dataset.index);
+
+        if (!isNaN(fromIndex) && !isNaN(toIndex)) {
+            // Reorder array
+            const item = tempSelectedOptions.splice(fromIndex, 1)[0];
+            tempSelectedOptions.splice(toIndex, 0, item);
+            renderQuickOptionsModal();
+        }
+    }
+
+    return false;
+}
+
+function setupQuickOptionsModalButtons() {
+    const modal = document.getElementById('manage-quick-options-modal');
     const closeBtn = document.getElementById('close-quick-options-modal');
     const cancelBtn = document.getElementById('cancel-quick-options-btn');
     const saveBtn = document.getElementById('save-quick-options-btn');
     const resetBtn = document.getElementById('reset-quick-options-btn');
+    const addCustomBtn = document.getElementById('add-custom-option-btn');
 
     if (closeBtn) {
         closeBtn.onclick = () => {
+            hideCustomOptionForm();
             modal.style.display = 'none';
         };
     }
 
     if (cancelBtn) {
         cancelBtn.onclick = () => {
+            hideCustomOptionForm();
             modal.style.display = 'none';
         };
     }
@@ -3932,6 +4049,7 @@ function openManageQuickOptionsModal() {
     if (saveBtn) {
         saveBtn.onclick = async () => {
             await saveQuickOptionsSelection();
+            hideCustomOptionForm();
             modal.style.display = 'none';
         };
     }
@@ -3943,32 +4061,26 @@ function openManageQuickOptionsModal() {
         };
     }
 
-    // Show modal
-    modal.style.display = 'flex';
+    if (addCustomBtn) {
+        addCustomBtn.onclick = () => {
+            showCustomOptionForm();
+        };
+    }
+
+    // Custom option form buttons
+    setupCustomOptionFormButtons();
 }
 
 async function saveQuickOptionsSelection() {
-    const selectionContainer = document.getElementById('quick-options-selection');
-    const defaultOptions = getDefaultQuickSearchOptions();
+    // Save selected options
+    const saved = await saveUserQuickSearchOptions(tempSelectedOptions);
 
-    // Get selected options in order
-    const selectedOptions = [];
-    const checkboxes = selectionContainer.querySelectorAll('.quick-option-checkbox:checked');
-
-    checkboxes.forEach(checkbox => {
-        const optionDiv = checkbox.closest('.quick-option-item');
-        const index = parseInt(optionDiv.dataset.index);
-        if (!isNaN(index) && defaultOptions[index]) {
-            selectedOptions.push(defaultOptions[index]);
-        }
-    });
-
-    // Save to storage
-    const saved = await saveUserQuickSearchOptions(selectedOptions);
+    // Save custom options
+    await saveUserCustomOptions(tempCustomOptions);
 
     if (saved) {
         // Update current options
-        quickSearchOptions = selectedOptions;
+        quickSearchOptions = tempSelectedOptions;
 
         // Re-render buttons
         renderQuickSearchButtons();
@@ -3978,6 +4090,176 @@ async function saveQuickOptionsSelection() {
         console.error('❌ 保存快捷選項失敗');
         alert('保存失敗，請稍後再試');
     }
+}
+
+// Custom options management
+async function loadUserCustomOptions() {
+    try {
+        if (currentUser && db) {
+            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
+            if (userDoc.exists() && userDoc.data().customQuickOptions) {
+                return userDoc.data().customQuickOptions;
+            }
+        }
+        const stored = localStorage.getItem('userCustomQuickOptions');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('載入自訂快捷選項時出錯:', error);
+    }
+    return [];
+}
+
+async function saveUserCustomOptions(customOptions) {
+    try {
+        if (currentUser && db) {
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                customQuickOptions: customOptions
+            }, { merge: true });
+        }
+        localStorage.setItem('userCustomQuickOptions', JSON.stringify(customOptions));
+        return true;
+    } catch (error) {
+        console.error('保存自訂快捷選項時出錯:', error);
+        return false;
+    }
+}
+
+function renderCustomOptionsList() {
+    const container = document.getElementById('custom-options-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (tempCustomOptions.length === 0) {
+        return;
+    }
+
+    tempCustomOptions.forEach((option) => {
+        const item = document.createElement('div');
+        item.className = 'custom-option-item';
+        item.innerHTML = `
+            <div class="custom-option-info">
+                <span class="tag-icon">${option.icon}</span>
+                <span class="tag-name">${option.displayName}</span>
+                <span style="color: #6b7280; font-size: 0.85rem;">(${option.merchants.join(', ')})</span>
+            </div>
+            <button class="custom-option-delete">刪除</button>
+        `;
+
+        const deleteBtn = item.querySelector('.custom-option-delete');
+        deleteBtn.onclick = () => {
+            deleteCustomOption(option);
+        };
+
+        container.appendChild(item);
+    });
+}
+
+function showCustomOptionForm() {
+    const form = document.getElementById('custom-option-form');
+    const addBtn = document.getElementById('add-custom-option-btn');
+
+    if (form && addBtn) {
+        form.style.display = 'block';
+        addBtn.style.display = 'none';
+
+        // Clear form
+        document.getElementById('custom-display-name').value = '';
+        document.getElementById('custom-icon').value = '';
+        document.getElementById('custom-keywords').value = '';
+    }
+}
+
+function hideCustomOptionForm() {
+    const form = document.getElementById('custom-option-form');
+    const addBtn = document.getElementById('add-custom-option-btn');
+
+    if (form && addBtn) {
+        form.style.display = 'none';
+        addBtn.style.display = 'block';
+    }
+}
+
+function setupCustomOptionFormButtons() {
+    const saveBtn = document.getElementById('save-custom-option-btn');
+    const cancelBtn = document.getElementById('cancel-custom-option-btn');
+
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            saveCustomOption();
+        };
+    }
+
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            hideCustomOptionForm();
+        };
+    }
+}
+
+function saveCustomOption() {
+    const displayName = document.getElementById('custom-display-name').value.trim();
+    const icon = document.getElementById('custom-icon').value.trim();
+    const keywords = document.getElementById('custom-keywords').value.trim();
+
+    // Validation
+    if (!displayName) {
+        alert('請輸入顯示名稱');
+        return;
+    }
+
+    if (!icon) {
+        alert('請輸入圖示');
+        return;
+    }
+
+    if (!keywords) {
+        alert('請輸入至少一個關鍵字');
+        return;
+    }
+
+    // Parse keywords
+    const merchantsArray = keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
+
+    if (merchantsArray.length === 0) {
+        alert('請輸入至少一個有效的關鍵字');
+        return;
+    }
+
+    // Create new custom option
+    const newOption = {
+        id: `custom-${Date.now()}`,
+        displayName: displayName,
+        icon: icon,
+        merchants: merchantsArray,
+        isCustom: true
+    };
+
+    // Add to custom options
+    tempCustomOptions.push(newOption);
+
+    // Re-render
+    renderQuickOptionsModal();
+    hideCustomOptionForm();
+}
+
+function deleteCustomOption(option) {
+    if (!confirm(`確定要刪除「${option.displayName}」嗎？`)) {
+        return;
+    }
+
+    const optionId = option.id || option.displayName;
+
+    // Remove from custom options
+    tempCustomOptions = tempCustomOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+
+    // Remove from selected if present
+    tempSelectedOptions = tempSelectedOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+
+    // Re-render
+    renderQuickOptionsModal();
 }
 
 async function resetQuickOptionsToDefault() {

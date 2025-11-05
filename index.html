@@ -206,12 +206,51 @@
                     <button class="close-modal" id="close-quick-options-modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇要顯示在快捷選項列的項目。拖曳可調整順序。</p>
-                    <div class="modal-controls">
-                        <button id="reset-quick-options-btn" class="toggle-all-btn">恢復預設</button>
+                    <div class="modal-section">
+                        <div class="section-header">
+                            <h4>已選擇的快捷選項</h4>
+                            <button id="reset-quick-options-btn" class="link-btn">恢復預設</button>
+                        </div>
+                        <div class="selected-tags-container" id="selected-tags-container">
+                            <!-- Selected quick options as tags with × button -->
+                        </div>
+                        <p class="hint-text">點擊 × 移除項目，拖曳可調整順序</p>
                     </div>
-                    <div class="quick-options-selection" id="quick-options-selection">
-                        <!-- Quick options checkboxes will be populated by JavaScript -->
+
+                    <div class="modal-section">
+                        <h4>可用的快捷選項</h4>
+                        <div class="available-tags-container" id="available-tags-container">
+                            <!-- Available quick options as tags with + button -->
+                        </div>
+                    </div>
+
+                    <div class="modal-section">
+                        <h4>自訂快捷選項</h4>
+                        <button id="add-custom-option-btn" class="add-custom-btn">+ 新增自訂快捷選項</button>
+                        <div class="custom-options-list" id="custom-options-list">
+                            <!-- Custom options will be displayed here -->
+                        </div>
+                    </div>
+
+                    <!-- Custom option input form (hidden by default) -->
+                    <div class="custom-option-form" id="custom-option-form" style="display: none;">
+                        <h4>新增自訂快捷選項</h4>
+                        <div class="form-group">
+                            <label for="custom-display-name">顯示名稱</label>
+                            <input type="text" id="custom-display-name" placeholder="例如：便利商店" maxlength="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-icon">圖示 (emoji)</label>
+                            <input type="text" id="custom-icon" placeholder="🏪" maxlength="2">
+                        </div>
+                        <div class="form-group">
+                            <label for="custom-keywords">關鍵字 (用逗號分隔)</label>
+                            <input type="text" id="custom-keywords" placeholder="7-11, 全家, 萊爾富, OK">
+                        </div>
+                        <div class="form-actions">
+                            <button id="save-custom-option-btn" class="save-btn">新增</button>
+                            <button id="cancel-custom-option-btn" class="cancel-btn">取消</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
