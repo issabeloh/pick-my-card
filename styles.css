@@ -385,12 +385,12 @@ main {
 .tag-item {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 4px 10px;
     background: white;
     border: 1px solid #e5e7eb;
-    border-radius: 20px;
-    font-size: 0.9rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
     cursor: grab;
     transition: all 0.2s ease;
     user-select: none;
@@ -407,13 +407,14 @@ main {
 }
 
 .tag-icon {
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1;
 }
 
 .tag-name {
     font-weight: 500;
     color: #374151;
+    font-size: 0.85rem;
 }
 
 .tag-remove-btn,
@@ -590,6 +591,7 @@ main {
     scrollbar-color: #cbd5e1 #f1f5f9;
     scroll-behavior: smooth;
     position: relative;
+    margin: 0 40px; /* 為左右箭頭留出空間 */
 }
 
 .quick-search-container::-webkit-scrollbar {

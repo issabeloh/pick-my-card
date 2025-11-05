@@ -541,20 +541,29 @@ function handleMerchantInput() {
                 isOverseas: true
             }));
 
-        // 同時查找 items 中包含海外/國外的項目
-        const matchedItems = findMatchingItem(input);
+        // 同時查找 items 中包含"海外"或"國外"的所有項目
+        // 無論輸入哪個詞，都要匹配兩者
+        const matchedOverseas = findMatchingItem('海外');
+        const matchedAbroad = findMatchingItem('國外');
 
-        // 合併兩種結果
-        let allOverseasMatches = [];
+        // 合併所有匹配結果
+        let allOverseasMatches = [...cardsWithOverseas];
+        const existingItems = new Set(allOverseasMatches.map(m => `${m.cardId}-${m.item}`));
 
-        if (cardsWithOverseas.length > 0) {
-            allOverseasMatches = [...cardsWithOverseas];
+        // 添加包含"海外"的項目
+        if (matchedOverseas && matchedOverseas.length > 0) {
+            for (const item of matchedOverseas) {
+                const key = `${item.cardId}-${item.item}`;
+                if (!existingItems.has(key)) {
+                    allOverseasMatches.push(item);
+                    existingItems.add(key);
+                }
+            }
         }
 
-        if (matchedItems && matchedItems.length > 0) {
-            // 合併結果，避免重複
-            const existingItems = new Set(allOverseasMatches.map(m => `${m.cardId}-${m.item}`));
-            for (const item of matchedItems) {
+        // 添加包含"國外"的項目
+        if (matchedAbroad && matchedAbroad.length > 0) {
+            for (const item of matchedAbroad) {
                 const key = `${item.cardId}-${item.item}`;
                 if (!existingItems.has(key)) {
                     allOverseasMatches.push(item);
@@ -4143,7 +4152,6 @@ function renderCustomOptionsList() {
             <div class="custom-option-info">
                 <span class="tag-icon">${option.icon}</span>
                 <span class="tag-name">${option.displayName}</span>
-                <span style="color: #6b7280; font-size: 0.85rem;">(${option.merchants.join(', ')})</span>
             </div>
             <button class="custom-option-delete">刪除</button>
         `;
@@ -4168,7 +4176,6 @@ function showCustomOptionForm() {
         // Clear form
         document.getElementById('custom-display-name').value = '';
         document.getElementById('custom-icon').value = '';
-        document.getElementById('custom-keywords').value = '';
     }
 }
 
@@ -4202,7 +4209,6 @@ function setupCustomOptionFormButtons() {
 function saveCustomOption() {
     const displayName = document.getElementById('custom-display-name').value.trim();
     const icon = document.getElementById('custom-icon').value.trim();
-    const keywords = document.getElementById('custom-keywords').value.trim();
 
     // Validation
     if (!displayName) {
@@ -4215,25 +4221,12 @@ function saveCustomOption() {
         return;
     }
 
-    if (!keywords) {
-        alert('請輸入至少一個關鍵字');
-        return;
-    }
-
-    // Parse keywords
-    const merchantsArray = keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
-
-    if (merchantsArray.length === 0) {
-        alert('請輸入至少一個有效的關鍵字');
-        return;
-    }
-
-    // Create new custom option
+    // Create new custom option - use displayName as the search keyword
     const newOption = {
         id: `custom-${Date.now()}`,
         displayName: displayName,
         icon: icon,
-        merchants: merchantsArray,
+        merchants: [displayName], // Use display name as the only search keyword
         isCustom: true
     };
 
