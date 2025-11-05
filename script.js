@@ -815,35 +815,23 @@ function findMatchingItem(searchTerm) {
     if (allMatches.length === 0) return null;
 
     // Remove duplicates (same item appearing in multiple cards)
-    // Also remove fuzzy variants (e.g., "linepay" and "line pay" should be treated as the same)
+    // 使用originalItem（cards.data中的實際名稱）去重
+    // 這樣"海外"和"國外"會被視為不同的items（因為它們在cards.data中是不同的item名稱）
     const uniqueMatches = [];
     const seenItems = new Set();
 
-    // Helper function to get canonical form of an item (handles bidirectional fuzzy mappings)
-    const getCanonicalForm = (itemLower) => {
-        // If this item is in the fuzzy map, get all its variants
-        const variants = new Set([itemLower]);
-        if (fuzzySearchMap[itemLower]) {
-            variants.add(fuzzySearchMap[itemLower].toLowerCase());
-        }
-        // Also check reverse mappings
-        Object.entries(fuzzySearchMap).forEach(([key, value]) => {
-            if (value.toLowerCase() === itemLower) {
-                variants.add(key);
-            }
-        });
-        // Return the alphabetically first variant as canonical form
-        return Array.from(variants).sort()[0];
-    };
-
     for (const match of allMatches) {
-        const canonicalForm = getCanonicalForm(match.itemLower);
+        const itemKey = match.originalItem;
 
-        if (!seenItems.has(canonicalForm)) {
-            seenItems.add(canonicalForm);
+        if (!seenItems.has(itemKey)) {
+            seenItems.add(itemKey);
             uniqueMatches.push(match);
         }
     }
+
+    // 添加調試日誌
+    console.log(`🔍 findMatchingItem 搜尋結果: 找到 ${allMatches.length} 個匹配, 去重後 ${uniqueMatches.length} 個唯一item`);
+    uniqueMatches.forEach(m => console.log(`  ✓ ${m.originalItem}`));
     
     // Sort by match quality
     uniqueMatches.sort((a, b) => {
