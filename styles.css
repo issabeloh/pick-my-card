@@ -591,7 +591,6 @@ main {
     scrollbar-color: #cbd5e1 #f1f5f9;
     scroll-behavior: smooth;
     position: relative;
-    margin: 0 40px; /* 為左右箭頭留出空間 */
 }
 
 .quick-search-container::-webkit-scrollbar {
@@ -650,7 +649,7 @@ main {
 }
 
 .scroll-arrow-right {
-    right: -12px;
+    right: 4px; /* 移動到container內部 */
 }
 
 /* Hide arrows on mobile */

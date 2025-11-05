@@ -527,59 +527,6 @@ function handleMerchantInput() {
         return;
     }
 
-// 特殊處理：如果輸入「海外」相關詞，同時檢查 overseasCashback 和 items
-    if (input === '海外' || input === 'overseas' || input === '國外' || input.includes('海外') || input.includes('國外')) {
-        // 先檢查 overseasCashback
-        const cardsWithOverseas = cardsData.cards
-            .filter(card => card.overseasCashback && card.overseasCashback > 0)
-            .map(card => ({
-                cardId: card.id,
-                cardName: card.name,
-                item: '海外消費',
-                originalItem: '海外消費',
-                rate: card.overseasCashback,
-                isOverseas: true
-            }));
-
-        // 同時查找 items 中包含"海外"或"國外"的所有項目
-        // 無論輸入哪個詞，都要匹配兩者
-        const matchedOverseas = findMatchingItem('海外');
-        const matchedAbroad = findMatchingItem('國外');
-
-        // 合併所有匹配結果
-        let allOverseasMatches = [...cardsWithOverseas];
-        const existingItems = new Set(allOverseasMatches.map(m => `${m.cardId}-${m.item}`));
-
-        // 添加包含"海外"的項目
-        if (matchedOverseas && matchedOverseas.length > 0) {
-            for (const item of matchedOverseas) {
-                const key = `${item.cardId}-${item.item}`;
-                if (!existingItems.has(key)) {
-                    allOverseasMatches.push(item);
-                    existingItems.add(key);
-                }
-            }
-        }
-
-        // 添加包含"國外"的項目
-        if (matchedAbroad && matchedAbroad.length > 0) {
-            for (const item of matchedAbroad) {
-                const key = `${item.cardId}-${item.item}`;
-                if (!existingItems.has(key)) {
-                    allOverseasMatches.push(item);
-                    existingItems.add(key);
-                }
-            }
-        }
-
-        if (allOverseasMatches.length > 0) {
-            showMatchedItem(allOverseasMatches);
-            currentMatchedItem = allOverseasMatches;
-            validateInputs();
-            return;
-        }
-    }
-
     // Find matching items (now returns array)
     const matchedItems = findMatchingItem(input);
 
@@ -640,6 +587,9 @@ const fuzzySearchMap = {
     'line pay': 'linepay',
     'applepay': 'apple pay',
     'apple pay': 'applepay',
+    '海外': '國外',
+    '國外': '海外',
+    'overseas': '海外',
     'apple wallet': 'apple pay',
     'googlepay': 'google pay',
     'google pay': 'googlepay',
@@ -922,7 +872,7 @@ function showMatchedItem(matchedItems) {
         matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${uniqueItems[0]}</strong>`;
     } else {
         const itemList = uniqueItems.join('、');
-        matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
+        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${itemList}</strong>`;
     }
 }
     } else {
