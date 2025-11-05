@@ -276,13 +276,84 @@ main {
     margin-bottom: 0;
 }
 
+/* Quick Options Section */
+.quick-options-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.quick-options-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quick-options-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.quick-options-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.quick-option-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.quick-option-item:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.quick-option-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.quick-option-checkbox {
+    flex-shrink: 0;
+}
+
+.quick-option-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.quick-option-name {
+    font-weight: 500;
+    color: #1f2937;
+    font-size: 0.95rem;
+}
+
+.quick-option-icon {
+    font-size: 1.2rem;
+}
+
 /* Quick Search Wrapper */
 .quick-search-wrapper {
     position: relative;
-    margin-top: 12px;
     width: 100%;
     max-width: 100%;
     overflow: hidden; /* 防止内容撑大父容器 */
+    flex: 1;
 }
 
 /* Fade gradient hint for mobile scrollable content */
@@ -495,11 +566,11 @@ input[type="number"]:focus {
 
 .calculate-btn.compact {
     width: auto;
-    padding: 16px 24px;
-    font-size: 16px;
-    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 10px;
     flex-shrink: 0;
-    height: 56px;
+    height: 48px;
 }
 
 .calculate-btn:hover {
@@ -512,15 +583,6 @@ input[type="number"]:focus {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
-}
-
-.calculate-btn.compact {
-    width: auto;
-    padding: 16px 24px;
-    font-size: 16px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    height: 56px;
 }
 
 /* Results section */

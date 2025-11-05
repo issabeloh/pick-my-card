@@ -83,15 +83,75 @@ function initializePaymentsData() {
     }
 }
 
-// Initialize quick search options from cardsData
-function initializeQuickSearchOptions() {
+// Get default quick search options from cardsData
+function getDefaultQuickSearchOptions() {
     if (cardsData && cardsData.quickSearchOptions) {
-        quickSearchOptions = cardsData.quickSearchOptions;
+        return cardsData.quickSearchOptions;
+    }
+    return [];
+}
+
+// Initialize quick search options from cardsData or user settings
+async function initializeQuickSearchOptions() {
+    // Get default options from cards.data
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Try to load user customized options
+    const userOptions = await loadUserQuickSearchOptions();
+
+    if (userOptions && userOptions.length > 0) {
+        quickSearchOptions = userOptions;
+        console.log('✅ 快捷搜索選項已從用戶設定載入');
+        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個自定義快捷選項`);
+    } else if (defaultOptions.length > 0) {
+        quickSearchOptions = defaultOptions;
         console.log('✅ 快捷搜索選項已從 cards.data 載入');
-        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個快捷選項`);
+        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個預設快捷選項`);
     } else {
-        console.warn('⚠️ cards.data 中沒有 quickSearchOptions 資料');
+        console.warn('⚠️ 沒有可用的快捷搜索選項');
         quickSearchOptions = [];
+    }
+}
+
+// Load user customized quick search options
+async function loadUserQuickSearchOptions() {
+    try {
+        if (currentUser && db) {
+            // Load from Firebase
+            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
+            if (userDoc.exists() && userDoc.data().quickSearchOptions) {
+                return userDoc.data().quickSearchOptions;
+            }
+        }
+
+        // Fallback to localStorage
+        const stored = localStorage.getItem('userQuickSearchOptions');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('載入用戶快捷選項時出錯:', error);
+    }
+    return null;
+}
+
+// Save user customized quick search options
+async function saveUserQuickSearchOptions(options) {
+    try {
+        if (currentUser && db) {
+            // Save to Firebase
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                quickSearchOptions: options
+            }, { merge: true });
+        }
+
+        // Also save to localStorage as backup
+        localStorage.setItem('userQuickSearchOptions', JSON.stringify(options));
+        console.log('✅ 用戶快捷選項已保存');
+        return true;
+    } catch (error) {
+        console.error('保存用戶快捷選項時出錯:', error);
+        return false;
     }
 }
 
@@ -301,8 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize payments data
     initializePaymentsData();
 
-    // Initialize quick search options
-    initializeQuickSearchOptions();
+    // Initialize quick search options (async)
+    await initializeQuickSearchOptions();
 
     populateCardChips();
     populatePaymentChips();
@@ -412,6 +472,14 @@ function setupEventListeners() {
         });
     }
 
+    // Manage quick options button
+    const manageQuickOptionsBtn = document.getElementById('manage-quick-options-btn');
+    if (manageQuickOptionsBtn) {
+        manageQuickOptionsBtn.addEventListener('click', () => {
+            openManageQuickOptionsModal();
+        });
+    }
+
     // Compare payments button
     const comparePaymentsBtn = document.getElementById('compare-payments-btn');
     if (comparePaymentsBtn) {
@@ -459,27 +527,50 @@ function handleMerchantInput() {
         return;
     }
 
-// 特殊處理：如果輸入「海外」，直接檢查 overseasCashback
-if (input === '海外' || input === 'overseas') {
-    const cardsWithOverseas = cardsData.cards
-        .filter(card => card.overseasCashback && card.overseasCashback > 0)
-        .map(card => ({
-            cardId: card.id,
-            cardName: card.name,
-            item: '海外消費',
-            originalItem: '海外消費',  // 加上這行
-            rate: card.overseasCashback,
-            isOverseas: true
-        }));
-    
-    if (cardsWithOverseas.length > 0) {
-        showMatchedItem(cardsWithOverseas);
-        currentMatchedItem = cardsWithOverseas;
-        validateInputs();
-        return;
+// 特殊處理：如果輸入「海外」相關詞，同時檢查 overseasCashback 和 items
+    if (input === '海外' || input === 'overseas' || input === '國外' || input.includes('海外') || input.includes('國外')) {
+        // 先檢查 overseasCashback
+        const cardsWithOverseas = cardsData.cards
+            .filter(card => card.overseasCashback && card.overseasCashback > 0)
+            .map(card => ({
+                cardId: card.id,
+                cardName: card.name,
+                item: '海外消費',
+                originalItem: '海外消費',
+                rate: card.overseasCashback,
+                isOverseas: true
+            }));
+
+        // 同時查找 items 中包含海外/國外的項目
+        const matchedItems = findMatchingItem(input);
+
+        // 合併兩種結果
+        let allOverseasMatches = [];
+
+        if (cardsWithOverseas.length > 0) {
+            allOverseasMatches = [...cardsWithOverseas];
+        }
+
+        if (matchedItems && matchedItems.length > 0) {
+            // 合併結果，避免重複
+            const existingItems = new Set(allOverseasMatches.map(m => `${m.cardId}-${m.item}`));
+            for (const item of matchedItems) {
+                const key = `${item.cardId}-${item.item}`;
+                if (!existingItems.has(key)) {
+                    allOverseasMatches.push(item);
+                    existingItems.add(key);
+                }
+            }
+        }
+
+        if (allOverseasMatches.length > 0) {
+            showMatchedItem(allOverseasMatches);
+            currentMatchedItem = allOverseasMatches;
+            validateInputs();
+            return;
+        }
     }
-}
-    
+
     // Find matching items (now returns array)
     const matchedItems = findMatchingItem(input);
 
@@ -3744,6 +3835,152 @@ async function saveUserPayments() {
         }
     } catch (error) {
         console.error('Error saving user payments to localStorage:', error);
+    }
+}
+
+// ============================================
+// Quick Search Options Management
+// ============================================
+
+function openManageQuickOptionsModal() {
+    const modal = document.getElementById('manage-quick-options-modal');
+    const selectionContainer = document.getElementById('quick-options-selection');
+
+    if (!modal || !selectionContainer) {
+        console.error('Quick options modal elements not found');
+        return;
+    }
+
+    // Clear existing content
+    selectionContainer.innerHTML = '';
+
+    // Get all available options (default from cards.data)
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Get current user's selected options
+    const currentSelectedIds = quickSearchOptions.map(opt => opt.id || opt.displayName);
+
+    // Create checkbox for each option
+    defaultOptions.forEach((option, index) => {
+        const optionId = option.id || option.displayName;
+        const isSelected = currentSelectedIds.includes(optionId);
+
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'quick-option-item';
+        optionDiv.draggable = isSelected;
+        optionDiv.dataset.optionId = optionId;
+        optionDiv.dataset.index = index;
+
+        optionDiv.innerHTML = `
+            <input type="checkbox" class="quick-option-checkbox"
+                   id="quick-opt-${index}"
+                   ${isSelected ? 'checked' : ''}>
+            <label for="quick-opt-${index}" class="quick-option-info">
+                <span class="quick-option-icon">${option.icon}</span>
+                <span class="quick-option-name">${option.displayName}</span>
+            </label>
+        `;
+
+        // Add checkbox change event
+        const checkbox = optionDiv.querySelector('.quick-option-checkbox');
+        checkbox.addEventListener('change', (e) => {
+            optionDiv.draggable = e.target.checked;
+        });
+
+        selectionContainer.appendChild(optionDiv);
+    });
+
+    // Setup modal close buttons
+    const closeBtn = document.getElementById('close-quick-options-modal');
+    const cancelBtn = document.getElementById('cancel-quick-options-btn');
+    const saveBtn = document.getElementById('save-quick-options-btn');
+    const resetBtn = document.getElementById('reset-quick-options-btn');
+
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            modal.style.display = 'none';
+        };
+    }
+
+    if (saveBtn) {
+        saveBtn.onclick = async () => {
+            await saveQuickOptionsSelection();
+            modal.style.display = 'none';
+        };
+    }
+
+    if (resetBtn) {
+        resetBtn.onclick = async () => {
+            await resetQuickOptionsToDefault();
+            modal.style.display = 'none';
+        };
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+async function saveQuickOptionsSelection() {
+    const selectionContainer = document.getElementById('quick-options-selection');
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Get selected options in order
+    const selectedOptions = [];
+    const checkboxes = selectionContainer.querySelectorAll('.quick-option-checkbox:checked');
+
+    checkboxes.forEach(checkbox => {
+        const optionDiv = checkbox.closest('.quick-option-item');
+        const index = parseInt(optionDiv.dataset.index);
+        if (!isNaN(index) && defaultOptions[index]) {
+            selectedOptions.push(defaultOptions[index]);
+        }
+    });
+
+    // Save to storage
+    const saved = await saveUserQuickSearchOptions(selectedOptions);
+
+    if (saved) {
+        // Update current options
+        quickSearchOptions = selectedOptions;
+
+        // Re-render buttons
+        renderQuickSearchButtons();
+
+        console.log('✅ 快捷選項已更新');
+    } else {
+        console.error('❌ 保存快捷選項失敗');
+        alert('保存失敗，請稍後再試');
+    }
+}
+
+async function resetQuickOptionsToDefault() {
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Clear user customization
+    try {
+        if (currentUser && db) {
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                quickSearchOptions: null
+            }, { merge: true });
+        }
+        localStorage.removeItem('userQuickSearchOptions');
+
+        // Update current options
+        quickSearchOptions = defaultOptions;
+
+        // Re-render buttons
+        renderQuickSearchButtons();
+
+        console.log('✅ 快捷選項已恢復為預設');
+    } catch (error) {
+        console.error('恢復預設快捷選項時出錯:', error);
+        alert('恢復預設失敗，請稍後再試');
     }
 }
 
