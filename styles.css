@@ -645,11 +645,11 @@ main {
 }
 
 .scroll-arrow-left {
-    left: -12px;
+    left: 4px; /* 移動到container內部左邊緣 */
 }
 
 .scroll-arrow-right {
-    right: 4px; /* 移動到container內部 */
+    right: 44px; /* container右邊緣（考慮manage按鈕32px + gap 8px） */
 }
 
 /* Hide arrows on mobile */

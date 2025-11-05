@@ -790,6 +790,10 @@ function findMatchingItem(searchTerm) {
         // Check cashbackRates items
         for (const rateGroup of card.cashbackRates) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
+            // Also check items_hide if exists
+            if (rateGroup.items_hide) {
+                checkItemMatches(rateGroup.items_hide, searchTerms, searchLower, allMatches, searchTerm);
+            }
         }
 
         // Check specialItems for CUBE card
@@ -2216,11 +2220,11 @@ basicCashbackDiv.innerHTML = basicContent;
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
-            
+
             if (rate.conditions) {
                 specialContent += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
             }
-            
+
             if (rate.period) {
                 specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
             }
@@ -2468,11 +2472,11 @@ async function updateCubeSpecialCashback(card) {
 function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
     const merchantsElement = document.getElementById(merchantsId);
     const buttonElement = document.getElementById(buttonId);
-    
+
     if (!merchantsElement || !buttonElement) return;
-    
+
     const isExpanded = buttonElement.textContent.includes('收起');
-    
+
     if (isExpanded) {
         // 收起
         merchantsElement.textContent = shortList;
@@ -2484,6 +2488,9 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
         buttonElement.textContent = '收起';
     }
 }
+
+// 將toggleMerchants暴露到全局作用域，確保onclick可以訪問
+window.toggleMerchants = toggleMerchants;
 
 // 用戶筆記相關功能
 let currentNotesCardId = null;
@@ -4166,16 +4173,11 @@ function saveCustomOption() {
         return;
     }
 
-    if (!icon) {
-        alert('請輸入圖示');
-        return;
-    }
-
     // Create new custom option - use displayName as the search keyword
     const newOption = {
         id: `custom-${Date.now()}`,
         displayName: displayName,
-        icon: icon,
+        icon: icon || '🔖', // 如果沒填寫圖示，使用預設emoji
         merchants: [displayName], // Use display name as the only search keyword
         isCustom: true
     };
