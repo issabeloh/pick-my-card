@@ -240,8 +240,16 @@
                             <input type="text" id="custom-display-name" placeholder="例如：7-11" maxlength="20">
                         </div>
                         <div class="form-group">
-                            <label for="custom-icon">圖示 (emoji)</label>
-                            <input type="text" id="custom-icon" placeholder="🏪">
+                            <label for="custom-icon">圖示 (選填)</label>
+                            <div class="emoji-picker-container">
+                                <div class="selected-emoji" id="selected-emoji">
+                                    <span class="emoji-placeholder">點擊選擇emoji</span>
+                                </div>
+                                <button type="button" class="clear-emoji-btn" id="clear-emoji-btn" style="display: none;">清除</button>
+                            </div>
+                            <div class="emoji-grid" id="emoji-grid" style="display: none;">
+                                <!-- Emoji grid will be populated by JavaScript -->
+                            </div>
                         </div>
                         <div class="form-actions">
                             <button id="save-custom-option-btn" class="save-btn">新增</button>

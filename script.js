@@ -178,8 +178,11 @@ function renderQuickSearchButtons() {
         button.className = 'quick-search-btn';
         button.dataset.merchants = option.merchants.join(',');
 
+        // 構建icon HTML（如果有的話）
+        const iconHtml = option.icon ? `<span class="icon">${option.icon}</span>` : '';
+
         button.innerHTML = `
-            <span class="icon">${option.icon}</span>
+            ${iconHtml}
             <span>${option.displayName}</span>
         `;
 
@@ -3899,11 +3902,14 @@ function createTagElement(option, type, index) {
     tag.dataset.optionId = option.id || option.displayName;
     tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
 
+    // 構建icon HTML（如果有的話）
+    const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+
     if (type === 'selected') {
         tag.draggable = true;
         tag.dataset.index = index;
         tag.innerHTML = `
-            <span class="tag-icon">${option.icon}</span>
+            ${iconHtml}
             <span class="tag-name">${option.displayName}</span>
             <button class="tag-remove-btn" title="移除">×</button>
         `;
@@ -3924,7 +3930,7 @@ function createTagElement(option, type, index) {
         // Available tag with add button
         tag.innerHTML = `
             <button class="tag-add-btn" title="新增">+</button>
-            <span class="tag-icon">${option.icon}</span>
+            ${iconHtml}
             <span class="tag-name">${option.displayName}</span>
         `;
 
@@ -4105,9 +4111,13 @@ function renderCustomOptionsList() {
     tempCustomOptions.forEach((option) => {
         const item = document.createElement('div');
         item.className = 'custom-option-item';
+
+        // 構建icon HTML（如果有的話）
+        const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+
         item.innerHTML = `
             <div class="custom-option-info">
-                <span class="tag-icon">${option.icon}</span>
+                ${iconHtml}
                 <span class="tag-name">${option.displayName}</span>
             </div>
             <button class="custom-option-delete">刪除</button>
@@ -4122,6 +4132,10 @@ function renderCustomOptionsList() {
     });
 }
 
+// Emoji選擇器相關變數
+let selectedEmoji = '';
+const commonEmojis = ['🏪', '🏬', '🛒', '🍔', '☕', '🍕', '🎬', '✈️', '🚗', '⛽', '🏨', '🎮', '📱', '💻', '👕', '👟', '📚', '💊', '🏥', '🎵', '🎨', '⚽', '🎾', '🏃'];
+
 function showCustomOptionForm() {
     const form = document.getElementById('custom-option-form');
     const addBtn = document.getElementById('add-custom-option-btn');
@@ -4132,17 +4146,78 @@ function showCustomOptionForm() {
 
         // Clear form
         document.getElementById('custom-display-name').value = '';
-        document.getElementById('custom-icon').value = '';
+
+        // Reset emoji picker
+        selectedEmoji = '';
+        updateEmojiDisplay();
+
+        // Setup emoji picker
+        setupEmojiPicker();
+    }
+}
+
+function setupEmojiPicker() {
+    const selectedEmojiDiv = document.getElementById('selected-emoji');
+    const emojiGrid = document.getElementById('emoji-grid');
+    const clearBtn = document.getElementById('clear-emoji-btn');
+
+    // Toggle emoji grid
+    selectedEmojiDiv.onclick = () => {
+        emojiGrid.style.display = emojiGrid.style.display === 'none' ? 'grid' : 'none';
+
+        // Populate emoji grid if empty
+        if (emojiGrid.children.length === 0) {
+            commonEmojis.forEach(emoji => {
+                const emojiBtn = document.createElement('div');
+                emojiBtn.className = 'emoji-option';
+                emojiBtn.textContent = emoji;
+                emojiBtn.onclick = () => {
+                    selectEmoji(emoji);
+                };
+                emojiGrid.appendChild(emojiBtn);
+            });
+        }
+    };
+
+    // Clear emoji button
+    clearBtn.onclick = () => {
+        selectedEmoji = '';
+        updateEmojiDisplay();
+    };
+}
+
+function selectEmoji(emoji) {
+    selectedEmoji = emoji;
+    updateEmojiDisplay();
+    // Hide emoji grid after selection
+    document.getElementById('emoji-grid').style.display = 'none';
+}
+
+function updateEmojiDisplay() {
+    const selectedEmojiDiv = document.getElementById('selected-emoji');
+    const clearBtn = document.getElementById('clear-emoji-btn');
+
+    if (selectedEmoji) {
+        selectedEmojiDiv.innerHTML = selectedEmoji;
+        clearBtn.style.display = 'block';
+    } else {
+        selectedEmojiDiv.innerHTML = '<span class="emoji-placeholder">點擊選擇emoji</span>';
+        clearBtn.style.display = 'none';
     }
 }
 
 function hideCustomOptionForm() {
     const form = document.getElementById('custom-option-form');
     const addBtn = document.getElementById('add-custom-option-btn');
+    const emojiGrid = document.getElementById('emoji-grid');
 
     if (form && addBtn) {
         form.style.display = 'none';
         addBtn.style.display = 'block';
+        // Hide emoji grid
+        if (emojiGrid) {
+            emojiGrid.style.display = 'none';
+        }
     }
 }
 
@@ -4165,7 +4240,6 @@ function setupCustomOptionFormButtons() {
 
 function saveCustomOption() {
     const displayName = document.getElementById('custom-display-name').value.trim();
-    const icon = document.getElementById('custom-icon').value.trim();
 
     // Validation
     if (!displayName) {
@@ -4177,7 +4251,7 @@ function saveCustomOption() {
     const newOption = {
         id: `custom-${Date.now()}`,
         displayName: displayName,
-        icon: icon || '🔖', // 如果沒填寫圖示，使用預設emoji
+        icon: selectedEmoji || '', // 使用選擇的emoji，沒選就留空
         merchants: [displayName], // Use display name as the only search keyword
         isCustom: true
     };
