@@ -274,30 +274,44 @@ main {
 
 .form-group.compact {
     margin-bottom: 0;
+    position: relative;
 }
 
-/* Quick Options Section */
-.quick-options-section {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
+/* Quick Search Wrapper */
+.quick-search-wrapper {
+    position: relative;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
-.quick-options-header {
+/* Manage Quick Options Button */
+.manage-quick-options-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 0;
+    background: transparent;
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: #6b7280;
 }
 
-.quick-options-label {
-    font-weight: 600;
+.manage-quick-options-btn:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
     color: #374151;
-    font-size: 0.95rem;
-    white-space: nowrap;
-    flex-shrink: 0;
 }
 
+/* Quick Options Selection Modal */
 .quick-options-selection {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -345,15 +359,7 @@ main {
 
 .quick-option-icon {
     font-size: 1.2rem;
-}
-
-/* Quick Search Wrapper */
-.quick-search-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden; /* 防止内容撑大父容器 */
-    flex: 1;
+    margin-right: 8px;
 }
 
 /* Fade gradient hint for mobile scrollable content */
@@ -570,7 +576,7 @@ input[type="number"]:focus {
     font-size: 15px;
     border-radius: 10px;
     flex-shrink: 0;
-    height: 48px;
+    height: 53.5px;
 }
 
 .calculate-btn:hover {
