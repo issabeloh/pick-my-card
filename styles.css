@@ -283,14 +283,14 @@ main {
     margin-top: 12px;
     width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* Manage Quick Options Button */
 .manage-quick-options-btn {
-    position: absolute;
-    bottom: 12px;
-    right: 0;
+    flex-shrink: 0;
     background: transparent;
     border: 1px solid #9ca3af;
     border-radius: 6px;
@@ -363,7 +363,7 @@ main {
 }
 
 /* Fade gradient hint for mobile scrollable content */
-.quick-search-wrapper::after {
+.quick-search-container::after {
     content: '';
     position: absolute;
     top: 0;
@@ -376,7 +376,7 @@ main {
 }
 
 @media (max-width: 768px) {
-    .quick-search-wrapper::after {
+    .quick-search-container::after {
         display: block; /* Show gradient on mobile */
     }
 }
@@ -388,11 +388,13 @@ main {
     overflow-x: auto;
     overflow-y: hidden;
     padding: 4px 0 8px 0;
-    max-width: 100%; /* 不超出父容器 */
+    flex: 1;
+    min-width: 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
     scroll-behavior: smooth;
+    position: relative;
 }
 
 .quick-search-container::-webkit-scrollbar {
