@@ -799,9 +799,18 @@ function findMatchingItem(searchTerm) {
         // Check cashbackRates items
         for (const rateGroup of card.cashbackRates) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
-            // Also check items_hide if exists
+            // Also check all _hide fields if they exist
             if (rateGroup.items_hide) {
                 checkItemMatches(rateGroup.items_hide, searchTerms, searchLower, allMatches, searchTerm);
+            }
+            if (rateGroup.category_hide) {
+                checkItemMatches([rateGroup.category_hide], searchTerms, searchLower, allMatches, searchTerm);
+            }
+            if (rateGroup.conditions_hide) {
+                checkItemMatches([rateGroup.conditions_hide], searchTerms, searchLower, allMatches, searchTerm);
+            }
+            if (rateGroup.period_hide) {
+                checkItemMatches([rateGroup.period_hide], searchTerms, searchLower, allMatches, searchTerm);
             }
         }
 
