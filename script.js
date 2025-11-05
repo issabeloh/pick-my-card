@@ -701,6 +701,11 @@ function findMatchingItem(searchTerm) {
         }
     });
 
+    console.log(`🔎 findMatchingItem 開始搜尋:`, {
+        原始輸入: searchTerm,
+        搜尋詞: searchTerms
+    });
+
     let allMatches = [];
     
     // Helper function to check item matches
@@ -774,6 +779,7 @@ function findMatchingItem(searchTerm) {
             }
 
             if (matchFound) {
+                console.log(`    ✓ 匹配到: "${item}" (搜尋詞: "${bestMatchTerm}")`);
                 allMatches.push({
                     originalItem: item,
                     searchTerm: searchTerm,
