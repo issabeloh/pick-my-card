@@ -1223,7 +1223,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                 for (const variant of searchVariants) {
                     let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                    if (exactMatch && (!rateGroup.hideInDisplay) && rateGroup.rate > bestRate) {
+                    // Note: We don't check hideInDisplay here because hidden rates should still be searchable
+                    if (exactMatch && rateGroup.rate > bestRate) {
                         bestRate = rateGroup.rate;
                         applicableCap = rateGroup.cap;
                         matchedItem = exactMatch;
