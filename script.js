@@ -942,27 +942,6 @@ async function calculateCashback() {
             console.log(`🔍 處理 ${currentMatchedItem.length} 個匹配項目`);
 
             for (const matchedItem of currentMatchedItem) {
-                // 特殊處理：如果是海外消費，使用 overseasCashback
-                if (matchedItem.isOverseas) {
-                    const itemResults = cardsToCompare
-                        .filter(card => card.overseasCashback && card.overseasCashback > 0)
-                        .map(card => ({
-                            rate: card.overseasCashback,
-                            cashbackAmount: Math.floor(amount * card.overseasCashback / 100),
-                            cap: card.overseasBonusCap || null,
-                            matchedItem: '海外消費',
-                            effectiveAmount: amount,
-                            card: card,
-                            matchedItemName: '海外消費'
-                        }));
-
-                    // Find best card for this item
-                    if (itemResults.length > 0) {
-                        itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-                        allItemResults.push(itemResults[0]);
-                    }
-                    continue; // Continue to next iteration
-                }
                 const searchTerm = matchedItem.originalItem.toLowerCase();
                 console.log(`  📝 計算項目: ${matchedItem.originalItem}`);
 
@@ -1231,7 +1210,19 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         matchedCategory = rateGroup.category || null;
                         matchedRateGroup = rateGroup;
                         cashbackRateMatch = true;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
+
+                        // Check if levelSettings has rate_hide to override the cashbackRate
+                        // This allows level-specific rates for items in cashbackRates
+                        if (levelSettings && levelSettings.rate_hide !== undefined) {
+                            bestRate = levelSettings.rate_hide;
+                            // Also update cap from levelSettings if available
+                            if (levelSettings.cap !== undefined) {
+                                applicableCap = levelSettings.cap;
+                            }
+                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
+                        } else {
+                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
+                        }
                         break;
                     }
                 }
