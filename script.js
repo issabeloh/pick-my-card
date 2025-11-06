@@ -971,7 +971,7 @@ async function calculateCashback() {
                     return {
                         ...result,
                         card: card,
-                        matchedItemName: matchedItem.originalItem
+                        matchedItemName: result.matchedItem // 使用卡片實際匹配到的item，而非搜尋詞
                     };
                 })).then(results => results.filter(result => result.cashbackAmount > 0));
 
