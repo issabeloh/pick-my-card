@@ -4106,11 +4106,9 @@ function renderCustomOptionsList() {
         const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
 
         item.innerHTML = `
-            <div class="custom-option-info">
-                ${iconHtml}
-                <span class="tag-name">${option.displayName}</span>
-            </div>
-            <button class="custom-option-delete">刪除</button>
+            ${iconHtml}
+            <span class="tag-name">${option.displayName}</span>
+            <button class="custom-option-delete" title="刪除">×</button>
         `;
 
         const deleteBtn = item.querySelector('.custom-option-delete');

@@ -474,36 +474,50 @@ main {
 .custom-options-list {
     margin-top: 12px;
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
 .custom-option-item {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
-    border-radius: 8px;
+    gap: 4px;
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.custom-option-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .custom-option-info {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     flex: 1;
 }
 
 .custom-option-delete {
     background: none;
     border: none;
-    color: #dc2626;
+    color: #ef4444;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    transition: background 0.2s ease;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    line-height: 1;
+    margin-left: 2px;
 }
 
 .custom-option-delete:hover {
