@@ -83,15 +83,75 @@ function initializePaymentsData() {
     }
 }
 
-// Initialize quick search options from cardsData
-function initializeQuickSearchOptions() {
+// Get default quick search options from cardsData
+function getDefaultQuickSearchOptions() {
     if (cardsData && cardsData.quickSearchOptions) {
-        quickSearchOptions = cardsData.quickSearchOptions;
+        return cardsData.quickSearchOptions;
+    }
+    return [];
+}
+
+// Initialize quick search options from cardsData or user settings
+async function initializeQuickSearchOptions() {
+    // Get default options from cards.data
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Try to load user customized options
+    const userOptions = await loadUserQuickSearchOptions();
+
+    if (userOptions && userOptions.length > 0) {
+        quickSearchOptions = userOptions;
+        console.log('✅ 快捷搜索選項已從用戶設定載入');
+        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個自定義快捷選項`);
+    } else if (defaultOptions.length > 0) {
+        quickSearchOptions = defaultOptions;
         console.log('✅ 快捷搜索選項已從 cards.data 載入');
-        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個快捷選項`);
+        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個預設快捷選項`);
     } else {
-        console.warn('⚠️ cards.data 中沒有 quickSearchOptions 資料');
+        console.warn('⚠️ 沒有可用的快捷搜索選項');
         quickSearchOptions = [];
+    }
+}
+
+// Load user customized quick search options
+async function loadUserQuickSearchOptions() {
+    try {
+        if (currentUser && db) {
+            // Load from Firebase
+            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
+            if (userDoc.exists() && userDoc.data().quickSearchOptions) {
+                return userDoc.data().quickSearchOptions;
+            }
+        }
+
+        // Fallback to localStorage
+        const stored = localStorage.getItem('userQuickSearchOptions');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('載入用戶快捷選項時出錯:', error);
+    }
+    return null;
+}
+
+// Save user customized quick search options
+async function saveUserQuickSearchOptions(options) {
+    try {
+        if (currentUser && db) {
+            // Save to Firebase
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                quickSearchOptions: options
+            }, { merge: true });
+        }
+
+        // Also save to localStorage as backup
+        localStorage.setItem('userQuickSearchOptions', JSON.stringify(options));
+        console.log('✅ 用戶快捷選項已保存');
+        return true;
+    } catch (error) {
+        console.error('保存用戶快捷選項時出錯:', error);
+        return false;
     }
 }
 
@@ -118,8 +178,11 @@ function renderQuickSearchButtons() {
         button.className = 'quick-search-btn';
         button.dataset.merchants = option.merchants.join(',');
 
+        // 構建icon HTML（如果有的話）
+        const iconHtml = option.icon ? `<span class="icon">${option.icon}</span>` : '';
+
         button.innerHTML = `
-            <span class="icon">${option.icon}</span>
+            ${iconHtml}
             <span>${option.displayName}</span>
         `;
 
@@ -301,8 +364,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize payments data
     initializePaymentsData();
 
-    // Initialize quick search options
-    initializeQuickSearchOptions();
+    // Initialize quick search options (async)
+    await initializeQuickSearchOptions();
 
     populateCardChips();
     populatePaymentChips();
@@ -412,6 +475,14 @@ function setupEventListeners() {
         });
     }
 
+    // Manage quick options button
+    const manageQuickOptionsBtn = document.getElementById('manage-quick-options-btn');
+    if (manageQuickOptionsBtn) {
+        manageQuickOptionsBtn.addEventListener('click', () => {
+            openManageQuickOptionsModal();
+        });
+    }
+
     // Compare payments button
     const comparePaymentsBtn = document.getElementById('compare-payments-btn');
     if (comparePaymentsBtn) {
@@ -459,27 +530,6 @@ function handleMerchantInput() {
         return;
     }
 
-// 特殊處理：如果輸入「海外」，直接檢查 overseasCashback
-if (input === '海外' || input === 'overseas') {
-    const cardsWithOverseas = cardsData.cards
-        .filter(card => card.overseasCashback && card.overseasCashback > 0)
-        .map(card => ({
-            cardId: card.id,
-            cardName: card.name,
-            item: '海外消費',
-            originalItem: '海外消費',  // 加上這行
-            rate: card.overseasCashback,
-            isOverseas: true
-        }));
-    
-    if (cardsWithOverseas.length > 0) {
-        showMatchedItem(cardsWithOverseas);
-        currentMatchedItem = cardsWithOverseas;
-        validateInputs();
-        return;
-    }
-}
-    
     // Find matching items (now returns array)
     const matchedItems = findMatchingItem(input);
 
@@ -540,6 +590,9 @@ const fuzzySearchMap = {
     'line pay': 'linepay',
     'applepay': 'apple pay',
     'apple pay': 'applepay',
+    '海外': '國外',
+    '國外': '海外',
+    'overseas': '海外',
     'apple wallet': 'apple pay',
     'googlepay': 'google pay',
     'google pay': 'googlepay',
@@ -648,6 +701,11 @@ function findMatchingItem(searchTerm) {
         }
     });
 
+    console.log(`🔎 findMatchingItem 開始搜尋:`, {
+        原始輸入: searchTerm,
+        搜尋詞: searchTerms
+    });
+
     let allMatches = [];
     
     // Helper function to check item matches
@@ -721,6 +779,7 @@ function findMatchingItem(searchTerm) {
             }
 
             if (matchFound) {
+                console.log(`    ✓ 匹配到: "${item}" (搜尋詞: "${bestMatchTerm}")`);
                 allMatches.push({
                     originalItem: item,
                     searchTerm: searchTerm,
@@ -737,7 +796,7 @@ function findMatchingItem(searchTerm) {
     
     // Collect all possible matches using all search terms
     for (const card of cardsData.cards) {
-        // Check cashbackRates items
+        // Check cashbackRates items (包含隱藏的rate，因為隱藏rate也在cashbackRates中)
         for (const rateGroup of card.cashbackRates) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
         }
@@ -758,14 +817,23 @@ function findMatchingItem(searchTerm) {
     if (allMatches.length === 0) return null;
 
     // Remove duplicates (same item appearing in multiple cards)
+    // 使用originalItem（cards.data中的實際名稱）去重
+    // 這樣"海外"和"國外"會被視為不同的items（因為它們在cards.data中是不同的item名稱）
     const uniqueMatches = [];
     const seenItems = new Set();
+
     for (const match of allMatches) {
-        if (!seenItems.has(match.itemLower)) {
-            seenItems.add(match.itemLower);
+        const itemKey = match.originalItem;
+
+        if (!seenItems.has(itemKey)) {
+            seenItems.add(itemKey);
             uniqueMatches.push(match);
         }
     }
+
+    // 添加調試日誌
+    console.log(`🔍 findMatchingItem 搜尋結果: 找到 ${allMatches.length} 個匹配, 去重後 ${uniqueMatches.length} 個唯一item`);
+    uniqueMatches.forEach(m => console.log(`  ✓ ${m.originalItem}`));
     
     // Sort by match quality
     uniqueMatches.sort((a, b) => {
@@ -801,7 +869,7 @@ function showMatchedItem(matchedItems) {
         matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${uniqueItems[0]}</strong>`;
     } else {
         const itemList = uniqueItems.join('、');
-        matchedItemDiv.innerHTML = `✓ 系統匹配到 ${matchedItems.length} 項: <strong>${itemList}</strong>`;
+        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${itemList}</strong>`;
     }
 }
     } else {
@@ -903,7 +971,7 @@ async function calculateCashback() {
                     return {
                         ...result,
                         card: card,
-                        matchedItemName: matchedItem.originalItem
+                        matchedItemName: result.matchedItem // 使用卡片實際匹配到的item，而非搜尋詞
                     };
                 })).then(results => results.filter(result => result.cashbackAmount > 0));
 
@@ -2145,11 +2213,11 @@ basicCashbackDiv.innerHTML = basicContent;
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
-            
+
             if (rate.conditions) {
                 specialContent += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
             }
-            
+
             if (rate.period) {
                 specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
             }
@@ -2397,11 +2465,11 @@ async function updateCubeSpecialCashback(card) {
 function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
     const merchantsElement = document.getElementById(merchantsId);
     const buttonElement = document.getElementById(buttonId);
-    
+
     if (!merchantsElement || !buttonElement) return;
-    
+
     const isExpanded = buttonElement.textContent.includes('收起');
-    
+
     if (isExpanded) {
         // 收起
         merchantsElement.textContent = shortList;
@@ -2413,6 +2481,9 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
         buttonElement.textContent = '收起';
     }
 }
+
+// 將toggleMerchants暴露到全局作用域，確保onclick可以訪問
+window.toggleMerchants = toggleMerchants;
 
 // 用戶筆記相關功能
 let currentNotesCardId = null;
@@ -3744,6 +3815,482 @@ async function saveUserPayments() {
         }
     } catch (error) {
         console.error('Error saving user payments to localStorage:', error);
+    }
+}
+
+// ============================================
+// Quick Search Options Management
+// ============================================
+
+// Temporary state for managing quick options in modal
+let tempSelectedOptions = [];
+let tempCustomOptions = [];
+
+function openManageQuickOptionsModal() {
+    const modal = document.getElementById('manage-quick-options-modal');
+
+    if (!modal) {
+        console.error('Quick options modal not found');
+        return;
+    }
+
+    // Initialize temporary state with current options
+    tempSelectedOptions = JSON.parse(JSON.stringify(quickSearchOptions));
+    loadUserCustomOptions().then(customOpts => {
+        tempCustomOptions = customOpts || [];
+        renderQuickOptionsModal();
+    });
+
+    // Setup modal buttons
+    setupQuickOptionsModalButtons();
+
+    // Show modal
+    modal.style.display = 'flex';
+}
+
+function renderQuickOptionsModal() {
+    renderSelectedTags();
+    renderAvailableTags();
+    renderCustomOptionsList();
+}
+
+function renderSelectedTags() {
+    const container = document.getElementById('selected-tags-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    tempSelectedOptions.forEach((option, index) => {
+        const tag = createTagElement(option, 'selected', index);
+        container.appendChild(tag);
+    });
+}
+
+function renderAvailableTags() {
+    const container = document.getElementById('available-tags-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Get all available options (default + custom)
+    const defaultOptions = getDefaultQuickSearchOptions();
+    const allOptions = [...defaultOptions, ...tempCustomOptions];
+
+    // Filter out already selected options
+    const selectedIds = tempSelectedOptions.map(opt => opt.id || opt.displayName);
+    const availableOptions = allOptions.filter(opt => !selectedIds.includes(opt.id || opt.displayName));
+
+    availableOptions.forEach((option) => {
+        const tag = createTagElement(option, 'available');
+        container.appendChild(tag);
+    });
+}
+
+function createTagElement(option, type, index) {
+    const tag = document.createElement('div');
+    tag.className = 'tag-item';
+    tag.dataset.optionId = option.id || option.displayName;
+    tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
+
+    // 構建icon HTML（如果有的話）
+    const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+
+    if (type === 'selected') {
+        tag.draggable = true;
+        tag.dataset.index = index;
+        tag.innerHTML = `
+            ${iconHtml}
+            <span class="tag-name">${option.displayName}</span>
+            <button class="tag-remove-btn" title="移除">×</button>
+        `;
+
+        // Remove button
+        const removeBtn = tag.querySelector('.tag-remove-btn');
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeOption(option);
+        };
+
+        // Drag and drop for reordering
+        tag.addEventListener('dragstart', handleDragStart);
+        tag.addEventListener('dragend', handleDragEnd);
+        tag.addEventListener('dragover', handleDragOver);
+        tag.addEventListener('drop', handleDrop);
+    } else {
+        // Available tag with add button
+        tag.innerHTML = `
+            <button class="tag-add-btn" title="新增">+</button>
+            ${iconHtml}
+            <span class="tag-name">${option.displayName}</span>
+        `;
+
+        const addBtn = tag.querySelector('.tag-add-btn');
+        addBtn.onclick = (e) => {
+            e.stopPropagation();
+            addOption(option);
+        };
+    }
+
+    return tag;
+}
+
+function addOption(option) {
+    tempSelectedOptions.push(option);
+    renderQuickOptionsModal();
+}
+
+function removeOption(option) {
+    const optionId = option.id || option.displayName;
+    tempSelectedOptions = tempSelectedOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+    renderQuickOptionsModal();
+}
+
+// Drag and drop handlers
+let draggedElement = null;
+
+function handleDragStart(e) {
+    draggedElement = e.target;
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+
+    if (draggedElement !== e.target && e.target.classList.contains('tag-item')) {
+        const fromIndex = parseInt(draggedElement.dataset.index);
+        const toIndex = parseInt(e.target.dataset.index);
+
+        if (!isNaN(fromIndex) && !isNaN(toIndex)) {
+            // Reorder array
+            const item = tempSelectedOptions.splice(fromIndex, 1)[0];
+            tempSelectedOptions.splice(toIndex, 0, item);
+            renderQuickOptionsModal();
+        }
+    }
+
+    return false;
+}
+
+function setupQuickOptionsModalButtons() {
+    const modal = document.getElementById('manage-quick-options-modal');
+    const closeBtn = document.getElementById('close-quick-options-modal');
+    const cancelBtn = document.getElementById('cancel-quick-options-btn');
+    const saveBtn = document.getElementById('save-quick-options-btn');
+    const resetBtn = document.getElementById('reset-quick-options-btn');
+    const addCustomBtn = document.getElementById('add-custom-option-btn');
+
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            hideCustomOptionForm();
+            modal.style.display = 'none';
+        };
+    }
+
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            hideCustomOptionForm();
+            modal.style.display = 'none';
+        };
+    }
+
+    if (saveBtn) {
+        saveBtn.onclick = async () => {
+            await saveQuickOptionsSelection();
+            hideCustomOptionForm();
+            modal.style.display = 'none';
+        };
+    }
+
+    if (resetBtn) {
+        resetBtn.onclick = async () => {
+            await resetQuickOptionsToDefault();
+            modal.style.display = 'none';
+        };
+    }
+
+    if (addCustomBtn) {
+        addCustomBtn.onclick = () => {
+            showCustomOptionForm();
+        };
+    }
+
+    // Custom option form buttons
+    setupCustomOptionFormButtons();
+}
+
+async function saveQuickOptionsSelection() {
+    // Save selected options
+    const saved = await saveUserQuickSearchOptions(tempSelectedOptions);
+
+    // Save custom options
+    await saveUserCustomOptions(tempCustomOptions);
+
+    if (saved) {
+        // Update current options
+        quickSearchOptions = tempSelectedOptions;
+
+        // Re-render buttons
+        renderQuickSearchButtons();
+
+        console.log('✅ 快捷選項已更新');
+    } else {
+        console.error('❌ 保存快捷選項失敗');
+        alert('保存失敗，請稍後再試');
+    }
+}
+
+// Custom options management
+async function loadUserCustomOptions() {
+    try {
+        if (currentUser && db) {
+            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
+            if (userDoc.exists() && userDoc.data().customQuickOptions) {
+                return userDoc.data().customQuickOptions;
+            }
+        }
+        const stored = localStorage.getItem('userCustomQuickOptions');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('載入自訂快捷選項時出錯:', error);
+    }
+    return [];
+}
+
+async function saveUserCustomOptions(customOptions) {
+    try {
+        if (currentUser && db) {
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                customQuickOptions: customOptions
+            }, { merge: true });
+        }
+        localStorage.setItem('userCustomQuickOptions', JSON.stringify(customOptions));
+        return true;
+    } catch (error) {
+        console.error('保存自訂快捷選項時出錯:', error);
+        return false;
+    }
+}
+
+function renderCustomOptionsList() {
+    const container = document.getElementById('custom-options-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (tempCustomOptions.length === 0) {
+        return;
+    }
+
+    tempCustomOptions.forEach((option) => {
+        const item = document.createElement('div');
+        item.className = 'custom-option-item';
+
+        // 構建icon HTML（如果有的話）
+        const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+
+        item.innerHTML = `
+            ${iconHtml}
+            <span class="tag-name">${option.displayName}</span>
+            <button class="custom-option-delete" title="刪除">×</button>
+        `;
+
+        const deleteBtn = item.querySelector('.custom-option-delete');
+        deleteBtn.onclick = () => {
+            deleteCustomOption(option);
+        };
+
+        container.appendChild(item);
+    });
+}
+
+// Emoji選擇器相關變數
+let selectedEmoji = '';
+const commonEmojis = ['🏪', '🏬', '🛒', '🍔', '☕', '🍕', '🎬', '✈️', '🚗', '⛽', '🏨', '🎮', '📱', '💻', '👕', '👟', '📚', '💊', '🏥', '🎵', '🎨', '⚽', '🎾', '🏃'];
+
+function showCustomOptionForm() {
+    const form = document.getElementById('custom-option-form');
+    const addBtn = document.getElementById('add-custom-option-btn');
+
+    if (form && addBtn) {
+        form.style.display = 'block';
+        addBtn.style.display = 'none';
+
+        // Clear form
+        document.getElementById('custom-display-name').value = '';
+
+        // Reset emoji picker
+        selectedEmoji = '';
+        updateEmojiDisplay();
+
+        // Setup emoji picker
+        setupEmojiPicker();
+    }
+}
+
+function setupEmojiPicker() {
+    const selectedEmojiDiv = document.getElementById('selected-emoji');
+    const emojiGrid = document.getElementById('emoji-grid');
+    const clearBtn = document.getElementById('clear-emoji-btn');
+
+    // Toggle emoji grid
+    selectedEmojiDiv.onclick = () => {
+        emojiGrid.style.display = emojiGrid.style.display === 'none' ? 'grid' : 'none';
+
+        // Populate emoji grid if empty
+        if (emojiGrid.children.length === 0) {
+            commonEmojis.forEach(emoji => {
+                const emojiBtn = document.createElement('div');
+                emojiBtn.className = 'emoji-option';
+                emojiBtn.textContent = emoji;
+                emojiBtn.onclick = () => {
+                    selectEmoji(emoji);
+                };
+                emojiGrid.appendChild(emojiBtn);
+            });
+        }
+    };
+
+    // Clear emoji button
+    clearBtn.onclick = () => {
+        selectedEmoji = '';
+        updateEmojiDisplay();
+    };
+}
+
+function selectEmoji(emoji) {
+    selectedEmoji = emoji;
+    updateEmojiDisplay();
+    // Hide emoji grid after selection
+    document.getElementById('emoji-grid').style.display = 'none';
+}
+
+function updateEmojiDisplay() {
+    const selectedEmojiDiv = document.getElementById('selected-emoji');
+    const clearBtn = document.getElementById('clear-emoji-btn');
+
+    if (selectedEmoji) {
+        selectedEmojiDiv.innerHTML = selectedEmoji;
+        clearBtn.style.display = 'block';
+    } else {
+        selectedEmojiDiv.innerHTML = '<span class="emoji-placeholder">點擊選擇emoji</span>';
+        clearBtn.style.display = 'none';
+    }
+}
+
+function hideCustomOptionForm() {
+    const form = document.getElementById('custom-option-form');
+    const addBtn = document.getElementById('add-custom-option-btn');
+    const emojiGrid = document.getElementById('emoji-grid');
+
+    if (form && addBtn) {
+        form.style.display = 'none';
+        addBtn.style.display = 'block';
+        // Hide emoji grid
+        if (emojiGrid) {
+            emojiGrid.style.display = 'none';
+        }
+    }
+}
+
+function setupCustomOptionFormButtons() {
+    const saveBtn = document.getElementById('save-custom-option-btn');
+    const cancelBtn = document.getElementById('cancel-custom-option-btn');
+
+    if (saveBtn) {
+        saveBtn.onclick = () => {
+            saveCustomOption();
+        };
+    }
+
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            hideCustomOptionForm();
+        };
+    }
+}
+
+function saveCustomOption() {
+    const displayName = document.getElementById('custom-display-name').value.trim();
+
+    // Validation
+    if (!displayName) {
+        alert('請輸入顯示名稱');
+        return;
+    }
+
+    // Create new custom option - use displayName as the search keyword
+    const newOption = {
+        id: `custom-${Date.now()}`,
+        displayName: displayName,
+        icon: selectedEmoji || '', // 使用選擇的emoji，沒選就留空
+        merchants: [displayName], // Use display name as the only search keyword
+        isCustom: true
+    };
+
+    // Add to custom options
+    tempCustomOptions.push(newOption);
+
+    // Re-render
+    renderQuickOptionsModal();
+    hideCustomOptionForm();
+}
+
+function deleteCustomOption(option) {
+    if (!confirm(`確定要刪除「${option.displayName}」嗎？`)) {
+        return;
+    }
+
+    const optionId = option.id || option.displayName;
+
+    // Remove from custom options
+    tempCustomOptions = tempCustomOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+
+    // Remove from selected if present
+    tempSelectedOptions = tempSelectedOptions.filter(opt => (opt.id || opt.displayName) !== optionId);
+
+    // Re-render
+    renderQuickOptionsModal();
+}
+
+async function resetQuickOptionsToDefault() {
+    const defaultOptions = getDefaultQuickSearchOptions();
+
+    // Clear user customization
+    try {
+        if (currentUser && db) {
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                quickSearchOptions: null
+            }, { merge: true });
+        }
+        localStorage.removeItem('userQuickSearchOptions');
+
+        // Update current options
+        quickSearchOptions = defaultOptions;
+
+        // Re-render buttons
+        renderQuickSearchButtons();
+
+        console.log('✅ 快捷選項已恢復為預設');
+    } catch (error) {
+        console.error('恢復預設快捷選項時出錯:', error);
+        alert('恢復預設失敗，請稍後再試');
     }
 }
 

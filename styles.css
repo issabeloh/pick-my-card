@@ -274,6 +274,7 @@ main {
 
 .form-group.compact {
     margin-bottom: 0;
+    position: relative;
 }
 
 /* Quick Search Wrapper */
@@ -282,11 +283,375 @@ main {
     margin-top: 12px;
     width: 100%;
     max-width: 100%;
-    overflow: hidden; /* 防止内容撑大父容器 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Manage Quick Options Button */
+.manage-quick-options-btn {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: #6b7280;
+}
+
+.manage-quick-options-btn:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+    color: #374151;
+}
+
+/* Quick Options Selection Modal */
+/* Modal sections */
+.modal-section {
+    margin-bottom: 24px;
+}
+
+.modal-section h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.section-header h4 {
+    margin-bottom: 0;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.link-btn:hover {
+    background: #eff6ff;
+}
+
+.hint-text {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+/* Tag containers */
+.selected-tags-container,
+.available-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 48px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+}
+
+.selected-tags-container {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.selected-tags-container:empty::before {
+    content: '尚未選擇任何項目';
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+/* Tag items */
+.tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    cursor: grab;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.tag-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.tag-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.tag-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.tag-name {
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.85rem;
+}
+
+.tag-remove-btn,
+.tag-add-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.tag-remove-btn {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.tag-remove-btn:hover {
+    background: #fee2e2;
+}
+
+.tag-add-btn {
+    color: #10b981;
+    margin-right: 2px;
+}
+
+.tag-add-btn:hover {
+    background: #d1fae5;
+}
+
+/* Custom options */
+.add-custom-btn {
+    background: #f3f4f6;
+    border: 1px dashed #9ca3af;
+    color: #374151;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    text-align: left;
+}
+
+.add-custom-btn:hover {
+    background: #e5e7eb;
+    border-color: #6b7280;
+}
+
+.custom-options-list {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.custom-option-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.custom-option-item:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.custom-option-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+}
+
+.custom-option-delete {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    line-height: 1;
+    margin-left: 2px;
+}
+
+.custom-option-delete:hover {
+    background: #fee2e2;
+}
+
+/* Custom option form */
+.custom-option-form {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.custom-option-form h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+}
+
+.custom-option-form .form-group {
+    margin-bottom: 12px;
+}
+
+.custom-option-form label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 6px;
+}
+
+.custom-option-form input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.custom-option-form input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Emoji Picker */
+.emoji-picker-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.selected-emoji {
+    flex: 1;
+    padding: 12px;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    font-size: 2rem;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selected-emoji:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.emoji-placeholder {
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+.clear-emoji-btn {
+    padding: 8px 12px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease;
+}
+
+.clear-emoji-btn:hover {
+    background: #dc2626;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+}
+
+.emoji-option {
+    font-size: 1.5rem;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    text-align: center;
+    background: white;
+    border: 1px solid transparent;
+}
+
+.emoji-option:hover {
+    background: #e0f2fe;
+    border-color: #3b82f6;
+    transform: scale(1.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
 }
 
 /* Fade gradient hint for mobile scrollable content */
-.quick-search-wrapper::after {
+.quick-search-container::after {
     content: '';
     position: absolute;
     top: 0;
@@ -299,7 +664,7 @@ main {
 }
 
 @media (max-width: 768px) {
-    .quick-search-wrapper::after {
+    .quick-search-container::after {
         display: block; /* Show gradient on mobile */
     }
 }
@@ -311,11 +676,13 @@ main {
     overflow-x: auto;
     overflow-y: hidden;
     padding: 4px 0 8px 0;
-    max-width: 100%; /* 不超出父容器 */
+    flex: 1;
+    min-width: 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
     scroll-behavior: smooth;
+    position: relative;
 }
 
 .quick-search-container::-webkit-scrollbar {
@@ -370,11 +737,11 @@ main {
 }
 
 .scroll-arrow-left {
-    left: -12px;
+    left: 4px; /* 移動到container內部左邊緣 */
 }
 
 .scroll-arrow-right {
-    right: -12px;
+    right: 44px; /* container右邊緣（考慮manage按鈕32px + gap 8px） */
 }
 
 /* Hide arrows on mobile */
@@ -495,11 +862,11 @@ input[type="number"]:focus {
 
 .calculate-btn.compact {
     width: auto;
-    padding: 16px 24px;
-    font-size: 16px;
-    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 10px;
     flex-shrink: 0;
-    height: 56px;
+    height: 53.5px;
 }
 
 .calculate-btn:hover {
@@ -512,15 +879,6 @@ input[type="number"]:focus {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
-}
-
-.calculate-btn.compact {
-    width: auto;
-    padding: 16px 24px;
-    font-size: 16px;
-    border-radius: 12px;
-    flex-shrink: 0;
-    height: 56px;
 }
 
 /* Results section */
