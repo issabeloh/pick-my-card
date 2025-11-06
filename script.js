@@ -1231,7 +1231,19 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         matchedCategory = rateGroup.category || null;
                         matchedRateGroup = rateGroup;
                         cashbackRateMatch = true;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
+
+                        // Check if levelSettings has rate_hide to override the cashbackRate
+                        // This allows level-specific rates for items in cashbackRates
+                        if (levelSettings && levelSettings.rate_hide !== undefined) {
+                            bestRate = levelSettings.rate_hide;
+                            // Also update cap from levelSettings if available
+                            if (levelSettings.cap !== undefined) {
+                                applicableCap = levelSettings.cap;
+                            }
+                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
+                        } else {
+                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
+                        }
                         break;
                     }
                 }
