@@ -4140,6 +4140,11 @@ function createTagElement(option, type, index) {
         tag.addEventListener('dragend', handleDragEnd);
         tag.addEventListener('dragover', handleDragOver);
         tag.addEventListener('drop', handleDrop);
+
+        // Touch events for mobile drag and drop
+        tag.addEventListener('touchstart', handleTouchStart, { passive: false });
+        tag.addEventListener('touchmove', handleTouchMove, { passive: false });
+        tag.addEventListener('touchend', handleTouchEnd);
     } else {
         // Available tag with add button
         tag.innerHTML = `
@@ -4171,6 +4176,9 @@ function removeOption(option) {
 
 // Drag and drop handlers
 let draggedElement = null;
+let touchDraggedElement = null;
+let touchStartY = 0;
+let touchStartX = 0;
 
 function handleDragStart(e) {
     draggedElement = e.target;
@@ -4208,6 +4216,61 @@ function handleDrop(e) {
     }
 
     return false;
+}
+
+// Touch event handlers for mobile drag and drop
+function handleTouchStart(e) {
+    touchDraggedElement = e.target.closest('.tag-item');
+    if (!touchDraggedElement) return;
+
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+
+    touchDraggedElement.classList.add('dragging');
+
+    // Prevent default to avoid scrolling while dragging
+    e.preventDefault();
+}
+
+function handleTouchMove(e) {
+    if (!touchDraggedElement) return;
+
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+
+    // Find the element under the touch point
+    const elementBelow = document.elementFromPoint(currentX, currentY);
+    const targetTag = elementBelow?.closest('.tag-item');
+
+    if (targetTag && targetTag !== touchDraggedElement && targetTag.classList.contains('tag-item')) {
+        const fromIndex = parseInt(touchDraggedElement.dataset.index);
+        const toIndex = parseInt(targetTag.dataset.index);
+
+        if (!isNaN(fromIndex) && !isNaN(toIndex) && fromIndex !== toIndex) {
+            // Reorder array
+            const item = tempSelectedOptions.splice(fromIndex, 1)[0];
+            tempSelectedOptions.splice(toIndex, 0, item);
+            renderQuickOptionsModal();
+
+            // Update the dragged element reference
+            const newTags = document.querySelectorAll('.selected-tags-container .tag-item');
+            touchDraggedElement = newTags[toIndex];
+            if (touchDraggedElement) {
+                touchDraggedElement.classList.add('dragging');
+            }
+        }
+    }
+}
+
+function handleTouchEnd(e) {
+    if (touchDraggedElement) {
+        touchDraggedElement.classList.remove('dragging');
+        touchDraggedElement = null;
+    }
 }
 
 function setupQuickOptionsModalButtons() {
