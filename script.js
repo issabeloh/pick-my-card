@@ -1215,52 +1215,80 @@ async function calculateCardCashback(card, searchTerm, amount) {
             };
         }
 
-        // Check if merchant matches special items
-        let matchedSpecialItem = null;
-        for (const variant of searchVariants) {
-            matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
-            if (matchedSpecialItem) {
-                console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
-                break;
-            }
-        }
+        // First, check cashbackRates if they exist (for cards like DBS Eco with special promotions)
+        let cashbackRateMatch = false;
+        if (card.cashbackRates && card.cashbackRates.length > 0) {
+            for (const rateGroup of card.cashbackRates) {
+                if (!rateGroup.items) continue;
 
-        if (!matchedSpecialItem && card.id === 'cathay-cube') {
-            console.log(`⚠️ ${card.name}: 未匹配到 (搜索變體: ${searchVariants.join(', ')}, specialItems 前3項: ${card.specialItems.slice(0, 3).join(', ')})`);
-        }
-
-        if (matchedSpecialItem) {
-            // CUBE card uses specialRate, other cards use rate
-            bestRate = levelSettings.specialRate || levelSettings.rate;
-            matchedItem = matchedSpecialItem;
-
-            // Set category from levelSettings or find from specialItemsWithCategory
-            if (levelSettings.category) {
-                matchedCategory = levelSettings.category;
-            } else if (card.id === 'cathay-cube' && card.specialItemsWithCategory) {
-                // Find which category this item belongs to
-                for (const [category, items] of Object.entries(card.specialItemsWithCategory)) {
-                    if (items.some(item => item.toLowerCase() === matchedSpecialItem.toLowerCase())) {
-                        matchedCategory = category;
+                for (const variant of searchVariants) {
+                    let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+                    if (exactMatch && (!rateGroup.hideInDisplay) && rateGroup.rate > bestRate) {
+                        bestRate = rateGroup.rate;
+                        applicableCap = rateGroup.cap;
+                        matchedItem = exactMatch;
+                        matchedCategory = rateGroup.category || null;
+                        matchedRateGroup = rateGroup;
+                        cashbackRateMatch = true;
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
                         break;
                     }
                 }
-                // Fallback if not found in categories
-                if (!matchedCategory) {
-                    matchedCategory = '玩數位、樂饗購、趣旅行';
+                if (cashbackRateMatch) break;
+            }
+        }
+
+        // If no cashbackRates match, check specialItems
+        if (!cashbackRateMatch) {
+            let matchedSpecialItem = null;
+            for (const variant of searchVariants) {
+                matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
+                if (matchedSpecialItem) {
+                    console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
+                    break;
                 }
-            } else {
-                matchedCategory = null; // 不再寫死「指定通路」
             }
 
-            // Set cap based on card type
-            applicableCap = levelSettings.cap || null;
-
-            // Set period from levelSettings if available
-            if (levelSettings.period) {
-                matchedRateGroup = { period: levelSettings.period };
+            if (!matchedSpecialItem && card.id === 'cathay-cube') {
+                console.log(`⚠️ ${card.name}: 未匹配到 (搜索變體: ${searchVariants.join(', ')}, specialItems 前3項: ${card.specialItems.slice(0, 3).join(', ')})`);
             }
-        } else if (card.id === 'cathay-cube') {
+
+            if (matchedSpecialItem) {
+                // CUBE card uses specialRate, other cards use rate
+                bestRate = levelSettings.specialRate || levelSettings.rate;
+                matchedItem = matchedSpecialItem;
+
+                // Set category from levelSettings or find from specialItemsWithCategory
+                if (levelSettings.category) {
+                    matchedCategory = levelSettings.category;
+                } else if (card.id === 'cathay-cube' && card.specialItemsWithCategory) {
+                    // Find which category this item belongs to
+                    for (const [category, items] of Object.entries(card.specialItemsWithCategory)) {
+                        if (items.some(item => item.toLowerCase() === matchedSpecialItem.toLowerCase())) {
+                            matchedCategory = category;
+                            break;
+                        }
+                    }
+                    // Fallback if not found in categories
+                    if (!matchedCategory) {
+                        matchedCategory = '玩數位、樂饗購、趣旅行';
+                    }
+                } else {
+                    matchedCategory = null; // 不再寫死「指定通路」
+                }
+
+                // Set cap based on card type
+                applicableCap = levelSettings.cap || null;
+
+                // Set period from levelSettings if available
+                if (levelSettings.period) {
+                    matchedRateGroup = { period: levelSettings.period };
+                }
+            }
+        }
+
+        // If still no match and this is CUBE card, check generalItems
+        if (bestRate === 0 && card.id === 'cathay-cube') {
             // CUBE card: check general items for 2% reward
             let matchedGeneralItem = null;
             let matchedGeneralCategory = null;
@@ -1286,19 +1314,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 bestRate = levelSettings.generalRate;
                 matchedItem = matchedGeneralItem;
                 matchedCategory = matchedGeneralCategory;
-            } else {
-                // No match - CUBE card gives 0 special rate
-                bestRate = 0;
-                matchedItem = null;
-                matchedCategory = null;
+                applicableCap = null; // CUBE card has no cap
             }
-            applicableCap = null; // CUBE card has no cap
-        } else {
-            // Other level-based cards (like Uni): no match means no special rate
-            bestRate = 0;
-            matchedItem = null;
-            matchedCategory = null;
+            // If no match at all, bestRate remains 0
         }
+        // For other level-based cards: if no match found (bestRate is still 0), it will return 0 cashback below
     } else {
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
@@ -2056,11 +2076,6 @@ basicContent += `</div>`; // ← 這裡關閉第一個區塊
 if (card.overseasCashback) {
     basicContent += `<div class="cashback-detail-item">`;
     basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
-    // Use overseasCashbackConditions if available, otherwise fall back to overseasConditions
-    const overseasCashbackConds = card.overseasCashbackConditions || card.overseasConditions;
-    if (overseasCashbackConds) {
-        basicContent += `<div class="cashback-condition">條件: ${overseasCashbackConds}</div>`;
-    }
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     basicContent += `</div>`;
 }
@@ -2068,10 +2083,10 @@ if (card.overseasCashback) {
 // Check for domesticBonusRate and overseasBonusRate in card level or levelSettings
 let domesticBonusRate = card.domesticBonusRate;
 let domesticBonusCap = card.domesticBonusCap;
-let domesticConditions = card.domesticBonusConditions || card.domesticConditions;
+let domesticConditions = card.domesticBonusConditions;
 let overseasBonusRate = card.overseasBonusRate;
 let overseasBonusCap = card.overseasBonusCap;
-let overseasConditions = card.overseasBonusConditions || card.overseasConditions;
+let overseasConditions = card.overseasBonusConditions;
 
 // If card has levels, check levelSettings for bonus rates
 if (card.hasLevels) {
@@ -2083,12 +2098,12 @@ if (card.hasLevels) {
     if (levelData.domesticBonusRate !== undefined) {
         domesticBonusRate = levelData.domesticBonusRate;
         domesticBonusCap = levelData.domesticBonusCap;
-        domesticConditions = levelData.domesticBonusConditions || levelData.domesticConditions || card.domesticBonusConditions || card.domesticConditions;
+        domesticConditions = levelData.domesticBonusConditions || card.domesticBonusConditions;
     }
     if (levelData.overseasBonusRate !== undefined) {
         overseasBonusRate = levelData.overseasBonusRate;
         overseasBonusCap = levelData.overseasBonusCap;
-        overseasConditions = levelData.overseasBonusConditions || levelData.overseasConditions || card.overseasBonusConditions || card.overseasConditions;
+        overseasConditions = levelData.overseasBonusConditions || card.overseasBonusConditions;
     }
 }
 
