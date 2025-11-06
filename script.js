@@ -1694,15 +1694,9 @@ function initializeAuth() {
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
     
-    // Sign in function
-    signInBtn.addEventListener('click', async () => {
-        try {
-            const result = await window.signInWithPopup(auth, window.googleProvider);
-            console.log('Sign in successful:', result.user);
-        } catch (error) {
-            console.error('Sign in failed:', error);
-            alert('登入失敗：' + error.message);
-        }
+    // Sign in function - open auth modal
+    signInBtn.addEventListener('click', () => {
+        openAuthModal('login');
     });
     
     // Sign out function
@@ -4865,4 +4859,212 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 }); // End of Feedback System DOMContentLoaded
+
+// ============================================
+// Auth Modal System (Login/Register with Email)
+// ============================================
+
+let authMode = 'login'; // 'login' or 'register'
+
+function openAuthModal(mode = 'login') {
+    authMode = mode;
+    const modal = document.getElementById('auth-modal');
+    const modalTitle = document.getElementById('auth-modal-title');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const switchText = document.getElementById('auth-switch-text');
+    const confirmPasswordGroup = document.getElementById('auth-confirm-password-group');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const authError = document.getElementById('auth-error');
+
+    // Clear form
+    document.getElementById('auth-form').reset();
+    authError.style.display = 'none';
+
+    if (mode === 'register') {
+        modalTitle.textContent = '註冊';
+        submitBtn.textContent = '註冊';
+        switchText.innerHTML = '已經有帳號？<a href="#" id="auth-switch-link">立即登入</a>';
+        confirmPasswordGroup.style.display = 'block';
+        forgotPasswordLink.style.display = 'none';
+    } else {
+        modalTitle.textContent = '登入';
+        submitBtn.textContent = '登入';
+        switchText.innerHTML = '還沒有帳號？<a href="#" id="auth-switch-link">立即註冊</a>';
+        confirmPasswordGroup.style.display = 'none';
+        forgotPasswordLink.style.display = 'inline-block';
+    }
+
+    modal.style.display = 'flex';
+
+    // Re-attach event listener for switch link
+    document.getElementById('auth-switch-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        openAuthModal(authMode === 'login' ? 'register' : 'login');
+    });
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('auth-modal');
+    modal.style.display = 'none';
+    document.getElementById('auth-form').reset();
+    document.getElementById('auth-error').style.display = 'none';
+}
+
+function showAuthError(message) {
+    const authError = document.getElementById('auth-error');
+    authError.textContent = message;
+    authError.style.display = 'block';
+}
+
+// Initialize auth modal event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const closeAuthModalBtn = document.getElementById('close-auth-modal');
+    const googleSignInBtn = document.getElementById('google-sign-in-btn');
+    const authForm = document.getElementById('auth-form');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const authModal = document.getElementById('auth-modal');
+
+    // Close modal
+    if (closeAuthModalBtn) {
+        closeAuthModalBtn.addEventListener('click', closeAuthModal);
+    }
+
+    // Close on backdrop click
+    if (authModal) {
+        authModal.addEventListener('click', (e) => {
+            if (e.target === authModal) {
+                closeAuthModal();
+            }
+        });
+    }
+
+    // Google sign in
+    if (googleSignInBtn) {
+        googleSignInBtn.addEventListener('click', async () => {
+            try {
+                const result = await window.signInWithPopup(auth, window.googleProvider);
+                console.log('Google sign in successful:', result.user);
+                closeAuthModal();
+            } catch (error) {
+                console.error('Google sign in failed:', error);
+                let errorMessage = '登入失敗，請稍後再試';
+                if (error.code === 'auth/popup-closed-by-user') {
+                    errorMessage = '登入視窗已關閉';
+                } else if (error.code === 'auth/popup-blocked') {
+                    errorMessage = '彈出視窗被瀏覽器阻擋，請允許彈出視窗';
+                }
+                showAuthError(errorMessage);
+            }
+        });
+    }
+
+    // Email/Password form submission
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const confirmPassword = document.getElementById('auth-confirm-password').value;
+            const submitBtn = document.getElementById('auth-submit-btn');
+
+            // Validation
+            if (!email || !password) {
+                showAuthError('請填寫所有欄位');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAuthError('密碼至少需要 6 個字元');
+                return;
+            }
+
+            if (authMode === 'register' && password !== confirmPassword) {
+                showAuthError('密碼不一致，請重新輸入');
+                return;
+            }
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = authMode === 'login' ? '登入中...' : '註冊中...';
+
+            try {
+                if (authMode === 'register') {
+                    // Register
+                    const result = await window.createUserWithEmailAndPassword(auth, email, password);
+                    console.log('Registration successful:', result.user);
+                    closeAuthModal();
+                } else {
+                    // Login
+                    const result = await window.signInWithEmailAndPassword(auth, email, password);
+                    console.log('Login successful:', result.user);
+                    closeAuthModal();
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                let errorMessage = '操作失敗，請稍後再試';
+
+                // Handle specific error codes
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = '此 Email 已被註冊';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = 'Email 格式不正確';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage = '找不到此帳號';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = '密碼錯誤';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = '嘗試次數過多，請稍後再試';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = '密碼強度不足';
+                        break;
+                    case 'auth/invalid-credential':
+                        errorMessage = 'Email 或密碼錯誤';
+                        break;
+                }
+
+                showAuthError(errorMessage);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = authMode === 'login' ? '登入' : '註冊';
+            }
+        });
+    }
+
+    // Forgot password
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('auth-email').value.trim();
+
+            if (!email) {
+                showAuthError('請先輸入您的 Email');
+                return;
+            }
+
+            try {
+                await window.sendPasswordResetEmail(auth, email);
+                showAuthError('✅ 密碼重設信已寄出，請檢查您的 Email');
+            } catch (error) {
+                console.error('Password reset error:', error);
+                let errorMessage = '發送失敗，請稍後再試';
+
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = '找不到此 Email 帳號';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Email 格式不正確';
+                }
+
+                showAuthError(errorMessage);
+            }
+        });
+    }
+}); // End of Auth Modal DOMContentLoaded
 
