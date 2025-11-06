@@ -796,22 +796,9 @@ function findMatchingItem(searchTerm) {
     
     // Collect all possible matches using all search terms
     for (const card of cardsData.cards) {
-        // Check cashbackRates items
+        // Check cashbackRates items (包含隱藏的rate，因為隱藏rate也在cashbackRates中)
         for (const rateGroup of card.cashbackRates) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
-            // Also check all _hide fields if they exist
-            if (rateGroup.items_hide) {
-                checkItemMatches(rateGroup.items_hide, searchTerms, searchLower, allMatches, searchTerm);
-            }
-            if (rateGroup.category_hide) {
-                checkItemMatches([rateGroup.category_hide], searchTerms, searchLower, allMatches, searchTerm);
-            }
-            if (rateGroup.conditions_hide) {
-                checkItemMatches([rateGroup.conditions_hide], searchTerms, searchLower, allMatches, searchTerm);
-            }
-            if (rateGroup.period_hide) {
-                checkItemMatches([rateGroup.period_hide], searchTerms, searchLower, allMatches, searchTerm);
-            }
         }
 
         // Check specialItems for CUBE card
