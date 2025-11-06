@@ -944,22 +944,45 @@ async function calculateCashback() {
             for (const matchedItem of currentMatchedItem) {
                 // 特殊處理：如果是海外消費，使用 overseasCashback
                 if (matchedItem.isOverseas) {
-                    const itemResults = cardsToCompare
-                        .filter(card => card.overseasCashback && card.overseasCashback > 0)
-                        .map(card => ({
-                            rate: card.overseasCashback,
-                            cashbackAmount: Math.floor(amount * card.overseasCashback / 100),
-                            cap: card.overseasBonusCap || null,
+                    const itemResults = await Promise.all(cardsToCompare.map(async card => {
+                        if (!card.overseasCashback || card.overseasCashback <= 0) return null;
+
+                        let rate = card.overseasCashback;
+                        let cap = card.overseasBonusCap || null;
+
+                        // Check if card has levels and levelSettings has rate_hide
+                        if (card.hasLevels && card.levelSettings) {
+                            const levelNames = Object.keys(card.levelSettings);
+                            const defaultLevel = levelNames[0];
+                            const savedLevel = await getCardLevel(card.id, defaultLevel);
+                            const levelData = card.levelSettings[savedLevel];
+
+                            if (levelData && levelData.rate_hide !== undefined) {
+                                rate = levelData.rate_hide;
+                                if (levelData.cap !== undefined) {
+                                    cap = levelData.cap;
+                                }
+                            }
+                        }
+
+                        return {
+                            rate: rate,
+                            cashbackAmount: Math.floor(amount * rate / 100),
+                            cap: cap,
                             matchedItem: '海外消費',
                             effectiveAmount: amount,
                             card: card,
                             matchedItemName: '海外消費'
-                        }));
+                        };
+                    }));
+
+                    // Filter out null results
+                    const validResults = itemResults.filter(r => r !== null);
 
                     // Find best card for this item
-                    if (itemResults.length > 0) {
-                        itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-                        allItemResults.push(itemResults[0]);
+                    if (validResults.length > 0) {
+                        validResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
+                        allItemResults.push(validResults[0]);
                     }
                     continue; // Continue to next iteration
                 }
