@@ -2188,8 +2188,8 @@ input[type="number"]:focus {
 }
 
 .social-link svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     transition: transform 0.3s ease;
 }
 
