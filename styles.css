@@ -2162,14 +2162,14 @@ input[type="number"]:focus {
 .social-link {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
 }
@@ -2188,8 +2188,8 @@ input[type="number"]:focus {
 }
 
 .social-link svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     transition: transform 0.3s ease;
 }
 
@@ -2199,7 +2199,7 @@ input[type="number"]:focus {
 
 .social-text {
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 /* Mobile responsiveness for social media */
@@ -2210,22 +2210,22 @@ input[type="number"]:focus {
     }
 
     .social-media-title {
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .social-link {
-        padding: 8px 12px;
-        font-size: 13px;
-        gap: 6px;
+        padding: 7px 10px;
+        font-size: 12px;
+        gap: 5px;
     }
 
     .social-link svg {
-        width: 18px;
-        height: 18px;
+        width: 15px;
+        height: 15px;
     }
 
     .social-text {
-        font-size: 12px;
+        font-size: 11px;
     }
 }
 
