@@ -288,26 +288,6 @@ main {
     gap: 8px;
 }
 
-/* Fade gradient hint for mobile scrollable content - fixed on the right */
-.quick-search-wrapper::after {
-    content: '';
-    position: absolute;
-    top: 12px; /* Align with container top */
-    right: 44px; /* Position before manage button (32px button + 8px gap + 4px padding) */
-    bottom: 20px; /* Account for scrollbar */
-    width: 40px;
-    background: linear-gradient(to left, rgba(255, 255, 255, 0.95), transparent);
-    pointer-events: none;
-    display: none; /* Hidden by default, shown on mobile */
-    z-index: 1;
-}
-
-@media (max-width: 768px) {
-    .quick-search-wrapper::after {
-        display: block; /* Show gradient on mobile */
-    }
-}
-
 /* Manage Quick Options Button */
 .manage-quick-options-btn {
     flex-shrink: 0;
