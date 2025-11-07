@@ -443,6 +443,11 @@
       const storage = getStorage(app);
       const provider = new GoogleAuthProvider();
 
+      // Configure Google provider to show account selection
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+
       // Make Firebase services available globally
       window.firebaseAuth = auth;
       window.db = db;

@@ -1825,20 +1825,33 @@ async function loadUserCards() {
     }
 }
 
-// Save user's selected cards to localStorage
-function saveUserCards() {
+// Save user's selected cards to localStorage and Firestore
+async function saveUserCards() {
     if (!currentUser) {
         console.log('No user logged in, skipping save');
         return;
     }
-    
+
+    const cardsArray = Array.from(userSelectedCards);
+
     try {
+        // Save to localStorage as backup
         const storageKey = `selectedCards_${currentUser.uid}`;
-        localStorage.setItem(storageKey, JSON.stringify(Array.from(userSelectedCards)));
-        console.log('Saved user cards to localStorage:', Array.from(userSelectedCards));
+        localStorage.setItem(storageKey, JSON.stringify(cardsArray));
+        console.log('✅ Saved user cards to localStorage:', cardsArray);
+
+        // Save to Firestore for cross-device sync
+        if (window.db && window.doc && window.setDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            await window.setDoc(docRef, {
+                selectedCards: cardsArray,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('☁️ Synced user cards to Firestore:', cardsArray);
+        }
     } catch (error) {
-        console.error('Error saving user cards to localStorage:', error);
-        throw error;
+        console.error('Error saving user cards:', error);
+        // Don't throw error - at least localStorage is saved
     }
 }
 
@@ -1869,29 +1882,29 @@ function setupManageCardsModal() {
     });
     
     // Save cards
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
-        
+
         checkboxes.forEach(checkbox => {
             if (checkbox.checked) {
                 newSelection.add(checkbox.value);
             }
         });
-        
+
         // Validate at least one card is selected
         if (newSelection.size === 0) {
             alert('請至少選擇一張信用卡');
             return;
         }
-        
+
         // Update and save
         userSelectedCards = newSelection;
-        saveUserCards();
-        
+        await saveUserCards();
+
         // Update UI immediately
         populateCardChips();
-        
+
         // Close modal
         closeModal();
     });
