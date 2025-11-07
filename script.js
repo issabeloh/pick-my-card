@@ -2848,8 +2848,8 @@ function generateMappingId() {
 
 // 讀取用戶的消費配卡表
 async function loadSpendingMappings() {
-    // 檢查 auth 是否已初始化
-    if (!auth || !auth.currentUser) {
+    // 檢查是否有登入用戶
+    if (!currentUser) {
         // 未登入用戶
         const localData = localStorage.getItem('spendingMappings');
         userSpendingMappings = localData ? JSON.parse(localData) : [];
@@ -2858,25 +2858,30 @@ async function loadSpendingMappings() {
     }
 
     try {
-        const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
-        if (!docRef || !window.getDoc) {
-            throw new Error('Firestore not available');
+        // 從 Firestore 的 users collection 讀取
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+
+            if (docSnap.exists() && docSnap.data().spendingMappings) {
+                const mappings = docSnap.data().spendingMappings;
+                userSpendingMappings = mappings;
+                console.log('✅ [配卡] 從 Firestore 讀取成功:', mappings.length, '筆');
+
+                // 更新本地快取
+                localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
+                return mappings;
+            }
         }
 
-        console.log('📋 [配卡] 從 Firestore 讀取中...', auth.currentUser.uid);
-        const docSnap = await window.getDoc(docRef);
-        const mappings = docSnap.exists() ? docSnap.data().mappings : [];
-
-        console.log('📋 [配卡] Firestore 讀取成功:', mappings.length, '筆');
-
-        // 更新本地快取
-        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
-        userSpendingMappings = mappings;
-
-        return mappings;
+        // Fallback to localStorage if Firestore fails or no data
+        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
+        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        console.log('📦 [配卡] 從本地快取載入 (fallback):', userSpendingMappings.length, '筆');
+        return userSpendingMappings;
     } catch (error) {
         console.error('❌ [配卡] 讀取失敗，使用本地快取:', error);
-        const localData = localStorage.getItem(`spendingMappings_${auth.currentUser.uid}`);
+        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
         userSpendingMappings = localData ? JSON.parse(localData) : [];
         console.log('📋 [配卡] 本地快取載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
@@ -2887,8 +2892,8 @@ async function loadSpendingMappings() {
 async function saveSpendingMappings(mappings) {
     userSpendingMappings = mappings;
 
-    // 檢查 auth 是否已初始化
-    if (!auth || !auth.currentUser) {
+    // 檢查是否有登入用戶
+    if (!currentUser) {
         // 未登入用戶只保存在本地
         localStorage.setItem('spendingMappings', JSON.stringify(mappings));
         console.log('💾 [配卡] 未登入，僅保存到本地');
@@ -2897,36 +2902,32 @@ async function saveSpendingMappings(mappings) {
 
     try {
         // 保存到本地快取
-        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
-        console.log('💾 [配卡] 本地快取已更新');
+        localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
+        console.log('✅ [配卡] 已保存到本地快取:', mappings.length, '筆');
 
-        // 保存到 Firestore
-        const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
-        if (!docRef || !window.setDoc) {
-            throw new Error('Firestore not available');
+        // 保存到 Firestore 的 users collection
+        if (window.db && window.doc && window.setDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            await window.setDoc(docRef, {
+                spendingMappings: mappings,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [配卡] 已同步到 Firestore:', mappings.length, '筆');
         }
 
-        console.log('💾 [配卡] 正在保存到 Firestore...', mappings.length, '筆');
-        await window.setDoc(docRef, {
-            mappings: mappings,
-            updatedAt: new Date()
-        });
-
-        console.log('✅ [配卡] Firestore 保存成功');
         return true;
     } catch (error) {
         console.error('❌ [配卡] Firestore 保存失敗:', error);
-        console.error('錯誤詳情:', error.message, error.code);
-        // 失敗時仍然保存在本地
-        localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
+        // 失敗時至少本地已保存
         return false;
     }
 }
 
 // 添加配對
 async function addMapping(cardId, cardName, merchant, cashbackRate) {
-    // 檢查 auth 是否已初始化
-    if (!auth || !auth.currentUser) {
+    // 檢查是否有登入用戶
+    if (!currentUser) {
         alert('請先登入才能使用此功能');
         return null;
     }
@@ -2975,8 +2976,8 @@ function isPinned(cardId, merchant) {
 
 // 切換釘選狀態
 async function togglePin(button, cardId, cardName, merchant, rate) {
-    // 檢查 auth 是否已初始化
-    if (!auth || !auth.currentUser) {
+    // 檢查是否有登入用戶
+    if (!currentUser) {
         alert('請先登入才能使用釘選功能');
         return;
     }
@@ -3386,38 +3387,69 @@ function updateSaveButtonState(cardId, currentNotes) {
 
 // 讀取免年費狀態
 async function loadFeeWaiverStatus(cardId) {
-    if (!auth.currentUser) return false;
-    
+    if (!currentUser) {
+        const localKey = `feeWaiver_local_${cardId}`;
+        return localStorage.getItem(localKey) === 'true';
+    }
+
     try {
-        const docRef = window.doc ? window.doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
-        const docSnap = await window.getDoc(docRef);
-        return docSnap.exists() ? docSnap.data().isWaived : false;
+        // 從 Firestore 的 users collection 讀取
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+
+            if (docSnap.exists() && docSnap.data().feeWaiverStatus) {
+                const isWaived = docSnap.data().feeWaiverStatus[cardId] || false;
+                // 更新本地快取
+                const localKey = `feeWaiver_${currentUser.uid}_${cardId}`;
+                localStorage.setItem(localKey, isWaived.toString());
+                console.log('✅ [免年費] 從 Firestore 讀取:', cardId, isWaived);
+                return isWaived;
+            }
+        }
+
+        // Fallback to localStorage
+        const localKey = `feeWaiver_${currentUser.uid}_${cardId}`;
+        const saved = localStorage.getItem(localKey) === 'true';
+        console.log('📦 [免年費] 從本地讀取 (fallback):', cardId, saved);
+        return saved;
     } catch (error) {
-        console.log('讀取免年費狀態失敗:', error);
-        const localKey = `feeWaiver_${auth.currentUser?.uid || 'local'}_${cardId}`;
+        console.error('❌ 讀取免年費狀態失敗:', error);
+        const localKey = `feeWaiver_${currentUser.uid}_${cardId}`;
         return localStorage.getItem(localKey) === 'true';
     }
 }
 
 // 儲存免年費狀態
 async function saveFeeWaiverStatus(cardId, isWaived) {
-    const localKey = `feeWaiver_${auth.currentUser?.uid || 'local'}_${cardId}`;
+    const localKey = `feeWaiver_${currentUser?.uid || 'local'}_${cardId}`;
     localStorage.setItem(localKey, isWaived.toString());
-    
-    if (!auth.currentUser) return;
-    
+    console.log('✅ [免年費] 已保存到本地快取:', cardId, isWaived);
+
+    if (!currentUser) return;
+
     try {
-        const docRef = window.doc ? window.doc(db, 'feeWaiverStatus', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
-        await window.setDoc(docRef, {
-            isWaived: isWaived,
-            updatedAt: new Date(),
-            cardId: cardId
-        });
-        console.log('免年費狀態已同步至雲端');
+        // 保存到 Firestore 的 users collection
+        if (window.db && window.doc && window.setDoc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+
+            // 先讀取現有的 feeWaiverStatus
+            const docSnap = await window.getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            const feeWaiverStatus = existingData.feeWaiverStatus || {};
+
+            // 更新特定卡片的狀態
+            feeWaiverStatus[cardId] = isWaived;
+
+            await window.setDoc(docRef, {
+                feeWaiverStatus: feeWaiverStatus,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [免年費] 已同步到 Firestore:', cardId, isWaived);
+        }
     } catch (error) {
-        console.error('雲端儲存免年費狀態失敗:', error);
+        console.error('❌ [免年費] Firestore 保存失敗:', error);
     }
 }
 
@@ -3451,28 +3483,38 @@ async function setupFeeWaiverStatus(cardId) {
 // 讀取結帳日期
 async function loadBillingDates(cardId) {
     const defaultDates = { billingDate: '', statementDate: '' };
-    
-    if (!auth.currentUser) {
+
+    if (!currentUser) {
         const localKey = `billingDates_local_${cardId}`;
         const saved = localStorage.getItem(localKey);
         return saved ? JSON.parse(saved) : defaultDates;
     }
-    
+
     try {
-        const docRef = window.doc ? window.doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
-        const docSnap = await window.getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            return {
-                billingDate: data.billingDate || '',
-                statementDate: data.statementDate || ''
-            };
+        // 從 Firestore 的 users collection 讀取
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+
+            if (docSnap.exists() && docSnap.data().billingDates && docSnap.data().billingDates[cardId]) {
+                const dates = docSnap.data().billingDates[cardId];
+                // 更新本地快取
+                const localKey = `billingDates_${currentUser.uid}_${cardId}`;
+                localStorage.setItem(localKey, JSON.stringify(dates));
+                console.log('✅ [結帳日期] 從 Firestore 讀取:', cardId, dates);
+                return dates;
+            }
         }
-        return defaultDates;
+
+        // Fallback to localStorage
+        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
+        const saved = localStorage.getItem(localKey);
+        const result = saved ? JSON.parse(saved) : defaultDates;
+        console.log('📦 [結帳日期] 從本地讀取 (fallback):', cardId, result);
+        return result;
     } catch (error) {
-        console.log('讀取結帳日期失敗:', error);
-        const localKey = `billingDates_${auth.currentUser?.uid || 'local'}_${cardId}`;
+        console.error('❌ 讀取結帳日期失敗:', error);
+        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
         const saved = localStorage.getItem(localKey);
         return saved ? JSON.parse(saved) : defaultDates;
     }
@@ -3484,23 +3526,35 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
         billingDate: billingDate || '',
         statementDate: statementDate || ''
     };
-    
-    const localKey = `billingDates_${auth.currentUser?.uid || 'local'}_${cardId}`;
+
+    const localKey = `billingDates_${currentUser?.uid || 'local'}_${cardId}`;
     localStorage.setItem(localKey, JSON.stringify(dateData));
-    
-    if (!auth.currentUser) return;
-    
+    console.log('✅ [結帳日期] 已保存到本地快取:', cardId, dateData);
+
+    if (!currentUser) return;
+
     try {
-        const docRef = window.doc ? window.doc(db, 'billingDates', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
-        await window.setDoc(docRef, {
-            ...dateData,
-            updatedAt: new Date(),
-            cardId: cardId
-        });
-        console.log('結帳日期已同步至雲端');
+        // 保存到 Firestore 的 users collection
+        if (window.db && window.doc && window.setDoc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+
+            // 先讀取現有的 billingDates
+            const docSnap = await window.getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            const billingDates = existingData.billingDates || {};
+
+            // 更新特定卡片的結帳日期
+            billingDates[cardId] = dateData;
+
+            await window.setDoc(docRef, {
+                billingDates: billingDates,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [結帳日期] 已同步到 Firestore:', cardId, dateData);
+        }
     } catch (error) {
-        console.error('雲端儲存結帳日期失敗:', error);
+        console.error('❌ [結帳日期] Firestore 保存失敗:', error);
     }
 }
 
