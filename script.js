@@ -2858,13 +2858,13 @@ async function loadSpendingMappings() {
     }
 
     try {
-        // 從 Firestore 讀取
+        // 從 Firestore 的 users collection 讀取
         if (window.db && window.doc && window.getDoc) {
-            const docRef = window.doc(window.db, 'spendingMappings', currentUser.uid);
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
 
-            if (docSnap.exists() && docSnap.data().mappings) {
-                const mappings = docSnap.data().mappings;
+            if (docSnap.exists() && docSnap.data().spendingMappings) {
+                const mappings = docSnap.data().spendingMappings;
                 userSpendingMappings = mappings;
                 console.log('✅ [配卡] 從 Firestore 讀取成功:', mappings.length, '筆');
 
@@ -2905,11 +2905,11 @@ async function saveSpendingMappings(mappings) {
         localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
         console.log('✅ [配卡] 已保存到本地快取:', mappings.length, '筆');
 
-        // 保存到 Firestore
+        // 保存到 Firestore 的 users collection
         if (window.db && window.doc && window.setDoc) {
-            const docRef = window.doc(window.db, 'spendingMappings', currentUser.uid);
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
             await window.setDoc(docRef, {
-                mappings: mappings,
+                spendingMappings: mappings,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
 
