@@ -2128,6 +2128,107 @@ input[type="number"]:focus {
     font-weight: 600;
 }
 
+/* Social Media Footer Styles */
+.social-media-footer {
+    max-width: 800px;
+    margin: 20px auto 10px;
+    padding: 0 24px;
+    text-align: center;
+}
+
+.social-media-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.social-media-title {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.social-media-links {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.social-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.social-link.instagram:hover {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.social-link svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.social-link:hover svg {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.social-text {
+    font-weight: 500;
+    font-size: 13px;
+}
+
+/* Mobile responsiveness for social media */
+@media (max-width: 600px) {
+    .social-media-footer {
+        padding: 0 16px;
+        margin: 16px auto 10px;
+    }
+
+    .social-media-title {
+        font-size: 11px;
+    }
+
+    .social-link {
+        padding: 8px 12px;
+        font-size: 13px;
+        gap: 6px;
+    }
+
+    .social-link svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .social-text {
+        font-size: 12px;
+    }
+}
+
 /* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
     max-width: 800px;
