@@ -2848,19 +2848,26 @@ function generateMappingId() {
 
 // 讀取用戶的消費配卡表
 async function loadSpendingMappings() {
-    if (!auth.currentUser) {
+    // 檢查 auth 是否已初始化
+    if (!auth || !auth.currentUser) {
         // 未登入用戶
         const localData = localStorage.getItem('spendingMappings');
         userSpendingMappings = localData ? JSON.parse(localData) : [];
+        console.log('📋 [配卡] 未登入，從本地載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     }
 
     try {
         const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
-        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+        if (!docRef || !window.getDoc) {
+            throw new Error('Firestore not available');
+        }
 
+        console.log('📋 [配卡] 從 Firestore 讀取中...', auth.currentUser.uid);
         const docSnap = await window.getDoc(docRef);
         const mappings = docSnap.exists() ? docSnap.data().mappings : [];
+
+        console.log('📋 [配卡] Firestore 讀取成功:', mappings.length, '筆');
 
         // 更新本地快取
         localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
@@ -2868,9 +2875,10 @@ async function loadSpendingMappings() {
 
         return mappings;
     } catch (error) {
-        console.log('讀取配卡表失敗，使用本地快取:', error);
+        console.error('❌ [配卡] 讀取失敗，使用本地快取:', error);
         const localData = localStorage.getItem(`spendingMappings_${auth.currentUser.uid}`);
         userSpendingMappings = localData ? JSON.parse(localData) : [];
+        console.log('📋 [配卡] 本地快取載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     }
 }
@@ -2879,28 +2887,36 @@ async function loadSpendingMappings() {
 async function saveSpendingMappings(mappings) {
     userSpendingMappings = mappings;
 
-    if (!auth.currentUser) {
+    // 檢查 auth 是否已初始化
+    if (!auth || !auth.currentUser) {
         // 未登入用戶只保存在本地
         localStorage.setItem('spendingMappings', JSON.stringify(mappings));
+        console.log('💾 [配卡] 未登入，僅保存到本地');
         return true;
     }
 
     try {
         // 保存到本地快取
         localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
+        console.log('💾 [配卡] 本地快取已更新');
 
         // 保存到 Firestore
         const docRef = window.doc ? window.doc(db, 'spendingMappings', auth.currentUser.uid) : null;
-        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+        if (!docRef || !window.setDoc) {
+            throw new Error('Firestore not available');
+        }
 
+        console.log('💾 [配卡] 正在保存到 Firestore...', mappings.length, '筆');
         await window.setDoc(docRef, {
             mappings: mappings,
             updatedAt: new Date()
         });
 
+        console.log('✅ [配卡] Firestore 保存成功');
         return true;
     } catch (error) {
-        console.error('雲端儲存配卡表失敗:', error);
+        console.error('❌ [配卡] Firestore 保存失敗:', error);
+        console.error('錯誤詳情:', error.message, error.code);
         // 失敗時仍然保存在本地
         localStorage.setItem(`spendingMappings_${auth.currentUser.uid}`, JSON.stringify(mappings));
         return false;
@@ -2909,7 +2925,8 @@ async function saveSpendingMappings(mappings) {
 
 // 添加配對
 async function addMapping(cardId, cardName, merchant, cashbackRate) {
-    if (!auth.currentUser) {
+    // 檢查 auth 是否已初始化
+    if (!auth || !auth.currentUser) {
         alert('請先登入才能使用此功能');
         return null;
     }
@@ -2927,16 +2944,26 @@ async function addMapping(cardId, cardName, merchant, cashbackRate) {
         hasChanged: false // 初始為未變動
     };
 
+    console.log('➕ [配卡] 新增配對:', cardName, '-', merchant, cashbackRate + '%');
     userSpendingMappings.push(newMapping);
-    await saveSpendingMappings(userSpendingMappings);
+    const saved = await saveSpendingMappings(userSpendingMappings);
+
+    if (!saved) {
+        console.warn('⚠️ [配卡] 保存到雲端失敗，但已保存到本地');
+    }
 
     return newMapping;
 }
 
 // 刪除配對
 async function removeMapping(mappingId) {
+    console.log('🗑️ [配卡] 刪除配對:', mappingId);
     userSpendingMappings = userSpendingMappings.filter(m => m.id !== mappingId);
-    await saveSpendingMappings(userSpendingMappings);
+    const saved = await saveSpendingMappings(userSpendingMappings);
+
+    if (!saved) {
+        console.warn('⚠️ [配卡] 刪除後保存到雲端失敗，但已保存到本地');
+    }
 }
 
 // 檢查是否已釘選
@@ -2948,7 +2975,8 @@ function isPinned(cardId, merchant) {
 
 // 切換釘選狀態
 async function togglePin(button, cardId, cardName, merchant, rate) {
-    if (!auth.currentUser) {
+    // 檢查 auth 是否已初始化
+    if (!auth || !auth.currentUser) {
         alert('請先登入才能使用釘選功能');
         return;
     }
@@ -2968,12 +2996,14 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
         }
     } else {
         // 釘選
-        await addMapping(cardId, cardName, merchant, rate);
-        button.classList.add('pinned');
-        button.title = '取消釘選';
+        const newMapping = await addMapping(cardId, cardName, merchant, rate);
+        if (newMapping) {
+            button.classList.add('pinned');
+            button.title = '取消釘選';
 
-        // 顯示成功動畫
-        showPinSuccessAnimation(button);
+            // 顯示成功動畫
+            showPinSuccessAnimation(button);
+        }
     }
 }
 
