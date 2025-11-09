@@ -609,6 +609,7 @@ const fuzzySearchMap = {
     'taiwanpay': '台灣pay',
     '悠遊付': 'easy wallet',
     'easywallet': '悠遊付',
+    '機票': '航空',
     '長榮': '長榮航空',
     'eva air': '長榮航空',
     'evaair': '長榮航空',
