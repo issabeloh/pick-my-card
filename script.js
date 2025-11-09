@@ -1352,53 +1352,27 @@ async function calculateCardCashback(card, searchTerm, amount) {
         }
         
         // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
-        // Do NOT add basicCashback on top unless it's a special case with domesticBonusRate
+        // Do NOT add basicCashback or domesticBonusRate on top
         specialCashback = Math.floor(effectiveSpecialAmount * bestRate / 100);
 
-        // Only handle additional bonus rates that are truly additive (like 永豐幣倍 domestic bonus)
+        // domesticBonusRate and overseasBonusRate are ONLY for basic cashback
+        // When there's a special rate (from cashbackRates), do NOT add these bonus rates
         let bonusRate = 0;
         let bonusCashback = 0;
 
-        // Handle special cards like 永豐幣倍 with separate domestic bonus
-        if (card.domesticBonusRate && card.domesticBonusCap && matchedItem !== '海外') {
-            bonusRate = card.domesticBonusRate;
-            let bonusAmount = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
-            bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
-        } else if (matchedItem === '海外' && card.overseasBonusRate && card.overseasBonusCap) {
-            bonusRate = card.overseasBonusRate;
-            let bonusAmount = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
-            bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
-        }
-        
         // Handle remaining amount if capped (excess amount gets basic cashback only)
         let remainingCashback = 0;
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
             // Remaining amount only gets basic cashback rate
             remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-
-            // Add bonus for remaining amount if still under bonus cap
-            if (bonusRate > 0) {
-                let remainingBonusAmount = remainingAmount;
-                if (matchedItem === '海外' && card.overseasBonusCap) {
-                    const usedBonus = Math.min(effectiveSpecialAmount, card.overseasBonusCap);
-                    const remainingBonusCapacity = Math.max(0, card.overseasBonusCap - usedBonus);
-                    remainingBonusAmount = Math.min(remainingAmount, remainingBonusCapacity);
-                } else if (card.domesticBonusCap) {
-                    const usedBonus = Math.min(effectiveSpecialAmount, card.domesticBonusCap);
-                    const remainingBonusCapacity = Math.max(0, card.domesticBonusCap - usedBonus);
-                    remainingBonusAmount = Math.min(remainingAmount, remainingBonusCapacity);
-                }
-                remainingCashback += Math.floor(remainingBonusAmount * bonusRate / 100);
-            }
         }
 
-        // Total cashback = special rate amount + bonus amount + remaining basic amount
+        // Total cashback = special rate amount + remaining basic amount
         cashbackAmount = specialCashback + bonusCashback + remainingCashback;
 
-        // Total rate is already in bestRate (no need to add basicRate)
-        // Only add bonusRate if it's truly additive
-        totalRate = Math.round((bestRate + bonusRate) * 10) / 10;
+        // Total rate is the special rate from cashbackRates (no bonusRate added)
+        totalRate = Math.round(bestRate * 10) / 10;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
     
