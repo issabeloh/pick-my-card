@@ -1686,6 +1686,7 @@ function initializeAuth() {
     
     // Helper functions to show/hide tool sections
     function showToolSections() {
+        // Main tool sections
         const inputSection = document.querySelector('.input-section');
         const resultsSection = document.querySelector('.results-section');
         const couponResultsSection = document.querySelector('.coupon-results-section');
@@ -1693,9 +1694,17 @@ function initializeAuth() {
         if (inputSection) inputSection.style.display = 'block';
         if (resultsSection) resultsSection.style.display = 'block';
         if (couponResultsSection) couponResultsSection.style.display = 'block';
+
+        // Header tool sections (cards and payments selection)
+        const supportedCards = document.querySelector('.supported-cards');
+        const headerSection = document.querySelector('.header-section');
+
+        if (supportedCards) supportedCards.style.display = 'block';
+        if (headerSection) headerSection.style.display = 'block';
     }
 
     function hideToolSections() {
+        // Main tool sections
         const inputSection = document.querySelector('.input-section');
         const resultsSection = document.querySelector('.results-section');
         const couponResultsSection = document.querySelector('.coupon-results-section');
@@ -1703,6 +1712,13 @@ function initializeAuth() {
         if (inputSection) inputSection.style.display = 'none';
         if (resultsSection) resultsSection.style.display = 'none';
         if (couponResultsSection) couponResultsSection.style.display = 'none';
+
+        // Header tool sections (cards and payments selection)
+        const supportedCards = document.querySelector('.supported-cards');
+        const headerSection = document.querySelector('.header-section');
+
+        if (supportedCards) supportedCards.style.display = 'none';
+        if (headerSection) headerSection.style.display = 'none';
     }
 
     // Listen for authentication state changes
