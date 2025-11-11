@@ -1686,12 +1686,19 @@ function initializeAuth() {
     
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
+        const productIntroSection = document.getElementById('product-intro-section');
+
         if (user) {
             // User is signed in
             console.log('User signed in:', user);
             currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
+
+            // Hide product introduction section when logged in
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
 
             // Set user photo with fallback
             if (user.photoURL) {
@@ -1730,6 +1737,11 @@ function initializeAuth() {
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
+            // Show product introduction section when not logged in
+            if (productIntroSection) {
+                productIntroSection.style.display = 'block';
+            }
+
             // Clear user info
             userPhoto.src = '';
             userPhoto.style.display = 'none';
@@ -1752,6 +1764,24 @@ function initializeAuth() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup "Start Using" button click event
+    const startUsingBtn = document.getElementById('start-using-btn');
+    if (startUsingBtn) {
+        startUsingBtn.addEventListener('click', () => {
+            const inputSection = document.querySelector('.input-section');
+            if (inputSection) {
+                inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Focus on merchant input after scrolling
+                setTimeout(() => {
+                    const merchantInput = document.getElementById('merchant-input');
+                    if (merchantInput) {
+                        merchantInput.focus();
+                    }
+                }, 500);
+            }
+        });
+    }
 }
 
 // Load user's selected cards from Firestore (with localStorage fallback)
