@@ -3209,14 +3209,18 @@ input[type="number"]:focus {
     transition: all 0.3s ease;
 }
 
-.feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    border-color: #3b82f6;
-}
+/* Hover effect removed - users shouldn't think cards are clickable */
 
 .feature-icon-placeholder {
     margin-bottom: 20px;
+}
+
+.feature-icon {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
 }
 
 .icon-box {

@@ -1684,6 +1684,27 @@ function initializeAuth() {
         }
     });
     
+    // Helper functions to show/hide tool sections
+    function showToolSections() {
+        const inputSection = document.querySelector('.input-section');
+        const resultsSection = document.querySelector('.results-section');
+        const couponResultsSection = document.querySelector('.coupon-results-section');
+
+        if (inputSection) inputSection.style.display = 'block';
+        if (resultsSection) resultsSection.style.display = 'block';
+        if (couponResultsSection) couponResultsSection.style.display = 'block';
+    }
+
+    function hideToolSections() {
+        const inputSection = document.querySelector('.input-section');
+        const resultsSection = document.querySelector('.results-section');
+        const couponResultsSection = document.querySelector('.coupon-results-section');
+
+        if (inputSection) inputSection.style.display = 'none';
+        if (resultsSection) resultsSection.style.display = 'none';
+        if (couponResultsSection) couponResultsSection.style.display = 'none';
+    }
+
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
         const productIntroSection = document.getElementById('product-intro-section');
@@ -1695,10 +1716,11 @@ function initializeAuth() {
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
 
-            // Hide product introduction section when logged in
+            // Hide product introduction section and show tool sections when logged in
             if (productIntroSection) {
                 productIntroSection.style.display = 'none';
             }
+            showToolSections();
 
             // Set user photo with fallback
             if (user.photoURL) {
@@ -1737,10 +1759,11 @@ function initializeAuth() {
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
-            // Show product introduction section when not logged in
+            // Show product introduction section and hide tool sections when not logged in
             if (productIntroSection) {
                 productIntroSection.style.display = 'block';
             }
+            hideToolSections();
 
             // Clear user info
             userPhoto.src = '';
@@ -1765,21 +1788,26 @@ function initializeAuth() {
     // Setup manage cards modal
     setupManageCardsModal();
 
-    // Setup "Start Using" button click event
+    // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');
     if (startUsingBtn) {
         startUsingBtn.addEventListener('click', () => {
-            const inputSection = document.querySelector('.input-section');
-            if (inputSection) {
-                inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Focus on merchant input after scrolling
-                setTimeout(() => {
-                    const merchantInput = document.getElementById('merchant-input');
-                    if (merchantInput) {
-                        merchantInput.focus();
-                    }
-                }, 500);
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
             }
+
+            // Show tool sections
+            showToolSections();
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
         });
     }
 }
