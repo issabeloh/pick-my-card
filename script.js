@@ -1686,14 +1686,9 @@ function initializeAuth() {
     
     // Helper functions to show/hide tool sections
     function showToolSections() {
-        // Main tool sections
+        // Input section (main tool UI)
         const inputSection = document.querySelector('.input-section');
-        const resultsSection = document.querySelector('.results-section');
-        const couponResultsSection = document.querySelector('.coupon-results-section');
-
         if (inputSection) inputSection.style.display = 'block';
-        if (resultsSection) resultsSection.style.display = 'block';
-        if (couponResultsSection) couponResultsSection.style.display = 'block';
 
         // Header tool sections (cards and payments selection)
         const supportedCards = document.querySelector('.supported-cards');
@@ -1701,17 +1696,14 @@ function initializeAuth() {
 
         if (supportedCards) supportedCards.style.display = 'block';
         if (headerSection) headerSection.style.display = 'block';
+
+        // Note: Results sections are controlled by query logic, not here
     }
 
     function hideToolSections() {
-        // Main tool sections
+        // Input section (main tool UI)
         const inputSection = document.querySelector('.input-section');
-        const resultsSection = document.querySelector('.results-section');
-        const couponResultsSection = document.querySelector('.coupon-results-section');
-
         if (inputSection) inputSection.style.display = 'none';
-        if (resultsSection) resultsSection.style.display = 'none';
-        if (couponResultsSection) couponResultsSection.style.display = 'none';
 
         // Header tool sections (cards and payments selection)
         const supportedCards = document.querySelector('.supported-cards');
@@ -1719,6 +1711,13 @@ function initializeAuth() {
 
         if (supportedCards) supportedCards.style.display = 'none';
         if (headerSection) headerSection.style.display = 'none';
+
+        // Hide results sections when hiding tool
+        const resultsSection = document.querySelector('.results-section');
+        const couponResultsSection = document.querySelector('.coupon-results-section');
+
+        if (resultsSection) resultsSection.style.display = 'none';
+        if (couponResultsSection) couponResultsSection.style.display = 'none';
     }
 
     // Listen for authentication state changes
