@@ -1684,14 +1684,58 @@ function initializeAuth() {
         }
     });
     
+    // Helper functions to show/hide tool sections
+    function showToolSections() {
+        // Input section (main tool UI)
+        const inputSection = document.querySelector('.input-section');
+        if (inputSection) inputSection.style.display = 'block';
+
+        // Header tool sections (cards and payments selection)
+        const supportedCards = document.querySelector('.supported-cards');
+        const headerSection = document.querySelector('.header-section');
+
+        if (supportedCards) supportedCards.style.display = 'block';
+        if (headerSection) headerSection.style.display = 'block';
+
+        // Note: Results sections are controlled by query logic, not here
+    }
+
+    function hideToolSections() {
+        // Input section (main tool UI)
+        const inputSection = document.querySelector('.input-section');
+        if (inputSection) inputSection.style.display = 'none';
+
+        // Header tool sections (cards and payments selection)
+        const supportedCards = document.querySelector('.supported-cards');
+        const headerSection = document.querySelector('.header-section');
+
+        if (supportedCards) supportedCards.style.display = 'none';
+        if (headerSection) headerSection.style.display = 'none';
+
+        // Hide results sections when hiding tool
+        const resultsSection = document.querySelector('.results-section');
+        const couponResultsSection = document.querySelector('.coupon-results-section');
+
+        if (resultsSection) resultsSection.style.display = 'none';
+        if (couponResultsSection) couponResultsSection.style.display = 'none';
+    }
+
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
+        const productIntroSection = document.getElementById('product-intro-section');
+
         if (user) {
             // User is signed in
             console.log('User signed in:', user);
             currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
+
+            // Hide product introduction section and show tool sections when logged in
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+            showToolSections();
 
             // Set user photo with fallback
             if (user.photoURL) {
@@ -1730,6 +1774,12 @@ function initializeAuth() {
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
+            // Show product introduction section and hide tool sections when not logged in
+            if (productIntroSection) {
+                productIntroSection.style.display = 'block';
+            }
+            hideToolSections();
+
             // Clear user info
             userPhoto.src = '';
             userPhoto.style.display = 'none';
@@ -1752,6 +1802,29 @@ function initializeAuth() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup "Start Using" button click event (Option 2: Toggle display)
+    const startUsingBtn = document.getElementById('start-using-btn');
+    if (startUsingBtn) {
+        startUsingBtn.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            showToolSections();
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
 }
 
 // Load user's selected cards from Firestore (with localStorage fallback)
