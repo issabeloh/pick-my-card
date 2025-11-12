@@ -1302,6 +1302,52 @@ input[type="number"]:focus {
     transform: none;
 }
 
+/* Tag Filter Section */
+.tag-filter-section {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.tag-filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.tag-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    opacity: 0.5;
+}
+
+.tag-filter-chip:hover {
+    opacity: 0.75;
+    transform: translateY(-1px);
+}
+
+.tag-filter-chip.active {
+    opacity: 1;
+    border-color: currentColor;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .modal-description {
     margin-bottom: 20px;
     color: #6b7280;
@@ -2036,6 +2082,42 @@ input[type="number"]:focus {
     color: #374151;
     font-style: normal;
 }
+
+/* Card Tags Styles */
+.card-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.card-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+}
+
+.card-tag:hover {
+    opacity: 1;
+}
+
+/* Tag color definitions - 柔和配色 */
+.card-tag.tag-travel { background: #dbeafe; color: #1e40af; }          /* 旅遊 - 淺藍 */
+.card-tag.tag-driving { background: #d1fae5; color: #065f46; }         /* 開車族 - 淺綠 */
+.card-tag.tag-restaurant { background: #fed7aa; color: #92400e; }      /* 餐廳 - 淺橘 */
+.card-tag.tag-transport { background: #e9d5ff; color: #6b21a8; }       /* 交通 - 淺紫 */
+.card-tag.tag-online { background: #fce7f3; color: #9f1239; }          /* 網購 - 淺粉紅 */
+.card-tag.tag-department { background: #fef3c7; color: #92400e; }      /* 百貨 - 淺黃 */
+.card-tag.tag-delivery { background: #fee2e2; color: #991b1b; }        /* 外送 - 淺紅 */
+.card-tag.tag-entertainment { background: #ccfbf1; color: #134e4a; }   /* 娛樂 - 淺青 */
+.card-tag.tag-payment { background: #ddd6fe; color: #5b21b6; }         /* 行動支付 - 淺紫羅蘭 */
+.card-tag.tag-ai { background: #e0e7ff; color: #3730a3; }              /* AI工具 - 淺靛藍 */
+.card-tag.tag-convenience { background: #fef9c3; color: #854d0e; }     /* 超商 - 淺金黃 */
+.card-tag.tag-streaming { background: #ede9fe; color: #6b21a8; }       /* 串流平台 - 淺紫紅 */
 
 /* Input Guide Styles */
 .help-btn {
