@@ -1991,6 +1991,43 @@ function openManageCardsModal() {
     // Check if user is logged in
     const isLoggedIn = currentUser !== null;
 
+    // Collect all unique tags from cards
+    const allTags = new Set();
+    cardsData.cards.forEach(card => {
+        if (card.tags && Array.isArray(card.tags)) {
+            card.tags.forEach(tag => allTags.add(tag));
+        }
+    });
+
+    // Render tag filter chips
+    const tagFilterChips = document.getElementById('tag-filter-chips');
+    const selectedTags = new Set(); // Track selected tags for filtering
+
+    if (allTags.size > 0) {
+        tagFilterChips.innerHTML = '';
+        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨', '外送', '娛樂', '行動支付', 'AI工具', '超商', '串流平台']
+            .filter(tag => allTags.has(tag));
+
+        sortedTags.forEach(tag => {
+            const chip = document.createElement('div');
+            chip.className = `tag-filter-chip card-tag ${getTagClass(tag)}`;
+            chip.textContent = tag;
+            chip.dataset.tag = tag;
+
+            chip.addEventListener('click', () => {
+                chip.classList.toggle('active');
+                if (chip.classList.contains('active')) {
+                    selectedTags.add(tag);
+                } else {
+                    selectedTags.delete(tag);
+                }
+                applyCardFilters();
+            });
+
+            tagFilterChips.appendChild(chip);
+        });
+    }
+
     // Populate cards selection
     cardsSelection.innerHTML = '';
 
@@ -2059,39 +2096,92 @@ function openManageCardsModal() {
         toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
     }
 
-    // Setup search functionality
+    // Setup combined search and tag filter functionality
     const searchInput = document.getElementById('search-cards-input');
     searchInput.value = ''; // Clear search on open
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase().trim();
+
+    // Function to apply both text search and tag filters
+    function applyCardFilters() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
         const cardDivs = cardsSelection.querySelectorAll('.card-checkbox');
 
         cardDivs.forEach(cardDiv => {
+            const checkbox = cardDiv.querySelector('input[type="checkbox"]');
+            if (!checkbox) return;
+
+            const cardId = checkbox.value;
+            const card = cardsData.cards.find(c => c.id === cardId);
+            if (!card) return;
+
             const label = cardDiv.querySelector('.card-checkbox-label');
-            if (label) {
-                const cardName = label.textContent.toLowerCase();
-                if (cardName.includes(searchTerm)) {
-                    cardDiv.style.display = 'flex';
-                } else {
-                    cardDiv.style.display = 'none';
-                }
+            if (!label) return;
+
+            // Text search filter
+            const cardName = label.textContent.toLowerCase();
+            const matchesSearch = searchTerm === '' || cardName.includes(searchTerm);
+
+            // Tag filter (must have ALL selected tags)
+            let matchesTags = true;
+            if (selectedTags.size > 0) {
+                const cardTags = card.tags || [];
+                matchesTags = [...selectedTags].every(tag => cardTags.includes(tag));
+            }
+
+            // Show card only if it matches BOTH filters (AND relationship)
+            if (matchesSearch && matchesTags) {
+                cardDiv.style.display = 'flex';
+            } else {
+                cardDiv.style.display = 'none';
             }
         });
-    });
+    }
+
+    // Listen to search input changes
+    searchInput.addEventListener('input', applyCardFilters);
 
     modal.style.display = 'flex';
 }
 
 // Show card detail modal
+// Helper function to convert tag name to CSS class
+function getTagClass(tagName) {
+    const tagMap = {
+        '旅遊': 'tag-travel',
+        '開車族': 'tag-driving',
+        '餐廳': 'tag-restaurant',
+        '交通': 'tag-transport',
+        '網購': 'tag-online',
+        '百貨': 'tag-department',
+        '外送': 'tag-delivery',
+        '娛樂': 'tag-entertainment',
+        '行動支付': 'tag-payment',
+        'AI工具': 'tag-ai',
+        '超商': 'tag-convenience',
+        '串流平台': 'tag-streaming'
+    };
+    return tagMap[tagName] || 'tag-default';
+}
+
+// Helper function to render card tags
+function renderCardTags(tags) {
+    if (!tags || tags.length === 0) return '';
+
+    const tagsHtml = tags.map(tag =>
+        `<span class="card-tag ${getTagClass(tag)}">${tag}</span>`
+    ).join('');
+
+    return `<div class="card-tags-container">${tagsHtml}</div>`;
+}
+
 async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;
-    
+
     const modal = document.getElementById('card-detail-modal');
-    
+
     // Update basic information
     document.getElementById('card-detail-title').textContent = card.name + ' 詳情';
-    
+
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
     if (card.website) {
@@ -2100,6 +2190,21 @@ async function showCardDetail(cardId) {
         fullNameLink.removeAttribute('href');
         fullNameLink.style.textDecoration = 'none';
         fullNameLink.style.color = 'inherit';
+    }
+
+    // Render tags after card full name
+    const cardInfoSection = modal.querySelector('.card-info-section');
+    const existingTags = cardInfoSection.querySelector('.card-tags-container');
+    if (existingTags) {
+        existingTags.remove();
+    }
+
+    if (card.tags && card.tags.length > 0) {
+        const tagsHtml = renderCardTags(card.tags);
+        const infoGrid = cardInfoSection.querySelector('.info-grid-2col');
+        if (infoGrid) {
+            infoGrid.insertAdjacentHTML('afterend', tagsHtml);
+        }
     }
 
     // 直接顯示年費和免年費資訊
