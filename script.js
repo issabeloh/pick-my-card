@@ -2005,7 +2005,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨', '外送', '娛樂', '行動支付', 'AI工具', '超商', '串流平台']
+        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -2151,13 +2151,21 @@ function getTagClass(tagName) {
         '餐廳': 'tag-restaurant',
         '交通': 'tag-transport',
         '網購': 'tag-online',
-        '百貨': 'tag-department',
+        '百貨公司': 'tag-department',
         '外送': 'tag-delivery',
         '娛樂': 'tag-entertainment',
         '行動支付': 'tag-payment',
         'AI工具': 'tag-ai',
-        '超商': 'tag-convenience',
-        '串流平台': 'tag-streaming'
+        '便利商店': 'tag-convenience',
+        '串流平台': 'tag-streaming',
+        '超市': 'tag-supermarket',
+        '藥妝': 'tag-pharmacy',
+        '時尚品牌': 'tag-fashion',
+        '生活百貨': 'tag-lifestyle',
+        '運動': 'tag-sports',
+        '寵物': 'tag-pet',
+        '親子': 'tag-family',
+        '應用程式商店': 'tag-appstore'
     };
     return tagMap[tagName] || 'tag-default';
 }

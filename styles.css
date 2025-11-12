@@ -2105,19 +2105,40 @@ input[type="number"]:focus {
     opacity: 1;
 }
 
-/* Tag color definitions - 柔和配色 */
-.card-tag.tag-travel { background: #dbeafe; color: #1e40af; }          /* 旅遊 - 淺藍 */
-.card-tag.tag-driving { background: #d1fae5; color: #065f46; }         /* 開車族 - 淺綠 */
-.card-tag.tag-restaurant { background: #fed7aa; color: #92400e; }      /* 餐廳 - 淺橘 */
-.card-tag.tag-transport { background: #e9d5ff; color: #6b21a8; }       /* 交通 - 淺紫 */
-.card-tag.tag-online { background: #fce7f3; color: #9f1239; }          /* 網購 - 淺粉紅 */
-.card-tag.tag-department { background: #fef3c7; color: #92400e; }      /* 百貨 - 淺黃 */
-.card-tag.tag-delivery { background: #fee2e2; color: #991b1b; }        /* 外送 - 淺紅 */
-.card-tag.tag-entertainment { background: #ccfbf1; color: #134e4a; }   /* 娛樂 - 淺青 */
-.card-tag.tag-payment { background: #ddd6fe; color: #5b21b6; }         /* 行動支付 - 淺紫羅蘭 */
-.card-tag.tag-ai { background: #e0e7ff; color: #3730a3; }              /* AI工具 - 淺靛藍 */
-.card-tag.tag-convenience { background: #fef9c3; color: #854d0e; }     /* 超商 - 淺金黃 */
-.card-tag.tag-streaming { background: #ede9fe; color: #6b21a8; }       /* 串流平台 - 淺紫紅 */
+/* Tag color definitions - 按類別分組配色 */
+/* 顏色1：旅遊、娛樂 - 淺藍色系 */
+.card-tag.tag-travel { background: #dbeafe; color: #1e40af; }          /* 旅遊 */
+.card-tag.tag-entertainment { background: #bfdbfe; color: #1e3a8a; }   /* 娛樂 */
+
+/* 顏色2：開車族、交通 - 淺綠色系 */
+.card-tag.tag-driving { background: #d1fae5; color: #065f46; }         /* 開車族 */
+.card-tag.tag-transport { background: #a7f3d0; color: #064e3b; }       /* 交通 */
+
+/* 顏色3：餐廳、外送 - 淺橘色系 */
+.card-tag.tag-restaurant { background: #fed7aa; color: #92400e; }      /* 餐廳 */
+.card-tag.tag-delivery { background: #fdba74; color: #9a3412; }        /* 外送 */
+
+/* 顏色4：行動支付 - 淺紫色系 */
+.card-tag.tag-payment { background: #ddd6fe; color: #5b21b6; }         /* 行動支付 */
+
+/* 顏色5：便利商店、超市、生活百貨、網購、百貨公司 - 淺粉色系 */
+.card-tag.tag-convenience { background: #fce7f3; color: #9f1239; }     /* 便利商店 */
+.card-tag.tag-supermarket { background: #fbcfe8; color: #9f1239; }     /* 超市 */
+.card-tag.tag-lifestyle { background: #f9a8d4; color: #831843; }       /* 生活百貨 */
+.card-tag.tag-online { background: #fce7f3; color: #be185d; }          /* 網購 */
+.card-tag.tag-department { background: #f9a8d4; color: #9d174d; }      /* 百貨公司 */
+
+/* 顏色6：運動、寵物、親子、藥妝、時尚品牌 - 淺黃色系 */
+.card-tag.tag-sports { background: #fef3c7; color: #92400e; }          /* 運動 */
+.card-tag.tag-pet { background: #fde68a; color: #78350f; }             /* 寵物 */
+.card-tag.tag-family { background: #fcd34d; color: #78350f; }          /* 親子 */
+.card-tag.tag-pharmacy { background: #fef3c7; color: #854d0e; }        /* 藥妝 */
+.card-tag.tag-fashion { background: #fde68a; color: #92400e; }         /* 時尚品牌 */
+
+/* 顏色7：應用程式商店、AI工具、串流平台 - 淺紫靛色系 */
+.card-tag.tag-appstore { background: #e0e7ff; color: #3730a3; }        /* 應用程式商店 */
+.card-tag.tag-ai { background: #c7d2fe; color: #312e81; }              /* AI工具 */
+.card-tag.tag-streaming { background: #a5b4fc; color: #312e81; }       /* 串流平台 */
 
 /* Input Guide Styles */
 .help-btn {
