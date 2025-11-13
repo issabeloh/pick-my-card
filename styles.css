@@ -3527,6 +3527,10 @@ input[type="number"]:focus {
         text-align: center;
     }
 
+    .use-case-item.reverse .use-case-content {
+        text-align: center;
+    }
+
     .use-case-title {
         font-size: 1.25rem;
     }
