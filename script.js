@@ -1825,6 +1825,29 @@ function initializeAuth() {
             }, 100);
         });
     }
+
+    // Setup second "Start Using" button with same functionality
+    const startUsingBtn2 = document.getElementById('start-using-btn-2');
+    if (startUsingBtn2) {
+        startUsingBtn2.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            showToolSections();
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
 }
 
 // Load user's selected cards from Firestore (with localStorage fallback)
