@@ -781,7 +781,7 @@ main {
 
 label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
     font-weight: 600;
     color: #374151;
 }
@@ -2068,7 +2068,7 @@ input[type="number"]:focus {
 .fee-combined-info {
     display: flex;
     flex-direction: column;
-    gap: 6px; /* 減少內部間距 */
+    gap: 0px; /* 減少內部間距 */
 }
 
 .fee-waiver-text {
@@ -3569,4 +3569,5 @@ input[type="number"]:focus {
         font-size: 0.875rem;
     }
 }
+
 
