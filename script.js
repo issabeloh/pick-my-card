@@ -1764,6 +1764,11 @@ function initializeAuth() {
             await loadUserPayments();
             await loadSpendingMappings();
 
+            // Load user's quick search options and custom options
+            await initializeQuickSearchOptions();
+            customOptions = await loadUserCustomOptions() || [];
+            renderQuickSearchButtons();
+
             // Update chips display
             populateCardChips();
             populatePaymentChips();
@@ -1776,6 +1781,11 @@ function initializeAuth() {
             userSpendingMappings = [];
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
+
+            // Reset quick search options to default
+            await initializeQuickSearchOptions();
+            customOptions = [];
+            renderQuickSearchButtons();
 
             // Show product introduction section and hide tool sections when not logged in
             if (productIntroSection) {
