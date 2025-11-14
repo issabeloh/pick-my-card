@@ -670,7 +670,10 @@ const fuzzySearchMap = {
     'ikea': 'IKEA宜家家居',
     '宜家': 'IKEA宜家家居',
     '宜家家居': 'IKEA宜家家居',
-    'IKEA宜家家居': 'ikea'
+    'IKEA宜家家居': 'ikea',
+    'greenvines': '綠藤生機',
+    '綠藤生機': 'greenvines',
+    '綠藤': '綠藤生機'
 };
 
 // Search term exclusion rules - prevents unwanted matches
