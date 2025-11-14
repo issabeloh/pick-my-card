@@ -2532,7 +2532,7 @@ input[type="number"]:focus {
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
     transition: all 0.2s ease;
-    z-index: 1000;
+    z-index: 999;
     display: flex;
     align-items: center;
     gap: 4px;
