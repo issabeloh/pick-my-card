@@ -4405,10 +4405,13 @@ function createTagElement(option, type, index) {
 
         // Remove button
         const removeBtn = tag.querySelector('.tag-remove-btn');
-        removeBtn.onclick = (e) => {
+        const handleRemove = (e) => {
             e.stopPropagation();
+            e.preventDefault();
             removeOption(option);
         };
+        removeBtn.addEventListener('click', handleRemove);
+        removeBtn.addEventListener('touchend', handleRemove);
 
         // Drag and drop for reordering
         tag.addEventListener('dragstart', handleDragStart);
@@ -4429,10 +4432,13 @@ function createTagElement(option, type, index) {
         `;
 
         const addBtn = tag.querySelector('.tag-add-btn');
-        addBtn.onclick = (e) => {
+        const handleAdd = (e) => {
             e.stopPropagation();
+            e.preventDefault();
             addOption(option);
         };
+        addBtn.addEventListener('click', handleAdd);
+        addBtn.addEventListener('touchend', handleAdd);
     }
 
     return tag;
@@ -4495,6 +4501,11 @@ function handleDrop(e) {
 
 // Touch event handlers for mobile drag and drop
 function handleTouchStart(e) {
+    // Don't interfere with button clicks
+    if (e.target.classList.contains('tag-remove-btn') || e.target.classList.contains('tag-add-btn')) {
+        return;
+    }
+
     touchDraggedElement = e.target.closest('.tag-item');
     if (!touchDraggedElement) return;
 
