@@ -3427,6 +3427,15 @@ input[type="number"]:focus {
     justify-content: center;
 }
 
+.use-case-media {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 .use-case-content {
     flex: 1;
     text-align: left;
@@ -3523,6 +3532,11 @@ input[type="number"]:focus {
         font-size: 4rem;
     }
 
+    .use-case-media {
+        width: 200px;
+        height: 200px;
+    }
+
     .use-case-content {
         text-align: center;
     }
@@ -3559,6 +3573,11 @@ input[type="number"]:focus {
         height: 160px;
         padding: 30px;
         font-size: 3rem;
+    }
+
+    .use-case-media {
+        width: 160px;
+        height: 160px;
     }
 
     .use-case-title {
