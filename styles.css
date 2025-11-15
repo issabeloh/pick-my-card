@@ -3350,6 +3350,149 @@ input[type="number"]:focus {
     margin: 0;
 }
 
+/* Features Grid Redesign - 左右兩欄佈局 */
+.features-grid-redesign {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    margin-bottom: 48px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Feature Card New - 新設計的卡片 */
+.feature-card-new {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.feature-card-new:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+}
+
+/* Feature Media - 影片容器 */
+.feature-media {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #f3f4f6;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 當影片尚未載入時的佔位圖示 */
+.feature-media .icon-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    z-index: 1;
+}
+
+.feature-video + .icon-box {
+    display: none;
+}
+
+/* Feature Content - 文字內容區域 */
+.feature-content {
+    padding: 32px 28px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.feature-content .feature-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 16px;
+}
+
+.feature-content .feature-description {
+    font-size: 1rem;
+    color: #6b7280;
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* 響應式設計 - 平板 */
+@media (max-width: 968px) {
+    .features-grid-redesign {
+        gap: 24px;
+    }
+
+    .feature-content {
+        padding: 24px 20px;
+    }
+
+    .feature-content .feature-title {
+        font-size: 1.25rem;
+    }
+
+    .feature-content .feature-description {
+        font-size: 0.95rem;
+    }
+}
+
+/* 響應式設計 - 手機 */
+@media (max-width: 640px) {
+    .features-grid-redesign {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    /* 手機版左右卡片都改為圖上文下 */
+    .feature-card-right {
+        flex-direction: column;
+    }
+
+    /* 確保手機版 feature-content 在 feature-media 之後 */
+    .feature-card-right .feature-content {
+        order: 2;
+    }
+
+    .feature-card-right .feature-media {
+        order: 1;
+    }
+
+    .feature-media {
+        aspect-ratio: 16 / 10;
+    }
+
+    .feature-content {
+        padding: 24px 20px;
+    }
+
+    .feature-content .feature-title {
+        font-size: 1.125rem;
+    }
+
+    .feature-content .feature-description {
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+}
+
 /* CTA Section */
 .cta-section {
     text-align: center;
