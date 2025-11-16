@@ -410,7 +410,22 @@ function initializeLazyLoading() {
                         });
                     }
                 } else if (element.tagName === 'IMG') {
-                    // Load image
+                    // Load image (supports both direct img and picture > img)
+                    const picture = element.parentElement;
+
+                    // Load picture source if exists
+                    if (picture && picture.tagName === 'PICTURE') {
+                        const sources = picture.querySelectorAll('source[data-srcset]');
+                        sources.forEach(source => {
+                            const srcset = source.getAttribute('data-srcset');
+                            if (srcset) {
+                                source.srcset = srcset;
+                                source.removeAttribute('data-srcset');
+                            }
+                        });
+                    }
+
+                    // Load img src
                     const imageSrc = element.getAttribute('data-src');
                     if (imageSrc && !element.src) {
                         element.src = imageSrc;
