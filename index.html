@@ -162,8 +162,7 @@
                     <!-- Feature 1: 記錄配卡 (圖上文下) -->
                     <div class="feature-card-new feature-card-left">
                         <div class="feature-media">
-                            <video autoplay loop muted playsinline class="feature-video">
-                                <source src="feature-credit-cards-customized-combination.mp4" type="video/mp4">
+                            <video loop muted playsinline class="feature-video lazy-video" data-src="feature-credit-cards-customized-combination.mp4">
                                 <!-- 臨時佔位圖示 -->
                                 <div class="icon-box">📋</div>
                             </video>
@@ -181,8 +180,7 @@
                             <p class="feature-description">記憶你的信用卡與行動支付，<br>支援自訂快捷選項、筆記與年費追蹤。<br>打造屬於你的專屬信用卡管理工具。</p>
                         </div>
                         <div class="feature-media">
-                            <video autoplay loop muted playsinline class="feature-video">
-                                <source src="feature-personalizations.mp4" type="video/mp4">
+                            <video loop muted playsinline class="feature-video lazy-video" data-src="feature-personalizations.mp4">
                                 <!-- 臨時佔位圖示 -->
                                 <div class="icon-box">⚙️</div>
                             </video>
@@ -205,7 +203,10 @@
                         <!-- Use Case 1: 即時消費，快速決策 (圖左文右) -->
                         <div class="use-case-item">
                             <div class="use-case-image">
-                                <img src="use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media" loading="lazy">
+                                <picture>
+                                    <source data-srcset="use-case-1-instant-check-cashback.webp" type="image/webp">
+                                    <img data-src="use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media lazy-image">
+                                </picture>
                             </div>
                             <div class="use-case-content">
                                 <h3 class="use-case-title">即時消費，快速決策</h3>
@@ -216,8 +217,7 @@
                         <!-- Use Case 2: 主動探索，找最佳通路 (圖右文左) -->
                         <div class="use-case-item reverse">
                             <div class="use-case-image">
-                                <video autoplay loop muted playsinline class="use-case-media">
-                                    <source src="use-case-2-explore-credit-cards.mp4" type="video/mp4">
+                                <video loop muted playsinline class="use-case-media lazy-video" data-src="use-case-2-explore-credit-cards.mp4">
                                 </video>
                             </div>
                             <div class="use-case-content">
@@ -229,7 +229,10 @@
                         <!-- Use Case 3: 盤點卡片，辦新卡 (圖左文右) -->
                         <div class="use-case-item">
                             <div class="use-case-image">
-                                <img src="use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media" loading="lazy">
+                                <picture>
+                                    <source data-srcset="use-case-3-review-credit-cards.webp" type="image/webp">
+                                    <img data-src="use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media lazy-image">
+                                </picture>
                             </div>
                             <div class="use-case-content">
                                 <h3 class="use-case-title">盤點卡片，辦新卡</h3>
@@ -593,63 +596,73 @@
     </div>
 
     <script src="script.js?v=20251113063152"></script>
-    
-    <!-- Firebase Configuration -->
+
+    <!-- Firebase Configuration - Lazy Loaded -->
     <script type="module">
-      // Import the functions you need from the SDKs you need
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
-      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-      import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
+      // Lazy load Firebase - only when user tries to login
+      window.initializeFirebase = async function() {
+        if (window.firebaseAuth) {
+          // Already initialized
+          return Promise.resolve();
+        }
 
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyCERYFst64lYgR07OnEk-aJPbg838R7nYA",
-        authDomain: "pick-my-card-28f2a.firebaseapp.com",
-        projectId: "pick-my-card-28f2a",
-        storageBucket: "pick-my-card-28f2a.firebasestorage.app",
-        messagingSenderId: "181128376981",
-        appId: "1:181128376981:web:f9084ecdf6dddaf82e619c",
-        measurementId: "G-RW8F159L52"
+        // Import the functions you need from the SDKs you need
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js");
+        const { getAnalytics } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js");
+        const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js");
+        const { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js");
+        const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js");
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyCERYFst64lYgR07OnEk-aJPbg838R7nYA",
+          authDomain: "pick-my-card-28f2a.firebaseapp.com",
+          projectId: "pick-my-card-28f2a",
+          storageBucket: "pick-my-card-28f2a.firebasestorage.app",
+          messagingSenderId: "181128376981",
+          appId: "1:181128376981:web:f9084ecdf6dddaf82e619c",
+          measurementId: "G-RW8F159L52"
+        };
+
+        // Note: Firebase API keys are designed to be public
+        // Security is handled by Firebase Authentication and domain restrictions
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const provider = new GoogleAuthProvider();
+
+        // Configure Google provider to show account selection
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+
+        // Make Firebase services available globally
+        window.firebaseAuth = auth;
+        window.db = db;
+        window.storage = storage;
+        window.googleProvider = provider;
+        window.signInWithPopup = signInWithPopup;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.sendPasswordResetEmail = sendPasswordResetEmail;
+        window.doc = doc;
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.serverTimestamp = serverTimestamp;
+        window.storageRef = ref;
+        window.uploadBytes = uploadBytes;
+        window.getDownloadURL = getDownloadURL;
+
+        console.log('✅ Firebase initialized');
       };
-
-      // Note: Firebase API keys are designed to be public
-      // Security is handled by Firebase Authentication and domain restrictions
-
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
-      const auth = getAuth(app);
-      const db = getFirestore(app);
-      const storage = getStorage(app);
-      const provider = new GoogleAuthProvider();
-
-      // Configure Google provider to show account selection
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-
-      // Make Firebase services available globally
-      window.firebaseAuth = auth;
-      window.db = db;
-      window.storage = storage;
-      window.googleProvider = provider;
-      window.signInWithPopup = signInWithPopup;
-      window.signOut = signOut;
-      window.onAuthStateChanged = onAuthStateChanged;
-      window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-      window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-      window.sendPasswordResetEmail = sendPasswordResetEmail;
-      window.doc = doc;
-      window.getDoc = getDoc;
-      window.setDoc = setDoc;
-      window.addDoc = addDoc;
-      window.collection = collection;
-      window.serverTimestamp = serverTimestamp;
-      window.storageRef = ref;
-      window.uploadBytes = uploadBytes;
-      window.getDownloadURL = getDownloadURL;
     </script>
 
     <!-- Payment Detail Modal -->
