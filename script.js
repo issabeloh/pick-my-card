@@ -372,7 +372,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderQuickSearchButtons();
     setupEventListeners();
     setupAuthentication();
+
+    // Initialize lazy loading for videos and images
+    initializeLazyLoading();
 });
+
+// Lazy loading for videos and images using Intersection Observer
+function initializeLazyLoading() {
+    // Intersection Observer options
+    const observerOptions = {
+        root: null,
+        rootMargin: '50px', // Start loading 50px before entering viewport
+        threshold: 0.1
+    };
+
+    // Callback for when elements enter viewport
+    const observerCallback = (entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const element = entry.target;
+
+                if (element.tagName === 'VIDEO') {
+                    // Load and play video
+                    const videoSrc = element.getAttribute('data-src');
+                    if (videoSrc && !element.src) {
+                        const source = document.createElement('source');
+                        source.src = videoSrc;
+                        source.type = 'video/mp4';
+                        element.appendChild(source);
+                        element.load();
+
+                        // Play video when loaded
+                        element.addEventListener('loadeddata', () => {
+                            element.play().catch(err => {
+                                console.log('Video autoplay failed:', err);
+                            });
+                        });
+                    }
+                } else if (element.tagName === 'IMG') {
+                    // Load image
+                    const imageSrc = element.getAttribute('data-src');
+                    if (imageSrc && !element.src) {
+                        element.src = imageSrc;
+                        element.onload = () => {
+                            element.classList.add('loaded');
+                        };
+                    }
+                }
+
+                // Stop observing this element
+                observer.unobserve(element);
+            }
+        });
+    };
+
+    // Create observer
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all lazy videos and images
+    document.querySelectorAll('.lazy-video').forEach(video => {
+        observer.observe(video);
+    });
+
+    document.querySelectorAll('.lazy-image').forEach(img => {
+        observer.observe(img);
+    });
+}
 
 // Populate card chips in header
 function populateCardChips() {
@@ -1652,30 +1717,29 @@ function formatCurrency(amount) {
 
 // Authentication setup
 function setupAuthentication() {
-    // Wait for Firebase to load
-    const checkFirebaseReady = () => {
-        if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
+    const signInBtn = document.getElementById('sign-in-btn');
+
+    // Initialize Firebase only when user clicks sign in
+    signInBtn.addEventListener('click', async () => {
+        if (!window.firebaseAuth) {
+            console.log('🔄 Loading Firebase...');
+            await window.initializeFirebase();
+
+            // Initialize auth after Firebase is loaded
             auth = window.firebaseAuth;
             db = window.db;
-            initializeAuth();
-        } else {
-            setTimeout(checkFirebaseReady, 100);
+            initializeAuthListeners();
         }
-    };
-    checkFirebaseReady();
+        openAuthModal('login');
+    });
 }
 
-function initializeAuth() {
+function initializeAuthListeners() {
     const signInBtn = document.getElementById('sign-in-btn');
     const signOutBtn = document.getElementById('sign-out-btn');
     const userInfo = document.getElementById('user-info');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
-    
-    // Sign in function - open auth modal
-    signInBtn.addEventListener('click', () => {
-        openAuthModal('login');
-    });
     
     // Sign out function
     signOutBtn.addEventListener('click', async () => {
@@ -1815,6 +1879,9 @@ function initializeAuth() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup auth modal listeners (must be called after Firebase is initialized)
+    setupAuthModalListeners();
 
     // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');
@@ -5221,8 +5288,8 @@ function showAuthError(message) {
     authError.style.display = 'block';
 }
 
-// Initialize auth modal event listeners
-document.addEventListener('DOMContentLoaded', () => {
+// Setup auth modal listeners after Firebase is initialized
+function setupAuthModalListeners() {
     const closeAuthModalBtn = document.getElementById('close-auth-modal');
     const googleSignInBtn = document.getElementById('google-sign-in-btn');
     const authForm = document.getElementById('auth-form');
@@ -5371,5 +5438,5 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-}); // End of Auth Modal DOMContentLoaded
+} // End of setupAuthModalListeners
 
