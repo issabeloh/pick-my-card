@@ -376,17 +376,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
 
-    // Initialize Firebase after a short delay (1 second) to avoid blocking initial page load
-    // This allows checking login state while maintaining performance
-    setTimeout(async () => {
-        if (!window.firebaseAuth) {
-            console.log('🔄 Auto-loading Firebase to check login status...');
-            await window.initializeFirebase();
-            auth = window.firebaseAuth;
-            db = window.db;
-            initializeAuthListeners();
-        }
-    }, 1000);
+    // Show product intro section by default for non-logged-in users
+    // This will be hidden if user is already logged in after Firebase initializes
+    const productIntroSection = document.getElementById('product-intro-section');
+    if (productIntroSection) {
+        productIntroSection.style.display = 'block';
+    }
+
+    // Initialize Firebase immediately to check login status and avoid blank page
+    // This ensures logged-in users see their content right away
+    if (!window.firebaseAuth) {
+        console.log('🔄 Auto-loading Firebase to check login status...');
+        await window.initializeFirebase();
+        auth = window.firebaseAuth;
+        db = window.db;
+        initializeAuthListeners();
+    }
 });
 
 // Lazy loading for videos and images using Intersection Observer
@@ -1823,6 +1828,12 @@ function initializeAuthListeners() {
             currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
+
+            // Close auth modal if it's open (user is already logged in)
+            const authModal = document.getElementById('auth-modal');
+            if (authModal && authModal.style.display === 'flex') {
+                closeAuthModal();
+            }
 
             // Hide product introduction section and show tool sections when logged in
             if (productIntroSection) {
