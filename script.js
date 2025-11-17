@@ -753,11 +753,11 @@ const fuzzySearchMap = {
     'IKEA宜家家居': 'ikea',
     'greenvines': '綠藤生機',
     '綠藤生機': 'greenvines',
-    '綠藤': '綠藤生機'
-    '屈臣氏': 'watsons'
-    'watsons': '屈臣氏'
-    '康是美': 'cosmed'
-    'cosmed': '康是美'
+    '綠藤': '綠藤生機',
+    '屈臣氏': 'watsons',
+    'watsons': '屈臣氏',
+    '康是美': 'cosmed',
+    'cosmed': '康是美',
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -5456,5 +5456,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of Auth Modal DOMContentLoaded
+
 
 
