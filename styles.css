@@ -3368,14 +3368,8 @@ input[type="number"]:focus {
     border-radius: 16px;
     padding: 0;
     overflow: hidden;
-    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-}
-
-.feature-card-new:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    transform: translateY(-4px);
 }
 
 /* Feature Media - 影片容器 */
