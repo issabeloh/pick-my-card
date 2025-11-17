@@ -375,23 +375,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
-
-    // Show product intro section by default for non-logged-in users
-    // This will be hidden if user is already logged in after Firebase initializes
-    const productIntroSection = document.getElementById('product-intro-section');
-    if (productIntroSection) {
-        productIntroSection.style.display = 'block';
-    }
-
-    // Initialize Firebase immediately to check login status and avoid blank page
-    // This ensures logged-in users see their content right away
-    if (!window.firebaseAuth) {
-        console.log('🔄 Auto-loading Firebase to check login status...');
-        await window.initializeFirebase();
-        auth = window.firebaseAuth;
-        db = window.db;
-        initializeAuthListeners();
-    }
 });
 
 // Lazy loading for videos and images using Intersection Observer
@@ -1749,20 +1732,17 @@ function formatCurrency(amount) {
 
 // Authentication setup
 function setupAuthentication() {
-    const signInBtn = document.getElementById('sign-in-btn');
-
-    // Setup sign-in button click handler
-    signInBtn.addEventListener('click', async () => {
-        // If Firebase not loaded yet, load it first
-        if (!window.firebaseAuth) {
-            console.log('🔄 Loading Firebase on demand...');
-            await window.initializeFirebase();
+    // Wait for Firebase to load
+    const checkFirebaseReady = () => {
+        if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
             auth = window.firebaseAuth;
             db = window.db;
             initializeAuthListeners();
+        } else {
+            setTimeout(checkFirebaseReady, 100);
         }
-        openAuthModal('login');
-    });
+    };
+    checkFirebaseReady();
 }
 
 function initializeAuthListeners() {
@@ -1771,7 +1751,12 @@ function initializeAuthListeners() {
     const userInfo = document.getElementById('user-info');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
-    
+
+    // Sign in function - open auth modal
+    signInBtn.addEventListener('click', () => {
+        openAuthModal('login');
+    });
+
     // Sign out function
     signOutBtn.addEventListener('click', async () => {
         try {
@@ -1828,12 +1813,6 @@ function initializeAuthListeners() {
             currentUser = user;
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
-
-            // Close auth modal if it's open (user is already logged in)
-            const authModal = document.getElementById('auth-modal');
-            if (authModal && authModal.style.display === 'flex') {
-                closeAuthModal();
-            }
 
             // Hide product introduction section and show tool sections when logged in
             if (productIntroSection) {
