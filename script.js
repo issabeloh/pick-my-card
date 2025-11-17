@@ -689,7 +689,7 @@ const fuzzySearchMap = {
     'taiwanpay': '台灣pay',
     '悠遊付': 'easy wallet',
     'easywallet': '悠遊付',
-    '機票': '航空',
+    '機票': '所有航空',
     '長榮': '長榮航空',
     'eva air': '長榮航空',
     'evaair': '長榮航空',
@@ -730,7 +730,7 @@ const fuzzySearchMap = {
     'thsr': '高鐵',
     'foodpanda': 'foodpanda',
     'food panda': 'foodpanda',
-    // Add uber eats variations
+    '熊貓': 'foodpanda',
     'uber eats': 'uber eats',
     'ubereats': 'uber eats',
     'ubereat': 'uber eats',
@@ -754,6 +754,10 @@ const fuzzySearchMap = {
     'greenvines': '綠藤生機',
     '綠藤生機': 'greenvines',
     '綠藤': '綠藤生機'
+    '屈臣氏': 'watsons'
+    'watsons': '屈臣氏'
+    '康是美': 'cosmed'
+    'cosmed': '康是美'
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -5452,4 +5456,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of Auth Modal DOMContentLoaded
+
 
