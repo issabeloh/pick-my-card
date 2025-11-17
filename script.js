@@ -1896,9 +1896,6 @@ function initializeAuthListeners() {
     // Setup manage cards modal
     setupManageCardsModal();
 
-    // Setup auth modal listeners (must be called after Firebase is initialized)
-    setupAuthModalListeners();
-
     // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');
     if (startUsingBtn) {
@@ -5304,8 +5301,8 @@ function showAuthError(message) {
     authError.style.display = 'block';
 }
 
-// Setup auth modal listeners after Firebase is initialized
-function setupAuthModalListeners() {
+// Initialize auth modal event listeners
+document.addEventListener('DOMContentLoaded', () => {
     const closeAuthModalBtn = document.getElementById('close-auth-modal');
     const googleSignInBtn = document.getElementById('google-sign-in-btn');
     const authForm = document.getElementById('auth-form');
@@ -5454,5 +5451,5 @@ function setupAuthModalListeners() {
             }
         });
     }
-} // End of setupAuthModalListeners
+}); // End of Auth Modal DOMContentLoaded
 
