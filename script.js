@@ -375,6 +375,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
+
+    // Initialize Firebase after a short delay (1 second) to avoid blocking initial page load
+    // This allows checking login state while maintaining performance
+    setTimeout(async () => {
+        if (!window.firebaseAuth) {
+            console.log('🔄 Auto-loading Firebase to check login status...');
+            await window.initializeFirebase();
+            auth = window.firebaseAuth;
+            db = window.db;
+            initializeAuthListeners();
+        }
+    }, 1000);
 });
 
 // Lazy loading for videos and images using Intersection Observer
@@ -1734,13 +1746,12 @@ function formatCurrency(amount) {
 function setupAuthentication() {
     const signInBtn = document.getElementById('sign-in-btn');
 
-    // Initialize Firebase only when user clicks sign in
+    // Setup sign-in button click handler
     signInBtn.addEventListener('click', async () => {
+        // If Firebase not loaded yet, load it first
         if (!window.firebaseAuth) {
-            console.log('🔄 Loading Firebase...');
+            console.log('🔄 Loading Firebase on demand...');
             await window.initializeFirebase();
-
-            // Initialize auth after Firebase is loaded
             auth = window.firebaseAuth;
             db = window.db;
             initializeAuthListeners();
