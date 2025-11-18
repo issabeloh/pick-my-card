@@ -685,11 +685,9 @@ const fuzzySearchMap = {
     'pi wallet': 'pi 拍錢包',
     '台灣支付': '台灣pay',
     'taiwan pay': '台灣pay',
-    '台灣行動支付': '台灣pay',
     'taiwanpay': '台灣pay',
     '悠遊付': 'easy wallet',
     'easywallet': '悠遊付',
-    '機票': '所有航空',
     '長榮': '長榮航空',
     'eva air': '長榮航空',
     'evaair': '長榮航空',
@@ -5456,6 +5454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of Auth Modal DOMContentLoaded
+
 
 
 
