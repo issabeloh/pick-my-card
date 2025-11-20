@@ -1606,9 +1606,8 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            ${coupon.conditions}
+            ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
         </div>
-        <div class="coupon-card-name">匹配項目: ${coupon.merchant}</div>
     `;
 
     return couponDiv;
@@ -5574,10 +5573,10 @@ function initReviewSystem() {
         });
     }
 
-    // Skip review
+    // Skip review - close modal without submitting
     if (skipReviewBtn) {
         skipReviewBtn.addEventListener('click', () => {
-            submitReviewWithoutComment();
+            closeReviewModalHandler();
         });
     }
 
@@ -5686,52 +5685,6 @@ async function submitReview() {
     } finally {
         submitReviewBtn.disabled = false;
         submitReviewBtn.textContent = '送出評價';
-    }
-}
-
-async function submitReviewWithoutComment() {
-    const skipReviewBtn = document.getElementById('skip-review-btn');
-    skipReviewBtn.disabled = true;
-    skipReviewBtn.textContent = '處理中...';
-
-    try {
-        const reviewData = {
-            rating: selectedRating,
-            comment: null,
-            timestamp: window.serverTimestamp(),
-            userAgent: navigator.userAgent,
-            screenSize: `${window.screen.width}x${window.screen.height}`
-        };
-
-        // Try to add user ID if logged in
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-            reviewData.userId = window.firebaseAuth.currentUser.uid;
-            reviewData.userEmail = window.firebaseAuth.currentUser.email;
-        }
-
-        // Save to Firebase
-        await window.addDoc(window.collection(window.db, 'reviews'), reviewData);
-
-        // Mark as reviewed
-        localStorage.setItem('hasReviewed', 'true');
-        localStorage.setItem('userRating', selectedRating);
-
-        // Show success message
-        showReviewFeedback('感謝您的評價！');
-        disableReviewButton();
-
-        // Close modal
-        document.getElementById('review-modal').style.display = 'none';
-
-        console.log('Review submitted successfully (no comment):', reviewData);
-    } catch (error) {
-        console.error('Error submitting review:', error);
-        const reviewError = document.getElementById('review-error');
-        reviewError.textContent = '送出失敗，請稍後再試';
-        reviewError.style.display = 'block';
-    } finally {
-        skipReviewBtn.disabled = false;
-        skipReviewBtn.textContent = '略過';
     }
 }
 
