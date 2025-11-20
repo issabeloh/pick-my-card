@@ -5689,12 +5689,8 @@ async function submitReview() {
         localStorage.setItem('hasReviewed', 'true');
         localStorage.setItem('userRating', selectedRating);
 
-        // Show success message
-        showReviewFeedback('感謝您的評價！');
-        disableReviewButton();
-
-        // Close modal
-        document.getElementById('review-modal').style.display = 'none';
+        // Show success message in modal
+        showReviewSuccessInModal();
 
         console.log('Review submitted successfully:', reviewData);
     } catch (error) {
@@ -5723,6 +5719,42 @@ function showReviewFeedback(message) {
     const reviewFeedback = document.getElementById('review-feedback');
     reviewFeedback.textContent = message;
     reviewFeedback.style.display = 'block';
+}
+
+function showReviewSuccessInModal() {
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const starRatingModal = document.getElementById('star-rating-modal');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+    const reviewError = document.getElementById('review-error');
+
+    // Hide stars and comment section
+    starRatingModal.style.display = 'none';
+    reviewCommentSection.style.display = 'none';
+    reviewError.style.display = 'none';
+
+    // Change title to thank you message
+    reviewModalTitle.textContent = '感謝您的評價！';
+    reviewModalTitle.style.textAlign = 'center';
+    reviewModalTitle.style.color = '#10b981';
+    reviewModalTitle.style.fontSize = '24px';
+    reviewModalTitle.style.padding = '40px 20px';
+
+    // Auto close modal after 2 seconds
+    setTimeout(() => {
+        document.getElementById('review-modal').style.display = 'none';
+
+        // Show feedback below button and disable it
+        showReviewFeedback('感謝您的評價！');
+        disableReviewButton();
+
+        // Reset modal for next time (if needed)
+        reviewModalTitle.style.textAlign = '';
+        reviewModalTitle.style.color = '';
+        reviewModalTitle.style.fontSize = '';
+        reviewModalTitle.style.padding = '';
+        starRatingModal.style.display = '';
+        reviewCommentSection.style.display = '';
+    }, 2000);
 }
 
 function disableReviewButton() {
