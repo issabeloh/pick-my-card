@@ -5526,7 +5526,6 @@ function initReviewSystem() {
     // Check if user has already reviewed
     const hasReviewed = localStorage.getItem('hasReviewed');
     if (hasReviewed) {
-        showReviewFeedback('感謝您的評價！');
         if (openReviewBtn) {
             openReviewBtn.style.opacity = '0.5';
             openReviewBtn.style.pointerEvents = 'none';
@@ -5743,8 +5742,7 @@ function showReviewSuccessInModal() {
     setTimeout(() => {
         document.getElementById('review-modal').style.display = 'none';
 
-        // Show feedback below button and disable it
-        showReviewFeedback('感謝您的評價！');
+        // Disable review button
         disableReviewButton();
 
         // Reset modal for next time (if needed)
