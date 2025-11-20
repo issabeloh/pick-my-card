@@ -2410,7 +2410,6 @@ input[type="number"]:focus {
 
 #review-comment-section {
     margin-top: 20px;
-    animation: fadeIn 0.3s ease;
 }
 
 .review-textarea {

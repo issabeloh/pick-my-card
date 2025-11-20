@@ -5557,7 +5557,6 @@ function initReviewSystem() {
             const rating = parseInt(star.dataset.rating);
             selectedRating = rating;
             highlightModalStars(rating);
-            showCommentSection();
         });
     });
 
@@ -5613,7 +5612,6 @@ function highlightModalStars(rating) {
 function openReviewModalInitial() {
     const reviewModal = document.getElementById('review-modal');
     const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewCommentSection = document.getElementById('review-comment-section');
     const reviewComment = document.getElementById('review-comment');
     const reviewCharCount = document.getElementById('review-char-count');
     const reviewError = document.getElementById('review-error');
@@ -5622,21 +5620,12 @@ function openReviewModalInitial() {
     selectedRating = 0;
     highlightModalStars(0);
     reviewModalTitle.textContent = '請為我們評分';
-    reviewCommentSection.style.display = 'none';
     reviewComment.value = '';
     reviewCharCount.textContent = '0';
     reviewError.style.display = 'none';
 
     // Show modal
     reviewModal.style.display = 'flex';
-}
-
-function showCommentSection() {
-    const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewCommentSection = document.getElementById('review-comment-section');
-
-    reviewModalTitle.textContent = '感謝您的評分！';
-    reviewCommentSection.style.display = 'block';
 }
 
 function closeReviewModalHandler() {
