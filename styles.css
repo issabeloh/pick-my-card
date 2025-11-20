@@ -2290,6 +2290,12 @@ input[type="number"]:focus {
     color: white;
 }
 
+.social-link.review:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-color: transparent;
+    color: white;
+}
+
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -2348,36 +2354,6 @@ input[type="number"]:focus {
 }
 
 /* Review Section Styles */
-.review-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.star-rating {
-    display: flex;
-    gap: 4px;
-    font-size: 32px;
-    cursor: pointer;
-}
-
-.star {
-    color: rgba(255, 255, 255, 0.3);
-    transition: all 0.2s ease;
-    user-select: none;
-}
-
-.star:hover,
-.star.hover {
-    color: #fbbf24;
-    transform: scale(1.1);
-}
-
-.star.selected {
-    color: #fbbf24;
-}
-
 .review-feedback {
     color: rgba(255, 255, 255, 0.9);
     font-size: 13px;
@@ -2386,6 +2362,7 @@ input[type="number"]:focus {
     border-radius: 8px;
     backdrop-filter: blur(10px);
     animation: fadeIn 0.3s ease;
+    margin-top: 8px;
 }
 
 @keyframes fadeIn {
@@ -2405,11 +2382,35 @@ input[type="number"]:focus {
     width: 90%;
 }
 
-.review-stars-display {
-    text-align: center;
-    font-size: 40px;
+.star-rating-modal {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    font-size: 48px;
+    cursor: pointer;
+    margin: 20px 0;
+}
+
+.star-modal {
+    color: #e5e7eb;
+    transition: all 0.2s ease;
+    user-select: none;
+    cursor: pointer;
+}
+
+.star-modal:hover,
+.star-modal.hover {
     color: #fbbf24;
-    margin-bottom: 20px;
+    transform: scale(1.1);
+}
+
+.star-modal.selected {
+    color: #fbbf24;
+}
+
+#review-comment-section {
+    margin-top: 20px;
+    animation: fadeIn 0.3s ease;
 }
 
 .review-textarea {
@@ -2458,13 +2459,9 @@ input[type="number"]:focus {
 
 /* Mobile responsiveness for review section */
 @media (max-width: 600px) {
-    .star-rating {
-        font-size: 28px;
-        gap: 2px;
-    }
-
-    .review-stars-display {
-        font-size: 32px;
+    .star-rating-modal {
+        font-size: 40px;
+        gap: 4px;
     }
 
     .review-modal-content {

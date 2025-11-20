@@ -1584,6 +1584,9 @@ function createCouponResultElement(coupon, amount) {
     const couponDiv = document.createElement('div');
     couponDiv.className = 'coupon-item fade-in';
 
+    // Handle cap display - same as regular cards
+    const capText = coupon.cap ? `NT$${coupon.cap.toLocaleString()}` : '無上限';
+
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="coupon-merchant">${coupon.cardName}</div>
@@ -1599,7 +1602,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
-                <div class="detail-value">無上限</div>
+                <div class="detail-value">${capText}</div>
             </div>
         </div>
         <div class="matched-merchant">
@@ -5501,11 +5504,13 @@ document.addEventListener('DOMContentLoaded', () => {
 let selectedRating = 0;
 
 function initReviewSystem() {
-    const stars = document.querySelectorAll('.star');
-    const starRating = document.getElementById('star-rating');
+    const openReviewBtn = document.getElementById('open-review-btn');
+    const starsModal = document.querySelectorAll('.star-modal');
+    const starRatingModal = document.getElementById('star-rating-modal');
     const reviewFeedback = document.getElementById('review-feedback');
     const reviewModal = document.getElementById('review-modal');
-    const reviewStarsDisplay = document.getElementById('review-stars-display');
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
     const reviewComment = document.getElementById('review-comment');
     const reviewCharCount = document.getElementById('review-char-count');
     const submitReviewBtn = document.getElementById('submit-review-btn');
@@ -5517,29 +5522,42 @@ function initReviewSystem() {
     const hasReviewed = localStorage.getItem('hasReviewed');
     if (hasReviewed) {
         showReviewFeedback('感謝您的評價！');
-        disableStars();
+        if (openReviewBtn) {
+            openReviewBtn.style.opacity = '0.5';
+            openReviewBtn.style.pointerEvents = 'none';
+        }
         return;
     }
 
-    // Star hover effect
-    stars.forEach(star => {
+    // Open review modal button
+    if (openReviewBtn) {
+        openReviewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openReviewModalInitial();
+        });
+    }
+
+    // Star hover effect in modal
+    starsModal.forEach(star => {
         star.addEventListener('mouseenter', () => {
             const rating = parseInt(star.dataset.rating);
-            highlightStars(rating);
+            highlightModalStars(rating);
         });
     });
 
-    starRating.addEventListener('mouseleave', () => {
-        highlightStars(selectedRating);
-    });
+    if (starRatingModal) {
+        starRatingModal.addEventListener('mouseleave', () => {
+            highlightModalStars(selectedRating);
+        });
+    }
 
-    // Star click handler
-    stars.forEach(star => {
+    // Star click handler in modal
+    starsModal.forEach(star => {
         star.addEventListener('click', () => {
             const rating = parseInt(star.dataset.rating);
             selectedRating = rating;
-            highlightStars(rating);
-            openReviewModal(rating);
+            highlightModalStars(rating);
+            showCommentSection();
         });
     });
 
@@ -5579,8 +5597,8 @@ function initReviewSystem() {
     }
 }
 
-function highlightStars(rating) {
-    const stars = document.querySelectorAll('.star');
+function highlightModalStars(rating) {
+    const stars = document.querySelectorAll('.star-modal');
     stars.forEach((star, index) => {
         if (index < rating) {
             star.classList.add('hover');
@@ -5592,17 +5610,19 @@ function highlightStars(rating) {
     });
 }
 
-function openReviewModal(rating) {
+function openReviewModalInitial() {
     const reviewModal = document.getElementById('review-modal');
-    const reviewStarsDisplay = document.getElementById('review-stars-display');
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
     const reviewComment = document.getElementById('review-comment');
     const reviewCharCount = document.getElementById('review-char-count');
     const reviewError = document.getElementById('review-error');
 
-    // Display stars
-    reviewStarsDisplay.textContent = '★'.repeat(rating);
-
-    // Reset form
+    // Reset state
+    selectedRating = 0;
+    highlightModalStars(0);
+    reviewModalTitle.textContent = '請為我們評分';
+    reviewCommentSection.style.display = 'none';
     reviewComment.value = '';
     reviewCharCount.textContent = '0';
     reviewError.style.display = 'none';
@@ -5611,13 +5631,21 @@ function openReviewModal(rating) {
     reviewModal.style.display = 'flex';
 }
 
+function showCommentSection() {
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+
+    reviewModalTitle.textContent = '感謝您的評分！';
+    reviewCommentSection.style.display = 'block';
+}
+
 function closeReviewModalHandler() {
     const reviewModal = document.getElementById('review-modal');
     reviewModal.style.display = 'none';
     // Reset selected rating if user closes without submitting
     if (!localStorage.getItem('hasReviewed')) {
         selectedRating = 0;
-        highlightStars(0);
+        highlightModalStars(0);
     }
 }
 
@@ -5656,7 +5684,7 @@ async function submitReview() {
 
         // Show success message
         showReviewFeedback('感謝您的評價！');
-        disableStars();
+        disableReviewButton();
 
         // Close modal
         document.getElementById('review-modal').style.display = 'none';
@@ -5701,7 +5729,7 @@ async function submitReviewWithoutComment() {
 
         // Show success message
         showReviewFeedback('感謝您的評價！');
-        disableStars();
+        disableReviewButton();
 
         // Close modal
         document.getElementById('review-modal').style.display = 'none';
@@ -5724,14 +5752,12 @@ function showReviewFeedback(message) {
     reviewFeedback.style.display = 'block';
 }
 
-function disableStars() {
-    const stars = document.querySelectorAll('.star');
-    const starRating = document.getElementById('star-rating');
-    starRating.style.cursor = 'default';
-    stars.forEach(star => {
-        star.style.cursor = 'default';
-        star.style.pointerEvents = 'none';
-    });
+function disableReviewButton() {
+    const openReviewBtn = document.getElementById('open-review-btn');
+    if (openReviewBtn) {
+        openReviewBtn.style.opacity = '0.5';
+        openReviewBtn.style.pointerEvents = 'none';
+    }
 }
 
 // Initialize review system when DOM is loaded
