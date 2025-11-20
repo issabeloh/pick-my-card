@@ -1585,7 +1585,13 @@ function createCouponResultElement(coupon, amount) {
     couponDiv.className = 'coupon-item fade-in';
 
     // Handle cap display - same as regular cards
-    const capText = coupon.cap ? `NT$${coupon.cap.toLocaleString()}` : '無上限';
+    // Check if cap exists and is a valid number
+    const capText = (coupon.cap && !isNaN(coupon.cap)) ? `NT$${Number(coupon.cap).toLocaleString()}` : '無上限';
+
+    // Debug log to check cap value
+    if (coupon.merchant.includes('星巴克')) {
+        console.log('星巴克 coupon cap:', coupon.cap, 'type:', typeof coupon.cap);
+    }
 
     couponDiv.innerHTML = `
         <div class="coupon-header">
@@ -1606,7 +1612,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
+            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
         </div>
     `;
 
