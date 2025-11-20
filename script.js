@@ -5650,11 +5650,24 @@ async function submitReview() {
 
     const comment = reviewComment.value.trim();
 
+    // Validate rating
+    if (!selectedRating || selectedRating === 0) {
+        reviewError.textContent = '請先選擇星星評分';
+        reviewError.style.display = 'block';
+        return;
+    }
+
     // Disable button
     submitReviewBtn.disabled = true;
     submitReviewBtn.textContent = '送出中...';
+    reviewError.style.display = 'none';
 
     try {
+        // Check if Firebase is initialized
+        if (!window.db || !window.collection || !window.addDoc || !window.serverTimestamp) {
+            throw new Error('Firebase not initialized');
+        }
+
         const reviewData = {
             rating: selectedRating,
             comment: comment || null,
@@ -5676,17 +5689,25 @@ async function submitReview() {
         localStorage.setItem('hasReviewed', 'true');
         localStorage.setItem('userRating', selectedRating);
 
-        // Show success message
-        showReviewFeedback('感謝您的評價！');
-        disableReviewButton();
-
-        // Close modal
-        document.getElementById('review-modal').style.display = 'none';
+        // Show success message in modal
+        showReviewSuccessInModal();
 
         console.log('Review submitted successfully:', reviewData);
     } catch (error) {
         console.error('Error submitting review:', error);
-        reviewError.textContent = '送出失敗，請稍後再試';
+        console.error('Error details:', error.message, error.code);
+
+        // Better error messages
+        let errorMessage = '送出失敗，請稍後再試';
+        if (error.message === 'Firebase not initialized') {
+            errorMessage = '系統初始化中，請稍後再試';
+        } else if (error.code === 'permission-denied') {
+            errorMessage = '權限不足，請重新整理頁面後再試';
+        } else if (error.code === 'unavailable') {
+            errorMessage = '網路連線問題，請檢查網路後再試';
+        }
+
+        reviewError.textContent = errorMessage;
         reviewError.style.display = 'block';
     } finally {
         submitReviewBtn.disabled = false;
@@ -5698,6 +5719,42 @@ function showReviewFeedback(message) {
     const reviewFeedback = document.getElementById('review-feedback');
     reviewFeedback.textContent = message;
     reviewFeedback.style.display = 'block';
+}
+
+function showReviewSuccessInModal() {
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const starRatingModal = document.getElementById('star-rating-modal');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+    const reviewError = document.getElementById('review-error');
+
+    // Hide stars and comment section
+    starRatingModal.style.display = 'none';
+    reviewCommentSection.style.display = 'none';
+    reviewError.style.display = 'none';
+
+    // Change title to thank you message
+    reviewModalTitle.textContent = '感謝您的評價！';
+    reviewModalTitle.style.textAlign = 'center';
+    reviewModalTitle.style.color = '#10b981';
+    reviewModalTitle.style.fontSize = '24px';
+    reviewModalTitle.style.padding = '40px 20px';
+
+    // Auto close modal after 2 seconds
+    setTimeout(() => {
+        document.getElementById('review-modal').style.display = 'none';
+
+        // Show feedback below button and disable it
+        showReviewFeedback('感謝您的評價！');
+        disableReviewButton();
+
+        // Reset modal for next time (if needed)
+        reviewModalTitle.style.textAlign = '';
+        reviewModalTitle.style.color = '';
+        reviewModalTitle.style.fontSize = '';
+        reviewModalTitle.style.padding = '';
+        starRatingModal.style.display = '';
+        reviewCommentSection.style.display = '';
+    }, 2000);
 }
 
 function disableReviewButton() {
