@@ -1584,6 +1584,9 @@ function createCouponResultElement(coupon, amount) {
     const couponDiv = document.createElement('div');
     couponDiv.className = 'coupon-item fade-in';
 
+    // Handle cap display - same as regular cards
+    const capText = coupon.cap ? `NT$${coupon.cap.toLocaleString()}` : '無上限';
+
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="coupon-merchant">${coupon.cardName}</div>
@@ -1599,7 +1602,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
-                <div class="detail-value">無上限</div>
+                <div class="detail-value">${capText}</div>
             </div>
         </div>
         <div class="matched-merchant">
@@ -5493,6 +5496,274 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of Auth Modal DOMContentLoaded
+
+// ============================================
+// Review System (Star Rating)
+// ============================================
+
+let selectedRating = 0;
+
+function initReviewSystem() {
+    const openReviewBtn = document.getElementById('open-review-btn');
+    const starsModal = document.querySelectorAll('.star-modal');
+    const starRatingModal = document.getElementById('star-rating-modal');
+    const reviewFeedback = document.getElementById('review-feedback');
+    const reviewModal = document.getElementById('review-modal');
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+    const reviewComment = document.getElementById('review-comment');
+    const reviewCharCount = document.getElementById('review-char-count');
+    const submitReviewBtn = document.getElementById('submit-review-btn');
+    const skipReviewBtn = document.getElementById('skip-review-btn');
+    const closeReviewModal = document.getElementById('close-review-modal');
+    const reviewError = document.getElementById('review-error');
+
+    // Check if user has already reviewed
+    const hasReviewed = localStorage.getItem('hasReviewed');
+    if (hasReviewed) {
+        showReviewFeedback('感謝您的評價！');
+        if (openReviewBtn) {
+            openReviewBtn.style.opacity = '0.5';
+            openReviewBtn.style.pointerEvents = 'none';
+        }
+        return;
+    }
+
+    // Open review modal button
+    if (openReviewBtn) {
+        openReviewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openReviewModalInitial();
+        });
+    }
+
+    // Star hover effect in modal
+    starsModal.forEach(star => {
+        star.addEventListener('mouseenter', () => {
+            const rating = parseInt(star.dataset.rating);
+            highlightModalStars(rating);
+        });
+    });
+
+    if (starRatingModal) {
+        starRatingModal.addEventListener('mouseleave', () => {
+            highlightModalStars(selectedRating);
+        });
+    }
+
+    // Star click handler in modal
+    starsModal.forEach(star => {
+        star.addEventListener('click', () => {
+            const rating = parseInt(star.dataset.rating);
+            selectedRating = rating;
+            highlightModalStars(rating);
+            showCommentSection();
+        });
+    });
+
+    // Character counter
+    if (reviewComment) {
+        reviewComment.addEventListener('input', () => {
+            reviewCharCount.textContent = reviewComment.value.length;
+        });
+    }
+
+    // Submit review
+    if (submitReviewBtn) {
+        submitReviewBtn.addEventListener('click', async () => {
+            await submitReview();
+        });
+    }
+
+    // Skip review
+    if (skipReviewBtn) {
+        skipReviewBtn.addEventListener('click', () => {
+            submitReviewWithoutComment();
+        });
+    }
+
+    // Close modal
+    if (closeReviewModal) {
+        closeReviewModal.addEventListener('click', closeReviewModalHandler);
+    }
+
+    // Close on backdrop click
+    if (reviewModal) {
+        reviewModal.addEventListener('click', (e) => {
+            if (e.target === reviewModal) {
+                closeReviewModalHandler();
+            }
+        });
+    }
+}
+
+function highlightModalStars(rating) {
+    const stars = document.querySelectorAll('.star-modal');
+    stars.forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('hover');
+            star.classList.add('selected');
+        } else {
+            star.classList.remove('hover');
+            star.classList.remove('selected');
+        }
+    });
+}
+
+function openReviewModalInitial() {
+    const reviewModal = document.getElementById('review-modal');
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+    const reviewComment = document.getElementById('review-comment');
+    const reviewCharCount = document.getElementById('review-char-count');
+    const reviewError = document.getElementById('review-error');
+
+    // Reset state
+    selectedRating = 0;
+    highlightModalStars(0);
+    reviewModalTitle.textContent = '請為我們評分';
+    reviewCommentSection.style.display = 'none';
+    reviewComment.value = '';
+    reviewCharCount.textContent = '0';
+    reviewError.style.display = 'none';
+
+    // Show modal
+    reviewModal.style.display = 'flex';
+}
+
+function showCommentSection() {
+    const reviewModalTitle = document.getElementById('review-modal-title');
+    const reviewCommentSection = document.getElementById('review-comment-section');
+
+    reviewModalTitle.textContent = '感謝您的評分！';
+    reviewCommentSection.style.display = 'block';
+}
+
+function closeReviewModalHandler() {
+    const reviewModal = document.getElementById('review-modal');
+    reviewModal.style.display = 'none';
+    // Reset selected rating if user closes without submitting
+    if (!localStorage.getItem('hasReviewed')) {
+        selectedRating = 0;
+        highlightModalStars(0);
+    }
+}
+
+async function submitReview() {
+    const reviewComment = document.getElementById('review-comment');
+    const submitReviewBtn = document.getElementById('submit-review-btn');
+    const reviewError = document.getElementById('review-error');
+
+    const comment = reviewComment.value.trim();
+
+    // Disable button
+    submitReviewBtn.disabled = true;
+    submitReviewBtn.textContent = '送出中...';
+
+    try {
+        const reviewData = {
+            rating: selectedRating,
+            comment: comment || null,
+            timestamp: window.serverTimestamp(),
+            userAgent: navigator.userAgent,
+            screenSize: `${window.screen.width}x${window.screen.height}`
+        };
+
+        // Try to add user ID if logged in
+        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+            reviewData.userId = window.firebaseAuth.currentUser.uid;
+            reviewData.userEmail = window.firebaseAuth.currentUser.email;
+        }
+
+        // Save to Firebase
+        await window.addDoc(window.collection(window.db, 'reviews'), reviewData);
+
+        // Mark as reviewed
+        localStorage.setItem('hasReviewed', 'true');
+        localStorage.setItem('userRating', selectedRating);
+
+        // Show success message
+        showReviewFeedback('感謝您的評價！');
+        disableReviewButton();
+
+        // Close modal
+        document.getElementById('review-modal').style.display = 'none';
+
+        console.log('Review submitted successfully:', reviewData);
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        reviewError.textContent = '送出失敗，請稍後再試';
+        reviewError.style.display = 'block';
+    } finally {
+        submitReviewBtn.disabled = false;
+        submitReviewBtn.textContent = '送出評價';
+    }
+}
+
+async function submitReviewWithoutComment() {
+    const skipReviewBtn = document.getElementById('skip-review-btn');
+    skipReviewBtn.disabled = true;
+    skipReviewBtn.textContent = '處理中...';
+
+    try {
+        const reviewData = {
+            rating: selectedRating,
+            comment: null,
+            timestamp: window.serverTimestamp(),
+            userAgent: navigator.userAgent,
+            screenSize: `${window.screen.width}x${window.screen.height}`
+        };
+
+        // Try to add user ID if logged in
+        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+            reviewData.userId = window.firebaseAuth.currentUser.uid;
+            reviewData.userEmail = window.firebaseAuth.currentUser.email;
+        }
+
+        // Save to Firebase
+        await window.addDoc(window.collection(window.db, 'reviews'), reviewData);
+
+        // Mark as reviewed
+        localStorage.setItem('hasReviewed', 'true');
+        localStorage.setItem('userRating', selectedRating);
+
+        // Show success message
+        showReviewFeedback('感謝您的評價！');
+        disableReviewButton();
+
+        // Close modal
+        document.getElementById('review-modal').style.display = 'none';
+
+        console.log('Review submitted successfully (no comment):', reviewData);
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        const reviewError = document.getElementById('review-error');
+        reviewError.textContent = '送出失敗，請稍後再試';
+        reviewError.style.display = 'block';
+    } finally {
+        skipReviewBtn.disabled = false;
+        skipReviewBtn.textContent = '略過';
+    }
+}
+
+function showReviewFeedback(message) {
+    const reviewFeedback = document.getElementById('review-feedback');
+    reviewFeedback.textContent = message;
+    reviewFeedback.style.display = 'block';
+}
+
+function disableReviewButton() {
+    const openReviewBtn = document.getElementById('open-review-btn');
+    if (openReviewBtn) {
+        openReviewBtn.style.opacity = '0.5';
+        openReviewBtn.style.pointerEvents = 'none';
+    }
+}
+
+// Initialize review system when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initReviewSystem();
+});
 
 
 
