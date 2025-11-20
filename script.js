@@ -1585,7 +1585,13 @@ function createCouponResultElement(coupon, amount) {
     couponDiv.className = 'coupon-item fade-in';
 
     // Handle cap display - same as regular cards
-    const capText = coupon.cap ? `NT$${coupon.cap.toLocaleString()}` : '無上限';
+    // Check if cap exists and is a valid number
+    const capText = (coupon.cap && !isNaN(coupon.cap)) ? `NT$${Number(coupon.cap).toLocaleString()}` : '無上限';
+
+    // Debug log to check cap value
+    if (coupon.merchant.includes('星巴克')) {
+        console.log('星巴克 coupon cap:', coupon.cap, 'type:', typeof coupon.cap);
+    }
 
     couponDiv.innerHTML = `
         <div class="coupon-header">
@@ -1606,9 +1612,8 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            ${coupon.conditions}
+            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
         </div>
-        <div class="coupon-card-name">匹配項目: ${coupon.merchant}</div>
     `;
 
     return couponDiv;
@@ -5557,7 +5562,6 @@ function initReviewSystem() {
             const rating = parseInt(star.dataset.rating);
             selectedRating = rating;
             highlightModalStars(rating);
-            showCommentSection();
         });
     });
 
@@ -5575,10 +5579,10 @@ function initReviewSystem() {
         });
     }
 
-    // Skip review
+    // Skip review - close modal without submitting
     if (skipReviewBtn) {
         skipReviewBtn.addEventListener('click', () => {
-            submitReviewWithoutComment();
+            closeReviewModalHandler();
         });
     }
 
@@ -5613,7 +5617,6 @@ function highlightModalStars(rating) {
 function openReviewModalInitial() {
     const reviewModal = document.getElementById('review-modal');
     const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewCommentSection = document.getElementById('review-comment-section');
     const reviewComment = document.getElementById('review-comment');
     const reviewCharCount = document.getElementById('review-char-count');
     const reviewError = document.getElementById('review-error');
@@ -5622,21 +5625,12 @@ function openReviewModalInitial() {
     selectedRating = 0;
     highlightModalStars(0);
     reviewModalTitle.textContent = '請為我們評分';
-    reviewCommentSection.style.display = 'none';
     reviewComment.value = '';
     reviewCharCount.textContent = '0';
     reviewError.style.display = 'none';
 
     // Show modal
     reviewModal.style.display = 'flex';
-}
-
-function showCommentSection() {
-    const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewCommentSection = document.getElementById('review-comment-section');
-
-    reviewModalTitle.textContent = '感謝您的評分！';
-    reviewCommentSection.style.display = 'block';
 }
 
 function closeReviewModalHandler() {
@@ -5697,52 +5691,6 @@ async function submitReview() {
     } finally {
         submitReviewBtn.disabled = false;
         submitReviewBtn.textContent = '送出評價';
-    }
-}
-
-async function submitReviewWithoutComment() {
-    const skipReviewBtn = document.getElementById('skip-review-btn');
-    skipReviewBtn.disabled = true;
-    skipReviewBtn.textContent = '處理中...';
-
-    try {
-        const reviewData = {
-            rating: selectedRating,
-            comment: null,
-            timestamp: window.serverTimestamp(),
-            userAgent: navigator.userAgent,
-            screenSize: `${window.screen.width}x${window.screen.height}`
-        };
-
-        // Try to add user ID if logged in
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-            reviewData.userId = window.firebaseAuth.currentUser.uid;
-            reviewData.userEmail = window.firebaseAuth.currentUser.email;
-        }
-
-        // Save to Firebase
-        await window.addDoc(window.collection(window.db, 'reviews'), reviewData);
-
-        // Mark as reviewed
-        localStorage.setItem('hasReviewed', 'true');
-        localStorage.setItem('userRating', selectedRating);
-
-        // Show success message
-        showReviewFeedback('感謝您的評價！');
-        disableReviewButton();
-
-        // Close modal
-        document.getElementById('review-modal').style.display = 'none';
-
-        console.log('Review submitted successfully (no comment):', reviewData);
-    } catch (error) {
-        console.error('Error submitting review:', error);
-        const reviewError = document.getElementById('review-error');
-        reviewError.textContent = '送出失敗，請稍後再試';
-        reviewError.style.display = 'block';
-    } finally {
-        skipReviewBtn.disabled = false;
-        skipReviewBtn.textContent = '略過';
     }
 }
 
