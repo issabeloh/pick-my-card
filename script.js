@@ -5650,11 +5650,24 @@ async function submitReview() {
 
     const comment = reviewComment.value.trim();
 
+    // Validate rating
+    if (!selectedRating || selectedRating === 0) {
+        reviewError.textContent = '請先選擇星星評分';
+        reviewError.style.display = 'block';
+        return;
+    }
+
     // Disable button
     submitReviewBtn.disabled = true;
     submitReviewBtn.textContent = '送出中...';
+    reviewError.style.display = 'none';
 
     try {
+        // Check if Firebase is initialized
+        if (!window.db || !window.collection || !window.addDoc || !window.serverTimestamp) {
+            throw new Error('Firebase not initialized');
+        }
+
         const reviewData = {
             rating: selectedRating,
             comment: comment || null,
@@ -5686,7 +5699,19 @@ async function submitReview() {
         console.log('Review submitted successfully:', reviewData);
     } catch (error) {
         console.error('Error submitting review:', error);
-        reviewError.textContent = '送出失敗，請稍後再試';
+        console.error('Error details:', error.message, error.code);
+
+        // Better error messages
+        let errorMessage = '送出失敗，請稍後再試';
+        if (error.message === 'Firebase not initialized') {
+            errorMessage = '系統初始化中，請稍後再試';
+        } else if (error.code === 'permission-denied') {
+            errorMessage = '權限不足，請重新整理頁面後再試';
+        } else if (error.code === 'unavailable') {
+            errorMessage = '網路連線問題，請檢查網路後再試';
+        }
+
+        reviewError.textContent = errorMessage;
         reviewError.style.display = 'block';
     } finally {
         submitReviewBtn.disabled = false;
