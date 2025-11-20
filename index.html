@@ -563,6 +563,41 @@
                     </a>
                 </div>
             </div>
+            <div class="review-section">
+                <p class="social-media-title">評價我們</p>
+                <div class="review-container">
+                    <div class="star-rating" id="star-rating">
+                        <span class="star" data-rating="1">★</span>
+                        <span class="star" data-rating="2">★</span>
+                        <span class="star" data-rating="3">★</span>
+                        <span class="star" data-rating="4">★</span>
+                        <span class="star" data-rating="5">★</span>
+                    </div>
+                    <div class="review-feedback" id="review-feedback" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="modal" style="display: none;">
+        <div class="modal-content review-modal-content">
+            <div class="modal-header">
+                <h3>感謝您的評分！</h3>
+                <button class="close-modal" id="close-review-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="review-stars-display" id="review-stars-display"></div>
+                <textarea id="review-comment" class="review-textarea" placeholder="想跟我們說些什麼嗎？（選填）" maxlength="500"></textarea>
+                <div class="review-char-count">
+                    <span id="review-char-count">0</span>/500
+                </div>
+                <div class="review-modal-actions">
+                    <button id="submit-review-btn" class="auth-btn primary">送出評價</button>
+                    <button id="skip-review-btn" class="auth-btn secondary">略過</button>
+                </div>
+                <div id="review-error" class="auth-error" style="display: none;"></div>
+            </div>
         </div>
     </div>
 
