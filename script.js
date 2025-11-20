@@ -1583,33 +1583,31 @@ function displayCouponCashbacks(amount, merchantValue) {
 function createCouponResultElement(coupon, amount) {
     const couponDiv = document.createElement('div');
     couponDiv.className = 'coupon-item fade-in';
-    
+
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="coupon-merchant">${coupon.cardName}</div>
-            <div class="coupon-rate">${coupon.rate}%</div>
         </div>
-        <div class="coupon-details">
-            <div class="coupon-detail-row">
-                <div class="coupon-detail-label">回饋金額:</div>
-                <div class="coupon-detail-value">NT$${coupon.potentialCashback.toLocaleString()}</div>
+        <div class="card-details">
+            <div class="detail-item">
+                <div class="detail-label">回饋率</div>
+                <div class="detail-value">${coupon.rate}%</div>
             </div>
-            <div class="coupon-detail-row">
-                <div class="coupon-detail-label">回饋消費上限:</div>
-                <div class="coupon-detail-value">無上限</div>
+            <div class="detail-item">
+                <div class="detail-label">回饋金額</div>
+                <div class="detail-value cashback-amount">NT$${coupon.potentialCashback.toLocaleString()}</div>
             </div>
-            <div class="coupon-detail-row">
-                <div class="coupon-detail-label">回饋條件:</div>
-                <div class="coupon-detail-value">${coupon.conditions}</div>
+            <div class="detail-item">
+                <div class="detail-label">回饋消費上限</div>
+                <div class="detail-value">無上限</div>
             </div>
-            <div class="coupon-detail-row">
-                <div class="coupon-detail-label">活動期間:</div>
-                <div class="coupon-detail-value">${coupon.period}</div>
-            </div>
+        </div>
+        <div class="matched-merchant">
+            ${coupon.conditions}
         </div>
         <div class="coupon-card-name">匹配項目: ${coupon.merchant}</div>
     `;
-    
+
     return couponDiv;
 }
 
@@ -5261,7 +5259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auth Modal System (Login/Register with Email)
 // ============================================
 
-let authMode = 'login'; // 'login' or 'register'
+let authMode = 'login'; // 'login', 'register', or 'forgotPassword'
 
 function openAuthModal(mode = 'login') {
     authMode = mode;
@@ -5270,6 +5268,7 @@ function openAuthModal(mode = 'login') {
     const submitBtn = document.getElementById('auth-submit-btn');
     const switchText = document.getElementById('auth-switch-text');
     const confirmPasswordGroup = document.getElementById('auth-confirm-password-group');
+    const passwordGroup = document.querySelector('.form-group:has(#auth-password)');
     const forgotPasswordLink = document.getElementById('forgot-password-link');
     const authError = document.getElementById('auth-error');
 
@@ -5282,12 +5281,21 @@ function openAuthModal(mode = 'login') {
         submitBtn.textContent = '註冊';
         switchText.innerHTML = '已經有帳號？<a href="#" id="auth-switch-link">立即登入</a>';
         confirmPasswordGroup.style.display = 'block';
+        passwordGroup.style.display = 'block';
+        forgotPasswordLink.style.display = 'none';
+    } else if (mode === 'forgotPassword') {
+        modalTitle.textContent = '忘記密碼';
+        submitBtn.textContent = '發送重設密碼郵件';
+        switchText.innerHTML = '<a href="#" id="auth-switch-link">返回登入</a>';
+        confirmPasswordGroup.style.display = 'none';
+        passwordGroup.style.display = 'none';
         forgotPasswordLink.style.display = 'none';
     } else {
         modalTitle.textContent = '登入';
         submitBtn.textContent = '登入';
         switchText.innerHTML = '還沒有帳號？<a href="#" id="auth-switch-link">立即註冊</a>';
         confirmPasswordGroup.style.display = 'none';
+        passwordGroup.style.display = 'block';
         forgotPasswordLink.style.display = 'inline-block';
     }
 
@@ -5296,7 +5304,11 @@ function openAuthModal(mode = 'login') {
     // Re-attach event listener for switch link
     document.getElementById('auth-switch-link').addEventListener('click', (e) => {
         e.preventDefault();
-        openAuthModal(authMode === 'login' ? 'register' : 'login');
+        if (authMode === 'forgotPassword') {
+            openAuthModal('login');
+        } else {
+            openAuthModal(authMode === 'login' ? 'register' : 'login');
+        }
     });
 }
 
@@ -5365,7 +5377,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const confirmPassword = document.getElementById('auth-confirm-password').value;
             const submitBtn = document.getElementById('auth-submit-btn');
 
-            // Validation
+            // Handle forgot password mode
+            if (authMode === 'forgotPassword') {
+                if (!email) {
+                    showAuthError('請輸入您的 Email');
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = '發送中...';
+
+                try {
+                    await window.sendPasswordResetEmail(auth, email);
+                    const authError = document.getElementById('auth-error');
+                    authError.textContent = '✅ 密碼重設信已寄出，請檢查您的 Email';
+                    authError.style.display = 'block';
+                    authError.style.background = '#d4edda';
+                    authError.style.color = '#155724';
+                } catch (error) {
+                    console.error('Password reset error:', error);
+                    let errorMessage = '發送失敗，請稍後再試';
+
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = '找不到此 Email 帳號';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Email 格式不正確';
+                    }
+
+                    const authError = document.getElementById('auth-error');
+                    authError.textContent = errorMessage;
+                    authError.style.display = 'block';
+                    authError.style.background = '#fce8e6';
+                    authError.style.color = '#c5221f';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '發送重設密碼郵件';
+                }
+                return;
+            }
+
+            // Validation for login/register
             if (!email || !password) {
                 showAuthError('請填寫所有欄位');
                 return;
@@ -5434,33 +5485,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Forgot password
+    // Forgot password link - switch to forgot password mode
     if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', async (e) => {
+        forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
-
-            const email = document.getElementById('auth-email').value.trim();
-
-            if (!email) {
-                showAuthError('請先輸入您的 Email');
-                return;
-            }
-
-            try {
-                await window.sendPasswordResetEmail(auth, email);
-                showAuthError('✅ 密碼重設信已寄出，請檢查您的 Email');
-            } catch (error) {
-                console.error('Password reset error:', error);
-                let errorMessage = '發送失敗，請稍後再試';
-
-                if (error.code === 'auth/user-not-found') {
-                    errorMessage = '找不到此 Email 帳號';
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage = 'Email 格式不正確';
-                }
-
-                showAuthError(errorMessage);
-            }
+            openAuthModal('forgotPassword');
         });
     }
 }); // End of Auth Modal DOMContentLoaded
