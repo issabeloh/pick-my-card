@@ -878,6 +878,42 @@
             </div>
         </div>
     </div>
+
+    <!-- WebView Warning Modal -->
+    <div id="webview-warning-modal" class="modal" style="display: none;">
+        <div class="modal-content webview-warning-content">
+            <div class="modal-header">
+                <h3>⚠️ 無法在此環境登入</h3>
+                <button class="close-modal" id="close-webview-warning">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="webview-warning-message">
+                    <p class="warning-main-text">偵測到您正在 APP 內瀏覽器中開啟此網站。</p>
+                    <p class="warning-explanation">基於 Google 的安全政策，<strong>無法在 APP 內使用 Google 登入</strong>。</p>
+
+                    <div class="solution-section">
+                        <h4>📱 解決方法：</h4>
+                        <ol class="solution-steps">
+                            <li>點擊下方「在瀏覽器中開啟」按鈕</li>
+                            <li>或點擊右上角選單「...」或「⋮」</li>
+                            <li>選擇「在 Safari/Chrome 中開啟」</li>
+                        </ol>
+                    </div>
+
+                    <div class="alternative-section">
+                        <p class="alternative-text">💡 或者，您也可以使用 <strong>Email/密碼登入</strong>（在 APP 內也能使用）</p>
+                    </div>
+
+                    <div id="copy-feedback" class="copy-feedback" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer webview-warning-footer">
+                <button id="open-in-browser-btn" class="auth-btn primary">在瀏覽器中開啟</button>
+                <button id="copy-url-btn" class="auth-btn secondary">複製連結</button>
+                <button id="use-email-login-btn" class="auth-btn secondary">改用 Email 登入</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 

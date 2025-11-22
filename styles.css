@@ -3875,4 +3875,112 @@ input[type="number"]:focus {
     }
 }
 
+/* WebView Warning Modal Styles */
+.webview-warning-content {
+    max-width: 500px;
+}
+
+.webview-warning-message {
+    text-align: left;
+}
+
+.warning-main-text {
+    font-size: 1rem;
+    color: #1f2937;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.warning-explanation {
+    font-size: 0.9375rem;
+    color: #4b5563;
+    margin-bottom: 24px;
+    line-height: 1.6;
+}
+
+.solution-section {
+    background: #f3f4f6;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.solution-section h4 {
+    font-size: 1rem;
+    color: #1f2937;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+}
+
+.solution-steps {
+    margin: 0;
+    padding-left: 20px;
+    color: #374151;
+}
+
+.solution-steps li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.alternative-section {
+    background: #eff6ff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+    margin-bottom: 16px;
+}
+
+.alternative-text {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: #1e40af;
+    line-height: 1.5;
+}
+
+.copy-feedback {
+    padding: 12px;
+    background: #d4edda;
+    color: #155724;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    margin-top: 12px;
+}
+
+.webview-warning-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.webview-warning-footer .auth-btn {
+    width: 100%;
+    margin: 0;
+}
+
+/* Responsive adjustments for WebView warning */
+@media (max-width: 480px) {
+    .webview-warning-content {
+        max-width: 95%;
+        margin: 20px auto;
+    }
+
+    .solution-section {
+        padding: 12px;
+    }
+
+    .solution-steps {
+        padding-left: 16px;
+        font-size: 0.875rem;
+    }
+
+    .warning-main-text,
+    .warning-explanation,
+    .alternative-text {
+        font-size: 0.875rem;
+    }
+}
+
 

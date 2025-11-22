@@ -9,6 +9,126 @@ let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
 
+// WebView detection function
+function isInAppBrowser() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+
+    // Check for common in-app browsers
+    const patterns = [
+        /FBAN|FBAV/i,        // Facebook
+        /Instagram/i,         // Instagram
+        /Line/i,             // LINE
+        /Threads/i,          // Threads
+        /Twitter/i,          // Twitter
+        /WeChat/i,           // WeChat
+        /\bwv\b/i,           // Generic WebView
+        /WebView/i           // Generic WebView
+    ];
+
+    const isWebView = patterns.some(pattern => pattern.test(ua));
+
+    if (isWebView) {
+        console.log('🔍 Detected in-app browser:', ua);
+    }
+
+    return isWebView;
+}
+
+// Show WebView warning modal
+function showWebViewWarning() {
+    const modal = document.getElementById('webview-warning-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// Close WebView warning modal
+function closeWebViewWarning() {
+    const modal = document.getElementById('webview-warning-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Copy current URL to clipboard
+function copyUrlToClipboard() {
+    const url = window.location.href;
+
+    // Try using Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            showCopyFeedback(true);
+        }).catch(() => {
+            // Fallback to old method
+            fallbackCopyUrl(url);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackCopyUrl(url);
+    }
+}
+
+// Fallback copy method
+function fallbackCopyUrl(url) {
+    const textArea = document.createElement('textarea');
+    textArea.value = url;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        document.execCommand('copy');
+        showCopyFeedback(true);
+    } catch (err) {
+        showCopyFeedback(false);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+// Show copy feedback
+function showCopyFeedback(success) {
+    const feedback = document.getElementById('copy-feedback');
+    if (feedback) {
+        feedback.textContent = success ? '✅ 連結已複製！' : '❌ 複製失敗，請手動複製';
+        feedback.style.display = 'block';
+
+        setTimeout(() => {
+            feedback.style.display = 'none';
+        }, 2000);
+    }
+}
+
+// Open in browser (try to open in default browser)
+function openInBrowser() {
+    const url = window.location.href;
+
+    // For iOS, try to open in Safari
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        // iOS doesn't allow direct opening in Safari from WebView
+        // Show copy instruction instead
+        copyUrlToClipboard();
+        alert('請點擊右上角「...」選單，選擇「在 Safari 中開啟」');
+    }
+    // For Android, try various methods
+    else if (/Android/i.test(navigator.userAgent)) {
+        // Try intent URL for Android
+        window.location.href = 'intent://' + url.replace(/https?:\/\//, '') + '#Intent;scheme=https;end';
+
+        // Fallback: show instructions
+        setTimeout(() => {
+            copyUrlToClipboard();
+            alert('請點擊右上角「⋮」選單，選擇「在瀏覽器中開啟」');
+        }, 1000);
+    }
+    // For other platforms
+    else {
+        copyUrlToClipboard();
+    }
+}
+
 // Load cards data from cards.data (encoded)
 async function loadCardsData() {
     try {
@@ -5358,6 +5478,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Google sign in
     if (googleSignInBtn) {
         googleSignInBtn.addEventListener('click', async () => {
+            // Check if user is in an in-app browser
+            if (isInAppBrowser()) {
+                console.log('⚠️ Google sign-in blocked: in-app browser detected');
+                closeAuthModal();
+                showWebViewWarning();
+                return;
+            }
+
             try {
                 const result = await window.signInWithPopup(auth, window.googleProvider);
                 console.log('Google sign in successful:', result.user);
@@ -5369,6 +5497,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     errorMessage = '登入視窗已關閉';
                 } else if (error.code === 'auth/popup-blocked') {
                     errorMessage = '彈出視窗被瀏覽器阻擋，請允許彈出視窗';
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    errorMessage = '此網域未經授權，請聯絡管理員';
                 }
                 showAuthError(errorMessage);
             }
@@ -5501,6 +5631,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of Auth Modal DOMContentLoaded
+
+// ============================================
+// WebView Warning Modal Event Listeners
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+    const closeWebViewWarningBtn = document.getElementById('close-webview-warning');
+    const openInBrowserBtn = document.getElementById('open-in-browser-btn');
+    const copyUrlBtn = document.getElementById('copy-url-btn');
+    const useEmailLoginBtn = document.getElementById('use-email-login-btn');
+    const webviewWarningModal = document.getElementById('webview-warning-modal');
+
+    // Close WebView warning modal
+    if (closeWebViewWarningBtn) {
+        closeWebViewWarningBtn.addEventListener('click', () => {
+            closeWebViewWarning();
+        });
+    }
+
+    // Close on backdrop click
+    if (webviewWarningModal) {
+        webviewWarningModal.addEventListener('click', (e) => {
+            if (e.target === webviewWarningModal) {
+                closeWebViewWarning();
+            }
+        });
+    }
+
+    // Open in browser button
+    if (openInBrowserBtn) {
+        openInBrowserBtn.addEventListener('click', () => {
+            openInBrowser();
+        });
+    }
+
+    // Copy URL button
+    if (copyUrlBtn) {
+        copyUrlBtn.addEventListener('click', () => {
+            copyUrlToClipboard();
+        });
+    }
+
+    // Use email login button
+    if (useEmailLoginBtn) {
+        useEmailLoginBtn.addEventListener('click', () => {
+            closeWebViewWarning();
+            openAuthModal('login');
+        });
+    }
+}); // End of WebView Warning Modal DOMContentLoaded
 
 // ============================================
 // Review System (Star Rating)
