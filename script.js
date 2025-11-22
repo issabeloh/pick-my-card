@@ -1137,6 +1137,15 @@ async function calculateCashback() {
     console.log('輸入：', { merchantValue, amount });
     console.log('currentMatchedItem:', currentMatchedItem);
 
+    // 追蹤計算回饋事件
+    if (window.logEvent && window.firebaseAnalytics) {
+        window.logEvent(window.firebaseAnalytics, 'calculate_cashback', {
+            merchant: merchantValue,
+            amount: amount,
+            has_match: currentMatchedItem ? true : false
+        });
+    }
+
     let results;
     let isBasicCashback = false;
 
@@ -2439,6 +2448,14 @@ async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;
 
+    // 追蹤卡片詳情查看
+    if (window.logEvent && window.firebaseAnalytics) {
+        window.logEvent(window.firebaseAnalytics, 'view_card_detail', {
+            card_id: cardId,
+            card_name: card.name
+        });
+    }
+
     const modal = document.getElementById('card-detail-modal');
 
     // Update basic information
@@ -2448,6 +2465,16 @@ async function showCardDetail(cardId) {
     fullNameLink.textContent = card.fullName || card.name;
     if (card.website) {
         fullNameLink.href = card.website;
+        // 追蹤外部連結點擊
+        fullNameLink.onclick = () => {
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'click_bank_website', {
+                    card_id: card.id,
+                    card_name: card.name,
+                    website: card.website
+                });
+            }
+        };
     } else {
         fullNameLink.removeAttribute('href');
         fullNameLink.style.textDecoration = 'none';
