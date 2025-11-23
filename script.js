@@ -1597,14 +1597,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
         cashbackAmount = specialCashback + bonusCashback + remainingCashback;
 
         // Total rate is the special rate from cashbackRates (no bonusRate added)
-        totalRate = Math.round(bestRate * 10) / 10;
+        totalRate = Math.round(bestRate * 100) / 100;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
-    
+
     return {
-        rate: Math.round(totalRate * 10) / 10,
-        specialRate: Math.round(bestRate * 10) / 10,
-        basicRate: Math.round(card.basicCashback * 10) / 10,
+        rate: Math.round(totalRate * 100) / 100,
+        specialRate: Math.round(bestRate * 100) / 100,
+        basicRate: Math.round(card.basicCashback * 100) / 100,
         cashbackAmount: cashbackAmount,
         cap: applicableCap,
         matchedItem: matchedItem,
