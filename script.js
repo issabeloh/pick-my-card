@@ -1597,14 +1597,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
         cashbackAmount = specialCashback + bonusCashback + remainingCashback;
 
         // Total rate is the special rate from cashbackRates (no bonusRate added)
-        totalRate = Math.round(bestRate * 10) / 10;
+        totalRate = Math.round(bestRate * 100) / 100;
         effectiveAmount = applicableCap; // Keep this for display purposes
     }
-    
+
     return {
-        rate: Math.round(totalRate * 10) / 10,
-        specialRate: Math.round(bestRate * 10) / 10,
-        basicRate: Math.round(card.basicCashback * 10) / 10,
+        rate: Math.round(totalRate * 100) / 100,
+        specialRate: Math.round(bestRate * 100) / 100,
+        basicRate: Math.round(card.basicCashback * 100) / 100,
         cashbackAmount: cashbackAmount,
         cap: applicableCap,
         matchedItem: matchedItem,
@@ -3436,6 +3436,16 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
             button.classList.remove('pinned');
             button.title = '釘選此配對';
             showToast('已取消釘選', button.closest('.card-result'));
+
+            // 追蹤取消釘選事件
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'unpin_card', {
+                    card_id: cardId,
+                    card_name: cardName,
+                    merchant: merchant,
+                    rate: rate
+                });
+            }
         }
     } else {
         // 釘選
@@ -3446,6 +3456,16 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
 
             // 顯示成功動畫
             showPinSuccessAnimation(button);
+
+            // 追蹤釘選事件
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'pin_card', {
+                    card_id: cardId,
+                    card_name: cardName,
+                    merchant: merchant,
+                    rate: rate
+                });
+            }
         }
     }
 }
@@ -3691,11 +3711,24 @@ function renderMappingsList(searchTerm = '') {
             e.preventDefault();
             const mappingId = btn.dataset.mappingId;
             if (confirm('確定要刪除這個配對嗎？')) {
+                // 在刪除前取得 mapping 資訊用於追蹤
+                const mapping = userSpendingMappings.find(m => m.id === mappingId);
+
                 await removeMapping(mappingId);
                 renderMappingsList(document.getElementById('mappings-search')?.value || '');
 
                 // 更新結果卡片的釘選狀態（如果結果還在顯示）
                 updatePinButtonsState();
+
+                // 追蹤從我的配卡中刪除事件
+                if (mapping && window.logEvent && window.firebaseAnalytics) {
+                    window.logEvent(window.firebaseAnalytics, 'remove_mapping', {
+                        card_id: mapping.cardId,
+                        card_name: mapping.cardName,
+                        merchant: mapping.merchant,
+                        rate: mapping.cashbackRate
+                    });
+                }
             }
         };
     });
