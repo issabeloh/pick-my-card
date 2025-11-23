@@ -3436,6 +3436,16 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
             button.classList.remove('pinned');
             button.title = '釘選此配對';
             showToast('已取消釘選', button.closest('.card-result'));
+
+            // 追蹤取消釘選事件
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'unpin_card', {
+                    card_id: cardId,
+                    card_name: cardName,
+                    merchant: merchant,
+                    rate: rate
+                });
+            }
         }
     } else {
         // 釘選
@@ -3446,6 +3456,16 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
 
             // 顯示成功動畫
             showPinSuccessAnimation(button);
+
+            // 追蹤釘選事件
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'pin_card', {
+                    card_id: cardId,
+                    card_name: cardName,
+                    merchant: merchant,
+                    rate: rate
+                });
+            }
         }
     }
 }
