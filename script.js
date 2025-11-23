@@ -1368,6 +1368,18 @@ function getAllSearchVariants(searchTerm) {
     return searchTerms;
 }
 
+// 取得類別顯示名稱
+function getCategoryDisplayName(category) {
+    const categoryMap = {
+        '玩數位': '切換「玩數位」方案',
+        '樂饗購': '切換「樂饗購」方案',
+        '趣旅行': '切換「趣旅行」方案',
+        '集精選': '切換「集精選」方案',
+        '來支付': '切換「來支付」方案'
+    };
+    return categoryMap[category] || category;
+}
+
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
     let bestRate = 0;
@@ -1834,7 +1846,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                 }
                 
-                const categoryInfo = result.matchedCategory ? ` (類別: ${result.matchedCategory})` : '';
+                const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
                 
                 // Special handling for Yushan Uni card exclusions in search results
                 let exclusionNote = '';
@@ -2661,7 +2673,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // Display rate with category in parentheses
-                const categoryLabel = rate.category ? ` (${rate.category})` : '';
+                const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate
@@ -2775,7 +2787,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // Display rate with category in parentheses
-                const categoryLabel = rate.category ? ` (${rate.category})` : '';
+                const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate if available, otherwise from levelData
@@ -3071,7 +3083,7 @@ async function generateCubeSpecialContent(card) {
             const items = card.specialItemsWithCategory[category];
             if (items && items.length > 0) {
                 content += `<div class="cashback-detail-item">`;
-                content += `<div class="cashback-rate">${specialRate}% 回饋 (${category})</div>`;
+                content += `<div class="cashback-rate">${specialRate}% 回饋 (${getCategoryDisplayName(category)})</div>`;
                 content += `<div class="cashback-condition">消費上限: 無上限</div>`;
 
                 const merchantsList = items.join('、');
@@ -3117,7 +3129,7 @@ async function generateCubeSpecialContent(card) {
     if (card.generalItems) {
         Object.entries(card.generalItems).forEach(([category, items]) => {
             content += `<div class="cashback-detail-item">`;
-            content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
+            content += `<div class="cashback-rate">2% 回饋 (${getCategoryDisplayName(category)})</div>`;
             content += `<div class="cashback-condition">消費上限: 無上限</div>`;
             content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${items.join('、')}</div>`;
             content += `</div>`;
