@@ -3711,11 +3711,24 @@ function renderMappingsList(searchTerm = '') {
             e.preventDefault();
             const mappingId = btn.dataset.mappingId;
             if (confirm('確定要刪除這個配對嗎？')) {
+                // 在刪除前取得 mapping 資訊用於追蹤
+                const mapping = userSpendingMappings.find(m => m.id === mappingId);
+
                 await removeMapping(mappingId);
                 renderMappingsList(document.getElementById('mappings-search')?.value || '');
 
                 // 更新結果卡片的釘選狀態（如果結果還在顯示）
                 updatePinButtonsState();
+
+                // 追蹤從我的配卡中刪除事件
+                if (mapping && window.logEvent && window.firebaseAnalytics) {
+                    window.logEvent(window.firebaseAnalytics, 'remove_mapping', {
+                        card_id: mapping.cardId,
+                        card_name: mapping.cardName,
+                        merchant: mapping.merchant,
+                        rate: mapping.cashbackRate
+                    });
+                }
             }
         };
     });
