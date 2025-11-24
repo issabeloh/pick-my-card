@@ -1375,7 +1375,8 @@ function getCategoryDisplayName(category) {
         '樂饗購': '切換「樂饗購」方案',
         '趣旅行': '切換「趣旅行」方案',
         '集精選': '切換「集精選」方案',
-        '來支付': '切換「來支付」方案'
+        '來支付': '切換「來支付」方案',
+        '童樂匯': '切換「童樂匯」方案'
     };
     return categoryMap[category] || category;
 }
@@ -3099,10 +3100,10 @@ async function generateCubeSpecialContent(card) {
     // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
     
     // 1. 童樂匯 10% 回饋 (固定最高)
-    const childrenRate10 = card.cashbackRates?.find(rate => rate.rate === 10.0 && rate.category === '童樂匯');
+    const childrenRate10 = card.cashbackRates?.find(rate => rate.rate === 10.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案'));
     if (childrenRate10) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">10% 回饋 (童樂匯)</div>`;
+        content += `<div class="cashback-rate">10% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -3113,12 +3114,12 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate10.items.join('、')}</div>`;
         content += `</div>`;
     }
-    
+
     // 2. 童樂匯 5% 回饋
-    const childrenRate5 = card.cashbackRates?.find(rate => rate.rate === 5.0 && rate.category === '童樂匯');
+    const childrenRate5 = card.cashbackRates?.find(rate => rate.rate === 5.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案'));
     if (childrenRate5) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">5% 回饋 (童樂匯)</div>`;
+        content += `<div class="cashback-rate">5% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
