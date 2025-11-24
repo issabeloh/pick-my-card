@@ -1340,9 +1340,9 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
     }
     
     displayResults(results, amount, displayedMatchItem, isBasicCashback);
-    
+
     // Display coupon cashbacks
-    displayCouponCashbacks(amount, merchantValue);
+    await displayCouponCashbacks(amount, merchantValue);
 }
 
 // Get all search term variants for comprehensive matching
@@ -1366,6 +1366,18 @@ function getAllSearchVariants(searchTerm) {
     });
     
     return searchTerms;
+}
+
+// 取得類別顯示名稱
+function getCategoryDisplayName(category) {
+    const categoryMap = {
+        '玩數位': '切換「玩數位」方案',
+        '樂饗購': '切換「樂饗購」方案',
+        '趣旅行': '切換「趣旅行」方案',
+        '集精選': '切換「集精選」方案',
+        '來支付': '切換「來支付」方案'
+    };
+    return categoryMap[category] || category;
 }
 
 // Calculate cashback for a specific card
@@ -1658,37 +1670,87 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// 計算 coupon 的實際回饋率（支援固定+分級回饋率）
+async function calculateCouponRate(coupon, card) {
+    let rate = coupon.rate;
+
+    // 如果不是 CUBE 卡，直接返回原始 rate
+    if (card.id !== 'cathay-cube') {
+        return typeof rate === 'number' ? rate : parseFloat(rate);
+    }
+
+    // 如果 rate 不是字串，直接返回數字（向下相容）
+    if (typeof rate !== 'string') {
+        return rate;
+    }
+
+    // 取得用戶的 Level 設定
+    const level = await getCardLevel('cathay-cube', 'Level 1');
+    const levelSettings = card.levelSettings[level];
+
+    // 處理純 "specialRate" 或 "generalRate" 的情況
+    if (rate === 'specialRate') {
+        return levelSettings.specialRate || 0;
+    }
+    if (rate === 'generalRate') {
+        return levelSettings.generalRate || 0;
+    }
+
+    // 處理 "數字+變數" 的情況（例如 "4.5+specialRate"）
+    if (rate.includes('+')) {
+        const parts = rate.split('+');
+        const fixedRate = parseFloat(parts[0].trim());
+        const variableType = parts[1].trim();
+
+        let variableRate = 0;
+        if (variableType === 'specialRate') {
+            variableRate = levelSettings.specialRate || 0;
+        } else if (variableType === 'generalRate') {
+            variableRate = levelSettings.generalRate || 0;
+        }
+
+        return fixedRate + variableRate;
+    }
+
+    // 如果都不是，當成固定數字處理
+    return parseFloat(rate);
+}
+
 // Display coupon cashback results
-function displayCouponCashbacks(amount, merchantValue) {
+async function displayCouponCashbacks(amount, merchantValue) {
     couponResultsContainer.innerHTML = '';
-    
+
     // Get cards to check (user selected or all)
-    const cardsToCheck = currentUser ? 
+    const cardsToCheck = currentUser ?
         cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
         cardsData.cards;
-    
+
     // Collect all coupon cashbacks that match the merchant
     const matchingCoupons = [];
-    
-    cardsToCheck.forEach(card => {
+
+    for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
-            card.couponCashbacks.forEach(coupon => {
+            for (const coupon of card.couponCashbacks) {
                 const merchantLower = merchantValue.toLowerCase();
                 const couponMerchantLower = coupon.merchant.toLowerCase();
-                
+
                 // Check if merchant matches coupon merchant
-                if (merchantLower.includes(couponMerchantLower) || 
+                if (merchantLower.includes(couponMerchantLower) ||
                     couponMerchantLower.includes(merchantLower)) {
+                    // 計算實際回饋率（支援分級）
+                    const actualRate = await calculateCouponRate(coupon, card);
+
                     matchingCoupons.push({
                         ...coupon,
                         cardName: card.name,
                         cardId: card.id,
-                        potentialCashback: Math.floor(amount * coupon.rate / 100)
+                        actualRate: actualRate, // 儲存計算後的實際回饋率
+                        potentialCashback: Math.floor(amount * actualRate / 100)
                     });
                 }
-            });
+            }
         }
-    });
+    }
     
     // If no matching coupons, hide the section
     if (matchingCoupons.length === 0) {
@@ -1697,7 +1759,7 @@ function displayCouponCashbacks(amount, merchantValue) {
     }
     
     // Sort by cashback rate (highest first)
-    matchingCoupons.sort((a, b) => b.rate - a.rate);
+    matchingCoupons.sort((a, b) => b.actualRate - a.actualRate);
     
     // Display coupon results
     matchingCoupons.forEach(coupon => {
@@ -1729,7 +1791,7 @@ function createCouponResultElement(coupon, amount) {
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${coupon.rate}%</div>
+                <div class="detail-value">${coupon.actualRate}%</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
@@ -1834,7 +1896,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                 }
                 
-                const categoryInfo = result.matchedCategory ? ` (類別: ${result.matchedCategory})` : '';
+                const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
                 
                 // Special handling for Yushan Uni card exclusions in search results
                 let exclusionNote = '';
@@ -2661,7 +2723,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // Display rate with category in parentheses
-                const categoryLabel = rate.category ? ` (${rate.category})` : '';
+                const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate
@@ -2775,7 +2837,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // Display rate with category in parentheses
-                const categoryLabel = rate.category ? ` (${rate.category})` : '';
+                const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate if available, otherwise from levelData
@@ -2940,13 +3002,18 @@ basicCashbackDiv.innerHTML = basicContent;
     
     if (card.couponCashbacks && card.couponCashbacks.length > 0) {
         let couponContent = '';
-        card.couponCashbacks.forEach(coupon => {
+
+        // 處理每個 coupon，計算實際回饋率
+        for (const coupon of card.couponCashbacks) {
+            const actualRate = await calculateCouponRate(coupon, card);
+
             couponContent += `<div class="cashback-detail-item">`;
-            couponContent += `<div class="cashback-rate">${coupon.merchant}: ${coupon.rate}% 回饋</div>`;
+            couponContent += `<div class="cashback-rate">${coupon.merchant}: ${actualRate}% 回饋</div>`;
             couponContent += `<div class="cashback-condition">條件: ${coupon.conditions}</div>`;
             couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
             couponContent += `</div>`;
-        });
+        }
+
         couponCashbackDiv.innerHTML = couponContent;
         couponSection.style.display = 'block';
     } else {
@@ -3071,7 +3138,7 @@ async function generateCubeSpecialContent(card) {
             const items = card.specialItemsWithCategory[category];
             if (items && items.length > 0) {
                 content += `<div class="cashback-detail-item">`;
-                content += `<div class="cashback-rate">${specialRate}% 回饋 (${category})</div>`;
+                content += `<div class="cashback-rate">${specialRate}% 回饋 (${getCategoryDisplayName(category)})</div>`;
                 content += `<div class="cashback-condition">消費上限: 無上限</div>`;
 
                 const merchantsList = items.join('、');
@@ -3117,7 +3184,7 @@ async function generateCubeSpecialContent(card) {
     if (card.generalItems) {
         Object.entries(card.generalItems).forEach(([category, items]) => {
             content += `<div class="cashback-detail-item">`;
-            content += `<div class="cashback-rate">2% 回饋 (${category})</div>`;
+            content += `<div class="cashback-rate">2% 回饋 (${getCategoryDisplayName(category)})</div>`;
             content += `<div class="cashback-condition">消費上限: 無上限</div>`;
             content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${items.join('、')}</div>`;
             content += `</div>`;
