@@ -879,6 +879,67 @@
         </div>
     </div>
 
+    <!-- Debug: User Agent Display (Temporary) -->
+    <div id="debug-ua-display" style="position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; word-break: break-all; z-index: 99999; display: none;">
+        <div style="margin-bottom: 5px; font-weight: bold; color: #ff0;">🔍 Debug Info - User Agent:</div>
+        <div id="debug-ua-text"></div>
+        <button onclick="copyDebugUA()" style="margin-top: 8px; padding: 5px 10px; background: #0f0; color: #000; border: none; border-radius: 3px; cursor: pointer;">📋 複製</button>
+        <button onclick="document.getElementById('debug-ua-display').style.display='none'" style="margin-top: 8px; margin-left: 5px; padding: 5px 10px; background: #f00; color: #fff; border: none; border-radius: 3px; cursor: pointer;">✕ 關閉</button>
+    </div>
+    <script>
+        // Show debug info on triple click on page title
+        let clickCount = 0;
+        let clickTimer = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            const title = document.querySelector('h1');
+            if (title) {
+                title.addEventListener('click', function() {
+                    clickCount++;
+                    if (clickCount === 1) {
+                        clickTimer = setTimeout(() => { clickCount = 0; }, 800);
+                    } else if (clickCount === 3) {
+                        clearTimeout(clickTimer);
+                        clickCount = 0;
+                        const debugDisplay = document.getElementById('debug-ua-display');
+                        const debugText = document.getElementById('debug-ua-text');
+                        if (debugDisplay && debugText) {
+                            debugText.textContent = navigator.userAgent;
+                            debugDisplay.style.display = 'block';
+                        }
+                    }
+                });
+            }
+        });
+        function copyDebugUA() {
+            const ua = navigator.userAgent;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(ua).then(() => {
+                    alert('✅ User Agent 已複製！');
+                }).catch(() => {
+                    fallbackCopyDebugUA(ua);
+                });
+            } else {
+                fallbackCopyDebugUA(ua);
+            }
+        }
+        function fallbackCopyDebugUA(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('✅ User Agent 已複製！');
+            } catch (err) {
+                alert('❌ 複製失敗');
+            }
+            document.body.removeChild(textArea);
+        }
+    </script>
+
     <!-- WebView Warning Modal -->
     <div id="webview-warning-modal" class="modal" style="display: none;">
         <div class="modal-content webview-warning-content">
