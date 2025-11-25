@@ -18,7 +18,8 @@ function isInAppBrowser() {
         /FBAN|FBAV/i,        // Facebook
         /Instagram/i,         // Instagram
         /Line/i,             // LINE
-        /Threads/i,          // Threads
+        /Barcelona/i,        // Threads (internal codename)
+        /IABMV/i,            // In-App Browser Mobile View (used by Threads and others)
         /Twitter/i,          // Twitter
         /WeChat/i,           // WeChat
         /\bwv\b/i,           // Generic WebView
