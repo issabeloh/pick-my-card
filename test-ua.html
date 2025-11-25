@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Agent 測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .info-box {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        .label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .value {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .copy-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .copy-btn:hover {
+            background: #45a049;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .detected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .not-detected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 User Agent 檢測工具</h1>
+
+    <div class="info-box">
+        <div class="label">您的 User Agent:</div>
+        <div class="value" id="user-agent"></div>
+        <button class="copy-btn" onclick="copyUA()">📋 複製 User Agent</button>
+    </div>
+
+    <div class="info-box">
+        <div class="label">檢測結果:</div>
+        <div id="detection-result"></div>
+    </div>
+
+    <div class="info-box">
+        <div class="label">匹配的模式:</div>
+        <div class="value" id="matched-patterns"></div>
+    </div>
+
+    <script>
+        // Display User Agent
+        const ua = navigator.userAgent;
+        document.getElementById('user-agent').textContent = ua;
+
+        // Detection patterns (same as in main script)
+        const patterns = {
+            'Facebook': /FBAN|FBAV/i,
+            'Instagram': /Instagram/i,
+            'LINE': /Line/i,
+            'Threads': /Threads/i,
+            'Twitter': /Twitter/i,
+            'WeChat': /WeChat/i,
+            'Generic WebView (wv)': /\bwv\b/i,
+            'Generic WebView': /WebView/i
+        };
+
+        // Check which patterns match
+        const matchedPatterns = [];
+        let isDetected = false;
+
+        for (const [name, pattern] of Object.entries(patterns)) {
+            if (pattern.test(ua)) {
+                matchedPatterns.push(name);
+                isDetected = true;
+            }
+        }
+
+        // Display results
+        const resultDiv = document.getElementById('detection-result');
+        if (isDetected) {
+            resultDiv.innerHTML = '<div class="status detected">✅ WebView 已檢測到</div>';
+        } else {
+            resultDiv.innerHTML = '<div class="status not-detected">❌ WebView 未檢測到</div>';
+        }
+
+        const matchedDiv = document.getElementById('matched-patterns');
+        if (matchedPatterns.length > 0) {
+            matchedDiv.textContent = matchedPatterns.join(', ');
+        } else {
+            matchedDiv.textContent = '無匹配模式';
+        }
+
+        // Copy function
+        function copyUA() {
+            navigator.clipboard.writeText(ua).then(() => {
+                alert('✅ User Agent 已複製！');
+            }).catch(() => {
+                // Fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = ua;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ User Agent 已複製！');
+            });
+        }
+    </script>
+</body>
+</html>
