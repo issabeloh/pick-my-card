@@ -9,6 +9,15 @@ let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
 
+// Body scroll lock utilities
+function disableBodyScroll() {
+    document.body.style.overflow = 'hidden';
+}
+
+function enableBodyScroll() {
+    document.body.style.overflow = '';
+}
+
 // WebView detection function
 function isInAppBrowser() {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -39,6 +48,7 @@ function showWebViewWarning() {
     const modal = document.getElementById('webview-warning-modal');
     if (modal) {
         modal.style.display = 'flex';
+        disableBodyScroll();
     }
 }
 
@@ -47,6 +57,7 @@ function closeWebViewWarning() {
     const modal = document.getElementById('webview-warning-modal');
     if (modal) {
         modal.style.display = 'none';
+        enableBodyScroll();
     }
 }
 
@@ -2245,6 +2256,7 @@ function setupManageCardsModal() {
     // Close modal function
     const closeModal = () => {
         modal.style.display = 'none';
+        enableBodyScroll();
     };
     
     closeBtn.addEventListener('click', closeModal);
@@ -2466,6 +2478,7 @@ function openManageCardsModal() {
     searchInput.addEventListener('input', applyCardFilters);
 
     modal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 // Show card detail modal
@@ -3057,11 +3070,13 @@ basicCashbackDiv.innerHTML = basicContent;
     
     // Show modal
     modal.style.display = 'flex';
-    
+    disableBodyScroll();
+
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
     const closeModal = () => {
         modal.style.display = 'none';
+        enableBodyScroll();
         currentNotesCardId = null;
     };
     
@@ -3663,12 +3678,14 @@ async function openMyMappingsModal() {
 
     // 顯示 Modal
     modal.style.display = 'flex';
+    disableBodyScroll();
 
     // 綁定關閉按鈕
     const closeBtn = document.getElementById('close-mappings-modal');
     if (closeBtn) {
         closeBtn.onclick = () => {
             modal.style.display = 'none';
+            enableBodyScroll();
         };
     }
 
@@ -3676,6 +3693,7 @@ async function openMyMappingsModal() {
     modal.onclick = (e) => {
         if (e.target === modal) {
             modal.style.display = 'none';
+            enableBodyScroll();
         }
     };
 
@@ -4305,6 +4323,7 @@ function openManagePaymentsModal() {
 
     const closeModal = () => {
         modal.style.display = 'none';
+        enableBodyScroll();
     };
 
     closeBtn.onclick = closeModal;
@@ -4347,6 +4366,7 @@ function openManagePaymentsModal() {
     });
 
     modal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 // Show payment detail modal
@@ -4460,6 +4480,7 @@ async function showPaymentDetail(paymentId) {
     const closeBtn = document.getElementById('close-payment-detail');
     const closeModal = () => {
         modal.style.display = 'none';
+        enableBodyScroll();
     };
 
     closeBtn.onclick = closeModal;
@@ -4468,6 +4489,7 @@ async function showPaymentDetail(paymentId) {
     };
 
     modal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 // Show compare payments modal
@@ -4594,6 +4616,7 @@ async function showComparePaymentsModal() {
     const closeBtn = document.getElementById('close-compare-payments');
     const closeModal = () => {
         modal.style.display = 'none';
+        enableBodyScroll();
     };
 
     closeBtn.onclick = closeModal;
@@ -4602,6 +4625,7 @@ async function showComparePaymentsModal() {
     };
 
     modal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 // Load user payments
@@ -4704,6 +4728,7 @@ function openManageQuickOptionsModal() {
 
     // Show modal
     modal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 function renderQuickOptionsModal() {
@@ -4930,6 +4955,7 @@ function setupQuickOptionsModalButtons() {
         closeBtn.onclick = () => {
             hideCustomOptionForm();
             modal.style.display = 'none';
+            enableBodyScroll();
         };
     }
 
@@ -4937,6 +4963,7 @@ function setupQuickOptionsModalButtons() {
         cancelBtn.onclick = () => {
             hideCustomOptionForm();
             modal.style.display = 'none';
+            enableBodyScroll();
         };
     }
 
@@ -4945,6 +4972,7 @@ function setupQuickOptionsModalButtons() {
             await saveQuickOptionsSelection();
             hideCustomOptionForm();
             modal.style.display = 'none';
+            enableBodyScroll();
         };
     }
 
@@ -4952,6 +4980,7 @@ function setupQuickOptionsModalButtons() {
         resetBtn.onclick = async () => {
             await resetQuickOptionsToDefault();
             modal.style.display = 'none';
+            enableBodyScroll();
         };
     }
 
@@ -5310,11 +5339,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         feedbackModal.style.display = 'flex';
+        disableBodyScroll();
     });
-    
+
     // Close Feedback Modal
     function closeFeedbackModalHandler() {
         feedbackModal.style.display = 'none';
+        enableBodyScroll();
         resetFeedbackForm();
     }
     
@@ -5556,6 +5587,7 @@ function openAuthModal(mode = 'login') {
     }
 
     modal.style.display = 'flex';
+    disableBodyScroll();
 
     // Re-attach event listener for switch link
     document.getElementById('auth-switch-link').addEventListener('click', (e) => {
@@ -5571,6 +5603,7 @@ function openAuthModal(mode = 'login') {
 function closeAuthModal() {
     const modal = document.getElementById('auth-modal');
     modal.style.display = 'none';
+    enableBodyScroll();
     document.getElementById('auth-form').reset();
     document.getElementById('auth-error').style.display = 'none';
 }
@@ -5937,11 +5970,13 @@ function openReviewModalInitial() {
 
     // Show modal
     reviewModal.style.display = 'flex';
+    disableBodyScroll();
 }
 
 function closeReviewModalHandler() {
     const reviewModal = document.getElementById('review-modal');
     reviewModal.style.display = 'none';
+    enableBodyScroll();
     // Reset selected rating if user closes without submitting
     if (!localStorage.getItem('hasReviewed')) {
         selectedRating = 0;
@@ -6048,6 +6083,7 @@ function showReviewSuccessInModal() {
     // Auto close modal after 2 seconds
     setTimeout(() => {
         document.getElementById('review-modal').style.display = 'none';
+        enableBodyScroll();
 
         // Disable review button
         disableReviewButton();
