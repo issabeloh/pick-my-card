@@ -671,16 +671,8 @@ function setupEventListeners() {
     
     // Calculate button
     calculateBtn.addEventListener('click', () => {
-    // 追蹤事件
-    if (typeof gtag !== 'undefined') {
-        gtag('event', 'calculate_cashback', {
-            'event_category': 'engagement',
-            'event_label': 'calculate_button_click'
-        });
-    }
-    
-    calculateCashback();
-});
+        calculateCashback();
+    });
     
     // Enter key support
     document.addEventListener('keypress', (e) => {
