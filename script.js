@@ -1633,6 +1633,72 @@ async function calculateCardCashback(card, searchTerm, amount) {
 }
 
 // Display calculation results
+// 模糊匹配商家名稱
+function findMerchantPaymentInfo(searchedItem) {
+    if (!cardsData?.merchantPayments || !searchedItem) {
+        return null;
+    }
+
+    const searchLower = searchedItem.toLowerCase().trim();
+
+    // 完全匹配
+    for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        if (merchantName.toLowerCase() === searchLower) {
+            return { merchantName, ...paymentInfo };
+        }
+    }
+
+    // 部分匹配：搜尋詞包含商家名稱或商家名稱包含搜尋詞
+    for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        const merchantLower = merchantName.toLowerCase();
+        if (searchLower.includes(merchantLower) || merchantLower.includes(searchLower)) {
+            return { merchantName, ...paymentInfo };
+        }
+    }
+
+    return null;
+}
+
+// 顯示商家付款方式資訊
+function displayMerchantPaymentInfo(searchedItem) {
+    const merchantInfo = findMerchantPaymentInfo(searchedItem);
+
+    // 移除舊的商家付款方式區塊（如果存在）
+    const existingBlock = document.getElementById('merchant-payment-info');
+    if (existingBlock) {
+        existingBlock.remove();
+    }
+
+    if (!merchantInfo) {
+        return;
+    }
+
+    // 建立商家付款方式區塊
+    const infoBlock = document.createElement('div');
+    infoBlock.id = 'merchant-payment-info';
+    infoBlock.className = 'merchant-payment-info';
+
+    let infoHTML = `<div class="merchant-payment-title">【${merchantInfo.merchantName} 支援的付款方式】</div>`;
+
+    if (merchantInfo.online) {
+        infoHTML += `<div class="merchant-payment-item"><span class="payment-label">線上：</span>${merchantInfo.online}</div>`;
+    }
+
+    if (merchantInfo.offline) {
+        infoHTML += `<div class="merchant-payment-item"><span class="payment-label">門市：</span>${merchantInfo.offline}</div>`;
+    }
+
+    infoBlock.innerHTML = infoHTML;
+
+    // 插入到「一般回饋與指定通路回饋」標題下方、免責聲明上方
+    const resultsSection = document.getElementById('results-section');
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+
+    if (resultsSection && paymentDisclaimer) {
+        resultsSection.insertBefore(infoBlock, paymentDisclaimer);
+    }
+}
+
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
@@ -1670,7 +1736,10 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
             resultsContainer.appendChild(cardElement);
         });
     }
-    
+
+    // 顯示商家付款方式資訊
+    displayMerchantPaymentInfo(searchedItem);
+
     resultsSection.style.display = 'block';
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
