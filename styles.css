@@ -885,17 +885,17 @@ input[type="number"]:focus {
     background-color: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     margin-bottom: 16px;
-    font-size: 0.875rem;
-    color: #4b5563;
-    line-height: 1.6;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    line-height: 1.5;
 }
 
 .merchant-payment-title {
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 8px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 6px;
 }
 
 .merchant-payment-item {

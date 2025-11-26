@@ -1678,14 +1678,21 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">【${merchantInfo.merchantName} 支援的付款方式】</div>`;
+    let infoHTML = `<div class="merchant-payment-title">${merchantInfo.merchantName} 也支援以下付款方式</div>`;
 
-    if (merchantInfo.online) {
-        infoHTML += `<div class="merchant-payment-item"><span class="payment-label">線上：</span>${merchantInfo.online}</div>`;
+    // 計算有多少個付款方式
+    const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
+    const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
+    const bothExist = hasOnline && hasOffline;
+
+    if (hasOnline) {
+        const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
+        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.online}</div>`;
     }
 
-    if (merchantInfo.offline) {
-        infoHTML += `<div class="merchant-payment-item"><span class="payment-label">門市：</span>${merchantInfo.offline}</div>`;
+    if (hasOffline) {
+        const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
+        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.offline}</div>`;
     }
 
     infoBlock.innerHTML = infoHTML;
