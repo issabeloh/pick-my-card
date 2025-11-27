@@ -1633,6 +1633,110 @@ async function calculateCardCashback(card, searchTerm, amount) {
 }
 
 // Display calculation results
+// 模糊匹配商家名稱
+function findMerchantPaymentInfo(searchedItem) {
+    console.log('🔍 findMerchantPaymentInfo 被調用，搜尋詞:', searchedItem);
+
+    if (!cardsData?.merchantPayments) {
+        console.log('❌ cardsData.merchantPayments 不存在');
+        return null;
+    }
+
+    if (!searchedItem) {
+        console.log('❌ searchedItem 為空');
+        return null;
+    }
+
+    const searchLower = searchedItem.toLowerCase().trim();
+    console.log('🔍 轉換為小寫後:', searchLower);
+    console.log('📋 可用的商家:', Object.keys(cardsData.merchantPayments));
+
+    // 完全匹配
+    for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        if (merchantName.toLowerCase() === searchLower) {
+            console.log('✅ 完全匹配到:', merchantName);
+            return { merchantName, ...paymentInfo };
+        }
+    }
+
+    // 部分匹配：搜尋詞包含商家名稱或商家名稱包含搜尋詞
+    for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        const merchantLower = merchantName.toLowerCase();
+        if (searchLower.includes(merchantLower) || merchantLower.includes(searchLower)) {
+            console.log('✅ 部分匹配到:', merchantName);
+            return { merchantName, ...paymentInfo };
+        }
+    }
+
+    console.log('❌ 沒有匹配到任何商家');
+    return null;
+}
+
+// 顯示商家付款方式資訊
+function displayMerchantPaymentInfo(searchedItem) {
+    // 移除舊的商家付款方式區塊（如果存在）
+    const existingBlock = document.getElementById('merchant-payment-info');
+    if (existingBlock) {
+        existingBlock.remove();
+    }
+
+    if (!searchedItem) {
+        return;
+    }
+
+    // 如果搜尋詞包含頓號，拆分並嘗試匹配每個詞
+    let merchantInfo = null;
+    const searchTerms = searchedItem.split('、');
+
+    console.log('🔍 搜尋商家付款方式，原始搜尋詞:', searchedItem);
+    console.log('🔍 拆分後的搜尋詞:', searchTerms);
+
+    for (const term of searchTerms) {
+        merchantInfo = findMerchantPaymentInfo(term);
+        if (merchantInfo) {
+            console.log('✅ 使用搜尋詞匹配成功:', term);
+            break;
+        }
+    }
+
+    if (!merchantInfo) {
+        console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
+        return;
+    }
+
+    // 建立商家付款方式區塊
+    const infoBlock = document.createElement('div');
+    infoBlock.id = 'merchant-payment-info';
+    infoBlock.className = 'merchant-payment-info';
+
+    let infoHTML = `<div class="merchant-payment-title">＊ ${merchantInfo.merchantName}也支援以下行動支付</div>`;
+
+    // 計算有多少個付款方式
+    const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
+    const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
+    const bothExist = hasOnline && hasOffline;
+
+    if (hasOnline) {
+        const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
+        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.online}</div>`;
+    }
+
+    if (hasOffline) {
+        const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
+        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.offline}</div>`;
+    }
+
+    infoBlock.innerHTML = infoHTML;
+
+    // 插入到「一般回饋與指定通路回饋」標題下方、免責聲明上方
+    const resultsSection = document.getElementById('results-section');
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+
+    if (resultsSection && paymentDisclaimer) {
+        resultsSection.insertBefore(infoBlock, paymentDisclaimer);
+    }
+}
+
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
@@ -1670,7 +1774,10 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
             resultsContainer.appendChild(cardElement);
         });
     }
-    
+
+    // 顯示商家付款方式資訊
+    displayMerchantPaymentInfo(searchedItem);
+
     resultsSection.style.display = 'block';
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -2336,7 +2443,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店']
+        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -2497,7 +2604,9 @@ function getTagClass(tagName) {
         '運動': 'tag-sports',
         '寵物': 'tag-pet',
         '親子': 'tag-family',
-        '應用程式商店': 'tag-appstore'
+        '應用程式商店': 'tag-appstore',
+        '飲食品牌': 'tag-food-brand',
+        '美妝美髮保養品牌': 'tag-beauty-brand'
     };
     return tagMap[tagName] || 'tag-default';
 }
