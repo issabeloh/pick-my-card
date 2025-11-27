@@ -1674,15 +1674,33 @@ function findMerchantPaymentInfo(searchedItem) {
 
 // 顯示商家付款方式資訊
 function displayMerchantPaymentInfo(searchedItem) {
-    const merchantInfo = findMerchantPaymentInfo(searchedItem);
-
     // 移除舊的商家付款方式區塊（如果存在）
     const existingBlock = document.getElementById('merchant-payment-info');
     if (existingBlock) {
         existingBlock.remove();
     }
 
+    if (!searchedItem) {
+        return;
+    }
+
+    // 如果搜尋詞包含頓號，拆分並嘗試匹配每個詞
+    let merchantInfo = null;
+    const searchTerms = searchedItem.split('、');
+
+    console.log('🔍 搜尋商家付款方式，原始搜尋詞:', searchedItem);
+    console.log('🔍 拆分後的搜尋詞:', searchTerms);
+
+    for (const term of searchTerms) {
+        merchantInfo = findMerchantPaymentInfo(term);
+        if (merchantInfo) {
+            console.log('✅ 使用搜尋詞匹配成功:', term);
+            break;
+        }
+    }
+
     if (!merchantInfo) {
+        console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
         return;
     }
 
