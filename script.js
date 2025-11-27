@@ -1635,15 +1635,26 @@ async function calculateCardCashback(card, searchTerm, amount) {
 // Display calculation results
 // 模糊匹配商家名稱
 function findMerchantPaymentInfo(searchedItem) {
-    if (!cardsData?.merchantPayments || !searchedItem) {
+    console.log('🔍 findMerchantPaymentInfo 被調用，搜尋詞:', searchedItem);
+
+    if (!cardsData?.merchantPayments) {
+        console.log('❌ cardsData.merchantPayments 不存在');
+        return null;
+    }
+
+    if (!searchedItem) {
+        console.log('❌ searchedItem 為空');
         return null;
     }
 
     const searchLower = searchedItem.toLowerCase().trim();
+    console.log('🔍 轉換為小寫後:', searchLower);
+    console.log('📋 可用的商家:', Object.keys(cardsData.merchantPayments));
 
     // 完全匹配
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
         if (merchantName.toLowerCase() === searchLower) {
+            console.log('✅ 完全匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
         }
     }
@@ -1652,10 +1663,12 @@ function findMerchantPaymentInfo(searchedItem) {
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
         const merchantLower = merchantName.toLowerCase();
         if (searchLower.includes(merchantLower) || merchantLower.includes(searchLower)) {
+            console.log('✅ 部分匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
         }
     }
 
+    console.log('❌ 沒有匹配到任何商家');
     return null;
 }
 
@@ -1678,7 +1691,7 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">${merchantInfo.merchantName} 也支援以下付款方式</div>`;
+    let infoHTML = `<div class="merchant-payment-title">＊ ${merchantInfo.merchantName}也支援以下行動支付</div>`;
 
     // 計算有多少個付款方式
     const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
@@ -2412,7 +2425,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店']
+        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -2573,7 +2586,9 @@ function getTagClass(tagName) {
         '運動': 'tag-sports',
         '寵物': 'tag-pet',
         '親子': 'tag-family',
-        '應用程式商店': 'tag-appstore'
+        '應用程式商店': 'tag-appstore',
+        '飲食品牌': 'tag-food-brand',
+        '美妝美髮保養品牌': 'tag-beauty-brand'
     };
     return tagMap[tagName] || 'tag-default';
 }

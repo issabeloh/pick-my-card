@@ -887,7 +887,7 @@ input[type="number"]:focus {
     border-radius: 6px;
     padding: 10px 14px;
     margin-bottom: 16px;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     color: #6b7280;
     line-height: 1.5;
 }
@@ -2139,19 +2139,21 @@ input[type="number"]:focus {
 .card-tag.tag-driving { background: #d1fae5; color: #065f46; }         /* 開車族 */
 .card-tag.tag-transport { background: #a7f3d0; color: #064e3b; }       /* 交通 */
 
-/* 顏色3：餐廳、外送 - 淺橘色系 */
+/* 顏色3：餐廳、外送、飲食品牌 - 淺橘色系 */
 .card-tag.tag-restaurant { background: #fed7aa; color: #92400e; }      /* 餐廳 */
 .card-tag.tag-delivery { background: #fdba74; color: #9a3412; }        /* 外送 */
+.card-tag.tag-food-brand { background: #fde68a; color: #92400e; }      /* 飲食品牌 */
 
 /* 顏色4：行動支付 - 淺紫色系 */
 .card-tag.tag-payment { background: #ddd6fe; color: #5b21b6; }         /* 行動支付 */
 
-/* 顏色5：便利商店、超市、生活百貨、網購、百貨公司 - 淺粉色系 */
+/* 顏色5：便利商店、超市、生活百貨、網購、百貨公司、美妝美髮保養品牌 - 淺粉色系 */
 .card-tag.tag-convenience { background: #fce7f3; color: #9f1239; }     /* 便利商店 */
 .card-tag.tag-supermarket { background: #fbcfe8; color: #9f1239; }     /* 超市 */
 .card-tag.tag-lifestyle { background: #f9a8d4; color: #831843; }       /* 生活百貨 */
 .card-tag.tag-online { background: #fce7f3; color: #be185d; }          /* 網購 */
 .card-tag.tag-department { background: #f9a8d4; color: #9d174d; }      /* 百貨公司 */
+.card-tag.tag-beauty-brand { background: #fbcfe8; color: #be185d; }    /* 美妝美髮保養品牌 */
 
 /* 顏色6：運動、寵物、親子、藥妝、時尚品牌 - 淺黃色系 */
 .card-tag.tag-sports { background: #fef3c7; color: #92400e; }          /* 運動 */
