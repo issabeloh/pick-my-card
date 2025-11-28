@@ -2167,6 +2167,9 @@ input[type="number"]:focus {
 .card-tag.tag-ai { background: #c7d2fe; color: #312e81; }              /* AI工具 */
 .card-tag.tag-streaming { background: #a5b4fc; color: #312e81; }       /* 串流平台 */
 
+/* 顏色8：保費 - 淺青色系 */
+.card-tag.tag-insurance { background: #cffafe; color: #164e63; }       /* 保費 */
+
 /* Input Guide Styles */
 .help-btn {
     background: #3b82f6;
