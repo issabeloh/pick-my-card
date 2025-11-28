@@ -1606,8 +1606,15 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let remainingCashback = 0;
         if (applicableCap && amount > applicableCap) {
             const remainingAmount = amount - applicableCap;
-            // Remaining amount only gets basic cashback rate
-            remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+
+            // 特殊处理：联邦M卡的rate_1超限用1.5%
+            let overCapRate = card.basicCashback;
+            if (card.id === 'ubot-mcard' && matchedRateGroup === card.cashbackRates[0]) {
+                overCapRate = 1.5;
+            }
+
+            // Remaining amount gets basic cashback rate (or special overCapRate for specific cards)
+            remainingCashback = Math.floor(remainingAmount * overCapRate / 100);
         }
 
         // Total cashback = special rate amount + remaining basic amount
