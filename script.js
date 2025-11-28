@@ -2606,7 +2606,8 @@ function getTagClass(tagName) {
         '親子': 'tag-family',
         '應用程式商店': 'tag-appstore',
         '飲食品牌': 'tag-food-brand',
-        '美妝美髮保養品牌': 'tag-beauty-brand'
+        '美妝美髮保養品牌': 'tag-beauty-brand',
+        '保費': 'tag-insurance'
     };
     return tagMap[tagName] || 'tag-default';
 }
