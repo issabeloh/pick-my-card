@@ -141,6 +141,79 @@ function openInBrowser() {
     }
 }
 
+// Check if a rate is currently active based on periodStart and periodEnd (UTC+8 Taiwan time)
+function isRateActive(periodStart, periodEnd) {
+    // If no date restrictions, rate is always active
+    if (!periodStart || !periodEnd) {
+        return true;
+    }
+
+    try {
+        // Get current time in UTC+8 (Taiwan time)
+        const now = new Date();
+        const utcOffset = now.getTimezoneOffset() * 60000; // Current UTC offset in milliseconds
+        const taiwanOffset = 8 * 60 * 60 * 1000; // UTC+8 in milliseconds
+        const nowTaiwan = new Date(now.getTime() + utcOffset + taiwanOffset);
+
+        // Parse start and end dates (format: yyyy/m/d)
+        const startParts = periodStart.split('/');
+        const endParts = periodEnd.split('/');
+
+        const startDate = new Date(
+            parseInt(startParts[0]),
+            parseInt(startParts[1]) - 1,
+            parseInt(startParts[2]),
+            0, 0, 0
+        );
+
+        const endDate = new Date(
+            parseInt(endParts[0]),
+            parseInt(endParts[1]) - 1,
+            parseInt(endParts[2]),
+            23, 59, 59
+        );
+
+        // Check if current Taiwan time is within the period
+        return nowTaiwan >= startDate && nowTaiwan <= endDate;
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
+        return true; // If error, show the rate (safer to show than hide)
+    }
+}
+
+// Filter expired rates from cards data
+function filterExpiredRates(cardsData) {
+    if (!cardsData || !cardsData.cards) {
+        return cardsData;
+    }
+
+    cardsData.cards.forEach(card => {
+        // Filter cashbackRates
+        if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
+            card.cashbackRates = card.cashbackRates.filter(rate => {
+                const isActive = isRateActive(rate.periodStart, rate.periodEnd);
+                if (!isActive) {
+                    console.log(`🕒 ${card.name}: 隐藏过期优惠 - ${rate.items ? rate.items[0] : 'unknown'} (${rate.periodStart}~${rate.periodEnd})`);
+                }
+                return isActive;
+            });
+        }
+
+        // Filter couponCashbacks
+        if (card.couponCashbacks && Array.isArray(card.couponCashbacks)) {
+            card.couponCashbacks = card.couponCashbacks.filter(coupon => {
+                const isActive = isRateActive(coupon.periodStart, coupon.periodEnd);
+                if (!isActive) {
+                    console.log(`🕒 ${card.name}: 隐藏过期优惠券 - ${coupon.merchant} (${coupon.periodStart}~${coupon.periodEnd})`);
+                }
+                return isActive;
+            });
+        }
+    });
+
+    return cardsData;
+}
+
 // Load cards data from cards.data (encoded)
 async function loadCardsData() {
     try {
@@ -157,6 +230,9 @@ async function loadCardsData() {
         // 解碼函數
         const decoded = decodeURIComponent(escape(atob(encoded)));
         cardsData = JSON.parse(decoded);
+
+        // Filter out expired rates based on periodStart and periodEnd
+        cardsData = filterExpiredRates(cardsData);
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
