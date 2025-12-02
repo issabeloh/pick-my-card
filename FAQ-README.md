@@ -121,7 +121,10 @@
 ### 步驟 3: 更新 cards.data
 1. 將新的 JSON 資料整合到 `cards.data` 檔案中
 2. 確保 JSON 格式正確
-3. 上傳到 GitHub
+3. **重要：`cards.data` 使用 Base64 編碼儲存**
+   - faq.js 會自動解碼（使用 `atob()` 函數）
+   - 匯出時請使用相同的編碼方式
+4. 上傳到 GitHub
 
 ### 步驟 4: 測試
 1. 開啟 `https://pickmycard.app/faq.html`

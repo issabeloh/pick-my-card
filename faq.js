@@ -24,8 +24,12 @@ async function loadFAQData() {
             throw new Error('Failed to fetch FAQ data');
         }
 
-        const data = await response.text();
-        const parsedData = JSON.parse(data);
+        // Read encoded text (cards.data is Base64 encoded)
+        const encoded = await response.text();
+
+        // Decode function (same as script.js)
+        const decoded = decodeURIComponent(escape(atob(encoded)));
+        const parsedData = JSON.parse(decoded);
 
         // Extract FAQ data (it should be in the faq property)
         if (parsedData.faq && Array.isArray(parsedData.faq)) {
