@@ -3321,7 +3321,64 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate5.items.join('、')}</div>`;
         content += `</div>`;
     }
-    
+
+    // 2.5. 其他 cashbackRates（如 LINE PAY 2%）- 不包括童樂匯
+    if (card.cashbackRates && card.cashbackRates.length > 0) {
+        const otherRates = card.cashbackRates
+            .filter(rate =>
+                !rate.hideInDisplay &&
+                rate.category !== '童樂匯' &&
+                rate.category !== '切換「童樂匯」方案'
+            )
+            .sort((a, b) => b.rate - a.rate); // 按回饋率高低排序
+
+        otherRates.forEach((rate, index) => {
+            content += `<div class="cashback-detail-item">`;
+
+            // 显示回饋率，如果有 category 则显示在括号中
+            const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
+            content += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+
+            // 显示消費上限
+            if (rate.cap) {
+                content += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+            } else {
+                content += `<div class="cashback-condition">消費上限: 無上限</div>`;
+            }
+
+            // 显示條件
+            if (rate.conditions) {
+                content += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
+            }
+
+            // 显示活動期間
+            if (rate.period) {
+                content += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
+            }
+
+            // 显示適用通路
+            if (rate.items && rate.items.length > 0) {
+                const merchantsId = `cube-other-merchants-${index}`;
+                const showAllId = `cube-other-show-all-${index}`;
+
+                if (rate.items.length <= 20) {
+                    const merchantsList = rate.items.join('、');
+                    content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
+                } else {
+                    const initialList = rate.items.slice(0, 20).join('、');
+                    const fullList = rate.items.join('、');
+
+                    content += `<div class="cashback-merchants">`;
+                    content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
+                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
+                    content += `</div>`;
+                }
+            }
+
+            content += `</div>`;
+        });
+    }
+
     // 3. Level變動的特殊通路 - 按類別分組顯示
     if (card.specialItemsWithCategory) {
         // 有分類資料，按類別顯示
