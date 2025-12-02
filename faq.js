@@ -32,10 +32,45 @@ async function loadFAQData() {
         const parsedData = JSON.parse(decoded);
 
         // Extract FAQ data (it should be in the faq property)
-        if (parsedData.faq && Array.isArray(parsedData.faq)) {
-            faqData = parsedData.faq
-                .filter(item => item.isActive === true || item.isActive === 'TRUE')
-                .sort((a, b) => parseInt(a.order) - parseInt(b.order));
+        let rawFaqData = null;
+
+        // Handle different FAQ data structures
+        if (parsedData.faq) {
+            if (Array.isArray(parsedData.faq)) {
+                // Structure: "faq": [...]
+                rawFaqData = parsedData.faq;
+            } else if (typeof parsedData.faq === 'object') {
+                // Structure: "faq": { "": [...] } or "faq": { "items": [...] }
+                // Find the first array property
+                const keys = Object.keys(parsedData.faq);
+                for (const key of keys) {
+                    if (Array.isArray(parsedData.faq[key])) {
+                        rawFaqData = parsedData.faq[key];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (rawFaqData && Array.isArray(rawFaqData)) {
+            faqData = rawFaqData
+                .filter(item => {
+                    // Check isActive (support boolean or string)
+                    const isActive = item.isActive;
+                    return isActive === true || isActive === 'TRUE' || isActive === undefined;
+                })
+                .map(item => {
+                    // Normalize data structure
+                    return {
+                        id: String(item.id || ''),
+                        category: item.category || '一般問題',
+                        question: item.question || '',
+                        answer: item.answer || '',
+                        order: parseInt(item.order) || parseInt(item.id) || 0,
+                        isActive: true
+                    };
+                })
+                .sort((a, b) => a.order - b.order);
 
             if (faqData.length === 0) {
                 showError('目前沒有可用的 FAQ 內容。');
