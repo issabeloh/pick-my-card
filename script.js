@@ -149,32 +149,29 @@ function isRateActive(periodStart, periodEnd) {
     }
 
     try {
-        // Get current time in UTC+8 (Taiwan time)
+        // Get current date in UTC+8 (Taiwan time)
         const now = new Date();
-        const utcOffset = now.getTimezoneOffset() * 60000; // Current UTC offset in milliseconds
-        const taiwanOffset = 8 * 60 * 60 * 1000; // UTC+8 in milliseconds
-        const nowTaiwan = new Date(now.getTime() + utcOffset + taiwanOffset);
+        const utcOffset = now.getTimezoneOffset() * 60; // Current UTC offset in minutes
+        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000); // UTC+8 = +480 minutes
+
+        // Get Taiwan date components (YYYY/M/D)
+        const currentYear = taiwanTime.getFullYear();
+        const currentMonth = taiwanTime.getMonth() + 1;
+        const currentDay = taiwanTime.getDate();
 
         // Parse start and end dates (format: yyyy/m/d)
-        const startParts = periodStart.split('/');
-        const endParts = periodEnd.split('/');
+        const startParts = periodStart.split('/').map(p => parseInt(p));
+        const endParts = periodEnd.split('/').map(p => parseInt(p));
 
-        const startDate = new Date(
-            parseInt(startParts[0]),
-            parseInt(startParts[1]) - 1,
-            parseInt(startParts[2]),
-            0, 0, 0
-        );
+        // Convert to comparable numbers (YYYYMMDD format)
+        const currentDate = currentYear * 10000 + currentMonth * 100 + currentDay;
+        const startDate = startParts[0] * 10000 + startParts[1] * 100 + startParts[2];
+        const endDate = endParts[0] * 10000 + endParts[1] * 100 + endParts[2];
 
-        const endDate = new Date(
-            parseInt(endParts[0]),
-            parseInt(endParts[1]) - 1,
-            parseInt(endParts[2]),
-            23, 59, 59
-        );
+        // Check if current date is within the period
+        const isActive = currentDate >= startDate && currentDate <= endDate;
 
-        // Check if current Taiwan time is within the period
-        return nowTaiwan >= startDate && nowTaiwan <= endDate;
+        return isActive;
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
         return true; // If error, show the rate (safer to show than hide)
