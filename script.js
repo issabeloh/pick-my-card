@@ -151,7 +151,7 @@ function isRateActive(periodStart, periodEnd) {
     try {
         // Get current date in UTC+8 (Taiwan time)
         const now = new Date();
-        const utcOffset = now.getTimezoneOffset() * 60; // Current UTC offset in minutes
+        const utcOffset = now.getTimezoneOffset(); // Current UTC offset in minutes
         const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000); // UTC+8 = +480 minutes
 
         // Get Taiwan date components (YYYY/M/D)
