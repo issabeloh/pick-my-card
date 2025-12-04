@@ -98,6 +98,24 @@ export async function onRequest(context) {
     const pathName = url.pathname.toLowerCase();
     const extension = pathName.substring(pathName.lastIndexOf(".") || pathName.length)?.toLowerCase();
 
+    // Test endpoint to verify configuration
+    if (pathName === "/prerender-test") {
+      const isBot = BOT_AGENTS.some((bot) => userAgent.includes(bot));
+      return new Response(JSON.stringify({
+        status: "Pages Function is working",
+        hasToken: !!env.PRERENDER_TOKEN,
+        tokenLength: env.PRERENDER_TOKEN ? env.PRERENDER_TOKEN.length : 0,
+        userAgent: userAgent,
+        isBot: isBot,
+        timestamp: new Date().toISOString()
+      }, null, 2), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        }
+      });
+    }
+
     // Skip if:
     // - Request already from Prerender (loop protection)
     // - Not a search engine bot
