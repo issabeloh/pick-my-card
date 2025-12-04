@@ -1,6 +1,7 @@
 // FAQ Page Script
 let faqData = [];
 let currentCategory = 'all';
+let prerenderFAQIds = []; // Track pre-rendered FAQ IDs
 
 // DOM Elements
 const faqLoading = document.getElementById('faq-loading');
@@ -10,6 +11,34 @@ const faqList = document.getElementById('faq-list');
 const faqEmpty = document.getElementById('faq-empty');
 const categoryFilter = document.getElementById('category-filter');
 const retryBtn = document.getElementById('retry-btn');
+
+// Initialize event listeners for pre-rendered FAQ items
+function initPrerenderFAQs() {
+    const prerenderItems = faqList.querySelectorAll('.faq-item[data-id]');
+    prerenderItems.forEach(item => {
+        const questionBtn = item.querySelector('.faq-question');
+        const answerDiv = item.querySelector('.faq-answer');
+        const faqId = item.dataset.id;
+
+        // Track this ID
+        prerenderFAQIds.push(faqId);
+
+        // Add click event
+        if (questionBtn && answerDiv) {
+            questionBtn.addEventListener('click', () => {
+                const isOpen = answerDiv.style.display !== 'none';
+
+                if (isOpen) {
+                    answerDiv.style.display = 'none';
+                    questionBtn.classList.remove('active');
+                } else {
+                    answerDiv.style.display = 'block';
+                    questionBtn.classList.add('active');
+                }
+            });
+        }
+    });
+}
 
 // Load FAQ data from cards.data
 async function loadFAQData() {
@@ -33,20 +62,23 @@ async function loadFAQData() {
 
         // Extract FAQ data (it should be in the faq property)
         if (parsedData.faq && Array.isArray(parsedData.faq)) {
+            // Filter active items and exclude pre-rendered ones
             faqData = parsedData.faq
                 .filter(item => item.isActive === true || item.isActive === 'TRUE')
+                .filter(item => !prerenderFAQIds.includes(String(item.id))) // Skip pre-rendered FAQs
                 .sort((a, b) => parseInt(a.order) - parseInt(b.order));
 
-            if (faqData.length === 0) {
-                showError('目前沒有可用的 FAQ 內容。');
-                return;
-            }
-
+            // Even if faqData is empty (all FAQs are pre-rendered), initialize
             initializeFAQ();
             showContent();
         } else {
-            // If no FAQ data exists yet, show a friendly message
-            showError('FAQ 內容即將推出，敬請期待！');
+            // If no FAQ data exists yet, check if we have pre-rendered items
+            if (prerenderFAQIds.length > 0) {
+                initializeFAQ();
+                showContent();
+            } else {
+                showError('FAQ 內容即將推出，敬請期待！');
+            }
         }
     } catch (error) {
         console.error('Error loading FAQ data:', error);
@@ -62,10 +94,17 @@ function initializeFAQ() {
 
 // Build category filter buttons
 function buildCategoryFilter() {
-    // Get unique categories
-    const categories = ['all', ...new Set(faqData.map(item => item.category))];
+    // Get categories from dynamic data
+    const dynamicCategories = faqData.map(item => item.category);
 
-    // Clear existing buttons except "全部"
+    // Get categories from pre-rendered items
+    const prerenderItems = faqList.querySelectorAll('.faq-item[data-category]');
+    const prerenderCategories = Array.from(prerenderItems).map(item => item.dataset.category);
+
+    // Combine and get unique categories
+    const categories = ['all', ...new Set([...dynamicCategories, ...prerenderCategories])];
+
+    // Clear existing buttons
     categoryFilter.innerHTML = '';
 
     // Create category buttons
@@ -103,22 +142,37 @@ function updateCategoryFilter() {
 
 // Render FAQ items
 function renderFAQItems(category) {
-    // Filter items by category
+    // Filter dynamic items by category
     const filteredItems = category === 'all'
         ? faqData
         : faqData.filter(item => item.category === category);
 
-    // Clear existing items
-    faqList.innerHTML = '';
+    // Handle pre-rendered items visibility
+    const prerenderItems = faqList.querySelectorAll('.faq-item[data-category]');
+    prerenderItems.forEach(item => {
+        if (category === 'all' || item.dataset.category === category) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
 
-    if (filteredItems.length === 0) {
+    // Remove previously dynamically added items (those without data-category)
+    const dynamicItems = faqList.querySelectorAll('.faq-item:not([data-category])');
+    dynamicItems.forEach(item => item.remove());
+
+    // Count visible items
+    const visiblePrerenderCount = Array.from(prerenderItems).filter(item => item.style.display !== 'none').length;
+    const totalVisibleCount = visiblePrerenderCount + filteredItems.length;
+
+    if (totalVisibleCount === 0) {
         faqEmpty.style.display = 'block';
         return;
     }
 
     faqEmpty.style.display = 'none';
 
-    // Create FAQ items
+    // Create and append dynamic FAQ items
     filteredItems.forEach(item => {
         const faqItem = createFAQItem(item);
         faqList.appendChild(faqItem);
@@ -208,6 +262,7 @@ if (retryBtn) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    initPrerenderFAQs(); // Initialize pre-rendered FAQ event listeners
     loadFAQData();
     initReviewSystem();
 });
