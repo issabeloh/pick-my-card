@@ -183,6 +183,7 @@ function renderFAQItems(category) {
 function createFAQItem(item) {
     const faqItem = document.createElement('div');
     faqItem.className = 'faq-item';
+    faqItem.id = `faq-${item.id}`; // Add anchor ID for cross-linking
     faqItem.dataset.id = item.id;
 
     // Question button
@@ -260,11 +261,56 @@ if (retryBtn) {
     });
 }
 
+// Handle FAQ anchor links (cross-linking between FAQs)
+function handleFAQAnchorLinks() {
+    // Function to expand a specific FAQ by ID
+    function expandFAQ(faqId) {
+        const faqItem = document.getElementById(faqId);
+        if (!faqItem) return false;
+
+        const questionBtn = faqItem.querySelector('.faq-question');
+        const answerDiv = faqItem.querySelector('.faq-answer');
+
+        if (questionBtn && answerDiv) {
+            // Expand the FAQ
+            answerDiv.style.display = 'block';
+            questionBtn.classList.add('active');
+
+            // Scroll to the FAQ with smooth behavior
+            setTimeout(() => {
+                faqItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+
+            return true;
+        }
+        return false;
+    }
+
+    // Handle hash on page load
+    if (window.location.hash) {
+        const hash = window.location.hash.substring(1); // Remove #
+        if (hash.startsWith('faq-')) {
+            setTimeout(() => {
+                expandFAQ(hash);
+            }, 500); // Wait for FAQ data to load
+        }
+    }
+
+    // Handle hash change (when clicking anchor links)
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.substring(1);
+        if (hash.startsWith('faq-')) {
+            expandFAQ(hash);
+        }
+    });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initPrerenderFAQs(); // Initialize pre-rendered FAQ event listeners
     loadFAQData();
     initReviewSystem();
+    handleFAQAnchorLinks(); // Handle cross-linking between FAQs
 });
 
 // ============================================
