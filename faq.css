@@ -274,7 +274,7 @@ main {
 
 /* FAQ Cross-Link Styles */
 .answer-content a.faq-link {
-    color: #7c3aed; /* Darker purple for better visibility */
+    color: #7c3aed !important; /* Darker purple - !important to override strong tag */
     font-weight: 600; /* Bolder text */
     text-decoration: underline; /* Add underline to make it obvious */
     text-decoration-color: rgba(124, 58, 237, 0.3);
@@ -282,6 +282,11 @@ main {
     position: relative;
     padding-right: 18px;
     transition: all 0.2s;
+}
+
+/* Force purple color on all child elements (like <strong>) within faq-link */
+.answer-content a.faq-link * {
+    color: #7c3aed !important;
 }
 
 .answer-content a.faq-link::after {
@@ -294,8 +299,13 @@ main {
 }
 
 .answer-content a.faq-link:hover {
-    color: #6d28d9;
+    color: #6d28d9 !important;
     text-decoration-color: rgba(124, 58, 237, 0.6);
+}
+
+/* Force hover color on child elements too */
+.answer-content a.faq-link:hover * {
+    color: #6d28d9 !important;
 }
 
 .answer-content a.faq-link:hover::after {
