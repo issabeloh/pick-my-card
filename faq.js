@@ -263,10 +263,38 @@ if (retryBtn) {
 
 // Handle FAQ anchor links (cross-linking between FAQs)
 function handleFAQAnchorLinks() {
-    // Function to expand a specific FAQ by ID
-    function expandFAQ(faqId) {
+    // Function to expand a specific FAQ by ID with retry mechanism
+    function expandFAQ(faqId, retries = 5) {
         const faqItem = document.getElementById(faqId);
-        if (!faqItem) return false;
+
+        if (!faqItem) {
+            // FAQ not found, retry after delay (might still be loading)
+            if (retries > 0) {
+                setTimeout(() => {
+                    expandFAQ(faqId, retries - 1);
+                }, 300); // Retry every 300ms
+            } else {
+                console.warn(`FAQ ${faqId} not found after retries`);
+            }
+            return false;
+        }
+
+        // Check if FAQ is hidden by category filter
+        if (faqItem.style.display === 'none') {
+            // Switch to the FAQ's category or 'all'
+            const faqCategory = faqItem.dataset.category;
+            if (faqCategory) {
+                currentCategory = faqCategory;
+                updateCategoryFilter();
+                renderFAQItems(currentCategory);
+
+                // Wait for render to complete, then try again
+                setTimeout(() => {
+                    expandFAQ(faqId, 0); // No more retries after category switch
+                }, 200);
+                return false;
+            }
+        }
 
         const questionBtn = faqItem.querySelector('.faq-question');
         const answerDiv = faqItem.querySelector('.faq-answer');
@@ -279,6 +307,12 @@ function handleFAQAnchorLinks() {
             // Scroll to the FAQ with smooth behavior
             setTimeout(() => {
                 faqItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Highlight the FAQ briefly
+                faqItem.style.transition = 'background-color 0.3s';
+                faqItem.style.backgroundColor = 'rgba(139, 92, 246, 0.1)';
+                setTimeout(() => {
+                    faqItem.style.backgroundColor = '';
+                }, 2000);
             }, 100);
 
             return true;
@@ -292,7 +326,7 @@ function handleFAQAnchorLinks() {
         if (hash.startsWith('faq-')) {
             setTimeout(() => {
                 expandFAQ(hash);
-            }, 500); // Wait for FAQ data to load
+            }, 800); // Initial delay for FAQ data to load
         }
     }
 
