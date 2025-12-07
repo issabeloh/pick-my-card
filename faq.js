@@ -185,6 +185,7 @@ function createFAQItem(item) {
     faqItem.className = 'faq-item';
     faqItem.id = `faq-${item.id}`; // Add anchor ID for cross-linking
     faqItem.dataset.id = item.id;
+    faqItem.dataset.category = item.category; // Add category for auto-switching
 
     // Question button
     const questionBtn = document.createElement('button');
