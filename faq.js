@@ -263,27 +263,35 @@ if (retryBtn) {
 
 // Handle FAQ anchor links (cross-linking between FAQs)
 function handleFAQAnchorLinks() {
+    console.log('FAQ anchor links handler initialized');
+
     // Function to expand a specific FAQ by ID with retry mechanism
-    function expandFAQ(faqId, retries = 5) {
+    function expandFAQ(faqId, retries = 10) {
+        console.log(`Attempting to expand FAQ: ${faqId}, retries left: ${retries}`);
         const faqItem = document.getElementById(faqId);
 
         if (!faqItem) {
+            console.log(`FAQ ${faqId} not found in DOM`);
             // FAQ not found, retry after delay (might still be loading)
             if (retries > 0) {
                 setTimeout(() => {
                     expandFAQ(faqId, retries - 1);
-                }, 300); // Retry every 300ms
+                }, 400); // Retry every 400ms
             } else {
-                console.warn(`FAQ ${faqId} not found after retries`);
+                console.warn(`FAQ ${faqId} not found after all retries`);
             }
             return false;
         }
 
+        console.log(`FAQ ${faqId} found, checking visibility`);
+
         // Check if FAQ is hidden by category filter
         if (faqItem.style.display === 'none') {
+            console.log(`FAQ ${faqId} is hidden by category filter`);
             // Switch to the FAQ's category or 'all'
             const faqCategory = faqItem.dataset.category;
             if (faqCategory) {
+                console.log(`Switching to category: ${faqCategory}`);
                 currentCategory = faqCategory;
                 updateCategoryFilter();
                 renderFAQItems(currentCategory);
@@ -291,7 +299,7 @@ function handleFAQAnchorLinks() {
                 // Wait for render to complete, then try again
                 setTimeout(() => {
                     expandFAQ(faqId, 0); // No more retries after category switch
-                }, 200);
+                }, 300);
                 return false;
             }
         }
@@ -300,6 +308,7 @@ function handleFAQAnchorLinks() {
         const answerDiv = faqItem.querySelector('.faq-answer');
 
         if (questionBtn && answerDiv) {
+            console.log(`Expanding FAQ ${faqId}`);
             // Expand the FAQ
             answerDiv.style.display = 'block';
             questionBtn.classList.add('active');
@@ -307,32 +316,37 @@ function handleFAQAnchorLinks() {
             // Scroll to the FAQ with smooth behavior
             setTimeout(() => {
                 faqItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                console.log(`Scrolled to FAQ ${faqId}`);
                 // Highlight the FAQ briefly
                 faqItem.style.transition = 'background-color 0.3s';
                 faqItem.style.backgroundColor = 'rgba(139, 92, 246, 0.1)';
                 setTimeout(() => {
                     faqItem.style.backgroundColor = '';
                 }, 2000);
-            }, 100);
+            }, 150);
 
             return true;
         }
+        console.warn(`FAQ ${faqId} found but missing question or answer elements`);
         return false;
     }
 
     // Handle hash on page load
     if (window.location.hash) {
         const hash = window.location.hash.substring(1); // Remove #
+        console.log(`Hash detected on page load: ${hash}`);
         if (hash.startsWith('faq-')) {
             setTimeout(() => {
+                console.log('Starting FAQ expansion from page load hash');
                 expandFAQ(hash);
-            }, 800); // Initial delay for FAQ data to load
+            }, 1500); // Longer initial delay for FAQ data to load
         }
     }
 
     // Handle hash change (when clicking anchor links)
     window.addEventListener('hashchange', () => {
         const hash = window.location.hash.substring(1);
+        console.log(`Hash changed: ${hash}`);
         if (hash.startsWith('faq-')) {
             expandFAQ(hash);
         }
