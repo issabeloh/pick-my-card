@@ -2270,7 +2270,7 @@ input[type="number"]:focus {
 .social-section,
 .sponsor-section,
 .review-section,
-.faq-section {
+.faq-section-footer {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2366,8 +2366,10 @@ input[type="number"]:focus {
     }
 
     .social-media-container {
-        flex-direction: column;
-        gap: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px 16px;
+        justify-items: center;
     }
 
     .social-media-title {
