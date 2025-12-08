@@ -963,6 +963,8 @@ const fuzzySearchMap = {
     'watsons': '屈臣氏',
     '康是美': 'cosmed',
     'cosmed': '康是美',
+    'hnm': 'h&m',
+    '車險': '產險'
 };
 
 // Search term exclusion rules - prevents unwanted matches
