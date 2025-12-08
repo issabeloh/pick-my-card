@@ -1179,9 +1179,15 @@ input[type="number"]:focus {
         grid-template-columns: 1fr;
         gap: 16px;
     }
-    
+
     .button-group {
-        margin-top: 16px;
+        margin-top: 0px;
+    }
+
+    .button-group label {
+        margin-bottom: 0px;
+        height: 0;
+        line-height: 0;
     }
     
     .calculate-btn.compact {
