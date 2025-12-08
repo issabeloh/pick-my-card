@@ -2365,8 +2365,10 @@ input[type="number"]:focus {
     }
 
     .social-media-container {
-        flex-direction: column;
-        gap: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px 16px;
+        justify-items: center;
     }
 
     .social-media-title {
