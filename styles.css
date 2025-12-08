@@ -1183,6 +1183,10 @@ input[type="number"]:focus {
     .button-group {
         margin-top: 0px;
     }
+
+    .button-group label {
+        margin-bottom: 0px;
+    }
     
     .calculate-btn.compact {
         width: 100%;
