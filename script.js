@@ -1963,6 +1963,39 @@ function parseCashbackRateSync(rate, levelData) {
     return parseFloat(rate) || 0;
 }
 
+// 解析 cashbackRates 中的 cap 值（支援數字和 {cap}）
+function parseCashbackCap(cap, card, levelSettings) {
+    // 如果是數字，直接返回
+    if (typeof cap === 'number') {
+        return cap;
+    }
+
+    // 如果是 undefined 或 null，返回 null
+    if (cap === undefined || cap === null) {
+        return null;
+    }
+
+    // 如果不是字串，嘗試轉換成數字
+    if (typeof cap !== 'string') {
+        const parsed = parseInt(cap);
+        return isNaN(parsed) ? null : parsed;
+    }
+
+    // 處理 {cap} 的情況
+    if (cap === '{cap}') {
+        // 只有 hasLevels 的卡片才支援 {cap}
+        if (card.hasLevels && levelSettings && levelSettings.cap !== undefined) {
+            return levelSettings.cap;
+        }
+        console.warn(`⚠️ ${card.name}: {cap} 需要 hasLevels=true 且 levelSettings 中有 cap`);
+        return null;
+    }
+
+    // 其他情況當成數字處理
+    const parsed = parseInt(cap);
+    return isNaN(parsed) ? null : parsed;
+}
+
 // Display coupon cashback results
 async function displayCouponCashbacks(amount, merchantValue) {
     couponResultsContainer.innerHTML = '';
@@ -2908,15 +2941,47 @@ basicCashbackDiv.innerHTML = basicContent;
             }
         }
 
+        // Generate level rates info
+        let levelRatesInfo = '';
+        if (levelNames.length > 1) {
+            levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0;">';
+            levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
+
+            if (card.id === 'dbs-eco') {
+                levelNames.forEach(level => {
+                    const data = card.levelSettings[level];
+                    if (level === '一般卡友') {
+                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'})</div>`;
+                    } else if (level === '精選卡友') {
+                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 1.8% 上限為 NT$ 50,000)</div>`;
+                    } else if (level === '豐盛理財客戶/豐盛理財私人客戶') {
+                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 4.8% 上限為 NT$ 37,500)</div>`;
+                    } else {
+                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
+                    }
+                });
+            } else {
+                // Default formatting for other cards (like Uni card)
+                levelNames.forEach(level => {
+                    const data = card.levelSettings[level];
+                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
+                });
+            }
+            levelRatesInfo += '</div>';
+        }
+
         let levelSelectorHTML = `
-            <div class="level-selector" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
-                <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                    ${levelNames.map(level =>
-                        `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
-                    ).join('')}
-                </select>
-                ${levelNote}
+            <div class="level-selector" style="margin-bottom: 16px; display: flex; align-items: flex-start; gap: 16px;">
+                <div style="flex-shrink: 0;">
+                    <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
+                    <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                        ${levelNames.map(level =>
+                            `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                        ).join('')}
+                    </select>
+                    ${levelNote}
+                </div>
+                ${levelRatesInfo}
             </div>
         `;
 
@@ -2987,9 +3052,10 @@ basicCashbackDiv.innerHTML = basicContent;
                 const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
-                // Use cap from rate
-                if (rate.cap) {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+                // 解析 cap 值（支援 {cap}）
+                const parsedCap = parseCashbackCap(rate.cap, card, levelData);
+                if (parsedCap) {
+                    specialContent += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
                 } else {
                     specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
                 }
@@ -3053,33 +3119,6 @@ basicCashbackDiv.innerHTML = basicContent;
             specialContent += `</div>`;
         }
 
-        // Show all level options for reference with special formatting for DBS Eco card
-        if (levelNames.length > 1) {
-            specialContent += `<div class="cashback-condition" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">各級別回饋率：</div>`;
-
-            // Special formatting for DBS Eco card
-            if (card.id === 'dbs-eco') {
-                levelNames.forEach(level => {
-                    const data = card.levelSettings[level];
-                    if (level === '一般卡友') {
-                        specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                    } else if (level === '精選卡友') {
-                        specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 1.8% 上限為 NT$ 50,000)</div>`;
-                    } else if (level === '豐盛理財客戶/豐盛理財私人客戶') {
-                        specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 4.8% 上限為 NT$ 37,500)</div>`;
-                    } else {
-                        specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                    }
-                });
-            } else {
-                // Default formatting for other cards
-                levelNames.forEach(level => {
-                    const data = card.levelSettings[level];
-                    specialContent += `<div class="cashback-merchants" style="font-size: 13px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                });
-            }
-        }
-
         specialContent += `</div>`;
     } else if (card.hasLevels && !card.specialItems) {
         // Handle level-based cards without specialItems
@@ -3110,10 +3149,10 @@ basicCashbackDiv.innerHTML = basicContent;
                 const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
                 specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
-                // Use cap from rate if available, otherwise from levelData
-                const cap = rate.cap || levelData.cap;
-                if (cap) {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${cap.toLocaleString()}</div>`;
+                // 解析 cap 值（支援 {cap}），如果解析後為 null，則使用 levelData.cap 作為後備
+                const parsedCap = parseCashbackCap(rate.cap, card, levelData) || levelData.cap;
+                if (parsedCap) {
+                    specialContent += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
                 } else {
                     specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
                 }
@@ -3217,12 +3256,13 @@ basicCashbackDiv.innerHTML = basicContent;
             const categoryLabel = rate.category ? ` (${rate.category})` : '';
             specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
-            // 消費上限
-            if (rate.cap) {
+            // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
+            const parsedCap = parseCashbackCap(rate.cap, card, null);
+            if (parsedCap) {
                 if (rate.capDescription && card.id === 'taishin-richart') {
                     specialContent += `<div class="cashback-condition">消費上限: ${rate.capDescription}</div>`;
                 } else {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+                    specialContent += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
                 }
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
@@ -3498,9 +3538,10 @@ async function generateCubeSpecialContent(card) {
             const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
             content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
-            // 显示消費上限
-            if (rate.cap) {
-                content += `<div class="cashback-condition">消費上限: NT$${rate.cap.toLocaleString()}</div>`;
+            // 解析 cap 值（支援 {cap}）
+            const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
+            if (parsedCap) {
+                content += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
             } else {
                 content += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
