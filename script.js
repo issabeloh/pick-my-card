@@ -2980,7 +2980,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 const rate = sortedRates[index];
                 specialContent += `<div class="cashback-detail-item">`;
 
-                // 解析 rate 值（支援 {specialRate}）
+                // 解析 rate 值（支援 {specialRate} 和 {rate}）
                 const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
 
                 // Display rate with category in parentheses
@@ -3026,7 +3026,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
         // Then display the level-based cashback with specialItems
         specialContent += `<div class="cashback-detail-item">`;
-        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋 (${savedLevel})</div>`;
+        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋</div>`;
         if (levelData.cap) {
             specialContent += `<div class="cashback-condition">消費上限: NT$${levelData.cap.toLocaleString()}</div>`;
         } else {
@@ -3103,7 +3103,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 const rate = sortedRates[index];
                 specialContent += `<div class="cashback-detail-item">`;
 
-                // 解析 rate 值（支援 {specialRate}）
+                // 解析 rate 值（支援 {specialRate} 和 {rate}）
                 const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
 
                 // Display rate with category in parentheses
@@ -3210,7 +3210,7 @@ basicCashbackDiv.innerHTML = basicContent;
             const rate = sortedRates[index];
             specialContent += `<div class="cashback-detail-item">`;
 
-            // 解析 rate 值（支援 {specialRate}，雖然 hasLevels=false 的卡片通常只有數字）
+            // 解析 rate 值（支援 {specialRate} 和 {rate}，雖然 hasLevels=false 的卡片通常只有數字）
             const parsedRate = await parseCashbackRate(rate.rate, card, null);
 
             // Display rate with category in parentheses (like Cube card style)
@@ -3491,7 +3491,7 @@ async function generateCubeSpecialContent(card) {
             const rate = otherRates[index];
             content += `<div class="cashback-detail-item">`;
 
-            // 解析 rate 值（支援 {specialRate}）
+            // 解析 rate 值（支援 {specialRate} 和 {rate}）
             const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
 
             // 显示回饋率，如果有 category 则显示在括号中
