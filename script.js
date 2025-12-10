@@ -1517,11 +1517,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
             for (const rateGroup of card.cashbackRates) {
                 if (!rateGroup.items) continue;
 
+                // 解析 rate 值（支援 {specialRate}）
+                const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
+
                 for (const variant of searchVariants) {
                     let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
                     // Note: We don't check hideInDisplay here because hidden rates should still be searchable
-                    if (exactMatch && rateGroup.rate > bestRate) {
-                        bestRate = rateGroup.rate;
+                    if (exactMatch && parsedRate > bestRate) {
+                        bestRate = parsedRate;
                         applicableCap = rateGroup.cap;
                         matchedItem = exactMatch;
                         matchedCategory = rateGroup.category || null;
@@ -1538,7 +1541,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                             }
                             console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
                         } else {
-                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${rateGroup.rate}%)`);
+                            // 顯示原始 rate 或解析後的值
+                            const displayRate = (rateGroup.rate === '{specialRate}' || rateGroup.rate === '{rate}')
+                                ? `${rateGroup.rate}=${parsedRate}`
+                                : parsedRate;
+                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
                         }
                         break;
                     }
@@ -1631,11 +1638,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
     } else {
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
+            // 解析 rate 值（雖然 hasLevels=false 的卡片通常只有數字，但為了代碼一致性仍然解析）
+            const parsedRate = await parseCashbackRate(rateGroup.rate, card, null);
+
             // Check all search variants against all items in the rate group
             for (const variant of searchVariants) {
                 let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                if (exactMatch && rateGroup.rate > bestRate) {
-                    bestRate = rateGroup.rate;
+                if (exactMatch && parsedRate > bestRate) {
+                    bestRate = parsedRate;
                     applicableCap = rateGroup.cap;
                     matchedItem = exactMatch;
                     matchedCategory = rateGroup.category || null;
@@ -1901,6 +1911,56 @@ async function calculateCouponRate(coupon, card) {
 
     // 如果都不是，當成固定數字處理
     return parseFloat(rate);
+}
+
+// 解析 cashbackRates 中的 rate 值（支援數字、{specialRate}、{rate}）
+async function parseCashbackRate(rate, card, levelSettings) {
+    // 如果是數字，直接返回
+    if (typeof rate === 'number') {
+        return rate;
+    }
+
+    // 如果不是字串，嘗試轉換成數字
+    if (typeof rate !== 'string') {
+        return parseFloat(rate);
+    }
+
+    // 處理 {specialRate} 的情況
+    if (rate === '{specialRate}') {
+        // 只有 hasLevels 的卡片才支援 {specialRate}
+        if (card.hasLevels && levelSettings && levelSettings.specialRate !== undefined) {
+            return levelSettings.specialRate;
+        }
+        console.warn(`⚠️ ${card.name}: {specialRate} 需要 hasLevels=true 且 levelSettings 中有 specialRate`);
+        return 0;
+    }
+
+    // 處理 {rate} 的情況
+    if (rate === '{rate}') {
+        // 只有 hasLevels 的卡片才支援 {rate}
+        if (card.hasLevels && levelSettings && levelSettings.rate !== undefined) {
+            return levelSettings.rate;
+        }
+        console.warn(`⚠️ ${card.name}: {rate} 需要 hasLevels=true 且 levelSettings 中有 rate`);
+        return 0;
+    }
+
+    // 其他情況當成數字處理
+    return parseFloat(rate);
+}
+
+// 同步版本的 rate 解析（用於排序，不顯示警告）
+function parseCashbackRateSync(rate, levelData) {
+    if (typeof rate === 'number') {
+        return rate;
+    }
+    if (rate === '{specialRate}') {
+        return levelData?.specialRate || 0;
+    }
+    if (rate === '{rate}') {
+        return levelData?.rate || 0;
+    }
+    return parseFloat(rate) || 0;
 }
 
 // Display coupon cashback results
@@ -2909,14 +2969,23 @@ basicCashbackDiv.innerHTML = basicContent;
         if (card.cashbackRates && card.cashbackRates.length > 0) {
             const sortedRates = [...card.cashbackRates]
                 .filter(rate => !rate.hideInDisplay)
-                .sort((a, b) => b.rate - a.rate);
+                .sort((a, b) => {
+                    // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
+                    const aRate = parseCashbackRateSync(a.rate, levelData);
+                    const bRate = parseCashbackRateSync(b.rate, levelData);
+                    return bRate - aRate;
+                });
 
-            sortedRates.forEach((rate, index) => {
+            for (let index = 0; index < sortedRates.length; index++) {
+                const rate = sortedRates[index];
                 specialContent += `<div class="cashback-detail-item">`;
+
+                // 解析 rate 值（支援 {specialRate}）
+                const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
 
                 // Display rate with category in parentheses
                 const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
-                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+                specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate
                 if (rate.cap) {
@@ -2952,7 +3021,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
 
                 specialContent += `</div>`;
-            });
+            }
         }
 
         // Then display the level-based cashback with specialItems
@@ -3023,14 +3092,23 @@ basicCashbackDiv.innerHTML = basicContent;
             // Display cashbackRates with level-based cap
             const sortedRates = [...card.cashbackRates]
                 .filter(rate => !rate.hideInDisplay)
-                .sort((a, b) => b.rate - a.rate);
+                .sort((a, b) => {
+                    // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
+                    const aRate = parseCashbackRateSync(a.rate, levelData);
+                    const bRate = parseCashbackRateSync(b.rate, levelData);
+                    return bRate - aRate;
+                });
 
-            sortedRates.forEach((rate, index) => {
+            for (let index = 0; index < sortedRates.length; index++) {
+                const rate = sortedRates[index];
                 specialContent += `<div class="cashback-detail-item">`;
+
+                // 解析 rate 值（支援 {specialRate}）
+                const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
 
                 // Display rate with category in parentheses
                 const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
-                specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+                specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
                 // Use cap from rate if available, otherwise from levelData
                 const cap = rate.cap || levelData.cap;
@@ -3067,7 +3145,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
 
                 specialContent += `</div>`;
-            });
+            }
 
             // Show all level options for reference with special formatting for DBS Eco card
             if (levelNames.length > 1) {
@@ -3121,14 +3199,23 @@ basicCashbackDiv.innerHTML = basicContent;
         // Sort rates by percentage in descending order
         const sortedRates = [...card.cashbackRates]
             .filter(rate => !rate.hideInDisplay)
-            .sort((a, b) => b.rate - a.rate);
-            
-        sortedRates.forEach((rate, index) => {
+            .sort((a, b) => {
+                // 解析 rate（hasLevels=false 的卡片，levelData 為 null）
+                const aRate = parseCashbackRateSync(a.rate, null);
+                const bRate = parseCashbackRateSync(b.rate, null);
+                return bRate - aRate;
+            });
+
+        for (let index = 0; index < sortedRates.length; index++) {
+            const rate = sortedRates[index];
             specialContent += `<div class="cashback-detail-item">`;
+
+            // 解析 rate 值（支援 {specialRate}，雖然 hasLevels=false 的卡片通常只有數字）
+            const parsedRate = await parseCashbackRate(rate.rate, card, null);
 
             // Display rate with category in parentheses (like Cube card style)
             const categoryLabel = rate.category ? ` (${rate.category})` : '';
-            specialContent += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+            specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
             // 消費上限
             if (rate.cap) {
@@ -3179,9 +3266,9 @@ basicCashbackDiv.innerHTML = basicContent;
                     specialContent += `</div>`;
                 }
             }
-            
+
             specialContent += `</div>`;
-        });
+        }
     } else {
         specialContent = '<div class="cashback-detail-item">無指定通路回饋</div>';
     }
@@ -3393,14 +3480,23 @@ async function generateCubeSpecialContent(card) {
                 rate.category !== '童樂匯' &&
                 rate.category !== '切換「童樂匯」方案'
             )
-            .sort((a, b) => b.rate - a.rate); // 按回饋率高低排序
+            .sort((a, b) => {
+                // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
+                const aRate = parseCashbackRateSync(a.rate, levelSettings);
+                const bRate = parseCashbackRateSync(b.rate, levelSettings);
+                return bRate - aRate;
+            });
 
-        otherRates.forEach((rate, index) => {
+        for (let index = 0; index < otherRates.length; index++) {
+            const rate = otherRates[index];
             content += `<div class="cashback-detail-item">`;
+
+            // 解析 rate 值（支援 {specialRate}）
+            const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
 
             // 显示回饋率，如果有 category 则显示在括号中
             const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
-            content += `<div class="cashback-rate">${rate.rate}% 回饋${categoryLabel}</div>`;
+            content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
             // 显示消費上限
             if (rate.cap) {
@@ -3439,7 +3535,7 @@ async function generateCubeSpecialContent(card) {
             }
 
             content += `</div>`;
-        });
+        }
     }
 
     return content;
