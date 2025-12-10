@@ -1636,33 +1636,34 @@ async function calculateCardCashback(card, searchTerm, amount) {
         }
         // For other level-based cards: if no match found (bestRate is still 0), it will return 0 cashback below
     } else {
+        // Handle cards without specialItems (or with empty specialItems)
+        // Get level settings if card has levels
+        let levelData = null;
+        if (card.hasLevels) {
+            const defaultLevel = Object.keys(card.levelSettings)[0];
+            const savedLevel = await getCardLevel(card.id, defaultLevel);
+            levelData = card.levelSettings[savedLevel];
+            selectedLevel = savedLevel; // Store selected level for display
+        }
+
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
-            // 解析 rate 值（雖然 hasLevels=false 的卡片通常只有數字，但為了代碼一致性仍然解析）
-            const parsedRate = await parseCashbackRate(rateGroup.rate, card, null);
+            // 解析 rate 值（支援 {rate}、{specialRate} 等）
+            const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+            const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
             // Check all search variants against all items in the rate group
             for (const variant of searchVariants) {
                 let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
                 if (exactMatch && parsedRate > bestRate) {
                     bestRate = parsedRate;
-                    applicableCap = rateGroup.cap;
+                    applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
                     matchedItem = exactMatch;
                     matchedCategory = rateGroup.category || null;
                     matchedRateGroup = rateGroup;
                 }
             }
         }
-    }
-
-    // 如果卡片有分級且不是 CUBE 卡，使用級別設定覆蓋回饋率和上限
-    if (card.hasLevels && !card.specialItems && bestRate > 0) {
-        const defaultLevel = Object.keys(card.levelSettings)[0];
-        const savedLevel = await getCardLevel(card.id, defaultLevel);
-        const levelData = card.levelSettings[savedLevel];
-
-        bestRate = levelData.rate;
-        applicableCap = levelData.cap || null;
     }
 
     let cashbackAmount = 0;
@@ -3180,8 +3181,8 @@ basicCashbackDiv.innerHTML = basicContent;
         }
 
         specialContent += `</div>`;
-    } else if (card.hasLevels && !card.specialItems) {
-        // Handle level-based cards without specialItems
+    } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
+        // Handle level-based cards without specialItems (or with empty specialItems array)
         const levelNames = Object.keys(card.levelSettings);
         const savedLevel = await getCardLevel(card.id, levelNames[0]);
         const levelData = card.levelSettings[savedLevel];
@@ -3296,35 +3297,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `</div>`;
             }
 
-            // Show all level options for reference with special formatting for DBS Eco card
-            if (levelNames.length > 1) {
-                specialContent += `<div class="cashback-detail-item">`;
-                specialContent += `<div class="cashback-condition" style="margin-top: 0; padding-top: 0; border-top: none;">各級別回饋率：</div>`;
-
-                // Special formatting for DBS Eco card
-                if (card.id === 'dbs-eco') {
-                    levelNames.forEach(level => {
-                        const data = card.levelSettings[level];
-                        if (level === '一般卡友') {
-                            specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                        } else if (level === '精選卡友') {
-                            specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 1.8% 上限為 NT$ 50,000)</div>`;
-                        } else if (level === '豐盛理財客戶/豐盛理財私人客戶') {
-                            specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap?.toLocaleString() || '無'}；加碼 4.8% 上限為 NT$ 37,500)</div>`;
-                        } else {
-                            specialContent += `<div class="cashback-merchants" style="font-size: 11px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                        }
-                    });
-                } else {
-                    // Default formatting for other cards
-                    levelNames.forEach(level => {
-                        const data = card.levelSettings[level];
-                        specialContent += `<div class="cashback-merchants" style="font-size: 13px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-                    });
-                }
-
-                specialContent += `</div>`;
-            }
+            // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
         } else {
             // Original logic for cards without cashbackRates
             specialContent += `<div class="cashback-detail-item">`;
@@ -3335,12 +3308,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
 
-            // Show all level options for reference
-            specialContent += `<div class="cashback-condition" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">各級別回饋率：</div>`;
-            levelNames.forEach(level => {
-                const data = card.levelSettings[level];
-                specialContent += `<div class="cashback-merchants" style="font-size: 13px; color: #6b7280;">• ${level}: ${data.rate}% (上限 NT$${data.cap?.toLocaleString() || '無'})</div>`;
-            });
+            // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
 
             specialContent += `</div>`;
         }
