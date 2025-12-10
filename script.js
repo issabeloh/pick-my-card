@@ -2944,7 +2944,7 @@ basicCashbackDiv.innerHTML = basicContent;
         // Generate level rates info
         let levelRatesInfo = '';
         if (levelNames.length > 1) {
-            levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0;">';
+            levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb;">';
             levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
 
             if (card.id === 'dbs-eco') {
