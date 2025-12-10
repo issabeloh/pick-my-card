@@ -2941,9 +2941,9 @@ basicCashbackDiv.innerHTML = basicContent;
             }
         }
 
-        // Generate level rates info
+        // Generate level rates info (skip for CUBE card as it has different structure)
         let levelRatesInfo = '';
-        if (levelNames.length > 1) {
+        if (levelNames.length > 1 && card.id !== 'cathay-cube') {
             levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb;">';
             levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
 
