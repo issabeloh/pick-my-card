@@ -2941,13 +2941,20 @@ basicCashbackDiv.innerHTML = basicContent;
             }
         }
 
-        // Generate level rates info (skip for CUBE card as it has different structure)
+        // Generate level rates info
         let levelRatesInfo = '';
-        if (levelNames.length > 1 && card.id !== 'cathay-cube') {
+        if (levelNames.length > 1) {
             levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb;">';
             levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
 
-            if (card.id === 'dbs-eco') {
+            if (card.id === 'cathay-cube') {
+                // CUBE card uses specialRate instead of rate
+                levelNames.forEach(level => {
+                    const data = card.levelSettings[level];
+                    const displayRate = data.specialRate || data.rate || 0;
+                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5;">• ${level}: ${displayRate}% (無上限)</div>`;
+                });
+            } else if (card.id === 'dbs-eco') {
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
                     if (level === '一般卡友') {
@@ -3107,14 +3114,34 @@ basicCashbackDiv.innerHTML = basicContent;
 
                 // 按 category 顯示各通路條件
                 if (group.conditions.length > 0) {
-                    specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                    specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
+                    // 玉山 Uni Card 使用可展開的詳細條件，其他卡片直接顯示
+                    if (card.id === 'yushan-unicard') {
+                        const conditionsId = `conditions-${card.id}-group-${groupKey}`;
+                        const showConditionsId = `show-conditions-${card.id}-group-${groupKey}`;
 
-                    for (const cond of group.conditions) {
-                        specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        // 生成條件內容
+                        let conditionsContent = '';
+                        for (const cond of group.conditions) {
+                            conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        }
+
+                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
+                        specialContent += `<button class="show-more-btn" id="${showConditionsId}" onclick="toggleConditions('${conditionsId}', '${showConditionsId}')" style="padding: 4px 12px; font-size: 13px;">▼ 查看各通路詳細條件</button>`;
+                        specialContent += `<div id="${conditionsId}" style="display: none; margin-top: 8px;">`;
+                        specialContent += conditionsContent;
+                        specialContent += `</div>`;
+                        specialContent += `</div>`;
+                    } else {
+                        // 其他卡片直接顯示條件
+                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
+                        specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
+
+                        for (const cond of group.conditions) {
+                            specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        }
+
+                        specialContent += `</div>`;
                     }
-
-                    specialContent += `</div>`;
                 }
 
                 specialContent += `</div>`;
@@ -3234,14 +3261,34 @@ basicCashbackDiv.innerHTML = basicContent;
 
                 // 按 category 顯示各通路條件
                 if (group.conditions.length > 0) {
-                    specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                    specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
+                    // 玉山 Uni Card 使用可展開的詳細條件，其他卡片直接顯示
+                    if (card.id === 'yushan-unicard') {
+                        const conditionsId = `conditions-${card.id}-group-${groupKey}`;
+                        const showConditionsId = `show-conditions-${card.id}-group-${groupKey}`;
 
-                    for (const cond of group.conditions) {
-                        specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        // 生成條件內容
+                        let conditionsContent = '';
+                        for (const cond of group.conditions) {
+                            conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        }
+
+                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
+                        specialContent += `<button class="show-more-btn" id="${showConditionsId}" onclick="toggleConditions('${conditionsId}', '${showConditionsId}')" style="padding: 4px 12px; font-size: 13px;">▼ 查看各通路詳細條件</button>`;
+                        specialContent += `<div id="${conditionsId}" style="display: none; margin-top: 8px;">`;
+                        specialContent += conditionsContent;
+                        specialContent += `</div>`;
+                        specialContent += `</div>`;
+                    } else {
+                        // 其他卡片直接顯示條件
+                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
+                        specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
+
+                        for (const cond of group.conditions) {
+                            specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        }
+
+                        specialContent += `</div>`;
                     }
-
-                    specialContent += `</div>`;
                 }
 
                 specialContent += `</div>`;
@@ -3671,8 +3718,29 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
     }
 }
 
-// 將toggleMerchants暴露到全局作用域，確保onclick可以訪問
+// 切換條件顯示/隱藏
+function toggleConditions(conditionsId, buttonId) {
+    const conditionsElement = document.getElementById(conditionsId);
+    const buttonElement = document.getElementById(buttonId);
+
+    if (!conditionsElement || !buttonElement) return;
+
+    const isHidden = conditionsElement.style.display === 'none';
+
+    if (isHidden) {
+        // 展開
+        conditionsElement.style.display = 'block';
+        buttonElement.textContent = '▲ 收起條件';
+    } else {
+        // 收起
+        conditionsElement.style.display = 'none';
+        buttonElement.textContent = '▼ 查看各通路詳細條件';
+    }
+}
+
+// 將toggleMerchants和toggleConditions暴露到全局作用域，確保onclick可以訪問
 window.toggleMerchants = toggleMerchants;
+window.toggleConditions = toggleConditions;
 
 // 用戶筆記相關功能
 let currentNotesCardId = null;
