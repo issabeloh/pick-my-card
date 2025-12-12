@@ -1396,12 +1396,11 @@ async function calculateCashback() {
 
             for (const searchTerm of searchTermsForUpcoming) {
                 const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
-                    const upcomingActivity = await findUpcomingActivity(card, searchTerm);
+                    const upcomingActivity = await findUpcomingActivity(card, searchTerm, amount);
                     if (upcomingActivity) {
                         return {
                             card: card,
                             ...upcomingActivity,
-                            cashbackAmount: 0, // No actual cashback yet
                             isUpcoming: true
                         };
                     }
@@ -1836,7 +1835,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
 }
 
 // Find upcoming activities for a card (activities starting within 30 days)
-async function findUpcomingActivity(card, searchTerm) {
+async function findUpcomingActivity(card, searchTerm, amount) {
     let matchedUpcomingActivity = null;
 
     // Get all possible search variants
@@ -1877,9 +1876,30 @@ async function findUpcomingActivity(card, searchTerm) {
             for (const variant of searchVariants) {
                 const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
                 if (exactMatch) {
+                    // Calculate cashback amount
+                    let cashbackAmount = 0;
+                    let effectiveAmount = amount;
+
+                    if (parsedCap && amount > parsedCap) {
+                        effectiveAmount = parsedCap;
+                    }
+
+                    // Calculate special rate cashback
+                    const specialCashback = Math.floor(effectiveAmount * parsedRate / 100);
+
+                    // Calculate remaining amount cashback (if capped)
+                    let remainingCashback = 0;
+                    if (parsedCap && amount > parsedCap) {
+                        const remainingAmount = amount - parsedCap;
+                        remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+                    }
+
+                    cashbackAmount = specialCashback + remainingCashback;
+
                     matchedUpcomingActivity = {
                         rate: parsedRate,
                         cap: parsedCap,
+                        cashbackAmount: cashbackAmount,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
                         periodStart: rateGroup.periodStart,
