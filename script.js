@@ -141,11 +141,12 @@ function openInBrowser() {
     }
 }
 
-// Check if a rate is currently active based on periodStart and periodEnd (UTC+8 Taiwan time)
-function isRateActive(periodStart, periodEnd) {
+// Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
+// Returns: 'active' | 'upcoming' | 'expired' | 'always'
+function getRateStatus(periodStart, periodEnd) {
     // If no date restrictions, rate is always active
     if (!periodStart || !periodEnd) {
-        return true;
+        return 'always';
     }
 
     try {
@@ -168,42 +169,105 @@ function isRateActive(periodStart, periodEnd) {
         const startDate = startParts[0] * 10000 + startParts[1] * 100 + startParts[2];
         const endDate = endParts[0] * 10000 + endParts[1] * 100 + endParts[2];
 
-        // Check if current date is within the period
-        const isActive = currentDate >= startDate && currentDate <= endDate;
-
-        return isActive;
+        // Check status
+        if (currentDate >= startDate && currentDate <= endDate) {
+            return 'active';
+        } else if (currentDate < startDate) {
+            return 'upcoming';
+        } else {
+            return 'expired';
+        }
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
-        return true; // If error, show the rate (safer to show than hide)
+        return 'always'; // If error, show the rate (safer to show than hide)
     }
 }
 
-// Filter expired rates from cards data
+// Check if a rate is currently active (for backwards compatibility)
+function isRateActive(periodStart, periodEnd) {
+    const status = getRateStatus(periodStart, periodEnd);
+    return status === 'active' || status === 'always';
+}
+
+// Check if upcoming activity starts within N days
+function isUpcomingWithinDays(periodStart, days = 30) {
+    if (!periodStart) return false;
+
+    try {
+        // Get current date in UTC+8 (Taiwan time)
+        const now = new Date();
+        const utcOffset = now.getTimezoneOffset();
+        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+        // Parse start date
+        const startParts = periodStart.split('/').map(p => parseInt(p));
+        const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+
+        // Calculate difference in days
+        const diffTime = startDate - taiwanTime;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays >= 0 && diffDays <= days;
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodStart });
+        return false;
+    }
+}
+
+// Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
         return cardsData;
     }
 
     cardsData.cards.forEach(card => {
-        // Filter cashbackRates
+        // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
             card.cashbackRates = card.cashbackRates.filter(rate => {
-                const isActive = isRateActive(rate.periodStart, rate.periodEnd);
-                if (!isActive) {
-                    console.log(`🕒 ${card.name}: 隐藏过期优惠 - ${rate.items ? rate.items[0] : 'unknown'} (${rate.periodStart}~${rate.periodEnd})`);
+                const status = getRateStatus(rate.periodStart, rate.periodEnd);
+
+                // Always keep active and always-active rates
+                if (status === 'active' || status === 'always') {
+                    return true;
                 }
-                return isActive;
+
+                // Keep upcoming if within 30 days
+                if (status === 'upcoming') {
+                    const isWithin30Days = isUpcomingWithinDays(rate.periodStart, 30);
+                    if (!isWithin30Days) {
+                        console.log(`🕒 ${card.name}: 隐藏未来优惠 - ${rate.items ? rate.items[0] : 'unknown'} (${rate.periodStart}~${rate.periodEnd})`);
+                    }
+                    return isWithin30Days;
+                }
+
+                // Filter out expired
+                console.log(`🕒 ${card.name}: 隐藏过期优惠 - ${rate.items ? rate.items[0] : 'unknown'} (${rate.periodStart}~${rate.periodEnd})`);
+                return false;
             });
         }
 
-        // Filter couponCashbacks
+        // Filter couponCashbacks - keep active and upcoming (within 30 days)
         if (card.couponCashbacks && Array.isArray(card.couponCashbacks)) {
             card.couponCashbacks = card.couponCashbacks.filter(coupon => {
-                const isActive = isRateActive(coupon.periodStart, coupon.periodEnd);
-                if (!isActive) {
-                    console.log(`🕒 ${card.name}: 隐藏过期优惠券 - ${coupon.merchant} (${coupon.periodStart}~${coupon.periodEnd})`);
+                const status = getRateStatus(coupon.periodStart, coupon.periodEnd);
+
+                // Always keep active and always-active coupons
+                if (status === 'active' || status === 'always') {
+                    return true;
                 }
-                return isActive;
+
+                // Keep upcoming if within 30 days
+                if (status === 'upcoming') {
+                    const isWithin30Days = isUpcomingWithinDays(coupon.periodStart, 30);
+                    if (!isWithin30Days) {
+                        console.log(`🕒 ${card.name}: 隐藏未来优惠券 - ${coupon.merchant} (${coupon.periodStart}~${coupon.periodEnd})`);
+                    }
+                    return isWithin30Days;
+                }
+
+                // Filter out expired
+                console.log(`🕒 ${card.name}: 隐藏过期优惠券 - ${coupon.merchant} (${coupon.periodStart}~${coupon.periodEnd})`);
+                return false;
             });
         }
     });
@@ -1517,6 +1581,12 @@ async function calculateCardCashback(card, searchTerm, amount) {
             for (const rateGroup of card.cashbackRates) {
                 if (!rateGroup.items) continue;
 
+                // Only consider active rates for cashback calculation (not upcoming)
+                const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+                if (rateStatus !== 'active' && rateStatus !== 'always') {
+                    continue;
+                }
+
                 // 解析 rate 值（支援 {specialRate}）
                 const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
 
@@ -1648,6 +1718,12 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
+            // Only consider active rates for cashback calculation (not upcoming)
+            const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+            if (rateStatus !== 'active' && rateStatus !== 'always') {
+                continue;
+            }
+
             // 解析 rate 值（支援 {rate}、{specialRate} 等）
             const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
             const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
@@ -3044,27 +3120,33 @@ basicCashbackDiv.innerHTML = basicContent;
         if (card.cashbackRates && card.cashbackRates.length > 0) {
             const filteredRates = card.cashbackRates.filter(rate => !rate.hideInDisplay);
 
-            // 按 rate 值和 cap 值分組（相同 rate 和 cap 的活動合併顯示）
-            const rateGroups = new Map();
+            // 按 rate 值、cap 值和狀態分組（相同 rate 和 cap 的活動合併顯示）
+            const activeRateGroups = new Map();
+            const upcomingRateGroups = new Map();
 
             for (const rate of filteredRates) {
                 const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
                 const parsedCap = parseCashbackCap(rate.cap, card, levelData);
+                const rateStatus = getRateStatus(rate.periodStart, rate.periodEnd);
                 const groupKey = `${parsedRate}-${parsedCap || 'nocap'}`;
 
-                if (!rateGroups.has(groupKey)) {
-                    rateGroups.set(groupKey, {
+                // 根據狀態選擇分組
+                const targetGroups = (rateStatus === 'active' || rateStatus === 'always') ? activeRateGroups : upcomingRateGroups;
+
+                if (!targetGroups.has(groupKey)) {
+                    targetGroups.set(groupKey, {
                         parsedRate,
                         parsedCap,
                         items: [],
                         conditions: [],
                         period: rate.period,
                         periodStart: rate.periodStart,
-                        periodEnd: rate.periodEnd
+                        periodEnd: rate.periodEnd,
+                        status: rateStatus
                     });
                 }
 
-                const group = rateGroups.get(groupKey);
+                const group = targetGroups.get(groupKey);
                 if (rate.items) {
                     group.items.push(...rate.items);
                 }
@@ -3076,13 +3158,27 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
             }
 
-            // 按 parsedRate 排序顯示
-            const sortedGroups = Array.from(rateGroups.entries())
+            // 按 parsedRate 排序，先顯示進行中的，再顯示即將開始的
+            const sortedActiveGroups = Array.from(activeRateGroups.entries())
+                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
+            const sortedUpcomingGroups = Array.from(upcomingRateGroups.entries())
                 .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
 
+            const sortedGroups = [...sortedActiveGroups, ...sortedUpcomingGroups];
+
             for (const [groupKey, group] of sortedGroups) {
-                specialContent += `<div class="cashback-detail-item">`;
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                // 為即將開始的活動添加特殊樣式
+                const isUpcoming = group.status === 'upcoming';
+                const itemClass = isUpcoming ? 'cashback-detail-item upcoming-activity' : 'cashback-detail-item';
+
+                specialContent += `<div class="${itemClass}">`;
+
+                // 顯示回饋率，如果是即將開始則添加標籤
+                if (isUpcoming && group.periodStart) {
+                    specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋 <span class="upcoming-badge">即將開始 (${group.periodStart})</span></div>`;
+                } else {
+                    specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                }
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${group.parsedCap.toLocaleString()}</div>`;
@@ -3191,27 +3287,33 @@ basicCashbackDiv.innerHTML = basicContent;
         if (card.cashbackRates && card.cashbackRates.length > 0) {
             const filteredRates = card.cashbackRates.filter(rate => !rate.hideInDisplay);
 
-            // 按 rate 值和 cap 值分組（相同 rate 和 cap 的活動合併顯示）
-            const rateGroups = new Map();
+            // 按 rate 值、cap 值和狀態分組（相同 rate 和 cap 的活動合併顯示）
+            const activeRateGroups = new Map();
+            const upcomingRateGroups = new Map();
 
             for (const rate of filteredRates) {
                 const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
                 const parsedCap = parseCashbackCap(rate.cap, card, levelData) || levelData.cap;
+                const rateStatus = getRateStatus(rate.periodStart, rate.periodEnd);
                 const groupKey = `${parsedRate}-${parsedCap || 'nocap'}`;
 
-                if (!rateGroups.has(groupKey)) {
-                    rateGroups.set(groupKey, {
+                // 根據狀態選擇分組
+                const targetGroups = (rateStatus === 'active' || rateStatus === 'always') ? activeRateGroups : upcomingRateGroups;
+
+                if (!targetGroups.has(groupKey)) {
+                    targetGroups.set(groupKey, {
                         parsedRate,
                         parsedCap,
                         items: [],
                         conditions: [],
                         period: rate.period,
                         periodStart: rate.periodStart,
-                        periodEnd: rate.periodEnd
+                        periodEnd: rate.periodEnd,
+                        status: rateStatus
                     });
                 }
 
-                const group = rateGroups.get(groupKey);
+                const group = targetGroups.get(groupKey);
                 if (rate.items) {
                     group.items.push(...rate.items);
                 }
@@ -3223,13 +3325,27 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
             }
 
-            // 按 parsedRate 排序顯示
-            const sortedGroups = Array.from(rateGroups.entries())
+            // 按 parsedRate 排序，先顯示進行中的，再顯示即將開始的
+            const sortedActiveGroups = Array.from(activeRateGroups.entries())
+                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
+            const sortedUpcomingGroups = Array.from(upcomingRateGroups.entries())
                 .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
 
+            const sortedGroups = [...sortedActiveGroups, ...sortedUpcomingGroups];
+
             for (const [groupKey, group] of sortedGroups) {
-                specialContent += `<div class="cashback-detail-item">`;
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                // 為即將開始的活動添加特殊樣式
+                const isUpcoming = group.status === 'upcoming';
+                const itemClass = isUpcoming ? 'cashback-detail-item upcoming-activity' : 'cashback-detail-item';
+
+                specialContent += `<div class="${itemClass}">`;
+
+                // 顯示回饋率，如果是即將開始則添加標籤
+                if (isUpcoming && group.periodStart) {
+                    specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋 <span class="upcoming-badge">即將開始 (${group.periodStart})</span></div>`;
+                } else {
+                    specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                }
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${group.parsedCap.toLocaleString()}</div>`;
