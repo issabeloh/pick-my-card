@@ -1507,12 +1507,8 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
 
     // Append upcoming results after active results (if they exist)
     if (typeof uniqueUpcomingResults !== 'undefined' && uniqueUpcomingResults.length > 0) {
-        // Filter out cards that are already in active results
-        const activeCardIds = new Set(results.map(r => r.card.id));
-        const upcomingOnly = uniqueUpcomingResults.filter(r => !activeCardIds.has(r.card.id));
-
-        // Append upcoming results
-        results = [...results, ...upcomingOnly];
+        // Append all upcoming results (even if card already has active result)
+        results = [...results, ...uniqueUpcomingResults];
     }
 
     // Display results - handle multiple matched items
