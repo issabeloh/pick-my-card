@@ -1386,7 +1386,42 @@ async function calculateCashback() {
         }
         
         results = allResults;
-        
+
+        // Also find upcoming activities (within 30 days)
+        const upcomingResults = [];
+        if (currentMatchedItem) {
+            const searchTermsForUpcoming = Array.isArray(currentMatchedItem)
+                ? currentMatchedItem.map(item => item.originalItem.toLowerCase())
+                : [currentMatchedItem.originalItem.toLowerCase()];
+
+            for (const searchTerm of searchTermsForUpcoming) {
+                const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
+                    const upcomingActivity = await findUpcomingActivity(card, searchTerm);
+                    if (upcomingActivity) {
+                        return {
+                            card: card,
+                            ...upcomingActivity,
+                            cashbackAmount: 0, // No actual cashback yet
+                            isUpcoming: true
+                        };
+                    }
+                    return null;
+                }));
+
+                upcomingResults.push(...upcomingActivities.filter(r => r !== null));
+            }
+        }
+
+        // Remove duplicates from upcoming results (same card might match multiple search terms)
+        const uniqueUpcomingResults = [];
+        const seenCardIds = new Set();
+        for (const result of upcomingResults) {
+            if (!seenCardIds.has(result.card.id)) {
+                seenCardIds.add(result.card.id);
+                uniqueUpcomingResults.push(result);
+            }
+        }
+
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
             showNoMatchMessage();
@@ -1467,9 +1502,19 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
         }
     }
     
-    // Sort by cashback amount (highest first)
+    // Sort active results by cashback amount (highest first)
     results.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-    
+
+    // Append upcoming results after active results (if they exist)
+    if (typeof uniqueUpcomingResults !== 'undefined' && uniqueUpcomingResults.length > 0) {
+        // Filter out cards that are already in active results
+        const activeCardIds = new Set(results.map(r => r.card.id));
+        const upcomingOnly = uniqueUpcomingResults.filter(r => !activeCardIds.has(r.card.id));
+
+        // Append upcoming results
+        results = [...results, ...upcomingOnly];
+    }
+
     // Display results - handle multiple matched items
     let displayedMatchItem;
     if (currentMatchedItem) {
@@ -1481,7 +1526,7 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
     } else {
         displayedMatchItem = merchantValue;
     }
-    
+
     displayResults(results, amount, displayedMatchItem, isBasicCashback);
 
     // Display coupon cashbacks
@@ -1792,6 +1837,68 @@ async function calculateCardCashback(card, searchTerm, amount) {
         matchedRateGroup: matchedRateGroup,
         selectedLevel: selectedLevel // Pass selected level to display
     };
+}
+
+// Find upcoming activities for a card (activities starting within 30 days)
+async function findUpcomingActivity(card, searchTerm) {
+    let matchedUpcomingActivity = null;
+
+    // Get all possible search variants
+    const searchVariants = getAllSearchVariants(searchTerm);
+
+    // Get level settings if card has levels
+    let levelData = null;
+    let selectedLevel = null;
+    if (card.hasLevels) {
+        const availableLevels = Object.keys(card.levelSettings || {});
+        const defaultLevel = availableLevels[0];
+        const savedLevel = await getCardLevel(card.id, defaultLevel);
+        levelData = card.levelSettings[savedLevel];
+        selectedLevel = savedLevel;
+    }
+
+    // Check cashbackRates for upcoming activities
+    if (card.cashbackRates && card.cashbackRates.length > 0) {
+        for (const rateGroup of card.cashbackRates) {
+            if (!rateGroup.items) continue;
+
+            // Only consider upcoming rates
+            const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+            if (rateStatus !== 'upcoming') {
+                continue;
+            }
+
+            // Check if it's within 30 days
+            if (!isUpcomingWithinDays(rateGroup.periodStart, 30)) {
+                continue;
+            }
+
+            // Parse rate and cap
+            const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+            const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
+
+            // Check if any search variant matches
+            for (const variant of searchVariants) {
+                const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+                if (exactMatch) {
+                    matchedUpcomingActivity = {
+                        rate: parsedRate,
+                        cap: parsedCap,
+                        matchedItem: exactMatch,
+                        matchedCategory: rateGroup.category || null,
+                        periodStart: rateGroup.periodStart,
+                        periodEnd: rateGroup.periodEnd,
+                        period: rateGroup.period,
+                        selectedLevel: selectedLevel
+                    };
+                    break;
+                }
+            }
+            if (matchedUpcomingActivity) break;
+        }
+    }
+
+    return matchedUpcomingActivity;
 }
 
 // Display calculation results
@@ -2170,8 +2277,9 @@ function createCouponResultElement(coupon, amount) {
 // Create card result element
 function createCardResultElement(result, originalAmount, searchedItem, isBest, isBasicCashback = false) {
     const cardDiv = document.createElement('div');
-    cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''}`;
-    
+    const isUpcoming = result.isUpcoming === true;
+    cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''} ${isUpcoming ? 'upcoming-activity' : ''}`;
+
     let capText = result.cap ? `NT$${result.cap.toLocaleString()}` : '無上限';
     // Special handling for Taishin Richart card cap display
     if (result.card.id === 'taishin-richart' && result.cap) {
@@ -2183,6 +2291,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     
     // All rates are already totaled, simply display the rate
     let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
+
+    // Add upcoming badge if applicable
+    if (isUpcoming && result.periodStart) {
+        rateDisplay += ` <span class="upcoming-badge">即將開始 (${result.periodStart})</span>`;
+    }
 
     // Generate level label if card has levels and levelLabelFormat
     let levelLabel = '';
@@ -2245,10 +2358,19 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 `;
             } else if (result.matchedItem) {
                 let additionalInfo = '';
-                if (result.matchedRateGroup) {
+
+                // For upcoming activities, show period from result directly
+                if (isUpcoming) {
+                    if (result.period) {
+                        additionalInfo += `<br><small>活動期間: ${result.period}</small>`;
+                    } else if (result.periodStart && result.periodEnd) {
+                        additionalInfo += `<br><small>活動期間: ${result.periodStart}~${result.periodEnd}</small>`;
+                    }
+                } else if (result.matchedRateGroup) {
+                    // For active activities, use matchedRateGroup
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
-                    
+
                     if (period) additionalInfo += `<br><small>活動期間: ${period}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                 }
