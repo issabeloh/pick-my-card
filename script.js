@@ -3195,6 +3195,8 @@ basicCashbackDiv.innerHTML = basicContent;
                     const displayRate = data.specialRate || data.rate || 0;
                     levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${displayRate}% (無上限)</div>`;
                 });
+                // Add note about which categories are affected by level
+                levelRatesInfo += `<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic; line-height: 1.4;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
             } else if (card.id === 'dbs-eco') {
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
