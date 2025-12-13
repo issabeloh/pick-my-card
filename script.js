@@ -3668,20 +3668,24 @@ basicCashbackDiv.innerHTML = basicContent;
     // Update upcoming cashback section
     const upcomingSection = document.getElementById('card-upcoming-section');
     const upcomingCashbackDiv = document.getElementById('card-upcoming-cashback');
-    const upcomingGroups = window._currentUpcomingGroups1 || window._currentUpcomingGroups2 || [];
+    const upcomingGroups = window._currentUpcomingGroups1 || window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || [];
     const upcomingCard = window._currentCard;
     const upcomingLevelData = window._currentLevelData1 || window._currentLevelData2;
 
     if (upcomingGroups.length > 0) {
         let upcomingContent = '';
 
-        for (const [groupKey, group] of upcomingGroups) {
+        // Handle both Map (from upcomingGroups1/2) and Array (from upcomingGroupsCube)
+        const groupsToDisplay = Array.isArray(upcomingGroups) ? upcomingGroups.map((g, i) => [i, g]) : upcomingGroups;
+
+        for (const [groupKey, group] of groupsToDisplay) {
             upcomingContent += `<div class="cashback-detail-item upcoming-activity">`;
 
-            // 顯示回饋率和即將開始標籤
+            // 顯示回饋率和即將開始標籤（包含 category 如果有的話）
             const daysUntil = getDaysUntilStart(group.periodStart);
             const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋 <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
+            const categoryText = group.category ? ` (${getCategoryDisplayName(group.category)})` : '';
+            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
 
             if (group.parsedCap) {
                 upcomingContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -3754,6 +3758,7 @@ basicCashbackDiv.innerHTML = basicContent;
     // Clean up temporary variables
     delete window._currentUpcomingGroups1;
     delete window._currentUpcomingGroups2;
+    delete window._currentUpcomingGroupsCube;
     delete window._currentCard;
     delete window._currentLevelData1;
     delete window._currentLevelData2;
@@ -3845,9 +3850,39 @@ async function generateCubeSpecialContent(card) {
     const defaultLevel = Object.keys(card.levelSettings)[0];
     const savedLevel = await getCardLevel(card.id, defaultLevel);
     const levelSettings = card.levelSettings[savedLevel];
-    
+
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
+
+    // Separate active and upcoming cashbackRates
+    const upcomingRates = [];
+    if (card.cashbackRates) {
+        card.cashbackRates.forEach(rate => {
+            const status = getRateStatus(rate.periodStart, rate.periodEnd);
+            if (status === 'upcoming' && isUpcomingWithinDays(rate.periodStart, 30)) {
+                upcomingRates.push(rate);
+            }
+        });
+    }
+
+    // Store upcoming rates for display in separate section
+    if (upcomingRates.length > 0) {
+        window._currentUpcomingGroupsCube = upcomingRates.map(rate => {
+            const parsedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
+            return {
+                parsedRate,
+                parsedCap: null,
+                items: rate.items || [],
+                conditions: [],
+                period: rate.period,
+                periodStart: rate.periodStart,
+                periodEnd: rate.periodEnd,
+                status: 'upcoming',
+                category: rate.category
+            };
+        });
+        window._currentCard = card;
+    }
 
     let content = '';
 
@@ -3861,9 +3896,12 @@ async function generateCubeSpecialContent(card) {
     `;
 
     // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
-    
-    // 1. 童樂匯 10% 回饋 (固定最高)
-    const childrenRate10 = card.cashbackRates?.find(rate => rate.rate === 10.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案'));
+
+    // 1. 童樂匯 10% 回饋 (固定最高) - 只顯示進行中的
+    const childrenRate10 = card.cashbackRates?.find(rate => {
+        const status = getRateStatus(rate.periodStart, rate.periodEnd);
+        return rate.rate === 10.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案') && (status === 'active' || status === 'always');
+    });
     if (childrenRate10) {
         content += `<div class="cashback-detail-item">`;
         content += `<div class="cashback-rate">10% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
@@ -3878,8 +3916,11 @@ async function generateCubeSpecialContent(card) {
         content += `</div>`;
     }
 
-    // 2. 童樂匯 5% 回饋
-    const childrenRate5 = card.cashbackRates?.find(rate => rate.rate === 5.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案'));
+    // 2. 童樂匯 5% 回饋 - 只顯示進行中的
+    const childrenRate5 = card.cashbackRates?.find(rate => {
+        const status = getRateStatus(rate.periodStart, rate.periodEnd);
+        return rate.rate === 5.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案') && (status === 'active' || status === 'always');
+    });
     if (childrenRate5) {
         content += `<div class="cashback-detail-item">`;
         content += `<div class="cashback-rate">5% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
