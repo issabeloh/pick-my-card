@@ -1291,6 +1291,7 @@ async function calculateCashback() {
 
     let results;
     let isBasicCashback = false;
+    let uniqueUpcomingResults = [];  // Define here for proper scope
 
     // Get cards to compare (user selected or all)
     const cardsToCompare = currentUser ?
