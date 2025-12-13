@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Upcoming Activities</title>
+</head>
+<body>
+    <h1>即將開始功能除錯</h1>
+    <div id="output"></div>
+
+    <script>
+        async function debugUpcoming() {
+            const output = document.getElementById('output');
+            let log = '';
+
+            // 1. Check if files are loaded with correct version
+            log += '<h2>1. 檢查版本號</h2>';
+            const styleSheets = Array.from(document.styleSheets);
+            const scripts = Array.from(document.scripts);
+
+            styleSheets.forEach(sheet => {
+                if (sheet.href && sheet.href.includes('styles.css')) {
+                    log += `<p>✓ CSS 載入: ${sheet.href}</p>`;
+                }
+            });
+
+            // 2. Load and check cards.data
+            log += '<h2>2. 檢查 cards.data</h2>';
+            try {
+                const response = await fetch('cards.data');
+                const base64Data = await response.text();
+                const jsonData = JSON.parse(atob(base64Data));
+
+                const cubeCard = jsonData.cards.find(c => c.id === 'cathay-cube');
+                if (cubeCard) {
+                    log += `<p>✓ 找到 CUBE 卡</p>`;
+
+                    const upcomingRates = cubeCard.cashbackRates?.filter(rate => {
+                        return rate.periodStart && rate.periodStart.includes('2025/12/16');
+                    });
+
+                    if (upcomingRates && upcomingRates.length > 0) {
+                        log += `<p>✓ 找到 ${upcomingRates.length} 個即將開始的活動 (2025/12/16)</p>`;
+                        upcomingRates.forEach(rate => {
+                            log += `<pre>  - rate: ${JSON.stringify(rate.rate)}, items: ${rate.items?.slice(0, 3).join(', ')}</pre>`;
+                        });
+                    } else {
+                        log += `<p>❌ 沒有找到 2025/12/16 的活動</p>`;
+                    }
+                }
+            } catch (error) {
+                log += `<p>❌ 載入 cards.data 失敗: ${error.message}</p>`;
+            }
+
+            // 3. Check CSS styles
+            log += '<h2>3. 檢查 CSS 樣式</h2>';
+            const testDiv = document.createElement('div');
+            testDiv.className = 'upcoming-badge';
+            document.body.appendChild(testDiv);
+            const styles = window.getComputedStyle(testDiv);
+
+            log += `<p>upcoming-badge 背景: ${styles.background || styles.backgroundColor}</p>`;
+            log += `<p>upcoming-badge padding: ${styles.padding}</p>`;
+            log += `<p>upcoming-badge border-radius: ${styles.borderRadius}</p>`;
+
+            document.body.removeChild(testDiv);
+
+            // 4. Test date functions
+            log += '<h2>4. 測試日期函數</h2>';
+            log += `<p>當前日期: ${new Date().toLocaleDateString('zh-TW')}</p>`;
+
+            // Simulate getRateStatus
+            const periodStart = '2025/12/16';
+            const periodEnd = '2026/1/5';
+
+            const now = new Date();
+            const utcOffset = now.getTimezoneOffset();
+            const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+            const currentYear = taiwanTime.getFullYear();
+            const currentMonth = taiwanTime.getMonth() + 1;
+            const currentDay = taiwanTime.getDate();
+            const currentDate = currentYear * 10000 + currentMonth * 100 + currentDay;
+
+            const startParts = periodStart.split('/').map(p => parseInt(p));
+            const startDate = startParts[0] * 10000 + startParts[1] * 100 + startParts[2];
+
+            log += `<p>Taiwan 時間: ${currentYear}/${currentMonth}/${currentDay}</p>`;
+            log += `<p>當前日期數值: ${currentDate}</p>`;
+            log += `<p>活動開始日期數值: ${startDate}</p>`;
+
+            let status = 'unknown';
+            if (currentDate < startDate) {
+                status = 'upcoming';
+            } else if (currentDate >= startDate) {
+                status = 'active or expired';
+            }
+            log += `<p><strong>狀態: ${status}</strong></p>`;
+
+            // Calculate days until start
+            const startDateObj = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+            const diffTime = startDateObj - taiwanTime;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            log += `<p>距離開始還有: ${diffDays} 天</p>`;
+            log += `<p>在 30 天內: ${diffDays >= 0 && diffDays <= 30 ? '✓ 是' : '❌ 否'}</p>`;
+
+            output.innerHTML = log;
+        }
+
+        debugUpcoming();
+    </script>
+</body>
+</html>
