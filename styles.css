@@ -1482,7 +1482,7 @@ input[type="number"]:focus {
 
 .card-info-section {
     margin-bottom: 24px;
-    padding-bottom: 20px;
+    padding-bottom: 0;
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -1870,6 +1870,7 @@ input[type="number"]:focus {
     gap: 6px;
     min-width: 100px;
     justify-content: center;
+    margin-bottom: 16px;
 }
 
 .save-notes-btn:hover:not(:disabled) {
@@ -4044,5 +4045,6 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
