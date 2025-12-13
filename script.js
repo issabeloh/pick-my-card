@@ -214,6 +214,31 @@ function isUpcomingWithinDays(periodStart, days = 30) {
     }
 }
 
+// Get days until activity starts (returns number or null if error)
+function getDaysUntilStart(periodStart) {
+    if (!periodStart) return null;
+
+    try {
+        // Get current date in UTC+8 (Taiwan time)
+        const now = new Date();
+        const utcOffset = now.getTimezoneOffset();
+        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+        // Parse start date
+        const startParts = periodStart.split('/').map(p => parseInt(p));
+        const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+
+        // Calculate difference in days
+        const diffTime = startDate - taiwanTime;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays >= 0 ? diffDays : null;
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodStart });
+        return null;
+    }
+}
+
 // Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
@@ -2339,7 +2364,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 ` : ''}
             </div>
             ${isBest ? '<div class="best-badge">最優回饋</div>' : ''}
-            ${isUpcoming && result.periodStart ? `<div class="upcoming-badge">即將開始 (${result.periodStart})</div>` : ''}
+            ${isUpcoming && result.periodStart ? (() => {
+                const daysUntil = getDaysUntilStart(result.periodStart);
+                const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+                return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
+            })() : ''}
         </div>
         <div class="card-details">
             <div class="detail-item">
@@ -3650,7 +3679,9 @@ basicCashbackDiv.innerHTML = basicContent;
             upcomingContent += `<div class="cashback-detail-item upcoming-activity">`;
 
             // 顯示回饋率和即將開始標籤
-            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋 <span class="upcoming-badge">即將開始 (${group.periodStart})</span></div>`;
+            const daysUntil = getDaysUntilStart(group.periodStart);
+            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋 <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
 
             if (group.parsedCap) {
                 upcomingContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
