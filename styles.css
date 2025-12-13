@@ -1997,6 +1997,7 @@ input[type="number"]:focus {
 .user-notes-section {
     margin-top: 16px !important; /* 縮小間距 */
     padding-top: 12px !important; /* 縮小內部間距 */
+    padding-bottom: 0; /* 桌機版本移除底部內距 */
 }
 
 /* 國泰CUBE等級選擇器樣式 */
