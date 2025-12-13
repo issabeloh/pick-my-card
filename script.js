@@ -3998,14 +3998,16 @@ async function generateCubeSpecialContent(card) {
         });
     }
 
-    // 5. 其他 cashbackRates（如 LINE PAY 2%）- 放在最後
+    // 5. 其他 cashbackRates（如 LINE PAY 2%）- 放在最後，只顯示進行中的
     if (card.cashbackRates && card.cashbackRates.length > 0) {
         const otherRates = card.cashbackRates
-            .filter(rate =>
-                !rate.hideInDisplay &&
-                rate.category !== '童樂匯' &&
-                rate.category !== '切換「童樂匯」方案'
-            )
+            .filter(rate => {
+                const status = getRateStatus(rate.periodStart, rate.periodEnd);
+                return !rate.hideInDisplay &&
+                    rate.category !== '童樂匯' &&
+                    rate.category !== '切換「童樂匯」方案' &&
+                    (status === 'active' || status === 'always');  // 只顯示進行中的
+            })
             .sort((a, b) => {
                 // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
                 const aRate = parseCashbackRateSync(a.rate, levelSettings);
