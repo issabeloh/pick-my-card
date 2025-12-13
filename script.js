@@ -1413,7 +1413,7 @@ async function calculateCashback() {
         }
 
         // Remove duplicates from upcoming results (same card might match multiple search terms)
-        const uniqueUpcomingResults = [];
+        uniqueUpcomingResults = [];  // Reuse the variable declared at function scope
         const seenCardIds = new Set();
         for (const result of upcomingResults) {
             if (!seenCardIds.has(result.card.id)) {
