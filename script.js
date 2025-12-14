@@ -2430,7 +2430,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 })() : ''}
                 ${!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10) ? (() => {
                     const daysUntil = getDaysUntilEnd(result.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     return `<div class="ending-soon-badge">即將結束 (${daysText})</div>`;
                 })() : ''}
             </div>
@@ -2695,6 +2695,29 @@ function initializeAuthListeners() {
     const startUsingBtn = document.getElementById('start-using-btn');
     if (startUsingBtn) {
         startUsingBtn.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            showToolSections();
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
+
+    // Setup header "Start Using" button (in auth section)
+    const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+    if (startUsingBtnHeader) {
+        startUsingBtnHeader.addEventListener('click', () => {
             // Hide product intro section
             const productIntroSection = document.getElementById('product-intro-section');
             if (productIntroSection) {
@@ -3409,7 +3432,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 let endingSoonBadgeLevel1 = '';
                 if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
                     const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
@@ -3580,7 +3603,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 let endingSoonBadgeLevel = '';
                 if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
                     const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
@@ -3852,7 +3875,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                     let conditionsContent = '';
                     for (const cond of group.conditions) {
-                        conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
                     }
 
                     upcomingContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
@@ -3866,7 +3889,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     upcomingContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
 
                     for (const cond of group.conditions) {
-                        upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
                     }
 
                     upcomingContent += `</div>`;
@@ -3901,11 +3924,54 @@ basicCashbackDiv.innerHTML = basicContent;
         // 處理每個 coupon，計算實際回饋率
         for (const coupon of card.couponCashbacks) {
             const actualRate = await calculateCouponRate(coupon, card);
+            const couponStatus = getRateStatus(coupon.periodStart, coupon.periodEnd);
 
             couponContent += `<div class="cashback-detail-item">`;
-            couponContent += `<div class="cashback-rate">${coupon.merchant}: ${actualRate}% 回饋</div>`;
-            couponContent += `<div class="cashback-condition">條件: ${coupon.conditions}</div>`;
-            couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
+
+            // 顯示回饋率和標籤
+            let badges = '';
+
+            // 即將開始標籤
+            if (couponStatus === 'upcoming' && coupon.periodStart) {
+                const daysUntil = getDaysUntilStart(coupon.periodStart);
+                const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+                badges += ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
+            }
+
+            // 即將結束標籤
+            if ((couponStatus === 'active' || couponStatus === 'always') && coupon.periodEnd && isEndingSoon(coupon.periodEnd, 10)) {
+                const daysUntil = getDaysUntilEnd(coupon.periodEnd);
+                const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+                badges += ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+            }
+
+            couponContent += `<div class="cashback-rate">${actualRate}% 回饋${badges}</div>`;
+
+            // 消費上限（如果有）
+            if (coupon.cap) {
+                couponContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(coupon.cap).toLocaleString()}</div>`;
+            } else {
+                couponContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
+            }
+
+            // 活動期間
+            if (coupon.period) {
+                couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
+            }
+
+            // 適用通路
+            if (coupon.merchant) {
+                couponContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${coupon.merchant}</div>`;
+            }
+
+            // 條件顯示（統一格式）
+            if (coupon.conditions) {
+                couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
+                couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
+                couponContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${coupon.conditions}</div>`;
+                couponContent += `</div>`;
+            }
+
             couponContent += `</div>`;
         }
 
