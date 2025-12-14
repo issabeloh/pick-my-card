@@ -3945,7 +3945,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 badges += ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            couponContent += `<div class="cashback-rate">${coupon.merchant}: ${actualRate}% 回饋${badges}</div>`;
+            couponContent += `<div class="cashback-rate">${actualRate}% 回饋${badges}</div>`;
 
             // 消費上限（如果有）
             if (coupon.cap) {
@@ -3954,17 +3954,22 @@ basicCashbackDiv.innerHTML = basicContent;
                 couponContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
 
+            // 活動期間
+            if (coupon.period) {
+                couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
+            }
+
+            // 適用通路
+            if (coupon.merchant) {
+                couponContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${coupon.merchant}</div>`;
+            }
+
             // 條件顯示（統一格式）
             if (coupon.conditions) {
                 couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
                 couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
                 couponContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${coupon.conditions}</div>`;
                 couponContent += `</div>`;
-            }
-
-            // 活動期間
-            if (coupon.period) {
-                couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
             }
 
             couponContent += `</div>`;
