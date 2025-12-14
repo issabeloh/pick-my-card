@@ -1040,6 +1040,13 @@ input[type="number"]:focus {
     color: #111827;
 }
 
+.badges-container {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 .best-badge {
     background: #10b981;
     color: white;
