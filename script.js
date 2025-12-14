@@ -239,6 +239,56 @@ function getDaysUntilStart(periodStart) {
     }
 }
 
+// Check if activity is ending soon (within N days)
+function isEndingSoon(periodEnd, days = 10) {
+    if (!periodEnd) return false;
+
+    try {
+        // Get current date in UTC+8 (Taiwan time)
+        const now = new Date();
+        const utcOffset = now.getTimezoneOffset();
+        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+        // Parse end date
+        const endParts = periodEnd.split('/').map(p => parseInt(p));
+        const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+        // Calculate difference in days
+        const diffTime = endDate - taiwanTime;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays >= 0 && diffDays <= days;
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodEnd });
+        return false;
+    }
+}
+
+// Get days until activity ends (returns number or null if error)
+function getDaysUntilEnd(periodEnd) {
+    if (!periodEnd) return null;
+
+    try {
+        // Get current date in UTC+8 (Taiwan time)
+        const now = new Date();
+        const utcOffset = now.getTimezoneOffset();
+        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+        // Parse end date
+        const endParts = periodEnd.split('/').map(p => parseInt(p));
+        const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+
+        // Calculate difference in days
+        const diffTime = endDate - taiwanTime;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays >= 0 ? diffDays : null;
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodEnd });
+        return null;
+    }
+}
+
 // Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
@@ -2369,6 +2419,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
                 return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
             })() : ''}
+            ${!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10) ? (() => {
+                const daysUntil = getDaysUntilEnd(result.periodEnd);
+                const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                return `<div class="ending-soon-badge">即將結束 (${daysText})</div>`;
+            })() : ''}
         </div>
         <div class="card-details">
             <div class="detail-item">
@@ -3340,7 +3395,15 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // 顯示回饋率
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                // Add ending soon badge if applicable
+                let endingSoonBadgeLevel1 = '';
+                if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
+                    const daysUntil = getDaysUntilEnd(group.periodEnd);
+                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+                }
+
+                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel1}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -3503,7 +3566,15 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-detail-item">`;
 
                 // 顯示回饋率
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋</div>`;
+                // Add ending soon badge if applicable
+                let endingSoonBadgeLevel = '';
+                if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
+                    const daysUntil = getDaysUntilEnd(group.periodEnd);
+                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+                }
+
+                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -3606,7 +3677,16 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // Display rate with category in parentheses (like Cube card style)
             const categoryLabel = rate.category ? ` (${rate.category})` : '';
-            specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
+
+            // Add ending soon badge if applicable
+            let endingSoonBadge = '';
+            if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
+                const daysUntil = getDaysUntilEnd(rate.periodEnd);
+                const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+            }
+
+            specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}${endingSoonBadge}</div>`;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
@@ -3906,7 +3986,16 @@ async function generateCubeSpecialContent(card) {
     });
     if (childrenRate10) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">10% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span></div>`;
+
+        // Add ending soon badge if applicable
+        let endingSoonBadge10 = '';
+        if (childrenRate10.periodEnd && isEndingSoon(childrenRate10.periodEnd, 10)) {
+            const daysUntil = getDaysUntilEnd(childrenRate10.periodEnd);
+            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+            endingSoonBadge10 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+
+        content += `<div class="cashback-rate">10% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -3925,7 +4014,16 @@ async function generateCubeSpecialContent(card) {
     });
     if (childrenRate5) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">5% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span></div>`;
+
+        // Add ending soon badge if applicable
+        let endingSoonBadge5 = '';
+        if (childrenRate5.periodEnd && isEndingSoon(childrenRate5.periodEnd, 10)) {
+            const daysUntil = getDaysUntilEnd(childrenRate5.periodEnd);
+            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+            endingSoonBadge5 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+
+        content += `<div class="cashback-rate">5% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
@@ -4024,7 +4122,16 @@ async function generateCubeSpecialContent(card) {
 
             // 显示回饋率，如果有 category 则显示在括号中（黑色）
             const categoryLabel = rate.category ? ` <span style="color: #111827;">(${getCategoryDisplayName(rate.category)})</span>` : '';
-            content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
+
+            // Add ending soon badge if applicable
+            let endingSoonBadgeOther = '';
+            if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
+                const daysUntil = getDaysUntilEnd(rate.periodEnd);
+                const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                endingSoonBadgeOther = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+            }
+
+            content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
 
             // 解析 cap 值（支援 {cap}）
             const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
