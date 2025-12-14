@@ -2714,6 +2714,29 @@ function initializeAuthListeners() {
         });
     }
 
+    // Setup header "Start Using" button (in auth section)
+    const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+    if (startUsingBtnHeader) {
+        startUsingBtnHeader.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            showToolSections();
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
+
     // Setup second "Start Using" button with same functionality
     const startUsingBtn2 = document.getElementById('start-using-btn-2');
     if (startUsingBtn2) {
@@ -3852,7 +3875,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                     let conditionsContent = '';
                     for (const cond of group.conditions) {
-                        conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
                     }
 
                     upcomingContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
@@ -3866,7 +3889,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     upcomingContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
 
                     for (const cond of group.conditions) {
-                        upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
+                        upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
                     }
 
                     upcomingContent += `</div>`;

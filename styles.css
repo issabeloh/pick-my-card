@@ -86,6 +86,16 @@ header {
     border-color: white;
 }
 
+.auth-btn.start-using {
+    background: rgba(59, 130, 246, 0.7);
+    color: white;
+    border-color: rgba(59, 130, 246, 0.9);
+}
+
+.auth-btn.start-using:hover {
+    background: rgba(59, 130, 246, 0.85);
+}
+
 .auth-btn.secondary {
     background: transparent;
 }
