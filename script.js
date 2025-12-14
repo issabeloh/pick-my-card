@@ -1103,7 +1103,8 @@ const fuzzySearchMap = {
     '康是美': 'cosmed',
     'cosmed': '康是美',
     'hnm': 'h&m',
-    '車險': '產險'
+    '唐吉軻德 DON DON DONKI': '唐吉訶德 DON DON DONKI'
+    '唐吉訶德 DON DON DONKI': '唐吉軻德 DON DON DONKI'
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -7215,6 +7216,7 @@ function disableReviewButton() {
 document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
+
 
 
 
