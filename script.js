@@ -1642,12 +1642,8 @@ function getCategoryDisplayName(category) {
 
 // Helper function to get category display style
 function getCategoryStyle(category) {
-    const displayName = getCategoryDisplayName(category);
-    // If category display name contains "切換「", use black color
-    if (displayName.includes('切換「')) {
-        return 'color: #111827;';
-    }
-    return '';
+    // All categories display in black color for consistency
+    return category ? 'color: #111827;' : '';
 }
 
 // Calculate cashback for a specific card
