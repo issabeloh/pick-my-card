@@ -1034,8 +1034,8 @@ input[type="number"]:focus {
 .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: flex-start;
+    margin-bottom: 2px;
 }
 
 .card-name-with-pin {
@@ -1057,11 +1057,10 @@ input[type="number"]:focus {
 
 .badges-container {
     display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: flex-end; /* Right align badges */
-    flex-shrink: 0; /* Prevent badges from shrinking */
+    flex-direction: column; 
+    gap: 6px; 
+    align-items: flex-end;
+    flex-shrink: 0;
 }
 
 .best-badge {
@@ -4082,4 +4081,5 @@ input[type="number"]:focus {
     text-transform: uppercase;
     white-space: nowrap;
 }
+
 
