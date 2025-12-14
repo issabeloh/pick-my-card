@@ -2430,7 +2430,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 })() : ''}
                 ${!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10) ? (() => {
                     const daysUntil = getDaysUntilEnd(result.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     return `<div class="ending-soon-badge">即將結束 (${daysText})</div>`;
                 })() : ''}
             </div>
@@ -3409,7 +3409,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 let endingSoonBadgeLevel1 = '';
                 if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
                     const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
@@ -3580,7 +3580,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 let endingSoonBadgeLevel = '';
                 if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
                     const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
                     endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 

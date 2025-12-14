@@ -1032,12 +1032,17 @@ input[type="number"]:focus {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0; /* Allow shrinking */
+    flex: 1; /* Take available space */
 }
 
 .card-name {
     font-size: 1.2rem;
     font-weight: 700;
     color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .badges-container {
@@ -1045,6 +1050,8 @@ input[type="number"]:focus {
     gap: 6px;
     align-items: center;
     flex-wrap: wrap;
+    justify-content: flex-end; /* Right align badges */
+    flex-shrink: 0; /* Prevent badges from shrinking */
 }
 
 .best-badge {
