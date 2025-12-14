@@ -4048,3 +4048,14 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
+.ending-soon-badge {
+    background: #6b7280;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
