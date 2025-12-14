@@ -3860,7 +3860,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     upcomingContent += `</div>`;
                 } else {
                     upcomingContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                    upcomingContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
+                    upcomingContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
 
                     for (const cond of group.conditions) {
                         upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
