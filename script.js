@@ -3906,7 +3906,7 @@ async function generateCubeSpecialContent(card) {
     });
     if (childrenRate10) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">10% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
+        content += `<div class="cashback-rate">10% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span></div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -3925,7 +3925,7 @@ async function generateCubeSpecialContent(card) {
     });
     if (childrenRate5) {
         content += `<div class="cashback-detail-item">`;
-        content += `<div class="cashback-rate">5% 回饋 (${getCategoryDisplayName('童樂匯')})</div>`;
+        content += `<div class="cashback-rate">5% 回饋 <span style="color: #111827;">(${getCategoryDisplayName('童樂匯')})</span></div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
@@ -4022,8 +4022,8 @@ async function generateCubeSpecialContent(card) {
             // 解析 rate 值（支援 {specialRate} 和 {rate}）
             const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
 
-            // 显示回饋率，如果有 category 则显示在括号中
-            const categoryLabel = rate.category ? ` (${getCategoryDisplayName(rate.category)})` : '';
+            // 显示回饋率，如果有 category 则显示在括号中（黑色）
+            const categoryLabel = rate.category ? ` <span style="color: #111827;">(${getCategoryDisplayName(rate.category)})</span>` : '';
             content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}</div>`;
 
             // 解析 cap 值（支援 {cap}）
