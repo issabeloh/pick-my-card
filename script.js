@@ -1912,7 +1912,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
         matchedCategory: matchedCategory,
         effectiveAmount: effectiveAmount,
         matchedRateGroup: matchedRateGroup,
-        selectedLevel: selectedLevel // Pass selected level to display
+        selectedLevel: selectedLevel, // Pass selected level to display
+        periodStart: matchedRateGroup?.periodStart || null,
+        periodEnd: matchedRateGroup?.periodEnd || null
     };
 }
 
@@ -3716,8 +3718,9 @@ basicCashbackDiv.innerHTML = basicContent;
             // 解析 rate 值（支援 {specialRate} 和 {rate}，雖然 hasLevels=false 的卡片通常只有數字）
             const parsedRate = await parseCashbackRate(rate.rate, card, null);
 
-            // Display rate with category in parentheses (like Cube card style)
-            const categoryLabel = rate.category ? ` (${rate.category})` : '';
+            // Display rate with category in parentheses (with black color for consistency)
+            const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
+            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">(${rate.category})</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadge = '';
