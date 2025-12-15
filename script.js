@@ -4087,7 +4087,7 @@ async function generateCubeSpecialContent(card) {
 
     // Store upcoming rates for display in separate section
     if (upcomingRates.length > 0) {
-        window._currentUpcomingGroupsCube = upcomingRates.map(rate => {
+        const upcomingGroups = upcomingRates.map(rate => {
             const parsedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
             return {
                 parsedRate,
@@ -4101,6 +4101,29 @@ async function generateCubeSpecialContent(card) {
                 category: rate.category
             };
         });
+
+        // Merge upcoming activities with same rate, category, and period (CUBE card only)
+        const mergedGroups = new Map();
+        upcomingGroups.forEach(group => {
+            // Create merge key: rate + category + period
+            const mergeKey = `${group.parsedRate}-${group.category || 'no-category'}-${group.period || 'no-period'}`;
+
+            if (mergedGroups.has(mergeKey)) {
+                // Merge with existing group
+                const existing = mergedGroups.get(mergeKey);
+                existing.items = [...existing.items, ...group.items];
+
+                // Merge conditions - list all conditions as bullet points
+                if (group.conditions.length > 0) {
+                    existing.conditions = [...existing.conditions, ...group.conditions];
+                }
+            } else {
+                // First time seeing this rate+category+period combination
+                mergedGroups.set(mergeKey, {...group});
+            }
+        });
+
+        window._currentUpcomingGroupsCube = Array.from(mergedGroups.values());
         window._currentCard = card;
     }
 
@@ -4255,65 +4278,100 @@ async function generateCubeSpecialContent(card) {
                 return bRate - aRate;
             });
 
-        for (let index = 0; index < otherRates.length; index++) {
-            const rate = otherRates[index];
+        // Merge active rates with same parsedRate, category, and period (CUBE card only)
+        const mergedActiveRates = new Map();
+        for (const rate of otherRates) {
+            const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
+            const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
+
+            // Create merge key: rate + category + period
+            const mergeKey = `${parsedRate}-${rate.category || 'no-category'}-${rate.period || 'no-period'}`;
+
+            if (mergedActiveRates.has(mergeKey)) {
+                // Merge with existing rate
+                const existing = mergedActiveRates.get(mergeKey);
+                if (rate.items) {
+                    existing.items = [...existing.items, ...rate.items];
+                }
+                // Merge conditions
+                if (rate.conditions) {
+                    if (existing.conditions) {
+                        existing.conditions += '\n' + rate.conditions;
+                    } else {
+                        existing.conditions = rate.conditions;
+                    }
+                }
+            } else {
+                // First time seeing this rate+category+period combination
+                mergedActiveRates.set(mergeKey, {
+                    parsedRate,
+                    parsedCap,
+                    items: rate.items ? [...rate.items] : [],
+                    conditions: rate.conditions || '',
+                    period: rate.period,
+                    periodEnd: rate.periodEnd,
+                    category: rate.category
+                });
+            }
+        }
+
+        // Display merged rates
+        let index = 0;
+        for (const [mergeKey, mergedRate] of mergedActiveRates) {
             content += `<div class="cashback-detail-item">`;
 
-            // 解析 rate 值（支援 {specialRate} 和 {rate}）
-            const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
-
             // 显示回饋率，如果有 category 则显示在括号中（使用動態樣式）
-            const categoryStyleOther = rate.category ? getCategoryStyle(rate.category) : '';
-            const categoryLabel = rate.category ? ` <span style="${categoryStyleOther}">(${getCategoryDisplayName(rate.category)})</span>` : '';
+            const categoryStyleOther = mergedRate.category ? getCategoryStyle(mergedRate.category) : '';
+            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">(${getCategoryDisplayName(mergedRate.category)})</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadgeOther = '';
-            if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
-                const daysUntil = getDaysUntilEnd(rate.periodEnd);
+            if (mergedRate.periodEnd && isEndingSoon(mergedRate.periodEnd, 10)) {
+                const daysUntil = getDaysUntilEnd(mergedRate.periodEnd);
                 const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
                 endingSoonBadgeOther = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            content += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
+            content += `<div class="cashback-rate">${mergedRate.parsedRate}% 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
 
-            // 解析 cap 值（支援 {cap}）
-            const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
-            if (parsedCap) {
-                content += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
+            // 显示消費上限
+            if (mergedRate.parsedCap) {
+                content += `<div class="cashback-condition">消費上限: NT$${mergedRate.parsedCap.toLocaleString()}</div>`;
             } else {
                 content += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
 
             // 显示條件
-            if (rate.conditions) {
-                content += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
+            if (mergedRate.conditions) {
+                content += `<div class="cashback-condition">條件: ${mergedRate.conditions}</div>`;
             }
 
             // 显示活動期間
-            if (rate.period) {
-                content += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
+            if (mergedRate.period) {
+                content += `<div class="cashback-condition">活動期間: ${mergedRate.period}</div>`;
             }
 
             // 显示適用通路
-            if (rate.items && rate.items.length > 0) {
+            if (mergedRate.items && mergedRate.items.length > 0) {
                 const merchantsId = `cube-other-merchants-${index}`;
                 const showAllId = `cube-other-show-all-${index}`;
 
-                if (rate.items.length <= 20) {
-                    const merchantsList = rate.items.join('、');
+                if (mergedRate.items.length <= 20) {
+                    const merchantsList = mergedRate.items.join('、');
                     content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
-                    const initialList = rate.items.slice(0, 20).join('、');
-                    const fullList = rate.items.join('、');
+                    const initialList = mergedRate.items.slice(0, 20).join('、');
+                    const fullList = mergedRate.items.join('、');
 
                     content += `<div class="cashback-merchants">`;
                     content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
+                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${mergedRate.items.length}個</button>`;
                     content += `</div>`;
                 }
             }
 
             content += `</div>`;
+            index++;
         }
     }
 
