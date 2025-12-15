@@ -372,11 +372,15 @@ async function loadCardsData() {
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
+        console.log('🔍 Debug: cards.data loaded successfully at', new Date().toISOString());
 
         // Update card count in subtitle
         const cardCountElement = document.getElementById('card-count');
         if (cardCountElement) {
             cardCountElement.textContent = cardsData.cards.length;
+            console.log(`✅ 卡片數量已更新: ${cardsData.cards.length} 張`);
+        } else {
+            console.warn('⚠️ 找不到 card-count 元素');
         }
 
         return true;
@@ -697,28 +701,37 @@ const matchedItemDiv = document.getElementById('matched-item');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 應用程式初始化開始...', new Date().toISOString());
+
     // Load cards data first
     const dataLoaded = await loadCardsData();
     if (!dataLoaded) {
         // If data loading fails, disable the app
+        console.error('❌ 資料載入失敗，停用應用程式');
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
 
     // Initialize payments data
+    console.log('📱 初始化行動支付資料...');
     initializePaymentsData();
 
     // Initialize quick search options (async)
     await initializeQuickSearchOptions();
 
+    console.log('🎨 填充卡片和支付選項...');
     populateCardChips();
     populatePaymentChips();
     renderQuickSearchButtons();
+
+    console.log('🔧 設定事件監聽器...');
     setupEventListeners();
     setupAuthentication();
 
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
+
+    console.log('✅ 應用程式初始化完成！');
 });
 
 // Lazy loading for videos and images using Intersection Observer
@@ -2609,6 +2622,12 @@ function initializeAuthListeners() {
             signInBtn.style.display = 'none';
             userInfo.style.display = 'inline-flex';
 
+            // Hide "Start Using" button when logged in
+            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'none';
+            }
+
             // Hide product introduction section and show tool sections when logged in
             if (productIntroSection) {
                 productIntroSection.style.display = 'none';
@@ -2656,6 +2675,12 @@ function initializeAuthListeners() {
             userSpendingMappings = [];
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
+
+            // Show "Start Using" button when logged out
+            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'inline-block';
+            }
 
             // Reset quick search options to default
             await initializeQuickSearchOptions();
