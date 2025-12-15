@@ -1434,34 +1434,13 @@ async function calculateCashback() {
                 console.log(`⚠️ 有 ${unmatchedCount} 個匹配項目沒有找到回饋，可能是因為未選取相關卡片`);
             }
 
-            // Deduplicate by card - if same card appears multiple times, combine matched items
-            const cardResultsMap = new Map();
-            allItemResults.forEach(result => {
-                const cardId = result.card.id;
-                const existing = cardResultsMap.get(cardId);
+            // Show all results without deduplication - user will handle duplicate data in backend
+            allResults = allItemResults.map(result => ({
+                ...result,
+                matchedItems: [result.matchedItemName]
+            }));
 
-                if (!existing) {
-                    // First time seeing this card - add it with matched items as array
-                    result.matchedItems = [result.matchedItemName];
-                    cardResultsMap.set(cardId, result);
-                } else {
-                    // Card already exists - compare rates and combine matched items
-                    if (result.cashbackAmount > existing.cashbackAmount) {
-                        // Higher rate - replace but keep matched items
-                        result.matchedItems = [result.matchedItemName, ...existing.matchedItems];
-                        cardResultsMap.set(cardId, result);
-                    } else if (result.cashbackAmount === existing.cashbackAmount) {
-                        // Same rate - add to matched items list
-                        if (!existing.matchedItems.includes(result.matchedItemName)) {
-                            existing.matchedItems.push(result.matchedItemName);
-                        }
-                    }
-                    // Lower rate - ignore this result
-                }
-            });
-
-            console.log(`📊 去重後: ${cardResultsMap.size} 張不同的卡片`);
-            allResults = Array.from(cardResultsMap.values());
+            console.log(`📊 找到 ${allResults.length} 個結果（包含同卡片的不同活動）`);
         } else {
             // Single match - backward compatibility
             const searchTerm = currentMatchedItem.originalItem.toLowerCase();
