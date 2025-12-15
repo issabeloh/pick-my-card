@@ -1447,24 +1447,70 @@ async function calculateCashback() {
                 console.log(`⚠️ 有 ${unmatchedCount} 個匹配項目沒有找到回饋，可能是因為未選取相關卡片`);
             }
 
-            // Show all results without deduplication - user will handle duplicate data in backend
-            allResults = allItemResults.map(result => ({
-                ...result,
-                matchedItems: [result.matchedItemName]
-            }));
+            // Merge results from same card and same activity
+            // Group by: card + rate + cap + period + category + conditions
+            const mergedResultsMap = new Map();
 
-            console.log(`📊 找到 ${allResults.length} 個結果（包含同卡片的不同活動）`);
+            for (const result of allItemResults) {
+                // Create a unique key for this activity
+                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+                if (mergedResultsMap.has(mergeKey)) {
+                    // Same activity - add this item to the matched items list
+                    const existing = mergedResultsMap.get(mergeKey);
+                    if (!existing.matchedItems.includes(result.matchedItemName)) {
+                        existing.matchedItems.push(result.matchedItemName);
+                    }
+                } else {
+                    // New activity - create new entry
+                    mergedResultsMap.set(mergeKey, {
+                        ...result,
+                        matchedItems: [result.matchedItemName]
+                    });
+                }
+            }
+
+            allResults = Array.from(mergedResultsMap.values());
+
+            console.log(`📊 合併前: ${allItemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         } else {
             // Single match - backward compatibility
             const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-            allResults = await Promise.all(cardsToCompare.map(async card => {
+            const itemResults = await Promise.all(cardsToCompare.map(async card => {
                 const results = await calculateCardCashback(card, searchTerm, amount);
                 // calculateCardCashback now returns an array of all matching activities
                 return results.map(result => ({
                     ...result,
-                    card: card
+                    card: card,
+                    matchedItemName: result.matchedItem
                 }));
             })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
+
+            // Merge results from same card and same activity
+            const mergedResultsMap = new Map();
+
+            for (const result of itemResults) {
+                // Create a unique key for this activity
+                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+                if (mergedResultsMap.has(mergeKey)) {
+                    // Same activity - add this item to the matched items list
+                    const existing = mergedResultsMap.get(mergeKey);
+                    if (!existing.matchedItems.includes(result.matchedItemName)) {
+                        existing.matchedItems.push(result.matchedItemName);
+                    }
+                } else {
+                    // New activity - create new entry
+                    mergedResultsMap.set(mergeKey, {
+                        ...result,
+                        matchedItems: [result.matchedItemName]
+                    });
+                }
+            }
+
+            allResults = Array.from(mergedResultsMap.values());
+
+            console.log(`📊 合併前: ${itemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         }
         
         results = allResults;
