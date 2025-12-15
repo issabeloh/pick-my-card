@@ -1265,13 +1265,25 @@ function findMatchingItem(searchTerm) {
     if (allMatches.length === 0) return null;
 
     // Remove duplicates (same item appearing in multiple cards)
-    // 使用originalItem（cards.data中的實際名稱）去重
-    // 這樣"海外"和"國外"會被視為不同的items（因為它們在cards.data中是不同的item名稱）
+    // 使用 itemLower 並考慮 fuzzySearchMap 映射關係去重
+    // 這樣"KLOOK"和"klook"會被視為相同，"海外"和"國外"也會被視為相同
     const uniqueMatches = [];
     const seenItems = new Set();
 
+    // Helper function to get normalized key considering fuzzy search mappings
+    const getNormalizedKey = (itemLower) => {
+        // If this item maps to another term in fuzzySearchMap, use the mapped term
+        // This ensures "海外" and "國外" get the same key
+        if (fuzzySearchMap[itemLower]) {
+            const mappedTerm = fuzzySearchMap[itemLower].toLowerCase();
+            // Use the alphabetically first term as the canonical key to avoid circular mapping
+            return itemLower < mappedTerm ? itemLower : mappedTerm;
+        }
+        return itemLower;
+    };
+
     for (const match of allMatches) {
-        const itemKey = match.originalItem;
+        const itemKey = getNormalizedKey(match.itemLower);
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
@@ -1404,13 +1416,14 @@ async function calculateCashback() {
                 console.log(`  📝 計算項目: ${matchedItem.originalItem}`);
 
                 const itemResults = await Promise.all(cardsToCompare.map(async card => {
-                    const result = await calculateCardCashback(card, searchTerm, amount);
-                    return {
+                    const results = await calculateCardCashback(card, searchTerm, amount);
+                    // calculateCardCashback now returns an array of all matching activities
+                    return results.map(result => ({
                         ...result,
                         card: card,
                         matchedItemName: result.matchedItem // 使用卡片實際匹配到的item，而非搜尋詞
-                    };
-                })).then(results => results.filter(result => result.cashbackAmount > 0));
+                    }));
+                })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
 
                 if (itemResults.length > 0) {
                     const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
@@ -1435,44 +1448,70 @@ async function calculateCashback() {
                 console.log(`⚠️ 有 ${unmatchedCount} 個匹配項目沒有找到回饋，可能是因為未選取相關卡片`);
             }
 
-            // Deduplicate by card - if same card appears multiple times, combine matched items
-            const cardResultsMap = new Map();
-            allItemResults.forEach(result => {
-                const cardId = result.card.id;
-                const existing = cardResultsMap.get(cardId);
+            // Merge results from same card and same activity
+            // Group by: card + rate + cap + period + category + conditions
+            const mergedResultsMap = new Map();
 
-                if (!existing) {
-                    // First time seeing this card - add it with matched items as array
-                    result.matchedItems = [result.matchedItemName];
-                    cardResultsMap.set(cardId, result);
-                } else {
-                    // Card already exists - compare rates and combine matched items
-                    if (result.cashbackAmount > existing.cashbackAmount) {
-                        // Higher rate - replace but keep matched items
-                        result.matchedItems = [result.matchedItemName, ...existing.matchedItems];
-                        cardResultsMap.set(cardId, result);
-                    } else if (result.cashbackAmount === existing.cashbackAmount) {
-                        // Same rate - add to matched items list
-                        if (!existing.matchedItems.includes(result.matchedItemName)) {
-                            existing.matchedItems.push(result.matchedItemName);
-                        }
+            for (const result of allItemResults) {
+                // Create a unique key for this activity
+                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+                if (mergedResultsMap.has(mergeKey)) {
+                    // Same activity - add this item to the matched items list
+                    const existing = mergedResultsMap.get(mergeKey);
+                    if (!existing.matchedItems.includes(result.matchedItemName)) {
+                        existing.matchedItems.push(result.matchedItemName);
                     }
-                    // Lower rate - ignore this result
+                } else {
+                    // New activity - create new entry
+                    mergedResultsMap.set(mergeKey, {
+                        ...result,
+                        matchedItems: [result.matchedItemName]
+                    });
                 }
-            });
+            }
 
-            console.log(`📊 去重後: ${cardResultsMap.size} 張不同的卡片`);
-            allResults = Array.from(cardResultsMap.values());
+            allResults = Array.from(mergedResultsMap.values());
+
+            console.log(`📊 合併前: ${allItemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         } else {
             // Single match - backward compatibility
             const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-            allResults = await Promise.all(cardsToCompare.map(async card => {
-                const result = await calculateCardCashback(card, searchTerm, amount);
-                return {
+            const itemResults = await Promise.all(cardsToCompare.map(async card => {
+                const results = await calculateCardCashback(card, searchTerm, amount);
+                // calculateCardCashback now returns an array of all matching activities
+                return results.map(result => ({
                     ...result,
-                    card: card
-                };
-            })).then(results => results.filter(result => result.cashbackAmount > 0));
+                    card: card,
+                    matchedItemName: result.matchedItem
+                }));
+            })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
+
+            // Merge results from same card and same activity
+            const mergedResultsMap = new Map();
+
+            for (const result of itemResults) {
+                // Create a unique key for this activity
+                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+                if (mergedResultsMap.has(mergeKey)) {
+                    // Same activity - add this item to the matched items list
+                    const existing = mergedResultsMap.get(mergeKey);
+                    if (!existing.matchedItems.includes(result.matchedItemName)) {
+                        existing.matchedItems.push(result.matchedItemName);
+                    }
+                } else {
+                    // New activity - create new entry
+                    mergedResultsMap.set(mergeKey, {
+                        ...result,
+                        matchedItems: [result.matchedItemName]
+                    });
+                }
+            }
+
+            allResults = Array.from(mergedResultsMap.values());
+
+            console.log(`📊 合併前: ${itemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         }
         
         results = allResults;
@@ -1662,11 +1701,7 @@ function getCategoryStyle(category) {
 
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
-    let bestRate = 0;
-    let applicableCap = null;
-    let matchedItem = null;
-    let matchedCategory = null;
-    let matchedRateGroup = null;
+    let allMatches = []; // Collect ALL matching activities
     let selectedLevel = null; // Track selected level for display
 
     // Get all possible search variants
@@ -1712,7 +1747,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
         }
 
         // First, check cashbackRates if they exist (for cards like DBS Eco with special promotions)
-        let cashbackRateMatch = false;
         if (card.cashbackRates && card.cashbackRates.length > 0) {
             for (const rateGroup of card.cashbackRates) {
                 if (!rateGroup.items) continue;
@@ -1724,23 +1758,18 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 }
 
                 // 解析 rate 值（支援 {specialRate}）
-                const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
+                let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
+                let applicableCap = rateGroup.cap;
 
                 for (const variant of searchVariants) {
                     let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
                     // Note: We don't check hideInDisplay here because hidden rates should still be searchable
-                    if (exactMatch && parsedRate > bestRate) {
-                        bestRate = parsedRate;
-                        applicableCap = rateGroup.cap;
-                        matchedItem = exactMatch;
-                        matchedCategory = rateGroup.category || null;
-                        matchedRateGroup = rateGroup;
-                        cashbackRateMatch = true;
-
+                    if (exactMatch) {
                         // Check if levelSettings has rate_hide to override the cashbackRate
                         // This allows level-specific rates for items in cashbackRates
+                        let finalRate = parsedRate;
                         if (levelSettings && levelSettings.rate_hide !== undefined) {
-                            bestRate = levelSettings.rate_hide;
+                            finalRate = levelSettings.rate_hide;
                             // Also update cap from levelSettings if available
                             if (levelSettings.cap !== undefined) {
                                 applicableCap = levelSettings.cap;
@@ -1753,15 +1782,23 @@ async function calculateCardCashback(card, searchTerm, amount) {
                                 : parsedRate;
                             console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
                         }
-                        break;
+
+                        // Add this match to allMatches array
+                        allMatches.push({
+                            rate: finalRate,
+                            cap: applicableCap,
+                            matchedItem: exactMatch,
+                            matchedCategory: rateGroup.category || null,
+                            matchedRateGroup: rateGroup
+                        });
+                        break; // Found match for this variant, move to next rateGroup
                     }
                 }
-                if (cashbackRateMatch) break;
             }
         }
 
         // If no cashbackRates match, check specialItems
-        if (!cashbackRateMatch) {
+        if (allMatches.length === 0) {
             let matchedSpecialItem = null;
             for (const variant of searchVariants) {
                 matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
@@ -1777,8 +1814,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
             if (matchedSpecialItem) {
                 // CUBE card uses specialRate, other cards use rate
-                bestRate = levelSettings.specialRate || levelSettings.rate;
-                matchedItem = matchedSpecialItem;
+                let rate = levelSettings.specialRate || levelSettings.rate;
+                let matchedCategory = null;
 
                 // Set category from levelSettings or find from specialItemsWithCategory
                 if (levelSettings.category) {
@@ -1800,17 +1837,27 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 }
 
                 // Set cap based on card type
-                applicableCap = levelSettings.cap || null;
+                let cap = levelSettings.cap || null;
 
                 // Set period from levelSettings if available
+                let rateGroup = null;
                 if (levelSettings.period) {
-                    matchedRateGroup = { period: levelSettings.period };
+                    rateGroup = { period: levelSettings.period };
                 }
+
+                // Add this match to allMatches array
+                allMatches.push({
+                    rate: rate,
+                    cap: cap,
+                    matchedItem: matchedSpecialItem,
+                    matchedCategory: matchedCategory,
+                    matchedRateGroup: rateGroup
+                });
             }
         }
 
         // If still no match and this is CUBE card, check generalItems
-        if (bestRate === 0 && card.id === 'cathay-cube') {
+        if (allMatches.length === 0 && card.id === 'cathay-cube') {
             // CUBE card: check general items for 2% reward
             let matchedGeneralItem = null;
             let matchedGeneralCategory = null;
@@ -1833,14 +1880,16 @@ async function calculateCardCashback(card, searchTerm, amount) {
             }
 
             if (matchedGeneralItem) {
-                bestRate = levelSettings.generalRate;
-                matchedItem = matchedGeneralItem;
-                matchedCategory = matchedGeneralCategory;
-                applicableCap = null; // CUBE card has no cap
+                allMatches.push({
+                    rate: levelSettings.generalRate,
+                    cap: null, // CUBE card has no cap
+                    matchedItem: matchedGeneralItem,
+                    matchedCategory: matchedGeneralCategory,
+                    matchedRateGroup: null
+                });
             }
-            // If no match at all, bestRate remains 0
         }
-        // For other level-based cards: if no match found (bestRate is still 0), it will return 0 cashback below
+        // For other level-based cards: if no match found, allMatches will be empty
     } else {
         // Handle cards without specialItems (or with empty specialItems)
         // Get level settings if card has levels
@@ -1867,69 +1916,75 @@ async function calculateCardCashback(card, searchTerm, amount) {
             // Check all search variants against all items in the rate group
             for (const variant of searchVariants) {
                 let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                if (exactMatch && parsedRate > bestRate) {
-                    bestRate = parsedRate;
-                    applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
-                    matchedItem = exactMatch;
-                    matchedCategory = rateGroup.category || null;
-                    matchedRateGroup = rateGroup;
+                if (exactMatch) {
+                    // Add this match to allMatches array
+                    allMatches.push({
+                        rate: parsedRate,
+                        cap: parsedCap !== null ? parsedCap : rateGroup.cap,
+                        matchedItem: exactMatch,
+                        matchedCategory: rateGroup.category || null,
+                        matchedRateGroup: rateGroup
+                    });
+                    break; // Found match for this variant, move to next rateGroup
                 }
             }
         }
     }
 
-    let cashbackAmount = 0;
-    let effectiveAmount = amount;
-    let totalRate = bestRate;
-    
-    if (bestRate > 0) {
-        // Calculate special rate cashback
-        let specialCashback = 0;
-        let effectiveSpecialAmount = amount;
-        
-        if (applicableCap && amount > applicableCap) {
-            effectiveSpecialAmount = applicableCap;
+    // Calculate cashback for each match and return array of results
+    const results = allMatches.map(match => {
+        const { rate, cap, matchedItem, matchedCategory, matchedRateGroup } = match;
+
+        let cashbackAmount = 0;
+        let effectiveAmount = amount;
+        let totalRate = rate;
+
+        if (rate > 0) {
+            // Calculate special rate cashback
+            let specialCashback = 0;
+            let effectiveSpecialAmount = amount;
+
+            if (cap && amount > cap) {
+                effectiveSpecialAmount = cap;
+            }
+
+            // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
+            // Do NOT add basicCashback or domesticBonusRate on top
+            specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
+
+            // Handle remaining amount if capped (excess amount gets basic cashback only)
+            let remainingCashback = 0;
+            if (cap && amount > cap) {
+                const remainingAmount = amount - cap;
+                // Remaining amount only gets basic cashback rate
+                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+            }
+
+            // Total cashback = special rate amount + remaining basic amount
+            cashbackAmount = specialCashback + remainingCashback;
+
+            // Total rate is the special rate from cashbackRates (no bonusRate added)
+            totalRate = Math.round(rate * 100) / 100;
+            effectiveAmount = cap; // Keep this for display purposes
         }
-        
-        // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
-        // Do NOT add basicCashback or domesticBonusRate on top
-        specialCashback = Math.floor(effectiveSpecialAmount * bestRate / 100);
 
-        // domesticBonusRate and overseasBonusRate are ONLY for basic cashback
-        // When there's a special rate (from cashbackRates), do NOT add these bonus rates
-        let bonusRate = 0;
-        let bonusCashback = 0;
+        return {
+            rate: Math.round(totalRate * 100) / 100,
+            specialRate: Math.round(rate * 100) / 100,
+            basicRate: Math.round(card.basicCashback * 100) / 100,
+            cashbackAmount: cashbackAmount,
+            cap: cap,
+            matchedItem: matchedItem,
+            matchedCategory: matchedCategory,
+            effectiveAmount: effectiveAmount,
+            matchedRateGroup: matchedRateGroup,
+            selectedLevel: selectedLevel, // Pass selected level to display
+            periodStart: matchedRateGroup?.periodStart || null,
+            periodEnd: matchedRateGroup?.periodEnd || null
+        };
+    });
 
-        // Handle remaining amount if capped (excess amount gets basic cashback only)
-        let remainingCashback = 0;
-        if (applicableCap && amount > applicableCap) {
-            const remainingAmount = amount - applicableCap;
-            // Remaining amount only gets basic cashback rate
-            remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-        }
-
-        // Total cashback = special rate amount + remaining basic amount
-        cashbackAmount = specialCashback + bonusCashback + remainingCashback;
-
-        // Total rate is the special rate from cashbackRates (no bonusRate added)
-        totalRate = Math.round(bestRate * 100) / 100;
-        effectiveAmount = applicableCap; // Keep this for display purposes
-    }
-
-    return {
-        rate: Math.round(totalRate * 100) / 100,
-        specialRate: Math.round(bestRate * 100) / 100,
-        basicRate: Math.round(card.basicCashback * 100) / 100,
-        cashbackAmount: cashbackAmount,
-        cap: applicableCap,
-        matchedItem: matchedItem,
-        matchedCategory: matchedCategory,
-        effectiveAmount: effectiveAmount,
-        matchedRateGroup: matchedRateGroup,
-        selectedLevel: selectedLevel, // Pass selected level to display
-        periodStart: matchedRateGroup?.periodStart || null,
-        periodEnd: matchedRateGroup?.periodEnd || null
-    };
+    return results;
 }
 
 // Find upcoming activities for a card (activities starting within 30 days)
@@ -5604,15 +5659,18 @@ async function showPaymentDetail(paymentId) {
         if (matches && matches.length > 0) {
             // For each matched item, calculate cashback for all cards
             for (const card of cardsToCheck) {
-                const result = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
-                if (result.rate > 0) {
-                    console.log(`    ✅ ${card.name}: ${result.rate}%`);
-                    matchingCards.push({
-                        card: card,
-                        rate: result.rate,
-                        cap: result.cap,
-                        rateGroup: null // Not needed for display
-                    });
+                const results = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+                // calculateCardCashback now returns an array of all matching activities
+                for (const result of results) {
+                    if (result.rate > 0) {
+                        console.log(`    ✅ ${card.name}: ${result.rate}%`);
+                        matchingCards.push({
+                            card: card,
+                            rate: result.rate,
+                            cap: result.cap,
+                            rateGroup: null // Not needed for display
+                        });
+                    }
                 }
             }
         }
@@ -5714,14 +5772,17 @@ async function showComparePaymentsModal() {
                 if (matches && matches.length > 0) {
                     // For each matched item, calculate cashback for all cards
                     for (const card of cardsToCheck) {
-                        const result = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
-                        if (result.rate > 0) {
-                            matchingCards.push({
-                                card: card,
-                                rate: result.rate,
-                                cap: result.cap,
-                                rateGroup: null
-                            });
+                        const results = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
+                        // calculateCardCashback now returns an array of all matching activities
+                        for (const result of results) {
+                            if (result.rate > 0) {
+                                matchingCards.push({
+                                    card: card,
+                                    rate: result.rate,
+                                    cap: result.cap,
+                                    rateGroup: null
+                                });
+                            }
                         }
                     }
                 }
