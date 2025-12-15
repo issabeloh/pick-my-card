@@ -4086,7 +4086,7 @@ async function generateCubeSpecialContent(card) {
 
     // Store upcoming rates for display in separate section
     if (upcomingRates.length > 0) {
-        window._currentUpcomingGroupsCube = upcomingRates.map(rate => {
+        const upcomingGroups = upcomingRates.map(rate => {
             const parsedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
             return {
                 parsedRate,
@@ -4100,6 +4100,40 @@ async function generateCubeSpecialContent(card) {
                 category: rate.category
             };
         });
+
+        // Merge upcoming activities with same rate and category (CUBE card only)
+        const mergedGroups = new Map();
+        upcomingGroups.forEach(group => {
+            // Create merge key: rate + category
+            const mergeKey = `${group.parsedRate}-${group.category || 'no-category'}`;
+
+            if (mergedGroups.has(mergeKey)) {
+                // Merge with existing group
+                const existing = mergedGroups.get(mergeKey);
+                existing.items = [...existing.items, ...group.items];
+
+                // Merge conditions if both have them
+                if (group.conditions.length > 0) {
+                    existing.conditions = [...existing.conditions, ...group.conditions];
+                }
+
+                // Keep the earliest start date
+                if (!existing.periodStart || (group.periodStart && group.periodStart < existing.periodStart)) {
+                    existing.periodStart = group.periodStart;
+                }
+
+                // Keep the latest end date
+                if (!existing.periodEnd || (group.periodEnd && group.periodEnd > existing.periodEnd)) {
+                    existing.periodEnd = group.periodEnd;
+                    existing.period = group.period; // Update period to match latest end date
+                }
+            } else {
+                // First time seeing this rate+category combination
+                mergedGroups.set(mergeKey, {...group});
+            }
+        });
+
+        window._currentUpcomingGroupsCube = Array.from(mergedGroups.values());
         window._currentCard = card;
     }
 
