@@ -1116,7 +1116,7 @@ const fuzzySearchMap = {
     '康是美': 'cosmed',
     'cosmed': '康是美',
     'hnm': 'h&m',
-    '唐吉軻德 DON DON DONKI': '唐吉訶德 DON DON DONKI'
+    '唐吉軻德 DON DON DONKI': '唐吉訶德 DON DON DONKI',
     '唐吉訶德 DON DON DONKI': '唐吉軻德 DON DON DONKI'
 };
 
@@ -7241,6 +7241,7 @@ function disableReviewButton() {
 document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
+
 
 
 
