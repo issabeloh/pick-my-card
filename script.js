@@ -1264,13 +1264,25 @@ function findMatchingItem(searchTerm) {
     if (allMatches.length === 0) return null;
 
     // Remove duplicates (same item appearing in multiple cards)
-    // 使用 itemLower（小寫後的名稱）去重，避免大小寫不同造成重複（如 KLOOK 和 klook）
-    // 這樣"海外"和"國外"仍會被視為不同的items（因為小寫後也不同）
+    // 使用 itemLower 並考慮 fuzzySearchMap 映射關係去重
+    // 這樣"KLOOK"和"klook"會被視為相同，"海外"和"國外"也會被視為相同
     const uniqueMatches = [];
     const seenItems = new Set();
 
+    // Helper function to get normalized key considering fuzzy search mappings
+    const getNormalizedKey = (itemLower) => {
+        // If this item maps to another term in fuzzySearchMap, use the mapped term
+        // This ensures "海外" and "國外" get the same key
+        if (fuzzySearchMap[itemLower]) {
+            const mappedTerm = fuzzySearchMap[itemLower].toLowerCase();
+            // Use the alphabetically first term as the canonical key to avoid circular mapping
+            return itemLower < mappedTerm ? itemLower : mappedTerm;
+        }
+        return itemLower;
+    };
+
     for (const match of allMatches) {
-        const itemKey = match.itemLower; // 使用小寫版本去重
+        const itemKey = getNormalizedKey(match.itemLower);
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
