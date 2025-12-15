@@ -1264,13 +1264,13 @@ function findMatchingItem(searchTerm) {
     if (allMatches.length === 0) return null;
 
     // Remove duplicates (same item appearing in multiple cards)
-    // 使用originalItem（cards.data中的實際名稱）去重
-    // 這樣"海外"和"國外"會被視為不同的items（因為它們在cards.data中是不同的item名稱）
+    // 使用 itemLower（小寫後的名稱）去重，避免大小寫不同造成重複（如 KLOOK 和 klook）
+    // 這樣"海外"和"國外"仍會被視為不同的items（因為小寫後也不同）
     const uniqueMatches = [];
     const seenItems = new Set();
 
     for (const match of allMatches) {
-        const itemKey = match.originalItem;
+        const itemKey = match.itemLower; // 使用小寫版本去重
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
