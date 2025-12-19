@@ -1524,30 +1524,49 @@ async function calculateCashback() {
 
             for (const searchTerm of searchTermsForUpcoming) {
                 const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
-                    const upcomingActivity = await findUpcomingActivity(card, searchTerm, amount);
-                    if (upcomingActivity) {
-                        return {
-                            card: card,
-                            ...upcomingActivity,
-                            isUpcoming: true
-                        };
-                    }
-                    return null;
+                    const activities = await findUpcomingActivity(card, searchTerm, amount);
+                    // findUpcomingActivity now returns an array
+                    return activities.map(activity => ({
+                        card: card,
+                        ...activity,
+                        isUpcoming: true,
+                        matchedItemName: activity.matchedItem
+                    }));
                 }));
 
-                upcomingResults.push(...upcomingActivities.filter(r => r !== null));
+                upcomingResults.push(...upcomingActivities.flat());
             }
         }
 
-        // Remove duplicates from upcoming results (same card might match multiple search terms)
-        uniqueUpcomingResults = [];  // Reuse the variable declared at function scope
-        const seenCardIds = new Set();
+        // Merge upcoming results from same card and same activity
+        // Group by: card + rate + cap + period + category
+        const mergedUpcomingMap = new Map();
+
         for (const result of upcomingResults) {
-            if (!seenCardIds.has(result.card.id)) {
-                seenCardIds.add(result.card.id);
-                uniqueUpcomingResults.push(result);
+            // Create a unique key for this activity
+            const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+            if (mergedUpcomingMap.has(mergeKey)) {
+                // Same activity - add this item to the matched items list
+                const existing = mergedUpcomingMap.get(mergeKey);
+                if (!existing.matchedItems) {
+                    existing.matchedItems = [existing.matchedItem];
+                }
+                if (!existing.matchedItems.includes(result.matchedItemName)) {
+                    existing.matchedItems.push(result.matchedItemName);
+                }
+            } else {
+                // New activity - create new entry
+                mergedUpcomingMap.set(mergeKey, {
+                    ...result,
+                    matchedItems: [result.matchedItemName]
+                });
             }
         }
+
+        uniqueUpcomingResults = Array.from(mergedUpcomingMap.values());
+
+        console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
@@ -1988,7 +2007,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
 // Find upcoming activities for a card (activities starting within 30 days)
 async function findUpcomingActivity(card, searchTerm, amount) {
-    let matchedUpcomingActivity = null;
+    let allMatchedActivities = [];
 
     // Get all possible search variants
     const searchVariants = getAllSearchVariants(searchTerm);
@@ -2048,7 +2067,7 @@ async function findUpcomingActivity(card, searchTerm, amount) {
 
                     cashbackAmount = specialCashback + remainingCashback;
 
-                    matchedUpcomingActivity = {
+                    allMatchedActivities.push({
                         rate: parsedRate,
                         cap: parsedCap,
                         cashbackAmount: cashbackAmount,
@@ -2058,15 +2077,14 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                         periodEnd: rateGroup.periodEnd,
                         period: rateGroup.period,
                         selectedLevel: selectedLevel
-                    };
-                    break;
+                    });
+                    break; // Found match for this variant, move to next rateGroup
                 }
             }
-            if (matchedUpcomingActivity) break;
         }
     }
 
-    return matchedUpcomingActivity;
+    return allMatchedActivities;
 }
 
 // Display calculation results
