@@ -2481,7 +2481,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant}</strong>
+            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant}</strong>${coupon.period ? `<br>活動期間: ${coupon.period}` : ''}
         </div>
     `;
 
