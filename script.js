@@ -2398,11 +2398,22 @@ async function displayCouponCashbacks(amount, merchantValue) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
                 const merchantLower = merchantValue.toLowerCase();
-                const couponMerchantLower = coupon.merchant.toLowerCase();
 
-                // Check if merchant matches coupon merchant
-                if (merchantLower.includes(couponMerchantLower) ||
-                    couponMerchantLower.includes(merchantLower)) {
+                // Split merchant string into array of individual merchants
+                const merchantItems = coupon.merchant.split(',').map(m => m.trim());
+
+                // Find all matching merchant items
+                const matchedMerchants = [];
+                for (const item of merchantItems) {
+                    const itemLower = item.toLowerCase();
+                    // Check if this item matches the search term
+                    if (merchantLower.includes(itemLower) || itemLower.includes(merchantLower)) {
+                        matchedMerchants.push(item);
+                    }
+                }
+
+                // If any merchants matched, add this coupon
+                if (matchedMerchants.length > 0) {
                     // 計算實際回饋率（支援分級）
                     const actualRate = await calculateCouponRate(coupon, card);
 
@@ -2411,7 +2422,8 @@ async function displayCouponCashbacks(amount, merchantValue) {
                         cardName: card.name,
                         cardId: card.id,
                         actualRate: actualRate, // 儲存計算後的實際回饋率
-                        potentialCashback: Math.floor(amount * actualRate / 100)
+                        potentialCashback: Math.floor(amount * actualRate / 100),
+                        matchedMerchants: matchedMerchants // Store matched merchants
                     });
                 }
             }
@@ -2469,7 +2481,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
+            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant}</strong>
         </div>
     `;
 
