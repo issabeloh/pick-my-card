@@ -1206,7 +1206,9 @@ const fuzzySearchMap = {
     '國外餐廳': '國外餐飲',
     '全台餐廳': '全台餐飲',
     '全臺餐廳': '全臺餐飲',
-    '國內國外餐廳': '國內國外餐飲'
+    '國內國外餐廳': '國內國外餐飲',
+    'holiday ktv': '好樂迪',
+    'party world': '錢櫃'
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -7536,6 +7538,7 @@ function disableReviewButton() {
 document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
+
 
 
 
