@@ -189,6 +189,18 @@ function isRateActive(periodStart, periodEnd) {
     return status === 'active' || status === 'always';
 }
 
+// Rate status cache for performance optimization
+let rateStatusCache = new Map();
+
+// Get cached rate status to avoid repeated date calculations
+function getCachedRateStatus(periodStart, periodEnd) {
+    const key = `${periodStart}-${periodEnd}`;
+    if (!rateStatusCache.has(key)) {
+        rateStatusCache.set(key, getRateStatus(periodStart, periodEnd));
+    }
+    return rateStatusCache.get(key);
+}
+
 // Check if upcoming activity starts within N days
 function isUpcomingWithinDays(periodStart, days = 30) {
     if (!periodStart) return false;
@@ -1371,6 +1383,9 @@ async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
     console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
 
+    // Clear rate status cache at the start of each calculation
+    rateStatusCache.clear();
+
     if (!cardsData) {
         console.error('❌ cardsData 未載入，無法計算');
         return;
@@ -1779,7 +1794,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 if (!rateGroup.items) continue;
 
                 // Only consider active rates for cashback calculation (not upcoming)
-                const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+                const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
                 if (rateStatus !== 'active' && rateStatus !== 'always') {
                     continue;
                 }
@@ -1931,7 +1946,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // Check exact matches for all search variants
         for (const rateGroup of card.cashbackRates) {
             // Only consider active rates for cashback calculation (not upcoming)
-            const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+            const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
             if (rateStatus !== 'active' && rateStatus !== 'always') {
                 continue;
             }
@@ -2038,7 +2053,7 @@ async function findUpcomingActivity(card, searchTerm, amount) {
             if (!rateGroup.items) continue;
 
             // Only consider upcoming rates
-            const rateStatus = getRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+            const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
             if (rateStatus !== 'upcoming') {
                 continue;
             }
@@ -2241,11 +2256,14 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         resultsContainer.appendChild(noResultsDiv);
     } else {
         const maxCashback = results[0].cashbackAmount;
-        
+
+        // Use DocumentFragment to batch DOM operations and reduce reflows
+        const fragment = document.createDocumentFragment();
         results.forEach((result, index) => {
             const cardElement = createCardResultElement(result, originalAmount, searchedItem, index === 0 && maxCashback > 0, isBasicCashback);
-            resultsContainer.appendChild(cardElement);
+            fragment.appendChild(cardElement);
         });
+        resultsContainer.appendChild(fragment);
     }
 
     // 顯示商家付款方式資訊
@@ -2440,13 +2458,15 @@ async function displayCouponCashbacks(amount, merchantValue) {
     
     // Sort by cashback rate (highest first)
     matchingCoupons.sort((a, b) => b.actualRate - a.actualRate);
-    
-    // Display coupon results
+
+    // Display coupon results using DocumentFragment
+    const fragment = document.createDocumentFragment();
     matchingCoupons.forEach(coupon => {
         const couponElement = createCouponResultElement(coupon, amount);
-        couponResultsContainer.appendChild(couponElement);
+        fragment.appendChild(couponElement);
     });
-    
+    couponResultsContainer.appendChild(fragment);
+
     couponResultsSection.style.display = 'block';
 }
 
