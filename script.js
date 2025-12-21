@@ -1748,6 +1748,8 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
 
     // Append upcoming results after active results (if they exist)
     if (typeof uniqueUpcomingResults !== 'undefined' && uniqueUpcomingResults.length > 0) {
+        // Sort upcoming results by cashback amount (highest first)
+        uniqueUpcomingResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
         // Append all upcoming results (even if card already has active result)
         results = [...results, ...uniqueUpcomingResults];
     }
@@ -1892,9 +1894,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
                     // Check if levelSettings has rate_hide to override the cashbackRate
-                    // This allows level-specific rates for items in cashbackRates
+                    // Only apply rate_hide for rateGroups with hideInDisplay=true
                     let finalRate = parsedRate;
-                    if (levelSettings && levelSettings.rate_hide !== undefined) {
+                    if (levelSettings && levelSettings.rate_hide !== undefined && rateGroup.hideInDisplay === true) {
                         finalRate = levelSettings.rate_hide;
                         // Also update cap from levelSettings if available
                         if (levelSettings.cap !== undefined) {
