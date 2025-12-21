@@ -157,8 +157,8 @@ function renderFAQItems(category) {
         }
     });
 
-    // Remove previously dynamically added items (those without data-category)
-    const dynamicItems = faqList.querySelectorAll('.faq-item:not([data-category])');
+    // Remove previously dynamically added items (marked with data-dynamic)
+    const dynamicItems = faqList.querySelectorAll('.faq-item[data-dynamic="true"]');
     dynamicItems.forEach(item => item.remove());
 
     // Count visible items
@@ -186,6 +186,7 @@ function createFAQItem(item) {
     faqItem.id = `faq-${item.id}`; // Add anchor ID for cross-linking
     faqItem.dataset.id = item.id;
     faqItem.dataset.category = item.category; // Add category for auto-switching
+    faqItem.dataset.dynamic = 'true'; // Mark as dynamically created
 
     // Question button
     const questionBtn = document.createElement('button');

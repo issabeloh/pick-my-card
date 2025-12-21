@@ -1525,30 +1525,56 @@ async function calculateCashback() {
 
             for (const searchTerm of searchTermsForUpcoming) {
                 const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
-                    const upcomingActivity = await findUpcomingActivity(card, searchTerm, amount);
-                    if (upcomingActivity) {
-                        return {
-                            card: card,
-                            ...upcomingActivity,
-                            isUpcoming: true
-                        };
-                    }
-                    return null;
+                    const activities = await findUpcomingActivity(card, searchTerm, amount);
+                    // findUpcomingActivity now returns an array
+                    return activities.map(activity => ({
+                        card: card,
+                        ...activity,
+                        isUpcoming: true,
+                        matchedItemName: activity.matchedItem
+                    }));
                 }));
 
-                upcomingResults.push(...upcomingActivities.filter(r => r !== null));
+                upcomingResults.push(...upcomingActivities.flat());
             }
         }
 
-        // Remove duplicates from upcoming results (same card might match multiple search terms)
-        uniqueUpcomingResults = [];  // Reuse the variable declared at function scope
-        const seenCardIds = new Set();
+        // Merge upcoming results from same card and same activity
+        // Group by: card + rate + cap + period + category
+        const mergedUpcomingMap = new Map();
+
         for (const result of upcomingResults) {
-            if (!seenCardIds.has(result.card.id)) {
-                seenCardIds.add(result.card.id);
-                uniqueUpcomingResults.push(result);
+            // Create a unique key for this activity
+            const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+            if (mergedUpcomingMap.has(mergeKey)) {
+                // Same activity - merge matched items
+                const existing = mergedUpcomingMap.get(mergeKey);
+
+                // Ensure existing has matchedItems array
+                if (!existing.matchedItems) {
+                    existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
+                }
+
+                // Add new matched items (could be single item or array)
+                const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
+                for (const item of newItems) {
+                    if (item && !existing.matchedItems.includes(item)) {
+                        existing.matchedItems.push(item);
+                    }
+                }
+            } else {
+                // New activity - create new entry
+                mergedUpcomingMap.set(mergeKey, {
+                    ...result,
+                    matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem]
+                });
             }
         }
+
+        uniqueUpcomingResults = Array.from(mergedUpcomingMap.values());
+
+        console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
@@ -1989,7 +2015,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
 // Find upcoming activities for a card (activities starting within 30 days)
 async function findUpcomingActivity(card, searchTerm, amount) {
-    let matchedUpcomingActivity = null;
+    let allMatchedActivities = [];
 
     // Get all possible search variants
     const searchVariants = getAllSearchVariants(searchTerm);
@@ -2025,49 +2051,57 @@ async function findUpcomingActivity(card, searchTerm, amount) {
             const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
             const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
-            // Check if any search variant matches
-            for (const variant of searchVariants) {
-                const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                if (exactMatch) {
-                    // Calculate cashback amount
-                    let cashbackAmount = 0;
-                    let effectiveAmount = amount;
-
-                    if (parsedCap && amount > parsedCap) {
-                        effectiveAmount = parsedCap;
+            // Collect all items that match the search term
+            const matchedItems = [];
+            for (const item of rateGroup.items) {
+                const itemLower = item.toLowerCase();
+                for (const variant of searchVariants) {
+                    if (itemLower === variant) {
+                        matchedItems.push(item);
+                        break; // Found match for this item, move to next item
                     }
-
-                    // Calculate special rate cashback
-                    const specialCashback = Math.floor(effectiveAmount * parsedRate / 100);
-
-                    // Calculate remaining amount cashback (if capped)
-                    let remainingCashback = 0;
-                    if (parsedCap && amount > parsedCap) {
-                        const remainingAmount = amount - parsedCap;
-                        remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-                    }
-
-                    cashbackAmount = specialCashback + remainingCashback;
-
-                    matchedUpcomingActivity = {
-                        rate: parsedRate,
-                        cap: parsedCap,
-                        cashbackAmount: cashbackAmount,
-                        matchedItem: exactMatch,
-                        matchedCategory: rateGroup.category || null,
-                        periodStart: rateGroup.periodStart,
-                        periodEnd: rateGroup.periodEnd,
-                        period: rateGroup.period,
-                        selectedLevel: selectedLevel
-                    };
-                    break;
                 }
             }
-            if (matchedUpcomingActivity) break;
+
+            // If any items matched, add this activity
+            if (matchedItems.length > 0) {
+                // Calculate cashback amount
+                let cashbackAmount = 0;
+                let effectiveAmount = amount;
+
+                if (parsedCap && amount > parsedCap) {
+                    effectiveAmount = parsedCap;
+                }
+
+                // Calculate special rate cashback
+                const specialCashback = Math.floor(effectiveAmount * parsedRate / 100);
+
+                // Calculate remaining amount cashback (if capped)
+                let remainingCashback = 0;
+                if (parsedCap && amount > parsedCap) {
+                    const remainingAmount = amount - parsedCap;
+                    remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+                }
+
+                cashbackAmount = specialCashback + remainingCashback;
+
+                allMatchedActivities.push({
+                    rate: parsedRate,
+                    cap: parsedCap,
+                    cashbackAmount: cashbackAmount,
+                    matchedItem: matchedItems[0], // First matched item for backward compatibility
+                    matchedItems: matchedItems, // All matched items
+                    matchedCategory: rateGroup.category || null,
+                    periodStart: rateGroup.periodStart,
+                    periodEnd: rateGroup.periodEnd,
+                    period: rateGroup.period,
+                    selectedLevel: selectedLevel
+                });
+            }
         }
     }
 
-    return matchedUpcomingActivity;
+    return allMatchedActivities;
 }
 
 // Display calculation results
@@ -2365,11 +2399,22 @@ async function displayCouponCashbacks(amount, merchantValue) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
                 const merchantLower = merchantValue.toLowerCase();
-                const couponMerchantLower = coupon.merchant.toLowerCase();
 
-                // Check if merchant matches coupon merchant
-                if (merchantLower.includes(couponMerchantLower) ||
-                    couponMerchantLower.includes(merchantLower)) {
+                // Split merchant string into array of individual merchants
+                const merchantItems = coupon.merchant.split(',').map(m => m.trim());
+
+                // Find all matching merchant items
+                const matchedMerchants = [];
+                for (const item of merchantItems) {
+                    const itemLower = item.toLowerCase();
+                    // Check if this item matches the search term
+                    if (merchantLower.includes(itemLower) || itemLower.includes(merchantLower)) {
+                        matchedMerchants.push(item);
+                    }
+                }
+
+                // If any merchants matched, add this coupon
+                if (matchedMerchants.length > 0) {
                     // 計算實際回饋率（支援分級）
                     const actualRate = await calculateCouponRate(coupon, card);
 
@@ -2378,7 +2423,8 @@ async function displayCouponCashbacks(amount, merchantValue) {
                         cardName: card.name,
                         cardId: card.id,
                         actualRate: actualRate, // 儲存計算後的實際回饋率
-                        potentialCashback: Math.floor(amount * actualRate / 100)
+                        potentialCashback: Math.floor(amount * actualRate / 100),
+                        matchedMerchants: matchedMerchants // Store matched merchants
                     });
                 }
             }
@@ -2436,7 +2482,7 @@ function createCouponResultElement(coupon, amount) {
             </div>
         </div>
         <div class="matched-merchant">
-            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.merchant}</strong>
+            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant}</strong>${coupon.period ? `<br>活動期間: ${coupon.period}` : ''}
         </div>
     `;
 
