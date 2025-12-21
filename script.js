@@ -1201,7 +1201,12 @@ const fuzzySearchMap = {
     'hnm': 'h&m',
     '唐吉軻德 DON DON DONKI': '唐吉訶德 DON DON DONKI',
     '唐吉訶德 DON DON DONKI': '唐吉軻德 DON DON DONKI',
-    '餐廳': '餐飲'
+    '餐廳': '餐飲',
+    '國內餐廳': '國內餐飲',
+    '國外餐廳': '國外餐飲',
+    '全台餐廳': '全台餐飲',
+    '全臺餐廳': '全臺餐飲',
+    '國內國外餐廳': '國內國外餐飲'
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -7531,6 +7536,7 @@ function disableReviewButton() {
 document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
+
 
 
 
