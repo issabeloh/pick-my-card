@@ -362,6 +362,69 @@ function filterExpiredRates(cardsData) {
     return cardsData;
 }
 
+// Build items index for fast lookup (performance optimization)
+function buildCardItemsIndex(card) {
+    const itemsMap = new Map();
+
+    // Index cashbackRates items
+    if (card.cashbackRates && card.cashbackRates.length > 0) {
+        card.cashbackRates.forEach((rateGroup, rateIndex) => {
+            if (rateGroup.items && rateGroup.items.length > 0) {
+                rateGroup.items.forEach(item => {
+                    const itemLower = item.toLowerCase();
+                    if (!itemsMap.has(itemLower)) {
+                        itemsMap.set(itemLower, []);
+                    }
+                    itemsMap.get(itemLower).push({
+                        type: 'cashbackRate',
+                        index: rateIndex,
+                        rateGroup: rateGroup
+                    });
+                });
+            }
+        });
+    }
+
+    // Index specialItems (can be string array or object array)
+    if (card.specialItems && card.specialItems.length > 0) {
+        card.specialItems.forEach((specialItem, specialIndex) => {
+            const itemLower = (typeof specialItem === 'string' ? specialItem : specialItem.item || '').toLowerCase();
+            if (itemLower) {
+                if (!itemsMap.has(itemLower)) {
+                    itemsMap.set(itemLower, []);
+                }
+                itemsMap.get(itemLower).push({
+                    type: 'specialItem',
+                    index: specialIndex,
+                    specialItem: specialItem
+                });
+            }
+        });
+    }
+
+    // Index generalItems (for cards like CUBE - object with category keys)
+    if (card.generalItems && typeof card.generalItems === 'object') {
+        for (const [category, items] of Object.entries(card.generalItems)) {
+            if (Array.isArray(items)) {
+                items.forEach(item => {
+                    const itemLower = item.toLowerCase();
+                    if (!itemsMap.has(itemLower)) {
+                        itemsMap.set(itemLower, []);
+                    }
+                    itemsMap.get(itemLower).push({
+                        type: 'generalItem',
+                        category: category,
+                        item: item
+                    });
+                });
+            }
+        }
+    }
+
+    card._itemsIndex = itemsMap;
+    return itemsMap.size; // Return number of indexed items
+}
+
 // Load cards data from cards.data (encoded)
 async function loadCardsData() {
     try {
@@ -385,6 +448,14 @@ async function loadCardsData() {
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         console.log('🔍 Debug: cards.data loaded successfully at', new Date().toISOString());
+
+        // Build search index for all cards
+        let totalIndexedItems = 0;
+        cardsData.cards.forEach(card => {
+            const indexedCount = buildCardItemsIndex(card);
+            totalIndexedItems += indexedCount;
+        });
+        console.log(`🚀 搜尋索引已建立: ${totalIndexedItems} 個項目`);
 
         // Update card count in subtitle
         const cardCountElement = document.getElementById('card-count');
@@ -1789,52 +1860,63 @@ async function calculateCardCashback(card, searchTerm, amount) {
         }
 
         // First, check cashbackRates if they exist (for cards like DBS Eco with special promotions)
-        if (card.cashbackRates && card.cashbackRates.length > 0) {
-            for (const rateGroup of card.cashbackRates) {
-                if (!rateGroup.items) continue;
+        // Use index for fast lookup
+        if (card.cashbackRates && card.cashbackRates.length > 0 && card._itemsIndex) {
+            const processedRateGroups = new Set(); // Track processed rate groups to avoid duplicates
 
-                // Only consider active rates for cashback calculation (not upcoming)
-                const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
-                if (rateStatus !== 'active' && rateStatus !== 'always') {
-                    continue;
-                }
+            for (const variant of searchVariants) {
+                const indexMatches = card._itemsIndex.get(variant);
+                if (!indexMatches) continue;
 
-                // 解析 rate 值（支援 {specialRate}）
-                let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
-                let applicableCap = rateGroup.cap;
+                // Filter for cashbackRate matches only
+                const cashbackMatches = indexMatches.filter(match => match.type === 'cashbackRate');
 
-                for (const variant of searchVariants) {
-                    let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                    // Note: We don't check hideInDisplay here because hidden rates should still be searchable
-                    if (exactMatch) {
-                        // Check if levelSettings has rate_hide to override the cashbackRate
-                        // This allows level-specific rates for items in cashbackRates
-                        let finalRate = parsedRate;
-                        if (levelSettings && levelSettings.rate_hide !== undefined) {
-                            finalRate = levelSettings.rate_hide;
-                            // Also update cap from levelSettings if available
-                            if (levelSettings.cap !== undefined) {
-                                applicableCap = levelSettings.cap;
-                            }
-                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
-                        } else {
-                            // 顯示原始 rate 或解析後的值
-                            const displayRate = (rateGroup.rate === '{specialRate}' || rateGroup.rate === '{rate}')
-                                ? `${rateGroup.rate}=${parsedRate}`
-                                : parsedRate;
-                            console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
-                        }
+                for (const match of cashbackMatches) {
+                    const rateGroup = match.rateGroup;
 
-                        // Add this match to allMatches array
-                        allMatches.push({
-                            rate: finalRate,
-                            cap: applicableCap,
-                            matchedItem: exactMatch,
-                            matchedCategory: rateGroup.category || null,
-                            matchedRateGroup: rateGroup
-                        });
-                        break; // Found match for this variant, move to next rateGroup
+                    // Skip if already processed this rate group
+                    if (processedRateGroups.has(rateGroup)) continue;
+                    processedRateGroups.add(rateGroup);
+
+                    // Only consider active rates for cashback calculation (not upcoming)
+                    const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+                    if (rateStatus !== 'active' && rateStatus !== 'always') {
+                        continue;
                     }
+
+                    // 解析 rate 值（支援 {specialRate}）
+                    let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
+                    let applicableCap = rateGroup.cap;
+
+                    // Find the exact matched item name
+                    const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+
+                    // Check if levelSettings has rate_hide to override the cashbackRate
+                    // This allows level-specific rates for items in cashbackRates
+                    let finalRate = parsedRate;
+                    if (levelSettings && levelSettings.rate_hide !== undefined) {
+                        finalRate = levelSettings.rate_hide;
+                        // Also update cap from levelSettings if available
+                        if (levelSettings.cap !== undefined) {
+                            applicableCap = levelSettings.cap;
+                        }
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
+                    } else {
+                        // 顯示原始 rate 或解析後的值
+                        const displayRate = (rateGroup.rate === '{specialRate}' || rateGroup.rate === '{rate}')
+                            ? `${rateGroup.rate}=${parsedRate}`
+                            : parsedRate;
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
+                    }
+
+                    // Add this match to allMatches array
+                    allMatches.push({
+                        rate: finalRate,
+                        cap: applicableCap,
+                        matchedItem: exactMatch,
+                        matchedCategory: rateGroup.category || null,
+                        matchedRateGroup: rateGroup
+                    });
                 }
             }
         }
@@ -1842,11 +1924,23 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // If no cashbackRates match, check specialItems
         if (allMatches.length === 0) {
             let matchedSpecialItem = null;
-            for (const variant of searchVariants) {
-                matchedSpecialItem = card.specialItems.find(item => item.toLowerCase() === variant);
-                if (matchedSpecialItem) {
-                    console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
-                    break;
+            let matchedVariant = null;
+
+            // Use index for fast lookup
+            if (card._itemsIndex) {
+                for (const variant of searchVariants) {
+                    const indexMatches = card._itemsIndex.get(variant);
+                    if (indexMatches) {
+                        const specialMatch = indexMatches.find(match => match.type === 'specialItem');
+                        if (specialMatch) {
+                            matchedSpecialItem = typeof specialMatch.specialItem === 'string'
+                                ? specialMatch.specialItem
+                                : specialMatch.specialItem.item;
+                            matchedVariant = variant;
+                            console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -1900,24 +1994,21 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
         // If still no match and this is CUBE card, check generalItems
         if (allMatches.length === 0 && card.id === 'cathay-cube') {
-            // CUBE card: check general items for 2% reward
+            // CUBE card: check general items for 2% reward using index
             let matchedGeneralItem = null;
             let matchedGeneralCategory = null;
 
-            if (card.generalItems) {
-                for (const [category, items] of Object.entries(card.generalItems)) {
-                    for (const variant of searchVariants) {
-                        const foundItem = items.find(item => {
-                            const itemLower = item.toLowerCase();
-                            return itemLower === variant || itemLower.includes(variant) || variant.includes(itemLower);
-                        });
-                        if (foundItem) {
-                            matchedGeneralItem = foundItem;
-                            matchedGeneralCategory = category;
+            if (card.generalItems && card._itemsIndex) {
+                for (const variant of searchVariants) {
+                    const indexMatches = card._itemsIndex.get(variant);
+                    if (indexMatches) {
+                        const generalMatch = indexMatches.find(match => match.type === 'generalItem');
+                        if (generalMatch) {
+                            matchedGeneralItem = generalMatch.item;
+                            matchedGeneralCategory = generalMatch.category;
                             break;
                         }
                     }
-                    if (matchedGeneralItem) break;
                 }
             }
 
@@ -1943,22 +2034,36 @@ async function calculateCardCashback(card, searchTerm, amount) {
             selectedLevel = savedLevel; // Store selected level for display
         }
 
-        // Check exact matches for all search variants
-        for (const rateGroup of card.cashbackRates) {
-            // Only consider active rates for cashback calculation (not upcoming)
-            const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
-            if (rateStatus !== 'active' && rateStatus !== 'always') {
-                continue;
-            }
+        // Check exact matches for all search variants using index
+        if (card._itemsIndex) {
+            const processedRateGroups = new Set();
 
-            // 解析 rate 值（支援 {rate}、{specialRate} 等）
-            const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
-            const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
-
-            // Check all search variants against all items in the rate group
             for (const variant of searchVariants) {
-                let exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-                if (exactMatch) {
+                const indexMatches = card._itemsIndex.get(variant);
+                if (!indexMatches) continue;
+
+                const cashbackMatches = indexMatches.filter(match => match.type === 'cashbackRate');
+
+                for (const match of cashbackMatches) {
+                    const rateGroup = match.rateGroup;
+
+                    // Skip if already processed
+                    if (processedRateGroups.has(rateGroup)) continue;
+                    processedRateGroups.add(rateGroup);
+
+                    // Only consider active rates for cashback calculation (not upcoming)
+                    const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+                    if (rateStatus !== 'active' && rateStatus !== 'always') {
+                        continue;
+                    }
+
+                    // 解析 rate 值（支援 {rate}、{specialRate} 等）
+                    const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+                    const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
+
+                    // Find the exact matched item name
+                    const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+
                     // Add this match to allMatches array
                     allMatches.push({
                         rate: parsedRate,
@@ -1967,7 +2072,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         matchedCategory: rateGroup.category || null,
                         matchedRateGroup: rateGroup
                     });
-                    break; // Found match for this variant, move to next rateGroup
                 }
             }
         }
