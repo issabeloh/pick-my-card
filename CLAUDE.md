@@ -108,7 +108,7 @@ group.conditions.push({category, conditions});
 - ✅ cashbackRates items
 - ✅ specialItems
 - ✅ generalItems (CUBE 卡)
-- ✅ **couponCashbacks merchant**（新增於 2024-12-22）
+- ✅ **couponCashbacks merchant**（新增於 2025-12-22）
 
 **Coupon 搜尋邏輯**：
 - 解析 merchant 欄位（逗號分隔的字符串）
@@ -136,7 +136,7 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 }
 ```
 
-## 性能優化 (2024-12-22)
+## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
 
@@ -175,13 +175,13 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ### 最近的技術決策
 
-1. **2024-12-22: 性能優化三項**
+1. **2025-12-22: 性能優化三項**
    - 建立搜尋索引：O(n³) → O(1)，提升 500-800ms
    - 日期狀態緩存：減少重複計算，提升 150-250ms
    - DocumentFragment 批量 DOM：減少 reflow，提升 100-200ms
    - 總提升：從 1.2-2.5 秒 → 0.2-0.7 秒
 
-2. **2024-12-22: Bug 修復**
+2. **2025-12-22: Bug 修復**
    - 修復即將開始活動排序（按回饋金額排序）
    - 修復 DBS Eco「禾乃川」搜尋錯誤（rate_hide 只對 hideInDisplay=true 生效）
    - 加入 coupon 搜尋支援（findMatchingItem 也搜尋 couponCashbacks）
@@ -258,7 +258,7 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 **目前分支**：`claude/optimize-search-performance-aKHAP`
 
-**最近的 commits**（2024-12-22）：
+**最近的 commits**（2025-12-22）：
 - Add coupon search support to findMatchingItem
 - Fix search bugs and improve sorting
 - Add items index for ultra-fast search lookups
@@ -272,4 +272,4 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ---
 
-**更新日期**：2024-12-22
+**更新日期**：2025-12-22
