@@ -1344,6 +1344,17 @@ function findMatchingItem(searchTerm) {
                 checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
             }
         }
+
+        // Check couponCashbacks merchant field
+        if (card.couponCashbacks) {
+            for (const coupon of card.couponCashbacks) {
+                if (coupon.merchant) {
+                    // Split merchant string into array (comma-separated)
+                    const merchantItems = coupon.merchant.split(',').map(m => m.trim());
+                    checkItemMatches(merchantItems, searchTerms, searchLower, allMatches, searchTerm);
+                }
+            }
+        }
     }
     
     if (allMatches.length === 0) return null;
