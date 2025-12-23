@@ -3678,17 +3678,10 @@ basicCashbackDiv.innerHTML = basicContent;
                 // Add note about which categories are affected by level
                 levelRatesInfo += `<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic; line-height: 1.4;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
             } else if (card.id === 'dbs-eco') {
+                // Simplified format for mobile compatibility
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    if (level === '一般卡友') {
-                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
-                    } else if (level === '精選卡友') {
-                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'}；加碼 1.8% 上限為 NT$ 50,000)</div>`;
-                    } else if (level === '豐盛理財客戶/豐盛理財私人客戶') {
-                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}% (其中加碼 3.8% 的上限為 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'}；加碼 4.8% 上限為 NT$ 37,500)</div>`;
-                    } else {
-                        levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}% (上限 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
-                    }
+                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}%</div>`;
                 });
             } else {
                 // Default formatting for other cards (like Uni card)
