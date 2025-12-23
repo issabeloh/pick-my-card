@@ -128,13 +128,32 @@ group.conditions.push({category, conditions});
 - 避免跟 overseasCashback 重複顯示
 - 只對 `hideInDisplay=true` 的項目生效
 
-**使用邏輯** (script.js:1899)：
+**使用邏輯** (script.js:1910)：
 ```javascript
 if (levelSettings && levelSettings.rate_hide !== undefined
     && rateGroup.hideInDisplay === true) {
     finalRate = levelSettings.rate_hide;
 }
 ```
+
+### 8. 分層回饋計算系統
+
+**用途**：處理多層獎勵結構的卡片（如 DBS Eco），每層有獨立的回饋率和消費上限。
+
+**觸發條件** (script.js:2186-2208)：
+- 卡片有 `levelSettings` 且包含 `overseasBonusRate` 或 `domesticBonusRate`
+- 自動檢測是否為海外交易（根據項目名稱）
+
+**計算函數** (script.js:1840-1904 `calculateLayeredCashback`)：
+- Layer 1: 基本回饋（無上限，適用全額）
+- Layer 2: 加碼回饋（國內/海外，有消費上限）
+- Layer 3: 指定項目加碼（額外回饋率，有消費上限）
+
+**範例**：DBS Eco 精選卡友消費 NT$30,000 到日本
+- 基本 1.2%: 30000 × 1.2% = 360
+- 海外加碼 1.8%: 30000 × 1.8% = 540（上限 50000）
+- 指定國家 3.8%: 21053 × 3.8% = 800（上限 21053）
+- **總計: 1,700**
 
 ## 性能優化 (2025-12-22)
 
@@ -175,38 +194,44 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ### 最近的技術決策
 
-1. **2025-12-22: 性能優化三項**
+1. **2025-12-22: 分層回饋計算系統**
+   - 實作 calculateLayeredCashback 函數處理多層獎勵結構
+   - 支援 DBS Eco 等複雜卡片的三層計算（基本+加碼+指定項目）
+   - 自動檢測海外/國內交易並套用對應加碼率
+   - 每層獨立計算消費上限
+
+2. **2025-12-22: 性能優化三項**
    - 建立搜尋索引：O(n³) → O(1)，提升 500-800ms
    - 日期狀態緩存：減少重複計算，提升 150-250ms
    - DocumentFragment 批量 DOM：減少 reflow，提升 100-200ms
    - 總提升：從 1.2-2.5 秒 → 0.2-0.7 秒
 
-2. **2025-12-22: Bug 修復**
+3. **2025-12-22: Bug 修復**
    - 修復即將開始活動排序（按回饋金額排序）
    - 修復 DBS Eco「禾乃川」搜尋錯誤（rate_hide 只對 hideInDisplay=true 生效）
    - 加入 coupon 搜尋支援（findMatchingItem 也搜尋 couponCashbacks）
 
-3. **2024-12: 支援 {cap} placeholder + 移動級別回饋率顯示**
+4. **2024-12: 支援 {cap} placeholder + 移動級別回饋率顯示**
    - 在 cap_N 欄位支援 {cap}
    - "各級別回饋率"移到級別選擇器旁邊
 
-4. **2024-12: 合併顯示 + 條件分組**
+5. **2024-12: 合併顯示 + 條件分組**
    - 相同 rate/cap 的活動合併顯示
    - 條件按 category 分組，不列出個別通路
 
-5. **2024-12: CUBE 卡修正**
+6. **2024-12: CUBE 卡修正**
    - 包含在級別回饋率顯示中
    - 使用 specialRate 而非 rate
 
-6. **2024-12: 玉山 Uni Card 可折疊條件**
+7. **2024-12: 玉山 Uni Card 可折疊條件**
    - 只有 Uni Card 使用可展開按鈕
    - 其他卡片直接顯示條件
 
-7. **2024-12: DBS Eco 佈局修正**
+8. **2024-12: DBS Eco 佈局修正**
    - level-note 移到下拉選單下方
    - 級別回饋率支援換行
 
-8. **2024-12: 修復空 specialItems 問題**
+9. **2024-12: 修復空 specialItems 問題**
    - 正確處理 specialItems = [] 的情況
    - 搜尋邏輯傳遞正確的 levelData 給解析函數
    - 移除 specialContent 中重複的級別回饋率顯示

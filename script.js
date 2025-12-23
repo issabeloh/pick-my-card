@@ -1825,6 +1825,84 @@ function getCategoryStyle(category) {
     return category ? 'color: #111827;' : '';
 }
 
+/**
+ * Calculate layered cashback for cards with multi-tier reward structures
+ * Used for cards like DBS Eco where multiple reward rates stack with independent caps
+ *
+ * @param {Object} card - The card object
+ * @param {Object} levelSettings - Level settings containing bonus rates and caps
+ * @param {number} amount - Transaction amount
+ * @param {number} displayedRate - Total displayed rate (for reference)
+ * @param {number} cap - Consumption cap for the highest tier bonus
+ * @param {boolean} isOverseas - Whether this is an overseas transaction
+ * @returns {Object} - { cashbackAmount, layers }
+ */
+function calculateLayeredCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
+    const layers = [];
+    let totalCashback = 0;
+
+    // Layer 1: Basic cashback (always applies, no cap)
+    const basicCashback = Math.floor(amount * card.basicCashback / 100);
+    layers.push({
+        name: '基本回饋',
+        rate: card.basicCashback,
+        applicableAmount: amount,
+        cashback: basicCashback,
+        cap: null
+    });
+    totalCashback += basicCashback;
+
+    // Layer 2: Bonus rate (domestic or overseas, with consumption cap)
+    let bonusRate = 0;
+    let bonusCap = 0;
+    let bonusName = '';
+
+    if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
+        bonusRate = levelSettings.overseasBonusRate;
+        bonusCap = levelSettings.overseasBonusCap;
+        bonusName = '海外消費加碼';
+    } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
+        bonusRate = levelSettings.domesticBonusRate;
+        bonusCap = levelSettings.domesticBonusCap;
+        bonusName = '國內消費加碼';
+    }
+
+    if (bonusRate > 0 && bonusCap > 0) {
+        const bonusApplicableAmount = Math.min(amount, bonusCap);
+        const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+        layers.push({
+            name: bonusName,
+            rate: bonusRate,
+            applicableAmount: bonusApplicableAmount,
+            cashback: bonusCashback,
+            cap: bonusCap
+        });
+        totalCashback += bonusCashback;
+    }
+
+    // Layer 3: Designated region/category bonus (with consumption cap)
+    // This is the additional rate on top of basic + bonus
+    const designatedBonusRate = displayedRate - card.basicCashback - bonusRate;
+
+    if (designatedBonusRate > 0 && cap) {
+        const designatedApplicableAmount = Math.min(amount, cap);
+        const designatedCashback = Math.floor(designatedApplicableAmount * designatedBonusRate / 100);
+        layers.push({
+            name: '指定項目加碼',
+            rate: designatedBonusRate,
+            applicableAmount: designatedApplicableAmount,
+            cashback: designatedCashback,
+            cap: cap
+        });
+        totalCashback += designatedCashback;
+    }
+
+    return {
+        cashbackAmount: totalCashback,
+        layers: layers
+    };
+}
+
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
     let allMatches = []; // Collect ALL matching activities
@@ -2097,34 +2175,81 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let cashbackAmount = 0;
         let effectiveAmount = amount;
         let totalRate = rate;
+        let calculationLayers = null;
+
+        // Check if we should use layered calculation
+        // Criteria: card has levelSettings with overseasBonusRate or domesticBonusRate
+        let shouldUseLayeredCalculation = false;
+        let levelSettingsForCalc = null;
+        let isOverseasTransaction = false;
+
+        if (card.hasLevels && card.levelSettings) {
+            // Get the level settings for this card
+            const availableLevels = Object.keys(card.levelSettings);
+            const levelToUse = selectedLevel || availableLevels[0];
+            levelSettingsForCalc = card.levelSettings[levelToUse];
+
+            // Check if this level has bonus rates (indicating layered calculation needed)
+            if (levelSettingsForCalc &&
+                (levelSettingsForCalc.overseasBonusRate || levelSettingsForCalc.domesticBonusRate)) {
+                shouldUseLayeredCalculation = true;
+
+                // Determine if this is an overseas transaction
+                // Check the matched item or category for overseas keywords
+                const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
+                const itemToCheck = (matchedItem || '').toLowerCase();
+                const categoryToCheck = (matchedCategory || '').toLowerCase();
+
+                isOverseasTransaction = overseasKeywords.some(keyword =>
+                    itemToCheck.includes(keyword.toLowerCase()) ||
+                    categoryToCheck.includes(keyword.toLowerCase())
+                );
+            }
+        }
 
         if (rate > 0) {
-            // Calculate special rate cashback
-            let specialCashback = 0;
-            let effectiveSpecialAmount = amount;
+            if (shouldUseLayeredCalculation && levelSettingsForCalc) {
+                // Use layered calculation for complex multi-tier cashback
+                const layeredResult = calculateLayeredCashback(
+                    card,
+                    levelSettingsForCalc,
+                    amount,
+                    rate,
+                    cap,
+                    isOverseasTransaction
+                );
+                cashbackAmount = layeredResult.cashbackAmount;
+                calculationLayers = layeredResult.layers;
+                totalRate = rate; // Keep displayed total rate
+                effectiveAmount = amount; // Show full amount for layered calculation
+            } else {
+                // Use simple calculation for standard cashback
+                let specialCashback = 0;
+                let effectiveSpecialAmount = amount;
 
-            if (cap && amount > cap) {
-                effectiveSpecialAmount = cap;
+                if (cap && amount > cap) {
+                    effectiveSpecialAmount = cap;
+                }
+
+                // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
+                // Do NOT add basicCashback or domesticBonusRate on top
+                specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
+
+                // Handle remaining amount if capped (excess amount gets basic cashback only)
+                let remainingCashback = 0;
+                if (cap && amount > cap) {
+                    const remainingAmount = amount - cap;
+                    // Remaining amount only gets basic cashback rate
+                    remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+                }
+
+                // Total cashback = special rate amount + remaining basic amount
+                cashbackAmount = specialCashback + remainingCashback;
+
+                // Total rate is the special rate from cashbackRates (no bonusRate added)
+                totalRate = Math.round(rate * 100) / 100;
+                effectiveAmount = cap; // Keep this for display purposes
             }
-
-            // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
-            // Do NOT add basicCashback or domesticBonusRate on top
-            specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
-
-            // Handle remaining amount if capped (excess amount gets basic cashback only)
-            let remainingCashback = 0;
-            if (cap && amount > cap) {
-                const remainingAmount = amount - cap;
-                // Remaining amount only gets basic cashback rate
-                remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
-            }
-
-            // Total cashback = special rate amount + remaining basic amount
-            cashbackAmount = specialCashback + remainingCashback;
-
-            // Total rate is the special rate from cashbackRates (no bonusRate added)
-            totalRate = Math.round(rate * 100) / 100;
-            effectiveAmount = cap; // Keep this for display purposes
         }
 
         return {
@@ -2139,7 +2264,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
             matchedRateGroup: matchedRateGroup,
             selectedLevel: selectedLevel, // Pass selected level to display
             periodStart: matchedRateGroup?.periodStart || null,
-            periodEnd: matchedRateGroup?.periodEnd || null
+            periodEnd: matchedRateGroup?.periodEnd || null,
+            calculationLayers: calculationLayers, // Include layer breakdown if available
+            isLayeredCalculation: shouldUseLayeredCalculation
         };
     });
 
