@@ -518,8 +518,28 @@
                             </div>
                         </div>
                     </div>
-                    
-                    
+
+                    <!-- 卡片到期日區域 -->
+                    <div class="card-info-section card-expiry-section">
+                        <h4>💳 卡片到期日</h4>
+                        <div class="card-expiry-container">
+                            <input type="month"
+                                   id="card-expiry-input"
+                                   class="card-expiry-input"
+                                   placeholder="MM/YY">
+                            <div class="expiry-note">
+                                <small style="color: #6b7280; font-size: 12px;">💡 輸入後可在到期前 30 天收到通知</small>
+                            </div>
+                            <div class="expiry-status" id="expiry-status">
+                                <button class="save-expiry-btn" id="save-expiry-btn" disabled>
+                                    <span class="btn-icon">💾</span>
+                                    <span class="btn-text">儲存到期日</span>
+                                </button>
+                                <span class="save-indicator" id="expiry-save-indicator"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card-info-section">
                         <h4>指定通路回饋</h4>
                         <div id="card-special-cashback"></div>

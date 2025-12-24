@@ -1024,8 +1024,10 @@ function setupEventListeners() {
                 const cardName = pinBtn.dataset.cardName;
                 const merchant = pinBtn.dataset.merchant;
                 const rate = parseFloat(pinBtn.dataset.rate);
+                const periodEnd = pinBtn.dataset.periodEnd || null;
+                const periodStart = pinBtn.dataset.periodStart || null;
 
-                await togglePin(pinBtn, cardId, cardName, merchant, rate);
+                await togglePin(pinBtn, cardId, cardName, merchant, rate, periodEnd, periodStart);
             }
         });
     }
@@ -2801,6 +2803,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                             data-card-name="${result.card.name}"
                             data-merchant="${merchantForPin}"
                             data-rate="${result.rate}"
+                            data-period-end="${result.periodEnd || ''}"
+                            data-period-start="${result.periodStart || ''}"
                             title="${pinned ? '取消釘選' : '釘選此配對'}">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
@@ -4400,7 +4404,35 @@ basicCashbackDiv.innerHTML = basicContent;
         const currentNotes = notesTextarea.value;
         saveUserNotes(card.id, currentNotes);
     };
-    
+
+    // Load and setup card expiry date
+    const expiryInput = document.getElementById('card-expiry-input');
+    const expiryBtn = document.getElementById('save-expiry-btn');
+    let lastSavedExpiry = '';
+
+    // 讀取當前到期日
+    loadCardExpiry(card.id).then(expiry => {
+        expiryInput.value = expiry;
+        lastSavedExpiry = expiry;
+    });
+
+    // 設置輸入監聽
+    expiryInput.oninput = (e) => {
+        const expiry = e.target.value;
+        // 只有當值改變時才啟用儲存按鈕
+        expiryBtn.disabled = (expiry === lastSavedExpiry);
+    };
+
+    // 設置儲存按鈕監聽
+    expiryBtn.onclick = async () => {
+        const currentExpiry = expiryInput.value;
+        const success = await saveCardExpiry(card.id, currentExpiry);
+        if (success) {
+            lastSavedExpiry = currentExpiry;
+            expiryBtn.disabled = true;
+        }
+    };
+
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
     
@@ -4918,6 +4950,101 @@ async function saveUserNotes(cardId, notes) {
 }
 
 // ============================================
+// 卡片到期日功能
+// ============================================
+
+// 載入卡片到期日
+async function loadCardExpiry(cardId) {
+    const cacheKey = auth.currentUser ? `expiry_${auth.currentUser.uid}_${cardId}` : `expiry_${cardId}`;
+
+    if (!auth.currentUser) {
+        return localStorage.getItem(cacheKey) || '';
+    }
+
+    try {
+        const docRef = window.doc ? window.doc(db, 'cardExpiry', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
+        const docSnap = await window.getDoc(docRef);
+        const expiry = docSnap.exists() ? docSnap.data().expiry : '';
+
+        // 更新本地快取
+        localStorage.setItem(cacheKey, expiry);
+
+        return expiry;
+    } catch (error) {
+        console.log('讀取卡片到期日失敗，使用本地快取:', error);
+        return localStorage.getItem(cacheKey) || '';
+    }
+}
+
+// 儲存卡片到期日
+async function saveCardExpiry(cardId, expiry) {
+    const saveBtn = document.getElementById('save-expiry-btn');
+    const saveIndicator = document.getElementById('expiry-save-indicator');
+
+    const cacheKey = auth.currentUser ? `expiry_${auth.currentUser.uid}_${cardId}` : `expiry_${cardId}`;
+
+    if (!auth.currentUser) {
+        // 未登入時僅儲存在本地
+        localStorage.setItem(cacheKey, expiry);
+
+        // 更新按鈕狀態
+        saveBtn.disabled = true;
+        saveIndicator.textContent = '已儲存在本地 (未登入)';
+        saveIndicator.style.color = '#6b7280';
+        return true;
+    }
+
+    try {
+        // 更新按鈕為儲存中狀態
+        saveBtn.disabled = true;
+        saveIndicator.textContent = '儲存中...';
+        saveIndicator.style.color = '#6b7280';
+
+        const docRef = window.doc ? window.doc(db, 'cardExpiry', `${auth.currentUser.uid}_${cardId}`) : null;
+        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
+        await window.setDoc(docRef, {
+            expiry: expiry,
+            updatedAt: new Date(),
+            cardId: cardId
+        });
+
+        // 也儲存在本地作為快取
+        localStorage.setItem(cacheKey, expiry);
+
+        // 成功狀態
+        saveIndicator.textContent = '✓ 雲端同步成功';
+        saveIndicator.style.color = '#10b981';
+
+        // 2秒後恢復正常狀態
+        setTimeout(() => {
+            saveBtn.disabled = true;
+            saveIndicator.textContent = '';
+        }, 2000);
+
+        return true;
+
+    } catch (error) {
+        console.error('雲端儲存失敗:', error);
+
+        // 失敗時仍然儲存在本地
+        localStorage.setItem(cacheKey, expiry);
+
+        // 錯誤狀態
+        saveBtn.disabled = false;
+        saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
+        saveIndicator.style.color = '#dc2626';
+
+        // 5秒後恢復
+        setTimeout(() => {
+            saveIndicator.textContent = '';
+        }, 5000);
+
+        return false;
+    }
+}
+
+// ============================================
 // 消費配卡表功能
 // ============================================
 
@@ -5005,7 +5132,7 @@ async function saveSpendingMappings(mappings) {
 }
 
 // 添加配對
-async function addMapping(cardId, cardName, merchant, cashbackRate) {
+async function addMapping(cardId, cardName, merchant, cashbackRate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         alert('請先登入才能使用此功能');
@@ -5022,10 +5149,12 @@ async function addMapping(cardId, cardName, merchant, cashbackRate) {
         createdAt: now,
         lastCheckedRate: cashbackRate, // 記錄最後檢查的回饋率
         lastCheckedTime: now, // 記錄最後檢查的時間
-        hasChanged: false // 初始為未變動
+        hasChanged: false, // 初始為未變動
+        periodEnd: periodEnd, // 活動結束日期
+        periodStart: periodStart // 活動開始日期
     };
 
-    console.log('➕ [配卡] 新增配對:', cardName, '-', merchant, cashbackRate + '%');
+    console.log('➕ [配卡] 新增配對:', cardName, '-', merchant, cashbackRate + '%', periodEnd ? `(到期: ${periodEnd})` : '');
     userSpendingMappings.push(newMapping);
     const saved = await saveSpendingMappings(userSpendingMappings);
 
@@ -5055,7 +5184,7 @@ function isPinned(cardId, merchant) {
 }
 
 // 切換釘選狀態
-async function togglePin(button, cardId, cardName, merchant, rate) {
+async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         alert('請先登入才能使用釘選功能');
@@ -5087,7 +5216,7 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
         }
     } else {
         // 釘選
-        const newMapping = await addMapping(cardId, cardName, merchant, rate);
+        const newMapping = await addMapping(cardId, cardName, merchant, rate, periodEnd, periodStart);
         if (newMapping) {
             button.classList.add('pinned');
             button.title = '取消釘選';
@@ -5300,8 +5429,78 @@ function renderMappingsList(searchTerm = '') {
     // 按 order 排序（用戶自訂順序）
     filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
 
+    // 計算最近的到期日（從所有 mappings，不只是 filteredMappings）
+    let nearestExpiryInfo = null;
+    const now = new Date();
+    const utcOffset = now.getTimezoneOffset();
+    const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+    for (const mapping of userSpendingMappings) {
+        if (mapping.periodEnd) {
+            try {
+                const endParts = mapping.periodEnd.split('/').map(p => parseInt(p));
+                const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+                const diffTime = endDate - taiwanTime;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // 如果活動已過期（但在 7 天內），或尚未過期
+                if (diffDays >= -7) {
+                    if (!nearestExpiryInfo || Math.abs(diffDays) < Math.abs(nearestExpiryInfo.daysUntil)) {
+                        nearestExpiryInfo = {
+                            cardName: mapping.cardName,
+                            merchant: mapping.merchant,
+                            periodEnd: mapping.periodEnd,
+                            daysUntil: diffDays,
+                            isExpired: diffDays < 0
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Date parsing error:', error, { periodEnd: mapping.periodEnd });
+            }
+        }
+    }
+
+    // 渲染到期日資訊區塊
+    let expiryInfoHtml = '';
+    if (nearestExpiryInfo) {
+        const { cardName, merchant, periodEnd, daysUntil, isExpired } = nearestExpiryInfo;
+        const merchantName = optimizeMerchantName(merchant);
+
+        if (isExpired) {
+            expiryInfoHtml = `
+                <div class="expiry-info expired" style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #dc2626; font-weight: 500;">
+                        <span>⚠️</span>
+                        <span>${cardName} - ${merchantName} 活動已過期</span>
+                    </div>
+                    <div style="font-size: 12px; color: #991b1b; margin-top: 4px;">
+                        到期日：${periodEnd} (${Math.abs(daysUntil)} 天前)
+                    </div>
+                </div>
+            `;
+        } else {
+            const urgencyClass = daysUntil <= 7 ? 'urgent' : daysUntil <= 30 ? 'warning' : 'normal';
+            const bgColor = daysUntil <= 7 ? '#fef2f2' : daysUntil <= 30 ? '#fffbeb' : '#f0f9ff';
+            const borderColor = daysUntil <= 7 ? '#fecaca' : daysUntil <= 30 ? '#fde68a' : '#bfdbfe';
+            const textColor = daysUntil <= 7 ? '#dc2626' : daysUntil <= 30 ? '#d97706' : '#2563eb';
+
+            expiryInfoHtml = `
+                <div class="expiry-info ${urgencyClass}" style="background: ${bgColor}; border: 1px solid ${borderColor}; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: ${textColor}; font-weight: 500;">
+                        <span>📅</span>
+                        <span>最近到期活動：${cardName} - ${merchantName}</span>
+                    </div>
+                    <div style="font-size: 12px; color: ${textColor}; margin-top: 4px;">
+                        到期日：${periodEnd} (剩 ${daysUntil} 天)
+                    </div>
+                </div>
+            `;
+        }
+    }
+
     // 渲染標準表格
-    let html = `
+    let html = expiryInfoHtml + `
         <table class="mappings-table">
             <thead>
                 <tr>

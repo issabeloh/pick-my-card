@@ -1930,6 +1930,75 @@ input[type="number"]:focus {
     font-size: 13px;
 }
 
+/* Card Expiry Section Styles */
+.card-expiry-container {
+    position: relative;
+}
+
+.card-expiry-input {
+    width: 100%;
+    max-width: 200px;
+    padding: 8px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.card-expiry-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.expiry-note {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.expiry-status {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.save-expiry-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.save-expiry-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.save-expiry-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.save-expiry-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .chip-clickable {
     cursor: pointer;
     transition: all 0.2s ease;
