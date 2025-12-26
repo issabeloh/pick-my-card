@@ -2945,8 +2945,42 @@ input[type="number"]:focus {
     text-align: right;
 }
 
+.mappings-table th.expiry-column {
+    width: 140px;
+    white-space: nowrap;
+}
+
+.mappings-table td.expiry-cell {
+    color: #6b7280;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.mappings-table td.expiry-cell.expired {
+    color: #dc2626;
+    font-weight: 500;
+}
+
 .mappings-table td.delete-cell {
     text-align: center;
+}
+
+/* Table wrapper for horizontal scrolling on mobile */
+.mappings-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Show scrollbar on mobile/tablet */
+@media (max-width: 1024px) {
+    .mappings-table-wrapper {
+        overflow-x: auto;
+    }
+
+    /* Make table minimum width to ensure horizontal scroll */
+    .mappings-table {
+        min-width: 650px;
+    }
 }
 
 /* Drag and drop states */

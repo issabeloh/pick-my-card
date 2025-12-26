@@ -1024,8 +1024,10 @@ function setupEventListeners() {
                 const cardName = pinBtn.dataset.cardName;
                 const merchant = pinBtn.dataset.merchant;
                 const rate = parseFloat(pinBtn.dataset.rate);
+                const periodEnd = pinBtn.dataset.periodEnd || null;
+                const periodStart = pinBtn.dataset.periodStart || null;
 
-                await togglePin(pinBtn, cardId, cardName, merchant, rate);
+                await togglePin(pinBtn, cardId, cardName, merchant, rate, periodEnd, periodStart);
             }
         });
     }
@@ -2801,6 +2803,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                             data-card-name="${result.card.name}"
                             data-merchant="${merchantForPin}"
                             data-rate="${result.rate}"
+                            data-period-end="${result.periodEnd || ''}"
+                            data-period-start="${result.periodStart || ''}"
                             title="${pinned ? '取消釘選' : '釘選此配對'}">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
@@ -3339,7 +3343,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐廳', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
+        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -3483,7 +3487,7 @@ function getTagClass(tagName) {
     const tagMap = {
         '旅遊': 'tag-travel',
         '開車族': 'tag-driving',
-        '餐廳': 'tag-restaurant',
+        '餐飲': 'tag-restaurant',
         '交通': 'tag-transport',
         '網購': 'tag-online',
         '百貨公司': 'tag-department',
@@ -4400,7 +4404,7 @@ basicCashbackDiv.innerHTML = basicContent;
         const currentNotes = notesTextarea.value;
         saveUserNotes(card.id, currentNotes);
     };
-    
+
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
     
@@ -5005,7 +5009,7 @@ async function saveSpendingMappings(mappings) {
 }
 
 // 添加配對
-async function addMapping(cardId, cardName, merchant, cashbackRate) {
+async function addMapping(cardId, cardName, merchant, cashbackRate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         alert('請先登入才能使用此功能');
@@ -5022,10 +5026,12 @@ async function addMapping(cardId, cardName, merchant, cashbackRate) {
         createdAt: now,
         lastCheckedRate: cashbackRate, // 記錄最後檢查的回饋率
         lastCheckedTime: now, // 記錄最後檢查的時間
-        hasChanged: false // 初始為未變動
+        hasChanged: false, // 初始為未變動
+        periodEnd: periodEnd, // 活動結束日期
+        periodStart: periodStart // 活動開始日期
     };
 
-    console.log('➕ [配卡] 新增配對:', cardName, '-', merchant, cashbackRate + '%');
+    console.log('➕ [配卡] 新增配對:', cardName, '-', merchant, cashbackRate + '%', periodEnd ? `(到期: ${periodEnd})` : '');
     userSpendingMappings.push(newMapping);
     const saved = await saveSpendingMappings(userSpendingMappings);
 
@@ -5055,7 +5061,7 @@ function isPinned(cardId, merchant) {
 }
 
 // 切換釘選狀態
-async function togglePin(button, cardId, cardName, merchant, rate) {
+async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         alert('請先登入才能使用釘選功能');
@@ -5087,7 +5093,7 @@ async function togglePin(button, cardId, cardName, merchant, rate) {
         }
     } else {
         // 釘選
-        const newMapping = await addMapping(cardId, cardName, merchant, rate);
+        const newMapping = await addMapping(cardId, cardName, merchant, rate, periodEnd, periodStart);
         if (newMapping) {
             button.classList.add('pinned');
             button.title = '取消釘選';
@@ -5220,6 +5226,57 @@ function optimizeMerchantName(merchant) {
     return merchant;
 }
 
+// 輔助函數：從 cardsData 中查找活動的到期日
+function findActivityPeriod(cardId, merchant) {
+    const card = cardsData?.cards.find(c => c.id === cardId);
+    if (!card) return null;
+
+    const merchantLower = merchant.toLowerCase();
+
+    // 搜尋 cashbackRates
+    if (card.cashbackRates) {
+        for (const rate of card.cashbackRates) {
+            if (rate.items) {
+                for (const item of rate.items) {
+                    if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                        return {
+                            periodEnd: rate.periodEnd || null,
+                            periodStart: rate.periodStart || null
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // 搜尋 specialItems
+    if (card.specialItems) {
+        for (const item of card.specialItems) {
+            if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                // specialItems 通常沒有獨立的 period，使用 card 層級的
+                return {
+                    periodEnd: null,
+                    periodStart: null
+                };
+            }
+        }
+    }
+
+    // 搜尋 generalItems (CUBE 卡)
+    if (card.generalItems) {
+        for (const item of card.generalItems) {
+            if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                return {
+                    periodEnd: null,
+                    periodStart: null
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
 // 打開我的配卡表 Modal
 async function openMyMappingsModal() {
     const modal = document.getElementById('my-mappings-modal');
@@ -5300,23 +5357,73 @@ function renderMappingsList(searchTerm = '') {
     // 按 order 排序（用戶自訂順序）
     filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 渲染標準表格
+    // 取得目前台灣時間（用於計算到期狀態）
+    const now = new Date();
+    const utcOffset = now.getTimezoneOffset();
+    const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+    // 渲染標準表格（包裹在可滾動容器中）
     let html = `
-        <table class="mappings-table">
-            <thead>
-                <tr>
-                    <th class="drag-handle-header"></th>
-                    <th>商家</th>
-                    <th>卡片名稱</th>
-                    <th class="rate-column">回饋率</th>
-                    <th class="delete-column"></th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="mappings-table-wrapper">
+            <table class="mappings-table">
+                <thead>
+                    <tr>
+                        <th class="drag-handle-header"></th>
+                        <th>商家</th>
+                        <th>卡片名稱</th>
+                        <th class="rate-column">回饋率</th>
+                        <th class="expiry-column">活動到期日</th>
+                        <th class="delete-column"></th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
     filteredMappings.forEach((mapping, index) => {
         const merchant = optimizeMerchantName(mapping.merchant);
+
+        // 計算活動到期日顯示
+        let expiryDisplay = '—';  // 預設顯示破折號
+        let expiryClass = '';
+        let foundPeriod = null;
+
+        // 如果 mapping 沒有 periodEnd，嘗試從 cardsData 中查找
+        if (!mapping.periodEnd) {
+            foundPeriod = findActivityPeriod(mapping.cardId, mapping.merchant);
+            if (foundPeriod && foundPeriod.periodEnd) {
+                mapping.periodEnd = foundPeriod.periodEnd;
+                mapping.periodStart = foundPeriod.periodStart;
+
+                // 在背景異步更新到 Firestore/localStorage
+                setTimeout(() => {
+                    saveSpendingMappings(userSpendingMappings).catch(err => {
+                        console.warn('⚠️ 背景更新 mapping periodEnd 失敗:', err);
+                    });
+                }, 100);
+            }
+        }
+
+        if (mapping.periodEnd) {
+            try {
+                const endParts = mapping.periodEnd.split('/').map(p => parseInt(p));
+                const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+                const diffTime = endDate - taiwanTime;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < 0) {
+                    // 已過期：紅色文字
+                    expiryDisplay = `${mapping.periodEnd} (已過期)`;
+                    expiryClass = 'expired';
+                } else {
+                    // 未過期：只顯示日期
+                    expiryDisplay = mapping.periodEnd;
+                }
+            } catch (error) {
+                console.error('❌ Date parsing error:', error, { periodEnd: mapping.periodEnd });
+                expiryDisplay = mapping.periodEnd;  // 解析失敗時直接顯示原始日期
+            }
+        }
+
         html += `
             <tr class="mapping-row"
                 draggable="true"
@@ -5330,6 +5437,7 @@ function renderMappingsList(searchTerm = '') {
                 <td class="merchant-cell">${merchant}</td>
                 <td class="card-cell">${mapping.cardName}</td>
                 <td class="rate-cell">${mapping.cashbackRate}%</td>
+                <td class="expiry-cell ${expiryClass}">${expiryDisplay}</td>
                 <td class="delete-cell">
                     <button class="mapping-delete-btn"
                             data-mapping-id="${mapping.id}"
@@ -5340,8 +5448,9 @@ function renderMappingsList(searchTerm = '') {
     });
 
     html += `
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     `;
 
     mappingsList.innerHTML = html;
