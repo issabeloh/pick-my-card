@@ -5226,6 +5226,57 @@ function optimizeMerchantName(merchant) {
     return merchant;
 }
 
+// 輔助函數：從 cardsData 中查找活動的到期日
+function findActivityPeriod(cardId, merchant) {
+    const card = cardsData?.cards.find(c => c.id === cardId);
+    if (!card) return null;
+
+    const merchantLower = merchant.toLowerCase();
+
+    // 搜尋 cashbackRates
+    if (card.cashbackRates) {
+        for (const rate of card.cashbackRates) {
+            if (rate.items) {
+                for (const item of rate.items) {
+                    if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                        return {
+                            periodEnd: rate.periodEnd || null,
+                            periodStart: rate.periodStart || null
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // 搜尋 specialItems
+    if (card.specialItems) {
+        for (const item of card.specialItems) {
+            if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                // specialItems 通常沒有獨立的 period，使用 card 層級的
+                return {
+                    periodEnd: null,
+                    periodStart: null
+                };
+            }
+        }
+    }
+
+    // 搜尋 generalItems (CUBE 卡)
+    if (card.generalItems) {
+        for (const item of card.generalItems) {
+            if (item.toLowerCase().includes(merchantLower) || merchantLower.includes(item.toLowerCase())) {
+                return {
+                    periodEnd: null,
+                    periodStart: null
+                };
+            }
+        }
+    }
+
+    return null;
+}
+
 // 打開我的配卡表 Modal
 async function openMyMappingsModal() {
     const modal = document.getElementById('my-mappings-modal');
@@ -5334,6 +5385,23 @@ function renderMappingsList(searchTerm = '') {
         // 計算活動到期日顯示
         let expiryDisplay = '—';  // 預設顯示破折號
         let expiryClass = '';
+        let foundPeriod = null;
+
+        // 如果 mapping 沒有 periodEnd，嘗試從 cardsData 中查找
+        if (!mapping.periodEnd) {
+            foundPeriod = findActivityPeriod(mapping.cardId, mapping.merchant);
+            if (foundPeriod && foundPeriod.periodEnd) {
+                mapping.periodEnd = foundPeriod.periodEnd;
+                mapping.periodStart = foundPeriod.periodStart;
+
+                // 在背景異步更新到 Firestore/localStorage
+                setTimeout(() => {
+                    saveSpendingMappings(userSpendingMappings).catch(err => {
+                        console.warn('⚠️ 背景更新 mapping periodEnd 失敗:', err);
+                    });
+                }, 100);
+            }
+        }
 
         if (mapping.periodEnd) {
             try {
