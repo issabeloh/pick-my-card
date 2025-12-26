@@ -3010,6 +3010,23 @@ input[type="number"]:focus {
     .mappings-table {
         min-width: 650px;
     }
+
+    /* Adjust column widths for mobile */
+    .mappings-table th.merchant-column {
+        width: 70px;
+    }
+
+    .mappings-table th.card-name-column {
+        width: 70px;
+    }
+
+    .mappings-table th.rate-column {
+        width: 40px;
+    }
+
+    .mappings-table th.expiry-column {
+        width: 80px;
+    }
 }
 
 /* Drag and drop states */

@@ -5329,6 +5329,10 @@ function renderMappingsList(searchTerm = '') {
     const mappingsList = document.getElementById('mappings-list');
     if (!mappingsList) return;
 
+    // 保存當前滾動位置（用於排序後恢復）
+    const existingWrapper = mappingsList.querySelector('.mappings-table-wrapper');
+    const savedScrollLeft = existingWrapper ? existingWrapper.scrollLeft : 0;
+
     // 篩選
     let filteredMappings = userSpendingMappings;
     if (searchTerm) {
@@ -5488,6 +5492,15 @@ function renderMappingsList(searchTerm = '') {
     `;
 
     mappingsList.innerHTML = html;
+
+    // 恢復滾動位置
+    const newWrapper = mappingsList.querySelector('.mappings-table-wrapper');
+    if (newWrapper && savedScrollLeft > 0) {
+        // 使用 setTimeout 確保 DOM 已完全渲染
+        setTimeout(() => {
+            newWrapper.scrollLeft = savedScrollLeft;
+        }, 0);
+    }
 
     // 綁定排序按鈕
     mappingsList.querySelectorAll('th.sortable').forEach(th => {
