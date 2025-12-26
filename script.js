@@ -4405,34 +4405,6 @@ basicCashbackDiv.innerHTML = basicContent;
         saveUserNotes(card.id, currentNotes);
     };
 
-    // Load and setup card expiry date
-    const expiryInput = document.getElementById('card-expiry-input');
-    const expiryBtn = document.getElementById('save-expiry-btn');
-    let lastSavedExpiry = '';
-
-    // 讀取當前到期日
-    loadCardExpiry(card.id).then(expiry => {
-        expiryInput.value = expiry;
-        lastSavedExpiry = expiry;
-    });
-
-    // 設置輸入監聽
-    expiryInput.oninput = (e) => {
-        const expiry = e.target.value;
-        // 只有當值改變時才啟用儲存按鈕
-        expiryBtn.disabled = (expiry === lastSavedExpiry);
-    };
-
-    // 設置儲存按鈕監聽
-    expiryBtn.onclick = async () => {
-        const currentExpiry = expiryInput.value;
-        const success = await saveCardExpiry(card.id, currentExpiry);
-        if (success) {
-            lastSavedExpiry = currentExpiry;
-            expiryBtn.disabled = true;
-        }
-    };
-
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
     
@@ -4950,101 +4922,6 @@ async function saveUserNotes(cardId, notes) {
 }
 
 // ============================================
-// 卡片到期日功能
-// ============================================
-
-// 載入卡片到期日
-async function loadCardExpiry(cardId) {
-    const cacheKey = auth.currentUser ? `expiry_${auth.currentUser.uid}_${cardId}` : `expiry_${cardId}`;
-
-    if (!auth.currentUser) {
-        return localStorage.getItem(cacheKey) || '';
-    }
-
-    try {
-        const docRef = window.doc ? window.doc(db, 'cardExpiry', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.getDoc) throw new Error('Firestore not available');
-        const docSnap = await window.getDoc(docRef);
-        const expiry = docSnap.exists() ? docSnap.data().expiry : '';
-
-        // 更新本地快取
-        localStorage.setItem(cacheKey, expiry);
-
-        return expiry;
-    } catch (error) {
-        console.log('讀取卡片到期日失敗，使用本地快取:', error);
-        return localStorage.getItem(cacheKey) || '';
-    }
-}
-
-// 儲存卡片到期日
-async function saveCardExpiry(cardId, expiry) {
-    const saveBtn = document.getElementById('save-expiry-btn');
-    const saveIndicator = document.getElementById('expiry-save-indicator');
-
-    const cacheKey = auth.currentUser ? `expiry_${auth.currentUser.uid}_${cardId}` : `expiry_${cardId}`;
-
-    if (!auth.currentUser) {
-        // 未登入時僅儲存在本地
-        localStorage.setItem(cacheKey, expiry);
-
-        // 更新按鈕狀態
-        saveBtn.disabled = true;
-        saveIndicator.textContent = '已儲存在本地 (未登入)';
-        saveIndicator.style.color = '#6b7280';
-        return true;
-    }
-
-    try {
-        // 更新按鈕為儲存中狀態
-        saveBtn.disabled = true;
-        saveIndicator.textContent = '儲存中...';
-        saveIndicator.style.color = '#6b7280';
-
-        const docRef = window.doc ? window.doc(db, 'cardExpiry', `${auth.currentUser.uid}_${cardId}`) : null;
-        if (!docRef || !window.setDoc) throw new Error('Firestore not available');
-        await window.setDoc(docRef, {
-            expiry: expiry,
-            updatedAt: new Date(),
-            cardId: cardId
-        });
-
-        // 也儲存在本地作為快取
-        localStorage.setItem(cacheKey, expiry);
-
-        // 成功狀態
-        saveIndicator.textContent = '✓ 雲端同步成功';
-        saveIndicator.style.color = '#10b981';
-
-        // 2秒後恢復正常狀態
-        setTimeout(() => {
-            saveBtn.disabled = true;
-            saveIndicator.textContent = '';
-        }, 2000);
-
-        return true;
-
-    } catch (error) {
-        console.error('雲端儲存失敗:', error);
-
-        // 失敗時仍然儲存在本地
-        localStorage.setItem(cacheKey, expiry);
-
-        // 錯誤狀態
-        saveBtn.disabled = false;
-        saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
-        saveIndicator.style.color = '#dc2626';
-
-        // 5秒後恢復
-        setTimeout(() => {
-            saveIndicator.textContent = '';
-        }, 5000);
-
-        return false;
-    }
-}
-
-// ============================================
 // 消費配卡表功能
 // ============================================
 
@@ -5429,13 +5306,35 @@ function renderMappingsList(searchTerm = '') {
     // 按 order 排序（用戶自訂順序）
     filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 計算最近的到期日（從所有 mappings，不只是 filteredMappings）
-    let nearestExpiryInfo = null;
+    // 取得目前台灣時間（用於計算到期狀態）
     const now = new Date();
     const utcOffset = now.getTimezoneOffset();
     const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
 
-    for (const mapping of userSpendingMappings) {
+    // 渲染標準表格（包裹在可滾動容器中）
+    let html = `
+        <div class="mappings-table-wrapper">
+            <table class="mappings-table">
+                <thead>
+                    <tr>
+                        <th class="drag-handle-header"></th>
+                        <th>商家</th>
+                        <th>卡片名稱</th>
+                        <th class="rate-column">回饋率</th>
+                        <th class="expiry-column">活動到期日</th>
+                        <th class="delete-column"></th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    filteredMappings.forEach((mapping, index) => {
+        const merchant = optimizeMerchantName(mapping.merchant);
+
+        // 計算活動到期日顯示
+        let expiryDisplay = '—';  // 預設顯示破折號
+        let expiryClass = '';
+
         if (mapping.periodEnd) {
             try {
                 const endParts = mapping.periodEnd.split('/').map(p => parseInt(p));
@@ -5443,79 +5342,20 @@ function renderMappingsList(searchTerm = '') {
                 const diffTime = endDate - taiwanTime;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                // 如果活動已過期（但在 7 天內），或尚未過期
-                if (diffDays >= -7) {
-                    if (!nearestExpiryInfo || Math.abs(diffDays) < Math.abs(nearestExpiryInfo.daysUntil)) {
-                        nearestExpiryInfo = {
-                            cardName: mapping.cardName,
-                            merchant: mapping.merchant,
-                            periodEnd: mapping.periodEnd,
-                            daysUntil: diffDays,
-                            isExpired: diffDays < 0
-                        };
-                    }
+                if (diffDays < 0) {
+                    // 已過期：紅色文字
+                    expiryDisplay = `${mapping.periodEnd} (已過期)`;
+                    expiryClass = 'expired';
+                } else {
+                    // 未過期：只顯示日期
+                    expiryDisplay = mapping.periodEnd;
                 }
             } catch (error) {
                 console.error('❌ Date parsing error:', error, { periodEnd: mapping.periodEnd });
+                expiryDisplay = mapping.periodEnd;  // 解析失敗時直接顯示原始日期
             }
         }
-    }
 
-    // 渲染到期日資訊區塊
-    let expiryInfoHtml = '';
-    if (nearestExpiryInfo) {
-        const { cardName, merchant, periodEnd, daysUntil, isExpired } = nearestExpiryInfo;
-        const merchantName = optimizeMerchantName(merchant);
-
-        if (isExpired) {
-            expiryInfoHtml = `
-                <div class="expiry-info expired" style="background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; color: #dc2626; font-weight: 500;">
-                        <span>⚠️</span>
-                        <span>${cardName} - ${merchantName} 活動已過期</span>
-                    </div>
-                    <div style="font-size: 12px; color: #991b1b; margin-top: 4px;">
-                        到期日：${periodEnd} (${Math.abs(daysUntil)} 天前)
-                    </div>
-                </div>
-            `;
-        } else {
-            const urgencyClass = daysUntil <= 7 ? 'urgent' : daysUntil <= 30 ? 'warning' : 'normal';
-            const bgColor = daysUntil <= 7 ? '#fef2f2' : daysUntil <= 30 ? '#fffbeb' : '#f0f9ff';
-            const borderColor = daysUntil <= 7 ? '#fecaca' : daysUntil <= 30 ? '#fde68a' : '#bfdbfe';
-            const textColor = daysUntil <= 7 ? '#dc2626' : daysUntil <= 30 ? '#d97706' : '#2563eb';
-
-            expiryInfoHtml = `
-                <div class="expiry-info ${urgencyClass}" style="background: ${bgColor}; border: 1px solid ${borderColor}; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px; color: ${textColor}; font-weight: 500;">
-                        <span>📅</span>
-                        <span>最近到期活動：${cardName} - ${merchantName}</span>
-                    </div>
-                    <div style="font-size: 12px; color: ${textColor}; margin-top: 4px;">
-                        到期日：${periodEnd} (剩 ${daysUntil} 天)
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    // 渲染標準表格
-    let html = expiryInfoHtml + `
-        <table class="mappings-table">
-            <thead>
-                <tr>
-                    <th class="drag-handle-header"></th>
-                    <th>商家</th>
-                    <th>卡片名稱</th>
-                    <th class="rate-column">回饋率</th>
-                    <th class="delete-column"></th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    filteredMappings.forEach((mapping, index) => {
-        const merchant = optimizeMerchantName(mapping.merchant);
         html += `
             <tr class="mapping-row"
                 draggable="true"
@@ -5529,6 +5369,7 @@ function renderMappingsList(searchTerm = '') {
                 <td class="merchant-cell">${merchant}</td>
                 <td class="card-cell">${mapping.cardName}</td>
                 <td class="rate-cell">${mapping.cashbackRate}%</td>
+                <td class="expiry-cell ${expiryClass}">${expiryDisplay}</td>
                 <td class="delete-cell">
                     <button class="mapping-delete-btn"
                             data-mapping-id="${mapping.id}"
@@ -5539,8 +5380,9 @@ function renderMappingsList(searchTerm = '') {
     });
 
     html += `
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     `;
 
     mappingsList.innerHTML = html;
