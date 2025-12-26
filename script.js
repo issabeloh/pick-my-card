@@ -5319,6 +5319,12 @@ async function openMyMappingsModal() {
 }
 
 // 渲染配卡表清單（標準表格式，支援拖曳排序）
+// 排序狀態
+let mappingsSortConfig = {
+    column: null,  // null, 'rate', 'expiry'
+    direction: 'asc'  // 'asc' or 'desc'
+};
+
 function renderMappingsList(searchTerm = '') {
     const mappingsList = document.getElementById('mappings-list');
     if (!mappingsList) return;
@@ -5354,13 +5360,41 @@ function renderMappingsList(searchTerm = '') {
         }
     });
 
-    // 按 order 排序（用戶自訂順序）
-    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
+    // 排序邏輯
+    if (mappingsSortConfig.column === 'rate') {
+        // 按回饋率排序
+        filteredMappings.sort((a, b) => {
+            const rateA = parseFloat(a.cashbackRate) || 0;
+            const rateB = parseFloat(b.cashbackRate) || 0;
+            return mappingsSortConfig.direction === 'asc' ? rateA - rateB : rateB - rateA;
+        });
+    } else if (mappingsSortConfig.column === 'expiry') {
+        // 按活動到期日排序
+        filteredMappings.sort((a, b) => {
+            // 如果沒有到期日，放在最後
+            const dateA = a.periodEnd ? new Date(a.periodEnd.replace(/\//g, '-')) : new Date('9999-12-31');
+            const dateB = b.periodEnd ? new Date(b.periodEnd.replace(/\//g, '-')) : new Date('9999-12-31');
+            return mappingsSortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+    } else {
+        // 按 order 排序（用戶自訂順序）
+        filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
 
     // 取得目前台灣時間（用於計算到期狀態）
     const now = new Date();
     const utcOffset = now.getTimezoneOffset();
     const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+
+    // 排序指示器
+    const getSortIcon = (column) => {
+        if (mappingsSortConfig.column !== column) {
+            return '<span class="sort-icon">⇅</span>';
+        }
+        return mappingsSortConfig.direction === 'asc'
+            ? '<span class="sort-icon active">↑</span>'
+            : '<span class="sort-icon active">↓</span>';
+    };
 
     // 渲染標準表格（包裹在可滾動容器中）
     let html = `
@@ -5369,10 +5403,10 @@ function renderMappingsList(searchTerm = '') {
                 <thead>
                     <tr>
                         <th class="drag-handle-header"></th>
-                        <th>商家</th>
-                        <th>卡片名稱</th>
-                        <th class="rate-column">回饋率</th>
-                        <th class="expiry-column">活動到期日</th>
+                        <th class="merchant-column">商家</th>
+                        <th class="card-name-column">卡片名稱</th>
+                        <th class="rate-column sortable" data-sort="rate">回饋率 ${getSortIcon('rate')}</th>
+                        <th class="expiry-column sortable" data-sort="expiry">活動到期日 ${getSortIcon('expiry')}</th>
                         <th class="delete-column"></th>
                     </tr>
                 </thead>
@@ -5454,6 +5488,23 @@ function renderMappingsList(searchTerm = '') {
     `;
 
     mappingsList.innerHTML = html;
+
+    // 綁定排序按鈕
+    mappingsList.querySelectorAll('th.sortable').forEach(th => {
+        th.style.cursor = 'pointer';
+        th.onclick = () => {
+            const column = th.dataset.sort;
+            if (mappingsSortConfig.column === column) {
+                // 切換排序方向
+                mappingsSortConfig.direction = mappingsSortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                // 新欄位，預設升序
+                mappingsSortConfig.column = column;
+                mappingsSortConfig.direction = 'asc';
+            }
+            renderMappingsList(document.getElementById('mappings-search')?.value || '');
+        };
+    });
 
     // 綁定刪除按鈕
     mappingsList.querySelectorAll('.mapping-delete-btn').forEach(btn => {

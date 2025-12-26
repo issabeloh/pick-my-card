@@ -2892,9 +2892,38 @@ input[type="number"]:focus {
     padding: 12px 8px;
 }
 
+.mappings-table th.merchant-column {
+    width: 120px;
+}
+
+.mappings-table th.card-name-column {
+    width: 150px;
+}
+
 .mappings-table th.rate-column {
     width: 80px;
     text-align: right;
+}
+
+.mappings-table th.sortable {
+    user-select: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.mappings-table th.sortable:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mappings-table .sort-icon {
+    margin-left: 4px;
+    font-size: 12px;
+    opacity: 0.5;
+}
+
+.mappings-table .sort-icon.active {
+    opacity: 1;
+    font-weight: bold;
 }
 
 .mappings-table th.delete-column {
@@ -2946,7 +2975,7 @@ input[type="number"]:focus {
 }
 
 .mappings-table th.expiry-column {
-    width: 140px;
+    width: 100px;
     white-space: nowrap;
 }
 
