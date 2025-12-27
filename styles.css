@@ -3366,6 +3366,21 @@ input[type="number"]:focus {
     }
 }
 
+/* Loading state for card count */
+#card-count.loading {
+    display: inline-block;
+    animation: pulse-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-loading {
+    0%, 100% {
+        opacity: 0.4;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
     .my-mappings-floating-btn {
