@@ -140,23 +140,24 @@ header p {
 
 /* Announcement Bar */
 .announcement-bar {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    padding: 10px 20px;
-    margin-top: 12px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background: #f0f9ff;
+    padding: 6px 14px;
+    margin-top: 8px;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
 }
 
 .announcement-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     max-width: 100%;
 }
 
 .announcement-icon {
-    font-size: 1.2rem;
+    font-size: 0.95rem;
     flex-shrink: 0;
+    opacity: 0.8;
 }
 
 .announcement-text-wrapper {
@@ -168,8 +169,8 @@ header p {
 .announcement-text {
     color: #1e40af;
     text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 400;
     display: block;
     white-space: nowrap;
     overflow: hidden;
@@ -178,7 +179,7 @@ header p {
 }
 
 .announcement-text:hover {
-    opacity: 0.8;
+    opacity: 0.7;
     text-decoration: underline;
 }
 
@@ -194,37 +195,39 @@ header p {
 .announcement-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
 }
 
 .announcement-indicator {
-    color: #1e40af;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 10px;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 1px 5px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 8px;
 }
 
 .announcement-btn {
     background: none;
     border: none;
-    color: #1e40af;
-    font-size: 1.2rem;
+    color: #64748b;
+    font-size: 1rem;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.2s ease;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.2s ease;
     line-height: 1;
+    opacity: 0.7;
 }
 
 .announcement-btn:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(148, 163, 184, 0.15);
+    opacity: 1;
 }
 
 #announcement-close {
-    font-size: 1.4rem;
+    font-size: 1.1rem;
     font-weight: 300;
 }
 
@@ -1290,8 +1293,8 @@ input[type="number"]:focus {
 
     /* Announcement Bar Mobile */
     .announcement-bar {
-        padding: 8px 12px;
-        margin-top: 10px;
+        padding: 5px 10px;
+        margin-top: 6px;
     }
 
     .announcement-content {
@@ -1299,7 +1302,7 @@ input[type="number"]:focus {
     }
 
     .announcement-icon {
-        font-size: 1rem;
+        font-size: 0.85rem;
     }
 
     .announcement-text {
@@ -1311,17 +1314,17 @@ input[type="number"]:focus {
     }
 
     .announcement-indicator {
-        font-size: 0.7rem;
-        padding: 2px 4px;
+        font-size: 0.65rem;
+        padding: 1px 4px;
     }
 
     .announcement-btn {
-        font-size: 1rem;
+        font-size: 0.9rem;
         padding: 2px 4px;
     }
 
     #announcement-close {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
 
     .auth-section {

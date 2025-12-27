@@ -447,14 +447,6 @@ async function loadCardsData() {
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
-        console.log('🔍 Debug: cards.data loaded successfully at', new Date().toISOString());
-
-        // Debug: Check announcements data
-        console.log('📢 Debug: cardsData.announcements =', cardsData.announcements);
-        console.log('📢 Debug: announcements array length =', cardsData.announcements ? cardsData.announcements.length : 'undefined');
-        if (cardsData.announcements && cardsData.announcements.length > 0) {
-            console.log('📢 Debug: First announcement =', cardsData.announcements[0]);
-        }
 
         // Build search index for all cards
         let totalIndexedItems = 0;
@@ -801,27 +793,10 @@ let isAnnouncementPaused = false;
 
 // Initialize announcements from cardsData
 function initializeAnnouncements() {
-    console.log('📢 Debug: initializeAnnouncements() called');
-    console.log('📢 Debug: cardsData exists?', !!cardsData);
-    console.log('📢 Debug: cardsData.announcements exists?', !!(cardsData && cardsData.announcements));
-    console.log('📢 Debug: cardsData.announcements type:', cardsData && cardsData.announcements ? typeof cardsData.announcements : 'N/A');
-    console.log('📢 Debug: cardsData.announcements length:', cardsData && cardsData.announcements ? cardsData.announcements.length : 'N/A');
-
     if (cardsData && cardsData.announcements && cardsData.announcements.length > 0) {
         announcements = cardsData.announcements.slice(0, 5); // 限制最多 5 則
-        console.log(`📢 載入了 ${announcements.length} 則公告`);
-        console.log('📢 公告內容:', announcements);
-
-        if (announcements.length > 0) {
-            setupAnnouncementBar();
-            startAnnouncementRotation();
-        }
-    } else {
-        console.log('ℹ️ 沒有公告資料');
-        if (cardsData) {
-            console.log('⚠️ cardsData 存在但沒有 announcements 或 announcements 為空');
-            console.log('⚠️ cardsData 的所有 keys:', Object.keys(cardsData));
-        }
+        setupAnnouncementBar();
+        startAnnouncementRotation();
     }
 }
 
@@ -834,10 +809,7 @@ function setupAnnouncementBar() {
     const nextBtn = document.getElementById('announcement-next');
     const closeBtn = document.getElementById('announcement-close');
 
-    if (!announcementBar || !announcementText) {
-        console.warn('⚠️ 公告條元素未找到');
-        return;
-    }
+    if (!announcementBar || !announcementText) return;
 
     // Show announcement bar
     announcementBar.style.display = 'block';
