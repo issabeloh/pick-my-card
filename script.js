@@ -461,6 +461,7 @@ async function loadCardsData() {
         const cardCountElement = document.getElementById('card-count');
         if (cardCountElement) {
             cardCountElement.textContent = cardsData.cards.length;
+            cardCountElement.classList.remove('loading');
             console.log(`✅ 卡片數量已更新: ${cardsData.cards.length} 張`);
         } else {
             console.warn('⚠️ 找不到 card-count 元素');
