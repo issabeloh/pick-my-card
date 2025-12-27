@@ -138,6 +138,105 @@ header p {
     display: inline;
 }
 
+/* Announcement Bar */
+.announcement-bar {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    padding: 10px 20px;
+    margin-top: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.announcement-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 100%;
+}
+
+.announcement-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.announcement-text-wrapper {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.announcement-text {
+    color: #1e40af;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.3s ease;
+}
+
+.announcement-text:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.announcement-text.no-link {
+    cursor: default;
+}
+
+.announcement-text.no-link:hover {
+    opacity: 1;
+    text-decoration: none;
+}
+
+.announcement-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.announcement-indicator {
+    color: #1e40af;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+}
+
+.announcement-btn {
+    background: none;
+    border: none;
+    color: #1e40af;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+    line-height: 1;
+}
+
+.announcement-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+#announcement-close {
+    font-size: 1.4rem;
+    font-weight: 300;
+}
+
+/* Fade animation */
+.announcement-text.fade-out {
+    opacity: 0;
+}
+
+.announcement-text.fade-in {
+    opacity: 1;
+}
+
 /* Supported cards */
 .cards-header {
     display: flex;
@@ -1187,6 +1286,42 @@ input[type="number"]:focus {
 
     #subtitle .tool-info::before {
         content: "💳 ";
+    }
+
+    /* Announcement Bar Mobile */
+    .announcement-bar {
+        padding: 8px 12px;
+        margin-top: 10px;
+    }
+
+    .announcement-content {
+        gap: 8px;
+    }
+
+    .announcement-icon {
+        font-size: 1rem;
+    }
+
+    .announcement-text {
+        font-size: 0.8rem;
+    }
+
+    .announcement-controls {
+        gap: 4px;
+    }
+
+    .announcement-indicator {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+    }
+
+    .announcement-btn {
+        font-size: 1rem;
+        padding: 2px 4px;
+    }
+
+    #announcement-close {
+        font-size: 1.2rem;
     }
 
     .auth-section {

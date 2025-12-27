@@ -34,9 +34,6 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <!-- Preload critical resources -->
-    <link rel="preload" href="cards.data" as="fetch" crossorigin="anonymous">
-
     <!-- iOS Home Screen Icons -->
     <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
     <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard.png">
@@ -122,6 +119,23 @@
                     <button id="sign-in-btn" class="auth-btn primary">登入</button>
                 </div>
             </div>
+
+            <!-- Announcement Bar -->
+            <div class="announcement-bar" id="announcement-bar" style="display: none;">
+                <div class="announcement-content">
+                    <span class="announcement-icon">📢</span>
+                    <div class="announcement-text-wrapper">
+                        <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
+                    </div>
+                    <div class="announcement-controls">
+                        <span class="announcement-indicator" id="announcement-indicator"></span>
+                        <button class="announcement-btn" id="announcement-prev" title="上一則" aria-label="上一則公告">‹</button>
+                        <button class="announcement-btn" id="announcement-next" title="下一則" aria-label="下一則公告">›</button>
+                        <button class="announcement-btn" id="announcement-close" title="關閉" aria-label="關閉公告">×</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="supported-cards" id="supported-cards" style="display: none;">
                 <div class="cards-header">
                     <p>我的信用卡卡夾：</p>

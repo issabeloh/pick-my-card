@@ -449,6 +449,13 @@ async function loadCardsData() {
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         console.log('🔍 Debug: cards.data loaded successfully at', new Date().toISOString());
 
+        // Debug: Check announcements data
+        console.log('📢 Debug: cardsData.announcements =', cardsData.announcements);
+        console.log('📢 Debug: announcements array length =', cardsData.announcements ? cardsData.announcements.length : 'undefined');
+        if (cardsData.announcements && cardsData.announcements.length > 0) {
+            console.log('📢 Debug: First announcement =', cardsData.announcements[0]);
+        }
+
         // Build search index for all cards
         let totalIndexedItems = 0;
         cardsData.cards.forEach(card => {
@@ -783,6 +790,196 @@ const couponResultsSection = document.getElementById('coupon-results-section');
 const couponResultsContainer = document.getElementById('coupon-results-container');
 const matchedItemDiv = document.getElementById('matched-item');
 
+// ==========================================
+// Announcement Bar System
+// ==========================================
+
+let announcements = [];
+let currentAnnouncementIndex = 0;
+let announcementInterval = null;
+let isAnnouncementPaused = false;
+
+// Initialize announcements from cardsData
+function initializeAnnouncements() {
+    console.log('📢 Debug: initializeAnnouncements() called');
+    console.log('📢 Debug: cardsData exists?', !!cardsData);
+    console.log('📢 Debug: cardsData.announcements exists?', !!(cardsData && cardsData.announcements));
+    console.log('📢 Debug: cardsData.announcements type:', cardsData && cardsData.announcements ? typeof cardsData.announcements : 'N/A');
+    console.log('📢 Debug: cardsData.announcements length:', cardsData && cardsData.announcements ? cardsData.announcements.length : 'N/A');
+
+    if (cardsData && cardsData.announcements && cardsData.announcements.length > 0) {
+        announcements = cardsData.announcements.slice(0, 5); // 限制最多 5 則
+        console.log(`📢 載入了 ${announcements.length} 則公告`);
+        console.log('📢 公告內容:', announcements);
+
+        if (announcements.length > 0) {
+            setupAnnouncementBar();
+            startAnnouncementRotation();
+        }
+    } else {
+        console.log('ℹ️ 沒有公告資料');
+        if (cardsData) {
+            console.log('⚠️ cardsData 存在但沒有 announcements 或 announcements 為空');
+            console.log('⚠️ cardsData 的所有 keys:', Object.keys(cardsData));
+        }
+    }
+}
+
+// Setup announcement bar UI and event listeners
+function setupAnnouncementBar() {
+    const announcementBar = document.getElementById('announcement-bar');
+    const announcementText = document.getElementById('announcement-text');
+    const announcementIndicator = document.getElementById('announcement-indicator');
+    const prevBtn = document.getElementById('announcement-prev');
+    const nextBtn = document.getElementById('announcement-next');
+    const closeBtn = document.getElementById('announcement-close');
+
+    if (!announcementBar || !announcementText) {
+        console.warn('⚠️ 公告條元素未找到');
+        return;
+    }
+
+    // Show announcement bar
+    announcementBar.style.display = 'block';
+
+    // Display first announcement
+    displayAnnouncement(0);
+
+    // Event listeners
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            showPreviousAnnouncement();
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            showNextAnnouncement();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            closeAnnouncementBar();
+        });
+    }
+
+    // Pause on hover, resume on mouse leave
+    announcementBar.addEventListener('mouseenter', () => {
+        pauseAnnouncementRotation();
+    });
+
+    announcementBar.addEventListener('mouseleave', () => {
+        resumeAnnouncementRotation();
+    });
+
+    // Click on text to pause/resume
+    announcementText.addEventListener('click', (e) => {
+        const announcement = announcements[currentAnnouncementIndex];
+        if (!announcement.link) {
+            e.preventDefault();
+            toggleAnnouncementPause();
+        }
+    });
+}
+
+// Display announcement by index
+function displayAnnouncement(index) {
+    const announcementText = document.getElementById('announcement-text');
+    const announcementIndicator = document.getElementById('announcement-indicator');
+
+    if (!announcementText || !announcements[index]) return;
+
+    const announcement = announcements[index];
+
+    // Fade out
+    announcementText.classList.add('fade-out');
+
+    setTimeout(() => {
+        // Update content
+        announcementText.textContent = announcement.text;
+
+        // Update link
+        if (announcement.link) {
+            announcementText.href = announcement.link;
+            announcementText.classList.remove('no-link');
+        } else {
+            announcementText.href = '#';
+            announcementText.classList.add('no-link');
+        }
+
+        // Update indicator
+        if (announcementIndicator && announcements.length > 1) {
+            announcementIndicator.textContent = `${index + 1}/${announcements.length}`;
+        }
+
+        // Fade in
+        announcementText.classList.remove('fade-out');
+        announcementText.classList.add('fade-in');
+    }, 150);
+
+    currentAnnouncementIndex = index;
+}
+
+// Show next announcement
+function showNextAnnouncement() {
+    const nextIndex = (currentAnnouncementIndex + 1) % announcements.length;
+    displayAnnouncement(nextIndex);
+    resetAnnouncementRotation();
+}
+
+// Show previous announcement
+function showPreviousAnnouncement() {
+    const prevIndex = (currentAnnouncementIndex - 1 + announcements.length) % announcements.length;
+    displayAnnouncement(prevIndex);
+    resetAnnouncementRotation();
+}
+
+// Start automatic rotation
+function startAnnouncementRotation() {
+    if (announcements.length <= 1) return;
+
+    announcementInterval = setInterval(() => {
+        if (!isAnnouncementPaused) {
+            showNextAnnouncement();
+        }
+    }, 6000); // 每 6 秒切換一次
+}
+
+// Pause rotation
+function pauseAnnouncementRotation() {
+    isAnnouncementPaused = true;
+}
+
+// Resume rotation
+function resumeAnnouncementRotation() {
+    isAnnouncementPaused = false;
+}
+
+// Toggle pause state
+function toggleAnnouncementPause() {
+    isAnnouncementPaused = !isAnnouncementPaused;
+}
+
+// Reset rotation timer
+function resetAnnouncementRotation() {
+    if (announcementInterval) {
+        clearInterval(announcementInterval);
+        startAnnouncementRotation();
+    }
+}
+
+// Close announcement bar
+function closeAnnouncementBar() {
+    const announcementBar = document.getElementById('announcement-bar');
+    if (announcementBar) {
+        announcementBar.style.display = 'none';
+    }
+    if (announcementInterval) {
+        clearInterval(announcementInterval);
+    }
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 應用程式初始化開始...', new Date().toISOString());
@@ -802,6 +999,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initialize quick search options (async)
     await initializeQuickSearchOptions();
+
+    // Initialize announcements
+    initializeAnnouncements();
 
     console.log('🎨 填充卡片和支付選項...');
     populateCardChips();
