@@ -42,6 +42,7 @@
 
     <!-- iOS Web App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="信用卡回饋大師">
 
@@ -123,7 +124,10 @@
             <!-- Announcement Bar -->
             <div class="announcement-bar" id="announcement-bar" style="display: none;">
                 <div class="announcement-content">
-                    <span class="announcement-icon">📢</span>
+                    <svg class="announcement-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 11l18-5v12L3 13v-2z"></path>
+                        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
+                    </svg>
                     <div class="announcement-text-wrapper">
                         <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
                     </div>

@@ -156,8 +156,10 @@ header p {
 }
 
 .announcement-icon {
-    font-size: 0.95rem;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+    color: #e0f2fe;
 }
 
 .announcement-text-wrapper {
@@ -1299,7 +1301,8 @@ input[type="number"]:focus {
     }
 
     .announcement-icon {
-        font-size: 0.85rem;
+        width: 14px;
+        height: 14px;
         margin-top: 2px;
     }
 
