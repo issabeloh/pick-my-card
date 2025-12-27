@@ -429,8 +429,15 @@ function buildCardItemsIndex(card) {
 async function loadCardsData() {
     try {
         const timestamp = new Date().getTime(); // 防止快取
-        const response = await fetch(`cards.data?t=${timestamp}`);
-        
+        const response = await fetch(`cards.data?t=${timestamp}`, {
+            cache: 'no-store', // 強制不使用快取
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -447,6 +454,8 @@ async function loadCardsData() {
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
+        console.log(`📢 公告數量: ${cardsData.announcements ? cardsData.announcements.length : 0} 則`);
+        console.log(`📦 檔案大小: ${Math.round(encoded.length / 1024)} KB (載入時間: ${new Date().toLocaleTimeString()})`);
 
         // Build search index for all cards
         let totalIndexedItems = 0;

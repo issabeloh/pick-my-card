@@ -140,12 +140,11 @@ header p {
 
 /* Announcement Bar */
 .announcement-bar {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     padding: 8px 16px;
     margin-top: 8px;
     margin-bottom: 16px;
     border-radius: 6px;
-    border-left: 3px solid #60a5fa;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -201,12 +200,7 @@ header p {
 }
 
 .announcement-indicator {
-    color: #cbd5e1;
-    font-size: 0.7rem;
-    font-weight: 500;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    display: none;
 }
 
 .announcement-btn {
