@@ -140,12 +140,11 @@ header p {
 
 /* Announcement Bar */
 .announcement-bar {
-    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
     padding: 8px 16px;
     margin-top: 8px;
     margin-bottom: 16px;
     border-radius: 6px;
-    border-left: 3px solid #60a5fa;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -157,8 +156,10 @@ header p {
 }
 
 .announcement-icon {
-    font-size: 0.95rem;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+    color: #e0f2fe;
 }
 
 .announcement-text-wrapper {
@@ -201,12 +202,7 @@ header p {
 }
 
 .announcement-indicator {
-    color: #cbd5e1;
-    font-size: 0.7rem;
-    font-weight: 500;
-    padding: 2px 6px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    display: none;
 }
 
 .announcement-btn {
@@ -1305,7 +1301,8 @@ input[type="number"]:focus {
     }
 
     .announcement-icon {
-        font-size: 0.85rem;
+        width: 14px;
+        height: 14px;
         margin-top: 2px;
     }
 
