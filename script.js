@@ -3847,8 +3847,8 @@ basicCashbackDiv.innerHTML = basicContent;
         const savedLevelData = card.levelSettings[savedLevel];
         const levelNoteText = savedLevelData['level-note'] || '';
         const levelNote = levelNoteText
-            ? `<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;">${levelNoteText}</div>`
-            : '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;"></div>';
+            ? `<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
+            : '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>';
 
         // Generate level rates info
         let levelRatesInfo = '';
