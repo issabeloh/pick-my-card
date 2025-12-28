@@ -3843,17 +3843,12 @@ basicCashbackDiv.innerHTML = basicContent;
         const defaultLevel = levelNames[0];
         const savedLevel = await getCardLevel(card.id, defaultLevel);
 
-        // Generate level selector HTML with note
-        let levelNote = '';
-        if (card.id === 'dbs-eco') {
-            if (savedLevel === '精選卡友') {
-                levelNote = '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;">需同時持有星展帳戶且資產達NT$30萬連續4個月</div>';
-            } else if (savedLevel === '豐盛理財客戶/豐盛理財私人客戶') {
-                levelNote = '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;">需星展總資產達NT$300萬/NT$3000萬連續4個月</div>';
-            } else {
-                levelNote = '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;"></div>';
-            }
-        }
+        // Generate level selector HTML with note (通用支援)
+        const savedLevelData = card.levelSettings[savedLevel];
+        const levelNoteText = savedLevelData['level-note'] || '';
+        const levelNote = levelNoteText
+            ? `<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;">${levelNoteText}</div>`
+            : '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px;"></div>';
 
         // Generate level rates info
         let levelRatesInfo = '';
@@ -3909,18 +3904,12 @@ basicCashbackDiv.innerHTML = basicContent;
         // Add change listener
         const levelSelect = document.getElementById('card-level-select');
         levelSelect.onchange = async function() {
-            // Update level note for DBS Eco card
-            if (card.id === 'dbs-eco') {
-                const levelNoteElement = document.getElementById('level-note');
-                if (levelNoteElement) {
-                    if (this.value === '精選卡友') {
-                        levelNoteElement.textContent = '需同時持有星展帳戶且資產達NT$30萬連續4個月';
-                    } else if (this.value === '豐盛理財客戶/豐盛理財私人客戶') {
-                        levelNoteElement.textContent = '需星展總資產達NT$300萬/NT$3000萬連續4個月';
-                    } else {
-                        levelNoteElement.textContent = '';
-                    }
-                }
+            // Update level note (通用支援所有卡片)
+            const levelNoteElement = document.getElementById('level-note');
+            if (levelNoteElement) {
+                const selectedLevelData = card.levelSettings[this.value];
+                const noteText = selectedLevelData['level-note'] || '';
+                levelNoteElement.textContent = noteText;
             }
 
             await saveCardLevel(card.id, this.value);
