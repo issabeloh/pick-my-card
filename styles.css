@@ -224,8 +224,7 @@ header p {
 }
 
 #announcement-close {
-    font-size: 1.1rem;
-    font-weight: 300;
+    display: none;
 }
 
 /* Fade animation */
@@ -1307,7 +1306,7 @@ input[type="number"]:focus {
     }
 
     .announcement-text {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
         white-space: normal;
         display: -webkit-box;
         -webkit-line-clamp: 2;
