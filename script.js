@@ -3883,7 +3883,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
         let levelSelectorHTML = `
             <div class="level-selector" style="margin-bottom: 16px; display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
-                <div style="flex-shrink: 0;">
+                <div style="flex: 1; min-width: 0;">
                     <div>
                         <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
                         <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
