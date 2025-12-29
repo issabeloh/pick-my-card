@@ -246,8 +246,31 @@ header p {
     font-size: 0.95rem;
     line-height: 1.6;
     color: #374151;
-    white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+.announcement-modal-content .modal-body strong {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.announcement-modal-content .modal-body ul,
+.announcement-modal-content .modal-body ol {
+    margin: 8px 0;
+    padding-left: 24px;
+}
+
+.announcement-modal-content .modal-body li {
+    margin: 4px 0;
+}
+
+.announcement-modal-content .modal-body p {
+    margin: 8px 0;
+}
+
+.announcement-modal-content .modal-body a {
+    color: #2563eb;
+    text-decoration: underline;
 }
 
 .announcement-modal-content .modal-footer {
