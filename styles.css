@@ -241,6 +241,16 @@ header p {
     max-width: 500px;
 }
 
+.announcement-modal-close {
+    font-size: 32px;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .announcement-modal-content .modal-body {
     padding: 20px;
     font-size: 0.95rem;
