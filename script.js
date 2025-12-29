@@ -869,7 +869,7 @@ function showAnnouncementModal(index) {
     const modal = document.getElementById('announcement-modal');
     const modalBody = document.getElementById('announcement-modal-body');
     const modalLink = document.getElementById('announcement-modal-link');
-    const modalCloseBtn = document.getElementById('announcement-modal-close-btn');
+    const modalCloseX = document.getElementById('announcement-modal-close');
 
     if (!modal || !modalBody) return;
 
@@ -895,7 +895,7 @@ function showAnnouncementModal(index) {
         modal.style.display = 'none';
     };
 
-    modalCloseBtn.onclick = closeModal;
+    if (modalCloseX) modalCloseX.onclick = closeModal;
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
