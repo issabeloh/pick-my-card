@@ -873,14 +873,11 @@ function showAnnouncementModal(index) {
 
     if (!modal || !modalBody) return;
 
-    // Get fullText (limit to 150 characters)
-    let fullText = announcement.fullText || announcement.text;
-    if (fullText.length > 150) {
-        fullText = fullText.substring(0, 150) + '...';
-    }
+    // Get fullText and display with HTML support
+    const fullText = announcement.fullText || announcement.text;
 
-    // Update modal content
-    modalBody.textContent = fullText;
+    // Update modal content with HTML support (no truncation)
+    modalBody.innerHTML = fullText;
 
     // Show/hide link button
     if (announcement.link) {
