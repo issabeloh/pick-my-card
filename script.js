@@ -873,21 +873,10 @@ function showAnnouncementModal(index) {
 
     if (!modal || !modalBody) return;
 
-    // Get fullText (limit to 150 characters of plain text, not counting HTML tags)
-    let fullText = announcement.fullText || announcement.text;
+    // Get fullText and display with HTML support
+    const fullText = announcement.fullText || announcement.text;
 
-    // Check plain text length (strip HTML tags for counting)
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = fullText;
-    const plainTextLength = tempDiv.textContent.length;
-
-    if (plainTextLength > 150) {
-        // Truncate plain text to 150 chars (this is approximate with HTML)
-        tempDiv.textContent = tempDiv.textContent.substring(0, 150) + '...';
-        fullText = tempDiv.textContent;
-    }
-
-    // Update modal content with HTML support
+    // Update modal content with HTML support (no truncation)
     modalBody.innerHTML = fullText;
 
     // Show/hide link button
