@@ -876,8 +876,20 @@ function showAnnouncementModal(index) {
     // Get fullText and display with HTML support
     const fullText = announcement.fullText || announcement.text;
 
-    // Update modal content with HTML support (no truncation)
+    console.log('📢 Modal fullText:', fullText);
+    console.log('📢 Modal fullText length:', fullText.length);
+
+    // Clear and update modal content
+    modalBody.innerHTML = '';
+    modalBody.style.color = '#374151';
+    modalBody.style.fontSize = '0.95rem';
+
+    // Set content with HTML support
     modalBody.innerHTML = fullText;
+
+    // Debug: check if content was set
+    console.log('📢 Modal body innerHTML:', modalBody.innerHTML);
+    console.log('📢 Modal body textContent:', modalBody.textContent);
 
     // Show/hide link button
     if (announcement.link) {
