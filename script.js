@@ -854,14 +854,56 @@ function setupAnnouncementBar() {
         resumeAnnouncementRotation();
     });
 
-    // Click on text to pause/resume
+    // Click on text to show modal
     announcementText.addEventListener('click', (e) => {
-        const announcement = announcements[currentAnnouncementIndex];
-        if (!announcement.link) {
-            e.preventDefault();
-            toggleAnnouncementPause();
-        }
+        e.preventDefault();
+        showAnnouncementModal(currentAnnouncementIndex);
     });
+}
+
+// Show announcement modal with full content
+function showAnnouncementModal(index) {
+    const announcement = announcements[index];
+    if (!announcement) return;
+
+    const modal = document.getElementById('announcement-modal');
+    const modalBody = document.getElementById('announcement-modal-body');
+    const modalLink = document.getElementById('announcement-modal-link');
+    const modalCloseBtn = document.getElementById('announcement-modal-close-btn');
+    const modalCloseX = document.getElementById('announcement-modal-close');
+
+    if (!modal || !modalBody) return;
+
+    // Get fullText (limit to 150 characters)
+    let fullText = announcement.fullText || announcement.text;
+    if (fullText.length > 150) {
+        fullText = fullText.substring(0, 150) + '...';
+    }
+
+    // Update modal content
+    modalBody.textContent = fullText;
+
+    // Show/hide link button
+    if (announcement.link) {
+        modalLink.href = announcement.link;
+        modalLink.style.display = 'inline-block';
+    } else {
+        modalLink.style.display = 'none';
+    }
+
+    // Show modal
+    modal.style.display = 'flex';
+
+    // Close handlers
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    modalCloseBtn.onclick = closeModal;
+    modalCloseX.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
 }
 
 // Display announcement by index
@@ -880,14 +922,9 @@ function displayAnnouncement(index) {
         // Update content
         announcementText.textContent = announcement.text;
 
-        // Update link
-        if (announcement.link) {
-            announcementText.href = announcement.link;
-            announcementText.classList.remove('no-link');
-        } else {
-            announcementText.href = '#';
-            announcementText.classList.add('no-link');
-        }
+        // Always set as clickable (opens modal)
+        announcementText.href = '#';
+        announcementText.style.cursor = 'pointer';
 
         // Update indicator
         if (announcementIndicator && announcements.length > 1) {
