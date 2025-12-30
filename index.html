@@ -29,6 +29,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Font display optimization to prevent layout shift -->
+    <style>
+        /* Ensure font is loaded with swap to prevent invisible text */
+        @font-face {
+            font-family: 'Noto Sans TC';
+            font-display: swap;
+        }
+    </style>
+
     <link rel="stylesheet" href="styles.css?v=20251220020000">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -202,7 +211,7 @@
                         <div class="feature-media">
                             <picture>
                                 <source data-srcset="assets/images/feature-credit-cards-customized-combination.webp" type="image/webp">
-                                <img data-src="assets/images/feature-credit-cards-customized-combination.png" alt="記錄配卡組合" class="feature-video lazy-image">
+                                <img data-src="assets/images/feature-credit-cards-customized-combination.png" alt="記錄配卡組合" class="feature-video lazy-image" width="800" height="450">
                             </picture>
                         </div>
                         <div class="feature-content">
@@ -218,7 +227,7 @@
                             <p class="feature-description">記憶你的信用卡與行動支付，<br>支援自訂快捷選項、筆記與年費追蹤。<br>打造屬於你的專屬信用卡管理工具。</p>
                         </div>
                         <div class="feature-media">
-                            <video loop muted playsinline class="feature-video lazy-video" data-src="assets/videos/feature-personalizations.mp4">
+                            <video loop muted playsinline class="feature-video lazy-video" data-src="assets/videos/feature-personalizations.mp4" width="800" height="450">
                                 <!-- 臨時佔位圖示 -->
                                 <div class="icon-box">⚙️</div>
                             </video>
@@ -243,7 +252,7 @@
                             <div class="use-case-image">
                                 <picture>
                                     <source data-srcset="assets/images/use-case-1-instant-check-cashback.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media lazy-image">
+                                    <img data-src="assets/images/use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media lazy-image" width="300" height="300">
                                 </picture>
                             </div>
                             <div class="use-case-content">
@@ -255,7 +264,7 @@
                         <!-- Use Case 2: 主動探索，找最佳通路 (圖右文左) -->
                         <div class="use-case-item reverse">
                             <div class="use-case-image">
-                                <video loop muted playsinline class="use-case-media lazy-video" data-src="assets/videos/use-case-2-explore-credit-cards.mp4">
+                                <video loop muted playsinline class="use-case-media lazy-video" data-src="assets/videos/use-case-2-explore-credit-cards.mp4" width="300" height="300">
                                 </video>
                             </div>
                             <div class="use-case-content">
@@ -269,7 +278,7 @@
                             <div class="use-case-image">
                                 <picture>
                                     <source data-srcset="assets/images/use-case-3-review-credit-cards.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media lazy-image">
+                                    <img data-src="assets/images/use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media lazy-image" width="300" height="300">
                                 </picture>
                             </div>
                             <div class="use-case-content">
