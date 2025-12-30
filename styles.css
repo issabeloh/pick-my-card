@@ -69,6 +69,7 @@ header {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-height: 44px; /* 預留登入按鈕空間，避免載入時位移 */
 }
 
 .auth-btn {
@@ -443,6 +444,7 @@ header p {
 main {
     padding: 30px;
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
+    min-height: 400px; /* 預留最小高度，避免內容載入時位移 */
 }
 
 /* Input section */
@@ -2520,6 +2522,7 @@ input[type="number"]:focus {
     margin: 20px auto 10px;
     padding: 0 24px;
     text-align: center;
+    min-height: 120px; /* 預留最小高度，避免內容載入時位移 */
 }
 
 .social-media-container {
@@ -2780,6 +2783,7 @@ input[type="number"]:focus {
     margin: 20px auto;
     padding: 0 24px 24px;
     text-align: center;
+    min-height: 60px; /* 預留最小高度，避免內容載入時位移 */
 }
 
 .disclaimer-toggle {
