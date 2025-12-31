@@ -779,6 +779,165 @@ function showErrorMessage(message) {
     }
 }
 
+// === API 相關輔助函數（方案 C） ===
+
+function showLoadingState() {
+    const resultsContainer = document.getElementById('results-container');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #6b7280;">
+                <div class="loading-spinner" style="
+                    border: 3px solid #f3f4f6;
+                    border-top: 3px solid #3b82f6;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 16px;
+                "></div>
+                <p>計算中...</p>
+            </div>
+        `;
+    }
+}
+
+function hideLoadingState() {
+    // 載入狀態會被結果覆蓋，不需要特別處理
+}
+
+function showAPIError(message) {
+    const resultsContainer = document.getElementById('results-container');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = `
+            <div style="
+                background: #fee2e2;
+                border: 1px solid #fca5a5;
+                color: #dc2626;
+                padding: 20px;
+                margin: 16px 0;
+                border-radius: 8px;
+                text-align: center;
+            ">
+                <p style="font-weight: 500; margin-bottom: 8px;">⚠️ 無法連接伺服器</p>
+                <p style="font-size: 14px; opacity: 0.8;">${message}</p>
+                <p style="font-size: 14px; margin-top: 12px;">正在使用本地計算...</p>
+            </div>
+        `;
+    }
+}
+
+function displayAPIResults(results, amount, searchedItem) {
+    const resultsContainer = document.getElementById('results-container');
+    if (!resultsContainer) {
+        console.error('找不到 results-container');
+        return;
+    }
+
+    // 清空容器
+    resultsContainer.innerHTML = '';
+
+    // 如果沒有結果
+    if (!results || results.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="no-results" style="
+                text-align: center;
+                padding: 40px 20px;
+                color: #6b7280;
+            ">
+                <p style="font-size: 18px; font-weight: 500; margin-bottom: 8px;">沒有找到匹配的信用卡</p>
+                <p style="font-size: 14px;">試試其他關鍵字，例如：星巴克、全家、百貨</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 顯示標題
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = 'padding: 16px; background: #f9fafb; margin-bottom: 16px; border-radius: 8px;';
+    headerDiv.innerHTML = `
+        <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #111827;">
+            搜尋「${searchedItem}」消費 NT$${amount.toLocaleString()}
+        </h3>
+        <p style="margin: 0; color: #6b7280; font-size: 14px;">
+            找到 ${results.length} 張符合的信用卡
+        </p>
+    `;
+    resultsContainer.appendChild(headerDiv);
+
+    // 顯示每張卡片的結果
+    results.forEach((result, index) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'result-card';
+        cardDiv.style.cssText = `
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        cardDiv.onmouseover = () => cardDiv.style.transform = 'translateY(-2px)';
+        cardDiv.onmouseout = () => cardDiv.style.transform = 'translateY(0)';
+
+        const rankBadge = index < 3 ? `
+            <span style="
+                display: inline-block;
+                background: ${index === 0 ? '#fbbf24' : index === 1 ? '#9ca3af' : '#cd7f32'};
+                color: white;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: 600;
+                margin-right: 8px;
+            ">TOP ${index + 1}</span>
+        ` : '';
+
+        cardDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                <div>
+                    ${rankBadge}
+                    <h4 style="margin: 4px 0; font-size: 16px; color: #111827;">${result.cardName}</h4>
+                    ${result.matchedItem ? `<p style="margin: 4px 0; font-size: 13px; color: #6b7280;">匹配：${result.matchedItem}</p>` : ''}
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 24px; font-weight: 700; color: #059669;">
+                        NT$${result.cashback}
+                    </div>
+                    <div style="font-size: 13px; color: #6b7280;">
+                        ${result.rate}% 回饋
+                    </div>
+                </div>
+            </div>
+            ${result.cap ? `<p style="margin: 8px 0 0 0; font-size: 12px; color: #9ca3af;">上限：NT$${result.cap}</p>` : ''}
+        `;
+
+        // 點擊打開卡片網站
+        cardDiv.onclick = () => {
+            if (result.website) {
+                window.open(result.website, '_blank');
+            }
+        };
+
+        resultsContainer.appendChild(cardDiv);
+    });
+
+    // 加入 CSS animation
+    if (!document.getElementById('api-loading-animation')) {
+        const style = document.createElement('style');
+        style.id = 'api-loading-animation';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// === End of API 輔助函數 ===
+
 let currentMatchedItem = null;
 
 // DOM elements
@@ -1689,6 +1848,56 @@ function validateInputs() {
 // Calculate cashback for all cards
 async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
+
+    const amount = parseFloat(amountInput.value);
+    const merchantValue = merchantInput.value.trim();
+
+    // 🚀 方案 C：使用後端 API 計算（保護資料和邏輯）
+    const USE_BACKEND_API = true; // 設為 false 可切換回本地計算
+
+    if (USE_BACKEND_API && merchantValue && amount > 0) {
+        console.log('🌐 使用後端 API 計算');
+        try {
+            // 顯示載入狀態
+            showLoadingState();
+
+            // 呼叫後端 API
+            const response = await fetch('/api/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    keyword: merchantValue,
+                    amount: amount
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API 錯誤: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(`✅ API 回應: ${data.resultCount} 個結果 (${data.processingTime})`);
+
+            // 顯示結果
+            displayAPIResults(data.results, amount, merchantValue);
+
+            // 清除載入狀態
+            hideLoadingState();
+
+            return; // 使用 API 後直接返回，不執行本地計算
+        } catch (error) {
+            console.error('❌ API 錯誤:', error);
+            // API 失敗時，顯示錯誤並繼續使用本地計算作為備援
+            showAPIError(error.message);
+            hideLoadingState();
+            // 繼續執行本地計算...
+        }
+    }
+
+    // === 以下是原有的本地計算邏輯（作為 API 的備援） ===
+
     console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
 
     // Clear rate status cache at the start of each calculation
@@ -1698,9 +1907,6 @@ async function calculateCashback() {
         console.error('❌ cardsData 未載入，無法計算');
         return;
     }
-
-    const amount = parseFloat(amountInput.value);
-    const merchantValue = merchantInput.value.trim();
 
     console.log('輸入：', { merchantValue, amount });
     console.log('currentMatchedItem:', currentMatchedItem);
