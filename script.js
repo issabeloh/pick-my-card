@@ -3874,15 +3874,24 @@ let overseasConditions = card.overseasBonusConditions;
 if (card.hasLevels) {
     const levelNames = Object.keys(card.levelSettings);
     const defaultLevel = levelNames[0];
-    const savedLevel = await getCardLevel(card.id, defaultLevel);
-    const levelData = card.levelSettings[savedLevel];
+    let savedLevel = await getCardLevel(card.id, defaultLevel);
+    let levelData = card.levelSettings[savedLevel];
 
-    if (levelData.domesticBonusRate !== undefined) {
+    // 🔥 新增：如果 levelData 不存在，使用 defaultLevel
+    if (!levelData) {
+        console.warn(`⚠️ ${card.name}: 保存的級別 "${savedLevel}" 不存在，使用預設級別 "${defaultLevel}"`);
+        savedLevel = defaultLevel;
+        levelData = card.levelSettings[savedLevel];
+        // 更新保存的級別
+        await saveCardLevel(card.id, savedLevel);
+    }
+
+    if (levelData && levelData.domesticBonusRate !== undefined) {
         domesticBonusRate = levelData.domesticBonusRate;
         domesticBonusCap = levelData.domesticBonusCap;
         domesticConditions = levelData.domesticBonusConditions || card.domesticBonusConditions;
     }
-    if (levelData.overseasBonusRate !== undefined) {
+    if (levelData && levelData.overseasBonusRate !== undefined) {
         overseasBonusRate = levelData.overseasBonusRate;
         overseasBonusCap = levelData.overseasBonusCap;
         overseasConditions = levelData.overseasBonusConditions || card.overseasBonusConditions;
