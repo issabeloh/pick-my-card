@@ -1258,11 +1258,56 @@ function setupEventListeners() {
     }
 }
 
+// Check and show search hints
+function checkAndShowSearchHint(searchTerm) {
+    const searchHintsContainer = document.getElementById('search-hints-container');
+
+    // 清空之前的提示
+    if (searchHintsContainer) {
+        searchHintsContainer.innerHTML = '';
+    }
+
+    if (!searchTerm || searchTerm.length < 2) {
+        return;
+    }
+
+    const hint = cardsData.searchHints?.[searchTerm.toLowerCase()];
+
+    if (hint && hint.suggestions.length > 0) {
+        const hintDiv = document.createElement('div');
+        hintDiv.className = 'search-hint';
+        hintDiv.innerHTML = `
+            <span class="hint-message">${hint.message}</span>
+            <div class="hint-suggestions">
+                ${hint.suggestions.map(s =>
+                    `<button class="hint-button" onclick="searchFromHint('${s}')">${s}</button>`
+                ).join('')}
+            </div>
+        `;
+        searchHintsContainer.appendChild(hintDiv);
+    }
+}
+
+// Search from hint button
+function searchFromHint(suggestion) {
+    const merchantInput = document.getElementById('merchant-input');
+    if (merchantInput) {
+        merchantInput.value = suggestion;
+        // 觸發 input 事件來更新匹配狀態
+        merchantInput.dispatchEvent(new Event('input'));
+        // 自動計算回饋
+        calculateCashback();
+    }
+}
+
 // Handle merchant input changes
 function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
 
     console.log('🔍 handleMerchantInput:', input);
+
+    // 🔥 新增：檢查並顯示搜尋提示
+    checkAndShowSearchHint(input);
 
     if (input.length === 0) {
         hideMatchedItem();
