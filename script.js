@@ -2801,23 +2801,16 @@ async function parseCashbackRate(rate, card, levelSettings) {
         return parseFloat(rate);
     }
 
-    // 處理 {specialRate} 的情況
-    if (rate === '{specialRate}') {
-        // 只有 hasLevels 的卡片才支援 {specialRate}
-        if (card.hasLevels && levelSettings && levelSettings.specialRate !== undefined) {
-            return levelSettings.specialRate;
-        }
-        console.warn(`⚠️ ${card.name}: {specialRate} 需要 hasLevels=true 且 levelSettings 中有 specialRate`);
-        return 0;
-    }
+    // 處理 {placeholder} 格式（支援任意欄位名稱）
+    const placeholderMatch = rate.match(/^\{(.+)\}$/);
+    if (placeholderMatch) {
+        const fieldName = placeholderMatch[1]; // 提取欄位名稱（如 "rate", "rate_1", "overseasBonusRate"）
 
-    // 處理 {rate} 的情況
-    if (rate === '{rate}') {
-        // 只有 hasLevels 的卡片才支援 {rate}
-        if (card.hasLevels && levelSettings && levelSettings.rate !== undefined) {
-            return levelSettings.rate;
+        // 只有 hasLevels 的卡片才支援 placeholder
+        if (card.hasLevels && levelSettings && levelSettings[fieldName] !== undefined) {
+            return levelSettings[fieldName];
         }
-        console.warn(`⚠️ ${card.name}: {rate} 需要 hasLevels=true 且 levelSettings 中有 rate`);
+        console.warn(`⚠️ ${card.name}: {${fieldName}} 需要 hasLevels=true 且 levelSettings 中有 ${fieldName}`);
         return 0;
     }
 
@@ -2830,16 +2823,20 @@ function parseCashbackRateSync(rate, levelData) {
     if (typeof rate === 'number') {
         return rate;
     }
-    if (rate === '{specialRate}') {
-        return levelData?.specialRate || 0;
+
+    // 處理 {placeholder} 格式（支援任意欄位名稱）
+    if (typeof rate === 'string') {
+        const placeholderMatch = rate.match(/^\{(.+)\}$/);
+        if (placeholderMatch) {
+            const fieldName = placeholderMatch[1];
+            return levelData?.[fieldName] || 0;
+        }
     }
-    if (rate === '{rate}') {
-        return levelData?.rate || 0;
-    }
+
     return parseFloat(rate) || 0;
 }
 
-// 解析 cashbackRates 中的 cap 值（支援數字和 {cap}）
+// 解析 cashbackRates 中的 cap 值（支援數字和 {cap}、{cap_1} 等任意 placeholder）
 function parseCashbackCap(cap, card, levelSettings) {
     // 如果是數字，直接返回
     if (typeof cap === 'number') {
@@ -2857,13 +2854,16 @@ function parseCashbackCap(cap, card, levelSettings) {
         return isNaN(parsed) ? null : parsed;
     }
 
-    // 處理 {cap} 的情況
-    if (cap === '{cap}') {
-        // 只有 hasLevels 的卡片才支援 {cap}
-        if (card.hasLevels && levelSettings && levelSettings.cap !== undefined) {
-            return levelSettings.cap;
+    // 處理 {placeholder} 格式（支援任意欄位名稱）
+    const placeholderMatch = cap.match(/^\{(.+)\}$/);
+    if (placeholderMatch) {
+        const fieldName = placeholderMatch[1]; // 提取欄位名稱（如 "cap", "cap_1", "domesticBonusCap"）
+
+        // 只有 hasLevels 的卡片才支援 placeholder
+        if (card.hasLevels && levelSettings && levelSettings[fieldName] !== undefined) {
+            return levelSettings[fieldName];
         }
-        console.warn(`⚠️ ${card.name}: {cap} 需要 hasLevels=true 且 levelSettings 中有 cap`);
+        console.warn(`⚠️ ${card.name}: {${fieldName}} 需要 hasLevels=true 且 levelSettings 中有 ${fieldName}`);
         return null;
     }
 

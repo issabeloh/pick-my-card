@@ -18,17 +18,24 @@
 
 ### 1. Placeholder 解析系統
 
-**支援的 Placeholder**：
+**支援的 Placeholder**（2026-01-01 更新：支援任意欄位）：
 - `{rate}`: 從 levelSettings[selectedLevel].rate 解析
 - `{specialRate}`: 從 levelSettings[selectedLevel].specialRate 解析
 - `{cap}`: 從 levelSettings[selectedLevel].cap 解析
+- **✨ 任意欄位**：`{rate_1}`, `{cap_1}`, `{overseasBonusRate}` 等都支援！
 
 **解析函數**：
-- `parseCashbackRate(rate, card, levelSettings)`: 非同步解析 rate（script.js:1917-1950）
-- `parseCashbackRateSync(rate, levelData)`: 同步版本，用於排序（script.js:1953-1964）
-- `parseCashbackCap(cap, card, levelSettings)`: 解析 cap（script.js:1967-1997）
+- `parseCashbackRate(rate, card, levelSettings)`: 非同步解析 rate（script.js:2793-2819）
+  - 使用正則表達式 `/^\{(.+)\}$/` 匹配任意 placeholder
+  - 從 levelSettings 中動態讀取對應欄位值
+- `parseCashbackRateSync(rate, levelData)`: 同步版本，用於排序（script.js:2822-2837）
+- `parseCashbackCap(cap, card, levelSettings)`: 解析 cap（script.js:2840-2873）
+  - 同樣支援任意欄位的 placeholder
 
-**重要**：必須傳遞正確的 `levelSettings` 參數，否則 placeholder 會被解析為 0
+**重要**：
+- 必須傳遞正確的 `levelSettings` 參數，否則 placeholder 會被解析為 0
+- Placeholder 只適用於 `hasLevels=true` 的卡片
+- 欄位名稱必須在 levelSettings 中存在
 
 ### 2. 卡片分級系統
 
@@ -194,7 +201,14 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ### 最近的技術決策
 
-1. **2025-12-22: 分層回饋計算系統**
+1. **2026-01-01: 擴展 Placeholder 支援任意欄位**
+   - 修改 parseCashbackRate 函數，使用正則表達式匹配任意 placeholder
+   - 支援 `{rate_1}`, `{cap_1}`, `{overseasBonusRate}`, `{domesticBonusRate}` 等
+   - 從 levelSettings 中動態讀取對應欄位值
+   - 同步更新 parseCashbackRateSync 和 parseCashbackCap 函數
+   - 解決永豐大戶卡等卡片顯示 NaN% 的問題
+
+2. **2025-12-22: 分層回饋計算系統**
    - 實作 calculateLayeredCashback 函數處理多層獎勵結構
    - 支援 DBS Eco 等複雜卡片的三層計算（基本+加碼+指定項目）
    - 自動檢測海外/國內交易並套用對應加碼率
