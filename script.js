@@ -1378,6 +1378,7 @@ const fuzzySearchMap = {
     'apple pay': 'applepay',
     '海外': '國外',
     '國外': '海外',
+    '海外消費': '國外',
     'overseas': '海外',
     'apple wallet': 'apple pay',
     'googlepay': 'google pay',
