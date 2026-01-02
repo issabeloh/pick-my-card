@@ -1950,28 +1950,47 @@ async function calculateCashback() {
             showNoMatchMessage();
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
+
+            // Check if search term is overseas-related
+            const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
+            const merchantLower = merchantValue.toLowerCase();
+            const isOverseasSearch = overseasKeywords.some(keyword =>
+                merchantLower.includes(keyword.toLowerCase())
+            );
+
             results = cardsToCompare.map(card => {
                 let basicCashbackAmount = 0;
                 let effectiveRate = card.basicCashback;
-                
-                // Handle complex cards like 永豐幣倍 with domestic bonus
-if (card.domesticBonusRate && card.domesticBonusCap) {
-                    // Handle 永豐幣倍 type cards with domestic bonus
+                let displayCap = null;
+
+                if (isOverseasSearch && card.overseasCashback) {
+                    // Use overseas cashback rate for overseas searches
+                    effectiveRate = card.overseasCashback;
+
+                    if (card.overseasBonusRate && card.overseasBonusCap) {
+                        // Has overseas bonus (like 永豐大戶卡)
+                        const bonusAmount = Math.min(amount, card.overseasBonusCap);
+                        const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
+                        const basicCashback = Math.floor(amount * card.overseasCashback / 100);
+                        basicCashbackAmount = bonusCashback + basicCashback;
+                        effectiveRate = card.overseasCashback + card.overseasBonusRate;
+                        displayCap = card.overseasBonusCap;
+                    } else {
+                        // Simple overseas cashback
+                        basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
+                    }
+                } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                    // Handle complex cards like 永豐幣倍 with domestic bonus
                     const bonusAmount = Math.min(amount, card.domesticBonusCap);
                     const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
                     const basicCashback = Math.floor(amount * card.basicCashback / 100);
                     basicCashbackAmount = bonusCashback + basicCashback;
                     effectiveRate = card.basicCashback + card.domesticBonusRate;
+                    displayCap = card.domesticBonusCap;
                 } else {
                     basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
                 }
-                
-                // Determine cap for display
-                let displayCap = null;
-                if (card.domesticBonusRate && card.domesticBonusCap) {
-                    displayCap = card.domesticBonusCap;
-                }
-                
+
                 return {
                     rate: effectiveRate,
                     cashbackAmount: basicCashbackAmount,
@@ -1986,28 +2005,47 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
     } else {
         // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
+
+        // Check if search term is overseas-related
+        const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
+        const merchantLower = merchantValue.toLowerCase();
+        const isOverseasSearch = overseasKeywords.some(keyword =>
+            merchantLower.includes(keyword.toLowerCase())
+        );
+
         results = cardsToCompare.map(card => {
             let basicCashbackAmount = 0;
             let effectiveRate = card.basicCashback;
-            
-            // Handle complex cards like 永豐幣倍 with domestic bonus
-if (card.domesticBonusRate && card.domesticBonusCap) {
-                // Handle 永豐幣倍 type cards with domestic bonus
+            let displayCap = null;
+
+            if (isOverseasSearch && card.overseasCashback) {
+                // Use overseas cashback rate for overseas searches
+                effectiveRate = card.overseasCashback;
+
+                if (card.overseasBonusRate && card.overseasBonusCap) {
+                    // Has overseas bonus (like 永豐大戶卡)
+                    const bonusAmount = Math.min(amount, card.overseasBonusCap);
+                    const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
+                    const basicCashback = Math.floor(amount * card.overseasCashback / 100);
+                    basicCashbackAmount = bonusCashback + basicCashback;
+                    effectiveRate = card.overseasCashback + card.overseasBonusRate;
+                    displayCap = card.overseasBonusCap;
+                } else {
+                    // Simple overseas cashback
+                    basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
+                }
+            } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                // Handle complex cards like 永豐幣倍 with domestic bonus
                 const bonusAmount = Math.min(amount, card.domesticBonusCap);
                 const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
                 const basicCashback = Math.floor(amount * card.basicCashback / 100);
                 basicCashbackAmount = bonusCashback + basicCashback;
                 effectiveRate = card.basicCashback + card.domesticBonusRate;
+                displayCap = card.domesticBonusCap;
             } else {
                 basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
             }
-            
-            // Determine cap for display
-            let displayCap = null;
-            if (card.domesticBonusRate && card.domesticBonusCap) {
-                displayCap = card.domesticBonusCap;
-            }
-            
+
             return {
                 rate: effectiveRate,
                 cashbackAmount: basicCashbackAmount,
@@ -2018,7 +2056,7 @@ if (card.domesticBonusRate && card.domesticBonusCap) {
                 isBasic: true
             };
         });
-        
+
         // Show no match message if user has typed something
         if (merchantValue.length > 0) {
             showNoMatchMessage();
@@ -2419,17 +2457,37 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 解析 rate 值（支援 {rate}、{specialRate} 等）
-                    const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
-                    const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
+                    // 解析 rate 值（支援 {rate}、{specialRate}、{rate_hide} 等）
+                    let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+                    let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
+                    // Check if levelSettings has rate_hide to override the cashbackRate
+                    // Only apply rate_hide for rateGroups with hideInDisplay=true
+                    let finalRate = parsedRate;
+                    let applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
+
+                    if (levelData && levelData.rate_hide !== undefined && rateGroup.hideInDisplay === true) {
+                        finalRate = levelData.rate_hide;
+                        // Also update cap from levelSettings if available
+                        if (levelData.cap !== undefined) {
+                            applicableCap = levelData.cap;
+                        }
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelData.rate_hide}%)`);
+                    } else {
+                        // 顯示原始 rate 或解析後的值
+                        const displayRate = (rateGroup.rate === '{rate_hide}' || rateGroup.rate === '{rate}')
+                            ? `${rateGroup.rate}=${parsedRate}`
+                            : parsedRate;
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
+                    }
+
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: parsedRate,
-                        cap: parsedCap !== null ? parsedCap : rateGroup.cap,
+                        rate: finalRate,
+                        cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
                         matchedRateGroup: rateGroup
@@ -3950,7 +4008,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
                     const displayRate = data.specialRate || data.rate || 0;
-                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${displayRate}% (無上限)</div>`;
+                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
                 });
                 // Add note about which categories are affected by level
                 levelRatesInfo += `<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic; line-height: 1.4;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
