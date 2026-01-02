@@ -186,16 +186,21 @@ export async function onRequest(context) {
   try {
     // 取得請求的 Origin
     const origin = context.request.headers.get('Origin');
+    const referer = context.request.headers.get('Referer');
+
     const allowedOrigins = [
       'https://pickmycard.app',
       'https://www.pickmycard.app'
     ];
 
-    // 在開發環境允許 localhost
-    const isDevelopment = context.env?.ENVIRONMENT === 'development' ||
-                         origin?.includes('localhost') ||
-                         origin?.includes('127.0.0.1') ||
-                         origin?.includes('pages.dev');
+    // 在開發環境允許 localhost 和 pages.dev
+    const isDevelopment =
+      context.env?.ENVIRONMENT === 'development' ||
+      origin?.includes('localhost') ||
+      origin?.includes('127.0.0.1') ||
+      origin?.includes('pages.dev') ||
+      referer?.includes('pages.dev') ||
+      referer?.includes('localhost');
 
     // Origin 驗證
     const isAllowedOrigin = allowedOrigins.includes(origin) || isDevelopment;
@@ -214,11 +219,19 @@ export async function onRequest(context) {
     }
 
     // Origin 檢查（非 OPTIONS 請求）
-    if (!isAllowedOrigin && origin) {
+    // 只在生產環境（pickmycard.app）進行嚴格檢查
+    const isProduction = referer?.includes('pickmycard.app') || origin?.includes('pickmycard.app');
+
+    if (isProduction && !isAllowedOrigin && origin) {
       return new Response(JSON.stringify({
         error: '未授權的來源',
         message: 'Unauthorized origin'
       }), { status: 403, headers });
+    }
+
+    // 開發環境（pages.dev, localhost）：記錄但允許通過
+    if (!isAllowedOrigin && !isProduction) {
+      console.log('Development request from:', origin || referer || 'unknown');
     }
 
     // 只允許 POST
