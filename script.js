@@ -1837,7 +1837,8 @@ async function calculateCashback() {
     }
 
     // 使用後端 API 計算（如果啟用）
-    if (USE_BACKEND_API && merchantValue && amount > 0) {
+    // 但如果有 currentMatchedItem（快捷搜索或自動完成匹配），則使用前端計算
+    if (USE_BACKEND_API && merchantValue && amount > 0 && !currentMatchedItem) {
         console.log('🚀 使用後端 API 計算');
         try {
             showLoadingState();
@@ -1864,6 +1865,15 @@ async function calculateCashback() {
             // Fall through to local calculation
             await new Promise(resolve => setTimeout(resolve, 1500)); // Show error message briefly
         }
+    }
+
+    // 前端計算（用於快捷搜索、自動完成匹配、或 API 失敗時的備用）
+    if (currentMatchedItem) {
+        console.log('🔍 使用前端計算（有匹配項目）');
+    } else if (USE_BACKEND_API) {
+        console.log('🔍 使用前端計算（後端 API 已關閉或失敗）');
+    } else {
+        console.log('🔍 使用前端計算');
     }
 
     let results;
