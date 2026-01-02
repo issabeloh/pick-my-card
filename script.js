@@ -1378,7 +1378,6 @@ const fuzzySearchMap = {
     'apple pay': 'applepay',
     '海外': '國外',
     '國外': '海外',
-    '海外消費': '國外',
     'overseas': '海外',
     'apple wallet': 'apple pay',
     'googlepay': 'google pay',
@@ -2458,17 +2457,37 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 解析 rate 值（支援 {rate}、{specialRate} 等）
-                    const parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
-                    const parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
+                    // 解析 rate 值（支援 {rate}、{specialRate}、{rate_hide} 等）
+                    let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+                    let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
+                    // Check if levelSettings has rate_hide to override the cashbackRate
+                    // Only apply rate_hide for rateGroups with hideInDisplay=true
+                    let finalRate = parsedRate;
+                    let applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
+
+                    if (levelData && levelData.rate_hide !== undefined && rateGroup.hideInDisplay === true) {
+                        finalRate = levelData.rate_hide;
+                        // Also update cap from levelSettings if available
+                        if (levelData.cap !== undefined) {
+                            applicableCap = levelData.cap;
+                        }
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelData.rate_hide}%)`);
+                    } else {
+                        // 顯示原始 rate 或解析後的值
+                        const displayRate = (rateGroup.rate === '{rate_hide}' || rateGroup.rate === '{rate}')
+                            ? `${rateGroup.rate}=${parsedRate}`
+                            : parsedRate;
+                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
+                    }
+
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: parsedRate,
-                        cap: parsedCap !== null ? parsedCap : rateGroup.cap,
+                        rate: finalRate,
+                        cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
                         matchedRateGroup: rateGroup
