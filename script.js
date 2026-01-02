@@ -4029,7 +4029,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-left: 8px;">悠遊卡自動加值 3% (上限 NT$3,333)</div>
                     <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-top: 4px;">• 大大等級: 只享有一般回饋</div>
                 `;
-            } else if (card.id === 'sinopac-beibi') {
+            } else if (card.id === 'sinopac-coin') {
                 // 永豐幣倍卡自訂格式
                 levelRatesInfo += `
                     <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">精選通路加碼 4%</div>
