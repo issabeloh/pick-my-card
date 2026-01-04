@@ -2,9 +2,16 @@
 
 ## 為什麼需要 Rate Limiting？
 
-後端 API (`/api/calculate`) 需要 Rate Limiting 來防止濫用和惡意攻擊，同時不影響正常用戶使用。
+後端 API 需要 Rate Limiting 來防止濫用和惡意攻擊，同時不影響正常用戶使用。
+
+### 受保護的 API 端點
+
+1. **`/api/calculate`** - 回饋計算 API
+2. **`/api/get-cards-data`** - 卡片資料 API（新增）
 
 ## 建議配置
+
+### `/api/calculate` - 計算 API
 
 **選項 C：平衡方案**（已選擇）
 - **每分鐘 50 次** 請求
@@ -15,6 +22,18 @@
 - ✅ 不影響正常用戶（日常 80-200 人，峰值 10,000+ 人）
 - ✅ 防止單一 IP 惡意濫用
 - ✅ 允許正常的重複搜尋
+
+### `/api/get-cards-data` - 資料載入 API
+
+**限制較寬鬆**（因為每個用戶只在載入頁面時呼叫一次）
+- **每分鐘 10 次** 請求
+- **每小時 30 次** 請求
+- **每日 100 次** 請求
+
+這個配置：
+- ✅ 正常用戶足夠（一般不會頻繁重新整理）
+- ✅ 防止批量下載資料
+- ✅ 允許開發和測試
 
 ---
 
@@ -76,6 +95,65 @@ If incoming requests match:
 
 When rate exceeds:
   - Requests: 500
+  - Period: 1 day
+  - With the same: IP address
+
+Then:
+  - Action: Block
+  - Duration: 1 day
+```
+
+---
+
+#### Rule 4: 資料載入 API - 每分鐘限制
+
+```
+Rule name: Get Cards Data - Per Minute
+If incoming requests match:
+  - Field: URI Path
+  - Operator: equals
+  - Value: /api/get-cards-data
+
+When rate exceeds:
+  - Requests: 10
+  - Period: 1 minute
+  - With the same: IP address
+
+Then:
+  - Action: Block
+  - Duration: 1 minute
+```
+
+#### Rule 5: 資料載入 API - 每小時限制
+
+```
+Rule name: Get Cards Data - Per Hour
+If incoming requests match:
+  - Field: URI Path
+  - Operator: equals
+  - Value: /api/get-cards-data
+
+When rate exceeds:
+  - Requests: 30
+  - Period: 1 hour
+  - With the same: IP address
+
+Then:
+  - Action: Block
+  - Duration: 1 hour
+```
+
+#### Rule 6: 資料載入 API - 每日限制
+
+```
+Rule name: Get Cards Data - Per Day
+If incoming requests match:
+  - Field: URI Path
+  - Operator: equals
+  - Value: /api/get-cards-data
+
+When rate exceeds:
+  - Requests: 100
   - Period: 1 day
   - With the same: IP address
 
