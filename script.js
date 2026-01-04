@@ -455,10 +455,10 @@ async function loadCardsData() {
         // Filter out expired rates based on periodStart and periodEnd
         cardsData = filterExpiredRates(cardsData);
 
-        console.log('✅ 信用卡資料已從 API 載入');
+        console.log('✅ 信用卡資料載入完成');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         console.log(`📢 公告數量: ${cardsData.announcements ? cardsData.announcements.length : 0} 則`);
-        console.log(`📦 檔案大小: ${Math.round(encoded.length / 1024)} KB (載入時間: ${new Date().toLocaleTimeString()})`);
+        console.log(`📦 資料大小: ${Math.round(encoded.length / 1024)} KB (載入時間: ${new Date().toLocaleTimeString()})`);
 
         // Build search index for all cards
         let totalIndexedItems = 0;
