@@ -86,11 +86,12 @@ function calculateCardCashback(card, searchVariants, amount) {
           }
         }
 
-        // 計算回饋
-        let cashback = Math.floor((amount * rate) / 100);
-        if (cap !== null && cashback > cap) {
-          cashback = cap;
+        // 計算回饋（cap 是消費金額上限，不是回饋金額上限）
+        let effectiveAmount = amount;
+        if (cap !== null && amount > cap) {
+          effectiveAmount = cap;
         }
+        let cashback = Math.floor((effectiveAmount * rate) / 100);
 
         // 記錄最佳回饋
         if (cashback > bestCashback) {
@@ -125,10 +126,12 @@ function calculateCardCashback(card, searchVariants, amount) {
         cap = levelSettings.cap || null;
       }
 
-      let cashback = Math.floor((amount * rate) / 100);
-      if (cap !== null && cashback > cap) {
-        cashback = cap;
+      // 計算回饋（cap 是消費金額上限）
+      let effectiveAmount = amount;
+      if (cap !== null && amount > cap) {
+        effectiveAmount = cap;
       }
+      let cashback = Math.floor((effectiveAmount * rate) / 100);
 
       if (cashback > bestCashback) {
         bestCashback = cashback;
