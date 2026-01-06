@@ -91,7 +91,16 @@ function calculateCardCashback(card, searchVariants, amount) {
         if (cap !== null && amount > cap) {
           effectiveAmount = cap;
         }
-        let cashback = Math.floor((effectiveAmount * rate) / 100);
+        let specialCashback = Math.floor((effectiveAmount * rate) / 100);
+
+        // 超過上限的部分用基本回饋計算
+        let remainingCashback = 0;
+        if (cap !== null && amount > cap) {
+          const remainingAmount = amount - cap;
+          remainingCashback = Math.floor((remainingAmount * card.basicCashback) / 100);
+        }
+
+        let cashback = specialCashback + remainingCashback;
 
         // 記錄最佳回饋
         if (cashback > bestCashback) {
@@ -131,7 +140,16 @@ function calculateCardCashback(card, searchVariants, amount) {
       if (cap !== null && amount > cap) {
         effectiveAmount = cap;
       }
-      let cashback = Math.floor((effectiveAmount * rate) / 100);
+      let specialCashback = Math.floor((effectiveAmount * rate) / 100);
+
+      // 超過上限的部分用基本回饋計算
+      let remainingCashback = 0;
+      if (cap !== null && amount > cap) {
+        const remainingAmount = amount - cap;
+        remainingCashback = Math.floor((remainingAmount * card.basicCashback) / 100);
+      }
+
+      let cashback = specialCashback + remainingCashback;
 
       if (cashback > bestCashback) {
         bestCashback = cashback;
