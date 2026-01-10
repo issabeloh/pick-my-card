@@ -10,7 +10,7 @@ let paymentsData = null;
 let quickSearchOptions = [];
 
 // Backend API configuration
-const USE_BACKEND_API = true; // 設定為 true 使用後端 API，false 使用前端計算
+const USE_BACKEND_API = false; // 設定為 true 使用後端 API，false 使用前端計算
 
 // Body scroll lock utilities
 function disableBodyScroll() {
