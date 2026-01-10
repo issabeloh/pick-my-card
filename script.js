@@ -9,9 +9,6 @@ let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
 
-// Backend API configuration
-const USE_BACKEND_API = false; // 設定為 true 使用後端 API，false 使用前端計算
-
 // Body scroll lock utilities
 function disableBodyScroll() {
     document.body.style.overflow = 'hidden';
@@ -432,7 +429,7 @@ function buildCardItemsIndex(card) {
 async function loadCardsData() {
     try {
         const timestamp = new Date().getTime(); // 防止快取
-        const response = await fetch(`/api/get-cards-data?t=${timestamp}`, {
+        const response = await fetch(`cards.data?t=${timestamp}`, {
             cache: 'no-store', // 強制不使用快取
             headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -1734,80 +1731,6 @@ function validateInputs() {
     calculateBtn.disabled = !isValid;
 }
 
-// Backend API functions
-async function callBackendAPI(keyword, amount) {
-    try {
-        const response = await fetch('/api/calculate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                keyword: keyword,
-                amount: amount
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`API 請求失敗: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.error || 'API 回傳錯誤');
-        }
-
-        return data;
-    } catch (error) {
-        console.error('❌ Backend API 錯誤:', error);
-        throw error;
-    }
-}
-
-function transformAPIResults(apiResults, cardsData) {
-    // Transform API results to match local result format
-    return apiResults.map(apiResult => {
-        // Find the full card object from cardsData
-        const card = cardsData.cards.find(c => c.id === apiResult.cardId);
-
-        if (!card) {
-            console.warn(`⚠️ 找不到卡片: ${apiResult.cardId}`);
-            return null;
-        }
-
-        return {
-            card: card,
-            cashbackAmount: apiResult.cashback,
-            rate: apiResult.rate,
-            cap: apiResult.cap,
-            matchedItem: apiResult.matchedItem,
-            effectiveAmount: apiResult.amount || 0,
-            isBasic: false
-        };
-    }).filter(result => result !== null);
-}
-
-function showLoadingState() {
-    resultsContainer.innerHTML = `
-        <div class="loading-state" style="text-align: center; padding: 40px;">
-            <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-            <p>計算中...</p>
-        </div>
-    `;
-    resultsSection.style.display = 'block';
-}
-
-function showAPIError(error) {
-    resultsContainer.innerHTML = `
-        <div class="error-state" style="text-align: center; padding: 40px; color: #e74c3c;">
-            <h3>⚠️ 計算失敗</h3>
-            <p>${error.message || '發生錯誤，請稍後再試'}</p>
-            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">正在使用本地計算...</p>
-        </div>
-    `;
-}
-
 // Calculate cashback for all cards
 async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
@@ -1836,45 +1759,8 @@ async function calculateCashback() {
         });
     }
 
-    // 使用後端 API 計算（如果啟用）
-    // 但如果有 currentMatchedItem（快捷搜索或自動完成匹配），則使用前端計算
-    if (USE_BACKEND_API && merchantValue && amount > 0 && !currentMatchedItem) {
-        console.log('🚀 使用後端 API 計算');
-        try {
-            showLoadingState();
-            const apiData = await callBackendAPI(merchantValue, amount);
-            console.log('✅ API 回傳結果:', apiData);
-
-            // Transform API results to match local format
-            const transformedResults = transformAPIResults(apiData.results, cardsData);
-
-            // Filter by user selected cards if logged in
-            const filteredResults = currentUser ?
-                transformedResults.filter(result => userSelectedCards.has(result.card.id)) :
-                transformedResults;
-
-            console.log(`📊 顯示 ${filteredResults.length} 張卡片的結果`);
-
-            // Display results using existing display function
-            displayResults(filteredResults, amount, merchantValue, false);
-
-            return; // Skip local calculation
-        } catch (error) {
-            console.error('❌ 後端 API 失敗，改用本地計算:', error);
-            showAPIError(error);
-            // Fall through to local calculation
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Show error message briefly
-        }
-    }
-
-    // 前端計算（用於快捷搜索、自動完成匹配、或 API 失敗時的備用）
-    if (currentMatchedItem) {
-        console.log('🔍 使用前端計算（有匹配項目）');
-    } else if (USE_BACKEND_API) {
-        console.log('🔍 使用前端計算（後端 API 已關閉或失敗）');
-    } else {
-        console.log('🔍 使用前端計算');
-    }
+    // 使用前端計算
+    console.log('🔍 使用前端計算');
 
     let results;
     let isBasicCashback = false;
