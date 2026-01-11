@@ -334,14 +334,66 @@ header p {
 .cards-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.cards-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .cards-header p {
     font-size: 0.9rem;
     margin: 0;
     opacity: 0.8;
+}
+
+/* Toggle collapse button (mobile only) */
+.toggle-collapse-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: none; /* Hidden by default, shown on mobile via JS */
+}
+
+.toggle-collapse-btn:hover {
+    color: white;
+}
+
+.toggle-collapse-btn .chevron-icon {
+    transition: transform 0.2s ease;
+}
+
+.toggle-collapse-btn.collapsed .chevron-icon {
+    transform: rotate(-90deg);
+}
+
+/* Count text (mobile only when collapsed) */
+.count-text {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: none; /* Hidden by default, shown on mobile when collapsed */
+}
+
+/* Collapsible chips container */
+.card-chips.collapsed,
+.payment-chips.collapsed {
+    display: none;
+}
+
+/* Mobile styles for collapse feature */
+@media (max-width: 768px) {
+    .toggle-collapse-btn {
+        display: flex !important; /* Override inline style on mobile */
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* 行動支付區塊 */
@@ -352,8 +404,15 @@ header p {
 .section-title-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.section-title-row .header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .section-title {
