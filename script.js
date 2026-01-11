@@ -3388,6 +3388,9 @@ function initializeAuthListeners() {
             // Update chips display
             populateCardChips();
             populatePaymentChips();
+
+            // Apply saved collapse state for logged-in users
+            await applyCollapseState();
         } else {
             // User is signed out
             console.log('User signed out');
@@ -3676,7 +3679,7 @@ function setupManageCardsModal() {
 }
 
 // Setup mobile collapse feature for cards and payments (only on mobile)
-function setupMobileCollapse() {
+async function setupMobileCollapse() {
     const toggleCardsBtn = document.getElementById('toggle-cards-btn');
     const togglePaymentsBtn = document.getElementById('toggle-payments-btn');
     const cardChips = document.getElementById('card-chips');
@@ -3687,9 +3690,26 @@ function setupMobileCollapse() {
     // Check if on mobile (screen width <= 768px)
     const isMobile = () => window.innerWidth <= 768;
 
+    // Load saved collapse state for logged-in users
+    const savedState = await loadCollapseState();
+
+    // Apply saved state on mobile
+    if (isMobile() && savedState) {
+        if (savedState.cardsCollapsed && cardChips && toggleCardsBtn && cardsCountText) {
+            cardChips.classList.add('collapsed');
+            toggleCardsBtn.classList.add('collapsed');
+            cardsCountText.style.display = 'inline';
+        }
+        if (savedState.paymentsCollapsed && paymentChips && togglePaymentsBtn && paymentsCountText) {
+            paymentChips.classList.add('collapsed');
+            togglePaymentsBtn.classList.add('collapsed');
+            paymentsCountText.style.display = 'inline';
+        }
+    }
+
     // Setup toggle for cards
     if (toggleCardsBtn && cardChips && cardsCountText) {
-        toggleCardsBtn.addEventListener('click', () => {
+        toggleCardsBtn.addEventListener('click', async () => {
             if (!isMobile()) return; // Only work on mobile
 
             const isCollapsed = cardChips.classList.contains('collapsed');
@@ -3705,12 +3725,18 @@ function setupMobileCollapse() {
                 toggleCardsBtn.classList.add('collapsed');
                 cardsCountText.style.display = 'inline';
             }
+
+            // Save state for logged-in users
+            await saveCollapseState({
+                cardsCollapsed: !isCollapsed,
+                paymentsCollapsed: paymentChips?.classList.contains('collapsed') || false
+            });
         });
     }
 
     // Setup toggle for payments
     if (togglePaymentsBtn && paymentChips && paymentsCountText) {
-        togglePaymentsBtn.addEventListener('click', () => {
+        togglePaymentsBtn.addEventListener('click', async () => {
             if (!isMobile()) return; // Only work on mobile
 
             const isCollapsed = paymentChips.classList.contains('collapsed');
@@ -3726,6 +3752,12 @@ function setupMobileCollapse() {
                 togglePaymentsBtn.classList.add('collapsed');
                 paymentsCountText.style.display = 'inline';
             }
+
+            // Save state for logged-in users
+            await saveCollapseState({
+                cardsCollapsed: cardChips?.classList.contains('collapsed') || false,
+                paymentsCollapsed: !isCollapsed
+            });
         });
     }
 
@@ -3758,6 +3790,76 @@ function setupMobileCollapse() {
 
         wasMobile = nowMobile;
     });
+}
+
+// Load collapse state from Firestore (for logged-in users)
+async function loadCollapseState() {
+    if (!currentUser || !db) {
+        return null;
+    }
+
+    try {
+        const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
+        if (userDoc.exists() && userDoc.data().collapseState) {
+            console.log('📦 Loaded collapse state:', userDoc.data().collapseState);
+            return userDoc.data().collapseState;
+        }
+    } catch (error) {
+        console.error('❌ Error loading collapse state:', error);
+    }
+
+    return null;
+}
+
+// Save collapse state to Firestore (for logged-in users)
+async function saveCollapseState(state) {
+    if (!currentUser || !db) {
+        return;
+    }
+
+    try {
+        await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+            collapseState: state
+        }, { merge: true });
+        console.log('💾 Saved collapse state:', state);
+    } catch (error) {
+        console.error('❌ Error saving collapse state:', error);
+    }
+}
+
+// Apply saved collapse state to UI (for logged-in users)
+async function applyCollapseState() {
+    const cardChips = document.getElementById('card-chips');
+    const paymentChips = document.getElementById('payment-chips');
+    const toggleCardsBtn = document.getElementById('toggle-cards-btn');
+    const togglePaymentsBtn = document.getElementById('toggle-payments-btn');
+    const cardsCountText = document.getElementById('cards-count-text');
+    const paymentsCountText = document.getElementById('payments-count-text');
+
+    // Check if on mobile (screen width <= 768px)
+    const isMobile = () => window.innerWidth <= 768;
+
+    if (!isMobile()) {
+        return; // Only apply on mobile
+    }
+
+    const savedState = await loadCollapseState();
+
+    if (savedState) {
+        // Apply cards collapse state
+        if (savedState.cardsCollapsed && cardChips && toggleCardsBtn && cardsCountText) {
+            cardChips.classList.add('collapsed');
+            toggleCardsBtn.classList.add('collapsed');
+            cardsCountText.style.display = 'inline';
+        }
+
+        // Apply payments collapse state
+        if (savedState.paymentsCollapsed && paymentChips && togglePaymentsBtn && paymentsCountText) {
+            paymentChips.classList.add('collapsed');
+            togglePaymentsBtn.classList.add('collapsed');
+            paymentsCountText.style.display = 'inline';
+        }
+    }
 }
 
 // Open manage cards modal
