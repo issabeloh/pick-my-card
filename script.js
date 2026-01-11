@@ -1115,15 +1115,15 @@ function initializeLazyLoading() {
 function populateCardChips() {
     const cardChipsContainer = document.getElementById('card-chips');
     if (!cardChipsContainer) return;
-    
+
     // Clear existing chips
     cardChipsContainer.innerHTML = '';
-    
+
     // Show cards based on user selection or all cards if not logged in
-    const cardsToShow = currentUser ? 
+    const cardsToShow = currentUser ?
         cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
         cardsData.cards;
-    
+
     cardsToShow.forEach(card => {
         const chip = document.createElement('div');
         chip.className = 'card-chip chip-clickable';
@@ -1131,6 +1131,12 @@ function populateCardChips() {
         chip.addEventListener('click', () => showCardDetail(card.id));
         cardChipsContainer.appendChild(chip);
     });
+
+    // Update count text for mobile collapse feature
+    const cardsCountText = document.getElementById('cards-count-text');
+    if (cardsCountText) {
+        cardsCountText.textContent = `已選取 ${cardsToShow.length} 張信用卡`;
+    }
 }
 
 // Populate payment chips in header
@@ -1150,6 +1156,12 @@ function populatePaymentChips() {
         emptyMsg.style.fontSize = '0.875rem';
         emptyMsg.textContent = '未選取行動支付，請點擊上方齒輪選取';
         paymentChipsContainer.appendChild(emptyMsg);
+
+        // Update count text even when empty
+        const paymentsCountText = document.getElementById('payments-count-text');
+        if (paymentsCountText) {
+            paymentsCountText.textContent = '已選取 0 個行動支付';
+        }
         return;
     }
 
@@ -1160,6 +1172,12 @@ function populatePaymentChips() {
         chip.addEventListener('click', () => showPaymentDetail(payment.id));
         paymentChipsContainer.appendChild(chip);
     });
+
+    // Update count text for mobile collapse feature
+    const paymentsCountText = document.getElementById('payments-count-text');
+    if (paymentsCountText) {
+        paymentsCountText.textContent = `已選取 ${paymentsToShow.length} 個行動支付`;
+    }
 }
 
 // Setup event listeners
@@ -3414,6 +3432,9 @@ function initializeAuthListeners() {
     // Setup manage cards modal
     setupManageCardsModal();
 
+    // Setup mobile collapse feature for cards and payments
+    setupMobileCollapse();
+
     // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');
     if (startUsingBtn) {
@@ -3426,6 +3447,9 @@ function initializeAuthListeners() {
 
             // Show tool sections
             showToolSections();
+
+            // Hide the button itself (for mobile)
+            startUsingBtn.style.display = 'none';
 
             // Focus on merchant input
             setTimeout(() => {
@@ -3450,6 +3474,9 @@ function initializeAuthListeners() {
             // Show tool sections
             showToolSections();
 
+            // Hide the button itself (for mobile)
+            startUsingBtnHeader.style.display = 'none';
+
             // Focus on merchant input
             setTimeout(() => {
                 const merchantInput = document.getElementById('merchant-input');
@@ -3472,6 +3499,9 @@ function initializeAuthListeners() {
 
             // Show tool sections
             showToolSections();
+
+            // Hide the button itself (for mobile)
+            startUsingBtn2.style.display = 'none';
 
             // Focus on merchant input
             setTimeout(() => {
@@ -3639,6 +3669,91 @@ function setupManageCardsModal() {
     });
 }
 
+// Setup mobile collapse feature for cards and payments (only on mobile)
+function setupMobileCollapse() {
+    const toggleCardsBtn = document.getElementById('toggle-cards-btn');
+    const togglePaymentsBtn = document.getElementById('toggle-payments-btn');
+    const cardChips = document.getElementById('card-chips');
+    const paymentChips = document.getElementById('payment-chips');
+    const cardsCountText = document.getElementById('cards-count-text');
+    const paymentsCountText = document.getElementById('payments-count-text');
+
+    // Check if on mobile (screen width <= 768px)
+    const isMobile = () => window.innerWidth <= 768;
+
+    // Setup toggle for cards
+    if (toggleCardsBtn && cardChips && cardsCountText) {
+        toggleCardsBtn.addEventListener('click', () => {
+            if (!isMobile()) return; // Only work on mobile
+
+            const isCollapsed = cardChips.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                // Expand
+                cardChips.classList.remove('collapsed');
+                toggleCardsBtn.classList.remove('collapsed');
+                cardsCountText.style.display = 'none';
+            } else {
+                // Collapse
+                cardChips.classList.add('collapsed');
+                toggleCardsBtn.classList.add('collapsed');
+                cardsCountText.style.display = 'inline';
+            }
+        });
+    }
+
+    // Setup toggle for payments
+    if (togglePaymentsBtn && paymentChips && paymentsCountText) {
+        togglePaymentsBtn.addEventListener('click', () => {
+            if (!isMobile()) return; // Only work on mobile
+
+            const isCollapsed = paymentChips.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                // Expand
+                paymentChips.classList.remove('collapsed');
+                togglePaymentsBtn.classList.remove('collapsed');
+                paymentsCountText.style.display = 'none';
+            } else {
+                // Collapse
+                paymentChips.classList.add('collapsed');
+                togglePaymentsBtn.classList.add('collapsed');
+                paymentsCountText.style.display = 'inline';
+            }
+        });
+    }
+
+    // Handle window resize - reset collapse state when going from mobile to desktop
+    let wasMobile = isMobile();
+    window.addEventListener('resize', () => {
+        const nowMobile = isMobile();
+
+        // If switching from mobile to desktop, expand everything
+        if (wasMobile && !nowMobile) {
+            if (cardChips) {
+                cardChips.classList.remove('collapsed');
+            }
+            if (paymentChips) {
+                paymentChips.classList.remove('collapsed');
+            }
+            if (toggleCardsBtn) {
+                toggleCardsBtn.classList.remove('collapsed');
+            }
+            if (togglePaymentsBtn) {
+                togglePaymentsBtn.classList.remove('collapsed');
+            }
+            if (cardsCountText) {
+                cardsCountText.style.display = 'none';
+            }
+            if (paymentsCountText) {
+                paymentsCountText.style.display = 'none';
+            }
+        }
+
+        wasMobile = nowMobile;
+    });
+}
+
 // Open manage cards modal
 function openManageCardsModal() {
     const modal = document.getElementById('manage-cards-modal');
@@ -3663,7 +3778,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
+        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '直銷品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -3820,6 +3935,7 @@ function getTagClass(tagName) {
         '超市': 'tag-supermarket',
         '藥妝': 'tag-pharmacy',
         '時尚品牌': 'tag-fashion',
+        '直銷品牌': 'tag-direct-sales',
         '生活百貨': 'tag-lifestyle',
         '運動': 'tag-sports',
         '寵物': 'tag-pet',

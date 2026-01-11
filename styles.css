@@ -344,6 +344,51 @@ header p {
     opacity: 0.8;
 }
 
+/* Toggle collapse button (mobile only) */
+.toggle-collapse-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: none; /* Hidden by default, shown on mobile via JS */
+}
+
+.toggle-collapse-btn:hover {
+    color: white;
+}
+
+.toggle-collapse-btn .chevron-icon {
+    transition: transform 0.2s ease;
+}
+
+.toggle-collapse-btn.collapsed .chevron-icon {
+    transform: rotate(-90deg);
+}
+
+/* Count text (mobile only when collapsed) */
+.count-text {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    display: none; /* Hidden by default, shown on mobile when collapsed */
+}
+
+/* Collapsible chips container */
+.card-chips.collapsed,
+.payment-chips.collapsed {
+    display: none;
+}
+
+/* Mobile styles for collapse feature */
+@media (max-width: 768px) {
+    .toggle-collapse-btn {
+        display: flex !important; /* Override inline style on mobile */
+        align-items: center;
+        justify-content: center;
+    }
+}
+
 /* 行動支付區塊 */
 .header-section {
     margin-top: 24px; /* 增加與上方信用卡區塊的間距 */
@@ -2426,12 +2471,13 @@ input[type="number"]:focus {
 .card-tag.tag-department { background: #f9a8d4; color: #9d174d; }      /* 百貨公司 */
 .card-tag.tag-beauty-brand { background: #fbcfe8; color: #be185d; }    /* 美妝美髮保養品牌 */
 
-/* 顏色6：運動、寵物、親子、藥妝、時尚品牌 - 淺黃色系 */
+/* 顏色6：運動、寵物、親子、藥妝、時尚品牌、直銷品牌 - 淺黃色系 */
 .card-tag.tag-sports { background: #fef3c7; color: #92400e; }          /* 運動 */
 .card-tag.tag-pet { background: #fde68a; color: #78350f; }             /* 寵物 */
 .card-tag.tag-family { background: #fcd34d; color: #78350f; }          /* 親子 */
 .card-tag.tag-pharmacy { background: #fef3c7; color: #854d0e; }        /* 藥妝 */
 .card-tag.tag-fashion { background: #fde68a; color: #92400e; }         /* 時尚品牌 */
+.card-tag.tag-direct-sales { background: #fef3c7; color: #92400e; }    /* 直銷品牌 */
 
 /* 顏色7：應用程式商店、AI工具、串流平台 - 淺紫靛色系 */
 .card-tag.tag-appstore { background: #e0e7ff; color: #3730a3; }        /* 應用程式商店 */
