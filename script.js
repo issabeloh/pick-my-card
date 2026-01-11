@@ -3709,7 +3709,7 @@ async function setupMobileCollapse() {
 
     // Setup toggle for cards
     if (toggleCardsBtn && cardChips && cardsCountText) {
-        toggleCardsBtn.addEventListener('click', async () => {
+        toggleCardsBtn.addEventListener('click', () => {
             if (!isMobile()) return; // Only work on mobile
 
             const isCollapsed = cardChips.classList.contains('collapsed');
@@ -3726,8 +3726,8 @@ async function setupMobileCollapse() {
                 cardsCountText.style.display = 'inline';
             }
 
-            // Save state for logged-in users
-            await saveCollapseState({
+            // Save state for logged-in users (debounced - saves 500ms after last click)
+            saveCollapseState({
                 cardsCollapsed: !isCollapsed,
                 paymentsCollapsed: paymentChips?.classList.contains('collapsed') || false
             });
@@ -3736,7 +3736,7 @@ async function setupMobileCollapse() {
 
     // Setup toggle for payments
     if (togglePaymentsBtn && paymentChips && paymentsCountText) {
-        togglePaymentsBtn.addEventListener('click', async () => {
+        togglePaymentsBtn.addEventListener('click', () => {
             if (!isMobile()) return; // Only work on mobile
 
             const isCollapsed = paymentChips.classList.contains('collapsed');
@@ -3753,8 +3753,8 @@ async function setupMobileCollapse() {
                 paymentsCountText.style.display = 'inline';
             }
 
-            // Save state for logged-in users
-            await saveCollapseState({
+            // Save state for logged-in users (debounced - saves 500ms after last click)
+            saveCollapseState({
                 cardsCollapsed: cardChips?.classList.contains('collapsed') || false,
                 paymentsCollapsed: !isCollapsed
             });
@@ -3811,20 +3811,31 @@ async function loadCollapseState() {
     return null;
 }
 
-// Save collapse state to Firestore (for logged-in users)
+// Debounce timer for collapse state saving
+let collapseStateSaveTimer = null;
+
+// Save collapse state to Firestore (for logged-in users) with debouncing
 async function saveCollapseState(state) {
     if (!currentUser || !db) {
         return;
     }
 
-    try {
-        await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-            collapseState: state
-        }, { merge: true });
-        console.log('💾 Saved collapse state:', state);
-    } catch (error) {
-        console.error('❌ Error saving collapse state:', error);
+    // Clear previous timer to prevent excessive saves
+    if (collapseStateSaveTimer) {
+        clearTimeout(collapseStateSaveTimer);
     }
+
+    // Wait 500ms after last click before saving
+    collapseStateSaveTimer = setTimeout(async () => {
+        try {
+            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
+                collapseState: state
+            }, { merge: true });
+            console.log('💾 Saved collapse state:', state);
+        } catch (error) {
+            console.error('❌ Error saving collapse state:', error);
+        }
+    }, 500);
 }
 
 // Apply saved collapse state to UI (for logged-in users)
