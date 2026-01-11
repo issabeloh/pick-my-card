@@ -917,8 +917,14 @@ function displayAnnouncement(index) {
     announcementText.classList.add('fade-out');
 
     setTimeout(() => {
-        // Update content
-        announcementText.textContent = announcement.text;
+        // Update content with date badge if available
+        if (announcement.date) {
+            // Display with date badge
+            announcementText.innerHTML = `<span class="announcement-date-badge">${announcement.date}</span>${announcement.text}`;
+        } else {
+            // Display without date
+            announcementText.textContent = announcement.text;
+        }
 
         // Always set as clickable (opens modal)
         announcementText.href = '#';

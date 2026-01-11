@@ -195,6 +195,22 @@ header p {
     text-decoration: none;
 }
 
+/* Date badge bubble */
+.announcement-date-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 8px;
+    white-space: nowrap;
+    vertical-align: middle;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .announcement-controls {
     display: flex;
     align-items: center;
@@ -1452,6 +1468,13 @@ input[type="number"]:focus {
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         line-height: 1.4;
+    }
+
+    /* Date badge on mobile */
+    .announcement-date-badge {
+        font-size: 0.7rem;
+        padding: 1px 6px;
+        margin-right: 6px;
     }
 
     .announcement-controls {
