@@ -3663,7 +3663,7 @@ function openManageCardsModal() {
 
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
+        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '直銷品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
             .filter(tag => allTags.has(tag));
 
         sortedTags.forEach(tag => {
@@ -3820,6 +3820,7 @@ function getTagClass(tagName) {
         '超市': 'tag-supermarket',
         '藥妝': 'tag-pharmacy',
         '時尚品牌': 'tag-fashion',
+        '直銷品牌': 'tag-direct-sales',
         '生活百貨': 'tag-lifestyle',
         '運動': 'tag-sports',
         '寵物': 'tag-pet',
