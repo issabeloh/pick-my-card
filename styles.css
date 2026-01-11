@@ -334,15 +334,8 @@ header p {
 .cards-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
-}
-
-.cards-header .header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .cards-header p {
@@ -404,15 +397,8 @@ header p {
 .section-title-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
-}
-
-.section-title-row .header-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .section-title {
