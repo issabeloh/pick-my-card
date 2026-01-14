@@ -3375,22 +3375,25 @@ function initializeAuthListeners() {
                 myMappingsBtn.style.display = 'flex';
             }
 
-            // Load user's selected cards and payments from Firestore (async)
-            await loadUserCards();
-            await loadUserPayments();
+            // ✨ Load ALL user data in ONE Firestore call (optimized!)
+            const userData = await loadUserData();
+
+            // Load user's selected cards and payments using unified data
+            await loadUserCards(userData);
+            await loadUserPayments(userData);
             await loadSpendingMappings();
 
-            // Load user's quick search options and custom options
+            // Load user's quick search options and custom options using unified data
             await initializeQuickSearchOptions();
-            customOptions = await loadUserCustomOptions() || [];
+            customOptions = await loadUserCustomOptions(userData) || [];
             renderQuickSearchButtons();
 
             // Update chips display
             populateCardChips();
             populatePaymentChips();
 
-            // Apply saved collapse state for logged-in users
-            await applyCollapseState();
+            // Apply saved collapse state for logged-in users (using unified data)
+            await applyCollapseState(userData);
         } else {
             // User is signed out
             console.log('User signed out');
@@ -3523,8 +3526,31 @@ function initializeAuthListeners() {
     }
 }
 
+// ✨ Unified user data loader - loads ALL user data in ONE Firestore call
+async function loadUserData() {
+    if (!currentUser || !window.db || !window.doc || !window.getDoc) {
+        return null;
+    }
+
+    try {
+        const docRef = window.doc(window.db, 'users', currentUser.uid);
+        const docSnap = await window.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const userData = docSnap.data();
+            console.log('✅ Loaded all user data from Firestore in ONE call:', Object.keys(userData));
+            return userData;
+        }
+    } catch (error) {
+        console.error('❌ Error loading user data:', error);
+    }
+
+    return null;
+}
+
 // Load user's selected cards from Firestore (with localStorage fallback)
-async function loadUserCards() {
+// Now accepts optional userData parameter to avoid redundant Firestore calls
+async function loadUserCards(userData = null) {
     if (!currentUser) {
         console.log('No current user, using all cards');
         userSelectedCards = new Set(cardsData.cards.map(card => card.id));
@@ -3532,7 +3558,19 @@ async function loadUserCards() {
     }
 
     try {
-        // Try to load from Firestore first
+        // Use provided userData if available (from unified load)
+        if (userData && userData.selectedCards) {
+            const cloudCards = userData.selectedCards;
+            userSelectedCards = new Set(cloudCards);
+            console.log('✅ Using user cards from unified data load:', Array.from(userSelectedCards));
+
+            // Sync to localStorage for offline use
+            const storageKey = `selectedCards_${currentUser.uid}`;
+            localStorage.setItem(storageKey, JSON.stringify(cloudCards));
+            return;
+        }
+
+        // Fallback: Try to load from Firestore if userData not provided
         if (window.db && window.doc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
@@ -3793,11 +3831,19 @@ async function setupMobileCollapse() {
 }
 
 // Load collapse state from Firestore (for logged-in users)
-async function loadCollapseState() {
+// Now accepts optional userData parameter to avoid redundant Firestore calls
+async function loadCollapseState(userData = null) {
     if (!currentUser || !db) {
         return null;
     }
 
+    // Use provided userData if available (from unified load)
+    if (userData && userData.collapseState) {
+        console.log('📦 Using collapse state from unified data load:', userData.collapseState);
+        return userData.collapseState;
+    }
+
+    // Fallback: load from Firestore if userData not provided
     try {
         const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
         if (userDoc.exists() && userDoc.data().collapseState) {
@@ -3839,7 +3885,8 @@ async function saveCollapseState(state) {
 }
 
 // Apply saved collapse state to UI (for logged-in users)
-async function applyCollapseState() {
+// Now accepts optional userData parameter to avoid redundant Firestore calls
+async function applyCollapseState(userData = null) {
     const cardChips = document.getElementById('card-chips');
     const paymentChips = document.getElementById('payment-chips');
     const toggleCardsBtn = document.getElementById('toggle-cards-btn');
@@ -3854,7 +3901,7 @@ async function applyCollapseState() {
         return; // Only apply on mobile
     }
 
-    const savedState = await loadCollapseState();
+    const savedState = await loadCollapseState(userData);
 
     if (savedState) {
         // Apply cards collapse state
@@ -6935,7 +6982,8 @@ async function showComparePaymentsModal() {
 
 // Load user payments
 // Load user's selected payments from Firestore (with localStorage fallback)
-async function loadUserPayments() {
+// Now accepts optional userData parameter to avoid redundant Firestore calls
+async function loadUserPayments(userData = null) {
     if (!currentUser) {
         console.log('No current user, showing no payments by default');
         userSelectedPayments = new Set();
@@ -6943,7 +6991,19 @@ async function loadUserPayments() {
     }
 
     try {
-        // Try to load from Firestore first
+        // Use provided userData if available (from unified load)
+        if (userData && userData.selectedPayments) {
+            const cloudPayments = userData.selectedPayments;
+            userSelectedPayments = new Set(cloudPayments);
+            console.log('✅ Using user payments from unified data load:', Array.from(userSelectedPayments));
+
+            // Sync to localStorage for offline use
+            const storageKey = `selectedPayments_${currentUser.uid}`;
+            localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
+            return;
+        }
+
+        // Fallback: Try to load from Firestore if userData not provided
         if (window.db && window.doc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
@@ -7321,8 +7381,16 @@ async function saveQuickOptionsSelection() {
 }
 
 // Custom options management
-async function loadUserCustomOptions() {
+// Now accepts optional userData parameter to avoid redundant Firestore calls
+async function loadUserCustomOptions(userData = null) {
     try {
+        // Use provided userData if available (from unified load)
+        if (userData && userData.customQuickOptions) {
+            console.log('✅ Using custom options from unified data load');
+            return userData.customQuickOptions;
+        }
+
+        // Fallback: load from Firestore if userData not provided
         if (currentUser && db) {
             const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
             if (userDoc.exists() && userDoc.data().customQuickOptions) {
