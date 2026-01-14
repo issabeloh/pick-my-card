@@ -4024,7 +4024,21 @@ const combinedFeeInfo = `${annualFeeText} ${feeWaiverText}`;
 
 document.getElementById('card-annual-fee').textContent = combinedFeeInfo;
 document.getElementById('card-fee-waiver').style.display = 'none';
-        
+
+    // Update cashback type and points expiry
+    const cashbackTypeDiv = document.getElementById('card-cashback-type');
+    const pointsExpiryDiv = document.getElementById('card-points-expiry');
+    const cashbackTypeExpirySection = document.getElementById('cashback-type-expiry-section');
+
+    // 只在有資料時顯示此區塊
+    if (card.basicCashbackType || card.pointsExpiry) {
+        cashbackTypeDiv.textContent = card.basicCashbackType || '';
+        pointsExpiryDiv.textContent = card.pointsExpiry || '';
+        cashbackTypeExpirySection.style.display = 'flex';
+    } else {
+        cashbackTypeExpirySection.style.display = 'none';
+    }
+
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
 let basicContent = `<div class="cashback-detail-item">`;
