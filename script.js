@@ -1445,6 +1445,7 @@ const fuzzySearchMap = {
     '泰國航空': 'thai airways',
     '泰航': 'thai airways',
     '馬來西亞航空': 'malaysia airlines',
+    'airasia': '亞洲航空',
     '馬航': 'malaysia airlines',
     '越南航空': 'vietnam airlines',
     '越航': 'vietnam airlines',
@@ -1470,7 +1471,6 @@ const fuzzySearchMap = {
     'mitsui': '三井',
     'mitsui outlet': '三井',
     'mitsui outlet park': '三井(mitsui outlet park)',
-    // 新增海外和國外的對應
     '國外': '海外',
     '海外': '國外',
     'decathlon': '迪卡儂',
@@ -1496,7 +1496,14 @@ const fuzzySearchMap = {
     '全臺餐廳': '全臺餐飲',
     '國內國外餐廳': '國內國外餐飲',
     'holiday ktv': '好樂迪',
-    'party world': '錢櫃'
+    'party world': '錢櫃',
+    'fb廣告': 'meta廣告',
+    'facebook廣告': 'meta廣告',
+    'meta 廣告': 'meta廣告',
+    'fb ads': 'meta廣告',
+    'meta ads': 'meta廣告',
+    'google 廣告': 'google廣告',
+    'google ads': 'google廣告'
 };
 
 // Search term exclusion rules - prevents unwanted matches
@@ -8498,6 +8505,7 @@ function disableReviewButton() {
 document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
+
 
 
 
