@@ -1840,6 +1840,12 @@ input[type="number"]:focus {
     gap: 20px;
 }
 
+.info-column-left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
 .info-item-full {
     grid-column: 1 / -1;
 }
