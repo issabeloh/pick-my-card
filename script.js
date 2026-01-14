@@ -4027,13 +4027,14 @@ document.getElementById('card-fee-waiver').style.display = 'none';
 
     // Update cashback type and points expiry
     const cashbackTypeDiv = document.getElementById('card-cashback-type');
-    const pointsExpiryDiv = document.getElementById('card-points-expiry');
     const cashbackTypeExpirySection = document.getElementById('cashback-type-expiry-section');
 
     // 只在有資料時顯示此區塊
     if (card.basicCashbackType || card.pointsExpiry) {
-        cashbackTypeDiv.textContent = card.basicCashbackType || '';
-        pointsExpiryDiv.textContent = card.pointsExpiry || '';
+        const parts = [];
+        if (card.basicCashbackType) parts.push(card.basicCashbackType);
+        if (card.pointsExpiry) parts.push(card.pointsExpiry);
+        cashbackTypeDiv.textContent = parts.join(' | ');
         cashbackTypeExpirySection.style.display = 'flex';
     } else {
         cashbackTypeExpirySection.style.display = 'none';
