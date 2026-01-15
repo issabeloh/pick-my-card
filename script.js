@@ -2592,8 +2592,19 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (cap && amount > cap) {
                     const remainingAmount = amount - cap;
-                    // Remaining amount only gets basic cashback rate
-                    remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+
+                    // 🔥 Check if should use overseasCashback for excess amount
+                    // Conditions: has cap_hide and NOT 台新 Richart 卡
+                    const shouldUseOverseasForExcess =
+                        levelSettingsForCalc?.cap_hide !== undefined &&
+                        card.id !== 'taishin-richart';
+
+                    // Choose excess rate: overseasCashback > basicCashback
+                    const excessRate = shouldUseOverseasForExcess
+                        ? (card.overseasCashback || card.basicCashback)
+                        : card.basicCashback;
+
+                    remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
                 // Total cashback = special rate amount + remaining basic amount
