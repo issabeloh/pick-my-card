@@ -2594,9 +2594,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     const remainingAmount = amount - cap;
 
                     // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: has cap_hide or cap_14 and NOT 台新 Richart 卡
+                    // Conditions: rateGroup marked with useOverseasForExcess and NOT 台新 Richart 卡
                     const shouldUseOverseasForExcess =
-                        (levelSettingsForCalc?.cap_hide !== undefined || levelSettingsForCalc?.cap_14 !== undefined) &&
+                        matchedRateGroup?.useOverseasForExcess === true &&
                         card.id !== 'taishin-richart';
 
                     // Choose excess rate: overseasCashback > basicCashback
@@ -2706,9 +2706,9 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                     const remainingAmount = amount - parsedCap;
 
                     // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: has cap_hide or cap_14 and NOT 台新 Richart 卡
+                    // Conditions: rateGroup marked with useOverseasForExcess and NOT 台新 Richart 卡
                     const shouldUseOverseasForExcess =
-                        (levelData?.cap_hide !== undefined || levelData?.cap_14 !== undefined) &&
+                        rateGroup.useOverseasForExcess === true &&
                         card.id !== 'taishin-richart';
 
                     // Choose excess rate: overseasCashback > basicCashback
