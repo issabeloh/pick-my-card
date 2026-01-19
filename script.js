@@ -2594,10 +2594,13 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     const remainingAmount = amount - cap;
 
                     // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: rateGroup marked with useOverseasForExcess and NOT 台新 Richart 卡
+                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
+                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
                     const shouldUseOverseasForExcess =
-                        matchedRateGroup?.useOverseasForExcess === true &&
-                        card.id !== 'taishin-richart';
+                        isAdPlatform && card.id !== 'taishin-richart';
 
                     // Choose excess rate: overseasCashback > basicCashback
                     const excessRate = shouldUseOverseasForExcess
@@ -2706,10 +2709,13 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                     const remainingAmount = amount - parsedCap;
 
                     // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: rateGroup marked with useOverseasForExcess and NOT 台新 Richart 卡
+                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
+                    const isAdPlatform = rateGroup.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
                     const shouldUseOverseasForExcess =
-                        rateGroup.useOverseasForExcess === true &&
-                        card.id !== 'taishin-richart';
+                        isAdPlatform && card.id !== 'taishin-richart';
 
                     // Choose excess rate: overseasCashback > basicCashback
                     const excessRate = shouldUseOverseasForExcess
