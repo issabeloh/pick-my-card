@@ -2599,8 +2599,22 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (cap && amount > cap) {
                     const remainingAmount = amount - cap;
-                    // Remaining amount only gets basic cashback rate
-                    remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+
+                    // 🔥 Check if should use overseasCashback for excess amount
+                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
+                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
+                    const shouldUseOverseasForExcess =
+                        isAdPlatform && card.id !== 'taishin-richart';
+
+                    // Choose excess rate: overseasCashback > basicCashback
+                    const excessRate = shouldUseOverseasForExcess
+                        ? (card.overseasCashback || card.basicCashback)
+                        : card.basicCashback;
+
+                    remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
                 // Total cashback = special rate amount + remaining basic amount
@@ -2700,7 +2714,22 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (parsedCap && amount > parsedCap) {
                     const remainingAmount = amount - parsedCap;
-                    remainingCashback = Math.floor(remainingAmount * card.basicCashback / 100);
+
+                    // 🔥 Check if should use overseasCashback for excess amount
+                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
+                    const isAdPlatform = rateGroup.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
+                    const shouldUseOverseasForExcess =
+                        isAdPlatform && card.id !== 'taishin-richart';
+
+                    // Choose excess rate: overseasCashback > basicCashback
+                    const excessRate = shouldUseOverseasForExcess
+                        ? (card.overseasCashback || card.basicCashback)
+                        : card.basicCashback;
+
+                    remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
                 cashbackAmount = specialCashback + remainingCashback;
