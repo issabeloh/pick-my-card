@@ -738,7 +738,11 @@ function handleQuickSearch(option) {
     merchantInput.value = option.displayName;
 
     if (allMatches.length > 0) {
-        showMatchedItem(allMatches);
+        // Get cards to compare for parking benefits check
+        const cardsToCompare = currentUser ?
+            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards;
+        showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
 
         // Auto-trigger calculation if amount is filled
@@ -1346,7 +1350,11 @@ function handleMerchantInput() {
     console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
 
     if (matchedItems && matchedItems.length > 0) {
-        showMatchedItem(matchedItems);
+        // Get cards to compare for parking benefits check
+        const cardsToCompare = currentUser ?
+            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards;
+        showMatchedItem(matchedItems, input, cardsToCompare);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
     } else {
@@ -1715,31 +1723,26 @@ function findMatchingItem(searchTerm) {
 }
 
 // Show matched item(s)
-function showMatchedItem(matchedItems) {
+function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
+    let messageHtml = '';
+
     if (Array.isArray(matchedItems)) {
         if (matchedItems.length === 1) {
-            matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
+            messageHtml = `✓ 匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
         } else {
-    // 如果所有項目名稱相同，只顯示一次
-    const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
-    if (uniqueItems.length === 1) {
-        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${uniqueItems[0]}</strong>`;
-    } else {
-        const itemList = uniqueItems.join('、');
-        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${itemList}</strong>`;
-    }
-}
+            // 如果所有項目名稱相同，只顯示一次
+            const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
+            if (uniqueItems.length === 1) {
+                messageHtml = `✓ 匹配到: <strong>${uniqueItems[0]}</strong>`;
+            } else {
+                const itemList = uniqueItems.join('、');
+                messageHtml = `✓ 匹配到: <strong>${itemList}</strong>`;
+            }
+        }
     } else {
         // Backward compatibility for single item
-        matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>${matchedItems.originalItem}</strong>`;
+        messageHtml = `✓ 匹配到: <strong>${matchedItems.originalItem}</strong>`;
     }
-    matchedItemDiv.className = 'matched-item';
-    matchedItemDiv.style.display = 'block';
-}
-
-// Show no match message with red styling
-function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
-    let messageHtml = `✓ 匹配到: <strong>您選取的卡片中沒有任何匹配項目，以下結果顯示基本回饋</strong>`;
 
     // Check if there are parking benefits matches
     if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
@@ -1767,7 +1770,44 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     }
 
     matchedItemDiv.innerHTML = messageHtml;
-    matchedItemDiv.className = 'matched-item no-match';
+    matchedItemDiv.className = 'matched-item';
+    matchedItemDiv.style.display = 'block';
+}
+
+// Show no match message with styling
+function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
+    let messageHtml = `✘ 匹配到: <strong>您選取的卡片中沒有任何匹配項目，以下結果顯示基本回饋</strong>`;
+    let hasParkingMatch = false;
+
+    // Check if there are parking benefits matches
+    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
+        const merchantLower = merchantValue.toLowerCase().trim();
+        const matchingBenefits = cardsData.benefits.filter(benefit => {
+            if (!benefit.active) return false;
+
+            // Check if this card is in the user's selection
+            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+            if (!shouldShow) return false;
+
+            // Check if merchants match
+            if (benefit.merchants && Array.isArray(benefit.merchants)) {
+                return benefit.merchants.some(merchant => {
+                    const merchantItemLower = merchant.toLowerCase();
+                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
+                });
+            }
+            return false;
+        });
+
+        if (matchingBenefits.length > 0) {
+            hasParkingMatch = true;
+            messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
+        }
+    }
+
+    matchedItemDiv.innerHTML = messageHtml;
+    // Use different style class depending on whether parking benefits matched
+    matchedItemDiv.className = hasParkingMatch ? 'matched-item partial-match' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
 }
 
@@ -5219,7 +5259,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
 
                 if (benefit.merchants && benefit.merchants.length > 0) {
-                    benefitsHtml += `<div class="cashback-condition">地點: <strong>${benefit.merchants.join('、')}</strong></div>`;
+                    benefitsHtml += `<div class="cashback-condition">地點: <strong style="color: #000000;">${benefit.merchants.join('、')}</strong></div>`;
                 }
 
                 if (benefit.conditions) {
