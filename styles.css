@@ -1096,6 +1096,31 @@ input[type="number"]:focus {
     color: #dc2626;
 }
 
+.parking-jump-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.parking-jump-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.parking-jump-btn:active {
+    transform: translateY(0);
+}
+
 
 /* Calculate button */
 .calculate-btn {
