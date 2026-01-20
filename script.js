@@ -2121,6 +2121,9 @@ async function calculateCashback() {
 
     // Display coupon cashbacks
     await displayCouponCashbacks(amount, merchantValue);
+
+    // Display parking benefits
+    displayParkingBenefits(merchantValue, cardsToCompare);
 }
 
 // Get all search term variants for comprehensive matching
@@ -3101,6 +3104,111 @@ async function displayCouponCashbacks(amount, merchantValue) {
     couponResultsContainer.appendChild(fragment);
 
     couponResultsSection.style.display = 'block';
+}
+
+// Display parking benefits
+function displayParkingBenefits(merchantValue, cardsToCheck) {
+    // Check if benefits data exists
+    if (!cardsData || !cardsData.benefits || cardsData.benefits.length === 0) {
+        return;
+    }
+
+    const merchantLower = merchantValue.toLowerCase().trim();
+    const matchingBenefits = [];
+
+    // Find matching benefits
+    for (const benefit of cardsData.benefits) {
+        // Skip inactive benefits
+        if (!benefit.active) continue;
+
+        // Check if merchants match
+        if (benefit.merchants && Array.isArray(benefit.merchants)) {
+            for (const merchant of benefit.merchants) {
+                const merchantItemLower = merchant.toLowerCase();
+                if (merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower)) {
+                    // Check if this card is in the user's selection
+                    const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+
+                    if (shouldShow) {
+                        matchingBenefits.push({
+                            ...benefit,
+                            matchedMerchant: merchant
+                        });
+                    }
+                    break; // Found a match for this benefit, move to next
+                }
+            }
+        }
+    }
+
+    // If no matches, hide the section
+    const parkingSection = document.getElementById('parking-benefits-section');
+    const parkingContainer = document.getElementById('parking-benefits-container');
+
+    if (matchingBenefits.length === 0) {
+        if (parkingSection) parkingSection.style.display = 'none';
+        return;
+    }
+
+    // Display parking benefits
+    if (!parkingContainer) {
+        console.error('❌ parking-benefits-container 元素不存在');
+        return;
+    }
+
+    parkingContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    matchingBenefits.forEach(benefit => {
+        const benefitElement = createParkingBenefitElement(benefit);
+        fragment.appendChild(benefitElement);
+    });
+
+    parkingContainer.appendChild(fragment);
+    if (parkingSection) parkingSection.style.display = 'block';
+}
+
+// Create parking benefit element
+function createParkingBenefitElement(benefit) {
+    const benefitDiv = document.createElement('div');
+    benefitDiv.className = 'parking-benefit-item fade-in';
+
+    // Find card name
+    const card = cardsData.cards.find(c => c.id === benefit.id);
+    const cardName = card ? card.name : benefit.id;
+
+    benefitDiv.innerHTML = `
+        <div class="parking-header">
+            <div class="parking-card-name">${cardName}</div>
+        </div>
+        <div class="parking-benefit-highlight">
+            ${benefit.benefit_desc}
+        </div>
+        <div class="parking-details">
+            <div class="parking-detail-item">
+                <span class="parking-label">條件：</span>
+                <span class="parking-value">${benefit.conditions || '無'}</span>
+            </div>
+            <div class="parking-detail-item">
+                <span class="parking-label">地點：</span>
+                <span class="parking-value">${benefit.merchants.join('、')}</span>
+            </div>
+            ${benefit.benefit_period ? `
+            <div class="parking-detail-item">
+                <span class="parking-label">期限：</span>
+                <span class="parking-value">${benefit.benefit_period}</span>
+            </div>
+            ` : ''}
+            ${benefit.notes ? `
+            <div class="parking-detail-item">
+                <span class="parking-label">備註：</span>
+                <span class="parking-value">${benefit.notes}</span>
+            </div>
+            ` : ''}
+        </div>
+    `;
+
+    return benefitDiv;
 }
 
 // Create coupon result element
@@ -5045,7 +5153,50 @@ basicCashbackDiv.innerHTML = basicContent;
     } else {
         couponSection.style.display = 'none';
     }
-    
+
+    // Display parking benefits
+    const benefitsSection = document.getElementById('card-benefits-section');
+    const benefitsContent = document.getElementById('card-benefits-content');
+
+    if (cardsData.benefits && cardsData.benefits.length > 0) {
+        // Find benefits for this card
+        const cardBenefits = cardsData.benefits.filter(b => b.id === card.id && b.active);
+
+        if (cardBenefits.length > 0) {
+            let benefitsHtml = '';
+
+            cardBenefits.forEach(benefit => {
+                benefitsHtml += `<div class="cashback-detail-item">`;
+                benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
+
+                if (benefit.conditions) {
+                    benefitsHtml += `<div class="cashback-condition">條件: ${benefit.conditions}</div>`;
+                }
+
+                if (benefit.merchants && benefit.merchants.length > 0) {
+                    benefitsHtml += `<div class="cashback-condition">地點: ${benefit.merchants.join('、')}</div>`;
+                }
+
+                if (benefit.benefit_period) {
+                    benefitsHtml += `<div class="cashback-condition">期限: ${benefit.benefit_period}</div>`;
+                }
+
+                if (benefit.notes) {
+                    benefitsHtml += `<div class="cashback-condition">備註: ${benefit.notes}</div>`;
+                }
+
+                benefitsHtml += `</div>`;
+            });
+
+            benefitsContent.innerHTML = benefitsHtml;
+            benefitsSection.style.display = 'block';
+        } else {
+            benefitsSection.style.display = 'none';
+        }
+    } else {
+        benefitsSection.style.display = 'none';
+    }
+
     // Load and setup user notes
     currentNotesCardId = card.id;
     const notesTextarea = document.getElementById('user-notes-input');
