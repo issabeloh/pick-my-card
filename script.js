@@ -1732,7 +1732,7 @@ function showMatchedItem(matchedItems) {
 
 // Show no match message with red styling
 function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
-    let messageHtml = `✓ 系統匹配到: <strong>您選取的卡片中沒有任何匹配的項目，以下結果顯示基本回饋</strong>`;
+    let messageHtml = `✓ 匹配到: <strong>您選取的卡片中沒有任何匹配項目，以下結果顯示基本回饋</strong>`;
 
     // Check if there are parking benefits matches
     if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
@@ -1755,7 +1755,7 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
         });
 
         if (matchingBenefits.length > 0) {
-            messageHtml += `<br><button class="parking-jump-btn" onclick="scrollToParkingBenefits()">🅿️ 停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</button>`;
+            messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
         }
     }
 
@@ -5051,12 +5051,12 @@ basicCashbackDiv.innerHTML = basicContent;
                 benefitsHtml += `<div class="cashback-detail-item">`;
                 benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
 
-                if (benefit.conditions) {
-                    benefitsHtml += `<div class="cashback-condition">條件: ${benefit.conditions}</div>`;
+                if (benefit.merchants && benefit.merchants.length > 0) {
+                    benefitsHtml += `<div class="cashback-condition">地點: <strong>${benefit.merchants.join('、')}</strong></div>`;
                 }
 
-                if (benefit.merchants && benefit.merchants.length > 0) {
-                    benefitsHtml += `<div class="cashback-condition">地點: ${benefit.merchants.join('、')}</div>`;
+                if (benefit.conditions) {
+                    benefitsHtml += `<div class="cashback-condition">條件: ${benefit.conditions}</div>`;
                 }
 
                 if (benefit.benefit_period) {
