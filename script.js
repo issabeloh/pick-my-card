@@ -3179,12 +3179,12 @@ function createParkingBenefitElement(benefit) {
         </div>
         <div class="parking-details">
             <div class="parking-detail-item">
-                <span class="parking-label">條件：</span>
-                <span class="parking-value">${benefit.conditions || '無'}</span>
+                <span class="parking-label">地點：</span>
+                <span class="parking-value parking-merchants-highlight">${benefit.merchants.join('、')}</span>
             </div>
             <div class="parking-detail-item">
-                <span class="parking-label">地點：</span>
-                <span class="parking-value">${benefit.merchants.join('、')}</span>
+                <span class="parking-label">條件：</span>
+                <span class="parking-value">${benefit.conditions || '無'}</span>
             </div>
             ${benefit.benefit_period ? `
             <div class="parking-detail-item">
@@ -3330,9 +3330,14 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         </div>
         ${(() => {
             if (isBasicCashback) {
+                let conditionsText = '';
+                // Check if card has domesticBonusConditions
+                if (result.card.domesticBonusConditions) {
+                    conditionsText = `<br><small>條件: ${result.card.domesticBonusConditions}</small>`;
+                }
                 return `
                     <div class="matched-merchant">
-                        一般消費回饋率
+                        一般消費回饋率${conditionsText}
                     </div>
                 `;
             } else if (result.matchedItem) {
