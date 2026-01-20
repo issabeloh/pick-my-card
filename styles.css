@@ -1259,6 +1259,90 @@ input[type="number"]:focus {
     margin-left: 8px;
 }
 
+/* Parking Benefits Styles */
+.parking-benefits-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+
+.parking-benefits-section h2 {
+    margin-bottom: 16px;
+    color: #111827;
+    font-size: 1.5rem;
+}
+
+.parking-benefits-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.parking-benefit-item {
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 16px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    transition: all 0.3s ease;
+}
+
+.parking-benefit-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.parking-header {
+    margin-bottom: 12px;
+    border-bottom: 1px solid #93c5fd;
+    padding-bottom: 8px;
+}
+
+.parking-card-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.parking-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.parking-detail-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.parking-label {
+    color: #1e40af;
+    font-weight: 500;
+    min-width: 50px;
+    flex-shrink: 0;
+}
+
+.parking-value {
+    color: #1e3a8a;
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+    .parking-benefits-container {
+        grid-template-columns: 1fr;
+    }
+
+    .parking-benefit-item {
+        padding: 12px;
+    }
+
+    .parking-detail-item {
+        font-size: 13px;
+    }
+}
+
 .results-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
