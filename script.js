@@ -1738,8 +1738,35 @@ function showMatchedItem(matchedItems) {
 }
 
 // Show no match message with red styling
-function showNoMatchMessage() {
-    matchedItemDiv.innerHTML = `✓ 系統匹配到: <strong>您選取的卡片中沒有任何匹配的項目，以下結果顯示基本回饋</strong>`;
+function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
+    let messageHtml = `✓ 系統匹配到: <strong>您選取的卡片中沒有任何匹配的項目，以下結果顯示基本回饋</strong>`;
+
+    // Check if there are parking benefits matches
+    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
+        const merchantLower = merchantValue.toLowerCase().trim();
+        const matchingBenefits = cardsData.benefits.filter(benefit => {
+            if (!benefit.active) return false;
+
+            // Check if this card is in the user's selection
+            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+            if (!shouldShow) return false;
+
+            // Check if merchants match
+            if (benefit.merchants && Array.isArray(benefit.merchants)) {
+                return benefit.merchants.some(merchant => {
+                    const merchantItemLower = merchant.toLowerCase();
+                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
+                });
+            }
+            return false;
+        });
+
+        if (matchingBenefits.length > 0) {
+            messageHtml += `<br><button class="parking-jump-btn" onclick="scrollToParkingBenefits()">🅿️ 停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</button>`;
+        }
+    }
+
+    matchedItemDiv.innerHTML = messageHtml;
     matchedItemDiv.className = 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
 }
@@ -1747,6 +1774,23 @@ function showNoMatchMessage() {
 // Hide matched item
 function hideMatchedItem() {
     matchedItemDiv.style.display = 'none';
+}
+
+// Scroll to parking benefits section
+function scrollToParkingBenefits() {
+    const parkingSection = document.getElementById('parking-benefits-section');
+    if (parkingSection && parkingSection.style.display !== 'none') {
+        parkingSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+        // Add a brief highlight animation
+        parkingSection.style.transition = 'background-color 0.5s ease';
+        parkingSection.style.backgroundColor = '#dbeafe';
+        setTimeout(() => {
+            parkingSection.style.backgroundColor = '';
+        }, 1500);
+    }
 }
 
 
@@ -1978,7 +2022,7 @@ async function calculateCashback() {
 
         // Show no-match message and basic rates when no special rates found
         if (results.length === 0 && merchantValue.length > 0) {
-            showNoMatchMessage();
+            showNoMatchMessage(merchantValue, cardsToCompare);
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 
@@ -2090,7 +2134,7 @@ async function calculateCashback() {
 
         // Show no match message if user has typed something
         if (merchantValue.length > 0) {
-            showNoMatchMessage();
+            showNoMatchMessage(merchantValue, cardsToCompare);
         }
     }
     
@@ -3186,12 +3230,12 @@ function createParkingBenefitElement(benefit) {
         </div>
         <div class="parking-details">
             <div class="parking-detail-item">
-                <span class="parking-label">條件：</span>
-                <span class="parking-value">${benefit.conditions || '無'}</span>
+                <span class="parking-label">地點：</span>
+                <span class="parking-value parking-merchants-highlight">${benefit.merchants.join('、')}</span>
             </div>
             <div class="parking-detail-item">
-                <span class="parking-label">地點：</span>
-                <span class="parking-value">${benefit.merchants.join('、')}</span>
+                <span class="parking-label">條件：</span>
+                <span class="parking-value">${benefit.conditions || '無'}</span>
             </div>
             ${benefit.benefit_period ? `
             <div class="parking-detail-item">
@@ -3337,9 +3381,14 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         </div>
         ${(() => {
             if (isBasicCashback) {
+                let conditionsText = '';
+                // Check if card has domesticBonusConditions
+                if (result.card.domesticBonusConditions) {
+                    conditionsText = `<br><small>條件: ${result.card.domesticBonusConditions}</small>`;
+                }
                 return `
                     <div class="matched-merchant">
-                        一般消費回饋率
+                        一般消費回饋率${conditionsText}
                     </div>
                 `;
             } else if (result.matchedItem) {
