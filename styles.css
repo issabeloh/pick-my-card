@@ -1303,6 +1303,18 @@ input[type="number"]:focus {
     color: #1e40af;
 }
 
+.parking-benefit-highlight {
+    background: #2563eb;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 12px 0;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
 .parking-details {
     display: grid;
     grid-template-columns: 1fr;

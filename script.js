@@ -3174,14 +3174,13 @@ function createParkingBenefitElement(benefit) {
         <div class="parking-header">
             <div class="parking-card-name">${cardName}</div>
         </div>
+        <div class="parking-benefit-highlight">
+            ${benefit.benefit_desc}
+        </div>
         <div class="parking-details">
             <div class="parking-detail-item">
                 <span class="parking-label">條件：</span>
                 <span class="parking-value">${benefit.conditions || '無'}</span>
-            </div>
-            <div class="parking-detail-item">
-                <span class="parking-label">優惠：</span>
-                <span class="parking-value">${benefit.benefit_desc}</span>
             </div>
             <div class="parking-detail-item">
                 <span class="parking-label">地點：</span>
@@ -4987,7 +4986,50 @@ basicCashbackDiv.innerHTML = basicContent;
     } else {
         couponSection.style.display = 'none';
     }
-    
+
+    // Display parking benefits
+    const benefitsSection = document.getElementById('card-benefits-section');
+    const benefitsContent = document.getElementById('card-benefits-content');
+
+    if (cardsData.benefits && cardsData.benefits.length > 0) {
+        // Find benefits for this card
+        const cardBenefits = cardsData.benefits.filter(b => b.id === card.id && b.active);
+
+        if (cardBenefits.length > 0) {
+            let benefitsHtml = '';
+
+            cardBenefits.forEach(benefit => {
+                benefitsHtml += `<div class="cashback-detail-item">`;
+                benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
+
+                if (benefit.conditions) {
+                    benefitsHtml += `<div class="cashback-condition">條件: ${benefit.conditions}</div>`;
+                }
+
+                if (benefit.merchants && benefit.merchants.length > 0) {
+                    benefitsHtml += `<div class="cashback-condition">地點: ${benefit.merchants.join('、')}</div>`;
+                }
+
+                if (benefit.benefit_period) {
+                    benefitsHtml += `<div class="cashback-condition">期限: ${benefit.benefit_period}</div>`;
+                }
+
+                if (benefit.notes) {
+                    benefitsHtml += `<div class="cashback-condition">備註: ${benefit.notes}</div>`;
+                }
+
+                benefitsHtml += `</div>`;
+            });
+
+            benefitsContent.innerHTML = benefitsHtml;
+            benefitsSection.style.display = 'block';
+        } else {
+            benefitsSection.style.display = 'none';
+        }
+    } else {
+        benefitsSection.style.display = 'none';
+    }
+
     // Load and setup user notes
     currentNotesCardId = card.id;
     const notesTextarea = document.getElementById('user-notes-input');
