@@ -3193,13 +3193,6 @@ function displayParkingBenefits(merchantValue, cardsToCheck) {
     const merchantLower = merchantValue.toLowerCase().trim();
     const matchingBenefits = [];
 
-    // Extract core search term for special quick search options like "所有停車"
-    // Remove prefixes like "所有" to improve matching
-    let coreSearchTerm = merchantLower;
-    if (merchantLower.startsWith('所有')) {
-        coreSearchTerm = merchantLower.substring(2); // Remove "所有"
-    }
-
     // Find matching benefits
     for (const benefit of cardsData.benefits) {
         // Skip inactive benefits
@@ -3209,11 +3202,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck) {
         if (benefit.merchants && Array.isArray(benefit.merchants)) {
             for (const merchant of benefit.merchants) {
                 const merchantItemLower = merchant.toLowerCase();
-                // Match using both original term and core term
-                const matchesOriginal = merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                const matchesCore = coreSearchTerm.includes(merchantItemLower) || merchantItemLower.includes(coreSearchTerm);
-
-                if (matchesOriginal || matchesCore) {
+                if (merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower)) {
                     // Check if this card is in the user's selection
                     const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
 
