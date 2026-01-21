@@ -744,6 +744,7 @@ function handleQuickSearch(option) {
             cardsData.cards;
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
+        currentQuickSearchOption = option; // Store quick search option for parking benefits
 
         // Auto-trigger calculation if amount is filled
         const amountInput = document.getElementById('amount-input');
@@ -756,6 +757,7 @@ function handleQuickSearch(option) {
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
+        currentQuickSearchOption = null;
         console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
 
@@ -784,6 +786,7 @@ function showErrorMessage(message) {
 }
 
 let currentMatchedItem = null;
+let currentQuickSearchOption = null; // Store current quick search option for parking benefits
 
 // DOM elements
 const merchantInput = document.getElementById('merchant-input');
@@ -1333,6 +1336,9 @@ function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
 
     console.log('🔍 handleMerchantInput:', input);
+
+    // Clear quick search option when user manually types
+    currentQuickSearchOption = null;
 
     // 🔥 新增：檢查並顯示搜尋提示
     checkAndShowSearchHint(input);
@@ -3190,7 +3196,18 @@ function displayParkingBenefits(merchantValue, cardsToCheck) {
         return;
     }
 
-    const merchantLower = merchantValue.toLowerCase().trim();
+    // Determine search terms to use
+    let searchTerms = [];
+    if (currentQuickSearchOption && currentQuickSearchOption.merchants) {
+        // Use quick search merchants (e.g., ["停車", "嘟嘟房", "台灣聯通", "24TPS永固", "VIVI PARK"])
+        searchTerms = currentQuickSearchOption.merchants.map(m => m.toLowerCase().trim());
+        console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
+    } else {
+        // Use regular input value
+        searchTerms = [merchantValue.toLowerCase().trim()];
+        console.log(`🅿️ 使用輸入值匹配停車折抵: "${searchTerms[0]}"`);
+    }
+
     const matchingBenefits = [];
 
     // Find matching benefits
@@ -3198,11 +3215,17 @@ function displayParkingBenefits(merchantValue, cardsToCheck) {
         // Skip inactive benefits
         if (!benefit.active) continue;
 
-        // Check if merchants match
+        // Check if merchants match using any search term
         if (benefit.merchants && Array.isArray(benefit.merchants)) {
             for (const merchant of benefit.merchants) {
                 const merchantItemLower = merchant.toLowerCase();
-                if (merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower)) {
+
+                // Check against all search terms
+                const isMatch = searchTerms.some(searchTerm =>
+                    searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
+                );
+
+                if (isMatch) {
                     // Check if this card is in the user's selection
                     const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
 
