@@ -2205,8 +2205,8 @@ async function calculateCashback() {
     // Display coupon cashbacks
     await displayCouponCashbacks(amount, merchantValue);
 
-    // Display parking benefits
-    displayParkingBenefits(merchantValue, cardsToCompare);
+    // Display parking benefits - pass quick search keywords if available
+    displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);
 }
 
 // Get all search term variants for comprehensive matching
@@ -3190,21 +3190,20 @@ async function displayCouponCashbacks(amount, merchantValue) {
 }
 
 // Display parking benefits
-function displayParkingBenefits(merchantValue, cardsToCheck) {
+function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null) {
     // Check if benefits data exists
     if (!cardsData || !cardsData.benefits || cardsData.benefits.length === 0) {
         return;
     }
 
     // Determine search terms to use
-    let searchTerms = [];
-    if (currentQuickSearchOption && currentQuickSearchOption.merchants) {
-        // Use quick search merchants (e.g., ["停車", "嘟嘟房", "台灣聯通", "24TPS永固", "VIVI PARK"])
-        searchTerms = currentQuickSearchOption.merchants.map(m => m.toLowerCase().trim());
+    const searchTerms = searchKeywords
+        ? searchKeywords.map(k => k.toLowerCase().trim())
+        : [merchantValue.toLowerCase().trim()];
+
+    if (searchKeywords) {
         console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
     } else {
-        // Use regular input value
-        searchTerms = [merchantValue.toLowerCase().trim()];
         console.log(`🅿️ 使用輸入值匹配停車折抵: "${searchTerms[0]}"`);
     }
 
