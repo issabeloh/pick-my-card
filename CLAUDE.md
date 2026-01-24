@@ -112,15 +112,20 @@ group.conditions.push({category, conditions});
 ### 6. 搜尋功能（findMatchingItem）
 
 **搜尋範圍** (script.js:1215-1400)：
-- ✅ cashbackRates items
-- ✅ specialItems
-- ✅ generalItems (CUBE 卡)
-- ✅ **couponCashbacks merchant**（新增於 2025-12-22）
+- ✅ cashbackRates items（信用卡回饋項目）
+- ✅ specialItems（特殊通路項目）
+- ✅ generalItems（CUBE 卡一般項目）
+- ✅ couponCashbacks merchant（領券型活動商家）
+- ✅ **benefits merchants（停車折抵優惠地點）**（新增於 2026-01-24）
 
 **Coupon 搜尋邏輯**：
 - 解析 merchant 欄位（逗號分隔的字符串）
 - 每個 merchant 項目都會被檢查匹配
 - 使 quick search 也能找到 coupon 活動
+
+**停車折抵搜尋邏輯**（詳見 section 9）：
+- 由 displayParkingBenefits() 獨立處理
+- 支援快捷搜尋傳遞多個關鍵詞
 
 ### 7. hideInDisplay 和 rate_hide 機制
 
@@ -162,6 +167,68 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 - 指定國家 3.8%: 21053 × 3.8% = 800（上限 21053）
 - **總計: 1,700**
 
+### 9. 停車折抵優惠系統（Parking Benefits）
+
+**資料結構**：
+- 儲存在 `cardsData.benefits` 陣列中
+- **一張卡可以有多個停車方案，ID 重複是正常的**
+  - 範例：ctbc-uniopen 卡有家樂福、夢時代、統一時代等多個停車方案
+  - 每個方案是獨立的物件，分別顯示
+  - 不同地點、不同優惠內容、不同條件都需要獨立記錄
+
+**資料欄位**：
+```javascript
+{
+  id: "ctbc-uniopen",  // 卡片 ID（會重複）
+  benefit_type: "parking",
+  benefit_desc: "購物當日 2 小時（每日限1次）",
+  merchants: ["夢時代購物中心停車場", "統一時代百貨高雄店"],
+  conditions: "刷卡消費滿 500 元(含)以上",
+  benefit_period: "2026/06/30",
+  notes: "需使用實體卡刷卡",
+  active: true
+}
+```
+
+**搜尋與顯示邏輯** (script.js:3193-3269 `displayParkingBenefits`)：
+
+**函數簽名**：
+```javascript
+function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)
+```
+
+**參數說明**：
+- `merchantValue`: 輸入框的值（如 "所有停車"）
+- `cardsToCheck`: 要檢查的卡片陣列（用戶選擇的卡或全部卡）
+- `searchKeywords`: 快捷搜尋的關鍵詞陣列（可選）
+
+**搜尋邏輯**：
+1. **快捷搜尋時**（searchKeywords 不為 null）：
+   - 使用所有關鍵詞陣列匹配
+   - 範例：`["停車", "嘟嘟房", "台灣聯通", "24TPS永固", "VIVI PARK"]`
+   - 任一關鍵詞匹配 benefit.merchants 即成功
+
+2. **一般搜尋時**（searchKeywords 為 null）：
+   - 只用 merchantValue 匹配
+   - 範例：`"家樂福"`
+
+3. **匹配邏輯**：
+   ```javascript
+   searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
+   ```
+
+**重要**：
+- 快捷搜尋時必須傳遞 `searchKeywords` 參數
+- 否則只會用顯示名稱（如 "所有停車"）匹配，會失敗
+- 調用範例：
+  ```javascript
+  displayParkingBenefits(
+      merchantValue,
+      cardsToCompare,
+      currentQuickSearchOption?.merchants  // 快捷搜尋關鍵詞
+  );
+  ```
+
 ## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
@@ -201,51 +268,57 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ### 最近的技術決策
 
-1. **2026-01-01: 擴展 Placeholder 支援任意欄位**
+1. **2026-01-24: 修復停車折抵優惠快捷搜尋**
+   - 快捷搜尋時，停車折抵優惠需要使用所有關鍵詞匹配
+   - displayParkingBenefits() 新增 searchKeywords 參數
+   - 避免只用顯示名稱（如 "所有停車"）匹配導致找不到結果
+   - 在 calculateCashback() 調用時傳遞 `currentQuickSearchOption?.merchants`
+
+2. **2026-01-01: 擴展 Placeholder 支援任意欄位**
    - 修改 parseCashbackRate 函數，使用正則表達式匹配任意 placeholder
    - 支援 `{rate_1}`, `{cap_1}`, `{overseasBonusRate}`, `{domesticBonusRate}` 等
    - 從 levelSettings 中動態讀取對應欄位值
    - 同步更新 parseCashbackRateSync 和 parseCashbackCap 函數
    - 解決永豐大戶卡等卡片顯示 NaN% 的問題
 
-2. **2025-12-22: 分層回饋計算系統**
+3. **2025-12-22: 分層回饋計算系統**
    - 實作 calculateLayeredCashback 函數處理多層獎勵結構
    - 支援 DBS Eco 等複雜卡片的三層計算（基本+加碼+指定項目）
    - 自動檢測海外/國內交易並套用對應加碼率
    - 每層獨立計算消費上限
 
-2. **2025-12-22: 性能優化三項**
+4. **2025-12-22: 性能優化三項**
    - 建立搜尋索引：O(n³) → O(1)，提升 500-800ms
    - 日期狀態緩存：減少重複計算，提升 150-250ms
    - DocumentFragment 批量 DOM：減少 reflow，提升 100-200ms
    - 總提升：從 1.2-2.5 秒 → 0.2-0.7 秒
 
-3. **2025-12-22: Bug 修復**
+5. **2025-12-22: Bug 修復**
    - 修復即將開始活動排序（按回饋金額排序）
    - 修復 DBS Eco「禾乃川」搜尋錯誤（rate_hide 只對 hideInDisplay=true 生效）
    - 加入 coupon 搜尋支援（findMatchingItem 也搜尋 couponCashbacks）
 
-4. **2024-12: 支援 {cap} placeholder + 移動級別回饋率顯示**
+6. **2024-12: 支援 {cap} placeholder + 移動級別回饋率顯示**
    - 在 cap_N 欄位支援 {cap}
    - "各級別回饋率"移到級別選擇器旁邊
 
-5. **2024-12: 合併顯示 + 條件分組**
+7. **2024-12: 合併顯示 + 條件分組**
    - 相同 rate/cap 的活動合併顯示
    - 條件按 category 分組，不列出個別通路
 
-6. **2024-12: CUBE 卡修正**
+8. **2024-12: CUBE 卡修正**
    - 包含在級別回饋率顯示中
    - 使用 specialRate 而非 rate
 
-7. **2024-12: 玉山 Uni Card 可折疊條件**
+9. **2024-12: 玉山 Uni Card 可折疊條件**
    - 只有 Uni Card 使用可展開按鈕
    - 其他卡片直接顯示條件
 
-8. **2024-12: DBS Eco 佈局修正**
+10. **2024-12: DBS Eco 佈局修正**
    - level-note 移到下拉選單下方
    - 級別回饋率支援換行
 
-9. **2024-12: 修復空 specialItems 問題**
+11. **2024-12: 修復空 specialItems 問題**
    - 正確處理 specialItems = [] 的情況
    - 搜尋邏輯傳遞正確的 levelData 給解析函數
    - 移除 specialContent 中重複的級別回饋率顯示
@@ -276,12 +349,24 @@ if (levelSettings && levelSettings.rate_hide !== undefined
    - 只在級別選擇器旁邊顯示一次
    - specialContent 中不再顯示
 
+4. **停車折抵優惠的重複 ID 是正常的**：
+   - 一張卡可以有多種停車方案（不同地點、不同優惠內容）
+   - 每個方案是獨立的物件，ID 會重複
+   - 程式會正確遍歷並分別顯示所有方案
+   - 範例：ctbc-uniopen 有家樂福、夢時代、統一時代等多個方案
+
+5. **快捷搜尋時必須傳遞關鍵詞給停車折抵**：
+   - displayParkingBenefits() 需要接收 searchKeywords 參數
+   - 否則只會用顯示名稱（如 "所有停車"）匹配，會失敗
+   - 正確調用：`displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants)`
+
 ### 🎯 開發指引
 
 **修改搜尋邏輯時**：
 - 確保 hasLevels 卡片正確取得 levelData
 - 測試 placeholder 是否正確解析
 - 檢查空 specialItems 的情況
+- 確認停車折抵優惠的快捷搜尋整合
 
 **修改顯示邏輯時**：
 - 注意 CUBE, DBS Eco, Uni Card 的特殊處理
@@ -295,20 +380,19 @@ if (levelSettings && levelSettings.rate_hide !== undefined
 
 ## Git 工作流程
 
-**目前分支**：`claude/optimize-search-performance-aKHAP`
+**目前分支**：`claude/add-points-expiry-info-AssTF`
 
-**最近的 commits**（2025-12-22）：
-- Add coupon search support to findMatchingItem
-- Fix search bugs and improve sorting
-- Add items index for ultra-fast search lookups
-- Optimize search performance with caching and batched DOM operations
+**最近的 commits**（2026-01-24）：
+- Refactor: use function parameter instead of global state lookup
+- Fix parking benefits matching for quick search options
+- Revert parking benefits fix - incorrect solution
+- Remove BETA badge from page header
 
-**性能優化系列**：
-- 搜尋索引：從 O(n³) 降到 O(1)
-- 日期緩存：避免重複計算
-- DOM 批量操作：減少 reflow
-- 總提升：75-85% 速度改善
+**停車折抵優惠修復**：
+- 修復快捷搜尋不顯示停車折抵的問題
+- 重構為使用函數參數而非全局變量查找
+- 提升代碼可測試性和可維護性
 
 ---
 
-**更新日期**：2025-12-22
+**更新日期**：2026-01-24
