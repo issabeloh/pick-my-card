@@ -18,6 +18,62 @@ function enableBodyScroll() {
     document.body.style.overflow = '';
 }
 
+// ==========================================
+// Global Loading Utilities
+// ==========================================
+
+const loadingOverlay = {
+    element: null,
+    textElement: null,
+    startTime: null,
+
+    init() {
+        this.element = document.getElementById('global-loading-overlay');
+        this.textElement = document.getElementById('loading-text');
+    },
+
+    show(message = '載入中...') {
+        if (!this.element) this.init();
+
+        this.startTime = performance.now();
+        if (this.textElement) {
+            this.textElement.textContent = message;
+        }
+        if (this.element) {
+            this.element.style.display = 'flex';
+        }
+        disableBodyScroll();
+
+        console.log(`⏱️ Loading started: ${message}`);
+    },
+
+    hide() {
+        if (!this.element) this.init();
+
+        if (this.element) {
+            this.element.style.display = 'none';
+        }
+        enableBodyScroll();
+
+        if (this.startTime) {
+            const duration = performance.now() - this.startTime;
+            console.log(`⏱️ Loading finished in ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
+            this.startTime = null;
+        }
+    },
+
+    // Wrapper for async operations with loading
+    async wrap(asyncFn, message = '載入中...') {
+        this.show(message);
+        try {
+            const result = await asyncFn();
+            return result;
+        } finally {
+            this.hide();
+        }
+    }
+};
+
 // WebView detection function
 function isInAppBrowser() {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -1857,12 +1913,28 @@ async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
     console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
 
+    const startTime = performance.now();
+
     // Clear rate status cache at the start of each calculation
     rateStatusCache.clear();
 
     if (!cardsData) {
         console.error('❌ cardsData 未載入，無法計算');
         return;
+    }
+
+    // Show loading for operations that might take time
+    const cardsToCompareCount = currentUser ?
+        cardsData.cards.filter(card => userSelectedCards.has(card.id)).length :
+        cardsData.cards.length;
+
+    // Only show loading if comparing many cards or multiple matched items
+    const shouldShowLoading = cardsToCompareCount > 5 || (currentMatchedItem && Array.isArray(currentMatchedItem) && currentMatchedItem.length > 3);
+
+    if (shouldShowLoading) {
+        loadingOverlay.show('正在計算回饋...');
+        // Allow UI to update
+        await new Promise(resolve => setTimeout(resolve, 50));
     }
 
     const amount = parseFloat(amountInput.value);
@@ -2214,6 +2286,15 @@ async function calculateCashback() {
 
     // Display parking benefits - pass quick search keywords if available
     displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);
+
+    // Hide loading and log performance
+    if (shouldShowLoading) {
+        loadingOverlay.hide();
+    }
+
+    const duration = performance.now() - startTime;
+    console.log(`⏱️ calculateCashback 完成 - 耗時: ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
+    console.log(`📊 比較了 ${cardsToCompare.length} 張卡片，找到 ${results.length} 個結果`);
 }
 
 // Get all search term variants for comprehensive matching
@@ -7223,6 +7304,10 @@ async function showComparePaymentsModal() {
         return;
     }
 
+    // Show modal first (for better UX)
+    modal.style.display = 'flex';
+    disableBodyScroll();
+
     const paymentsToCompare = currentUser ?
         paymentsData.payments.filter(p => userSelectedPayments.has(p.id)) :
         paymentsData.payments;
@@ -7230,6 +7315,18 @@ async function showComparePaymentsModal() {
     if (paymentsToCompare.length === 0) {
         contentContainer.innerHTML = '<p style="text-align: center; color: #666;">請先選擇要比較的行動支付</p>';
     } else {
+        // Show loading state
+        contentContainer.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; gap: 16px;">
+                <div class="loading-spinner-large"></div>
+                <div style="color: #6b7280; font-size: 0.95rem;">正在計算所有行動支付回饋...</div>
+            </div>
+        `;
+
+        // Wrap calculation in try-catch and use setTimeout to allow UI to update
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        const startTime = performance.now();
         let paymentsWithCards = [];
 
         for (const payment of paymentsToCompare) {
@@ -7333,6 +7430,11 @@ async function showComparePaymentsModal() {
 
             contentContainer.appendChild(gridContainer);
         }
+
+        // Log performance
+        const duration = performance.now() - startTime;
+        console.log(`⏱️ 行動支付比較完成 - 耗時: ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
+        console.log(`📊 比較了 ${paymentsToCompare.length} 個行動支付，找到 ${paymentsWithCards.length} 個有回饋`);
     }
 
     // Setup close events
@@ -7346,9 +7448,6 @@ async function showComparePaymentsModal() {
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
-
-    modal.style.display = 'flex';
-    disableBodyScroll();
 }
 
 // Load user payments
