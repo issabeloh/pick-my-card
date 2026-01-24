@@ -2951,6 +2951,61 @@ function displayMerchantPaymentInfo(searchedItem) {
     }
 }
 
+// 顯示推薦連結資訊
+function displayReferralLink(searchedItem) {
+    // 移除舊的推薦連結區塊（如果存在）
+    const existingBlock = document.getElementById('referral-link-info');
+    if (existingBlock) {
+        existingBlock.remove();
+    }
+
+    if (!searchedItem || !cardsData?.referralLinks) {
+        return;
+    }
+
+    // 搜尋匹配的推薦連結
+    const searchLower = searchedItem.toLowerCase().trim();
+    const matchedReferral = cardsData.referralLinks.find(referral => {
+        if (!referral.active) return false;
+        const merchantLower = referral.merchant.toLowerCase();
+        return merchantLower === searchLower ||
+               merchantLower.includes(searchLower) ||
+               searchLower.includes(merchantLower);
+    });
+
+    if (!matchedReferral) {
+        return;
+    }
+
+    console.log('✅ 找到推薦連結:', matchedReferral.merchant);
+
+    // 建立推薦連結區塊
+    const infoBlock = document.createElement('div');
+    infoBlock.id = 'referral-link-info';
+    infoBlock.className = 'referral-link-info';
+
+    infoBlock.innerHTML = `
+        <div class="referral-link-content">
+            <span class="referral-link-icon">🎁</span>
+            <span class="referral-link-text">${matchedReferral.description}</span>
+            <a href="${matchedReferral.url}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+                前往註冊 →
+            </a>
+        </div>
+    `;
+
+    // 插入到商家付款方式區塊下方、免責聲明上方
+    const resultsSection = document.getElementById('results-section');
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
+
+    if (resultsSection && paymentDisclaimer) {
+        // 如果有商家付款方式資訊，插入在它下方；否則插入在免責聲明上方
+        const insertBeforeElement = merchantPaymentInfo ? merchantPaymentInfo.nextSibling : paymentDisclaimer;
+        resultsSection.insertBefore(infoBlock, insertBeforeElement);
+    }
+}
+
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
@@ -2994,6 +3049,9 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
 
     // 顯示商家付款方式資訊
     displayMerchantPaymentInfo(searchedItem);
+
+    // 顯示推薦連結資訊
+    displayReferralLink(searchedItem);
 
     resultsSection.style.display = 'block';
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });

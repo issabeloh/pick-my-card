@@ -378,6 +378,127 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 同時更新同步版本（用於排序）
 - Apps Script 也需要相應修改
 
+## Google Sheets 與 Apps Script 資料架構
+
+### 資料表結構
+
+系統使用 Google Sheets 作為資料來源，透過 Apps Script 匯出成 `cards.data` (Base64 編碼的 JSON)。
+
+**主要工作表**：
+
+1. **Cards Data** - 信用卡基本資料和回饋規則
+   - 必填欄位：`id`, `name`, `fullName`, `basicCashback`, `annualFee`, `feeWaiver`, `website`, `tags`
+   - 回饋欄位：`rate_N`, `items_N`, `cap_N`, `category_N`, `conditions_N`, `periodStart_N`, `periodEnd_N` (N=1-17)
+   - 領券活動：`couponMerchant_N`, `couponRate_N`, `couponConditions_N`, `couponPeriod_N`, `couponCap_N` (N=1-10)
+   - 分級卡片：`hasLevels`, `levelSettings` (JSON 格式)
+
+2. **Payments** - 行動支付資料
+   - 欄位：`id`, `name`, `website`
+   - 自動生成 `searchTerms` (別名對照表)
+
+3. **QuickSearch** - 快捷搜尋選項
+   - 欄位：`id`, `displayName`, `icon`, `merchants`, `order`
+   - `merchants` 為逗號分隔的關鍵詞字串
+
+4. **Merchant Payments** - 商家付款方式資訊
+   - 欄位：`merchant`, `online_payment`, `offline_payment`, `source_url`, `last_updated`
+
+5. **Search Hints** - 搜尋提示建議
+   - 欄位：`keywords`, `suggestions`, `display_message`, `active`
+   - `keywords` 為逗號分隔字串，會展開成多個 key
+
+6. **FAQ** - 常見問題
+   - 欄位：`id`, `category`, `question`, `answer`, `order`, `isActive`
+   - 依 `order` 排序
+
+7. **announcements** - 公告資訊
+   - 欄位：`text`, `fullText`, `link`, `active`, `priority`, `date`
+   - 依 `priority` 排序，限制最多 5 則
+
+8. **Card Benefits** - 卡片優惠（停車折抵等）
+   - 欄位：`id`, `benefit_type`, `benefit_desc`, `merchants`, `conditions`, `benefit_period`, `notes`, `active`
+   - `merchants` 為陣列格式（逗號分隔會自動轉換）
+   - **同一張卡可有多筆記錄**（不同地點、不同優惠）
+
+9. **ReferralLinks** - 推薦連結（2026-01-24 新增）
+   - 欄位：`merchant`, `url`, `description`, `active`
+   - 用於顯示商家推薦註冊連結和優惠說明
+
+### Apps Script 匯出流程
+
+**主要函數**：`exportToJSON()`
+
+**執行順序**：
+1. 執行 QA 檢查 (`runQACheck()`)
+2. 讀取 Cards Data → 轉換成 `cards` 陣列
+3. 讀取 Payments → 轉換成 `payments` 陣列
+4. 讀取 QuickSearch → 轉換成 `quickSearchOptions` 陣列
+5. 讀取 Merchant Payments → 轉換成 `merchantPayments` 物件
+6. 讀取 Search Hints → 轉換成 `searchHints` 物件
+7. 讀取 FAQ → 轉換成 `faq` 陣列
+8. 讀取 announcements → 轉換成 `announcements` 陣列
+9. 讀取 Card Benefits (`readCardBenefits()`) → 轉換成 `benefits` 陣列
+10. 讀取 ReferralLinks (`readReferralLinks()`) → 轉換成 `referralLinks` 陣列
+11. 組合所有資料成 JSON
+12. Base64 編碼輸出為 `cards.data`
+
+**匯出的 JSON 結構**：
+```javascript
+{
+  cards: [...],
+  payments: [...],
+  quickSearchOptions: [...],
+  merchantPayments: {...},
+  faq: [...],
+  announcements: [...],
+  searchHints: {...},
+  benefits: [...],
+  referralLinks: [...]
+}
+```
+
+### 新增資料表的標準流程
+
+當需要新增資料類型時（如推薦連結）：
+
+1. **在 Google Sheets 新增工作表**
+   - 定義欄位結構（第一行為 headers）
+   - 通常包含 `active` 欄位控制啟用狀態
+
+2. **撰寫讀取函數**（參考 `readCardBenefits()` 或 `getAnnouncements()`）
+   ```javascript
+   function readXxxData() {
+     const sheet = ss.getSheetByName('SheetName');
+     if (!sheet) return [];
+
+     const data = sheet.getDataRange().getValues();
+     const headers = data[0];
+     const results = [];
+
+     for (let i = 1; i < data.length; i++) {
+       // 讀取並轉換資料
+     }
+
+     return results;
+   }
+   ```
+
+3. **在 `exportToJSON()` 中調用**
+   - 在 `const benefits = readCardBenefits();` 附近新增讀取
+   - 在 `jsonContent` 物件中新增對應欄位
+   - 在成功訊息中顯示匯出數量
+
+4. **前端使用**
+   - `cardsData.xxxData` 即可存取
+   - 依需求實作搜尋/顯示邏輯
+
+### 重要輔助函數
+
+- `getValue(row, headers, fieldName)` - 安全讀取欄位值
+- `addOptionalField(obj, row, headers, fieldName, type, targetName)` - 新增選填欄位
+- `formatDateToSlash(dateValue)` - 日期格式轉換 (YYYY/M/D)
+- `generateSearchTerms(id, name)` - 生成搜尋別名
+
 ## Git 工作流程
 
 **目前分支**：`claude/add-points-expiry-info-AssTF`

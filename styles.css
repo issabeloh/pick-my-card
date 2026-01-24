@@ -1202,6 +1202,77 @@ input[type="number"]:focus {
     margin-right: 4px;
 }
 
+/* 推薦連結樣式 */
+.referral-link-info {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(251, 191, 36, 0.1);
+}
+
+.referral-link-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.referral-link-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.referral-link-text {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #78350f;
+    font-weight: 500;
+    line-height: 1.5;
+    min-width: 200px;
+}
+
+.referral-link-button {
+    background-color: #f59e0b;
+    color: white;
+    padding: 6px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.referral-link-button:hover {
+    background-color: #d97706;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.referral-link-button:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+    .referral-link-content {
+        gap: 8px;
+    }
+
+    .referral-link-text {
+        min-width: 100%;
+        font-size: 0.8125rem;
+    }
+
+    .referral-link-button {
+        width: 100%;
+        text-align: center;
+        margin-top: 4px;
+    }
+}
+
 /* Coupon results section */
 .coupon-results-section {
     border-top: 1px solid #e5e7eb;
