@@ -39,42 +39,72 @@
 
 ### 2. 卡片分級系統
 
-**hasLevels 卡片的兩種類型**：
+**hasLevels 卡片統一架構**（2026-01-25 更新）：
 
-#### Type A: hasLevels + specialItems（如 DBS Eco）
-- `specialItems` 包含特定通路名單
-- `levelSettings` 定義各級別的 rate/cap
-- 顯示邏輯：先顯示 cashbackRates（如果有），再顯示 specialItems
+所有 hasLevels 卡片（包括 CUBE 卡）現在都使用**統一的資料結構**：
+- `hasLevels: true` - 標記為分級卡片
+- `levelSettings` - JSON 格式，定義各級別的 rate/specialRate/cap 等參數
+- `cashbackRates` - 陣列格式，所有回饋項目都在這裡
+- `category` 欄位 - 用於標記項目所屬類別（如「切換『玩數位』方案」）
 
-#### Type B: hasLevels + cashbackRates（如玉山 Uni Card）
-- **無 specialItems**（或空陣列）
-- `cashbackRates` 中使用 `{rate}`, `{cap}` placeholder
-- 每個 rate 可以有自己的 items 和 conditions
-- 使用 `category` 欄位標記條件所屬類別
+#### **舊架構（已廢棄）**：
+- ❌ `specialItems` - 不再使用（CUBE 卡）
+- ❌ `specialItemsWithCategory` - 不再使用（CUBE 卡）
+- ❌ `generalItems` - 不再使用（CUBE 卡）
 
-**關鍵條件判斷**：
+#### **新架構範例（CUBE 卡）**：
 ```javascript
-// 檢查是否無 specialItems
-if (!card.specialItems || card.specialItems.length === 0)
+{
+  "hasLevels": true,
+  "levelSettings": {
+    "level1": { "specialRate": 2.0 },
+    "level2": { "specialRate": 3.0 },
+    "level3": { "specialRate": 3.3 }
+  },
+  "cashbackRates": [
+    {
+      "rate": 2,
+      "items": ["Line Pay"],
+      "cap": 5882
+    },
+    {
+      "rate": "{specialRate}",  // 使用 placeholder
+      "items": ["ChatGPT", "Notion"],
+      "cap": 500000,
+      "category": "切換「玩數位」方案"  // 類別標記
+    }
+  ]
+}
 ```
+
+**關鍵特性**：
+- 使用 `category` 欄位識別類別（如「玩數位」、「樂饗購」、「趣旅行」）
+- 支援 `{specialRate}` 等 placeholder，從 levelSettings 動態解析
+- 所有項目統一放在 `cashbackRates`，簡化前端邏輯
 
 ### 3. 搜尋邏輯（calculateCardCashback）
 
-**流程** (script.js:1464-1718)：
+**統一流程**（2026-01-25 簡化）：
 
-1. **有 specialItems 的 hasLevels 卡片**：
-   - 優先檢查 cashbackRates（支援 placeholder）
-   - 如無匹配，檢查 specialItems
-   - CUBE 卡特殊處理：用 specialRate 和 generalItems
+所有卡片（包括 CUBE 卡）都使用相同的搜尋邏輯：
 
-2. **無 specialItems 的卡片**（包括 hasLevels）：
-   - 先取得 levelData（如果 hasLevels）
-   - 檢查 cashbackRates，傳遞 levelData 給解析函數
-   - 支援 {rate} 和 {cap} placeholder
+1. **取得級別設定**（如果有 hasLevels）：
+   - 從 Firestore 讀取用戶選擇的級別
+   - 取得對應的 levelSettings
 
-3. **一般卡片**（hasLevels=false）：
-   - 直接檢查 cashbackRates
-   - levelData 為 null（不使用 placeholder）
+2. **檢查 cashbackRates**：
+   - 使用索引 `card._itemsIndex` 快速查找
+   - 解析 placeholder（如 `{specialRate}`, `{rate}`, `{cap}`）
+   - 從 levelSettings 動態讀取對應值
+
+3. **返回匹配結果**：
+   - 包含 rate, cap, matchedItem, category 等資訊
+   - 支援多個匹配項目（陣列格式）
+
+**重要**：
+- 不再有 specialItems/generalItems 的特殊處理
+- 所有卡片統一使用 cashbackRates + category 架構
+- CUBE 卡透過 category 欄位（如「切換『玩數位』方案」）識別類別
 
 ### 4. 卡片詳情頁顯示
 
@@ -91,7 +121,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **特殊處理**：
 - 玉山 Uni Card: 條件可展開/收起（toggleConditions 函數）
-- CUBE 卡: 使用 specialRate，顯示"無上限"
+- CUBE 卡: 從 cashbackRates 按 category 分組顯示（generateCubeSpecialContent 函數）
 - DBS Eco: 特殊的 cap 說明格式
 
 ### 5. 資料合併與分組
@@ -111,12 +141,14 @@ group.conditions.push({category, conditions});
 
 ### 6. 搜尋功能（findMatchingItem）
 
-**搜尋範圍** (script.js:1215-1400)：
+**搜尋範圍**：
 - ✅ cashbackRates items（信用卡回饋項目）
-- ✅ specialItems（特殊通路項目）
-- ✅ generalItems（CUBE 卡一般項目）
 - ✅ couponCashbacks merchant（領券型活動商家）
 - ✅ **benefits merchants（停車折抵優惠地點）**（新增於 2026-01-24）
+
+**向後兼容**（保留但不使用）：
+- ⚠️ specialItems（舊架構，CUBE 卡已不使用）
+- ⚠️ generalItems（舊架構，CUBE 卡已不使用）
 
 **Coupon 搜尋邏輯**：
 - 解析 merchant 欄位（逗號分隔的字符串）
@@ -126,6 +158,11 @@ group.conditions.push({category, conditions});
 **停車折抵搜尋邏輯**（詳見 section 9）：
 - 由 displayParkingBenefits() 獨立處理
 - 支援快捷搜尋傳遞多個關鍵詞
+
+**推薦連結搜尋邏輯**（2026-01-25 新增）：
+- 由 displayReferralLink() 處理
+- 從 cardsData.referralLinks 匹配商家名稱
+- 顯示在搜尋結果下方、免責聲明上方
 
 ### 7. hideInDisplay 和 rate_hide 機制
 
@@ -264,76 +301,152 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 **總效能提升**：從 1.2-2.5 秒 → **0.2-0.7 秒**
 
+## Loading 指示器與性能監控 (2026-01-25)
+
+### 全局 Loading Overlay
+
+**組件位置**：
+- HTML: `#global-loading-overlay`（fixed 定位，z-index: 10000）
+- CSS: `.global-loading-overlay`, `.loading-spinner-large`, `.loading-text`
+- JS: `loadingOverlay` 工具物件
+
+**loadingOverlay 工具物件**：
+```javascript
+loadingOverlay = {
+  show(message)        // 顯示 loading，傳入自訂訊息
+  hide()               // 隱藏 loading，記錄執行時間
+  wrap(asyncFn, msg)   // 包裝異步函數，自動處理 show/hide
+}
+```
+
+**使用範例**：
+```javascript
+// 方法 1: 手動控制
+loadingOverlay.show('正在計算回饋...');
+await doSomething();
+loadingOverlay.hide();
+
+// 方法 2: 自動包裝
+await loadingOverlay.wrap(async () => {
+  await doSomething();
+}, '處理中...');
+```
+
+### 應用場景
+
+**1. 行動支付比較**（必定顯示）：
+- 觸發：點擊「📊 比較所有行動支付回饋」
+- Loading 位置：Modal 內嵌 spinner + "正在計算所有行動支付回饋..."
+- 原因：需遍歷所有支付 × 所有卡片，計算量大
+
+**2. 主搜尋功能**（智能顯示）：
+- 觸發條件（滿足任一）：
+  - 比較超過 5 張卡片
+  - 搜尋結果有超過 3 個匹配項目
+- Loading: 全螢幕 overlay
+- 原因：複雜搜尋可能耗時 >500ms
+
+**設計理念**：
+- 避免 loading 閃爍（<300ms 的操作不顯示）
+- 只在預期耗時 >500ms 時才顯示
+- 用戶體驗優先
+
+### 性能監控機制
+
+**Console 日誌格式**：
+```
+⏱️ Loading started: 正在計算回饋...
+⏱️ Loading finished in 1234.56ms (1.23s)
+📊 比較了 15 個行動支付，找到 12 個有回饋
+```
+
+**實作方式**：
+- 使用 `performance.now()` 測量時間
+- 自動記錄執行時間（精確到 0.01ms）
+- 包含操作摘要（如比較了幾張卡、找到幾個結果）
+
+**查看方式**：
+- 開啟瀏覽器開發者工具（F12）
+- 切換到 Console 分頁
+- 執行操作後查看時間日誌
+
 ## 近期修改模式
 
 ### 最近的技術決策
 
-1. **2026-01-24: 修復停車折抵優惠快捷搜尋**
+1. **2026-01-25: CUBE 卡資料結構重構** ⭐ 重大變更
+   - 移除 specialItems/specialItemsWithCategory/generalItems 欄位
+   - 改為統一使用 cashbackRates + category 欄位
+   - category 欄位包含「切換『玩數位』方案」等字樣來識別類別
+   - 前端 generateCubeSpecialContent() 完全重寫，從 cashbackRates 讀取並按類別分組
+   - Apps Script hasLevels 處理邏輯大幅簡化（只保留 levelSettings 處理）
+   - 影響：所有未來的分級卡片都應遵循此架構
+
+2. **2026-01-25: 全局 Loading 指示器系統**
+   - 新增 loadingOverlay 工具物件（show/hide/wrap 方法）
+   - 實作全局 loading overlay UI（半透明背景 + 白色卡片 + spinner）
+   - 新增性能監控機制（console.log 記錄執行時間）
+   - 智能顯示邏輯：
+     - 行動支付比較：一定顯示（Modal 內嵌 spinner）
+     - 主搜尋：5+ 卡片或 3+ 匹配項目時顯示（全螢幕 overlay）
+   - 避免 loading 閃爍（<300ms 不顯示）
+
+3. **2026-01-25: 推薦連結功能**
+   - 新增 displayReferralLink() 函數
+   - 黃色漸層 UI 設計（background: linear-gradient）
+   - 支援從 cardsData.referralLinks 讀取資料
+   - 顯示位置：搜尋結果下方、免責聲明上方
+   - 點擊按鈕在新視窗開啟推薦連結
+   - Google Sheets 新增 ReferralLinks 工作表
+
+4. **2026-01-24: 修復停車折抵優惠快捷搜尋**
    - 快捷搜尋時，停車折抵優惠需要使用所有關鍵詞匹配
    - displayParkingBenefits() 新增 searchKeywords 參數
    - 避免只用顯示名稱（如 "所有停車"）匹配導致找不到結果
    - 在 calculateCashback() 調用時傳遞 `currentQuickSearchOption?.merchants`
 
-2. **2026-01-01: 擴展 Placeholder 支援任意欄位**
+5. **2026-01-01: 擴展 Placeholder 支援任意欄位**
    - 修改 parseCashbackRate 函數，使用正則表達式匹配任意 placeholder
    - 支援 `{rate_1}`, `{cap_1}`, `{overseasBonusRate}`, `{domesticBonusRate}` 等
    - 從 levelSettings 中動態讀取對應欄位值
    - 同步更新 parseCashbackRateSync 和 parseCashbackCap 函數
    - 解決永豐大戶卡等卡片顯示 NaN% 的問題
 
-3. **2025-12-22: 分層回饋計算系統**
+6. **2025-12-22: 分層回饋計算系統**
    - 實作 calculateLayeredCashback 函數處理多層獎勵結構
    - 支援 DBS Eco 等複雜卡片的三層計算（基本+加碼+指定項目）
    - 自動檢測海外/國內交易並套用對應加碼率
    - 每層獨立計算消費上限
 
-4. **2025-12-22: 性能優化三項**
+7. **2025-12-22: 性能優化三項**
    - 建立搜尋索引：O(n³) → O(1)，提升 500-800ms
    - 日期狀態緩存：減少重複計算，提升 150-250ms
    - DocumentFragment 批量 DOM：減少 reflow，提升 100-200ms
    - 總提升：從 1.2-2.5 秒 → 0.2-0.7 秒
 
-5. **2025-12-22: Bug 修復**
+8. **2025-12-22: Bug 修復**
    - 修復即將開始活動排序（按回饋金額排序）
    - 修復 DBS Eco「禾乃川」搜尋錯誤（rate_hide 只對 hideInDisplay=true 生效）
    - 加入 coupon 搜尋支援（findMatchingItem 也搜尋 couponCashbacks）
-
-6. **2024-12: 支援 {cap} placeholder + 移動級別回饋率顯示**
-   - 在 cap_N 欄位支援 {cap}
-   - "各級別回饋率"移到級別選擇器旁邊
-
-7. **2024-12: 合併顯示 + 條件分組**
-   - 相同 rate/cap 的活動合併顯示
-   - 條件按 category 分組，不列出個別通路
-
-8. **2024-12: CUBE 卡修正**
-   - 包含在級別回饋率顯示中
-   - 使用 specialRate 而非 rate
-
-9. **2024-12: 玉山 Uni Card 可折疊條件**
-   - 只有 Uni Card 使用可展開按鈕
-   - 其他卡片直接顯示條件
-
-10. **2024-12: DBS Eco 佈局修正**
-   - level-note 移到下拉選單下方
-   - 級別回饋率支援換行
-
-11. **2024-12: 修復空 specialItems 問題**
-   - 正確處理 specialItems = [] 的情況
-   - 搜尋邏輯傳遞正確的 levelData 給解析函數
-   - 移除 specialContent 中重複的級別回饋率顯示
 
 ## 重要注意事項
 
 ### ⚠️ 常見陷阱
 
-1. **空陣列不是 falsy**：
+1. **CUBE 卡已不使用 specialItems/generalItems**（2026-01-25 更新）：
    ```javascript
-   // ❌ 錯誤
-   if (!card.specialItems)
+   // ❌ 錯誤（舊架構）
+   if (card.specialItems) {
+     // CUBE 卡現在沒有這個欄位，會永遠是 false
+   }
 
-   // ✅ 正確
-   if (!card.specialItems || card.specialItems.length === 0)
+   // ✅ 正確（新架構）
+   if (card.cashbackRates) {
+     // 從 category 欄位識別類別
+     const categoryRates = card.cashbackRates.filter(rate =>
+       rate.category && rate.category.includes('玩數位')
+     );
+   }
    ```
 
 2. **levelData 必須正確傳遞**：
@@ -365,13 +478,20 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 **修改搜尋邏輯時**：
 - 確保 hasLevels 卡片正確取得 levelData
 - 測試 placeholder 是否正確解析
-- 檢查空 specialItems 的情況
+- **不要依賴 specialItems/generalItems**（CUBE 卡已廢棄）
 - 確認停車折抵優惠的快捷搜尋整合
 
 **修改顯示邏輯時**：
 - 注意 CUBE, DBS Eco, Uni Card 的特殊處理
+- CUBE 卡使用 generateCubeSpecialContent()，從 cashbackRates 按 category 分組
 - 避免重複顯示資訊
 - 保持 UI 簡潔
+
+**新增分級卡片時**（2026-01-25 更新）：
+- 遵循 CUBE 卡的新架構：cashbackRates + category 欄位
+- 不要使用 specialItems/generalItems（已廢棄）
+- 在 category 欄位使用清楚的類別名稱（如「切換『XXX』方案」）
+- Apps Script 只需處理 hasLevels + levelSettings，不需特殊邏輯
 
 **新增 placeholder 時**：
 - 在 parseCashbackRate/parseCashbackCap 中處理
@@ -492,6 +612,57 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
    - `cardsData.xxxData` 即可存取
    - 依需求實作搜尋/顯示邏輯
 
+### hasLevels 卡片處理邏輯（2026-01-25 簡化）
+
+**舊架構**（已廢棄）：
+```javascript
+// ❌ 複雜的特殊處理（已移除）
+if (card.hasLevels) {
+  // 處理 specialItems_玩數位, specialItems_樂饗購, specialItems_趣旅行
+  // 處理 generalItems_集精選, generalItems_來支付
+  // 處理 specialItemsWithCategory
+  // ... 大量特殊邏輯
+}
+```
+
+**新架構**（簡化後）：
+```javascript
+// ✅ 統一處理
+if (card.hasLevels) {
+  // 只處理 levelSettings 和 levelLabelFormat
+  const levelSettingsStr = getValue(row, headers, 'levelSettings');
+  if (levelSettingsStr) {
+    card.levelSettings = JSON.parse(levelSettingsStr);
+  }
+  addOptionalField(card, row, headers, 'levelLabelFormat');
+}
+
+// cashbackRates 在 hasLevels 區塊外處理（所有卡片統一）
+card.cashbackRates = [];
+for (let j = 1; j <= 17; j++) {
+  const rate = getValue(row, headers, `rate_${j}`);
+  const items = getValue(row, headers, `items_${j}`);
+
+  if (rate && items) {
+    const rateObj = {
+      items: items.split(',').map(s => s.trim()),
+      rate: /* 支援 placeholder */
+    };
+
+    // 讀取 category 欄位（用於 CUBE 卡等分類顯示）
+    addOptionalField(rateObj, row, headers, `category_${j}`, 'string', 'category');
+
+    card.cashbackRates.push(rateObj);
+  }
+}
+```
+
+**關鍵改進**：
+- 不再有 specialItems/generalItems 的複雜分支邏輯
+- hasLevels 區塊只處理級別設定，不處理項目
+- 所有項目統一放在 cashbackRates，用 category 欄位區分
+- Apps Script 代碼減少約 100 行
+
 ### 重要輔助函數
 
 - `getValue(row, headers, fieldName)` - 安全讀取欄位值
@@ -501,19 +672,21 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ## Git 工作流程
 
-**目前分支**：`claude/add-points-expiry-info-AssTF`
+**目前分支**：`claude/add-referral-link-popup-lnYZi`
 
-**最近的 commits**（2026-01-24）：
-- Refactor: use function parameter instead of global state lookup
-- Fix parking benefits matching for quick search options
-- Revert parking benefits fix - incorrect solution
-- Remove BETA badge from page header
+**最近的 commits**（2026-01-25）：
+- Fix CUBE card display by removing dependency on deprecated fields
+- Add global loading indicators and performance monitoring
+- Update CLAUDE.md: add Apps Script and data architecture documentation
+- Add referral link display feature for merchant promotions
+- Refactor: use function parameter instead of global state lookup (2026-01-24)
 
-**停車折抵優惠修復**：
-- 修復快捷搜尋不顯示停車折抵的問題
-- 重構為使用函數參數而非全局變量查找
-- 提升代碼可測試性和可維護性
+**重大變更摘要**：
+- **CUBE 卡重構**：移除 specialItems/generalItems，改用 cashbackRates + category
+- **Loading 系統**：新增全局 loading overlay 和性能監控
+- **推薦連結**：新增商家推薦連結顯示功能
+- **Apps Script 簡化**：hasLevels 處理邏輯減少約 100 行
 
 ---
 
-**更新日期**：2026-01-24
+**更新日期**：2026-01-25
