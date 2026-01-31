@@ -653,100 +653,142 @@ async function saveUserQuickSearchOptions(options) {
 
 // Render quick search buttons
 function renderQuickSearchButtons() {
-    const container = document.getElementById('quick-search-container');
-    if (!container) return;
+    const visibleContainer = document.getElementById('quick-search-visible');
+    const dropdownContent = document.getElementById('quick-search-dropdown-content');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+
+    if (!visibleContainer || !dropdownContent || !expandBtn) return;
 
     // Clear existing buttons
-    container.innerHTML = '';
+    visibleContainer.innerHTML = '';
+    dropdownContent.innerHTML = '';
 
-    // If no options, hide container and arrows
+    // If no options, hide everything
     if (quickSearchOptions.length === 0) {
-        container.style.display = 'none';
-        hideScrollArrows();
+        visibleContainer.style.display = 'none';
+        expandBtn.classList.add('hidden');
         return;
     }
 
-    container.style.display = 'flex';
+    visibleContainer.style.display = 'flex';
 
-    // Create buttons
-    quickSearchOptions.forEach(option => {
+    // Create button element helper
+    const createButton = (option) => {
         const button = document.createElement('button');
         button.className = 'quick-search-btn';
         button.dataset.merchants = option.merchants.join(',');
 
-        // 構建icon HTML（如果有的話）
         const iconHtml = option.icon ? `<span class="icon">${option.icon}</span>` : '';
+        button.innerHTML = `${iconHtml}<span>${option.displayName}</span>`;
 
-        button.innerHTML = `
-            ${iconHtml}
-            <span>${option.displayName}</span>
-        `;
-
-        // Add click event
         button.addEventListener('click', () => {
             handleQuickSearch(option);
+            closeQuickSearchDropdown();
         });
 
-        container.appendChild(button);
+        return button;
+    };
+
+    // Add buttons to visible row
+    quickSearchOptions.forEach(option => {
+        visibleContainer.appendChild(createButton(option));
     });
 
-    // Setup scroll arrows
-    setupScrollArrows();
+    // Add all buttons to dropdown
+    quickSearchOptions.forEach(option => {
+        dropdownContent.appendChild(createButton(option));
+    });
+
+    // Setup expand button and dropdown
+    setupQuickSearchDropdown();
 
     console.log(`✅ 已渲染 ${quickSearchOptions.length} 個快捷搜索按鈕`);
 }
 
-// Setup scroll arrows
-function setupScrollArrows() {
-    const container = document.getElementById('quick-search-container');
-    const leftArrow = document.getElementById('scroll-left');
-    const rightArrow = document.getElementById('scroll-right');
+// Setup quick search dropdown expand/collapse
+function setupQuickSearchDropdown() {
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+    const dropdown = document.getElementById('quick-search-dropdown');
 
-    if (!container || !leftArrow || !rightArrow) {
-        console.warn('⚠️ 箭头元素未找到');
-        return;
-    }
+    if (!expandBtn || !dropdown) return;
 
-    // Update arrow states (always visible on desktop, disabled when at edges)
-    const updateArrowsVisibility = () => {
-        const hasScroll = container.scrollWidth > container.clientWidth;
-        const isAtStart = container.scrollLeft <= 0;
-        const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-
-        // Disable/enable arrows based on scroll position
-        leftArrow.disabled = !hasScroll || isAtStart;
-        rightArrow.disabled = !hasScroll || isAtEnd;
+    // Toggle dropdown on button click
+    expandBtn.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        if (isOpen) {
+            closeQuickSearchDropdown();
+        } else {
+            openQuickSearchDropdown();
+        }
     };
 
-    // Scroll functions
-    const scrollAmount = 200;
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && !expandBtn.contains(e.target)) {
+            closeQuickSearchDropdown();
+        }
+    });
 
-    leftArrow.onclick = () => {
-        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-    };
-
-    rightArrow.onclick = () => {
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    };
-
-    // Update arrows on scroll
-    container.addEventListener('scroll', updateArrowsVisibility);
-
-    // Initial update with longer delay
-    setTimeout(updateArrowsVisibility, 300);
-
-    // Second check to ensure
-    setTimeout(updateArrowsVisibility, 1000);
-
-    // Update on window resize
-    window.addEventListener('resize', updateArrowsVisibility);
+    // Update position on scroll instead of closing
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        if (dropdown.classList.contains('open')) {
+            // Throttle position updates
+            if (!scrollTimeout) {
+                scrollTimeout = setTimeout(() => {
+                    updateDropdownPosition();
+                    scrollTimeout = null;
+                }, 16); // ~60fps
+            }
+        }
+    }, true);
 }
 
-function hideScrollArrows() {
-    const leftArrow = document.getElementById('scroll-left');
-    const rightArrow = document.getElementById('scroll-right');
-    if (leftArrow) leftArrow.style.display = 'none';
-    if (rightArrow) rightArrow.style.display = 'none';
+function updateDropdownPosition() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const wrapper = document.querySelector('.quick-search-wrapper');
+
+    if (!dropdown || !wrapper) return;
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+
+    // Set dropdown width to match wrapper
+    const dropdownWidth = Math.min(wrapperRect.width, viewportWidth - 20);
+
+    // Position below the wrapper
+    let top = wrapperRect.bottom + 4;
+    let left = wrapperRect.left;
+
+    // Ensure dropdown doesn't go off-screen horizontally
+    if (left + dropdownWidth > viewportWidth - 10) {
+        left = viewportWidth - dropdownWidth - 10;
+    }
+    if (left < 10) left = 10;
+
+    // Apply position
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.width = `${dropdownWidth}px`;
+}
+
+function openQuickSearchDropdown() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+
+    if (!dropdown) return;
+
+    updateDropdownPosition();
+    dropdown.classList.add('open');
+    if (expandBtn) expandBtn.classList.add('expanded');
+}
+
+function closeQuickSearchDropdown() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+    if (dropdown) dropdown.classList.remove('open');
+    if (expandBtn) expandBtn.classList.remove('expanded');
 }
 
 // Handle quick search button click
@@ -1305,6 +1347,7 @@ function setupEventListeners() {
     const manageQuickOptionsBtn = document.getElementById('manage-quick-options-btn');
     if (manageQuickOptionsBtn) {
         manageQuickOptionsBtn.addEventListener('click', () => {
+            closeQuickSearchDropdown();
             openManageQuickOptionsModal();
         });
     }
@@ -7778,6 +7821,7 @@ function setupQuickOptionsModalButtons() {
     const cancelBtn = document.getElementById('cancel-quick-options-btn');
     const saveBtn = document.getElementById('save-quick-options-btn');
     const resetBtn = document.getElementById('reset-quick-options-btn');
+    const clearAllBtn = document.getElementById('clear-all-quick-options-btn');
     const addCustomBtn = document.getElementById('add-custom-option-btn');
 
     if (closeBtn) {
@@ -7806,10 +7850,14 @@ function setupQuickOptionsModalButtons() {
     }
 
     if (resetBtn) {
-        resetBtn.onclick = async () => {
-            await resetQuickOptionsToDefault();
-            modal.style.display = 'none';
-            enableBodyScroll();
+        resetBtn.onclick = () => {
+            resetQuickOptionsToDefault();
+        };
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.onclick = () => {
+            clearAllQuickOptions();
         };
     }
 
@@ -8067,29 +8115,29 @@ function deleteCustomOption(option) {
     renderQuickOptionsModal();
 }
 
-async function resetQuickOptionsToDefault() {
+function clearAllQuickOptions() {
+    // Move all selected options back to available
+    tempSelectedOptions = [];
+
+    // Re-render the modal to reflect changes
+    renderQuickOptionsModal();
+
+    console.log('✅ 已移除所有已選擇的快捷選項');
+}
+
+function resetQuickOptionsToDefault() {
     const defaultOptions = getDefaultQuickSearchOptions();
 
-    // Clear user customization
-    try {
-        if (currentUser && db) {
-            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-                quickSearchOptions: null
-            }, { merge: true });
-        }
-        localStorage.removeItem('userQuickSearchOptions');
+    // Reset temp selected options to default
+    tempSelectedOptions = [...defaultOptions];
 
-        // Update current options
-        quickSearchOptions = defaultOptions;
+    // Clear temp custom options
+    tempCustomOptions = [];
 
-        // Re-render buttons
-        renderQuickSearchButtons();
+    // Re-render the modal to reflect changes
+    renderQuickOptionsModal();
 
-        console.log('✅ 快捷選項已恢復為預設');
-    } catch (error) {
-        console.error('恢復預設快捷選項時出錯:', error);
-        alert('恢復預設失敗，請稍後再試');
-    }
+    console.log('✅ 已恢復為預設快捷選項（需儲存才會生效）');
 }
 
 // ============================================
