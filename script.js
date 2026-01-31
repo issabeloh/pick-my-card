@@ -750,12 +750,46 @@ function setupQuickSearchDropdown() {
             closeQuickSearchDropdown();
         }
     });
+
+    // Close on scroll (since it's position: fixed)
+    window.addEventListener('scroll', () => {
+        if (dropdown.classList.contains('open')) {
+            closeQuickSearchDropdown();
+        }
+    }, true);
 }
 
 function openQuickSearchDropdown() {
     const dropdown = document.getElementById('quick-search-dropdown');
     const expandBtn = document.getElementById('quick-search-expand-btn');
-    if (dropdown) dropdown.classList.add('open');
+    const wrapper = document.querySelector('.quick-search-wrapper');
+
+    if (!dropdown || !wrapper) return;
+
+    // Calculate position based on wrapper
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Set dropdown width to match wrapper
+    const dropdownWidth = Math.min(wrapperRect.width, viewportWidth - 20);
+
+    // Position below the wrapper
+    let top = wrapperRect.bottom + 4;
+    let left = wrapperRect.left;
+
+    // Ensure dropdown doesn't go off-screen horizontally
+    if (left + dropdownWidth > viewportWidth - 10) {
+        left = viewportWidth - dropdownWidth - 10;
+    }
+    if (left < 10) left = 10;
+
+    // Apply position
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.width = `${dropdownWidth}px`;
+
+    dropdown.classList.add('open');
     if (expandBtn) expandBtn.classList.add('expanded');
 }
 
