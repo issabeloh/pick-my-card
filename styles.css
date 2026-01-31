@@ -958,8 +958,6 @@ main {
     visibility: hidden;
     transform: translateY(-8px);
     transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
-    max-height: 280px;
-    overflow-y: auto;
 }
 
 .quick-search-dropdown.open {
@@ -973,7 +971,7 @@ main {
     flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
 }
 
@@ -1008,13 +1006,10 @@ main {
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
-    .quick-search-dropdown {
-        max-height: 240px;
-    }
-
     .quick-search-dropdown-content {
         padding: 10px;
         gap: 6px;
+        max-height: 180px;
     }
 
     .expand-btn-text {
