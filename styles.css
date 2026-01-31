@@ -580,6 +580,11 @@ main {
     margin-bottom: 0;
 }
 
+.section-header-buttons {
+    display: flex;
+    gap: 8px;
+}
+
 .link-btn {
     background: none;
     border: none;
@@ -593,6 +598,14 @@ main {
 
 .link-btn:hover {
     background: #eff6ff;
+}
+
+.link-btn-danger {
+    color: #dc2626;
+}
+
+.link-btn-danger:hover {
+    background: #fef2f2;
 }
 
 .hint-text {

@@ -7821,6 +7821,7 @@ function setupQuickOptionsModalButtons() {
     const cancelBtn = document.getElementById('cancel-quick-options-btn');
     const saveBtn = document.getElementById('save-quick-options-btn');
     const resetBtn = document.getElementById('reset-quick-options-btn');
+    const clearAllBtn = document.getElementById('clear-all-quick-options-btn');
     const addCustomBtn = document.getElementById('add-custom-option-btn');
 
     if (closeBtn) {
@@ -7853,6 +7854,12 @@ function setupQuickOptionsModalButtons() {
             await resetQuickOptionsToDefault();
             modal.style.display = 'none';
             enableBodyScroll();
+        };
+    }
+
+    if (clearAllBtn) {
+        clearAllBtn.onclick = () => {
+            clearAllQuickOptions();
         };
     }
 
@@ -8108,6 +8115,16 @@ function deleteCustomOption(option) {
 
     // Re-render
     renderQuickOptionsModal();
+}
+
+function clearAllQuickOptions() {
+    // Move all selected options back to available
+    tempSelectedOptions = [];
+
+    // Re-render the modal to reflect changes
+    renderQuickOptionsModal();
+
+    console.log('✅ 已移除所有已選擇的快捷選項');
 }
 
 async function resetQuickOptionsToDefault() {
