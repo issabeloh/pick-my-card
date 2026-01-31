@@ -715,20 +715,22 @@ function setupQuickSearchDropdown() {
 
     // Check if we need the expand button (content overflows)
     const checkOverflow = () => {
-        // Use requestAnimationFrame to ensure DOM is rendered
-        requestAnimationFrame(() => {
-            const hasOverflow = visibleContainer.scrollWidth > visibleContainer.clientWidth;
-            if (hasOverflow) {
-                expandBtn.classList.remove('hidden');
-            } else {
-                expandBtn.classList.add('hidden');
-                closeQuickSearchDropdown();
-            }
-        });
+        const hasOverflow = visibleContainer.scrollWidth > visibleContainer.clientWidth;
+        if (hasOverflow) {
+            expandBtn.classList.remove('hidden');
+        } else {
+            expandBtn.classList.add('hidden');
+            closeQuickSearchDropdown();
+        }
     };
 
-    // Initial check
-    checkOverflow();
+    // Initial check with multiple delays to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+        checkOverflow();
+        // Additional checks for slower renders
+        setTimeout(checkOverflow, 100);
+        setTimeout(checkOverflow, 300);
+    });
 
     // Recheck on resize
     window.addEventListener('resize', checkOverflow);
@@ -751,25 +753,29 @@ function setupQuickSearchDropdown() {
         }
     });
 
-    // Close on scroll (since it's position: fixed)
+    // Update position on scroll instead of closing
+    let scrollTimeout;
     window.addEventListener('scroll', () => {
         if (dropdown.classList.contains('open')) {
-            closeQuickSearchDropdown();
+            // Throttle position updates
+            if (!scrollTimeout) {
+                scrollTimeout = setTimeout(() => {
+                    updateDropdownPosition();
+                    scrollTimeout = null;
+                }, 16); // ~60fps
+            }
         }
     }, true);
 }
 
-function openQuickSearchDropdown() {
+function updateDropdownPosition() {
     const dropdown = document.getElementById('quick-search-dropdown');
-    const expandBtn = document.getElementById('quick-search-expand-btn');
     const wrapper = document.querySelector('.quick-search-wrapper');
 
     if (!dropdown || !wrapper) return;
 
-    // Calculate position based on wrapper
     const wrapperRect = wrapper.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
 
     // Set dropdown width to match wrapper
     const dropdownWidth = Math.min(wrapperRect.width, viewportWidth - 20);
@@ -788,7 +794,15 @@ function openQuickSearchDropdown() {
     dropdown.style.top = `${top}px`;
     dropdown.style.left = `${left}px`;
     dropdown.style.width = `${dropdownWidth}px`;
+}
 
+function openQuickSearchDropdown() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+
+    if (!dropdown) return;
+
+    updateDropdownPosition();
     dropdown.classList.add('open');
     if (expandBtn) expandBtn.classList.add('expanded');
 }
