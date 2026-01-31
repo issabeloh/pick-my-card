@@ -556,29 +556,6 @@ main {
     gap: 8px;
 }
 
-/* Manage Quick Options Button */
-.manage-quick-options-btn {
-    flex-shrink: 0;
-    background: transparent;
-    border: 1px solid #9ca3af;
-    border-radius: 6px;
-    padding: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    color: #6b7280;
-}
-
-.manage-quick-options-btn:hover {
-    background: #f3f4f6;
-    border-color: #6b7280;
-    color: #374151;
-}
-
 /* Quick Options Selection Modal */
 /* Modal sections */
 .modal-section {
@@ -996,6 +973,37 @@ main {
     flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.quick-search-dropdown-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 0 0 12px 12px;
+}
+
+.quick-search-dropdown-footer .manage-quick-options-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: transparent;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-search-dropdown-footer .manage-quick-options-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #475569;
 }
 
 /* Mobile adjustments */

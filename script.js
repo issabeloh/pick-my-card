@@ -1347,6 +1347,7 @@ function setupEventListeners() {
     const manageQuickOptionsBtn = document.getElementById('manage-quick-options-btn');
     if (manageQuickOptionsBtn) {
         manageQuickOptionsBtn.addEventListener('click', () => {
+            closeQuickSearchDropdown();
             openManageQuickOptionsModal();
         });
     }
