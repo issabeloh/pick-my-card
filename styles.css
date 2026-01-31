@@ -969,10 +969,6 @@ main {
     transition: transform 0.2s ease;
 }
 
-.quick-search-expand-btn.hidden {
-    display: none;
-}
-
 /* Quick Search Dropdown Panel */
 .quick-search-dropdown {
     position: fixed;

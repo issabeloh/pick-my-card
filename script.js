@@ -707,33 +707,10 @@ function renderQuickSearchButtons() {
 
 // Setup quick search dropdown expand/collapse
 function setupQuickSearchDropdown() {
-    const visibleContainer = document.getElementById('quick-search-visible');
     const expandBtn = document.getElementById('quick-search-expand-btn');
     const dropdown = document.getElementById('quick-search-dropdown');
 
-    if (!visibleContainer || !expandBtn || !dropdown) return;
-
-    // Check if we need the expand button (content overflows)
-    const checkOverflow = () => {
-        const hasOverflow = visibleContainer.scrollWidth > visibleContainer.clientWidth;
-        if (hasOverflow) {
-            expandBtn.classList.remove('hidden');
-        } else {
-            expandBtn.classList.add('hidden');
-            closeQuickSearchDropdown();
-        }
-    };
-
-    // Initial check with multiple delays to ensure DOM is fully rendered
-    requestAnimationFrame(() => {
-        checkOverflow();
-        // Additional checks for slower renders
-        setTimeout(checkOverflow, 100);
-        setTimeout(checkOverflow, 300);
-    });
-
-    // Recheck on resize
-    window.addEventListener('resize', checkOverflow);
+    if (!expandBtn || !dropdown) return;
 
     // Toggle dropdown on button click
     expandBtn.onclick = (e) => {
