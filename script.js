@@ -653,100 +653,117 @@ async function saveUserQuickSearchOptions(options) {
 
 // Render quick search buttons
 function renderQuickSearchButtons() {
-    const container = document.getElementById('quick-search-container');
-    if (!container) return;
+    const visibleContainer = document.getElementById('quick-search-visible');
+    const dropdownContent = document.getElementById('quick-search-dropdown-content');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+
+    if (!visibleContainer || !dropdownContent || !expandBtn) return;
 
     // Clear existing buttons
-    container.innerHTML = '';
+    visibleContainer.innerHTML = '';
+    dropdownContent.innerHTML = '';
 
-    // If no options, hide container and arrows
+    // If no options, hide everything
     if (quickSearchOptions.length === 0) {
-        container.style.display = 'none';
-        hideScrollArrows();
+        visibleContainer.style.display = 'none';
+        expandBtn.classList.add('hidden');
         return;
     }
 
-    container.style.display = 'flex';
+    visibleContainer.style.display = 'flex';
 
-    // Create buttons
-    quickSearchOptions.forEach(option => {
+    // Create button element helper
+    const createButton = (option) => {
         const button = document.createElement('button');
         button.className = 'quick-search-btn';
         button.dataset.merchants = option.merchants.join(',');
 
-        // 構建icon HTML（如果有的話）
         const iconHtml = option.icon ? `<span class="icon">${option.icon}</span>` : '';
+        button.innerHTML = `${iconHtml}<span>${option.displayName}</span>`;
 
-        button.innerHTML = `
-            ${iconHtml}
-            <span>${option.displayName}</span>
-        `;
-
-        // Add click event
         button.addEventListener('click', () => {
             handleQuickSearch(option);
+            closeQuickSearchDropdown();
         });
 
-        container.appendChild(button);
+        return button;
+    };
+
+    // Add buttons to visible row
+    quickSearchOptions.forEach(option => {
+        visibleContainer.appendChild(createButton(option));
     });
 
-    // Setup scroll arrows
-    setupScrollArrows();
+    // Add all buttons to dropdown
+    quickSearchOptions.forEach(option => {
+        dropdownContent.appendChild(createButton(option));
+    });
+
+    // Setup expand button and dropdown
+    setupQuickSearchDropdown();
 
     console.log(`✅ 已渲染 ${quickSearchOptions.length} 個快捷搜索按鈕`);
 }
 
-// Setup scroll arrows
-function setupScrollArrows() {
-    const container = document.getElementById('quick-search-container');
-    const leftArrow = document.getElementById('scroll-left');
-    const rightArrow = document.getElementById('scroll-right');
+// Setup quick search dropdown expand/collapse
+function setupQuickSearchDropdown() {
+    const visibleContainer = document.getElementById('quick-search-visible');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+    const dropdown = document.getElementById('quick-search-dropdown');
 
-    if (!container || !leftArrow || !rightArrow) {
-        console.warn('⚠️ 箭头元素未找到');
-        return;
-    }
+    if (!visibleContainer || !expandBtn || !dropdown) return;
 
-    // Update arrow states (always visible on desktop, disabled when at edges)
-    const updateArrowsVisibility = () => {
-        const hasScroll = container.scrollWidth > container.clientWidth;
-        const isAtStart = container.scrollLeft <= 0;
-        const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-
-        // Disable/enable arrows based on scroll position
-        leftArrow.disabled = !hasScroll || isAtStart;
-        rightArrow.disabled = !hasScroll || isAtEnd;
+    // Check if we need the expand button (content overflows)
+    const checkOverflow = () => {
+        // Use requestAnimationFrame to ensure DOM is rendered
+        requestAnimationFrame(() => {
+            const hasOverflow = visibleContainer.scrollWidth > visibleContainer.clientWidth;
+            if (hasOverflow) {
+                expandBtn.classList.remove('hidden');
+            } else {
+                expandBtn.classList.add('hidden');
+                closeQuickSearchDropdown();
+            }
+        });
     };
 
-    // Scroll functions
-    const scrollAmount = 200;
+    // Initial check
+    checkOverflow();
 
-    leftArrow.onclick = () => {
-        container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    // Recheck on resize
+    window.addEventListener('resize', checkOverflow);
+
+    // Toggle dropdown on button click
+    expandBtn.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        if (isOpen) {
+            closeQuickSearchDropdown();
+        } else {
+            openQuickSearchDropdown();
+        }
     };
 
-    rightArrow.onclick = () => {
-        container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    };
-
-    // Update arrows on scroll
-    container.addEventListener('scroll', updateArrowsVisibility);
-
-    // Initial update with longer delay
-    setTimeout(updateArrowsVisibility, 300);
-
-    // Second check to ensure
-    setTimeout(updateArrowsVisibility, 1000);
-
-    // Update on window resize
-    window.addEventListener('resize', updateArrowsVisibility);
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target) && !expandBtn.contains(e.target)) {
+            closeQuickSearchDropdown();
+        }
+    });
 }
 
-function hideScrollArrows() {
-    const leftArrow = document.getElementById('scroll-left');
-    const rightArrow = document.getElementById('scroll-right');
-    if (leftArrow) leftArrow.style.display = 'none';
-    if (rightArrow) rightArrow.style.display = 'none';
+function openQuickSearchDropdown() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+    if (dropdown) dropdown.classList.add('open');
+    if (expandBtn) expandBtn.classList.add('expanded');
+}
+
+function closeQuickSearchDropdown() {
+    const dropdown = document.getElementById('quick-search-dropdown');
+    const expandBtn = document.getElementById('quick-search-expand-btn');
+    if (dropdown) dropdown.classList.remove('open');
+    if (expandBtn) expandBtn.classList.remove('expanded');
 }
 
 // Handle quick search button click
