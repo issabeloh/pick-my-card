@@ -7850,10 +7850,8 @@ function setupQuickOptionsModalButtons() {
     }
 
     if (resetBtn) {
-        resetBtn.onclick = async () => {
-            await resetQuickOptionsToDefault();
-            modal.style.display = 'none';
-            enableBodyScroll();
+        resetBtn.onclick = () => {
+            resetQuickOptionsToDefault();
         };
     }
 
@@ -8127,29 +8125,19 @@ function clearAllQuickOptions() {
     console.log('✅ 已移除所有已選擇的快捷選項');
 }
 
-async function resetQuickOptionsToDefault() {
+function resetQuickOptionsToDefault() {
     const defaultOptions = getDefaultQuickSearchOptions();
 
-    // Clear user customization
-    try {
-        if (currentUser && db) {
-            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-                quickSearchOptions: null
-            }, { merge: true });
-        }
-        localStorage.removeItem('userQuickSearchOptions');
+    // Reset temp selected options to default
+    tempSelectedOptions = [...defaultOptions];
 
-        // Update current options
-        quickSearchOptions = defaultOptions;
+    // Clear temp custom options
+    tempCustomOptions = [];
 
-        // Re-render buttons
-        renderQuickSearchButtons();
+    // Re-render the modal to reflect changes
+    renderQuickOptionsModal();
 
-        console.log('✅ 快捷選項已恢復為預設');
-    } catch (error) {
-        console.error('恢復預設快捷選項時出錯:', error);
-        alert('恢復預設失敗，請稍後再試');
-    }
+    console.log('✅ 已恢復為預設快捷選項（需儲存才會生效）');
 }
 
 // ============================================
