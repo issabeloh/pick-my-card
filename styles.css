@@ -3083,6 +3083,16 @@ input[type="number"]:focus {
     }
 }
 
+/* Data Update Footer */
+.data-update-footer {
+    max-width: 800px;
+    margin: 16px auto 0;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #6b7280;
+}
+
 /* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
     max-width: 800px;
