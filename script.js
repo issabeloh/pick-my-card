@@ -531,6 +531,13 @@ async function loadCardsData() {
             console.warn('⚠️ 找不到 card-count 元素');
         }
 
+        // Display last update date
+        const lastUpdateElement = document.getElementById('last-update-date');
+        if (lastUpdateElement && cardsData.lastUpdated) {
+            lastUpdateElement.textContent = `最後資料更新：${cardsData.lastUpdated}`;
+            console.log(`📅 最後資料更新：${cardsData.lastUpdated}`);
+        }
+
         return true;
     } catch (error) {
         console.error('❌ 載入信用卡資料失敗:', error);
