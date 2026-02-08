@@ -512,7 +512,6 @@ header p {
 main {
     padding: 30px;
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
-    min-height: 400px; /* 預留最小高度，避免內容載入時位移 */
 }
 
 /* Input section */
