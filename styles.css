@@ -97,8 +97,15 @@ header {
     background: rgba(59, 130, 246, 0.85);
 }
 
-.auth-btn.secondary {
-    background: transparent;
+/* Header 登出鈕 - 和開始使用按鈕同風格 */
+#sign-out-btn {
+    background: rgba(59, 130, 246, 0.7);
+    color: white;
+    border-color: rgba(59, 130, 246, 0.9);
+}
+
+#sign-out-btn:hover {
+    background: rgba(59, 130, 246, 0.85);
 }
 
 .user-photo {
@@ -2828,7 +2835,7 @@ input[type="number"]:focus {
     margin: 20px auto 10px;
     padding: 0 24px;
     text-align: center;
-    min-height: 120px; /* 預留最小高度，避免內容載入時位移 */
+    min-height: 100px; /* 預留最小高度，避免內容載入時位移 */
 }
 
 .social-media-container {
@@ -3086,7 +3093,7 @@ input[type="number"]:focus {
 /* Data Update Footer */
 .data-update-footer {
     max-width: 800px;
-    margin: 6px auto 0;
+    margin: 16px auto 0;
     padding: 0 24px;
     text-align: center;
     font-size: 12px;
