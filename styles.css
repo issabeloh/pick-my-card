@@ -15,12 +15,12 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
+    overflow: clip; /* Use clip instead of hidden to allow sticky positioning */
 }
 
 /* Header */
@@ -403,14 +403,7 @@ header p {
     display: none;
 }
 
-/* Mobile styles for collapse feature */
-@media (max-width: 768px) {
-    .toggle-collapse-btn {
-        display: flex !important; /* Override inline style on mobile */
-        align-items: center;
-        justify-content: center;
-    }
-}
+/* Mobile styles for collapse feature - now handled by sidebar drawer CSS */
 
 /* 行動支付區塊 */
 .header-section {
@@ -512,6 +505,7 @@ header p {
 main {
     padding: 30px;
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
+    min-width: 0; /* Prevent grid blowout */
 }
 
 /* Input section */
@@ -1629,61 +1623,20 @@ input[type="number"]:focus {
 }
 
 /* Responsive design */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     body {
         padding: 10px;
     }
-    
+
     main {
         padding: 20px;
-    }
-    
-    header {
-        padding: 15px;
-    }
-    
-    .header-top {
-        flex-direction: column;
-        align-items: flex-start;
-        text-align: left;
-        gap: 12px;
-        margin-bottom: 16px;
-    }
-    
-    .header-content h1 {
-        font-size: 1.8rem;
-    }
-
-    /* Mobile subtitle layout */
-    #subtitle .slogan,
-    #subtitle .tool-info {
-        display: block;
-    }
-
-    #subtitle .separator {
-        display: none;
-    }
-
-    #subtitle .slogan {
-        font-size: 1.15rem;
-    }
-
-    #subtitle .tool-info {
-        font-size: 0.85rem;
-        font-weight: normal;
-        font-style: italic;
-        margin-top: 4px;
-    }
-
-    #subtitle .tool-info::before {
-        content: "💳 ";
     }
 
     /* Announcement Bar Mobile */
     .announcement-bar {
         padding: 8px 12px;
         margin-top: 6px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
 
     .announcement-content {
@@ -1698,7 +1651,7 @@ input[type="number"]:focus {
     }
 
     .announcement-text {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         white-space: normal;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -1733,15 +1686,6 @@ input[type="number"]:focus {
         font-size: 1rem;
     }
 
-    .auth-section {
-        gap: 8px;
-    }
-    
-    .auth-btn {
-        padding: 6px 10px;
-        font-size: 14px;
-    }
-    
     .input-row-with-button {
         grid-template-columns: 1fr;
         gap: 16px;
@@ -1756,30 +1700,21 @@ input[type="number"]:focus {
         height: 0;
         line-height: 0;
     }
-    
+
     .calculate-btn.compact {
         width: 100%;
     }
-    
+
     .results-container {
         grid-template-columns: 1fr;
     }
-    
+
     .coupon-results-container {
         grid-template-columns: 1fr;
     }
-    
+
     .card-details {
         grid-template-columns: 1fr;
-    }
-    
-    .card-chips {
-        gap: 4px;
-    }
-
-    .card-chip {
-        font-size: 0.7rem;
-        padding: 3px 8px;
     }
 
     .cards-selection {
@@ -2830,7 +2765,7 @@ input[type="number"]:focus {
 
 /* Social Media Footer Styles */
 .social-media-footer {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 20px auto 10px;
     padding: 0 24px;
     text-align: center;
@@ -2937,7 +2872,7 @@ input[type="number"]:focus {
 }
 
 /* Mobile responsiveness for social media */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .social-media-footer {
         padding: 0 16px;
         margin: 16px auto 10px;
@@ -3091,7 +3026,7 @@ input[type="number"]:focus {
 
 /* Data Update Footer */
 .data-update-footer {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 16px auto 0;
     padding: 0 24px;
     text-align: center;
@@ -3101,7 +3036,7 @@ input[type="number"]:focus {
 
 /* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 20px auto;
     padding: 0 24px 24px;
     text-align: center;
@@ -3987,7 +3922,7 @@ input[type="number"]:focus {
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .my-mappings-floating-btn {
         bottom: 72px;
         right: 16px;
@@ -4170,7 +4105,7 @@ input[type="number"]:focus {
 }
 
 /* Mobile Responsive */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .auth-modal-content {
         max-width: 95%;
         margin: 20px;
@@ -4369,7 +4304,7 @@ input[type="number"]:focus {
 }
 
 /* 響應式設計 - 手機 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .features-grid-redesign {
         grid-template-columns: 1fr;
         gap: 24px;
@@ -4611,7 +4546,7 @@ input[type="number"]:focus {
     }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
     .hero-title {
         font-size: 1.5rem;
     }
@@ -4872,5 +4807,307 @@ input[type="number"]:focus {
 
     .hint-suggestions {
         gap: 4px;
+    }
+}
+
+/* ============================================
+   App Layout: Sidebar + Main Content
+   ============================================ */
+
+/* Hamburger button - hidden on desktop */
+.sidebar-toggle-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Sidebar overlay - for mobile drawer backdrop */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 900;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* App layout - desktop: sidebar + main, mobile: main only */
+.app-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 0;
+}
+
+/* When sidebar is hidden (landing page), collapse to single column */
+.app-layout:has(.sidebar[style*="display: none"]) {
+    grid-template-columns: 1fr;
+}
+
+/* Fallback for browsers that don't support :has() */
+.app-layout.no-sidebar {
+    grid-template-columns: 1fr;
+}
+
+/* Sidebar */
+.sidebar {
+    background: linear-gradient(180deg, #1e40af 0%, #2563eb 100%);
+    color: white;
+    padding: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+    position: sticky;
+    top: 20px;
+    align-self: start;
+    border-right: 1px solid rgba(30, 64, 175, 0.15);
+}
+
+.sidebar-header {
+    display: none; /* Hidden on desktop, shown on mobile */
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.sidebar-close-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 4px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-close-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+}
+
+.sidebar-content {
+    padding: 16px;
+}
+
+/* Sidebar internal styles */
+.sidebar .supported-cards {
+    margin-bottom: 20px;
+}
+
+.sidebar .cards-header {
+    margin-bottom: 10px;
+}
+
+.sidebar .cards-header p {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 1;
+}
+
+.sidebar .card-chips {
+    justify-content: flex-start;
+    gap: 5px;
+}
+
+.sidebar .card-chip {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+}
+
+.sidebar .header-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sidebar .section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 1;
+}
+
+.sidebar .payment-chips {
+    justify-content: flex-start;
+    gap: 5px;
+}
+
+.sidebar .payment-chip {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+}
+
+.sidebar .compare-payments-btn {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    padding: 5px 10px;
+}
+
+/* Sidebar manage buttons - adapt color for non-header context */
+.sidebar .manage-cards-btn {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar .manage-cards-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.sidebar .count-text {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebar .toggle-collapse-btn {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Desktop: hide hamburger and sidebar close button */
+@media (min-width: 1025px) {
+    .sidebar-toggle-btn {
+        display: none !important;
+    }
+
+    .sidebar-header {
+        display: none;
+    }
+
+    .sidebar .toggle-collapse-btn {
+        display: none !important;
+    }
+}
+
+/* Tablet: sidebar collapsible */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .app-layout {
+        grid-template-columns: 240px 1fr;
+    }
+
+    .sidebar {
+        max-height: calc(100vh - 70px);
+    }
+
+    .sidebar-toggle-btn {
+        display: none !important;
+    }
+
+    .sidebar-header {
+        display: none;
+    }
+
+    .sidebar .toggle-collapse-btn {
+        display: none !important;
+    }
+}
+
+/* Mobile: sidebar becomes drawer */
+@media (max-width: 768px) {
+    .app-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar-toggle-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 85vw;
+        max-width: 360px;
+        height: 100vh;
+        max-height: 100vh;
+        z-index: 950;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        border-radius: 0;
+        border-right: none;
+        box-shadow: none;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .sidebar-header {
+        display: flex;
+    }
+
+    /* Show toggle collapse on mobile drawer */
+    .sidebar .toggle-collapse-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   Mobile header adjustments
+   ============================================ */
+
+/* On mobile, header is compact - one line */
+@media (max-width: 768px) {
+    .header-top {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0;
+    }
+
+    .header-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .header-content h1 {
+        font-size: 1.25rem;
+        margin-bottom: 0;
+    }
+
+    .header-content p {
+        display: none;
+    }
+
+    header {
+        padding: 12px 16px;
+    }
+
+    .auth-section {
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .auth-btn {
+        padding: 5px 10px;
+        font-size: 13px;
+    }
+
+    #user-name {
+        display: none;
     }
 }

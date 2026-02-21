@@ -3735,12 +3735,24 @@ function initializeAuthListeners() {
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
 
-        // Header tool sections (cards and payments selection)
+        // Sidebar sections (cards and payments selection)
         const supportedCards = document.querySelector('.supported-cards');
         const headerSection = document.querySelector('.header-section');
+        const sidebar = document.getElementById('sidebar');
 
         if (supportedCards) supportedCards.style.display = 'block';
         if (headerSection) headerSection.style.display = 'block';
+
+        // Show sidebar (desktop: visible in grid; mobile: off-screen until drawer opened)
+        if (sidebar) sidebar.style.display = '';
+
+        // Remove no-sidebar class for grid layout
+        const appLayout = document.querySelector('.app-layout');
+        if (appLayout) appLayout.classList.remove('no-sidebar');
+
+        // Restore hamburger button visibility (CSS controls actual display per breakpoint)
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+        if (sidebarToggleBtn) sidebarToggleBtn.style.display = '';
 
         // Note: Results sections are controlled by query logic, not here
     }
@@ -3750,12 +3762,24 @@ function initializeAuthListeners() {
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'none';
 
-        // Header tool sections (cards and payments selection)
+        // Sidebar sections (cards and payments selection)
         const supportedCards = document.querySelector('.supported-cards');
         const headerSection = document.querySelector('.header-section');
+        const sidebar = document.getElementById('sidebar');
 
         if (supportedCards) supportedCards.style.display = 'none';
         if (headerSection) headerSection.style.display = 'none';
+
+        // Hide sidebar on desktop when tools are hidden (landing page)
+        if (sidebar) sidebar.style.display = 'none';
+
+        // Add no-sidebar class for :has() fallback
+        const appLayout = document.querySelector('.app-layout');
+        if (appLayout) appLayout.classList.add('no-sidebar');
+
+        // Hide hamburger button on mobile when tools are hidden
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+        if (sidebarToggleBtn) sidebarToggleBtn.style.display = 'none';
 
         // Hide results sections when hiding tool
         const resultsSection = document.querySelector('.results-section');
@@ -3875,6 +3899,9 @@ function initializeAuthListeners() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup sidebar drawer for mobile
+    setupSidebarDrawer();
 
     // Setup mobile collapse feature for cards and payments
     setupMobileCollapse();
@@ -4145,6 +4172,52 @@ function setupManageCardsModal() {
             });
             toggleAllBtn.textContent = '全不選';
         }
+    });
+}
+
+// ==========================================
+// Sidebar Drawer (Mobile)
+// ==========================================
+
+function setupSidebarDrawer() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+
+    if (!sidebar || !overlay || !toggleBtn || !closeBtn) return;
+
+    function openDrawer() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        disableBodyScroll();
+    }
+
+    function closeDrawer() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        enableBodyScroll();
+    }
+
+    toggleBtn.addEventListener('click', openDrawer);
+    closeBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+            closeDrawer();
+        }
+    });
+
+    // Close drawer when resizing to desktop
+    let wasMobileDrawer = window.innerWidth <= 768;
+    window.addEventListener('resize', () => {
+        const nowMobile = window.innerWidth <= 768;
+        if (wasMobileDrawer && !nowMobile) {
+            closeDrawer();
+        }
+        wasMobileDrawer = nowMobile;
     });
 }
 
