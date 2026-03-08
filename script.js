@@ -9,13 +9,18 @@ let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
 
-// Body scroll lock utilities
+// Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
 function disableBodyScroll() {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+    }
 }
 
 function enableBodyScroll() {
     document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
 }
 
 // ==========================================
@@ -1250,11 +1255,6 @@ function populateCardChips() {
         cardChipsContainer.appendChild(chip);
     });
 
-    // Update count text for mobile collapse feature
-    const cardsCountText = document.getElementById('cards-count-text');
-    if (cardsCountText) {
-        cardsCountText.textContent = `已選取 ${cardsToShow.length} 張信用卡`;
-    }
 }
 
 // Populate payment chips in header
@@ -1270,16 +1270,10 @@ function populatePaymentChips() {
 
     if (paymentsToShow.length === 0) {
         const emptyMsg = document.createElement('div');
-        emptyMsg.style.color = 'rgba(255, 255, 255, 0.7)';
+        emptyMsg.style.color = '#9ca3af';
         emptyMsg.style.fontSize = '0.875rem';
         emptyMsg.textContent = '未選取行動支付，請點擊上方齒輪選取';
         paymentChipsContainer.appendChild(emptyMsg);
-
-        // Update count text even when empty
-        const paymentsCountText = document.getElementById('payments-count-text');
-        if (paymentsCountText) {
-            paymentsCountText.textContent = '已選取 0 個行動支付';
-        }
         return;
     }
 
@@ -1290,12 +1284,6 @@ function populatePaymentChips() {
         chip.addEventListener('click', () => showPaymentDetail(payment.id));
         paymentChipsContainer.appendChild(chip);
     });
-
-    // Update count text for mobile collapse feature
-    const paymentsCountText = document.getElementById('payments-count-text');
-    if (paymentsCountText) {
-        paymentsCountText.textContent = `已選取 ${paymentsToShow.length} 個行動支付`;
-    }
 }
 
 // Setup event listeners
@@ -3707,9 +3695,56 @@ function setupAuthentication() {
     checkFirebaseReady();
 }
 
+// Setup avatar dropdown menu (toggle, close on outside click, menu actions)
+function setupAvatarDropdown() {
+    const avatarBtn = document.getElementById('avatar-btn');
+    const avatarDropdown = document.getElementById('avatar-dropdown');
+    if (!avatarBtn || !avatarDropdown) return;
+
+    const closeDropdown = () => avatarDropdown.classList.remove('open');
+
+    avatarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        avatarDropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!avatarDropdown.contains(e.target) && !avatarBtn.contains(e.target)) closeDropdown();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDropdown();
+    });
+
+    // Menu item actions — map element IDs to handler functions
+    const menuActions = {
+        'avatar-manage-cards': () => openManageCardsModal(),
+        'avatar-manage-payments': () => openManagePaymentsModal(),
+        'avatar-my-mappings': () => openMyMappingsModal(),
+        'avatar-feedback': () => {
+            const modal = document.getElementById('feedback-modal');
+            if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
+        },
+        'avatar-sign-out': async () => {
+            try { await window.signOut(auth); }
+            catch (error) { console.error('Sign out failed:', error); }
+        }
+    };
+
+    for (const [id, action] of Object.entries(menuActions)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeDropdown();
+                action();
+            });
+        }
+    }
+}
+
 function initializeAuthListeners() {
     const signInBtn = document.getElementById('sign-in-btn');
-    const signOutBtn = document.getElementById('sign-out-btn');
     const userInfo = document.getElementById('user-info');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
@@ -3719,50 +3754,50 @@ function initializeAuthListeners() {
         openAuthModal('login');
     });
 
-    // Sign out function
-    signOutBtn.addEventListener('click', async () => {
-        try {
-            await window.signOut(auth);
-            console.log('Sign out successful');
-        } catch (error) {
-            console.error('Sign out failed:', error);
-        }
-    });
+    // Setup avatar dropdown menu
+    setupAvatarDropdown();
     
-    // Helper functions to show/hide tool sections
+    // Cache shared DOM references for show/hide
+    const toolElements = {
+        inputSection: document.querySelector('.input-section'),
+        supportedCards: document.querySelector('.supported-cards'),
+        headerSection: document.querySelector('.header-section'),
+        sidebar: document.getElementById('sidebar'),
+        appLayout: document.querySelector('.app-layout'),
+        sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
+        announcementBar: document.getElementById('announcement-bar'),
+        resultsSection: document.querySelector('.results-section'),
+        couponResultsSection: document.querySelector('.coupon-results-section'),
+    };
+
     function showToolSections() {
-        // Input section (main tool UI)
-        const inputSection = document.querySelector('.input-section');
-        if (inputSection) inputSection.style.display = 'block';
-
-        // Header tool sections (cards and payments selection)
-        const supportedCards = document.querySelector('.supported-cards');
-        const headerSection = document.querySelector('.header-section');
-
-        if (supportedCards) supportedCards.style.display = 'block';
-        if (headerSection) headerSection.style.display = 'block';
-
-        // Note: Results sections are controlled by query logic, not here
+        const t = toolElements;
+        if (t.inputSection) t.inputSection.style.display = 'block';
+        if (t.supportedCards) t.supportedCards.style.display = 'block';
+        if (t.headerSection) t.headerSection.style.display = 'block';
+        if (t.sidebar) t.sidebar.style.display = '';
+        if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
+        if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
+        if (t.announcementBar && announcements && announcements.length > 0) {
+            t.announcementBar.style.display = 'block';
+        }
     }
 
     function hideToolSections() {
-        // Input section (main tool UI)
-        const inputSection = document.querySelector('.input-section');
-        if (inputSection) inputSection.style.display = 'none';
+        const t = toolElements;
+        if (t.inputSection) t.inputSection.style.display = 'none';
+        if (t.supportedCards) t.supportedCards.style.display = 'none';
+        if (t.headerSection) t.headerSection.style.display = 'none';
 
-        // Header tool sections (cards and payments selection)
-        const supportedCards = document.querySelector('.supported-cards');
-        const headerSection = document.querySelector('.header-section');
-
-        if (supportedCards) supportedCards.style.display = 'none';
-        if (headerSection) headerSection.style.display = 'none';
-
-        // Hide results sections when hiding tool
-        const resultsSection = document.querySelector('.results-section');
-        const couponResultsSection = document.querySelector('.coupon-results-section');
-
-        if (resultsSection) resultsSection.style.display = 'none';
-        if (couponResultsSection) couponResultsSection.style.display = 'none';
+        // Mobile: keep sidebar as drawer; Desktop: hide from grid
+        if (t.sidebar) {
+            t.sidebar.style.display = window.innerWidth <= 768 ? '' : 'none';
+        }
+        if (t.appLayout) t.appLayout.classList.add('no-sidebar');
+        if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
+        if (t.announcementBar) t.announcementBar.style.display = 'none';
+        if (t.resultsSection) t.resultsSection.style.display = 'none';
+        if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
     }
 
     // Listen for authentication state changes
@@ -3824,8 +3859,6 @@ function initializeAuthListeners() {
             populateCardChips();
             populatePaymentChips();
 
-            // Apply saved collapse state for logged-in users (using unified data)
-            await applyCollapseState(userData);
         } else {
             // User is signed out
             console.log('User signed out');
@@ -3876,8 +3909,8 @@ function initializeAuthListeners() {
     // Setup manage cards modal
     setupManageCardsModal();
 
-    // Setup mobile collapse feature for cards and payments
-    setupMobileCollapse();
+    // Setup sidebar drawer for mobile
+    setupSidebarDrawer();
 
     // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');
@@ -4148,208 +4181,56 @@ function setupManageCardsModal() {
     });
 }
 
-// Setup mobile collapse feature for cards and payments (only on mobile)
-async function setupMobileCollapse() {
-    const toggleCardsBtn = document.getElementById('toggle-cards-btn');
-    const togglePaymentsBtn = document.getElementById('toggle-payments-btn');
-    const cardChips = document.getElementById('card-chips');
-    const paymentChips = document.getElementById('payment-chips');
-    const cardsCountText = document.getElementById('cards-count-text');
-    const paymentsCountText = document.getElementById('payments-count-text');
+// ==========================================
+// Sidebar Drawer (Mobile)
+// ==========================================
 
-    // Check if on mobile (screen width <= 768px)
-    const isMobile = () => window.innerWidth <= 768;
+function setupSidebarDrawer() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const closeBtn = document.getElementById('sidebar-close-btn');
 
-    // Load saved collapse state for logged-in users
-    const savedState = await loadCollapseState();
+    if (!sidebar || !overlay || !toggleBtn || !closeBtn) return;
 
-    // Apply saved state on mobile
-    if (isMobile() && savedState) {
-        if (savedState.cardsCollapsed && cardChips && toggleCardsBtn && cardsCountText) {
-            cardChips.classList.add('collapsed');
-            toggleCardsBtn.classList.add('collapsed');
-            cardsCountText.style.display = 'inline';
-        }
-        if (savedState.paymentsCollapsed && paymentChips && togglePaymentsBtn && paymentsCountText) {
-            paymentChips.classList.add('collapsed');
-            togglePaymentsBtn.classList.add('collapsed');
-            paymentsCountText.style.display = 'inline';
-        }
+    function openDrawer() {
+        // Ensure sidebar content is visible (may be hidden on landing page)
+        const supportedCards = sidebar.querySelector('.supported-cards');
+        const headerSection = sidebar.querySelector('.header-section');
+        if (supportedCards) supportedCards.style.display = 'block';
+        if (headerSection) headerSection.style.display = 'block';
+
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        disableBodyScroll();
     }
 
-    // Setup toggle for cards
-    if (toggleCardsBtn && cardChips && cardsCountText) {
-        toggleCardsBtn.addEventListener('click', () => {
-            if (!isMobile()) return; // Only work on mobile
-
-            const isCollapsed = cardChips.classList.contains('collapsed');
-
-            if (isCollapsed) {
-                // Expand
-                cardChips.classList.remove('collapsed');
-                toggleCardsBtn.classList.remove('collapsed');
-                cardsCountText.style.display = 'none';
-            } else {
-                // Collapse
-                cardChips.classList.add('collapsed');
-                toggleCardsBtn.classList.add('collapsed');
-                cardsCountText.style.display = 'inline';
-            }
-
-            // Save state for logged-in users (debounced - saves 500ms after last click)
-            saveCollapseState({
-                cardsCollapsed: !isCollapsed,
-                paymentsCollapsed: paymentChips?.classList.contains('collapsed') || false
-            });
-        });
+    function closeDrawer() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        enableBodyScroll();
     }
 
-    // Setup toggle for payments
-    if (togglePaymentsBtn && paymentChips && paymentsCountText) {
-        togglePaymentsBtn.addEventListener('click', () => {
-            if (!isMobile()) return; // Only work on mobile
+    toggleBtn.addEventListener('click', openDrawer);
+    closeBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
 
-            const isCollapsed = paymentChips.classList.contains('collapsed');
-
-            if (isCollapsed) {
-                // Expand
-                paymentChips.classList.remove('collapsed');
-                togglePaymentsBtn.classList.remove('collapsed');
-                paymentsCountText.style.display = 'none';
-            } else {
-                // Collapse
-                paymentChips.classList.add('collapsed');
-                togglePaymentsBtn.classList.add('collapsed');
-                paymentsCountText.style.display = 'inline';
-            }
-
-            // Save state for logged-in users (debounced - saves 500ms after last click)
-            saveCollapseState({
-                cardsCollapsed: cardChips?.classList.contains('collapsed') || false,
-                paymentsCollapsed: !isCollapsed
-            });
-        });
-    }
-
-    // Handle window resize - reset collapse state when going from mobile to desktop
-    let wasMobile = isMobile();
-    window.addEventListener('resize', () => {
-        const nowMobile = isMobile();
-
-        // If switching from mobile to desktop, expand everything
-        if (wasMobile && !nowMobile) {
-            if (cardChips) {
-                cardChips.classList.remove('collapsed');
-            }
-            if (paymentChips) {
-                paymentChips.classList.remove('collapsed');
-            }
-            if (toggleCardsBtn) {
-                toggleCardsBtn.classList.remove('collapsed');
-            }
-            if (togglePaymentsBtn) {
-                togglePaymentsBtn.classList.remove('collapsed');
-            }
-            if (cardsCountText) {
-                cardsCountText.style.display = 'none';
-            }
-            if (paymentsCountText) {
-                paymentsCountText.style.display = 'none';
-            }
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+            closeDrawer();
         }
-
-        wasMobile = nowMobile;
     });
-}
 
-// Load collapse state from Firestore (for logged-in users)
-// Now accepts optional userData parameter to avoid redundant Firestore calls
-async function loadCollapseState(userData = null) {
-    if (!currentUser || !db) {
-        return null;
-    }
-
-    // Use provided userData if available (from unified load)
-    if (userData && userData.collapseState) {
-        console.log('📦 Using collapse state from unified data load:', userData.collapseState);
-        return userData.collapseState;
-    }
-
-    // Fallback: load from Firestore if userData not provided
-    try {
-        const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
-        if (userDoc.exists() && userDoc.data().collapseState) {
-            console.log('📦 Loaded collapse state:', userDoc.data().collapseState);
-            return userDoc.data().collapseState;
+    // Close drawer when resizing to desktop
+    let wasMobileDrawer = window.innerWidth <= 768;
+    window.addEventListener('resize', () => {
+        const nowMobile = window.innerWidth <= 768;
+        if (wasMobileDrawer && !nowMobile) {
+            closeDrawer();
         }
-    } catch (error) {
-        console.error('❌ Error loading collapse state:', error);
-    }
-
-    return null;
-}
-
-// Debounce timer for collapse state saving
-let collapseStateSaveTimer = null;
-
-// Save collapse state to Firestore (for logged-in users) with debouncing
-async function saveCollapseState(state) {
-    if (!currentUser || !db) {
-        return;
-    }
-
-    // Clear previous timer to prevent excessive saves
-    if (collapseStateSaveTimer) {
-        clearTimeout(collapseStateSaveTimer);
-    }
-
-    // Wait 500ms after last click before saving
-    collapseStateSaveTimer = setTimeout(async () => {
-        try {
-            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-                collapseState: state
-            }, { merge: true });
-            console.log('💾 Saved collapse state:', state);
-        } catch (error) {
-            console.error('❌ Error saving collapse state:', error);
-        }
-    }, 500);
-}
-
-// Apply saved collapse state to UI (for logged-in users)
-// Now accepts optional userData parameter to avoid redundant Firestore calls
-async function applyCollapseState(userData = null) {
-    const cardChips = document.getElementById('card-chips');
-    const paymentChips = document.getElementById('payment-chips');
-    const toggleCardsBtn = document.getElementById('toggle-cards-btn');
-    const togglePaymentsBtn = document.getElementById('toggle-payments-btn');
-    const cardsCountText = document.getElementById('cards-count-text');
-    const paymentsCountText = document.getElementById('payments-count-text');
-
-    // Check if on mobile (screen width <= 768px)
-    const isMobile = () => window.innerWidth <= 768;
-
-    if (!isMobile()) {
-        return; // Only apply on mobile
-    }
-
-    const savedState = await loadCollapseState(userData);
-
-    if (savedState) {
-        // Apply cards collapse state
-        if (savedState.cardsCollapsed && cardChips && toggleCardsBtn && cardsCountText) {
-            cardChips.classList.add('collapsed');
-            toggleCardsBtn.classList.add('collapsed');
-            cardsCountText.style.display = 'inline';
-        }
-
-        // Apply payments collapse state
-        if (savedState.paymentsCollapsed && paymentChips && togglePaymentsBtn && paymentsCountText) {
-            paymentChips.classList.add('collapsed');
-            togglePaymentsBtn.classList.add('collapsed');
-            paymentsCountText.style.display = 'inline';
-        }
-    }
+        wasMobileDrawer = nowMobile;
+    });
 }
 
 // Open manage cards modal
