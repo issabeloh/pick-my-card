@@ -3701,83 +3701,45 @@ function setupAvatarDropdown() {
     const avatarDropdown = document.getElementById('avatar-dropdown');
     if (!avatarBtn || !avatarDropdown) return;
 
-    // Toggle dropdown on avatar click
+    const closeDropdown = () => avatarDropdown.classList.remove('open');
+
     avatarBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         avatarDropdown.classList.toggle('open');
     });
 
-    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!avatarDropdown.contains(e.target) && !avatarBtn.contains(e.target)) {
-            avatarDropdown.classList.remove('open');
-        }
+        if (!avatarDropdown.contains(e.target) && !avatarBtn.contains(e.target)) closeDropdown();
     });
 
-    // Close dropdown on Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            avatarDropdown.classList.remove('open');
-        }
+        if (e.key === 'Escape') closeDropdown();
     });
 
-    // Menu item: 管理信用卡
-    const manageCardsItem = document.getElementById('avatar-manage-cards');
-    if (manageCardsItem) {
-        manageCardsItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            avatarDropdown.classList.remove('open');
-            openManageCardsModal();
-        });
-    }
+    // Menu item actions — map element IDs to handler functions
+    const menuActions = {
+        'avatar-manage-cards': () => openManageCardsModal(),
+        'avatar-manage-payments': () => openManagePaymentsModal(),
+        'avatar-my-mappings': () => openMyMappingsModal(),
+        'avatar-feedback': () => {
+            const modal = document.getElementById('feedback-modal');
+            if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
+        },
+        'avatar-sign-out': async () => {
+            try { await window.signOut(auth); }
+            catch (error) { console.error('Sign out failed:', error); }
+        }
+    };
 
-    // Menu item: 管理行動支付
-    const managePaymentsItem = document.getElementById('avatar-manage-payments');
-    if (managePaymentsItem) {
-        managePaymentsItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            avatarDropdown.classList.remove('open');
-            openManagePaymentsModal();
-        });
-    }
-
-    // Menu item: 我的配卡
-    const myMappingsItem = document.getElementById('avatar-my-mappings');
-    if (myMappingsItem) {
-        myMappingsItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            avatarDropdown.classList.remove('open');
-            openMyMappingsModal();
-        });
-    }
-
-    // Menu item: 意見回饋
-    const feedbackItem = document.getElementById('avatar-feedback');
-    if (feedbackItem) {
-        feedbackItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            avatarDropdown.classList.remove('open');
-            const feedbackModal = document.getElementById('feedback-modal');
-            if (feedbackModal) {
-                feedbackModal.style.display = 'flex';
-                disableBodyScroll();
-            }
-        });
-    }
-
-    // Menu item: 登出
-    const signOutItem = document.getElementById('avatar-sign-out');
-    if (signOutItem) {
-        signOutItem.addEventListener('click', async (e) => {
-            e.preventDefault();
-            avatarDropdown.classList.remove('open');
-            try {
-                await window.signOut(auth);
-                console.log('Sign out successful');
-            } catch (error) {
-                console.error('Sign out failed:', error);
-            }
-        });
+    for (const [id, action] of Object.entries(menuActions)) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeDropdown();
+                action();
+            });
+        }
     }
 }
 
@@ -3795,81 +3757,47 @@ function initializeAuthListeners() {
     // Setup avatar dropdown menu
     setupAvatarDropdown();
     
-    // Helper functions to show/hide tool sections
+    // Cache shared DOM references for show/hide
+    const toolElements = {
+        inputSection: document.querySelector('.input-section'),
+        supportedCards: document.querySelector('.supported-cards'),
+        headerSection: document.querySelector('.header-section'),
+        sidebar: document.getElementById('sidebar'),
+        appLayout: document.querySelector('.app-layout'),
+        sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
+        announcementBar: document.getElementById('announcement-bar'),
+        resultsSection: document.querySelector('.results-section'),
+        couponResultsSection: document.querySelector('.coupon-results-section'),
+    };
+
     function showToolSections() {
-        // Input section (main tool UI)
-        const inputSection = document.querySelector('.input-section');
-        if (inputSection) inputSection.style.display = 'block';
-
-        // Sidebar sections (cards and payments selection)
-        const supportedCards = document.querySelector('.supported-cards');
-        const headerSection = document.querySelector('.header-section');
-        const sidebar = document.getElementById('sidebar');
-
-        if (supportedCards) supportedCards.style.display = 'block';
-        if (headerSection) headerSection.style.display = 'block';
-
-        // Show sidebar (desktop: visible in grid; mobile: off-screen until drawer opened)
-        if (sidebar) sidebar.style.display = '';
-
-        // Remove no-sidebar class for grid layout
-        const appLayout = document.querySelector('.app-layout');
-        if (appLayout) appLayout.classList.remove('no-sidebar');
-
-        // Restore hamburger button visibility (CSS controls actual display per breakpoint)
-        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
-        if (sidebarToggleBtn) sidebarToggleBtn.style.display = '';
-
-        // Show announcement bar (if announcements exist)
-        const announcementBar = document.getElementById('announcement-bar');
-        if (announcementBar && announcements && announcements.length > 0) {
-            announcementBar.style.display = 'block';
+        const t = toolElements;
+        if (t.inputSection) t.inputSection.style.display = 'block';
+        if (t.supportedCards) t.supportedCards.style.display = 'block';
+        if (t.headerSection) t.headerSection.style.display = 'block';
+        if (t.sidebar) t.sidebar.style.display = '';
+        if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
+        if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
+        if (t.announcementBar && announcements && announcements.length > 0) {
+            t.announcementBar.style.display = 'block';
         }
-
-        // Note: Results sections are controlled by query logic, not here
     }
 
     function hideToolSections() {
-        // Input section (main tool UI)
-        const inputSection = document.querySelector('.input-section');
-        if (inputSection) inputSection.style.display = 'none';
+        const t = toolElements;
+        if (t.inputSection) t.inputSection.style.display = 'none';
+        if (t.supportedCards) t.supportedCards.style.display = 'none';
+        if (t.headerSection) t.headerSection.style.display = 'none';
 
-        // Sidebar sections (cards and payments selection)
-        const supportedCards = document.querySelector('.supported-cards');
-        const headerSection = document.querySelector('.header-section');
-        const sidebar = document.getElementById('sidebar');
-
-        if (supportedCards) supportedCards.style.display = 'none';
-        if (headerSection) headerSection.style.display = 'none';
-
-        // On mobile: keep sidebar accessible as drawer (transform handles visibility)
-        // On desktop: hide sidebar from grid layout
-        if (sidebar) {
-            if (window.innerWidth <= 768) {
-                sidebar.style.display = '';
-            } else {
-                sidebar.style.display = 'none';
-            }
+        // Mobile: keep sidebar as drawer; Desktop: hide from grid
+        if (t.sidebar) {
+            t.sidebar.style.display = window.innerWidth <= 768 ? '' : 'none';
         }
-
-        // Add no-sidebar class for :has() fallback
-        const appLayout = document.querySelector('.app-layout');
-        if (appLayout) appLayout.classList.add('no-sidebar');
-
-        // Keep hamburger button visible on landing page (for mobile users to browse cards)
-        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
-        if (sidebarToggleBtn) sidebarToggleBtn.style.display = '';
-
-        // Hide announcement bar on landing page
-        const announcementBar = document.getElementById('announcement-bar');
-        if (announcementBar) announcementBar.style.display = 'none';
-
-        // Hide results sections when hiding tool
-        const resultsSection = document.querySelector('.results-section');
-        const couponResultsSection = document.querySelector('.coupon-results-section');
-
-        if (resultsSection) resultsSection.style.display = 'none';
-        if (couponResultsSection) couponResultsSection.style.display = 'none';
+        if (t.appLayout) t.appLayout.classList.add('no-sidebar');
+        if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
+        if (t.announcementBar) t.announcementBar.style.display = 'none';
+        if (t.resultsSection) t.resultsSection.style.display = 'none';
+        if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
     }
 
     // Listen for authentication state changes
@@ -3983,7 +3911,6 @@ function initializeAuthListeners() {
 
     // Setup sidebar drawer for mobile
     setupSidebarDrawer();
-
 
     // Setup "Start Using" button click event (Option 2: Toggle display)
     const startUsingBtn = document.getElementById('start-using-btn');

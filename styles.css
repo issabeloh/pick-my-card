@@ -144,7 +144,6 @@ header {
     transition: transform 0.2s;
 }
 
-.avatar-dropdown.open ~ .avatar-btn .avatar-chevron,
 .avatar-menu-wrapper:has(.avatar-dropdown.open) .avatar-chevron {
     transform: rotate(180deg);
 }
@@ -4440,10 +4439,6 @@ input[type="number"]:focus {
     gap: 32px;
 }
 
-.use-case-item.reverse {
-    flex-direction: row-reverse;
-}
-
 .use-case-image {
     flex: 0 0 240px;
     display: flex;
@@ -4479,9 +4474,7 @@ input[type="number"]:focus {
     text-align: left;
 }
 
-.use-case-item.reverse .use-case-content {
-    text-align: left;
-}
+
 
 .use-case-title {
     font-size: 1.25rem;
@@ -4579,9 +4572,6 @@ input[type="number"]:focus {
         text-align: center;
     }
 
-    .use-case-item.reverse .use-case-content {
-        text-align: center;
-    }
 
     .use-case-title {
         font-size: 1.125rem;
@@ -5060,10 +5050,6 @@ input[type="number"]:focus {
 @media (min-width: 769px) and (max-width: 1024px) {
     .app-layout {
         grid-template-columns: 240px 1fr;
-    }
-
-    .sidebar {
-        /* No max-height or scrolling — content shown in full */
     }
 
     .sidebar-toggle-btn {
