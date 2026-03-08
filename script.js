@@ -1265,7 +1265,7 @@ function populatePaymentChips() {
 
     if (paymentsToShow.length === 0) {
         const emptyMsg = document.createElement('div');
-        emptyMsg.style.color = 'rgba(255, 255, 255, 0.7)';
+        emptyMsg.style.color = '#9ca3af';
         emptyMsg.style.fontSize = '0.875rem';
         emptyMsg.textContent = '未選取行動支付，請點擊上方齒輪選取';
         paymentChipsContainer.appendChild(emptyMsg);
