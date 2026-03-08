@@ -5125,7 +5125,8 @@ input[type="number"]:focus {
 }
 
 .app-layout main label {
-    font-size: 0.875rem;
+    font-size: 1.1rem;
+    font-weight: 600;
     margin-bottom: 10px;
 }
 
@@ -5145,6 +5146,14 @@ input[type="number"]:focus {
 .app-layout main .calculate-btn.compact {
     padding: 12px 20px;
     font-size: 0.9rem;
+}
+
+.app-layout main .quick-search-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-top: 12px;
+    margin-bottom: 6px;
 }
 
 .app-layout main .quick-search-btn {
