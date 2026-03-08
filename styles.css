@@ -4188,15 +4188,15 @@ input[type="number"]:focus {
 }
 
 .hero-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     color: #111827;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     line-height: 1.2;
 }
 
 .hero-subtitle {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: #6b7280;
     line-height: 1.6;
     max-width: 600px;
@@ -4259,11 +4259,8 @@ input[type="number"]:focus {
 .features-grid-redesign {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
+    gap: 24px;
     margin-bottom: 48px;
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 /* Feature Card New - 新設計的卡片 */
@@ -4312,7 +4309,7 @@ input[type="number"]:focus {
 
 /* Feature Content - 文字內容區域 */
 .feature-content {
-    padding: 32px 28px;
+    padding: 24px 20px;
     text-align: center;
     flex: 1;
     display: flex;
@@ -4321,14 +4318,14 @@ input[type="number"]:focus {
 }
 
 .feature-content .feature-title {
-    font-size: 1.375rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: #111827;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .feature-content .feature-description {
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: #6b7280;
     line-height: 1.7;
     margin: 0;
@@ -4433,14 +4430,14 @@ input[type="number"]:focus {
 .use-cases-list {
     display: flex;
     flex-direction: column;
-    gap: 48px;
+    gap: 40px;
     margin-bottom: 48px;
 }
 
 .use-case-item {
     display: flex;
     align-items: center;
-    gap: 40px;
+    gap: 32px;
 }
 
 .use-case-item.reverse {
@@ -4448,30 +4445,29 @@ input[type="number"]:focus {
 }
 
 .use-case-image {
-    flex: 0 0 300px;
+    flex: 0 0 240px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .icon-box-large {
-    font-size: 5rem;
+    font-size: 4rem;
     line-height: 1;
-    display: inline-block;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 60px;
-    width: 300px;
-    height: 300px;
+    padding: 40px;
+    width: 240px;
+    height: 240px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .use-case-media {
-    width: 300px;
-    height: 300px;
+    width: 240px;
+    height: 240px;
     object-fit: cover;
     border-radius: 12px;
     border: 1px solid #e5e7eb;
@@ -4488,16 +4484,16 @@ input[type="number"]:focus {
 }
 
 .use-case-title {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: #111827;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .use-case-description {
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: #6b7280;
-    line-height: 1.8;
+    line-height: 1.75;
     margin: 0;
 }
 
@@ -4588,11 +4584,11 @@ input[type="number"]:focus {
     }
 
     .use-case-title {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
     }
 
     .use-case-description {
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
     }
 }
 
