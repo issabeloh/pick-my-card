@@ -9,13 +9,18 @@ let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
 
-// Body scroll lock utilities
+// Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
 function disableBodyScroll() {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+    }
 }
 
 function enableBodyScroll() {
     document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
 }
 
 // ==========================================
@@ -3742,8 +3747,7 @@ function setupAvatarDropdown() {
         myMappingsItem.addEventListener('click', (e) => {
             e.preventDefault();
             avatarDropdown.classList.remove('open');
-            const myMappingsModal = document.getElementById('my-mappings-modal');
-            if (myMappingsModal) myMappingsModal.style.display = 'flex';
+            openMyMappingsModal();
         });
     }
 
@@ -3754,7 +3758,10 @@ function setupAvatarDropdown() {
             e.preventDefault();
             avatarDropdown.classList.remove('open');
             const feedbackModal = document.getElementById('feedback-modal');
-            if (feedbackModal) feedbackModal.style.display = 'flex';
+            if (feedbackModal) {
+                feedbackModal.style.display = 'flex';
+                disableBodyScroll();
+            }
         });
     }
 
