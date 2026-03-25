@@ -591,6 +591,13 @@ main {
     position: relative;
 }
 
+.amount-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 4px;
+}
+
 /* Quick Search Wrapper */
 .quick-search-wrapper {
     position: relative;
