@@ -1315,8 +1315,24 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
     
-    // Amount input validation
-    amountInput.addEventListener('input', validateInputs);
+    // Amount input: clear default on focus, restore on blur if empty
+    amountInput.addEventListener('focus', () => {
+        if (amountInput.value === '1000' && amountInput.dataset.userModified !== 'true') {
+            amountInput.value = '';
+            validateInputs();
+        }
+    });
+    amountInput.addEventListener('blur', () => {
+        if (amountInput.value === '') {
+            amountInput.value = '1000';
+            delete amountInput.dataset.userModified;
+            validateInputs();
+        }
+    });
+    amountInput.addEventListener('input', () => {
+        amountInput.dataset.userModified = 'true';
+        validateInputs();
+    });
     
     // Calculate button
     calculateBtn.addEventListener('click', () => {
@@ -1938,11 +1954,11 @@ function scrollToParkingBenefits() {
 function validateInputs() {
     const merchantValue = merchantInput.value.trim();
     const amountValue = parseFloat(amountInput.value);
-    
-    const isValid = merchantValue.length > 0 && 
-                   !isNaN(amountValue) && 
-                   amountValue > 0;
-    
+
+    // Empty amount is valid (defaults to 1000)
+    const isValid = merchantValue.length > 0 &&
+                   (amountInput.value === '' || (!isNaN(amountValue) && amountValue > 0));
+
     calculateBtn.disabled = !isValid;
 }
 
@@ -1975,7 +1991,7 @@ async function calculateCashback() {
         await new Promise(resolve => setTimeout(resolve, 50));
     }
 
-    const amount = parseFloat(amountInput.value);
+    const amount = amountInput.value === '' ? 1000 : parseFloat(amountInput.value);
     const merchantValue = merchantInput.value.trim();
 
     console.log('輸入：', { merchantValue, amount });
