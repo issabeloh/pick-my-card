@@ -8,6 +8,8 @@ let db = null;
 let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
+let userBirthdayMonth = null; // 用戶生日月份 (1-12)，null 表示未設定
+let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為生日月份
 
 // Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
 function disableBodyScroll() {
@@ -2543,6 +2545,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
+                    // 慶生月方案只在用戶生日當月配對
+                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
+                        continue;
+                    }
+
                     // 解析 rate 值（支援 {specialRate}）
                     let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
                     let applicableCap = rateGroup.cap;
@@ -2701,6 +2708,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     // Only consider active rates for cashback calculation (not upcoming)
                     const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
                     if (rateStatus !== 'active' && rateStatus !== 'always') {
+                        continue;
+                    }
+
+                    // 慶生月方案只在用戶生日當月配對
+                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
                         continue;
                     }
 
@@ -3861,6 +3873,10 @@ function initializeAuthListeners() {
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();
 
+            // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
+            userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
+            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === (new Date().getMonth() + 1);
+
             // Load user's selected cards and payments using unified data
             await loadUserCards(userData);
             await loadUserPayments(userData);
@@ -3882,6 +3898,8 @@ function initializeAuthListeners() {
             userSelectedCards.clear();
             userSelectedPayments.clear();
             userSpendingMappings = [];
+            userBirthdayMonth = null;
+            isBirthdayMonth = false;
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
@@ -4689,6 +4707,35 @@ basicCashbackDiv.innerHTML = basicContent;
             </div>
         `;
 
+        // 國泰CUBE卡專屬：生日月份選擇器
+        if (card.id === 'cathay-cube') {
+            if (!currentUser) {
+                levelSelectorHTML += `
+                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 600; flex-shrink: 0;">生日月份：</span>
+                        <span style="font-size: 12px; color: #9ca3af;">請先登入才能設定生日月份</span>
+                    </div>
+                `;
+            } else {
+                const monthOptions = '<option value="">-- 未設定 --</option>' +
+                    Array.from({length: 12}, (_, i) => {
+                        const m = i + 1;
+                        return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
+                    }).join('');
+                levelSelectorHTML += `
+                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label style="font-weight: 600; flex-shrink: 0;">生日月份：</label>
+                            <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                ${monthOptions}
+                            </select>
+                            <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
 
@@ -4712,6 +4759,15 @@ basicCashbackDiv.innerHTML = basicContent;
                 await showCardDetail(card.id);
             }
         };
+
+        // 生日月份選擇器事件（CUBE卡，已登入）
+        const birthdayMonthSelect = document.getElementById('birthday-month-select');
+        if (birthdayMonthSelect) {
+            birthdayMonthSelect.onchange = async function() {
+                const val = this.value;
+                await saveBirthdayMonth(val ? parseInt(val) : null);
+            };
+        }
     } else {
         cubeLevelSection.style.display = 'none';
     }
@@ -5500,10 +5556,25 @@ async function generateCubeSpecialContent(card) {
     let content = '';
 
     // Add CUBE-specific birthday note at the beginning
+    let birthdayNoteText;
+    let birthdayNoteColor;
+    if (!currentUser) {
+        birthdayNoteText = '※ 「慶生月」方案：請登入並設定生日月份，即可在生日當月自動納入比較';
+        birthdayNoteColor = '#9ca3af';
+    } else if (!userBirthdayMonth) {
+        birthdayNoteText = '※ 「慶生月」方案：在上方設定生日月份後，將在您的生日月份自動納入比較';
+        birthdayNoteColor = '#9ca3af';
+    } else if (isBirthdayMonth) {
+        birthdayNoteText = `🎂 本月是您的生日月份（${userBirthdayMonth}月），「慶生月」方案已自動納入比較！`;
+        birthdayNoteColor = '#be185d';
+    } else {
+        birthdayNoteText = `※ 「慶生月」方案：已設定在您的生日月份（${userBirthdayMonth}月）自動納入比較`;
+        birthdayNoteColor = '#9ca3af';
+    }
     content += `
         <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-bottom: 16px;">
-            <div style="color: #9ca3af; font-size: 11px; line-height: 1.5; font-style: italic;">
-                ※ 慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #6b7280; text-decoration: underline;">官網查詢</a>
+            <div style="color: ${birthdayNoteColor}; font-size: 11px; line-height: 1.5; font-style: italic;">
+                ${birthdayNoteText}
             </div>
         </div>
     `;
@@ -6945,6 +7016,29 @@ async function getCardLevel(cardId, defaultLevel) {
         console.log('Failed to load card level from Firestore:', error);
         // Fallback to localStorage
         return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+    }
+}
+
+// Save user's birthday month to Firestore and update pre-computed flag
+async function saveBirthdayMonth(month) {
+    userBirthdayMonth = month;
+    isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
+
+    // localStorage fallback
+    if (month !== null) {
+        localStorage.setItem('birthdayMonth', String(month));
+    } else {
+        localStorage.removeItem('birthdayMonth');
+    }
+
+    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+
+    try {
+        const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
+        await window.setDoc(docRef, { birthdayMonth: month, updatedAt: new Date().toISOString() }, { merge: true });
+        console.log(`Birthday month saved: ${month}`);
+    } catch (error) {
+        console.error('Failed to save birthday month:', error);
     }
 }
 
