@@ -4550,7 +4550,7 @@ document.getElementById('card-fee-waiver').style.display = 'none';
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
 let basicContent = `<div class="cashback-detail-item">`;
-basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+basicContent += `<div class="cashback-rate">國內一般回饋: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
 if (card.basicConditions) {
     basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
 }
@@ -4559,7 +4559,7 @@ basicContent += `</div>`; // ← 這裡關閉第一個區塊
 
 if (card.overseasCashback) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+    basicContent += `<div class="cashback-rate">海外一般回饋: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     basicContent += `</div>`;
 }
@@ -4602,7 +4602,7 @@ if (card.hasLevels) {
 
 if (domesticBonusRate) {
     basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
-    basicContent += `<div class="cashback-rate">國內加碼回饋: +${domesticBonusRate}%</div>`;
+    basicContent += `<div class="cashback-rate">國內加碼回饋: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
     if (domesticConditions) {
         basicContent += `<div class="cashback-condition">條件: ${domesticConditions}</div>`;
     }
@@ -4614,7 +4614,7 @@ if (domesticBonusRate) {
 
 if (overseasBonusRate) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外加碼回饋: +${overseasBonusRate}%</div>`;
+    basicContent += `<div class="cashback-rate">海外加碼回饋: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
     if (overseasConditions) {
         basicContent += `<div class="cashback-condition">條件: ${overseasConditions}</div>`;
     }
@@ -4712,7 +4712,7 @@ basicCashbackDiv.innerHTML = basicContent;
             if (!currentUser) {
                 levelSelectorHTML += `
                     <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="font-weight: 600; flex-shrink: 0;">生日月份：</span>
+                        <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
                         <span style="font-size: 12px; color: #9ca3af;">請先登入才能設定生日月份</span>
                     </div>
                 `;
@@ -4725,7 +4725,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 levelSelectorHTML += `
                     <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label style="font-weight: 600; flex-shrink: 0;">生日月份：</label>
+                            <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
                             <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                                 ${monthOptions}
                             </select>
@@ -4850,7 +4850,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel1}</div>`;
+                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel1}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -4921,7 +4921,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
         // Then display the level-based cashback with specialItems
         specialContent += `<div class="cashback-detail-item">`;
-        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋</div>`;
+        specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋</div>`;
         if (levelData.cap) {
             specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
         } else {
@@ -5021,7 +5021,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel}</div>`;
+                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -5093,7 +5093,7 @@ basicCashbackDiv.innerHTML = basicContent;
         } else {
             // Original logic for cards without cashbackRates
             specialContent += `<div class="cashback-detail-item">`;
-            specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋 (${savedLevel})</div>`;
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋 (${savedLevel})</div>`;
             if (levelData.cap) {
                 specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
             } else {
@@ -5167,7 +5167,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}${endingSoonBadge}</div>`;
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadge}</div>`;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
@@ -5249,7 +5249,7 @@ basicCashbackDiv.innerHTML = basicContent;
             const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
             const categoryStyle = group.category ? getCategoryStyle(group.category) : '';
             const categoryText = group.category ? ` <span style="${categoryStyle}">(${getCategoryDisplayName(group.category)})</span>` : '';
-            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
+            upcomingContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
 
             if (group.parsedCap) {
                 upcomingContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -5359,7 +5359,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 badges += ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            couponContent += `<div class="cashback-rate">${actualRate}% 回饋${badges}</div>`;
+            couponContent += `<div class="cashback-rate"><span class="cashback-rate-num">${actualRate}%</span> 回饋${badges}</div>`;
 
             // 消費上限（如果有）
             if (coupon.cap) {
@@ -5598,7 +5598,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle10 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate">10% 回饋 <span style="${categoryStyle10}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge10}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -5627,7 +5627,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle5 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate">5% 回饋 <span style="${categoryStyle5}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge5}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
@@ -5687,7 +5687,7 @@ async function generateCubeSpecialContent(card) {
                         displayRate = levelSettings[fieldName] || categoryData.rate;
                     }
 
-                    content += `<div class="cashback-rate">${displayRate}% 回饋 <span style="${categoryStyle}">(${getCategoryDisplayName(category)})</span></div>`;
+                    content += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋 <span style="${categoryStyle}">(${getCategoryDisplayName(category)})</span></div>`;
                     content += `<div class="cashback-condition">消費上限: ${categoryData.cap ? `NT$${Math.floor(categoryData.cap).toLocaleString()}` : '無上限'}</div>`;
 
                     if (categoryData.period) {
@@ -5784,7 +5784,7 @@ async function generateCubeSpecialContent(card) {
                 endingSoonBadgeOther = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            content += `<div class="cashback-rate">${mergedRate.parsedRate}% 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
+            content += `<div class="cashback-rate"><span class="cashback-rate-num">${mergedRate.parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
 
             // 显示消費上限
             if (mergedRate.parsedCap) {

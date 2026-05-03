@@ -632,14 +632,16 @@
                     <div class="card-info-section user-notes-section">
                         <h4>📝 我的筆記</h4>
                         <div class="user-notes-container">
-                            <textarea id="user-notes-input" 
-                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                      class="user-notes-textarea"></textarea>
-                            <div class="notes-status" id="notes-status">
+                            <div class="notes-input-row">
+                                <textarea id="user-notes-input"
+                                          placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                          class="user-notes-textarea"></textarea>
                                 <button class="save-notes-btn" id="save-notes-btn" disabled>
                                     <span class="btn-icon">💾</span>
                                     <span class="btn-text">儲存筆記</span>
                                 </button>
+                            </div>
+                            <div class="notes-status" id="notes-status">
                                 <span class="save-indicator" id="save-indicator"></span>
                             </div>
                         </div>
