@@ -2565,7 +2565,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
+                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -2736,7 +2736,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
+                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -4679,20 +4679,22 @@ basicCashbackDiv.innerHTML = basicContent;
 
         // Generate level rates info
         let levelRatesInfo = '';
-        if (levelNames.length > 1) {
+        if (levelNames.length > 1 && card.id === 'cathay-cube') {
+            // CUBE 卡用較小字體，配合統一設定區塊
+            levelRatesInfo = '<div style="margin-left: 16px; flex-shrink: 0; padding: 5px 9px; border-left: 2px solid #e5e7eb; min-width: 0;">';
+            levelRatesInfo += '<div style="font-size: 10.3px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">各級別回饋率：</div>';
+            levelNames.forEach(level => {
+                const data = card.levelSettings[level];
+                const displayRate = data.specialRate || data.rate || 0;
+                levelRatesInfo += `<div style="font-size: 9.5px; color: #6b7280; line-height: 1.4; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
+            });
+            levelRatesInfo += `<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-style: italic; line-height: 1.3;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
+            levelRatesInfo += '</div>';
+        } else if (levelNames.length > 1) {
             levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb; min-width: 0;">';
             levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
 
-            if (card.id === 'cathay-cube') {
-                // CUBE card uses specialRate instead of rate
-                levelNames.forEach(level => {
-                    const data = card.levelSettings[level];
-                    const displayRate = data.specialRate || data.rate || 0;
-                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
-                });
-                // Add note about which categories are affected by level
-                levelRatesInfo += `<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic; line-height: 1.4;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
-            } else if (card.id === 'dbs-eco') {
+            if (card.id === 'dbs-eco') {
                 // Simplified format for mobile compatibility
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
@@ -4724,20 +4726,6 @@ basicCashbackDiv.innerHTML = basicContent;
                 });
             }
             levelRatesInfo += '</div>';
-
-            // CUBE card: rebuild levelRatesInfo with smaller fonts to match the unified card
-            if (card.id === 'cathay-cube') {
-                let cubeRates = '<div style="margin-left: 16px; flex-shrink: 0; padding: 5px 9px; border-left: 2px solid #e5e7eb; min-width: 0;">';
-                cubeRates += '<div style="font-size: 10.3px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">各級別回饋率：</div>';
-                levelNames.forEach(level => {
-                    const data = card.levelSettings[level];
-                    const displayRate = data.specialRate || data.rate || 0;
-                    cubeRates += `<div style="font-size: 9.5px; color: #6b7280; line-height: 1.4; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
-                });
-                cubeRates += `<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-style: italic; line-height: 1.3;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
-                cubeRates += '</div>';
-                levelRatesInfo = cubeRates;
-            }
         }
 
         let levelSelectorHTML;
@@ -4850,12 +4838,11 @@ basicCashbackDiv.innerHTML = basicContent;
             };
         }
 
-        // 童樂匯勾選框事件（CUBE卡，已登入）
+        // 童樂匯勾選框事件（影響搜尋配對；不影響 modal 顯示，所以不需要重新渲染）
         const childrenCheckbox = document.getElementById('children-eligible-checkbox');
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
                 await saveChildrenEligible(this.checked);
-                await updateCubeSpecialCashback(card);
             };
         }
     } else {
@@ -5567,11 +5554,9 @@ basicCashbackDiv.innerHTML = basicContent;
     disableBodyScroll();
 
     // 滾動到最上面（不記憶上一個 modal 的捲動位置）
-    modal.scrollTop = 0;
+    // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
-    const modalBody = modal.querySelector('.modal-body');
-    if (modalBody) modalBody.scrollTop = 0;
 
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
@@ -7177,13 +7162,6 @@ async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
 
-    // localStorage fallback
-    if (month !== null) {
-        localStorage.setItem('birthdayMonth', String(month));
-    } else {
-        localStorage.removeItem('birthdayMonth');
-    }
-
     if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
@@ -7198,7 +7176,6 @@ async function saveBirthdayMonth(month) {
 // Save user's children eligibility to Firestore and update global flag
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
-    localStorage.setItem('isChildrenEligible', String(eligible));
 
     if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 

@@ -2959,8 +2959,8 @@ input[type="number"]:focus {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.social-link.instagram:hover {
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+.social-link.threads:hover {
+    background: #000000;
     border-color: transparent;
     color: white;
 }
