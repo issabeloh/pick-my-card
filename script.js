@@ -2565,7 +2565,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
+                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -2736,7 +2736,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
+                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -4671,26 +4671,30 @@ basicCashbackDiv.innerHTML = basicContent;
         // Generate level selector HTML with note (通用支援)
         const savedLevelData = card.levelSettings[savedLevel];
         const levelNoteText = savedLevelData['level-note'] || '';
+        const noteFs = card.id === 'cathay-cube' ? '9.5px' : '11px';
+        const noteMt = card.id === 'cathay-cube' ? '6px' : '8px';
         const levelNote = levelNoteText
-            ? `<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
-            : '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>';
+            ? `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
+            : `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>`;
 
         // Generate level rates info
         let levelRatesInfo = '';
-        if (levelNames.length > 1) {
+        if (levelNames.length > 1 && card.id === 'cathay-cube') {
+            // CUBE 卡用較小字體，配合統一設定區塊
+            levelRatesInfo = '<div style="margin-left: 16px; flex-shrink: 0; padding: 5px 9px; border-left: 2px solid #e5e7eb; min-width: 0;">';
+            levelRatesInfo += '<div style="font-size: 10.3px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">各級別回饋率：</div>';
+            levelNames.forEach(level => {
+                const data = card.levelSettings[level];
+                const displayRate = data.specialRate || data.rate || 0;
+                levelRatesInfo += `<div style="font-size: 9.5px; color: #6b7280; line-height: 1.4; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
+            });
+            levelRatesInfo += `<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-style: italic; line-height: 1.3;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
+            levelRatesInfo += '</div>';
+        } else if (levelNames.length > 1) {
             levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb; min-width: 0;">';
             levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
 
-            if (card.id === 'cathay-cube') {
-                // CUBE card uses specialRate instead of rate
-                levelNames.forEach(level => {
-                    const data = card.levelSettings[level];
-                    const displayRate = data.specialRate || data.rate || 0;
-                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
-                });
-                // Add note about which categories are affected by level
-                levelRatesInfo += `<div style="font-size: 10px; color: #9ca3af; margin-top: 6px; font-style: italic; line-height: 1.4;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
-            } else if (card.id === 'dbs-eco') {
+            if (card.id === 'dbs-eco') {
                 // Simplified format for mobile compatibility
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
@@ -4724,61 +4728,79 @@ basicCashbackDiv.innerHTML = basicContent;
             levelRatesInfo += '</div>';
         }
 
-        let levelSelectorHTML = `
-            <div class="level-selector" style="margin-bottom: 16px;">
-                <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
-                    <div style="flex-shrink: 0;">
-                        <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
-                        <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                            ${levelNames.map(level =>
-                                `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
-                            ).join('')}
+        let levelSelectorHTML;
+
+        if (card.id === 'cathay-cube') {
+            // CUBE card: all three settings rows in one unified card
+            const monthOptions = !currentUser ? '' :
+                '<option value="">-- 未設定 --</option>' +
+                Array.from({length: 12}, (_, i) => {
+                    const m = i + 1;
+                    return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
+                }).join('');
+
+            const birthdayRow = currentUser ? `
+                <div>
+                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151; margin-bottom: 4px;">我的生日月份：</label>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                        <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                            ${monthOptions}
                         </select>
                     </div>
-                    ${levelRatesInfo}
+                    <div style="font-size: 11px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</div>
                 </div>
-                ${levelNote}
-            </div>
-        `;
+            ` : `
+                <div>
+                    <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</div>
+                </div>
+            `;
 
-        // 國泰CUBE卡專屬：生日月份選擇器
-        if (card.id === 'cathay-cube') {
-            if (!currentUser) {
-                levelSelectorHTML += `
-                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
-                        <span style="font-size: 12px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
-                    </div>
-                `;
-            } else {
-                const monthOptions = '<option value="">-- 未設定 --</option>' +
-                    Array.from({length: 12}, (_, i) => {
-                        const m = i + 1;
-                        return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
-                    }).join('');
-                levelSelectorHTML += `
-                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
-                            <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                ${monthOptions}
+            levelSelectorHTML = `
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex-shrink: 0;">
+                            <label style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                                ${levelNames.map(level =>
+                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                                ).join('')}
                             </select>
-                            <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                        </div>
+                        ${levelRatesInfo}
+                    </div>
+                    ${levelNote}
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                        ${birthdayRow}
+                    </div>
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="children-eligible-checkbox"
+                                ${isChildrenEligible ? 'checked' : ''}
+                                style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
+                            <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
+                        </label>
+                        <div style="margin-top: 1px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
+                            勾選後才會在比較結果納入「童樂匯」方案的活動
                         </div>
                     </div>
-                `;
-            }
-
-            // 童樂匯權益勾選框（所有用戶）
-            levelSelectorHTML += `
-                <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                        <input type="checkbox" id="children-eligible-checkbox"
-                            ${isChildrenEligible ? 'checked' : ''}
-                            style="width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6;">
-                        <span style="font-weight: 600;">我符合「童樂匯」權益</span>
-                        <span style="font-size: 12px; color: #6b7280;">勾選後才會在比較結果納入「童樂匯」方案的活動</span>
-                    </label>
+                </div>
+            `;
+        } else {
+            levelSelectorHTML = `
+                <div class="level-selector" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <div style="flex-shrink: 0;">
+                            <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                ${levelNames.map(level =>
+                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        ${levelRatesInfo}
+                    </div>
+                    ${levelNote}
                 </div>
             `;
         }
@@ -4816,12 +4838,11 @@ basicCashbackDiv.innerHTML = basicContent;
             };
         }
 
-        // 童樂匯勾選框事件（CUBE卡，已登入）
+        // 童樂匯勾選框事件（影響搜尋配對；不影響 modal 顯示，所以不需要重新渲染）
         const childrenCheckbox = document.getElementById('children-eligible-checkbox');
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
                 await saveChildrenEligible(this.checked);
-                await updateCubeSpecialCashback(card);
             };
         }
     } else {
@@ -5531,6 +5552,11 @@ basicCashbackDiv.innerHTML = basicContent;
     // Show modal
     modal.style.display = 'flex';
     disableBodyScroll();
+
+    // 滾動到最上面（不記憶上一個 modal 的捲動位置）
+    // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
 
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
@@ -7136,13 +7162,6 @@ async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
 
-    // localStorage fallback
-    if (month !== null) {
-        localStorage.setItem('birthdayMonth', String(month));
-    } else {
-        localStorage.removeItem('birthdayMonth');
-    }
-
     if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
@@ -7157,7 +7176,6 @@ async function saveBirthdayMonth(month) {
 // Save user's children eligibility to Firestore and update global flag
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
-    localStorage.setItem('isChildrenEligible', String(eligible));
 
     if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 

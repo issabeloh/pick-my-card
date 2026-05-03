@@ -2141,13 +2141,18 @@ input[type="number"]:focus {
 /* Real-time search input above special cashback */
 .cashback-search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 5px 10px;
     margin-bottom: 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cashback-search-input::placeholder {
+    font-size: 11px;
+    color: #9ca3af;
 }
 
 .cashback-search-input:focus {
@@ -2954,8 +2959,8 @@ input[type="number"]:focus {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.social-link.instagram:hover {
-    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+.social-link.threads:hover {
+    background: #000000;
     border-color: transparent;
     color: white;
 }
