@@ -5566,6 +5566,13 @@ basicCashbackDiv.innerHTML = basicContent;
     modal.style.display = 'flex';
     disableBodyScroll();
 
+    // 滾動到最上面（不記憶上一個 modal 的捲動位置）
+    modal.scrollTop = 0;
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+    const modalBody = modal.querySelector('.modal-body');
+    if (modalBody) modalBody.scrollTop = 0;
+
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');
     const closeModal = () => {
