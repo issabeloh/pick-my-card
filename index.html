@@ -636,9 +636,8 @@
                                 <textarea id="user-notes-input"
                                           placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
                                           class="user-notes-textarea"></textarea>
-                                <button class="save-notes-btn" id="save-notes-btn" disabled>
+                                <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
                                     <span class="btn-icon">💾</span>
-                                    <span class="btn-text">儲存筆記</span>
                                 </button>
                             </div>
                             <div class="notes-status" id="notes-status">
@@ -649,6 +648,12 @@
 
                     <div class="card-info-section">
                         <h4>指定通路回饋</h4>
+                        <input type="text" id="cashback-search-input" class="cashback-search-input"
+                               placeholder="🔍 搜尋通路或方案（如：全聯、童樂匯）"
+                               oninput="filterCashbackItems(this.value)">
+                        <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
+                            找不到符合的活動
+                        </div>
                         <div id="card-special-cashback"></div>
                     </div>
 

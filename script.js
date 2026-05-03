@@ -2389,10 +2389,10 @@ function getCategoryDisplayName(category) {
     return categoryMap[category] || category;
 }
 
-// Helper function to get category display style
+// Helper function to get category display style (blue chip)
 function getCategoryStyle(category) {
-    // All categories display in black color for consistency
-    return category ? 'color: #111827;' : '';
+    if (!category) return '';
+    return 'display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; vertical-align: middle;';
 }
 
 /**
@@ -4484,6 +4484,12 @@ async function showCardDetail(cardId) {
         });
     }
 
+    // 重置指定通路回饋的搜尋框
+    const cashbackSearchInput = document.getElementById('cashback-search-input');
+    if (cashbackSearchInput) cashbackSearchInput.value = '';
+    const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
+    if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
+
     const modal = document.getElementById('card-detail-modal');
 
     // Update basic information
@@ -4869,11 +4875,11 @@ basicCashbackDiv.innerHTML = basicContent;
                     const merchantsId = `merchants-${card.id}-group-${groupKey}`;
                     const showAllId = `show-all-${card.id}-group-${groupKey}`;
 
-                    if (uniqueItems.length <= 20) {
+                    if (uniqueItems.length <= 5) {
                         const merchantsList = uniqueItems.join('、');
                         specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = uniqueItems.slice(0, 20).join('、');
+                        const initialList = uniqueItems.slice(0, 5).join('、');
                         const fullList = uniqueItems.join('、');
 
                         specialContent += `<div class="cashback-merchants">`;
@@ -5040,11 +5046,11 @@ basicCashbackDiv.innerHTML = basicContent;
                     const merchantsId = `merchants-${card.id}-group-${groupKey}`;
                     const showAllId = `show-all-${card.id}-group-${groupKey}`;
 
-                    if (uniqueItems.length <= 20) {
+                    if (uniqueItems.length <= 5) {
                         const merchantsList = uniqueItems.join('、');
                         specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = uniqueItems.slice(0, 20).join('、');
+                        const initialList = uniqueItems.slice(0, 5).join('、');
                         const fullList = uniqueItems.join('、');
 
                         specialContent += `<div class="cashback-merchants">`;
@@ -5157,7 +5163,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // Display rate with category in parentheses (with black color for consistency)
             const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
-            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">(${rate.category})</span>` : '';
+            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadge = '';
@@ -5204,13 +5210,13 @@ basicCashbackDiv.innerHTML = basicContent;
                     });
                 }
                 
-                if (rate.items.length <= 20) {
+                if (rate.items.length <= 5) {
                     // 少於20個直接顯示全部
                     const merchantsList = processedItems.join('、');
                     specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
                     // 超過20個顯示可展開的列表
-                    const initialList = processedItems.slice(0, 20).join('、');
+                    const initialList = processedItems.slice(0, 5).join('、');
                     const fullList = processedItems.join('、');
                     
                     specialContent += `<div class="cashback-merchants">`;
@@ -5248,7 +5254,7 @@ basicCashbackDiv.innerHTML = basicContent;
             const daysUntil = getDaysUntilStart(group.periodStart);
             const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
             const categoryStyle = group.category ? getCategoryStyle(group.category) : '';
-            const categoryText = group.category ? ` <span style="${categoryStyle}">(${getCategoryDisplayName(group.category)})</span>` : '';
+            const categoryText = group.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(group.category)}</span>` : '';
             upcomingContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
 
             if (group.parsedCap) {
@@ -5267,11 +5273,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 const merchantsId = `upcoming-merchants-${upcomingCard.id}-group-${groupKey}`;
                 const showAllId = `upcoming-show-all-${upcomingCard.id}-group-${groupKey}`;
 
-                if (uniqueItems.length <= 20) {
+                if (uniqueItems.length <= 5) {
                     const merchantsList = uniqueItems.join('、');
                     upcomingContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
-                    const initialList = uniqueItems.slice(0, 20).join('、');
+                    const initialList = uniqueItems.slice(0, 5).join('、');
                     const fullList = uniqueItems.join('、');
 
                     upcomingContent += `<div class="cashback-merchants">`;
@@ -5598,7 +5604,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle10 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge10}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -5627,7 +5633,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle5 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge5}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
@@ -5687,7 +5693,7 @@ async function generateCubeSpecialContent(card) {
                         displayRate = levelSettings[fieldName] || categoryData.rate;
                     }
 
-                    content += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋 <span style="${categoryStyle}">(${getCategoryDisplayName(category)})</span></div>`;
+                    content += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋 <span style="${categoryStyle}">${getCategoryDisplayName(category)}</span></div>`;
                     content += `<div class="cashback-condition">消費上限: ${categoryData.cap ? `NT$${Math.floor(categoryData.cap).toLocaleString()}` : '無上限'}</div>`;
 
                     if (categoryData.period) {
@@ -5695,10 +5701,10 @@ async function generateCubeSpecialContent(card) {
                     }
 
                     const merchantsList = items.join('、');
-                    if (items.length <= 20) {
+                    if (items.length <= 5) {
                         content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = items.slice(0, 20).join('、');
+                        const initialList = items.slice(0, 5).join('、');
                         const merchantsId = `cube-merchants-${category}-${savedLevel}`;
                         const showAllId = `cube-show-all-${category}-${savedLevel}`;
 
@@ -5774,7 +5780,7 @@ async function generateCubeSpecialContent(card) {
 
             // 显示回饋率，如果有 category 则显示在括号中（使用動態樣式）
             const categoryStyleOther = mergedRate.category ? getCategoryStyle(mergedRate.category) : '';
-            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">(${getCategoryDisplayName(mergedRate.category)})</span>` : '';
+            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">${getCategoryDisplayName(mergedRate.category)}</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadgeOther = '';
@@ -5808,11 +5814,11 @@ async function generateCubeSpecialContent(card) {
                 const merchantsId = `cube-other-merchants-${index}`;
                 const showAllId = `cube-other-show-all-${index}`;
 
-                if (mergedRate.items.length <= 20) {
+                if (mergedRate.items.length <= 5) {
                     const merchantsList = mergedRate.items.join('、');
                     content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
-                    const initialList = mergedRate.items.slice(0, 20).join('、');
+                    const initialList = mergedRate.items.slice(0, 5).join('、');
                     const fullList = mergedRate.items.join('、');
 
                     content += `<div class="cashback-merchants">`;
@@ -5855,6 +5861,38 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
         // 展開
         merchantsElement.textContent = fullList;
         buttonElement.textContent = '收起';
+    }
+}
+
+// 即時過濾「指定通路回饋」中的活動卡片
+// 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
+function filterCashbackItems(searchTerm) {
+    const term = (searchTerm || '').toLowerCase().trim();
+    const container = document.getElementById('card-special-cashback');
+    const emptyMsg = document.getElementById('cashback-search-empty');
+    if (!container) return;
+
+    const items = container.querySelectorAll('.cashback-detail-item');
+    let visibleCount = 0;
+
+    items.forEach(item => {
+        if (!term) {
+            item.style.display = '';
+            visibleCount++;
+            return;
+        }
+        // 比對整個卡片的 textContent，包含通路名稱、category 標籤、條件等
+        const text = item.textContent.toLowerCase();
+        if (text.includes(term)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    if (emptyMsg) {
+        emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
     }
 }
 
@@ -5944,8 +5982,8 @@ async function saveUserNotes(cardId, notes) {
         // 更新按鈕為儲存中狀態
         saveBtn.className = 'save-notes-btn saving';
         saveBtn.disabled = true;
-        btnIcon.textContent = '⏳';
-        btnText.textContent = '儲存中...';
+        if (btnIcon) btnIcon.textContent = '⏳';
+        if (btnText) btnText.textContent = '儲存中...';
         saveIndicator.textContent = '';
         
         const docRef = window.doc ? window.doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`) : null;
@@ -5962,17 +6000,17 @@ async function saveUserNotes(cardId, notes) {
         
         // 成功狀態
         saveBtn.className = 'save-notes-btn success';
-        btnIcon.textContent = '✓';
-        btnText.textContent = '已儲存';
+        if (btnIcon) btnIcon.textContent = '✓';
+        if (btnText) btnText.textContent = '已儲存';
         saveIndicator.textContent = '✓ 雲端同步成功';
         saveIndicator.style.color = '#10b981';
-        
+
         // 2秒後恢復正常狀態
         setTimeout(() => {
             saveBtn.className = 'save-notes-btn';
             saveBtn.disabled = true; // 沒有變更時保持禁用
-            btnIcon.textContent = '💾';
-            btnText.textContent = '儲存筆記';
+            if (btnIcon) btnIcon.textContent = '💾';
+            if (btnText) btnText.textContent = '儲存筆記';
             saveIndicator.textContent = '';
         }, 2000);
         
@@ -5987,15 +6025,15 @@ async function saveUserNotes(cardId, notes) {
         // 錯誤狀態
         saveBtn.className = 'save-notes-btn';
         saveBtn.disabled = false; // 可以再次嘗試
-        btnIcon.textContent = '⚠️';
-        btnText.textContent = '重試儲存';
+        if (btnIcon) btnIcon.textContent = '⚠️';
+        if (btnText) btnText.textContent = '重試儲存';
         saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
         saveIndicator.style.color = '#dc2626';
-        
+
         // 5秒後恢復
         setTimeout(() => {
-            btnIcon.textContent = '💾';
-            btnText.textContent = '儲存筆記';
+            if (btnIcon) btnIcon.textContent = '💾';
+            if (btnText) btnText.textContent = '儲存筆記';
             saveIndicator.textContent = '';
         }, 5000);
         
