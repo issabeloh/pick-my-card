@@ -2492,7 +2492,7 @@ input[type="number"]:focus {
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 10px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
@@ -2500,8 +2500,9 @@ input[type="number"]:focus {
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
-    min-width: 100px;
+    gap: 0;
+    min-width: unset;
+    width: auto;
     justify-content: center;
     flex-shrink: 0;
 }
