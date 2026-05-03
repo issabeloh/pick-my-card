@@ -4671,9 +4671,11 @@ basicCashbackDiv.innerHTML = basicContent;
         // Generate level selector HTML with note (通用支援)
         const savedLevelData = card.levelSettings[savedLevel];
         const levelNoteText = savedLevelData['level-note'] || '';
+        const noteFs = card.id === 'cathay-cube' ? '9.5px' : '11px';
+        const noteMt = card.id === 'cathay-cube' ? '6px' : '8px';
         const levelNote = levelNoteText
-            ? `<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
-            : '<div id="level-note" style="font-size: 11px; color: #9ca3af; margin-top: 8px; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>';
+            ? `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
+            : `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>`;
 
         // Generate level rates info
         let levelRatesInfo = '';
@@ -4722,6 +4724,20 @@ basicCashbackDiv.innerHTML = basicContent;
                 });
             }
             levelRatesInfo += '</div>';
+
+            // CUBE card: rebuild levelRatesInfo with smaller fonts to match the unified card
+            if (card.id === 'cathay-cube') {
+                let cubeRates = '<div style="margin-left: 16px; flex-shrink: 0; padding: 5px 9px; border-left: 2px solid #e5e7eb; min-width: 0;">';
+                cubeRates += '<div style="font-size: 10.3px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">各級別回饋率：</div>';
+                levelNames.forEach(level => {
+                    const data = card.levelSettings[level];
+                    const displayRate = data.specialRate || data.rate || 0;
+                    cubeRates += `<div style="font-size: 9.5px; color: #6b7280; line-height: 1.4; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
+                });
+                cubeRates += `<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-style: italic; line-height: 1.3;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
+                cubeRates += '</div>';
+                levelRatesInfo = cubeRates;
+            }
         }
 
         let levelSelectorHTML;
@@ -4736,26 +4752,26 @@ basicCashbackDiv.innerHTML = basicContent;
                 }).join('');
 
             const birthdayRow = currentUser ? `
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
-                    <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <label style="font-weight: 600; flex-shrink: 0; font-size: 10.3px;">我的生日月份：</label>
+                    <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11px;">
                         ${monthOptions}
                     </select>
-                    <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                    <span style="font-size: 10px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
                 </div>
             ` : `
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
-                    <span style="font-size: 12px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; flex-shrink: 0; font-size: 10.3px;">我的生日月份：</span>
+                    <span style="font-size: 10px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
                 </div>
             `;
 
             levelSelectorHTML = `
-                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 14px 16px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                         <div style="flex-shrink: 0;">
-                            <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
-                            <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                            <label style="font-weight: 600; margin-right: 6px; font-size: 10.3px;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11px;">
                                 ${levelNames.map(level =>
                                     `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
                                 ).join('')}
@@ -4764,17 +4780,19 @@ basicCashbackDiv.innerHTML = basicContent;
                         ${levelRatesInfo}
                     </div>
                     ${levelNote}
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
                         ${birthdayRow}
                     </div>
                     <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
                             <input type="checkbox" id="children-eligible-checkbox"
                                 ${isChildrenEligible ? 'checked' : ''}
-                                style="width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6;">
-                            <span style="font-weight: 600;">我符合「童樂匯」權益</span>
-                            <span style="font-size: 12px; color: #6b7280;">勾選後才會在比較結果納入「童樂匯」方案的活動</span>
+                                style="width: 13px; height: 13px; cursor: pointer; accent-color: #3b82f6;">
+                            <span style="font-weight: 600; font-size: 10.3px;">我符合「童樂匯」權益</span>
                         </label>
+                        <div style="margin-top: 2px; padding-left: 19px; font-size: 10px; color: #6b7280;">
+                            勾選後才會在比較結果納入「童樂匯」方案的活動
+                        </div>
                     </div>
                 </div>
             `;
