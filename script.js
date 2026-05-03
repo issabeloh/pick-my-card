@@ -8,6 +8,9 @@ let db = null;
 let cardsData = null;
 let paymentsData = null;
 let quickSearchOptions = [];
+let userBirthdayMonth = null; // 用戶生日月份 (1-12)，null 表示未設定
+let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為生日月份
+let isChildrenEligible = true; // 用戶是否符合「童樂匯」權益（預設為是）
 
 // Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
 function disableBodyScroll() {
@@ -1339,12 +1342,25 @@ function setupEventListeners() {
         calculateCashback();
     });
     
-    // Enter key support
+    // Enter key support (disabled when any modal is open)
     document.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !calculateBtn.disabled) {
+            const anyModalOpen = document.querySelector('[id$="-modal"][style*="display: flex"], [id$="-modal"][style*="display:flex"]');
+            if (anyModalOpen) return;
             calculateCashback();
         }
     });
+
+    // Prevent Enter in the cashback search input from bubbling to the global handler
+    const cashbackSearchInputEl = document.getElementById('cashback-search-input');
+    if (cashbackSearchInputEl) {
+        cashbackSearchInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    }
 
     // Manage payments button
     const managePaymentsBtn = document.getElementById('manage-payments-btn');
@@ -2387,10 +2403,10 @@ function getCategoryDisplayName(category) {
     return categoryMap[category] || category;
 }
 
-// Helper function to get category display style
+// Helper function to get category display style (blue chip)
 function getCategoryStyle(category) {
-    // All categories display in black color for consistency
-    return category ? 'color: #111827;' : '';
+    if (!category) return '';
+    return 'display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; vertical-align: middle;';
 }
 
 /**
@@ -2540,6 +2556,16 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     // Only consider active rates for cashback calculation (not upcoming)
                     const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
                     if (rateStatus !== 'active' && rateStatus !== 'always') {
+                        continue;
+                    }
+
+                    // 慶生月方案只在用戶生日當月配對
+                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
+                        continue;
+                    }
+
+                    // 童樂匯方案只對符合資格的用戶配對
+                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -2701,6 +2727,16 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     // Only consider active rates for cashback calculation (not upcoming)
                     const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
                     if (rateStatus !== 'active' && rateStatus !== 'always') {
+                        continue;
+                    }
+
+                    // 慶生月方案只在用戶生日當月配對
+                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
+                        continue;
+                    }
+
+                    // 童樂匯方案只對符合資格的用戶配對
+                    if (rateGroup.category && (rateGroup.category === '童樂匯' || rateGroup.category === '切換「童樂匯」方案') && !isChildrenEligible) {
                         continue;
                     }
 
@@ -3861,6 +3897,13 @@ function initializeAuthListeners() {
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();
 
+            // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
+            userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
+            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === (new Date().getMonth() + 1);
+
+            // Load children eligibility flag (defaults to true if not set)
+            isChildrenEligible = (userData && userData.isChildrenEligible != null) ? userData.isChildrenEligible : true;
+
             // Load user's selected cards and payments using unified data
             await loadUserCards(userData);
             await loadUserPayments(userData);
@@ -3882,6 +3925,9 @@ function initializeAuthListeners() {
             userSelectedCards.clear();
             userSelectedPayments.clear();
             userSpendingMappings = [];
+            userBirthdayMonth = null;
+            isBirthdayMonth = false;
+            isChildrenEligible = true;
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
@@ -4466,6 +4512,12 @@ async function showCardDetail(cardId) {
         });
     }
 
+    // 重置指定通路回饋的搜尋框
+    const cashbackSearchInput = document.getElementById('cashback-search-input');
+    if (cashbackSearchInput) cashbackSearchInput.value = '';
+    const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
+    if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
+
     const modal = document.getElementById('card-detail-modal');
 
     // Update basic information
@@ -4532,7 +4584,7 @@ document.getElementById('card-fee-waiver').style.display = 'none';
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
 let basicContent = `<div class="cashback-detail-item">`;
-basicContent += `<div class="cashback-rate">國內一般回饋: ${card.basicCashback}%</div>`;
+basicContent += `<div class="cashback-rate">國內一般回饋: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
 if (card.basicConditions) {
     basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
 }
@@ -4541,7 +4593,7 @@ basicContent += `</div>`; // ← 這裡關閉第一個區塊
 
 if (card.overseasCashback) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外一般回饋: ${card.overseasCashback}%</div>`;
+    basicContent += `<div class="cashback-rate">海外一般回饋: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     basicContent += `</div>`;
 }
@@ -4584,7 +4636,7 @@ if (card.hasLevels) {
 
 if (domesticBonusRate) {
     basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
-    basicContent += `<div class="cashback-rate">國內加碼回饋: +${domesticBonusRate}%</div>`;
+    basicContent += `<div class="cashback-rate">國內加碼回饋: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
     if (domesticConditions) {
         basicContent += `<div class="cashback-condition">條件: ${domesticConditions}</div>`;
     }
@@ -4596,7 +4648,7 @@ if (domesticBonusRate) {
 
 if (overseasBonusRate) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外加碼回饋: +${overseasBonusRate}%</div>`;
+    basicContent += `<div class="cashback-rate">海外加碼回饋: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
     if (overseasConditions) {
         basicContent += `<div class="cashback-condition">條件: ${overseasConditions}</div>`;
     }
@@ -4689,6 +4741,48 @@ basicCashbackDiv.innerHTML = basicContent;
             </div>
         `;
 
+        // 國泰CUBE卡專屬：生日月份選擇器
+        if (card.id === 'cathay-cube') {
+            if (!currentUser) {
+                levelSelectorHTML += `
+                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
+                        <span style="font-size: 12px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
+                    </div>
+                `;
+            } else {
+                const monthOptions = '<option value="">-- 未設定 --</option>' +
+                    Array.from({length: 12}, (_, i) => {
+                        const m = i + 1;
+                        return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
+                    }).join('');
+                levelSelectorHTML += `
+                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
+                            <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                ${monthOptions}
+                            </select>
+                            <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 童樂匯權益勾選框（所有用戶）
+            levelSelectorHTML += `
+                <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="children-eligible-checkbox"
+                            ${isChildrenEligible ? 'checked' : ''}
+                            style="width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6;">
+                        <span style="font-weight: 600;">我符合「童樂匯」權益</span>
+                        <span style="font-size: 12px; color: #6b7280;">勾選後才會在比較結果納入「童樂匯」方案的活動</span>
+                    </label>
+                </div>
+            `;
+        }
+
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
 
@@ -4712,6 +4806,24 @@ basicCashbackDiv.innerHTML = basicContent;
                 await showCardDetail(card.id);
             }
         };
+
+        // 生日月份選擇器事件（CUBE卡，已登入）
+        const birthdayMonthSelect = document.getElementById('birthday-month-select');
+        if (birthdayMonthSelect) {
+            birthdayMonthSelect.onchange = async function() {
+                const val = this.value;
+                await saveBirthdayMonth(val ? parseInt(val) : null);
+            };
+        }
+
+        // 童樂匯勾選框事件（CUBE卡，已登入）
+        const childrenCheckbox = document.getElementById('children-eligible-checkbox');
+        if (childrenCheckbox) {
+            childrenCheckbox.onchange = async function() {
+                await saveChildrenEligible(this.checked);
+                await updateCubeSpecialCashback(card);
+            };
+        }
     } else {
         cubeLevelSection.style.display = 'none';
     }
@@ -4794,7 +4906,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel1}</div>`;
+                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel1}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -4813,11 +4925,11 @@ basicCashbackDiv.innerHTML = basicContent;
                     const merchantsId = `merchants-${card.id}-group-${groupKey}`;
                     const showAllId = `show-all-${card.id}-group-${groupKey}`;
 
-                    if (uniqueItems.length <= 20) {
+                    if (uniqueItems.length <= 5) {
                         const merchantsList = uniqueItems.join('、');
                         specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = uniqueItems.slice(0, 20).join('、');
+                        const initialList = uniqueItems.slice(0, 5).join('、');
                         const fullList = uniqueItems.join('、');
 
                         specialContent += `<div class="cashback-merchants">`;
@@ -4865,7 +4977,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
         // Then display the level-based cashback with specialItems
         specialContent += `<div class="cashback-detail-item">`;
-        specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋</div>`;
+        specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋</div>`;
         if (levelData.cap) {
             specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
         } else {
@@ -4965,7 +5077,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
                 }
 
-                specialContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${endingSoonBadgeLevel}</div>`;
+                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel}</div>`;
 
                 if (group.parsedCap) {
                     specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -4984,11 +5096,11 @@ basicCashbackDiv.innerHTML = basicContent;
                     const merchantsId = `merchants-${card.id}-group-${groupKey}`;
                     const showAllId = `show-all-${card.id}-group-${groupKey}`;
 
-                    if (uniqueItems.length <= 20) {
+                    if (uniqueItems.length <= 5) {
                         const merchantsList = uniqueItems.join('、');
                         specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = uniqueItems.slice(0, 20).join('、');
+                        const initialList = uniqueItems.slice(0, 5).join('、');
                         const fullList = uniqueItems.join('、');
 
                         specialContent += `<div class="cashback-merchants">`;
@@ -5037,7 +5149,7 @@ basicCashbackDiv.innerHTML = basicContent;
         } else {
             // Original logic for cards without cashbackRates
             specialContent += `<div class="cashback-detail-item">`;
-            specialContent += `<div class="cashback-rate">${levelData.rate}% 回饋 (${savedLevel})</div>`;
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋 (${savedLevel})</div>`;
             if (levelData.cap) {
                 specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
             } else {
@@ -5101,7 +5213,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // Display rate with category in parentheses (with black color for consistency)
             const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
-            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">(${rate.category})</span>` : '';
+            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadge = '';
@@ -5111,7 +5223,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            specialContent += `<div class="cashback-rate">${parsedRate}% 回饋${categoryLabel}${endingSoonBadge}</div>`;
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadge}</div>`;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
@@ -5148,13 +5260,13 @@ basicCashbackDiv.innerHTML = basicContent;
                     });
                 }
                 
-                if (rate.items.length <= 20) {
+                if (rate.items.length <= 5) {
                     // 少於20個直接顯示全部
                     const merchantsList = processedItems.join('、');
                     specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
                     // 超過20個顯示可展開的列表
-                    const initialList = processedItems.slice(0, 20).join('、');
+                    const initialList = processedItems.slice(0, 5).join('、');
                     const fullList = processedItems.join('、');
                     
                     specialContent += `<div class="cashback-merchants">`;
@@ -5192,8 +5304,8 @@ basicCashbackDiv.innerHTML = basicContent;
             const daysUntil = getDaysUntilStart(group.periodStart);
             const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
             const categoryStyle = group.category ? getCategoryStyle(group.category) : '';
-            const categoryText = group.category ? ` <span style="${categoryStyle}">(${getCategoryDisplayName(group.category)})</span>` : '';
-            upcomingContent += `<div class="cashback-rate">${group.parsedRate}% 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
+            const categoryText = group.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(group.category)}</span>` : '';
+            upcomingContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
 
             if (group.parsedCap) {
                 upcomingContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
@@ -5211,11 +5323,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 const merchantsId = `upcoming-merchants-${upcomingCard.id}-group-${groupKey}`;
                 const showAllId = `upcoming-show-all-${upcomingCard.id}-group-${groupKey}`;
 
-                if (uniqueItems.length <= 20) {
+                if (uniqueItems.length <= 5) {
                     const merchantsList = uniqueItems.join('、');
                     upcomingContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
-                    const initialList = uniqueItems.slice(0, 20).join('、');
+                    const initialList = uniqueItems.slice(0, 5).join('、');
                     const fullList = uniqueItems.join('、');
 
                     upcomingContent += `<div class="cashback-merchants">`;
@@ -5303,7 +5415,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 badges += ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            couponContent += `<div class="cashback-rate">${actualRate}% 回饋${badges}</div>`;
+            couponContent += `<div class="cashback-rate"><span class="cashback-rate-num">${actualRate}%</span> 回饋${badges}</div>`;
 
             // 消費上限（如果有）
             if (coupon.cap) {
@@ -5500,10 +5612,25 @@ async function generateCubeSpecialContent(card) {
     let content = '';
 
     // Add CUBE-specific birthday note at the beginning
+    let birthdayNoteText;
+    let birthdayNoteColor;
+    if (!currentUser) {
+        birthdayNoteText = '※ 「慶生月」方案：請登入並設定生日月份，即可在生日當月自動納入比較';
+        birthdayNoteColor = '#9ca3af';
+    } else if (!userBirthdayMonth) {
+        birthdayNoteText = '※ 「慶生月」方案：在上方設定生日月份後，將在您的生日月份自動納入比較';
+        birthdayNoteColor = '#9ca3af';
+    } else if (isBirthdayMonth) {
+        birthdayNoteText = `🎂 本月是您的生日月份（${userBirthdayMonth}月），「慶生月」方案已自動納入比較！`;
+        birthdayNoteColor = '#be185d';
+    } else {
+        birthdayNoteText = `※ 「慶生月」方案：已設定在您的生日月份（${userBirthdayMonth}月）自動納入比較`;
+        birthdayNoteColor = '#9ca3af';
+    }
     content += `
         <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-bottom: 16px;">
-            <div style="color: #9ca3af; font-size: 11px; line-height: 1.5; font-style: italic;">
-                ※ 慶生月方案不納入回饋比較，請於您的生日月份到<a href="https://www.cathay-cube.com.tw/cathaybk/personal/product/credit-card/cards/cube-list" target="_blank" rel="noopener" style="color: #6b7280; text-decoration: underline;">官網查詢</a>
+            <div style="color: ${birthdayNoteColor}; font-size: 11px; line-height: 1.5; font-style: italic;">
+                ${birthdayNoteText}
             </div>
         </div>
     `;
@@ -5527,7 +5654,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle10 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate">10% 回饋 <span style="${categoryStyle10}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge10}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
@@ -5535,7 +5662,19 @@ async function generateCubeSpecialContent(card) {
         if (childrenRate10.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
         }
-        content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate10.items.join('、')}</div>`;
+        const items10 = childrenRate10.items;
+        const merchantsList10 = items10.join('、');
+        if (items10.length <= 5) {
+            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList10}</div>`;
+        } else {
+            const initialList10 = items10.slice(0, 5).join('、');
+            const merchantsId10 = 'cube-children10-merchants';
+            const showAllId10 = 'cube-children10-show-all';
+            content += `<div class="cashback-merchants">`;
+            content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId10}">${initialList10}</span>`;
+            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${initialList10}', '${merchantsList10}')">... 顯示全部${items10.length}個</button>`;
+            content += `</div>`;
+        }
         content += `</div>`;
     }
 
@@ -5556,7 +5695,7 @@ async function generateCubeSpecialContent(card) {
         }
 
         const categoryStyle5 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate">5% 回饋 <span style="${categoryStyle5}">(${getCategoryDisplayName('童樂匯')})</span>${endingSoonBadge5}</div>`;
+        content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
             content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
@@ -5564,7 +5703,19 @@ async function generateCubeSpecialContent(card) {
         if (childrenRate5.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
         }
-        content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${childrenRate5.items.join('、')}</div>`;
+        const items5 = childrenRate5.items;
+        const merchantsList5 = items5.join('、');
+        if (items5.length <= 5) {
+            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList5}</div>`;
+        } else {
+            const initialList5 = items5.slice(0, 5).join('、');
+            const merchantsId5 = 'cube-children5-merchants';
+            const showAllId5 = 'cube-children5-show-all';
+            content += `<div class="cashback-merchants">`;
+            content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId5}">${initialList5}</span>`;
+            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${initialList5}', '${merchantsList5}')">... 顯示全部${items5.length}個</button>`;
+            content += `</div>`;
+        }
         content += `</div>`;
     }
 
@@ -5616,7 +5767,7 @@ async function generateCubeSpecialContent(card) {
                         displayRate = levelSettings[fieldName] || categoryData.rate;
                     }
 
-                    content += `<div class="cashback-rate">${displayRate}% 回饋 <span style="${categoryStyle}">(${getCategoryDisplayName(category)})</span></div>`;
+                    content += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋 <span style="${categoryStyle}">${getCategoryDisplayName(category)}</span></div>`;
                     content += `<div class="cashback-condition">消費上限: ${categoryData.cap ? `NT$${Math.floor(categoryData.cap).toLocaleString()}` : '無上限'}</div>`;
 
                     if (categoryData.period) {
@@ -5624,10 +5775,10 @@ async function generateCubeSpecialContent(card) {
                     }
 
                     const merchantsList = items.join('、');
-                    if (items.length <= 20) {
+                    if (items.length <= 5) {
                         content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                     } else {
-                        const initialList = items.slice(0, 20).join('、');
+                        const initialList = items.slice(0, 5).join('、');
                         const merchantsId = `cube-merchants-${category}-${savedLevel}`;
                         const showAllId = `cube-show-all-${category}-${savedLevel}`;
 
@@ -5703,7 +5854,7 @@ async function generateCubeSpecialContent(card) {
 
             // 显示回饋率，如果有 category 则显示在括号中（使用動態樣式）
             const categoryStyleOther = mergedRate.category ? getCategoryStyle(mergedRate.category) : '';
-            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">(${getCategoryDisplayName(mergedRate.category)})</span>` : '';
+            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">${getCategoryDisplayName(mergedRate.category)}</span>` : '';
 
             // Add ending soon badge if applicable
             let endingSoonBadgeOther = '';
@@ -5713,7 +5864,7 @@ async function generateCubeSpecialContent(card) {
                 endingSoonBadgeOther = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            content += `<div class="cashback-rate">${mergedRate.parsedRate}% 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
+            content += `<div class="cashback-rate"><span class="cashback-rate-num">${mergedRate.parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
 
             // 显示消費上限
             if (mergedRate.parsedCap) {
@@ -5737,11 +5888,11 @@ async function generateCubeSpecialContent(card) {
                 const merchantsId = `cube-other-merchants-${index}`;
                 const showAllId = `cube-other-show-all-${index}`;
 
-                if (mergedRate.items.length <= 20) {
+                if (mergedRate.items.length <= 5) {
                     const merchantsList = mergedRate.items.join('、');
                     content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
                 } else {
-                    const initialList = mergedRate.items.slice(0, 20).join('、');
+                    const initialList = mergedRate.items.slice(0, 5).join('、');
                     const fullList = mergedRate.items.join('、');
 
                     content += `<div class="cashback-merchants">`;
@@ -5784,6 +5935,38 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
         // 展開
         merchantsElement.textContent = fullList;
         buttonElement.textContent = '收起';
+    }
+}
+
+// 即時過濾「指定通路回饋」中的活動卡片
+// 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
+function filterCashbackItems(searchTerm) {
+    const term = (searchTerm || '').toLowerCase().trim();
+    const container = document.getElementById('card-special-cashback');
+    const emptyMsg = document.getElementById('cashback-search-empty');
+    if (!container) return;
+
+    const items = container.querySelectorAll('.cashback-detail-item');
+    let visibleCount = 0;
+
+    items.forEach(item => {
+        if (!term) {
+            item.style.display = '';
+            visibleCount++;
+            return;
+        }
+        // 比對整個卡片的 textContent，包含通路名稱、category 標籤、條件等
+        const text = item.textContent.toLowerCase();
+        if (text.includes(term)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    if (emptyMsg) {
+        emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
     }
 }
 
@@ -5873,8 +6056,8 @@ async function saveUserNotes(cardId, notes) {
         // 更新按鈕為儲存中狀態
         saveBtn.className = 'save-notes-btn saving';
         saveBtn.disabled = true;
-        btnIcon.textContent = '⏳';
-        btnText.textContent = '儲存中...';
+        if (btnIcon) btnIcon.textContent = '⏳';
+        if (btnText) btnText.textContent = '儲存中...';
         saveIndicator.textContent = '';
         
         const docRef = window.doc ? window.doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`) : null;
@@ -5891,17 +6074,17 @@ async function saveUserNotes(cardId, notes) {
         
         // 成功狀態
         saveBtn.className = 'save-notes-btn success';
-        btnIcon.textContent = '✓';
-        btnText.textContent = '已儲存';
+        if (btnIcon) btnIcon.textContent = '✓';
+        if (btnText) btnText.textContent = '已儲存';
         saveIndicator.textContent = '✓ 雲端同步成功';
         saveIndicator.style.color = '#10b981';
-        
+
         // 2秒後恢復正常狀態
         setTimeout(() => {
             saveBtn.className = 'save-notes-btn';
             saveBtn.disabled = true; // 沒有變更時保持禁用
-            btnIcon.textContent = '💾';
-            btnText.textContent = '儲存筆記';
+            if (btnIcon) btnIcon.textContent = '💾';
+            if (btnText) btnText.textContent = '儲存筆記';
             saveIndicator.textContent = '';
         }, 2000);
         
@@ -5916,15 +6099,15 @@ async function saveUserNotes(cardId, notes) {
         // 錯誤狀態
         saveBtn.className = 'save-notes-btn';
         saveBtn.disabled = false; // 可以再次嘗試
-        btnIcon.textContent = '⚠️';
-        btnText.textContent = '重試儲存';
+        if (btnIcon) btnIcon.textContent = '⚠️';
+        if (btnText) btnText.textContent = '重試儲存';
         saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
         saveIndicator.style.color = '#dc2626';
-        
+
         // 5秒後恢復
         setTimeout(() => {
-            btnIcon.textContent = '💾';
-            btnText.textContent = '儲存筆記';
+            if (btnIcon) btnIcon.textContent = '💾';
+            if (btnText) btnText.textContent = '儲存筆記';
             saveIndicator.textContent = '';
         }, 5000);
         
@@ -6945,6 +7128,45 @@ async function getCardLevel(cardId, defaultLevel) {
         console.log('Failed to load card level from Firestore:', error);
         // Fallback to localStorage
         return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+    }
+}
+
+// Save user's birthday month to Firestore and update pre-computed flag
+async function saveBirthdayMonth(month) {
+    userBirthdayMonth = month;
+    isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
+
+    // localStorage fallback
+    if (month !== null) {
+        localStorage.setItem('birthdayMonth', String(month));
+    } else {
+        localStorage.removeItem('birthdayMonth');
+    }
+
+    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+
+    try {
+        const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
+        await window.setDoc(docRef, { birthdayMonth: month, updatedAt: new Date().toISOString() }, { merge: true });
+        console.log(`Birthday month saved: ${month}`);
+    } catch (error) {
+        console.error('Failed to save birthday month:', error);
+    }
+}
+
+// Save user's children eligibility to Firestore and update global flag
+async function saveChildrenEligible(eligible) {
+    isChildrenEligible = eligible;
+    localStorage.setItem('isChildrenEligible', String(eligible));
+
+    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+
+    try {
+        const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
+        await window.setDoc(docRef, { isChildrenEligible: eligible, updatedAt: new Date().toISOString() }, { merge: true });
+        console.log(`Children eligibility saved: ${eligible}`);
+    } catch (error) {
+        console.error('Failed to save children eligibility:', error);
     }
 }
 

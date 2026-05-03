@@ -2138,10 +2138,75 @@ input[type="number"]:focus {
     margin-bottom: 0;
 }
 
+/* Real-time search input above special cashback */
+.cashback-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cashback-search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cashback-search-empty {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 13px;
+    font-style: italic;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+/* 2-column grid for cashback items in card detail modal */
+#card-special-cashback {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+/* Non-item elements (e.g. birthday note) span full width */
+#card-special-cashback > *:not(.cashback-detail-item) {
+    grid-column: 1 / -1;
+}
+
+/* Remove individual bottom margin since grid gap handles spacing */
+#card-special-cashback .cashback-detail-item {
+    margin-bottom: 0;
+}
+
+/* Force ending-soon / upcoming badges onto a new line within the rate row */
+#card-special-cashback .ending-soon-badge,
+#card-special-cashback .upcoming-badge {
+    display: block;
+    width: fit-content;
+    margin-top: 4px;
+}
+
+@media (max-width: 540px) {
+    #card-special-cashback {
+        grid-template-columns: 1fr;
+    }
+}
+
 .cashback-rate {
     font-weight: 600;
-    color: #059669;
+    color: #374151;
     margin-bottom: 4px;
+}
+
+.cashback-rate-num {
+    color: #059669;
 }
 
 .cashback-condition {
@@ -2190,6 +2255,12 @@ input[type="number"]:focus {
 /* User Notes Styles */
 .user-notes-container {
     position: relative;
+}
+
+.notes-input-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
 }
 
 /* Fee Waiver Checkbox Styles */
@@ -2357,7 +2428,8 @@ input[type="number"]:focus {
 }
 
 .user-notes-textarea {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: 60px; /* 縮小初始高度 */
     height: 60px; /* 設定預設高度 */
     max-height: 200px; /* 增加最大高度 */
@@ -2382,11 +2454,11 @@ input[type="number"]:focus {
 }
 
 .notes-status {
-    margin-top: 12px;
+    margin-top: 4px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    min-height: 20px;
 }
 
 .save-indicator {
@@ -2420,7 +2492,7 @@ input[type="number"]:focus {
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
     border: none;
-    padding: 8px 16px;
+    padding: 8px 10px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
@@ -2428,10 +2500,11 @@ input[type="number"]:focus {
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 6px;
-    min-width: 100px;
+    gap: 0;
+    min-width: unset;
+    width: auto;
     justify-content: center;
-    margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 .save-notes-btn:hover:not(:disabled) {
