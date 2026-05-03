@@ -4724,61 +4724,75 @@ basicCashbackDiv.innerHTML = basicContent;
             levelRatesInfo += '</div>';
         }
 
-        let levelSelectorHTML = `
-            <div class="level-selector" style="margin-bottom: 16px;">
-                <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
-                    <div style="flex-shrink: 0;">
-                        <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
-                        <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                            ${levelNames.map(level =>
-                                `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                    ${levelRatesInfo}
-                </div>
-                ${levelNote}
-            </div>
-        `;
+        let levelSelectorHTML;
 
-        // 國泰CUBE卡專屬：生日月份選擇器
         if (card.id === 'cathay-cube') {
-            if (!currentUser) {
-                levelSelectorHTML += `
-                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
-                        <span style="font-size: 12px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
-                    </div>
-                `;
-            } else {
-                const monthOptions = '<option value="">-- 未設定 --</option>' +
-                    Array.from({length: 12}, (_, i) => {
-                        const m = i + 1;
-                        return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
-                    }).join('');
-                levelSelectorHTML += `
-                    <div style="margin-top: 4px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
-                            <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                ${monthOptions}
-                            </select>
-                            <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
-                        </div>
-                    </div>
-                `;
-            }
+            // CUBE card: all three settings rows in one unified card
+            const monthOptions = !currentUser ? '' :
+                '<option value="">-- 未設定 --</option>' +
+                Array.from({length: 12}, (_, i) => {
+                    const m = i + 1;
+                    return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
+                }).join('');
 
-            // 童樂匯權益勾選框（所有用戶）
-            levelSelectorHTML += `
-                <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
-                        <input type="checkbox" id="children-eligible-checkbox"
-                            ${isChildrenEligible ? 'checked' : ''}
-                            style="width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6;">
-                        <span style="font-weight: 600;">我符合「童樂匯」權益</span>
-                        <span style="font-size: 12px; color: #6b7280;">勾選後才會在比較結果納入「童樂匯」方案的活動</span>
-                    </label>
+            const birthdayRow = currentUser ? `
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <label style="font-weight: 600; flex-shrink: 0;">我的生日月份：</label>
+                    <select id="birthday-month-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                        ${monthOptions}
+                    </select>
+                    <span style="font-size: 12px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                </div>
+            ` : `
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600; flex-shrink: 0;">我的生日月份：</span>
+                    <span style="font-size: 12px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
+                </div>
+            `;
+
+            levelSelectorHTML = `
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 14px 16px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+                        <div style="flex-shrink: 0;">
+                            <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                ${levelNames.map(level =>
+                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        ${levelRatesInfo}
+                    </div>
+                    ${levelNote}
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+                        ${birthdayRow}
+                    </div>
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="children-eligible-checkbox"
+                                ${isChildrenEligible ? 'checked' : ''}
+                                style="width: 16px; height: 16px; cursor: pointer; accent-color: #3b82f6;">
+                            <span style="font-weight: 600;">我符合「童樂匯」權益</span>
+                            <span style="font-size: 12px; color: #6b7280;">勾選後才會在比較結果納入「童樂匯」方案的活動</span>
+                        </label>
+                    </div>
+                </div>
+            `;
+        } else {
+            levelSelectorHTML = `
+                <div class="level-selector" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <div style="flex-shrink: 0;">
+                            <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                ${levelNames.map(level =>
+                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        ${levelRatesInfo}
+                    </div>
+                    ${levelNote}
                 </div>
             `;
         }
