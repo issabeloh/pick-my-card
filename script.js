@@ -4753,16 +4753,16 @@ basicCashbackDiv.innerHTML = basicContent;
 
             const birthdayRow = currentUser ? `
                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <label style="font-weight: 600; flex-shrink: 0; font-size: 10.3px;">我的生日月份：</label>
-                    <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11px;">
+                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</label>
+                    <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
                         ${monthOptions}
                     </select>
-                    <span style="font-size: 10px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                    <span style="font-size: 11px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
                 </div>
             ` : `
                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="font-weight: 600; flex-shrink: 0; font-size: 10.3px;">我的生日月份：</span>
-                    <span style="font-size: 10px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
+                    <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
+                    <span style="font-size: 11px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
                 </div>
             `;
 
@@ -4770,8 +4770,8 @@ basicCashbackDiv.innerHTML = basicContent;
                 <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                         <div style="flex-shrink: 0;">
-                            <label style="font-weight: 600; margin-right: 6px; font-size: 10.3px;">選擇級別：</label>
-                            <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11px;">
+                            <label style="font-weight: 600; margin-right: 6px; font-size: 14px; color: #374151;">選擇級別：</label>
+                            <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
                                 ${levelNames.map(level =>
                                     `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
                                 ).join('')}
@@ -4787,10 +4787,10 @@ basicCashbackDiv.innerHTML = basicContent;
                         <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
                             <input type="checkbox" id="children-eligible-checkbox"
                                 ${isChildrenEligible ? 'checked' : ''}
-                                style="width: 13px; height: 13px; cursor: pointer; accent-color: #3b82f6;">
-                            <span style="font-weight: 600; font-size: 10.3px;">我符合「童樂匯」權益</span>
+                                style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
+                            <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
                         </label>
-                        <div style="margin-top: 2px; padding-left: 19px; font-size: 10px; color: #6b7280;">
+                        <div style="margin-top: 1px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
                             勾選後才會在比較結果納入「童樂匯」方案的活動
                         </div>
                     </div>
