@@ -2141,13 +2141,18 @@ input[type="number"]:focus {
 /* Real-time search input above special cashback */
 .cashback-search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 5px 10px;
     margin-bottom: 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 12px;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cashback-search-input::placeholder {
+    font-size: 11px;
+    color: #9ca3af;
 }
 
 .cashback-search-input:focus {

@@ -4752,17 +4752,19 @@ basicCashbackDiv.innerHTML = basicContent;
                 }).join('');
 
             const birthdayRow = currentUser ? `
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151; margin-bottom: 0;">我的生日月份：</label>
-                    <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
-                        ${monthOptions}
-                    </select>
-                    <span style="font-size: 11px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</span>
+                <div>
+                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151; margin-bottom: 4px;">我的生日月份：</label>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+                        <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                            ${monthOptions}
+                        </select>
+                    </div>
+                    <div style="font-size: 11px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</div>
                 </div>
             ` : `
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <div>
                     <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
-                    <span style="font-size: 11px; color: #9ca3af;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</span>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</div>
                 </div>
             `;
 
