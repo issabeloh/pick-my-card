@@ -4753,7 +4753,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             const birthdayRow = currentUser ? `
                 <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</label>
+                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151; margin-bottom: 0;">我的生日月份：</label>
                     <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
                         ${monthOptions}
                     </select>
@@ -4770,7 +4770,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                         <div style="flex-shrink: 0;">
-                            <label style="font-weight: 600; margin-right: 6px; font-size: 14px; color: #374151;">選擇級別：</label>
+                            <label style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">選擇級別：</label>
                             <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
                                 ${levelNames.map(level =>
                                     `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
@@ -4784,7 +4784,7 @@ basicCashbackDiv.innerHTML = basicContent;
                         ${birthdayRow}
                     </div>
                     <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
                             <input type="checkbox" id="children-eligible-checkbox"
                                 ${isChildrenEligible ? 'checked' : ''}
                                 style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
