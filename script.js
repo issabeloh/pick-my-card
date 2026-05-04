@@ -529,14 +529,16 @@ async function loadCardsData() {
         });
         console.log(`🚀 搜尋索引已建立: ${totalIndexedItems} 個項目`);
 
-        // Update card count in subtitle
-        const cardCountElement = document.getElementById('card-count');
-        if (cardCountElement) {
-            cardCountElement.textContent = cardsData.cards.length;
-            cardCountElement.classList.remove('loading');
+        // Update card count (.card-count may appear in multiple places)
+        const cardCountElements = document.querySelectorAll('.card-count');
+        if (cardCountElements.length > 0) {
+            cardCountElements.forEach(el => {
+                el.textContent = cardsData.cards.length;
+                el.classList.remove('loading');
+            });
             console.log(`✅ 卡片數量已更新: ${cardsData.cards.length} 張`);
         } else {
-            console.warn('⚠️ 找不到 card-count 元素');
+            console.warn('⚠️ 找不到 .card-count 元素');
         }
 
         // Display last update date
