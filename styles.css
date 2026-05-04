@@ -48,17 +48,6 @@ header {
     line-height: 1.2;
 }
 
-.header-content #subtitle {
-    font-size: 0.85rem;
-    opacity: 0.9;
-    line-height: 1.2;
-    margin: 0;
-}
-
-.header-content #subtitle .brand-name {
-    font-weight: 600;
-    color: #ffffff;
-}
 
 .beta-badge {
     display: inline-block;
@@ -71,11 +60,6 @@ header {
     letter-spacing: 0.5px;
     color: #ffffff;
     box-shadow: 0 2px 4px rgba(30, 64, 175, 0.3);
-}
-
-.header-content p {
-    font-size: 0.95rem;
-    opacity: 0.9;
 }
 
 .auth-section {
@@ -227,19 +211,6 @@ header h1 {
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 8px;
-}
-
-header p {
-    font-size: 1.1rem;
-    opacity: 0.9;
-    margin-bottom: 20px;
-}
-
-/* Subtitle structure */
-#subtitle .slogan,
-#subtitle .separator,
-#subtitle .tool-info {
-    display: inline;
 }
 
 /* Announcement Bar */
@@ -4294,12 +4265,16 @@ input[type="number"]:focus {
 }
 
 .hero-lead-title .brand-name {
-    color: #1f43b3;
     font-weight: 800;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 .hero-lead-sub {
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     color: #4b5563;
     line-height: 1.5;
     margin: 0;
@@ -4635,7 +4610,7 @@ input[type="number"]:focus {
     }
 
     .hero-lead-sub {
-        font-size: 0.95rem;
+        font-size: 1.05rem;
     }
 
     .hero-section {
@@ -4730,7 +4705,7 @@ input[type="number"]:focus {
     }
 
     .hero-lead-sub {
-        font-size: 0.9rem;
+        font-size: 1rem;
     }
 
     .hero-title {
@@ -5336,10 +5311,6 @@ input[type="number"]:focus {
     .header-content h1 {
         font-size: 1.25rem;
         margin-bottom: 0;
-    }
-
-    .header-content p {
-        display: none;
     }
 
     header {
