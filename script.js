@@ -2565,7 +2565,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
+                    if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
                         continue;
                     }
 
@@ -2736,7 +2736,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category && rateGroup.category.includes('童樂匯') && !isChildrenEligible) {
+                    if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
                         continue;
                     }
 
@@ -5666,7 +5666,7 @@ async function generateCubeSpecialContent(card) {
     // 1. 童樂匯 10% 回饋 (固定最高) - 只顯示進行中的
     const childrenRate10 = card.cashbackRates?.find(rate => {
         const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 10.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案') && (status === 'active' || status === 'always');
+        return rate.rate === 10.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
     });
     if (childrenRate10) {
         content += `<div class="cashback-detail-item">`;
@@ -5707,7 +5707,7 @@ async function generateCubeSpecialContent(card) {
     // 2. 童樂匯 5% 回饋 - 只顯示進行中的
     const childrenRate5 = card.cashbackRates?.find(rate => {
         const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 5.0 && (rate.category === '童樂匯' || rate.category === '切換「童樂匯」方案') && (status === 'active' || status === 'always');
+        return rate.rate === 5.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
     });
     if (childrenRate5) {
         content += `<div class="cashback-detail-item">`;
@@ -5825,7 +5825,6 @@ async function generateCubeSpecialContent(card) {
             .filter(rate => {
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
                 return !rate.hideInDisplay &&
-                    rate.category !== '童樂匯' &&
                     rate.category !== '切換「童樂匯」方案' &&
                     (status === 'active' || status === 'always');  // 只顯示進行中的
             })
