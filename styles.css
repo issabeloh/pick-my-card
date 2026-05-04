@@ -4252,7 +4252,7 @@ input[type="number"]:focus {
 /* Hero Lead (主視覺第一層 - 最重點) */
 .hero-lead {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
 }
 
 .hero-lead-title {
@@ -4261,7 +4261,7 @@ input[type="number"]:focus {
     color: #111827;
     line-height: 1.2;
     letter-spacing: -0.01em;
-    margin-bottom: 12px;
+    margin-bottom: 28px;
 }
 
 .hero-lead-title .brand-name {
@@ -4283,6 +4283,14 @@ input[type="number"]:focus {
 .hero-lead-sub .card-count {
     font-weight: 700;
     color: #1f43b3;
+}
+
+/* Curtain-opening divider between hero-lead and hero-section */
+.hero-divider {
+    width: 1px;
+    height: 72px;
+    margin: 32px auto;
+    background: linear-gradient(to bottom, transparent, #d1d5db 40%, #d1d5db 60%, transparent);
 }
 
 /* Hero Section */
@@ -4602,15 +4610,21 @@ input[type="number"]:focus {
     }
 
     .hero-lead {
-        margin-bottom: 24px;
+        margin-bottom: 12px;
     }
 
     .hero-lead-title {
         font-size: 2rem;
+        margin-bottom: 20px;
     }
 
     .hero-lead-sub {
         font-size: 1.05rem;
+    }
+
+    .hero-divider {
+        height: 56px;
+        margin: 24px auto;
     }
 
     .hero-section {
