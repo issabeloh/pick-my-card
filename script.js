@@ -2560,7 +2560,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 慶生月方案只在用戶生日當月配對
-                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
+                    if (rateGroup.category === '切換「慶生月」方案' && !isBirthdayMonth) {
                         continue;
                     }
 
@@ -2731,7 +2731,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     }
 
                     // 慶生月方案只在用戶生日當月配對
-                    if (rateGroup.category && rateGroup.category.includes('慶生月') && !isBirthdayMonth) {
+                    if (rateGroup.category === '切換「慶生月」方案' && !isBirthdayMonth) {
                         continue;
                     }
 
