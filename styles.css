@@ -2157,7 +2157,8 @@ input[type="number"]:focus {
 }
 
 /* 2-column grid for cashback items in card detail modal */
-#card-special-cashback {
+#card-special-cashback,
+#card-coupon-cashback {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -2165,25 +2166,30 @@ input[type="number"]:focus {
 }
 
 /* Non-item elements (e.g. birthday note) span full width */
-#card-special-cashback > *:not(.cashback-detail-item) {
+#card-special-cashback > *:not(.cashback-detail-item),
+#card-coupon-cashback > *:not(.cashback-detail-item) {
     grid-column: 1 / -1;
 }
 
 /* Remove individual bottom margin since grid gap handles spacing */
-#card-special-cashback .cashback-detail-item {
+#card-special-cashback .cashback-detail-item,
+#card-coupon-cashback .cashback-detail-item {
     margin-bottom: 0;
 }
 
 /* Force ending-soon / upcoming badges onto a new line within the rate row */
 #card-special-cashback .ending-soon-badge,
-#card-special-cashback .upcoming-badge {
+#card-special-cashback .upcoming-badge,
+#card-coupon-cashback .ending-soon-badge,
+#card-coupon-cashback .upcoming-badge {
     display: block;
     width: fit-content;
     margin-top: 4px;
 }
 
 @media (max-width: 540px) {
-    #card-special-cashback {
+    #card-special-cashback,
+    #card-coupon-cashback {
         grid-template-columns: 1fr;
     }
 }
