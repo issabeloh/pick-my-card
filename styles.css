@@ -27,7 +27,7 @@ body {
 header {
     background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
     color: white;
-    padding: 20px;
+    padding: 10px 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -39,12 +39,25 @@ header {
 }
 
 .header-content h1 {
-    font-size: 2rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    line-height: 1.2;
+}
+
+.header-content #subtitle {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.header-content #subtitle .brand-name {
+    font-weight: 600;
+    color: #ffffff;
 }
 
 .beta-badge {
@@ -4038,7 +4051,7 @@ input[type="number"]:focus {
 }
 
 /* Loading state for card count */
-#card-count.loading {
+.card-count.loading {
     display: inline-block;
     animation: pulse-loading 1.5s ease-in-out infinite;
 }
@@ -4263,6 +4276,38 @@ input[type="number"]:focus {
     max-width: 900px;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* Hero Lead (主視覺第一層 - 最重點) */
+.hero-lead {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.hero-lead-title {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+}
+
+.hero-lead-title .brand-name {
+    color: #1f43b3;
+    font-weight: 800;
+}
+
+.hero-lead-sub {
+    font-size: 1.05rem;
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.hero-lead-sub .card-count {
+    font-weight: 700;
+    color: #1f43b3;
 }
 
 /* Hero Section */
@@ -4581,12 +4626,24 @@ input[type="number"]:focus {
         padding: 32px 0;
     }
 
+    .hero-lead {
+        margin-bottom: 24px;
+    }
+
+    .hero-lead-title {
+        font-size: 2rem;
+    }
+
+    .hero-lead-sub {
+        font-size: 0.95rem;
+    }
+
     .hero-section {
         margin-bottom: 32px;
     }
 
     .hero-title {
-        font-size: 1.875rem;
+        font-size: 1.5rem;
     }
 
     .hero-subtitle {
@@ -4668,8 +4725,16 @@ input[type="number"]:focus {
 }
 
 @media (max-width: 480px) {
+    .hero-lead-title {
+        font-size: 1.625rem;
+    }
+
+    .hero-lead-sub {
+        font-size: 0.9rem;
+    }
+
     .hero-title {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
     }
 
     .hero-subtitle {
