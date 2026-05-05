@@ -1646,7 +1646,8 @@ const fuzzySearchMap = {
     'fb ads': 'meta廣告',
     'meta ads': 'meta廣告',
     'google 廣告': 'google廣告',
-    'google ads': 'google廣告'
+    'google ads': 'google廣告',
+    'abc mart': 'abc-mart'
 };
 
 // Search term exclusion rules - prevents unwanted matches
