@@ -11,6 +11,7 @@ let quickSearchOptions = [];
 let userBirthdayMonth = null; // 用戶生日月份 (1-12)，null 表示未設定
 let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為生日月份
 let isChildrenEligible = true; // 用戶是否符合「童樂匯」權益（預設為是）
+let cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa'; // 國泰CUBE卡發卡組織（Visa/Mastercard/JCB）
 
 // Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
 function disableBodyScroll() {
@@ -2571,6 +2572,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
+                    // JCB日本賞方案只對 JCB 發卡組織用戶配對
+                    if (rateGroup.category === '切換「JCB日本賞」方案' && cubeIssuer !== 'JCB') {
+                        continue;
+                    }
+
                     // 解析 rate 值（支援 {specialRate}）
                     let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
                     let applicableCap = rateGroup.cap;
@@ -2739,6 +2745,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                        continue;
+                    }
+
+                    // JCB日本賞方案只對 JCB 發卡組織用戶配對
+                    if (rateGroup.category === '切換「JCB日本賞」方案' && cubeIssuer !== 'JCB') {
                         continue;
                     }
 
@@ -3906,6 +3917,12 @@ function initializeAuthListeners() {
             // Load children eligibility flag (defaults to true if not set)
             isChildrenEligible = (userData && userData.isChildrenEligible != null) ? userData.isChildrenEligible : true;
 
+            // Load CUBE card issuer (defaults to Visa, fall back to localStorage if Firestore not set)
+            if (userData && userData.cubeIssuer) {
+                cubeIssuer = userData.cubeIssuer;
+                try { localStorage.setItem('cubeIssuer', cubeIssuer); } catch (e) {}
+            }
+
             // Load user's selected cards and payments using unified data
             await loadUserCards(userData);
             await loadUserPayments(userData);
@@ -3930,6 +3947,7 @@ function initializeAuthListeners() {
             userBirthdayMonth = null;
             isBirthdayMonth = false;
             isChildrenEligible = true;
+            cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
             signInBtn.style.display = 'inline-block';
             userInfo.style.display = 'none';
 
@@ -4786,6 +4804,17 @@ basicCashbackDiv.innerHTML = basicContent;
                             勾選後才會在比較結果納入「童樂匯」方案的活動
                         </div>
                     </div>
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                        <label for="cube-issuer-select" style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">發卡組織：</label>
+                        <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                            ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
+                                `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
+                            ).join('')}
+                        </select>
+                        <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
+                            選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
+                        </div>
+                    </div>
                 </div>
             `;
         } else {
@@ -4845,6 +4874,14 @@ basicCashbackDiv.innerHTML = basicContent;
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
                 await saveChildrenEligible(this.checked);
+            };
+        }
+
+        // 發卡組織選擇事件（影響搜尋配對；不影響 modal 顯示，所以不需要重新渲染）
+        const cubeIssuerSelect = document.getElementById('cube-issuer-select');
+        if (cubeIssuerSelect) {
+            cubeIssuerSelect.onchange = async function() {
+                await saveCubeIssuer(this.value);
             };
         }
     } else {
@@ -7171,6 +7208,22 @@ async function saveBirthdayMonth(month) {
         console.log(`Birthday month saved: ${month}`);
     } catch (error) {
         console.error('Failed to save birthday month:', error);
+    }
+}
+
+// Save user's CUBE card issuer (Visa/Mastercard/JCB) to Firestore + localStorage and update global flag
+async function saveCubeIssuer(issuer) {
+    cubeIssuer = issuer;
+    try { localStorage.setItem('cubeIssuer', issuer); } catch (e) {}
+
+    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+
+    try {
+        const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
+        await window.setDoc(docRef, { cubeIssuer: issuer, updatedAt: new Date().toISOString() }, { merge: true });
+        console.log(`Cube issuer saved: ${issuer}`);
+    } catch (error) {
+        console.error('Failed to save cube issuer:', error);
     }
 }
 
