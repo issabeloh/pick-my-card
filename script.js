@@ -5452,6 +5452,7 @@ basicCashbackDiv.innerHTML = basicContent;
         let couponContent = '';
 
         // 處理每個 coupon，計算實際回饋率
+        let couponIndex = 0;
         for (const coupon of card.couponCashbacks) {
             const actualRate = await calculateCouponRate(coupon, card);
             const couponStatus = getRateStatus(coupon.periodStart, coupon.periodEnd);
@@ -5489,9 +5490,22 @@ basicCashbackDiv.innerHTML = basicContent;
                 couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
             }
 
-            // 適用通路
+            // 適用通路（超過 5 個時收起顯示）
             if (coupon.merchant) {
-                couponContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${coupon.merchant}</div>`;
+                const merchantItems = coupon.merchant.split(',').map(m => m.trim()).filter(m => m);
+                if (merchantItems.length <= 5) {
+                    const merchantsList = merchantItems.join('、');
+                    couponContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
+                } else {
+                    const merchantsId = `coupon-merchants-${card.id}-${couponIndex}`;
+                    const showAllId = `coupon-show-all-${card.id}-${couponIndex}`;
+                    const initialList = merchantItems.slice(0, 5).join('、');
+                    const fullList = merchantItems.join('、');
+                    couponContent += `<div class="cashback-merchants">`;
+                    couponContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
+                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${merchantItems.length}個</button>`;
+                    couponContent += `</div>`;
+                }
             }
 
             // 條件顯示（統一格式）
@@ -5503,6 +5517,7 @@ basicCashbackDiv.innerHTML = basicContent;
             }
 
             couponContent += `</div>`;
+            couponIndex++;
         }
 
         couponCashbackDiv.innerHTML = couponContent;
