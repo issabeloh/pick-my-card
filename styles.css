@@ -2003,6 +2003,18 @@ input[type="number"]:focus {
     transform: translateY(-1px);
 }
 
+#save-cards-btn,
+#save-payments-btn,
+#submit-feedback-btn {
+    background: #3b82f6;
+}
+
+#save-cards-btn:hover,
+#save-payments-btn:hover,
+#submit-feedback-btn:hover {
+    background: #2563eb;
+}
+
 .cancel-btn {
     background: #f3f4f6;
     color: #374151;
