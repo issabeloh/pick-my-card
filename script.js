@@ -3194,11 +3194,11 @@ function displayReferralLink(searchedItem) {
     // 插入到商家付款方式區塊下方、免責聲明上方
     const resultsSection = document.getElementById('results-section');
     const paymentDisclaimer = document.getElementById('payment-disclaimer');
-    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
+    const merchantInfoRow = document.getElementById('merchant-info-row');
 
     if (resultsSection && paymentDisclaimer) {
-        // 如果有商家付款方式資訊，插入在它下方；否則插入在免責聲明上方
-        const insertBeforeElement = merchantPaymentInfo ? merchantPaymentInfo.nextSibling : paymentDisclaimer;
+        // 如果有 merchant-info-row，插入在它下方；否則插入在免責聲明上方
+        const insertBeforeElement = merchantInfoRow ? merchantInfoRow.nextSibling : paymentDisclaimer;
         resultsSection.insertBefore(infoBlock, insertBeforeElement);
     }
 }
