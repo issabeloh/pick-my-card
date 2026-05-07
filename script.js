@@ -3180,6 +3180,7 @@ function displayReferralLink(searchedItem) {
 }
 
 // 顯示導購網站回饋資訊（Shopback / Line 購物）
+// 若 merchant-payment-info 存在則合併進去，否則建立同樣樣式的獨立 block
 function displayCashbackSites(searchedItem) {
     const existingBlock = document.getElementById('cashback-sites-info');
     if (existingBlock) {
@@ -3218,44 +3219,35 @@ function displayCashbackSites(searchedItem) {
         return;
     }
 
-    const infoBlock = document.createElement('div');
-    infoBlock.id = 'cashback-sites-info';
-    infoBlock.className = 'cashback-sites-info';
-
-    let html = '';
+    // 組合導購連結文字（小字內嵌連結，不用按鈕）
+    const links = [];
     if (shopbackMatch) {
-        html += `
-            <div class="cashback-site-item">
-                <span class="cashback-site-text">用 <strong>Shopback</strong> 再享導購加碼回饋</span>
-                <a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-button">前往 →</a>
-            </div>
-        `;
+        links.push(`<a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a>`);
     }
     if (linebuyMatch) {
-        html += `
-            <div class="cashback-site-item">
-                <span class="cashback-site-text">用 <strong>LINE 購物</strong> 再享導購加碼回饋</span>
-                <a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-button">前往 →</a>
-            </div>
-        `;
+        links.push(`<a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a>`);
     }
-    infoBlock.innerHTML = html;
+    const lineHTML = `<div class="cashback-site-row">＊ 導購加碼：${links.join('　')}</div>`;
 
-    // 插入順序：merchant-payment-info → cashback-sites-info → referral-link-info → 免責聲明
+    // 若已有 merchant-payment-info，直接 append 進去
+    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
+    if (merchantPaymentInfo) {
+        merchantPaymentInfo.insertAdjacentHTML('beforeend', lineHTML);
+        return;
+    }
+
+    // 否則建立獨立 block（同 merchant-payment-info 樣式）
+    const infoBlock = document.createElement('div');
+    infoBlock.id = 'cashback-sites-info';
+    infoBlock.className = 'merchant-payment-info';
+    infoBlock.innerHTML = lineHTML;
+
     const resultsSection = document.getElementById('results-section');
     const paymentDisclaimer = document.getElementById('payment-disclaimer');
-    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
     const referralLinkInfo = document.getElementById('referral-link-info');
 
     if (resultsSection && paymentDisclaimer) {
-        let insertBeforeElement;
-        if (referralLinkInfo) {
-            insertBeforeElement = referralLinkInfo;
-        } else if (merchantPaymentInfo) {
-            insertBeforeElement = merchantPaymentInfo.nextSibling;
-        } else {
-            insertBeforeElement = paymentDisclaimer;
-        }
+        const insertBeforeElement = referralLinkInfo || paymentDisclaimer;
         resultsSection.insertBefore(infoBlock, insertBeforeElement);
     }
 }
