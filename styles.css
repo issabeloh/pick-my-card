@@ -1342,9 +1342,18 @@ input[type="number"]:focus {
     }
 }
 
-/* 導購網站回饋：合併進 merchant-payment-info 的行樣式 */
-.cashback-site-row {
-    margin-top: 4px;
+/* merchant-info-row：左欄 merchant-payment-info，右欄 cashback-sites-info */
+.merchant-info-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: stretch;
+}
+
+.merchant-info-row > .merchant-payment-info {
+    flex: 1 1 0;
+    margin-bottom: 0;
+    min-width: 0;
 }
 
 .cashback-site-link {
@@ -1357,6 +1366,12 @@ input[type="number"]:focus {
 
 .cashback-site-link:hover {
     color: #374151;
+}
+
+@media (max-width: 480px) {
+    .merchant-info-row {
+        gap: 8px;
+    }
 }
 
 /* Coupon results section */

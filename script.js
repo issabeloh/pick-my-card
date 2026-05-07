@@ -3061,6 +3061,30 @@ function findMerchantPaymentInfo(searchedItem) {
 }
 
 // 顯示商家付款方式資訊
+// 取得或建立 merchant-info 兩欄容器（左：商家付款方式，右：導購加碼）
+function getOrCreateMerchantInfoRow() {
+    let row = document.getElementById('merchant-info-row');
+    if (row) return row;
+
+    row = document.createElement('div');
+    row.id = 'merchant-info-row';
+    row.className = 'merchant-info-row';
+
+    const resultsSection = document.getElementById('results-section');
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+    if (resultsSection && paymentDisclaimer) {
+        resultsSection.insertBefore(row, paymentDisclaimer);
+    }
+    return row;
+}
+
+function removeMerchantInfoRowIfEmpty() {
+    const row = document.getElementById('merchant-info-row');
+    if (row && row.children.length === 0) {
+        row.remove();
+    }
+}
+
 function displayMerchantPaymentInfo(searchedItem) {
     // 移除舊的商家付款方式區塊（如果存在）
     const existingBlock = document.getElementById('merchant-payment-info');
@@ -3089,6 +3113,7 @@ function displayMerchantPaymentInfo(searchedItem) {
 
     if (!merchantInfo) {
         console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
+        removeMerchantInfoRowIfEmpty();
         return;
     }
 
@@ -3116,12 +3141,11 @@ function displayMerchantPaymentInfo(searchedItem) {
 
     infoBlock.innerHTML = infoHTML;
 
-    // 插入到「一般回饋與指定通路回饋」標題下方、免責聲明上方
-    const resultsSection = document.getElementById('results-section');
-    const paymentDisclaimer = document.getElementById('payment-disclaimer');
-
-    if (resultsSection && paymentDisclaimer) {
-        resultsSection.insertBefore(infoBlock, paymentDisclaimer);
+    // 插入到 merchant-info-row 容器（左欄）
+    const row = getOrCreateMerchantInfoRow();
+    if (row) {
+        // 確保 merchant-payment-info 在最前面（左欄）
+        row.insertBefore(infoBlock, row.firstChild);
     }
 }
 
@@ -3181,7 +3205,7 @@ function displayReferralLink(searchedItem) {
 }
 
 // 顯示導購網站回饋資訊（Shopback / Line 購物）
-// 若 merchant-payment-info 存在則合併進去，否則建立同樣樣式的獨立 block
+// 建立獨立 block 放在 merchant-info-row 的右欄
 function displayCashbackSites(searchedItem) {
     const existingBlock = document.getElementById('cashback-sites-info');
     if (existingBlock) {
@@ -3189,6 +3213,7 @@ function displayCashbackSites(searchedItem) {
     }
 
     if (!searchedItem || !cardsData?.cashbackSites) {
+        removeMerchantInfoRowIfEmpty();
         return;
     }
 
@@ -3217,39 +3242,28 @@ function displayCashbackSites(searchedItem) {
     const linebuyMatch = matchEntry(linebuyList);
 
     if (!shopbackMatch && !linebuyMatch) {
+        removeMerchantInfoRowIfEmpty();
         return;
     }
 
-    // 組合導購連結文字（小字內嵌連結，不用按鈕）
-    const links = [];
-    if (shopbackMatch) {
-        links.push(`<a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a>`);
-    }
-    if (linebuyMatch) {
-        links.push(`<a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a>`);
-    }
-    const lineHTML = `<div class="cashback-site-row">＊ 導購加碼：${links.join('　')}</div>`;
-
-    // 若已有 merchant-payment-info，直接 append 進去
-    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
-    if (merchantPaymentInfo) {
-        merchantPaymentInfo.insertAdjacentHTML('beforeend', lineHTML);
-        return;
-    }
-
-    // 否則建立獨立 block（同 merchant-payment-info 樣式）
+    // 建立獨立 block（同 merchant-payment-info 灰色樣式）
     const infoBlock = document.createElement('div');
     infoBlock.id = 'cashback-sites-info';
     infoBlock.className = 'merchant-payment-info';
-    infoBlock.innerHTML = lineHTML;
 
-    const resultsSection = document.getElementById('results-section');
-    const paymentDisclaimer = document.getElementById('payment-disclaimer');
-    const referralLinkInfo = document.getElementById('referral-link-info');
+    let html = `<div class="merchant-payment-title">＊ 也可透過導購網站加碼</div>`;
+    if (shopbackMatch) {
+        html += `<div class="merchant-payment-item"><a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
+    }
+    if (linebuyMatch) {
+        html += `<div class="merchant-payment-item"><a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
+    }
+    infoBlock.innerHTML = html;
 
-    if (resultsSection && paymentDisclaimer) {
-        const insertBeforeElement = referralLinkInfo || paymentDisclaimer;
-        resultsSection.insertBefore(infoBlock, insertBeforeElement);
+    // 插入到 merchant-info-row 容器（右欄）
+    const row = getOrCreateMerchantInfoRow();
+    if (row) {
+        row.appendChild(infoBlock);
     }
 }
 
