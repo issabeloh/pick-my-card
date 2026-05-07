@@ -1342,6 +1342,79 @@ input[type="number"]:focus {
     }
 }
 
+/* 導購網站回饋樣式 */
+.cashback-sites-info {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1px solid #6ee7b7;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.08);
+}
+
+.cashback-site-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+}
+
+.cashback-site-item + .cashback-site-item {
+    border-top: 1px dashed #a7f3d0;
+    margin-top: 4px;
+    padding-top: 8px;
+}
+
+.cashback-site-text {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #065f46;
+    line-height: 1.5;
+    min-width: 200px;
+}
+
+.cashback-site-text strong {
+    color: #047857;
+    font-weight: 600;
+}
+
+.cashback-site-button {
+    background-color: #10b981;
+    color: white;
+    padding: 5px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.cashback-site-button:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
+}
+
+.cashback-site-button:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+    .cashback-site-text {
+        min-width: 100%;
+        font-size: 0.8125rem;
+    }
+
+    .cashback-site-button {
+        width: 100%;
+        text-align: center;
+        margin-top: 4px;
+    }
+}
+
 /* Coupon results section */
 .coupon-results-section {
     border-top: 1px solid #e5e7eb;
