@@ -3179,6 +3179,87 @@ function displayReferralLink(searchedItem) {
     }
 }
 
+// 顯示導購網站回饋資訊（Shopback / Line 購物）
+function displayCashbackSites(searchedItem) {
+    const existingBlock = document.getElementById('cashback-sites-info');
+    if (existingBlock) {
+        existingBlock.remove();
+    }
+
+    if (!searchedItem || !cardsData?.cashbackSites) {
+        return;
+    }
+
+    const sites = cardsData.cashbackSites;
+    const shopbackList = Array.isArray(sites.shopback) ? sites.shopback : [];
+    const linebuyList = Array.isArray(sites.linebuy) ? sites.linebuy : [];
+
+    const searchTerms = searchedItem.split('、').map(t => t.trim()).filter(Boolean);
+
+    const matchEntry = (list) => {
+        for (const term of searchTerms) {
+            const termLower = term.toLowerCase();
+            const found = list.find(entry => {
+                if (!entry || !entry.merchant) return false;
+                const merchantLower = entry.merchant.toLowerCase();
+                return merchantLower === termLower ||
+                       merchantLower.includes(termLower) ||
+                       termLower.includes(merchantLower);
+            });
+            if (found) return found;
+        }
+        return null;
+    };
+
+    const shopbackMatch = matchEntry(shopbackList);
+    const linebuyMatch = matchEntry(linebuyList);
+
+    if (!shopbackMatch && !linebuyMatch) {
+        return;
+    }
+
+    const infoBlock = document.createElement('div');
+    infoBlock.id = 'cashback-sites-info';
+    infoBlock.className = 'cashback-sites-info';
+
+    let html = '';
+    if (shopbackMatch) {
+        html += `
+            <div class="cashback-site-item">
+                <span class="cashback-site-text">用 <strong>Shopback</strong> 再享導購加碼回饋</span>
+                <a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-button">前往 →</a>
+            </div>
+        `;
+    }
+    if (linebuyMatch) {
+        html += `
+            <div class="cashback-site-item">
+                <span class="cashback-site-text">用 <strong>LINE 購物</strong> 再享導購加碼回饋</span>
+                <a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-button">前往 →</a>
+            </div>
+        `;
+    }
+    infoBlock.innerHTML = html;
+
+    // 插入順序：merchant-payment-info → cashback-sites-info → referral-link-info → 免責聲明
+    const resultsSection = document.getElementById('results-section');
+    const paymentDisclaimer = document.getElementById('payment-disclaimer');
+    const merchantPaymentInfo = document.getElementById('merchant-payment-info');
+    const referralLinkInfo = document.getElementById('referral-link-info');
+
+    if (resultsSection && paymentDisclaimer) {
+        let insertBeforeElement;
+        if (referralLinkInfo) {
+            insertBeforeElement = referralLinkInfo;
+        } else if (merchantPaymentInfo) {
+            insertBeforeElement = merchantPaymentInfo.nextSibling;
+        } else {
+            insertBeforeElement = paymentDisclaimer;
+        }
+        resultsSection.insertBefore(infoBlock, insertBeforeElement);
+    }
+}
+
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
@@ -3222,6 +3303,9 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
 
     // 顯示商家付款方式資訊
     displayMerchantPaymentInfo(searchedItem);
+
+    // 顯示導購網站回饋資訊
+    displayCashbackSites(searchedItem);
 
     // 顯示推薦連結資訊
     displayReferralLink(searchedItem);
