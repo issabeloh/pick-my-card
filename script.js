@@ -3723,28 +3723,49 @@ function parsePromoRate(rateStr) {
     return parseFloat(m[1]) / 100;
 }
 
+// Expand a search term to include fuzzy aliases (e.g., 'linepay' ↔ 'line pay').
+function expandSearchTerm(term) {
+    const t = String(term || '').toLowerCase().trim();
+    if (!t) return [];
+    const variants = new Set([t]);
+    // Forward map: t → mapped
+    if (typeof fuzzySearchMap !== 'undefined' && fuzzySearchMap[t]) {
+        variants.add(String(fuzzySearchMap[t]).toLowerCase());
+    }
+    // Reverse map: any key whose value is t
+    if (typeof fuzzySearchMap !== 'undefined') {
+        Object.entries(fuzzySearchMap).forEach(([k, v]) => {
+            if (String(v).toLowerCase() === t) variants.add(k.toLowerCase());
+        });
+    }
+    return Array.from(variants);
+}
+
 // Does a promo's bonus_merchants list match the current search term/keywords?
 // Returns true for *all_items if the card has any cashbackRate item matching the search.
 function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     if (!promo.bonus_merchants) return false;
 
-    // Build the list of search terms (lowercased)
-    const terms = [];
+    // Build the list of search terms (lowercased + fuzzy variants)
+    const rawTerms = [];
     if (Array.isArray(quickKeywords) && quickKeywords.length > 0) {
-        quickKeywords.forEach(k => { if (k) terms.push(String(k).toLowerCase()); });
+        quickKeywords.forEach(k => { if (k) rawTerms.push(k); });
     } else if (merchantValue) {
-        terms.push(String(merchantValue).toLowerCase());
+        rawTerms.push(merchantValue);
     }
+    if (rawTerms.length === 0) return false;
+    const terms = rawTerms.flatMap(expandSearchTerm);
     if (terms.length === 0) return false;
 
     // Resolve actual merchants list (handles *all_items)
     const merchants = expandPromoMerchants(promo, card);
     if (!merchants || merchants.length === 0) return false;
 
-    // Substring match either way
+    // Substring match either way (also against each merchant's fuzzy variants)
     return merchants.some(m => {
         const ml = String(m).toLowerCase();
-        return terms.some(t => ml.includes(t) || t.includes(ml));
+        const mlVariants = expandSearchTerm(ml);
+        return terms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
     });
 }
 
@@ -3807,10 +3828,9 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
         return;
     }
 
-    // Candidate cards: in comparison, NOT owned, and matched by current search
-    const candidateCards = getCardsForComparison()
-        .filter(c => !myOwnedCards.has(c.id))
-        .filter(c => cardMatchesSearch(c, merchantValue, quickKeywords));
+    // Candidate cards: in comparison AND not owned. Whether each promo
+    // shows is decided by promoMerchantsMatchSearch below.
+    const candidateCards = getCardsForComparison().filter(c => !myOwnedCards.has(c.id));
 
     const fragment = document.createDocumentFragment();
     let renderedCount = 0;
@@ -3820,27 +3840,24 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
         if (promos.length === 0) return;
 
         promos.forEach(promo => {
-            const bonusApplies = promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords);
-            // Determine if this promo has anything relevant to this search:
-            // - bonus matches → yes
-            // - has gift_content → yes (relevant for considering the card)
-            // - has voucher_amount → yes
-            const hasGiftOrVoucher = promo.gift_content || promo.voucher_amount;
-            if (!bonusApplies && !hasGiftOrVoucher) return;
+            // Strict rule: only show a promo if its bonus_merchants matches
+            // the current search (incl. fuzzy aliases and *all_items expansion).
+            if (!promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords)) return;
 
-            // Build highlight rows; if all empty, skip
-            const rows = buildPromoDetailRows(promo, card, amount, bonusApplies);
+            // Build highlight rows (gift / voucher / bonus_rate); skip if empty.
+            const rows = buildPromoDetailRows(promo, card, amount, true);
             if (rows.length === 0) return;
 
-            const matchedMerchants = bonusApplies
-                ? expandPromoMerchants(promo, card).filter(m => {
-                    const ml = String(m).toLowerCase();
-                    const term = (quickKeywords && quickKeywords.length > 0)
-                        ? quickKeywords.map(k => String(k).toLowerCase())
-                        : [String(merchantValue || '').toLowerCase()];
-                    return term.some(t => ml.includes(t) || (t && t.includes(ml)));
-                })
-                : [];
+            // Identify which merchants from bonus_merchants actually matched the search
+            const rawTerms = (Array.isArray(quickKeywords) && quickKeywords.length > 0)
+                ? quickKeywords
+                : [merchantValue || ''];
+            const expandedTerms = rawTerms.flatMap(expandSearchTerm);
+            const matchedMerchants = expandPromoMerchants(promo, card).filter(m => {
+                const ml = String(m).toLowerCase();
+                const mlVariants = expandSearchTerm(ml);
+                return expandedTerms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
+            });
 
             const el = createCardholderPromoElement(card, promo, rows, matchedMerchants);
             fragment.appendChild(el);
