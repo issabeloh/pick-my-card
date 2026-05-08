@@ -38,7 +38,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260221010000">
+    <link rel="stylesheet" href="styles.css?v=20260508144828">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -397,10 +397,43 @@
                         <label for="amount-input">消費金額 (NT$)</label>
                         <input type="number" id="amount-input" value="1000" min="1" step="1" />
                         <small class="amount-hint">未填金額時，預設以 NT$1,000 計算</small>
+                        <!-- 顯示新戶活動 toggle (桌機版位置：消費金額下方) — 桌機用 hover popover -->
+                        <div class="show-promos-toggle show-promos-desktop">
+                            <div class="promo-toggle-row">
+                                <label>
+                                    <input type="checkbox" id="show-promos-toggle-desktop">
+                                    新戶活動
+                                </label>
+                                <button type="button"
+                                        class="promo-help-btn promo-help-hover"
+                                        data-help-target="promo-help-popup-desktop"
+                                        aria-label="說明">?</button>
+                                <div id="promo-help-popup-desktop" popover class="promo-help-popup">
+                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group compact button-group">
                         <label>&nbsp;</label>
+                        <!-- 顯示新戶活動 toggle (手機版位置) — 手機用內嵌展開 -->
+                        <div class="show-promos-toggle show-promos-mobile">
+                            <div class="promo-toggle-row">
+                                <label>
+                                    <input type="checkbox" id="show-promos-toggle-mobile">
+                                    新戶活動
+                                </label>
+                                <button type="button"
+                                        class="promo-help-btn promo-help-inline"
+                                        data-help-target="promo-help-text-mobile"
+                                        aria-expanded="false"
+                                        aria-label="說明">?</button>
+                            </div>
+                            <div id="promo-help-text-mobile" class="promo-help-text" hidden>
+                                如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                            </div>
+                        </div>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
                     </div>
                 </div>
@@ -451,6 +484,14 @@
                 <h2>🅿️ 停車折抵優惠</h2>
                 <div class="parking-benefits-container" id="parking-benefits-container">
                     <!-- Parking benefits will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
+                <h2>🎁 新戶活動加碼</h2>
+                <p class="cardholder-promos-desc">未持有但加入比較的卡片中，符合本次消費商家的新戶活動。可考慮為這次消費辦卡。</p>
+                <div class="cardholder-promos-container" id="cardholder-promos-container">
+                    <!-- Cardholder promos will be dynamically inserted here -->
                 </div>
             </section>
 
@@ -713,6 +754,11 @@
                         <h4>🅿️ 停車折抵優惠</h4>
                         <div id="card-benefits-content"></div>
                     </div>
+
+                    <div class="card-info-section" id="card-promos-section" style="display: none;">
+                        <h4>🎁 新戶活動</h4>
+                        <div id="card-promos-content"></div>
+                    </div>
             </div>
         </div>
     </div>
@@ -844,7 +890,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260221010000" defer></script>
+    <script src="script.js?v=20260508144828" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
