@@ -1672,8 +1672,8 @@ input[type="number"]:focus {
 /* Cardholder promo cards reuse .card-result + .card-details + .detail-item
    styling so they look consistent with the regular comparison results. */
 .cardholder-promo-item .promo-summary {
-    color: #6b7280;
-    font-size: 13px;
+    color: #111827;
+    font-size: 14px;
     line-height: 1.5;
     margin-bottom: 12px;
 }
