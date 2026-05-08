@@ -3608,9 +3608,8 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Help "?" toggles a sibling text panel inline (no popup, no z-index battles).
-    // Same behavior on desktop and mobile.
-    document.querySelectorAll('.promo-help-btn').forEach(btn => {
+    // Mobile help: click '?' toggles a sibling text panel inline.
+    document.querySelectorAll('.promo-help-inline').forEach(btn => {
         const targetId = btn.getAttribute('data-help-target');
         const text = targetId && document.getElementById(targetId);
         if (!text) return;
@@ -3619,6 +3618,52 @@ function setupCardholderPromoToggle() {
             const isHidden = text.hasAttribute('hidden');
             text.toggleAttribute('hidden', !isHidden);
             btn.setAttribute('aria-expanded', String(isHidden));
+        });
+    });
+
+    // Desktop help: hover '?' shows a native popover (top-layer, escapes z-index).
+    const popoverSupported = typeof HTMLElement.prototype.showPopover === 'function';
+    document.querySelectorAll('.promo-help-hover').forEach(btn => {
+        const popupId = btn.getAttribute('data-help-target');
+        const popup = popupId && document.getElementById(popupId);
+        if (!popup) return;
+
+        const positionPopup = () => {
+            const rect = btn.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = `${rect.bottom + 4}px`;
+            popup.style.left = `${rect.left}px`;
+            const popupRect = popup.getBoundingClientRect();
+            const overflow = popupRect.right - window.innerWidth;
+            if (overflow > 0) {
+                popup.style.left = `${Math.max(8, rect.left - overflow - 8)}px`;
+            }
+        };
+
+        const open = () => {
+            if (popoverSupported && !popup.matches(':popover-open')) {
+                try { popup.showPopover(); positionPopup(); } catch (e) { /* ignore */ }
+            }
+        };
+        const close = () => {
+            if (popoverSupported && popup.matches(':popover-open')) {
+                try { popup.hidePopover(); } catch (e) { /* ignore */ }
+            }
+        };
+
+        let leaveTimer = null;
+        const cancelLeave = () => { if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null; } };
+        const scheduleHide = () => {
+            cancelLeave();
+            leaveTimer = setTimeout(close, 80);
+        };
+
+        btn.addEventListener('mouseenter', () => { cancelLeave(); open(); });
+        btn.addEventListener('mouseleave', scheduleHide);
+        popup.addEventListener('mouseenter', cancelLeave);
+        popup.addEventListener('mouseleave', scheduleHide);
+        popup.addEventListener('toggle', (e) => {
+            if (e.newState === 'open') positionPopup();
         });
     });
 }
