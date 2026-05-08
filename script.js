@@ -3608,29 +3608,32 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Mobile: tap "?" to toggle popup .open class. Tap outside to close.
-    // Desktop hover still works via CSS :hover on the wrapper.
+    // Tap "?" toggles popup .open class (works on all devices).
+    // Desktop additionally has CSS :hover on the wrapper for pointer:fine devices.
     document.querySelectorAll('.promo-help-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             const popup = btn.parentElement.querySelector('.promo-help-popup');
             if (!popup) return;
-            const isOpen = popup.classList.contains('open');
-            // Close all other open popups first
-            document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
-            if (!isOpen) popup.classList.add('open');
-            else btn.blur();
+            const wasOpen = popup.classList.contains('open');
+            // Close any other open popups first
+            document.querySelectorAll('.promo-help-popup.open').forEach(p => {
+                if (p !== popup) p.classList.remove('open');
+            });
+            if (wasOpen) {
+                popup.classList.remove('open');
+                btn.blur();
+            } else {
+                popup.classList.add('open');
+            }
         });
     });
 
+    // Outside click → close all popups
     document.addEventListener('click', (e) => {
         if (e.target.closest('.promo-help-wrap')) return;
         document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
-        const active = document.activeElement;
-        if (active && active.classList && active.classList.contains('promo-help-btn')) {
-            active.blur();
-        }
     });
 }
 
