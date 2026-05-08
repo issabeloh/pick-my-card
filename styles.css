@@ -1535,10 +1535,28 @@ input[type="number"]:focus {
     font-size: 14px;
     color: #6b7280;
     user-select: none;
-    position: relative;
+}
+
+.promo-toggle-row {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.promo-help-text {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #0c4a6e;
+    line-height: 1.5;
+    max-width: 360px;
+}
+
+.promo-help-text[hidden] {
+    display: none;
 }
 
 /* Help button next to "新戶活動" label */
@@ -1564,37 +1582,6 @@ input[type="number"]:focus {
     background: #6b7280;
 }
 
-/* Help popup — uses native Popover API where available (top-layer rendering),
-   with a .open class fallback for browsers that don't support it. */
-.promo-help-popup {
-    /* Hidden by default; shown via .showPopover() (top layer) or .open class */
-    display: none;
-    margin: 0;
-    border: 1px solid #bae6fd;
-    background: #f0f9ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #0c4a6e;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-width: 320px;
-    width: max-content;
-    inset: auto;
-}
-
-/* When opened via popover API, browsers set :popover-open and the element
-   moves into the top layer. We restore display so it's visible. */
-.promo-help-popup:popover-open {
-    display: block;
-}
-
-/* Fallback for browsers without Popover API support */
-.promo-help-popup.open {
-    display: block;
-    position: fixed;
-    z-index: 999999999;
-}
 
 .show-promos-toggle,
 .show-promos-toggle label {

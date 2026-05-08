@@ -38,7 +38,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260508143923">
+    <link rel="stylesheet" href="styles.css?v=20260508144510">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -399,18 +399,18 @@
                         <small class="amount-hint">未填金額時，預設以 NT$1,000 計算</small>
                         <!-- 顯示新戶活動 toggle (桌機版位置：消費金額下方) -->
                         <div class="show-promos-toggle show-promos-desktop">
-                            <label>
-                                <input type="checkbox" id="show-promos-toggle-desktop">
-                                新戶活動
-                            </label>
-                            <button type="button"
-                                    class="promo-help-btn"
-                                    id="promo-help-btn-desktop"
-                                    popovertarget="promo-help-popup-desktop"
-                                    aria-label="說明">?</button>
-                            <div id="promo-help-popup-desktop"
-                                 popover
-                                 class="promo-help-popup">
+                            <div class="promo-toggle-row">
+                                <label>
+                                    <input type="checkbox" id="show-promos-toggle-desktop">
+                                    新戶活動
+                                </label>
+                                <button type="button"
+                                        class="promo-help-btn"
+                                        data-help-target="promo-help-text-desktop"
+                                        aria-expanded="false"
+                                        aria-label="說明">?</button>
+                            </div>
+                            <div id="promo-help-text-desktop" class="promo-help-text" hidden>
                                 如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
                             </div>
                         </div>
@@ -420,18 +420,18 @@
                         <label>&nbsp;</label>
                         <!-- 顯示新戶活動 toggle (手機版位置) -->
                         <div class="show-promos-toggle show-promos-mobile">
-                            <label>
-                                <input type="checkbox" id="show-promos-toggle-mobile">
-                                新戶活動
-                            </label>
-                            <button type="button"
-                                    class="promo-help-btn"
-                                    id="promo-help-btn-mobile"
-                                    popovertarget="promo-help-popup-mobile"
-                                    aria-label="說明">?</button>
-                            <div id="promo-help-popup-mobile"
-                                 popover
-                                 class="promo-help-popup">
+                            <div class="promo-toggle-row">
+                                <label>
+                                    <input type="checkbox" id="show-promos-toggle-mobile">
+                                    新戶活動
+                                </label>
+                                <button type="button"
+                                        class="promo-help-btn"
+                                        data-help-target="promo-help-text-mobile"
+                                        aria-expanded="false"
+                                        aria-label="說明">?</button>
+                            </div>
+                            <div id="promo-help-text-mobile" class="promo-help-text" hidden>
                                 如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
                             </div>
                         </div>
@@ -891,7 +891,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260508143923" defer></script>
+    <script src="script.js?v=20260508144510" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
