@@ -1678,12 +1678,6 @@ input[type="number"]:focus {
     margin-bottom: 12px;
 }
 
-.cardholder-promo-item .detail-support {
-    font-size: 11px;
-    color: #6b7280;
-    margin-top: 2px;
-}
-
 @media (max-width: 768px) {
     .cardholder-promos-container {
         grid-template-columns: 1fr;
