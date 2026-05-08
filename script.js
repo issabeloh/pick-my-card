@@ -3749,8 +3749,8 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
 }
 
 // Build the highlighted detail rows for a single promo.
-// Each row: { label, value, support? }. 'value' is rendered with .cashback-amount.
-// Empty array means the promo has nothing to show for this context.
+// Each row: { label, value, isCapRow? }. 'value' on highlight rows is rendered
+// with .cashback-amount (green, bold). Cap rows are plain text.
 function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     const rows = [];
 
@@ -3764,20 +3764,28 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     }
 
     if (bonusApplies && promo.bonus_rate) {
-        const rate = parsePromoRate(promo.bonus_rate);
-        let bonusAmount = Math.floor((amount || 0) * rate);
-        const cap = typeof promo.bonus_cap === 'number' ? promo.bonus_cap : null;
-        if (cap !== null && bonusAmount > cap) bonusAmount = cap;
-        const supportParts = [promo.bonus_rate];
-        if (cap !== null) supportParts.push(`上限 NT$${cap}`);
-        rows.push({
-            label: '加碼回饋',
-            value: `NT$${bonusAmount}`,
-            support: supportParts.join('，')
-        });
+        rows.push({ label: '回饋率', value: String(promo.bonus_rate) });
     }
 
     return rows;
+}
+
+// Does a card match the current merchant search? (used to decide whether to
+// show its promos at all). A card matches if any of its cashbackRates items
+// substring-matches the search term or any quick-search keyword.
+function cardMatchesSearch(card, merchantValue, quickKeywords) {
+    if (!card || !card._itemsIndex) return false;
+    const terms = [];
+    if (Array.isArray(quickKeywords) && quickKeywords.length > 0) {
+        quickKeywords.forEach(k => { if (k) terms.push(String(k).toLowerCase()); });
+    } else if (merchantValue) {
+        terms.push(String(merchantValue).toLowerCase());
+    }
+    if (terms.length === 0) return false;
+    for (const itemKey of card._itemsIndex.keys()) {
+        if (terms.some(t => itemKey.includes(t) || t.includes(itemKey))) return true;
+    }
+    return false;
 }
 
 // Render new cardholder promos below the regular results.
@@ -3799,8 +3807,10 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
         return;
     }
 
-    // Candidate cards: in comparison AND not owned
-    const candidateCards = getCardsForComparison().filter(c => !myOwnedCards.has(c.id));
+    // Candidate cards: in comparison, NOT owned, and matched by current search
+    const candidateCards = getCardsForComparison()
+        .filter(c => !myOwnedCards.has(c.id))
+        .filter(c => cardMatchesSearch(c, merchantValue, quickKeywords));
 
     const fragment = document.createDocumentFragment();
     let renderedCount = 0;
@@ -3848,9 +3858,10 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
 }
 
 // Build the DOM element for a single cardholder promo result.
-// Display order: 卡名 → new_customer_summary → highlight rows → 匹配項目 → 期限.
-// Reuses .card-result / .card-details / .detail-item classes for visual parity
-// with the regular comparison results.
+// Display order:
+//   卡名 → new_customer_summary → 重點 detail rows + 匹配項目 + 回饋消費上限(若有)
+//   → 活動期間 (small, .matched-merchant style)
+// Reuses .card-result / .card-details / .detail-item for visual parity.
 function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
     const el = document.createElement('div');
     el.className = 'card-result cardholder-promo-item fade-in';
@@ -3858,7 +3869,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
     const summary = promo.new_customer_summary || '';
 
     const period = (promo.period_start || promo.period_end)
-        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? ' ~ ' : (promo.period_end ? '~ ' : '')}${promo.period_end || ''}`.trim()
+        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
         : '不限期';
 
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
@@ -3869,9 +3880,16 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
             <div class="detail-value cashback-amount">${escapeHtml(r.value)}</div>
-            ${r.support ? `<div class="detail-support">${escapeHtml(r.support)}</div>` : ''}
         </div>
     `).join('');
+
+    // Show 回饋消費上限 row only when bonus_cap is set on this promo
+    const capRowHtml = (typeof promo.bonus_cap === 'number')
+        ? `<div class="detail-item">
+            <div class="detail-label">回饋消費上限</div>
+            <div class="detail-value">NT$${promo.bonus_cap.toLocaleString()}</div>
+        </div>`
+        : '';
 
     el.innerHTML = `
         <div class="card-header">
@@ -3886,11 +3904,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
                 <div class="detail-label">匹配項目</div>
                 <div class="detail-value">${escapeHtml(merchantsText)}</div>
             </div>
-            <div class="detail-item">
-                <div class="detail-label">期限</div>
-                <div class="detail-value">${escapeHtml(period)}</div>
-            </div>
+            ${capRowHtml}
         </div>
+        <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
     `;
     return el;
 }
