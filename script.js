@@ -3853,7 +3853,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
             <div class="detail-value">
-                <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? escapeHtml(r.extra) : ''}
+                <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? ' ' + escapeHtml(r.extra) : ''}
             </div>
         </div>
     `).join('');

@@ -1675,7 +1675,18 @@ input[type="number"]:focus {
     color: #111827;
     font-size: 14px;
     line-height: 1.5;
-    margin-bottom: 12px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+/* No 3-column grid for promo cards — '匹配項目' moved out, so each
+   highlight/cap row gets full width for breathable layout. */
+.cardholder-promo-item .card-details {
+    display: block;
+}
+
+.cardholder-promo-item .card-details .detail-item {
+    margin-bottom: 8px;
 }
 
 @media (max-width: 768px) {
