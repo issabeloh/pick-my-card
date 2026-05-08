@@ -434,22 +434,29 @@ function getActiveCardholderPromos(cardId) {
         });
 }
 
-// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items
+// True if the bonus_merchants value (string or array) represents the *all_items wildcard.
+// Robust to whitespace and case variants.
+function isAllItemsMarker(raw) {
+    const norm = (s) => String(s).trim().toLowerCase();
+    if (typeof raw === 'string') return norm(raw) === '*all_items';
+    if (Array.isArray(raw)) {
+        // Treat as wildcard if any (typically the only) entry is the marker
+        return raw.some(item => norm(item) === '*all_items');
+    }
+    return false;
+}
+
+// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items.
 function expandPromoMerchants(promo, card) {
     if (!promo.bonus_merchants) return [];
-    // String form (Apps Script may keep *all_items as string)
+    if (isAllItemsMarker(promo.bonus_merchants)) {
+        return collectCardItems(card);
+    }
     if (typeof promo.bonus_merchants === 'string') {
-        if (promo.bonus_merchants.trim() === '*all_items') {
-            return collectCardItems(card);
-        }
         return promo.bonus_merchants.split(',').map(s => s.trim()).filter(Boolean);
     }
-    // Array form
     if (Array.isArray(promo.bonus_merchants)) {
-        if (promo.bonus_merchants.length === 1 && promo.bonus_merchants[0] === '*all_items') {
-            return collectCardItems(card);
-        }
-        return promo.bonus_merchants.filter(Boolean);
+        return promo.bonus_merchants.map(s => String(s).trim()).filter(Boolean);
     }
     return [];
 }
@@ -3769,6 +3776,28 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     });
 }
 
+// Format bonus_rate for display: handle both '10%' strings and 0.1 decimals
+// (Google Sheets percentage cells come through Apps Script as decimal numbers).
+function formatBonusRate(rate) {
+    if (rate == null || rate === '') return '';
+    if (typeof rate === 'number') {
+        // Decimal like 0.1 → '10%'; values >=1 treated as already-percentage (10 → '10%')
+        const pct = rate < 1 ? rate * 100 : rate;
+        const formatted = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
+        return `${formatted}%`;
+    }
+    const s = String(rate).trim();
+    if (!s) return '';
+    if (s.includes('%')) return s;
+    const n = parseFloat(s);
+    if (!isNaN(n)) {
+        const pct = n < 1 ? n * 100 : n;
+        const formatted = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
+        return `${formatted}%`;
+    }
+    return s;
+}
+
 // Build the highlighted detail rows for a single promo.
 // Each row: { label, value, extra? }. 'value' renders with .cashback-amount;
 // 'extra' (e.g. voucher_usage) renders inline in default colour next to value.
@@ -3782,13 +3811,13 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     if (promo.voucher_amount) {
         rows.push({
             label: '定額回饋',
-            value: `NT$${promo.voucher_amount}`,
+            value: `NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`,
             extra: promo.voucher_usage || ''
         });
     }
 
-    if (bonusApplies && promo.bonus_rate) {
-        rows.push({ label: '回饋率', value: String(promo.bonus_rate) });
+    if (bonusApplies && (promo.bonus_rate != null && promo.bonus_rate !== '')) {
+        rows.push({ label: '回饋率', value: formatBonusRate(promo.bonus_rate) });
     }
 
     return rows;
@@ -3879,10 +3908,12 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
 
 // Build the DOM element for a single cardholder promo result.
 // Display order:
-//   卡名 → new_customer_summary → 重點 detail rows + 匹配項目 + 回饋消費上限(若有)
-//   → 活動期間 (small, .matched-merchant style)
+//   (卡名) → new_customer_summary → 重點 detail rows + 回饋消費上限(若有)
+//   → 匹配項目 + 活動期間 (small, .matched-merchant style)
 // Reuses .card-result / .card-details / .detail-item for visual parity.
-function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
+// opts.hideCardName: omit the card name (used on the card detail page where
+// the modal title already shows the card name).
+function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts = {}) {
     const el = document.createElement('div');
     el.className = 'card-result cardholder-promo-item fade-in';
 
@@ -3896,29 +3927,53 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
         ? matchedMerchants.join('、')
         : '不限通路';
 
-    const highlightRowsHtml = rows.map(r => `
+    const renderRow = (r) => `
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
             <div class="detail-value">
                 <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? ' ' + escapeHtml(r.extra) : ''}
             </div>
         </div>
-    `).join('');
+    `;
+    const renderPlainRow = (label, value) => `
+        <div class="detail-item">
+            <div class="detail-label">${escapeHtml(label)}</div>
+            <div class="detail-value">${escapeHtml(value)}</div>
+        </div>
+    `;
 
-    // Show 回饋消費上限 row only when bonus_cap is set on this promo
-    const capRowHtml = (typeof promo.bonus_cap === 'number')
-        ? `<div class="detail-item">
-            <div class="detail-label">回饋消費上限</div>
-            <div class="detail-value">NT$${promo.bonus_cap.toLocaleString()}</div>
-        </div>`
-        : '';
+    // Group rows: gift / voucher are full-width; bonus_rate pairs side-by-side
+    // with the bonus_cap row when both exist.
+    const bonusRateRow = rows.find(r => r.label === '回饋率');
+    const fullWidthRows = rows.filter(r => r !== bonusRateRow);
+    const hasCap = typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap);
+    const capValue = hasCap ? `NT$${Math.round(Number(promo.bonus_cap)).toLocaleString()}` : '';
 
-    el.innerHTML = `
+    const fullWidthHtml = fullWidthRows.map(renderRow).join('');
+    let bonusGroupHtml = '';
+    if (bonusRateRow && hasCap) {
+        bonusGroupHtml = `<div class="promo-bonus-row">
+            ${renderRow(bonusRateRow)}
+            ${renderPlainRow('回饋消費上限', capValue)}
+        </div>`;
+    } else if (bonusRateRow) {
+        bonusGroupHtml = renderRow(bonusRateRow);
+    } else if (hasCap) {
+        bonusGroupHtml = renderPlainRow('回饋消費上限', capValue);
+    }
+
+    const highlightRowsHtml = fullWidthHtml + bonusGroupHtml;
+    const capRowHtml = '';  // already merged into bonusGroupHtml above
+
+    const cardHeaderHtml = opts.hideCardName ? '' : `
         <div class="card-header">
             <div class="card-name-with-pin">
                 <h3 class="card-name">${escapeHtml(card.name)}</h3>
             </div>
-        </div>
+        </div>`;
+
+    el.innerHTML = `
+        ${cardHeaderHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
         <div class="card-details">
             ${highlightRowsHtml}
@@ -3977,17 +4032,14 @@ function renderCardDetailPromos(card) {
         // Show all bonus_merchants (or "本卡所有指定通路" for *all_items)
         let merchantList = [];
         if (promo.bonus_merchants) {
-            const raw = promo.bonus_merchants;
-            const isAllItems = (typeof raw === 'string' && raw.trim() === '*all_items') ||
-                (Array.isArray(raw) && raw.length === 1 && raw[0] === '*all_items');
-            if (isAllItems) {
+            if (isAllItemsMarker(promo.bonus_merchants)) {
                 merchantList = ['本卡所有指定通路'];
             } else {
                 merchantList = expandPromoMerchants(promo, card);
             }
         }
 
-        const el = createCardholderPromoElement(card, promo, rows, merchantList);
+        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true });
         fragment.appendChild(el);
     });
 
