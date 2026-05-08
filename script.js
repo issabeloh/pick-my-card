@@ -206,6 +206,18 @@ function openInBrowser() {
     }
 }
 
+// 取得台灣今天的日期字串 YYYY-MM-DD（UTC+8，不依賴使用者瀏覽器時區）
+function getTaiwanToday() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+}
+
+// 解析 ISO 日期字串 YYYY-MM-DD 為本地午夜 Date 物件（供天數差計算用）
+function parseISODate(dateStr) {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
 // Returns: 'active' | 'upcoming' | 'expired' | 'always'
 function getRateStatus(periodStart, periodEnd) {
@@ -215,36 +227,13 @@ function getRateStatus(periodStart, periodEnd) {
     }
 
     try {
-        // Get current date in UTC+8 (Taiwan time)
-        const now = new Date();
-        const utcOffset = now.getTimezoneOffset(); // Current UTC offset in minutes
-        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000); // UTC+8 = +480 minutes
-
-        // Get Taiwan date components (YYYY/M/D)
-        const currentYear = taiwanTime.getFullYear();
-        const currentMonth = taiwanTime.getMonth() + 1;
-        const currentDay = taiwanTime.getDate();
-
-        // Parse start and end dates (format: yyyy/m/d)
-        const startParts = periodStart.split('/').map(p => parseInt(p));
-        const endParts = periodEnd.split('/').map(p => parseInt(p));
-
-        // Convert to comparable numbers (YYYYMMDD format)
-        const currentDate = currentYear * 10000 + currentMonth * 100 + currentDay;
-        const startDate = startParts[0] * 10000 + startParts[1] * 100 + startParts[2];
-        const endDate = endParts[0] * 10000 + endParts[1] * 100 + endParts[2];
-
-        // Check status
-        if (currentDate >= startDate && currentDate <= endDate) {
-            return 'active';
-        } else if (currentDate < startDate) {
-            return 'upcoming';
-        } else {
-            return 'expired';
-        }
+        const today = getTaiwanToday(); // YYYY-MM-DD，ISO 字典序 = 日期序
+        if (today >= periodStart && today <= periodEnd) return 'active';
+        if (today < periodStart) return 'upcoming';
+        return 'expired';
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
-        return 'always'; // If error, show the rate (safer to show than hide)
+        return 'always';
     }
 }
 
@@ -271,19 +260,9 @@ function isUpcomingWithinDays(periodStart, days = 30) {
     if (!periodStart) return false;
 
     try {
-        // Get current date in UTC+8 (Taiwan time)
-        const now = new Date();
-        const utcOffset = now.getTimezoneOffset();
-        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
-
-        // Parse start date
-        const startParts = periodStart.split('/').map(p => parseInt(p));
-        const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2]);
-
-        // Calculate difference in days
-        const diffTime = startDate - taiwanTime;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+        const today = parseISODate(getTaiwanToday());
+        const startDate = parseISODate(periodStart);
+        const diffDays = Math.ceil((startDate - today) / 86400000);
         return diffDays >= 0 && diffDays <= days;
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart });
@@ -296,19 +275,9 @@ function getDaysUntilStart(periodStart) {
     if (!periodStart) return null;
 
     try {
-        // Get current date in UTC+8 (Taiwan time)
-        const now = new Date();
-        const utcOffset = now.getTimezoneOffset();
-        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
-
-        // Parse start date
-        const startParts = periodStart.split('/').map(p => parseInt(p));
-        const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2]);
-
-        // Calculate difference in days
-        const diffTime = startDate - taiwanTime;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+        const today = parseISODate(getTaiwanToday());
+        const startDate = parseISODate(periodStart);
+        const diffDays = Math.ceil((startDate - today) / 86400000);
         return diffDays >= 0 ? diffDays : null;
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart });
@@ -321,19 +290,9 @@ function isEndingSoon(periodEnd, days = 10) {
     if (!periodEnd) return false;
 
     try {
-        // Get current date in UTC+8 (Taiwan time)
-        const now = new Date();
-        const utcOffset = now.getTimezoneOffset();
-        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
-
-        // Parse end date
-        const endParts = periodEnd.split('/').map(p => parseInt(p));
-        const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-
-        // Calculate difference in days
-        const diffTime = endDate - taiwanTime;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+        const today = parseISODate(getTaiwanToday());
+        const endDate = parseISODate(periodEnd);
+        const diffDays = Math.ceil((endDate - today) / 86400000);
         return diffDays >= 0 && diffDays <= days;
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodEnd });
@@ -346,19 +305,9 @@ function getDaysUntilEnd(periodEnd) {
     if (!periodEnd) return null;
 
     try {
-        // Get current date in UTC+8 (Taiwan time)
-        const now = new Date();
-        const utcOffset = now.getTimezoneOffset();
-        const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
-
-        // Parse end date
-        const endParts = periodEnd.split('/').map(p => parseInt(p));
-        const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-
-        // Calculate difference in days
-        const diffTime = endDate - taiwanTime;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+        const today = parseISODate(getTaiwanToday());
+        const endDate = parseISODate(periodEnd);
+        const diffDays = Math.ceil((endDate - today) / 86400000);
         return diffDays >= 0 ? diffDays : null;
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodEnd });
@@ -6740,8 +6689,8 @@ function renderMappingsList(searchTerm = '') {
         // 按活動到期日排序
         filteredMappings.sort((a, b) => {
             // 如果沒有到期日，放在最後
-            const dateA = a.periodEnd ? new Date(a.periodEnd.replace(/\//g, '-')) : new Date('9999-12-31');
-            const dateB = b.periodEnd ? new Date(b.periodEnd.replace(/\//g, '-')) : new Date('9999-12-31');
+            const dateA = a.periodEnd ? parseISODate(a.periodEnd) : new Date('9999-12-31');
+            const dateB = b.periodEnd ? parseISODate(b.periodEnd) : new Date('9999-12-31');
             return mappingsSortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
         });
     } else {
@@ -6749,10 +6698,8 @@ function renderMappingsList(searchTerm = '') {
         filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
     }
 
-    // 取得目前台灣時間（用於計算到期狀態）
-    const now = new Date();
-    const utcOffset = now.getTimezoneOffset();
-    const taiwanTime = new Date(now.getTime() + (utcOffset + 480) * 60000);
+    // 取得目前台灣今天（用於計算到期狀態）
+    const taiwanToday = parseISODate(getTaiwanToday());
 
     // 排序指示器
     const getSortIcon = (column) => {
@@ -6807,10 +6754,8 @@ function renderMappingsList(searchTerm = '') {
 
         if (mapping.periodEnd) {
             try {
-                const endParts = mapping.periodEnd.split('/').map(p => parseInt(p));
-                const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-                const diffTime = endDate - taiwanTime;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const endDate = parseISODate(mapping.periodEnd);
+                const diffDays = Math.ceil((endDate - taiwanToday) / 86400000);
 
                 if (diffDays < 0) {
                     // 已過期：紅色文字
