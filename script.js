@@ -3861,10 +3861,12 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
 
 // Build the DOM element for a single cardholder promo result.
 // Display order:
-//   卡名 → new_customer_summary → 重點 detail rows + 匹配項目 + 回饋消費上限(若有)
-//   → 活動期間 (small, .matched-merchant style)
+//   (卡名) → new_customer_summary → 重點 detail rows + 回饋消費上限(若有)
+//   → 匹配項目 + 活動期間 (small, .matched-merchant style)
 // Reuses .card-result / .card-details / .detail-item for visual parity.
-function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
+// opts.hideCardName: omit the card name (used on the card detail page where
+// the modal title already shows the card name).
+function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts = {}) {
     const el = document.createElement('div');
     el.className = 'card-result cardholder-promo-item fade-in';
 
@@ -3895,12 +3897,15 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
         </div>`
         : '';
 
-    el.innerHTML = `
+    const cardHeaderHtml = opts.hideCardName ? '' : `
         <div class="card-header">
             <div class="card-name-with-pin">
                 <h3 class="card-name">${escapeHtml(card.name)}</h3>
             </div>
-        </div>
+        </div>`;
+
+    el.innerHTML = `
+        ${cardHeaderHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
         <div class="card-details">
             ${highlightRowsHtml}
@@ -3966,7 +3971,7 @@ function renderCardDetailPromos(card) {
             }
         }
 
-        const el = createCardholderPromoElement(card, promo, rows, merchantList);
+        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true });
         fragment.appendChild(el);
     });
 
