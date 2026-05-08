@@ -3589,7 +3589,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 let showCardholderPromos = false;
 
 // Wire both desktop and mobile checkboxes; keep them in sync.
-// Also wires the "?" help button → floating popup, with outside-click to close.
+// Help popup show/hide is pure CSS hover (.promo-help-btn:hover + .promo-help-popup).
 function setupCardholderPromoToggle() {
     const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
     const onChange = (e) => {
@@ -3605,33 +3605,6 @@ function setupCardholderPromoToggle() {
     ids.forEach(id => {
         const cb = document.getElementById(id);
         if (cb) cb.addEventListener('change', onChange);
-    });
-
-    // Wire help buttons (desktop + mobile)
-    const helpPairs = [
-        ['promo-help-btn-desktop', 'promo-help-popup-desktop'],
-        ['promo-help-btn-mobile', 'promo-help-popup-mobile']
-    ];
-    helpPairs.forEach(([btnId, popupId]) => {
-        const btn = document.getElementById(btnId);
-        const popup = document.getElementById(popupId);
-        if (!btn || !popup) return;
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Close any other open popup
-            document.querySelectorAll('.promo-help-popup.open').forEach(p => {
-                if (p !== popup) p.classList.remove('open');
-            });
-            popup.classList.toggle('open');
-        });
-        // Stop clicks inside the popup from bubbling to the document closer
-        popup.addEventListener('click', (e) => e.stopPropagation());
-    });
-
-    // Close all promo help popups on outside click
-    document.addEventListener('click', () => {
-        document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
     });
 }
 
