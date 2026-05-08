@@ -2225,6 +2225,61 @@ input[type="number"]:focus {
     max-height: 90vh;
 }
 
+/* Sticky section nav inside the card detail modal */
+.card-detail-nav {
+    position: sticky;
+    top: -20px; /* counters .modal-body padding so it sticks flush to scroll viewport top */
+    background: white;
+    margin: -20px -20px 16px -20px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    z-index: 10;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.card-detail-nav::-webkit-scrollbar {
+    height: 4px;
+}
+
+.card-detail-nav::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
+
+.card-detail-nav-btn {
+    flex-shrink: 0;
+    background: transparent;
+    color: #6b7280;
+    border: 1px solid transparent;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.card-detail-nav-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.card-detail-nav-btn.active {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+
+.card-detail-nav-btn[hidden] {
+    display: none;
+}
+
 .card-info-section {
     margin-bottom: 24px;
     padding-bottom: 0;
