@@ -3770,8 +3770,8 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
 }
 
 // Build the highlighted detail rows for a single promo.
-// Each row: { label, value, isCapRow? }. 'value' on highlight rows is rendered
-// with .cashback-amount (green, bold). Cap rows are plain text.
+// Each row: { label, value, extra? }. 'value' renders with .cashback-amount;
+// 'extra' (e.g. voucher_usage) renders inline in default colour next to value.
 function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     const rows = [];
 
@@ -3780,8 +3780,11 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     }
 
     if (promo.voucher_amount) {
-        const usage = promo.voucher_usage || '';
-        rows.push({ label: '定額回饋', value: `NT$${promo.voucher_amount}${usage}` });
+        rows.push({
+            label: '定額回饋',
+            value: `NT$${promo.voucher_amount}`,
+            extra: promo.voucher_usage || ''
+        });
     }
 
     if (bonusApplies && promo.bonus_rate) {
@@ -3896,7 +3899,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
     const highlightRowsHtml = rows.map(r => `
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
-            <div class="detail-value cashback-amount">${escapeHtml(r.value)}</div>
+            <div class="detail-value">
+                <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? escapeHtml(r.extra) : ''}
+            </div>
         </div>
     `).join('');
 
@@ -3917,12 +3922,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants) {
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
         <div class="card-details">
             ${highlightRowsHtml}
-            <div class="detail-item">
-                <div class="detail-label">匹配項目</div>
-                <div class="detail-value">${escapeHtml(merchantsText)}</div>
-            </div>
             ${capRowHtml}
         </div>
+        <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
     `;
     return el;
