@@ -468,14 +468,16 @@
                     <p class="modal-description">選擇要加入比較的信用卡，只有選中的卡片會出現在比較結果中。</p>
                     <div class="modal-controls">
                         <input type="text" id="search-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
-                        <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">📌 套用我的信用卡</button>
-                        <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="tag-filter-section">
                         <div class="tag-filter-label">篩選標籤：</div>
                         <div class="tag-filter-chips" id="tag-filter-chips">
                             <!-- Tag filter chips will be populated by JavaScript -->
                         </div>
+                    </div>
+                    <div class="modal-action-buttons">
+                        <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">套用我的信用卡選項</button>
+                        <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="cards-selection" id="cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
@@ -499,13 +501,15 @@
                     <p class="modal-description">選擇你實際持有的信用卡，方便快速加入比較與隱藏新戶活動。</p>
                     <div class="modal-controls">
                         <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
-                        <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="tag-filter-section">
                         <div class="tag-filter-label">篩選標籤：</div>
                         <div class="tag-filter-chips" id="owned-tag-filter-chips">
                             <!-- Tag filter chips will be populated by JavaScript -->
                         </div>
+                    </div>
+                    <div class="modal-action-buttons">
+                        <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="cards-selection" id="owned-cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->

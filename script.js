@@ -415,6 +415,13 @@ function parseDateString(dateStr) {
     return new Date(year, month, day);
 }
 
+// Returns the cards to use in comparison results, based on the user's selection.
+// Falls back to all cards if cardsInComparison is empty (e.g., before auth state fires).
+function getCardsForComparison() {
+    if (cardsInComparison.size === 0) return cardsData.cards;
+    return cardsData.cards.filter(card => cardsInComparison.has(card.id));
+}
+
 // Get active new cardholder promos for a given card id, sorted by priority
 function getActiveCardholderPromos(cardId) {
     if (!cardsData || !cardsData.newCardholderPromos) return [];
@@ -889,9 +896,7 @@ function handleQuickSearch(option) {
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
-        const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-            cardsData.cards;
+        const cardsToCompare = getCardsForComparison();
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
         currentQuickSearchOption = option; // Store quick search option for parking benefits
@@ -1283,9 +1288,7 @@ function populateCardChips() {
     cardChipsContainer.innerHTML = '';
 
     // Show cards based on user selection or all cards if not logged in
-    const cardsToShow = currentUser ?
-        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-        cardsData.cards;
+    const cardsToShow = getCardsForComparison();
 
     cardsToShow.forEach(card => {
         const chip = document.createElement('div');
@@ -1520,9 +1523,7 @@ function handleMerchantInput() {
 
     if (matchedItems && matchedItems.length > 0) {
         // Get cards to compare for parking benefits check
-        const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-            cardsData.cards;
+        const cardsToCompare = getCardsForComparison();
         showMatchedItem(matchedItems, input, cardsToCompare);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
@@ -2033,9 +2034,7 @@ async function calculateCashback() {
     }
 
     // Show loading for operations that might take time
-    const cardsToCompareCount = currentUser ?
-        cardsData.cards.filter(card => cardsInComparison.has(card.id)).length :
-        cardsData.cards.length;
+    const cardsToCompareCount = getCardsForComparison().length;
 
     // Only show loading if comparing many cards or multiple matched items
     const shouldShowLoading = cardsToCompareCount > 5 || (currentMatchedItem && Array.isArray(currentMatchedItem) && currentMatchedItem.length > 3);
@@ -2066,9 +2065,7 @@ async function calculateCashback() {
     let uniqueUpcomingResults = [];  // Define here for proper scope
 
     // Get cards to compare (user selected or all)
-    const cardsToCompare = currentUser ?
-        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-        cardsData.cards;
+    const cardsToCompare = getCardsForComparison();
 
     console.log(`比較 ${cardsToCompare.length} 張卡片`);
     
@@ -3489,9 +3486,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
     couponResultsContainer.innerHTML = '';
 
     // Get cards to check (user selected or all)
-    const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-        cardsData.cards;
+    const cardsToCheck = getCardsForComparison();
 
     // Collect all coupon cashbacks that match the merchant
     const matchingCoupons = [];
@@ -4070,7 +4065,8 @@ function initializeAuthListeners() {
             currentUser = null;
             cardsInComparison.clear();
             myOwnedCards.clear();
-            // After logout, become a guest — load any guest-mode myOwnedCards from localStorage
+            // After logout, become a guest — load any guest-mode data from localStorage
+            await loadCardsInComparison();
             await loadMyOwnedCards();
             userSelectedPayments.clear();
             userSpendingMappings = [];
@@ -4230,11 +4226,23 @@ async function loadUserData() {
 
 // Load user's cards-in-comparison from Firestore (with localStorage fallback)
 // Reads new field `cardsInComparison` first; falls back to legacy `selectedCards` for migration.
+// Guests load from localStorage `cardsInComparison_guest`; default is all cards.
 // Accepts optional userData parameter to avoid redundant Firestore calls.
 async function loadCardsInComparison(userData = null) {
     if (!currentUser) {
-        console.log('No current user, using all cards');
-        cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+        // Guest: load from localStorage; default to all cards if nothing saved
+        try {
+            const saved = localStorage.getItem('cardsInComparison_guest');
+            if (saved) {
+                cardsInComparison = new Set(JSON.parse(saved));
+                console.log('📦 Loaded cards-in-comparison from guest localStorage:', Array.from(cardsInComparison));
+            } else {
+                cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+                console.log('🆕 Guest with no saved comparison, defaulting to all cards');
+            }
+        } catch (e) {
+            cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+        }
         return;
     }
 
@@ -4286,6 +4294,35 @@ async function loadCardsInComparison(userData = null) {
         console.error('❌ Error loading cards-in-comparison:', error);
         // Default to all cards if error
         cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+    }
+
+    // After loading, check if guest data exists from before login
+    await maybeMergeGuestCardsInComparison();
+}
+
+// On login, if guest had locally-saved cards-in-comparison data, prompt to merge.
+async function maybeMergeGuestCardsInComparison() {
+    const guestKey = 'cardsInComparison_guest';
+    const guestData = localStorage.getItem(guestKey);
+    if (!guestData) return;
+
+    try {
+        const guestCards = JSON.parse(guestData);
+        if (!Array.isArray(guestCards) || guestCards.length === 0) {
+            localStorage.removeItem(guestKey);
+            return;
+        }
+
+        const shouldMerge = confirm('偵測到本地的『加入比較的卡片』設定，要合併到此賬號嗎？');
+        if (shouldMerge) {
+            guestCards.forEach(id => cardsInComparison.add(id));
+            await saveCardsInComparison();
+            console.log('🔀 Merged guest cards-in-comparison into account:', guestCards);
+        }
+        localStorage.removeItem(guestKey);
+    } catch (e) {
+        console.error('Error merging guest cards-in-comparison:', e);
+        localStorage.removeItem(guestKey);
     }
 }
 
@@ -4393,14 +4430,19 @@ async function maybeMergeGuestMyOwnedCards() {
     }
 }
 
-// Save cards-in-comparison to localStorage and Firestore
+// Save cards-in-comparison to localStorage (always) and Firestore (if logged in)
 async function saveCardsInComparison() {
+    const cardsArray = Array.from(cardsInComparison);
+
     if (!currentUser) {
-        console.log('No user logged in, skipping save');
+        try {
+            localStorage.setItem('cardsInComparison_guest', JSON.stringify(cardsArray));
+            console.log('✅ Saved cards-in-comparison to guest localStorage:', cardsArray);
+        } catch (e) {
+            console.error('Error saving guest cards-in-comparison:', e);
+        }
         return;
     }
-
-    const cardsArray = Array.from(cardsInComparison);
 
     try {
         // Save to localStorage as backup
@@ -4711,8 +4753,7 @@ function openManageCardsModal() {
         toggleAllBtnId: 'toggle-all-cards',
         saveBtnId: 'save-cards-btn',
         currentSelection: cardsInComparison,
-        allowGuestEdit: false,
-        guestPromptText: '登入後即可選取指定卡片做比較'
+        allowGuestEdit: true
     });
 
     updateApplyOwnedButtonState();
@@ -4740,17 +4781,12 @@ function openMyOwnedCardsModal() {
     disableBodyScroll();
 }
 
-// Update the "套用我的信用卡" button state.
-// Disabled when guest (cardsInComparison is read-only without login) or when no owned cards set.
+// Update the "套用我的信用卡選項" button state.
+// Disabled only when no owned cards set (works for guests via localStorage too).
 function updateApplyOwnedButtonState() {
     const btn = document.getElementById('apply-owned-cards-btn');
     if (!btn) return;
-    if (!currentUser) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.title = '登入後即可套用';
-    } else if (myOwnedCards.size === 0) {
+    if (myOwnedCards.size === 0) {
         btn.disabled = true;
         btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
@@ -7769,9 +7805,7 @@ async function showPaymentDetail(paymentId) {
     }
 
     // Get matching cards for this payment
-    const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-        cardsData.cards;
+    const cardsToCheck = getCardsForComparison();
 
     let matchingCards = [];
 
@@ -7903,9 +7937,7 @@ async function showComparePaymentsModal() {
         let paymentsWithCards = [];
 
         for (const payment of paymentsToCompare) {
-            const cardsToCheck = currentUser ?
-                cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
-                cardsData.cards;
+            const cardsToCheck = getCardsForComparison();
 
             let matchingCards = [];
 
