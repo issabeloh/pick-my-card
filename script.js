@@ -478,22 +478,29 @@ function getActiveCardholderPromos(cardId) {
         });
 }
 
-// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items
+// True if the bonus_merchants value (string or array) represents the *all_items wildcard.
+// Robust to whitespace and case variants.
+function isAllItemsMarker(raw) {
+    const norm = (s) => String(s).trim().toLowerCase();
+    if (typeof raw === 'string') return norm(raw) === '*all_items';
+    if (Array.isArray(raw)) {
+        // Treat as wildcard if any (typically the only) entry is the marker
+        return raw.some(item => norm(item) === '*all_items');
+    }
+    return false;
+}
+
+// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items.
 function expandPromoMerchants(promo, card) {
     if (!promo.bonus_merchants) return [];
-    // String form (Apps Script may keep *all_items as string)
+    if (isAllItemsMarker(promo.bonus_merchants)) {
+        return collectCardItems(card);
+    }
     if (typeof promo.bonus_merchants === 'string') {
-        if (promo.bonus_merchants.trim() === '*all_items') {
-            return collectCardItems(card);
-        }
         return promo.bonus_merchants.split(',').map(s => s.trim()).filter(Boolean);
     }
-    // Array form
     if (Array.isArray(promo.bonus_merchants)) {
-        if (promo.bonus_merchants.length === 1 && promo.bonus_merchants[0] === '*all_items') {
-            return collectCardItems(card);
-        }
-        return promo.bonus_merchants.filter(Boolean);
+        return promo.bonus_merchants.map(s => String(s).trim()).filter(Boolean);
     }
     return [];
 }
@@ -3722,6 +3729,28 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     });
 }
 
+// Format bonus_rate for display: handle both '10%' strings and 0.1 decimals
+// (Google Sheets percentage cells come through Apps Script as decimal numbers).
+function formatBonusRate(rate) {
+    if (rate == null || rate === '') return '';
+    if (typeof rate === 'number') {
+        // Decimal like 0.1 → '10%'; values >=1 treated as already-percentage (10 → '10%')
+        const pct = rate < 1 ? rate * 100 : rate;
+        const formatted = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
+        return `${formatted}%`;
+    }
+    const s = String(rate).trim();
+    if (!s) return '';
+    if (s.includes('%')) return s;
+    const n = parseFloat(s);
+    if (!isNaN(n)) {
+        const pct = n < 1 ? n * 100 : n;
+        const formatted = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
+        return `${formatted}%`;
+    }
+    return s;
+}
+
 // Build the highlighted detail rows for a single promo.
 // Each row: { label, value, extra? }. 'value' renders with .cashback-amount;
 // 'extra' (e.g. voucher_usage) renders inline in default colour next to value.
@@ -3740,8 +3769,8 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
         });
     }
 
-    if (bonusApplies && promo.bonus_rate) {
-        rows.push({ label: '回饋率', value: String(promo.bonus_rate) });
+    if (bonusApplies && (promo.bonus_rate != null && promo.bonus_rate !== '')) {
+        rows.push({ label: '回饋率', value: formatBonusRate(promo.bonus_rate) });
     }
 
     return rows;
@@ -3930,10 +3959,7 @@ function renderCardDetailPromos(card) {
         // Show all bonus_merchants (or "本卡所有指定通路" for *all_items)
         let merchantList = [];
         if (promo.bonus_merchants) {
-            const raw = promo.bonus_merchants;
-            const isAllItems = (typeof raw === 'string' && raw.trim() === '*all_items') ||
-                (Array.isArray(raw) && raw.length === 1 && raw[0] === '*all_items');
-            if (isAllItems) {
+            if (isAllItemsMarker(promo.bonus_merchants)) {
                 merchantList = ['本卡所有指定通路'];
             } else {
                 merchantList = expandPromoMerchants(promo, card);
