@@ -135,7 +135,7 @@
                             <div class="avatar-dropdown" id="avatar-dropdown">
                                 <a href="#" class="avatar-dropdown-item" id="avatar-manage-cards">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H2z"/><path d="M0 10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-4zm2-1a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H2z"/></svg>
-                                    管理信用卡
+                                    我的信用卡
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-manage-payments">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11 5.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1z"/><path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H2zm13 2v5H1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1zm-1 9H2a1 1 0 0 1-1-1v-1h14v1a1 1 0 0 1-1 1z"/></svg>
@@ -216,8 +216,8 @@
                 <div class="sidebar-content">
                     <div class="supported-cards" id="supported-cards" style="display: none;">
                         <div class="cards-header">
-                            <p>我的卡匣：</p>
-                            <button id="manage-cards-btn" class="manage-cards-btn" title="管理我的信用卡" style="display: none;">
+                            <p>加入比較的卡片：</p>
+                            <button id="manage-cards-btn" class="manage-cards-btn" title="管理加入比較的卡片" style="display: none;">
                                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
                                     <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
@@ -461,13 +461,14 @@
         <div id="manage-cards-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>管理我的信用卡</h3>
+                    <h3>管理加入比較的卡片</h3>
                     <button class="close-modal" id="close-modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇你擁有的信用卡，只有選中的卡片會出現在比較結果中。</p>
+                    <p class="modal-description">選擇要加入比較的信用卡，只有選中的卡片會出現在比較結果中。</p>
                     <div class="modal-controls">
                         <input type="text" id="search-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
+                        <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">📌 套用我的信用卡</button>
                         <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="tag-filter-section">
@@ -483,6 +484,36 @@
                 <div class="modal-footer">
                     <button id="save-cards-btn" class="save-btn">儲存設定</button>
                     <button id="cancel-cards-btn" class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Owned Cards Modal -->
+        <div id="my-owned-cards-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>我的信用卡</h3>
+                    <button class="close-modal" id="close-owned-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">選擇你實際持有的信用卡，方便快速加入比較與隱藏新戶活動。</p>
+                    <div class="modal-controls">
+                        <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
+                        <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
+                    </div>
+                    <div class="tag-filter-section">
+                        <div class="tag-filter-label">篩選標籤：</div>
+                        <div class="tag-filter-chips" id="owned-tag-filter-chips">
+                            <!-- Tag filter chips will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="cards-selection" id="owned-cards-selection">
+                        <!-- Card checkboxes will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
+                    <button id="cancel-owned-cards-btn" class="cancel-btn">取消</button>
                 </div>
             </div>
         </div>

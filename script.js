@@ -1,6 +1,7 @@
 // Global variables
 let currentUser = null;
-let userSelectedCards = new Set();
+let cardsInComparison = new Set();
+let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
 let userSpendingMappings = []; // 用戶的消費配卡表
 let auth = null;
@@ -380,7 +381,84 @@ function filterExpiredRates(cardsData) {
         }
     });
 
+    // Filter expired new cardholder promos (top-level array, not per-card)
+    if (cardsData.newCardholderPromos && Array.isArray(cardsData.newCardholderPromos)) {
+        const before = cardsData.newCardholderPromos.length;
+        cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
+            // Keep if no end date (ongoing) or end date >= today
+            if (!promo.period_end) return true;
+            const endDate = parseDateString(promo.period_end);
+            if (!endDate) return true;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isActive = endDate >= today;
+            if (!isActive) {
+                console.log(`🕒 隱藏過期新戶活動 - ${promo.id} ${promo.promo_name} (~${promo.period_end})`);
+            }
+            return isActive;
+        });
+        console.log(`✨ 新戶活動: ${before} → ${cardsData.newCardholderPromos.length} 筆有效`);
+    }
+
     return cardsData;
+}
+
+// Parse YYYY/M/D or YYYY/MM/DD date string to Date object
+function parseDateString(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    return new Date(year, month, day);
+}
+
+// Get active new cardholder promos for a given card id, sorted by priority
+function getActiveCardholderPromos(cardId) {
+    if (!cardsData || !cardsData.newCardholderPromos) return [];
+    return cardsData.newCardholderPromos
+        .filter(promo => promo.id === cardId)
+        .sort((a, b) => {
+            const pa = typeof a.priority === 'number' ? a.priority : 99;
+            const pb = typeof b.priority === 'number' ? b.priority : 99;
+            return pa - pb;
+        });
+}
+
+// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items
+function expandPromoMerchants(promo, card) {
+    if (!promo.bonus_merchants) return [];
+    // String form (Apps Script may keep *all_items as string)
+    if (typeof promo.bonus_merchants === 'string') {
+        if (promo.bonus_merchants.trim() === '*all_items') {
+            return collectCardItems(card);
+        }
+        return promo.bonus_merchants.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    // Array form
+    if (Array.isArray(promo.bonus_merchants)) {
+        if (promo.bonus_merchants.length === 1 && promo.bonus_merchants[0] === '*all_items') {
+            return collectCardItems(card);
+        }
+        return promo.bonus_merchants.filter(Boolean);
+    }
+    return [];
+}
+
+// Collect all items from a card's cashbackRates (for *all_items expansion)
+function collectCardItems(card) {
+    if (!card) return [];
+    const items = new Set();
+    if (Array.isArray(card.cashbackRates)) {
+        card.cashbackRates.forEach(rate => {
+            if (Array.isArray(rate.items)) {
+                rate.items.forEach(item => items.add(item));
+            }
+        });
+    }
+    return Array.from(items);
 }
 
 // Build items index for fast lookup (performance optimization)
@@ -812,7 +890,7 @@ function handleQuickSearch(option) {
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
             cardsData.cards;
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
@@ -1206,7 +1284,7 @@ function populateCardChips() {
 
     // Show cards based on user selection or all cards if not logged in
     const cardsToShow = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     cardsToShow.forEach(card => {
@@ -1443,7 +1521,7 @@ function handleMerchantInput() {
     if (matchedItems && matchedItems.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
             cardsData.cards;
         showMatchedItem(matchedItems, input, cardsToCompare);
         currentMatchedItem = matchedItems; // Now stores array of matches
@@ -1956,7 +2034,7 @@ async function calculateCashback() {
 
     // Show loading for operations that might take time
     const cardsToCompareCount = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)).length :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)).length :
         cardsData.cards.length;
 
     // Only show loading if comparing many cards or multiple matched items
@@ -1989,7 +2067,7 @@ async function calculateCashback() {
 
     // Get cards to compare (user selected or all)
     const cardsToCompare = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     console.log(`比較 ${cardsToCompare.length} 張卡片`);
@@ -3412,7 +3490,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
 
     // Get cards to check (user selected or all)
     const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     // Collect all coupon cashbacks that match the merchant
@@ -3831,7 +3909,7 @@ function setupAvatarDropdown() {
 
     // Menu item actions — map element IDs to handler functions
     const menuActions = {
-        'avatar-manage-cards': () => openManageCardsModal(),
+        'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openManagePaymentsModal(),
         'avatar-my-mappings': () => openMyMappingsModal(),
         'avatar-feedback': () => {
@@ -3972,7 +4050,8 @@ function initializeAuthListeners() {
             }
 
             // Load user's selected cards and payments using unified data
-            await loadUserCards(userData);
+            await loadCardsInComparison(userData);
+            await loadMyOwnedCards(userData);
             await loadUserPayments(userData);
             await loadSpendingMappings();
 
@@ -3989,7 +4068,10 @@ function initializeAuthListeners() {
             // User is signed out
             console.log('User signed out');
             currentUser = null;
-            userSelectedCards.clear();
+            cardsInComparison.clear();
+            myOwnedCards.clear();
+            // After logout, become a guest — load any guest-mode myOwnedCards from localStorage
+            await loadMyOwnedCards();
             userSelectedPayments.clear();
             userSpendingMappings = [];
             userBirthdayMonth = null;
@@ -4038,6 +4120,9 @@ function initializeAuthListeners() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup my-owned-cards modal
+    setupMyOwnedCardsModal();
 
     // Setup sidebar drawer for mobile
     setupSidebarDrawer();
@@ -4143,26 +4228,29 @@ async function loadUserData() {
     return null;
 }
 
-// Load user's selected cards from Firestore (with localStorage fallback)
-// Now accepts optional userData parameter to avoid redundant Firestore calls
-async function loadUserCards(userData = null) {
+// Load user's cards-in-comparison from Firestore (with localStorage fallback)
+// Reads new field `cardsInComparison` first; falls back to legacy `selectedCards` for migration.
+// Accepts optional userData parameter to avoid redundant Firestore calls.
+async function loadCardsInComparison(userData = null) {
     if (!currentUser) {
         console.log('No current user, using all cards');
-        userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        cardsInComparison = new Set(cardsData.cards.map(card => card.id));
         return;
     }
 
+    const newKey = `cardsInComparison_${currentUser.uid}`;
+    const legacyKey = `selectedCards_${currentUser.uid}`;
+
     try {
         // Use provided userData if available (from unified load)
-        if (userData && userData.selectedCards) {
-            const cloudCards = userData.selectedCards;
-            userSelectedCards = new Set(cloudCards);
-            console.log('✅ Using user cards from unified data load:', Array.from(userSelectedCards));
-
-            // Sync to localStorage for offline use
-            const storageKey = `selectedCards_${currentUser.uid}`;
-            localStorage.setItem(storageKey, JSON.stringify(cloudCards));
-            return;
+        if (userData) {
+            const cloudCards = userData.cardsInComparison || userData.selectedCards;
+            if (cloudCards) {
+                cardsInComparison = new Set(cloudCards);
+                console.log('✅ Using cards-in-comparison from unified data load:', Array.from(cardsInComparison));
+                localStorage.setItem(newKey, JSON.stringify(cloudCards));
+                return;
+            }
         }
 
         // Fallback: Try to load from Firestore if userData not provided
@@ -4170,64 +4258,167 @@ async function loadUserCards(userData = null) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
 
-            if (docSnap.exists() && docSnap.data().selectedCards) {
-                const cloudCards = docSnap.data().selectedCards;
-                userSelectedCards = new Set(cloudCards);
-                console.log('✅ Loaded user cards from Firestore:', Array.from(userSelectedCards));
-
-                // Sync to localStorage for offline use
-                const storageKey = `selectedCards_${currentUser.uid}`;
-                localStorage.setItem(storageKey, JSON.stringify(cloudCards));
-                return;
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const cloudCards = data.cardsInComparison || data.selectedCards;
+                if (cloudCards) {
+                    cardsInComparison = new Set(cloudCards);
+                    console.log('✅ Loaded cards-in-comparison from Firestore:', Array.from(cardsInComparison));
+                    localStorage.setItem(newKey, JSON.stringify(cloudCards));
+                    return;
+                }
             }
         }
 
-        // Fallback to localStorage if Firestore fails or no data
-        const storageKey = `selectedCards_${currentUser.uid}`;
-        const savedCards = localStorage.getItem(storageKey);
+        // Fallback to localStorage (try new key first, then legacy)
+        const savedCards = localStorage.getItem(newKey) || localStorage.getItem(legacyKey);
 
         if (savedCards) {
-            userSelectedCards = new Set(JSON.parse(savedCards));
-            console.log('📦 Loaded user cards from localStorage (fallback):', Array.from(userSelectedCards));
+            cardsInComparison = new Set(JSON.parse(savedCards));
+            console.log('📦 Loaded cards-in-comparison from localStorage (fallback):', Array.from(cardsInComparison));
         } else {
             // First time user - select all cards by default
             console.log('🆕 First time user, selecting all cards');
-            userSelectedCards = new Set(cardsData.cards.map(card => card.id));
-            saveUserCards();
+            cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+            saveCardsInComparison();
         }
     } catch (error) {
-        console.error('❌ Error loading user cards:', error);
+        console.error('❌ Error loading cards-in-comparison:', error);
         // Default to all cards if error
-        userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        cardsInComparison = new Set(cardsData.cards.map(card => card.id));
     }
 }
 
-// Save user's selected cards to localStorage and Firestore
-async function saveUserCards() {
+// Load my-owned-cards from Firestore (logged in) or localStorage (guest).
+// Default for everyone is empty Set.
+async function loadMyOwnedCards(userData = null) {
+    if (!currentUser) {
+        // Guest: load from localStorage
+        try {
+            const saved = localStorage.getItem('myOwnedCards_guest');
+            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
+            console.log('📦 Loaded myOwnedCards from guest localStorage:', Array.from(myOwnedCards));
+        } catch (e) {
+            myOwnedCards = new Set();
+        }
+        return;
+    }
+
+    const userKey = `myOwnedCards_${currentUser.uid}`;
+    try {
+        let cloudOwned = null;
+        if (userData && Array.isArray(userData.myOwnedCards)) {
+            cloudOwned = userData.myOwnedCards;
+        } else if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists() && Array.isArray(docSnap.data().myOwnedCards)) {
+                cloudOwned = docSnap.data().myOwnedCards;
+            }
+        }
+
+        myOwnedCards = new Set(cloudOwned || []);
+        console.log('✅ Loaded myOwnedCards from Firestore:', Array.from(myOwnedCards));
+        localStorage.setItem(userKey, JSON.stringify(Array.from(myOwnedCards)));
+
+        // After loading, check if guest data exists from before login
+        await maybeMergeGuestMyOwnedCards();
+    } catch (error) {
+        console.error('❌ Error loading myOwnedCards:', error);
+        // Fallback to user-specific localStorage
+        try {
+            const saved = localStorage.getItem(userKey);
+            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch (e) {
+            myOwnedCards = new Set();
+        }
+    }
+}
+
+// Save my-owned-cards to localStorage (always) and Firestore (if logged in).
+async function saveMyOwnedCards() {
+    const cardsArray = Array.from(myOwnedCards);
+
+    if (!currentUser) {
+        try {
+            localStorage.setItem('myOwnedCards_guest', JSON.stringify(cardsArray));
+            console.log('✅ Saved myOwnedCards to guest localStorage:', cardsArray);
+        } catch (e) {
+            console.error('Error saving guest myOwnedCards:', e);
+        }
+        return;
+    }
+
+    try {
+        const userKey = `myOwnedCards_${currentUser.uid}`;
+        localStorage.setItem(userKey, JSON.stringify(cardsArray));
+
+        if (window.db && window.doc && window.setDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            await window.setDoc(docRef, {
+                myOwnedCards: cardsArray,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('☁️ Synced myOwnedCards to Firestore:', cardsArray);
+        }
+    } catch (error) {
+        console.error('Error saving myOwnedCards:', error);
+    }
+}
+
+// On login, if guest had locally-saved myOwnedCards data, prompt to merge into account.
+async function maybeMergeGuestMyOwnedCards() {
+    const guestKey = 'myOwnedCards_guest';
+    const guestData = localStorage.getItem(guestKey);
+    if (!guestData) return;
+
+    try {
+        const guestCards = JSON.parse(guestData);
+        if (!Array.isArray(guestCards) || guestCards.length === 0) {
+            localStorage.removeItem(guestKey);
+            return;
+        }
+
+        const shouldMerge = confirm('偵測到本地的『我的信用卡』資料，要合併到此賬號嗎？');
+        if (shouldMerge) {
+            guestCards.forEach(id => myOwnedCards.add(id));
+            await saveMyOwnedCards();
+            console.log('🔀 Merged guest myOwnedCards into account:', guestCards);
+        }
+        // Remove guest data either way (don't ask again)
+        localStorage.removeItem(guestKey);
+    } catch (e) {
+        console.error('Error merging guest myOwnedCards:', e);
+        localStorage.removeItem(guestKey);
+    }
+}
+
+// Save cards-in-comparison to localStorage and Firestore
+async function saveCardsInComparison() {
     if (!currentUser) {
         console.log('No user logged in, skipping save');
         return;
     }
 
-    const cardsArray = Array.from(userSelectedCards);
+    const cardsArray = Array.from(cardsInComparison);
 
     try {
         // Save to localStorage as backup
-        const storageKey = `selectedCards_${currentUser.uid}`;
+        const storageKey = `cardsInComparison_${currentUser.uid}`;
         localStorage.setItem(storageKey, JSON.stringify(cardsArray));
-        console.log('✅ Saved user cards to localStorage:', cardsArray);
+        console.log('✅ Saved cards-in-comparison to localStorage:', cardsArray);
 
         // Save to Firestore for cross-device sync
         if (window.db && window.doc && window.setDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             await window.setDoc(docRef, {
-                selectedCards: cardsArray,
+                cardsInComparison: cardsArray,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
-            console.log('☁️ Synced user cards to Firestore:', cardsArray);
+            console.log('☁️ Synced cards-in-comparison to Firestore:', cardsArray);
         }
     } catch (error) {
-        console.error('Error saving user cards:', error);
+        console.error('Error saving cards-in-comparison:', error);
         // Don't throw error - at least localStorage is saved
     }
 }
@@ -4277,8 +4468,8 @@ function setupManageCardsModal() {
         }
 
         // Update and save
-        userSelectedCards = newSelection;
-        await saveUserCards();
+        cardsInComparison = newSelection;
+        await saveCardsInComparison();
 
         // Update UI immediately
         populateCardChips();
@@ -4292,7 +4483,7 @@ function setupManageCardsModal() {
     toggleAllBtn.addEventListener('click', () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        
+
         if (allChecked) {
             // Uncheck all
             checkboxes.forEach(checkbox => {
@@ -4309,6 +4500,22 @@ function setupManageCardsModal() {
             toggleAllBtn.textContent = '全不選';
         }
     });
+
+    // "套用我的信用卡" toggle: add all myOwnedCards to current selection,
+    // or remove them if all are already selected. Does not affect other cards.
+    const applyOwnedBtn = document.getElementById('apply-owned-cards-btn');
+    if (applyOwnedBtn) {
+        applyOwnedBtn.addEventListener('click', () => {
+            if (myOwnedCards.size === 0) return;
+            const checkboxes = Array.from(document.querySelectorAll('#cards-selection input[type="checkbox"]'));
+            const ownedCheckboxes = checkboxes.filter(cb => myOwnedCards.has(cb.value));
+            const allOwnedChecked = ownedCheckboxes.length > 0 && ownedCheckboxes.every(cb => cb.checked);
+            ownedCheckboxes.forEach(cb => {
+                cb.checked = !allOwnedChecked;
+                cb.parentElement.classList.toggle('selected', !allOwnedChecked);
+            });
+        });
+    }
 }
 
 // ==========================================
@@ -4363,17 +4570,21 @@ function setupSidebarDrawer() {
     });
 }
 
-// Open manage cards modal
-function openManageCardsModal() {
-    const modal = document.getElementById('manage-cards-modal');
-    const cardsSelection = document.getElementById('cards-selection');
-    const saveBtn = document.getElementById('save-cards-btn');
-    const toggleAllBtn = document.getElementById('toggle-all-cards');
+// Shared renderer for card-selection modals (used by both Manage Cards and My Owned Cards).
+// Populates tag filter chips, the card list with checkboxes, search filter, and updates
+// toggle-all button state. Caller is responsible for showing the modal afterwards.
+function _renderCardSelectionModal(config) {
+    const cardsSelection = document.getElementById(config.selectionId);
+    const tagFilterChips = document.getElementById(config.tagFilterChipsId);
+    const searchInput = document.getElementById(config.searchInputId);
+    const toggleAllBtn = document.getElementById(config.toggleAllBtnId);
+    const saveBtn = document.getElementById(config.saveBtnId);
 
-    // Check if user is logged in
+    const currentSelection = config.currentSelection;
     const isLoggedIn = currentUser !== null;
+    const canEdit = isLoggedIn || config.allowGuestEdit === true;
 
-    // Collect all unique tags from cards
+    // Collect all unique tags
     const allTags = new Set();
     cardsData.cards.forEach(card => {
         if (card.tags && Array.isArray(card.tags)) {
@@ -4382,30 +4593,22 @@ function openManageCardsModal() {
     });
 
     // Render tag filter chips
-    const tagFilterChips = document.getElementById('tag-filter-chips');
-    const selectedTags = new Set(); // Track selected tags for filtering
-
+    const selectedTags = new Set();
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
         const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '直銷品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
             .filter(tag => allTags.has(tag));
-
         sortedTags.forEach(tag => {
             const chip = document.createElement('div');
             chip.className = `tag-filter-chip card-tag ${getTagClass(tag)}`;
             chip.textContent = tag;
             chip.dataset.tag = tag;
-
             chip.addEventListener('click', () => {
                 chip.classList.toggle('active');
-                if (chip.classList.contains('active')) {
-                    selectedTags.add(tag);
-                } else {
-                    selectedTags.delete(tag);
-                }
-                applyCardFilters();
+                if (chip.classList.contains('active')) selectedTags.add(tag);
+                else selectedTags.delete(tag);
+                applyFilters();
             });
-
             tagFilterChips.appendChild(chip);
         });
     }
@@ -4413,8 +4616,8 @@ function openManageCardsModal() {
     // Populate cards selection
     cardsSelection.innerHTML = '';
 
-    // Add login prompt if not logged in
-    if (!isLoggedIn) {
+    // Show login prompt if user can't edit (guest in a guest-disabled mode)
+    if (!canEdit && config.guestPromptText) {
         const loginPrompt = document.createElement('div');
         loginPrompt.style.cssText = `
             background: #fef3c7;
@@ -4428,37 +4631,31 @@ function openManageCardsModal() {
             grid-column: 1 / -1;
             width: 100%;
         `;
-        loginPrompt.textContent = '登入後即可選取指定卡片做比較';
+        loginPrompt.textContent = config.guestPromptText;
         cardsSelection.appendChild(loginPrompt);
     }
 
-    // Sort cards by name
     const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
-
     sortedCards.forEach(card => {
-        const isSelected = userSelectedCards.has(card.id);
-
+        const isSelected = currentSelection.has(card.id);
         const cardDiv = document.createElement('div');
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
-
+        const checkboxId = `${config.selectionId}-${card.id}`;
         cardDiv.innerHTML = `
-            <input type="checkbox" id="card-${card.id}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
-            <label for="card-${card.id}" class="card-checkbox-label">${card.name}</label>
+            <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+            <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
         `;
-
-        // Update visual state on checkbox change (only if logged in)
         const checkbox = cardDiv.querySelector('input');
-        if (isLoggedIn) {
+        if (canEdit) {
             checkbox.addEventListener('change', () => {
                 cardDiv.classList.toggle('selected', checkbox.checked);
             });
         }
-
         cardsSelection.appendChild(cardDiv);
     });
 
-    // Disable buttons if not logged in
-    if (!isLoggedIn) {
+    // Enable/disable footer buttons based on edit permission
+    if (!canEdit) {
         saveBtn.disabled = true;
         saveBtn.style.opacity = '0.5';
         saveBtn.style.cursor = 'not-allowed';
@@ -4472,57 +4669,139 @@ function openManageCardsModal() {
         toggleAllBtn.disabled = false;
         toggleAllBtn.style.opacity = '1';
         toggleAllBtn.style.cursor = 'pointer';
-
-        // Update toggle button state
-        const allSelected = sortedCards.every(card => userSelectedCards.has(card.id));
+        const allSelected = sortedCards.every(card => currentSelection.has(card.id));
         toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
     }
 
-    // Setup combined search and tag filter functionality
-    const searchInput = document.getElementById('search-cards-input');
-    searchInput.value = ''; // Clear search on open
-
-    // Function to apply both text search and tag filters
-    function applyCardFilters() {
+    // Search filter (combined with tag filter)
+    searchInput.value = '';
+    function applyFilters() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        const cardDivs = cardsSelection.querySelectorAll('.card-checkbox');
-
-        cardDivs.forEach(cardDiv => {
+        cardsSelection.querySelectorAll('.card-checkbox').forEach(cardDiv => {
             const checkbox = cardDiv.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
-
             const cardId = checkbox.value;
             const card = cardsData.cards.find(c => c.id === cardId);
             if (!card) return;
-
             const label = cardDiv.querySelector('.card-checkbox-label');
             if (!label) return;
-
-            // Text search filter
-            const cardName = label.textContent.toLowerCase();
-            const matchesSearch = searchTerm === '' || cardName.includes(searchTerm);
-
-            // Tag filter (must have ALL selected tags)
+            const matchesSearch = searchTerm === '' || label.textContent.toLowerCase().includes(searchTerm);
             let matchesTags = true;
             if (selectedTags.size > 0) {
                 const cardTags = card.tags || [];
-                matchesTags = [...selectedTags].every(tag => cardTags.includes(tag));
+                matchesTags = [...selectedTags].every(t => cardTags.includes(t));
             }
-
-            // Show card only if it matches BOTH filters (AND relationship)
-            if (matchesSearch && matchesTags) {
-                cardDiv.style.display = 'flex';
-            } else {
-                cardDiv.style.display = 'none';
-            }
+            cardDiv.style.display = matchesSearch && matchesTags ? 'flex' : 'none';
         });
     }
+    // Detach previous listener (each open call) to avoid duplicates
+    if (searchInput._cardSelectionListener) {
+        searchInput.removeEventListener('input', searchInput._cardSelectionListener);
+    }
+    searchInput._cardSelectionListener = applyFilters;
+    searchInput.addEventListener('input', applyFilters);
+}
 
-    // Listen to search input changes
-    searchInput.addEventListener('input', applyCardFilters);
+// Open the "管理加入比較的卡片" modal
+function openManageCardsModal() {
+    _renderCardSelectionModal({
+        selectionId: 'cards-selection',
+        tagFilterChipsId: 'tag-filter-chips',
+        searchInputId: 'search-cards-input',
+        toggleAllBtnId: 'toggle-all-cards',
+        saveBtnId: 'save-cards-btn',
+        currentSelection: cardsInComparison,
+        allowGuestEdit: false,
+        guestPromptText: '登入後即可選取指定卡片做比較'
+    });
 
+    updateApplyOwnedButtonState();
+
+    const modal = document.getElementById('manage-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
+}
+
+// Open the "我的信用卡" modal (avatar dropdown).
+// Guests are allowed to edit; data persists to localStorage and asks to merge on login.
+function openMyOwnedCardsModal() {
+    _renderCardSelectionModal({
+        selectionId: 'owned-cards-selection',
+        tagFilterChipsId: 'owned-tag-filter-chips',
+        searchInputId: 'search-owned-cards-input',
+        toggleAllBtnId: 'toggle-all-owned-cards',
+        saveBtnId: 'save-owned-cards-btn',
+        currentSelection: myOwnedCards,
+        allowGuestEdit: true
+    });
+
+    const modal = document.getElementById('my-owned-cards-modal');
+    modal.style.display = 'flex';
+    disableBodyScroll();
+}
+
+// Update the "套用我的信用卡" button state.
+// Disabled when guest (cardsInComparison is read-only without login) or when no owned cards set.
+function updateApplyOwnedButtonState() {
+    const btn = document.getElementById('apply-owned-cards-btn');
+    if (!btn) return;
+    if (!currentUser) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = '登入後即可套用';
+    } else if (myOwnedCards.size === 0) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = '先去頭像下拉選單設定「我的信用卡」';
+    } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.title = '一鍵套用「我的信用卡」';
+    }
+}
+
+// Setup the "我的信用卡" modal (close, save, toggle-all listeners)
+function setupMyOwnedCardsModal() {
+    const modal = document.getElementById('my-owned-cards-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-owned-modal');
+    const cancelBtn = document.getElementById('cancel-owned-cards-btn');
+    const saveBtn = document.getElementById('save-owned-cards-btn');
+    const toggleAllBtn = document.getElementById('toggle-all-owned-cards');
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        enableBodyScroll();
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    saveBtn.addEventListener('click', async () => {
+        const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
+        const newSelection = new Set();
+        checkboxes.forEach(cb => { if (cb.checked) newSelection.add(cb.value); });
+        myOwnedCards = newSelection;
+        await saveMyOwnedCards();
+        closeModal();
+    });
+
+    toggleAllBtn.addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        if (allChecked) {
+            checkboxes.forEach(cb => { cb.checked = false; cb.parentElement.classList.remove('selected'); });
+            toggleAllBtn.textContent = '全選';
+        } else {
+            checkboxes.forEach(cb => { cb.checked = true; cb.parentElement.classList.add('selected'); });
+            toggleAllBtn.textContent = '全不選';
+        }
+    });
 }
 
 // Show card detail modal
@@ -6125,7 +6404,7 @@ window.toggleConditions = toggleConditions;
 let currentNotesCardId = null;
 let lastSavedNotes = new Map(); // 記錄每張卡最後儲存的內容
 
-// 讀取用戶筆記 (註: 筆記僅依賴cardId，與userSelectedCards狀態無關)
+// 讀取用戶筆記 (註: 筆記僅依賴cardId，與cardsInComparison狀態無關)
 async function loadUserNotes(cardId) {
     const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
     
@@ -7491,7 +7770,7 @@ async function showPaymentDetail(paymentId) {
 
     // Get matching cards for this payment
     const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     let matchingCards = [];
@@ -7625,7 +7904,7 @@ async function showComparePaymentsModal() {
 
         for (const payment of paymentsToCompare) {
             const cardsToCheck = currentUser ?
-                cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+                cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
                 cardsData.cards;
 
             let matchingCards = [];
