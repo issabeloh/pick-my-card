@@ -3779,6 +3779,66 @@ function escapeHtml(s) {
         .replace(/'/g, '&#039;');
 }
 
+// Render new cardholder promos in the card detail modal.
+// Hidden entirely (header included) when user owns this card.
+function renderCardDetailPromos(card) {
+    const section = document.getElementById('card-promos-section');
+    const content = document.getElementById('card-promos-content');
+    if (!section || !content) return;
+
+    content.innerHTML = '';
+
+    // Hide if user owns this card
+    if (myOwnedCards.has(card.id)) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const promos = getActiveCardholderPromos(card.id);
+    if (promos.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    // Use current amount-input value for bonus calculation; fall back to 1000.
+    const amountInputEl = document.getElementById('amount-input');
+    const amount = amountInputEl && amountInputEl.value !== '' ? parseFloat(amountInputEl.value) : 1000;
+
+    const fragment = document.createDocumentFragment();
+
+    promos.forEach(promo => {
+        // In detail page, no merchant search context — show bonus regardless.
+        const bonusApplies = !!promo.bonus_rate;
+
+        const parts = buildPromoDisplayParts(promo, card, amount, bonusApplies);
+        if (parts.length === 0) return;
+
+        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items)
+        let merchantList = [];
+        if (promo.bonus_merchants) {
+            const raw = promo.bonus_merchants;
+            const isAllItems = (typeof raw === 'string' && raw.trim() === '*all_items') ||
+                (Array.isArray(raw) && raw.length === 1 && raw[0] === '*all_items');
+            if (isAllItems) {
+                merchantList = ['本卡所有指定通路'];
+            } else {
+                merchantList = expandPromoMerchants(promo, card);
+            }
+        }
+
+        const el = createCardholderPromoElement(card, promo, parts, merchantList);
+        fragment.appendChild(el);
+    });
+
+    if (!fragment.hasChildNodes()) {
+        section.style.display = 'none';
+        return;
+    }
+
+    content.appendChild(fragment);
+    section.style.display = 'block';
+}
+
 // Create parking benefit element
 function createParkingBenefitElement(benefit) {
     const benefitDiv = document.createElement('div');
@@ -6088,6 +6148,9 @@ basicCashbackDiv.innerHTML = basicContent;
     } else {
         benefitsSection.style.display = 'none';
     }
+
+    // Display new cardholder promos for this card (hidden if user owns the card)
+    renderCardDetailPromos(card);
 
     // Load and setup user notes
     currentNotesCardId = card.id;
