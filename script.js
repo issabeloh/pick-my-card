@@ -3608,31 +3608,68 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Help "?" uses native Popover API: top-layer rendering bypasses any
-    // ancestor stacking context, and outside-click + Esc are handled by the browser.
-    // The popovertarget attribute handles click-to-toggle automatically.
-    // We only need to (a) position the popup beneath its button on open,
-    // and (b) on hover-capable devices, also open/close on mouseenter/leave.
+    // Help "?" uses native Popover API for top-layer rendering (escapes any
+    // ancestor stacking context). Browser supports popover='auto' outside-click
+    // + Esc closing by default. We drive open/close via JS rather than the
+    // popovertarget attribute — Safari versions ship inconsistent support for
+    // the attribute even after the API itself works.
     const hoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const popoverSupported = typeof HTMLElement.prototype.showPopover === 'function';
+
+    const positionPopup = (btn, popup) => {
+        const rect = btn.getBoundingClientRect();
+        popup.style.position = 'fixed';
+        popup.style.top = `${rect.bottom + 4}px`;
+        popup.style.left = `${rect.left}px`;
+        // Keep on screen if popup overflows right edge
+        const popupRect = popup.getBoundingClientRect();
+        const overflow = popupRect.right - window.innerWidth;
+        if (overflow > 0) {
+            popup.style.left = `${Math.max(8, rect.left - overflow - 8)}px`;
+        }
+    };
+
+    const isOpen = (popup) => popoverSupported
+        ? popup.matches(':popover-open')
+        : popup.classList.contains('open');
+
+    const open = (btn, popup) => {
+        if (isOpen(popup)) return;
+        positionPopup(btn, popup);
+        if (popoverSupported) {
+            try { popup.showPopover(); }
+            catch (e) { popup.classList.add('open'); }
+        } else {
+            popup.classList.add('open');
+        }
+    };
+
+    const close = (popup) => {
+        if (!isOpen(popup)) return;
+        if (popoverSupported && popup.matches(':popover-open')) {
+            try { popup.hidePopover(); } catch (e) { /* ignore */ }
+        }
+        popup.classList.remove('open');
+    };
 
     document.querySelectorAll('.promo-help-btn').forEach(btn => {
-        const popupId = btn.getAttribute('popovertarget');
+        const popupId = btn.getAttribute('popovertarget') || btn.getAttribute('aria-controls');
         const popup = popupId && document.getElementById(popupId);
         if (!popup) return;
+        // Stop relying on the popovertarget attribute — Safari is flaky.
+        btn.removeAttribute('popovertarget');
 
-        // Position the popup just under the button each time it opens
+        // Click toggles
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isOpen(popup)) close(popup);
+            else open(btn, popup);
+        });
+
+        // Reposition on open (popover toggle event for spec-compliant browsers)
         popup.addEventListener('toggle', (e) => {
-            if (e.newState !== 'open') return;
-            const rect = btn.getBoundingClientRect();
-            popup.style.position = 'fixed';
-            popup.style.top = `${rect.bottom + 4}px`;
-            popup.style.left = `${rect.left}px`;
-            // Keep it on screen if near the right edge
-            const popupRect = popup.getBoundingClientRect();
-            const overflow = popupRect.right - window.innerWidth;
-            if (overflow > 0) {
-                popup.style.left = `${Math.max(8, rect.left - overflow - 8)}px`;
-            }
+            if (e.newState === 'open') positionPopup(btn, popup);
         });
 
         // Desktop hover: show on mouseenter, hide on mouseleave (button or popup)
@@ -3641,19 +3678,22 @@ function setupCardholderPromoToggle() {
             const cancelLeave = () => { if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null; } };
             const scheduleHide = () => {
                 cancelLeave();
-                leaveTimer = setTimeout(() => {
-                    if (popup.matches(':popover-open')) popup.hidePopover();
-                }, 80);
+                leaveTimer = setTimeout(() => close(popup), 80);
             };
-            btn.addEventListener('mouseenter', () => {
-                cancelLeave();
-                if (!popup.matches(':popover-open')) popup.showPopover();
-            });
+            btn.addEventListener('mouseenter', () => { cancelLeave(); open(btn, popup); });
             btn.addEventListener('mouseleave', scheduleHide);
             popup.addEventListener('mouseenter', cancelLeave);
             popup.addEventListener('mouseleave', scheduleHide);
         }
     });
+
+    // Fallback outside-click closer for browsers without popover='auto' light-dismiss
+    if (!popoverSupported) {
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.promo-help-btn') || e.target.closest('.promo-help-popup')) return;
+            document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
+        });
+    }
 }
 
 // Parse a rate string like "5%" or "+3%" into a decimal (0.05).

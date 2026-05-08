@@ -1564,9 +1564,11 @@ input[type="number"]:focus {
     background: #6b7280;
 }
 
-/* Popover-based help — renders in browser top layer (escapes z-index/stacking) */
-.promo-help-popup[popover] {
-    /* Reset UA popover defaults */
+/* Help popup — uses native Popover API where available (top-layer rendering),
+   with a .open class fallback for browsers that don't support it. */
+.promo-help-popup {
+    /* Hidden by default; shown via .showPopover() (top layer) or .open class */
+    display: none;
     margin: 0;
     border: 1px solid #bae6fd;
     background: #f0f9ff;
@@ -1578,8 +1580,20 @@ input[type="number"]:focus {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-width: 320px;
     width: max-content;
-    /* JS sets top/left when opening; default position fallback below */
     inset: auto;
+}
+
+/* When opened via popover API, browsers set :popover-open and the element
+   moves into the top layer. We restore display so it's visible. */
+.promo-help-popup:popover-open {
+    display: block;
+}
+
+/* Fallback for browsers without Popover API support */
+.promo-help-popup.open {
+    display: block;
+    position: fixed;
+    z-index: 999999999;
 }
 
 .show-promos-toggle,
