@@ -218,6 +218,13 @@ function parseISODate(dateStr) {
     return new Date(y, m - 1, d);
 }
 
+// 將 ISO 日期 YYYY-MM-DD 格式化為台灣慣用顯示 YYYY/M/D（去補零）
+function formatISODateForDisplay(isoDate) {
+    if (!isoDate) return '';
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return `${y}/${m}/${d}`;
+}
+
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
 // Returns: 'active' | 'upcoming' | 'expired' | 'always'
 function getRateStatus(periodStart, periodEnd) {
@@ -3731,7 +3738,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     if (result.period) {
                         additionalInfo += `<br><small>活動期間: ${result.period}</small>`;
                     } else if (result.periodStart && result.periodEnd) {
-                        additionalInfo += `<br><small>活動期間: ${result.periodStart}~${result.periodEnd}</small>`;
+                        additionalInfo += `<br><small>活動期間: ${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}</small>`;
                     }
                 } else if (result.matchedRateGroup) {
                     // For active activities, use matchedRateGroup
