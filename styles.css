@@ -1701,70 +1701,19 @@ input[type="number"]:focus {
     gap: 16px;
 }
 
-.cardholder-promo-item {
-    border: 1px solid #f59e0b;
-    border-radius: 8px;
-    padding: 16px;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    transition: all 0.3s ease;
-}
-
-.cardholder-promo-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
-}
-
-.cardholder-promo-card-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #92400e;
-    margin-bottom: 8px;
-    border-bottom: 1px solid #fcd34d;
-    padding-bottom: 8px;
-}
-
-.cardholder-promo-summary {
-    color: #78350f;
-    font-size: 14px;
+/* Cardholder promo cards reuse .card-result + .card-details + .detail-item
+   styling so they look consistent with the regular comparison results. */
+.cardholder-promo-item .promo-summary {
+    color: #6b7280;
+    font-size: 13px;
     line-height: 1.5;
     margin-bottom: 12px;
 }
 
-.cardholder-promo-highlight {
-    background: #d97706;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 6px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    text-align: center;
-    margin: 12px 0;
-    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
-}
-
-.cardholder-promo-details {
-    display: grid;
-    gap: 6px;
-    font-size: 13px;
-    color: #78350f;
-}
-
-.cardholder-promo-detail-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.cardholder-promo-label {
-    color: #92400e;
-    font-weight: 500;
-    min-width: 60px;
-    flex-shrink: 0;
-}
-
-.cardholder-promo-value {
-    color: #78350f;
-    flex: 1;
+.cardholder-promo-item .detail-support {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
 }
 
 @media (max-width: 768px) {
