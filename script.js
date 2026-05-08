@@ -2436,6 +2436,9 @@ async function calculateCashback() {
     // Display parking benefits - pass quick search keywords if available
     displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);
 
+    // Display new cardholder promos (filtered by user toggle, ownership, and merchant match)
+    displayCardholderPromos(merchantValue, amount, currentQuickSearchOption?.merchants);
+
     // Hide loading and log performance
     if (shouldShowLoading) {
         loadingOverlay.hide();
@@ -3578,6 +3581,204 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
     if (parkingSection) parkingSection.style.display = 'block';
 }
 
+// ==========================================
+// New Cardholder Promos (search results)
+// ==========================================
+
+// Toggle state shared by desktop + mobile checkboxes
+let showCardholderPromos = false;
+
+// Wire both desktop and mobile checkboxes; keep them in sync.
+function setupCardholderPromoToggle() {
+    const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
+    const onChange = (e) => {
+        showCardholderPromos = e.target.checked;
+        // Sync the other checkbox
+        ids.forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb && cb !== e.target) cb.checked = showCardholderPromos;
+        });
+        // Re-run results so the section appears/disappears
+        if (typeof calculateCashback === 'function') calculateCashback();
+    };
+    ids.forEach(id => {
+        const cb = document.getElementById(id);
+        if (cb) cb.addEventListener('change', onChange);
+    });
+}
+
+// Parse a rate string like "5%" or "+3%" into a decimal (0.05).
+function parsePromoRate(rateStr) {
+    if (!rateStr) return 0;
+    const m = String(rateStr).match(/(\d+(?:\.\d+)?)/);
+    if (!m) return 0;
+    return parseFloat(m[1]) / 100;
+}
+
+// Does a promo's bonus_merchants list match the current search term/keywords?
+// Returns true for *all_items if the card has any cashbackRate item matching the search.
+function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
+    if (!promo.bonus_merchants) return false;
+
+    // Build the list of search terms (lowercased)
+    const terms = [];
+    if (Array.isArray(quickKeywords) && quickKeywords.length > 0) {
+        quickKeywords.forEach(k => { if (k) terms.push(String(k).toLowerCase()); });
+    } else if (merchantValue) {
+        terms.push(String(merchantValue).toLowerCase());
+    }
+    if (terms.length === 0) return false;
+
+    // Resolve actual merchants list (handles *all_items)
+    const merchants = expandPromoMerchants(promo, card);
+    if (!merchants || merchants.length === 0) return false;
+
+    // Substring match either way
+    return merchants.some(m => {
+        const ml = String(m).toLowerCase();
+        return terms.some(t => ml.includes(t) || t.includes(ml));
+    });
+}
+
+// Build the parts shown as the highlight + breakdown for a single promo.
+// Returns an array of strings to be joined by '及'. Empty array means hide promo.
+function buildPromoDisplayParts(promo, card, amount, bonusApplies) {
+    const parts = [];
+
+    if (promo.gift_content) {
+        parts.push(`贈品：${promo.gift_content}`);
+    }
+
+    if (promo.voucher_amount) {
+        const usage = promo.voucher_usage ? `（${promo.voucher_usage}）` : '';
+        parts.push(`抵用 NT$${promo.voucher_amount}${usage}`);
+    }
+
+    if (bonusApplies && promo.bonus_rate) {
+        const rate = parsePromoRate(promo.bonus_rate);
+        let bonusAmount = Math.floor((amount || 0) * rate);
+        const cap = typeof promo.bonus_cap === 'number' ? promo.bonus_cap : null;
+        const capped = cap !== null && bonusAmount > cap;
+        if (capped) bonusAmount = cap;
+        const capNote = cap !== null ? `，上限 NT$${cap}` : '';
+        parts.push(`加碼 ${promo.bonus_rate}（NT$${bonusAmount}${capNote}）`);
+    }
+
+    return parts;
+}
+
+// Render new cardholder promos below the regular results.
+// Filters: card in cardsInComparison, NOT in myOwnedCards, has matching active promo.
+function displayCardholderPromos(merchantValue, amount, quickKeywords) {
+    const section = document.getElementById('cardholder-promos-section');
+    const container = document.getElementById('cardholder-promos-container');
+    if (!section || !container) return;
+
+    container.innerHTML = '';
+
+    if (!showCardholderPromos) {
+        section.style.display = 'none';
+        return;
+    }
+
+    if (!cardsData || !cardsData.newCardholderPromos || cardsData.newCardholderPromos.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    // Candidate cards: in comparison AND not owned
+    const candidateCards = getCardsForComparison().filter(c => !myOwnedCards.has(c.id));
+
+    const fragment = document.createDocumentFragment();
+    let renderedCount = 0;
+
+    candidateCards.forEach(card => {
+        const promos = getActiveCardholderPromos(card.id);
+        if (promos.length === 0) return;
+
+        promos.forEach(promo => {
+            const bonusApplies = promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords);
+            // Determine if this promo has anything relevant to this search:
+            // - bonus matches → yes
+            // - has gift_content → yes (relevant for considering the card)
+            // - has voucher_amount → yes
+            const hasGiftOrVoucher = promo.gift_content || promo.voucher_amount;
+            if (!bonusApplies && !hasGiftOrVoucher) return;
+
+            // Build display parts; if all empty, skip
+            const parts = buildPromoDisplayParts(promo, card, amount, bonusApplies);
+            if (parts.length === 0) return;
+
+            const matchedMerchants = bonusApplies
+                ? expandPromoMerchants(promo, card).filter(m => {
+                    const ml = String(m).toLowerCase();
+                    const term = (quickKeywords && quickKeywords.length > 0)
+                        ? quickKeywords.map(k => String(k).toLowerCase())
+                        : [String(merchantValue || '').toLowerCase()];
+                    return term.some(t => ml.includes(t) || (t && t.includes(ml)));
+                })
+                : [];
+
+            const el = createCardholderPromoElement(card, promo, parts, matchedMerchants);
+            fragment.appendChild(el);
+            renderedCount++;
+        });
+    });
+
+    if (renderedCount === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    container.appendChild(fragment);
+    section.style.display = 'block';
+}
+
+// Build the DOM element for a single cardholder promo result.
+// Display order: 卡名 → new_customer_summary → 重點(parts) → 匹配項目 → 期限
+function createCardholderPromoElement(card, promo, parts, matchedMerchants) {
+    const el = document.createElement('div');
+    el.className = 'cardholder-promo-item';
+
+    const summary = promo.new_customer_summary || '';
+    const highlight = parts.join('，及 ');
+
+    const period = (promo.period_start || promo.period_end)
+        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? ' ~ ' : (promo.period_end ? '~ ' : '')}${promo.period_end || ''}`.trim()
+        : '不限期';
+
+    const merchantsText = matchedMerchants && matchedMerchants.length > 0
+        ? matchedMerchants.join('、')
+        : '不限通路';
+
+    el.innerHTML = `
+        <div class="cardholder-promo-card-name">${escapeHtml(card.name)}</div>
+        ${summary ? `<div class="cardholder-promo-summary">${escapeHtml(summary)}</div>` : ''}
+        <div class="cardholder-promo-highlight">${escapeHtml(highlight)}</div>
+        <div class="cardholder-promo-details">
+            <div class="cardholder-promo-detail-item">
+                <span class="cardholder-promo-label">匹配項目：</span>
+                <span class="cardholder-promo-value">${escapeHtml(merchantsText)}</span>
+            </div>
+            <div class="cardholder-promo-detail-item">
+                <span class="cardholder-promo-label">期限：</span>
+                <span class="cardholder-promo-value">${escapeHtml(period)}</span>
+            </div>
+        </div>
+    `;
+    return el;
+}
+
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Create parking benefit element
 function createParkingBenefitElement(benefit) {
     const benefitDiv = document.createElement('div');
@@ -4072,6 +4273,9 @@ function initializeAuthListeners() {
 
     // Setup my-owned-cards modal
     setupMyOwnedCardsModal();
+
+    // Setup new cardholder promos toggle (search results section)
+    setupCardholderPromoToggle();
 
     // Setup sidebar drawer for mobile
     setupSidebarDrawer();

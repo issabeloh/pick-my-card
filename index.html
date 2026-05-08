@@ -391,6 +391,14 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 顯示新戶活動 toggle (桌機版位置) -->
+                        <div class="show-promos-toggle show-promos-desktop">
+                            <label>
+                                <input type="checkbox" id="show-promos-toggle-desktop">
+                                顯示新戶活動（排除我的信用卡）
+                            </label>
+                        </div>
                     </div>
 
                     <div class="form-group compact">
@@ -401,6 +409,13 @@
 
                     <div class="form-group compact button-group">
                         <label>&nbsp;</label>
+                        <!-- 顯示新戶活動 toggle (手機版位置) -->
+                        <div class="show-promos-toggle show-promos-mobile">
+                            <label>
+                                <input type="checkbox" id="show-promos-toggle-mobile">
+                                顯示新戶活動（排除我的信用卡）
+                            </label>
+                        </div>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
                     </div>
                 </div>
@@ -451,6 +466,14 @@
                 <h2>🅿️ 停車折抵優惠</h2>
                 <div class="parking-benefits-container" id="parking-benefits-container">
                     <!-- Parking benefits will be dynamically inserted here -->
+                </div>
+            </section>
+
+            <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
+                <h2>🎁 新戶活動加碼</h2>
+                <p class="cardholder-promos-desc">未持有但加入比較的卡片中，符合本次消費商家的新戶活動。可考慮為這次消費辦卡。</p>
+                <div class="cardholder-promos-container" id="cardholder-promos-container">
+                    <!-- Cardholder promos will be dynamically inserted here -->
                 </div>
             </section>
 
