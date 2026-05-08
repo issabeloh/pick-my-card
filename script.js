@@ -424,7 +424,84 @@ function filterExpiredRates(cardsData) {
         }
     });
 
+    // Filter expired new cardholder promos (top-level array, not per-card)
+    if (cardsData.newCardholderPromos && Array.isArray(cardsData.newCardholderPromos)) {
+        const before = cardsData.newCardholderPromos.length;
+        cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
+            // Keep if no end date (ongoing) or end date >= today
+            if (!promo.period_end) return true;
+            const endDate = parseDateString(promo.period_end);
+            if (!endDate) return true;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isActive = endDate >= today;
+            if (!isActive) {
+                console.log(`🕒 隱藏過期新戶活動 - ${promo.id} ${promo.promo_name} (~${promo.period_end})`);
+            }
+            return isActive;
+        });
+        console.log(`✨ 新戶活動: ${before} → ${cardsData.newCardholderPromos.length} 筆有效`);
+    }
+
     return cardsData;
+}
+
+// Parse YYYY/M/D or YYYY/MM/DD date string to Date object
+function parseDateString(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    return new Date(year, month, day);
+}
+
+// Get active new cardholder promos for a given card id, sorted by priority
+function getActiveCardholderPromos(cardId) {
+    if (!cardsData || !cardsData.newCardholderPromos) return [];
+    return cardsData.newCardholderPromos
+        .filter(promo => promo.id === cardId)
+        .sort((a, b) => {
+            const pa = typeof a.priority === 'number' ? a.priority : 99;
+            const pb = typeof b.priority === 'number' ? b.priority : 99;
+            return pa - pb;
+        });
+}
+
+// Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items
+function expandPromoMerchants(promo, card) {
+    if (!promo.bonus_merchants) return [];
+    // String form (Apps Script may keep *all_items as string)
+    if (typeof promo.bonus_merchants === 'string') {
+        if (promo.bonus_merchants.trim() === '*all_items') {
+            return collectCardItems(card);
+        }
+        return promo.bonus_merchants.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    // Array form
+    if (Array.isArray(promo.bonus_merchants)) {
+        if (promo.bonus_merchants.length === 1 && promo.bonus_merchants[0] === '*all_items') {
+            return collectCardItems(card);
+        }
+        return promo.bonus_merchants.filter(Boolean);
+    }
+    return [];
+}
+
+// Collect all items from a card's cashbackRates (for *all_items expansion)
+function collectCardItems(card) {
+    if (!card) return [];
+    const items = new Set();
+    if (Array.isArray(card.cashbackRates)) {
+        card.cashbackRates.forEach(rate => {
+            if (Array.isArray(rate.items)) {
+                rate.items.forEach(item => items.add(item));
+            }
+        });
+    }
+    return Array.from(items);
 }
 
 // Build items index for fast lookup (performance optimization)
