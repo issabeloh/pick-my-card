@@ -3862,7 +3862,7 @@ function setupAvatarDropdown() {
 
     // Menu item actions — map element IDs to handler functions
     const menuActions = {
-        'avatar-manage-cards': () => openManageCardsModal(),
+        'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openManagePaymentsModal(),
         'avatar-my-mappings': () => openMyMappingsModal(),
         'avatar-feedback': () => {
@@ -4073,6 +4073,9 @@ function initializeAuthListeners() {
     
     // Setup manage cards modal
     setupManageCardsModal();
+
+    // Setup my-owned-cards modal
+    setupMyOwnedCardsModal();
 
     // Setup sidebar drawer for mobile
     setupSidebarDrawer();
@@ -4433,7 +4436,7 @@ function setupManageCardsModal() {
     toggleAllBtn.addEventListener('click', () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        
+
         if (allChecked) {
             // Uncheck all
             checkboxes.forEach(checkbox => {
@@ -4450,6 +4453,22 @@ function setupManageCardsModal() {
             toggleAllBtn.textContent = '全不選';
         }
     });
+
+    // "套用我的信用卡" toggle: add all myOwnedCards to current selection,
+    // or remove them if all are already selected. Does not affect other cards.
+    const applyOwnedBtn = document.getElementById('apply-owned-cards-btn');
+    if (applyOwnedBtn) {
+        applyOwnedBtn.addEventListener('click', () => {
+            if (myOwnedCards.size === 0) return;
+            const checkboxes = Array.from(document.querySelectorAll('#cards-selection input[type="checkbox"]'));
+            const ownedCheckboxes = checkboxes.filter(cb => myOwnedCards.has(cb.value));
+            const allOwnedChecked = ownedCheckboxes.length > 0 && ownedCheckboxes.every(cb => cb.checked);
+            ownedCheckboxes.forEach(cb => {
+                cb.checked = !allOwnedChecked;
+                cb.parentElement.classList.toggle('selected', !allOwnedChecked);
+            });
+        });
+    }
 }
 
 // ==========================================
@@ -4504,17 +4523,21 @@ function setupSidebarDrawer() {
     });
 }
 
-// Open manage cards modal
-function openManageCardsModal() {
-    const modal = document.getElementById('manage-cards-modal');
-    const cardsSelection = document.getElementById('cards-selection');
-    const saveBtn = document.getElementById('save-cards-btn');
-    const toggleAllBtn = document.getElementById('toggle-all-cards');
+// Shared renderer for card-selection modals (used by both Manage Cards and My Owned Cards).
+// Populates tag filter chips, the card list with checkboxes, search filter, and updates
+// toggle-all button state. Caller is responsible for showing the modal afterwards.
+function _renderCardSelectionModal(config) {
+    const cardsSelection = document.getElementById(config.selectionId);
+    const tagFilterChips = document.getElementById(config.tagFilterChipsId);
+    const searchInput = document.getElementById(config.searchInputId);
+    const toggleAllBtn = document.getElementById(config.toggleAllBtnId);
+    const saveBtn = document.getElementById(config.saveBtnId);
 
-    // Check if user is logged in
+    const currentSelection = config.currentSelection;
     const isLoggedIn = currentUser !== null;
+    const canEdit = isLoggedIn || config.allowGuestEdit === true;
 
-    // Collect all unique tags from cards
+    // Collect all unique tags
     const allTags = new Set();
     cardsData.cards.forEach(card => {
         if (card.tags && Array.isArray(card.tags)) {
@@ -4523,30 +4546,22 @@ function openManageCardsModal() {
     });
 
     // Render tag filter chips
-    const tagFilterChips = document.getElementById('tag-filter-chips');
-    const selectedTags = new Set(); // Track selected tags for filtering
-
+    const selectedTags = new Set();
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
         const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '直銷品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
             .filter(tag => allTags.has(tag));
-
         sortedTags.forEach(tag => {
             const chip = document.createElement('div');
             chip.className = `tag-filter-chip card-tag ${getTagClass(tag)}`;
             chip.textContent = tag;
             chip.dataset.tag = tag;
-
             chip.addEventListener('click', () => {
                 chip.classList.toggle('active');
-                if (chip.classList.contains('active')) {
-                    selectedTags.add(tag);
-                } else {
-                    selectedTags.delete(tag);
-                }
-                applyCardFilters();
+                if (chip.classList.contains('active')) selectedTags.add(tag);
+                else selectedTags.delete(tag);
+                applyFilters();
             });
-
             tagFilterChips.appendChild(chip);
         });
     }
@@ -4554,8 +4569,8 @@ function openManageCardsModal() {
     // Populate cards selection
     cardsSelection.innerHTML = '';
 
-    // Add login prompt if not logged in
-    if (!isLoggedIn) {
+    // Show login prompt if user can't edit (guest in a guest-disabled mode)
+    if (!canEdit && config.guestPromptText) {
         const loginPrompt = document.createElement('div');
         loginPrompt.style.cssText = `
             background: #fef3c7;
@@ -4569,37 +4584,31 @@ function openManageCardsModal() {
             grid-column: 1 / -1;
             width: 100%;
         `;
-        loginPrompt.textContent = '登入後即可選取指定卡片做比較';
+        loginPrompt.textContent = config.guestPromptText;
         cardsSelection.appendChild(loginPrompt);
     }
 
-    // Sort cards by name
     const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
-
     sortedCards.forEach(card => {
-        const isSelected = cardsInComparison.has(card.id);
-
+        const isSelected = currentSelection.has(card.id);
         const cardDiv = document.createElement('div');
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
-
+        const checkboxId = `${config.selectionId}-${card.id}`;
         cardDiv.innerHTML = `
-            <input type="checkbox" id="card-${card.id}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
-            <label for="card-${card.id}" class="card-checkbox-label">${card.name}</label>
+            <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+            <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
         `;
-
-        // Update visual state on checkbox change (only if logged in)
         const checkbox = cardDiv.querySelector('input');
-        if (isLoggedIn) {
+        if (canEdit) {
             checkbox.addEventListener('change', () => {
                 cardDiv.classList.toggle('selected', checkbox.checked);
             });
         }
-
         cardsSelection.appendChild(cardDiv);
     });
 
-    // Disable buttons if not logged in
-    if (!isLoggedIn) {
+    // Enable/disable footer buttons based on edit permission
+    if (!canEdit) {
         saveBtn.disabled = true;
         saveBtn.style.opacity = '0.5';
         saveBtn.style.cursor = 'not-allowed';
@@ -4613,57 +4622,139 @@ function openManageCardsModal() {
         toggleAllBtn.disabled = false;
         toggleAllBtn.style.opacity = '1';
         toggleAllBtn.style.cursor = 'pointer';
-
-        // Update toggle button state
-        const allSelected = sortedCards.every(card => cardsInComparison.has(card.id));
+        const allSelected = sortedCards.every(card => currentSelection.has(card.id));
         toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
     }
 
-    // Setup combined search and tag filter functionality
-    const searchInput = document.getElementById('search-cards-input');
-    searchInput.value = ''; // Clear search on open
-
-    // Function to apply both text search and tag filters
-    function applyCardFilters() {
+    // Search filter (combined with tag filter)
+    searchInput.value = '';
+    function applyFilters() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        const cardDivs = cardsSelection.querySelectorAll('.card-checkbox');
-
-        cardDivs.forEach(cardDiv => {
+        cardsSelection.querySelectorAll('.card-checkbox').forEach(cardDiv => {
             const checkbox = cardDiv.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
-
             const cardId = checkbox.value;
             const card = cardsData.cards.find(c => c.id === cardId);
             if (!card) return;
-
             const label = cardDiv.querySelector('.card-checkbox-label');
             if (!label) return;
-
-            // Text search filter
-            const cardName = label.textContent.toLowerCase();
-            const matchesSearch = searchTerm === '' || cardName.includes(searchTerm);
-
-            // Tag filter (must have ALL selected tags)
+            const matchesSearch = searchTerm === '' || label.textContent.toLowerCase().includes(searchTerm);
             let matchesTags = true;
             if (selectedTags.size > 0) {
                 const cardTags = card.tags || [];
-                matchesTags = [...selectedTags].every(tag => cardTags.includes(tag));
+                matchesTags = [...selectedTags].every(t => cardTags.includes(t));
             }
-
-            // Show card only if it matches BOTH filters (AND relationship)
-            if (matchesSearch && matchesTags) {
-                cardDiv.style.display = 'flex';
-            } else {
-                cardDiv.style.display = 'none';
-            }
+            cardDiv.style.display = matchesSearch && matchesTags ? 'flex' : 'none';
         });
     }
+    // Detach previous listener (each open call) to avoid duplicates
+    if (searchInput._cardSelectionListener) {
+        searchInput.removeEventListener('input', searchInput._cardSelectionListener);
+    }
+    searchInput._cardSelectionListener = applyFilters;
+    searchInput.addEventListener('input', applyFilters);
+}
 
-    // Listen to search input changes
-    searchInput.addEventListener('input', applyCardFilters);
+// Open the "管理加入比較的卡片" modal
+function openManageCardsModal() {
+    _renderCardSelectionModal({
+        selectionId: 'cards-selection',
+        tagFilterChipsId: 'tag-filter-chips',
+        searchInputId: 'search-cards-input',
+        toggleAllBtnId: 'toggle-all-cards',
+        saveBtnId: 'save-cards-btn',
+        currentSelection: cardsInComparison,
+        allowGuestEdit: false,
+        guestPromptText: '登入後即可選取指定卡片做比較'
+    });
 
+    updateApplyOwnedButtonState();
+
+    const modal = document.getElementById('manage-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
+}
+
+// Open the "我的信用卡" modal (avatar dropdown).
+// Guests are allowed to edit; data persists to localStorage and asks to merge on login.
+function openMyOwnedCardsModal() {
+    _renderCardSelectionModal({
+        selectionId: 'owned-cards-selection',
+        tagFilterChipsId: 'owned-tag-filter-chips',
+        searchInputId: 'search-owned-cards-input',
+        toggleAllBtnId: 'toggle-all-owned-cards',
+        saveBtnId: 'save-owned-cards-btn',
+        currentSelection: myOwnedCards,
+        allowGuestEdit: true
+    });
+
+    const modal = document.getElementById('my-owned-cards-modal');
+    modal.style.display = 'flex';
+    disableBodyScroll();
+}
+
+// Update the "套用我的信用卡" button state.
+// Disabled when guest (cardsInComparison is read-only without login) or when no owned cards set.
+function updateApplyOwnedButtonState() {
+    const btn = document.getElementById('apply-owned-cards-btn');
+    if (!btn) return;
+    if (!currentUser) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = '登入後即可套用';
+    } else if (myOwnedCards.size === 0) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.title = '先去頭像下拉選單設定「我的信用卡」';
+    } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.title = '一鍵套用「我的信用卡」';
+    }
+}
+
+// Setup the "我的信用卡" modal (close, save, toggle-all listeners)
+function setupMyOwnedCardsModal() {
+    const modal = document.getElementById('my-owned-cards-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-owned-modal');
+    const cancelBtn = document.getElementById('cancel-owned-cards-btn');
+    const saveBtn = document.getElementById('save-owned-cards-btn');
+    const toggleAllBtn = document.getElementById('toggle-all-owned-cards');
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        enableBodyScroll();
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    saveBtn.addEventListener('click', async () => {
+        const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
+        const newSelection = new Set();
+        checkboxes.forEach(cb => { if (cb.checked) newSelection.add(cb.value); });
+        myOwnedCards = newSelection;
+        await saveMyOwnedCards();
+        closeModal();
+    });
+
+    toggleAllBtn.addEventListener('click', () => {
+        const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        if (allChecked) {
+            checkboxes.forEach(cb => { cb.checked = false; cb.parentElement.classList.remove('selected'); });
+            toggleAllBtn.textContent = '全選';
+        } else {
+            checkboxes.forEach(cb => { cb.checked = true; cb.parentElement.classList.add('selected'); });
+            toggleAllBtn.textContent = '全不選';
+        }
+    });
 }
 
 // Show card detail modal
