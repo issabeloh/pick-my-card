@@ -1,6 +1,7 @@
 // Global variables
 let currentUser = null;
 let cardsInComparison = new Set();
+let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
 let userSpendingMappings = []; // 用戶的消費配卡表
 let auth = null;
@@ -4003,6 +4004,7 @@ function initializeAuthListeners() {
 
             // Load user's selected cards and payments using unified data
             await loadCardsInComparison(userData);
+            await loadMyOwnedCards(userData);
             await loadUserPayments(userData);
             await loadSpendingMappings();
 
@@ -4020,6 +4022,9 @@ function initializeAuthListeners() {
             console.log('User signed out');
             currentUser = null;
             cardsInComparison.clear();
+            myOwnedCards.clear();
+            // After logout, become a guest — load any guest-mode myOwnedCards from localStorage
+            await loadMyOwnedCards();
             userSelectedPayments.clear();
             userSpendingMappings = [];
             userBirthdayMonth = null;
@@ -4231,6 +4236,110 @@ async function loadCardsInComparison(userData = null) {
         console.error('❌ Error loading cards-in-comparison:', error);
         // Default to all cards if error
         cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+    }
+}
+
+// Load my-owned-cards from Firestore (logged in) or localStorage (guest).
+// Default for everyone is empty Set.
+async function loadMyOwnedCards(userData = null) {
+    if (!currentUser) {
+        // Guest: load from localStorage
+        try {
+            const saved = localStorage.getItem('myOwnedCards_guest');
+            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
+            console.log('📦 Loaded myOwnedCards from guest localStorage:', Array.from(myOwnedCards));
+        } catch (e) {
+            myOwnedCards = new Set();
+        }
+        return;
+    }
+
+    const userKey = `myOwnedCards_${currentUser.uid}`;
+    try {
+        let cloudOwned = null;
+        if (userData && Array.isArray(userData.myOwnedCards)) {
+            cloudOwned = userData.myOwnedCards;
+        } else if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists() && Array.isArray(docSnap.data().myOwnedCards)) {
+                cloudOwned = docSnap.data().myOwnedCards;
+            }
+        }
+
+        myOwnedCards = new Set(cloudOwned || []);
+        console.log('✅ Loaded myOwnedCards from Firestore:', Array.from(myOwnedCards));
+        localStorage.setItem(userKey, JSON.stringify(Array.from(myOwnedCards)));
+
+        // After loading, check if guest data exists from before login
+        await maybeMergeGuestMyOwnedCards();
+    } catch (error) {
+        console.error('❌ Error loading myOwnedCards:', error);
+        // Fallback to user-specific localStorage
+        try {
+            const saved = localStorage.getItem(userKey);
+            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch (e) {
+            myOwnedCards = new Set();
+        }
+    }
+}
+
+// Save my-owned-cards to localStorage (always) and Firestore (if logged in).
+async function saveMyOwnedCards() {
+    const cardsArray = Array.from(myOwnedCards);
+
+    if (!currentUser) {
+        try {
+            localStorage.setItem('myOwnedCards_guest', JSON.stringify(cardsArray));
+            console.log('✅ Saved myOwnedCards to guest localStorage:', cardsArray);
+        } catch (e) {
+            console.error('Error saving guest myOwnedCards:', e);
+        }
+        return;
+    }
+
+    try {
+        const userKey = `myOwnedCards_${currentUser.uid}`;
+        localStorage.setItem(userKey, JSON.stringify(cardsArray));
+
+        if (window.db && window.doc && window.setDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            await window.setDoc(docRef, {
+                myOwnedCards: cardsArray,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('☁️ Synced myOwnedCards to Firestore:', cardsArray);
+        }
+    } catch (error) {
+        console.error('Error saving myOwnedCards:', error);
+    }
+}
+
+// On login, if guest had locally-saved myOwnedCards data, prompt to merge into account.
+async function maybeMergeGuestMyOwnedCards() {
+    const guestKey = 'myOwnedCards_guest';
+    const guestData = localStorage.getItem(guestKey);
+    if (!guestData) return;
+
+    try {
+        const guestCards = JSON.parse(guestData);
+        if (!Array.isArray(guestCards) || guestCards.length === 0) {
+            localStorage.removeItem(guestKey);
+            return;
+        }
+
+        const shouldMerge = confirm('偵測到本地的『我的信用卡』資料，要合併到此賬號嗎？');
+        if (shouldMerge) {
+            guestCards.forEach(id => myOwnedCards.add(id));
+            await saveMyOwnedCards();
+            console.log('🔀 Merged guest myOwnedCards into account:', guestCards);
+        }
+        // Remove guest data either way (don't ask again)
+        localStorage.removeItem(guestKey);
+    } catch (e) {
+        console.error('Error merging guest myOwnedCards:', e);
+        localStorage.removeItem(guestKey);
     }
 }
 
