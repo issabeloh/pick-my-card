@@ -1571,13 +1571,13 @@ input[type="number"]:focus {
     align-items: center;
 }
 
-/* Floating popup — shown on hover or focus-within of the wrapper */
+/* Floating popup — shown on hover, focus-within, or .open class (mobile click) */
 .promo-help-popup {
     display: none;
     position: absolute;
     top: 100%;
     left: 0;
-    z-index: 100;
+    z-index: 9999;
     width: max-content;
     max-width: 320px;
     margin-top: 4px;
@@ -1588,11 +1588,12 @@ input[type="number"]:focus {
     font-size: 13px;
     line-height: 1.5;
     color: #0c4a6e;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .promo-help-wrap:hover .promo-help-popup,
-.promo-help-wrap:focus-within .promo-help-popup {
+.promo-help-wrap:focus-within .promo-help-popup,
+.promo-help-popup.open {
     display: block;
 }
 

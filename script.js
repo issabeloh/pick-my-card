@@ -3608,9 +3608,25 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Close help popup on outside tap/click by blurring the focused help button
+    // Mobile: tap "?" to toggle popup .open class. Tap outside to close.
+    // Desktop hover still works via CSS :hover on the wrapper.
+    document.querySelectorAll('.promo-help-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const popup = btn.parentElement.querySelector('.promo-help-popup');
+            if (!popup) return;
+            const isOpen = popup.classList.contains('open');
+            // Close all other open popups first
+            document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
+            if (!isOpen) popup.classList.add('open');
+            else btn.blur();
+        });
+    });
+
     document.addEventListener('click', (e) => {
         if (e.target.closest('.promo-help-wrap')) return;
+        document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
         const active = document.activeElement;
         if (active && active.classList && active.classList.contains('promo-help-btn')) {
             active.blur();
