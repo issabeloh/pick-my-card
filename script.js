@@ -1,6 +1,6 @@
 // Global variables
 let currentUser = null;
-let userSelectedCards = new Set();
+let cardsInComparison = new Set();
 let userSelectedPayments = new Set();
 let userSpendingMappings = []; // 用戶的消費配卡表
 let auth = null;
@@ -933,7 +933,7 @@ function handleQuickSearch(option) {
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
             cardsData.cards;
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
@@ -1327,7 +1327,7 @@ function populateCardChips() {
 
     // Show cards based on user selection or all cards if not logged in
     const cardsToShow = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     cardsToShow.forEach(card => {
@@ -1564,7 +1564,7 @@ function handleMerchantInput() {
     if (matchedItems && matchedItems.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = currentUser ?
-            cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+            cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
             cardsData.cards;
         showMatchedItem(matchedItems, input, cardsToCompare);
         currentMatchedItem = matchedItems; // Now stores array of matches
@@ -2076,7 +2076,7 @@ async function calculateCashback() {
 
     // Show loading for operations that might take time
     const cardsToCompareCount = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)).length :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)).length :
         cardsData.cards.length;
 
     // Only show loading if comparing many cards or multiple matched items
@@ -2109,7 +2109,7 @@ async function calculateCashback() {
 
     // Get cards to compare (user selected or all)
     const cardsToCompare = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     console.log(`比較 ${cardsToCompare.length} 張卡片`);
@@ -3442,7 +3442,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
 
     // Get cards to check (user selected or all)
     const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     // Collect all coupon cashbacks that match the merchant
@@ -4002,7 +4002,7 @@ function initializeAuthListeners() {
             }
 
             // Load user's selected cards and payments using unified data
-            await loadUserCards(userData);
+            await loadCardsInComparison(userData);
             await loadUserPayments(userData);
             await loadSpendingMappings();
 
@@ -4019,7 +4019,7 @@ function initializeAuthListeners() {
             // User is signed out
             console.log('User signed out');
             currentUser = null;
-            userSelectedCards.clear();
+            cardsInComparison.clear();
             userSelectedPayments.clear();
             userSpendingMappings = [];
             userBirthdayMonth = null;
@@ -4173,26 +4173,29 @@ async function loadUserData() {
     return null;
 }
 
-// Load user's selected cards from Firestore (with localStorage fallback)
-// Now accepts optional userData parameter to avoid redundant Firestore calls
-async function loadUserCards(userData = null) {
+// Load user's cards-in-comparison from Firestore (with localStorage fallback)
+// Reads new field `cardsInComparison` first; falls back to legacy `selectedCards` for migration.
+// Accepts optional userData parameter to avoid redundant Firestore calls.
+async function loadCardsInComparison(userData = null) {
     if (!currentUser) {
         console.log('No current user, using all cards');
-        userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        cardsInComparison = new Set(cardsData.cards.map(card => card.id));
         return;
     }
 
+    const newKey = `cardsInComparison_${currentUser.uid}`;
+    const legacyKey = `selectedCards_${currentUser.uid}`;
+
     try {
         // Use provided userData if available (from unified load)
-        if (userData && userData.selectedCards) {
-            const cloudCards = userData.selectedCards;
-            userSelectedCards = new Set(cloudCards);
-            console.log('✅ Using user cards from unified data load:', Array.from(userSelectedCards));
-
-            // Sync to localStorage for offline use
-            const storageKey = `selectedCards_${currentUser.uid}`;
-            localStorage.setItem(storageKey, JSON.stringify(cloudCards));
-            return;
+        if (userData) {
+            const cloudCards = userData.cardsInComparison || userData.selectedCards;
+            if (cloudCards) {
+                cardsInComparison = new Set(cloudCards);
+                console.log('✅ Using cards-in-comparison from unified data load:', Array.from(cardsInComparison));
+                localStorage.setItem(newKey, JSON.stringify(cloudCards));
+                return;
+            }
         }
 
         // Fallback: Try to load from Firestore if userData not provided
@@ -4200,64 +4203,63 @@ async function loadUserCards(userData = null) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
 
-            if (docSnap.exists() && docSnap.data().selectedCards) {
-                const cloudCards = docSnap.data().selectedCards;
-                userSelectedCards = new Set(cloudCards);
-                console.log('✅ Loaded user cards from Firestore:', Array.from(userSelectedCards));
-
-                // Sync to localStorage for offline use
-                const storageKey = `selectedCards_${currentUser.uid}`;
-                localStorage.setItem(storageKey, JSON.stringify(cloudCards));
-                return;
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const cloudCards = data.cardsInComparison || data.selectedCards;
+                if (cloudCards) {
+                    cardsInComparison = new Set(cloudCards);
+                    console.log('✅ Loaded cards-in-comparison from Firestore:', Array.from(cardsInComparison));
+                    localStorage.setItem(newKey, JSON.stringify(cloudCards));
+                    return;
+                }
             }
         }
 
-        // Fallback to localStorage if Firestore fails or no data
-        const storageKey = `selectedCards_${currentUser.uid}`;
-        const savedCards = localStorage.getItem(storageKey);
+        // Fallback to localStorage (try new key first, then legacy)
+        const savedCards = localStorage.getItem(newKey) || localStorage.getItem(legacyKey);
 
         if (savedCards) {
-            userSelectedCards = new Set(JSON.parse(savedCards));
-            console.log('📦 Loaded user cards from localStorage (fallback):', Array.from(userSelectedCards));
+            cardsInComparison = new Set(JSON.parse(savedCards));
+            console.log('📦 Loaded cards-in-comparison from localStorage (fallback):', Array.from(cardsInComparison));
         } else {
             // First time user - select all cards by default
             console.log('🆕 First time user, selecting all cards');
-            userSelectedCards = new Set(cardsData.cards.map(card => card.id));
-            saveUserCards();
+            cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+            saveCardsInComparison();
         }
     } catch (error) {
-        console.error('❌ Error loading user cards:', error);
+        console.error('❌ Error loading cards-in-comparison:', error);
         // Default to all cards if error
-        userSelectedCards = new Set(cardsData.cards.map(card => card.id));
+        cardsInComparison = new Set(cardsData.cards.map(card => card.id));
     }
 }
 
-// Save user's selected cards to localStorage and Firestore
-async function saveUserCards() {
+// Save cards-in-comparison to localStorage and Firestore
+async function saveCardsInComparison() {
     if (!currentUser) {
         console.log('No user logged in, skipping save');
         return;
     }
 
-    const cardsArray = Array.from(userSelectedCards);
+    const cardsArray = Array.from(cardsInComparison);
 
     try {
         // Save to localStorage as backup
-        const storageKey = `selectedCards_${currentUser.uid}`;
+        const storageKey = `cardsInComparison_${currentUser.uid}`;
         localStorage.setItem(storageKey, JSON.stringify(cardsArray));
-        console.log('✅ Saved user cards to localStorage:', cardsArray);
+        console.log('✅ Saved cards-in-comparison to localStorage:', cardsArray);
 
         // Save to Firestore for cross-device sync
         if (window.db && window.doc && window.setDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             await window.setDoc(docRef, {
-                selectedCards: cardsArray,
+                cardsInComparison: cardsArray,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
-            console.log('☁️ Synced user cards to Firestore:', cardsArray);
+            console.log('☁️ Synced cards-in-comparison to Firestore:', cardsArray);
         }
     } catch (error) {
-        console.error('Error saving user cards:', error);
+        console.error('Error saving cards-in-comparison:', error);
         // Don't throw error - at least localStorage is saved
     }
 }
@@ -4307,8 +4309,8 @@ function setupManageCardsModal() {
         }
 
         // Update and save
-        userSelectedCards = newSelection;
-        await saveUserCards();
+        cardsInComparison = newSelection;
+        await saveCardsInComparison();
 
         // Update UI immediately
         populateCardChips();
@@ -4466,7 +4468,7 @@ function openManageCardsModal() {
     const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedCards.forEach(card => {
-        const isSelected = userSelectedCards.has(card.id);
+        const isSelected = cardsInComparison.has(card.id);
 
         const cardDiv = document.createElement('div');
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
@@ -4504,7 +4506,7 @@ function openManageCardsModal() {
         toggleAllBtn.style.cursor = 'pointer';
 
         // Update toggle button state
-        const allSelected = sortedCards.every(card => userSelectedCards.has(card.id));
+        const allSelected = sortedCards.every(card => cardsInComparison.has(card.id));
         toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
     }
 
@@ -6155,7 +6157,7 @@ window.toggleConditions = toggleConditions;
 let currentNotesCardId = null;
 let lastSavedNotes = new Map(); // 記錄每張卡最後儲存的內容
 
-// 讀取用戶筆記 (註: 筆記僅依賴cardId，與userSelectedCards狀態無關)
+// 讀取用戶筆記 (註: 筆記僅依賴cardId，與cardsInComparison狀態無關)
 async function loadUserNotes(cardId) {
     const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
     
@@ -7525,7 +7527,7 @@ async function showPaymentDetail(paymentId) {
 
     // Get matching cards for this payment
     const cardsToCheck = currentUser ?
-        cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+        cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
         cardsData.cards;
 
     let matchingCards = [];
@@ -7659,7 +7661,7 @@ async function showComparePaymentsModal() {
 
         for (const payment of paymentsToCompare) {
             const cardsToCheck = currentUser ?
-                cardsData.cards.filter(card => userSelectedCards.has(card.id)) :
+                cardsData.cards.filter(card => cardsInComparison.has(card.id)) :
                 cardsData.cards;
 
             let matchingCards = [];
