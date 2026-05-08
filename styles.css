@@ -1531,8 +1531,8 @@ input[type="number"]:focus {
    ========================================== */
 .show-promos-toggle {
     margin-top: 8px;
-    font-size: 13px;
-    color: #374151;
+    font-size: 11px;
+    color: #6b7280;
     user-select: none;
 }
 
