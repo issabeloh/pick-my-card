@@ -1564,43 +1564,22 @@ input[type="number"]:focus {
     background: #6b7280;
 }
 
-/* Wrapper for help button + popup so :hover / :focus-within target both */
-.promo-help-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-/* Floating popup — desktop hover or click .open class (mobile) */
-.promo-help-popup {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 999999999;
-    width: max-content;
-    max-width: 320px;
-    margin-top: 4px;
-    background: #f0f9ff;
+/* Popover-based help — renders in browser top layer (escapes z-index/stacking) */
+.promo-help-popup[popover] {
+    /* Reset UA popover defaults */
+    margin: 0;
     border: 1px solid #bae6fd;
+    background: #f0f9ff;
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 13px;
     line-height: 1.5;
     color: #0c4a6e;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Pointer-capable devices (desktop): hover shows popup */
-@media (hover: hover) and (pointer: fine) {
-    .promo-help-wrap:hover .promo-help-popup {
-        display: block;
-    }
-}
-
-/* Mobile / explicit toggle */
-.promo-help-popup.open {
-    display: block;
+    max-width: 320px;
+    width: max-content;
+    /* JS sets top/left when opening; default position fallback below */
+    inset: auto;
 }
 
 .show-promos-toggle,

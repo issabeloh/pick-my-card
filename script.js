@@ -3608,32 +3608,51 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Tap "?" toggles popup .open class (works on all devices).
-    // Desktop additionally has CSS :hover on the wrapper for pointer:fine devices.
+    // Help "?" uses native Popover API: top-layer rendering bypasses any
+    // ancestor stacking context, and outside-click + Esc are handled by the browser.
+    // The popovertarget attribute handles click-to-toggle automatically.
+    // We only need to (a) position the popup beneath its button on open,
+    // and (b) on hover-capable devices, also open/close on mouseenter/leave.
+    const hoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
     document.querySelectorAll('.promo-help-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const popup = btn.parentElement.querySelector('.promo-help-popup');
-            if (!popup) return;
-            const wasOpen = popup.classList.contains('open');
-            // Close any other open popups first
-            document.querySelectorAll('.promo-help-popup.open').forEach(p => {
-                if (p !== popup) p.classList.remove('open');
-            });
-            if (wasOpen) {
-                popup.classList.remove('open');
-                btn.blur();
-            } else {
-                popup.classList.add('open');
+        const popupId = btn.getAttribute('popovertarget');
+        const popup = popupId && document.getElementById(popupId);
+        if (!popup) return;
+
+        // Position the popup just under the button each time it opens
+        popup.addEventListener('toggle', (e) => {
+            if (e.newState !== 'open') return;
+            const rect = btn.getBoundingClientRect();
+            popup.style.position = 'fixed';
+            popup.style.top = `${rect.bottom + 4}px`;
+            popup.style.left = `${rect.left}px`;
+            // Keep it on screen if near the right edge
+            const popupRect = popup.getBoundingClientRect();
+            const overflow = popupRect.right - window.innerWidth;
+            if (overflow > 0) {
+                popup.style.left = `${Math.max(8, rect.left - overflow - 8)}px`;
             }
         });
-    });
 
-    // Outside click → close all popups
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.promo-help-wrap')) return;
-        document.querySelectorAll('.promo-help-popup.open').forEach(p => p.classList.remove('open'));
+        // Desktop hover: show on mouseenter, hide on mouseleave (button or popup)
+        if (hoverCapable) {
+            let leaveTimer = null;
+            const cancelLeave = () => { if (leaveTimer) { clearTimeout(leaveTimer); leaveTimer = null; } };
+            const scheduleHide = () => {
+                cancelLeave();
+                leaveTimer = setTimeout(() => {
+                    if (popup.matches(':popover-open')) popup.hidePopover();
+                }, 80);
+            };
+            btn.addEventListener('mouseenter', () => {
+                cancelLeave();
+                if (!popup.matches(':popover-open')) popup.showPopover();
+            });
+            btn.addEventListener('mouseleave', scheduleHide);
+            popup.addEventListener('mouseenter', cancelLeave);
+            popup.addEventListener('mouseleave', scheduleHide);
+        }
     });
 }
 
