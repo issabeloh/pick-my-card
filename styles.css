@@ -1541,6 +1541,14 @@ input[type="number"]:focus {
     align-items: center;
     gap: 6px;
     cursor: pointer;
+    /* Override base label rule (font-weight 600, margin-bottom 14px) */
+    font-size: 11px;
+    font-weight: 400;
+    color: #6b7280;
+    margin-bottom: 0;
+    line-height: 1.4;
+    visibility: visible;
+    height: auto;
 }
 
 .show-promos-toggle input[type="checkbox"] {
@@ -1555,6 +1563,12 @@ input[type="number"]:focus {
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
     .show-promos-mobile { display: block; margin-bottom: 8px; }
+    /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
+    .button-group .show-promos-toggle label {
+        height: auto;
+        line-height: 1.4;
+        margin-bottom: 0;
+    }
 }
 
 /* ==========================================
