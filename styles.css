@@ -1834,10 +1834,11 @@ input[type="number"]:focus {
 
 .search-modal-input {
     flex: 1;
-    padding: 8px 12px;
+    padding: 5px 10px;
     border: 2px solid #e5e7eb;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.4;
     transition: border-color 0.2s ease;
 }
 
@@ -1849,6 +1850,14 @@ input[type="number"]:focus {
 
 .search-modal-input::placeholder {
     color: #9ca3af;
+    font-size: 12px;
+}
+
+.modal-action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
 }
 
 .toggle-all-btn {
