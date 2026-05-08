@@ -38,7 +38,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260508141702">
+    <link rel="stylesheet" href="styles.css?v=20260508142107">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -403,10 +403,12 @@
                                 <input type="checkbox" id="show-promos-toggle-desktop">
                                 新戶活動
                             </label>
-                            <button type="button" class="promo-help-btn" id="promo-help-btn-desktop" aria-label="說明">?</button>
-                            <div class="promo-help-popup" id="promo-help-popup-desktop">
-                                如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                            </div>
+                            <span class="promo-help-wrap">
+                                <button type="button" class="promo-help-btn" id="promo-help-btn-desktop" aria-label="說明">?</button>
+                                <div class="promo-help-popup" id="promo-help-popup-desktop">
+                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                                </div>
+                            </span>
                         </div>
                     </div>
 
@@ -418,10 +420,12 @@
                                 <input type="checkbox" id="show-promos-toggle-mobile">
                                 新戶活動
                             </label>
-                            <button type="button" class="promo-help-btn" id="promo-help-btn-mobile" aria-label="說明">?</button>
-                            <div class="promo-help-popup" id="promo-help-popup-mobile">
-                                如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                            </div>
+                            <span class="promo-help-wrap">
+                                <button type="button" class="promo-help-btn" id="promo-help-btn-mobile" aria-label="說明">?</button>
+                                <div class="promo-help-popup" id="promo-help-popup-mobile">
+                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                                </div>
+                            </span>
                         </div>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
                     </div>
@@ -879,7 +883,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260508141702" defer></script>
+    <script src="script.js?v=20260508142107" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>

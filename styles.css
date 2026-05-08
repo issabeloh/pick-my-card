@@ -1564,7 +1564,14 @@ input[type="number"]:focus {
     background: #6b7280;
 }
 
-/* Floating popup — shown on hover of the help button (or the popup itself) */
+/* Wrapper for help button + popup so :hover / :focus-within target both */
+.promo-help-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Floating popup — shown on hover or focus-within of the wrapper */
 .promo-help-popup {
     display: none;
     position: absolute;
@@ -1584,8 +1591,8 @@ input[type="number"]:focus {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.promo-help-btn:hover + .promo-help-popup,
-.promo-help-popup:hover {
+.promo-help-wrap:hover .promo-help-popup,
+.promo-help-wrap:focus-within .promo-help-popup {
     display: block;
 }
 

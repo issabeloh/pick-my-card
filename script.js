@@ -3589,7 +3589,8 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 let showCardholderPromos = false;
 
 // Wire both desktop and mobile checkboxes; keep them in sync.
-// Help popup show/hide is pure CSS hover (.promo-help-btn:hover + .promo-help-popup).
+// Help popup is shown via CSS (:hover or :focus-within on .promo-help-wrap).
+// On touch, tapping outside the wrap blurs the help button so the popup hides.
 function setupCardholderPromoToggle() {
     const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
     const onChange = (e) => {
@@ -3605,6 +3606,15 @@ function setupCardholderPromoToggle() {
     ids.forEach(id => {
         const cb = document.getElementById(id);
         if (cb) cb.addEventListener('change', onChange);
+    });
+
+    // Close help popup on outside tap/click by blurring the focused help button
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.promo-help-wrap')) return;
+        const active = document.activeElement;
+        if (active && active.classList && active.classList.contains('promo-help-btn')) {
+            active.blur();
+        }
     });
 }
 
