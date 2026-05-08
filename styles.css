@@ -585,7 +585,7 @@ main {
 /* Quick Search Wrapper */
 .quick-search-wrapper {
     position: relative;
-    margin-top: 12px;
+    margin-top: 0;
     width: 100%;
     max-width: 100%;
     display: flex;
@@ -1538,7 +1538,7 @@ input[type="number"]:focus {
 
 .show-promos-toggle,
 .show-promos-toggle label {
-    font-size: 11px !important;
+    font-size: 14px !important;
     font-weight: 400 !important;
 }
 
@@ -1565,7 +1565,7 @@ input[type="number"]:focus {
 
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 6px; }
+    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 20px; }
     /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
     .button-group .show-promos-toggle label {
         height: auto;
