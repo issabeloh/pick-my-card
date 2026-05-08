@@ -3764,7 +3764,7 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     if (promo.voucher_amount) {
         rows.push({
             label: '定額回饋',
-            value: `NT$${promo.voucher_amount}`,
+            value: `NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`,
             extra: promo.voucher_usage || ''
         });
     }
@@ -3880,22 +3880,43 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? matchedMerchants.join('、')
         : '不限通路';
 
-    const highlightRowsHtml = rows.map(r => `
+    const renderRow = (r) => `
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
             <div class="detail-value">
                 <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? ' ' + escapeHtml(r.extra) : ''}
             </div>
         </div>
-    `).join('');
+    `;
+    const renderPlainRow = (label, value) => `
+        <div class="detail-item">
+            <div class="detail-label">${escapeHtml(label)}</div>
+            <div class="detail-value">${escapeHtml(value)}</div>
+        </div>
+    `;
 
-    // Show 回饋消費上限 row only when bonus_cap is set on this promo
-    const capRowHtml = (typeof promo.bonus_cap === 'number')
-        ? `<div class="detail-item">
-            <div class="detail-label">回饋消費上限</div>
-            <div class="detail-value">NT$${promo.bonus_cap.toLocaleString()}</div>
-        </div>`
-        : '';
+    // Group rows: gift / voucher are full-width; bonus_rate pairs side-by-side
+    // with the bonus_cap row when both exist.
+    const bonusRateRow = rows.find(r => r.label === '回饋率');
+    const fullWidthRows = rows.filter(r => r !== bonusRateRow);
+    const hasCap = typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap);
+    const capValue = hasCap ? `NT$${Math.round(Number(promo.bonus_cap)).toLocaleString()}` : '';
+
+    const fullWidthHtml = fullWidthRows.map(renderRow).join('');
+    let bonusGroupHtml = '';
+    if (bonusRateRow && hasCap) {
+        bonusGroupHtml = `<div class="promo-bonus-row">
+            ${renderRow(bonusRateRow)}
+            ${renderPlainRow('回饋消費上限', capValue)}
+        </div>`;
+    } else if (bonusRateRow) {
+        bonusGroupHtml = renderRow(bonusRateRow);
+    } else if (hasCap) {
+        bonusGroupHtml = renderPlainRow('回饋消費上限', capValue);
+    }
+
+    const highlightRowsHtml = fullWidthHtml + bonusGroupHtml;
+    const capRowHtml = '';  // already merged into bonusGroupHtml above
 
     const cardHeaderHtml = opts.hideCardName ? '' : `
         <div class="card-header">

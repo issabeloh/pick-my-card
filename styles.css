@@ -1689,6 +1689,18 @@ input[type="number"]:focus {
     margin-bottom: 8px;
 }
 
+/* Pair bonus rate (回饋率) and bonus cap (回饋消費上限) side-by-side */
+.cardholder-promo-item .promo-bonus-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 8px;
+}
+
+.cardholder-promo-item .promo-bonus-row > .detail-item {
+    flex: 1;
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     .cardholder-promos-container {
         grid-template-columns: 1fr;
