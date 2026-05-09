@@ -3995,6 +3995,75 @@ function escapeHtml(s) {
         .replace(/'/g, '&#039;');
 }
 
+// Sticky nav inside the card detail modal: hide buttons whose section is
+// missing or empty, smooth-scroll on click, highlight active section.
+let _cardDetailNavObserver = null;
+function setupCardDetailNav(modalContent) {
+    const nav = document.getElementById('card-detail-nav');
+    if (!nav || !modalContent) return;
+
+    const buttons = Array.from(nav.querySelectorAll('.card-detail-nav-btn'));
+
+    // Disconnect any prior observer (modal opens once per card, but be safe)
+    if (_cardDetailNavObserver) {
+        _cardDetailNavObserver.disconnect();
+        _cardDetailNavObserver = null;
+    }
+
+    // Hide buttons whose section is missing, has display:none, or has no real content
+    const visibleSections = [];
+    buttons.forEach(btn => {
+        const id = btn.dataset.section;
+        const section = id && document.getElementById(id);
+        const hasContent = section && section.offsetParent !== null && section.textContent.trim().length > 0;
+        btn.hidden = !hasContent;
+        btn.classList.remove('active');
+        if (hasContent) visibleSections.push({ btn, section });
+    });
+
+    if (visibleSections.length === 0) return;
+
+    // Click → smooth-scroll the modal-content so section sits just under the sticky nav
+    buttons.forEach(btn => {
+        btn.onclick = () => {
+            const section = document.getElementById(btn.dataset.section);
+            if (!section) return;
+            const navHeight = nav.offsetHeight;
+            const targetTop = section.offsetTop - navHeight - 8;
+            modalContent.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        };
+    });
+
+    // Highlight the section currently in view (whichever is closest to the
+    // top of the scroll viewport, accounting for the sticky nav height).
+    const updateActive = () => {
+        const navHeight = nav.offsetHeight;
+        const containerTop = modalContent.getBoundingClientRect().top;
+        let current = visibleSections[0];
+        for (const s of visibleSections) {
+            const top = s.section.getBoundingClientRect().top - containerTop - navHeight - 4;
+            if (top <= 0) current = s;
+            else break;
+        }
+        buttons.forEach(b => b.classList.remove('active'));
+        if (current) current.btn.classList.add('active');
+    };
+
+    // Throttle scroll handler with rAF
+    let ticking = false;
+    const onScroll = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { updateActive(); ticking = false; });
+    };
+    modalContent.removeEventListener('scroll', modalContent._cardDetailNavScroll || (() => {}));
+    modalContent._cardDetailNavScroll = onScroll;
+    modalContent.addEventListener('scroll', onScroll, { passive: true });
+
+    // Initial active state
+    updateActive();
+}
+
 // Render new cardholder promos in the card detail modal.
 // Hidden entirely (header included) when user owns this card.
 function renderCardDetailPromos(card) {
@@ -6407,6 +6476,9 @@ basicCashbackDiv.innerHTML = basicContent;
     // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
+
+    // Wire the sticky section nav after sections are rendered.
+    setupCardDetailNav(modalContent);
 
     // Setup close events
     const closeBtn = document.getElementById('close-card-detail');

@@ -38,7 +38,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260508164424">
+    <link rel="stylesheet" href="styles.css?v=20260509045237">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -663,8 +663,18 @@
                     <h3 id="card-detail-title">卡片詳情</h3>
                     <button class="close-modal" id="close-card-detail">&times;</button>
                 </div>
+                <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->
+                <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
+                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-notes-section">我的筆記</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
+                </nav>
                 <div class="modal-body">
-                    <div class="card-info-section">
+                    <div class="card-info-section" id="card-basic-info-section">
                         <div class="info-grid-2col">
                             <div class="info-column-left">
                                 <div class="info-item">
@@ -707,7 +717,7 @@
                     </div>
                     
                     <!-- 用戶筆記區域 -->
-                    <div class="card-info-section user-notes-section">
+                    <div class="card-info-section user-notes-section" id="card-notes-section">
                         <h4>📝 我的筆記</h4>
                         <div class="user-notes-container">
                             <div class="notes-input-row">
@@ -724,7 +734,7 @@
                         </div>
                     </div>
 
-                    <div class="card-info-section">
+                    <div class="card-info-section" id="card-special-section">
                         <h4>指定通路回饋</h4>
                         <input type="text" id="cashback-search-input" class="cashback-search-input"
                                placeholder="🔍 搜尋通路或方案（如：全聯、童樂匯）"
@@ -740,7 +750,7 @@
                         <div id="card-upcoming-cashback"></div>
                     </div>
 
-                    <div class="card-info-section">
+                    <div class="card-info-section" id="card-basic-cashback-section">
                         <h4>一般回饋</h4>
                         <div id="card-basic-cashback"></div>
                     </div>
@@ -890,7 +900,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260508164424" defer></script>
+    <script src="script.js?v=20260509045237" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
