@@ -1673,10 +1673,25 @@ input[type="number"]:focus {
    styling so they look consistent with the regular comparison results. */
 .cardholder-promo-item .promo-summary {
     color: #111827;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
     line-height: 1.5;
     margin-top: 12px;
     margin-bottom: 16px;
+}
+
+/* Spacing between promo cards in the detail page section */
+#card-promos-content .cardholder-promo-item + .cardholder-promo-item {
+    margin-top: 16px;
+}
+
+/* Parking benefits in detail page: condition lines black + bold;
+   blue rate banner becomes plain blue text without background. */
+#card-benefits-section .cashback-condition {
+    color: #111827;
+    font-weight: 700;
+    font-style: normal;
+    font-size: 13px;
 }
 
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each

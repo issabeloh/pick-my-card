@@ -6354,7 +6354,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             cardBenefits.forEach(benefit => {
                 benefitsHtml += `<div class="cashback-detail-item">`;
-                benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
+                benefitsHtml += `<div class="cashback-rate" style="color: #2563eb; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
 
                 if (benefit.merchants && benefit.merchants.length > 0) {
                     benefitsHtml += `<div class="cashback-condition">地點: <strong style="color: #000000;">${benefit.merchants.join('、')}</strong></div>`;
