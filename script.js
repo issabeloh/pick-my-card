@@ -1690,7 +1690,8 @@ const fuzzySearchMap = {
     'google 廣告': 'google廣告',
     'google ads': 'google廣告',
     'abc mart': 'abc-mart',
-    'MAC': 'M.A.C'
+    'MAC': 'M.A.C',
+    'nitori': '宜得利'
 };
 
 // Search term exclusion rules - prevents unwanted matches
