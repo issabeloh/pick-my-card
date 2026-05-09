@@ -3972,6 +3972,14 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             </div>
         </div>`;
 
+    // Detail page shows extra context (notes / official link); search results don't
+    const notesHtml = (opts.showExtras && promo.notes)
+        ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
+        : '';
+    const linkHtml = (opts.showExtras && promo.link)
+        ? `<div class="matched-merchant"><a href="${escapeHtml(promo.link)}" target="_blank" rel="noopener noreferrer">官網連結</a></div>`
+        : '';
+
     el.innerHTML = `
         ${cardHeaderHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
@@ -3981,6 +3989,8 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         </div>
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
+        ${notesHtml}
+        ${linkHtml}
     `;
     return el;
 }
@@ -4108,7 +4118,7 @@ function renderCardDetailPromos(card) {
             }
         }
 
-        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true });
+        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true, showExtras: true });
         fragment.appendChild(el);
     });
 
@@ -6401,7 +6411,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             cardBenefits.forEach(benefit => {
                 benefitsHtml += `<div class="cashback-detail-item">`;
-                benefitsHtml += `<div class="cashback-rate" style="background: #2563eb; color: white; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
+                benefitsHtml += `<div class="cashback-rate" style="color: #2563eb; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
 
                 if (benefit.merchants && benefit.merchants.length > 0) {
                     benefitsHtml += `<div class="cashback-condition">地點: <strong style="color: #000000;">${benefit.merchants.join('、')}</strong></div>`;
