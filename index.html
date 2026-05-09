@@ -38,7 +38,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260508165008">
+    <link rel="stylesheet" href="styles.css?v=20260509045237">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -663,18 +663,17 @@
                     <h3 id="card-detail-title">卡片詳情</h3>
                     <button class="close-modal" id="close-card-detail">&times;</button>
                 </div>
+                <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->
+                <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
+                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-notes-section">我的筆記</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
+                </nav>
                 <div class="modal-body">
-                    <!-- Sticky 跳轉列 -->
-                    <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
-                        <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-notes-section">我的筆記</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
-                        <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
-                    </nav>
-
                     <div class="card-info-section" id="card-basic-info-section">
                         <div class="info-grid-2col">
                             <div class="info-column-left">
@@ -901,7 +900,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260508165008" defer></script>
+    <script src="script.js?v=20260509045237" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
