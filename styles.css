@@ -1618,9 +1618,9 @@ input[type="number"]:focus {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    font-size: 11px;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     display: inline-flex;
@@ -1629,6 +1629,10 @@ input[type="number"]:focus {
     transition: background-color 0.2s;
     padding: 0;
     line-height: 1;
+    flex-shrink: 0;
+    /* Slight nudge so the optical center aligns with the label text */
+    position: relative;
+    top: 1px;
 }
 
 .promo-help-btn:hover {
@@ -1717,13 +1721,56 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
-/* Parking benefits in detail page: condition lines black + bold;
-   blue rate banner becomes plain blue text without background. */
-#card-benefits-section .cashback-condition {
+/* Parking benefits in detail page: 地點 / 條件 lines render bold + black;
+   期限 / 備註 keep the default muted italic style of .cashback-condition.
+   Blue rate banner uses plain bold blue text (no background). */
+#card-benefits-section .cashback-condition.parking-strong-line {
     color: #111827;
     font-weight: 700;
     font-style: normal;
     font-size: 13px;
+}
+
+/* Promo type chips on the detail-page promo card */
+.promo-type-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.promo-type-chip {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+    border: 1px solid transparent;
+}
+
+.promo-type-chip.promo-type-gift {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: #fcd34d;
+}
+
+.promo-type-chip.promo-type-bonus {
+    background: #d1fae5;
+    color: #065f46;
+    border-color: #6ee7b7;
+}
+
+.promo-type-chip.promo-type-voucher {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
+}
+
+.promo-type-chip.promo-type-default {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
 }
 
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
