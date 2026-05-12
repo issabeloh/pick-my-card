@@ -3933,8 +3933,18 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `<div class="matched-merchant"><a href="${escapeHtml(promo.link)}" target="_blank" rel="noopener noreferrer">官網連結</a></div>`
         : '';
 
+    // Promo type chips (detail page only) — quick visual category at top of card
+    let chipsHtml = '';
+    if (opts.showExtras && Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
+        const chips = promo.promo_types
+            .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
+            .join('');
+        chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
+    }
+
     el.innerHTML = `
         ${cardHeaderHtml}
+        ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
         <div class="card-details">
             ${highlightRowsHtml}
@@ -3946,6 +3956,14 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ${linkHtml}
     `;
     return el;
+}
+
+// Map a promo type label (贈品 / 回饋加碼 / 定額抵用) to a CSS modifier
+function promoTypeClass(label) {
+    if (label === '贈品') return 'gift';
+    if (label === '回饋加碼') return 'bonus';
+    if (label === '定額抵用' || label === '定額回饋') return 'voucher';
+    return 'default';
 }
 
 function escapeHtml(s) {
@@ -6367,11 +6385,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 benefitsHtml += `<div class="cashback-rate" style="color: #2563eb; margin-bottom: 8px;">${benefit.benefit_desc}</div>`;
 
                 if (benefit.merchants && benefit.merchants.length > 0) {
-                    benefitsHtml += `<div class="cashback-condition">地點: <strong style="color: #000000;">${benefit.merchants.join('、')}</strong></div>`;
+                    benefitsHtml += `<div class="cashback-condition parking-strong-line">地點: ${benefit.merchants.join('、')}</div>`;
                 }
 
                 if (benefit.conditions) {
-                    benefitsHtml += `<div class="cashback-condition">條件: ${benefit.conditions}</div>`;
+                    benefitsHtml += `<div class="cashback-condition parking-strong-line">條件: ${benefit.conditions}</div>`;
                 }
 
                 if (benefit.benefit_period) {
