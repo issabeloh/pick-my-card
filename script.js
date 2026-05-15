@@ -3779,6 +3779,39 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
 
 // Format bonus_rate for display: handle both '10%' strings and 0.1 decimals
 // (Google Sheets percentage cells come through Apps Script as decimal numbers).
+// Convert a promo bonus_rate to a decimal multiplier (0.1 for 10%).
+// Accepts numbers (0.1 or 10) or strings ("10%", "10", "0.1").
+function promoBonusRateToDecimal(rate) {
+    if (rate == null || rate === '') return null;
+    let n;
+    if (typeof rate === 'number') {
+        n = rate;
+    } else {
+        const s = String(rate).trim().replace('%', '');
+        n = parseFloat(s);
+    }
+    if (isNaN(n)) return null;
+    return n < 1 ? n : n / 100;
+}
+
+// Compute bonus cashback amount for a promo given the consumption amount.
+// bonus_cap is a spend cap (回饋消費上限): spend above the cap earns only the
+// card's basicCashback rate, matching how regular / designated-merchant rewards
+// are calculated elsewhere.
+function computePromoBonusAmount(promo, card, amount) {
+    const rate = promoBonusRateToDecimal(promo.bonus_rate);
+    if (rate == null || rate <= 0) return null;
+    const amt = Number(amount);
+    if (!isFinite(amt) || amt <= 0) return null;
+    const hasCap = typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap);
+    const cap = hasCap ? Number(promo.bonus_cap) : Infinity;
+    const eligibleSpend = Math.min(amt, cap);
+    const excessSpend = Math.max(0, amt - cap);
+    const basicRate = (card && typeof card.basicCashback === 'number') ? card.basicCashback / 100 : 0;
+    const cashback = eligibleSpend * rate + excessSpend * basicRate;
+    return Math.round(cashback);
+}
+
 function formatBonusRate(rate) {
     if (rate == null || rate === '') return '';
     if (typeof rate === 'number') {
@@ -3892,7 +3925,7 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
                 return expandedTerms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
             });
 
-            const el = createCardholderPromoElement(card, promo, rows, matchedMerchants);
+            const el = createCardholderPromoElement(card, promo, rows, matchedMerchants, { amount });
             fragment.appendChild(el);
             renderedCount++;
         });
@@ -3950,15 +3983,30 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const hasCap = typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap);
     const capValue = hasCap ? `NT$${Math.round(Number(promo.bonus_cap)).toLocaleString()}` : '';
 
+    // Search-result mode: compute and show the bonus cashback amount between rate and cap.
+    const showAmount = !opts.showExtras && bonusRateRow;
+    let amountRowHtml = '';
+    if (showAmount) {
+        const amt = computePromoBonusAmount(promo, card, opts.amount);
+        if (amt != null) {
+            amountRowHtml = `
+                <div class="detail-item">
+                    <div class="detail-label">回饋金額</div>
+                    <div class="detail-value"><span class="cashback-amount">NT$${amt.toLocaleString()}</span></div>
+                </div>`;
+        }
+    }
+
     const fullWidthHtml = fullWidthRows.map(renderRow).join('');
     let bonusGroupHtml = '';
     if (bonusRateRow && hasCap) {
         bonusGroupHtml = `<div class="promo-bonus-row">
             ${renderRow(bonusRateRow)}
+            ${amountRowHtml}
             ${renderPlainRow('回饋消費上限', capValue)}
         </div>`;
     } else if (bonusRateRow) {
-        bonusGroupHtml = renderRow(bonusRateRow);
+        bonusGroupHtml = renderRow(bonusRateRow) + amountRowHtml;
     } else if (hasCap) {
         bonusGroupHtml = renderPlainRow('回饋消費上限', capValue);
     }
@@ -3981,16 +4029,23 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `<div class="matched-merchant"><a href="${escapeHtml(promo.link)}" target="_blank" rel="noopener noreferrer">官網連結</a></div>`
         : '';
 
-    // Promo type chips (detail page only) — quick visual category at top of card
+    // Promo type chips — detail page shows all types inline; search results show
+    // only the "回饋加碼" chip in the top-right corner.
     let chipsHtml = '';
-    if (opts.showExtras && Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
-        const chips = promo.promo_types
-            .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
-            .join('');
-        chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
+    let cornerChipHtml = '';
+    if (Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
+        if (opts.showExtras) {
+            const chips = promo.promo_types
+                .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
+                .join('');
+            chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
+        } else if (promo.promo_types.includes('回饋加碼')) {
+            cornerChipHtml = `<span class="promo-type-chip promo-type-bonus promo-type-chip-corner">回饋加碼</span>`;
+        }
     }
 
     el.innerHTML = `
+        ${cornerChipHtml}
         ${cardHeaderHtml}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
