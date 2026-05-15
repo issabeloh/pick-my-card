@@ -1723,11 +1723,12 @@ input[type="number"]:focus {
 
 /* Apply CTA: shown above promo cards. Text + arrow + yellow button hugged together with a yellow glow. */
 .card-apply-cta {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
     justify-content: flex-start;
-    gap: 8px;
+    column-gap: 8px;
+    row-gap: 14px;
     padding: 12px 14px;
     margin-bottom: 16px;
     background: #fffbea;
@@ -1737,11 +1738,13 @@ input[type="number"]:focus {
         0 0 0 4px rgba(250, 204, 21, 0.18),
         0 0 14px 2px rgba(250, 204, 21, 0.35),
         0 0 28px 4px rgba(234, 179, 8, 0.18);
+    max-width: 100%;
 }
 
 .card-apply-cta-text {
     flex: 0 1 auto;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
     color: #78350f;
     line-height: 1.5;
 }
@@ -1826,6 +1829,14 @@ input[type="number"]:focus {
     background: #f3f4f6;
     color: #374151;
     border-color: #e5e7eb;
+}
+
+/* Corner chip variant — positioned at the top-right of a search result card */
+.promo-type-chip.promo-type-chip-corner {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1;
 }
 
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
