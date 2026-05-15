@@ -4109,8 +4109,37 @@ function renderCardDetailPromos(card) {
     }
 
     const promos = getActiveCardholderPromos(card.id);
-    if (promos.length === 0) {
+    const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
+    const hasCta = !!(applyCta && (applyCta.text || applyCta.link));
+
+    if (promos.length === 0 && !hasCta) {
         section.style.display = 'none';
+        return;
+    }
+
+    // Render apply CTA (text + button) above the promo cards.
+    if (hasCta) {
+        const ctaEl = document.createElement('div');
+        ctaEl.className = 'card-apply-cta';
+        const textSpan = document.createElement('span');
+        textSpan.className = 'card-apply-cta-text';
+        textSpan.textContent = applyCta.text || '';
+        ctaEl.appendChild(textSpan);
+        if (applyCta.link) {
+            const btn = document.createElement('a');
+            btn.className = 'card-apply-cta-btn';
+            btn.href = applyCta.link;
+            btn.target = '_blank';
+            btn.rel = 'noopener noreferrer';
+            btn.textContent = '立即申辦';
+            ctaEl.appendChild(btn);
+        }
+        content.appendChild(ctaEl);
+    }
+
+    if (promos.length === 0) {
+        // CTA-only case: nothing more to render but keep section visible.
+        section.style.display = 'block';
         return;
     }
 
@@ -4142,7 +4171,11 @@ function renderCardDetailPromos(card) {
     });
 
     if (!fragment.hasChildNodes()) {
-        section.style.display = 'none';
+        if (hasCta) {
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
         return;
     }
 

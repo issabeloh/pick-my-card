@@ -1721,6 +1721,50 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
+/* Apply CTA: shown above promo cards. Text + yellow button on the same row. */
+.card-apply-cta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: #fffbea;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+}
+
+.card-apply-cta-text {
+    flex: 1 1 auto;
+    min-width: 180px;
+    font-size: 14px;
+    color: #78350f;
+    line-height: 1.5;
+}
+
+.card-apply-cta-btn {
+    flex: 0 0 auto;
+    display: inline-block;
+    padding: 8px 16px;
+    background: #facc15;
+    color: #422006;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 6px;
+    border: 1px solid #eab308;
+    transition: background-color 0.15s ease, transform 0.05s ease;
+    white-space: nowrap;
+}
+
+.card-apply-cta-btn:hover {
+    background: #eab308;
+}
+
+.card-apply-cta-btn:active {
+    transform: translateY(1px);
+}
+
 /* Parking benefits in detail page: 地點 / 條件 lines render bold + black;
    期限 / 備註 keep the default muted italic style of .cashback-condition.
    Blue rate banner uses plain bold blue text (no background). */
