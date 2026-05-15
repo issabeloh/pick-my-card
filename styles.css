@@ -1779,6 +1779,18 @@ input[type="number"]:focus {
     transform: translateY(1px);
 }
 
+/* Mobile: center the CTA box horizontally within the section. */
+@media (max-width: 768px) {
+    .card-apply-cta {
+        display: flex;
+        width: fit-content;
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        justify-content: center;
+    }
+}
+
 /* Parking benefits in detail page: 地點 / 條件 lines render bold + black;
    期限 / 備註 keep the default muted italic style of .cashback-condition.
    Blue rate banner uses plain bold blue text (no background). */
