@@ -3293,7 +3293,7 @@ function displayCashbackSites(searchedItem) {
     infoBlock.id = 'cashback-sites-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let html = `<div class="merchant-payment-title">＊ 也可透過導購網站加碼</div>`;
+    let html = `<div class="merchant-payment-title">＊ 也可透過導購網站享加碼回饋</div>`;
     if (shopbackMatch) {
         html += `<div class="merchant-payment-item"><a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
     }
@@ -4125,6 +4125,11 @@ function renderCardDetailPromos(card) {
         textSpan.className = 'card-apply-cta-text';
         textSpan.textContent = applyCta.text || '';
         ctaEl.appendChild(textSpan);
+        // SVG arrow keeps the glyph identical across OS / fonts.
+        const arrow = document.createElement('span');
+        arrow.className = 'card-apply-cta-arrow';
+        arrow.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        ctaEl.appendChild(arrow);
         if (applyCta.link) {
             const btn = document.createElement('a');
             btn.className = 'card-apply-cta-btn';
