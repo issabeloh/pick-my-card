@@ -3795,16 +3795,20 @@ function promoBonusRateToDecimal(rate) {
 }
 
 // Compute bonus cashback amount for a promo given the consumption amount.
-// Applies bonus_cap by capping the eligible spend at (cap / rate).
-function computePromoBonusAmount(promo, amount) {
+// bonus_cap is a spend cap (回饋消費上限): spend above the cap earns only the
+// card's basicCashback rate, matching how regular / designated-merchant rewards
+// are calculated elsewhere.
+function computePromoBonusAmount(promo, card, amount) {
     const rate = promoBonusRateToDecimal(promo.bonus_rate);
     if (rate == null || rate <= 0) return null;
     const amt = Number(amount);
     if (!isFinite(amt) || amt <= 0) return null;
-    let cashback = amt * rate;
-    if (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap)) {
-        cashback = Math.min(cashback, Number(promo.bonus_cap));
-    }
+    const hasCap = typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap);
+    const cap = hasCap ? Number(promo.bonus_cap) : Infinity;
+    const eligibleSpend = Math.min(amt, cap);
+    const excessSpend = Math.max(0, amt - cap);
+    const basicRate = (card && typeof card.basicCashback === 'number') ? card.basicCashback / 100 : 0;
+    const cashback = eligibleSpend * rate + excessSpend * basicRate;
     return Math.round(cashback);
 }
 
@@ -3983,7 +3987,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const showAmount = !opts.showExtras && bonusRateRow;
     let amountRowHtml = '';
     if (showAmount) {
-        const amt = computePromoBonusAmount(promo, opts.amount);
+        const amt = computePromoBonusAmount(promo, card, opts.amount);
         if (amt != null) {
             amountRowHtml = `
                 <div class="detail-item">
