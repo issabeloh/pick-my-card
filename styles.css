@@ -2290,6 +2290,11 @@ input[type="number"]:focus {
     gap: 6px;
 }
 
+.tag-filter-chips[hidden],
+.tag-filter-section.collapsed .tag-filter-chips {
+    display: none;
+}
+
 .tag-filter-chip {
     display: inline-flex;
     align-items: center;
@@ -5849,19 +5854,6 @@ input[type="number"]:focus {
     #feedback-modal .modal-content {
         max-height: 75vh;
         max-height: 75dvh;
-    }
-
-    /* Keep the modal header pinned alongside the sticky nav so the
-       two never overlap content while scrolling (iOS Chrome). */
-    #card-detail-modal .modal-header {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 11;
-    }
-
-    #card-detail-modal .card-detail-nav {
-        top: 0;
     }
 }
 
