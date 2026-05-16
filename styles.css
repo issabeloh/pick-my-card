@@ -5804,12 +5804,25 @@ input[type="number"]:focus {
     .header-content {
         flex: 1;
         min-width: 0;
-        text-align: center;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .header-logo {
+        height: 32px;
     }
 
     .header-content h1 {
-        font-size: 1.25rem;
-        margin-bottom: 0;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
     }
 
     header {
