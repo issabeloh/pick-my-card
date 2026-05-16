@@ -2247,17 +2247,49 @@ input[type="number"]:focus {
     border-radius: 8px;
 }
 
+.tag-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #374151;
+    font: inherit;
+}
+
+.tag-filter-section:not(.collapsed) .tag-filter-toggle {
+    margin-bottom: 8px;
+}
+
+.tag-filter-toggle-icon {
+    transition: transform 0.2s ease;
+    font-size: 20px;
+    line-height: 1;
+    color: #6b7280;
+}
+
+.tag-filter-section:not(.collapsed) .tag-filter-toggle-icon {
+    transform: rotate(180deg);
+}
+
 .tag-filter-label {
     font-size: 13px;
     font-weight: 600;
     color: #374151;
-    margin-bottom: 8px;
 }
 
 .tag-filter-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+}
+
+.tag-filter-chips[hidden],
+.tag-filter-section.collapsed .tag-filter-chips {
+    display: none;
 }
 
 .tag-filter-chip {
@@ -5793,4 +5825,45 @@ input[type="number"]:focus {
         right: -8px;
         min-width: 170px;
     }
+}
+
+/* ============================================
+   Mobile modal sizing: shrink to leave room
+   around the dimmed backdrop for easy dismissal.
+   Also use dvh so iOS Chrome's collapsing URL
+   bar doesn't break the sticky card-detail-nav.
+   ============================================ */
+@media (max-width: 768px) {
+    .modal-content {
+        max-height: 75vh;
+        max-height: 75dvh;
+    }
+
+    .card-detail-content {
+        max-height: 80vh;
+        max-height: 80dvh;
+    }
+
+    .review-modal-content,
+    .auth-modal-content,
+    .announcement-modal-content,
+    #my-mappings-modal .modal-content,
+    #feedback-modal .modal-content {
+        max-height: 75vh;
+        max-height: 75dvh;
+    }
+}
+
+/* iOS Chrome / Safari: ensure clickable chips reliably trigger
+   click on tap (avoid 300ms delay + missed taps in scrolled drawer). */
+.card-chip,
+.payment-chip,
+.chip-clickable {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+}
+
+.card-chip.chip-clickable,
+.payment-chip {
+    cursor: pointer;
 }

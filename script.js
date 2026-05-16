@@ -1301,7 +1301,10 @@ function populateCardChips() {
         const chip = document.createElement('div');
         chip.className = 'card-chip chip-clickable';
         chip.textContent = card.name;
-        chip.addEventListener('click', () => showCardDetail(card.id));
+        chip.addEventListener('click', () => {
+            if (window.closeSidebarDrawer) window.closeSidebarDrawer();
+            showCardDetail(card.id);
+        });
         cardChipsContainer.appendChild(chip);
     });
 
@@ -1331,7 +1334,10 @@ function populatePaymentChips() {
         const chip = document.createElement('div');
         chip.className = 'payment-chip';
         chip.textContent = payment.name;
-        chip.addEventListener('click', () => showPaymentDetail(payment.id));
+        chip.addEventListener('click', () => {
+            if (window.closeSidebarDrawer) window.closeSidebarDrawer();
+            showPaymentDetail(payment.id);
+        });
         paymentChipsContainer.appendChild(chip);
     });
 }
@@ -5210,6 +5216,7 @@ function setupSidebarDrawer() {
         overlay.classList.remove('active');
         enableBodyScroll();
     }
+    window.closeSidebarDrawer = closeDrawer;
 
     toggleBtn.addEventListener('click', openDrawer);
     closeBtn.addEventListener('click', closeDrawer);
@@ -5254,6 +5261,18 @@ function _renderCardSelectionModal(config) {
             card.tags.forEach(tag => allTags.add(tag));
         }
     });
+
+    // Wire up the collapsible tag-filter-section toggle (idempotent).
+    const tagFilterSection = tagFilterChips ? tagFilterChips.closest('.tag-filter-section') : null;
+    const tagFilterToggle = tagFilterSection ? tagFilterSection.querySelector('.tag-filter-toggle') : null;
+    if (tagFilterToggle && !tagFilterToggle.dataset.bound) {
+        tagFilterToggle.dataset.bound = '1';
+        tagFilterToggle.addEventListener('click', () => {
+            const collapsed = tagFilterSection.classList.toggle('collapsed');
+            tagFilterToggle.setAttribute('aria-expanded', String(!collapsed));
+            tagFilterChips.hidden = collapsed;
+        });
+    }
 
     // Render tag filter chips
     const selectedTags = new Set();
