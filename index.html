@@ -14,7 +14,7 @@
     <meta property="og:url" content="https://pickmycard.app/">
     <meta property="og:title" content="信用卡回饋大師 - 一鍵找出最高回饋卡">
     <meta property="og:description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
-    <meta property="og:image" content="https://pickmycard.app/pickmycard-social-share.png">
+    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
     <meta property="og:locale" content="zh_TW">
 
     <!-- Twitter Card -->
@@ -22,7 +22,7 @@
     <meta name="twitter:url" content="https://pickmycard.app/">
     <meta name="twitter:title" content="信用卡回饋大師 - 一鍵找出最高回饋卡">
     <meta name="twitter:description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
-    <meta name="twitter:image" content="https://pickmycard.app/pickmycard-social-share.png">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
 
     <!-- Google Fonts Preconnect for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,11 +44,11 @@
     <meta http-equiv="Expires" content="0">
 
     <!-- iOS Home Screen Icons -->
-    <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard.png">
-
+    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard.png?v=20260516">
+    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/icon-pickmycard.png?v=20260516">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard.png?v=20260516">
+    <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260516">
+    
     <!-- iOS Web App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -56,7 +56,9 @@
     <meta name="apple-mobile-web-app-title" content="信用卡回饋大師">
 
     <!-- Favicon for other devices -->
-    <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
+    <!-- PWA manifest + theme -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e40af">
 
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
@@ -120,6 +122,7 @@
                     </svg>
                 </button>
                 <div class="header-content">
+                    <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
                     <h1>信用卡回饋大師</h1>
                 </div>
                 <div class="auth-section">
