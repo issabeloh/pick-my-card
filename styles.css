@@ -38,6 +38,20 @@ header {
     gap: 16px;
 }
 
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.header-logo {
+    height: 40px;
+    width: auto;
+    display: block;
+    flex-shrink: 0;
+}
+
 .header-content h1 {
     font-size: 1.25rem;
     font-weight: 700;
