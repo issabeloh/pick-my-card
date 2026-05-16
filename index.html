@@ -510,9 +510,12 @@
                     <div class="modal-controls">
                         <input type="text" id="search-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
                     </div>
-                    <div class="tag-filter-section">
-                        <div class="tag-filter-label">篩選標籤：</div>
-                        <div class="tag-filter-chips" id="tag-filter-chips">
+                    <div class="tag-filter-section collapsed" id="manage-tag-filter-section">
+                        <button type="button" class="tag-filter-toggle" aria-expanded="false" aria-controls="tag-filter-chips">
+                            <span class="tag-filter-label">篩選標籤</span>
+                            <span class="tag-filter-toggle-icon" aria-hidden="true">▾</span>
+                        </button>
+                        <div class="tag-filter-chips" id="tag-filter-chips" hidden>
                             <!-- Tag filter chips will be populated by JavaScript -->
                         </div>
                     </div>
@@ -543,9 +546,12 @@
                     <div class="modal-controls">
                         <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
                     </div>
-                    <div class="tag-filter-section">
-                        <div class="tag-filter-label">篩選標籤：</div>
-                        <div class="tag-filter-chips" id="owned-tag-filter-chips">
+                    <div class="tag-filter-section collapsed" id="owned-tag-filter-section">
+                        <button type="button" class="tag-filter-toggle" aria-expanded="false" aria-controls="owned-tag-filter-chips">
+                            <span class="tag-filter-label">篩選標籤</span>
+                            <span class="tag-filter-toggle-icon" aria-hidden="true">▾</span>
+                        </button>
+                        <div class="tag-filter-chips" id="owned-tag-filter-chips" hidden>
                             <!-- Tag filter chips will be populated by JavaScript -->
                         </div>
                     </div>

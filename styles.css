@@ -2247,11 +2247,41 @@ input[type="number"]:focus {
     border-radius: 8px;
 }
 
+.tag-filter-section.collapsed {
+    padding: 4px 12px;
+}
+
+.tag-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 6px 0;
+    cursor: pointer;
+    color: #374151;
+    font: inherit;
+}
+
+.tag-filter-toggle-icon {
+    transition: transform 0.2s ease;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.tag-filter-section:not(.collapsed) .tag-filter-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.tag-filter-section:not(.collapsed) .tag-filter-toggle {
+    margin-bottom: 8px;
+}
+
 .tag-filter-label {
     font-size: 13px;
     font-weight: 600;
     color: #374151;
-    margin-bottom: 8px;
 }
 
 .tag-filter-chips {
@@ -5793,4 +5823,58 @@ input[type="number"]:focus {
         right: -8px;
         min-width: 170px;
     }
+}
+
+/* ============================================
+   Mobile modal sizing: shrink to leave room
+   around the dimmed backdrop for easy dismissal.
+   Also use dvh so iOS Chrome's collapsing URL
+   bar doesn't break the sticky card-detail-nav.
+   ============================================ */
+@media (max-width: 768px) {
+    .modal-content {
+        max-height: 75vh;
+        max-height: 75dvh;
+    }
+
+    .card-detail-content {
+        max-height: 80vh;
+        max-height: 80dvh;
+    }
+
+    .review-modal-content,
+    .auth-modal-content,
+    .announcement-modal-content,
+    #my-mappings-modal .modal-content,
+    #feedback-modal .modal-content {
+        max-height: 75vh;
+        max-height: 75dvh;
+    }
+
+    /* Keep the modal header pinned alongside the sticky nav so the
+       two never overlap content while scrolling (iOS Chrome). */
+    #card-detail-modal .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 11;
+    }
+
+    #card-detail-modal .card-detail-nav {
+        top: 0;
+    }
+}
+
+/* iOS Chrome / Safari: ensure clickable chips reliably trigger
+   click on tap (avoid 300ms delay + missed taps in scrolled drawer). */
+.card-chip,
+.payment-chip,
+.chip-clickable {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.05);
+}
+
+.card-chip.chip-clickable,
+.payment-chip {
+    cursor: pointer;
 }
