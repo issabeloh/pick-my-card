@@ -1,0 +1,23 @@
+{
+  "name": "Pick My Card",
+  "short_name": "PickMyCard",
+  "description": "信用卡回饋大師 — 找到最高回饋的信用卡",
+  "lang": "zh-TW",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e40af",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "assets/images/icon-pickmycard.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/icon-pickmycard.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}
