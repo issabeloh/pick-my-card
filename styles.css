@@ -2266,7 +2266,8 @@ input[type="number"]:focus {
 
 .tag-filter-toggle-icon {
     transition: transform 0.2s ease;
-    font-size: 12px;
+    font-size: 20px;
+    line-height: 1;
     color: #6b7280;
 }
 
