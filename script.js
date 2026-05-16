@@ -4683,6 +4683,11 @@ function initializeAuthListeners() {
             populateCardChips();
             populatePaymentChips();
 
+            // Refresh feedback badges / admin visibility on login
+            if (typeof window.updateFeedbackBadges === 'function') {
+                window.updateFeedbackBadges();
+            }
+
         } else {
             // User is signed out
             console.log('User signed out');
@@ -4731,6 +4736,11 @@ function initializeAuthListeners() {
 
             // Show manage cards button even when not logged in (read-only mode)
             document.getElementById('manage-cards-btn').style.display = 'block';
+
+            // Refresh feedback badges / hide admin item on logout
+            if (typeof window.updateFeedbackBadges === 'function') {
+                window.updateFeedbackBadges();
+            }
 
             // Show all cards and payments when signed out
             populateCardChips();
@@ -9618,7 +9628,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 userEmail: currentUser.email || '',
                 imageUrls: imageUrls,
                 timestamp: window.serverTimestamp(),
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                status: 'pending',
+                replyCount: 0
             };
     
             await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
@@ -9640,6 +9652,355 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 }); // End of Feedback System DOMContentLoaded
+
+// ============================================
+// Feedback Replies System (User + Admin)
+// ============================================
+
+const ADMIN_EMAIL = 'belvesoh@gmail.com';
+const ADMIN_NAME = '管理員 - Issabel';
+const DAILY_REPLY_LIMIT = 50;
+
+function isCurrentUserAdmin() {
+    return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === ADMIN_EMAIL);
+}
+
+function formatFeedbackDate(value) {
+    if (!value) return '時間未知';
+    let date;
+    if (typeof value.toDate === 'function') date = value.toDate();
+    else if (typeof value === 'string') date = new Date(value);
+    else if (value instanceof Date) date = value;
+    else if (typeof value === 'number') date = new Date(value);
+    else return '時間未知';
+    if (isNaN(date.getTime())) return '時間未知';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function escapeFeedbackHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\n/g, '<br>');
+}
+
+async function fetchRepliesForFeedback(feedbackId) {
+    try {
+        const repliesCol = window.collection(window.db, 'feedback', feedbackId, 'replies');
+        const q = window.query(repliesCol, window.orderBy('createdAt', 'asc'));
+        const snap = await window.getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+        console.error('fetchReplies error', feedbackId, e);
+        return [];
+    }
+}
+
+function renderFeedbackCard(fb, replies, opts = {}) {
+    const isAdmin = !!opts.isAdmin;
+    const images = (fb.imageUrls || []).map(url =>
+        `<a href="${escapeFeedbackHtml(url)}" target="_blank" rel="noopener"><img src="${escapeFeedbackHtml(url)}" class="feedback-thumb" alt="screenshot"></a>`
+    ).join('');
+    const status = (fb.status === 'replied' || (replies && replies.length > 0)) ? 'replied' : 'pending';
+    const statusLabel = status === 'replied' ? '已回覆' : '未回覆';
+    const repliesHtml = (replies || []).map(r => `
+        <div class="reply-bubble">
+            <div class="reply-header">
+                <strong>${escapeFeedbackHtml(r.adminName || ADMIN_NAME)}</strong>
+                <span class="reply-date">${formatFeedbackDate(r.createdAt)}</span>
+            </div>
+            <div class="reply-body">${escapeFeedbackHtml(r.message)}</div>
+        </div>
+    `).join('') || '<div class="no-replies">尚無回覆</div>';
+
+    const adminControls = isAdmin ? `
+        <div class="admin-reply-controls">
+            <textarea class="admin-reply-input" placeholder="輸入回覆內容..." rows="2"></textarea>
+            <button class="admin-reply-send-btn" data-fid="${escapeFeedbackHtml(fb.id)}">送出回覆</button>
+            <span class="admin-reply-status"></span>
+        </div>
+    ` : '';
+
+    const userMetaForAdmin = isAdmin ? `
+        <div class="feedback-meta-admin">
+            <span>👤 ${escapeFeedbackHtml(fb.userName || '未知')} (${escapeFeedbackHtml(fb.userEmail || '無 email')})</span>
+        </div>
+    ` : '';
+
+    return `
+        <div class="feedback-card" data-fid="${escapeFeedbackHtml(fb.id)}" data-status="${status}">
+            <div class="feedback-card-header">
+                <span class="feedback-status-badge feedback-status-${status}">${statusLabel}</span>
+                <span class="feedback-date">${formatFeedbackDate(fb.timestamp || fb.createdAt)}</span>
+            </div>
+            ${userMetaForAdmin}
+            <div class="feedback-message">${escapeFeedbackHtml(fb.message)}</div>
+            ${images ? `<div class="feedback-images">${images}</div>` : ''}
+            <div class="feedback-replies">${repliesHtml}</div>
+            ${adminControls}
+        </div>
+    `;
+}
+
+async function openMyRepliesModal() {
+    if (!currentUser) {
+        alert('請先登入');
+        return;
+    }
+    const modal = document.getElementById('my-replies-modal');
+    const list = document.getElementById('my-replies-list');
+    modal.style.display = 'flex';
+    disableBodyScroll();
+    list.innerHTML = '<div class="replies-loading">載入中...</div>';
+
+    try {
+        const feedbackCol = window.collection(window.db, 'feedback');
+        const q = window.query(
+            feedbackCol,
+            window.where('userId', '==', currentUser.uid),
+            window.orderBy('timestamp', 'desc'),
+            window.limitQuery(50)
+        );
+        const snap = await window.getDocs(q);
+        if (snap.empty) {
+            list.innerHTML = '<div class="no-feedback">您目前還沒有任何回報。<br>點擊「意見回饋」即可送出第一筆回報！</div>';
+            return;
+        }
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const repliesArr = await Promise.all(items.map(it => fetchRepliesForFeedback(it.id)));
+        list.innerHTML = items.map((fb, i) => renderFeedbackCard(fb, repliesArr[i], { isAdmin: false })).join('');
+    } catch (e) {
+        console.error('loadMyReplies error', e);
+        list.innerHTML = `<div class="replies-error">載入失敗：${escapeFeedbackHtml(e.message || String(e))}</div>`;
+    }
+}
+
+let adminAllFeedback = [];
+let adminAllReplies = {};
+let adminCurrentFilter = 'all';
+
+async function openAdminPanelModal() {
+    if (!isCurrentUserAdmin()) {
+        alert('您沒有權限存取此功能');
+        return;
+    }
+    const modal = document.getElementById('admin-panel-modal');
+    const list = document.getElementById('admin-feedback-list');
+    modal.style.display = 'flex';
+    disableBodyScroll();
+    list.innerHTML = '<div class="replies-loading">載入中...</div>';
+
+    try {
+        const feedbackCol = window.collection(window.db, 'feedback');
+        const q = window.query(feedbackCol, window.orderBy('timestamp', 'desc'), window.limitQuery(200));
+        const snap = await window.getDocs(q);
+        adminAllFeedback = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const repliesArr = await Promise.all(adminAllFeedback.map(it => fetchRepliesForFeedback(it.id)));
+        adminAllReplies = {};
+        adminAllFeedback.forEach((fb, i) => { adminAllReplies[fb.id] = repliesArr[i]; });
+        await renderAdminPanel();
+        await updateAdminRateLimitDisplay();
+    } catch (e) {
+        console.error('loadAdminPanel error', e);
+        list.innerHTML = `<div class="replies-error">載入失敗：${escapeFeedbackHtml(e.message || String(e))}<br><small>請確認您已部署 Firestore Security Rules，且 admin email 正確。</small></div>`;
+    }
+}
+
+async function renderAdminPanel() {
+    const list = document.getElementById('admin-feedback-list');
+    const statsText = document.getElementById('admin-stats-text');
+    const filtered = adminAllFeedback.filter(fb => {
+        const status = (fb.status === 'replied' || (adminAllReplies[fb.id] && adminAllReplies[fb.id].length > 0)) ? 'replied' : 'pending';
+        if (adminCurrentFilter === 'all') return true;
+        return status === adminCurrentFilter;
+    });
+    const pendingCount = adminAllFeedback.filter(fb => {
+        return !(fb.status === 'replied' || (adminAllReplies[fb.id] && adminAllReplies[fb.id].length > 0));
+    }).length;
+    statsText.textContent = `共 ${adminAllFeedback.length} 筆回報・未回覆 ${pendingCount} 筆`;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="no-feedback">沒有符合條件的回報。</div>';
+        return;
+    }
+    list.innerHTML = filtered.map(fb => renderFeedbackCard(fb, adminAllReplies[fb.id] || [], { isAdmin: true })).join('');
+
+    list.querySelectorAll('.admin-reply-send-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const fid = btn.dataset.fid;
+            const card = btn.closest('.feedback-card');
+            const textarea = card.querySelector('.admin-reply-input');
+            const statusEl = card.querySelector('.admin-reply-status');
+            const message = textarea.value.trim();
+            if (!message) {
+                statusEl.textContent = '請輸入回覆內容';
+                statusEl.className = 'admin-reply-status error';
+                return;
+            }
+            btn.disabled = true;
+            statusEl.textContent = '送出中...';
+            statusEl.className = 'admin-reply-status loading';
+            try {
+                await sendAdminReply(fid, message);
+                textarea.value = '';
+                statusEl.textContent = '✅ 已送出';
+                statusEl.className = 'admin-reply-status success';
+                const newReplies = await fetchRepliesForFeedback(fid);
+                adminAllReplies[fid] = newReplies;
+                const fb = adminAllFeedback.find(f => f.id === fid);
+                if (fb) fb.status = 'replied';
+                await renderAdminPanel();
+                await updateAdminRateLimitDisplay();
+            } catch (err) {
+                console.error('sendReply error', err);
+                statusEl.textContent = err.message === 'RATE_LIMIT'
+                    ? `❌ 已達今日回覆上限（${DAILY_REPLY_LIMIT} 則）`
+                    : `❌ 送出失敗：${err.message || String(err)}`;
+                statusEl.className = 'admin-reply-status error';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+}
+
+async function sendAdminReply(feedbackId, message) {
+    const today = new Date().toISOString().slice(0, 10);
+    const counterRef = window.doc(window.db, 'adminMeta', 'dailyReplyCounter');
+    const feedbackRef = window.doc(window.db, 'feedback', feedbackId);
+    const replyRef = window.doc(window.collection(window.db, 'feedback', feedbackId, 'replies'));
+
+    await window.runTransaction(window.db, async (tx) => {
+        const counterSnap = await tx.get(counterRef);
+        let count = 0;
+        if (counterSnap.exists() && counterSnap.data().date === today) {
+            count = counterSnap.data().count || 0;
+        }
+        if (count >= DAILY_REPLY_LIMIT) {
+            throw new Error('RATE_LIMIT');
+        }
+        tx.set(replyRef, {
+            message: message,
+            adminName: ADMIN_NAME,
+            adminEmail: currentUser.email,
+            adminUid: currentUser.uid,
+            createdAt: window.serverTimestamp(),
+            createdAtIso: new Date().toISOString()
+        });
+        tx.set(counterRef, { date: today, count: count + 1, lastUpdatedBy: currentUser.email, lastUpdatedAt: window.serverTimestamp() });
+        tx.update(feedbackRef, {
+            status: 'replied',
+            lastReplyAt: window.serverTimestamp(),
+            replyCount: window.increment(1)
+        });
+    });
+}
+
+async function updateAdminRateLimitDisplay() {
+    const el = document.getElementById('admin-rate-limit');
+    if (!el) return;
+    try {
+        const counterRef = window.doc(window.db, 'adminMeta', 'dailyReplyCounter');
+        const snap = await window.getDoc(counterRef);
+        const today = new Date().toISOString().slice(0, 10);
+        let count = 0;
+        if (snap.exists() && snap.data().date === today) count = snap.data().count || 0;
+        const remaining = Math.max(0, DAILY_REPLY_LIMIT - count);
+        el.textContent = `今日剩餘回覆額度：${remaining} / ${DAILY_REPLY_LIMIT}`;
+        el.classList.toggle('low', remaining <= 10);
+        el.classList.toggle('exhausted', remaining === 0);
+    } catch (e) {
+        el.textContent = '';
+    }
+}
+
+async function updateFeedbackBadges() {
+    const adminItem = document.getElementById('avatar-admin-panel');
+    const adminBadge = document.getElementById('admin-pending-badge');
+    const myBadge = document.getElementById('my-replies-badge');
+
+    if (adminItem) {
+        adminItem.style.display = isCurrentUserAdmin() ? '' : 'none';
+    }
+    if (adminBadge) adminBadge.style.display = 'none';
+    if (myBadge) myBadge.style.display = 'none';
+
+    if (!currentUser || !window.db) return;
+
+    try {
+        if (isCurrentUserAdmin() && adminBadge) {
+            const q = window.query(
+                window.collection(window.db, 'feedback'),
+                window.where('status', '==', 'pending'),
+                window.limitQuery(100)
+            );
+            const snap = await window.getDocs(q);
+            let pending = 0;
+            snap.forEach(() => pending++);
+            if (pending > 0) {
+                adminBadge.textContent = pending > 99 ? '99+' : String(pending);
+                adminBadge.style.display = 'inline-block';
+            }
+        }
+    } catch (e) {
+        console.warn('updateFeedbackBadges admin error', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const myRepliesBtn = document.getElementById('avatar-my-replies');
+    const adminBtn = document.getElementById('avatar-admin-panel');
+    const closeMyReplies = document.getElementById('close-my-replies-modal');
+    const closeAdmin = document.getElementById('close-admin-panel-modal');
+    const myRepliesModal = document.getElementById('my-replies-modal');
+    const adminModal = document.getElementById('admin-panel-modal');
+
+    if (myRepliesBtn) {
+        myRepliesBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dropdown = document.getElementById('avatar-dropdown');
+            if (dropdown) dropdown.classList.remove('open');
+            if (!currentUser) { alert('請先登入'); return; }
+            openMyRepliesModal();
+        });
+    }
+    if (adminBtn) {
+        adminBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dropdown = document.getElementById('avatar-dropdown');
+            if (dropdown) dropdown.classList.remove('open');
+            openAdminPanelModal();
+        });
+    }
+    if (closeMyReplies && myRepliesModal) {
+        const close = () => { myRepliesModal.style.display = 'none'; enableBodyScroll(); };
+        closeMyReplies.addEventListener('click', close);
+        myRepliesModal.addEventListener('click', (e) => { if (e.target === myRepliesModal) close(); });
+    }
+    if (closeAdmin && adminModal) {
+        const close = () => { adminModal.style.display = 'none'; enableBodyScroll(); };
+        closeAdmin.addEventListener('click', close);
+        adminModal.addEventListener('click', (e) => { if (e.target === adminModal) close(); });
+    }
+
+    document.querySelectorAll('.admin-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.admin-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            adminCurrentFilter = btn.dataset.filter;
+            renderAdminPanel();
+        });
+    });
+
+    // Initial check shortly after load; will also be re-called on auth state change
+    setTimeout(() => updateFeedbackBadges(), 1500);
+    window.updateFeedbackBadges = updateFeedbackBadges;
+});
 
 // ============================================
 // Auth Modal System (Login/Register with Email)

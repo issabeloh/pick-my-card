@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// =============================================================
+// Pick My Card — Firestore Security Rules
+// =============================================================
+// Deploy:
+//   1. Go to Firebase Console → Firestore Database → Rules
+//   2. Paste the contents of this file
+//   3. Click "Publish"
+//
+// Admin email is hard-coded here (server-side) — front-end checks
+// are only for UI gating; this file is the real defense.
+// =============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+             && request.auth.token.email_verified == true
+             && request.auth.token.email == 'belvesoh@gmail.com';
+    }
+
+    function isOwnerByUid(uidField) {
+      return isSignedIn() && request.auth.uid == uidField;
+    }
+
+    // ---- User profile / data ----
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ---- Feedback ----
+    match /feedback/{feedbackId} {
+
+      // Anyone signed-in can create their OWN feedback (uid + email must match token)
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.userEmail == request.auth.token.email
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 5000;
+
+      // Owner can read their own; admin can read all
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Only admin can update (e.g. mark replied, set replyCount, lastReplyAt)
+      allow update: if isAdmin();
+
+      // Only admin can delete
+      allow delete: if isAdmin();
+
+      // ---- Replies sub-collection ----
+      match /replies/{replyId} {
+
+        // Only admin can create replies; payload must be self-consistent
+        allow create: if isAdmin()
+                      && request.resource.data.adminEmail == request.auth.token.email
+                      && request.resource.data.adminUid == request.auth.uid
+                      && request.resource.data.message is string
+                      && request.resource.data.message.size() > 0
+                      && request.resource.data.message.size() <= 5000;
+
+        // Admin can read all replies; feedback owner can read replies on their own feedback
+        allow read: if isAdmin()
+                    || (isSignedIn()
+                        && get(/databases/$(database)/documents/feedback/$(feedbackId)).data.userId == request.auth.uid);
+
+        // Only admin can update or delete a reply
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ---- Admin meta (rate-limit counter, etc.) ----
+    match /adminMeta/{docId} {
+      // Only admin can read or write
+      allow read, write: if isAdmin();
+    }
+
+    // ---- Default deny ----
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

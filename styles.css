@@ -5867,3 +5867,256 @@ input[type="number"]:focus {
 .payment-chip {
     cursor: pointer;
 }
+
+/* ============================================
+   Feedback Replies System (User + Admin)
+   ============================================ */
+
+.dropdown-badge {
+    display: inline-block;
+    margin-left: auto;
+    min-width: 18px;
+    padding: 0 6px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    background: #ef4444;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 9px;
+}
+
+.replies-list,
+.admin-feedback-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.replies-loading,
+.no-feedback,
+.replies-error {
+    padding: 24px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.replies-error {
+    color: #dc2626;
+}
+
+.feedback-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px;
+    background: #fff;
+}
+
+.feedback-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.feedback-status-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.feedback-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.feedback-status-replied {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.feedback-date {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.feedback-meta-admin {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.feedback-message {
+    color: #111827;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 8px 0;
+}
+
+.feedback-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.feedback-thumb {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+}
+
+.feedback-replies {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.no-replies {
+    color: #9ca3af;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.reply-bubble {
+    background: #f3f4f6;
+    border-left: 3px solid #2563eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.reply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.reply-header strong {
+    color: #1e40af;
+}
+
+.reply-date {
+    color: #6b7280;
+}
+
+.reply-body {
+    font-size: 14px;
+    color: #111827;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.admin-reply-controls {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.admin-reply-input {
+    flex: 1 1 60%;
+    min-width: 200px;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.admin-reply-send-btn {
+    padding: 8px 16px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-reply-send-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.admin-reply-send-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.admin-reply-status {
+    flex: 1 1 100%;
+    font-size: 13px;
+}
+
+.admin-reply-status.success { color: #059669; }
+.admin-reply-status.error { color: #dc2626; }
+.admin-reply-status.loading { color: #6b7280; }
+
+.admin-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.admin-toolbar-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.admin-rate-limit {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.admin-rate-limit.low { color: #d97706; font-weight: 600; }
+.admin-rate-limit.exhausted { color: #dc2626; font-weight: 700; }
+
+.admin-toolbar-filters {
+    display: flex;
+    gap: 6px;
+}
+
+.admin-filter-btn {
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #374151;
+}
+
+.admin-filter-btn.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}

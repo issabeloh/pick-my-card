@@ -149,6 +149,16 @@
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
                                     意見回饋
                                 </a>
+                                <a href="#" class="avatar-dropdown-item" id="avatar-my-replies">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8.93 6.588l-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+                                    我的回報
+                                    <span id="my-replies-badge" class="dropdown-badge" style="display: none;"></span>
+                                </a>
+                                <a href="#" class="avatar-dropdown-item" id="avatar-admin-panel" style="display: none;">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a1 1 0 0 1 .707.293l.707.707L11 .293a1 1 0 0 1 1.414 0L14 1.879a1 1 0 0 1 0 1.414l-.707.707.707.707A1 1 0 0 1 14 5.121V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5.121a1 1 0 0 1 .293-.707L3 3.707l-.707-.707a1 1 0 0 1 0-1.414L3.586.293a1 1 0 0 1 1.414 0L6.586 1 7.293.293A1 1 0 0 1 8 0zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                                    管理員後台
+                                    <span id="admin-pending-badge" class="dropdown-badge" style="display: none;"></span>
+                                </a>
                                 <div class="avatar-dropdown-divider"></div>
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-logout" id="avatar-sign-out">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
@@ -914,7 +924,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, query, where, orderBy, limit, updateDoc, runTransaction, increment, Timestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
       // Your web app's Firebase configuration
@@ -966,6 +976,15 @@
       window.storageRef = ref;
       window.uploadBytes = uploadBytes;
       window.getDownloadURL = getDownloadURL;
+      window.getDocs = getDocs;
+      window.query = query;
+      window.where = where;
+      window.orderBy = orderBy;
+      window.limitQuery = limit;
+      window.updateDoc = updateDoc;
+      window.runTransaction = runTransaction;
+      window.increment = increment;
+      window.firestoreTimestamp = Timestamp;
     </script>
 
     <!-- Payment Detail Modal -->
@@ -1089,6 +1108,48 @@
             <div class="modal-footer">
                 <button type="button" id="submit-feedback-btn" class="save-btn">送出</button>
                 <button type="button" id="cancel-feedback-btn" class="cancel-btn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Replies Modal (user view) -->
+    <div id="my-replies-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📬 我的回報與回覆</h3>
+                <button class="close-modal" id="close-my-replies-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description" style="color:#6b7280;font-size:14px;">這裡顯示您送出的所有回報，以及管理員的回覆。</p>
+                <div id="my-replies-list" class="replies-list">
+                    <div class="replies-loading">載入中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div id="admin-panel-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>🛠️ 管理員後台 — 意見回饋</h3>
+                <button class="close-modal" id="close-admin-panel-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="admin-toolbar">
+                    <div class="admin-toolbar-stats">
+                        <span id="admin-stats-text">載入中...</span>
+                        <span id="admin-rate-limit" class="admin-rate-limit"></span>
+                    </div>
+                    <div class="admin-toolbar-filters">
+                        <button class="admin-filter-btn active" data-filter="all">全部</button>
+                        <button class="admin-filter-btn" data-filter="pending">未回覆</button>
+                        <button class="admin-filter-btn" data-filter="replied">已回覆</button>
+                    </div>
+                </div>
+                <div id="admin-feedback-list" class="admin-feedback-list">
+                    <div class="replies-loading">載入中...</div>
+                </div>
             </div>
         </div>
     </div>
