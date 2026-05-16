@@ -2247,10 +2247,6 @@ input[type="number"]:focus {
     border-radius: 8px;
 }
 
-.tag-filter-section.collapsed {
-    padding: 4px 12px;
-}
-
 .tag-filter-toggle {
     display: flex;
     align-items: center;
@@ -2258,10 +2254,14 @@ input[type="number"]:focus {
     width: 100%;
     background: transparent;
     border: none;
-    padding: 6px 0;
+    padding: 0;
     cursor: pointer;
     color: #374151;
     font: inherit;
+}
+
+.tag-filter-section:not(.collapsed) .tag-filter-toggle {
+    margin-bottom: 8px;
 }
 
 .tag-filter-toggle-icon {
@@ -2273,10 +2273,6 @@ input[type="number"]:focus {
 
 .tag-filter-section:not(.collapsed) .tag-filter-toggle-icon {
     transform: rotate(180deg);
-}
-
-.tag-filter-section:not(.collapsed) .tag-filter-toggle {
-    margin-bottom: 8px;
 }
 
 .tag-filter-label {
