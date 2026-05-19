@@ -1336,6 +1336,7 @@ function populatePaymentChips() {
         chip.textContent = payment.name;
         chip.addEventListener('click', () => {
             if (window.closeSidebarDrawer) window.closeSidebarDrawer();
+            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             showPaymentDetail(payment.id);
         });
         paymentChipsContainer.appendChild(chip);
@@ -1415,10 +1416,11 @@ function setupEventListeners() {
         });
     }
 
-    // Manage payments button
+    // Manage payments button (gear icon inside my-payments modal)
     const managePaymentsBtn = document.getElementById('manage-payments-btn');
     if (managePaymentsBtn) {
         managePaymentsBtn.addEventListener('click', () => {
+            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             openManagePaymentsModal();
         });
     }
@@ -1436,6 +1438,7 @@ function setupEventListeners() {
     const comparePaymentsBtn = document.getElementById('compare-payments-btn');
     if (comparePaymentsBtn) {
         comparePaymentsBtn.addEventListener('click', () => {
+            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             showComparePaymentsModal();
         });
     }
@@ -4529,7 +4532,7 @@ function setupAvatarDropdown() {
     // Menu item actions — map element IDs to handler functions
     const menuActions = {
         'avatar-manage-cards': () => openMyOwnedCardsModal(),
-        'avatar-manage-payments': () => openManagePaymentsModal(),
+        'avatar-manage-payments': () => openMyPaymentsModal(),
         'avatar-my-mappings': () => openMyMappingsModal(),
         'avatar-feedback': () => {
             const modal = document.getElementById('feedback-modal');
@@ -4571,7 +4574,6 @@ function initializeAuthListeners() {
     const toolElements = {
         inputSection: document.querySelector('.input-section'),
         supportedCards: document.querySelector('.supported-cards'),
-        headerSection: document.querySelector('.header-section'),
         sidebar: document.getElementById('sidebar'),
         appLayout: document.querySelector('.app-layout'),
         sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
@@ -4584,7 +4586,6 @@ function initializeAuthListeners() {
         const t = toolElements;
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
-        if (t.headerSection) t.headerSection.style.display = 'block';
         if (t.sidebar) t.sidebar.style.display = '';
         if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
         if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
@@ -4597,7 +4598,6 @@ function initializeAuthListeners() {
         const t = toolElements;
         if (t.inputSection) t.inputSection.style.display = 'none';
         if (t.supportedCards) t.supportedCards.style.display = 'none';
-        if (t.headerSection) t.headerSection.style.display = 'none';
 
         // Mobile: keep sidebar as drawer; Desktop: hide from grid
         if (t.sidebar) {
@@ -5202,9 +5202,7 @@ function setupSidebarDrawer() {
     function openDrawer() {
         // Ensure sidebar content is visible (may be hidden on landing page)
         const supportedCards = sidebar.querySelector('.supported-cards');
-        const headerSection = sidebar.querySelector('.header-section');
         if (supportedCards) supportedCards.style.display = 'block';
-        if (headerSection) headerSection.style.display = 'block';
 
         sidebar.classList.add('open');
         overlay.classList.add('active');
@@ -8294,6 +8292,28 @@ async function saveCardLevel(cardId, level) {
 // ========== Payment Management Functions ==========
 
 // Open manage payments modal
+function openMyPaymentsModal() {
+    const modal = document.getElementById('my-payments-modal');
+    if (!modal) return;
+
+    populatePaymentChips();
+
+    modal.style.display = 'flex';
+    disableBodyScroll();
+
+    const closeBtn = document.getElementById('close-my-payments-modal');
+    const closeModal = () => {
+        modal.style.display = 'none';
+        enableBodyScroll();
+    };
+    window.closeMyPaymentsModal = closeModal;
+
+    closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+    };
+}
+
 function openManagePaymentsModal() {
     const modal = document.getElementById('manage-payments-modal');
     const paymentsSelection = document.getElementById('payments-selection');
