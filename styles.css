@@ -5599,6 +5599,10 @@ input[type="number"]:focus {
     background: #dbeafe;
 }
 
+#my-payments-modal {
+    z-index: 999;
+}
+
 #my-payments-modal .section-title-row {
     margin-bottom: 12px;
 }

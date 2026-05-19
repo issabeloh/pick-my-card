@@ -1336,7 +1336,6 @@ function populatePaymentChips() {
         chip.textContent = payment.name;
         chip.addEventListener('click', () => {
             if (window.closeSidebarDrawer) window.closeSidebarDrawer();
-            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             showPaymentDetail(payment.id);
         });
         paymentChipsContainer.appendChild(chip);
@@ -1420,7 +1419,6 @@ function setupEventListeners() {
     const managePaymentsBtn = document.getElementById('manage-payments-btn');
     if (managePaymentsBtn) {
         managePaymentsBtn.addEventListener('click', () => {
-            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             openManagePaymentsModal();
         });
     }
@@ -1438,7 +1436,6 @@ function setupEventListeners() {
     const comparePaymentsBtn = document.getElementById('compare-payments-btn');
     if (comparePaymentsBtn) {
         comparePaymentsBtn.addEventListener('click', () => {
-            if (window.closeMyPaymentsModal) window.closeMyPaymentsModal();
             showComparePaymentsModal();
         });
     }
