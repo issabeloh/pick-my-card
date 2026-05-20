@@ -1697,7 +1697,8 @@ const fuzzySearchMap = {
     'google ads': 'google廣告',
     'abc mart': 'abc-mart',
     'MAC': 'M.A.C',
-    'nitori': '宜得利'
+    'nitori': '宜得利',
+    'mia cbon': 'Mia C\u2018bon'
 };
 
 // Search term exclusion rules - prevents unwanted matches
