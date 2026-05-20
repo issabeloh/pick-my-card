@@ -4537,8 +4537,12 @@ function setupAvatarDropdown() {
             if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
         },
         'avatar-sign-out': async () => {
-            try { await window.signOut(auth); }
-            catch (error) { console.error('Sign out failed:', error); }
+            if (currentUser) {
+                try { await window.signOut(auth); }
+                catch (error) { console.error('Sign out failed:', error); }
+            } else {
+                openAuthModal('login');
+            }
         }
     };
 
@@ -4556,14 +4560,48 @@ function setupAvatarDropdown() {
 
 function initializeAuthListeners() {
     const signInBtn = document.getElementById('sign-in-btn');
-    const userInfo = document.getElementById('user-info');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
+    const avatarBtn = document.getElementById('avatar-btn');
+    const guestAvatarIcon = document.getElementById('guest-avatar-icon');
+    const signOutLabel = document.getElementById('sign-out-label');
 
-    // Sign in function - open auth modal
-    signInBtn.addEventListener('click', () => {
-        openAuthModal('login');
-    });
+    // Sign in button (now hidden, kept for fallback)
+    if (signInBtn) signInBtn.addEventListener('click', () => openAuthModal('login'));
+
+    function setGuestAvatarState() {
+        if (avatarBtn) avatarBtn.classList.add('guest-mode');
+        if (guestAvatarIcon) guestAvatarIcon.style.display = '';
+        if (userPhoto) { userPhoto.src = ''; userPhoto.style.display = 'none'; }
+        if (userName) userName.textContent = '';
+        if (signOutLabel) signOutLabel.textContent = '註冊／登入';
+        const signOutItem = document.getElementById('avatar-sign-out');
+        if (signOutItem) {
+            signOutItem.classList.remove('avatar-dropdown-logout');
+            signOutItem.classList.add('avatar-dropdown-signin');
+        }
+    }
+
+    function setLoggedInAvatarState(user) {
+        if (avatarBtn) avatarBtn.classList.remove('guest-mode');
+        if (guestAvatarIcon) guestAvatarIcon.style.display = 'none';
+        if (user.photoURL) {
+            userPhoto.src = user.photoURL;
+            userPhoto.style.display = 'block';
+        } else {
+            userPhoto.style.display = 'none';
+        }
+        if (userName) userName.textContent = user.displayName || user.email;
+        if (signOutLabel) signOutLabel.textContent = '登出';
+        const signOutItem = document.getElementById('avatar-sign-out');
+        if (signOutItem) {
+            signOutItem.classList.add('avatar-dropdown-logout');
+            signOutItem.classList.remove('avatar-dropdown-signin');
+        }
+    }
+
+    // Initialize as guest state on page load
+    setGuestAvatarState();
 
     // Setup avatar dropdown menu
     setupAvatarDropdown();
@@ -4616,8 +4654,7 @@ function initializeAuthListeners() {
             // User is signed in
             console.log('User signed in:', user);
             currentUser = user;
-            signInBtn.style.display = 'none';
-            userInfo.style.display = 'inline-flex';
+            setLoggedInAvatarState(user);
 
             // Hide "Start Using" button when logged in
             const startUsingBtnHeader = document.getElementById('start-using-btn-header');
@@ -4630,16 +4667,6 @@ function initializeAuthListeners() {
                 productIntroSection.style.display = 'none';
             }
             showToolSections();
-
-            // Set user photo with fallback
-            if (user.photoURL) {
-                userPhoto.src = user.photoURL;
-                userPhoto.style.display = 'block';
-            } else {
-                userPhoto.style.display = 'none'; // Hide if no photo
-            }
-
-            userName.textContent = user.displayName || user.email;
 
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
@@ -4670,6 +4697,7 @@ function initializeAuthListeners() {
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
             await loadUserPayments(userData);
+            await maybeMergeGuestPayments();
             await loadSpendingMappings();
 
             // Load user's quick search options and custom options using unified data
@@ -4682,22 +4710,22 @@ function initializeAuthListeners() {
             populatePaymentChips();
 
         } else {
-            // User is signed out
+            // User is signed out — guest mode
             console.log('User signed out');
             currentUser = null;
             cardsInComparison.clear();
             myOwnedCards.clear();
-            // After logout, become a guest — load any guest-mode data from localStorage
+            // Load guest data from localStorage
             await loadCardsInComparison();
             await loadMyOwnedCards();
             userSelectedPayments.clear();
-            userSpendingMappings = [];
+            await loadUserPayments();  // loads guest payments from localStorage
+            await loadSpendingMappings();
             userBirthdayMonth = null;
             isBirthdayMonth = false;
             isChildrenEligible = true;
             cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
-            signInBtn.style.display = 'inline-block';
-            userInfo.style.display = 'none';
+            setGuestAvatarState();
 
             // Show "Start Using" button when logged out
             const startUsingBtnHeader = document.getElementById('start-using-btn-header');
@@ -4715,11 +4743,6 @@ function initializeAuthListeners() {
                 productIntroSection.style.display = 'block';
             }
             hideToolSections();
-
-            // Clear user info
-            userPhoto.src = '';
-            userPhoto.style.display = 'none';
-            userName.textContent = '';
 
             // Hide my mappings button
             const myMappingsBtn = document.getElementById('my-mappings-btn');
@@ -4947,6 +4970,32 @@ async function maybeMergeGuestCardsInComparison() {
         localStorage.removeItem(guestKey);
     } catch (e) {
         console.error('Error merging guest cards-in-comparison:', e);
+        localStorage.removeItem(guestKey);
+    }
+}
+
+// On login, if guest had locally-saved payments, prompt to merge.
+async function maybeMergeGuestPayments() {
+    const guestKey = 'selectedPayments_guest';
+    const guestData = localStorage.getItem(guestKey);
+    if (!guestData) return;
+
+    try {
+        const guestPayments = JSON.parse(guestData);
+        if (!Array.isArray(guestPayments) || guestPayments.length === 0) {
+            localStorage.removeItem(guestKey);
+            return;
+        }
+
+        const shouldMerge = confirm('偵測到本地的『行動支付』設定，要合併到此賬號嗎？');
+        if (shouldMerge) {
+            guestPayments.forEach(id => userSelectedPayments.add(id));
+            await saveUserPayments();
+            console.log('🔀 Merged guest payments into account:', guestPayments);
+        }
+        localStorage.removeItem(guestKey);
+    } catch (e) {
+        console.error('Error merging guest payments:', e);
         localStorage.removeItem(guestKey);
     }
 }
@@ -8724,8 +8773,19 @@ async function showComparePaymentsModal() {
 // Now accepts optional userData parameter to avoid redundant Firestore calls
 async function loadUserPayments(userData = null) {
     if (!currentUser) {
-        console.log('No current user, showing no payments by default');
-        userSelectedPayments = new Set();
+        // Guest: load from localStorage
+        try {
+            const saved = localStorage.getItem('selectedPayments_guest');
+            if (saved) {
+                userSelectedPayments = new Set(JSON.parse(saved));
+                console.log('📦 Loaded user payments from guest localStorage:', Array.from(userSelectedPayments));
+            } else {
+                userSelectedPayments = new Set();
+                console.log('🆕 Guest first time, no payments selected');
+            }
+        } catch (e) {
+            userSelectedPayments = new Set();
+        }
         return;
     }
 
@@ -8780,7 +8840,16 @@ async function loadUserPayments(userData = null) {
 
 // Save user payments
 async function saveUserPayments() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        try {
+            const paymentsArray = Array.from(userSelectedPayments);
+            localStorage.setItem('selectedPayments_guest', JSON.stringify(paymentsArray));
+            console.log('✅ Saved guest payments to localStorage:', paymentsArray);
+        } catch (e) {
+            console.error('Error saving guest payments to localStorage:', e);
+        }
+        return;
+    }
 
     try {
         const storageKey = `selectedPayments_${currentUser.uid}`;

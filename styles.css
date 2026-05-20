@@ -118,13 +118,9 @@ header {
 }
 
 #user-info {
-    /* display 由 JavaScript 控制，不使用 !important 以免覆蓋 display: none */
+    display: inline-flex;
     align-items: center;
     gap: 0;
-}
-
-#user-info[style*="inline-flex"] {
-    display: inline-flex;
 }
 
 /* Avatar dropdown menu */
@@ -148,6 +144,30 @@ header {
 
 .avatar-btn:hover {
     background: rgba(255, 255, 255, 0.25);
+}
+
+.guest-avatar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    flex-shrink: 0;
+}
+
+.avatar-dropdown-signin {
+    color: #2563eb;
+}
+
+.avatar-dropdown-signin svg {
+    color: #2563eb;
+}
+
+.avatar-dropdown-signin:hover {
+    background: #eff6ff;
 }
 
 .avatar-chevron {

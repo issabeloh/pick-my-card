@@ -126,9 +126,12 @@
                     <h1>信用卡回饋大師</h1>
                 </div>
                 <div class="auth-section">
-                    <div id="user-info" style="display: none;">
+                    <div id="user-info">
                         <div class="avatar-menu-wrapper">
-                            <button class="avatar-btn" id="avatar-btn" aria-label="使用者選單">
+                            <button class="avatar-btn guest-mode" id="avatar-btn" aria-label="使用者選單">
+                                <span id="guest-avatar-icon" class="guest-avatar-icon">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
+                                </span>
                                 <img id="user-photo" class="user-photo" alt="User" style="display: none;">
                                 <span id="user-name"></span>
                                 <svg class="avatar-chevron" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
@@ -154,14 +157,14 @@
                                 </a>
                                 <div class="avatar-dropdown-divider"></div>
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-logout" id="avatar-sign-out">
-                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
-                                    登出
+                                    <svg id="sign-out-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
+                                    <span id="sign-out-label">登出</span>
                                 </a>
                             </div>
                         </div>
                     </div>
                     <button id="start-using-btn-header" class="auth-btn start-using">開始使用</button>
-                    <button id="sign-in-btn" class="auth-btn primary">登入</button>
+                    <button id="sign-in-btn" class="auth-btn primary" style="display: none;">登入</button>
                 </div>
             </div>
 
