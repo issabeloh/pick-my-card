@@ -4131,7 +4131,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         : '';
 
     // Promo type chips — detail page shows all types inline; search results show
-    // only the "回饋加碼" chip in the top-right corner.
+    // the first promo type as a corner chip (colored by type).
     let chipsHtml = '';
     let cornerChipHtml = '';
     if (Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
@@ -4140,8 +4140,21 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
                 .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
                 .join('');
             chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
-        } else if (promo.promo_types.includes('回饋加碼')) {
-            cornerChipHtml = `<span class="promo-type-chip promo-type-bonus promo-type-chip-corner">回饋加碼</span>`;
+        } else {
+            // Prefer 回饋加碼 if present, otherwise use the first type
+            const cornerType = promo.promo_types.includes('回饋加碼')
+                ? '回饋加碼'
+                : promo.promo_types[0];
+            cornerChipHtml = `<span class="promo-type-chip promo-type-${promoTypeClass(cornerType)} promo-type-chip-corner">${escapeHtml(cornerType)}</span>`;
+        }
+    }
+
+    // Apply CTA link (search results only) — "馬上辦卡" button at bottom-right
+    let applyCtaBtnHtml = '';
+    if (!opts.showExtras) {
+        const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
+        if (applyCta && applyCta.link) {
+            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer">馬上辦卡</a>`;
         }
     }
 
@@ -4158,6 +4171,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
         ${linkHtml}
+        ${applyCtaBtnHtml}
     `;
     return el;
 }
@@ -9047,7 +9061,7 @@ function createTagElement(option, type, index) {
     const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
 
     // Expand button (only when merchants exist)
-    const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 0;
+    const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
 
     if (type === 'selected') {
         tag.draggable = true;
@@ -9348,7 +9362,7 @@ function renderCustomOptionsList() {
 
         // 構建icon HTML（如果有的話）
         const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
-        const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 0;
+        const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
 
         item.innerHTML = `
             ${iconHtml}

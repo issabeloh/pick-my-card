@@ -1947,6 +1947,43 @@ input[type="number"]:focus {
     display: block;
 }
 
+/* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
+   Style matches detail page's .card-apply-cta-btn. */
+.cardholder-promo-item {
+    position: relative;
+}
+
+.promo-apply-cta-btn {
+    display: inline-block;
+    margin-top: 10px;
+    float: right;
+    padding: 6px 14px;
+    background: #facc15;
+    color: #422006;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 6px;
+    border: 1px solid #eab308;
+    transition: background-color 0.15s ease, transform 0.05s ease;
+    white-space: nowrap;
+}
+
+.promo-apply-cta-btn:hover {
+    background: #eab308;
+}
+
+.promo-apply-cta-btn:active {
+    transform: translateY(1px);
+}
+
+/* Clear float so the card height grows for the button */
+.cardholder-promo-item::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
 .cardholder-promo-item .card-details .detail-item {
     margin-bottom: 8px;
 }
