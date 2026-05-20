@@ -653,66 +653,161 @@ function getDefaultQuickSearchOptions() {
     return [];
 }
 
-// Initialize quick search options from cardsData or user settings
-async function initializeQuickSearchOptions() {
-    // Get default options from cards.data
+// Initialize quick search options from defaults + user prefs (hidden ids + custom options)
+// New model: defaults always come from cards.json (so developer updates propagate).
+// User prefs store only:
+//   - hiddenDefaultIds: which default options the user has removed from their list
+//   - customQuickOptions: user-created options
+//   - selectedOrder: display order (mix of default ids and custom ids)
+async function initializeQuickSearchOptions(userData = null) {
     const defaultOptions = getDefaultQuickSearchOptions();
+    const prefs = await loadUserQuickSearchPrefs(userData);
 
-    // Try to load user customized options
-    const userOptions = await loadUserQuickSearchOptions();
+    // Filter out defaults the user has hidden
+    const visibleDefaults = defaultOptions.filter(o => !prefs.hiddenDefaultIds.includes(o.id));
 
-    if (userOptions && userOptions.length > 0) {
-        quickSearchOptions = userOptions;
-        console.log('✅ 快捷搜索選項已從用戶設定載入');
-        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個自定義快捷選項`);
-    } else if (defaultOptions.length > 0) {
-        quickSearchOptions = defaultOptions;
-        console.log('✅ 快捷搜索選項已從 cards.data 載入');
-        console.log(`⚡ 載入了 ${quickSearchOptions.length} 個預設快捷選項`);
-    } else {
-        console.warn('⚠️ 沒有可用的快捷搜索選項');
-        quickSearchOptions = [];
+    // Combine visible defaults + user's custom options
+    let combined = [...visibleDefaults, ...prefs.customQuickOptions];
+
+    // Apply user's preferred order (items not in order list appended in their natural position)
+    if (prefs.selectedOrder && prefs.selectedOrder.length > 0) {
+        const orderMap = new Map();
+        prefs.selectedOrder.forEach((id, idx) => orderMap.set(id, idx));
+        combined.sort((a, b) => {
+            const aIdx = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+            const bIdx = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+            return aIdx - bIdx;
+        });
     }
+
+    quickSearchOptions = combined;
+    console.log(`⚡ 載入了 ${quickSearchOptions.length} 個快捷選項 (${visibleDefaults.length} 預設 + ${prefs.customQuickOptions.length} 自訂，隱藏 ${prefs.hiddenDefaultIds.length})`);
 }
 
-// Load user customized quick search options
-async function loadUserQuickSearchOptions() {
+// Load user quick search preferences (hiddenDefaultIds + customQuickOptions + selectedOrder).
+// Auto-migrates legacy `quickSearchOptions` array format on first load.
+async function loadUserQuickSearchPrefs(userData = null) {
+    const empty = { hiddenDefaultIds: [], customQuickOptions: [], selectedOrder: [] };
+
     try {
-        if (currentUser && db) {
-            // Load from Firebase
-            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
-            if (userDoc.exists() && userDoc.data().quickSearchOptions) {
-                return userDoc.data().quickSearchOptions;
+        // Logged-in user: use unified userData or Firestore
+        if (currentUser && window.db) {
+            let data = userData;
+            if (!data) {
+                const userDoc = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
+                data = userDoc.exists() ? userDoc.data() : null;
+            }
+            if (data) {
+                // Check if migration is needed (legacy `quickSearchOptions` array exists)
+                if (Array.isArray(data.quickSearchOptions)) {
+                    console.log('🔀 偵測到舊格式快捷選項，自動遷移為新格式');
+                    return await migrateLegacyQuickSearchOptions(data);
+                }
+                return {
+                    hiddenDefaultIds: data.hiddenDefaultIds || [],
+                    customQuickOptions: data.customQuickOptions || [],
+                    selectedOrder: data.selectedOrder || []
+                };
             }
         }
 
-        // Fallback to localStorage
-        const stored = localStorage.getItem('userQuickSearchOptions');
-        if (stored) {
-            return JSON.parse(stored);
+        // Guest: load from localStorage
+        const storedPrefs = localStorage.getItem('userQuickSearchPrefs');
+        if (storedPrefs) {
+            const parsed = JSON.parse(storedPrefs);
+            return {
+                hiddenDefaultIds: parsed.hiddenDefaultIds || [],
+                customQuickOptions: parsed.customQuickOptions || [],
+                selectedOrder: parsed.selectedOrder || []
+            };
+        }
+
+        // Legacy localStorage migration (guest had old format)
+        const legacyOptions = localStorage.getItem('userQuickSearchOptions');
+        const legacyCustoms = localStorage.getItem('userCustomQuickOptions');
+        if (legacyOptions) {
+            console.log('🔀 偵測到 localStorage 舊格式，自動遷移');
+            const oldList = JSON.parse(legacyOptions);
+            const customs = legacyCustoms ? JSON.parse(legacyCustoms) : [];
+            const migrated = computeMigratedPrefs(oldList, customs);
+            localStorage.setItem('userQuickSearchPrefs', JSON.stringify(migrated));
+            localStorage.removeItem('userQuickSearchOptions');
+            return migrated;
         }
     } catch (error) {
-        console.error('載入用戶快捷選項時出錯:', error);
+        console.error('載入快捷選項偏好時出錯:', error);
     }
-    return null;
+    return empty;
 }
 
-// Save user customized quick search options
-async function saveUserQuickSearchOptions(options) {
+// Compute new prefs format from legacy saved list + customs
+function computeMigratedPrefs(oldSavedList, existingCustoms) {
+    const defaultOptions = getDefaultQuickSearchOptions();
+    const defaultIds = new Set(defaultOptions.map(o => o.id));
+    const savedIds = new Set(oldSavedList.map(o => o.id));
+
+    // Defaults missing from saved list → hidden
+    const hiddenDefaultIds = defaultOptions
+        .map(o => o.id)
+        .filter(id => !savedIds.has(id));
+
+    // Items in saved list that aren't defaults → custom (merge with existing customs by id)
+    const customMap = new Map();
+    (existingCustoms || []).forEach(c => { if (c && c.id) customMap.set(c.id, c); });
+    oldSavedList.forEach(o => {
+        if (o && o.id && !defaultIds.has(o.id) && !customMap.has(o.id)) {
+            customMap.set(o.id, o);
+        }
+    });
+    const customQuickOptions = Array.from(customMap.values());
+
+    // Preserve user's order
+    const selectedOrder = oldSavedList.map(o => o.id).filter(Boolean);
+
+    return { hiddenDefaultIds, customQuickOptions, selectedOrder };
+}
+
+// Migrate Firestore legacy format and persist
+async function migrateLegacyQuickSearchOptions(userData) {
+    const oldList = userData.quickSearchOptions || [];
+    const existingCustoms = userData.customQuickOptions || [];
+    const migrated = computeMigratedPrefs(oldList, existingCustoms);
+
     try {
-        if (currentUser && db) {
-            // Save to Firebase
-            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-                quickSearchOptions: options
+        if (currentUser && window.db && window.deleteField) {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                hiddenDefaultIds: migrated.hiddenDefaultIds,
+                customQuickOptions: migrated.customQuickOptions,
+                selectedOrder: migrated.selectedOrder,
+                quickSearchOptions: window.deleteField()
+            }, { merge: true });
+            console.log('✅ 已將舊快捷選項格式遷移為新格式並刪除舊欄位');
+        }
+        // Update localStorage too
+        localStorage.setItem('userQuickSearchPrefs', JSON.stringify(migrated));
+        localStorage.removeItem('userQuickSearchOptions');
+    } catch (e) {
+        console.error('遷移舊快捷選項格式時出錯:', e);
+    }
+
+    return migrated;
+}
+
+// Save user quick search preferences (new format)
+async function saveUserQuickSearchPrefs(prefs) {
+    try {
+        if (currentUser && window.db) {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                hiddenDefaultIds: prefs.hiddenDefaultIds,
+                customQuickOptions: prefs.customQuickOptions,
+                selectedOrder: prefs.selectedOrder
             }, { merge: true });
         }
-
-        // Also save to localStorage as backup
-        localStorage.setItem('userQuickSearchOptions', JSON.stringify(options));
-        console.log('✅ 用戶快捷選項已保存');
+        localStorage.setItem('userQuickSearchPrefs', JSON.stringify(prefs));
+        console.log('✅ 用戶快捷選項偏好已保存');
         return true;
     } catch (error) {
-        console.error('保存用戶快捷選項時出錯:', error);
+        console.error('保存快捷選項偏好時出錯:', error);
         return false;
     }
 }
@@ -4699,9 +4794,8 @@ function initializeAuthListeners() {
             await maybeMergeGuestPayments();
             await loadSpendingMappings();
 
-            // Load user's quick search options and custom options using unified data
-            await initializeQuickSearchOptions();
-            customOptions = await loadUserCustomOptions(userData) || [];
+            // Load user's quick search options (new prefs format with auto-migration)
+            await initializeQuickSearchOptions(userData);
             renderQuickSearchButtons();
 
             // Update chips display
@@ -4732,9 +4826,8 @@ function initializeAuthListeners() {
                 startUsingBtnHeader.style.display = 'inline-block';
             }
 
-            // Reset quick search options to default
+            // Load guest quick search prefs from localStorage (or defaults)
             await initializeQuickSearchOptions();
-            customOptions = [];
             renderQuickSearchButtons();
 
             // Show product introduction section and hide tool sections when not logged in
@@ -8890,8 +8983,8 @@ function openManageQuickOptionsModal() {
 
     // Initialize temporary state with current options
     tempSelectedOptions = JSON.parse(JSON.stringify(quickSearchOptions));
-    loadUserCustomOptions().then(customOpts => {
-        tempCustomOptions = customOpts || [];
+    loadUserQuickSearchPrefs().then(prefs => {
+        tempCustomOptions = JSON.parse(JSON.stringify(prefs.customQuickOptions || []));
         renderQuickOptionsModal();
     });
 
@@ -9172,65 +9265,35 @@ function setupQuickOptionsModalButtons() {
 }
 
 async function saveQuickOptionsSelection() {
-    // Save selected options
-    const saved = await saveUserQuickSearchOptions(tempSelectedOptions);
+    // Compute new prefs from current modal state
+    const defaultOptions = getDefaultQuickSearchOptions();
+    const defaultIds = new Set(defaultOptions.map(o => o.id));
+    const selectedDefaultIds = new Set(
+        tempSelectedOptions.filter(o => defaultIds.has(o.id)).map(o => o.id)
+    );
 
-    // Save custom options
-    await saveUserCustomOptions(tempCustomOptions);
+    // Defaults NOT in user's selected list = hidden
+    const hiddenDefaultIds = defaultOptions
+        .map(o => o.id)
+        .filter(id => !selectedDefaultIds.has(id));
+
+    // User's custom options (from tempCustomOptions, the source of truth for customs)
+    const customQuickOptions = tempCustomOptions;
+
+    // Preserve user's ordering
+    const selectedOrder = tempSelectedOptions.map(o => o.id).filter(Boolean);
+
+    const prefs = { hiddenDefaultIds, customQuickOptions, selectedOrder };
+    const saved = await saveUserQuickSearchPrefs(prefs);
 
     if (saved) {
-        // Update current options
-        quickSearchOptions = tempSelectedOptions;
-
-        // Re-render buttons
+        // Reload quickSearchOptions from new prefs (which pulls fresh defaults from cards.json)
+        await initializeQuickSearchOptions();
         renderQuickSearchButtons();
-
         console.log('✅ 快捷選項已更新');
     } else {
         console.error('❌ 保存快捷選項失敗');
         alert('保存失敗，請稍後再試');
-    }
-}
-
-// Custom options management
-// Now accepts optional userData parameter to avoid redundant Firestore calls
-async function loadUserCustomOptions(userData = null) {
-    try {
-        // Use provided userData if available (from unified load)
-        if (userData && userData.customQuickOptions) {
-            console.log('✅ Using custom options from unified data load');
-            return userData.customQuickOptions;
-        }
-
-        // Fallback: load from Firestore if userData not provided
-        if (currentUser && db) {
-            const userDoc = await window.getDoc(window.doc(db, 'users', currentUser.uid));
-            if (userDoc.exists() && userDoc.data().customQuickOptions) {
-                return userDoc.data().customQuickOptions;
-            }
-        }
-        const stored = localStorage.getItem('userCustomQuickOptions');
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (error) {
-        console.error('載入自訂快捷選項時出錯:', error);
-    }
-    return [];
-}
-
-async function saveUserCustomOptions(customOptions) {
-    try {
-        if (currentUser && db) {
-            await window.setDoc(window.doc(db, 'users', currentUser.uid), {
-                customQuickOptions: customOptions
-            }, { merge: true });
-        }
-        localStorage.setItem('userCustomQuickOptions', JSON.stringify(customOptions));
-        return true;
-    } catch (error) {
-        console.error('保存自訂快捷選項時出錯:', error);
-        return false;
     }
 }
 
