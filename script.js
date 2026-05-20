@@ -9035,13 +9035,19 @@ function renderAvailableTags() {
 }
 
 function createTagElement(option, type, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tag-wrapper';
+
     const tag = document.createElement('div');
     tag.className = 'tag-item';
     tag.dataset.optionId = option.id || option.displayName;
     tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
 
-    // 構建icon HTML（如果有的話）
+    // Icon HTML
     const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+
+    // Expand button (only when merchants exist)
+    const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 0;
 
     if (type === 'selected') {
         tag.draggable = true;
@@ -9049,6 +9055,7 @@ function createTagElement(option, type, index) {
         tag.innerHTML = `
             ${iconHtml}
             <span class="tag-name">${option.displayName}</span>
+            ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
             <button class="tag-remove-btn" title="移除">×</button>
         `;
 
@@ -9078,6 +9085,7 @@ function createTagElement(option, type, index) {
             <button class="tag-add-btn" title="新增">+</button>
             ${iconHtml}
             <span class="tag-name">${option.displayName}</span>
+            ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
         `;
 
         const addBtn = tag.querySelector('.tag-add-btn');
@@ -9090,7 +9098,28 @@ function createTagElement(option, type, index) {
         addBtn.addEventListener('touchend', handleAdd);
     }
 
-    return tag;
+    wrapper.appendChild(tag);
+
+    // Merchants panel (collapsed by default)
+    if (hasMerchants) {
+        const panel = document.createElement('div');
+        panel.className = 'tag-merchants-panel';
+        panel.textContent = option.merchants.join('、');
+        wrapper.appendChild(panel);
+
+        const expandBtn = tag.querySelector('.tag-expand-btn');
+        const toggle = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const isOpen = panel.classList.contains('open');
+            panel.classList.toggle('open', !isOpen);
+            expandBtn.classList.toggle('expanded', !isOpen);
+        };
+        expandBtn.addEventListener('click', toggle);
+        expandBtn.addEventListener('touchend', toggle);
+    }
+
+    return wrapper;
 }
 
 function addOption(option) {
@@ -9133,9 +9162,10 @@ function handleDrop(e) {
         e.stopPropagation();
     }
 
-    if (draggedElement !== e.target && e.target.classList.contains('tag-item')) {
+    const dropTarget = e.target.closest?.('.tag-item') || e.target;
+    if (draggedElement !== dropTarget && dropTarget.classList.contains('tag-item')) {
         const fromIndex = parseInt(draggedElement.dataset.index);
-        const toIndex = parseInt(e.target.dataset.index);
+        const toIndex = parseInt(dropTarget.dataset.index);
 
         if (!isNaN(fromIndex) && !isNaN(toIndex)) {
             // Reorder array
@@ -9151,7 +9181,9 @@ function handleDrop(e) {
 // Touch event handlers for mobile drag and drop
 function handleTouchStart(e) {
     // Don't interfere with button clicks
-    if (e.target.classList.contains('tag-remove-btn') || e.target.classList.contains('tag-add-btn')) {
+    if (e.target.classList.contains('tag-remove-btn') ||
+        e.target.classList.contains('tag-add-btn') ||
+        e.target.classList.contains('tag-expand-btn')) {
         return;
     }
 
@@ -9308,24 +9340,46 @@ function renderCustomOptionsList() {
     }
 
     tempCustomOptions.forEach((option) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-option-wrapper';
+
         const item = document.createElement('div');
         item.className = 'custom-option-item';
 
         // 構建icon HTML（如果有的話）
         const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+        const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 0;
 
         item.innerHTML = `
             ${iconHtml}
             <span class="tag-name">${option.displayName}</span>
+            ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
             <button class="custom-option-delete" title="刪除">×</button>
         `;
 
         const deleteBtn = item.querySelector('.custom-option-delete');
-        deleteBtn.onclick = () => {
-            deleteCustomOption(option);
-        };
+        deleteBtn.onclick = () => { deleteCustomOption(option); };
 
-        container.appendChild(item);
+        wrapper.appendChild(item);
+
+        if (hasMerchants) {
+            const panel = document.createElement('div');
+            panel.className = 'tag-merchants-panel';
+            panel.textContent = option.merchants.join('、');
+            wrapper.appendChild(panel);
+
+            const expandBtn = item.querySelector('.tag-expand-btn');
+            const toggle = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                panel.classList.toggle('open');
+                expandBtn.classList.toggle('expanded');
+            };
+            expandBtn.addEventListener('click', toggle);
+            expandBtn.addEventListener('touchend', toggle);
+        }
+
+        container.appendChild(wrapper);
     });
 }
 
