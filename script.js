@@ -1698,7 +1698,7 @@ const fuzzySearchMap = {
     'abc mart': 'abc-mart',
     'MAC': 'M.A.C',
     'nitori': '宜得利',
-    'mia cbon': 'Mia C\u2018bon'
+    'mia cbon': 'Mia C\'bon'
 };
 
 // Search term exclusion rules - prevents unwanted matches
