@@ -4115,13 +4115,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const highlightRowsHtml = fullWidthHtml + bonusGroupHtml;
     const capRowHtml = '';  // already merged into bonusGroupHtml above
 
-    const cardHeaderHtml = opts.hideCardName ? '' : `
-        <div class="card-header">
-            <div class="card-name-with-pin">
-                <h3 class="card-name">${escapeHtml(card.name)}</h3>
-            </div>
-        </div>`;
-
     // Detail page shows extra context (notes / official link); search results don't
     const notesHtml = (opts.showExtras && promo.notes)
         ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
@@ -4149,7 +4142,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         }
     }
 
-    // Apply CTA link (search results only) — "馬上辦卡" button at bottom-right
+    // Apply CTA link (search results only) — small "馬上辦卡" pill next to card name
     let applyCtaBtnHtml = '';
     if (!opts.showExtras) {
         const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
@@ -4158,9 +4151,17 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         }
     }
 
+    const cardHeaderHtmlWithCta = opts.hideCardName ? '' : `
+        <div class="card-header">
+            <div class="card-name-with-pin">
+                <h3 class="card-name">${escapeHtml(card.name)}</h3>
+                ${applyCtaBtnHtml}
+            </div>
+        </div>`;
+
     el.innerHTML = `
         ${cornerChipHtml}
-        ${cardHeaderHtml}
+        ${cardHeaderHtmlWithCta}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
         <div class="card-details">
@@ -4171,7 +4172,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
         ${linkHtml}
-        ${applyCtaBtnHtml}
     `;
     return el;
 }

@@ -1955,33 +1955,26 @@ input[type="number"]:focus {
 
 .promo-apply-cta-btn {
     display: inline-block;
-    margin-top: 10px;
-    float: right;
-    padding: 6px 14px;
+    flex-shrink: 0;
+    padding: 2px 8px;
     background: #facc15;
-    color: #422006;
-    font-size: 13px;
+    color: #78350f;
+    font-size: 11px;
     font-weight: 600;
     text-decoration: none;
-    border-radius: 6px;
+    border-radius: 20px;
     border: 1px solid #eab308;
     transition: background-color 0.15s ease, transform 0.05s ease;
     white-space: nowrap;
+    line-height: 1.6;
 }
 
 .promo-apply-cta-btn:hover {
-    background: #eab308;
+    background: #fbbf24;
 }
 
 .promo-apply-cta-btn:active {
     transform: translateY(1px);
-}
-
-/* Clear float so the card height grows for the button */
-.cardholder-promo-item::after {
-    content: '';
-    display: block;
-    clear: both;
 }
 
 .cardholder-promo-item .card-details .detail-item {
