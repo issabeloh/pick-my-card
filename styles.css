@@ -1962,7 +1962,7 @@ input[type="number"]:focus {
     font-size: 11px;
     font-weight: 600;
     text-decoration: none;
-    border-radius: 20px;
+    border-radius: 3px;
     border: 1px solid #eab308;
     transition: background-color 0.15s ease, transform 0.05s ease;
     white-space: nowrap;
@@ -1975,6 +1975,16 @@ input[type="number"]:focus {
 
 .promo-apply-cta-btn:active {
     transform: translateY(1px);
+}
+
+.promo-apply-cta-icon {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 3px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
 }
 
 .cardholder-promo-item .card-details .detail-item {
