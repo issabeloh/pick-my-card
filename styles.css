@@ -784,6 +784,62 @@ main {
     background: #d1fae5;
 }
 
+/* Tag wrapper — keeps merchants panel anchored below its chip */
+.tag-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+/* Expand toggle button on chips */
+.tag-expand-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 1px;
+    color: #9ca3af;
+    font-size: 0.7rem;
+    line-height: 1;
+    transition: transform 0.2s, color 0.15s;
+    display: flex;
+    align-items: center;
+}
+
+.tag-expand-btn:hover {
+    color: #4b5563;
+}
+
+.tag-expand-btn.expanded {
+    transform: rotate(180deg);
+    color: #3b82f6;
+}
+
+/* Merchants panel (collapsed by default) */
+.tag-merchants-panel {
+    display: none;
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: #f3f4f6;
+    border-radius: 6px;
+    padding: 4px 10px;
+    line-height: 1.5;
+    max-width: 280px;
+    word-break: break-all;
+}
+
+.tag-merchants-panel.open {
+    display: block;
+}
+
+/* Custom option wrapper (same column layout) */
+.custom-option-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
 /* Custom options */
 .add-custom-btn {
     background: #f3f4f6;
@@ -1889,6 +1945,46 @@ input[type="number"]:focus {
    highlight/cap row gets full width for breathable layout. */
 .cardholder-promo-item .card-details {
     display: block;
+}
+
+/* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
+   Style matches detail page's .card-apply-cta-btn. */
+.cardholder-promo-item {
+    position: relative;
+}
+
+.promo-apply-cta-btn {
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    background: #facc15;
+    color: #78350f;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 3px;
+    border: 1px solid #eab308;
+    transition: background-color 0.15s ease, transform 0.05s ease;
+    white-space: nowrap;
+    line-height: 1.6;
+}
+
+.promo-apply-cta-btn:hover {
+    background: #fbbf24;
+}
+
+.promo-apply-cta-btn:active {
+    transform: translateY(1px);
+}
+
+.promo-apply-cta-icon {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 3px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
 }
 
 .cardholder-promo-item .card-details .detail-item {
