@@ -3372,9 +3372,19 @@ function displayCashbackSites(searchedItem) {
             const found = list.find(entry => {
                 if (!entry || !entry.merchant) return false;
                 const merchantLower = entry.merchant.toLowerCase();
-                return merchantLower === termLower ||
-                       merchantLower.includes(termLower) ||
-                       termLower.includes(merchantLower);
+                // Exact match or search term contains the merchant name (e.g. "momo購物網" ⊇ "momo")
+                // Avoid partial prefix matches like "Qmomo".includes("momo")
+                if (merchantLower === termLower) return true;
+                if (termLower.includes(merchantLower)) return true;
+                // Allow merchant to contain the term only when term appears at a word boundary
+                // e.g. merchant="momo購物網" term="momo" → starts at index 0 ✓
+                //      merchant="Qmomo"     term="momo" → preceded by 'Q', not a boundary ✗
+                const idx = merchantLower.indexOf(termLower);
+                if (idx !== -1) {
+                    const before = idx === 0 ? '' : merchantLower[idx - 1];
+                    return before === '' || /\W/.test(before);
+                }
+                return false;
             });
             if (found) return found;
         }
