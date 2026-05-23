@@ -1,5 +1,6 @@
 // Global variables
 let currentUser = null;
+let appStarted = false; // true after user clicks "開始使用"
 let cardsInComparison = new Set();
 let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
@@ -4627,6 +4628,19 @@ function setupAuthentication() {
 }
 
 // Setup avatar dropdown menu (toggle, close on outside click, menu actions)
+// Show/hide guest-only dropdown items depending on whether the app has started.
+// Called on init and whenever appStarted flips to true.
+function setGuestDropdownVisibility() {
+    if (currentUser) return; // logged-in users always see full menu
+    const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
+    const divider = document.querySelector('.avatar-dropdown-divider');
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = appStarted ? '' : 'none';
+    });
+    if (divider) divider.style.display = appStarted ? '' : 'none';
+}
+
 function setupAvatarDropdown() {
     const avatarBtn = document.getElementById('avatar-btn');
     const avatarDropdown = document.getElementById('avatar-dropdown');
@@ -4700,6 +4714,7 @@ function initializeAuthListeners() {
             signOutItem.classList.remove('avatar-dropdown-logout');
             signOutItem.classList.add('avatar-dropdown-signin');
         }
+        setGuestDropdownVisibility();
     }
 
     function setLoggedInAvatarState(user) {
@@ -4786,6 +4801,7 @@ function initializeAuthListeners() {
             if (productIntroSection) {
                 productIntroSection.style.display = 'none';
             }
+            appStarted = true;
             showToolSections();
 
             // Show manage cards button
@@ -4900,6 +4916,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
@@ -4926,6 +4944,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
@@ -4952,6 +4972,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
@@ -6160,7 +6182,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                         specialContent += `<div class="cashback-merchants">`;
                         specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                         specialContent += `</div>`;
                     }
                 }
@@ -6226,7 +6248,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             specialContent += `<div class="cashback-merchants">`;
             specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">... 顯示全部${card.specialItems.length}個</button>`;
             specialContent += `</div>`;
         }
 
@@ -6331,7 +6353,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                         specialContent += `<div class="cashback-merchants">`;
                         specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                         specialContent += `</div>`;
                     }
                 }
@@ -6497,7 +6519,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     
                     specialContent += `<div class="cashback-merchants">`;
                     specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
+                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${rate.items.length}個</button>`;
                     specialContent += `</div>`;
                 }
             }
@@ -6558,7 +6580,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                     upcomingContent += `<div class="cashback-merchants">`;
                     upcomingContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    upcomingContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                    upcomingContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                     upcomingContent += `</div>`;
                 }
             }
@@ -6669,7 +6691,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     const fullList = merchantItems.join('、');
                     couponContent += `<div class="cashback-merchants">`;
                     couponContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${merchantItems.length}個</button>`;
+                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${merchantItems.length}個</button>`;
                     couponContent += `</div>`;
                 }
             }
@@ -6924,7 +6946,7 @@ async function generateCubeSpecialContent(card) {
             const showAllId10 = 'cube-children10-show-all';
             content += `<div class="cashback-merchants">`;
             content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId10}">${initialList10}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${initialList10}', '${merchantsList10}')">... 顯示全部${items10.length}個</button>`;
+            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${escapeForOnclick(initialList10)}', '${escapeForOnclick(merchantsList10)}')">... 顯示全部${items10.length}個</button>`;
             content += `</div>`;
         }
         content += `</div>`;
@@ -6965,7 +6987,7 @@ async function generateCubeSpecialContent(card) {
             const showAllId5 = 'cube-children5-show-all';
             content += `<div class="cashback-merchants">`;
             content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId5}">${initialList5}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${initialList5}', '${merchantsList5}')">... 顯示全部${items5.length}個</button>`;
+            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${escapeForOnclick(initialList5)}', '${escapeForOnclick(merchantsList5)}')">... 顯示全部${items5.length}個</button>`;
             content += `</div>`;
         }
         content += `</div>`;
@@ -7036,7 +7058,7 @@ async function generateCubeSpecialContent(card) {
 
                         content += `<div class="cashback-merchants">`;
                         content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${merchantsList}')">... 顯示全部${items.length}個</button>`;
+                        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(merchantsList)}')">... 顯示全部${items.length}個</button>`;
                         content += `</div>`;
                     }
                     content += `</div>`;
@@ -7148,7 +7170,7 @@ async function generateCubeSpecialContent(card) {
 
                     content += `<div class="cashback-merchants">`;
                     content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${mergedRate.items.length}個</button>`;
+                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${mergedRate.items.length}個</button>`;
                     content += `</div>`;
                 }
             }
@@ -7166,6 +7188,12 @@ async function updateCubeSpecialCashback(card) {
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     const newContent = await generateCubeSpecialContent(card);
     specialCashbackDiv.innerHTML = newContent;
+}
+
+// Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
+// Apostrophes (e.g. "Tomod's") would otherwise close the single-quoted string early.
+function escapeForOnclick(s) {
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 // 切換通路顯示展開/收起
@@ -8489,24 +8517,6 @@ function openManagePaymentsModal() {
 
     paymentsSelection.innerHTML = '';
 
-    if (!isLoggedIn) {
-        const loginPrompt = document.createElement('div');
-        loginPrompt.style.cssText = `
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 500;
-            grid-column: 1 / -1;
-            width: 100%;
-        `;
-        loginPrompt.textContent = '登入後即可選取指定行動支付做比較';
-        paymentsSelection.appendChild(loginPrompt);
-    }
-
     paymentsData.payments.forEach(payment => {
         const isSelected = userSelectedPayments.has(payment.id);
 
@@ -8514,33 +8524,23 @@ function openManagePaymentsModal() {
         paymentDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
 
         paymentDiv.innerHTML = `
-            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
+            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''}>
             <label for="payment-${payment.id}" class="card-checkbox-label">${payment.name}</label>
         `;
 
         const checkbox = paymentDiv.querySelector('input');
-        if (isLoggedIn) {
-            checkbox.addEventListener('change', () => {
-                paymentDiv.classList.toggle('selected', checkbox.checked);
-            });
-        }
+        checkbox.addEventListener('change', () => {
+            paymentDiv.classList.toggle('selected', checkbox.checked);
+        });
 
         paymentsSelection.appendChild(paymentDiv);
     });
 
-    if (!isLoggedIn) {
-        saveBtn.disabled = true;
-        saveBtn.style.opacity = '0.5';
-        saveBtn.style.cursor = 'not-allowed';
-        toggleAllBtn.disabled = true;
-        toggleAllBtn.style.opacity = '0.5';
-    } else {
-        saveBtn.disabled = false;
-        saveBtn.style.opacity = '1';
-        saveBtn.style.cursor = 'pointer';
-        toggleAllBtn.disabled = false;
-        toggleAllBtn.style.opacity = '1';
-    }
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+    toggleAllBtn.disabled = false;
+    toggleAllBtn.style.opacity = '1';
 
     // Toggle all payments
     let allSelected = userSelectedPayments.size === paymentsData.payments.length;
