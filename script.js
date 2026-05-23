@@ -1793,7 +1793,8 @@ const fuzzySearchMap = {
     'abc mart': 'abc-mart',
     'MAC': 'M.A.C',
     'nitori': '宜得利',
-    'mia cbon': 'Mia C\'bon'
+    'mia cbon': 'Mia C\'bon',
+    'tomods': 'Tomod\'s'
 };
 
 // Search term exclusion rules - prevents unwanted matches
