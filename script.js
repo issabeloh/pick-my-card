@@ -6158,7 +6158,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                         specialContent += `<div class="cashback-merchants">`;
                         specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                         specialContent += `</div>`;
                     }
                 }
@@ -6224,7 +6224,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
             specialContent += `<div class="cashback-merchants">`;
             specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">... 顯示全部${card.specialItems.length}個</button>`;
+            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">... 顯示全部${card.specialItems.length}個</button>`;
             specialContent += `</div>`;
         }
 
@@ -6329,7 +6329,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                         specialContent += `<div class="cashback-merchants">`;
                         specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                         specialContent += `</div>`;
                     }
                 }
@@ -6495,7 +6495,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     
                     specialContent += `<div class="cashback-merchants">`;
                     specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${rate.items.length}個</button>`;
+                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${rate.items.length}個</button>`;
                     specialContent += `</div>`;
                 }
             }
@@ -6556,7 +6556,7 @@ basicCashbackDiv.innerHTML = basicContent;
 
                     upcomingContent += `<div class="cashback-merchants">`;
                     upcomingContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    upcomingContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${uniqueItems.length}個</button>`;
+                    upcomingContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
                     upcomingContent += `</div>`;
                 }
             }
@@ -6667,7 +6667,7 @@ basicCashbackDiv.innerHTML = basicContent;
                     const fullList = merchantItems.join('、');
                     couponContent += `<div class="cashback-merchants">`;
                     couponContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${merchantItems.length}個</button>`;
+                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${merchantItems.length}個</button>`;
                     couponContent += `</div>`;
                 }
             }
@@ -6922,7 +6922,7 @@ async function generateCubeSpecialContent(card) {
             const showAllId10 = 'cube-children10-show-all';
             content += `<div class="cashback-merchants">`;
             content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId10}">${initialList10}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${initialList10}', '${merchantsList10}')">... 顯示全部${items10.length}個</button>`;
+            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${escapeForOnclick(initialList10)}', '${escapeForOnclick(merchantsList10)}')">... 顯示全部${items10.length}個</button>`;
             content += `</div>`;
         }
         content += `</div>`;
@@ -6963,7 +6963,7 @@ async function generateCubeSpecialContent(card) {
             const showAllId5 = 'cube-children5-show-all';
             content += `<div class="cashback-merchants">`;
             content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId5}">${initialList5}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${initialList5}', '${merchantsList5}')">... 顯示全部${items5.length}個</button>`;
+            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${escapeForOnclick(initialList5)}', '${escapeForOnclick(merchantsList5)}')">... 顯示全部${items5.length}個</button>`;
             content += `</div>`;
         }
         content += `</div>`;
@@ -7034,7 +7034,7 @@ async function generateCubeSpecialContent(card) {
 
                         content += `<div class="cashback-merchants">`;
                         content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${merchantsList}')">... 顯示全部${items.length}個</button>`;
+                        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(merchantsList)}')">... 顯示全部${items.length}個</button>`;
                         content += `</div>`;
                     }
                     content += `</div>`;
@@ -7146,7 +7146,7 @@ async function generateCubeSpecialContent(card) {
 
                     content += `<div class="cashback-merchants">`;
                     content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${initialList}', '${fullList}')">… 顯示全部${mergedRate.items.length}個</button>`;
+                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${mergedRate.items.length}個</button>`;
                     content += `</div>`;
                 }
             }
@@ -7164,6 +7164,12 @@ async function updateCubeSpecialCashback(card) {
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     const newContent = await generateCubeSpecialContent(card);
     specialCashbackDiv.innerHTML = newContent;
+}
+
+// Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
+// Apostrophes (e.g. "Tomod's") would otherwise close the single-quoted string early.
+function escapeForOnclick(s) {
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 // 切換通路顯示展開/收起
