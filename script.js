@@ -1,5 +1,6 @@
 // Global variables
 let currentUser = null;
+let appStarted = false; // true after user clicks "開始使用"
 let cardsInComparison = new Set();
 let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
@@ -4625,6 +4626,19 @@ function setupAuthentication() {
 }
 
 // Setup avatar dropdown menu (toggle, close on outside click, menu actions)
+// Show/hide guest-only dropdown items depending on whether the app has started.
+// Called on init and whenever appStarted flips to true.
+function setGuestDropdownVisibility() {
+    if (currentUser) return; // logged-in users always see full menu
+    const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
+    const divider = document.querySelector('.avatar-dropdown-divider');
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = appStarted ? '' : 'none';
+    });
+    if (divider) divider.style.display = appStarted ? '' : 'none';
+}
+
 function setupAvatarDropdown() {
     const avatarBtn = document.getElementById('avatar-btn');
     const avatarDropdown = document.getElementById('avatar-dropdown');
@@ -4698,6 +4712,7 @@ function initializeAuthListeners() {
             signOutItem.classList.remove('avatar-dropdown-logout');
             signOutItem.classList.add('avatar-dropdown-signin');
         }
+        setGuestDropdownVisibility();
     }
 
     function setLoggedInAvatarState(user) {
@@ -4784,6 +4799,7 @@ function initializeAuthListeners() {
             if (productIntroSection) {
                 productIntroSection.style.display = 'none';
             }
+            appStarted = true;
             showToolSections();
 
             // Show manage cards button
@@ -4898,6 +4914,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
@@ -4924,6 +4942,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
@@ -4950,6 +4970,8 @@ function initializeAuthListeners() {
             }
 
             // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
             showToolSections();
 
             // Hide the button itself (for mobile)
