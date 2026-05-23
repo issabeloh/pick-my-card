@@ -8493,24 +8493,6 @@ function openManagePaymentsModal() {
 
     paymentsSelection.innerHTML = '';
 
-    if (!isLoggedIn) {
-        const loginPrompt = document.createElement('div');
-        loginPrompt.style.cssText = `
-            background: #fef3c7;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            padding: 12px 16px;
-            margin-bottom: 16px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 500;
-            grid-column: 1 / -1;
-            width: 100%;
-        `;
-        loginPrompt.textContent = '登入後即可選取指定行動支付做比較';
-        paymentsSelection.appendChild(loginPrompt);
-    }
-
     paymentsData.payments.forEach(payment => {
         const isSelected = userSelectedPayments.has(payment.id);
 
@@ -8518,33 +8500,23 @@ function openManagePaymentsModal() {
         paymentDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
 
         paymentDiv.innerHTML = `
-            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''} ${!isLoggedIn ? 'disabled' : ''}>
+            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''}>
             <label for="payment-${payment.id}" class="card-checkbox-label">${payment.name}</label>
         `;
 
         const checkbox = paymentDiv.querySelector('input');
-        if (isLoggedIn) {
-            checkbox.addEventListener('change', () => {
-                paymentDiv.classList.toggle('selected', checkbox.checked);
-            });
-        }
+        checkbox.addEventListener('change', () => {
+            paymentDiv.classList.toggle('selected', checkbox.checked);
+        });
 
         paymentsSelection.appendChild(paymentDiv);
     });
 
-    if (!isLoggedIn) {
-        saveBtn.disabled = true;
-        saveBtn.style.opacity = '0.5';
-        saveBtn.style.cursor = 'not-allowed';
-        toggleAllBtn.disabled = true;
-        toggleAllBtn.style.opacity = '0.5';
-    } else {
-        saveBtn.disabled = false;
-        saveBtn.style.opacity = '1';
-        saveBtn.style.cursor = 'pointer';
-        toggleAllBtn.disabled = false;
-        toggleAllBtn.style.opacity = '1';
-    }
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+    toggleAllBtn.disabled = false;
+    toggleAllBtn.style.opacity = '1';
 
     // Toggle all payments
     let allSelected = userSelectedPayments.size === paymentsData.payments.length;
