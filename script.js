@@ -7546,7 +7546,7 @@ function isPinned(cardId, merchant) {
 async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
-        alert('請先登入才能使用釘選功能');
+        alert('登入後即可使用釘選功能，幫您記錄個人配卡！');
         return;
     }
 
