@@ -4733,6 +4733,14 @@ function initializeAuthListeners() {
             signOutItem.classList.add('avatar-dropdown-logout');
             signOutItem.classList.remove('avatar-dropdown-signin');
         }
+        // Always show all menu items for logged-in users
+        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
+        const divider = document.querySelector('.avatar-dropdown-divider');
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = '';
+        });
+        if (divider) divider.style.display = '';
     }
 
     // Initialize as guest state on page load
