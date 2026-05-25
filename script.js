@@ -4733,6 +4733,14 @@ function initializeAuthListeners() {
             signOutItem.classList.add('avatar-dropdown-logout');
             signOutItem.classList.remove('avatar-dropdown-signin');
         }
+        // Always show all menu items for logged-in users
+        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
+        const divider = document.querySelector('.avatar-dropdown-divider');
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = '';
+        });
+        if (divider) divider.style.display = '';
     }
 
     // Initialize as guest state on page load
@@ -4848,6 +4856,7 @@ function initializeAuthListeners() {
             // User is signed out — guest mode
             console.log('User signed out');
             currentUser = null;
+            appStarted = false;
             cardsInComparison.clear();
             myOwnedCards.clear();
             // Load guest data from localStorage
@@ -7537,7 +7546,7 @@ function isPinned(cardId, merchant) {
 async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
-        alert('請先登入才能使用釘選功能');
+        alert('登入後即可使用釘選功能，幫您記錄個人配卡！');
         return;
     }
 
