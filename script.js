@@ -4856,6 +4856,7 @@ function initializeAuthListeners() {
             // User is signed out — guest mode
             console.log('User signed out');
             currentUser = null;
+            appStarted = false;
             cardsInComparison.clear();
             myOwnedCards.clear();
             // Load guest data from localStorage
