@@ -1130,7 +1130,7 @@ function buildSpotlightCard(item, index) {
         </div>
     `;
 
-    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(spotlightSearchTerm(item)));
+    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
 }
@@ -1192,27 +1192,21 @@ function setupSpotlightControls() {
     }
 }
 
-// Resolve the search token for a spotlight: an explicit search_term wins,
-// otherwise the merchant label doubles as the search keyword.
-function spotlightSearchTerm(item) {
-    return (item.search_term && String(item.search_term).trim()) || item.merchant || '';
-}
-
 // Find the actual cashbackRate activities in a card that cover the spotlight's
 // merchant, by looking up the card's prebuilt items index. Keywords come from a
 // matching quick-search option (so "所有加油站" expands to 中油/台塑/…) or from
-// the search token split on common separators.
-function findSpotlightCardActivities(card, searchTerm) {
-    if (!card || !card._itemsIndex || !searchTerm) return [];
+// the merchant itself.
+function findSpotlightCardActivities(card, merchant) {
+    if (!card || !card._itemsIndex || !merchant) return [];
 
     let keywords;
     const options = (cardsData && cardsData.quickSearchOptions) || [];
-    const normalized = searchTerm.trim().toLowerCase();
+    const normalized = merchant.trim().toLowerCase();
     const opt = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
     if (opt && Array.isArray(opt.merchants)) {
         keywords = opt.merchants.slice();
     } else {
-        keywords = searchTerm.split(/[,，、・]/).map(s => s.trim()).filter(Boolean);
+        keywords = [merchant.trim()];
     }
     const variants = [...new Set(keywords.flatMap(k => getAllSearchVariants(k)))].filter(v => v && v.length >= 2);
     if (variants.length === 0) return [];
@@ -1241,7 +1235,7 @@ function findSpotlightCardActivities(card, searchTerm) {
 
 function buildSpotlightModalBody(item) {
     const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
-    const activities = card ? findSpotlightCardActivities(card, spotlightSearchTerm(item)) : [];
+    const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
     const cardNameLine = `<div class="spotlight-modal-cardname">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</div>`;
 
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
@@ -1314,7 +1308,7 @@ function openSpotlightModal(index) {
         }
     }
     if (compareBtn) {
-        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(spotlightSearchTerm(item)); };
+        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(item.merchant); };
     }
 
     modal.style.display = 'flex';
