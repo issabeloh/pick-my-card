@@ -1236,7 +1236,12 @@ function findSpotlightCardActivities(card, merchant) {
 function buildSpotlightModalBody(item) {
     const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
     const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
-    const cardNameLine = `<div class="spotlight-modal-cardname">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</div>`;
+
+    const applyCta = (cardsData && cardsData.cardApplyCtas && item.card_id) ? cardsData.cardApplyCtas[item.card_id] : null;
+    const applyCtaHtml = (applyCta && applyCta.link)
+        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+        : '';
+    const cardNameLine = `<div class="spotlight-modal-cardname"><span class="spotlight-modal-cardname-text">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</span>${applyCtaHtml}</div>`;
 
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
@@ -4349,9 +4354,10 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
         return;
     }
 
-    // Candidate cards: in comparison AND not owned. Whether each promo
-    // shows is decided by promoMerchantsMatchSearch below.
-    const candidateCards = getCardsForComparison().filter(c => !myOwnedCards.has(c.id));
+    // Candidate cards: any card the user doesn't own (independent of the
+    // comparison selection — this is a discovery feature for cards you don't
+    // hold). Whether each promo shows is decided by promoMerchantsMatchSearch.
+    const candidateCards = cardsData.cards.filter(c => !myOwnedCards.has(c.id));
 
     const fragment = document.createDocumentFragment();
     let renderedCount = 0;

@@ -6237,10 +6237,18 @@ input[type="number"]:focus {
 }
 
 .spotlight-modal-cardname {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     font-size: 0.9rem;
     font-weight: 600;
     color: #374151;
     margin-bottom: 12px;
+}
+.spotlight-apply-cta-btn {
+    font-size: 12px;
+    padding: 3px 10px;
 }
 .spotlight-activity {
     border-top: 1px solid #f0f0f0;
