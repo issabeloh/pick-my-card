@@ -1130,7 +1130,7 @@ function buildSpotlightCard(item, index) {
         </div>
     `;
 
-    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
+    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(spotlightSearchTerm(item)));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
 }
@@ -1192,6 +1192,104 @@ function setupSpotlightControls() {
     }
 }
 
+// Resolve the search token for a spotlight: an explicit search_term wins,
+// otherwise the merchant label doubles as the search keyword.
+function spotlightSearchTerm(item) {
+    return (item.search_term && String(item.search_term).trim()) || item.merchant || '';
+}
+
+// Find the actual cashbackRate activities in a card that cover the spotlight's
+// merchant, by looking up the card's prebuilt items index. Keywords come from a
+// matching quick-search option (so "所有加油站" expands to 中油/台塑/…) or from
+// the search token split on common separators.
+function findSpotlightCardActivities(card, searchTerm) {
+    if (!card || !card._itemsIndex || !searchTerm) return [];
+
+    let keywords;
+    const options = (cardsData && cardsData.quickSearchOptions) || [];
+    const normalized = searchTerm.trim().toLowerCase();
+    const opt = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
+    if (opt && Array.isArray(opt.merchants)) {
+        keywords = opt.merchants.slice();
+    } else {
+        keywords = searchTerm.split(/[,，、・]/).map(s => s.trim()).filter(Boolean);
+    }
+    const variants = [...new Set(keywords.flatMap(k => getAllSearchVariants(k)))].filter(v => v && v.length >= 2);
+    if (variants.length === 0) return [];
+
+    const collect = (predicate) => {
+        const seen = new Set();
+        const out = [];
+        for (const [itemLower, entries] of card._itemsIndex.entries()) {
+            if (!predicate(itemLower)) continue;
+            entries.forEach(e => {
+                if (e.type === 'cashbackRate' && e.rateGroup && !seen.has(e.rateGroup)) {
+                    seen.add(e.rateGroup);
+                    out.push(e.rateGroup);
+                }
+            });
+        }
+        return out;
+    };
+
+    let groups = collect(itemLower => variants.includes(itemLower));
+    if (groups.length === 0) {
+        groups = collect(itemLower => variants.some(v => itemLower.includes(v) || v.includes(itemLower)));
+    }
+    return groups;
+}
+
+function buildSpotlightModalBody(item) {
+    const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
+    const activities = card ? findSpotlightCardActivities(card, spotlightSearchTerm(item)) : [];
+    const cardNameLine = `<div class="spotlight-modal-cardname">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</div>`;
+
+    // Fallback to the editorial Highlights data when the card/activity can't be resolved.
+    if (activities.length === 0) {
+        const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
+        const daysLeft = getSpotlightDaysLeft(item.deadline);
+        const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
+            ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+        return `
+            ${cardNameLine}
+            ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
+            <p class="spotlight-modal-desc">${escapeHtml(item.description || '')}</p>
+            <div class="spotlight-modal-info">
+                ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
+                ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
+            </div>
+            <p class="spotlight-modal-hint">完整活動條件請點下方「查看完整卡片詳情」。</p>
+        `;
+    }
+
+    let levelData = null;
+    if (card.hasLevels && card.levelSettings) {
+        levelData = card.levelSettings[Object.keys(card.levelSettings)[0]] || null;
+    }
+
+    const blocks = activities.map(group => {
+        const rateNum = parseCashbackRateSync(group.rate, levelData);
+        const capNum = parseCashbackCap(group.cap, card, levelData);
+        const capText = (capNum !== null && capNum !== undefined && !isNaN(capNum))
+            ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
+        const period = group.period || ((group.periodStart && group.periodEnd) ? `${group.periodStart}~${group.periodEnd}` : '');
+        const items = Array.isArray(group.items) ? group.items : [];
+        return `
+            <div class="spotlight-activity">
+                <div class="spotlight-modal-rate">${escapeHtml(rateNum ? rateNum + '%' : '')}</div>
+                <div class="spotlight-modal-info">
+                    <div><span class="spotlight-modal-label">回饋上限</span><span>${capText}</span></div>
+                    ${period ? `<div><span class="spotlight-modal-label">活動期間</span><span>${escapeHtml(period)}</span></div>` : ''}
+                    ${group.conditions ? `<div><span class="spotlight-modal-label">條件</span><span>${escapeHtml(group.conditions)}</span></div>` : ''}
+                </div>
+                ${items.length ? `<div class="spotlight-act-items"><span class="spotlight-modal-label">適用通路</span><span>${items.map(escapeHtml).join('、')}</span></div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    return `${cardNameLine}${blocks}`;
+}
+
 function openSpotlightModal(index) {
     const item = spotlightItems[index];
     if (!item) return;
@@ -1202,26 +1300,13 @@ function openSpotlightModal(index) {
 
     if (titleEl) titleEl.textContent = item.merchant || '活動詳情';
 
-    const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
-    const daysLeft = getSpotlightDaysLeft(item.deadline);
-    const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
-        ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
-
-    bodyEl.innerHTML = `
-        ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
-        <p class="spotlight-modal-desc">${escapeHtml(item.description || '')}</p>
-        <div class="spotlight-modal-info">
-            <div><span class="spotlight-modal-label">適用卡片</span><span>${escapeHtml(item.card_name || '—')}</span></div>
-            ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
-            ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
-        </div>
-        <p class="spotlight-modal-hint">完整活動條件請點下方「查看完整卡片詳情」。</p>
-    `;
+    bodyEl.innerHTML = buildSpotlightModalBody(item);
 
     const detailBtn = document.getElementById('spotlight-modal-detail');
     const compareBtn = document.getElementById('spotlight-modal-compare');
     if (detailBtn) {
-        if (item.card_id) {
+        const cardExists = item.card_id && ((cardsData && cardsData.cards) || []).some(c => c.id === item.card_id);
+        if (cardExists) {
             detailBtn.style.display = 'inline-block';
             detailBtn.onclick = () => { closeSpotlightModal(); showCardDetail(item.card_id); };
         } else {
@@ -1229,7 +1314,7 @@ function openSpotlightModal(index) {
         }
     }
     if (compareBtn) {
-        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(item.merchant); };
+        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(spotlightSearchTerm(item)); };
     }
 
     modal.style.display = 'flex';
