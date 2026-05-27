@@ -1023,6 +1023,265 @@ function handleQuickSearch(option) {
     validateInputs();
 }
 
+// ============ 本週亮點活動 (Spotlight) ============
+// Editorial highlights from cardsData.spotlights. Shows 3 per page in an
+// auto-rotating carousel; the count cap is decoupled from what's visible.
+let spotlightItems = [];
+let spotlightPage = 0;
+let spotlightTimer = null;
+const SPOTLIGHT_PAGE_SIZE = 3;
+const SPOTLIGHT_MAX = 12;
+const SPOTLIGHT_INTERVAL = 6000;
+
+function getSpotlightDaysLeft(deadline) {
+    if (!deadline) return null;
+    const end = new Date(deadline);
+    if (isNaN(end.getTime())) return null;
+    end.setHours(23, 59, 59, 999);
+    return Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+}
+
+function spotlightTotalPages() {
+    return Math.ceil(spotlightItems.length / SPOTLIGHT_PAGE_SIZE);
+}
+
+function renderSpotlights() {
+    const section = document.getElementById('spotlight-section');
+    const track = document.getElementById('spotlight-track');
+    if (!section || !track) return;
+
+    const all = (cardsData && Array.isArray(cardsData.spotlights)) ? cardsData.spotlights : [];
+    spotlightItems = all
+        .filter(s => s && s.active !== false && s.active !== 'FALSE')
+        .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999))
+        .slice(0, SPOTLIGHT_MAX);
+
+    if (spotlightItems.length === 0) {
+        section.style.display = 'none';
+        stopSpotlightAutoRotate();
+        return;
+    }
+
+    section.style.display = 'block';
+
+    const badge = document.getElementById('spotlight-badge');
+    if (badge) {
+        badge.textContent = `共 ${spotlightItems.length} 則`;
+        badge.style.display = 'inline-block';
+    }
+
+    spotlightPage = 0;
+    buildSpotlightDots();
+    renderSpotlightPage();
+
+    const multiPage = spotlightTotalPages() > 1;
+    const nextBtn = document.getElementById('spotlight-next-btn');
+    const dots = document.getElementById('spotlight-dots');
+    if (nextBtn) nextBtn.style.display = multiPage ? 'inline-flex' : 'none';
+    if (dots) dots.style.display = multiPage ? 'flex' : 'none';
+
+    if (multiPage) startSpotlightAutoRotate();
+    else stopSpotlightAutoRotate();
+}
+
+function renderSpotlightPage() {
+    const track = document.getElementById('spotlight-track');
+    if (!track) return;
+    const start = spotlightPage * SPOTLIGHT_PAGE_SIZE;
+    const pageItems = spotlightItems.slice(start, start + SPOTLIGHT_PAGE_SIZE);
+
+    const frag = document.createDocumentFragment();
+    pageItems.forEach((item, i) => {
+        frag.appendChild(buildSpotlightCard(item, start + i));
+    });
+
+    track.classList.remove('spotlight-fade-in');
+    track.innerHTML = '';
+    track.appendChild(frag);
+    void track.offsetWidth; // restart fade animation
+    track.classList.add('spotlight-fade-in');
+
+    updateSpotlightDots();
+}
+
+function buildSpotlightCard(item, index) {
+    const card = document.createElement('div');
+    card.className = 'spotlight-card';
+
+    const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
+    const daysLeft = getSpotlightDaysLeft(item.deadline);
+    const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
+        ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+
+    card.innerHTML = `
+        <div class="spotlight-card-top">
+            <span class="spotlight-merchant-tag">${escapeHtml(item.merchant || '')}</span>
+            <span class="spotlight-rate">${escapeHtml(rate)}</span>
+        </div>
+        <div class="spotlight-desc">${escapeHtml(item.description || '')}</div>
+        <div class="spotlight-meta">
+            <div class="spotlight-meta-row"><span class="spotlight-meta-icon">💳</span><span>${escapeHtml(item.card_name || '')}</span></div>
+            ${item.cap ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">＄</span><span>消費上限 ${escapeHtml(item.cap)}</span></div>` : ''}
+            ${item.deadline ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">🕒</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
+        </div>
+        <div class="spotlight-card-actions">
+            <button type="button" class="spotlight-compare-btn">比較這個通路 →</button>
+            <button type="button" class="spotlight-info-btn" aria-label="活動詳情">ⓘ</button>
+        </div>
+    `;
+
+    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
+    card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
+    return card;
+}
+
+function buildSpotlightDots() {
+    const dots = document.getElementById('spotlight-dots');
+    if (!dots) return;
+    const total = spotlightTotalPages();
+    dots.innerHTML = '';
+    for (let i = 0; i < total; i++) {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'spotlight-dot';
+        dot.setAttribute('aria-label', `第 ${i + 1} 組`);
+        dot.addEventListener('click', () => goToSpotlightPage(i, true));
+        dots.appendChild(dot);
+    }
+}
+
+function updateSpotlightDots() {
+    const dots = document.getElementById('spotlight-dots');
+    if (!dots) return;
+    Array.from(dots.children).forEach((d, i) => d.classList.toggle('active', i === spotlightPage));
+}
+
+function goToSpotlightPage(page, userTriggered) {
+    const total = spotlightTotalPages();
+    if (total === 0) return;
+    spotlightPage = ((page % total) + total) % total;
+    renderSpotlightPage();
+    if (userTriggered) startSpotlightAutoRotate(); // reset countdown
+}
+
+function nextSpotlightPage(userTriggered) {
+    goToSpotlightPage(spotlightPage + 1, userTriggered);
+}
+
+function startSpotlightAutoRotate() {
+    stopSpotlightAutoRotate();
+    if (spotlightTotalPages() <= 1) return;
+    spotlightTimer = setInterval(() => nextSpotlightPage(false), SPOTLIGHT_INTERVAL);
+}
+
+function stopSpotlightAutoRotate() {
+    if (spotlightTimer) {
+        clearInterval(spotlightTimer);
+        spotlightTimer = null;
+    }
+}
+
+function setupSpotlightControls() {
+    const nextBtn = document.getElementById('spotlight-next-btn');
+    if (nextBtn) nextBtn.addEventListener('click', () => nextSpotlightPage(true));
+
+    const track = document.getElementById('spotlight-track');
+    if (track) {
+        track.addEventListener('mouseenter', stopSpotlightAutoRotate);
+        track.addEventListener('mouseleave', startSpotlightAutoRotate);
+    }
+}
+
+function openSpotlightModal(index) {
+    const item = spotlightItems[index];
+    if (!item) return;
+    const modal = document.getElementById('spotlight-modal');
+    const titleEl = document.getElementById('spotlight-modal-title');
+    const bodyEl = document.getElementById('spotlight-modal-body');
+    if (!modal || !bodyEl) return;
+
+    if (titleEl) titleEl.textContent = item.merchant || '活動詳情';
+
+    const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
+    const daysLeft = getSpotlightDaysLeft(item.deadline);
+    const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
+        ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+
+    bodyEl.innerHTML = `
+        ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
+        <p class="spotlight-modal-desc">${escapeHtml(item.description || '')}</p>
+        <div class="spotlight-modal-info">
+            <div><span class="spotlight-modal-label">適用卡片</span><span>${escapeHtml(item.card_name || '—')}</span></div>
+            ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
+            ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
+        </div>
+        <p class="spotlight-modal-hint">完整活動條件請點下方「查看完整卡片詳情」。</p>
+    `;
+
+    const detailBtn = document.getElementById('spotlight-modal-detail');
+    const compareBtn = document.getElementById('spotlight-modal-compare');
+    if (detailBtn) {
+        if (item.card_id) {
+            detailBtn.style.display = 'inline-block';
+            detailBtn.onclick = () => { closeSpotlightModal(); showCardDetail(item.card_id); };
+        } else {
+            detailBtn.style.display = 'none';
+        }
+    }
+    if (compareBtn) {
+        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(item.merchant); };
+    }
+
+    modal.style.display = 'flex';
+    disableBodyScroll();
+    stopSpotlightAutoRotate();
+
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+
+    const closeBtn = document.getElementById('spotlight-modal-close');
+    if (closeBtn) closeBtn.onclick = closeSpotlightModal;
+    modal.onclick = (e) => { if (e.target === modal) closeSpotlightModal(); };
+}
+
+function closeSpotlightModal() {
+    const modal = document.getElementById('spotlight-modal');
+    if (modal) modal.style.display = 'none';
+    enableBodyScroll();
+    startSpotlightAutoRotate();
+}
+
+// Auto-fill the merchant search and run the comparison. If the merchant matches
+// a quick-search option's displayName (e.g. 所有加油站), trigger that multi-keyword
+// search; otherwise do a plain single-merchant search.
+function compareSpotlightMerchant(merchant) {
+    if (!merchant) return;
+    const merchantInputEl = document.getElementById('merchant-input');
+    const amountInput = document.getElementById('amount-input');
+
+    const options = (cardsData && cardsData.quickSearchOptions) ? cardsData.quickSearchOptions : [];
+    const normalized = merchant.trim().toLowerCase();
+    const matchedOption = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
+
+    if (matchedOption) {
+        handleQuickSearch(matchedOption);
+    } else {
+        if (merchantInputEl) {
+            merchantInputEl.value = merchant;
+            handleMerchantInput();
+        }
+        if (amountInput && !amountInput.value) amountInput.value = '1000';
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn && !calcBtn.disabled) calcBtn.click();
+    }
+
+    setTimeout(() => {
+        const results = document.getElementById('results-section');
+        const target = (results && results.style.display !== 'none') ? results : merchantInputEl;
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: results === target ? 'start' : 'center' });
+    }, 200);
+}
+
 // Show error message to user
 function showErrorMessage(message) {
     const container = document.querySelector('.container');
@@ -1466,7 +1725,10 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
-    
+
+    // Spotlight carousel controls (next button + hover pause)
+    setupSpotlightControls();
+
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {
         if (amountInput.value === '1000' && amountInput.dataset.userModified !== 'true') {
@@ -4759,12 +5021,14 @@ function initializeAuthListeners() {
         announcementBar: document.getElementById('announcement-bar'),
         resultsSection: document.querySelector('.results-section'),
         couponResultsSection: document.querySelector('.coupon-results-section'),
+        spotlightSection: document.getElementById('spotlight-section'),
     };
 
     function showToolSections() {
         const t = toolElements;
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
+        renderSpotlights();
         if (t.sidebar) t.sidebar.style.display = '';
         if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
         if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
@@ -4787,6 +5051,8 @@ function initializeAuthListeners() {
         if (t.announcementBar) t.announcementBar.style.display = 'none';
         if (t.resultsSection) t.resultsSection.style.display = 'none';
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
+        if (t.spotlightSection) t.spotlightSection.style.display = 'none';
+        stopSpotlightAutoRotate();
     }
 
     // Listen for authentication state changes
