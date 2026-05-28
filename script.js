@@ -1064,12 +1064,6 @@ function renderSpotlights() {
 
     section.style.display = 'block';
 
-    const badge = document.getElementById('spotlight-badge');
-    if (badge) {
-        badge.textContent = `共 ${spotlightItems.length} 則`;
-        badge.style.display = 'inline-block';
-    }
-
     spotlightPage = 0;
     buildSpotlightDots();
     renderSpotlightPage();
