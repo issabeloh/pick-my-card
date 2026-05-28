@@ -1106,15 +1106,20 @@ function buildSpotlightCard(item, index) {
     const daysLeft = getSpotlightDaysLeft(item.deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+    const categoryChip = item.category
+        ? `<span class="spotlight-tag-chip">${escapeHtml(item.category)}</span>` : '';
 
     card.innerHTML = `
         <div class="spotlight-card-top">
-            <span class="spotlight-merchant-tag">${escapeHtml(item.merchant || '')}</span>
+            <div class="spotlight-tags">
+                <span class="spotlight-merchant-tag">${escapeHtml(item.merchant || '')}</span>
+                ${categoryChip}
+            </div>
             <span class="spotlight-rate">${escapeHtml(rate)}</span>
         </div>
         <div class="spotlight-desc">${escapeHtml(item.description || '')}</div>
         <div class="spotlight-meta">
-            <div class="spotlight-meta-row"><span class="spotlight-meta-icon">💳</span><span>${escapeHtml(item.card_name || '')}</span></div>
+            <div class="spotlight-meta-row spotlight-meta-card"><span class="spotlight-meta-icon">💳</span><span>${escapeHtml(item.card_name || '')}</span></div>
             ${item.cap ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">＄</span><span>消費上限 ${escapeHtml(item.cap)}</span></div>` : ''}
             ${item.deadline ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">🕒</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
         </div>
