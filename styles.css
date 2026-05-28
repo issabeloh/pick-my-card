@@ -6018,9 +6018,15 @@ input[type="number"]:focus {
     cursor: pointer;
 }
 
-/* ============ 本週亮點活動 (Spotlight) ============ */
+/* ============ 精選活動 (Spotlight) ============ */
+/* Full-width row below the sidebar+main grid. Box-sizing keeps the section
+   exactly at container width so it visibly bridges both columns above. */
 .spotlight-section {
-    margin: 24px 0;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 24px 30px 30px;
+    border-top: 1px solid #e5e7eb;
 }
 .spotlight-header {
     display: flex;
@@ -6037,14 +6043,6 @@ input[type="number"]:focus {
     font-size: 1.25rem;
 }
 .spotlight-fire { font-size: 1.1em; }
-.spotlight-badge {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #b45309;
-    background: #fef3c7;
-    border-radius: 999px;
-    padding: 2px 10px;
-}
 .spotlight-next-btn {
     display: inline-flex;
     align-items: center;

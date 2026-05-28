@@ -229,9 +229,9 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
   );
   ```
 
-### 10. 本週亮點活動（Spotlight）
+### 10. 精選活動（Spotlight）
 
-**用途**：在搜尋框下方常駐顯示一區編輯精選活動（「🔥 本週亮點活動」），與使用者的搜尋無關。
+**用途**：在搜尋框下方常駐顯示一區編輯精選活動（「🔥 精選活動」），與使用者的搜尋無關。
 
 **資料來源**：
 - Google Sheets 的 `Highlights` 工作表，由 Apps Script 匯出成 `cardsData.spotlights` 陣列
@@ -304,12 +304,12 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 最近的技術決策
 
-1. **2026-05-27: 新增本週亮點活動（Spotlight）**
+1. **2026-05-27: 新增精選活動（Spotlight）**
    - 搜尋框下方常駐的編輯精選活動區，資料來自 `Highlights` 工作表（JSON key `spotlights`）
    - 自動輪播：每頁 3 張、6 秒換頁、可手動「看下一組」、頁碼圓點，最多 12 則
    - 「比較這個通路」帶入主搜尋（merchant 對到快捷 displayName 則走快捷搜尋）
    - ⓘ 開啟獨立 modal，顯示卡片 `cashbackRates` 中涵蓋該 merchant 的真實活動，找不到則退回編輯文字
-   - 詳見「關鍵技術概念 → 10. 本週亮點活動（Spotlight）」
+   - 詳見「關鍵技術概念 → 10. 精選活動（Spotlight）」
 
 2. **2026-01-24: 修復停車折抵優惠快捷搜尋**
    - 快捷搜尋時，停車折抵優惠需要使用所有關鍵詞匹配
@@ -467,11 +467,11 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
    - 欄位：`merchant`, `url`, `description`, `active`
    - 用於顯示商家推薦註冊連結和優惠說明
 
-10. **Highlights** - 本週亮點活動（2026-05-27 新增）
+10. **Highlights** - 精選活動（2026-05-27 新增）
     - 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`
     - 匯出 JSON key 為 `spotlights`
     - `merchant` 為單一搜尋詞（一個商家，或剛好等於某個快捷搜尋的 displayName）
-    - 詳見「關鍵技術概念 → 10. 本週亮點活動（Spotlight）」
+    - 詳見「關鍵技術概念 → 10. 精選活動（Spotlight）」
 
 ### Apps Script 匯出流程
 
@@ -507,7 +507,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
   cashbackSites: [...],        // 領券/回饋網站
   newCardholderPromos: [...],  // 新戶活動
   cardApplyCtas: [...],        // 辦卡 CTA
-  spotlights: [...]            // 本週亮點活動（Highlights 工作表）
+  spotlights: [...]            // 精選活動（Highlights 工作表）
 }
 ```
 > 註：`cashbackSites` / `newCardholderPromos` / `cardApplyCtas` 為現有結構（先前文件未列出），此處一併補上。
