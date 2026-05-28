@@ -6086,13 +6086,28 @@ input[type="number"]:focus {
     gap: 8px;
     margin-bottom: 10px;
 }
+.spotlight-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    max-width: 75%;
+}
+.spotlight-tag-chip {
+    font-size: 0.72rem;
+    color: #1e40af;
+    background: #dbeafe;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-weight: 500;
+    white-space: nowrap;
+}
 .spotlight-merchant-tag {
     font-size: 0.78rem;
     color: #4b5563;
     background: #f3f4f6;
     border-radius: 999px;
     padding: 4px 10px;
-    max-width: 75%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -6140,6 +6155,10 @@ input[type="number"]:focus {
     flex: 1;
 }
 .spotlight-meta-icon { width: 16px; text-align: center; flex-shrink: 0; }
+.spotlight-meta-card > span:last-child {
+    font-weight: 700;
+    color: #111827;
+}
 .spotlight-days-badge {
     display: inline-block;
     margin-left: 6px;
