@@ -229,6 +229,42 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
   );
   ```
 
+### 10. 本週亮點活動（Spotlight）
+
+**用途**：在搜尋框下方常駐顯示一區編輯精選活動（「🔥 本週亮點活動」），與使用者的搜尋無關。
+
+**資料來源**：
+- Google Sheets 的 `Highlights` 工作表，由 Apps Script 匯出成 `cardsData.spotlights` 陣列
+- 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`
+- `rate`/`order` 為數字，`active` 為布林，`deadline` 為 `YYYY/MM/DD` 字串
+
+**顯示方式（輪播）** (script.js `renderSpotlights` 一帶)：
+- 每頁 3 張卡片（`SPOTLIGHT_PAGE_SIZE`），每 6 秒（`SPOTLIGHT_INTERVAL`）自動跳下一組，會循環
+- 「看下一組」按鈕可手動換頁、下方有頁碼圓點；滑鼠移入卡片或開啟 modal 時暫停輪播
+- 最多顯示 12 則（`SPOTLIGHT_MAX`），依 `order` 升冪排序，`active === false` 不顯示
+- 只有 1 頁（≤3 則）時自動隱藏「看下一組」與圓點
+- 區塊顯示時機跟著 `showToolSections()`／`hideToolSections()`（登入或「開始使用」後才出現）
+
+**卡片上的兩個動作**：
+- **「比較這個通路 →」** (`compareSpotlightMerchant`)：把 `merchant` 帶入主搜尋並計算
+  - 若 `merchant` 完全等於某個快捷搜尋的 `displayName`（如 `所有加油站`）→ 觸發 `handleQuickSearch`（多關鍵詞）
+  - 否則 → 當一般單一商家搜尋
+  - ⚠️ `merchant` 一律是「單一搜尋詞」：要嘛一個商家、要嘛剛好等於某個快捷搜尋的 displayName（不支援多商家字串）
+- **ⓘ 按鈕** (`openSpotlightModal`)：開啟獨立活動 modal
+
+**ⓘ 活動 modal 顯示「卡片的真實活動」**（不是 sheet 的編輯文字）：
+- 用 `card_id` 找到卡片，再用 `findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找出涵蓋該 merchant 的 `cashbackRate`
+- 關鍵字來源：merchant 對到快捷搜尋 displayName 時用該選項的 `merchants`，否則用 merchant 本身；先精確比對 items，無結果再退而做子字串比對
+- 顯示該活動的真實 `rate`／`cap`／`period`／`conditions`／`items`（適用通路）；placeholder 用 `parseCashbackRateSync`／`parseCashbackCap` + 卡片第一個級別解析
+- **找不到對應活動時，退回顯示 sheet 的編輯文字**（rate/description/cap/deadline）
+- ⚠️ 目前只比對 `cashbackRates`；若卡片把通路放在 `specialItems`（分級卡特殊通路）會退回編輯文字
+- **modal 內唯一的動作按鈕是「馬上辦卡」**（卡名旁，來自 `cardsData.cardApplyCtas[card_id]`，無連結則不顯示）；modal 內不放「查看完整卡片詳情」或「比較這個通路」
+
+**相關檔案**：
+- `index.html`: `#spotlight-section`（搜尋框下方）與 `#spotlight-modal`
+- `script.js`: `renderSpotlights` 一系列函數 + `compareSpotlightMerchant` + `openSpotlightModal` / `buildSpotlightModalBody` / `findSpotlightCardActivities`
+- `styles.css`: `.spotlight-*`（白底、回饋率粗體綠字、「剩 N 天」徽章於 0–14 天顯示）
+
 ## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
@@ -268,7 +304,14 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 最近的技術決策
 
-1. **2026-01-24: 修復停車折抵優惠快捷搜尋**
+1. **2026-05-27: 新增本週亮點活動（Spotlight）**
+   - 搜尋框下方常駐的編輯精選活動區，資料來自 `Highlights` 工作表（JSON key `spotlights`）
+   - 自動輪播：每頁 3 張、6 秒換頁、可手動「看下一組」、頁碼圓點，最多 12 則
+   - 「比較這個通路」帶入主搜尋（merchant 對到快捷 displayName 則走快捷搜尋）
+   - ⓘ 開啟獨立 modal，顯示卡片 `cashbackRates` 中涵蓋該 merchant 的真實活動，找不到則退回編輯文字
+   - 詳見「關鍵技術概念 → 10. 本週亮點活動（Spotlight）」
+
+2. **2026-01-24: 修復停車折抵優惠快捷搜尋**
    - 快捷搜尋時，停車折抵優惠需要使用所有關鍵詞匹配
    - displayParkingBenefits() 新增 searchKeywords 參數
    - 避免只用顯示名稱（如 "所有停車"）匹配導致找不到結果
@@ -424,6 +467,12 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
    - 欄位：`merchant`, `url`, `description`, `active`
    - 用於顯示商家推薦註冊連結和優惠說明
 
+10. **Highlights** - 本週亮點活動（2026-05-27 新增）
+    - 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`
+    - 匯出 JSON key 為 `spotlights`
+    - `merchant` 為單一搜尋詞（一個商家，或剛好等於某個快捷搜尋的 displayName）
+    - 詳見「關鍵技術概念 → 10. 本週亮點活動（Spotlight）」
+
 ### Apps Script 匯出流程
 
 **主要函數**：`exportToJSON()`
@@ -445,6 +494,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 **匯出的 JSON 結構**：
 ```javascript
 {
+  lastUpdated: "...",
   cards: [...],
   payments: [...],
   quickSearchOptions: [...],
@@ -453,9 +503,14 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
   announcements: [...],
   searchHints: {...},
   benefits: [...],
-  referralLinks: [...]
+  referralLinks: [...],
+  cashbackSites: [...],        // 領券/回饋網站
+  newCardholderPromos: [...],  // 新戶活動
+  cardApplyCtas: [...],        // 辦卡 CTA
+  spotlights: [...]            // 本週亮點活動（Highlights 工作表）
 }
 ```
+> 註：`cashbackSites` / `newCardholderPromos` / `cardApplyCtas` 為現有結構（先前文件未列出），此處一併補上。
 
 ### 新增資料表的標準流程
 
@@ -516,4 +571,4 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ---
 
-**更新日期**：2026-01-24
+**更新日期**：2026-05-27
