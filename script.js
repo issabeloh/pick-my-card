@@ -1257,7 +1257,6 @@ function buildSpotlightModalBody(item) {
                 ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
                 ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
             </div>
-            <p class="spotlight-modal-hint">完整活動條件請點下方「查看完整卡片詳情」。</p>
         `;
     }
 
@@ -1300,21 +1299,6 @@ function openSpotlightModal(index) {
     if (titleEl) titleEl.textContent = item.merchant || '活動詳情';
 
     bodyEl.innerHTML = buildSpotlightModalBody(item);
-
-    const detailBtn = document.getElementById('spotlight-modal-detail');
-    const compareBtn = document.getElementById('spotlight-modal-compare');
-    if (detailBtn) {
-        const cardExists = item.card_id && ((cardsData && cardsData.cards) || []).some(c => c.id === item.card_id);
-        if (cardExists) {
-            detailBtn.style.display = 'inline-block';
-            detailBtn.onclick = () => { closeSpotlightModal(); showCardDetail(item.card_id); };
-        } else {
-            detailBtn.style.display = 'none';
-        }
-    }
-    if (compareBtn) {
-        compareBtn.onclick = () => { closeSpotlightModal(); compareSpotlightMerchant(item.merchant); };
-    }
 
     modal.style.display = 'flex';
     disableBodyScroll();
@@ -4354,10 +4338,9 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
         return;
     }
 
-    // Candidate cards: any card the user doesn't own (independent of the
-    // comparison selection — this is a discovery feature for cards you don't
-    // hold). Whether each promo shows is decided by promoMerchantsMatchSearch.
-    const candidateCards = cardsData.cards.filter(c => !myOwnedCards.has(c.id));
+    // Candidate cards: in comparison AND not owned. Whether each promo
+    // shows is decided by promoMerchantsMatchSearch below.
+    const candidateCards = getCardsForComparison().filter(c => !myOwnedCards.has(c.id));
 
     const fragment = document.createDocumentFragment();
     let renderedCount = 0;

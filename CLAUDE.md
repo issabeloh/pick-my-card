@@ -258,6 +258,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 顯示該活動的真實 `rate`／`cap`／`period`／`conditions`／`items`（適用通路）；placeholder 用 `parseCashbackRateSync`／`parseCashbackCap` + 卡片第一個級別解析
 - **找不到對應活動時，退回顯示 sheet 的編輯文字**（rate/description/cap/deadline）
 - ⚠️ 目前只比對 `cashbackRates`；若卡片把通路放在 `specialItems`（分級卡特殊通路）會退回編輯文字
+- **modal 內唯一的動作按鈕是「馬上辦卡」**（卡名旁，來自 `cardsData.cardApplyCtas[card_id]`，無連結則不顯示）；modal 內不放「查看完整卡片詳情」或「比較這個通路」
 
 **相關檔案**：
 - `index.html`: `#spotlight-section`（搜尋框下方）與 `#spotlight-modal`

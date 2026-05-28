@@ -6220,17 +6220,6 @@ input[type="number"]:focus {
     flex-shrink: 0;
     width: 64px;
 }
-.spotlight-modal-hint {
-    font-size: 0.8rem;
-    color: #9ca3af;
-    margin: 0;
-}
-.spotlight-modal-footer {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-}
-
 @media (max-width: 768px) {
     .spotlight-track { grid-template-columns: 1fr; }
     .spotlight-title { font-size: 1.1rem; }
