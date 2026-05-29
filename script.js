@@ -4457,12 +4457,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const highlightRowsHtml = fullWidthHtml + bonusGroupHtml;
     const capRowHtml = '';  // already merged into bonusGroupHtml above
 
-    // Detail page shows extra context (notes / official link); search results don't
+    // Detail page shows extra context (notes); search results don't
     const notesHtml = (opts.showExtras && promo.notes)
         ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
-        : '';
-    const linkHtml = (opts.showExtras && promo.link)
-        ? `<div class="matched-merchant"><a href="${escapeHtml(promo.link)}" target="_blank" rel="noopener noreferrer">官網連結</a></div>`
         : '';
 
     // Promo type chips — detail page shows all types inline; search results show
@@ -4513,7 +4510,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
-        ${linkHtml}
     `;
     return el;
 }
@@ -6075,23 +6071,6 @@ async function showCardDetail(cardId) {
 
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
-    if (card.website) {
-        fullNameLink.href = card.website;
-        // 追蹤外部連結點擊
-        fullNameLink.onclick = () => {
-            if (window.logEvent && window.firebaseAnalytics) {
-                window.logEvent(window.firebaseAnalytics, 'click_bank_website', {
-                    card_id: card.id,
-                    card_name: card.name,
-                    website: card.website
-                });
-            }
-        };
-    } else {
-        fullNameLink.removeAttribute('href');
-        fullNameLink.style.textDecoration = 'none';
-        fullNameLink.style.color = 'inherit';
-    }
 
     // Render tags after card full name
     const cardInfoSection = modal.querySelector('.card-info-section');
