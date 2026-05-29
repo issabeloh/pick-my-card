@@ -2494,6 +2494,25 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
+.card-detail-peek-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.card-detail-peek-btn:hover {
+    color: #1e40af;
+    background: #eef2ff;
+}
+
 .card-checkbox-label {
     flex-grow: 1;
     font-weight: 400;

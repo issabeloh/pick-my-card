@@ -15,18 +15,27 @@ let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為�
 let isChildrenEligible = true; // 用戶是否符合「童樂匯」權益（預設為是）
 let cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa'; // 國泰CUBE卡發卡組織（Visa/Mastercard/JCB）
 
-// Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
+// Body scroll lock utilities (compensate scrollbar width to prevent layout shift).
+// Refcounted so stacked modals (e.g. card detail opened from inside another modal)
+// don't release the scroll lock while an outer modal is still open.
+let bodyScrollLockDepth = 0;
 function disableBodyScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = scrollbarWidth + 'px';
+    if (bodyScrollLockDepth === 0) {
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        if (scrollbarWidth > 0) {
+            document.body.style.paddingRight = scrollbarWidth + 'px';
+        }
     }
+    bodyScrollLockDepth++;
 }
 
 function enableBodyScroll() {
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
+    bodyScrollLockDepth = Math.max(0, bodyScrollLockDepth - 1);
+    if (bodyScrollLockDepth === 0) {
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
 }
 
 // ==========================================
@@ -4457,12 +4466,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const highlightRowsHtml = fullWidthHtml + bonusGroupHtml;
     const capRowHtml = '';  // already merged into bonusGroupHtml above
 
-    // Detail page shows extra context (notes / official link); search results don't
+    // Detail page shows extra context (notes); search results don't
     const notesHtml = (opts.showExtras && promo.notes)
         ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
-        : '';
-    const linkHtml = (opts.showExtras && promo.link)
-        ? `<div class="matched-merchant"><a href="${escapeHtml(promo.link)}" target="_blank" rel="noopener noreferrer">官網連結</a></div>`
         : '';
 
     // Promo type chips — detail page shows all types inline; search results show
@@ -4513,7 +4519,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
-        ${linkHtml}
     `;
     return el;
 }
@@ -5853,6 +5858,7 @@ function _renderCardSelectionModal(config) {
         cardDiv.innerHTML = `
             <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
             <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
+            <button type="button" class="card-detail-peek-btn" aria-label="查看詳情" title="查看詳情">ⓘ</button>
         `;
         const checkbox = cardDiv.querySelector('input');
         if (canEdit) {
@@ -5860,6 +5866,13 @@ function _renderCardSelectionModal(config) {
                 cardDiv.classList.toggle('selected', checkbox.checked);
             });
         }
+        const peekBtn = cardDiv.querySelector('.card-detail-peek-btn');
+        peekBtn.addEventListener('click', (e) => {
+            // Don't toggle the checkbox or close the host modal
+            e.preventDefault();
+            e.stopPropagation();
+            showCardDetail(card.id);
+        });
         cardsSelection.appendChild(cardDiv);
     });
 
@@ -6075,23 +6088,6 @@ async function showCardDetail(cardId) {
 
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
-    if (card.website) {
-        fullNameLink.href = card.website;
-        // 追蹤外部連結點擊
-        fullNameLink.onclick = () => {
-            if (window.logEvent && window.firebaseAnalytics) {
-                window.logEvent(window.firebaseAnalytics, 'click_bank_website', {
-                    card_id: card.id,
-                    card_name: card.name,
-                    website: card.website
-                });
-            }
-        };
-    } else {
-        fullNameLink.removeAttribute('href');
-        fullNameLink.style.textDecoration = 'none';
-        fullNameLink.style.color = 'inherit';
-    }
 
     // Render tags after card full name
     const cardInfoSection = modal.querySelector('.card-info-section');
