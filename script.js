@@ -15,18 +15,27 @@ let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為�
 let isChildrenEligible = true; // 用戶是否符合「童樂匯」權益（預設為是）
 let cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa'; // 國泰CUBE卡發卡組織（Visa/Mastercard/JCB）
 
-// Body scroll lock utilities (compensate scrollbar width to prevent layout shift)
+// Body scroll lock utilities (compensate scrollbar width to prevent layout shift).
+// Refcounted so stacked modals (e.g. card detail opened from inside another modal)
+// don't release the scroll lock while an outer modal is still open.
+let bodyScrollLockDepth = 0;
 function disableBodyScroll() {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    document.body.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) {
-        document.body.style.paddingRight = scrollbarWidth + 'px';
+    if (bodyScrollLockDepth === 0) {
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        if (scrollbarWidth > 0) {
+            document.body.style.paddingRight = scrollbarWidth + 'px';
+        }
     }
+    bodyScrollLockDepth++;
 }
 
 function enableBodyScroll() {
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
+    bodyScrollLockDepth = Math.max(0, bodyScrollLockDepth - 1);
+    if (bodyScrollLockDepth === 0) {
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
 }
 
 // ==========================================
@@ -5849,6 +5858,7 @@ function _renderCardSelectionModal(config) {
         cardDiv.innerHTML = `
             <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
             <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
+            <button type="button" class="card-detail-peek-btn" aria-label="查看詳情" title="查看詳情">ⓘ</button>
         `;
         const checkbox = cardDiv.querySelector('input');
         if (canEdit) {
@@ -5856,6 +5866,13 @@ function _renderCardSelectionModal(config) {
                 cardDiv.classList.toggle('selected', checkbox.checked);
             });
         }
+        const peekBtn = cardDiv.querySelector('.card-detail-peek-btn');
+        peekBtn.addEventListener('click', (e) => {
+            // Don't toggle the checkbox or close the host modal
+            e.preventDefault();
+            e.stopPropagation();
+            showCardDetail(card.id);
+        });
         cardsSelection.appendChild(cardDiv);
     });
 
