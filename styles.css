@@ -2550,6 +2550,12 @@ input[type="number"]:focus {
     font-size: 13px;
     line-height: 1.2;
 }
+/* Bold card names in card-selection modals (not payments) */
+#cards-selection .card-checkbox-label,
+#owned-cards-selection .card-checkbox-label {
+    font-weight: 700;
+    color: #111827;
+}
 
 .modal-footer {
     display: flex;
