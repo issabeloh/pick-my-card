@@ -2290,6 +2290,21 @@ input[type="number"]:focus {
     font-size: 1.25rem;
 }
 
+/* Card detail modal: image + title group at top-left */
+.card-detail-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.card-detail-image {
+    height: 56px;
+    width: auto;
+    max-width: 96px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .close-modal {
     background: none;
     border: none;
@@ -2467,14 +2482,27 @@ input[type="number"]:focus {
 
 .card-checkbox {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 10px;
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
+}
+.card-checkbox-image {
+    height: 70px;
+    width: auto;
+    max-width: 140px;
+    object-fit: contain;
+}
+.card-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 }
 
 .card-checkbox:hover {
