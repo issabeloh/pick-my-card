@@ -712,7 +712,10 @@
         <div id="card-detail-modal" class="modal" style="display: none;">
             <div class="modal-content card-detail-content">
                 <div class="modal-header">
-                    <h3 id="card-detail-title">卡片詳情</h3>
+                    <div class="card-detail-title-group">
+                        <img id="card-detail-image" class="card-detail-image" alt="" hidden>
+                        <h3 id="card-detail-title">卡片詳情</h3>
+                    </div>
                     <button class="close-modal" id="close-card-detail">&times;</button>
                 </div>
                 <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->

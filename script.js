@@ -5856,9 +5856,12 @@ function _renderCardSelectionModal(config) {
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
         const checkboxId = `${config.selectionId}-${card.id}`;
         cardDiv.innerHTML = `
-            <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
-            <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
-            <button type="button" class="card-detail-peek-btn" aria-label="查看詳情" title="查看詳情">ⓘ</button>
+            <img class="card-checkbox-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
+            <div class="card-checkbox-row">
+                <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+                <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
+                <button type="button" class="card-detail-peek-btn" aria-label="查看詳情" title="查看詳情">ⓘ</button>
+            </div>
         `;
         const checkbox = cardDiv.querySelector('input');
         if (canEdit) {
@@ -6084,7 +6087,15 @@ async function showCardDetail(cardId) {
     const modal = document.getElementById('card-detail-modal');
 
     // Update basic information
-    document.getElementById('card-detail-title').textContent = card.name + ' 詳情';
+    document.getElementById('card-detail-title').textContent = card.name;
+
+    // Optional card image (assets/images/cards/<card.id>.png) — gracefully hides if missing
+    const headerImg = document.getElementById('card-detail-image');
+    if (headerImg) {
+        headerImg.hidden = false;
+        headerImg.onerror = () => { headerImg.hidden = true; };
+        headerImg.src = `assets/images/cards/${card.id}.png`;
+    }
 
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
