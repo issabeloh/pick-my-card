@@ -6084,7 +6084,7 @@ async function showCardDetail(cardId) {
     const modal = document.getElementById('card-detail-modal');
 
     // Update basic information
-    document.getElementById('card-detail-title').textContent = card.name + ' 詳情';
+    document.getElementById('card-detail-title').textContent = card.name;
 
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
