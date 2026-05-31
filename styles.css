@@ -2483,7 +2483,7 @@ input[type="number"]:focus {
 .card-checkbox {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 10px;
     border: 1px solid #e5e7eb;
@@ -2497,6 +2497,8 @@ input[type="number"]:focus {
     width: auto;
     max-width: 140px;
     object-fit: contain;
+    /* Indent to line up with the card name (checkbox width 14 + row gap 8) */
+    margin-left: 22px;
 }
 .card-checkbox-row {
     display: flex;

@@ -5856,12 +5856,12 @@ function _renderCardSelectionModal(config) {
         cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
         const checkboxId = `${config.selectionId}-${card.id}`;
         cardDiv.innerHTML = `
-            <img class="card-checkbox-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
             <div class="card-checkbox-row">
                 <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
                 <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
                 <button type="button" class="card-detail-peek-btn" aria-label="查看詳情" title="查看詳情">ⓘ</button>
             </div>
+            <img class="card-checkbox-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
         `;
         const checkbox = cardDiv.querySelector('input');
         if (canEdit) {
