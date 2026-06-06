@@ -5131,6 +5131,17 @@ function initializeAuthListeners() {
     window.onAuthStateChanged(auth, async (user) => {
         const productIntroSection = document.getElementById('product-intro-section');
 
+        // Update the pre-paint auth hint so the next visit skips the hero flash
+        // (or correctly shows it if the user signed out / token expired).
+        try {
+            if (user) {
+                localStorage.setItem('pmc_known_logged_in', '1');
+            } else {
+                localStorage.removeItem('pmc_known_logged_in');
+            }
+        } catch (e) { /* localStorage disabled — silently ignore */ }
+        document.documentElement.classList.remove('pmc-returning-user');
+
         if (user) {
             // User is signed in
             console.log('User signed in:', user);

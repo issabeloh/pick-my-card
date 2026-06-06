@@ -14,6 +14,13 @@ body {
     padding: 20px;
 }
 
+/* Pre-paint auth hint: returning logged-in users skip the hero flash.
+   Set by the inline <head> script reading localStorage; cleared after
+   Firebase resolves the real auth state. */
+html.pmc-returning-user #product-intro-section {
+    display: none !important;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;

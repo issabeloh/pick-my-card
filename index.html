@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
 
+    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users.
+         Read synchronously before any external script so first paint reflects it. -->
+    <script>
+        try {
+            if (localStorage.getItem('pmc_known_logged_in') === '1') {
+                document.documentElement.classList.add('pmc-returning-user');
+            }
+        } catch (e) { /* localStorage disabled — fall back to default render */ }
+    </script>
+
     <!-- SEO Meta Tags -->
     <meta name="description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
     <link rel="canonical" href="https://pickmycard.app/">
