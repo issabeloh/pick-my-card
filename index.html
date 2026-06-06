@@ -122,6 +122,13 @@
      crossorigin="anonymous"></script>
 </head>
 <body>
+    <!-- Boot loader for returning logged-in users — visible only while
+         html.pmc-returning-user is set (CSS-controlled), auto-hidden when
+         the auth callback clears that class. -->
+    <div id="pmc-boot-loader" aria-hidden="true">
+        <div class="pmc-boot-spinner"></div>
+        <div class="pmc-boot-text">載入中…</div>
+    </div>
     <div class="container">
         <header>
             <div class="header-top">
