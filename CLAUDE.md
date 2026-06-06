@@ -231,12 +231,15 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 10. 精選活動（Spotlight）
 
-**用途**：在搜尋框下方常駐顯示一區編輯精選活動（「🔥 精選活動」），與使用者的搜尋無關。
+**用途**：常駐顯示一區編輯精選活動（「🔥 精選活動」），與使用者的搜尋無關。
+
+**位置（重要）**：`#spotlight-section` 不在 `<main>` 內，而是 `.container` 直系子節點、緊接在 `.app-layout` 之後 —— 視覺上是一條跨越 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果（含 results / coupon / parking / cardholder promo）下方。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px; border-top: 1px solid #e5e7eb`。
 
 **資料來源**：
 - Google Sheets 的 `Highlights` 工作表，由 Apps Script 匯出成 `cardsData.spotlights` 陣列
-- 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`
+- 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`, `category`（選填）
 - `rate`/`order` 為數字，`active` 為布林，`deadline` 為 `YYYY/MM/DD` 字串
+- `category` 為選填字串（如「外送平台」「加油站」「計程車」），有值才顯示紫色分類 chip
 
 **顯示方式（輪播）** (script.js `renderSpotlights` 一帶)：
 - 每頁 3 張卡片（`SPOTLIGHT_PAGE_SIZE`），每 6 秒（`SPOTLIGHT_INTERVAL`）自動跳下一組，會循環
@@ -244,6 +247,13 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 最多顯示 12 則（`SPOTLIGHT_MAX`），依 `order` 升冪排序，`active === false` 不顯示
 - 只有 1 頁（≤3 則）時自動隱藏「看下一組」與圓點
 - 區塊顯示時機跟著 `showToolSections()`／`hideToolSections()`（登入或「開始使用」後才出現）
+
+**卡片視覺（固定高度）**：
+- `.spotlight-card { min-height: 260px }` —— 跨頁切換不會跳動
+- `.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 2.8em` 永遠保留 2 行高度
+- `.spotlight-meta` `min-height: 76px`（3 列容量），meta-row 用 nowrap + ellipsis 避免長卡名換行
+- 卡名（💳 那一列）為粗體（`.spotlight-meta-card > span:last-child`）
+- 分類 chip 用紫色（`#6d28d9` on `#ede9fe`），刻意避開 sidebar `.card-chip` 的藍色系
 
 **卡片上的兩個動作**：
 - **「比較這個通路 →」** (`compareSpotlightMerchant`)：把 `merchant` 帶入主搜尋並計算
@@ -261,9 +271,46 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - **modal 內唯一的動作按鈕是「馬上辦卡」**（卡名旁，來自 `cardsData.cardApplyCtas[card_id]`，無連結則不顯示）；modal 內不放「查看完整卡片詳情」或「比較這個通路」
 
 **相關檔案**：
-- `index.html`: `#spotlight-section`（搜尋框下方）與 `#spotlight-modal`
+- `index.html`: `#spotlight-section`（`.app-layout` 之後的全寬橫帶）與 `#spotlight-modal`
 - `script.js`: `renderSpotlights` 一系列函數 + `compareSpotlightMerchant` + `openSpotlightModal` / `buildSpotlightModalBody` / `findSpotlightCardActivities`
 - `styles.css`: `.spotlight-*`（白底、回饋率粗體綠字、「剩 N 天」徽章於 0–14 天顯示）
+
+### 11. 卡片詳情頁與卡片圖片資產
+
+**卡片詳情頁** (`#card-detail-modal`)，由 `showCardDetail(cardId)` 開啟：
+- Modal 標題就是 `card.name`（不再有「詳情」後綴）
+- Header 左上角有一張卡片圖（見下），右邊接卡名
+- 不再顯示「信用卡官網連結:」標籤（卡全名以純文字呈現）
+- 新戶活動區塊也不再有「官網連結」連結（之前少人點擊）
+
+**進入詳情頁的入口**：
+1. 搜尋結果卡片點擊
+2. Sidebar 卡片 chips（如果啟用）
+3. **`#cards-selection` / `#owned-cards-selection` 的每張卡 ⓘ 小按鈕**（管理加入比較的卡片 / 我的信用卡 modals）
+   - 由 `_renderCardSelectionModal` 注入；click handler 呼叫 `showCardDetail(card.id)` 並 `stopPropagation()`，不會誤勾選 checkbox
+   - 詳情 modal 開在原 modal 之上，關掉後回到原 modal
+
+**卡片圖片資產**（選填，2026-05-31 新增）：
+- 路徑慣例：`assets/images/cards/<card.id>.png`
+- **不用改 Google Sheet / Apps Script** —— 前端依 `card.id` 直接組路徑
+- 缺圖時用 `<img onerror>` 隱藏整個 `<img>` 元素，layout 自動退回沒圖版本
+- 兩個顯示位置：
+  - **詳情頁 header**：`.card-detail-image`，`height: 56px; max-width: 96px; object-fit: contain`
+  - **選擇 modal tile**：`.card-checkbox-image`，`height: 70px; max-width: 140px; object-fit: contain`，`margin-left: 22px`（= checkbox 14px + row gap 8px，讓圖片左緣對齊卡名而非 checkbox）
+- 直/橫卡都支援：`object-fit: contain` 自動 letterbox；透明背景 PNG 沒邊框問題
+
+**「我的信用卡」/「管理加入比較的卡片」modal tile 排版**：
+- 共用渲染：`_renderCardSelectionModal(config)` —— 一份程式碼餵兩個 modal（不同 `selectionId`、`tagFilterChipsId` 等）
+- `.card-checkbox` 為 column flex（`align-items: flex-start`）：
+  - 上：`.card-checkbox-row`（checkbox + 卡名 label + ⓘ 詳情按鈕）
+  - 下：`.card-checkbox-image`（左對齊卡名）
+- 卡名粗體（限定於 `#cards-selection` / `#owned-cards-selection` `.card-checkbox-label`，不影響行動支付 modals 共用的同 class）
+- Grid 維持 `repeat(auto-fit, minmax(200px, 1fr))`：桌機 2 欄、窄螢幕 1 欄
+
+**Body scroll lock refcount**（疊層 modals 需要）：
+- `disableBodyScroll()` / `enableBodyScroll()` 改為 depth-counter（`bodyScrollLockDepth`）
+- 上層 modal 關掉時不會誤放開捲動鎖（外層 modal 還在）
+- 完全相容單一 modal 用法
 
 ## 性能優化 (2025-12-22)
 
@@ -304,8 +351,24 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 最近的技術決策
 
-1. **2026-05-27: 新增精選活動（Spotlight）**
-   - 搜尋框下方常駐的編輯精選活動區，資料來自 `Highlights` 工作表（JSON key `spotlights`）
+1. **2026-05-31: 詳情頁入口 + 卡片圖片資產 + 連結瘦身**
+   - 「我的信用卡」/「管理加入比較的卡片」modals 的每張卡 row 旁加 ⓘ peek button，呼叫 `showCardDetail()`；觸發時 `stopPropagation()` 不會誤勾 checkbox
+   - `disableBodyScroll`/`enableBodyScroll` 改為 refcount，疊層 modals 不會誤放開捲動鎖
+   - 卡片圖片慣例 `assets/images/cards/<card.id>.png`，缺圖用 `<img onerror>` 隱藏，不用改 Apps Script
+   - 兩處使用：詳情頁 header 左上、選擇 modal tile（卡名下方、左對齊卡名）
+   - 詳情頁標題去掉「詳情」後綴；移除「信用卡官網連結:」標籤；新戶活動 card 拿掉「官網連結」
+   - 詳見「關鍵技術概念 → 11. 卡片詳情頁與卡片圖片資產」
+
+2. **2026-05-31: 精選活動視覺定稿**
+   - 標題改為「🔥 精選活動」（原「本週亮點活動」），拿掉「共 N 則」徽章
+   - 區塊改為 `.container` 直系子節點、跨越 sidebar+main 兩欄的全寬橫帶（不在 `<main>` 內），位於所有搜尋結果之下
+   - 固定卡片高度（`min-height: 260px`）+ desc 強制 2 行（`-webkit-line-clamp: 2` + `height: 2.8em`），輪播時不會跳動
+   - 新增選填 `category` 欄位 → 紫色分類 chip（與藍色系 sidebar `.card-chip` 區隔）
+   - 卡名（💳 那一列）改粗體
+   - ⓘ modal 只保留「馬上辦卡」CTA（之前還有「查看完整卡片詳情」「比較這個通路」已移除），CTA 顯示在卡名旁
+
+3. **2026-05-27: 新增精選活動（Spotlight）**
+   - 編輯精選活動區，資料來自 `Highlights` 工作表（JSON key `spotlights`）
    - 自動輪播：每頁 3 張、6 秒換頁、可手動「看下一組」、頁碼圓點，最多 12 則
    - 「比較這個通路」帶入主搜尋（merchant 對到快捷 displayName 則走快捷搜尋）
    - ⓘ 開啟獨立 modal，顯示卡片 `cashbackRates` 中涵蓋該 merchant 的真實活動，找不到則退回編輯文字
@@ -467,10 +530,11 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
    - 欄位：`merchant`, `url`, `description`, `active`
    - 用於顯示商家推薦註冊連結和優惠說明
 
-10. **Highlights** - 精選活動（2026-05-27 新增）
-    - 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`
+10. **Highlights** - 精選活動（2026-05-27 新增；2026-05-31 加 `category`）
+    - 欄位：`merchant`, `rate`, `description`, `card_name`, `card_id`, `cap`, `deadline`, `order`, `active`, `category`（選填）
     - 匯出 JSON key 為 `spotlights`
     - `merchant` 為單一搜尋詞（一個商家，或剛好等於某個快捷搜尋的 displayName）
+    - `category` 為選填字串（如「外送平台」「加油站」），有值才在卡上顯示紫色分類 chip
     - 詳見「關鍵技術概念 → 10. 精選活動（Spotlight）」
 
 ### Apps Script 匯出流程
@@ -571,4 +635,4 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ---
 
-**更新日期**：2026-05-27
+**更新日期**：2026-05-31
