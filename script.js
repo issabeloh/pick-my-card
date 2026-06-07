@@ -10833,24 +10833,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // GA4 Button Click Tracking
 // ============================================
 document.addEventListener('click', function(e) {
-    if (typeof gtag !== 'function') return;
+    if (!window.logEvent || !window.firebaseAnalytics) return;
     const btn = e.target.closest(
         '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn'
     );
     if (!btn) return;
 
     let buttonType;
-    if (btn.classList.contains('spotlight-compare-btn'))       buttonType = 'spotlight_compare';
-    else if (btn.classList.contains('spotlight-info-btn'))     buttonType = 'spotlight_info';
+    if (btn.classList.contains('spotlight-compare-btn'))        buttonType = 'spotlight_compare';
+    else if (btn.classList.contains('spotlight-info-btn'))      buttonType = 'spotlight_info';
     else if (btn.classList.contains('spotlight-apply-cta-btn')) buttonType = 'spotlight_apply';
-    else if (btn.classList.contains('card-apply-cta-btn'))     buttonType = 'card_apply';
-    else                                                        buttonType = 'search_result_apply';
+    else if (btn.classList.contains('card-apply-cta-btn'))      buttonType = 'card_apply';
+    else                                                         buttonType = 'search_result_apply';
 
-    gtag('event', 'button_click', {
-        button_type:  buttonType,
-        card_id:      btn.dataset.cardId   || '',
-        card_name:    btn.dataset.cardName || '',
-        merchant:     btn.dataset.merchant || '',
+    window.logEvent(window.firebaseAnalytics, 'button_click', {
+        button_type: buttonType,
+        card_id:     btn.dataset.cardId   || '',
+        card_name:   btn.dataset.cardName || '',
+        merchant:    btn.dataset.merchant || '',
     });
 });
 
