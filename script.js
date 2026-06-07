@@ -1133,8 +1133,8 @@ function buildSpotlightCard(item, index) {
             ${item.deadline ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">🕒</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
         </div>
         <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn">比較這個通路 →</button>
-            <button type="button" class="spotlight-info-btn" aria-label="活動詳情">ⓘ</button>
+            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較這個通路 →</button>
+            <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
         </div>
     `;
 
@@ -1247,7 +1247,7 @@ function buildSpotlightModalBody(item) {
 
     const applyCta = (cardsData && cardsData.cardApplyCtas && item.card_id) ? cardsData.cardApplyCtas[item.card_id] : null;
     const applyCtaHtml = (applyCta && applyCta.link)
-        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
     const cardNameLine = `<div class="spotlight-modal-cardname"><span class="spotlight-modal-cardname-text">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</span>${applyCtaHtml}</div>`;
 
@@ -4495,7 +4495,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     if (!opts.showExtras) {
         const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
         if (applyCta && applyCta.link) {
-            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
+            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
         }
     }
 
@@ -4654,6 +4654,8 @@ function renderCardDetailPromos(card) {
             btn.target = '_blank';
             btn.rel = 'noopener noreferrer';
             btn.textContent = '立即申辦';
+            btn.dataset.cardId = card.id;
+            btn.dataset.cardName = card.name;
             ctaEl.appendChild(btn);
         }
         content.appendChild(ctaEl);
@@ -10827,7 +10829,30 @@ document.addEventListener('DOMContentLoaded', () => {
     initReviewSystem();
 });
 
+// ============================================
+// GA4 Button Click Tracking
+// ============================================
+document.addEventListener('click', function(e) {
+    if (typeof gtag !== 'function') return;
+    const btn = e.target.closest(
+        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn'
+    );
+    if (!btn) return;
 
+    let buttonType;
+    if (btn.classList.contains('spotlight-compare-btn'))       buttonType = 'spotlight_compare';
+    else if (btn.classList.contains('spotlight-info-btn'))     buttonType = 'spotlight_info';
+    else if (btn.classList.contains('spotlight-apply-cta-btn')) buttonType = 'spotlight_apply';
+    else if (btn.classList.contains('card-apply-cta-btn'))     buttonType = 'card_apply';
+    else                                                        buttonType = 'search_result_apply';
+
+    gtag('event', 'button_click', {
+        button_type:  buttonType,
+        card_id:      btn.dataset.cardId   || '',
+        card_name:    btn.dataset.cardName || '',
+        merchant:     btn.dataset.merchant || '',
+    });
+});
 
 
 
