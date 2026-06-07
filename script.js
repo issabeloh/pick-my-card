@@ -9976,19 +9976,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Image Compression Function
     async function compressImage(file) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
+            reader.onerror = () => reject(new Error('讀取圖片失敗：' + (reader.error?.message || 'FileReader error')));
             reader.onload = (e) => {
                 const img = new Image();
+                img.onerror = () => reject(new Error(`圖片格式不支援或檔案損毀（${file.type || 'unknown type'}）`));
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-    
+
                     // Calculate new dimensions (max 1920px)
                     const MAX_WIDTH = 1920;
                     const MAX_HEIGHT = 1920;
-    
+
                     if (width > height) {
                         if (width > MAX_WIDTH) {
                             height *= MAX_WIDTH / width;
@@ -10000,17 +10002,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             height = MAX_HEIGHT;
                         }
                     }
-    
+
                     canvas.width = width;
                     canvas.height = height;
-    
+
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-    
-                    // Convert to blob with compression
-                    canvas.toBlob((blob) => {
+
+                    // canvas.toBlob with the source mime may return null when the
+                    // browser can't encode that type (e.g. image/heic). Fall back
+                    // to image/jpeg so the upload still succeeds.
+                    const tryEncode = (mime, quality) => new Promise(res => canvas.toBlob(b => res(b), mime, quality));
+                    (async () => {
+                        let blob = await tryEncode(file.type, 0.85);
+                        if (!blob) blob = await tryEncode('image/jpeg', 0.85);
+                        if (!blob) return reject(new Error('圖片編碼失敗（canvas.toBlob 回傳 null）'));
                         resolve(blob);
-                    }, file.type, 0.85); // 85% quality
+                    })();
                 };
                 img.src = e.target.result;
             };
@@ -10222,7 +10230,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
         } catch (error) {
             console.error('Error submitting feedback:', error);
-            showStatus('error', '❌ 送出失敗，請稍後再試');
+            // Surface enough detail to diagnose (Firebase Storage permission, mime,
+            // network…) instead of swallowing it under a generic message.
+            const detail = (error && (error.code || error.message)) || String(error);
+            showStatus('error', `❌ 送出失敗：${detail}`);
         } finally {
             submitFeedbackBtn.disabled = false;
         }
