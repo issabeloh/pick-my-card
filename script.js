@@ -10179,33 +10179,35 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('loading', '正在上傳...');
     
         try {
-            // Upload images to Firebase Storage
+            // Upload images to Firebase Storage — each one is wrapped so a single
+            // failure (e.g. Storage quota exceeded) doesn't abort the whole
+            // submission. Text feedback still goes through with whatever images
+            // we managed to upload.
             const imageUrls = [];
-    
+            const imageUploadErrors = [];
+
             if (selectedImages.length > 0) {
                 for (let i = 0; i < selectedImages.length; i++) {
                     const imgData = selectedImages[i];
                     showStatus('loading', `正在上傳圖片 ${i + 1}/${selectedImages.length}...`);
-    
-                    // Compress image
-                    const compressedBlob = await compressImage(imgData.file);
-    
-                    // Generate unique filename
-                    const timestamp = Date.now();
-                    const userId = currentUser?.uid || 'anonymous';
-                    const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
-    
-                    // Upload to Firebase Storage
-                    const storageReference = window.storageRef(window.storage, filename);
-                    await window.uploadBytes(storageReference, compressedBlob);
-    
-                    // Get download URL
-                    const downloadUrl = await window.getDownloadURL(storageReference);
-                    imageUrls.push(downloadUrl);
+
+                    try {
+                        const compressedBlob = await compressImage(imgData.file);
+                        const timestamp = Date.now();
+                        const userId = currentUser?.uid || 'anonymous';
+                        const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
+                        const storageReference = window.storageRef(window.storage, filename);
+                        await window.uploadBytes(storageReference, compressedBlob);
+                        const downloadUrl = await window.getDownloadURL(storageReference);
+                        imageUrls.push(downloadUrl);
+                    } catch (imgError) {
+                        console.warn(`圖片 ${i + 1} 上傳失敗:`, imgError);
+                        imageUploadErrors.push(imgError);
+                    }
                 }
             }
-    
-            // Save to Firestore
+
+            // Save text feedback to Firestore even if images failed
             showStatus('loading', '正在儲存...');
 
             const feedbackData = {
@@ -10217,21 +10219,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 timestamp: window.serverTimestamp(),
                 createdAt: new Date().toISOString()
             };
-    
+            // Record image-upload failure context for triage (quota, mime, etc.)
+            if (imageUploadErrors.length > 0) {
+                feedbackData.imageUploadFailedCount = imageUploadErrors.length;
+                feedbackData.imageUploadFirstError = (imageUploadErrors[0] && (imageUploadErrors[0].code || imageUploadErrors[0].message)) || String(imageUploadErrors[0]);
+            }
+
             await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
-    
-            // Success
-            showStatus('success', '✅ 回報已送出，感謝您的回饋！');
-    
+
+            // Status reflects what actually happened with images
+            const total = selectedImages.length;
+            const ok = imageUrls.length;
+            let successMsg;
+            if (total === 0 || imageUploadErrors.length === 0) {
+                successMsg = '✅ 回報已送出，感謝您的回饋！';
+            } else if (ok === 0) {
+                successMsg = '⚠️ 文字回報已送出（圖片暫時無法上傳，已紀錄錯誤）';
+            } else {
+                successMsg = `⚠️ 已送出（${ok}/${total} 張圖片成功上傳）`;
+            }
+            showStatus('success', successMsg);
+
             // Reset form after 2 seconds
             setTimeout(() => {
                 closeFeedbackModalHandler();
             }, 2000);
-    
+
         } catch (error) {
-            console.error('Error submitting feedback:', error);
-            // Surface enough detail to diagnose (Firebase Storage permission, mime,
-            // network…) instead of swallowing it under a generic message.
+            // Only reached if the Firestore write itself failed — image errors are
+            // now handled per-image above and don't get here.
+            console.error('Error saving feedback:', error);
             const detail = (error && (error.code || error.message)) || String(error);
             showStatus('error', `❌ 送出失敗：${detail}`);
         } finally {
