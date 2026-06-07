@@ -21,6 +21,37 @@ html.pmc-returning-user #product-intro-section {
     display: none !important;
 }
 
+/* Boot loader (small spinner + label) — only visible during the gate,
+   auto-hides when the hint class is removed by the auth callback. */
+#pmc-boot-loader {
+    display: none;
+}
+html.pmc-returning-user #pmc-boot-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
+    color: #6b7280;
+    font-size: 0.875rem;
+    pointer-events: none;
+}
+.pmc-boot-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #dbeafe;
+    border-top-color: #1e40af;
+    border-radius: 50%;
+    animation: spinner-rotate 0.7s linear infinite;
+}
+.pmc-boot-text {
+    letter-spacing: 0.5px;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
