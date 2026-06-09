@@ -3801,14 +3801,14 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         resultsContainer.appendChild(fragment);
     }
 
-    // 顯示商家付款方式資訊
-    displayMerchantPaymentInfo(searchedItem);
-
-    // 顯示導購網站回饋資訊
-    displayCashbackSites(searchedItem);
-
-    // 顯示推薦連結資訊
-    displayReferralLink(searchedItem);
+    // 顯示商家付款方式資訊 / 導購網站 / 推薦連結
+    // Use actual user input, not the joined matched-item names — otherwise a search like
+    // "日本" would match "7-ELEVEN" (because "日本7-ELEVEN門市" is a matched item) or
+    // "ToCoo! 日本租車網" in Shopback (because "日本" appears inside the merchant name).
+    const actualUserInput = merchantInput.value.trim();
+    displayMerchantPaymentInfo(actualUserInput);
+    displayCashbackSites(actualUserInput);
+    displayReferralLink(actualUserInput);
 
     resultsSection.style.display = 'block';
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
