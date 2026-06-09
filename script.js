@@ -3581,12 +3581,12 @@ function displayMerchantPaymentInfo(searchedItem) {
         return;
     }
 
-    // 如果搜尋詞包含頓號，拆分並嘗試匹配每個詞
+    // 展開別名（e.g. "711" → ["711","7-eleven"]），讓縮寫也能匹配
     let merchantInfo = null;
-    const searchTerms = searchedItem.split('、');
+    const searchTerms = getAllSearchVariants(searchedItem);
 
     console.log('🔍 搜尋商家付款方式，原始搜尋詞:', searchedItem);
-    console.log('🔍 拆分後的搜尋詞:', searchTerms);
+    console.log('🔍 展開後的搜尋詞:', searchTerms);
 
     for (const term of searchTerms) {
         merchantInfo = findMerchantPaymentInfo(term);
@@ -3706,7 +3706,8 @@ function displayCashbackSites(searchedItem) {
     const shopbackList = Array.isArray(sites.shopback) ? sites.shopback : [];
     const linebuyList = Array.isArray(sites.linebuy) ? sites.linebuy : [];
 
-    const searchTerms = searchedItem.split('、').map(t => t.trim()).filter(Boolean);
+    // 展開別名（e.g. "全聯" → ["全聯","px mart"]），讓縮寫也能匹配
+    const searchTerms = getAllSearchVariants(searchedItem);
 
     const matchEntry = (list) => {
         for (const term of searchTerms) {
