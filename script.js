@@ -3530,11 +3530,13 @@ function findMerchantPaymentInfo(searchedItem) {
         }
     }
 
-    // 部分匹配：搜尋詞包含商家名稱或商家名稱包含搜尋詞
+    // 前綴匹配：輸入以商家名稱開頭（e.g. "7-ELEVEN門市" → "7-ELEVEN"）
+    //           或商家名稱以輸入開頭（e.g. "7-ELEVEN" → "7-ELEVEN門市"）
+    // 使用 startsWith 而非 includes，避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
         const merchantLower = merchantName.toLowerCase();
-        if (searchLower.includes(merchantLower) || merchantLower.includes(searchLower)) {
-            console.log('✅ 部分匹配到:', merchantName);
+        if (searchLower.startsWith(merchantLower) || merchantLower.startsWith(searchLower)) {
+            console.log('✅ 前綴匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
         }
     }
@@ -3716,14 +3718,10 @@ function displayCashbackSites(searchedItem) {
                 // Avoid partial prefix matches like "Qmomo".includes("momo")
                 if (merchantLower === termLower) return true;
                 if (termLower.includes(merchantLower)) return true;
-                // Allow merchant to contain the term only when term appears at a word boundary
-                // e.g. merchant="momo購物網" term="momo" → starts at index 0 ✓
-                //      merchant="Qmomo"     term="momo" → preceded by 'Q', not a boundary ✗
-                const idx = merchantLower.indexOf(termLower);
-                if (idx !== -1) {
-                    const before = idx === 0 ? '' : merchantLower[idx - 1];
-                    return before === '' || /\W/.test(before);
-                }
+                // Allow merchant name to start with the search term
+                // e.g. merchant="momo購物網" term="momo" → startsWith ✓
+                //      merchant="ToCoo! 日本租車網" term="日本" → does NOT startsWith ✗
+                if (merchantLower.startsWith(termLower)) return true;
                 return false;
             });
             if (found) return found;
