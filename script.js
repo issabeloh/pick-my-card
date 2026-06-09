@@ -2495,6 +2495,8 @@ async function calculateCashback() {
         await new Promise(resolve => setTimeout(resolve, 50));
     }
 
+    try {
+
     const amount = amountInput.value === '' ? 1000 : parseFloat(amountInput.value);
     const merchantValue = merchantInput.value.trim();
 
@@ -2846,14 +2848,18 @@ async function calculateCashback() {
     // Display new cardholder promos (filtered by user toggle, ownership, and merchant match)
     displayCardholderPromos(merchantValue, amount, currentQuickSearchOption?.merchants);
 
-    // Hide loading and log performance
-    if (shouldShowLoading) {
-        loadingOverlay.hide();
-    }
-
     const duration = performance.now() - startTime;
     console.log(`⏱️ calculateCashback 完成 - 耗時: ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
     console.log(`📊 比較了 ${cardsToCompare.length} 張卡片，找到 ${results.length} 個結果`);
+
+    } catch (err) {
+        console.error('❌ calculateCashback 發生錯誤:', err);
+    } finally {
+        // Always hide loading overlay, even on error
+        if (shouldShowLoading) {
+            loadingOverlay.hide();
+        }
+    }
 }
 
 // Get all search term variants for comprehensive matching
@@ -3013,14 +3019,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // Safety check: if levelSettings is still undefined, return 0 cashback
         if (!levelSettings) {
             console.warn(`⚠️ ${card.name}: levelSettings 未定義 for level "${savedLevel}"`);
-            return {
-                rate: 0,
-                cashbackAmount: 0,
-                cap: null,
-                matchedItem: null,
-                effectiveAmount: 0,
-                selectedLevel: null
-            };
+            return [];
         }
 
         // First, check cashbackRates if they exist (for cards like DBS Eco with special promotions)
