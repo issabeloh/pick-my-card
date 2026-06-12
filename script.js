@@ -2885,6 +2885,19 @@ function getAllSearchVariants(searchTerm) {
     return searchTerms;
 }
 
+// 判斷搜尋詞是否「包含」某個項目名稱（term ⊇ item）。
+// 中文允許任意 substring；英文要求詞彙邊界，避免 "singapore" 誤含 "gap"。
+function termContainsItemWithBoundary(term, itemLower) {
+    if (!term.includes(itemLower)) return false;
+    const isChinese = /[\u4e00-\u9fa5]/.test(itemLower);
+    if (isChinese) return true;
+    const wordBoundaryRegex = new RegExp(
+        `(^|\\s|[^a-z])${itemLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s|[^a-z])`,
+        'i'
+    );
+    return wordBoundaryRegex.test(term);
+}
+
 // 取得類別顯示名稱
 function getCategoryDisplayName(category) {
     const categoryMap = {
@@ -3969,7 +3982,11 @@ async function displayCouponCashbacks(amount, merchantValue) {
                 const matchedMerchants = [];
                 for (const item of merchantItems) {
                     const itemLower = item.toLowerCase();
-                    if (searchVariants.some(term => term.includes(itemLower) || itemLower.includes(term))) {
+                    // itemLower.includes(term): 項目包含搜尋詞（允許）
+                    // term ⊇ item: 用詞彙邊界判斷，避免 "singapore" 誤含 "gap"
+                    if (searchVariants.some(term =>
+                        itemLower.includes(term) || termContainsItemWithBoundary(term, itemLower)
+                    )) {
                         matchedMerchants.push(item);
                     }
                 }
