@@ -2133,7 +2133,8 @@ const fuzzySearchMap = {
     'MAC': 'M.A.C',
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
-    'tomods': 'Tomod\'s'
+    'tomods': 'Tomod\'s',
+    'sogo': '遠東 SOGO'
 };
 
 // Search term exclusion rules - prevents unwanted matches
