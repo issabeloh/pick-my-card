@@ -1,0 +1,4 @@
+# 舊網址 301 轉址：apex 換成介紹頁後，原本在 apex 上的工具頁面導向 compare 子網域
+/faq        https://compare.pickmycard.app/faq        301
+/faq.html   https://compare.pickmycard.app/faq        301
+/manifest.json  https://compare.pickmycard.app/manifest.json  301

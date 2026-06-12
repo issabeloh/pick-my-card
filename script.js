@@ -1606,6 +1606,10 @@ function closeAnnouncementBar() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 應用程式初始化開始...', new Date().toISOString());
 
+    // Mark this browser as a returning tool user (read by the landing page
+    // at pickmycard.app to auto-redirect old users straight to the tool)
+    try { localStorage.setItem('pmc_visited', '1'); } catch (e) {}
+
     // Load cards data first
     const dataLoaded = await loadCardsData();
     if (!dataLoaded) {
