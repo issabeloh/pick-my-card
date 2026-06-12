@@ -3646,14 +3646,16 @@ function displayReferralLink(searchedItem) {
         return;
     }
 
-    // 搜尋匹配的推薦連結
-    const searchLower = searchedItem.toLowerCase().trim();
+    // 搜尋匹配的推薦連結（含 fuzzy 別名展開，e.g. "711" 也能匹配 "7-ELEVEN"）
+    const searchVariants = getAllSearchVariants(searchedItem);
     const matchedReferral = cardsData.referralLinks.find(referral => {
         if (!referral.active) return false;
         const merchantLower = referral.merchant.toLowerCase();
-        return merchantLower === searchLower ||
-               merchantLower.includes(searchLower) ||
-               searchLower.includes(merchantLower);
+        return searchVariants.some(term =>
+            merchantLower === term ||
+            merchantLower.includes(term) ||
+            term.includes(merchantLower)
+        );
     });
 
     if (!matchedReferral) {
@@ -3952,11 +3954,12 @@ async function displayCouponCashbacks(amount, merchantValue) {
     // Collect all coupon cashbacks that match the merchant
     const matchingCoupons = [];
 
+    // Pre-compute search variants once (含 fuzzy 別名，e.g. "711" → ["711","7-eleven"])
+    const searchVariants = getAllSearchVariants(merchantValue);
+
     for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
-                const merchantLower = merchantValue.toLowerCase();
-
                 // Split merchant string into array of individual merchants
                 const merchantItems = coupon.merchant.split(',').map(m => m.trim());
 
@@ -3964,8 +3967,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
                 const matchedMerchants = [];
                 for (const item of merchantItems) {
                     const itemLower = item.toLowerCase();
-                    // Check if this item matches the search term
-                    if (merchantLower.includes(itemLower) || itemLower.includes(merchantLower)) {
+                    if (searchVariants.some(term => term.includes(itemLower) || itemLower.includes(term))) {
                         matchedMerchants.push(item);
                     }
                 }
@@ -4015,10 +4017,10 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
         return;
     }
 
-    // Determine search terms to use
+    // Determine search terms to use (含 fuzzy 別名展開)
     const searchTerms = searchKeywords
-        ? searchKeywords.map(k => k.toLowerCase().trim())
-        : [merchantValue.toLowerCase().trim()];
+        ? [...new Set(searchKeywords.flatMap(k => getAllSearchVariants(k)))]
+        : getAllSearchVariants(merchantValue);
 
     if (searchKeywords) {
         console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
