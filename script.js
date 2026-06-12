@@ -2133,7 +2133,11 @@ const fuzzySearchMap = {
     'MAC': 'M.A.C',
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
-    'tomods': 'Tomod\'s'
+    'tomods': 'Tomod\'s',
+    'sogo': '遠東 sogo',
+    'etmall': '東森購物',
+    'eslite': '誠品線上',
+    'betterbio': '好好生醫',
 };
 
 // Search term exclusion rules - prevents unwanted matches
