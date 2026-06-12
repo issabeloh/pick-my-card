@@ -3530,11 +3530,13 @@ function findMerchantPaymentInfo(searchedItem) {
         }
     }
 
-    // 部分匹配：搜尋詞包含商家名稱或商家名稱包含搜尋詞
+    // 前綴匹配：輸入以商家名稱開頭（e.g. "7-ELEVEN門市" → "7-ELEVEN"）
+    //           或商家名稱以輸入開頭（e.g. "7-ELEVEN" → "7-ELEVEN門市"）
+    // 使用 startsWith 而非 includes，避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
         const merchantLower = merchantName.toLowerCase();
-        if (searchLower.includes(merchantLower) || merchantLower.includes(searchLower)) {
-            console.log('✅ 部分匹配到:', merchantName);
+        if (searchLower.startsWith(merchantLower) || merchantLower.startsWith(searchLower)) {
+            console.log('✅ 前綴匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
         }
     }
@@ -3579,12 +3581,12 @@ function displayMerchantPaymentInfo(searchedItem) {
         return;
     }
 
-    // 如果搜尋詞包含頓號，拆分並嘗試匹配每個詞
+    // 展開別名（e.g. "711" → ["711","7-eleven"]），讓縮寫也能匹配
     let merchantInfo = null;
-    const searchTerms = searchedItem.split('、');
+    const searchTerms = getAllSearchVariants(searchedItem);
 
     console.log('🔍 搜尋商家付款方式，原始搜尋詞:', searchedItem);
-    console.log('🔍 拆分後的搜尋詞:', searchTerms);
+    console.log('🔍 展開後的搜尋詞:', searchTerms);
 
     for (const term of searchTerms) {
         merchantInfo = findMerchantPaymentInfo(term);
@@ -3644,14 +3646,16 @@ function displayReferralLink(searchedItem) {
         return;
     }
 
-    // 搜尋匹配的推薦連結
-    const searchLower = searchedItem.toLowerCase().trim();
+    // 搜尋匹配的推薦連結（含 fuzzy 別名展開，e.g. "711" 也能匹配 "7-ELEVEN"）
+    const searchVariants = getAllSearchVariants(searchedItem);
     const matchedReferral = cardsData.referralLinks.find(referral => {
         if (!referral.active) return false;
         const merchantLower = referral.merchant.toLowerCase();
-        return merchantLower === searchLower ||
-               merchantLower.includes(searchLower) ||
-               searchLower.includes(merchantLower);
+        return searchVariants.some(term =>
+            merchantLower === term ||
+            merchantLower.includes(term) ||
+            term.includes(merchantLower)
+        );
     });
 
     if (!matchedReferral) {
@@ -3704,7 +3708,8 @@ function displayCashbackSites(searchedItem) {
     const shopbackList = Array.isArray(sites.shopback) ? sites.shopback : [];
     const linebuyList = Array.isArray(sites.linebuy) ? sites.linebuy : [];
 
-    const searchTerms = searchedItem.split('、').map(t => t.trim()).filter(Boolean);
+    // 展開別名（e.g. "全聯" → ["全聯","px mart"]），讓縮寫也能匹配
+    const searchTerms = getAllSearchVariants(searchedItem);
 
     const matchEntry = (list) => {
         for (const term of searchTerms) {
@@ -3716,14 +3721,10 @@ function displayCashbackSites(searchedItem) {
                 // Avoid partial prefix matches like "Qmomo".includes("momo")
                 if (merchantLower === termLower) return true;
                 if (termLower.includes(merchantLower)) return true;
-                // Allow merchant to contain the term only when term appears at a word boundary
-                // e.g. merchant="momo購物網" term="momo" → starts at index 0 ✓
-                //      merchant="Qmomo"     term="momo" → preceded by 'Q', not a boundary ✗
-                const idx = merchantLower.indexOf(termLower);
-                if (idx !== -1) {
-                    const before = idx === 0 ? '' : merchantLower[idx - 1];
-                    return before === '' || /\W/.test(before);
-                }
+                // Allow merchant name to start with the search term
+                // e.g. merchant="momo購物網" term="momo" → startsWith ✓
+                //      merchant="ToCoo! 日本租車網" term="日本" → does NOT startsWith ✗
+                if (merchantLower.startsWith(termLower)) return true;
                 return false;
             });
             if (found) return found;
@@ -3953,11 +3954,12 @@ async function displayCouponCashbacks(amount, merchantValue) {
     // Collect all coupon cashbacks that match the merchant
     const matchingCoupons = [];
 
+    // Pre-compute search variants once (含 fuzzy 別名，e.g. "711" → ["711","7-eleven"])
+    const searchVariants = getAllSearchVariants(merchantValue);
+
     for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
-                const merchantLower = merchantValue.toLowerCase();
-
                 // Split merchant string into array of individual merchants
                 const merchantItems = coupon.merchant.split(',').map(m => m.trim());
 
@@ -3965,8 +3967,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
                 const matchedMerchants = [];
                 for (const item of merchantItems) {
                     const itemLower = item.toLowerCase();
-                    // Check if this item matches the search term
-                    if (merchantLower.includes(itemLower) || itemLower.includes(merchantLower)) {
+                    if (searchVariants.some(term => term.includes(itemLower) || itemLower.includes(term))) {
                         matchedMerchants.push(item);
                     }
                 }
@@ -4016,10 +4017,10 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
         return;
     }
 
-    // Determine search terms to use
+    // Determine search terms to use (含 fuzzy 別名展開)
     const searchTerms = searchKeywords
-        ? searchKeywords.map(k => k.toLowerCase().trim())
-        : [merchantValue.toLowerCase().trim()];
+        ? [...new Set(searchKeywords.flatMap(k => getAllSearchVariants(k)))]
+        : getAllSearchVariants(merchantValue);
 
     if (searchKeywords) {
         console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
