@@ -3745,7 +3745,9 @@ function displayCashbackSites(searchedItem) {
     infoBlock.id = 'cashback-sites-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let html = `<div class="merchant-payment-title">＊ 也可透過導購網站享加碼回饋</div>`;
+    // 標題顯示實際匹配到的商家名稱（粗體），而非使用者輸入
+    const matchedMerchantName = (shopbackMatch || linebuyMatch).merchant;
+    let html = `<div class="merchant-payment-title">＊ <strong>${matchedMerchantName}</strong> 也可透過導購網站享加碼回饋</div>`;
     if (shopbackMatch) {
         html += `<div class="merchant-payment-item"><a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
     }
