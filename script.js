@@ -2885,6 +2885,52 @@ function getAllSearchVariants(searchTerm) {
     return searchTerms;
 }
 
+// 判斷搜尋詞是否「包含」某個項目名稱（term ⊇ item）。
+// 中文允許任意 substring；英文要求詞彙邊界，避免 "singapore" 誤含 "gap"。
+function termContainsItemWithBoundary(term, itemLower) {
+    if (!term.includes(itemLower)) return false;
+    const isChinese = /[\u4e00-\u9fa5]/.test(itemLower);
+    if (isChinese) return true;
+    const wordBoundaryRegex = new RegExp(
+        `(^|\\s|[^a-z])${itemLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s|[^a-z])`,
+        'i'
+    );
+    return wordBoundaryRegex.test(term);
+}
+
+// 把商家名稱拆成可比對單元：主名稱（去掉括號）+ 每個括號內的別名。
+// 括號是「唯一」的別名邊界（空格不算），所以雙語商家請統一寫成「中文名 (English)」。
+// e.g. "酷澎 (Coupang)"      → ["酷澎", "coupang"]
+//      "肯德基 (KFC)"        → ["肯德基", "kfc"]
+//      "ToCoo! 日本租車網"   → ["tocoo! 日本租車網"]（無括號 → 整串當一個單元）
+function getMerchantSearchUnits(merchantName) {
+    const lower = String(merchantName || '').toLowerCase();
+    const units = [];
+    // 抓出所有括號內容（支援半形 () 與全形 （））
+    const bracketRegex = /[(（]([^)）]*)[)）]/g;
+    let m;
+    while ((m = bracketRegex.exec(lower)) !== null) {
+        const inner = m[1].trim();
+        if (inner) units.push(inner);
+    }
+    // 去掉所有括號後的主名稱
+    const main = lower.replace(/[(（][^)）]*[)）]/g, '').trim();
+    if (main) units.push(main);
+    return units.length > 0 ? units : [lower];
+}
+
+// B 類（補充資訊）嚴格比對：商家名稱 vs 已 fuzzy 展開的搜尋詞陣列。
+// 規則：把商家拆成單元後，任一單元與任一搜尋詞 exact 或雙向 startsWith 即算命中。
+// 嚴格的 startsWith（而非 includes）可避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"。
+function merchantMatchesStrict(merchantName, searchVariants) {
+    const units = getMerchantSearchUnits(merchantName);
+    return units.some(unit =>
+        searchVariants.some(term =>
+            term === unit || term.startsWith(unit) || unit.startsWith(term)
+        )
+    );
+}
+
 // 取得類別顯示名稱
 function getCategoryDisplayName(category) {
     const categoryMap = {
@@ -3505,38 +3551,26 @@ async function findUpcomingActivity(card, searchTerm, amount) {
 
 // Display calculation results
 // 模糊匹配商家名稱
-function findMerchantPaymentInfo(searchedItem) {
-    console.log('🔍 findMerchantPaymentInfo 被調用，搜尋詞:', searchedItem);
+// searchVariants：已 fuzzy 展開的搜尋詞陣列（由 displayMerchantPaymentInfo 傳入）
+function findMerchantPaymentInfo(searchVariants) {
+    console.log('🔍 findMerchantPaymentInfo 被調用，搜尋詞:', searchVariants);
 
     if (!cardsData?.merchantPayments) {
         console.log('❌ cardsData.merchantPayments 不存在');
         return null;
     }
 
-    if (!searchedItem) {
-        console.log('❌ searchedItem 為空');
+    if (!searchVariants || searchVariants.length === 0) {
+        console.log('❌ searchVariants 為空');
         return null;
     }
 
-    const searchLower = searchedItem.toLowerCase().trim();
-    console.log('🔍 轉換為小寫後:', searchLower);
-    console.log('📋 可用的商家:', Object.keys(cardsData.merchantPayments));
-
-    // 完全匹配
+    // B 類嚴格比對：商家名稱拆括號 + 雙向 startsWith
+    // e.g. "好市多 (Costco)" 可用「好市多」或「Costco」搜到；
+    //      "日本7-ELEVEN門市" 不會誤匹配 "7-ELEVEN"
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
-        if (merchantName.toLowerCase() === searchLower) {
-            console.log('✅ 完全匹配到:', merchantName);
-            return { merchantName, ...paymentInfo };
-        }
-    }
-
-    // 前綴匹配：輸入以商家名稱開頭（e.g. "7-ELEVEN門市" → "7-ELEVEN"）
-    //           或商家名稱以輸入開頭（e.g. "7-ELEVEN" → "7-ELEVEN門市"）
-    // 使用 startsWith 而非 includes，避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"
-    for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
-        const merchantLower = merchantName.toLowerCase();
-        if (searchLower.startsWith(merchantLower) || merchantLower.startsWith(searchLower)) {
-            console.log('✅ 前綴匹配到:', merchantName);
+        if (merchantMatchesStrict(merchantName, searchVariants)) {
+            console.log('✅ 匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
         }
     }
@@ -3582,19 +3616,12 @@ function displayMerchantPaymentInfo(searchedItem) {
     }
 
     // 展開別名（e.g. "711" → ["711","7-eleven"]），讓縮寫也能匹配
-    let merchantInfo = null;
     const searchTerms = getAllSearchVariants(searchedItem);
 
     console.log('🔍 搜尋商家付款方式，原始搜尋詞:', searchedItem);
     console.log('🔍 展開後的搜尋詞:', searchTerms);
 
-    for (const term of searchTerms) {
-        merchantInfo = findMerchantPaymentInfo(term);
-        if (merchantInfo) {
-            console.log('✅ 使用搜尋詞匹配成功:', term);
-            break;
-        }
-    }
+    const merchantInfo = findMerchantPaymentInfo(searchTerms);
 
     if (!merchantInfo) {
         console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
@@ -3647,16 +3674,11 @@ function displayReferralLink(searchedItem) {
     }
 
     // 搜尋匹配的推薦連結（含 fuzzy 別名展開，e.g. "711" 也能匹配 "7-ELEVEN"）
+    // B 類嚴格比對：商家拆括號 + 雙向 startsWith，避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"
     const searchVariants = getAllSearchVariants(searchedItem);
-    const matchedReferral = cardsData.referralLinks.find(referral => {
-        if (!referral.active) return false;
-        const merchantLower = referral.merchant.toLowerCase();
-        return searchVariants.some(term =>
-            merchantLower === term ||
-            merchantLower.includes(term) ||
-            term.includes(merchantLower)
-        );
-    });
+    const matchedReferral = cardsData.referralLinks.find(referral =>
+        referral.active && merchantMatchesStrict(referral.merchant, searchVariants)
+    );
 
     if (!matchedReferral) {
         return;
@@ -3711,26 +3733,11 @@ function displayCashbackSites(searchedItem) {
     // 展開別名（e.g. "全聯" → ["全聯","px mart"]），讓縮寫也能匹配
     const searchTerms = getAllSearchVariants(searchedItem);
 
-    const matchEntry = (list) => {
-        for (const term of searchTerms) {
-            const termLower = term.toLowerCase();
-            const found = list.find(entry => {
-                if (!entry || !entry.merchant) return false;
-                const merchantLower = entry.merchant.toLowerCase();
-                // Exact match or search term contains the merchant name (e.g. "momo購物網" ⊇ "momo")
-                // Avoid partial prefix matches like "Qmomo".includes("momo")
-                if (merchantLower === termLower) return true;
-                if (termLower.includes(merchantLower)) return true;
-                // Allow merchant name to start with the search term
-                // e.g. merchant="momo購物網" term="momo" → startsWith ✓
-                //      merchant="ToCoo! 日本租車網" term="日本" → does NOT startsWith ✗
-                if (merchantLower.startsWith(termLower)) return true;
-                return false;
-            });
-            if (found) return found;
-        }
-        return null;
-    };
+    // B 類嚴格比對：商家拆括號 + 雙向 startsWith
+    // e.g. "酷澎 (Coupang)" 可用「酷澎」或「Coupang」搜到；
+    //      "ToCoo! 日本租車網" 不會被「日本」誤匹配
+    const matchEntry = (list) =>
+        list.find(entry => entry && entry.merchant && merchantMatchesStrict(entry.merchant, searchTerms)) || null;
 
     const shopbackMatch = matchEntry(shopbackList);
     const linebuyMatch = matchEntry(linebuyList);
@@ -3969,7 +3976,11 @@ async function displayCouponCashbacks(amount, merchantValue) {
                 const matchedMerchants = [];
                 for (const item of merchantItems) {
                     const itemLower = item.toLowerCase();
-                    if (searchVariants.some(term => term.includes(itemLower) || itemLower.includes(term))) {
+                    // itemLower.includes(term): 項目包含搜尋詞（允許）
+                    // term ⊇ item: 用詞彙邊界判斷，避免 "singapore" 誤含 "gap"
+                    if (searchVariants.some(term =>
+                        itemLower.includes(term) || termContainsItemWithBoundary(term, itemLower)
+                    )) {
                         matchedMerchants.push(item);
                     }
                 }
@@ -4042,7 +4053,9 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
             for (const merchant of benefit.merchants) {
                 const merchantItemLower = merchant.toLowerCase();
 
-                // Check against all search terms
+                // 注意：停車的商家名稱是長描述字串、關鍵詞常在中間（如「中興嘟嘟房」⊇「嘟嘟房」、
+                // 「全台遠東百貨停車」⊇「遠東」），因此這裡刻意用 substring 而非 startsWith，
+                // 否則會漏掉大量停車場。停車資料皆為台灣停車場專名，誤匹配風險低。
                 const isMatch = searchTerms.some(searchTerm =>
                     searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
                 );
