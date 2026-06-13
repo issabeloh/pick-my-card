@@ -2135,9 +2135,6 @@ const fuzzySearchMap = {
     'mia cbon': 'Mia C\'bon',
     'tomods': 'Tomod\'s',
     'sogo': '遠東 sogo',
-    'etmall': '東森購物',
-    'eslite': '誠品線上',
-    'betterbio': '好好生醫',
 };
 
 // Search term exclusion rules - prevents unwanted matches
