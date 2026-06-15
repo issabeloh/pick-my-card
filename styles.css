@@ -2598,8 +2598,8 @@ input[type="number"]:focus {
 /* --- My Owned Cards overview (layer 1) --- */
 .owned-overview-actions {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 16px;
+    justify-content: center;
+    margin-top: 16px;
 }
 .manage-owned-btn {
     display: inline-flex;
@@ -2628,7 +2628,7 @@ input[type="number"]:focus {
 .owned-overview-card {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
     padding: 10px;
     border: 1px solid #e5e7eb;
@@ -2651,6 +2651,7 @@ input[type="number"]:focus {
     color: #111827;
     font-size: 13px;
     line-height: 1.2;
+    text-align: center;
 }
 
 .owned-overview-empty {
