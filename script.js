@@ -5975,9 +5975,71 @@ function openManageCardsModal() {
     disableBodyScroll();
 }
 
-// Open the "我的信用卡" modal (avatar dropdown).
+// Open the "我的信用卡" modal (avatar dropdown) — shows the owned-cards overview.
 // Guests are allowed to edit; data persists to localStorage and asks to merge on login.
 function openMyOwnedCardsModal() {
+    renderOwnedCardsOverview();
+
+    const modal = document.getElementById('my-owned-cards-modal');
+    modal.style.display = 'flex';
+    disableBodyScroll();
+}
+
+// Render the owned-cards overview tiles (image + name, click opens card detail).
+// Shows an empty-state prompt with a "新增信用卡" button when nothing is selected.
+function renderOwnedCardsOverview() {
+    const container = document.getElementById('owned-cards-overview');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const actions = document.getElementById('owned-overview-actions');
+
+    const ownedCards = [...cardsData.cards]
+        .filter(card => myOwnedCards.has(card.id))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (ownedCards.length === 0) {
+        // Empty state has its own CTA; hide the bottom manage button to avoid duplication
+        if (actions) actions.style.display = 'none';
+        const empty = document.createElement('div');
+        empty.className = 'owned-overview-empty';
+        empty.innerHTML = `
+            <p class="owned-overview-empty-text">你還沒有新增任何信用卡。</p>
+            <button type="button" id="owned-overview-add-btn" class="manage-owned-btn">
+                <span aria-hidden="true">＋</span> 新增信用卡
+            </button>
+        `;
+        container.appendChild(empty);
+        const addBtn = empty.querySelector('#owned-overview-add-btn');
+        addBtn.addEventListener('click', openManageOwnedCardsModal);
+        return;
+    }
+
+    if (actions) actions.style.display = 'flex';
+
+    ownedCards.forEach(card => {
+        const tile = document.createElement('div');
+        tile.className = 'owned-overview-card';
+        tile.setAttribute('role', 'button');
+        tile.setAttribute('tabindex', '0');
+        tile.title = '查看詳情';
+        tile.innerHTML = `
+            <img class="owned-overview-card-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
+            <span class="owned-overview-card-name">${card.name}</span>
+        `;
+        tile.addEventListener('click', () => showCardDetail(card.id));
+        tile.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                showCardDetail(card.id);
+            }
+        });
+        container.appendChild(tile);
+    });
+}
+
+// Open the "管理我的信用卡" modal (stacked on top of the overview).
+function openManageOwnedCardsModal() {
     _renderCardSelectionModal({
         selectionId: 'owned-cards-selection',
         tagFilterChipsId: 'owned-tag-filter-chips',
@@ -5988,7 +6050,7 @@ function openMyOwnedCardsModal() {
         allowGuestEdit: true
     });
 
-    const modal = document.getElementById('my-owned-cards-modal');
+    const modal = document.getElementById('manage-owned-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
 }
@@ -6011,24 +6073,40 @@ function updateApplyOwnedButtonState() {
     }
 }
 
-// Setup the "我的信用卡" modal (close, save, toggle-all listeners)
+// Setup the "我的信用卡" overview modal + the stacked "管理我的信用卡" modal.
 function setupMyOwnedCardsModal() {
-    const modal = document.getElementById('my-owned-cards-modal');
-    if (!modal) return;
+    const overviewModal = document.getElementById('my-owned-cards-modal');
+    const manageModal = document.getElementById('manage-owned-cards-modal');
+    if (!overviewModal || !manageModal) return;
 
-    const closeBtn = document.getElementById('close-owned-modal');
+    // --- Overview modal (layer 1) ---
+    const closeOverviewBtn = document.getElementById('close-owned-modal');
+    const manageBtn = document.getElementById('manage-owned-cards-btn');
+
+    const closeOverview = () => {
+        overviewModal.style.display = 'none';
+        enableBodyScroll();
+    };
+
+    closeOverviewBtn.addEventListener('click', closeOverview);
+    overviewModal.addEventListener('click', (e) => { if (e.target === overviewModal) closeOverview(); });
+    manageBtn.addEventListener('click', openManageOwnedCardsModal);
+
+    // --- Manage modal (layer 2, stacked on top of overview) ---
+    const closeManageBtn = document.getElementById('close-manage-owned-modal');
     const cancelBtn = document.getElementById('cancel-owned-cards-btn');
     const saveBtn = document.getElementById('save-owned-cards-btn');
     const toggleAllBtn = document.getElementById('toggle-all-owned-cards');
 
-    const closeModal = () => {
-        modal.style.display = 'none';
+    // Closes the manage modal only — overview underneath stays open.
+    const closeManage = () => {
+        manageModal.style.display = 'none';
         enableBodyScroll();
     };
 
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    closeManageBtn.addEventListener('click', closeManage);
+    cancelBtn.addEventListener('click', closeManage);
+    manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
 
     saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
@@ -6036,7 +6114,9 @@ function setupMyOwnedCardsModal() {
         checkboxes.forEach(cb => { if (cb.checked) newSelection.add(cb.value); });
         myOwnedCards = newSelection;
         await saveMyOwnedCards();
-        closeModal();
+        closeManage();
+        // Refresh the overview underneath so it reflects the new selection
+        renderOwnedCardsOverview();
     });
 
     toggleAllBtn.addEventListener('click', () => {
