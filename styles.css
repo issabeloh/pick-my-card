@@ -2595,6 +2595,79 @@ input[type="number"]:focus {
     color: #111827;
 }
 
+/* --- My Owned Cards overview (layer 1) --- */
+.owned-overview-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+.manage-owned-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid #6bb6ff;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e40af;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.manage-owned-btn:hover {
+    background: #f0f9ff;
+    border-color: #1e40af;
+}
+
+.owned-cards-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+.owned-overview-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.owned-overview-card:hover {
+    border-color: #6bb6ff;
+    background: #f8fafc;
+}
+.owned-overview-card-image {
+    height: 70px;
+    width: auto;
+    max-width: 140px;
+    object-fit: contain;
+}
+.owned-overview-card-name {
+    font-weight: 700;
+    color: #111827;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.owned-overview-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 40px 20px;
+    text-align: center;
+}
+.owned-overview-empty-text {
+    color: #6b7280;
+    font-size: 15px;
+    margin: 0;
+}
+
 .modal-footer {
     display: flex;
     gap: 12px;

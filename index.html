@@ -572,12 +572,32 @@
             </div>
         </div>
 
-        <!-- My Owned Cards Modal -->
+        <!-- My Owned Cards Modal (overview) -->
         <div id="my-owned-cards-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>我的信用卡</h3>
                     <button class="close-modal" id="close-owned-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="owned-overview-actions">
+                        <button id="manage-owned-cards-btn" class="manage-owned-btn" type="button">
+                            <span aria-hidden="true">⚙️</span> 管理我的信用卡
+                        </button>
+                    </div>
+                    <div class="owned-cards-overview" id="owned-cards-overview">
+                        <!-- Owned card overview tiles populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage My Owned Cards Modal -->
+        <div id="manage-owned-cards-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>管理我的信用卡</h3>
+                    <button class="close-modal" id="close-manage-owned-modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="modal-description">選擇你實際持有的信用卡，方便快速加入比較與隱藏新戶活動。</p>
