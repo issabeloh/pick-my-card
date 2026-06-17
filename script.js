@@ -1200,6 +1200,58 @@ function setupSpotlightControls() {
     }
 }
 
+// Click-to-enlarge: open any .promo-gift-image (or .image-zoomable) in a
+// fullscreen lightbox. Uses event delegation so dynamically-rendered promo
+// cards work without re-binding.
+function setupGiftImageLightbox() {
+    const lightbox = document.getElementById('image-lightbox');
+    const lightboxImg = document.getElementById('image-lightbox-img');
+    if (!lightbox || !lightboxImg) return;
+
+    document.addEventListener('click', (e) => {
+        const img = e.target.closest('.promo-gift-image');
+        if (!img || !img.src) return;
+        lightboxImg.src = img.src;
+        lightbox.style.display = 'flex';
+        disableBodyScroll();
+    });
+
+    const close = () => {
+        lightbox.style.display = 'none';
+        lightboxImg.src = '';
+        enableBodyScroll();
+    };
+    lightbox.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox.style.display === 'flex') close();
+    });
+}
+
+// Mobile back-to-top floating button: appears (above the feedback button)
+// once the page is scrolled down, smooth-scrolls to the top on click.
+function setupBackToTopButton() {
+    const btn = document.getElementById('back-to-top-btn');
+    if (!btn) return;
+
+    const toggle = () => {
+        const scrolled = (window.pageYOffset || document.documentElement.scrollTop) > 300;
+        btn.classList.toggle('is-visible', scrolled);
+    };
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { toggle(); ticking = false; });
+    }, { passive: true });
+
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    toggle();
+}
+
 // Find the actual cashbackRate activities in a card that cover the spotlight's
 // merchant, by looking up the card's prebuilt items index. Keywords come from a
 // matching quick-search option (so "所有加油站" expands to 中油/台塑/…) or from
@@ -1804,6 +1856,10 @@ function setupEventListeners() {
 
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
+
+    // Click-to-enlarge for the first-spend gift image + mobile back-to-top button
+    setupGiftImageLightbox();
+    setupBackToTopButton();
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {
