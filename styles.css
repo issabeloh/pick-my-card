@@ -1842,7 +1842,7 @@ input[type="number"]:focus {
 
 /* Regulatory warning above the 新戶活動 heading — dark band, white text, centered. */
 .promo-disclaimer {
-    margin: 0 0 12px;
+    margin: 0 0 22px;
     padding: 10px 12px;
     color: #fff;
     font-size: 14px;
