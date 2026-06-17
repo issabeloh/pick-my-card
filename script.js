@@ -4307,7 +4307,7 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     const rows = [];
 
     if (promo.gift_content) {
-        rows.push({ label: '贈品', value: promo.gift_content });
+        rows.push({ label: '首刷禮', value: promo.gift_content });
     }
 
     if (promo.voucher_amount) {
@@ -4423,7 +4423,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     // and an image URL is provided in the sheet. Desktop floats it to the right;
     // mobile drops it full-width between the summary and the detail rows.
     const giftImageHtml = (opts.showExtras
-        && Array.isArray(promo.promo_types) && promo.promo_types.includes('贈品')
+        && Array.isArray(promo.promo_types) && promo.promo_types.some(t => t === '贈品' || t === '首刷禮')
         && promo.gift_image_url)
         ? `<img class="promo-gift-image" src="${escapeHtml(promo.gift_image_url)}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`
         : '';
@@ -4552,7 +4552,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
 
 // Map a promo type label (贈品 / 回饋加碼 / 定額抵用) to a CSS modifier
 function promoTypeClass(label) {
-    if (label === '贈品') return 'gift';
+    if (label === '贈品' || label === '首刷禮') return 'gift';
     if (label === '回饋加碼') return 'bonus';
     if (label === '定額抵用' || label === '定額回饋') return 'voucher';
     return 'default';
