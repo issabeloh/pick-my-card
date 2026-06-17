@@ -2229,6 +2229,11 @@ input[type="number"]:focus {
 .matched-merchant.promo-condition {
     line-height: 1.6;
 }
+/* 達成條件: label on its own line, content (black) below it */
+.promo-condition-text {
+    color: #111827;
+    margin-top: 2px;
+}
 .cardholder-promo-item .detail-value .cashback-amount {
     line-height: 1.6;
 }
