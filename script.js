@@ -4599,7 +4599,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             ${highlightRowsHtml}
             ${capRowHtml}
         </div>
-        ${promo.promo_condition ? `<div class="matched-merchant promo-condition">達成條件: ${escapeHtmlMultiline(promo.promo_condition)}</div>` : ''}
+        ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件:</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
