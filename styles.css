@@ -3959,6 +3959,28 @@ input[type="number"]:focus {
     color: #6b7280;
 }
 
+/* 信用卡警語橫條 — 全站、頁尾全寬明顯橫條（靜態，不吸底） */
+.finance-warning-bar {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px 24px;
+    background: #1f2937;
+    color: #fff;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-top: 3px solid #facc15;
+}
+
+@media (max-width: 600px) {
+    .finance-warning-bar {
+        font-size: 15px;
+        padding: 14px 16px;
+        letter-spacing: 1px;
+    }
+}
+
 /* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
     max-width: 1200px;
