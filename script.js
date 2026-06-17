@@ -5129,6 +5129,7 @@ function initializeAuthListeners() {
         resultsSection: document.querySelector('.results-section'),
         couponResultsSection: document.querySelector('.coupon-results-section'),
         spotlightSection: document.getElementById('spotlight-section'),
+        financeWarningRow: document.getElementById('finance-warning-row'),
     };
 
     function showToolSections() {
@@ -5136,6 +5137,7 @@ function initializeAuthListeners() {
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
         renderSpotlights();
+        if (t.financeWarningRow) t.financeWarningRow.style.display = 'block';
         if (t.sidebar) t.sidebar.style.display = '';
         if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
         if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
@@ -5159,6 +5161,7 @@ function initializeAuthListeners() {
         if (t.resultsSection) t.resultsSection.style.display = 'none';
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
         if (t.spotlightSection) t.spotlightSection.style.display = 'none';
+        if (t.financeWarningRow) t.financeWarningRow.style.display = 'none';
         stopSpotlightAutoRotate();
     }
 

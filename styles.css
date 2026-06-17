@@ -1827,19 +1827,30 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 
-/* Regulatory warning under the main-results promo desc (italic per spec). */
+/* Regulatory warning under the main-results promo desc — red bordered box, centered. */
 .cardholder-promos-disclaimer {
-    margin: -8px 0 16px;
-    color: #6b7280;
+    margin: -4px 0 16px;
+    padding: 8px 12px;
+    color: #dc2626;
     font-size: 14px;
-    font-style: italic;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #dc2626;
+    border-radius: 8px;
+    background: #fef2f2;
 }
 
-/* Regulatory warning in the card detail modal promo section (plain, >=14px). */
+/* Regulatory warning in the card detail modal promo section — red bordered box, centered. */
 .promo-disclaimer {
     margin: 0 0 12px;
-    color: #6b7280;
+    padding: 8px 12px;
+    color: #dc2626;
     font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #dc2626;
+    border-radius: 8px;
+    background: #fef2f2;
 }
 
 /* First-spend gift image inside a detail-page promo card.
@@ -3959,24 +3970,25 @@ input[type="number"]:focus {
     color: #6b7280;
 }
 
-/* 信用卡警語橫條 — 全站、頁尾全寬明顯橫條（靜態，不吸底） */
-.finance-warning-bar {
+/* 信用卡警語橫條 — 精選活動區下方的一整行警語 */
+.finance-warning-row {
     width: 100%;
     box-sizing: border-box;
-    padding: 16px 24px;
+    padding: 14px 24px;
     background: #1f2937;
     color: #fff;
     text-align: center;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    border-top: 3px solid #facc15;
+    border-radius: 12px;
+    margin-top: 16px;
 }
 
 @media (max-width: 600px) {
-    .finance-warning-bar {
-        font-size: 15px;
-        padding: 14px 16px;
+    .finance-warning-row {
+        font-size: 14px;
+        padding: 12px 16px;
         letter-spacing: 1px;
     }
 }
