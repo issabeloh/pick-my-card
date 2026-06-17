@@ -4363,7 +4363,7 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     const rows = [];
 
     if (promo.gift_content) {
-        rows.push({ label: '首刷禮', value: promo.gift_content });
+        rows.push({ label: '首刷禮', value: promo.gift_content, multiline: true });
     }
 
     if (promo.voucher_amount) {
@@ -4499,7 +4499,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="detail-item">
             <div class="detail-label">${escapeHtml(r.label)}</div>
             <div class="detail-value">
-                <span class="cashback-amount">${escapeHtml(r.value)}</span>${r.extra ? ' ' + escapeHtml(r.extra) : ''}
+                <span class="cashback-amount">${r.multiline ? escapeHtmlMultiline(r.value) : escapeHtml(r.value)}</span>${r.extra ? ' ' + escapeHtml(r.extra) : ''}
             </div>
         </div>
     `;
@@ -4599,6 +4599,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             ${highlightRowsHtml}
             ${capRowHtml}
         </div>
+        ${promo.promo_condition ? `<div class="matched-merchant promo-condition">達成條件: ${escapeHtmlMultiline(promo.promo_condition)}</div>` : ''}
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
         ${notesHtml}
@@ -4622,6 +4623,13 @@ function escapeHtml(s) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+// Like escapeHtml but preserves manual line breaks (Alt+Enter in Sheets ->
+// \n) by converting them to <br>. Use for free-text fields that should keep
+// their multi-line formatting (gift_content, promo_condition).
+function escapeHtmlMultiline(s) {
+    return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
 // Sticky nav inside the card detail modal: hide buttons whose section is

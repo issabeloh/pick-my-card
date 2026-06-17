@@ -2225,6 +2225,14 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* Multi-line condition / gift text: keep manual line breaks readable */
+.matched-merchant.promo-condition {
+    line-height: 1.6;
+}
+.cardholder-promo-item .detail-value .cashback-amount {
+    line-height: 1.6;
+}
+
 /* No results styling */
 .no-results {
     color: #374151;
