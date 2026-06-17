@@ -496,7 +496,8 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此消費商家的新戶活動</p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動</p>
+                <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
                 </div>
@@ -522,6 +523,9 @@
             </div>
             <div class="spotlight-dots" id="spotlight-dots" style="display:none;"></div>
         </section>
+
+        <!-- 信用卡警語橫條（精選活動區下方） -->
+        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -861,6 +865,7 @@
                     </div>
 
                     <div class="card-info-section" id="card-promos-section" style="display: none;">
+                        <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
                         <h4>新戶活動</h4>
                         <div id="card-promos-content"></div>
                     </div>
@@ -1101,10 +1106,20 @@
     </button>
 
     <!-- Feedback Button -->
+    <!-- 回到頂部浮標（手機版） -->
+    <button id="back-to-top-btn" class="back-to-top-btn" title="回到頂部" aria-label="回到頂部">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
     <button id="feedback-btn" class="feedback-floating-btn" title="回報問題 / 意見回饋">
         <span>🐛</span>
         <span>回報錯誤</span>
     </button>
+
+    <!-- 圖片放大檢視 lightbox -->
+    <div id="image-lightbox" class="image-lightbox" style="display: none;" role="dialog" aria-label="放大圖片">
+        <img id="image-lightbox-img" class="image-lightbox-img" src="" alt="放大圖片">
+    </div>
 
     <!-- My Mappings Modal -->
     <div id="my-mappings-modal" class="modal" style="display: none;">

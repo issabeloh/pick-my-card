@@ -1827,6 +1827,59 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 
+/* Regulatory warning under the main-results promo desc — red bordered box, centered. */
+.cardholder-promos-disclaimer {
+    margin: -4px 0 16px;
+    padding: 8px 12px;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #dc2626;
+    border-radius: 8px;
+    background: #fef2f2;
+}
+
+/* Regulatory warning above the 新戶活動 heading — dark band, white text, centered. */
+.promo-disclaimer {
+    margin: 0 0 22px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    border-radius: 8px;
+    background: #1f2937;
+}
+
+/* First-spend gift image inside a detail-page promo card.
+   Desktop: floats right beside the detail rows; mobile: full-width block
+   between the summary and the detail rows. */
+.cardholder-promo-item.has-gift::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+.cardholder-promo-item .promo-gift-image {
+    float: right;
+    width: 150px;
+    max-width: 42%;
+    height: auto;
+    margin: 0 0 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    cursor: zoom-in;
+}
+@media (max-width: 600px) {
+    .cardholder-promo-item .promo-gift-image {
+        float: none;
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        margin: 4px 0 14px;
+    }
+}
+
 .cardholder-promos-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -2359,6 +2412,34 @@ input[type="number"]:focus {
 
 .close-modal:hover {
     color: #374151;
+}
+
+/* Spotlight (and other) modals use .modal-close — give it a comfortably
+   large, easy-to-tap target since the default button was tiny. */
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 32px;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover {
+    color: #111827;
+    background: rgba(107, 114, 128, 0.12);
+}
+
+.modal-close:active {
+    transform: scale(0.94);
 }
 
 .modal-body {
@@ -3917,6 +3998,29 @@ input[type="number"]:focus {
     color: #6b7280;
 }
 
+/* 信用卡警語橫條 — 精選活動區下方的一整行警語 */
+.finance-warning-row {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 24px;
+    background: #1f2937;
+    color: #fff;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border-radius: 12px;
+    margin-top: 16px;
+}
+
+@media (max-width: 600px) {
+    .finance-warning-row {
+        font-size: 14px;
+        padding: 12px 16px;
+        letter-spacing: 1px;
+    }
+}
+
 /* Disclaimer Footer Styles - 白色可收合版本 */
 .disclaimer-footer {
     max-width: 1200px;
@@ -4542,6 +4646,53 @@ input[type="number"]:focus {
     transform: scale(0.98);
 }
 
+/* Image lightbox (click-to-enlarge for the first-spend gift image) */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+}
+
+.image-lightbox-img {
+    max-width: 92vw;
+    max-height: 92vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Back-to-top floating button — mobile only, sits above the feedback button */
+.back-to-top-btn {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+    background: rgba(107, 114, 128, 0.15);
+    color: #374151;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    z-index: 999;
+    transition: all 0.2s ease;
+    /* Hidden on desktop; shown on mobile via the media query below */
+    display: none;
+}
+
+.back-to-top-btn:active {
+    transform: scale(0.96);
+}
+
 /* Feedback Modal Specific Styles */
 #feedback-modal .modal-content {
     max-width: 600px;
@@ -4829,6 +4980,13 @@ input[type="number"]:focus {
         font-size: 24px;
         padding: 0;
         justify-content: center;
+    }
+
+    /* Back-to-top: mobile only, stacked just above the feedback button */
+    .back-to-top-btn.is-visible {
+        display: flex;
+        bottom: 76px;
+        right: 16px;
     }
 
     /* Hide text on mobile, only show icon */

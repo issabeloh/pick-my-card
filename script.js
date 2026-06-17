@@ -1200,6 +1200,58 @@ function setupSpotlightControls() {
     }
 }
 
+// Click-to-enlarge: open any .promo-gift-image (or .image-zoomable) in a
+// fullscreen lightbox. Uses event delegation so dynamically-rendered promo
+// cards work without re-binding.
+function setupGiftImageLightbox() {
+    const lightbox = document.getElementById('image-lightbox');
+    const lightboxImg = document.getElementById('image-lightbox-img');
+    if (!lightbox || !lightboxImg) return;
+
+    document.addEventListener('click', (e) => {
+        const img = e.target.closest('.promo-gift-image');
+        if (!img || !img.src) return;
+        lightboxImg.src = img.src;
+        lightbox.style.display = 'flex';
+        disableBodyScroll();
+    });
+
+    const close = () => {
+        lightbox.style.display = 'none';
+        lightboxImg.src = '';
+        enableBodyScroll();
+    };
+    lightbox.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox.style.display === 'flex') close();
+    });
+}
+
+// Mobile back-to-top floating button: appears (above the feedback button)
+// once the page is scrolled down, smooth-scrolls to the top on click.
+function setupBackToTopButton() {
+    const btn = document.getElementById('back-to-top-btn');
+    if (!btn) return;
+
+    const toggle = () => {
+        const scrolled = (window.pageYOffset || document.documentElement.scrollTop) > 300;
+        btn.classList.toggle('is-visible', scrolled);
+    };
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { toggle(); ticking = false; });
+    }, { passive: true });
+
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    toggle();
+}
+
 // Find the actual cashbackRate activities in a card that cover the spotlight's
 // merchant, by looking up the card's prebuilt items index. Keywords come from a
 // matching quick-search option (so "所有加油站" expands to 中油/台塑/…) or from
@@ -1804,6 +1856,10 @@ function setupEventListeners() {
 
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
+
+    // Click-to-enlarge for the first-spend gift image + mobile back-to-top button
+    setupGiftImageLightbox();
+    setupBackToTopButton();
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {
@@ -4307,7 +4363,7 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
     const rows = [];
 
     if (promo.gift_content) {
-        rows.push({ label: '贈品', value: promo.gift_content });
+        rows.push({ label: '首刷禮', value: promo.gift_content });
     }
 
     if (promo.voucher_amount) {
@@ -4419,6 +4475,16 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const el = document.createElement('div');
     el.className = 'card-result cardholder-promo-item fade-in';
 
+    // First-spend gift image (detail page only): show when this is a 贈品 promo
+    // and an image URL is provided in the sheet. Desktop floats it to the right;
+    // mobile drops it full-width between the summary and the detail rows.
+    const giftImageHtml = (opts.showExtras
+        && Array.isArray(promo.promo_types) && promo.promo_types.some(t => t === '贈品' || t === '首刷禮')
+        && promo.gift_image_url)
+        ? `<img class="promo-gift-image" src="${escapeHtml(promo.gift_image_url)}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+    if (giftImageHtml) el.className += ' has-gift';
+
     const summary = promo.new_customer_summary || '';
 
     const period = (promo.period_start || promo.period_end)
@@ -4528,6 +4594,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ${cardHeaderHtmlWithCta}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
+        ${giftImageHtml}
         <div class="card-details">
             ${highlightRowsHtml}
             ${capRowHtml}
@@ -4541,7 +4608,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
 
 // Map a promo type label (贈品 / 回饋加碼 / 定額抵用) to a CSS modifier
 function promoTypeClass(label) {
-    if (label === '贈品') return 'gift';
+    if (label === '贈品' || label === '首刷禮') return 'gift';
     if (label === '回饋加碼') return 'bonus';
     if (label === '定額抵用' || label === '定額回饋') return 'voucher';
     return 'default';
@@ -4590,9 +4657,14 @@ function setupCardDetailNav(modalContent) {
         btn.onclick = () => {
             const section = document.getElementById(btn.dataset.section);
             if (!section) return;
+            // Rect-based delta (same basis as updateActive) so the section's
+            // heading lands just below the sticky nav, not hidden under it.
+            // offsetTop was relative to the wrong offsetParent and overshot on mobile.
             const navHeight = nav.offsetHeight;
-            const targetTop = section.offsetTop - navHeight - 8;
-            modalContent.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            const containerTop = modalContent.getBoundingClientRect().top;
+            const sectionTop = section.getBoundingClientRect().top;
+            const delta = sectionTop - containerTop - navHeight - 8;
+            modalContent.scrollTo({ top: modalContent.scrollTop + delta, behavior: 'smooth' });
         };
     });
 
@@ -4634,6 +4706,11 @@ function renderCardDetailPromos(card) {
     if (!section || !content) return;
 
     content.innerHTML = '';
+
+    // Regulatory warning sits above the 新戶活動 heading; hidden until we
+    // actually render promo cards below.
+    const disclaimerEl = document.getElementById('card-promo-disclaimer');
+    if (disclaimerEl) disclaimerEl.style.display = 'none';
 
     // Hide if user owns this card
     if (myOwnedCards.has(card.id)) {
@@ -4718,6 +4795,9 @@ function renderCardDetailPromos(card) {
         }
         return;
     }
+
+    // Promo cards exist → reveal the warning above the 新戶活動 heading.
+    if (disclaimerEl) disclaimerEl.style.display = 'block';
 
     content.appendChild(fragment);
     section.style.display = 'block';
@@ -5112,6 +5192,7 @@ function initializeAuthListeners() {
         resultsSection: document.querySelector('.results-section'),
         couponResultsSection: document.querySelector('.coupon-results-section'),
         spotlightSection: document.getElementById('spotlight-section'),
+        financeWarningRow: document.getElementById('finance-warning-row'),
     };
 
     function showToolSections() {
@@ -5119,6 +5200,7 @@ function initializeAuthListeners() {
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
         renderSpotlights();
+        if (t.financeWarningRow) t.financeWarningRow.style.display = 'block';
         if (t.sidebar) t.sidebar.style.display = '';
         if (t.appLayout) t.appLayout.classList.remove('no-sidebar');
         if (t.sidebarToggleBtn) t.sidebarToggleBtn.style.display = '';
@@ -5142,6 +5224,7 @@ function initializeAuthListeners() {
         if (t.resultsSection) t.resultsSection.style.display = 'none';
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
         if (t.spotlightSection) t.spotlightSection.style.display = 'none';
+        if (t.financeWarningRow) t.financeWarningRow.style.display = 'none';
         stopSpotlightAutoRotate();
     }
 
