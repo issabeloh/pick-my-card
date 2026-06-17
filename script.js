@@ -1301,7 +1301,13 @@ function buildSpotlightModalBody(item) {
     const applyCtaHtml = (applyCta && applyCta.link)
         ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
-    const cardNameLine = `<div class="spotlight-modal-cardname"><span class="spotlight-modal-cardname-text">💳 ${escapeHtml(item.card_name || (card && card.name) || '')}</span>${applyCtaHtml}</div>`;
+    // Card name: clickable (opens the card detail modal) when we can resolve
+    // the card; otherwise a plain label.
+    const cardNameText = escapeHtml(item.card_name || (card && card.name) || '');
+    const cardNameInner = card
+        ? `<button type="button" class="spotlight-modal-cardname-text spotlight-cardname-link" data-card-id="${escapeHtml(card.id)}">💳 ${cardNameText}<svg class="spotlight-cardname-chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+        : `<span class="spotlight-modal-cardname-text">💳 ${cardNameText}</span>`;
+    const cardNameLine = `<div class="spotlight-modal-cardname">${cardNameInner}${applyCtaHtml}</div>`;
 
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
@@ -1359,6 +1365,12 @@ function openSpotlightModal(index) {
     if (titleEl) titleEl.textContent = item.merchant || '活動詳情';
 
     bodyEl.innerHTML = buildSpotlightModalBody(item);
+
+    // Card name → open the card detail modal (stacked on top of this one).
+    const cardnameLink = bodyEl.querySelector('.spotlight-cardname-link');
+    if (cardnameLink) {
+        cardnameLink.addEventListener('click', () => showCardDetail(cardnameLink.dataset.cardId));
+    }
 
     modal.style.display = 'flex';
     disableBodyScroll();
