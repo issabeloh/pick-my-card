@@ -4657,9 +4657,14 @@ function setupCardDetailNav(modalContent) {
         btn.onclick = () => {
             const section = document.getElementById(btn.dataset.section);
             if (!section) return;
+            // Rect-based delta (same basis as updateActive) so the section's
+            // heading lands just below the sticky nav, not hidden under it.
+            // offsetTop was relative to the wrong offsetParent and overshot on mobile.
             const navHeight = nav.offsetHeight;
-            const targetTop = section.offsetTop - navHeight - 8;
-            modalContent.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+            const containerTop = modalContent.getBoundingClientRect().top;
+            const sectionTop = section.getBoundingClientRect().top;
+            const delta = sectionTop - containerTop - navHeight - 8;
+            modalContent.scrollTo({ top: modalContent.scrollTop + delta, behavior: 'smooth' });
         };
     });
 
@@ -4701,6 +4706,11 @@ function renderCardDetailPromos(card) {
     if (!section || !content) return;
 
     content.innerHTML = '';
+
+    // Regulatory warning sits above the 新戶活動 heading; hidden until we
+    // actually render promo cards below.
+    const disclaimerEl = document.getElementById('card-promo-disclaimer');
+    if (disclaimerEl) disclaimerEl.style.display = 'none';
 
     // Hide if user owns this card
     if (myOwnedCards.has(card.id)) {
@@ -4786,11 +4796,8 @@ function renderCardDetailPromos(card) {
         return;
     }
 
-    // Regulatory warning, shown just above the promo cards (below the apply CTA).
-    const disclaimer = document.createElement('p');
-    disclaimer.className = 'promo-disclaimer';
-    disclaimer.textContent = '謹慎理財、信用至上';
-    content.appendChild(disclaimer);
+    // Promo cards exist → reveal the warning above the 新戶活動 heading.
+    if (disclaimerEl) disclaimerEl.style.display = 'block';
 
     content.appendChild(fragment);
     section.style.display = 'block';
