@@ -1827,6 +1827,48 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 
+/* Regulatory warning under the main-results promo desc (italic per spec). */
+.cardholder-promos-disclaimer {
+    margin: -8px 0 16px;
+    color: #6b7280;
+    font-size: 14px;
+    font-style: italic;
+}
+
+/* Regulatory warning in the card detail modal promo section (plain, >=14px). */
+.promo-disclaimer {
+    margin: 0 0 12px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* First-spend gift image inside a detail-page promo card.
+   Desktop: floats right beside the detail rows; mobile: full-width block
+   between the summary and the detail rows. */
+.cardholder-promo-item.has-gift::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+.cardholder-promo-item .promo-gift-image {
+    float: right;
+    width: 150px;
+    max-width: 42%;
+    height: auto;
+    margin: 0 0 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+@media (max-width: 600px) {
+    .cardholder-promo-item .promo-gift-image {
+        float: none;
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        margin: 4px 0 14px;
+    }
+}
+
 .cardholder-promos-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

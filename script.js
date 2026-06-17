@@ -4419,6 +4419,16 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const el = document.createElement('div');
     el.className = 'card-result cardholder-promo-item fade-in';
 
+    // First-spend gift image (detail page only): show when this is a 贈品 promo
+    // and an image URL is provided in the sheet. Desktop floats it to the right;
+    // mobile drops it full-width between the summary and the detail rows.
+    const giftImageHtml = (opts.showExtras
+        && Array.isArray(promo.promo_types) && promo.promo_types.includes('贈品')
+        && promo.gift_image_url)
+        ? `<img class="promo-gift-image" src="${escapeHtml(promo.gift_image_url)}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+    if (giftImageHtml) el.className += ' has-gift';
+
     const summary = promo.new_customer_summary || '';
 
     const period = (promo.period_start || promo.period_end)
@@ -4528,6 +4538,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ${cardHeaderHtmlWithCta}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
+        ${giftImageHtml}
         <div class="card-details">
             ${highlightRowsHtml}
             ${capRowHtml}
@@ -4718,6 +4729,12 @@ function renderCardDetailPromos(card) {
         }
         return;
     }
+
+    // Regulatory warning, shown just above the promo cards (below the apply CTA).
+    const disclaimer = document.createElement('p');
+    disclaimer.className = 'promo-disclaimer';
+    disclaimer.textContent = '謹慎理財、信用至上';
+    content.appendChild(disclaimer);
 
     content.appendChild(fragment);
     section.style.display = 'block';
