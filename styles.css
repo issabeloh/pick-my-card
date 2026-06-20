@@ -2334,11 +2334,21 @@ input[type="number"]:focus {
     }
 
     .results-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .coupon-results-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Prevent result cards from exceeding the viewport width:
+       grid items default to min-width:auto and can refuse to shrink
+       below their content's min-content size, pushing the card off-screen. */
+    .card-result,
+    .cardholder-promo-item,
+    .coupon-item {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .card-details {
