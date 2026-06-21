@@ -6391,20 +6391,30 @@ input[type="number"]:focus {
     font-size: 1.25rem;
 }
 .spotlight-fire { font-size: 1.1em; }
-.spotlight-next-btn {
+.spotlight-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.spotlight-nav-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
     background: none;
-    border: none;
+    border: 1px solid #e5e7eb;
     color: #6b7280;
-    font-size: 0.85rem;
     cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 6px;
-    transition: color .2s, background .2s;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+    transition: color .2s, background .2s, border-color .2s;
 }
-.spotlight-next-btn:hover { color: #1e40af; background: #f3f4f6; }
+.spotlight-nav-btn:hover {
+    color: #1e40af;
+    background: #f3f4f6;
+    border-color: #c7d2fe;
+}
 
 .spotlight-track {
     display: grid;
