@@ -1963,6 +1963,13 @@ function setupEventListeners() {
     const resultsContainer = document.getElementById('results-container');
     if (resultsContainer) {
         resultsContainer.addEventListener('click', async (e) => {
+            const peekBtn = e.target.closest('.card-detail-peek-btn');
+            if (peekBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                showCardDetail(peekBtn.dataset.cardId);
+                return;
+            }
             const pinBtn = e.target.closest('.pin-btn');
             if (pinBtn) {
                 e.preventDefault();
@@ -1974,6 +1981,19 @@ function setupEventListeners() {
                 const periodStart = pinBtn.dataset.periodStart || null;
 
                 await togglePin(pinBtn, cardId, cardName, merchant, rate, periodEnd, periodStart);
+            }
+        });
+    }
+
+    // 新戶活動卡片的 ⓘ 詳情按鈕（搜尋結果）
+    const cardholderPromosContainer = document.getElementById('cardholder-promos-container');
+    if (cardholderPromosContainer) {
+        cardholderPromosContainer.addEventListener('click', (e) => {
+            const peekBtn = e.target.closest('.card-detail-peek-btn');
+            if (peekBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                showCardDetail(peekBtn.dataset.cardId);
             }
         });
     }
@@ -4614,6 +4634,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         <div class="card-header">
             <div class="card-name-with-pin">
                 <h3 class="card-name">${escapeHtml(card.name)}</h3>
+                <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(card.id)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 ${applyCtaBtnHtml}
             </div>
         </div>`;
@@ -4951,6 +4972,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-header">
             <div class="card-name-with-pin">
                 <div class="card-name">${result.card.name}</div>
+                <button type="button" class="card-detail-peek-btn" data-card-id="${result.card.id}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 ${merchantForPin && !isBasicCashback ? `
                     <button class="pin-btn ${pinned ? 'pinned' : ''}"
                             data-card-id="${result.card.id}"
