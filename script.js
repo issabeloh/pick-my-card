@@ -4749,12 +4749,6 @@ function renderCardDetailPromos(card) {
     const disclaimerEl = document.getElementById('card-promo-disclaimer');
     if (disclaimerEl) disclaimerEl.style.display = 'none';
 
-    // Hide if user owns this card
-    if (myOwnedCards.has(card.id)) {
-        section.style.display = 'none';
-        return;
-    }
-
     const promos = getActiveCardholderPromos(card.id);
     const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
     const hasCta = !!(applyCta && (applyCta.text || applyCta.link));
