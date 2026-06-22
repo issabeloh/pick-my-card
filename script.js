@@ -1078,9 +1078,8 @@ function renderSpotlights() {
     renderSpotlightPage();
 
     const multiPage = spotlightTotalPages() > 1;
-    const nextBtn = document.getElementById('spotlight-next-btn');
     const dots = document.getElementById('spotlight-dots');
-    if (nextBtn) nextBtn.style.display = multiPage ? 'inline-flex' : 'none';
+    updateSpotlightNav();
     if (dots) dots.style.display = multiPage ? 'flex' : 'none';
 
     if (multiPage) startSpotlightAutoRotate();
@@ -1105,6 +1104,17 @@ function renderSpotlightPage() {
     track.classList.add('spotlight-fade-in');
 
     updateSpotlightDots();
+    updateSpotlightNav();
+}
+
+// Show the next arrow whenever there are multiple pages; show the prev arrow
+// only when we're past the first page (no "previous" on page 1).
+function updateSpotlightNav() {
+    const multiPage = spotlightTotalPages() > 1;
+    const prevBtn = document.getElementById('spotlight-prev-btn');
+    const nextBtn = document.getElementById('spotlight-next-btn');
+    if (nextBtn) nextBtn.style.display = multiPage ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.style.display = (multiPage && spotlightPage > 0) ? 'inline-flex' : 'none';
 }
 
 function buildSpotlightCard(item, index) {
@@ -1176,6 +1186,10 @@ function nextSpotlightPage(userTriggered) {
     goToSpotlightPage(spotlightPage + 1, userTriggered);
 }
 
+function prevSpotlightPage(userTriggered) {
+    goToSpotlightPage(spotlightPage - 1, userTriggered);
+}
+
 function startSpotlightAutoRotate() {
     stopSpotlightAutoRotate();
     if (spotlightTotalPages() <= 1) return;
@@ -1192,6 +1206,9 @@ function stopSpotlightAutoRotate() {
 function setupSpotlightControls() {
     const nextBtn = document.getElementById('spotlight-next-btn');
     if (nextBtn) nextBtn.addEventListener('click', () => nextSpotlightPage(true));
+
+    const prevBtn = document.getElementById('spotlight-prev-btn');
+    if (prevBtn) prevBtn.addEventListener('click', () => prevSpotlightPage(true));
 
     const track = document.getElementById('spotlight-track');
     if (track) {
@@ -4731,12 +4748,6 @@ function renderCardDetailPromos(card) {
     // actually render promo cards below.
     const disclaimerEl = document.getElementById('card-promo-disclaimer');
     if (disclaimerEl) disclaimerEl.style.display = 'none';
-
-    // Hide if user owns this card
-    if (myOwnedCards.has(card.id)) {
-        section.style.display = 'none';
-        return;
-    }
 
     const promos = getActiveCardholderPromos(card.id);
     const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];

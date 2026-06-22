@@ -511,12 +511,18 @@
                 <h2 class="spotlight-title">
                     <span class="spotlight-fire">🔥</span> 精選活動
                 </h2>
-                <button type="button" class="spotlight-next-btn" id="spotlight-next-btn" style="display:none;">
-                    看下一組
-                    <svg width="13" height="13" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
-                    </svg>
-                </button>
+                <div class="spotlight-nav">
+                    <button type="button" class="spotlight-nav-btn spotlight-prev-btn" id="spotlight-prev-btn" aria-label="上一組" title="上一組" style="display:none;">
+                        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="spotlight-nav-btn spotlight-next-btn" id="spotlight-next-btn" aria-label="下一組" title="下一組" style="display:none;">
+                        <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="spotlight-track" id="spotlight-track">
                 <!-- Spotlight cards injected by JS -->
