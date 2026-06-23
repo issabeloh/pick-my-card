@@ -5005,11 +5005,17 @@ input[type="number"]:focus {
         justify-content: center;
     }
 
-    /* Back-to-top: mobile only, stacked just above the feedback button */
+    /* Back-to-top: mobile only, stacked just above the feedback button.
+       When the "我的消費配卡" button is visible (logged in), it occupies the
+       slot above feedback, so push back-to-top one slot higher to avoid overlap. */
     .back-to-top-btn.is-visible {
         display: flex;
-        bottom: 76px;
+        bottom: 72px;
         right: 16px;
+    }
+
+    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible {
+        bottom: 128px;
     }
 
     /* Hide text on mobile, only show icon */
