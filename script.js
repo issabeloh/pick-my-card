@@ -3482,6 +3482,20 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     itemToCheck.includes(keyword.toLowerCase()) ||
                     categoryToCheck.includes(keyword.toLowerCase())
                 );
+
+                // Only use layered calculation when the displayed rate genuinely
+                // STACKS on top of basic + bonus (i.e. there is a positive designated
+                // bonus, like DBS Eco's 指定國家). For a flat designated channel that
+                // has its own tight cap (e.g. 大戶卡 悠遊卡自動加值 5% / 上限 10,000),
+                // the designated bonus is <= 0, so layering would wrongly apply basic
+                // over the full uncapped amount and ignore the item's own cap.
+                const applicableBonusRate = isOverseasTransaction
+                    ? (levelSettingsForCalc.overseasBonusRate || 0)
+                    : (levelSettingsForCalc.domesticBonusRate || 0);
+                const designatedBonusRate = rate - card.basicCashback - applicableBonusRate;
+                if (designatedBonusRate <= 0) {
+                    shouldUseLayeredCalculation = false;
+                }
             }
         }
 
