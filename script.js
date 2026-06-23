@@ -264,6 +264,22 @@ function isRateActive(periodStart, periodEnd) {
 // Rate status cache for performance optimization
 let rateStatusCache = new Map();
 
+// Card level cache: avoids repeated Firestore getDoc calls for the same card's
+// selected level during a single calculation. getCardLevel() is called once per
+// (matchedItem × card), so a multi-item search like "日本" would otherwise fire
+// dozens of identical network round-trips (~10s on mobile). Keyed by uid+cardId;
+// write-through on saveCardLevel and cleared on auth changes to stay fresh.
+let cardLevelCache = new Map();
+
+function cardLevelCacheKey(cardId) {
+    const uid = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.uid : 'guest';
+    return `${uid}_${cardId}`;
+}
+
+function clearCardLevelCache() {
+    cardLevelCache.clear();
+}
+
 // Get cached rate status to avoid repeated date calculations
 function getCachedRateStatus(periodStart, periodEnd) {
     const key = `${periodStart}-${periodEnd}`;
@@ -5283,6 +5299,9 @@ function initializeAuthListeners() {
 
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
+        // Card levels are user-scoped; drop cached values when the user changes.
+        clearCardLevelCache();
+
         const productIntroSection = document.getElementById('product-intro-section');
 
         // Update the pre-paint auth hint so the next visit skips the hero flash
@@ -8968,6 +8987,19 @@ async function getCardLevel(cardId, defaultLevel) {
     // For non-level cards, return default immediately
     if (!cardId || !defaultLevel) return defaultLevel;
 
+    // Serve from cache when available (avoids repeated Firestore reads within a
+    // single calculation; invalidated by saveCardLevel and auth changes).
+    const cacheKey = cardLevelCacheKey(cardId);
+    if (cardLevelCache.has(cacheKey)) {
+        return cardLevelCache.get(cacheKey);
+    }
+
+    const resolved = await getCardLevelUncached(cardId, defaultLevel);
+    cardLevelCache.set(cacheKey, resolved);
+    return resolved;
+}
+
+async function getCardLevelUncached(cardId, defaultLevel) {
     // If user not logged in, use localStorage
     if (!auth.currentUser) {
         return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
@@ -9050,6 +9082,9 @@ async function saveChildrenEligible(eligible) {
 // Save card level to Firestore (with localStorage backup)
 async function saveCardLevel(cardId, level) {
     if (!cardId || !level) return;
+
+    // Write-through to the in-memory cache so subsequent reads see the new value.
+    cardLevelCache.set(cardLevelCacheKey(cardId), level);
 
     // Always save to localStorage as backup
     localStorage.setItem(`cardLevel-${cardId}`, level);
