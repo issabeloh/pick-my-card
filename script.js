@@ -3084,64 +3084,76 @@ function getCategoryStyle(category) {
  * @param {boolean} isOverseas - Whether this is an overseas transaction
  * @returns {Object} - { cashbackAmount, layers }
  */
+// Waterfall cashback for designated-channel cards that also carry a 國內/海外
+// 加碼 (e.g. 永豐大戶卡 悠遊卡自動加值). The designated rate is a flat TOTAL
+// within its own cap and does NOT overlap basic; only the OVERFLOW beyond that
+// cap drops down to 基本 + 加碼. Driven entirely by data fields (designated
+// rate/cap from the matched rateGroup, bonus rate/cap from levelSettings or the
+// top-level card) — no card-specific branching.
+//
+//   Tier 1 指定通路 : min(amount, designatedCap) × designatedRate   (flat, no basic overlap)
+//   Tier 2 基本回饋 : overflow × baseRate                            (無上限)
+//   Tier 3 國內/海外加碼 : min(overflow, bonusCap) × bonusRate        (capped)
 function calculateLayeredCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
     const layers = [];
     let totalCashback = 0;
 
-    // Layer 1: Basic cashback (always applies, no cap)
-    const basicCashback = Math.floor(amount * card.basicCashback / 100);
+    // Tier 1: designated channel — flat total rate within its own cap, no basic overlap
+    const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+    const designatedCashback = Math.floor(designatedAmount * displayedRate / 100);
     layers.push({
-        name: '基本回饋',
-        rate: card.basicCashback,
-        applicableAmount: amount,
-        cashback: basicCashback,
-        cap: null
+        name: '指定通路',
+        rate: displayedRate,
+        applicableAmount: designatedAmount,
+        cashback: designatedCashback,
+        cap: (cap && cap > 0) ? cap : null
     });
-    totalCashback += basicCashback;
+    totalCashback += designatedCashback;
 
-    // Layer 2: Bonus rate (domestic or overseas, with consumption cap)
-    let bonusRate = 0;
-    let bonusCap = 0;
-    let bonusName = '';
+    const overflow = amount - designatedAmount;
 
-    if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
-        bonusRate = levelSettings.overseasBonusRate;
-        bonusCap = levelSettings.overseasBonusCap;
-        bonusName = '海外消費加碼';
-    } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
-        bonusRate = levelSettings.domesticBonusRate;
-        bonusCap = levelSettings.domesticBonusCap;
-        bonusName = '國內消費加碼';
-    }
-
-    if (bonusRate > 0 && bonusCap > 0) {
-        const bonusApplicableAmount = Math.min(amount, bonusCap);
-        const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+    if (overflow > 0) {
+        // Tier 2: base rate on the overflow (no cap). Overseas spend uses
+        // overseasCashback as its base; domestic uses basicCashback.
+        const baseRate = isOverseas
+            ? (card.overseasCashback || card.basicCashback)
+            : card.basicCashback;
+        const baseCashback = Math.floor(overflow * baseRate / 100);
         layers.push({
-            name: bonusName,
-            rate: bonusRate,
-            applicableAmount: bonusApplicableAmount,
-            cashback: bonusCashback,
-            cap: bonusCap
+            name: '基本回饋',
+            rate: baseRate,
+            applicableAmount: overflow,
+            cashback: baseCashback,
+            cap: null
         });
-        totalCashback += bonusCashback;
-    }
+        totalCashback += baseCashback;
 
-    // Layer 3: Designated region/category bonus (with consumption cap)
-    // This is the additional rate on top of basic + bonus
-    const designatedBonusRate = displayedRate - card.basicCashback - bonusRate;
+        // Tier 3: 國內/海外加碼 on the overflow, capped by its own bonus cap
+        let bonusRate = 0;
+        let bonusCap = 0;
+        let bonusName = '';
+        if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
+            bonusRate = levelSettings.overseasBonusRate;
+            bonusCap = levelSettings.overseasBonusCap;
+            bonusName = '海外消費加碼';
+        } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
+            bonusRate = levelSettings.domesticBonusRate;
+            bonusCap = levelSettings.domesticBonusCap;
+            bonusName = '國內消費加碼';
+        }
 
-    if (designatedBonusRate > 0 && cap) {
-        const designatedApplicableAmount = Math.min(amount, cap);
-        const designatedCashback = Math.floor(designatedApplicableAmount * designatedBonusRate / 100);
-        layers.push({
-            name: '指定項目加碼',
-            rate: designatedBonusRate,
-            applicableAmount: designatedApplicableAmount,
-            cashback: designatedCashback,
-            cap: cap
-        });
-        totalCashback += designatedCashback;
+        if (bonusRate > 0 && bonusCap > 0) {
+            const bonusApplicableAmount = Math.min(overflow, bonusCap);
+            const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+            layers.push({
+                name: bonusName,
+                rate: bonusRate,
+                applicableAmount: bonusApplicableAmount,
+                cashback: bonusCashback,
+                cap: bonusCap
+            });
+            totalCashback += bonusCashback;
+        }
     }
 
     return {
@@ -3482,20 +3494,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     itemToCheck.includes(keyword.toLowerCase()) ||
                     categoryToCheck.includes(keyword.toLowerCase())
                 );
-
-                // Only use layered calculation when the displayed rate genuinely
-                // STACKS on top of basic + bonus (i.e. there is a positive designated
-                // bonus, like DBS Eco's 指定國家). For a flat designated channel that
-                // has its own tight cap (e.g. 大戶卡 悠遊卡自動加值 5% / 上限 10,000),
-                // the designated bonus is <= 0, so layering would wrongly apply basic
-                // over the full uncapped amount and ignore the item's own cap.
-                const applicableBonusRate = isOverseasTransaction
-                    ? (levelSettingsForCalc.overseasBonusRate || 0)
-                    : (levelSettingsForCalc.domesticBonusRate || 0);
-                const designatedBonusRate = rate - card.basicCashback - applicableBonusRate;
-                if (designatedBonusRate <= 0) {
-                    shouldUseLayeredCalculation = false;
-                }
             }
         }
 
