@@ -6179,8 +6179,11 @@ function renderOwnedCardsOverview() {
         tile.setAttribute('tabindex', '0');
         tile.title = '查看詳情';
         tile.innerHTML = `
-            <img class="owned-overview-card-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
-            <span class="owned-overview-card-name">${card.name}</span>
+            <span class="owned-overview-card-tab">${card.name}</span>
+            <div class="owned-overview-card-body">
+                <img class="owned-overview-card-image" alt="${card.name}" src="assets/images/cards/${card.id}.png"
+                     onerror="this.outerHTML='<span class=\\'owned-overview-card-noimg\\'>${card.name}</span>'">
+            </div>
         `;
         tile.addEventListener('click', () => showCardDetail(card.id));
         tile.addEventListener('keydown', (e) => {

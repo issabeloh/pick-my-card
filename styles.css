@@ -2726,35 +2726,62 @@ input[type="number"]:focus {
 
 .owned-cards-overview {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 10px;
 }
 .owned-overview-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    position: relative;
+    padding-top: 18px;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
-.owned-overview-card:hover {
-    border-color: #6bb6ff;
-    background: #f8fafc;
+.owned-overview-card-tab {
+    position: absolute;
+    top: 0;
+    left: 10px;
+    max-width: calc(100% - 20px);
+    background: #eef2f7;
+    color: #374151;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 4px 10px 6px;
+    border-radius: 5px 5px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 0;
+}
+.owned-overview-card-body {
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 0.5px 2px rgba(0,0,0,0.06);
+    padding: 10px 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70px;
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.owned-overview-card:hover .owned-overview-card-body {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13), 0 1px 3px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+.owned-overview-card:hover .owned-overview-card-tab {
+    background: #dce4ee;
 }
 .owned-overview-card-image {
-    height: 70px;
+    height: 60px;
     width: auto;
-    max-width: 140px;
+    max-width: 130px;
     object-fit: contain;
 }
-.owned-overview-card-name {
+.owned-overview-card-noimg {
     font-weight: 700;
-    color: #111827;
+    color: #374151;
     font-size: 13px;
-    line-height: 1.2;
+    line-height: 1.3;
     text-align: center;
 }
 
