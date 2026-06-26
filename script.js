@@ -6232,17 +6232,23 @@ function renderOwnedCardsOverview() {
             const o = i - active;
             const abs = Math.abs(o);
             const sign = Math.sign(o);
-            let tx, rotY, tz, scale;
+            let tx, ty, rotY, rotZ, tz, scale;
             if (abs === 0) {
-                tx = 0; rotY = 0; tz = 30; scale = 1;
+                tx = 0; ty = 0; rotY = 0; rotZ = 0; tz = 20; scale = 1;
             } else {
-                tx = sign * (120 + (abs - 1) * 46);
-                rotY = -sign * 48;
-                tz = -abs * 60;
-                scale = Math.max(0.7, 1 - abs * 0.07);
+                // Wider spacing so the fan opens up like the reference.
+                tx = sign * (150 + (abs - 1) * 64);
+                // Edges rise to form an upward-curving arc (parabolic).
+                ty = -(abs * abs) * 4 - abs * 2;
+                // Mild depth turn + in-plane tilt so cards fan like a hand.
+                rotY = -sign * 24;
+                rotZ = sign * Math.min(abs * 5, 16);
+                tz = -abs * 40;
+                scale = Math.max(0.76, 1 - abs * 0.05);
             }
             el.style.transform =
-                `translateX(${tx}px) translateZ(${tz}px) rotateY(${rotY}deg) scale(${scale})`;
+                `translateX(${tx}px) translateY(${ty}px) translateZ(${tz}px) ` +
+                `rotateY(${rotY}deg) rotateZ(${rotZ}deg) scale(${scale})`;
             el.style.zIndex = String(1000 - abs);
             el.style.opacity = abs > 5 ? '0' : '1';
             el.classList.toggle('cf-active', abs === 0);

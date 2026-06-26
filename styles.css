@@ -2731,8 +2731,8 @@ input[type="number"]:focus {
 /* --- 3D coverflow for "我的信用卡" --- */
 .cf-stage {
     position: relative;
-    height: 240px;
-    perspective: 1100px;
+    height: 270px;
+    perspective: 1200px;
     overflow: hidden;
     touch-action: pan-y;
     user-select: none;
