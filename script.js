@@ -4567,9 +4567,14 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         : '不限期';
 
     // Upcoming / ending-soon badges (same logic as card activities)
+    // promo dates are already ISO YYYY-MM-DD; fall back to slash-to-ISO conversion
     let promoBadgeHtml = '';
-    const isoStart = slashDateToISO(promo.period_start);
-    const isoEnd = slashDateToISO(promo.period_end);
+    const isoStart = promo.period_start
+        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
+        : '';
+    const isoEnd = promo.period_end
+        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
+        : '';
     const promoStatus = getRateStatus(isoStart, isoEnd);
     if (promoStatus === 'upcoming' && isoStart) {
         const daysUntil = getDaysUntilStart(isoStart);
