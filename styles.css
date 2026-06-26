@@ -2238,7 +2238,8 @@ input[type="number"]:focus {
     line-height: 1.6;
 }
 
-.cardholder-promo-item .upcoming-badge {
+.cardholder-promo-item .upcoming-badge,
+.card-result .matched-merchant .upcoming-badge {
     background: #fff7ed;
     color: #c2410c;
     border: 1px solid #fdba74;
@@ -2247,7 +2248,8 @@ input[type="number"]:focus {
     font-weight: 500;
 }
 
-.cardholder-promo-item .ending-soon-badge {
+.cardholder-promo-item .ending-soon-badge,
+.card-result .matched-merchant .ending-soon-badge {
     background: #f3f4f6;
     color: #4b5563;
     border: 1px solid #d1d5db;

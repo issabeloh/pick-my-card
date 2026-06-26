@@ -5012,6 +5012,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
     }
 
+    // Ending-soon badge (inline, next to period text)
+    let endingSoonInlineBadge = '';
+    if (!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10)) {
+        const daysUntil = getDaysUntilEnd(result.periodEnd);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+            endingSoonInlineBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+    }
+
     // 檢查是否已釘選（使用 matchedItem）
     const merchantForPin = result.matchedItems && result.matchedItems.length > 0
         ? result.matchedItems.join('、')
@@ -5044,11 +5054,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     const daysUntil = getDaysUntilStart(result.periodStart);
                     const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
                     return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
-                })() : ''}
-                ${!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10) ? (() => {
-                    const daysUntil = getDaysUntilEnd(result.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-                    return `<div class="ending-soon-badge">即將結束 (${daysText})</div>`;
                 })() : ''}
             </div>
         </div>
@@ -5100,8 +5105,13 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
 
-                    if (period) additionalInfo += `<br><small>活動期間: ${period}</small>`;
+                    if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
+                } else if (endingSoonInlineBadge && result.periodEnd) {
+                    const periodDisplay = result.periodStart
+                        ? `${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}`
+                        : `~${formatISODateForDisplay(result.periodEnd)}`;
+                    additionalInfo += `<br><small>活動期間: ${periodDisplay}${endingSoonInlineBadge}</small>`;
                 }
                 
                 const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
