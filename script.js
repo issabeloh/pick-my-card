@@ -6172,6 +6172,12 @@ function renderOwnedCardsOverview() {
 
     if (actions) actions.style.display = 'flex';
 
+    // --- Card count ---
+    const countLine = document.createElement('div');
+    countLine.className = 'cf-count';
+    countLine.textContent = `您有 ${ownedCards.length} 張信用卡`;
+    container.appendChild(countLine);
+
     // --- 3D coverflow: cards fan out in 3D; scroll/drag to bring a card
     // forward, click the front card to open its detail page. ---
     const stage = document.createElement('div');
@@ -6208,6 +6214,11 @@ function renderOwnedCardsOverview() {
     });
 
     container.appendChild(stage);
+
+    // --- Card name caption (below the fan) ---
+    const caption = document.createElement('div');
+    caption.className = 'cf-caption';
+    container.appendChild(caption);
 
     // Navigation arrows
     const prevBtn = document.createElement('button');
@@ -6255,6 +6266,7 @@ function renderOwnedCardsOverview() {
         });
         prevBtn.disabled = active <= 0;
         nextBtn.disabled = active >= count - 1;
+        caption.textContent = ownedCards[active].name;
     };
 
     const setActive = (idx) => {
@@ -6278,6 +6290,7 @@ function renderOwnedCardsOverview() {
     // Pointer drag / swipe, and tap-to-select / tap-front-to-open.
     let down = null;
     stage.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.cf-nav')) return;
         down = { x: e.clientX, card: e.target.closest('.cf-card') };
         try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     });
