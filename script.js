@@ -236,6 +236,16 @@ function formatISODateForDisplay(isoDate) {
     return `${y}/${m}/${d}`;
 }
 
+// 將台灣慣用 YYYY/M/D 轉為 ISO YYYY-MM-DD（供日期工具函數使用）
+function slashDateToISO(slashDate) {
+    if (!slashDate || typeof slashDate !== 'string') return '';
+    const parts = slashDate.split('/');
+    if (parts.length !== 3) return '';
+    const [y, m, d] = parts.map(Number);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return '';
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
 // Returns: 'active' | 'upcoming' | 'expired' | 'always'
 function getRateStatus(periodStart, periodEnd) {
@@ -4556,6 +4566,25 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
         : '不限期';
 
+    // Upcoming / ending-soon badges (same logic as card activities)
+    let promoBadgeHtml = '';
+    const isoStart = slashDateToISO(promo.period_start);
+    const isoEnd = slashDateToISO(promo.period_end);
+    const promoStatus = getRateStatus(isoStart, isoEnd);
+    if (promoStatus === 'upcoming' && isoStart) {
+        const daysUntil = getDaysUntilStart(isoStart);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+            promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
+        }
+    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 10)) {
+        const daysUntil = getDaysUntilEnd(isoEnd);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+            promoBadgeHtml = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+    }
+
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
         ? matchedMerchants.join('、')
         : '不限通路';
@@ -4667,7 +4696,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         </div>
         ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件:</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
-        <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
+        <div class="matched-merchant">活動期間: ${escapeHtml(period)}${promoBadgeHtml}</div>
         ${notesHtml}
     `;
     return el;
