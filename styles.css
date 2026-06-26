@@ -2370,7 +2370,20 @@ input[type="number"]:focus {
     }
 
     .card-details {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .card-details .detail-label {
+        font-size: 11px;
+    }
+
+    .card-details .detail-value {
+        font-size: 13px;
+    }
+
+    .card-details .cashback-amount {
+        font-size: 14px;
     }
 
     .cards-selection {
