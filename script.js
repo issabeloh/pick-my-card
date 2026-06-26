@@ -6172,26 +6172,129 @@ function renderOwnedCardsOverview() {
 
     if (actions) actions.style.display = 'flex';
 
-    ownedCards.forEach(card => {
-        const tile = document.createElement('div');
-        tile.className = 'owned-overview-card';
-        tile.setAttribute('role', 'button');
-        tile.setAttribute('tabindex', '0');
-        tile.title = '查看詳情';
-        tile.innerHTML = `
-            <span class="owned-overview-card-tab">${card.name}</span>
-            <img class="owned-overview-card-image" alt="${card.name}" src="assets/images/cards/${card.id}.png"
-                 onerror="this.outerHTML='<span class=\\'owned-overview-card-noimg\\'>${card.name}</span>'">
-        `;
-        tile.addEventListener('click', () => showCardDetail(card.id));
-        tile.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                showCardDetail(card.id);
-            }
+    // --- 3D coverflow: cards fan out in 3D; scroll/drag to bring a card
+    // forward, click the front card to open its detail page. ---
+    const stage = document.createElement('div');
+    stage.className = 'cf-stage';
+    stage.setAttribute('tabindex', '0');
+    stage.setAttribute('role', 'listbox');
+    stage.setAttribute('aria-label', '我的信用卡（滑動切換，點擊查看詳情）');
+
+    const track = document.createElement('div');
+    track.className = 'cf-track';
+    stage.appendChild(track);
+
+    ownedCards.forEach((card, i) => {
+        const el = document.createElement('div');
+        el.className = 'cf-card';
+        el.dataset.index = i;
+        el.setAttribute('role', 'option');
+        el.setAttribute('aria-label', card.name);
+
+        const img = document.createElement('img');
+        img.className = 'cf-img';
+        img.alt = card.name;
+        img.src = `assets/images/cards/${card.id}.png`;
+        // Auto-rotate portrait card images so they sit landscape like the rest.
+        img.addEventListener('load', () => {
+            if (img.naturalHeight > img.naturalWidth) el.classList.add('cf-portrait');
         });
-        container.appendChild(tile);
+        img.addEventListener('error', () => {
+            el.classList.add('cf-noimg');
+            el.textContent = card.name;
+        });
+        el.appendChild(img);
+        track.appendChild(el);
     });
+
+    container.appendChild(stage);
+
+    // Navigation arrows
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'cf-nav cf-prev';
+    prevBtn.setAttribute('aria-label', '上一張');
+    prevBtn.innerHTML = '‹';
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'cf-nav cf-next';
+    nextBtn.setAttribute('aria-label', '下一張');
+    nextBtn.innerHTML = '›';
+    stage.appendChild(prevBtn);
+    stage.appendChild(nextBtn);
+
+    const count = ownedCards.length;
+    // Start with the middle card in front so it reads as a fan.
+    let active = Math.floor((count - 1) / 2);
+
+    const layout = () => {
+        [...track.children].forEach((el, i) => {
+            const o = i - active;
+            const abs = Math.abs(o);
+            const sign = Math.sign(o);
+            let tx, rotY, tz, scale;
+            if (abs === 0) {
+                tx = 0; rotY = 0; tz = 30; scale = 1;
+            } else {
+                tx = sign * (120 + (abs - 1) * 46);
+                rotY = -sign * 48;
+                tz = -abs * 60;
+                scale = Math.max(0.7, 1 - abs * 0.07);
+            }
+            el.style.transform =
+                `translateX(${tx}px) translateZ(${tz}px) rotateY(${rotY}deg) scale(${scale})`;
+            el.style.zIndex = String(1000 - abs);
+            el.style.opacity = abs > 5 ? '0' : '1';
+            el.classList.toggle('cf-active', abs === 0);
+        });
+        prevBtn.disabled = active <= 0;
+        nextBtn.disabled = active >= count - 1;
+    };
+
+    const setActive = (idx) => {
+        active = Math.max(0, Math.min(count - 1, idx));
+        layout();
+    };
+
+    prevBtn.addEventListener('click', (e) => { e.stopPropagation(); setActive(active - 1); });
+    nextBtn.addEventListener('click', (e) => { e.stopPropagation(); setActive(active + 1); });
+
+    // Wheel / trackpad: step through cards (throttled).
+    let wheelAcc = 0, wheelLock = false;
+    stage.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (wheelLock) return;
+        wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (wheelAcc > 50) { setActive(active + 1); wheelAcc = 0; wheelLock = true; setTimeout(() => wheelLock = false, 180); }
+        else if (wheelAcc < -50) { setActive(active - 1); wheelAcc = 0; wheelLock = true; setTimeout(() => wheelLock = false, 180); }
+    }, { passive: false });
+
+    // Pointer drag / swipe, and tap-to-select / tap-front-to-open.
+    let down = null;
+    stage.addEventListener('pointerdown', (e) => {
+        down = { x: e.clientX, card: e.target.closest('.cf-card') };
+        try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    stage.addEventListener('pointerup', (e) => {
+        if (!down) return;
+        const dx = e.clientX - down.x;
+        if (Math.abs(dx) > 40) {
+            setActive(active + (dx < 0 ? 1 : -1));
+        } else if (down.card) {
+            const idx = Number(down.card.dataset.index);
+            if (idx === active) showCardDetail(ownedCards[active].id);
+            else setActive(idx);
+        }
+        down = null;
+    });
+
+    stage.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); setActive(active - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); setActive(active + 1); }
+        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showCardDetail(ownedCards[active].id); }
+    });
+
+    layout();
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
