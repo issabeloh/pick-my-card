@@ -2134,7 +2134,7 @@ input[type="number"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2px;
+    margin-bottom: 8px;
 }
 
 .card-name-with-pin {
@@ -2236,6 +2236,24 @@ input[type="number"]:focus {
 }
 .cardholder-promo-item .detail-value .cashback-amount {
     line-height: 1.6;
+}
+
+.cardholder-promo-item .upcoming-badge {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.cardholder-promo-item .ending-soon-badge {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
 /* No results styling */
@@ -2352,7 +2370,20 @@ input[type="number"]:focus {
     }
 
     .card-details {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .card-details .detail-label {
+        font-size: 11px;
+    }
+
+    .card-details .detail-value {
+        font-size: 13px;
+    }
+
+    .card-details .cashback-amount {
+        font-size: 14px;
     }
 
     .cards-selection {
