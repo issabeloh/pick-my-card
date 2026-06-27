@@ -3966,12 +3966,30 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     } else {
         const maxCashback = results[0].cashbackAmount;
 
+        // Split results into active/basic and upcoming
+        const activeResults = results.filter(r => !r.isUpcoming);
+        const upcomingResults = results.filter(r => r.isUpcoming);
+
         // Use DocumentFragment to batch DOM operations and reduce reflows
         const fragment = document.createDocumentFragment();
-        results.forEach((result, index) => {
+        activeResults.forEach((result, index) => {
             const cardElement = createCardResultElement(result, originalAmount, searchedItem, index === 0 && maxCashback > 0, isBasicCashback);
             fragment.appendChild(cardElement);
         });
+
+        // Insert a separator and render upcoming results
+        if (upcomingResults.length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'upcoming-separator';
+            separator.innerHTML = `<span>即將開始的活動 (${upcomingResults.length})</span>`;
+            fragment.appendChild(separator);
+
+            upcomingResults.forEach(result => {
+                const cardElement = createCardResultElement(result, originalAmount, searchedItem, false, false);
+                fragment.appendChild(cardElement);
+            });
+        }
+
         resultsContainer.appendChild(fragment);
     }
 

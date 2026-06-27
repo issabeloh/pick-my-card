@@ -5854,8 +5854,28 @@ input[type="number"]:focus {
 
 /* Upcoming activity styles */
 .upcoming-activity {
-    background-color: #f3f4f6;
-    opacity: 0.5;
+    background-color: #fff7ed;
+    border-color: #fdba74;
+    opacity: 0.85;
+}
+
+.upcoming-separator {
+    text-align: center;
+    margin: 16px 0 8px;
+    color: #9ca3af;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.upcoming-separator::before,
+.upcoming-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
 }
 
 .upcoming-badge {
