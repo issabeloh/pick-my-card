@@ -2944,6 +2944,38 @@ async function calculateCashback() {
         if (merchantValue.length > 0) {
             showNoMatchMessage(merchantValue, cardsToCompare);
         }
+
+        // Still search for upcoming activities even without active matches
+        if (merchantValue.length > 0) {
+            const upcomingResults = [];
+            const searchTerm = merchantValue.toLowerCase();
+            const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
+                const activities = await findUpcomingActivity(card, searchTerm, amount);
+                return activities.map(activity => ({
+                    card: card,
+                    ...activity,
+                    isUpcoming: true,
+                    matchedItemName: activity.matchedItem
+                }));
+            }));
+            upcomingResults.push(...upcomingActivities.flat());
+
+            const mergedMap = new Map();
+            for (const result of upcomingResults) {
+                const key = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+                if (mergedMap.has(key)) {
+                    const existing = mergedMap.get(key);
+                    if (!existing.matchedItems) existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
+                    const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
+                    for (const item of newItems) {
+                        if (item && !existing.matchedItems.includes(item)) existing.matchedItems.push(item);
+                    }
+                } else {
+                    mergedMap.set(key, { ...result, matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem] });
+                }
+            }
+            uniqueUpcomingResults = Array.from(mergedMap.values());
+        }
     }
     
     // Sort active results by cashback amount (highest first)
