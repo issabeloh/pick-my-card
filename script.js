@@ -5111,7 +5111,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
         </div>
         ${(() => {
-            if (isBasicCashback) {
+            if (isBasicCashback && !isUpcoming) {
                 let conditionsText = '';
                 // Check if card has domesticBonusConditions
                 if (result.card.domesticBonusConditions) {
