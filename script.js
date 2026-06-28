@@ -282,7 +282,7 @@ let rateStatusCache = new Map();
 let cardLevelCache = new Map();
 
 function cardLevelCacheKey(cardId) {
-    const uid = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.uid : 'guest';
+    const uid = (auth && auth.currentUser) ? auth.currentUser.uid : 'guest';
     return `${uid}_${cardId}`;
 }
 
@@ -7231,8 +7231,9 @@ basicCashbackDiv.innerHTML = basicContent;
     if (upcomingGroups.length > 0) {
         let upcomingContent = '';
 
-        // Handle both Map (from upcomingGroups1/2) and Array (from upcomingGroupsCube)
-        const groupsToDisplay = Array.isArray(upcomingGroups) ? upcomingGroups.map((g, i) => [i, g]) : upcomingGroups;
+        // upcomingGroups1/2 are [key, value] tuples from Map.entries();
+        // upcomingGroups3/Cube are plain object arrays. Normalize both to [key, value].
+        const groupsToDisplay = upcomingGroups.map((g, i) => Array.isArray(g) ? g : [i, g]);
 
         for (const [groupKey, group] of groupsToDisplay) {
             upcomingContent += `<div class="cashback-detail-item upcoming-activity">`;
@@ -7968,9 +7969,9 @@ let lastSavedNotes = new Map(); // 記錄每張卡最後儲存的內容
 
 // 讀取用戶筆記 (註: 筆記僅依賴cardId，與cardsInComparison狀態無關)
 async function loadUserNotes(cardId) {
-    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
-    
-    if (!auth.currentUser) {
+    const cacheKey = (auth && auth.currentUser) ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+
+    if (!auth || !auth.currentUser) {
         const localNotes = localStorage.getItem(cacheKey) || '';
         lastSavedNotes.set(cardId, localNotes);
         return localNotes;
@@ -7997,7 +7998,7 @@ async function loadUserNotes(cardId) {
 
 // 本地儲存（自動備份）
 function autoBackupNotes(cardId, notes) {
-    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+    const cacheKey = (auth && auth.currentUser) ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
     localStorage.setItem(cacheKey, notes);
 }
 
@@ -8008,7 +8009,7 @@ async function saveUserNotes(cardId, notes) {
     const btnText = document.querySelector('.btn-text');
     const btnIcon = document.querySelector('.btn-icon');
     
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         // 未登入時僅儲存在本地
         autoBackupNotes(cardId, notes);
         lastSavedNotes.set(cardId, notes);
@@ -9077,7 +9078,7 @@ async function getCardLevel(cardId, defaultLevel) {
 
 async function getCardLevelUncached(cardId, defaultLevel) {
     // If user not logged in, use localStorage
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
     }
 
@@ -9113,7 +9114,7 @@ async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9129,7 +9130,7 @@ async function saveCubeIssuer(issuer) {
     cubeIssuer = issuer;
     try { localStorage.setItem('cubeIssuer', issuer); } catch (e) {}
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9144,7 +9145,7 @@ async function saveCubeIssuer(issuer) {
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9166,7 +9167,7 @@ async function saveCardLevel(cardId, level) {
     localStorage.setItem(`cardLevel-${cardId}`, level);
 
     // If user not logged in, only save locally
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         console.log(`Card level saved locally for ${cardId}: ${level}`);
         return;
     }
