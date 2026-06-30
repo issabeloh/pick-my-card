@@ -3543,12 +3543,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let calculationLayers = null;
 
         // Determine calculation path based on cashbackModel field and card bonus rates.
-        // cashbackModel values (set per-cashbackRate item in Sheet):
-        //   "rate"                    → just the rate, basic on overflow, no bonus
-        //   "rate+basic"              → same as "rate" (alias)
-        //   "basic+domesticBonusRate" → stacking model, domestic bonus
-        //   "basic+overseasBonusRate" → stacking model, overseas bonus
-        //   (not set)                 → waterfall if card has any bonus rate
+        // cashbackModel values (set per-cashbackRate item in Sheet); the name lists
+        // every rate component that applies, in order of cap consumption:
+        //   "rate" / "rate+basic"           → just the rate, basic on overflow, NO bonus
+        //   "rate+basic+domesticBonusRate"  → stacking: designated + basic + domestic bonus
+        //   "rate+basic+overseasBonusRate"  → stacking: designated + basic + overseas bonus
+        //   "basic+domesticBonusRate"       → stacking, no designated (general 國內消費)
+        //   "basic+overseasBonusRate"       → stacking, no designated (general 國外消費)
+        //   (not set)                       → waterfall if card carries any bonus rate
         let shouldUseLayeredCalculation = false;
         let shouldUseStackedCalculation = false;
         let stackedIsOverseas = false;
@@ -3565,13 +3567,23 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // Step 2: pick calculation model
         const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null;
 
-        if (cashbackModel === 'basic+domesticBonusRate') {
+        // Stacking models — all components applied to the same amount concurrently.
+        // The engine decomposes the displayed rate: designated = displayed - basic - bonus.
+        //   "rate+basic+domesticBonusRate" → 3 components (Sport 卡 Apple Pay: 3%+1%+1%)
+        //   "basic+domesticBonusRate"      → 2 components, no designated rate (大戶卡 一般國內消費)
+        // Both go through calculateStackedCashback; the 2-component case simply yields
+        // designated = 0 when the displayed rate equals basic + bonus.
+        const domesticStackModels = ['basic+domesticBonusRate', 'rate+basic+domesticBonusRate'];
+        const overseasStackModels = ['basic+overseasBonusRate', 'rate+basic+overseasBonusRate'];
+        const rateOnlyModels = ['rate', 'rate+basic'];
+
+        if (domesticStackModels.includes(cashbackModel)) {
             shouldUseStackedCalculation = true;
             stackedIsOverseas = false;
-        } else if (cashbackModel === 'basic+overseasBonusRate') {
+        } else if (overseasStackModels.includes(cashbackModel)) {
             shouldUseStackedCalculation = true;
             stackedIsOverseas = true;
-        } else if (cashbackModel !== 'rate' && cashbackModel !== 'rate+basic') {
+        } else if (!rateOnlyModels.includes(cashbackModel)) {
             // No explicit model — use waterfall if card carries bonus rates
             const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
             const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
