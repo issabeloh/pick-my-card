@@ -6710,3 +6710,17 @@ input[type="number"]:focus {
     margin-top: 10px;
 }
 .spotlight-act-items > span:last-child { flex: 1; }
+
+/* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
