@@ -2689,22 +2689,24 @@ input[type="number"]:focus {
 .calc-breakdown-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     margin-left: 6px;
-    padding: 1px 7px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #4f46e5;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    border-radius: 4px;
+    width: 18px;
+    height: 18px;
+    font-size: 13px;
+    color: #059669;
+    background: none;
+    border: none;
+    border-radius: 50%;
     cursor: pointer;
     vertical-align: middle;
-    line-height: 1.6;
-    transition: background 0.15s, color 0.15s;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s, background 0.15s;
 }
 .calc-breakdown-btn:hover {
-    background: #e0e7ff;
-    color: #3730a3;
+    color: #047857;
+    background: #d1fae5;
 }
 .calc-breakdown-popup {
     margin: 0 12px 12px;
