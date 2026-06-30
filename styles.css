@@ -2685,6 +2685,85 @@ input[type="number"]:focus {
     background: #eef2ff;
 }
 
+/* ── Calculation breakdown button + popup ───────────────────────────────── */
+.calc-breakdown-btn {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 4px;
+    cursor: pointer;
+    vertical-align: middle;
+    line-height: 1.6;
+    transition: background 0.15s, color 0.15s;
+}
+.calc-breakdown-btn:hover {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+.calc-breakdown-popup {
+    margin: 0 12px 12px;
+    padding: 14px 16px;
+    background: #f8faff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    font-size: 13px;
+    animation: fadeIn 0.15s ease;
+}
+.breakdown-title {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+.breakdown-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.breakdown-table th {
+    font-size: 11px;
+    color: #9ca3af;
+    text-align: left;
+    padding: 2px 6px 6px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+.breakdown-table td {
+    padding: 5px 6px 5px 0;
+    color: #374151;
+    vertical-align: middle;
+    border-bottom: 1px solid #f3f4f6;
+}
+.breakdown-table tfoot td {
+    border-bottom: none;
+    padding-top: 8px;
+}
+.breakdown-cap-note {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-left: 4px;
+}
+.breakdown-cashback {
+    text-align: right;
+    font-weight: 500;
+    color: #059669;
+}
+.breakdown-total-label {
+    text-align: right;
+    font-weight: 600;
+    color: #374151;
+    padding-right: 12px;
+}
+.breakdown-total {
+    text-align: right;
+    font-weight: 700;
+    font-size: 15px;
+    color: #059669;
+}
+
 .card-checkbox-label {
     flex-grow: 1;
     font-weight: 400;

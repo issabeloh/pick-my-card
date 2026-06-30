@@ -1986,6 +1986,14 @@ function setupEventListeners() {
                 showCardDetail(peekBtn.dataset.cardId);
                 return;
             }
+            const breakdownBtn = e.target.closest('.calc-breakdown-btn');
+            if (breakdownBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const cardResult = breakdownBtn.closest('.card-result');
+                showCalcBreakdown(breakdownBtn, cardResult);
+                return;
+            }
             const pinBtn = e.target.closest('.pin-btn');
             if (pinBtn) {
                 e.preventDefault();
@@ -5011,6 +5019,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         : result.matchedItem;
     const pinned = merchantForPin && !isBasicCashback ? isPinned(result.card.id, merchantForPin) : false;
 
+    // Store layers for the breakdown button
+    if (result.calculationLayers) {
+        cardDiv.dataset.calcLayers = JSON.stringify(result.calculationLayers);
+        cardDiv.dataset.calcAmount = originalAmount;
+    }
+
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
@@ -5052,7 +5066,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
-                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
+                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
+                    ${cashbackText}
+                    ${result.calculationLayers && result.calculationLayers.length > 1 ? `
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細">算式</button>
+                    ` : ''}
+                </div>
                 ${(() => {
     if (result.card.basicCashbackType) {
         const cashbackType = result.card.basicCashbackType;
@@ -5129,6 +5148,57 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     
     return cardDiv;
 }
+
+// Show a small inline breakdown popup when the user clicks "算式"
+function showCalcBreakdown(btn, cardResult) {
+    // Remove any existing popup
+    const existing = document.querySelector('.calc-breakdown-popup');
+    if (existing) {
+        if (existing.previousSibling === btn || existing.dataset.btnId === btn.dataset.btnId) {
+            existing.remove();
+            return; // toggle off
+        }
+        existing.remove();
+    }
+
+    const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
+    const totalAmount = parseInt(cardResult.dataset.calcAmount, 10);
+    if (!layers.length) return;
+
+    const rows = layers.map(layer => {
+        const capLabel = layer.cap != null ? `上限 NT$${Math.floor(layer.cap).toLocaleString()}` : '無上限';
+        const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
+        return `<tr>
+            <td>${layer.name}</td>
+            <td>${layer.rate}%</td>
+            <td>${amtLabel}<span class="breakdown-cap-note">（${capLabel}）</span></td>
+            <td class="breakdown-cashback">NT$${Math.floor(layer.cashback).toLocaleString()}</td>
+        </tr>`;
+    }).join('');
+
+    const total = layers.reduce((s, l) => s + l.cashback, 0);
+
+    const popup = document.createElement('div');
+    popup.className = 'calc-breakdown-popup';
+    popup.innerHTML = `
+        <div class="breakdown-title">計算明細（消費 NT$${totalAmount.toLocaleString()}）</div>
+        <table class="breakdown-table">
+            <thead><tr><th>項目</th><th>回饋率</th><th>適用金額</th><th>回饋</th></tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr><td colspan="3" class="breakdown-total-label">合計回饋金額</td><td class="breakdown-total">NT$${total.toLocaleString()}</td></tr></tfoot>
+        </table>
+    `;
+
+    // Insert immediately after the card result
+    cardResult.after(popup);
+    popup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// Close breakdown popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.calc-breakdown-popup') && !e.target.closest('.calc-breakdown-btn')) {
+        document.querySelector('.calc-breakdown-popup')?.remove();
+    }
+}, true);
 
 // Format currency
 function formatCurrency(amount) {
