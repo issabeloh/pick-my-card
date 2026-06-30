@@ -3128,29 +3128,39 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
         });
         totalCashback += baseCashback;
 
-        // Tier 3: 國內/海外加碼 on the overflow, capped by its own bonus cap
+        // Tier 3: 國內/海外加碼 on the overflow.
+        // Priority: levelSettings fields first (大戶卡 where bonus varies per level),
+        // then fall back to top-level card fields (all other cards).
+        // bonusCap null/undefined = no spending cap on the bonus (無上限).
         let bonusRate = 0;
-        let bonusCap = 0;
+        let bonusCap = null; // null means uncapped
         let bonusName = '';
-        if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
-            bonusRate = levelSettings.overseasBonusRate;
-            bonusCap = levelSettings.overseasBonusCap;
+        if (isOverseas) {
+            bonusRate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
+            const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
+                ? levelSettings.overseasBonusCap
+                : card.overseasBonusCap;
+            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
             bonusName = '海外消費加碼';
-        } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
-            bonusRate = levelSettings.domesticBonusRate;
-            bonusCap = levelSettings.domesticBonusCap;
+        } else {
+            bonusRate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
+            const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
+                ? levelSettings.domesticBonusCap
+                : card.domesticBonusCap;
+            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
             bonusName = '國內消費加碼';
         }
 
-        if (bonusRate > 0 && bonusCap > 0) {
-            const bonusApplicableAmount = Math.min(overflow, bonusCap);
+        if (bonusRate > 0) {
+            // bonusCap null = apply to full overflow (無上限)
+            const bonusApplicableAmount = bonusCap != null ? Math.min(overflow, bonusCap) : overflow;
             const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
             layers.push({
                 name: bonusName,
                 rate: bonusRate,
                 applicableAmount: bonusApplicableAmount,
                 cashback: bonusCashback,
-                cap: bonusCap
+                cap: bonusCap // null = 無上限, preserved for display
             });
             totalCashback += bonusCashback;
         }
@@ -3467,39 +3477,44 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let totalRate = rate;
         let calculationLayers = null;
 
-        // Check if we should use layered calculation
-        // Criteria: card has levelSettings with overseasBonusRate or domesticBonusRate
+        // Check if we should use layered waterfall calculation.
+        // Triggers when the card carries any domestic or overseas bonus rate —
+        // either inside levelSettings (大戶卡, bonus varies per level) or at the
+        // top level (all other cards where bonus is level-independent, e.g.
+        // DBS Eco, 凱基誠品, 中信 uniopen, 滙豐 Live+, iLEO…).
         let shouldUseLayeredCalculation = false;
         let levelSettingsForCalc = null;
         let isOverseasTransaction = false;
 
+        // Step 1: resolve level settings for hasLevels cards (regardless of bonus)
         if (card.hasLevels && card.levelSettings) {
-            // Get the level settings for this card
             const availableLevels = Object.keys(card.levelSettings);
             const levelToUse = selectedLevel || availableLevels[0];
             levelSettingsForCalc = card.levelSettings[levelToUse];
+        }
 
-            // Check if this level has bonus rates (indicating layered calculation needed)
-            if (levelSettingsForCalc &&
-                (levelSettingsForCalc.overseasBonusRate || levelSettingsForCalc.domesticBonusRate)) {
-                shouldUseLayeredCalculation = true;
+        // Step 2: check for bonus rates — levelSettings takes priority, then top-level
+        const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
+        const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
 
-                // Determine if this is an overseas transaction
-                // Check the matched item or category for overseas keywords
-                const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-                const itemToCheck = (matchedItem || '').toLowerCase();
-                const categoryToCheck = (matchedCategory || '').toLowerCase();
+        if (effectiveDomBonus || effectiveOvsBonus) {
+            shouldUseLayeredCalculation = true;
 
-                isOverseasTransaction = overseasKeywords.some(keyword =>
-                    itemToCheck.includes(keyword.toLowerCase()) ||
-                    categoryToCheck.includes(keyword.toLowerCase())
-                );
-            }
+            const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
+            const itemToCheck = (matchedItem || '').toLowerCase();
+            const categoryToCheck = (matchedCategory || '').toLowerCase();
+
+            isOverseasTransaction = overseasKeywords.some(keyword =>
+                itemToCheck.includes(keyword.toLowerCase()) ||
+                categoryToCheck.includes(keyword.toLowerCase())
+            );
         }
 
         if (rate > 0) {
-            if (shouldUseLayeredCalculation && levelSettingsForCalc) {
-                // Use layered calculation for complex multi-tier cashback
+            if (shouldUseLayeredCalculation) {
+                // Use waterfall calculation. levelSettingsForCalc may be null for
+                // non-hasLevels cards; calculateLayeredCashback falls back to
+                // top-level card bonus fields in that case.
                 const layeredResult = calculateLayeredCashback(
                     card,
                     levelSettingsForCalc,
