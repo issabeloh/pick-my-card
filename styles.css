@@ -1324,7 +1324,7 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background: #1e40af;
     color: white;
     border: none;
     border-radius: 12px;
@@ -1787,9 +1787,11 @@ input[type="number"]:focus {
 }
 
 .show-promos-toggle input[type="checkbox"] {
-    width: auto;
+    width: 18px;
+    height: 18px;
     margin: 0;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .show-promos-desktop { display: block; }
@@ -1797,7 +1799,7 @@ input[type="number"]:focus {
 
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 20px; }
+    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
     /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
     .button-group .show-promos-toggle label {
         height: auto;
@@ -2335,12 +2337,17 @@ input[type="number"]:focus {
     }
 
     .input-row-with-button {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+    }
+
+    .input-row-with-button > .form-group:first-child {
+        grid-column: 1 / -1;
     }
 
     .button-group {
         margin-top: 0px;
+        min-width: 96px;
     }
 
     .button-group label {
@@ -2351,6 +2358,7 @@ input[type="number"]:focus {
 
     .calculate-btn.compact {
         width: 100%;
+        white-space: nowrap;
     }
 
     .results-container {
@@ -2535,6 +2543,13 @@ input[type="number"]:focus {
     gap: 8px;
     margin-bottom: 12px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.modal-action-save-btn {
+    margin-left: auto;
+    padding: 6px 14px !important;
+    font-size: 13px !important;
 }
 
 .toggle-all-btn {
@@ -2645,7 +2660,7 @@ input[type="number"]:focus {
 
 .cards-selection {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
@@ -2668,12 +2683,13 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 .card-checkbox-image {
-    height: 70px;
+    height: 56px;
     width: auto;
-    max-width: 140px;
+    max-width: 110px;
     object-fit: contain;
     /* Indent to line up with the card name (checkbox width 14 + row gap 8) */
     margin-left: 22px;
+    cursor: pointer;
 }
 .card-checkbox-row {
     display: flex;
@@ -6278,8 +6294,9 @@ input[type="number"]:focus {
 }
 
 .app-layout main .calculate-btn.compact {
-    padding: 12px 20px;
+    padding: 10px 16px;
     font-size: 0.9rem;
+    height: auto;
 }
 
 .app-layout main .quick-search-label {
@@ -6288,6 +6305,23 @@ input[type="number"]:focus {
     color: #6b7280;
     margin-top: 12px;
     margin-bottom: 6px;
+}
+
+@media (max-width: 768px) {
+    .app-layout main label {
+        margin-bottom: 6px;
+    }
+    .app-layout main .quick-search-label {
+        margin-top: 6px;
+        margin-bottom: 4px;
+    }
+    .app-layout main input[type="text"],
+    .app-layout main input[type="number"] {
+        padding: 10px 12px;
+    }
+    .app-layout main .input-section {
+        margin-bottom: 12px;
+    }
 }
 
 .app-layout main .quick-search-btn {
