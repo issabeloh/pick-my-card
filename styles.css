@@ -1324,7 +1324,7 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background: #1e40af;
     color: white;
     border: none;
     border-radius: 12px;
@@ -6294,7 +6294,7 @@ input[type="number"]:focus {
 }
 
 .app-layout main .calculate-btn.compact {
-    padding: 8px 16px;
+    padding: 10px 16px;
     font-size: 0.9rem;
     height: auto;
 }
