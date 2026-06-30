@@ -5913,8 +5913,8 @@ function setupManageCardsModal() {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards
-    saveBtn.addEventListener('click', async () => {
+    // Save cards (shared handler for both footer and quick-save buttons)
+    const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
 
@@ -5939,7 +5939,10 @@ function setupManageCardsModal() {
 
         // Close modal
         closeModal();
-    });
+    };
+    saveBtn.addEventListener('click', doSaveCards);
+    const quickSaveBtn = document.getElementById('save-cards-btn-quick');
+    if (quickSaveBtn) quickSaveBtn.addEventListener('click', doSaveCards);
     
     // Toggle all cards button
     const toggleAllBtn = document.getElementById('toggle-all-cards');
@@ -6136,6 +6139,14 @@ function _renderCardSelectionModal(config) {
             e.stopPropagation();
             showCardDetail(card.id);
         });
+        const img = cardDiv.querySelector('.card-checkbox-image');
+        if (img && canEdit) {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                checkbox.checked = !checkbox.checked;
+                cardDiv.classList.toggle('selected', checkbox.checked);
+            });
+        }
         cardsSelection.appendChild(cardDiv);
     });
 
