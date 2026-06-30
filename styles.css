@@ -1797,7 +1797,7 @@ input[type="number"]:focus {
 
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 20px; }
+    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
     /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
     .button-group .show-promos-toggle label {
         height: auto;
@@ -2335,12 +2335,17 @@ input[type="number"]:focus {
     }
 
     .input-row-with-button {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+    }
+
+    .input-row-with-button > .form-group:first-child {
+        grid-column: 1 / -1;
     }
 
     .button-group {
         margin-top: 0px;
+        min-width: 96px;
     }
 
     .button-group label {
@@ -2351,6 +2356,7 @@ input[type="number"]:focus {
 
     .calculate-btn.compact {
         width: 100%;
+        white-space: nowrap;
     }
 
     .results-container {
@@ -6288,6 +6294,23 @@ input[type="number"]:focus {
     color: #6b7280;
     margin-top: 12px;
     margin-bottom: 6px;
+}
+
+@media (max-width: 768px) {
+    .app-layout main label {
+        margin-bottom: 6px;
+    }
+    .app-layout main .quick-search-label {
+        margin-top: 6px;
+        margin-bottom: 4px;
+    }
+    .app-layout main input[type="text"],
+    .app-layout main input[type="number"] {
+        padding: 10px 12px;
+    }
+    .app-layout main .input-section {
+        margin-bottom: 12px;
+    }
 }
 
 .app-layout main .quick-search-btn {
