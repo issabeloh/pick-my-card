@@ -5130,7 +5130,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
                     ${cashbackText}
                     ${result.calculationLayers && result.calculationLayers.length > 1 ? `
-                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細">算式</button>
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
                     ` : ''}
                 </div>
                 ${(() => {

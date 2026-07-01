@@ -2689,18 +2689,16 @@ input[type="number"]:focus {
 .calc-breakdown-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     margin-left: 6px;
-    padding: 1px 8px;
-    font-size: 12px;
-    font-weight: 500;
+    padding: 3px;
     color: #059669;
     background: #ecfdf5;
     border: 1px solid #a7f3d0;
-    border-radius: 10px;
+    border-radius: 6px;
     cursor: pointer;
     vertical-align: middle;
-    line-height: 1.5;
-    white-space: nowrap;
+    line-height: 0;
     transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 .calc-breakdown-btn:hover {
