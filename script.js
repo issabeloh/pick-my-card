@@ -5225,21 +5225,35 @@ function showCalcBreakdown(btn, cardResult) {
     const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
     if (!layers.length) return;
 
-    // One line per layer, e.g. "NT$3,333 × 10% (指定通路，封頂)".
+    // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
     // "封頂" marks a layer whose applicable amount was clamped by its cap.
-    const lines = layers.map((layer, i) => {
+    const rows = layers.map(layer => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
+        const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
         const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
-        const label = isCapped
-            ? `（${layer.name}，<span class="breakdown-capped">封頂</span>）`
-            : `（${layer.name}）`;
-        const prefix = i === 0 ? '' : '+ ';
-        return `<div class="breakdown-line">${prefix}${amtLabel} × ${layer.rate}%<span class="breakdown-label">${label}</span></div>`;
+        const cappedTag = isCapped ? `<span class="breakdown-capped">（封頂）</span>` : '';
+        return `<tr>
+            <td class="bd-name">${layer.name}</td>
+            <td class="bd-amt">${amtLabel}</td>
+            <td class="bd-rate">${layer.rate}%</td>
+            <td class="bd-cash">${cashLabel}${cappedTag}</td>
+        </tr>`;
     }).join('');
+
+    // Total row: sum cashback across layers; total spending = actual amount
+    // entered (NOT sum of applicable amounts, which overlaps for bonus/stacking).
+    const totalCash = layers.reduce((s, l) => s + Math.floor(l.cashback), 0);
+    const totalAmount = parseInt(cardResult.dataset.calcAmount, 10) || 0;
+    const totalRow = `<tr class="bd-total">
+        <td class="bd-name">Total</td>
+        <td class="bd-amt">NT$${totalAmount.toLocaleString()}</td>
+        <td class="bd-rate"></td>
+        <td class="bd-cash">NT$${totalCash.toLocaleString()}</td>
+    </tr>`;
 
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
-    popup.innerHTML = lines;
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
 
     // Insert immediately after the card result
     cardResult.after(popup);

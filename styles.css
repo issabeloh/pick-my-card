@@ -2715,20 +2715,39 @@ input[type="number"]:focus {
     border: 1px solid #c7d2fe;
     border-radius: 8px;
     font-size: 13px;
-    line-height: 1.7;
     animation: fadeIn 0.15s ease;
 }
-.breakdown-line {
+.breakdown-table {
+    border-collapse: collapse;
+    width: auto;
+}
+.breakdown-table td {
+    padding: 4px 10px 4px 0;
     color: #374151;
     white-space: nowrap;
+    vertical-align: middle;
 }
-.breakdown-line .breakdown-label {
-    color: #6b7280;
-    margin-left: 4px;
+.breakdown-table .bd-name { font-weight: 500; }
+.breakdown-table .bd-amt,
+.breakdown-table .bd-rate { color: #6b7280; }
+.breakdown-table .bd-cash {
+    color: #059669;
+    font-weight: 500;
+    padding-right: 0;
 }
-.breakdown-line .breakdown-capped {
+.breakdown-table .breakdown-capped {
     color: #dc2626;
+    font-weight: 400;
+    margin-left: 2px;
 }
+.breakdown-table .bd-total td {
+    border-top: 1px solid #d1d5db;
+    padding-top: 7px;
+    font-weight: 700;
+}
+.breakdown-table .bd-total .bd-name { color: #374151; }
+.breakdown-table .bd-total .bd-amt { color: #374151; }
+.breakdown-table .bd-total .bd-cash { color: #059669; }
 
 .card-checkbox-label {
     flex-grow: 1;
