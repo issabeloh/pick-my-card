@@ -3620,6 +3620,23 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 // Total rate is the special rate from cashbackRates (no bonusRate added)
                 totalRate = Math.round(rate * 100) / 100;
                 effectiveAmount = cap; // Keep this for display purposes
+
+                // Build a 2-layer breakdown when spending exceeds the cap, so the
+                // ⓘ button can show "指定通路 (within cap) + 基本回饋 (overflow)".
+                if (cap && amount > cap) {
+                    const remainingAmount = amount - cap;
+                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
+                    const excessRate = (isAdPlatform && card.id !== 'taishin-richart')
+                        ? (card.overseasCashback || card.basicCashback)
+                        : card.basicCashback;
+                    calculationLayers = [
+                        { name: '指定通路', rate: rate, applicableAmount: cap, cashback: specialCashback, cap: cap },
+                        { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null }
+                    ];
+                }
             }
         }
 
