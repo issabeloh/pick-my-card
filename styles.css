@@ -2689,81 +2689,45 @@ input[type="number"]:focus {
 .calc-breakdown-btn {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     margin-left: 6px;
-    width: 18px;
-    height: 18px;
-    font-size: 13px;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-weight: 500;
     color: #059669;
-    background: none;
-    border: none;
-    border-radius: 50%;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 10px;
     cursor: pointer;
     vertical-align: middle;
-    padding: 0;
-    line-height: 1;
-    transition: color 0.15s, background 0.15s;
+    line-height: 1.5;
+    white-space: nowrap;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 .calc-breakdown-btn:hover {
     color: #047857;
     background: #d1fae5;
+    border-color: #6ee7b7;
 }
 .calc-breakdown-popup {
     margin: 0 12px 12px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     background: #f8faff;
     border: 1px solid #c7d2fe;
     border-radius: 8px;
     font-size: 13px;
+    line-height: 1.7;
     animation: fadeIn 0.15s ease;
 }
-.breakdown-title {
-    font-size: 12px;
-    color: #6b7280;
-    margin-bottom: 10px;
-}
-.breakdown-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.breakdown-table th {
-    font-size: 11px;
-    color: #9ca3af;
-    text-align: left;
-    padding: 2px 6px 6px 0;
-    border-bottom: 1px solid #e5e7eb;
-}
-.breakdown-table td {
-    padding: 5px 6px 5px 0;
+.breakdown-line {
     color: #374151;
-    vertical-align: middle;
-    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
 }
-.breakdown-table tfoot td {
-    border-bottom: none;
-    padding-top: 8px;
-}
-.breakdown-cap-note {
-    font-size: 11px;
-    color: #9ca3af;
+.breakdown-line .breakdown-label {
+    color: #6b7280;
     margin-left: 4px;
 }
-.breakdown-cashback {
-    text-align: right;
-    font-weight: 500;
-    color: #059669;
-}
-.breakdown-total-label {
-    text-align: right;
-    font-weight: 600;
-    color: #374151;
-    padding-right: 12px;
-}
-.breakdown-total {
-    text-align: right;
-    font-weight: 700;
-    font-size: 15px;
-    color: #059669;
+.breakdown-line .breakdown-capped {
+    color: #dc2626;
 }
 
 .card-checkbox-label {

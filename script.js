@@ -5130,7 +5130,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
                     ${cashbackText}
                     ${result.calculationLayers && result.calculationLayers.length > 1 ? `
-                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細">ⓘ</button>
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細">算式</button>
                     ` : ''}
                 </div>
                 ${(() => {
@@ -5223,32 +5223,23 @@ function showCalcBreakdown(btn, cardResult) {
     }
 
     const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
-    const totalAmount = parseInt(cardResult.dataset.calcAmount, 10);
     if (!layers.length) return;
 
-    const rows = layers.map(layer => {
-        const capLabel = layer.cap != null ? `上限 NT$${Math.floor(layer.cap).toLocaleString()}` : '無上限';
+    // One line per layer, e.g. "NT$3,333 × 10% (指定通路，封頂)".
+    // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    const lines = layers.map((layer, i) => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
-        return `<tr>
-            <td>${layer.name}</td>
-            <td>${layer.rate}%</td>
-            <td>${amtLabel}<span class="breakdown-cap-note">（${capLabel}）</span></td>
-            <td class="breakdown-cashback">NT$${Math.floor(layer.cashback).toLocaleString()}</td>
-        </tr>`;
+        const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
+        const label = isCapped
+            ? `（${layer.name}，<span class="breakdown-capped">封頂</span>）`
+            : `（${layer.name}）`;
+        const prefix = i === 0 ? '' : '+ ';
+        return `<div class="breakdown-line">${prefix}${amtLabel} × ${layer.rate}%<span class="breakdown-label">${label}</span></div>`;
     }).join('');
-
-    const total = layers.reduce((s, l) => s + l.cashback, 0);
 
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
-    popup.innerHTML = `
-        <div class="breakdown-title">計算明細（消費 NT$${totalAmount.toLocaleString()}）</div>
-        <table class="breakdown-table">
-            <thead><tr><th>項目</th><th>回饋率</th><th>適用金額</th><th>回饋</th></tr></thead>
-            <tbody>${rows}</tbody>
-            <tfoot><tr><td colspan="3" class="breakdown-total-label">合計回饋金額</td><td class="breakdown-total">NT$${total.toLocaleString()}</td></tr></tfoot>
-        </table>
-    `;
+    popup.innerHTML = lines;
 
     // Insert immediately after the card result
     cardResult.after(popup);
