@@ -2832,35 +2832,12 @@ async function calculateCashback() {
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 
-            // Check if search term is overseas-related
-            const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-            const merchantLower = merchantValue.toLowerCase();
-            const isOverseasSearch = overseasKeywords.some(keyword =>
-                merchantLower.includes(keyword.toLowerCase())
-            );
-
             results = cardsToCompare.map(card => {
                 let basicCashbackAmount = 0;
                 let effectiveRate = card.basicCashback;
                 let displayCap = null;
 
-                if (isOverseasSearch && card.overseasCashback) {
-                    // Use overseas cashback rate for overseas searches
-                    effectiveRate = card.overseasCashback;
-
-                    if (card.overseasBonusRate && card.overseasBonusCap) {
-                        // Has overseas bonus (like 永豐大戶卡)
-                        const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                        const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                        const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                        basicCashbackAmount = bonusCashback + basicCashback;
-                        effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                        displayCap = card.overseasBonusCap;
-                    } else {
-                        // Simple overseas cashback
-                        basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                    }
-                } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                if (card.domesticBonusRate && card.domesticBonusCap) {
                     // Handle complex cards like 永豐幣倍 with domestic bonus
                     const bonusAmount = Math.min(amount, card.domesticBonusCap);
                     const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
@@ -2887,35 +2864,12 @@ async function calculateCashback() {
         // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
 
-        // Check if search term is overseas-related
-        const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-        const merchantLower = merchantValue.toLowerCase();
-        const isOverseasSearch = overseasKeywords.some(keyword =>
-            merchantLower.includes(keyword.toLowerCase())
-        );
-
         results = cardsToCompare.map(card => {
             let basicCashbackAmount = 0;
             let effectiveRate = card.basicCashback;
             let displayCap = null;
 
-            if (isOverseasSearch && card.overseasCashback) {
-                // Use overseas cashback rate for overseas searches
-                effectiveRate = card.overseasCashback;
-
-                if (card.overseasBonusRate && card.overseasBonusCap) {
-                    // Has overseas bonus (like 永豐大戶卡)
-                    const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                    const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                    const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                    basicCashbackAmount = bonusCashback + basicCashback;
-                    effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                    displayCap = card.overseasBonusCap;
-                } else {
-                    // Simple overseas cashback
-                    basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                }
-            } else if (card.domesticBonusRate && card.domesticBonusCap) {
+            if (card.domesticBonusRate && card.domesticBonusCap) {
                 // Handle complex cards like 永豐幣倍 with domestic bonus
                 const bonusAmount = Math.min(amount, card.domesticBonusCap);
                 const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
@@ -3590,15 +3544,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
             if (effectiveDomBonus || effectiveOvsBonus) {
                 shouldUseLayeredCalculation = true;
-
-                const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-                const itemToCheck = (matchedItem || '').toLowerCase();
-                const categoryToCheck = (matchedCategory || '').toLowerCase();
-
-                isOverseasTransaction = overseasKeywords.some(keyword =>
-                    itemToCheck.includes(keyword.toLowerCase()) ||
-                    categoryToCheck.includes(keyword.toLowerCase())
-                );
+                // Waterfall defaults to domestic. To treat an item as overseas,
+                // set cashbackModel = "...+overseasBonusRate" on that rate item.
+                isOverseasTransaction = false;
             }
         }
 
