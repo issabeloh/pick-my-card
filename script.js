@@ -1996,6 +1996,14 @@ function setupEventListeners() {
                 showCardDetail(peekBtn.dataset.cardId);
                 return;
             }
+            const breakdownBtn = e.target.closest('.calc-breakdown-btn');
+            if (breakdownBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const cardResult = breakdownBtn.closest('.card-result');
+                showCalcBreakdown(breakdownBtn, cardResult);
+                return;
+            }
             const pinBtn = e.target.closest('.pin-btn');
             if (pinBtn) {
                 e.preventDefault();
@@ -2834,35 +2842,12 @@ async function calculateCashback() {
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 
-            // Check if search term is overseas-related
-            const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-            const merchantLower = merchantValue.toLowerCase();
-            const isOverseasSearch = overseasKeywords.some(keyword =>
-                merchantLower.includes(keyword.toLowerCase())
-            );
-
             results = cardsToCompare.map(card => {
                 let basicCashbackAmount = 0;
                 let effectiveRate = card.basicCashback;
                 let displayCap = null;
 
-                if (isOverseasSearch && card.overseasCashback) {
-                    // Use overseas cashback rate for overseas searches
-                    effectiveRate = card.overseasCashback;
-
-                    if (card.overseasBonusRate && card.overseasBonusCap) {
-                        // Has overseas bonus (like 永豐大戶卡)
-                        const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                        const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                        const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                        basicCashbackAmount = bonusCashback + basicCashback;
-                        effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                        displayCap = card.overseasBonusCap;
-                    } else {
-                        // Simple overseas cashback
-                        basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                    }
-                } else if (card.domesticBonusRate && card.domesticBonusCap) {
+                if (card.domesticBonusRate && card.domesticBonusCap) {
                     // Handle complex cards like 永豐幣倍 with domestic bonus
                     const bonusAmount = Math.min(amount, card.domesticBonusCap);
                     const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
@@ -2889,35 +2874,12 @@ async function calculateCashback() {
         // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
 
-        // Check if search term is overseas-related
-        const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-        const merchantLower = merchantValue.toLowerCase();
-        const isOverseasSearch = overseasKeywords.some(keyword =>
-            merchantLower.includes(keyword.toLowerCase())
-        );
-
         results = cardsToCompare.map(card => {
             let basicCashbackAmount = 0;
             let effectiveRate = card.basicCashback;
             let displayCap = null;
 
-            if (isOverseasSearch && card.overseasCashback) {
-                // Use overseas cashback rate for overseas searches
-                effectiveRate = card.overseasCashback;
-
-                if (card.overseasBonusRate && card.overseasBonusCap) {
-                    // Has overseas bonus (like 永豐大戶卡)
-                    const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                    const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                    const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                    basicCashbackAmount = bonusCashback + basicCashback;
-                    effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                    displayCap = card.overseasBonusCap;
-                } else {
-                    // Simple overseas cashback
-                    basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                }
-            } else if (card.domesticBonusRate && card.domesticBonusCap) {
+            if (card.domesticBonusRate && card.domesticBonusCap) {
                 // Handle complex cards like 永豐幣倍 with domestic bonus
                 const bonusAmount = Math.min(amount, card.domesticBonusCap);
                 const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
@@ -3126,70 +3088,149 @@ function getCategoryStyle(category) {
  * @param {boolean} isOverseas - Whether this is an overseas transaction
  * @returns {Object} - { cashbackAmount, layers }
  */
+// Waterfall cashback for designated-channel cards that also carry a 國內/海外
+// 加碼 (e.g. 永豐大戶卡 悠遊卡自動加值). The designated rate is a flat TOTAL
+// within its own cap and does NOT overlap basic; only the OVERFLOW beyond that
+// cap drops down to 基本 + 加碼. Driven entirely by data fields (designated
+// rate/cap from the matched rateGroup, bonus rate/cap from levelSettings or the
+// top-level card) — no card-specific branching.
+//
+//   Tier 1 指定通路 : min(amount, designatedCap) × designatedRate   (flat, no basic overlap)
+//   Tier 2 基本回饋 : overflow × baseRate                            (無上限)
+//   Tier 3 國內/海外加碼 : min(overflow, bonusCap) × bonusRate        (capped)
 function calculateLayeredCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
     const layers = [];
     let totalCashback = 0;
 
-    // Layer 1: Basic cashback (always applies, no cap)
-    const basicCashback = Math.floor(amount * card.basicCashback / 100);
+    // Tier 1: designated channel — flat total rate within its own cap, no basic overlap
+    const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+    const designatedCashback = Math.floor(designatedAmount * displayedRate / 100);
     layers.push({
-        name: '基本回饋',
-        rate: card.basicCashback,
-        applicableAmount: amount,
-        cashback: basicCashback,
-        cap: null
+        name: '指定通路',
+        rate: displayedRate,
+        applicableAmount: designatedAmount,
+        cashback: designatedCashback,
+        cap: (cap && cap > 0) ? cap : null
     });
-    totalCashback += basicCashback;
+    totalCashback += designatedCashback;
 
-    // Layer 2: Bonus rate (domestic or overseas, with consumption cap)
-    let bonusRate = 0;
-    let bonusCap = 0;
-    let bonusName = '';
+    const overflow = amount - designatedAmount;
 
-    if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
-        bonusRate = levelSettings.overseasBonusRate;
-        bonusCap = levelSettings.overseasBonusCap;
-        bonusName = '海外消費加碼';
-    } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
-        bonusRate = levelSettings.domesticBonusRate;
-        bonusCap = levelSettings.domesticBonusCap;
-        bonusName = '國內消費加碼';
-    }
-
-    if (bonusRate > 0 && bonusCap > 0) {
-        const bonusApplicableAmount = Math.min(amount, bonusCap);
-        const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+    if (overflow > 0) {
+        // Tier 2: base rate on the overflow (no cap). Overseas spend uses
+        // overseasCashback as its base; domestic uses basicCashback.
+        const baseRate = isOverseas
+            ? (card.overseasCashback || card.basicCashback)
+            : card.basicCashback;
+        const baseCashback = Math.floor(overflow * baseRate / 100);
         layers.push({
-            name: bonusName,
-            rate: bonusRate,
-            applicableAmount: bonusApplicableAmount,
-            cashback: bonusCashback,
-            cap: bonusCap
+            name: '基本回饋',
+            rate: baseRate,
+            applicableAmount: overflow,
+            cashback: baseCashback,
+            cap: null
         });
-        totalCashback += bonusCashback;
-    }
+        totalCashback += baseCashback;
 
-    // Layer 3: Designated region/category bonus (with consumption cap)
-    // This is the additional rate on top of basic + bonus
-    const designatedBonusRate = displayedRate - card.basicCashback - bonusRate;
+        // Tier 3: 國內/海外加碼 on the overflow.
+        // Priority: levelSettings fields first (大戶卡 where bonus varies per level),
+        // then fall back to top-level card fields (all other cards).
+        // bonusCap null/undefined = no spending cap on the bonus (無上限).
+        let bonusRate = 0;
+        let bonusCap = null; // null means uncapped
+        let bonusName = '';
+        if (isOverseas) {
+            bonusRate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
+            const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
+                ? levelSettings.overseasBonusCap
+                : card.overseasBonusCap;
+            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
+            bonusName = '海外消費加碼';
+        } else {
+            bonusRate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
+            const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
+                ? levelSettings.domesticBonusCap
+                : card.domesticBonusCap;
+            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
+            bonusName = '國內消費加碼';
+        }
 
-    if (designatedBonusRate > 0 && cap) {
-        const designatedApplicableAmount = Math.min(amount, cap);
-        const designatedCashback = Math.floor(designatedApplicableAmount * designatedBonusRate / 100);
-        layers.push({
-            name: '指定項目加碼',
-            rate: designatedBonusRate,
-            applicableAmount: designatedApplicableAmount,
-            cashback: designatedCashback,
-            cap: cap
-        });
-        totalCashback += designatedCashback;
+        if (bonusRate > 0) {
+            // bonusCap null = apply to full overflow (無上限)
+            const bonusApplicableAmount = bonusCap != null ? Math.min(overflow, bonusCap) : overflow;
+            const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+            layers.push({
+                name: bonusName,
+                rate: bonusRate,
+                applicableAmount: bonusApplicableAmount,
+                cashback: bonusCashback,
+                cap: bonusCap // null = 無上限, preserved for display
+            });
+            totalCashback += bonusCashback;
+        }
     }
 
     return {
         cashbackAmount: totalCashback,
         layers: layers
     };
+}
+
+// Stacking (疊加) model: all rate components apply to the same spending amount simultaneously.
+// Used when cashbackModel = "basic+domesticBonusRate" or "basic+overseasBonusRate".
+// The card's displayed rate in cashbackRates is the SUM; the engine decomposes it:
+//   designated = displayedRate - basicRate - bonusRate
+// Each component has its own cap; they are applied concurrently (not waterfall).
+function calculateStackedCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
+    const layers = [];
+    let totalCashback = 0;
+
+    const basicRate = isOverseas
+        ? (card.overseasCashback || card.basicCashback)
+        : card.basicCashback;
+
+    let bonusRate = 0;
+    let bonusCap = null;
+    let bonusName = '';
+    if (isOverseas) {
+        bonusRate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
+        const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
+            ? levelSettings.overseasBonusCap : card.overseasBonusCap;
+        bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
+        bonusName = '海外消費加碼';
+    } else {
+        bonusRate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
+        const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
+            ? levelSettings.domesticBonusCap : card.domesticBonusCap;
+        bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
+        bonusName = '國內消費加碼';
+    }
+
+    // Derive designated (channel-specific extra) rate by subtracting base components
+    const designatedRate = Math.max(0, displayedRate - basicRate - bonusRate);
+
+    // Layer 1: Basic cashback on ALL spending (no cap)
+    const basicCashback = Math.floor(amount * basicRate / 100);
+    layers.push({ name: '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
+    totalCashback += basicCashback;
+
+    // Layer 2: Bonus (domestic / overseas), within its own cap
+    if (bonusRate > 0) {
+        const bonusAmount = bonusCap != null ? Math.min(amount, bonusCap) : amount;
+        const bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
+        layers.push({ name: bonusName, rate: bonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: bonusCap });
+        totalCashback += bonusCashback;
+    }
+
+    // Layer 3: Designated channel extra rate, within cashbackRate cap
+    if (designatedRate > 0) {
+        const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+        const designatedCashback = Math.floor(designatedAmount * designatedRate / 100);
+        layers.push({ name: '指定通路加碼', rate: designatedRate, applicableAmount: designatedAmount, cashback: designatedCashback, cap: (cap && cap > 0) ? cap : null });
+        totalCashback += designatedCashback;
+    }
+
+    return { cashbackAmount: totalCashback, layers };
 }
 
 // Calculate cashback for a specific card
@@ -3497,39 +3538,77 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let totalRate = rate;
         let calculationLayers = null;
 
-        // Check if we should use layered calculation
-        // Criteria: card has levelSettings with overseasBonusRate or domesticBonusRate
+        // Determine calculation path based on cashbackModel field and card bonus rates.
+        // cashbackModel values (set per-cashbackRate item in Sheet); the name lists
+        // every rate component that applies, in order of cap consumption:
+        //   "rate" / "rate+basic"           → just the rate, basic on overflow, NO bonus
+        //   "rate+basic+domesticBonusRate"  → stacking: designated + basic + domestic bonus
+        //   "rate+basic+overseasBonusRate"  → stacking: designated + basic + overseas bonus
+        //   "basic+domesticBonusRate"       → stacking, no designated (general 國內消費)
+        //   "basic+overseasBonusRate"       → stacking, no designated (general 國外消費)
+        //   (not set)                       → waterfall if card carries any bonus rate
         let shouldUseLayeredCalculation = false;
+        let shouldUseStackedCalculation = false;
+        let stackedIsOverseas = false;
         let levelSettingsForCalc = null;
         let isOverseasTransaction = false;
 
+        // Step 1: resolve level settings for hasLevels cards (regardless of bonus)
         if (card.hasLevels && card.levelSettings) {
-            // Get the level settings for this card
             const availableLevels = Object.keys(card.levelSettings);
             const levelToUse = selectedLevel || availableLevels[0];
             levelSettingsForCalc = card.levelSettings[levelToUse];
+        }
 
-            // Check if this level has bonus rates (indicating layered calculation needed)
-            if (levelSettingsForCalc &&
-                (levelSettingsForCalc.overseasBonusRate || levelSettingsForCalc.domesticBonusRate)) {
+        // Step 2: pick calculation model
+        const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null;
+
+        // Stacking models — all components applied to the same amount concurrently.
+        // The engine decomposes the displayed rate: designated = displayed - basic - bonus.
+        //   "rate+basic+domesticBonusRate" → 3 components (Sport 卡 Apple Pay: 3%+1%+1%)
+        //   "basic+domesticBonusRate"      → 2 components, no designated rate (大戶卡 一般國內消費)
+        // Both go through calculateStackedCashback; the 2-component case simply yields
+        // designated = 0 when the displayed rate equals basic + bonus.
+        const domesticStackModels = ['basic+domesticBonusRate', 'rate+basic+domesticBonusRate'];
+        const overseasStackModels = ['basic+overseasBonusRate', 'rate+basic+overseasBonusRate'];
+        const rateOnlyModels = ['rate', 'rate+basic'];
+
+        if (domesticStackModels.includes(cashbackModel)) {
+            shouldUseStackedCalculation = true;
+            stackedIsOverseas = false;
+        } else if (overseasStackModels.includes(cashbackModel)) {
+            shouldUseStackedCalculation = true;
+            stackedIsOverseas = true;
+        } else if (!rateOnlyModels.includes(cashbackModel)) {
+            // No explicit model — use waterfall if card carries bonus rates
+            const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
+            const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
+
+            if (effectiveDomBonus || effectiveOvsBonus) {
                 shouldUseLayeredCalculation = true;
-
-                // Determine if this is an overseas transaction
-                // Check the matched item or category for overseas keywords
-                const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-                const itemToCheck = (matchedItem || '').toLowerCase();
-                const categoryToCheck = (matchedCategory || '').toLowerCase();
-
-                isOverseasTransaction = overseasKeywords.some(keyword =>
-                    itemToCheck.includes(keyword.toLowerCase()) ||
-                    categoryToCheck.includes(keyword.toLowerCase())
-                );
+                // Waterfall defaults to domestic. To treat an item as overseas,
+                // set cashbackModel = "...+overseasBonusRate" on that rate item.
+                isOverseasTransaction = false;
             }
         }
 
         if (rate > 0) {
-            if (shouldUseLayeredCalculation && levelSettingsForCalc) {
-                // Use layered calculation for complex multi-tier cashback
+            if (shouldUseStackedCalculation) {
+                // Stacking model: basic + bonus + designated all applied to same amount
+                const stackedResult = calculateStackedCashback(
+                    card,
+                    levelSettingsForCalc,
+                    amount,
+                    rate,
+                    cap,
+                    stackedIsOverseas
+                );
+                cashbackAmount = stackedResult.cashbackAmount;
+                calculationLayers = stackedResult.layers;
+                totalRate = rate;
+                effectiveAmount = amount;
+            } else if (shouldUseLayeredCalculation) {
+                // Waterfall: designated tier first, basic on overflow, bonus on overflow
                 const layeredResult = calculateLayeredCashback(
                     card,
                     levelSettingsForCalc,
@@ -3583,6 +3662,23 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 // Total rate is the special rate from cashbackRates (no bonusRate added)
                 totalRate = Math.round(rate * 100) / 100;
                 effectiveAmount = cap; // Keep this for display purposes
+
+                // Build a 2-layer breakdown when spending exceeds the cap, so the
+                // ⓘ button can show "指定通路 (within cap) + 基本回饋 (overflow)".
+                if (cap && amount > cap) {
+                    const remainingAmount = amount - cap;
+                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
+                        item.toLowerCase().includes('meta廣告') ||
+                        item.toLowerCase().includes('google廣告')
+                    );
+                    const excessRate = (isAdPlatform && card.id !== 'taishin-richart')
+                        ? (card.overseasCashback || card.basicCashback)
+                        : card.basicCashback;
+                    calculationLayers = [
+                        { name: '指定通路', rate: rate, applicableAmount: cap, cashback: specialCashback, cap: cap },
+                        { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null }
+                    ];
+                }
             }
         }
 
@@ -5060,6 +5156,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         : result.matchedItem;
     const pinned = merchantForPin && !isBasicCashback ? isPinned(result.card.id, merchantForPin) : false;
 
+    // Store layers for the breakdown button
+    if (result.calculationLayers) {
+        cardDiv.dataset.calcLayers = JSON.stringify(result.calculationLayers);
+        cardDiv.dataset.calcAmount = originalAmount;
+    }
+
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
@@ -5096,7 +5198,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
-                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
+                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
+                    ${cashbackText}
+                    ${result.calculationLayers && result.calculationLayers.length > 1 ? `
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
+                    ` : ''}
+                </div>
                 ${(() => {
     if (result.card.basicCashbackType) {
         const cashbackType = result.card.basicCashbackType;
@@ -5178,6 +5285,62 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     
     return cardDiv;
 }
+
+// Show a small inline breakdown popup when the user clicks "算式"
+function showCalcBreakdown(btn, cardResult) {
+    // Remove any existing popup
+    const existing = document.querySelector('.calc-breakdown-popup');
+    if (existing) {
+        if (existing.previousSibling === btn || existing.dataset.btnId === btn.dataset.btnId) {
+            existing.remove();
+            return; // toggle off
+        }
+        existing.remove();
+    }
+
+    const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
+    if (!layers.length) return;
+
+    // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
+    // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    const rows = layers.map(layer => {
+        const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
+        const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
+        const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
+        const cappedTag = isCapped ? `<span class="breakdown-capped">（封頂）</span>` : '';
+        return `<tr>
+            <td class="bd-name">${layer.name}</td>
+            <td class="bd-amt">${amtLabel}</td>
+            <td class="bd-rate">${layer.rate}%</td>
+            <td class="bd-cash">${cashLabel}${cappedTag}</td>
+        </tr>`;
+    }).join('');
+
+    // Total row: sum cashback across layers; total spending = actual amount
+    // entered (NOT sum of applicable amounts, which overlaps for bonus/stacking).
+    const totalCash = layers.reduce((s, l) => s + Math.floor(l.cashback), 0);
+    const totalAmount = parseInt(cardResult.dataset.calcAmount, 10) || 0;
+    const totalRow = `<tr class="bd-total">
+        <td class="bd-name">Total</td>
+        <td class="bd-amt">NT$${totalAmount.toLocaleString()}</td>
+        <td class="bd-rate"></td>
+        <td class="bd-cash">NT$${totalCash.toLocaleString()}</td>
+    </tr>`;
+
+    const popup = document.createElement('div');
+    popup.className = 'calc-breakdown-popup';
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+
+    // Insert immediately after the card result
+    cardResult.after(popup);
+    popup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// Close breakdown popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.calc-breakdown-popup') && !e.target.closest('.calc-breakdown-btn')) {
+        document.querySelector('.calc-breakdown-popup')?.remove();
+    }
+}, true);
 
 // Format currency
 function formatCurrency(amount) {
