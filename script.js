@@ -222,10 +222,13 @@ function getTaiwanToday() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
-// 解析 ISO 日期字串 YYYY-MM-DD 為本地午夜 Date 物件（供天數差計算用）
+// 解析日期字串為本地午夜 Date 物件（供天數差計算用）
+// 相容 ISO "YYYY-MM-DD" 與台灣慣用 "YYYY/M/D"（Apps Script 匯出的 periodStart/periodEnd 兩種格式都會出現）
 function parseISODate(dateStr) {
     if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
+    const isoStr = dateStr.includes('-') ? dateStr : slashDateToISO(dateStr);
+    if (!isoStr) return null;
+    const [y, m, d] = isoStr.split('-').map(Number);
     return new Date(y, m - 1, d);
 }
 
@@ -256,8 +259,12 @@ function getRateStatus(periodStart, periodEnd) {
 
     try {
         const today = getTaiwanToday(); // YYYY-MM-DD，ISO 字典序 = 日期序
-        if (today >= periodStart && today <= periodEnd) return 'active';
-        if (today < periodStart) return 'upcoming';
+        // periodStart/periodEnd 可能是 ISO "YYYY-MM-DD" 或台灣慣用 "YYYY/M/D"，
+        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂
+        const start = periodStart.includes('-') ? periodStart : slashDateToISO(periodStart);
+        const end = periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd);
+        if (today >= start && today <= end) return 'active';
+        if (today < start) return 'upcoming';
         return 'expired';
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
