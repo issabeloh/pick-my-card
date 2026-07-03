@@ -312,6 +312,28 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 上層 modal 關掉時不會誤放開捲動鎖（外層 modal 還在）
 - 完全相容單一 modal 用法
 
+### 12. 活動期間日期處理（periodStart / periodEnd）
+
+**⚠️ 資料來源的日期格式不保證一致**：
+- `cashbackRates` 的 `periodStart`/`periodEnd` 通常是 ISO 格式 `"2026-01-01"`（用 `-`）
+- 但 `couponCashbacks`（領券型活動）等其他區塊，Apps Script 匯出時可能是台灣慣用格式 `"2026/7/1"`（用 `/`，且不一定補零）
+- **兩種格式都會實際出現在 `cards.data` 裡，前端不能假設只有一種**
+
+**核心日期函數已做雙格式相容**（`script.js`）：
+- `parseISODate(dateStr)`：先判斷 `dateStr.includes('-')`，是 ISO 就直接解析，不是就呼叫 `slashDateToISO()` 轉換再解析
+- `getRateStatus(periodStart, periodEnd)`：比較日期字串前，同樣先用 `slashDateToISO()` 正規化成 ISO 格式，才做字典序比較
+- `slashDateToISO(slashDate)`：把 `"YYYY/M/D"`（含不補零）轉成 `"YYYY-MM-DD"`
+
+**為什麼混用格式會整個活動消失（不是報錯，是「搜尋不到」）**：
+- `getRateStatus` 舊版直接用字串比較（`today >= periodStart`）。ASCII 中 `-`（0x2D）比 `/`（0x2F）小，所以只要 `periodStart`/`periodEnd` 是 `/` 格式、`today` 是 `-` 格式，`today >= periodStart` 永遠是 `false`、`today < periodStart` 永遠是 `true`——不管實際日期是過去、現在還是未來，都會被誤判成「即將開始」
+- 接著 `isUpcomingWithinDays()` 呼叫 `parseISODate()` 想解析 `periodStart`，但舊版只會 `dateStr.split('-')`，遇到 `/` 格式會切不出年月日，變成 `Invalid Date`，計算天數變成 `NaN`
+- 結果：這個活動被 `filterExpiredRates()`（載入資料時的過濾器）直接濾掉，完全不會出現在任何搜尋結果或卡片詳情頁——而且**不會有任何錯誤訊息**，看起來就像「這個通路真的沒有這個活動」，非常難察覺
+
+**修改任何日期比較/解析相關程式碼時**：
+- 不要對 `periodStart`/`periodEnd` 做原始字串比較或直接 `.split('-')`
+- 一律先用 `slashDateToISO()`（如果不確定格式）或透過 `parseISODate()` / `getRateStatus()` 等既有函數處理，不要另外手刻一套日期邏輯
+- 如果新增其他區塊（例如新的活動類型）也帶有 `periodStart`/`periodEnd`，記得沿用這套函數，不要假設 Apps Script 匯出的格式一定是 ISO
+
 ## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
@@ -350,6 +372,13 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 ## 近期修改模式
 
 ### 最近的技術決策
+
+1. **2026-07-03: 修復日期格式混用導致活動被靜默濾掉的 bug**
+   - 問題現象：領券型活動（`couponCashbacks`）在 Google Sheets 上明明還在有效期間內，搜尋卻完全找不到，且無任何錯誤訊息
+   - 根本原因：`couponCashbacks` 的 `periodStart`/`periodEnd` 是 `"YYYY/M/D"`（Apps Script 匯出），但 `getRateStatus`/`parseISODate` 原本假設一定是 ISO `"YYYY-MM-DD"`，直接做字串比較與 `split('-')`，格式不符時會誤判狀態或解析成 `Invalid Date`，導致 `filterExpiredRates()` 把活動整個濾掉
+   - 修復：`parseISODate`、`getRateStatus` 內部都改用既有的 `slashDateToISO()` 先正規化成 ISO 格式再比較/解析，兩種日期格式都相容
+   - 同一次連帶修復：`showCardDetail()` 詳情頁 modal 在 Firebase 尚未載入完成時（`auth` 為 `null`）點擊 `hasLevels` 卡片會直接 crash 導致 modal 打不開；以及「即將開始活動」區塊把 Map entries 的 `[key, value]` tuple 重複包裝導致 `group.items` 為 `undefined`
+   - 詳見「關鍵技術概念 → 12. 活動期間日期處理」、「重要注意事項 → 常見陷阱 6」
 
 1. **2026-05-31: 詳情頁入口 + 卡片圖片資產 + 連結瘦身**
    - 「我的信用卡」/「管理加入比較的卡片」modals 的每張卡 row 旁加 ⓘ peek button，呼叫 `showCardDetail()`；觸發時 `stopPropagation()` 不會誤勾 checkbox
@@ -465,6 +494,19 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
    - displayParkingBenefits() 需要接收 searchKeywords 參數
    - 否則只會用顯示名稱（如 "所有停車"）匹配，會失敗
    - 正確調用：`displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants)`
+
+6. **periodStart/periodEnd 不能假設格式一致（ISO `-` vs 台灣慣用 `/`）**：
+   ```javascript
+   // ❌ 錯誤：混用格式時字串比較/split('-') 會誤判或解析失敗，
+   //          活動被靜默濾掉且完全不報錯
+   if (today >= periodStart) ...
+   dateStr.split('-')
+
+   // ✅ 正確：一律透過既有函數處理，不手刻日期邏輯
+   getRateStatus(periodStart, periodEnd)   // 內部已正規化
+   parseISODate(dateStr)                    // 內部已正規化
+   ```
+   - 詳見「關鍵技術概念 → 12. 活動期間日期處理」
 
 ### 🎯 開發指引
 
@@ -635,4 +677,4 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ---
 
-**更新日期**：2026-05-31
+**更新日期**：2026-07-03
