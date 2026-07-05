@@ -3166,6 +3166,21 @@ function getOverflowRate(card, items) {
     return resolveBaseRate(card, shouldUseOverseasForExcess);
 }
 
+// The rate to SHOW the user for a cashbackRate item. For stacking models
+// ("...+...BonusRate", e.g. Sport 卡 Apple Pay) rate_N holds only the
+// designated-channel rate, so the displayed rate is designated + basic + bonus
+// (3%+1%+1% = 5%) — identical to what the search-result card shows (this mirrors
+// calculateStackedCashback's totalRate). For every other model, or blank,
+// rate_N is already a total and is shown as-is.
+function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
+    const model = rateGroup && rateGroup.cashbackModel;
+    if (!model || !model.includes('+')) return designatedRate;
+    const isOverseas = model.includes('overseasBonusRate');
+    const basicRate = resolveBaseRate(card, isOverseas);
+    const { rate: bonusRate } = resolveBonusComponent(card, levelSettings, isOverseas);
+    return Math.round((designatedRate + basicRate + bonusRate) * 100) / 100;
+}
+
 /**
  * Calculate layered cashback for cards with multi-tier reward structures
  * Used for cards like DBS Eco where multiple reward rates stack with independent caps
@@ -7352,11 +7367,11 @@ basicCashbackDiv.innerHTML = basicContent;
             }
         }
 
-        // Sort active rates by percentage in descending order
+        // Sort active rates by DISPLAYED percentage descending (so a stacking
+        // item like Apple Pay sorts by its summed 5%, not its raw designated 3%)
         const sortedRates = activeRates.sort((a, b) => {
-            // 解析 rate（hasLevels=false 的卡片，levelData 為 null）
-            const aRate = parseCashbackRateSync(a.rate, null);
-            const bRate = parseCashbackRateSync(b.rate, null);
+            const aRate = getDisplayRate(card, a, parseCashbackRateSync(a.rate, null), null);
+            const bRate = getDisplayRate(card, b, parseCashbackRateSync(b.rate, null), null);
             return bRate - aRate;
         });
 
@@ -7386,6 +7401,9 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // 解析 rate 值（支援 {specialRate} 和 {rate}，雖然 hasLevels=false 的卡片通常只有數字）
             const parsedRate = await parseCashbackRate(rate.rate, card, null);
+            // For stacking models, show the summed rate (designated+basic+bonus),
+            // same number the search-result card shows; otherwise show as-is.
+            const displayRate = getDisplayRate(card, rate, parsedRate, null);
 
             // Display rate with category in parentheses (with black color for consistency)
             const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
@@ -7399,7 +7417,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadge}</div>`;
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${endingSoonBadge}</div>`;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
