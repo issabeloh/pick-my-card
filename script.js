@@ -7751,7 +7751,7 @@ basicCashbackDiv.innerHTML = basicContent;
 async function generateCubeSpecialContent(card) {
     // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const { data: levelSettings } = await resolveCardLevel(card, defaultLevel);
+    const { level: savedLevel, data: levelSettings } = await resolveCardLevel(card, defaultLevel);
 
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
