@@ -3091,10 +3091,10 @@ input[type="number"]:focus {
 }
 
 .cashback-detail-item {
-    background: #f8fafc;
-    border-radius: 6px;
-    padding: 12px;
-    border-left: 3px solid #3b82f6;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
     margin-bottom: 12px;
 }
 
@@ -3188,11 +3188,14 @@ input[type="number"]:focus {
 .cashback-rate {
     font-weight: 600;
     color: #374151;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    font-size: 15px;
 }
 
 .cashback-rate-num {
     color: #059669;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 .cashback-condition {
