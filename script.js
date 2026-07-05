@@ -5283,16 +5283,28 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
 }
 
 // Show a small inline breakdown popup when the user clicks "算式"
-function showCalcBreakdown(btn, cardResult) {
-    // Remove any existing popup
-    const existing = document.querySelector('.calc-breakdown-popup');
-    if (existing) {
-        if (existing.previousSibling === btn || existing.dataset.btnId === btn.dataset.btnId) {
-            existing.remove();
-            return; // toggle off
-        }
-        existing.remove();
+// Tracks which button currently has its breakdown open, so a second click on
+// the SAME button toggles it closed, while clicking a DIFFERENT button closes
+// the old one and opens the new one (instead of just closing whatever was open).
+let openBreakdownBtn = null;
+
+function closeOpenBreakdown() {
+    if (openBreakdownBtn) {
+        openBreakdownBtn.closest('.card-result, .coupon-item')?.querySelector('.calc-breakdown-popup')?.remove();
+        openBreakdownBtn.classList.remove('active');
+        openBreakdownBtn = null;
     }
+}
+
+function showCalcBreakdown(btn, cardResult) {
+    // Clicking the button whose popup is already open just closes it
+    if (openBreakdownBtn === btn) {
+        closeOpenBreakdown();
+        return;
+    }
+
+    // Otherwise close whichever popup was open elsewhere, then open this one
+    closeOpenBreakdown();
 
     const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
     if (!layers.length) return;
@@ -5327,14 +5339,18 @@ function showCalcBreakdown(btn, cardResult) {
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
 
-    // Insert immediately after the card result
-    cardResult.after(popup);
+    // Append INSIDE the card/coupon box (not as a grid sibling) so it's visually
+    // anchored to its own result — doesn't shift other grid items around, and
+    // reads clearly as "this card's breakdown" instead of a floating panel.
+    cardResult.appendChild(popup);
+    btn.classList.add('active');
+    openBreakdownBtn = btn;
     popup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 // Close breakdown popup when clicking outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.calc-breakdown-popup') && !e.target.closest('.calc-breakdown-btn')) {
-        document.querySelector('.calc-breakdown-popup')?.remove();
+        closeOpenBreakdown();
     }
 }, true);
 

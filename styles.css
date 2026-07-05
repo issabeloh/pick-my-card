@@ -2706,14 +2706,28 @@ input[type="number"]:focus {
     background: #d1fae5;
     border-color: #6ee7b7;
 }
+.calc-breakdown-btn.active {
+    color: #ffffff;
+    background: #059669;
+    border-color: #059669;
+}
+/* Appended as the LAST CHILD of .card-result / .coupon-item (which are
+   position:relative, padded boxes) — bleeds edge-to-edge and sits flush at
+   the bottom, reading as a drawer that slides out from behind its own card
+   rather than a floating panel disconnected from any specific result. */
 .calc-breakdown-popup {
-    margin: 0 12px 12px;
-    padding: 12px 14px;
-    background: #f8faff;
-    border: 1px solid #c7d2fe;
-    border-radius: 8px;
+    margin: 12px -16px -16px;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-top: 1px solid #d1d5db;
+    border-radius: 0 0 8px 8px;
     font-size: 13px;
-    animation: fadeIn 0.15s ease;
+    overflow-x: auto;
+    animation: breakdownSlideDown 0.15s ease;
+}
+@keyframes breakdownSlideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .breakdown-table {
     border-collapse: collapse;
