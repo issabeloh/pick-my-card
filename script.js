@@ -2850,6 +2850,7 @@ async function calculateCashback() {
                 let basicCashbackAmount = 0;
                 let effectiveRate = card.basicCashback;
                 let displayCap = null;
+                let layers;
 
                 if (card.domesticBonusRate && card.domesticBonusCap) {
                     // Handle complex cards like 永豐幣倍 with domestic bonus
@@ -2859,8 +2860,15 @@ async function calculateCashback() {
                     basicCashbackAmount = bonusCashback + basicCashback;
                     effectiveRate = card.basicCashback + card.domesticBonusRate;
                     displayCap = card.domesticBonusCap;
+                    layers = [
+                        { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashback, cap: null },
+                        { name: '國內消費加碼', rate: card.domesticBonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: card.domesticBonusCap }
+                    ];
                 } else {
                     basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+                    layers = [
+                        { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashbackAmount, cap: null }
+                    ];
                 }
 
                 return {
@@ -2870,7 +2878,8 @@ async function calculateCashback() {
                     matchedItem: null,
                     effectiveAmount: amount,
                     card: card,
-                    isBasic: true
+                    isBasic: true,
+                    calculationLayers: layers
                 };
             });
         }
@@ -2882,6 +2891,7 @@ async function calculateCashback() {
             let basicCashbackAmount = 0;
             let effectiveRate = card.basicCashback;
             let displayCap = null;
+            let layers;
 
             if (card.domesticBonusRate && card.domesticBonusCap) {
                 // Handle complex cards like 永豐幣倍 with domestic bonus
@@ -2891,8 +2901,15 @@ async function calculateCashback() {
                 basicCashbackAmount = bonusCashback + basicCashback;
                 effectiveRate = card.basicCashback + card.domesticBonusRate;
                 displayCap = card.domesticBonusCap;
+                layers = [
+                    { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashback, cap: null },
+                    { name: '國內消費加碼', rate: card.domesticBonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: card.domesticBonusCap }
+                ];
             } else {
                 basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+                layers = [
+                    { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashbackAmount, cap: null }
+                ];
             }
 
             return {
@@ -2902,7 +2919,8 @@ async function calculateCashback() {
                 matchedItem: null,
                 effectiveAmount: amount,
                 card: card,
-                isBasic: true
+                isBasic: true,
+                calculationLayers: layers
             };
         });
 
@@ -3636,8 +3654,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 totalRate = Math.round(rate * 100) / 100;
                 effectiveAmount = cap; // Keep this for display purposes
 
-                // Build a 2-layer breakdown when spending exceeds the cap, so the
-                // ⓘ button can show "指定通路 (within cap) + 基本回饋 (overflow)".
+                // Always build a breakdown: 2 layers when spending exceeds the cap
+                // (指定通路 within cap + 基本回饋 overflow), otherwise a single layer.
                 if (cap && amount > cap) {
                     const remainingAmount = amount - cap;
                     const isAdPlatform = matchedRateGroup?.items?.some(item =>
@@ -3650,6 +3668,10 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     calculationLayers = [
                         { name: '指定通路', rate: rate, applicableAmount: cap, cashback: specialCashback, cap: cap },
                         { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null }
+                    ];
+                } else {
+                    calculationLayers = [
+                        { name: '指定通路', rate: rate, applicableAmount: effectiveSpecialAmount, cashback: specialCashback, cap: (cap && cap > 0) ? cap : null }
                     ];
                 }
             }
@@ -4242,6 +4264,9 @@ async function displayCouponCashbacks(amount, merchantValue) {
                         ];
                     } else {
                         potentialCashback = Math.floor(amount * actualRate / 100);
+                        calculationLayers = [
+                            { name: '領券活動', rate: actualRate, applicableAmount: amount, cashback: potentialCashback, cap: (capNum && capNum > 0) ? capNum : null }
+                        ];
                     }
 
                     matchingCoupons.push({
@@ -5079,7 +5104,7 @@ function createCouponResultElement(coupon, amount) {
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value cashback-amount">
                     NT$${coupon.potentialCashback.toLocaleString()}
-                    ${coupon.calculationLayers && coupon.calculationLayers.length > 1 ? `
+                    ${coupon.calculationLayers && coupon.calculationLayers.length > 0 ? `
                         <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
                     ` : ''}
                 </div>
@@ -5176,7 +5201,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
                     ${cashbackText}
-                    ${result.calculationLayers && result.calculationLayers.length > 1 ? `
+                    ${result.calculationLayers && result.calculationLayers.length > 0 ? `
                         <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
                     ` : ''}
                 </div>
