@@ -2009,6 +2009,20 @@ function setupEventListeners() {
         });
     }
 
+    // 領券活動卡片的計算明細按鈕
+    const couponResultsContainerEl = document.getElementById('coupon-results-container');
+    if (couponResultsContainerEl) {
+        couponResultsContainerEl.addEventListener('click', (e) => {
+            const breakdownBtn = e.target.closest('.calc-breakdown-btn');
+            if (breakdownBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const couponResult = breakdownBtn.closest('.coupon-item');
+                showCalcBreakdown(breakdownBtn, couponResult);
+            }
+        });
+    }
+
     // 新戶活動卡片的 ⓘ 詳情按鈕（搜尋結果）
     const cardholderPromosContainer = document.getElementById('cardholder-promos-container');
     if (cardholderPromosContainer) {
@@ -4208,12 +4222,34 @@ async function displayCouponCashbacks(amount, merchantValue) {
                     // 計算實際回饋率（支援分級）
                     const actualRate = await calculateCouponRate(coupon, card);
 
+                    // Apply couponCap: within-cap amount uses the coupon rate,
+                    // spending beyond the cap earns the card's basic cashback rate.
+                    const capNum = parseFloat(coupon.cap);
+                    let potentialCashback;
+                    let calculationLayers = null;
+
+                    if (capNum && capNum > 0 && amount > capNum) {
+                        const withinCapAmount = capNum;
+                        const overflowAmount = amount - capNum;
+                        const couponCashback = Math.floor(withinCapAmount * actualRate / 100);
+                        const overflowRate = card.basicCashback || 0;
+                        const overflowCashback = Math.floor(overflowAmount * overflowRate / 100);
+                        potentialCashback = couponCashback + overflowCashback;
+                        calculationLayers = [
+                            { name: '領券活動', rate: actualRate, applicableAmount: withinCapAmount, cashback: couponCashback, cap: capNum },
+                            { name: '基本回饋', rate: overflowRate, applicableAmount: overflowAmount, cashback: overflowCashback, cap: null }
+                        ];
+                    } else {
+                        potentialCashback = Math.floor(amount * actualRate / 100);
+                    }
+
                     matchingCoupons.push({
                         ...coupon,
                         cardName: card.name,
                         cardId: card.id,
                         actualRate: actualRate, // 儲存計算後的實際回饋率
-                        potentialCashback: Math.floor(amount * actualRate / 100),
+                        potentialCashback: potentialCashback,
+                        calculationLayers: calculationLayers,
                         matchedMerchants: matchedMerchants // Store matched merchants
                     });
                 }
@@ -5024,6 +5060,11 @@ function createCouponResultElement(coupon, amount) {
         console.log('星巴克 coupon cap:', coupon.cap, 'type:', typeof coupon.cap);
     }
 
+    if (coupon.calculationLayers) {
+        couponDiv.dataset.calcLayers = JSON.stringify(coupon.calculationLayers);
+        couponDiv.dataset.calcAmount = amount;
+    }
+
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="coupon-merchant">${coupon.cardName}</div>
@@ -5035,7 +5076,12 @@ function createCouponResultElement(coupon, amount) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
-                <div class="detail-value cashback-amount">NT$${coupon.potentialCashback.toLocaleString()}</div>
+                <div class="detail-value cashback-amount">
+                    NT$${coupon.potentialCashback.toLocaleString()}
+                    ${coupon.calculationLayers && coupon.calculationLayers.length > 1 ? `
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
+                    ` : ''}
+                </div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
