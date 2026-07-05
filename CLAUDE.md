@@ -312,6 +312,59 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 上層 modal 關掉時不會誤放開捲動鎖（外層 modal 還在）
 - 完全相容單一 modal 用法
 
+### 12. cashbackModel 計算模型（2026-07-01 新增）
+
+**用途**：以資料驅動的方式,決定每個 `cashbackRate` 項目要用哪種算法,取代散在程式裡的寫死判斷。
+
+**資料位置**：Cards Data 工作表新增 `cashbackModel_N` 欄位（對齊 `rate_N`/`items_N`/`cap_N`,N=1-17）。
+- **不必一次加滿 17 欄**：只加到實際會用到的槽位即可（`getValue()` 讀不到會回空字串）
+- Apps Script 匯出時,把非空值掛到該 rateGroup 的 `cashbackModel` 屬性
+- **絕大多數項目留空** = 走預設行為（見下）
+
+**命名規則（2026-07-05 重新設計）**：**分隔符號本身決定 stacking 還是 waterfall**,不再靠固定字串表去查——每個 rate_N 槽位獨立決定,同一張卡不同活動可以一個 stacking、一個 waterfall,互不影響：
+
+| 分隔符號 | 引擎 | `rate_N` 慣例 |
+|---|---|---|
+| `+`（如 `basic+domesticBonusRate`） | **stacking(疊加)**：各成分**同時**作用於全額,各有獨立上限 | `rate_N` 只填**指定通路本身的加碼率**（不含 basic） |
+| `>`（如 `rate>basic>domesticBonusRate`） | **waterfall(瀑布)**：cap 用完,**溢出**才進下一個成分 | `rate_N`（第一個成分）是**已含 basic 的總率** |
+| `rate`（單一字串,無分隔符） | **簡單路徑**,**保證不套用任何加碼**（無論卡片本身有沒有 domesticBonusRate/overseasBonusRate） | `rate_N` 是已含 basic 的總率 |
+| （空白） | **舊預設**:卡有加碼欄位 → 視同隱性 `rate>basic>domesticBonusRate`（只支援國內,無法標記海外）；卡沒有加碼欄位 → 視同 `rate` | 已含 basic 的總率 |
+
+**國內／海外一律由字串裡有沒有 `domesticBonusRate` / `overseasBonusRate` 決定**（`+`、`>` 兩種語法通用),不看其他判斷、不看搜尋詞、不看 item 名稱：
+- `basic+domesticBonusRate`、`rate+basic+domesticBonusRate` → stacking,國內（Sport 卡 Apple Pay、大戶卡一般國內消費）
+- `basic+overseasBonusRate`、`rate+basic+overseasBonusRate` → stacking,海外
+- `rate>basic>domesticBonusRate` → waterfall,國內（DBS Eco 國內項目、凱基誠品,也可以留空繼續吃舊預設）
+- `rate>basic>overseasBonusRate` → waterfall,海外（DBS Eco「日本/韓國/…實體消費」等海外指定通路項目,**必須明確填,不能留空**）
+
+**⚠️ 已停用**：`rate+basic` 這個舊名稱**不再是** `rate` 的別名——因為含 `+`,現在會被當成 stacking 解析,含義完全改變。若資料裡還有 `rate+basic`,請改成純 `rate`。
+
+**三種計算函數**：
+- `calculateStackedCashback()`（**stacking / 疊加**）：各成分**同時**作用於全額,各有獨立上限。
+  引擎會自動加總 `顯示回饋率 = rate_N(指定通路) + 基本 + 加碼` 顯示給用戶看（如 3%+1%+1%=5%）。
+  範例 Sport 卡 Apple Pay：`rate_N` 填 `3`,`cashbackModel` 填 `rate+basic+domesticBonusRate`,消費 6,000 算式為
+  `1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`,畫面顯示回饋率 **5%**。
+- `calculateLayeredCashback()`（**waterfall / 瀑布**）：一層用完上限,**溢出**才進下一層（各層不重疊）。
+  Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出,加碼 cap 內)。
+  盲填空白時仍是這個引擎的舊預設行為(僅支援國內)；要明確標記海外,填 `rate>basic>overseasBonusRate`。**`rate_N` 是已含基本的總率**（與 stacking 相反）。
+- **簡單路徑**（`rate` 或無加碼卡的空白預設）：cap 內用 `rate_N`（已含基本）、溢出用基本率,**保證跳過所有加碼**。
+
+**選擇邏輯** (script.js:3554 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
+`cashbackModel === 'rate'` → 簡單路徑；含 `+` → stacking；含 `>` → waterfall；空白 → 落回舊預設(依卡片是否有加碼欄位判斷)。
+
+**⚠️ 海外判斷是明確化的（2026-07-01 起）**：
+- **移除**原本散在 3 處的國家關鍵字清單（`overseasKeywords`,自動偵測 item 名稱含「日本/海外…」）
+- 不論 stacking 或 waterfall,海外一律由字串裡的 `overseasBonusRate` 關鍵字明確指定,絕不自動偵測
+- 影響:有 `overseasBonusRate` 的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）的「國外」item,若要走海外加碼**必須**明確填對應 model,留空一律當國內算
+
+**⚠️ 待整理（技術債）**：「溢出金額用 basic 還是 overseasCashback」的判斷目前仍散在 4 處（簡單路徑、waterfall、stacking、no-match fallback）,其中 `meta廣告/google廣告 → overseasCashback` 特例只寫在簡單路徑。待 `cashbackModel` 資料填好後,抽成單一 helper（如 `getOverflowRate()`）統一。
+
+**計算明細（計算機圖示按鈕）**：
+- 只要有算出回饋金額,一律至少產生 1 層明細,按鈕永遠顯示（`result.calculationLayers.length > 0`）
+- 明細以「卡片內部抽屜」形式呈現（append 進 `.card-result`/`.coupon-item` 內部,不是網格兄弟節點），不會打亂其他卡片排版
+- 用 `openBreakdownBtn` 追蹤目前開啟的按鈕：點同一顆關閉,點不同顆關閉舊的並開新的
+- stacking / waterfall / **簡單路徑（cap+溢出,2 層）** 都會產生 layers
+- `showCalcBreakdown()` (script.js:5249 一帶) 讀 `dataset.calcLayers` 渲染
+
 ## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
@@ -351,7 +404,15 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 最近的技術決策
 
-1. **2026-05-31: 詳情頁入口 + 卡片圖片資產 + 連結瘦身**
+1. **2026-07-01: cashbackModel 資料驅動計算模型**
+   - 新增 `cashbackModel_N` 欄位,以資料決定每個 rate 項目走哪種算法（stacking / rate-only / 預設）
+   - 新增 `calculateStackedCashback()`（疊加,各成分不同上限,如 Sport 卡）
+   - 移除散在 3 處的國家關鍵字清單,海外改由 `...+overseasBonusRate` 明確指定
+   - 簡單路徑（cap+溢出）也產生 `calculationLayers`,讓 ⓘ 計算明細按鈕顯示
+   - 空 cashbackModel = 維持原本行為,對現有資料零影響
+   - 詳見「關鍵技術概念 → 12. cashbackModel 計算模型」
+
+2. **2026-05-31: 詳情頁入口 + 卡片圖片資產 + 連結瘦身**
    - 「我的信用卡」/「管理加入比較的卡片」modals 的每張卡 row 旁加 ⓘ peek button，呼叫 `showCardDetail()`；觸發時 `stopPropagation()` 不會誤勾 checkbox
    - `disableBodyScroll`/`enableBodyScroll` 改為 refcount，疊層 modals 不會誤放開捲動鎖
    - 卡片圖片慣例 `assets/images/cards/<card.id>.png`，缺圖用 `<img onerror>` 隱藏，不用改 Apps Script
@@ -484,6 +545,16 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 同時更新同步版本（用於排序）
 - Apps Script 也需要相應修改
 
+**⚠️ 每次修改 `script.js` 或 `styles.css` 後，必做**：
+- 更新 `index.html` 中這兩行的 `?v=` 版本號（目前格式：`YYYYMMDDHHMMSS`，UTC 時間）：
+  ```html
+  <link rel="stylesheet" href="styles.css?v=...">
+  <script src="script.js?v=..." defer></script>
+  ```
+- **原因**：瀏覽器/CDN 用網址（含 `?v=`）快取檔案。版本號沒變 → 使用者可能吃到舊的 CSS/JS，但 HTML 結構已經是新的，會出現「毛胚」（無樣式、跑版）畫面
+- 兩個檔案的版本號**同步更新為同一個值**即可，不需分開管理
+- 這一步不是選填的優化，而是每次部署前的必要動作
+
 ## Google Sheets 與 Apps Script 資料架構
 
 ### 資料表結構
@@ -495,6 +566,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 1. **Cards Data** - 信用卡基本資料和回饋規則
    - 必填欄位：`id`, `name`, `fullName`, `basicCashback`, `annualFee`, `feeWaiver`, `website`, `tags`
    - 回饋欄位：`rate_N`, `items_N`, `cap_N`, `category_N`, `conditions_N`, `periodStart_N`, `periodEnd_N` (N=1-17)
+   - **計算模型**：`cashbackModel_N`（選填,只需加到實際用到的槽位;見「關鍵技術概念 → 12」）
    - 領券活動：`couponMerchant_N`, `couponRate_N`, `couponConditions_N`, `couponPeriod_N`, `couponCap_N` (N=1-10)
    - 分級卡片：`hasLevels`, `levelSettings` (JSON 格式)
 
@@ -635,4 +707,4 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ---
 
-**更新日期**：2026-05-31
+**更新日期**：2026-07-01
