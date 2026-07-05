@@ -327,8 +327,8 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 |---|---|---|
 | `+`（如 `basic+domesticBonusRate`） | **stacking(疊加)**：各成分**同時**作用於全額,各有獨立上限 | `rate_N` 只填**指定通路本身的加碼率**（不含 basic） |
 | `>`（如 `rate>basic>domesticBonusRate`） | **waterfall(瀑布)**：cap 用完,**溢出**才進下一個成分 | `rate_N`（第一個成分）是**已含 basic 的總率** |
-| `rate`（單一字串,無分隔符） | **簡單路徑**,**保證不套用任何加碼**（無論卡片本身有沒有 domesticBonusRate/overseasBonusRate） | `rate_N` 是已含 basic 的總率 |
-| （空白） | **舊預設**:卡有加碼欄位 → 視同隱性 `rate>basic>domesticBonusRate`（只支援國內,無法標記海外）；卡沒有加碼欄位 → 視同 `rate` | 已含 basic 的總率 |
+| `rate`（單一字串,無分隔符） | **通路完全排除在卡片一般消費之外**：cap 內用 rate_N,**溢出算 0(不列入任何回饋)**——不是套用 basic！用於「這個通路本來就不算一般消費」的情境（如大戶卡「悠遊卡自動加值」） | `rate_N` 是已含 basic 的總率 |
+| （空白） | **舊預設**:卡有加碼欄位 → 視同隱性 `rate>basic>domesticBonusRate`（只支援國內,無法標記海外）；卡沒有加碼欄位 → 簡單路徑,cap 內用 rate_N、**溢出算 basicCashback**（一般卡片的正常行為,如玉山 Ubear 卡） | 已含 basic 的總率 |
 
 **國內／海外一律由字串裡有沒有 `domesticBonusRate` / `overseasBonusRate` 決定**（`+`、`>` 兩種語法通用),不看其他判斷、不看搜尋詞、不看 item 名稱：
 - `basic+domesticBonusRate`、`rate+basic+domesticBonusRate` → stacking,國內（Sport 卡 Apple Pay、大戶卡一般國內消費）
@@ -346,10 +346,11 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - `calculateLayeredCashback()`（**waterfall / 瀑布**）：一層用完上限,**溢出**才進下一層（各層不重疊）。
   Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出,加碼 cap 內)。
   盲填空白時仍是這個引擎的舊預設行為(僅支援國內)；要明確標記海外,填 `rate>basic>overseasBonusRate`。**`rate_N` 是已含基本的總率**（與 stacking 相反）。
-- **簡單路徑**（`rate` 或無加碼卡的空白預設）：cap 內用 `rate_N`（已含基本）、溢出用基本率,**保證跳過所有加碼**。
+- **簡單路徑**（無加碼卡的空白預設）：cap 內用 `rate_N`（已含基本）、溢出用 `basicCashback`。
+- **`rate` 專用路徑**：cap 內用 `rate_N`,**溢出算 0**——跟簡單路徑的差異只在溢出：這個通路的錢完全不算進卡片的一般消費/基本回饋（如大戶卡悠遊卡加值,消費超過 cap 的部分不會退回去算 1% 基本回饋,而是 0）。**填 `rate` 前務必先確認這個通路是否真的被卡片排除在一般消費外**,如果只是「沒有加碼」但仍算一般消費,應該留空,不要填 `rate`。
 
 **選擇邏輯** (script.js:3554 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
-`cashbackModel === 'rate'` → 簡單路徑；含 `+` → stacking；含 `>` → waterfall；空白 → 落回舊預設(依卡片是否有加碼欄位判斷)。
+`cashbackModel === 'rate'` → 專用路徑(溢出 0)；含 `+` → stacking；含 `>` → waterfall；空白 → 落回舊預設(依卡片是否有加碼欄位判斷,溢出算 basicCashback)。
 
 **⚠️ 海外判斷是明確化的（2026-07-01 起）**：
 - **移除**原本散在 3 處的國家關鍵字清單（`overseasKeywords`,自動偵測 item 名稱含「日本/海外…」）

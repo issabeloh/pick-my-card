@@ -3691,9 +3691,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 // Do NOT add basicCashback or domesticBonusRate on top
                 specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
 
-                // Handle remaining amount if capped (excess amount gets basic cashback only)
+                // Handle remaining amount if capped.
+                // cashbackModel === 'rate' means this channel is fully excluded from
+                // the card's ordinary spending program (e.g. 大戶卡「悠遊卡自動加值」) —
+                // spending beyond its cap earns NOTHING, not even basic. Everything
+                // else (blank cashbackModel, ordinary cards with no bonus fields)
+                // keeps the existing behavior: excess earns basicCashback.
                 let remainingCashback = 0;
-                if (cap && amount > cap) {
+                if (cap && amount > cap && cashbackModel !== 'rate') {
                     const remainingAmount = amount - cap;
 
                     // 🔥 Check if should use overseasCashback for excess amount
@@ -3721,19 +3726,27 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 effectiveAmount = cap; // Keep this for display purposes
 
                 // Always build a breakdown: 2 layers when spending exceeds the cap
-                // (指定通路 within cap + 基本回饋 overflow), otherwise a single layer.
+                // (指定通路 within cap + 基本回饋/無回饋 overflow), otherwise a single layer.
                 if (cap && amount > cap) {
                     const remainingAmount = amount - cap;
-                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
-                        item.toLowerCase().includes('meta廣告') ||
-                        item.toLowerCase().includes('google廣告')
-                    );
-                    const excessRate = (isAdPlatform && card.id !== 'taishin-richart')
-                        ? (card.overseasCashback || card.basicCashback)
-                        : card.basicCashback;
+                    let overflowLayer;
+                    if (cashbackModel === 'rate') {
+                        // Fully excluded from the card's ordinary spending program —
+                        // spending beyond the cap earns nothing, shown explicitly as 0.
+                        overflowLayer = { name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null };
+                    } else {
+                        const isAdPlatform = matchedRateGroup?.items?.some(item =>
+                            item.toLowerCase().includes('meta廣告') ||
+                            item.toLowerCase().includes('google廣告')
+                        );
+                        const excessRate = (isAdPlatform && card.id !== 'taishin-richart')
+                            ? (card.overseasCashback || card.basicCashback)
+                            : card.basicCashback;
+                        overflowLayer = { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null };
+                    }
                     calculationLayers = [
                         { name: '指定通路', rate: rate, applicableAmount: cap, cashback: specialCashback, cap: cap },
-                        { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null }
+                        overflowLayer
                     ];
                 } else {
                     calculationLayers = [
