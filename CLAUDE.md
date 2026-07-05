@@ -536,6 +536,16 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - 同時更新同步版本（用於排序）
 - Apps Script 也需要相應修改
 
+**⚠️ 每次修改 `script.js` 或 `styles.css` 後，必做**：
+- 更新 `index.html` 中這兩行的 `?v=` 版本號（目前格式：`YYYYMMDDHHMMSS`，UTC 時間）：
+  ```html
+  <link rel="stylesheet" href="styles.css?v=...">
+  <script src="script.js?v=..." defer></script>
+  ```
+- **原因**：瀏覽器/CDN 用網址（含 `?v=`）快取檔案。版本號沒變 → 使用者可能吃到舊的 CSS/JS，但 HTML 結構已經是新的，會出現「毛胚」（無樣式、跑版）畫面
+- 兩個檔案的版本號**同步更新為同一個值**即可，不需分開管理
+- 這一步不是選填的優化，而是每次部署前的必要動作
+
 ## Google Sheets 與 Apps Script 資料架構
 
 ### 資料表結構
