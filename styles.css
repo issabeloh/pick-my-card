@@ -3437,6 +3437,13 @@ input[type="number"]:focus {
 
 .user-notes-textarea::placeholder {
     color: #9ca3af;
+    /* Keep the textarea element at 16px on mobile (prevents iOS focus auto-zoom),
+       but render the placeholder at 14px. iOS decides zoom from the element's
+       own font-size, not the ::placeholder pseudo-element, so this is safe.
+       A direct rule on ::placeholder overrides the 16px !important the element
+       inherits from the max-width:768px input rule (inheritance loses to a
+       directly-applied value). */
+    font-size: 14px;
 }
 
 .notes-status {
