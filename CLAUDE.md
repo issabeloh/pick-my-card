@@ -321,37 +321,40 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - Apps Script 匯出時,把非空值掛到該 rateGroup 的 `cashbackModel` 屬性
 - **絕大多數項目留空** = 走預設行為（見下）
 
-**命名規則**：值就是「有作用的回饋成分,依上限消耗順序」用 `+` 串接。目前引擎接受的值：
+**命名規則（2026-07-05 重新設計）**：**分隔符號本身決定 stacking 還是 waterfall**,不再靠固定字串表去查——每個 rate_N 槽位獨立決定,同一張卡不同活動可以一個 stacking、一個 waterfall,互不影響：
 
-| 值 | 行為 | 適用 |
+| 分隔符號 | 引擎 | `rate_N` 慣例 |
 |---|---|---|
-| （空白） | 預設:卡有加碼→waterfall,否則簡單路徑 | 95% 的卡 |
-| `rate` / `rate+basic` | 簡單路徑,**跳過所有加碼**（cap 內用 rate、溢出用基本） | 大戶卡「悠遊卡自動加值」 |
-| `rate+basic+domesticBonusRate` | stacking,3 成分各自不同上限 | Sport 卡 Apple Pay |
-| `rate+basic+overseasBonusRate` | stacking,海外加碼 | 海外版 |
-| `basic+domesticBonusRate` | stacking,無指定通路那層 | 大戶卡一般國內消費 |
-| `basic+overseasBonusRate` | stacking,無指定通路那層 | 大戶卡一般國外消費 |
-| `rate+overseasCashback` / `rate+overseasCashback+overseasBonusRate` | **waterfall,明確標記為海外**（指定通路 cap 內 → 溢出用 overseasCashback → 溢出用 overseasBonusRate,加碼 cap 內） | DBS Eco「日本/韓國/…實體消費」等海外指定通路項目 |
+| `+`（如 `basic+domesticBonusRate`） | **stacking(疊加)**：各成分**同時**作用於全額,各有獨立上限 | `rate_N` 只填**指定通路本身的加碼率**（不含 basic） |
+| `>`（如 `rate>basic>domesticBonusRate`） | **waterfall(瀑布)**：cap 用完,**溢出**才進下一個成分 | `rate_N`（第一個成分）是**已含 basic 的總率** |
+| `rate`（單一字串,無分隔符） | **簡單路徑**,**保證不套用任何加碼**（無論卡片本身有沒有 domesticBonusRate/overseasBonusRate） | `rate_N` 是已含 basic 的總率 |
+| （空白） | **舊預設**:卡有加碼欄位 → 視同隱性 `rate>basic>domesticBonusRate`（只支援國內,無法標記海外）；卡沒有加碼欄位 → 視同 `rate` | 已含 basic 的總率 |
+
+**國內／海外一律由字串裡有沒有 `domesticBonusRate` / `overseasBonusRate` 決定**（`+`、`>` 兩種語法通用),不看其他判斷、不看搜尋詞、不看 item 名稱：
+- `basic+domesticBonusRate`、`rate+basic+domesticBonusRate` → stacking,國內（Sport 卡 Apple Pay、大戶卡一般國內消費）
+- `basic+overseasBonusRate`、`rate+basic+overseasBonusRate` → stacking,海外
+- `rate>basic>domesticBonusRate` → waterfall,國內（DBS Eco 國內項目、凱基誠品,也可以留空繼續吃舊預設）
+- `rate>basic>overseasBonusRate` → waterfall,海外（DBS Eco「日本/韓國/…實體消費」等海外指定通路項目,**必須明確填,不能留空**）
+
+**⚠️ 已停用**：`rate+basic` 這個舊名稱**不再是** `rate` 的別名——因為含 `+`,現在會被當成 stacking 解析,含義完全改變。若資料裡還有 `rate+basic`,請改成純 `rate`。
 
 **三種計算函數**：
 - `calculateStackedCashback()`（**stacking / 疊加**）：各成分**同時**作用於全額,各有獨立上限。
-  ⚠️ **資料慣例與其他模式不同**：走 stacking 的項目,`rate_N` 只填**指定通路本身的加碼率**（不含基本、不含國內外加碼），
   引擎會自動加總 `顯示回饋率 = rate_N(指定通路) + 基本 + 加碼` 顯示給用戶看（如 3%+1%+1%=5%）。
-  範例 Sport 卡 Apple Pay：`rate_N` 填 `3`,消費 6,000 算式為
+  範例 Sport 卡 Apple Pay：`rate_N` 填 `3`,`cashbackModel` 填 `rate+basic+domesticBonusRate`,消費 6,000 算式為
   `1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`,畫面顯示回饋率 **5%**。
 - `calculateLayeredCashback()`（**waterfall / 瀑布**）：一層用完上限,**溢出**才進下一層（各層不重疊）。
   Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出,加碼 cap 內)。
-  這是空白 cashbackModel + 卡有加碼時的預設,DBS Eco、凱基誠品等在用。**`rate_N` 仍是已含基本的總率**（與 stacking 不同）。
-- **簡單路徑**（無加碼卡的預設）：cap 內用 `rate_N`（已含基本）、溢出用基本率。
+  盲填空白時仍是這個引擎的舊預設行為(僅支援國內)；要明確標記海外,填 `rate>basic>overseasBonusRate`。**`rate_N` 是已含基本的總率**（與 stacking 相反）。
+- **簡單路徑**（`rate` 或無加碼卡的空白預設）：cap 內用 `rate_N`（已含基本）、溢出用基本率,**保證跳過所有加碼**。
 
-**選擇邏輯** (script.js:3565 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
-先看 `cashbackModel` → stacking / rate-only；未指定才落回 waterfall/簡單路徑。
+**選擇邏輯** (script.js:3554 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
+`cashbackModel === 'rate'` → 簡單路徑；含 `+` → stacking；含 `>` → waterfall；空白 → 落回舊預設(依卡片是否有加碼欄位判斷)。
 
-**⚠️ 海外判斷改為明確化（2026-07-01,waterfall 支援於同日稍晚補上）**：
+**⚠️ 海外判斷是明確化的（2026-07-01 起）**：
 - **移除**原本散在 3 處的國家關鍵字清單（`overseasKeywords`,自動偵測 item 名稱含「日本/海外…」）
-- Stacking 模型的海外一律由 `cashbackModel = ...+overseasBonusRate` 明確指定
-- **waterfall 模型也需要明確指定**：`cashbackModel = rate+overseasCashback` 或 `rate+overseasCashback+overseasBonusRate`,否則 waterfall 一律當國內算（Tier2 溢出用 `basicCashback`,不會用到 `overseasCashback`/`overseasBonusRate`）
-- 影響:有 `overseasBonusRate` 的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）的「國外」item,若要走海外加碼須補上對應 model,否則預設當國內
+- 不論 stacking 或 waterfall,海外一律由字串裡的 `overseasBonusRate` 關鍵字明確指定,絕不自動偵測
+- 影響:有 `overseasBonusRate` 的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）的「國外」item,若要走海外加碼**必須**明確填對應 model,留空一律當國內算
 
 **⚠️ 待整理（技術債）**：「溢出金額用 basic 還是 overseasCashback」的判斷目前仍散在 4 處（簡單路徑、waterfall、stacking、no-match fallback）,其中 `meta廣告/google廣告 → overseasCashback` 特例只寫在簡單路徑。待 `cashbackModel` 資料填好後,抽成單一 helper（如 `getOverflowRate()`）統一。
 

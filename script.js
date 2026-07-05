@@ -3554,33 +3554,43 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // Step 2: pick calculation model
         const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null;
 
-        // Stacking models — all components applied to the same amount concurrently.
-        // The engine decomposes the displayed rate: designated = displayed - basic - bonus.
-        //   "rate+basic+domesticBonusRate" → 3 components (Sport 卡 Apple Pay: 3%+1%+1%)
-        //   "basic+domesticBonusRate"      → 2 components, no designated rate (大戶卡 一般國內消費)
-        // Both go through calculateStackedCashback; the 2-component case simply yields
-        // designated = 0 when the displayed rate equals basic + bonus.
-        const domesticStackModels = ['basic+domesticBonusRate', 'rate+basic+domesticBonusRate'];
-        const overseasStackModels = ['basic+overseasBonusRate', 'rate+basic+overseasBonusRate'];
-        // Explicit waterfall + overseas: Layer1 指定通路(rate_N, cap 內) →
-        // Layer2 overseasCashback(溢出,無上限) → Layer3 overseasBonusRate(溢出,加碼 cap 內).
-        // Needed because plain waterfall (blank cashbackModel) always defaults to
-        // domestic — this is the only way to mark a designated-channel item as overseas
-        // now that the country-keyword auto-detection has been removed.
-        const overseasWaterfallModels = ['rate+overseasCashback', 'rate+overseasCashback+overseasBonusRate'];
-        const rateOnlyModels = ['rate', 'rate+basic'];
+        // cashbackModel grammar — the SEPARATOR alone picks stacking vs waterfall,
+        // per rate_N slot, independent of every other slot on the same card:
+        //   "+" → STACKING: components apply concurrently to the FULL amount,
+        //         each with its own cap (calculateStackedCashback). rate_N here
+        //         is the designated-only rate (does NOT include basic).
+        //         e.g. "rate+basic+domesticBonusRate", "basic+overseasBonusRate"
+        //   ">" → WATERFALL: rate_N is cap-limited; the overflow then earns the
+        //         next component(s) (calculateLayeredCashback). rate_N here is
+        //         the ALREADY-TOTALED rate (includes basic).
+        //         e.g. "rate>basic>domesticBonusRate", "rate>basic>overseasBonusRate"
+        //   "rate" (bare, no separator) → simple 2-tier, NEVER applies any bonus
+        //         regardless of the card's own bonus fields (cap→rate_N,
+        //         overflow→basicCashback only) — for channels fully excluded
+        //         from the card's bonus program, e.g. 大戶卡「悠遊卡自動加值」.
+        //   (blank) → legacy default: if the card carries domesticBonusRate/
+        //         overseasBonusRate, behaves like an implicit domestic
+        //         "rate>basic>domesticBonusRate" — kept so cards not yet
+        //         tagged (DBS Eco 國內項目, 凱基誠品, …) keep working unchanged.
+        //
+        // Domestic vs overseas is read purely from whether the literal keyword
+        // `domesticBonusRate` / `overseasBonusRate` appears in the string —
+        // never auto-detected from the search term or item name.
+        // NOTE: the retired name "rate+basic" (used before this redesign) is NOT
+        // an alias for bare "rate" — it now matches the "+" branch (stacking).
+        // Rename any existing "rate+basic" data to bare "rate".
+        const isOverseasModel = cashbackModel ? cashbackModel.includes('overseasBonusRate') : false;
 
-        if (domesticStackModels.includes(cashbackModel)) {
+        if (cashbackModel === 'rate') {
+            // Simple path, no bonus ever — handled by the final `else` branch below.
+        } else if (cashbackModel && cashbackModel.includes('+')) {
             shouldUseStackedCalculation = true;
-            stackedIsOverseas = false;
-        } else if (overseasStackModels.includes(cashbackModel)) {
-            shouldUseStackedCalculation = true;
-            stackedIsOverseas = true;
-        } else if (overseasWaterfallModels.includes(cashbackModel)) {
+            stackedIsOverseas = isOverseasModel;
+        } else if (cashbackModel && cashbackModel.includes('>')) {
             shouldUseLayeredCalculation = true;
-            isOverseasTransaction = true;
-        } else if (!rateOnlyModels.includes(cashbackModel)) {
-            // No explicit model — use waterfall (domestic) if card carries bonus rates
+            isOverseasTransaction = isOverseasModel;
+        } else if (!cashbackModel) {
+            // Blank — legacy default: waterfall (domestic) if card carries bonus rates
             const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
             const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
 
