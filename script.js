@@ -222,10 +222,13 @@ function getTaiwanToday() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
-// 解析 ISO 日期字串 YYYY-MM-DD 為本地午夜 Date 物件（供天數差計算用）
+// 解析日期字串為本地午夜 Date 物件（供天數差計算用）
+// 相容 ISO "YYYY-MM-DD" 與台灣慣用 "YYYY/M/D"（Apps Script 匯出的 periodStart/periodEnd 兩種格式都會出現）
 function parseISODate(dateStr) {
     if (!dateStr) return null;
-    const [y, m, d] = dateStr.split('-').map(Number);
+    const isoStr = dateStr.includes('-') ? dateStr : slashDateToISO(dateStr);
+    if (!isoStr) return null;
+    const [y, m, d] = isoStr.split('-').map(Number);
     return new Date(y, m - 1, d);
 }
 
@@ -234,6 +237,16 @@ function formatISODateForDisplay(isoDate) {
     if (!isoDate) return '';
     const [y, m, d] = isoDate.split('-').map(Number);
     return `${y}/${m}/${d}`;
+}
+
+// 將台灣慣用 YYYY/M/D 轉為 ISO YYYY-MM-DD（供日期工具函數使用）
+function slashDateToISO(slashDate) {
+    if (!slashDate || typeof slashDate !== 'string') return '';
+    const parts = slashDate.split('/');
+    if (parts.length !== 3) return '';
+    const [y, m, d] = parts.map(Number);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return '';
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
@@ -246,8 +259,12 @@ function getRateStatus(periodStart, periodEnd) {
 
     try {
         const today = getTaiwanToday(); // YYYY-MM-DD，ISO 字典序 = 日期序
-        if (today >= periodStart && today <= periodEnd) return 'active';
-        if (today < periodStart) return 'upcoming';
+        // periodStart/periodEnd 可能是 ISO "YYYY-MM-DD" 或台灣慣用 "YYYY/M/D"，
+        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂
+        const start = periodStart.includes('-') ? periodStart : slashDateToISO(periodStart);
+        const end = periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd);
+        if (today >= start && today <= end) return 'active';
+        if (today < start) return 'upcoming';
         return 'expired';
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
@@ -272,7 +289,7 @@ let rateStatusCache = new Map();
 let cardLevelCache = new Map();
 
 function cardLevelCacheKey(cardId) {
-    const uid = (typeof auth !== 'undefined' && auth.currentUser) ? auth.currentUser.uid : 'guest';
+    const uid = (auth && auth.currentUser) ? auth.currentUser.uid : 'guest';
     return `${uid}_${cardId}`;
 }
 
@@ -2928,6 +2945,38 @@ async function calculateCashback() {
         if (merchantValue.length > 0) {
             showNoMatchMessage(merchantValue, cardsToCompare);
         }
+
+        // Still search for upcoming activities even without active matches
+        if (merchantValue.length > 0) {
+            const upcomingResults = [];
+            const searchTerm = merchantValue.toLowerCase();
+            const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
+                const activities = await findUpcomingActivity(card, searchTerm, amount);
+                return activities.map(activity => ({
+                    card: card,
+                    ...activity,
+                    isUpcoming: true,
+                    matchedItemName: activity.matchedItem
+                }));
+            }));
+            upcomingResults.push(...upcomingActivities.flat());
+
+            const mergedMap = new Map();
+            for (const result of upcomingResults) {
+                const key = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+                if (mergedMap.has(key)) {
+                    const existing = mergedMap.get(key);
+                    if (!existing.matchedItems) existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
+                    const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
+                    for (const item of newItems) {
+                        if (item && !existing.matchedItems.includes(item)) existing.matchedItems.push(item);
+                    }
+                } else {
+                    mergedMap.set(key, { ...result, matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem] });
+                }
+            }
+            uniqueUpcomingResults = Array.from(mergedMap.values());
+        }
     }
     
     // Sort active results by cashback amount (highest first)
@@ -4731,6 +4780,30 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
         : '不限期';
 
+    // Upcoming / ending-soon badges (same logic as card activities)
+    // promo dates are already ISO YYYY-MM-DD; fall back to slash-to-ISO conversion
+    let promoBadgeHtml = '';
+    const isoStart = promo.period_start
+        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
+        : '';
+    const isoEnd = promo.period_end
+        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
+        : '';
+    const promoStatus = getRateStatus(isoStart, isoEnd);
+    if (promoStatus === 'upcoming' && isoStart) {
+        const daysUntil = getDaysUntilStart(isoStart);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+            promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
+        }
+    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 10)) {
+        const daysUntil = getDaysUntilEnd(isoEnd);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+            promoBadgeHtml = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+    }
+
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
         ? matchedMerchants.join('、')
         : '不限通路';
@@ -4842,7 +4915,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         </div>
         ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件:</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
         <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
-        <div class="matched-merchant">活動期間: ${escapeHtml(period)}</div>
+        <div class="matched-merchant">活動期間: ${escapeHtml(period)}${promoBadgeHtml}</div>
         ${notesHtml}
     `;
     return el;
@@ -5163,6 +5236,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
     }
 
+    // Ending-soon badge (inline, next to period text)
+    let endingSoonInlineBadge = '';
+    if (!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10)) {
+        const daysUntil = getDaysUntilEnd(result.periodEnd);
+        if (daysUntil != null) {
+            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+            endingSoonInlineBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+    }
+
     // 檢查是否已釘選（使用 matchedItem）
     const merchantForPin = result.matchedItems && result.matchedItems.length > 0
         ? result.matchedItems.join('、')
@@ -5202,11 +5285,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
                     return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
                 })() : ''}
-                ${!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10) ? (() => {
-                    const daysUntil = getDaysUntilEnd(result.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-                    return `<div class="ending-soon-badge">即將結束 (${daysText})</div>`;
-                })() : ''}
             </div>
         </div>
         <div class="card-details">
@@ -5236,7 +5314,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
         </div>
         ${(() => {
-            if (isBasicCashback) {
+            if (isBasicCashback && !isUpcoming) {
                 let conditionsText = '';
                 // Check if card has domesticBonusConditions
                 if (result.card.domesticBonusConditions) {
@@ -5262,8 +5340,13 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
 
-                    if (period) additionalInfo += `<br><small>活動期間: ${period}</small>`;
+                    if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
+                } else if (endingSoonInlineBadge && result.periodEnd) {
+                    const periodDisplay = result.periodStart
+                        ? `${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}`
+                        : `~${formatISODateForDisplay(result.periodEnd)}`;
+                    additionalInfo += `<br><small>活動期間: ${periodDisplay}${endingSoonInlineBadge}</small>`;
                 }
                 
                 const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
@@ -6105,8 +6188,8 @@ function setupManageCardsModal() {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards
-    saveBtn.addEventListener('click', async () => {
+    // Save cards (shared handler for both footer and quick-save buttons)
+    const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
 
@@ -6131,7 +6214,10 @@ function setupManageCardsModal() {
 
         // Close modal
         closeModal();
-    });
+    };
+    saveBtn.addEventListener('click', doSaveCards);
+    const quickSaveBtn = document.getElementById('save-cards-btn-quick');
+    if (quickSaveBtn) quickSaveBtn.addEventListener('click', doSaveCards);
     
     // Toggle all cards button
     const toggleAllBtn = document.getElementById('toggle-all-cards');
@@ -6328,6 +6414,14 @@ function _renderCardSelectionModal(config) {
             e.stopPropagation();
             showCardDetail(card.id);
         });
+        const img = cardDiv.querySelector('.card-checkbox-image');
+        if (img && canEdit) {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                checkbox.checked = !checkbox.checked;
+                cardDiv.classList.toggle('selected', checkbox.checked);
+            });
+        }
         cardsSelection.appendChild(cardDiv);
     });
 
@@ -7423,8 +7517,9 @@ basicCashbackDiv.innerHTML = basicContent;
     if (upcomingGroups.length > 0) {
         let upcomingContent = '';
 
-        // Handle both Map (from upcomingGroups1/2) and Array (from upcomingGroupsCube)
-        const groupsToDisplay = Array.isArray(upcomingGroups) ? upcomingGroups.map((g, i) => [i, g]) : upcomingGroups;
+        // upcomingGroups1/2 are [key, value] tuples from Map.entries();
+        // upcomingGroups3/Cube are plain object arrays. Normalize both to [key, value].
+        const groupsToDisplay = upcomingGroups.map((g, i) => Array.isArray(g) ? g : [i, g]);
 
         for (const [groupKey, group] of groupsToDisplay) {
             upcomingContent += `<div class="cashback-detail-item upcoming-activity">`;
@@ -8160,9 +8255,9 @@ let lastSavedNotes = new Map(); // 記錄每張卡最後儲存的內容
 
 // 讀取用戶筆記 (註: 筆記僅依賴cardId，與cardsInComparison狀態無關)
 async function loadUserNotes(cardId) {
-    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
-    
-    if (!auth.currentUser) {
+    const cacheKey = (auth && auth.currentUser) ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+
+    if (!auth || !auth.currentUser) {
         const localNotes = localStorage.getItem(cacheKey) || '';
         lastSavedNotes.set(cardId, localNotes);
         return localNotes;
@@ -8189,7 +8284,7 @@ async function loadUserNotes(cardId) {
 
 // 本地儲存（自動備份）
 function autoBackupNotes(cardId, notes) {
-    const cacheKey = auth.currentUser ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
+    const cacheKey = (auth && auth.currentUser) ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
     localStorage.setItem(cacheKey, notes);
 }
 
@@ -8200,7 +8295,7 @@ async function saveUserNotes(cardId, notes) {
     const btnText = document.querySelector('.btn-text');
     const btnIcon = document.querySelector('.btn-icon');
     
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         // 未登入時僅儲存在本地
         autoBackupNotes(cardId, notes);
         lastSavedNotes.set(cardId, notes);
@@ -9269,7 +9364,7 @@ async function getCardLevel(cardId, defaultLevel) {
 
 async function getCardLevelUncached(cardId, defaultLevel) {
     // If user not logged in, use localStorage
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
     }
 
@@ -9305,7 +9400,7 @@ async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9321,7 +9416,7 @@ async function saveCubeIssuer(issuer) {
     cubeIssuer = issuer;
     try { localStorage.setItem('cubeIssuer', issuer); } catch (e) {}
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9336,7 +9431,7 @@ async function saveCubeIssuer(issuer) {
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
 
-    if (!auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
@@ -9358,7 +9453,7 @@ async function saveCardLevel(cardId, level) {
     localStorage.setItem(`cardLevel-${cardId}`, level);
 
     // If user not logged in, only save locally
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
         console.log(`Card level saved locally for ${cardId}: ${level}`);
         return;
     }
