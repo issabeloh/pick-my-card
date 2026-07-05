@@ -3115,6 +3115,45 @@ function getCategoryStyle(category) {
     return 'display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; vertical-align: middle;';
 }
 
+// Base cashback rate for a domestic vs overseas transaction. Overseas falls
+// back to basicCashback if the card has no dedicated overseasCashback field.
+function resolveBaseRate(card, isOverseas) {
+    return isOverseas ? (card.overseasCashback || card.basicCashback) : card.basicCashback;
+}
+
+// Domestic/海外 bonus component (rate + cap + display name) for a card+level.
+// Priority: levelSettings first (bonus varies per level, e.g. 大戶卡),
+// then top-level card fields (bonus is level-independent for all other
+// cards, e.g. DBS Eco, 凱基誠品, 中信 uniopen, 滙豐 Live+, iLEO…).
+// cap === null means uncapped (無上限). Shared by calculateLayeredCashback
+// (Tier 3) and calculateStackedCashback (Layer 2) — same lookup either way.
+function resolveBonusComponent(card, levelSettings, isOverseas) {
+    if (isOverseas) {
+        const rate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
+        const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
+            ? levelSettings.overseasBonusCap : card.overseasBonusCap;
+        return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '海外消費加碼' };
+    }
+    const rate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
+    const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
+        ? levelSettings.domesticBonusCap : card.domesticBonusCap;
+    return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '國內消費加碼' };
+}
+
+// Overflow rate for the simple (cap→rate_N, overflow→basic) path. Normally
+// basicCashback; ad platforms (meta廣告/google廣告) use overseasCashback
+// instead, except on 台新 Richart 卡 which never gets this override.
+// Shared by calculateCardCashback's simple path and findUpcomingActivity —
+// previously this exact check was copy-pasted in 3 places.
+function getOverflowRate(card, items) {
+    const isAdPlatform = items?.some(item =>
+        item.toLowerCase().includes('meta廣告') ||
+        item.toLowerCase().includes('google廣告')
+    );
+    const shouldUseOverseasForExcess = isAdPlatform && card.id !== 'taishin-richart';
+    return resolveBaseRate(card, shouldUseOverseasForExcess);
+}
+
 /**
  * Calculate layered cashback for cards with multi-tier reward structures
  * Used for cards like DBS Eco where multiple reward rates stack with independent caps
@@ -3156,11 +3195,8 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
     const overflow = amount - designatedAmount;
 
     if (overflow > 0) {
-        // Tier 2: base rate on the overflow (no cap). Overseas spend uses
-        // overseasCashback as its base; domestic uses basicCashback.
-        const baseRate = isOverseas
-            ? (card.overseasCashback || card.basicCashback)
-            : card.basicCashback;
+        // Tier 2: base rate on the overflow (no cap).
+        const baseRate = resolveBaseRate(card, isOverseas);
         const baseCashback = Math.floor(overflow * baseRate / 100);
         layers.push({
             name: '基本回饋',
@@ -3172,27 +3208,7 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
         totalCashback += baseCashback;
 
         // Tier 3: 國內/海外加碼 on the overflow.
-        // Priority: levelSettings fields first (大戶卡 where bonus varies per level),
-        // then fall back to top-level card fields (all other cards).
-        // bonusCap null/undefined = no spending cap on the bonus (無上限).
-        let bonusRate = 0;
-        let bonusCap = null; // null means uncapped
-        let bonusName = '';
-        if (isOverseas) {
-            bonusRate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
-            const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
-                ? levelSettings.overseasBonusCap
-                : card.overseasBonusCap;
-            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
-            bonusName = '海外消費加碼';
-        } else {
-            bonusRate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
-            const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
-                ? levelSettings.domesticBonusCap
-                : card.domesticBonusCap;
-            bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
-            bonusName = '國內消費加碼';
-        }
+        const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
         if (bonusRate > 0) {
             // bonusCap null = apply to full overflow (無上限)
@@ -3225,26 +3241,8 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     const layers = [];
     let totalCashback = 0;
 
-    const basicRate = isOverseas
-        ? (card.overseasCashback || card.basicCashback)
-        : card.basicCashback;
-
-    let bonusRate = 0;
-    let bonusCap = null;
-    let bonusName = '';
-    if (isOverseas) {
-        bonusRate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
-        const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
-            ? levelSettings.overseasBonusCap : card.overseasBonusCap;
-        bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
-        bonusName = '海外消費加碼';
-    } else {
-        bonusRate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
-        const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
-            ? levelSettings.domesticBonusCap : card.domesticBonusCap;
-        bonusCap = (rawCap != null && rawCap > 0) ? rawCap : null;
-        bonusName = '國內消費加碼';
-    }
+    const basicRate = resolveBaseRate(card, isOverseas);
+    const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
     // Layer 1: Basic cashback on ALL spending (no cap)
     const basicCashback = Math.floor(amount * basicRate / 100);
@@ -3679,80 +3677,35 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 totalRate = rate; // Keep displayed total rate
                 effectiveAmount = amount; // Show full amount for layered calculation
             } else {
-                // Use simple calculation for standard cashback
-                let specialCashback = 0;
-                let effectiveSpecialAmount = amount;
+                // Simple path: cap 內用 rate_N(已含 basic)、溢出視 cashbackModel 而定.
+                // Build the breakdown layers once and derive cashbackAmount from
+                // them, instead of computing each layer's cashback twice.
+                const effectiveSpecialAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+                const specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
+
+                const layers = [
+                    { name: '指定通路', rate: rate, applicableAmount: effectiveSpecialAmount, cashback: specialCashback, cap: (cap && cap > 0) ? cap : null }
+                ];
 
                 if (cap && amount > cap) {
-                    effectiveSpecialAmount = cap;
-                }
-
-                // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
-                // Do NOT add basicCashback or domesticBonusRate on top
-                specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
-
-                // Handle remaining amount if capped.
-                // cashbackModel === 'rate' means this channel is fully excluded from
-                // the card's ordinary spending program (e.g. 大戶卡「悠遊卡自動加值」) —
-                // spending beyond its cap earns NOTHING, not even basic. Everything
-                // else (blank cashbackModel, ordinary cards with no bonus fields)
-                // keeps the existing behavior: excess earns basicCashback.
-                let remainingCashback = 0;
-                if (cap && amount > cap && cashbackModel !== 'rate') {
                     const remainingAmount = amount - cap;
-
-                    // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
-                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
-                        item.toLowerCase().includes('meta廣告') ||
-                        item.toLowerCase().includes('google廣告')
-                    );
-                    const shouldUseOverseasForExcess =
-                        isAdPlatform && card.id !== 'taishin-richart';
-
-                    // Choose excess rate: overseasCashback > basicCashback
-                    const excessRate = shouldUseOverseasForExcess
-                        ? (card.overseasCashback || card.basicCashback)
-                        : card.basicCashback;
-
-                    remainingCashback = Math.floor(remainingAmount * excessRate / 100);
+                    if (cashbackModel === 'rate') {
+                        // Fully excluded from the card's ordinary spending program
+                        // (e.g. 大戶卡「悠遊卡自動加值」) — spending beyond the cap
+                        // earns nothing, shown explicitly as 0 rather than silently
+                        // missing from the total.
+                        layers.push({ name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
+                    } else {
+                        const excessRate = getOverflowRate(card, matchedRateGroup?.items);
+                        const remainingCashback = Math.floor(remainingAmount * excessRate / 100);
+                        layers.push({ name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null });
+                    }
                 }
 
-                // Total cashback = special rate amount + remaining basic amount
-                cashbackAmount = specialCashback + remainingCashback;
-
-                // Total rate is the special rate from cashbackRates (no bonusRate added)
+                cashbackAmount = layers.reduce((sum, layer) => sum + layer.cashback, 0);
                 totalRate = Math.round(rate * 100) / 100;
                 effectiveAmount = cap; // Keep this for display purposes
-
-                // Always build a breakdown: 2 layers when spending exceeds the cap
-                // (指定通路 within cap + 基本回饋/無回饋 overflow), otherwise a single layer.
-                if (cap && amount > cap) {
-                    const remainingAmount = amount - cap;
-                    let overflowLayer;
-                    if (cashbackModel === 'rate') {
-                        // Fully excluded from the card's ordinary spending program —
-                        // spending beyond the cap earns nothing, shown explicitly as 0.
-                        overflowLayer = { name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null };
-                    } else {
-                        const isAdPlatform = matchedRateGroup?.items?.some(item =>
-                            item.toLowerCase().includes('meta廣告') ||
-                            item.toLowerCase().includes('google廣告')
-                        );
-                        const excessRate = (isAdPlatform && card.id !== 'taishin-richart')
-                            ? (card.overseasCashback || card.basicCashback)
-                            : card.basicCashback;
-                        overflowLayer = { name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null };
-                    }
-                    calculationLayers = [
-                        { name: '指定通路', rate: rate, applicableAmount: cap, cashback: specialCashback, cap: cap },
-                        overflowLayer
-                    ];
-                } else {
-                    calculationLayers = [
-                        { name: '指定通路', rate: rate, applicableAmount: effectiveSpecialAmount, cashback: specialCashback, cap: (cap && cap > 0) ? cap : null }
-                    ];
-                }
+                calculationLayers = layers;
             }
         }
 
@@ -3844,21 +3797,7 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (parsedCap && amount > parsedCap) {
                     const remainingAmount = amount - parsedCap;
-
-                    // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
-                    const isAdPlatform = rateGroup.items?.some(item =>
-                        item.toLowerCase().includes('meta廣告') ||
-                        item.toLowerCase().includes('google廣告')
-                    );
-                    const shouldUseOverseasForExcess =
-                        isAdPlatform && card.id !== 'taishin-richart';
-
-                    // Choose excess rate: overseasCashback > basicCashback
-                    const excessRate = shouldUseOverseasForExcess
-                        ? (card.overseasCashback || card.basicCashback)
-                        : card.basicCashback;
-
+                    const excessRate = getOverflowRate(card, rateGroup.items);
                     remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
