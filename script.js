@@ -373,6 +373,18 @@ function filterExpiredRates(cardsData) {
     }
 
     cardsData.cards.forEach(card => {
+        // A card can claim hasLevels=true while its levelSettings is empty — e.g.
+        // every level's period has expired and the Google Sheets export dropped
+        // them, leaving `levelSettings: {}`. Downstream code assumes at least one
+        // level exists (Object.keys(levelSettings)[0]) and would read
+        // levelSettings[undefined] → crash (the card detail modal never opens).
+        // Demote such a card to a plain non-level card so every `if (card.hasLevels)`
+        // branch is skipped uniformly.
+        if (card.hasLevels && (!card.levelSettings || Object.keys(card.levelSettings).length === 0)) {
+            console.warn(`⚠️ ${card.name}: hasLevels=true 但 levelSettings 為空（可能所有級別已過期），改以一般卡處理`);
+            card.hasLevels = false;
+        }
+
         // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
             card.cashbackRates = card.cashbackRates.filter(rate => {
