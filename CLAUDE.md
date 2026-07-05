@@ -331,6 +331,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 | `rate+basic+overseasBonusRate` | stacking,海外加碼 | 海外版 |
 | `basic+domesticBonusRate` | stacking,無指定通路那層 | 大戶卡一般國內消費 |
 | `basic+overseasBonusRate` | stacking,無指定通路那層 | 大戶卡一般國外消費 |
+| `rate+overseasCashback` / `rate+overseasCashback+overseasBonusRate` | **waterfall,明確標記為海外**（指定通路 cap 內 → 溢出用 overseasCashback → 溢出用 overseasBonusRate,加碼 cap 內） | DBS Eco「日本/韓國/…實體消費」等海外指定通路項目 |
 
 **三種計算函數**：
 - `calculateStackedCashback()`（**stacking / 疊加**）：各成分**同時**作用於全額,各有獨立上限。
@@ -346,15 +347,18 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 **選擇邏輯** (script.js:3565 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
 先看 `cashbackModel` → stacking / rate-only；未指定才落回 waterfall/簡單路徑。
 
-**⚠️ 海外判斷改為明確化（2026-07-01）**：
+**⚠️ 海外判斷改為明確化（2026-07-01,waterfall 支援於同日稍晚補上）**：
 - **移除**原本散在 3 處的國家關鍵字清單（`overseasKeywords`,自動偵測 item 名稱含「日本/海外…」）
-- 海外一律由 `cashbackModel = ...+overseasBonusRate` 明確指定
-- 影響:有 `overseasBonusRate` 的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）的「國外」item,若要走海外加碼須補上 model,否則預設當國內
+- Stacking 模型的海外一律由 `cashbackModel = ...+overseasBonusRate` 明確指定
+- **waterfall 模型也需要明確指定**：`cashbackModel = rate+overseasCashback` 或 `rate+overseasCashback+overseasBonusRate`,否則 waterfall 一律當國內算（Tier2 溢出用 `basicCashback`,不會用到 `overseasCashback`/`overseasBonusRate`）
+- 影響:有 `overseasBonusRate` 的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）的「國外」item,若要走海外加碼須補上對應 model,否則預設當國內
 
 **⚠️ 待整理（技術債）**：「溢出金額用 basic 還是 overseasCashback」的判斷目前仍散在 4 處（簡單路徑、waterfall、stacking、no-match fallback）,其中 `meta廣告/google廣告 → overseasCashback` 特例只寫在簡單路徑。待 `cashbackModel` 資料填好後,抽成單一 helper（如 `getOverflowRate()`）統一。
 
-**計算明細（ⓘ 按鈕）**：
-- 只要 `result.calculationLayers.length > 1` 就顯示按鈕,點開列出各層算式
+**計算明細（計算機圖示按鈕）**：
+- 只要有算出回饋金額,一律至少產生 1 層明細,按鈕永遠顯示（`result.calculationLayers.length > 0`）
+- 明細以「卡片內部抽屜」形式呈現（append 進 `.card-result`/`.coupon-item` 內部,不是網格兄弟節點），不會打亂其他卡片排版
+- 用 `openBreakdownBtn` 追蹤目前開啟的按鈕：點同一顆關閉,點不同顆關閉舊的並開新的
 - stacking / waterfall / **簡單路徑（cap+溢出,2 層）** 都會產生 layers
 - `showCalcBreakdown()` (script.js:5249 一帶) 讀 `dataset.calcLayers` 渲染
 

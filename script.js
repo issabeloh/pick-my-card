@@ -3562,6 +3562,12 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // designated = 0 when the displayed rate equals basic + bonus.
         const domesticStackModels = ['basic+domesticBonusRate', 'rate+basic+domesticBonusRate'];
         const overseasStackModels = ['basic+overseasBonusRate', 'rate+basic+overseasBonusRate'];
+        // Explicit waterfall + overseas: Layer1 指定通路(rate_N, cap 內) →
+        // Layer2 overseasCashback(溢出,無上限) → Layer3 overseasBonusRate(溢出,加碼 cap 內).
+        // Needed because plain waterfall (blank cashbackModel) always defaults to
+        // domestic — this is the only way to mark a designated-channel item as overseas
+        // now that the country-keyword auto-detection has been removed.
+        const overseasWaterfallModels = ['rate+overseasCashback', 'rate+overseasCashback+overseasBonusRate'];
         const rateOnlyModels = ['rate', 'rate+basic'];
 
         if (domesticStackModels.includes(cashbackModel)) {
@@ -3570,15 +3576,16 @@ async function calculateCardCashback(card, searchTerm, amount) {
         } else if (overseasStackModels.includes(cashbackModel)) {
             shouldUseStackedCalculation = true;
             stackedIsOverseas = true;
+        } else if (overseasWaterfallModels.includes(cashbackModel)) {
+            shouldUseLayeredCalculation = true;
+            isOverseasTransaction = true;
         } else if (!rateOnlyModels.includes(cashbackModel)) {
-            // No explicit model — use waterfall if card carries bonus rates
+            // No explicit model — use waterfall (domestic) if card carries bonus rates
             const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
             const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
 
             if (effectiveDomBonus || effectiveOvsBonus) {
                 shouldUseLayeredCalculation = true;
-                // Waterfall defaults to domestic. To treat an item as overseas,
-                // set cashbackModel = "...+overseasBonusRate" on that rate item.
                 isOverseasTransaction = false;
             }
         }
