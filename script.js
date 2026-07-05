@@ -3149,11 +3149,12 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
 }
 
 // Stacking (疊加) model: all rate components apply to the same spending amount simultaneously.
-// Used when cashbackModel = "basic+domesticBonusRate" or "basic+overseasBonusRate".
-// The card's displayed rate in cashbackRates is the SUM; the engine decomposes it:
-//   designated = displayedRate - basicRate - bonusRate
+// Used when cashbackModel = "...+domesticBonusRate" or "...+overseasBonusRate".
+// rate_N for a stacking item holds ONLY the designated-channel rate (e.g. Sport 卡
+// Apple Pay rate_N = 3, not 5) — it does NOT include basic/bonus. The displayed
+// 回饋率 (totalRate) is computed here as designated + basic + bonus for the user.
 // Each component has its own cap; they are applied concurrently (not waterfall).
-function calculateStackedCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
+function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false) {
     const layers = [];
     let totalCashback = 0;
 
@@ -3178,9 +3179,6 @@ function calculateStackedCashback(card, levelSettings, amount, displayedRate, ca
         bonusName = '國內消費加碼';
     }
 
-    // Derive designated (channel-specific extra) rate by subtracting base components
-    const designatedRate = Math.max(0, displayedRate - basicRate - bonusRate);
-
     // Layer 1: Basic cashback on ALL spending (no cap)
     const basicCashback = Math.floor(amount * basicRate / 100);
     layers.push({ name: '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
@@ -3194,7 +3192,7 @@ function calculateStackedCashback(card, levelSettings, amount, displayedRate, ca
         totalCashback += bonusCashback;
     }
 
-    // Layer 3: Designated channel extra rate, within cashbackRate cap
+    // Layer 3: Designated channel rate (from rate_N as-is), within cashbackRate cap
     if (designatedRate > 0) {
         const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
         const designatedCashback = Math.floor(designatedAmount * designatedRate / 100);
@@ -3202,7 +3200,10 @@ function calculateStackedCashback(card, levelSettings, amount, displayedRate, ca
         totalCashback += designatedCashback;
     }
 
-    return { cashbackAmount: totalCashback, layers };
+    // Displayed 回饋率 = sum of all active components (e.g. 3%+1%+1% = 5%)
+    const totalRate = designatedRate + basicRate + bonusRate;
+
+    return { cashbackAmount: totalCashback, layers, totalRate };
 }
 
 // Calculate cashback for a specific card
@@ -3577,7 +3578,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 );
                 cashbackAmount = stackedResult.cashbackAmount;
                 calculationLayers = stackedResult.layers;
-                totalRate = rate;
+                totalRate = stackedResult.totalRate; // 顯示加總後的最高回饋率（如 3%+1%+1%=5%）
                 effectiveAmount = amount;
             } else if (shouldUseLayeredCalculation) {
                 // Waterfall: designated tier first, basic on overflow, bonus on overflow

@@ -334,11 +334,13 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 **三種計算函數**：
 - `calculateStackedCashback()`（**stacking / 疊加**）：各成分**同時**作用於全額,各有獨立上限。
-  引擎自動拆解 `指定通路率 = 顯示總率 − 基本 − 加碼`（2 成分時自然為 0）。
-  範例 Sport 卡 Apple Pay 6,000：`1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`
+  ⚠️ **資料慣例與其他模式不同**：走 stacking 的項目,`rate_N` 只填**指定通路本身的加碼率**（不含基本、不含國內外加碼），
+  引擎會自動加總 `顯示回饋率 = rate_N(指定通路) + 基本 + 加碼` 顯示給用戶看（如 3%+1%+1%=5%）。
+  範例 Sport 卡 Apple Pay：`rate_N` 填 `3`,消費 6,000 算式為
+  `1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`,畫面顯示回饋率 **5%**。
 - `calculateLayeredCashback()`（**waterfall / 瀑布**）：一層用完上限,**溢出**才進下一層（各層不重疊）。
   Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出,加碼 cap 內)。
-  這是空白 cashbackModel + 卡有加碼時的預設,DBS Eco、凱基誠品等在用。
+  這是空白 cashbackModel + 卡有加碼時的預設,DBS Eco、凱基誠品等在用。**`rate_N` 仍是已含基本的總率**（與 stacking 不同）。
 - **簡單路徑**（無加碼卡的預設）：cap 內用 `rate_N`（已含基本）、溢出用基本率。
 
 **選擇邏輯** (script.js:3565 一帶 `const cashbackModel = matchedRateGroup?.cashbackModel`)：
