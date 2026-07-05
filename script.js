@@ -3305,12 +3305,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
             );
             if (matchedLevel) {
                 savedLevel = matchedLevel;
-                // Update Firestore with correct format
+                // Same level, just a formatting difference (e.g. "level1" vs
+                // "Level 1") — safe to persist the normalized form.
                 await saveCardLevel(card.id, savedLevel);
             } else {
-                // Fallback to default level
+                // Genuinely not found — use default for this calculation only,
+                // but do NOT persist it, so the user's stored choice survives a
+                // transient data mismatch (see resolveCardLevel for rationale).
                 savedLevel = defaultLevel;
-                await saveCardLevel(card.id, savedLevel);
             }
         }
 
@@ -7751,7 +7753,7 @@ basicCashbackDiv.innerHTML = basicContent;
 async function generateCubeSpecialContent(card) {
     // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const { data: levelSettings } = await resolveCardLevel(card, defaultLevel);
+    const { level: savedLevel, data: levelSettings } = await resolveCardLevel(card, defaultLevel);
 
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
@@ -9425,23 +9427,29 @@ async function saveCardLevel(cardId, level) {
 }
 
 // Resolve a hasLevels card's current level + settings, falling back to
-// defaultLevel and persisting the correction if the saved level no longer
-// exists in card.levelSettings (level names renamed in the Sheet, or a
-// corrupted/stale localStorage entry — e.g. a prior bug once saved the
-// literal string "undefined" for a guest, which then got reused on every
-// later lookup since getCardLevel() caches whatever it resolves).
+// defaultLevel WITHOUT overwriting the user's stored choice when the saved
+// level isn't currently present in card.levelSettings.
+//
+// Why we do NOT re-save the fallback: a saved level can fail to match for a
+// TRANSIENT reason — e.g. the moment after cards.data is updated, or a briefly
+// malformed export — not only a permanent rename. Persisting the default in
+// that window would erase a logged-in user's real choice (Level 2 → Level 1)
+// for good, even after the data is corrected. So we fall back to the default
+// for THIS render only and leave the stored preference untouched; once the
+// card's data contains the saved level again, it resolves correctly on its own.
+//
 // Returns { level, data } — level is always a valid key into levelSettings,
 // data is always defined (never crashes downstream on `.rate`/`.cap` access).
 async function resolveCardLevel(card, defaultLevel) {
-    let level = await getCardLevel(card.id, defaultLevel);
-    let data = card.levelSettings[level];
-    if (!data) {
-        console.warn(`⚠️ ${card.name}: 保存的級別 "${level}" 不存在，使用預設級別 "${defaultLevel}"`);
-        level = defaultLevel;
-        data = card.levelSettings[level];
-        await saveCardLevel(card.id, level);
+    const savedLevel = await getCardLevel(card.id, defaultLevel);
+    const savedData = card.levelSettings[savedLevel];
+    if (savedData) {
+        return { level: savedLevel, data: savedData };
     }
-    return { level, data };
+    // Saved level not found in current data — render with the default but do
+    // NOT persist it, so the user's stored preference survives the mismatch.
+    console.warn(`⚠️ ${card.name}: 保存的級別 "${savedLevel}" 目前不在資料中，暫時顯示預設級別 "${defaultLevel}"（不覆蓋已儲存的選擇）`);
+    return { level: defaultLevel, data: card.levelSettings[defaultLevel] };
 }
 
 // ========== Payment Management Functions ==========
