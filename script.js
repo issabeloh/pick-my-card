@@ -3484,9 +3484,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let levelData = null;
         if (card.hasLevels) {
             const defaultLevel = Object.keys(card.levelSettings)[0];
-            const savedLevel = await getCardLevel(card.id, defaultLevel);
-            levelData = card.levelSettings[savedLevel];
-            selectedLevel = savedLevel; // Store selected level for display
+            const resolved = await resolveCardLevel(card, defaultLevel);
+            levelData = resolved.data;
+            selectedLevel = resolved.level; // Store selected level for display
         }
 
         // Check exact matches for all search variants using index
@@ -3743,9 +3743,9 @@ async function findUpcomingActivity(card, searchTerm, amount) {
     if (card.hasLevels) {
         const availableLevels = Object.keys(card.levelSettings || {});
         const defaultLevel = availableLevels[0];
-        const savedLevel = await getCardLevel(card.id, defaultLevel);
-        levelData = card.levelSettings[savedLevel];
-        selectedLevel = savedLevel;
+        const resolved = await resolveCardLevel(card, defaultLevel);
+        levelData = resolved.data;
+        selectedLevel = resolved.level;
     }
 
     // Check cashbackRates for upcoming activities
@@ -4112,8 +4112,7 @@ async function calculateCouponRate(coupon, card) {
     }
 
     // 取得用戶的 Level 設定
-    const level = await getCardLevel('cathay-cube', 'Level 1');
-    const levelSettings = card.levelSettings[level];
+    const { data: levelSettings } = await resolveCardLevel(card, 'Level 1');
 
     // 處理純 "specialRate" 或 "generalRate" 的情況
     if (rate === 'specialRate') {
@@ -6745,17 +6744,7 @@ let overseasConditions = card.overseasBonusConditions;
 if (card.hasLevels) {
     const levelNames = Object.keys(card.levelSettings);
     const defaultLevel = levelNames[0];
-    let savedLevel = await getCardLevel(card.id, defaultLevel);
-    let levelData = card.levelSettings[savedLevel];
-
-    // 🔥 新增：如果 levelData 不存在，使用 defaultLevel
-    if (!levelData) {
-        console.warn(`⚠️ ${card.name}: 保存的級別 "${savedLevel}" 不存在，使用預設級別 "${defaultLevel}"`);
-        savedLevel = defaultLevel;
-        levelData = card.levelSettings[savedLevel];
-        // 更新保存的級別
-        await saveCardLevel(card.id, savedLevel);
-    }
+    const { data: levelData } = await resolveCardLevel(card, defaultLevel);
 
     if (levelData && levelData.domesticBonusRate !== undefined) {
         domesticBonusRate = levelData.domesticBonusRate;
@@ -6801,10 +6790,10 @@ basicCashbackDiv.innerHTML = basicContent;
     if (card.hasLevels) {
         const levelNames = Object.keys(card.levelSettings);
         const defaultLevel = levelNames[0];
-        const savedLevel = await getCardLevel(card.id, defaultLevel);
 
         // Generate level selector HTML with note (通用支援)
-        const savedLevelData = card.levelSettings[savedLevel];
+        const { level: savedLevel, data: savedLevelData } = await resolveCardLevel(card, defaultLevel);
+
         const levelNoteText = savedLevelData['level-note'] || '';
         const noteFs = card.id === 'cathay-cube' ? '9.5px' : '11px';
         const noteMt = card.id === 'cathay-cube' ? '6px' : '8px';
@@ -7012,8 +7001,7 @@ basicCashbackDiv.innerHTML = basicContent;
     } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
         // Handle generic level-based cards with specialItems (like Uni card and DBS Eco)
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = await getCardLevel(card.id, levelNames[0]);
-        const levelData = card.levelSettings[savedLevel];
+        const { data: levelData } = await resolveCardLevel(card, levelNames[0]);
 
         // First, display any cashbackRates if they exist (like DBS Eco's 10% cashback)
         if (card.cashbackRates && card.cashbackRates.length > 0) {
@@ -7183,8 +7171,7 @@ basicCashbackDiv.innerHTML = basicContent;
     } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
         // Handle level-based cards without specialItems (or with empty specialItems array)
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = await getCardLevel(card.id, levelNames[0]);
-        const levelData = card.levelSettings[savedLevel];
+        const { level: savedLevel, data: levelData } = await resolveCardLevel(card, levelNames[0]);
 
         // Check if card also has cashbackRates (like DBS Eco card)
         if (card.cashbackRates && card.cashbackRates.length > 0) {
@@ -7752,8 +7739,7 @@ basicCashbackDiv.innerHTML = basicContent;
 async function generateCubeSpecialContent(card) {
     // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const savedLevel = await getCardLevel(card.id, defaultLevel);
-    const levelSettings = card.levelSettings[savedLevel];
+    const { data: levelSettings } = await resolveCardLevel(card, defaultLevel);
 
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
@@ -9424,6 +9410,26 @@ async function saveCardLevel(cardId, level) {
     } catch (error) {
         console.error('Failed to save card level to Firestore:', error);
     }
+}
+
+// Resolve a hasLevels card's current level + settings, falling back to
+// defaultLevel and persisting the correction if the saved level no longer
+// exists in card.levelSettings (level names renamed in the Sheet, or a
+// corrupted/stale localStorage entry — e.g. a prior bug once saved the
+// literal string "undefined" for a guest, which then got reused on every
+// later lookup since getCardLevel() caches whatever it resolves).
+// Returns { level, data } — level is always a valid key into levelSettings,
+// data is always defined (never crashes downstream on `.rate`/`.cap` access).
+async function resolveCardLevel(card, defaultLevel) {
+    let level = await getCardLevel(card.id, defaultLevel);
+    let data = card.levelSettings[level];
+    if (!data) {
+        console.warn(`⚠️ ${card.name}: 保存的級別 "${level}" 不存在，使用預設級別 "${defaultLevel}"`);
+        level = defaultLevel;
+        data = card.levelSettings[level];
+        await saveCardLevel(card.id, level);
+    }
+    return { level, data };
 }
 
 // ========== Payment Management Functions ==========
