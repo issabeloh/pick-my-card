@@ -6747,7 +6747,7 @@ document.getElementById('card-fee-waiver').style.display = 'none';
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
 let basicContent = `<div class="cashback-detail-item">`;
-basicContent += `<div class="cashback-rate">國內一般回饋: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
+basicContent += `<div class="cashback-rate">國內: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
 if (card.basicConditions) {
     basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
 }
@@ -6756,7 +6756,7 @@ basicContent += `</div>`; // ← 這裡關閉第一個區塊
 
 if (card.overseasCashback) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外一般回饋: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
+    basicContent += `<div class="cashback-rate">海外: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     basicContent += `</div>`;
 }
@@ -6789,7 +6789,7 @@ if (card.hasLevels) {
 
 if (domesticBonusRate) {
     basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
-    basicContent += `<div class="cashback-rate">國內加碼回饋: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
+    basicContent += `<div class="cashback-rate">國內加碼: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
     if (domesticConditions) {
         basicContent += `<div class="cashback-condition">條件: ${domesticConditions}</div>`;
     }
@@ -6801,7 +6801,7 @@ if (domesticBonusRate) {
 
 if (overseasBonusRate) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外加碼回饋: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
+    basicContent += `<div class="cashback-rate">海外加碼: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
     if (overseasConditions) {
         basicContent += `<div class="cashback-condition">條件: ${overseasConditions}</div>`;
     }
