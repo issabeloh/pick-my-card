@@ -1630,7 +1630,10 @@ function showAnnouncementModal(index) {
 
     if (!modal || !modalBody) return;
 
-    // Get fullText and display with HTML support
+    // Get fullText and display with HTML support.
+    // ⚠️ 這裡是「刻意」允許 HTML 的：fullText 來自 Google Sheets 的公告工作表，
+    // 屬於管理者（你本人）控制的內容，可以放 <b>、<a> 等排版。
+    // 千萬不要把任何「使用者輸入」餵進這個欄位。
     const fullText = announcement.fullText || announcement.text;
 
     // Clear and update modal content
@@ -1639,9 +1642,10 @@ function showAnnouncementModal(index) {
     modalBody.style.fontSize = '0.95rem';
     modalBody.innerHTML = fullText;
 
-    // Show/hide link button
-    if (announcement.link) {
-        modalLink.href = announcement.link;
+    // Show/hide link button（僅接受 http/https 連結）
+    const safeLink = sanitizeUrl(announcement.link);
+    if (safeLink) {
+        modalLink.href = safeLink;
         modalLink.style.display = 'inline-block';
     } else {
         modalLink.style.display = 'none';
@@ -1677,7 +1681,7 @@ function displayAnnouncement(index) {
         // Update content with date badge if available
         if (announcement.date) {
             // Display with date badge
-            announcementText.innerHTML = `<span class="announcement-date-badge">${announcement.date}</span>${announcement.text}`;
+            announcementText.innerHTML = `<span class="announcement-date-badge">${escapeHtml(announcement.date)}</span>${escapeHtml(announcement.text)}`;
         } else {
             // Display without date
             announcementText.textContent = announcement.text;
@@ -3967,7 +3971,7 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">＊ ${merchantInfo.merchantName}也支援以下行動支付</div>`;
+    let infoHTML = `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
 
     // 計算有多少個付款方式
     const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
@@ -3976,12 +3980,12 @@ function displayMerchantPaymentInfo(searchedItem) {
 
     if (hasOnline) {
         const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.online}</div>`;
+        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
     }
 
     if (hasOffline) {
         const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.offline}</div>`;
+        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
     }
 
     infoBlock.innerHTML = infoHTML;
@@ -4024,13 +4028,14 @@ function displayReferralLink(searchedItem) {
     infoBlock.id = 'referral-link-info';
     infoBlock.className = 'referral-link-info';
 
+    const referralUrl = sanitizeUrl(matchedReferral.url);
     infoBlock.innerHTML = `
         <div class="referral-link-content">
             <span class="referral-link-icon">🎁</span>
-            <span class="referral-link-text">${matchedReferral.description}</span>
-            <a href="${matchedReferral.url}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+            <span class="referral-link-text">${escapeHtml(matchedReferral.description)}</span>
+            ${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
                 前往註冊 →
-            </a>
+            </a>` : ''}
         </div>
     `;
 
@@ -4087,12 +4092,14 @@ function displayCashbackSites(searchedItem) {
 
     // 標題顯示實際匹配到的商家名稱（粗體），而非使用者輸入
     const matchedMerchantName = (shopbackMatch || linebuyMatch).merchant;
-    let html = `<div class="merchant-payment-title">＊ <strong>${matchedMerchantName}</strong> 也可透過導購網站享加碼回饋</div>`;
-    if (shopbackMatch) {
-        html += `<div class="merchant-payment-item"><a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
+    let html = `<div class="merchant-payment-title">＊ <strong>${escapeHtml(matchedMerchantName)}</strong> 也可透過導購網站享加碼回饋</div>`;
+    const shopbackUrl = shopbackMatch ? sanitizeUrl(shopbackMatch.link) : '';
+    const linebuyUrl = linebuyMatch ? sanitizeUrl(linebuyMatch.link) : '';
+    if (shopbackUrl) {
+        html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
     }
-    if (linebuyMatch) {
-        html += `<div class="merchant-payment-item"><a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
+    if (linebuyUrl) {
+        html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
     }
     infoBlock.innerHTML = html;
 
@@ -4129,7 +4136,7 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         noResultsDiv.className = 'no-results';
         noResultsDiv.innerHTML = `
             <h3>無符合的信用卡</h3>
-            <p>沒有任何信用卡對「${searchedItem}」提供現金回饋。</p>
+            <p>沒有任何信用卡對「${escapeHtml(searchedItem)}」提供現金回饋。</p>
         `;
         resultsContainer.appendChild(noResultsDiv);
     } else {
@@ -4955,6 +4962,15 @@ function escapeHtml(s) {
 // their multi-line formatting (gift_content, promo_condition).
 function escapeHtmlMultiline(s) {
     return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
+}
+
+// 外部連結防護：只允許 http/https 開頭的網址，杜絕 javascript: 等危險 scheme
+// 被塞進 href（連結值來自 Google Sheets 資料，多一層保險）。不合法時回傳空字串，
+// 呼叫端拿到空字串就不要渲染該連結。
+function sanitizeUrl(url) {
+    if (typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : '';
 }
 
 // Sticky nav inside the card detail modal: hide buttons whose section is
