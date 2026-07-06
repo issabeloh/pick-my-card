@@ -2615,20 +2615,20 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
 
     if (Array.isArray(matchedItems)) {
         if (matchedItems.length === 1) {
-            messageHtml = `✓ 匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
+            messageHtml = `✓ 匹配到: <strong>${escapeHtml(matchedItems[0].originalItem)}</strong>`;
         } else {
             // 如果所有項目名稱相同，只顯示一次
             const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
             if (uniqueItems.length === 1) {
-                messageHtml = `✓ 匹配到: <strong>${uniqueItems[0]}</strong>`;
+                messageHtml = `✓ 匹配到: <strong>${escapeHtml(uniqueItems[0])}</strong>`;
             } else {
                 const itemList = uniqueItems.join('、');
-                messageHtml = `✓ 匹配到: <strong>${itemList}</strong>`;
+                messageHtml = `✓ 匹配到: <strong>${escapeHtml(itemList)}</strong>`;
             }
         }
     } else {
         // Backward compatibility for single item
-        messageHtml = `✓ 匹配到: <strong>${matchedItems.originalItem}</strong>`;
+        messageHtml = `✓ 匹配到: <strong>${escapeHtml(matchedItems.originalItem)}</strong>`;
     }
 
     // Check if there are parking benefits matches
