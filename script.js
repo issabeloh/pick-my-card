@@ -1,3 +1,16 @@
+// ========== Debug 日誌閘門 ==========
+// 正式環境靜音 console.log / console.warn（減少執行負擔與雜訊）。
+// 需要除錯時在網址加 ?debug=1 即可全部重新開啟。
+// console.error 永遠保留 —— 錯誤一定要看得到。
+(function () {
+    try {
+        if (!new URLSearchParams(location.search).has('debug')) {
+            console.log = function () {};
+            console.warn = function () {};
+        }
+    } catch (e) { /* 環境不支援時維持原樣 */ }
+})();
+
 // Global variables
 let currentUser = null;
 let appStarted = false; // true after user clicks "開始使用"
@@ -628,17 +641,40 @@ function buildCardItemsIndex(card) {
 }
 
 // Load cards data from cards.data (encoded)
+//
+// 快取策略（2026-07 版本指標方案）：
+// 1. 先抓幾十 bytes 的 cards.version（永遠不快取）
+// 2. 用版本號當 cards.data 的 ?v= 參數 → 版本沒變時瀏覽器直接用快取，
+//    省下每次進站 ~485KB 的下載；資料更新後版本號改變 → 立即抓到新資料
+// 3. cards.version 不存在或抓不到時，回退舊行為（no-store 每次重抓），
+//    功能完全不受影響
+// ⚠️ 資料維護流程：更新 cards.data 時「務必」同步更新 cards.version
+//    （詳見 CARDS-DATA-CACHE-README.md），否則使用者最多會延遲約 10 分鐘
+//    （GitHub Pages 的快取時效）才看到新資料。
 async function loadCardsData() {
     try {
-        const timestamp = new Date().getTime(); // 防止快取
-        const response = await fetch(`cards.data?t=${timestamp}`, {
-            cache: 'no-store', // 強制不使用快取
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
+        let version = null;
+        try {
+            const vRes = await fetch(`cards.version?t=${Date.now()}`, { cache: 'no-store' });
+            if (vRes.ok) {
+                const text = (await vRes.text()).trim();
+                // 防呆：版本檔應是短字串（時間戳），過長或像 HTML（404 頁）視為無效
+                if (text && text.length <= 64 && !text.includes('<')) {
+                    version = encodeURIComponent(text);
+                }
             }
-        });
+        } catch (e) { /* 拿不到版本檔 → 回退舊行為 */ }
+
+        const response = version
+            ? await fetch(`cards.data?v=${version}`) // 可被瀏覽器快取，版本變了自動失效
+            : await fetch(`cards.data?t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

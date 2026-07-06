@@ -1,4 +1,15 @@
 // FAQ Page Script
+
+// Debug 日誌閘門：正式環境靜音 log/warn，?debug=1 重新開啟（同 script.js）
+(function () {
+    try {
+        if (!new URLSearchParams(location.search).has('debug')) {
+            console.log = function () {};
+            console.warn = function () {};
+        }
+    } catch (e) { /* ignore */ }
+})();
+
 let faqData = [];
 let currentCategory = 'all';
 let prerenderFAQIds = []; // Track pre-rendered FAQ IDs
