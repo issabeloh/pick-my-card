@@ -3148,6 +3148,7 @@ input[type="number"]:focus {
 }
 
 /* 2-column grid for cashback items in card detail modal */
+#card-basic-cashback,
 #card-special-cashback,
 #card-coupon-cashback {
     display: grid;
@@ -3157,12 +3158,14 @@ input[type="number"]:focus {
 }
 
 /* Non-item elements (e.g. birthday note) span full width */
+#card-basic-cashback > *:not(.cashback-detail-item),
 #card-special-cashback > *:not(.cashback-detail-item),
 #card-coupon-cashback > *:not(.cashback-detail-item) {
     grid-column: 1 / -1;
 }
 
 /* Remove individual bottom margin since grid gap handles spacing */
+#card-basic-cashback .cashback-detail-item,
 #card-special-cashback .cashback-detail-item,
 #card-coupon-cashback .cashback-detail-item {
     margin-bottom: 0;
@@ -3179,6 +3182,7 @@ input[type="number"]:focus {
 }
 
 @media (max-width: 540px) {
+    #card-basic-cashback,
     #card-special-cashback,
     #card-coupon-cashback {
         grid-template-columns: 1fr;
