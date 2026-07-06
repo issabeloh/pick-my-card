@@ -3154,7 +3154,8 @@ input[type="number"]:focus {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    align-items: start;
+    /* stretch: the two cards in each row match the taller one's height */
+    align-items: stretch;
 }
 
 /* Non-item elements (e.g. birthday note) span full width */
@@ -3208,6 +3209,35 @@ input[type="number"]:focus {
     color: #9ca3af;
     margin-bottom: 6px;
     padding-left: 0.5em;
+}
+
+/* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
+   toggle only when the text actually overflows. Uses a max-height clamp
+   (line-height 1.6 × 4 lines = 6.4em) rather than -webkit-line-clamp, which
+   needs display:-webkit-box and was being overridden here. */
+.cond-collapsible .cond-text {
+    display: block;
+    max-height: 6.4em;
+    line-height: 1.6;
+    overflow: hidden;
+}
+.cond-collapsible.expanded .cond-text {
+    max-height: none;
+    overflow: visible;
+}
+.cond-toggle {
+    display: none;
+    margin-top: 2px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-size: 11px;
+    font-style: normal;
+    cursor: pointer;
+}
+.cond-toggle:hover {
+    text-decoration: underline;
 }
 
 .cashback-merchants {

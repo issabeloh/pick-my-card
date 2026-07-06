@@ -6672,6 +6672,40 @@ function renderCardTags(tags) {
     return `<div class="card-tags-container">${tagsHtml}</div>`;
 }
 
+// Render a 條件 line that clamps to a few lines and reveals a 展開/收起 toggle
+// only when the text actually overflows (see initConditionClamps + CSS
+// .cond-collapsible). Used in the card-detail activity cards so a long 條件
+// doesn't blow up the card height (esp. now that rows are equal-height).
+function renderConditionLine(text) {
+    return `<div class="cashback-condition cond-collapsible">` +
+        `<span class="cond-text">條件: ${text}</span>` +
+        `<button type="button" class="cond-toggle" style="display:none;">展開</button>` +
+        `</div>`;
+}
+
+// After the detail content is in the DOM AND visible, reveal a toggle only on
+// conditions whose text is actually clamped (overflowing). Must run while the
+// modal is displayed, otherwise clientHeight/scrollHeight are 0.
+function initConditionClamps(container) {
+    if (!container) return;
+    container.querySelectorAll('.cond-collapsible').forEach(el => {
+        const text = el.querySelector('.cond-text');
+        const btn = el.querySelector('.cond-toggle');
+        if (!text || !btn) return;
+        // Overflowing = content taller than the clamped box (2px tolerance)
+        if (text.scrollHeight - text.clientHeight > 2) {
+            btn.style.display = 'inline';
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const expanded = el.classList.toggle('expanded');
+                btn.textContent = expanded ? '收起' : '展開';
+            };
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+}
+
 async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;
@@ -6910,7 +6944,7 @@ basicCashbackDiv.innerHTML = basicContent;
             `;
 
             levelSelectorHTML = `
-                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 12px 14px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                         <div style="flex-shrink: 0;">
                             <label style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">選擇級別：</label>
@@ -6923,29 +6957,29 @@ basicCashbackDiv.innerHTML = basicContent;
                         ${levelRatesInfo}
                     </div>
                     ${levelNote}
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
                         ${birthdayRow}
-                    </div>
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
-                            <input type="checkbox" id="children-eligible-checkbox"
-                                ${isChildrenEligible ? 'checked' : ''}
-                                style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
-                            <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
-                        </label>
-                        <div style="margin-top: 1px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
-                            勾選後才會在比較結果納入「童樂匯」方案的活動
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="children-eligible-checkbox"
+                                    ${isChildrenEligible ? 'checked' : ''}
+                                    style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
+                                <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
+                            </label>
+                            <div style="margin-top: 4px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
+                                勾選後才會在比較結果納入「童樂匯」方案的活動
+                            </div>
                         </div>
-                    </div>
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label for="cube-issuer-select" style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">發卡組織：</label>
-                        <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
-                            ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
-                                `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
-                            ).join('')}
-                        </select>
-                        <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
-                            選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
+                        <div>
+                            <label for="cube-issuer-select" style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #374151;">發卡組織：</label>
+                            <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                                ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
+                                    `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
+                                ).join('')}
+                            </select>
+                            <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
+                                選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -7177,7 +7211,7 @@ basicCashbackDiv.innerHTML = basicContent;
         }
 
         if (levelData.condition) {
-            specialContent += `<div class="cashback-condition">條件: ${levelData.condition}</div>`;
+            specialContent += renderConditionLine(levelData.condition);
         }
 
         // Show applicable merchants
@@ -7432,7 +7466,7 @@ basicCashbackDiv.innerHTML = basicContent;
             }
 
             if (rate.conditions) {
-                specialContent += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
+                specialContent += renderConditionLine(rate.conditions);
             }
 
             if (rate.period) {
@@ -7643,11 +7677,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
             }
 
-            // 條件顯示（統一格式）
+            // 條件顯示（統一格式；內容過長時可收起）
             if (coupon.conditions) {
                 couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
                 couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
-                couponContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${coupon.conditions}</div>`;
+                couponContent += `<div class="cond-collapsible" style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;"><span class="cond-text">• ${coupon.conditions}</span><button type="button" class="cond-toggle" style="display:none;">展開</button></div>`;
                 couponContent += `</div>`;
             }
 
@@ -7749,6 +7783,11 @@ basicCashbackDiv.innerHTML = basicContent;
     // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
+
+    // Reveal 展開 toggles only on conditions that actually overflow — must run
+    // now that the modal is displayed (measurements need layout).
+    initConditionClamps(document.getElementById('card-special-cashback'));
+    initConditionClamps(document.getElementById('card-coupon-cashback'));
 
     // Wire the sticky section nav after sections are rendered.
     setupCardDetailNav(modalContent);
@@ -7877,7 +7916,7 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
-            content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
+            content += renderConditionLine(childrenRate10.conditions);
         }
         if (childrenRate10.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
@@ -7918,7 +7957,7 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
-            content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
+            content += renderConditionLine(childrenRate5.conditions);
         }
         if (childrenRate5.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
@@ -8094,7 +8133,7 @@ async function generateCubeSpecialContent(card) {
 
             // 显示條件
             if (mergedRate.conditions) {
-                content += `<div class="cashback-condition">條件: ${mergedRate.conditions}</div>`;
+                content += renderConditionLine(mergedRate.conditions);
             }
 
             // 显示活動期間
@@ -8134,6 +8173,8 @@ async function updateCubeSpecialCashback(card) {
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     const newContent = await generateCubeSpecialContent(card);
     specialCashbackDiv.innerHTML = newContent;
+    // Re-evaluate condition clamps for the freshly rendered content
+    initConditionClamps(specialCashbackDiv);
 }
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
