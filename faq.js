@@ -608,12 +608,6 @@ async function submitReview() {
     }
 }
 
-function showReviewFeedback(message) {
-    const reviewFeedback = document.getElementById('review-feedback');
-    reviewFeedback.textContent = message;
-    reviewFeedback.style.display = 'block';
-}
-
 function showReviewSuccessInModal() {
     const reviewModalTitle = document.getElementById('review-modal-title');
     const starRatingModal = document.getElementById('star-rating-modal');
