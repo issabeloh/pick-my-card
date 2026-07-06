@@ -297,6 +297,40 @@ function clearCardLevelCache() {
     cardLevelCache.clear();
 }
 
+// ========== localStorage 安全讀取 helpers ==========
+// localStorage 裡的 JSON 一旦損毀（舊版程式寫入格式不符、被手動改過、擴充套件污染），
+// 直接 JSON.parse 會拋錯並中斷整個載入流程（過去曾因此造成詳情頁打不開）。
+// 所有 localStorage 的 JSON 讀取一律走這裡：壞資料回傳 fallback 並移除該 key。
+function readLocalJSON(key, fallback = null) {
+    let raw = null;
+    try { raw = localStorage.getItem(key); } catch (e) { return fallback; }
+    if (raw === null) return fallback;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error(`⚠️ localStorage "${key}" 資料損毀，已移除該筆資料`, e);
+        try { localStorage.removeItem(key); } catch (e2) { /* ignore */ }
+        return fallback;
+    }
+}
+
+// 讀取「必須是陣列」的 localStorage JSON；非陣列（污染成物件/字串）一律回 fallback，
+// 避免下游 new Set(...) / .forEach(...) 直接拋錯。
+function readLocalJSONArray(key, fallback = []) {
+    const parsed = readLocalJSON(key, null);
+    return Array.isArray(parsed) ? parsed : fallback;
+}
+
+// 過濾掉 cards.data 中已不存在的卡片 ID（卡片下架/改名後，用戶本機或雲端
+// 可能還存著舊 ID）。只在記憶體中過濾、絕不回寫儲存 —— 「找不到」可能是
+// 資料匯出短暫不完整造成的暫時現象，回寫會永久抹掉用戶的選擇。
+function filterKnownCardIds(ids) {
+    if (!Array.isArray(ids)) return [];
+    if (!cardsData || !Array.isArray(cardsData.cards) || cardsData.cards.length === 0) return ids;
+    const known = new Set(cardsData.cards.map(card => card.id));
+    return ids.filter(id => known.has(id));
+}
+
 // Get cached rate status to avoid repeated date calculations
 function getCachedRateStatus(periodStart, periodEnd) {
     const key = `${periodStart}-${periodEnd}`;
@@ -766,10 +800,9 @@ async function loadUserQuickSearchPrefs(userData = null) {
             }
         }
 
-        // Guest: load from localStorage
-        const storedPrefs = localStorage.getItem('userQuickSearchPrefs');
-        if (storedPrefs) {
-            const parsed = JSON.parse(storedPrefs);
+        // Guest: load from localStorage（readLocalJSON：壞資料自動移除並回 null）
+        const parsed = readLocalJSON('userQuickSearchPrefs', null);
+        if (parsed && typeof parsed === 'object') {
             return {
                 hiddenDefaultIds: parsed.hiddenDefaultIds || [],
                 customQuickOptions: parsed.customQuickOptions || [],
@@ -778,12 +811,10 @@ async function loadUserQuickSearchPrefs(userData = null) {
         }
 
         // Legacy localStorage migration (guest had old format)
-        const legacyOptions = localStorage.getItem('userQuickSearchOptions');
-        const legacyCustoms = localStorage.getItem('userCustomQuickOptions');
-        if (legacyOptions) {
+        const oldList = readLocalJSONArray('userQuickSearchOptions', null);
+        if (Array.isArray(oldList)) {
             console.log('🔀 偵測到 localStorage 舊格式，自動遷移');
-            const oldList = JSON.parse(legacyOptions);
-            const customs = legacyCustoms ? JSON.parse(legacyCustoms) : [];
+            const customs = readLocalJSONArray('userCustomQuickOptions');
             const migrated = computeMigratedPrefs(oldList, customs);
             localStorage.setItem('userQuickSearchPrefs', JSON.stringify(migrated));
             localStorage.removeItem('userQuickSearchOptions');
@@ -5504,6 +5535,10 @@ function setupAvatarDropdown() {
         },
         'avatar-sign-out': async () => {
             if (currentUser) {
+                // 先清本機個人資料再登出：順序固定，避免與 onAuthStateChanged
+                // 的訪客資料重載互相競速。Firestore 是雲端事實來源，本機鏡像
+                // 清掉後下次登入會自動重建。
+                clearPersonalLocalDataOnSignOut(currentUser.uid);
                 try { await window.signOut(auth); }
                 catch (error) { console.error('Sign out failed:', error); }
             } else {
@@ -5522,6 +5557,47 @@ function setupAvatarDropdown() {
             });
         }
     }
+}
+
+// 登出時清理本機的個人資料：所有帶 uid 的鏡像 + 未帶 uid 區分的個人 key，
+// 防止共用電腦上洩漏給下一位使用者。
+// ⚠️ 只能在「用戶親自按登出」時呼叫 —— 不能放進 onAuthStateChanged 的登出分支，
+// 那個分支在純訪客每次開頁時也會觸發，會誤刪訪客自己的資料。
+function clearPersonalLocalDataOnSignOut(uid) {
+    let allKeys = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
+    } catch (e) { return; }
+
+    const uidExact = uid ? [
+        `cardsInComparison_${uid}`, `selectedCards_${uid}`, `myOwnedCards_${uid}`,
+        `selectedPayments_${uid}`, `spendingMappings_${uid}`
+    ] : [];
+    const uidPrefixes = uid ? [
+        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`
+    ] : [];
+    // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
+    // 這裡清掉的是殘留值）
+    const guestExact = [
+        'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
+        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
+    ];
+    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_'];
+    // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
+    const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
+
+    for (const key of allKeys) {
+        const isPersonal =
+            uidExact.includes(key) ||
+            uidPrefixes.some(p => key.startsWith(p)) ||
+            guestExact.includes(key) ||
+            guestPrefixes.some(p => key.startsWith(p)) ||
+            (key.startsWith('notes_') && knownCardIds.has(key.slice('notes_'.length)));
+        if (isPersonal) {
+            try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+        }
+    }
+    console.log('🧹 已清理本機個人資料（登出）');
 }
 
 function initializeAuthListeners() {
@@ -5690,11 +5766,13 @@ function initializeAuthListeners() {
                 try { localStorage.setItem('cubeIssuer', cubeIssuer); } catch (e) {}
             }
 
-            // Load user's selected cards and payments using unified data
+            // Load user's selected cards and payments using unified data.
+            // 訪客資料的處理原則（2026-07 統一）：雲端有值 → 雲端為準；
+            // 雲端沒值 → 靜默帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
             await loadUserPayments(userData);
-            await maybeMergeGuestPayments();
+            await absorbGuestPersonalData(userData);
             await loadSpendingMappings();
 
             // Load user's quick search options (new prefs format with auto-migration)
@@ -5874,6 +5952,144 @@ async function loadUserData() {
     return null;
 }
 
+// 登入時消化「訪客期間留下的其餘個人資料」：消費配卡表、卡片級別、筆記、
+// 免年費、結帳日、CUBE 發卡組織。（信用卡/行動支付在各自的 load 函數內處理。）
+// 原則：雲端有值 → 雲端為準；雲端沒值 → 靜默帶入訪客值並上傳（不彈窗）。
+// 訪客 key 處理完即移除，避免留在共用電腦上被下一位使用者「繼承」——
+// 這正是過去卡片級別跨用戶洩漏的根源。
+// 高價值資料（級別、筆記）在上傳失敗時保留 key，下次登入重試。
+async function absorbGuestPersonalData(userData) {
+    if (!currentUser || !window.db || !window.doc) return;
+    const canWrite = !!window.setDoc;
+    const canRead = !!window.getDoc;
+
+    // 先收集所有 key 再處理，避免邊迭代邊刪除
+    let allKeys = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
+    } catch (e) { return; }
+
+    const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
+
+    // 1. 消費配卡表（訪客 key: spendingMappings）
+    if (allKeys.includes('spendingMappings')) {
+        const guestMappings = readLocalJSONArray('spendingMappings');
+        localStorage.removeItem('spendingMappings');
+        const cloudHasMappings = Array.isArray(userData?.spendingMappings) && userData.spendingMappings.length > 0;
+        if (!cloudHasMappings && guestMappings.length > 0 && canWrite) {
+            try {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                    spendingMappings: guestMappings,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                console.log('🔀 雲端無配卡表，已帶入訪客的配卡表:', guestMappings.length, '筆');
+            } catch (e) { console.error('帶入訪客配卡表失敗:', e); }
+        }
+    }
+
+    // 2. 卡片級別（訪客 key: cardLevel-<cardId>；登入後鏡像是 cardLevel_<uid>_<cardId>）
+    //    只有雲端「沒有」這張卡的級別時才帶入 —— 絕不覆蓋用戶已儲存的選擇。
+    for (const key of allKeys.filter(k => k.startsWith('cardLevel-'))) {
+        const cardId = key.slice('cardLevel-'.length);
+        let guestLevel = null;
+        try { guestLevel = localStorage.getItem(key); } catch (e) { continue; }
+        if (!guestLevel || !knownCardIds.has(cardId)) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            continue;
+        }
+        if (!canRead || !canWrite) continue;
+        try {
+            const snap = await window.getDoc(window.doc(window.db, 'cardSettings', `${currentUser.uid}_${cardId}`));
+            if (!snap.exists()) {
+                await saveCardLevel(cardId, guestLevel);
+                console.log(`🔀 雲端無級別，帶入訪客選擇 ${cardId}: ${guestLevel}`);
+            }
+            localStorage.removeItem(key); // 成功處理（帶入或雲端已有）才移除
+        } catch (e) {
+            console.error('帶入訪客級別失敗（保留待下次重試）:', cardId, e);
+        }
+    }
+
+    // 3. 筆記（訪客 key: notes_<cardId>；用 knownCardIds 區分 notes_<uid>_<cardId> 鏡像）
+    for (const key of allKeys.filter(k => k.startsWith('notes_'))) {
+        const cardId = key.slice('notes_'.length);
+        if (!knownCardIds.has(cardId)) continue; // 不是訪客筆記 key
+        let guestNotes = null;
+        try { guestNotes = localStorage.getItem(key); } catch (e) { continue; }
+        if (!guestNotes) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            continue;
+        }
+        if (!canRead || !canWrite) continue;
+        try {
+            const ref = window.doc(window.db, 'userNotes', `${currentUser.uid}_${cardId}`);
+            const snap = await window.getDoc(ref);
+            if (!snap.exists() || !snap.data().notes) {
+                await window.setDoc(ref, { notes: guestNotes, updatedAt: new Date(), cardId: cardId });
+                console.log(`🔀 雲端無筆記，帶入訪客筆記 ${cardId}`);
+            }
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('帶入訪客筆記失敗（保留待下次重試）:', cardId, e);
+        }
+    }
+
+    // 4. 免年費（訪客 key: feeWaiver_local_<cardId>；雲端是 users 文件的 feeWaiverStatus map）
+    const cloudFeeWaiver = (userData && userData.feeWaiverStatus) || {};
+    const feeWaiverUpdates = {};
+    for (const key of allKeys.filter(k => k.startsWith('feeWaiver_local_'))) {
+        const cardId = key.slice('feeWaiver_local_'.length);
+        let val = null;
+        try { val = localStorage.getItem(key); localStorage.removeItem(key); } catch (e) { continue; }
+        if (knownCardIds.has(cardId) && val === 'true' && !(cardId in cloudFeeWaiver)) {
+            feeWaiverUpdates[cardId] = true;
+        }
+    }
+    if (Object.keys(feeWaiverUpdates).length > 0 && canWrite) {
+        try {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                feeWaiverStatus: { ...cloudFeeWaiver, ...feeWaiverUpdates },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('🔀 帶入訪客的免年費設定:', Object.keys(feeWaiverUpdates));
+        } catch (e) { console.error('帶入訪客免年費失敗:', e); }
+    }
+
+    // 5. 結帳日期（訪客 key: billingDates_local_<cardId>；雲端是 users 文件的 billingDates map）
+    const cloudBillingDates = (userData && userData.billingDates) || {};
+    const billingUpdates = {};
+    for (const key of allKeys.filter(k => k.startsWith('billingDates_local_'))) {
+        const cardId = key.slice('billingDates_local_'.length);
+        const dates = readLocalJSON(key, null);
+        try { localStorage.removeItem(key); } catch (e) {}
+        if (knownCardIds.has(cardId) && dates && typeof dates === 'object' && !(cardId in cloudBillingDates)) {
+            billingUpdates[cardId] = {
+                billingDate: typeof dates.billingDate === 'string' ? dates.billingDate : '',
+                statementDate: typeof dates.statementDate === 'string' ? dates.statementDate : ''
+            };
+        }
+    }
+    if (Object.keys(billingUpdates).length > 0 && canWrite) {
+        try {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                billingDates: { ...cloudBillingDates, ...billingUpdates },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('🔀 帶入訪客的結帳日期設定:', Object.keys(billingUpdates));
+        } catch (e) { console.error('帶入訪客結帳日期失敗:', e); }
+    }
+
+    // 6. CUBE 發卡組織：雲端沒有且訪客改過（非預設 Visa）→ 帶入
+    if (!(userData && userData.cubeIssuer)) {
+        let localIssuer = null;
+        try { localIssuer = localStorage.getItem('cubeIssuer'); } catch (e) {}
+        if (localIssuer && localIssuer !== 'Visa') {
+            await saveCubeIssuer(localIssuer);
+            console.log('🔀 雲端無 CUBE 發卡組織設定，帶入訪客選擇:', localIssuer);
+        }
+    }
+}
+
 // Load user's cards-in-comparison from Firestore (with localStorage fallback)
 // Reads new field `cardsInComparison` first; falls back to legacy `selectedCards` for migration.
 // Guests load from localStorage `cardsInComparison_guest`; default is all cards.
@@ -5881,17 +6097,13 @@ async function loadUserData() {
 async function loadCardsInComparison(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage; default to all cards if nothing saved
-        try {
-            const saved = localStorage.getItem('cardsInComparison_guest');
-            if (saved) {
-                cardsInComparison = new Set(JSON.parse(saved));
-                console.log('📦 Loaded cards-in-comparison from guest localStorage:', Array.from(cardsInComparison));
-            } else {
-                cardsInComparison = new Set(cardsData.cards.map(card => card.id));
-                console.log('🆕 Guest with no saved comparison, defaulting to all cards');
-            }
-        } catch (e) {
+        const saved = readLocalJSON('cardsInComparison_guest', null);
+        if (Array.isArray(saved)) {
+            cardsInComparison = new Set(filterKnownCardIds(saved));
+            console.log('📦 Loaded cards-in-comparison from guest localStorage:', Array.from(cardsInComparison));
+        } else {
             cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+            console.log('🆕 Guest with no saved comparison, defaulting to all cards');
         }
         return;
     }
@@ -5901,38 +6113,43 @@ async function loadCardsInComparison(userData = null) {
 
     try {
         // Use provided userData if available (from unified load)
+        let cloudCards = null;
         if (userData) {
-            const cloudCards = userData.cardsInComparison || userData.selectedCards;
-            if (cloudCards) {
-                cardsInComparison = new Set(cloudCards);
-                console.log('✅ Using cards-in-comparison from unified data load:', Array.from(cardsInComparison));
-                localStorage.setItem(newKey, JSON.stringify(cloudCards));
-                return;
+            cloudCards = userData.cardsInComparison || userData.selectedCards || null;
+        } else if (window.db && window.doc && window.getDoc) {
+            // Fallback: Try to load from Firestore if userData not provided
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                cloudCards = data.cardsInComparison || data.selectedCards || null;
             }
         }
 
-        // Fallback: Try to load from Firestore if userData not provided
-        if (window.db && window.doc && window.getDoc) {
-            const docRef = window.doc(window.db, 'users', currentUser.uid);
-            const docSnap = await window.getDoc(docRef);
+        if (Array.isArray(cloudCards)) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key，避免留給下一位使用者
+            cardsInComparison = new Set(filterKnownCardIds(cloudCards));
+            console.log('✅ Loaded cards-in-comparison from cloud:', Array.from(cardsInComparison));
+            localStorage.setItem(newKey, JSON.stringify(cloudCards));
+            localStorage.removeItem('cardsInComparison_guest');
+            return;
+        }
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const cloudCards = data.cardsInComparison || data.selectedCards;
-                if (cloudCards) {
-                    cardsInComparison = new Set(cloudCards);
-                    console.log('✅ Loaded cards-in-comparison from Firestore:', Array.from(cardsInComparison));
-                    localStorage.setItem(newKey, JSON.stringify(cloudCards));
-                    return;
-                }
-            }
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        const guestCards = readLocalJSON('cardsInComparison_guest', null);
+        if (guestCards !== null) localStorage.removeItem('cardsInComparison_guest');
+        if (Array.isArray(guestCards) && guestCards.length > 0) {
+            cardsInComparison = new Set(filterKnownCardIds(guestCards));
+            console.log('🔀 雲端無設定，帶入訪客的加入比較卡片:', Array.from(cardsInComparison));
+            await saveCardsInComparison();
+            return;
         }
 
         // Fallback to localStorage (try new key first, then legacy)
-        const savedCards = localStorage.getItem(newKey) || localStorage.getItem(legacyKey);
+        const savedCards = readLocalJSON(newKey, null) || readLocalJSON(legacyKey, null);
 
-        if (savedCards) {
-            cardsInComparison = new Set(JSON.parse(savedCards));
+        if (Array.isArray(savedCards)) {
+            cardsInComparison = new Set(filterKnownCardIds(savedCards));
             console.log('📦 Loaded cards-in-comparison from localStorage (fallback):', Array.from(cardsInComparison));
         } else {
             // First time user - select all cards by default
@@ -5945,61 +6162,6 @@ async function loadCardsInComparison(userData = null) {
         // Default to all cards if error
         cardsInComparison = new Set(cardsData.cards.map(card => card.id));
     }
-
-    // After loading, check if guest data exists from before login
-    await maybeMergeGuestCardsInComparison();
-}
-
-// On login, if guest had locally-saved cards-in-comparison data, prompt to merge.
-async function maybeMergeGuestCardsInComparison() {
-    const guestKey = 'cardsInComparison_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestCards = JSON.parse(guestData);
-        if (!Array.isArray(guestCards) || guestCards.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『加入比較的卡片』設定，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestCards.forEach(id => cardsInComparison.add(id));
-            await saveCardsInComparison();
-            console.log('🔀 Merged guest cards-in-comparison into account:', guestCards);
-        }
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest cards-in-comparison:', e);
-        localStorage.removeItem(guestKey);
-    }
-}
-
-// On login, if guest had locally-saved payments, prompt to merge.
-async function maybeMergeGuestPayments() {
-    const guestKey = 'selectedPayments_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestPayments = JSON.parse(guestData);
-        if (!Array.isArray(guestPayments) || guestPayments.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『行動支付』設定，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestPayments.forEach(id => userSelectedPayments.add(id));
-            await saveUserPayments();
-            console.log('🔀 Merged guest payments into account:', guestPayments);
-        }
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest payments:', e);
-        localStorage.removeItem(guestKey);
-    }
 }
 
 // Load my-owned-cards from Firestore (logged in) or localStorage (guest).
@@ -6007,13 +6169,9 @@ async function maybeMergeGuestPayments() {
 async function loadMyOwnedCards(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage
-        try {
-            const saved = localStorage.getItem('myOwnedCards_guest');
-            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
-            console.log('📦 Loaded myOwnedCards from guest localStorage:', Array.from(myOwnedCards));
-        } catch (e) {
-            myOwnedCards = new Set();
-        }
+        const saved = readLocalJSON('myOwnedCards_guest', null);
+        myOwnedCards = Array.isArray(saved) ? new Set(filterKnownCardIds(saved)) : new Set();
+        console.log('📦 Loaded myOwnedCards (guest):', Array.from(myOwnedCards));
         return;
     }
 
@@ -6022,7 +6180,7 @@ async function loadMyOwnedCards(userData = null) {
         let cloudOwned = null;
         if (userData && Array.isArray(userData.myOwnedCards)) {
             cloudOwned = userData.myOwnedCards;
-        } else if (window.db && window.doc && window.getDoc) {
+        } else if (!userData && window.db && window.doc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
             if (docSnap.exists() && Array.isArray(docSnap.data().myOwnedCards)) {
@@ -6030,21 +6188,32 @@ async function loadMyOwnedCards(userData = null) {
             }
         }
 
-        myOwnedCards = new Set(cloudOwned || []);
-        console.log('✅ Loaded myOwnedCards from Firestore:', Array.from(myOwnedCards));
-        localStorage.setItem(userKey, JSON.stringify(Array.from(myOwnedCards)));
+        if (cloudOwned !== null) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key
+            myOwnedCards = new Set(filterKnownCardIds(cloudOwned));
+            console.log('✅ Loaded myOwnedCards from cloud:', Array.from(myOwnedCards));
+            localStorage.setItem(userKey, JSON.stringify(cloudOwned));
+            localStorage.removeItem('myOwnedCards_guest');
+            return;
+        }
 
-        // After loading, check if guest data exists from before login
-        await maybeMergeGuestMyOwnedCards();
+        // 雲端沒有設定：若訪客期間有儲存過 → 靜默帶入並上傳（不彈窗）
+        const guestCards = readLocalJSON('myOwnedCards_guest', null);
+        if (guestCards !== null) localStorage.removeItem('myOwnedCards_guest');
+        if (Array.isArray(guestCards) && guestCards.length > 0) {
+            myOwnedCards = new Set(filterKnownCardIds(guestCards));
+            console.log('🔀 雲端無設定，帶入訪客的我的信用卡:', Array.from(myOwnedCards));
+            await saveMyOwnedCards();
+            return;
+        }
+
+        myOwnedCards = new Set();
+        localStorage.setItem(userKey, JSON.stringify([]));
     } catch (error) {
         console.error('❌ Error loading myOwnedCards:', error);
         // Fallback to user-specific localStorage
-        try {
-            const saved = localStorage.getItem(userKey);
-            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
-        } catch (e) {
-            myOwnedCards = new Set();
-        }
+        const saved = readLocalJSON(userKey, null);
+        myOwnedCards = Array.isArray(saved) ? new Set(filterKnownCardIds(saved)) : new Set();
     }
 }
 
@@ -6076,33 +6245,6 @@ async function saveMyOwnedCards() {
         }
     } catch (error) {
         console.error('Error saving myOwnedCards:', error);
-    }
-}
-
-// On login, if guest had locally-saved myOwnedCards data, prompt to merge into account.
-async function maybeMergeGuestMyOwnedCards() {
-    const guestKey = 'myOwnedCards_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestCards = JSON.parse(guestData);
-        if (!Array.isArray(guestCards) || guestCards.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『我的信用卡』資料，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestCards.forEach(id => myOwnedCards.add(id));
-            await saveMyOwnedCards();
-            console.log('🔀 Merged guest myOwnedCards into account:', guestCards);
-        }
-        // Remove guest data either way (don't ask again)
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest myOwnedCards:', e);
-        localStorage.removeItem(guestKey);
     }
 }
 
@@ -8395,8 +8537,7 @@ async function loadSpendingMappings() {
     // 檢查是否有登入用戶
     if (!currentUser) {
         // 未登入用戶
-        const localData = localStorage.getItem('spendingMappings');
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        userSpendingMappings = readLocalJSONArray('spendingMappings');
         console.log('📋 [配卡] 未登入，從本地載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     }
@@ -8419,15 +8560,12 @@ async function loadSpendingMappings() {
         }
 
         // Fallback to localStorage if Firestore fails or no data
-        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        userSpendingMappings = readLocalJSONArray(`spendingMappings_${currentUser.uid}`);
         console.log('📦 [配卡] 從本地快取載入 (fallback):', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     } catch (error) {
         console.error('❌ [配卡] 讀取失敗，使用本地快取:', error);
-        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
-        console.log('📋 [配卡] 本地快取載入:', userSpendingMappings.length, '筆');
+        userSpendingMappings = readLocalJSONArray(`spendingMappings_${currentUser.uid}`);
         return userSpendingMappings;
     }
 }
@@ -9228,11 +9366,17 @@ async function setupFeeWaiverStatus(cardId) {
 // 讀取結帳日期
 async function loadBillingDates(cardId) {
     const defaultDates = { billingDate: '', statementDate: '' };
+    // 確保回傳值一定是 { billingDate, statementDate } 形狀，儲存的資料被污染也不會讓 UI 掛掉
+    const normalizeDates = (raw) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ...defaultDates };
+        return {
+            billingDate: typeof raw.billingDate === 'string' ? raw.billingDate : '',
+            statementDate: typeof raw.statementDate === 'string' ? raw.statementDate : ''
+        };
+    };
 
     if (!currentUser) {
-        const localKey = `billingDates_local_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        return saved ? JSON.parse(saved) : defaultDates;
+        return normalizeDates(readLocalJSON(`billingDates_local_${cardId}`));
     }
 
     try {
@@ -9242,7 +9386,7 @@ async function loadBillingDates(cardId) {
             const docSnap = await window.getDoc(docRef);
 
             if (docSnap.exists() && docSnap.data().billingDates && docSnap.data().billingDates[cardId]) {
-                const dates = docSnap.data().billingDates[cardId];
+                const dates = normalizeDates(docSnap.data().billingDates[cardId]);
                 // 更新本地快取
                 const localKey = `billingDates_${currentUser.uid}_${cardId}`;
                 localStorage.setItem(localKey, JSON.stringify(dates));
@@ -9252,16 +9396,10 @@ async function loadBillingDates(cardId) {
         }
 
         // Fallback to localStorage
-        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        const result = saved ? JSON.parse(saved) : defaultDates;
-        console.log('📦 [結帳日期] 從本地讀取 (fallback):', cardId, result);
-        return result;
+        return normalizeDates(readLocalJSON(`billingDates_${currentUser.uid}_${cardId}`));
     } catch (error) {
         console.error('❌ 讀取結帳日期失敗:', error);
-        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        return saved ? JSON.parse(saved) : defaultDates;
+        return normalizeDates(readLocalJSON(`billingDates_${currentUser.uid}_${cardId}`));
     }
 }
 
@@ -9373,10 +9511,21 @@ async function getCardLevel(cardId, defaultLevel) {
     return resolved;
 }
 
+// 卡片級別的本機 key：登入者一律用 uid 區分（cardLevel_<uid>_<cardId>），
+// 訪客沿用舊 key（cardLevel-<cardId>），既有訪客的資料不受影響。
+// ⚠️ 登入狀態下絕不可讀寫訪客 key —— 共用電腦上那可能是「別人」的選擇
+// （過去曾因此把前一位使用者的級別遷移進當前帳號）。訪客 key 只在登入當下
+// 由 absorbGuestPersonalData() 統一消化。
+function cardLevelLocalKey(cardId) {
+    return (auth && auth.currentUser)
+        ? `cardLevel_${auth.currentUser.uid}_${cardId}`
+        : `cardLevel-${cardId}`;
+}
+
 async function getCardLevelUncached(cardId, defaultLevel) {
     // If user not logged in, use localStorage
     if (!auth || !auth.currentUser) {
-        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+        return localStorage.getItem(cardLevelLocalKey(cardId)) || defaultLevel;
     }
 
     try {
@@ -9386,14 +9535,15 @@ async function getCardLevelUncached(cardId, defaultLevel) {
         const docSnap = await window.getDoc(docRef);
 
         if (docSnap.exists()) {
-            // Return level from Firestore
-            return docSnap.data().level || defaultLevel;
+            const level = docSnap.data().level || defaultLevel;
+            // 更新本機鏡像，離線時 fallback 用
+            try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
+            return level;
         } else {
-            // Check localStorage for migration
-            const localLevel = localStorage.getItem(`cardLevel-${cardId}`);
+            // 雲端沒有：檢查「自己的」本機鏡像（例如之前離線時儲存的），有則補上傳
+            const localLevel = localStorage.getItem(cardLevelLocalKey(cardId));
             if (localLevel && localLevel !== defaultLevel) {
-                // Migrate to Firestore
-                console.log(`Migrating level for ${cardId} from localStorage to Firestore: ${localLevel}`);
+                console.log(`Migrating level for ${cardId} from local mirror to Firestore: ${localLevel}`);
                 await saveCardLevel(cardId, localLevel);
                 return localLevel;
             }
@@ -9401,8 +9551,8 @@ async function getCardLevelUncached(cardId, defaultLevel) {
         }
     } catch (error) {
         console.log('Failed to load card level from Firestore:', error);
-        // Fallback to localStorage
-        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+        // Fallback to本機鏡像（uid 區分，不會讀到別人的資料）
+        return localStorage.getItem(cardLevelLocalKey(cardId)) || defaultLevel;
     }
 }
 
@@ -9460,8 +9610,8 @@ async function saveCardLevel(cardId, level) {
     // Write-through to the in-memory cache so subsequent reads see the new value.
     cardLevelCache.set(cardLevelCacheKey(cardId), level);
 
-    // Always save to localStorage as backup
-    localStorage.setItem(`cardLevel-${cardId}`, level);
+    // Always save to localStorage as backup（登入者用 uid 區分的 key，見 cardLevelLocalKey）
+    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
 
     // If user not logged in, only save locally
     if (!auth || !auth.currentUser) {
@@ -9921,57 +10071,50 @@ async function showComparePaymentsModal() {
 async function loadUserPayments(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage
-        try {
-            const saved = localStorage.getItem('selectedPayments_guest');
-            if (saved) {
-                userSelectedPayments = new Set(JSON.parse(saved));
-                console.log('📦 Loaded user payments from guest localStorage:', Array.from(userSelectedPayments));
-            } else {
-                userSelectedPayments = new Set();
-                console.log('🆕 Guest first time, no payments selected');
-            }
-        } catch (e) {
-            userSelectedPayments = new Set();
-        }
+        const saved = readLocalJSON('selectedPayments_guest', null);
+        userSelectedPayments = Array.isArray(saved) ? new Set(saved) : new Set();
+        console.log('📦 Loaded user payments (guest):', Array.from(userSelectedPayments));
         return;
     }
 
     try {
         // Use provided userData if available (from unified load)
-        if (userData && userData.selectedPayments) {
-            const cloudPayments = userData.selectedPayments;
-            userSelectedPayments = new Set(cloudPayments);
-            console.log('✅ Using user payments from unified data load:', Array.from(userSelectedPayments));
-
-            // Sync to localStorage for offline use
-            const storageKey = `selectedPayments_${currentUser.uid}`;
-            localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
-            return;
-        }
-
-        // Fallback: Try to load from Firestore if userData not provided
-        if (window.db && window.doc && window.getDoc) {
+        let cloudPayments = null;
+        if (userData && Array.isArray(userData.selectedPayments)) {
+            cloudPayments = userData.selectedPayments;
+        } else if (!userData && window.db && window.doc && window.getDoc) {
+            // Fallback: Try to load from Firestore if userData not provided
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
-
-            if (docSnap.exists() && docSnap.data().selectedPayments) {
-                const cloudPayments = docSnap.data().selectedPayments;
-                userSelectedPayments = new Set(cloudPayments);
-                console.log('✅ Loaded user payments from Firestore:', Array.from(userSelectedPayments));
-
-                // Sync to localStorage for offline use
-                const storageKey = `selectedPayments_${currentUser.uid}`;
-                localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
-                return;
+            if (docSnap.exists() && Array.isArray(docSnap.data().selectedPayments)) {
+                cloudPayments = docSnap.data().selectedPayments;
             }
         }
 
-        // Fallback to localStorage if Firestore fails or no data
-        const storageKey = `selectedPayments_${currentUser.uid}`;
-        const savedPayments = localStorage.getItem(storageKey);
+        if (cloudPayments !== null) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key
+            userSelectedPayments = new Set(cloudPayments);
+            console.log('✅ Loaded user payments from cloud:', Array.from(userSelectedPayments));
+            localStorage.setItem(`selectedPayments_${currentUser.uid}`, JSON.stringify(cloudPayments));
+            localStorage.removeItem('selectedPayments_guest');
+            return;
+        }
 
-        if (savedPayments) {
-            userSelectedPayments = new Set(JSON.parse(savedPayments));
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        const guestPayments = readLocalJSON('selectedPayments_guest', null);
+        if (guestPayments !== null) localStorage.removeItem('selectedPayments_guest');
+        if (Array.isArray(guestPayments) && guestPayments.length > 0) {
+            userSelectedPayments = new Set(guestPayments);
+            console.log('🔀 雲端無設定，帶入訪客的行動支付選擇:', guestPayments);
+            await saveUserPayments();
+            return;
+        }
+
+        // Fallback to localStorage if Firestore fails or no data
+        const savedPayments = readLocalJSON(`selectedPayments_${currentUser.uid}`, null);
+
+        if (Array.isArray(savedPayments)) {
+            userSelectedPayments = new Set(savedPayments);
             console.log('📦 Loaded user payments from localStorage (fallback):', Array.from(userSelectedPayments));
         } else {
             // First time user - no payments selected by default
@@ -10008,7 +10151,8 @@ async function saveUserPayments() {
         if (window.db && window.doc && window.setDoc) {
             try {
                 await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                    selectedPayments: paymentsArray
+                    selectedPayments: paymentsArray,
+                    updatedAt: new Date().toISOString()
                 }, { merge: true });
                 console.log('✅ Payments saved to Firestore');
             } catch (firestoreError) {
