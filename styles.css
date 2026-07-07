@@ -2751,8 +2751,7 @@ input[type="number"]:focus {
 }
 
 #my-owned-cards-modal .modal-body {
-    background:
-        radial-gradient(120% 70% at 50% 0%, #eef4ff 0%, #f8fafc 45%, #ffffff 100%);
+    background: #ffffff;
     border-radius: 0 0 12px 12px;
 }
 
@@ -2807,10 +2806,33 @@ input[type="number"]:focus {
     background: linear-gradient(135deg, #e2e8f0, #f8fafc);
 }
 
+/* --- Card-holder pocket (dark interior so every card face pops) --- */
+.ow-pocket {
+    position: relative;
+    width: min(330px, 100%);
+    margin: 0 auto;
+    background: linear-gradient(165deg, #32353e 0%, #23252c 45%, #1b1d23 100%);
+    border-radius: 24px;
+    padding: 24px 20px 28px;
+    box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.55),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+        0 2px 10px rgba(15, 23, 42, 0.12);
+}
+/* stitching seam, like a leather card holder */
+.ow-pocket::after {
+    content: '';
+    position: absolute;
+    inset: 9px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.13);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
 /* --- Wallet stack --- */
 .ow-stack {
     position: relative;
-    width: min(260px, 76%);
+    width: min(252px, 92%);
     margin: 0 auto;
     transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -2824,21 +2846,21 @@ input[type="number"]:focus {
                 transform 0.25s ease;
 }
 .ow-slot .ow-frame {
-    /* upward-cast shadow separates each strip from the card behind it */
-    box-shadow: 0 -12px 24px -14px rgba(15, 23, 42, 0.45),
-                0 2px 6px rgba(15, 23, 42, 0.08);
+    /* bright hairline edge + tight dark shadow: crisp separation, no haze */
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 -16px 24px -18px rgba(0, 0, 0, 0.85);
     transition: box-shadow 0.25s ease;
 }
 .ow-slot:hover {
     transform: translateY(-5px);
 }
 .ow-slot:focus-visible .ow-frame {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #60a5fa;
     outline-offset: 2px;
 }
 .ow-slot.ow-open .ow-frame {
-    box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.38),
-                0 4px 10px rgba(15, 23, 42, 0.10);
+    box-shadow: 0 -16px 24px -18px rgba(0, 0, 0, 0.85),
+                0 16px 32px -12px rgba(0, 0, 0, 0.55);
 }
 
 /* "tap again" affordance pill on the revealed card */

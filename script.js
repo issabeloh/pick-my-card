@@ -6175,11 +6175,15 @@ function renderOwnedCardsOverview() {
     container.appendChild(countLine);
 
     // --- View 1: wallet stack — all cards at a glance, no names.
-    // Tap a covered card to reveal its full face in place; tap a fully
-    // visible card to open the solo view. ---
+    // The stack sits inside a dark "card-holder pocket" so every card
+    // face (light or dark) stands out. Tap a covered card to reveal its
+    // full face in place; tap a fully visible card to open the solo view. ---
+    const pocket = document.createElement('div');
+    pocket.className = 'ow-pocket';
     const stack = document.createElement('div');
     stack.className = 'ow-stack';
-    container.appendChild(stack);
+    pocket.appendChild(stack);
+    container.appendChild(pocket);
 
     // --- View 2: solo card + personal info area (hidden until opened) ---
     const solo = document.createElement('div');
