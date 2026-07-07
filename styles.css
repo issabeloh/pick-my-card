@@ -1324,7 +1324,7 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background: #1e40af;
     color: white;
     border: none;
     border-radius: 12px;
@@ -1787,9 +1787,11 @@ input[type="number"]:focus {
 }
 
 .show-promos-toggle input[type="checkbox"] {
-    width: auto;
+    width: 18px;
+    height: 18px;
     margin: 0;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .show-promos-desktop { display: block; }
@@ -1797,7 +1799,7 @@ input[type="number"]:focus {
 
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 20px; }
+    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
     /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
     .button-group .show-promos-toggle label {
         height: auto;
@@ -2134,7 +2136,7 @@ input[type="number"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2px;
+    margin-bottom: 8px;
 }
 
 .card-name-with-pin {
@@ -2238,6 +2240,26 @@ input[type="number"]:focus {
     line-height: 1.6;
 }
 
+.cardholder-promo-item .upcoming-badge,
+.card-result .matched-merchant .upcoming-badge {
+    background: #fff7ed;
+    color: #c2410c;
+    border: 1px solid #fdba74;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.cardholder-promo-item .ending-soon-badge,
+.card-result .matched-merchant .ending-soon-badge {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
 /* No results styling */
 .no-results {
     color: #374151;
@@ -2315,12 +2337,17 @@ input[type="number"]:focus {
     }
 
     .input-row-with-button {
-        grid-template-columns: 1fr;
-        gap: 16px;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+    }
+
+    .input-row-with-button > .form-group:first-child {
+        grid-column: 1 / -1;
     }
 
     .button-group {
         margin-top: 0px;
+        min-width: 96px;
     }
 
     .button-group label {
@@ -2331,6 +2358,7 @@ input[type="number"]:focus {
 
     .calculate-btn.compact {
         width: 100%;
+        white-space: nowrap;
     }
 
     .results-container {
@@ -2352,7 +2380,20 @@ input[type="number"]:focus {
     }
 
     .card-details {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .card-details .detail-label {
+        font-size: 11px;
+    }
+
+    .card-details .detail-value {
+        font-size: 13px;
+    }
+
+    .card-details .cashback-amount {
+        font-size: 14px;
     }
 
     .cards-selection {
@@ -2502,6 +2543,13 @@ input[type="number"]:focus {
     gap: 8px;
     margin-bottom: 12px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.modal-action-save-btn {
+    margin-left: auto;
+    padding: 6px 14px !important;
+    font-size: 13px !important;
 }
 
 .toggle-all-btn {
@@ -2612,7 +2660,7 @@ input[type="number"]:focus {
 
 .cards-selection {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
@@ -2635,12 +2683,13 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 .card-checkbox-image {
-    height: 70px;
+    height: 56px;
     width: auto;
-    max-width: 140px;
+    max-width: 110px;
     object-fit: contain;
     /* Indent to line up with the card name (checkbox width 14 + row gap 8) */
     margin-left: 22px;
+    cursor: pointer;
 }
 .card-checkbox-row {
     display: flex;
@@ -2684,6 +2733,82 @@ input[type="number"]:focus {
     color: #1e40af;
     background: #eef2ff;
 }
+
+/* ── Calculation breakdown button + popup ───────────────────────────────── */
+.calc-breakdown-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    padding: 3px;
+    color: #059669;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 6px;
+    cursor: pointer;
+    vertical-align: middle;
+    line-height: 0;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.calc-breakdown-btn:hover {
+    color: #047857;
+    background: #d1fae5;
+    border-color: #6ee7b7;
+}
+.calc-breakdown-btn.active {
+    color: #ffffff;
+    background: #059669;
+    border-color: #059669;
+}
+/* Appended as the LAST CHILD of .card-result / .coupon-item (which are
+   position:relative, padded boxes) — bleeds edge-to-edge and sits flush at
+   the bottom, reading as a drawer that slides out from behind its own card
+   rather than a floating panel disconnected from any specific result. */
+.calc-breakdown-popup {
+    margin: 12px -16px -16px;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-top: 1px solid #d1d5db;
+    border-radius: 0 0 8px 8px;
+    font-size: 13px;
+    overflow-x: auto;
+    animation: breakdownSlideDown 0.15s ease;
+}
+@keyframes breakdownSlideDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.breakdown-table {
+    border-collapse: collapse;
+    width: auto;
+}
+.breakdown-table td {
+    padding: 4px 10px 4px 0;
+    color: #374151;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.breakdown-table .bd-name { font-weight: 500; }
+.breakdown-table .bd-amt,
+.breakdown-table .bd-rate { color: #6b7280; }
+.breakdown-table .bd-cash {
+    color: #059669;
+    font-weight: 500;
+    padding-right: 0;
+}
+.breakdown-table .breakdown-capped {
+    color: #dc2626;
+    font-weight: 400;
+    margin-left: 2px;
+}
+.breakdown-table .bd-total td {
+    border-top: 1px solid #d1d5db;
+    padding-top: 7px;
+    font-weight: 700;
+}
+.breakdown-table .bd-total .bd-name { color: #374151; }
+.breakdown-table .bd-total .bd-amt { color: #374151; }
+.breakdown-table .bd-total .bd-cash { color: #059669; }
 
 .card-checkbox-label {
     flex-grow: 1;
@@ -3314,10 +3439,10 @@ input[type="number"]:focus {
 }
 
 .cashback-detail-item {
-    background: #f8fafc;
-    border-radius: 6px;
-    padding: 12px;
-    border-left: 3px solid #3b82f6;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
     margin-bottom: 12px;
 }
 
@@ -3371,21 +3496,25 @@ input[type="number"]:focus {
 }
 
 /* 2-column grid for cashback items in card detail modal */
+#card-basic-cashback,
 #card-special-cashback,
 #card-coupon-cashback {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    align-items: start;
+    /* stretch: the two cards in each row match the taller one's height */
+    align-items: stretch;
 }
 
 /* Non-item elements (e.g. birthday note) span full width */
+#card-basic-cashback > *:not(.cashback-detail-item),
 #card-special-cashback > *:not(.cashback-detail-item),
 #card-coupon-cashback > *:not(.cashback-detail-item) {
     grid-column: 1 / -1;
 }
 
 /* Remove individual bottom margin since grid gap handles spacing */
+#card-basic-cashback .cashback-detail-item,
 #card-special-cashback .cashback-detail-item,
 #card-coupon-cashback .cashback-detail-item {
     margin-bottom: 0;
@@ -3402,6 +3531,7 @@ input[type="number"]:focus {
 }
 
 @media (max-width: 540px) {
+    #card-basic-cashback,
     #card-special-cashback,
     #card-coupon-cashback {
         grid-template-columns: 1fr;
@@ -3411,11 +3541,14 @@ input[type="number"]:focus {
 .cashback-rate {
     font-weight: 600;
     color: #374151;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    font-size: 15px;
 }
 
 .cashback-rate-num {
     color: #059669;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 .cashback-condition {
@@ -3424,6 +3557,35 @@ input[type="number"]:focus {
     color: #9ca3af;
     margin-bottom: 6px;
     padding-left: 0.5em;
+}
+
+/* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
+   toggle only when the text actually overflows. Uses a max-height clamp
+   (line-height 1.6 × 4 lines = 6.4em) rather than -webkit-line-clamp, which
+   needs display:-webkit-box and was being overridden here. */
+.cond-collapsible .cond-text {
+    display: block;
+    max-height: 6.4em;
+    line-height: 1.6;
+    overflow: hidden;
+}
+.cond-collapsible.expanded .cond-text {
+    max-height: none;
+    overflow: visible;
+}
+.cond-toggle {
+    display: none;
+    margin-top: 2px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #3b82f6;
+    font-size: 11px;
+    font-style: normal;
+    cursor: pointer;
+}
+.cond-toggle:hover {
+    text-decoration: underline;
 }
 
 .cashback-merchants {
@@ -3660,6 +3822,13 @@ input[type="number"]:focus {
 
 .user-notes-textarea::placeholder {
     color: #9ca3af;
+    /* Keep the textarea element at 16px on mobile (prevents iOS focus auto-zoom),
+       but render the placeholder at 14px. iOS decides zoom from the element's
+       own font-size, not the ::placeholder pseudo-element, so this is safe.
+       A direct rule on ::placeholder overrides the 16px !important the element
+       inherits from the max-width:768px input rule (inheritance loses to a
+       directly-applied value). */
+    font-size: 14px;
 }
 
 .notes-status {
@@ -6593,8 +6762,9 @@ input[type="number"]:focus {
 }
 
 .app-layout main .calculate-btn.compact {
-    padding: 12px 20px;
+    padding: 10px 16px;
     font-size: 0.9rem;
+    height: auto;
 }
 
 .app-layout main .quick-search-label {
@@ -6603,6 +6773,23 @@ input[type="number"]:focus {
     color: #6b7280;
     margin-top: 12px;
     margin-bottom: 6px;
+}
+
+@media (max-width: 768px) {
+    .app-layout main label {
+        margin-bottom: 6px;
+    }
+    .app-layout main .quick-search-label {
+        margin-top: 6px;
+        margin-bottom: 4px;
+    }
+    .app-layout main input[type="text"],
+    .app-layout main input[type="number"] {
+        padding: 10px 12px;
+    }
+    .app-layout main .input-section {
+        margin-bottom: 12px;
+    }
 }
 
 .app-layout main .quick-search-btn {
@@ -7025,3 +7212,17 @@ input[type="number"]:focus {
     margin-top: 10px;
 }
 .spotlight-act-items > span:last-child { flex: 1; }
+
+/* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
