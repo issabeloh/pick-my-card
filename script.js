@@ -6172,148 +6172,178 @@ function renderOwnedCardsOverview() {
 
     if (actions) actions.style.display = 'flex';
 
-    // --- Card count ---
+    const count = ownedCards.length;
+
+    // --- Card count line ---
     const countLine = document.createElement('div');
-    countLine.className = 'cf-count';
-    countLine.textContent = `您有 ${ownedCards.length} 張信用卡`;
+    countLine.className = 'ow-count';
+    countLine.innerHTML = `您有 <b>${count}</b> 張信用卡`;
     container.appendChild(countLine);
 
-    // --- 3D coverflow: cards fan out in 3D; scroll/drag to bring a card
-    // forward, click the front card to open its detail page. ---
-    const stage = document.createElement('div');
-    stage.className = 'cf-stage';
-    stage.setAttribute('tabindex', '0');
-    stage.setAttribute('role', 'listbox');
-    stage.setAttribute('aria-label', '我的信用卡（滑動切換，點擊查看詳情）');
+    // --- View 1: wallet stack — all cards at a glance, no names.
+    // Tap a covered card to reveal its full face in place; tap a fully
+    // visible card to open the solo view. ---
+    const stack = document.createElement('div');
+    stack.className = 'ow-stack';
+    container.appendChild(stack);
 
-    const track = document.createElement('div');
-    track.className = 'cf-track';
-    stage.appendChild(track);
+    // --- View 2: solo card + personal info area (hidden until opened) ---
+    const solo = document.createElement('div');
+    solo.className = 'ow-solo';
+    solo.style.display = 'none';
+    container.appendChild(solo);
 
-    ownedCards.forEach((card, i) => {
-        const el = document.createElement('div');
-        el.className = 'cf-card';
-        el.dataset.index = i;
-        el.setAttribute('role', 'option');
-        el.setAttribute('aria-label', card.name);
+    const PEEK = 64;   // visible strip of each stacked card
+    const GAP = 16;    // breathing room under a revealed card
+    let expanded = null;
+    let soloIndex = 0;
 
+    // Builds a card-face frame; portrait art is auto-rotated to landscape.
+    const makeFace = (card) => {
+        const frame = document.createElement('div');
+        frame.className = 'ow-frame';
         const img = document.createElement('img');
-        img.className = 'cf-img';
+        img.className = 'ow-img';
         img.alt = card.name;
         img.src = `assets/images/cards/${card.id}.png`;
-        // Auto-rotate portrait card images so they sit landscape like the rest.
         img.addEventListener('load', () => {
-            if (img.naturalHeight > img.naturalWidth) el.classList.add('cf-portrait');
+            if (img.naturalHeight > img.naturalWidth) frame.classList.add('ow-portrait');
         });
         img.addEventListener('error', () => {
-            el.classList.add('cf-noimg');
-            el.textContent = card.name;
+            frame.classList.add('ow-noimg');
+            frame.textContent = card.name;
         });
-        el.appendChild(img);
-        track.appendChild(el);
-    });
-
-    container.appendChild(stage);
-
-    // --- Card name caption (below the fan) ---
-    const caption = document.createElement('div');
-    caption.className = 'cf-caption';
-    container.appendChild(caption);
-
-    // Navigation arrows
-    const prevBtn = document.createElement('button');
-    prevBtn.type = 'button';
-    prevBtn.className = 'cf-nav cf-prev';
-    prevBtn.setAttribute('aria-label', '上一張');
-    prevBtn.innerHTML = '‹';
-    const nextBtn = document.createElement('button');
-    nextBtn.type = 'button';
-    nextBtn.className = 'cf-nav cf-next';
-    nextBtn.setAttribute('aria-label', '下一張');
-    nextBtn.innerHTML = '›';
-    stage.appendChild(prevBtn);
-    stage.appendChild(nextBtn);
-
-    const count = ownedCards.length;
-    // Start with the middle card in front so it reads as a fan.
-    let active = Math.floor((count - 1) / 2);
-
-    const layout = () => {
-        [...track.children].forEach((el, i) => {
-            const o = i - active;
-            const abs = Math.abs(o);
-            const sign = Math.sign(o);
-            let tx, ty, rotY, rotZ, tz, scale;
-            if (abs === 0) {
-                tx = 0; ty = 0; rotY = 0; rotZ = 0; tz = 20; scale = 1;
-            } else {
-                // Wider spacing so the fan opens up like the reference.
-                tx = sign * (150 + (abs - 1) * 64);
-                // Edges rise to form an upward-curving arc (parabolic).
-                ty = -(abs * abs) * 4 - abs * 2;
-                // Mild depth turn + in-plane tilt so cards fan like a hand.
-                rotY = -sign * 24;
-                rotZ = sign * Math.min(abs * 5, 16);
-                tz = -abs * 40;
-                scale = Math.max(0.76, 1 - abs * 0.05);
-            }
-            el.style.transform =
-                `translateX(${tx}px) translateY(${ty}px) translateZ(${tz}px) ` +
-                `rotateY(${rotY}deg) rotateZ(${rotZ}deg) scale(${scale})`;
-            el.style.zIndex = String(1000 - abs);
-            el.style.opacity = abs > 5 ? '0' : '1';
-            el.classList.toggle('cf-active', abs === 0);
-        });
-        prevBtn.disabled = active <= 0;
-        nextBtn.disabled = active >= count - 1;
-        caption.textContent = ownedCards[active].name;
+        frame.appendChild(img);
+        return frame;
     };
 
-    const setActive = (idx) => {
-        active = Math.max(0, Math.min(count - 1, idx));
-        layout();
+    const slots = ownedCards.map((card, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'ow-slot';
+        slot.style.zIndex = String(i + 1);
+        slot.setAttribute('role', 'button');
+        slot.setAttribute('tabindex', '0');
+        slot.setAttribute('aria-label', card.name);
+        slot.appendChild(makeFace(card));
+        const activate = () => {
+            // Fully visible cards (revealed, or the bottom-most) open solo view.
+            if (i === expanded || i === count - 1) openSolo(i);
+            else { expanded = i; layoutStack(); }
+        };
+        slot.addEventListener('click', activate);
+        slot.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+        });
+        stack.appendChild(slot);
+        return slot;
+    });
+
+    const layoutStack = () => {
+        const h = stack.clientWidth / 1.586; // standard card aspect ratio
+        let shift = 0, maxBottom = 0;
+        slots.forEach((slot, i) => {
+            slot.classList.toggle('ow-open', expanded === i);
+            const top = i * PEEK + shift;
+            slot.style.top = `${top}px`;
+            maxBottom = Math.max(maxBottom, top + h);
+            if (expanded === i) shift = h - PEEK + GAP;
+        });
+        stack.style.height = `${Math.ceil(maxBottom)}px`;
     };
 
-    prevBtn.addEventListener('click', (e) => { e.stopPropagation(); setActive(active - 1); });
-    nextBtn.addEventListener('click', (e) => { e.stopPropagation(); setActive(active + 1); });
+    const openSolo = (i) => {
+        soloIndex = i;
+        renderSolo();
+        stack.style.display = 'none';
+        solo.style.display = '';
+    };
 
-    // Wheel / trackpad: step through cards (throttled).
-    let wheelAcc = 0, wheelLock = false;
-    stage.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        if (wheelLock) return;
-        wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-        if (wheelAcc > 50) { setActive(active + 1); wheelAcc = 0; wheelLock = true; setTimeout(() => wheelLock = false, 180); }
-        else if (wheelAcc < -50) { setActive(active - 1); wheelAcc = 0; wheelLock = true; setTimeout(() => wheelLock = false, 180); }
-    }, { passive: false });
+    const backToStack = () => {
+        solo.style.display = 'none';
+        stack.style.display = '';
+        expanded = soloIndex; // keep the card you were viewing revealed
+        layoutStack();
+    };
 
-    // Pointer drag / swipe, and tap-to-select / tap-front-to-open.
-    let down = null;
-    stage.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.cf-nav')) return;
-        down = { x: e.clientX, card: e.target.closest('.cf-card') };
-        try { stage.setPointerCapture(e.pointerId); } catch (_) {}
-    });
-    stage.addEventListener('pointerup', (e) => {
-        if (!down) return;
-        const dx = e.clientX - down.x;
-        if (Math.abs(dx) > 40) {
-            setActive(active + (dx < 0 ? 1 : -1));
-        } else if (down.card) {
-            const idx = Number(down.card.dataset.index);
-            if (idx === active) showCardDetail(ownedCards[active].id);
-            else setActive(idx);
-        }
-        down = null;
-    });
+    const renderSolo = () => {
+        const card = ownedCards[soloIndex];
+        solo.innerHTML = '';
 
-    stage.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') { e.preventDefault(); setActive(active - 1); }
-        else if (e.key === 'ArrowRight') { e.preventDefault(); setActive(active + 1); }
-        else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showCardDetail(ownedCards[active].id); }
-    });
+        const top = document.createElement('div');
+        top.className = 'ow-solo-top';
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'ow-back';
+        back.innerHTML = '‹ 所有卡片';
+        back.addEventListener('click', backToStack);
+        top.appendChild(back);
+        solo.appendChild(top);
 
-    layout();
+        const row = document.createElement('div');
+        row.className = 'ow-solo-row';
+        const mkArrow = (dir) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ow-arrow';
+            b.innerHTML = dir < 0 ? '‹' : '›';
+            b.setAttribute('aria-label', dir < 0 ? '上一張' : '下一張');
+            b.disabled = dir < 0 ? soloIndex <= 0 : soloIndex >= count - 1;
+            b.addEventListener('click', () => { soloIndex += dir; renderSolo(); });
+            return b;
+        };
+        row.appendChild(mkArrow(-1));
+        const face = makeFace(card);
+        face.classList.add('ow-solo-face');
+        // Swipe left/right to switch cards.
+        let sx = null;
+        face.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+        face.addEventListener('pointerup', (e) => {
+            if (sx === null) return;
+            const dx = e.clientX - sx;
+            sx = null;
+            if (dx < -40 && soloIndex < count - 1) { soloIndex++; renderSolo(); }
+            else if (dx > 40 && soloIndex > 0) { soloIndex--; renderSolo(); }
+        });
+        row.appendChild(face);
+        row.appendChild(mkArrow(1));
+        solo.appendChild(row);
+
+        const name = document.createElement('div');
+        name.className = 'ow-solo-name';
+        name.textContent = card.name;
+        solo.appendChild(name);
+
+        const dots = document.createElement('div');
+        dots.className = 'ow-dots';
+        ownedCards.forEach((_, i) => {
+            const d = document.createElement('i');
+            if (i === soloIndex) d.className = 'on';
+            dots.appendChild(d);
+        });
+        solo.appendChild(dots);
+
+        // Personal info area — content TBD; placeholder plus link to the
+        // full card detail page for now.
+        const info = document.createElement('div');
+        info.className = 'ow-solo-info';
+        info.innerHTML = '<div class="ow-info-coming">✨ 個人化卡片資訊即將推出</div>';
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'ow-detail-btn';
+        detailBtn.textContent = '查看完整卡片介紹';
+        detailBtn.addEventListener('click', () => showCardDetail(card.id));
+        info.appendChild(detailBtn);
+        solo.appendChild(info);
+    };
+
+    // The modal isn't displayed yet when this runs; lay out on the next
+    // frame (and again on resize) so clientWidth is real.
+    requestAnimationFrame(() => requestAnimationFrame(layoutStack));
+    if (renderOwnedCardsOverview._onResize) {
+        window.removeEventListener('resize', renderOwnedCardsOverview._onResize);
+    }
+    renderOwnedCardsOverview._onResize = layoutStack;
+    window.addEventListener('resize', renderOwnedCardsOverview._onResize);
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
