@@ -6219,6 +6219,11 @@ function renderOwnedCardsOverview() {
         slot.setAttribute('tabindex', '0');
         slot.setAttribute('aria-label', card.name);
         slot.appendChild(makeFace(card));
+        // Tap-again affordance: pill fades in on the revealed card.
+        const hint = document.createElement('div');
+        hint.className = 'ow-hint';
+        hint.textContent = '再點一下 查看個人資訊 ›';
+        slot.appendChild(hint);
         const activate = () => {
             // Fully visible cards (revealed, or the bottom-most) open solo view.
             if (i === expanded || i === count - 1) openSolo(i);
@@ -6259,8 +6264,11 @@ function renderOwnedCardsOverview() {
         layoutStack();
     };
 
+    let soloToken = 0;
+
     const renderSolo = () => {
         const card = ownedCards[soloIndex];
+        const token = ++soloToken;
         solo.innerHTML = '';
 
         const top = document.createElement('div');
@@ -6316,18 +6324,87 @@ function renderOwnedCardsOverview() {
         });
         solo.appendChild(dots);
 
-        // Personal info area — content TBD; placeholder plus link to the
-        // full card detail page for now.
+        // --- Read-only personal info (editing lives in the card detail page) ---
         const info = document.createElement('div');
         info.className = 'ow-solo-info';
-        info.innerHTML = '<div class="ow-info-coming">✨ 個人化卡片資訊即將推出</div>';
+        const infoHead = document.createElement('div');
+        infoHead.className = 'ow-info-head';
+        infoHead.innerHTML = '<span>個人化設定</span><span class="ow-info-ro">唯讀</span>';
+        info.appendChild(infoHead);
+        const list = document.createElement('div');
+        list.className = 'ow-info-list';
+        list.innerHTML = '<div class="ow-info-loading">載入中…</div>';
+        info.appendChild(list);
         const detailBtn = document.createElement('button');
         detailBtn.type = 'button';
         detailBtn.className = 'ow-detail-btn';
-        detailBtn.textContent = '查看完整卡片介紹';
+        detailBtn.textContent = '前往卡片介紹頁編輯 ›';
         detailBtn.addEventListener('click', () => showCardDetail(card.id));
         info.appendChild(detailBtn);
         solo.appendChild(info);
+
+        fillSoloInfo(card, list, token);
+    };
+
+    const fillSoloInfo = async (card, list, token) => {
+        const hasLevels = !!(card.hasLevels && card.levelSettings);
+        // Each load falls back to a default if storage (e.g. Firebase) is
+        // unavailable, so the panel always renders.
+        const safe = (fn, fallback) => {
+            try { return Promise.resolve(fn()).catch(() => fallback); }
+            catch (_) { return Promise.resolve(fallback); }
+        };
+        const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
+        const [level, notes, feeWaived] = await Promise.all([
+            hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
+            safe(() => loadUserNotes(card.id), ''),
+            safe(() => loadFeeWaiverStatus(card.id), false)
+        ]);
+        if (token !== soloToken) return; // user switched cards while loading
+
+        list.innerHTML = '';
+        const addRow = (label, value, cls) => {
+            const row = document.createElement('div');
+            row.className = 'ow-info-row';
+            const l = document.createElement('span');
+            l.className = 'ow-info-label';
+            l.textContent = label;
+            const v = document.createElement('span');
+            v.className = 'ow-info-value' + (cls ? ' ' + cls : '');
+            v.textContent = value;
+            row.appendChild(l);
+            row.appendChild(v);
+            list.appendChild(row);
+        };
+
+        if (hasLevels && level) {
+            const label = card.levelLabelFormat
+                ? card.levelLabelFormat.replace('{level}', level)
+                : level;
+            addRow('卡片分級', label);
+        }
+        // 發卡組織／生日月份／童樂匯 are CUBE-specific settings today.
+        if (card.id === 'cathay-cube') {
+            addRow('發卡組織', cubeIssuer);
+            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未設定',
+                userBirthdayMonth ? '' : 'ow-muted');
+            addRow('童樂匯權益', isChildrenEligible ? '✓ 符合' : '不符合',
+                isChildrenEligible ? 'ow-ok' : 'ow-muted');
+        }
+        addRow('免年費門檻', feeWaived ? '✓ 已達成' : '尚未達成', feeWaived ? 'ow-ok' : 'ow-warn');
+
+        const noteText = (notes || '').trim();
+        const noteRow = document.createElement('div');
+        noteRow.className = 'ow-info-note';
+        const noteLabel = document.createElement('div');
+        noteLabel.className = 'ow-info-label';
+        noteLabel.textContent = '我的筆記';
+        const noteBody = document.createElement('div');
+        noteBody.className = 'ow-note-text' + (noteText ? '' : ' ow-note-empty');
+        noteBody.textContent = noteText || '尚未有筆記';
+        noteRow.appendChild(noteLabel);
+        noteRow.appendChild(noteBody);
+        list.appendChild(noteRow);
     };
 
     // The modal isn't displayed yet when this runs; lay out on the next
