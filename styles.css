@@ -3178,12 +3178,12 @@ input[type="number"]:focus {
 .credit-limit-field {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     background: #fff;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 8px 12px;
-    max-width: 240px;
+    border-radius: 6px;
+    padding: 5px 10px;
+    max-width: 150px;
     flex: 1;
 }
 .credit-limit-field:focus-within {
@@ -3192,29 +3192,54 @@ input[type="number"]:focus {
 }
 .credit-limit-prefix {
     color: #64748b;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     flex: 0 0 auto;
 }
-.credit-limit-input {
+/* input[type="text"] 全站通用樣式特異度較高，這裡用 input.credit-limit-input 蓋回 */
+input[type="text"].credit-limit-input {
     border: none;
+    border-radius: 0;
     outline: none;
+    box-shadow: none;
     width: 100%;
     min-width: 0;
-    font-size: 15px;
+    padding: 0;
+    font-size: 13px;
     font-weight: 600;
     color: #0f172a;
     background: transparent;
 }
+input[type="text"].credit-limit-input:focus {
+    border: none;
+    box-shadow: none;
+}
 .credit-limit-input::placeholder {
     color: #cbd5e1;
+    font-size: 12px;
     font-weight: 400;
 }
 .credit-limit-saved {
     color: #059669;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     white-space: nowrap;
+}
+
+/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile */
+@media (min-width: 768px) {
+    .personal-fields-row {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .personal-fields-row #credit-limit-section {
+        flex: 0 0 200px;
+    }
+    .personal-fields-row #card-notes-section {
+        flex: 1;
+        min-width: 0;
+    }
 }
 .ow-detail-btn {
     padding: 8px 18px;

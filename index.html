@@ -48,7 +48,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260707063108">
+    <link rel="stylesheet" href="styles.css?v=20260707152537">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -819,33 +819,36 @@
                         </div>
                     </div>
                     
-                    <!-- 我的額度區域 -->
-                    <div class="card-info-section" id="credit-limit-section">
-                        <h4>💳 我的額度</h4>
-                        <div class="credit-limit-row">
-                            <div class="credit-limit-field">
-                                <span class="credit-limit-prefix">NT$</span>
-                                <input type="text" id="credit-limit-input" class="credit-limit-input"
-                                       inputmode="numeric" placeholder="選填，例如 150,000">
+                    <!-- 我的額度 + 我的筆記（桌機並排、手機直排） -->
+                    <div class="personal-fields-row">
+                        <div class="card-info-section" id="credit-limit-section">
+                            <h4>💳 我的額度</h4>
+                            <div class="credit-limit-row">
+                                <div class="credit-limit-field">
+                                    <span class="credit-limit-prefix">NT$</span>
+                                    <input type="text" id="credit-limit-input" class="credit-limit-input"
+                                           inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                           placeholder="選填">
+                                </div>
+                                <span class="credit-limit-saved" id="credit-limit-saved"></span>
                             </div>
-                            <span class="credit-limit-saved" id="credit-limit-saved"></span>
                         </div>
-                    </div>
 
-                    <!-- 用戶筆記區域 -->
-                    <div class="card-info-section user-notes-section" id="card-notes-section">
-                        <h4>📝 我的筆記</h4>
-                        <div class="user-notes-container">
-                            <div class="notes-input-row">
-                                <textarea id="user-notes-input"
-                                          placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                          class="user-notes-textarea"></textarea>
-                                <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                    <span class="btn-icon">💾</span>
-                                </button>
-                            </div>
-                            <div class="notes-status" id="notes-status">
-                                <span class="save-indicator" id="save-indicator"></span>
+                        <!-- 用戶筆記區域 -->
+                        <div class="card-info-section user-notes-section" id="card-notes-section">
+                            <h4>📝 我的筆記</h4>
+                            <div class="user-notes-container">
+                                <div class="notes-input-row">
+                                    <textarea id="user-notes-input"
+                                              placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                              class="user-notes-textarea"></textarea>
+                                    <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
+                                        <span class="btn-icon">💾</span>
+                                    </button>
+                                </div>
+                                <div class="notes-status" id="notes-status">
+                                    <span class="save-indicator" id="save-indicator"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1017,7 +1020,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260707063108" defer></script>
+    <script src="script.js?v=20260707152537" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>

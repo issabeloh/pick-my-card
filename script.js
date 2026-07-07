@@ -5512,7 +5512,8 @@ function clearPersonalLocalDataOnSignOut(uid) {
         `selectedPayments_${uid}`, `spendingMappings_${uid}`
     ] : [];
     const uidPrefixes = uid ? [
-        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`
+        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
+        `creditLimit_${uid}_`
     ] : [];
     // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
     // 這裡清掉的是殘留值）
@@ -5520,7 +5521,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
         'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
     ];
-    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_'];
+    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
     // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
     const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
 
