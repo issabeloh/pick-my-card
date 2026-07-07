@@ -78,7 +78,7 @@ body {
 }
 .lp-hint-sub {
     display: block;
-    margin-top: 12px;
+    margin-top: 24px;
     font-size: 0.82rem;
     font-weight: 500;
     color: #94a3b8;
@@ -856,7 +856,8 @@ body {
 .lp-safety {
     display: block;
     margin-top: 18px;
-    font-size: 0.8rem;
+    font-size: clamp(0.6rem, 3.2vw, 0.78rem);
+    white-space: nowrap;
     color: #475569;
     line-height: 1.7;
     text-decoration: underline;
