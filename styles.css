@@ -2755,11 +2755,37 @@ input[type="number"]:focus {
     border-radius: 0 0 12px 12px;
 }
 
+.ow-mode {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+.ow-mode-btn {
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ow-mode-btn:hover {
+    border-color: #cbd5e1;
+}
+.ow-mode-btn.ow-mode-active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #2563eb;
+    font-weight: 600;
+}
+
 .ow-count {
     text-align: center;
     font-size: 13px;
     color: #374151;
-    margin: 0 0 18px;
+    margin: 18px 0 4px;
     letter-spacing: 0.02em;
 }
 .ow-count b {
