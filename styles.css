@@ -2428,6 +2428,8 @@ input[type="number"]:focus {
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
+    /* 滑到頂/底不再橡皮筋回彈、也不把捲動傳給背景頁 */
+    overscroll-behavior: none;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
@@ -2544,6 +2546,12 @@ input[type="number"]:focus {
     margin-bottom: 12px;
     flex-wrap: wrap;
     align-items: center;
+}
+/* compact save button on the 全選 row (mirrors the bottom save button) */
+.save-btn-top {
+    margin-left: auto;
+    padding: 6px 16px;
+    font-size: 13.5px;
 }
 
 .modal-action-save-btn {
@@ -3178,17 +3186,19 @@ input[type="number"]:focus {
 .credit-limit-field {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     background: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 5px 10px;
-    max-width: 150px;
+    /* 跟 .user-notes-textarea 同規格：2px 邊框、8px 圓角、60px 高 */
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 12px;
+    height: 60px;
+    box-sizing: border-box;
     flex: 1;
 }
 .credit-limit-field:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
 }
 .credit-limit-prefix {
     color: #64748b;
@@ -3226,7 +3236,20 @@ input[type="text"].credit-limit-input:focus {
     white-space: nowrap;
 }
 
-/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile */
+/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile.
+   Sections inside the row drop their own border/offsets (they caused
+   stray lines and misaligned headings); the row carries the separator. */
+.personal-fields-row {
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+.personal-fields-row .card-info-section {
+    border-bottom: none;
+}
+.personal-fields-row .user-notes-section {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
 @media (min-width: 768px) {
     .personal-fields-row {
         display: flex;

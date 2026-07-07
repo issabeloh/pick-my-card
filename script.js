@@ -6888,6 +6888,16 @@ function openManageOwnedCardsModal() {
     // Always open at the top — don't keep the previous session's scroll.
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
+
+    // 篩選標籤預設收合（需要時再點開）
+    const tagSection = document.getElementById('owned-tag-filter-section');
+    if (tagSection && !tagSection.classList.contains('collapsed')) {
+        tagSection.classList.add('collapsed');
+        const toggle = tagSection.querySelector('.tag-filter-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        const chips = document.getElementById('owned-tag-filter-chips');
+        if (chips) chips.hidden = true;
+    }
 }
 
 // Update the "套用我的信用卡選項" button state.
@@ -6942,6 +6952,11 @@ function setupMyOwnedCardsModal() {
     closeManageBtn.addEventListener('click', closeManage);
     cancelBtn.addEventListener('click', closeManage);
     manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
+
+    // Top save button (on the 全選 row) proxies the bottom one so users
+    // don't have to scroll to the footer to save.
+    const saveBtnTop = document.getElementById('save-owned-cards-btn-top');
+    if (saveBtnTop) saveBtnTop.addEventListener('click', () => saveBtn.click());
 
     saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
