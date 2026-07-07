@@ -6175,15 +6175,11 @@ function renderOwnedCardsOverview() {
     container.appendChild(countLine);
 
     // --- View 1: wallet stack — all cards at a glance, no names.
-    // The stack sits inside a dark "card-holder pocket" so every card
-    // face (light or dark) stands out. Tap a covered card to reveal its
-    // full face in place; tap a fully visible card to open the solo view. ---
-    const pocket = document.createElement('div');
-    pocket.className = 'ow-pocket';
+    // Tap a covered card to reveal its full face in place; tap a fully
+    // visible card to open the solo view. ---
     const stack = document.createElement('div');
     stack.className = 'ow-stack';
-    pocket.appendChild(stack);
-    container.appendChild(pocket);
+    container.appendChild(stack);
 
     // --- View 2: solo card + personal info area (hidden until opened) ---
     const solo = document.createElement('div');
@@ -6287,14 +6283,19 @@ function renderOwnedCardsOverview() {
 
         const row = document.createElement('div');
         row.className = 'ow-solo-row';
+        // Arrows and swipe wrap around (last → first, first → last).
+        const step = (dir) => {
+            soloIndex = (soloIndex + dir + count) % count;
+            renderSolo();
+        };
         const mkArrow = (dir) => {
             const b = document.createElement('button');
             b.type = 'button';
             b.className = 'ow-arrow';
             b.innerHTML = dir < 0 ? '‹' : '›';
             b.setAttribute('aria-label', dir < 0 ? '上一張' : '下一張');
-            b.disabled = dir < 0 ? soloIndex <= 0 : soloIndex >= count - 1;
-            b.addEventListener('click', () => { soloIndex += dir; renderSolo(); });
+            b.disabled = count <= 1;
+            b.addEventListener('click', () => step(dir));
             return b;
         };
         row.appendChild(mkArrow(-1));
@@ -6307,8 +6308,8 @@ function renderOwnedCardsOverview() {
             if (sx === null) return;
             const dx = e.clientX - sx;
             sx = null;
-            if (dx < -40 && soloIndex < count - 1) { soloIndex++; renderSolo(); }
-            else if (dx > 40 && soloIndex > 0) { soloIndex--; renderSolo(); }
+            if (dx < -40 && count > 1) step(1);
+            else if (dx > 40 && count > 1) step(-1);
         });
         row.appendChild(face);
         row.appendChild(mkArrow(1));
