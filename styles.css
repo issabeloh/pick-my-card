@@ -2860,6 +2860,15 @@ input[type="number"]:focus {
         0 -18px 26px -18px rgba(0, 0, 0, 0.8);
     transition: box-shadow 0.25s ease;
 }
+/* Tight mode: strips are much thinner, so the full seam stack would pile
+   up and read almost black — use a shorter, lighter seam instead. The
+   revealed (.ow-open) card keeps its regular shadows. */
+.ow-stack.ow-tight .ow-slot:not(.ow-open) .ow-frame {
+    box-shadow:
+        0 -1px 0 rgba(0, 0, 0, 0.28),
+        0 -3px 4px -2px rgba(0, 0, 0, 0.26),
+        0 -6px 9px -7px rgba(0, 0, 0, 0.28);
+}
 .ow-slot:hover {
     transform: translateY(-5px);
 }

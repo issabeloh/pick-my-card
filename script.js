@@ -6172,7 +6172,7 @@ function renderOwnedCardsOverview() {
     // sized so the whole stack fits on screen no matter how many cards) ---
     const modeWrap = document.createElement('div');
     modeWrap.className = 'ow-mode';
-    let stackMode = localStorage.getItem('ownedStackMode') === 'tight' ? 'tight' : 'open';
+    let stackMode = 'tight'; // always start collapsed; not persisted
     const modeBtns = [
         { key: 'open', label: '展開' },
         { key: 'tight', label: '收合' }
@@ -6276,7 +6276,7 @@ function renderOwnedCardsOverview() {
 
     const setMode = (m) => {
         stackMode = m;
-        try { localStorage.setItem('ownedStackMode', m); } catch (_) {}
+        stack.classList.toggle('ow-tight', stackMode === 'tight');
         modeBtns.forEach(({ key, btn }) =>
             btn.classList.toggle('ow-mode-active', key === stackMode));
         layoutStack();
@@ -6451,6 +6451,7 @@ function renderOwnedCardsOverview() {
         list.appendChild(noteRow);
     };
 
+    stack.classList.toggle('ow-tight', stackMode === 'tight');
     modeBtns.forEach(({ key, btn }) =>
         btn.classList.toggle('ow-mode-active', key === stackMode));
 
