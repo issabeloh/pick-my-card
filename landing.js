@@ -37,8 +37,9 @@
     var scrollCue = document.getElementById('lp-scrollcue');
     var scenes = Array.prototype.slice.call(document.querySelectorAll('.lp-scene'));
 
-    // 各幕在總進度中的相對長度（第 1 幕兩段式最長；第 3、5 幕內容多）
-    var weights = [2.0, 1.0, 1.35, 1.0, 1.45, 1.0];
+    // 各幕在總進度中的相對長度（第 1 幕兩段式最長；其餘幕動畫改為進場即播，
+    // 不需要長滾動距離）
+    var weights = [2.0, 0.8, 1.0, 0.8, 1.0, 0.8];
     var total = weights.reduce(function (a, b) { return a + b; }, 0);
     var bounds = [];
     (function () {
@@ -63,14 +64,64 @@
     var s1 = scenes[0];
     var brainBar = document.getElementById('lp-brain-bar');
     var brainPct = document.getElementById('lp-brain-pct');
+    var skipBtn = document.getElementById('lp-skip');
 
     function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
+    /* 第 1 幕：維持滾動驅動（收斂/結果卡/品牌是滾動敘事的主軸） */
     function applyScene(idx, subP) {
         sceneFx[idx].forEach(function (item) {
             item.el.classList.toggle('on', subP >= item.at);
             if (item.out !== null) item.el.classList.toggle('out', subP >= item.out);
         });
+    }
+
+    /* 第 2 幕起：進場後一次連續播放整幕動畫（約 0.9 秒內全部出齊），
+       data-at 只當「出場順序」用；離開該幕即重置，回來會重播 */
+    var SCENE_PLAY_TOTAL = 900;
+    var scenePlayed = scenes.map(function () { return false; });
+    var sceneTimers = scenes.map(function () { return []; });
+    function playScene(i) {
+        if (scenePlayed[i]) return;
+        scenePlayed[i] = true;
+        var items = sceneFx[i].slice().sort(function (a, b) { return a.at - b.at; });
+        var n = items.length;
+        items.forEach(function (item, k) {
+            var d = n > 1 ? Math.round(k / (n - 1) * SCENE_PLAY_TOTAL) : 0;
+            sceneTimers[i].push(setTimeout(function () { item.el.classList.add('on'); }, d));
+        });
+    }
+    function resetScene(i) {
+        if (!scenePlayed[i]) return;
+        scenePlayed[i] = false;
+        sceneTimers[i].forEach(clearTimeout);
+        sceneTimers[i] = [];
+        sceneFx[i].forEach(function (item) { item.el.classList.remove('on'); });
+    }
+
+    /* 「省下的腦力」進度條：結果卡出現後自動跑完（約 0.9 秒），不綁滑動距離 */
+    var S1_CARD_AT = 0.24;
+    var brainAnim = null;
+    var brainPlayed = false;
+    function playBrain() {
+        brainPlayed = true;
+        var start = performance.now();
+        var dur = 900;
+        function step(t) {
+            var q = Math.min(1, (t - start) / dur);
+            var eased = 1 - Math.pow(1 - q, 2);
+            var pctText = Math.round(eased * 100) + '%';
+            brainBar.style.width = pctText;
+            brainPct.textContent = pctText;
+            brainAnim = q < 1 ? requestAnimationFrame(step) : null;
+        }
+        brainAnim = requestAnimationFrame(step);
+    }
+    function resetBrain() {
+        if (brainAnim) { cancelAnimationFrame(brainAnim); brainAnim = null; }
+        brainPlayed = false;
+        brainBar.style.width = '0%';
+        brainPct.textContent = '0%';
     }
 
     /* 打字動畫：進入第 3 幕後用計時器快速打完（不逐字綁滾動，
@@ -117,18 +168,30 @@
         scenes.forEach(function (scene, i) {
             scene.classList.toggle('active', i === idx);
         });
-        applyScene(idx, subP);
 
-        // 第 1 幕：碎片收斂進度（subP 0.08→0.34 完成收斂，接著結果卡彈出）
+        // 第 1 幕走滾動驅動；第 2 幕起進場即連續播放、離場重置（回滑重播）
+        if (idx === 0) applyScene(0, subP);
+        for (var s = 1; s < scenes.length; s++) {
+            if (s === idx) playScene(s); else resetScene(s);
+        }
+
+        // 右上角「開始使用」快速入口：只在第 1 幕顯示，進入第 2 幕淡出
+        if (skipBtn) skipBtn.classList.toggle('gone', idx > 0);
+
+        // 第 1 幕：碎片收斂進度（subP 0.08→0.34 完成收斂，接著結果卡凝聚成形）
         var conv = idx === 0 ? clamp01((subP - 0.08) / 0.26) : 1;
         s1.style.setProperty('--conv', conv);
 
-        // 第 1 幕：「省下的腦力」進度條（subP 0.28→0.50 從 0% 填到 100%）
+        // 第 1 幕：「省下的腦力」進度條——結果卡出現後自動跑完，不綁滑動距離
         if (brainBar) {
-            var brain = idx === 0 ? clamp01((subP - 0.28) / 0.22) : 1;
-            var pctText = Math.round(brain * 100) + '%';
-            brainBar.style.width = pctText;
-            if (brainPct.textContent !== pctText) brainPct.textContent = pctText;
+            if (idx === 0) {
+                if (subP >= S1_CARD_AT && !brainPlayed) playBrain();
+                if (subP < S1_CARD_AT && brainPlayed) resetBrain();
+            } else if (!brainPlayed) {
+                brainPlayed = true;
+                brainBar.style.width = '100%';
+                brainPct.textContent = '100%';
+            }
         }
 
         // 第 3 幕打字：進場即觸發；離開幕時重置（回滑重播）
@@ -167,8 +230,8 @@
             if (p >= bounds[bounds.length - 1][1] - 1e-9) idx = bounds.length - 1;
         }
         var target = Math.min(idx + 1, bounds.length - 1);
-        // 跳到下一幕 93% 處：所有元素都已進場（含印章/勾勾/整行矩陣）
-        var targetP = bounds[target][0] + 0.93 * (bounds[target][1] - bounds[target][0]);
+        // 跳到下一幕開頭偏後一點：進場動畫會自動連續播完
+        var targetP = bounds[target][0] + 0.30 * (bounds[target][1] - bounds[target][0]);
         window.scrollTo({ top: Math.round(targetP * span), behavior: 'auto' });
     });
 })();

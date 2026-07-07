@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="landing.css?v=20260707145516">
+    <link rel="stylesheet" href="landing.css?v=20260707181339">
 
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
@@ -36,6 +36,9 @@
 
     <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
     <button class="lp-scrollcue" id="lp-scrollcue" type="button" aria-label="跳到下一幕"></button>
+
+    <!-- 右上角快速入口：舊用戶誤入 landing 時可直接進工具（第 2 幕起淡出） -->
+    <a class="lp-skip" id="lp-skip" href="index.html">開始使用</a>
 
     <div class="lp-scrolly" id="lp-scrolly">
         <div class="lp-stage">
@@ -54,9 +57,9 @@
                     <span class="lp-frag" style="--tx:-105px; --ty:-235px; --rz:-6deg;  --fd:0s"><i>回饋上限 NT$300／月</i></span>
                     <span class="lp-frag" style="--tx:120px;  --ty:-290px; --rz:4deg;   --fd:.4s"><i>需事先登錄</i></span>
                     <span class="lp-frag" style="--tx:115px;  --ty:-180px; --rz:-3deg;  --fd:1.2s"><i>排除：超商、全聯、保費</i></span>
-                    <span class="lp-frag" style="--tx:-120px; --ty:-150px; --rz:3deg;   --fd:.8s"><i>NT$15,000 封頂</i></span>
-                    <span class="lp-frag" style="--tx:-135px; --ty:-95px;  --rz:5deg;   --fd:.2s"><i>須單筆滿NT$1,000</i></span>
-                    <span class="lp-frag" style="--tx:130px;  --ty:-105px; --rz:-5deg;  --fd:.9s"><i>3%+1%+1%=5%</i></span>
+                    <span class="lp-frag" style="--tx:-120px; --ty:-180px; --rz:3deg;   --fd:.8s"><i>NT$15,000 封頂</i></span>
+                    <span class="lp-frag" style="--tx:-135px; --ty:-125px; --rz:5deg;   --fd:.2s"><i>須單筆滿NT$1,000</i></span>
+                    <span class="lp-frag" style="--tx:135px;  --ty:-130px; --rz:-5deg;  --fd:.9s"><i>3%+1%+1%=5%</i></span>
                     <span class="lp-frag" style="--tx:-125px; --ty:70px;   --rz:-4deg;  --fd:1.5s"><i>新戶限定</i></span>
                     <span class="lp-frag" style="--tx:105px;  --ty:65px;   --rz:6deg;   --fd:.6s"><i>權益至 2026/12/31</i></span>
                     <span class="lp-frag" style="--tx:-100px; --ty:190px;  --rz:4deg;   --fd:1.1s"><i>不含儲值與繳費</i></span>
@@ -231,6 +234,6 @@
         </div>
     </div>
 
-    <script src="landing.js?v=20260707145516" defer></script>
+    <script src="landing.js?v=20260707181339" defer></script>
 </body>
 </html>

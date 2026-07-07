@@ -119,8 +119,32 @@ body {
     50%      { transform: translateY(6px) rotate(45deg); }
 }
 
+/* ---------- 右上角快速入口（第 1 幕顯示，第 2 幕起淡出） ---------- */
+.lp-skip {
+    position: fixed;
+    top: calc(14px + env(safe-area-inset-top));
+    right: 16px;
+    z-index: 45;
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1.5px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+    transition: opacity 0.4s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.lp-skip:hover { background: #fff; }
+.lp-skip.gone { opacity: 0; pointer-events: none; }
+
 /* ---------- Scrolly 骨架 ---------- */
-.lp-scrolly { height: 820vh; }
+.lp-scrolly { height: 680vh; }
 
 .lp-stage {
     position: sticky;
@@ -299,24 +323,24 @@ body {
     background: linear-gradient(90deg, #2563eb, #3b82f6);
 }
 
-.lp-s1-result.fx { opacity: 0; transform: scale(0.5); transition: none; }
+/* 進場：碎片被吸入後「凝聚成形」——從模糊的小尺寸凝聚成清晰卡片（無彈跳） */
+.lp-s1-result.fx {
+    opacity: 0;
+    transform: scale(0.62);
+    filter: blur(12px);
+    transition: none;
+}
 .lp-s1-result.fx.on {
     opacity: 1;
     transform: none;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    animation: lp-result-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+    filter: blur(0);
+    transition: opacity 0.55s ease-out, transform 0.65s cubic-bezier(0.22, 0.9, 0.35, 1), filter 0.5s ease-out;
 }
 /* 第一段退場：往上淡出，讓品牌畫面接上 */
 .lp-s1-result.fx.on.out {
-    animation: none;
     opacity: 0;
     transform: translateY(-46px) scale(0.96);
     pointer-events: none;
-}
-@keyframes lp-result-pop {
-    0%   { opacity: 0; transform: scale(0.5); }
-    70%  { opacity: 1; transform: scale(1.04); }
-    100% { opacity: 1; transform: scale(1); }
 }
 
 .lp-brand { position: relative; }
