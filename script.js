@@ -6461,6 +6461,10 @@ function openManageOwnedCardsModal() {
     const modal = document.getElementById('manage-owned-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
+
+    // Always open at the top — don't keep the previous session's scroll.
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
 }
 
 // Update the "套用我的信用卡選項" button state.

@@ -2754,6 +2754,11 @@ input[type="number"]:focus {
     background: #ffffff;
     border-radius: 0 0 12px 12px;
 }
+/* Reserve scrollbar space even when nothing scrolls, so the modal's
+   content width doesn't jump when expanding a card makes it scrollable. */
+#my-owned-cards-modal .modal-content {
+    scrollbar-gutter: stable;
+}
 
 .ow-count-badge {
     color: #94a3b8;
