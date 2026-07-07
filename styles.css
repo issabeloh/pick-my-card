@@ -2755,44 +2755,34 @@ input[type="number"]:focus {
     border-radius: 0 0 12px 12px;
 }
 
-.ow-mode {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-bottom: 16px;
+.ow-count-badge {
+    display: inline-block;
+    vertical-align: 2px;
+    margin-left: 6px;
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 999px;
 }
-.ow-mode-btn {
-    padding: 4px 14px;
+
+.ow-collapse-btn {
+    display: block;
+    margin: 16px auto 0;
+    padding: 4px 18px;
     border-radius: 999px;
     border: 1px solid #e2e8f0;
     background: #fff;
     color: #64748b;
     font-size: 12.5px;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: border-color 0.15s ease, color 0.15s ease;
 }
-.ow-mode-btn:hover {
+.ow-collapse-btn:hover {
     border-color: #cbd5e1;
-}
-.ow-mode-btn.ow-mode-active {
-    background: #eff6ff;
-    border-color: #3b82f6;
-    color: #2563eb;
-    font-weight: 600;
-}
-
-.ow-count {
-    text-align: center;
-    font-size: 13px;
-    color: #374151;
-    margin: 18px 0 4px;
-    letter-spacing: 0.02em;
-}
-.ow-count b {
-    color: #0f172a;
-    font-size: 16px;
-    font-weight: 800;
-    margin: 0 2px;
+    color: #334155;
 }
 
 /* Card face frame (shared by stack slots and solo view) */
@@ -2849,25 +2839,16 @@ input[type="number"]:focus {
                 transform 0.25s ease;
 }
 .ow-slot .ow-frame {
-    /* bright hairline edge + layered dark seam: the 0/-1px shadows keep a
-       dark gap right at the edge so stacked cards' white borders never
-       touch each other directly */
+    /* bright hairline edge + a short, light seam: the 0/-1px shadow keeps
+       a dark gap right at the edge so stacked cards' white borders never
+       touch. Strips are thin, so heavier seams would pile up and read
+       almost black. */
     border: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow:
-        0 -1px 0 rgba(0, 0, 0, 0.45),
-        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
-        0 -10px 16px -10px rgba(0, 0, 0, 0.65),
-        0 -18px 26px -18px rgba(0, 0, 0, 0.8);
-    transition: box-shadow 0.25s ease;
-}
-/* Tight mode: strips are much thinner, so the full seam stack would pile
-   up and read almost black — use a shorter, lighter seam instead. The
-   revealed (.ow-open) card keeps its regular shadows. */
-.ow-stack.ow-tight .ow-slot:not(.ow-open) .ow-frame {
     box-shadow:
         0 -1px 0 rgba(0, 0, 0, 0.28),
         0 -3px 4px -2px rgba(0, 0, 0, 0.26),
         0 -6px 9px -7px rgba(0, 0, 0, 0.28);
+    transition: box-shadow 0.25s ease;
 }
 .ow-slot:hover {
     transform: translateY(-5px);

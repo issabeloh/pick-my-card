@@ -6151,7 +6151,10 @@ function renderOwnedCardsOverview() {
         .filter(card => myOwnedCards.has(card.id))
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    const badge = document.getElementById('owned-count-badge');
+
     if (ownedCards.length === 0) {
+        if (badge) badge.style.display = 'none';
         const empty = document.createElement('div');
         empty.className = 'owned-overview-empty';
         empty.innerHTML = `
@@ -6168,24 +6171,11 @@ function renderOwnedCardsOverview() {
 
     const count = ownedCards.length;
 
-    // --- Stack density toggle: 展開 (current airy look) / 收合 (tight,
-    // sized so the whole stack fits on screen no matter how many cards) ---
-    const modeWrap = document.createElement('div');
-    modeWrap.className = 'ow-mode';
-    let stackMode = 'tight'; // always start collapsed; not persisted
-    const modeBtns = [
-        { key: 'open', label: '展開' },
-        { key: 'tight', label: '收合' }
-    ].map(m => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'ow-mode-btn';
-        b.textContent = m.label;
-        b.addEventListener('click', () => setMode(m.key));
-        modeWrap.appendChild(b);
-        return { key: m.key, btn: b };
-    });
-    if (count > 1) container.appendChild(modeWrap);
+    // Card count lives as a badge next to the modal title.
+    if (badge) {
+        badge.textContent = `${count} 張`;
+        badge.style.display = '';
+    }
 
     // --- View 1: wallet stack — all cards at a glance, no names.
     // Tap a covered card to reveal its full face in place; tap a fully
@@ -6194,11 +6184,14 @@ function renderOwnedCardsOverview() {
     stack.className = 'ow-stack';
     container.appendChild(stack);
 
-    // --- Card count line (below the cards; hidden in solo view) ---
-    const countLine = document.createElement('div');
-    countLine.className = 'ow-count';
-    countLine.innerHTML = `您有 <b>${count}</b> 張信用卡`;
-    container.appendChild(countLine);
+    // "收合" pill: appears only while a card is revealed, folds the
+    // stack fully closed again.
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type = 'button';
+    collapseBtn.className = 'ow-collapse-btn';
+    collapseBtn.textContent = '收合';
+    collapseBtn.style.display = 'none';
+    container.appendChild(collapseBtn);
 
     // --- View 2: solo card + personal info area (hidden until opened) ---
     const solo = document.createElement('div');
@@ -6206,7 +6199,6 @@ function renderOwnedCardsOverview() {
     solo.style.display = 'none';
     container.appendChild(solo);
 
-    const PEEK = 64;   // visible strip of each stacked card
     const GAP = 40;    // breathing room under a revealed card
     let expanded = null;
     let soloIndex = 0;
@@ -6258,11 +6250,9 @@ function renderOwnedCardsOverview() {
 
     const layoutStack = () => {
         const h = stack.clientWidth / 1.586; // standard card aspect ratio
-        // Tight mode budgets ~320px for the whole stack: the more cards,
-        // the thinner each visible strip (floor of 12px).
-        const peek = stackMode === 'tight'
-            ? Math.max(12, Math.min(40, Math.round((320 - h) / Math.max(1, count - 1))))
-            : PEEK;
+        // Budget ~320px for the whole stack: the more cards, the thinner
+        // each visible strip (floor of 12px).
+        const peek = Math.max(12, Math.min(40, Math.round((320 - h) / Math.max(1, count - 1))));
         let shift = 0, maxBottom = 0;
         slots.forEach((slot, i) => {
             slot.classList.toggle('ow-open', expanded === i);
@@ -6272,30 +6262,25 @@ function renderOwnedCardsOverview() {
             if (expanded === i) shift = h - peek + GAP;
         });
         stack.style.height = `${Math.ceil(maxBottom)}px`;
+        collapseBtn.style.display = expanded === null ? 'none' : '';
     };
 
-    const setMode = (m) => {
-        stackMode = m;
-        stack.classList.toggle('ow-tight', stackMode === 'tight');
-        modeBtns.forEach(({ key, btn }) =>
-            btn.classList.toggle('ow-mode-active', key === stackMode));
+    collapseBtn.addEventListener('click', () => {
+        expanded = null;
         layoutStack();
-    };
+    });
 
     const openSolo = (i) => {
         soloIndex = i;
         renderSolo();
         stack.style.display = 'none';
-        modeWrap.style.display = 'none';
-        countLine.style.display = 'none';
+        collapseBtn.style.display = 'none';
         solo.style.display = '';
     };
 
     const backToStack = () => {
         solo.style.display = 'none';
         stack.style.display = '';
-        modeWrap.style.display = '';
-        countLine.style.display = '';
         expanded = soloIndex; // keep the card you were viewing revealed
         layoutStack();
     };
@@ -6450,10 +6435,6 @@ function renderOwnedCardsOverview() {
         noteRow.appendChild(noteBody);
         list.appendChild(noteRow);
     };
-
-    stack.classList.toggle('ow-tight', stackMode === 'tight');
-    modeBtns.forEach(({ key, btn }) =>
-        btn.classList.toggle('ow-mode-active', key === stackMode));
 
     // The modal isn't displayed yet when this runs; lay out on the next
     // frame (and again on resize) so clientWidth is real.
