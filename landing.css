@@ -37,22 +37,27 @@ body {
 /* ---------- 開場提示 ---------- */
 .lp-hint {
     position: fixed;
-    top: 18px; left: 0; right: 0;
+    top: 40px; left: 0; right: 0;
     text-align: center;
-    font-size: 0.85rem;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 600;
     color: #475569;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     z-index: 40;
     opacity: 1;
     transition: opacity 0.5s ease;
-    animation: lp-hint-bob 2.2s ease-in-out infinite;
     pointer-events: none;
 }
 .lp-hint.gone { opacity: 0; }
+.lp-hint-arrow {
+    display: block;
+    margin-top: 8px;
+    font-size: 1.05rem;
+    animation: lp-hint-bob 2.2s ease-in-out infinite;
+}
 @keyframes lp-hint-bob {
     0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(4px); }
+    50%      { transform: translateY(5px); }
 }
 
 /* ---------- Scrolly 骨架 ---------- */
@@ -178,27 +183,39 @@ body {
 
 .lp-brand { position: relative; }
 .lp-brand-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     font-size: 0.9rem;
     font-weight: 700;
     color: #1e40af;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.14em;
     margin-bottom: 14px;
+}
+.lp-brand-logo-img {
+    height: 22px;
+    width: auto;
 }
 .lp-brand-title {
     font-size: clamp(2rem, 9vw, 2.75rem);
     font-weight: 900;
-    line-height: 1.25;
-    background: linear-gradient(120deg, #1e3a8a 10%, #2563eb 55%, #3b82f6 90%);
+    line-height: 1.3;
+    color: #0f172a;
+    margin-bottom: 16px;
+}
+.lp-brand-t2 {
+    background: linear-gradient(120deg, #1e40af 10%, #2563eb 55%, #3b82f6 90%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    color: #1e40af;
-    margin-bottom: 16px;
+    color: #2563eb;
 }
 .lp-brand-sub {
     font-size: 1rem;
     font-weight: 500;
     color: #475569;
+    line-height: 1.75;
     transition-delay: 0.15s;
 }
 
@@ -409,7 +426,23 @@ body {
     flex-direction: column;
     line-height: 1.3;
 }
-.lp-rank-name small { font-size: 0.72rem; font-weight: 500; color: #64748b; }
+/* 分級選擇 chip（展示可自選卡片級別） */
+.lp-level-chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    margin-top: 3px;
+    padding: 1px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1.5px solid #93c5fd;
+    border-radius: 7px;
+    white-space: nowrap;
+}
+.lp-note--level { margin-top: 18px; }
+.lp-note--level + .lp-note { margin-top: 8px; }
 .lp-rank-rate {
     font-size: 1.05rem;
     font-weight: 900;
@@ -719,69 +752,6 @@ body {
 .lp-follow:hover { color: #0f172a; background: rgba(15, 23, 42, 0.05); }
 
 /* ============================================================
-   頁尾：安全說明（可收合，預設收起）
-   ============================================================ */
-.lp-footer {
-    max-width: 560px;
-    margin: 0 auto;
-    padding: 48px 24px calc(56px + env(safe-area-inset-bottom));
-}
-.lp-footer-lead {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #1e3a8a;
-    line-height: 1.8;
-    margin-bottom: 16px;
-    text-align: center;
-}
-.lp-security-details {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
-    overflow: hidden;
-}
-.lp-security-details summary {
-    cursor: pointer;
-    list-style: none;
-    padding: 15px 18px;
-    min-height: 48px;
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #1e40af;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    -webkit-tap-highlight-color: transparent;
-}
-.lp-security-details summary::-webkit-details-marker { display: none; }
-.lp-security-details summary::after {
-    content: "＋";
-    font-weight: 500;
-    color: #64748b;
-    transition: transform 0.25s ease;
-}
-.lp-security-details[open] summary::after { transform: rotate(45deg); }
-.lp-security-body {
-    padding: 2px 18px 18px;
-}
-.lp-security-body p {
-    font-size: 0.85rem;
-    line-height: 1.9;
-    color: #334155;
-    margin-bottom: 12px;
-    text-align: left;
-}
-.lp-security-body p:last-child { margin-bottom: 0; }
-.lp-security-body strong { color: #0f172a; }
-.lp-footer-copy {
-    margin-top: 24px;
-    text-align: center;
-    font-size: 0.75rem;
-    color: #5b6b83;
-}
-
-/* ============================================================
    桌機（≥1024px）：單欄置中 + 左右淡色裝飾
    ============================================================ */
 .lp-deco { display: none; }
@@ -813,6 +783,8 @@ body {
     .lp-scene > .lp-frags { max-width: none; }
     .lp-frag { --sx: 2.6; --sy: 1.05; }
     .lp-disclaimer { right: 24px; bottom: 18px; }
+    .lp-hint { top: 9vh; font-size: 1.25rem; }
+    .lp-hint-arrow { font-size: 1.3rem; margin-top: 12px; }
 }
 
 /* ============================================================

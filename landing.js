@@ -115,13 +115,4 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     update();
-
-    /* ---------- 收尾安全句 → 展開頁尾說明 ---------- */
-    var safetyLink = document.querySelector('.lp-safety');
-    var securityDetails = document.getElementById('lp-security-details');
-    if (safetyLink && securityDetails) {
-        safetyLink.addEventListener('click', function () {
-            securityDetails.open = true;
-        });
-    }
 })();
