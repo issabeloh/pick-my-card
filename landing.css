@@ -191,7 +191,7 @@ body {
 .lp-disclaimer {
     position: absolute;
     right: 16px;
-    bottom: max(12px, env(safe-area-inset-bottom));
+    bottom: calc(58px + env(safe-area-inset-bottom)); /* 避開底部下滑提示 */
     width: auto;
     font-size: 0.68rem;
     color: #4a5871;
@@ -214,7 +214,10 @@ body {
     top: 50%; left: 50%;
     transform:
         translate(-50%, -50%)
-        translate(calc(var(--tx) * var(--sx, 1) * (1 - var(--c))), calc(var(--ty) * var(--sy, 1) * (1 - var(--c))))
+        translate(
+            calc(var(--tx) * var(--sx, 1) * (1 - var(--c))),
+            calc(var(--ty) * var(--sy, 1) * (1 - var(--c)) + 56px * var(--c)) /* 收斂點：中間偏下（與結果卡位置一致） */
+        )
         rotate(calc(var(--rz) * (1 - var(--c))))
         scale(calc(1 - 0.85 * var(--c)));
     opacity: calc(1 - var(--c) * 1.25);
@@ -247,8 +250,9 @@ body {
 }
 .lp-s1-stack > * { grid-area: 1 / 1; }
 
-/* 第一段：碎片收斂成的搜尋結果卡 */
+/* 第一段：碎片收斂成的搜尋結果卡（中間偏下，與碎片收斂點一致） */
 .lp-s1-result {
+    margin-top: 112px;
     width: min(320px, 82vw);
     background: #fff;
     border: 2px solid #3b82f6;
@@ -971,6 +975,7 @@ body {
 .lp-reduced .lp-frag i { animation: none; white-space: normal; }
 /* 兩段式改為依序排版：結果卡與品牌畫面都完整顯示 */
 .lp-reduced .lp-s1-stack { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+.lp-reduced .lp-s1-result { margin-top: 0; }
 .lp-reduced .lp-s1-result.fx,
 .lp-reduced .lp-s1-result.fx.on.out { opacity: 1; transform: none; animation: none; }
 .lp-reduced .lp-brain-bar { width: 100% !important; }

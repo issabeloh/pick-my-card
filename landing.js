@@ -6,6 +6,9 @@
 (function () {
     'use strict';
 
+    // 記錄「看過 landing」：之後打 pickmycard.app 會直接進工具，不再導回來
+    try { localStorage.setItem('pmc_seen_landing', '1'); } catch (e) { /* 無痕模式忽略 */ }
+
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     var typedEl = document.getElementById('lp-typed');
@@ -120,9 +123,9 @@
         var conv = idx === 0 ? clamp01((subP - 0.08) / 0.26) : 1;
         s1.style.setProperty('--conv', conv);
 
-        // 第 1 幕：「省下的腦力」進度條（subP 0.36→0.56 從 0% 填到 100%）
+        // 第 1 幕：「省下的腦力」進度條（subP 0.28→0.50 從 0% 填到 100%）
         if (brainBar) {
-            var brain = idx === 0 ? clamp01((subP - 0.36) / 0.20) : 1;
+            var brain = idx === 0 ? clamp01((subP - 0.28) / 0.22) : 1;
             var pctText = Math.round(brain * 100) + '%';
             brainBar.style.width = pctText;
             if (brainPct.textContent !== pctText) brainPct.textContent = pctText;

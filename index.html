@@ -15,6 +15,19 @@
         } catch (e) { /* localStorage disabled — fall back to default render */ }
     </script>
 
+    <!-- 首訪導向 landing：完全沒有本站使用痕跡的新訪客，第一次進站先看 landing 故事頁。
+         舊用戶（登入過/選過卡/存過任何資料/看過 landing）不受影響，直接進工具。
+         寬鬆認定「舊用戶」：localStorage 有任何一個 key 就算（寧可少跳、不誤跳）。
+         用 location.replace 讓返回鍵不會跳回這裡造成循環。 -->
+    <script>
+        try {
+            if (localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+                localStorage.setItem('pmc_seen_landing', '1');
+                location.replace('landing.html');
+            }
+        } catch (e) { /* localStorage 不可用（無痕/封鎖）→ 一律直接進工具 */ }
+    </script>
+
     <!-- SEO Meta Tags -->
     <meta name="description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
     <link rel="canonical" href="https://pickmycard.app/">
