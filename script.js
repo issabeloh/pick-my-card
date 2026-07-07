@@ -6171,9 +6171,9 @@ function renderOwnedCardsOverview() {
 
     const count = ownedCards.length;
 
-    // Card count lives as a badge next to the modal title.
+    // Card count lives as quiet muted text after the modal title.
     if (badge) {
-        badge.textContent = `${count} 張`;
+        badge.textContent = `・${count} 張`;
         badge.style.display = '';
     }
 
