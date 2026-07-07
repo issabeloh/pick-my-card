@@ -2398,7 +2398,9 @@ const fuzzySearchMap = {
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
     'tomods': 'Tomod\'s',
-    'sogo': '遠東 SOGO'
+    'sogo': '遠東 SOGO',
+    '台北捷運': '臺北捷運',
+    '臺北捷運': '台北捷運'
 };
 
 // Search term exclusion rules - prevents unwanted matches
