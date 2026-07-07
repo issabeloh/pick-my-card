@@ -2729,6 +2729,27 @@ input[type="number"]:focus {
 }
 
 /* --- "我的信用卡" modal: wallet stack + solo card views --- */
+.ow-gear-btn {
+    margin-left: 10px;
+    margin-right: auto; /* sit right beside the title; close btn stays far right */
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.3s ease;
+}
+.ow-gear-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+    transform: rotate(30deg);
+}
+
 #my-owned-cards-modal .modal-body {
     background:
         radial-gradient(120% 70% at 50% 0%, #eef4ff 0%, #f8fafc 45%, #ffffff 100%);
@@ -2789,7 +2810,7 @@ input[type="number"]:focus {
 /* --- Wallet stack --- */
 .ow-stack {
     position: relative;
-    width: min(320px, 100%);
+    width: min(260px, 76%);
     margin: 0 auto;
     transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }

@@ -6147,15 +6147,11 @@ function renderOwnedCardsOverview() {
     if (!container) return;
     container.innerHTML = '';
 
-    const actions = document.getElementById('owned-overview-actions');
-
     const ownedCards = [...cardsData.cards]
         .filter(card => myOwnedCards.has(card.id))
         .sort((a, b) => a.name.localeCompare(b.name));
 
     if (ownedCards.length === 0) {
-        // Empty state has its own CTA; hide the bottom manage button to avoid duplication
-        if (actions) actions.style.display = 'none';
         const empty = document.createElement('div');
         empty.className = 'owned-overview-empty';
         empty.innerHTML = `
@@ -6169,8 +6165,6 @@ function renderOwnedCardsOverview() {
         addBtn.addEventListener('click', openManageOwnedCardsModal);
         return;
     }
-
-    if (actions) actions.style.display = 'flex';
 
     const count = ownedCards.length;
 
@@ -6194,7 +6188,7 @@ function renderOwnedCardsOverview() {
     container.appendChild(solo);
 
     const PEEK = 64;   // visible strip of each stacked card
-    const GAP = 16;    // breathing room under a revealed card
+    const GAP = 40;    // breathing room under a revealed card
     let expanded = null;
     let soloIndex = 0;
 
