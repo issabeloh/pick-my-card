@@ -2811,12 +2811,16 @@ input[type="number"]:focus {
     position: relative;
     width: min(330px, 100%);
     margin: 0 auto;
-    background: linear-gradient(165deg, #32353e 0%, #23252c 45%, #1b1d23 100%);
+    /* subtle grain (inline SVG noise) over a lighter charcoal gradient
+       — reads as quiet leather texture */
+    background:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.07'/></svg>"),
+        linear-gradient(165deg, #43464f 0%, #34363e 45%, #2b2d34 100%);
     border-radius: 24px;
     padding: 24px 20px 28px;
     box-shadow:
-        inset 0 2px 10px rgba(0, 0, 0, 0.55),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 2px 10px rgba(0, 0, 0, 0.45),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.07),
         0 2px 10px rgba(15, 23, 42, 0.12);
 }
 /* stitching seam, like a leather card holder */
@@ -2824,7 +2828,7 @@ input[type="number"]:focus {
     content: '';
     position: absolute;
     inset: 9px;
-    border: 1.5px dashed rgba(255, 255, 255, 0.13);
+    border: 1.5px dashed rgba(255, 255, 255, 0.15);
     border-radius: 17px;
     pointer-events: none;
 }
@@ -2846,9 +2850,15 @@ input[type="number"]:focus {
                 transform 0.25s ease;
 }
 .ow-slot .ow-frame {
-    /* bright hairline edge + tight dark shadow: crisp separation, no haze */
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow: 0 -16px 24px -18px rgba(0, 0, 0, 0.85);
+    /* bright hairline edge + layered dark seam: the 0/-1px shadows keep a
+       dark gap right at the edge so stacked cards' white borders never
+       touch each other directly */
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow:
+        0 -1px 0 rgba(0, 0, 0, 0.45),
+        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
+        0 -10px 16px -10px rgba(0, 0, 0, 0.65),
+        0 -18px 26px -18px rgba(0, 0, 0, 0.8);
     transition: box-shadow 0.25s ease;
 }
 .ow-slot:hover {
@@ -2859,8 +2869,11 @@ input[type="number"]:focus {
     outline-offset: 2px;
 }
 .ow-slot.ow-open .ow-frame {
-    box-shadow: 0 -16px 24px -18px rgba(0, 0, 0, 0.85),
-                0 16px 32px -12px rgba(0, 0, 0, 0.55);
+    box-shadow:
+        0 -1px 0 rgba(0, 0, 0, 0.45),
+        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
+        0 -18px 26px -18px rgba(0, 0, 0, 0.8),
+        0 16px 32px -12px rgba(0, 0, 0, 0.55);
 }
 
 /* "tap again" affordance pill on the revealed card */
