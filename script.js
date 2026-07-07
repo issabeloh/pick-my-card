@@ -1486,7 +1486,11 @@ function buildSpotlightModalBody(item) {
     }
 
     const blocks = activities.map(group => {
-        const rateNum = parseCashbackRateSync(group.rate, levelData);
+        const parsedRate = parseCashbackRateSync(group.rate, levelData);
+        // For stacking models (rate+basic+…) rate_N holds only the designated-channel
+        // rate, so show the summed total (designated + basic + bonus) — same number the
+        // search-result card shows. Non-stacking models return the parsed rate as-is.
+        const rateNum = getDisplayRate(card, group, parsedRate, levelData);
         const capNum = parseCashbackCap(group.cap, card, levelData);
         const capText = (capNum !== null && capNum !== undefined && !isNaN(capNum))
             ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
