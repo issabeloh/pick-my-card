@@ -29,6 +29,7 @@
     var scrolly = document.getElementById('lp-scrolly');
     var progressBar = document.getElementById('lp-progress-bar');
     var hint = document.getElementById('lp-hint');
+    var scrollCue = document.getElementById('lp-scrollcue');
     var scenes = Array.prototype.slice.call(document.querySelectorAll('.lp-scene'));
 
     // 各幕在總進度中的相對長度（第 1、3、5 幕內容較多，多給一點滾動距離）
@@ -60,6 +61,26 @@
         });
     }
 
+    /* 打字動畫：進入第 3 幕後用計時器快速打完（不逐字綁滾動，
+       稍微一滑就會看到完整的 "uniqlo" 打字過程） */
+    var typingTimer = null;
+    var typingStarted = false;
+    function startTyping() {
+        typingStarted = true;
+        var n = 0;
+        typedEl.textContent = '';
+        typingTimer = setInterval(function () {
+            n++;
+            typedEl.textContent = typedText.slice(0, n);
+            if (n >= typedText.length) { clearInterval(typingTimer); typingTimer = null; }
+        }, 75);
+    }
+    function resetTyping(fullText) {
+        if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+        typingStarted = false;
+        typedEl.textContent = fullText ? typedText : '';
+    }
+
     function update() {
         var rect = scrolly.getBoundingClientRect();
         var span = scrolly.offsetHeight - window.innerHeight;
@@ -68,8 +89,9 @@
         // 頂端進度條
         progressBar.style.transform = 'scaleX(' + p + ')';
 
-        // 開場提示：一開始滑動就淡出
+        // 開場提示：一開始滑動就淡出；淺灰下滑提示接手，接近結尾消失
         hint.classList.toggle('gone', p > 0.015);
+        scrollCue.classList.toggle('show', p > 0.015 && p < 0.93);
 
         // 目前在哪一幕
         var idx = 0;
@@ -85,20 +107,18 @@
         });
         applyScene(idx, subP);
 
-        // 第 1 幕：碎片收斂進度（subP 0.12→0.6 之間完成收斂）
-        var conv = idx === 0 ? clamp01((subP - 0.12) / 0.48) : 1;
+        // 第 1 幕：碎片收斂進度（subP 0.10→0.42 之間完成收斂，接著結果卡片彈出）
+        var conv = idx === 0 ? clamp01((subP - 0.10) / 0.32) : 1;
         s1.style.setProperty('--conv', conv);
 
-        // 第 3 幕：滾動驅動打字（subP 0.12→0.36 打完 6 個字，倒帶會回刪）
+        // 第 3 幕打字：進場即觸發；離開幕時重置（回滑重播）
         if (typedEl) {
-            var chars = 0;
-            if (idx > 2) {
-                chars = typedText.length;
-            } else if (idx === 2) {
-                chars = Math.round(clamp01((subP - 0.12) / 0.24) * typedText.length);
+            if (idx === 2) {
+                if (subP >= 0.06 && !typingStarted) startTyping();
+                if (subP < 0.06 && typingStarted) resetTyping(false);
+            } else if (typingStarted || typedEl.textContent !== (idx > 2 ? typedText : '')) {
+                resetTyping(idx > 2);
             }
-            var next = typedText.slice(0, chars);
-            if (typedEl.textContent !== next) typedEl.textContent = next;
         }
     }
 

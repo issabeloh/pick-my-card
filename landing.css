@@ -37,9 +37,10 @@ body {
 /* ---------- 開場提示 ---------- */
 .lp-hint {
     position: fixed;
-    top: 40px; left: 0; right: 0;
+    top: 50%; left: 0; right: 0;
+    transform: translateY(-60%);
     text-align: center;
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: #475569;
     letter-spacing: 0.14em;
@@ -49,15 +50,60 @@ body {
     pointer-events: none;
 }
 .lp-hint.gone { opacity: 0; }
+/* 拉長的向下箭頭（直線 + 箭頭尖） */
 .lp-hint-arrow {
     display: block;
-    margin-top: 8px;
-    font-size: 1.05rem;
-    animation: lp-hint-bob 2.2s ease-in-out infinite;
+    position: relative;
+    width: 2px;
+    height: 46px;
+    margin: 14px auto 0;
+    background: #64748b;
+    border-radius: 2px;
+    animation: lp-hint-bob 2s ease-in-out infinite;
+}
+.lp-hint-arrow::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid #64748b;
+    border-bottom: 2px solid #64748b;
+    transform: translate(-50%, -1px) rotate(45deg);
 }
 @keyframes lp-hint-bob {
     0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(5px); }
+    50%      { transform: translateY(7px); }
+}
+
+/* 常駐下滑提示（淺灰 chevron，開始滑動後出現、接近結尾消失） */
+.lp-scrollcue {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    width: 26px;
+    height: 26px;
+    margin-left: -13px;
+    z-index: 40;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    animation: lp-cue-bob 1.8s ease-in-out infinite;
+}
+.lp-scrollcue::before {
+    content: "";
+    position: absolute;
+    left: 5px; right: 5px; top: 3px; bottom: 9px;
+    border-right: 3px solid #94a3b8;
+    border-bottom: 3px solid #94a3b8;
+    border-radius: 2px;
+    transform: rotate(45deg);
+}
+.lp-scrollcue.show { opacity: 0.85; }
+@keyframes lp-cue-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(6px); }
 }
 
 /* ---------- Scrolly 骨架 ---------- */
@@ -179,6 +225,56 @@ body {
 @keyframes lp-float {
     from { transform: translateY(-5px); }
     to   { transform: translateY(6px); }
+}
+
+/* 第 1 幕：碎片收斂成的「結果卡片」 */
+.lp-s1-result {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    background: #fff;
+    border: 2px solid #2563eb;
+    border-radius: 14px;
+    padding: 12px 18px;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.22);
+    margin-bottom: 26px;
+}
+.lp-s1-check {
+    flex: none;
+    position: relative;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: #2563eb;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.lp-s1-check::after {
+    content: "";
+    position: absolute;
+    left: 8px; top: 5px;
+    width: 6px; height: 11px;
+    border: solid #fff;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(42deg);
+}
+.lp-s1-result-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+}
+.lp-s1-result-rate {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #16a34a;
+    font-variant-numeric: tabular-nums;
+}
+.lp-s1-result.fx { opacity: 0; transform: scale(0.5); transition: none; }
+.lp-s1-result.fx.on { animation: lp-result-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) forwards; }
+@keyframes lp-result-pop {
+    0%   { opacity: 0; transform: scale(0.5); }
+    70%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
 }
 
 .lp-brand { position: relative; }
@@ -781,14 +877,15 @@ body {
     .lp-scene > .lp-frags { max-width: none; }
     .lp-frag { --sx: 2.6; --sy: 1.05; }
     .lp-disclaimer { right: 24px; bottom: 18px; }
-    .lp-hint { top: 9vh; font-size: 1.25rem; }
-    .lp-hint-arrow { font-size: 1.3rem; margin-top: 12px; }
+    .lp-hint { font-size: 1.25rem; }
+    .lp-hint-arrow { height: 58px; margin-top: 16px; }
 }
 
 /* ============================================================
    減少動態（prefers-reduced-motion）：靜態依序排版
    ============================================================ */
 .lp-reduced .lp-progress,
+.lp-reduced .lp-scrollcue,
 .lp-reduced .lp-hint { display: none; }
 
 .lp-reduced .lp-scrolly { height: auto; }
