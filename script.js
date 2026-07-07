@@ -6222,7 +6222,7 @@ function renderOwnedCardsOverview() {
         // Tap-again affordance: pill fades in on the revealed card.
         const hint = document.createElement('div');
         hint.className = 'ow-hint';
-        hint.textContent = '再點一下 查看個人資訊 ›';
+        hint.textContent = '查看個人資訊 ›';
         slot.appendChild(hint);
         const activate = () => {
             // Fully visible cards (revealed, or the bottom-most) open solo view.
@@ -6329,7 +6329,7 @@ function renderOwnedCardsOverview() {
         info.className = 'ow-solo-info';
         const infoHead = document.createElement('div');
         infoHead.className = 'ow-info-head';
-        infoHead.innerHTML = '<span>個人化設定</span><span class="ow-info-ro">唯讀</span>';
+        infoHead.textContent = '個人化設定';
         info.appendChild(infoHead);
         const list = document.createElement('div');
         list.className = 'ow-info-list';
@@ -6355,10 +6355,11 @@ function renderOwnedCardsOverview() {
             catch (_) { return Promise.resolve(fallback); }
         };
         const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
-        const [level, notes, feeWaived] = await Promise.all([
+        const [level, notes, feeWaived, creditLimit] = await Promise.all([
             hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
             safe(() => loadUserNotes(card.id), ''),
-            safe(() => loadFeeWaiverStatus(card.id), false)
+            safe(() => loadFeeWaiverStatus(card.id), false),
+            safe(() => loadCreditLimit(card.id), null)
         ]);
         if (token !== soloToken) return; // user switched cards while loading
 
@@ -6386,12 +6387,14 @@ function renderOwnedCardsOverview() {
         // 發卡組織／生日月份／童樂匯 are CUBE-specific settings today.
         if (card.id === 'cathay-cube') {
             addRow('發卡組織', cubeIssuer);
-            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未設定',
+            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未填寫',
                 userBirthdayMonth ? '' : 'ow-muted');
             addRow('童樂匯權益', isChildrenEligible ? '✓ 符合' : '不符合',
                 isChildrenEligible ? 'ow-ok' : 'ow-muted');
         }
         addRow('免年費門檻', feeWaived ? '✓ 已達成' : '尚未達成', feeWaived ? 'ow-ok' : 'ow-warn');
+        addRow('我的額度', creditLimit !== null ? `NT$ ${creditLimit.toLocaleString()}` : '未填寫',
+            creditLimit !== null ? '' : 'ow-muted');
 
         const noteText = (notes || '').trim();
         const noteRow = document.createElement('div');
@@ -6401,7 +6404,7 @@ function renderOwnedCardsOverview() {
         noteLabel.textContent = '我的筆記';
         const noteBody = document.createElement('div');
         noteBody.className = 'ow-note-text' + (noteText ? '' : ' ow-note-empty');
-        noteBody.textContent = noteText || '尚未有筆記';
+        noteBody.textContent = noteText || '未填寫';
         noteRow.appendChild(noteLabel);
         noteRow.appendChild(noteBody);
         list.appendChild(noteRow);
@@ -7627,7 +7630,10 @@ basicCashbackDiv.innerHTML = basicContent;
 
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
-    
+
+    // 設置我的額度輸入
+    setupCreditLimit(card.id);
+
     // 設置結帳日期功能
     setupBillingDates(card.id);
     
@@ -9052,16 +9058,16 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
 async function setupFeeWaiverStatus(cardId) {
     const checkbox = document.getElementById('fee-waiver-checked');
     if (!checkbox) return;
-    
+
     // 讀取當前狀態
     const isWaived = await loadFeeWaiverStatus(cardId);
     checkbox.checked = isWaived;
-    
+
     // 設置變更監聽
     checkbox.onchange = (e) => {
         const newStatus = e.target.checked;
         saveFeeWaiverStatus(cardId, newStatus);
-        
+
         // 更新視覺提示 (可選)
         const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
         if (newStatus) {
@@ -9070,6 +9076,97 @@ async function setupFeeWaiverStatus(cardId) {
                 checkboxLabel.style.color = '';
             }, 1000);
         }
+    };
+}
+
+// 我的額度相關功能（選填金額；比照免年費狀態的儲存方式）
+
+// 讀取我的額度（回傳數字，未填寫回傳 null）
+async function loadCreditLimit(cardId) {
+    const parse = (v) => {
+        const n = Number(v);
+        return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
+    };
+
+    if (!currentUser) {
+        return parse(localStorage.getItem(`creditLimit_local_${cardId}`));
+    }
+
+    try {
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().creditLimits) {
+                const amount = parse(docSnap.data().creditLimits[cardId]);
+                const localKey = `creditLimit_${currentUser.uid}_${cardId}`;
+                localStorage.setItem(localKey, amount === null ? '' : String(amount));
+                return amount;
+            }
+        }
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    } catch (error) {
+        console.error('❌ 讀取我的額度失敗:', error);
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    }
+}
+
+// 儲存我的額度（amount 為數字，null 表示清空）
+async function saveCreditLimit(cardId, amount) {
+    const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
+    localStorage.setItem(localKey, amount === null ? '' : String(amount));
+
+    if (!currentUser) return;
+
+    try {
+        if (window.db && window.doc && window.setDoc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            const creditLimits = existingData.creditLimits || {};
+
+            if (amount === null) {
+                delete creditLimits[cardId];
+            } else {
+                creditLimits[cardId] = amount;
+            }
+
+            await window.setDoc(docRef, {
+                creditLimits: creditLimits,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [我的額度] 已同步到 Firestore:', cardId, amount);
+        }
+    } catch (error) {
+        console.error('❌ [我的額度] Firestore 保存失敗:', error);
+    }
+}
+
+// 設置我的額度輸入（卡片詳情頁）
+async function setupCreditLimit(cardId) {
+    const input = document.getElementById('credit-limit-input');
+    const savedTag = document.getElementById('credit-limit-saved');
+    if (!input) return;
+
+    if (savedTag) savedTag.textContent = '';
+    const current = await loadCreditLimit(cardId);
+    input.value = current !== null ? current.toLocaleString() : '';
+
+    // 失焦或按 Enter 即儲存；只留數字，顯示千分位
+    input.onchange = () => {
+        const raw = input.value.replace(/[^\d]/g, '');
+        const amount = raw ? Number(raw) : null;
+        input.value = amount !== null ? amount.toLocaleString() : '';
+        saveCreditLimit(cardId, amount);
+        if (savedTag) {
+            savedTag.textContent = '✓ 已儲存';
+            setTimeout(() => {
+                if (savedTag.textContent === '✓ 已儲存') savedTag.textContent = '';
+            }, 2000);
+        }
+    };
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
     };
 }
 

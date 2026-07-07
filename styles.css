@@ -2952,21 +2952,10 @@ input[type="number"]:focus {
     text-align: left;
 }
 .ow-info-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     font-size: 13.5px;
     font-weight: 700;
     color: #334155;
     margin-bottom: 10px;
-}
-.ow-info-ro {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    background: #f1f5f9;
-    padding: 2px 8px;
-    border-radius: 999px;
 }
 .ow-info-loading {
     color: #94a3b8;
@@ -3022,6 +3011,54 @@ input[type="number"]:focus {
 .ow-solo-info .ow-detail-btn {
     display: block;
     margin: 14px auto 0;
+}
+
+/* --- 我的額度 (card detail page) --- */
+.credit-limit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.credit-limit-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-width: 240px;
+    flex: 1;
+}
+.credit-limit-field:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.credit-limit-prefix {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+.credit-limit-input {
+    border: none;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    background: transparent;
+}
+.credit-limit-input::placeholder {
+    color: #cbd5e1;
+    font-weight: 400;
+}
+.credit-limit-saved {
+    color: #059669;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 .ow-detail-btn {
     padding: 8px 18px;
