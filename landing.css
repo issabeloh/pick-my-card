@@ -441,8 +441,6 @@ body {
     border-radius: 7px;
     white-space: nowrap;
 }
-.lp-note--level { margin-top: 18px; }
-.lp-note--level + .lp-note { margin-top: 8px; }
 .lp-rank-rate {
     font-size: 1.05rem;
     font-weight: 900;
