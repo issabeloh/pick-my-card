@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="landing.css?v=20260707134601">
+    <link rel="stylesheet" href="landing.css?v=20260707142330">
 
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
@@ -30,10 +30,10 @@
     <div class="lp-progress" aria-hidden="true"><div class="lp-progress-bar" id="lp-progress-bar"></div></div>
 
     <!-- 開場提示 -->
-    <div class="lp-hint" id="lp-hint" aria-hidden="true">信用卡回饋的世界<span class="lp-hint-arrow"></span></div>
+    <div class="lp-hint" id="lp-hint" aria-hidden="true">信用卡回饋的世界<span class="lp-hint-arrow"></span><span class="lp-hint-sub">往下滑</span></div>
 
-    <!-- 常駐下滑提示（淺灰） -->
-    <div class="lp-scrollcue" id="lp-scrollcue" aria-hidden="true"></div>
+    <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
+    <button class="lp-scrollcue" id="lp-scrollcue" type="button" aria-label="跳到下一幕"></button>
 
     <div class="lp-scrolly" id="lp-scrolly">
         <div class="lp-stage">
@@ -62,16 +62,23 @@
                     <span class="lp-frag" style="--tx:-95px;  --ty:305px;  --rz:5deg;   --fd:1.4s"><i>需綁定電子帳單</i></span>
                     <span class="lp-frag" style="--tx:100px;  --ty:300px;  --rz:-4deg;  --fd:.7s"><i>限量 50,000 名</i></span>
                 </div>
-                <div class="lp-s1-result fx" data-at="0.44" aria-hidden="true">
-                    <span class="lp-s1-check"></span>
-                    <span class="lp-minicard lp-card--uni"></span>
-                    <span class="lp-s1-result-name">玉山 Uni 卡</span>
-                    <span class="lp-s1-result-rate">3.5%</span>
-                </div>
-                <div class="lp-brand fx" data-at="0.62">
-                    <p class="lp-brand-logo"><img src="assets/images/icon-pickmycard.png?v=20260519" alt="" class="lp-brand-logo-img">信用卡回饋大師</p>
-                    <h1 class="lp-brand-title"><span class="lp-brand-t1">結帳前，先</span><br><span class="lp-brand-t2">Pick&nbsp;My&nbsp;Card</span></h1>
-                    <p class="lp-brand-sub fx" data-at="0.74">搞懂回饋規則，不該是你的功課</p>
+                <div class="lp-s1-stack">
+                    <!-- 第一段：碎片收斂成的搜尋結果卡 -->
+                    <div class="lp-s1-result fx" data-at="0.34" data-out="0.60">
+                        <p class="lp-s1-q">搭台北捷運，刷哪張？</p>
+                        <p class="lp-s1-cardname">永豐 Green 卡</p>
+                        <p class="lp-s1-rate">回饋 5%</p>
+                        <div class="lp-brain">
+                            <div class="lp-brain-head"><span>省下的腦力</span><span id="lp-brain-pct">0%</span></div>
+                            <div class="lp-brain-track"><div class="lp-brain-bar" id="lp-brain-bar"></div></div>
+                        </div>
+                    </div>
+                    <!-- 第二段：品牌畫面 -->
+                    <div class="lp-brand fx" data-at="0.70">
+                        <p class="lp-brand-logo"><img src="assets/images/icon-pickmycard.png?v=20260519" alt="" class="lp-brand-logo-img">信用卡回饋大師</p>
+                        <h1 class="lp-brand-title"><span class="lp-brand-t1">結帳前，先</span><br><span class="lp-brand-t2">Pick&nbsp;My&nbsp;Card</span></h1>
+                        <p class="lp-brand-sub fx" data-at="0.78">搞懂回饋規則，不該是你的功課</p>
+                    </div>
                 </div>
             </section>
 
@@ -212,7 +219,7 @@
                 <p class="lp-final-sub fx" data-at="0.26">免費、免下載，打開網頁就能用</p>
                 <p class="lp-final-stat fx" data-at="0.34">加入 <strong>25,000+</strong> 位用戶的行列，一起輕鬆賺回饋</p>
                 <a class="lp-cta fx" data-at="0.42" href="index.html">開始使用</a>
-                <a class="lp-safety fx" data-at="0.52" href="faq.html#faq-10" target="_blank" rel="noopener noreferrer">本站不收集任何個資，辦卡都在銀行官網完成，放心使用。</a>
+                <a class="lp-safety fx" data-at="0.52" href="faq.html#faq-10" target="_blank" rel="noopener noreferrer">本站不收集任何個資，辦卡都在銀行官網完成，請安心使用。</a>
                 <a class="lp-follow fx" data-at="0.60" href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer">
                     <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/></svg>
                     追蹤 Pick My Card
@@ -222,6 +229,6 @@
         </div>
     </div>
 
-    <script src="landing.js?v=20260707134601" defer></script>
+    <script src="landing.js?v=20260707142330" defer></script>
 </body>
 </html>

@@ -22,6 +22,8 @@
         document.querySelectorAll('.lp-scene').forEach(function (s) {
             s.classList.add('active');
         });
+        var brainPctStatic = document.getElementById('lp-brain-pct');
+        if (brainPctStatic) brainPctStatic.textContent = '100%';
         return;
     }
 
@@ -32,8 +34,8 @@
     var scrollCue = document.getElementById('lp-scrollcue');
     var scenes = Array.prototype.slice.call(document.querySelectorAll('.lp-scene'));
 
-    // 各幕在總進度中的相對長度（第 1、3、5 幕內容較多，多給一點滾動距離）
-    var weights = [1.5, 1.0, 1.35, 1.0, 1.45, 1.0];
+    // 各幕在總進度中的相對長度（第 1 幕兩段式最長；第 3、5 幕內容多）
+    var weights = [2.0, 1.0, 1.35, 1.0, 1.45, 1.0];
     var total = weights.reduce(function (a, b) { return a + b; }, 0);
     var bounds = [];
     (function () {
@@ -44,20 +46,27 @@
         }
     })();
 
-    // 每幕的 [data-at] 元素快取
+    // 每幕的 [data-at]（進場）與 [data-out]（退場）元素快取
     var sceneFx = scenes.map(function (scene) {
         return Array.prototype.slice.call(scene.querySelectorAll('[data-at]')).map(function (el) {
-            return { el: el, at: parseFloat(el.getAttribute('data-at')) || 0 };
+            return {
+                el: el,
+                at: parseFloat(el.getAttribute('data-at')) || 0,
+                out: el.hasAttribute('data-out') ? parseFloat(el.getAttribute('data-out')) : null
+            };
         });
     });
 
     var s1 = scenes[0];
+    var brainBar = document.getElementById('lp-brain-bar');
+    var brainPct = document.getElementById('lp-brain-pct');
 
     function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 
     function applyScene(idx, subP) {
         sceneFx[idx].forEach(function (item) {
             item.el.classList.toggle('on', subP >= item.at);
+            if (item.out !== null) item.el.classList.toggle('out', subP >= item.out);
         });
     }
 
@@ -107,9 +116,17 @@
         });
         applyScene(idx, subP);
 
-        // 第 1 幕：碎片收斂進度（subP 0.10→0.42 之間完成收斂，接著結果卡片彈出）
-        var conv = idx === 0 ? clamp01((subP - 0.10) / 0.32) : 1;
+        // 第 1 幕：碎片收斂進度（subP 0.08→0.34 完成收斂，接著結果卡彈出）
+        var conv = idx === 0 ? clamp01((subP - 0.08) / 0.26) : 1;
         s1.style.setProperty('--conv', conv);
+
+        // 第 1 幕：「省下的腦力」進度條（subP 0.36→0.56 從 0% 填到 100%）
+        if (brainBar) {
+            var brain = idx === 0 ? clamp01((subP - 0.36) / 0.20) : 1;
+            var pctText = Math.round(brain * 100) + '%';
+            brainBar.style.width = pctText;
+            if (brainPct.textContent !== pctText) brainPct.textContent = pctText;
+        }
 
         // 第 3 幕打字：進場即觸發；離開幕時重置（回滑重播）
         if (typedEl) {
@@ -135,4 +152,20 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     update();
+
+    /* ---------- 下滑提示點擊：直接跳到下一幕的完整狀態 ---------- */
+    scrollCue.addEventListener('click', function () {
+        var span = scrolly.offsetHeight - window.innerHeight;
+        if (span <= 0) return;
+        var p = clamp01(-scrolly.getBoundingClientRect().top / span);
+        var idx = 0;
+        for (var i = 0; i < bounds.length; i++) {
+            if (p >= bounds[i][0] && p < bounds[i][1]) { idx = i; break; }
+            if (p >= bounds[bounds.length - 1][1] - 1e-9) idx = bounds.length - 1;
+        }
+        var target = Math.min(idx + 1, bounds.length - 1);
+        // 跳到下一幕 93% 處：所有元素都已進場（含印章/勾勾/整行矩陣）
+        var targetP = bounds[target][0] + 0.93 * (bounds[target][1] - bounds[target][0]);
+        window.scrollTo({ top: Math.round(targetP * span), behavior: 'auto' });
+    });
 })();
