@@ -8,8 +8,14 @@
  * 需要的工作表：
  *   Watchlist —— 第一列表頭至少要有：url、last_snapshot
  *                建議完整表頭：card_id | bank | url | watch_type | css_selector
- *                             | last_snapshot | last_checked | active
+ *                             | last_snapshot | last_checked | active | fetch_via
  *   情報收件匣 —— 不用自己建，腳本會自動建立
+ *
+ * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
+ *   留空或 auto —— 先直接抓，失敗才走 Jina Reader 備援
+ *   jina        —— 一律走 Jina Reader（已知是動態網頁的銀行填這個，避免直接抓
+ *                  「偶爾成功、偶爾失敗」造成新舊快照格式不同的假警報）
+ *   direct      —— 一律直接抓，不用備援
  *
  * 使用方式：
  *   1. 在 Watchlist 填入要監控的網址（active 填 TRUE）
@@ -25,7 +31,11 @@ const MONITOR_CONFIG = {
   // 關鍵字閘門：變動段落至少要含一個才算事件
   keywords: ['回饋', '加碼', '%', '％', '權益', '活動', '調整', '終止', '停止', '新戶', '上限', '登錄', '延長', '生效'],
   minDiffChars: 30,        // 變動總字數少於這個門檻視為雜訊
-  snapshotMaxChars: 45000  // 快照長度上限（Sheets 一格上限 5 萬字，留餘裕）
+  snapshotMaxChars: 45000, // 快照長度上限（Sheets 一格上限 5 萬字，留餘裕）
+  // 動態網頁/擋機器人的備援：直接抓失敗時改走 Jina Reader（免費的「網頁轉純文字」服務，
+  // 會用真的瀏覽器幫你渲染 JS 動態網頁）。不需申請就能用（每分鐘額度較低）；
+  // 用量大再到 https://jina.ai/reader 免費申請金鑰，存進「專案設定 → 指令碼屬性」JINA_API_KEY
+  jinaFallback: true
 };
 
 /************** 主函數：觸發器要叫醒的就是它 **************/
@@ -44,6 +54,7 @@ function checkWatchlist() {
   const cActive = col('active');
   const cCard = col('card_id');
   const cBank = col('bank');
+  const cVia = col('fetch_via');
   if (cUrl < 0 || cSnap < 0) {
     throw new Error('Watchlist 第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
   }
@@ -58,9 +69,11 @@ function checkWatchlist() {
     if (!url) continue;
     if (cActive >= 0 && String(row[cActive]).toUpperCase() === 'FALSE') continue;
 
+    const fetchVia = cVia >= 0 ? String(row[cVia] || '').trim().toLowerCase() : '';
+
     let text;
     try {
-      text = fetchPageText_(url).slice(0, MONITOR_CONFIG.snapshotMaxChars);
+      text = fetchPageText_(url, fetchVia).slice(0, MONITOR_CONFIG.snapshotMaxChars);
     } catch (e) {
       errors.push((row[cCard] || '') + ' ' + url + '：' + e.message);
       continue;
@@ -107,7 +120,23 @@ function checkWatchlist() {
 }
 
 /************** 抓網頁 → 只留人看得到的正文 **************/
-function fetchPageText_(url) {
+// fetchVia：''/'auto' = 先直接抓、失敗走 Jina 備援；'jina' = 一律走 Jina；'direct' = 只直接抓
+function fetchPageText_(url, fetchVia) {
+  if (fetchVia === 'jina') return fetchViaJina_(url);
+  try {
+    return fetchDirect_(url);
+  } catch (e) {
+    if (fetchVia === 'direct' || !MONITOR_CONFIG.jinaFallback) throw e;
+    try {
+      return fetchViaJina_(url);
+    } catch (e2) {
+      throw new Error('直接抓失敗（' + e.message + '），Jina 備援也失敗（' + e2.message +
+        '）。若持續失敗，建議改監控該銀行的公告列表頁');
+    }
+  }
+}
+
+function fetchDirect_(url) {
   const res = UrlFetchApp.fetch(url, {
     muteHttpExceptions: true,
     followRedirects: true,
@@ -136,9 +165,31 @@ function fetchPageText_(url) {
     .trim();
 
   if (html.length < 100) {
-    throw new Error('抓到的正文太短（' + html.length + ' 字），可能是動態網頁或被擋，建議改監控該行的公告列表頁');
+    throw new Error('抓到的正文太短（' + html.length + ' 字），可能是動態網頁或被擋');
   }
   return html;
+}
+
+/************** 備援：透過 Jina Reader 抓（處理 JS 動態網頁與部分擋機器人的站） **************/
+// 原理：把網址接在 https://r.jina.ai/ 後面，Jina 會用真的瀏覽器開這一頁、等 JS 跑完，
+// 回傳純文字。免申請可直接用；有金鑰（指令碼屬性 JINA_API_KEY）額度更高。
+function fetchViaJina_(url) {
+  const headers = { 'X-Return-Format': 'text' };  // 只要純文字，不要 markdown 連結雜訊
+  const key = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
+  if (key) headers['Authorization'] = 'Bearer ' + key;
+
+  const res = UrlFetchApp.fetch('https://r.jina.ai/' + url, {
+    muteHttpExceptions: true,
+    headers: headers
+  });
+  const code = res.getResponseCode();
+  if (code >= 400) throw new Error('Jina HTTP ' + code);
+
+  const text = res.getContentText().replace(/\s+/g, ' ').trim();
+  if (text.length < 100) {
+    throw new Error('Jina 抓到的正文太短（' + text.length + ' 字），這一頁可能整頁都是圖片');
+  }
+  return text;
 }
 
 /************** 比對新舊：回傳「新增的句子」與「消失的句子」 **************/
@@ -195,7 +246,9 @@ function sendDigest_(alerts, errors) {
   }
   if (errors.length) {
     body += '⚠ 以下網址抓取失敗（可能是動態網頁或擋機器人，見規劃書 §2.4）：\n' +
-            errors.join('\n') + '\n';
+            errors.join('\n') + '\n\n' +
+            '提示：在 Watchlist 該列的 fetch_via 欄填 jina 可強制走備援抓法；' +
+            '若備援也失敗，把 url 換成該銀行的公告/最新消息列表頁。\n';
   }
 
   const subject = '【信用卡權益監控】' +
