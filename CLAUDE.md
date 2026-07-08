@@ -373,6 +373,38 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 - stacking / waterfall / **簡單路徑（cap+溢出,2 層）** 都會產生 layers
 - `showCalcBreakdown()` (script.js:5249 一帶) 讀 `dataset.calcLayers` 渲染
 
+### 13. 「我的信用卡」modal（錢包堆疊 + 單卡頁，2026-07-07 重造）
+
+**兩層視圖**（`renderOwnedCardsOverview()`，script.js 搜尋 "wallet stack" 一帶）：
+
+1. **一覽（錢包堆疊）**：所有卡片直向疊放、只露上緣色條、**不顯示卡名**
+   - 堆疊總高固定預算 ~320px：**卡越多、每條越窄**（`peek` 12~40px 自動計算），任何張數都一屏放完
+   - 點被蓋住的卡 → 原位展開全貌（下方卡滑開 40px）＋淡入「查看個人資訊 ›」提示 pill
+   - 點全貌卡（展開的或最底那張）→ 進單卡頁
+   - 有卡展開時，「收合」pill 以 `position: sticky; bottom` 黏在可視區底部（z-index 2000 > 卡片的 1..N，**曾因層級太低被卡蓋住**）
+2. **單卡頁（solo）**：大卡置中、左右箭頭＋滑動換卡（**循環**：最後→第一）、頁點、卡名
+   - 下方「個人化設定」**唯讀面板**：分級、CUBE 專屬（發卡組織/生日月份/童樂匯）、免年費門檻、我的額度、我的筆記；空值一律顯示「未填寫」
+   - **這裡不給編輯**，「前往卡片介紹頁編輯 ›」按鈕開 `showCardDetail()`
+   - 所有讀取包 `safe()` fallback（Firebase 被擋也能渲染，不會卡「載入中」）
+
+**視覺定案（歷經多輪迭代，勿隨意回退）**：
+- 純白背景（皮革框/毛玻璃/漸層都試過並否決）
+- 卡片邊緣 = 白色髮絲邊 + **貼緣暗縫**（`0 -1px` + `-3px` 短陰影；大範圍模糊陰影會在細條上疊成死黑，已刻意調輕）
+- 卡片數顯示為標題列淡灰小字「我的信用卡 ・N 張」（`#owned-count-badge`；藍膠囊版被否決）
+- 「管理我的信用卡」= 標題旁齒輪鈕（`#manage-owned-cards-btn`，沿用原 id 綁定）
+- `#my-owned-cards-modal .modal-content` 有 `scrollbar-gutter: stable`（防展開時捲軸出現造成寬度跳動）
+- 直式卡圖自動偵測（naturalHeight > naturalWidth）並旋轉為橫式（`.ow-portrait`）
+
+**卡圖解析度規範**：橫式 **800×500**（直式 500×800）PNG，壓在 ~150KB 內。舊 320×200 在 Retina 上會糊（顯示寬 252px × 2~3x DPR）。
+
+### 14. 我的額度（creditLimit，2026-07-07 新增）
+
+- **編輯處只有卡片詳情頁**：`#credit-limit-section`（我的筆記左側，桌機並排/手機直排 `.personal-fields-row`）
+- NT$ 前綴輸入框：只收數字、自動千分位、**失焦或 Enter 即存**（`✓ 已儲存` 顯示 2 秒）；`inputmode="numeric"` + `pattern` 讓手機出數字鍵盤
+- 儲存比照免年費狀態：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）+ 本機鏡像 `creditLimit_<uid>_<cardId>`；清空輸入框 = 刪除該卡額度
+- 函數：`loadCreditLimit()` / `saveCreditLimit()` / `setupCreditLimit()`（script.js 搜尋 "我的額度相關功能"）
+- 單卡頁唯讀顯示 `NT$ x,xxx` 或「未填寫」
+
 ## 性能優化 (2025-12-22)
 
 ### 1. 搜尋索引 (Items Index)
@@ -456,7 +488,14 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ### 最近的技術決策
 
-0. **2026-07-06: 全站清理（資料穩定性/安全/速度/整併）**
+0. **2026-07-07: 「我的信用卡」modal 重造 + 我的額度**
+   - 一覽改為錢包堆疊（收合式、密度隨卡片數自適應、無卡名）→ 點卡原位展開 → 單卡頁（唯讀個人化設定面板）
+   - 新增「我的額度」欄位（詳情頁編輯、Firestore `users/{uid}.creditLimits` 同步）
+   - 視覺歷經多輪迭代定案：純白底、貼緣暗縫卡邊、標題列淡灰卡數、齒輪鈕進標題列、sticky 收合鈕、scrollbar-gutter
+   - 卡圖解析度規範確立：橫式 800×500 / 直式 500×800
+   - 詳見「關鍵技術概念 → 13、14」
+
+1. **2026-07-06: 全站清理（資料穩定性/安全/速度/整併）**
    - localStorage 安全讀取 helpers + 自我修復（解決詳情頁被污染資料弄掛的整類問題）
    - 卡片級別本機 key 改 uid 區分；登入合併統一為「靜默補位」；登出清理個人資料
    - XSS 修復（搜尋詞轉義）+ `sanitizeUrl()` + `firestore.rules` 進 repo
