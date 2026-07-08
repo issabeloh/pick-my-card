@@ -24,7 +24,7 @@
  *   min_diff_chars —— 這一列專用雜訊門檻。公告標題頁建議填 10
  *                     （一條新標題常見 15~30 字，全域預設 30 會漏掉短標題）
  *
- * 注意：watch_type、css_selector 目前只是備註欄，程式不會讀。
+ * 注意：watch_type、css_selector 目前只是備註欄，程式不會讀（第二階段才實作）。
  *   card_id 填法：權益頁（一卡一頁）必須填 Cards Data 的正式 id；
  *               公告頁（多卡共用）填頁級標籤即可，例：sinopac-news
  *
