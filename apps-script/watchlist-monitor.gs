@@ -9,7 +9,18 @@
  *   Watchlist —— 第一列表頭至少要有：url、last_snapshot
  *                建議完整表頭：card_id | bank | url | watch_type | css_selector
  *                             | last_snapshot | last_checked | active
+ *                             | keywords | min_diff_chars
  *   情報收件匣 —— 不用自己建，腳本會自動建立
+ *
+ * 選填欄位（留空 = 用程式最上方 MONITOR_CONFIG 的全域設定）：
+ *   keywords       —— 這一列專用的關鍵字，逗號分隔（半形/全形逗號、頓號都可）。
+ *                     公告標題頁建議填該行的卡片名稱，例：永豐SPORT卡,夢行,幣倍
+ *   min_diff_chars —— 這一列專用的雜訊門檻。公告標題頁建議填 10
+ *                     （一條新標題通常 15~30 字，全域預設 30 會漏掉短標題）
+ *
+ * 注意：watch_type、css_selector 目前只是備註欄，程式不會讀（第二階段才實作）。
+ *   card_id 填法：權益頁（一卡一頁）必須填 Cards Data 的正式 id；
+ *               公告頁（多卡共用）填頁級標籤即可，例：sinopac-news
  *
  * 使用方式：
  *   1. 在 Watchlist 填入要監控的網址（active 填 TRUE）
@@ -44,6 +55,8 @@ function checkWatchlist() {
   const cActive = col('active');
   const cCard = col('card_id');
   const cBank = col('bank');
+  const cKeywords = col('keywords');
+  const cMinDiff = col('min_diff_chars');
   if (cUrl < 0 || cSnap < 0) {
     throw new Error('Watchlist 第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
   }
@@ -75,12 +88,27 @@ function checkWatchlist() {
       continue;
     }
 
+    // 這一列專用的關鍵字與雜訊門檻：欄位有填就覆蓋全域設定，留空用 MONITOR_CONFIG
+    let rowKeywords = MONITOR_CONFIG.keywords;
+    if (cKeywords >= 0) {
+      const own = String(row[cKeywords] || '')
+        .split(/[,，、]/)
+        .map(function (s) { return s.trim(); })
+        .filter(function (s) { return s; });
+      if (own.length) rowKeywords = own;
+    }
+    let rowMinDiff = MONITOR_CONFIG.minDiffChars;
+    if (cMinDiff >= 0) {
+      const n = Number(row[cMinDiff]);
+      if (n > 0) rowMinDiff = n;
+    }
+
     const changedText = diffSegments_(oldText, text).join('\n');
-    const hasKeyword = MONITOR_CONFIG.keywords.some(function (k) {
+    const hasKeyword = rowKeywords.some(function (k) {
       return changedText.indexOf(k) !== -1;
     });
 
-    if (changedText.length >= MONITOR_CONFIG.minDiffChars && hasKeyword) {
+    if (changedText.length >= rowMinDiff && hasKeyword) {
       appendToInbox_(ss, {
         time: now,
         cardId: row[cCard] || '',
