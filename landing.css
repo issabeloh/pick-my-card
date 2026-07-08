@@ -1006,11 +1006,33 @@ body {
 .lp-reduced .lp-hero-card { animation: none; }
 .lp-reduced .lp-disclaimer { position: static; margin-top: 14px; text-align: right; }
 
+/* 靜態版頂部的「播放動態版本」按鈕（只在 lp-reduced 模式由 JS 注入） */
+.lp-motion-btn {
+    display: block;
+    margin: 24px auto 0;
+    min-height: 44px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    border: 1.5px solid #93c5fd;
+    background: #fff;
+    color: #1d4ed8;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 系統減少動態時關閉所有動畫——除非使用者按了「播放動態版本」
+   （html.lp-force-motion 覆寫） */
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    html:not(.lp-force-motion) *,
+    html:not(.lp-force-motion) *::before,
+    html:not(.lp-force-motion) *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-    html { scroll-behavior: auto; }
+    html:not(.lp-force-motion) { scroll-behavior: auto; }
 }

@@ -18,14 +18,21 @@
     <!-- 首訪導向 landing：完全沒有本站使用痕跡的新訪客，第一次進站先看 landing 故事頁。
          舊用戶（登入過/選過卡/存過任何資料/看過 landing）不受影響，直接進工具。
          寬鬆認定「舊用戶」：localStorage 有任何一個 key 就算（寧可少跳、不誤跳）。
-         用 location.replace 讓返回鍵不會跳回這裡造成循環。 -->
+         用 location.replace 讓返回鍵不會跳回這裡造成循環。
+         ?start 為 landing CTA 的逃生參數：帶著它一律直接進工具（storage 被封鎖時
+         若沒有這個參數，landing → 工具 → landing 會無限循環）。 -->
     <script>
+        var pmcFromLanding = location.search.indexOf('start') !== -1;
         try {
-            if (localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+            if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 localStorage.setItem('pmc_seen_landing', '1');
                 location.replace('landing.html');
             }
-        } catch (e) { /* localStorage 不可用（無痕/封鎖）→ 一律直接進工具 */ }
+        } catch (e) {
+            // localStorage 不可用（無痕強化/隱私封鎖）→ 一樣先看 landing，
+            // 從 landing 的「開始使用」（帶 ?start）可正常進工具
+            if (!pmcFromLanding) location.replace('landing.html');
+        }
     </script>
 
     <!-- SEO Meta Tags -->
@@ -937,6 +944,14 @@
                 <div class="social-media-links">
                     <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
                         <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                </div>
+            </div>
+            <div class="faq-section">
+                <p class="social-media-title">認識我們</p>
+                <div class="social-media-links">
+                    <a href="landing.html" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？</span>
                     </a>
                 </div>
             </div>
