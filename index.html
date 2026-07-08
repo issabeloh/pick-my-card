@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
 
-    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users.
+    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users,
+         and for visitors who already saw the landing story page（避免 landing 與
+         hero 重複敘事；hero 正式移除是獨立的 follow-up）.
          Read synchronously before any external script so first paint reflects it. -->
     <script>
         try {
-            if (localStorage.getItem('pmc_known_logged_in') === '1') {
+            if (localStorage.getItem('pmc_known_logged_in') === '1' ||
+                localStorage.getItem('pmc_seen_landing') === '1' ||
+                location.search.indexOf('start') !== -1) {
                 document.documentElement.classList.add('pmc-returning-user');
             }
         } catch (e) { /* localStorage disabled — fall back to default render */ }
@@ -68,7 +72,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260706065934">
+    <link rel="stylesheet" href="styles.css?v=20260708080158">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -1035,7 +1039,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260706065934" defer></script>
+    <script src="script.js?v=20260708080158" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>

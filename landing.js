@@ -9,12 +9,7 @@
     // 記錄「看過 landing」：之後打 pickmycard.app 會直接進工具，不再導回來
     try { localStorage.setItem('pmc_seen_landing', '1'); } catch (e) { /* 無痕模式忽略 */ }
 
-    // 使用者可在靜態版點「播放動態版本」覆寫系統的減少動態設定
-    var forceMotion = false;
-    try { forceMotion = localStorage.getItem('pmc_force_motion') === '1'; } catch (e) { /* ignore */ }
-    if (forceMotion) document.documentElement.classList.add('lp-force-motion');
-
-    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches && !forceMotion;
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     var typedEl = document.getElementById('lp-typed');
     var typedText = typedEl ? (typedEl.getAttribute('data-text') || '') : '';
@@ -32,16 +27,6 @@
         });
         var brainPctStatic = document.getElementById('lp-brain-pct');
         if (brainPctStatic) brainPctStatic.textContent = '100%';
-        // 靜態版頂部提供「播放動態版本」：給系統關了動畫但其實想看的人
-        var motionBtn = document.createElement('button');
-        motionBtn.type = 'button';
-        motionBtn.className = 'lp-motion-btn';
-        motionBtn.textContent = '▶ 播放動態版本';
-        motionBtn.addEventListener('click', function () {
-            try { localStorage.setItem('pmc_force_motion', '1'); } catch (e) { /* ignore */ }
-            location.reload();
-        });
-        document.body.insertBefore(motionBtn, document.body.firstChild);
         return;
     }
 

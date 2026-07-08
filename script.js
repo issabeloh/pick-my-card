@@ -5746,11 +5746,31 @@ function initializeAuthListeners() {
             await initializeQuickSearchOptions();
             renderQuickSearchButtons();
 
-            // Show product introduction section and hide tool sections when not logged in
-            if (productIntroSection) {
-                productIntroSection.style.display = 'block';
+            // 看過 landing 故事頁的訪客（或帶 ?start 從 landing 過來）不再顯示 hero，
+            // 直接進工具——避免 landing 與 hero 重複敘事。
+            // （hero 區塊的正式移除是獨立的 follow-up，這裡只跳過顯示）
+            let pmcSeenLanding = location.search.indexOf('start') !== -1;
+            try {
+                pmcSeenLanding = pmcSeenLanding || localStorage.getItem('pmc_seen_landing') === '1';
+            } catch (e) { /* localStorage 不可用時只看 ?start */ }
+
+            if (pmcSeenLanding) {
+                if (productIntroSection) {
+                    productIntroSection.style.display = 'none';
+                }
+                appStarted = true;
+                setGuestDropdownVisibility();
+                showToolSections();
+                if (startUsingBtnHeader) {
+                    startUsingBtnHeader.style.display = 'none';
+                }
+            } else {
+                // Show product introduction section and hide tool sections when not logged in
+                if (productIntroSection) {
+                    productIntroSection.style.display = 'block';
+                }
+                hideToolSections();
             }
-            hideToolSections();
 
             // Hide my mappings button
             const myMappingsBtn = document.getElementById('my-mappings-btn');
