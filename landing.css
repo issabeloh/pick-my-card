@@ -981,15 +981,17 @@ body {
 .lp-reduced .lp-winstamp.fx { opacity: 1; transform: rotate(8deg); }
 .lp-reduced .lp-reminder.fx { transform: none; }
 
-/* 第 1 幕碎片改為靜態排版（不飄浮、不吸收斂） */
+/* 第 1 幕碎片改為靜態排版，但保留「即將被吸入收斂」的示意：
+   碎片微傾 + 下方虛線漏斗（咻）指向結果卡 */
 .lp-reduced .lp-frags {
-    position: static;
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
     max-width: 460px;
-    margin: 0 auto 28px;
+    margin: 0 auto 8px;
+    padding-bottom: 60px;
 }
 .lp-reduced .lp-frag {
     position: static;
@@ -997,6 +999,29 @@ body {
     opacity: 1;
 }
 .lp-reduced .lp-frag i { animation: none; white-space: normal; }
+.lp-reduced .lp-frag:nth-child(odd) i  { transform: rotate(-2.5deg); }
+.lp-reduced .lp-frag:nth-child(even) i { transform: rotate(2.5deg); }
+/* 虛線漏斗：兩側往中心收 */
+.lp-reduced .lp-frags::before,
+.lp-reduced .lp-frags::after {
+    content: "";
+    position: absolute;
+    bottom: 10px;
+    height: 44px;
+    border-left: 2px dashed #94a3b8;
+    opacity: 0.9;
+}
+.lp-reduced .lp-frags::before { left: calc(50% - 38px); transform: rotate(28deg); }
+.lp-reduced .lp-frags::after  { right: calc(50% - 38px); transform: rotate(-28deg); }
+/* 中央短虛線接到結果卡（吸入點） */
+.lp-reduced .lp-s1-stack::before {
+    content: "";
+    width: 0;
+    height: 30px;
+    border-left: 2px dashed #94a3b8;
+    opacity: 0.9;
+    margin-bottom: -6px;
+}
 /* 兩段式改為依序排版：結果卡與品牌畫面都完整顯示 */
 .lp-reduced .lp-s1-stack { display: flex; flex-direction: column; align-items: center; gap: 32px; }
 .lp-reduced .lp-s1-result { margin-top: 0; }

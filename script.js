@@ -5746,30 +5746,19 @@ function initializeAuthListeners() {
             await initializeQuickSearchOptions();
             renderQuickSearchButtons();
 
-            // 看過 landing 故事頁的訪客（或帶 ?start 從 landing 過來）不再顯示 hero，
-            // 直接進工具——避免 landing 與 hero 重複敘事。
-            // （hero 區塊的正式移除是獨立的 follow-up，這裡只跳過顯示）
-            let pmcSeenLanding = location.search.indexOf('start') !== -1;
-            try {
-                pmcSeenLanding = pmcSeenLanding || localStorage.getItem('pmc_seen_landing') === '1';
-            } catch (e) { /* localStorage 不可用時只看 ?start */ }
-
-            if (pmcSeenLanding) {
-                if (productIntroSection) {
-                    productIntroSection.style.display = 'none';
-                }
-                appStarted = true;
-                setGuestDropdownVisibility();
-                showToolSections();
-                if (startUsingBtnHeader) {
-                    startUsingBtnHeader.style.display = 'none';
-                }
-            } else {
-                // Show product introduction section and hide tool sections when not logged in
-                if (productIntroSection) {
-                    productIntroSection.style.display = 'block';
-                }
-                hideToolSections();
+            // hero（product-intro）不再顯示：landing 已接手行銷/上手敘事。
+            // 首屏路由（index.html pre-paint）已把全新訪客導去 landing，因此能走到
+            // 這裡的登出使用者都是「從 landing 來」或「用過工具的舊用戶」——兩者都
+            // 直接進工具、不看 hero，避免與 landing 重複敘事、也讓舊用戶開頁即用。
+            // （hero 區塊正式從 DOM 移除是獨立的 follow-up；這裡只是不顯示它）
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+            appStarted = true;
+            setGuestDropdownVisibility();
+            showToolSections();
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'none';
             }
 
             // Hide my mappings button
