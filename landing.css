@@ -1025,8 +1025,9 @@ body {
         linear-gradient(to bottom, rgba(59, 130, 246, 0),   rgba(59, 130, 246, 0.32))   22px 100% / 2px 86px no-repeat,
         linear-gradient(to bottom, rgba(148, 163, 184, 0), rgba(148, 163, 184, 0.55)) 42px 100% / 2px 46px no-repeat;
 }
-.lp-reduced .lp-frags::before { left: calc(50% - 108px);  transform: rotate(24deg); }
-.lp-reduced .lp-frags::after  { right: calc(50% - 108px); transform: rotate(-24deg) scaleX(-1); }
+/* 底端錨在中心附近、頂端向外張開：線束往內收向結果卡（收斂，非擴散） */
+.lp-reduced .lp-frags::before { left: calc(50% - 60px);  transform: rotate(-26deg); }
+.lp-reduced .lp-frags::after  { right: calc(50% - 60px); transform: rotate(26deg) scaleX(-1); }
 /* 兩段式改為依序排版：結果卡與品牌畫面都完整顯示 */
 .lp-reduced .lp-s1-stack { display: flex; flex-direction: column; align-items: center; gap: 32px; }
 /* 中央吸入光帶：接到結果卡上緣（收斂終點） */
