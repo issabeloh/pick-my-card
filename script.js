@@ -5512,7 +5512,8 @@ function clearPersonalLocalDataOnSignOut(uid) {
         `selectedPayments_${uid}`, `spendingMappings_${uid}`
     ] : [];
     const uidPrefixes = uid ? [
-        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`
+        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
+        `creditLimit_${uid}_`
     ] : [];
     // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
     // 這裡清掉的是殘留值）
@@ -5520,7 +5521,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
         'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
     ];
-    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_'];
+    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
     // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
     const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
 
@@ -6569,15 +6570,14 @@ function renderOwnedCardsOverview() {
     if (!container) return;
     container.innerHTML = '';
 
-    const actions = document.getElementById('owned-overview-actions');
-
     const ownedCards = [...cardsData.cards]
         .filter(card => myOwnedCards.has(card.id))
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    const badge = document.getElementById('owned-count-badge');
+
     if (ownedCards.length === 0) {
-        // Empty state has its own CTA; hide the bottom manage button to avoid duplication
-        if (actions) actions.style.display = 'none';
+        if (badge) badge.style.display = 'none';
         const empty = document.createElement('div');
         empty.className = 'owned-overview-empty';
         empty.innerHTML = `
@@ -6592,27 +6592,281 @@ function renderOwnedCardsOverview() {
         return;
     }
 
-    if (actions) actions.style.display = 'flex';
+    const count = ownedCards.length;
 
-    ownedCards.forEach(card => {
-        const tile = document.createElement('div');
-        tile.className = 'owned-overview-card';
-        tile.setAttribute('role', 'button');
-        tile.setAttribute('tabindex', '0');
-        tile.title = '查看詳情';
-        tile.innerHTML = `
-            <img class="owned-overview-card-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
-            <span class="owned-overview-card-name">${card.name}</span>
-        `;
-        tile.addEventListener('click', () => showCardDetail(card.id));
-        tile.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                showCardDetail(card.id);
-            }
+    // Card count lives as quiet muted text after the modal title.
+    if (badge) {
+        badge.textContent = `・${count} 張`;
+        badge.style.display = '';
+    }
+
+    // --- View 1: wallet stack — all cards at a glance, no names.
+    // Tap a covered card to reveal its full face in place; tap a fully
+    // visible card to open the solo view. ---
+    const stack = document.createElement('div');
+    stack.className = 'ow-stack';
+    container.appendChild(stack);
+
+    // "收合" pill: appears only while a card is revealed, folds the
+    // stack fully closed again.
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type = 'button';
+    collapseBtn.className = 'ow-collapse-btn';
+    collapseBtn.textContent = '收合';
+    collapseBtn.style.display = 'none';
+    container.appendChild(collapseBtn);
+
+    // --- View 2: solo card + personal info area (hidden until opened) ---
+    const solo = document.createElement('div');
+    solo.className = 'ow-solo';
+    solo.style.display = 'none';
+    container.appendChild(solo);
+
+    const GAP = 40;    // breathing room under a revealed card
+    let expanded = null;
+    let soloIndex = 0;
+
+    // Builds a card-face frame; portrait art is auto-rotated to landscape.
+    const makeFace = (card) => {
+        const frame = document.createElement('div');
+        frame.className = 'ow-frame';
+        const img = document.createElement('img');
+        img.className = 'ow-img';
+        img.alt = card.name;
+        img.src = `assets/images/cards/${card.id}.png`;
+        img.addEventListener('load', () => {
+            if (img.naturalHeight > img.naturalWidth) frame.classList.add('ow-portrait');
         });
-        container.appendChild(tile);
+        img.addEventListener('error', () => {
+            frame.classList.add('ow-noimg');
+            frame.textContent = card.name;
+        });
+        frame.appendChild(img);
+        return frame;
+    };
+
+    const slots = ownedCards.map((card, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'ow-slot';
+        slot.style.zIndex = String(i + 1);
+        slot.setAttribute('role', 'button');
+        slot.setAttribute('tabindex', '0');
+        slot.setAttribute('aria-label', card.name);
+        slot.appendChild(makeFace(card));
+        // Tap-again affordance: pill fades in on the revealed card.
+        const hint = document.createElement('div');
+        hint.className = 'ow-hint';
+        hint.textContent = '查看個人資訊 ›';
+        slot.appendChild(hint);
+        const activate = () => {
+            // Fully visible cards (revealed, or the bottom-most) open solo view.
+            if (i === expanded || i === count - 1) openSolo(i);
+            else { expanded = i; layoutStack(); }
+        };
+        slot.addEventListener('click', activate);
+        slot.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+        });
+        stack.appendChild(slot);
+        return slot;
     });
+
+    const layoutStack = () => {
+        const h = stack.clientWidth / 1.586; // standard card aspect ratio
+        // Budget ~320px for the whole stack: the more cards, the thinner
+        // each visible strip (floor of 12px).
+        const peek = Math.max(12, Math.min(40, Math.round((320 - h) / Math.max(1, count - 1))));
+        let shift = 0, maxBottom = 0;
+        slots.forEach((slot, i) => {
+            slot.classList.toggle('ow-open', expanded === i);
+            const top = i * peek + shift;
+            slot.style.top = `${top}px`;
+            maxBottom = Math.max(maxBottom, top + h);
+            if (expanded === i) shift = h - peek + GAP;
+        });
+        stack.style.height = `${Math.ceil(maxBottom)}px`;
+        collapseBtn.style.display = expanded === null ? 'none' : '';
+    };
+
+    collapseBtn.addEventListener('click', () => {
+        expanded = null;
+        layoutStack();
+    });
+
+    const openSolo = (i) => {
+        soloIndex = i;
+        renderSolo();
+        stack.style.display = 'none';
+        collapseBtn.style.display = 'none';
+        solo.style.display = '';
+    };
+
+    const backToStack = () => {
+        solo.style.display = 'none';
+        stack.style.display = '';
+        expanded = soloIndex; // keep the card you were viewing revealed
+        layoutStack();
+    };
+
+    let soloToken = 0;
+
+    const renderSolo = () => {
+        const card = ownedCards[soloIndex];
+        const token = ++soloToken;
+        solo.innerHTML = '';
+
+        const top = document.createElement('div');
+        top.className = 'ow-solo-top';
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'ow-back';
+        back.innerHTML = '‹ 所有卡片';
+        back.addEventListener('click', backToStack);
+        top.appendChild(back);
+        solo.appendChild(top);
+
+        const row = document.createElement('div');
+        row.className = 'ow-solo-row';
+        // Arrows and swipe wrap around (last → first, first → last).
+        const step = (dir) => {
+            soloIndex = (soloIndex + dir + count) % count;
+            renderSolo();
+        };
+        const mkArrow = (dir) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ow-arrow';
+            b.innerHTML = dir < 0 ? '‹' : '›';
+            b.setAttribute('aria-label', dir < 0 ? '上一張' : '下一張');
+            b.disabled = count <= 1;
+            b.addEventListener('click', () => step(dir));
+            return b;
+        };
+        row.appendChild(mkArrow(-1));
+        const face = makeFace(card);
+        face.classList.add('ow-solo-face');
+        // Swipe left/right to switch cards.
+        let sx = null;
+        face.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+        face.addEventListener('pointerup', (e) => {
+            if (sx === null) return;
+            const dx = e.clientX - sx;
+            sx = null;
+            if (dx < -40 && count > 1) step(1);
+            else if (dx > 40 && count > 1) step(-1);
+        });
+        row.appendChild(face);
+        row.appendChild(mkArrow(1));
+        solo.appendChild(row);
+
+        const name = document.createElement('div');
+        name.className = 'ow-solo-name';
+        name.textContent = card.name;
+        solo.appendChild(name);
+
+        const dots = document.createElement('div');
+        dots.className = 'ow-dots';
+        ownedCards.forEach((_, i) => {
+            const d = document.createElement('i');
+            if (i === soloIndex) d.className = 'on';
+            dots.appendChild(d);
+        });
+        solo.appendChild(dots);
+
+        // --- Read-only personal info (editing lives in the card detail page) ---
+        const info = document.createElement('div');
+        info.className = 'ow-solo-info';
+        const infoHead = document.createElement('div');
+        infoHead.className = 'ow-info-head';
+        infoHead.textContent = '個人化設定';
+        info.appendChild(infoHead);
+        const list = document.createElement('div');
+        list.className = 'ow-info-list';
+        list.innerHTML = '<div class="ow-info-loading">載入中…</div>';
+        info.appendChild(list);
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'ow-detail-btn';
+        detailBtn.textContent = '前往卡片介紹頁編輯 ›';
+        detailBtn.addEventListener('click', () => showCardDetail(card.id));
+        info.appendChild(detailBtn);
+        solo.appendChild(info);
+
+        fillSoloInfo(card, list, token);
+    };
+
+    const fillSoloInfo = async (card, list, token) => {
+        const hasLevels = !!(card.hasLevels && card.levelSettings);
+        // Each load falls back to a default if storage (e.g. Firebase) is
+        // unavailable, so the panel always renders.
+        const safe = (fn, fallback) => {
+            try { return Promise.resolve(fn()).catch(() => fallback); }
+            catch (_) { return Promise.resolve(fallback); }
+        };
+        const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
+        const [level, notes, feeWaived, creditLimit] = await Promise.all([
+            hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
+            safe(() => loadUserNotes(card.id), ''),
+            safe(() => loadFeeWaiverStatus(card.id), false),
+            safe(() => loadCreditLimit(card.id), null)
+        ]);
+        if (token !== soloToken) return; // user switched cards while loading
+
+        list.innerHTML = '';
+        const addRow = (label, value, cls) => {
+            const row = document.createElement('div');
+            row.className = 'ow-info-row';
+            const l = document.createElement('span');
+            l.className = 'ow-info-label';
+            l.textContent = label;
+            const v = document.createElement('span');
+            v.className = 'ow-info-value' + (cls ? ' ' + cls : '');
+            v.textContent = value;
+            row.appendChild(l);
+            row.appendChild(v);
+            list.appendChild(row);
+        };
+
+        if (hasLevels && level) {
+            const label = card.levelLabelFormat
+                ? card.levelLabelFormat.replace('{level}', level)
+                : level;
+            addRow('卡片分級', label);
+        }
+        // 發卡組織／生日月份／童樂匯 are CUBE-specific settings today.
+        if (card.id === 'cathay-cube') {
+            addRow('發卡組織', cubeIssuer);
+            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未填寫',
+                userBirthdayMonth ? '' : 'ow-muted');
+            addRow('童樂匯權益', isChildrenEligible ? '✓ 符合' : '不符合',
+                isChildrenEligible ? 'ow-ok' : 'ow-muted');
+        }
+        addRow('免年費門檻', feeWaived ? '✓ 已達成' : '尚未達成', feeWaived ? 'ow-ok' : 'ow-warn');
+        addRow('我的額度', creditLimit !== null ? `NT$ ${creditLimit.toLocaleString()}` : '未填寫',
+            creditLimit !== null ? '' : 'ow-muted');
+
+        const noteText = (notes || '').trim();
+        const noteRow = document.createElement('div');
+        noteRow.className = 'ow-info-note';
+        const noteLabel = document.createElement('div');
+        noteLabel.className = 'ow-info-label';
+        noteLabel.textContent = '我的筆記';
+        const noteBody = document.createElement('div');
+        noteBody.className = 'ow-note-text' + (noteText ? '' : ' ow-note-empty');
+        noteBody.textContent = noteText || '未填寫';
+        noteRow.appendChild(noteLabel);
+        noteRow.appendChild(noteBody);
+        list.appendChild(noteRow);
+    };
+
+    // The modal isn't displayed yet when this runs; lay out on the next
+    // frame (and again on resize) so clientWidth is real.
+    requestAnimationFrame(() => requestAnimationFrame(layoutStack));
+    if (renderOwnedCardsOverview._onResize) {
+        window.removeEventListener('resize', renderOwnedCardsOverview._onResize);
+    }
+    renderOwnedCardsOverview._onResize = layoutStack;
+    window.addEventListener('resize', renderOwnedCardsOverview._onResize);
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
@@ -6630,6 +6884,20 @@ function openManageOwnedCardsModal() {
     const modal = document.getElementById('manage-owned-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
+
+    // Always open at the top — don't keep the previous session's scroll.
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+
+    // 篩選標籤預設收合（需要時再點開）
+    const tagSection = document.getElementById('owned-tag-filter-section');
+    if (tagSection && !tagSection.classList.contains('collapsed')) {
+        tagSection.classList.add('collapsed');
+        const toggle = tagSection.querySelector('.tag-filter-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        const chips = document.getElementById('owned-tag-filter-chips');
+        if (chips) chips.hidden = true;
+    }
 }
 
 // Update the "套用我的信用卡選項" button state.
@@ -6684,6 +6952,11 @@ function setupMyOwnedCardsModal() {
     closeManageBtn.addEventListener('click', closeManage);
     cancelBtn.addEventListener('click', closeManage);
     manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
+
+    // Top save button (on the 全選 row) proxies the bottom one so users
+    // don't have to scroll to the footer to save.
+    const saveBtnTop = document.getElementById('save-owned-cards-btn-top');
+    if (saveBtnTop) saveBtnTop.addEventListener('click', () => saveBtn.click());
 
     saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
@@ -7851,7 +8124,10 @@ basicCashbackDiv.innerHTML = basicContent;
 
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
-    
+
+    // 設置我的額度輸入
+    setupCreditLimit(card.id);
+
     // 設置結帳日期功能
     setupBillingDates(card.id);
     
@@ -9278,16 +9554,16 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
 async function setupFeeWaiverStatus(cardId) {
     const checkbox = document.getElementById('fee-waiver-checked');
     if (!checkbox) return;
-    
+
     // 讀取當前狀態
     const isWaived = await loadFeeWaiverStatus(cardId);
     checkbox.checked = isWaived;
-    
+
     // 設置變更監聽
     checkbox.onchange = (e) => {
         const newStatus = e.target.checked;
         saveFeeWaiverStatus(cardId, newStatus);
-        
+
         // 更新視覺提示 (可選)
         const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
         if (newStatus) {
@@ -9296,6 +9572,97 @@ async function setupFeeWaiverStatus(cardId) {
                 checkboxLabel.style.color = '';
             }, 1000);
         }
+    };
+}
+
+// 我的額度相關功能（選填金額；比照免年費狀態的儲存方式）
+
+// 讀取我的額度（回傳數字，未填寫回傳 null）
+async function loadCreditLimit(cardId) {
+    const parse = (v) => {
+        const n = Number(v);
+        return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
+    };
+
+    if (!currentUser) {
+        return parse(localStorage.getItem(`creditLimit_local_${cardId}`));
+    }
+
+    try {
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().creditLimits) {
+                const amount = parse(docSnap.data().creditLimits[cardId]);
+                const localKey = `creditLimit_${currentUser.uid}_${cardId}`;
+                localStorage.setItem(localKey, amount === null ? '' : String(amount));
+                return amount;
+            }
+        }
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    } catch (error) {
+        console.error('❌ 讀取我的額度失敗:', error);
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    }
+}
+
+// 儲存我的額度（amount 為數字，null 表示清空）
+async function saveCreditLimit(cardId, amount) {
+    const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
+    localStorage.setItem(localKey, amount === null ? '' : String(amount));
+
+    if (!currentUser) return;
+
+    try {
+        if (window.db && window.doc && window.setDoc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            const creditLimits = existingData.creditLimits || {};
+
+            if (amount === null) {
+                delete creditLimits[cardId];
+            } else {
+                creditLimits[cardId] = amount;
+            }
+
+            await window.setDoc(docRef, {
+                creditLimits: creditLimits,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [我的額度] 已同步到 Firestore:', cardId, amount);
+        }
+    } catch (error) {
+        console.error('❌ [我的額度] Firestore 保存失敗:', error);
+    }
+}
+
+// 設置我的額度輸入（卡片詳情頁）
+async function setupCreditLimit(cardId) {
+    const input = document.getElementById('credit-limit-input');
+    const savedTag = document.getElementById('credit-limit-saved');
+    if (!input) return;
+
+    if (savedTag) savedTag.textContent = '';
+    const current = await loadCreditLimit(cardId);
+    input.value = current !== null ? current.toLocaleString() : '';
+
+    // 失焦或按 Enter 即儲存；只留數字，顯示千分位
+    input.onchange = () => {
+        const raw = input.value.replace(/[^\d]/g, '');
+        const amount = raw ? Number(raw) : null;
+        input.value = amount !== null ? amount.toLocaleString() : '';
+        saveCreditLimit(cardId, amount);
+        if (savedTag) {
+            savedTag.textContent = '✓ 已儲存';
+            setTimeout(() => {
+                if (savedTag.textContent === '✓ 已儲存') savedTag.textContent = '';
+            }, 2000);
+        }
+    };
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
     };
 }
 

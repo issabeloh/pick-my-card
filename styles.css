@@ -2428,6 +2428,8 @@ input[type="number"]:focus {
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
+    /* 滑到頂/底不再橡皮筋回彈、也不把捲動傳給背景頁 */
+    overscroll-behavior: none;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
@@ -2544,6 +2546,12 @@ input[type="number"]:focus {
     margin-bottom: 12px;
     flex-wrap: wrap;
     align-items: center;
+}
+/* compact save button on the 全選 row (mirrors the bottom save button) */
+.save-btn-top {
+    margin-left: auto;
+    padding: 6px 16px;
+    font-size: 13.5px;
 }
 
 .modal-action-save-btn {
@@ -2850,37 +2858,425 @@ input[type="number"]:focus {
 }
 
 .owned-cards-overview {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 8px;
+    display: block;
 }
-.owned-overview-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+
+/* --- "我的信用卡" modal: wallet stack + solo card views --- */
+.ow-gear-btn {
+    margin-left: 10px;
+    margin-right: auto; /* sit right beside the title; close btn stays far right */
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #475569;
     cursor: pointer;
-    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.3s ease;
 }
-.owned-overview-card:hover {
-    border-color: #6bb6ff;
-    background: #f8fafc;
+.ow-gear-btn:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+    transform: rotate(30deg);
 }
-.owned-overview-card-image {
-    height: 70px;
-    width: auto;
-    max-width: 140px;
-    object-fit: contain;
+
+#my-owned-cards-modal .modal-body {
+    background: #ffffff;
+    border-radius: 0 0 12px 12px;
 }
-.owned-overview-card-name {
+/* Reserve scrollbar space even when nothing scrolls, so the modal's
+   content width doesn't jump when expanding a card makes it scrollable. */
+#my-owned-cards-modal .modal-content {
+    scrollbar-gutter: stable;
+}
+
+.ow-count-badge {
+    color: #94a3b8;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.ow-collapse-btn {
+    /* sticks to the bottom of the modal's visible area while the
+       expanded stack is taller than the viewport — always reachable
+       without scrolling */
+    position: sticky;
+    bottom: 12px;
+    z-index: 2000; /* above every stacked card (cards use z-index 1..N) */
+    display: block;
+    margin: 16px auto 0;
+    padding: 5px 20px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.16);
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ow-collapse-btn:hover {
+    border-color: #cbd5e1;
+    color: #1e293b;
+}
+
+/* Card face frame (shared by stack slots and solo view) */
+.ow-frame {
+    width: 100%;
+    aspect-ratio: 1.586;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    background: #f1f5f9;
+}
+.ow-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+/* Portrait card art: rotate to landscape and fill the frame. */
+.ow-frame.ow-portrait .ow-img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(100% / 1.586);
+    height: 158.6%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+}
+.ow-frame.ow-noimg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
     font-weight: 700;
-    color: #111827;
-    font-size: 13px;
-    line-height: 1.2;
+    font-size: 14px;
+    color: #374151;
     text-align: center;
+    background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+}
+
+/* --- Wallet stack --- */
+.ow-stack {
+    position: relative;
+    width: min(252px, 92%);
+    margin: 0 auto;
+    transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.ow-slot {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    cursor: pointer;
+    outline: none;
+    transition: top 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+                transform 0.25s ease;
+}
+.ow-slot .ow-frame {
+    /* bright hairline edge + a short, light seam: the 0/-1px shadow keeps
+       a dark gap right at the edge so stacked cards' white borders never
+       touch. Strips are thin, so heavier seams would pile up and read
+       almost black. */
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow:
+        0 -1px 0 rgba(0, 0, 0, 0.28),
+        0 -3px 4px -2px rgba(0, 0, 0, 0.26),
+        0 -6px 9px -7px rgba(0, 0, 0, 0.28);
+    transition: box-shadow 0.25s ease;
+}
+.ow-slot:hover {
+    transform: translateY(-5px);
+}
+.ow-slot:focus-visible .ow-frame {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+.ow-slot.ow-open .ow-frame {
+    box-shadow:
+        0 -1px 0 rgba(0, 0, 0, 0.45),
+        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
+        0 -18px 26px -18px rgba(0, 0, 0, 0.8),
+        0 16px 32px -12px rgba(0, 0, 0, 0.55);
+}
+
+/* "tap again" affordance pill on the revealed card */
+.ow-hint {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    background: rgba(15, 23, 42, 0.72);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s ease 0.4s, transform 0.3s ease 0.4s;
+    z-index: 2;
+}
+.ow-slot.ow-open .ow-hint {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* --- Solo view --- */
+.ow-solo-top {
+    display: flex;
+    margin-bottom: 10px;
+}
+.ow-back {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 6px 4px 0;
+}
+.ow-back:hover {
+    text-decoration: underline;
+}
+.ow-solo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ow-solo-face {
+    flex: 1;
+    min-width: 0;
+    border-radius: 16px;
+    box-shadow: 0 20px 44px -14px rgba(15, 23, 42, 0.38),
+                0 4px 12px rgba(15, 23, 42, 0.10);
+    touch-action: pan-y;
+}
+.ow-arrow {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
+    color: #334155;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ow-arrow:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+.ow-arrow:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+.ow-solo-name {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 14px;
+}
+.ow-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+.ow-dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: #cbd5e1;
+    transition: width 0.2s ease, background 0.2s ease;
+}
+.ow-dots i.on {
+    width: 18px;
+    background: #2563eb;
+}
+.ow-solo-info {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+    text-align: left;
+}
+.ow-info-head {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 10px;
+}
+.ow-info-loading {
+    color: #94a3b8;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px 0;
+}
+.ow-info-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13.5px;
+}
+.ow-info-label {
+    color: #64748b;
+    flex: 0 0 auto;
+}
+.ow-info-value {
+    color: #0f172a;
+    font-weight: 600;
+    text-align: right;
+}
+.ow-info-value.ow-ok { color: #059669; }
+.ow-info-value.ow-warn { color: #d97706; }
+.ow-info-value.ow-muted { color: #94a3b8; font-weight: 500; }
+.ow-info-note {
+    padding: 9px 0 2px;
+}
+.ow-info-note .ow-info-label {
+    font-size: 13.5px;
+    margin-bottom: 5px;
+}
+.ow-note-text {
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 9px 11px;
+    max-height: 7.8em;
+    overflow-y: auto;
+}
+.ow-note-text.ow-note-empty {
+    color: #94a3b8;
+    background: none;
+    padding: 0;
+}
+.ow-solo-info .ow-detail-btn {
+    display: block;
+    margin: 14px auto 0;
+}
+
+/* --- 我的額度 (card detail page) --- */
+.credit-limit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.credit-limit-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    /* 跟 .user-notes-textarea 同規格：2px 邊框、8px 圓角、60px 高 */
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 12px;
+    height: 60px;
+    box-sizing: border-box;
+    flex: 1;
+}
+.credit-limit-field:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+.credit-limit-prefix {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+/* input[type="text"] 全站通用樣式特異度較高，這裡用 input.credit-limit-input 蓋回 */
+input[type="text"].credit-limit-input {
+    border: none;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    background: transparent;
+}
+input[type="text"].credit-limit-input:focus {
+    border: none;
+    box-shadow: none;
+}
+.credit-limit-input::placeholder {
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 400;
+}
+.credit-limit-saved {
+    color: #059669;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile.
+   Sections inside the row drop their own border/offsets (they caused
+   stray lines and misaligned headings); the row carries the separator. */
+.personal-fields-row {
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+.personal-fields-row .card-info-section {
+    border-bottom: none;
+}
+.personal-fields-row .user-notes-section {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+@media (min-width: 768px) {
+    .personal-fields-row {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    .personal-fields-row #credit-limit-section {
+        flex: 0 0 200px;
+    }
+    .personal-fields-row #card-notes-section {
+        flex: 1;
+        min-width: 0;
+    }
+}
+.ow-detail-btn {
+    padding: 8px 18px;
+    border: 1px solid #3b82f6;
+    border-radius: 999px;
+    background: #fff;
+    color: #2563eb;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.ow-detail-btn:hover {
+    background: #eff6ff;
 }
 
 .owned-overview-empty {
