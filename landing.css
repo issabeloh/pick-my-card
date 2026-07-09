@@ -212,6 +212,8 @@ body {
     line-height: 1.7;
     margin-top: 20px;
 }
+/* STEP 2 提示：手機顯示含「高鐵/thsr」的版本，桌機 (≥1024px) 顯示原版 */
+.lp-note--desktop { display: none; }
 .lp-disclaimer {
     position: absolute;
     right: 16px;
@@ -959,6 +961,8 @@ body {
     .lp-frag { --sx: 2.6; --sy: 1.05; }
     .lp-disclaimer { right: 24px; bottom: 18px; }
     .lp-hint { font-size: 1.25rem; }
+    .lp-note--mobile { display: none; }
+    .lp-note--desktop { display: block; }
     .lp-hint-arrow { height: 58px; margin-top: 16px; }
 }
 

@@ -2322,8 +2322,8 @@ const fuzzySearchMap = {
     'starlux': '星宇航空',
     'starlux airlines': '星宇航空',
     '日本航空': 'japan airlines',
-    '日航': 'jal',
-    'jal': 'japan airlines',
+    '日航': '日本航空',
+    'jal': '日本航空',
     '全日空': 'ana',
     'all nippon airways': 'ana',
     '大韓航空': 'korean air',
@@ -2333,8 +2333,8 @@ const fuzzySearchMap = {
     '國泰航空': 'cathay pacific',
     '國泰': 'cathay pacific',
     '新加坡航空': 'singapore airlines',
-    '新航': 'singapore airlines',
-    'sia': 'singapore airlines',
+    '新航': '新加坡航空',
+    'sia': '新加坡航空',
     '泰國航空': 'thai airways',
     '泰航': 'thai airways',
     '馬來西亞航空': 'malaysia airlines',
@@ -5532,8 +5532,7 @@ function toggleRateComposition(btn) {
 
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
-    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>` +
-        `<div style="font-size: 10px; color: #6b7280; margin-top: 5px;">各成分同時計算，上限各自獨立</div>`;
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
     item.appendChild(popup);
     btn.classList.add('active');
 }
