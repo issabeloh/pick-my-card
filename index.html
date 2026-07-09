@@ -5,14 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
 
-    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users.
-         Read synchronously before any external script so first paint reflects it. -->
+    <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
+         - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
+         - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
+           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
+         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+         ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
+         location.replace 讓返回鍵不會跳回造成循環。 -->
     <script>
+        var pmcFromLanding = location.search.indexOf('start') !== -1;
         try {
-            if (localStorage.getItem('pmc_known_logged_in') === '1') {
+            if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+                localStorage.setItem('pmc_seen_landing', '1');
+                location.replace('landing.html');
+            } else {
                 document.documentElement.classList.add('pmc-returning-user');
             }
-        } catch (e) { /* localStorage disabled — fall back to default render */ }
+        } catch (e) {
+            // localStorage 不可用（無痕強化/隱私封鎖）
+            if (!pmcFromLanding) location.replace('landing.html');
+            else document.documentElement.classList.add('pmc-returning-user');
+        }
     </script>
 
     <!-- SEO Meta Tags -->
@@ -48,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260707155020">
+    <link rel="stylesheet" href="styles.css?v=20260708101940">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -941,6 +954,14 @@
                     </a>
                 </div>
             </div>
+            <div class="faq-section">
+                <p class="social-media-title">認識我們</p>
+                <div class="social-media-links">
+                    <a href="landing.html" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1021,7 +1042,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260707155020" defer></script>
+    <script src="script.js?v=20260708101940" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
