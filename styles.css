@@ -2787,11 +2787,16 @@ input[type="number"]:focus {
     to { opacity: 1; transform: translateY(0); }
 }
 /* 詳情頁活動項目內的「回饋組成」抽屜：detail item 的 padding 與 .card-result
-   不同，改為內含圓角框（不吃上面為結果卡調的負 margin） */
+   不同，改為內含圓角框（不吃上面為結果卡調的負 margin）；文字整體縮小 */
 .cashback-detail-item .calc-breakdown-popup {
     margin: 10px 0 0;
+    padding: 9px 12px;
     border: 1px solid #d1d5db;
     border-radius: 8px;
+    font-size: 12px;
+}
+.cashback-detail-item .calc-breakdown-popup .breakdown-table td {
+    padding: 3px 8px 3px 0;
 }
 .breakdown-table {
     border-collapse: collapse;

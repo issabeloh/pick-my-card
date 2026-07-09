@@ -3381,6 +3381,10 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     const layers = [];
     let totalCashback = 0;
 
+    // rate 欄留空/非數字（匯出 null → 解析 NaN）視為「無指定通路加碼」：
+    // 純 basic+加碼 的隱藏槽（如大戶卡一般國內消費）就是這種用法
+    if (!(designatedRate > 0)) designatedRate = 0;
+
     const basicRate = resolveBaseRate(card, isOverseas);
     const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
@@ -5562,7 +5566,7 @@ function toggleRateComposition(btn) {
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>` +
-        `<div style="font-size: 11px; color: #6b7280; margin-top: 6px;">各成分同時計算，上限各自獨立</div>`;
+        `<div style="font-size: 10px; color: #6b7280; margin-top: 5px;">各成分同時計算，上限各自獨立</div>`;
     item.appendChild(popup);
     btn.classList.add('active');
 }
