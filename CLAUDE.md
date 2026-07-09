@@ -126,33 +126,36 @@ if (!card.specialItems || card.specialItems.length === 0)
 - 由 displayParkingBenefits() 獨立處理
 - 支援快捷搜尋傳遞多個關鍵詞
 
-### 7. hideInDisplay 和 rate_hide 機制
+### 7. hideInDisplay 機制（rate_hide 覆寫已於 2026-07-09 移除）
 
 **hideInDisplay**：
-- 用途：標記不在卡片詳情頁顯示的 cashbackRate
-- 主要用於：國外消費（避免跟 overseasCashback 重複顯示）
+- 用途：標記不在卡片詳情頁顯示的 cashbackRate（Sheet 的 `_hide`、`_hide_1` 槽位）
+- 主要用於：國外消費／一般國內消費（避免跟詳情頁其他區塊重複顯示）
 - 這些項目仍然可以被搜尋
 
-**rate_hide**：
-- 用途：提供不顯示在前台的固定回饋率
-- 只有 DBS Eco 卡使用
-- 避免跟 overseasCashback 重複顯示
-- 只對 `hideInDisplay=true` 的項目生效
+**計算與匹配邏輯與一般活動完全相同**（不因隱藏而有任何特殊邏輯）：
+- cashbackModel 空 → 預設行為；有值 → 以 model 為準（見 section 12）
+- **rate=0 是明確的資料語義：「此活動沒有指定通路加碼成分」**。
+  stacking 模型允許 rate=0，只算模型裡的基準與加碼成分
+  （`if (rate > 0 || shouldUseStackedCalculation)`）；
+  rate=0 配空 model 或 `rate`/waterfall 沒有意義（會算出 0）
 
-**使用邏輯**（2026-07-09 起多一個 `!rateGroup.cashbackModel` 條件）：
-```javascript
-if (levelSettings && levelSettings.rate_hide !== undefined
-    && rateGroup.hideInDisplay === true
-    && !rateGroup.cashbackModel) {
-    finalRate = levelSettings.rate_hide;
-}
-```
-- **帶明確 cashbackModel 的隱藏槽（如 `_hide_1`）不吃 rate_hide 覆寫**——
-  走自己的模型計算。例：大戶卡「一般國內消費」隱藏槽填
-  `cashbackModel=basic+domesticBonusRate`（stacking，rate 留空/0 也能算：
-  基本+該級別加碼，`if (rate > 0 || shouldUseStackedCalculation)`）
-- 大戶卡第一個 `_hide` 槽（國外）沿用覆寫：rate 欄非數字 → 匯出 null →
-  以 levelSettings 的 per-level `rate_hide` 總率計算
+**隱藏槽標準配方**（以大戶卡為例，值自動跟用戶選的級別）：
+- 一般國內消費（`_hide_1`）：`rate_hide_1=0`、
+  `cashbackModel_hide_1=basic+domesticBonusRate`、cap 留空
+  → 基本 1% 無上限 + 該級別國內加碼（有 cap）
+- 國外（`_hide`）：`rate_hide=0`、
+  `cashbackModel_hide=overseasCashback+overseasBonusRate`、cap 留空
+  → 海外基本（overseasCashback）無上限 + 該級別海外加碼（有 cap）
+  （stacking 的基準層由 `resolveBaseRate` 決定：海外模型自動用
+  overseasCashback，所以「無 basic」的組合不需特殊處理）
+- **levelSettings 的 `rate_hide`/`cap_hide` 欄位已退役**，前端不再讀取，
+  總率不用再手動維護（如 6/4.5/2），由成分自動加總
+
+**⚠️ 與 cards.data 的相依**：前端移除覆寫後，大戶卡 `_hide` 槽必須照上面
+配方重新填寫並匯出（rate 欄留非數字會解析成 NaN%）。Apps Script 匯出
+隱藏槽的規則：items 必填、rate 必填數字（0 = 無指定加碼成分），
+非數字/留空 → 整組不匯出
 
 ### 8. 分層回饋計算系統
 
