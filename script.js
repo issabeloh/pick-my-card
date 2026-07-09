@@ -3189,7 +3189,7 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
 
     const rows = [];
     if (designatedRate > 0) rows.push({ name: '指定通路加碼', rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
-    if (basicRate > 0) rows.push({ name: isOverseas ? '基本回饋(海外)' : '基本回饋', rate: basicRate, cap: null });
+    if (basicRate > 0) rows.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, cap: null });
     if (bonusRate > 0) rows.push({ name: bonusName, rate: bonusRate, cap: bonusCap });
     if (rows.length < 2) return '';
 
@@ -3384,9 +3384,11 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     const basicRate = resolveBaseRate(card, isOverseas);
     const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
-    // Layer 1: Basic cashback on ALL spending (no cap)
+    // Layer 1: base cashback on ALL spending (no cap) — 海外模型自動用
+    // overseasCashback（resolveBaseRate），所以「overseasCashback+overseasBonusRate」
+    // 這種無 basic 的組合不需要特殊處理
     const basicCashback = Math.floor(amount * basicRate / 100);
-    layers.push({ name: '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
+    layers.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
     totalCashback += basicCashback;
 
     // Layer 2: Bonus (domestic / overseas), within its own cap
@@ -3500,30 +3502,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
-                    // Check if levelSettings has rate_hide to override the cashbackRate
-                    // Only apply rate_hide for rateGroups with hideInDisplay=true.
-                    // 帶有明確 cashbackModel 的隱藏槽（如 _hide_1 的 basic+domesticBonusRate）
-                    // 走自己的模型計算，不吃 rate_hide 覆寫（rate_hide 是給「rate 欄留空、
-                    // 靠 levelSettings 給總率」的第一個 _hide 槽用的）。
-                    let finalRate = parsedRate;
-                    if (levelSettings && levelSettings.rate_hide !== undefined && rateGroup.hideInDisplay === true && !rateGroup.cashbackModel) {
-                        finalRate = levelSettings.rate_hide;
-                        // Also update cap from levelSettings if available
-                        if (levelSettings.cap !== undefined) {
-                            applicableCap = levelSettings.cap;
-                        }
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
-                    } else {
-                        // 顯示原始 rate 或解析後的值
-                        const displayRate = (rateGroup.rate === '{specialRate}' || rateGroup.rate === '{rate}')
-                            ? `${rateGroup.rate}=${parsedRate}`
-                            : parsedRate;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
-                    }
+                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
+                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
+                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
+                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
 
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: finalRate,
+                        rate: parsedRate,
                         cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
@@ -3668,37 +3654,22 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 解析 rate 值（支援 {rate}、{specialRate}、{rate_hide} 等）
+                    // 解析 rate 值（支援 {rate}、{specialRate} 等任意 levelSettings 欄位）
                     let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
                     let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
-                    // Check if levelSettings has rate_hide to override the cashbackRate
-                    // Only apply rate_hide for rateGroups with hideInDisplay=true.
-                    // 帶有明確 cashbackModel 的隱藏槽不吃 rate_hide 覆寫（見上方同名邏輯註解）。
-                    let finalRate = parsedRate;
-                    let applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
-
-                    if (levelData && levelData.rate_hide !== undefined && rateGroup.hideInDisplay === true && !rateGroup.cashbackModel) {
-                        finalRate = levelData.rate_hide;
-                        // Also update cap from levelSettings if available
-                        if (levelData.cap !== undefined) {
-                            applicableCap = levelData.cap;
-                        }
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelData.rate_hide}%)`);
-                    } else {
-                        // 顯示原始 rate 或解析後的值
-                        const displayRate = (rateGroup.rate === '{rate_hide}' || rateGroup.rate === '{rate}')
-                            ? `${rateGroup.rate}=${parsedRate}`
-                            : parsedRate;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
-                    }
+                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
+                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
+                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
+                    const applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
+                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
 
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: finalRate,
+                        rate: parsedRate,
                         cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
@@ -5562,7 +5533,7 @@ function toggleRateComposition(btn) {
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>` +
-        `<div style="font-size: 11px; color: #6b7280; margin-top: 6px;">各成分同時計算，上限各自獨立</div>`;
+        `<div style="font-size: 10px; color: #6b7280; margin-top: 5px;">各成分同時計算，上限各自獨立</div>`;
     item.appendChild(popup);
     btn.classList.add('active');
 }
