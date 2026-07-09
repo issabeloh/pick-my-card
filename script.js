@@ -2322,28 +2322,28 @@ const fuzzySearchMap = {
     'starlux': '星宇航空',
     'starlux airlines': '星宇航空',
     '日本航空': 'japan airlines',
-    '日航': 'jal',
-    'jal': 'japan airlines',
-    '全日空': 'ana',
-    'all nippon airways': 'ana',
+    '日航': '日本航空',
+    'jal': '日本航空',
+    'ana': '全日空',
+    'all nippon airways': '全日空',
     '大韓航空': 'korean air',
     '大韓': 'korean air',
-    '韓亞航空': 'asiana airlines',
-    '韓亞': 'asiana airlines',
+    '韓亞': '韓亞航空',
+    'asiana airlines': '韓亞航空',
     '國泰航空': 'cathay pacific',
     '國泰': 'cathay pacific',
     '新加坡航空': 'singapore airlines',
-    '新航': 'singapore airlines',
-    'sia': 'singapore airlines',
-    '泰國航空': 'thai airways',
-    '泰航': 'thai airways',
-    '馬來西亞航空': 'malaysia airlines',
+    '新航': '新加坡航空',
+    'sia': '新加坡航空',
+    '泰航': '泰國航空',
+    'thai airways': '泰國航空',
+    '馬航': '馬來西亞航空',
+    'malaysia airlines': '馬來西亞航空',
     'airasia': '亞洲航空',
-    '馬航': 'malaysia airlines',
-    '越南航空': 'vietnam airlines',
-    '越航': 'vietnam airlines',
-    '菲律賓航空': 'philippine airlines',
-    '菲航': 'philippine airlines',
+    '越航': '越南航空',
+    'vietnam airlines': '越南航空',
+    '菲航': '菲律賓航空',
+    'philippine airlines': '菲律賓航空',
     '華信航空': 'mandarin airlines',
     '華信': 'mandarin airlines',
     '台灣高鐵': '高鐵',
@@ -5532,8 +5532,7 @@ function toggleRateComposition(btn) {
 
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
-    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>` +
-        `<div style="font-size: 10px; color: #6b7280; margin-top: 5px;">各成分同時計算，上限各自獨立</div>`;
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
     item.appendChild(popup);
     btn.classList.add('active');
 }
