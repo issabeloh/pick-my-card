@@ -699,6 +699,19 @@ body {
 }
 .lp-pill--line::before { background: #06c755; }
 .lp-pill--jko::before  { background: #e4002b; }
+/* 純文字建議 pill（相關通路建議，無色點） */
+.lp-pill--plain { color: #1d4ed8; border-color: #93c5fd; }
+.lp-pill--plain::before { display: none; }
+/* 第二個範例的搜尋框：與上一個提醒卡隔開 */
+.lp-search--hint { margin-top: 26px; }
+/* 矮螢幕（如 iPhone SE）：第 4 幕兩個範例較擠，整幕緊湊化 */
+@media (max-height: 700px) {
+    .lp-s4 .lp-title { margin-bottom: 14px; }
+    .lp-s4 .lp-reminder { margin-top: 12px; padding: 12px 14px 11px 42px; }
+    .lp-s4 .lp-reminder p { font-size: 0.88rem; line-height: 1.55; }
+    .lp-s4 .lp-pills { margin-top: 9px; }
+    .lp-s4 .lp-search--hint { margin-top: 16px; }
+}
 .lp-pill.fx { transform: scale(0); transition: none; }
 .lp-pill.fx.on { animation: lp-pop 0.4s cubic-bezier(0.2, 1.6, 0.45, 1) forwards; }
 
@@ -1042,7 +1055,9 @@ body {
 .lp-reduced .lp-s1-result.fx,
 .lp-reduced .lp-s1-result.fx.on.out { opacity: 1; transform: none; animation: none; }
 .lp-reduced .lp-brain-bar { width: 100% !important; }
-.lp-reduced .lp-hero-card { animation: none; }
+/* 收尾大卡靜態微傾（左低右高），保留一點動勢 */
+.lp-reduced .lp-hero-card,
+.lp-reduced .lp-hero-card.fx.on { animation: none; transform: rotate(-4deg); }
 .lp-reduced .lp-disclaimer { position: static; margin-top: 14px; text-align: right; }
 
 @media (prefers-reduced-motion: reduce) {
