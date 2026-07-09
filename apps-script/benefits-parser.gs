@@ -41,11 +41,8 @@ const PARSER_CONFIG = {
 };
 
 /************** 自訂選單 **************/
-// 若專案其他 .gs 檔已經有 onOpen，把下面 buildAutomationMenu_() 這一行搬進去即可
-function onOpen() {
-  buildAutomationMenu_();
-}
-
+// ⚠️ 這份檔案「不要」自己定義 onOpen（一個專案只能有一個 onOpen，會蓋掉 code.gs 匯出選單）。
+// 選單的建立改由 code.gs 既有的 onOpen 呼叫 buildAutomationMenu_() 一行來觸發。
 function buildAutomationMenu_() {
   SpreadsheetApp.getUi()
     .createMenu('🤖 權益自動化')
@@ -151,11 +148,13 @@ function extractNewPromos_(rawText, cardHint) {
     '1. promo_types 只能選：首刷禮（實體或虛擬禮品，如行李箱、商品卡）、回饋加碼（特定消費有額外百分比回饋）、定額點數（固定金額的點數或刷卡金）。',
     '2. new_customer_definition：官網對「新戶」的定義，照實摘錄成一句話；未明確說明則省略。',
     '3. promo_condition：把「持卡人為了拿到獎勵必須完成的任務」逐項拆解。若有兩項以上，用①②③④⑤依序編號、每項簡要說明（約25字內）；只有一項時直接寫一句、不必編號。這些任務不要再重複寫進 notes。',
+    '3a. promo_condition 寫法要「精簡、把修飾語放進名詞」：把官網「新增N筆一般消費且每筆金額均滿NT$X(含)以上」濃縮成「新增N筆NT$X元(含)以上的一般消費」；不要保留「且每筆金額均滿」這種贅字。同理其他任務也用最短、資訊不漏的講法。',
     '4. new_customer_summary：一句話帶出「核卡後X天內＋（可選）最關鍵門檻＋獎勵」，詳細條件已在 promo_condition，summary 只挑最關鍵的門檻（如單筆滿多少、累積滿多少）點出即可，不要把每個條件都塞進來。結尾不加句號。',
     '5. 日期格式 YYYY/M/D；官網寫「即日起」則 period_start 省略。',
     '6. gift_content：僅 promo_types 含首刷禮時填，寫官網的實際品名（如「TRAVEL FOX 25吋上掀式行李箱」）。',
     '7. bonus_rate_percent、bonus_cap_amount、voucher_amount 只填官網寫的原始數字（如 7、200、500），不做任何計算或換算。',
-    '8. notes 放「非任務」的重要限制，依序涵蓋：回饋結構拆解（官網標榜「最高X%」時列出所有組成）、核卡期限、不可與其他活動並行、排除條款、發放規則與名額限制；不同類別之間用全形分號「；」分隔。已寫進 promo_condition 的任務不要重複。',
+    '8. notes 放「非任務」的重要限制，依序涵蓋：回饋結構拆解（官網標榜「最高X%」時列出所有組成）、核卡期限、不可與其他活動並行、消費排除條款（哪些交易不算一般消費）、發放規則與名額限制；不同類別之間用全形分號「；」分隔。已寫進 promo_condition 的任務不要重複。',
+    '8a. notes「不要」收錄這類通用罰則／免責樣板（幾乎每張卡都一樣、對用戶無資訊量）：未完成任務即喪失資格、取消交易/退貨致不符資格、卡片非有效狀態、延滯繳款、違反約定條款、於贈禮前取消自動扣繳將喪失資格、銀行保留修改/終止活動權利等。這些一律略過，不要寫進任何欄位。',
     '9. evidence：逐字引用支撐回饋率/上限/期間的官網原文句子。',
     '10. 任何不確定之處（官網未列排除清單、文字看起來不完整、卡片對應不確定）→ needs_review 填 true，並把你想問的問題寫進 review_question。',
     '11. 文字中若沒有新戶活動，promos 回傳空陣列。',
@@ -164,11 +163,11 @@ function extractNewPromos_(rawText, cardHint) {
     '  promo_types=["首刷禮"]',
     '  new_customer_definition="自申辦日起前6個月，未曾持有任何一張富邦信用卡正卡者"',
     '  new_customer_summary="核卡後30天內，符合條件即贈行李箱"',
-    '  promo_condition="①新增3筆一般消費且每筆滿NT$1,000\\n②30天內設定本行本人帳戶自動扣繳本行信用卡款 (或) 申請電子帳單，同時取消實體帳單\\n③登錄活動"',
+    '  promo_condition="①新增3筆NT$1,000元(含)以上的一般消費\\n②30天內設定本行本人帳戶自動扣繳本行信用卡款 (或) 申請電子帳單，同時取消實體帳單\\n③登錄活動"',
     '  period_start="2026/7/1" period_end="2026/9/30"',
     '  gift_content="TRAVEL FOX 25吋上掀式行李箱(最新雙開款)"',
     '  notes="限於2026/10/15前核卡始符合活動資格；無法與本行其他新戶刷卡禮活動同時參與，亦不適用其他通路、辦卡平台之新戶首刷禮活動"',
-    '（注意：三個任務在 promo_condition 逐點列出、notes 不再重複；所有欄位無句號；編號連續①②③）',
+    '（注意：①用精簡寫法「N筆X元(含)以上的一般消費」而非「N筆一般消費且每筆滿X」；三個任務在 promo_condition 逐點列出、notes 不再重複；notes 沒有收「喪失資格/銀行保留權利」那類樣板；所有欄位無句號；編號連續①②③）',
     cardHint ? '\n卡片提示：這段文字很可能屬於「' + cardHint + '」。' : ''
   ].join('\n');
 

@@ -83,8 +83,10 @@
 1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
 2. Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增 `GEMINI_API_KEY` = 你的金鑰（**絕不寫進程式碼**）
 3. 把 `benefits-parser.gs` 內容貼進 Apps Script 專案的新檔案「權益解析」
-4. 重新整理試算表 → 工具列出現「🤖 權益自動化」選單
-   （若專案其他檔案已有 `onOpen` 函數會相衝：把 `buildAutomationMenu_();` 那一行搬進既有的 onOpen，並刪掉本檔的 onOpen）
+4. **把選單掛到專案既有的 onOpen**：這份檔案「不」自帶 onOpen（一個專案只能有一個 onOpen，
+   否則會蓋掉 `code.gs` 的匯出選單）。到你既有的 `code.gs`（有匯出選單的那個檔）的 `onOpen`
+   函數裡，在結尾 `}` 前加一行 `buildAutomationMenu_();`
+5. 重新整理試算表 → 匯出選單與「🤖 權益自動化」選單會**同時**出現
 
 ### 分工原則（為什麼比 GEM 準）
 
