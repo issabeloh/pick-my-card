@@ -157,6 +157,17 @@ if (!card.specialItems || card.specialItems.length === 0)
 隱藏槽的規則：items 必填、rate 必填數字（0 = 無指定加碼成分），
 非數字/留空 → 整組不匯出
 
+**⚠️ 可見的 `rate_N` 槽也適用同一條 rate=0 規則（2026-07-09 補）**：主
+`cashbackRates` 匯出迴圈的 guard 一度是 `if (rate && items)`——因為
+`0 && items` 是 falsy，會把 `rate_N=0` 的 stacking 槽整組丟掉（如
+`meta廣告`／`google廣告`，`cashbackModel=…+overseasBonusRate`、指定加碼
+成分為 0）。症狀跟隱藏槽 rate=0 被丟一模一樣：搜尋零結果、`cards.data`
+裡根本沒有該 item。**兩支匯出迴圈（可見 `rate_N` 與隱藏 `_hide`／`_hide_1`）
+都不可以用 `if (rate && items)` 當 guard。** 正確做法：只有 `items` 沒填才
+跳過、`rate` 用 `parseFloat` 解析，`0` 放行、非數字才整組不匯出
+（placeholder 如 `{specialRate}` 為 truthy 字串，不受影響）。快速自檢：
+匯出後解 base64，「非 hideInDisplay 的 `rate===0` 槽數量」不該是 0。
+
 ### 8. 分層回饋計算系統
 
 **用途**：處理多層獎勵結構的卡片（如 DBS Eco），每層有獨立的回饋率和消費上限。
@@ -826,4 +837,4 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
 
 ---
 
-**更新日期**：2026-07-06
+**更新日期**：2026-07-09
