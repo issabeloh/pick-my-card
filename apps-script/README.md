@@ -93,6 +93,23 @@
 - **程式做格式與數學**：promo_id 編號（撞號自動加 -1/-2）、cap 公式（`=200/0.07`）、
   bonus_rate 加 `%`、卡片 ID 清單直接從 `Cards Data` 動態讀取（不用維護對照表）
 
+### 欄位規範（2026-07-09 對齊正式表更新）
+
+待審核表「id」之後的欄位順序與正式新戶活動表一致：
+`id / promo_id / promo_types / new_customer_definition / new_customer_summary / promo_condition /
+period_start / period_end / gift_content / gift_image_url / bonus_rate / bonus_merchants / bonus_cap /
+voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_text / apply_cta_link / apply_cta_expiry`
+
+- **promo_condition**（AI 填）：達成獎勵的任務，兩項以上用 ①②③ 編號逐項簡述、只有一項不編號；已寫這裡的任務不會再重複進 notes
+- **new_customer_summary**（AI 填）：一句話「核卡後X天內＋最關鍵門檻＋獎勵」，細節在 promo_condition，summary 只點關鍵門檻
+- **promo_types**：「贈品」一律改稱 **首刷禮**（enum 只有 首刷禮／回饋加碼／定額點數）
+- **所有文字欄位不以句號結尾**（已寫進 prompt）
+- **需你手動補的 4 欄**（AI 不碰，程式留空或給預設）：
+  - `gift_image_url`：留空 → 你貼首刷禮的圖片網址
+  - `apply_cta_text`：程式預設「申辦{卡名}」；你若透過連結有專屬首刷禮，改成「透過連結申辦，再享專屬首刷禮」
+  - `apply_cta_link`：留空 → 你貼推薦連結
+  - `apply_cta_expiry`：留空 → 你填連結到期日
+
 ### 審核流程
 
 1. 收到「N 個新戶活動等你審核」的信 → 開 `待審核-新戶活動`

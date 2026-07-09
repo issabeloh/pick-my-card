@@ -140,19 +140,36 @@ function extractNewPromos_(rawText, cardHint) {
 
   const systemPrompt = [
     '你是台灣信用卡「新戶活動」的資料分析師。從我提供的官網文字中，找出所有與新戶/核卡相關的活動，輸出結構化 JSON。',
-    '規則：',
-    '1. 只提取文字中明確寫出的資訊，絕不自行假設或腦補；找不到的欄位一律省略。',
-    '2. 每個「獨立活動」（不同條件、不同期限）輸出一個物件；同一活動包含多種回饋類型時，放在同一物件的 promo_types 陣列。',
-    '3. promo_types 只能選：贈品（實體或虛擬禮品）、回饋加碼（特定消費有額外百分比回饋）、定額點數（固定金額的點數或刷卡金）。',
-    '4. new_customer_definition：官網對「新戶」的定義，照實摘錄成一句話；未明確說明則省略。',
-    '5. new_customer_summary：一句話說明達成條件與回饋重點，結尾不加句號。',
-    '6. 日期格式 YYYY/M/D；官網寫「即日起」則 period_start 省略。',
+    '',
+    '【總則】',
+    'A. 只提取文字中明確寫出的資訊，絕不自行假設或腦補；找不到的欄位一律省略。',
+    'B. 每個「獨立活動」（不同條件、不同期限）輸出一個物件；同一活動包含多種回饋類型時，放在同一物件的 promo_types 陣列。',
+    'C. 所有文字欄位（summary、condition、notes、definition…）一律不要以句號結尾。',
+    'D. 「贈品／禮品／好禮」等字樣，在我們的欄位一律稱「首刷禮」（promo_types 用「首刷禮」）；但 gift_content 照官網寫贈品的實際品名即可。',
+    '',
+    '【各欄位規則】',
+    '1. promo_types 只能選：首刷禮（實體或虛擬禮品，如行李箱、商品卡）、回饋加碼（特定消費有額外百分比回饋）、定額點數（固定金額的點數或刷卡金）。',
+    '2. new_customer_definition：官網對「新戶」的定義，照實摘錄成一句話；未明確說明則省略。',
+    '3. promo_condition：把「持卡人為了拿到獎勵必須完成的任務」逐項拆解。若有兩項以上，用①②③④⑤依序編號、每項簡要說明（約25字內）；只有一項時直接寫一句、不必編號。這些任務不要再重複寫進 notes。',
+    '4. new_customer_summary：一句話帶出「核卡後X天內＋（可選）最關鍵門檻＋獎勵」，詳細條件已在 promo_condition，summary 只挑最關鍵的門檻（如單筆滿多少、累積滿多少）點出即可，不要把每個條件都塞進來。結尾不加句號。',
+    '5. 日期格式 YYYY/M/D；官網寫「即日起」則 period_start 省略。',
+    '6. gift_content：僅 promo_types 含首刷禮時填，寫官網的實際品名（如「TRAVEL FOX 25吋上掀式行李箱」）。',
     '7. bonus_rate_percent、bonus_cap_amount、voucher_amount 只填官網寫的原始數字（如 7、200、500），不做任何計算或換算。',
-    '8. notes 依序涵蓋：回饋結構拆解（官網標榜「最高X%」時列出所有組成）、排除條款、發放規則與名額限制；不同類別之間用全形分號「；」分隔。',
+    '8. notes 放「非任務」的重要限制，依序涵蓋：回饋結構拆解（官網標榜「最高X%」時列出所有組成）、核卡期限、不可與其他活動並行、排除條款、發放規則與名額限制；不同類別之間用全形分號「；」分隔。已寫進 promo_condition 的任務不要重複。',
     '9. evidence：逐字引用支撐回饋率/上限/期間的官網原文句子。',
     '10. 任何不確定之處（官網未列排除清單、文字看起來不完整、卡片對應不確定）→ needs_review 填 true，並把你想問的問題寫進 review_question。',
     '11. 文字中若沒有新戶活動，promos 回傳空陣列。',
-    cardHint ? '卡片提示：這段文字很可能屬於「' + cardHint + '」。' : ''
+    '',
+    '【完整示範】原文：富邦 J 卡，活動期間 2026/7/1～2026/9/30，新戶核卡後30天內完成「新增3筆一般消費且每筆滿NT$1,000、設定本行帳戶自動扣繳或申請電子帳單並取消紙本、完成登錄」即贈 TRAVEL FOX 25吋上掀式行李箱；限2026/10/15前核卡；新戶定義為申辦日前6個月未持有任何富邦信用卡正卡；不可與本行其他新戶刷卡禮或其他通路辦卡平台活動並行。應輸出：',
+    '  promo_types=["首刷禮"]',
+    '  new_customer_definition="自申辦日起前6個月，未曾持有任何一張富邦信用卡正卡者"',
+    '  new_customer_summary="核卡後30天內，符合條件即贈行李箱"',
+    '  promo_condition="①新增3筆一般消費且每筆滿NT$1,000\\n②30天內設定本行本人帳戶自動扣繳本行信用卡款 (或) 申請電子帳單，同時取消實體帳單\\n③登錄活動"',
+    '  period_start="2026/7/1" period_end="2026/9/30"',
+    '  gift_content="TRAVEL FOX 25吋上掀式行李箱(最新雙開款)"',
+    '  notes="限於2026/10/15前核卡始符合活動資格；無法與本行其他新戶刷卡禮活動同時參與，亦不適用其他通路、辦卡平台之新戶首刷禮活動"',
+    '（注意：三個任務在 promo_condition 逐點列出、notes 不再重複；所有欄位無句號；編號連續①②③）',
+    cardHint ? '\n卡片提示：這段文字很可能屬於「' + cardHint + '」。' : ''
   ].join('\n');
 
   const schema = {
@@ -164,12 +181,13 @@ function extractNewPromos_(rawText, cardHint) {
           type: 'OBJECT',
           properties: {
             card_id: { type: 'STRING', enum: cardIds, description: '對應的卡片 ID' },
-            promo_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['贈品', '回饋加碼', '定額點數'] } },
+            promo_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['首刷禮', '回饋加碼', '定額點數'] } },
             new_customer_definition: { type: 'STRING' },
             new_customer_summary: { type: 'STRING' },
+            promo_condition: { type: 'STRING', description: '達成獎勵的任務；兩項以上用①②③編號、每項簡述，只有一項不編號' },
             period_start: { type: 'STRING', description: 'YYYY/M/D；即日起則省略' },
             period_end: { type: 'STRING', description: 'YYYY/M/D' },
-            gift_content: { type: 'STRING', description: '僅促銷類型含贈品時填' },
+            gift_content: { type: 'STRING', description: '僅 promo_types 含首刷禮時填，寫官網實際品名' },
             bonus_rate_percent: { type: 'NUMBER', description: '加碼回饋率的原始數字，如 5' },
             bonus_merchants: { type: 'ARRAY', items: { type: 'STRING' }, description: '加碼適用通路；所有消費填 *all_items' },
             bonus_cap_amount: { type: 'NUMBER', description: '加碼「回饋金額」上限的原始數字，如 200。不要換算' },
@@ -248,14 +266,16 @@ function writePromosToReview_(promos, source, link) {
       '核准', '解析時間', '來源', 'AI信心', 'needs_review', 'AI想問的問題', '原文引用',
       // ↓ 從這裡開始與正式「新戶活動」表的欄位一一對應，審核後整段複製即可
       'id', 'promo_id', 'promo_types', 'new_customer_definition', 'new_customer_summary',
-      'period_start', 'period_end', 'gift_content', 'bonus_rate', 'bonus_merchants',
-      'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link', 'priority', 'active'
+      'promo_condition', 'period_start', 'period_end', 'gift_content', 'gift_image_url',
+      'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage',
+      'notes', 'link', 'priority', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'
     ]);
     sheet.setFrozenRows(1);
   }
 
   const existingIds = sheet.getDataRange().getValues()
-    .map(function (r) { return String(r[8] || ''); });  // promo_id 欄
+    .map(function (r) { return String(r[8] || ''); });  // promo_id 欄（第 9 欄，index 8）
+  const nameMap = getCardNameMap_();
 
   const now = new Date();
   promos.forEach(function (p) {
@@ -265,6 +285,8 @@ function writePromosToReview_(promos, source, link) {
     const bonusRate = (p.bonus_rate_percent !== undefined && p.bonus_rate_percent !== null && p.bonus_rate_percent !== 0)
       ? p.bonus_rate_percent + '%' : '';
     const bonusCap = buildCapFormula_(p.bonus_cap_amount, p.bonus_rate_percent);
+    // apply_cta_text 預設「申辦{卡名}」（你若透過連結有專屬首刷禮，再自行改成「透過連結申辦，再享專屬首刷禮」）
+    const applyCtaText = nameMap[p.card_id] ? '申辦' + nameMap[p.card_id] : '';
 
     const row = [
       '',                                        // 核准（你打 V）
@@ -274,23 +296,29 @@ function writePromosToReview_(promos, source, link) {
       p.needs_review ? 'TRUE' : '',
       p.review_question || '',
       p.evidence || '',
-      p.card_id,
-      promoId,
-      (p.promo_types || []).join(','),
-      p.new_customer_definition || '',
-      p.new_customer_summary || '',
-      p.period_start || '',
-      p.period_end || '',
-      p.gift_content || '',
-      bonusRate,
-      (p.bonus_merchants || []).join(','),
-      bonusCap,
-      p.voucher_amount || '',
-      p.voucher_usage || '',
-      p.notes || '',
-      p.link || link || '',
+      // ↓ 與正式表一一對應
+      p.card_id,                                 // id
+      promoId,                                   // promo_id
+      (p.promo_types || []).join(','),           // promo_types
+      p.new_customer_definition || '',           // new_customer_definition
+      p.new_customer_summary || '',              // new_customer_summary
+      p.promo_condition || '',                   // promo_condition
+      p.period_start || '',                      // period_start
+      p.period_end || '',                        // period_end
+      p.gift_content || '',                      // gift_content
+      '',                                        // gift_image_url（你手動貼圖片網址）
+      bonusRate,                                 // bonus_rate
+      (p.bonus_merchants || []).join(','),       // bonus_merchants
+      bonusCap,                                  // bonus_cap
+      p.voucher_amount || '',                    // voucher_amount
+      p.voucher_usage || '',                     // voucher_usage
+      p.notes || '',                             // notes
+      p.link || link || '',                      // link
       '',                                        // priority 固定留空
-      'TRUE'                                     // active
+      'TRUE',                                    // active
+      applyCtaText,                              // apply_cta_text（預設值，可改）
+      '',                                        // apply_cta_link（你手動貼推薦連結）
+      ''                                         // apply_cta_expiry（你手動填連結到期日）
     ];
     sheet.appendRow(row);
     if (p.needs_review) {
@@ -337,6 +365,24 @@ function getCardIds_() {
     if (id) ids.push(id);
   }
   return ids;
+}
+
+// id → 卡片簡稱（name 欄），用來給 apply_cta_text 產生「申辦{卡名}」預設值
+function getCardNameMap_() {
+  const map = {};
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PARSER_CONFIG.cardsSheet);
+  if (!sheet) return map;
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
+  const idCol = headers.indexOf('id');
+  const nameCol = headers.indexOf('name');
+  if (idCol < 0 || nameCol < 0) return map;
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][idCol] || '').trim();
+    const name = String(data[i][nameCol] || '').trim();
+    if (id && name) map[id] = name;
+  }
+  return map;
 }
 
 /************** 通知 **************/
