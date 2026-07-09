@@ -2786,6 +2786,13 @@ input[type="number"]:focus {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+/* 詳情頁活動項目內的「回饋組成」抽屜：detail item 的 padding 與 .card-result
+   不同，改為內含圓角框（不吃上面為結果卡調的負 margin） */
+.cashback-detail-item .calc-breakdown-popup {
+    margin: 10px 0 0;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
 .breakdown-table {
     border-collapse: collapse;
     width: auto;

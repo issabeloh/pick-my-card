@@ -85,30 +85,28 @@ if (!card.specialItems || card.specialItems.length === 0)
 - DBS Eco: level-note 顯示在下拉選單下方
 - 支援文字換行（flex-wrap: wrap）
 
-**回饋內容區域** (script.js:3031-3500+)：
+**回饋內容區域**：
 - **不再重複顯示"各級別回饋率"**（已在選擇器旁顯示）
-- 合併相同 rate/cap 的活動（使用 Map 分組）
-- 按 category 顯示條件（不是按通路）
+- **2026-07-09 起：逐筆顯示每個 cashbackRate 活動（不再按 rate+cap 合併）**
+  - 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（CUBE 用自己的
+    `generateCubeSpecialContent`，不受影響）
+  - `category` 一律以藍色 chip 顯示在回饋率旁（同一般卡片），條件直接顯示
+  - 回饋率顯示 `getDisplayRate()` 加總值（stacking = 指定+基本+加碼，與搜尋結果一致）
+  - stacking 模型（cashbackModel 含 `+`）回饋率旁有「回饋組成」計算機按鈕
+    （`rateCompositionButtonHtml` + `toggleRateComposition`），展開各成分 rate/上限與合計
 
 **特殊處理**：
 - 玉山 Uni Card: 條件可展開/收起（toggleConditions 函數）
 - CUBE 卡: 使用 specialRate，顯示"無上限"
 - DBS Eco: 特殊的 cap 說明格式
 
-### 5. 資料合併與分組
+### 5. 資料合併與分組（詳情頁合併已於 2026-07-09 移除）
 
-**cashbackRates 合併邏輯** (script.js:3047-3077, 3194-3223)：
-```javascript
-// 按 rate+cap 分組
-const groupKey = `${parsedRate}-${parsedCap || 'nocap'}`;
-// 合併 items 和 conditions
-group.items.push(...rate.items);
-group.conditions.push({category, conditions});
-```
-
-**條件顯示**：
-- 按 category 分組（如："行動支付：xxxxx"）
-- 使用 `getCategoryDisplayName()` 轉換顯示名稱
+- 詳情頁**不再**按 rate+cap 合併活動——每個 cashbackRate 逐筆顯示，
+  category 以 chip 顯示在回饋率旁（見 section 4）
+- 仍存在的合併只有兩處：CUBE 專屬產生器（按 rate+category+period 合併，
+  category 不會被吃掉）與搜尋結果的 `mergeResultsByActivity`
+- `getCategoryDisplayName()` 仍用於 chip 顯示名稱轉換
 
 ### 6. 搜尋功能（findMatchingItem）
 
@@ -141,13 +139,20 @@ group.conditions.push({category, conditions});
 - 避免跟 overseasCashback 重複顯示
 - 只對 `hideInDisplay=true` 的項目生效
 
-**使用邏輯** (script.js:1910)：
+**使用邏輯**（2026-07-09 起多一個 `!rateGroup.cashbackModel` 條件）：
 ```javascript
 if (levelSettings && levelSettings.rate_hide !== undefined
-    && rateGroup.hideInDisplay === true) {
+    && rateGroup.hideInDisplay === true
+    && !rateGroup.cashbackModel) {
     finalRate = levelSettings.rate_hide;
 }
 ```
+- **帶明確 cashbackModel 的隱藏槽（如 `_hide_1`）不吃 rate_hide 覆寫**——
+  走自己的模型計算。例：大戶卡「一般國內消費」隱藏槽填
+  `cashbackModel=basic+domesticBonusRate`（stacking，rate 留空/0 也能算：
+  基本+該級別加碼，`if (rate > 0 || shouldUseStackedCalculation)`）
+- 大戶卡第一個 `_hide` 槽（國外）沿用覆寫：rate 欄非數字 → 匯出 null →
+  以 levelSettings 的 per-level `rate_hide` 總率計算
 
 ### 8. 分層回饋計算系統
 
