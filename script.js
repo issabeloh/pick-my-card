@@ -295,20 +295,23 @@ function slashDateToISO(slashDate) {
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
 // Returns: 'active' | 'upcoming' | 'expired' | 'always'
 function getRateStatus(periodStart, periodEnd) {
-    // If no date restrictions, rate is always active
-    if (!periodStart || !periodEnd) {
+    // If no date restrictions at all, rate is always active
+    if (!periodStart && !periodEnd) {
         return 'always';
     }
 
     try {
         const today = getTaiwanToday(); // YYYY-MM-DD，ISO 字典序 = 日期序
         // periodStart/periodEnd 可能是 ISO "YYYY-MM-DD" 或台灣慣用 "YYYY/M/D"，
-        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂
-        const start = periodStart.includes('-') ? periodStart : slashDateToISO(periodStart);
-        const end = periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd);
-        if (today >= start && today <= end) return 'active';
-        if (today < start) return 'upcoming';
-        return 'expired';
+        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂。
+        // ⚠️ 只給一邊也要判斷：只有 periodStart = 開始後無限期；只有 periodEnd =
+        //   一開始就有效、到期為止。過去「缺一邊就回 always」會讓已過期（有 periodEnd
+        //   但沒 periodStart）的活動永遠不被隱藏。
+        const start = periodStart ? (periodStart.includes('-') ? periodStart : slashDateToISO(periodStart)) : null;
+        const end = periodEnd ? (periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd)) : null;
+        if (end && today > end) return 'expired';
+        if (start && today < start) return 'upcoming';
+        return 'active';
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
         return 'always';
