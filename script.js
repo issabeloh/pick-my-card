@@ -318,6 +318,25 @@ function getRateStatus(periodStart, periodEnd) {
     }
 }
 
+// 有一整類活動，Apps Script 只匯出了合併字串 period（"YYYY/M/D~YYYY/M/D"）與
+// periodEnd，卻「沒有」單獨的 periodStart 欄位。expiry / upcoming 判斷看的是
+// periodStart/periodEnd 欄位，缺欄位會誤判（過期活動不被隱藏、未來活動提早顯示）。
+// 這裡從 period 字串把缺少的那一邊「補回」——只補「缺的」欄位、絕不覆寫既有值，
+// 因為 period 字串偶爾比 periodStart/periodEnd 欄位舊（如中信 LINE Pay 肌膚之鑰：
+// period 停在 ~6/30 但 periodEnd 欄位已更新為 12/31，覆寫會誤把生效中的活動判為過期）。
+function backfillPeriodBounds(entry) {
+    if (!entry || typeof entry.period !== 'string' || !entry.period.includes('~')) return;
+    const [startRaw, endRaw] = entry.period.split('~');
+    if (!entry.periodStart && startRaw) {
+        const iso = slashDateToISO(startRaw.trim());
+        if (iso) entry.periodStart = iso;
+    }
+    if (!entry.periodEnd && endRaw) {
+        const iso = slashDateToISO(endRaw.trim());
+        if (iso) entry.periodEnd = iso;
+    }
+}
+
 // Check if a rate is currently active (for backwards compatibility)
 // Rate status cache for performance optimization
 let rateStatusCache = new Map();
@@ -463,6 +482,7 @@ function filterExpiredRates(cardsData) {
         // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
             card.cashbackRates = card.cashbackRates.filter(rate => {
+                backfillPeriodBounds(rate); // 從 period 字串補回缺少的 periodStart/periodEnd
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
 
                 // Always keep active and always-active rates
@@ -488,6 +508,7 @@ function filterExpiredRates(cardsData) {
         // Filter couponCashbacks - keep active and upcoming (within 30 days)
         if (card.couponCashbacks && Array.isArray(card.couponCashbacks)) {
             card.couponCashbacks = card.couponCashbacks.filter(coupon => {
+                backfillPeriodBounds(coupon); // 從 period 字串補回缺少的 periodStart/periodEnd
                 const status = getRateStatus(coupon.periodStart, coupon.periodEnd);
 
                 // Always keep active and always-active coupons
