@@ -6,19 +6,17 @@
 ## 開工順序（新 session 第一次進來）
 
 1. CLAUDE.md 已經是路由版（78 行）——讀完它，按任務路由表讀對應領域檔，**然後才動手**
-2. 有一件立制 session 沒做完的事：`docs/ops/regression.md` 的**基準快照還沒拍**（需要實際開頁面跑 12 組搜尋）。第一次要改 script.js 計算邏輯之前，先花 20 分鐘把基準拍好，否則回歸清單沒有比對對象
+2. 回歸驗證已自動化（2026-07-12，用戶核准後由同一個立制 session 完成）：`node tools/regression/run-regression.js`，基準已拍在 `tools/regression/baseline.json`。用法與基準過期規則見 `tools/regression/README.md`
 3. 這是短命容器：**每完成一個獨立單位就 commit+push**，沒 push 的工作等於沒發生
 
 ## 三件用戶沒問、但對這個環境最重要的事
 
-### 1. 沒有自動化測試是這個 repo 最大的單一風險
+### 1. ~~沒有自動化測試是這個 repo 最大的單一風險~~（✅ 已解決 2026-07-12：見 tools/regression/）
 
-全站唯一的品質防線是 preflight（機械檢查）＋人工回歸（regression.md）。歷史上的重大 bug（rate=0 匯出、
-跨用戶級別洩漏）都是「改 A 壞 B」型——正是自動化回歸最擅長抓的。這個站是無 build 靜態站、Chromium+Playwright
-在 remote 環境已預裝（executablePath `/opt/pw-browsers/chromium`），自動化條件非常好：
-起 `python3 -m http.server` → Playwright 開頁 → 依序輸入 regression.md 的 12 組搜尋 → 抓結果卡的
-卡名/回饋率/金額存成 JSON → 與基準檔 diff。估計一個 session 能做完。
-**先跟用戶提案再做**（這是工程投資，不是日常任務），做完把 regression.md 從人工清單升級為腳本入口說明。
+（原文說這是最大單一風險、值得一個 session 投資——用戶已核准並於 2026-07-12 完成：
+`tools/regression/run-regression.js`＋`baseline.json`，做過確定性/抓差異/退出碼三向驗證。
+留給你的部分：活動到期時換檢查詞並重拍基準（見 `tools/regression/README.md`）；腳本壞掉時
+regression.md 有人工備援流程。）
 
 ### 2. `exportToJSON()` 不在 repo 裡（單點故障）
 
@@ -59,6 +57,5 @@ judgment.md 第 3 節：問用戶，不要猜。
 
 - ✅ A 診斷（diagnosis.md）、B CLAUDE.md 路由版＋5 個領域檔、C dispatch＋3 個自訂 agent、
   D judgment、E templates、F maintenance、G 本信、tools/preflight.sh（已正反向測試）
-- ⬜ regression.md 基準快照未拍（見上方「開工順序」第 2 點）
-- ⬜ 自動化回歸測試未建（見「三件事」第 1 件，需用戶同意）
+- ✅ 自動化回歸測試已建＋基準已拍（2026-07-12 用戶核准後完成，見 tools/regression/）
 - 全部產出在 branch `claude/fable5-system-design-8qds6h`，逐項 commit，原 CLAUDE.md 備份於 `docs/archive/`
