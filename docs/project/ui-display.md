@@ -51,7 +51,7 @@
 **固定高度（防跳動）**：`.spotlight-card { min-height: 260px }`；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 2.8em`；`.spotlight-meta` min-height 76px、nowrap+ellipsis；卡名列粗體；分類 chip 紫色（#6d28d9 on #ede9fe，刻意避開 sidebar 藍色系）。
 
 **兩個動作**：
-- 「比較這個通路 →」（`compareSpotlightMerchant`）：merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串
+- 「比較這個通路 →」（`compareSpotlightMerchant`）：merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。**這是全站唯一自動觸發計算的入口**（兩條路徑都代按計算、金額空白補 1000）——快捷搜尋按鈕與 `handleQuickSearch` 本身自 2026-07-12 起只填入關鍵詞、不自動計算（產品決策：計算由用戶按「計算」觸發），要復原或擴大自動計算屬產品行為變更，先問用戶
 - ⓘ（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap＋卡片第一個級別解析。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）
 
 **相關檔案**：index.html `#spotlight-section` `#spotlight-modal`；styles.css `.spotlight-*`（白底、回饋率粗體綠字、「剩 N 天」徽章 0–14 天顯示）。

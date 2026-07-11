@@ -171,8 +171,8 @@ async function run(updateBaseline) {
         return false;
       }, c.displayName);
       if (!clicked) throw new Error(`快捷搜尋按鈕找不到：${c.displayName}`);
-      // handler 內建的自動計算會因按鈕 disabled 時序被跳過（script.js:1181 檢查早於
-      // 結尾的 validateInputs()）——比照真實用戶：快捷按鈕點完後自己按計算
+      // 快捷搜尋只填入、不自動計算（2026-07-12 產品決策）——比照真實用戶：
+      // 點完快捷按鈕後自己按計算
       await page.waitForTimeout(100);
       await page.click('#calculate-btn');
     }

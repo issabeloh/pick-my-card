@@ -1174,14 +1174,8 @@ function handleQuickSearch(option) {
         currentMatchedItem = allMatches;
         currentQuickSearchOption = option; // Store quick search option for parking benefits
 
-        // Auto-trigger calculation if amount is filled
-        const amountInput = document.getElementById('amount-input');
-        if (amountInput && amountInput.value) {
-            const calculateBtn = document.getElementById('calculate-btn');
-            if (calculateBtn && !calculateBtn.disabled) {
-                calculateBtn.click();
-            }
-        }
+        // 快捷搜尋只填入、不自動計算（2026-07-12 產品決策）：計算一律由用戶按「計算」觸發。
+        // 需要點了就出結果的入口（Spotlight 的比較按鈕）由呼叫端自行觸發計算。
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -1586,7 +1580,12 @@ function compareSpotlightMerchant(merchant) {
     const matchedOption = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
 
     if (matchedOption) {
+        // handleQuickSearch 只填入關鍵詞（不自動計算）；其結尾的 validateInputs()
+        // 已依「商家非空」啟用計算鈕，這裡代替用戶按下計算，維持本按鈕「點了就比較」的承諾
         handleQuickSearch(matchedOption);
+        if (amountInput && !amountInput.value) amountInput.value = '1000';
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn && !calcBtn.disabled) calcBtn.click();
     } else {
         if (merchantInputEl) {
             merchantInputEl.value = merchant;
