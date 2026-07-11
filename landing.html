@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="landing.css?v=20260711101628">
+    <link rel="stylesheet" href="landing.css?v=20260711144731">
 
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
@@ -88,8 +88,8 @@
             </section>
 
             <!-- ============ 第 2 幕｜STEP 1 · 你的信用卡 ============ -->
-            <section class="lp-scene lp-s2" data-scene="2" aria-label="STEP 1 你的信用卡">
-                <p class="lp-eyebrow fx" data-at="0.04">STEP 1 · 你的信用卡</p>
+            <section class="lp-scene lp-s2" data-scene="2" aria-label="STEP 1 篩選你的個人信用卡">
+                <p class="lp-eyebrow fx" data-at="0.04">STEP 1 · 篩選你的個人信用卡</p>
                 <h2 class="lp-title fx" data-at="0.08">勾選你持有哪些卡片</h2>
                 <div class="lp-cardgrid" data-at="0.62">
                     <div class="lp-card lp-card--uni checked fx" data-at="0.14">
@@ -115,9 +115,10 @@
                         <span class="lp-chip"></span><span class="lp-wave"></span>
                         <span class="lp-cardname">永豐 Green 卡</span>
                     </div>
-                    <div class="lp-card lp-card--ubear fx" data-at="0.34">
+                    <div class="lp-card lp-card--sport checked fx" data-at="0.34">
                         <span class="lp-chip"></span><span class="lp-wave"></span>
-                        <span class="lp-cardname">玉山 Ubear 卡</span>
+                        <span class="lp-cardname">永豐 Sport 卡</span>
+                        <span class="lp-check fx" data-at="0.64"></span>
                     </div>
                 </div>
                 <p class="lp-note fx" data-at="0.74">比較結果只列入你持有的卡，選項隨時都能改</p>
@@ -136,16 +137,16 @@
                     <li class="lp-rank fx" data-at="0.38">
                         <span class="lp-rank-no lp-rank-no--gold">1</span>
                         <span class="lp-minicard lp-card--uni"></span>
-                        <span class="lp-rank-name">玉山 Uni 卡<span class="lp-level-chip fx" data-at="0.58">任意選 ▾</span></span>
-                        <span class="lp-stamp fx" data-at="0.68">3.5%</span>
+                        <span class="lp-rank-name">玉山 Uni 卡<span class="lp-level-chip fx" data-at="0.58">UP選 ▾</span></span>
+                        <span class="lp-stamp fx" data-at="0.68">4.5%</span>
                     </li>
-                    <li class="lp-rank fx" data-at="0.46">
+                    <li class="lp-rank lp-rank--dim fx" data-at="0.46">
                         <span class="lp-rank-no">2</span>
                         <span class="lp-minicard lp-card--richart"></span>
                         <span class="lp-rank-name">台新 Richart 卡</span>
                         <span class="lp-rank-rate">3.3%</span>
                     </li>
-                    <li class="lp-rank fx" data-at="0.52">
+                    <li class="lp-rank lp-rank--dim fx" data-at="0.52">
                         <span class="lp-rank-no">3</span>
                         <span class="lp-minicard lp-card--crystal"></span>
                         <span class="lp-rank-name">陽信 JCB 晶緻卡</span>
@@ -191,25 +192,17 @@
                 <p class="lp-disclaimer">畫面為示意，實際回饋以查詢結果為準</p>
             </section>
 
-            <!-- ============ 第 5 幕｜STEP 4 · 實用提醒自動跳出 ============ -->
-            <section class="lp-scene lp-s5" data-scene="5" aria-label="STEP 4 實用提醒自動跳出">
-                <p class="lp-eyebrow fx" data-at="0.04">STEP 4 · 實用提醒自動跳出</p>
-                <h2 class="lp-title fx" data-at="0.08">搜尋時，貼心提醒跟著出現</h2>
-                <div class="lp-mini-result lp-ex1 fx" data-at="0.13">
-                    <div class="lp-search lp-search--mini">
-                        <span class="lp-search-icon" aria-hidden="true"></span>
-                        <span class="lp-typed-static">uniqlo</span>
-                    </div>
-                    <div class="lp-rank lp-rank--mini">
-                        <span class="lp-rank-no lp-rank-no--gold">1</span>
-                        <span class="lp-minicard lp-card--uni"></span>
-                        <span class="lp-rank-name">玉山 Uni 卡</span>
-                        <span class="lp-rank-rate lp-rank-rate--best">3.5%</span>
-                    </div>
+            <!-- ============ 第 5 幕｜STEP 4 · 實用提醒 ============ -->
+            <section class="lp-scene lp-s5" data-scene="5" aria-label="STEP 4 實用提醒">
+                <p class="lp-eyebrow fx" data-at="0.04">STEP 4 · 實用提醒</p>
+                <h2 class="lp-title fx" data-at="0.08">搜尋時，貼心提醒自動跳出</h2>
+                <div class="lp-search lp-search--mini lp-ex1 fx" data-at="0.13">
+                    <span class="lp-search-icon" aria-hidden="true"></span>
+                    <span class="lp-typed-static">IKEA</span>
                 </div>
                 <div class="lp-reminder lp-ex1 fx" data-at="0.34" role="note">
                     <span class="lp-reminder-icon" aria-hidden="true">💡</span>
-                    <p>提醒：UNIQLO 也支援 Apple&nbsp;Pay、LINE&nbsp;Pay、街口支付，綁卡回饋可能更高，要不要一起比比看？</p>
+                    <p>此商家也支援 Apple&nbsp;Pay、LINE&nbsp;Pay、街口支付，可能比直接刷回饋更高，比較看看？</p>
                     <div class="lp-pills">
                         <span class="lp-pill fx" data-at="0.50">Apple Pay</span>
                         <span class="lp-pill lp-pill--line fx" data-at="0.55">LINE Pay</span>
@@ -241,22 +234,22 @@
                     <div class="lp-mx-head fx" data-at="0.14">LINE Pay</div>
                     <div class="lp-mx-head fx" data-at="0.14">街口支付</div>
 
-                    <div class="lp-mx-row fx" data-at="0.24"><span class="lp-minicard lp-card--uni"></span>玉山 Uni</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
+                    <div class="lp-mx-row fx" data-at="0.24"><span class="lp-minicard lp-card--sport"></span>永豐 Sport</div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.24"><em>5%</em></div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.24">1%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.24">1%</div>
 
                     <div class="lp-mx-row fx" data-at="0.36"><span class="lp-minicard lp-card--richart"></span>Richart</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">3.3%</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">2.3%</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">0.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">3.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">2.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">0.3%</div>
 
                     <div class="lp-mx-row fx" data-at="0.48"><span class="lp-minicard lp-card--crystal"></span>陽信晶緻</div>
-                    <div class="lp-mx-cell fx" data-at="0.48">1%</div>
-                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em><span class="lp-winstamp fx" data-at="0.62">最高</span></div>
-                    <div class="lp-mx-cell fx" data-at="0.48">5%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.48">1%</div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em></div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em></div>
                 </div>
-                <p class="lp-payoff fx" data-at="0.76">陽信晶緻 ✕ LINE Pay <strong>5%</strong>，比直接刷還高。</p>
+                <p class="lp-payoff fx" data-at="0.76">同一張卡，綁對支付，回饋從 1% 跳到 <strong>5%</strong>。</p>
                 <p class="lp-disclaimer">畫面為示意，實際回饋以查詢結果為準</p>
             </section>
 
@@ -282,6 +275,6 @@
         </div>
     </div>
 
-    <script src="landing.js?v=20260711101628" defer></script>
+    <script src="landing.js?v=20260711144731" defer></script>
 </body>
 </html>
