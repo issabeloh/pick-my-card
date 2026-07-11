@@ -6,11 +6,12 @@
 //    實際執行的版本在 Google Sheets 裡（試算表 → 擴充功能 → Apps Script），
 //    改動時兩邊請同步（見 apps-script/README.md）。
 //
-// 2026-07-11 修正：日期範圍統一以 period_N 合併字串（"YYYY/M/D~YYYY/M/D"）為單一
-//    真實來源，透過 resolvePeriodBounds() 拆出 periodStart / periodEnd；試算表的
-//    periodStart_N / periodEnd_N 只是 period_N 的公式衍生欄（開始日公式在某些列算不出
-//    值→整欄空），僅在 period_N 沒填時當 fallback。修正前只讀公式欄，會漏掉 periodStart
-//    而讓已過期活動不被隱藏。套用於 cashbackRates / _hide 隱藏槽 / couponCashbacks 三處。
+// 2026-07-11 修正：日期範圍改由 resolvePeriodBounds() 統一決定——優先讀維護者輸入的
+//    periodStart_N / periodEnd_N（日期源頭），某一邊讀不到時從 period_N 合併字串
+//    （公式組出的 "YYYY/M/D~YYYY/M/D"）拆回來救援。修正前若輸入欄「讀不到」（欄位
+//    標題對不上或欄名重複，儲存格有值也讀不到），periodStart 會缺席，前端過期判斷
+//    拿不到開始日、已過期活動不被隱藏。套用於 cashbackRates / _hide / couponCashbacks
+//    三處；並在 runQACheck 加入欄位結構與期間一致性檢查，匯出時直接報警。
 
 // 建立自訂選單
 function onOpen() {
@@ -114,12 +115,62 @@ function runQACheck() {
         }
       }
     }
+
+    // 檢查 8: 期間欄位完整性與一致性（periodStart/End_N 是輸入源頭、period_N 是公式字串）
+    // 8a: periodEnd_N 讀得到但 periodStart_N 讀不到 → 匯出會缺開始日（沒填、或欄位標題對不上）
+    // 8b: period_N 與輸入的 periodStart/End_N 日期對不上 → 有一邊是舊資料（如肌膚之鑰誤植案例）
+    for (let j = 1; j <= 21; j++) {
+      const ps = getValue(row, headers, `periodStart_${j}`);
+      const pe = getValue(row, headers, `periodEnd_${j}`);
+      const per = getValue(row, headers, `period_${j}`);
+      if (!ps && !pe && !per) continue;
+
+      if (pe && !ps) {
+        issues.push([cardId, cardName, '期間欄位不完整', `periodStart_${j}`, `periodEnd_${j} 有值但讀不到 periodStart_${j}（沒填，或欄位標題對不上）`, '⚠️']);
+      }
+
+      if (per && String(per).indexOf('~') !== -1 && (ps || pe)) {
+        const parts = String(per).split('~');
+        const perStart = formatDateToISO(String(parts[0] || '').trim());
+        const perEnd = formatDateToISO(String(parts[1] || '').trim());
+        const typedStart = ps ? formatDateToISO(ps) : null;
+        const typedEnd = pe ? formatDateToISO(pe) : null;
+        if ((perStart && typedStart && perStart !== typedStart) ||
+            (perEnd && typedEnd && perEnd !== typedEnd)) {
+          issues.push([cardId, cardName, '期間欄位不一致', `period_${j}`, `period_${j}（${per}）與輸入的 periodStart/End_${j} 日期對不上，請確認哪邊才是對的`, '⚠️']);
+        }
+      }
+    }
   }
 
   // 檢查 7: ID 重複
   const duplicateIds = idList.filter((id, index) => idList.indexOf(id) !== index);
   duplicateIds.forEach(id => {
     issues.push([id, '', 'ID 重複', 'id', `ID "${id}" 重複出現`, '❌']);
+  });
+
+  // 檢查 9: 欄位標題結構（匯出用 headers.indexOf 按「完全相同的字串」找欄，
+  // 標題拼字／前後空格／大小寫／全形字元不對 = 整欄讀不到，儲存格有填也一樣）
+  // 9a: periodStart_N / periodEnd_N 必須成對存在
+  for (let j = 1; j <= 21; j++) {
+    const hasStart = headers.indexOf(`periodStart_${j}`) >= 0;
+    const hasEnd = headers.indexOf(`periodEnd_${j}`) >= 0;
+    if (hasStart !== hasEnd) {
+      const missing = hasStart ? `periodEnd_${j}` : `periodStart_${j}`;
+      const present = hasStart ? `periodStart_${j}` : `periodEnd_${j}`;
+      issues.push(['(全表)', '', '欄位結構', missing, `有 ${present} 欄但找不到 ${missing} 欄（標題拼錯／多空格／漏建），該欄所有卡片的值都會匯不出去`, '⚠️']);
+    }
+  }
+  // 9b: 欄位標題重複（indexOf 只會讀到最前面那欄，後面同名欄整欄被忽略）
+  const seenHeaders = {};
+  headers.forEach((h, idx) => {
+    if (h === null || h === undefined || String(h).trim() === '') return;
+    const key = String(h);
+    if (seenHeaders[key] !== undefined) {
+      issues.push(['(全表)', '', '欄位結構', key, `欄位標題「${key}」重複出現（第 ${seenHeaders[key] + 1} 欄與第 ${idx + 1} 欄），匯出只會讀最前面那欄`, '⚠️']);
+    } else {
+      seenHeaders[key] = idx;
+    }
   });
 
   // 寫入 QA 報告
@@ -284,8 +335,7 @@ function exportToJSON() {
     addOptionalField(rateObj, row, headers, `hideInDisplay_${j}`, 'boolean', 'hideInDisplay');
     addOptionalField(rateObj, row, headers, `cashbackModel_${j}`, 'string', 'cashbackModel');
 
-    // 日期範圍：period_N 合併字串為單一真實來源；periodStart_N/periodEnd_N 是它的公式
-    // 衍生欄（開始日的公式在某些列算不出值→整欄空），只在 period_N 沒填時當 fallback。
+    // 日期範圍：輸入欄 periodStart_N/periodEnd_N 為準，讀不到的那一邊從 period_N 字串救回
     resolvePeriodBounds(
       rateObj,
       getValue(row, headers, `period_${j}`),
@@ -328,7 +378,7 @@ function exportToJSON() {
   const cashbackModelHide = getValue(row, headers, 'cashbackModel' + suffix);
   if (cashbackModelHide) hiddenRateObj.cashbackModel = cashbackModelHide;
 
-  // 日期範圍同樣以 period 字串為準、公式欄為 fallback
+  // 日期範圍同樣以輸入欄為準、period 字串救援
   resolvePeriodBounds(
     hiddenRateObj,
     periodHide,
@@ -370,7 +420,7 @@ for (let j = 1; j <= 21; j++) {
     const cap = getValue(row, headers, `couponCap_${j}`);
     if (cap) coupon.cap = parseFloat(cap);
 
-    // 日期範圍：couponPeriod_N 為準、couponPeriodStart/End_N 為 fallback
+    // 日期範圍：輸入欄 couponPeriodStart/End_N 為準、couponPeriod_N 字串救援
     resolvePeriodBounds(
       coupon,
       getValue(row, headers, `couponPeriod_${j}`),
@@ -687,21 +737,21 @@ function formatDateToISO(dateValue) {
 }
 
 // ⭐ 決定一筆活動的 periodStart / periodEnd。
-//    period 合併字串（"YYYY/M/D~YYYY/M/D"）是日期範圍的【單一真實來源】；試算表的
-//    periodStart_N / periodEnd_N 只是它的公式衍生欄，開始日的公式在某些列算不出值
-//    （整欄空），若以公式欄為主就會漏掉 periodStart、讓已過期活動不被隱藏。
-//    因此優先用 period 字串拆出 start/end；只有 period 沒填時（少數只填日期欄的活動）
-//    才退回讀公式欄。formatDateToISO 能吃 "2025/7/1" 斜線格式，解析失敗回 null 即不寫入。
-function resolvePeriodBounds(obj, periodStr, fallbackStart, fallbackEnd) {
-  const p = periodStr ? String(periodStr).trim() : '';
-  let startRaw, endRaw;
-  if (p && p.indexOf('~') !== -1) {
-    const parts = p.split('~');
-    startRaw = (parts[0] || '').trim();
-    endRaw = (parts[1] || '').trim();
-  } else {
-    startRaw = fallbackStart;   // period 沒有可拆的範圍 → 退回公式欄
-    endRaw = fallbackEnd;
+//    資料流：維護者「輸入」periodStart_N / periodEnd_N（日期源頭），period_N 是由
+//    它們「公式組出」的顯示字串。因此優先採用輸入欄；period 字串只在某一邊讀不到時
+//    當救援來源。「讀不到」通常不是沒填——getValue 按欄位標題字串找欄，標題拼字／
+//    空格／大小寫對不上、或欄名重複（indexOf 只抓最前面那欄）都會回空值，但儲存格
+//    其實有資料、公式照樣組得出完整字串（2026-07 實例：periodStart_2 整欄讀不到，
+//    23 張卡的第 2 槽全缺 periodStart，靠 period 字串救回）。這類結構問題另由
+//    runQACheck 的欄位結構檢查在匯出時直接報警。
+//    formatDateToISO 能吃 "2025/7/1" 斜線格式，解析失敗回 null 即不寫入該欄。
+function resolvePeriodBounds(obj, periodStr, typedStart, typedEnd) {
+  let startRaw = typedStart;
+  let endRaw = typedEnd;
+  if ((!startRaw || !endRaw) && periodStr && String(periodStr).indexOf('~') !== -1) {
+    const parts = String(periodStr).split('~');
+    if (!startRaw) startRaw = (parts[0] || '').trim();
+    if (!endRaw) endRaw = (parts[1] || '').trim();
   }
   if (startRaw) {
     const iso = formatDateToISO(startRaw);

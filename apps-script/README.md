@@ -9,14 +9,19 @@
 `exportToJSON()` 那支。**這是備份，改動請同步回 Google Sheets。**
 
 - 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
-- 2026-07-11 修正：日期範圍改以 **`period_N` 合併字串（`YYYY/M/D~YYYY/M/D`）為單一真實來源**。
-  試算表的 `periodStart_N` / `periodEnd_N` 是 `period_N` 的**公式衍生欄**，但開始日的公式在
-  某些列算不出值（整欄空）；匯出若以公式欄為主，`periodStart` 就會缺席，前端過期判斷
-  （`getRateStatus`）拿不到開始日，把已過期活動當成永久有效顯示。新增 `resolvePeriodBounds()`：
-  優先從 `period` 字串拆出 `periodStart` / `periodEnd`，只有 `period` 沒填時（少數只填日期欄的
-  活動，如 yushan 家樂福、cathay-cube 國內餐廳、firstbank 國外實體消費）才退回讀公式欄。
-  套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。**試算表不用改任何欄位或公式。**
-  前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
+- 2026-07-11 修正（過期活動不隱藏事件）：
+  - **資料流事實**：`periodStart_N` / `periodEnd_N` 是維護者**輸入**的日期源頭；`period_N`
+    是由它們**公式組出**的顯示字串（`YYYY/M/D~YYYY/M/D`）。
+  - **事故根因**：匯出用 `headers.indexOf(欄名)` 按「完全相同的字串」找欄，`periodStart_2`
+    這欄整欄讀不到（標題拼字／空格／大小寫／全形字元對不上，或欄名重複時 indexOf 只抓最前面
+    那欄）→ 23 張卡的第 2 槽全部缺 `periodStart`（儲存格其實有值，公式照樣組得出完整字串），
+    前端過期判斷拿不到開始日，把已過期活動當成永久有效顯示。
+  - **修正 1**：`resolvePeriodBounds()` 統一決定日期範圍——優先讀輸入欄，某一邊讀不到時從
+    `period_N` 字串拆回來救援。套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。
+  - **修正 2**：`runQACheck` 新增檢查 8（`periodEnd_N` 有值但 `periodStart_N` 讀不到；`period_N`
+    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在；欄位標題重複），
+    匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+  - 前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 
