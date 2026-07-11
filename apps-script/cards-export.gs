@@ -1,0 +1,1232 @@
+// ==========================================
+// 信用卡管理系統 - Apps Script（新增 QuickSearch）
+// ==========================================
+//
+// ⚠️ 這是 Google Sheets Apps Script 專案內「匯出主程式」的備份副本。
+//    實際執行的版本在 Google Sheets 裡（試算表 → 擴充功能 → Apps Script），
+//    改動時兩邊請同步（見 apps-script/README.md）。
+//
+// 2026-07-11 修正：cashbackRates / _hide / couponCashbacks 匯出時，若只填了
+//    period_N 合併字串（"YYYY/M/D~YYYY/M/D"）與 periodEnd_N、卻沒填 periodStart_N，
+//    前端過期判斷會拿不到 periodStart 而把已過期活動當成永久有效顯示出來。
+//    新增 backfillPeriodFromString()，從 period 字串補回缺少的 periodStart/periodEnd
+//    （只補缺的、不覆寫既有值）。
+
+// 建立自訂選單
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🎯 卡片管理')
+    .addItem('✅ 檢查資料品質', 'runQACheck')
+    .addItem('📥 匯出 JSON', 'exportToJSON')
+    .addSeparator()
+    .addItem('🗑️ 清除 QA 報告', 'clearQAReport')
+    .addToUi();
+    buildAutomationMenu_();
+}
+
+// ==========================================
+// QA 檢查功能（保持不變）
+// ==========================================
+
+function runQACheck() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dataSheet = ss.getSheetByName('Cards Data');
+  const qaSheet = ss.getSheetByName('QA Check');
+
+  if (!dataSheet || !qaSheet) {
+    SpreadsheetApp.getUi().alert('找不到必要的工作表！');
+    return;
+  }
+
+  // 清除舊的 QA 報告
+  qaSheet.clear();
+
+  // 設定標題
+  qaSheet.getRange(1, 1, 1, 6).setValues([
+    ['卡片ID', '卡片名稱', '問題類型', '欄位', '問題描述', '嚴重度']
+  ]);
+  qaSheet.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#4285f4').setFontColor('white');
+
+  // 讀取資料
+  const data = dataSheet.getDataRange().getValues();
+  const headers = data[0];
+  const issues = [];
+
+  // 必填欄位
+  const requiredFields = ['id', 'name', 'fullName', 'basicCashback', 'annualFee', 'feeWaiver', 'website', 'tags'];
+
+  // 檢查所有 ID（用於重複檢查）
+  const idList = [];
+
+  // 從第二行開始檢查（跳過標題）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const cardId = row[headers.indexOf('id')];
+    const cardName = row[headers.indexOf('name')];
+
+    // 跳過空行
+    if (!cardId && !cardName) continue;
+
+    // 檢查 1: 必填欄位
+    requiredFields.forEach(field => {
+      const colIndex = headers.indexOf(field);
+      if (colIndex >= 0 && !row[colIndex]) {
+        issues.push([cardId, cardName, '缺少必填欄位', field, `${field} 欄位為空`, '❌']);
+      }
+    });
+
+    // 檢查 2: ID 格式
+    if (cardId) {
+      if (!/^[a-z0-9-]+$/.test(cardId)) {
+        issues.push([cardId, cardName, '格式錯誤', 'id', 'ID 只能包含小寫英文、數字和連字號', '❌']);
+      }
+      idList.push(cardId);
+    }
+
+    // 檢查 3: basicCashback 範圍
+    const basicCashback = row[headers.indexOf('basicCashback')];
+    if (basicCashback !== '' && (basicCashback < 0 || basicCashback > 100)) {
+      issues.push([cardId, cardName, '數值超出範圍', 'basicCashback', '回饋率必須在 0-100 之間', '❌']);
+    }
+
+    // 檢查 4: website 格式
+    const website = row[headers.indexOf('website')];
+    if (website && !website.startsWith('https://')) {
+      issues.push([cardId, cardName, '格式錯誤', 'website', '網址必須以 https:// 開頭', '⚠️']);
+    }
+
+    // 檢查 5: name 長度
+    if (cardName && cardName.length > 20) {
+      issues.push([cardId, cardName, '名稱過長', 'name', `名稱長度 ${cardName.length} 字，建議不超過 20 字`, '⚠️']);
+    }
+
+    // 檢查 6: rate 必須有 items
+    for (let j = 1; j <= 5; j++) {
+      const rateCol = headers.indexOf(`rate_${j}`);
+      const itemsCol = headers.indexOf(`items_${j}`);
+
+      if (rateCol >= 0 && itemsCol >= 0) {
+        const rate = row[rateCol];
+        const items = row[itemsCol];
+
+        if (rate && !items) {
+          issues.push([cardId, cardName, '資料不完整', `rate_${j}`, `有設定 rate_${j} 但沒有 items_${j}`, '❌']);
+        }
+      }
+    }
+  }
+
+  // 檢查 7: ID 重複
+  const duplicateIds = idList.filter((id, index) => idList.indexOf(id) !== index);
+  duplicateIds.forEach(id => {
+    issues.push([id, '', 'ID 重複', 'id', `ID "${id}" 重複出現`, '❌']);
+  });
+
+  // 寫入 QA 報告
+  if (issues.length > 0) {
+    qaSheet.getRange(2, 1, issues.length, 6).setValues(issues);
+
+    // 設定顏色
+    for (let i = 0; i < issues.length; i++) {
+      const severity = issues[i][5];
+      const color = severity === '❌' ? '#fce8e6' : '#fff4ce';
+      qaSheet.getRange(i + 2, 1, 1, 6).setBackground(color);
+    }
+  }
+
+  // 統計結果
+  const criticalCount = issues.filter(issue => issue[5] === '❌').length;
+  const warningCount = issues.filter(issue => issue[5] === '⚠️').length;
+
+  // 顯示結果
+  const ui = SpreadsheetApp.getUi();
+  if (criticalCount === 0 && warningCount === 0) {
+    ui.alert('✅ 資料品質檢查完成', '沒有發現任何問題！可以安全匯出 JSON。', ui.ButtonSet.OK);
+  } else {
+    ui.alert('⚠️ 發現問題',
+      `嚴重問題：${criticalCount} 個\n警告：${warningCount} 個\n\n請到 QA Check 工作表查看詳細內容。`,
+      ui.ButtonSet.OK);
+  }
+}
+
+// ==========================================
+// 匯出 JSON 功能（新增 QuickSearch）
+// ==========================================
+
+function exportToJSON() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dataSheet = ss.getSheetByName('Cards Data');
+  const paymentsSheet = ss.getSheetByName('Payments');
+  const quickSearchSheet = ss.getSheetByName('QuickSearch');
+  const qaSheet = ss.getSheetByName('QA Check');
+  const ui = SpreadsheetApp.getUi();
+
+  // 先執行 QA 檢查
+  runQACheck();
+
+  // 檢查是否有嚴重問題
+  const qaData = qaSheet.getDataRange().getValues();
+  const criticalIssues = qaData.filter(row => row[5] === '❌').length - 1;
+
+  if (criticalIssues > 0) {
+    ui.alert('❌ 無法匯出',
+      `發現 ${criticalIssues} 個嚴重問題，請先修正後再匯出。`,
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // 讀取資料
+  const data = dataSheet.getDataRange().getValues();
+  const headers = data[0];
+
+  // 轉換成 JSON 格式
+  const cards = [];
+
+  function parseTags(tagsString) {
+  if (!tagsString || tagsString.trim() === '') {
+    return [];
+  }
+  // 分割字串、移除空白、過濾空值
+  return tagsString
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0);
+}
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const cardId = row[headers.indexOf('id')];
+
+    // 跳過空行
+    if (!cardId) continue;
+
+    const card = {
+      id: cardId,
+      name: getValue(row, headers, 'name'),
+      fullName: getValue(row, headers, 'fullName'),
+      basicCashback: getValue(row, headers, 'basicCashback'),
+      pointsExpiry: getValue(row, headers, 'pointsExpiry'),
+      annualFee: getValue(row, headers, 'annualFee'),
+      feeWaiver: getValue(row, headers, 'feeWaiver'),
+      website: getValue(row, headers, 'website'),
+      tags: parseTags(getValue(row, headers, 'tags'))
+    };
+
+    // 選填欄位
+    addOptionalField(card, row, headers, 'basicCashbackType');
+    addOptionalField(card, row, headers, 'basicConditions');
+    addOptionalField(card, row, headers, 'domesticBonusConditions');
+    addOptionalField(card, row, headers, 'overseasBonusConditions');
+    addOptionalField(card, row, headers, 'hasLevels', 'boolean');
+    addOptionalField(card, row, headers, 'overseasCashback', 'number');
+    addOptionalField(card, row, headers, 'overseasBonusRate', 'number');
+    addOptionalField(card, row, headers, 'overseasBonusCap', 'number');
+    addOptionalField(card, row, headers, 'domesticBonusRate', 'number');
+    addOptionalField(card, row, headers, 'domesticBonusCap', 'number');
+    addOptionalField(card, row, headers, 'overseasBonusPeriod');
+    addOptionalField(card, row, headers, 'domesticBonusPeriod');
+    addOptionalField(card, row, headers, 'autoBillCashback', 'number');
+    addOptionalField(card, row, headers, 'autoBillCap', 'number');
+
+    // ========== hasLevels 卡片處理（僅處理 levelSettings）==========
+  if (card.hasLevels) {
+    const levelSettingsStr = getValue(row, headers, 'levelSettings');
+    if (levelSettingsStr) {
+      try {
+        card.levelSettings = JSON.parse(levelSettingsStr);
+      } catch (e) {
+        Logger.log('levelSettings JSON 解析失敗 (' + card.id + '): ' + e);
+        // 提供預設值（可選）
+        card.levelSettings = {};
+    }
+  }
+
+  addOptionalField(card, row, headers, 'levelLabelFormat');
+}
+
+    // cashbackRates - 處理 rate_N
+    card.cashbackRates = [];
+    for (let j = 1; j <= 21; j++) {
+      const rate = getValue(row, headers, `rate_${j}`);
+      const items = getValue(row, headers, `items_${j}`);
+
+    if (items && (rate || rate === 0)) {
+    const rateObj = {
+      items: items.split(',').map(s => s.trim())
+    };
+
+    // 🔥 判斷 rate 是否為變數格式 {specialRate}
+    const rateValue = String(rate).trim();
+
+    // 使用正則表達式匹配 {任意欄位名} 格式
+    if (rateValue.match(/^\{.+\}$/)) {
+      rateObj.rate = rateValue;  // 保持字串（如 {rate_1}, {specialRate}, {rate} 等）
+    } else {
+      const parsed = parseFloat(rate);
+      if (isNaN(parsed)) continue;   // 非數字垃圾 → 整組跳過（0 會正常過）
+      rateObj.rate = parsed;
+    }
+
+    const cap = getValue(row, headers, `cap_${j}`);
+    if (cap) {
+      const capValue = String(cap).trim();
+      // 使用正則表達式匹配 {任意欄位名} 格式
+      if (capValue.match(/^\{.+\}$/)) {
+        rateObj.cap = capValue;  // 保持字串（如 {cap_1}, {cap} 等）
+      } else {
+        rateObj.cap = parseInt(cap);
+      }
+    }
+
+    // 🔥 添加日期格式轉換
+    const periodStartValue = getValue(row, headers, `periodStart_${j}`);
+    if (periodStartValue) {
+      rateObj.periodStart = formatDateToISO(periodStartValue);
+    }
+
+    const periodEndValue = getValue(row, headers, `periodEnd_${j}`);
+    if (periodEndValue) {
+      rateObj.periodEnd = formatDateToISO(periodEndValue);
+    }
+
+    addOptionalField(rateObj, row, headers, `category_${j}`, 'string', 'category');
+    addOptionalField(rateObj, row, headers, `conditions_${j}`, 'string', 'conditions');
+    addOptionalField(rateObj, row, headers, `period_${j}`, 'string', 'period');
+    addOptionalField(rateObj, row, headers, `hideInDisplay_${j}`, 'boolean', 'hideInDisplay');
+    addOptionalField(rateObj, row, headers, `cashbackModel_${j}`, 'string', 'cashbackModel');
+
+    // ⭐ 只填了 period_N 合併字串、沒填 periodStart_N/periodEnd_N 時，從 period 字串補回
+    backfillPeriodFromString(rateObj);
+
+    card.cashbackRates.push(rateObj);
+  }
+}
+
+
+// ⭐ 處理隱藏的 rate（_hide 與 _hide_1 兩個槽位）
+['_hide', '_hide_1'].forEach(function(suffix) {
+  const rateHide = getValue(row, headers, 'rate' + suffix);
+  const itemsHide = getValue(row, headers, 'items' + suffix);
+  if (!itemsHide) return;
+
+  const parsedHideRate = parseFloat(rateHide);
+  if (isNaN(parsedHideRate)) return;
+
+  const hiddenRateObj = {
+    rate: parsedHideRate,
+    items: itemsHide.split(',').map(s => s.trim()),
+    hideInDisplay: true  // 標記為隱藏
+  };
+
+  const capHide = getValue(row, headers, 'cap' + suffix);
+  if (capHide) hiddenRateObj.cap = parseInt(capHide);
+
+  const categoryHide = getValue(row, headers, 'category' + suffix);
+  if (categoryHide) hiddenRateObj.category = categoryHide;
+
+  const conditionsHide = getValue(row, headers, 'conditions' + suffix);
+  if (conditionsHide) hiddenRateObj.conditions = conditionsHide;
+
+  const periodHide = getValue(row, headers, 'period' + suffix);
+  if (periodHide) hiddenRateObj.period = periodHide;
+
+  const periodStartHide = getValue(row, headers, 'periodStart' + suffix);
+  if (periodStartHide) hiddenRateObj.periodStart = formatDateToISO(periodStartHide);
+
+  const periodEndHide = getValue(row, headers, 'periodEnd' + suffix);
+  if (periodEndHide) hiddenRateObj.periodEnd = formatDateToISO(periodEndHide);
+
+  const cashbackModelHide = getValue(row, headers, 'cashbackModel' + suffix);
+  if (cashbackModelHide) hiddenRateObj.cashbackModel = cashbackModelHide;
+
+  // ⭐ 同樣從 period 字串補回缺少的 periodStart/periodEnd
+  backfillPeriodFromString(hiddenRateObj);
+
+  card.cashbackRates.push(hiddenRateObj);
+});
+
+    // couponCashbacks
+card.couponCashbacks = [];
+for (let j = 1; j <= 21; j++) {
+  const merchant = getValue(row, headers, `couponMerchant_${j}`);
+  const rate = getValue(row, headers, `couponRate_${j}`);
+
+  if (merchant && rate) {
+    // 判斷 rate 是否需要保持字串格式
+    const rateValue = String(rate).trim();
+    let couponRate;
+
+    // 如果包含 '+' 或變數名稱，保持字串；否則轉成數字
+    if (rateValue.includes('+') ||
+        rateValue === 'specialRate' ||
+        rateValue === 'generalRate') {
+      couponRate = rateValue;  // 保持字串
+    } else {
+      couponRate = parseFloat(rateValue);  // 轉成數字
+    }
+
+    const coupon = {
+      merchant: merchant,
+      rate: couponRate,  // ✅ 現在可以是字串或數字
+      conditions: getValue(row, headers, `couponConditions_${j}`) || '',
+      period: getValue(row, headers, `couponPeriod_${j}`) || ''
+    };
+
+    // 新增：抓取 cap 欄位
+    const cap = getValue(row, headers, `couponCap_${j}`);
+    if (cap) {
+      coupon.cap = parseFloat(cap);
+      const periodStart = getValue(row, headers, `couponPeriodStart_${j}`);
+      if (periodStart) {
+      coupon.periodStart = periodStart;
+}
+
+const periodEnd = getValue(row, headers, `couponPeriodEnd_${j}`);
+if (periodEnd) {
+  coupon.periodEnd = periodEnd;
+}
+
+    }
+
+    // ⭐ 同樣從 period 字串補回缺少的 periodStart/periodEnd
+    backfillPeriodFromString(coupon);
+
+    card.couponCashbacks.push(coupon);
+  }
+}
+
+if (card.couponCashbacks.length === 0) {
+  delete card.couponCashbacks;
+}
+
+cards.push(card);
+}  // ← 這裡關閉主循環（處理每一張卡片的 for 循環）
+
+  // ========== 匯出行動支付資料 ==========
+  const payments = [];
+
+  if (paymentsSheet) {
+    const paymentsData = paymentsSheet.getDataRange().getValues();
+    const paymentsHeaders = paymentsData[0];
+
+    for (let i = 1; i < paymentsData.length; i++) {
+      const row = paymentsData[i];
+      const paymentId = getValue(row, paymentsHeaders, 'id');
+
+      if (!paymentId) continue;
+
+      const payment = {
+        id: paymentId,
+        name: getValue(row, paymentsHeaders, 'name')
+      };
+
+      const website = getValue(row, paymentsHeaders, 'website');
+      if (website) {
+        payment.website = website;
+      }
+
+      payment.searchTerms = generateSearchTerms(paymentId, payment.name);
+
+      payments.push(payment);
+    }
+  }
+
+  // ========== ✨ 新增：匯出 QuickSearch 資料 ==========
+  const quickSearchOptions = [];
+
+  if (quickSearchSheet) {
+    const quickSearchData = quickSearchSheet.getDataRange().getValues();
+    const quickSearchHeaders = quickSearchData[0];
+
+    for (let i = 1; i < quickSearchData.length; i++) {
+      const row = quickSearchData[i];
+      const quickId = getValue(row, quickSearchHeaders, 'id');
+
+      if (!quickId) continue;
+
+      const quickOption = {
+        id: quickId,
+        displayName: getValue(row, quickSearchHeaders, 'displayName'),
+        icon: getValue(row, quickSearchHeaders, 'icon'),
+        merchants: getValue(row, quickSearchHeaders, 'merchants').split(',').map(s => s.trim()),
+        order: parseInt(getValue(row, quickSearchHeaders, 'order')) || 999
+      };
+
+      quickSearchOptions.push(quickOption);
+    }
+
+    // 按 order 排序
+    quickSearchOptions.sort((a, b) => a.order - b.order);
+  }
+
+// ========== 匯出商家付款方式資料 ==========
+  const merchantPayments = {};
+
+  const merchantPaymentsSheet = ss.getSheetByName('Merchant Payments');
+  if (merchantPaymentsSheet) {
+    const merchantData = merchantPaymentsSheet.getDataRange().getValues();
+    const merchantHeaders = merchantData[0];
+
+    for (let i = 1; i < merchantData.length; i++) {
+      const row = merchantData[i];
+      const merchant = getValue(row, merchantHeaders, 'merchant');
+
+      if (!merchant) continue;
+
+      merchantPayments[merchant] = {
+        online: getValue(row, merchantHeaders, 'online_payment') || '',
+        offline: getValue(row, merchantHeaders, 'offline_payment') || '',
+        source_url: getValue(row, merchantHeaders, 'source_url') || '',
+        last_updated: getValue(row, merchantHeaders, 'last_updated') || ''
+      };
+    }
+  }
+
+// ========== 匯出 Search Hints 資料 ==========
+    const searchHints = {};
+
+const searchHintsSheet = ss.getSheetByName('Search Hints');
+if (searchHintsSheet) {
+  const hintsData = searchHintsSheet.getDataRange().getValues();
+  const hintsHeaders = hintsData[0];
+
+  for (let i = 1; i < hintsData.length; i++) {
+    const row = hintsData[i];
+    const keywordsStr = getValue(row, hintsHeaders, 'keywords');  // ← 改成 keywords
+    const active = getValue(row, hintsHeaders, 'active');
+
+    // 只匯出啟用的提示
+    if (!keywordsStr || (active !== true && active !== 'TRUE' && active !== 'true')) {
+      continue;
+    }
+
+    const suggestions = getValue(row, hintsHeaders, 'suggestions');
+    const displayMessage = getValue(row, hintsHeaders, 'display_message');
+
+    // 🔥 新增：將 keywords 字串分割成陣列
+    const keywordsList = keywordsStr.split(',').map(k => k.trim().toLowerCase());
+
+    // 為每個 keyword 建立相同的提示
+    const hintObj = {
+      suggestions: suggestions ? suggestions.split(',').map(s => s.trim()) : [],
+      message: displayMessage || '💡 建議也搜尋：'
+    };
+
+    // 將每個 keyword 都對應到相同的提示
+    keywordsList.forEach(keyword => {
+      if (keyword) {
+        searchHints[keyword] = hintObj;
+      }
+    });
+  }
+
+  Logger.log('Search Hints 載入成功：' + Object.keys(searchHints).length + ' 個關鍵詞');
+}
+
+// ========== 新增讀取FAQ資料 ==========
+const faqSheet = ss.getSheetByName('FAQ');
+let faqList = [];
+
+if (faqSheet) {
+  const faqData = faqSheet.getDataRange().getValues();
+  const faqHeaders = faqData[0];  // 保留這行以供未來使用
+
+  for (let i = 1; i < faqData.length; i++) {
+    const row = faqData[i];
+
+    // 跳過完全空白的行
+    if (!row[0] && !row[2]) continue;
+
+    const id = row[0];
+    const category = row[1] || '';  // 允許空值
+    const question = row[2];
+    const answer = row[3];
+    const order = row[4] || i;  // 如果沒填 order，使用行號
+    const isActive = row[5];
+
+    // 只處理啟用的項目
+
+    if (isActive !== true && isActive !== 'TRUE' && isActive !== 'true') {
+
+      continue;
+
+    }
+
+    faqList.push({
+      id: String(id),
+      category: category,
+      question: question,
+      answer: answer,
+      order: order,
+      isActive: true
+    });
+  }
+
+  // 依照 order 排序
+  faqList.sort((a, b) => a.order - b.order);
+
+  Logger.log('FAQ 資料載入成功：' + faqList.length + ' 筆');
+}
+
+// ========== 讀取 Announcements 資料 ==========
+  const announcements = getAnnouncements();
+  const benefits = readCardBenefits();
+  const referralLinks = readReferralLinks();
+  const cashbackSites = readCashbackSites();
+  const promoData = readNewCardholderPromos();
+  const newCardholderPromos = promoData.newCardholderPromos;
+  const cardApplyCtas = promoData.cardApplyCtas;
+  const spotlights = readHighlights();
+
+  // 生成 cards.json 內容
+  const jsonContent = JSON.stringify({
+  lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/M/d"),
+  cards: cards,
+  payments: payments,
+  quickSearchOptions: quickSearchOptions,
+  merchantPayments: merchantPayments,
+  faq: faqList,
+  announcements: announcements,
+  searchHints: searchHints,
+  benefits: benefits,
+  referralLinks: referralLinks,
+  cashbackSites: cashbackSites,
+  newCardholderPromos: newCardholderPromos,
+  cardApplyCtas: cardApplyCtas,
+  spotlights: spotlights
+  }, null, 2);
+
+
+  // 🔒 Base64 編碼
+  const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
+  const version = publishToGitHub(encoded);
+
+  // 建立兩個檔案：cards.json (原始) 和 cards.data (編碼)
+  const jsonFileName = `cards.json`;
+  const dataFileName = 'cards.data';
+
+  const jsonBlob = Utilities.newBlob(jsonContent, 'application/json', jsonFileName);
+  const dataBlob = Utilities.newBlob(encoded, 'text/plain', dataFileName);
+
+  // 顯示下載連結
+  const jsonUrl = createDownloadUrl(jsonBlob);
+  const dataUrl = createDownloadUrl(dataBlob);
+
+  const htmlOutput = HtmlService
+    .createHtmlOutput(`
+      <html>
+        <body style="font-family: Arial; padding: 15px;">
+          <h2>✅ JSON 匯出成功！</h2>
+          <p>匯出了 <strong>${cards.length}</strong> 張信用卡、<strong>${payments.length}</strong> 個行動支付、<strong>${quickSearchOptions.length}</strong> 個快捷選項、<strong>${Object.keys(merchantPayments).length}</strong> 個商家付款資訊、<strong>${faqList.length}</strong> 個FAQ、<strong>${announcements.length}</strong> 則公告、<strong>${referralLinks.length}</strong> 個推薦連結、<strong>Shopback: ${cashbackSites.shopback.length} / LINE 購物: ${cashbackSites.linebuy.length}</strong> 個返利站點、<strong>${newCardholderPromos.length}</strong> 筆新戶活動、<strong>申辦 CTA: ${Object.keys(cardApplyCtas).length} 張卡片</strong>、<strong>精選優惠 (spotlights): ${spotlights.length} 筆</strong></p>
+
+          <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #2e7d32;">🔒 下載編碼檔案 (推薦)</h3>
+            <p><a href="${dataUrl}" download="${dataFileName}" style="display: inline-block; background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">⬇️ 下載 cards.data</a></p>
+            <p style="color: #666; font-size: 12px; margin: 5px 0 0 0;">
+              ✅ 已編碼保護，上傳到 GitHub 後無法直接讀取
+            </p>
+          </div>
+
+          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #856404;">📄 原始 JSON (備份用)</h3>
+            <p><a href="${jsonUrl}" download="${jsonFileName}" style="display: inline-block; background: #ffc107; color: #333; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">⬇️ 下載 cards.json</a></p>
+            <p style="color: #666; font-size: 12px; margin: 5px 0 0 0;">
+              ⚠️ 僅供本地備份，不要上傳到 GitHub
+            </p>
+          </div>
+
+          <p style="color: #666; font-size: 13px; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
+            <strong>📤 上傳步驟：</strong><br>
+            1. 下載 <strong>cards.data</strong><br>
+            2. 放到你的專案資料夾，替換舊的 cards.data<br>
+            3. Git commit 並 push 到 GitHub<br>
+            4. Vercel 會自動部署更新 ✨
+          </p>
+        </body>
+      </html>
+    `)
+    .setWidth(550)
+    .setHeight(450);
+
+  ui.showModalDialog(htmlOutput, '匯出完成');
+}
+
+// ==========================================
+// 輔助函數
+// ==========================================
+
+function getValue(row, headers, fieldName) {
+  const index = headers.indexOf(fieldName);
+  return index >= 0 ? row[index] : null;
+}
+
+function addOptionalField(obj, row, headers, fieldName, type = 'string', targetName = null) {
+  const value = getValue(row, headers, fieldName);
+  const name = targetName || fieldName;
+
+  if (value !== null && value !== '') {
+    if (type === 'number') {
+      obj[name] = parseFloat(value);
+    } else if (type === 'boolean') {
+      obj[name] = value === true || value === 'TRUE' || value === 'true';
+    } else {
+      obj[name] = value;
+    }
+  }
+}
+
+function formatDateToISO(dateValue) {
+  if (!dateValue) return null;
+
+  try {
+    const date = new Date(dateValue);
+
+    // 防呆：檢查是否為無效日期
+    if (isNaN(date.getTime())) {
+      // 額外處理：如果原本是字串且已經符合 YYYY-MM-DD，則直接回傳
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return dateValue;
+      }
+      return null;
+    }
+
+    // 使用 Google 內建工具：強制輸出 YYYY-MM-DD 並鎖定台北時區
+    // "yyyy-MM-dd" 中的大寫 MM 代表補零的月份，dd 代表補零的日期
+    return Utilities.formatDate(date, "Asia/Taipei", "yyyy-MM-dd");
+  } catch (e) {
+    Logger.log('日期轉換失敗: ' + dateValue);
+    return null;
+  }
+}
+
+// ⭐ 有些槽位只填了 period 合併字串（"YYYY/M/D~YYYY/M/D"）與 periodEnd，
+//    卻沒填 periodStart。前端的過期／即將開始判斷看的是 periodStart/periodEnd 欄位，
+//    缺一邊會誤判（已過期活動不被隱藏、未來活動提早顯示）。這裡從 period 字串把缺少的
+//    那一邊補回——只補「缺的」欄位、絕不覆寫既有值（period 字串偶爾比 periodEnd 舊，
+//    例如中信 LINE Pay 肌膚之鑰 period 停在 ~6/30 但 periodEnd 已更新為 12/31，
+//    覆寫會誤把生效中的活動判為過期）。formatDateToISO 能吃 "2025/7/1" 斜線格式。
+function backfillPeriodFromString(obj) {
+  if (!obj || typeof obj.period !== 'string' || obj.period.indexOf('~') === -1) return;
+  const parts = obj.period.split('~');
+  const startStr = (parts[0] || '').trim();
+  const endStr = (parts[1] || '').trim();
+  if (!obj.periodStart && startStr) {
+    const iso = formatDateToISO(startStr);
+    if (iso) obj.periodStart = iso;
+  }
+  if (!obj.periodEnd && endStr) {
+    const iso = formatDateToISO(endStr);
+    if (iso) obj.periodEnd = iso;
+  }
+}
+
+const TARGET_FOLDER_ID = '1UbqO3cJKaLhIzp8H5aQEJc0fPyg4fvwT'; function createDownloadUrl(blob) {
+
+  try {
+
+    const targetFolder = DriveApp.getFolderById(TARGET_FOLDER_ID);
+    const file = targetFolder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    const url = file.getDownloadUrl();
+    return url;
+  } catch (error) {
+    Logger.log('Drive error: ' + error);
+    throw new Error('無法建立下載連結: ' + error);
+  }
+}
+
+function clearQAReport() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qaSheet = ss.getSheetByName('QA Check');
+
+  if (qaSheet) {
+    qaSheet.clear();
+    SpreadsheetApp.getUi().alert('✅ 已清除 QA 報告');
+  }
+}
+
+// ========== 读取停车优惠数据 ==========
+function readCardBenefits() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Card Benefits');
+  if (!sheet) {
+    Logger.log('⚠️ 找不到 Card Benefits 表格');
+    return [];
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const benefits = [];
+
+  // 从第三行开始读取（第一行是标题、第二行是個人備註）
+  for (let i = 2; i < data.length; i++) {
+    const row = data[i];
+
+    // 跳过空行
+    if (!row[0]) continue;
+
+    const benefit = {};
+
+    // 读取各栏位
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j];
+      const value = row[j];
+
+      if (value !== null && value !== undefined && value !== '') {
+        // 处理 active 栏位（转换为 boolean）
+        if (header === 'active') {
+          benefit[header] = value === true || value === 'true' || value === 'TRUE';
+        }
+        // 处理 merchants 栏位（分割成数组）
+        else if (header === 'merchants') {
+          benefit[header] = String(value).split(',').map(m => m.trim());
+        }
+        // ✅ 正确 - 使用 formatDateToISO 函数
+        else if (header === 'benefit_period') {
+          benefit[header] = formatDateToISO(value);
+        }
+
+        // 其他栏位直接赋值
+        else {
+          benefit[header] = value;
+        }
+      }
+    }
+
+    // 只添加有效的数据
+    if (benefit.id && benefit.benefit_type) {
+      benefits.push(benefit);
+    }
+  }
+
+  Logger.log(`✅ 读取 ${benefits.length} 笔停车优惠数据`);
+  return benefits;
+}
+
+// ========== 讀取 New Cardholder Promos 資料 ==========
+function readNewCardholderPromos() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('New Cardholder Promos');
+
+  if (!sheet) {
+    Logger.log('⚠️ 找不到 New Cardholder Promos 工作表');
+    return { newCardholderPromos: [], cardApplyCtas: {} };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const promos = [];
+  const cardApplyCtas = {}; // ✨ 新增：用於存放卡片層級的 CTA
+
+  // 從第二行開始讀取（第一行是標題）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+
+    // 跳過空行
+    if (!row[0]) continue;
+
+    const active = getValue(row, headers, 'active');
+
+    // 只輸出 active === true 的資料
+    if (active !== true && active !== 'TRUE' && active !== 'true') {
+      continue;
+    }
+
+    const id = String(getValue(row, headers, 'id') || '');
+    const promo_id = String(getValue(row, headers, 'promo_id') || '');
+
+    // ==========================================
+    // ✨ 新增：處理 CTA 資料 (情境 A & B)
+    // ==========================================
+    const ctaTextRaw = getValue(row, headers, 'apply_cta_text');
+    const ctaLinkRaw = getValue(row, headers, 'apply_cta_link');
+    const ctaText = ctaTextRaw ? String(ctaTextRaw).trim() : '';
+    const ctaLink = ctaLinkRaw ? String(ctaLinkRaw).trim() : '';
+
+    if (ctaText || ctaLink) {
+      if (!cardApplyCtas[id]) {
+        // 第一筆直接寫入
+        cardApplyCtas[id] = {
+          text: ctaText,
+          link: ctaLink
+        };
+      } else {
+        // 如果已存在，檢查是否需要補齊空值或發出衝突警告
+        const existing = cardApplyCtas[id];
+        let hasConflict = false;
+
+        if (ctaText) {
+          if (!existing.text) existing.text = ctaText;
+          else if (existing.text !== ctaText) hasConflict = true;
+        }
+
+        if (ctaLink) {
+          if (!existing.link) existing.link = ctaLink;
+          else if (existing.link !== ctaLink) hasConflict = true;
+        }
+
+        if (hasConflict) {
+          Logger.log(`⚠️ 卡片 ${id} 有多個不同的 apply_cta_text 或 apply_cta_link，使用第一個。`);
+        }
+      }
+    }
+
+    // ==========================================
+    // 處理新戶活動資料 (僅在有 promo_id 時處理 - 情境 A)
+    // ==========================================
+    if (promo_id) {
+      const promo = {
+        id: id,
+        promo_id: promo_id,
+        promo_name: String(getValue(row, headers, 'promo_name') || ''),
+        new_customer_definition: getValue(row, headers, 'new_customer_definition') || '',
+        new_customer_summary: getValue(row, headers, 'new_customer_summary') || ''
+      };
+
+      // 處理 promo_types (以逗號分割成陣列)
+      const promoTypesStr = getValue(row, headers, 'promo_types');
+      promo.promo_types = promoTypesStr
+        ? String(promoTypesStr).split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+
+      // 處理日期欄位 (維持 ISO 格式)
+      const periodStart = getValue(row, headers, 'period_start');
+      promo.period_start = periodStart ? formatDateToISO(periodStart) : null;
+
+      const periodEnd = getValue(row, headers, 'period_end');
+      promo.period_end = periodEnd ? formatDateToISO(periodEnd) : null;
+
+      // 處理 priority (預設為 99)
+      const priorityVal = getValue(row, headers, 'priority');
+      promo.priority = (priorityVal !== null && priorityVal !== '') ? parseInt(priorityVal) : 99;
+
+      // 處理 bonus_merchants (以逗號分割成陣列)
+      const bonusMerchantsStr = getValue(row, headers, 'bonus_merchants');
+      if (bonusMerchantsStr && String(bonusMerchantsStr).trim() !== '') {
+        promo.bonus_merchants = String(bonusMerchantsStr).split(',').map(s => s.trim());
+      }
+
+      // 處理數字型別的選填欄位
+      const bonusCap = getValue(row, headers, 'bonus_cap');
+      if (bonusCap !== null && bonusCap !== '') promo.bonus_cap = parseFloat(bonusCap);
+
+      const voucherAmount = getValue(row, headers, 'voucher_amount');
+      if (voucherAmount !== null && voucherAmount !== '') promo.voucher_amount = parseFloat(voucherAmount);
+
+      // 使用 addOptionalField 處理其他選填字串欄位
+      addOptionalField(promo, row, headers, 'gift_content');
+      addOptionalField(promo, row, headers, 'gift_image_url', 'string');
+      addOptionalField(promo, row, headers, 'bonus_rate');
+      addOptionalField(promo, row, headers, 'voucher_usage');
+      addOptionalField(promo, row, headers, 'notes');
+      addOptionalField(promo, row, headers, 'link');
+      addOptionalField(promo, row, headers, 'promo_condition');
+
+      promos.push(promo);
+    }
+  }
+
+  Logger.log(`✅ 讀取 ${promos.length} 筆新戶活動資料，${Object.keys(cardApplyCtas).length} 張卡片申辦 CTA`);
+  return { newCardholderPromos: promos, cardApplyCtas: cardApplyCtas }; // ✨ 回傳物件
+}
+
+// ========== 讀取 Announcements 資料 ==========
+function getAnnouncements() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('announcements');
+
+  if (!sheet) {
+    Logger.log('⚠️ announcements sheet not found');
+    return [];
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const announcements = [];
+
+  // Skip header row (index 0), start from row 1
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const text = getValue(row, headers, 'text');
+    const fullText = getValue(row, headers, 'fullText');
+    const link = getValue(row, headers, 'link');
+    const active = getValue(row, headers, 'active');
+    const priority = getValue(row, headers, 'priority');
+    const date = getValue(row, headers, 'date');
+
+    // Only include active announcements with text
+    if (active === true && text && text.trim() !== '') {
+      announcements.push({
+        text: text.toString().trim(),
+        fullText: fullText && fullText.toString().trim() !== ''
+            ? fullText.toString().trim()
+            : text.toString().trim(),
+        link: link && link.toString().trim() !== '' ? link.toString().trim() : null,
+        priority: typeof priority === 'number' ? priority : 999,
+        date: date && date.toString().trim() !== '' ? date.toString().trim() : null
+      });
+    }
+  }
+
+  // ⭐ 新增：按 priority 排序（數字越小越前面）
+  announcements.sort((a, b) => a.priority - b.priority);
+
+  // 移除 priority 欄位（前端不需要）
+  const sortedAnnouncements = announcements.map(({ priority, ...rest }) => rest);
+
+  // 限制最多 5 則
+  if (sortedAnnouncements.length > 5) {
+    Logger.log('⚠️ 公告超過 5 則，只取前 5 則');
+    return sortedAnnouncements.slice(0, 5);
+  }
+
+  Logger.log('✅ Loaded ' + announcements.length + ' announcements');
+  return announcements;
+}
+
+function readReferralLinks() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('ReferralLinks');
+
+  if (!sheet) {
+    Logger.log('⚠️ ReferralLinks 工作表不存在');
+    return [];
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const referralLinks = [];
+
+  // 從第二行開始讀取（跳過標題行）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+
+    // 跳過空行
+    if (!row[0]) continue;
+
+    const merchant = getValue(row, headers, 'merchant');
+    const url = getValue(row, headers, 'url');
+    const description = getValue(row, headers, 'description');
+    const active = getValue(row, headers, 'active');
+
+    // 只匯出 active = TRUE 的項目
+    if (active === true && merchant && url && description) {
+      referralLinks.push({
+        merchant: merchant,
+        url: url,
+        description: description,
+        active: true
+      });
+    }
+  }
+
+  Logger.log('✅ 讀取 ' + referralLinks.length + ' 筆推薦連結資料');
+  return referralLinks;
+}
+
+// ========== 讀取 Highlights 資料 ==========
+function readHighlights() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Highlights');
+
+  if (!sheet) {
+    Logger.log('⚠️ 找不到 Highlights 工作表');
+    return []; // 找不到工作表回傳空陣列
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return []; // 只有標題列或全空
+
+  const headers = data[0];
+  const spotlights = [];
+
+  // 輔助閉包函式：處理空值預設與型別轉換
+  const getStr = (row, field) => {
+    const val = getValue(row, headers, field);
+    return val !== null && val !== undefined && val !== '' ? String(val).trim() : '';
+  };
+
+  const getNum = (row, field) => {
+    const val = getValue(row, headers, field);
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const getBool = (row, field) => {
+    const val = getValue(row, headers, field);
+    return val === true || String(val).toUpperCase() === 'TRUE';
+  };
+
+  // 從第二行開始讀取（跳過標題）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+
+    // 簡單防呆：如果 merchant 和 card_id 都沒填，視為無效空行跳過
+    if (!getValue(row, headers, 'merchant') && !getValue(row, headers, 'card_id')) continue;
+
+    // 處理日期格式 (確保輸出 YYYY/MM/DD)
+    let deadlineStr = '';
+    const rawDeadline = getValue(row, headers, 'deadline');
+    if (rawDeadline) {
+      const d = new Date(rawDeadline);
+      if (!isNaN(d.getTime())) {
+        // 強制轉換為指定格式與時區
+        deadlineStr = Utilities.formatDate(d, "Asia/Taipei", "yyyy/MM/dd");
+      } else {
+        // 若為無法解析的字串則原樣保留
+        deadlineStr = String(rawDeadline).trim();
+      }
+    }
+
+    spotlights.push({
+      merchant: getStr(row, 'merchant'),
+      category: getStr(row, 'category'),
+      rate: getNum(row, 'rate'),
+      description: getStr(row, 'description'),
+      card_name: getStr(row, 'card_name'),
+      card_id: getStr(row, 'card_id'),
+      cap: getStr(row, 'cap'),
+      deadline: deadlineStr,
+      order: getNum(row, 'order'),
+      active: getBool(row, 'active') // active 為 false 也照常 push
+    });
+  }
+
+  Logger.log(`✅ 讀取 ${spotlights.length} 筆 Highlights (spotlights) 資料`);
+  return spotlights;
+}
+
+// ========== 讀取 Cashback Sites 資料 ==========
+function readCashbackSites() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Cashback Sites');
+
+  if (!sheet) {
+    Logger.log('⚠️ Cashback Sites 工作表不存在');
+    return { shopback: [], linebuy: [] };
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const shopback = [];
+  const linebuy = [];
+
+  // 從第二行開始讀取（跳過標題行）
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+
+    // 處理 Shopback 欄位
+    const sbMerchant = getValue(row, headers, 'shopbackMerchants');
+    const sbLink = getValue(row, headers, 'shopbackLink');
+    if (sbMerchant && sbLink && sbMerchant.toString().trim() !== '' && sbLink.toString().trim() !== '') {
+      shopback.push({
+        merchant: sbMerchant.toString().trim(),
+        link: sbLink.toString().trim()
+      });
+    }
+
+    // 處理 LINE 購物 欄位
+    const lbMerchant = getValue(row, headers, 'linebuyMerchants');
+    const lbLink = getValue(row, headers, 'linebuyLink');
+    if (lbMerchant && lbLink && lbMerchant.toString().trim() !== '' && lbLink.toString().trim() !== '') {
+      linebuy.push({
+        merchant: lbMerchant.toString().trim(),
+        link: lbLink.toString().trim()
+      });
+    }
+  }
+
+  Logger.log(`✅ 讀取 Cashback Sites: Shopback ${shopback.length} 筆, LINE 購物 ${linebuy.length} 筆`);
+  return { shopback, linebuy };
+}
+
+function generateSearchTerms(id, name) {
+  const terms = [id.toLowerCase(), name.toLowerCase()];
+
+  const aliases = {
+    'linepay': ['line pay', 'linepay'],
+    'jkopay': ['街口', '街口支付', 'jkopay'],
+    'applepay': ['apple pay', 'applepay'],
+    'allpay': ['全支付'],
+    'easywallet': ['悠遊付', 'easy wallet', 'easywallet'],
+    'googlepay': ['google pay', 'googlepay'],
+    'esunwallet': ['玉山wallet', 'esun wallet'],
+    'allplus': ['全盈+pay', '全盈支付', '全盈+'],
+    'openwallet': ['open錢包', 'open wallet'],
+    'piwallet': ['pi錢包', 'pi 拍錢包', 'pi wallet'],
+    'icashpay': ['icash pay', 'icashpay'],
+    'samsungpay': ['samsung pay', 'samsungpay'],
+    'opay': ['歐付寶', '歐付寶行動支付', 'opay'],
+    'ecpay': ['橘子支付', 'ecpay'],
+    'paypal': ['paypal'],
+    'twpay': ['台灣pay', 'taiwan pay', 'twpay', '台灣支付'],
+    'skmpay': ['skm pay', 'skmpay'],
+    'hamipay': ['hami pay', 'hamipay', 'hami pay掃碼付'],
+    'cpcpay': ['中油pay', 'cpc pay'],
+    'garminpay': ['garmin pay', 'garminpay']
+  };
+
+  if (aliases[id]) {
+    return aliases[id];
+  }
+
+  return terms;
+
+}
+
+// ============ GitHub 自動發布 ============
+// 在 exportToJSON() 產生 cards.data 內容（base64 字串）後呼叫：
+//   publishToGitHub(encodedContent);
+// 會把 cards.data 與 cards.version 一起 commit 到 repo。
+
+const GITHUB_REPO = 'issabeloh/pick-my-card';
+const GITHUB_BRANCH = 'main';
+
+function publishToGitHub(cardsDataContent) {
+  const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
+
+  const version = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd-HHmmss');
+
+  commitFileToGitHub('cards.data', cardsDataContent, `Update cards.data (${version})`, token);
+  commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
+
+  return version;
+}
+
+function commitFileToGitHub(path, textContent, message, token) {
+  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${path}`;
+  const headers = {
+    'Authorization': 'Bearer ' + token,
+    'Accept': 'application/vnd.github+json'
+  };
+
+  // 取得現有檔案的 sha（更新既有檔案時 GitHub API 必須帶上）
+  let sha = null;
+  const getRes = UrlFetchApp.fetch(url + '?ref=' + GITHUB_BRANCH, {
+    headers: headers,
+    muteHttpExceptions: true
+  });
+  if (getRes.getResponseCode() === 200) {
+    sha = JSON.parse(getRes.getContentText()).sha;
+  }
+
+  const body = {
+    message: message,
+    content: Utilities.base64Encode(textContent, Utilities.Charset.UTF_8),
+    branch: GITHUB_BRANCH
+  };
+  if (sha) body.sha = sha;
+
+  const putRes = UrlFetchApp.fetch(url, {
+    method: 'put',
+    headers: headers,
+    contentType: 'application/json',
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  });
+
+  const code = putRes.getResponseCode();
+  if (code !== 200 && code !== 201) {
+    throw new Error(`GitHub 上傳 ${path} 失敗 (HTTP ${code}): ` + putRes.getContentText());
+  }
+}
