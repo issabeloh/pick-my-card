@@ -4,6 +4,11 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-07-11 隱藏活動併入一般槽位（Sheet + Apps Script）
+- Sheet 的 `_hide`/`_hide_1` 專用欄位組改名為一般編號槽位（rate_20/21 一帶）＋ `hideInDisplay_N=TRUE`
+- Apps Script 刪除 `['_hide','_hide_1'].forEach` 特例迴圈——隱藏活動與一般活動走同一支匯出迴圈，隱藏與否純粹是資料欄位
+- 對應前端 2026-07-09 的「隱藏活動無專屬邏輯」原則，匯出端也歸一
+
 ## 2026-07-11 Fable 5 立制 session
 - CLAUDE.md 改為路由版；細節抽到 docs/project/*；制度檔進 docs/ops/*；新增 tools/preflight.sh
 - 新增 .claude/agents/ 自訂 subagent（scout/builder/verifier）

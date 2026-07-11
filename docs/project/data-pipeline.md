@@ -18,11 +18,11 @@ jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
 
 1. **Cards Data** —— 信用卡基本資料和回饋規則
    - 必填：`id, name, fullName, basicCashback, annualFee, feeWaiver, website, tags`
-   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N`（N=1-17）
+   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N`（N=1-21，匯出迴圈上限 21）
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
-   - 隱藏槽位：`_hide` / `_hide_1`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節）
+   - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
 4. **Merchant Payments** —— 商家付款方式（merchant, online_payment, offline_payment, source_url, last_updated）
@@ -54,7 +54,7 @@ jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
 
 ## 4. 匯出 guard 鐵則（rate=0 陷阱，2026-07-09 血淚教訓）
 
-**兩支匯出迴圈（可見 `rate_N` 與隱藏 `_hide`/`_hide_1`）都不可以用 `if (rate && items)` 當 guard**——
+**匯出迴圈（`rate_N` 槽位，隱藏活動也走同一支）不可以用 `if (rate && items)` 當 guard**——
 `0 && items` 是 falsy，會把 `rate_N=0` 的 stacking 槽整組丟掉（如 `meta廣告`/`google廣告`，
 `cashbackModel=…+overseasBonusRate`、指定加碼成分為 0）。症狀：搜尋零結果、cards.data 裡根本沒有該 item。
 
