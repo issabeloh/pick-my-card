@@ -57,12 +57,13 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 ## 5. hideInDisplay 與 rate=0 語義
 
-- `hideInDisplay`：標記不在詳情頁顯示的 cashbackRate（Sheet 的 `_hide`/`_hide_1` 槽位），主要用於國外消費／一般國內消費（避免與詳情頁其他區塊重複）。**仍然可被搜尋，計算邏輯與一般活動完全相同**
+- `hideInDisplay`：標記不在詳情頁顯示的 cashbackRate（Sheet 一般編號槽位加 `hideInDisplay_N=TRUE`；舊 `_hide`/`_hide_1` 專用欄位已於 2026-07-11 併入一般槽位並刪除），主要用於國外消費／一般國內消費（避免與詳情頁其他區塊重複）。**仍然可被搜尋，計算邏輯與一般活動完全相同**
 - **rate=0 是明確語義：「此活動沒有指定通路加碼成分」**。stacking 模型允許 rate=0（只算基準＋加碼成分，`if (rate > 0 || shouldUseStackedCalculation)`）；rate=0 配空 model 或 `rate`/waterfall 沒有意義（會算出 0）
 - `rate_hide` 覆寫已於 2026-07-09 移除；levelSettings 的 `rate_hide`/`cap_hide` 欄位已退役，前端不再讀取
-- **隱藏槽標準配方**（大戶卡為例，值自動跟用戶選的級別）：
-  - 一般國內（`_hide_1`）：`rate_hide_1=0`、`cashbackModel_hide_1=basic+domesticBonusRate`、cap 留空
-  - 國外（`_hide`）：`rate_hide=0`、`cashbackModel_hide=overseasCashback+overseasBonusRate`、cap 留空（stacking 基準層由 `resolveBaseRate` 決定，海外模型自動用 overseasCashback）
+- **隱藏活動標準配方**（大戶卡為例，值自動跟用戶選的級別；N 為該活動所在槽位）：
+  - 一般國內消費：`rate_N=0`、`cashbackModel_N=basic+domesticBonusRate`、cap 留空、`hideInDisplay_N=TRUE`
+  - 國外：`rate_N=0`、`cashbackModel_N=overseasCashback+overseasBonusRate`、cap 留空、`hideInDisplay_N=TRUE`（stacking 基準層由 `resolveBaseRate` 決定，海外模型自動用 overseasCashback；卡片沒有 overseasBonusRate 也適用——成分為 0 的層自動跳過，總率＝overseasCashback）
+  - 期間限定的特別總率（如兆豐 BT21 舊 4%）不適用 0+model：維持數字總率、model 留空（走簡單路徑）
 - ⚠️ Apps Script 匯出端的 rate=0 陷阱見 `docs/project/data-pipeline.md`「匯出 guard 鐵則」
 
 ## 6. cashbackModel 計算模型（資料驅動，2026-07-01 起）
