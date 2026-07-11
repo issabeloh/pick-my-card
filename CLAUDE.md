@@ -10,7 +10,7 @@
 
 | 檔案 | 內容 |
 |---|---|
-| `script.js` | 核心邏輯（11,900 行——**使用規則見下方「大檔案」節**；檔案頂部有區塊目錄可 Grep） |
+| `script.js` | 核心邏輯（約 11,900 行——**使用規則見下方「大檔案」節**；檔案頂部有區塊目錄可 Grep） |
 | `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號） |
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 script.js；也引用 styles.css） |
@@ -19,7 +19,7 @@
 | `apps-script/` | Apps Script 備份（⚠️ 主匯出程式 exportToJSON 在 Google Sheets 裡，不在 repo） |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh` `update-version.sh` | 部署前機械檢查／`?v=` 自動 bump |
+| `tools/preflight.sh`、`./update-version.sh`（repo 根） | 部署前機械檢查／`?v=` 自動 bump |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
@@ -28,7 +28,7 @@
 1. 改了 `script.js`/`styles.css` → 跑 `./update-version.sh` bump `index.html` 的 `?v=`；改到 `styles.css`/`faq.js` 時 `faq.html` 的 `?v=` 要**手動**改
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑 `docs/ops/regression.md` 回歸清單
+4. 改了計算/搜尋/顯示邏輯 → 跑 `docs/ops/regression.md` 回歸清單（⚠️ 該檔「基準快照」區還是空的話，此閘無效——先在**改動前**的版本拍好相關條目的基準，才有得比對；不准對空基準打 ✅）
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 

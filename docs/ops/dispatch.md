@@ -3,7 +3,7 @@
 > 適用對象：未來每個 session 的主模型（Sonnet/Opus/Haiku 等級都適用）。
 > 環境快照 2026-07-11（查證自官方文件與本環境 Agent 工具，非憑印象；環境變更時照 maintenance.md 更新本節）：
 > - Agent 工具呼叫時 `model` 可選：`sonnet` / `opus` / `haiku` / `fable`（fable 未必長期可用，不可依賴）
-> - **effort 無法在呼叫當下指定**，只能寫在 `.claude/agents/*.md` frontmatter 的 `effort:`（合法值 low/medium/high/xhigh/max，預設繼承主會話）
+> - **effort 無法在呼叫當下指定**，只能寫在 `.claude/agents/*.md` frontmatter 的 `effort:`（合法值 low/medium/high/xhigh/max，預設繼承主會話）。此欄位出自官方文件（code.claude.com/docs/en/sub-agents），但在本環境未實測過是否真的生效——若觀察到 agent 行為像是忽略它，當作「繼承主會話」處理並把觀察寫進本檔教訓區
 > - 內建 agent：`Explore`（唯讀搜尋）、`Plan`（方案設計）、`general-purpose`、`claude-code-guide`（查 Claude Code 用法）
 > - 專案自訂 agent（`.claude/agents/`）：`scout`（haiku/medium，唯讀偵察）、`builder`（sonnet/high，實作）、`verifier`（sonnet/high，fresh-context 驗收）
 

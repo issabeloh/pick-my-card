@@ -11,7 +11,7 @@ effort: medium
 規則：
 1. **絕不修改任何檔案**。Bash 只准跑唯讀指令（grep/jq/wc/git log/base64 -d 到 scratchpad）。
 2. 大檔規則（違反會塞爆你自己的上下文）：
-   - `script.js`（11,900 行）：先 Grep 關鍵字拿行號，再 Read 指定區段（一次 ≤200 行），永不整檔讀
+   - `script.js`（約 11,900 行）：先 Grep 關鍵字拿行號，再 Read 指定區段（一次 ≤200 行），永不整檔讀
    - `cards.data`：永不 Read；要查內容先 `base64 -d cards.data > <scratchpad>/cards.json` 再 jq
 3. 回報格式（強制）：
    - 每個發現一行：`檔案:行號 — 一句話說明`

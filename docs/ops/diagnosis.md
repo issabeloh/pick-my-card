@@ -19,7 +19,7 @@
 1. CLAUDE.md 改為「路由版」：只放專案地圖、鐵則、任務路由表（詳見改寫後的 CLAUDE.md）
 2. 細節抽到 `docs/project/` 四個領域檔，按任務類型「用到才讀」
 3. changelog 整體搬到 `docs/project/history.md`
-4. 行數預算寫進 `docs/ops/maintenance.md`：CLAUDE.md 超過 250 行就觸發精簡
+4. 行數預算寫進 `docs/ops/maintenance.md`：CLAUDE.md 超過 150 行就觸發精簡（門檻數字以 maintenance.md 第 4 節為唯一權威）
 
 ## 第 2 名：直接讀大檔 —— 單次數萬到十幾萬 token 的地雷
 
