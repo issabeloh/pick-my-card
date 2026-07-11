@@ -144,7 +144,7 @@ body {
 .lp-skip.gone { opacity: 0; pointer-events: none; }
 
 /* ---------- Scrolly 骨架 ---------- */
-.lp-scrolly { height: 680vh; }
+.lp-scrolly { height: 750vh; }
 
 .lp-stage {
     position: sticky;
@@ -637,7 +637,111 @@ body {
 }
 
 /* ============================================================
-   第 4 幕｜提醒自動跳出
+   第 4 幕｜快捷選項（一按 → 展開整類 → 答案）
+   ============================================================ */
+.lp-qs-hero { display: flex; justify-content: center; }
+.lp-qs-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1.5px solid #bae6fd;
+    color: #0369a1;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(3, 105, 161, 0.12);
+}
+.lp-qs-chip i { font-style: normal; font-size: 1.15rem; line-height: 1; }
+
+/* 點按效果：藍色高亮 + 向外擴散的指尖漣漪 */
+.lp-qs-tap {
+    position: absolute;
+    inset: -2px;
+    border-radius: 999px;
+    pointer-events: none;
+}
+.lp-qs-tap.fx { opacity: 0; transform: none; transition: opacity 0.2s ease; }
+.lp-qs-tap.fx.on {
+    opacity: 1;
+    background: rgba(37, 99, 235, 0.10);
+    box-shadow: inset 0 0 0 2px #2563eb;
+    animation: lp-qs-tapring 0.8s ease-out 1;
+}
+@keyframes lp-qs-tapring {
+    0%   { box-shadow: inset 0 0 0 2px #2563eb, 0 0 0 0    rgba(37, 99, 235, 0.35); }
+    100% { box-shadow: inset 0 0 0 2px #2563eb, 0 0 0 18px rgba(37, 99, 235, 0); }
+}
+
+/* 展開的分類內容 */
+.lp-qs-fanhead {
+    margin: 20px 0 10px;
+    font-size: 0.88rem;
+    color: #334155;
+}
+.lp-qs-fan {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: center;
+    max-width: 340px;
+    margin: 0 auto;
+}
+.lp-qs-kw {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+    background: #fff;
+    border: 1px dashed #94a3b8;
+    border-radius: 8px;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+.lp-qs-kw.fx { transform: scale(0); transition: none; }
+.lp-qs-kw.fx.on { animation: lp-pop 0.35s cubic-bezier(0.2, 1.6, 0.45, 1) forwards; }
+
+/* 答案卡（沿用第 1 幕結果卡語彙）：唯一視覺重點 */
+.lp-qs-answer {
+    width: min(330px, 84vw);
+    margin: 22px auto 0;
+    background: #fff;
+    border: 2px solid #3b82f6;
+    border-radius: 18px;
+    padding: 20px 22px 18px;
+    box-shadow: 0 18px 44px rgba(37, 99, 235, 0.20);
+}
+.lp-qs-answer-q {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.lp-qs-answer-combo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 1.22rem;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 12px;
+    white-space: nowrap;
+}
+.lp-qs-answer-combo .lp-minicard { width: 38px; }
+.lp-qs-answer-rate { display: inline-block; font-size: 1.02rem; }
+
+/* 矮螢幕：整幕緊湊化 */
+@media (max-height: 700px) {
+    .lp-s4 .lp-title { margin-bottom: 16px; }
+    .lp-s4 .lp-qs-fanhead { margin: 14px 0 8px; }
+    .lp-s4 .lp-qs-answer { margin-top: 16px; }
+    .lp-s4 .lp-note { margin-top: 12px; }
+}
+
+/* ============================================================
+   第 5 幕｜提醒自動跳出
    ============================================================ */
 .lp-mini-result {
     display: flex;
@@ -706,20 +810,28 @@ body {
 .lp-pill--plain { color: #1d4ed8; border-color: #93c5fd; }
 .lp-pill--plain::before { display: none; }
 /* 第二個範例的搜尋框：與上一個提醒卡隔開 */
-.lp-search--hint { margin-top: 26px; }
-/* 矮螢幕（如 iPhone SE）：第 4 幕兩個範例較擠，整幕緊湊化 */
+.lp-search--hint { margin-top: 36px; }
+/* 兩個範例左右錯開（範例一偏左、範例二偏右），看起來是兩件獨立的事
+   （負/正 margin 成對 → 寬度不變，只平移；transform 已被 .fx 進場動畫佔用） */
+.lp-ex1 { margin-left: -12px; margin-right: 12px; }
+.lp-ex2 { margin-left: 12px; margin-right: -12px; }
+@media (min-width: 1024px) {
+    .lp-ex1 { margin-left: -26px; margin-right: 26px; }
+    .lp-ex2 { margin-left: 26px; margin-right: -26px; }
+}
+/* 矮螢幕（如 iPhone SE）：第 5 幕兩個範例較擠，整幕緊湊化 */
 @media (max-height: 700px) {
-    .lp-s4 .lp-title { margin-bottom: 14px; }
-    .lp-s4 .lp-reminder { margin-top: 12px; padding: 12px 14px 11px 42px; }
-    .lp-s4 .lp-reminder p { font-size: 0.88rem; line-height: 1.55; }
-    .lp-s4 .lp-pills { margin-top: 9px; }
-    .lp-s4 .lp-search--hint { margin-top: 16px; }
+    .lp-s5 .lp-title { margin-bottom: 14px; }
+    .lp-s5 .lp-reminder { margin-top: 12px; padding: 12px 14px 11px 42px; }
+    .lp-s5 .lp-reminder p { font-size: 0.88rem; line-height: 1.55; }
+    .lp-s5 .lp-pills { margin-top: 9px; }
+    .lp-s5 .lp-search--hint { margin-top: 20px; }
 }
 .lp-pill.fx { transform: scale(0); transition: none; }
 .lp-pill.fx.on { animation: lp-pop 0.4s cubic-bezier(0.2, 1.6, 0.45, 1) forwards; }
 
 /* ============================================================
-   第 5 幕｜回饋率矩陣
+   第 6 幕｜回饋率矩陣
    ============================================================ */
 .lp-matrix {
     display: grid;
@@ -807,7 +919,7 @@ body {
 }
 
 /* ============================================================
-   第 6 幕｜收尾 CTA
+   第 7 幕｜收尾 CTA
    ============================================================ */
 .lp-hero-card {
     position: relative;
@@ -995,6 +1107,13 @@ body {
 }
 .lp-reduced .lp-check.fx { transform: scale(1); }
 .lp-reduced .lp-pill.fx { transform: scale(1); }
+.lp-reduced .lp-qs-kw.fx { transform: scale(1); }
+.lp-reduced .lp-qs-tap.fx {
+    opacity: 1;
+    animation: none;
+    background: rgba(37, 99, 235, 0.08);
+    box-shadow: inset 0 0 0 2px #2563eb;
+}
 .lp-reduced .lp-stamp.fx { opacity: 1; transform: rotate(-8deg); }
 .lp-reduced .lp-winstamp.fx { opacity: 1; transform: rotate(8deg); }
 .lp-reduced .lp-reminder.fx { transform: none; }
