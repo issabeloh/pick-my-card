@@ -6,11 +6,11 @@
 //    實際執行的版本在 Google Sheets 裡（試算表 → 擴充功能 → Apps Script），
 //    改動時兩邊請同步（見 apps-script/README.md）。
 //
-// 2026-07-11 修正：cashbackRates / _hide / couponCashbacks 匯出時，若只填了
-//    period_N 合併字串（"YYYY/M/D~YYYY/M/D"）與 periodEnd_N、卻沒填 periodStart_N，
-//    前端過期判斷會拿不到 periodStart 而把已過期活動當成永久有效顯示出來。
-//    新增 backfillPeriodFromString()，從 period 字串補回缺少的 periodStart/periodEnd
-//    （只補缺的、不覆寫既有值）。
+// 2026-07-11 修正：日期範圍統一以 period_N 合併字串（"YYYY/M/D~YYYY/M/D"）為單一
+//    真實來源，透過 resolvePeriodBounds() 拆出 periodStart / periodEnd；試算表的
+//    periodStart_N / periodEnd_N 只是 period_N 的公式衍生欄（開始日公式在某些列算不出
+//    值→整欄空），僅在 period_N 沒填時當 fallback。修正前只讀公式欄，會漏掉 periodStart
+//    而讓已過期活動不被隱藏。套用於 cashbackRates / _hide 隱藏槽 / couponCashbacks 三處。
 
 // 建立自訂選單
 function onOpen() {
@@ -278,25 +278,20 @@ function exportToJSON() {
       }
     }
 
-    // 🔥 添加日期格式轉換
-    const periodStartValue = getValue(row, headers, `periodStart_${j}`);
-    if (periodStartValue) {
-      rateObj.periodStart = formatDateToISO(periodStartValue);
-    }
-
-    const periodEndValue = getValue(row, headers, `periodEnd_${j}`);
-    if (periodEndValue) {
-      rateObj.periodEnd = formatDateToISO(periodEndValue);
-    }
-
     addOptionalField(rateObj, row, headers, `category_${j}`, 'string', 'category');
     addOptionalField(rateObj, row, headers, `conditions_${j}`, 'string', 'conditions');
     addOptionalField(rateObj, row, headers, `period_${j}`, 'string', 'period');
     addOptionalField(rateObj, row, headers, `hideInDisplay_${j}`, 'boolean', 'hideInDisplay');
     addOptionalField(rateObj, row, headers, `cashbackModel_${j}`, 'string', 'cashbackModel');
 
-    // ⭐ 只填了 period_N 合併字串、沒填 periodStart_N/periodEnd_N 時，從 period 字串補回
-    backfillPeriodFromString(rateObj);
+    // 日期範圍：period_N 合併字串為單一真實來源；periodStart_N/periodEnd_N 是它的公式
+    // 衍生欄（開始日的公式在某些列算不出值→整欄空），只在 period_N 沒填時當 fallback。
+    resolvePeriodBounds(
+      rateObj,
+      getValue(row, headers, `period_${j}`),
+      getValue(row, headers, `periodStart_${j}`),
+      getValue(row, headers, `periodEnd_${j}`)
+    );
 
     card.cashbackRates.push(rateObj);
   }
@@ -330,17 +325,16 @@ function exportToJSON() {
   const periodHide = getValue(row, headers, 'period' + suffix);
   if (periodHide) hiddenRateObj.period = periodHide;
 
-  const periodStartHide = getValue(row, headers, 'periodStart' + suffix);
-  if (periodStartHide) hiddenRateObj.periodStart = formatDateToISO(periodStartHide);
-
-  const periodEndHide = getValue(row, headers, 'periodEnd' + suffix);
-  if (periodEndHide) hiddenRateObj.periodEnd = formatDateToISO(periodEndHide);
-
   const cashbackModelHide = getValue(row, headers, 'cashbackModel' + suffix);
   if (cashbackModelHide) hiddenRateObj.cashbackModel = cashbackModelHide;
 
-  // ⭐ 同樣從 period 字串補回缺少的 periodStart/periodEnd
-  backfillPeriodFromString(hiddenRateObj);
+  // 日期範圍同樣以 period 字串為準、公式欄為 fallback
+  resolvePeriodBounds(
+    hiddenRateObj,
+    periodHide,
+    getValue(row, headers, 'periodStart' + suffix),
+    getValue(row, headers, 'periodEnd' + suffix)
+  );
 
   card.cashbackRates.push(hiddenRateObj);
 });
@@ -374,22 +368,15 @@ for (let j = 1; j <= 21; j++) {
 
     // 新增：抓取 cap 欄位
     const cap = getValue(row, headers, `couponCap_${j}`);
-    if (cap) {
-      coupon.cap = parseFloat(cap);
-      const periodStart = getValue(row, headers, `couponPeriodStart_${j}`);
-      if (periodStart) {
-      coupon.periodStart = periodStart;
-}
+    if (cap) coupon.cap = parseFloat(cap);
 
-const periodEnd = getValue(row, headers, `couponPeriodEnd_${j}`);
-if (periodEnd) {
-  coupon.periodEnd = periodEnd;
-}
-
-    }
-
-    // ⭐ 同樣從 period 字串補回缺少的 periodStart/periodEnd
-    backfillPeriodFromString(coupon);
+    // 日期範圍：couponPeriod_N 為準、couponPeriodStart/End_N 為 fallback
+    resolvePeriodBounds(
+      coupon,
+      getValue(row, headers, `couponPeriod_${j}`),
+      getValue(row, headers, `couponPeriodStart_${j}`),
+      getValue(row, headers, `couponPeriodEnd_${j}`)
+    );
 
     card.couponCashbacks.push(coupon);
   }
@@ -699,23 +686,29 @@ function formatDateToISO(dateValue) {
   }
 }
 
-// ⭐ 有些槽位只填了 period 合併字串（"YYYY/M/D~YYYY/M/D"）與 periodEnd，
-//    卻沒填 periodStart。前端的過期／即將開始判斷看的是 periodStart/periodEnd 欄位，
-//    缺一邊會誤判（已過期活動不被隱藏、未來活動提早顯示）。這裡從 period 字串把缺少的
-//    那一邊補回——只補「缺的」欄位、絕不覆寫既有值（period 字串偶爾比 periodEnd 舊，
-//    例如中信 LINE Pay 肌膚之鑰 period 停在 ~6/30 但 periodEnd 已更新為 12/31，
-//    覆寫會誤把生效中的活動判為過期）。formatDateToISO 能吃 "2025/7/1" 斜線格式。
-function backfillPeriodFromString(obj) {
-  if (!obj || typeof obj.period !== 'string' || obj.period.indexOf('~') === -1) return;
-  const parts = obj.period.split('~');
-  const startStr = (parts[0] || '').trim();
-  const endStr = (parts[1] || '').trim();
-  if (!obj.periodStart && startStr) {
-    const iso = formatDateToISO(startStr);
+// ⭐ 決定一筆活動的 periodStart / periodEnd。
+//    period 合併字串（"YYYY/M/D~YYYY/M/D"）是日期範圍的【單一真實來源】；試算表的
+//    periodStart_N / periodEnd_N 只是它的公式衍生欄，開始日的公式在某些列算不出值
+//    （整欄空），若以公式欄為主就會漏掉 periodStart、讓已過期活動不被隱藏。
+//    因此優先用 period 字串拆出 start/end；只有 period 沒填時（少數只填日期欄的活動）
+//    才退回讀公式欄。formatDateToISO 能吃 "2025/7/1" 斜線格式，解析失敗回 null 即不寫入。
+function resolvePeriodBounds(obj, periodStr, fallbackStart, fallbackEnd) {
+  const p = periodStr ? String(periodStr).trim() : '';
+  let startRaw, endRaw;
+  if (p && p.indexOf('~') !== -1) {
+    const parts = p.split('~');
+    startRaw = (parts[0] || '').trim();
+    endRaw = (parts[1] || '').trim();
+  } else {
+    startRaw = fallbackStart;   // period 沒有可拆的範圍 → 退回公式欄
+    endRaw = fallbackEnd;
+  }
+  if (startRaw) {
+    const iso = formatDateToISO(startRaw);
     if (iso) obj.periodStart = iso;
   }
-  if (!obj.periodEnd && endStr) {
-    const iso = formatDateToISO(endStr);
+  if (endRaw) {
+    const iso = formatDateToISO(endRaw);
     if (iso) obj.periodEnd = iso;
   }
 }

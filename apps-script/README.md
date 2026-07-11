@@ -9,13 +9,14 @@
 `exportToJSON()` 那支。**這是備份，改動請同步回 Google Sheets。**
 
 - 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
-- 2026-07-11 修正：新增 `backfillPeriodFromString()`。有一整類活動在 Cards Data 只填了
-  `period_N` 合併字串（`YYYY/M/D~YYYY/M/D`）與 `periodEnd_N`、沒填 `periodStart_N`，
-  匯出時 `periodStart` 就會缺席，導致前端過期判斷（`getRateStatus`）拿不到開始日、把
-  已過期活動當成永久有效顯示出來。此函數在 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks`
-  三處 push 前，從 `period` 字串補回缺少的 `periodStart` / `periodEnd`（**只補缺的、不覆寫既有值**，
-  因為 `period` 字串偶爾比欄位舊）。前端 `script.js` 也保有同樣的 `backfillPeriodBounds()` 當防呆，
-  兩層互不衝突。
+- 2026-07-11 修正：日期範圍改以 **`period_N` 合併字串（`YYYY/M/D~YYYY/M/D`）為單一真實來源**。
+  試算表的 `periodStart_N` / `periodEnd_N` 是 `period_N` 的**公式衍生欄**，但開始日的公式在
+  某些列算不出值（整欄空）；匯出若以公式欄為主，`periodStart` 就會缺席，前端過期判斷
+  （`getRateStatus`）拿不到開始日，把已過期活動當成永久有效顯示。新增 `resolvePeriodBounds()`：
+  優先從 `period` 字串拆出 `periodStart` / `periodEnd`，只有 `period` 沒填時（少數只填日期欄的
+  活動，如 yushan 家樂福、cathay-cube 國內餐廳、firstbank 國外實體消費）才退回讀公式欄。
+  套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。**試算表不用改任何欄位或公式。**
+  前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 
