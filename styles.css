@@ -1806,6 +1806,15 @@ input[type="number"]:focus {
         line-height: 1.4;
         margin-bottom: 0;
     }
+    /* 手機版兩組 toggle（精準搜尋/新戶活動）直向堆疊：並排會把 1fr auto 網格的
+       auto 欄（按鈕欄）撐寬，擠壓左欄「消費金額」到換行 */
+    .show-promos-mobile .promo-toggle-row {
+        display: flex;
+    }
+    .show-promos-mobile .promo-toggle-row + .promo-toggle-row {
+        margin-left: 0;
+        margin-top: 6px;
+    }
 }
 
 /* ==========================================
