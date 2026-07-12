@@ -74,8 +74,9 @@
 
 ## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
 
-- 精準搜尋與新戶活動都是**膠囊 toggle**（淡藍圓角，樣式在 styles.css「膠囊 toggle」區），精準搜尋在左/在前。桌機 `.show-promos-desktop`（消費金額下方）／手機 `.show-promos-mobile`（**`.input-row-with-button` 的直接子元素**，佔滿整列、在快捷搜尋下方）各一個 checkbox：`#exact-search-checkbox-desktop`/`-mobile`，change 事件互相同步，讀取用 `isExactSearchEnabled()`。說明文字收在「?」按鈕（沿用 `promo-help-hover` 桌機 popover／`promo-help-inline` 手機內嵌展開，`setupCardholderPromoToggle` 自動接線）。預設關閉、不記憶狀態
-- **搜尋輸入區單欄直向流**（手機，參考 Google Flights/Airbnb 搜尋卡片）：商家輸入 → 快捷 chips（「快捷搜尋」標題列已 display:none，chips 視覺上屬於商家輸入這一塊）→ 膠囊 toggles 一列 → 金額＋計算按鈕同列。手機版金額欄砍標籤與提示、以 `.amount-input-wrap` 的 NT$ 前綴補幣別語義（桌機前綴隱藏、維持標籤）。改這區排版時注意 `.input-row-with-button` 的 grid：桌機 `2fr 1fr auto` 三欄、手機 `1fr auto`＋商家/toggles 整列 span
+- 精準搜尋與新戶活動是**淺灰方框 toggle**（桌機手機共用**同一份 DOM**，`.show-promos-toggle` 是 `.input-row-with-button` 的直接網格子元素）：兩框同一列各佔一半（flex 1 1 0），label flex:1 讓**點文字即可勾選**，「?」按鈕在框內文字右側、點擊內嵌展開說明（`promo-help-inline`，桌機也用點擊、不再用 hover popover）。checkbox id：`#exact-search-checkbox`／`#show-promos-checkbox`（單一實例；JS 保留陣列/同步邏輯以防未來再分裝置）。讀取用 `isExactSearchEnabled()`。預設關閉、不記憶狀態
+- **合併框 `.merchant-search-box`**：商家輸入（上半部）與快捷 chips（下半部、淺灰背景）在同一個粗框（3px）內；「快捷搜尋」標題列已從 DOM 移除。`#exact-search-empty-hint` 與 `#search-hints-container` 在合併框下方。金額框 `.amount-input-wrap` 同款粗框：NT$ 前綴在左、無框線輸入在右（桌機手機同款，桌機另有「消費金額」標籤＋「預設 NT$1,000」提示，手機隱藏兩者）
+- 版面順序（桌機 grid `2fr 1fr auto`）：合併框(1,1)→toggles(2,1 同一行兩框)→金額(1,2)→按鈕(1,3)；手機（`1fr auto`）：合併框整列→toggles 整列→金額＋按鈕同列。改排版時注意 toggles 的 grid 定位規則（styles.css 搜 "show-promos-toggle"）
 - 語義：勾選時 `handleMerchantInput` 以 `findMatchingItem(input, { exactOnly: true })` 過濾，只留 `isExactMatch`（**fuzzy 同義詞展開後全等也算**，如搜「國外」時 item「海外」視為一致）
 - **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉

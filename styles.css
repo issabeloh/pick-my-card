@@ -1690,21 +1690,30 @@ input[type="number"]:focus {
    Show new cardholder promos toggle
    ========================================== */
 .show-promos-toggle {
-    margin-top: 26px;
-    margin-left: 5px;
+    display: flex;
+    flex-wrap: wrap; /* 「?」展開的說明文字（flex-basis:100%）換行到下方 */
+    gap: 8px;
     font-size: 14px;
     color: #6b7280;
     user-select: none;
 }
 
+/* 淺灰方框 toggle：左右各一框、各佔一半；label 撐滿讓點文字也能勾選，「?」靠右 */
 .promo-toggle-row {
-    display: inline-flex;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
     align-items: center;
     gap: 6px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 8px 12px;
 }
 
 .promo-help-text {
-    margin-top: 6px;
+    flex-basis: 100%;
+    margin-top: 0;
     padding: 8px 10px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -1775,32 +1784,42 @@ input[type="number"]:focus {
 }
 
 .show-promos-toggle label {
+    flex: 1;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    color: #6b7280;
+    color: #4b5563;
     margin-bottom: 0;
     line-height: 1.4;
     visibility: visible;
     height: auto;
+    white-space: nowrap;
 }
 
 .show-promos-toggle input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     margin: 0;
     cursor: pointer;
     flex-shrink: 0;
+    accent-color: #2563eb;
 }
 
-.show-promos-desktop { display: block; }
-.show-promos-mobile { display: none; }
-
+/* toggles 是 .input-row-with-button 的直接網格子元素 */
 @media (max-width: 768px) {
-    .show-promos-desktop { display: none; }
-    /* 手機版 toggles 是 .input-row-with-button 的直接子元素：佔滿整列（快捷搜尋下方） */
-    .show-promos-mobile { display: block; grid-column: 1 / -1; margin: 0; }
+    /* 手機：佔滿整列（合併框下方），左右各一框 */
+    .show-promos-toggle { grid-column: 1 / -1; margin: 0; }
+}
+
+@media (min-width: 769px) {
+    /* 桌機：置於商家合併框正下方（第 1 欄第 2 列），兩框同一行 */
+    .show-promos-toggle {
+        grid-column: 1;
+        grid-row: 2;
+        margin-top: 0;
+    }
 }
 
 /* ==========================================
@@ -7282,98 +7301,95 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
-/* ============ 精準搜尋／新戶活動 膠囊 toggle（2026-07-12 版面重整） ============ */
-/* 兩組 toggle 膠囊化（Airbnb 篩選風格）；桌機、手機共用。
-   字級/顏色需蓋過上方 .show-promos-toggle label 的 14px !important（靠更高特異度） */
-.show-promos-toggle .promo-toggle-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    margin: 0 8px 0 0;
-}
-
-.show-promos-toggle .promo-toggle-row + .promo-toggle-row {
-    margin-left: 0;
-}
-
-.show-promos-toggle .promo-toggle-row label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1.5px solid #dbeafe;
-    border-radius: 999px;
-    padding: 5px 12px;
-    font-size: 13px !important;
-    color: #1d4ed8;
-    background: #eff6ff;
-    white-space: nowrap;
-}
-
-.show-promos-toggle .promo-toggle-row label:has(input:checked) {
-    background: #dbeafe;
-    border-color: #93c5fd;
-}
-
-.show-promos-toggle .promo-toggle-row input[type="checkbox"] {
-    width: 15px;
-    height: 15px;
-    margin: 0;
-    accent-color: #2563eb;
-}
-
-.show-promos-toggle .promo-toggle-row .promo-help-btn {
-    width: 16px;
-    height: 16px;
-    font-size: 11px;
-    background: #bfdbfe;
-    color: #1e40af;
-}
-
-/* 精準搜尋零結果提示（merchant-input 下方） */
+/* 精準搜尋零結果提示（合併框下方） */
 .exact-search-empty-hint {
     margin-top: 6px;
     font-size: 0.8rem;
     color: #b45309;
 }
 
-/* ============ 搜尋輸入區版面重整（2026-07-12，參考 Google Flights/Airbnb 搜尋卡片） ============ */
-/* 消費商家與快捷搜尋收成同一塊：拿掉「快捷搜尋」標題列，chips 直接貼在輸入框下方
-   （chips 本來就是為了填入消費商家的建議選項） */
-.quick-search-label {
-    display: none;
+/* ============ 搜尋輸入區版面（2026-07-12 重整 v2：合併框＋淺灰方框 toggle） ============ */
+/* 合併框：上半部商家輸入、下半部快捷選項（淺灰背景）；外層粗框。
+   「快捷搜尋」標題列已從 DOM 移除——chips 就是這個輸入框的建議選項 */
+.merchant-search-box {
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-.quick-search-wrapper {
-    margin-top: 10px;
+.merchant-search-box:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
 }
 
-/* 金額輸入框 NT$ 前綴容器：桌機由標籤傳達幣別（前綴隱藏），手機顯示前綴取代標籤 */
+.merchant-search-box input[type="text"]#merchant-input {
+    border: none;
+    border-radius: 11px 11px 0 0;
+    box-shadow: none;
+    width: 100%;
+}
+
+.merchant-search-box input[type="text"]#merchant-input:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+.merchant-search-box .quick-search-wrapper {
+    margin-top: 0;
+    background: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 0 0 11px 11px;
+    padding: 10px 12px;
+}
+
+/* 金額框：NT$ 前綴在左、輸入在右的一體框（桌機手機同款），粗框與合併框一致 */
 .amount-input-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    padding-left: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.amount-input-wrap:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
 }
 
 .amount-input-wrap .amount-prefix {
-    display: none;
     font-size: 14px;
     font-weight: 600;
     color: #6b7280;
     flex-shrink: 0;
 }
 
+.amount-input-wrap input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    border: none;
+    border-radius: 0 11px 11px 0;
+    box-shadow: none;
+}
+
+.amount-input-wrap input[type="number"]:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
 @media (max-width: 768px) {
-    /* 手機版金額列：砍標籤與提示（預設值 1000 直接顯示在框內），NT$ 前綴補幣別語義 */
+    /* 手機版金額列：砍標籤與提示（預設值 1000 直接顯示在框內） */
     label[for="amount-input"] {
         display: none;
     }
 
     .amount-hint {
         display: none;
-    }
-
-    .amount-input-wrap .amount-prefix {
-        display: inline;
     }
 
     .button-group label {

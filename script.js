@@ -2500,8 +2500,8 @@ function mergeDataSearchExclusions(data) {
 }
 
 // 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
-// 桌機/手機各有一個 checkbox（比照新戶活動 toggle），由 change 事件保持同步，讀任一存在者即可
-const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox-desktop', 'exact-search-checkbox-mobile'];
+// 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式以防未來再分裝置）
+const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox'];
 function isExactSearchEnabled() {
     return EXACT_SEARCH_CHECKBOX_IDS.some(id => {
         const checkbox = document.getElementById(id);
@@ -4630,7 +4630,8 @@ let showCardholderPromos = false;
 // Help popup is shown via CSS (:hover or :focus-within on .promo-help-wrap).
 // On touch, tapping outside the wrap blurs the help button so the popup hides.
 function setupCardholderPromoToggle() {
-    const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
+    // 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式與同步邏輯以防未來再分裝置）
+    const ids = ['show-promos-checkbox'];
     const onChange = (e) => {
         showCardholderPromos = e.target.checked;
         // Sync the other checkbox so both stay in lockstep

@@ -61,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260712141641">
+    <link rel="stylesheet" href="styles.css?v=20260712143645">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -377,16 +377,10 @@
                             消費商家
                             <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
                         </label>
+                        <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
+                        <div class="merchant-search-box">
                         <input type="text" id="merchant-input" placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
 
-                        <!-- 精準搜尋零結果提示（勾選精準搜尋且放寬後有相近結果時顯示） -->
-                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
-
-                        <!-- 搜尋提示容器 -->
-                        <div id="search-hints-container"></div>
-
-                        <!-- 快捷搜尋按鈕 -->
-                        <div class="quick-search-label">快捷搜尋</div>
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
                                 <!-- 可見的快捷按鈕會由 JavaScript 填充 -->
@@ -414,76 +408,54 @@
                                 </div>
                             </div>
                         </div>
+                        </div><!-- /merchant-search-box -->
+
+                        <!-- 精準搜尋零結果提示（勾選精準搜尋且放寬後有相近結果時顯示） -->
+                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
+
+                        <!-- 搜尋提示容器 -->
+                        <div id="search-hints-container"></div>
                     </div>
 
-                    <!-- 精準搜尋＋顯示新戶活動 toggles (手機版位置：快捷搜尋下方整列) — 手機用內嵌展開 -->
-                    <div class="show-promos-toggle show-promos-mobile">
+                    <!-- 精準搜尋＋新戶活動 toggles（桌機/手機共用一份，合併框下方同一列；說明點「?」內嵌展開） -->
+                    <div class="show-promos-toggle">
                         <div class="promo-toggle-row">
                             <label>
-                                <input type="checkbox" id="exact-search-checkbox-mobile">
+                                <input type="checkbox" id="exact-search-checkbox">
                                 精準搜尋
                             </label>
                             <button type="button"
                                     class="promo-help-btn promo-help-inline"
-                                    data-help-target="exact-search-help-text-mobile"
+                                    data-help-target="exact-search-help-text"
                                     aria-expanded="false"
                                     aria-label="說明">?</button>
                         </div>
                         <div class="promo-toggle-row">
                             <label>
-                                <input type="checkbox" id="show-promos-toggle-mobile">
+                                <input type="checkbox" id="show-promos-checkbox">
                                 新戶活動
                             </label>
                             <button type="button"
                                     class="promo-help-btn promo-help-inline"
-                                    data-help-target="promo-help-text-mobile"
+                                    data-help-target="promo-help-text"
                                     aria-expanded="false"
                                     aria-label="說明">?</button>
                         </div>
-                        <div id="exact-search-help-text-mobile" class="promo-help-text" hidden>
+                        <div id="exact-search-help-text" class="promo-help-text" hidden>
                             只顯示與輸入完全相同的項目。例：輸入「國外」只顯示「國外」，不含「國外航空」等（不影響快捷搜尋）
                         </div>
-                        <div id="promo-help-text-mobile" class="promo-help-text" hidden>
+                        <div id="promo-help-text" class="promo-help-text" hidden>
                             如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
                         </div>
                     </div>
 
                     <div class="form-group compact">
-                        <label for="amount-input">消費金額 (NT$)</label>
+                        <label for="amount-input">消費金額</label>
                         <div class="amount-input-wrap">
                             <span class="amount-prefix">NT$</span>
                             <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
-                        <small class="amount-hint">未填金額時，預設以 NT$1,000 計算</small>
-                        <!-- 精準搜尋＋顯示新戶活動 toggles (桌機版位置：消費金額下方) — 桌機用 hover popover -->
-                        <div class="show-promos-toggle show-promos-desktop">
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="exact-search-checkbox-desktop">
-                                    精準搜尋
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-hover"
-                                        data-help-target="exact-search-help-popup-desktop"
-                                        aria-label="說明">?</button>
-                                <div id="exact-search-help-popup-desktop" popover class="promo-help-popup">
-                                    只顯示與輸入完全相同的項目。例：輸入「國外」只顯示「國外」，不含「國外航空」等（不影響快捷搜尋）
-                                </div>
-                            </div>
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="show-promos-toggle-desktop">
-                                    新戶活動
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-hover"
-                                        data-help-target="promo-help-popup-desktop"
-                                        aria-label="說明">?</button>
-                                <div id="promo-help-popup-desktop" popover class="promo-help-popup">
-                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                                </div>
-                            </div>
-                        </div>
+                        <small class="amount-hint">預設 NT$1,000</small>
                     </div>
 
                     <div class="form-group compact button-group">
@@ -1076,7 +1048,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260712141641" defer></script>
+    <script src="script.js?v=20260712143645" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
