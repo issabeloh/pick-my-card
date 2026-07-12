@@ -61,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260712143645">
+    <link rel="stylesheet" href="styles.css?v=20260712144856">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -379,7 +379,10 @@
                         </label>
                         <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
                         <div class="merchant-search-box">
-                        <input type="text" id="merchant-input" placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
+                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
 
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
@@ -455,7 +458,6 @@
                             <span class="amount-prefix">NT$</span>
                             <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
-                        <small class="amount-hint">預設 NT$1,000</small>
                     </div>
 
                     <div class="form-group compact button-group">
@@ -1048,7 +1050,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260712143645" defer></script>
+    <script src="script.js?v=20260712144856" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
