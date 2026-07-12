@@ -438,13 +438,19 @@ body {
     white-space: nowrap;
 }
 
-/* 各卡配色 */
-.lp-card--uni     { background: linear-gradient(135deg, #065f46 0%, #10b981 70%, #6ee7b7 105%); }
-.lp-card--richart { background: linear-gradient(135deg, #365314 0%, #84cc16 75%, #d9f99d 108%); }
-.lp-card--crystal { background: linear-gradient(135deg, #86198f 0%, #d946ef 62%, #f0abfc 105%); }
+/* 各卡配色（參考實體卡主色：Uni 淺黃、Richart 銀灰、陽信綠、Sport 深藍） */
+.lp-card--uni     { background: linear-gradient(135deg, #c9a962 0%, #e9d9ae 60%, #f8f1de 105%); }
+.lp-card--richart { background: linear-gradient(135deg, #8a94a3 0%, #c4ccd6 55%, #eef1f5 100%); }
+.lp-card--crystal { background: linear-gradient(135deg, #166534 0%, #22c55e 62%, #bbf7d0 108%); }
 .lp-card--cube    { background: linear-gradient(135deg, #0f172a 0%, #334155 65%, #94a3b8 108%); }
 .lp-card--green   { background: linear-gradient(135deg, #14532d 0%, #16a34a 70%, #86efac 108%); }
-.lp-card--sport   { background: linear-gradient(135deg, #9a3412 0%, #f97316 68%, #fdba74 105%); }
+.lp-card--sport   { background: linear-gradient(135deg, #172554 0%, #1e40af 65%, #60a5fa 108%); }
+/* 淺色卡面（Uni 淺黃、Richart 銀灰）：卡名用深色字才清楚 */
+.lp-card--uni .lp-cardname,
+.lp-card--richart .lp-cardname {
+    color: #1f2937;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+}
 
 /* ============================================================
    第 2 幕｜勾選卡片
