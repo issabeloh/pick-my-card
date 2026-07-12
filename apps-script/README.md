@@ -43,6 +43,20 @@
     commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
     Sheets 版本記錄承擔。
 
+## 每月自動備份（.xlsx 寄信，2026-07-12 新增）
+
+Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、Watchlist/QA 等工作表），
+cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 Google 帳號單點。每月自動把
+整本試算表以 .xlsx 附件寄到信箱，收到後存到 Google 以外的位置即補上此缺口。
+
+| 項目 | 內容 |
+|---|---|
+| 函數 | `sendBackupEmail`（寄一份）、`setupMonthlyBackupTrigger`（建立每月觸發器） |
+| 選單 | 「📦 立即寄送試算表備份」「⏰ 啟用每月自動備份」 |
+| 排程 | 每月 1 日 9–10 點（由 `setupMonthlyBackupTrigger` 建立；重跑會先清舊觸發器，不會重複寄） |
+| 收件人 | `BACKUP_EMAIL` 常數留空 = 寄給試算表登入帳號（比照權益監控慣例） |
+| 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
+
 ## 權益監控（第一階段，2026-07-07 上線）
 
 整體規劃見 repo 根目錄的 `BENEFITS-AUTOMATION-PLAN.md`。

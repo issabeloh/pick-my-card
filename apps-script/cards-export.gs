@@ -29,6 +29,9 @@ function onOpen() {
     .addItem('📥 匯出 JSON', 'exportToJSON')
     .addSeparator()
     .addItem('🗑️ 清除 QA 報告', 'clearQAReport')
+    .addSeparator()
+    .addItem('📦 立即寄送試算表備份', 'sendBackupEmail')
+    .addItem('⏰ 啟用每月自動備份', 'setupMonthlyBackupTrigger')
     .addToUi();
     buildAutomationMenu_();
 }
@@ -1210,4 +1213,58 @@ function commitFileToGitHub(path, textContent, message, token) {
   if (code !== 200 && code !== 201) {
     throw new Error(`GitHub 上傳 ${path} 失敗 (HTTP ${code}): ` + putRes.getContentText());
   }
+}
+
+// ============ 每月自動備份（.xlsx 寄信）============
+// 目的：Google Sheet 是唯一存放「原始資料全貌」的地方——公式（period_N、
+// daysRemaining_N）、欄位結構、Watchlist/QA 等其他工作表都只在這裡；
+// cards.data 的 git 歷史只涵蓋「匯出內容」。每月把整本試算表以 .xlsx 附件
+// 寄到信箱，補上「Google 帳號單點故障」這個備份缺口。
+// 啟用方式：選單「⏰ 啟用每月自動備份」跑一次即可（重跑會先清掉舊觸發器，
+// 不會重複寄）；「📦 立即寄送試算表備份」可隨時手動寄一份或測試。
+
+const BACKUP_EMAIL = ''; // 留空 = 寄給試算表登入帳號（比照權益監控的慣例）
+
+function sendBackupEmail() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dateStr = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+
+  // 匯出整本試算表為 .xlsx（含所有工作表；公式大多可保留，Google 專屬函數會轉成值）
+  const exportUrl = 'https://docs.google.com/spreadsheets/d/' + ss.getId() + '/export?format=xlsx';
+  const blob = UrlFetchApp.fetch(exportUrl, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+  }).getBlob().setName(ss.getName() + '-備份-' + dateStr + '.xlsx');
+
+  const to = BACKUP_EMAIL || Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+  MailApp.sendEmail({
+    to: to,
+    subject: '📦 [pick-my-card] 試算表每月備份 ' + dateStr,
+    body: '附件是「' + ss.getName() + '」的完整 .xlsx 備份（含所有工作表）。\n\n' +
+          '建議下載後存放到 Google 以外的位置（本機或另一個雲端），' +
+          '以防 Google 帳號無法存取時原始資料（公式、欄位結構、Watchlist 等）遺失。\n\n' +
+          '試算表：' + ss.getUrl() + '\n' +
+          '此信由 Apps Script 每月備份觸發器自動寄出。',
+    attachments: [blob]
+  });
+  Logger.log('✅ 備份已寄出：' + to);
+}
+
+function setupMonthlyBackupTrigger() {
+  // 先清掉同一 handler 的舊觸發器，重跑不會疊加
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendBackupEmail') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('sendBackupEmail')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(9)
+    .create();
+
+  const to = BACKUP_EMAIL || Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+  SpreadsheetApp.getUi().alert(
+    '✅ 已啟用每月自動備份',
+    '每月 1 日早上（9–10 點間）會把整本試算表以 .xlsx 附件寄到：\n' + to +
+    '\n\n可用「📦 立即寄送試算表備份」先測試一封。',
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
 }
