@@ -739,6 +739,9 @@ async function loadCardsData() {
         // Filter out expired rates based on periodStart and periodEnd
         cardsData = filterExpiredRates(cardsData);
 
+        // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
+        mergeDataSearchExclusions(cardsData);
+
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         console.log(`📢 公告數量: ${cardsData.announcements ? cardsData.announcements.length : 0} 則`);
@@ -2432,10 +2435,40 @@ const fuzzySearchMap = {
 
 // Search term exclusion rules - prevents unwanted matches
 // Format: 'searchTerm': ['excluded item 1', 'excluded item 2', ...]
+// 比對規則：searchTerm 對 fuzzy 展開後的每個搜尋詞生效，excluded item 與 item 名做小寫全等比對。
+// 日常維護走 Google Sheets 的 SearchExclusions 工作表（載入時由 mergeDataSearchExclusions 併入），
+// 這裡只保留兜底預設值。
 const searchExclusionMap = {
     '街口': ['日本paypay(限於街口支付綁定)'],
-    '街口支付': ['日本paypay(限於街口支付綁定)']
+    '街口支付': ['日本paypay(限於街口支付綁定)'],
+    // 「新加坡航空」fuzzy 展開出別名 sia，子字串誤中 a"sia"yo
+    'sia': ['asiayo']
 };
+
+// 將 cards.data 匯出的 searchExclusions（SearchExclusions 工作表）併入內建排除表，
+// 讓排除規則可從 Google Sheets 維護、不必改程式。格式：[{ term, excludedItems: [...] }]。
+// 一律正規化為小寫存放，與 checkItemMatches 的小寫全等比對一致。
+function mergeDataSearchExclusions(data) {
+    if (!data || !Array.isArray(data.searchExclusions)) return;
+    let mergedCount = 0;
+    data.searchExclusions.forEach(entry => {
+        const term = String(entry && entry.term || '').toLowerCase().trim();
+        const items = Array.isArray(entry && entry.excludedItems) ? entry.excludedItems : [];
+        if (!term || items.length === 0) return;
+        if (!searchExclusionMap[term]) searchExclusionMap[term] = [];
+        const existing = searchExclusionMap[term];
+        items.forEach(item => {
+            const normalized = String(item).toLowerCase().trim();
+            if (normalized && !existing.some(e => e.toLowerCase() === normalized)) {
+                existing.push(normalized);
+                mergedCount++;
+            }
+        });
+    });
+    if (mergedCount > 0) {
+        console.log(`🚫 已從 cards.data 併入 ${mergedCount} 條搜尋排除規則`);
+    }
+}
 
 // Find matching item in cards database
 function findMatchingItem(searchTerm) {
