@@ -28,7 +28,7 @@
 1. 改了 `script.js`/`styles.css` → 跑 `./update-version.sh` bump `index.html` 的 `?v=`；改到 `styles.css`/`faq.js` 時 `faq.html` 的 `?v=` 要**手動**改
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑 `docs/ops/regression.md` 回歸清單（⚠️ 該檔「基準快照」區還是空的話，此閘無效——先在**改動前**的版本拍好相關條目的基準，才有得比對；不准對空基準打 ✅）
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright`；改動**前**先跑一次確認綠燈。差異→exit 1；語義與基準規則見 `docs/ops/regression.md`）
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 

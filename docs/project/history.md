@@ -4,6 +4,16 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-07-12 快捷搜尋移除自動計算（產品決策）
+- handleQuickSearch 只填入關鍵詞，計算一律由用戶按「計算」（原自動計算有 disabled 時序問題，本來就時好時壞）
+- Spotlight「比較這個通路」是唯一保留自動計算的入口（用戶拍板）：由呼叫端補金額（1000）並代按計算
+- 驗證：行為探測 3 場景 PASS＋回歸 12/12 與基準逐字一致
+
+## 2026-07-12 回歸驗證自動化（Playwright）
+- tools/regression/run-regression.js：hermetic 跑 12 組搜尋（Firebase 替身、外部請求全擋、訪客模式）與 baseline.json 逐字比對
+- 基準綁定 cards.version；退出碼 0/1/2；正反向＋確定性驗證通過
+- regression.md 改為「腳本優先、人工備援」；builder agent 驗收條款同步更新
+
 ## 2026-07-11 隱藏活動併入一般槽位（Sheet + Apps Script）
 - Sheet 的 `_hide`/`_hide_1` 專用欄位組改名為一般編號槽位（rate_20/21 一帶）＋ `hideInDisplay_N=TRUE`
 - Apps Script 刪除 `['_hide','_hide_1'].forEach` 特例迴圈——隱藏活動與一般活動走同一支匯出迴圈，隱藏與否純粹是資料欄位
