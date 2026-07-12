@@ -19,15 +19,24 @@
   - **修正 1**：`resolvePeriodBounds()` 統一決定日期範圍——優先讀輸入欄，某一邊讀不到時從
     `period_N` 字串拆回來救援。套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。
   - **修正 2**：`runQACheck` 新增檢查 8（`periodEnd_N` 有值但 `periodStart_N` 讀不到；`period_N`
-    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在、`period_N` 欄同槽存在；
-    欄位標題重複），匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在；欄位標題重複），
+    匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
   - **修正 3**：rate／coupon 槽位上限改由 `maxSlotIndex()` 依表頭自動偵測（原本寫死 `<= 21`，
     但表已加到 `rate_22`——slot 22 整槽被靜默丟棄、永遠不會匯出）。之後加 `rate_23` 等新欄
     不用改程式。
   - 前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
   - 事後對照維護者提供的完整表頭確認：事故元凶是 slot 2 的 `periodStart` 欄標題誤植成
-    `periodStart_1`（重複欄名，indexOf 只抓最前面那欄）；另掃出 `period_19` 欄漏建（QA 檢查 9a
-    會報）。其餘 381 欄無重複、無空格／大小寫／全形問題。
+    `periodStart_1`（重複欄名，indexOf 只抓最前面那欄），已由維護者修正。其餘 381 欄無重複、
+    無空格／大小寫／全形問題。
+- 2026-07-12 與線上版合併：
+  - **保留維護者的修改**：`_hide`／`_hide_1` 專用隱藏槽處理移除（隱藏活動改用一般槽位 21/22
+    配 `hideInDisplay_N=TRUE`，走主迴圈）；槽位上限手動改的 22 由 `maxSlotIndex()` 自動偵測取代。
+  - **修正 coupon 兩個舊 bug**：日期欄原本巢狀在 `if (couponCap)` 內——沒設 cap 的 coupon
+    日期整組不匯出（過期領券活動不會被隱藏，實測 7 筆中招）；且日期未過 `formatDateToISO`，
+    Date 儲存格會序列化成 `"2026-06-29T16:00:00.000Z"` UTC 字串（前端字串比較會提早一天判過期）。
+    現統一走 `resolvePeriodBounds`。
+  - 依維護者要求，拿掉「`period_N` 欄漏建」QA 通知（保留成對檢查與重複欄名檢查——那兩種是
+    「整欄資料靜默消失」等級，非簡單補欄）。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 

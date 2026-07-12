@@ -10,8 +10,16 @@
 //    periodStart_N / periodEnd_N（日期源頭），某一邊讀不到時從 period_N 合併字串
 //    （公式組出的 "YYYY/M/D~YYYY/M/D"）拆回來救援。修正前若輸入欄「讀不到」（欄位
 //    標題對不上或欄名重複，儲存格有值也讀不到），periodStart 會缺席，前端過期判斷
-//    拿不到開始日、已過期活動不被隱藏。套用於 cashbackRates / _hide / couponCashbacks
-//    三處；並在 runQACheck 加入欄位結構與期間一致性檢查，匯出時直接報警。
+//    拿不到開始日、已過期活動不被隱藏。套用於 cashbackRates / couponCashbacks；
+//    並在 runQACheck 加入欄位結構與期間一致性檢查，匯出時直接報警。
+//
+// 2026-07-12 與線上版合併：
+//    - 保留維護者的修改：_hide/_hide_1 專用隱藏槽處理移除（隱藏活動改走一般槽位
+//      + hideInDisplay_N）；槽位上限 21→22 由 maxSlotIndex() 自動偵測取代（加新欄免改程式）
+//    - 修正 coupon 兩個舊 bug：日期欄原本只在有 couponCap 時才匯出（沒 cap 的 coupon
+//      過期判斷失效）；且未過 formatDateToISO（Date 儲存格會序列化成
+//      "2026-06-29T16:00:00.000Z" UTC 字串，前端字串比較會提早一天過期）。
+//      現統一走 resolvePeriodBounds，與 cashbackRates 相同。
 
 // 建立自訂選單
 function onOpen() {
@@ -151,7 +159,7 @@ function runQACheck() {
 
   // 檢查 9: 欄位標題結構（匯出用 headers.indexOf 按「完全相同的字串」找欄，
   // 標題拼字／前後空格／大小寫／全形字元不對 = 整欄讀不到，儲存格有填也一樣）
-  // 9a: periodStart_N / periodEnd_N 必須成對存在；period_N（顯示字串公式欄）也應同槽存在
+  // 9a: periodStart_N / periodEnd_N 必須成對存在
   for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
     const hasStart = headers.indexOf(`periodStart_${j}`) >= 0;
     const hasEnd = headers.indexOf(`periodEnd_${j}`) >= 0;
@@ -159,9 +167,6 @@ function runQACheck() {
       const missing = hasStart ? `periodEnd_${j}` : `periodStart_${j}`;
       const present = hasStart ? `periodStart_${j}` : `periodEnd_${j}`;
       issues.push(['(全表)', '', '欄位結構', missing, `有 ${present} 欄但找不到 ${missing} 欄（標題拼錯／多空格／漏建），該欄所有卡片的值都會匯不出去`, '⚠️']);
-    }
-    if (hasStart && hasEnd && headers.indexOf(`period_${j}`) < 0) {
-      issues.push(['(全表)', '', '欄位結構', `period_${j}`, `槽位 ${j} 有 periodStart/periodEnd 欄但找不到 period_${j} 欄（顯示字串公式欄漏建或標題拼錯）`, '⚠️']);
     }
   }
   // 9b: 欄位標題重複（indexOf 只會讀到最前面那欄，後面同名欄整欄被忽略）
@@ -352,46 +357,9 @@ function exportToJSON() {
 }
 
 
-// ⭐ 處理隱藏的 rate（_hide 與 _hide_1 兩個槽位）
-['_hide', '_hide_1'].forEach(function(suffix) {
-  const rateHide = getValue(row, headers, 'rate' + suffix);
-  const itemsHide = getValue(row, headers, 'items' + suffix);
-  if (!itemsHide) return;
-
-  const parsedHideRate = parseFloat(rateHide);
-  if (isNaN(parsedHideRate)) return;
-
-  const hiddenRateObj = {
-    rate: parsedHideRate,
-    items: itemsHide.split(',').map(s => s.trim()),
-    hideInDisplay: true  // 標記為隱藏
-  };
-
-  const capHide = getValue(row, headers, 'cap' + suffix);
-  if (capHide) hiddenRateObj.cap = parseInt(capHide);
-
-  const categoryHide = getValue(row, headers, 'category' + suffix);
-  if (categoryHide) hiddenRateObj.category = categoryHide;
-
-  const conditionsHide = getValue(row, headers, 'conditions' + suffix);
-  if (conditionsHide) hiddenRateObj.conditions = conditionsHide;
-
-  const periodHide = getValue(row, headers, 'period' + suffix);
-  if (periodHide) hiddenRateObj.period = periodHide;
-
-  const cashbackModelHide = getValue(row, headers, 'cashbackModel' + suffix);
-  if (cashbackModelHide) hiddenRateObj.cashbackModel = cashbackModelHide;
-
-  // 日期範圍同樣以輸入欄為準、period 字串救援
-  resolvePeriodBounds(
-    hiddenRateObj,
-    periodHide,
-    getValue(row, headers, 'periodStart' + suffix),
-    getValue(row, headers, 'periodEnd' + suffix)
-  );
-
-  card.cashbackRates.push(hiddenRateObj);
-});
+// （原 _hide／_hide_1 專用隱藏槽處理已於 2026-07-12 退役——隱藏活動改用一般槽位
+//   （目前是 21/22）配 hideInDisplay_N=TRUE，主迴圈的 addOptionalField 會自動帶出，
+//   計算/匹配規則與一般槽完全相同，rate=0 一樣放行）
 
     // couponCashbacks（槽位上限依表頭自動偵測）
 card.couponCashbacks = [];

@@ -129,7 +129,11 @@ if (!card.specialItems || card.specialItems.length === 0)
 ### 7. hideInDisplay 機制（rate_hide 覆寫已於 2026-07-09 移除）
 
 **hideInDisplay**：
-- 用途：標記不在卡片詳情頁顯示的 cashbackRate（Sheet 的 `_hide`、`_hide_1` 槽位）
+- 用途：標記不在卡片詳情頁顯示的 cashbackRate
+- **✨ 2026-07-12 起：`_hide`／`_hide_1` 專用槽位已退役**——隱藏活動改用**一般
+  rate_N 槽位**（目前是 21/22）配 `hideInDisplay_N=TRUE`，走主匯出迴圈，
+  不再有第二支專用匯出迴圈。下方「隱藏槽標準配方」的欄位名對應改為
+  `rate_21`/`cashbackModel_21` 等，配方內容（rate=0、model 寫法）不變
 - 主要用於：國外消費／一般國內消費（避免跟詳情頁其他區塊重複顯示）
 - 這些項目仍然可以被搜尋
 
@@ -162,8 +166,8 @@ if (!card.specialItems || card.specialItems.length === 0)
 `0 && items` 是 falsy，會把 `rate_N=0` 的 stacking 槽整組丟掉（如
 `meta廣告`／`google廣告`，`cashbackModel=…+overseasBonusRate`、指定加碼
 成分為 0）。症狀跟隱藏槽 rate=0 被丟一模一樣：搜尋零結果、`cards.data`
-裡根本沒有該 item。**兩支匯出迴圈（可見 `rate_N` 與隱藏 `_hide`／`_hide_1`）
-都不可以用 `if (rate && items)` 當 guard。** 正確做法：只有 `items` 沒填才
+裡根本沒有該 item。**匯出迴圈不可以用 `if (rate && items)` 當 guard**
+（2026-07-12 起隱藏槽併入主迴圈，只剩一支，同一條規則）。正確做法：只有 `items` 沒填才
 跳過、`rate` 用 `parseFloat` 解析，`0` 放行、非數字才整組不匯出
 （placeholder 如 `{specialRate}` 為 truthy 字串，不受影響）。快速自檢：
 匯出後解 base64，「非 hideInDisplay 的 `rate===0` 槽數量」不該是 0。
