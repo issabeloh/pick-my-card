@@ -1169,6 +1169,8 @@ function handleQuickSearch(option) {
 
     // Update UI
     merchantInput.value = option.displayName;
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    toggleExactSearchEmptyHint(false);
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
@@ -2050,6 +2052,20 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
 
+    // 精準搜尋開關：切換時重跑手動輸入的匹配。
+    // 快捷搜尋不受精準搜尋影響（currentQuickSearchOption 存在時不動它的結果）。
+    const exactSearchCheckbox = document.getElementById('exact-search-checkbox');
+    if (exactSearchCheckbox) {
+        exactSearchCheckbox.addEventListener('change', () => {
+            if (currentQuickSearchOption) return;
+            if (merchantInput.value.trim()) {
+                handleMerchantInput();
+            } else {
+                toggleExactSearchEmptyHint(false);
+            }
+        });
+    }
+
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
 
@@ -2252,13 +2268,15 @@ function handleMerchantInput() {
 
     if (input.length === 0) {
         hideMatchedItem();
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = null;
         validateInputs();
         return;
     }
 
     // Find matching items (now returns array)
-    const matchedItems = findMatchingItem(input);
+    const exactOnly = isExactSearchEnabled();
+    const matchedItems = findMatchingItem(input, { exactOnly });
 
     console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
 
@@ -2266,11 +2284,16 @@ function handleMerchantInput() {
         // Get cards to compare for parking benefits check
         const cardsToCompare = getCardsForComparison();
         showMatchedItem(matchedItems, input, cardsToCompare);
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
+        // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
+        const relaxedWouldMatch = exactOnly &&
+            (findMatchingItem(input) || []).length > 0;
+        toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
     }
 
@@ -2470,9 +2493,24 @@ function mergeDataSearchExclusions(data) {
     }
 }
 
+// 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
+function isExactSearchEnabled() {
+    const checkbox = document.getElementById('exact-search-checkbox');
+    return !!(checkbox && checkbox.checked);
+}
+
+// 精準搜尋下零結果的提示（「無完全一致項目，可取消勾選看相近結果」）
+function toggleExactSearchEmptyHint(show) {
+    const hint = document.getElementById('exact-search-empty-hint');
+    if (hint) hint.style.display = show ? 'block' : 'none';
+}
+
 // Find matching item in cards database
-function findMatchingItem(searchTerm) {
+// options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
+// 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
+function findMatchingItem(searchTerm, options = {}) {
     if (!cardsData) return null;
+    const exactOnly = !!options.exactOnly;
 
     let searchLower = searchTerm.toLowerCase().trim();
     let searchTerms = [searchLower]; // Always include original search term
@@ -2641,6 +2679,7 @@ function findMatchingItem(searchTerm) {
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
+            if (exactOnly && !match.isExactMatch) continue;
             uniqueMatches.push(match);
         }
     }

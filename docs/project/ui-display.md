@@ -72,6 +72,13 @@
 - 函數：`loadCreditLimit()`/`saveCreditLimit()`/`setupCreditLimit()`（Grep "我的額度相關功能"）
 - 單卡頁唯讀顯示 `NT$ x,xxx` 或「未填寫」
 
+## 7. 精準搜尋核取方塊（2026-07-12 新增）
+
+- 位置：`#merchant-input` 正下方（`.exact-search-row`：`#exact-search-checkbox`「精準搜尋」＋灰字範例說明），預設關閉、不記憶狀態
+- 語義：勾選時 `handleMerchantInput` 以 `findMatchingItem(input, { exactOnly: true })` 過濾，只留 `isExactMatch`（**fuzzy 同義詞展開後全等也算**，如搜「國外」時 item「海外」視為一致）
+- **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
+- 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
+
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

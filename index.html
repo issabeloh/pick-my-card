@@ -61,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260712012718">
+    <link rel="stylesheet" href="styles.css?v=20260712014839">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -378,6 +378,16 @@
                             <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
                         </label>
                         <input type="text" id="merchant-input" placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+
+                        <!-- 精準搜尋（只顯示與輸入完全相同的項目；不影響快捷搜尋） -->
+                        <div class="exact-search-row">
+                            <label class="exact-search-toggle">
+                                <input type="checkbox" id="exact-search-checkbox" />
+                                <span>精準搜尋</span>
+                            </label>
+                            <span class="exact-search-desc">例：輸入「國外」只顯示「國外」，不含「國外航空」等</span>
+                        </div>
+                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選看相近結果</div>
 
                         <!-- 搜尋提示容器 -->
                         <div id="search-hints-container"></div>
@@ -1042,7 +1052,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260712012718" defer></script>
+    <script src="script.js?v=20260712014839" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
