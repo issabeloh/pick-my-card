@@ -3170,18 +3170,13 @@ function resolveBonusComponent(card, levelSettings, isOverseas) {
     return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '國內消費加碼' };
 }
 
-// Overflow rate for the simple (cap→rate_N, overflow→basic) path. Normally
-// basicCashback; ad platforms (meta廣告/google廣告) use overseasCashback
-// instead, except on 台新 Richart 卡 which never gets this override.
-// Shared by calculateCardCashback's simple path and findUpcomingActivity —
-// previously this exact check was copy-pasted in 3 places.
-function getOverflowRate(card, items) {
-    const isAdPlatform = items?.some(item =>
-        item.toLowerCase().includes('meta廣告') ||
-        item.toLowerCase().includes('google廣告')
-    );
-    const shouldUseOverseasForExcess = isAdPlatform && card.id !== 'taishin-richart';
-    return resolveBaseRate(card, shouldUseOverseasForExcess);
+// Overflow rate for the simple (cap→rate_N, overflow→basic) path: basicCashback.
+// Shared by calculateCardCashback's simple path and findUpcomingActivity.
+// （2026-07-12 移除 meta/google 廣告 → overseasCashback 特例：所有廣告槽位
+// 已改用明確的 cashbackModel（stacking），不再進簡單路徑——海外與否一律由
+// cashbackModel 決定，程式不認通路名稱。）
+function getOverflowRate(card) {
+    return resolveBaseRate(card, false);
 }
 
 // The rate to SHOW the user for a cashbackRate item. For stacking models
@@ -3834,7 +3829,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         // missing from the total.
                         layers.push({ name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
                     } else {
-                        const excessRate = getOverflowRate(card, matchedRateGroup?.items);
+                        const excessRate = getOverflowRate(card);
                         const remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                         layers.push({ name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null });
                     }
@@ -3935,7 +3930,7 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (parsedCap && amount > parsedCap) {
                     const remainingAmount = amount - parsedCap;
-                    const excessRate = getOverflowRate(card, rateGroup.items);
+                    const excessRate = getOverflowRate(card);
                     remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
@@ -4406,9 +4401,8 @@ async function displayCouponCashbacks(amount, merchantValue) {
                         const withinCapAmount = capNum;
                         const overflowAmount = amount - capNum;
                         const couponCashback = Math.floor(withinCapAmount * actualRate / 100);
-                        // 領券活動的溢出「刻意」直接用 basicCashback，不走 getOverflowRate：
-                        // 該 helper 的 meta/google 廣告→海外回饋特例只適用一般消費活動，
-                        // 領券商家都是國內實體/電商通路
+                        // 領券活動的溢出直接用 basicCashback（與 getOverflowRate 現值等價，
+                        // 不共用只是避免對 helper 的依賴；領券商家都是國內實體/電商通路）
                         const overflowRate = card.basicCashback || 0;
                         const overflowCashback = Math.floor(overflowAmount * overflowRate / 100);
                         potentialCashback = couponCashback + overflowCashback;

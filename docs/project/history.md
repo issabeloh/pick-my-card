@@ -4,6 +4,11 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-07-12 getOverflowRate 移除 meta/google 廣告寫死特例
+- 舊特例：簡單路徑溢出遇 meta/google 廣告通路改用 overseasCashback（台新 Richart 除外）——用通路名稱判斷海外的 cashbackModel 前遺物
+- 全部 21 個廣告槽位已改明確 stacking model（rate=0），不再進簡單路徑，特例成死碼 → 刪除，溢出一律 basicCashback
+- 自此海外與否唯一由 cashbackModel 決定，前端不認任何通路名稱
+
 ## 2026-07-12 快捷搜尋移除自動計算（產品決策）
 - handleQuickSearch 只填入關鍵詞，計算一律由用戶按「計算」（原自動計算有 disabled 時序問題，本來就時好時壞）
 - Spotlight「比較這個通路」是唯一保留自動計算的入口（用戶拍板）：由呼叫端補金額（1000）並代按計算
