@@ -72,9 +72,10 @@
 - 函數：`loadCreditLimit()`/`saveCreditLimit()`/`setupCreditLimit()`（Grep "我的額度相關功能"）
 - 單卡頁唯讀顯示 `NT$ x,xxx` 或「未填寫」
 
-## 7. 精準搜尋核取方塊（2026-07-12 新增）
+## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
 
-- 位置：與「新戶活動」同列、在其**左邊**（桌機 `.show-promos-desktop`／手機 `.show-promos-mobile` 各一個 checkbox：`#exact-search-checkbox-desktop`/`-mobile`，change 事件互相同步，讀取用 `isExactSearchEnabled()`）。說明文字收在「?」按鈕（沿用 `promo-help-hover` 桌機 popover／`promo-help-inline` 手機內嵌展開，`setupCardholderPromoToggle` 自動接線）。預設關閉、不記憶狀態
+- 精準搜尋與新戶活動都是**膠囊 toggle**（淡藍圓角，樣式在 styles.css「膠囊 toggle」區），精準搜尋在左/在前。桌機 `.show-promos-desktop`（消費金額下方）／手機 `.show-promos-mobile`（**`.input-row-with-button` 的直接子元素**，佔滿整列、在快捷搜尋下方）各一個 checkbox：`#exact-search-checkbox-desktop`/`-mobile`，change 事件互相同步，讀取用 `isExactSearchEnabled()`。說明文字收在「?」按鈕（沿用 `promo-help-hover` 桌機 popover／`promo-help-inline` 手機內嵌展開，`setupCardholderPromoToggle` 自動接線）。預設關閉、不記憶狀態
+- **搜尋輸入區單欄直向流**（手機，參考 Google Flights/Airbnb 搜尋卡片）：商家輸入 → 快捷 chips（「快捷搜尋」標題列已 display:none，chips 視覺上屬於商家輸入這一塊）→ 膠囊 toggles 一列 → 金額＋計算按鈕同列。手機版金額欄砍標籤與提示、以 `.amount-input-wrap` 的 NT$ 前綴補幣別語義（桌機前綴隱藏、維持標籤）。改這區排版時注意 `.input-row-with-button` 的 grid：桌機 `2fr 1fr auto` 三欄、手機 `1fr auto`＋商家/toggles 整列 span
 - 語義：勾選時 `handleMerchantInput` 以 `findMatchingItem(input, { exactOnly: true })` 過濾，只留 `isExactMatch`（**fuzzy 同義詞展開後全等也算**，如搜「國外」時 item「海外」視為一致）
 - **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉

@@ -1799,22 +1799,8 @@ input[type="number"]:focus {
 
 @media (max-width: 768px) {
     .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
-    /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
-    .button-group .show-promos-toggle label {
-        height: auto;
-        line-height: 1.4;
-        margin-bottom: 0;
-    }
-    /* 手機版兩組 toggle（精準搜尋/新戶活動）直向堆疊：並排會把 1fr auto 網格的
-       auto 欄（按鈕欄）撐寬，擠壓左欄「消費金額」到換行 */
-    .show-promos-mobile .promo-toggle-row {
-        display: flex;
-    }
-    .show-promos-mobile .promo-toggle-row + .promo-toggle-row {
-        margin-left: 0;
-        margin-top: 6px;
-    }
+    /* 手機版 toggles 是 .input-row-with-button 的直接子元素：佔滿整列（快捷搜尋下方） */
+    .show-promos-mobile { display: block; grid-column: 1 / -1; margin: 0; }
 }
 
 /* ==========================================
@@ -7296,11 +7282,51 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
-/* ============ 精準搜尋 ============ */
-/* 核取方塊本體與新戶活動同列（.show-promos-toggle 內，樣式全沿用）；
-   同列兩組 toggle 之間留距 */
+/* ============ 精準搜尋／新戶活動 膠囊 toggle（2026-07-12 版面重整） ============ */
+/* 兩組 toggle 膠囊化（Airbnb 篩選風格）；桌機、手機共用。
+   字級/顏色需蓋過上方 .show-promos-toggle label 的 14px !important（靠更高特異度） */
+.show-promos-toggle .promo-toggle-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0 8px 0 0;
+}
+
 .show-promos-toggle .promo-toggle-row + .promo-toggle-row {
-    margin-left: 14px;
+    margin-left: 0;
+}
+
+.show-promos-toggle .promo-toggle-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1.5px solid #dbeafe;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px !important;
+    color: #1d4ed8;
+    background: #eff6ff;
+    white-space: nowrap;
+}
+
+.show-promos-toggle .promo-toggle-row label:has(input:checked) {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.show-promos-toggle .promo-toggle-row input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: #2563eb;
+}
+
+.show-promos-toggle .promo-toggle-row .promo-help-btn {
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+    background: #bfdbfe;
+    color: #1e40af;
 }
 
 /* 精準搜尋零結果提示（merchant-input 下方） */
@@ -7308,4 +7334,49 @@ input[type="text"].credit-limit-input:focus {
     margin-top: 6px;
     font-size: 0.8rem;
     color: #b45309;
+}
+
+/* ============ 搜尋輸入區版面重整（2026-07-12，參考 Google Flights/Airbnb 搜尋卡片） ============ */
+/* 消費商家與快捷搜尋收成同一塊：拿掉「快捷搜尋」標題列，chips 直接貼在輸入框下方
+   （chips 本來就是為了填入消費商家的建議選項） */
+.quick-search-label {
+    display: none;
+}
+
+.quick-search-wrapper {
+    margin-top: 10px;
+}
+
+/* 金額輸入框 NT$ 前綴容器：桌機由標籤傳達幣別（前綴隱藏），手機顯示前綴取代標籤 */
+.amount-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.amount-input-wrap .amount-prefix {
+    display: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    /* 手機版金額列：砍標籤與提示（預設值 1000 直接顯示在框內），NT$ 前綴補幣別語義 */
+    label[for="amount-input"] {
+        display: none;
+    }
+
+    .amount-hint {
+        display: none;
+    }
+
+    .amount-input-wrap .amount-prefix {
+        display: inline;
+    }
+
+    .button-group label {
+        display: none;
+    }
 }
