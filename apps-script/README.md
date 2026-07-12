@@ -19,9 +19,15 @@
   - **修正 1**：`resolvePeriodBounds()` 統一決定日期範圍——優先讀輸入欄，某一邊讀不到時從
     `period_N` 字串拆回來救援。套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。
   - **修正 2**：`runQACheck` 新增檢查 8（`periodEnd_N` 有值但 `periodStart_N` 讀不到；`period_N`
-    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在；欄位標題重複），
-    匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在、`period_N` 欄同槽存在；
+    欄位標題重複），匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+  - **修正 3**：rate／coupon 槽位上限改由 `maxSlotIndex()` 依表頭自動偵測（原本寫死 `<= 21`，
+    但表已加到 `rate_22`——slot 22 整槽被靜默丟棄、永遠不會匯出）。之後加 `rate_23` 等新欄
+    不用改程式。
   - 前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
+  - 事後對照維護者提供的完整表頭確認：事故元凶是 slot 2 的 `periodStart` 欄標題誤植成
+    `periodStart_1`（重複欄名，indexOf 只抓最前面那欄）；另掃出 `period_19` 欄漏建（QA 檢查 9a
+    會報）。其餘 381 欄無重複、無空格／大小寫／全形問題。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 

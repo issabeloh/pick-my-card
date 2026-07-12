@@ -119,7 +119,7 @@ function runQACheck() {
     // 檢查 8: 期間欄位完整性與一致性（periodStart/End_N 是輸入源頭、period_N 是公式字串）
     // 8a: periodEnd_N 讀得到但 periodStart_N 讀不到 → 匯出會缺開始日（沒填、或欄位標題對不上）
     // 8b: period_N 與輸入的 periodStart/End_N 日期對不上 → 有一邊是舊資料（如肌膚之鑰誤植案例）
-    for (let j = 1; j <= 21; j++) {
+    for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
       const ps = getValue(row, headers, `periodStart_${j}`);
       const pe = getValue(row, headers, `periodEnd_${j}`);
       const per = getValue(row, headers, `period_${j}`);
@@ -151,14 +151,17 @@ function runQACheck() {
 
   // 檢查 9: 欄位標題結構（匯出用 headers.indexOf 按「完全相同的字串」找欄，
   // 標題拼字／前後空格／大小寫／全形字元不對 = 整欄讀不到，儲存格有填也一樣）
-  // 9a: periodStart_N / periodEnd_N 必須成對存在
-  for (let j = 1; j <= 21; j++) {
+  // 9a: periodStart_N / periodEnd_N 必須成對存在；period_N（顯示字串公式欄）也應同槽存在
+  for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
     const hasStart = headers.indexOf(`periodStart_${j}`) >= 0;
     const hasEnd = headers.indexOf(`periodEnd_${j}`) >= 0;
     if (hasStart !== hasEnd) {
       const missing = hasStart ? `periodEnd_${j}` : `periodStart_${j}`;
       const present = hasStart ? `periodStart_${j}` : `periodEnd_${j}`;
       issues.push(['(全表)', '', '欄位結構', missing, `有 ${present} 欄但找不到 ${missing} 欄（標題拼錯／多空格／漏建），該欄所有卡片的值都會匯不出去`, '⚠️']);
+    }
+    if (hasStart && hasEnd && headers.indexOf(`period_${j}`) < 0) {
+      issues.push(['(全表)', '', '欄位結構', `period_${j}`, `槽位 ${j} 有 periodStart/periodEnd 欄但找不到 period_${j} 欄（顯示字串公式欄漏建或標題拼錯）`, '⚠️']);
     }
   }
   // 9b: 欄位標題重複（indexOf 只會讀到最前面那欄，後面同名欄整欄被忽略）
@@ -295,9 +298,10 @@ function exportToJSON() {
   addOptionalField(card, row, headers, 'levelLabelFormat');
 }
 
-    // cashbackRates - 處理 rate_N
+    // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];
-    for (let j = 1; j <= 21; j++) {
+    const maxRateSlot = maxSlotIndex(headers, 'rate');
+    for (let j = 1; j <= maxRateSlot; j++) {
       const rate = getValue(row, headers, `rate_${j}`);
       const items = getValue(row, headers, `items_${j}`);
 
@@ -389,9 +393,10 @@ function exportToJSON() {
   card.cashbackRates.push(hiddenRateObj);
 });
 
-    // couponCashbacks
+    // couponCashbacks（槽位上限依表頭自動偵測）
 card.couponCashbacks = [];
-for (let j = 1; j <= 21; j++) {
+const maxCouponSlot = maxSlotIndex(headers, 'couponMerchant');
+for (let j = 1; j <= maxCouponSlot; j++) {
   const merchant = getValue(row, headers, `couponMerchant_${j}`);
   const rate = getValue(row, headers, `couponRate_${j}`);
 
@@ -695,6 +700,19 @@ if (faqSheet) {
 function getValue(row, headers, fieldName) {
   const index = headers.indexOf(fieldName);
   return index >= 0 ? row[index] : null;
+}
+
+// ⭐ 依表頭自動偵測某前綴的最大槽位編號（如 rate_1..rate_22 → 22）。
+//    匯出迴圈用它決定上限，之後在試算表加 rate_23 等新欄位不用改程式。
+//    （2026-07 教訓：表已加到 rate_22，程式迴圈還寫死 <= 21，slot 22 整槽被靜默丟棄）
+function maxSlotIndex(headers, prefix) {
+  const re = new RegExp('^' + prefix + '_(\\d+)$');
+  let max = 0;
+  headers.forEach(function(h) {
+    const m = String(h).match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return max;
 }
 
 function addOptionalField(obj, row, headers, fieldName, type = 'string', targetName = null) {
