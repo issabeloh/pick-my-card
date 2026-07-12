@@ -1188,3 +1188,14 @@ body {
     }
     html { scroll-behavior: auto; }
 }
+
+/* ============ 頁尾 SEO 說明（scrolly 之後的靜態區塊） ============ */
+.lp-footer {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.9;
+    text-align: center;
+}

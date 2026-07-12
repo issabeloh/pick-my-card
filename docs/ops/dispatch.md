@@ -85,3 +85,5 @@
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-07-12] scout 回報「搜尋結果卡片有圖片、無 lazy loading」被直接寫進給用戶的優化建議，實查結果卡片根本沒有圖片 → haiku 偵察結論未抽驗就當事實用 → scout 回報中會變成「工項或對用戶結論」的條目，主對話必須先 read-back 該檔案:行號親自驗證才能採用；只當導航線索用的條目可不驗
+- [2026-07-12] 並行 builder 把工作目錄裡另一項工作的未 commit 改動（regression 基準）當雜訊處理掉 → 多 agent 共用同一工作樹，派工 prompt 沒聲明樹上有他人改動、也沒禁止還原類操作 → 並行派工前先把已完成單位 commit 乾淨；每個 builder/verifier prompt 固定聲明「工作樹上可能有其他任務的未 commit 改動，不屬於你的檔案一律不碰」並明文禁止 git checkout/restore/clean/stash 與「還原不相關檔案」
