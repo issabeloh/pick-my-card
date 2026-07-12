@@ -89,6 +89,12 @@ const loadingOverlay = {
     element: null,
     textElement: null,
     startTime: null,
+    // true 只在 show() 真的把 overlay 顯示出來之後；hide() 用它 guard，
+    // 讓「show() 從未被呼叫過就呼叫 hide()」是安全的 no-op（calculateCashback 的
+    // 150ms 延遲顯示模式：計算很快時 show() 可能永遠不會跑到，但 finally 仍會
+    // 無條件呼叫 hide()）。沒有這個 guard，hide() 會在未 show() 的情況下也呼叫
+    // enableBodyScroll()，可能誤解除「其他 modal 正持有」的 scroll lock。
+    shown: false,
 
     init() {
         this.element = document.getElementById('global-loading-overlay');
@@ -98,6 +104,7 @@ const loadingOverlay = {
     show(message = '載入中...') {
         if (!this.element) this.init();
 
+        this.shown = true;
         this.startTime = performance.now();
         if (this.textElement) {
             this.textElement.textContent = message;
@@ -111,6 +118,9 @@ const loadingOverlay = {
     },
 
     hide() {
+        if (!this.shown) return; // 從未 show() 過，不做任何事（見上方 shown 註解）
+        this.shown = false;
+
         if (!this.element) this.init();
 
         if (this.element) {
@@ -2847,17 +2857,15 @@ async function calculateCashback() {
         return;
     }
 
-    // Show loading for operations that might take time
-    const cardsToCompareCount = getCardsForComparison().length;
-
-    // Only show loading if comparing many cards or multiple matched items
-    const shouldShowLoading = cardsToCompareCount > 5 || (currentMatchedItem && Array.isArray(currentMatchedItem) && currentMatchedItem.length > 3);
-
-    if (shouldShowLoading) {
+    // Loading overlay 延遲顯示：多數計算（包含訪客的全部案例）在 80-155ms 內完成，
+    // 立刻顯示 overlay 對快搜尋只會造成閃爍、沒有實際回饋感。改成「超過 150ms 才顯示」
+    // ——只有真的慢（主要是登入用戶第一次計算要序列等 Firestore getDoc）才會看到。
+    // 已知限制：純 CPU 阻塞主執行緒時，這個 timer 本身也要等主執行緒讓出才會觸發，
+    // overlay 可能到計算尾端才畫出來；Firestore 等待型的慢（主要場景）會正常顯示，
+    // 因為 await 會讓出主執行緒，timer 能準時觸發。
+    const loadingShowTimer = setTimeout(() => {
         loadingOverlay.show('正在計算回饋...');
-        // Allow UI to update
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
+    }, 150);
 
     try {
 
@@ -3050,10 +3058,11 @@ async function calculateCashback() {
     } catch (err) {
         console.error('❌ calculateCashback 發生錯誤:', err);
     } finally {
-        // Always hide loading overlay, even on error
-        if (shouldShowLoading) {
-            loadingOverlay.hide();
-        }
+        // 無條件清 timer + hide：若 150ms timer 還沒觸發就先 clearTimeout（overlay
+        // 從未顯示過，loadingOverlay.hide() 的 shown guard 讓這是安全的 no-op）；
+        // 若 timer 已經顯示了 overlay，這裡負責收尾隱藏。
+        clearTimeout(loadingShowTimer);
+        loadingOverlay.hide();
     }
 }
 
@@ -5557,18 +5566,46 @@ function toggleRateComposition(btn) {
 // Format currency
 
 // Authentication setup
+//
+// Firebase 是從 gstatic 載入的外部模組，在公司網路/擋廣告環境可能永遠載不到。
+// 過去的寫法是無限 100ms 輪詢直到 Firebase 就緒才綁定任何 UI 事件——
+// Firebase 載不到＝整站卡在 boot loader，訪客連「計算」按鈕都按不到。
+// 現在拆成兩條路：
+//   - firebaseReadyHandled 之前（最多等 FIREBASE_FALLBACK_MS）：持續輪詢等 Firebase。
+//   - 逾時仍未就緒：ensureGuestUIBound() 立即以訪客模式綁定 UI（不重複，見下方 guard），
+//     輪詢繼續在背景跑；Firebase 之後就緒時只補跑 ensureAuthSubscribed()，不重新綁定事件。
+const FIREBASE_FALLBACK_MS = 4000;
+
 function setupAuthentication() {
+    let firebaseReadyHandled = false;
+
+    const onFirebaseReady = () => {
+        if (firebaseReadyHandled) return;
+        firebaseReadyHandled = true;
+        auth = window.firebaseAuth;
+        db = window.db;
+        initializeAuthListeners();
+    };
+
     // Wait for Firebase to load
     const checkFirebaseReady = () => {
+        if (firebaseReadyHandled) return; // already handled via fallback+late-arrival path
         if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
-            auth = window.firebaseAuth;
-            db = window.db;
-            initializeAuthListeners();
+            onFirebaseReady();
         } else {
             setTimeout(checkFirebaseReady, 100);
         }
     };
     checkFirebaseReady();
+
+    // Fallback: Firebase 逾時未就緒 → 先以訪客模式初始化 UI，避免整站卡死。
+    // 輪詢（checkFirebaseReady 的 setTimeout 鏈）仍在跑，Firebase 之後到位時
+    // onFirebaseReady 會補做 auth 訂閱與登入態更新。
+    setTimeout(() => {
+        if (firebaseReadyHandled) return;
+        console.error('⏱️ Firebase 載入逾時（' + FIREBASE_FALLBACK_MS + 'ms），以訪客模式初始化 UI，持續等待 SDK...');
+        ensureGuestUIBound();
+    }, FIREBASE_FALLBACK_MS);
 }
 
 // Setup avatar dropdown menu (toggle, close on outside click, menu actions)
@@ -5682,7 +5719,26 @@ function clearPersonalLocalDataOnSignOut(uid) {
     console.log('🧹 已清理本機個人資料（登出）');
 }
 
-function initializeAuthListeners() {
+// UI 綁定與 auth 訂閱拆開兩個 guard：Firebase 逾時 fallback 時只需要 ensureGuestUIBound()
+// 就能讓網站可互動；Firebase 之後就緒時只補跑 ensureAuthSubscribed()，不重新綁定任何
+// 事件監聽器（重複綁定會讓按鈕點擊、document click 等監聽器疊加觸發）。
+let _guestUIBound = false;
+let _authStateSubscribed = false;
+// ensureGuestUIBound() 內定義的 closures，ensureAuthSubscribed() 的 onAuthStateChanged
+// callback 需要用到同一份（避免兩份 showToolSections/setGuestAvatarState 各自為政）。
+let _authUIRefs = null;
+
+// 綁定「訪客也能用」的 UI：avatar 狀態、工具區顯示/隱藏、各種 modal、「開始使用」按鈕。
+// 刻意不依賴 auth/db 是否就緒——Firebase 逾時時這是唯一會跑到的初始化路徑。
+function ensureGuestUIBound() {
+    if (_guestUIBound) return;
+    _guestUIBound = true;
+
+    // Firebase 逾時 fallback 時，這裡是唯一會清除 boot loader 的地方
+    // （原本綁在 onAuthStateChanged 裡，Firebase 若永遠載不到就永遠不會清）。
+    // 見 index.html #pmc-boot-loader / html.pmc-returning-user 的說明。
+    document.documentElement.classList.remove('pmc-returning-user');
+
     const signInBtn = document.getElementById('sign-in-btn');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
@@ -5785,6 +5841,124 @@ function initializeAuthListeners() {
         if (t.financeWarningRow) t.financeWarningRow.style.display = 'none';
         stopSpotlightAutoRotate();
     }
+
+    // 分享給 ensureAuthSubscribed() 的 onAuthStateChanged callback用，避免兩份
+    // showToolSections/setGuestAvatarState/setLoggedInAvatarState 各自為政。
+    _authUIRefs = { setGuestAvatarState, setLoggedInAvatarState, showToolSections, hideToolSections };
+
+    // Setup manage cards modal
+    setupManageCardsModal();
+
+    // Setup my-owned-cards modal
+    setupMyOwnedCardsModal();
+
+    // Setup new cardholder promos toggle (search results section)
+    setupCardholderPromoToggle();
+
+    // Setup sidebar drawer for mobile
+    setupSidebarDrawer();
+
+    // Setup "Start Using" button click event (Option 2: Toggle display)
+    const startUsingBtn = document.getElementById('start-using-btn');
+    if (startUsingBtn) {
+        startUsingBtn.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
+            showToolSections();
+
+            // Hide the button itself (for mobile)
+            startUsingBtn.style.display = 'none';
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
+
+    // Setup header "Start Using" button (in auth section)
+    const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+    if (startUsingBtnHeader) {
+        startUsingBtnHeader.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
+            showToolSections();
+
+            // Hide the button itself (for mobile)
+            startUsingBtnHeader.style.display = 'none';
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
+
+    // Setup second "Start Using" button with same functionality
+    const startUsingBtn2 = document.getElementById('start-using-btn-2');
+    if (startUsingBtn2) {
+        startUsingBtn2.addEventListener('click', () => {
+            // Hide product intro section
+            const productIntroSection = document.getElementById('product-intro-section');
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+
+            // Show tool sections
+            appStarted = true;
+            setGuestDropdownVisibility();
+            showToolSections();
+
+            // Hide the button itself (for mobile)
+            startUsingBtn2.style.display = 'none';
+
+            // Focus on merchant input
+            setTimeout(() => {
+                const merchantInput = document.getElementById('merchant-input');
+                if (merchantInput) {
+                    merchantInput.focus();
+                }
+            }, 100);
+        });
+    }
+}
+
+// 訂閱 Firebase auth 狀態變化。只在 auth 真的就緒時呼叫；用 _authStateSubscribed
+// guard 避免 Firebase 逾時 fallback 之後晚到時重複訂閱（onAuthStateChanged 訂閱兩次
+// 會讓登入/登出流程跑兩遍，造成 loadUserData 等重複呼叫）。
+function ensureAuthSubscribed() {
+    if (_authStateSubscribed) return;
+    if (!auth) {
+        console.error('❌ ensureAuthSubscribed() 在 auth 就緒前被呼叫，略過訂閱');
+        return;
+    }
+    if (!_authUIRefs) {
+        console.error('❌ ensureAuthSubscribed() 在 ensureGuestUIBound() 之前被呼叫，略過訂閱');
+        return;
+    }
+    _authStateSubscribed = true;
+
+    const { setGuestAvatarState, setLoggedInAvatarState, showToolSections } = _authUIRefs;
 
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
@@ -5922,103 +6096,20 @@ function initializeAuthListeners() {
             populateCardChips();
             populatePaymentChips();
         }
+
+        // 登入成功後預熱級別快取（見 warmCardLevelCache 定義處的說明），
+        // fire-and-forget——不擋 onAuthStateChanged 流程。
+        if (user) {
+            warmCardLevelCache();
+        }
     });
-    
-    // Setup manage cards modal
-    setupManageCardsModal();
+}
 
-    // Setup my-owned-cards modal
-    setupMyOwnedCardsModal();
-
-    // Setup new cardholder promos toggle (search results section)
-    setupCardholderPromoToggle();
-
-    // Setup sidebar drawer for mobile
-    setupSidebarDrawer();
-
-    // Setup "Start Using" button click event (Option 2: Toggle display)
-    const startUsingBtn = document.getElementById('start-using-btn');
-    if (startUsingBtn) {
-        startUsingBtn.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtn.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
-
-    // Setup header "Start Using" button (in auth section)
-    const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-    if (startUsingBtnHeader) {
-        startUsingBtnHeader.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtnHeader.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
-
-    // Setup second "Start Using" button with same functionality
-    const startUsingBtn2 = document.getElementById('start-using-btn-2');
-    if (startUsingBtn2) {
-        startUsingBtn2.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtn2.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
+// Firebase 就緒後才呼叫：先確保訪客 UI 已綁定（fallback 逾時可能已經跑過，
+// 這裡的 ensureGuestUIBound() 是 no-op），再訂閱 auth 狀態。
+function initializeAuthListeners() {
+    ensureGuestUIBound();
+    ensureAuthSubscribed();
 }
 
 // ✨ Unified user data loader - loads ALL user data in ONE Firestore call
@@ -9724,6 +9815,36 @@ async function getCardLevel(cardId, defaultLevel) {
     const resolved = await getCardLevelUncached(cardId, defaultLevel);
     cardLevelCache.set(cacheKey, resolved);
     return resolved;
+}
+
+// 登入後預熱級別快取：並行對所有「有級別設定」的卡呼叫 getCardLevel()，把結果灌進
+// cardLevelCache，讓使用者登入後的第一次計算不用再對每張卡串行等 Firestore getDoc
+// （resolveCardLevel → getCardLevel 命中快取直接回傳）。
+//
+// 只讀不寫：這裡只是把 getCardLevel() 本來就會做的讀取提前、並行跑，不呼叫
+// saveCardLevel()。getCardLevelUncached() 內既有的「本機鏡像補上傳 Firestore」邏輯
+// （雲端沒值但本機鏡像有值時會 saveCardLevel 一次）維持原樣不動——那是既有的合法
+// 呼叫場景（見 docs/project/storage-and-security.md 第 2 節），預熱只是提早觸發它，
+// 不是新增呼叫路徑。
+//
+// Fire-and-forget：呼叫端不 await，逐卡失敗各自 catch 並 console.error，不讓單一
+// 卡片的 Firestore 錯誤擋住其他卡或影響 onAuthStateChanged 流程。
+function warmCardLevelCache() {
+    if (!auth || !auth.currentUser) return; // 訪客沒有 Firestore 級別可預熱
+    if (!cardsData || !Array.isArray(cardsData.cards)) return; // cardsData 還沒載入時安靜跳過
+
+    const levelCards = cardsData.cards.filter(
+        card => card.hasLevels && card.levelSettings && Object.keys(card.levelSettings).length > 0
+    );
+
+    Promise.all(levelCards.map(card => {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        return getCardLevel(card.id, defaultLevel).catch(err => {
+            console.error(`⚠️ 級別快取預熱失敗 (${card.id}):`, err);
+        });
+    })).then(() => {
+        console.log(`✅ 級別快取預熱完成（${levelCards.length} 張卡）`);
+    });
 }
 
 // 卡片級別的本機 key：登入者一律用 uid 區分（cardLevel_<uid>_<cardId>），

@@ -52,6 +52,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase modules: modulepreload so the browser fetches/parses them while the
+         rest of <head> loads, instead of waiting for the inline module script near the
+         end of <body> to discover the import specifiers. URLs must match the import
+         statements verbatim (see the inline <script type="module"> block below). -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js" crossorigin>
+
     <!-- Font display optimization to prevent layout shift -->
     <style>
         /* Ensure font is loaded with swap to prevent invisible text */
@@ -61,7 +71,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260712010418">
+    <link rel="stylesheet" href="styles.css?v=20260712060326">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -1042,10 +1052,17 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260712010418" defer></script>
+    <script src="script.js?v=20260712060326" defer></script>
 
     <!-- Firebase Configuration -->
-    <script type="module" defer>
+    <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
+         script 完全 fetch+執行完才會觸發 DOMContentLoaded——Firebase 網路慢（不是被擋，只是慢）
+         時，script.js 的 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
+         fallback 本身）會被這個 script 卡住，逾時 fallback 永遠等不到執行的機會。改 async 讓這個
+         module 獨立非同步載入，不阻塞 DOMContentLoaded；script.js 原本就用輪詢等
+         window.firebaseAuth/window.db 就緒，不依賴執行順序，這裡只設定 window.* 屬性、不碰 DOM，
+         async 對它是安全的。 -->
+    <script type="module" async>
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
