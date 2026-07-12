@@ -7287,39 +7287,14 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
-/* ============ 精準搜尋核取方塊（merchant-input 下方） ============ */
-.exact-search-row {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 6px;
+/* ============ 精準搜尋 ============ */
+/* 核取方塊本體與新戶活動同列（.show-promos-toggle 內，樣式全沿用）；
+   同列兩組 toggle 之間留距 */
+.show-promos-toggle .promo-toggle-row + .promo-toggle-row {
+    margin-left: 14px;
 }
 
-.exact-search-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #6b7280;
-    cursor: pointer;
-    user-select: none;
-    white-space: nowrap;
-}
-
-.exact-search-toggle input[type="checkbox"] {
-    width: auto;
-    margin: 0;
-    cursor: pointer;
-    accent-color: #667eea;
-}
-
-.exact-search-desc {
-    font-size: 0.75rem;
-    color: #9ca3af;
-}
-
+/* 精準搜尋零結果提示（merchant-input 下方） */
 .exact-search-empty-hint {
     margin-top: 6px;
     font-size: 0.8rem;

@@ -2052,19 +2052,25 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
 
-    // 精準搜尋開關：切換時重跑手動輸入的匹配。
-    // 快捷搜尋不受精準搜尋影響（currentQuickSearchOption 存在時不動它的結果）。
-    const exactSearchCheckbox = document.getElementById('exact-search-checkbox');
-    if (exactSearchCheckbox) {
-        exactSearchCheckbox.addEventListener('change', () => {
-            if (currentQuickSearchOption) return;
-            if (merchantInput.value.trim()) {
-                handleMerchantInput();
-            } else {
-                toggleExactSearchEmptyHint(false);
-            }
+    // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
+    // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
+    // （currentQuickSearchOption 存在時不動它的結果）。
+    const onExactSearchChange = (e) => {
+        EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb && cb !== e.target) cb.checked = e.target.checked;
         });
-    }
+        if (currentQuickSearchOption) return;
+        if (merchantInput.value.trim()) {
+            handleMerchantInput();
+        } else {
+            toggleExactSearchEmptyHint(false);
+        }
+    };
+    EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+        const cb = document.getElementById(id);
+        if (cb) cb.addEventListener('change', onExactSearchChange);
+    });
 
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
@@ -2494,9 +2500,13 @@ function mergeDataSearchExclusions(data) {
 }
 
 // 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
+// 桌機/手機各有一個 checkbox（比照新戶活動 toggle），由 change 事件保持同步，讀任一存在者即可
+const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox-desktop', 'exact-search-checkbox-mobile'];
 function isExactSearchEnabled() {
-    const checkbox = document.getElementById('exact-search-checkbox');
-    return !!(checkbox && checkbox.checked);
+    return EXACT_SEARCH_CHECKBOX_IDS.some(id => {
+        const checkbox = document.getElementById(id);
+        return !!(checkbox && checkbox.checked);
+    });
 }
 
 // 精準搜尋下零結果的提示（「無完全一致項目，可取消勾選看相近結果」）
