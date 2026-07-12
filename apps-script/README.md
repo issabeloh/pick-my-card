@@ -37,6 +37,11 @@
     現統一走 `resolvePeriodBounds`。
   - 依維護者要求，拿掉「`period_N` 欄漏建」QA 通知（保留成對檢查與重複欄名檢查——那兩種是
     「整欄資料靜默消失」等級，非簡單補欄）。
+  - **移除 Drive 下載區塊**（`createDownloadUrl` / `TARGET_FOLDER_ID` / HTML 下載視窗）：
+    `publishToGitHub` 已自動 commit cards.data + cards.version，下載連結只是每次匯出在
+    Drive 堆兩個永不清理的檔案。匯出結果改用簡單 alert 顯示統計。歷史版本備份由 GitHub
+    commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
+    Sheets 版本記錄承擔。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 

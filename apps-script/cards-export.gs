@@ -607,58 +607,25 @@ if (faqSheet) {
   }, null, 2);
 
 
-  // 🔒 Base64 編碼
+  // 🔒 Base64 編碼 → 直接發布到 GitHub（cards.data + cards.version），
+  //    Vercel 自動部署。不再產生 Drive 下載檔（2026-07-12 移除：下載區塊
+  //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
+  //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
   const version = publishToGitHub(encoded);
 
-  // 建立兩個檔案：cards.json (原始) 和 cards.data (編碼)
-  const jsonFileName = `cards.json`;
-  const dataFileName = 'cards.data';
-
-  const jsonBlob = Utilities.newBlob(jsonContent, 'application/json', jsonFileName);
-  const dataBlob = Utilities.newBlob(encoded, 'text/plain', dataFileName);
-
-  // 顯示下載連結
-  const jsonUrl = createDownloadUrl(jsonBlob);
-  const dataUrl = createDownloadUrl(dataBlob);
-
-  const htmlOutput = HtmlService
-    .createHtmlOutput(`
-      <html>
-        <body style="font-family: Arial; padding: 15px;">
-          <h2>✅ JSON 匯出成功！</h2>
-          <p>匯出了 <strong>${cards.length}</strong> 張信用卡、<strong>${payments.length}</strong> 個行動支付、<strong>${quickSearchOptions.length}</strong> 個快捷選項、<strong>${Object.keys(merchantPayments).length}</strong> 個商家付款資訊、<strong>${faqList.length}</strong> 個FAQ、<strong>${announcements.length}</strong> 則公告、<strong>${referralLinks.length}</strong> 個推薦連結、<strong>Shopback: ${cashbackSites.shopback.length} / LINE 購物: ${cashbackSites.linebuy.length}</strong> 個返利站點、<strong>${newCardholderPromos.length}</strong> 筆新戶活動、<strong>申辦 CTA: ${Object.keys(cardApplyCtas).length} 張卡片</strong>、<strong>精選優惠 (spotlights): ${spotlights.length} 筆</strong></p>
-
-          <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #2e7d32;">🔒 下載編碼檔案 (推薦)</h3>
-            <p><a href="${dataUrl}" download="${dataFileName}" style="display: inline-block; background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">⬇️ 下載 cards.data</a></p>
-            <p style="color: #666; font-size: 12px; margin: 5px 0 0 0;">
-              ✅ 已編碼保護，上傳到 GitHub 後無法直接讀取
-            </p>
-          </div>
-
-          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0; color: #856404;">📄 原始 JSON (備份用)</h3>
-            <p><a href="${jsonUrl}" download="${jsonFileName}" style="display: inline-block; background: #ffc107; color: #333; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">⬇️ 下載 cards.json</a></p>
-            <p style="color: #666; font-size: 12px; margin: 5px 0 0 0;">
-              ⚠️ 僅供本地備份，不要上傳到 GitHub
-            </p>
-          </div>
-
-          <p style="color: #666; font-size: 13px; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
-            <strong>📤 上傳步驟：</strong><br>
-            1. 下載 <strong>cards.data</strong><br>
-            2. 放到你的專案資料夾，替換舊的 cards.data<br>
-            3. Git commit 並 push 到 GitHub<br>
-            4. Vercel 會自動部署更新 ✨
-          </p>
-        </body>
-      </html>
-    `)
-    .setWidth(550)
-    .setHeight(450);
-
-  ui.showModalDialog(htmlOutput, '匯出完成');
+  ui.alert(
+    '✅ 匯出完成',
+    `已自動發布到 GitHub（版本 ${version}），Vercel 會自動部署。\n\n` +
+    `匯出內容：\n` +
+    `・信用卡 ${cards.length} 張\n` +
+    `・行動支付 ${payments.length} 個、快捷選項 ${quickSearchOptions.length} 個\n` +
+    `・商家付款資訊 ${Object.keys(merchantPayments).length} 個、FAQ ${faqList.length} 則、公告 ${announcements.length} 則\n` +
+    `・推薦連結 ${referralLinks.length} 個、返利站點 Shopback ${cashbackSites.shopback.length} / LINE購物 ${cashbackSites.linebuy.length}\n` +
+    `・新戶活動 ${newCardholderPromos.length} 筆、申辦 CTA ${Object.keys(cardApplyCtas).length} 張卡\n` +
+    `・精選活動 ${spotlights.length} 筆`,
+    ui.ButtonSet.OK
+  );
 }
 
 // ==========================================
@@ -746,21 +713,6 @@ function resolvePeriodBounds(obj, periodStr, typedStart, typedEnd) {
   if (endRaw) {
     const iso = formatDateToISO(endRaw);
     if (iso) obj.periodEnd = iso;
-  }
-}
-
-const TARGET_FOLDER_ID = '1UbqO3cJKaLhIzp8H5aQEJc0fPyg4fvwT'; function createDownloadUrl(blob) {
-
-  try {
-
-    const targetFolder = DriveApp.getFolderById(TARGET_FOLDER_ID);
-    const file = targetFolder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    const url = file.getDownloadUrl();
-    return url;
-  } catch (error) {
-    Logger.log('Drive error: ' + error);
-    throw new Error('無法建立下載連結: ' + error);
   }
 }
 
