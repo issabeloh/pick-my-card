@@ -1199,3 +1199,8 @@ body {
     line-height: 1.9;
     text-align: center;
 }
+
+/* 手機版讓「都交給 Pick My Card！」獨立成行；桌機維持同行 */
+@media (max-width: 639px) {
+    .lp-footer .lp-fbr { display: block; }
+}
