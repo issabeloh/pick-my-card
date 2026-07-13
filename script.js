@@ -7398,7 +7398,7 @@ function renderCardTags(tags) {
 function renderConditionLine(text) {
     return `<div class="cashback-condition cond-collapsible">` +
         `<span class="cond-text">條件: ${text}</span>` +
-        `<button type="button" class="cond-toggle" style="display:none;">展開</button>` +
+        `<button type="button" class="cond-toggle" style="display:none;">...展開</button>` +
         `</div>`;
 }
 
@@ -7417,7 +7417,7 @@ function initConditionClamps(container) {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const expanded = el.classList.toggle('expanded');
-                btn.textContent = expanded ? '收起' : '展開';
+                btn.textContent = expanded ? '收起' : '...展開';
             };
         } else {
             btn.style.display = 'none';
@@ -8158,7 +8158,7 @@ basicCashbackDiv.innerHTML = basicContent;
             if (coupon.conditions) {
                 couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
                 couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
-                couponContent += `<div class="cond-collapsible" style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;"><span class="cond-text">• ${coupon.conditions}</span><button type="button" class="cond-toggle" style="display:none;">展開</button></div>`;
+                couponContent += `<div class="cond-collapsible" style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;"><span class="cond-text">• ${coupon.conditions}</span><button type="button" class="cond-toggle" style="display:none;">...展開</button></div>`;
                 couponContent += `</div>`;
             }
 
