@@ -106,7 +106,15 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 3. 在 `exportToJSON()` 調用：`readCardBenefits()` 附近新增讀取、`jsonContent` 加欄位、成功訊息顯示匯出數量
 4. 前端以 `cardsData.xxx` 存取，依需求實作搜尋/顯示
 
-## 8. Apps Script 相關的既有文件
+## 8. 日期欄位雙格式陷阱（periodStart / periodEnd）
+
+**匯出的日期格式不保證一致**：`cashbackRates` 通常是 ISO `"2026-01-01"`（`-`），但 `couponCashbacks` 等區塊可能是台式 `"2026/7/1"`（`/`，不一定補零）。**兩種都會實際出現在 cards.data，前端不能假設只有一種。**
+
+混用時不會報錯，活動會**被靜默濾掉**（看起來像「根本沒這活動」）：ASCII `-` < `/`，原始字串比較會把任何日期誤判成「即將開始」；`.split('-')` 遇 `/` 格式解析成 `Invalid Date`，最後被 `filterExpiredRates()` 整個濾掉（2026-07-03 教訓）。
+
+**規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
+
+## 9. Apps Script 相關的既有文件
 
 - `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃
