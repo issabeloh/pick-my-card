@@ -33,6 +33,13 @@ jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
 9. **ReferralLinks** —— merchant, url, description, active
 10. **Highlights** —— 精選活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
 11. **Watchlist** —— 權益監控清單（見 `apps-script/README.md`，與 cards.data 匯出無關）
+12. **SearchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
+    `mergeDataSearchExclusions()` 併入 script.js 的 `searchExclusionMap`（程式內只留兜底預設）。
+    語義：搜尋詞（含 fuzzy 展開後的別名）＝term 時，item 名與 excludedItems **小寫全等**者不匹配。
+    例：`term=sia, excludedItems=AsiaYo`（新加坡航空的別名 sia 子字串誤中 a"sia"yo）。
+    ⚠️ 此工作表尚未建立；建立時 Apps Script 讀取函數照第 7 節標準流程，匯出 JSON key 為
+    `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。工作表建好前，規則暫時直接加在
+    script.js 的 `searchExclusionMap`。
 
 ## 3. exportToJSON() 匯出流程
 

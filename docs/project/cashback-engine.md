@@ -55,6 +55,10 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 搜尋涵蓋：cashbackRates items、specialItems、generalItems（CUBE）、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
 
+**誤傷防範**：
+- 搜尋詞會經 `fuzzySearchMap` 雙向展開（含反向：所有映射到同值的 key）。**展開出的短英文別名可能子字串誤中無關 item**（例：「新加坡航空」→ 別名 `sia` → 誤中 a"sia"yo）。英文字界保護（Grep "word boundary"）只做在 `term.includes(item)` 方向，`item.includes(term)` 方向刻意不做——因為用戶手打部分字串（如 `eats`）要能命中連寫 item（如 `UberEats`）
+- 個案誤傷用 `searchExclusionMap` 修（搜尋詞→排除 item 小寫全等清單）；規則可從 SearchExclusions 工作表維護（→ `docs/project/data-pipeline.md` 第 2 節第 12 項）
+
 ## 5. hideInDisplay 與 rate=0 語義
 
 - `hideInDisplay`：標記不在詳情頁顯示的 cashbackRate（Sheet 一般編號槽位加 `hideInDisplay_N=TRUE`；舊 `_hide`/`_hide_1` 專用欄位已於 2026-07-11 併入一般槽位並刪除），主要用於國外消費／一般國內消費（避免與詳情頁其他區塊重複）。**仍然可被搜尋，計算邏輯與一般活動完全相同**

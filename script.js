@@ -749,6 +749,9 @@ async function loadCardsData() {
         // Filter out expired rates based on periodStart and periodEnd
         cardsData = filterExpiredRates(cardsData);
 
+        // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
+        mergeDataSearchExclusions(cardsData);
+
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
         console.log(`📢 公告數量: ${cardsData.announcements ? cardsData.announcements.length : 0} 則`);
@@ -1176,6 +1179,8 @@ function handleQuickSearch(option) {
 
     // Update UI
     merchantInput.value = option.displayName;
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    toggleExactSearchEmptyHint(false);
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
@@ -2077,6 +2082,26 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
 
+    // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
+    // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
+    // （currentQuickSearchOption 存在時不動它的結果）。
+    const onExactSearchChange = (e) => {
+        EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb && cb !== e.target) cb.checked = e.target.checked;
+        });
+        if (currentQuickSearchOption) return;
+        if (merchantInput.value.trim()) {
+            handleMerchantInput();
+        } else {
+            toggleExactSearchEmptyHint(false);
+        }
+    };
+    EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+        const cb = document.getElementById(id);
+        if (cb) cb.addEventListener('change', onExactSearchChange);
+    });
+
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
 
@@ -2279,13 +2304,15 @@ function handleMerchantInput() {
 
     if (input.length === 0) {
         hideMatchedItem();
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = null;
         validateInputs();
         return;
     }
 
     // Find matching items (now returns array)
-    const matchedItems = findMatchingItem(input);
+    const exactOnly = isExactSearchEnabled();
+    const matchedItems = findMatchingItem(input, { exactOnly });
 
     console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
 
@@ -2293,11 +2320,16 @@ function handleMerchantInput() {
         // Get cards to compare for parking benefits check
         const cardsToCompare = getCardsForComparison();
         showMatchedItem(matchedItems, input, cardsToCompare);
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
+        // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
+        const relaxedWouldMatch = exactOnly &&
+            (findMatchingItem(input) || []).length > 0;
+        toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
     }
 
@@ -2462,14 +2494,63 @@ const fuzzySearchMap = {
 
 // Search term exclusion rules - prevents unwanted matches
 // Format: 'searchTerm': ['excluded item 1', 'excluded item 2', ...]
+// 比對規則：searchTerm 對 fuzzy 展開後的每個搜尋詞生效，excluded item 與 item 名做小寫全等比對。
+// 日常維護走 Google Sheets 的 SearchExclusions 工作表（載入時由 mergeDataSearchExclusions 併入），
+// 這裡只保留兜底預設值。
 const searchExclusionMap = {
     '街口': ['日本paypay(限於街口支付綁定)'],
-    '街口支付': ['日本paypay(限於街口支付綁定)']
+    '街口支付': ['日本paypay(限於街口支付綁定)'],
+    // 「新加坡航空」fuzzy 展開出別名 sia，子字串誤中 a"sia"yo
+    'sia': ['asiayo']
 };
 
+// 將 cards.data 匯出的 searchExclusions（SearchExclusions 工作表）併入內建排除表，
+// 讓排除規則可從 Google Sheets 維護、不必改程式。格式：[{ term, excludedItems: [...] }]。
+// 一律正規化為小寫存放，與 checkItemMatches 的小寫全等比對一致。
+function mergeDataSearchExclusions(data) {
+    if (!data || !Array.isArray(data.searchExclusions)) return;
+    let mergedCount = 0;
+    data.searchExclusions.forEach(entry => {
+        const term = String(entry && entry.term || '').toLowerCase().trim();
+        const items = Array.isArray(entry && entry.excludedItems) ? entry.excludedItems : [];
+        if (!term || items.length === 0) return;
+        if (!searchExclusionMap[term]) searchExclusionMap[term] = [];
+        const existing = searchExclusionMap[term];
+        items.forEach(item => {
+            const normalized = String(item).toLowerCase().trim();
+            if (normalized && !existing.some(e => e.toLowerCase() === normalized)) {
+                existing.push(normalized);
+                mergedCount++;
+            }
+        });
+    });
+    if (mergedCount > 0) {
+        console.log(`🚫 已從 cards.data 併入 ${mergedCount} 條搜尋排除規則`);
+    }
+}
+
+// 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
+// 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式以防未來再分裝置）
+const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox'];
+function isExactSearchEnabled() {
+    return EXACT_SEARCH_CHECKBOX_IDS.some(id => {
+        const checkbox = document.getElementById(id);
+        return !!(checkbox && checkbox.checked);
+    });
+}
+
+// 精準搜尋下零結果的提示（「無完全一致項目，可取消勾選看相近結果」）
+function toggleExactSearchEmptyHint(show) {
+    const hint = document.getElementById('exact-search-empty-hint');
+    if (hint) hint.style.display = show ? 'block' : 'none';
+}
+
 // Find matching item in cards database
-function findMatchingItem(searchTerm) {
+// options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
+// 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
+function findMatchingItem(searchTerm, options = {}) {
     if (!cardsData) return null;
+    const exactOnly = !!options.exactOnly;
 
     let searchLower = searchTerm.toLowerCase().trim();
     let searchTerms = [searchLower]; // Always include original search term
@@ -2638,6 +2719,7 @@ function findMatchingItem(searchTerm) {
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
+            if (exactOnly && !match.isExactMatch) continue;
             uniqueMatches.push(match);
         }
     }
@@ -2755,6 +2837,8 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     // Use different style class depending on whether parking benefits matched
     matchedItemDiv.className = hasParkingMatch ? 'matched-item partial-match' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
+    // 匹配狀態列一次只顯示一行：✘/部分匹配訊息出現時收起精準搜尋的橙色提示
+    toggleExactSearchEmptyHint(false);
 }
 
 // Hide matched item
@@ -4571,7 +4655,8 @@ let showCardholderPromos = false;
 // Help popup is shown via CSS (:hover or :focus-within on .promo-help-wrap).
 // On touch, tapping outside the wrap blurs the help button so the popup hides.
 function setupCardholderPromoToggle() {
-    const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
+    // 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式與同步邏輯以防未來再分裝置）
+    const ids = ['show-promos-checkbox'];
     const onChange = (e) => {
         showCardholderPromos = e.target.checked;
         // Sync the other checkbox so both stay in lockstep
@@ -4587,18 +4672,36 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Mobile help: click '?' toggles a sibling text panel inline.
-    document.querySelectorAll('.promo-help-inline').forEach(btn => {
+    // Help: click '?' toggles a floating text panel (overlay, doesn't push layout).
+    // 一次只開一個說明——開新的先收舊的；點面板外任意處也會收合
+    const inlineHelpBtns = [...document.querySelectorAll('.promo-help-inline')];
+    const closeAllInlineHelp = () => {
+        inlineHelpBtns.forEach(btn => {
+            const t = document.getElementById(btn.getAttribute('data-help-target'));
+            if (t && !t.hasAttribute('hidden')) {
+                t.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    };
+    inlineHelpBtns.forEach(btn => {
         const targetId = btn.getAttribute('data-help-target');
         const text = targetId && document.getElementById(targetId);
         if (!text) return;
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const isHidden = text.hasAttribute('hidden');
-            text.toggleAttribute('hidden', !isHidden);
-            btn.setAttribute('aria-expanded', String(isHidden));
+            e.stopPropagation();
+            const wasHidden = text.hasAttribute('hidden');
+            closeAllInlineHelp();
+            text.toggleAttribute('hidden', !wasHidden);
+            btn.setAttribute('aria-expanded', String(wasHidden));
         });
     });
+    if (inlineHelpBtns.length > 0) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.promo-help-text')) closeAllInlineHelp();
+        });
+    }
 
     // Desktop help: hover '?' shows a native popover (top-layer, escapes z-index).
     const popoverSupported = typeof HTMLElement.prototype.showPopover === 'function';
