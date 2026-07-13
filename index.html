@@ -61,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260713005700">
+    <link rel="stylesheet" href="styles.css?v=20260713010335">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -463,6 +463,11 @@
                     <div class="form-group compact button-group">
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
                     </div>
+
+                    <!-- 匹配狀態列（桌機與計算按鈕同列、置左欄；手機在最下方整列） -->
+                    <div class="matched-item-row">
+                        <div class="matched-item" id="matched-item" style="display: none;"></div>
+                    </div>
                 </div>
 
                 <!-- 輸入指南提示框 -->
@@ -485,9 +490,6 @@
                     </div>
                 </div>
 
-                <div class="matched-item-row">
-                    <div class="matched-item" id="matched-item" style="display: none;"></div>
-                </div>
             </section>
 
             <section class="results-section" id="results-section" style="display: none;">
@@ -1049,7 +1051,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260713005700" defer></script>
+    <script src="script.js?v=20260713010335" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>
