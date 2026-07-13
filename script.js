@@ -1794,7 +1794,9 @@ function displayAnnouncement(index) {
             announcementIndicator.textContent = `${index + 1}/${announcements.length}`;
         }
 
-        // Fade in
+        // Fade in（先強制 reflow：iOS Safari 換內容後不踢一下 layout，
+        // line-clamp 元素可能沿用舊的文字圖層，畫面停在上一則公告）
+        void announcementText.offsetWidth;
         announcementText.classList.remove('fade-out');
         announcementText.classList.add('fade-in');
     }, 150);

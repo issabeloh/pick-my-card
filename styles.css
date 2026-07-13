@@ -324,7 +324,9 @@ header h1 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity 0.3s ease;
+    /* 必須 ≤ displayAnnouncement() 的 150ms 換字延遲：內容要在完全透明時才替換，
+       iOS Safari 對半透明中換字的 line-clamp 元素會留下舊文字殘影 */
+    transition: opacity 0.15s ease;
 }
 
 .announcement-text:hover {
@@ -353,7 +355,8 @@ header h1 {
     margin-right: 8px;
     white-space: nowrap;
     vertical-align: middle;
-    backdrop-filter: blur(4px);
+    /* 禁用 backdrop-filter：會讓 badge 自成 compositing layer，iOS Safari 在
+       line-clamp + opacity fade 下只重繪 badge、公告文字停在舊圖層變疊字亂碼 */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
