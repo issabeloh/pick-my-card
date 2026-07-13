@@ -8279,10 +8279,13 @@ basicCashbackDiv.innerHTML = basicContent;
 
     // 設置結帳日期功能
     setupBillingDates(card.id);
-    
+
     // Show modal
+    // 級別切換等重繪路徑會在 modal 已開啟時重呼叫 showCardDetail()；
+    // 已開啟就不再 disableBodyScroll()，否則鎖深度多加、closeModal 只解一次，頁面會鎖死
+    const wasAlreadyOpen = modal.style.display === 'flex';
     modal.style.display = 'flex';
-    disableBodyScroll();
+    if (!wasAlreadyOpen) disableBodyScroll();
 
     // 滾動到最上面（不記憶上一個 modal 的捲動位置）
     // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
