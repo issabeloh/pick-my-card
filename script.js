@@ -1,3 +1,46 @@
+/* ============================================================
+ * Pick My Card — script.js 區塊目錄
+ * （用下列關鍵字在檔案內搜尋即可跳到該區；刻意不寫行號以免過時）
+ *
+ *  1. Debug 日誌閘門           → "Debug 日誌閘門"
+ *  2. 全域狀態                 → "Global variables"
+ *  3. localStorage 安全讀取     → "localStorage 安全讀取 helpers"
+ *  4. 資料載入與搜尋索引        → "loadCardsData" / "buildCardItemsIndex"
+ *  5. 快捷搜尋                 → "handleQuickSearch" / "QuickSearch"
+ *  6. 精選活動（Spotlight）     → "renderSpotlights"
+ *  7. 公告                    → "displayAnnouncement"
+ *  8. 搜尋匹配                 → "findMatchingItem"
+ *  9. 回饋計算（總調度）        → "calculateCashback"
+ * 10. 回饋計算（單卡引擎）      → "calculateCardCashback" /
+ *     "calculateLayeredCashback"(瀑布) / "calculateStackedCashback"(疊加) /
+ *     "getOverflowRate"(溢出) / "findUpcomingActivity"(即將開始)
+ * 11. Placeholder 解析         → "extractPlaceholderField"
+ * 12. 結果顯示                 → "displayResults" / "displayCouponCashbacks" /
+ *     "displayParkingBenefits" / "displayCardholderPromos"
+ * 13. HTML 轉義與連結防護      → "escapeHtml" / "sanitizeUrl"
+ * 14. 登入/登出與資料同步      → "onAuthStateChanged" / "absorbGuestPersonalData" /
+ *     "clearPersonalLocalDataOnSignOut"
+ * 15. 用戶資料載入/儲存        → "loadCardsInComparison" / "loadMyOwnedCards" /
+ *     "loadUserPayments" / "loadSpendingMappings"
+ * 16. 卡片詳情頁              → "showCardDetail"
+ * 17. 筆記/免年費/結帳日       → "loadUserNotes" / "loadFeeWaiverStatus" / "loadBillingDates"
+ * 18. 卡片級別                → "Card Level Management" / "resolveCardLevel"
+ * 19. 回報與評分              → "feedback" / "review"
+ * ============================================================ */
+
+// ========== Debug 日誌閘門 ==========
+// 正式環境靜音 console.log / console.warn（減少執行負擔與雜訊）。
+// 需要除錯時在網址加 ?debug=1 即可全部重新開啟。
+// console.error 永遠保留 —— 錯誤一定要看得到。
+(function () {
+    try {
+        if (!new URLSearchParams(location.search).has('debug')) {
+            console.log = function () {};
+            console.warn = function () {};
+        }
+    } catch (e) { /* 環境不支援時維持原樣 */ }
+})();
+
 // Global variables
 let currentUser = null;
 let appStarted = false; // true after user clicks "開始使用"
@@ -46,6 +89,12 @@ const loadingOverlay = {
     element: null,
     textElement: null,
     startTime: null,
+    // true 只在 show() 真的把 overlay 顯示出來之後；hide() 用它 guard，
+    // 讓「show() 從未被呼叫過就呼叫 hide()」是安全的 no-op（calculateCashback 的
+    // 150ms 延遲顯示模式：計算很快時 show() 可能永遠不會跑到，但 finally 仍會
+    // 無條件呼叫 hide()）。沒有這個 guard，hide() 會在未 show() 的情況下也呼叫
+    // enableBodyScroll()，可能誤解除「其他 modal 正持有」的 scroll lock。
+    shown: false,
 
     init() {
         this.element = document.getElementById('global-loading-overlay');
@@ -55,6 +104,7 @@ const loadingOverlay = {
     show(message = '載入中...') {
         if (!this.element) this.init();
 
+        this.shown = true;
         this.startTime = performance.now();
         if (this.textElement) {
             this.textElement.textContent = message;
@@ -68,6 +118,9 @@ const loadingOverlay = {
     },
 
     hide() {
+        if (!this.shown) return; // 從未 show() 過，不做任何事（見上方 shown 註解）
+        this.shown = false;
+
         if (!this.element) this.init();
 
         if (this.element) {
@@ -252,32 +305,49 @@ function slashDateToISO(slashDate) {
 // Get the status of a rate based on periodStart and periodEnd (UTC+8 Taiwan time)
 // Returns: 'active' | 'upcoming' | 'expired' | 'always'
 function getRateStatus(periodStart, periodEnd) {
-    // If no date restrictions, rate is always active
-    if (!periodStart || !periodEnd) {
+    // If no date restrictions at all, rate is always active
+    if (!periodStart && !periodEnd) {
         return 'always';
     }
 
     try {
         const today = getTaiwanToday(); // YYYY-MM-DD，ISO 字典序 = 日期序
         // periodStart/periodEnd 可能是 ISO "YYYY-MM-DD" 或台灣慣用 "YYYY/M/D"，
-        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂
-        const start = periodStart.includes('-') ? periodStart : slashDateToISO(periodStart);
-        const end = periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd);
-        if (today >= start && today <= end) return 'active';
-        if (today < start) return 'upcoming';
-        return 'expired';
+        // 字串比較前先統一轉成 ISO，否則 "-" 與 "/" 的字元順序會讓比較結果錯亂。
+        // ⚠️ 只給一邊也要判斷：只有 periodStart = 開始後無限期；只有 periodEnd =
+        //   一開始就有效、到期為止。過去「缺一邊就回 always」會讓已過期（有 periodEnd
+        //   但沒 periodStart）的活動永遠不被隱藏。
+        const start = periodStart ? (periodStart.includes('-') ? periodStart : slashDateToISO(periodStart)) : null;
+        const end = periodEnd ? (periodEnd.includes('-') ? periodEnd : slashDateToISO(periodEnd)) : null;
+        if (end && today > end) return 'expired';
+        if (start && today < start) return 'upcoming';
+        return 'active';
     } catch (error) {
         console.error('❌ Date parsing error:', error, { periodStart, periodEnd });
         return 'always';
     }
 }
 
-// Check if a rate is currently active (for backwards compatibility)
-function isRateActive(periodStart, periodEnd) {
-    const status = getRateStatus(periodStart, periodEnd);
-    return status === 'active' || status === 'always';
+// 有一整類活動，Apps Script 只匯出了合併字串 period（"YYYY/M/D~YYYY/M/D"）與
+// periodEnd，卻「沒有」單獨的 periodStart 欄位。expiry / upcoming 判斷看的是
+// periodStart/periodEnd 欄位，缺欄位會誤判（過期活動不被隱藏、未來活動提早顯示）。
+// 這裡從 period 字串把缺少的那一邊「補回」——只補「缺的」欄位、絕不覆寫既有值，
+// 因為 period 字串偶爾比 periodStart/periodEnd 欄位舊（如中信 LINE Pay 肌膚之鑰：
+// period 停在 ~6/30 但 periodEnd 欄位已更新為 12/31，覆寫會誤把生效中的活動判為過期）。
+function backfillPeriodBounds(entry) {
+    if (!entry || typeof entry.period !== 'string' || !entry.period.includes('~')) return;
+    const [startRaw, endRaw] = entry.period.split('~');
+    if (!entry.periodStart && startRaw) {
+        const iso = slashDateToISO(startRaw.trim());
+        if (iso) entry.periodStart = iso;
+    }
+    if (!entry.periodEnd && endRaw) {
+        const iso = slashDateToISO(endRaw.trim());
+        if (iso) entry.periodEnd = iso;
+    }
 }
 
+// Check if a rate is currently active (for backwards compatibility)
 // Rate status cache for performance optimization
 let rateStatusCache = new Map();
 
@@ -295,6 +365,40 @@ function cardLevelCacheKey(cardId) {
 
 function clearCardLevelCache() {
     cardLevelCache.clear();
+}
+
+// ========== localStorage 安全讀取 helpers ==========
+// localStorage 裡的 JSON 一旦損毀（舊版程式寫入格式不符、被手動改過、擴充套件污染），
+// 直接 JSON.parse 會拋錯並中斷整個載入流程（過去曾因此造成詳情頁打不開）。
+// 所有 localStorage 的 JSON 讀取一律走這裡：壞資料回傳 fallback 並移除該 key。
+function readLocalJSON(key, fallback = null) {
+    let raw = null;
+    try { raw = localStorage.getItem(key); } catch (e) { return fallback; }
+    if (raw === null) return fallback;
+    try {
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error(`⚠️ localStorage "${key}" 資料損毀，已移除該筆資料`, e);
+        try { localStorage.removeItem(key); } catch (e2) { /* ignore */ }
+        return fallback;
+    }
+}
+
+// 讀取「必須是陣列」的 localStorage JSON；非陣列（污染成物件/字串）一律回 fallback，
+// 避免下游 new Set(...) / .forEach(...) 直接拋錯。
+function readLocalJSONArray(key, fallback = []) {
+    const parsed = readLocalJSON(key, null);
+    return Array.isArray(parsed) ? parsed : fallback;
+}
+
+// 過濾掉 cards.data 中已不存在的卡片 ID（卡片下架/改名後，用戶本機或雲端
+// 可能還存著舊 ID）。只在記憶體中過濾、絕不回寫儲存 —— 「找不到」可能是
+// 資料匯出短暫不完整造成的暫時現象，回寫會永久抹掉用戶的選擇。
+function filterKnownCardIds(ids) {
+    if (!Array.isArray(ids)) return [];
+    if (!cardsData || !Array.isArray(cardsData.cards) || cardsData.cards.length === 0) return ids;
+    const known = new Set(cardsData.cards.map(card => card.id));
+    return ids.filter(id => known.has(id));
 }
 
 // Get cached rate status to avoid repeated date calculations
@@ -373,9 +477,22 @@ function filterExpiredRates(cardsData) {
     }
 
     cardsData.cards.forEach(card => {
+        // A card can claim hasLevels=true while its levelSettings is empty — e.g.
+        // every level's period has expired and the Google Sheets export dropped
+        // them, leaving `levelSettings: {}`. Downstream code assumes at least one
+        // level exists (Object.keys(levelSettings)[0]) and would read
+        // levelSettings[undefined] → crash (the card detail modal never opens).
+        // Demote such a card to a plain non-level card so every `if (card.hasLevels)`
+        // branch is skipped uniformly.
+        if (card.hasLevels && (!card.levelSettings || Object.keys(card.levelSettings).length === 0)) {
+            console.warn(`⚠️ ${card.name}: hasLevels=true 但 levelSettings 為空（可能所有級別已過期），改以一般卡處理`);
+            card.hasLevels = false;
+        }
+
         // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
             card.cashbackRates = card.cashbackRates.filter(rate => {
+                backfillPeriodBounds(rate); // 從 period 字串補回缺少的 periodStart/periodEnd
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
 
                 // Always keep active and always-active rates
@@ -401,6 +518,7 @@ function filterExpiredRates(cardsData) {
         // Filter couponCashbacks - keep active and upcoming (within 30 days)
         if (card.couponCashbacks && Array.isArray(card.couponCashbacks)) {
             card.couponCashbacks = card.couponCashbacks.filter(coupon => {
+                backfillPeriodBounds(coupon); // 從 period 字串補回缺少的 periodStart/periodEnd
                 const status = getRateStatus(coupon.periodStart, coupon.periodEnd);
 
                 // Always keep active and always-active coupons
@@ -582,17 +700,40 @@ function buildCardItemsIndex(card) {
 }
 
 // Load cards data from cards.data (encoded)
+//
+// 快取策略（2026-07 版本指標方案）：
+// 1. 先抓幾十 bytes 的 cards.version（永遠不快取）
+// 2. 用版本號當 cards.data 的 ?v= 參數 → 版本沒變時瀏覽器直接用快取，
+//    省下每次進站 ~485KB 的下載；資料更新後版本號改變 → 立即抓到新資料
+// 3. cards.version 不存在或抓不到時，回退舊行為（no-store 每次重抓），
+//    功能完全不受影響
+// ⚠️ 資料維護流程：更新 cards.data 時「務必」同步更新 cards.version
+//    （詳見 CARDS-DATA-CACHE-README.md），否則使用者最多會延遲約 10 分鐘
+//    （GitHub Pages 的快取時效）才看到新資料。
 async function loadCardsData() {
     try {
-        const timestamp = new Date().getTime(); // 防止快取
-        const response = await fetch(`cards.data?t=${timestamp}`, {
-            cache: 'no-store', // 強制不使用快取
-            headers: {
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
+        let version = null;
+        try {
+            const vRes = await fetch(`cards.version?t=${Date.now()}`, { cache: 'no-store' });
+            if (vRes.ok) {
+                const text = (await vRes.text()).trim();
+                // 防呆：版本檔應是短字串（時間戳），過長或像 HTML（404 頁）視為無效
+                if (text && text.length <= 64 && !text.includes('<')) {
+                    version = encodeURIComponent(text);
+                }
             }
-        });
+        } catch (e) { /* 拿不到版本檔 → 回退舊行為 */ }
+
+        const response = version
+            ? await fetch(`cards.data?v=${version}`) // 可被瀏覽器快取，版本變了自動失效
+            : await fetch(`cards.data?t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                }
+            });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -607,6 +748,9 @@ async function loadCardsData() {
 
         // Filter out expired rates based on periodStart and periodEnd
         cardsData = filterExpiredRates(cardsData);
+
+        // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
+        mergeDataSearchExclusions(cardsData);
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
@@ -754,10 +898,9 @@ async function loadUserQuickSearchPrefs(userData = null) {
             }
         }
 
-        // Guest: load from localStorage
-        const storedPrefs = localStorage.getItem('userQuickSearchPrefs');
-        if (storedPrefs) {
-            const parsed = JSON.parse(storedPrefs);
+        // Guest: load from localStorage（readLocalJSON：壞資料自動移除並回 null）
+        const parsed = readLocalJSON('userQuickSearchPrefs', null);
+        if (parsed && typeof parsed === 'object') {
             return {
                 hiddenDefaultIds: parsed.hiddenDefaultIds || [],
                 customQuickOptions: parsed.customQuickOptions || [],
@@ -766,12 +909,10 @@ async function loadUserQuickSearchPrefs(userData = null) {
         }
 
         // Legacy localStorage migration (guest had old format)
-        const legacyOptions = localStorage.getItem('userQuickSearchOptions');
-        const legacyCustoms = localStorage.getItem('userCustomQuickOptions');
-        if (legacyOptions) {
+        const oldList = readLocalJSONArray('userQuickSearchOptions', null);
+        if (Array.isArray(oldList)) {
             console.log('🔀 偵測到 localStorage 舊格式，自動遷移');
-            const oldList = JSON.parse(legacyOptions);
-            const customs = legacyCustoms ? JSON.parse(legacyCustoms) : [];
+            const customs = readLocalJSONArray('userCustomQuickOptions');
             const migrated = computeMigratedPrefs(oldList, customs);
             localStorage.setItem('userQuickSearchPrefs', JSON.stringify(migrated));
             localStorage.removeItem('userQuickSearchOptions');
@@ -1038,6 +1179,8 @@ function handleQuickSearch(option) {
 
     // Update UI
     merchantInput.value = option.displayName;
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    toggleExactSearchEmptyHint(false);
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
@@ -1046,14 +1189,8 @@ function handleQuickSearch(option) {
         currentMatchedItem = allMatches;
         currentQuickSearchOption = option; // Store quick search option for parking benefits
 
-        // Auto-trigger calculation if amount is filled
-        const amountInput = document.getElementById('amount-input');
-        if (amountInput && amountInput.value) {
-            const calculateBtn = document.getElementById('calculate-btn');
-            if (calculateBtn && !calculateBtn.disabled) {
-                calculateBtn.click();
-            }
-        }
+        // 快捷搜尋只填入、不自動計算（2026-07-12 產品決策）：計算一律由用戶按「計算」觸發。
+        // 需要點了就出結果的入口（Spotlight 的比較按鈕）由呼叫端自行觸發計算。
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -1382,7 +1519,11 @@ function buildSpotlightModalBody(item) {
     }
 
     const blocks = activities.map(group => {
-        const rateNum = parseCashbackRateSync(group.rate, levelData);
+        const parsedRate = parseCashbackRateSync(group.rate, levelData);
+        // For stacking models (rate+basic+…) rate_N holds only the designated-channel
+        // rate, so show the summed total (designated + basic + bonus) — same number the
+        // search-result card shows. Non-stacking models return the parsed rate as-is.
+        const rateNum = getDisplayRate(card, group, parsedRate, levelData);
         const capNum = parseCashbackCap(group.cap, card, levelData);
         const capText = (capNum !== null && capNum !== undefined && !isNaN(capNum))
             ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
@@ -1454,7 +1595,12 @@ function compareSpotlightMerchant(merchant) {
     const matchedOption = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
 
     if (matchedOption) {
+        // handleQuickSearch 只填入關鍵詞（不自動計算）；其結尾的 validateInputs()
+        // 已依「商家非空」啟用計算鈕，這裡代替用戶按下計算，維持本按鈕「點了就比較」的承諾
         handleQuickSearch(matchedOption);
+        if (amountInput && !amountInput.value) amountInput.value = '1000';
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn && !calcBtn.disabled) calcBtn.click();
     } else {
         if (merchantInputEl) {
             merchantInputEl.value = merchant;
@@ -1568,11 +1714,18 @@ function setupAnnouncementBar() {
         resumeAnnouncementRotation();
     });
 
-    // Click on text to show modal
+    // Click on text or date badge to show modal
     announcementText.addEventListener('click', (e) => {
         e.preventDefault();
         showAnnouncementModal(currentAnnouncementIndex);
     });
+
+    const announcementDate = document.getElementById('announcement-date');
+    if (announcementDate) {
+        announcementDate.addEventListener('click', () => {
+            showAnnouncementModal(currentAnnouncementIndex);
+        });
+    }
 }
 
 // Show announcement modal with full content
@@ -1587,7 +1740,10 @@ function showAnnouncementModal(index) {
 
     if (!modal || !modalBody) return;
 
-    // Get fullText and display with HTML support
+    // Get fullText and display with HTML support.
+    // ⚠️ 這裡是「刻意」允許 HTML 的：fullText 來自 Google Sheets 的公告工作表，
+    // 屬於管理者（你本人）控制的內容，可以放 <b>、<a> 等排版。
+    // 千萬不要把任何「使用者輸入」餵進這個欄位。
     const fullText = announcement.fullText || announcement.text;
 
     // Clear and update modal content
@@ -1596,9 +1752,10 @@ function showAnnouncementModal(index) {
     modalBody.style.fontSize = '0.95rem';
     modalBody.innerHTML = fullText;
 
-    // Show/hide link button
-    if (announcement.link) {
-        modalLink.href = announcement.link;
+    // Show/hide link button（僅接受 http/https 連結）
+    const safeLink = sanitizeUrl(announcement.link);
+    if (safeLink) {
+        modalLink.href = safeLink;
         modalLink.style.display = 'inline-block';
     } else {
         modalLink.style.display = 'none';
@@ -1619,8 +1776,12 @@ function showAnnouncementModal(index) {
 }
 
 // Display announcement by index
+// ⚠️ announcement-text 只能用 textContent 放純文字，不能塞任何行內元素（含日期）：
+//    iOS Safari 對「line-clamp 元素內含 inline-block ＋ opacity 淡入淡出」會停止重繪
+//    文字圖層，畫面卡在上一則變疊字亂碼。日期放在獨立的 #announcement-date badge。
 function displayAnnouncement(index) {
     const announcementText = document.getElementById('announcement-text');
+    const announcementDate = document.getElementById('announcement-date');
     const announcementIndicator = document.getElementById('announcement-indicator');
 
     if (!announcementText || !announcements[index]) return;
@@ -1629,16 +1790,21 @@ function displayAnnouncement(index) {
 
     // Fade out
     announcementText.classList.add('fade-out');
+    if (announcementDate) announcementDate.classList.add('fade-out');
 
     setTimeout(() => {
-        // Update content with date badge if available
-        if (announcement.date) {
-            // Display with date badge
-            announcementText.innerHTML = `<span class="announcement-date-badge">${announcement.date}</span>${announcement.text}`;
-        } else {
-            // Display without date
-            announcementText.textContent = announcement.text;
+        // Update date badge (sibling element, see warning above)
+        if (announcementDate) {
+            if (announcement.date) {
+                announcementDate.textContent = announcement.date;
+                announcementDate.style.display = '';
+            } else {
+                announcementDate.style.display = 'none';
+            }
         }
+
+        // Update text (plain text only, see warning above)
+        announcementText.textContent = announcement.text;
 
         // Always set as clickable (opens modal)
         announcementText.href = '#';
@@ -1652,6 +1818,10 @@ function displayAnnouncement(index) {
         // Fade in
         announcementText.classList.remove('fade-out');
         announcementText.classList.add('fade-in');
+        if (announcementDate) {
+            announcementDate.classList.remove('fade-out');
+            announcementDate.classList.add('fade-in');
+        }
     }, 150);
 
     currentAnnouncementIndex = index;
@@ -1693,10 +1863,6 @@ function resumeAnnouncementRotation() {
 }
 
 // Toggle pause state
-function toggleAnnouncementPause() {
-    isAnnouncementPaused = !isAnnouncementPaused;
-}
-
 // Reset rotation timer
 function resetAnnouncementRotation() {
     if (announcementInterval) {
@@ -1916,6 +2082,26 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
 
+    // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
+    // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
+    // （currentQuickSearchOption 存在時不動它的結果）。
+    const onExactSearchChange = (e) => {
+        EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb && cb !== e.target) cb.checked = e.target.checked;
+        });
+        if (currentQuickSearchOption) return;
+        if (merchantInput.value.trim()) {
+            handleMerchantInput();
+        } else {
+            toggleExactSearchEmptyHint(false);
+        }
+    };
+    EXACT_SEARCH_CHECKBOX_IDS.forEach(id => {
+        const cb = document.getElementById(id);
+        if (cb) cb.addEventListener('change', onExactSearchChange);
+    });
+
     // Spotlight carousel controls (next button + hover pause)
     setupSpotlightControls();
 
@@ -2003,6 +2189,14 @@ function setupEventListeners() {
                 showCardDetail(peekBtn.dataset.cardId);
                 return;
             }
+            const breakdownBtn = e.target.closest('.calc-breakdown-btn');
+            if (breakdownBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const cardResult = breakdownBtn.closest('.card-result');
+                showCalcBreakdown(breakdownBtn, cardResult);
+                return;
+            }
             const pinBtn = e.target.closest('.pin-btn');
             if (pinBtn) {
                 e.preventDefault();
@@ -2014,6 +2208,20 @@ function setupEventListeners() {
                 const periodStart = pinBtn.dataset.periodStart || null;
 
                 await togglePin(pinBtn, cardId, cardName, merchant, rate, periodEnd, periodStart);
+            }
+        });
+    }
+
+    // 領券活動卡片的計算明細按鈕
+    const couponResultsContainerEl = document.getElementById('coupon-results-container');
+    if (couponResultsContainerEl) {
+        couponResultsContainerEl.addEventListener('click', (e) => {
+            const breakdownBtn = e.target.closest('.calc-breakdown-btn');
+            if (breakdownBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const couponResult = breakdownBtn.closest('.coupon-item');
+                showCalcBreakdown(breakdownBtn, couponResult);
             }
         });
     }
@@ -2108,13 +2316,15 @@ function handleMerchantInput() {
 
     if (input.length === 0) {
         hideMatchedItem();
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = null;
         validateInputs();
         return;
     }
 
     // Find matching items (now returns array)
-    const matchedItems = findMatchingItem(input);
+    const exactOnly = isExactSearchEnabled();
+    const matchedItems = findMatchingItem(input, { exactOnly });
 
     console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
 
@@ -2122,11 +2332,16 @@ function handleMerchantInput() {
         // Get cards to compare for parking benefits check
         const cardsToCompare = getCardsForComparison();
         showMatchedItem(matchedItems, input, cardsToCompare);
+        toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
+        // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
+        const relaxedWouldMatch = exactOnly &&
+            (findMatchingItem(input) || []).length > 0;
+        toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
     }
 
@@ -2204,28 +2419,28 @@ const fuzzySearchMap = {
     'starlux': '星宇航空',
     'starlux airlines': '星宇航空',
     '日本航空': 'japan airlines',
-    '日航': 'jal',
-    'jal': 'japan airlines',
-    '全日空': 'ana',
-    'all nippon airways': 'ana',
+    '日航': '日本航空',
+    'jal': '日本航空',
+    'ana': '全日空',
+    'all nippon airways': '全日空',
     '大韓航空': 'korean air',
     '大韓': 'korean air',
-    '韓亞航空': 'asiana airlines',
-    '韓亞': 'asiana airlines',
+    '韓亞': '韓亞航空',
+    'asiana airlines': '韓亞航空',
     '國泰航空': 'cathay pacific',
     '國泰': 'cathay pacific',
     '新加坡航空': 'singapore airlines',
-    '新航': 'singapore airlines',
-    'sia': 'singapore airlines',
-    '泰國航空': 'thai airways',
-    '泰航': 'thai airways',
-    '馬來西亞航空': 'malaysia airlines',
+    '新航': '新加坡航空',
+    'sia': '新加坡航空',
+    '泰航': '泰國航空',
+    'thai airways': '泰國航空',
+    '馬航': '馬來西亞航空',
+    'malaysia airlines': '馬來西亞航空',
     'airasia': '亞洲航空',
-    '馬航': 'malaysia airlines',
-    '越南航空': 'vietnam airlines',
-    '越航': 'vietnam airlines',
-    '菲律賓航空': 'philippine airlines',
-    '菲航': 'philippine airlines',
+    '越航': '越南航空',
+    'vietnam airlines': '越南航空',
+    '菲航': '菲律賓航空',
+    'philippine airlines': '菲律賓航空',
     '華信航空': 'mandarin airlines',
     '華信': 'mandarin airlines',
     '台灣高鐵': '高鐵',
@@ -2284,19 +2499,70 @@ const fuzzySearchMap = {
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
     'tomods': 'Tomod\'s',
-    'sogo': '遠東 SOGO'
+    'sogo': '遠東 SOGO',
+    '台北捷運': '臺北捷運',
+    '臺北捷運': '台北捷運'
 };
 
 // Search term exclusion rules - prevents unwanted matches
 // Format: 'searchTerm': ['excluded item 1', 'excluded item 2', ...]
+// 比對規則：searchTerm 對 fuzzy 展開後的每個搜尋詞生效，excluded item 與 item 名做小寫全等比對。
+// 日常維護走 Google Sheets 的 SearchExclusions 工作表（載入時由 mergeDataSearchExclusions 併入），
+// 這裡只保留兜底預設值。
 const searchExclusionMap = {
     '街口': ['日本paypay(限於街口支付綁定)'],
-    '街口支付': ['日本paypay(限於街口支付綁定)']
+    '街口支付': ['日本paypay(限於街口支付綁定)'],
+    // 「新加坡航空」fuzzy 展開出別名 sia，子字串誤中 a"sia"yo
+    'sia': ['asiayo']
 };
 
+// 將 cards.data 匯出的 searchExclusions（SearchExclusions 工作表）併入內建排除表，
+// 讓排除規則可從 Google Sheets 維護、不必改程式。格式：[{ term, excludedItems: [...] }]。
+// 一律正規化為小寫存放，與 checkItemMatches 的小寫全等比對一致。
+function mergeDataSearchExclusions(data) {
+    if (!data || !Array.isArray(data.searchExclusions)) return;
+    let mergedCount = 0;
+    data.searchExclusions.forEach(entry => {
+        const term = String(entry && entry.term || '').toLowerCase().trim();
+        const items = Array.isArray(entry && entry.excludedItems) ? entry.excludedItems : [];
+        if (!term || items.length === 0) return;
+        if (!searchExclusionMap[term]) searchExclusionMap[term] = [];
+        const existing = searchExclusionMap[term];
+        items.forEach(item => {
+            const normalized = String(item).toLowerCase().trim();
+            if (normalized && !existing.some(e => e.toLowerCase() === normalized)) {
+                existing.push(normalized);
+                mergedCount++;
+            }
+        });
+    });
+    if (mergedCount > 0) {
+        console.log(`🚫 已從 cards.data 併入 ${mergedCount} 條搜尋排除規則`);
+    }
+}
+
+// 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
+// 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式以防未來再分裝置）
+const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox'];
+function isExactSearchEnabled() {
+    return EXACT_SEARCH_CHECKBOX_IDS.some(id => {
+        const checkbox = document.getElementById(id);
+        return !!(checkbox && checkbox.checked);
+    });
+}
+
+// 精準搜尋下零結果的提示（「無完全一致項目，可取消勾選看相近結果」）
+function toggleExactSearchEmptyHint(show) {
+    const hint = document.getElementById('exact-search-empty-hint');
+    if (hint) hint.style.display = show ? 'block' : 'none';
+}
+
 // Find matching item in cards database
-function findMatchingItem(searchTerm) {
+// options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
+// 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
+function findMatchingItem(searchTerm, options = {}) {
     if (!cardsData) return null;
+    const exactOnly = !!options.exactOnly;
 
     let searchLower = searchTerm.toLowerCase().trim();
     let searchTerms = [searchLower]; // Always include original search term
@@ -2465,6 +2731,7 @@ function findMatchingItem(searchTerm) {
 
         if (!seenItems.has(itemKey)) {
             seenItems.add(itemKey);
+            if (exactOnly && !match.isExactMatch) continue;
             uniqueMatches.push(match);
         }
     }
@@ -2501,20 +2768,20 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
 
     if (Array.isArray(matchedItems)) {
         if (matchedItems.length === 1) {
-            messageHtml = `✓ 匹配到: <strong>${matchedItems[0].originalItem}</strong>`;
+            messageHtml = `✓ 匹配到: <strong>${escapeHtml(matchedItems[0].originalItem)}</strong>`;
         } else {
             // 如果所有項目名稱相同，只顯示一次
             const uniqueItems = [...new Set(matchedItems.map(item => item.originalItem))];
             if (uniqueItems.length === 1) {
-                messageHtml = `✓ 匹配到: <strong>${uniqueItems[0]}</strong>`;
+                messageHtml = `✓ 匹配到: <strong>${escapeHtml(uniqueItems[0])}</strong>`;
             } else {
                 const itemList = uniqueItems.join('、');
-                messageHtml = `✓ 匹配到: <strong>${itemList}</strong>`;
+                messageHtml = `✓ 匹配到: <strong>${escapeHtml(itemList)}</strong>`;
             }
         }
     } else {
         // Backward compatibility for single item
-        messageHtml = `✓ 匹配到: <strong>${matchedItems.originalItem}</strong>`;
+        messageHtml = `✓ 匹配到: <strong>${escapeHtml(matchedItems.originalItem)}</strong>`;
     }
 
     // Check if there are parking benefits matches
@@ -2582,6 +2849,8 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     // Use different style class depending on whether parking benefits matched
     matchedItemDiv.className = hasParkingMatch ? 'matched-item partial-match' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
+    // 匹配狀態列一次只顯示一行：✘/部分匹配訊息出現時收起精準搜尋的橙色提示
+    toggleExactSearchEmptyHint(false);
 }
 
 // Hide matched item
@@ -2619,6 +2888,76 @@ function validateInputs() {
     calculateBtn.disabled = !isValid;
 }
 
+// 合併相同活動的搜尋結果：同一張卡 + 同 rate/cap/期間/類別 = 同一個活動，
+// 個別匹配到的 item 收進 matchedItems 陣列。
+// （這段邏輯原本在 calculateCashback 內複製了 4 份：多項目/單項目/即將開始 ×2）
+function mergeResultsByActivity(resultList) {
+    const merged = new Map();
+    for (const result of resultList) {
+        const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
+
+        if (merged.has(mergeKey)) {
+            // Same activity - merge matched items
+            const existing = merged.get(mergeKey);
+            if (!existing.matchedItems) {
+                existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
+            }
+            const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
+            for (const item of newItems) {
+                if (item && !existing.matchedItems.includes(item)) {
+                    existing.matchedItems.push(item);
+                }
+            }
+        } else {
+            // New activity - create new entry
+            merged.set(mergeKey, {
+                ...result,
+                matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem]
+            });
+        }
+    }
+    return Array.from(merged.values());
+}
+
+// 無匹配活動時的「基本回饋」結果（含國內加碼卡如永豐幣倍的兩層計算）。
+// （原本在「有搜尋詞但無結果」與「無搜尋詞」兩處各複製一份）
+function buildBasicCashbackResult(card, amount) {
+    let basicCashbackAmount = 0;
+    let effectiveRate = card.basicCashback;
+    let displayCap = null;
+    let layers;
+
+    if (card.domesticBonusRate && card.domesticBonusCap) {
+        // Handle complex cards like 永豐幣倍 with domestic bonus
+        const bonusAmount = Math.min(amount, card.domesticBonusCap);
+        const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
+        const basicCashback = Math.floor(amount * card.basicCashback / 100);
+        basicCashbackAmount = bonusCashback + basicCashback;
+        effectiveRate = card.basicCashback + card.domesticBonusRate;
+        displayCap = card.domesticBonusCap;
+        layers = [
+            { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashback, cap: null },
+            { name: '國內消費加碼', rate: card.domesticBonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: card.domesticBonusCap }
+        ];
+    } else {
+        basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+        layers = [
+            { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashbackAmount, cap: null }
+        ];
+    }
+
+    return {
+        rate: effectiveRate,
+        cashbackAmount: basicCashbackAmount,
+        cap: displayCap,
+        matchedItem: null,
+        effectiveAmount: amount,
+        card: card,
+        isBasic: true,
+        calculationLayers: layers
+    };
+}
+
 // Calculate cashback for all cards
 async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');
@@ -2634,17 +2973,15 @@ async function calculateCashback() {
         return;
     }
 
-    // Show loading for operations that might take time
-    const cardsToCompareCount = getCardsForComparison().length;
-
-    // Only show loading if comparing many cards or multiple matched items
-    const shouldShowLoading = cardsToCompareCount > 5 || (currentMatchedItem && Array.isArray(currentMatchedItem) && currentMatchedItem.length > 3);
-
-    if (shouldShowLoading) {
+    // Loading overlay 延遲顯示：多數計算（包含訪客的全部案例）在 80-155ms 內完成，
+    // 立刻顯示 overlay 對快搜尋只會造成閃爍、沒有實際回饋感。改成「超過 150ms 才顯示」
+    // ——只有真的慢（主要是登入用戶第一次計算要序列等 Firestore getDoc）才會看到。
+    // 已知限制：純 CPU 阻塞主執行緒時，這個 timer 本身也要等主執行緒讓出才會觸發，
+    // overlay 可能到計算尾端才畫出來；Firestore 等待型的慢（主要場景）會正常顯示，
+    // 因為 await 會讓出主執行緒，timer 能準時觸發。
+    const loadingShowTimer = setTimeout(() => {
         loadingOverlay.show('正在計算回饋...');
-        // Allow UI to update
-        await new Promise(resolve => setTimeout(resolve, 50));
-    }
+    }, 150);
 
     try {
 
@@ -2697,52 +3034,16 @@ async function calculateCashback() {
                 })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
 
                 if (itemResults.length > 0) {
-                    const cardNames = itemResults.map(r => `${r.card.name}(${r.rate}%)`).join(', ');
-                    console.log(`  ✅ 找到 ${itemResults.length} 張卡有回饋: ${cardNames}`);
-
                     // Sort by cashback amount (highest first)
                     itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-                    console.log(`    🥇 最佳: ${itemResults[0].card.name} ${itemResults[0].rate}%`);
 
                     // Add ALL cards with cashback, not just the best one
                     allItemResults.push(...itemResults);
-                } else {
-                    console.log(`  ⚠️ 找到 0 張卡有回饋 (可能未選取相關卡片)`);
                 }
-            }
-
-            console.log(`📊 總共 ${allItemResults.length} 個項目有回饋結果`);
-
-            // If some items matched but no cards have cashback, add a note
-            const unmatchedCount = currentMatchedItem.length - allItemResults.length;
-            if (unmatchedCount > 0 && currentUser) {
-                console.log(`⚠️ 有 ${unmatchedCount} 個匹配項目沒有找到回饋，可能是因為未選取相關卡片`);
             }
 
             // Merge results from same card and same activity
-            // Group by: card + rate + cap + period + category + conditions
-            const mergedResultsMap = new Map();
-
-            for (const result of allItemResults) {
-                // Create a unique key for this activity
-                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
-
-                if (mergedResultsMap.has(mergeKey)) {
-                    // Same activity - add this item to the matched items list
-                    const existing = mergedResultsMap.get(mergeKey);
-                    if (!existing.matchedItems.includes(result.matchedItemName)) {
-                        existing.matchedItems.push(result.matchedItemName);
-                    }
-                } else {
-                    // New activity - create new entry
-                    mergedResultsMap.set(mergeKey, {
-                        ...result,
-                        matchedItems: [result.matchedItemName]
-                    });
-                }
-            }
-
-            allResults = Array.from(mergedResultsMap.values());
+            allResults = mergeResultsByActivity(allItemResults);
 
             console.log(`📊 合併前: ${allItemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         } else {
@@ -2759,28 +3060,7 @@ async function calculateCashback() {
             })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
 
             // Merge results from same card and same activity
-            const mergedResultsMap = new Map();
-
-            for (const result of itemResults) {
-                // Create a unique key for this activity
-                const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
-
-                if (mergedResultsMap.has(mergeKey)) {
-                    // Same activity - add this item to the matched items list
-                    const existing = mergedResultsMap.get(mergeKey);
-                    if (!existing.matchedItems.includes(result.matchedItemName)) {
-                        existing.matchedItems.push(result.matchedItemName);
-                    }
-                } else {
-                    // New activity - create new entry
-                    mergedResultsMap.set(mergeKey, {
-                        ...result,
-                        matchedItems: [result.matchedItemName]
-                    });
-                }
-            }
-
-            allResults = Array.from(mergedResultsMap.values());
+            allResults = mergeResultsByActivity(itemResults);
 
             console.log(`📊 合併前: ${itemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
         }
@@ -2811,39 +3091,7 @@ async function calculateCashback() {
         }
 
         // Merge upcoming results from same card and same activity
-        // Group by: card + rate + cap + period + category
-        const mergedUpcomingMap = new Map();
-
-        for (const result of upcomingResults) {
-            // Create a unique key for this activity
-            const mergeKey = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
-
-            if (mergedUpcomingMap.has(mergeKey)) {
-                // Same activity - merge matched items
-                const existing = mergedUpcomingMap.get(mergeKey);
-
-                // Ensure existing has matchedItems array
-                if (!existing.matchedItems) {
-                    existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
-                }
-
-                // Add new matched items (could be single item or array)
-                const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
-                for (const item of newItems) {
-                    if (item && !existing.matchedItems.includes(item)) {
-                        existing.matchedItems.push(item);
-                    }
-                }
-            } else {
-                // New activity - create new entry
-                mergedUpcomingMap.set(mergeKey, {
-                    ...result,
-                    matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem]
-                });
-            }
-        }
-
-        uniqueUpcomingResults = Array.from(mergedUpcomingMap.values());
+        uniqueUpcomingResults = mergeResultsByActivity(upcomingResults);
 
         console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
@@ -2853,111 +3101,13 @@ async function calculateCashback() {
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 
-            // Check if search term is overseas-related
-            const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-            const merchantLower = merchantValue.toLowerCase();
-            const isOverseasSearch = overseasKeywords.some(keyword =>
-                merchantLower.includes(keyword.toLowerCase())
-            );
-
-            results = cardsToCompare.map(card => {
-                let basicCashbackAmount = 0;
-                let effectiveRate = card.basicCashback;
-                let displayCap = null;
-
-                if (isOverseasSearch && card.overseasCashback) {
-                    // Use overseas cashback rate for overseas searches
-                    effectiveRate = card.overseasCashback;
-
-                    if (card.overseasBonusRate && card.overseasBonusCap) {
-                        // Has overseas bonus (like 永豐大戶卡)
-                        const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                        const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                        const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                        basicCashbackAmount = bonusCashback + basicCashback;
-                        effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                        displayCap = card.overseasBonusCap;
-                    } else {
-                        // Simple overseas cashback
-                        basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                    }
-                } else if (card.domesticBonusRate && card.domesticBonusCap) {
-                    // Handle complex cards like 永豐幣倍 with domestic bonus
-                    const bonusAmount = Math.min(amount, card.domesticBonusCap);
-                    const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
-                    const basicCashback = Math.floor(amount * card.basicCashback / 100);
-                    basicCashbackAmount = bonusCashback + basicCashback;
-                    effectiveRate = card.basicCashback + card.domesticBonusRate;
-                    displayCap = card.domesticBonusCap;
-                } else {
-                    basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
-                }
-
-                return {
-                    rate: effectiveRate,
-                    cashbackAmount: basicCashbackAmount,
-                    cap: displayCap,
-                    matchedItem: null,
-                    effectiveAmount: amount,
-                    card: card,
-                    isBasic: true
-                };
-            });
+            results = cardsToCompare.map(card => buildBasicCashbackResult(card, amount));
         }
     } else {
         // No match found or no input - show basic cashback for selected cards
         isBasicCashback = true;
 
-        // Check if search term is overseas-related
-        const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-        const merchantLower = merchantValue.toLowerCase();
-        const isOverseasSearch = overseasKeywords.some(keyword =>
-            merchantLower.includes(keyword.toLowerCase())
-        );
-
-        results = cardsToCompare.map(card => {
-            let basicCashbackAmount = 0;
-            let effectiveRate = card.basicCashback;
-            let displayCap = null;
-
-            if (isOverseasSearch && card.overseasCashback) {
-                // Use overseas cashback rate for overseas searches
-                effectiveRate = card.overseasCashback;
-
-                if (card.overseasBonusRate && card.overseasBonusCap) {
-                    // Has overseas bonus (like 永豐大戶卡)
-                    const bonusAmount = Math.min(amount, card.overseasBonusCap);
-                    const bonusCashback = Math.floor(bonusAmount * card.overseasBonusRate / 100);
-                    const basicCashback = Math.floor(amount * card.overseasCashback / 100);
-                    basicCashbackAmount = bonusCashback + basicCashback;
-                    effectiveRate = card.overseasCashback + card.overseasBonusRate;
-                    displayCap = card.overseasBonusCap;
-                } else {
-                    // Simple overseas cashback
-                    basicCashbackAmount = Math.floor(amount * card.overseasCashback / 100);
-                }
-            } else if (card.domesticBonusRate && card.domesticBonusCap) {
-                // Handle complex cards like 永豐幣倍 with domestic bonus
-                const bonusAmount = Math.min(amount, card.domesticBonusCap);
-                const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
-                const basicCashback = Math.floor(amount * card.basicCashback / 100);
-                basicCashbackAmount = bonusCashback + basicCashback;
-                effectiveRate = card.basicCashback + card.domesticBonusRate;
-                displayCap = card.domesticBonusCap;
-            } else {
-                basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
-            }
-
-            return {
-                rate: effectiveRate,
-                cashbackAmount: basicCashbackAmount,
-                cap: displayCap,
-                matchedItem: null,
-                effectiveAmount: amount,
-                card: card,
-                isBasic: true
-            };
-        });
+        results = cardsToCompare.map(card => buildBasicCashbackResult(card, amount));
 
         // Show no match message if user has typed something
         if (merchantValue.length > 0) {
@@ -2979,21 +3129,7 @@ async function calculateCashback() {
             }));
             upcomingResults.push(...upcomingActivities.flat());
 
-            const mergedMap = new Map();
-            for (const result of upcomingResults) {
-                const key = `${result.card.id}-${result.rate}-${result.cap || 'nocap'}-${result.periodStart || ''}-${result.periodEnd || ''}-${result.matchedCategory || 'nocat'}`;
-                if (mergedMap.has(key)) {
-                    const existing = mergedMap.get(key);
-                    if (!existing.matchedItems) existing.matchedItems = existing.matchedItem ? [existing.matchedItem] : [];
-                    const newItems = result.matchedItems || [result.matchedItemName || result.matchedItem];
-                    for (const item of newItems) {
-                        if (item && !existing.matchedItems.includes(item)) existing.matchedItems.push(item);
-                    }
-                } else {
-                    mergedMap.set(key, { ...result, matchedItems: result.matchedItems || [result.matchedItemName || result.matchedItem] });
-                }
-            }
-            uniqueUpcomingResults = Array.from(mergedMap.values());
+            uniqueUpcomingResults = mergeResultsByActivity(upcomingResults);
         }
     }
     
@@ -3038,10 +3174,11 @@ async function calculateCashback() {
     } catch (err) {
         console.error('❌ calculateCashback 發生錯誤:', err);
     } finally {
-        // Always hide loading overlay, even on error
-        if (shouldShowLoading) {
-            loadingOverlay.hide();
-        }
+        // 無條件清 timer + hide：若 150ms timer 還沒觸發就先 clearTimeout（overlay
+        // 從未顯示過，loadingOverlay.hide() 的 shown guard 讓這是安全的 no-op）；
+        // 若 timer 已經顯示了 overlay，這裡負責收尾隱藏。
+        clearTimeout(loadingShowTimer);
+        loadingOverlay.hide();
     }
 }
 
@@ -3143,6 +3280,173 @@ function getCategoryStyle(category) {
     return 'display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; vertical-align: middle;';
 }
 
+// Base cashback rate for a domestic vs overseas transaction. Overseas falls
+// back to basicCashback if the card has no dedicated overseasCashback field.
+function resolveBaseRate(card, isOverseas) {
+    return isOverseas ? (card.overseasCashback || card.basicCashback) : card.basicCashback;
+}
+
+// Domestic/海外 bonus component (rate + cap + display name) for a card+level.
+// Priority: levelSettings first (bonus varies per level, e.g. 大戶卡),
+// then top-level card fields (bonus is level-independent for all other
+// cards, e.g. DBS Eco, 凱基誠品, 中信 uniopen, 滙豐 Live+, iLEO…).
+// cap === null means uncapped (無上限). Shared by calculateLayeredCashback
+// (Tier 3) and calculateStackedCashback (Layer 2) — same lookup either way.
+function resolveBonusComponent(card, levelSettings, isOverseas) {
+    if (isOverseas) {
+        const rate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
+        const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
+            ? levelSettings.overseasBonusCap : card.overseasBonusCap;
+        return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '海外消費加碼' };
+    }
+    const rate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
+    const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
+        ? levelSettings.domesticBonusCap : card.domesticBonusCap;
+    return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '國內消費加碼' };
+}
+
+// Overflow rate for the simple (cap→rate_N, overflow→basic) path: basicCashback.
+// Shared by calculateCardCashback's simple path and findUpcomingActivity.
+// （2026-07-12 移除 meta/google 廣告 → overseasCashback 特例：所有廣告槽位
+// 已改用明確的 cashbackModel（stacking），不再進簡單路徑——海外與否一律由
+// cashbackModel 決定，程式不認通路名稱。）
+function getOverflowRate(card) {
+    return resolveBaseRate(card, false);
+}
+
+// The rate to SHOW the user for a cashbackRate item. For stacking models
+// ("...+...BonusRate", e.g. Sport 卡 Apple Pay) rate_N holds only the
+// designated-channel rate, so the displayed rate is designated + basic + bonus
+// (3%+1%+1% = 5%) — identical to what the search-result card shows (this mirrors
+// calculateStackedCashback's totalRate). For every other model, or blank,
+// rate_N is already a total and is shown as-is.
+function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
+    const model = rateGroup && rateGroup.cashbackModel;
+    if (!model || !model.includes('+')) return designatedRate;
+    const isOverseas = model.includes('overseasBonusRate');
+    const basicRate = resolveBaseRate(card, isOverseas);
+    const { rate: bonusRate } = resolveBonusComponent(card, levelSettings, isOverseas);
+    return Math.round((designatedRate + basicRate + bonusRate) * 100) / 100;
+}
+
+// 詳情頁「回饋組成」按鈕（計算機圖示）：只有 stacking 模型（cashbackModel 含 '+'）
+// 需要解釋加總的來源（如 5% = 3%+1%+1%）；其他模型 rate 即總率，不顯示按鈕。
+// 組成資料以 JSON 存在按鈕的 data-comp，點擊由 toggleRateComposition 展開抽屜。
+const CALC_BREAKDOWN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
+function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+    const model = rateGroup && rateGroup.cashbackModel;
+    if (!model || !model.includes('+')) return '';
+    const isOverseas = model.includes('overseasBonusRate');
+    const basicRate = resolveBaseRate(card, isOverseas);
+    const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
+
+    const rows = [];
+    if (designatedRate > 0) rows.push({ name: '指定通路加碼', rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
+    if (basicRate > 0) rows.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, cap: null });
+    if (bonusRate > 0) rows.push({ name: bonusName, rate: bonusRate, cap: bonusCap });
+    if (rows.length < 2) return '';
+
+    const total = Math.round(rows.reduce((s, r) => s + r.rate, 0) * 100) / 100;
+    const comp = escapeHtml(JSON.stringify({ rows, total }));
+    return ` <button type="button" class="calc-breakdown-btn" title="查看回饋組成" aria-label="查看回饋組成" data-comp="${comp}" onclick="toggleRateComposition(this)">${CALC_BREAKDOWN_ICON_SVG}</button>`;
+}
+
+// 詳情頁：逐筆渲染 cashbackRates（2026-07-09 起不再按 rate+cap 合併），
+// category 一律以藍色 chip 顯示在回饋率旁（與一般卡片一致），回饋率顯示
+// getDisplayRate 加總值（stacking 模型 = 指定+基本+加碼）。
+// 回傳 { html, upcoming }；upcoming 為 30 天內即將開始的活動（逐筆、含 category）。
+async function renderCashbackRatesIndividually(card, levelData, options = {}) {
+    const { capFallbackToLevel = false, idPrefix = 'lv' } = options;
+    const activeRates = [];
+    const upcoming = [];
+
+    for (const rate of card.cashbackRates) {
+        if (rate.hideInDisplay) continue;
+        const status = getRateStatus(rate.periodStart, rate.periodEnd);
+        if (status !== 'active' && status !== 'always' && status !== 'upcoming') continue;
+
+        const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
+        let parsedCap = parseCashbackCap(rate.cap, card, levelData);
+        if (parsedCap == null && capFallbackToLevel && levelData) parsedCap = levelData.cap || null;
+        const displayRate = getDisplayRate(card, rate, parsedRate, levelData);
+
+        if (status === 'upcoming') {
+            if (isUpcomingWithinDays(rate.periodStart, 30)) {
+                upcoming.push({
+                    parsedRate: displayRate,
+                    parsedCap,
+                    items: rate.items || [],
+                    conditions: rate.conditions ? [{ category: rate.category || '', conditions: rate.conditions }] : [],
+                    period: rate.period,
+                    periodStart: rate.periodStart,
+                    periodEnd: rate.periodEnd,
+                    status: 'upcoming',
+                    category: rate.category
+                });
+            }
+            continue;
+        }
+        activeRates.push({ rate, parsedRate, parsedCap, displayRate });
+    }
+
+    // 按顯示回饋率（加總後）由高到低排序
+    activeRates.sort((a, b) => b.displayRate - a.displayRate);
+
+    let html = '';
+    activeRates.forEach((entry, index) => {
+        const { rate, parsedRate, parsedCap, displayRate } = entry;
+        html += `<div class="cashback-detail-item">`;
+
+        const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
+        const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
+
+        let endingSoonBadge = '';
+        if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
+            const daysUntil = getDaysUntilEnd(rate.periodEnd);
+            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
+            endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+        }
+
+        const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData);
+        html += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
+
+        if (parsedCap) {
+            html += `<div class="cashback-condition">消費上限: NT$${Math.floor(parsedCap).toLocaleString()}</div>`;
+        } else {
+            html += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        }
+
+        if (rate.conditions) {
+            html += renderConditionLine(rate.conditions);
+        }
+
+        if (rate.period) {
+            html += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
+        }
+
+        if (rate.items && rate.items.length > 0) {
+            const uniqueItems = [...new Set(rate.items)];
+            const merchantsId = `merchants-${card.id}-${idPrefix}-${index}`;
+            const showAllId = `show-all-${card.id}-${idPrefix}-${index}`;
+
+            if (uniqueItems.length <= 5) {
+                html += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${uniqueItems.join('、')}</div>`;
+            } else {
+                const initialList = uniqueItems.slice(0, 5).join('、');
+                const fullList = uniqueItems.join('、');
+                html += `<div class="cashback-merchants">`;
+                html += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
+                html += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
+                html += `</div>`;
+            }
+        }
+
+        html += `</div>`;
+    });
+
+    return { html, upcoming };
+}
+
 /**
  * Calculate layered cashback for cards with multi-tier reward structures
  * Used for cards like DBS Eco where multiple reward rates stack with independent caps
@@ -3155,70 +3459,111 @@ function getCategoryStyle(category) {
  * @param {boolean} isOverseas - Whether this is an overseas transaction
  * @returns {Object} - { cashbackAmount, layers }
  */
+// Waterfall cashback for designated-channel cards that also carry a 國內/海外
+// 加碼 (e.g. 永豐大戶卡 悠遊卡自動加值). The designated rate is a flat TOTAL
+// within its own cap and does NOT overlap basic; only the OVERFLOW beyond that
+// cap drops down to 基本 + 加碼. Driven entirely by data fields (designated
+// rate/cap from the matched rateGroup, bonus rate/cap from levelSettings or the
+// top-level card) — no card-specific branching.
+//
+//   Tier 1 指定通路 : min(amount, designatedCap) × designatedRate   (flat, no basic overlap)
+//   Tier 2 基本回饋 : overflow × baseRate                            (無上限)
+//   Tier 3 國內/海外加碼 : min(overflow, bonusCap) × bonusRate        (capped)
 function calculateLayeredCashback(card, levelSettings, amount, displayedRate, cap, isOverseas = false) {
     const layers = [];
     let totalCashback = 0;
 
-    // Layer 1: Basic cashback (always applies, no cap)
-    const basicCashback = Math.floor(amount * card.basicCashback / 100);
+    // Tier 1: designated channel — flat total rate within its own cap, no basic overlap
+    const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+    const designatedCashback = Math.floor(designatedAmount * displayedRate / 100);
     layers.push({
-        name: '基本回饋',
-        rate: card.basicCashback,
-        applicableAmount: amount,
-        cashback: basicCashback,
-        cap: null
+        name: '指定通路',
+        rate: displayedRate,
+        applicableAmount: designatedAmount,
+        cashback: designatedCashback,
+        cap: (cap && cap > 0) ? cap : null
     });
-    totalCashback += basicCashback;
+    totalCashback += designatedCashback;
 
-    // Layer 2: Bonus rate (domestic or overseas, with consumption cap)
-    let bonusRate = 0;
-    let bonusCap = 0;
-    let bonusName = '';
+    const overflow = amount - designatedAmount;
 
-    if (isOverseas && levelSettings.overseasBonusRate && levelSettings.overseasBonusCap) {
-        bonusRate = levelSettings.overseasBonusRate;
-        bonusCap = levelSettings.overseasBonusCap;
-        bonusName = '海外消費加碼';
-    } else if (!isOverseas && levelSettings.domesticBonusRate && levelSettings.domesticBonusCap) {
-        bonusRate = levelSettings.domesticBonusRate;
-        bonusCap = levelSettings.domesticBonusCap;
-        bonusName = '國內消費加碼';
-    }
-
-    if (bonusRate > 0 && bonusCap > 0) {
-        const bonusApplicableAmount = Math.min(amount, bonusCap);
-        const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+    if (overflow > 0) {
+        // Tier 2: base rate on the overflow (no cap).
+        const baseRate = resolveBaseRate(card, isOverseas);
+        const baseCashback = Math.floor(overflow * baseRate / 100);
         layers.push({
-            name: bonusName,
-            rate: bonusRate,
-            applicableAmount: bonusApplicableAmount,
-            cashback: bonusCashback,
-            cap: bonusCap
+            name: '基本回饋',
+            rate: baseRate,
+            applicableAmount: overflow,
+            cashback: baseCashback,
+            cap: null
         });
-        totalCashback += bonusCashback;
-    }
+        totalCashback += baseCashback;
 
-    // Layer 3: Designated region/category bonus (with consumption cap)
-    // This is the additional rate on top of basic + bonus
-    const designatedBonusRate = displayedRate - card.basicCashback - bonusRate;
+        // Tier 3: 國內/海外加碼 on the overflow.
+        const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
-    if (designatedBonusRate > 0 && cap) {
-        const designatedApplicableAmount = Math.min(amount, cap);
-        const designatedCashback = Math.floor(designatedApplicableAmount * designatedBonusRate / 100);
-        layers.push({
-            name: '指定項目加碼',
-            rate: designatedBonusRate,
-            applicableAmount: designatedApplicableAmount,
-            cashback: designatedCashback,
-            cap: cap
-        });
-        totalCashback += designatedCashback;
+        if (bonusRate > 0) {
+            // bonusCap null = apply to full overflow (無上限)
+            const bonusApplicableAmount = bonusCap != null ? Math.min(overflow, bonusCap) : overflow;
+            const bonusCashback = Math.floor(bonusApplicableAmount * bonusRate / 100);
+            layers.push({
+                name: bonusName,
+                rate: bonusRate,
+                applicableAmount: bonusApplicableAmount,
+                cashback: bonusCashback,
+                cap: bonusCap // null = 無上限, preserved for display
+            });
+            totalCashback += bonusCashback;
+        }
     }
 
     return {
         cashbackAmount: totalCashback,
         layers: layers
     };
+}
+
+// Stacking (疊加) model: all rate components apply to the same spending amount simultaneously.
+// Used when cashbackModel = "...+domesticBonusRate" or "...+overseasBonusRate".
+// rate_N for a stacking item holds ONLY the designated-channel rate (e.g. Sport 卡
+// Apple Pay rate_N = 3, not 5) — it does NOT include basic/bonus. The displayed
+// 回饋率 (totalRate) is computed here as designated + basic + bonus for the user.
+// Each component has its own cap; they are applied concurrently (not waterfall).
+function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false) {
+    const layers = [];
+    let totalCashback = 0;
+
+    const basicRate = resolveBaseRate(card, isOverseas);
+    const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
+
+    // Layer 1: base cashback on ALL spending (no cap) — 海外模型自動用
+    // overseasCashback（resolveBaseRate），所以「overseasCashback+overseasBonusRate」
+    // 這種無 basic 的組合不需要特殊處理
+    const basicCashback = Math.floor(amount * basicRate / 100);
+    layers.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
+    totalCashback += basicCashback;
+
+    // Layer 2: Bonus (domestic / overseas), within its own cap
+    if (bonusRate > 0) {
+        const bonusAmount = bonusCap != null ? Math.min(amount, bonusCap) : amount;
+        const bonusCashback = Math.floor(bonusAmount * bonusRate / 100);
+        layers.push({ name: bonusName, rate: bonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: bonusCap });
+        totalCashback += bonusCashback;
+    }
+
+    // Layer 3: Designated channel rate (from rate_N as-is), within cashbackRate cap
+    if (designatedRate > 0) {
+        const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+        const designatedCashback = Math.floor(designatedAmount * designatedRate / 100);
+        layers.push({ name: '指定通路加碼', rate: designatedRate, applicableAmount: designatedAmount, cashback: designatedCashback, cap: (cap && cap > 0) ? cap : null });
+        totalCashback += designatedCashback;
+    }
+
+    // Displayed 回饋率 = sum of all active components (e.g. 3%+1%+1% = 5%)
+    const totalRate = designatedRate + basicRate + bonusRate;
+
+    return { cashbackAmount: totalCashback, layers, totalRate };
 }
 
 // Calculate cashback for a specific card
@@ -3243,12 +3588,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
             );
             if (matchedLevel) {
                 savedLevel = matchedLevel;
-                // Update Firestore with correct format
+                // Same level, just a formatting difference (e.g. "level1" vs
+                // "Level 1") — safe to persist the normalized form.
                 await saveCardLevel(card.id, savedLevel);
             } else {
-                // Fallback to default level
+                // Genuinely not found — use default for this calculation only,
+                // but do NOT persist it, so the user's stored choice survives a
+                // transient data mismatch (see resolveCardLevel for rationale).
                 savedLevel = defaultLevel;
-                await saveCardLevel(card.id, savedLevel);
             }
         }
 
@@ -3308,27 +3655,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
-                    // Check if levelSettings has rate_hide to override the cashbackRate
-                    // Only apply rate_hide for rateGroups with hideInDisplay=true
-                    let finalRate = parsedRate;
-                    if (levelSettings && levelSettings.rate_hide !== undefined && rateGroup.hideInDisplay === true) {
-                        finalRate = levelSettings.rate_hide;
-                        // Also update cap from levelSettings if available
-                        if (levelSettings.cap !== undefined) {
-                            applicableCap = levelSettings.cap;
-                        }
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelSettings.rate_hide}%)`);
-                    } else {
-                        // 顯示原始 rate 或解析後的值
-                        const displayRate = (rateGroup.rate === '{specialRate}' || rateGroup.rate === '{rate}')
-                            ? `${rateGroup.rate}=${parsedRate}`
-                            : parsedRate;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
-                    }
+                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
+                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
+                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
+                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
 
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: finalRate,
+                        rate: parsedRate,
                         cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
@@ -3359,10 +3693,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         }
                     }
                 }
-            }
-
-            if (!matchedSpecialItem && card.id === 'cathay-cube') {
-                console.log(`⚠️ ${card.name}: 未匹配到 specialItem (搜索變體: ${searchVariants.join(', ')})`);
             }
 
             if (matchedSpecialItem) {
@@ -3434,9 +3764,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let levelData = null;
         if (card.hasLevels) {
             const defaultLevel = Object.keys(card.levelSettings)[0];
-            const savedLevel = await getCardLevel(card.id, defaultLevel);
-            levelData = card.levelSettings[savedLevel];
-            selectedLevel = savedLevel; // Store selected level for display
+            const resolved = await resolveCardLevel(card, defaultLevel);
+            levelData = resolved.data;
+            selectedLevel = resolved.level; // Store selected level for display
         }
 
         // Check exact matches for all search variants using index
@@ -3477,36 +3807,22 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 解析 rate 值（支援 {rate}、{specialRate}、{rate_hide} 等）
+                    // 解析 rate 值（支援 {rate}、{specialRate} 等任意 levelSettings 欄位）
                     let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
                     let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
 
                     // Find the exact matched item name
                     const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
 
-                    // Check if levelSettings has rate_hide to override the cashbackRate
-                    // Only apply rate_hide for rateGroups with hideInDisplay=true
-                    let finalRate = parsedRate;
-                    let applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
-
-                    if (levelData && levelData.rate_hide !== undefined && rateGroup.hideInDisplay === true) {
-                        finalRate = levelData.rate_hide;
-                        // Also update cap from levelSettings if available
-                        if (levelData.cap !== undefined) {
-                            applicableCap = levelData.cap;
-                        }
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}"，使用 levelSettings.rate_hide (${levelData.rate_hide}%)`);
-                    } else {
-                        // 顯示原始 rate 或解析後的值
-                        const displayRate = (rateGroup.rate === '{rate_hide}' || rateGroup.rate === '{rate}')
-                            ? `${rateGroup.rate}=${parsedRate}`
-                            : parsedRate;
-                        console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${displayRate}%)`);
-                    }
+                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
+                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
+                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
+                    const applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
+                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
 
                     // Add this match to allMatches array
                     allMatches.push({
-                        rate: finalRate,
+                        rate: parsedRate,
                         cap: applicableCap,
                         matchedItem: exactMatch,
                         matchedCategory: rateGroup.category || null,
@@ -3526,39 +3842,96 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let totalRate = rate;
         let calculationLayers = null;
 
-        // Check if we should use layered calculation
-        // Criteria: card has levelSettings with overseasBonusRate or domesticBonusRate
+        // Determine calculation path based on cashbackModel field and card bonus rates.
+        // cashbackModel values (set per-cashbackRate item in Sheet); the name lists
+        // every rate component that applies, in order of cap consumption:
+        //   "rate" / "rate+basic"           → just the rate, basic on overflow, NO bonus
+        //   "rate+basic+domesticBonusRate"  → stacking: designated + basic + domestic bonus
+        //   "rate+basic+overseasBonusRate"  → stacking: designated + basic + overseas bonus
+        //   "basic+domesticBonusRate"       → stacking, no designated (general 國內消費)
+        //   "basic+overseasBonusRate"       → stacking, no designated (general 國外消費)
+        //   (not set)                       → waterfall if card carries any bonus rate
         let shouldUseLayeredCalculation = false;
+        let shouldUseStackedCalculation = false;
+        let stackedIsOverseas = false;
         let levelSettingsForCalc = null;
         let isOverseasTransaction = false;
 
+        // Step 1: resolve level settings for hasLevels cards (regardless of bonus)
         if (card.hasLevels && card.levelSettings) {
-            // Get the level settings for this card
             const availableLevels = Object.keys(card.levelSettings);
             const levelToUse = selectedLevel || availableLevels[0];
             levelSettingsForCalc = card.levelSettings[levelToUse];
+        }
 
-            // Check if this level has bonus rates (indicating layered calculation needed)
-            if (levelSettingsForCalc &&
-                (levelSettingsForCalc.overseasBonusRate || levelSettingsForCalc.domesticBonusRate)) {
+        // Step 2: pick calculation model
+        const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null;
+
+        // cashbackModel grammar — the SEPARATOR alone picks stacking vs waterfall,
+        // per rate_N slot, independent of every other slot on the same card:
+        //   "+" → STACKING: components apply concurrently to the FULL amount,
+        //         each with its own cap (calculateStackedCashback). rate_N here
+        //         is the designated-only rate (does NOT include basic).
+        //         e.g. "rate+basic+domesticBonusRate", "basic+overseasBonusRate"
+        //   ">" → WATERFALL: rate_N is cap-limited; the overflow then earns the
+        //         next component(s) (calculateLayeredCashback). rate_N here is
+        //         the ALREADY-TOTALED rate (includes basic).
+        //         e.g. "rate>basic>domesticBonusRate", "rate>basic>overseasBonusRate"
+        //   "rate" (bare, no separator) → simple 2-tier, NEVER applies any bonus
+        //         regardless of the card's own bonus fields (cap→rate_N,
+        //         overflow→basicCashback only) — for channels fully excluded
+        //         from the card's bonus program, e.g. 大戶卡「悠遊卡自動加值」.
+        //   (blank) → legacy default: if the card carries domesticBonusRate/
+        //         overseasBonusRate, behaves like an implicit domestic
+        //         "rate>basic>domesticBonusRate" — kept so cards not yet
+        //         tagged (DBS Eco 國內項目, 凱基誠品, …) keep working unchanged.
+        //
+        // Domestic vs overseas is read purely from whether the literal keyword
+        // `domesticBonusRate` / `overseasBonusRate` appears in the string —
+        // never auto-detected from the search term or item name.
+        // NOTE: the retired name "rate+basic" (used before this redesign) is NOT
+        // an alias for bare "rate" — it now matches the "+" branch (stacking).
+        // Rename any existing "rate+basic" data to bare "rate".
+        const isOverseasModel = cashbackModel ? cashbackModel.includes('overseasBonusRate') : false;
+
+        if (cashbackModel === 'rate') {
+            // Simple path, no bonus ever — handled by the final `else` branch below.
+        } else if (cashbackModel && cashbackModel.includes('+')) {
+            shouldUseStackedCalculation = true;
+            stackedIsOverseas = isOverseasModel;
+        } else if (cashbackModel && cashbackModel.includes('>')) {
+            shouldUseLayeredCalculation = true;
+            isOverseasTransaction = isOverseasModel;
+        } else if (!cashbackModel) {
+            // Blank — legacy default: waterfall (domestic) if card carries bonus rates
+            const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
+            const effectiveOvsBonus = (levelSettingsForCalc && levelSettingsForCalc.overseasBonusRate) || card.overseasBonusRate;
+
+            if (effectiveDomBonus || effectiveOvsBonus) {
                 shouldUseLayeredCalculation = true;
-
-                // Determine if this is an overseas transaction
-                // Check the matched item or category for overseas keywords
-                const overseasKeywords = ['海外', '國外', '日本', '韓國', '美國', '歐洲', '新加坡', '泰國', '越南', '馬來西亞', '印尼', '菲律賓', '香港', '澳門', '中國'];
-                const itemToCheck = (matchedItem || '').toLowerCase();
-                const categoryToCheck = (matchedCategory || '').toLowerCase();
-
-                isOverseasTransaction = overseasKeywords.some(keyword =>
-                    itemToCheck.includes(keyword.toLowerCase()) ||
-                    categoryToCheck.includes(keyword.toLowerCase())
-                );
+                isOverseasTransaction = false;
             }
         }
 
-        if (rate > 0) {
-            if (shouldUseLayeredCalculation && levelSettingsForCalc) {
-                // Use layered calculation for complex multi-tier cashback
+        // 註：stacking 允許 rate=0 的「無指定加碼」項目（如隱藏的一般國內消費槽，
+        // model=basic+domesticBonusRate）——基本與加碼層仍會計算。
+        if (rate > 0 || shouldUseStackedCalculation) {
+            if (shouldUseStackedCalculation) {
+                // Stacking model: basic + bonus + designated all applied to same amount
+                const stackedResult = calculateStackedCashback(
+                    card,
+                    levelSettingsForCalc,
+                    amount,
+                    rate,
+                    cap,
+                    stackedIsOverseas
+                );
+                cashbackAmount = stackedResult.cashbackAmount;
+                calculationLayers = stackedResult.layers;
+                totalRate = stackedResult.totalRate; // 顯示加總後的最高回饋率（如 3%+1%+1%=5%）
+                effectiveAmount = amount;
+            } else if (shouldUseLayeredCalculation) {
+                // Waterfall: designated tier first, basic on overflow, bonus on overflow
                 const layeredResult = calculateLayeredCashback(
                     card,
                     levelSettingsForCalc,
@@ -3572,46 +3945,35 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 totalRate = rate; // Keep displayed total rate
                 effectiveAmount = amount; // Show full amount for layered calculation
             } else {
-                // Use simple calculation for standard cashback
-                let specialCashback = 0;
-                let effectiveSpecialAmount = amount;
+                // Simple path: cap 內用 rate_N(已含 basic)、溢出視 cashbackModel 而定.
+                // Build the breakdown layers once and derive cashbackAmount from
+                // them, instead of computing each layer's cashback twice.
+                const effectiveSpecialAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
+                const specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
 
-                if (cap && amount > cap) {
-                    effectiveSpecialAmount = cap;
-                }
+                const layers = [
+                    { name: '指定通路', rate: rate, applicableAmount: effectiveSpecialAmount, cashback: specialCashback, cap: (cap && cap > 0) ? cap : null }
+                ];
 
-                // NOTE: All cashback rates in cashbackRates are already TOTAL rates (including basic)
-                // Do NOT add basicCashback or domesticBonusRate on top
-                specialCashback = Math.floor(effectiveSpecialAmount * rate / 100);
-
-                // Handle remaining amount if capped (excess amount gets basic cashback only)
-                let remainingCashback = 0;
                 if (cap && amount > cap) {
                     const remainingAmount = amount - cap;
-
-                    // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
-                    const isAdPlatform = matchedRateGroup?.items?.some(item =>
-                        item.toLowerCase().includes('meta廣告') ||
-                        item.toLowerCase().includes('google廣告')
-                    );
-                    const shouldUseOverseasForExcess =
-                        isAdPlatform && card.id !== 'taishin-richart';
-
-                    // Choose excess rate: overseasCashback > basicCashback
-                    const excessRate = shouldUseOverseasForExcess
-                        ? (card.overseasCashback || card.basicCashback)
-                        : card.basicCashback;
-
-                    remainingCashback = Math.floor(remainingAmount * excessRate / 100);
+                    if (cashbackModel === 'rate') {
+                        // Fully excluded from the card's ordinary spending program
+                        // (e.g. 大戶卡「悠遊卡自動加值」) — spending beyond the cap
+                        // earns nothing, shown explicitly as 0 rather than silently
+                        // missing from the total.
+                        layers.push({ name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
+                    } else {
+                        const excessRate = getOverflowRate(card);
+                        const remainingCashback = Math.floor(remainingAmount * excessRate / 100);
+                        layers.push({ name: '基本回饋', rate: excessRate, applicableAmount: remainingAmount, cashback: remainingCashback, cap: null });
+                    }
                 }
 
-                // Total cashback = special rate amount + remaining basic amount
-                cashbackAmount = specialCashback + remainingCashback;
-
-                // Total rate is the special rate from cashbackRates (no bonusRate added)
+                cashbackAmount = layers.reduce((sum, layer) => sum + layer.cashback, 0);
                 totalRate = Math.round(rate * 100) / 100;
                 effectiveAmount = cap; // Keep this for display purposes
+                calculationLayers = layers;
             }
         }
 
@@ -3649,9 +4011,9 @@ async function findUpcomingActivity(card, searchTerm, amount) {
     if (card.hasLevels) {
         const availableLevels = Object.keys(card.levelSettings || {});
         const defaultLevel = availableLevels[0];
-        const savedLevel = await getCardLevel(card.id, defaultLevel);
-        levelData = card.levelSettings[savedLevel];
-        selectedLevel = savedLevel;
+        const resolved = await resolveCardLevel(card, defaultLevel);
+        levelData = resolved.data;
+        selectedLevel = resolved.level;
     }
 
     // Check cashbackRates for upcoming activities
@@ -3703,21 +4065,7 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                 let remainingCashback = 0;
                 if (parsedCap && amount > parsedCap) {
                     const remainingAmount = amount - parsedCap;
-
-                    // 🔥 Check if should use overseasCashback for excess amount
-                    // Conditions: items include meta广告 or google广告, and NOT 台新 Richart 卡
-                    const isAdPlatform = rateGroup.items?.some(item =>
-                        item.toLowerCase().includes('meta廣告') ||
-                        item.toLowerCase().includes('google廣告')
-                    );
-                    const shouldUseOverseasForExcess =
-                        isAdPlatform && card.id !== 'taishin-richart';
-
-                    // Choose excess rate: overseasCashback > basicCashback
-                    const excessRate = shouldUseOverseasForExcess
-                        ? (card.overseasCashback || card.basicCashback)
-                        : card.basicCashback;
-
+                    const excessRate = getOverflowRate(card);
                     remainingCashback = Math.floor(remainingAmount * excessRate / 100);
                 }
 
@@ -3827,7 +4175,7 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">＊ ${merchantInfo.merchantName}也支援以下行動支付</div>`;
+    let infoHTML = `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
 
     // 計算有多少個付款方式
     const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
@@ -3836,12 +4184,12 @@ function displayMerchantPaymentInfo(searchedItem) {
 
     if (hasOnline) {
         const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.online}</div>`;
+        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
     }
 
     if (hasOffline) {
         const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${merchantInfo.offline}</div>`;
+        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
     }
 
     infoBlock.innerHTML = infoHTML;
@@ -3884,13 +4232,14 @@ function displayReferralLink(searchedItem) {
     infoBlock.id = 'referral-link-info';
     infoBlock.className = 'referral-link-info';
 
+    const referralUrl = sanitizeUrl(matchedReferral.url);
     infoBlock.innerHTML = `
         <div class="referral-link-content">
             <span class="referral-link-icon">🎁</span>
-            <span class="referral-link-text">${matchedReferral.description}</span>
-            <a href="${matchedReferral.url}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+            <span class="referral-link-text">${escapeHtml(matchedReferral.description)}</span>
+            ${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
                 前往註冊 →
-            </a>
+            </a>` : ''}
         </div>
     `;
 
@@ -3947,12 +4296,14 @@ function displayCashbackSites(searchedItem) {
 
     // 標題顯示實際匹配到的商家名稱（粗體），而非使用者輸入
     const matchedMerchantName = (shopbackMatch || linebuyMatch).merchant;
-    let html = `<div class="merchant-payment-title">＊ <strong>${matchedMerchantName}</strong> 也可透過導購網站享加碼回饋</div>`;
-    if (shopbackMatch) {
-        html += `<div class="merchant-payment-item"><a href="${shopbackMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
+    let html = `<div class="merchant-payment-title">＊ <strong>${escapeHtml(matchedMerchantName)}</strong> 也可透過導購網站享加碼回饋</div>`;
+    const shopbackUrl = shopbackMatch ? sanitizeUrl(shopbackMatch.link) : '';
+    const linebuyUrl = linebuyMatch ? sanitizeUrl(linebuyMatch.link) : '';
+    if (shopbackUrl) {
+        html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
     }
-    if (linebuyMatch) {
-        html += `<div class="merchant-payment-item"><a href="${linebuyMatch.link}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
+    if (linebuyUrl) {
+        html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
     }
     infoBlock.innerHTML = html;
 
@@ -3989,7 +4340,7 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         noResultsDiv.className = 'no-results';
         noResultsDiv.innerHTML = `
             <h3>無符合的信用卡</h3>
-            <p>沒有任何信用卡對「${searchedItem}」提供現金回饋。</p>
+            <p>沒有任何信用卡對「${escapeHtml(searchedItem)}」提供現金回饋。</p>
         `;
         resultsContainer.appendChild(noResultsDiv);
     } else {
@@ -4032,8 +4383,7 @@ async function calculateCouponRate(coupon, card) {
     }
 
     // 取得用戶的 Level 設定
-    const level = await getCardLevel('cathay-cube', 'Level 1');
-    const levelSettings = card.levelSettings[level];
+    const { data: levelSettings } = await resolveCardLevel(card, 'Level 1');
 
     // 處理純 "specialRate" 或 "generalRate" 的情況
     if (rate === 'specialRate') {
@@ -4063,23 +4413,27 @@ async function calculateCouponRate(coupon, card) {
     return parseFloat(rate);
 }
 
-// 解析 cashbackRates 中的 rate 值（支援數字、{specialRate}、{rate}）
-async function parseCashbackRate(rate, card, levelSettings) {
+// ========== Placeholder 解析（{rate}、{cap}、{rate_1}、{overseasBonusRate} 等任意欄位）==========
+// 三個 parse 函數共用這一個 placeholder 抽取邏輯（原本正則寫了 3 遍）。
+// 從 "{欄位名}" 字串取出欄位名，不是 placeholder 格式則回 null。
+function extractPlaceholderField(value) {
+    if (typeof value !== 'string') return null;
+    const m = value.match(/^\{(.+)\}$/);
+    return m ? m[1] : null;
+}
+
+// 解析 cashbackRates 中的 rate 值（支援數字、{specialRate}、{rate} 等任意 placeholder）
+// 註：2026-07 起改為同步函數（原本標成 async 但內部沒有任何非同步操作），
+// 既有的 `await parseCashbackRate(...)` 呼叫方式仍完全相容。
+function parseCashbackRate(rate, card, levelSettings) {
     // 如果是數字，直接返回
     if (typeof rate === 'number') {
         return rate;
     }
 
-    // 如果不是字串，嘗試轉換成數字
-    if (typeof rate !== 'string') {
-        return parseFloat(rate);
-    }
-
     // 處理 {placeholder} 格式（支援任意欄位名稱）
-    const placeholderMatch = rate.match(/^\{(.+)\}$/);
-    if (placeholderMatch) {
-        const fieldName = placeholderMatch[1]; // 提取欄位名稱（如 "rate", "rate_1", "overseasBonusRate"）
-
+    const fieldName = extractPlaceholderField(rate);
+    if (fieldName) {
         // 只有 hasLevels 的卡片才支援 placeholder
         if (card.hasLevels && levelSettings && levelSettings[fieldName] !== undefined) {
             return levelSettings[fieldName];
@@ -4092,25 +4446,22 @@ async function parseCashbackRate(rate, card, levelSettings) {
     return parseFloat(rate);
 }
 
-// 同步版本的 rate 解析（用於排序，不顯示警告）
+// 同步版本的 rate 解析（用於排序，不需要 card 物件、不顯示警告）
 function parseCashbackRateSync(rate, levelData) {
     if (typeof rate === 'number') {
         return rate;
     }
 
-    // 處理 {placeholder} 格式（支援任意欄位名稱）
-    if (typeof rate === 'string') {
-        const placeholderMatch = rate.match(/^\{(.+)\}$/);
-        if (placeholderMatch) {
-            const fieldName = placeholderMatch[1];
-            return levelData?.[fieldName] || 0;
-        }
+    const fieldName = extractPlaceholderField(rate);
+    if (fieldName) {
+        return levelData?.[fieldName] || 0;
     }
 
     return parseFloat(rate) || 0;
 }
 
 // 解析 cashbackRates 中的 cap 值（支援數字和 {cap}、{cap_1} 等任意 placeholder）
+// 與 rate 的差異：無效值回傳 null（代表無上限），不是 0
 function parseCashbackCap(cap, card, levelSettings) {
     // 如果是數字，直接返回
     if (typeof cap === 'number') {
@@ -4122,17 +4473,9 @@ function parseCashbackCap(cap, card, levelSettings) {
         return null;
     }
 
-    // 如果不是字串，嘗試轉換成數字
-    if (typeof cap !== 'string') {
-        const parsed = parseInt(cap);
-        return isNaN(parsed) ? null : parsed;
-    }
-
     // 處理 {placeholder} 格式（支援任意欄位名稱）
-    const placeholderMatch = cap.match(/^\{(.+)\}$/);
-    if (placeholderMatch) {
-        const fieldName = placeholderMatch[1]; // 提取欄位名稱（如 "cap", "cap_1", "domesticBonusCap"）
-
+    const fieldName = extractPlaceholderField(cap);
+    if (fieldName) {
         // 只有 hasLevels 的卡片才支援 placeholder
         if (card.hasLevels && levelSettings && levelSettings[fieldName] !== undefined) {
             return levelSettings[fieldName];
@@ -4183,12 +4526,39 @@ async function displayCouponCashbacks(amount, merchantValue) {
                     // 計算實際回饋率（支援分級）
                     const actualRate = await calculateCouponRate(coupon, card);
 
+                    // Apply couponCap: within-cap amount uses the coupon rate,
+                    // spending beyond the cap earns the card's basic cashback rate.
+                    const capNum = parseFloat(coupon.cap);
+                    let potentialCashback;
+                    let calculationLayers = null;
+
+                    if (capNum && capNum > 0 && amount > capNum) {
+                        const withinCapAmount = capNum;
+                        const overflowAmount = amount - capNum;
+                        const couponCashback = Math.floor(withinCapAmount * actualRate / 100);
+                        // 領券活動的溢出直接用 basicCashback（與 getOverflowRate 現值等價，
+                        // 不共用只是避免對 helper 的依賴；領券商家都是國內實體/電商通路）
+                        const overflowRate = card.basicCashback || 0;
+                        const overflowCashback = Math.floor(overflowAmount * overflowRate / 100);
+                        potentialCashback = couponCashback + overflowCashback;
+                        calculationLayers = [
+                            { name: '領券活動', rate: actualRate, applicableAmount: withinCapAmount, cashback: couponCashback, cap: capNum },
+                            { name: '基本回饋', rate: overflowRate, applicableAmount: overflowAmount, cashback: overflowCashback, cap: null }
+                        ];
+                    } else {
+                        potentialCashback = Math.floor(amount * actualRate / 100);
+                        calculationLayers = [
+                            { name: '領券活動', rate: actualRate, applicableAmount: amount, cashback: potentialCashback, cap: (capNum && capNum > 0) ? capNum : null }
+                        ];
+                    }
+
                     matchingCoupons.push({
                         ...coupon,
                         cardName: card.name,
                         cardId: card.id,
                         actualRate: actualRate, // 儲存計算後的實際回饋率
-                        potentialCashback: Math.floor(amount * actualRate / 100),
+                        potentialCashback: potentialCashback,
+                        calculationLayers: calculationLayers,
                         matchedMerchants: matchedMerchants // Store matched merchants
                     });
                 }
@@ -4307,7 +4677,8 @@ let showCardholderPromos = false;
 // Help popup is shown via CSS (:hover or :focus-within on .promo-help-wrap).
 // On touch, tapping outside the wrap blurs the help button so the popup hides.
 function setupCardholderPromoToggle() {
-    const ids = ['show-promos-toggle-desktop', 'show-promos-toggle-mobile'];
+    // 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式與同步邏輯以防未來再分裝置）
+    const ids = ['show-promos-checkbox'];
     const onChange = (e) => {
         showCardholderPromos = e.target.checked;
         // Sync the other checkbox so both stay in lockstep
@@ -4323,18 +4694,36 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Mobile help: click '?' toggles a sibling text panel inline.
-    document.querySelectorAll('.promo-help-inline').forEach(btn => {
+    // Help: click '?' toggles a floating text panel (overlay, doesn't push layout).
+    // 一次只開一個說明——開新的先收舊的；點面板外任意處也會收合
+    const inlineHelpBtns = [...document.querySelectorAll('.promo-help-inline')];
+    const closeAllInlineHelp = () => {
+        inlineHelpBtns.forEach(btn => {
+            const t = document.getElementById(btn.getAttribute('data-help-target'));
+            if (t && !t.hasAttribute('hidden')) {
+                t.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    };
+    inlineHelpBtns.forEach(btn => {
         const targetId = btn.getAttribute('data-help-target');
         const text = targetId && document.getElementById(targetId);
         if (!text) return;
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const isHidden = text.hasAttribute('hidden');
-            text.toggleAttribute('hidden', !isHidden);
-            btn.setAttribute('aria-expanded', String(isHidden));
+            e.stopPropagation();
+            const wasHidden = text.hasAttribute('hidden');
+            closeAllInlineHelp();
+            text.toggleAttribute('hidden', !wasHidden);
+            btn.setAttribute('aria-expanded', String(wasHidden));
         });
     });
+    if (inlineHelpBtns.length > 0) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.promo-help-text')) closeAllInlineHelp();
+        });
+    }
 
     // Desktop help: hover '?' shows a native popover (top-layer, escapes z-index).
     const popoverSupported = typeof HTMLElement.prototype.showPopover === 'function';
@@ -4384,13 +4773,6 @@ function setupCardholderPromoToggle() {
 }
 
 // Parse a rate string like "5%" or "+3%" into a decimal (0.05).
-function parsePromoRate(rateStr) {
-    if (!rateStr) return 0;
-    const m = String(rateStr).match(/(\d+(?:\.\d+)?)/);
-    if (!m) return 0;
-    return parseFloat(m[1]) / 100;
-}
-
 // Expand a search term to include fuzzy aliases (e.g., 'linepay' ↔ 'line pay').
 function expandSearchTerm(term) {
     const t = String(term || '').toLowerCase().trim();
@@ -4520,21 +4902,6 @@ function buildPromoDetailRows(promo, card, amount, bonusApplies) {
 // Does a card match the current merchant search? (used to decide whether to
 // show its promos at all). A card matches if any of its cashbackRates items
 // substring-matches the search term or any quick-search keyword.
-function cardMatchesSearch(card, merchantValue, quickKeywords) {
-    if (!card || !card._itemsIndex) return false;
-    const terms = [];
-    if (Array.isArray(quickKeywords) && quickKeywords.length > 0) {
-        quickKeywords.forEach(k => { if (k) terms.push(String(k).toLowerCase()); });
-    } else if (merchantValue) {
-        terms.push(String(merchantValue).toLowerCase());
-    }
-    if (terms.length === 0) return false;
-    for (const itemKey of card._itemsIndex.keys()) {
-        if (terms.some(t => itemKey.includes(t) || t.includes(itemKey))) return true;
-    }
-    return false;
-}
-
 // Render new cardholder promos below the regular results.
 // Filters: card in cardsInComparison, NOT in myOwnedCards, has matching active promo.
 function displayCardholderPromos(merchantValue, amount, quickKeywords) {
@@ -4793,6 +5160,15 @@ function escapeHtmlMultiline(s) {
     return escapeHtml(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
+// 外部連結防護：只允許 http/https 開頭的網址，杜絕 javascript: 等危險 scheme
+// 被塞進 href（連結值來自 Google Sheets 資料，多一層保險）。不合法時回傳空字串，
+// 呼叫端拿到空字串就不要渲染該連結。
+function sanitizeUrl(url) {
+    if (typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+}
+
 // Sticky nav inside the card detail modal: hide buttons whose section is
 // missing or empty, smooth-scroll on click, highlight active section.
 let _cardDetailNavObserver = null;
@@ -5023,11 +5399,16 @@ function createCouponResultElement(coupon, amount) {
         console.log('星巴克 coupon cap:', coupon.cap, 'type:', typeof coupon.cap);
     }
 
+    if (coupon.calculationLayers) {
+        couponDiv.dataset.calcLayers = JSON.stringify(coupon.calculationLayers);
+        couponDiv.dataset.calcAmount = amount;
+    }
+
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="card-name-with-pin">
                 <div class="coupon-merchant">${coupon.cardName}</div>
-                <button type="button" class="card-detail-peek-btn" data-card-id="${coupon.cardId}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
+                <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(coupon.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
             </div>
         </div>
         <div class="card-details">
@@ -5037,7 +5418,12 @@ function createCouponResultElement(coupon, amount) {
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
-                <div class="detail-value cashback-amount">NT$${coupon.potentialCashback.toLocaleString()}</div>
+                <div class="detail-value cashback-amount">
+                    NT$${coupon.potentialCashback.toLocaleString()}
+                    ${coupon.calculationLayers && coupon.calculationLayers.length > 0 ? `
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
+                    ` : ''}
+                </div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
@@ -5092,6 +5478,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         : result.matchedItem;
     const pinned = merchantForPin && !isBasicCashback ? isPinned(result.card.id, merchantForPin) : false;
 
+    // Store layers for the breakdown button
+    if (result.calculationLayers) {
+        cardDiv.dataset.calcLayers = JSON.stringify(result.calculationLayers);
+        cardDiv.dataset.calcAmount = originalAmount;
+    }
+
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
@@ -5128,7 +5520,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
-                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">${cashbackText}</div>
+                <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
+                    ${cashbackText}
+                    ${result.calculationLayers && result.calculationLayers.length > 0 ? `
+                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
+                    ` : ''}
+                </div>
                 ${(() => {
     if (result.card.basicCashbackType) {
         const cashbackType = result.card.basicCashbackType;
@@ -5211,29 +5608,152 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     return cardDiv;
 }
 
-// Format currency
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('zh-TW', {
-        style: 'currency',
-        currency: 'TWD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
+// Show a small inline breakdown popup when the user clicks "算式"
+// Tracks which button currently has its breakdown open, so a second click on
+// the SAME button toggles it closed, while clicking a DIFFERENT button closes
+// the old one and opens the new one (instead of just closing whatever was open).
+let openBreakdownBtn = null;
+
+function closeOpenBreakdown() {
+    if (openBreakdownBtn) {
+        openBreakdownBtn.closest('.card-result, .coupon-item')?.querySelector('.calc-breakdown-popup')?.remove();
+        openBreakdownBtn.classList.remove('active');
+        openBreakdownBtn = null;
+    }
 }
 
+function showCalcBreakdown(btn, cardResult) {
+    // Clicking the button whose popup is already open just closes it
+    if (openBreakdownBtn === btn) {
+        closeOpenBreakdown();
+        return;
+    }
+
+    // Otherwise close whichever popup was open elsewhere, then open this one
+    closeOpenBreakdown();
+
+    const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
+    if (!layers.length) return;
+
+    // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
+    // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    const rows = layers.map(layer => {
+        const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
+        const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
+        const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
+        const cappedTag = isCapped ? `<span class="breakdown-capped">（封頂）</span>` : '';
+        return `<tr>
+            <td class="bd-name">${layer.name}</td>
+            <td class="bd-amt">${amtLabel}</td>
+            <td class="bd-rate">${layer.rate}%</td>
+            <td class="bd-cash">${cashLabel}${cappedTag}</td>
+        </tr>`;
+    }).join('');
+
+    // Total row: sum cashback across layers; total spending = actual amount
+    // entered (NOT sum of applicable amounts, which overlaps for bonus/stacking).
+    const totalCash = layers.reduce((s, l) => s + Math.floor(l.cashback), 0);
+    const totalAmount = parseInt(cardResult.dataset.calcAmount, 10) || 0;
+    const totalRow = `<tr class="bd-total">
+        <td class="bd-name">Total</td>
+        <td class="bd-amt">NT$${totalAmount.toLocaleString()}</td>
+        <td class="bd-rate"></td>
+        <td class="bd-cash">NT$${totalCash.toLocaleString()}</td>
+    </tr>`;
+
+    const popup = document.createElement('div');
+    popup.className = 'calc-breakdown-popup';
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+
+    // Append INSIDE the card/coupon box (not as a grid sibling) so it's visually
+    // anchored to its own result — doesn't shift other grid items around, and
+    // reads clearly as "this card's breakdown" instead of a floating panel.
+    cardResult.appendChild(popup);
+    btn.classList.add('active');
+    openBreakdownBtn = btn;
+    popup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// Close breakdown popup when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.calc-breakdown-popup') && !e.target.closest('.calc-breakdown-btn')) {
+        closeOpenBreakdown();
+    }
+}, true);
+
+// 詳情頁「回饋組成」抽屜：展開/收合各成分的回饋率與上限（不含金額，
+// 與搜尋結果的計算明細不同——那個要有消費金額才算得出來）。
+// 一次只開一個；資料來自按鈕的 data-comp（rateCompositionButtonHtml 產生）。
+function toggleRateComposition(btn) {
+    const item = btn.closest('.cashback-detail-item');
+    if (!item) return;
+    const wasOpen = !!item.querySelector('.calc-breakdown-popup');
+
+    // 先關掉所有開著的組成抽屜（含自己）
+    document.querySelectorAll('.cashback-detail-item .calc-breakdown-popup').forEach(p => p.remove());
+    document.querySelectorAll('.cashback-detail-item .calc-breakdown-btn.active').forEach(b => b.classList.remove('active'));
+    if (wasOpen) return; // 點的是已開啟的按鈕 → 收合即可
+
+    let comp;
+    try { comp = JSON.parse(btn.dataset.comp || '{}'); } catch (e) { return; }
+    if (!comp.rows || !comp.rows.length) return;
+
+    const rows = comp.rows.map(r => `<tr>
+        <td class="bd-name">${escapeHtml(String(r.name))}</td>
+        <td class="bd-rate">${r.rate}%</td>
+        <td class="bd-amt">${r.cap ? `上限 NT$${Math.floor(r.cap).toLocaleString()}` : '無上限'}</td>
+    </tr>`).join('');
+    const totalRow = `<tr class="bd-total"><td class="bd-name">合計</td><td class="bd-rate">${comp.total}%</td><td class="bd-amt"></td></tr>`;
+
+    const popup = document.createElement('div');
+    popup.className = 'calc-breakdown-popup';
+    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+    item.appendChild(popup);
+    btn.classList.add('active');
+}
+
+// Format currency
+
 // Authentication setup
+//
+// Firebase 是從 gstatic 載入的外部模組，在公司網路/擋廣告環境可能永遠載不到。
+// 過去的寫法是無限 100ms 輪詢直到 Firebase 就緒才綁定任何 UI 事件——
+// Firebase 載不到＝整站卡在 boot loader，訪客連「計算」按鈕都按不到。
+// 現在拆成兩條路：
+//   - firebaseReadyHandled 之前（最多等 FIREBASE_FALLBACK_MS）：持續輪詢等 Firebase。
+//   - 逾時仍未就緒：ensureGuestUIBound() 立即以訪客模式綁定 UI（不重複，見下方 guard），
+//     輪詢繼續在背景跑；Firebase 之後就緒時只補跑 ensureAuthSubscribed()，不重新綁定事件。
+const FIREBASE_FALLBACK_MS = 4000;
+
 function setupAuthentication() {
+    let firebaseReadyHandled = false;
+
+    const onFirebaseReady = () => {
+        if (firebaseReadyHandled) return;
+        firebaseReadyHandled = true;
+        auth = window.firebaseAuth;
+        db = window.db;
+        initializeAuthListeners();
+    };
+
     // Wait for Firebase to load
     const checkFirebaseReady = () => {
+        if (firebaseReadyHandled) return; // already handled via fallback+late-arrival path
         if (typeof window.firebaseAuth !== 'undefined' && typeof window.db !== 'undefined') {
-            auth = window.firebaseAuth;
-            db = window.db;
-            initializeAuthListeners();
+            onFirebaseReady();
         } else {
             setTimeout(checkFirebaseReady, 100);
         }
     };
     checkFirebaseReady();
+
+    // Fallback: Firebase 逾時未就緒 → 先以訪客模式初始化 UI，避免整站卡死。
+    // 輪詢（checkFirebaseReady 的 setTimeout 鏈）仍在跑，Firebase 之後到位時
+    // onFirebaseReady 會補做 auth 訂閱與登入態更新。
+    setTimeout(() => {
+        if (firebaseReadyHandled) return;
+        console.error('⏱️ Firebase 載入逾時（' + FIREBASE_FALLBACK_MS + 'ms），以訪客模式初始化 UI，持續等待 SDK...');
+        ensureGuestUIBound();
+    }, FIREBASE_FALLBACK_MS);
 }
 
 // Setup avatar dropdown menu (toggle, close on outside click, menu actions)
@@ -5281,6 +5801,10 @@ function setupAvatarDropdown() {
         },
         'avatar-sign-out': async () => {
             if (currentUser) {
+                // 先清本機個人資料再登出：順序固定，避免與 onAuthStateChanged
+                // 的訪客資料重載互相競速。Firestore 是雲端事實來源，本機鏡像
+                // 清掉後下次登入會自動重建。
+                clearPersonalLocalDataOnSignOut(currentUser.uid);
                 try { await window.signOut(auth); }
                 catch (error) { console.error('Sign out failed:', error); }
             } else {
@@ -5301,7 +5825,68 @@ function setupAvatarDropdown() {
     }
 }
 
-function initializeAuthListeners() {
+// 登出時清理本機的個人資料：所有帶 uid 的鏡像 + 未帶 uid 區分的個人 key，
+// 防止共用電腦上洩漏給下一位使用者。
+// ⚠️ 只能在「用戶親自按登出」時呼叫 —— 不能放進 onAuthStateChanged 的登出分支，
+// 那個分支在純訪客每次開頁時也會觸發，會誤刪訪客自己的資料。
+function clearPersonalLocalDataOnSignOut(uid) {
+    let allKeys = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
+    } catch (e) { return; }
+
+    const uidExact = uid ? [
+        `cardsInComparison_${uid}`, `selectedCards_${uid}`, `myOwnedCards_${uid}`,
+        `selectedPayments_${uid}`, `spendingMappings_${uid}`
+    ] : [];
+    const uidPrefixes = uid ? [
+        `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
+        `creditLimit_${uid}_`
+    ] : [];
+    // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
+    // 這裡清掉的是殘留值）
+    const guestExact = [
+        'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
+        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
+    ];
+    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
+    // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
+    const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
+
+    for (const key of allKeys) {
+        const isPersonal =
+            uidExact.includes(key) ||
+            uidPrefixes.some(p => key.startsWith(p)) ||
+            guestExact.includes(key) ||
+            guestPrefixes.some(p => key.startsWith(p)) ||
+            (key.startsWith('notes_') && knownCardIds.has(key.slice('notes_'.length)));
+        if (isPersonal) {
+            try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+        }
+    }
+    console.log('🧹 已清理本機個人資料（登出）');
+}
+
+// UI 綁定與 auth 訂閱拆開兩個 guard：Firebase 逾時 fallback 時只需要 ensureGuestUIBound()
+// 就能讓網站可互動；Firebase 之後就緒時只補跑 ensureAuthSubscribed()，不重新綁定任何
+// 事件監聽器（重複綁定會讓按鈕點擊、document click 等監聽器疊加觸發）。
+let _guestUIBound = false;
+let _authStateSubscribed = false;
+// ensureGuestUIBound() 內定義的 closures，ensureAuthSubscribed() 的 onAuthStateChanged
+// callback 需要用到同一份（避免兩份 showToolSections/setGuestAvatarState 各自為政）。
+let _authUIRefs = null;
+
+// 綁定「訪客也能用」的 UI：avatar 狀態、工具區顯示/隱藏、各種 modal、「開始使用」按鈕。
+// 刻意不依賴 auth/db 是否就緒——Firebase 逾時時這是唯一會跑到的初始化路徑。
+function ensureGuestUIBound() {
+    if (_guestUIBound) return;
+    _guestUIBound = true;
+
+    // Firebase 逾時 fallback 時，這裡是唯一會清除 boot loader 的地方
+    // （原本綁在 onAuthStateChanged 裡，Firebase 若永遠載不到就永遠不會清）。
+    // 見 index.html #pmc-boot-loader / html.pmc-returning-user 的說明。
+    document.documentElement.classList.remove('pmc-returning-user');
+
     const signInBtn = document.getElementById('sign-in-btn');
     const userPhoto = document.getElementById('user-photo');
     const userName = document.getElementById('user-name');
@@ -5405,133 +5990,10 @@ function initializeAuthListeners() {
         stopSpotlightAutoRotate();
     }
 
-    // Listen for authentication state changes
-    window.onAuthStateChanged(auth, async (user) => {
-        // Card levels are user-scoped; drop cached values when the user changes.
-        clearCardLevelCache();
+    // 分享給 ensureAuthSubscribed() 的 onAuthStateChanged callback用，避免兩份
+    // showToolSections/setGuestAvatarState/setLoggedInAvatarState 各自為政。
+    _authUIRefs = { setGuestAvatarState, setLoggedInAvatarState, showToolSections, hideToolSections };
 
-        const productIntroSection = document.getElementById('product-intro-section');
-
-        // Update the pre-paint auth hint so the next visit skips the hero flash
-        // (or correctly shows it if the user signed out / token expired).
-        try {
-            if (user) {
-                localStorage.setItem('pmc_known_logged_in', '1');
-            } else {
-                localStorage.removeItem('pmc_known_logged_in');
-            }
-        } catch (e) { /* localStorage disabled — silently ignore */ }
-        document.documentElement.classList.remove('pmc-returning-user');
-
-        if (user) {
-            // User is signed in
-            console.log('User signed in:', user);
-            currentUser = user;
-            setLoggedInAvatarState(user);
-
-            // Hide "Start Using" button when logged in
-            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-            if (startUsingBtnHeader) {
-                startUsingBtnHeader.style.display = 'none';
-            }
-
-            // Hide product introduction section and show tool sections when logged in
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-            appStarted = true;
-            showToolSections();
-
-            // Show manage cards button
-            document.getElementById('manage-cards-btn').style.display = 'block';
-
-            // Show my mappings button
-            const myMappingsBtn = document.getElementById('my-mappings-btn');
-            if (myMappingsBtn) {
-                myMappingsBtn.style.display = 'flex';
-            }
-
-            // ✨ Load ALL user data in ONE Firestore call (optimized!)
-            const userData = await loadUserData();
-
-            // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
-            userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
-            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === (new Date().getMonth() + 1);
-
-            // Load children eligibility flag (defaults to true if not set)
-            isChildrenEligible = (userData && userData.isChildrenEligible != null) ? userData.isChildrenEligible : true;
-
-            // Load CUBE card issuer (defaults to Visa, fall back to localStorage if Firestore not set)
-            if (userData && userData.cubeIssuer) {
-                cubeIssuer = userData.cubeIssuer;
-                try { localStorage.setItem('cubeIssuer', cubeIssuer); } catch (e) {}
-            }
-
-            // Load user's selected cards and payments using unified data
-            await loadCardsInComparison(userData);
-            await loadMyOwnedCards(userData);
-            await loadUserPayments(userData);
-            await maybeMergeGuestPayments();
-            await loadSpendingMappings();
-
-            // Load user's quick search options (new prefs format with auto-migration)
-            await initializeQuickSearchOptions(userData);
-            renderQuickSearchButtons();
-
-            // Update chips display
-            populateCardChips();
-            populatePaymentChips();
-
-        } else {
-            // User is signed out — guest mode
-            console.log('User signed out');
-            currentUser = null;
-            appStarted = false;
-            cardsInComparison.clear();
-            myOwnedCards.clear();
-            // Load guest data from localStorage
-            await loadCardsInComparison();
-            await loadMyOwnedCards();
-            userSelectedPayments.clear();
-            await loadUserPayments();  // loads guest payments from localStorage
-            await loadSpendingMappings();
-            userBirthdayMonth = null;
-            isBirthdayMonth = false;
-            isChildrenEligible = true;
-            cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
-            setGuestAvatarState();
-
-            // Show "Start Using" button when logged out
-            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-            if (startUsingBtnHeader) {
-                startUsingBtnHeader.style.display = 'inline-block';
-            }
-
-            // Load guest quick search prefs from localStorage (or defaults)
-            await initializeQuickSearchOptions();
-            renderQuickSearchButtons();
-
-            // Show product introduction section and hide tool sections when not logged in
-            if (productIntroSection) {
-                productIntroSection.style.display = 'block';
-            }
-            hideToolSections();
-
-            // Hide my mappings button
-            const myMappingsBtn = document.getElementById('my-mappings-btn');
-            if (myMappingsBtn) {
-                myMappingsBtn.style.display = 'none';
-            }
-
-            // Show manage cards button even when not logged in (read-only mode)
-            document.getElementById('manage-cards-btn').style.display = 'block';
-
-            // Show all cards and payments when signed out
-            populateCardChips();
-            populatePaymentChips();
-        }
-    });
-    
     // Setup manage cards modal
     setupManageCardsModal();
 
@@ -5629,6 +6091,175 @@ function initializeAuthListeners() {
     }
 }
 
+// 訂閱 Firebase auth 狀態變化。只在 auth 真的就緒時呼叫；用 _authStateSubscribed
+// guard 避免 Firebase 逾時 fallback 之後晚到時重複訂閱（onAuthStateChanged 訂閱兩次
+// 會讓登入/登出流程跑兩遍，造成 loadUserData 等重複呼叫）。
+function ensureAuthSubscribed() {
+    if (_authStateSubscribed) return;
+    if (!auth) {
+        console.error('❌ ensureAuthSubscribed() 在 auth 就緒前被呼叫，略過訂閱');
+        return;
+    }
+    if (!_authUIRefs) {
+        console.error('❌ ensureAuthSubscribed() 在 ensureGuestUIBound() 之前被呼叫，略過訂閱');
+        return;
+    }
+    _authStateSubscribed = true;
+
+    const { setGuestAvatarState, setLoggedInAvatarState, showToolSections } = _authUIRefs;
+
+    // Listen for authentication state changes
+    window.onAuthStateChanged(auth, async (user) => {
+        // Card levels are user-scoped; drop cached values when the user changes.
+        clearCardLevelCache();
+
+        const productIntroSection = document.getElementById('product-intro-section');
+
+        // Update the pre-paint auth hint so the next visit skips the hero flash
+        // (or correctly shows it if the user signed out / token expired).
+        try {
+            if (user) {
+                localStorage.setItem('pmc_known_logged_in', '1');
+            } else {
+                localStorage.removeItem('pmc_known_logged_in');
+            }
+        } catch (e) { /* localStorage disabled — silently ignore */ }
+        document.documentElement.classList.remove('pmc-returning-user');
+
+        if (user) {
+            // User is signed in
+            console.log('User signed in:', user);
+            currentUser = user;
+            setLoggedInAvatarState(user);
+
+            // Hide "Start Using" button when logged in
+            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'none';
+            }
+
+            // Hide product introduction section and show tool sections when logged in
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+            appStarted = true;
+            showToolSections();
+
+            // Show manage cards button
+            document.getElementById('manage-cards-btn').style.display = 'block';
+
+            // Show my mappings button
+            const myMappingsBtn = document.getElementById('my-mappings-btn');
+            if (myMappingsBtn) {
+                myMappingsBtn.style.display = 'flex';
+            }
+
+            // ✨ Load ALL user data in ONE Firestore call (optimized!)
+            const userData = await loadUserData();
+
+            // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
+            userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
+            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === (new Date().getMonth() + 1);
+
+            // Load children eligibility flag (defaults to true if not set)
+            isChildrenEligible = (userData && userData.isChildrenEligible != null) ? userData.isChildrenEligible : true;
+
+            // Load CUBE card issuer (defaults to Visa, fall back to localStorage if Firestore not set)
+            if (userData && userData.cubeIssuer) {
+                cubeIssuer = userData.cubeIssuer;
+                try { localStorage.setItem('cubeIssuer', cubeIssuer); } catch (e) {}
+            }
+
+            // Load user's selected cards and payments using unified data.
+            // 訪客資料的處理原則（2026-07 統一）：雲端有值 → 雲端為準；
+            // 雲端沒值 → 靜默帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
+            await loadCardsInComparison(userData);
+            await loadMyOwnedCards(userData);
+            await loadUserPayments(userData);
+            await absorbGuestPersonalData(userData);
+            await loadSpendingMappings();
+
+            // Load user's quick search options (new prefs format with auto-migration)
+            await initializeQuickSearchOptions(userData);
+            renderQuickSearchButtons();
+
+            // Update chips display
+            populateCardChips();
+            populatePaymentChips();
+
+        } else {
+            // User is signed out — guest mode
+            console.log('User signed out');
+            currentUser = null;
+            appStarted = false;
+            cardsInComparison.clear();
+            myOwnedCards.clear();
+            // Load guest data from localStorage
+            await loadCardsInComparison();
+            await loadMyOwnedCards();
+            userSelectedPayments.clear();
+            await loadUserPayments();  // loads guest payments from localStorage
+            await loadSpendingMappings();
+            userBirthdayMonth = null;
+            isBirthdayMonth = false;
+            isChildrenEligible = true;
+            cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
+            setGuestAvatarState();
+
+            // Show "Start Using" button when logged out
+            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'inline-block';
+            }
+
+            // Load guest quick search prefs from localStorage (or defaults)
+            await initializeQuickSearchOptions();
+            renderQuickSearchButtons();
+
+            // hero（product-intro）不再顯示：landing 已接手行銷/上手敘事。
+            // 首屏路由（index.html pre-paint）已把全新訪客導去 landing，因此能走到
+            // 這裡的登出使用者都是「從 landing 來」或「用過工具的舊用戶」——兩者都
+            // 直接進工具、不看 hero，避免與 landing 重複敘事、也讓舊用戶開頁即用。
+            // （hero 區塊正式從 DOM 移除是獨立的 follow-up；這裡只是不顯示它）
+            if (productIntroSection) {
+                productIntroSection.style.display = 'none';
+            }
+            appStarted = true;
+            setGuestDropdownVisibility();
+            showToolSections();
+            if (startUsingBtnHeader) {
+                startUsingBtnHeader.style.display = 'none';
+            }
+
+            // Hide my mappings button
+            const myMappingsBtn = document.getElementById('my-mappings-btn');
+            if (myMappingsBtn) {
+                myMappingsBtn.style.display = 'none';
+            }
+
+            // Show manage cards button even when not logged in (read-only mode)
+            document.getElementById('manage-cards-btn').style.display = 'block';
+
+            // Show all cards and payments when signed out
+            populateCardChips();
+            populatePaymentChips();
+        }
+
+        // 登入成功後預熱級別快取（見 warmCardLevelCache 定義處的說明），
+        // fire-and-forget——不擋 onAuthStateChanged 流程。
+        if (user) {
+            warmCardLevelCache();
+        }
+    });
+}
+
+// Firebase 就緒後才呼叫：先確保訪客 UI 已綁定（fallback 逾時可能已經跑過，
+// 這裡的 ensureGuestUIBound() 是 no-op），再訂閱 auth 狀態。
+function initializeAuthListeners() {
+    ensureGuestUIBound();
+    ensureAuthSubscribed();
+}
+
 // ✨ Unified user data loader - loads ALL user data in ONE Firestore call
 async function loadUserData() {
     if (!currentUser || !window.db || !window.doc || !window.getDoc) {
@@ -5651,6 +6282,144 @@ async function loadUserData() {
     return null;
 }
 
+// 登入時消化「訪客期間留下的其餘個人資料」：消費配卡表、卡片級別、筆記、
+// 免年費、結帳日、CUBE 發卡組織。（信用卡/行動支付在各自的 load 函數內處理。）
+// 原則：雲端有值 → 雲端為準；雲端沒值 → 靜默帶入訪客值並上傳（不彈窗）。
+// 訪客 key 處理完即移除，避免留在共用電腦上被下一位使用者「繼承」——
+// 這正是過去卡片級別跨用戶洩漏的根源。
+// 高價值資料（級別、筆記）在上傳失敗時保留 key，下次登入重試。
+async function absorbGuestPersonalData(userData) {
+    if (!currentUser || !window.db || !window.doc) return;
+    const canWrite = !!window.setDoc;
+    const canRead = !!window.getDoc;
+
+    // 先收集所有 key 再處理，避免邊迭代邊刪除
+    let allKeys = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
+    } catch (e) { return; }
+
+    const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
+
+    // 1. 消費配卡表（訪客 key: spendingMappings）
+    if (allKeys.includes('spendingMappings')) {
+        const guestMappings = readLocalJSONArray('spendingMappings');
+        localStorage.removeItem('spendingMappings');
+        const cloudHasMappings = Array.isArray(userData?.spendingMappings) && userData.spendingMappings.length > 0;
+        if (!cloudHasMappings && guestMappings.length > 0 && canWrite) {
+            try {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                    spendingMappings: guestMappings,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                console.log('🔀 雲端無配卡表，已帶入訪客的配卡表:', guestMappings.length, '筆');
+            } catch (e) { console.error('帶入訪客配卡表失敗:', e); }
+        }
+    }
+
+    // 2. 卡片級別（訪客 key: cardLevel-<cardId>；登入後鏡像是 cardLevel_<uid>_<cardId>）
+    //    只有雲端「沒有」這張卡的級別時才帶入 —— 絕不覆蓋用戶已儲存的選擇。
+    for (const key of allKeys.filter(k => k.startsWith('cardLevel-'))) {
+        const cardId = key.slice('cardLevel-'.length);
+        let guestLevel = null;
+        try { guestLevel = localStorage.getItem(key); } catch (e) { continue; }
+        if (!guestLevel || !knownCardIds.has(cardId)) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            continue;
+        }
+        if (!canRead || !canWrite) continue;
+        try {
+            const snap = await window.getDoc(window.doc(window.db, 'cardSettings', `${currentUser.uid}_${cardId}`));
+            if (!snap.exists()) {
+                await saveCardLevel(cardId, guestLevel);
+                console.log(`🔀 雲端無級別，帶入訪客選擇 ${cardId}: ${guestLevel}`);
+            }
+            localStorage.removeItem(key); // 成功處理（帶入或雲端已有）才移除
+        } catch (e) {
+            console.error('帶入訪客級別失敗（保留待下次重試）:', cardId, e);
+        }
+    }
+
+    // 3. 筆記（訪客 key: notes_<cardId>；用 knownCardIds 區分 notes_<uid>_<cardId> 鏡像）
+    for (const key of allKeys.filter(k => k.startsWith('notes_'))) {
+        const cardId = key.slice('notes_'.length);
+        if (!knownCardIds.has(cardId)) continue; // 不是訪客筆記 key
+        let guestNotes = null;
+        try { guestNotes = localStorage.getItem(key); } catch (e) { continue; }
+        if (!guestNotes) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            continue;
+        }
+        if (!canRead || !canWrite) continue;
+        try {
+            const ref = window.doc(window.db, 'userNotes', `${currentUser.uid}_${cardId}`);
+            const snap = await window.getDoc(ref);
+            if (!snap.exists() || !snap.data().notes) {
+                await window.setDoc(ref, { notes: guestNotes, updatedAt: new Date(), cardId: cardId });
+                console.log(`🔀 雲端無筆記，帶入訪客筆記 ${cardId}`);
+            }
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('帶入訪客筆記失敗（保留待下次重試）:', cardId, e);
+        }
+    }
+
+    // 4. 免年費（訪客 key: feeWaiver_local_<cardId>；雲端是 users 文件的 feeWaiverStatus map）
+    const cloudFeeWaiver = (userData && userData.feeWaiverStatus) || {};
+    const feeWaiverUpdates = {};
+    for (const key of allKeys.filter(k => k.startsWith('feeWaiver_local_'))) {
+        const cardId = key.slice('feeWaiver_local_'.length);
+        let val = null;
+        try { val = localStorage.getItem(key); localStorage.removeItem(key); } catch (e) { continue; }
+        if (knownCardIds.has(cardId) && val === 'true' && !(cardId in cloudFeeWaiver)) {
+            feeWaiverUpdates[cardId] = true;
+        }
+    }
+    if (Object.keys(feeWaiverUpdates).length > 0 && canWrite) {
+        try {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                feeWaiverStatus: { ...cloudFeeWaiver, ...feeWaiverUpdates },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('🔀 帶入訪客的免年費設定:', Object.keys(feeWaiverUpdates));
+        } catch (e) { console.error('帶入訪客免年費失敗:', e); }
+    }
+
+    // 5. 結帳日期（訪客 key: billingDates_local_<cardId>；雲端是 users 文件的 billingDates map）
+    const cloudBillingDates = (userData && userData.billingDates) || {};
+    const billingUpdates = {};
+    for (const key of allKeys.filter(k => k.startsWith('billingDates_local_'))) {
+        const cardId = key.slice('billingDates_local_'.length);
+        const dates = readLocalJSON(key, null);
+        try { localStorage.removeItem(key); } catch (e) {}
+        if (knownCardIds.has(cardId) && dates && typeof dates === 'object' && !(cardId in cloudBillingDates)) {
+            billingUpdates[cardId] = {
+                billingDate: typeof dates.billingDate === 'string' ? dates.billingDate : '',
+                statementDate: typeof dates.statementDate === 'string' ? dates.statementDate : ''
+            };
+        }
+    }
+    if (Object.keys(billingUpdates).length > 0 && canWrite) {
+        try {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                billingDates: { ...cloudBillingDates, ...billingUpdates },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            console.log('🔀 帶入訪客的結帳日期設定:', Object.keys(billingUpdates));
+        } catch (e) { console.error('帶入訪客結帳日期失敗:', e); }
+    }
+
+    // 6. CUBE 發卡組織：雲端沒有且訪客改過（非預設 Visa）→ 帶入
+    if (!(userData && userData.cubeIssuer)) {
+        let localIssuer = null;
+        try { localIssuer = localStorage.getItem('cubeIssuer'); } catch (e) {}
+        if (localIssuer && localIssuer !== 'Visa') {
+            await saveCubeIssuer(localIssuer);
+            console.log('🔀 雲端無 CUBE 發卡組織設定，帶入訪客選擇:', localIssuer);
+        }
+    }
+}
+
 // Load user's cards-in-comparison from Firestore (with localStorage fallback)
 // Reads new field `cardsInComparison` first; falls back to legacy `selectedCards` for migration.
 // Guests load from localStorage `cardsInComparison_guest`; default is all cards.
@@ -5658,17 +6427,13 @@ async function loadUserData() {
 async function loadCardsInComparison(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage; default to all cards if nothing saved
-        try {
-            const saved = localStorage.getItem('cardsInComparison_guest');
-            if (saved) {
-                cardsInComparison = new Set(JSON.parse(saved));
-                console.log('📦 Loaded cards-in-comparison from guest localStorage:', Array.from(cardsInComparison));
-            } else {
-                cardsInComparison = new Set(cardsData.cards.map(card => card.id));
-                console.log('🆕 Guest with no saved comparison, defaulting to all cards');
-            }
-        } catch (e) {
+        const saved = readLocalJSON('cardsInComparison_guest', null);
+        if (Array.isArray(saved)) {
+            cardsInComparison = new Set(filterKnownCardIds(saved));
+            console.log('📦 Loaded cards-in-comparison from guest localStorage:', Array.from(cardsInComparison));
+        } else {
             cardsInComparison = new Set(cardsData.cards.map(card => card.id));
+            console.log('🆕 Guest with no saved comparison, defaulting to all cards');
         }
         return;
     }
@@ -5678,38 +6443,43 @@ async function loadCardsInComparison(userData = null) {
 
     try {
         // Use provided userData if available (from unified load)
+        let cloudCards = null;
         if (userData) {
-            const cloudCards = userData.cardsInComparison || userData.selectedCards;
-            if (cloudCards) {
-                cardsInComparison = new Set(cloudCards);
-                console.log('✅ Using cards-in-comparison from unified data load:', Array.from(cardsInComparison));
-                localStorage.setItem(newKey, JSON.stringify(cloudCards));
-                return;
+            cloudCards = userData.cardsInComparison || userData.selectedCards || null;
+        } else if (window.db && window.doc && window.getDoc) {
+            // Fallback: Try to load from Firestore if userData not provided
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                cloudCards = data.cardsInComparison || data.selectedCards || null;
             }
         }
 
-        // Fallback: Try to load from Firestore if userData not provided
-        if (window.db && window.doc && window.getDoc) {
-            const docRef = window.doc(window.db, 'users', currentUser.uid);
-            const docSnap = await window.getDoc(docRef);
+        if (Array.isArray(cloudCards)) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key，避免留給下一位使用者
+            cardsInComparison = new Set(filterKnownCardIds(cloudCards));
+            console.log('✅ Loaded cards-in-comparison from cloud:', Array.from(cardsInComparison));
+            localStorage.setItem(newKey, JSON.stringify(cloudCards));
+            localStorage.removeItem('cardsInComparison_guest');
+            return;
+        }
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                const cloudCards = data.cardsInComparison || data.selectedCards;
-                if (cloudCards) {
-                    cardsInComparison = new Set(cloudCards);
-                    console.log('✅ Loaded cards-in-comparison from Firestore:', Array.from(cardsInComparison));
-                    localStorage.setItem(newKey, JSON.stringify(cloudCards));
-                    return;
-                }
-            }
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        const guestCards = readLocalJSON('cardsInComparison_guest', null);
+        if (guestCards !== null) localStorage.removeItem('cardsInComparison_guest');
+        if (Array.isArray(guestCards) && guestCards.length > 0) {
+            cardsInComparison = new Set(filterKnownCardIds(guestCards));
+            console.log('🔀 雲端無設定，帶入訪客的加入比較卡片:', Array.from(cardsInComparison));
+            await saveCardsInComparison();
+            return;
         }
 
         // Fallback to localStorage (try new key first, then legacy)
-        const savedCards = localStorage.getItem(newKey) || localStorage.getItem(legacyKey);
+        const savedCards = readLocalJSON(newKey, null) || readLocalJSON(legacyKey, null);
 
-        if (savedCards) {
-            cardsInComparison = new Set(JSON.parse(savedCards));
+        if (Array.isArray(savedCards)) {
+            cardsInComparison = new Set(filterKnownCardIds(savedCards));
             console.log('📦 Loaded cards-in-comparison from localStorage (fallback):', Array.from(cardsInComparison));
         } else {
             // First time user - select all cards by default
@@ -5722,61 +6492,6 @@ async function loadCardsInComparison(userData = null) {
         // Default to all cards if error
         cardsInComparison = new Set(cardsData.cards.map(card => card.id));
     }
-
-    // After loading, check if guest data exists from before login
-    await maybeMergeGuestCardsInComparison();
-}
-
-// On login, if guest had locally-saved cards-in-comparison data, prompt to merge.
-async function maybeMergeGuestCardsInComparison() {
-    const guestKey = 'cardsInComparison_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestCards = JSON.parse(guestData);
-        if (!Array.isArray(guestCards) || guestCards.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『加入比較的卡片』設定，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestCards.forEach(id => cardsInComparison.add(id));
-            await saveCardsInComparison();
-            console.log('🔀 Merged guest cards-in-comparison into account:', guestCards);
-        }
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest cards-in-comparison:', e);
-        localStorage.removeItem(guestKey);
-    }
-}
-
-// On login, if guest had locally-saved payments, prompt to merge.
-async function maybeMergeGuestPayments() {
-    const guestKey = 'selectedPayments_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestPayments = JSON.parse(guestData);
-        if (!Array.isArray(guestPayments) || guestPayments.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『行動支付』設定，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestPayments.forEach(id => userSelectedPayments.add(id));
-            await saveUserPayments();
-            console.log('🔀 Merged guest payments into account:', guestPayments);
-        }
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest payments:', e);
-        localStorage.removeItem(guestKey);
-    }
 }
 
 // Load my-owned-cards from Firestore (logged in) or localStorage (guest).
@@ -5784,13 +6499,9 @@ async function maybeMergeGuestPayments() {
 async function loadMyOwnedCards(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage
-        try {
-            const saved = localStorage.getItem('myOwnedCards_guest');
-            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
-            console.log('📦 Loaded myOwnedCards from guest localStorage:', Array.from(myOwnedCards));
-        } catch (e) {
-            myOwnedCards = new Set();
-        }
+        const saved = readLocalJSON('myOwnedCards_guest', null);
+        myOwnedCards = Array.isArray(saved) ? new Set(filterKnownCardIds(saved)) : new Set();
+        console.log('📦 Loaded myOwnedCards (guest):', Array.from(myOwnedCards));
         return;
     }
 
@@ -5799,7 +6510,7 @@ async function loadMyOwnedCards(userData = null) {
         let cloudOwned = null;
         if (userData && Array.isArray(userData.myOwnedCards)) {
             cloudOwned = userData.myOwnedCards;
-        } else if (window.db && window.doc && window.getDoc) {
+        } else if (!userData && window.db && window.doc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
             if (docSnap.exists() && Array.isArray(docSnap.data().myOwnedCards)) {
@@ -5807,21 +6518,32 @@ async function loadMyOwnedCards(userData = null) {
             }
         }
 
-        myOwnedCards = new Set(cloudOwned || []);
-        console.log('✅ Loaded myOwnedCards from Firestore:', Array.from(myOwnedCards));
-        localStorage.setItem(userKey, JSON.stringify(Array.from(myOwnedCards)));
+        if (cloudOwned !== null) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key
+            myOwnedCards = new Set(filterKnownCardIds(cloudOwned));
+            console.log('✅ Loaded myOwnedCards from cloud:', Array.from(myOwnedCards));
+            localStorage.setItem(userKey, JSON.stringify(cloudOwned));
+            localStorage.removeItem('myOwnedCards_guest');
+            return;
+        }
 
-        // After loading, check if guest data exists from before login
-        await maybeMergeGuestMyOwnedCards();
+        // 雲端沒有設定：若訪客期間有儲存過 → 靜默帶入並上傳（不彈窗）
+        const guestCards = readLocalJSON('myOwnedCards_guest', null);
+        if (guestCards !== null) localStorage.removeItem('myOwnedCards_guest');
+        if (Array.isArray(guestCards) && guestCards.length > 0) {
+            myOwnedCards = new Set(filterKnownCardIds(guestCards));
+            console.log('🔀 雲端無設定，帶入訪客的我的信用卡:', Array.from(myOwnedCards));
+            await saveMyOwnedCards();
+            return;
+        }
+
+        myOwnedCards = new Set();
+        localStorage.setItem(userKey, JSON.stringify([]));
     } catch (error) {
         console.error('❌ Error loading myOwnedCards:', error);
         // Fallback to user-specific localStorage
-        try {
-            const saved = localStorage.getItem(userKey);
-            myOwnedCards = saved ? new Set(JSON.parse(saved)) : new Set();
-        } catch (e) {
-            myOwnedCards = new Set();
-        }
+        const saved = readLocalJSON(userKey, null);
+        myOwnedCards = Array.isArray(saved) ? new Set(filterKnownCardIds(saved)) : new Set();
     }
 }
 
@@ -5853,33 +6575,6 @@ async function saveMyOwnedCards() {
         }
     } catch (error) {
         console.error('Error saving myOwnedCards:', error);
-    }
-}
-
-// On login, if guest had locally-saved myOwnedCards data, prompt to merge into account.
-async function maybeMergeGuestMyOwnedCards() {
-    const guestKey = 'myOwnedCards_guest';
-    const guestData = localStorage.getItem(guestKey);
-    if (!guestData) return;
-
-    try {
-        const guestCards = JSON.parse(guestData);
-        if (!Array.isArray(guestCards) || guestCards.length === 0) {
-            localStorage.removeItem(guestKey);
-            return;
-        }
-
-        const shouldMerge = confirm('偵測到本地的『我的信用卡』資料，要合併到此賬號嗎？');
-        if (shouldMerge) {
-            guestCards.forEach(id => myOwnedCards.add(id));
-            await saveMyOwnedCards();
-            console.log('🔀 Merged guest myOwnedCards into account:', guestCards);
-        }
-        // Remove guest data either way (don't ask again)
-        localStorage.removeItem(guestKey);
-    } catch (e) {
-        console.error('Error merging guest myOwnedCards:', e);
-        localStorage.removeItem(guestKey);
     }
 }
 
@@ -5945,8 +6640,8 @@ function setupManageCardsModal() {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards
-    saveBtn.addEventListener('click', async () => {
+    // Save cards (shared handler for both footer and quick-save buttons)
+    const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
 
@@ -5971,7 +6666,10 @@ function setupManageCardsModal() {
 
         // Close modal
         closeModal();
-    });
+    };
+    saveBtn.addEventListener('click', doSaveCards);
+    const quickSaveBtn = document.getElementById('save-cards-btn-quick');
+    if (quickSaveBtn) quickSaveBtn.addEventListener('click', doSaveCards);
     
     // Toggle all cards button
     const toggleAllBtn = document.getElementById('toggle-all-cards');
@@ -6168,6 +6866,14 @@ function _renderCardSelectionModal(config) {
             e.stopPropagation();
             showCardDetail(card.id);
         });
+        const img = cardDiv.querySelector('.card-checkbox-image');
+        if (img && canEdit) {
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                checkbox.checked = !checkbox.checked;
+                cardDiv.classList.toggle('selected', checkbox.checked);
+            });
+        }
         cardsSelection.appendChild(cardDiv);
     });
 
@@ -6255,15 +6961,14 @@ function renderOwnedCardsOverview() {
     if (!container) return;
     container.innerHTML = '';
 
-    const actions = document.getElementById('owned-overview-actions');
-
     const ownedCards = [...cardsData.cards]
         .filter(card => myOwnedCards.has(card.id))
         .sort((a, b) => a.name.localeCompare(b.name));
 
+    const badge = document.getElementById('owned-count-badge');
+
     if (ownedCards.length === 0) {
-        // Empty state has its own CTA; hide the bottom manage button to avoid duplication
-        if (actions) actions.style.display = 'none';
+        if (badge) badge.style.display = 'none';
         const empty = document.createElement('div');
         empty.className = 'owned-overview-empty';
         empty.innerHTML = `
@@ -6278,27 +6983,281 @@ function renderOwnedCardsOverview() {
         return;
     }
 
-    if (actions) actions.style.display = 'flex';
+    const count = ownedCards.length;
 
-    ownedCards.forEach(card => {
-        const tile = document.createElement('div');
-        tile.className = 'owned-overview-card';
-        tile.setAttribute('role', 'button');
-        tile.setAttribute('tabindex', '0');
-        tile.title = '查看詳情';
-        tile.innerHTML = `
-            <img class="owned-overview-card-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
-            <span class="owned-overview-card-name">${card.name}</span>
-        `;
-        tile.addEventListener('click', () => showCardDetail(card.id));
-        tile.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                showCardDetail(card.id);
-            }
+    // Card count lives as quiet muted text after the modal title.
+    if (badge) {
+        badge.textContent = `・${count} 張`;
+        badge.style.display = '';
+    }
+
+    // --- View 1: wallet stack — all cards at a glance, no names.
+    // Tap a covered card to reveal its full face in place; tap a fully
+    // visible card to open the solo view. ---
+    const stack = document.createElement('div');
+    stack.className = 'ow-stack';
+    container.appendChild(stack);
+
+    // "收合" pill: appears only while a card is revealed, folds the
+    // stack fully closed again.
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type = 'button';
+    collapseBtn.className = 'ow-collapse-btn';
+    collapseBtn.textContent = '收合';
+    collapseBtn.style.display = 'none';
+    container.appendChild(collapseBtn);
+
+    // --- View 2: solo card + personal info area (hidden until opened) ---
+    const solo = document.createElement('div');
+    solo.className = 'ow-solo';
+    solo.style.display = 'none';
+    container.appendChild(solo);
+
+    const GAP = 40;    // breathing room under a revealed card
+    let expanded = null;
+    let soloIndex = 0;
+
+    // Builds a card-face frame; portrait art is auto-rotated to landscape.
+    const makeFace = (card) => {
+        const frame = document.createElement('div');
+        frame.className = 'ow-frame';
+        const img = document.createElement('img');
+        img.className = 'ow-img';
+        img.alt = card.name;
+        img.src = `assets/images/cards/${card.id}.png`;
+        img.addEventListener('load', () => {
+            if (img.naturalHeight > img.naturalWidth) frame.classList.add('ow-portrait');
         });
-        container.appendChild(tile);
+        img.addEventListener('error', () => {
+            frame.classList.add('ow-noimg');
+            frame.textContent = card.name;
+        });
+        frame.appendChild(img);
+        return frame;
+    };
+
+    const slots = ownedCards.map((card, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'ow-slot';
+        slot.style.zIndex = String(i + 1);
+        slot.setAttribute('role', 'button');
+        slot.setAttribute('tabindex', '0');
+        slot.setAttribute('aria-label', card.name);
+        slot.appendChild(makeFace(card));
+        // Tap-again affordance: pill fades in on the revealed card.
+        const hint = document.createElement('div');
+        hint.className = 'ow-hint';
+        hint.textContent = '查看個人資訊 ›';
+        slot.appendChild(hint);
+        const activate = () => {
+            // Fully visible cards (revealed, or the bottom-most) open solo view.
+            if (i === expanded || i === count - 1) openSolo(i);
+            else { expanded = i; layoutStack(); }
+        };
+        slot.addEventListener('click', activate);
+        slot.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+        });
+        stack.appendChild(slot);
+        return slot;
     });
+
+    const layoutStack = () => {
+        const h = stack.clientWidth / 1.586; // standard card aspect ratio
+        // Budget ~320px for the whole stack: the more cards, the thinner
+        // each visible strip (floor of 12px).
+        const peek = Math.max(12, Math.min(40, Math.round((320 - h) / Math.max(1, count - 1))));
+        let shift = 0, maxBottom = 0;
+        slots.forEach((slot, i) => {
+            slot.classList.toggle('ow-open', expanded === i);
+            const top = i * peek + shift;
+            slot.style.top = `${top}px`;
+            maxBottom = Math.max(maxBottom, top + h);
+            if (expanded === i) shift = h - peek + GAP;
+        });
+        stack.style.height = `${Math.ceil(maxBottom)}px`;
+        collapseBtn.style.display = expanded === null ? 'none' : '';
+    };
+
+    collapseBtn.addEventListener('click', () => {
+        expanded = null;
+        layoutStack();
+    });
+
+    const openSolo = (i) => {
+        soloIndex = i;
+        renderSolo();
+        stack.style.display = 'none';
+        collapseBtn.style.display = 'none';
+        solo.style.display = '';
+    };
+
+    const backToStack = () => {
+        solo.style.display = 'none';
+        stack.style.display = '';
+        expanded = soloIndex; // keep the card you were viewing revealed
+        layoutStack();
+    };
+
+    let soloToken = 0;
+
+    const renderSolo = () => {
+        const card = ownedCards[soloIndex];
+        const token = ++soloToken;
+        solo.innerHTML = '';
+
+        const top = document.createElement('div');
+        top.className = 'ow-solo-top';
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'ow-back';
+        back.innerHTML = '‹ 所有卡片';
+        back.addEventListener('click', backToStack);
+        top.appendChild(back);
+        solo.appendChild(top);
+
+        const row = document.createElement('div');
+        row.className = 'ow-solo-row';
+        // Arrows and swipe wrap around (last → first, first → last).
+        const step = (dir) => {
+            soloIndex = (soloIndex + dir + count) % count;
+            renderSolo();
+        };
+        const mkArrow = (dir) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ow-arrow';
+            b.innerHTML = dir < 0 ? '‹' : '›';
+            b.setAttribute('aria-label', dir < 0 ? '上一張' : '下一張');
+            b.disabled = count <= 1;
+            b.addEventListener('click', () => step(dir));
+            return b;
+        };
+        row.appendChild(mkArrow(-1));
+        const face = makeFace(card);
+        face.classList.add('ow-solo-face');
+        // Swipe left/right to switch cards.
+        let sx = null;
+        face.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+        face.addEventListener('pointerup', (e) => {
+            if (sx === null) return;
+            const dx = e.clientX - sx;
+            sx = null;
+            if (dx < -40 && count > 1) step(1);
+            else if (dx > 40 && count > 1) step(-1);
+        });
+        row.appendChild(face);
+        row.appendChild(mkArrow(1));
+        solo.appendChild(row);
+
+        const name = document.createElement('div');
+        name.className = 'ow-solo-name';
+        name.textContent = card.name;
+        solo.appendChild(name);
+
+        const dots = document.createElement('div');
+        dots.className = 'ow-dots';
+        ownedCards.forEach((_, i) => {
+            const d = document.createElement('i');
+            if (i === soloIndex) d.className = 'on';
+            dots.appendChild(d);
+        });
+        solo.appendChild(dots);
+
+        // --- Read-only personal info (editing lives in the card detail page) ---
+        const info = document.createElement('div');
+        info.className = 'ow-solo-info';
+        const infoHead = document.createElement('div');
+        infoHead.className = 'ow-info-head';
+        infoHead.textContent = '個人化設定';
+        info.appendChild(infoHead);
+        const list = document.createElement('div');
+        list.className = 'ow-info-list';
+        list.innerHTML = '<div class="ow-info-loading">載入中…</div>';
+        info.appendChild(list);
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'ow-detail-btn';
+        detailBtn.textContent = '前往卡片介紹頁編輯 ›';
+        detailBtn.addEventListener('click', () => showCardDetail(card.id));
+        info.appendChild(detailBtn);
+        solo.appendChild(info);
+
+        fillSoloInfo(card, list, token);
+    };
+
+    const fillSoloInfo = async (card, list, token) => {
+        const hasLevels = !!(card.hasLevels && card.levelSettings);
+        // Each load falls back to a default if storage (e.g. Firebase) is
+        // unavailable, so the panel always renders.
+        const safe = (fn, fallback) => {
+            try { return Promise.resolve(fn()).catch(() => fallback); }
+            catch (_) { return Promise.resolve(fallback); }
+        };
+        const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
+        const [level, notes, feeWaived, creditLimit] = await Promise.all([
+            hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
+            safe(() => loadUserNotes(card.id), ''),
+            safe(() => loadFeeWaiverStatus(card.id), false),
+            safe(() => loadCreditLimit(card.id), null)
+        ]);
+        if (token !== soloToken) return; // user switched cards while loading
+
+        list.innerHTML = '';
+        const addRow = (label, value, cls) => {
+            const row = document.createElement('div');
+            row.className = 'ow-info-row';
+            const l = document.createElement('span');
+            l.className = 'ow-info-label';
+            l.textContent = label;
+            const v = document.createElement('span');
+            v.className = 'ow-info-value' + (cls ? ' ' + cls : '');
+            v.textContent = value;
+            row.appendChild(l);
+            row.appendChild(v);
+            list.appendChild(row);
+        };
+
+        if (hasLevels && level) {
+            const label = card.levelLabelFormat
+                ? card.levelLabelFormat.replace('{level}', level)
+                : level;
+            addRow('卡片分級', label);
+        }
+        // 發卡組織／生日月份／童樂匯 are CUBE-specific settings today.
+        if (card.id === 'cathay-cube') {
+            addRow('發卡組織', cubeIssuer);
+            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未填寫',
+                userBirthdayMonth ? '' : 'ow-muted');
+            addRow('童樂匯權益', isChildrenEligible ? '✓ 符合' : '不符合',
+                isChildrenEligible ? 'ow-ok' : 'ow-muted');
+        }
+        addRow('免年費門檻', feeWaived ? '✓ 已達成' : '尚未達成', feeWaived ? 'ow-ok' : 'ow-warn');
+        addRow('我的額度', creditLimit !== null ? `NT$ ${creditLimit.toLocaleString()}` : '未填寫',
+            creditLimit !== null ? '' : 'ow-muted');
+
+        const noteText = (notes || '').trim();
+        const noteRow = document.createElement('div');
+        noteRow.className = 'ow-info-note';
+        const noteLabel = document.createElement('div');
+        noteLabel.className = 'ow-info-label';
+        noteLabel.textContent = '我的筆記';
+        const noteBody = document.createElement('div');
+        noteBody.className = 'ow-note-text' + (noteText ? '' : ' ow-note-empty');
+        noteBody.textContent = noteText || '未填寫';
+        noteRow.appendChild(noteLabel);
+        noteRow.appendChild(noteBody);
+        list.appendChild(noteRow);
+    };
+
+    // The modal isn't displayed yet when this runs; lay out on the next
+    // frame (and again on resize) so clientWidth is real.
+    requestAnimationFrame(() => requestAnimationFrame(layoutStack));
+    if (renderOwnedCardsOverview._onResize) {
+        window.removeEventListener('resize', renderOwnedCardsOverview._onResize);
+    }
+    renderOwnedCardsOverview._onResize = layoutStack;
+    window.addEventListener('resize', renderOwnedCardsOverview._onResize);
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
@@ -6316,6 +7275,20 @@ function openManageOwnedCardsModal() {
     const modal = document.getElementById('manage-owned-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
+
+    // Always open at the top — don't keep the previous session's scroll.
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) modalContent.scrollTop = 0;
+
+    // 篩選標籤預設收合（需要時再點開）
+    const tagSection = document.getElementById('owned-tag-filter-section');
+    if (tagSection && !tagSection.classList.contains('collapsed')) {
+        tagSection.classList.add('collapsed');
+        const toggle = tagSection.querySelector('.tag-filter-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        const chips = document.getElementById('owned-tag-filter-chips');
+        if (chips) chips.hidden = true;
+    }
 }
 
 // Update the "套用我的信用卡選項" button state.
@@ -6370,6 +7343,11 @@ function setupMyOwnedCardsModal() {
     closeManageBtn.addEventListener('click', closeManage);
     cancelBtn.addEventListener('click', closeManage);
     manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
+
+    // Top save button (on the 全選 row) proxies the bottom one so users
+    // don't have to scroll to the footer to save.
+    const saveBtnTop = document.getElementById('save-owned-cards-btn-top');
+    if (saveBtnTop) saveBtnTop.addEventListener('click', () => saveBtn.click());
 
     saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
@@ -6436,6 +7414,40 @@ function renderCardTags(tags) {
     ).join('');
 
     return `<div class="card-tags-container">${tagsHtml}</div>`;
+}
+
+// Render a 條件 line that clamps to a few lines and reveals a 展開/收起 toggle
+// only when the text actually overflows (see initConditionClamps + CSS
+// .cond-collapsible). Used in the card-detail activity cards so a long 條件
+// doesn't blow up the card height (esp. now that rows are equal-height).
+function renderConditionLine(text) {
+    return `<div class="cashback-condition cond-collapsible">` +
+        `<span class="cond-text">條件: ${text}</span>` +
+        `<button type="button" class="cond-toggle" style="display:none;">...展開</button>` +
+        `</div>`;
+}
+
+// After the detail content is in the DOM AND visible, reveal a toggle only on
+// conditions whose text is actually clamped (overflowing). Must run while the
+// modal is displayed, otherwise clientHeight/scrollHeight are 0.
+function initConditionClamps(container) {
+    if (!container) return;
+    container.querySelectorAll('.cond-collapsible').forEach(el => {
+        const text = el.querySelector('.cond-text');
+        const btn = el.querySelector('.cond-toggle');
+        if (!text || !btn) return;
+        // Overflowing = content taller than the clamped box (2px tolerance)
+        if (text.scrollHeight - text.clientHeight > 2) {
+            btn.style.display = 'inline';
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const expanded = el.classList.toggle('expanded');
+                btn.textContent = expanded ? '收起' : '...展開';
+            };
+        } else {
+            btn.style.display = 'none';
+        }
+    });
 }
 
 async function showCardDetail(cardId) {
@@ -6513,7 +7525,7 @@ document.getElementById('card-fee-waiver').style.display = 'none';
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
 let basicContent = `<div class="cashback-detail-item">`;
-basicContent += `<div class="cashback-rate">國內一般回饋: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
+basicContent += `<div class="cashback-rate">國內: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
 if (card.basicConditions) {
     basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
 }
@@ -6522,7 +7534,7 @@ basicContent += `</div>`; // ← 這裡關閉第一個區塊
 
 if (card.overseasCashback) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外一般回饋: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
+    basicContent += `<div class="cashback-rate">海外: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
     basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
     basicContent += `</div>`;
 }
@@ -6539,17 +7551,7 @@ let overseasConditions = card.overseasBonusConditions;
 if (card.hasLevels) {
     const levelNames = Object.keys(card.levelSettings);
     const defaultLevel = levelNames[0];
-    let savedLevel = await getCardLevel(card.id, defaultLevel);
-    let levelData = card.levelSettings[savedLevel];
-
-    // 🔥 新增：如果 levelData 不存在，使用 defaultLevel
-    if (!levelData) {
-        console.warn(`⚠️ ${card.name}: 保存的級別 "${savedLevel}" 不存在，使用預設級別 "${defaultLevel}"`);
-        savedLevel = defaultLevel;
-        levelData = card.levelSettings[savedLevel];
-        // 更新保存的級別
-        await saveCardLevel(card.id, savedLevel);
-    }
+    const { data: levelData } = await resolveCardLevel(card, defaultLevel);
 
     if (levelData && levelData.domesticBonusRate !== undefined) {
         domesticBonusRate = levelData.domesticBonusRate;
@@ -6565,7 +7567,7 @@ if (card.hasLevels) {
 
 if (domesticBonusRate) {
     basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
-    basicContent += `<div class="cashback-rate">國內加碼回饋: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
+    basicContent += `<div class="cashback-rate">國內加碼: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
     if (domesticConditions) {
         basicContent += `<div class="cashback-condition">條件: ${domesticConditions}</div>`;
     }
@@ -6577,7 +7579,7 @@ if (domesticBonusRate) {
 
 if (overseasBonusRate) {
     basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外加碼回饋: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
+    basicContent += `<div class="cashback-rate">海外加碼: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
     if (overseasConditions) {
         basicContent += `<div class="cashback-condition">條件: ${overseasConditions}</div>`;
     }
@@ -6595,10 +7597,10 @@ basicCashbackDiv.innerHTML = basicContent;
     if (card.hasLevels) {
         const levelNames = Object.keys(card.levelSettings);
         const defaultLevel = levelNames[0];
-        const savedLevel = await getCardLevel(card.id, defaultLevel);
 
         // Generate level selector HTML with note (通用支援)
-        const savedLevelData = card.levelSettings[savedLevel];
+        const { level: savedLevel, data: savedLevelData } = await resolveCardLevel(card, defaultLevel);
+
         const levelNoteText = savedLevelData['level-note'] || '';
         const noteFs = card.id === 'cathay-cube' ? '9.5px' : '11px';
         const noteMt = card.id === 'cathay-cube' ? '6px' : '8px';
@@ -6686,7 +7688,7 @@ basicCashbackDiv.innerHTML = basicContent;
             `;
 
             levelSelectorHTML = `
-                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 10px 14px; margin-bottom: 16px;">
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 12px 14px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                         <div style="flex-shrink: 0;">
                             <label style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">選擇級別：</label>
@@ -6699,29 +7701,29 @@ basicCashbackDiv.innerHTML = basicContent;
                         ${levelRatesInfo}
                     </div>
                     ${levelNote}
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
                         ${birthdayRow}
-                    </div>
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
-                            <input type="checkbox" id="children-eligible-checkbox"
-                                ${isChildrenEligible ? 'checked' : ''}
-                                style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
-                            <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
-                        </label>
-                        <div style="margin-top: 1px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
-                            勾選後才會在比較結果納入「童樂匯」方案的活動
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="children-eligible-checkbox"
+                                    ${isChildrenEligible ? 'checked' : ''}
+                                    style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
+                                <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
+                            </label>
+                            <div style="margin-top: 4px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
+                                勾選後才會在比較結果納入「童樂匯」方案的活動
+                            </div>
                         </div>
-                    </div>
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 8px;">
-                        <label for="cube-issuer-select" style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">發卡組織：</label>
-                        <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
-                            ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
-                                `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
-                            ).join('')}
-                        </select>
-                        <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
-                            選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
+                        <div>
+                            <label for="cube-issuer-select" style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #374151;">發卡組織：</label>
+                            <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                                ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
+                                    `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
+                                ).join('')}
+                            </select>
+                            <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
+                                選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -6806,142 +7808,18 @@ basicCashbackDiv.innerHTML = basicContent;
     } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
         // Handle generic level-based cards with specialItems (like Uni card and DBS Eco)
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = await getCardLevel(card.id, levelNames[0]);
-        const levelData = card.levelSettings[savedLevel];
+        const { data: levelData } = await resolveCardLevel(card, levelNames[0]);
 
         // First, display any cashbackRates if they exist (like DBS Eco's 10% cashback)
+        // 2026-07-09 起逐筆顯示（不再按 rate+cap 合併），category 以 chip 顯示在回饋率旁
         if (card.cashbackRates && card.cashbackRates.length > 0) {
-            const filteredRates = card.cashbackRates.filter(rate => !rate.hideInDisplay);
-
-            // 按 rate 值、cap 值和狀態分組（相同 rate 和 cap 的活動合併顯示）
-            const activeRateGroups = new Map();
-            const upcomingRateGroups = new Map();
-
-            for (const rate of filteredRates) {
-                const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
-                const parsedCap = parseCashbackCap(rate.cap, card, levelData);
-                const rateStatus = getRateStatus(rate.periodStart, rate.periodEnd);
-                const groupKey = `${parsedRate}-${parsedCap || 'nocap'}`;
-
-                // 根據狀態選擇分組
-                const targetGroups = (rateStatus === 'active' || rateStatus === 'always') ? activeRateGroups : upcomingRateGroups;
-
-                if (!targetGroups.has(groupKey)) {
-                    targetGroups.set(groupKey, {
-                        parsedRate,
-                        parsedCap,
-                        items: [],
-                        conditions: [],
-                        period: rate.period,
-                        periodStart: rate.periodStart,
-                        periodEnd: rate.periodEnd,
-                        status: rateStatus
-                    });
-                }
-
-                const group = targetGroups.get(groupKey);
-                if (rate.items) {
-                    group.items.push(...rate.items);
-                }
-                if (rate.conditions && rate.category) {
-                    group.conditions.push({
-                        category: rate.category,
-                        conditions: rate.conditions
-                    });
-                }
-            }
-
-            // 按 parsedRate 排序
-            const sortedActiveGroups = Array.from(activeRateGroups.entries())
-                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
-            const sortedUpcomingGroups = Array.from(upcomingRateGroups.entries())
-                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
+            const rendered = await renderCashbackRatesIndividually(card, levelData, { idPrefix: 'lvA' });
+            specialContent += rendered.html;
 
             // Store upcoming groups for later display in separate section
-            window._currentUpcomingGroups1 = sortedUpcomingGroups;
+            window._currentUpcomingGroups1 = rendered.upcoming;
             window._currentCard = card;
             window._currentLevelData1 = levelData;
-
-            // Only display active groups in special cashback section
-            for (const [groupKey, group] of sortedActiveGroups) {
-                specialContent += `<div class="cashback-detail-item">`;
-
-                // 顯示回饋率
-                // Add ending soon badge if applicable
-                let endingSoonBadgeLevel1 = '';
-                if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
-                    const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-                    endingSoonBadgeLevel1 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-                }
-
-                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel1}</div>`;
-
-                if (group.parsedCap) {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
-                } else {
-                    specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-                }
-
-                if (group.period) {
-                    specialContent += `<div class="cashback-condition">活動期間: ${group.period}</div>`;
-                }
-
-                // 顯示所有通路
-                if (group.items.length > 0) {
-                    // 去重
-                    const uniqueItems = [...new Set(group.items)];
-                    const merchantsId = `merchants-${card.id}-group-${groupKey}`;
-                    const showAllId = `show-all-${card.id}-group-${groupKey}`;
-
-                    if (uniqueItems.length <= 5) {
-                        const merchantsList = uniqueItems.join('、');
-                        specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                    } else {
-                        const initialList = uniqueItems.slice(0, 5).join('、');
-                        const fullList = uniqueItems.join('、');
-
-                        specialContent += `<div class="cashback-merchants">`;
-                        specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
-                        specialContent += `</div>`;
-                    }
-                }
-
-                // 按 category 顯示各通路條件
-                if (group.conditions.length > 0) {
-                    // 玉山 Uni Card 使用可展開的詳細條件，其他卡片直接顯示
-                    if (card.id === 'yushan-unicard') {
-                        const conditionsId = `conditions-${card.id}-group-${groupKey}`;
-                        const showConditionsId = `show-conditions-${card.id}-group-${groupKey}`;
-
-                        // 生成條件內容
-                        let conditionsContent = '';
-                        for (const cond of group.conditions) {
-                            conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
-                        }
-
-                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                        specialContent += `<button class="show-more-btn" id="${showConditionsId}" onclick="toggleConditions('${conditionsId}', '${showConditionsId}')" style="padding: 4px 12px; font-size: 13px;">▼ 查看各通路詳細條件</button>`;
-                        specialContent += `<div id="${conditionsId}" style="display: none; margin-top: 8px;">`;
-                        specialContent += conditionsContent;
-                        specialContent += `</div>`;
-                        specialContent += `</div>`;
-                    } else {
-                        // 其他卡片直接顯示條件
-                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                        specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
-
-                        for (const cond of group.conditions) {
-                            specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
-                        }
-
-                        specialContent += `</div>`;
-                    }
-                }
-
-                specialContent += `</div>`;
-            }
         }
 
         // Then display the level-based cashback with specialItems
@@ -6954,7 +7832,7 @@ basicCashbackDiv.innerHTML = basicContent;
         }
 
         if (levelData.condition) {
-            specialContent += `<div class="cashback-condition">條件: ${levelData.condition}</div>`;
+            specialContent += renderConditionLine(levelData.condition);
         }
 
         // Show applicable merchants
@@ -6977,142 +7855,19 @@ basicCashbackDiv.innerHTML = basicContent;
     } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
         // Handle level-based cards without specialItems (or with empty specialItems array)
         const levelNames = Object.keys(card.levelSettings);
-        const savedLevel = await getCardLevel(card.id, levelNames[0]);
-        const levelData = card.levelSettings[savedLevel];
+        const { level: savedLevel, data: levelData } = await resolveCardLevel(card, levelNames[0]);
 
         // Check if card also has cashbackRates (like DBS Eco card)
         if (card.cashbackRates && card.cashbackRates.length > 0) {
-            const filteredRates = card.cashbackRates.filter(rate => !rate.hideInDisplay);
-
-            // 按 rate 值、cap 值和狀態分組（相同 rate 和 cap 的活動合併顯示）
-            const activeRateGroups = new Map();
-            const upcomingRateGroups = new Map();
-
-            for (const rate of filteredRates) {
-                const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
-                const parsedCap = parseCashbackCap(rate.cap, card, levelData) || levelData.cap;
-                const rateStatus = getRateStatus(rate.periodStart, rate.periodEnd);
-                const groupKey = `${parsedRate}-${parsedCap || 'nocap'}`;
-
-                // 根據狀態選擇分組
-                const targetGroups = (rateStatus === 'active' || rateStatus === 'always') ? activeRateGroups : upcomingRateGroups;
-
-                if (!targetGroups.has(groupKey)) {
-                    targetGroups.set(groupKey, {
-                        parsedRate,
-                        parsedCap,
-                        items: [],
-                        conditions: [],
-                        period: rate.period,
-                        periodStart: rate.periodStart,
-                        periodEnd: rate.periodEnd,
-                        status: rateStatus
-                    });
-                }
-
-                const group = targetGroups.get(groupKey);
-                if (rate.items) {
-                    group.items.push(...rate.items);
-                }
-                if (rate.conditions && rate.category) {
-                    group.conditions.push({
-                        category: rate.category,
-                        conditions: rate.conditions
-                    });
-                }
-            }
-
-            // 按 parsedRate 排序
-            const sortedActiveGroups = Array.from(activeRateGroups.entries())
-                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
-            const sortedUpcomingGroups = Array.from(upcomingRateGroups.entries())
-                .sort((a, b) => b[1].parsedRate - a[1].parsedRate);
+            // 2026-07-09 起逐筆顯示（不再按 rate+cap 合併），category 以 chip 顯示在
+            // 回饋率旁，回饋率為 getDisplayRate 加總值；cap 留空退回 levelData.cap（舊行為）
+            const rendered = await renderCashbackRatesIndividually(card, levelData, { capFallbackToLevel: true, idPrefix: 'lvB' });
+            specialContent += rendered.html;
 
             // Store upcoming groups for later display in separate section
-            window._currentUpcomingGroups2 = sortedUpcomingGroups;
+            window._currentUpcomingGroups2 = rendered.upcoming;
             window._currentCard = card;
             window._currentLevelData2 = levelData;
-
-            // Only display active groups in special cashback section
-            for (const [groupKey, group] of sortedActiveGroups) {
-                specialContent += `<div class="cashback-detail-item">`;
-
-                // 顯示回饋率
-                // Add ending soon badge if applicable
-                let endingSoonBadgeLevel = '';
-                if (group.periodEnd && isEndingSoon(group.periodEnd, 10)) {
-                    const daysUntil = getDaysUntilEnd(group.periodEnd);
-                    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-                    endingSoonBadgeLevel = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-                }
-
-                specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${endingSoonBadgeLevel}</div>`;
-
-                if (group.parsedCap) {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
-                } else {
-                    specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-                }
-
-                if (group.period) {
-                    specialContent += `<div class="cashback-condition">活動期間: ${group.period}</div>`;
-                }
-
-                // 顯示所有通路
-                if (group.items.length > 0) {
-                    // 去重
-                    const uniqueItems = [...new Set(group.items)];
-                    const merchantsId = `merchants-${card.id}-group-${groupKey}`;
-                    const showAllId = `show-all-${card.id}-group-${groupKey}`;
-
-                    if (uniqueItems.length <= 5) {
-                        const merchantsList = uniqueItems.join('、');
-                        specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                    } else {
-                        const initialList = uniqueItems.slice(0, 5).join('、');
-                        const fullList = uniqueItems.join('、');
-
-                        specialContent += `<div class="cashback-merchants">`;
-                        specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
-                        specialContent += `</div>`;
-                    }
-                }
-
-                // 按 category 顯示各通路條件
-                if (group.conditions.length > 0) {
-                    // 玉山 Uni Card 使用可展開的詳細條件，其他卡片直接顯示
-                    if (card.id === 'yushan-unicard') {
-                        const conditionsId = `conditions-${card.id}-group-${groupKey}`;
-                        const showConditionsId = `show-conditions-${card.id}-group-${groupKey}`;
-
-                        // 生成條件內容
-                        let conditionsContent = '';
-                        for (const cond of group.conditions) {
-                            conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
-                        }
-
-                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                        specialContent += `<button class="show-more-btn" id="${showConditionsId}" onclick="toggleConditions('${conditionsId}', '${showConditionsId}')" style="padding: 4px 12px; font-size: 13px;">▼ 查看各通路詳細條件</button>`;
-                        specialContent += `<div id="${conditionsId}" style="display: none; margin-top: 8px;">`;
-                        specialContent += conditionsContent;
-                        specialContent += `</div>`;
-                        specialContent += `</div>`;
-                    } else {
-                        // 其他卡片直接顯示條件
-                        specialContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                        specialContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 各通路條件：</div>`;
-
-                        for (const cond of group.conditions) {
-                            specialContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${getCategoryDisplayName(cond.category)}：${cond.conditions}</div>`;
-                        }
-
-                        specialContent += `</div>`;
-                    }
-                }
-
-                specialContent += `</div>`;
-            }
 
             // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
         } else {
@@ -7145,11 +7900,11 @@ basicCashbackDiv.innerHTML = basicContent;
             }
         }
 
-        // Sort active rates by percentage in descending order
+        // Sort active rates by DISPLAYED percentage descending (so a stacking
+        // item like Apple Pay sorts by its summed 5%, not its raw designated 3%)
         const sortedRates = activeRates.sort((a, b) => {
-            // 解析 rate（hasLevels=false 的卡片，levelData 為 null）
-            const aRate = parseCashbackRateSync(a.rate, null);
-            const bRate = parseCashbackRateSync(b.rate, null);
+            const aRate = getDisplayRate(card, a, parseCashbackRateSync(a.rate, null), null);
+            const bRate = getDisplayRate(card, b, parseCashbackRateSync(b.rate, null), null);
             return bRate - aRate;
         });
 
@@ -7159,7 +7914,8 @@ basicCashbackDiv.innerHTML = basicContent;
                 const parsedRate = await parseCashbackRate(rate.rate, card, null);
                 const parsedCap = parseCashbackCap(rate.cap, card, null);
                 return {
-                    parsedRate,
+                    // stacking 模型顯示加總後的回饋率（與進行中活動一致）
+                    parsedRate: getDisplayRate(card, rate, parsedRate, null),
                     parsedCap,
                     items: rate.items || [],
                     conditions: rate.conditions ? [{category: rate.category || '', conditions: rate.conditions}] : [],
@@ -7179,6 +7935,12 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // 解析 rate 值（支援 {specialRate} 和 {rate}，雖然 hasLevels=false 的卡片通常只有數字）
             const parsedRate = await parseCashbackRate(rate.rate, card, null);
+            // For stacking models, show the summed rate (designated+basic+bonus),
+            // same number the search-result card shows; otherwise show as-is.
+            const displayRate = getDisplayRate(card, rate, parsedRate, null);
+
+            // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
+            const parsedCap = parseCashbackCap(rate.cap, card, null);
 
             // Display rate with category in parentheses (with black color for consistency)
             const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
@@ -7192,10 +7954,9 @@ basicCashbackDiv.innerHTML = basicContent;
                 endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
             }
 
-            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadge}</div>`;
-
-            // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
-            const parsedCap = parseCashbackCap(rate.cap, card, null);
+            // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
+            const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, null);
+            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
             if (parsedCap) {
                 if (rate.capDescription && card.id === 'taishin-richart') {
                     specialContent += `<div class="cashback-condition">消費上限: ${rate.capDescription}</div>`;
@@ -7207,7 +7968,7 @@ basicCashbackDiv.innerHTML = basicContent;
             }
 
             if (rate.conditions) {
-                specialContent += `<div class="cashback-condition">條件: ${rate.conditions}</div>`;
+                specialContent += renderConditionLine(rate.conditions);
             }
 
             if (rate.period) {
@@ -7418,11 +8179,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 }
             }
 
-            // 條件顯示（統一格式）
+            // 條件顯示（統一格式；內容過長時可收起）
             if (coupon.conditions) {
                 couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
                 couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
-                couponContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${coupon.conditions}</div>`;
+                couponContent += `<div class="cond-collapsible" style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;"><span class="cond-text">• ${coupon.conditions}</span><button type="button" class="cond-toggle" style="display:none;">...展開</button></div>`;
                 couponContent += `</div>`;
             }
 
@@ -7512,7 +8273,10 @@ basicCashbackDiv.innerHTML = basicContent;
 
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
-    
+
+    // 設置我的額度輸入
+    setupCreditLimit(card.id);
+
     // 設置結帳日期功能
     setupBillingDates(card.id);
     
@@ -7524,6 +8288,11 @@ basicCashbackDiv.innerHTML = basicContent;
     // .modal-content 才是真正的捲動容器（overflow-y: auto; max-height: 80vh）
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
+
+    // Reveal 展開 toggles only on conditions that actually overflow — must run
+    // now that the modal is displayed (measurements need layout).
+    initConditionClamps(document.getElementById('card-special-cashback'));
+    initConditionClamps(document.getElementById('card-coupon-cashback'));
 
     // Wire the sticky section nav after sections are rendered.
     setupCardDetailNav(modalContent);
@@ -7546,8 +8315,7 @@ basicCashbackDiv.innerHTML = basicContent;
 async function generateCubeSpecialContent(card) {
     // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const savedLevel = await getCardLevel(card.id, defaultLevel);
-    const levelSettings = card.levelSettings[savedLevel];
+    const { level: savedLevel, data: levelSettings } = await resolveCardLevel(card, defaultLevel);
 
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
@@ -7653,7 +8421,7 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge10}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate10.conditions) {
-            content += `<div class="cashback-condition">條件: ${childrenRate10.conditions}</div>`;
+            content += renderConditionLine(childrenRate10.conditions);
         }
         if (childrenRate10.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
@@ -7694,7 +8462,7 @@ async function generateCubeSpecialContent(card) {
         content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge5}</div>`;
         content += `<div class="cashback-condition">消費上限: 無上限</div>`;
         if (childrenRate5.conditions) {
-            content += `<div class="cashback-condition">條件: ${childrenRate5.conditions}</div>`;
+            content += renderConditionLine(childrenRate5.conditions);
         }
         if (childrenRate5.period) {
             content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
@@ -7870,7 +8638,7 @@ async function generateCubeSpecialContent(card) {
 
             // 显示條件
             if (mergedRate.conditions) {
-                content += `<div class="cashback-condition">條件: ${mergedRate.conditions}</div>`;
+                content += renderConditionLine(mergedRate.conditions);
             }
 
             // 显示活動期間
@@ -7910,6 +8678,8 @@ async function updateCubeSpecialCashback(card) {
     const specialCashbackDiv = document.getElementById('card-special-cashback');
     const newContent = await generateCubeSpecialContent(card);
     specialCashbackDiv.innerHTML = newContent;
+    // Re-evaluate condition clamps for the freshly rendered content
+    initConditionClamps(specialCashbackDiv);
 }
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
@@ -8130,8 +8900,7 @@ async function loadSpendingMappings() {
     // 檢查是否有登入用戶
     if (!currentUser) {
         // 未登入用戶
-        const localData = localStorage.getItem('spendingMappings');
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        userSpendingMappings = readLocalJSONArray('spendingMappings');
         console.log('📋 [配卡] 未登入，從本地載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     }
@@ -8154,15 +8923,12 @@ async function loadSpendingMappings() {
         }
 
         // Fallback to localStorage if Firestore fails or no data
-        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
+        userSpendingMappings = readLocalJSONArray(`spendingMappings_${currentUser.uid}`);
         console.log('📦 [配卡] 從本地快取載入 (fallback):', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     } catch (error) {
         console.error('❌ [配卡] 讀取失敗，使用本地快取:', error);
-        const localData = localStorage.getItem(`spendingMappings_${currentUser.uid}`);
-        userSpendingMappings = localData ? JSON.parse(localData) : [];
-        console.log('📋 [配卡] 本地快取載入:', userSpendingMappings.length, '筆');
+        userSpendingMappings = readLocalJSONArray(`spendingMappings_${currentUser.uid}`);
         return userSpendingMappings;
     }
 }
@@ -8937,16 +9703,16 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
 async function setupFeeWaiverStatus(cardId) {
     const checkbox = document.getElementById('fee-waiver-checked');
     if (!checkbox) return;
-    
+
     // 讀取當前狀態
     const isWaived = await loadFeeWaiverStatus(cardId);
     checkbox.checked = isWaived;
-    
+
     // 設置變更監聽
     checkbox.onchange = (e) => {
         const newStatus = e.target.checked;
         saveFeeWaiverStatus(cardId, newStatus);
-        
+
         // 更新視覺提示 (可選)
         const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
         if (newStatus) {
@@ -8958,16 +9724,113 @@ async function setupFeeWaiverStatus(cardId) {
     };
 }
 
+// 我的額度相關功能（選填金額；比照免年費狀態的儲存方式）
+
+// 讀取我的額度（回傳數字，未填寫回傳 null）
+async function loadCreditLimit(cardId) {
+    const parse = (v) => {
+        const n = Number(v);
+        return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
+    };
+
+    if (!currentUser) {
+        return parse(localStorage.getItem(`creditLimit_local_${cardId}`));
+    }
+
+    try {
+        if (window.db && window.doc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().creditLimits) {
+                const amount = parse(docSnap.data().creditLimits[cardId]);
+                const localKey = `creditLimit_${currentUser.uid}_${cardId}`;
+                localStorage.setItem(localKey, amount === null ? '' : String(amount));
+                return amount;
+            }
+        }
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    } catch (error) {
+        console.error('❌ 讀取我的額度失敗:', error);
+        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+    }
+}
+
+// 儲存我的額度（amount 為數字，null 表示清空）
+async function saveCreditLimit(cardId, amount) {
+    const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
+    localStorage.setItem(localKey, amount === null ? '' : String(amount));
+
+    if (!currentUser) return;
+
+    try {
+        if (window.db && window.doc && window.setDoc && window.getDoc) {
+            const docRef = window.doc(window.db, 'users', currentUser.uid);
+            const docSnap = await window.getDoc(docRef);
+            const existingData = docSnap.exists() ? docSnap.data() : {};
+            const creditLimits = existingData.creditLimits || {};
+
+            if (amount === null) {
+                delete creditLimits[cardId];
+            } else {
+                creditLimits[cardId] = amount;
+            }
+
+            await window.setDoc(docRef, {
+                creditLimits: creditLimits,
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+
+            console.log('☁️ [我的額度] 已同步到 Firestore:', cardId, amount);
+        }
+    } catch (error) {
+        console.error('❌ [我的額度] Firestore 保存失敗:', error);
+    }
+}
+
+// 設置我的額度輸入（卡片詳情頁）
+async function setupCreditLimit(cardId) {
+    const input = document.getElementById('credit-limit-input');
+    const savedTag = document.getElementById('credit-limit-saved');
+    if (!input) return;
+
+    if (savedTag) savedTag.textContent = '';
+    const current = await loadCreditLimit(cardId);
+    input.value = current !== null ? current.toLocaleString() : '';
+
+    // 失焦或按 Enter 即儲存；只留數字，顯示千分位
+    input.onchange = () => {
+        const raw = input.value.replace(/[^\d]/g, '');
+        const amount = raw ? Number(raw) : null;
+        input.value = amount !== null ? amount.toLocaleString() : '';
+        saveCreditLimit(cardId, amount);
+        if (savedTag) {
+            savedTag.textContent = '✓ 已儲存';
+            setTimeout(() => {
+                if (savedTag.textContent === '✓ 已儲存') savedTag.textContent = '';
+            }, 2000);
+        }
+    };
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    };
+}
+
 // 結帳日期相關功能
 
 // 讀取結帳日期
 async function loadBillingDates(cardId) {
     const defaultDates = { billingDate: '', statementDate: '' };
+    // 確保回傳值一定是 { billingDate, statementDate } 形狀，儲存的資料被污染也不會讓 UI 掛掉
+    const normalizeDates = (raw) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ...defaultDates };
+        return {
+            billingDate: typeof raw.billingDate === 'string' ? raw.billingDate : '',
+            statementDate: typeof raw.statementDate === 'string' ? raw.statementDate : ''
+        };
+    };
 
     if (!currentUser) {
-        const localKey = `billingDates_local_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        return saved ? JSON.parse(saved) : defaultDates;
+        return normalizeDates(readLocalJSON(`billingDates_local_${cardId}`));
     }
 
     try {
@@ -8977,7 +9840,7 @@ async function loadBillingDates(cardId) {
             const docSnap = await window.getDoc(docRef);
 
             if (docSnap.exists() && docSnap.data().billingDates && docSnap.data().billingDates[cardId]) {
-                const dates = docSnap.data().billingDates[cardId];
+                const dates = normalizeDates(docSnap.data().billingDates[cardId]);
                 // 更新本地快取
                 const localKey = `billingDates_${currentUser.uid}_${cardId}`;
                 localStorage.setItem(localKey, JSON.stringify(dates));
@@ -8987,16 +9850,10 @@ async function loadBillingDates(cardId) {
         }
 
         // Fallback to localStorage
-        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        const result = saved ? JSON.parse(saved) : defaultDates;
-        console.log('📦 [結帳日期] 從本地讀取 (fallback):', cardId, result);
-        return result;
+        return normalizeDates(readLocalJSON(`billingDates_${currentUser.uid}_${cardId}`));
     } catch (error) {
         console.error('❌ 讀取結帳日期失敗:', error);
-        const localKey = `billingDates_${currentUser.uid}_${cardId}`;
-        const saved = localStorage.getItem(localKey);
-        return saved ? JSON.parse(saved) : defaultDates;
+        return normalizeDates(readLocalJSON(`billingDates_${currentUser.uid}_${cardId}`));
     }
 }
 
@@ -9108,10 +9965,51 @@ async function getCardLevel(cardId, defaultLevel) {
     return resolved;
 }
 
+// 登入後預熱級別快取：並行對所有「有級別設定」的卡呼叫 getCardLevel()，把結果灌進
+// cardLevelCache，讓使用者登入後的第一次計算不用再對每張卡串行等 Firestore getDoc
+// （resolveCardLevel → getCardLevel 命中快取直接回傳）。
+//
+// 只讀不寫：這裡只是把 getCardLevel() 本來就會做的讀取提前、並行跑，不呼叫
+// saveCardLevel()。getCardLevelUncached() 內既有的「本機鏡像補上傳 Firestore」邏輯
+// （雲端沒值但本機鏡像有值時會 saveCardLevel 一次）維持原樣不動——那是既有的合法
+// 呼叫場景（見 docs/project/storage-and-security.md 第 2 節），預熱只是提早觸發它，
+// 不是新增呼叫路徑。
+//
+// Fire-and-forget：呼叫端不 await，逐卡失敗各自 catch 並 console.error，不讓單一
+// 卡片的 Firestore 錯誤擋住其他卡或影響 onAuthStateChanged 流程。
+function warmCardLevelCache() {
+    if (!auth || !auth.currentUser) return; // 訪客沒有 Firestore 級別可預熱
+    if (!cardsData || !Array.isArray(cardsData.cards)) return; // cardsData 還沒載入時安靜跳過
+
+    const levelCards = cardsData.cards.filter(
+        card => card.hasLevels && card.levelSettings && Object.keys(card.levelSettings).length > 0
+    );
+
+    Promise.all(levelCards.map(card => {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        return getCardLevel(card.id, defaultLevel).catch(err => {
+            console.error(`⚠️ 級別快取預熱失敗 (${card.id}):`, err);
+        });
+    })).then(() => {
+        console.log(`✅ 級別快取預熱完成（${levelCards.length} 張卡）`);
+    });
+}
+
+// 卡片級別的本機 key：登入者一律用 uid 區分（cardLevel_<uid>_<cardId>），
+// 訪客沿用舊 key（cardLevel-<cardId>），既有訪客的資料不受影響。
+// ⚠️ 登入狀態下絕不可讀寫訪客 key —— 共用電腦上那可能是「別人」的選擇
+// （過去曾因此把前一位使用者的級別遷移進當前帳號）。訪客 key 只在登入當下
+// 由 absorbGuestPersonalData() 統一消化。
+function cardLevelLocalKey(cardId) {
+    return (auth && auth.currentUser)
+        ? `cardLevel_${auth.currentUser.uid}_${cardId}`
+        : `cardLevel-${cardId}`;
+}
+
 async function getCardLevelUncached(cardId, defaultLevel) {
     // If user not logged in, use localStorage
     if (!auth || !auth.currentUser) {
-        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+        return localStorage.getItem(cardLevelLocalKey(cardId)) || defaultLevel;
     }
 
     try {
@@ -9121,14 +10019,15 @@ async function getCardLevelUncached(cardId, defaultLevel) {
         const docSnap = await window.getDoc(docRef);
 
         if (docSnap.exists()) {
-            // Return level from Firestore
-            return docSnap.data().level || defaultLevel;
+            const level = docSnap.data().level || defaultLevel;
+            // 更新本機鏡像，離線時 fallback 用
+            try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
+            return level;
         } else {
-            // Check localStorage for migration
-            const localLevel = localStorage.getItem(`cardLevel-${cardId}`);
+            // 雲端沒有：檢查「自己的」本機鏡像（例如之前離線時儲存的），有則補上傳
+            const localLevel = localStorage.getItem(cardLevelLocalKey(cardId));
             if (localLevel && localLevel !== defaultLevel) {
-                // Migrate to Firestore
-                console.log(`Migrating level for ${cardId} from localStorage to Firestore: ${localLevel}`);
+                console.log(`Migrating level for ${cardId} from local mirror to Firestore: ${localLevel}`);
                 await saveCardLevel(cardId, localLevel);
                 return localLevel;
             }
@@ -9136,8 +10035,8 @@ async function getCardLevelUncached(cardId, defaultLevel) {
         }
     } catch (error) {
         console.log('Failed to load card level from Firestore:', error);
-        // Fallback to localStorage
-        return localStorage.getItem(`cardLevel-${cardId}`) || defaultLevel;
+        // Fallback to本機鏡像（uid 區分，不會讀到別人的資料）
+        return localStorage.getItem(cardLevelLocalKey(cardId)) || defaultLevel;
     }
 }
 
@@ -9195,8 +10094,8 @@ async function saveCardLevel(cardId, level) {
     // Write-through to the in-memory cache so subsequent reads see the new value.
     cardLevelCache.set(cardLevelCacheKey(cardId), level);
 
-    // Always save to localStorage as backup
-    localStorage.setItem(`cardLevel-${cardId}`, level);
+    // Always save to localStorage as backup（登入者用 uid 區分的 key，見 cardLevelLocalKey）
+    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
 
     // If user not logged in, only save locally
     if (!auth || !auth.currentUser) {
@@ -9218,6 +10117,32 @@ async function saveCardLevel(cardId, level) {
     } catch (error) {
         console.error('Failed to save card level to Firestore:', error);
     }
+}
+
+// Resolve a hasLevels card's current level + settings, falling back to
+// defaultLevel WITHOUT overwriting the user's stored choice when the saved
+// level isn't currently present in card.levelSettings.
+//
+// Why we do NOT re-save the fallback: a saved level can fail to match for a
+// TRANSIENT reason — e.g. the moment after cards.data is updated, or a briefly
+// malformed export — not only a permanent rename. Persisting the default in
+// that window would erase a logged-in user's real choice (Level 2 → Level 1)
+// for good, even after the data is corrected. So we fall back to the default
+// for THIS render only and leave the stored preference untouched; once the
+// card's data contains the saved level again, it resolves correctly on its own.
+//
+// Returns { level, data } — level is always a valid key into levelSettings,
+// data is always defined (never crashes downstream on `.rate`/`.cap` access).
+async function resolveCardLevel(card, defaultLevel) {
+    const savedLevel = await getCardLevel(card.id, defaultLevel);
+    const savedData = card.levelSettings[savedLevel];
+    if (savedData) {
+        return { level: savedLevel, data: savedData };
+    }
+    // Saved level not found in current data — render with the default but do
+    // NOT persist it, so the user's stored preference survives the mismatch.
+    console.warn(`⚠️ ${card.name}: 保存的級別 "${savedLevel}" 目前不在資料中，暫時顯示預設級別 "${defaultLevel}"（不覆蓋已儲存的選擇）`);
+    return { level: defaultLevel, data: card.levelSettings[defaultLevel] };
 }
 
 // ========== Payment Management Functions ==========
@@ -9630,57 +10555,50 @@ async function showComparePaymentsModal() {
 async function loadUserPayments(userData = null) {
     if (!currentUser) {
         // Guest: load from localStorage
-        try {
-            const saved = localStorage.getItem('selectedPayments_guest');
-            if (saved) {
-                userSelectedPayments = new Set(JSON.parse(saved));
-                console.log('📦 Loaded user payments from guest localStorage:', Array.from(userSelectedPayments));
-            } else {
-                userSelectedPayments = new Set();
-                console.log('🆕 Guest first time, no payments selected');
-            }
-        } catch (e) {
-            userSelectedPayments = new Set();
-        }
+        const saved = readLocalJSON('selectedPayments_guest', null);
+        userSelectedPayments = Array.isArray(saved) ? new Set(saved) : new Set();
+        console.log('📦 Loaded user payments (guest):', Array.from(userSelectedPayments));
         return;
     }
 
     try {
         // Use provided userData if available (from unified load)
-        if (userData && userData.selectedPayments) {
-            const cloudPayments = userData.selectedPayments;
-            userSelectedPayments = new Set(cloudPayments);
-            console.log('✅ Using user payments from unified data load:', Array.from(userSelectedPayments));
-
-            // Sync to localStorage for offline use
-            const storageKey = `selectedPayments_${currentUser.uid}`;
-            localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
-            return;
-        }
-
-        // Fallback: Try to load from Firestore if userData not provided
-        if (window.db && window.doc && window.getDoc) {
+        let cloudPayments = null;
+        if (userData && Array.isArray(userData.selectedPayments)) {
+            cloudPayments = userData.selectedPayments;
+        } else if (!userData && window.db && window.doc && window.getDoc) {
+            // Fallback: Try to load from Firestore if userData not provided
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
-
-            if (docSnap.exists() && docSnap.data().selectedPayments) {
-                const cloudPayments = docSnap.data().selectedPayments;
-                userSelectedPayments = new Set(cloudPayments);
-                console.log('✅ Loaded user payments from Firestore:', Array.from(userSelectedPayments));
-
-                // Sync to localStorage for offline use
-                const storageKey = `selectedPayments_${currentUser.uid}`;
-                localStorage.setItem(storageKey, JSON.stringify(cloudPayments));
-                return;
+            if (docSnap.exists() && Array.isArray(docSnap.data().selectedPayments)) {
+                cloudPayments = docSnap.data().selectedPayments;
             }
         }
 
-        // Fallback to localStorage if Firestore fails or no data
-        const storageKey = `selectedPayments_${currentUser.uid}`;
-        const savedPayments = localStorage.getItem(storageKey);
+        if (cloudPayments !== null) {
+            // 雲端有設定 → 雲端為準；移除訪客殘留 key
+            userSelectedPayments = new Set(cloudPayments);
+            console.log('✅ Loaded user payments from cloud:', Array.from(userSelectedPayments));
+            localStorage.setItem(`selectedPayments_${currentUser.uid}`, JSON.stringify(cloudPayments));
+            localStorage.removeItem('selectedPayments_guest');
+            return;
+        }
 
-        if (savedPayments) {
-            userSelectedPayments = new Set(JSON.parse(savedPayments));
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        const guestPayments = readLocalJSON('selectedPayments_guest', null);
+        if (guestPayments !== null) localStorage.removeItem('selectedPayments_guest');
+        if (Array.isArray(guestPayments) && guestPayments.length > 0) {
+            userSelectedPayments = new Set(guestPayments);
+            console.log('🔀 雲端無設定，帶入訪客的行動支付選擇:', guestPayments);
+            await saveUserPayments();
+            return;
+        }
+
+        // Fallback to localStorage if Firestore fails or no data
+        const savedPayments = readLocalJSON(`selectedPayments_${currentUser.uid}`, null);
+
+        if (Array.isArray(savedPayments)) {
+            userSelectedPayments = new Set(savedPayments);
             console.log('📦 Loaded user payments from localStorage (fallback):', Array.from(userSelectedPayments));
         } else {
             // First time user - no payments selected by default
@@ -9717,7 +10635,8 @@ async function saveUserPayments() {
         if (window.db && window.doc && window.setDoc) {
             try {
                 await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                    selectedPayments: paymentsArray
+                    selectedPayments: paymentsArray,
+                    updatedAt: new Date().toISOString()
                 }, { merge: true });
                 console.log('✅ Payments saved to Firestore');
             } catch (firestoreError) {
@@ -11148,12 +12067,6 @@ async function submitReview() {
         submitReviewBtn.disabled = false;
         submitReviewBtn.textContent = '送出評價';
     }
-}
-
-function showReviewFeedback(message) {
-    const reviewFeedback = document.getElementById('review-feedback');
-    reviewFeedback.textContent = message;
-    reviewFeedback.style.display = 'block';
 }
 
 function showReviewSuccessInModal() {

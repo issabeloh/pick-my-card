@@ -1,4 +1,15 @@
 // FAQ Page Script
+
+// Debug 日誌閘門：正式環境靜音 log/warn，?debug=1 重新開啟（同 script.js）
+(function () {
+    try {
+        if (!new URLSearchParams(location.search).has('debug')) {
+            console.log = function () {};
+            console.warn = function () {};
+        }
+    } catch (e) { /* ignore */ }
+})();
+
 let faqData = [];
 let currentCategory = 'all';
 let prerenderFAQIds = []; // Track pre-rendered FAQ IDs
@@ -179,6 +190,17 @@ function renderFAQItems(category) {
     });
 }
 
+// HTML 轉義（faq.js 獨立載入，不共用 script.js 的 helper）
+function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Create a single FAQ item (accordion)
 function createFAQItem(item) {
     const faqItem = document.createElement('div');
@@ -192,11 +214,13 @@ function createFAQItem(item) {
     const questionBtn = document.createElement('button');
     questionBtn.className = 'faq-question';
     questionBtn.innerHTML = `
-        <span class="question-text">${item.question}</span>
+        <span class="question-text">${escapeHtml(item.question)}</span>
         <span class="toggle-icon">▼</span>
     `;
 
     // Answer content
+    // ⚠️ answer 是「刻意」允許 HTML 的：內容來自 FAQ 工作表（管理者控制），
+    // 可放 <a>、<b> 等排版。不要把使用者輸入餵進這個欄位。
     const answerDiv = document.createElement('div');
     answerDiv.className = 'faq-answer';
     answerDiv.style.display = 'none';
@@ -582,12 +606,6 @@ async function submitReview() {
         submitReviewBtn.disabled = false;
         submitReviewBtn.textContent = '送出評價';
     }
-}
-
-function showReviewFeedback(message) {
-    const reviewFeedback = document.getElementById('review-feedback');
-    reviewFeedback.textContent = message;
-    reviewFeedback.style.display = 'block';
 }
 
 function showReviewSuccessInModal() {

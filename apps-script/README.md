@@ -1,0 +1,105 @@
+# Apps Script 備份與運維紀錄
+
+此資料夾存放 Google Sheets「信用卡管理系統」Apps Script 專案中的程式備份副本。
+**實際執行的版本在 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
+
+## 匯出主程式（`cards-export.gs`）
+
+產出 `cards.data` / `cards.version` 並自動 commit 到 GitHub 的主程式，對應 Apps Script 專案裡
+`exportToJSON()` 那支。**這是備份，改動請同步回 Google Sheets。**
+
+- 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
+- 2026-07-11 修正（過期活動不隱藏事件）：
+  - **資料流事實**：`periodStart_N` / `periodEnd_N` 是維護者**輸入**的日期源頭；`period_N`
+    是由它們**公式組出**的顯示字串（`YYYY/M/D~YYYY/M/D`）。
+  - **事故根因**：匯出用 `headers.indexOf(欄名)` 按「完全相同的字串」找欄，`periodStart_2`
+    這欄整欄讀不到（標題拼字／空格／大小寫／全形字元對不上，或欄名重複時 indexOf 只抓最前面
+    那欄）→ 23 張卡的第 2 槽全部缺 `periodStart`（儲存格其實有值，公式照樣組得出完整字串），
+    前端過期判斷拿不到開始日，把已過期活動當成永久有效顯示。
+  - **修正 1**：`resolvePeriodBounds()` 統一決定日期範圍——優先讀輸入欄，某一邊讀不到時從
+    `period_N` 字串拆回來救援。套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。
+  - **修正 2**：`runQACheck` 新增檢查 8（`periodEnd_N` 有值但 `periodStart_N` 讀不到；`period_N`
+    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在；欄位標題重複），
+    匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+  - **修正 3**：rate／coupon 槽位上限改由 `maxSlotIndex()` 依表頭自動偵測（原本寫死 `<= 21`，
+    但表已加到 `rate_22`——slot 22 整槽被靜默丟棄、永遠不會匯出）。之後加 `rate_23` 等新欄
+    不用改程式。
+  - 前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
+  - 事後對照維護者提供的完整表頭確認：事故元凶是 slot 2 的 `periodStart` 欄標題誤植成
+    `periodStart_1`（重複欄名，indexOf 只抓最前面那欄），已由維護者修正。其餘 381 欄無重複、
+    無空格／大小寫／全形問題。
+- 2026-07-12 與線上版合併：
+  - **保留維護者的修改**：`_hide`／`_hide_1` 專用隱藏槽處理移除（隱藏活動改用一般槽位 21/22
+    配 `hideInDisplay_N=TRUE`，走主迴圈）；槽位上限手動改的 22 由 `maxSlotIndex()` 自動偵測取代。
+  - **修正 coupon 兩個舊 bug**：日期欄原本巢狀在 `if (couponCap)` 內——沒設 cap 的 coupon
+    日期整組不匯出（過期領券活動不會被隱藏，實測 7 筆中招）；且日期未過 `formatDateToISO`，
+    Date 儲存格會序列化成 `"2026-06-29T16:00:00.000Z"` UTC 字串（前端字串比較會提早一天判過期）。
+    現統一走 `resolvePeriodBounds`。
+  - 依維護者要求，拿掉「`period_N` 欄漏建」QA 通知（保留成對檢查與重複欄名檢查——那兩種是
+    「整欄資料靜默消失」等級，非簡單補欄）。
+  - **移除 Drive 下載區塊**（`createDownloadUrl` / `TARGET_FOLDER_ID` / HTML 下載視窗）：
+    `publishToGitHub` 已自動 commit cards.data + cards.version，下載連結只是每次匯出在
+    Drive 堆兩個永不清理的檔案。匯出結果改用簡單 alert 顯示統計。歷史版本備份由 GitHub
+    commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
+    Sheets 版本記錄承擔。
+
+## 每月自動備份（.xlsx 寄信，2026-07-12 新增）
+
+Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、Watchlist/QA 等工作表），
+cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 Google 帳號單點。每月自動把
+整本試算表以 .xlsx 附件寄到信箱，收到後存到 Google 以外的位置即補上此缺口。
+
+| 項目 | 內容 |
+|---|---|
+| 函數 | `sendBackupEmail`（寄一份）、`setupMonthlyBackupTrigger`（建立每月觸發器） |
+| 選單 | 「📦 立即寄送試算表備份」「⏰ 啟用每月自動備份」 |
+| 排程 | 每月 1 日 9–10 點（由 `setupMonthlyBackupTrigger` 建立；重跑會先清舊觸發器，不會重複寄） |
+| 收件人 | `BACKUP_EMAIL` 常數留空 = 寄給試算表登入帳號（比照權益監控慣例） |
+| 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
+
+## 權益監控（第一階段，2026-07-07 上線）
+
+整體規劃見 repo 根目錄的 `BENEFITS-AUTOMATION-PLAN.md`。
+
+| 項目 | 內容 |
+|---|---|
+| 程式檔案 | Apps Script 專案內的 `權益監控.gs`（備份：`watchlist-monitor.gs`） |
+| 主函數 | `checkWatchlist`（觸發器叫醒的就是它） |
+| 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」 |
+| 監控清單 | 試算表分頁 `Watchlist`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / css_selector / last_snapshot / last_checked / active / keywords / min_diff_chars` |
+| 偵測結果 | 自動寫入分頁 `情報收件匣`（不存在會自動建立），並寄 Email 通知 |
+| 通知信箱 | `MONITOR_CONFIG.notifyEmail` 留空 = 寄給試算表登入帳號 |
+
+### 可調整的設定（都在程式最上方的 `MONITOR_CONFIG`）
+
+- `keywords`：全域關鍵字閘門——變動段落須含至少一個才算事件
+- `minDiffChars`：30，變動總字數低於此門檻視為雜訊
+- `snapshotMaxChars`：45000，快照長度上限（Sheets 單格上限 5 萬字）
+
+### Per-row 覆蓋（2026-07-08 加入，在 Watchlist 直接維護、不用改程式）
+
+| 欄位 | 作用 | 填法 |
+|---|---|---|
+| `keywords` | 這一列專用關鍵字，覆蓋全域 | 逗號分隔（半形/全形逗號、頓號皆可）。公告標題頁填該行卡名，例：`永豐SPORT卡,夢行,幣倍` |
+| `min_diff_chars` | 這一列專用雜訊門檻，覆蓋全域 30 | 公告標題頁填 `10`（一條新標題常見 15~30 字，30 會漏掉短標題） |
+
+兩欄留空 = 沿用全域設定，舊列完全不受影響。
+
+### 欄位注意事項
+
+- `watch_type`、`css_selector` **目前程式不會讀**，只是備註／預留欄（css_selector 屬第二階段）
+- `card_id` 填法：**權益頁**（一卡一頁）必須填 Cards Data 正式 id（第二階段靠它對資料）；**公告頁**（多卡共用一頁）填頁級標籤即可（例：`sinopac-news`），該是哪張卡由公告標題判讀
+- 公告頁**一頁只填一列**，不要每張卡複製一列——同 URL 多列會重複抓取、同一變動寄多封通知
+
+### 日常操作
+
+- **新增監控對象**：Watchlist 加一列即可，不用改程式（last_snapshot 留空，首次執行會自動填基準快照且不通知）
+- **暫停某個網址**：該列 active 改 `FALSE`
+- **改執行頻率**：Apps Script → 觸發條件 → 編輯該觸發器（頻率不影響費用，全部免費）
+- **手動跑一次**：編輯器上方函數選 `checkWatchlist` → Run
+
+### 已知問題與排錯
+
+- 錯誤「Watchlist 第一列必須有 url 與 last_snapshot」→ 表頭不在第 1 列、大小寫不對、或全形字，重打表頭即可
+- 錯誤「抓到的正文太短」→ 該銀行是動態網頁（JS 載入），把該列 url 換成銀行「公告/最新消息列表頁」（規劃書 §2.4）
+- 腳本執行失敗會依觸發器的 Failure notification 設定寄信通知
