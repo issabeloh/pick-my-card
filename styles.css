@@ -313,6 +313,8 @@ header h1 {
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    display: flex;
+    align-items: center;
 }
 
 .announcement-text {
@@ -321,6 +323,8 @@ header h1 {
     font-size: 0.85rem;
     font-weight: 400;
     display: block;
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -343,9 +347,12 @@ header h1 {
     text-decoration: none;
 }
 
-/* Date badge bubble */
+/* Date badge bubble（是 announcement-text 的兄弟元素，禁止塞回文字內——
+   iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字。
+   同理禁用 backdrop-filter：它會讓 badge 自成 compositing layer。 */
 .announcement-date-badge {
     display: inline-block;
+    flex-shrink: 0;
     background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
     padding: 2px 8px;
@@ -354,9 +361,8 @@ header h1 {
     font-weight: 600;
     margin-right: 8px;
     white-space: nowrap;
-    vertical-align: middle;
-    /* 禁用 backdrop-filter：會讓 badge 自成 compositing layer，iOS Safari 在
-       line-clamp + opacity fade 下只重繪 badge、公告文字停在舊圖層變疊字亂碼 */
+    cursor: pointer;
+    transition: opacity 0.15s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -394,11 +400,13 @@ header h1 {
 }
 
 /* Fade animation */
-.announcement-text.fade-out {
+.announcement-text.fade-out,
+.announcement-date-badge.fade-out {
     opacity: 0;
 }
 
-.announcement-text.fade-in {
+.announcement-text.fade-in,
+.announcement-date-badge.fade-in {
     opacity: 1;
 }
 
@@ -2312,11 +2320,16 @@ input[type="number"]:focus {
         line-height: 1.4;
     }
 
-    /* Date badge on mobile */
+    /* Date badge on mobile（badge 是兄弟元素，貼齊文字第一行） */
+    .announcement-text-wrapper {
+        align-items: flex-start;
+    }
+
     .announcement-date-badge {
         font-size: 0.7rem;
         padding: 1px 6px;
         margin-right: 6px;
+        margin-top: 2px;
     }
 
     .announcement-controls {
