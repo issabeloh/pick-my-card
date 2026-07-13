@@ -2239,6 +2239,18 @@ function setupEventListeners() {
         });
     }
 
+    // 領券型活動卡片的 ⓘ 詳情按鈕（搜尋結果）
+    if (couponResultsContainer) {
+        couponResultsContainer.addEventListener('click', (e) => {
+            const peekBtn = e.target.closest('.card-detail-peek-btn');
+            if (peekBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                showCardDetail(peekBtn.dataset.cardId);
+            }
+        });
+    }
+
     // 我的配卡按鈕
     const myMappingsBtn = document.getElementById('my-mappings-btn');
     if (myMappingsBtn) {
@@ -3230,12 +3242,22 @@ function getMerchantSearchUnits(merchantName) {
 // B 類（補充資訊）嚴格比對：商家名稱 vs 已 fuzzy 展開的搜尋詞陣列。
 // 規則：把商家拆成單元後，任一單元與任一搜尋詞 exact 或雙向 startsWith 即算命中。
 // 嚴格的 startsWith（而非 includes）可避免 "日本7-ELEVEN門市" 誤匹配 "7-ELEVEN"。
+// unit.startsWith(term) 額外排除「配對後緊接空白+全新英文單字」的情況，
+// 避免 "Line Pay" 誤配到完全不同的產品 "Line Pay Money"（"money" 是新單字，不是同一商家的註記）。
+// 雙語商家名稱請統一寫成 "中文 (English)" 括號格式（見 getMerchantSearchUnits），
+// 才會被拆成獨立 unit 做 exact 比對，不會受此規則影響。
 function merchantMatchesStrict(merchantName, searchVariants) {
     const units = getMerchantSearchUnits(merchantName);
     return units.some(unit =>
-        searchVariants.some(term =>
-            term === unit || term.startsWith(unit) || unit.startsWith(term)
-        )
+        searchVariants.some(term => {
+            if (term === unit || term.startsWith(unit)) return true;
+            if (unit.startsWith(term)) {
+                const rest = unit.slice(term.length);
+                const isNewEnglishWord = /^\s+[a-z]/i.test(rest);
+                return !isNewEnglishWord;
+            }
+            return false;
+        })
     );
 }
 
@@ -5384,7 +5406,10 @@ function createCouponResultElement(coupon, amount) {
 
     couponDiv.innerHTML = `
         <div class="coupon-header">
-            <div class="coupon-merchant">${coupon.cardName}</div>
+            <div class="card-name-with-pin">
+                <div class="coupon-merchant">${coupon.cardName}</div>
+                <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(coupon.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
+            </div>
         </div>
         <div class="card-details">
             <div class="detail-item">
