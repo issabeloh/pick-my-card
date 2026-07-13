@@ -621,7 +621,9 @@ main {
     gap: 16px;
     margin-bottom: 16px;
     align-items: start; /* 顶部对齐，让输入框在同一高度 */
-    overflow: hidden; /* 防止子元素撑大容器 */
+    /* 不可用 overflow:hidden——search hint 與「?」說明是浮層，會被裁掉；
+       子元素撐大容器的問題由 > .form-group 的 min-width:0 處理 */
+    overflow: visible;
 }
 
 .input-row-with-button > .form-group {
@@ -7360,6 +7362,7 @@ input[type="text"].credit-limit-input:focus {
 .merchant-search-box #merchant-input {
     -webkit-appearance: none;
     appearance: none;
+    background: #fff; /* 部分行動瀏覽器給 type=search 灰色 UA 底色，明確蓋掉 */
     border: none;
     border-radius: 11px 11px 0 0;
     box-shadow: none;
