@@ -1233,7 +1233,7 @@ main {
     .matched-item-row {
         grid-column: 1;
         grid-row: 3;
-        align-self: end;
+        align-self: start; /* 與按鈕同樣釘住第 3 列頂端 */
         display: flex;
         align-items: center;
         min-height: 46px; /* 與計算按鈕同高，讓文字垂直置中對齊按鈕 */
@@ -1692,8 +1692,8 @@ input[type="number"]:focus {
    Show new cardholder promos toggle
    ========================================== */
 .show-promos-toggle {
+    position: relative; /* 「?」說明浮層的定位基準 */
     display: flex;
-    flex-wrap: wrap; /* 「?」展開的說明文字（flex-basis:100%）換行到下方 */
     gap: 12px; /* 與 .input-row-with-button 手機版 grid gap 一致，上下左右間距等距 */
     font-size: 14px;
     color: #6b7280;
@@ -1714,8 +1714,13 @@ input[type="number"]:focus {
 }
 
 .promo-help-text {
-    flex-basis: 100%;
-    margin-top: 0;
+    position: absolute; /* 浮層：蓋在下方內容上，不推擠版面 */
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    z-index: 30;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     padding: 8px 10px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -1821,11 +1826,22 @@ input[type="number"]:focus {
     .input-row-with-button > .form-group:first-child {
         grid-column: 1;
         grid-row: 1 / 4;
+        position: relative; /* search hint 浮層的定位基準 */
+        align-self: start;
+    }
+    /* search hint 改浮層貼在合併框下方：不參與 grid 佈局，出現時右欄不跑位。
+       選擇器帶父層 class 以蓋過後方的基礎 #search-hints-container 規則 */
+    .input-row-with-button #search-hints-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin: 6px 0 0 0;
     }
     .input-row-with-button > .form-group.button-group {
         grid-column: 2;
         grid-row: 3;
-        align-self: end;
+        align-self: start; /* 釘住：search hint 撐高左欄（第 3 列變高）時按鈕不跑位 */
     }
     .input-row-with-button > .form-group.button-group .calculate-btn {
         width: 100%;
@@ -6457,6 +6473,8 @@ input[type="text"].credit-limit-input:focus {
 
 /* 搜尋提示容器 */
 #search-hints-container {
+    position: relative;
+    z-index: 5; /* 蓋過同格位的匹配狀態列文字（罕見同時出現時不疊字） */
     margin-top: 10px;
     margin-bottom: 10px;
 }
@@ -7318,8 +7336,9 @@ input[type="text"].credit-limit-input:focus {
 
 /* 精準搜尋零結果提示（合併框下方） */
 .exact-search-empty-hint {
-    margin-top: 6px;
-    font-size: 0.8rem;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
     color: #b45309;
 }
 

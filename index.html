@@ -61,7 +61,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260713010335">
+    <link rel="stylesheet" href="styles.css?v=20260713012111">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -413,9 +413,6 @@
                         </div>
                         </div><!-- /merchant-search-box -->
 
-                        <!-- 精準搜尋零結果提示（勾選精準搜尋且放寬後有相近結果時顯示） -->
-                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
-
                         <!-- 搜尋提示容器 -->
                         <div id="search-hints-container"></div>
                     </div>
@@ -464,8 +461,10 @@
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
                     </div>
 
-                    <!-- 匹配狀態列（桌機與計算按鈕同列、置左欄；手機在最下方整列） -->
+                    <!-- 匹配狀態列（桌機與計算按鈕同列、置左欄；手機在最下方整列）。
+                         一次只顯示一行：精準搜尋橙色提示與「匹配到:」互斥（JS 控制） -->
                     <div class="matched-item-row">
+                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
                         <div class="matched-item" id="matched-item" style="display: none;"></div>
                     </div>
                 </div>
@@ -1051,7 +1050,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260713010335" defer></script>
+    <script src="script.js?v=20260713012111" defer></script>
 
     <!-- Firebase Configuration -->
     <script type="module" defer>

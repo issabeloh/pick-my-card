@@ -2807,6 +2807,8 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     // Use different style class depending on whether parking benefits matched
     matchedItemDiv.className = hasParkingMatch ? 'matched-item partial-match' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
+    // 匹配狀態列一次只顯示一行：✘/部分匹配訊息出現時收起精準搜尋的橙色提示
+    toggleExactSearchEmptyHint(false);
 }
 
 // Hide matched item
@@ -4647,18 +4649,36 @@ function setupCardholderPromoToggle() {
         if (cb) cb.addEventListener('change', onChange);
     });
 
-    // Mobile help: click '?' toggles a sibling text panel inline.
-    document.querySelectorAll('.promo-help-inline').forEach(btn => {
+    // Help: click '?' toggles a floating text panel (overlay, doesn't push layout).
+    // 一次只開一個說明——開新的先收舊的；點面板外任意處也會收合
+    const inlineHelpBtns = [...document.querySelectorAll('.promo-help-inline')];
+    const closeAllInlineHelp = () => {
+        inlineHelpBtns.forEach(btn => {
+            const t = document.getElementById(btn.getAttribute('data-help-target'));
+            if (t && !t.hasAttribute('hidden')) {
+                t.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    };
+    inlineHelpBtns.forEach(btn => {
         const targetId = btn.getAttribute('data-help-target');
         const text = targetId && document.getElementById(targetId);
         if (!text) return;
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const isHidden = text.hasAttribute('hidden');
-            text.toggleAttribute('hidden', !isHidden);
-            btn.setAttribute('aria-expanded', String(isHidden));
+            e.stopPropagation();
+            const wasHidden = text.hasAttribute('hidden');
+            closeAllInlineHelp();
+            text.toggleAttribute('hidden', !wasHidden);
+            btn.setAttribute('aria-expanded', String(wasHidden));
         });
     });
+    if (inlineHelpBtns.length > 0) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.promo-help-text')) closeAllInlineHelp();
+        });
+    }
 
     // Desktop help: hover '?' shows a native popover (top-layer, escapes z-index).
     const popoverSupported = typeof HTMLElement.prototype.showPopover === 'function';
