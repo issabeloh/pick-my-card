@@ -71,7 +71,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260712060326">
+    <link rel="stylesheet" href="styles.css?v=20260713024333">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -216,6 +216,9 @@
                         <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
                     </svg>
                     <div class="announcement-text-wrapper">
+                        <!-- 日期 badge 必須是 announcement-text 的「兄弟」而非子元素：
+                             iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字 -->
+                        <span class="announcement-date-badge" id="announcement-date" style="display: none;"></span>
                         <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
                     </div>
                     <div class="announcement-controls">
@@ -1052,7 +1055,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260712060326" defer></script>
+    <script src="script.js?v=20260713024333" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個

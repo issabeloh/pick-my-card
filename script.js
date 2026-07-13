@@ -1709,11 +1709,18 @@ function setupAnnouncementBar() {
         resumeAnnouncementRotation();
     });
 
-    // Click on text to show modal
+    // Click on text or date badge to show modal
     announcementText.addEventListener('click', (e) => {
         e.preventDefault();
         showAnnouncementModal(currentAnnouncementIndex);
     });
+
+    const announcementDate = document.getElementById('announcement-date');
+    if (announcementDate) {
+        announcementDate.addEventListener('click', () => {
+            showAnnouncementModal(currentAnnouncementIndex);
+        });
+    }
 }
 
 // Show announcement modal with full content
@@ -1764,8 +1771,12 @@ function showAnnouncementModal(index) {
 }
 
 // Display announcement by index
+// ⚠️ announcement-text 只能用 textContent 放純文字，不能塞任何行內元素（含日期）：
+//    iOS Safari 對「line-clamp 元素內含 inline-block ＋ opacity 淡入淡出」會停止重繪
+//    文字圖層，畫面卡在上一則變疊字亂碼。日期放在獨立的 #announcement-date badge。
 function displayAnnouncement(index) {
     const announcementText = document.getElementById('announcement-text');
+    const announcementDate = document.getElementById('announcement-date');
     const announcementIndicator = document.getElementById('announcement-indicator');
 
     if (!announcementText || !announcements[index]) return;
@@ -1774,16 +1785,21 @@ function displayAnnouncement(index) {
 
     // Fade out
     announcementText.classList.add('fade-out');
+    if (announcementDate) announcementDate.classList.add('fade-out');
 
     setTimeout(() => {
-        // Update content with date badge if available
-        if (announcement.date) {
-            // Display with date badge
-            announcementText.innerHTML = `<span class="announcement-date-badge">${escapeHtml(announcement.date)}</span>${escapeHtml(announcement.text)}`;
-        } else {
-            // Display without date
-            announcementText.textContent = announcement.text;
+        // Update date badge (sibling element, see warning above)
+        if (announcementDate) {
+            if (announcement.date) {
+                announcementDate.textContent = announcement.date;
+                announcementDate.style.display = '';
+            } else {
+                announcementDate.style.display = 'none';
+            }
         }
+
+        // Update text (plain text only, see warning above)
+        announcementText.textContent = announcement.text;
 
         // Always set as clickable (opens modal)
         announcementText.href = '#';
@@ -1797,6 +1813,10 @@ function displayAnnouncement(index) {
         // Fade in
         announcementText.classList.remove('fade-out');
         announcementText.classList.add('fade-in');
+        if (announcementDate) {
+            announcementDate.classList.remove('fade-out');
+            announcementDate.classList.add('fade-in');
+        }
     }, 150);
 
     currentAnnouncementIndex = index;
