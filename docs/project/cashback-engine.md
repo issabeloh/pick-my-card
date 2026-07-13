@@ -98,9 +98,9 @@ if (!card.specialItems || card.specialItems.length === 0)
 - 選擇邏輯（約 script.js:3554 `const cashbackModel = matchedRateGroup?.cashbackModel`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
 
 **共用邏輯**（2026-07-06 整併完成，改動時不要再複製一份）：
-- `getOverflowRate(card, items)`：簡單路徑與 findUpcomingActivity 共用；內含 `meta廣告/google廣告 → overseasCashback` 特例（台新 Richart 除外）
+- `getOverflowRate(card)`：簡單路徑與 findUpcomingActivity 共用的溢出率＝`basicCashback`（2026-07-12 移除 `meta廣告/google廣告 → overseasCashback` 寫死特例：全部廣告槽位已改用明確 cashbackModel、走 stacking，不再進簡單路徑；海外與否一律由 cashbackModel 決定）
 - `resolveBaseRate(card, isOverseas)` / `resolveBonusComponent(...)`：waterfall/stacking 共用
-- 領券活動的溢出**刻意**直接用 `basicCashback`（不走 getOverflowRate，廣告平台特例不適用於領券商家，程式內有註解）
+- 領券活動的溢出直接用 `basicCashback`（與 getOverflowRate 現值等價；不共用只是避免依賴，程式內有註解）
 - 無匹配 fallback：`buildBasicCashbackResult(card, amount)`；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
 **計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
