@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// Pick My Card — Firestore 安全規則
+//
+// 這份檔案是「唯一正確版本」的規則來源（版本控管在 git）。
+// 修改後要貼到 Firebase console 才會生效：
+//   Firebase console → Firestore Database → 規則（Rules）→ 貼上 → 發布
+// 詳細教學見 FIRESTORE-RULES-README.md
+//
+// 資料模型（程式碼實際使用的 collections）：
+//   users/{uid}                  用戶設定總文件（卡片選擇、行動支付、配卡表、
+//                                免年費、結帳日、生日月、CUBE 發卡組織…）
+//   cardSettings/{uid}_{cardId}  卡片級別（每張卡一份）
+//   userNotes/{uid}_{cardId}     卡片筆記（每張卡一份）
+//   feedback/{autoId}            問題回報（需登入，只能新增）
+//   reviews/{autoId}             星星評分（訪客也能送出，只能新增）
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── 用戶個人設定：只有本人能讀寫 ─────────────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // ── 卡片級別：文件 ID 格式為 "<uid>_<cardId>"，只有本人能讀寫 ──
+    match /cardSettings/{docId} {
+      allow read, write: if request.auth != null
+                         && docId.matches(request.auth.uid + '_.*');
+    }
+
+    // ── 卡片筆記：同上 ──────────────────────────────────────────
+    match /userNotes/{docId} {
+      allow read, write: if request.auth != null
+                         && docId.matches(request.auth.uid + '_.*');
+    }
+
+    // ── 問題回報：需登入、只能新增、不能讀取/修改/刪除 ──────────────
+    //    （讀取只透過 Firebase console，避免用戶回報內容外洩）
+    match /feedback/{docId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 5000;
+      allow read, update, delete: if false;
+    }
+
+    // ── 星星評分：訪客也能送出（不需登入）、只能新增 ────────────────
+    //    rating 限 1~5 的數字；comment 可以是字串或 null，最長 2000 字
+    match /reviews/{docId} {
+      allow create: if request.resource.data.rating is number
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    && (
+                         !('comment' in request.resource.data)
+                         || request.resource.data.comment == null
+                         || (request.resource.data.comment is string
+                             && request.resource.data.comment.size() <= 2000)
+                       );
+      allow read, update, delete: if false;
+    }
+
+    // ── 其他一律拒絕（新 collection 需在此明確加規則才可用） ─────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

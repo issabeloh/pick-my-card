@@ -5,14 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
 
-    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users.
-         Read synchronously before any external script so first paint reflects it. -->
+    <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
+         - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
+         - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
+           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
+         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+         ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
+         location.replace 讓返回鍵不會跳回造成循環。 -->
     <script>
+        var pmcFromLanding = location.search.indexOf('start') !== -1;
         try {
-            if (localStorage.getItem('pmc_known_logged_in') === '1') {
+            if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+                localStorage.setItem('pmc_seen_landing', '1');
+                location.replace('landing.html');
+            } else {
                 document.documentElement.classList.add('pmc-returning-user');
             }
-        } catch (e) { /* localStorage disabled — fall back to default render */ }
+        } catch (e) {
+            // localStorage 不可用（無痕強化/隱私封鎖）
+            if (!pmcFromLanding) location.replace('landing.html');
+            else document.documentElement.classList.add('pmc-returning-user');
+        }
     </script>
 
     <!-- SEO Meta Tags -->
@@ -39,6 +52,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase modules: modulepreload so the browser fetches/parses them while the
+         rest of <head> loads, instead of waiting for the inline module script near the
+         end of <body> to discover the import specifiers. URLs must match the import
+         statements verbatim (see the inline <script type="module"> block below). -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js" crossorigin>
+
     <!-- Font display optimization to prevent layout shift -->
     <style>
         /* Ensure font is loaded with swap to prevent invisible text */
@@ -48,7 +71,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260706111156">
+    <link rel="stylesheet" href="styles.css?v=20260713062459">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -193,6 +216,9 @@
                         <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
                     </svg>
                     <div class="announcement-text-wrapper">
+                        <!-- 日期 badge 必須是 announcement-text 的「兄弟」而非子元素：
+                             iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字 -->
+                        <span class="announcement-date-badge" id="announcement-date" style="display: none;"></span>
                         <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
                     </div>
                     <div class="announcement-controls">
@@ -364,13 +390,13 @@
                             消費商家
                             <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
                         </label>
-                        <input type="text" id="merchant-input" placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
+                        <div class="merchant-search-box">
+                        <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
+                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
 
-                        <!-- 搜尋提示容器 -->
-                        <div id="search-hints-container"></div>
-
-                        <!-- 快捷搜尋按鈕 -->
-                        <div class="quick-search-label">快捷搜尋</div>
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
                                 <!-- 可見的快捷按鈕會由 JavaScript 填充 -->
@@ -398,50 +424,61 @@
                                 </div>
                             </div>
                         </div>
+                        </div><!-- /merchant-search-box -->
+
+                        <!-- 搜尋提示容器 -->
+                        <div id="search-hints-container"></div>
+                    </div>
+
+                    <!-- 精準搜尋＋新戶活動 toggles（桌機/手機共用一份，合併框下方同一列；說明點「?」內嵌展開） -->
+                    <div class="show-promos-toggle">
+                        <div class="promo-toggle-row">
+                            <label>
+                                <input type="checkbox" id="exact-search-checkbox">
+                                精準搜尋
+                            </label>
+                            <button type="button"
+                                    class="promo-help-btn promo-help-inline"
+                                    data-help-target="exact-search-help-text"
+                                    aria-expanded="false"
+                                    aria-label="說明">?</button>
+                        </div>
+                        <div class="promo-toggle-row">
+                            <label>
+                                <input type="checkbox" id="show-promos-checkbox">
+                                新戶活動
+                            </label>
+                            <button type="button"
+                                    class="promo-help-btn promo-help-inline"
+                                    data-help-target="promo-help-text"
+                                    aria-expanded="false"
+                                    aria-label="說明">?</button>
+                        </div>
+                        <div id="exact-search-help-text" class="promo-help-text" hidden>
+                            只顯示與輸入完全相同的項目。例：輸入「國外」只顯示「國外」，不含「國外航空」等（不影響快捷搜尋）
+                        </div>
+                        <div id="promo-help-text" class="promo-help-text" hidden>
+                            如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                        </div>
                     </div>
 
                     <div class="form-group compact">
-                        <label for="amount-input">消費金額 (NT$)</label>
-                        <input type="number" id="amount-input" value="1000" min="1" step="1" />
-                        <small class="amount-hint">未填金額時，預設以 NT$1,000 計算</small>
-                        <!-- 顯示新戶活動 toggle (桌機版位置：消費金額下方) — 桌機用 hover popover -->
-                        <div class="show-promos-toggle show-promos-desktop">
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="show-promos-toggle-desktop">
-                                    新戶活動
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-hover"
-                                        data-help-target="promo-help-popup-desktop"
-                                        aria-label="說明">?</button>
-                                <div id="promo-help-popup-desktop" popover class="promo-help-popup">
-                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                                </div>
-                            </div>
+                        <label for="amount-input">消費金額</label>
+                        <div class="amount-input-wrap">
+                            <span class="amount-prefix">NT$</span>
+                            <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
                     </div>
 
                     <div class="form-group compact button-group">
-                        <label>&nbsp;</label>
-                        <!-- 顯示新戶活動 toggle (手機版位置) — 手機用內嵌展開 -->
-                        <div class="show-promos-toggle show-promos-mobile">
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="show-promos-toggle-mobile">
-                                    新戶活動
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-inline"
-                                        data-help-target="promo-help-text-mobile"
-                                        aria-expanded="false"
-                                        aria-label="說明">?</button>
-                            </div>
-                            <div id="promo-help-text-mobile" class="promo-help-text" hidden>
-                                如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                            </div>
-                        </div>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
+                    </div>
+
+                    <!-- 匹配狀態列（桌機與計算按鈕同列、置左欄；手機在最下方整列）。
+                         一次只顯示一行：精準搜尋橙色提示與「匹配到:」互斥（JS 控制） -->
+                    <div class="matched-item-row">
+                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
+                        <div class="matched-item" id="matched-item" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -465,9 +502,6 @@
                     </div>
                 </div>
 
-                <div class="matched-item-row">
-                    <div class="matched-item" id="matched-item" style="display: none;"></div>
-                </div>
             </section>
 
             <section class="results-section" id="results-section" style="display: none;">
@@ -587,21 +621,18 @@
         <div id="my-owned-cards-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>我的信用卡</h3>
+                    <h3>我的信用卡 <span id="owned-count-badge" class="ow-count-badge" style="display: none;"></span></h3>
+                    <button id="manage-owned-cards-btn" class="ow-gear-btn" type="button" title="管理我的信用卡" aria-label="管理我的信用卡">
+                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                        </svg>
+                    </button>
                     <button class="close-modal" id="close-owned-modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="owned-cards-overview" id="owned-cards-overview">
                         <!-- Owned card overview tiles populated by JavaScript -->
-                    </div>
-                    <div class="owned-overview-actions" id="owned-overview-actions">
-                        <button id="manage-owned-cards-btn" class="manage-owned-btn" type="button">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-                                <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-                                <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
-                            </svg>
-                            管理我的信用卡
-                        </button>
                     </div>
                 </div>
             </div>
@@ -630,6 +661,7 @@
                     </div>
                     <div class="modal-action-buttons">
                         <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
+                        <button id="save-owned-cards-btn-top" class="save-btn save-btn-top" type="button">儲存設定</button>
                     </div>
                     <div class="cards-selection" id="owned-cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
@@ -822,20 +854,36 @@
                         </div>
                     </div>
                     
-                    <!-- 用戶筆記區域 -->
-                    <div class="card-info-section user-notes-section" id="card-notes-section">
-                        <h4>📝 我的筆記</h4>
-                        <div class="user-notes-container">
-                            <div class="notes-input-row">
-                                <textarea id="user-notes-input"
-                                          placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                          class="user-notes-textarea"></textarea>
-                                <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                    <span class="btn-icon">💾</span>
-                                </button>
+                    <!-- 我的額度 + 我的筆記（桌機並排、手機直排） -->
+                    <div class="personal-fields-row">
+                        <div class="card-info-section" id="credit-limit-section">
+                            <h4>💳 我的額度</h4>
+                            <div class="credit-limit-row">
+                                <div class="credit-limit-field">
+                                    <span class="credit-limit-prefix">NT$</span>
+                                    <input type="text" id="credit-limit-input" class="credit-limit-input"
+                                           inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                           placeholder="選填">
+                                </div>
+                                <span class="credit-limit-saved" id="credit-limit-saved"></span>
                             </div>
-                            <div class="notes-status" id="notes-status">
-                                <span class="save-indicator" id="save-indicator"></span>
+                        </div>
+
+                        <!-- 用戶筆記區域 -->
+                        <div class="card-info-section user-notes-section" id="card-notes-section">
+                            <h4>📝 我的筆記</h4>
+                            <div class="user-notes-container">
+                                <div class="notes-input-row">
+                                    <textarea id="user-notes-input"
+                                              placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                              class="user-notes-textarea"></textarea>
+                                    <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
+                                        <span class="btn-icon">💾</span>
+                                    </button>
+                                </div>
+                                <div class="notes-status" id="notes-status">
+                                    <span class="save-indicator" id="save-indicator"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -927,6 +975,14 @@
                     </a>
                 </div>
             </div>
+            <div class="faq-section">
+                <p class="social-media-title">認識我們</p>
+                <div class="social-media-links">
+                    <a href="landing.html" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1007,10 +1063,17 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260706111156" defer></script>
+    <script src="script.js?v=20260713062459" defer></script>
 
     <!-- Firebase Configuration -->
-    <script type="module" defer>
+    <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
+         script 完全 fetch+執行完才會觸發 DOMContentLoaded——Firebase 網路慢（不是被擋，只是慢）
+         時，script.js 的 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
+         fallback 本身）會被這個 script 卡住，逾時 fallback 永遠等不到執行的機會。改 async 讓這個
+         module 獨立非同步載入，不阻塞 DOMContentLoaded；script.js 原本就用輪詢等
+         window.firebaseAuth/window.db 就緒，不依賴執行順序，這裡只設定 window.* 屬性、不碰 DOM，
+         async 對它是安全的。 -->
+    <script type="module" async>
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
