@@ -11327,7 +11327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     feedbackBtn.addEventListener('click', () => {
         // Check if user is logged in
         if (!currentUser) {
-            alert('請先登入才能回報問題 🔐\n\n登入後可以幫助我們更好地追蹤和回覆您的回報。');
+            alert('請先登入才能回報問題 🔐\n\n登入後可以幫助我們更好地追蹤您的回報。');
             return;
         }
 
