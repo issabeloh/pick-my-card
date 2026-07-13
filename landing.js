@@ -39,7 +39,7 @@
 
     // 各幕在總進度中的相對長度（第 1 幕兩段式最長；其餘幕動畫改為進場即播，
     // 不需要長滾動距離）
-    var weights = [2.0, 0.8, 1.0, 0.8, 1.0, 0.8];
+    var weights = [2.0, 0.8, 1.0, 0.9, 0.8, 1.0, 0.8];
     var total = weights.reduce(function (a, b) { return a + b; }, 0);
     var bounds = [];
     (function () {

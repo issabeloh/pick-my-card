@@ -16,15 +16,56 @@
     <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
     <meta property="og:locale" content="zh_TW">
 
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://pickmycard.app/landing">
+    <meta name="twitter:title" content="信用卡回饋大師 - 結帳前，先 Pick My Card">
+    <meta name="twitter:description" content="搞懂回饋規則，不該是你的功課。勾選你的卡、結帳前搜一下，找出回饋最高的那張卡與支付組合。">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="landing.css?v=20260709081748">
+    <link rel="stylesheet" href="landing.css?v=20260712144800">
 
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
+
+    <!-- Structured Data (JSON-LD) for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "信用卡回饋大師",
+        "alternateName": "PickMyCard",
+        "url": "https://pickmycard.app/landing",
+        "description": "搞懂回饋規則，不該是你的功課。勾選你的卡、結帳前搜一下，Pick My Card 幫你找出回饋最高的那張卡與支付組合。免費、免下載。",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "TWD"
+        },
+        "featureList": [
+            "篩選你的個人信用卡",
+            "結帳前搜一下",
+            "快捷選項",
+            "實用提醒",
+            "一鍵比較行動支付"
+        ],
+        "inLanguage": "zh-TW",
+        "audience": {
+            "@type": "Audience",
+            "geographicArea": {
+                "@type": "Country",
+                "name": "Taiwan"
+            }
+        }
+    }
+    </script>
 </head>
 <body>
 
@@ -88,8 +129,8 @@
             </section>
 
             <!-- ============ 第 2 幕｜STEP 1 · 你的信用卡 ============ -->
-            <section class="lp-scene lp-s2" data-scene="2" aria-label="STEP 1 你的信用卡">
-                <p class="lp-eyebrow fx" data-at="0.04">STEP 1 · 你的信用卡</p>
+            <section class="lp-scene lp-s2" data-scene="2" aria-label="STEP 1 篩選你的個人信用卡">
+                <p class="lp-eyebrow fx" data-at="0.04">STEP 1 · 篩選你的個人信用卡</p>
                 <h2 class="lp-title fx" data-at="0.08">勾選你持有哪些卡片</h2>
                 <div class="lp-cardgrid" data-at="0.62">
                     <div class="lp-card lp-card--uni checked fx" data-at="0.14">
@@ -115,9 +156,10 @@
                         <span class="lp-chip"></span><span class="lp-wave"></span>
                         <span class="lp-cardname">永豐 Green 卡</span>
                     </div>
-                    <div class="lp-card lp-card--ubear fx" data-at="0.34">
+                    <div class="lp-card lp-card--sport checked fx" data-at="0.34">
                         <span class="lp-chip"></span><span class="lp-wave"></span>
-                        <span class="lp-cardname">玉山 Ubear 卡</span>
+                        <span class="lp-cardname">永豐 Sport 卡</span>
+                        <span class="lp-check fx" data-at="0.64"></span>
                     </div>
                 </div>
                 <p class="lp-note fx" data-at="0.74">比較結果只列入你持有的卡，選項隨時都能改</p>
@@ -136,16 +178,16 @@
                     <li class="lp-rank fx" data-at="0.38">
                         <span class="lp-rank-no lp-rank-no--gold">1</span>
                         <span class="lp-minicard lp-card--uni"></span>
-                        <span class="lp-rank-name">玉山 Uni 卡<span class="lp-level-chip fx" data-at="0.58">任意選 ▾</span></span>
-                        <span class="lp-stamp fx" data-at="0.68">3.5%</span>
+                        <span class="lp-rank-name">玉山 Uni 卡<span class="lp-level-chip fx" data-at="0.58">UP選 ▾</span></span>
+                        <span class="lp-stamp fx" data-at="0.68">4.5%</span>
                     </li>
-                    <li class="lp-rank fx" data-at="0.46">
+                    <li class="lp-rank lp-rank--dim fx" data-at="0.46">
                         <span class="lp-rank-no">2</span>
                         <span class="lp-minicard lp-card--richart"></span>
                         <span class="lp-rank-name">台新 Richart 卡</span>
                         <span class="lp-rank-rate">3.3%</span>
                     </li>
-                    <li class="lp-rank fx" data-at="0.52">
+                    <li class="lp-rank lp-rank--dim fx" data-at="0.52">
                         <span class="lp-rank-no">3</span>
                         <span class="lp-minicard lp-card--crystal"></span>
                         <span class="lp-rank-name">陽信 JCB 晶緻卡</span>
@@ -157,39 +199,65 @@
                 <p class="lp-disclaimer">畫面為示意，實際回饋以查詢結果為準</p>
             </section>
 
-            <!-- ============ 第 4 幕｜STEP 3 · 實用提醒自動跳出 ============ -->
-            <section class="lp-scene lp-s4" data-scene="4" aria-label="STEP 3 實用提醒自動跳出">
-                <p class="lp-eyebrow fx" data-at="0.04">STEP 3 · 實用提醒自動跳出</p>
-                <h2 class="lp-title fx" data-at="0.08">搜尋時，貼心提醒跟著出現</h2>
-                <div class="lp-mini-result fx" data-at="0.13">
-                    <div class="lp-search lp-search--mini">
-                        <span class="lp-search-icon" aria-hidden="true"></span>
-                        <span class="lp-typed-static">uniqlo</span>
-                    </div>
-                    <div class="lp-rank lp-rank--mini">
-                        <span class="lp-rank-no lp-rank-no--gold">1</span>
-                        <span class="lp-minicard lp-card--uni"></span>
-                        <span class="lp-rank-name">玉山 Uni 卡</span>
-                        <span class="lp-rank-rate lp-rank-rate--best">3.5%</span>
-                    </div>
+            <!-- ============ 第 4 幕｜STEP 3 · 快捷選項 ============ -->
+            <section class="lp-scene lp-s4" data-scene="4" aria-label="STEP 3 快捷選項一鍵比整個分類">
+                <p class="lp-eyebrow fx" data-at="0.03">STEP 3 · 快捷選項</p>
+                <h2 class="lp-title fx" data-at="0.06">想加油，還沒決定去哪家？</h2>
+
+                <!-- 一顆快捷，一按 -->
+                <div class="lp-qs-hero fx" data-at="0.12">
+                    <span class="lp-qs-chip"><i>⛽</i>所有加油站<span class="lp-qs-tap fx" data-at="0.22" aria-hidden="true"></span></span>
                 </div>
-                <div class="lp-reminder fx" data-at="0.34" role="note">
+
+                <!-- 展開整個分類 -->
+                <p class="lp-qs-fanhead fx" data-at="0.34">一按，8 家加油站同時比：</p>
+                <div class="lp-qs-fan">
+                    <span class="lp-qs-kw fx" data-at="0.38">中油(CPC)</span>
+                    <span class="lp-qs-kw fx" data-at="0.41">全國(NPC)</span>
+                    <span class="lp-qs-kw fx" data-at="0.44">台亞</span>
+                    <span class="lp-qs-kw fx" data-at="0.47">鯨世界</span>
+                    <span class="lp-qs-kw fx" data-at="0.50">西歐</span>
+                    <span class="lp-qs-kw fx" data-at="0.53">台糖</span>
+                    <span class="lp-qs-kw fx" data-at="0.56">速邁樂</span>
+                    <span class="lp-qs-kw fx" data-at="0.59">福懋</span>
+                </div>
+
+                <!-- 答案卡：唯一視覺重點 -->
+                <div class="lp-qs-answer fx" data-at="0.70">
+                    <p class="lp-qs-answer-q">你的卡片中，最划算的是</p>
+                    <p class="lp-qs-answer-combo"><span class="lp-minicard lp-card--richart"></span>台新 Richart 卡 ✕ 中油</p>
+                    <span class="lp-stamp lp-qs-answer-rate fx" data-at="0.88">回饋 3.3%</span>
+                </div>
+
+                <p class="lp-note fx" data-at="0.98">超市、影城、外送、百貨也能一按比整類；<br>常搜的商家可加成自訂快捷</p>
+                <p class="lp-disclaimer">畫面為示意，實際回饋以查詢結果為準</p>
+            </section>
+
+            <!-- ============ 第 5 幕｜STEP 4 · 實用提醒 ============ -->
+            <section class="lp-scene lp-s5" data-scene="5" aria-label="STEP 4 實用提醒">
+                <p class="lp-eyebrow fx" data-at="0.04">STEP 4 · 實用提醒</p>
+                <h2 class="lp-title fx" data-at="0.08">搜尋時，貼心提醒自動跳出</h2>
+                <div class="lp-search lp-search--mini lp-ex1 fx" data-at="0.13">
+                    <span class="lp-search-icon" aria-hidden="true"></span>
+                    <span class="lp-typed-static">IKEA</span>
+                </div>
+                <div class="lp-reminder lp-ex1 fx" data-at="0.34" role="note">
                     <span class="lp-reminder-icon" aria-hidden="true">💡</span>
-                    <p>提醒：UNIQLO 也支援 Apple&nbsp;Pay、LINE&nbsp;Pay、街口支付，綁卡回饋可能更高，要不要一起比比看？</p>
+                    <p>此商家也支援以下支付方式，比較看看：</p>
                     <div class="lp-pills">
                         <span class="lp-pill fx" data-at="0.50">Apple Pay</span>
                         <span class="lp-pill lp-pill--line fx" data-at="0.55">LINE Pay</span>
                         <span class="lp-pill lp-pill--jko fx" data-at="0.60">街口支付</span>
                     </div>
                 </div>
-                <!-- 第二個範例：輸入商家 → 相關通路建議 -->
-                <div class="lp-search lp-search--mini lp-search--hint fx" data-at="0.72">
+                <!-- 第二個範例：輸入商家 → 相關通路建議（往右錯開，與範例一區隔） -->
+                <div class="lp-search lp-search--mini lp-search--hint lp-ex2 fx" data-at="0.72">
                     <span class="lp-search-icon" aria-hidden="true"></span>
                     <span class="lp-typed-static">星宇航空</span>
                 </div>
-                <div class="lp-reminder fx" data-at="0.80" role="note">
+                <div class="lp-reminder lp-ex2 fx" data-at="0.80" role="note">
                     <span class="lp-reminder-icon" aria-hidden="true">💡</span>
-                    <p>此商家也符合以下通路，也比比看：</p>
+                    <p>此商家也符合以下通路，比較看看：</p>
                     <div class="lp-pills">
                         <span class="lp-pill lp-pill--plain fx" data-at="0.90">國內航空</span>
                         <span class="lp-pill lp-pill--plain fx" data-at="0.95">國內消費</span>
@@ -197,9 +265,9 @@
                 </div>
             </section>
 
-            <!-- ============ 第 5 幕｜STEP 4 · 一鍵比較行動支付 ============ -->
-            <section class="lp-scene lp-s5" data-scene="5" aria-label="STEP 4 一鍵比較行動支付">
-                <p class="lp-eyebrow fx" data-at="0.03">STEP 4 · 一鍵比較行動支付</p>
+            <!-- ============ 第 6 幕｜STEP 5 · 一鍵比較行動支付 ============ -->
+            <section class="lp-scene lp-s6" data-scene="6" aria-label="STEP 5 一鍵比較行動支付">
+                <p class="lp-eyebrow fx" data-at="0.03">STEP 5 · 一鍵比較行動支付</p>
                 <h2 class="lp-title fx" data-at="0.06">你的哪張卡、綁哪個支付，<br>回饋最高？</h2>
                 <div class="lp-matrix fx" data-at="0.10">
                     <div class="lp-mx-corner"></div>
@@ -207,27 +275,27 @@
                     <div class="lp-mx-head fx" data-at="0.14">LINE Pay</div>
                     <div class="lp-mx-head fx" data-at="0.14">街口支付</div>
 
-                    <div class="lp-mx-row fx" data-at="0.24"><span class="lp-minicard lp-card--uni"></span>玉山 Uni</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
-                    <div class="lp-mx-cell fx" data-at="0.24">3.5%</div>
+                    <div class="lp-mx-row fx" data-at="0.24"><span class="lp-minicard lp-card--sport"></span>永豐 Sport</div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.24"><em>5%</em></div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.24">1%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.24">1%</div>
 
                     <div class="lp-mx-row fx" data-at="0.36"><span class="lp-minicard lp-card--richart"></span>Richart</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">3.3%</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">2.3%</div>
-                    <div class="lp-mx-cell fx" data-at="0.36">0.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">3.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">2.3%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.36">0.3%</div>
 
                     <div class="lp-mx-row fx" data-at="0.48"><span class="lp-minicard lp-card--crystal"></span>陽信晶緻</div>
-                    <div class="lp-mx-cell fx" data-at="0.48">1%</div>
-                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em><span class="lp-winstamp fx" data-at="0.62">最高</span></div>
-                    <div class="lp-mx-cell fx" data-at="0.48">5%</div>
+                    <div class="lp-mx-cell lp-mx-cell--dim fx" data-at="0.48">1%</div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em></div>
+                    <div class="lp-mx-cell lp-mx-cell--win fx" data-at="0.48"><em>5%</em></div>
                 </div>
-                <p class="lp-payoff fx" data-at="0.76">陽信晶緻 ✕ LINE Pay <strong>5%</strong>，比直接刷還高。</p>
+                <p class="lp-payoff fx" data-at="0.76">每張卡都有自己的主場，綁對支付直上 <strong>5%</strong>。</p>
                 <p class="lp-disclaimer">畫面為示意，實際回饋以查詢結果為準</p>
             </section>
 
-            <!-- ============ 第 6 幕｜收尾 CTA ============ -->
-            <section class="lp-scene lp-s6" data-scene="6" aria-label="開始使用">
+            <!-- ============ 第 7 幕｜收尾 CTA ============ -->
+            <section class="lp-scene lp-s7" data-scene="7" aria-label="開始使用">
                 <div class="lp-hero-card fx" data-at="0.06" aria-hidden="true">
                     <span class="lp-chip"></span>
                     <span class="lp-wave"></span>
@@ -248,6 +316,14 @@
         </div>
     </div>
 
-    <script src="landing.js?v=20260709081748" defer></script>
+    <!-- 頁尾說明（可爬的 SEO 文字；位於 scrolly 之後，不參與任何一幕動畫） -->
+    <footer class="lp-footer">
+        <p>台灣信用卡的回饋規則，不該是你的功課。<br>
+        回饋上限、指定通路、行動支付等，<span class="lp-fbr">都交給 Pick My Card！</span><br>
+        結帳前，一鍵比較你的個人信用卡，找出哪張回饋最高。<br>
+        免費、免下載，網頁一開即用。</p>
+    </footer>
+
+    <script src="landing.js?v=20260712005527" defer></script>
 </body>
 </html>

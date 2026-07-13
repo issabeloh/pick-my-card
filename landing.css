@@ -144,7 +144,7 @@ body {
 .lp-skip.gone { opacity: 0; pointer-events: none; }
 
 /* ---------- Scrolly 骨架 ---------- */
-.lp-scrolly { height: 680vh; }
+.lp-scrolly { height: 750vh; }
 
 .lp-stage {
     position: sticky;
@@ -438,13 +438,22 @@ body {
     white-space: nowrap;
 }
 
-/* 各卡配色 */
-.lp-card--uni     { background: linear-gradient(135deg, #065f46 0%, #10b981 70%, #6ee7b7 105%); }
-.lp-card--richart { background: linear-gradient(135deg, #365314 0%, #84cc16 75%, #d9f99d 108%); }
-.lp-card--crystal { background: linear-gradient(135deg, #86198f 0%, #d946ef 62%, #f0abfc 105%); }
-.lp-card--cube    { background: linear-gradient(135deg, #0f172a 0%, #334155 65%, #94a3b8 108%); }
-.lp-card--green   { background: linear-gradient(135deg, #14532d 0%, #16a34a 70%, #86efac 108%); }
-.lp-card--ubear   { background: linear-gradient(135deg, #075985 0%, #0ea5e9 68%, #7dd3fc 105%); }
+/* 各卡配色（參考實體卡主色：Uni 淺黃、Richart 銀灰、陽信綠、
+   CUBE 白、Green 淡藍、Sport 深藍） */
+.lp-card--uni     { background: linear-gradient(135deg, #c9a962 0%, #e9d9ae 60%, #f8f1de 105%); }
+.lp-card--richart { background: linear-gradient(135deg, #8a94a3 0%, #c4ccd6 55%, #eef1f5 100%); }
+.lp-card--crystal { background: linear-gradient(135deg, #166534 0%, #22c55e 62%, #bbf7d0 108%); }
+.lp-card--cube    { background: linear-gradient(135deg, #c7ccd4 0%, #e9ecf0 55%, #ffffff 100%); }
+.lp-card--green   { background: linear-gradient(135deg, #8ec3dc 0%, #bfe0ee 60%, #e8f4f9 105%); }
+.lp-card--sport   { background: linear-gradient(135deg, #172554 0%, #1e40af 65%, #60a5fa 108%); }
+/* 淺色卡面（Uni 淺黃、Richart 銀灰、CUBE 白、Green 淡藍）：卡名用深色字才清楚 */
+.lp-card--uni .lp-cardname,
+.lp-card--richart .lp-cardname,
+.lp-card--cube .lp-cardname,
+.lp-card--green .lp-cardname {
+    color: #1f2937;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+}
 
 /* ============================================================
    第 2 幕｜勾選卡片
@@ -612,7 +621,17 @@ body {
     color: #475569;
     font-variant-numeric: tabular-nums;
 }
-.lp-rank-rate--best { color: #16a34a; }
+/* 第 2、3 名刻意低調：整幕聚焦在第 1 名 */
+.lp-rank--dim {
+    border-color: #e8edf5;
+    box-shadow: none;
+    background: #fbfcfe;
+}
+.lp-rank--dim.fx.on { opacity: 0.62; }
+.lp-rank--dim .lp-rank-name { font-weight: 600; color: #64748b; }
+.lp-rank--dim .lp-rank-rate { font-weight: 700; font-size: 0.95rem; color: #64748b; }
+.lp-rank--dim .lp-minicard { filter: saturate(0.45); opacity: 0.75; }
+.lp-rank--dim .lp-rank-no { background: #eef2f7; color: #94a3b8; }
 
 /* 回饋率印章（從大縮小蓋下去） */
 .lp-stamp {
@@ -637,15 +656,113 @@ body {
 }
 
 /* ============================================================
-   第 4 幕｜提醒自動跳出
+   第 4 幕｜快捷選項（一按 → 展開整類 → 答案）
    ============================================================ */
-.lp-mini-result {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.lp-qs-hero { display: flex; justify-content: center; }
+.lp-qs-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1.5px solid #bae6fd;
+    color: #0369a1;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(3, 105, 161, 0.12);
 }
+.lp-qs-chip i { font-style: normal; font-size: 1.15rem; line-height: 1; }
+
+/* 點按效果：藍色高亮 + 向外擴散的指尖漣漪 */
+.lp-qs-tap {
+    position: absolute;
+    inset: -2px;
+    border-radius: 999px;
+    pointer-events: none;
+}
+.lp-qs-tap.fx { opacity: 0; transform: none; transition: opacity 0.2s ease; }
+.lp-qs-tap.fx.on {
+    opacity: 1;
+    background: rgba(37, 99, 235, 0.10);
+    box-shadow: inset 0 0 0 2px #2563eb;
+    animation: lp-qs-tapring 0.8s ease-out 1;
+}
+@keyframes lp-qs-tapring {
+    0%   { box-shadow: inset 0 0 0 2px #2563eb, 0 0 0 0    rgba(37, 99, 235, 0.35); }
+    100% { box-shadow: inset 0 0 0 2px #2563eb, 0 0 0 18px rgba(37, 99, 235, 0); }
+}
+
+/* 展開的分類內容 */
+.lp-qs-fanhead {
+    margin: 20px 0 10px;
+    font-size: 0.88rem;
+    color: #334155;
+}
+.lp-qs-fan {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: center;
+    max-width: 340px;
+    margin: 0 auto;
+}
+.lp-qs-kw {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #475569;
+    background: #fff;
+    border: 1px dashed #94a3b8;
+    border-radius: 8px;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+.lp-qs-kw.fx { transform: scale(0); transition: none; }
+.lp-qs-kw.fx.on { animation: lp-pop 0.35s cubic-bezier(0.2, 1.6, 0.45, 1) forwards; }
+
+/* 答案卡（沿用第 1 幕結果卡語彙）：唯一視覺重點 */
+.lp-qs-answer {
+    width: min(330px, 84vw);
+    margin: 22px auto 0;
+    background: #fff;
+    border: 2px solid #3b82f6;
+    border-radius: 18px;
+    padding: 20px 22px 18px;
+    box-shadow: 0 18px 44px rgba(37, 99, 235, 0.20);
+}
+.lp-qs-answer-q {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+.lp-qs-answer-combo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font-size: 1.22rem;
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 12px;
+    white-space: nowrap;
+}
+.lp-qs-answer-combo .lp-minicard { width: 38px; }
+.lp-qs-answer-rate { display: inline-block; font-size: 1.02rem; }
+
+/* 矮螢幕：整幕緊湊化 */
+@media (max-height: 700px) {
+    .lp-s4 .lp-title { margin-bottom: 16px; }
+    .lp-s4 .lp-qs-fanhead { margin: 14px 0 8px; }
+    .lp-s4 .lp-qs-answer { margin-top: 16px; }
+    .lp-s4 .lp-note { margin-top: 12px; }
+}
+
+/* ============================================================
+   第 5 幕｜提醒自動跳出
+   ============================================================ */
 .lp-search--mini { padding: 10px 14px; min-height: 44px; border-width: 1.5px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1); }
-.lp-rank--mini { padding: 10px 14px; }
 
 .lp-reminder {
     margin-top: 18px;
@@ -706,20 +823,28 @@ body {
 .lp-pill--plain { color: #1d4ed8; border-color: #93c5fd; }
 .lp-pill--plain::before { display: none; }
 /* 第二個範例的搜尋框：與上一個提醒卡隔開 */
-.lp-search--hint { margin-top: 26px; }
-/* 矮螢幕（如 iPhone SE）：第 4 幕兩個範例較擠，整幕緊湊化 */
+.lp-search--hint { margin-top: 36px; }
+/* 兩個範例左右錯開（範例一偏左、範例二偏右），看起來是兩件獨立的事
+   （負/正 margin 成對 → 寬度不變，只平移；transform 已被 .fx 進場動畫佔用） */
+.lp-ex1 { margin-left: -12px; margin-right: 12px; }
+.lp-ex2 { margin-left: 12px; margin-right: -12px; }
+@media (min-width: 1024px) {
+    .lp-ex1 { margin-left: -26px; margin-right: 26px; }
+    .lp-ex2 { margin-left: 26px; margin-right: -26px; }
+}
+/* 矮螢幕（如 iPhone SE）：第 5 幕兩個範例較擠，整幕緊湊化 */
 @media (max-height: 700px) {
-    .lp-s4 .lp-title { margin-bottom: 14px; }
-    .lp-s4 .lp-reminder { margin-top: 12px; padding: 12px 14px 11px 42px; }
-    .lp-s4 .lp-reminder p { font-size: 0.88rem; line-height: 1.55; }
-    .lp-s4 .lp-pills { margin-top: 9px; }
-    .lp-s4 .lp-search--hint { margin-top: 16px; }
+    .lp-s5 .lp-title { margin-bottom: 14px; }
+    .lp-s5 .lp-reminder { margin-top: 12px; padding: 12px 14px 11px 42px; }
+    .lp-s5 .lp-reminder p { font-size: 0.88rem; line-height: 1.55; }
+    .lp-s5 .lp-pills { margin-top: 9px; }
+    .lp-s5 .lp-search--hint { margin-top: 20px; }
 }
 .lp-pill.fx { transform: scale(0); transition: none; }
 .lp-pill.fx.on { animation: lp-pop 0.4s cubic-bezier(0.2, 1.6, 0.45, 1) forwards; }
 
 /* ============================================================
-   第 5 幕｜回饋率矩陣
+   第 6 幕｜回饋率矩陣
    ============================================================ */
 .lp-matrix {
     display: grid;
@@ -772,25 +897,8 @@ body {
     box-shadow: inset 0 0 0 2.5px #10b981;
 }
 .lp-mx-cell--win em { font-style: normal; font-size: 1.1rem; font-weight: 900; }
-.lp-winstamp {
-    position: absolute;
-    top: -10px; right: -8px;
-    font-size: 0.66rem;
-    font-weight: 900;
-    color: #b91c1c;
-    border: 2px solid #b91c1c;
-    border-radius: 6px;
-    padding: 1px 5px;
-    background: rgba(255, 255, 255, 0.92);
-    transform: rotate(8deg);
-}
-.lp-winstamp.fx { opacity: 0; transition: none; }
-.lp-winstamp.fx.on { animation: lp-stamp-in-r 0.45s cubic-bezier(0.25, 1.2, 0.4, 1) forwards; }
-@keyframes lp-stamp-in-r {
-    0%   { opacity: 0; transform: rotate(16deg) scale(2.4); }
-    62%  { opacity: 1; transform: rotate(8deg)  scale(0.94); }
-    100% { opacity: 1; transform: rotate(8deg)  scale(1); }
-}
+/* 落選格淡化：每個支付欄只留一個冠軍格搶眼 */
+.lp-mx-cell--dim { color: #94a3b8; font-weight: 600; font-size: 0.88rem; }
 
 .lp-payoff {
     margin-top: 20px;
@@ -807,7 +915,7 @@ body {
 }
 
 /* ============================================================
-   第 6 幕｜收尾 CTA
+   第 7 幕｜收尾 CTA
    ============================================================ */
 .lp-hero-card {
     position: relative;
@@ -995,9 +1103,16 @@ body {
 }
 .lp-reduced .lp-check.fx { transform: scale(1); }
 .lp-reduced .lp-pill.fx { transform: scale(1); }
+.lp-reduced .lp-qs-kw.fx { transform: scale(1); }
+.lp-reduced .lp-qs-tap.fx {
+    opacity: 1;
+    animation: none;
+    background: rgba(37, 99, 235, 0.08);
+    box-shadow: inset 0 0 0 2px #2563eb;
+}
 .lp-reduced .lp-stamp.fx { opacity: 1; transform: rotate(-8deg); }
-.lp-reduced .lp-winstamp.fx { opacity: 1; transform: rotate(8deg); }
 .lp-reduced .lp-reminder.fx { transform: none; }
+.lp-reduced .lp-rank--dim.fx { opacity: 0.62; }
 
 /* 第 1 幕碎片：靜態收斂示意——碎片微傾、越往下越小越淡，
    背後兩束速度線指向結果卡，定格「即將咻地被吸入」的瞬間 */
@@ -1072,4 +1187,20 @@ body {
         transition-duration: 0.01ms !important;
     }
     html { scroll-behavior: auto; }
+}
+
+/* ============ 頁尾 SEO 說明（scrolly 之後的靜態區塊） ============ */
+.lp-footer {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.9;
+    text-align: center;
+}
+
+/* 手機版讓「都交給 Pick My Card！」獨立成行；桌機維持同行 */
+@media (max-width: 639px) {
+    .lp-footer .lp-fbr { display: block; }
 }

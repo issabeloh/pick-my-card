@@ -313,6 +313,8 @@ header h1 {
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    display: flex;
+    align-items: center;
 }
 
 .announcement-text {
@@ -321,10 +323,14 @@ header h1 {
     font-size: 0.85rem;
     font-weight: 400;
     display: block;
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity 0.3s ease;
+    /* 必須 ≤ displayAnnouncement() 的 150ms 換字延遲：內容要在完全透明時才替換，
+       iOS Safari 對半透明中換字的 line-clamp 元素會留下舊文字殘影 */
+    transition: opacity 0.15s ease;
 }
 
 .announcement-text:hover {
@@ -341,9 +347,12 @@ header h1 {
     text-decoration: none;
 }
 
-/* Date badge bubble */
+/* Date badge bubble（是 announcement-text 的兄弟元素，禁止塞回文字內——
+   iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字。
+   同理禁用 backdrop-filter：它會讓 badge 自成 compositing layer。 */
 .announcement-date-badge {
     display: inline-block;
+    flex-shrink: 0;
     background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
     padding: 2px 8px;
@@ -352,8 +361,8 @@ header h1 {
     font-weight: 600;
     margin-right: 8px;
     white-space: nowrap;
-    vertical-align: middle;
-    backdrop-filter: blur(4px);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -391,11 +400,13 @@ header h1 {
 }
 
 /* Fade animation */
-.announcement-text.fade-out {
+.announcement-text.fade-out,
+.announcement-date-badge.fade-out {
     opacity: 0;
 }
 
-.announcement-text.fade-in {
+.announcement-text.fade-in,
+.announcement-date-badge.fade-in {
     opacity: 1;
 }
 
@@ -617,11 +628,13 @@ main {
 
 .input-row-with-button {
     display: grid;
-    grid-template-columns: 2fr 1fr auto;
+    grid-template-columns: 2fr 1fr; /* 商家(含快捷):金額 = 2:1；按鈕收在右欄第 3 列 */
     gap: 16px;
     margin-bottom: 16px;
     align-items: start; /* 顶部对齐，让输入框在同一高度 */
-    overflow: hidden; /* 防止子元素撑大容器 */
+    /* 不可用 overflow:hidden——search hint 與「?」說明是浮層，會被裁掉；
+       子元素撐大容器的問題由 > .form-group 的 min-width:0 處理 */
+    overflow: visible;
 }
 
 .input-row-with-button > .form-group {
@@ -633,11 +646,6 @@ main {
     flex-direction: column;
 }
 
-.button-group label {
-    margin-bottom: 8px;
-    visibility: hidden;
-}
-
 .form-group {
     margin-bottom: 20px;
 }
@@ -645,13 +653,6 @@ main {
 .form-group.compact {
     margin-bottom: 0;
     position: relative;
-}
-
-.amount-hint {
-    display: block;
-    font-size: 0.75rem;
-    color: #9ca3af;
-    margin-top: 4px;
 }
 
 /* Quick Search Wrapper */
@@ -1204,9 +1205,9 @@ main {
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: #fff;
     color: #0369a1;
-    border: 1px solid #bae6fd;
+    border: 1px solid #7dd3fc;
     border-radius: 16px;
     font-size: 13px;
     font-weight: 500;
@@ -1217,8 +1218,8 @@ main {
 }
 
 .quick-search-btn:hover {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    border-color: #7dd3fc;
+    background: #f0f9ff;
+    border-color: #38bdf8;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(3, 105, 161, 0.1);
 }
@@ -1235,9 +1236,21 @@ main {
 
 /* Matched item row */
 .matched-item-row {
-    margin-top: 8px;
-    margin-bottom: 16px;
-    min-height: 24px;
+    /* 在 .input-row-with-button 網格內：手機整列在最下、桌機與計算按鈕同列置左欄 */
+    grid-column: 1 / -1;
+    margin: 0;
+    min-height: 0;
+}
+
+@media (min-width: 769px) {
+    .matched-item-row {
+        grid-column: 1;
+        grid-row: 3;
+        align-self: start; /* 與按鈕同樣釘住第 3 列頂端 */
+        display: flex;
+        align-items: center;
+        min-height: 46px; /* 與計算按鈕同高，讓文字垂直置中對齊按鈕 */
+    }
 }
 
 label {
@@ -1248,6 +1261,7 @@ label {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="number"] {
     width: 100%;
     padding: 16px;
@@ -1269,34 +1283,35 @@ input[type="number"] {
 }
 
 input[type="text"]:focus,
+input[type="search"]:focus,
 input[type="number"]:focus {
     outline: none;
     border-color: #6bb6ff;
     box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
 }
 
-/* Matched item display */
+/* Matched item display：純文字狀態列（刻意無底色無框線，與淺灰勾選框區隔） */
 .matched-item {
     margin-top: 0;
-    padding: 6px 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    color: #64748b;
-    font-size: 12px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #059669;
+    font-size: 13px;
+    line-height: 1.5;
     display: inline-block;
 }
 
 .matched-item.no-match {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: transparent;
+    border: none;
     color: #dc2626;
 }
 
 .matched-item.partial-match {
-    background: #f9fafb;
-    border: 1px solid #d1d5db;
-    color: #374151;
+    background: transparent;
+    border: none;
+    color: #4b5563;
 }
 
 .matched-item.no-match .parking-jump-link {
@@ -1690,21 +1705,35 @@ input[type="number"]:focus {
    Show new cardholder promos toggle
    ========================================== */
 .show-promos-toggle {
-    margin-top: 26px;
-    margin-left: 5px;
+    position: relative; /* 「?」說明浮層的定位基準 */
+    display: flex;
+    gap: 12px; /* 與 .input-row-with-button 手機版 grid gap 一致，上下左右間距等距 */
     font-size: 14px;
     color: #6b7280;
     user-select: none;
 }
 
+/* 淺灰方框 toggle：左右各一框、各佔一半；label 撐滿讓點文字也能勾選，「?」靠右 */
 .promo-toggle-row {
-    display: inline-flex;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
     align-items: center;
     gap: 6px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 4px 12px;
 }
 
 .promo-help-text {
+    position: absolute; /* 浮層：蓋在下方內容上，不推擠版面 */
+    top: 100%;
+    left: 0;
+    right: 0;
     margin-top: 6px;
+    z-index: 30;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     padding: 8px 10px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -1775,36 +1804,67 @@ input[type="number"]:focus {
 }
 
 .show-promos-toggle label {
+    flex: 0 1 auto;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    color: #6b7280;
+    color: #4b5563;
     margin-bottom: 0;
     line-height: 1.4;
     visibility: visible;
     height: auto;
+    white-space: nowrap;
 }
 
 .show-promos-toggle input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     margin: 0;
     cursor: pointer;
     flex-shrink: 0;
+    accent-color: #2563eb;
 }
 
-.show-promos-desktop { display: block; }
-.show-promos-mobile { display: none; }
-
+/* toggles 是 .input-row-with-button 的直接網格子元素 */
 @media (max-width: 768px) {
-    .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
-    /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
-    .button-group .show-promos-toggle label {
-        height: auto;
-        line-height: 1.4;
-        margin-bottom: 0;
+    /* 手機：佔滿整列（合併框下方），左右各一框 */
+    .show-promos-toggle { grid-column: 1 / -1; margin: 0; }
+}
+
+@media (min-width: 769px) {
+    /* 桌機 2:1 版面：左欄合併框跨 3 列；右欄由上而下「金額 → 勾選 → 計算按鈕」，
+       按鈕在整個表單動線的收尾位置 */
+    .input-row-with-button > .form-group:first-child {
+        grid-column: 1;
+        grid-row: 1 / 4;
+        position: relative; /* search hint 浮層的定位基準 */
+        align-self: start;
+    }
+    /* search hint 改浮層貼在合併框下方：不參與 grid 佈局，出現時右欄不跑位。
+       選擇器帶父層 class 以蓋過後方的基礎 #search-hints-container 規則 */
+    .input-row-with-button #search-hints-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin: 6px 0 0 0;
+    }
+    .input-row-with-button > .form-group.button-group {
+        grid-column: 2;
+        grid-row: 3;
+        align-self: start; /* 釘住：search hint 撐高左欄（第 3 列變高）時按鈕不跑位 */
+    }
+    .input-row-with-button > .form-group.button-group .calculate-btn {
+        width: 100%;
+        margin: 0;
+    }
+    .show-promos-toggle {
+        grid-column: 2;
+        grid-row: 2;
+        margin: 0;
+        align-self: start;
     }
 }
 
@@ -2309,11 +2369,16 @@ input[type="number"]:focus {
         line-height: 1.4;
     }
 
-    /* Date badge on mobile */
+    /* Date badge on mobile（badge 是兄弟元素，貼齊文字第一行） */
+    .announcement-text-wrapper {
+        align-items: flex-start;
+    }
+
     .announcement-date-badge {
         font-size: 0.7rem;
         padding: 1px 6px;
         margin-right: 6px;
+        margin-top: 2px;
     }
 
     .announcement-controls {
@@ -2348,12 +2413,6 @@ input[type="number"]:focus {
     .button-group {
         margin-top: 0px;
         min-width: 96px;
-    }
-
-    .button-group label {
-        margin-bottom: 0px;
-        height: 0;
-        line-height: 0;
     }
 
     .calculate-btn.compact {
@@ -6432,8 +6491,15 @@ input[type="text"].credit-limit-input:focus {
 
 /* 搜尋提示容器 */
 #search-hints-container {
+    position: relative;
+    z-index: 5; /* 蓋過同格位的匹配狀態列文字（罕見同時出現時不疊字） */
     margin-top: 10px;
     margin-bottom: 10px;
+}
+
+/* 沒提示時不佔空間（否則桌機勾選框無法貼齊合併框底部） */
+#search-hints-container:empty {
+    margin: 0;
 }
 
 /* 搜尋提示卡片 */
@@ -6748,9 +6814,6 @@ input[type="text"].credit-limit-input:focus {
         grid-column: 1 / -1;
     }
 
-    .button-group label {
-        display: none;
-    }
 }
 
 /* Mobile: sidebar becomes drawer */
@@ -6809,6 +6872,7 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .app-layout main input[type="text"],
+.app-layout main input[type="search"],
 .app-layout main input[type="number"] {
     padding: 12px;
     font-size: 15px;
@@ -6844,6 +6908,7 @@ input[type="text"].credit-limit-input:focus {
         margin-bottom: 4px;
     }
     .app-layout main input[type="text"],
+    .app-layout main input[type="search"],
     .app-layout main input[type="number"] {
         padding: 10px 12px;
     }
@@ -7285,4 +7350,102 @@ input[type="text"].credit-limit-input:focus {
     select {
         font-size: 16px !important;
     }
+}
+
+/* 精準搜尋零結果提示（合併框下方） */
+.exact-search-empty-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #b45309;
+}
+
+/* ============ 搜尋輸入區版面（2026-07-12 重整 v2：合併框＋淺灰方框 toggle） ============ */
+/* 合併框：上半部商家輸入、下半部快捷選項（淺灰背景）；外層粗框。
+   「快捷搜尋」標題列已從 DOM 移除——chips 就是這個輸入框的建議選項 */
+.merchant-search-box {
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.merchant-search-box:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+.merchant-search-box #merchant-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff; /* 部分行動瀏覽器給 type=search 灰色 UA 底色，明確蓋掉 */
+    border: none;
+    border-radius: 11px 11px 0 0;
+    box-shadow: none;
+    width: 100%;
+}
+
+.merchant-search-box #merchant-input:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+#merchant-input::-webkit-search-cancel-button,
+#merchant-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+
+.merchant-search-box .quick-search-wrapper {
+    margin-top: 0;
+    background: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 0 0 11px 11px;
+    padding: 10px 12px;
+}
+
+/* 金額框：NT$ 前綴在左、輸入在右的一體框（桌機手機同款），粗框與合併框一致 */
+.amount-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    padding-left: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.amount-input-wrap:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+.amount-input-wrap .amount-prefix {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.amount-input-wrap input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    border: none;
+    border-radius: 0 11px 11px 0;
+    box-shadow: none;
+}
+
+.amount-input-wrap input[type="number"]:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    /* 手機版金額列：砍標籤與提示（預設值 1000 直接顯示在框內） */
+    label[for="amount-input"] {
+        display: none;
+    }
+
 }
