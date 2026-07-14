@@ -87,7 +87,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 有 `overseasBonusRate` 欄位的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）
 的「國外」item 要走海外加碼**必須明確填** model（如 `rate>basic>overseasBonusRate`），留空一律當國內算。
 
-**⚠️ 已停用**：`rate+basic` 不再是 `rate` 的別名——含 `+` 會被當 stacking 解析，含義完全改變。資料裡若還有，改成純 `rate`。
+**⚠️ 舊別名已失效，但 `rate+basic` 是合法寫法**：2026-07-05 命名規則重設計前，`rate+basic` 曾是 `rate`（排除型）的別名；現在含 `+` 一律當 stacking 解析（rate_N 與 basic 各自作用於全額，rate_N 不含 basic）。**這是合法且使用中的寫法**（2026-07-13 資料擁有者確認，全表約 37 槽），不要「清理」它。只有「2026-07-05 前以排除型意圖填寫」的舊資料才需要改成純 `rate`；判定意圖是資料擁有者的事，不是 session 可自行推斷的。
 
 **⚠️ 填 `rate` 前必先確認**該通路真的被卡片排除在一般消費外；若只是「沒有加碼」但仍算一般消費，應留空。
 
@@ -141,3 +141,4 @@ if (!card.specialItems || card.specialItems.length === 0)
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-07-13] 差點把 37 個合法 `rate+basic` stacking 槽通報為「需清理的殘留別名」 → 第 6 節舊敘述「資料裡若還有，改成純 rate」把所有 `rate+basic` 當成 2026-07-01 前的排除型別名殘留 → `rate+basic` 是合法 stacking 寫法；別名警告只適用「當初以排除型意圖填寫」的舊資料，意圖判定屬資料擁有者，session 不得自行改資料（正文已改寫）
