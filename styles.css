@@ -5054,6 +5054,7 @@ input[type="text"].credit-limit-input:focus {
     user-select: none;
     cursor: pointer;
     transition: background 0.2s;
+    white-space: nowrap; /* 標題文字與排序箭頭必須同一行（回饋率欄 80px 曾把箭頭擠到第二行） */
 }
 
 .mappings-table th.sortable:hover {
