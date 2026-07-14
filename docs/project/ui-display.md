@@ -85,3 +85,4 @@
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-07-13] 詳情頁改分級後關閉 modal 頁面鎖死不能捲動 → 級別 onchange 重呼叫 showCardDetail() 重繪，disableBodyScroll() 多執行一次而 closeModal 只解一次（refcount 不成對）→ 任何「modal 已開啟時重繪」的路徑都要先檢查 modal 是否已顯示、已顯示就不得再上鎖（showCardDetail 內以 wasAlreadyOpen guard 實作）
