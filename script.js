@@ -5197,11 +5197,29 @@ function setupCardDetailNav(modalContent) {
 
     if (visibleSections.length === 0) return;
 
+    // While a click-initiated smooth scroll runs, scroll events must NOT
+    // recompute the highlight: the target lands 8px below the nav (or the
+    // scroll clamps at the bottom for short trailing sections), so a
+    // position-based recompute would light up the PREVIOUS section instead
+    // of the clicked one. The clicked button is highlighted immediately and
+    // suppression lifts shortly after scroll events stop arriving.
+    let suppressScrollHighlight = false;
+    let scrollSettleTimer = null;
+    const armScrollSettleTimer = (ms) => {
+        clearTimeout(scrollSettleTimer);
+        scrollSettleTimer = setTimeout(() => { suppressScrollHighlight = false; }, ms);
+    };
+
     // Click → smooth-scroll the modal-content so section sits just under the sticky nav
     buttons.forEach(btn => {
         btn.onclick = () => {
             const section = document.getElementById(btn.dataset.section);
             if (!section) return;
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            suppressScrollHighlight = true;
+            // Fallback release in case no scroll event fires (already at target)
+            armScrollSettleTimer(400);
             // Rect-based delta (same basis as updateActive) so the section's
             // heading lands just below the sticky nav, not hidden under it.
             // offsetTop was relative to the wrong offsetParent and overshot on mobile.
@@ -5215,14 +5233,21 @@ function setupCardDetailNav(modalContent) {
 
     // Highlight the section currently in view (whichever is closest to the
     // top of the scroll viewport, accounting for the sticky nav height).
+    // The detection line (nav + 12px) sits BELOW the click landing point
+    // (nav + 8px): a section a nav button just scrolled to must count as
+    // past the line, otherwise the previous section stays highlighted.
     const updateActive = () => {
         const navHeight = nav.offsetHeight;
         const containerTop = modalContent.getBoundingClientRect().top;
         let current = visibleSections[0];
         for (const s of visibleSections) {
-            const top = s.section.getBoundingClientRect().top - containerTop - navHeight - 4;
+            const top = s.section.getBoundingClientRect().top - containerTop - navHeight - 12;
             if (top <= 0) current = s;
             else break;
+        }
+        // 捲到底時，尾端的短區塊永遠碰不到判定線——此時點亮最後一個可見區塊
+        if (modalContent.scrollTop + modalContent.clientHeight >= modalContent.scrollHeight - 2) {
+            current = visibleSections[visibleSections.length - 1];
         }
         buttons.forEach(b => b.classList.remove('active'));
         if (current) current.btn.classList.add('active');
@@ -5231,6 +5256,10 @@ function setupCardDetailNav(modalContent) {
     // Throttle scroll handler with rAF
     let ticking = false;
     const onScroll = () => {
+        if (suppressScrollHighlight) {
+            armScrollSettleTimer(150);
+            return;
+        }
         if (ticking) return;
         ticking = true;
         requestAnimationFrame(() => { updateActive(); ticking = false; });
