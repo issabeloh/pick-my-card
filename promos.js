@@ -9,6 +9,8 @@
    3. 活動類型篩選 chips
    4. 排序切換（即將截止 / 依卡片）
    5. 「立即申辦」點擊送 GA4 button_click 事件
+   6. 活動宣傳圖小縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
+   7. 備註客戶端量測：scrollHeight 超過兩行高才收合＋加「展開 ▾」toggle（同上）
    ========================================================================== */
 
 (function () {
@@ -227,11 +229,111 @@
     });
   }
 
+  // 外部連結防護：只允許 http/https 開頭，語義同 apps-script/cards-export.gs 的
+  // pmcSanitizeUrl_（縮圖 src 已在生成器端過濾過，這裡是多一層保險，不假設
+  // data-full-src 屬性值一定乾淨）。
+  function sanitizeImgUrl(url) {
+    if (typeof url !== 'string') return '';
+    var trimmed = url.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+  }
+
+  // 活動宣傳圖 lightbox：點小縮圖（.promo-gift-thumb）開全螢幕深色遮罩置中
+  // 看原圖，點遮罩／關閉鈕／Esc 都會關閉。lightbox 元素懶建立（第一次點擊才
+  // 塞進 DOM），縮圖按鈕本身在 .promo-card-toggle 之外（見 cards-export.gs
+  // pmcRenderPromoCard_ 註解），不需要特別擋 toggle 展開的冒泡，但仍保留
+  // stopPropagation 當防禦性寫法，避免未來版面調整後行為悄悄改變。
+  function setupGiftLightbox() {
+    var lightbox = null;
+    var imgEl = null;
+    var lastFocused = null;
+
+    function ensureLightbox() {
+      if (lightbox) return;
+      lightbox = document.createElement('div');
+      lightbox.className = 'promo-lightbox';
+      lightbox.setAttribute('role', 'dialog');
+      lightbox.setAttribute('aria-modal', 'true');
+      lightbox.setAttribute('aria-label', '活動宣傳圖放大檢視');
+      lightbox.innerHTML =
+        '<button type="button" class="promo-lightbox-close" aria-label="關閉放大圖">&times;</button>' +
+        '<img class="promo-lightbox-img" src="" alt="">';
+      document.body.appendChild(lightbox);
+      imgEl = lightbox.querySelector('.promo-lightbox-img');
+      lightbox.addEventListener('click', function (e) {
+        if (e.target === lightbox || e.target.closest('.promo-lightbox-close')) {
+          closeLightbox();
+        }
+      });
+    }
+
+    function openLightbox(src, alt) {
+      var safeSrc = sanitizeImgUrl(src);
+      if (!safeSrc) return;
+      ensureLightbox();
+      imgEl.src = safeSrc;
+      imgEl.alt = alt || '';
+      lightbox.classList.add('is-open');
+      lastFocused = document.activeElement;
+      lightbox.querySelector('.promo-lightbox-close').focus();
+    }
+
+    function closeLightbox() {
+      if (!lightbox || !lightbox.classList.contains('is-open')) return;
+      lightbox.classList.remove('is-open');
+      imgEl.src = '';
+      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    }
+
+    document.addEventListener('click', function (e) {
+      var thumb = e.target.closest('.promo-gift-thumb');
+      if (!thumb) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openLightbox(thumb.getAttribute('data-full-src'), thumb.getAttribute('data-full-alt'));
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' || e.key === 'Esc') closeLightbox();
+    });
+  }
+
+  // 備註收合：先讓 .promo-notes-text 完整渲染（生成器輸出的是純 div，不再是
+  // 預設收合的 <details>），量測 scrollHeight 是否超過兩行高，超過才套
+  // .is-clamped（CSS line-clamp:2）＋補一個「展開 ▾」toggle 按鈕；兩行內的
+  // 備註完全不加任何 toggle。CSS 端 .promo-notes-text 的 line-height 用固定
+  // 數值（見 promos.css），getComputedStyle 才能量到穩定的 px 值。
+  function setupNotesClamp() {
+    var blocks = document.querySelectorAll('.promo-notes-text');
+    blocks.forEach(function (el) {
+      var lineHeight = parseFloat(window.getComputedStyle(el).lineHeight);
+      if (!lineHeight || isNaN(lineHeight)) return; // 量不到就保留完整顯示，不冒然收合
+      var twoLineHeight = lineHeight * 2;
+      var fullHeight = el.scrollHeight;
+      if (fullHeight <= twoLineHeight + 1) return; // 兩行內，不加 toggle
+      el.classList.add('is-clamped');
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'promo-notes-toggle';
+      toggle.textContent = '展開 ▾';
+      toggle.setAttribute('aria-expanded', 'false');
+      el.insertAdjacentElement('afterend', toggle);
+      toggle.addEventListener('click', function () {
+        var stillClamped = el.classList.toggle('is-clamped');
+        var isOpen = !stillClamped;
+        toggle.textContent = isOpen ? '收合 ▴' : '展開 ▾';
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     refreshBadgesAndExpiry();
     setupFilters();
     setupSort();
     setupCardToggle();
     setupApplyTracking();
+    setupGiftLightbox();
+    setupNotesClamp();
   });
 })();

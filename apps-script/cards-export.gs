@@ -1350,11 +1350,12 @@ function pmcBuildPromoHero_(promo) {
   const items = [];
   const quickParts = [];
 
+  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字＋既有配色
+  // 區分即可（.promo-hero-item--gift/voucher/bonus 底色已經夠分得出類型）。
   if (promo.gift_content) {
     const raw = String(promo.gift_content);
     items.push({
       bucket: 'gift',
-      icon: '🎁',
       bigHtml: pmcEscapeHtmlMultiline_(raw),
       bigModifier: 'promo-hero-big--gift'
     });
@@ -1366,7 +1367,6 @@ function pmcBuildPromoHero_(promo) {
     const usage = promo.voucher_usage ? String(promo.voucher_usage) : '';
     items.push({
       bucket: 'voucher',
-      icon: '💰',
       bigHtml: pmcEscapeHtml_(amountDisplay),
       smallHtml: usage ? pmcEscapeHtml_(usage) : ''
     });
@@ -1385,7 +1385,6 @@ function pmcBuildPromoHero_(promo) {
       : '';
     items.push({
       bucket: 'bonus',
-      icon: '⚡',
       bigHtml: '最高 ' + pmcEscapeHtml_(rateDisplay),
       smallHtml: capText ? pmcEscapeHtml_(capText) : ''
     });
@@ -1394,7 +1393,6 @@ function pmcBuildPromoHero_(promo) {
 
   const heroItemsHtml = items.map(function (it) {
     return '<div class="promo-hero-item promo-hero-item--' + it.bucket + '">' +
-      '<span class="promo-hero-icon" aria-hidden="true">' + it.icon + '</span>' +
       '<span class="promo-hero-main">' +
       '<span class="promo-hero-big' + (it.bigModifier ? ' ' + it.bigModifier : '') + '">' + it.bigHtml + '</span>' +
       (it.smallHtml ? '<span class="promo-hero-small">' + it.smallHtml + '</span>' : '') +
@@ -1449,10 +1447,18 @@ function pmcRenderPromoCard_(p) {
   }).join('');
 
   // 活動宣傳圖：可能空、也可能是資料誤填的非網址字串（如 "picture link"），
-  // 一律走 pmcSanitizeUrl_ 過濾，無效值直接不輸出 <img>（不留空位）。
+  // 一律走 pmcSanitizeUrl_ 過濾，無效值直接不輸出縮圖（不留空位）。改成小縮圖
+  // （約 80px、圓角、cover）＋點擊開 lightbox 看原圖（promos.js 監聽
+  // .promo-gift-thumb 點擊）。縮圖獨立放在可收合的 .promo-card-toggle 之外，
+  // 手機收合態、桌機都看得到——不像舊版大圖藏在收合的 detail 區塊裡
+  // （2026-07-15 站長回饋：活動宣傳圖沒顯示在頁面上）。
   const giftImgUrl = pmcSanitizeUrl_(promo.gift_image_url);
-  const giftImgHtml = giftImgUrl
-    ? '<img class="promo-hero-image" src="' + pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(title) + ' 活動宣傳圖" loading="lazy" onerror="this.style.display=\'none\'">'
+  const giftImgAlt = title + ' 活動宣傳圖';
+  const giftThumbHtml = giftImgUrl
+    ? '<div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="' +
+      pmcEscapeHtml_(giftImgUrl) + '" data-full-alt="' + pmcEscapeHtml_(giftImgAlt) +
+      '" aria-label="放大看' + pmcEscapeHtml_(giftImgAlt) + '"><img src="' + pmcEscapeHtml_(giftImgUrl) +
+      '" alt="' + pmcEscapeHtml_(giftImgAlt) + '" loading="lazy" onerror="this.closest(\'.promo-gift-thumb-row\').style.display=\'none\'"></button></div>'
     : '';
 
   // 新戶定義：直接顯示全文（2026-07-15 站長回饋移除收合，這是判斷自己是不是
@@ -1478,14 +1484,15 @@ function pmcRenderPromoCard_(p) {
   }
   const periodHtml = '<div class="promo-meta-row"><dt>活動期間</dt><dd>' + periodValueHtml + '</dd></div>';
 
-  // 備註預設收合：沿用 <details>／<summary> 這套原生元件，不用額外寫 JS 收合
-  // 邏輯，無 JS 環境也能點開（progressive enhancement）。標題樣式（見 promos.css
-  // .promo-notes-details summary）跟「活動期間」等 dt label 完全一樣，不再用
-  // class="promo-definition-details" 共用「新戶定義」那套粉色跳色樣式（新戶定義
-  // 已改直出、不再收合，兩者不再共用同一個視覺配方）。
+  // 備註：一律完整輸出成純 div，收不收合交給 promos.js 客戶端量測——
+  // scrollHeight 超過兩行高才套 clamp＋「展開 ▾」toggle，兩行內的備註完全不
+  // 收合（2026-07-15 站長回饋：短備註不該無條件被收合藏起來）。不再用
+  // <details>／<summary>：那套原生元件只能「一律收合」，沒辦法依內容長度
+  // 決定要不要收合。標題樣式（見 promos.css .promo-notes-label）跟「活動期間」
+  // 等 dt label 完全一樣，沿用同一視覺配方。
   const notesHtml = promo.notes
-    ? '<details class="promo-notes-details"><summary>備註</summary><p>' +
-      pmcEscapeHtmlMultiline_(promo.notes) + '</p></details>'
+    ? '<div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div>' +
+      '<div class="promo-notes-text">' + pmcEscapeHtmlMultiline_(promo.notes) + '</div></div>'
     : '';
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
@@ -1532,11 +1539,11 @@ function pmcRenderPromoCard_(p) {
     '      </div>\n' +
     quickHighlightHtml +
     '    </div>\n' +
+    giftThumbHtml +
     primaryCtaSectionHtml + '\n' +
     '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
     '      <div class="promo-card-detail-inner">\n' +
     heroSectionHtml +
-    giftImgHtml +
     (summary ? '<p class="promo-card-summary">' + pmcEscapeHtml_(summary) + '</p>' : '') +
     '        <dl class="promo-card-meta">\n' +
     definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
@@ -1548,12 +1555,14 @@ function pmcRenderPromoCard_(p) {
     '</article>';
 }
 
+// 數量括號用半形 (n)，不用全形（） ——2026-07-15 站長回饋：全形括號跟其餘半形
+// 內文混排不一致，改半形比較乾淨。
 function pmcBuildFilterChips_(total, bucketCounts) {
-  const chips = ['<button type="button" class="promo-chip is-active" data-filter="all">全部（' + total + '）</button>'];
+  const chips = ['<button type="button" class="promo-chip is-active" data-filter="all">全部 (' + total + ')</button>'];
   PMC_CHIP_DEFS.forEach(function (c) {
     const n = bucketCounts[c.key] || 0;
     if (n > 0) {
-      chips.push('<button type="button" class="promo-chip" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + '（' + n + '）</button>');
+      chips.push('<button type="button" class="promo-chip" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + ' (' + n + ')</button>');
     }
   });
   return chips.join('\n');
@@ -1639,13 +1648,24 @@ function pmcPageTemplate_(o) {
 '    <p class="promos-hero-sub">目前共 <strong>' + o.count + '</strong> 檔新戶活動・更新日期 ' + pmcEscapeHtml_(o.generatedDisplay) + '</p>\n' +
 '  </section>\n' +
 '\n' +
+// 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
+// 分不出是「篩選活動類型」跟「排序方式」兩組不同的操作。id 仍留在
+// .promos-filter-chips / .promos-sort-toggle 本體（promos.js 用 getElementById
+// 抓這兩個 id，querySelectorAll('.promo-chip'/'.promo-sort-btn') 只會選到按鈕，
+// 不受外層新增的 label/wrapper 影響）。
 '  <section class="promos-controls" aria-label="篩選與排序">\n' +
-'    <div class="promos-filter-chips" role="group" aria-label="活動類型篩選" id="promos-filter-chips">\n' +
+'    <div class="promos-control-group">\n' +
+'      <span class="promos-control-label">類型</span>\n' +
+'      <div class="promos-filter-chips" role="group" aria-label="活動類型篩選" id="promos-filter-chips">\n' +
 o.filterChipsHtml + '\n' +
+'      </div>\n' +
 '    </div>\n' +
-'    <div class="promos-sort-toggle" role="group" aria-label="排序方式" id="promos-sort-toggle">\n' +
-'      <button type="button" class="promo-sort-btn is-active" data-sort="deadline">即將截止</button>\n' +
-'      <button type="button" class="promo-sort-btn" data-sort="card">依卡片</button>\n' +
+'    <div class="promos-control-group">\n' +
+'      <span class="promos-control-label">排序</span>\n' +
+'      <div class="promos-sort-toggle" role="group" aria-label="排序方式" id="promos-sort-toggle">\n' +
+'        <button type="button" class="promo-sort-btn is-active" data-sort="deadline">按截止日期排序</button>\n' +
+'        <button type="button" class="promo-sort-btn" data-sort="card">按卡片名稱排序</button>\n' +
+'      </div>\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +

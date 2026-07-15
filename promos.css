@@ -185,6 +185,24 @@ a {
   border-radius: var(--pmc-radius-md);
 }
 
+/* 「類型」／「排序」兩組容器：各自一個 label + chips 列，讓兩排 chips 一眼看出
+   是不同的操作（2026-07-15 站長回饋：原本兩排長得一樣，分不出差異） */
+.promos-control-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.promos-control-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pmc-muted);
+  letter-spacing: 0.02em;
+}
+
 .promos-filter-chips,
 .promos-sort-toggle {
   display: flex;
@@ -321,7 +339,13 @@ a {
 .promo-type-badge--default { background: var(--pmc-candy-default-bg); color: var(--pmc-candy-default-text); }
 
 /* 「剩 N 天」徽章：抄自 styles.css .upcoming-badge 的扁平橘底白字（收斂掉原本
-   的果凍漸層/立體陰影），可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色 */
+   的果凍漸層/立體陰影），可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
+   2026-07-15 bug fix：生成器輸出的是一律存在、初始無文字的 <span>（給
+   promos.js 即時填字），舊版這裡直接 display:inline-block 會蓋掉瀏覽器對
+   [hidden] 的預設 display:none（author 樣式優先權高於 UA 樣式，即使
+   specificity 相同）——結果沒有任何倒數活動時，每張卡還是會顯示一條有底色
+   /內距/wiggle 動畫、但沒有文字的紅色殘影。改用 :empty 當顯示開關（[hidden]
+   一併覆蓋，雙保險），animation 也只在非空狀態套用，徹底不可見。 */
 .promo-ending-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -332,6 +356,14 @@ a {
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
+}
+
+.promo-ending-badge:empty,
+.promo-ending-badge[hidden] {
+  display: none;
+}
+
+.promo-ending-badge:not(:empty) {
   animation: promo-ending-wiggle 4.5s ease-in-out infinite;
 }
 
@@ -384,16 +416,15 @@ a {
 }
 
 /* 手機收合態摘要行——顯示 new_customer_summary（活動摘要），不是贈品內容；
-   字級/顏色比照主站內文，不再用粉色跳色強調 */
+   字級/顏色比照主站內文，不再用粉色跳色強調。2026-07-15 站長回饋：拿掉單行
+   ellipsis 截斷，完整顯示摘要（卡片收合態高度會因此變動，可接受）。 */
 .promo-quick-highlight {
   display: none;
   margin: 4px 0 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--pmc-label);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 
 /* ---------------- 好康 hero（重點好康區）---------------- */
@@ -418,12 +449,6 @@ a {
 .promo-hero-item--gift { background: #fdf2f6; border-color: #f8d9e4; }
 .promo-hero-item--voucher { background: #f0fdf7; border-color: #c9f1de; }
 .promo-hero-item--bonus { background: #fffbeb; border-color: #fde9b0; }
-
-.promo-hero-icon {
-  font-size: 1.2rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
 
 .promo-hero-main {
   display: flex;
@@ -462,16 +487,95 @@ a {
   color: var(--pmc-muted);
 }
 
-.promo-hero-image {
+/* 活動宣傳圖小縮圖＋lightbox（2026-07-15 新增）：獨立於可收合的
+   .promo-card-toggle 之外，手機收合態、桌機都看得到；點擊由 promos.js 開
+   lightbox 看原圖。放在 .promo-card-toggle 與 CTA 按鈕之間，收合態摘要行
+   下方。 */
+.promo-gift-thumb-row {
+  display: flex;
+  margin: 6px 0 0;
+}
+
+.promo-gift-thumb {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-md);
+  overflow: hidden;
+  background: #f9fafb;
+  cursor: zoom-in;
+}
+
+.promo-gift-thumb img {
   display: block;
   width: 100%;
-  /* 固定高度（非 max-height）：圖片還沒載入完成前 <img> 沒有 intrinsic size，
-     只給 max-height 會讓收合展開瞬間先是 0 高度、圖載完才彈出來（layout jank）。
-     固定高度＋object-fit: cover 兩邊都穩定。 */
-  height: 180px;
+  height: 100%;
   object-fit: cover;
-  border-radius: var(--pmc-radius-md);
-  background: #f9fafb;
+}
+
+.promo-gift-thumb:hover {
+  border-color: var(--pmc-blue);
+}
+
+.promo-gift-thumb:focus-visible {
+  outline: 3px solid var(--pmc-blue);
+  outline-offset: 2px;
+}
+
+/* Lightbox：全螢幕深色遮罩置中放大圖，promos.js 用 .is-open 切換顯示；
+   點遮罩／關閉鈕／Esc 都會關閉（行為見 promos.js setupGiftLightbox）。 */
+.promo-lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.86);
+  z-index: 1000;
+}
+
+.promo-lightbox.is-open {
+  display: flex;
+}
+
+.promo-lightbox-img {
+  display: block;
+  max-width: min(92vw, 720px);
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.promo-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.promo-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.promo-lightbox-close:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
 }
 
 .promo-card-summary {
@@ -501,7 +605,7 @@ a {
 }
 
 /* label 樣式：抄自主站「活動期間」一類 dt 的字級／字重／顏色，全站統一，
-   備註標題也照這個樣式（見下面 .promo-notes-details summary），不再用粉色跳色 */
+   備註標題也照這個樣式（見下面 .promo-notes-label），不再用粉色跳色 */
 .promo-meta-row dt {
   font-weight: 700;
   color: var(--pmc-label);
@@ -519,40 +623,51 @@ a {
   color: var(--pmc-ink);
 }
 
-/* 備註：預設收合、點擊展開，標題樣式跟「活動期間」等 label 完全一樣（同字級
-   同色，不用粉色突出），收合指示用低調小 ▾（不是原本較搶眼的粉色箭頭） */
-.promo-notes-details {
+/* 備註：2026-07-15 改版，不再用 <details> 無條件收合——標題樣式跟「活動期間」
+   等 label 完全一樣（同字級同色，不用粉色突出）；內文預設完整渲染，
+   promos.js 量測 scrollHeight 超過兩行高才加上 .is-clamped（clamp 成兩行）
+   ＋「展開 ▾」toggle 按鈕（見 promos.js setupNotesClamp）；兩行內完全不出現
+   任何 toggle。line-height 用固定數值（不是 normal），量測才準。 */
+.promo-notes {
   margin-top: 2px;
   font-size: 14px;
 }
 
-.promo-notes-details summary {
-  cursor: pointer;
+.promo-notes-label {
   font-weight: 700;
   color: var(--pmc-label);
-  list-style: none;
 }
 
-.promo-notes-details summary::-webkit-details-marker {
-  display: none;
-}
-
-.promo-notes-details summary::after {
-  content: ' ▾';
-  font-weight: 400;
-  color: var(--pmc-muted);
-  font-size: 0.8em;
-}
-
-.promo-notes-details[open] summary::after {
-  content: ' ▴';
-}
-
-.promo-notes-details p {
+.promo-notes-text {
   margin: 6px 0 0;
   color: var(--pmc-muted);
   font-size: 13px;
   line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.promo-notes-text.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.promo-notes-toggle {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--pmc-muted);
+  cursor: pointer;
+}
+
+.promo-notes-toggle:hover,
+.promo-notes-toggle:focus-visible {
+  color: var(--pmc-blue);
 }
 
 .promo-card-cta {
@@ -821,17 +936,18 @@ a {
     padding: 8px 10px;
   }
 
-  /* 篩選 chips／排序切換：單列可橫向捲動避免擠成好幾列 */
-  .promos-filter-chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    max-width: 100%;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
+  /* 篩選 chips／排序切換：改成可換行全部顯示，不橫向捲動（2026-07-15 站長回饋：
+     原本橫向捲動的 chips 在 390px 螢幕上會被裁切、看不出還有更多選項可滑）。
+     .promos-control-group 各自成一列，組內 chips 換行塞滿寬度即可。 */
+  .promos-control-group {
+    width: 100%;
   }
 
+  .promos-filter-chips,
   .promos-sort-toggle {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    overflow-x: visible;
+    max-width: 100%;
   }
 
   .promo-chip,
@@ -839,7 +955,6 @@ a {
     font-size: 0.72rem;
     padding: 5px 11px;
     white-space: nowrap;
-    flex-shrink: 0;
   }
 
   .promo-grid {
@@ -925,8 +1040,9 @@ a {
     padding: 8px 12px;
   }
 
-  .promo-hero-image {
-    height: 140px;
+  .promo-gift-thumb {
+    width: 72px;
+    height: 72px;
   }
 
   .promos-warning-row {
