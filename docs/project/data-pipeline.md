@@ -114,7 +114,39 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 **規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
 
-## 9. Apps Script 相關的既有文件
+## 9. promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
+
+`promos.html`（＋獨立的 `promos.css` / `promos.js`）是給 SEO／社群轉貼用的「新戶活動一覽」
+落地頁，內容**不是手寫、也不是前端 fetch cards.data 動態組出來**——是 Apps Script 匯出時
+用純函數把 HTML 字串直接生成好，跟 cards.data 一起 commit 進 repo。
+
+- **生成邏輯的唯一事實來源**：`apps-script/cards-export.gs` 內的 `generatePromosPageHtml(exportData)`。
+  它是純函數（吃組好的 `{ cards, newCardholderPromos, cardApplyCtas }` 物件、回傳完整 HTML
+  字串），內部**不呼叫任何 Sheets/Apps Script API**（連 `Utilities.formatDate` 都不用，改用
+  自己的 `pmcTodayISO_()`），所以同一份程式碼可以直接被 Node 的 `vm` 載入執行——這是刻意設計，
+  避免「Apps Script 版」和「repo 初版」各寫一份生成邏輯而分岔。
+- **呼叫點**：`exportToJSON()` 讀完 `newCardholderPromos` / `cardApplyCtas` 後立刻呼叫
+  `generatePromosPageHtml()`，產出的 HTML 字串跟著 `cards.data` / `cards.version` 一起
+  丟進 `publishToGitHub(encoded, promosPageHtml)` → 同一次 commit 三個檔案。
+- **repo 初版怎麼來的**：用臨時 Node harness（放 scratchpad，不留在 repo）以 `vm.runInContext`
+  載入 `cards-export.gs`、餵 `base64 -d cards.data` 解出來的 JSON，呼叫
+  `generatePromosPageHtml()` 產生 `promos.html`。之後每次 Apps Script 端跑 `exportToJSON()`
+  都會用真正的 Sheets 資料重新生成、覆蓋這份檔案——**repo 裡的版本只是初版備份，最新內容以
+  GitHub 上次 commit 的為準**。
+- **⚠️ 改生成邏輯務必兩邊同步**：跟其他 `apps-script/*.gs` 一樣，實際執行的版本在 Google
+  Sheets 的 Apps Script 專案裡；改了 `generatePromosPageHtml` 或它的小工具函數，要把整份
+  `cards-export.gs` 貼回 Sheets（見 `apps-script/README.md`），否則下次匯出還是跑舊邏輯、
+  repo 的新版程式碼形同沒生效。
+- **`<!-- PROMOS:START -->` / `<!-- PROMOS:END -->`**：包住 `promo-grid` 那塊卡片列表，
+  方便日後對 diff／除錯（一眼看出「這次匯出改了哪些活動」，不用整份 HTML 比對）。
+- **過期過濾＋排序**：生成時只保留 `period_end` 未到期（或無 `period_end`＝不限期）的活動，
+  依 `period_end` 升冪排序（無截止日排最後）；日期解析走生成器自帶的 `pmcNormalizeDate_()`，
+  同樣容忍第 8 節說的 ISO／台式雙格式，不假設只有一種。
+- **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
+  天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
+  不 fetch 任何東西，頁面本身就是完整資料。
+
+## 10. Apps Script 相關的既有文件
 
 - `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃
