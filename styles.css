@@ -4534,12 +4534,6 @@ input[type="text"].credit-limit-input:focus {
     gap: 12px;
 }
 
-.social-media-links.stacked {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
 .social-media-title {
     color: rgba(255, 255, 255, 0.7);
     font-size: 12px;
@@ -4551,6 +4545,7 @@ input[type="text"].credit-limit-input:focus {
 
 .social-media-links {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
     justify-content: center;
