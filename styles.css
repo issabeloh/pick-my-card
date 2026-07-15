@@ -6694,23 +6694,72 @@ input[type="text"].credit-limit-input:focus {
     opacity: 1;
 }
 
-/* 側選單底部的站內頁面連結（新戶活動一覽 / FAQ） */
+/* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結 */
 .sidebar-page-links {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     padding-top: 14px;
     border-top: 1px solid #e5e7eb;
 }
 
-.sidebar-page-links a {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #2563eb;
+.sidebar-promos-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #FFE066 0%, #FFC933 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
+    text-decoration: none;
+    transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+}
+
+.sidebar-promos-banner:hover {
+    transform: translateY(-1px) scale(1.02);
+}
+
+.sidebar-promos-banner:active {
+    transform: translateY(2px) scale(1.01, 0.96);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+}
+
+.sidebar-promos-banner-emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.sidebar-promos-banner-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-promos-banner-text strong {
+    font-size: 0.92rem;
+    color: #7A4E00;
+}
+
+.sidebar-promos-banner-text small {
+    font-size: 0.72rem;
+    color: #98650a;
+}
+
+.sidebar-promos-banner-arrow {
+    color: #7A4E00;
+    font-weight: 700;
+}
+
+.sidebar-faq-link {
+    align-self: center;
+    font-size: 0.78rem;
+    color: #6b7280;
     text-decoration: none;
 }
 
-.sidebar-page-links a:hover {
+.sidebar-faq-link:hover {
+    color: #374151;
     text-decoration: underline;
 }
 

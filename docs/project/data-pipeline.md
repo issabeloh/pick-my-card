@@ -162,4 +162,6 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 ## 教訓記錄
 
+- [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
+
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

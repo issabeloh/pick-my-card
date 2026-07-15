@@ -548,7 +548,9 @@ function filterExpiredRates(cardsData) {
         cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
             // Keep if no end date (ongoing) or end date >= today
             if (!promo.period_end) return true;
-            const endDate = parseDateString(promo.period_end);
+            // 一律走 parseISODate（相容 ISO 與台式斜線，見 data-pipeline.md 第 8 節）——
+            // 舊 parseDateString 只認 "/"，ISO 的 period_end 解析成 null 被當永久有效，過期活動永遠濾不掉
+            const endDate = parseISODate(promo.period_end);
             if (!endDate) return true;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -562,18 +564,6 @@ function filterExpiredRates(cardsData) {
     }
 
     return cardsData;
-}
-
-// Parse YYYY/M/D or YYYY/MM/DD date string to Date object
-function parseDateString(dateStr) {
-    if (!dateStr || typeof dateStr !== 'string') return null;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-    return new Date(year, month, day);
 }
 
 // Returns the cards to use in comparison results, based on the user's selection.
