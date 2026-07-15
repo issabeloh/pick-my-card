@@ -144,12 +144,6 @@ a {
   margin-bottom: 28px;
 }
 
-.promos-hero-deco {
-  font-size: 1.6rem;
-  margin-bottom: 6px;
-  filter: saturate(1.1);
-}
-
 .promos-hero h1 {
   margin: 0 0 10px;
   font-size: clamp(1.6rem, 4vw, 2.3rem);
@@ -337,6 +331,105 @@ a {
   font-weight: 600;
 }
 
+.promo-card-chevron {
+  display: none;
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 0.8rem;
+  color: var(--pmc-ink-soft);
+  transition: transform 0.25s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.promo-card-chevron::before {
+  content: '▾';
+}
+
+.promo-card.is-open .promo-card-chevron {
+  transform: rotate(180deg);
+}
+
+/* 手機收合態「一行重點好康」——單行截斷，桌機不顯示（桌機直接看下面完整的 promo-hero） */
+.promo-quick-highlight {
+  display: none;
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--pmc-pink-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- 好康 hero（重點好康區）---------------- */
+
+.promo-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.promo-hero-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--pmc-default-bg);
+}
+
+.promo-hero-item--gift { background: var(--pmc-pink-bg); }
+.promo-hero-item--voucher { background: var(--pmc-mint-bg); }
+.promo-hero-item--bonus { background: var(--pmc-yellow-bg); }
+
+.promo-hero-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.promo-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.promo-hero-big {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--pmc-ink);
+  overflow-wrap: break-word;
+}
+
+.promo-hero-item--gift .promo-hero-big { color: #B03A63; }
+.promo-hero-item--voucher .promo-hero-big { color: #0B7A56; }
+.promo-hero-item--bonus .promo-hero-big { color: #8A5C00; }
+
+/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點，避免版面爆掉 */
+.promo-hero-big--gift {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.promo-hero-small {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--pmc-ink-soft);
+}
+
+.promo-hero-image {
+  display: block;
+  width: 100%;
+  /* 固定高度（非 max-height）：圖片還沒載入完成前 <img> 沒有 intrinsic size，
+     只給 max-height 會讓收合展開瞬間先是 0 高度、圖載完才彈出來（layout jank）。
+     固定高度＋object-fit: cover 兩邊都穩定。 */
+  height: 180px;
+  object-fit: cover;
+  border-radius: var(--pmc-radius-md);
+  background: var(--pmc-cream);
+}
+
 .promo-card-summary {
   margin: 0;
   font-size: 0.92rem;
@@ -399,11 +492,10 @@ a {
   font-size: 0.85rem;
 }
 
-.promo-card-notes {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--pmc-ink-soft);
-  overflow-wrap: break-word;
+/* 備註收合沿用 .promo-definition-details（見 pmcRenderPromoCard_ 註解），這裡只補
+   跟「新戶定義」不同的間距——備註是卡片內較後段的次要資訊 */
+.promo-notes-details {
+  margin-top: 2px;
 }
 
 .promo-card-cta {
@@ -411,8 +503,38 @@ a {
   flex-wrap: wrap;
   align-items: center;
   gap: 14px;
-  margin-top: auto;
-  padding-top: 4px;
+}
+
+/* 收合／展開的可折疊容器：用 grid-template-rows 0fr→1fr 做高度動畫（比 max-height
+   更準確，不用猜內容高度上限）。桌機（預設，見檔尾 min-width:769px 以下都不受
+   media query 限制）grid-template-rows 固定 1fr＝一律展開，跟收合機制無關——桌機
+   版型維持「全部展開」。收合行為只在 ≤768px 的 media query 內生效。 */
+.promo-card-detail {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.promo-card-detail-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.promo-card-toggle {
+  cursor: pointer;
+  border-radius: 16px;
+}
+
+.promo-card-toggle:focus-visible {
+  outline: 3px solid var(--pmc-pink-deep);
+  outline-offset: 3px;
+}
+
+.promo-card-secondary {
+  margin-top: -4px;
 }
 
 /* Jelly apply button */
@@ -481,23 +603,169 @@ a {
 }
 
 /* ---------------- Responsive ---------------- */
+/* ≤768px＝手機版「摘要卡可展開」版型：卡片預設收合成一行重點好康＋申辦鈕的摘要條，
+   點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
+   維持原本全部展開的 grid 卡片版型不變。 */
+@media (max-width: 768px) {
+  .promos-topnav {
+    padding: 6px 16px;
+    gap: 8px;
+  }
 
-@media (max-width: 640px) {
-  .promo-grid {
-    grid-template-columns: 1fr;
+  .promos-main {
+    padding-top: 2px;
+  }
+
+  .promos-hero {
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+  }
+
+  .promos-hero h1 {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+  }
+
+  .promos-hero-sub {
+    font-size: 0.8rem;
   }
 
   .promos-controls {
     flex-direction: column;
     align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 10px;
   }
 
-  .promos-hero h1 {
-    font-size: 1.5rem;
+  /* 篩選 chips／排序切換明顯縮小：字級、padding 都減，單列可橫向捲動避免擠成好幾列 */
+  .promos-filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .promos-sort-toggle {
+    flex-wrap: nowrap;
+  }
+
+  .promo-chip,
+  .promo-sort-btn {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .promo-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* 收合態卡片目標高度 ~110-130px：下面每個元素都刻意壓縮，一屏（390x844）
+     才塞得下 4-5 張。展開後（.promo-card-detail 撐開）不受這裡影響。 */
+  .promo-card-body {
+    padding: 8px 12px 10px;
+    gap: 0;
+  }
+
+  .promo-card-cardimg {
+    width: 40px;
+    height: 28px;
+    padding: 3px;
+  }
+
+  .promo-card-header {
+    gap: 8px;
+  }
+
+  .promo-type-badges {
+    margin-bottom: 2px;
+    gap: 4px;
+  }
+
+  .promo-type-badge,
+  .promo-ending-badge {
+    font-size: 0.58rem;
+    padding: 1px 7px;
+    line-height: 1.3;
+    box-shadow: none;
+  }
+
+  /* 標題收合態固定單行，展開後也維持（緊湊摘要條的一部分，完整文字仍在 DOM 裡） */
+  .promo-card-title {
+    font-size: 0.86rem;
+    line-height: 1.15;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .promo-card-cardname {
+    font-size: 0.66rem;
+    line-height: 1.2;
+  }
+
+  .promo-card-chevron,
+  .promo-quick-highlight {
+    display: block;
+  }
+
+  .promo-quick-highlight {
+    margin-top: 4px;
+    font-size: 0.76rem;
+    line-height: 1.25;
+  }
+
+  .promo-card-cta {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .promo-apply-btn {
+    padding: 6px 18px;
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .promo-secondary-link {
+    font-size: 0.78rem;
   }
 
   .promo-meta-row {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+
+  .promo-hero-big {
+    font-size: 1.15rem;
+  }
+
+  .promo-hero-item {
+    padding: 8px 12px;
+  }
+
+  .promo-hero-image {
+    height: 140px;
+  }
+
+  /* 收合機制：只在手機生效。桌機的 .promo-card-detail 維持檔案前段預設的
+     grid-template-rows: 1fr（一律展開），這裡覆寫成 0fr 當收合態，配合
+     .is-open 展開，靠 grid-template-rows 動畫做果凍感過渡。 */
+  .promo-card-detail {
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.32s cubic-bezier(.34, 1.56, .64, 1);
+  }
+
+  .promo-card.is-open .promo-card-detail {
+    grid-template-rows: 1fr;
+  }
+
+  .promo-card-detail-inner {
+    padding-top: 10px;
   }
 }

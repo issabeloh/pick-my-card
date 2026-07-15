@@ -1340,6 +1340,74 @@ function pmcPromoTypeBucket_(label) {
   return 'default';
 }
 
+// ---------- 好康 hero（重點好康區）----------
+// 依活動類型抽出「一眼看到」的重點：贈品內容／定額金額（＋用途）／加碼回饋率（＋上限）。
+// 同一筆 promo 可能同時具備多種類型（如 cathay-cube 同時有 gift_content 與
+// voucher_amount），因此回傳陣列讓卡片渲染時並列顯示，而不是只挑一種。
+// 回傳的 quickHighlightPlain 是給手機收合態「一行重點好康」用的純文字版（無 HTML、
+// 換行轉頓號），交由呼叫端自己 escape 後塞進單行 CSS ellipsis 容器。
+function pmcBuildPromoHero_(promo) {
+  const items = [];
+  const quickParts = [];
+
+  if (promo.gift_content) {
+    const raw = String(promo.gift_content);
+    items.push({
+      bucket: 'gift',
+      icon: '🎁',
+      bigHtml: pmcEscapeHtmlMultiline_(raw),
+      bigModifier: 'promo-hero-big--gift'
+    });
+    quickParts.push(raw.replace(/\r\n|\r|\n/g, '、'));
+  }
+
+  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
+    const amountDisplay = promo.voucher_amount.toLocaleString('en-US');
+    const usage = promo.voucher_usage ? String(promo.voucher_usage) : '';
+    items.push({
+      bucket: 'voucher',
+      icon: '💰',
+      bigHtml: pmcEscapeHtml_(amountDisplay),
+      smallHtml: usage ? pmcEscapeHtml_(usage) : ''
+    });
+    quickParts.push(amountDisplay + (usage ? ' ' + usage : ''));
+  }
+
+  if (promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '') {
+    let rateDisplay;
+    if (typeof promo.bonus_rate === 'number') {
+      rateDisplay = (promo.bonus_rate <= 1 ? (promo.bonus_rate * 100) : promo.bonus_rate) + '%';
+    } else {
+      rateDisplay = String(promo.bonus_rate);
+    }
+    const capText = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
+      ? '上限 NT$' + Math.round(promo.bonus_cap).toLocaleString('en-US')
+      : '';
+    items.push({
+      bucket: 'bonus',
+      icon: '⚡',
+      bigHtml: '最高 ' + pmcEscapeHtml_(rateDisplay),
+      smallHtml: capText ? pmcEscapeHtml_(capText) : ''
+    });
+    quickParts.push('最高' + rateDisplay + (capText ? '（' + capText + '）' : ''));
+  }
+
+  const heroItemsHtml = items.map(function (it) {
+    return '<div class="promo-hero-item promo-hero-item--' + it.bucket + '">' +
+      '<span class="promo-hero-icon" aria-hidden="true">' + it.icon + '</span>' +
+      '<span class="promo-hero-main">' +
+      '<span class="promo-hero-big' + (it.bigModifier ? ' ' + it.bigModifier : '') + '">' + it.bigHtml + '</span>' +
+      (it.smallHtml ? '<span class="promo-hero-small">' + it.smallHtml + '</span>' : '') +
+      '</span></div>';
+  }).join('');
+
+  return {
+    heroItemsHtml: heroItemsHtml,
+    hasHero: items.length > 0,
+    quickHighlightPlain: quickParts.join('｜')
+  };
+}
+
 // ---------- HTML 片段渲染 ----------
 
 function pmcRenderPromoCard_(p) {
@@ -1358,26 +1426,15 @@ function pmcRenderPromoCard_(p) {
 
   const summary = promo.new_customer_summary || '';
 
+  // 好康 hero：贈品內容／定額金額／加碼回饋率抽出來大字呈現（見 pmcBuildPromoHero_），
+  // 下面 dl 列表不再重複這三種欄位，只留適用通路（hero 沒地方放的細節）。
+  const hero = pmcBuildPromoHero_(promo);
+  const heroSectionHtml = hero.hasHero ? '<div class="promo-hero">' + hero.heroItemsHtml + '</div>' : '';
+  const quickHighlightHtml = hero.quickHighlightPlain
+    ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(hero.quickHighlightPlain) + '</p>'
+    : '';
+
   const highlightRows = [];
-  if (promo.gift_content) {
-    highlightRows.push({ label: '贈品內容', value: promo.gift_content, multiline: true });
-  }
-  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
-    const usage = promo.voucher_usage ? '（' + promo.voucher_usage + '）' : '';
-    highlightRows.push({ label: '回饋金額/點數', value: String(promo.voucher_amount) + usage });
-  }
-  if (promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '') {
-    let rateDisplay;
-    if (typeof promo.bonus_rate === 'number') {
-      rateDisplay = (promo.bonus_rate <= 1 ? (promo.bonus_rate * 100) : promo.bonus_rate) + '%';
-    } else {
-      rateDisplay = String(promo.bonus_rate);
-    }
-    highlightRows.push({ label: '回饋率', value: rateDisplay });
-  }
-  if (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap)) {
-    highlightRows.push({ label: '回饋上限', value: 'NT$' + Math.round(promo.bonus_cap).toLocaleString('en-US') });
-  }
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
     highlightRows.push({ label: '適用通路', value: promo.bonus_merchants.join('、') });
   }
@@ -1385,6 +1442,13 @@ function pmcRenderPromoCard_(p) {
     const val = r.multiline ? pmcEscapeHtmlMultiline_(r.value) : pmcEscapeHtml_(r.value);
     return '<div class="promo-meta-row"><dt>' + pmcEscapeHtml_(r.label) + '</dt><dd>' + val + '</dd></div>';
   }).join('');
+
+  // 活動宣傳圖：可能空、也可能是資料誤填的非網址字串（如 "picture link"），
+  // 一律走 pmcSanitizeUrl_ 過濾，無效值直接不輸出 <img>（不留空位）。
+  const giftImgUrl = pmcSanitizeUrl_(promo.gift_image_url);
+  const giftImgHtml = giftImgUrl
+    ? '<img class="promo-hero-image" src="' + pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(title) + ' 活動宣傳圖" loading="lazy" onerror="this.style.display=\'none\'">'
+    : '';
 
   const definitionHtml = promo.new_customer_definition
     ? '<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd><details class="promo-definition-details"><summary>查看新戶定義</summary><p>' +
@@ -1407,12 +1471,18 @@ function pmcRenderPromoCard_(p) {
   }
   const periodHtml = '<div class="promo-meta-row"><dt>活動期間</dt><dd>' + periodValueHtml + '</dd></div>';
 
+  // 備註預設收合：沿用 <details>／<summary> 這套原生元件（跟新戶定義同一招），
+  // 不用額外寫 JS 收合邏輯，無 JS 環境也能點開（progressive enhancement）。
   const notesHtml = promo.notes
-    ? '<p class="promo-card-notes">備註：' + pmcEscapeHtmlMultiline_(promo.notes) + '</p>'
+    ? '<details class="promo-definition-details promo-notes-details"><summary>備註</summary><p>' +
+      pmcEscapeHtmlMultiline_(promo.notes) + '</p></details>'
     : '';
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
   // （銀行活動頁）當主按鈕，文字改「活動詳情」。有分潤連結時 promo.link 另放次要連結。
+  // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以主按鈕獨立成
+  // 一段固定顯示的區塊，跟可收合的 promo-card-detail 分開；次要連結（銀行活動頁）
+  // 不是分潤入口，收進 detail，跟其他次要資訊一起手機展開後才出現。
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
   const promoLink = pmcSanitizeUrl_(promo.link);
   let primaryCtaHtml = '';
@@ -1425,31 +1495,49 @@ function pmcRenderPromoCard_(p) {
   } else if (promoLink) {
     primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) + '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
   }
-  const ctaSectionHtml = (primaryCtaHtml || secondaryLinkHtml)
-    ? '<div class="promo-card-cta">' + primaryCtaHtml + secondaryLinkHtml + '</div>'
+  const primaryCtaSectionHtml = primaryCtaHtml
+    ? '<div class="promo-card-cta">' + primaryCtaHtml + '</div>'
+    : '';
+  const secondaryLinkSectionHtml = secondaryLinkHtml
+    ? '<div class="promo-card-secondary">' + secondaryLinkHtml + '</div>'
     : '';
 
   const imgSrc = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  const detailId = p.anchorId + '-detail';
 
   return '<article class="promo-card" id="' + pmcEscapeHtml_(p.anchorId) + '" data-card-id="' + pmcEscapeHtml_(cardId) +
     '" data-card-name="' + pmcEscapeHtml_(cardName) + '" data-period-end="' + (p.periodEndIso || '') +
     '" data-order-index="' + p.orderIndex + '" data-type-buckets="' + pmcEscapeHtml_(p.buckets.join(' ')) + '">\n' +
     '  <div class="promo-type-bar promo-type-bar--' + p.primaryBucket + '"></div>\n' +
     '  <div class="promo-card-body">\n' +
-    '    <div class="promo-card-header">\n' +
-    '      <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
-    '      <div class="promo-card-headline">\n' +
-    '        <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
-    '        <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
-    '        <div class="promo-card-cardname">' + pmcEscapeHtml_(cardName) + '</div>\n' +
+    // role="button" 而非真的 <button>：裡面包 <h2> 標題，<button> 的內容模型是
+    // phrasing content 不允許 heading 後代（HTML5 規範），用 div+role=button 才合法；
+    // 鍵盤可及性（Enter/Space 觸發）與 aria-expanded 同步由 promos.js 補上。
+    '    <div class="promo-card-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
+    '      <div class="promo-card-header">\n' +
+    '        <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
+    '        <div class="promo-card-headline">\n' +
+    '          <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
+    '          <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
+    '          <div class="promo-card-cardname">' + pmcEscapeHtml_(cardName) + '</div>\n' +
+    '        </div>\n' +
+    '        <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
+    '      </div>\n' +
+    quickHighlightHtml +
+    '    </div>\n' +
+    primaryCtaSectionHtml + '\n' +
+    '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
+    '      <div class="promo-card-detail-inner">\n' +
+    heroSectionHtml +
+    giftImgHtml +
+    (summary ? '<p class="promo-card-summary">' + pmcEscapeHtml_(summary) + '</p>' : '') +
+    '        <dl class="promo-card-meta">\n' +
+    definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
+    '        </dl>\n' +
+    notesHtml +
+    secondaryLinkSectionHtml +
     '      </div>\n' +
     '    </div>\n' +
-    (summary ? '    <p class="promo-card-summary">' + pmcEscapeHtml_(summary) + '</p>\n' : '') +
-    '    <dl class="promo-card-meta">\n' +
-    definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
-    '    </dl>\n' +
-    notesHtml +
-    ctaSectionHtml + '\n' +
     '  </div>\n' +
     '</article>';
 }
@@ -1531,7 +1619,6 @@ function pmcPageTemplate_(o) {
 '\n' +
 '<main class="promos-main">\n' +
 '  <section class="promos-hero">\n' +
-'    <div class="promos-hero-deco" aria-hidden="true">🎁 ✨ 🍬</div>\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '    <p class="promos-hero-sub">目前共 <strong>' + o.count + '</strong> 檔新戶活動・更新日期 ' + pmcEscapeHtml_(o.generatedDisplay) + '</p>\n' +
 '  </section>\n' +

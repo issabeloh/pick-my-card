@@ -153,6 +153,59 @@
     cards.forEach(function (card) { grid.appendChild(card); });
   }
 
+  // 手機版「摘要卡可展開」：點卡片收合區（.promo-card-toggle，除申辦鈕外的整個收合
+  // 態表面）展開/收回詳情（新戶定義、達成條件、活動期間、宣傳圖、備註、次要連結）。
+  // 用 role="button" 的 div 而非真 <button>——裡面包 <h2> 標題，<button> 的內容模型
+  // 不允許 heading 後代（見 cards-export.gs pmcRenderPromoCard_ 註解），所以鍵盤可及性
+  // （Enter/Space 觸發）要自己補。
+  //
+  // 桌機（≥769px）版型維持全部展開、無收合行為（CSS 在該寬度一律強制
+  // .promo-card-detail 展開，不看 is-open class）；這裡用 matchMedia 讓桌機寬度下
+  // 點擊/按鍵不做事，並讓 aria-expanded 誠實反映「桌機一律展開」的視覺事實。
+  function setupCardToggle() {
+    var mq = window.matchMedia('(max-width: 768px)');
+
+    function toggle(el) {
+      var card = el.closest('.promo-card');
+      if (!card) return;
+      var isOpen = card.classList.toggle('is-open');
+      el.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    function syncAriaForBreakpoint() {
+      var toggles = document.querySelectorAll('.promo-card-toggle');
+      toggles.forEach(function (el) {
+        if (mq.matches) {
+          var card = el.closest('.promo-card');
+          el.setAttribute('aria-expanded', card && card.classList.contains('is-open') ? 'true' : 'false');
+        } else {
+          el.setAttribute('aria-expanded', 'true'); // 桌機視覺上一律展開
+        }
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest('.promo-card-toggle');
+      if (!el || !mq.matches) return;
+      toggle(el);
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+      var el = e.target.closest('.promo-card-toggle');
+      if (!el || !mq.matches) return;
+      e.preventDefault();
+      toggle(el);
+    });
+
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', syncAriaForBreakpoint);
+    } else if (typeof mq.addListener === 'function') {
+      mq.addListener(syncAriaForBreakpoint); // Safari < 14 fallback
+    }
+    syncAriaForBreakpoint();
+  }
+
   // 「立即申辦」點擊 → GA4 button_click（promos.html 內嵌的精簡版 Firebase
   // Analytics 初始化會設定 window.firebaseAnalytics / window.logEvent；
   // 若載入失敗或被封鎖，安靜跳過，不擋使用者點擊申辦連結）。
@@ -178,6 +231,7 @@
     refreshBadgesAndExpiry();
     setupFilters();
     setupSort();
+    setupCardToggle();
     setupApplyTracking();
   });
 })();
