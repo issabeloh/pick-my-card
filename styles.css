@@ -2109,14 +2109,6 @@ input[type="number"]:focus {
     border-color: #e5e7eb;
 }
 
-/* Corner chip variant — positioned at the top-right of a search result card */
-.promo-type-chip.promo-type-chip-corner {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 1;
-}
-
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
    highlight/cap row gets full width for breathable layout. */
 .cardholder-promo-item .card-details {

@@ -5080,23 +5080,14 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
         : '';
 
-    // Promo type chips — detail page shows all types inline; search results show
-    // the first promo type as a corner chip (colored by type).
+    // Promo type chips — always an inline chips row under the header.
+    // (右上角 corner chip 已於 2026-07-15 移除：手機上會和卡名旁的馬上辦卡 pill 重疊)
     let chipsHtml = '';
-    let cornerChipHtml = '';
     if (Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
-        if (opts.showExtras) {
-            const chips = promo.promo_types
-                .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
-                .join('');
-            chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
-        } else {
-            // Prefer 回饋加碼 if present, otherwise use the first type
-            const cornerType = promo.promo_types.includes('回饋加碼')
-                ? '回饋加碼'
-                : promo.promo_types[0];
-            cornerChipHtml = `<span class="promo-type-chip promo-type-${promoTypeClass(cornerType)} promo-type-chip-corner">${escapeHtml(cornerType)}</span>`;
-        }
+        const chips = promo.promo_types
+            .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
+            .join('');
+        chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
     }
 
     // Apply CTA link (search results only) — small "馬上辦卡" pill next to card name
@@ -5118,7 +5109,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         </div>`;
 
     el.innerHTML = `
-        ${cornerChipHtml}
         ${cardHeaderHtmlWithCta}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
