@@ -6694,6 +6694,26 @@ input[type="text"].credit-limit-input:focus {
     opacity: 1;
 }
 
+/* 側選單底部的站內頁面連結（新戶活動一覽 / FAQ） */
+.sidebar-page-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-page-links a {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.sidebar-page-links a:hover {
+    text-decoration: underline;
+}
+
 .sidebar .card-chips {
     justify-content: flex-start;
     gap: 5px;
