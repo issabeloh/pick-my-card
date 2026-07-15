@@ -5010,11 +5010,11 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
             promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
         }
-    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 10)) {
+    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 14)) {
         const daysUntil = getDaysUntilEnd(isoEnd);
         if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-            promoBadgeHtml = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+            const daysText = daysUntil === 0 ? '今天截止' : `剩 ${daysUntil} 天`;
+            promoBadgeHtml = ` <span class="ending-soon-badge">${daysText}</span>`;
         }
     }
 
@@ -7501,6 +7501,40 @@ async function showCardDetail(cardId) {
 
     // Update basic information
     document.getElementById('card-detail-title').textContent = card.name;
+
+    // Header 申辦按鈕（桌機）＋ sticky 申辦列（手機）：兩者共用同一份 applyCta 資料。
+    // 每次呼叫都要明確重設 hidden——上一張卡有 CTA、這張沒有時不能沿用舊狀態。
+    const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
+    const applyLink = applyCta ? sanitizeUrl(applyCta.link) : '';
+    const headerApplyBtn = document.getElementById('card-detail-apply-header-btn');
+    const applyBar = document.getElementById('card-detail-apply-bar');
+    const applyBarText = applyBar ? applyBar.querySelector('.card-detail-apply-bar-text') : null;
+    const applyBarBtn = applyBar ? applyBar.querySelector('.card-detail-apply-bar-btn') : null;
+    if (applyLink) {
+        if (headerApplyBtn) {
+            headerApplyBtn.hidden = false;
+            headerApplyBtn.href = applyLink;
+            headerApplyBtn.title = applyCta.text || '';
+            headerApplyBtn.dataset.cardId = card.id;
+            headerApplyBtn.dataset.cardName = card.name;
+        }
+        if (applyBar) {
+            applyBar.hidden = false;
+            if (applyBarText) {
+                const text = applyCta.text || '';
+                applyBarText.textContent = text;
+                applyBarText.hidden = !text;
+            }
+            if (applyBarBtn) {
+                applyBarBtn.href = applyLink;
+                applyBarBtn.dataset.cardId = card.id;
+                applyBarBtn.dataset.cardName = card.name;
+            }
+        }
+    } else {
+        if (headerApplyBtn) headerApplyBtn.hidden = true;
+        if (applyBar) applyBar.hidden = true;
+    }
 
     // Optional card image (assets/images/cards/<card.id>.png) — gracefully hides if missing
     const headerImg = document.getElementById('card-detail-image');
@@ -12156,7 +12190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('click', function(e) {
     if (!window.logEvent || !window.firebaseAnalytics) return;
     const btn = e.target.closest(
-        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn'
+        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn, .card-detail-apply-header-btn, .card-detail-apply-bar-btn'
     );
     if (!btn) return;
 
@@ -12164,6 +12198,8 @@ document.addEventListener('click', function(e) {
     if (btn.classList.contains('spotlight-compare-btn'))        buttonType = 'spotlight_compare';
     else if (btn.classList.contains('spotlight-info-btn'))      buttonType = 'spotlight_info';
     else if (btn.classList.contains('spotlight-apply-cta-btn')) buttonType = 'spotlight_apply';
+    else if (btn.classList.contains('card-detail-apply-header-btn')) buttonType = 'detail_header_apply';
+    else if (btn.classList.contains('card-detail-apply-bar-btn'))    buttonType = 'detail_sticky_apply';
     else if (btn.classList.contains('card-apply-cta-btn'))      buttonType = 'card_apply';
     else                                                         buttonType = 'search_result_apply';
 

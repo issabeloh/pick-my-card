@@ -71,7 +71,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260714090004">
+    <link rel="stylesheet" href="styles.css?v=20260715022551">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -799,6 +799,7 @@
                     <div class="card-detail-title-group">
                         <img id="card-detail-image" class="card-detail-image" alt="" hidden>
                         <h3 id="card-detail-title">卡片詳情</h3>
+                        <a id="card-detail-apply-header-btn" class="card-detail-apply-header-btn" target="_blank" rel="noopener noreferrer" hidden>立即申辦</a>
                     </div>
                     <button class="close-modal" id="close-card-detail">&times;</button>
                 </div>
@@ -924,6 +925,10 @@
                         <h4>新戶活動</h4>
                         <div id="card-promos-content"></div>
                     </div>
+            </div>
+            <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>
+                <span class="card-detail-apply-bar-text"></span>
+                <a class="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
             </div>
         </div>
     </div>
@@ -1063,7 +1068,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260714090004" defer></script>
+    <script src="script.js?v=20260715022551" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
