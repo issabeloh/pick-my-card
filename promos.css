@@ -1,6 +1,10 @@
 /* ==========================================================================
-   promos.css — 信用卡新戶活動一覽頁（糖果果凍風）
-   完全獨立於 styles.css，不共用任何 class／變數，避免跨檔版本耦合。
+   promos.css — 信用卡新戶活動一覽頁
+   v2（2026-07-15）：改回主站設計語言（白底容器＋深藍 header／footer＋主站字級間距），
+   只保留兩個可愛點綴——類型徽章糖果色、「剩 N 天」徽章微抖動。其餘沿用主站
+   styles.css 的配色／組件配方（見各段落註解標明抄自哪個 class）。
+   仍然完全獨立於 styles.css（不 @import、不共用 class），避免跨檔版本耦合；
+   顏色數值是手動對照 styles.css 抄過來的，主站配色若改，這裡要跟著手動同步。
    ========================================================================== */
 
 * {
@@ -8,63 +12,37 @@
 }
 
 :root {
-  --pmc-cream: #FFFBEB;
-  --pmc-cream-deep: #FFF3C4;
-  --pmc-ink: #3A2E1F;
-  --pmc-ink-soft: #6B5B45;
-  --pmc-white: #FFFFFF;
+  /* 主站色票（抄自 styles.css，非變數，是實際色碼——主站本身也沒用 CSS 變數，
+     這裡建成變數只是方便本檔內部重複使用，改動需對照 styles.css 手動同步）。 */
+  --pmc-blue-deep: #1e40af;
+  --pmc-blue: #3b82f6;
+  --pmc-ink: #333333;
+  --pmc-label: #374151;
+  --pmc-muted: #6b7280;
+  --pmc-green: #059669;
+  --pmc-white: #ffffff;
+  --pmc-page-bg-1: #e4e5e8;
+  --pmc-page-bg-2: #b0b2b8;
+  --pmc-warn-bg: #1f2937;
+  --pmc-border: #e5e7eb;
+  --pmc-chip-border: #7dd3fc;
+  --pmc-chip-text: #0369a1;
+  --pmc-chip-hover-bg: #f0f9ff;
 
-  --pmc-pink: #FF8FAB;
-  --pmc-pink-deep: #E8628A;
-  --pmc-pink-bg: #FFE3EC;
+  /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風） */
+  --pmc-candy-pink-bg: #ffe3ec;
+  --pmc-candy-pink-text: #b03a63;
+  --pmc-candy-yellow-bg: #fff3c4;
+  --pmc-candy-yellow-text: #8a5c00;
+  --pmc-candy-mint-bg: #ddfbef;
+  --pmc-candy-mint-text: #0b7a56;
+  --pmc-candy-default-bg: #ede6ff;
+  --pmc-candy-default-text: #5b3fbf;
 
-  --pmc-yellow: #FFC933;
-  --pmc-yellow-deep: #E8A800;
-  --pmc-yellow-bg: #FFF3C4;
-
-  --pmc-mint: #6EE7B7;
-  --pmc-mint-deep: #2FBF87;
-  --pmc-mint-bg: #DDFBEF;
-
-  --pmc-default: #A78BFA;
-  --pmc-default-bg: #EDE6FF;
-
-  --pmc-shadow-soft: 0 10px 30px rgba(122, 78, 0, 0.10);
-  --pmc-shadow-card: 0 6px 18px rgba(122, 78, 0, 0.08);
-  --pmc-radius-lg: 24px;
-  --pmc-radius-md: 20px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --pmc-cream: #221B10;
-    --pmc-cream-deep: #2E2411;
-    --pmc-ink: #FDF6E8;
-    --pmc-ink-soft: #D8C9A8;
-    --pmc-white: #2B2418;
-    --pmc-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
-    --pmc-shadow-card: 0 6px 18px rgba(0, 0, 0, 0.3);
-  }
-}
-
-:root[data-theme="dark"] {
-  --pmc-cream: #221B10;
-  --pmc-cream-deep: #2E2411;
-  --pmc-ink: #FDF6E8;
-  --pmc-ink-soft: #D8C9A8;
-  --pmc-white: #2B2418;
-  --pmc-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --pmc-shadow-card: 0 6px 18px rgba(0, 0, 0, 0.3);
-}
-
-:root[data-theme="light"] {
-  --pmc-cream: #FFFBEB;
-  --pmc-cream-deep: #FFF3C4;
-  --pmc-ink: #3A2E1F;
-  --pmc-ink-soft: #6B5B45;
-  --pmc-white: #FFFFFF;
-  --pmc-shadow-soft: 0 10px 30px rgba(122, 78, 0, 0.10);
-  --pmc-shadow-card: 0 6px 18px rgba(122, 78, 0, 0.08);
+  --pmc-radius-lg: 16px;
+  --pmc-radius-md: 12px;
+  --pmc-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --pmc-shadow-container: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 html, body {
@@ -74,11 +52,15 @@ html, body {
   overflow-x: hidden;
 }
 
+/* 頁面底色：抄自 styles.css body{}（灰階漸層，.container 白卡浮在上面）。
+   奶油黃整頁背景在 v2 移除。 */
 body {
-  background: linear-gradient(180deg, var(--pmc-cream) 0%, var(--pmc-cream-deep) 340px, var(--pmc-cream) 900px);
-  color: var(--pmc-ink);
-  font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
+  color: var(--pmc-ink);
+  background: linear-gradient(135deg, var(--pmc-page-bg-1) 0%, var(--pmc-page-bg-2) 100%);
+  min-height: 100vh;
+  padding: 20px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -86,81 +68,107 @@ a {
   color: inherit;
 }
 
-/* ---------------- Top nav ---------------- */
+/* ---------------- 白底容器（抄自 styles.css .container）---------------- */
 
-.promos-topnav {
+.promos-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--pmc-white);
+  border-radius: var(--pmc-radius-lg);
+  box-shadow: var(--pmc-shadow-container);
+  overflow: clip;
+}
+
+/* ---------------- Header（抄自 styles.css header/.header-top/.header-content）---------------- */
+
+.promos-header {
+  background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
+  color: white;
+  padding: 10px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.promos-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.promos-header-content {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px clamp(16px, 4vw, 48px);
+  gap: 10px;
 }
 
-.promos-topnav-brand {
-  font-weight: 800;
-  font-size: 1.15rem;
-  text-decoration: none;
-  color: var(--pmc-ink);
+.promos-header-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
 }
 
-.promos-topnav-links {
+/* 站名文字視覺上跟主站 header h1 同款（字級/粗細一致），但刻意不用 <h1>——
+   這頁真正的 SEO H1 是下面 hero 區的「信用卡新戶活動一覽」，同頁兩個 h1
+   對 SEO 結構不利，用 span 純視覺呈現即可。 */
+.promos-header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.promos-header-links {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
 }
 
-.promos-topnav-links a {
+/* 抄自 styles.css .auth-btn（半透明白底圓角按鈕），這裡兩個都當「次要」樣式 */
+.promos-header-links a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
   text-decoration: none;
+  font-size: 0.85rem;
   font-weight: 600;
-  font-size: 0.92rem;
-  color: var(--pmc-ink-soft);
-  background: var(--pmc-white);
-  padding: 8px 16px;
-  border-radius: 999px;
-  box-shadow: var(--pmc-shadow-card);
-  transition: transform 0.15s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
-.promos-topnav-links a:hover {
-  transform: translateY(-2px);
+.promos-header-links a:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 /* ---------------- Main / hero ---------------- */
 
 .promos-main {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 8px clamp(16px, 4vw, 48px) 64px;
+  padding: 16px 24px 28px;
 }
 
 .promos-hero {
-  position: relative;
-  background: var(--pmc-white);
-  border-radius: 28px;
-  padding: clamp(28px, 5vw, 44px) clamp(20px, 5vw, 48px);
-  text-align: center;
-  box-shadow: var(--pmc-shadow-soft);
-  overflow: hidden;
-  margin-bottom: 28px;
+  padding: 20px 4px 8px;
 }
 
 .promos-hero h1 {
-  margin: 0 0 10px;
-  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  margin: 0 0 6px;
+  font-size: 1.5rem;
   font-weight: 800;
-  color: var(--pmc-pink-deep);
+  color: var(--pmc-ink);
   letter-spacing: 0.01em;
 }
 
 .promos-hero-sub {
   margin: 0;
-  color: var(--pmc-ink-soft);
-  font-size: 0.98rem;
+  color: var(--pmc-muted);
+  font-size: 0.92rem;
 }
 
 .promos-hero-sub strong {
-  color: var(--pmc-ink);
-  font-size: 1.1em;
+  color: var(--pmc-blue-deep);
+  font-size: 1.05em;
 }
 
 /* ---------------- Controls: filter chips + sort ---------------- */
@@ -171,7 +179,10 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 24px;
+  margin: 4px 0 20px;
+  padding: 12px 14px;
+  background: #f9fafb;
+  border-radius: var(--pmc-radius-md);
 }
 
 .promos-filter-chips,
@@ -181,37 +192,36 @@ a {
   gap: 8px;
 }
 
+/* 篩選鈕／排序鈕：抄自 styles.css .quick-search-btn 配方（白底細框圓角），
+   不再用果凍漸層。active 用主站藍底白字。 */
 .promo-chip,
 .promo-sort-btn {
+  display: inline-flex;
+  align-items: center;
   font-family: inherit;
-  font-size: 0.86rem;
-  font-weight: 700;
-  border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--pmc-chip-border);
+  border-radius: 16px;
+  padding: 6px 14px;
   background: var(--pmc-white);
-  color: var(--pmc-ink-soft);
-  box-shadow: var(--pmc-shadow-card);
+  color: var(--pmc-chip-text);
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 
 .promo-chip:hover,
 .promo-sort-btn:hover {
+  background: var(--pmc-chip-hover-bg);
+  border-color: var(--pmc-blue);
   transform: translateY(-1px);
 }
 
 .promo-chip.is-active,
 .promo-sort-btn.is-active {
-  background: linear-gradient(180deg, #FFB3C6, var(--pmc-pink));
-  color: #6B1435;
-  box-shadow: 0 3px 0 var(--pmc-pink-deep), var(--pmc-shadow-card);
-}
-
-.promos-sort-toggle .promo-sort-btn.is-active {
-  background: linear-gradient(180deg, #A7F3D8, var(--pmc-mint));
-  color: #0B4A34;
-  box-shadow: 0 3px 0 var(--pmc-mint-deep), var(--pmc-shadow-card);
+  background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
+  border-color: var(--pmc-blue-deep);
+  color: white;
 }
 
 /* ---------------- Promo grid + cards ---------------- */
@@ -219,45 +229,47 @@ a {
 .promo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .promo-card {
   position: relative;
   background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
   border-radius: var(--pmc-radius-lg);
   box-shadow: var(--pmc-shadow-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: box-shadow 0.18s ease;
 }
 
 .promo-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 28px rgba(122, 78, 0, 0.14);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
 .promo-card[hidden] {
   display: none;
 }
 
+/* 頂色條沿用類型色（與徽章同一套糖果色系，是保留的可愛點綴之一的延伸），
+   但收斂成細線，不再是粗粗的果凍漸層 bar */
 .promo-type-bar {
-  height: 8px;
+  height: 4px;
   width: 100%;
-  background: var(--pmc-default);
+  background: var(--pmc-candy-default-text);
 }
 
-.promo-type-bar--gift { background: linear-gradient(90deg, var(--pmc-pink), #FFB3C6); }
-.promo-type-bar--bonus { background: linear-gradient(90deg, var(--pmc-yellow), #FFE066); }
-.promo-type-bar--voucher { background: linear-gradient(90deg, var(--pmc-mint), #A7F3D8); }
-.promo-type-bar--default { background: linear-gradient(90deg, var(--pmc-default), #C9B8FF); }
+.promo-type-bar--gift { background: var(--pmc-candy-pink-text); }
+.promo-type-bar--bonus { background: var(--pmc-candy-yellow-text); }
+.promo-type-bar--voucher { background: var(--pmc-candy-mint-text); }
+.promo-type-bar--default { background: var(--pmc-candy-default-text); }
 
 .promo-card-body {
-  padding: 18px 20px 20px;
+  padding: 16px 18px 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
 }
 
@@ -267,14 +279,16 @@ a {
   gap: 12px;
 }
 
+/* 卡圖左上角保留——站長點名喜歡，維持原尺寸與位置 */
 .promo-card-cardimg {
   width: 64px;
   height: 40px;
   object-fit: contain;
   border-radius: 8px;
-  background: var(--pmc-cream);
+  background: #f9fafb;
   flex-shrink: 0;
   padding: 4px;
+  border: 1px solid var(--pmc-border);
 }
 
 .promo-card-headline {
@@ -290,54 +304,75 @@ a {
   margin-bottom: 6px;
 }
 
+/* 可愛點綴 1/2：類型徽章維持糖果色，其餘元素一律收斂成主站風 */
 .promo-type-badge {
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
-  color: var(--pmc-ink);
-  background: var(--pmc-default-bg);
+  color: var(--pmc-candy-default-text);
+  background: var(--pmc-candy-default-bg);
   white-space: nowrap;
 }
 
-.promo-type-badge--gift { background: var(--pmc-pink-bg); color: #B03A63; }
-.promo-type-badge--bonus { background: var(--pmc-yellow-bg); color: #8A5C00; }
-.promo-type-badge--voucher { background: var(--pmc-mint-bg); color: #0B7A56; }
-.promo-type-badge--default { background: var(--pmc-default-bg); color: #5B3FBF; }
+.promo-type-badge--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
+.promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
+.promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
+.promo-type-badge--default { background: var(--pmc-candy-default-bg); color: var(--pmc-candy-default-text); }
 
+/* 「剩 N 天」徽章：抄自 styles.css .upcoming-badge 的扁平橘底白字（收斂掉原本
+   的果凍漸層/立體陰影），可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色 */
 .promo-ending-badge {
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 700;
   padding: 3px 12px;
   border-radius: 999px;
   color: #fff;
-  background: linear-gradient(180deg, #FF9EB5, #E8628A);
-  box-shadow: 0 2px 0 #B23F63;
+  background: #f97316;
   white-space: nowrap;
+  display: inline-block;
+  transform-origin: 50% 90%;
+  animation: promo-ending-wiggle 4.5s ease-in-out infinite;
+}
+
+/* 每 4.5 秒輕輕晃一下（多數時間靜止），不是持續搖晃——避免視覺干擾 */
+@keyframes promo-ending-wiggle {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  91% { transform: rotate(-8deg); }
+  92.5% { transform: rotate(7deg); }
+  94% { transform: rotate(-5deg); }
+  95.5% { transform: rotate(4deg); }
+  97% { transform: rotate(-2deg); }
+  98.5% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-ending-badge {
+    animation: none;
+  }
 }
 
 .promo-card-title {
-  margin: 0 0 2px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  line-height: 1.35;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
   color: var(--pmc-ink);
   overflow-wrap: break-word;
 }
 
-.promo-card-cardname {
-  font-size: 0.82rem;
-  color: var(--pmc-ink-soft);
-  font-weight: 600;
-}
-
+/* 展開 chevron：加大點擊/視覺目標至 44×44（原本只是個小箭頭字元） */
 .promo-card-chevron {
   display: none;
   flex-shrink: 0;
   align-self: center;
-  font-size: 0.8rem;
-  color: var(--pmc-ink-soft);
-  transition: transform 0.25s cubic-bezier(.34, 1.56, .64, 1);
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--pmc-muted);
+  transition: transform 0.25s ease;
 }
 
 .promo-card-chevron::before {
@@ -348,19 +383,21 @@ a {
   transform: rotate(180deg);
 }
 
-/* 手機收合態「一行重點好康」——單行截斷，桌機不顯示（桌機直接看下面完整的 promo-hero） */
+/* 手機收合態摘要行——顯示 new_customer_summary（活動摘要），不是贈品內容；
+   字級/顏色比照主站內文，不再用粉色跳色強調 */
 .promo-quick-highlight {
   display: none;
-  margin: 6px 0 0;
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--pmc-pink-deep);
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pmc-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* ---------------- 好康 hero（重點好康區）---------------- */
+/* 保留但收斂：大字重點仍醒目，底色改極淡主站灰／類型淡色，回饋率一律用主站綠 */
 
 .promo-hero {
   display: flex;
@@ -373,16 +410,17 @@ a {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 16px;
-  background: var(--pmc-default-bg);
+  border-radius: var(--pmc-radius-md);
+  background: #f9fafb;
+  border: 1px solid var(--pmc-border);
 }
 
-.promo-hero-item--gift { background: var(--pmc-pink-bg); }
-.promo-hero-item--voucher { background: var(--pmc-mint-bg); }
-.promo-hero-item--bonus { background: var(--pmc-yellow-bg); }
+.promo-hero-item--gift { background: #fdf2f6; border-color: #f8d9e4; }
+.promo-hero-item--voucher { background: #f0fdf7; border-color: #c9f1de; }
+.promo-hero-item--bonus { background: #fffbeb; border-color: #fde9b0; }
 
 .promo-hero-icon {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -395,27 +433,33 @@ a {
 }
 
 .promo-hero-big {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.3;
   color: var(--pmc-ink);
   overflow-wrap: break-word;
 }
 
-.promo-hero-item--gift .promo-hero-big { color: #B03A63; }
-.promo-hero-item--voucher .promo-hero-big { color: #0B7A56; }
-.promo-hero-item--bonus .promo-hero-big { color: #8A5C00; }
+/* 回饋率／金額一律用主站的回饋率綠字（抄自 styles.css .cashback-rate-num #059669） */
+.promo-hero-item--voucher .promo-hero-big,
+.promo-hero-item--bonus .promo-hero-big {
+  color: var(--pmc-green);
+}
 
-/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點，避免版面爆掉 */
+.promo-hero-item--gift .promo-hero-big {
+  color: var(--pmc-label);
+}
+
+/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點 */
 .promo-hero-big--gift {
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .promo-hero-small {
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--pmc-ink-soft);
+  color: var(--pmc-muted);
 }
 
 .promo-hero-image {
@@ -427,15 +471,15 @@ a {
   height: 180px;
   object-fit: cover;
   border-radius: var(--pmc-radius-md);
-  background: var(--pmc-cream);
+  background: #f9fafb;
 }
 
 .promo-card-summary {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 14px;
   color: var(--pmc-ink);
-  background: var(--pmc-cream);
-  border-radius: 12px;
+  background: #f9fafb;
+  border-radius: var(--pmc-radius-md);
   padding: 10px 12px;
   overflow-wrap: break-word;
 }
@@ -451,13 +495,16 @@ a {
   display: grid;
   grid-template-columns: 84px 1fr;
   gap: 8px;
-  font-size: 0.86rem;
+  font-size: 14px;
+  line-height: 1.6;
   align-items: baseline;
 }
 
+/* label 樣式：抄自主站「活動期間」一類 dt 的字級／字重／顏色，全站統一，
+   備註標題也照這個樣式（見下面 .promo-notes-details summary），不再用粉色跳色 */
 .promo-meta-row dt {
   font-weight: 700;
-  color: var(--pmc-ink-soft);
+  color: var(--pmc-label);
   white-space: nowrap;
 }
 
@@ -467,35 +514,45 @@ a {
   overflow-wrap: break-word;
 }
 
-.promo-definition-details summary {
+/* 新戶定義：直接顯示全文，不再收合 */
+.promo-definition-row dd {
+  color: var(--pmc-ink);
+}
+
+/* 備註：預設收合、點擊展開，標題樣式跟「活動期間」等 label 完全一樣（同字級
+   同色，不用粉色突出），收合指示用低調小 ▾（不是原本較搶眼的粉色箭頭） */
+.promo-notes-details {
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.promo-notes-details summary {
   cursor: pointer;
-  font-weight: 600;
-  color: var(--pmc-pink-deep);
+  font-weight: 700;
+  color: var(--pmc-label);
   list-style: none;
 }
 
-.promo-definition-details summary::-webkit-details-marker {
+.promo-notes-details summary::-webkit-details-marker {
   display: none;
 }
 
-.promo-definition-details summary::after {
+.promo-notes-details summary::after {
   content: ' ▾';
+  font-weight: 400;
+  color: var(--pmc-muted);
+  font-size: 0.8em;
 }
 
-.promo-definition-details[open] summary::after {
+.promo-notes-details[open] summary::after {
   content: ' ▴';
 }
 
-.promo-definition-details p {
+.promo-notes-details p {
   margin: 6px 0 0;
-  color: var(--pmc-ink-soft);
-  font-size: 0.85rem;
-}
-
-/* 備註收合沿用 .promo-definition-details（見 pmcRenderPromoCard_ 註解），這裡只補
-   跟「新戶定義」不同的間距——備註是卡片內較後段的次要資訊 */
-.promo-notes-details {
-  margin-top: 2px;
+  color: var(--pmc-muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .promo-card-cta {
@@ -525,81 +582,190 @@ a {
 
 .promo-card-toggle {
   cursor: pointer;
-  border-radius: 16px;
+  border-radius: 12px;
 }
 
 .promo-card-toggle:focus-visible {
-  outline: 3px solid var(--pmc-pink-deep);
+  outline: 3px solid var(--pmc-blue);
   outline-offset: 3px;
 }
 
-.promo-card-secondary {
-  margin-top: -4px;
-}
-
-/* Jelly apply button */
+/* 立即申辦按鈕：與主站現行果凍黃「立即申辦」完全一致——配方抄自 styles.css
+   .card-apply-cta-btn（漸層/陰影/邊角/active 壓下效果），padding/字級沿用桌機版 */
 .promo-apply-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: #7A4E00;
-  padding: 12px 26px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #7a4e00;
+  padding: 8px 16px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #FFE066, #FFC933);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.75), 0 4px 0 #E8A800;
-  transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s ease;
+  white-space: nowrap;
+  background:
+    radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+  border: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 4px 0 #e8a800,
+    0 6px 14px rgba(255, 180, 0, 0.35);
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .promo-apply-btn:hover {
-  transform: translateY(-1px);
+  transform: scale(1.05);
 }
 
 .promo-apply-btn:active {
-  transform: translateY(3px) scale(1.02, .94);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 1px 0 #E8A800;
+  transform: translateY(3px) scale(1.02, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 0 #e8a800,
+    0 2px 5px rgba(255, 180, 0, 0.3);
 }
 
-.promo-secondary-link {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--pmc-ink-soft);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* ---------------- Empty state / footer ---------------- */
+/* ---------------- Empty state ---------------- */
 
 .promos-empty-state {
   text-align: center;
-  color: var(--pmc-ink-soft);
+  color: var(--pmc-muted);
   font-weight: 600;
   padding: 40px 0;
 }
 
-.promos-footer {
+/* ---------------- Footer（抄自 index.html .finance-warning-row /
+   .social-media-footer——主站改動這兩塊時，這裡要手動同步）---------------- */
+
+/* 信用卡警語橫條，樣式抄自 styles.css .finance-warning-row，放在 footer 上方，
+   跟主站「精選活動區下方」同款用法：一整行深色警語 */
+.promos-warning-row {
+  max-width: 1200px;
+  margin: 20px auto 0;
+  box-sizing: border-box;
+  padding: 14px 24px;
+  background: var(--pmc-warn-bg);
+  color: #fff;
   text-align: center;
-  padding: 12px 16px 56px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border-radius: 12px;
 }
 
-.promos-footer-cta {
+/* 抄自 styles.css .social-media-footer 一整段（含 .social-media-container /
+   .social-section 等），配色/間距逐一比照 */
+.social-media-footer {
+  max-width: 1200px;
+  margin: 20px auto 10px;
+  padding: 0 24px;
+  text-align: center;
+  min-height: 100px;
+}
+
+.social-media-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 48px;
+}
+
+.social-section,
+.sponsor-section,
+.explore-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.social-media-title {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.social-media-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
-  font-weight: 800;
-  color: #0B4A34;
-  padding: 12px 26px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #A7F3D8, #6EE7B7);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), 0 4px 0 #2FBF87;
-  transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1);
+  font-size: 13px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
-.promos-footer-cta:active {
-  transform: translateY(3px) scale(1.02, .94);
+.social-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.social-link.threads:hover {
+  background: #000000;
+  border-color: transparent;
+  color: white;
+}
+
+.social-link.sponsor:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.social-link svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+.social-link:hover svg {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.social-link.sponsor:hover svg {
+  transform: scale(1.2);
+  animation: promos-heartbeat 0.6s ease-in-out;
+}
+
+@keyframes promos-heartbeat {
+  0%, 100% { transform: scale(1.2); }
+  50% { transform: scale(1.35); }
+}
+
+.social-text {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* 最後資料更新日期（抄自 styles.css .data-update-footer） */
+.promos-data-update-footer {
+  max-width: 1200px;
+  margin: 16px auto 0;
+  padding: 0 24px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--pmc-muted);
 }
 
 /* ---------------- Responsive ---------------- */
@@ -607,38 +773,55 @@ a {
    點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
    維持原本全部展開的 grid 卡片版型不變。 */
 @media (max-width: 768px) {
-  .promos-topnav {
-    padding: 6px 16px;
-    gap: 8px;
+  body {
+    padding: 10px;
+  }
+
+  .promos-header {
+    padding: 12px 16px;
+  }
+
+  .promos-header-logo {
+    height: 32px;
+  }
+
+  /* 手機收窄站名文字，只留 logo（比照主站 header 手機版把 h1 視覺隱藏的做法，
+     這裡文字本來就短，改成截斷＋縮小字級，不整段隱藏，因為沒有 auth 區搶空間） */
+  .promos-header-title {
+    font-size: 1.02rem;
+  }
+
+  .promos-header-links a {
+    padding: 5px 10px;
+    font-size: 0.78rem;
   }
 
   .promos-main {
-    padding-top: 2px;
+    padding: 10px 12px 18px;
   }
 
   .promos-hero {
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    border-radius: 18px;
+    padding: 12px 4px 4px;
   }
 
   .promos-hero h1 {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     margin-bottom: 4px;
   }
 
   .promos-hero-sub {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
   }
 
   .promos-controls {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 8px;
     margin-bottom: 10px;
+    padding: 8px 10px;
   }
 
-  /* 篩選 chips／排序切換明顯縮小：字級、padding 都減，單列可橫向捲動避免擠成好幾列 */
+  /* 篩選 chips／排序切換：單列可橫向捲動避免擠成好幾列 */
   .promos-filter-chips {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -653,8 +836,8 @@ a {
 
   .promo-chip,
   .promo-sort-btn {
-    font-size: 0.7rem;
-    padding: 4px 10px;
+    font-size: 0.72rem;
+    padding: 5px 11px;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -667,7 +850,7 @@ a {
   /* 收合態卡片目標高度 ~110-130px：下面每個元素都刻意壓縮，一屏（390x844）
      才塞得下 4-5 張。展開後（.promo-card-detail 撐開）不受這裡影響。 */
   .promo-card-body {
-    padding: 8px 12px 10px;
+    padding: 8px 10px 10px;
     gap: 0;
   }
 
@@ -691,13 +874,12 @@ a {
     font-size: 0.58rem;
     padding: 1px 7px;
     line-height: 1.3;
-    box-shadow: none;
   }
 
   /* 標題收合態固定單行，展開後也維持（緊湊摘要條的一部分，完整文字仍在 DOM 裡） */
   .promo-card-title {
     font-size: 0.86rem;
-    line-height: 1.15;
+    line-height: 1.2;
     margin: 0;
     display: -webkit-box;
     -webkit-line-clamp: 1;
@@ -705,20 +887,17 @@ a {
     overflow: hidden;
   }
 
-  .promo-card-cardname {
-    font-size: 0.66rem;
-    line-height: 1.2;
+  /* 卡名副標（.promo-card-cardname）已從生成器移除，這裡不再需要對應規則 */
+
+  .promo-card-chevron {
+    display: flex;
   }
 
-  .promo-card-chevron,
   .promo-quick-highlight {
     display: block;
-  }
-
-  .promo-quick-highlight {
     margin-top: 4px;
     font-size: 0.76rem;
-    line-height: 1.25;
+    line-height: 1.3;
   }
 
   .promo-card-cta {
@@ -727,22 +906,19 @@ a {
   }
 
   .promo-apply-btn {
-    padding: 6px 18px;
-    font-size: 0.78rem;
+    padding: 6px 16px;
+    font-size: 0.76rem;
     line-height: 1.3;
-  }
-
-  .promo-secondary-link {
-    font-size: 0.78rem;
   }
 
   .promo-meta-row {
     grid-template-columns: 1fr;
     gap: 2px;
+    font-size: 0.82rem;
   }
 
   .promo-hero-big {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
   }
 
   .promo-hero-item {
@@ -753,12 +929,49 @@ a {
     height: 140px;
   }
 
+  .promos-warning-row {
+    font-size: 14px;
+    padding: 12px 16px;
+    letter-spacing: 1px;
+    margin-top: 14px;
+  }
+
+  .social-media-footer {
+    padding: 0 16px;
+    margin: 16px auto 10px;
+  }
+
+  .social-media-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .social-media-title {
+    font-size: 10px;
+  }
+
+  .social-link {
+    padding: 7px 10px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
+  .social-link svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .social-text {
+    font-size: 11px;
+  }
+
   /* 收合機制：只在手機生效。桌機的 .promo-card-detail 維持檔案前段預設的
      grid-template-rows: 1fr（一律展開），這裡覆寫成 0fr 當收合態，配合
-     .is-open 展開，靠 grid-template-rows 動畫做果凍感過渡。 */
+     .is-open 展開，靠 grid-template-rows 動畫做過渡。 */
   .promo-card-detail {
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.32s cubic-bezier(.34, 1.56, .64, 1);
+    transition: grid-template-rows 0.32s ease;
   }
 
   .promo-card.is-open .promo-card-detail {

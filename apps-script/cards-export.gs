@@ -1430,8 +1430,13 @@ function pmcRenderPromoCard_(p) {
   // 下面 dl 列表不再重複這三種欄位，只留適用通路（hero 沒地方放的細節）。
   const hero = pmcBuildPromoHero_(promo);
   const heroSectionHtml = hero.hasHero ? '<div class="promo-hero">' + hero.heroItemsHtml + '</div>' : '';
-  const quickHighlightHtml = hero.quickHighlightPlain
-    ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(hero.quickHighlightPlain) + '</p>'
+
+  // 手機收合態摘要行：優先顯示 new_customer_summary（活動摘要，一句話講清楚活動
+  // 在幹嘛），summary 空的極少數情況才退用 hero 的贈品/金額/回饋率純文字版
+  // （2026-07-15 站長回饋：收合態原本顯示贈品內容，容易被誤讀成「活動只有這個」）。
+  const collapsedSummaryPlain = summary || hero.quickHighlightPlain;
+  const quickHighlightHtml = collapsedSummaryPlain
+    ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(collapsedSummaryPlain) + '</p>'
     : '';
 
   const highlightRows = [];
@@ -1450,9 +1455,11 @@ function pmcRenderPromoCard_(p) {
     ? '<img class="promo-hero-image" src="' + pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(title) + ' 活動宣傳圖" loading="lazy" onerror="this.style.display=\'none\'">'
     : '';
 
+  // 新戶定義：直接顯示全文（2026-07-15 站長回饋移除收合，這是判斷自己是不是
+  // 新戶的關鍵資訊，不該藏在一個要點開的 details 裡）
   const definitionHtml = promo.new_customer_definition
-    ? '<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd><details class="promo-definition-details"><summary>查看新戶定義</summary><p>' +
-      pmcEscapeHtmlMultiline_(promo.new_customer_definition) + '</p></details></dd></div>'
+    ? '<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>' +
+      pmcEscapeHtmlMultiline_(promo.new_customer_definition) + '</dd></div>'
     : '';
 
   const conditionHtml = promo.promo_condition
@@ -1471,35 +1478,32 @@ function pmcRenderPromoCard_(p) {
   }
   const periodHtml = '<div class="promo-meta-row"><dt>活動期間</dt><dd>' + periodValueHtml + '</dd></div>';
 
-  // 備註預設收合：沿用 <details>／<summary> 這套原生元件（跟新戶定義同一招），
-  // 不用額外寫 JS 收合邏輯，無 JS 環境也能點開（progressive enhancement）。
+  // 備註預設收合：沿用 <details>／<summary> 這套原生元件，不用額外寫 JS 收合
+  // 邏輯，無 JS 環境也能點開（progressive enhancement）。標題樣式（見 promos.css
+  // .promo-notes-details summary）跟「活動期間」等 dt label 完全一樣，不再用
+  // class="promo-definition-details" 共用「新戶定義」那套粉色跳色樣式（新戶定義
+  // 已改直出、不再收合，兩者不再共用同一個視覺配方）。
   const notesHtml = promo.notes
-    ? '<details class="promo-definition-details promo-notes-details"><summary>備註</summary><p>' +
+    ? '<details class="promo-notes-details"><summary>備註</summary><p>' +
       pmcEscapeHtmlMultiline_(promo.notes) + '</p></details>'
     : '';
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
-  // （銀行活動頁）當主按鈕，文字改「活動詳情」。有分潤連結時 promo.link 另放次要連結。
+  // （銀行活動頁）當主按鈕，文字改「活動詳情」。
   // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以主按鈕獨立成
-  // 一段固定顯示的區塊，跟可收合的 promo-card-detail 分開；次要連結（銀行活動頁）
-  // 不是分潤入口，收進 detail，跟其他次要資訊一起手機展開後才出現。
+  // 一段固定顯示的區塊，跟可收合的 promo-card-detail 分開。
+  // 2026-07-15 站長回饋：移除「銀行活動頁」次要連結——有分潤連結時 promo.link
+  // 不再另外顯示，避免使用者被導去銀行官網、繞過分潤申辦連結。
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
   const promoLink = pmcSanitizeUrl_(promo.link);
   let primaryCtaHtml = '';
-  let secondaryLinkHtml = '';
   if (ctaLink) {
     primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) + '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(cardName) + '">立即申辦</a>';
-    if (promoLink) {
-      secondaryLinkHtml = '<a class="promo-secondary-link" href="' + pmcEscapeHtml_(promoLink) + '" target="_blank" rel="noopener noreferrer">銀行活動頁 &rarr;</a>';
-    }
   } else if (promoLink) {
     primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) + '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
   }
   const primaryCtaSectionHtml = primaryCtaHtml
     ? '<div class="promo-card-cta">' + primaryCtaHtml + '</div>'
-    : '';
-  const secondaryLinkSectionHtml = secondaryLinkHtml
-    ? '<div class="promo-card-secondary">' + secondaryLinkHtml + '</div>'
     : '';
 
   const imgSrc = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
@@ -1518,8 +1522,11 @@ function pmcRenderPromoCard_(p) {
     '        <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
     '        <div class="promo-card-headline">\n' +
     '          <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
+    // 卡名只出現一次：title 已含卡名（promo_name 自訂時假設含卡名／預設 fallback
+    // 就是 cardName + " 新戶優惠"），不再另外重複一行 .promo-card-cardname
+    // （2026-07-15 站長回饋：「滙豐 Live+ 卡 新戶優惠」標題下又重複一行「滙豐
+    // Live+ 卡」）。
     '          <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
-    '          <div class="promo-card-cardname">' + pmcEscapeHtml_(cardName) + '</div>\n' +
     '        </div>\n' +
     '        <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '      </div>\n' +
@@ -1535,7 +1542,6 @@ function pmcRenderPromoCard_(p) {
     definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
     '        </dl>\n' +
     notesHtml +
-    secondaryLinkSectionHtml +
     '      </div>\n' +
     '    </div>\n' +
     '  </div>\n' +
@@ -1609,12 +1615,22 @@ function pmcPageTemplate_(o) {
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
-'<header class="promos-topnav">\n' +
-'  <a href="/" class="promos-topnav-brand">🎯 Pick My Card</a>\n' +
-'  <nav class="promos-topnav-links" aria-label="站內導覽">\n' +
-'    <a href="/">回主站工具</a>\n' +
-'    <a href="/faq">FAQ</a>\n' +
-'  </nav>\n' +
+'<div class="promos-container">\n' +
+// Header：與主站左上角一致（同款 logo＋站名＋深藍 header bar），複製自 index.html
+// 的 header/.header-top/.header-content 結構——主站改動 header 時這裡要手動同步。
+// 站名刻意用 <span> 而非 <h1>：這頁真正的 SEO H1 是下面 hero 區塊的
+// 「信用卡新戶活動一覽」，同頁兩個 h1 對文件結構不利。
+'<header class="promos-header">\n' +
+'  <div class="promos-header-top">\n' +
+'    <div class="promos-header-content">\n' +
+'      <img src="assets/images/logo-header.png?v=' + o.versionTag + '" alt="" class="promos-header-logo">\n' +
+'      <span class="promos-header-title">信用卡回饋大師</span>\n' +
+'    </div>\n' +
+'    <nav class="promos-header-links" aria-label="站內導覽">\n' +
+'      <a href="/">回主站工具</a>\n' +
+'      <a href="/faq">FAQ</a>\n' +
+'    </nav>\n' +
+'  </div>\n' +
 '</header>\n' +
 '\n' +
 '<main class="promos-main">\n' +
@@ -1641,10 +1657,49 @@ o.cardsHtml + '\n' +
 '\n' +
 '  <p class="promos-empty-state" id="promos-empty-state" hidden>目前沒有符合條件的活動，換個篩選試試？</p>\n' +
 '</main>\n' +
+'</div>\n' +
 '\n' +
-'<footer class="promos-footer">\n' +
-'  <a class="promos-footer-cta" href="/">用回饋計算機比比看 &rarr;</a>\n' +
-'</footer>\n' +
+// Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（信用卡警語橫條＋
+// 社群媒體/贊助區塊），複製自 index.html 的 .finance-warning-row／
+// .social-media-footer——主站改動這兩塊時，這裡要手動同步（同一句提醒也寫進了
+// docs/project/data-pipeline.md 第 9 節）。
+'<div class="promos-warning-row" role="note" aria-label="信用卡警語">謹慎理財、信用至上</div>\n' +
+'\n' +
+'<div class="social-media-footer">\n' +
+'  <div class="social-media-container">\n' +
+'    <div class="explore-section">\n' +
+'      <p class="social-media-title">探索更多</p>\n' +
+'      <div class="social-media-links">\n' +
+'        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
+'          <span class="social-text">常見問題 FAQ ↗</span>\n' +
+'        </a>\n' +
+'        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
+'          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
+'        </a>\n' +
+'      </div>\n' +
+'    </div>\n' +
+'    <div class="social-section">\n' +
+'      <p class="social-media-title">追蹤我們</p>\n' +
+'      <div class="social-media-links">\n' +
+'        <a href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer" class="social-link threads" aria-label="Threads">\n' +
+'          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/></svg>\n' +
+'          <span class="social-text">@pickmycard_tw</span>\n' +
+'        </a>\n' +
+'      </div>\n' +
+'    </div>\n' +
+'    <div class="sponsor-section">\n' +
+'      <p class="social-media-title">支持我們</p>\n' +
+'      <div class="social-media-links">\n' +
+'        <a href="https://portaly.cc/pickmycard/support" target="_blank" rel="noopener noreferrer" class="social-link sponsor" aria-label="贊助支持">\n' +
+'          <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/></svg>\n' +
+'          <span class="social-text">小額抖內</span>\n' +
+'        </a>\n' +
+'      </div>\n' +
+'    </div>\n' +
+'  </div>\n' +
+'</div>\n' +
+'\n' +
+'<div class="promos-data-update-footer">資料更新於 ' + pmcEscapeHtml_(o.generatedDisplay) + '</div>\n' +
 '\n' +
 '<script type="module" async>\n' +
 '  // 精簡版 Firebase Analytics 初始化（只取 app+analytics，不含 auth/firestore/storage，\n' +

@@ -145,6 +145,13 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
   天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
   不 fetch 任何東西，頁面本身就是完整資料。
+- **⚠️ 2026-07-15 v2 改版起，header／footer 是從 `index.html` 手動複製過來的**：
+  `pmcPageTemplate_()` 裡的 `<header class="promos-header">`（logo＋站名＋深藍 bar）、
+  `.promos-warning-row`（謹慎理財警語）、`.social-media-footer`（探索更多／追蹤我們／
+  支持我們）三段，內容與樣式都是照 `index.html` 對應區塊（`header`／`.finance-warning-row`／
+  `.social-media-footer`）手動抄的，**不是共用元件**。主站改這幾塊時（換連結、改文案、換
+  社群帳號），這裡要記得手動同步，否則 promos 頁會悄悄跟主站不一致。`promos.css` 裡對應的
+  樣式規則也在同一段加了「抄自 styles.css」的註解，方便對照。
 
 ## 10. Apps Script 相關的既有文件
 
