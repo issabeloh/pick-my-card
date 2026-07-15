@@ -160,17 +160,6 @@ a {
   letter-spacing: 0.01em;
 }
 
-.promos-hero-sub {
-  margin: 0;
-  color: var(--pmc-muted);
-  font-size: 0.92rem;
-}
-
-.promos-hero-sub strong {
-  color: var(--pmc-blue-deep);
-  font-size: 1.05em;
-}
-
 /* ---------------- Controls: filter chips + sort ---------------- */
 
 .promos-controls {
@@ -225,7 +214,7 @@ a {
   background: var(--pmc-white);
   color: var(--pmc-chip-text);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 
 .promo-chip:hover,
@@ -415,16 +404,42 @@ a {
   transform: rotate(180deg);
 }
 
-/* 手機收合態摘要行——顯示 new_customer_summary（活動摘要），不是贈品內容；
-   字級/顏色比照主站內文，不再用粉色跳色強調。2026-07-15 站長回饋：拿掉單行
-   ellipsis 截斷，完整顯示摘要（卡片收合態高度會因此變動，可接受）。 */
+/* 摘要行——顯示 new_customer_summary（活動摘要），不是贈品內容；字級/顏色比照
+   主站內文，不再用粉色跳色強調。2026-07-15 站長回饋：拿掉單行 ellipsis 截斷，
+   完整顯示摘要（卡片收合態高度會因此變動，可接受）。2026-07-15 第三輪站長
+   回饋：桌機／手機都要顯示這一行（不再只在手機收合態靠 media query 打開），
+   因為展開後的詳情區塊已經移除重複的 .promo-card-summary，這行是全頁唯一的
+   摘要文字來源；同時字級從 14px 升到 16px，可感知地變大、跟卡片標題層次更協調。 */
 .promo-quick-highlight {
-  display: none;
+  display: block;
   margin: 4px 0 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--pmc-label);
   overflow-wrap: break-word;
+}
+
+/* 帶宣傳圖縮圖的卡片：縮圖（左）＋摘要文字（右）橫排一列（2026-07-15 第三輪
+   站長回饋）。這個容器由 cards-export.gs 的 pmcRenderPromoCard_ 只在有縮圖時
+   才輸出（見 highlightRowHtml），無圖的卡完全沒有這個容器、不佔任何空間。
+   容器本身刻意放在 .promo-card-toggle 之外（跟舊版縮圖位置一樣），理由見
+   cards-export.gs 對應註解：promos.js 的點擊監聽都掛在 document 上，
+   stopPropagation 攔不住同層另一個監聽器，縮圖若塞進 toggle 內點擊會誤觸展開。 */
+.promo-highlight-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 6px 0 0;
+}
+
+.promo-highlight-row .promo-gift-thumb-row {
+  margin: 0;
+}
+
+.promo-highlight-row .promo-quick-highlight {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
 
 /* ---------------- 好康 hero（重點好康區）---------------- */
@@ -450,10 +465,14 @@ a {
 .promo-hero-item--voucher { background: #f0fdf7; border-color: #c9f1de; }
 .promo-hero-item--bonus { background: #fffbeb; border-color: #fde9b0; }
 
+/* 2026-07-15 第三輪站長回饋：定額金額／回饋率的大字＋用途小字改成同一行橫排
+   （原本是上下兩行），用 baseline 對齊讓大字數字與小字說明看起來像一句話。 */
 .promo-hero-main {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -576,16 +595,6 @@ a {
 .promo-lightbox-close:focus-visible {
   outline: 3px solid #fff;
   outline-offset: 2px;
-}
-
-.promo-card-summary {
-  margin: 0;
-  font-size: 14px;
-  color: var(--pmc-ink);
-  background: #f9fafb;
-  border-radius: var(--pmc-radius-md);
-  padding: 10px 12px;
-  overflow-wrap: break-word;
 }
 
 .promo-card-meta {
@@ -924,10 +933,6 @@ a {
     margin-bottom: 4px;
   }
 
-  .promos-hero-sub {
-    font-size: 0.78rem;
-  }
-
   .promos-controls {
     flex-direction: column;
     align-items: flex-start;
@@ -1008,10 +1013,12 @@ a {
     display: flex;
   }
 
+  /* display 已由桌機規則統一設為 block，這裡不用再設一次；字級跟桌機一樣
+     比原本（0.76rem≈12px）調升一階，維持「可感知變大」但仍比桌機 16px 收斂，
+     手機版面較擠 */
   .promo-quick-highlight {
-    display: block;
     margin-top: 4px;
-    font-size: 0.76rem;
+    font-size: 0.86rem;
     line-height: 1.3;
   }
 

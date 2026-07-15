@@ -1418,9 +1418,11 @@ function pmcRenderPromoCard_(p) {
     return '<span class="promo-type-badge promo-type-badge--' + bucket + '">' + pmcEscapeHtml_(t) + '</span>';
   }).join('');
 
+  // 標題只留卡名：不再附加「新戶優惠」字樣（2026-07-15 站長回饋，卡名旁的
+  // 「新戶優惠」文字被認為多餘——activity 類型已經由下方 promo-type-badges 表達）。
   const title = (promo.promo_name && String(promo.promo_name).trim())
     ? String(promo.promo_name).trim()
-    : (cardName ? cardName + ' 新戶優惠' : '新戶優惠');
+    : (cardName || '新戶優惠');
 
   const summary = promo.new_customer_summary || '';
 
@@ -1429,13 +1431,21 @@ function pmcRenderPromoCard_(p) {
   const hero = pmcBuildPromoHero_(promo);
   const heroSectionHtml = hero.hasHero ? '<div class="promo-hero">' + hero.heroItemsHtml + '</div>' : '';
 
-  // 手機收合態摘要行：優先顯示 new_customer_summary（活動摘要，一句話講清楚活動
-  // 在幹嘛），summary 空的極少數情況才退用 hero 的贈品/金額/回饋率純文字版
-  // （2026-07-15 站長回饋：收合態原本顯示贈品內容，容易被誤讀成「活動只有這個」）。
+  // 摘要行：優先顯示 new_customer_summary（活動摘要，一句話講清楚活動在幹嘛），
+  // summary 空的極少數情況才退用 hero 的贈品/金額/回饋率純文字版（2026-07-15
+  // 站長回饋：收合態原本顯示贈品內容，容易被誤讀成「活動只有這個」）。這一行是
+  // 全頁唯一的摘要文字——桌機／手機收合態都看得到（見 promos.css .promo-quick-highlight
+  // 已移除 display:none）；詳情展開區不再重複輸出第二份相同文字（2026-07-15
+  // 第三輪站長回饋：原本展開後灰底 summary 區塊跟這行內容重複）。
   const collapsedSummaryPlain = summary || hero.quickHighlightPlain;
   const quickHighlightHtml = collapsedSummaryPlain
     ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(collapsedSummaryPlain) + '</p>'
     : '';
+  // 帶宣傳圖的卡片改「圖左、摘要文字右」橫排（2026-07-15 第三輪站長回饋）：
+  // 這種情況下 quickHighlightHtml 要跟縮圖一起搬到 .promo-card-toggle 之外的
+  // .promo-highlight-row（見下方 giftThumbHtml/highlightRowHtml 組裝），
+  // toggle 內部就不再重複塞一份。沒有縮圖的卡完全不受影響——quickHighlightHtml
+  // 照舊留在 toggle 內，不產生任何空的 highlight-row。
 
   const highlightRows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
@@ -1451,7 +1461,10 @@ function pmcRenderPromoCard_(p) {
   // （約 80px、圓角、cover）＋點擊開 lightbox 看原圖（promos.js 監聽
   // .promo-gift-thumb 點擊）。縮圖獨立放在可收合的 .promo-card-toggle 之外，
   // 手機收合態、桌機都看得到——不像舊版大圖藏在收合的 detail 區塊裡
-  // （2026-07-15 站長回饋：活動宣傳圖沒顯示在頁面上）。
+  // （2026-07-15 站長回饋：活動宣傳圖沒顯示在頁面上）。維持在 toggle 之外還有
+  // 第二個理由：promos.js 的 click 監聽都掛在 document 上，同一層兩個監聽器
+  // 彼此的 stopPropagation 攔不住對方（不是真正的冒泡攔截），若把縮圖塞進
+  // .promo-card-toggle 內，點縮圖會連帶觸發卡片展開/收合。
   const giftImgUrl = pmcSanitizeUrl_(promo.gift_image_url);
   const giftImgAlt = title + ' 活動宣傳圖';
   const giftThumbHtml = giftImgUrl
@@ -1459,6 +1472,17 @@ function pmcRenderPromoCard_(p) {
       pmcEscapeHtml_(giftImgUrl) + '" data-full-alt="' + pmcEscapeHtml_(giftImgAlt) +
       '" aria-label="放大看' + pmcEscapeHtml_(giftImgAlt) + '"><img src="' + pmcEscapeHtml_(giftImgUrl) +
       '" alt="' + pmcEscapeHtml_(giftImgAlt) + '" loading="lazy" onerror="this.closest(\'.promo-gift-thumb-row\').style.display=\'none\'"></button></div>'
+    : '';
+
+  // 帶圖版面（2026-07-15 第三輪站長回饋）：有縮圖時，縮圖＋摘要文字合併成
+  // 「圖左、文右」一列（.promo-highlight-row，同樣在 toggle 之外，不影響上面
+  // 的 stopPropagation 考量），quickHighlightHtml 就不再放進 toggle 內部；
+  // 無縮圖的卡完全不受影響，quickHighlightHtml 照舊留在 toggle 內、highlightRowHtml
+  // 是空字串、不產生任何多餘容器或留白。
+  const hasGiftThumb = !!giftThumbHtml;
+  const toggleQuickHighlightHtml = hasGiftThumb ? '' : quickHighlightHtml;
+  const highlightRowHtml = hasGiftThumb
+    ? '<div class="promo-highlight-row">' + giftThumbHtml + quickHighlightHtml + '</div>'
     : '';
 
   // 新戶定義：直接顯示全文（2026-07-15 站長回饋移除收合，這是判斷自己是不是
@@ -1530,21 +1554,23 @@ function pmcRenderPromoCard_(p) {
     '        <div class="promo-card-headline">\n' +
     '          <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
     // 卡名只出現一次：title 已含卡名（promo_name 自訂時假設含卡名／預設 fallback
-    // 就是 cardName + " 新戶優惠"），不再另外重複一行 .promo-card-cardname
-    // （2026-07-15 站長回饋：「滙豐 Live+ 卡 新戶優惠」標題下又重複一行「滙豐
-    // Live+ 卡」）。
+    // 就是 cardName 本身，2026-07-15 第三輪站長回饋起不再附加「新戶優惠」字樣），
+    // 不再另外重複一行 .promo-card-cardname（2026-07-15 第二輪站長回饋：「滙豐
+    // Live+ 卡 新戶優惠」標題下又重複一行「滙豐 Live+ 卡」）。
     '          <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
     '        </div>\n' +
     '        <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '      </div>\n' +
-    quickHighlightHtml +
+    toggleQuickHighlightHtml +
     '    </div>\n' +
-    giftThumbHtml +
+    highlightRowHtml +
     primaryCtaSectionHtml + '\n' +
     '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
     '      <div class="promo-card-detail-inner">\n' +
     heroSectionHtml +
-    (summary ? '<p class="promo-card-summary">' + pmcEscapeHtml_(summary) + '</p>' : '') +
+    // summary 已經在 quickHighlightHtml（.promo-quick-highlight，展開前就看得到
+    // 那一行）輸出過一次，這裡不再重複——2026-07-15 第三輪站長回饋：收合態一行
+    // ＋展開後灰底 summary 區塊是同一段文字重複兩次。
     '        <dl class="promo-card-meta">\n' +
     definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
     '        </dl>\n' +
@@ -1573,7 +1599,8 @@ function pmcBuildJsonLd_(prepared) {
     return {
       '@type': 'ListItem',
       position: idx + 1,
-      name: (p.promo.promo_name && String(p.promo.promo_name).trim()) ? String(p.promo.promo_name).trim() : (p.cardName + ' 新戶優惠'),
+      // 與卡片標題（pmcRenderPromoCard_ 的 title）同一套 fallback 邏輯，一律只留卡名
+      name: (p.promo.promo_name && String(p.promo.promo_name).trim()) ? String(p.promo.promo_name).trim() : (p.cardName || '新戶優惠'),
       url: PMC_SITE_URL + '/promos#' + p.anchorId
     };
   });
@@ -1637,7 +1664,6 @@ function pmcPageTemplate_(o) {
 '    </div>\n' +
 '    <nav class="promos-header-links" aria-label="站內導覽">\n' +
 '      <a href="/">回主站工具</a>\n' +
-'      <a href="/faq">FAQ</a>\n' +
 '    </nav>\n' +
 '  </div>\n' +
 '</header>\n' +
@@ -1645,7 +1671,6 @@ function pmcPageTemplate_(o) {
 '<main class="promos-main">\n' +
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
-'    <p class="promos-hero-sub">目前共 <strong>' + o.count + '</strong> 檔新戶活動・更新日期 ' + pmcEscapeHtml_(o.generatedDisplay) + '</p>\n' +
 '  </section>\n' +
 '\n' +
 // 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
