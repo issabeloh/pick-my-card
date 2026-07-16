@@ -93,7 +93,10 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **計算函數**：
 - `calculateStackedCashback()`（stacking）：各成分同時作用於全額、各自上限。顯示回饋率 = rate_N＋基本＋加碼 自動加總（如 3%+1%+1%=5%）。範例 Sport 卡 Apple Pay 消費 6,000：`1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`，顯示 5%
-- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700
+  - **加碼層（Layer 2）gate（Fix B，2026-07-16 起）**：卡片級 `domesticBonusRate`/`overseasBonusRate`（`resolveBonusComponent` 回傳）**不再無條件加進 stacking**，只在該槽的 `cashbackModel` 字串**明確含**對應關鍵字（`model.includes('domesticBonusRate')` 或 `'overseasBonusRate'`）時才加。例：`rate+basic` 不加卡片級加碼；`basic+domesticBonusRate` 才加。基本回饋層（Layer 1，`basic`/`overseasCashback`）**不受此 gate 影響**，一律計算——每個 stacking 槽都含基準，且海外 model 常用 `basic` 寬鬆指代 overseasCashback base。
+  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus` 參數（`if (applyBonus && bonusRate > 0)`）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算 `model.includes('domesticBonusRate') || model.includes('overseasBonusRate')` 來決定加不加/顯不顯示 bonus 行。呼叫端（約 script.js:4018 附近）算 `stackedApplyBonus` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
+  - 背景：舊版無條件加卡片級加碼，與「model 字串列出所有適用成分」的文法矛盾；線上掃描 0 張卡受影響，直到 ctbc-uniopen 改採明確槽＋跨槽引用後才第一次觸發（slot1 `rate+basic` 被誤加 dbr）。詳見 `docs/project/cross-slot-ref-and-minspend-spec.md` 功能三。
+- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
 - 簡單路徑（無加碼卡的空白預設）：cap 內 rate_N、溢出 basicCashback
 - 選擇邏輯（約 script.js:3554 `const cashbackModel = matchedRateGroup?.cashbackModel`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
 
