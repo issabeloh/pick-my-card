@@ -201,19 +201,14 @@
   }
 
   // 「?」浮出說明（2026-07-16 站長回饋）：點擊浮出、不推開版面；
-  // 張數＝頁面上活動卡中屬於持有卡的「不重複卡片數」（誠實反映會被藏幾張卡）。
+  // 張數＝用戶在「我的信用卡」勾選的張數（ownedCardIds 已去重），
+  // 不是頁面上實際被藏的活動卡數（2026-07-16 站長二次指示）。
   function setupOwnedHelp() {
     var btn = document.getElementById('promos-owned-help-btn');
     var pop = document.getElementById('promos-owned-help-pop');
     var countEl = document.getElementById('promos-owned-help-count');
     if (!btn || !pop || !countEl) return;
-    var seen = {};
-    var n = 0;
-    Array.prototype.forEach.call(document.querySelectorAll('.promo-card[data-card-id]'), function (card) {
-      var id = card.getAttribute('data-card-id');
-      if (ownedCardIds.indexOf(id) !== -1 && !seen[id]) { seen[id] = true; n++; }
-    });
-    countEl.textContent = String(n);
+    countEl.textContent = String(ownedCardIds.length);
     function close() {
       pop.hidden = true;
       btn.setAttribute('aria-expanded', 'false');
