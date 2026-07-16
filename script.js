@@ -9335,9 +9335,9 @@ async function openMyMappingsModal() {
 // （像素過濾近白/近黑/低飽和後做色相投票，亮度 clamp 到白字可讀範圍）。
 // 新卡缺項時用 fallback 深灰；覺得哪張卡不像，直接改該行 hex 即可。
 const CARD_ACCENT_COLORS = {
-    'cathay-cube': '#7f7f80',
+    'cathay-cube': '#1b1d21',
     'ctbc-linepay-card': '#c88637',
-    'ctbc-uniopen': '#807f80',
+    'ctbc-uniopen': '#ffffff',
     'dbs-aov': '#8d7859',
     'dbs-eco': '#21783d',
     'febank-lejia': '#d09a2f',
@@ -9355,7 +9355,7 @@ const CARD_ACCENT_COLORS = {
     'sinopac-sport': '#0e2d8b',
     'sunny-jcb-crystal': '#0e8b54',
     'taishin-jiekou': '#d83027',
-    'taishin-richart': '#798086',
+    'taishin-richart': '#ffffff',
     'tbb-artfun': '#56a8a9',
     'tbb-chaotian': '#d29b2d',
     'ubot-linebank': '#4ea753',
@@ -9367,6 +9367,14 @@ const CARD_ACCENT_COLORS = {
 
 function getCardAccentColor(cardId) {
     return CARD_ACCENT_COLORS[cardId] || '#6b7280';
+}
+
+// 色塊夠淺（如白卡面用 #ffffff）時卡名等前景改深色、色塊補分隔線，
+// 否則一律白字——讓黑白卡可以誠實用回黑白色
+function isLightAccentColor(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.72;
 }
 
 // 到期狀態分類：expired（過期沉底）/ soon（14 天內，黃色預警）/ active / none
@@ -9494,9 +9502,10 @@ function renderMappingsList(searchTerm = '') {
 
     let html = '<div class="mapping-groups">';
     groups.forEach(group => {
+        const accent = getCardAccentColor(group.cardId);
         html += `
             <div class="mapping-group" data-card-id="${escapeHtml(group.cardId)}">
-                <div class="mapping-group-head" style="background: ${getCardAccentColor(group.cardId)};">
+                <div class="mapping-group-head${isLightAccentColor(accent) ? ' light' : ''}" style="background: ${accent};">
                     ${dragHandleHtml('group-handle')}
                     <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
                     <button type="button" class="mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>

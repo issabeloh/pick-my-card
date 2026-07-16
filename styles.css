@@ -2616,6 +2616,13 @@ input[type="number"]:focus {
     z-index: 1000;
 }
 
+/* 詳情頁可以從其他 modal（我的配卡、選卡、我的信用卡）內開啟，必須疊在
+   所有 z-index 1000 的 modal 之上——同層時 DOM 順序決定，而 #card-detail-modal
+   在 HTML 裡比 #my-mappings-modal 早，曾被蓋住 */
+#card-detail-modal {
+    z-index: 1100;
+}
+
 .modal-content {
     background: white;
     border-radius: 12px;
@@ -5097,16 +5104,25 @@ input[type="text"].credit-limit-input:focus {
     max-width: 600px;
 }
 
-.mappings-search-input {
+/* 用 #my-mappings-modal 提高特異性——全域 input[type="text"]（padding 16px、
+   2px 框）特異性 0-1-1 會蓋過純 class 的 0-1-0，之前這組樣式其實從沒生效過。
+   字級固定 16px（<16px 會觸發 iOS 聚焦自動縮放），矮身靠 padding、預覽字靠
+   ::placeholder 縮小 */
+#my-mappings-modal .mappings-search-input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 7px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.875rem;
+    border-radius: 8px;
+    font-size: 16px;
     transition: border-color 0.2s;
 }
 
-.mappings-search-input:focus {
+#my-mappings-modal .mappings-search-input::placeholder {
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+#my-mappings-modal .mappings-search-input:focus {
     outline: none;
     border-color: #667eea;
 }
@@ -5250,6 +5266,21 @@ input[type="text"].credit-limit-input:focus {
 
 .mapping-group-head .mapping-drag-handle {
     color: rgba(255, 255, 255, 0.7);
+}
+
+/* 淺色色塊（白卡面）：前景轉深色、補分隔線，避免白字隱形／與卡片底融合 */
+.mapping-group-head.light {
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.mapping-group-head.light .mapping-peek-btn {
+    border-color: rgba(31, 41, 55, 0.45);
+    color: #374151;
+}
+
+.mapping-group-head.light .mapping-drag-handle {
+    color: #9ca3af;
 }
 
 .mapping-dragging {
