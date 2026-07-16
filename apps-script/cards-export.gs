@@ -1381,7 +1381,7 @@ function pmcBuildPromoHero_(promo) {
       rateDisplay = String(promo.bonus_rate);
     }
     const capText = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
-      ? '上限 NT$' + Math.round(promo.bonus_cap).toLocaleString('en-US')
+      ? '消費上限 NT$' + Math.round(promo.bonus_cap).toLocaleString('en-US')
       : '';
     items.push({
       bucket: 'bonus',
@@ -1521,8 +1521,12 @@ function pmcRenderPromoCard_(p) {
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
   // （銀行活動頁）當主按鈕，文字改「活動詳情」。
-  // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以主按鈕獨立成
-  // 一段固定顯示的區塊，跟可收合的 promo-card-detail 分開。
+  // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以按鈕仍放在
+  // .promo-card-toggle 內、跟可收合的 promo-card-detail 分開——2026-07-16 第四輪
+  // 站長回饋：按鈕從卡片下緣移到卡名右側同一列（見下方 title-row 組裝），不再是
+  // 獨立固定顯示的區塊；promos.js 的收合展開點擊處理需忽略按鈕本身的點擊
+  // （見 promos.js setupCardToggle 的 .promo-apply-btn 排除判斷），避免點按鈕
+  // 同時觸發卡片展開/收合。
   // 2026-07-15 站長回饋：移除「銀行活動頁」次要連結——有分潤連結時 promo.link
   // 不再另外顯示，避免使用者被導去銀行官網、繞過分潤申辦連結。
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
@@ -1533,9 +1537,6 @@ function pmcRenderPromoCard_(p) {
   } else if (promoLink) {
     primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) + '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
   }
-  const primaryCtaSectionHtml = primaryCtaHtml
-    ? '<div class="promo-card-cta">' + primaryCtaHtml + '</div>'
-    : '';
 
   const imgSrc = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
   const detailId = p.anchorId + '-detail';
@@ -1557,14 +1558,20 @@ function pmcRenderPromoCard_(p) {
     // 就是 cardName 本身，2026-07-15 第三輪站長回饋起不再附加「新戶優惠」字樣），
     // 不再另外重複一行 .promo-card-cardname（2026-07-15 第二輪站長回饋：「滙豐
     // Live+ 卡 新戶優惠」標題下又重複一行「滙豐 Live+ 卡」）。
-    '          <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
+    // 「立即申辦」跟卡名同一列（2026-07-16 第四輪站長回饋：從卡片下緣移到卡名
+    // 右側）——卡名長時允許換行，按鈕靠右不動（見 promos.css .promo-card-title-row
+    // 的 flex align-items:flex-start）。primaryCtaHtml 可能是空字串（沒有任何連結
+    // 可用時），此時只留 <h2>，版面不受影響。
+    '          <div class="promo-card-title-row">\n' +
+    '            <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
+    primaryCtaHtml + '\n' +
+    '          </div>\n' +
     '        </div>\n' +
     '        <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '      </div>\n' +
     toggleQuickHighlightHtml +
     '    </div>\n' +
     highlightRowHtml +
-    primaryCtaSectionHtml + '\n' +
     '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
     '      <div class="promo-card-detail-inner">\n' +
     heroSectionHtml +
@@ -1691,6 +1698,18 @@ o.filterChipsHtml + '\n' +
 '        <button type="button" class="promo-sort-btn is-active" data-sort="deadline">按截止日期排序</button>\n' +
 '        <button type="button" class="promo-sort-btn" data-sort="card">按卡片名稱排序</button>\n' +
 '      </div>\n' +
+'    </div>\n' +
+    // 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：讀主站
+    // localStorage 的 myOwnedCards_*（見 promos.js），這裡靜態生成時完全不知道
+    // 訪客/用戶持有哪些卡，所以一律先 hidden，交給 promos.js 在偵測到有持有資料
+    // 時才拿掉 hidden（見 promos.js setupOwnedFilter）——沒有任何持有資料時，
+    // 這組控制項整個不出現。
+'    <div class="promos-control-group" id="promos-owned-filter-group" hidden>\n' +
+'      <span class="promos-control-label">篩選</span>\n' +
+'      <label class="promos-owned-filter-label">\n' +
+'        <input type="checkbox" id="promos-hide-owned-checkbox">\n' +
+'        隱藏我持有的卡片\n' +
+'      </label>\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +

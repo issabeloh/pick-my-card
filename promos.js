@@ -11,6 +11,8 @@
    5. 「立即申辦」點擊送 GA4 button_click 事件
    6. 活動宣傳圖小縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
    7. 備註客戶端量測：scrollHeight 超過兩行高才收合＋加「展開 ▾」toggle（同上）
+   8. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
+      不寫入/刪除任何 key（2026-07-16 第四輪新增）
    ========================================================================== */
 
 (function () {
@@ -90,6 +92,12 @@
     });
   }
 
+  // 篩選狀態：類型 chips（typeFilter）與「隱藏我持有的卡片」（hideOwned）疊加
+  // 運作，統一由 refreshVisibility() 依兩個條件重算每張卡的 hidden，取代原本
+  // 只看類型的 applyFilter()（2026-07-16 第四輪站長回饋新增持有卡篩選）。
+  var filterState = { typeFilter: 'all', hideOwned: false };
+  var ownedCardIds = null; // 讀到的持有卡 id 清單（Array），沒有持有資料時維持 null
+
   function setupFilters() {
     var chipsContainer = document.getElementById('promos-filter-chips');
     if (!chipsContainer) return;
@@ -99,22 +107,94 @@
       Array.prototype.forEach.call(chipsContainer.querySelectorAll('.promo-chip'), function (b) {
         b.classList.toggle('is-active', b === btn);
       });
-      applyFilter(btn.getAttribute('data-filter') || 'all');
+      filterState.typeFilter = btn.getAttribute('data-filter') || 'all';
+      refreshVisibility();
     });
   }
 
-  function applyFilter(filter) {
+  function refreshVisibility() {
     var cards = document.querySelectorAll('.promo-card');
     var anyVisible = false;
     cards.forEach(function (card) {
-      if (card.getAttribute('data-expired') === '1') return; // 過期卡永遠不重新顯示
+      if (card.getAttribute('data-expired') === '1') {
+        card.hidden = true; // 過期卡永遠不重新顯示
+        return;
+      }
       var buckets = (card.getAttribute('data-type-buckets') || '').split(' ');
-      var show = filter === 'all' || buckets.indexOf(filter) !== -1;
+      var typeMatch = filterState.typeFilter === 'all' || buckets.indexOf(filterState.typeFilter) !== -1;
+      var ownedMatch = true;
+      if (filterState.hideOwned && ownedCardIds) {
+        var cardId = card.getAttribute('data-card-id') || '';
+        ownedMatch = ownedCardIds.indexOf(cardId) === -1;
+      }
+      var show = typeMatch && ownedMatch;
       card.hidden = !show;
       if (show) anyVisible = true;
     });
     var emptyState = document.getElementById('promos-empty-state');
     if (emptyState) emptyState.hidden = anyVisible;
+  }
+
+  // 安全解析 localStorage 的 myOwnedCards_*（訪客 key「myOwnedCards_guest」＋
+  // 所有登入者本機鏡像「myOwnedCards_<uid>」的聯集）。純讀取、絕不寫入/刪除任何
+  // localStorage key（唯讀鐵則，見 CLAUDE.md 鐵則 2 精神／docs/project/
+  // storage-and-security.md 第 1 節）；這頁不載入 script.js，沒有共用的
+  // readLocalJSON() 可用，因此自己寫一個容錯的小函數：壞資料一律 try/catch
+  // 吞掉、回空陣列，絕不讓 JSON.parse 拋錯中斷頁面其餘互動。
+  function readOwnedCardIdsSafe() {
+    var ids = [];
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('myOwnedCards_') === 0) keys.push(k);
+      }
+    } catch (err) {
+      console.error('❌ promos.js 掃描 localStorage keys 失敗:', err);
+      return [];
+    }
+    keys.forEach(function (key) {
+      try {
+        var raw = localStorage.getItem(key);
+        if (!raw) return;
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(function (id) {
+            if (typeof id === 'string' && id) ids.push(id);
+          });
+        }
+      } catch (err) {
+        console.error('❌ promos.js 解析 ' + key + ' 失敗:', err);
+      }
+    });
+    // 去重
+    var seen = {};
+    var result = [];
+    ids.forEach(function (id) {
+      if (seen[id]) return;
+      seen[id] = true;
+      result.push(id);
+    });
+    return result;
+  }
+
+  // 「隱藏我持有的卡片」篩選：generatePromosPageHtml() 生成當下不知道訪客/用戶
+  // 持有哪些卡，.promos-control-group#promos-owned-filter-group 一律先 hidden，
+  // 這裡偵測到有持有資料才拿掉 hidden；完全沒讀到任何持有資料（訪客也沒存過、
+  // 也沒有任何 uid 鏡像）時整組維持隱藏，不顯示空的篩選項。狀態不記憶——
+  // 重整頁面回到未勾選，跟主站精準搜尋 toggle 同哲學。
+  function setupOwnedFilter() {
+    var group = document.getElementById('promos-owned-filter-group');
+    var checkbox = document.getElementById('promos-hide-owned-checkbox');
+    if (!group || !checkbox) return;
+    var ids = readOwnedCardIdsSafe();
+    if (!ids.length) return;
+    ownedCardIds = ids;
+    group.hidden = false;
+    checkbox.addEventListener('change', function () {
+      filterState.hideOwned = checkbox.checked;
+      refreshVisibility();
+    });
   }
 
   function setupSort() {
@@ -186,9 +266,14 @@
       });
     }
 
+    // 2026-07-16 第四輪站長回饋：「立即申辦」按鈕移到卡名右側後變成
+    // .promo-card-toggle 的後代，點按鈕的 click/keydown 事件會冒泡到這裡；
+    // 明確排除 .promo-apply-btn，避免點申辦按鈕時「連帶」觸發卡片展開/收合
+    // （按鈕本身的連結行為完全不受影響，仍走瀏覽器預設開新分頁）。
     document.addEventListener('click', function (e) {
       var el = e.target.closest('.promo-card-toggle');
       if (!el || !mq.matches) return;
+      if (e.target.closest('.promo-apply-btn')) return;
       toggle(el);
     });
 
@@ -196,6 +281,7 @@
       if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
       var el = e.target.closest('.promo-card-toggle');
       if (!el || !mq.matches) return;
+      if (e.target.closest('.promo-apply-btn')) return;
       e.preventDefault();
       toggle(el);
     });
@@ -330,6 +416,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     refreshBadgesAndExpiry();
     setupFilters();
+    setupOwnedFilter();
     setupSort();
     setupCardToggle();
     setupApplyTracking();
