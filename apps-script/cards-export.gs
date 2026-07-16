@@ -317,6 +317,7 @@ function exportToJSON() {
     const rateObj = {
       items: items.split(',').map(s => s.trim())
     };
+    rateObj.slot = j;
 
     // 🔥 判斷 rate 是否為變數格式 {specialRate}
     const rateValue = String(rate).trim();
@@ -346,6 +347,8 @@ function exportToJSON() {
     addOptionalField(rateObj, row, headers, `period_${j}`, 'string', 'period');
     addOptionalField(rateObj, row, headers, `hideInDisplay_${j}`, 'boolean', 'hideInDisplay');
     addOptionalField(rateObj, row, headers, `cashbackModel_${j}`, 'string', 'cashbackModel');
+    addOptionalField(rateObj, row, headers, `minSpend_${j}`, 'number', 'minSpend');
+    addOptionalField(rateObj, row, headers, `maxSpend_${j}`, 'number', 'maxSpend');
 
     // 日期範圍：輸入欄 periodStart_N/periodEnd_N 為準，讀不到的那一邊從 period_N 字串救回
     resolvePeriodBounds(
