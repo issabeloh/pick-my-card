@@ -3311,19 +3311,85 @@ function getOverflowRate(card) {
     return resolveBaseRate(card, false);
 }
 
+// ========== 跨槽引用 rate_N（見 docs/project/cross-slot-ref-and-minspend-spec.md）==========
+// 語法：stacking（"+"）cashbackModel 字串裡的成分寫成裸 `rate_N`（無大括號），
+// N＝同卡 card.cashbackRates 陣列的 1-based 槽位編號，引用「兄弟槽」。
+// 與 `{rate_1}`（大括號、在 rate/cap 值欄位、hasLevels 卡讀 levelSettings）是完全
+// 不同的兩套語法、不同欄位，不衝突——見 cashback-engine.md 第 6 節「命名澄清」。
+const CROSS_SLOT_REF_RE = /^rate_(\d+)$/;
+
+// 找出 cashbackModel（或其任一分隔符切出的成分）裡的 rate_N token，不管格式合不合法。
+// 用於 stacking 分支之外的偵測（那些分支不支援 rate_N，只需要抓出來供 warn 用）。
+function findRateNTokens(cashbackModel) {
+    if (!cashbackModel) return [];
+    const matches = cashbackModel.match(/rate_\d+/g);
+    return matches || [];
+}
+
+// 用穩定 slot 號（Sheet 真實槽號，見 apps-script/cards-export.gs 的 rateObj.slot）
+// 定位被引用槽，取代「陣列位置 cashbackRates[N-1]」——中間跳號（如 slot 1,3,5）
+// 時陣列位置會漂移，slot 號不會。
+// 相容：若這張卡的 cashbackRates 都沒有 `.slot` 欄（舊 cards.data 尚未重匯出），
+// 退回舊的陣列位置 [N-1] 邏輯，行為不變。
+function findRateGroupBySlot(card, slotNum) {
+    const rates = card.cashbackRates;
+    const hasSlotField = rates.some(rg => rg && rg.slot != null);
+    if (hasSlotField) {
+        return rates.find(rg => rg && rg.slot === slotNum) || null;
+    }
+    return rates[slotNum - 1] || null;
+}
+
+// 解析 stacking cashbackModel 裡的 rate_N 跨槽引用，回傳獨立 layer 陣列
+// [{ rate, cap, name }]，供 calculateStackedCashback 疊加。
+// 非遞迴：只讀被引用槽的原始 rate/cap 數字，不執行它自己的 cashbackModel
+// ——這是避免循環引用、避免重複算 basic 的關鍵設計。
+// 被引用槽若是 {...} placeholder（hasLevels 卡），用同一 levelSettings 經
+// parseCashbackRate/parseCashbackCap 解析，與現有 placeholder 系統一致。
+function resolveCrossSlotLayers(card, cashbackModel, levelSettings) {
+    if (!card || !cashbackModel || !Array.isArray(card.cashbackRates)) return [];
+    const layers = [];
+    for (const rawToken of cashbackModel.split('+')) {
+        const token = rawToken.trim();
+        const m = token.match(CROSS_SLOT_REF_RE);
+        if (!m) continue;
+        const slotNum = parseInt(m[1], 10);
+        const refGroup = findRateGroupBySlot(card, slotNum);
+        if (!refGroup) {
+            console.error(`❌ ${card.name || card.id}: cashbackModel "${cashbackModel}" 引用不存在的槽 rate_${slotNum}（該卡只有 ${card.cashbackRates.length} 槽）`);
+            continue;
+        }
+        const refRate = parseCashbackRate(refGroup.rate, card, levelSettings);
+        const refCap = parseCashbackCap(refGroup.cap, card, levelSettings);
+        layers.push({ rate: refRate, cap: refCap, name: refGroup.category || `活動${slotNum}加碼` });
+    }
+    return layers;
+}
+
+// rate_N 僅在 stacking（"+"）分支支援；waterfall（">"）與裸 rate 分支偵測到就
+// console.error 一筆並忽略該 token（不得靜默算錯）——見 spec 功能一末段。
+function warnIfCrossSlotRefMisused(card, cashbackModel) {
+    const tokens = findRateNTokens(cashbackModel);
+    if (tokens.length === 0) return;
+    console.error(`❌ ${card.name || card.id}: cashbackModel "${cashbackModel}" 在非 stacking("+") 分支使用 ${tokens.join(', ')}——跨槽引用僅 "+" 支援，已忽略該 token`);
+}
+
 // The rate to SHOW the user for a cashbackRate item. For stacking models
 // ("...+...BonusRate", e.g. Sport 卡 Apple Pay) rate_N holds only the
 // designated-channel rate, so the displayed rate is designated + basic + bonus
 // (3%+1%+1% = 5%) — identical to what the search-result card shows (this mirrors
 // calculateStackedCashback's totalRate). For every other model, or blank,
 // rate_N is already a total and is shown as-is.
+// 跨槽引用（裸 rate_N，見上方）也計入加總，讓排序與詳情頁顯示跟實際計算一致。
 function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
     if (!model || !model.includes('+')) return designatedRate;
     const isOverseas = model.includes('overseasBonusRate');
     const basicRate = resolveBaseRate(card, isOverseas);
     const { rate: bonusRate } = resolveBonusComponent(card, levelSettings, isOverseas);
-    return Math.round((designatedRate + basicRate + bonusRate) * 100) / 100;
+    const crossSlotRate = resolveCrossSlotLayers(card, model, levelSettings)
+        .reduce((sum, layer) => sum + (layer.rate || 0), 0);
+    return Math.round((designatedRate + basicRate + bonusRate + crossSlotRate) * 100) / 100;
 }
 
 // 詳情頁「回饋組成」按鈕（計算機圖示）：只有 stacking 模型（cashbackModel 含 '+'）
@@ -3341,6 +3407,10 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
     if (designatedRate > 0) rows.push({ name: '指定通路加碼', rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
     if (basicRate > 0) rows.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, cap: null });
     if (bonusRate > 0) rows.push({ name: bonusName, rate: bonusRate, cap: bonusCap });
+    // 跨槽引用（rate_N）：每個被引用槽是獨立一行，各自的 category + rate + cap
+    resolveCrossSlotLayers(card, model, levelSettings).forEach(layer => {
+        if (layer.rate > 0) rows.push({ name: layer.name, rate: layer.rate, cap: layer.cap });
+    });
     if (rows.length < 2) return '';
 
     const total = Math.round(rows.reduce((s, r) => s + r.rate, 0) * 100) / 100;
@@ -3411,6 +3481,13 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
             html += `<div class="cashback-condition">消費上限: NT$${Math.floor(parsedCap).toLocaleString()}</div>`;
         } else {
             html += `<div class="cashback-condition">消費上限: 無上限</div>`;
+        }
+
+        if (rate.minSpend) {
+            html += `<div class="cashback-condition">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
+        }
+        if (rate.maxSpend) {
+            html += `<div class="cashback-condition">單筆未滿 NT$${Math.floor(rate.maxSpend).toLocaleString()}</div>`;
         }
 
         if (rate.conditions) {
@@ -3527,7 +3604,11 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
 // Apple Pay rate_N = 3, not 5) — it does NOT include basic/bonus. The displayed
 // 回饋率 (totalRate) is computed here as designated + basic + bonus for the user.
 // Each component has its own cap; they are applied concurrently (not waterfall).
-function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false) {
+// extraLayers（optional）：跨槽引用 rate_N 解析出的獨立層 [{ rate, cap, name }]
+// （見 resolveCrossSlotLayers）。每層都吃自己的 cap、獨立作用於全額，
+// 與 Layer 1-3 完全對等地加入 totalCashback/totalRate。空陣列/未傳都安全（鐵則4：
+// 用 length 判斷，不靠陣列本身的 truthiness）。
+function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false, extraLayers = []) {
     const layers = [];
     let totalCashback = 0;
 
@@ -3557,8 +3638,23 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
         totalCashback += designatedCashback;
     }
 
+    // Extra layers: cross-slot rate_N references. Each is a fully independent
+    // layer (own cap, applies to the full amount) — non-recursive, so this can
+    // never double-count or loop (see resolveCrossSlotLayers).
+    let extraRateSum = 0;
+    if (extraLayers.length > 0) {
+        for (const extra of extraLayers) {
+            if (!extra || !(extra.rate > 0)) continue;
+            const extraAmount = (extra.cap != null && extra.cap > 0) ? Math.min(amount, extra.cap) : amount;
+            const extraCashback = Math.floor(extraAmount * extra.rate / 100);
+            layers.push({ name: extra.name, rate: extra.rate, applicableAmount: extraAmount, cashback: extraCashback, cap: (extra.cap != null && extra.cap > 0) ? extra.cap : null });
+            totalCashback += extraCashback;
+            extraRateSum += extra.rate;
+        }
+    }
+
     // Displayed 回饋率 = sum of all active components (e.g. 3%+1%+1% = 5%)
-    const totalRate = designatedRate + basicRate + bonusRate;
+    const totalRate = designatedRate + basicRate + bonusRate + extraRateSum;
 
     return { cashbackAmount: totalCashback, layers, totalRate };
 }
@@ -3642,6 +3738,18 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // JCB日本賞方案只對 JCB 發卡組織用戶配對
                     if (rateGroup.category === '切換「JCB日本賞」方案' && cubeIssuer !== 'JCB') {
+                        continue;
+                    }
+
+                    // 滿額門檻 minSpend/maxSpend：金額 < minSpend 或 amount >= maxSpend
+                    // 時此槽不符資格——純粹不匹配，不貢獻此活動回饋，也不退回 basic
+                    // （退回 basic 的邏輯已移除：用戶會用另一槽的 maxSpend 負責未滿門檻
+                    // 的回饋，退回 basic 會跟那槽打架、產生重複結果。見
+                    // docs/project/cross-slot-ref-and-minspend-spec.md 2026-07-16 更正）。
+                    if (rateGroup.minSpend && amount < rateGroup.minSpend) {
+                        continue;
+                    }
+                    if (rateGroup.maxSpend && amount >= rateGroup.maxSpend) {
                         continue;
                     }
 
@@ -3804,6 +3912,16 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
+                    // 滿額門檻 minSpend/maxSpend：金額 < minSpend 或 amount >= maxSpend
+                    // 時此槽不符資格——純粹不匹配，不貢獻此活動回饋，也不退回 basic
+                    // （見上方 hasLevels 分支同款判斷的註解與 spec 2026-07-16 更正）。
+                    if (rateGroup.minSpend && amount < rateGroup.minSpend) {
+                        continue;
+                    }
+                    if (rateGroup.maxSpend && amount >= rateGroup.maxSpend) {
+                        continue;
+                    }
+
                     // 解析 rate 值（支援 {rate}、{specialRate} 等任意 levelSettings 欄位）
                     let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
                     let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
@@ -3851,6 +3969,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let shouldUseLayeredCalculation = false;
         let shouldUseStackedCalculation = false;
         let stackedIsOverseas = false;
+        let stackedExtraLayers = []; // 跨槽引用 rate_N 解析出的獨立層（僅 stacking 分支使用）
         let levelSettingsForCalc = null;
         let isOverseasTransaction = false;
 
@@ -3896,9 +4015,14 @@ async function calculateCardCashback(card, searchTerm, amount) {
         } else if (cashbackModel && cashbackModel.includes('+')) {
             shouldUseStackedCalculation = true;
             stackedIsOverseas = isOverseasModel;
+            // 跨槽引用 rate_N（僅 stacking 分支支援）：非遞迴，只讀被引用槽的原始
+            // rate/cap，不執行它自己的 cashbackModel。見 resolveCrossSlotLayers。
+            stackedExtraLayers = resolveCrossSlotLayers(card, cashbackModel, levelSettingsForCalc);
         } else if (cashbackModel && cashbackModel.includes('>')) {
             shouldUseLayeredCalculation = true;
             isOverseasTransaction = isOverseasModel;
+            // rate_N 跨槽引用不支援 waterfall 分支——偵測到就 warn，忽略該 token
+            warnIfCrossSlotRefMisused(card, cashbackModel);
         } else if (!cashbackModel) {
             // Blank — legacy default: waterfall (domestic) if card carries bonus rates
             const effectiveDomBonus = (levelSettingsForCalc && levelSettingsForCalc.domesticBonusRate) || card.domesticBonusRate;
@@ -3908,6 +4032,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 shouldUseLayeredCalculation = true;
                 isOverseasTransaction = false;
             }
+        } else {
+            // Model set but not 'rate' / '+' / '>' — falls through to the simple
+            // path unchanged (existing behavior). rate_N is unsupported here too;
+            // warn rather than silently mis-computing.
+            warnIfCrossSlotRefMisused(card, cashbackModel);
         }
 
         // 註：stacking 允許 rate=0 的「無指定加碼」項目（如隱藏的一般國內消費槽，
@@ -3921,7 +4050,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     amount,
                     rate,
                     cap,
-                    stackedIsOverseas
+                    stackedIsOverseas,
+                    stackedExtraLayers
                 );
                 cashbackAmount = stackedResult.cashbackAmount;
                 calculationLayers = stackedResult.layers;
@@ -5581,9 +5711,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     // For active activities, use matchedRateGroup
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
+                    const minSpend = result.matchedRateGroup.minSpend;
+                    const maxSpend = result.matchedRateGroup.maxSpend;
 
                     if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
+                    // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
+                    // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
+                    // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
+                    if (minSpend) additionalInfo += `<br><small>單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())} 起</small>`;
+                    if (maxSpend) additionalInfo += `<br><small>單筆未滿 NT$${escapeHtml(Math.floor(maxSpend).toLocaleString())}</small>`;
                 } else if (endingSoonInlineBadge && result.periodEnd) {
                     const periodDisplay = result.periodStart
                         ? `${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}`
@@ -8021,6 +8158,13 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
             }
 
+            if (rate.minSpend) {
+                specialContent += `<div class="cashback-condition">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
+            }
+            if (rate.maxSpend) {
+                specialContent += `<div class="cashback-condition">單筆未滿 NT$${Math.floor(rate.maxSpend).toLocaleString()}</div>`;
+            }
+
             if (rate.conditions) {
                 specialContent += renderConditionLine(rate.conditions);
             }
@@ -8625,6 +8769,11 @@ async function generateCubeSpecialContent(card) {
             })
             .sort((a, b) => {
                 // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
+                // 註：這裡刻意不經 getDisplayRate 加總（不像 7906/7940 等呼叫點）——
+                // 本區塊下面的顯示（mergedRate.parsedRate）本來就是顯示原始 rate、不含
+                // stacking 加總，排序理應跟著同一個數字走，否則才會「排序與顯示不一致」。
+                // CUBE 卡既有 rate+basic 資料（如「切換全支付方案」）依賴這個既有順序，
+                // 跨槽引用 rate_N 目前也沒有卡片用在這個 CUBE 專屬路徑，此處不動。
                 const aRate = parseCashbackRateSync(a.rate, levelSettings);
                 const bRate = parseCashbackRateSync(b.rate, levelSettings);
                 return bRate - aRate;

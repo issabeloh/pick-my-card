@@ -107,6 +107,22 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **分層計算的觸發**（約 script.js:2186-2208）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
 
+**跨槽引用 `rate_N`**（2026-07-16 起，設計決策見 `docs/project/cross-slot-ref-and-minspend-spec.md`）：
+- 只在 stacking（`+`）分支有效，寫成裸 `rate_N`（無大括號），如 `rate+rate_5+rate_1+basic`。N＝同卡 `card.cashbackRates` 陣列的 1-based 槽位編號。
+- 解析為讀 `card.cashbackRates[N-1]` 的原始 rate/cap，當成獨立一層加進 stacking（自己吃自己的 cap，作用於全額）——**非遞迴**，不會執行被引用槽自己的 cashbackModel，所以不會循環引用、不會重複算 basic。
+- 與 `{rate_1}`（大括號、在 rate/cap **值欄位**、hasLevels 卡讀 levelSettings）是完全不同的兩套語法，不衝突。
+- `waterfall`（`>`）與裸 `rate` 分支不支援，偵測到會 `console.error` 並忽略該 token（不會靜默算錯）。
+- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（約 script.js:3317-3364）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
+- **定位方式（2026-07-16 更正）**：`rate_N` 用 Sheet 真實槽號 `.slot` 定位（`findRateGroupBySlot()`），不是陣列位置——中間跳號（如 slot 1,3,5）時陣列位置會漂移，slot 號不會。相容：若這張卡的 `cashbackRates` 都沒有 `.slot` 欄（舊 `cards.data` 尚未重匯出），退回舊的陣列位置 `[N-1]` 邏輯。匯出端見 `apps-script/cards-export.gs` 的 `rateObj.slot = j`。
+- 安全網：`tools/check-cross-slot-refs.js`（`tools/preflight.sh` 會跑）掃 `cards.data` 抓引用不存在槽的 `rate_N`，擋 commit；同樣優先用 `.slot` 驗證存在，無 `.slot` 欄退回陣列長度。
+
+**滿額/未滿門檻 `minSpend` / `maxSpend`**（同上，spec 功能二；2026-07-16 更正＋擴充）：
+- `rateGroup.minSpend`：單筆消費 `< minSpend` 時該槽不符資格。`rateGroup.maxSpend`：單筆消費 `>= maxSpend` 時該槽不符資格（邊界值歸 minSpend 那槽）。
+- **語義更正（2026-07-16）**：不符資格＝該槽純粹不匹配、不貢獻此活動回饋，**也不退回 `buildBasicCashbackResult`**。舊版「退回 basic」邏輯已移除——理由：用戶會用「另一個槽（填 `maxSpend`）」負責未滿門檻的回饋，退回 basic 會跟那槽打架、產生重複結果。若整張卡因此無任何槽命中，走卡片既有的 no-match 行為（不特別處理）。
+- 互斥用法：高回饋槽填 `minSpend`（只在 ≥門檻匹配）、替代槽填 `maxSpend`（只在 <門檻匹配），同商家兩槽二選一命中，邊界值只有 minSpend 那槽命中。
+- 實作在 `calculateCardCashback()` 命中槽後、計算前判斷（`amount < rateGroup.minSpend` 或 `amount >= rateGroup.maxSpend` → 跳過此槽，純 `continue`，不設任何 fallback 旗標）。
+- 顯示：詳情頁（`renderCashbackRatesIndividually` 等）與搜尋結果卡片（`createCardResultElement`）都會標註「單筆滿 NT$X 起」/「單筆未滿 NT$X」。
+
 ## 7. 停車折抵優惠（Parking Benefits）
 
 資料在 `cardsData.benefits` 陣列。**一張卡可有多個停車方案，ID 重複是正常的**（如 ctbc-uniopen 有家樂福、夢時代、統一時代多筆）——每筆是獨立物件，分別顯示。
