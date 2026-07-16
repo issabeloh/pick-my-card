@@ -52,5 +52,25 @@
 - [ ] `tools/preflight.sh` 通過；`node tools/regression/run-regression.js` 跑過（目標卡的預期差異重拍基準）
 - [ ] `docs/project/cashback-engine.md` 第 6 節補跨槽引用與 minSpend 文法；本 spec 與它不重複（spec 記設計決策，engine.md 記使用規則）
 
+## 功能三：stacking 加碼層改由 model 字串決定（Fix B，2026-07-16 用戶核定）
+
+### 問題
+`calculateStackedCashback` 過去**無條件**把卡片級 `domesticBonusRate`/`overseasBonusRate` 加進 stacking 總額（`resolveBonusComponent` 不看 model 字串），與文件文法「model 字串列出所有適用成分」矛盾。至今沒爆是因為線上無任何卡同時「有卡片級 dbr/obr」又「用不列該成分的 stacking 槽」（完整掃描：card+levelSettings 兩層皆 0 受影響槽）。ctbc-uniopen 改採「明確槽＋跨槽引用」後成為第一個：slot1 `rate+basic` 被誤加 dbr=4（顯示 7% 而非 3%）。
+
+### 修法
+stacking 的**加碼層（domesticBonusRate/overseasBonusRate）只在 model 字串含對應關鍵字時才加**。三處要一致改（否則顯示與計算不一致）：
+1. `calculateStackedCashback`（約 3607）：新增參數 `applyBonus`（boolean），`if (applyBonus && bonusRate > 0)` 才加 Layer 2。
+2. `getDisplayRate`（約 3323）：加總時同樣只在 `model.includes('domesticBonusRate')||model.includes('overseasBonusRate')` 才計入 bonusRate。
+3. `rateCompositionButtonHtml`（約 3336）：明細列出 bonus 行前套同一條件。
+
+呼叫端（stacking 分支，約 4018）計算 `const stackedApplyBonus = cashbackModel.includes('domesticBonusRate') || cashbackModel.includes('overseasBonusRate');` 傳入。
+
+**基本回饋層（basic/overseasCashback，Layer 1）不 gate**——每個 stacking 活動都含基準、且 `basic` 在海外 model 被寬鬆用來指代 overseasCashback base（如 `rate+basic+overseasBonusRate`），gate 它會脆。Layer 1 一律保留。
+
+### 影響與驗收
+- 線上卡：**0 張改變**（已掃描證實）→ regression 應維持零 diff，不需重拍基準（若真零 diff）。
+- 新測試：合成卡有卡片級 dbr、slot model=`rate+basic` → 不再加 dbr；model=`basic+domesticBonusRate` → 照加 dbr。
+- uniopen 實測（卡片級 dbr 保留）：slot1=3%、slot2=7%、slot3=11%、slot5=7%、slot21=5%。
+
 ## 命名澄清（避免未來混淆）
 `{rate_1}`（大括號，在 rate/cap **值欄位**，hasLevels 卡讀 levelSettings）與 `rate_5`（無括號，在 **cashbackModel 欄位**，引用兄弟槽）是**兩套不同語法、不同欄位**，不衝突。文件要寫清楚。
