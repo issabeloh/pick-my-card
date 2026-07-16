@@ -9331,38 +9331,39 @@ async function openMyMappingsModal() {
 // 過期配對自動沉底成收合區（含一鍵清理）；14 天內到期顯示黃色預警。
 // 拖曳排序：卡片組可整組拖、商家列限組內拖（Pointer Events，桌機手機共用）。
 
-// 卡名色塊顏色＝卡面主色：從 assets/images/cards/<card.id>.png 抽色
-// （像素過濾近白/近黑/低飽和後做色相投票，亮度 clamp 到白字可讀範圍）。
-// 新卡缺項時用 fallback 深灰；覺得哪張卡不像，直接改該行 hex 即可。
+// 卡名色塊顏色＝卡面底色：從 assets/images/cards/<card.id>.png 抽
+// 「外圈環帶面積最大的色簇」（底色一定延伸到卡片邊緣，圖案/logo 通常在中間），
+// 不調亮度——淺色可讀性由 isLightAccentColor 切深色前景處理。
+// 抽色腳本產出後人工校對；新卡缺項 fallback 深灰，不像就直接改該行 hex。
 const CARD_ACCENT_COLORS = {
-    'cathay-cube': '#1b1d21',
-    'ctbc-linepay-card': '#c88637',
-    'ctbc-uniopen': '#ffffff',
-    'dbs-aov': '#8d7859',
-    'dbs-eco': '#21783d',
-    'febank-lejia': '#d09a2f',
-    'firstbank-ileo': '#e89b17',
-    'fubon-jcard': '#20a147',
-    'hsbc-cashback-signature': '#ca323d',
-    'hsbc-liveplus': '#b43863',
-    'hsbc-titanium': '#c3372a',
-    'kgi-eslite': '#616633',
-    'mega-bt21': '#b89e12',
-    'sinopac-coin': '#af8650',
-    'sinopac-daway': '#64869b',
-    'sinopac-dawho': '#98845a',
-    'sinopac-green': '#39aac6',
-    'sinopac-sport': '#0e2d8b',
-    'sunny-jcb-crystal': '#0e8b54',
-    'taishin-jiekou': '#d83027',
-    'taishin-richart': '#ffffff',
-    'tbb-artfun': '#56a8a9',
-    'tbb-chaotian': '#d29b2d',
-    'ubot-linebank': '#4ea753',
-    'ubot-linepoint': '#659a87',
-    'ubot-mcard': '#3d96c2',
-    'yushan-ubear': '#b8a212',
-    'yushan-unicard': '#c79b38'
+    'cathay-cube': '#fdfdfd',
+    'ctbc-linepay-card': '#d9ab78',
+    'ctbc-uniopen': '#ececec',
+    'dbs-aov': '#020202',
+    'dbs-eco': '#1e7036',
+    'febank-lejia': '#f1eff0',
+    'firstbank-ileo': '#dae9dd',
+    'fubon-jcard': '#1ca244',
+    'hsbc-cashback-signature': '#303030',
+    'hsbc-liveplus': '#2f71b7',
+    'hsbc-titanium': '#020000',
+    'kgi-eslite': '#424623',
+    'mega-bt21': '#fdd601',
+    'sinopac-coin': '#e0d6cc',
+    'sinopac-daway': '#dce5ea',
+    'sinopac-dawho': '#231513',
+    'sinopac-green': '#cde9f2',
+    'sinopac-sport': '#011b6a',
+    'sunny-jcb-crystal': '#038f50',
+    'taishin-jiekou': '#d92b22',
+    'taishin-richart': '#aeb1b5',
+    'tbb-artfun': '#f4f3f3',
+    'tbb-chaotian': '#f4f1e5',
+    'ubot-linebank': '#2d3430',
+    'ubot-linepoint': '#929495',
+    'ubot-mcard': '#afb9ce',
+    'yushan-ubear': '#fde64c',
+    'yushan-unicard': '#fdeac0'
 };
 
 function getCardAccentColor(cardId) {
@@ -9374,7 +9375,7 @@ function getCardAccentColor(cardId) {
 function isLightAccentColor(hex) {
     const n = parseInt(hex.slice(1), 16);
     const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.72;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
 }
 
 // 到期狀態分類：expired（過期沉底）/ soon（14 天內，黃色預警）/ active / none
