@@ -6751,16 +6751,49 @@ input[type="text"].credit-limit-input:focus {
     font-weight: 700;
 }
 
-.sidebar-faq-link {
-    align-self: center;
-    font-size: 0.78rem;
-    color: #6b7280;
+/* FAQ 卡：與新戶 banner 同構型但刻意低調（灰階、無陰影），它不是重點入口 */
+.sidebar-faq-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.sidebar-faq-link:hover {
-    color: #374151;
-    text-decoration: underline;
+.sidebar-faq-card:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.sidebar-faq-card-emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sidebar-faq-card-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-faq-card-text strong {
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+.sidebar-faq-card-text small {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.sidebar-faq-card-arrow {
+    color: #9ca3af;
+    font-weight: 700;
 }
 
 .sidebar .card-chips {
