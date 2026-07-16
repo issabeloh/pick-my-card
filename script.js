@@ -5653,6 +5653,8 @@ function showCalcBreakdown(btn, cardResult) {
 
     // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
     // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    // 依回饋率高→低排列（2026-07-16 站長要求；Total 列固定最後不參與排序）
+    layers.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = layers.map(layer => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
         const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
@@ -5713,6 +5715,8 @@ function toggleRateComposition(btn) {
     try { comp = JSON.parse(btn.dataset.comp || '{}'); } catch (e) { return; }
     if (!comp.rows || !comp.rows.length) return;
 
+    // 依回饋率高→低排列（2026-07-16 站長要求；合計列固定最後不參與排序）
+    comp.rows.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = comp.rows.map(r => `<tr>
         <td class="bd-name">${escapeHtml(String(r.name))}</td>
         <td class="bd-rate">${r.rate}%</td>

@@ -7397,10 +7397,13 @@ input[type="text"].credit-limit-input:focus {
     font-weight: 500;
     white-space: nowrap;
 }
+/* 配色對齊快捷搜尋按鈕（.quick-search-btn：白底＋天藍細框＋藍字，
+   2026-07-16 站長要求），尺寸維持原 tag 大小 */
 .spotlight-merchant-tag {
     font-size: 0.78rem;
-    color: #4b5563;
-    background: #f3f4f6;
+    color: #0369a1;
+    background: #fff;
+    border: 1px solid #7dd3fc;
     border-radius: 999px;
     padding: 4px 10px;
     overflow: hidden;
