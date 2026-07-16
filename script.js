@@ -1907,6 +1907,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
 
+    // 深連結：?card=<卡片id> 直接開卡片詳情 modal（新戶活動一覽頁 ⓘ 的入口，
+    // 2026-07-16）。搭配 ?start 繞過 landing 首訪轉址；無效 id 靜默忽略。
+    const deepLinkCardId = new URLSearchParams(location.search).get('card');
+    if (deepLinkCardId && cardsData && cardsData.cards.some(c => c.id === deepLinkCardId)) {
+        showCardDetail(deepLinkCardId);
+    }
+
     console.log('✅ 應用程式初始化完成！');
 });
 
@@ -5646,6 +5653,8 @@ function showCalcBreakdown(btn, cardResult) {
 
     // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
     // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    // 依回饋率高→低排列（2026-07-16 站長要求；Total 列固定最後不參與排序）
+    layers.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = layers.map(layer => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
         const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
@@ -5706,6 +5715,8 @@ function toggleRateComposition(btn) {
     try { comp = JSON.parse(btn.dataset.comp || '{}'); } catch (e) { return; }
     if (!comp.rows || !comp.rows.length) return;
 
+    // 依回饋率高→低排列（2026-07-16 站長要求；合計列固定最後不參與排序）
+    comp.rows.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = comp.rows.map(r => `<tr>
         <td class="bd-name">${escapeHtml(String(r.name))}</td>
         <td class="bd-rate">${r.rate}%</td>
