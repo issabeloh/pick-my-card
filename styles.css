@@ -114,6 +114,74 @@ header {
     box-shadow: 0 2px 4px rgba(30, 64, 175, 0.3);
 }
 
+/* 桌機 header 導覽（2026-07-16 新增）：新戶活動＋FAQ 入口從側選單搬到這裡。
+   手機（≤768px）隱藏，側選單 .sidebar-page-links 兩張卡片維持原樣。 */
+.header-page-links {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+    .header-page-links {
+        display: flex;
+    }
+}
+
+/* 亮黃果凍 pill，沿用 .card-apply-cta-btn 的配色語言但縮小尺寸，用於 header 這種次要入口 */
+.header-promos-link {
+    display: inline-flex;
+    align-items: center;
+    background:
+        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    color: #7a4e00;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: 999px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 3px 0 #e8a800,
+        0 4px 10px rgba(255, 180, 0, 0.3);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.header-promos-link:hover {
+    transform: scale(1.05);
+}
+
+.header-promos-link:active {
+    transform: translateY(2px) scale(1.02, 0.94);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 0 #e8a800,
+        0 2px 5px rgba(255, 180, 0, 0.3);
+}
+
+/* 低調半透明白框 pill，與 header 既有 .auth-btn 同一套視覺語言（FAQ 只是工具連結，不搶眼） */
+.header-faq-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.header-faq-link:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
 .auth-section {
     display: flex;
     align-items: center;
@@ -6694,13 +6762,21 @@ input[type="text"].credit-limit-input:focus {
     opacity: 1;
 }
 
-/* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結 */
+/* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
+   （2026-07-16：桌機改搬到 header 導覽，這裡只留給手機側選單用；DOM 保留不刪，
+   ≥769px 隱藏即可） */
 .sidebar-page-links {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding-top: 14px;
     border-top: 1px solid #e5e7eb;
+}
+
+@media (min-width: 769px) {
+    .sidebar-page-links {
+        display: none;
+    }
 }
 
 .sidebar-promos-banner {
@@ -6905,7 +6981,16 @@ input[type="text"].credit-limit-input:focus {
         display: none;
     }
 
-    /* Input row: stack merchant input on first row, amount + button on second row */
+    /* Input row：中寬度側欄固定吃掉 240px，可用寬度比桌機窄很多，2fr:1fr 兩欄式
+       右欄放不下「金額→toggles→按鈕」三列，改用跟手機版一致的滿版堆疊。
+       （2026-07-16 修跑版）根因：這裡只覆寫了 grid-template-columns 與合併框的
+       grid-column，但合併框的 grid-row:1/4、toggles 的 grid-column:2/grid-row:2、
+       按鈕的 grid-column:2/grid-row:3 全部繼承自上面 `@media (min-width:769px)`
+       的桌機顯式定位規則（該 media query 沒有寬度上限，769-1024px 也會套用）——
+       合併框變滿版後仍佔 3 列高，跟卡在第 2 欄的 toggles／按鈕重疊，導致「計算回饋」
+       按鈕蓋住合併框與 chips。這裡要把繼承來的 grid-row/grid-column 全部歸零成
+       auto，讓四個子元素照 DOM 順序自然落版（跟手機版同一招）：
+       合併框整列 → toggles 整列 → 金額＋按鈕同列各半。 */
     .input-row-with-button {
         grid-template-columns: 1fr auto;
         gap: 12px;
@@ -6913,6 +6998,31 @@ input[type="text"].credit-limit-input:focus {
 
     .input-row-with-button > .form-group:first-child {
         grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .input-row-with-button > .form-group.button-group {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .show-promos-toggle {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        margin: 0;
+    }
+
+    /* 第 5 個 grid 子元素（匹配狀態列）也要一併歸零——它同樣繼承了桌機版
+       `grid-column:1; grid-row:3;`（固定兩軸的「完全定位」項目），若不取消，
+       auto-placement 演算法會先把它釘死在第 3 列第 1 欄，逼得金額／按鈕
+       兩個全自動項目找不到同一列的位置而各自流到不同列（金額擠進第3列
+       第2欄、按鈕流到第4列第1欄），版面仍然「能用」但不是預期的同列並排。 */
+    .matched-item-row {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        align-self: auto;
+        display: block;
+        min-height: 0;
     }
 
 }
