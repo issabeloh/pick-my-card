@@ -227,9 +227,14 @@ a {
   cursor: pointer;
 }
 
-/* 「?」說明：絕對定位浮層，不推開版面（2026-07-16 站長回饋） */
-.promos-owned-help-wrap {
+/* 「?」說明：絕對定位浮層，不推開版面（2026-07-16 站長回饋）。
+   浮層錨定在整個篩選列（group）而非小小的「?」上——錨在「?」時窄螢幕會
+   伸出 .promos-container 的 overflow:clip 邊界被裁掉（站長截圖實證）。 */
+#promos-owned-filter-group {
   position: relative;
+}
+
+.promos-owned-help-wrap {
   display: inline-flex;
   align-items: center;
 }
@@ -258,12 +263,12 @@ a {
 
 .promos-owned-help-pop {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: 340px;
   z-index: 60;
-  width: max-content;
-  max-width: 260px;
   padding: 10px 12px;
   background: var(--pmc-warn-bg);
   color: #f9fafb;
@@ -280,15 +285,6 @@ a {
 
 .promos-owned-help-pop strong {
   color: #fbbf24;
-}
-
-/* 手機上浮層可能超出左右邊界：改靠右對齊按鈕 */
-@media (max-width: 480px) {
-  .promos-owned-help-pop {
-    left: auto;
-    right: -8px;
-    transform: none;
-  }
 }
 
 /* 篩選鈕／排序鈕：抄自 styles.css .quick-search-btn 配方（白底細框圓角），
@@ -886,9 +882,7 @@ a {
     box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.promo-apply-btn:hover {
-  transform: scale(1.05);
-}
+/* hover 效果見檔尾「申辦按鈕光影」區：單次掠光＋變亮，無放大（2026-07-16 站長定案） */
 
 .promo-apply-btn:active {
   transform: translateY(3px) scale(1.02, 0.94);
@@ -1277,9 +1271,8 @@ a {
   }
 }
 
-/* ═══ 申辦按鈕光影（2026-07-16 站長選定：auto 定時掠光＋hover 整顆微亮合體）═══
-   多顆按鈕以卡片位置錯開掠光時間，避免整頁 25 顆同時閃；
-   「減少動態」系統設定下自動停用（純無障礙考量）。 */
+/* ═══ 申辦按鈕光影（2026-07-16 站長二次定案：hover 才閃一次＋變亮；無 auto、無放大）═══
+   「減少動態」系統設定下 hover 完全靜態（站長指示：與其看到殘缺的動畫不如不要動）。 */
 .promo-apply-btn {
   position: relative;
   overflow: hidden;
@@ -1295,16 +1288,11 @@ a {
   background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
   transform: translateX(-140%) skewX(-18deg);
   pointer-events: none;
-  animation: promo-shine-sweep 4.5s ease-in-out infinite;
 }
 
-.promo-card:nth-child(2n) .promo-apply-btn::after { animation-delay: 1.5s; }
-.promo-card:nth-child(3n) .promo-apply-btn::after { animation-delay: 3s; }
-
-@keyframes promo-shine-sweep {
-  0% { transform: translateX(-140%) skewX(-18deg); }
-  14% { transform: translateX(340%) skewX(-18deg); }
-  100% { transform: translateX(340%) skewX(-18deg); }
+.promo-apply-btn:hover::after {
+  transform: translateX(340%) skewX(-18deg);
+  transition: transform 0.65s ease;
 }
 
 .promo-apply-btn:hover {
@@ -1314,5 +1302,6 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .promo-apply-btn::after { display: none; }
   .promo-apply-btn:hover { filter: none; }
+  .promo-apply-btn { transition: none; }
 }
 /* ═══ 光影區結束 ═══ */

@@ -130,6 +130,15 @@ header {
         /* 貼齊右側、緊鄰頭像左邊（.header-top 是 space-between 三欄，
            不加 auto margin 會被擠到正中間——2026-07-16 站長回饋） */
         margin-left: auto;
+        /* 與頭像之間的「｜」分隔（細半透明直線，比全形字元精緻） */
+        padding-right: 16px;
+        border-right: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* 兩個連結之間的「｜」分隔 */
+    .header-nav-link + .header-nav-link {
+        padding-left: 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.3);
     }
 }
 
@@ -2070,10 +2079,61 @@ input[type="number"]:focus {
         box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* hover＝單次掠光＋變亮，無放大（2026-07-16 站長定案，與 promos 頁一致）。
+   掠光需要 overflow hidden＋::after 光帶。 */
+.card-apply-cta-btn,
+.card-detail-apply-header-btn,
+.card-detail-apply-bar-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-apply-cta-btn::after,
+.card-detail-apply-header-btn::after,
+.card-detail-apply-bar-btn::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 34%;
+    background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+    transform: translateX(-140%) skewX(-18deg);
+    pointer-events: none;
+}
+
+.card-apply-cta-btn:hover::after,
+.card-detail-apply-header-btn:hover::after,
+.card-detail-apply-bar-btn:hover::after {
+    transform: translateX(340%) skewX(-18deg);
+    transition: transform 0.65s ease;
+}
+
 .card-apply-cta-btn:hover,
 .card-detail-apply-header-btn:hover,
 .card-detail-apply-bar-btn:hover {
-    transform: scale(1.05);
+    filter: brightness(1.07) saturate(1.05);
+}
+
+/* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
+@media (prefers-reduced-motion: reduce) {
+    .card-apply-cta-btn,
+    .card-detail-apply-header-btn,
+    .card-detail-apply-bar-btn {
+        transition: none;
+    }
+
+    .card-apply-cta-btn::after,
+    .card-detail-apply-header-btn::after,
+    .card-detail-apply-bar-btn::after {
+        display: none;
+    }
+
+    .card-apply-cta-btn:hover,
+    .card-detail-apply-header-btn:hover,
+    .card-detail-apply-bar-btn:hover {
+        filter: none;
+    }
 }
 
 .card-apply-cta-btn:active,
