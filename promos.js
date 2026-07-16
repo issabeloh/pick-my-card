@@ -293,6 +293,15 @@
         } else {
           el.setAttribute('aria-expanded', 'true'); // 桌機視覺上一律展開
         }
+        // 桌機拿掉按鈕語意（role/tabindex），避免「可聚焦、看似可點、點了沒反應」
+        // （2026-07-16 站長回饋）；縮回手機寬度時還原
+        if (mq.matches) {
+          el.setAttribute('role', 'button');
+          el.setAttribute('tabindex', '0');
+        } else {
+          el.removeAttribute('role');
+          el.removeAttribute('tabindex');
+        }
       });
     }
 

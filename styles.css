@@ -4686,6 +4686,26 @@ input[type="text"].credit-limit-input:focus {
     color: white;
 }
 
+/* 站內頁連結 hover 上色（2026-07-16 站長要求：有顏色、不要動態）。
+   新戶活動＝品牌琥珀黃、FAQ＝主站藍、關於＝薄荷綠。 */
+.social-link.promos:hover {
+    background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    border-color: transparent;
+    color: #7a4e00;
+}
+
+.social-link.faq:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.social-link.about:hover {
+    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    border-color: transparent;
+    color: white;
+}
+
 .social-link svg {
     width: 16px;
     height: 16px;

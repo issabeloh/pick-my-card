@@ -410,6 +410,29 @@ a {
 .promo-card-headline {
   min-width: 0;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ⓘ 卡片詳情深連結（樣式對齊主站詳情 peek 鈕的低調圓 i） */
+.promo-card-info-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--pmc-muted);
+  text-decoration: none;
+  border-radius: 999px;
+}
+
+.promo-card-info-btn:hover {
+  color: var(--pmc-blue);
+  background: var(--pmc-chip-hover-bg);
 }
 
 .promo-type-badges {
@@ -847,14 +870,21 @@ a {
   min-height: 0;
 }
 
+/* 收合/展開觸控區只在手機有作用；桌機卡片永遠展開，游標與可點語意都要拿掉
+   （2026-07-16 站長回饋：桌機整塊 hover 出現手型、點了卻沒反應＋醜藍框） */
 .promo-card-toggle {
-  cursor: pointer;
   border-radius: 12px;
 }
 
-.promo-card-toggle:focus-visible {
-  outline: 3px solid var(--pmc-blue);
-  outline-offset: 3px;
+@media (max-width: 768px) {
+  .promo-card-toggle {
+    cursor: pointer;
+  }
+
+  .promo-card-toggle:focus-visible {
+    outline: 3px solid var(--pmc-blue);
+    outline-offset: 3px;
+  }
 }
 
 /* 立即申辦按鈕：與主站現行果凍黃「立即申辦」完全一致——配方抄自 styles.css
@@ -994,6 +1024,25 @@ a {
 
 .social-link.sponsor:hover {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+/* 站內頁連結 hover 上色（抄自 styles.css 同名規則，主站改動需同步） */
+.social-link.promos:hover {
+  background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+  border-color: transparent;
+  color: #7a4e00;
+}
+
+.social-link.faq:hover {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.social-link.about:hover {
+  background: linear-gradient(135deg, #059669 0%, #34d399 100%);
   border-color: transparent;
   color: white;
 }

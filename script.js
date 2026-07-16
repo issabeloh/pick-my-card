@@ -1907,6 +1907,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize lazy loading for videos and images
     initializeLazyLoading();
 
+    // 深連結：?card=<卡片id> 直接開卡片詳情 modal（新戶活動一覽頁 ⓘ 的入口，
+    // 2026-07-16）。搭配 ?start 繞過 landing 首訪轉址；無效 id 靜默忽略。
+    const deepLinkCardId = new URLSearchParams(location.search).get('card');
+    if (deepLinkCardId && cardsData && cardsData.cards.some(c => c.id === deepLinkCardId)) {
+        showCardDetail(deepLinkCardId);
+    }
+
     console.log('✅ 應用程式初始化完成！');
 });
 
