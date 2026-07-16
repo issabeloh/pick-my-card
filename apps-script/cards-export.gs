@@ -1449,11 +1449,17 @@ function pmcRenderPromoCard_(p) {
 
   const highlightRows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
-    highlightRows.push({ label: '適用通路', value: promo.bonus_merchants.join('、') });
+    // 2026-07-16 第五輪站長回饋：適用通路可能很長（多個通路逗號分隔），超過 3 行
+    // 高才收合＋加「展開 ▾」toggle（機制同備註，見 promos.js setupMerchantsClamp）。
+    // clampClass 包一層 <span> 而不是直接 class 加在 <dd> 上——<dl> 內容模型只允許
+    // dt/dd 當子元素，toggle 按鈕必須插在 <dd> 內部（span 之後）才合法，不能像備註
+    // 那樣直接掛在量測目標的 afterend（那是 <div> 不是 <dd>，情境不同）。
+    highlightRows.push({ label: '適用通路', value: promo.bonus_merchants.join('、'), clampClass: 'promo-merchants-value' });
   }
   const highlightHtml = highlightRows.map(function (r) {
     const val = r.multiline ? pmcEscapeHtmlMultiline_(r.value) : pmcEscapeHtml_(r.value);
-    return '<div class="promo-meta-row"><dt>' + pmcEscapeHtml_(r.label) + '</dt><dd>' + val + '</dd></div>';
+    const inner = r.clampClass ? '<span class="' + r.clampClass + '">' + val + '</span>' : val;
+    return '<div class="promo-meta-row"><dt>' + pmcEscapeHtml_(r.label) + '</dt><dd>' + inner + '</dd></div>';
   }).join('');
 
   // 活動宣傳圖：可能空、也可能是資料誤填的非網址字串（如 "picture link"），
@@ -1522,11 +1528,11 @@ function pmcRenderPromoCard_(p) {
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
   // （銀行活動頁）當主按鈕，文字改「活動詳情」。
   // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以按鈕仍放在
-  // .promo-card-toggle 內、跟可收合的 promo-card-detail 分開——2026-07-16 第四輪
-  // 站長回饋：按鈕從卡片下緣移到卡名右側同一列（見下方 title-row 組裝），不再是
-  // 獨立固定顯示的區塊；promos.js 的收合展開點擊處理需忽略按鈕本身的點擊
-  // （見 promos.js setupCardToggle 的 .promo-apply-btn 排除判斷），避免點按鈕
-  // 同時觸發卡片展開/收合。
+  // .promo-card-toggle 內、跟可收合的 promo-card-detail 分開。位置沿革：第四輪
+  // 移到卡名右側（站長回饋位置尷尬），2026-07-16 第五輪再移到卡片右上角、跟類型
+  // 徽章同一水平帶（見下方 topline 組裝）；promos.js 的收合展開點擊處理需忽略
+  // 按鈕本身的點擊（見 promos.js setupCardToggle 的 .promo-apply-btn 排除判斷），
+  // 避免點按鈕同時觸發卡片展開/收合。
   // 2026-07-15 站長回饋：移除「銀行活動頁」次要連結——有分潤連結時 promo.link
   // 不再另外顯示，避免使用者被導去銀行官網、繞過分潤申辦連結。
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
@@ -1551,23 +1557,27 @@ function pmcRenderPromoCard_(p) {
     // 鍵盤可及性（Enter/Space 觸發）與 aria-expanded 同步由 promos.js 補上。
     '    <div class="promo-card-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     '      <div class="promo-card-header">\n' +
-    '        <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
-    '        <div class="promo-card-headline">\n' +
+    // 「立即申辦」再移到卡片右上角（2026-07-16 第五輪站長回饋：卡名右側的位置很
+    // 尷尬）——跟類型徽章同一水平帶（.promo-card-topline），靠右。這一整列在
+    // .promo-card-mainline（卡圖＋卡名＋chevron）之上，跟 chevron 完全不同一列，
+    // 天生不會重疊（chevron 只在 mainline 內垂直置中，topline 在它上方另起一行）；
+    // primaryCtaHtml 可能是空字串（沒有任何連結可用時），topline 此時只剩徽章，
+    // justify-content:space-between 對單一子元素無副作用。
+    '        <div class="promo-card-topline">\n' +
     '          <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
+    primaryCtaHtml + '\n' +
+    '        </div>\n' +
+    '        <div class="promo-card-mainline">\n' +
+    '          <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
     // 卡名只出現一次：title 已含卡名（promo_name 自訂時假設含卡名／預設 fallback
     // 就是 cardName 本身，2026-07-15 第三輪站長回饋起不再附加「新戶優惠」字樣），
     // 不再另外重複一行 .promo-card-cardname（2026-07-15 第二輪站長回饋：「滙豐
     // Live+ 卡 新戶優惠」標題下又重複一行「滙豐 Live+ 卡」）。
-    // 「立即申辦」跟卡名同一列（2026-07-16 第四輪站長回饋：從卡片下緣移到卡名
-    // 右側）——卡名長時允許換行，按鈕靠右不動（見 promos.css .promo-card-title-row
-    // 的 flex align-items:flex-start）。primaryCtaHtml 可能是空字串（沒有任何連結
-    // 可用時），此時只留 <h2>，版面不受影響。
-    '          <div class="promo-card-title-row">\n' +
+    '          <div class="promo-card-headline">\n' +
     '            <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
-    primaryCtaHtml + '\n' +
     '          </div>\n' +
+    '          <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '        </div>\n' +
-    '        <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '      </div>\n' +
     toggleQuickHighlightHtml +
     '    </div>\n' +

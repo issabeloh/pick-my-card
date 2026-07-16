@@ -10,7 +10,9 @@
    4. 排序切換（即將截止 / 依卡片）
    5. 「立即申辦」點擊送 GA4 button_click 事件
    6. 活動宣傳圖小縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
-   7. 備註客戶端量測：scrollHeight 超過兩行高才收合＋加「展開 ▾」toggle（同上）
+   7. 備註／適用通路客戶端量測：scrollHeight 超過 N 行高才收合＋加「展開 ▾」
+      toggle（setupLineClamp 通用機制，備註 2 行、適用通路 3 行，2026-07-16
+      第五輪把適用通路併入同一套機制）
    8. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
       不寫入/刪除任何 key（2026-07-16 第四輪新增）
    ========================================================================== */
@@ -384,25 +386,31 @@
     });
   }
 
-  // 備註收合：先讓 .promo-notes-text 完整渲染（生成器輸出的是純 div，不再是
-  // 預設收合的 <details>），量測 scrollHeight 是否超過兩行高，超過才套
-  // .is-clamped（CSS line-clamp:2）＋補一個「展開 ▾」toggle 按鈕；兩行內的
-  // 備註完全不加任何 toggle。CSS 端 .promo-notes-text 的 line-height 用固定
-  // 數值（見 promos.css），getComputedStyle 才能量到穩定的 px 值。
-  function setupNotesClamp() {
-    var blocks = document.querySelectorAll('.promo-notes-text');
+  // 通用「超過 N 行才收合＋展開 toggle」機制：先讓內容完整渲染，量測
+  // scrollHeight 是否超過 N 行高，超過才套 .is-clamped（CSS line-clamp:N）＋
+  // 補一個「展開 ▾」toggle 按鈕；N 行內完全不加任何 toggle。呼叫端 CSS 的
+  // line-height 要用固定數值（不是 normal），getComputedStyle 才能量到穩定的
+  // px 值——見 promos.css .promo-notes-text／.promo-merchants-value。
+  // 2026-07-16 第五輪新增「適用通路」3 行收合，跟備註 2 行收合共用同一套邏輯
+  // （原本各自一份函數，抽成通用版避免兩份幾乎一樣的程式碼分岔）。
+  function setupLineClamp(selector, maxLines, toggleClassName) {
+    var blocks = document.querySelectorAll(selector);
     blocks.forEach(function (el) {
       var lineHeight = parseFloat(window.getComputedStyle(el).lineHeight);
       if (!lineHeight || isNaN(lineHeight)) return; // 量不到就保留完整顯示，不冒然收合
-      var twoLineHeight = lineHeight * 2;
+      var maxHeight = lineHeight * maxLines;
       var fullHeight = el.scrollHeight;
-      if (fullHeight <= twoLineHeight + 1) return; // 兩行內，不加 toggle
+      if (fullHeight <= maxHeight + 1) return; // N 行內，不加 toggle
       el.classList.add('is-clamped');
       var toggle = document.createElement('button');
       toggle.type = 'button';
-      toggle.className = 'promo-notes-toggle';
+      toggle.className = toggleClassName;
       toggle.textContent = '展開 ▾';
       toggle.setAttribute('aria-expanded', 'false');
+      // 插在量測目標之後（afterend）：備註量測目標是 <div>，適用通路量測目標是
+      // <dl><dd> 內的 <span>（見 apps-script/cards-export.gs 的 clampClass 註解），
+      // 兩種情況 afterend 插入點都還是合法的 flow/phrasing content，不會破壞
+      // <dl> 只能有 dt/dd 子元素的內容模型。
       el.insertAdjacentElement('afterend', toggle);
       toggle.addEventListener('click', function () {
         var stillClamped = el.classList.toggle('is-clamped');
@@ -411,6 +419,14 @@
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     });
+  }
+
+  function setupNotesClamp() {
+    setupLineClamp('.promo-notes-text', 2, 'promo-notes-toggle');
+  }
+
+  function setupMerchantsClamp() {
+    setupLineClamp('.promo-merchants-value', 3, 'promo-notes-toggle');
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -422,5 +438,6 @@
     setupApplyTracking();
     setupGiftLightbox();
     setupNotesClamp();
+    setupMerchantsClamp();
   });
 })();
