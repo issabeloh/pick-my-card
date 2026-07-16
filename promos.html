@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="promos.css?v=20260716">
+<link rel="stylesheet" href="promos.css?v=202607161437">
 
 <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
 <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
@@ -196,7 +196,7 @@
 <header class="promos-header">
   <div class="promos-header-top">
     <div class="promos-header-content">
-      <img src="assets/images/logo-header.png?v=20260716" alt="" class="promos-header-logo">
+      <img src="assets/images/logo-header.png?v=202607161437" alt="" class="promos-header-logo">
       <span class="promos-header-title">信用卡回饋大師</span>
     </div>
     <nav class="promos-header-links" aria-label="站內導覽">
@@ -233,6 +233,10 @@
         <input type="checkbox" id="promos-hide-owned-checkbox">
         隱藏我持有的卡片
       </label>
+      <span class="promos-owned-help-wrap">
+        <button type="button" class="promos-owned-help-btn" id="promos-owned-help-btn" aria-expanded="false" aria-controls="promos-owned-help-pop" aria-label="說明">?</button>
+        <span class="promos-owned-help-pop" id="promos-owned-help-pop" role="tooltip" hidden>您有「我的信用卡」的記錄，因此將幫你隱藏 <strong id="promos-owned-help-count">0</strong> 張信用卡的新戶活動</span>
+      </span>
     </div>
   </section>
 
@@ -976,6 +980,6 @@
   window.firebaseAnalytics = getAnalytics(app);
   window.logEvent = logEvent;
 </script>
-<script src="promos.js?v=20260716"></script>
+<script src="promos.js?v=202607161437"></script>
 </body>
 </html>

@@ -142,6 +142,7 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **過期過濾＋排序**：生成時只保留 `period_end` 未到期（或無 `period_end`＝不限期）的活動，
   依 `period_end` 升冪排序（無截止日排最後）；日期解析走生成器自帶的 `pmcNormalizeDate_()`，
   同樣容忍第 8 節說的 ISO／台式雙格式，不假設只有一種。
+- **versionTag 含台北時分**（2026-07-16 起）：promos.css/js 的 `?v=` 為 `YYYYMMDDHHmm`，同日多次匯出也能破快取。代價是重生成不再天然位元級一致——**做位元級重現驗證時，exportData 傳 `versionTagOverride: '<repo 版的 tag>'` 固定它**再比對。
 - **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
   天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
   不 fetch 任何東西，頁面本身就是完整資料。

@@ -1250,7 +1250,11 @@ function generatePromosPageHtml(exportData) {
   const sampleNames = sampleNameList.join('、');
   const description = prepared.length + ' 檔信用卡新戶活動一次看' + (sampleNames ? '，含' + sampleNames + '等' : '') +
     '首刷禮、新戶回饋加碼、定額回饋活動，依即將截止時間排序，持續更新。';
-  const versionTag = todayIso.replace(/-/g, '');
+  // 版本含台北時間的時分：同一天多次匯出／改版也能破 promos.css/js 快取
+  // （2026-07-16 教訓：純日期版本讓當天稍早的舊 CSS/JS 被瀏覽器快取住）。
+  // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 data-pipeline.md 第 9 節）。
+  const versionTag = (exportData && exportData.versionTagOverride) ||
+    todayIso.replace(/-/g, '') + pmcTaipeiHm_();
 
   return pmcPageTemplate_({
     title: title,
@@ -1276,6 +1280,14 @@ function pmcTodayISO_() {
   const m = String(taipei.getUTCMonth() + 1).padStart(2, '0');
   const d = String(taipei.getUTCDate()).padStart(2, '0');
   return y + '-' + m + '-' + d;
+}
+
+// 台北時間的時分（HHmm），供 versionTag 破同日快取用
+function pmcTaipeiHm_() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const taipei = new Date(utcMs + 8 * 3600000);
+  return String(taipei.getUTCHours()).padStart(2, '0') + String(taipei.getUTCMinutes()).padStart(2, '0');
 }
 
 // 容忍 ISO "2026-07-01" 與台式 "2026/7/1"（不一定補零）兩種格式（data-pipeline.md 第 8 節陷阱），
@@ -1715,6 +1727,12 @@ o.filterChipsHtml + '\n' +
 '        <input type="checkbox" id="promos-hide-owned-checkbox">\n' +
 '        隱藏我持有的卡片\n' +
 '      </label>\n' +
+// 「?」浮出說明（2026-07-16 站長回饋）：絕對定位浮層，不推開版面；
+// 文案中的張數由 promos.js 依實際比對結果填入 #promos-owned-help-count。
+'      <span class="promos-owned-help-wrap">\n' +
+'        <button type="button" class="promos-owned-help-btn" id="promos-owned-help-btn" aria-expanded="false" aria-controls="promos-owned-help-pop" aria-label="說明">?</button>\n' +
+'        <span class="promos-owned-help-pop" id="promos-owned-help-pop" role="tooltip" hidden>您有「我的信用卡」的記錄，因此將幫你隱藏 <strong id="promos-owned-help-count">0</strong> 張信用卡的新戶活動</span>\n' +
+'      </span>\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +

@@ -227,6 +227,70 @@ a {
   cursor: pointer;
 }
 
+/* 「?」說明：絕對定位浮層，不推開版面（2026-07-16 站長回饋） */
+.promos-owned-help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.promos-owned-help-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--pmc-chip-border);
+  border-radius: 999px;
+  background: var(--pmc-white);
+  color: var(--pmc-chip-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promos-owned-help-btn:hover {
+  background: var(--pmc-chip-hover-bg);
+  border-color: var(--pmc-blue);
+}
+
+.promos-owned-help-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: max-content;
+  max-width: 260px;
+  padding: 10px 12px;
+  background: var(--pmc-warn-bg);
+  color: #f9fafb;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.55;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.promos-owned-help-pop[hidden] {
+  display: none;
+}
+
+.promos-owned-help-pop strong {
+  color: #fbbf24;
+}
+
+/* 手機上浮層可能超出左右邊界：改靠右對齊按鈕 */
+@media (max-width: 480px) {
+  .promos-owned-help-pop {
+    left: auto;
+    right: -8px;
+    transform: none;
+  }
+}
+
 /* 篩選鈕／排序鈕：抄自 styles.css .quick-search-btn 配方（白底細框圓角），
    不再用果凍漸層。active 用主站藍底白字。 */
 .promo-chip,
@@ -1213,17 +1277,15 @@ a {
   }
 }
 
-/* ═══ 光影效果試用區（TRIAL，站長選定後移除本區塊、把定案效果轉正式）═══
-   用法：promos.html?shine=once（甲：hover 單次掠光）
-        promos.html?shine=auto（乙：每 4.5 秒自動掠光，手機也看得到）
-        promos.html?shine=glow（丙：hover 掠光＋整顆微亮）
-   promos.js 讀取參數後在 <body> 設 data-shine。 */
-body[data-shine] .promo-apply-btn {
+/* ═══ 申辦按鈕光影（2026-07-16 站長選定：auto 定時掠光＋hover 整顆微亮合體）═══
+   多顆按鈕以卡片位置錯開掠光時間，避免整頁 25 顆同時閃；
+   「減少動態」系統設定下自動停用（純無障礙考量）。 */
+.promo-apply-btn {
   position: relative;
   overflow: hidden;
 }
 
-body[data-shine] .promo-apply-btn::after {
+.promo-apply-btn::after {
   content: "";
   position: absolute;
   top: -20%;
@@ -1233,16 +1295,11 @@ body[data-shine] .promo-apply-btn::after {
   background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
   transform: translateX(-140%) skewX(-18deg);
   pointer-events: none;
-}
-
-body[data-shine="once"] .promo-apply-btn:hover::after {
-  transform: translateX(340%) skewX(-18deg);
-  transition: transform 0.65s ease;
-}
-
-body[data-shine="auto"] .promo-apply-btn::after {
   animation: promo-shine-sweep 4.5s ease-in-out infinite;
 }
+
+.promo-card:nth-child(2n) .promo-apply-btn::after { animation-delay: 1.5s; }
+.promo-card:nth-child(3n) .promo-apply-btn::after { animation-delay: 3s; }
 
 @keyframes promo-shine-sweep {
   0% { transform: translateX(-140%) skewX(-18deg); }
@@ -1250,17 +1307,12 @@ body[data-shine="auto"] .promo-apply-btn::after {
   100% { transform: translateX(340%) skewX(-18deg); }
 }
 
-body[data-shine="glow"] .promo-apply-btn:hover {
+.promo-apply-btn:hover {
   filter: brightness(1.07) saturate(1.05);
 }
 
-body[data-shine="glow"] .promo-apply-btn:hover::after {
-  transform: translateX(340%) skewX(-18deg);
-  transition: transform 0.6s ease;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  body[data-shine] .promo-apply-btn::after { display: none; }
-  body[data-shine="glow"] .promo-apply-btn:hover { filter: none; }
+  .promo-apply-btn::after { display: none; }
+  .promo-apply-btn:hover { filter: none; }
 }
-/* ═══ 光影試用區結束 ═══ */
+/* ═══ 光影區結束 ═══ */

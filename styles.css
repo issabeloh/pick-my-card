@@ -127,6 +127,9 @@ header {
 @media (min-width: 769px) {
     .header-page-links {
         display: flex;
+        /* 貼齊右側、緊鄰頭像左邊（.header-top 是 space-between 三欄，
+           不加 auto margin 會被擠到正中間——2026-07-16 站長回饋） */
+        margin-left: auto;
     }
 }
 

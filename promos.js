@@ -197,6 +197,39 @@
       filterState.hideOwned = checkbox.checked;
       refreshVisibility();
     });
+    setupOwnedHelp();
+  }
+
+  // 「?」浮出說明（2026-07-16 站長回饋）：點擊浮出、不推開版面；
+  // 張數＝頁面上活動卡中屬於持有卡的「不重複卡片數」（誠實反映會被藏幾張卡）。
+  function setupOwnedHelp() {
+    var btn = document.getElementById('promos-owned-help-btn');
+    var pop = document.getElementById('promos-owned-help-pop');
+    var countEl = document.getElementById('promos-owned-help-count');
+    if (!btn || !pop || !countEl) return;
+    var seen = {};
+    var n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('.promo-card[data-card-id]'), function (card) {
+      var id = card.getAttribute('data-card-id');
+      if (ownedCardIds.indexOf(id) !== -1 && !seen[id]) { seen[id] = true; n++; }
+    });
+    countEl.textContent = String(n);
+    function close() {
+      pop.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = pop.hidden;
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function (e) {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') close();
+    });
   }
 
   function setupSort() {
