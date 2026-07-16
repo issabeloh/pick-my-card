@@ -25,7 +25,7 @@
  * 16. 卡片詳情頁              → "showCardDetail"
  * 17. 筆記/免年費/結帳日       → "loadUserNotes" / "loadFeeWaiverStatus" / "loadBillingDates"
  * 18. 卡片級別                → "Card Level Management" / "resolveCardLevel"
- * 19. 回報與評分              → "feedback" / "review"
+ * 19. 回報（意見回饋）        → "feedback"
  * ============================================================ */
 
 // ========== Debug 日誌閘門 ==========
@@ -548,7 +548,9 @@ function filterExpiredRates(cardsData) {
         cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
             // Keep if no end date (ongoing) or end date >= today
             if (!promo.period_end) return true;
-            const endDate = parseDateString(promo.period_end);
+            // 一律走 parseISODate（相容 ISO 與台式斜線，見 data-pipeline.md 第 8 節）——
+            // 舊 parseDateString 只認 "/"，ISO 的 period_end 解析成 null 被當永久有效，過期活動永遠濾不掉
+            const endDate = parseISODate(promo.period_end);
             if (!endDate) return true;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -562,18 +564,6 @@ function filterExpiredRates(cardsData) {
     }
 
     return cardsData;
-}
-
-// Parse YYYY/M/D or YYYY/MM/DD date string to Date object
-function parseDateString(dateStr) {
-    if (!dateStr || typeof dateStr !== 'string') return null;
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const day = parseInt(parts[2], 10);
-    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-    return new Date(year, month, day);
 }
 
 // Returns the cards to use in comparison results, based on the user's selection.
@@ -5080,23 +5070,14 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         ? `<div class="matched-merchant">備註: ${escapeHtml(promo.notes)}</div>`
         : '';
 
-    // Promo type chips — detail page shows all types inline; search results show
-    // the first promo type as a corner chip (colored by type).
+    // Promo type chips — always an inline chips row under the header.
+    // (右上角 corner chip 已於 2026-07-15 移除：手機上會和卡名旁的馬上辦卡 pill 重疊)
     let chipsHtml = '';
-    let cornerChipHtml = '';
     if (Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
-        if (opts.showExtras) {
-            const chips = promo.promo_types
-                .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
-                .join('');
-            chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
-        } else {
-            // Prefer 回饋加碼 if present, otherwise use the first type
-            const cornerType = promo.promo_types.includes('回饋加碼')
-                ? '回饋加碼'
-                : promo.promo_types[0];
-            cornerChipHtml = `<span class="promo-type-chip promo-type-${promoTypeClass(cornerType)} promo-type-chip-corner">${escapeHtml(cornerType)}</span>`;
-        }
+        const chips = promo.promo_types
+            .map(t => `<span class="promo-type-chip promo-type-${promoTypeClass(t)}">${escapeHtml(t)}</span>`)
+            .join('');
+        chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
     }
 
     // Apply CTA link (search results only) — small "馬上辦卡" pill next to card name
@@ -5118,7 +5099,6 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         </div>`;
 
     el.innerHTML = `
-        ${cornerChipHtml}
         ${cardHeaderHtmlWithCta}
         ${chipsHtml}
         ${summary ? `<div class="promo-summary">${escapeHtml(summary)}</div>` : ''}
@@ -11920,269 +11900,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); // End of WebView Warning Modal DOMContentLoaded
-
-// ============================================
-// Review System (Star Rating)
-// ============================================
-
-let selectedRating = 0;
-
-function initReviewSystem() {
-    const openReviewBtn = document.getElementById('open-review-btn');
-    const starsModal = document.querySelectorAll('.star-modal');
-    const starRatingModal = document.getElementById('star-rating-modal');
-    const reviewFeedback = document.getElementById('review-feedback');
-    const reviewModal = document.getElementById('review-modal');
-    const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewCommentSection = document.getElementById('review-comment-section');
-    const reviewComment = document.getElementById('review-comment');
-    const reviewCharCount = document.getElementById('review-char-count');
-    const submitReviewBtn = document.getElementById('submit-review-btn');
-    const skipReviewBtn = document.getElementById('skip-review-btn');
-    const closeReviewModal = document.getElementById('close-review-modal');
-    const reviewError = document.getElementById('review-error');
-
-    // Check if user has already reviewed
-    const hasReviewed = localStorage.getItem('hasReviewed');
-    if (hasReviewed) {
-        if (openReviewBtn) {
-            openReviewBtn.style.opacity = '0.5';
-            openReviewBtn.style.pointerEvents = 'none';
-        }
-        return;
-    }
-
-    // Open review modal button
-    if (openReviewBtn) {
-        openReviewBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openReviewModalInitial();
-        });
-    }
-
-    // Star hover effect in modal
-    starsModal.forEach(star => {
-        star.addEventListener('mouseenter', () => {
-            const rating = parseInt(star.dataset.rating);
-            highlightModalStars(rating);
-        });
-    });
-
-    if (starRatingModal) {
-        starRatingModal.addEventListener('mouseleave', () => {
-            highlightModalStars(selectedRating);
-        });
-    }
-
-    // Star click handler in modal
-    starsModal.forEach(star => {
-        star.addEventListener('click', () => {
-            const rating = parseInt(star.dataset.rating);
-            selectedRating = rating;
-            highlightModalStars(rating);
-        });
-    });
-
-    // Character counter
-    if (reviewComment) {
-        reviewComment.addEventListener('input', () => {
-            reviewCharCount.textContent = reviewComment.value.length;
-        });
-    }
-
-    // Submit review
-    if (submitReviewBtn) {
-        submitReviewBtn.addEventListener('click', async () => {
-            await submitReview();
-        });
-    }
-
-    // Skip review - close modal without submitting
-    if (skipReviewBtn) {
-        skipReviewBtn.addEventListener('click', () => {
-            closeReviewModalHandler();
-        });
-    }
-
-    // Close modal
-    if (closeReviewModal) {
-        closeReviewModal.addEventListener('click', closeReviewModalHandler);
-    }
-
-    // Close on backdrop click
-    if (reviewModal) {
-        reviewModal.addEventListener('click', (e) => {
-            if (e.target === reviewModal) {
-                closeReviewModalHandler();
-            }
-        });
-    }
-}
-
-function highlightModalStars(rating) {
-    const stars = document.querySelectorAll('.star-modal');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.add('hover');
-            star.classList.add('selected');
-        } else {
-            star.classList.remove('hover');
-            star.classList.remove('selected');
-        }
-    });
-}
-
-function openReviewModalInitial() {
-    const reviewModal = document.getElementById('review-modal');
-    const reviewModalTitle = document.getElementById('review-modal-title');
-    const reviewComment = document.getElementById('review-comment');
-    const reviewCharCount = document.getElementById('review-char-count');
-    const reviewError = document.getElementById('review-error');
-
-    // Reset state
-    selectedRating = 0;
-    highlightModalStars(0);
-    reviewModalTitle.textContent = '請為我們評分';
-    reviewComment.value = '';
-    reviewCharCount.textContent = '0';
-    reviewError.style.display = 'none';
-
-    // Show modal
-    reviewModal.style.display = 'flex';
-    disableBodyScroll();
-}
-
-function closeReviewModalHandler() {
-    const reviewModal = document.getElementById('review-modal');
-    reviewModal.style.display = 'none';
-    enableBodyScroll();
-    // Reset selected rating if user closes without submitting
-    if (!localStorage.getItem('hasReviewed')) {
-        selectedRating = 0;
-        highlightModalStars(0);
-    }
-}
-
-async function submitReview() {
-    const reviewComment = document.getElementById('review-comment');
-    const submitReviewBtn = document.getElementById('submit-review-btn');
-    const reviewError = document.getElementById('review-error');
-
-    const comment = reviewComment.value.trim();
-
-    // Validate rating
-    if (!selectedRating || selectedRating === 0) {
-        reviewError.textContent = '請先選擇星星評分';
-        reviewError.style.display = 'block';
-        return;
-    }
-
-    // Disable button
-    submitReviewBtn.disabled = true;
-    submitReviewBtn.textContent = '送出中...';
-    reviewError.style.display = 'none';
-
-    try {
-        // Check if Firebase is initialized
-        if (!window.db || !window.collection || !window.addDoc || !window.serverTimestamp) {
-            throw new Error('Firebase not initialized');
-        }
-
-        const reviewData = {
-            rating: selectedRating,
-            comment: comment || null,
-            timestamp: window.serverTimestamp(),
-            userAgent: navigator.userAgent,
-            screenSize: `${window.screen.width}x${window.screen.height}`
-        };
-
-        // Try to add user ID if logged in
-        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-            reviewData.userId = window.firebaseAuth.currentUser.uid;
-            reviewData.userEmail = window.firebaseAuth.currentUser.email;
-        }
-
-        // Save to Firebase
-        await window.addDoc(window.collection(window.db, 'reviews'), reviewData);
-
-        // Mark as reviewed
-        localStorage.setItem('hasReviewed', 'true');
-        localStorage.setItem('userRating', selectedRating);
-
-        // Show success message in modal
-        showReviewSuccessInModal();
-
-        console.log('Review submitted successfully:', reviewData);
-    } catch (error) {
-        console.error('Error submitting review:', error);
-        console.error('Error details:', error.message, error.code);
-
-        // Better error messages
-        let errorMessage = '送出失敗，請稍後再試';
-        if (error.message === 'Firebase not initialized') {
-            errorMessage = '系統初始化中，請稍後再試';
-        } else if (error.code === 'permission-denied') {
-            errorMessage = '權限不足，請重新整理頁面後再試';
-        } else if (error.code === 'unavailable') {
-            errorMessage = '網路連線問題，請檢查網路後再試';
-        }
-
-        reviewError.textContent = errorMessage;
-        reviewError.style.display = 'block';
-    } finally {
-        submitReviewBtn.disabled = false;
-        submitReviewBtn.textContent = '送出評價';
-    }
-}
-
-function showReviewSuccessInModal() {
-    const reviewModalTitle = document.getElementById('review-modal-title');
-    const starRatingModal = document.getElementById('star-rating-modal');
-    const reviewCommentSection = document.getElementById('review-comment-section');
-    const reviewError = document.getElementById('review-error');
-
-    // Hide stars and comment section
-    starRatingModal.style.display = 'none';
-    reviewCommentSection.style.display = 'none';
-    reviewError.style.display = 'none';
-
-    // Change title to thank you message
-    reviewModalTitle.textContent = '感謝您的評價！';
-    reviewModalTitle.style.textAlign = 'center';
-    reviewModalTitle.style.color = '#10b981';
-    reviewModalTitle.style.fontSize = '24px';
-    reviewModalTitle.style.padding = '40px 20px';
-
-    // Auto close modal after 2 seconds
-    setTimeout(() => {
-        document.getElementById('review-modal').style.display = 'none';
-        enableBodyScroll();
-
-        // Disable review button
-        disableReviewButton();
-
-        // Reset modal for next time (if needed)
-        reviewModalTitle.style.textAlign = '';
-        reviewModalTitle.style.color = '';
-        reviewModalTitle.style.fontSize = '';
-        reviewModalTitle.style.padding = '';
-        starRatingModal.style.display = '';
-        reviewCommentSection.style.display = '';
-    }, 2000);
-}
-
-function disableReviewButton() {
-    const openReviewBtn = document.getElementById('open-review-btn');
-    if (openReviewBtn) {
-        openReviewBtn.style.opacity = '0.5';
-        openReviewBtn.style.pointerEvents = 'none';
-    }
-}
-
-// Initialize review system when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    initReviewSystem();
-});
 
 // ============================================
 // GA4 Button Click Tracking

@@ -71,7 +71,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260715022551">
+    <link rel="stylesheet" href="styles.css?v=20260716073213">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -165,6 +165,13 @@
                     <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
                     <h1>信用卡回饋大師</h1>
                 </div>
+                <!-- 桌機 header 導覽（≥769px）：原本在側選單的兩個站內頁面入口搬來這裡——
+                     側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
+                     手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
+                <nav class="header-page-links" aria-label="站內頁面">
+                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--dot">新戶活動</a>
+                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
+                </nav>
                 <div class="auth-section">
                     <div id="user-info">
                         <div class="avatar-menu-wrapper">
@@ -277,6 +284,18 @@
                         </div>
                     </div>
 
+                    <nav class="sidebar-page-links" aria-label="站內頁面">
+                        <a href="promos.html" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
+                            <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>
+                            <span class="sidebar-promos-banner-text"><strong>新戶活動一覽</strong><small>首刷禮・回饋加碼 好康快報</small></span>
+                            <span class="sidebar-promos-banner-arrow" aria-hidden="true">→</span>
+                        </a>
+                        <a href="faq.html" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
+                            <span class="sidebar-faq-card-emoji" aria-hidden="true">💬</span>
+                            <span class="sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
+                            <span class="sidebar-faq-card-arrow" aria-hidden="true">→</span>
+                        </a>
+                    </nav>
                 </div>
             </aside>
 
@@ -530,7 +549,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動</p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
@@ -927,6 +946,7 @@
                     </div>
             </div>
             <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>
+                <span class="card-detail-apply-bar-emoji" aria-hidden="true">🎁</span>
                 <span class="card-detail-apply-bar-text"></span>
                 <a class="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
             </div>
@@ -938,6 +958,20 @@
     <!-- 社群媒體與贊助區塊 -->
     <div class="social-media-footer">
         <div class="social-media-container">
+            <div class="explore-section">
+                <p class="social-media-title">探索更多</p>
+                <div class="social-media-links">
+                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
+                    </a>
+                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                        <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                    <a href="landing.html" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？↗</span>
+                    </a>
+                </div>
+            </div>
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
                 <div class="social-media-links">
@@ -959,64 +993,6 @@
                         <span class="social-text">小額抖內</span>
                     </a>
                 </div>
-            </div>
-            <div class="review-section">
-                <p class="social-media-title">評價我們</p>
-                <div class="social-media-links">
-                    <a href="#" id="open-review-btn" class="social-link review" aria-label="評價網站">
-                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
-                        </svg>
-                        <span class="social-text">給我們評分</span>
-                    </a>
-                </div>
-                <div class="review-feedback" id="review-feedback" style="display: none;"></div>
-            </div>
-            <div class="faq-section">
-                <p class="social-media-title">需要幫助？</p>
-                <div class="social-media-links">
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
-                        <span class="social-text">常見問題 FAQ ↗</span>
-                    </a>
-                </div>
-            </div>
-            <div class="faq-section">
-                <p class="social-media-title">認識我們</p>
-                <div class="social-media-links">
-                    <a href="landing.html" class="social-link about" aria-label="認識 Pick My Card">
-                        <span class="social-text">Pick My Card 是什麼？</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Review Modal -->
-    <div id="review-modal" class="modal" style="display: none;">
-        <div class="modal-content review-modal-content">
-            <div class="modal-header">
-                <h3 id="review-modal-title">請為我們評分</h3>
-                <button class="close-modal" id="close-review-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="star-rating-modal" id="star-rating-modal">
-                    <span class="star-modal" data-rating="1">★</span>
-                    <span class="star-modal" data-rating="2">★</span>
-                    <span class="star-modal" data-rating="3">★</span>
-                    <span class="star-modal" data-rating="4">★</span>
-                    <span class="star-modal" data-rating="5">★</span>
-                </div>
-                <div id="review-comment-section">
-                    <textarea id="review-comment" class="review-textarea" placeholder="想跟我們說些什麼嗎？（選填）" maxlength="500"></textarea>
-                    <div class="review-char-count">
-                        <span id="review-char-count">0</span>/500
-                    </div>
-                    <div class="review-modal-actions">
-                        <button id="submit-review-btn" class="auth-btn primary">送出評價</button>
-                        <button id="skip-review-btn" class="auth-btn secondary">略過</button>
-                    </div>
-                </div>
-                <div id="review-error" class="auth-error" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -1068,7 +1044,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260715022551" defer></script>
+    <script src="script.js?v=20260716073213" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個

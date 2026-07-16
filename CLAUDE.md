@@ -15,6 +15,7 @@
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 script.js；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
+| `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（⚠️ 主匯出程式 exportToJSON 在 Google Sheets 裡，不在 repo） |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |

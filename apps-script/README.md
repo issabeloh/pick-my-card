@@ -43,6 +43,30 @@
     commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
     Sheets 版本記錄承擔。
 
+## promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
+
+`exportToJSON()` 現在除了 `cards.data` / `cards.version`，還會多 commit 一個 `promos.html`
+（給 SEO／社群轉貼用的「新戶活動一覽」落地頁，糖果果凍風 UI）。生成邏輯與資料流細節見
+`docs/project/data-pipeline.md` 第 9 節，這裡只記站長要做的事與程式位置。
+
+- **函數**：`generatePromosPageHtml(exportData)`（純函數，不呼叫任何 Sheets/Apps Script API），
+  在 `exportToJSON()` 內讀完 `newCardholderPromos` / `cardApplyCtas` 後呼叫，回傳的 HTML
+  字串跟著 `cards.data` 一起丟進 `publishToGitHub()`。
+- **⚠️ 站長需要做的一次性動作**：這次 `cards-export.gs` 新增了 `generatePromosPageHtml`
+  及其小工具函數（`pmc*` 開頭，含 `PMC_SITE_URL` 等常數）、並修改了 `exportToJSON()` 與
+  `publishToGitHub()` 的呼叫方式——**必須把整份新版 `cards-export.gs` 貼回 Google Sheets
+  的 Apps Script 專案，否則下次匯出不會產生 / 更新 `promos.html`**（Sheets 端會繼續執行舊版
+  `publishToGitHub(encoded)`，只有一個參數，不會出錯，但也不會生成新戶活動頁）。
+- **同步檢查方式**：在 Sheets 的 Apps Script 編輯器貼上後，執行一次「📥 匯出 JSON」，
+  完成提示的訊息框最後一行應該會多一行「promos.html 已同步更新（... 筆活動中...）」；
+  GitHub repo 的 commit 紀錄裡應該看到 `promos.html` 跟 `cards.data`/`cards.version` 同一次
+  commit 一起更新。
+- **repo 裡的 `promos.html` 只是初版備份**：由 scratchpad 臨時 Node harness 執行
+  `generatePromosPageHtml()` 餵當時的 `cards.data` 產生，之後每次 Sheets 端匯出都會覆蓋成
+  最新版本——**別在 repo 手改 `promos.html` 的卡片內容**，改了下次匯出照樣會被蓋掉；要調整
+  版面/樣式改 `promos.css`，要調整互動邏輯改 `promos.js`（這兩個檔案不受生成流程管，可直接
+  在 repo 改動、正常走 `tools/preflight.sh` 流程即可）。
+
 ## 每月自動備份（.xlsx 寄信，2026-07-12 新增）
 
 Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、Watchlist/QA 等工作表），

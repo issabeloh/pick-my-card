@@ -114,6 +114,64 @@ header {
     box-shadow: 0 2px 4px rgba(30, 64, 175, 0.3);
 }
 
+/* 桌機 header 導覽（2026-07-16 新增）：新戶活動＋FAQ 入口從側選單搬到這裡。
+   手機（≤768px）隱藏，側選單 .sidebar-page-links 兩張卡片維持原樣。 */
+.header-page-links {
+    display: none;
+    align-items: center;
+    gap: 18px;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+    .header-page-links {
+        display: flex;
+        /* 貼齊右側、緊鄰頭像左邊（.header-top 是 space-between 三欄，
+           不加 auto margin 會被擠到正中間——2026-07-16 站長回饋） */
+        margin-left: auto;
+        /* 與頭像之間的「｜」分隔（細半透明直線，比全形字元精緻） */
+        padding-right: 16px;
+        border-right: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* 兩個連結之間的「｜」分隔 */
+    .header-nav-link + .header-nav-link {
+        padding-left: 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* 純文字導覽＋紅點（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
+   色彩太重）。新戶活動帶一顆小紅點（App 通知的視覺語言）默默吸睛。 */
+.header-nav-link {
+    position: relative;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 4px 2px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.header-nav-link:hover {
+    border-bottom-color: #ffc933;
+    color: #ffffff;
+}
+
+.header-nav-link--dot::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -9px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #f87171;
+}
+
 .auth-section {
     display: flex;
     align-items: center;
@@ -1999,27 +2057,101 @@ input[type="number"]:focus {
     color: #b45309;
 }
 
+/* 果凍感「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
+   亮黃漸層＋頂部玻璃光澤＋底部軟糖邊＋暖色環境陰影；active 時往下沉並輕微壓扁，
+   transition 用回彈曲線做 Q 彈手感。個別位置的 padding/font-size 留在各自的規則裡。 */
+.card-apply-cta-btn,
+.card-detail-apply-header-btn,
+.card-detail-apply-bar-btn {
+    background:
+        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    color: #7a4e00;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 999px;
+    border: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 4px 0 #e8a800,
+        0 6px 14px rgba(255, 180, 0, 0.35);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* hover＝單次掠光＋變亮，無放大（2026-07-16 站長定案，與 promos 頁一致）。
+   掠光需要 overflow hidden＋::after 光帶。 */
+.card-apply-cta-btn,
+.card-detail-apply-header-btn,
+.card-detail-apply-bar-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-apply-cta-btn::after,
+.card-detail-apply-header-btn::after,
+.card-detail-apply-bar-btn::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 34%;
+    background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+    transform: translateX(-140%) skewX(-18deg);
+    pointer-events: none;
+}
+
+.card-apply-cta-btn:hover::after,
+.card-detail-apply-header-btn:hover::after,
+.card-detail-apply-bar-btn:hover::after {
+    transform: translateX(340%) skewX(-18deg);
+    transition: transform 0.65s ease;
+}
+
+.card-apply-cta-btn:hover,
+.card-detail-apply-header-btn:hover,
+.card-detail-apply-bar-btn:hover {
+    filter: brightness(1.07) saturate(1.05);
+}
+
+/* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
+@media (prefers-reduced-motion: reduce) {
+    .card-apply-cta-btn,
+    .card-detail-apply-header-btn,
+    .card-detail-apply-bar-btn {
+        transition: none;
+    }
+
+    .card-apply-cta-btn::after,
+    .card-detail-apply-header-btn::after,
+    .card-detail-apply-bar-btn::after {
+        display: none;
+    }
+
+    .card-apply-cta-btn:hover,
+    .card-detail-apply-header-btn:hover,
+    .card-detail-apply-bar-btn:hover {
+        filter: none;
+    }
+}
+
+.card-apply-cta-btn:active,
+.card-detail-apply-header-btn:active,
+.card-detail-apply-bar-btn:active {
+    transform: translateY(3px) scale(1.02, 0.94);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 0 #e8a800,
+        0 2px 5px rgba(255, 180, 0, 0.3);
+}
+
 .card-apply-cta-btn {
     flex: 0 0 auto;
     display: inline-block;
     padding: 8px 16px;
-    background: #facc15;
-    color: #422006;
     font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: 6px;
-    border: 1px solid #eab308;
-    transition: background-color 0.15s ease, transform 0.05s ease;
     white-space: nowrap;
-}
-
-.card-apply-cta-btn:hover {
-    background: #eab308;
-}
-
-.card-apply-cta-btn:active {
-    transform: translateY(1px);
 }
 
 /* Mobile: center the CTA box horizontally within the section. */
@@ -2086,14 +2218,6 @@ input[type="number"]:focus {
     border-color: #e5e7eb;
 }
 
-/* Corner chip variant — positioned at the top-right of a search result card */
-.promo-type-chip.promo-type-chip-corner {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 1;
-}
-
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
    highlight/cap row gets full width for breathable layout. */
 .cardholder-promo-item .card-details {
@@ -2101,7 +2225,8 @@ input[type="number"]:focus {
 }
 
 /* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
-   Style matches detail page's .card-apply-cta-btn. */
+   小 pill，配色跟果凍按鈕同一組亮黃語言，但尺寸小不做滿版果凍厚度，
+   只留輕量高光＋按下 squish，避免新舊黃並存。 */
 .cardholder-promo-item {
     position: relative;
 }
@@ -2109,25 +2234,36 @@ input[type="number"]:focus {
 .promo-apply-cta-btn {
     display: inline-block;
     flex-shrink: 0;
-    padding: 2px 8px;
-    background: #facc15;
-    color: #78350f;
+    padding: 3px 9px;
+    background:
+        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    color: #7a4e00;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     text-decoration: none;
-    border-radius: 3px;
-    border: 1px solid #eab308;
-    transition: background-color 0.15s ease, transform 0.05s ease;
+    border-radius: 999px;
+    border: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 2px 0 #e8a800,
+        0 3px 7px rgba(255, 180, 0, 0.3);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     white-space: nowrap;
     line-height: 1.6;
 }
 
 .promo-apply-cta-btn:hover {
-    background: #fbbf24;
+    transform: scale(1.05);
 }
 
 .promo-apply-cta-btn:active {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(1.02, 0.94);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 0.5px 0 #e8a800,
+        0 1px 3px rgba(255, 180, 0, 0.25);
 }
 
 .promo-apply-cta-icon {
@@ -3483,23 +3619,8 @@ input[type="text"].credit-limit-input:focus {
     flex-shrink: 0;
     display: inline-block;
     padding: 6px 16px;
-    background: #facc15;
-    color: #422006;
     font-size: 14px;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 999px;
-    border: 1px solid #eab308;
     white-space: nowrap;
-    transition: background-color 0.15s ease, transform 0.05s ease;
-}
-
-.card-detail-apply-header-btn:hover {
-    background: #eab308;
-}
-
-.card-detail-apply-header-btn:active {
-    transform: translateY(1px);
 }
 
 .card-detail-apply-header-btn[hidden] {
@@ -3514,17 +3635,18 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* 手機版底部常駐申辦列，貼在 .modal-content（捲動容器）底部。
-   是 modal-content 的最後一個子節點，in-flow，不需額外 padding hack。 */
+   是 modal-content 的最後一個子節點，in-flow，不需額外 padding hack。
+   2026-07-15：改成「好康通知」語氣——淡奶油黃底＋暖色邊框，跟內文區塊拉開視覺區隔。 */
 .card-detail-apply-bar {
     position: sticky;
     bottom: 0;
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: #fff;
+    gap: 10px;
+    background: #fffbeb;
     padding: 10px 16px;
-    border-top: 1px solid #e5e7eb;
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.08);
+    border-top: 1px solid #fde68a;
+    box-shadow: 0 -4px 10px rgba(234, 179, 8, 0.15);
     z-index: 10;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
@@ -3534,12 +3656,25 @@ input[type="text"].credit-limit-input:focus {
     display: none;
 }
 
+/* 靜態禮物 emoji，純裝飾（aria-hidden）。文字被截斷隱藏時（applyCta.text 為空）
+   一併隱藏，避免只剩孤零零一個 emoji。 */
+.card-detail-apply-bar-emoji {
+    flex: 0 0 auto;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.card-detail-apply-bar:has(.card-detail-apply-bar-text[hidden]) .card-detail-apply-bar-emoji {
+    display: none;
+}
+
 .card-detail-apply-bar-text {
     flex: 1;
     min-width: 0;
-    font-size: 13px;
-    line-height: 1.4;
-    color: #374151;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #92400e;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -3554,23 +3689,8 @@ input[type="text"].credit-limit-input:focus {
     flex-shrink: 0;
     display: inline-block;
     padding: 10px 18px;
-    background: #facc15;
-    color: #422006;
     font-size: 14px;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 999px;
-    border: 1px solid #eab308;
     white-space: nowrap;
-    transition: background-color 0.15s ease, transform 0.05s ease;
-}
-
-.card-detail-apply-bar-btn:hover {
-    background: #eab308;
-}
-
-.card-detail-apply-bar-btn:active {
-    transform: translateY(1px);
 }
 
 @media (min-width: 769px) {
@@ -4508,8 +4628,7 @@ input[type="text"].credit-limit-input:focus {
 
 .social-section,
 .sponsor-section,
-.review-section,
-.faq-section {
+.explore-section {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -4527,6 +4646,7 @@ input[type="text"].credit-limit-input:focus {
 
 .social-media-links {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
     justify-content: center;
@@ -4566,12 +4686,6 @@ input[type="text"].credit-limit-input:focus {
     color: white;
 }
 
-.social-link.review:hover {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-    border-color: transparent;
-    color: white;
-}
-
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -4605,10 +4719,10 @@ input[type="text"].credit-limit-input:focus {
     }
 
     .social-media-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px 16px;
-        justify-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
     }
 
     .social-media-title {
@@ -4631,100 +4745,6 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
-/* Review Section Styles */
-.review-feedback {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
-    animation: fadeIn 0.3s ease;
-    margin-top: 8px;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Review Modal Styles */
-.review-modal-content {
-    max-width: 500px;
-    width: 90%;
-}
-
-.star-rating-modal {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    font-size: 48px;
-    cursor: pointer;
-    margin: 20px 0;
-}
-
-.star-modal {
-    color: #e5e7eb;
-    transition: all 0.2s ease;
-    user-select: none;
-    cursor: pointer;
-}
-
-.star-modal:hover,
-.star-modal.hover {
-    color: #fbbf24;
-    transform: scale(1.1);
-}
-
-.star-modal.selected {
-    color: #fbbf24;
-}
-
-#review-comment-section {
-    margin-top: 20px;
-}
-
-.review-textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 12px;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    resize: vertical;
-    transition: border-color 0.2s ease;
-}
-
-.review-textarea:focus {
-    outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
-}
-
-.review-char-count {
-    text-align: right;
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 4px;
-    margin-bottom: 16px;
-}
-
-.review-modal-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.review-modal-actions button {
-    flex: 1;
-}
-
 .auth-btn.secondary {
     background: #f3f4f6;
     color: #374151;
@@ -4732,22 +4752,6 @@ input[type="text"].credit-limit-input:focus {
 
 .auth-btn.secondary:hover {
     background: #e5e7eb;
-}
-
-/* Mobile responsiveness for review section */
-@media (max-width: 600px) {
-    .star-rating-modal {
-        font-size: 40px;
-        gap: 4px;
-    }
-
-    .review-modal-content {
-        width: 95%;
-    }
-
-    .review-modal-actions {
-        flex-direction: column;
-    }
 }
 
 /* Data Update Footer */
@@ -6799,6 +6803,116 @@ input[type="text"].credit-limit-input:focus {
     opacity: 1;
 }
 
+/* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
+   （2026-07-16：桌機改搬到 header 導覽，這裡只留給手機側選單用；DOM 保留不刪，
+   ≥769px 隱藏即可） */
+.sidebar-page-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (min-width: 769px) {
+    .sidebar-page-links {
+        display: none;
+    }
+}
+
+.sidebar-promos-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #FFE066 0%, #FFC933 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
+    text-decoration: none;
+    transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+}
+
+.sidebar-promos-banner:hover {
+    transform: translateY(-1px) scale(1.02);
+}
+
+.sidebar-promos-banner:active {
+    transform: translateY(2px) scale(1.01, 0.96);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+}
+
+.sidebar-promos-banner-emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.sidebar-promos-banner-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-promos-banner-text strong {
+    font-size: 0.92rem;
+    color: #7A4E00;
+}
+
+.sidebar-promos-banner-text small {
+    font-size: 0.72rem;
+    color: #98650a;
+}
+
+.sidebar-promos-banner-arrow {
+    color: #7A4E00;
+    font-weight: 700;
+}
+
+/* FAQ 卡：與新戶 banner 同構型但刻意低調（灰階、無陰影），它不是重點入口 */
+.sidebar-faq-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-faq-card:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.sidebar-faq-card-emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sidebar-faq-card-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-faq-card-text strong {
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+.sidebar-faq-card-text small {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.sidebar-faq-card-arrow {
+    color: #9ca3af;
+    font-weight: 700;
+}
+
 .sidebar .card-chips {
     justify-content: flex-start;
     gap: 5px;
@@ -6908,7 +7022,16 @@ input[type="text"].credit-limit-input:focus {
         display: none;
     }
 
-    /* Input row: stack merchant input on first row, amount + button on second row */
+    /* Input row：中寬度側欄固定吃掉 240px，可用寬度比桌機窄很多，2fr:1fr 兩欄式
+       右欄放不下「金額→toggles→按鈕」三列，改用跟手機版一致的滿版堆疊。
+       （2026-07-16 修跑版）根因：這裡只覆寫了 grid-template-columns 與合併框的
+       grid-column，但合併框的 grid-row:1/4、toggles 的 grid-column:2/grid-row:2、
+       按鈕的 grid-column:2/grid-row:3 全部繼承自上面 `@media (min-width:769px)`
+       的桌機顯式定位規則（該 media query 沒有寬度上限，769-1024px 也會套用）——
+       合併框變滿版後仍佔 3 列高，跟卡在第 2 欄的 toggles／按鈕重疊，導致「計算回饋」
+       按鈕蓋住合併框與 chips。這裡要把繼承來的 grid-row/grid-column 全部歸零成
+       auto，讓四個子元素照 DOM 順序自然落版（跟手機版同一招）：
+       合併框整列 → toggles 整列 → 金額＋按鈕同列各半。 */
     .input-row-with-button {
         grid-template-columns: 1fr auto;
         gap: 12px;
@@ -6916,6 +7039,31 @@ input[type="text"].credit-limit-input:focus {
 
     .input-row-with-button > .form-group:first-child {
         grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .input-row-with-button > .form-group.button-group {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
+    .show-promos-toggle {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        margin: 0;
+    }
+
+    /* 第 5 個 grid 子元素（匹配狀態列）也要一併歸零——它同樣繼承了桌機版
+       `grid-column:1; grid-row:3;`（固定兩軸的「完全定位」項目），若不取消，
+       auto-placement 演算法會先把它釘死在第 3 列第 1 欄，逼得金額／按鈕
+       兩個全自動項目找不到同一列的位置而各自流到不同列（金額擠進第3列
+       第2欄、按鈕流到第4列第1欄），版面仍然「能用」但不是預期的同列並排。 */
+    .matched-item-row {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        align-self: auto;
+        display: block;
+        min-height: 0;
     }
 
 }
@@ -7112,7 +7260,6 @@ input[type="text"].credit-limit-input:focus {
         max-height: 80dvh;
     }
 
-    .review-modal-content,
     .auth-modal-content,
     .announcement-modal-content,
     #my-mappings-modal .modal-content,
