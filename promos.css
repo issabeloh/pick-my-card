@@ -556,10 +556,12 @@ a {
   color: var(--pmc-label);
 }
 
-/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點 */
+/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點；
+   行距拉開讓多行清單好讀（2026-07-16 第六輪站長回饋） */
 .promo-hero-big--gift {
   font-size: 15px;
   font-weight: 700;
+  line-height: 1.65;
 }
 
 .promo-hero-small {
@@ -1140,6 +1142,12 @@ a {
 
   .promo-hero-big {
     font-size: 1.05rem;
+  }
+
+  /* 贈品清單手機再小一階（桌機 15px；行距沿用桌機的 1.65）。
+     必須排在上面的 .promo-hero-big 之後，否則同特異度會被它蓋掉 */
+  .promo-hero-big--gift {
+    font-size: 13px;
   }
 
   .promo-hero-item {

@@ -1365,12 +1365,14 @@ function pmcBuildPromoHero_(promo) {
   if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
     const amountDisplay = promo.voucher_amount.toLocaleString('en-US');
     const usage = promo.voucher_usage ? String(promo.voucher_usage) : '';
+    // voucher_amount 匯出時已 parseFloat 成純數字（見讀取端），不會有「NT$」「元」殘留，
+    // 前綴固定加不會重複（2026-07-16 第六輪站長回饋：「500 刷卡金」→「NT$500 刷卡金」）
     items.push({
       bucket: 'voucher',
-      bigHtml: pmcEscapeHtml_(amountDisplay),
+      bigHtml: pmcEscapeHtml_('NT$' + amountDisplay),
       smallHtml: usage ? pmcEscapeHtml_(usage) : ''
     });
-    quickParts.push(amountDisplay + (usage ? ' ' + usage : ''));
+    quickParts.push('NT$' + amountDisplay + (usage ? ' ' + usage : ''));
   }
 
   if (promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '') {
@@ -1441,11 +1443,8 @@ function pmcRenderPromoCard_(p) {
   const quickHighlightHtml = collapsedSummaryPlain
     ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(collapsedSummaryPlain) + '</p>'
     : '';
-  // 帶宣傳圖的卡片改「圖左、摘要文字右」橫排（2026-07-15 第三輪站長回饋）：
-  // 這種情況下 quickHighlightHtml 要跟縮圖一起搬到 .promo-card-toggle 之外的
-  // .promo-highlight-row（見下方 giftThumbHtml/highlightRowHtml 組裝），
-  // toggle 內部就不再重複塞一份。沒有縮圖的卡完全不受影響——quickHighlightHtml
-  // 照舊留在 toggle 內，不產生任何空的 highlight-row。
+  // 摘要（有圖時圖左文右）一律在 toggle 之外的 .promo-highlight-row 輸出，
+  // 見下方 highlightRowHtml 組裝處的說明。
 
   const highlightRows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
@@ -1480,14 +1479,11 @@ function pmcRenderPromoCard_(p) {
       '" alt="' + pmcEscapeHtml_(giftImgAlt) + '" loading="lazy" onerror="this.closest(\'.promo-gift-thumb-row\').style.display=\'none\'"></button></div>'
     : '';
 
-  // 帶圖版面（2026-07-15 第三輪站長回饋）：有縮圖時，縮圖＋摘要文字合併成
-  // 「圖左、文右」一列（.promo-highlight-row，同樣在 toggle 之外，不影響上面
-  // 的 stopPropagation 考量），quickHighlightHtml 就不再放進 toggle 內部；
-  // 無縮圖的卡完全不受影響，quickHighlightHtml 照舊留在 toggle 內、highlightRowHtml
-  // 是空字串、不產生任何多餘容器或留白。
-  const hasGiftThumb = !!giftThumbHtml;
-  const toggleQuickHighlightHtml = hasGiftThumb ? '' : quickHighlightHtml;
-  const highlightRowHtml = hasGiftThumb
+  // 摘要一律放 toggle 之外的 .promo-highlight-row（2026-07-16 第六輪站長回饋：
+  // 有圖與無圖卡的 summary 起始位置要一致——舊做法無圖時塞在 toggle 內、有圖時
+  // 在 toggle 外的 highlight-row，兩者 top 不同）。無圖時 row 內只有文字；
+  // 圖與摘要皆無時不產生空容器。
+  const highlightRowHtml = (giftThumbHtml || quickHighlightHtml)
     ? '<div class="promo-highlight-row">' + giftThumbHtml + quickHighlightHtml + '</div>'
     : '';
 
@@ -1579,7 +1575,6 @@ function pmcRenderPromoCard_(p) {
     '          <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '        </div>\n' +
     '      </div>\n' +
-    toggleQuickHighlightHtml +
     '    </div>\n' +
     highlightRowHtml +
     '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
