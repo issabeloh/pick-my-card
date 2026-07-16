@@ -1212,3 +1212,55 @@ a {
     padding-top: 10px;
   }
 }
+
+/* ═══ 光影效果試用區（TRIAL，站長選定後移除本區塊、把定案效果轉正式）═══
+   用法：promos.html?shine=once（甲：hover 單次掠光）
+        promos.html?shine=auto（乙：每 4.5 秒自動掠光，手機也看得到）
+        promos.html?shine=glow（丙：hover 掠光＋整顆微亮）
+   promos.js 讀取參數後在 <body> 設 data-shine。 */
+body[data-shine] .promo-apply-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+body[data-shine] .promo-apply-btn::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 34%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  transform: translateX(-140%) skewX(-18deg);
+  pointer-events: none;
+}
+
+body[data-shine="once"] .promo-apply-btn:hover::after {
+  transform: translateX(340%) skewX(-18deg);
+  transition: transform 0.65s ease;
+}
+
+body[data-shine="auto"] .promo-apply-btn::after {
+  animation: promo-shine-sweep 4.5s ease-in-out infinite;
+}
+
+@keyframes promo-shine-sweep {
+  0% { transform: translateX(-140%) skewX(-18deg); }
+  14% { transform: translateX(340%) skewX(-18deg); }
+  100% { transform: translateX(340%) skewX(-18deg); }
+}
+
+body[data-shine="glow"] .promo-apply-btn:hover {
+  filter: brightness(1.07) saturate(1.05);
+}
+
+body[data-shine="glow"] .promo-apply-btn:hover::after {
+  transform: translateX(340%) skewX(-18deg);
+  transition: transform 0.6s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-shine] .promo-apply-btn::after { display: none; }
+  body[data-shine="glow"] .promo-apply-btn:hover { filter: none; }
+}
+/* ═══ 光影試用區結束 ═══ */

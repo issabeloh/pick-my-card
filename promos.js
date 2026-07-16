@@ -429,6 +429,13 @@
     setupLineClamp('.promo-merchants-value', 3, 'promo-notes-toggle');
   }
 
+  // 光影效果試用（TRIAL，站長選定後移除——對應 promos.css 底部試用區塊）：
+  // ?shine=once|auto|glow 在 <body> 設 data-shine，讓三種效果可在真機上切換比較。
+  function setupShineTrial() {
+    var v = new URLSearchParams(location.search).get('shine');
+    if (v === 'once' || v === 'auto' || v === 'glow') document.body.dataset.shine = v;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     refreshBadgesAndExpiry();
     setupFilters();
@@ -439,5 +446,6 @@
     setupGiftLightbox();
     setupNotesClamp();
     setupMerchantsClamp();
+    setupShineTrial();
   });
 })();
