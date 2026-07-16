@@ -3385,11 +3385,13 @@ function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
     if (!model || !model.includes('+')) return designatedRate;
     const isOverseas = model.includes('overseasBonusRate');
-    const basicRate = resolveBaseRate(card, isOverseas);
-    // Fix B（2026-07-16）：加碼層只在 model 字串明確列出 domesticBonusRate/
-    // overseasBonusRate 時才計入，不再無條件加卡片級 dbr/obr——見
-    // cashback-engine.md 第 6 節、calculateStackedCashback 的 applyBonus gate。
+    // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出對應成分時才計入，
+    // 不再無條件加——「寫什麼才加什麼」。基本層關鍵字＝basic 或 overseasCashback
+    // （海外 model 用 basic 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。
+    // 見 cashback-engine.md 第 6 節、calculateStackedCashback 的 applyBase/applyBonus gate。
+    const applyBase = model.includes('basic') || model.includes('overseasCashback');
     const applyBonus = model.includes('domesticBonusRate') || model.includes('overseasBonusRate');
+    const basicRate = applyBase ? resolveBaseRate(card, isOverseas) : 0;
     const { rate: bonusRateRaw } = resolveBonusComponent(card, levelSettings, isOverseas);
     const bonusRate = applyBonus ? bonusRateRaw : 0;
     const crossSlotRate = resolveCrossSlotLayers(card, model, levelSettings)
@@ -3405,11 +3407,11 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
     const model = rateGroup && rateGroup.cashbackModel;
     if (!model || !model.includes('+')) return '';
     const isOverseas = model.includes('overseasBonusRate');
-    const basicRate = resolveBaseRate(card, isOverseas);
-    // Fix B（2026-07-16）：只在 model 字串明確列出 domesticBonusRate/
-    // overseasBonusRate 時才顯示加碼行——見 getDisplayRate 與
-    // calculateStackedCashback 的同款 gate，三處必須一致。
+    // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出時才顯示——
+    // 與 getDisplayRate、calculateStackedCashback 的 gate 一致，三處必須同步。
+    const applyBase = model.includes('basic') || model.includes('overseasCashback');
     const applyBonus = model.includes('domesticBonusRate') || model.includes('overseasBonusRate');
+    const basicRate = applyBase ? resolveBaseRate(card, isOverseas) : 0;
     const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
     const rows = [];
@@ -3617,19 +3619,21 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
 // （見 resolveCrossSlotLayers）。每層都吃自己的 cap、獨立作用於全額，
 // 與 Layer 1-3 完全對等地加入 totalCashback/totalRate。空陣列/未傳都安全（鐵則4：
 // 用 length 判斷，不靠陣列本身的 truthiness）。
-function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false, extraLayers = [], applyBonus = true) {
+function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false, extraLayers = [], applyBonus = true, applyBase = true) {
     const layers = [];
     let totalCashback = 0;
 
-    const basicRate = resolveBaseRate(card, isOverseas);
+    const basicRate = applyBase ? resolveBaseRate(card, isOverseas) : 0;
     const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
-    // Layer 1: base cashback on ALL spending (no cap) — 海外模型自動用
-    // overseasCashback（resolveBaseRate），所以「overseasCashback+overseasBonusRate」
-    // 這種無 basic 的組合不需要特殊處理
-    const basicCashback = Math.floor(amount * basicRate / 100);
-    layers.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
-    totalCashback += basicCashback;
+    // Layer 1: base cashback on ALL spending (no cap) — gated by applyBase（Fix B）：
+    // 基本層只在 model 字串列出 basic/overseasCashback 時才加（「寫什麼才加什麼」）。
+    // 海外模型的 base 由 resolveBaseRate 自動給 overseasCashback。
+    if (applyBase && basicRate > 0) {
+        const basicCashback = Math.floor(amount * basicRate / 100);
+        layers.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
+        totalCashback += basicCashback;
+    }
 
     // Layer 2: Bonus (domestic / overseas), within its own cap — gated by
     // applyBonus (Fix B, 2026-07-16): the card-level bonus rate only applies
@@ -3666,8 +3670,8 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     }
 
     // Displayed 回饋率 = sum of all active components (e.g. 3%+1%+1% = 5%)
-    // bonusRate 同 Layer 2 受 applyBonus gate（Fix B）：未 gate 會讓顯示率含卡片級加碼、
-    // 與實際計入的金額不一致（金額層 3641 已 gate）。
+    // basicRate 已在宣告時受 applyBase gate、bonusRate 在此受 applyBonus gate（Fix B）——
+    // 顯示率與實際計入金額一致（金額層 Layer 1/2 各自已 gate）。
     const totalRate = designatedRate + basicRate + (applyBonus ? bonusRate : 0) + extraRateSum;
 
     return { cashbackAmount: totalCashback, layers, totalRate };
@@ -3985,6 +3989,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
         let stackedIsOverseas = false;
         let stackedExtraLayers = []; // 跨槽引用 rate_N 解析出的獨立層（僅 stacking 分支使用）
         let stackedApplyBonus = false; // Fix B（2026-07-16）：加碼層只在 model 字串含 dbr/obr 關鍵字時才加
+        let stackedApplyBase = false; // Fix B（2026-07-16）：基本層只在 model 字串含 basic/overseasCashback 時才加
         let levelSettingsForCalc = null;
         let isOverseasTransaction = false;
 
@@ -4037,6 +4042,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
             // domesticBonusRate/overseasBonusRate 時才加，不再無條件加卡片級
             // dbr/obr——見 docs/project/cross-slot-ref-and-minspend-spec.md 功能三。
             stackedApplyBonus = cashbackModel.includes('domesticBonusRate') || cashbackModel.includes('overseasBonusRate');
+            // 基本層（Layer 1）同理：只在 model 字串明確列出 basic 或 overseasCashback 時才加。
+            stackedApplyBase = cashbackModel.includes('basic') || cashbackModel.includes('overseasCashback');
         } else if (cashbackModel && cashbackModel.includes('>')) {
             shouldUseLayeredCalculation = true;
             isOverseasTransaction = isOverseasModel;
@@ -4071,7 +4078,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     cap,
                     stackedIsOverseas,
                     stackedExtraLayers,
-                    stackedApplyBonus
+                    stackedApplyBonus,
+                    stackedApplyBase
                 );
                 cashbackAmount = stackedResult.cashbackAmount;
                 calculationLayers = stackedResult.layers;
