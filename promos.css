@@ -477,7 +477,8 @@ a {
   padding: 3px 12px;
   border-radius: 999px;
   color: #fff;
-  background: #f97316;
+  /* 深橘（原 #f97316 亮橘太搶——2026-07-17 站長回饋頁面顏色太多） */
+  background: #c2410c;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
@@ -743,6 +744,75 @@ a {
 .promo-lightbox-close:focus-visible {
   outline: 3px solid #fff;
   outline-offset: 2px;
+}
+
+/* 卡片詳情內嵌彈窗（2026-07-16，方案 A）：點 ⓘ 不開新分頁，改在這個全螢幕遮罩裡用
+   常駐 iframe 載入主站 /?start&embed=1 顯示 #card-detail-modal（見 promos.js
+   setupCardDetailOverlay）。z-index 故意高於 .promo-lightbox（1000），避免兩者疊在一起
+   時被蓋住。手機全版面貼齊螢幕（模擬原生彈窗）；桌機留邊距＋置中直式卡片，寬度貼近
+   主站 modal-content 本身的比例，視覺上像原生彈窗而不是「網頁裡的網頁」。 */
+.promo-detail-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.86);
+  z-index: 1200;
+}
+
+.promo-detail-overlay.is-open {
+  display: flex;
+}
+
+.promo-detail-overlay-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.promo-detail-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff; /* iframe 內容（尤其載入中）先白底，避免透空看到遮罩穿幫 */
+}
+
+.promo-detail-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: promo-detail-spin 0.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes promo-detail-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@media (min-width: 640px) {
+  .promo-detail-overlay {
+    padding: 24px;
+  }
+  .promo-detail-overlay-inner {
+    max-width: 720px;
+    height: 90vh;
+    max-height: 900px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-detail-spinner { animation-duration: 1.6s; }
 }
 
 .promo-card-meta {
