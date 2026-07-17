@@ -29,10 +29,28 @@
 
 /* 導覽「常見問題」目前頁的 active 視覺（aria-current="page"）：styles.css:119-135
    只定義 .header-nav-link 基礎樣式，沒有 active 態（主站導覽本身沒有「目前在哪頁」
-   的需求，只有 faq.html/promos.html 互相對照時才需要）。 */
+   的需求，只有 faq.html/promos.html 互相對照時才需要）。
+   2026-07-17 站長回饋修正：「常見問題」是 styles.css .header-nav-link + .header-nav-link
+   選到的第二顆連結，該規則為了畫連結間的「｜」分隔線加了 padding-left:18px，於是
+   border-bottom（含在整個 padding box 內）連分隔線的留白都框進去，比照第一顆
+   「新戶活動」hover 時的金色底線「又低又寬」。改用 ::after 直接以 left/right 對齊
+   文字實際起訖點（18px＝分隔線 padding-left，2px＝基礎 padding-right），
+   position:relative 元件本身是 border-box，bottom:0 天生對齊原本 border-bottom
+   的垂直位置，不需要另外量測——這樣底線長度/位置就跟「新戶活動」hover 時完全一致。 */
 .header-nav-link[aria-current="page"] {
     font-weight: 800;
-    border-bottom-color: rgba(255, 255, 255, 0.85);
+    border-bottom-color: transparent;
+}
+
+.header-nav-link[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 18px;
+    right: 2px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 1px;
+    background: rgba(255, 255, 255, 0.85);
 }
 
 /* 返回首頁鈕（取自 8adda98 版本，站長二輪回饋撤回頭像後恢復）：半透明白底
@@ -81,7 +99,7 @@
 /* 手機抽屜「新戶活動一覽」卡（🎁）去立體感（2026-07-16 站長二輪回饋：「目前明顯
    得太刻意」）。styles.css 本體的漸層＋內凹白線＋多層陰影＋彈跳位移一律不動
    （index.html 自己的抽屜不受影響），這裡只在 faq.css override 壓平成跟同抽屜
-   工具卡（.sidebar-faq-card，本頁連去回饋比較工具）相近的平面卡片感：純色底
+   工具卡（.sidebar-tool-card，本頁連去回饋比較工具）相近的平面卡片感：純色底
    ＋細邊框＋無陰影，hover 只換底色、不做位移動畫。 */
 .sidebar-promos-banner {
     background: #fff7e0;
@@ -98,6 +116,58 @@
 .sidebar-promos-banner:active {
     transform: none;
     box-shadow: none;
+}
+
+/* 手機抽屜「回饋比較工具」卡（💳，2026-07-17 站長回饋：原本借用 styles.css 的
+   .sidebar-faq-card 灰階樣式，跟同抽屜「新戶活動一覽」卡分不出主次；改名
+   .sidebar-tool-card 並整組自帶樣式——faq.html 有載 styles.css 但 class 已改名，
+   不會再繼承到舊規則。配色比照 promos.css 的 .promos-sidebar-tool-card 同款糖果
+   薄荷綠（--pmc-candy-mint-bg/#ddfbef、--pmc-candy-mint-text/#0b7a56，faq.css
+   沒有站台共用變數檔可 var()，直接寫死同值），版面結構複製 styles.css 的
+   .sidebar-faq-card 系列；壓平風格與上面的 .sidebar-promos-banner override 一致：
+   純色底＋細邊框＋無陰影＋hover 只換底色。 */
+.sidebar-tool-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #ddfbef;
+    border: 1px solid #b7f0d5;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-tool-card:hover {
+    background: #c9f5e2;
+    border-color: #9fe9c8;
+}
+
+.sidebar-tool-card-emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sidebar-tool-card-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-tool-card-text strong {
+    font-size: 0.85rem;
+    color: #0b7a56;
+}
+
+.sidebar-tool-card-text small {
+    font-size: 0.7rem;
+    color: #0b7a56;
+}
+
+.sidebar-tool-card-arrow {
+    color: #0b7a56;
+    font-weight: 700;
 }
 
 /* 麵包屑（2026-07-16 新增）：hero 上方一行低調小字，「首頁」連回主站，
