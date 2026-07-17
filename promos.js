@@ -293,6 +293,15 @@
         } else {
           el.setAttribute('aria-expanded', 'true'); // 桌機視覺上一律展開
         }
+        // 桌機拿掉按鈕語意（role/tabindex），避免「可聚焦、看似可點、點了沒反應」
+        // （2026-07-16 站長回饋）；縮回手機寬度時還原
+        if (mq.matches) {
+          el.setAttribute('role', 'button');
+          el.setAttribute('tabindex', '0');
+        } else {
+          el.removeAttribute('role');
+          el.removeAttribute('tabindex');
+        }
       });
     }
 
@@ -464,6 +473,151 @@
     if (v === 'once' || v === 'auto' || v === 'glow') document.body.dataset.shine = v;
   }
 
+  // 卡片詳情內嵌彈窗（2026-07-16，站長核准「方案 A」）：點 ⓘ 不再開新分頁，改在頁內
+  // 用一個常駐、只建立一次的 iframe 載入主站 /?start&embed=1，postMessage 換卡讓第二
+  // 張以後的卡「秒開」。協定（origin 兩端都檢查，只信 location.origin）：
+  //   iframe → 父頁：{type:'pmc-embed-ready'}（初始化完成）、
+  //            {type:'pmc-detail-closed'}（modal 被關閉，兩條關閉路徑共用同一個
+  //            closeModal，見 script.js showCardDetail）
+  //   父頁 → iframe：{type:'pmc-open-card', cardId}（開/換卡）
+  // 逾時 fallback：首次點擊後 8 秒內沒收到 ready，視為 iframe 內嵌不可行（例如
+  // script.js 初始化卡住），放棄攔截、改用原本 <a> 的 href 開新分頁（target="_blank"
+  // 已內建在生成的 HTML 裡），並記下「已放棄」——之後的點擊完全不再攔截、直接讓瀏覽器
+  // 原生開新分頁，不會每次都空等 8 秒。
+  function setupCardDetailOverlay() {
+    var READY_TIMEOUT_MS = 8000;
+    var overlay = null;
+    var iframeEl = null;
+    var spinnerEl = null;
+    var iframeReady = false;
+    var iframeGaveUp = false;
+    var readyTimer = null;
+    var pendingCardId = null; // ready 之前點擊時先記住，ready 到達後補送
+    var scrollLocked = false;
+    var scrollLockY = 0;
+
+    // 鎖父頁捲動：這裡只管 promos.html 自己這個 document，跟 iframe 內主站自己的
+    // body scroll lock（disableBodyScroll/enableBodyScroll，refcount）完全獨立，
+    // 兩個 document 互不知道對方存在，不會互相干擾也不用互相通知。
+    function lockScroll() {
+      if (scrollLocked) return;
+      scrollLocked = true;
+      scrollLockY = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = '-' + scrollLockY + 'px';
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+    }
+
+    function unlockScroll() {
+      if (!scrollLocked) return;
+      scrollLocked = false;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollLockY);
+    }
+
+    function ensureOverlay() {
+      if (overlay) return;
+      overlay = document.createElement('div');
+      overlay.className = 'promo-detail-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.setAttribute('aria-label', '卡片詳情');
+      overlay.innerHTML =
+        '<div class="promo-detail-overlay-inner">' +
+        '<div class="promo-detail-spinner" aria-hidden="true"></div>' +
+        '<iframe class="promo-detail-iframe" title="卡片詳情" src="/?start&embed=1"></iframe>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      iframeEl = overlay.querySelector('.promo-detail-iframe');
+      spinnerEl = overlay.querySelector('.promo-detail-spinner');
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) hideOverlay();
+      });
+      readyTimer = window.setTimeout(function () {
+        if (iframeReady) return;
+        iframeGaveUp = true;
+        console.error('❌ promos.js 卡片詳情 iframe 逾時（' + READY_TIMEOUT_MS + 'ms）未就緒，改開新分頁');
+        var fallbackCardId = pendingCardId;
+        pendingCardId = null;
+        hideOverlay();
+        if (fallbackCardId) openInNewTab(fallbackCardId);
+      }, READY_TIMEOUT_MS);
+    }
+
+    function showOverlay() {
+      ensureOverlay();
+      overlay.classList.add('is-open');
+      if (spinnerEl) spinnerEl.hidden = iframeReady;
+      lockScroll();
+    }
+
+    function hideOverlay() {
+      if (!overlay) return;
+      overlay.classList.remove('is-open');
+      unlockScroll();
+    }
+
+    function openInNewTab(cardId) {
+      window.open('/?start&card=' + encodeURIComponent(cardId), '_blank', 'noopener,noreferrer');
+    }
+
+    function requestCard(cardId) {
+      if (!iframeEl || !iframeEl.contentWindow) return;
+      try {
+        iframeEl.contentWindow.postMessage({ type: 'pmc-open-card', cardId: cardId }, location.origin);
+      } catch (err) {
+        console.error('❌ promos.js postMessage pmc-open-card 失敗:', err);
+      }
+    }
+
+    window.addEventListener('message', function (event) {
+      if (event.origin !== location.origin) return;
+      var data = event.data;
+      if (!data || !data.type) return;
+      if (data.type === 'pmc-embed-ready') {
+        iframeReady = true;
+        if (readyTimer) {
+          window.clearTimeout(readyTimer);
+          readyTimer = null;
+        }
+        if (spinnerEl) spinnerEl.hidden = true;
+        if (pendingCardId) {
+          requestCard(pendingCardId);
+          pendingCardId = null;
+        }
+      } else if (data.type === 'pmc-detail-closed') {
+        hideOverlay();
+      }
+    });
+
+    // Esc 在父頁也能關（iframe 內 modal 本身沒有 Esc 監聽，這裡是唯一的鍵盤關閉路徑）。
+    document.addEventListener('keydown', function (e) {
+      if ((e.key === 'Escape' || e.key === 'Esc') && overlay && overlay.classList.contains('is-open')) {
+        hideOverlay();
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('.promo-card-info-btn');
+      if (!link) return;
+      var cardId = link.getAttribute('data-card-id');
+      if (!cardId || iframeGaveUp) return; // 沒有 id，或已逾時放棄 → 放行原生 <a> 行為
+      e.preventDefault();
+      showOverlay();
+      if (iframeReady) {
+        requestCard(cardId);
+      } else {
+        pendingCardId = cardId;
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     refreshBadgesAndExpiry();
     setupFilters();
@@ -475,5 +629,6 @@
     setupNotesClamp();
     setupMerchantsClamp();
     setupShineTrial();
+    setupCardDetailOverlay();
   });
 })();

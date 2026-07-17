@@ -52,6 +52,36 @@ html.pmc-returning-user #pmc-boot-loader {
     letter-spacing: 0.5px;
 }
 
+/* Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：<html> 帶 pmc-embed
+   class 時（index.html pre-paint script 依 ?embed=1 加上）只留 #card-detail-modal
+   可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight）
+   隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的 .promo-detail-overlay）遮罩區時，
+   視覺上就像原生彈窗。#card-detail-modal 本身的樣式（position:fixed 全螢幕深色遮罩）
+   完全不用改，它天生就會蓋滿 iframe viewport。 */
+html.pmc-embed body {
+    background: transparent;
+    padding: 0;
+}
+html.pmc-embed .container {
+    background: transparent;
+    box-shadow: none;
+}
+html.pmc-embed header,
+html.pmc-embed .sidebar-overlay,
+html.pmc-embed .app-layout,
+html.pmc-embed .spotlight-section,
+html.pmc-embed .finance-warning-row,
+html.pmc-embed .social-media-footer,
+html.pmc-embed .data-update-footer,
+html.pmc-embed .disclaimer-footer,
+html.pmc-embed #back-to-top-btn,
+html.pmc-embed #feedback-btn,
+html.pmc-embed #my-mappings-btn,
+html.pmc-embed #pmc-boot-loader,
+html.pmc-embed .modal:not(#card-detail-modal) {
+    display: none !important;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -4693,6 +4723,26 @@ input[type="text"].credit-limit-input:focus {
     color: white;
 }
 
+/* 站內頁連結 hover 上色（2026-07-16 站長要求：有顏色、不要動態）。
+   新戶活動＝品牌琥珀黃、FAQ＝主站藍、關於＝薄荷綠。 */
+.social-link.promos:hover {
+    background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    border-color: transparent;
+    color: #7a4e00;
+}
+
+.social-link.faq:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.social-link.about:hover {
+    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    border-color: transparent;
+    color: white;
+}
+
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -7414,10 +7464,13 @@ input[type="text"].credit-limit-input:focus {
     font-weight: 500;
     white-space: nowrap;
 }
+/* 配色對齊快捷搜尋按鈕（.quick-search-btn：白底＋天藍細框＋藍字，
+   2026-07-16 站長要求），尺寸維持原 tag 大小 */
 .spotlight-merchant-tag {
     font-size: 0.78rem;
-    color: #4b5563;
-    background: #f3f4f6;
+    color: #0369a1;
+    background: #fff;
+    border: 1px solid #7dd3fc;
     border-radius: 999px;
     padding: 4px 10px;
     overflow: hidden;
