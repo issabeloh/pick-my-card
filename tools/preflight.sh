@@ -59,6 +59,16 @@ if echo "$added" | grep -qE 'console\.(log|warn)'; then
   echo "⚠️  新增了 console.log/warn——正式環境會被靜音；錯誤處理應改用 console.error"; warn=1
 fi
 
+# ---- 4) 跨槽引用 rate_N 安全網（cashbackModel 引用不存在的槽 → 擋 commit）----
+# 見 docs/project/cross-slot-ref-and-minspend-spec.md 功能一、驗收清單第 4 條。
+if command -v node >/dev/null 2>&1; then
+  if ! node tools/check-cross-slot-refs.js; then
+    fail=1
+  fi
+else
+  echo "⚠️  找不到 node，略過跨槽引用 rate_N 檢查（cards.data 若改了 cashbackModel 請自行確認 rate_N 沒指到不存在的槽）"; warn=1
+fi
+
 # ---- 結果 ----
 echo "---"
 if [ "$fail" -ne 0 ]; then

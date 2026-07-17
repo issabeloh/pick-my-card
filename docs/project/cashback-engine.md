@@ -93,7 +93,13 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **計算函數**：
 - `calculateStackedCashback()`（stacking）：各成分同時作用於全額、各自上限。顯示回饋率 = rate_N＋基本＋加碼 自動加總（如 3%+1%+1%=5%）。範例 Sport 卡 Apple Pay 消費 6,000：`1%×6,000 + 1%×min(6,000,5,000) + 3%×min(6,000,10,000) = 290`，顯示 5%
-- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700
+  - **「寫什麼才加什麼」gate（Fix B，2026-07-16 起）**：stacking 的**基本層與加碼層都只在 `cashbackModel` 字串明確列出對應成分時才加**，不再無條件加卡片級 `basicCashback`/`domesticBonusRate`/`overseasBonusRate`：
+    - 加碼層（Layer 2）：`applyBonus = model.includes('domesticBonusRate') || model.includes('overseasBonusRate')`。例：`rate+basic` 不加卡片級加碼；`basic+domesticBonusRate` 才加。
+    - 基本層（Layer 1）：`applyBase = model.includes('basic') || model.includes('overseasCashback')`（海外 model 用 `basic` 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。例：`rate+basic` 加基本；`rate+domesticBonusRate`（沒寫 basic）**不加**基本。
+    - 注意「單獨 `rate`」與「留空」不走 stacking、不受此 gate：單獨 `rate`＝排除型（cap 內 rate、溢出 0，不加 basic）；留空＝簡單路徑（cap 內 rate、溢出 basic）。
+  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這兩個 flag。呼叫端（約 script.js:4040 附近）算 `stackedApplyBonus`/`stackedApplyBase` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
+  - 背景：舊版無條件加卡片級加碼，與「model 字串列出所有適用成分」的文法矛盾；線上掃描 0 張卡受影響，直到 ctbc-uniopen 改採明確槽＋跨槽引用後才第一次觸發（slot1 `rate+basic` 被誤加 dbr）。詳見 `docs/project/cross-slot-ref-and-minspend-spec.md` 功能三。
+- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
 - 簡單路徑（無加碼卡的空白預設）：cap 內 rate_N、溢出 basicCashback
 - 選擇邏輯（約 script.js:3554 `const cashbackModel = matchedRateGroup?.cashbackModel`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
 
@@ -106,6 +112,22 @@ if (!card.specialItems || card.specialItems.length === 0)
 **計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
 **分層計算的觸發**（約 script.js:2186-2208）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
+
+**跨槽引用 `rate_N`**（2026-07-16 起，設計決策見 `docs/project/cross-slot-ref-and-minspend-spec.md`）：
+- 只在 stacking（`+`）分支有效，寫成裸 `rate_N`（無大括號），如 `rate+rate_5+rate_1+basic`。N＝同卡 `card.cashbackRates` 陣列的 1-based 槽位編號。
+- 解析為讀 `card.cashbackRates[N-1]` 的原始 rate/cap，當成獨立一層加進 stacking（自己吃自己的 cap，作用於全額）——**非遞迴**，不會執行被引用槽自己的 cashbackModel，所以不會循環引用、不會重複算 basic。
+- 與 `{rate_1}`（大括號、在 rate/cap **值欄位**、hasLevels 卡讀 levelSettings）是完全不同的兩套語法，不衝突。
+- `waterfall`（`>`）與裸 `rate` 分支不支援，偵測到會 `console.error` 並忽略該 token（不會靜默算錯）。
+- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（約 script.js:3317-3364）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
+- **定位方式（2026-07-16 更正）**：`rate_N` 用 Sheet 真實槽號 `.slot` 定位（`findRateGroupBySlot()`），不是陣列位置——中間跳號（如 slot 1,3,5）時陣列位置會漂移，slot 號不會。相容：若這張卡的 `cashbackRates` 都沒有 `.slot` 欄（舊 `cards.data` 尚未重匯出），退回舊的陣列位置 `[N-1]` 邏輯。匯出端見 `apps-script/cards-export.gs` 的 `rateObj.slot = j`。
+- 安全網：`tools/check-cross-slot-refs.js`（`tools/preflight.sh` 會跑）掃 `cards.data` 抓引用不存在槽的 `rate_N`，擋 commit；同樣優先用 `.slot` 驗證存在，無 `.slot` 欄退回陣列長度。
+
+**滿額/未滿門檻 `minSpend` / `maxSpend`**（同上，spec 功能二；2026-07-16 更正＋擴充）：
+- `rateGroup.minSpend`：單筆消費 `< minSpend` 時該槽不符資格。`rateGroup.maxSpend`：單筆消費 `>= maxSpend` 時該槽不符資格（邊界值歸 minSpend 那槽）。
+- **語義更正（2026-07-16）**：不符資格＝該槽純粹不匹配、不貢獻此活動回饋，**也不退回 `buildBasicCashbackResult`**。舊版「退回 basic」邏輯已移除——理由：用戶會用「另一個槽（填 `maxSpend`）」負責未滿門檻的回饋，退回 basic 會跟那槽打架、產生重複結果。若整張卡因此無任何槽命中，走卡片既有的 no-match 行為（不特別處理）。
+- 互斥用法：高回饋槽填 `minSpend`（只在 ≥門檻匹配）、替代槽填 `maxSpend`（只在 <門檻匹配），同商家兩槽二選一命中，邊界值只有 minSpend 那槽命中。
+- 實作在 `calculateCardCashback()` 命中槽後、計算前判斷（`amount < rateGroup.minSpend` 或 `amount >= rateGroup.maxSpend` → 跳過此槽，純 `continue`，不設任何 fallback 旗標）。
+- 顯示：詳情頁（`renderCashbackRatesIndividually` 等）與搜尋結果卡片（`createCardResultElement`）都會標註「單筆滿 NT$X 起」/「單筆未滿 NT$X」。
 
 ## 7. 停車折抵優惠（Parking Benefits）
 
