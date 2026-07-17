@@ -83,10 +83,10 @@
       }
       if (!badge) return;
       if (diff === 0) {
-        badge.textContent = '今天截止';
+        badge.textContent = '今天截止！';
         badge.hidden = false;
       } else if (diff <= 14) {
-        badge.textContent = '剩 ' + diff + ' 天';
+        badge.textContent = '剩 ' + diff + ' 天！';
         badge.hidden = false;
       } else {
         badge.hidden = true;
