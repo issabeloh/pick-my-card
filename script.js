@@ -3520,12 +3520,10 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
         const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData);
         html += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
 
-        // 滿額/未滿門檻是重要條件：黑色、置於消費上限上方（2026-07-17 用戶定案）
+        // 滿額門檻是重要條件：黑色、置於消費上限上方；maxSpend（未滿門檻）
+        // 只影響匹配、不顯示標註（2026-07-17 用戶定案）
         if (rate.minSpend) {
             html += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
-        }
-        if (rate.maxSpend) {
-            html += `<div class="cashback-condition spend-threshold">單筆未滿 NT$${Math.floor(rate.maxSpend).toLocaleString()}</div>`;
         }
 
         if (parsedCap) {
@@ -5780,15 +5778,14 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     const period = result.matchedRateGroup.period;
                     const conditions = result.matchedRateGroup.conditions;
                     const minSpend = result.matchedRateGroup.minSpend;
-                    const maxSpend = result.matchedRateGroup.maxSpend;
 
                     if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
                     // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
                     // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
                     // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
+                    // maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
                     if (minSpend) thresholdLine += `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())}</div>`;
-                    if (maxSpend) thresholdLine += `<div class="spend-threshold-note">✔ 單筆未滿 NT$${escapeHtml(Math.floor(maxSpend).toLocaleString())}</div>`;
                 } else if (endingSoonInlineBadge && result.periodEnd) {
                     const periodDisplay = result.periodStart
                         ? `${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}`
@@ -8218,12 +8215,10 @@ basicCashbackDiv.innerHTML = basicContent;
             // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
             const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, null);
             specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
-            // 滿額/未滿門檻是重要條件：黑色、置於消費上限上方（2026-07-17 用戶定案）
+            // 滿額門檻是重要條件：黑色、置於消費上限上方；maxSpend（未滿門檻）
+            // 只影響匹配、不顯示標註（2026-07-17 用戶定案）
             if (rate.minSpend) {
                 specialContent += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
-            }
-            if (rate.maxSpend) {
-                specialContent += `<div class="cashback-condition spend-threshold">單筆未滿 NT$${Math.floor(rate.maxSpend).toLocaleString()}</div>`;
             }
 
             if (parsedCap) {
