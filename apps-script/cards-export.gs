@@ -1586,9 +1586,11 @@ function pmcRenderPromoCard_(p) {
     // Live+ 卡 新戶優惠」標題下又重複一行「滙豐 Live+ 卡」）。
     '          <div class="promo-card-headline">\n' +
     '            <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
-    // ⓘ 卡片詳情（2026-07-16 站長要求）：連去主站的卡片詳情深連結
-    // （?card= 由 script.js 開 modal；?start 繞過 landing 首訪轉址）。
-    '            <a class="promo-card-info-btn" href="' + pmcEscapeHtml_('/?start&card=' + cardId) + '" target="_blank" rel="noopener noreferrer" aria-label="查看卡片詳情" title="查看卡片詳情">&#9432;</a>\n' +
+    // ⓘ 卡片詳情（2026-07-16 站長要求；同日方案 A 改為 iframe 內嵌彈窗）：href 保留
+    // 原本的深連結（?card= 由 script.js 開 modal；?start 繞過 landing 首訪轉址）當
+    // SEO／JS 失效或 promos.js 逾時放棄攔截時的 fallback；data-card-id 給 promos.js
+    // 的 detail overlay 模組讀取，postMessage 換卡不用重新解析 href。
+    '            <a class="promo-card-info-btn" href="' + pmcEscapeHtml_('/?start&card=' + cardId) + '" data-card-id="' + pmcEscapeHtml_(cardId) + '" target="_blank" rel="noopener noreferrer" aria-label="查看卡片詳情" title="查看卡片詳情">&#9432;</a>\n' +
     '          </div>\n' +
     '          <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
     '        </div>\n' +

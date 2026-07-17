@@ -52,6 +52,36 @@ html.pmc-returning-user #pmc-boot-loader {
     letter-spacing: 0.5px;
 }
 
+/* Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：<html> 帶 pmc-embed
+   class 時（index.html pre-paint script 依 ?embed=1 加上）只留 #card-detail-modal
+   可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight）
+   隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的 .promo-detail-overlay）遮罩區時，
+   視覺上就像原生彈窗。#card-detail-modal 本身的樣式（position:fixed 全螢幕深色遮罩）
+   完全不用改，它天生就會蓋滿 iframe viewport。 */
+html.pmc-embed body {
+    background: transparent;
+    padding: 0;
+}
+html.pmc-embed .container {
+    background: transparent;
+    box-shadow: none;
+}
+html.pmc-embed header,
+html.pmc-embed .sidebar-overlay,
+html.pmc-embed .app-layout,
+html.pmc-embed .spotlight-section,
+html.pmc-embed .finance-warning-row,
+html.pmc-embed .social-media-footer,
+html.pmc-embed .data-update-footer,
+html.pmc-embed .disclaimer-footer,
+html.pmc-embed #back-to-top-btn,
+html.pmc-embed #feedback-btn,
+html.pmc-embed #my-mappings-btn,
+html.pmc-embed #pmc-boot-loader,
+html.pmc-embed .modal:not(#card-detail-modal) {
+    display: none !important;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
