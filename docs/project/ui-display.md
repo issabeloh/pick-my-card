@@ -93,7 +93,23 @@
 - **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
+## 8. 「我的配卡」modal（分組卡片式，2026-07-17 重造）
+
+**視圖**（`renderMappingsList()`，Grep "分組卡片式視圖"）：一張信用卡＝一個 `.mapping-group`——卡名色塊（卡面主色）＋卡圖小圖＋ⓘ（開 showCardDetail，`#card-detail-modal` z-index 1100 疊在所有 modal 之上）；同卡商家集合在組內，一列＝商家＋活動期限（左）＋綠色回饋率（右）＋刪除 ×。舊表格視圖與欄位排序（rate/expiry sort）已移除，由自訂拖曳排序取代。手機無橫向捲動。
+
+**卡面主色**：`CARD_ACCENT_COLORS` 常數（script.js，一卡一行 hex）＝**卡面底色**（面積最大的色，非最搶眼的色），由抽色腳本從卡圖外圈環帶取最大色簇產出、人工圖對圖校對後定案；微調直接改 hex，新卡缺項 fallback 深灰。淺色色塊（`isLightAccentColor` 亮度 >0.6）自動切深色前景＋分隔線——黑白卡誠實用黑白也可讀。
+
+**過期沉底**：過期配對離開群組、收進底部「已過期（N）」收合區（顯示商家＋卡名），內有「清除全部過期配對」一鍵清理；卡名色塊上**不得**出現過期資訊。14 天內到期顯示黃色「即將到期」章。
+
+**拖曳排序**（`setupMappingsDrag`）：卡片組整組拖＋商家列限組內拖；把手 `touch-action: none` 供觸控。**move/up 監聽掛 document，禁用 setPointerCapture**（Chromium 會在拖曳中途無故 lostpointercapture 斷流，教訓見下）。順序由 `persistMappingsDomOrder()` 依 DOM 序重寫回既有 `order` 欄位（localStorage＋Firestore，資料結構不變）。搜尋過濾時把手不渲染＝停用拖曳（過濾後順序無全域意義）。
+
+**其他**：搜尋框同時比對商家與卡名；樣式必須用 `#my-mappings-modal .mappings-search-input`（特異性，見教訓）；輸入字級固定 16px 防 iOS 聚焦縮放，矮身靠 padding、預覽字靠 `::placeholder`。進場浮標 `#my-mappings-btn`（淺綠底）與 modal 標題用結果卡釘選同款 SVG icon。
+
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
 - [2026-07-13] 詳情頁改分級後關閉 modal 頁面鎖死不能捲動 → 級別 onchange 重呼叫 showCardDetail() 重繪，disableBodyScroll() 多執行一次而 closeModal 只解一次（refcount 不成對）→ 任何「modal 已開啟時重繪」的路徑都要先檢查 modal 是否已顯示、已顯示就不得再上鎖（showCardDetail 內以 wasAlreadyOpen guard 實作）
+- [2026-07-17] 吸卡面主色 28 張幾乎全錯（Uni 淺黃變深金、CUBE 淺灰變黑）→ 飽和度加權投票挑到 logo 而非底色＋亮度 clamp 壓死淺色 → 「主色」＝面積最大的底色（取外圈環帶最大色簇、不調亮度）；抽色/生成類產出必附「原圖 vs 結果」對照圖給用戶驗收
+- [2026-07-17] 配卡列拖到一半不再跟手、放開也不存檔 → Chromium 對 setPointerCapture 的元素在拖曳中途無故 lostpointercapture、事件斷流 → 自訂拖曳的 pointermove/up 監聽掛 document，不依賴 pointer capture
+- [2026-07-17] 配卡搜尋框樣式怎麼改都沒反應 → 全域 `input[type="text"]`（特異性 0-1-1）壓過純 class（0-1-0），該 class 樣式從未生效 → 元件覆蓋全域 input 樣式時用 `#modal-id .class` 提特異性；「改了沒反應」先查特異性再查快取
+- [2026-07-17] 從配卡 modal 點 ⓘ 詳情頁開在後面 → 全部 .modal 同 z-index 1000、同層疊序由 DOM 順序決定，而 #card-detail-modal 在 HTML 較早 → 詳情頁固定 z-index 1100；任何「modal 疊 modal」需求不得靠 DOM 順序
