@@ -3465,7 +3465,7 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
 // getDisplayRate 加總值（stacking 模型 = 指定+基本+加碼）。
 // 回傳 { html, upcoming }；upcoming 為 30 天內即將開始的活動（逐筆、含 category）。
 async function renderCashbackRatesIndividually(card, levelData, options = {}) {
-    const { capFallbackToLevel = false, idPrefix = 'lv' } = options;
+    const { idPrefix = 'lv' } = options;
     const activeRates = [];
     const upcoming = [];
 
@@ -3475,8 +3475,9 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
         if (status !== 'active' && status !== 'always' && status !== 'upcoming') continue;
 
         const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
-        let parsedCap = parseCashbackCap(rate.cap, card, levelData);
-        if (parsedCap == null && capFallbackToLevel && levelData) parsedCap = levelData.cap || null;
+        // cap 留空＝無上限，與搜尋結果/計算引擎一致。（2026-07-17 移除 capFallbackToLevel：
+        // 舊 fallback 會把留空的槽顯示成級別 cap，需要級別 cap 的槽請明確填 {cap}）
+        const parsedCap = parseCashbackCap(rate.cap, card, levelData);
         const displayRate = getDisplayRate(card, rate, parsedRate, levelData);
 
         if (status === 'upcoming') {
@@ -8114,8 +8115,9 @@ basicCashbackDiv.innerHTML = basicContent;
         // Check if card also has cashbackRates (like DBS Eco card)
         if (card.cashbackRates && card.cashbackRates.length > 0) {
             // 2026-07-09 起逐筆顯示（不再按 rate+cap 合併），category 以 chip 顯示在
-            // 回饋率旁，回饋率為 getDisplayRate 加總值；cap 留空退回 levelData.cap（舊行為）
-            const rendered = await renderCashbackRatesIndividually(card, levelData, { capFallbackToLevel: true, idPrefix: 'lvB' });
+            // 回饋率旁，回饋率為 getDisplayRate 加總值；cap 留空＝無上限（需要級別
+            // cap 的槽明確填 {cap}；capFallbackToLevel 舊行為已於 2026-07-17 移除）
+            const rendered = await renderCashbackRatesIndividually(card, levelData, { idPrefix: 'lvB' });
             specialContent += rendered.html;
 
             // Store upcoming groups for later display in separate section
