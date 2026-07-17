@@ -4997,19 +4997,20 @@ input[type="text"].credit-limit-input:focus {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button */
+/* Floating My Mappings Button（淺綠底＋釘選 icon，與結果卡的釘選視覺呼應） */
 .my-mappings-floating-btn {
     position: fixed;
     bottom: 72px;
     right: 16px;
     padding: 8px 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: white;
+    color: #065f46;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
@@ -5019,8 +5020,14 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     transform: translateY(-2px);
+}
+
+/* 配卡 modal 標題的釘選 icon */
+.mappings-title-pin {
+    vertical-align: -2px;
+    color: #667eea;
 }
 
 .my-mappings-floating-btn:active {
@@ -5191,21 +5198,36 @@ input[type="text"].credit-limit-input:focus {
     overflow-wrap: anywhere;
 }
 
+/* 卡名旁的卡圖小圖（仿 promos 的 promo-card-cardimg，縮小版；缺圖自動隱藏） */
+.mapping-group-cardimg {
+    flex: none;
+    width: 46px;
+    height: 29px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 2px;
+}
+
+/* ⓘ 與全站其他 peek 按鈕同款：只有字元自帶的圓圈，不畫外框 */
 .mapping-peek-btn {
     flex: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
     background: transparent;
-    color: white;
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+    border-radius: 50%;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mapping-peek-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
 }
 
 .mapping-item {
@@ -5275,8 +5297,12 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-group-head.light .mapping-peek-btn {
-    border-color: rgba(31, 41, 55, 0.45);
-    color: #374151;
+    color: #6b7280;
+}
+
+.mapping-group-head.light .mapping-peek-btn:hover {
+    color: #1e40af;
+    background: #eef2ff;
 }
 
 .mapping-group-head.light .mapping-drag-handle {

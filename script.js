@@ -9508,6 +9508,7 @@ function renderMappingsList(searchTerm = '') {
             <div class="mapping-group" data-card-id="${escapeHtml(group.cardId)}">
                 <div class="mapping-group-head${isLightAccentColor(accent) ? ' light' : ''}" style="background: ${accent};">
                     ${dragHandleHtml('group-handle')}
+                    <img class="mapping-group-cardimg" src="assets/images/cards/${escapeHtml(group.cardId)}.png" alt="" onerror="this.style.display='none'">
                     <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
                     <button type="button" class="mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 </div>
