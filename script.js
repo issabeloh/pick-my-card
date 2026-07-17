@@ -4737,7 +4737,11 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const isoEnd = promo.period_end
         ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
         : '';
-    const promoStatus = getRateStatus(isoStart, isoEnd);
+    let promoStatus = getRateStatus(isoStart, isoEnd);
+    // getRateStatus 對「只有開始日、沒有結束日」回 'always'，這裡補判尚未開始的情況
+    if (promoStatus === 'always' && isoStart && isoStart > getTaiwanToday()) {
+        promoStatus = 'upcoming';
+    }
     if (promoStatus === 'upcoming' && isoStart) {
         const daysUntil = getDaysUntilStart(isoStart);
         if (daysUntil != null) {
