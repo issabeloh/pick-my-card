@@ -1,6 +1,42 @@
 /* FAQ Page Specific Styles */
 
-/* Back to Home Button */
+/* ==========================================================================
+   Header（2026-07-16 改版，同日站長二輪回饋撤回頭像）：header-top 結構抄自
+   index.html／faq.html 已載 styles.css，.header-top/.header-content/
+   .header-page-links/.sidebar-系列 等視覺（字級、配色、間距）本體都在
+   styles.css，這裡只補 styles.css 沒涵蓋、FAQ 頁專屬的部分。
+   右側原本試過頭像＋dropdown，站長裁定「副頁頭像做不到主站完整功能，意義
+   不大」，退回原本的「返回首頁」鈕（.back-home-btn，樣式取自 8adda98 版本）。
+   ========================================================================== */
+
+/* .header-content 現在是 <a> 包 logo+站名：styles.css 只定義 .header-content h1
+   的字級（原本是 <h1>），這裡補 span 版本的等效字級，並蓋掉連結的 UA 底線／
+   visited 紫色（styles.css 沒處理，因為主站 index.html 的 header-content 不是連結）。 */
+.header-content {
+    text-decoration: none;
+    color: white;
+}
+
+.header-content:visited {
+    color: white;
+}
+
+.header-content .header-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* 導覽「常見問題」目前頁的 active 視覺（aria-current="page"）：styles.css:119-135
+   只定義 .header-nav-link 基礎樣式，沒有 active 態（主站導覽本身沒有「目前在哪頁」
+   的需求，只有 faq.html/promos.html 互相對照時才需要）。 */
+.header-nav-link[aria-current="page"] {
+    font-weight: 800;
+    border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+/* 返回首頁鈕（取自 8adda98 版本，站長二輪回饋撤回頭像後恢復）：半透明白底
+   膠囊按鈕，疊在深藍 header bar 上；hover 時左移 2px 暗示「返回」方向。 */
 .back-home-btn {
     display: flex;
     align-items: center;
@@ -15,6 +51,7 @@
     font-weight: 500;
     transition: all 0.2s;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .back-home-btn:hover {
@@ -29,6 +66,83 @@
 
 .back-home-btn:hover svg {
     transform: translateX(-2px);
+}
+
+/* 桌機（≥769px）：漢堡與抽屜整組隱藏——FAQ 頁沒有 .app-layout 常駐左欄，
+   styles.css 的 .sidebar 桌機樣式（sticky 常駐欄）不適用這頁，不隱藏會版面壞。 */
+@media (min-width: 769px) {
+    .sidebar,
+    .sidebar-overlay,
+    .sidebar-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* 手機抽屜「新戶活動一覽」卡（🎁）去立體感（2026-07-16 站長二輪回饋：「目前明顯
+   得太刻意」）。styles.css 本體的漸層＋內凹白線＋多層陰影＋彈跳位移一律不動
+   （index.html 自己的抽屜不受影響），這裡只在 faq.css override 壓平成跟同抽屜
+   工具卡（.sidebar-faq-card，本頁連去回饋比較工具）相近的平面卡片感：純色底
+   ＋細邊框＋無陰影，hover 只換底色、不做位移動畫。 */
+.sidebar-promos-banner {
+    background: #fff7e0;
+    box-shadow: none;
+    border: 1px solid #ffe29a;
+}
+
+.sidebar-promos-banner:hover {
+    transform: none;
+    background: #fff2cc;
+    border-color: #ffd97a;
+}
+
+.sidebar-promos-banner:active {
+    transform: none;
+    box-shadow: none;
+}
+
+/* 麵包屑（2026-07-16 新增）：hero 上方一行低調小字，「首頁」連回主站，
+   當前頁純文字。結構化資料另見 <head> 的 BreadcrumbList JSON-LD。 */
+.faq-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 4px 0;
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.faq-breadcrumb a {
+    color: #9ca3af;
+    text-decoration: none;
+}
+
+.faq-breadcrumb a:hover {
+    color: #6b7280;
+    text-decoration: underline;
+}
+
+.faq-breadcrumb [aria-current="page"] {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.faq-breadcrumb-sep {
+    color: #d1d5db;
+}
+
+/* Hero：頁面大標題（原本在 header 裡的 <h1>，2026-07-16 下移到這裡）。
+   視覺量體比照 promos.html 的 .promos-hero（promos.css:151-160），但用 FAQ 頁
+   自身的簡潔白底風格（main 已經是白底，不需要另外的背景色塊）。 */
+.faq-hero {
+    padding: 20px 4px 8px;
+}
+
+.faq-hero h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1f2937;
+    letter-spacing: 0.01em;
 }
 
 /* Main Content */
@@ -350,6 +464,13 @@ main {
         padding: 24px 16px;
     }
 
+    /* 比照 promos.css 的 .promos-header-title 手機收窄（縮小字級，不整段隱藏，
+       跟 styles.css:7204 隱藏 <h1> 的做法不同——這裡是 <span>，站名本來就短，
+       縮字級即可，不需要用 clip 隱藏技巧）。 */
+    .header-content .header-title {
+        font-size: 1.02rem;
+    }
+
     .back-home-btn {
         padding: 6px 12px;
         font-size: 0.85rem;
@@ -358,6 +479,14 @@ main {
     .back-home-btn svg {
         width: 16px;
         height: 16px;
+    }
+
+    .faq-hero {
+        padding: 12px 4px 4px;
+    }
+
+    .faq-hero h1 {
+        font-size: 1.3rem;
     }
 
     .category-filter {
@@ -384,17 +513,6 @@ main {
 }
 
 @media (max-width: 480px) {
-    .header-top {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .back-home-btn {
-        width: 100%;
-        justify-content: center;
-    }
-
     .category-filter {
         gap: 6px;
     }

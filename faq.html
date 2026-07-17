@@ -30,8 +30,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=20260717023103">
-    <link rel="stylesheet" href="faq.css?v=20251207000001">
+    <link rel="stylesheet" href="styles.css?v=20260716073213">
+    <link rel="stylesheet" href="faq.css?v=20260716130000">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -94,6 +94,28 @@
     }
     </script>
 
+    <!-- Structured Data (JSON-LD) for SEO: Breadcrumb -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "首頁",
+                "item": "https://pickmycard.app/"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "常見問題",
+                "item": "https://pickmycard.app/faq"
+            }
+        ]
+    }
+    </script>
+
     <!-- Microsoft Clarity -->
     <script type="text/javascript">
         (function(c,l,a,r,i,t,y){
@@ -110,10 +132,27 @@
 <body>
     <div class="container">
         <header>
+            <!-- header-top 結構抄自 index.html header-top（logo+站名/導覽/頭像），
+                 手動同步：主站改這塊時這裡要跟著改（見 FAQ-README.md）。 -->
             <div class="header-top">
-                <div class="header-content">
-                    <h1>常見問題 FAQ</h1>
-                </div>
+                <!-- Hamburger menu button (mobile only, CSS 控制顯示——styles.css 的
+                     .sidebar-toggle-btn 本來就只在 ≤768px 顯示，這裡不需要 inline style/JS) -->
+                <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" aria-label="開啟選單">
+                    <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    </svg>
+                </button>
+                <!-- 副頁面刻意把整塊包成連結回主站（index 本身不是連結，這是副頁差異） -->
+                <a href="index.html" class="header-content">
+                    <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
+                    <span class="header-title">信用卡回饋大師</span>
+                </a>
+                <nav class="header-page-links" aria-label="站內頁面">
+                    <a href="promos.html" class="header-nav-link header-nav-link--dot">新戶活動</a>
+                    <a href="faq.html" class="header-nav-link" aria-current="page">常見問題</a>
+                </nav>
+                <!-- 2026-07-16 站長裁定：副頁頭像做不到主站完整功能（無法登出/管理），意義不大，
+                     退回原本的「返回首頁」鈕（markup／樣式取自 8adda98 版本）。 -->
                 <a href="index.html" class="back-home-btn" title="返回首頁">
                     <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M8.354 1.146a.5.5 0 0 1 0 .708L2.707 7.5H14.5a.5.5 0 0 1 0 1H2.707l5.647 5.646a.5.5 0 0 1-.708.708l-6.5-6.5a.5.5 0 0 1 0-.708l6.5-6.5a.5.5 0 0 1 .708 0z"/>
@@ -123,7 +162,45 @@
             </div>
         </header>
 
+        <!-- Sidebar overlay + drawer for mobile (FAQ 頁沒有 .app-layout 常駐左欄，
+             桌機顯式隱藏見 faq.css) -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="關閉選單">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <nav class="sidebar-page-links" aria-label="站內頁面">
+                    <a href="promos.html" class="sidebar-promos-banner">
+                        <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>
+                        <span class="sidebar-promos-banner-text"><strong>新戶活動一覽</strong><small>首刷禮・回饋加碼 好康快報</small></span>
+                        <span class="sidebar-promos-banner-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a href="index.html" class="sidebar-faq-card">
+                        <span class="sidebar-faq-card-emoji" aria-hidden="true">🛠️</span>
+                        <span class="sidebar-faq-card-text"><strong>回饋比較工具</strong><small>查商家回饋・比較信用卡</small></span>
+                        <span class="sidebar-faq-card-arrow" aria-hidden="true">→</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
         <main>
+            <!-- 麵包屑（2026-07-16 新增）：結構化資料見 <head> 的 BreadcrumbList JSON-LD -->
+            <nav class="faq-breadcrumb" aria-label="breadcrumb">
+                <a href="index.html">首頁</a><span class="faq-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">常見問題</span>
+            </nav>
+
+            <!-- Hero：頁面大標題（原本在 header 裡，2026-07-16 改版下移） -->
+            <section class="faq-hero">
+                <h1>常見問題 FAQ</h1>
+            </section>
+
             <!-- Loading State -->
             <div id="faq-loading" class="faq-loading">
                 <div class="loading-spinner"></div>
@@ -256,6 +333,12 @@
             </div>
         </div>
 
+    <!-- 回到頂部浮標（手機版，2026-07-16 新增，比照 index.html：捲動超過 300px 才顯示，
+         .back-to-top-btn 樣式與顯示門檻沿用 styles.css 既有規則，不重新定義） -->
+    <button id="back-to-top-btn" class="back-to-top-btn" title="回到頂部" aria-label="回到頂部">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
     <!-- Firebase Configuration -->
     <script type="module">
       // Import the functions you need from the SDKs you need
@@ -291,7 +374,7 @@
       window.serverTimestamp = serverTimestamp;
     </script>
 
-    <script src="faq.js?v=20260715070000"></script>
+    <script src="faq.js?v=20260716130000"></script>
 </body>
 </html>
 
