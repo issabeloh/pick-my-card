@@ -5201,7 +5201,7 @@ input[type="text"].credit-limit-input:focus {
 .mapping-delete-btn {
     background: none;
     border: none;
-    color: #4b5563;
+    color: #ef4444;
     cursor: pointer;
     font-size: 18px;
     padding: 4px 8px;
@@ -5225,8 +5225,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
-   一張信用卡＝一個群組卡片：卡名色塊（卡面主色，CARD_ACCENT_COLORS）＋商家列。
-   手機不再橫向捲動；過期配對沉底收合；拖曳把手 touch-action:none 供觸控拖曳 */
+   一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
+   的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
 .mapping-groups {
     display: flex;
     flex-direction: column;
@@ -5245,7 +5245,9 @@ input[type="text"].credit-limit-input:focus {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    color: white;
+    background: #f1eff0;
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 /* 不設 flex:1——讓後面的 ⓘ 貼著卡名，而不是被推到最右側；長卡名靠 shrink+wrap */
@@ -5276,7 +5278,7 @@ input[type="text"].credit-limit-input:focus {
     padding: 0;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.9);
+    color: #6b7280;
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -5285,7 +5287,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-peek-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
+    color: #1e40af;
+    background: #eef2ff;
 }
 
 .mapping-item {
@@ -5306,6 +5309,56 @@ input[type="text"].credit-limit-input:focus {
     min-width: 0;
 }
 
+.mapping-item-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 商家 pill（仿快速搜尋 .tag-item：白底淺灰框、整顆可拖）；
+   touch-action none 讓觸控拖曳不會捲動 modal */
+.mapping-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.mapping-pill.mapping-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mapping-pill-remove {
+    flex: none;
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 0 0 2px;
+    opacity: 0.75;
+}
+
+.mapping-pill-remove:hover {
+    opacity: 1;
+}
+
 .mapping-item-merchant {
     font-weight: 500;
     color: #1f2937;
@@ -5316,7 +5369,7 @@ input[type="text"].credit-limit-input:focus {
 .mapping-item-date {
     font-size: 12px;
     color: #9ca3af;
-    margin-top: 1px;
+    margin-top: 4px;
     font-variant-numeric: tabular-nums;
 }
 
@@ -5345,25 +5398,6 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-group-head .mapping-drag-handle {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* 淺色卡面：不吸色、統一淺灰底（JS 端給 #f1eff0），前景轉深色、補分隔線 */
-.mapping-group-head.light {
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.mapping-group-head.light .mapping-peek-btn {
-    color: #6b7280;
-}
-
-.mapping-group-head.light .mapping-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
-}
-
-.mapping-group-head.light .mapping-drag-handle {
     color: #9ca3af;
 }
 
