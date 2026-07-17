@@ -172,8 +172,9 @@ header {
     }
 }
 
-/* 純文字導覽＋紅點（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
-   色彩太重）。新戶活動帶一顆小紅點（App 通知的視覺語言）默默吸睛。 */
+/* 純文字導覽（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
+   色彩太重）。新戶活動原本帶一顆小紅點吸睛，2026-07-17 退場改用小煙花
+   （.header-nav-link--sparkle，見下方）。 */
 .header-nav-link {
     position: relative;
     color: rgba(255, 255, 255, 0.92);
@@ -191,15 +192,62 @@ header {
     color: #ffffff;
 }
 
-.header-nav-link--dot::after {
+/* 2026-07-17 站長回饋：紅點退場，改用更輕巧、週期性的小煙花吸睛（純 CSS，
+   box-shadow 清單模擬多顆粒子，不額外加 DOM 節點）。class 隨改名
+   --dot → --sparkle。手機抽屜「新戶活動一覽」卡（.sidebar-promos-banner，
+   index.html/faq.html 共用）套用同一顆 keyframes——定義在這裡，套用處在該
+   class 本來的區塊（Grep「sidebar-promos-banner」可找到，本檔約 7000 行附近）。 */
+.header-nav-link--sparkle::after {
     content: "";
     position: absolute;
-    top: -1px;
-    right: -9px;
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: #f87171;
+    top: 1px;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 4.5s ease-out infinite;
+}
+
+/* 單次綻放（金／珊瑚／粉 5 顆）壓在 4.5s 週期的前 ~0.8s，其餘時間維持透明靜止
+   （0%/22%/100% 三個關鍵影格數值相同，確保 infinite 循環銜接不跳動）。用
+   box-shadow 清單（而非各自獨立的 transform）是因為單一虛元素的多筆
+   box-shadow 可以各自插值出「向外擴散＋縮小＋淡出」的粒子錯覺，不必多開
+   DOM 節點或多個 ::before/::after。 */
+@keyframes nav-sparkle-burst {
+    0%, 22%, 100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0),
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0);
+    }
+    5% {
+        box-shadow:
+            -3px -5px 0 1.6px rgba(255, 201, 51, 0.95),
+            5px -6px 0 1.6px rgba(255, 138, 101, 0.95),
+            -6px 2px 0 1.4px rgba(255, 158, 205, 0.9),
+            6px 3px 0 1.4px rgba(255, 201, 51, 0.9),
+            0px -8px 0 1.3px rgba(255, 138, 101, 0.9);
+    }
+    16% {
+        box-shadow:
+            -9px -13px 0 0 rgba(255, 201, 51, 0),
+            11px -15px 0 0 rgba(255, 138, 101, 0),
+            -14px 5px 0 0 rgba(255, 158, 205, 0),
+            14px 7px 0 0 rgba(255, 201, 51, 0),
+            1px -18px 0 0 rgba(255, 138, 101, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-nav-link--sparkle::after,
+    .sidebar-promos-banner::after {
+        content: none;
+        animation: none;
+    }
 }
 
 .auth-section {
@@ -6917,6 +6965,8 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
     text-decoration: none;
     transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+    /* 錨定下方煙花 ::after 的定位基準（原本純 flex 排版沒有 position） */
+    position: relative;
 }
 
 .sidebar-promos-banner:hover {
@@ -6926,6 +6976,23 @@ input[type="text"].credit-limit-input:focus {
 .sidebar-promos-banner:active {
     transform: translateY(2px) scale(1.01, 0.96);
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+}
+
+/* 手機抽屜同款小煙花（2026-07-17，跟桌機 header 的 .header-nav-link--sparkle
+   共用 @keyframes nav-sparkle-burst，定義見 styles.css 前段「導覽」區塊；
+   reduced-motion 停用規則也在那裡一併處理）。 */
+.sidebar-promos-banner::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 24px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 4.5s ease-out infinite;
+    animation-delay: 0.4s;
 }
 
 .sidebar-promos-banner-emoji {
