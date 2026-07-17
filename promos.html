@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="promos.css?v=202607170351">
+<link rel="stylesheet" href="promos.css?v=202607171458">
 
 <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
 <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
@@ -208,22 +208,79 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://pickmycard.app/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "新戶活動",
+      "item": "https://pickmycard.app/promos"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div class="promos-container">
 <header class="promos-header">
   <div class="promos-header-top">
-    <div class="promos-header-content">
-      <img src="assets/images/logo-header.png?v=202607170351" alt="" class="promos-header-logo">
+    <button id="promos-sidebar-toggle-btn" class="promos-sidebar-toggle-btn" aria-label="開啟選單">
+      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
+    </button>
+    <a href="/" class="promos-header-content">
+      <img src="assets/images/logo-header.png?v=202607171458" alt="" class="promos-header-logo">
       <span class="promos-header-title">信用卡回饋大師</span>
-    </div>
-    <nav class="promos-header-links" aria-label="站內導覽">
-      <a href="/">回主站工具</a>
+    </a>
+    <nav class="promos-header-links" aria-label="站內頁面">
+      <a href="/promos" class="promos-header-nav-link" aria-current="page">新戶活動</a>
+      <a href="/faq" class="promos-header-nav-link">常見問題</a>
     </nav>
+    <a href="/" class="promos-back-home-btn" title="返回首頁">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8.354 1.146a.5.5 0 0 1 0 .708L2.707 7.5H14.5a.5.5 0 0 1 0 1H2.707l5.647 5.646a.5.5 0 0 1-.708.708l-6.5-6.5a.5.5 0 0 1 0-.708l6.5-6.5a.5.5 0 0 1 .708 0z"/>
+      </svg>
+      <span>返回首頁</span>
+    </a>
   </div>
 </header>
 
+<div class="promos-sidebar-overlay" id="promos-sidebar-overlay"></div>
+
+<aside class="promos-sidebar" id="promos-sidebar">
+  <div class="promos-sidebar-header">
+    <button class="promos-sidebar-close-btn" id="promos-sidebar-close-btn" aria-label="關閉選單">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+    </button>
+  </div>
+  <div class="promos-sidebar-content">
+    <nav class="promos-sidebar-page-links" aria-label="站內頁面">
+      <a href="/" class="promos-sidebar-tool-card">
+        <span class="promos-sidebar-tool-card-emoji" aria-hidden="true">💳</span>
+        <span class="promos-sidebar-tool-card-text"><strong>回饋比較工具</strong><small>查商家回饋・比較信用卡</small></span>
+        <span class="promos-sidebar-tool-card-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="/faq" class="promos-sidebar-faq-card">
+        <span class="promos-sidebar-faq-card-emoji" aria-hidden="true">💬</span>
+        <span class="promos-sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
+        <span class="promos-sidebar-faq-card-arrow" aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </div>
+</aside>
+
 <main class="promos-main">
+  <nav class="promos-breadcrumb" aria-label="breadcrumb">
+    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>
+  </nav>
   <section class="promos-hero">
     <h1>信用卡新戶活動一覽</h1>
   </section>
@@ -1089,6 +1146,10 @@
 
 <div class="promos-data-update-footer">資料更新於 2026/7/17</div>
 
+<button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
 <script type="module" async>
   // 精簡版 Firebase Analytics 初始化（只取 app+analytics，不含 auth/firestore/storage，
   // 這頁不需要登入或存取用戶資料）；供 promos.js 送 button_click 事件。
@@ -1107,6 +1168,6 @@
   window.firebaseAnalytics = getAnalytics(app);
   window.logEvent = logEvent;
 </script>
-<script src="promos.js?v=202607170351"></script>
+<script src="promos.js?v=202607171458"></script>
 </body>
 </html>
