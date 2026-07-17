@@ -3,6 +3,84 @@
 此資料夾存放 Google Sheets「信用卡管理系統」Apps Script 專案中的程式備份副本。
 **實際執行的版本在 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
 
+## 匯出主程式（`cards-export.gs`）
+
+產出 `cards.data` / `cards.version` 並自動 commit 到 GitHub 的主程式，對應 Apps Script 專案裡
+`exportToJSON()` 那支。**這是備份，改動請同步回 Google Sheets。**
+
+- 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
+- 2026-07-11 修正（過期活動不隱藏事件）：
+  - **資料流事實**：`periodStart_N` / `periodEnd_N` 是維護者**輸入**的日期源頭；`period_N`
+    是由它們**公式組出**的顯示字串（`YYYY/M/D~YYYY/M/D`）。
+  - **事故根因**：匯出用 `headers.indexOf(欄名)` 按「完全相同的字串」找欄，`periodStart_2`
+    這欄整欄讀不到（標題拼字／空格／大小寫／全形字元對不上，或欄名重複時 indexOf 只抓最前面
+    那欄）→ 23 張卡的第 2 槽全部缺 `periodStart`（儲存格其實有值，公式照樣組得出完整字串），
+    前端過期判斷拿不到開始日，把已過期活動當成永久有效顯示。
+  - **修正 1**：`resolvePeriodBounds()` 統一決定日期範圍——優先讀輸入欄，某一邊讀不到時從
+    `period_N` 字串拆回來救援。套用於 `cashbackRates` / `_hide` 隱藏槽 / `couponCashbacks` 三處。
+  - **修正 2**：`runQACheck` 新增檢查 8（`periodEnd_N` 有值但 `periodStart_N` 讀不到；`period_N`
+    與輸入日期對不上）與檢查 9（`periodStart/End_N` 欄位標題必須成對存在；欄位標題重複），
+    匯出時直接在 QA 報告報警（⚠️ 警告，不擋匯出）。
+  - **修正 3**：rate／coupon 槽位上限改由 `maxSlotIndex()` 依表頭自動偵測（原本寫死 `<= 21`，
+    但表已加到 `rate_22`——slot 22 整槽被靜默丟棄、永遠不會匯出）。之後加 `rate_23` 等新欄
+    不用改程式。
+  - 前端 `script.js` 另有 `backfillPeriodBounds()` 當防呆，兩層互不衝突。
+  - 事後對照維護者提供的完整表頭確認：事故元凶是 slot 2 的 `periodStart` 欄標題誤植成
+    `periodStart_1`（重複欄名，indexOf 只抓最前面那欄），已由維護者修正。其餘 381 欄無重複、
+    無空格／大小寫／全形問題。
+- 2026-07-12 與線上版合併：
+  - **保留維護者的修改**：`_hide`／`_hide_1` 專用隱藏槽處理移除（隱藏活動改用一般槽位 21/22
+    配 `hideInDisplay_N=TRUE`，走主迴圈）；槽位上限手動改的 22 由 `maxSlotIndex()` 自動偵測取代。
+  - **修正 coupon 兩個舊 bug**：日期欄原本巢狀在 `if (couponCap)` 內——沒設 cap 的 coupon
+    日期整組不匯出（過期領券活動不會被隱藏，實測 7 筆中招）；且日期未過 `formatDateToISO`，
+    Date 儲存格會序列化成 `"2026-06-29T16:00:00.000Z"` UTC 字串（前端字串比較會提早一天判過期）。
+    現統一走 `resolvePeriodBounds`。
+  - 依維護者要求，拿掉「`period_N` 欄漏建」QA 通知（保留成對檢查與重複欄名檢查——那兩種是
+    「整欄資料靜默消失」等級，非簡單補欄）。
+  - **移除 Drive 下載區塊**（`createDownloadUrl` / `TARGET_FOLDER_ID` / HTML 下載視窗）：
+    `publishToGitHub` 已自動 commit cards.data + cards.version，下載連結只是每次匯出在
+    Drive 堆兩個永不清理的檔案。匯出結果改用簡單 alert 顯示統計。歷史版本備份由 GitHub
+    commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
+    Sheets 版本記錄承擔。
+
+## promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
+
+`exportToJSON()` 現在除了 `cards.data` / `cards.version`，還會多 commit 一個 `promos.html`
+（給 SEO／社群轉貼用的「新戶活動一覽」落地頁，糖果果凍風 UI）。生成邏輯與資料流細節見
+`docs/project/data-pipeline.md` 第 9 節，這裡只記站長要做的事與程式位置。
+
+- **函數**：`generatePromosPageHtml(exportData)`（純函數，不呼叫任何 Sheets/Apps Script API），
+  在 `exportToJSON()` 內讀完 `newCardholderPromos` / `cardApplyCtas` 後呼叫，回傳的 HTML
+  字串跟著 `cards.data` 一起丟進 `publishToGitHub()`。
+- **⚠️ 站長需要做的一次性動作**：這次 `cards-export.gs` 新增了 `generatePromosPageHtml`
+  及其小工具函數（`pmc*` 開頭，含 `PMC_SITE_URL` 等常數）、並修改了 `exportToJSON()` 與
+  `publishToGitHub()` 的呼叫方式——**必須把整份新版 `cards-export.gs` 貼回 Google Sheets
+  的 Apps Script 專案，否則下次匯出不會產生 / 更新 `promos.html`**（Sheets 端會繼續執行舊版
+  `publishToGitHub(encoded)`，只有一個參數，不會出錯，但也不會生成新戶活動頁）。
+- **同步檢查方式**：在 Sheets 的 Apps Script 編輯器貼上後，執行一次「📥 匯出 JSON」，
+  完成提示的訊息框最後一行應該會多一行「promos.html 已同步更新（... 筆活動中...）」；
+  GitHub repo 的 commit 紀錄裡應該看到 `promos.html` 跟 `cards.data`/`cards.version` 同一次
+  commit 一起更新。
+- **repo 裡的 `promos.html` 只是初版備份**：由 scratchpad 臨時 Node harness 執行
+  `generatePromosPageHtml()` 餵當時的 `cards.data` 產生，之後每次 Sheets 端匯出都會覆蓋成
+  最新版本——**別在 repo 手改 `promos.html` 的卡片內容**，改了下次匯出照樣會被蓋掉；要調整
+  版面/樣式改 `promos.css`，要調整互動邏輯改 `promos.js`（這兩個檔案不受生成流程管，可直接
+  在 repo 改動、正常走 `tools/preflight.sh` 流程即可）。
+
+## 每月自動備份（.xlsx 寄信，2026-07-12 新增）
+
+Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、Watchlist/QA 等工作表），
+cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 Google 帳號單點。每月自動把
+整本試算表以 .xlsx 附件寄到信箱，收到後存到 Google 以外的位置即補上此缺口。
+
+| 項目 | 內容 |
+|---|---|
+| 函數 | `sendBackupEmail`（寄一份）、`setupMonthlyBackupTrigger`（建立每月觸發器） |
+| 選單 | 「📦 立即寄送試算表備份」「⏰ 啟用每月自動備份」 |
+| 排程 | 每月 1 日 9–10 點（由 `setupMonthlyBackupTrigger` 建立；重跑會先清舊觸發器，不會重複寄） |
+| 收件人 | `BACKUP_EMAIL` 常數留空 = 寄給試算表登入帳號（比照權益監控慣例） |
+| 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
+
 ## 權益監控（第一階段，2026-07-07 上線）
 
 整體規劃見 repo 根目錄的 `BENEFITS-AUTOMATION-PLAN.md`。

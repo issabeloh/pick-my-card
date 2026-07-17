@@ -52,6 +52,36 @@ html.pmc-returning-user #pmc-boot-loader {
     letter-spacing: 0.5px;
 }
 
+/* Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：<html> 帶 pmc-embed
+   class 時（index.html pre-paint script 依 ?embed=1 加上）只留 #card-detail-modal
+   可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight）
+   隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的 .promo-detail-overlay）遮罩區時，
+   視覺上就像原生彈窗。#card-detail-modal 本身的樣式（position:fixed 全螢幕深色遮罩）
+   完全不用改，它天生就會蓋滿 iframe viewport。 */
+html.pmc-embed body {
+    background: transparent;
+    padding: 0;
+}
+html.pmc-embed .container {
+    background: transparent;
+    box-shadow: none;
+}
+html.pmc-embed header,
+html.pmc-embed .sidebar-overlay,
+html.pmc-embed .app-layout,
+html.pmc-embed .spotlight-section,
+html.pmc-embed .finance-warning-row,
+html.pmc-embed .social-media-footer,
+html.pmc-embed .data-update-footer,
+html.pmc-embed .disclaimer-footer,
+html.pmc-embed #back-to-top-btn,
+html.pmc-embed #feedback-btn,
+html.pmc-embed #my-mappings-btn,
+html.pmc-embed #pmc-boot-loader,
+html.pmc-embed .modal:not(#card-detail-modal) {
+    display: none !important;
+}
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -112,6 +142,64 @@ header {
     letter-spacing: 0.5px;
     color: #ffffff;
     box-shadow: 0 2px 4px rgba(30, 64, 175, 0.3);
+}
+
+/* 桌機 header 導覽（2026-07-16 新增）：新戶活動＋FAQ 入口從側選單搬到這裡。
+   手機（≤768px）隱藏，側選單 .sidebar-page-links 兩張卡片維持原樣。 */
+.header-page-links {
+    display: none;
+    align-items: center;
+    gap: 18px;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+    .header-page-links {
+        display: flex;
+        /* 貼齊右側、緊鄰頭像左邊（.header-top 是 space-between 三欄，
+           不加 auto margin 會被擠到正中間——2026-07-16 站長回饋） */
+        margin-left: auto;
+        /* 與頭像之間的「｜」分隔（細半透明直線，比全形字元精緻） */
+        padding-right: 16px;
+        border-right: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* 兩個連結之間的「｜」分隔 */
+    .header-nav-link + .header-nav-link {
+        padding-left: 18px;
+        border-left: 1px solid rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* 純文字導覽＋紅點（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
+   色彩太重）。新戶活動帶一顆小紅點（App 通知的視覺語言）默默吸睛。 */
+.header-nav-link {
+    position: relative;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 4px 2px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.header-nav-link:hover {
+    border-bottom-color: #ffc933;
+    color: #ffffff;
+}
+
+.header-nav-link--dot::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -9px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #f87171;
 }
 
 .auth-section {
@@ -313,6 +401,8 @@ header h1 {
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    display: flex;
+    align-items: center;
 }
 
 .announcement-text {
@@ -321,10 +411,14 @@ header h1 {
     font-size: 0.85rem;
     font-weight: 400;
     display: block;
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: opacity 0.3s ease;
+    /* 必須 ≤ displayAnnouncement() 的 150ms 換字延遲：內容要在完全透明時才替換，
+       iOS Safari 對半透明中換字的 line-clamp 元素會留下舊文字殘影 */
+    transition: opacity 0.15s ease;
 }
 
 .announcement-text:hover {
@@ -341,9 +435,12 @@ header h1 {
     text-decoration: none;
 }
 
-/* Date badge bubble */
+/* Date badge bubble（是 announcement-text 的兄弟元素，禁止塞回文字內——
+   iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字。
+   同理禁用 backdrop-filter：它會讓 badge 自成 compositing layer。 */
 .announcement-date-badge {
     display: inline-block;
+    flex-shrink: 0;
     background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
     padding: 2px 8px;
@@ -352,8 +449,8 @@ header h1 {
     font-weight: 600;
     margin-right: 8px;
     white-space: nowrap;
-    vertical-align: middle;
-    backdrop-filter: blur(4px);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -391,11 +488,13 @@ header h1 {
 }
 
 /* Fade animation */
-.announcement-text.fade-out {
+.announcement-text.fade-out,
+.announcement-date-badge.fade-out {
     opacity: 0;
 }
 
-.announcement-text.fade-in {
+.announcement-text.fade-in,
+.announcement-date-badge.fade-in {
     opacity: 1;
 }
 
@@ -617,11 +716,13 @@ main {
 
 .input-row-with-button {
     display: grid;
-    grid-template-columns: 2fr 1fr auto;
+    grid-template-columns: 2fr 1fr; /* 商家(含快捷):金額 = 2:1；按鈕收在右欄第 3 列 */
     gap: 16px;
     margin-bottom: 16px;
     align-items: start; /* 顶部对齐，让输入框在同一高度 */
-    overflow: hidden; /* 防止子元素撑大容器 */
+    /* 不可用 overflow:hidden——search hint 與「?」說明是浮層，會被裁掉；
+       子元素撐大容器的問題由 > .form-group 的 min-width:0 處理 */
+    overflow: visible;
 }
 
 .input-row-with-button > .form-group {
@@ -633,11 +734,6 @@ main {
     flex-direction: column;
 }
 
-.button-group label {
-    margin-bottom: 8px;
-    visibility: hidden;
-}
-
 .form-group {
     margin-bottom: 20px;
 }
@@ -645,13 +741,6 @@ main {
 .form-group.compact {
     margin-bottom: 0;
     position: relative;
-}
-
-.amount-hint {
-    display: block;
-    font-size: 0.75rem;
-    color: #9ca3af;
-    margin-top: 4px;
 }
 
 /* Quick Search Wrapper */
@@ -1204,9 +1293,9 @@ main {
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: #fff;
     color: #0369a1;
-    border: 1px solid #bae6fd;
+    border: 1px solid #7dd3fc;
     border-radius: 16px;
     font-size: 13px;
     font-weight: 500;
@@ -1217,8 +1306,8 @@ main {
 }
 
 .quick-search-btn:hover {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    border-color: #7dd3fc;
+    background: #f0f9ff;
+    border-color: #38bdf8;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(3, 105, 161, 0.1);
 }
@@ -1235,9 +1324,21 @@ main {
 
 /* Matched item row */
 .matched-item-row {
-    margin-top: 8px;
-    margin-bottom: 16px;
-    min-height: 24px;
+    /* 在 .input-row-with-button 網格內：手機整列在最下、桌機與計算按鈕同列置左欄 */
+    grid-column: 1 / -1;
+    margin: 0;
+    min-height: 0;
+}
+
+@media (min-width: 769px) {
+    .matched-item-row {
+        grid-column: 1;
+        grid-row: 3;
+        align-self: start; /* 與按鈕同樣釘住第 3 列頂端 */
+        display: flex;
+        align-items: center;
+        min-height: 46px; /* 與計算按鈕同高，讓文字垂直置中對齊按鈕 */
+    }
 }
 
 label {
@@ -1248,6 +1349,7 @@ label {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="number"] {
     width: 100%;
     padding: 16px;
@@ -1269,34 +1371,35 @@ input[type="number"] {
 }
 
 input[type="text"]:focus,
+input[type="search"]:focus,
 input[type="number"]:focus {
     outline: none;
     border-color: #6bb6ff;
     box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
 }
 
-/* Matched item display */
+/* Matched item display：純文字狀態列（刻意無底色無框線，與淺灰勾選框區隔） */
 .matched-item {
     margin-top: 0;
-    padding: 6px 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    color: #64748b;
-    font-size: 12px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #059669;
+    font-size: 13px;
+    line-height: 1.5;
     display: inline-block;
 }
 
 .matched-item.no-match {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: transparent;
+    border: none;
     color: #dc2626;
 }
 
 .matched-item.partial-match {
-    background: #f9fafb;
-    border: 1px solid #d1d5db;
-    color: #374151;
+    background: transparent;
+    border: none;
+    color: #4b5563;
 }
 
 .matched-item.no-match .parking-jump-link {
@@ -1690,21 +1793,35 @@ input[type="number"]:focus {
    Show new cardholder promos toggle
    ========================================== */
 .show-promos-toggle {
-    margin-top: 26px;
-    margin-left: 5px;
+    position: relative; /* 「?」說明浮層的定位基準 */
+    display: flex;
+    gap: 12px; /* 與 .input-row-with-button 手機版 grid gap 一致，上下左右間距等距 */
     font-size: 14px;
     color: #6b7280;
     user-select: none;
 }
 
+/* 淺灰方框 toggle：左右各一框、各佔一半；label 撐滿讓點文字也能勾選，「?」靠右 */
 .promo-toggle-row {
-    display: inline-flex;
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
     align-items: center;
     gap: 6px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 4px 12px;
 }
 
 .promo-help-text {
+    position: absolute; /* 浮層：蓋在下方內容上，不推擠版面 */
+    top: 100%;
+    left: 0;
+    right: 0;
     margin-top: 6px;
+    z-index: 30;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     padding: 8px 10px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
@@ -1775,36 +1892,67 @@ input[type="number"]:focus {
 }
 
 .show-promos-toggle label {
+    flex: 0 1 auto;
+    min-width: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
-    color: #6b7280;
+    color: #4b5563;
     margin-bottom: 0;
     line-height: 1.4;
     visibility: visible;
     height: auto;
+    white-space: nowrap;
 }
 
 .show-promos-toggle input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     margin: 0;
     cursor: pointer;
     flex-shrink: 0;
+    accent-color: #2563eb;
 }
 
-.show-promos-desktop { display: block; }
-.show-promos-mobile { display: none; }
-
+/* toggles 是 .input-row-with-button 的直接網格子元素 */
 @media (max-width: 768px) {
-    .show-promos-desktop { display: none; }
-    .show-promos-mobile { display: block; margin-top: 0; margin-bottom: 8px; }
-    /* Defeat .button-group label rule that collapses to height/line-height 0 on mobile */
-    .button-group .show-promos-toggle label {
-        height: auto;
-        line-height: 1.4;
-        margin-bottom: 0;
+    /* 手機：佔滿整列（合併框下方），左右各一框 */
+    .show-promos-toggle { grid-column: 1 / -1; margin: 0; }
+}
+
+@media (min-width: 769px) {
+    /* 桌機 2:1 版面：左欄合併框跨 3 列；右欄由上而下「金額 → 勾選 → 計算按鈕」，
+       按鈕在整個表單動線的收尾位置 */
+    .input-row-with-button > .form-group:first-child {
+        grid-column: 1;
+        grid-row: 1 / 4;
+        position: relative; /* search hint 浮層的定位基準 */
+        align-self: start;
+    }
+    /* search hint 改浮層貼在合併框下方：不參與 grid 佈局，出現時右欄不跑位。
+       選擇器帶父層 class 以蓋過後方的基礎 #search-hints-container 規則 */
+    .input-row-with-button #search-hints-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin: 6px 0 0 0;
+    }
+    .input-row-with-button > .form-group.button-group {
+        grid-column: 2;
+        grid-row: 3;
+        align-self: start; /* 釘住：search hint 撐高左欄（第 3 列變高）時按鈕不跑位 */
+    }
+    .input-row-with-button > .form-group.button-group .calculate-btn {
+        width: 100%;
+        margin: 0;
+    }
+    .show-promos-toggle {
+        grid-column: 2;
+        grid-row: 2;
+        margin: 0;
+        align-self: start;
     }
 }
 
@@ -1939,27 +2087,101 @@ input[type="number"]:focus {
     color: #b45309;
 }
 
+/* 果凍感「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
+   亮黃漸層＋頂部玻璃光澤＋底部軟糖邊＋暖色環境陰影；active 時往下沉並輕微壓扁，
+   transition 用回彈曲線做 Q 彈手感。個別位置的 padding/font-size 留在各自的規則裡。 */
+.card-apply-cta-btn,
+.card-detail-apply-header-btn,
+.card-detail-apply-bar-btn {
+    background:
+        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    color: #7a4e00;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 999px;
+    border: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 4px 0 #e8a800,
+        0 6px 14px rgba(255, 180, 0, 0.35);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* hover＝單次掠光＋變亮，無放大（2026-07-16 站長定案，與 promos 頁一致）。
+   掠光需要 overflow hidden＋::after 光帶。 */
+.card-apply-cta-btn,
+.card-detail-apply-header-btn,
+.card-detail-apply-bar-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-apply-cta-btn::after,
+.card-detail-apply-header-btn::after,
+.card-detail-apply-bar-btn::after {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 34%;
+    background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+    transform: translateX(-140%) skewX(-18deg);
+    pointer-events: none;
+}
+
+.card-apply-cta-btn:hover::after,
+.card-detail-apply-header-btn:hover::after,
+.card-detail-apply-bar-btn:hover::after {
+    transform: translateX(340%) skewX(-18deg);
+    transition: transform 0.65s ease;
+}
+
+.card-apply-cta-btn:hover,
+.card-detail-apply-header-btn:hover,
+.card-detail-apply-bar-btn:hover {
+    filter: brightness(1.07) saturate(1.05);
+}
+
+/* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
+@media (prefers-reduced-motion: reduce) {
+    .card-apply-cta-btn,
+    .card-detail-apply-header-btn,
+    .card-detail-apply-bar-btn {
+        transition: none;
+    }
+
+    .card-apply-cta-btn::after,
+    .card-detail-apply-header-btn::after,
+    .card-detail-apply-bar-btn::after {
+        display: none;
+    }
+
+    .card-apply-cta-btn:hover,
+    .card-detail-apply-header-btn:hover,
+    .card-detail-apply-bar-btn:hover {
+        filter: none;
+    }
+}
+
+.card-apply-cta-btn:active,
+.card-detail-apply-header-btn:active,
+.card-detail-apply-bar-btn:active {
+    transform: translateY(3px) scale(1.02, 0.94);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 1px 0 #e8a800,
+        0 2px 5px rgba(255, 180, 0, 0.3);
+}
+
 .card-apply-cta-btn {
     flex: 0 0 auto;
     display: inline-block;
     padding: 8px 16px;
-    background: #facc15;
-    color: #422006;
     font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: 6px;
-    border: 1px solid #eab308;
-    transition: background-color 0.15s ease, transform 0.05s ease;
     white-space: nowrap;
-}
-
-.card-apply-cta-btn:hover {
-    background: #eab308;
-}
-
-.card-apply-cta-btn:active {
-    transform: translateY(1px);
 }
 
 /* Mobile: center the CTA box horizontally within the section. */
@@ -2026,14 +2248,6 @@ input[type="number"]:focus {
     border-color: #e5e7eb;
 }
 
-/* Corner chip variant — positioned at the top-right of a search result card */
-.promo-type-chip.promo-type-chip-corner {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 1;
-}
-
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
    highlight/cap row gets full width for breathable layout. */
 .cardholder-promo-item .card-details {
@@ -2041,7 +2255,8 @@ input[type="number"]:focus {
 }
 
 /* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
-   Style matches detail page's .card-apply-cta-btn. */
+   小 pill，配色跟果凍按鈕同一組亮黃語言，但尺寸小不做滿版果凍厚度，
+   只留輕量高光＋按下 squish，避免新舊黃並存。 */
 .cardholder-promo-item {
     position: relative;
 }
@@ -2049,25 +2264,36 @@ input[type="number"]:focus {
 .promo-apply-cta-btn {
     display: inline-block;
     flex-shrink: 0;
-    padding: 2px 8px;
-    background: #facc15;
-    color: #78350f;
+    padding: 3px 9px;
+    background:
+        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
+        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    color: #7a4e00;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     text-decoration: none;
-    border-radius: 3px;
-    border: 1px solid #eab308;
-    transition: background-color 0.15s ease, transform 0.05s ease;
+    border-radius: 999px;
+    border: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 2px 0 #e8a800,
+        0 3px 7px rgba(255, 180, 0, 0.3);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     white-space: nowrap;
     line-height: 1.6;
 }
 
 .promo-apply-cta-btn:hover {
-    background: #fbbf24;
+    transform: scale(1.05);
 }
 
 .promo-apply-cta-btn:active {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(1.02, 0.94);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 0.5px 0 #e8a800,
+        0 1px 3px rgba(255, 180, 0, 0.25);
 }
 
 .promo-apply-cta-icon {
@@ -2309,11 +2535,16 @@ input[type="number"]:focus {
         line-height: 1.4;
     }
 
-    /* Date badge on mobile */
+    /* Date badge on mobile（badge 是兄弟元素，貼齊文字第一行） */
+    .announcement-text-wrapper {
+        align-items: flex-start;
+    }
+
     .announcement-date-badge {
         font-size: 0.7rem;
         padding: 1px 6px;
         margin-right: 6px;
+        margin-top: 2px;
     }
 
     .announcement-controls {
@@ -2348,12 +2579,6 @@ input[type="number"]:focus {
     .button-group {
         margin-top: 0px;
         min-width: 96px;
-    }
-
-    .button-group label {
-        margin-bottom: 0px;
-        height: 0;
-        line-height: 0;
     }
 
     .calculate-btn.compact {
@@ -2419,6 +2644,13 @@ input[type="number"]:focus {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+}
+
+/* 詳情頁可以從其他 modal（我的配卡、選卡、我的信用卡）內開啟，必須疊在
+   所有 z-index 1000 的 modal 之上——同層時 DOM 順序決定，而 #card-detail-modal
+   在 HTML 裡比 #my-mappings-modal 早，曾被蓋住 */
+#card-detail-modal {
+    z-index: 1100;
 }
 
 .modal-content {
@@ -2785,6 +3017,18 @@ input[type="number"]:focus {
 @keyframes breakdownSlideDown {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
+}
+/* 詳情頁活動項目內的「回饋組成」抽屜：detail item 的 padding 與 .card-result
+   不同，改為內含圓角框（不吃上面為結果卡調的負 margin）；文字整體縮小 */
+.cashback-detail-item .calc-breakdown-popup {
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 12px;
+}
+.cashback-detail-item .calc-breakdown-popup .breakdown-table td {
+    padding: 3px 8px 3px 0;
 }
 .breakdown-table {
     border-collapse: collapse;
@@ -3404,6 +3648,93 @@ input[type="text"].credit-limit-input:focus {
 
 .card-detail-nav-btn[hidden] {
     display: none;
+}
+
+/* 桌機版「立即申辦」按鈕，緊鄰卡名（詳情頁 header）。
+   配色沿用 .card-apply-cta-btn 的黃底樣式。 */
+.card-detail-apply-header-btn {
+    flex-shrink: 0;
+    display: inline-block;
+    padding: 6px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.card-detail-apply-header-btn[hidden] {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* 手機改用底部 sticky bar，header 按鈕不重複顯示 */
+    .card-detail-apply-header-btn {
+        display: none;
+    }
+}
+
+/* 手機版底部常駐申辦列，貼在 .modal-content（捲動容器）底部。
+   是 modal-content 的最後一個子節點，in-flow，不需額外 padding hack。
+   2026-07-15：改成「好康通知」語氣——淡奶油黃底＋暖色邊框，跟內文區塊拉開視覺區隔。 */
+.card-detail-apply-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fffbeb;
+    padding: 10px 16px;
+    border-top: 1px solid #fde68a;
+    box-shadow: 0 -4px 10px rgba(234, 179, 8, 0.15);
+    z-index: 10;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.card-detail-apply-bar[hidden] {
+    display: none;
+}
+
+/* 靜態禮物 emoji，純裝飾（aria-hidden）。文字被截斷隱藏時（applyCta.text 為空）
+   一併隱藏，避免只剩孤零零一個 emoji。 */
+.card-detail-apply-bar-emoji {
+    flex: 0 0 auto;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.card-detail-apply-bar:has(.card-detail-apply-bar-text[hidden]) .card-detail-apply-bar-emoji {
+    display: none;
+}
+
+.card-detail-apply-bar-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #92400e;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-detail-apply-bar-text[hidden] {
+    display: none;
+}
+
+.card-detail-apply-bar-btn {
+    flex-shrink: 0;
+    display: inline-block;
+    padding: 10px 18px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+@media (min-width: 769px) {
+    /* 桌機用 header 按鈕，sticky bar 不顯示 */
+    .card-detail-apply-bar {
+        display: none;
+    }
 }
 
 .card-info-section {
@@ -4334,8 +4665,7 @@ input[type="text"].credit-limit-input:focus {
 
 .social-section,
 .sponsor-section,
-.review-section,
-.faq-section {
+.explore-section {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -4353,6 +4683,7 @@ input[type="text"].credit-limit-input:focus {
 
 .social-media-links {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
     justify-content: center;
@@ -4392,8 +4723,22 @@ input[type="text"].credit-limit-input:focus {
     color: white;
 }
 
-.social-link.review:hover {
-    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+/* 站內頁連結 hover 上色（2026-07-16 站長要求：有顏色、不要動態）。
+   新戶活動＝品牌琥珀黃、FAQ＝主站藍、關於＝薄荷綠。 */
+.social-link.promos:hover {
+    background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    border-color: transparent;
+    color: #7a4e00;
+}
+
+.social-link.faq:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.social-link.about:hover {
+    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
     border-color: transparent;
     color: white;
 }
@@ -4431,10 +4776,10 @@ input[type="text"].credit-limit-input:focus {
     }
 
     .social-media-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px 16px;
-        justify-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
     }
 
     .social-media-title {
@@ -4457,100 +4802,6 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
-/* Review Section Styles */
-.review-feedback {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
-    padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
-    animation: fadeIn 0.3s ease;
-    margin-top: 8px;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Review Modal Styles */
-.review-modal-content {
-    max-width: 500px;
-    width: 90%;
-}
-
-.star-rating-modal {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    font-size: 48px;
-    cursor: pointer;
-    margin: 20px 0;
-}
-
-.star-modal {
-    color: #e5e7eb;
-    transition: all 0.2s ease;
-    user-select: none;
-    cursor: pointer;
-}
-
-.star-modal:hover,
-.star-modal.hover {
-    color: #fbbf24;
-    transform: scale(1.1);
-}
-
-.star-modal.selected {
-    color: #fbbf24;
-}
-
-#review-comment-section {
-    margin-top: 20px;
-}
-
-.review-textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 12px;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: inherit;
-    resize: vertical;
-    transition: border-color 0.2s ease;
-}
-
-.review-textarea:focus {
-    outline: none;
-    border-color: #1a73e8;
-    box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
-}
-
-.review-char-count {
-    text-align: right;
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 4px;
-    margin-bottom: 16px;
-}
-
-.review-modal-actions {
-    display: flex;
-    gap: 12px;
-}
-
-.review-modal-actions button {
-    flex: 1;
-}
-
 .auth-btn.secondary {
     background: #f3f4f6;
     color: #374151;
@@ -4558,22 +4809,6 @@ input[type="text"].credit-limit-input:focus {
 
 .auth-btn.secondary:hover {
     background: #e5e7eb;
-}
-
-/* Mobile responsiveness for review section */
-@media (max-width: 600px) {
-    .star-rating-modal {
-        font-size: 40px;
-        gap: 4px;
-    }
-
-    .review-modal-content {
-        width: 95%;
-    }
-
-    .review-modal-actions {
-        flex-direction: column;
-    }
 }
 
 /* Data Update Footer */
@@ -4812,19 +5047,20 @@ input[type="text"].credit-limit-input:focus {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button */
+/* Floating My Mappings Button（淺綠底＋釘選 icon，與結果卡的釘選視覺呼應） */
 .my-mappings-floating-btn {
     position: fixed;
     bottom: 72px;
     right: 16px;
     padding: 8px 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: white;
+    color: #065f46;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
@@ -4834,8 +5070,14 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     transform: translateY(-2px);
+}
+
+/* 配卡 modal 標題的釘選 icon */
+.mappings-title-pin {
+    vertical-align: -2px;
+    color: #667eea;
 }
 
 .my-mappings-floating-btn:active {
@@ -4919,16 +5161,25 @@ input[type="text"].credit-limit-input:focus {
     max-width: 600px;
 }
 
-.mappings-search-input {
+/* 用 #my-mappings-modal 提高特異性——全域 input[type="text"]（padding 16px、
+   2px 框）特異性 0-1-1 會蓋過純 class 的 0-1-0，之前這組樣式其實從沒生效過。
+   字級固定 16px（<16px 會觸發 iOS 聚焦自動縮放），矮身靠 padding、預覽字靠
+   ::placeholder 縮小 */
+#my-mappings-modal .mappings-search-input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 7px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.875rem;
+    border-radius: 8px;
+    font-size: 16px;
     transition: border-color 0.2s;
 }
 
-.mappings-search-input:focus {
+#my-mappings-modal .mappings-search-input::placeholder {
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+#my-mappings-modal .mappings-search-input:focus {
     outline: none;
     border-color: #667eea;
 }
@@ -4937,181 +5188,6 @@ input[type="text"].credit-limit-input:focus {
     max-height: 500px;
     overflow-y: auto;
     margin-top: 16px;
-}
-
-/* Standard table layout with drag and drop */
-.mappings-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-    background: white;
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.mappings-table thead {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.mappings-table th {
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-    font-size: 13px;
-}
-
-.mappings-table th.drag-handle-header {
-    width: 30px;
-    padding: 12px 8px;
-}
-
-.mappings-table th.merchant-column {
-    width: 120px;
-}
-
-.mappings-table th.card-name-column {
-    width: 150px;
-}
-
-.mappings-table th.rate-column {
-    width: 80px;
-    text-align: right;
-}
-
-.mappings-table th.sortable {
-    user-select: none;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.mappings-table th.sortable:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.mappings-table .sort-icon {
-    margin-left: 4px;
-    font-size: 12px;
-    opacity: 0.5;
-}
-
-.mappings-table .sort-icon.active {
-    opacity: 1;
-    font-weight: bold;
-}
-
-.mappings-table th.delete-column {
-    width: 50px;
-    text-align: center;
-}
-
-.mappings-table tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-    transition: background 0.2s;
-}
-
-.mappings-table tbody tr:hover {
-    background: #f9fafb;
-}
-
-.mappings-table tbody tr:last-child {
-    border-bottom: none;
-}
-
-.mappings-table td {
-    padding: 12px;
-}
-
-.mappings-table td.drag-handle {
-    cursor: grab;
-    color: #9ca3af;
-    padding: 12px 8px;
-    text-align: center;
-}
-
-.mappings-table td.drag-handle:active {
-    cursor: grabbing;
-}
-
-.mappings-table td.merchant-cell {
-    font-weight: 500;
-    color: #1f2937;
-}
-
-.mappings-table td.card-cell {
-    color: #4b5563;
-}
-
-.mappings-table td.rate-cell {
-    color: #10b981;
-    font-weight: 600;
-    text-align: right;
-}
-
-.mappings-table th.expiry-column {
-    width: 100px;
-    white-space: nowrap;
-}
-
-.mappings-table td.expiry-cell {
-    color: #6b7280;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-.mappings-table td.expiry-cell.expired {
-    color: #dc2626;
-    font-weight: 500;
-}
-
-.mappings-table td.delete-cell {
-    text-align: center;
-}
-
-/* Table wrapper for horizontal scrolling on mobile */
-.mappings-table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-/* Show scrollbar on mobile/tablet */
-@media (max-width: 1024px) {
-    .mappings-table-wrapper {
-        overflow-x: auto;
-    }
-
-    /* Make table minimum width to ensure horizontal scroll */
-    .mappings-table {
-        min-width: 650px;
-    }
-
-    /* Adjust column widths for mobile */
-    .mappings-table th.merchant-column {
-        width: 70px;
-    }
-
-    .mappings-table th.card-name-column {
-        width: 70px;
-    }
-
-    .mappings-table th.rate-column {
-        width: 40px;
-    }
-
-    .mappings-table th.expiry-column {
-        width: 80px;
-    }
-}
-
-/* Drag and drop states */
-.mapping-row.dragging {
-    opacity: 0.5;
-    background: #f3f4f6;
-}
-
-.mapping-row.drag-over {
-    background: #e0e7ff;
-    border-top: 2px solid #667eea;
 }
 
 .mapping-delete-btn {
@@ -5140,62 +5216,252 @@ input[type="text"].credit-limit-input:focus {
     opacity: 0.5;
 }
 
-/* Mobile responsive styles for mappings table */
-@media (max-width: 640px) {
-    .mappings-table {
-        font-size: 12px;
-    }
+/* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
+   一張信用卡＝一個群組卡片：卡名色塊（卡面主色，CARD_ACCENT_COLORS）＋商家列。
+   手機不再橫向捲動；過期配對沉底收合；拖曳把手 touch-action:none 供觸控拖曳 */
+.mapping-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
-    .mappings-table th {
-        padding: 10px 6px;
-        font-size: 11px;
-    }
+.mapping-group {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
 
-    .mappings-table td {
-        padding: 10px 6px;
-    }
+.mapping-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    color: white;
+}
 
-    /* Reduce drag handle width on mobile */
-    .mappings-table th.drag-handle-header {
-        width: 24px;
-        padding: 10px 4px;
-    }
+.mapping-group-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 700;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+}
 
-    .mappings-table td.drag-handle {
-        padding: 10px 4px;
-    }
+/* 卡名旁的卡圖小圖（仿 promos 的 promo-card-cardimg，縮小版；缺圖自動隱藏） */
+.mapping-group-cardimg {
+    flex: none;
+    width: 46px;
+    height: 29px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 2px;
+}
 
-    /* Reduce rate column width to give more space for card name */
-    .mappings-table th.rate-column {
-        width: 50px;
-        font-size: 10px;
-    }
+/* ⓘ 與全站其他 peek 按鈕同款：只有字元自帶的圓圈，不畫外框 */
+.mapping-peek-btn {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: color 0.15s ease, background 0.15s ease;
+}
 
-    .mappings-table td.rate-cell {
-        font-size: 12px;
-    }
+.mapping-peek-btn:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
 
-    /* Reduce delete column width */
-    .mappings-table th.delete-column {
-        width: 36px;
-    }
+.mapping-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    background: white;
+}
 
-    .mapping-delete-btn {
-        font-size: 16px;
-        padding: 2px 4px;
-    }
+.mapping-group-rows .mapping-item:last-child {
+    border-bottom: none;
+}
 
-    /* Ensure card names don't break awkwardly */
-    .mappings-table td.card-cell {
-        word-break: keep-all;
-        overflow-wrap: break-word;
-        line-height: 1.3;
-    }
+.mapping-item-main {
+    flex: 1;
+    min-width: 0;
+}
 
-    /* Merchant cell optimization */
-    .mappings-table td.merchant-cell {
-        font-size: 12px;
-    }
+.mapping-item-merchant {
+    font-weight: 500;
+    color: #1f2937;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.mapping-item-date {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+}
+
+.mapping-item-rate {
+    flex: none;
+    color: #059669;
+    font-weight: 700;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 拖曳把手：touch-action none 讓觸控拖曳不會捲動 modal */
+.mapping-drag-handle {
+    flex: none;
+    display: flex;
+    align-items: center;
+    color: #d1d5db;
+    cursor: grab;
+    touch-action: none;
+    padding: 6px 2px;
+    margin: -6px 0;
+}
+
+.mapping-drag-handle:active {
+    cursor: grabbing;
+}
+
+.mapping-group-head .mapping-drag-handle {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* 淺色色塊（白卡面）：前景轉深色、補分隔線，避免白字隱形／與卡片底融合 */
+.mapping-group-head.light {
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.mapping-group-head.light .mapping-peek-btn {
+    color: #6b7280;
+}
+
+.mapping-group-head.light .mapping-peek-btn:hover {
+    color: #1e40af;
+    background: #eef2ff;
+}
+
+.mapping-group-head.light .mapping-drag-handle {
+    color: #9ca3af;
+}
+
+.mapping-dragging {
+    opacity: 0.9;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 5;
+}
+
+.mapping-badge-soon {
+    display: inline-block;
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.mapping-badge-expired {
+    display: inline-block;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+/* 過期沉底收合區 */
+.mappings-expired {
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+    background: #fafafa;
+    overflow: hidden;
+}
+
+.mappings-expired-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.mappings-expired-chev {
+    transition: transform 0.2s;
+    font-size: 11px;
+}
+
+.mappings-expired.open .mappings-expired-chev {
+    transform: rotate(180deg);
+}
+
+.mappings-expired-body {
+    display: none;
+}
+
+.mappings-expired.open .mappings-expired-body {
+    display: block;
+}
+
+.mappings-expired .mapping-item {
+    background: transparent;
+    border-top: 1px solid #f3f4f6;
+    border-bottom: none;
+}
+
+.mappings-expired .mapping-item-merchant,
+.mappings-expired .mapping-item-rate {
+    color: #9ca3af;
+}
+
+.mapping-expired-cardname {
+    color: #9ca3af;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.mappings-clear-expired {
+    display: block;
+    margin: 10px 12px 12px;
+    padding: 6px 14px;
+    background: white;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.mappings-clear-expired:hover {
+    background: #fef2f2;
 }
 
 /* ============================================
@@ -6420,8 +6686,15 @@ input[type="text"].credit-limit-input:focus {
 
 /* 搜尋提示容器 */
 #search-hints-container {
+    position: relative;
+    z-index: 5; /* 蓋過同格位的匹配狀態列文字（罕見同時出現時不疊字） */
     margin-top: 10px;
     margin-bottom: 10px;
+}
+
+/* 沒提示時不佔空間（否則桌機勾選框無法貼齊合併框底部） */
+#search-hints-container:empty {
+    margin: 0;
 }
 
 /* 搜尋提示卡片 */
@@ -6617,6 +6890,116 @@ input[type="text"].credit-limit-input:focus {
     opacity: 1;
 }
 
+/* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
+   （2026-07-16：桌機改搬到 header 導覽，這裡只留給手機側選單用；DOM 保留不刪，
+   ≥769px 隱藏即可） */
+.sidebar-page-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (min-width: 769px) {
+    .sidebar-page-links {
+        display: none;
+    }
+}
+
+.sidebar-promos-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #FFE066 0%, #FFC933 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
+    text-decoration: none;
+    transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+}
+
+.sidebar-promos-banner:hover {
+    transform: translateY(-1px) scale(1.02);
+}
+
+.sidebar-promos-banner:active {
+    transform: translateY(2px) scale(1.01, 0.96);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+}
+
+.sidebar-promos-banner-emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.sidebar-promos-banner-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-promos-banner-text strong {
+    font-size: 0.92rem;
+    color: #7A4E00;
+}
+
+.sidebar-promos-banner-text small {
+    font-size: 0.72rem;
+    color: #98650a;
+}
+
+.sidebar-promos-banner-arrow {
+    color: #7A4E00;
+    font-weight: 700;
+}
+
+/* FAQ 卡：與新戶 banner 同構型但刻意低調（灰階、無陰影），它不是重點入口 */
+.sidebar-faq-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.sidebar-faq-card:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.sidebar-faq-card-emoji {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.sidebar-faq-card-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.sidebar-faq-card-text strong {
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+.sidebar-faq-card-text small {
+    font-size: 0.7rem;
+    color: #9ca3af;
+}
+
+.sidebar-faq-card-arrow {
+    color: #9ca3af;
+    font-weight: 700;
+}
+
 .sidebar .card-chips {
     justify-content: flex-start;
     gap: 5px;
@@ -6726,7 +7109,16 @@ input[type="text"].credit-limit-input:focus {
         display: none;
     }
 
-    /* Input row: stack merchant input on first row, amount + button on second row */
+    /* Input row：中寬度側欄固定吃掉 240px，可用寬度比桌機窄很多，2fr:1fr 兩欄式
+       右欄放不下「金額→toggles→按鈕」三列，改用跟手機版一致的滿版堆疊。
+       （2026-07-16 修跑版）根因：這裡只覆寫了 grid-template-columns 與合併框的
+       grid-column，但合併框的 grid-row:1/4、toggles 的 grid-column:2/grid-row:2、
+       按鈕的 grid-column:2/grid-row:3 全部繼承自上面 `@media (min-width:769px)`
+       的桌機顯式定位規則（該 media query 沒有寬度上限，769-1024px 也會套用）——
+       合併框變滿版後仍佔 3 列高，跟卡在第 2 欄的 toggles／按鈕重疊，導致「計算回饋」
+       按鈕蓋住合併框與 chips。這裡要把繼承來的 grid-row/grid-column 全部歸零成
+       auto，讓四個子元素照 DOM 順序自然落版（跟手機版同一招）：
+       合併框整列 → toggles 整列 → 金額＋按鈕同列各半。 */
     .input-row-with-button {
         grid-template-columns: 1fr auto;
         gap: 12px;
@@ -6734,11 +7126,33 @@ input[type="text"].credit-limit-input:focus {
 
     .input-row-with-button > .form-group:first-child {
         grid-column: 1 / -1;
+        grid-row: auto;
     }
 
-    .button-group label {
-        display: none;
+    .input-row-with-button > .form-group.button-group {
+        grid-column: auto;
+        grid-row: auto;
     }
+
+    .show-promos-toggle {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        margin: 0;
+    }
+
+    /* 第 5 個 grid 子元素（匹配狀態列）也要一併歸零——它同樣繼承了桌機版
+       `grid-column:1; grid-row:3;`（固定兩軸的「完全定位」項目），若不取消，
+       auto-placement 演算法會先把它釘死在第 3 列第 1 欄，逼得金額／按鈕
+       兩個全自動項目找不到同一列的位置而各自流到不同列（金額擠進第3列
+       第2欄、按鈕流到第4列第1欄），版面仍然「能用」但不是預期的同列並排。 */
+    .matched-item-row {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        align-self: auto;
+        display: block;
+        min-height: 0;
+    }
+
 }
 
 /* Mobile: sidebar becomes drawer */
@@ -6797,6 +7211,7 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .app-layout main input[type="text"],
+.app-layout main input[type="search"],
 .app-layout main input[type="number"] {
     padding: 12px;
     font-size: 15px;
@@ -6832,6 +7247,7 @@ input[type="text"].credit-limit-input:focus {
         margin-bottom: 4px;
     }
     .app-layout main input[type="text"],
+    .app-layout main input[type="search"],
     .app-layout main input[type="number"] {
         padding: 10px 12px;
     }
@@ -6931,7 +7347,6 @@ input[type="text"].credit-limit-input:focus {
         max-height: 80dvh;
     }
 
-    .review-modal-content,
     .auth-modal-content,
     .announcement-modal-content,
     #my-mappings-modal .modal-content,
@@ -7049,10 +7464,13 @@ input[type="text"].credit-limit-input:focus {
     font-weight: 500;
     white-space: nowrap;
 }
+/* 配色對齊快捷搜尋按鈕（.quick-search-btn：白底＋天藍細框＋藍字，
+   2026-07-16 站長要求），尺寸維持原 tag 大小 */
 .spotlight-merchant-tag {
     font-size: 0.78rem;
-    color: #4b5563;
-    background: #f3f4f6;
+    color: #0369a1;
+    background: #fff;
+    border: 1px solid #7dd3fc;
     border-radius: 999px;
     padding: 4px 10px;
     overflow: hidden;
@@ -7273,4 +7691,102 @@ input[type="text"].credit-limit-input:focus {
     select {
         font-size: 16px !important;
     }
+}
+
+/* 精準搜尋零結果提示（合併框下方） */
+.exact-search-empty-hint {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #b45309;
+}
+
+/* ============ 搜尋輸入區版面（2026-07-12 重整 v2：合併框＋淺灰方框 toggle） ============ */
+/* 合併框：上半部商家輸入、下半部快捷選項（淺灰背景）；外層粗框。
+   「快捷搜尋」標題列已從 DOM 移除——chips 就是這個輸入框的建議選項 */
+.merchant-search-box {
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.merchant-search-box:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+.merchant-search-box #merchant-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #fff; /* 部分行動瀏覽器給 type=search 灰色 UA 底色，明確蓋掉 */
+    border: none;
+    border-radius: 11px 11px 0 0;
+    box-shadow: none;
+    width: 100%;
+}
+
+.merchant-search-box #merchant-input:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+#merchant-input::-webkit-search-cancel-button,
+#merchant-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+
+.merchant-search-box .quick-search-wrapper {
+    margin-top: 0;
+    background: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 0 0 11px 11px;
+    padding: 10px 12px;
+}
+
+/* 金額框：NT$ 前綴在左、輸入在右的一體框（桌機手機同款），粗框與合併框一致 */
+.amount-input-wrap {
+    display: flex;
+    align-items: center;
+    border: 3px solid #dbe1ea;
+    border-radius: 14px;
+    background: #fff;
+    padding-left: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.amount-input-wrap:focus-within {
+    border-color: #6bb6ff;
+    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
+}
+
+.amount-input-wrap .amount-prefix {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.amount-input-wrap input[type="number"] {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    border: none;
+    border-radius: 0 11px 11px 0;
+    box-shadow: none;
+}
+
+.amount-input-wrap input[type="number"]:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    /* 手機版金額列：砍標籤與提示（預設值 1000 直接顯示在框內） */
+    label[for="amount-input"] {
+        display: none;
+    }
+
 }

@@ -5,14 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>信用卡回饋大師</title>
 
-    <!-- Pre-paint auth hint: skip hero flash for returning logged-in users.
-         Read synchronously before any external script so first paint reflects it. -->
+    <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
+         - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
+         - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
+           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
+         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+         ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
+         location.replace 讓返回鍵不會跳回造成循環。
+         ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
+         class，styles.css 據此只留 #card-detail-modal、隱藏其餘全站 UI——必須在這裡
+         （首屏前）加 class，晚了會先閃一下完整工具介面才被 CSS 蓋掉。 -->
     <script>
         try {
-            if (localStorage.getItem('pmc_known_logged_in') === '1') {
+            if (new URLSearchParams(location.search).get('embed') === '1') {
+                document.documentElement.classList.add('pmc-embed');
+            }
+        } catch (e) {
+            // URLSearchParams 不支援時忽略——embed 只是顯示精簡化，非必要流程
+        }
+        var pmcFromLanding = location.search.indexOf('start') !== -1;
+        try {
+            if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+                localStorage.setItem('pmc_seen_landing', '1');
+                location.replace('landing.html');
+            } else {
                 document.documentElement.classList.add('pmc-returning-user');
             }
-        } catch (e) { /* localStorage disabled — fall back to default render */ }
+        } catch (e) {
+            // localStorage 不可用（無痕強化/隱私封鎖）
+            if (!pmcFromLanding) location.replace('landing.html');
+            else document.documentElement.classList.add('pmc-returning-user');
+        }
     </script>
 
     <!-- SEO Meta Tags -->
@@ -39,6 +62,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase modules: modulepreload so the browser fetches/parses them while the
+         rest of <head> loads, instead of waiting for the inline module script near the
+         end of <body> to discover the import specifiers. URLs must match the import
+         statements verbatim (see the inline <script type="module"> block below). -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js" crossorigin>
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js" crossorigin>
+
     <!-- Font display optimization to prevent layout shift -->
     <style>
         /* Ensure font is loaded with swap to prevent invisible text */
@@ -48,7 +81,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260717062755">
+    <link rel="stylesheet" href="styles.css?v=20260717063100">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -142,6 +175,13 @@
                     <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
                     <h1>信用卡回饋大師</h1>
                 </div>
+                <!-- 桌機 header 導覽（≥769px）：原本在側選單的兩個站內頁面入口搬來這裡——
+                     側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
+                     手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
+                <nav class="header-page-links" aria-label="站內頁面">
+                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--dot">新戶活動</a>
+                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
+                </nav>
                 <div class="auth-section">
                     <div id="user-info">
                         <div class="avatar-menu-wrapper">
@@ -193,6 +233,9 @@
                         <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
                     </svg>
                     <div class="announcement-text-wrapper">
+                        <!-- 日期 badge 必須是 announcement-text 的「兄弟」而非子元素：
+                             iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字 -->
+                        <span class="announcement-date-badge" id="announcement-date" style="display: none;"></span>
                         <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
                     </div>
                     <div class="announcement-controls">
@@ -251,6 +294,18 @@
                         </div>
                     </div>
 
+                    <nav class="sidebar-page-links" aria-label="站內頁面">
+                        <a href="promos.html" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
+                            <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>
+                            <span class="sidebar-promos-banner-text"><strong>新戶活動一覽</strong><small>首刷禮・回饋加碼 好康快報</small></span>
+                            <span class="sidebar-promos-banner-arrow" aria-hidden="true">→</span>
+                        </a>
+                        <a href="faq.html" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
+                            <span class="sidebar-faq-card-emoji" aria-hidden="true">💬</span>
+                            <span class="sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
+                            <span class="sidebar-faq-card-arrow" aria-hidden="true">→</span>
+                        </a>
+                    </nav>
                 </div>
             </aside>
 
@@ -364,13 +419,13 @@
                             消費商家
                             <button type="button" id="toggle-input-guide" class="help-btn" aria-label="輸入指南">?</button>
                         </label>
-                        <input type="text" id="merchant-input" placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
+                        <div class="merchant-search-box">
+                        <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
+                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
 
-                        <!-- 搜尋提示容器 -->
-                        <div id="search-hints-container"></div>
-
-                        <!-- 快捷搜尋按鈕 -->
-                        <div class="quick-search-label">快捷搜尋</div>
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
                                 <!-- 可見的快捷按鈕會由 JavaScript 填充 -->
@@ -398,50 +453,61 @@
                                 </div>
                             </div>
                         </div>
+                        </div><!-- /merchant-search-box -->
+
+                        <!-- 搜尋提示容器 -->
+                        <div id="search-hints-container"></div>
+                    </div>
+
+                    <!-- 精準搜尋＋新戶活動 toggles（桌機/手機共用一份，合併框下方同一列；說明點「?」內嵌展開） -->
+                    <div class="show-promos-toggle">
+                        <div class="promo-toggle-row">
+                            <label>
+                                <input type="checkbox" id="exact-search-checkbox">
+                                精準搜尋
+                            </label>
+                            <button type="button"
+                                    class="promo-help-btn promo-help-inline"
+                                    data-help-target="exact-search-help-text"
+                                    aria-expanded="false"
+                                    aria-label="說明">?</button>
+                        </div>
+                        <div class="promo-toggle-row">
+                            <label>
+                                <input type="checkbox" id="show-promos-checkbox">
+                                新戶活動
+                            </label>
+                            <button type="button"
+                                    class="promo-help-btn promo-help-inline"
+                                    data-help-target="promo-help-text"
+                                    aria-expanded="false"
+                                    aria-label="說明">?</button>
+                        </div>
+                        <div id="exact-search-help-text" class="promo-help-text" hidden>
+                            只顯示與輸入完全相同的項目。例：輸入「國外」只顯示「國外」，不含「國外航空」等（不影響快捷搜尋）
+                        </div>
+                        <div id="promo-help-text" class="promo-help-text" hidden>
+                            如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
+                        </div>
                     </div>
 
                     <div class="form-group compact">
-                        <label for="amount-input">消費金額 (NT$)</label>
-                        <input type="number" id="amount-input" value="1000" min="1" step="1" />
-                        <small class="amount-hint">未填金額時，預設以 NT$1,000 計算</small>
-                        <!-- 顯示新戶活動 toggle (桌機版位置：消費金額下方) — 桌機用 hover popover -->
-                        <div class="show-promos-toggle show-promos-desktop">
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="show-promos-toggle-desktop">
-                                    新戶活動
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-hover"
-                                        data-help-target="promo-help-popup-desktop"
-                                        aria-label="說明">?</button>
-                                <div id="promo-help-popup-desktop" popover class="promo-help-popup">
-                                    如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                                </div>
-                            </div>
+                        <label for="amount-input">消費金額</label>
+                        <div class="amount-input-wrap">
+                            <span class="amount-prefix">NT$</span>
+                            <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
                     </div>
 
                     <div class="form-group compact button-group">
-                        <label>&nbsp;</label>
-                        <!-- 顯示新戶活動 toggle (手機版位置) — 手機用內嵌展開 -->
-                        <div class="show-promos-toggle show-promos-mobile">
-                            <div class="promo-toggle-row">
-                                <label>
-                                    <input type="checkbox" id="show-promos-toggle-mobile">
-                                    新戶活動
-                                </label>
-                                <button type="button"
-                                        class="promo-help-btn promo-help-inline"
-                                        data-help-target="promo-help-text-mobile"
-                                        aria-expanded="false"
-                                        aria-label="說明">?</button>
-                            </div>
-                            <div id="promo-help-text-mobile" class="promo-help-text" hidden>
-                                如您有選取並儲存「我的信用卡」，則新戶活動會自動排除那些卡片，只匹配您沒有的卡片的新戶活動
-                            </div>
-                        </div>
                         <button id="calculate-btn" class="calculate-btn compact">計算回饋</button>
+                    </div>
+
+                    <!-- 匹配狀態列（桌機與計算按鈕同列、置左欄；手機在最下方整列）。
+                         一次只顯示一行：精準搜尋橙色提示與「匹配到:」互斥（JS 控制） -->
+                    <div class="matched-item-row">
+                        <div id="exact-search-empty-hint" class="exact-search-empty-hint" style="display: none;">無完全一致項目，可取消勾選「精準搜尋」看相近結果</div>
+                        <div class="matched-item" id="matched-item" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -465,9 +531,6 @@
                     </div>
                 </div>
 
-                <div class="matched-item-row">
-                    <div class="matched-item" id="matched-item" style="display: none;"></div>
-                </div>
             </section>
 
             <section class="results-section" id="results-section" style="display: none;">
@@ -496,7 +559,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動</p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
@@ -765,6 +828,7 @@
                     <div class="card-detail-title-group">
                         <img id="card-detail-image" class="card-detail-image" alt="" hidden>
                         <h3 id="card-detail-title">卡片詳情</h3>
+                        <a id="card-detail-apply-header-btn" class="card-detail-apply-header-btn" target="_blank" rel="noopener noreferrer" hidden>立即申辦</a>
                     </div>
                     <button class="close-modal" id="close-card-detail">&times;</button>
                 </div>
@@ -891,6 +955,11 @@
                         <div id="card-promos-content"></div>
                     </div>
             </div>
+            <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>
+                <span class="card-detail-apply-bar-emoji" aria-hidden="true">🎁</span>
+                <span class="card-detail-apply-bar-text"></span>
+                <a class="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
+            </div>
         </div>
     </div>
 </div>
@@ -899,6 +968,20 @@
     <!-- 社群媒體與贊助區塊 -->
     <div class="social-media-footer">
         <div class="social-media-container">
+            <div class="explore-section">
+                <p class="social-media-title">探索更多</p>
+                <div class="social-media-links">
+                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
+                    </a>
+                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                        <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                    <a href="landing.html" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？↗</span>
+                    </a>
+                </div>
+            </div>
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
                 <div class="social-media-links">
@@ -920,56 +1003,6 @@
                         <span class="social-text">小額抖內</span>
                     </a>
                 </div>
-            </div>
-            <div class="review-section">
-                <p class="social-media-title">評價我們</p>
-                <div class="social-media-links">
-                    <a href="#" id="open-review-btn" class="social-link review" aria-label="評價網站">
-                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
-                        </svg>
-                        <span class="social-text">給我們評分</span>
-                    </a>
-                </div>
-                <div class="review-feedback" id="review-feedback" style="display: none;"></div>
-            </div>
-            <div class="faq-section">
-                <p class="social-media-title">需要幫助？</p>
-                <div class="social-media-links">
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
-                        <span class="social-text">常見問題 FAQ ↗</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Review Modal -->
-    <div id="review-modal" class="modal" style="display: none;">
-        <div class="modal-content review-modal-content">
-            <div class="modal-header">
-                <h3 id="review-modal-title">請為我們評分</h3>
-                <button class="close-modal" id="close-review-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="star-rating-modal" id="star-rating-modal">
-                    <span class="star-modal" data-rating="1">★</span>
-                    <span class="star-modal" data-rating="2">★</span>
-                    <span class="star-modal" data-rating="3">★</span>
-                    <span class="star-modal" data-rating="4">★</span>
-                    <span class="star-modal" data-rating="5">★</span>
-                </div>
-                <div id="review-comment-section">
-                    <textarea id="review-comment" class="review-textarea" placeholder="想跟我們說些什麼嗎？（選填）" maxlength="500"></textarea>
-                    <div class="review-char-count">
-                        <span id="review-char-count">0</span>/500
-                    </div>
-                    <div class="review-modal-actions">
-                        <button id="submit-review-btn" class="auth-btn primary">送出評價</button>
-                        <button id="skip-review-btn" class="auth-btn secondary">略過</button>
-                    </div>
-                </div>
-                <div id="review-error" class="auth-error" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -1021,10 +1054,17 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260717062755" defer></script>
+    <script src="script.js?v=20260717063100" defer></script>
 
     <!-- Firebase Configuration -->
-    <script type="module" defer>
+    <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
+         script 完全 fetch+執行完才會觸發 DOMContentLoaded——Firebase 網路慢（不是被擋，只是慢）
+         時，script.js 的 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
+         fallback 本身）會被這個 script 卡住，逾時 fallback 永遠等不到執行的機會。改 async 讓這個
+         module 獨立非同步載入，不阻塞 DOMContentLoaded；script.js 原本就用輪詢等
+         window.firebaseAuth/window.db 就緒，不依賴執行順序，這裡只設定 window.* 屬性、不碰 DOM，
+         async 對它是安全的。 -->
+    <script type="module" async>
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
@@ -1122,7 +1162,9 @@
 
     <!-- My Mappings Button -->
     <button id="my-mappings-btn" class="my-mappings-floating-btn" title="我的消費配卡" style="display: none;">
-        <span>📋</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
+        </svg>
         <span class="btn-text">我的配卡</span>
     </button>
 
@@ -1146,12 +1188,14 @@
     <div id="my-mappings-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📋 我的配卡</h3>
+                <h3><svg class="mappings-title-pin" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
+                </svg> 我的配卡</h3>
                 <button class="close-modal" id="close-mappings-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <input type="text" id="mappings-search" placeholder="搜尋商家..." class="mappings-search-input" />
+                    <input type="text" id="mappings-search" placeholder="搜尋商家或信用卡" class="mappings-search-input" />
                 </div>
                 <div id="mappings-list" class="mappings-list">
                     <!-- 配卡清單將由 JavaScript 動態生成 -->

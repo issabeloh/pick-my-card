@@ -7,30 +7,30 @@
 
     <!-- SEO Meta Tags -->
     <meta name="description" content="信用卡與行動支付常見問題解答。解決你在選卡、支付方式、回饋計算等各種信用卡領域的疑問。台灣信用卡回饋比較工具使用說明。">
-    <link rel="canonical" href="https://pickmycard.app/faq.html">
+    <link rel="canonical" href="https://pickmycard.app/faq">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article">
-    <meta property="og:url" content="https://pickmycard.app/faq.html">
+    <meta property="og:url" content="https://pickmycard.app/faq">
     <meta property="og:title" content="常見問題 FAQ｜信用卡與行動支付疑問解答">
     <meta property="og:description" content="解決你在信用卡、行動支付、回饋計算等領域的各種疑問。台灣信用卡回饋比較工具使用說明。">
-    <meta property="og:image" content="https://pickmycard.app/pickmycard-social-share.png">
+    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
     <meta property="og:locale" content="zh_TW">
     <meta property="og:site_name" content="信用卡回饋大師">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://pickmycard.app/faq.html">
+    <meta name="twitter:url" content="https://pickmycard.app/faq">
     <meta name="twitter:title" content="常見問題 FAQ｜信用卡與行動支付疑問解答">
     <meta name="twitter:description" content="解決你在信用卡、行動支付、回饋計算等領域的各種疑問。台灣信用卡回饋比較工具使用說明。">
-    <meta name="twitter:image" content="https://pickmycard.app/pickmycard-social-share.png">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
 
     <!-- Google Fonts Preconnect for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles.css?v=20260707155020">
+    <link rel="stylesheet" href="styles.css?v=20260717023103">
     <link rel="stylesheet" href="faq.css?v=20251207000001">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -58,7 +58,7 @@
         "@type": "FAQPage",
         "name": "信用卡回饋大師 - 常見問題",
         "description": "信用卡與行動支付常見問題解答，解決消費者在信用卡領域的各種疑問。",
-        "url": "https://pickmycard.app/faq.html",
+        "url": "https://pickmycard.app/faq",
         "inLanguage": "zh-TW",
         "publisher": {
             "@type": "Organization",
@@ -253,18 +253,6 @@
                         </a>
                     </div>
                 </div>
-                <div class="review-section">
-                    <p class="social-media-title">評價我們</p>
-                    <div class="social-media-links">
-                        <a href="#" id="open-review-btn" class="social-link review" aria-label="評價網站">
-                            <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z"/>
-                            </svg>
-                            <span class="social-text">給我們評分</span>
-                        </a>
-                    </div>
-                    <div class="review-feedback" id="review-feedback" style="display: none;"></div>
-                </div>
             </div>
         </div>
 
@@ -303,37 +291,7 @@
       window.serverTimestamp = serverTimestamp;
     </script>
 
-    <!-- Review Modal -->
-    <div id="review-modal" class="modal" style="display: none;">
-        <div class="modal-content review-modal-content">
-            <div class="modal-header">
-                <h3 id="review-modal-title">請為我們評分</h3>
-                <button class="close-modal" id="close-review-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="star-rating-modal" id="star-rating-modal">
-                    <span class="star-modal" data-rating="1">★</span>
-                    <span class="star-modal" data-rating="2">★</span>
-                    <span class="star-modal" data-rating="3">★</span>
-                    <span class="star-modal" data-rating="4">★</span>
-                    <span class="star-modal" data-rating="5">★</span>
-                </div>
-                <div id="review-comment-section">
-                    <textarea id="review-comment" class="review-textarea" placeholder="想跟我們說些什麼嗎？（選填）" maxlength="500"></textarea>
-                    <div class="review-char-count">
-                        <span id="review-char-count">0</span>/500
-                    </div>
-                    <div class="review-modal-actions">
-                        <button id="submit-review-btn" class="auth-btn primary">送出評價</button>
-                        <button id="skip-review-btn" class="auth-btn secondary">略過</button>
-                    </div>
-                </div>
-                <div id="review-error" class="auth-error" style="display: none;"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="faq.js?v=20260706065934"></script>
+    <script src="faq.js?v=20260715070000"></script>
 </body>
 </html>
 
