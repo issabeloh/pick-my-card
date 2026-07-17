@@ -477,7 +477,8 @@ a {
   padding: 3px 12px;
   border-radius: 999px;
   color: #fff;
-  background: #f97316;
+  /* 深橘（原 #f97316 亮橘太搶——2026-07-17 站長回饋頁面顏色太多） */
+  background: #c2410c;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
