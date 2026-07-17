@@ -9563,56 +9563,11 @@ async function openMyMappingsModal() {
 }
 
 // ============== 我的配卡：分組卡片式視圖（2026-07-16 重造） ==============
-// 一張信用卡＝一個群組卡片：卡名色塊（卡面主色）＋ⓘ 詳情＋商家列。
+// 一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，2026-07-17 起不吸卡面色，
+// 舊 CARD_ACCENT_COLORS 抽色表見 git 歷史）＋ⓘ 詳情＋活動列。
+// 同卡＋同回饋率＋同截止日＝同一活動，商家合併成一列 pills；
+// 活動列固定回饋率高→低排序，卡片組可整組拖、pill 限同列內拖。
 // 過期配對自動沉底成收合區（含一鍵清理）；14 天內到期顯示黃色預警。
-// 拖曳排序：卡片組可整組拖、商家列限組內拖（Pointer Events，桌機手機共用）。
-
-// 卡名色塊顏色＝卡面底色：從 assets/images/cards/<card.id>.png 抽
-// 「外圈環帶面積最大的色簇」（底色一定延伸到卡片邊緣，圖案/logo 通常在中間），
-// 不調亮度——淺色可讀性由 isLightAccentColor 切深色前景處理。
-// 抽色腳本產出後人工校對；新卡缺項 fallback 深灰，不像就直接改該行 hex。
-const CARD_ACCENT_COLORS = {
-    'cathay-cube': '#fdfdfd',
-    'ctbc-linepay-card': '#d9ab78',
-    'ctbc-uniopen': '#ececec',
-    'dbs-aov': '#020202',
-    'dbs-eco': '#1e7036',
-    'febank-lejia': '#f1eff0',
-    'firstbank-ileo': '#dae9dd',
-    'fubon-jcard': '#1ca244',
-    'hsbc-cashback-signature': '#303030',
-    'hsbc-liveplus': '#2f71b7',
-    'hsbc-titanium': '#020000',
-    'kgi-eslite': '#424623',
-    'mega-bt21': '#fdd601',
-    'sinopac-coin': '#e0d6cc',
-    'sinopac-daway': '#dce5ea',
-    'sinopac-dawho': '#231513',
-    'sinopac-green': '#cde9f2',
-    'sinopac-sport': '#011b6a',
-    'sunny-jcb-crystal': '#038f50',
-    'taishin-jiekou': '#d92b22',
-    'taishin-richart': '#aeb1b5',
-    'tbb-artfun': '#f4f3f3',
-    'tbb-chaotian': '#f4f1e5',
-    'ubot-linebank': '#2d3430',
-    'ubot-linepoint': '#929495',
-    'ubot-mcard': '#afb9ce',
-    'yushan-ubear': '#fde64c',
-    'yushan-unicard': '#fdeac0'
-};
-
-function getCardAccentColor(cardId) {
-    return CARD_ACCENT_COLORS[cardId] || '#6b7280';
-}
-
-// 色塊夠淺（如白卡面用 #ffffff）時卡名等前景改深色、色塊補分隔線，
-// 否則一律白字——讓黑白卡可以誠實用回黑白色
-function isLightAccentColor(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
-}
 
 // 到期狀態分類：expired（過期沉底）/ soon（14 天內，黃色預警）/ active / none
 function getMappingExpiryInfo(mapping, taiwanToday) {
@@ -9709,47 +9664,69 @@ function renderMappingsList(searchTerm = '') {
 
     // 搜尋過濾時停用拖曳（過濾後的順序沒有全域意義，拖了會亂寫 order）
     const dragEnabled = !searchTerm;
-    const dragHandleHtml = (extraClass) => dragEnabled ? `
-        <span class="mapping-drag-handle ${extraClass}" title="拖曳排序">
+    const dragHandleHtml = () => dragEnabled ? `
+        <span class="mapping-drag-handle group-handle" title="拖曳排序">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
             </svg>
         </span>` : '';
 
-    const rowHtml = (mapping, expiry) => {
+    // 同卡＋同回饋率＋同截止日＝同一個活動：商家合併成一列 pills。
+    // 活動列不開放拖曳，固定回饋率高→低（同率截止日近→遠）；pill 順序仍吃 order、可拖
+    const buildActivities = (rows) => {
+        const activities = [];
+        const actIndex = new Map();
+        rows.forEach(({ mapping, expiry }) => {
+            const key = `${mapping.cashbackRate}|${mapping.periodEnd || ''}`;
+            if (!actIndex.has(key)) {
+                actIndex.set(key, activities.length);
+                activities.push({ rate: mapping.cashbackRate, periodEnd: mapping.periodEnd, expiry, mappings: [] });
+            }
+            activities[actIndex.get(key)].mappings.push(mapping);
+        });
+        activities.sort((a, b) =>
+            (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0) ||
+            String(a.periodEnd || '9999-99-99').localeCompare(String(b.periodEnd || '9999-99-99')));
+        return activities;
+    };
+
+    const pillHtml = (mapping) => `
+        <span class="mapping-pill" data-mapping-id="${escapeHtml(mapping.id)}">
+            <span class="mapping-pill-name">${escapeHtml(optimizeMerchantName(mapping.merchant))}</span>
+            <button type="button" class="mapping-pill-remove" data-mapping-id="${escapeHtml(mapping.id)}" title="刪除">×</button>
+        </span>`;
+
+    const activityHtml = (activity) => {
         let dateHtml;
-        if (expiry.status === 'soon') {
-            dateHtml = `${escapeHtml(mapping.periodEnd)} 止 <span class="mapping-badge-soon">即將到期</span>`;
-        } else if (expiry.status === 'active') {
-            dateHtml = `${escapeHtml(mapping.periodEnd)} 止`;
+        if (activity.expiry.status === 'soon') {
+            dateHtml = `${escapeHtml(activity.periodEnd)} 止 <span class="mapping-badge-soon">即將到期</span>`;
+        } else if (activity.expiry.status === 'active') {
+            dateHtml = `${escapeHtml(activity.periodEnd)} 止`;
         } else {
             dateHtml = '無活動期限';
         }
         return `
-            <div class="mapping-item" data-mapping-id="${escapeHtml(mapping.id)}">
-                ${dragHandleHtml('row-handle')}
+            <div class="mapping-item">
                 <div class="mapping-item-main">
-                    <div class="mapping-item-merchant">${escapeHtml(optimizeMerchantName(mapping.merchant))}</div>
+                    <div class="mapping-item-pills">${activity.mappings.map(pillHtml).join('')}</div>
                     <div class="mapping-item-date">${dateHtml}</div>
                 </div>
-                <span class="mapping-item-rate">${escapeHtml(String(mapping.cashbackRate))}%</span>
-                <button class="mapping-delete-btn" data-mapping-id="${escapeHtml(mapping.id)}" title="刪除">×</button>
+                <span class="mapping-item-rate">${escapeHtml(String(activity.rate))}%</span>
             </div>`;
     };
 
     let html = '<div class="mapping-groups">';
     groups.forEach(group => {
-        const accent = getCardAccentColor(group.cardId);
         html += `
             <div class="mapping-group" data-card-id="${escapeHtml(group.cardId)}">
-                <div class="mapping-group-head${isLightAccentColor(accent) ? ' light' : ''}" style="background: ${accent};">
-                    ${dragHandleHtml('group-handle')}
+                <div class="mapping-group-head">
+                    ${dragHandleHtml()}
                     <img class="mapping-group-cardimg" src="assets/images/cards/${escapeHtml(group.cardId)}.png" alt="" onerror="this.style.display='none'">
                     <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
                     <button type="button" class="mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 </div>
                 <div class="mapping-group-rows">
-                    ${group.rows.map(r => rowHtml(r.mapping, r.expiry)).join('')}
+                    ${buildActivities(group.rows).map(activityHtml).join('')}
                 </div>
             </div>`;
     });
@@ -9815,8 +9792,8 @@ function renderMappingsList(searchTerm = '') {
         };
     }
 
-    // 綁定刪除按鈕
-    mappingsList.querySelectorAll('.mapping-delete-btn').forEach(btn => {
+    // 綁定刪除按鈕（過期區的 × ＋ 活動列 pill 內的 ×）
+    mappingsList.querySelectorAll('.mapping-delete-btn, .mapping-pill-remove').forEach(btn => {
         btn.onclick = async (e) => {
             e.preventDefault();
             const mappingId = btn.dataset.mappingId;
@@ -9848,49 +9825,60 @@ function renderMappingsList(searchTerm = '') {
 }
 
 // 拖曳排序（Pointer Events，桌機滑鼠與手機觸控共用一套）：
-// 只能從把手啟動；把手有 touch-action: none，拖曳時不會觸發頁面捲動。
-// 卡片組整組拖（.mapping-group 之間換位）、商家列限同組內拖。
+// move/up 掛在 document（不用 setPointerCapture——實測 Chromium 會在拖曳中途
+// 無故 lostpointercapture，事件斷流）；觸控防捲動靠元素的 touch-action: none。
+// 卡片組從把手整組拖（.mapping-group 之間換位）；商家 pill 整顆拖、
+// 限同一活動列的 pills 容器內換位（跨列＝不同回饋率/截止日，混了語義就錯）。
 function setupMappingsDrag(container) {
-    container.querySelectorAll('.mapping-drag-handle').forEach(handle => {
-        handle.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            const isGroup = handle.classList.contains('group-handle');
-            const item = handle.closest(isGroup ? '.mapping-group' : '.mapping-item');
-            if (!item) return;
-            const parent = item.parentElement;
-            const selector = isGroup ? '.mapping-group' : '.mapping-item';
-            item.classList.add('mapping-dragging');
-            let moved = false;
+    // horizontal：pill 換行排列，命中判斷要同時看 X/Y、換位看左右半邊
+    const startDrag = (item, selector, horizontal) => (e) => {
+        e.preventDefault();
+        const parent = item.parentElement;
+        item.classList.add('mapping-dragging');
+        let moved = false;
 
-            // move/up 掛在 document（不用 setPointerCapture——實測 Chromium 會在
-            // 拖曳中途無故 lostpointercapture，事件斷流）；觸控的防捲動靠把手的
-            // touch-action: none
-            const onMove = (ev) => {
-                // 指標跨過某個兄弟元素的中線就即時換位（live reorder，無 ghost）
-                const siblings = Array.from(parent.querySelectorAll(':scope > ' + selector)).filter(el => el !== item);
-                for (const sib of siblings) {
-                    const r = sib.getBoundingClientRect();
-                    if (ev.clientY > r.top && ev.clientY < r.bottom) {
-                        const before = ev.clientY < r.top + r.height / 2;
-                        const target = before ? sib : sib.nextSibling;
-                        if (target !== item && target !== item.nextSibling) {
-                            parent.insertBefore(item, target);
-                            moved = true;
-                        }
-                        break;
+        const onMove = (ev) => {
+            // 指標跨過某個兄弟元素的中線就即時換位（live reorder，無 ghost）
+            const siblings = Array.from(parent.querySelectorAll(':scope > ' + selector)).filter(el => el !== item);
+            for (const sib of siblings) {
+                const r = sib.getBoundingClientRect();
+                const hit = ev.clientY > r.top && ev.clientY < r.bottom &&
+                    (!horizontal || (ev.clientX > r.left && ev.clientX < r.right));
+                if (hit) {
+                    const before = horizontal
+                        ? ev.clientX < r.left + r.width / 2
+                        : ev.clientY < r.top + r.height / 2;
+                    const target = before ? sib : sib.nextSibling;
+                    if (target !== item && target !== item.nextSibling) {
+                        parent.insertBefore(item, target);
+                        moved = true;
                     }
+                    break;
                 }
-            };
-            const onUp = async () => {
-                document.removeEventListener('pointermove', onMove);
-                document.removeEventListener('pointerup', onUp);
-                document.removeEventListener('pointercancel', onUp);
-                item.classList.remove('mapping-dragging');
-                if (moved) await persistMappingsDomOrder();
-            };
-            document.addEventListener('pointermove', onMove);
-            document.addEventListener('pointerup', onUp);
-            document.addEventListener('pointercancel', onUp);
+            }
+        };
+        const onUp = async () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            document.removeEventListener('pointercancel', onUp);
+            item.classList.remove('mapping-dragging');
+            if (moved) await persistMappingsDomOrder();
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
+    };
+
+    container.querySelectorAll('.mapping-drag-handle').forEach(handle => {
+        const group = handle.closest('.mapping-group');
+        if (!group) return;
+        handle.addEventListener('pointerdown', startDrag(group, '.mapping-group', false));
+    });
+
+    container.querySelectorAll('.mapping-pill').forEach(pill => {
+        pill.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.mapping-pill-remove')) return;
+            startDrag(pill, '.mapping-pill', true)(e);
         });
     });
 }
@@ -9903,7 +9891,7 @@ async function persistMappingsDomOrder() {
     const byId = new Map(userSpendingMappings.map(m => [m.id, m]));
     const seenIds = new Set();
     let seq = 0;
-    mappingsList.querySelectorAll('.mapping-group .mapping-item').forEach(el => {
+    mappingsList.querySelectorAll('.mapping-group .mapping-pill').forEach(el => {
         const mapping = byId.get(el.dataset.mappingId);
         if (mapping) {
             mapping.order = seq++;
