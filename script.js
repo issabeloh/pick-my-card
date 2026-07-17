@@ -9521,7 +9521,8 @@ async function openMyMappingsModal() {
 
     if (!modal || !mappingsList) return;
 
-    // 渲染配卡表
+    // 渲染配卡表（過期收合區每次開 modal 都從收合狀態開始）
+    mappingsExpiredOpen = false;
     renderMappingsList();
 
     // 顯示 Modal
@@ -9554,22 +9555,81 @@ async function openMyMappingsModal() {
     }
 }
 
-// 渲染配卡表清單（標準表格式，支援拖曳排序）
-// 排序狀態
-let mappingsSortConfig = {
-    column: null,  // null, 'rate', 'expiry'
-    direction: 'asc'  // 'asc' or 'desc'
+// ============== 我的配卡：分組卡片式視圖（2026-07-16 重造） ==============
+// 一張信用卡＝一個群組卡片：卡名色塊（卡面主色）＋ⓘ 詳情＋商家列。
+// 過期配對自動沉底成收合區（含一鍵清理）；14 天內到期顯示黃色預警。
+// 拖曳排序：卡片組可整組拖、商家列限組內拖（Pointer Events，桌機手機共用）。
+
+// 卡名色塊顏色＝卡面底色：從 assets/images/cards/<card.id>.png 抽
+// 「外圈環帶面積最大的色簇」（底色一定延伸到卡片邊緣，圖案/logo 通常在中間），
+// 不調亮度——淺色可讀性由 isLightAccentColor 切深色前景處理。
+// 抽色腳本產出後人工校對；新卡缺項 fallback 深灰，不像就直接改該行 hex。
+const CARD_ACCENT_COLORS = {
+    'cathay-cube': '#fdfdfd',
+    'ctbc-linepay-card': '#d9ab78',
+    'ctbc-uniopen': '#ececec',
+    'dbs-aov': '#020202',
+    'dbs-eco': '#1e7036',
+    'febank-lejia': '#f1eff0',
+    'firstbank-ileo': '#dae9dd',
+    'fubon-jcard': '#1ca244',
+    'hsbc-cashback-signature': '#303030',
+    'hsbc-liveplus': '#2f71b7',
+    'hsbc-titanium': '#020000',
+    'kgi-eslite': '#424623',
+    'mega-bt21': '#fdd601',
+    'sinopac-coin': '#e0d6cc',
+    'sinopac-daway': '#dce5ea',
+    'sinopac-dawho': '#231513',
+    'sinopac-green': '#cde9f2',
+    'sinopac-sport': '#011b6a',
+    'sunny-jcb-crystal': '#038f50',
+    'taishin-jiekou': '#d92b22',
+    'taishin-richart': '#aeb1b5',
+    'tbb-artfun': '#f4f3f3',
+    'tbb-chaotian': '#f4f1e5',
+    'ubot-linebank': '#2d3430',
+    'ubot-linepoint': '#929495',
+    'ubot-mcard': '#afb9ce',
+    'yushan-ubear': '#fde64c',
+    'yushan-unicard': '#fdeac0'
 };
+
+function getCardAccentColor(cardId) {
+    return CARD_ACCENT_COLORS[cardId] || '#6b7280';
+}
+
+// 色塊夠淺（如白卡面用 #ffffff）時卡名等前景改深色、色塊補分隔線，
+// 否則一律白字——讓黑白卡可以誠實用回黑白色
+function isLightAccentColor(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+
+// 到期狀態分類：expired（過期沉底）/ soon（14 天內，黃色預警）/ active / none
+function getMappingExpiryInfo(mapping, taiwanToday) {
+    if (!mapping.periodEnd) return { status: 'none' };
+    try {
+        const endDate = parseISODate(mapping.periodEnd);
+        const diffDays = Math.ceil((endDate - taiwanToday) / 86400000);
+        if (diffDays < 0) return { status: 'expired' };
+        if (diffDays <= 14) return { status: 'soon', diffDays };
+        return { status: 'active' };
+    } catch (error) {
+        console.error('❌ Date parsing error:', error, { periodEnd: mapping.periodEnd });
+        return { status: 'none' };
+    }
+}
+
+// 過期收合區展開狀態（modal 開啟期間記住，重開 modal 歸零）
+let mappingsExpiredOpen = false;
 
 function renderMappingsList(searchTerm = '') {
     const mappingsList = document.getElementById('mappings-list');
     if (!mappingsList) return;
 
-    // 保存當前滾動位置（用於排序後恢復）
-    const existingWrapper = mappingsList.querySelector('.mappings-table-wrapper');
-    const savedScrollLeft = existingWrapper ? existingWrapper.scrollLeft : 0;
-
-    // 篩選
+    // 篩選（商家或卡名）
     let filteredMappings = userSpendingMappings;
     if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -9593,163 +9653,160 @@ function renderMappingsList(searchTerm = '') {
         return;
     }
 
-    // 確保每個 mapping 都有 order 欄位（用於拖曳排序）
+    // 確保每個 mapping 都有 order 欄位（拖曳排序的持久化鍵）
     filteredMappings.forEach((mapping, index) => {
         if (mapping.order === undefined) {
             mapping.order = index;
         }
     });
+    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // 排序邏輯
-    if (mappingsSortConfig.column === 'rate') {
-        // 按回饋率排序
-        filteredMappings.sort((a, b) => {
-            const rateA = parseFloat(a.cashbackRate) || 0;
-            const rateB = parseFloat(b.cashbackRate) || 0;
-            return mappingsSortConfig.direction === 'asc' ? rateA - rateB : rateB - rateA;
-        });
-    } else if (mappingsSortConfig.column === 'expiry') {
-        // 按活動到期日排序
-        filteredMappings.sort((a, b) => {
-            // 如果沒有到期日，放在最後
-            const dateA = a.periodEnd ? parseISODate(a.periodEnd) : new Date('9999-12-31');
-            const dateB = b.periodEnd ? parseISODate(b.periodEnd) : new Date('9999-12-31');
-            return mappingsSortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
-        });
-    } else {
-        // 按 order 排序（用戶自訂順序）
-        filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
-    }
-
-    // 取得目前台灣今天（用於計算到期狀態）
     const taiwanToday = parseISODate(getTaiwanToday());
 
-    // 排序指示器
-    const getSortIcon = (column) => {
-        if (mappingsSortConfig.column !== column) {
-            return '<span class="sort-icon">⇅</span>';
-        }
-        return mappingsSortConfig.direction === 'asc'
-            ? '<span class="sort-icon active">↑</span>'
-            : '<span class="sort-icon active">↓</span>';
-    };
-
-    // 渲染標準表格（包裹在可滾動容器中）
-    let html = `
-        <div class="mappings-table-wrapper">
-            <table class="mappings-table">
-                <thead>
-                    <tr>
-                        <th class="drag-handle-header"></th>
-                        <th class="merchant-column">商家</th>
-                        <th class="card-name-column">卡片名稱</th>
-                        <th class="rate-column sortable" data-sort="rate">回饋率 ${getSortIcon('rate')}</th>
-                        <th class="expiry-column sortable" data-sort="expiry">活動到期日 ${getSortIcon('expiry')}</th>
-                        <th class="delete-column"></th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    filteredMappings.forEach((mapping, index) => {
-        const merchant = optimizeMerchantName(mapping.merchant);
-
-        // 計算活動到期日顯示
-        let expiryDisplay = '—';  // 預設顯示破折號
-        let expiryClass = '';
-        let foundPeriod = null;
-
-        // 如果 mapping 沒有 periodEnd，嘗試從 cardsData 中查找
+    // mapping 沒有 periodEnd 時嘗試從 cardsData 回填（沿用舊行為）
+    let needsBackfillSave = false;
+    filteredMappings.forEach(mapping => {
         if (!mapping.periodEnd) {
-            foundPeriod = findActivityPeriod(mapping.cardId, mapping.merchant);
+            const foundPeriod = findActivityPeriod(mapping.cardId, mapping.merchant);
             if (foundPeriod && foundPeriod.periodEnd) {
                 mapping.periodEnd = foundPeriod.periodEnd;
                 mapping.periodStart = foundPeriod.periodStart;
-
-                // 在背景異步更新到 Firestore/localStorage
-                setTimeout(() => {
-                    saveSpendingMappings(userSpendingMappings).catch(err => {
-                        console.warn('⚠️ 背景更新 mapping periodEnd 失敗:', err);
-                    });
-                }, 100);
+                needsBackfillSave = true;
             }
         }
+    });
+    if (needsBackfillSave) {
+        setTimeout(() => {
+            saveSpendingMappings(userSpendingMappings).catch(err => {
+                console.warn('⚠️ 背景更新 mapping periodEnd 失敗:', err);
+            });
+        }, 100);
+    }
 
-        if (mapping.periodEnd) {
-            try {
-                const endDate = parseISODate(mapping.periodEnd);
-                const diffDays = Math.ceil((endDate - taiwanToday) / 86400000);
-
-                if (diffDays < 0) {
-                    // 已過期：紅色文字
-                    expiryDisplay = `${mapping.periodEnd} (已過期)`;
-                    expiryClass = 'expired';
-                } else {
-                    // 未過期：只顯示日期
-                    expiryDisplay = mapping.periodEnd;
-                }
-            } catch (error) {
-                console.error('❌ Date parsing error:', error, { periodEnd: mapping.periodEnd });
-                expiryDisplay = mapping.periodEnd;  // 解析失敗時直接顯示原始日期
-            }
+    // 分類：有效配對依卡分組（組序＝組內最前面那筆的順序），過期配對沉底
+    const groups = [];
+    const groupIndex = new Map(); // cardId -> groups[] index
+    const expiredMappings = [];
+    filteredMappings.forEach(mapping => {
+        const expiry = getMappingExpiryInfo(mapping, taiwanToday);
+        if (expiry.status === 'expired') {
+            expiredMappings.push(mapping);
+            return;
         }
-
-        html += `
-            <tr class="mapping-row"
-                draggable="true"
-                data-mapping-id="${mapping.id}"
-                data-index="${index}">
-                <td class="drag-handle">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                    </svg>
-                </td>
-                <td class="merchant-cell">${merchant}</td>
-                <td class="card-cell">${mapping.cardName}</td>
-                <td class="rate-cell">${mapping.cashbackRate}%</td>
-                <td class="expiry-cell ${expiryClass}">${expiryDisplay}</td>
-                <td class="delete-cell">
-                    <button class="mapping-delete-btn"
-                            data-mapping-id="${mapping.id}"
-                            title="刪除">×</button>
-                </td>
-            </tr>
-        `;
+        if (!groupIndex.has(mapping.cardId)) {
+            groupIndex.set(mapping.cardId, groups.length);
+            groups.push({ cardId: mapping.cardId, cardName: mapping.cardName, rows: [] });
+        }
+        groups[groupIndex.get(mapping.cardId)].rows.push({ mapping, expiry });
     });
 
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
+    // 搜尋過濾時停用拖曳（過濾後的順序沒有全域意義，拖了會亂寫 order）
+    const dragEnabled = !searchTerm;
+    const dragHandleHtml = (extraClass) => dragEnabled ? `
+        <span class="mapping-drag-handle ${extraClass}" title="拖曳排序">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 6a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+            </svg>
+        </span>` : '';
+
+    const rowHtml = (mapping, expiry) => {
+        let dateHtml;
+        if (expiry.status === 'soon') {
+            dateHtml = `${escapeHtml(mapping.periodEnd)} 止 <span class="mapping-badge-soon">即將到期</span>`;
+        } else if (expiry.status === 'active') {
+            dateHtml = `${escapeHtml(mapping.periodEnd)} 止`;
+        } else {
+            dateHtml = '無活動期限';
+        }
+        return `
+            <div class="mapping-item" data-mapping-id="${escapeHtml(mapping.id)}">
+                ${dragHandleHtml('row-handle')}
+                <div class="mapping-item-main">
+                    <div class="mapping-item-merchant">${escapeHtml(optimizeMerchantName(mapping.merchant))}</div>
+                    <div class="mapping-item-date">${dateHtml}</div>
+                </div>
+                <span class="mapping-item-rate">${escapeHtml(String(mapping.cashbackRate))}%</span>
+                <button class="mapping-delete-btn" data-mapping-id="${escapeHtml(mapping.id)}" title="刪除">×</button>
+            </div>`;
+    };
+
+    let html = '<div class="mapping-groups">';
+    groups.forEach(group => {
+        const accent = getCardAccentColor(group.cardId);
+        html += `
+            <div class="mapping-group" data-card-id="${escapeHtml(group.cardId)}">
+                <div class="mapping-group-head${isLightAccentColor(accent) ? ' light' : ''}" style="background: ${accent};">
+                    ${dragHandleHtml('group-handle')}
+                    <img class="mapping-group-cardimg" src="assets/images/cards/${escapeHtml(group.cardId)}.png" alt="" onerror="this.style.display='none'">
+                    <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
+                    <button type="button" class="mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
+                </div>
+                <div class="mapping-group-rows">
+                    ${group.rows.map(r => rowHtml(r.mapping, r.expiry)).join('')}
+                </div>
+            </div>`;
+    });
+
+    if (expiredMappings.length > 0) {
+        html += `
+            <div class="mappings-expired ${mappingsExpiredOpen ? 'open' : ''}">
+                <button type="button" class="mappings-expired-toggle" id="mappings-expired-toggle">
+                    <span>已過期（${expiredMappings.length}）</span>
+                    <span class="mappings-expired-chev">▾</span>
+                </button>
+                <div class="mappings-expired-body">
+                    ${expiredMappings.map(mapping => `
+                        <div class="mapping-item" data-mapping-id="${escapeHtml(mapping.id)}">
+                            <div class="mapping-item-main">
+                                <div class="mapping-item-merchant">${escapeHtml(optimizeMerchantName(mapping.merchant))}<span class="mapping-expired-cardname">・${escapeHtml(mapping.cardName)}</span></div>
+                                <div class="mapping-item-date">${escapeHtml(mapping.periodEnd)} <span class="mapping-badge-expired">已過期</span></div>
+                            </div>
+                            <span class="mapping-item-rate">${escapeHtml(String(mapping.cashbackRate))}%</span>
+                            <button class="mapping-delete-btn" data-mapping-id="${escapeHtml(mapping.id)}" title="刪除">×</button>
+                        </div>`).join('')}
+                    <button type="button" class="mappings-clear-expired" id="mappings-clear-expired">清除全部過期配對</button>
+                </div>
+            </div>`;
+    }
+    html += '</div>';
 
     mappingsList.innerHTML = html;
 
-    // 恢復滾動位置
-    const newWrapper = mappingsList.querySelector('.mappings-table-wrapper');
-    if (newWrapper && savedScrollLeft > 0) {
-        // 使用 setTimeout 確保 DOM 已完全渲染
-        setTimeout(() => {
-            newWrapper.scrollLeft = savedScrollLeft;
-        }, 0);
-    }
-
-    // 綁定排序按鈕
-    mappingsList.querySelectorAll('th.sortable').forEach(th => {
-        th.style.cursor = 'pointer';
-        th.onclick = () => {
-            const column = th.dataset.sort;
-            if (mappingsSortConfig.column === column) {
-                // 切換排序方向
-                mappingsSortConfig.direction = mappingsSortConfig.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                // 新欄位，預設升序
-                mappingsSortConfig.column = column;
-                mappingsSortConfig.direction = 'asc';
-            }
-            renderMappingsList(document.getElementById('mappings-search')?.value || '');
+    // ⓘ → 詳情頁（疊在配卡 modal 之上，body scroll lock 是 refcount 所以安全）
+    mappingsList.querySelectorAll('.mapping-peek-btn').forEach(btn => {
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showCardDetail(btn.dataset.cardId);
         };
     });
+
+    // 過期區展開/收合
+    const expiredToggle = document.getElementById('mappings-expired-toggle');
+    if (expiredToggle) {
+        expiredToggle.onclick = () => {
+            mappingsExpiredOpen = !mappingsExpiredOpen;
+            expiredToggle.closest('.mappings-expired').classList.toggle('open', mappingsExpiredOpen);
+        };
+    }
+
+    // 一鍵清理全部過期
+    const clearExpiredBtn = document.getElementById('mappings-clear-expired');
+    if (clearExpiredBtn) {
+        clearExpiredBtn.onclick = async () => {
+            if (!confirm(`確定要刪除全部 ${expiredMappings.length} 筆已過期的配對嗎？`)) return;
+            const expiredIds = new Set(expiredMappings.map(m => m.id));
+            userSpendingMappings = userSpendingMappings.filter(m => !expiredIds.has(m.id));
+            await saveSpendingMappings(userSpendingMappings);
+            renderMappingsList(searchTerm);
+            updatePinButtonsState();
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'clear_expired_mappings', {
+                    count: expiredIds.size
+                });
+            }
+        };
+    }
 
     // 綁定刪除按鈕
     mappingsList.querySelectorAll('.mapping-delete-btn').forEach(btn => {
@@ -9779,93 +9836,79 @@ function renderMappingsList(searchTerm = '') {
         };
     });
 
-    // 綁定拖曳排序功能
-    initDragAndDrop();
+    // 綁定拖曳排序
+    if (dragEnabled) setupMappingsDrag(mappingsList);
 }
 
-// 初始化拖曳排序功能
-function initDragAndDrop() {
-    const rows = document.querySelectorAll('.mapping-row');
-    let draggedRow = null;
-    let draggedIndex = null;
-
-    rows.forEach(row => {
-        row.addEventListener('dragstart', function(e) {
-            draggedRow = this;
-            draggedIndex = parseInt(this.dataset.index);
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-        });
-
-        row.addEventListener('dragover', function(e) {
+// 拖曳排序（Pointer Events，桌機滑鼠與手機觸控共用一套）：
+// 只能從把手啟動；把手有 touch-action: none，拖曳時不會觸發頁面捲動。
+// 卡片組整組拖（.mapping-group 之間換位）、商家列限同組內拖。
+function setupMappingsDrag(container) {
+    container.querySelectorAll('.mapping-drag-handle').forEach(handle => {
+        handle.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
+            const isGroup = handle.classList.contains('group-handle');
+            const item = handle.closest(isGroup ? '.mapping-group' : '.mapping-item');
+            if (!item) return;
+            const parent = item.parentElement;
+            const selector = isGroup ? '.mapping-group' : '.mapping-item';
+            item.classList.add('mapping-dragging');
+            let moved = false;
 
-            if (this !== draggedRow) {
-                this.classList.add('drag-over');
-            }
-        });
-
-        row.addEventListener('dragleave', function(e) {
-            this.classList.remove('drag-over');
-        });
-
-        row.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-
-            if (this !== draggedRow) {
-                const targetIndex = parseInt(this.dataset.index);
-
-                // 更新陣列順序
-                reorderMappings(draggedIndex, targetIndex);
-            }
-        });
-
-        row.addEventListener('dragend', function(e) {
-            this.classList.remove('dragging');
-
-            // 移除所有 drag-over class
-            rows.forEach(r => r.classList.remove('drag-over'));
+            // move/up 掛在 document（不用 setPointerCapture——實測 Chromium 會在
+            // 拖曳中途無故 lostpointercapture，事件斷流）；觸控的防捲動靠把手的
+            // touch-action: none
+            const onMove = (ev) => {
+                // 指標跨過某個兄弟元素的中線就即時換位（live reorder，無 ghost）
+                const siblings = Array.from(parent.querySelectorAll(':scope > ' + selector)).filter(el => el !== item);
+                for (const sib of siblings) {
+                    const r = sib.getBoundingClientRect();
+                    if (ev.clientY > r.top && ev.clientY < r.bottom) {
+                        const before = ev.clientY < r.top + r.height / 2;
+                        const target = before ? sib : sib.nextSibling;
+                        if (target !== item && target !== item.nextSibling) {
+                            parent.insertBefore(item, target);
+                            moved = true;
+                        }
+                        break;
+                    }
+                }
+            };
+            const onUp = async () => {
+                document.removeEventListener('pointermove', onMove);
+                document.removeEventListener('pointerup', onUp);
+                document.removeEventListener('pointercancel', onUp);
+                item.classList.remove('mapping-dragging');
+                if (moved) await persistMappingsDomOrder();
+            };
+            document.addEventListener('pointermove', onMove);
+            document.addEventListener('pointerup', onUp);
+            document.addEventListener('pointercancel', onUp);
         });
     });
 }
 
-// 重新排序配卡表
-async function reorderMappings(fromIndex, toIndex) {
-    // 取得目前的篩選結果
-    const searchTerm = document.getElementById('mappings-search')?.value || '';
-    let filteredMappings = userSpendingMappings;
-
-    if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        filteredMappings = userSpendingMappings.filter(m =>
-            m.merchant.toLowerCase().includes(term) ||
-            m.cardName.toLowerCase().includes(term)
-        );
-    }
-
-    // 確保有 order 欄位並排序
-    filteredMappings.forEach((mapping, index) => {
-        if (mapping.order === undefined) {
-            mapping.order = index;
+// 依畫面目前的 DOM 順序重寫所有 mapping 的 order 並存檔。
+// 過期列不在主序裡，接在後面、維持原相對順序。
+async function persistMappingsDomOrder() {
+    const mappingsList = document.getElementById('mappings-list');
+    if (!mappingsList) return;
+    const byId = new Map(userSpendingMappings.map(m => [m.id, m]));
+    const seenIds = new Set();
+    let seq = 0;
+    mappingsList.querySelectorAll('.mapping-group .mapping-item').forEach(el => {
+        const mapping = byId.get(el.dataset.mappingId);
+        if (mapping) {
+            mapping.order = seq++;
+            seenIds.add(mapping.id);
         }
     });
-    filteredMappings.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    // 移動元素
-    const [movedItem] = filteredMappings.splice(fromIndex, 1);
-    filteredMappings.splice(toIndex, 0, movedItem);
-
-    // 重新分配 order
-    filteredMappings.forEach((mapping, index) => {
-        mapping.order = index;
-    });
-
-    // 保存並重新渲染
+    userSpendingMappings
+        .filter(m => !seenIds.has(m.id))
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach(m => { m.order = seq++; });
     await saveSpendingMappings(userSpendingMappings);
-    renderMappingsList(searchTerm);
+    renderMappingsList(document.getElementById('mappings-search')?.value.trim() || '');
 }
 
 // 更新釘選按鈕狀態
