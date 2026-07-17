@@ -5061,20 +5061,20 @@ input[type="text"].credit-limit-input:focus {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button（淺綠底＋釘選 icon，與結果卡的釘選視覺呼應） */
+/* Floating My Mappings Button（琥珀底＋釘選 icon，與結果卡釘選態 pin-btn.pinned 同色系） */
 .my-mappings-floating-btn {
     position: fixed;
     bottom: 72px;
     right: 16px;
     padding: 8px 12px;
-    background: #d1fae5;
-    border: 1px solid #a7f3d0;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #065f46;
+    color: #b45309;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
@@ -5084,14 +5084,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
     transform: translateY(-2px);
-}
-
-/* 配卡 modal 標題的釘選 icon */
-.mappings-title-pin {
-    vertical-align: -2px;
-    color: #667eea;
 }
 
 .my-mappings-floating-btn:active {
@@ -5207,7 +5201,7 @@ input[type="text"].credit-limit-input:focus {
 .mapping-delete-btn {
     background: none;
     border: none;
-    color: #ef4444;
+    color: #4b5563;
     cursor: pointer;
     font-size: 18px;
     padding: 4px 8px;
@@ -5250,15 +5244,15 @@ input[type="text"].credit-limit-input:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     color: white;
 }
 
+/* 不設 flex:1——讓後面的 ⓘ 貼著卡名，而不是被推到最右側；長卡名靠 shrink+wrap */
 .mapping-group-name {
-    flex: 1;
     min-width: 0;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     overflow-wrap: anywhere;
 }
 
@@ -5298,7 +5292,7 @@ input[type="text"].credit-limit-input:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 6px 12px;
     border-bottom: 1px solid #f3f4f6;
     background: white;
 }
@@ -5328,7 +5322,7 @@ input[type="text"].credit-limit-input:focus {
 
 .mapping-item-rate {
     flex: none;
-    color: #059669;
+    color: #10b981;
     font-weight: 700;
     font-size: 15px;
     font-variant-numeric: tabular-nums;
@@ -5354,7 +5348,7 @@ input[type="text"].credit-limit-input:focus {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* 淺色色塊（白卡面）：前景轉深色、補分隔線，避免白字隱形／與卡片底融合 */
+/* 淺色卡面：不吸色、統一淺灰底（JS 端給 #f1eff0），前景轉深色、補分隔線 */
 .mapping-group-head.light {
     color: #1f2937;
     border-bottom: 1px solid #e5e7eb;

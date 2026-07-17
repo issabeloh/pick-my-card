@@ -9740,9 +9740,11 @@ function renderMappingsList(searchTerm = '') {
     let html = '<div class="mapping-groups">';
     groups.forEach(group => {
         const accent = getCardAccentColor(group.cardId);
+        // 淺色卡面不吸色（白字隱形、與底融合），統一淺灰底
+        const isLight = isLightAccentColor(accent);
         html += `
             <div class="mapping-group" data-card-id="${escapeHtml(group.cardId)}">
-                <div class="mapping-group-head${isLightAccentColor(accent) ? ' light' : ''}" style="background: ${accent};">
+                <div class="mapping-group-head${isLight ? ' light' : ''}" style="background: ${isLight ? '#f1eff0' : accent};">
                     ${dragHandleHtml('group-handle')}
                     <img class="mapping-group-cardimg" src="assets/images/cards/${escapeHtml(group.cardId)}.png" alt="" onerror="this.style.display='none'">
                     <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
