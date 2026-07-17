@@ -2453,6 +2453,15 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* 滿額/未滿門檻（搜尋結果卡片）：重要條件，獨立一行置於匹配項目上方、
+   緊貼回饋數字。黑色粗體、字級與 .matched-merchant 一致（2026-07-17 用戶定案） */
+.spend-threshold-note {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #111827;
+}
+
 /* Multi-line condition / gift text: keep manual line breaks readable */
 .matched-merchant.promo-condition {
     line-height: 1.6;
@@ -3936,6 +3945,11 @@ input[type="text"].credit-limit-input:focus {
     color: #9ca3af;
     margin-bottom: 6px;
     padding-left: 0.5em;
+}
+
+/* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
+.cashback-condition.spend-threshold {
+    color: #111827;
 }
 
 /* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
