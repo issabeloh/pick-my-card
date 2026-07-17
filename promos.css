@@ -166,9 +166,25 @@ a {
   color: #ffffff;
 }
 
+/* 2026-07-17 四輪回饋：跟 styles.css 的 .header-nav-link + .header-nav-link
+   同步修正——原本 padding-left+border-left 把分隔線留白框進第二顆連結的 box，
+   導致 hover/active 底線（border-bottom）比「新戶活動」又低又寬。改用
+   margin-left 把留白移出 box，padding-left 只留 2px（跟基礎 padding-right:2px
+   對稱），分隔線改用 ::before 畫在 margin 區間內。 */
 .promos-header-nav-link + .promos-header-nav-link {
-  padding-left: 18px;
-  border-left: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 18px;
+  padding-left: 2px;
+  border-left: none;
+}
+
+.promos-header-nav-link + .promos-header-nav-link::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* 本頁（新戶活動）在導覽列的 active 視覺：加粗＋底線，抄自 styles.css:119-135

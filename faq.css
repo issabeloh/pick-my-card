@@ -30,13 +30,11 @@
 /* 導覽「常見問題」目前頁的 active 視覺（aria-current="page"）：styles.css:119-135
    只定義 .header-nav-link 基礎樣式，沒有 active 態（主站導覽本身沒有「目前在哪頁」
    的需求，只有 faq.html/promos.html 互相對照時才需要）。
-   2026-07-17 站長回饋修正：「常見問題」是 styles.css .header-nav-link + .header-nav-link
-   選到的第二顆連結，該規則為了畫連結間的「｜」分隔線加了 padding-left:18px，於是
-   border-bottom（含在整個 padding box 內）連分隔線的留白都框進去，比照第一顆
-   「新戶活動」hover 時的金色底線「又低又寬」。改用 ::after 直接以 left/right 對齊
-   文字實際起訖點（18px＝分隔線 padding-left，2px＝基礎 padding-right），
-   position:relative 元件本身是 border-box，bottom:0 天生對齊原本 border-bottom
-   的垂直位置，不需要另外量測——這樣底線長度/位置就跟「新戶活動」hover 時完全一致。 */
+   2026-07-17 四輪回饋根治：styles.css 的 `.header-nav-link + .header-nav-link`
+   分隔線實作已改為 margin-left:18px＋padding-left:2px（跟基礎 padding-right:2px
+   對稱）＋::before 畫分隔線，不再佔用 padding——第二顆連結的 padding box現在跟
+   第一顆完全對稱（4px 2px），border-bottom 自然對齊、等寬。這裡的 ::after 白
+   底線同步改成 left:2px/right:2px（對應新的對稱 padding），不再需要 18px 特例。 */
 .header-nav-link[aria-current="page"] {
     font-weight: 800;
     border-bottom-color: transparent;
@@ -45,7 +43,7 @@
 .header-nav-link[aria-current="page"]::after {
     content: "";
     position: absolute;
-    left: 18px;
+    left: 2px;
     right: 2px;
     bottom: 0;
     height: 2px;

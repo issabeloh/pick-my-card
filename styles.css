@@ -165,10 +165,26 @@ header {
         border-right: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* 兩個連結之間的「｜」分隔 */
+    /* 兩個連結之間的「｜」分隔（2026-07-17 四輪回饋修正：原本用 padding-left+
+       border-left 實作，等於把分隔線的留白也框進第二顆連結的 box，導致
+       hover 金色底線（border-bottom，畫在整個 padding box 底部）比「新戶活動」
+       又低又寬。改用 margin-left 把留白移到 box 外面，padding-left 只留
+       2px（與基礎 padding-right:2px 對稱），分隔線改用 ::before 絕對定位畫在
+       margin 區間內——兩顆連結的 box 幾何從此一致，border-bottom 自然對齊。 */
     .header-nav-link + .header-nav-link {
-        padding-left: 18px;
-        border-left: 1px solid rgba(255, 255, 255, 0.3);
+        margin-left: 18px;
+        padding-left: 2px;
+        border-left: none;
+    }
+
+    .header-nav-link + .header-nav-link::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -10px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.3);
     }
 }
 
