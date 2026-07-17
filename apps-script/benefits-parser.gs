@@ -150,6 +150,7 @@ function extractNewPromos_(rawText, cardHint) {
     '3. promo_condition：把「持卡人為了拿到獎勵必須完成的任務」逐項拆解。若有兩項以上，用①②③④⑤依序編號、每項簡要說明（約25字內）；只有一項時直接寫一句、不必編號。這些任務不要再重複寫進 notes。',
     '3a. promo_condition 寫法要「精簡、把修飾語放進名詞」：把官網「新增N筆一般消費且每筆金額均滿NT$X(含)以上」濃縮成「新增N筆NT$X元(含)以上的一般消費」；不要保留「且每筆金額均滿」這種贅字。同理其他任務也用最短、資訊不漏的講法。',
     '4. new_customer_summary：一句話帶出「核卡後X天內＋（可選）最關鍵門檻＋獎勵」，詳細條件已在 promo_condition，summary 只挑最關鍵的門檻（如單筆滿多少、累積滿多少）點出即可，不要把每個條件都塞進來。結尾不加句號。',
+    '4a. 原文出現「Money 101專屬連結」「Money101專屬」「M101獨家」這類字樣時：m101_exclusive 填 true，且 new_customer_summary 的最前面加上「【大師加碼】」。若該活動必須透過該連結申辦才享有，summary 用「透過本站連結申辦」的講法。範例：「【大師加碼】核卡後30天內，符合條件即享刷卡金200元」、「【大師加碼】透過本站連結申辦並刷滿NT$3,000元，享首刷禮3選1」。沒有這類字樣則 m101_exclusive 填 false、summary 不加前綴。',
     '5. 日期格式 YYYY/M/D；官網寫「即日起」則 period_start 省略。',
     '6. gift_content：僅 promo_types 含首刷禮時填，寫官網的實際品名（如「TRAVEL FOX 25吋上掀式行李箱」）。',
     '7. bonus_rate_percent、bonus_cap_amount、voucher_amount 只填官網寫的原始數字（如 7、200、500），不做任何計算或換算。',
@@ -193,6 +194,7 @@ function extractNewPromos_(rawText, cardHint) {
             voucher_amount: { type: 'NUMBER', description: '定額點數數量，如 500' },
             voucher_usage: { type: 'STRING', description: '點數名稱，如 玉山e point' },
             notes: { type: 'STRING' },
+            m101_exclusive: { type: 'BOOLEAN', description: '原文出現 Money 101專屬連結／M101獨家 等字樣時為 true' },
             evidence: { type: 'STRING' },
             confidence: { type: 'STRING', enum: ['高', '中', '低'] },
             needs_review: { type: 'BOOLEAN' },
@@ -284,8 +286,10 @@ function writePromosToReview_(promos, source, link) {
     const bonusRate = (p.bonus_rate_percent !== undefined && p.bonus_rate_percent !== null && p.bonus_rate_percent !== 0)
       ? p.bonus_rate_percent + '%' : '';
     const bonusCap = buildCapFormula_(p.bonus_cap_amount, p.bonus_rate_percent);
-    // apply_cta_text 預設「申辦{卡名}」（你若透過連結有專屬首刷禮，再自行改成「透過連結申辦，再享專屬首刷禮」）
-    const applyCtaText = nameMap[p.card_id] ? '申辦' + nameMap[p.card_id] : '';
+    // apply_cta_text：M101 專屬活動 → 「透過連結申辦，再享專屬首刷禮」；一般活動 → 「申辦{卡名}」
+    const applyCtaText = p.m101_exclusive
+      ? '透過連結申辦，再享專屬首刷禮'
+      : (nameMap[p.card_id] ? '申辦' + nameMap[p.card_id] : '');
 
     const row = [
       '',                                        // 核准（你打 V）
