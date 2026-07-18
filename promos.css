@@ -478,7 +478,10 @@ a {
   font-size: 0.8rem;
   font-weight: 800;
   padding: 3px 0;
-  color: #f97316;
+  /* 淺灰字（2026-07-18 站長定案，#f97316 亮橘改 #dedede）；靠左的類型徽章之間
+     多留一點距離，用 margin-left（.promo-type-badges 本身 gap 只有 6px）。 */
+  color: #dedede;
+  margin-left: 8px;
   letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
