@@ -486,9 +486,12 @@ a {
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
+  /* 加粗黑描邊（2026-07-18 站長：再粗一點）——2px 8 方向外環＋1px 中間環填滿，
+     避免對角線 2px 留縫 */
   text-shadow:
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-    -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
+    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+    -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000,
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .promo-ending-badge:empty,
@@ -872,6 +875,9 @@ a {
 .promo-merchants-value {
   display: block;
   line-height: 1.6;
+  /* 藍色粗體，對齊主站搜尋結果的 .matched-merchant strong（2026-07-18 站長定案） */
+  color: var(--pmc-blue);
+  font-weight: 700;
 }
 
 .promo-merchants-value.is-clamped {
