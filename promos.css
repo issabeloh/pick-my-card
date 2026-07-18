@@ -800,14 +800,20 @@ a {
   font-size: 0.8rem;
   font-weight: 800;
   padding: 3px 0;
-  color: #f97316;
+  /* 淺灰字（2026-07-18 站長定案，#f97316 亮橘改 #dedede）；靠左的類型徽章之間
+     多留一點距離，用 margin-left（.promo-type-badges 本身 gap 只有 6px）。 */
+  color: #dedede;
+  margin-left: 8px;
   letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
+  /* 加粗黑描邊（2026-07-18 站長：再粗一點）——2px 8 方向外環＋1px 中間環填滿，
+     避免對角線 2px 留縫 */
   text-shadow:
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-    -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
+    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+    -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000,
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .promo-ending-badge:empty,
@@ -1191,6 +1197,9 @@ a {
 .promo-merchants-value {
   display: block;
   line-height: 1.6;
+  /* 藍色粗體，對齊主站搜尋結果的 .matched-merchant strong（2026-07-18 站長定案） */
+  color: var(--pmc-blue);
+  font-weight: 700;
 }
 
 .promo-merchants-value.is-clamped {
