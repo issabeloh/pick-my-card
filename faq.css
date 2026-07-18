@@ -89,27 +89,9 @@
     }
 }
 
-/* 手機抽屜「新戶活動一覽」卡（🎁）去立體感（2026-07-16 站長二輪回饋：「目前明顯
-   得太刻意」）。styles.css 本體的漸層＋內凹白線＋多層陰影＋彈跳位移一律不動
-   （index.html 自己的抽屜不受影響），這裡只在 faq.css override 壓平成跟同抽屜
-   工具卡（.sidebar-tool-card，本頁連去回饋比較工具）相近的平面卡片感：純色底
-   ＋細邊框＋無陰影，hover 只換底色、不做位移動畫。 */
-.sidebar-promos-banner {
-    background: #fff7e0;
-    box-shadow: none;
-    border: 1px solid #ffe29a;
-}
-
-.sidebar-promos-banner:hover {
-    transform: none;
-    background: #fff2cc;
-    border-color: #ffd97a;
-}
-
-.sidebar-promos-banner:active {
-    transform: none;
-    box-shadow: none;
-}
+/* 手機抽屜「新戶活動一覽」卡（🎁）的平面樣式（去糖果黃立體感）已於 2026-07-18
+   收進 styles.css 本體的 .sidebar-promos-banner——站長要求 index 與本頁抽屜共用
+   同一種平面外觀，本頁不再需要專屬 override（原 faq.css 壓平規則已移除）。 */
 
 /* 手機抽屜「回饋比較工具」卡（💳，2026-07-17 站長回饋：原本借用 styles.css 的
    .sidebar-faq-card 灰階樣式，跟同抽屜「新戶活動一覽」卡分不出主次；改名
@@ -117,7 +99,7 @@
    不會再繼承到舊規則。配色比照 promos.css 的 .promos-sidebar-tool-card 同款糖果
    薄荷綠（--pmc-candy-mint-bg/#ddfbef、--pmc-candy-mint-text/#0b7a56，faq.css
    沒有站台共用變數檔可 var()，直接寫死同值），版面結構複製 styles.css 的
-   .sidebar-faq-card 系列；壓平風格與上面的 .sidebar-promos-banner override 一致：
+   .sidebar-faq-card 系列；壓平風格與 .sidebar-promos-banner（styles.css 本體）一致：
    純色底＋細邊框＋無陰影＋hover 只換底色。 */
 .sidebar-tool-card {
     display: flex;
