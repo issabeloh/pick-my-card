@@ -27,28 +27,23 @@
     line-height: 1.2;
 }
 
-/* 導覽「常見問題」目前頁的 active 視覺（aria-current="page"）：styles.css:119-135
+/* 導覽「常見問題」目前頁的 active 視覺（aria-current="page"）：styles.css
    只定義 .header-nav-link 基礎樣式，沒有 active 態（主站導覽本身沒有「目前在哪頁」
    的需求，只有 faq.html/promos.html 互相對照時才需要）。
-   2026-07-17 四輪回饋根治：styles.css 的 `.header-nav-link + .header-nav-link`
-   分隔線實作已改為 margin-left:18px＋padding-left:2px（跟基礎 padding-right:2px
-   對稱）＋::before 畫分隔線，不再佔用 padding——第二顆連結的 padding box現在跟
-   第一顆完全對稱（4px 2px），border-bottom 自然對齊、等寬。這裡的 ::after 白
-   底線同步改成 left:2px/right:2px（對應新的對稱 padding），不再需要 18px 特例。 */
+   2026-07-18 五輪回饋：白底線從 ::after 改成直接上色 border-bottom-color——
+   舊 ::after 版（left/right:2px、bottom:0）貼在 padding box 底、比內容窄，而
+   hover 金線是 border-bottom、畫在 padding box「外」且橫跨整個 border box，
+   兩者天生差 2px 高、4px 寬，同頁對照（hover 新戶活動 vs active 常見問題）
+   一眼可見。改用與 hover 同一條 border（styles.css:194 起的
+   `border-bottom: 2px solid transparent`）只換顏色，幾何從此跟金線逐 px 相同，
+   也跟 promos.css:194 的做法一致。本規則在 faq.css、載入順序在 styles.css 之後，
+   同 specificity 下蓋過 :hover 的金色——目前頁 hover 時維持白線（原行為不變）。
+   注意：這裡不能再動用 ::after/::before——本頁「新戶活動」的
+   .header-nav-link--sparkle 煙花佔用 ::after/::before，「常見問題」的分隔線
+   佔用 ::before，改回虛元素方案容易踩到互撞。 */
 .header-nav-link[aria-current="page"] {
     font-weight: 800;
-    border-bottom-color: transparent;
-}
-
-.header-nav-link[aria-current="page"]::after {
-    content: "";
-    position: absolute;
-    left: 2px;
-    right: 2px;
-    bottom: 0;
-    height: 2px;
-    border-radius: 1px;
-    background: rgba(255, 255, 255, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.85);
 }
 
 /* 返回首頁鈕（取自 8adda98 版本，站長二輪回饋撤回頭像後恢復）：半透明白底
