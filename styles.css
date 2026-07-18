@@ -215,41 +215,43 @@ header {
    class 本來的區塊（Grep「sidebar-promos-banner」可找到，本檔約 7000 行附近）。
    2026-07-17 四輪回饋：單一發射點改左右雙發——::after 維持右側，新增 ::before
    在左側；左側套用另一組粒子圖樣（nav-sparkle-burst-alt，顏色/位移順序不同，
-   刻意不完全鏡像）並用 animation-delay 錯開半個週期（1.8s／3.6s 的一半），
+   刻意不完全鏡像）並用 animation-delay 錯開半個週期（1.2s／2.4s 的一半），
    讓兩側交錯綻放（見下方 @keyframes 註解說明交錯時間軸）。
-   2026-07-18 六輪回饋：週期 4.5s→3.6s（播快一點點）；發射點 top:1px→7px
-   （下移讓粒子稍微蓋到「新戶活動」文字——站長明示蓋到 ok，別改回貼齊上緣）。 */
+   2026-07-18 六、七輪回饋連調兩次：週期 4.5s→3.6s→2.4s（站長要的是「播放
+   長度縮短」＝單發綻放播得更快，不是動 delay；縮週期等比縮綻放實長，交錯
+   結構不變）；發射點 top:1px→7px→12px（一路下移到字體中線附近，粒子直接
+   蓋在「新戶活動」文字上——站長明示蓋到 ok，別改回貼齊上緣）。 */
 .header-nav-link--sparkle::after {
     content: "";
     position: absolute;
-    top: 7px;
+    top: 12px;
     right: -8px;
     width: 0;
     height: 0;
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
-    animation: nav-sparkle-burst 3.6s ease-out infinite;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
 }
 
 .header-nav-link--sparkle::before {
     content: "";
     position: absolute;
-    top: 7px;
+    top: 12px;
     left: -8px;
     width: 0;
     height: 0;
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
-    animation: nav-sparkle-burst-alt 3.6s ease-out infinite;
-    animation-delay: 1.8s;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.2s;
 }
 
-/* 單次綻放（金／珊瑚／粉 5 顆）拉長到 3.6s 週期的前 ~72%（0.65s 起爆、2.59s
-   完全熄滅），搭配右側 ::after 不加 delay、左側 ::before 加 1.8s（半週期）
-   delay：右側熄滅點（72%＝2.59s）與左側起爆點（因 delay 1.8s，落在
-   1.8+0.65=2.45s）銜接還小幅重疊，形成「前一發尾聲時下一發已起爆」的交錯視覺，
+/* 單次綻放（金／珊瑚／粉 5 顆）佔 2.4s 週期的前 ~72%（0.43s 起爆、1.73s
+   完全熄滅），搭配右側 ::after 不加 delay、左側 ::before 加 1.2s（半週期）
+   delay：右側熄滅點（72%＝1.73s）與左側起爆點（因 delay 1.2s，落在
+   1.2+0.43=1.63s）銜接還小幅重疊，形成「前一發尾聲時下一發已起爆」的交錯視覺，
    而非兩側各自孤立閃一下。0%/100% 數值相同確保 infinite 循環銜接不跳動。
    用 box-shadow 清單（而非各自獨立的 transform）是因為單一虛元素的多筆
    box-shadow 可以各自插值出「向外擴散＋縮小＋淡出」的粒子錯覺，不必多開
@@ -7111,9 +7113,9 @@ input[type="text"].credit-limit-input:focus {
    「之後」才能靠源碼順序覆蓋，放前段會被這裡的無條件定義蓋掉）。
    四輪回饋：改左右雙發——::before 留在原本位置（左側，靠近 🎁 emoji），
    ::after 新增在右側（靠近 → 箭頭）。兩者都疊加原本的 0.4s 起始 delay
-   （避開跟桌機 header 同步閃爍），再用半週期 1.8s 讓左右交錯。
-   六輪回饋：週期跟桌機一起 4.5s→3.6s；發射點位置不動（站長下移回饋針對
-   header 導覽文字，這裡本來就疊在黃色卡上）。 */
+   （避開跟桌機 header 同步閃爍），再用半週期 1.2s 讓左右交錯。
+   六、七輪回饋：週期跟桌機一起 4.5s→3.6s→2.4s；發射點位置不動（站長下移
+   回饋針對 header 導覽文字，這裡本來就疊在黃色卡上）。 */
 .sidebar-promos-banner::before {
     content: "";
     position: absolute;
@@ -7124,7 +7126,7 @@ input[type="text"].credit-limit-input:focus {
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
-    animation: nav-sparkle-burst 3.6s ease-out infinite;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
     animation-delay: 0.4s;
 }
 
@@ -7138,8 +7140,8 @@ input[type="text"].credit-limit-input:focus {
     border-radius: 50%;
     pointer-events: none;
     z-index: 2;
-    animation: nav-sparkle-burst-alt 3.6s ease-out infinite;
-    animation-delay: 2.2s;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.6s;
 }
 
 /* 停用手機抽屜煙花：同 specificity，靠源碼順序勝出，必須排在上面兩個無條件動畫
