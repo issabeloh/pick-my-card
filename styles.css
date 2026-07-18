@@ -327,9 +327,7 @@ header {
 
 @media (prefers-reduced-motion: reduce) {
     .header-nav-link--sparkle::after,
-    .header-nav-link--sparkle::before,
-    .sidebar-promos-banner::after,
-    .sidebar-promos-banner::before {
+    .header-nav-link--sparkle::before {
         content: none;
         animation: none;
     }
@@ -7065,7 +7063,8 @@ input[type="text"].credit-limit-input:focus {
 
 /* 手機抽屜同款小煙花（2026-07-17，跟桌機 header 的 .header-nav-link--sparkle
    共用 @keyframes nav-sparkle-burst／nav-sparkle-burst-alt，定義見 styles.css
-   前段「導覽」區塊；reduced-motion 停用規則也在那裡一併處理）。
+   前段「導覽」區塊；reduced-motion 停用規則見本區塊正下方——必須放在動畫定義
+   「之後」才能靠源碼順序覆蓋，放前段會被這裡的無條件定義蓋掉）。
    四輪回饋：改左右雙發——::before 留在原本位置（左側，靠近 🎁 emoji），
    ::after 新增在右側（靠近 → 箭頭）。兩者都疊加原本的 0.4s 起始 delay
    （避開跟桌機 header 同步閃爍），再用半週期 2.25s 讓左右交錯。 */
@@ -7095,6 +7094,17 @@ input[type="text"].credit-limit-input:focus {
     z-index: 2;
     animation: nav-sparkle-burst-alt 4.5s ease-out infinite;
     animation-delay: 2.65s;
+}
+
+/* 停用手機抽屜煙花：同 specificity，靠源碼順序勝出，必須排在上面兩個無條件動畫
+   定義「之後」（四輪回饋驗收抓到：放前段統一停用區塊會被這裡蓋掉，reduced-motion
+   下手機抽屜仍會閃）。 */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-promos-banner::before,
+    .sidebar-promos-banner::after {
+        content: none;
+        animation: none;
+    }
 }
 
 .sidebar-promos-banner-emoji {
