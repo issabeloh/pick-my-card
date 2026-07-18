@@ -165,15 +165,32 @@ header {
         border-right: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* 兩個連結之間的「｜」分隔 */
+    /* 兩個連結之間的「｜」分隔（2026-07-17 四輪回饋修正：原本用 padding-left+
+       border-left 實作，等於把分隔線的留白也框進第二顆連結的 box，導致
+       hover 金色底線（border-bottom，畫在整個 padding box 底部）比「新戶活動」
+       又低又寬。改用 margin-left 把留白移到 box 外面，padding-left 只留
+       2px（與基礎 padding-right:2px 對稱），分隔線改用 ::before 絕對定位畫在
+       margin 區間內——兩顆連結的 box 幾何從此一致，border-bottom 自然對齊。 */
     .header-nav-link + .header-nav-link {
-        padding-left: 18px;
-        border-left: 1px solid rgba(255, 255, 255, 0.3);
+        margin-left: 18px;
+        padding-left: 2px;
+        border-left: none;
+    }
+
+    .header-nav-link + .header-nav-link::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -10px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.3);
     }
 }
 
-/* 純文字導覽＋紅點（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
-   色彩太重）。新戶活動帶一顆小紅點（App 通知的視覺語言）默默吸睛。 */
+/* 純文字導覽（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
+   色彩太重）。新戶活動原本帶一顆小紅點吸睛，2026-07-17 退場改用小煙花
+   （.header-nav-link--sparkle，見下方）。 */
 .header-nav-link {
     position: relative;
     color: rgba(255, 255, 255, 0.92);
@@ -191,15 +208,133 @@ header {
     color: #ffffff;
 }
 
-.header-nav-link--dot::after {
+/* 2026-07-17 站長回饋：紅點退場，改用更輕巧、週期性的小煙花吸睛（純 CSS，
+   box-shadow 清單模擬多顆粒子，不額外加 DOM 節點）。class 隨改名
+   --dot → --sparkle。手機抽屜「新戶活動一覽」卡（.sidebar-promos-banner，
+   index.html/faq.html 共用）套用同一組 keyframes——定義在這裡，套用處在該
+   class 本來的區塊（Grep「sidebar-promos-banner」可找到，本檔約 7000 行附近）。
+   2026-07-17 四輪回饋：單一發射點改左右雙發——::after 維持右側，新增 ::before
+   在左側；左側套用另一組粒子圖樣（nav-sparkle-burst-alt，顏色/位移順序不同，
+   刻意不完全鏡像）並用 animation-delay 錯開半個週期（1.2s／2.4s 的一半），
+   讓兩側交錯綻放（見下方 @keyframes 註解說明交錯時間軸）。
+   2026-07-18 六、七輪回饋連調兩次：週期 4.5s→3.6s→2.4s（站長要的是「播放
+   長度縮短」＝單發綻放播得更快，不是動 delay；縮週期等比縮綻放實長，交錯
+   結構不變）；發射點 top:1px→7px→12px（一路下移到字體中線附近，粒子直接
+   蓋在「新戶活動」文字上——站長明示蓋到 ok，別改回貼齊上緣）。 */
+.header-nav-link--sparkle::after {
     content: "";
     position: absolute;
-    top: -1px;
-    right: -9px;
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: #f87171;
+    top: 12px;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+}
+
+.header-nav-link--sparkle::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: -8px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.2s;
+}
+
+/* 單次綻放（金／珊瑚／粉 5 顆）佔 2.4s 週期的前 ~72%（0.43s 起爆、1.73s
+   完全熄滅），搭配右側 ::after 不加 delay、左側 ::before 加 1.2s（半週期）
+   delay：右側熄滅點（72%＝1.73s）與左側起爆點（因 delay 1.2s，落在
+   1.2+0.43=1.63s）銜接還小幅重疊，形成「前一發尾聲時下一發已起爆」的交錯視覺，
+   而非兩側各自孤立閃一下。0%/100% 數值相同確保 infinite 循環銜接不跳動。
+   用 box-shadow 清單（而非各自獨立的 transform）是因為單一虛元素的多筆
+   box-shadow 可以各自插值出「向外擴散＋縮小＋淡出」的粒子錯覺，不必多開
+   DOM 節點或多個 ::before/::after。 */
+@keyframes nav-sparkle-burst {
+    0%, 100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0),
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0);
+    }
+    18% {
+        box-shadow:
+            -3px -5px 0 1.6px rgba(255, 201, 51, 0.95),
+            5px -6px 0 1.6px rgba(255, 138, 101, 0.95),
+            -6px 2px 0 1.4px rgba(255, 158, 205, 0.9),
+            6px 3px 0 1.4px rgba(255, 201, 51, 0.9),
+            0px -8px 0 1.3px rgba(255, 138, 101, 0.9);
+    }
+    45% {
+        box-shadow:
+            -6px -9px 0 0.8px rgba(255, 201, 51, 0.45),
+            8px -10px 0 0.8px rgba(255, 138, 101, 0.45),
+            -10px 3px 0 0.7px rgba(255, 158, 205, 0.4),
+            10px 5px 0 0.7px rgba(255, 201, 51, 0.4),
+            0px -13px 0 0.6px rgba(255, 138, 101, 0.4);
+    }
+    72% {
+        box-shadow:
+            -9px -13px 0 0 rgba(255, 201, 51, 0),
+            11px -15px 0 0 rgba(255, 138, 101, 0),
+            -14px 5px 0 0 rgba(255, 158, 205, 0),
+            14px 7px 0 0 rgba(255, 201, 51, 0),
+            1px -18px 0 0 rgba(255, 138, 101, 0);
+    }
+}
+
+/* 左側發射點的變化版：粒子順序／顏色配對與偏移量都跟上面不同（別完全鏡像），
+   時間軸節奏（0%/18%/45%/72%/100%）與 nav-sparkle-burst 一致，方便靠
+   animation-delay 交錯銜接。 */
+@keyframes nav-sparkle-burst-alt {
+    0%, 100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0),
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0);
+    }
+    18% {
+        box-shadow:
+            4px -6px 0 1.5px rgba(255, 158, 205, 0.95),
+            -5px -4px 0 1.7px rgba(255, 201, 51, 0.9),
+            6px 3px 0 1.3px rgba(255, 138, 101, 0.9),
+            -7px 4px 0 1.4px rgba(255, 158, 205, 0.85),
+            1px -9px 0 1.2px rgba(255, 201, 51, 0.9);
+    }
+    45% {
+        box-shadow:
+            7px -10px 0 0.7px rgba(255, 158, 205, 0.45),
+            -9px -7px 0 0.8px rgba(255, 201, 51, 0.4),
+            10px 5px 0 0.6px rgba(255, 138, 101, 0.4),
+            -12px 6px 0 0.7px rgba(255, 158, 205, 0.4),
+            2px -15px 0 0.6px rgba(255, 201, 51, 0.4);
+    }
+    72% {
+        box-shadow:
+            12px -16px 0 0 rgba(255, 158, 205, 0),
+            -14px -12px 0 0 rgba(255, 201, 51, 0),
+            15px 8px 0 0 rgba(255, 138, 101, 0),
+            -17px 9px 0 0 rgba(255, 158, 205, 0),
+            3px -20px 0 0 rgba(255, 201, 51, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-nav-link--sparkle::after,
+    .header-nav-link--sparkle::before {
+        content: none;
+        animation: none;
+    }
 }
 
 .auth-section {
@@ -6959,6 +7094,10 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
     text-decoration: none;
     transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+    /* 曾是煙花 ::before/::after 的定位基準（八輪回饋後煙花改錨在
+       .sidebar-promos-banner-text strong 上）；position 保留無害，留著避免
+       未來有人在這卡上疊絕對定位元素時再踩一次 */
+    position: relative;
 }
 
 .sidebar-promos-banner:hover {
@@ -6968,6 +7107,39 @@ input[type="text"].credit-limit-input:focus {
 .sidebar-promos-banner:active {
     transform: translateY(2px) scale(1.01, 0.96);
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+}
+
+/* 手機抽屜小煙花（2026-07-17 起，跟桌機 header 的 .header-nav-link--sparkle
+   共用 @keyframes nav-sparkle-burst，定義見 styles.css 前段「導覽」區塊；
+   reduced-motion 停用規則見本區塊正下方——必須放在動畫定義「之後」才能靠
+   源碼順序覆蓋，放前段會被這裡的無條件定義蓋掉）。
+   八輪回饋：曾做過卡片左右角雙發（四輪），站長改要「只要一顆，出現在
+   『新戶活動一覽』字尾緊鄰右側，不要右上角」——改錨在
+   .sidebar-promos-banner-text strong 的 ::after（strong 要 align-self:flex-start
+   收縮成內容寬，錨點才貼字尾、不是整欄右緣；見下方 strong 規則），top:50%
+   垂直對齊標題行中線。0.4s 起始 delay 維持（避開跟桌機 header 同步閃爍）。 */
+.sidebar-promos-banner-text strong::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+    animation-delay: 0.4s;
+}
+
+/* 停用手機抽屜煙花：同 specificity，靠源碼順序勝出，必須排在上面的無條件動畫
+   定義「之後」（四輪回饋驗收抓到：放前段統一停用區塊會被這裡蓋掉，reduced-motion
+   下手機抽屜仍會閃）。 */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-promos-banner-text strong::after {
+        content: none;
+        animation: none;
+    }
 }
 
 .sidebar-promos-banner-emoji {
@@ -6985,6 +7157,10 @@ input[type="text"].credit-limit-input:focus {
 .sidebar-promos-banner-text strong {
     font-size: 0.92rem;
     color: #7A4E00;
+    /* 煙花錨點（八輪回饋，見上方 strong::after 區塊）：flex-column 下 strong
+       預設被拉伸成整欄寬，收縮成內容寬煙花才會貼在字尾右側 */
+    position: relative;
+    align-self: flex-start;
 }
 
 .sidebar-promos-banner-text small {

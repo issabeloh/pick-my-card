@@ -96,10 +96,18 @@ a {
   flex-wrap: wrap;
 }
 
+/* 2026-07-16 v3：整塊 logo+站名包成連回 `/` 的連結（跟 faq.html 一樣，副頁差異——
+   promos 本身也不是「首頁」）。顯式蓋掉 UA 底線／visited 紫色，維持白字視覺。 */
 .promos-header-content {
   display: flex;
   align-items: center;
   gap: 10px;
+  text-decoration: none;
+  color: white;
+}
+
+.promos-header-content:visited {
+  color: white;
 }
 
 .promos-header-logo {
@@ -118,34 +126,348 @@ a {
   line-height: 1.2;
 }
 
+/* 桌機導覽（2026-07-16 v3，抄自 styles.css .header-page-links／.header-nav-link）：
+   純文字＋hover 底線，取代 v2 的半透明按鈕樣式——與 faq.html／index.html 站內導覽同款。
+   手機（≤768px）隱藏，改用漢堡抽屜（.promos-sidebar-page-links 兩張卡片）。 */
 .promos-header-links {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+  margin-left: auto;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
 }
 
-/* 抄自 styles.css .auth-btn（半透明白底圓角按鈕），這裡兩個都當「次要」樣式 */
-.promos-header-links a {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+@media (min-width: 769px) {
+  .promos-header-links {
+    display: flex;
+  }
+}
+
+.promos-header-nav-link {
+  position: relative;
+  color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.15s ease;
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.promos-header-links a:hover {
-  background: rgba(255, 255, 255, 0.28);
+.promos-header-nav-link:visited {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.promos-header-nav-link:hover {
+  border-bottom-color: #ffc933;
+  color: #ffffff;
+}
+
+/* 2026-07-17 四輪回饋：跟 styles.css 的 .header-nav-link + .header-nav-link
+   同步修正——原本 padding-left+border-left 把分隔線留白框進第二顆連結的 box，
+   導致 hover/active 底線（border-bottom）比「新戶活動」又低又寬。改用
+   margin-left 把留白移出 box，padding-left 只留 2px（跟基礎 padding-right:2px
+   對稱），分隔線改用 ::before 畫在 margin 區間內。 */
+.promos-header-nav-link + .promos-header-nav-link {
+  margin-left: 18px;
+  padding-left: 2px;
+  border-left: none;
+}
+
+.promos-header-nav-link + .promos-header-nav-link::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 本頁（新戶活動）在導覽列的 active 視覺：加粗＋底線，抄自 styles.css:119-135
+   一帶對 aria-current="page" 的處理精神（主站導覽本身沒有 active 態，這裡是
+   promos/faq 兩個副頁互相對照才需要標示「目前在哪一頁」）。此頁「新戶活動」是
+   當前頁，不套用 header-nav-link--sparkle 煙花效果（見 styles.css 對應規則）。 */
+.promos-header-nav-link[aria-current="page"] {
+  font-weight: 800;
+  border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------------- 漢堡選單 + 返回首頁（2026-07-16 v3，抄自 styles.css
+   .sidebar-toggle-btn；v3 曾試過頭像＋dropdown，站長二輪回饋裁定「副頁頭像做不到
+   主站完整功能，意義不大」，撤回改用同款 faq.html 的 .back-home-btn，這裡加
+   promos- 前綴）---------------- */
+
+.promos-sidebar-toggle-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.promos-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.promos-back-home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.promos-back-home-btn:visited {
+  color: white;
+}
+
+.promos-back-home-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
+.promos-back-home-btn svg {
+  transition: transform 0.2s;
+}
+
+.promos-back-home-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* ---------------- 手機漢堡抽屜（抄自 styles.css .sidebar／.sidebar-overlay 一帶，
+   styles.css:6694-7108）---------------- */
+
+.promos-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 900;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.promos-sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+.promos-sidebar {
+  background: #ffffff;
+  color: #374151;
+  padding: 0;
+}
+
+.promos-sidebar-header {
+  display: none;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.promos-sidebar-close-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promos-sidebar-close-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.promos-sidebar-content {
+  padding: 16px;
+}
+
+.promos-sidebar-page-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 工具卡（💳）／FAQ 卡（💬）：同構型但配色刻意區隔（2026-07-16 站長二輪回饋：
+   兩卡原本都走灰階，長得太像分不出來）。工具卡改用糖果薄荷色系（沿用類型徽章
+   已有的 --pmc-candy-mint-* 變數，融入本頁糖果果凍風），FAQ 卡維持原本低調灰階。 */
+.promos-sidebar-tool-card,
+.promos-sidebar-faq-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.promos-sidebar-tool-card {
+  background: var(--pmc-candy-mint-bg);
+  border: 1px solid #b7f0d5;
+}
+
+.promos-sidebar-tool-card:hover {
+  background: #c9f5e2;
+  border-color: #9fe9c8;
+}
+
+.promos-sidebar-faq-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.promos-sidebar-faq-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.promos-sidebar-tool-card-emoji,
+.promos-sidebar-faq-card-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.promos-sidebar-tool-card-text,
+.promos-sidebar-faq-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.promos-sidebar-tool-card-text strong {
+  font-size: 0.85rem;
+  color: var(--pmc-candy-mint-text);
+}
+
+.promos-sidebar-tool-card-text small {
+  font-size: 0.7rem;
+  color: var(--pmc-candy-mint-text);
+}
+
+.promos-sidebar-faq-card-text strong {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.promos-sidebar-faq-card-text small {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.promos-sidebar-tool-card-arrow {
+  color: var(--pmc-candy-mint-text);
+  font-weight: 700;
+}
+
+.promos-sidebar-faq-card-arrow {
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+/* 桌機（≥769px）：抽屜整組隱藏——這頁沒有 .app-layout 常駐左欄，不隱藏會版面壞
+   （同 faq.css 的處理，見 data-pipeline.md 第 9 節）。 */
+@media (min-width: 769px) {
+  .promos-sidebar,
+  .promos-sidebar-overlay,
+  .promos-sidebar-toggle-btn {
+    display: none !important;
+  }
+}
+
+/* 手機（≤768px）：抽屜滑出式，比照 styles.css:7071-7108 的 .sidebar/.sidebar.open。 */
+@media (max-width: 768px) {
+  .promos-sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .promos-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 85vw;
+    max-width: 360px;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 950;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    box-shadow: none;
+  }
+
+  .promos-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .promos-sidebar-header {
+    display: flex;
+  }
 }
 
 /* ---------------- Main / hero ---------------- */
 
 .promos-main {
   padding: 16px 24px 28px;
+}
+
+/* 麵包屑（2026-07-16 新增）：低調小字，「首頁」連回主站，當前頁純文字。
+   結構化資料見 pmcBuildBreadcrumbJsonLd_() 輸出到 <head> 的 BreadcrumbList。 */
+.promos-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.promos-breadcrumb a {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.promos-breadcrumb a:hover {
+  color: #6b7280;
+  text-decoration: underline;
+}
+
+.promos-breadcrumb [aria-current="page"] {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.promos-breadcrumb-sep {
+  color: #d1d5db;
 }
 
 .promos-hero {
@@ -1165,6 +1487,34 @@ a {
   color: var(--pmc-muted);
 }
 
+/* 回到頂部浮標（抄自 styles.css .back-to-top-btn，2026-07-16 新增）：手機限定
+   （見下方 Responsive 區塊的 .is-visible 規則），捲動超過門檻才顯示，行為邏輯
+   在 promos.js setupBackToTopButton。 */
+.promos-back-to-top-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  background: rgba(107, 114, 128, 0.15);
+  color: #374151;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  transition: all 0.2s ease;
+  /* 桌機隱藏；手機顯示由 Responsive 區塊的 .is-visible 規則接手 */
+  display: none;
+}
+
+.promos-back-to-top-btn:active {
+  transform: scale(0.96);
+}
+
 /* ---------------- Responsive ---------------- */
 /* ≤768px＝手機版「摘要卡可展開」版型：卡片預設收合成一行重點好康＋申辦鈕的摘要條，
    點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
@@ -1188,9 +1538,14 @@ a {
     font-size: 1.02rem;
   }
 
-  .promos-header-links a {
-    padding: 5px 10px;
-    font-size: 0.78rem;
+  .promos-back-home-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .promos-back-home-btn svg {
+    width: 16px;
+    height: 16px;
   }
 
   .promos-main {
@@ -1400,6 +1755,13 @@ a {
 
   .promo-card-detail-inner {
     padding-top: 10px;
+  }
+
+  /* 回到頂部浮標：手機限定顯示，行為與 index.html／faq.html 一致（見 promos.js
+     setupBackToTopButton）。桌機維持 display:none（基礎樣式），這裡只在達到
+     捲動門檻時才 display:flex。 */
+  .promos-back-to-top-btn.is-visible {
+    display: flex;
   }
 }
 

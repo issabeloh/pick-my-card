@@ -1238,6 +1238,7 @@ function generatePromosPageHtml(exportData) {
   const cardsHtml = prepared.map(pmcRenderPromoCard_).join('\n');
   const filterChipsHtml = pmcBuildFilterChips_(prepared.length, bucketCounts);
   const jsonLd = pmcBuildJsonLd_(prepared);
+  const breadcrumbJsonLd = pmcBuildBreadcrumbJsonLd_();
 
   const generatedDisplay = pmcFormatDateDisplay_(todayIso);
   const yearMonthLabel = todayIso.slice(0, 4) + '年' + parseInt(todayIso.slice(5, 7), 10) + '月';
@@ -1267,6 +1268,7 @@ function generatePromosPageHtml(exportData) {
     cardsHtml: cardsHtml,
     filterChipsHtml: filterChipsHtml,
     jsonLd: jsonLd,
+    breadcrumbJsonLd: breadcrumbJsonLd,
     versionTag: versionTag
   });
 }
@@ -1648,6 +1650,21 @@ function pmcBuildJsonLd_(prepared) {
   return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
 }
 
+// 麵包屑結構化資料（2026-07-16 新增）：與頁面可見的 .promos-breadcrumb 對應，
+// 內容固定（只有兩層：首頁／本頁），不依賴任何動態資料，獨立於 pmcBuildJsonLd_
+// 的 ItemList 並存（同頁多個 JSON-LD <script> 是合法用法）。
+function pmcBuildBreadcrumbJsonLd_() {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: PMC_SITE_URL + '/' },
+      { '@type': 'ListItem', position: 2, name: '新戶活動', item: PMC_SITE_URL + '/promos' }
+    ]
+  };
+  return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
+}
+
 function pmcPageTemplate_(o) {
   return '<!DOCTYPE html>\n' +
 '<html lang="zh-Hant">\n' +
@@ -1683,26 +1700,75 @@ function pmcPageTemplate_(o) {
 '<link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">\n' +
 '\n' +
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
+'<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
-// Header：與主站左上角一致（同款 logo＋站名＋深藍 header bar），複製自 index.html
-// 的 header/.header-top/.header-content 結構——主站改動 header 時這裡要手動同步。
+// Header（2026-07-16 v3 全站 header 一致化，同日站長二輪回饋撤回頭像）：與 faq.html
+// 同款結構——漢堡（手機）、logo＋站名整塊連回 `/`、導覽「新戶活動」（本頁，
+// aria-current）＋「常見問題」→ `/faq`、右側「返回首頁」鈕。跟 faq.html 一樣是
+// 手抄件，不是共用元件；faq.html 又是抄 index.html 的 header-top，三邊都要手動
+// 同步（見 FAQ-README.md／data-pipeline.md 第 9 節）。
 // 站名刻意用 <span> 而非 <h1>：這頁真正的 SEO H1 是下面 hero 區塊的
 // 「信用卡新戶活動一覽」，同頁兩個 h1 對文件結構不利。
+// 右側原本試過頭像＋精簡 dropdown，站長裁定「副頁頭像做不到主站完整功能
+// （無法登出/管理），意義不大」，退回「返回首頁」鈕（同款 faq.html 的
+// .back-home-btn，這裡用 promos- 前綴）。
 '<header class="promos-header">\n' +
 '  <div class="promos-header-top">\n' +
-'    <div class="promos-header-content">\n' +
+'    <button id="promos-sidebar-toggle-btn" class="promos-sidebar-toggle-btn" aria-label="開啟選單">\n' +
+'      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>\n' +
+'    </button>\n' +
+'    <a href="/" class="promos-header-content">\n' +
 '      <img src="assets/images/logo-header.png?v=' + o.versionTag + '" alt="" class="promos-header-logo">\n' +
 '      <span class="promos-header-title">信用卡回饋大師</span>\n' +
-'    </div>\n' +
-'    <nav class="promos-header-links" aria-label="站內導覽">\n' +
-'      <a href="/">回主站工具</a>\n' +
+'    </a>\n' +
+'    <nav class="promos-header-links" aria-label="站內頁面">\n' +
+'      <a href="/promos" class="promos-header-nav-link" aria-current="page">新戶活動</a>\n' +
+'      <a href="/faq" class="promos-header-nav-link">常見問題</a>\n' +
 '    </nav>\n' +
+'    <a href="/" class="promos-back-home-btn" title="返回首頁">\n' +
+'      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">\n' +
+'        <path fill-rule="evenodd" d="M8.354 1.146a.5.5 0 0 1 0 .708L2.707 7.5H14.5a.5.5 0 0 1 0 1H2.707l5.647 5.646a.5.5 0 0 1-.708.708l-6.5-6.5a.5.5 0 0 1 0-.708l6.5-6.5a.5.5 0 0 1 .708 0z"/>\n' +
+'      </svg>\n' +
+'      <span>返回首頁</span>\n' +
+'    </a>\n' +
 '  </div>\n' +
 '</header>\n' +
 '\n' +
+// 手機漢堡抽屜（比照 faq.html：抽屜內兩張卡片連回主站兩個頁面）。桌機
+// （≥769px）在 promos.css 顯式隱藏，跟 faq.css 對 .sidebar 的處理一樣——這頁沒有
+// .app-layout 常駐左欄，不隱藏會版面壞。
+'<div class="promos-sidebar-overlay" id="promos-sidebar-overlay"></div>\n' +
+'\n' +
+'<aside class="promos-sidebar" id="promos-sidebar">\n' +
+'  <div class="promos-sidebar-header">\n' +
+'    <button class="promos-sidebar-close-btn" id="promos-sidebar-close-btn" aria-label="關閉選單">\n' +
+'      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>\n' +
+'    </button>\n' +
+'  </div>\n' +
+'  <div class="promos-sidebar-content">\n' +
+'    <nav class="promos-sidebar-page-links" aria-label="站內頁面">\n' +
+'      <a href="/" class="promos-sidebar-tool-card">\n' +
+'        <span class="promos-sidebar-tool-card-emoji" aria-hidden="true">💳</span>\n' +
+'        <span class="promos-sidebar-tool-card-text"><strong>回饋比較工具</strong><small>查商家回饋・比較信用卡</small></span>\n' +
+'        <span class="promos-sidebar-tool-card-arrow" aria-hidden="true">→</span>\n' +
+'      </a>\n' +
+'      <a href="/faq" class="promos-sidebar-faq-card">\n' +
+'        <span class="promos-sidebar-faq-card-emoji" aria-hidden="true">💬</span>\n' +
+'        <span class="promos-sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>\n' +
+'        <span class="promos-sidebar-faq-card-arrow" aria-hidden="true">→</span>\n' +
+'      </a>\n' +
+'    </nav>\n' +
+'  </div>\n' +
+'</aside>\n' +
+'\n' +
 '<main class="promos-main">\n' +
+// 麵包屑（2026-07-16 新增）：結構化資料另見 <head> 的 BreadcrumbList JSON-LD
+// （pmcBuildBreadcrumbJsonLd_）。
+'  <nav class="promos-breadcrumb" aria-label="breadcrumb">\n' +
+'    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>\n' +
+'  </nav>\n' +
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '  </section>\n' +
@@ -1797,6 +1863,12 @@ o.cardsHtml + '\n' +
 '</div>\n' +
 '\n' +
 '<div class="promos-data-update-footer">資料更新於 ' + pmcEscapeHtml_(o.generatedDisplay) + '</div>\n' +
+'\n' +
+// 回到頂部浮標（手機版，2026-07-16 新增，比照 index.html／faq.html）：捲動超過
+// 300px 才顯示，行為邏輯在 promos.js setupBackToTopButton()。
+'<button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">\n' +
+'  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>\n' +
+'</button>\n' +
 '\n' +
 '<script type="module" async>\n' +
 '  // 精簡版 Firebase Analytics 初始化（只取 app+analytics，不含 auth/firestore/storage，\n' +
