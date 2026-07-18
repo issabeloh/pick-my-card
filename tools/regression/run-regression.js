@@ -102,6 +102,10 @@ async function extract(page) {
       best: el.classList.contains('best-card'),
       fields,
       matched: el.querySelector('.matched-merchant')?.innerText?.replace(/\s+/g, ' ').trim() || null,
+      // 滿額/未滿門檻列（2026-07-17 起獨立於 .matched-merchant 之外），
+      // 單獨抓取以維持 minSpend/maxSpend 標註的回歸覆蓋
+      threshold: Array.from(el.querySelectorAll('.spend-threshold-note'))
+        .map(n => n.innerText.replace(/\s+/g, ' ').trim()).join(' / ') || null,
     };
   }));
   const parking = await page.$$eval('#parking-benefits-container .parking-benefit-item', els => els.map(el => ({

@@ -793,17 +793,21 @@ a {
    specificity 相同）——結果沒有任何倒數活動時，每張卡還是會顯示一條有底色
    /內距/wiggle 動畫、但沒有文字的紅色殘影。改用 :empty 當顯示開關（[hidden]
    一併覆蓋，雙保險），animation 也只在非空狀態套用，徹底不可見。 */
+/* pixel 遊戲風文字徽章（2026-07-17 站長定案）：無背景膠囊、亮橘粗字＋
+   黑色硬邊描邊（8 方向 1px text-shadow 疊出來，比 text-stroke 不吃筆劃）；
+   「天」後帶全形驚嘆號（promos.js 填字）。無位移陰影（站長二修移除）。 */
 .promo-ending-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 12px;
-  border-radius: 999px;
-  color: #fff;
-  /* 深橘（原 #f97316 亮橘太搶——2026-07-17 站長回饋頁面顏色太多） */
-  background: #c2410c;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 3px 0;
+  color: #f97316;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
+  text-shadow:
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+    -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
 }
 
 .promo-ending-badge:empty,

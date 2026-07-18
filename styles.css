@@ -2584,6 +2584,15 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* 滿額/未滿門檻（搜尋結果卡片）：重要條件，獨立一行置於匹配項目上方、
+   緊貼回饋數字。黑色粗體、字級與 .matched-merchant 一致（2026-07-17 用戶定案） */
+.spend-threshold-note {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #111827;
+}
+
 /* Multi-line condition / gift text: keep manual line breaks readable */
 .matched-merchant.promo-condition {
     line-height: 1.6;
@@ -4069,6 +4078,11 @@ input[type="text"].credit-limit-input:focus {
     padding-left: 0.5em;
 }
 
+/* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
+.cashback-condition.spend-threshold {
+    color: #111827;
+}
+
 /* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
    toggle only when the text actually overflows. Uses a max-height clamp
    (line-height 1.6 × 4 lines = 6.4em) rather than -webkit-line-clamp, which
@@ -5178,20 +5192,20 @@ input[type="text"].credit-limit-input:focus {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button（淺綠底＋釘選 icon，與結果卡的釘選視覺呼應） */
+/* Floating My Mappings Button（琥珀底＋釘選 icon，與結果卡釘選態 pin-btn.pinned 同色系） */
 .my-mappings-floating-btn {
     position: fixed;
     bottom: 72px;
     right: 16px;
     padding: 8px 12px;
-    background: #d1fae5;
-    border: 1px solid #a7f3d0;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #065f46;
+    color: #b45309;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
@@ -5201,14 +5215,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
     transform: translateY(-2px);
-}
-
-/* 配卡 modal 標題的釘選 icon */
-.mappings-title-pin {
-    vertical-align: -2px;
-    color: #667eea;
 }
 
 .my-mappings-floating-btn:active {
@@ -5348,8 +5356,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
-   一張信用卡＝一個群組卡片：卡名色塊（卡面主色，CARD_ACCENT_COLORS）＋商家列。
-   手機不再橫向捲動；過期配對沉底收合；拖曳把手 touch-action:none 供觸控拖曳 */
+   一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
+   的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
 .mapping-groups {
     display: flex;
     flex-direction: column;
@@ -5367,15 +5375,17 @@ input[type="text"].credit-limit-input:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 12px;
-    color: white;
+    padding: 8px 12px;
+    background: #f1eff0;
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
 }
 
+/* 不設 flex:1——讓後面的 ⓘ 貼著卡名，而不是被推到最右側；長卡名靠 shrink+wrap */
 .mapping-group-name {
-    flex: 1;
     min-width: 0;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     overflow-wrap: anywhere;
 }
 
@@ -5399,7 +5409,7 @@ input[type="text"].credit-limit-input:focus {
     padding: 0;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.9);
+    color: #6b7280;
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -5408,14 +5418,15 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-peek-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
+    color: #1e40af;
+    background: #eef2ff;
 }
 
 .mapping-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 6px 12px;
     border-bottom: 1px solid #f3f4f6;
     background: white;
 }
@@ -5429,6 +5440,56 @@ input[type="text"].credit-limit-input:focus {
     min-width: 0;
 }
 
+.mapping-item-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 商家 pill（仿快速搜尋 .tag-item：白底淺灰框、整顆可拖）；
+   touch-action none 讓觸控拖曳不會捲動 modal */
+.mapping-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.mapping-pill.mapping-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mapping-pill-remove {
+    flex: none;
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 0 0 2px;
+    opacity: 0.75;
+}
+
+.mapping-pill-remove:hover {
+    opacity: 1;
+}
+
 .mapping-item-merchant {
     font-weight: 500;
     color: #1f2937;
@@ -5439,13 +5500,13 @@ input[type="text"].credit-limit-input:focus {
 .mapping-item-date {
     font-size: 12px;
     color: #9ca3af;
-    margin-top: 1px;
+    margin-top: 4px;
     font-variant-numeric: tabular-nums;
 }
 
 .mapping-item-rate {
     flex: none;
-    color: #059669;
+    color: #10b981;
     font-weight: 700;
     font-size: 15px;
     font-variant-numeric: tabular-nums;
@@ -5468,25 +5529,6 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-group-head .mapping-drag-handle {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* 淺色色塊（白卡面）：前景轉深色、補分隔線，避免白字隱形／與卡片底融合 */
-.mapping-group-head.light {
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.mapping-group-head.light .mapping-peek-btn {
-    color: #6b7280;
-}
-
-.mapping-group-head.light .mapping-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
-}
-
-.mapping-group-head.light .mapping-drag-handle {
     color: #9ca3af;
 }
 
