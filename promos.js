@@ -58,6 +58,22 @@
     return Math.ceil((to - from) / 86400000);
   }
 
+  // 徽章文字逐字包 span（2026-07-18 站長：逐字往上跳的波浪動畫，delay 由 CSS
+  // 的 .promo-ending-char 動畫＋這裡設的 animation-delay 錯開）。用 DOM API 建
+  // span、textContent 逐字填，不拼 innerHTML（動態內容一律避開 innerHTML，鐵則 3）。
+  function renderBadgeChars(badge, text) {
+    badge.textContent = '';
+    var chars = Array.from(text);
+    chars.forEach(function (ch, i) {
+      var span = document.createElement('span');
+      span.className = 'promo-ending-char';
+      span.textContent = ch;
+      // 每字晚 0.09s 起跳，形成「一個接一個」的波浪
+      span.style.animationDelay = (i * 0.09).toFixed(2) + 's';
+      badge.appendChild(span);
+    });
+  }
+
   // 「剩 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「剩 N 天」，其餘隱藏；
   // 文案與主站搜尋結果一致（script.js 的 isEndingSoon / getDaysUntilEnd 語義）。
   // 順便隱藏已過期活動（data-expired 標記，篩選/排序都不會再讓它重新出現）。
@@ -83,10 +99,10 @@
       }
       if (!badge) return;
       if (diff === 0) {
-        badge.textContent = '今天截止！';
+        renderBadgeChars(badge, '今天截止！');
         badge.hidden = false;
       } else if (diff <= 14) {
-        badge.textContent = '剩 ' + diff + ' 天！';
+        renderBadgeChars(badge, '剩 ' + diff + ' 天！');
         badge.hidden = false;
       } else {
         badge.hidden = true;

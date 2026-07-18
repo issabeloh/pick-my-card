@@ -478,20 +478,16 @@ a {
   font-size: 0.8rem;
   font-weight: 800;
   padding: 3px 0;
-  /* 淺灰字（2026-07-18 站長定案，#f97316 亮橘改 #dedede）；靠左的類型徽章之間
-     多留一點距離，用 margin-left（.promo-type-badges 本身 gap 只有 6px）。 */
-  color: #dedede;
+  /* 亮橘字（2026-07-18 站長改回 #f97316）；靠左的類型徽章之間多留距離。 */
+  color: #f97316;
   margin-left: 8px;
   letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
-  transform-origin: 50% 90%;
-  /* 加粗黑描邊（2026-07-18 站長：再粗一點）——2px 8 方向外環＋1px 中間環填滿，
-     避免對角線 2px 留縫 */
+  /* 1px 8 方向黑描邊（2026-07-18 站長取消加粗，還原細描邊） */
   text-shadow:
-    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
-    -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000,
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+    -1px 0 0 #000, 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000;
 }
 
 .promo-ending-badge:empty,
@@ -499,23 +495,25 @@ a {
   display: none;
 }
 
-.promo-ending-badge:not(:empty) {
-  animation: promo-ending-wiggle 4.5s ease-in-out infinite;
+/* 逐字跳動（2026-07-18 站長定案）：每個字包一個 .promo-ending-char，由 promos.js
+   依索引設 animation-delay，形成從第一字開始一個接一個往上跳的波浪，跳完停一下再循環。 */
+.promo-ending-char {
+  display: inline-block;
+  /* 保住單一空格字的寬度（inline-block 內單個空格預設會被收掉） */
+  white-space: pre;
+  animation: promo-ending-jump 2.4s ease-in-out infinite;
 }
 
-/* 每 4.5 秒輕輕晃一下（多數時間靜止），不是持續搖晃——避免視覺干擾 */
-@keyframes promo-ending-wiggle {
-  0%, 90%, 100% { transform: rotate(0deg); }
-  91% { transform: rotate(-8deg); }
-  92.5% { transform: rotate(7deg); }
-  94% { transform: rotate(-5deg); }
-  95.5% { transform: rotate(4deg); }
-  97% { transform: rotate(-2deg); }
-  98.5% { transform: rotate(0deg); }
+/* 每字：快速彈起再落下（前 ~15% 完成一次跳），其餘時間靜止等下一輪。 */
+@keyframes promo-ending-jump {
+  0% { transform: translateY(0); }
+  6% { transform: translateY(-5px); }
+  14% { transform: translateY(0); }
+  100% { transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .promo-ending-badge {
+  .promo-ending-char {
     animation: none;
   }
 }
