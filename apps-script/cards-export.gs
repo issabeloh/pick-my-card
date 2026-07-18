@@ -1402,10 +1402,11 @@ function pmcBuildPromoHero_(promo) {
       : '';
     items.push({
       bucket: 'bonus',
-      bigHtml: '最高 ' + pmcEscapeHtml_(rateDisplay),
+      // 「最高」二字移除（2026-07-18 站長定案）
+      bigHtml: pmcEscapeHtml_(rateDisplay),
       smallHtml: capText ? pmcEscapeHtml_(capText) : ''
     });
-    quickParts.push('最高' + rateDisplay + (capText ? '（' + capText + '）' : ''));
+    quickParts.push(rateDisplay + (capText ? '（' + capText + '）' : ''));
   }
 
   const heroItemsHtml = items.map(function (it) {
@@ -1604,7 +1605,8 @@ function pmcRenderPromoCard_(p) {
     // 那一行）輸出過一次，這裡不再重複——2026-07-15 第三輪站長回饋：收合態一行
     // ＋展開後灰底 summary 區塊是同一段文字重複兩次。
     '        <dl class="promo-card-meta">\n' +
-    definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
+    // 欄位順序（2026-07-18 站長定案）：適用通路、達成條件、活動期間、新戶定義
+    highlightHtml + conditionHtml + periodHtml + definitionHtml + '\n' +
     '        </dl>\n' +
     notesHtml +
     '      </div>\n' +
