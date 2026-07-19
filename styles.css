@@ -2222,62 +2222,37 @@ input[type="number"]:focus {
     color: #b45309;
 }
 
-/* 果凍感「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
-   亮黃漸層＋頂部玻璃光澤＋底部軟糖邊＋暖色環境陰影；active 時往下沉並輕微壓扁，
-   transition 用回彈曲線做 Q 彈手感。個別位置的 padding/font-size 留在各自的規則裡。 */
+/* 「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
+   2026-07-19 站長定案改版：奶油蛋蜜「糖衣亮面」（mockup 代號 C3b＋H4）——蛋黃橘→
+   奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），扁平無厚底、深蜜糖字。
+   與 promos.css .promo-apply-btn 同配方，改配方時兩檔要手動同步。
+   hover＝糖衣變厚（內圈 1.5→2.5px 變白＋微提亮），無位移無掠光；active＝原地
+   縮小回彈。個別位置的 padding/font-size 留在各自的規則裡。 */
 .card-apply-cta-btn,
 .card-detail-apply-header-btn,
 .card-detail-apply-bar-btn {
-    background:
-        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    background-image:
+        radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+        linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
     color: #7a4e00;
     font-weight: 700;
     text-decoration: none;
     border-radius: 999px;
     border: none;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.85),
-        0 4px 0 #e8a800,
-        0 6px 14px rgba(255, 180, 0, 0.35);
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* hover＝單次掠光＋變亮，無放大（2026-07-16 站長定案，與 promos 頁一致）。
-   掠光需要 overflow hidden＋::after 光帶。 */
-.card-apply-cta-btn,
-.card-detail-apply-header-btn,
-.card-detail-apply-bar-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.card-apply-cta-btn::after,
-.card-detail-apply-header-btn::after,
-.card-detail-apply-bar-btn::after {
-    content: "";
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: 0;
-    width: 34%;
-    background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-    transform: translateX(-140%) skewX(-18deg);
-    pointer-events: none;
-}
-
-.card-apply-cta-btn:hover::after,
-.card-detail-apply-header-btn:hover::after,
-.card-detail-apply-bar-btn:hover::after {
-    transform: translateX(340%) skewX(-18deg);
-    transition: transform 0.65s ease;
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+        0 3px 10px rgba(255, 183, 77, 0.55);
+    transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
 .card-apply-cta-btn:hover,
 .card-detail-apply-header-btn:hover,
 .card-detail-apply-bar-btn:hover {
-    filter: brightness(1.07) saturate(1.05);
+    filter: brightness(1.03);
+    box-shadow:
+        inset 0 0 0 2.5px rgba(255, 255, 255, 1),
+        0 3px 10px rgba(255, 183, 77, 0.55);
 }
 
 /* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
@@ -2288,27 +2263,23 @@ input[type="number"]:focus {
         transition: none;
     }
 
-    .card-apply-cta-btn::after,
-    .card-detail-apply-header-btn::after,
-    .card-detail-apply-bar-btn::after {
-        display: none;
-    }
-
     .card-apply-cta-btn:hover,
     .card-detail-apply-header-btn:hover,
     .card-detail-apply-bar-btn:hover {
         filter: none;
+        box-shadow:
+            inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+            0 3px 10px rgba(255, 183, 77, 0.55);
     }
 }
 
 .card-apply-cta-btn:active,
 .card-detail-apply-header-btn:active,
 .card-detail-apply-bar-btn:active {
-    transform: translateY(3px) scale(1.02, 0.94);
+    transform: scale(0.95);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 1px 0 #e8a800,
-        0 2px 5px rgba(255, 180, 0, 0.3);
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.6),
+        0 2px 6px rgba(255, 183, 77, 0.45);
 }
 
 .card-apply-cta-btn {
@@ -2389,9 +2360,9 @@ input[type="number"]:focus {
     display: block;
 }
 
-/* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
-   小 pill，配色跟果凍按鈕同一組亮黃語言，但尺寸小不做滿版果凍厚度，
-   只留輕量高光＋按下 squish，避免新舊黃並存。 */
+/* "立即申辦" button at bottom-right of new-customer promo cards in search results.
+   小 pill，2026-07-19 起改用奶油蛋蜜「糖衣亮面」縮小版（同上方共用底座配方，
+   內圈縮成 1px 配合小尺寸）；hover 同樣走糖衣變厚，無位移無放大。 */
 .cardholder-promo-item {
     position: relative;
 }
@@ -2400,35 +2371,49 @@ input[type="number"]:focus {
     display: inline-block;
     flex-shrink: 0;
     padding: 3px 9px;
-    background:
-        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    background-image:
+        radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+        linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
     color: #7a4e00;
     font-size: 11px;
     font-weight: 700;
     text-decoration: none;
     border-radius: 999px;
     border: none;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 2px 0 #e8a800,
-        0 3px 7px rgba(255, 180, 0, 0.3);
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+        0 2px 6px rgba(255, 183, 77, 0.45);
+    transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
     white-space: nowrap;
     line-height: 1.6;
 }
 
 .promo-apply-cta-btn:hover {
-    transform: scale(1.05);
+    filter: brightness(1.03);
+    box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, 1),
+        0 2px 6px rgba(255, 183, 77, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .promo-apply-cta-btn {
+        transition: none;
+    }
+
+    .promo-apply-cta-btn:hover {
+        filter: none;
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+            0 2px 6px rgba(255, 183, 77, 0.45);
+    }
 }
 
 .promo-apply-cta-btn:active {
-    transform: translateY(1px) scale(1.02, 0.94);
+    transform: scale(0.95);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 0.5px 0 #e8a800,
-        0 1px 3px rgba(255, 180, 0, 0.25);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+        0 1px 3px rgba(255, 183, 77, 0.35);
 }
 
 .promo-apply-cta-icon {
@@ -3795,7 +3780,7 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* 桌機版「立即申辦」按鈕，緊鄰卡名（詳情頁 header）。
-   配色沿用 .card-apply-cta-btn 的黃底樣式。 */
+   配色沿用上方共用底座的糖衣亮面樣式。 */
 .card-detail-apply-header-btn {
     flex-shrink: 0;
     display: inline-block;

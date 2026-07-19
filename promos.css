@@ -1,7 +1,7 @@
 /* ==========================================================================
    promos.css — 信用卡新戶活動一覽頁
    v2（2026-07-15）：改回主站設計語言（白底容器＋深藍 header／footer＋主站字級間距），
-   只保留兩個可愛點綴——類型徽章糖果色、「剩 N 天」徽章微抖動。其餘沿用主站
+   只保留兩個可愛點綴——類型徽章糖果色、「最後 N 天」徽章微抖動。其餘沿用主站
    styles.css 的配色／組件配方（見各段落註解標明抄自哪個 class）。
    仍然完全獨立於 styles.css（不 @import、不共用 class），避免跨檔版本耦合；
    顏色數值是手動對照 styles.css 抄過來的，主站配色若改，這裡要跟著手動同步。
@@ -785,35 +785,30 @@ a {
 .promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
 .promo-type-badge--default { background: var(--pmc-candy-default-bg); color: var(--pmc-candy-default-text); }
 
-/* 「剩 N 天」徽章：抄自 styles.css .upcoming-badge 的扁平橘底白字（收斂掉原本
-   的果凍漸層/立體陰影），可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
+/* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
    2026-07-15 bug fix：生成器輸出的是一律存在、初始無文字的 <span>（給
    promos.js 即時填字），舊版這裡直接 display:inline-block 會蓋掉瀏覽器對
    [hidden] 的預設 display:none（author 樣式優先權高於 UA 樣式，即使
    specificity 相同）——結果沒有任何倒數活動時，每張卡還是會顯示一條有底色
    /內距/wiggle 動畫、但沒有文字的紅色殘影。改用 :empty 當顯示開關（[hidden]
    一併覆蓋，雙保險），animation 也只在非空狀態套用，徹底不可見。 */
-/* pixel 遊戲風文字徽章（2026-07-17 站長定案）：無背景膠囊、亮橘粗字＋
-   黑色硬邊描邊（8 方向 1px text-shadow 疊出來，比 text-stroke 不吃筆劃）；
-   「天」後帶全形驚嘆號（promos.js 填字）。無位移陰影（站長二修移除）。 */
+/* 紅色細框 pill 徽章（2026-07-19 站長定案）：紅字＋1px 紅色細 pill 框、透明底，
+   移除 2026-07-17 的 pixel 黑描邊（8 方向 text-shadow）。文案「最後 N 天」
+   （promos.js 填字，無驚嘆號；0 天維持「今天截止！」）。
+   靠左的類型徽章之間多留一點距離，用 margin-left（.promo-type-badges 本身
+   gap 只有 6px）。 */
 .promo-ending-badge {
   font-size: 0.8rem;
-  font-weight: 800;
-  padding: 3px 0;
-  /* 淺灰字（2026-07-18 站長定案，#f97316 亮橘改 #dedede）；靠左的類型徽章之間
-     多留一點距離，用 margin-left（.promo-type-badges 本身 gap 只有 6px）。 */
-  color: #dedede;
+  font-weight: 700;
+  padding: 1px 9px;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+  border-radius: 999px;
   margin-left: 8px;
   letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
-  /* 加粗黑描邊（2026-07-18 站長：再粗一點）——2px 8 方向外環＋1px 中間環填滿，
-     避免對角線 2px 留縫 */
-  text-shadow:
-    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
-    -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000,
-    -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 .promo-ending-badge:empty,
@@ -919,7 +914,8 @@ a {
 }
 
 /* ---------------- 好康 hero（重點好康區）---------------- */
-/* 保留但收斂：大字重點仍醒目，底色改極淡主站灰／類型淡色，回饋率一律用主站綠 */
+/* 保留但收斂：大字重點仍醒目，底色一律極淡主站灰（2026-07-19 站長定案：取消
+   gift 粉／voucher 綠／bonus 黃的類型底色，全部統一淺灰），回饋率一律用主站綠 */
 
 .promo-hero {
   display: flex;
@@ -936,10 +932,6 @@ a {
   background: #f9fafb;
   border: 1px solid var(--pmc-border);
 }
-
-.promo-hero-item--gift { background: #fdf2f6; border-color: #f8d9e4; }
-.promo-hero-item--voucher { background: #f0fdf7; border-color: #c9f1de; }
-.promo-hero-item--bonus { background: #fffbeb; border-color: #fde9b0; }
 
 /* 2026-07-15 第三輪站長回饋：定額金額／回饋率的大字＋用途小字改成同一行橫排
    （原本是上下兩行），用 baseline 對齊讓大字數字與小字說明看起來像一句話。 */
@@ -1292,9 +1284,10 @@ a {
   }
 }
 
-/* 立即申辦按鈕：糖果落日膠囊「糖衣亮面」版（2026-07-19 站長定案，mockup 代號 B3）：
-   粉→橘→黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），扁平無厚底。
-   不再與主站果凍黃同配方——這是新戶活動頁專屬的 CTA 樣式。
+/* 立即申辦按鈕：奶油蛋蜜「糖衣亮面」版（2026-07-19 站長色系決選定案，mockup
+   代號 C3b）：蛋黃橘→奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），
+   扁平無厚底、深蜜糖字。主站三顆申辦按鈕（styles.css .card-apply-cta-btn 家族）
+   同日改用同配方——改配方時兩檔要手動同步。
    hover 效果見檔尾「申辦按鈕光影」區；active＝原地縮小回彈（無位移） */
 .promo-apply-btn {
   display: inline-flex;
@@ -1303,26 +1296,26 @@ a {
   text-decoration: none;
   font-weight: 700;
   font-size: 14px;
-  color: #ffffff;
+  color: #7a4e00;
   padding: 8px 18px;
   border-radius: 999px;
   white-space: nowrap;
   background-image:
-    radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 58%),
-    linear-gradient(115deg, #ff5f8f 0%, #ff8f5e 55%, #ffb347 100%);
+    radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
   border: none;
-  text-shadow: 0 1px 2px rgba(176, 58, 99, 0.4);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
   box-shadow:
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
-    0 3px 10px rgba(255, 95, 143, 0.45);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+    0 3px 10px rgba(255, 183, 77, 0.55);
   transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
 .promo-apply-btn:active {
   transform: scale(0.95);
   box-shadow:
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.45),
-    0 2px 6px rgba(255, 95, 143, 0.4);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6),
+    0 2px 6px rgba(255, 183, 77, 0.45);
 }
 
 /* ---------------- Empty state ---------------- */
@@ -1763,15 +1756,15 @@ a {
   }
 }
 
-/* ═══ 申辦按鈕光影（2026-07-19 站長三次定案，mockup 代號 H4「糖衣變厚」：
+/* ═══ 申辦按鈕光影（2026-07-19 站長定案，mockup 代號 H4「糖衣變厚」：
    hover＝內白圈 1.5px→2.5px 變厚變白＋整顆微提亮；無位移、無掠光、無放大。
    舊掠光 ::after 配方已隨果凍黃版一起移除。
    「減少動態」系統設定下 hover 完全靜態（站長指示：與其看到殘缺的動畫不如不要動）。 */
 .promo-apply-btn:hover {
-  filter: brightness(1.04);
+  filter: brightness(1.03);
   box-shadow:
-    inset 0 0 0 2.5px rgba(255, 255, 255, 0.85),
-    0 3px 10px rgba(255, 95, 143, 0.45);
+    inset 0 0 0 2.5px rgba(255, 255, 255, 1),
+    0 3px 10px rgba(255, 183, 77, 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1780,8 +1773,8 @@ a {
   .promo-apply-btn:hover {
     filter: none;
     box-shadow:
-      inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
-      0 3px 10px rgba(255, 95, 143, 0.45);
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+      0 3px 10px rgba(255, 183, 77, 0.55);
   }
 }
 /* ═══ 光影區結束 ═══ */
