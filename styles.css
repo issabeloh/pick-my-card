@@ -4118,7 +4118,8 @@ input[type="text"].credit-limit-input:focus {
 
 .cashback-merchants {
     font-size: 12px; /* 縮小字體 */
-    color: #6b7280; /* 降低顏色對比 */
+    color: #3b82f6; /* 適用通路內容：藍色粗體，比照 .matched-merchant strong（2026-07-19 用戶定案，字級不需與 matched-merchant 一致） */
+    font-weight: bold;
     line-height: 1.6; /* 增加行高改善易讀性 */
     margin-top: 6px;
 }
