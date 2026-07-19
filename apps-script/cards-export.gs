@@ -2108,8 +2108,9 @@ o.cardsHtml + '\n' +
 
 const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
+const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
@@ -2121,7 +2122,37 @@ function publishToGitHub(cardsDataContent, promosPageHtml) {
     commitFileToGitHub('promos.html', promosPageHtml, `Update promos.html (${version})`, token);
   }
 
+  // 商家靜態頁（top-N SEO 落地頁，見 generateMerchantPageHtml_）——選填
+  (merchantPages || []).forEach(function(m) {
+    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `Update merchant/${m.slug}.html (${version})`, token);
+  });
+
+  // sitemap.xml 每次匯出重生：promos 與商家頁的內容會隨資料變動，lastmod 跟上匯出
+  // 日期，Google 才知道要重爬（先前 lastmod 手打死、更新後 Google 以為沒變）。
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages), `Update sitemap.xml (${version})`, token);
+
   return version;
+}
+
+// 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
+// 更新這裡的常數）；promos 與商家頁每次匯出都可能變 → 用匯出當天日期。
+function generateSitemapXml_(merchantPages) {
+  const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+  const urls = [
+    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
+    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
+    { loc: SITE_ORIGIN + '/promos', lastmod: today }
+  ];
+  (merchantPages || []).forEach(function(m) {
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(m.slug), lastmod: today });
+  });
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  urls.forEach(function(u) {
+    xml += '  <url>\n    <loc>' + u.loc + '</loc>\n    <lastmod>' + u.lastmod + '</lastmod>\n  </url>\n';
+  });
+  xml += '</urlset>\n';
+  return xml;
 }
 
 function commitFileToGitHub(path, textContent, message, token) {
