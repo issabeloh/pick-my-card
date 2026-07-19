@@ -26,6 +26,8 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🎯 卡片管理')
     .addItem('✅ 檢查資料品質', 'runQACheck')
+    .addItem('🔗 檢查 card_id 參照完整性', 'runReferentialIntegrityCheck')
+    .addItem('🏷️ 檢查通路名稱一致性', 'runMerchantNamingCheck')
     .addItem('📥 匯出 JSON', 'exportToJSON')
     .addSeparator()
     .addItem('🗑️ 清除 QA 報告', 'clearQAReport')
@@ -209,6 +211,193 @@ function runQACheck() {
       `嚴重問題：${criticalCount} 個\n警告：${warningCount} 個\n\n請到 QA Check 工作表查看詳細內容。`,
       ui.ButtonSet.OK);
   }
+}
+
+// ==========================================
+// ② 參照完整性檢查（card_id 對得到卡片）
+// ------------------------------------------
+// spotlights.card_id / newCardholderPromos.id / cardApplyCtas 的 key 都必須對得到
+// cards[].id。對不到時前端「靜默」失敗——精選活動 ⓘ 退回手打文字、申辦按鈕不顯示，
+// 不會有錯誤訊息。純函數：吃已解析好的記憶體物件、回傳問題字串陣列（空＝沒問題）。
+// 於 exportToJSON 匯出前呼叫（發布前擋），也可獨立由 runReferentialIntegrityCheck 手動跑。
+// ==========================================
+function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas) {
+  const idSet = {};
+  (cards || []).forEach(function(c) { if (c && c.id) idSet[c.id] = true; });
+
+  const problems = [];
+
+  (spotlights || []).forEach(function(s, i) {
+    if (!s) return;
+    const who = s.merchant || s.card_name || ('第 ' + (i + 1) + ' 列');
+    if (!s.card_id) {
+      problems.push('精選活動（Highlights）「' + who + '」缺 card_id');
+    } else if (!idSet[s.card_id]) {
+      problems.push('精選活動（Highlights）「' + who + '」的 card_id「' + s.card_id + '」對不到任何卡片');
+    }
+  });
+
+  (newCardholderPromos || []).forEach(function(p, i) {
+    if (!p) return;
+    const who = p.promo_name || p.promo_id || ('第 ' + (i + 1) + ' 列');
+    if (!p.id) {
+      problems.push('新戶活動「' + who + '」缺卡片 id');
+    } else if (!idSet[p.id]) {
+      problems.push('新戶活動「' + who + '」的卡片 id「' + p.id + '」對不到任何卡片');
+    }
+  });
+
+  Object.keys(cardApplyCtas || {}).forEach(function(cid) {
+    if (!idSet[cid]) {
+      problems.push('申辦 CTA（cardApplyCtas）的卡片 id「' + cid + '」對不到任何卡片');
+    }
+  });
+
+  return problems;
+}
+
+// 手動版：不做完整匯出，只跑參照完整性檢查並用對話框回報（給選單用）。
+// 重用既有 reader，所以欄位版面改了也不會失準。
+function runReferentialIntegrityCheck() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const cards = readCardsForValidation_();
+    const promoData = readNewCardholderPromos();
+    const spotlights = readHighlights();
+    const problems = validateReferentialIntegrity_(
+      cards, spotlights, promoData.newCardholderPromos, promoData.cardApplyCtas
+    );
+    if (problems.length === 0) {
+      ui.alert('✅ 參照完整性檢查通過', '所有 card_id 都對得到卡片。', ui.ButtonSet.OK);
+    } else {
+      ui.alert('⚠️ 發現 ' + problems.length + ' 個參照問題',
+        problems.slice(0, 25).join('\n') +
+          (problems.length > 25 ? '\n…（其餘略）' : ''),
+        ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    ui.alert('檢查失敗：' + e.message);
+  }
+}
+
+// 只為驗證讀出 cards 的 id/name（不跑完整 exportToJSON）。
+// 若專案已有可重用的「讀 Cards Data」函式，可改呼叫它取代這段。
+function readCardsForValidation_() {
+  const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Cards Data');
+  if (!dataSheet) return [];
+  const data = dataSheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('id');
+  const nameCol = headers.indexOf('name');
+  const cards = [];
+  for (let i = 1; i < data.length; i++) {
+    const id = idCol >= 0 ? data[i][idCol] : '';
+    if (!id) continue;
+    cards.push({ id: String(id), name: nameCol >= 0 ? data[i][nameCol] : '' });
+  }
+  return cards;
+}
+
+// ==========================================
+// ⑥ 通路（商家）名稱一致性檢查
+// ------------------------------------------
+// 搜尋靠 item 名稱比對，同一通路寫法不一（全形/半形、大小寫、空格、常見別名）
+// 會讓匹配分裂。做法：把所有來源的通路字串收齊 → 正規化成一把「鑰匙」→ 同一把
+// 鑰匙底下若出現 2 種以上「原始寫法」，就是疑似同物異名，列進 QA Check 工作表。
+// 這是「警告」不是「錯誤」：正規化後相同不代表一定是同一家（可能真的是兩家），
+// 需人工判讀，所以不擋匯出，只產報告。
+// ==========================================
+function runMerchantNamingCheck() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qaSheet = ss.getSheetByName('QA Check');
+  const ui = SpreadsheetApp.getUi();
+  if (!qaSheet) { ui.alert('找不到 QA Check 工作表！'); return; }
+
+  // 收集所有通路字串 + 來源（能追回哪張卡/哪個活動）
+  const occ = {};  // rawName -> Set(來源說明)
+  const addName = function(raw, source) {
+    if (raw === null || raw === undefined) return;
+    const name = String(raw).trim();
+    if (!name) return;
+    if (!occ[name]) occ[name] = {};
+    occ[name][source] = true;
+  };
+
+  // 來源 1：Cards Data 的 items_N（主來源，佔絕大多數）
+  const dataSheet = ss.getSheetByName('Cards Data');
+  if (dataSheet) {
+    const data = dataSheet.getDataRange().getValues();
+    const headers = data[0];
+    const nameCol = headers.indexOf('name');
+    for (let i = 1; i < data.length; i++) {
+      const cardName = nameCol >= 0 ? data[i][nameCol] : '';
+      if (!cardName) continue;
+      for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
+        const itemsCol = headers.indexOf('items_' + j);
+        if (itemsCol < 0) continue;
+        splitMerchantCell_(data[i][itemsCol]).forEach(function(m) {
+          addName(m, '卡片:' + cardName);
+        });
+      }
+    }
+  }
+  // 來源 2：快捷搜尋（QuickSearch 的 merchants）與精選活動 merchant——跨來源不一致最常見
+  try {
+    (readHighlights() || []).forEach(function(s) { addName(s.merchant, '精選活動'); });
+  } catch (e) {}
+
+  // 依正規化鑰匙分群，找出「一鑰匙多寫法」
+  const groups = {};  // key -> Set(rawName)
+  Object.keys(occ).forEach(function(name) {
+    const key = normalizeMerchantKey_(name);
+    if (!key) return;
+    if (!groups[key]) groups[key] = {};
+    groups[key][name] = true;
+  });
+
+  const issues = [['正規化鑰匙', '疑似同物異名（原始寫法）', '出現來源']];
+  Object.keys(groups).forEach(function(key) {
+    const variants = Object.keys(groups[key]);
+    if (variants.length < 2) return;  // 只有一種寫法＝沒問題
+    const sources = {};
+    variants.forEach(function(v) { Object.keys(occ[v] || {}).forEach(function(s) { sources[s] = true; }); });
+    issues.push([key, variants.join('  ⇄  '), Object.keys(sources).slice(0, 6).join('、')]);
+  });
+
+  // 寫報告到 QA Check 工作表下方（不覆蓋既有 QA 報告，另起一區）
+  const startRow = Math.max(qaSheet.getLastRow() + 2, 2);
+  if (issues.length > 1) {
+    qaSheet.getRange(startRow, 1).setValue('—— ⑥ 通路名稱一致性（疑似同物異名 ' + (issues.length - 1) + ' 組）——')
+      .setFontWeight('bold');
+    qaSheet.getRange(startRow + 1, 1, issues.length, 3).setValues(issues);
+    qaSheet.getRange(startRow + 1, 1, 1, 3).setFontWeight('bold').setBackground('#fff4ce');
+    ui.alert('⚠️ 通路名稱一致性',
+      '找到 ' + (issues.length - 1) + ' 組疑似同物異名，已寫入 QA Check 工作表。\n' +
+      '請人工判讀——正規化後相同不代表一定是同一家。',
+      ui.ButtonSet.OK);
+  } else {
+    ui.alert('✅ 通路名稱一致性', '沒有發現疑似同物異名。', ui.ButtonSet.OK);
+  }
+}
+
+// 拆一格 items（sheet 內可能用 、 , ，或換行分隔）
+function splitMerchantCell_(cell) {
+  if (cell === null || cell === undefined) return [];
+  return String(cell).split(/[、,，\n]/).map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+}
+
+// 正規化鑰匙：小寫 + 去空白 + 全形轉半形 + 去常見尾綴/符號。
+// 目的是讓「玉山Wallet」「玉山 wallet」「玉山wallet電子支付」落到同一鑰匙以便攤在一起檢視。
+// 尾綴清單刻意保守（只削明顯的通用後綴），寧可少歸併也不要把兩家不同的併成一家。
+function normalizeMerchantKey_(name) {
+  let s = String(name);
+  // 全形英數轉半形
+  s = s.replace(/[！-～]/g, function(ch) { return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); });
+  s = s.toLowerCase();
+  s = s.replace(/[\s　]/g, '');                 // 去所有空白（含全形空格）
+  s = s.replace(/[()（）·・.,\-_/]/g, '');            // 去常見標點
+  s = s.replace(/(電子支付|購物網|購物|股份有限公司|有限公司|公司|服務|系統|超市|超商|門市)$/g, '');
+  return s;
 }
 
 // ==========================================
@@ -593,6 +782,25 @@ if (faqSheet) {
   const newCardholderPromos = promoData.newCardholderPromos;
   const cardApplyCtas = promoData.cardApplyCtas;
   const spotlights = readHighlights();
+
+  // 🔒 參照完整性把關：spotlights.card_id／newCardholderPromos.id／cardApplyCtas 的
+  //    key 都必須對得到 cards[].id。對不到時前端不會報錯，會「靜默」退回手打文字
+  //    （精選活動 ⓘ）或不顯示申辦按鈕，上線後肉眼幾乎抓不到。匯出前擋一次，
+  //    讓維護者決定是否仍要發布（見 validateReferentialIntegrity_）。
+  const refProblems = validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas);
+  if (refProblems.length > 0) {
+    const proceed = ui.alert(
+      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片）',
+      refProblems.slice(0, 20).join('\n') +
+        (refProblems.length > 20 ? '\n…（其餘 ' + (refProblems.length - 20) + ' 個略）' : '') +
+        '\n\n這些引用會讓前端靜默退回手打文字或不顯示申辦按鈕。\n仍要繼續匯出嗎？',
+      ui.ButtonSet.YES_NO
+    );
+    if (proceed !== ui.Button.YES) {
+      ui.alert('已取消匯出。請修正上述 card_id 後再匯出一次。');
+      return;
+    }
+  }
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
   // 掛進同一次 GitHub commit（見 publishToGitHub）
