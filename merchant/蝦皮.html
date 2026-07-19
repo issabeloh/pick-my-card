@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <base href="/">
+    <script>window.__PMC_MERCHANT__="蝦皮";</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>信用卡回饋大師</title>
+    <title>蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
@@ -23,7 +25,7 @@
         } catch (e) {
             // URLSearchParams 不支援時忽略——embed 只是顯示精簡化，非必要流程
         }
-        var pmcFromLanding = location.search.indexOf('start') !== -1;
+        var pmcFromLanding = true; /* merchant landing page */
         try {
             if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 localStorage.setItem('pmc_seen_landing', '1');
@@ -39,22 +41,22 @@
     </script>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
-    <link rel="canonical" href="https://pickmycard.app/">
+    <meta name="description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
+    <link rel="canonical" href="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://pickmycard.app/">
-    <meta property="og:title" content="信用卡回饋大師 - 一鍵找出最高回饋卡">
-    <meta property="og:description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
+    <meta property="og:url" content="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
+    <meta property="og:title" content="蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card">
+    <meta property="og:description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
     <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
     <meta property="og:locale" content="zh_TW">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://pickmycard.app/">
-    <meta name="twitter:title" content="信用卡回饋大師 - 一鍵找出最高回饋卡">
-    <meta name="twitter:description" content="解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。">
+    <meta name="twitter:url" content="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
+    <meta name="twitter:title" content="蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card">
+    <meta name="twitter:description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
     <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
 
     <!-- Google Fonts Preconnect for better performance -->
@@ -153,6 +155,11 @@
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3478658382505422"
      crossorigin="anonymous"></script>
+<style>
+.mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}
+.mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}
+</style>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"蝦皮 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":2,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":3,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"台新 Richart 卡"},{"@type":"ListItem","position":6,"name":"星展傳說對決聯名卡"},{"@type":"ListItem","position":7,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":8,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":9,"name":"iLEO 信用卡"}]}</script>
 </head>
 <body>
     <!-- Boot loader for returning logged-in users — visible only while
@@ -594,7 +601,11 @@
         </section>
 
         <!-- 信用卡警語橫條（精選活動區下方） -->
-        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+        <section class="mc-seo-footer" aria-label="蝦皮 信用卡回饋說明">
+  <h1>蝦皮 信用卡回饋比較</h1>
+  <p>想知道刷 蝦皮 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 蝦皮 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 玉山 Uni 卡、玉山 Ubear 卡、國泰 CUBE 卡、滙豐 Live+ 卡、台新 Richart 卡、星展傳說對決聯名卡、聯邦 LINE Bank 卡、兆豐 BT21 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
+</section>
+<div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">

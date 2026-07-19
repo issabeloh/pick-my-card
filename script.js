@@ -1586,8 +1586,9 @@ function closeSpotlightModal() {
 // Auto-fill the merchant search and run the comparison. If the merchant matches
 // a quick-search option's displayName (e.g. 所有加油站), trigger that multi-keyword
 // search; otherwise do a plain single-merchant search.
-function compareSpotlightMerchant(merchant) {
+function compareSpotlightMerchant(merchant, opts) {
     if (!merchant) return;
+    opts = opts || {};
     const merchantInputEl = document.getElementById('merchant-input');
     const amountInput = document.getElementById('amount-input');
 
@@ -1612,6 +1613,9 @@ function compareSpotlightMerchant(merchant) {
         if (calcBtn && !calcBtn.disabled) calcBtn.click();
     }
 
+    // 商家落地頁（noScroll）不自動捲到結果，讓頂部標題區塊與搜尋框先入眼；
+    // 一般 spotlight 點擊維持「點了就捲到結果」。
+    if (opts.noScroll) return;
     setTimeout(() => {
         const results = document.getElementById('results-section');
         const target = (results && results.style.display !== 'none') ? results : merchantInputEl;
@@ -1923,6 +1927,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     const deepLinkCardId = new URLSearchParams(location.search).get('card');
     if (deepLinkCardId && cardsData && cardsData.cards.some(c => c.id === deepLinkCardId)) {
         showCardDetail(deepLinkCardId);
+    }
+
+    // 深連結：商家落地頁（/merchant/<商家>）注入的 window.__PMC_MERCHANT__，或 ?merchant=<商家>
+    // → 開頁自動填入商家並即時計算（沿用 compareSpotlightMerchant，快捷/模糊查詢一併處理）。
+    // 讓從 Google 落地商家頁的用戶開頁即見即時結果（見 merchant/ 靜態頁生成，data-pipeline.md）。
+    const deepLinkMerchant = (typeof window !== 'undefined' && window.__PMC_MERCHANT__) ||
+        new URLSearchParams(location.search).get('merchant');
+    if (deepLinkMerchant && typeof compareSpotlightMerchant === 'function') {
+        // 商家落地頁：直接顯示搜尋框等工具區塊，不依賴 Firebase 驗證流程或 _authUIRefs
+        // 是否就緒（setupAuthentication 可能非同步、晚於此處才填好 _authUIRefs）——
+        // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
+        // 讓頂部標題與搜尋框先入眼）。
+        appStarted = true;
+        const introSection = document.getElementById('product-intro-section');
+        if (introSection) introSection.style.display = 'none';
+        const inputSection = document.querySelector('.input-section');
+        if (inputSection) inputSection.style.display = 'block';
+        const supportedCards = document.querySelector('.supported-cards');
+        if (supportedCards) supportedCards.style.display = 'block';
+        if (_authUIRefs && typeof _authUIRefs.showToolSections === 'function') {
+            _authUIRefs.showToolSections();
+        }
+        window.__pmcSuppressNextScroll = true; // 開頁自動計算不捲動（displayResults 讀取後清除）
+        compareSpotlightMerchant(String(deepLinkMerchant), { noScroll: true });
     }
 
     // Embed 模式（新戶活動頁 iframe，2026-07-16）：告知父頁（promos.js）已就緒可以開卡，
@@ -4551,7 +4579,13 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     displayReferralLink(actualUserInput);
 
     resultsSection.style.display = 'block';
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // 商家落地頁的開頁自動計算：跳過這次捲動，讓頂部標題區塊與搜尋框先入眼（一次性旗標，
+    // 之後用戶自己搜尋仍照常捲到結果）。
+    if (window.__pmcSuppressNextScroll) {
+        window.__pmcSuppressNextScroll = false;
+    } else {
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 // 計算 coupon 的實際回饋率（支援固定+分級回饋率）
