@@ -4,7 +4,7 @@
    generatePromosPageHtml() 靜態生成進 HTML）。
 
    職責：
-   1. 依 data-period-end 即時重算「剩 N 天」徽章（靜態生成的天數會過時）
+   1. 依 data-period-end 即時重算「最後 N 天」徽章（靜態生成的天數會過時）
    2. 隱藏已過期活動（防呆：靜態生成後才過期，或站長忘了重新匯出）
    3. 活動類型篩選 chips
    4. 排序切換（即將截止 / 依卡片）
@@ -58,7 +58,7 @@
     return Math.ceil((to - from) / 86400000);
   }
 
-  // 「剩 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「剩 N 天」，其餘隱藏；
+  // 「最後 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「最後 N 天」，其餘隱藏；
   // 文案與主站搜尋結果一致（script.js 的 isEndingSoon / getDaysUntilEnd 語義）。
   // 順便隱藏已過期活動（data-expired 標記，篩選/排序都不會再讓它重新出現）。
   function refreshBadgesAndExpiry() {
@@ -86,7 +86,7 @@
         badge.textContent = '今天截止！';
         badge.hidden = false;
       } else if (diff <= 14) {
-        badge.textContent = '剩 ' + diff + ' 天！';
+        badge.textContent = '最後 ' + diff + ' 天';
         badge.hidden = false;
       } else {
         badge.hidden = true;

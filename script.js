@@ -1487,7 +1487,7 @@ function buildSpotlightModalBody(item) {
 
     const applyCta = (cardsData && cardsData.cardApplyCtas && item.card_id) ? cardsData.cardApplyCtas[item.card_id] : null;
     const applyCtaHtml = (applyCta && applyCta.link)
-        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
     // Card name: clickable (opens the card detail modal) when we can resolve
     // the card; otherwise a plain label.
@@ -5305,7 +5305,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         : '';
 
     // Promo type chips — always an inline chips row under the header.
-    // (右上角 corner chip 已於 2026-07-15 移除：手機上會和卡名旁的馬上辦卡 pill 重疊)
+    // (右上角 corner chip 已於 2026-07-15 移除：手機上會和卡名旁的立即申辦 pill 重疊)
     let chipsHtml = '';
     if (Array.isArray(promo.promo_types) && promo.promo_types.length > 0) {
         const chips = promo.promo_types
@@ -5314,12 +5314,12 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
         chipsHtml = `<div class="promo-type-chips">${chips}</div>`;
     }
 
-    // Apply CTA link (search results only) — small "馬上辦卡" pill next to card name
+    // Apply CTA link (search results only) — small "立即申辦" pill next to card name
     let applyCtaBtnHtml = '';
     if (!opts.showExtras) {
         const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
         if (applyCta && applyCta.link) {
-            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">馬上辦卡<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
+            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
         }
     }
 

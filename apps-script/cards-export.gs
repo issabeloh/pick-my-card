@@ -1575,8 +1575,9 @@ function pmcBuildPromoHero_(promo) {
   const items = [];
   const quickParts = [];
 
-  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字＋既有配色
-  // 區分即可（.promo-hero-item--gift/voucher/bonus 底色已經夠分得出類型）。
+  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字即可。
+  // （2026-07-19 起 .promo-hero-item--gift/voucher/bonus 底色統一淺灰、不再分色，
+  // bucket class 仍照常輸出——CSS 端目前只剩 .promo-hero-big 字色還在用它。）
   if (promo.gift_content) {
     const raw = String(promo.gift_content);
     items.push({
