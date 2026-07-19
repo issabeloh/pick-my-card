@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="promos.css?v=202607181320">
+<link rel="stylesheet" href="promos.css?v=202607190553">
 
 <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
 <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
@@ -208,22 +208,79 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://pickmycard.app/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "新戶活動",
+      "item": "https://pickmycard.app/promos"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div class="promos-container">
 <header class="promos-header">
   <div class="promos-header-top">
-    <div class="promos-header-content">
-      <img src="assets/images/logo-header.png?v=202607181320" alt="" class="promos-header-logo">
+    <button id="promos-sidebar-toggle-btn" class="promos-sidebar-toggle-btn" aria-label="開啟選單">
+      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
+    </button>
+    <a href="/" class="promos-header-content">
+      <img src="assets/images/logo-header.png?v=202607190553" alt="" class="promos-header-logo">
       <span class="promos-header-title">信用卡回饋大師</span>
-    </div>
-    <nav class="promos-header-links" aria-label="站內導覽">
-      <a href="/">回主站工具</a>
+    </a>
+    <nav class="promos-header-links" aria-label="站內頁面">
+      <a href="/promos" class="promos-header-nav-link" aria-current="page">新戶活動</a>
+      <a href="/faq" class="promos-header-nav-link">常見問題</a>
     </nav>
+    <a href="/" class="promos-back-home-btn" title="返回首頁">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8.354 1.146a.5.5 0 0 1 0 .708L2.707 7.5H14.5a.5.5 0 0 1 0 1H2.707l5.647 5.646a.5.5 0 0 1-.708.708l-6.5-6.5a.5.5 0 0 1 0-.708l6.5-6.5a.5.5 0 0 1 .708 0z"/>
+      </svg>
+      <span>返回首頁</span>
+    </a>
   </div>
 </header>
 
+<div class="promos-sidebar-overlay" id="promos-sidebar-overlay"></div>
+
+<aside class="promos-sidebar" id="promos-sidebar">
+  <div class="promos-sidebar-header">
+    <button class="promos-sidebar-close-btn" id="promos-sidebar-close-btn" aria-label="關閉選單">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+    </button>
+  </div>
+  <div class="promos-sidebar-content">
+    <nav class="promos-sidebar-page-links" aria-label="站內頁面">
+      <a href="/" class="promos-sidebar-tool-card">
+        <span class="promos-sidebar-tool-card-emoji" aria-hidden="true">💳</span>
+        <span class="promos-sidebar-tool-card-text"><strong>回饋比較工具</strong><small>查商家回饋・比較信用卡</small></span>
+        <span class="promos-sidebar-tool-card-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="/faq" class="promos-sidebar-faq-card">
+        <span class="promos-sidebar-faq-card-emoji" aria-hidden="true">💬</span>
+        <span class="promos-sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
+        <span class="promos-sidebar-faq-card-arrow" aria-hidden="true">→</span>
+      </a>
+    </nav>
+  </div>
+</aside>
+
 <main class="promos-main">
+  <nav class="promos-breadcrumb" aria-label="breadcrumb">
+    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>
+  </nav>
   <section class="promos-hero">
     <h1>信用卡新戶活動一覽</h1>
   </section>
@@ -282,7 +339,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" data-full-alt="滙豐 Live+ 卡 活動宣傳圖" aria-label="放大看滙豐 Live+ 卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" alt="滙豐 Live+ 卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】符合條件並新增一般消費累積達NT$5,000元，享限定首刷禮4選1</p></div>    <div class="promo-card-detail" id="promo-1-hsbc-liveplus-2026-apr-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①SNOOPY 20吋行李箱<br>②SNOOPY拖輪袋+SNOOPY迷你數位相機<br>③Doris 29吋 極能裝行李箱(不挑色)<br>④宜睿 NT$1,200 多選多即享券</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">宜睿16大品牌多選多即享券：無效期餘額型，可分次抵用（16大品牌：王品集團、瓦城集團、爭鮮集團、漢來美食通用券、foodpanda、7-ELEVEN、全家、家樂福、大潤發、特力集團、屈臣氏、寶雅集團、遠東SOGO百貨、遠東百貨、遠東百貨購物中心、漢神百貨／漢神巨蛋）；務必從大師網站點擊「馬上申辦」並直接填寫線上申請書，方可獲得首刷禮；贈品序號於2026年10月底前發送首刷禮回饋簡訊，並於2026年12月底前點選兌換連結並登入Money101會員選擇贈品並填寫配送資料，如超過兌換截止月份底前未完成兌換，滙豐銀行保留以其他等值贈品替代的權利。</div></div>      </div>
     </div>
@@ -310,7 +367,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">線上申辦並刷滿3,000元，享500元刷卡金</p></div>    <div class="promo-card-detail" id="promo-2-hsbc-liveplus-2026-apr-1-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①線上申辦並於申辦後45天內完成核卡<br>②累積一般消費刷滿3,000元<br>③勾選使用電子或行動帳單<br>④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①線上申辦並於申辦後45天內完成核卡<br>②累積一般消費刷滿3,000元<br>③勾選使用電子或行動帳單<br>④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額</div></div>      </div>
     </div>
@@ -338,7 +395,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" data-full-alt="滙豐匯鑽卡 活動宣傳圖" aria-label="放大看滙豐匯鑽卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" alt="滙豐匯鑽卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】符合條件並新增一般消費累積達NT$5,000元，享限定首刷禮4選1</p></div>    <div class="promo-card-detail" id="promo-3-hsbc-titanium-2026-apr-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①SNOOPY 20吋行李箱<br>②SNOOPY拖輪袋 + SNOOPY迷你數位相機<br>③Doris 29吋 極能裝行李箱(不挑色)<br>④宜睿 NT$1,200 多選多即享券</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐信用卡正卡或附卡，且於本行未有任何未繳清之信用卡帳款</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐信用卡正卡或附卡，且於本行未有任何未繳清之信用卡帳款</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">宜睿16大品牌多選多即享券：無效期餘額型，可分次抵用（16大品牌：王品集團、瓦城集團、爭鮮集團、漢來美食通用券、foodpanda、7-ELEVEN、全家、家樂福、大潤發、特力集團、屈臣氏、寶雅集團、遠東SOGO百貨、遠東百貨、遠東百貨購物中心、漢神百貨／漢神巨蛋）；務必從大師網站點擊「馬上申辦」並直接填寫線上申請書，方可獲得首刷禮；贈品序號於2026年10月底前發送首刷禮回饋簡訊，並於2026年12月底前點選兌換連結並登入Money101會員選擇贈品並填寫配送資料，如超過兌換截止月份底前未完成兌換，滙豐銀行保留以其他等值贈品替代的權利。</div></div>      </div>
     </div>
@@ -366,7 +423,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">線上申辦並刷滿3,000元，享500元刷卡金</p></div>    <div class="promo-card-detail" id="promo-4-hsbc-titanium-2026-apr-1-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①線上申辦並於申辦後45天內完成核卡<br>②累積一般消費刷滿3,000元<br>③勾選使用電子或行動帳單<br>④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①線上申辦並於申辦後45天內完成核卡<br>②累積一般消費刷滿3,000元<br>③勾選使用電子或行動帳單<br>④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額</div></div>      </div>
     </div>
@@ -394,7 +451,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">線上申辦並刷滿3,000元，享500元刷卡金</p></div>    <div class="promo-card-detail" id="promo-5-hsbc-cashback-signature-2026-june-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①核卡後30天內新增一般消費達3,000元，享刷卡金500元<br>②須勾選使用電子或行動帳單<br>③核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐任何信用卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①核卡後30天內新增一般消費達3,000元，享刷卡金500元<br>②須勾選使用電子或行動帳單<br>③核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額</div></div>      </div>
     </div>
@@ -422,7 +479,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" data-full-alt="滙豐現金回饋御璽卡 活動宣傳圖" aria-label="放大看滙豐現金回饋御璽卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fhsbc-liveplus-2026-7.jpg?alt=media" alt="滙豐現金回饋御璽卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】符合條件並新增一般消費累積達NT$5,000元，享限定首刷禮4選1</p></div>    <div class="promo-card-detail" id="promo-6-hsbc-cashback-signature-2026-june-1-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①SNOOPY 20吋行李箱<br>②SNOOPY拖輪袋 + SNOOPY迷你數位相機<br>③Doris 29吋 極能裝行李箱(不挑色)<br>④宜睿 NT$1,200 多選多即享券</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐信用卡正卡或附卡，且於本行未有任何未繳清之信用卡帳款</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前十二個月內須未持有滙豐信用卡正卡或附卡，且於本行未有任何未繳清之信用卡帳款</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①持有中華民國身分證之自然人於本站點擊連結線上申辦<br>②提供年收入70萬元以上之薪資所得證明<br>③累積新增一般消費滿NT$5,000元<br>④勾選電子帳單或行動帳單<br>⑤核卡30天內登入滙豐銀行信用卡行動App(HSBC Card+)</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
       </div>
     </div>
@@ -450,7 +507,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fdbs-eco-2026-sep.png?alt=media" data-full-alt="星展 eco 永續卡 活動宣傳圖" aria-label="放大看星展 eco 永續卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fdbs-eco-2026-sep.png?alt=media" alt="星展 eco 永續卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】符合條件並新增一般消費累積達NT$3,000元，享限定首刷禮3選1</p></div>    <div class="promo-card-detail" id="promo-7-dbs-eco-2026-july-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①宜睿多選多即享券NT$1,200<br>②Aecooly Aero Pro 小水管 手持渦輪冷風扇 (PH01) 不挑色<br>③one-meter可攜帶式豆漿機OJE-36051PT</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦，並於2026/08/15前核卡<br>②核卡日後30天內累積新增一般消費滿NT$3,000元<br>③申請信用卡電子帳單<br>④完成註冊登入星展Card+信用卡數位服務</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請當日之前180天內未持有星展銀行任一信用卡正卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請當日之前180天內未持有星展銀行任一信用卡正卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦，並於2026/08/15前核卡<br>②核卡日後30天內累積新增一般消費滿NT$3,000元<br>③申請信用卡電子帳單<br>④完成註冊登入星展Card+信用卡數位服務</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
       </div>
     </div>
@@ -478,7 +535,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30日內消費累積滿1,288元並綁定 LINE Bank 帳戶，贈 LINE FRIENDS 保溫瓶</p></div>    <div class="promo-card-detail" id="promo-8-ubot-linebank-2025-aug-1-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">LINE FRIENDS minini lenini 保溫瓶</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2025-08-01">2025/8/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前6個月內未曾持有任何一聯邦信用卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前6個月內未曾持有任何一聯邦信用卡者</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2025-08-01">2025/8/1</time> ~ <time datetime="2026-07-31">2026/7/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">限量5,000份；需完成活動登錄；若贈品贈送完畢則改贈刷卡金300元</div></div>      </div>
     </div>
@@ -505,8 +562,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後60天內於指定五大通路消費，完成指定任務享最高20%回饋</p></div>    <div class="promo-card-detail" id="promo-9-yushan-ubear-2026-jun-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">20%</span><span class="promo-hero-small">消費上限 NT$2,857</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">Apple 媒體服務(Apple Music、Apple TV、App Store及iCloud 等)、Google Play、YouTube Premium、Epic Games Store、GASH、MyCard(智冠科技)、MSI Store、蝦皮購物、momo、PChome、樂天市場購物網、tixcraft拓元售票、KKTIX、Ticket Plus遠大售票系統、OPENTIX兩廳院文化生活、寬宏售票系統、ibon售票系統、Grab、Booking.com、Claude、Canva、Gamma、Speak</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①首次申辦玉山U Bear信用卡正卡且核卡<br>②核卡後60天內於指定五大通路消費<br>③綁定帳單e化(Email電子帳單/簡訊帳單)<br>④申請玉山銀行臺幣帳戶自動扣繳卡費</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-06-15">2026/6/15</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡日前六個月內未持有玉山銀行任一張流通正卡卡片(含認同卡、聯名卡)</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 20%</span><span class="promo-hero-small">消費上限 NT$2,857</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡日前六個月內未持有玉山銀行任一張流通正卡卡片(含認同卡、聯名卡)</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①首次申辦玉山U Bear信用卡正卡且核卡<br>②核卡後60天內於指定五大通路消費<br>③綁定帳單e化(Email電子帳單/簡訊帳單)<br>④申請玉山銀行臺幣帳戶自動扣繳卡費</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-06-15">2026/6/15</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">Apple 媒體服務(Apple Music、Apple TV、App Store及iCloud 等)、Google Play、YouTube Premium、Epic Games Store、GASH、MyCard(智冠科技)、MSI Store、蝦皮購物、momo、PChome、樂天市場購物網、tixcraft拓元售票、KKTIX、Ticket Plus遠大售票系統、OPENTIX兩廳院文化生活、寬宏售票系統、ibon售票系統、Grab、Booking.com、Claude、Canva、Gamma、Speak</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">20% = 指定五大通路加碼10% +新戶網路消費加碼7%+國內外一般消費最高享1% +網路消費加碼2%</div></div>      </div>
     </div>
@@ -534,7 +591,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Ffebank-lejia-2026July.png?alt=media" data-full-alt="遠東樂家+卡 活動宣傳圖" aria-label="放大看遠東樂家+卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Ffebank-lejia-2026July.png?alt=media" alt="遠東樂家+卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】透過本站連結申辦並刷滿NT$3,000元，享首刷禮3選1</p></div>    <div class="promo-card-detail" id="promo-10-febank-lejia-2026-july-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①Disegno極光璀璨20+28吋行李箱2件組(不挑色)<br>②LaPO Qi2 15W磁吸無線快充行動電源<br>③宜睿即享券 NT$1,200</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①透過本站連結申辦<br>②核卡後次月底前累積新增一般消費滿NT$3,000元</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡當月(不含)前起算6個月內未持有任一遠銀卡正卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡當月(不含)前起算6個月內未持有任一遠銀卡正卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①透過本站連結申辦<br>②核卡後次月底前累積新增一般消費滿NT$3,000元</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">此活動不可與其他首刷禮活動重疊；贈品兌換序號將於符合回饋資格後3個月起，遠銀將以簡訊寄送兌換連結至您留存的手機號碼；排除項目包含悠遊加值金、稅金、學雜費、公共事業費、代繳費用、eToro、醫指付、小額支付平台等；達成門檻後4個月起陸續配送或回饋；分期以總金額計算</div></div>      </div>
     </div>
@@ -562,7 +619,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Ftaishin-richart-2026June.png?alt=media" data-full-alt="台新 Richart 卡 活動宣傳圖" aria-label="放大看台新 Richart 卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Ftaishin-richart-2026June.png?alt=media" alt="台新 Richart 卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">【大師加碼】透過本站連結申辦並符合條件，享首刷禮4選1</p></div>    <div class="promo-card-detail" id="promo-11-taishin-richart-2026-june-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①宜睿 NT$1,700 宜睿多選多即享券<br>②SNOOPY 20吋輕量款行李箱<br>③SNOOPY藍芽耳機頸枕<br>④Disegno 20+28吋城市漫步旅行箱</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦<br>②核卡30天內使用該卡累積消費滿NT$3,000<br>③不可與另一首刷禮回饋重疊使用</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有台新銀行任一信用卡正卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有台新銀行任一信用卡正卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦<br>②核卡30天內使用該卡累積消費滿NT$3,000<br>③不可與另一首刷禮回饋重疊使用</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-08-31">2026/8/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">符合本活動資格之客戶，不得再適用其他通路、專案或聯名卡首刷活動，亦不得重覆參加；首刷禮領取方式：<br>2026/10/31前收到「好禮兌換簡訊」後，①點擊手機簡訊的好禮兌換連結，進入Money101好禮兌換頁面。②登入/註冊Money101會員。③確認/選擇您想要的限定好禮，並完成寄件資料的填寫</div></div>      </div>
     </div>
@@ -589,8 +646,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後次月起3個月內綁定玉山Wallet電子支付消費，最高享20%</p></div>    <div class="promo-card-detail" id="promo-12-yushan-unicard-2026-july-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">20%</span><span class="promo-hero-small">消費上限 NT$1,935</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">玉山Wallet</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①2026/9/30前申辦且核卡<br>②當月的百大指定消費選項要包含「玉山Wallet電子支付」</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡日前六個月內未持有玉山銀行任一張流通正卡卡片(含認同卡、聯名卡)</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 20%</span><span class="promo-hero-small">消費上限 NT$1,935</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡日前六個月內未持有玉山銀行任一張流通正卡卡片(含認同卡、聯名卡)</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①2026/9/30前申辦且核卡<br>②當月的百大指定消費選項要包含「玉山Wallet電子支付」</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">玉山Wallet</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">20%包含一般消費最高1%(無上限)+百大指定消費加碼最高3.5%(每月回饋上限5,000點)+限時辦卡新戶加碼最高15.5%(每月回饋上限300點)</div></div>      </div>
     </div>
@@ -617,8 +674,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30天內符合條件，透過 LINE Pay 刷卡享最高 10% 回饋</p></div>    <div class="promo-card-detail" id="promo-13-dbs-eco-2026-july-1-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">10%</span><span class="promo-hero-small">消費上限 NT$1,667</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>透過 LINE Pay 刷星展 eco 永續卡累積達NT$3,000</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>辦卡前180天內未持有本行任一信用卡正卡</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 10%</span><span class="promo-hero-small">消費上限 NT$1,667</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>辦卡前180天內未持有本行任一信用卡正卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>透過 LINE Pay 刷星展 eco 永續卡累積達NT$3,000</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">10%回饋包含1%現金積點無上限＋加碼9%；每人每月上限150現金積點，含本行其他LINE Pay 10%加碼活動；需於指定日期前核卡成功</div></div>      </div>
     </div>
@@ -646,7 +703,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">完成指定任務，贈20吋前開式行李箱</p></div>    <div class="promo-card-detail" id="promo-14-taishin-richart-2026-apr-1-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">20吋前開式行李箱</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①2026/8/31前累積消費滿NT$2,000<br>②此為「首刷好禮2選1」的其中一項<br>③不可與大師加碼回饋重疊使用</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有台新銀行任一信用卡正卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有台新銀行任一信用卡正卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①2026/8/31前累積消費滿NT$2,000<br>②此為「首刷好禮2選1」的其中一項<br>③不可與大師加碼回饋重疊使用</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-09-30">2026/9/30</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">20吋前開式行李箱說明：顏色：淺藍色；尺寸：20吋，34*25*54.5±5cm(不含輪子與配件)；材質：ABS電子紋；鎖具：密碼鎖</div></div>      </div>
     </div>
@@ -673,8 +730,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">保險新戶首筆保費。符合條件享最高8%</p></div>    <div class="promo-card-detail" id="promo-15-taishin-richart-2026-apr-3-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">6%</span><span class="promo-hero-small">消費上限 NT$8,333</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">保費</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①保險新戶首筆保費，享6%台新Point<br>②搭配切換「假日刷」+2%；即使不切換權益也可+1.3%<br>③需領券，限量</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-10-31">2026/10/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>2025/4/1~2026/3/31期間，未使用任一張台新信用卡刷保費，或刷保費金額1,000元(含)以下者</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 6%</span><span class="promo-hero-small">消費上限 NT$8,333</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>2025/4/1~2026/3/31期間，未使用任一張台新信用卡刷保費，或刷保費金額1,000元(含)以下者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①保險新戶首筆保費，享6%台新Point<br>②搭配切換「假日刷」+2%；即使不切換權益也可+1.3%<br>③需領券，限量</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-10-31">2026/10/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">保費</span></dd></div>
         </dl>
       </div>
     </div>
@@ -701,8 +758,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30日內，符合條件即可享有綁定之行動支付最高20%刷卡金回饋</p></div>    <div class="promo-card-detail" id="promo-16-sinopac-sport-2026-july-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">20%</span><span class="promo-hero-small">消費上限 NT$2,500</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">Line Pay、Apple Pay、Google Pay、Samsung Pay、Garmin Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①以新臺幣結購外幣<br>②綁定指定行動支付刷一般消費</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 20%</span><span class="promo-hero-small">消費上限 NT$2,500</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①以新臺幣結購外幣<br>②綁定指定行動支付刷一般消費</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">Line Pay、Apple Pay、Google Pay、Samsung Pay、Garmin Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div>
         </dl>
       </div>
     </div>
@@ -730,7 +787,7 @@
 <div class="promo-highlight-row"><div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fsinopac-green-2026-june.png?alt=media" data-full-alt="永豐 Green 卡 活動宣傳圖" aria-label="放大看永豐 Green 卡 活動宣傳圖"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fsinopac-green-2026-june.png?alt=media" alt="永豐 Green 卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-gift-thumb-row').style.display='none'"></button></div><p class="promo-quick-highlight">核卡後30天內，完成任一消費條件，享首刷「好禮3選1」</p></div>    <div class="promo-card-detail" id="promo-17-sinopac-green-2026-july-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">①M.Rino萬向四輪折疊購物車<br>②MunaKami多功能304不鏽鋼雙層防燙料理鍋<br>③刷卡金500元</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①消費條件A: 『一般消費』或『大全聯、全聯消費』，累積滿2,000元<br>②消費條件B: 綁定特選行動支付*，『一般消費』或『大全聯、全聯消費』累積滿1,000元<br>*特選行動支付：LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①消費條件A: 『一般消費』或『大全聯、全聯消費』，累積滿2,000元<br>②消費條件B: 綁定特選行動支付*，『一般消費』或『大全聯、全聯消費』累積滿1,000元<br>*特選行動支付：LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">「購物車」的展開尺寸為39x35x90cm±5% (高度含輪及拉桿)，收納尺寸為39x10x44cm±5%，材質為PP(塑膠)+金屬拉桿，顏色為時尚白；「料理鍋」的材質為外層PP+304不鏽鋼內鍋，滿水容量為約1.8L，額定電壓為110V；「刷卡金」使用方法為下載並註冊永豐大咖DACARD APP，並於『大亞國際行銷(股)公司』提供之活動專屬網頁兌換後3個月內，任刷一筆一般消費金額新臺幣500 元(含)以上且成功入帳。符合條件者，將於消費次月回饋 NT$500 元至信用卡帳單。</div></div>      </div>
     </div>
@@ -757,8 +814,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30日內以新臺幣結購外幣，享有指定行動支付一般消費最高20%刷卡金回饋</p></div>    <div class="promo-card-detail" id="promo-18-sinopac-coin-2026-july-2-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">20%</span><span class="promo-hero-small">消費上限 NT$2,500</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>指定綁定的行動支付為LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 20%</span><span class="promo-hero-small">消費上限 NT$2,500</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>指定綁定的行動支付為LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">限量活動</div></div>      </div>
     </div>
@@ -786,7 +843,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">永豐薪轉戶新辦卡，核卡後30日內綁定特選行動支付一般消費累積滿600元，贈300元刷卡金</p></div>    <div class="promo-card-detail" id="promo-19-sinopac-coin-2026-jan-payroll-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$300</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶。</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶。</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">限永豐薪轉客戶（近3個月內有代撥薪紀錄）；特選行動支付含LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay；JCB卡不適用GP及SP；符合資格後第3個月起陸續回饋</div></div>      </div>
     </div>
@@ -814,7 +871,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30日內累積一般消費達3,888元、申辦電子帳單且設定帳戶自動扣繳，享500元刷卡金</p></div>    <div class="promo-card-detail" id="promo-20-tbb-chaotian-2026-jan-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>112.1.1以後同一身分證字號（ID）下從未持有兆豐銀行任一信用卡正卡之客戶</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>112.1.1以後同一身分證字號（ID）下從未持有兆豐銀行任一信用卡正卡之客戶</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">500元回饋為刷卡金；需於核卡30天內完成一般消費滿3,888元、申辦電子帳單且設定帳戶自動扣繳三項任務；電子帳單不含行動帳單，且不可與紙本帳單併行；消費須於核卡後60天內請款入帳；分期交易以總額計算；刷卡金於核卡滿30日之次月確認資格後8週內回饋；刷卡金僅能折抵回饋當月及次二個月帳單，逾期視同放棄；每戶限領一份，限參加一種新戶活動；適用卡別包含e秒Happy、Mega One、e秒刷、利多御璽、雙幣鈦金商旅、中興保全、中鼎、雅芳及將來銀行聯名卡</div></div>      </div>
     </div>
@@ -842,7 +899,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡三個月內，保費單筆滿15,000元(含)以上，贈500元刷卡金</p></div>    <div class="promo-card-detail" id="promo-21-ubot-mcard-2026-jun-2-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>需申辦電子化帳單（電子帳單-Email／行動帳單-簡訊／LINE帳單）且於回饋時仍為有效</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前6個月內未曾持有任一聯邦信用卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前6個月內未曾持有任一聯邦信用卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>需申辦電子化帳單（電子帳單-Email／行動帳單-簡訊／LINE帳單）且於回饋時仍為有效</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">活動限量1,000名，贈完為止；保費回饋與分期活動僅可擇一參加</div></div>      </div>
     </div>
@@ -870,7 +927,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30日內完成指定任務，享BT21摺疊拉桿購物車乙個</p></div>    <div class="promo-card-detail" id="promo-22-mega-bt21-2026-jan-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">BT21摺疊拉桿購物車乙個</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①持卡新增一般消費累積滿NT$3,888<br>②綁定電子帳單(不含行動帳單且需取消紙本帳單成功)<br>③設定本行或其他銀行帳戶自動扣繳本行信用卡款<br>④需登錄成功</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>112/1/1 後同一身分證字號下從未持有兆豐銀行任一信用卡正卡之客戶</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>112/1/1 後同一身分證字號下從未持有兆豐銀行任一信用卡正卡之客戶</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①持卡新增一般消費累積滿NT$3,888<br>②綁定電子帳單(不含行動帳單且需取消紙本帳單成功)<br>③設定本行或其他銀行帳戶自動扣繳本行信用卡款<br>④需登錄成功</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">首刷禮指限量2,400個</div></div>      </div>
     </div>
@@ -898,7 +955,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">【大師加碼】透過本站連結申辦，再享200元即享券</p></div>    <div class="promo-card-detail" id="promo-23-firstbank-ileo-2026-apr-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$200</span><span class="promo-hero-small">即享券</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦<br>②核卡60天內單筆一般消費滿1,000元（含）以上<br>③申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未申辦持有iLEO信用卡</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>從未申辦持有iLEO信用卡</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①於本站點擊連結線上申辦<br>②核卡60天內單筆一般消費滿1,000元（含）以上<br>③申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">即享券可用於百家連鎖品牌（如7-11、全家、屈臣氏、家樂福、百貨等）；此活動名額限量</div></div>      </div>
     </div>
@@ -925,8 +982,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後90天內，國外外幣消費享10%</p></div>    <div class="promo-card-detail" id="promo-24-firstbank-ileo-2026-jan-1-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">10%</span><span class="promo-hero-small">消費上限 NT$20,000</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">國外消費</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 10%</span><span class="promo-hero-small">消費上限 NT$20,000</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">國外消費</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">排除部分歐洲地區國家實體商店消費；限於國外且使用外幣交易；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出</div></div>      </div>
     </div>
@@ -953,8 +1010,8 @@
     </div>
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後90天內，國內刷指定行動支付享10%</p></div>    <div class="promo-card-detail" id="promo-25-firstbank-ileo-2026-jan-3-detail">
       <div class="promo-card-detail-inner">
-<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">10%</span><span class="promo-hero-small">消費上限 NT$5,000</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、街口支付、Apple Pay、Google Pay、Samsung Pay、台灣Pay</span></dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div>
+<div class="promo-hero"><div class="promo-hero-item promo-hero-item--bonus"><span class="promo-hero-main"><span class="promo-hero-big">最高 10%</span><span class="promo-hero-small">消費上限 NT$5,000</span></span></div></div>        <dl class="promo-card-meta">
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">LINE Pay、街口支付、Apple Pay、Google Pay、Samsung Pay、台灣Pay</span></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">若申辦本行帳戶扣繳與電子帳單，且單筆消費滿NT$1,000再加碼1%；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出</div></div>      </div>
     </div>
@@ -982,7 +1039,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後90天內，單筆一般消費滿NT1,000享100元刷卡金</p></div>    <div class="promo-card-detail" id="promo-26-firstbank-ileo-2026-jan-5-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$100</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①單筆一般消費滿NT1,000<br>②申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①單筆一般消費滿NT1,000<br>②申辦iLEO數位帳戶扣繳與電子帳單</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">100元回饋不累加；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出</div></div>      </div>
     </div>
@@ -1010,7 +1067,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">新增3筆一般消費，且每筆達新臺幣666元(含)以上送NT$500刷卡金</p></div>    <div class="promo-card-detail" id="promo-27-tbb-artfun-2026-jan-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--voucher"><span class="promo-hero-main"><span class="promo-hero-big">NT$500</span><span class="promo-hero-small">刷卡金</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有企銀任一信用卡正卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>申請日前六個月內未持有企銀任一信用卡正卡者</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-01-01">2026/1/1</time> ~ <time datetime="2026-12-31">2026/12/31</time></dd></div>
         </dl>
       </div>
     </div>
@@ -1038,7 +1095,7 @@
 <div class="promo-highlight-row"><p class="promo-quick-highlight">核卡後30天內，符合條件即贈行李箱</p></div>    <div class="promo-card-detail" id="promo-28-fubon-jcard-2026-apr-detail">
       <div class="promo-card-detail-inner">
 <div class="promo-hero"><div class="promo-hero-item promo-hero-item--gift"><span class="promo-hero-main"><span class="promo-hero-big promo-hero-big--gift">TRAVEL FOX 24 吋上掀式行李箱乙個</span></span></div></div>        <dl class="promo-card-meta">
-<div class="promo-meta-row"><dt>達成條件</dt><dd>①新增3筆NT$1,000元(含)以上的一般消費<br>②設定本行帳戶自動扣繳富邦信用卡費 或 申請電子帳單(並取消紙本帳單)<br>③完成活動登錄</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> 起</dd></div><div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>辦卡前6個月內未曾持有任何一張富邦信用卡正卡者</dd></div>
+<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>辦卡前6個月內未曾持有任何一張富邦信用卡正卡者</dd></div><div class="promo-meta-row"><dt>達成條件</dt><dd>①新增3筆NT$1,000元(含)以上的一般消費<br>②設定本行帳戶自動扣繳富邦信用卡費 或 申請電子帳單(並取消紙本帳單)<br>③完成活動登錄</dd></div><div class="promo-meta-row"><dt>活動期間</dt><dd><time datetime="2026-07-01">2026/7/1</time> 起</dd></div>
         </dl>
 <div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div><div class="promo-notes-text">須以正卡持卡人資料登錄；名額無上限；分期付款以總金額計算；一般消費排除自動加值、基金、eToro、預借現金及相關利息手續費；贈品於次次月底起配送</div></div>      </div>
     </div>
@@ -1087,7 +1144,11 @@
   </div>
 </div>
 
-<div class="promos-data-update-footer">資料更新於 2026/7/18</div>
+<div class="promos-data-update-footer">資料更新於 2026/7/19</div>
+
+<button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
 
 <script type="module" async>
   // 精簡版 Firebase Analytics 初始化（只取 app+analytics，不含 auth/firestore/storage，
@@ -1107,6 +1168,6 @@
   window.firebaseAnalytics = getAnalytics(app);
   window.logEvent = logEvent;
 </script>
-<script src="promos.js?v=202607181320"></script>
+<script src="promos.js?v=202607190553"></script>
 </body>
 </html>
