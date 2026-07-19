@@ -1925,6 +1925,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         showCardDetail(deepLinkCardId);
     }
 
+    // 深連結：商家落地頁（/merchant/<商家>）注入的 window.__PMC_MERCHANT__，或 ?merchant=<商家>
+    // → 開頁自動填入商家並即時計算（沿用 compareSpotlightMerchant，快捷/模糊查詢一併處理）。
+    // 讓從 Google 落地商家頁的用戶開頁即見即時結果（見 merchant/ 靜態頁生成，data-pipeline.md）。
+    const deepLinkMerchant = (typeof window !== 'undefined' && window.__PMC_MERCHANT__) ||
+        new URLSearchParams(location.search).get('merchant');
+    if (deepLinkMerchant && typeof compareSpotlightMerchant === 'function') {
+        compareSpotlightMerchant(String(deepLinkMerchant));
+    }
+
     // Embed 模式（新戶活動頁 iframe，2026-07-16）：告知父頁（promos.js）已就緒可以開卡，
     // 並監聽父頁的換卡指令。origin 檢查兩端都做（promos.js 送 postMessage 時也會檢查
     // event.origin）；非 embed 模式完全不掛這個 listener、不送任何 postMessage。
