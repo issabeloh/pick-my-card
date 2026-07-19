@@ -830,7 +830,7 @@ if (faqSheet) {
 
 
   // 🔒 Base64 編碼 → 直接發布到 GitHub（cards.data + cards.version），
-  //    Vercel 自動部署。不再產生 Drive 下載檔（2026-07-12 移除：下載區塊
+  //    Cloudflare Pages 自動部署。不再產生 Drive 下載檔（2026-07-12 移除：下載區塊
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
@@ -838,7 +838,7 @@ if (faqSheet) {
 
   ui.alert(
     '✅ 匯出完成',
-    `已自動發布到 GitHub（版本 ${version}），Vercel 會自動部署。\n\n` +
+    `已自動發布到 GitHub（版本 ${version}），Cloudflare Pages 會自動部署。\n\n` +
     `匯出內容：\n` +
     `・信用卡 ${cards.length} 張\n` +
     `・行動支付 ${payments.length} 個、快捷選項 ${quickSearchOptions.length} 個\n` +
