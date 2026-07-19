@@ -2118,6 +2118,9 @@ input[type="number"]:focus {
 .cardholder-promos-more-btn {
     display: inline-block;
     padding: 4px 14px;
+    /* 說明文字換行後 pill 掉到第二行，靠 margin-top 跟上一行拉開（inline-block
+       的 margin-top 有效；同行未換行時只多 6px 無害） */
+    margin-top: 6px;
     margin-left: 2px;
     border: 1px solid #7dd3fc;
     border-radius: 999px;
