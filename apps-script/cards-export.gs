@@ -2134,6 +2134,11 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
   return version;
 }
 
+// 試水溫階段手動維護的商家頁 slug：生成器尚未移植前，這些頁是手動 commit 的靜態檔，
+// 沒有進 merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把
+// 它們從 sitemap 移除）。生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
+const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo'];
+
 // 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
 // 更新這裡的常數）；promos 與商家頁每次匯出都可能變 → 用匯出當天日期。
 function generateSitemapXml_(merchantPages) {
@@ -2143,8 +2148,12 @@ function generateSitemapXml_(merchantPages) {
     { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
     { loc: SITE_ORIGIN + '/promos', lastmod: today }
   ];
-  (merchantPages || []).forEach(function(m) {
-    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(m.slug), lastmod: today });
+  // 商家頁 slug：試水溫手動清單 + 生成器產出（merchantPages），去重後輸出
+  const slugSet = {};
+  MERCHANT_PILOT_SLUGS.forEach(function(s) { slugSet[s] = true; });
+  (merchantPages || []).forEach(function(m) { if (m && m.slug) slugSet[m.slug] = true; });
+  Object.keys(slugSet).forEach(function(s) {
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: today });
   });
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
