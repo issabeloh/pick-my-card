@@ -2112,17 +2112,26 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 
-/* Regulatory warning under the main-results promo desc — red bordered box, centered. */
-.cardholder-promos-disclaimer {
-    margin: -4px 0 16px;
-    padding: 8px 12px;
-    color: #dc2626;
-    font-size: 14px;
-    font-weight: 600;
-    text-align: center;
-    border: 1px solid #dc2626;
-    border-radius: 8px;
-    background: #fef2f2;
+/* 「看全部新戶活動」pill 連結（2026-07-19 站長定案：原純文字連結改按鈕 pill；
+   同日移除本區的 .cardholder-promos-disclaimer 紅框警語行）。配色走站上
+   淺藍 chip 語言（#7dd3fc／#0369a1，同精準搜尋說明鈕一帶）。 */
+.cardholder-promos-more-btn {
+    display: inline-block;
+    padding: 4px 14px;
+    margin-left: 2px;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0369a1;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.cardholder-promos-more-btn:hover {
+    background: #f0f9ff;
 }
 
 /* Regulatory warning above the 新戶活動 heading — dark band, white text, centered. */
@@ -2187,7 +2196,9 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
-/* Apply CTA: shown above promo cards. Text + arrow + yellow button hugged together with a yellow glow. */
+/* Apply CTA: shown above promo cards. Text + arrow + yellow button hugged together.
+   2026-07-19 站長指示：移除外框光暈（box-shadow 三層黃暈），保留淡黃底＋邊框；
+   按鈕本體設計不動。 */
 .card-apply-cta {
     display: inline-flex;
     align-items: center;
@@ -2200,10 +2211,6 @@ input[type="number"]:focus {
     background: #fffbea;
     border: 1px solid #fde68a;
     border-radius: 10px;
-    box-shadow:
-        0 0 0 4px rgba(250, 204, 21, 0.18),
-        0 0 14px 2px rgba(250, 204, 21, 0.35),
-        0 0 28px 4px rgba(234, 179, 8, 0.18);
     max-width: 100%;
 }
 
@@ -2290,15 +2297,18 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
-/* Mobile: center the CTA box horizontally within the section. */
+/* Mobile: 詳情頁已有底部 sticky 申辦列（.card-detail-apply-bar），新戶活動區
+   上方的 CTA 盒重複，整個隱藏（2026-07-19 站長指示，原本是置中顯示）。
+   若該卡只有 CTA、沒有任何活動卡（renderCardPromos 的 CTA-only 分支），
+   整個新戶活動區在手機上也一併隱藏，避免剩一個空標題——:has() 全站已在用
+   （.avatar-menu-wrapper 等處），不支援的舊瀏覽器只是多看到一個空區塊標題，無害。 */
 @media (max-width: 768px) {
-    .card-apply-cta {
-        display: flex;
-        width: fit-content;
-        max-width: 100%;
-        margin-left: auto;
-        margin-right: auto;
-        justify-content: center;
+    #card-promos-content .card-apply-cta {
+        display: none;
+    }
+
+    #card-promos-section:has(> #card-promos-content > .card-apply-cta:only-child) {
+        display: none !important;
     }
 }
 
@@ -2370,12 +2380,13 @@ input[type="number"]:focus {
 .promo-apply-cta-btn {
     display: inline-block;
     flex-shrink: 0;
-    padding: 3px 9px;
+    /* 2026-07-19 站長指示加大一號（原 3px 9px／11px） */
+    padding: 5px 13px;
     background-image:
         radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
         linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
     color: #7a4e00;
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 700;
     text-decoration: none;
     border-radius: 999px;
@@ -2418,9 +2429,9 @@ input[type="number"]:focus {
 
 .promo-apply-cta-icon {
     display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-left: 3px;
+    width: 12px;
+    height: 12px;
+    margin-left: 4px;
     vertical-align: middle;
     position: relative;
     top: -1px;

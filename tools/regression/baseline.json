@@ -1,7 +1,7 @@
 {
   "meta": {
-    "generatedAt": "2026-07-19T13:49:41.264Z",
-    "cardsVersion": "20260718-124843",
+    "generatedAt": "2026-07-19T14:46:21.769Z",
+    "cardsVersion": "20260719-135353",
     "note": "基準綁定 cards.version；活動期限日期敏感——cards.data 更新或活動到期造成的差異屬預期，確認後重拍基準"
   },
   "checks": [
@@ -812,6 +812,17 @@
           "threshold": null
         },
         {
+          "card": "iLEO 信用卡",
+          "best": false,
+          "fields": {
+            "回饋率": "3%",
+            "回饋金額": "NT$800",
+            "回饋消費上限": "NT$20,000"
+          },
+          "matched": "匹配項目: LINE Pay (類別: 行動支付滿千加碼) 活動期間: 2026/7/1~2026/12/31 條件: 須申辦本行帳戶扣繳與電子帳單",
+          "threshold": "✔ 單筆滿 NT$1,000"
+        },
+        {
           "card": "台新 Richart 卡",
           "best": false,
           "fields": {
@@ -853,17 +864,6 @@
             "回饋消費上限": "NT$7,500"
           },
           "matched": "匹配項目: LINE Pay 活動期間: 2026/1/1~2026/12/31",
-          "threshold": null
-        },
-        {
-          "card": "iLEO 信用卡",
-          "best": false,
-          "fields": {
-            "回饋率": "2%",
-            "回饋金額": "NT$600",
-            "回饋消費上限": "NT$33,333"
-          },
-          "matched": "匹配項目: LINE Pay (類別: 行動支付) 活動期間: 2026/7/1~2026/12/31 條件: 單筆滿NT$1,000再加碼1%(消費NT$2,0000封頂)；申辦本行帳戶扣繳與電子帳單",
           "threshold": null
         },
         {
