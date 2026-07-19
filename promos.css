@@ -1292,8 +1292,10 @@ a {
   }
 }
 
-/* 立即申辦按鈕：與主站現行果凍黃「立即申辦」完全一致——配方抄自 styles.css
-   .card-apply-cta-btn（漸層/陰影/邊角/active 壓下效果），padding/字級沿用桌機版 */
+/* 立即申辦按鈕：糖果落日膠囊「糖衣亮面」版（2026-07-19 站長定案，mockup 代號 B3）：
+   粉→橘→黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），扁平無厚底。
+   不再與主站果凍黃同配方——這是新戶活動頁專屬的 CTA 樣式。
+   hover 效果見檔尾「申辦按鈕光影」區；active＝原地縮小回彈（無位移） */
 .promo-apply-btn {
   display: inline-flex;
   align-items: center;
@@ -1301,30 +1303,26 @@ a {
   text-decoration: none;
   font-weight: 700;
   font-size: 14px;
-  color: #7a4e00;
-  padding: 8px 16px;
+  color: #ffffff;
+  padding: 8px 18px;
   border-radius: 999px;
   white-space: nowrap;
-  background:
-    radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+  background-image:
+    radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(115deg, #ff5f8f 0%, #ff8f5e 55%, #ffb347 100%);
   border: none;
+  text-shadow: 0 1px 2px rgba(176, 58, 99, 0.4);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 4px 0 #e8a800,
-    0 6px 14px rgba(255, 180, 0, 0.35);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
+    0 3px 10px rgba(255, 95, 143, 0.45);
+  transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
-/* hover 效果見檔尾「申辦按鈕光影」區：單次掠光＋變亮，無放大（2026-07-16 站長定案） */
-
 .promo-apply-btn:active {
-  transform: translateY(3px) scale(1.02, 0.94);
+  transform: scale(0.95);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 0 #e8a800,
-    0 2px 5px rgba(255, 180, 0, 0.3);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.45),
+    0 2px 6px rgba(255, 95, 143, 0.4);
 }
 
 /* ---------------- Empty state ---------------- */
@@ -1765,37 +1763,25 @@ a {
   }
 }
 
-/* ═══ 申辦按鈕光影（2026-07-16 站長二次定案：hover 才閃一次＋變亮；無 auto、無放大）═══
+/* ═══ 申辦按鈕光影（2026-07-19 站長三次定案，mockup 代號 H4「糖衣變厚」：
+   hover＝內白圈 1.5px→2.5px 變厚變白＋整顆微提亮；無位移、無掠光、無放大。
+   舊掠光 ::after 配方已隨果凍黃版一起移除。
    「減少動態」系統設定下 hover 完全靜態（站長指示：與其看到殘缺的動畫不如不要動）。 */
-.promo-apply-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-.promo-apply-btn::after {
-  content: "";
-  position: absolute;
-  top: -20%;
-  bottom: -20%;
-  left: 0;
-  width: 34%;
-  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-  transform: translateX(-140%) skewX(-18deg);
-  pointer-events: none;
-}
-
-.promo-apply-btn:hover::after {
-  transform: translateX(340%) skewX(-18deg);
-  transition: transform 0.65s ease;
-}
-
 .promo-apply-btn:hover {
-  filter: brightness(1.07) saturate(1.05);
+  filter: brightness(1.04);
+  box-shadow:
+    inset 0 0 0 2.5px rgba(255, 255, 255, 0.85),
+    0 3px 10px rgba(255, 95, 143, 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .promo-apply-btn::after { display: none; }
-  .promo-apply-btn:hover { filter: none; }
   .promo-apply-btn { transition: none; }
+
+  .promo-apply-btn:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.55),
+      0 3px 10px rgba(255, 95, 143, 0.45);
+  }
 }
 /* ═══ 光影區結束 ═══ */
