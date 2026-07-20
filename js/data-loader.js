@@ -551,6 +551,8 @@ function handleQuickSearch(option) {
 
     // Update UI
     merchantInput.value = option.displayName;
+    // 快捷搜尋不走 handleMerchantInput，清除 ✕ 的顯示要自己更新
+    if (typeof updateMerchantClearBtn === 'function') updateMerchantClearBtn();
     // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
     toggleExactSearchEmptyHint(false);
 

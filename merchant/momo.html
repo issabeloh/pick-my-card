@@ -83,7 +83,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260720115118">
+    <link rel="stylesheet" href="styles.css?v=20260720132345">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -327,9 +327,12 @@
                         <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
                         <div class="merchant-search-box">
                         <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
-                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
-                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <div class="merchant-input-wrap">
+                            <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                                   placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                            <button type="button" id="merchant-clear-btn" class="merchant-clear-btn" aria-label="清除輸入" hidden>✕</button>
+                        </div>
 
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
@@ -965,18 +968,18 @@
     </div>
 
     <!-- 主程式模組：清單與順序必須與 index.html 一致（preflight 會檢查）。 -->
-    <script src="js/core-utils.js?v=20260720115118" defer></script>
-    <script src="js/data-loader.js?v=20260720115118" defer></script>
-    <script src="js/home-ui.js?v=20260720115118" defer></script>
-    <script src="js/search-match.js?v=20260720115118" defer></script>
-    <script src="js/cashback-engine.js?v=20260720115118" defer></script>
-    <script src="js/results-display.js?v=20260720115118" defer></script>
-    <script src="js/auth-user-data.js?v=20260720115118" defer></script>
-    <script src="js/cards-modals.js?v=20260720115118" defer></script>
-    <script src="js/card-detail.js?v=20260720115118" defer></script>
-    <script src="js/spending-mappings.js?v=20260720115118" defer></script>
-    <script src="js/levels-payments.js?v=20260720115118" defer></script>
-    <script src="js/quick-options-misc.js?v=20260720115118" defer></script>
+    <script src="js/core-utils.js?v=20260720132345" defer></script>
+    <script src="js/data-loader.js?v=20260720132345" defer></script>
+    <script src="js/home-ui.js?v=20260720132345" defer></script>
+    <script src="js/search-match.js?v=20260720132345" defer></script>
+    <script src="js/cashback-engine.js?v=20260720132345" defer></script>
+    <script src="js/results-display.js?v=20260720132345" defer></script>
+    <script src="js/auth-user-data.js?v=20260720132345" defer></script>
+    <script src="js/cards-modals.js?v=20260720132345" defer></script>
+    <script src="js/card-detail.js?v=20260720132345" defer></script>
+    <script src="js/spending-mappings.js?v=20260720132345" defer></script>
+    <script src="js/levels-payments.js?v=20260720132345" defer></script>
+    <script src="js/quick-options-misc.js?v=20260720132345" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個

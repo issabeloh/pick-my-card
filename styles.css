@@ -599,7 +599,7 @@ header h1 {
 
 /* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: #cbd5e1;
     white-space: nowrap;
     padding: 0 2px;
@@ -609,10 +609,13 @@ header h1 {
     background: none;
     border: none;
     color: #cbd5e1;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 3px;
+    /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
+    padding: 10px 9px;
+    margin: -8px 0;
+    min-width: 36px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     line-height: 1;
     opacity: 0.8;
@@ -2696,19 +2699,20 @@ input[type="number"]:focus {
     }
 
     .announcement-controls {
-        gap: 4px;
-        align-self: flex-start;
-        margin-top: 2px;
+        gap: 2px;
+        align-self: center;
     }
 
     .announcement-indicator {
-        font-size: 0.65rem;
-        padding: 1px 4px;
+        font-size: 0.75rem;
+        padding: 1px 2px;
     }
 
     .announcement-btn {
-        font-size: 0.9rem;
-        padding: 2px 4px;
+        font-size: 1.05rem;
+        padding: 12px 9px;
+        margin: -10px 0;
+        min-width: 36px;
     }
 
     #announcement-close {
@@ -7958,6 +7962,36 @@ input[type="text"].credit-limit-input:focus {
 #merchant-input::-webkit-search-cancel-button,
 #merchant-input::-webkit-search-decoration {
     -webkit-appearance: none;
+}
+
+/* 一鍵清除輸入的 ✕（原生 search cancel 已在上面關掉，改用跨瀏覽器一致的自製鈕） */
+.merchant-input-wrap {
+    position: relative;
+}
+
+.merchant-input-wrap #merchant-input {
+    padding-right: 44px; /* 讓長輸入不會壓在 ✕ 底下 */
+}
+
+.merchant-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: #9ca3af;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.merchant-clear-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
 .merchant-search-box .quick-search-wrapper {

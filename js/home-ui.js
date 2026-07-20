@@ -941,6 +941,16 @@ function setupEventListeners() {
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
 
+    // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
+    const merchantClearBtn = document.getElementById('merchant-clear-btn');
+    if (merchantClearBtn) {
+        merchantClearBtn.addEventListener('click', () => {
+            merchantInput.value = '';
+            handleMerchantInput(); // 收掉匹配狀態列/搜尋提示，並更新 ✕ 顯示
+            merchantInput.focus();
+        });
+    }
+
     // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
     // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
     // （currentQuickSearchOption 存在時不動它的結果）。
@@ -1162,8 +1172,15 @@ function searchFromHint(suggestion) {
 }
 
 // Handle merchant input changes
+// 依輸入框是否有內容切換清除 ✕ 的顯示（手動輸入與程式填值都要呼叫）
+function updateMerchantClearBtn() {
+    const btn = document.getElementById('merchant-clear-btn');
+    if (btn) btn.hidden = merchantInput.value.length === 0;
+}
+
 function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
+    updateMerchantClearBtn();
 
     console.log('🔍 handleMerchantInput:', input);
 

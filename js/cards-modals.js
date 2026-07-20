@@ -236,6 +236,16 @@ function openManageCardsModal() {
 
     updateApplyOwnedButtonState();
 
+    // 篩選標籤每次開 modal 都預設收合（不記憶上次展開狀態）
+    const tagSection = document.getElementById('manage-tag-filter-section');
+    if (tagSection && !tagSection.classList.contains('collapsed')) {
+        tagSection.classList.add('collapsed');
+        const toggle = tagSection.querySelector('.tag-filter-toggle');
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        const chips = document.getElementById('tag-filter-chips');
+        if (chips) chips.hidden = true;
+    }
+
     const modal = document.getElementById('manage-cards-modal');
     modal.style.display = 'flex';
     disableBodyScroll();
