@@ -14,11 +14,12 @@ body {
     padding: 20px;
 }
 
-/* Pre-paint auth hint: returning logged-in users skip the hero flash.
-   Set by the inline <head> script reading localStorage; cleared after
-   Firebase resolves the real auth state. */
-html.pmc-returning-user #product-intro-section {
-    display: none !important;
+/* 鍵盤導覽焦點指示：:focus-visible 只在鍵盤操作時顯示外框，滑鼠/觸控點擊不出現。
+   !important 必要：全站有 16 處「.xxx:focus { outline:none }」權重比裸 :focus-visible
+   高，會把外框蓋掉；鍵盤焦點可見性必須贏過它們。 */
+:focus-visible {
+    outline: 2px solid #2563eb !important;
+    outline-offset: 2px;
 }
 
 /* Boot loader (small spinner + label) — only visible during the gate,
@@ -596,8 +597,12 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
-    display: none;
+    font-size: 0.7rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    padding: 0 2px;
 }
 
 .announcement-btn {
