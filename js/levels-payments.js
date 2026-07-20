@@ -354,8 +354,10 @@ async function showPaymentDetail(paymentId) {
     title.textContent = payment.name;
 
     // Set website link
-    if (payment.website) {
-        websiteLink.href = payment.website;
+    // 鐵則 3：動態 href 先 sanitizeUrl（不合法網址視同沒有網站）
+    const paymentSite = sanitizeUrl(payment.website);
+    if (paymentSite) {
+        websiteLink.href = paymentSite;
         websiteLink.textContent = '點此查看官方網站';
         websiteLink.style.display = 'inline';
     } else {

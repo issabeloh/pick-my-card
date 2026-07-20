@@ -64,6 +64,7 @@
 | 拿不準「該不該升級/算不算完成/要不要問用戶/方向對不對」 | `docs/ops/judgment.md` |
 | 要寫派工 prompt | `docs/ops/templates.md`（直接套模板填空） |
 | 要更新任何 docs/ 制度檔或本檔 | `docs/ops/maintenance.md` |
+| 安全掃描報錯、要改掃描規則或 security-baseline | `docs/ops/security-monitoring.md` |
 | 考古「為什麼當初這樣設計」 | `docs/project/history.md` |
 | 新 session 開工、或發現制度怪怪的 | `docs/ops/letter.md` |
 
