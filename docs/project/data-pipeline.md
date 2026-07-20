@@ -10,8 +10,7 @@ Google Sheets（多工作表）→ Apps Script `exportToJSON()` → Base64 JSON 
 
 **查 cards.data 內容的唯一正確姿勢**（488KB base64 單行，絕不 Read）：
 ```bash
-base64 -d cards.data > <scratchpad>/cards.json
-jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
+bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼＋截斷長輸出
 ```
 
 ## 2. 工作表結構
@@ -70,7 +69,7 @@ jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
 
 **匯出後快速自檢**：解 base64，「非 hideInDisplay 的 `rate===0` 槽數量」不該是 0：
 ```bash
-base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hideInDisplay|not))] | length'
+bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hideInDisplay|not))] | length'
 ```
 
 ## 5. cards.data 快取機制
@@ -129,7 +128,7 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   `generatePromosPageHtml()`，產出的 HTML 字串跟著 `cards.data` / `cards.version` 一起
   丟進 `publishToGitHub(encoded, promosPageHtml)` → 同一次 commit 三個檔案。
 - **repo 初版怎麼來的**：用臨時 Node harness（放 scratchpad，不留在 repo）以 `vm.runInContext`
-  載入 `cards-export.gs`、餵 `base64 -d cards.data` 解出來的 JSON，呼叫
+  載入 `cards-export.gs`、餵 cards.data 解碼後的 JSON（跑過 `tools/cards-query.sh` 後快取在 `$TMPDIR/cards-decoded.json`），呼叫
   `generatePromosPageHtml()` 產生 `promos.html`。之後每次 Apps Script 端跑 `exportToJSON()`
   都會用真正的 Sheets 資料重新生成、覆蓋這份檔案——**repo 裡的版本只是初版備份，最新內容以
   GitHub 上次 commit 的為準**。

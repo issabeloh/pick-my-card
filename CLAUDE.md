@@ -20,7 +20,7 @@
 | `apps-script/` | Apps Script 備份（⚠️ 主匯出程式 exportToJSON 在 Google Sheets 裡，不在 repo） |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`./update-version.sh`（repo 根） | 部署前機械檢查／`?v=` 自動 bump |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`./update-version.sh` | 部署前機械檢查／cards.data 查詢／`?v=` 自動 bump |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
@@ -29,7 +29,7 @@
 1. 改了 `js/*.js`/`styles.css` → 跑 `./update-version.sh` bump `index.html`＋`merchant/*.html` 的 `?v=`；改到 `styles.css`/`faq.js` 時 `faq.html` 的 `?v=` 要**手動**改
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright`；改動**前**先跑一次確認綠燈。差異→exit 1；語義與基準規則見 `docs/ops/regression.md`）
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1；語義與基準規則見 `docs/ops/regression.md`）
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 
@@ -46,9 +46,10 @@
 ## 大檔案使用規則（防上下文塞爆，依據見 docs/ops/diagnosis.md）
 
 - `js/*.js`（12 檔，單檔 565–1,530 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（一次 ≤200 行）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
-- `cards.data`（488KB base64 單行）：**永遠不 Read**。查內容：`base64 -d cards.data > <scratchpad>/cards.json` 後用 `jq`
+- `cards.data`（488KB base64 單行）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）
 - `styles.css`（7,300 行）/ `index.html`（1,350 行）：同樣先 Grep 再讀區段
 - 廣度未知的搜尋（不確定在哪幾個檔）→ 派 `Explore` subagent，主對話只收結論＋檔案:行號（→ `docs/ops/dispatch.md`）
+- `docs/project/` 領域檔：先 `grep -n '^## ' <檔>` 看節標題＋行號，**只讀與任務相關的節**（鐵則括號裡的「第 N 節」即節編號）；教訓記錄區一律連帶讀
 - 文件裡的行號都是快照、會漂移：**以 Grep 關鍵字為準**，行號只當起點
 
 ## 任務路由表（動手前先讀對應檔）
