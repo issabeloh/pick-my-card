@@ -38,13 +38,13 @@
 
 **確認安全的面向**：無直接 `JSON.parse(localStorage)`；無 eval 系；無硬編碼密鑰（Apps Script 正確使用 PropertiesService；前端 Firebase apiKey 屬公開設計，安全靠 firestore.rules）；`firestore.rules` 為 default-deny、個人資料按 uid 隔離、feedback/reviews 只能 create 且有長度/型別驗證；HTML 檔內 `target="_blank"` 均有 noopener；無非 TLS 連結。
 
-**發現待修（severity 低，皆需管理者資料源或用戶自身輸入才可觸發）**：
+**發現並已於同日修復（severity 低，皆需管理者資料源或用戶自身輸入才可觸發）**：
 1. 自訂快捷選項 `option.displayName`／`option.icon`（用戶輸入）未 `escapeHtml` 進 innerHTML —— `js/data-loader.js` createButton、`js/quick-options-misc.js` 三處 tag-name 模板（self-XSS 等級：僅存於該用戶自己的 localStorage/Firestore）
 2. `applyCta.link`／`payment.website`（cards.data 管理者資料）只 `escapeHtml` 或直接賦值 `.href`，未過 `sanitizeUrl`——擋不住 `javascript:` scheme；防的是 Google Sheets 資料源被污染的供應鏈路徑 —— `js/results-display.js`、`js/home-ui.js` Spotlight、`js/levels-payments.js`
 3. 回饋明細 popup 的 `layer.name`（cards.data）未轉義 —— `js/results-display.js`
 4. `showErrorMessage()` 用 innerHTML 顯示 message（目前唯一呼叫端是靜態字串）—— `js/home-ui.js`
 
-以上皆已列入 baseline「待修復」區；修復後應把對應條目從 baseline 刪除。
+以上 4 項已全數修復（escapeHtml／sanitizeUrl／textContent），對應 baseline 條目已刪除；現存 baseline 皆為「上游已淨化」型安全條目。修復驗證：回歸 12/12 綠燈＋Playwright 冒煙測試（快捷按鈕渲染、行動支付官網連結）。
 
 **未來可再加強（非本次範圍）**：CSP meta tag（因大量 inline script/style，需先整理才可行）、Subresource Integrity（目前第三方只有 Firebase SDK 走官方 CDN）。
 
