@@ -1,3 +1,17 @@
+/* ============================================================
+ * Pick My Card — js/levels-payments.js（載入順序 11/12）
+ * ⚠️ 本檔含 saveCardLevel()——CLAUDE.md 鐵則 1（🔒 最高等級）：
+ * 只有「用戶親自點選」與「大小寫/空格正規化」兩個合法呼叫場景。
+ * 區塊目錄（Grep 關鍵字）：
+ *  - Card Level Management     → "Card Level Management" / "getCardLevel"
+ *  - 級別快取暖機              → "warmCardLevelCache"
+ *  - 生日月/CUBE 發卡組織/童樂匯 → "saveBirthdayMonth" / "saveCubeIssuer" / "saveChildrenEligible"
+ *  - 級別儲存（鐵則 1 🔒）      → "saveCardLevel"
+ *  - 級別解析                  → "resolveCardLevel"
+ *  - 行動支付管理              → "Payment Management" / "openMyPaymentsModal"
+ *  - 支付詳情/比較             → "showPaymentDetail" / "showComparePaymentsModal"
+ *  - 用戶支付載存              → "loadUserPayments" / "saveUserPayments"
+ * ============================================================ */
 // ========== Card Level Management Functions ==========
 
 // Load card level from Firestore (with localStorage fallback and migration)

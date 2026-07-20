@@ -1,3 +1,17 @@
+/* ============================================================
+ * Pick My Card — js/home-ui.js（載入順序 3/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
+ *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
+ *  - 錯誤訊息                  → "showErrorMessage"
+ *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
+ *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
+ *  - 主初始化（DOMContentLoaded）→ "DOMContentLoaded"
+ *  - 圖片 lazy loading          → "initializeLazyLoading"
+ *  - 卡片/支付 chips            → "populateCardChips" / "populatePaymentChips"
+ *  - 全站事件綁定              → "setupEventListeners"
+ *  - 搜尋提示                  → "checkAndShowSearchHint" / "handleMerchantInput"
+ * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
 // Editorial highlights from cardsData.spotlights. Shows 3 per page in an
 // auto-rotating carousel; the count cap is decoupled from what's visible.

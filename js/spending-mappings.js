@@ -1,3 +1,14 @@
+/* ============================================================
+ * Pick My Card — js/spending-mappings.js（載入順序 10/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
+ *  - 釘選/取消釘選             → "togglePin" / "addMapping"
+ *  - 我的配卡 modal＋分組視圖   → "openMyMappingsModal" / "renderMappingsList"
+ *  - 拖曳排序                  → "setupMappingsDrag" / "persistMappingsDomOrder"
+ *  - 免年費狀態                → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
+ *  - 我的額度相關功能           → "loadCreditLimit" / "setupCreditLimit"
+ *  - 結帳日/繳款日             → "loadBillingDates" / "setupBillingDates"
+ * ============================================================ */
 // ============================================
 // 消費配卡表功能
 // ============================================

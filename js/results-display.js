@@ -1,3 +1,18 @@
+/* ============================================================
+ * Pick My Card — js/results-display.js（載入順序 6/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 結果列表顯示              → "displayResults"
+ *  - 領券回饋計算              → "calculateCouponRate"
+ *  - Placeholder 解析（必傳 levelSettings，見鐵則 5）→ "extractPlaceholderField" / "parseCashbackRate"
+ *  - 領券結果顯示              → "displayCouponCashbacks"
+ *  - 停車折抵顯示              → "displayParkingBenefits"
+ *  - 新戶活動顯示              → "displayCardholderPromos" / "createCardholderPromoElement"
+ *  - HTML 轉義與連結防護（鐵則 3）→ "escapeHtml" / "sanitizeUrl"
+ *  - 詳情頁導覽                → "setupCardDetailNav" / "renderCardDetailPromos"
+ *  - 結果卡片元素              → "createCardResultElement" / "createCouponResultElement"
+ *  - 計算明細 popover           → "showCalcBreakdown"
+ *  - 率組成展開                → "toggleRateComposition"
+ * ============================================================ */
 function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);

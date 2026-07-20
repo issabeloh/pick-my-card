@@ -1,3 +1,13 @@
+/* ============================================================
+ * Pick My Card — js/card-detail.js（載入順序 9/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 卡片詳情頁主體            → "showCardDetail"
+ *  - CUBE 卡專屬內容            → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
+ *  - onclick 轉義               → "escapeForOnclick"
+ *  - 商家/條件展開收合（含 window 賦值）→ "toggleMerchants" / "toggleConditions"
+ *  - 詳情頁項目過濾            → "filterCashbackItems"
+ *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
+ * ============================================================ */
 async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;

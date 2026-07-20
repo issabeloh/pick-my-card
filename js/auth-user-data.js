@@ -1,3 +1,16 @@
+/* ============================================================
+ * Pick My Card — js/auth-user-data.js（載入順序 7/12）
+ * 改這檔前必讀 docs/project/storage-and-security.md（登出清理鐵則 9）。
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 認證入口/訪客 UI           → "setupAuthentication" / "ensureGuestUIBound"
+ *  - 頭像下拉                  → "setupAvatarDropdown"
+ *  - 登出個資清理（鐵則 9）     → "clearPersonalLocalDataOnSignOut"
+ *  - Firebase 認證訂閱          → "ensureAuthSubscribed" / "onAuthStateChanged"
+ *  - 用戶資料載入              → "loadUserData"
+ *  - 訪客資料吸收              → "absorbGuestPersonalData"
+ *  - 比較卡/持有卡載存          → "loadCardsInComparison" / "loadMyOwnedCards"
+ *  - 管理比較卡 modal           → "setupManageCardsModal"
+ * ============================================================ */
 function setupAuthentication() {
     let firebaseReadyHandled = false;
 

@@ -1,3 +1,14 @@
+/* ============================================================
+ * Pick My Card — js/data-loader.js（載入順序 2/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 卡片搜尋索引              → "buildCardItemsIndex"
+ *  - 資料載入（cards.data）     → "loadCardsData"
+ *  - 行動支付資料初始化         → "initializePaymentsData"
+ *  - 快捷選項初始化/偏好載存    → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
+ *  - 舊版偏好遷移              → "migrateLegacyQuickSearchOptions"
+ *  - 快捷按鈕渲染/下拉         → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
+ *  - 快捷搜尋觸發              → "handleQuickSearch"
+ * ============================================================ */
 function buildCardItemsIndex(card) {
     const itemsMap = new Map();
 

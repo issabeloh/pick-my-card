@@ -1,3 +1,19 @@
+/* ============================================================
+ * Pick My Card — js/cashback-engine.js（載入順序 5/12）
+ * 改這檔前必讀 docs/project/cashback-engine.md。
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 回饋計算總調度            → "calculateCashback"
+ *  - 搜尋變體/邊界判斷          → "getAllSearchVariants" / "merchantMatchesStrict"
+ *  - 類別顯示                  → "getCategoryDisplayName"
+ *  - 基礎/加碼率解析            → "resolveBaseRate" / "resolveBonusComponent"
+ *  - 溢出率                    → "getOverflowRate"
+ *  - 跨槽引用 rate_N            → "跨槽引用 rate_N" / "resolveCrossSlotLayers"
+ *  - 率組成顯示                → "getDisplayRate" / "renderCashbackRatesIndividually"
+ *  - 瀑布/疊加計算              → "calculateLayeredCashback" / "calculateStackedCashback"
+ *  - 單卡計算引擎              → "calculateCardCashback"
+ *  - 即將開始活動              → "findUpcomingActivity"
+ *  - 商家付款資訊/導購連結      → "displayMerchantPaymentInfo" / "displayReferralLink"
+ * ============================================================ */
 // Calculate cashback for all cards
 async function calculateCashback() {
     console.log('🔄 calculateCashback 被調用');

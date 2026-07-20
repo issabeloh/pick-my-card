@@ -1,31 +1,21 @@
 /* ============================================================
- * Pick My Card — script.js 區塊目錄
- * （用下列關鍵字在檔案內搜尋即可跳到該區；刻意不寫行號以免過時）
- *
- *  1. Debug 日誌閘門           → "Debug 日誌閘門"
- *  2. 全域狀態                 → "Global variables"
- *  3. localStorage 安全讀取     → "localStorage 安全讀取 helpers"
- *  4. 資料載入與搜尋索引        → "loadCardsData" / "buildCardItemsIndex"
- *  5. 快捷搜尋                 → "handleQuickSearch" / "QuickSearch"
- *  6. 精選活動（Spotlight）     → "renderSpotlights"
- *  7. 公告                    → "displayAnnouncement"
- *  8. 搜尋匹配                 → "findMatchingItem"
- *  9. 回饋計算（總調度）        → "calculateCashback"
- * 10. 回饋計算（單卡引擎）      → "calculateCardCashback" /
- *     "calculateLayeredCashback"(瀑布) / "calculateStackedCashback"(疊加) /
- *     "getOverflowRate"(溢出) / "findUpcomingActivity"(即將開始)
- * 11. Placeholder 解析         → "extractPlaceholderField"
- * 12. 結果顯示                 → "displayResults" / "displayCouponCashbacks" /
- *     "displayParkingBenefits" / "displayCardholderPromos"
- * 13. HTML 轉義與連結防護      → "escapeHtml" / "sanitizeUrl"
- * 14. 登入/登出與資料同步      → "onAuthStateChanged" / "absorbGuestPersonalData" /
- *     "clearPersonalLocalDataOnSignOut"
- * 15. 用戶資料載入/儲存        → "loadCardsInComparison" / "loadMyOwnedCards" /
- *     "loadUserPayments" / "loadSpendingMappings"
- * 16. 卡片詳情頁              → "showCardDetail"
- * 17. 筆記/免年費/結帳日       → "loadUserNotes" / "loadFeeWaiverStatus" / "loadBillingDates"
- * 18. 卡片級別                → "Card Level Management" / "resolveCardLevel"
- * 19. 回報（意見回饋）        → "feedback"
+ * Pick My Card — js/core-utils.js（載入順序 1/12）
+ * 12 個模組檔為傳統全域 script（非 ES module），依 index.html 標籤
+ * 順序載入，被依賴的在前；模組地圖見 CLAUDE.md 專案地圖。
+ * 區塊目錄（Grep 關鍵字）：
+ *  - Debug 日誌閘門            → "Debug 日誌閘門"
+ *  - 全域狀態                  → "Global variables"
+ *  - Body scroll lock          → "disableBodyScroll"
+ *  - 全域 loading overlay      → "loadingOverlay"
+ *  - WebView 內建瀏覽器警告     → "isInAppBrowser" / "showWebViewWarning"
+ *  - 台灣時區日期工具           → "getTaiwanToday" / "parseISODate"
+ *  - 活動期間狀態＋快取         → "getRateStatus" / "rateStatusCache"
+ *  - 級別快取                  → "cardLevelCache"
+ *  - localStorage 安全讀取      → "localStorage 安全讀取 helpers" / "readLocalJSON"
+ *  - 過期活動過濾              → "filterExpiredRates"
+ *  - 比較卡集合                → "getCardsForComparison"
+ *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
+ *  - 卡片項目彙整              → "collectCardItems"
  * ============================================================ */
 
 // ========== Debug 日誌閘門 ==========

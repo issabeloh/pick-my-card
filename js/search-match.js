@@ -1,3 +1,15 @@
+/* ============================================================
+ * Pick My Card — js/search-match.js（載入順序 4/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 模糊搜尋對照表            → "fuzzySearchMap"
+ *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
+ *  - 精準搜尋開關              → "isExactSearchEnabled"
+ *  - 搜尋匹配核心              → "findMatchingItem"
+ *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
+ *  - 輸入驗證                  → "validateInputs"
+ *  - 同活動合併                → "mergeResultsByActivity"
+ *  - 無匹配 fallback            → "buildBasicCashbackResult"
+ * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
     'pchome': 'pchome',

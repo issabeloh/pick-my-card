@@ -1,3 +1,15 @@
+/* ============================================================
+ * Pick My Card — js/quick-options-misc.js（載入順序 12/12）
+ * 區塊目錄（Grep 關鍵字）：
+ *  - 快捷選項管理 modal         → "openManageQuickOptionsModal" / "renderQuickOptionsModal"
+ *  - 標籤拖曳排序（含觸控）     → "handleDragStart" / "handleTouchStart"
+ *  - 快捷選項儲存/重設          → "saveQuickOptionsSelection" / "resetQuickOptionsToDefault"
+ *  - 自訂選項＋emoji picker     → "showCustomOptionForm" / "setupEmojiPicker"
+ *  - 意見回饋                  → "Feedback System"
+ *  - Auth modal（登入/註冊/忘記密碼）→ "Auth Modal System" / "openAuthModal"
+ *  - WebView 警告事件綁定       → "WebView Warning Modal Event Listeners"
+ *  - GA4 點擊追蹤               → "GA4 Button Click Tracking"
+ * ============================================================ */
 // ============================================
 // Quick Search Options Management
 // ============================================
