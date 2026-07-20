@@ -6,7 +6,7 @@
 ## 怎麼跑（正常情況只需要這個）
 
 ```bash
-npm install playwright   # 一次性
+npm install playwright --no-fund --no-audit --loglevel=error   # 一次性；靜音參數必帶（省下數百行安裝雜訊）
 node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組哪張卡不同
 ```
 

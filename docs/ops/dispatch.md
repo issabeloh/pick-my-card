@@ -6,6 +6,7 @@
 > - **effort 無法在呼叫當下指定**，只能寫在 `.claude/agents/*.md` frontmatter 的 `effort:`（合法值 low/medium/high/xhigh/max，預設繼承主會話）。此欄位出自官方文件（code.claude.com/docs/en/sub-agents），但在本環境未實測過是否真的生效——若觀察到 agent 行為像是忽略它，當作「繼承主會話」處理並把觀察寫進本檔教訓區
 > - 內建 agent：`Explore`（唯讀搜尋）、`Plan`（方案設計）、`general-purpose`、`claude-code-guide`（查 Claude Code 用法）
 > - 專案自訂 agent（`.claude/agents/`）：`scout`（haiku/medium，唯讀偵察）、`builder`（sonnet/high，實作）、`verifier`（sonnet/high，fresh-context 驗收）
+> - subagent 啟動時 CLAUDE.md 由系統**自動注入**其 context（2026-07-20 派 scout 實測、引用原文證實）——agent 定義與派工 prompt 不需、也不應要求重讀 CLAUDE.md
 
 ## 1. 指揮官不下場
 
