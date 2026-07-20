@@ -1,4 +1,8 @@
-# script.js 模組化拆分計畫（2026-07-20 核准，待獨立 session 執行）
+# script.js 模組化拆分計畫（✅ 已於 2026-07-20 執行完成，本檔僅存考古用）
+
+> **狀態：已完成，不要重跑。** 成果：js/ 12 模組檔（見 CLAUDE.md 專案地圖）；
+> 執行紀錄與驗收見 docs/project/history.md 2026-07-20 條目與分支
+> claude/script-js-modularization-czrvtu 的 P1–P6 commits。
 
 > 背景：站長核准「省 token 建議 4」——把 12,200 行的 script.js 拆成多個功能模組檔。
 > 動機：(a) 省 token——拆後 Grep 命中更乾淨、讀窗更小；(b) 更好管理——改動範圍與檔案對應，降低改錯地方的機率。

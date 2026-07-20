@@ -4,6 +4,13 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-07-20 script.js 拆分為 js/ 12 模組檔（省 token＋可管理性，站長核准）
+- 純前綴切割搬移、內容零改寫：12 檔依載入順序 concat 的 sha256 與原 script.js 逐位一致（8e2b2583…）後才加各檔頭註解
+- 保持傳統全域 script 多標籤依序載入（defer），**禁止改 ES module**——inline onclick 依賴全域函數、type="module" 會變更時序與作用域
+- 載入順序＝依賴順序：載入期跨檔依賴只有 window.toggleMerchants/toggleConditions 賦值（與定義同檔）；其餘跨檔呼叫都在事件/DOMContentLoaded 之後，DOM ready 時 12 檔已全數載入
+- 消費者三頁：index.html＋merchant/*.html（`<base href="/">` 共用根目錄 js/）；update-version.sh 從此連 merchant 頁一起 bump（模組版本必須 lockstep），preflight 新增規則 1c 查覆蓋與順序一致
+- 每階段（P1–P5）獨立 commit＋preflight＋regression 12/12 綠；分支 claude/script-js-modularization-czrvtu
+
 ## 2026-07-12 getOverflowRate 移除 meta/google 廣告寫死特例
 - 舊特例：簡單路徑溢出遇 meta/google 廣告通路改用 overseasCashback（台新 Richart 除外）——用通路名稱判斷海外的 cashbackModel 前遺物
 - 全部 21 個廣告槽位已改明確 stacking model（rate=0），不再進簡單路徑，特例成死碼 → 刪除，溢出一律 basicCashback
