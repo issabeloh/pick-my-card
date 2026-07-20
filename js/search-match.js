@@ -608,4 +608,3 @@ function buildBasicCashbackResult(card, amount) {
     };
 }
 
-// Calculate cashback for all cards
