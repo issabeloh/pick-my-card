@@ -42,6 +42,25 @@
     Drive 堆兩個永不清理的檔案。匯出結果改用簡單 alert 顯示統計。歷史版本備份由 GitHub
     commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
     Sheets 版本記錄承擔。
+- 2026-07-20 審計修正（⚠️ **需把整份新版 `cards-export.gs` 貼回 Sheets 才生效**，
+  貼回後跑一次「📥 匯出 JSON」，確認 GitHub 上該次匯出只有 `cards.version` 那個 commit
+  沒有 `[CI Skip]` 前綴、且 Cloudflare Pages 只跑了一次 build）：
+  - **匯出改為單一 build**（省 Cloudflare 免費額度，見下方「免費額度」節）：
+    `publishToGitHub` 除最後一個 commit 外全部加 `[CI Skip]` 前綴，`cards.version`
+    移到最後、獨自觸發唯一一次 build。順帶保證「版本號前進時新資料必已就緒」。
+  - **匯出擋門檻 off-by-one**：`exportToJSON` 的 ❌ 計數原本多減 1（誤以為標題列會被
+    數進去），恰好只有 1 個 ❌ 時會照樣放行匯出——已移除 `- 1`。
+  - **QA 檢查 6 盲區**：「rate 有值但 items 空」原本只掃槽 1–5，槽 6+ 中招時整槽
+    靜默消失且無警告。改為依表頭自動偵測上限；槽 1–5 維持 ❌ 擋匯出、槽 6+ 用 ⚠️
+    警告不擋（避免舊資料突然全面擋死）。
+
+## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
+
+| 服務 | 免費額度 | 本專案用量與注意點 |
+|---|---|---|
+| Cloudflare Pages | **500 builds/月**、同時 1 build | push 到 main 的**每個 commit 各觸發一次 build**。舊匯出流程一次 4+ commits＝4+ builds（每日匯出≈120+/月，一日多次匯出會逼近上限）；2026-07-20 起改單一 build。另外**日常開發 merge 到 main 也各算一次**——多個小 PR 分開 merge 比 squash 成一次更耗額度 |
+| Apps Script（免費帳號） | 單次執行 6 分鐘；觸發器總計 90 分/日；UrlFetchApp 20,000 次/日；MailApp 收件人 100/日 | 匯出目前約 10 餘次 HTTP 呼叫、遠低於上限。**商家頁生成器上線後**每頁多 2 次呼叫＋生成時間，頁數多時留意 6 分鐘上限（逼近時分批或改用 git tree API 一次 commit） |
+| Google Sheets 本體 | 單一試算表 1,000 萬儲存格 | 目前規模（數十卡×數百欄）差 3 個數量級以上；Apps Script 內建 `SpreadsheetApp` 不消耗 Sheets API 配額，無 API 額度問題 |
 
 ## promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
 

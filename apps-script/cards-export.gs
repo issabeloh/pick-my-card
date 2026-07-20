@@ -114,8 +114,10 @@ function runQACheck() {
       issues.push([cardId, cardName, '名稱過長', 'name', `名稱長度 ${cardName.length} 字，建議不超過 20 字`, '⚠️']);
     }
 
-    // 檢查 6: rate 必須有 items
-    for (let j = 1; j <= 5; j++) {
+    // 檢查 6: rate 必須有 items——匯出迴圈的 guard 要求 items 才收槽，rate 有值但
+    // items 空 ＝ 整槽靜默消失。上限依表頭自動偵測（原本寫死 1–5，槽 6+ 完全沒查）；
+    // 槽 1–5 維持 ❌ 擋匯出（沿用既有行為），槽 6 起用 ⚠️ 只警告不擋，避免舊資料突然擋死匯出
+    for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
       const rateCol = headers.indexOf(`rate_${j}`);
       const itemsCol = headers.indexOf(`items_${j}`);
 
@@ -124,7 +126,7 @@ function runQACheck() {
         const items = row[itemsCol];
 
         if (rate && !items) {
-          issues.push([cardId, cardName, '資料不完整', `rate_${j}`, `有設定 rate_${j} 但沒有 items_${j}`, '❌']);
+          issues.push([cardId, cardName, '資料不完整', `rate_${j}`, `有設定 rate_${j} 但沒有 items_${j}（此槽不會匯出）`, j <= 5 ? '❌' : '⚠️']);
         }
       }
     }
@@ -417,7 +419,9 @@ function exportToJSON() {
 
   // 檢查是否有嚴重問題
   const qaData = qaSheet.getDataRange().getValues();
-  const criticalIssues = qaData.filter(row => row[5] === '❌').length - 1;
+  // 標題列的第 6 欄是「嚴重度」字樣、不是 ❌，filter 本來就不會數到它——
+  // 不能再 -1（2026-07-20 審計發現：舊的 -1 讓「恰好只有 1 個 ❌」時照樣放行匯出）
+  const criticalIssues = qaData.filter(row => row[5] === '❌').length;
 
   if (criticalIssues > 0) {
     ui.alert('❌ 無法匯出',
@@ -2117,20 +2121,29 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
 
   const version = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd-HHmmss');
 
-  commitFileToGitHub('cards.data', cardsDataContent, `Update cards.data (${version})`, token);
-  commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
+  // Cloudflare Pages 免費方案 500 builds/月，push 到 main 每個 commit 觸發一次 build：
+  // 舊做法一次匯出 4+ 個 commit ＝ 4+ 個 build，且中間幾個 build 部署的是半新半舊的樹。
+  // 改法：除最後一個 commit 外全部加 [CI Skip] 前綴（Cloudflare 認得的跳過標記），
+  // cards.version 移到最後、不加標記——整次匯出只觸發這一次 build，build checkout 時
+  // 樹上已有本次全部檔案，一次部署到位。version 最後落地也順帶保證前端快取檢查
+  // 「版本號前進時，新 cards.data 一定已經在 repo」。
+  const skip = '[CI Skip] ';
+  commitFileToGitHub('cards.data', cardsDataContent, `${skip}Update cards.data (${version})`, token);
   if (promosPageHtml) {
-    commitFileToGitHub('promos.html', promosPageHtml, `Update promos.html (${version})`, token);
+    commitFileToGitHub('promos.html', promosPageHtml, `${skip}Update promos.html (${version})`, token);
   }
 
   // 商家靜態頁（top-N SEO 落地頁，見 generateMerchantPageHtml_）——選填
   (merchantPages || []).forEach(function(m) {
-    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `Update merchant/${m.slug}.html (${version})`, token);
+    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
   });
 
   // sitemap.xml 每次匯出重生：promos 與商家頁的內容會隨資料變動，lastmod 跟上匯出
   // 日期，Google 才知道要重爬（先前 lastmod 手打死、更新後 Google 以為沒變）。
-  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages), `Update sitemap.xml (${version})`, token);
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages), `${skip}Update sitemap.xml (${version})`, token);
+
+  // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
+  commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
 
   return version;
 }
