@@ -92,6 +92,16 @@ else
   echo "⚠️  找不到 node，略過跨槽引用 rate_N 檢查（cards.data 若改了 cashbackModel 請自行確認 rate_N 沒指到不存在的槽）"; warn=1
 fi
 
+# ---- 5) 全 repo 安全掃描（規則見 docs/ops/security-monitoring.md）----
+# preflight 第 3 節只掃 diff 新增行；這裡補掃整個 repo 現狀（XSS/密鑰/firestore.rules）。
+if [ -f tools/security-scan.sh ]; then
+  if ! bash tools/security-scan.sh; then
+    fail=1
+  fi
+else
+  echo "⚠️  找不到 tools/security-scan.sh，略過全 repo 安全掃描"; warn=1
+fi
+
 # ---- 結果 ----
 echo "---"
 if [ "$fail" -ne 0 ]; then

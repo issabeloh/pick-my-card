@@ -1,0 +1,22 @@
+# 安全監測 CI：每次 push / PR ＋ 每週一次排程，跑 tools/security-scan.sh 全 repo 掃描。
+# 規則說明與 baseline 維護方式見 docs/ops/security-monitoring.md。
+name: security-scan
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # 每週一 09:00 台北時間（01:00 UTC）——即使沒改動也定期掃，
+    # 抓「規則更新後既有程式碼變違規」與 baseline 過期條目
+    - cron: '0 1 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run repo-wide security scan
+        run: bash tools/security-scan.sh
