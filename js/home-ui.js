@@ -97,6 +97,27 @@ function updateSpotlightNav() {
     if (prevBtn) prevBtn.style.display = (multiPage && spotlightPage > 0) ? 'inline-flex' : 'none';
 }
 
+// description 開頭的「XX！」＝活動類型標籤（全卡唯一帶分類色的元素）。
+// 對不到表列類型就不顯示標籤、description 全文照常顯示，資料端不需配合改
+const SPOTLIGHT_HYPE_TYPES = {
+    '全場最高': 'hype-top',
+    '壓倒性神卡': 'hype-god',
+    '獨家回饋': 'hype-excl',
+    '無腦刷': 'hype-easy'
+};
+
+function parseSpotlightHype(description) {
+    const m = /^(.+?)[！!]/.exec(description || '');
+    if (m && SPOTLIGHT_HYPE_TYPES[m[1]]) {
+        return {
+            label: m[1],
+            cssClass: SPOTLIGHT_HYPE_TYPES[m[1]],
+            rest: description.slice(m[0].length).trim()
+        };
+    }
+    return null;
+}
+
 function buildSpotlightCard(item, index) {
     const card = document.createElement('div');
     card.className = 'spotlight-card';
@@ -105,22 +126,28 @@ function buildSpotlightCard(item, index) {
     const daysLeft = getSpotlightDaysLeft(item.deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
-    const categoryChip = item.category
-        ? `<span class="spotlight-tag-chip">${escapeHtml(item.category)}</span>` : '';
+
+    const hype = parseSpotlightHype(item.description);
+    const hypeTag = hype
+        ? `<span class="spotlight-hype-tag ${hype.cssClass}">${escapeHtml(hype.label)}</span>` : '';
+    const desc = hype ? hype.rest : (item.description || '');
+    const sticker = rate ? `<span class="spotlight-rate-sticker">${escapeHtml(rate)}</span>` : '';
 
     card.innerHTML = `
-        <div class="spotlight-card-top">
-            <div class="spotlight-tags">
-                <span class="spotlight-merchant-tag">${escapeHtml(item.merchant || '')}</span>
-                ${categoryChip}
+        <div class="spotlight-top-row">
+            <div class="spotlight-ccwrap">
+                <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
+                ${sticker}
             </div>
-            <span class="spotlight-rate">${escapeHtml(rate)}</span>
+            <div class="spotlight-top-right">
+                ${hypeTag}
+                <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+                <div class="spotlight-desc">${escapeHtml(desc)}</div>
+            </div>
         </div>
-        <div class="spotlight-desc">${escapeHtml(item.description || '')}</div>
-        <div class="spotlight-meta">
-            <div class="spotlight-meta-row spotlight-meta-card"><span class="spotlight-meta-icon">💳</span><span>${escapeHtml(item.card_name || '')}</span></div>
-            ${item.cap ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">＄</span><span>消費上限 ${escapeHtml(item.cap)}</span></div>` : ''}
-            ${item.deadline ? `<div class="spotlight-meta-row"><span class="spotlight-meta-icon">🕒</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
+        <div class="spotlight-info-row">
+            ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
+            ${item.deadline ? `<span>至 <b>${escapeHtml(item.deadline)}</b>${daysBadge}</span>` : ''}
         </div>
         <div class="spotlight-card-actions">
             <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較這個通路 →</button>
