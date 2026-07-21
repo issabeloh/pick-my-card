@@ -8,8 +8,8 @@
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
-           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
-         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+           → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
+         hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
          ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
          location.replace 讓返回鍵不會跳回造成循環。
          ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
@@ -81,7 +81,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260720071417">
+    <link rel="stylesheet" href="styles.css?v=20260720133134">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -220,7 +220,6 @@
                             </div>
                         </div>
                     </div>
-                    <button id="start-using-btn-header" class="auth-btn start-using">開始使用</button>
                     <button id="sign-in-btn" class="auth-btn primary" style="display: none;">登入</button>
                 </div>
             </div>
@@ -310,107 +309,6 @@
             </aside>
 
             <main>
-            <!-- Product Introduction Section (shown only when not logged in) -->
-            <section id="product-intro-section" class="product-intro-section">
-                <div class="hero-lead">
-                    <p class="hero-lead-title">結帳前，先 <span class="brand-name">Pick My Card</span></p>
-                    <p class="hero-lead-sub">收錄 <strong class="card-count loading">...</strong> 張台灣主流信用卡</p>
-                </div>
-                <div class="hero-divider" aria-hidden="true"></div>
-                <div class="hero-section">
-                    <h2 class="hero-title">解放腦力，聰明刷卡</h2>
-                    <p class="hero-subtitle">一鍵比較出最高信用卡回饋。幫你記憶卡片、管理配卡、免費使用。</p>
-                </div>
-
-                <div class="features-grid-redesign">
-                    <!-- Feature 1: 記錄配卡 (圖上文下) -->
-                    <div class="feature-card-new feature-card-left">
-                        <div class="feature-media">
-                            <picture>
-                                <source data-srcset="assets/images/feature-credit-cards-customized-combination.webp" type="image/webp">
-                                <img data-src="assets/images/feature-credit-cards-customized-combination.png" alt="記錄配卡組合" class="feature-video lazy-image" width="800" height="450">
-                            </picture>
-                        </div>
-                        <div class="feature-content">
-                            <h3 class="feature-title">記錄配卡</h3>
-                            <p class="feature-description">一鍵收藏你的信用卡組合，<br>下次消費不用再查、不用做筆記，<br>配卡策略一目了然，自由管理更輕鬆。</p>
-                        </div>
-                    </div>
-
-                    <!-- Feature 2: 個人化功能 (文上圖下) -->
-                    <div class="feature-card-new feature-card-right">
-                        <div class="feature-content">
-                            <h3 class="feature-title">個人化功能</h3>
-                            <p class="feature-description">記憶你的信用卡與行動支付，<br>支援自訂快捷選項、筆記與年費追蹤。<br>打造屬於你的專屬信用卡管理工具。</p>
-                        </div>
-                        <div class="feature-media">
-                            <video loop muted playsinline class="feature-video lazy-video" data-src="assets/videos/feature-personalizations.mp4" width="800" height="450">
-                                <!-- 臨時佔位圖示 -->
-                                <div class="icon-box">⚙️</div>
-                            </video>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cta-section">
-                    <button id="start-using-btn" class="cta-button">開始使用</button>
-                </div>
-
-                <!-- Use Cases Section -->
-                <div class="use-cases-section">
-                    <div class="hero-section">
-                        <h2 class="hero-title">使用情境</h2>
-                        <p class="hero-subtitle">從日常消費到用卡規劃</p>
-                    </div>
-
-                    <div class="use-cases-list">
-                        <!-- Use Case 1: 即時消費，快速決策 (圖左文右) -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <picture>
-                                    <source data-srcset="assets/images/use-case-1-instant-check-cashback.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media lazy-image" width="300" height="300">
-                                </picture>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">即時消費，快速決策</h3>
-                                <p class="use-case-description">在新商家結帳不知道該用哪張卡？<br>輸入<strong>商家名稱</strong>或支援的<strong>行動支付</strong>，<br>快速找出回饋最高的卡片。</p>
-                            </div>
-                        </div>
-
-                        <!-- Use Case 2: 主動探索，找最佳通路 -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <video loop muted playsinline class="use-case-media lazy-video" data-src="assets/videos/use-case-2-explore-credit-cards.mp4" width="300" height="300">
-                                </video>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">主動探索，找最佳通路</h3>
-                                <p class="use-case-description">計劃旅遊或大額消費前想知道哪裡刷最划算？<br>用<strong>快捷選項</strong>一次查看指定類別的回饋排名，<br>提前規劃，回饋最大化。</p>
-                            </div>
-                        </div>
-
-                        <!-- Use Case 3: 盤點卡片，辦新卡 (圖左文右) -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <picture>
-                                    <source data-srcset="assets/images/use-case-3-review-credit-cards.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media lazy-image" width="300" height="300">
-                                </picture>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">盤點卡片，辦新卡</h3>
-                                <p class="use-case-description">半年一次的信用卡健檢時刻，<br>查看常用通路的回饋表現，<br>比較現有卡片與考慮申辦的新卡。</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cta-section">
-                        <button id="start-using-btn-2" class="cta-button">開始使用</button>
-                        <p class="cta-hint">登入後可儲存你的配卡組合</p>
-                    </div>
-                </div>
-            </section>
 
             <section class="input-section" style="display: none;">
                 <div class="input-row-with-button">
@@ -422,9 +320,12 @@
                         <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
                         <div class="merchant-search-box">
                         <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
-                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
-                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <div class="merchant-input-wrap">
+                            <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                                   placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                            <button type="button" id="merchant-clear-btn" class="merchant-clear-btn" aria-label="清除輸入" hidden>✕</button>
+                        </div>
 
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
@@ -1006,8 +907,9 @@
         </div>
     </div>
 
-    <!-- 最後資料更新日期 -->
+    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
+        <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
     </div>
 
@@ -1055,18 +957,18 @@
 
     <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
          全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
-    <script src="js/core-utils.js?v=20260720071417" defer></script>
-    <script src="js/data-loader.js?v=20260720071417" defer></script>
-    <script src="js/home-ui.js?v=20260720071417" defer></script>
-    <script src="js/search-match.js?v=20260720071417" defer></script>
-    <script src="js/cashback-engine.js?v=20260720071417" defer></script>
-    <script src="js/results-display.js?v=20260720071417" defer></script>
-    <script src="js/auth-user-data.js?v=20260720071417" defer></script>
-    <script src="js/cards-modals.js?v=20260720071417" defer></script>
-    <script src="js/card-detail.js?v=20260720071417" defer></script>
-    <script src="js/spending-mappings.js?v=20260720071417" defer></script>
-    <script src="js/levels-payments.js?v=20260720071417" defer></script>
-    <script src="js/quick-options-misc.js?v=20260720071417" defer></script>
+    <script src="js/core-utils.js?v=20260720133134" defer></script>
+    <script src="js/data-loader.js?v=20260720133134" defer></script>
+    <script src="js/home-ui.js?v=20260720133134" defer></script>
+    <script src="js/search-match.js?v=20260720133134" defer></script>
+    <script src="js/cashback-engine.js?v=20260720133134" defer></script>
+    <script src="js/results-display.js?v=20260720133134" defer></script>
+    <script src="js/auth-user-data.js?v=20260720133134" defer></script>
+    <script src="js/cards-modals.js?v=20260720133134" defer></script>
+    <script src="js/card-detail.js?v=20260720133134" defer></script>
+    <script src="js/spending-mappings.js?v=20260720133134" defer></script>
+    <script src="js/levels-payments.js?v=20260720133134" defer></script>
+    <script src="js/quick-options-misc.js?v=20260720133134" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個

@@ -69,7 +69,16 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     if (window.__pmcSuppressNextScroll) {
         window.__pmcSuppressNextScroll = false;
     } else {
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 無匹配（含僅停車匹配）時捲到 #matched-item 紅字狀態列：結果區在狀態列下方，
+        // 照舊捲到結果區會把紅字推出畫面外，用戶看不到「沒匹配到、顯示的是基本回饋」。
+        const statusBar = document.getElementById('matched-item');
+        const showNoMatchStatus = statusBar && statusBar.style.display !== 'none' &&
+            (statusBar.classList.contains('no-match') || statusBar.classList.contains('partial-match'));
+        if (showNoMatchStatus) {
+            statusBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 }
 

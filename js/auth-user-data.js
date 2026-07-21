@@ -40,6 +40,14 @@ function setupAuthentication() {
         if (firebaseReadyHandled) return;
         console.error('⏱️ Firebase 載入逾時（' + FIREBASE_FALLBACK_MS + 'ms），以訪客模式初始化 UI，持續等待 SDK...');
         ensureGuestUIBound();
+        // hero 已移除（2026-07-20）：逾時 fallback 必須自己顯示工具區，否則
+        // onAuthStateChanged 永遠不觸發時，頁面會停在 boot loader 清掉後的空白。
+        appStarted = true;
+        if (_authUIRefs) {
+            _authUIRefs.setGuestAvatarState();
+            _authUIRefs.showToolSections();
+        }
+        setGuestDropdownVisibility();
     }, FIREBASE_FALLBACK_MS);
 }
 
@@ -292,90 +300,6 @@ function ensureGuestUIBound() {
 
     // Setup sidebar drawer for mobile
     setupSidebarDrawer();
-
-    // Setup "Start Using" button click event (Option 2: Toggle display)
-    const startUsingBtn = document.getElementById('start-using-btn');
-    if (startUsingBtn) {
-        startUsingBtn.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtn.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
-
-    // Setup header "Start Using" button (in auth section)
-    const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-    if (startUsingBtnHeader) {
-        startUsingBtnHeader.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtnHeader.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
-
-    // Setup second "Start Using" button with same functionality
-    const startUsingBtn2 = document.getElementById('start-using-btn-2');
-    if (startUsingBtn2) {
-        startUsingBtn2.addEventListener('click', () => {
-            // Hide product intro section
-            const productIntroSection = document.getElementById('product-intro-section');
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
-
-            // Show tool sections
-            appStarted = true;
-            setGuestDropdownVisibility();
-            showToolSections();
-
-            // Hide the button itself (for mobile)
-            startUsingBtn2.style.display = 'none';
-
-            // Focus on merchant input
-            setTimeout(() => {
-                const merchantInput = document.getElementById('merchant-input');
-                if (merchantInput) {
-                    merchantInput.focus();
-                }
-            }, 100);
-        });
-    }
 }
 
 // 訂閱 Firebase auth 狀態變化。只在 auth 真的就緒時呼叫；用 _authStateSubscribed
@@ -400,9 +324,7 @@ function ensureAuthSubscribed() {
         // Card levels are user-scoped; drop cached values when the user changes.
         clearCardLevelCache();
 
-        const productIntroSection = document.getElementById('product-intro-section');
-
-        // Update the pre-paint auth hint so the next visit skips the hero flash
+        // Update the pre-paint auth hint so the next visit skips the boot loader delay
         // (or correctly shows it if the user signed out / token expired).
         try {
             if (user) {
@@ -419,16 +341,6 @@ function ensureAuthSubscribed() {
             currentUser = user;
             setLoggedInAvatarState(user);
 
-            // Hide "Start Using" button when logged in
-            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-            if (startUsingBtnHeader) {
-                startUsingBtnHeader.style.display = 'none';
-            }
-
-            // Hide product introduction section and show tool sections when logged in
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
             appStarted = true;
             showToolSections();
 
@@ -493,30 +405,16 @@ function ensureAuthSubscribed() {
             cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
             setGuestAvatarState();
 
-            // Show "Start Using" button when logged out
-            const startUsingBtnHeader = document.getElementById('start-using-btn-header');
-            if (startUsingBtnHeader) {
-                startUsingBtnHeader.style.display = 'inline-block';
-            }
-
             // Load guest quick search prefs from localStorage (or defaults)
             await initializeQuickSearchOptions();
             renderQuickSearchButtons();
 
-            // hero（product-intro）不再顯示：landing 已接手行銷/上手敘事。
+            // hero（product-intro）已從 DOM 移除（2026-07-20）：landing 接手行銷/上手敘事。
             // 首屏路由（index.html pre-paint）已把全新訪客導去 landing，因此能走到
-            // 這裡的登出使用者都是「從 landing 來」或「用過工具的舊用戶」——兩者都
-            // 直接進工具、不看 hero，避免與 landing 重複敘事、也讓舊用戶開頁即用。
-            // （hero 區塊正式從 DOM 移除是獨立的 follow-up；這裡只是不顯示它）
-            if (productIntroSection) {
-                productIntroSection.style.display = 'none';
-            }
+            // 這裡的登出使用者都是「從 landing 來」或「用過工具的舊用戶」——直接進工具。
             appStarted = true;
             setGuestDropdownVisibility();
             showToolSections();
-            if (startUsingBtnHeader) {
-                startUsingBtnHeader.style.display = 'none';
-            }
 
             // Hide my mappings button
             const myMappingsBtn = document.getElementById('my-mappings-btn');

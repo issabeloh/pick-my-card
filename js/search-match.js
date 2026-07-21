@@ -478,7 +478,10 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
 
 // Show no match message with styling
 function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
-    let messageHtml = `✘ 匹配到: <strong>您選取的卡片中沒有任何匹配項目，以下結果顯示基本回饋</strong>`;
+    // 回顯商家名讓用戶能確認「是打錯字還是真的沒活動」；用戶輸入必過 escapeHtml（鐵則）
+    const safeMerchant = escapeHtml((merchantValue || '').trim());
+    const merchantPart = safeMerchant ? `『<strong>${safeMerchant}</strong>』的商家` : '任何商家';
+    let messageHtml = `✘ 沒有匹配到${merchantPart}，修改信用卡選項試看看！（以下顯示卡片們的基本回饋）`;
     let hasParkingMatch = false;
 
     // Check if there are parking benefits matches

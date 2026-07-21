@@ -657,15 +657,11 @@ function showPreviousAnnouncement() {
     resetAnnouncementRotation();
 }
 
-// Start automatic rotation
+// 2026-07-20 取消自動輪播：輪播讓用戶多半只看到隨機一則（觸控裝置無 hover 暫停，
+// 閱讀中途被換掉更傷）。公告固定顯示第一則（最新），由用戶用左右箭頭手動切換，
+// n/N 位置指示（#announcement-indicator）提示還有其他則。函式保留為 no-op，
+// 呼叫端（初始化與 resetAnnouncementRotation）不用改。
 function startAnnouncementRotation() {
-    if (announcements.length <= 1) return;
-
-    announcementInterval = setInterval(() => {
-        if (!isAnnouncementPaused) {
-            showNextAnnouncement();
-        }
-    }, 6000); // 每 6 秒切換一次
 }
 
 // Pause rotation
@@ -751,8 +747,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
         // 讓頂部標題與搜尋框先入眼）。
         appStarted = true;
-        const introSection = document.getElementById('product-intro-section');
-        if (introSection) introSection.style.display = 'none';
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
         const supportedCards = document.querySelector('.supported-cards');
@@ -948,6 +942,16 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
+
+    // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
+    const merchantClearBtn = document.getElementById('merchant-clear-btn');
+    if (merchantClearBtn) {
+        merchantClearBtn.addEventListener('click', () => {
+            merchantInput.value = '';
+            handleMerchantInput(); // 收掉匹配狀態列/搜尋提示，並更新 ✕ 顯示
+            merchantInput.focus();
+        });
+    }
 
     // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
     // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
@@ -1170,8 +1174,15 @@ function searchFromHint(suggestion) {
 }
 
 // Handle merchant input changes
+// 依輸入框是否有內容切換清除 ✕ 的顯示（手動輸入與程式填值都要呼叫）
+function updateMerchantClearBtn() {
+    const btn = document.getElementById('merchant-clear-btn');
+    if (btn) btn.hidden = merchantInput.value.length === 0;
+}
+
 function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
+    updateMerchantClearBtn();
 
     console.log('🔍 handleMerchantInput:', input);
 
