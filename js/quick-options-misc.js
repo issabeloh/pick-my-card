@@ -88,8 +88,8 @@ function createTagElement(option, type, index) {
     tag.dataset.optionId = option.id || option.displayName;
     tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
 
-    // Icon HTML
-    const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+    // Icon HTML（鐵則 3：icon/displayName 含用戶自訂輸入，必須轉義）
+    const iconHtml = option.icon ? `<span class="tag-icon">${escapeHtml(option.icon)}</span>` : '';
 
     // Expand button (only when merchants exist)
     const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
@@ -99,7 +99,7 @@ function createTagElement(option, type, index) {
         tag.dataset.index = index;
         tag.innerHTML = `
             ${iconHtml}
-            <span class="tag-name">${option.displayName}</span>
+            <span class="tag-name">${escapeHtml(option.displayName)}</span>
             ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
             <button class="tag-remove-btn" title="移除">×</button>
         `;
@@ -129,7 +129,7 @@ function createTagElement(option, type, index) {
         tag.innerHTML = `
             <button class="tag-add-btn" title="新增">+</button>
             ${iconHtml}
-            <span class="tag-name">${option.displayName}</span>
+            <span class="tag-name">${escapeHtml(option.displayName)}</span>
             ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
         `;
 
@@ -391,13 +391,13 @@ function renderCustomOptionsList() {
         const item = document.createElement('div');
         item.className = 'custom-option-item';
 
-        // 構建icon HTML（如果有的話）
-        const iconHtml = option.icon ? `<span class="tag-icon">${option.icon}</span>` : '';
+        // 構建icon HTML（如果有的話；鐵則 3：用戶自訂輸入必須轉義）
+        const iconHtml = option.icon ? `<span class="tag-icon">${escapeHtml(option.icon)}</span>` : '';
         const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
 
         item.innerHTML = `
             ${iconHtml}
-            <span class="tag-name">${option.displayName}</span>
+            <span class="tag-name">${escapeHtml(option.displayName)}</span>
             ${hasMerchants ? '<button class="tag-expand-btn" title="查看商家" tabindex="-1">▾</button>' : ''}
             <button class="custom-option-delete" title="刪除">×</button>
         `;

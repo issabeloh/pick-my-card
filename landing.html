@@ -33,6 +33,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
 
+    <!-- Microsoft Clarity（async 注入，不卡 first paint；比照 index.html）
+         landing 過去無追蹤碼＝/landing 在 Clarity 完全不被記錄，補上讓 SEO canonical 頁能被追蹤 -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "u1w7nqgag1");
+    </script>
+
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
     {

@@ -812,8 +812,10 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     let applyCtaBtnHtml = '';
     if (!opts.showExtras) {
         const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];
-        if (applyCta && applyCta.link) {
-            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyCta.link)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
+        // 鐵則 3：動態 href 先 sanitizeUrl（escapeHtml 擋不住 javascript: scheme）
+        const applyLink = applyCta ? sanitizeUrl(applyCta.link) : '';
+        if (applyLink) {
+            applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
         }
     }
 
@@ -1016,10 +1018,11 @@ function renderCardDetailPromos(card) {
         arrow.className = 'card-apply-cta-arrow';
         arrow.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         ctaEl.appendChild(arrow);
-        if (applyCta.link) {
+        const ctaLink = sanitizeUrl(applyCta.link);
+        if (ctaLink) {
             const btn = document.createElement('a');
             btn.className = 'card-apply-cta-btn';
-            btn.href = applyCta.link;
+            btn.href = ctaLink;
             btn.target = '_blank';
             btn.rel = 'noopener noreferrer';
             btn.textContent = '立即申辦';
@@ -1392,7 +1395,7 @@ function showCalcBreakdown(btn, cardResult) {
         const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
         const cappedTag = isCapped ? `<span class="breakdown-capped">（封頂）</span>` : '';
         return `<tr>
-            <td class="bd-name">${layer.name}</td>
+            <td class="bd-name">${escapeHtml(String(layer.name))}</td>
             <td class="bd-amt">${amtLabel}</td>
             <td class="bd-rate">${layer.rate}%</td>
             <td class="bd-cash">${cashLabel}${cappedTag}</td>

@@ -395,8 +395,9 @@ function renderQuickSearchButtons() {
         button.className = 'quick-search-btn';
         button.dataset.merchants = option.merchants.join(',');
 
-        const iconHtml = option.icon ? `<span class="icon">${option.icon}</span>` : '';
-        button.innerHTML = `${iconHtml}<span>${option.displayName}</span>`;
+        // 鐵則 3：displayName/icon 含用戶自訂快捷選項輸入，必須轉義
+        const iconHtml = option.icon ? `<span class="icon">${escapeHtml(option.icon)}</span>` : '';
+        button.innerHTML = `${iconHtml}<span>${escapeHtml(option.displayName)}</span>`;
 
         button.addEventListener('click', () => {
             handleQuickSearch(option);

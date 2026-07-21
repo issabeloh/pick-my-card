@@ -1,0 +1,26 @@
+# tools/security-scan.sh 的 baseline：已「人工確認安全」的既有 SEC5/SEC6 條目。
+# 格式：規則|檔案|該行 trim 後的完整內容（內容一變就會失效、重新被掃描抓到）。
+# 原則：只進不出要有理由；目標是逐步清零。新增條目必須附上「為什麼安全」的註解。
+# 維護方式見 docs/ops/security-monitoring.md。
+# （2026-07-20 稽核發現的 7 條待修條目已全數修復移除，現存皆為「上游已淨化」型）
+
+# ── 上游已 sanitizeUrl，當行只是使用已淨化變數（安全）──
+# card-detail.js:37 applyLink = sanitizeUrl(applyCta.link)
+SEC6|js/card-detail.js|applyBarBtn.href = applyLink;
+SEC6|js/card-detail.js|headerApplyBtn.href = applyLink;
+# home-ui.js modalLink：safeLink = sanitizeUrl(announcement.link)
+SEC6|js/home-ui.js|modalLink.href = safeLink;
+# home-ui.js Spotlight／results-display 申辦按鈕：applyLink = sanitizeUrl(applyCta.link)（緊鄰上一行）
+SEC6|js/home-ui.js|? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+SEC6|js/results-display.js|applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
+# results-display.js 卡片詳情 CTA：ctaLink = sanitizeUrl(applyCta.link)（緊鄰上一行）
+SEC6|js/results-display.js|btn.href = ctaLink;
+# levels-payments.js：paymentSite = sanitizeUrl(payment.website)（緊鄰上一行）
+SEC6|js/levels-payments.js|websiteLink.href = paymentSite;
+# cashback-engine.js referralUrl/shopbackUrl/linebuyUrl 皆已 sanitizeUrl
+SEC6|js/cashback-engine.js|${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
+SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
+
+# ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）──
+SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
