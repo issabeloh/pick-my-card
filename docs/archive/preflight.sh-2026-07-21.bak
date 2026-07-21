@@ -11,18 +11,22 @@ changed=$(git diff HEAD --name-only)
 
 has() { echo "$changed" | grep -qx "$1"; }
 
-# ---- 1) ?v= 一律是 dev 佔位（2026-07-21 起版本號改由部署時注入，repo 不存時間戳）----
-# 部署時 Cloudflare Pages build command 跑 tools/deploy-version.sh 把 dev 換成 commit hash。
-# repo 裡出現非 dev 的值＝有人手動 bump（舊流程回潮）或解衝突拿錯版本，一律擋下。
-# promos.html 除外：由 Apps Script 匯出生成、自帶時間戳，部署時照樣被覆寫、無害。
-VER_RE='((styles|faq|landing)\.css|(script|faq|landing)\.js|js/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+'
-for page in index.html faq.html landing.html merchant/*.html; do
-  [ -e "$page" ] || continue
-  bad=$(grep -oE "$VER_RE" "$page" | grep -v '?v=dev$' || true)
-  if [ -n "$bad" ]; then
-    echo "❌ $page 的 ?v= 不是 dev 佔位（版本號由部署注入，repo 內禁寫時間戳）：$(echo $bad | head -c 200)"; fail=1
+# ---- 1) script.js / styles.css / js/*.js 改動 → index.html 的 ?v= 必須 bump 且全部一致 ----
+# ?v= 引用的抓取範圍：styles.css、script.js、js/*.js（.png?v= 等資產不管）
+VER_RE='(styles\.css|script\.js|js/[A-Za-z0-9_-]+\.js)\?v=[0-9]+'
+core_changed=$(echo "$changed" | grep -E '^(script\.js|styles\.css|js/[A-Za-z0-9_-]+\.js)$' || true)
+if [ -n "$core_changed" ]; then
+  vers=$(grep -oE "$VER_RE" index.html | grep -oE '[0-9]+$' | sort -u)
+  n_vers=$(echo "$vers" | grep -c . || true)
+  old_vers=$(git show HEAD:index.html | grep -oE "$VER_RE" | grep -oE '[0-9]+$' | sort -u | tail -1)
+  if [ "$n_vers" -eq 0 ]; then
+    echo "❌ index.html 找不到任何 styles.css/script.js/js/*.js 的 ?v= 引用行"; fail=1
+  elif [ "$n_vers" -gt 1 ]; then
+    echo "❌ index.html 的 ?v= 版本號不一致（必須全部同值）：$(echo $vers)"; fail=1
+  elif [ "$vers" = "$old_vers" ]; then
+    echo "❌ js/css 有改動，但 index.html 的 ?v= 仍是 $vers（沒 bump）。跑 ./update-version.sh 後重試"; fail=1
   fi
-done
+fi
 
 # ---- 1c) 模組檔覆蓋與載入順序（?v= 快取機制必須涵蓋所有 js/ 模組檔）----
 # a. repo 裡每個 js/*.js 都要被 index.html 以 <script src="js/xxx.js?v=..."> 引用
@@ -43,6 +47,20 @@ for page in merchant/*.html; do
     echo "❌ $page 的 script 載入清單/順序與 index.html 不一致（必須完全相同）"; fail=1
   fi
 done
+
+# ---- 1b) styles.css / faq.js 改動 → faq.html 的 ?v= 也要 bump ----
+if has styles.css || has faq.js; then
+  new_faq=$(grep -o 'faq\.js?v=[0-9]*' faq.html | head -1 | grep -o '[0-9]*$')
+  old_faq=$(git show HEAD:faq.html | grep -o 'faq\.js?v=[0-9]*' | head -1 | grep -o '[0-9]*$')
+  new_fcss=$(grep -o 'styles\.css?v=[0-9]*' faq.html | head -1 | grep -o '[0-9]*$')
+  old_fcss=$(git show HEAD:faq.html | grep -o 'styles\.css?v=[0-9]*' | head -1 | grep -o '[0-9]*$')
+  if has faq.js && [ "$new_faq" = "$old_faq" ]; then
+    echo "❌ faq.js 有改動，但 faq.html 的 faq.js?v= 沒 bump（faq.html 不歸 update-version.sh 管，要手動改）"; fail=1
+  fi
+  if has styles.css && [ "$new_fcss" = "$old_fcss" ]; then
+    echo "❌ styles.css 有改動，但 faq.html 的 styles.css?v= 沒 bump（要手動改）"; fail=1
+  fi
+fi
 
 # ---- 2) cards.data 改動 → cards.version 必須同步更新 ----
 if has cards.data && ! has cards.version; then

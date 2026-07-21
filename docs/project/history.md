@@ -4,7 +4,12 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
-## 2026-07-20 方向裁決三題（站長委託「品味/方向裁決清倉」；判例，站長可否決）
+## 2026-07-21 ?v= 快取版本改部署時注入（站長核准，起因 PR #337 merge 事故）
+- repo 內所有本站 .css/.js 引用一律 `?v=dev` 佔位；Cloudflare Pages build command 跑 `tools/deploy-version.sh` 在部署時注入 commit hash（CF_PAGES_COMMIT_SHA）
+- 動機：每個分支都 bump 時間戳 → 多分支併行必撞 merge 衝突；#337 解衝突時 `checkout --ours` 整檔蓋掉 main 改動釀 UI 事故。版本號離開版控後衝突源消失
+- 舊 `./update-version.sh` 刪除；faq.html「手動 bump」規則作廢；preflight 規則 1/1b 改為「佔位純度檢查」（非 dev 值一律 ❌）；回歸腳本加訪客首屏斷言
+- 對「無 build 步驟」原則（2026-07-20 判例）的關係：站長知情核准的**窄例外**——build command 只做版本字串替換，邏輯全在 repo 內的腳本，不引入組件/打包系統
+- promos.html 由 Apps Script 匯出、自帶時間戳版本：不受佔位規則管（preflight 排除），部署時照樣被覆寫，匯出端不需配合
 - **商家 SEO 落地頁**：不再手動加頁。蝦皮/momo 兩頁在 Search Console 蹲滿 4–6 週後，任一頁有自然流量訊號（如週曝光 >100，或任何非品牌關鍵字點擊）才值得移植 generateMerchantPageHtml_ 生成器擴大到 top-N；兩頁皆無訊號則從 sitemap 移除、收掉此方向。理由：每頁都是手抄件、加重三邊同步負擔，值不值得該由數據裁決而非猜
 - **權益自動化非 MVP 項**（BENEFITS-AUTOMATION-PLAN 第 3–5 項）：比對引擎＋「一鍵套用」**預設不做**——自動寫入 Cards Data 的爆炸半徑是全站資料事故，換到的只是每週幾分鐘的搬運。重啟條件：待審核表→正式表的人工搬運連續一個月每週實測 >30 分鐘；屆時也必須先有寫入前逐格 diff 預覽。權益/領券 GEM 遷移等新戶活動這條線跑穩一個月再議
 - **header 三邊手抄件**（index/faq/promos）：維持手抄，不引入 build/組件系統——「無 build 步驟」是本專案的結構性選擇，不用全局複雜度換局部方便。可接受的緩解：未來讓 preflight 機械比對三邊 header 結構
