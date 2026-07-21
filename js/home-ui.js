@@ -276,6 +276,28 @@ function setupBackToTopButton() {
     toggle();
 }
 
+// 精選活動快速跳轉浮標：搜尋結果有時很長，這顆讓用戶一鍵跳到最底的精選活動區。
+// 顯示條件＝有搜尋結果（#results-section 顯示中）且精選活動區本身有顯示（有資料）。
+// 由 displayResults()（結果出現）與 hideToolSections()（結果收起）呼叫更新。
+function updateScrollToSpotlightBtn() {
+    const btn = document.getElementById('scroll-to-spotlight-btn');
+    if (!btn) return;
+    const results = document.getElementById('results-section');
+    const spotlight = document.getElementById('spotlight-section');
+    const resultsVisible = !!results && results.style.display !== 'none';
+    const spotlightVisible = !!spotlight && spotlight.style.display !== 'none';
+    btn.classList.toggle('is-visible', resultsVisible && spotlightVisible);
+}
+
+function setupScrollToSpotlightButton() {
+    const btn = document.getElementById('scroll-to-spotlight-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+        const spotlight = document.getElementById('spotlight-section');
+        if (spotlight) spotlight.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
 // Find the actual cashbackRate activities in a card that cover the spotlight's
 // merchant, by looking up the card's prebuilt items index. Keywords come from a
 // matching quick-search option (so "所有加油站" expands to 中油/台塑/…) or from
@@ -1051,6 +1073,7 @@ function setupEventListeners() {
     // Click-to-enlarge for the first-spend gift image + mobile back-to-top button
     setupGiftImageLightbox();
     setupBackToTopButton();
+    setupScrollToSpotlightButton();
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {

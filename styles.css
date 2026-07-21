@@ -76,7 +76,7 @@ html.pmc-embed .social-media-footer,
 html.pmc-embed .data-update-footer,
 html.pmc-embed .disclaimer-footer,
 html.pmc-embed #back-to-top-btn,
-html.pmc-embed #feedback-btn,
+html.pmc-embed #scroll-to-spotlight-btn,
 html.pmc-embed #my-mappings-btn,
 html.pmc-embed #pmc-boot-loader,
 html.pmc-embed .modal:not(#card-detail-modal) {
@@ -665,6 +665,12 @@ header h1 {
 .announcement-text.fade-in,
 .announcement-date-badge.fade-in {
     opacity: 1;
+}
+
+/* 日期徽章只用自身 opacity transition 淡入，取消全域 .fade-in 的 fadeIn 落下動畫
+   （@keyframes fadeIn 有 translateY，會讓徽章第一次出現時從上方落下；站長要求移除） */
+.announcement-date-badge.fade-in {
+    animation: none;
 }
 
 /* Announcement Modal */
@@ -1557,6 +1563,9 @@ input[type="number"]:focus {
     font-size: 13px;
     line-height: 1.5;
     display: inline-block;
+    /* 無匹配時 displayResults() 會 scrollIntoView({block:'start'}) 把這行紅字捲到接近
+       頂端；留點上緣空間避免貼齊視窗最上緣，也讓上方搜尋框露出一小截當定位參考 */
+    scroll-margin-top: 72px;
 }
 
 .matched-item.no-match {
@@ -2530,6 +2539,9 @@ input[type="number"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    /* 卡名（連釘選鈕）與右側「最優回饋」pill 之間保底距離：卡名很長（手機換行）時
+       釘選鈕會被推到右緣，沒有 gap 會與 pill 貼在一起 */
+    gap: 12px;
     margin-bottom: 8px;
 }
 
@@ -2774,8 +2786,10 @@ input[type="number"]:focus {
         overflow-wrap: anywhere;
     }
 
+    /* 回饋率不需要太多橫向空間，把省下的寬度給「回饋金額」欄，讓四位數金額
+       （如 NT$1,000）與計算機按鈕 .calc-breakdown-btn 能留在同一行不換行 */
     .card-details {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 0.8fr 1.35fr 0.85fr;
         gap: 6px;
     }
 
@@ -2789,6 +2803,18 @@ input[type="number"]:focus {
 
     .card-details .cashback-amount {
         font-size: 14px;
+    }
+
+    /* 手機版卡名太長時換到第二行（不再用 … 截斷；overflow-wrap 由 .card-result 繼承） */
+    .card-name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    /* 卡名換行成兩行時，ⓘ／釘選鈕靠齊第一行頂端，不要浮在兩行中間 */
+    .card-name-with-pin {
+        align-items: flex-start;
     }
 
     .cards-selection {
@@ -5673,35 +5699,41 @@ input[type="text"].credit-limit-input:focus {
    ============================================ */
 
 /* Floating Feedback Button */
-.feedback-floating-btn {
+/* 精選活動快速跳轉浮標：有搜尋結果時（JS 加 .is-visible）才顯示，點擊平滑捲到
+   #spotlight-section。搜尋結果有時很長，這顆讓用戶一鍵跳到最底的精選活動區。
+   綠色系與 spotlight 回饋率貼紙同調，和琥珀色的「我的消費配卡」浮標區隔。 */
+.scroll-to-spotlight-btn {
     position: fixed;
     bottom: 16px;
     right: 16px;
     padding: 8px 12px;
-    background: rgba(107, 114, 128, 0.15);
-    border: 1px solid rgba(107, 114, 128, 0.2);
+    background: #dcfce7;
+    border: 1px solid #22c55e;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #15803d;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
-    display: flex;
     align-items: center;
     gap: 4px;
-    backdrop-filter: blur(8px);
+    /* 預設隱藏，僅在有搜尋結果時由 JS 切換 .is-visible 顯示 */
+    display: none;
 }
 
-.feedback-floating-btn:hover {
-    background: rgba(107, 114, 128, 0.25);
-    border-color: rgba(107, 114, 128, 0.3);
-    color: #374151;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+.scroll-to-spotlight-btn.is-visible {
+    display: flex;
 }
 
-.feedback-floating-btn:active {
-    transform: scale(0.98);
+.scroll-to-spotlight-btn:hover {
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    transform: translateY(-2px);
+}
+
+.scroll-to-spotlight-btn:active {
+    transform: translateY(0) scale(0.98);
 }
 
 /* Image lightbox (click-to-enlarge for the first-spend gift image) */
@@ -6030,12 +6062,12 @@ input[type="text"].credit-limit-input:focus {
         display: none;
     }
 
-    .feedback-floating-btn {
+    .scroll-to-spotlight-btn {
         bottom: 16px;
         right: 16px;
         width: 48px;
         height: 48px;
-        font-size: 24px;
+        font-size: 22px;
         padding: 0;
         justify-content: center;
     }
@@ -6054,7 +6086,7 @@ input[type="text"].credit-limit-input:focus {
     }
 
     /* Hide text on mobile, only show icon */
-    .feedback-floating-btn span:last-child {
+    .scroll-to-spotlight-btn .btn-text {
         display: none;
     }
 
