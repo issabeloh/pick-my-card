@@ -55,17 +55,19 @@
 
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px; border-top: 1px solid #e5e7eb`。
 
-**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填，有值才顯示紫色分類 chip)。
+**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填；2026-07-21 起卡片上不再顯示，欄位保留)。
+
+**卡片版式（2026-07-21 F-2 重設計）**：左側傾斜卡圖（`assets/images/cards/<card_id>.png`，object-fit contain＋drop-shadow；`onerror` 隱藏 img 並在 `.spotlight-ccwrap` 加 `noimg` class 讓貼紙退回靜態）＋淺綠回饋率貼紙（#15803d on #bbf7d0、白邊、微旋轉）；右側＝活動類型標籤＋通路名（粗體）＋描述。**活動類型標籤**：`parseSpotlightHype()` 從 description 開頭抽「XX！」對表（全場最高/壓倒性神卡/獨家回饋/無腦刷 → hype-top/god/excl/easy 四色），是全卡唯一帶分類色的元素；對不到表列類型→不顯示標籤、description 全文照常顯示（資料端不需配合）。下方虛線分隔的資訊列放上限＋期限（含「剩 N 天」徽章）。設計裁定（站長 2026-07-21）：不用 emoji、不用浮起／轉正動畫（hover 只准陰影微調）、回饋率不上分類色。
 
 **輪播**（`renderSpotlights` 一帶）：每頁 3 張（SPOTLIGHT_PAGE_SIZE）、6 秒自動換頁（SPOTLIGHT_INTERVAL）、循環；「看下一組」手動換頁＋頁碼圓點；hover 卡片或開 modal 暫停；最多 12 則（SPOTLIGHT_MAX）依 order 升冪；`active===false` 不顯示；≤3 則自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
-**固定高度（防跳動）**：`.spotlight-card { min-height: 260px }`；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 2.8em`；`.spotlight-meta` min-height 76px、nowrap+ellipsis；卡名列粗體；分類 chip 紫色（#6d28d9 on #ede9fe，刻意避開 sidebar 藍色系）。
+**固定高度（防跳動）**：`.spotlight-card { min-height: 200px }`；`.spotlight-top-row` min-height 92px（有無類型標籤高度都以卡圖列為準）；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 3em`；`.spotlight-info-row` min-height 28px、nowrap。
 
 **兩個動作**：
 - 「比較這個通路 →」（`compareSpotlightMerchant`）：merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。**這是全站唯一自動觸發計算的入口**（兩條路徑都代按計算、金額空白補 1000）——快捷搜尋按鈕與 `handleQuickSearch` 本身自 2026-07-12 起只填入關鍵詞、不自動計算（產品決策：計算由用戶按「計算」觸發），要復原或擴大自動計算屬產品行為變更，先問用戶
 - ⓘ（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap＋卡片第一個級別解析。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）
 
-**相關檔案**：index.html `#spotlight-section` `#spotlight-modal`；styles.css `.spotlight-*`（白底、回饋率粗體綠字、「剩 N 天」徽章 0–14 天顯示）。
+**相關檔案**：index.html `#spotlight-section` `#spotlight-modal`（merchant/momo.html、merchant/蝦皮.html 有同一組容器標記，卡片由 js 動態生成、不需同步改）；styles.css `.spotlight-*`（「剩 N 天」徽章 0–14 天顯示）。
 
 ## 5. 「我的信用卡」modal（錢包堆疊＋單卡頁，2026-07-07 重造）
 

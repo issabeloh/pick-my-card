@@ -7676,98 +7676,130 @@ input[type="text"].credit-limit-input:focus {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* F-2 版式（2026-07-21 重設計）：左側傾斜卡圖＋淺綠回饋率貼紙，
+   右側活動類型標籤（唯一帶分類色的元素）＋通路名＋描述 */
 .spotlight-card {
     display: flex;
     flex-direction: column;
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    min-height: 260px;
+    min-height: 200px;
+    transition: box-shadow .25s, border-color .25s;
 }
-.spotlight-card-top {
+.spotlight-card:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    border-color: #d1d5db;
+}
+/* min-height 防輪播換頁跳動：有無類型標籤高度都以卡圖列為準 */
+.spotlight-top-row {
     display: flex;
+    gap: 14px;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
     margin-bottom: 10px;
+    min-height: 92px;
 }
-.spotlight-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-width: 0;
-    max-width: 75%;
+.spotlight-ccwrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 118px;
+    height: 84px;
 }
-.spotlight-tag-chip {
-    font-size: 0.72rem;
-    color: #6d28d9;
-    background: #ede9fe;
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-weight: 500;
+/* 直式卡圖靠 contain letterbox；陰影用 drop-shadow 跟著實際像素走 */
+.spotlight-ccimg {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 108px;
+    height: 66px;
+    object-fit: contain;
+    border-radius: 8px;
+    transform: rotate(-6deg);
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
+}
+/* 回饋率貼紙：統一淺綠底＋深綠字＋白邊，貼在卡圖右下角 */
+.spotlight-rate-sticker {
+    position: absolute;
+    right: -6px;
+    bottom: -4px;
+    font-size: 0.98rem;
+    font-weight: 900;
+    color: #15803d;
+    background: #bbf7d0;
+    border-radius: 10px;
+    padding: 6px 9px;
+    transform: rotate(6deg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+    border: 2px solid #fff;
     white-space: nowrap;
 }
-/* 配色對齊快捷搜尋按鈕（.quick-search-btn：白底＋天藍細框＋藍字，
-   2026-07-16 站長要求），尺寸維持原 tag 大小 */
-.spotlight-merchant-tag {
-    font-size: 0.78rem;
-    color: #0369a1;
-    background: #fff;
-    border: 1px solid #7dd3fc;
+/* 缺圖（img onerror）：整欄縮起、貼紙退回靜態擺左側 */
+.spotlight-ccwrap.noimg {
+    width: auto;
+    height: auto;
+    align-self: flex-start;
+}
+.spotlight-ccwrap.noimg .spotlight-rate-sticker {
+    position: static;
+    display: inline-block;
+    transform: none;
+}
+.spotlight-top-right {
+    flex: 1;
+    min-width: 0;
+}
+.spotlight-hype-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: .02em;
     border-radius: 999px;
-    padding: 4px 10px;
+    padding: 3px 10px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+}
+.spotlight-hype-tag.hype-top  { color: #b45309; background: #fef3c7; }
+.spotlight-hype-tag.hype-god  { color: #be123c; background: #ffe4e6; }
+.spotlight-hype-tag.hype-excl { color: #6d28d9; background: #ede9fe; }
+.spotlight-hype-tag.hype-easy { color: #0f766e; background: #ccfbf1; }
+.spotlight-merchant {
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.3;
+    margin-bottom: 3px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.spotlight-rate {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: #059669;
-    flex-shrink: 0;
-}
 .spotlight-desc {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #111827;
-    line-height: 1.4;
-    margin-bottom: 12px;
+    font-size: 0.76rem;
+    color: #6b7280;
+    line-height: 1.5;
     /* Always reserve exactly 2 lines so cards don't jump on rotate */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    height: 2.8em;
+    height: 3em;
 }
-.spotlight-meta {
+.spotlight-info-row {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 14px;
-    min-height: 76px;
-}
-.spotlight-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+    gap: 14px;
+    font-size: 0.72rem;
     color: #6b7280;
-    min-width: 0;
-}
-.spotlight-meta-row > span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    border-top: 1px dashed #e5e7eb;
+    padding: 9px 2px 0;
+    margin-bottom: 12px;
+    min-height: 28px;
     white-space: nowrap;
-    min-width: 0;
-    flex: 1;
+    overflow: hidden;
 }
-.spotlight-meta-icon { width: 16px; text-align: center; flex-shrink: 0; }
-.spotlight-meta-card > span:last-child {
-    font-weight: 700;
+.spotlight-info-row b {
     color: #111827;
+    font-weight: 700;
 }
 .spotlight-days-badge {
     display: inline-block;
