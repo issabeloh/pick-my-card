@@ -81,7 +81,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260720133134">
+    <link rel="stylesheet" href="styles.css?v=20260721012423">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -244,6 +244,8 @@
                         <button class="announcement-btn" id="announcement-close" title="關閉" aria-label="關閉公告">×</button>
                     </div>
                 </div>
+                <!-- 手機版：圓點指示＋左右滑動換則（桌機隱藏、沿用箭頭） -->
+                <div class="announcement-dots" id="announcement-dots"></div>
             </div>
 
             <!-- Announcement Detail Modal -->
@@ -957,18 +959,18 @@
 
     <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
          全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
-    <script src="js/core-utils.js?v=20260720133134" defer></script>
-    <script src="js/data-loader.js?v=20260720133134" defer></script>
-    <script src="js/home-ui.js?v=20260720133134" defer></script>
-    <script src="js/search-match.js?v=20260720133134" defer></script>
-    <script src="js/cashback-engine.js?v=20260720133134" defer></script>
-    <script src="js/results-display.js?v=20260720133134" defer></script>
-    <script src="js/auth-user-data.js?v=20260720133134" defer></script>
-    <script src="js/cards-modals.js?v=20260720133134" defer></script>
-    <script src="js/card-detail.js?v=20260720133134" defer></script>
-    <script src="js/spending-mappings.js?v=20260720133134" defer></script>
-    <script src="js/levels-payments.js?v=20260720133134" defer></script>
-    <script src="js/quick-options-misc.js?v=20260720133134" defer></script>
+    <script src="js/core-utils.js?v=20260721012423" defer></script>
+    <script src="js/data-loader.js?v=20260721012423" defer></script>
+    <script src="js/home-ui.js?v=20260721012423" defer></script>
+    <script src="js/search-match.js?v=20260721012423" defer></script>
+    <script src="js/cashback-engine.js?v=20260721012423" defer></script>
+    <script src="js/results-display.js?v=20260721012423" defer></script>
+    <script src="js/auth-user-data.js?v=20260721012423" defer></script>
+    <script src="js/cards-modals.js?v=20260721012423" defer></script>
+    <script src="js/card-detail.js?v=20260721012423" defer></script>
+    <script src="js/spending-mappings.js?v=20260721012423" defer></script>
+    <script src="js/levels-payments.js?v=20260721012423" defer></script>
+    <script src="js/quick-options-misc.js?v=20260721012423" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
