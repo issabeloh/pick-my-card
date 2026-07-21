@@ -49,6 +49,7 @@ harness 觸發壓縮 → 早期讀到的鐵則被壓掉 → 後半段開始犯 C
 3. 禁用模式：新程式碼直接寫 `JSON.parse(localStorage.getItem(...))`、動態 innerHTML 不過 `escapeHtml()`、非法呼叫 `saveCardLevel()`
 
 既有的 `update-version.sh` 只會「執行」第 1 條的 index.html 部分（不檢查、不管 faq.html、不管 cards.version）。
+（2026-07-21 更新：第 1 條已整條退役——`?v=` 改由部署時 `tools/deploy-version.sh` 注入，repo 一律 `dev` 佔位，preflight 規則 1 改查佔位純度；本段其餘敘述保留當立 preflight 的歷史脈絡。）
 長 session 尾端＋上下文壓縮後，弱模型忘記機率極高——這正是最不能靠記憶的環節。
 
 **修法**（本 session 已執行）：
