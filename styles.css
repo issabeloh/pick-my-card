@@ -14,11 +14,12 @@ body {
     padding: 20px;
 }
 
-/* Pre-paint auth hint: returning logged-in users skip the hero flash.
-   Set by the inline <head> script reading localStorage; cleared after
-   Firebase resolves the real auth state. */
-html.pmc-returning-user #product-intro-section {
-    display: none !important;
+/* 鍵盤導覽焦點指示：:focus-visible 只在鍵盤操作時顯示外框，滑鼠/觸控點擊不出現。
+   !important 必要：全站有 16 處「.xxx:focus { outline:none }」權重比裸 :focus-visible
+   高，會把外框蓋掉；鍵盤焦點可見性必須贏過它們。 */
+:focus-visible {
+    outline: 2px solid #2563eb !important;
+    outline-offset: 2px;
 }
 
 /* Boot loader (small spinner + label) — only visible during the gate,
@@ -596,18 +597,25 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
-    display: none;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    padding: 0 2px;
 }
 
 .announcement-btn {
     background: none;
     border: none;
     color: #cbd5e1;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 3px;
+    /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
+    padding: 10px 9px;
+    margin: -8px 0;
+    min-width: 36px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     line-height: 1;
     opacity: 0.8;
@@ -620,6 +628,32 @@ header h1 {
 
 #announcement-close {
     display: none;
+}
+
+/* 手機版圓點指示（方案 B）：桌機隱藏、沿用箭頭；手機隱藏箭頭、改滑動＋圓點 */
+.announcement-dots {
+    display: none;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 3px;
+}
+
+.announcement-dot {
+    width: 6px;
+    height: 6px;
+    padding: 7px; /* content-box＋background-clip：視覺 6px、點擊區 20px */
+    box-sizing: content-box;
+    border: none;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.35);
+    background-clip: content-box;
+    cursor: pointer;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.announcement-dot.active {
+    width: 14px;
+    background-color: #ffffff;
 }
 
 /* Fade animation */
@@ -2690,20 +2724,13 @@ input[type="number"]:focus {
         margin-top: 2px;
     }
 
+    /* 方案 B：手機隱藏箭頭/則數，文字吃滿寬度，改用滑動＋圓點指示 */
     .announcement-controls {
-        gap: 4px;
-        align-self: flex-start;
-        margin-top: 2px;
+        display: none;
     }
 
-    .announcement-indicator {
-        font-size: 0.65rem;
-        padding: 1px 4px;
-    }
-
-    .announcement-btn {
-        font-size: 0.9rem;
-        padding: 2px 4px;
+    .announcement-dots {
+        display: flex;
     }
 
     #announcement-close {
@@ -7985,6 +8012,36 @@ input[type="text"].credit-limit-input:focus {
 #merchant-input::-webkit-search-cancel-button,
 #merchant-input::-webkit-search-decoration {
     -webkit-appearance: none;
+}
+
+/* 一鍵清除輸入的 ✕（原生 search cancel 已在上面關掉，改用跨瀏覽器一致的自製鈕） */
+.merchant-input-wrap {
+    position: relative;
+}
+
+.merchant-input-wrap #merchant-input {
+    padding-right: 44px; /* 讓長輸入不會壓在 ✕ 底下 */
+}
+
+.merchant-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: #9ca3af;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.merchant-clear-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
 .merchant-search-box .quick-search-wrapper {

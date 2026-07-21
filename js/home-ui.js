@@ -557,6 +557,27 @@ function setupAnnouncementBar() {
         resumeAnnouncementRotation();
     });
 
+    // 手機版（方案 B）：圓點指示＋左右滑動換則。桌機以 CSS 隱藏圓點、保留箭頭。
+    buildAnnouncementDots();
+
+    // 滑動手勢：水平位移 >40px 且大於垂直位移才算滑動（避免吃掉頁面捲動與點擊）。
+    // passive:true——不呼叫 preventDefault，捲動效能不受影響；真的滑動時瀏覽器
+    // 自己就不會觸發 click，開公告 modal 的點擊行為不衝突。
+    let touchStartX = 0;
+    let touchStartY = 0;
+    announcementBar.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    announcementBar.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+            if (dx < 0) showNextAnnouncement();
+            else showPreviousAnnouncement();
+        }
+    }, { passive: true });
+
     // Click on text or date badge to show modal
     announcementText.addEventListener('click', (e) => {
         e.preventDefault();
@@ -618,6 +639,29 @@ function showAnnouncementModal(index) {
     };
 }
 
+// 手機版圓點指示：一則一顆，點擊可直接跳到該則（點擊區用 padding 撐到 ~20px）
+function buildAnnouncementDots() {
+    const dots = document.getElementById('announcement-dots');
+    if (!dots) return;
+    dots.innerHTML = '';
+    if (announcements.length <= 1) return;
+    announcements.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'announcement-dot';
+        dot.setAttribute('aria-label', `第 ${i + 1} 則公告`);
+        dot.addEventListener('click', () => displayAnnouncement(i));
+        dots.appendChild(dot);
+    });
+    updateAnnouncementDots(0);
+}
+
+function updateAnnouncementDots(index) {
+    const dots = document.getElementById('announcement-dots');
+    if (!dots) return;
+    Array.from(dots.children).forEach((d, i) => d.classList.toggle('active', i === index));
+}
+
 // Display announcement by index
 // ⚠️ announcement-text 只能用 textContent 放純文字，不能塞任何行內元素（含日期）：
 //    iOS Safari 對「line-clamp 元素內含 inline-block ＋ opacity 淡入淡出」會停止重繪
@@ -657,6 +701,7 @@ function displayAnnouncement(index) {
         if (announcementIndicator && announcements.length > 1) {
             announcementIndicator.textContent = `${index + 1}/${announcements.length}`;
         }
+        updateAnnouncementDots(index);
 
         // Fade in
         announcementText.classList.remove('fade-out');
@@ -684,15 +729,11 @@ function showPreviousAnnouncement() {
     resetAnnouncementRotation();
 }
 
-// Start automatic rotation
+// 2026-07-20 取消自動輪播：輪播讓用戶多半只看到隨機一則（觸控裝置無 hover 暫停，
+// 閱讀中途被換掉更傷）。公告固定顯示第一則（最新），由用戶用左右箭頭手動切換，
+// n/N 位置指示（#announcement-indicator）提示還有其他則。函式保留為 no-op，
+// 呼叫端（初始化與 resetAnnouncementRotation）不用改。
 function startAnnouncementRotation() {
-    if (announcements.length <= 1) return;
-
-    announcementInterval = setInterval(() => {
-        if (!isAnnouncementPaused) {
-            showNextAnnouncement();
-        }
-    }, 6000); // 每 6 秒切換一次
 }
 
 // Pause rotation
@@ -778,8 +819,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
         // 讓頂部標題與搜尋框先入眼）。
         appStarted = true;
-        const introSection = document.getElementById('product-intro-section');
-        if (introSection) introSection.style.display = 'none';
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
         const supportedCards = document.querySelector('.supported-cards');
@@ -975,6 +1014,16 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
+
+    // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
+    const merchantClearBtn = document.getElementById('merchant-clear-btn');
+    if (merchantClearBtn) {
+        merchantClearBtn.addEventListener('click', () => {
+            merchantInput.value = '';
+            handleMerchantInput(); // 收掉匹配狀態列/搜尋提示，並更新 ✕ 顯示
+            merchantInput.focus();
+        });
+    }
 
     // 精準搜尋開關：切換時重跑手動輸入的匹配。桌機/手機兩個 checkbox 保持同步
     // （比照 setupCardholderPromoToggle）。快捷搜尋不受精準搜尋影響
@@ -1197,8 +1246,15 @@ function searchFromHint(suggestion) {
 }
 
 // Handle merchant input changes
+// 依輸入框是否有內容切換清除 ✕ 的顯示（手動輸入與程式填值都要呼叫）
+function updateMerchantClearBtn() {
+    const btn = document.getElementById('merchant-clear-btn');
+    if (btn) btn.hidden = merchantInput.value.length === 0;
+}
+
 function handleMerchantInput() {
     const input = merchantInput.value.trim().toLowerCase();
+    updateMerchantClearBtn();
 
     console.log('🔍 handleMerchantInput:', input);
 
