@@ -5701,20 +5701,20 @@ input[type="text"].credit-limit-input:focus {
 /* Floating Feedback Button */
 /* 精選活動快速跳轉浮標：有搜尋結果時（JS 加 .is-visible）才顯示，點擊平滑捲到
    #spotlight-section。搜尋結果有時很長，這顆讓用戶一鍵跳到最底的精選活動區。
-   綠色系與 spotlight 回饋率貼紙同調，和琥珀色的「我的消費配卡」浮標區隔。 */
+   橘黃色系，和琥珀色的「我的消費配卡」浮標同暖色但更偏橘。 */
 .scroll-to-spotlight-btn {
     position: fixed;
     bottom: 16px;
     right: 16px;
     padding: 8px 12px;
-    background: #dcfce7;
-    border: 1px solid #22c55e;
+    background: #ffedd5;
+    border: 1px solid #f97316;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #15803d;
+    color: #c2410c;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     align-items: center;
@@ -5727,8 +5727,13 @@ input[type="text"].credit-limit-input:focus {
     display: flex;
 }
 
+/* 桌機顯示「↓ 精選活動」文字（.btn-text），手機只顯示 ↓🔥 圖示（.stsb-icon） */
+.scroll-to-spotlight-btn .stsb-icon {
+    display: none;
+}
+
 .scroll-to-spotlight-btn:hover {
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
     transform: translateY(-2px);
 }
 
@@ -6067,7 +6072,7 @@ input[type="text"].credit-limit-input:focus {
         right: 16px;
         width: 48px;
         height: 48px;
-        font-size: 22px;
+        font-size: 18px;
         padding: 0;
         justify-content: center;
     }
@@ -6085,9 +6090,13 @@ input[type="text"].credit-limit-input:focus {
         bottom: 128px;
     }
 
-    /* Hide text on mobile, only show icon */
+    /* Hide text on mobile, only show ↓🔥 icon */
     .scroll-to-spotlight-btn .btn-text {
         display: none;
+    }
+
+    .scroll-to-spotlight-btn .stsb-icon {
+        display: inline;
     }
 
     .image-preview-container {
