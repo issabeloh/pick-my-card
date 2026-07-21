@@ -1,7 +1,7 @@
 {
   "meta": {
-    "generatedAt": "2026-07-20T01:45:35.806Z",
-    "cardsVersion": "20260719-230819",
+    "generatedAt": "2026-07-21T03:05:56.920Z",
+    "cardsVersion": "20260721-110249",
     "note": "基準綁定 cards.version；活動期限日期敏感——cards.data 更新或活動到期造成的差異屬預期，確認後重拍基準"
   },
   "checks": [
