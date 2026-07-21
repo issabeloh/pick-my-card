@@ -530,6 +530,27 @@ function setupAnnouncementBar() {
         resumeAnnouncementRotation();
     });
 
+    // 手機版（方案 B）：圓點指示＋左右滑動換則。桌機以 CSS 隱藏圓點、保留箭頭。
+    buildAnnouncementDots();
+
+    // 滑動手勢：水平位移 >40px 且大於垂直位移才算滑動（避免吃掉頁面捲動與點擊）。
+    // passive:true——不呼叫 preventDefault，捲動效能不受影響；真的滑動時瀏覽器
+    // 自己就不會觸發 click，開公告 modal 的點擊行為不衝突。
+    let touchStartX = 0;
+    let touchStartY = 0;
+    announcementBar.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    announcementBar.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+            if (dx < 0) showNextAnnouncement();
+            else showPreviousAnnouncement();
+        }
+    }, { passive: true });
+
     // Click on text or date badge to show modal
     announcementText.addEventListener('click', (e) => {
         e.preventDefault();
@@ -591,6 +612,29 @@ function showAnnouncementModal(index) {
     };
 }
 
+// 手機版圓點指示：一則一顆，點擊可直接跳到該則（點擊區用 padding 撐到 ~20px）
+function buildAnnouncementDots() {
+    const dots = document.getElementById('announcement-dots');
+    if (!dots) return;
+    dots.innerHTML = '';
+    if (announcements.length <= 1) return;
+    announcements.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'announcement-dot';
+        dot.setAttribute('aria-label', `第 ${i + 1} 則公告`);
+        dot.addEventListener('click', () => displayAnnouncement(i));
+        dots.appendChild(dot);
+    });
+    updateAnnouncementDots(0);
+}
+
+function updateAnnouncementDots(index) {
+    const dots = document.getElementById('announcement-dots');
+    if (!dots) return;
+    Array.from(dots.children).forEach((d, i) => d.classList.toggle('active', i === index));
+}
+
 // Display announcement by index
 // ⚠️ announcement-text 只能用 textContent 放純文字，不能塞任何行內元素（含日期）：
 //    iOS Safari 對「line-clamp 元素內含 inline-block ＋ opacity 淡入淡出」會停止重繪
@@ -630,6 +674,7 @@ function displayAnnouncement(index) {
         if (announcementIndicator && announcements.length > 1) {
             announcementIndicator.textContent = `${index + 1}/${announcements.length}`;
         }
+        updateAnnouncementDots(index);
 
         // Fade in
         announcementText.classList.remove('fade-out');

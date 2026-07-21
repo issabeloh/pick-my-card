@@ -630,6 +630,32 @@ header h1 {
     display: none;
 }
 
+/* 手機版圓點指示（方案 B）：桌機隱藏、沿用箭頭；手機隱藏箭頭、改滑動＋圓點 */
+.announcement-dots {
+    display: none;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 3px;
+}
+
+.announcement-dot {
+    width: 6px;
+    height: 6px;
+    padding: 7px; /* content-box＋background-clip：視覺 6px、點擊區 20px */
+    box-sizing: content-box;
+    border: none;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.35);
+    background-clip: content-box;
+    cursor: pointer;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.announcement-dot.active {
+    width: 14px;
+    background-color: #ffffff;
+}
+
 /* Fade animation */
 .announcement-text.fade-out,
 .announcement-date-badge.fade-out {
@@ -2698,21 +2724,13 @@ input[type="number"]:focus {
         margin-top: 2px;
     }
 
+    /* 方案 B：手機隱藏箭頭/則數，文字吃滿寬度，改用滑動＋圓點指示 */
     .announcement-controls {
-        gap: 2px;
-        align-self: center;
+        display: none;
     }
 
-    .announcement-indicator {
-        font-size: 0.75rem;
-        padding: 1px 2px;
-    }
-
-    .announcement-btn {
-        font-size: 1.05rem;
-        padding: 12px 9px;
-        margin: -10px 0;
-        min-width: 36px;
+    .announcement-dots {
+        display: flex;
     }
 
     #announcement-close {
