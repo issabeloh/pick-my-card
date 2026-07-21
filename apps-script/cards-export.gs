@@ -887,7 +887,12 @@ function addOptionalField(obj, row, headers, fieldName, type = 'string', targetN
     } else if (type === 'boolean') {
       obj[name] = value === true || value === 'TRUE' || value === 'true';
     } else {
-      obj[name] = value;
+      // 字串欄位一律去頭尾空白（含隱形的 \r/\n）——與 rate/cap/name/items 等
+      // 已 trim 的欄位一致。cashbackModel 走這條，先前沒 trim，貼上帶 CRLF 的
+      // 來源會讓儲存格夾帶隱形尾端 \r（如 "rate+overseasCashback\r"），
+      // 前端用 includes()／=== 'rate' 比對時是顆潛在地雷。只 trim 真字串，
+      // 數字/布林/日期型不動。
+      obj[name] = (typeof value === 'string') ? value.trim() : value;
     }
   }
 }

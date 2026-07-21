@@ -443,7 +443,12 @@ function warnIfCrossSlotRefMisused(card, cashbackModel) {
 function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
     if (!model || !model.includes('+')) return designatedRate;
-    const isOverseas = model.includes('overseasBonusRate');
+    // 海外偵測＝字串裡有海外成分（加碼 overseasBonusRate 或基準 overseasCashback）。
+    // overseasCashback 是「海外基準」token，必須也算海外訊號，否則 resolveBaseRate
+    // 會退回 basicCashback（國內基準）——`rate+overseasCashback` 這種只列海外基準、
+    // 沒列海外加碼的 model 就會少算（幣倍卡 slot2 曾 4%+1%=5% 而非 4%+2%=6%）。
+    // ⚠️ 三處同步：getDisplayRate / rateCompositionButtonHtml / 呼叫端 isOverseasModel。
+    const isOverseas = model.includes('overseasBonusRate') || model.includes('overseasCashback');
     // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出對應成分時才計入，
     // 不再無條件加——「寫什麼才加什麼」。基本層關鍵字＝basic 或 overseasCashback
     // （海外 model 用 basic 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。
@@ -465,7 +470,8 @@ const CALC_BREAKDOWN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24"
 function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
     if (!model || !model.includes('+')) return '';
-    const isOverseas = model.includes('overseasBonusRate');
+    // 海外偵測含 overseasCashback（海外基準 token）——理由與三處同步規則見 getDisplayRate。
+    const isOverseas = model.includes('overseasBonusRate') || model.includes('overseasCashback');
     // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出時才顯示——
     // 與 getDisplayRate、calculateStackedCashback 的 gate 一致，三處必須同步。
     const applyBase = model.includes('basic') || model.includes('overseasCashback');
@@ -1081,13 +1087,19 @@ async function calculateCardCashback(card, searchTerm, amount) {
         //         "rate>basic>domesticBonusRate" — kept so cards not yet
         //         tagged (DBS Eco 國內項目, 凱基誠品, …) keep working unchanged.
         //
-        // Domestic vs overseas is read purely from whether the literal keyword
-        // `domesticBonusRate` / `overseasBonusRate` appears in the string —
-        // never auto-detected from the search term or item name.
+        // Domestic vs overseas is read purely from whether an overseas keyword
+        // appears in the string — the overseas BONUS token `overseasBonusRate`
+        // OR the overseas BASE token `overseasCashback` — never auto-detected
+        // from the search term or item name. Including overseasCashback here is
+        // what lets a `rate+overseasCashback` model (overseas base, no overseas
+        // bonus) resolve its base to overseasCashback instead of basicCashback.
+        // ⚠️ 三處同步：getDisplayRate / rateCompositionButtonHtml / 此處。
         // NOTE: the retired name "rate+basic" (used before this redesign) is NOT
         // an alias for bare "rate" — it now matches the "+" branch (stacking).
         // Rename any existing "rate+basic" data to bare "rate".
-        const isOverseasModel = cashbackModel ? cashbackModel.includes('overseasBonusRate') : false;
+        const isOverseasModel = cashbackModel
+            ? (cashbackModel.includes('overseasBonusRate') || cashbackModel.includes('overseasCashback'))
+            : false;
 
         if (cashbackModel === 'rate') {
             // Simple path, no bonus ever — handled by the final `else` branch below.
