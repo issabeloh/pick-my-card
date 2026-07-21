@@ -63,7 +63,16 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     displayCashbackSites(actualUserInput);
     displayReferralLink(actualUserInput);
 
+    // 結果標題：無匹配（只剩基本回饋，isBasicCashback）時沒有「指定通路回饋」，
+    // 標題退成「一般回饋」；有匹配時維持「一般回饋與指定通路回饋」。
+    const resultsTitle = resultsSection.querySelector('h2');
+    if (resultsTitle) {
+        resultsTitle.textContent = isBasicCashback ? '一般回饋' : '一般回饋與指定通路回饋';
+    }
+
     resultsSection.style.display = 'block';
+    // 有搜尋結果時顯示「精選活動」快速跳轉浮標（結果太長時一鍵跳到最底的精選活動區）
+    if (typeof updateScrollToSpotlightBtn === 'function') updateScrollToSpotlightBtn();
     // 商家落地頁的開頁自動計算：跳過這次捲動，讓頂部標題區塊與搜尋框先入眼（一次性旗標，
     // 之後用戶自己搜尋仍照常捲到結果）。
     if (window.__pmcSuppressNextScroll) {
@@ -75,7 +84,16 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         const showNoMatchStatus = statusBar && statusBar.style.display !== 'none' &&
             (statusBar.classList.contains('no-match') || statusBar.classList.contains('partial-match'));
         if (showNoMatchStatus) {
-            statusBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 手機：先讓聚焦中的輸入框（金額/商家）失焦收鍵盤，否則鍵盤收合造成的視窗
+            // 高度變化會打斷 smooth scroll，只捲一點點就停（用戶回報）。再用 rAF 等版面
+            // 回穩後把紅字捲到接近頂端（block:'start' ＋ #matched-item 的 scroll-margin-top），
+            // 讓「沒匹配到」明確跳到上方、下方接著顯示基本回饋結果。block:'start' 也比
+            // 'center' 更不受鍵盤造成的視窗高度變動影響。
+            const active = document.activeElement;
+            if (active && typeof active.blur === 'function') active.blur();
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                statusBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }));
         } else {
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }

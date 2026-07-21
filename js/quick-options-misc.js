@@ -614,7 +614,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
     // DOM Elements
-    const feedbackBtn = document.getElementById('feedback-btn');
+    // 回報錯誤入口只剩 avatar 下拉（#avatar-feedback，見 auth-user-data.js menuActions）；
+    // 浮動 #feedback-btn 已移除，這裡不再取用
     const feedbackModal = document.getElementById('feedback-modal');
     const closeFeedbackModal = document.getElementById('close-feedback-modal');
     const cancelFeedbackBtn = document.getElementById('cancel-feedback-btn');
@@ -628,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const feedbackStatus = document.getElementById('feedback-status');
 
     // Check if elements exist
-    if (!feedbackBtn || !feedbackModal) {
+    if (!feedbackModal) {
         console.warn('Feedback elements not found');
         return;
     }
@@ -685,17 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Open Feedback Modal
-    feedbackBtn.addEventListener('click', () => {
-        // Check if user is logged in
-        if (!currentUser) {
-            alert('請先登入才能回報問題 🔐\n\n登入後可以幫助我們更好地追蹤您的回報。');
-            return;
-        }
-
-        feedbackModal.style.display = 'flex';
-        disableBodyScroll();
-    });
+    // 開啟回報錯誤 modal 的入口在 avatar 下拉（auth-user-data.js 的 menuActions
+    // 'avatar-feedback'），該項只在登入後顯示，故不需再做登入檢查
 
     // Close Feedback Modal
     function closeFeedbackModalHandler() {

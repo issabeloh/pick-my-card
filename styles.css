@@ -76,7 +76,7 @@ html.pmc-embed .social-media-footer,
 html.pmc-embed .data-update-footer,
 html.pmc-embed .disclaimer-footer,
 html.pmc-embed #back-to-top-btn,
-html.pmc-embed #feedback-btn,
+html.pmc-embed #scroll-to-spotlight-btn,
 html.pmc-embed #my-mappings-btn,
 html.pmc-embed #pmc-boot-loader,
 html.pmc-embed .modal:not(#card-detail-modal) {
@@ -665,6 +665,12 @@ header h1 {
 .announcement-text.fade-in,
 .announcement-date-badge.fade-in {
     opacity: 1;
+}
+
+/* 日期徽章只用自身 opacity transition 淡入，取消全域 .fade-in 的 fadeIn 落下動畫
+   （@keyframes fadeIn 有 translateY，會讓徽章第一次出現時從上方落下；站長要求移除） */
+.announcement-date-badge.fade-in {
+    animation: none;
 }
 
 /* Announcement Modal */
@@ -1557,6 +1563,9 @@ input[type="number"]:focus {
     font-size: 13px;
     line-height: 1.5;
     display: inline-block;
+    /* 無匹配時 displayResults() 會 scrollIntoView({block:'start'}) 把這行紅字捲到接近
+       頂端；留點上緣空間避免貼齊視窗最上緣，也讓上方搜尋框露出一小截當定位參考 */
+    scroll-margin-top: 72px;
 }
 
 .matched-item.no-match {
@@ -2530,6 +2539,9 @@ input[type="number"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    /* 卡名（連釘選鈕）與右側「最優回饋」pill 之間保底距離：卡名很長（手機換行）時
+       釘選鈕會被推到右緣，沒有 gap 會與 pill 貼在一起 */
+    gap: 12px;
     margin-bottom: 8px;
 }
 
@@ -2774,8 +2786,10 @@ input[type="number"]:focus {
         overflow-wrap: anywhere;
     }
 
+    /* 回饋率不需要太多橫向空間，把省下的寬度給「回饋金額」欄，讓四位數金額
+       （如 NT$1,000）與計算機按鈕 .calc-breakdown-btn 能留在同一行不換行 */
     .card-details {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 0.8fr 1.35fr 0.85fr;
         gap: 6px;
     }
 
@@ -2789,6 +2803,18 @@ input[type="number"]:focus {
 
     .card-details .cashback-amount {
         font-size: 14px;
+    }
+
+    /* 手機版卡名太長時換到第二行（不再用 … 截斷；overflow-wrap 由 .card-result 繼承） */
+    .card-name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    /* 卡名換行成兩行時，ⓘ／釘選鈕靠齊第一行頂端，不要浮在兩行中間 */
+    .card-name-with-pin {
+        align-items: flex-start;
     }
 
     .cards-selection {
@@ -5224,25 +5250,32 @@ input[type="text"].credit-limit-input:focus {
    ============================================ */
 
 /* Floating My Mappings Button（琥珀底＋釘選 icon，與結果卡釘選態 pin-btn.pinned 同色系） */
+/* 我的配卡組合浮標：唯一「打開 modal」的捷徑鈕，用琥珀色圓角方塊，和灰色圓形的
+   捲動導覽鈕（精選活動／回到頂部）在視覺上分類。排在最下方。桌機/手機都只顯示圖示，
+   桌機 hover 時左側浮現文字標籤（.btn-text）。 */
 .my-mappings-floating-btn {
     position: fixed;
-    bottom: 72px;
+    bottom: 16px;
     right: 16px;
-    padding: 8px 12px;
+    width: 48px;
+    height: 48px;
     background: #fef3c7;
     border: 1px solid #f59e0b;
     border-radius: 6px;
-    font-size: 0.75rem;
     color: #b45309;
-    font-weight: 600;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
     overflow: visible;
+}
+
+.my-mappings-floating-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 .my-mappings-floating-btn:hover {
@@ -5673,35 +5706,67 @@ input[type="text"].credit-limit-input:focus {
    ============================================ */
 
 /* Floating Feedback Button */
-.feedback-floating-btn {
+/* 精選活動快速跳轉浮標：功能是「往下捲到精選活動區」，本質是捲動導覽（和回到頂部同類，
+   而非開 modal 的捷徑），因此沿用回到頂部鈕的灰色圓形設計。有搜尋結果時（JS 加 .is-visible）
+   才顯示。桌機/手機都只顯示圖示，桌機 hover 時左側浮現「精選活動」標籤。 */
+.scroll-to-spotlight-btn {
     position: fixed;
     bottom: 16px;
     right: 16px;
-    padding: 8px 12px;
-    background: rgba(107, 114, 128, 0.15);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
     border: 1px solid rgba(107, 114, 128, 0.2);
+    background: rgba(107, 114, 128, 0.15);
+    color: #374151;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    z-index: 999;
+    overflow: visible;
+    transition: all 0.2s ease;
+    /* 預設隱藏，僅在有搜尋結果時由 JS 切換 .is-visible 顯示 */
+    display: none;
+}
+
+.scroll-to-spotlight-btn.is-visible {
+    display: flex;
+}
+
+/* 我的配卡組合（M）排在最下方；M 有顯示時把精選活動鈕往上疊一層 */
+body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
+    bottom: 72px;
+}
+
+.scroll-to-spotlight-btn:active {
+    transform: scale(0.96);
+}
+
+/* 桌機浮標（我的配卡組合／精選活動）的 hover 文字標籤：平常隱藏，
+   hover 時浮現在圖示鈕左側；手機無 hover，於 media query 內整個隱藏 */
+.my-mappings-floating-btn .btn-text,
+.scroll-to-spotlight-btn .btn-text {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: rgba(31, 41, 55, 0.92);
+    color: #ffffff;
+    padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #6b7280;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    backdrop-filter: blur(8px);
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
 }
 
-.feedback-floating-btn:hover {
-    background: rgba(107, 114, 128, 0.25);
-    border-color: rgba(107, 114, 128, 0.3);
-    color: #374151;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.feedback-floating-btn:active {
-    transform: scale(0.98);
+.my-mappings-floating-btn:hover .btn-text,
+.scroll-to-spotlight-btn:hover .btn-text {
+    opacity: 1;
 }
 
 /* Image lightbox (click-to-enlarge for the first-spend gift image) */
@@ -5725,7 +5790,8 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* Back-to-top floating button — mobile only, sits above the feedback button */
+/* Back-to-top floating button — mobile only; top-most of the floating stack
+   (下方依序：我的配卡組合 → 精選活動 → 回到頂部，見 mobile media query 的疊放規則） */
 .back-to-top-btn {
     position: fixed;
     bottom: 16px;
@@ -6015,47 +6081,27 @@ input[type="text"].credit-limit-input:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-    .my-mappings-floating-btn {
-        bottom: 72px;
-        right: 16px;
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-        padding: 0;
-        justify-content: center;
-    }
-
-    /* Hide text on mobile, only show icon */
-    .my-mappings-floating-btn .btn-text {
+    /* 浮標桌機/手機同尺寸（48×48，樣式在各自 base）；此處只處理手機專屬的疊放與
+       隱藏 hover 文字。堆疊順序（下→上）：我的配卡組合 → 精選活動 → 回到頂部。 */
+    .my-mappings-floating-btn .btn-text,
+    .scroll-to-spotlight-btn .btn-text {
         display: none;
     }
 
-    .feedback-floating-btn {
-        bottom: 16px;
-        right: 16px;
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-        padding: 0;
-        justify-content: center;
-    }
-
-    /* Back-to-top: mobile only, stacked just above the feedback button.
-       When the "我的消費配卡" button is visible (logged in), it occupies the
-       slot above feedback, so push back-to-top one slot higher to avoid overlap. */
+    /* 回到頂部：手機專用，疊在最上方；下方每多一顆可見浮標就往上讓一層 56px */
     .back-to-top-btn.is-visible {
         display: flex;
-        bottom: 72px;
+        bottom: 16px;
         right: 16px;
     }
 
-    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible {
-        bottom: 128px;
+    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible,
+    body:has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+        bottom: 72px;
     }
 
-    /* Hide text on mobile, only show icon */
-    .feedback-floating-btn span:last-child {
-        display: none;
+    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+        bottom: 128px;
     }
 
     .image-preview-container {
