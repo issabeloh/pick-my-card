@@ -203,7 +203,7 @@ function showPinSuccessAnimation(button) {
     const cardElement = button.closest('.card-result');
 
     // 1. 顯示提示
-    showToast('已加入我的配卡✓', cardElement);
+    showToast('已加入我的配卡組合✓', cardElement);
 
     // 2. 顯示 +1 徽章動畫
     showPlusBadgeAnimation();
@@ -450,7 +450,7 @@ function renderMappingsList(searchTerm = '') {
                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
                 <p>${searchTerm ? '找不到符合的配對' : '還沒有配卡記錄'}</p>
-                <p style="font-size: 12px; margin-top: 8px;">登入後查詢商家，點擊結果卡片的釘選按鈕即可加入配卡</p>
+                <p style="font-size: 12px; margin-top: 8px;">登入後，釘選結果卡片即可加入我的配卡組合</p>
             </div>
         `;
         return;

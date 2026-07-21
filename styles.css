@@ -6090,13 +6090,25 @@ input[type="text"].credit-limit-input:focus {
         bottom: 128px;
     }
 
-    /* Hide text on mobile, only show ↓🔥 icon */
+    /* 手機隱藏文字，只顯示「🔥 ＋ 下方小 ▼」堆疊圖示（▼ 示意往下捲） */
     .scroll-to-spotlight-btn .btn-text {
         display: none;
     }
 
     .scroll-to-spotlight-btn .stsb-icon {
-        display: inline;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1;
+    }
+
+    .scroll-to-spotlight-btn .stsb-fire {
+        font-size: 18px;
+    }
+
+    .scroll-to-spotlight-btn .stsb-arrow {
+        font-size: 8px;
+        margin-top: 1px;
     }
 
     .image-preview-container {
