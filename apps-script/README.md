@@ -56,17 +56,24 @@
 
 ## GA4 成效匯出（`ga4-metrics-export.gs`，2026-07-22 新增）
 
-把 GA4 全站「分頁」成效指標撈進「PMC數據集中」試算表，給行銷部門討論用。搭配 landing.html
-新加的 GA4 tag（同一 property `G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
+把 GA4 各「到達頁」成效指標撈進「PMC數據集中」試算表的 `GA4_頁面成效` 分頁，給行銷部門評估
+/landing、/promos 等落地頁表現用。搭配 landing.html 新加的 GA4 tag（同一 property
+`G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
 
-- 主函數：`updatePmcMetrics`（撈最近 28 天，維度＝日期×頁面路徑，每次重寫資料區）
-- 指標：Sessions、Active users、New users、New users 佔比、Bounce rate、Engagement rate、
-  平均參與時間（＝`userEngagementDuration ÷ activeUsers`）、Page views
-- GA4 Property ID：`505426795`（寫在檔頭設定區；非 Measurement ID）
-- 依賴：Apps Script 進階服務「Google Analytics Data API」（識別碼 `AnalyticsData`）＋
-  GCP 專案啟用該 API＋執行帳號有 GA4 檢視權限（設定步驟見檔頭註解）
-- 自動更新：跑一次 `createDailyTrigger()`（每天 08:00 台北時間）
-- 檔尾註解含變體：累加保留歷史 / 全站彙總單列 / 只追 /landing 的改法
+- **⚠️ 這是 drop-in 函數備份，不是獨立可跑檔**：實際執行版在「PMC數據集中」試算表綁定的
+  Apps Script 專案 Code.gs（那支有 `updateAllReports` / GA4+GSC+Clarity 同步）。跟
+  cards-export.gs 綁的「信用卡管理系統」是**不同專案**，別搞混。
+- 函數：`updateGA4Pages()`——`updateAllReports()` 內已呼叫，補上定義即生效；跟著現有每日
+  排程跑，**不另建 trigger**。
+- 沿用 Code.gs 既有全域：`GA4_PROPERTY_ID`（`505426795`）、`getOrCreateSheet()`。
+  **絕不重複宣告**（重複宣告 const 會讓整個專案語法錯誤停擺——舊版範本踩過，已修）。
+- 寫入分頁：`GA4_頁面成效`（比照 `GA4_每日趨勢` / `GA4_流量來源` 命名，每次 `clear()` 重寫）。
+- 維度用 `landingPage`（不是 `pagePath`）：跳出率/互動率/新用戶是「到達頁」概念，跟 pagePath
+  併用 GA4 Data API 可能回「維度指標不相容」；landingPage 相容性有保證，也正好對應目的。
+- 指標：Sessions、活躍用戶、新用戶、新用戶佔比（`newUsers÷totalUsers`）、跳出率、互動率、
+  平均參與時間（`userEngagementDuration÷activeUsers`）、頁面瀏覽。
+- 依賴：進階服務 `AnalyticsData`——PMC數據集中 專案**已加**；執行帳號對 property 有 GA4
+  檢視權限（既有 GA4 報表能跑＝已具備）。
 
 ## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
 
