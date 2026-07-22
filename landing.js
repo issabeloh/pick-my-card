@@ -218,11 +218,11 @@
     window.addEventListener('resize', onScroll, { passive: true });
     update();
 
-    /* ---------- 混合捲動：第 1 幕跟手、第 2 幕起一次一幕 snap ----------
-       接管 wheel / touch / 鍵盤。第 1 幕（碎片收斂→結果卡→品牌）是「自由區」：
-       捲多少動多少，收斂隨手勢一點一點發生；頂到品牌畫面停住，再滑一次才進第 2 幕。
-       第 2 幕起一個手勢只前進/後退一個停留點，snap 到定位後解鎖，再滑才到下一幕。
-       離開一幕會 resetScene、回滑會重播，維持原引擎行為。
+    /* ---------- 混合捲動：碎片收斂段跟手、其後一次一幕 snap ----------
+       接管 wheel / touch / 鍵盤。碎片收斂段（開場→結果卡）是「自由區」：
+       捲多少動多少，收斂隨手勢一點一點發生；頂到結果卡停住，再滑一次才 snap
+       進品牌畫面。品牌畫面起一個手勢只前進/後退一個停留點，snap 到定位後解鎖，
+       再滑才到下一幕。離開一幕會 resetScene、回滑會重播，維持原引擎行為。
        （reduced-motion 已在最上方 return，不會進到這裡，維持原生捲動與無障礙。） */
 
     // 停留點：用 bounds 換算，weights 之後若調整仍正確。
@@ -282,10 +282,12 @@
     var freeClampT = 0;
     var snapAnim = null;
 
-    /* 自由區＝第 1 幕（碎片收斂 → 結果卡 → 品牌）：捲多少、動多少，收斂跟著
-       手指/滾輪一點一點發生（不做 snap 動畫）；頂到 stops[2]（品牌畫面）就停住，
-       手放開後「再滑一次」才 snap 進第 2 幕。第 2 幕起維持一手勢一幕。 */
-    function freeMax() { return stops[2]; }
+    /* 自由區＝只有碎片收斂段（開場 → 「搭台北捷運」結果卡，stops[1]）：捲多少、
+       動多少，收斂跟著手指/滾輪一點一點發生（不做 snap 動畫）；頂到結果卡就停住，
+       手放開後「再滑一次」才 snap 進品牌畫面。之後（品牌畫面起）全部一手勢一幕。
+       ⚠️ 自由區上限不能設在品牌畫面（stops[2]）：結果卡 0.60 淡出、品牌 0.70 進場，
+       中間有過渡空窗，跟手滑動會停在空白畫面；改成 snap 進品牌就會直接穿過空窗。 */
+    function freeMax() { return stops[1]; }
 
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
@@ -341,14 +343,14 @@
         if (Math.abs(e.deltaY) < WHEEL_MIN) return;
         var y = currentY();
         if (y < freeMax() - 1) {
-            // 自由區：捲多少動多少，頂到品牌畫面（freeMax）就停
+            // 自由區：捲多少動多少，頂到結果卡（freeMax）就停
             var ny = Math.min(freeMax(), Math.max(0, y + e.deltaY * WHEEL_MULT));
             window.scrollTo(0, ny);
             if (ny >= freeMax()) freeClampT = now; // 記下頂到底的時間，擋 momentum 尾巴直接換幕
             return;
         }
         if (e.deltaY < 0 && y <= freeMax() + 1) {
-            // 站在自由區底往回滾 → 回到自由區（品牌 → 結果卡 → 碎片倒帶）
+            // 站在自由區底往回滾 → 回到自由區（結果卡 → 碎片倒帶）
             window.scrollTo(0, Math.max(0, y + e.deltaY * WHEEL_MULT));
             return;
         }
