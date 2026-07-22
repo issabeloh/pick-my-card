@@ -383,6 +383,26 @@ body {
     line-height: 1.75;
     transition-delay: 0.15s;
 }
+/* 品牌畫面的「如何使用？」引子——下方接著的 STEP 1~5 各幕就是答案，
+   小箭頭暗示「繼續往下看就知道」 */
+.lp-brand-how {
+    margin-top: 18px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e40af;
+    letter-spacing: 0.04em;
+    transition-delay: 0.24s;
+}
+.lp-brand-how::after {
+    content: "";
+    display: block;
+    width: 8px;
+    height: 8px;
+    margin: 10px auto 0;
+    border-right: 2px solid #93c5fd;
+    border-bottom: 2px solid #93c5fd;
+    transform: rotate(45deg);
+}
 
 /* ============================================================
    卡面（純 CSS，含晶片 / 感應波 / 金屬光澤）

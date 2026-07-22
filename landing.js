@@ -175,8 +175,7 @@
             if (s === idx) playScene(s); else resetScene(s);
         }
 
-        // 右上角「開始使用」快速入口：只在第 1 幕顯示，進入第 2 幕淡出
-        if (skipBtn) skipBtn.classList.toggle('gone', idx > 0);
+        // 右上角「開始使用」快速入口：全程常駐（站長要求「中間不要消失」），不再隨幕淡出
 
         // 第 1 幕：碎片收斂進度（subP 0.08→0.34 完成收斂，接著結果卡凝聚成形）
         var conv = idx === 0 ? clamp01((subP - 0.08) / 0.26) : 1;
@@ -267,10 +266,10 @@
         return best;
     }
 
-    var STEP_DUR = 720;    // 每次 snap 捲動的時間（毫秒）
-    var QUIET_GAP = 140;   // 手勢停止多久才解鎖（吸收 trackpad / 觸控慣性尾巴）
+    var STEP_DUR = 500;    // 每次 snap 捲動的時間（毫秒）——調短讓翻頁更即時
+    var QUIET_GAP = 120;   // 手勢停止多久才解鎖（吸收 trackpad / 觸控慣性尾巴）
     var WHEEL_MIN = 4;     // 太小的 wheel delta 視為雜訊，不觸發翻頁
-    var TOUCH_MIN = 30;    // 滑動距離超過此值（px）才算一次翻頁
+    var TOUCH_MIN = 24;    // 滑動距離超過此值（px）才算一次翻頁
     var locked = false;
     var lastGestureTime = 0;
     var snapAnim = null;
@@ -323,22 +322,27 @@
         step(e.deltaY > 0 ? 1 : -1);
     }, { passive: false });
 
-    // 觸控：往上滑 → 下一幕、往下滑 → 上一幕
-    var touchY = null;
+    // 觸控：往上滑 → 下一幕、往下滑 → 上一幕。
+    // 一超過門檻就在 touchmove 當下觸發（不等手指放開），手機才不會「滑了半天畫面沒動、
+    // 以為沒滑到」；同時擋掉原生捲動改由 snap 接手。
+    var touchY = null, touchFired = false;
     window.addEventListener('touchstart', function (e) {
         touchY = e.touches.length ? e.touches[0].clientY : null;
+        touchFired = false;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
-        e.preventDefault(); // 擋掉原生捲動，改由 snap 接手
-    }, { passive: false });
-    window.addEventListener('touchend', function (e) {
-        lastGestureTime = performance.now();
-        if (touchY === null || locked) { touchY = null; return; }
-        var endY = e.changedTouches.length ? e.changedTouches[0].clientY : touchY;
-        var dy = touchY - endY; // 手指往上移（往上滑）→ dy > 0 → 下一幕
-        touchY = null;
+        e.preventDefault();
+        if (touchFired || locked || touchY === null || !e.touches.length) return;
+        var dy = touchY - e.touches[0].clientY; // 手指往上移（往上滑）→ dy > 0 → 下一幕
         if (Math.abs(dy) < TOUCH_MIN) return;
+        touchFired = true; // 本次滑動只翻一頁，之後的 move 忽略到放手為止
+        lastGestureTime = performance.now();
         step(dy > 0 ? 1 : -1);
+    }, { passive: false });
+    window.addEventListener('touchend', function () {
+        lastGestureTime = performance.now();
+        touchY = null;
+        touchFired = false;
     }, { passive: true });
 
     // 鍵盤：方向鍵 / PgUp、PgDn / Space / Home、End
