@@ -505,6 +505,20 @@ a {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
+/* 單色放大鏡 SVG（Bootstrap search icon，同 header 其他圖示同一套線條）：絕對定位
+   在框內左側、淡灰不搶眼，pointer-events:none 讓點擊穿透到底下的 input（點圖示
+   等於點輸入框）。刻意不用彩色 🔍 emoji——站長回饋太顯眼（2026-07-22）。 */
+.promos-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
 #promos-search-input {
   -webkit-appearance: none;
   appearance: none;
@@ -513,7 +527,7 @@ a {
   border: none;
   border-radius: 11px;
   background: transparent;
-  padding: 12px 44px 12px 16px; /* 右側留 44px 讓長輸入不壓在清除 ✕ 底下 */
+  padding: 12px 44px 12px 40px; /* 左 40px 讓開放大鏡圖示、右 44px 讓長輸入不壓在清除 ✕ 底下 */
   font-family: inherit;
   font-size: 0.95rem;
   color: var(--pmc-ink);
