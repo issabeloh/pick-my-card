@@ -43,6 +43,18 @@
         })(window, document, "clarity", "script", "u1w7nqgag1");
     </script>
 
+    <!-- Google Analytics 4（gtag.js，async 不卡 first paint）
+         與 index.html 同一個 GA4 property（G-RW8F159L52）；index.html 走 Firebase Analytics，
+         landing 是獨立靜態頁不載 Firebase 模組，故直接用標準 gtag.js。
+         補上前 /landing 在 GA4 完全無資料（只有 Clarity）；加上後才能用 Data API 撈成效。 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RW8F159L52"></script>
+    <script type="text/javascript">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-RW8F159L52');
+    </script>
+
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
     {
