@@ -66,6 +66,8 @@
 - 依賴：Apps Script 進階服務「Google Analytics Data API」（識別碼 `AnalyticsData`）＋
   GCP 專案啟用該 API＋執行帳號有 GA4 檢視權限（設定步驟見檔頭註解）
 - 自動更新：跑一次 `createDailyTrigger()`（每天 08:00 台北時間）
+- 放哪：建議直接加進現有 Apps Script 專案（與 cards-export 並存）。`TARGET_SPREADSHEET_ID`
+  留空＝寫進綁定的試算表分頁；填 ID＝寫進獨立試算表（PMC數據集中 是獨立檔案時）
 - 檔尾註解含變體：累加保留歷史 / 全站彙總單列 / 只追 /landing 的改法
 
 ## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）

@@ -27,7 +27,12 @@
 
 // ── 設定區 ──────────────────────────────────────────────────────────────────
 var GA4_PROPERTY_ID = '505426795';       // GA4 Property ID（數字，非 Measurement ID G-...）
-var SHEET_NAME      = 'PMC數據集中';       // 目標工作表名稱
+var SHEET_NAME      = 'PMC數據集中';       // 目標工作表（分頁）名稱
+
+// 「PMC數據集中」所在的試算表：
+//   留空 '' → 用目前 Apps Script 綁定的那份試算表（若 PMC數據集中 就是現有表的一個分頁，選這個）。
+//   填 ID  → 去開另一份獨立試算表（PMC數據集中 是獨立檔案時，貼它網址 /d/ 後面那串 ID）。
+var TARGET_SPREADSHEET_ID = '';
 var LOOKBACK_DAYS   = 28;                  // 每次撈最近幾天（含昨天，不含今天不完整資料）
 var MIN_SESSIONS    = 1;                   // 過濾雜訊：session 數低於此的頁面不列（設 0 = 全列）
 
@@ -124,7 +129,9 @@ function buildRows_(report) {
  * 重寫工作表：表頭 + 資料。找不到工作表就建立。
  */
 function writeToSheet_(rows) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = TARGET_SPREADSHEET_ID
+    ? SpreadsheetApp.openById(TARGET_SPREADSHEET_ID)  // 情況 B：獨立試算表
+    : SpreadsheetApp.getActiveSpreadsheet();          // 情況 A：目前綁定的試算表
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
 
