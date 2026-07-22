@@ -54,6 +54,20 @@
     靜默消失且無警告。改為依表頭自動偵測上限；槽 1–5 維持 ❌ 擋匯出、槽 6+ 用 ⚠️
     警告不擋（避免舊資料突然全面擋死）。
 
+## GA4 成效匯出（`ga4-metrics-export.gs`，2026-07-22 新增）
+
+把 GA4 全站「分頁」成效指標撈進「PMC數據集中」試算表，給行銷部門討論用。搭配 landing.html
+新加的 GA4 tag（同一 property `G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
+
+- 主函數：`updatePmcMetrics`（撈最近 28 天，維度＝日期×頁面路徑，每次重寫資料區）
+- 指標：Sessions、Active users、New users、New users 佔比、Bounce rate、Engagement rate、
+  平均參與時間（＝`userEngagementDuration ÷ activeUsers`）、Page views
+- GA4 Property ID：`505426795`（寫在檔頭設定區；非 Measurement ID）
+- 依賴：Apps Script 進階服務「Google Analytics Data API」（識別碼 `AnalyticsData`）＋
+  GCP 專案啟用該 API＋執行帳號有 GA4 檢視權限（設定步驟見檔頭註解）
+- 自動更新：跑一次 `createDailyTrigger()`（每天 08:00 台北時間）
+- 檔尾註解含變體：累加保留歷史 / 全站彙總單列 / 只追 /landing 的改法
+
 ## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
 
 | 服務 | 免費額度 | 本專案用量與注意點 |
