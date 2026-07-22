@@ -218,10 +218,10 @@
     window.addEventListener('resize', onScroll, { passive: true });
     update();
 
-    /* ---------- 一次一幕的 snap 捲動 ----------
-       接管 wheel / touch / 鍵盤：一個手勢只前進或後退「一個停留點」，平滑捲到定位
-       後才解鎖，再滾一次才會到下一幕（原本一次滾動會翻過好幾幕）。捲動用動畫做，
-       所以途中 update() 照跑，第 1 幕的收斂/結果卡/品牌等滾動敘事仍會順順播出；
+    /* ---------- 混合捲動：第 1 幕跟手、第 2 幕起一次一幕 snap ----------
+       接管 wheel / touch / 鍵盤。第 1 幕（碎片收斂→結果卡→品牌）是「自由區」：
+       捲多少動多少，收斂隨手勢一點一點發生；頂到品牌畫面停住，再滑一次才進第 2 幕。
+       第 2 幕起一個手勢只前進/後退一個停留點，snap 到定位後解鎖，再滑才到下一幕。
        離開一幕會 resetScene、回滑會重播，維持原引擎行為。
        （reduced-motion 已在最上方 return，不會進到這裡，維持原生捲動與無障礙。） */
 
@@ -268,43 +268,38 @@
         return best;
     }
 
-    var STEP_DUR = 420;     // 一般 snap 捲動時間（毫秒）：短＋easeOut 起步快，翻頁跟手
-    var CONV_DUR = 2000;    // 停留點 0↔1（第 1 幕碎片收斂段）：拉長，讓收斂慢慢演完
-    var BRAND_DUR = 900;    // 停留點 1↔2（結果卡 → 品牌畫面）：中速換場
+    var STEP_DUR = 420;     // snap 捲動時間（毫秒）：短＋easeOut 起步快，翻頁跟手
     var QUIET_GAP = 100;    // 手勢停止多久才解鎖（吸收 trackpad / 觸控慣性尾巴）
     var WHEEL_MIN = 4;      // 太小的 wheel delta 視為雜訊，不觸發翻頁
-    var TOUCH_MIN = 24;     // 滑動距離超過此值（px）才算一次翻頁
+    var TOUCH_MIN = 24;     // snap 區：滑動距離超過此值（px）才算一次翻頁
+    var WHEEL_MULT = 1.6;   // 自由區滾輪捲動倍率
+    var TOUCH_MULT = 1.8;   // 自由區觸控跟手倍率
     var FOOTER_DWELL = 650; // 抵達最後一幕後要先停穩這麼久，再滑才會進頁尾（防連滑衝過頭）
+    var FREE_EDGE_COOLDOWN = 300; // 滾輪頂到自由區底後，這段時間內不換幕（擋 momentum 尾巴）
     var locked = false;
     var lastGestureTime = 0;
     var lastSettleTime = 0;
+    var freeClampT = 0;
     var snapAnim = null;
 
-    function easeInOutCubic(t) {
-        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    }
+    /* 自由區＝第 1 幕（碎片收斂 → 結果卡 → 品牌）：捲多少、動多少，收斂跟著
+       手指/滾輪一點一點發生（不做 snap 動畫）；頂到 stops[2]（品牌畫面）就停住，
+       手放開後「再滑一次」才 snap 進第 2 幕。第 2 幕起維持一手勢一幕。 */
+    function freeMax() { return stops[2]; }
+
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
-    function stepDuration(fromIdx, toIdx) {
-        var lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
-        if (lo === 0 && hi === 1) return CONV_DUR;
-        if (lo === 1 && hi === 2) return BRAND_DUR;
-        return STEP_DUR;
-    }
-    function animateTo(targetTop, dur) {
+    function animateTo(targetTop) {
         if (snapAnim) cancelAnimationFrame(snapAnim);
         var startTop = window.pageYOffset || document.documentElement.scrollTop || 0;
         var delta = targetTop - startTop;
         if (Math.abs(delta) < 1) { locked = false; return; }
-        // 長換場（收斂/品牌）走緩入緩出的敘事節奏；一般翻頁走 easeOut——
-        // 一開始就快才「跟手」，起步慢會被當成沒反應
-        var ease = dur >= 900 ? easeInOutCubic : easeOutCubic;
         var startT = performance.now();
         locked = true;
         (function frame(now) {
-            var q = Math.min(1, (now - startT) / dur);
-            window.scrollTo(0, Math.round(startTop + delta * ease(q)));
+            var q = Math.min(1, (now - startT) / STEP_DUR);
+            window.scrollTo(0, Math.round(startTop + delta * easeOutCubic(q)));
             if (q < 1) {
                 snapAnim = requestAnimationFrame(frame);
             } else {
@@ -322,52 +317,77 @@
             locked = false;
         }
     }
-    function goToStop(idx, fromIdx) {
+    function goToStop(idx) {
         idx = idx < 0 ? 0 : (idx >= stops.length ? stops.length - 1 : idx);
-        if (fromIdx == null) fromIdx = nearestStop(currentY());
-        animateTo(stops[idx], stepDuration(fromIdx, idx));
+        animateTo(stops[idx]);
     }
     function step(dir) {
-        var from = nearestStop(currentY());
-        var target = from + dir;
+        var target = nearestStop(currentY()) + dir;
         if (target < 0 || target > stops.length - 1) return; // 已到頭 / 尾就不動
         // 頁尾停留點要「刻意再滑一次」才進：抵達最後一幕 CTA 後須先停穩
         // FOOTER_DWELL，連續甩滑不會直接衝到最底、把 CTA 畫面跳過去
         if (hasFooterStop && target === stops.length - 1 &&
             performance.now() - lastSettleTime < FOOTER_DWELL) return;
-        goToStop(target, from);
+        goToStop(target);
     }
 
-    // 滑鼠滾輪 / trackpad：完全接管，一個手勢一幕
+    // 滑鼠滾輪 / trackpad：自由區內直接跟著滾（收斂由捲動位置驅動）；
+    // 自由區外一個手勢一幕
     window.addEventListener('wheel', function (e) {
         e.preventDefault();
-        lastGestureTime = performance.now();
+        var now = performance.now();
+        lastGestureTime = now;
         if (locked) return;
         if (Math.abs(e.deltaY) < WHEEL_MIN) return;
+        var y = currentY();
+        if (y < freeMax() - 1) {
+            // 自由區：捲多少動多少，頂到品牌畫面（freeMax）就停
+            var ny = Math.min(freeMax(), Math.max(0, y + e.deltaY * WHEEL_MULT));
+            window.scrollTo(0, ny);
+            if (ny >= freeMax()) freeClampT = now; // 記下頂到底的時間，擋 momentum 尾巴直接換幕
+            return;
+        }
+        if (e.deltaY < 0 && y <= freeMax() + 1) {
+            // 站在自由區底往回滾 → 回到自由區（品牌 → 結果卡 → 碎片倒帶）
+            window.scrollTo(0, Math.max(0, y + e.deltaY * WHEEL_MULT));
+            return;
+        }
+        if (e.deltaY > 0 && y <= freeMax() + 1 &&
+            now - freeClampT < FREE_EDGE_COOLDOWN) return; // 同一波慣性，不換幕
         step(e.deltaY > 0 ? 1 : -1);
     }, { passive: false });
 
-    // 觸控：往上滑 → 下一幕、往下滑 → 上一幕。
-    // 一超過門檻就在 touchmove 當下觸發（不等手指放開），手機才不會「滑了半天畫面沒動、
-    // 以為沒滑到」；同時擋掉原生捲動改由 snap 接手。
-    var touchY = null, touchFired = false;
+    // 觸控：自由區內完全跟手（手指動多少畫面捲多少，收斂一點一點發生）；
+    // 自由區外一超過門檻就在 touchmove 當下翻一幕（不等手指放開）。
+    // 手勢起點決定模式：在自由區起手的整個手勢都跟手，就算頂到自由區底也只停住，
+    // 不會同一手勢直接衝進第 2 幕（放手後再滑一次才換幕）。
+    var touchY = null, touchLastY = null, touchFired = false, touchFree = false;
     window.addEventListener('touchstart', function (e) {
-        touchY = e.touches.length ? e.touches[0].clientY : null;
+        touchY = touchLastY = e.touches.length ? e.touches[0].clientY : null;
         touchFired = false;
+        touchFree = currentY() < freeMax() - 1;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
         e.preventDefault();
         lastGestureTime = performance.now(); // 手指還在動就持續刷新，解鎖要等真的停下
         if (touchFired || locked || touchY === null || !e.touches.length) return;
-        var dy = touchY - e.touches[0].clientY; // 手指往上移（往上滑）→ dy > 0 → 下一幕
+        var cy = e.touches[0].clientY;
+        if (touchFree) {
+            var d = (touchLastY - cy) * TOUCH_MULT; // 手指往上移 → 畫面前進
+            touchLastY = cy;
+            window.scrollTo(0, Math.min(freeMax(), Math.max(0, currentY() + d)));
+            return;
+        }
+        var dy = touchY - cy; // 手指往上移（往上滑）→ dy > 0 → 下一幕
         if (Math.abs(dy) < TOUCH_MIN) return;
         touchFired = true; // 本次滑動只翻一頁，之後的 move 忽略到放手為止
         step(dy > 0 ? 1 : -1);
     }, { passive: false });
     function endTouch() {
         lastGestureTime = performance.now();
-        touchY = null;
+        touchY = touchLastY = null;
         touchFired = false;
+        touchFree = false;
     }
     window.addEventListener('touchend', endTouch, { passive: true });
     window.addEventListener('touchcancel', endTouch, { passive: true });
