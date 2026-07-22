@@ -1653,6 +1653,8 @@ a {
 
   .promo-card-chevron {
     display: flex;
+    /* 手機版展開/收合箭頭加大（原 1.1rem 太小不好按也不明顯） */
+    font-size: 1.7rem;
   }
 
   /* display 已由桌機規則統一設為 block，這裡不用再設一次；字級跟桌機一樣
