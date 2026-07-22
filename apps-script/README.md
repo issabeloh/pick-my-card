@@ -219,3 +219,27 @@ voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_te
 2. 黃底列 = AI 沒把握（看「AI想問的問題」欄），對照「原文引用」欄驗證數字
 3. 確認 OK 後，把該列 **id 以後的欄位**（與正式表欄位一一對應）複製貼到正式的新戶活動表，「核准」欄打 V 做記錄
 4. 之後的第三階段會做「勾核准 → 一鍵寫入」，這一步手動複製就消失
+
+## 主要活動解析（新卡權益，2026-07-17 建置）
+
+| 項目 | 內容 |
+|---|---|
+| 程式檔案 | 自動化檔 Apps Script 內 `權益解析-新卡.gs`（備份：`card-benefits-parser.gs`） |
+| 依賴 | 與 `benefits-parser.gs` 同專案，共用 `callGemini_` / `getCardsSheet_` / `getCardIds_` |
+| 輸入 | `新卡解析輸入` 分頁（A2＝官網權益頁文字、B2＝id 提示選填、C2＝網址選填） |
+| 產出 | `待審核-新卡基本`（1 列＝ Cards Data 固定欄位）＋`待審核-新卡組別`（垂直，一組一列） |
+| 入口 | 選單「🤖 權益自動化 → 解析新卡（主要活動）」 |
+
+### cashbackModel 分工（最重要）
+
+- **AI 只抽事實**：rate/items/category/條件/期間/cap 金額，加語意分類 `group_kind`（指定通路加碼／國外一般消費／國外指定加碼／廣告／排除型／其他）與 `is_stacked`（是否疊加）
+- **程式產出安全模型**：排除型→`rate`；一般海外→`overseasCashback+overseasBonusRate`+`hideInDisplay`；指定通路加碼→留空（cap 內 rate、溢出 basic）
+- **⚠️ 跨槽疊加（`rate+rate_1+basic` 這類）程式無法從文字推導** → 該組標黃、cashbackModel 留空、「cashbackModel需手填?」欄＝TRUE、程式備註提示參考同卡其他組。這是資料建模決策，不是抽取，必須人工
+- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%` 換算（海外/國內加碼的 Cap 同理）
+
+### 審核與套用
+
+1. 開 `待審核-新卡基本` + `待審核-新卡組別`；黃底＝AI 沒把握或 cashbackModel 需你手填
+2. 對照 `原文引用` 欄驗證數字；`levelSettings`/`levelLabelFormat` 一律人工（級別名稱＝識別碼鐵則）
+3. 基本表那列貼進 Cards Data 對應固定欄位；組別逐組把值填進該卡的 `rate_N/items_N/cap_N/category_N/conditions_N/periodStart_N/periodEnd_N/hideInDisplay_N/cashbackModel_N`（N＝建議槽位）
+4. 之後照現有流程 `runQACheck → exportToJSON`；建議搭配 `docs/ops/regression.md` 人工回歸驗算新卡的回饋計算
