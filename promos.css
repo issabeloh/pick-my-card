@@ -482,6 +482,85 @@ a {
   letter-spacing: 0.01em;
 }
 
+/* ---------------- 卡片名稱搜尋框（2026-07-22）----------------
+   抄自 styles.css .merchant-search-box / .merchant-input-wrap / .merchant-clear-btn
+   的配方（白底、粗細框、聚焦藍光暈、自製清除 ✕ 鈕，關掉原生 search cancel），
+   顏色改用本頁 --pmc-* 變數。互動見 promos.js setupSearch()。 */
+.promos-search-box {
+  margin: 4px 0 14px;
+}
+
+.promos-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 3px solid var(--pmc-border);
+  border-radius: 14px;
+  background: var(--pmc-white);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.promos-search-input-wrap:focus-within {
+  border-color: var(--pmc-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+#promos-search-input {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  padding: 12px 44px 12px 16px; /* 右側留 44px 讓長輸入不壓在清除 ✕ 底下 */
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--pmc-ink);
+}
+
+#promos-search-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 原生 type=search 的清除叉／裝飾關掉，改用下方跨瀏覽器一致的自製 ✕ 鈕 */
+#promos-search-input::-webkit-search-cancel-button,
+#promos-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.promos-search-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promos-search-clear-btn:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* [hidden] 的 UA 樣式被上面 display:inline-flex 蓋過（同 specificity 下 author
+   勝），這裡明確補回 display:none，否則沒有輸入時 ✕ 仍會露出（跟
+   #promos-owned-filter-group[hidden] 同一個坑）。 */
+.promos-search-clear-btn[hidden] {
+  display: none;
+}
+
 /* ---------------- Controls: filter chips + sort ---------------- */
 
 .promos-controls {

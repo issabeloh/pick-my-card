@@ -1991,6 +1991,18 @@ function pmcPageTemplate_(o) {
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '  </section>\n' +
 '\n' +
+// 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
+// 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
+// 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
+// promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
+// 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
+'  <div class="promos-search-box">\n' +
+'    <div class="promos-search-input-wrap">\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 搜尋卡片名稱" aria-label="搜尋卡片名稱">\n' +
+'      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
+'    </div>\n' +
+'  </div>\n' +
+'\n' +
 // 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
 // 分不出是「篩選活動類型」跟「排序方式」兩組不同的操作。id 仍留在
 // .promos-filter-chips / .promos-sort-toggle 本體（promos.js 用 getElementById
