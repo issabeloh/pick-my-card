@@ -239,17 +239,19 @@
         { s: 6, sub: 0.55 }
     ];
     // stops = 每個停留點的「絕對捲動位置（px）」
+    var hasFooterStop = false;
     function computeStops() {
         var span = scrolly.offsetHeight - window.innerHeight;
         var arr = stopDefs.map(function (d) {
             var prog = bounds[d.s][0] + d.sub * (bounds[d.s][1] - bounds[d.s][0]);
             return Math.round(prog * span);
         });
-        arr[arr.length - 1] = span; // 最後一幕 CTA 對齊 scrolly 底（畫面置中）
+        arr[arr.length - 1] = span; // 最後一幕 CTA 對齊 scrolly 底（畫面置中、正常顯示）
         // scrolly 之後還有頁尾 SEO 說明（.lp-footer，不在任何一幕內）：多加一個
         // 「捲到文件最底」的停留點，讓最後再滑一次能看到它（否則會被鎖在 scrolly 底看不到）
         var docMax = Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
-        if (docMax > span + 4) arr.push(docMax);
+        hasFooterStop = docMax > span + 4;
+        if (hasFooterStop) arr.push(docMax);
         return arr;
     }
     var stops = computeStops();
@@ -266,31 +268,48 @@
         return best;
     }
 
-    var STEP_DUR = 500;    // 每次 snap 捲動的時間（毫秒）——調短讓翻頁更即時
-    var QUIET_GAP = 120;   // 手勢停止多久才解鎖（吸收 trackpad / 觸控慣性尾巴）
-    var WHEEL_MIN = 4;     // 太小的 wheel delta 視為雜訊，不觸發翻頁
-    var TOUCH_MIN = 24;    // 滑動距離超過此值（px）才算一次翻頁
+    var STEP_DUR = 420;     // 一般 snap 捲動時間（毫秒）：短＋easeOut 起步快，翻頁跟手
+    var CONV_DUR = 2000;    // 停留點 0↔1（第 1 幕碎片收斂段）：拉長，讓收斂慢慢演完
+    var BRAND_DUR = 900;    // 停留點 1↔2（結果卡 → 品牌畫面）：中速換場
+    var QUIET_GAP = 100;    // 手勢停止多久才解鎖（吸收 trackpad / 觸控慣性尾巴）
+    var WHEEL_MIN = 4;      // 太小的 wheel delta 視為雜訊，不觸發翻頁
+    var TOUCH_MIN = 24;     // 滑動距離超過此值（px）才算一次翻頁
+    var FOOTER_DWELL = 650; // 抵達最後一幕後要先停穩這麼久，再滑才會進頁尾（防連滑衝過頭）
     var locked = false;
     var lastGestureTime = 0;
+    var lastSettleTime = 0;
     var snapAnim = null;
 
     function easeInOutCubic(t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
-    function animateTo(targetTop) {
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+    function stepDuration(fromIdx, toIdx) {
+        var lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
+        if (lo === 0 && hi === 1) return CONV_DUR;
+        if (lo === 1 && hi === 2) return BRAND_DUR;
+        return STEP_DUR;
+    }
+    function animateTo(targetTop, dur) {
         if (snapAnim) cancelAnimationFrame(snapAnim);
         var startTop = window.pageYOffset || document.documentElement.scrollTop || 0;
         var delta = targetTop - startTop;
         if (Math.abs(delta) < 1) { locked = false; return; }
+        // 長換場（收斂/品牌）走緩入緩出的敘事節奏；一般翻頁走 easeOut——
+        // 一開始就快才「跟手」，起步慢會被當成沒反應
+        var ease = dur >= 900 ? easeInOutCubic : easeOutCubic;
         var startT = performance.now();
         locked = true;
         (function frame(now) {
-            var q = Math.min(1, (now - startT) / STEP_DUR);
-            window.scrollTo(0, Math.round(startTop + delta * easeInOutCubic(q)));
+            var q = Math.min(1, (now - startT) / dur);
+            window.scrollTo(0, Math.round(startTop + delta * ease(q)));
             if (q < 1) {
                 snapAnim = requestAnimationFrame(frame);
             } else {
                 snapAnim = null;
+                lastSettleTime = performance.now();
                 scheduleUnlock();
             }
         })(startT);
@@ -303,14 +322,20 @@
             locked = false;
         }
     }
-    function goToStop(idx) {
+    function goToStop(idx, fromIdx) {
         idx = idx < 0 ? 0 : (idx >= stops.length ? stops.length - 1 : idx);
-        animateTo(stops[idx]);
+        if (fromIdx == null) fromIdx = nearestStop(currentY());
+        animateTo(stops[idx], stepDuration(fromIdx, idx));
     }
     function step(dir) {
-        var target = nearestStop(currentY()) + dir;
+        var from = nearestStop(currentY());
+        var target = from + dir;
         if (target < 0 || target > stops.length - 1) return; // 已到頭 / 尾就不動
-        goToStop(target);
+        // 頁尾停留點要「刻意再滑一次」才進：抵達最後一幕 CTA 後須先停穩
+        // FOOTER_DWELL，連續甩滑不會直接衝到最底、把 CTA 畫面跳過去
+        if (hasFooterStop && target === stops.length - 1 &&
+            performance.now() - lastSettleTime < FOOTER_DWELL) return;
+        goToStop(target, from);
     }
 
     // 滑鼠滾輪 / trackpad：完全接管，一個手勢一幕
@@ -332,18 +357,20 @@
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
         e.preventDefault();
+        lastGestureTime = performance.now(); // 手指還在動就持續刷新，解鎖要等真的停下
         if (touchFired || locked || touchY === null || !e.touches.length) return;
         var dy = touchY - e.touches[0].clientY; // 手指往上移（往上滑）→ dy > 0 → 下一幕
         if (Math.abs(dy) < TOUCH_MIN) return;
         touchFired = true; // 本次滑動只翻一頁，之後的 move 忽略到放手為止
-        lastGestureTime = performance.now();
         step(dy > 0 ? 1 : -1);
     }, { passive: false });
-    window.addEventListener('touchend', function () {
+    function endTouch() {
         lastGestureTime = performance.now();
         touchY = null;
         touchFired = false;
-    }, { passive: true });
+    }
+    window.addEventListener('touchend', endTouch, { passive: true });
+    window.addEventListener('touchcancel', endTouch, { passive: true });
 
     // 鍵盤：方向鍵 / PgUp、PgDn / Space / Home、End
     window.addEventListener('keydown', function (e) {
