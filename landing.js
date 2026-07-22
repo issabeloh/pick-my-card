@@ -239,24 +239,29 @@
         { s: 5, sub: 0.35 },
         { s: 6, sub: 0.55 }
     ];
+    // stops = 每個停留點的「絕對捲動位置（px）」
     function computeStops() {
+        var span = scrolly.offsetHeight - window.innerHeight;
         var arr = stopDefs.map(function (d) {
-            return bounds[d.s][0] + d.sub * (bounds[d.s][1] - bounds[d.s][0]);
+            var prog = bounds[d.s][0] + d.sub * (bounds[d.s][1] - bounds[d.s][0]);
+            return Math.round(prog * span);
         });
-        arr[arr.length - 1] = 1; // 最後一幕捲到底，下面不留空白
+        arr[arr.length - 1] = span; // 最後一幕 CTA 對齊 scrolly 底（畫面置中）
+        // scrolly 之後還有頁尾 SEO 說明（.lp-footer，不在任何一幕內）：多加一個
+        // 「捲到文件最底」的停留點，讓最後再滑一次能看到它（否則會被鎖在 scrolly 底看不到）
+        var docMax = Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
+        if (docMax > span + 4) arr.push(docMax);
         return arr;
     }
     var stops = computeStops();
 
-    function currentProgress() {
-        var span = scrolly.offsetHeight - window.innerHeight;
-        if (span <= 0) return 0;
-        return clamp01(-scrolly.getBoundingClientRect().top / span);
+    function currentY() {
+        return window.pageYOffset || document.documentElement.scrollTop || 0;
     }
-    function nearestStop(p) {
+    function nearestStop(y) {
         var best = 0, bestD = Infinity;
         for (var i = 0; i < stops.length; i++) {
-            var d = Math.abs(stops[i] - p);
+            var d = Math.abs(stops[i] - y);
             if (d < bestD) { bestD = d; best = i; }
         }
         return best;
@@ -301,12 +306,10 @@
     }
     function goToStop(idx) {
         idx = idx < 0 ? 0 : (idx >= stops.length ? stops.length - 1 : idx);
-        var span = scrolly.offsetHeight - window.innerHeight;
-        if (span <= 0) return;
-        animateTo(Math.round(stops[idx] * span));
+        animateTo(stops[idx]);
     }
     function step(dir) {
-        var target = nearestStop(currentProgress()) + dir;
+        var target = nearestStop(currentY()) + dir;
         if (target < 0 || target > stops.length - 1) return; // 已到頭 / 尾就不動
         goToStop(target);
     }

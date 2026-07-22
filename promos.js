@@ -313,6 +313,11 @@
       var el = e.target.closest('.promo-card-toggle');
       if (!el || !mq.matches) return;
       if (e.target.closest('.promo-apply-btn')) return;
+      // 只有點在展開箭頭（.promo-card-chevron）上才展開/收合；一般手指點到徽章、
+      // 卡圖、標題等後代元素不再觸發（站長回饋：點擊範圍太大會誤觸）。
+      // e.target === el 這條保留給無障礙輔具：AT 觸發 role="button" 時 click 的
+      // target 會是 toggle 本身（而非某個後代），這種情況仍要能展開。
+      if (e.target !== el && !e.target.closest('.promo-card-chevron')) return;
       toggle(el);
     });
 

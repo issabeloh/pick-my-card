@@ -1274,8 +1274,10 @@ a {
 }
 
 @media (max-width: 768px) {
+  /* 展開/收合只由箭頭觸發（見 promos.js），所以手型游標放在箭頭上，
+     整塊 toggle 不再給可點暗示，避免「看似整張可點、點了才知道只有箭頭有用」 */
   .promo-card-toggle {
-    cursor: pointer;
+    cursor: default;
   }
 
   .promo-card-toggle:focus-visible {
@@ -1655,6 +1657,7 @@ a {
     display: flex;
     /* 手機版展開/收合箭頭加大（原 1.1rem 太小不好按也不明顯） */
     font-size: 1.7rem;
+    cursor: pointer;
   }
 
   /* display 已由桌機規則統一設為 block，這裡不用再設一次；字級跟桌機一樣
