@@ -1,217 +1,94 @@
-/**
- * Pick My Card — GA4 成效匯出到「PMC數據集中」Google Sheet
- * ============================================================================
- * 用 GA4 Data API v1 撈全站「分頁」成效指標，寫進試算表給行銷部門討論用。
- * 不只 /landing——維度用 pagePath，涵蓋 landing、主頁、merchant 落地頁等所有頁面。
- *
- * ⚠️ 這是備份副本，實際執行版在「PMC數據集中」試算表綁定的 Apps Script 專案裡
- *    （那個已有 updateAllReports / GA4+GSC+Clarity 同步的 Code.gs）。改動兩邊同步。
- *    ※ 注意：這支綁的是「PMC數據集中」，跟 cards-export.gs 那個綁「信用卡管理系統」的
- *      是不同的 Apps Script 專案，別搞混。
- *
- * ── 怎麼裝進現有專案（PMC數據集中 已綁 Apps Script，多數前置已就緒）──────────
- * 1. 服務 AnalyticsData：你的專案「Services」已經加了 ✅（截圖可見），不用再加。
- * 2. GA4 檢視權限：執行帳號對 property 505426795 要有「檢視者」以上（既有 GA4 報表能跑＝已有）。
- * 3. 把本檔函數貼進現有專案（新增一個 .gs 檔，或併進 Code.gs 都可）。
- * 4. 【建議】不要另建 trigger——把 updateGA4Pages() 加進你現有的 updateAllReports()：
- *        function updateAllReports() {
- *          updateGA4Daily();
- *          updateGA4Channels();
- *          updateGA4Pages();   // ← 加這行，跟著既有排程一起跑
- *          updateGSCQueries();
- *          ...
- *        }
- *    （若要獨立排程才用 createDailyTrigger()；但你已有 updateAllReports 的觸發器，不需要。）
- * 5. 手動跑一次 updateGA4Pages() 驗證，資料會寫進新分頁「GA4_分頁成效」。
- *
- * ── 指標對照（使用者指定的 5 項）──────────────────────────────────────────
- *   Bounce rate            → bounceRate
- *   Engagement rate        → engagementRate
- *   Sessions               → sessions
- *   Active users           → activeUsers
- *   Average engagement time→ userEngagementDuration ÷ activeUsers（GA4 後台同算法）
- *   New users 佔比          → newUsers ÷ totalUsers
- * ============================================================================
- */
+// ============================================================================
+// Pick My Card — GA4 到達頁成效（updateGA4Pages）
+// ----------------------------------------------------------------------------
+// 這是「PMC數據集中」試算表綁定 Apps Script 專案（Code.gs：GA4+GSC+Clarity 同步）的
+// 一段【drop-in 函數】備份，不是獨立可跑的檔。實際執行版在該試算表的 Code.gs 裡，改動兩邊同步。
+//   ※ 與 cards-export.gs（綁「信用卡管理系統」）是不同的 Apps Script 專案，別搞混。
+//
+// 安裝：把下面 updateGA4Pages() 貼進 Code.gs（或新增一個 .gs 檔）。
+//   - updateAllReports() 裡已經有 updateGA4Pages();（先前加的），補上本定義即可運作。
+//   - 沿用 Code.gs 既有的全域 const GA4_PROPERTY_ID 與 getOrCreateSheet()，不重複宣告
+//     （重複宣告 const 會讓整個專案語法錯誤停擺）。
+//   - 不自帶 trigger：跟著現有 updateAllReports 的每日排程一起跑即可。
+//
+// 為什麼用 landingPage 維度而非 pagePath：
+//   跳出率/互動率/新用戶是「到達頁（session 入口）」概念，跟 pagePath 併用 GA4 Data API 可能
+//   回「維度與指標不相容」。用 landingPage 相容性有保證，也正好對應「評估 /landing、/promos
+//   當行銷落地頁的表現」這個目的。想改看「任一被瀏覽頁」→ 把 dimension.name 換成 'pagePath'
+//   並自行確認相容性（跳出率/互動率可能要拿掉）。
+//
+// 指標對照（使用者指定）：
+//   Sessions→sessions／Active users→activeUsers／New users 佔比→newUsers÷totalUsers／
+//   Bounce rate→bounceRate／Engagement rate→engagementRate／
+//   Average engagement time→userEngagementDuration÷activeUsers（GA4 後台同算法）
+// ============================================================================
 
-// ── 設定區 ──────────────────────────────────────────────────────────────────
-var GA4_PROPERTY_ID = '505426795';       // GA4 Property ID（數字，非 Measurement ID G-...）
-var SHEET_NAME      = 'GA4_分頁成效';      // 寫入的分頁名稱（新分頁，比照既有 Clarity_每日 命名）
-
-// 本檔綁在「PMC數據集中」試算表上，所以留空即可（getActiveSpreadsheet 就是這份表）。
-//   留空 ''：用綁定的試算表 ← 你的情況選這個。
-//   填 ID  ：改去開別份獨立試算表（本專案用不到）。
-var TARGET_SPREADSHEET_ID = '';
-var LOOKBACK_DAYS   = 28;                  // 每次撈最近幾天（含昨天，不含今天不完整資料）
-var MIN_SESSIONS    = 1;                   // 過濾雜訊：session 數低於此的頁面不列（設 0 = 全列）
-
-// 每次執行「重寫」資料區（清掉舊資料重填最近 LOOKBACK_DAYS 天），確保無重複、永遠是最新。
-// 想改成「累加保留歷史」→ 見檔尾 appendMode 說明。
-// ────────────────────────────────────────────────────────────────────────────
-
-/**
- * 主函數：撈 GA4 分頁成效，寫進「PMC數據集中」。手動或由觸發器呼叫。
- */
+// ---------- GA4：近 30 天各到達頁成效（含 /landing、/promos 等）----------
 function updateGA4Pages() {
-  var report = runGa4Report_();
-  var rows   = buildRows_(report);
-  writeToSheet_(rows);
-  Logger.log('✅ 已更新 %s：%s 列（最近 %s 天，頁面 × 日期）',
-             SHEET_NAME, rows.length, LOOKBACK_DAYS);
-}
+  const sheet = getOrCreateSheet('GA4_頁面成效');
+  sheet.clear();
 
-/**
- * 呼叫 GA4 Data API runReport。維度 = 日期 + 頁面路徑；指標 = 使用者指定那幾項的原始值。
- */
-function runGa4Report_() {
-  var request = {
-    dateRanges: [{ startDate: LOOKBACK_DAYS + 'daysAgo', endDate: 'yesterday' }],
-    dimensions: [
-      { name: 'date' },
-      { name: 'pagePath' }
-    ],
-    metrics: [
-      { name: 'sessions' },
-      { name: 'activeUsers' },
-      { name: 'newUsers' },
-      { name: 'totalUsers' },
-      { name: 'bounceRate' },
-      { name: 'engagementRate' },
-      { name: 'userEngagementDuration' }, // 秒；平均參與時間 = 此值 ÷ activeUsers
-      { name: 'screenPageViews' }
-    ],
-    // 只留有 session 的頁面，並排除雜訊；MIN_SESSIONS 過濾在 buildRows_ 再做一次（API 端先粗篩）
-    orderBys: [
-      { dimension: { dimensionName: 'date' }, desc: true },
-      { metric: { metricName: 'sessions' }, desc: true }
-    ],
-    limit: 100000
-  };
+  const dimension = AnalyticsData.newDimension();
+  dimension.name = 'landingPage'; // 到達頁路徑（無 query），如 /landing、/promos、/
 
-  // Advanced Service 呼叫：AnalyticsData.Properties.runReport
-  return AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
-}
+  const mSessions    = AnalyticsData.newMetric(); mSessions.name    = 'sessions';
+  const mActiveUsers = AnalyticsData.newMetric(); mActiveUsers.name = 'activeUsers';
+  const mNewUsers    = AnalyticsData.newMetric(); mNewUsers.name    = 'newUsers';
+  const mTotalUsers  = AnalyticsData.newMetric(); mTotalUsers.name  = 'totalUsers';
+  const mBounce      = AnalyticsData.newMetric(); mBounce.name      = 'bounceRate';
+  const mEngRate     = AnalyticsData.newMetric(); mEngRate.name     = 'engagementRate';
+  const mEngDur      = AnalyticsData.newMetric(); mEngDur.name      = 'userEngagementDuration';
+  const mViews       = AnalyticsData.newMetric(); mViews.name       = 'screenPageViews';
 
-/**
- * 把 API 回傳整理成一列列陣列（含算出來的「平均參與時間」與「New users 佔比」）。
- */
-function buildRows_(report) {
-  var rows = [];
-  if (!report || !report.rows) return rows;
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = '30daysAgo';
+  dateRange.endDate = 'yesterday';
 
-  report.rows.forEach(function (r) {
-    var dimDate  = r.dimensionValues[0].value;          // YYYYMMDD
-    var pagePath = r.dimensionValues[1].value;
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dimension];
+  request.metrics = [mSessions, mActiveUsers, mNewUsers, mTotalUsers,
+                     mBounce, mEngRate, mEngDur, mViews];
+  request.dateRanges = [dateRange];
 
-    var sessions       = num_(r.metricValues[0].value);
-    var activeUsers    = num_(r.metricValues[1].value);
-    var newUsers       = num_(r.metricValues[2].value);
-    var totalUsers     = num_(r.metricValues[3].value);
-    var bounceRate     = num_(r.metricValues[4].value); // 0~1
-    var engagementRate = num_(r.metricValues[5].value); // 0~1
-    var engDuration    = num_(r.metricValues[6].value); // 秒
-    var pageViews      = num_(r.metricValues[7].value);
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
 
-    if (sessions < MIN_SESSIONS) return;
-
-    var avgEngSec      = activeUsers > 0 ? (engDuration / activeUsers) : 0;   // 平均參與時間（秒/人）
-    var newUsersRatio  = totalUsers  > 0 ? (newUsers / totalUsers)     : 0;   // New users 佔比 0~1
-
-    rows.push([
-      formatDate_(dimDate),        // 日期 YYYY-MM-DD
-      pagePath,                    // 頁面路徑（/landing、/、/merchant/... 等）
-      sessions,                    // Sessions
-      activeUsers,                 // Active users
-      newUsers,                    // New users
-      newUsersRatio,               // New users 佔比（格式化成 %）
-      bounceRate,                  // Bounce rate（%）
-      engagementRate,              // Engagement rate（%）
-      Math.round(avgEngSec),       // 平均參與時間（秒）
-      pageViews                    // Page views（附帶參考）
-    ]);
-  });
-
-  return rows;
-}
-
-/**
- * 重寫工作表：表頭 + 資料。找不到工作表就建立。
- */
-function writeToSheet_(rows) {
-  var ss = TARGET_SPREADSHEET_ID
-    ? SpreadsheetApp.openById(TARGET_SPREADSHEET_ID)  // 情況 B：獨立試算表
-    : SpreadsheetApp.getActiveSpreadsheet();          // 情況 A：目前綁定的試算表
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
-
-  var header = ['日期', '頁面路徑', 'Sessions', 'Active users', 'New users',
-                'New users 佔比', 'Bounce rate', 'Engagement rate',
-                '平均參與時間(秒)', 'Page views'];
-
-  sheet.clearContents();
-  sheet.getRange(1, 1, 1, header.length).setValues([header]).setFontWeight('bold');
-
-  if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, header.length).setValues(rows);
-
-    // 百分比欄位（佔比 / bounce / engagement）格式化成 %
-    sheet.getRange(2, 6, rows.length, 1).setNumberFormat('0.0%'); // New users 佔比
-    sheet.getRange(2, 7, rows.length, 1).setNumberFormat('0.0%'); // Bounce rate
-    sheet.getRange(2, 8, rows.length, 1).setNumberFormat('0.0%'); // Engagement rate
-  }
-
-  // 更新時間戳記（放在表頭右邊一格，方便行銷確認資料新鮮度）
-  sheet.getRange(1, header.length + 2).setValue(
-    '更新於 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm'));
-
+  sheet.appendRow(['到達頁面', 'Sessions', '活躍用戶', '新用戶', '新用戶佔比',
+                   '跳出率', '互動率', '平均參與時間(秒)', '頁面瀏覽']);
   sheet.setFrozenRows(1);
-}
+  if (!report.rows) return;
 
-// ── 小工具 ──────────────────────────────────────────────────────────────────
-function num_(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+  // 依 Sessions 由多到少排序（比照 updateGA4Channels 的作法，前面就是重點頁）
+  const sortedRows = report.rows.slice().sort((a, b) =>
+    Number(b.metricValues[0].value) - Number(a.metricValues[0].value)
+  );
 
-function formatDate_(yyyymmdd) {
-  // '20260722' → '2026-07-22'
-  return yyyymmdd.slice(0, 4) + '-' + yyyymmdd.slice(4, 6) + '-' + yyyymmdd.slice(6, 8);
-}
+  const values = sortedRows.map(row => {
+    const sessions    = Number(row.metricValues[0].value);
+    const activeUsers = Number(row.metricValues[1].value);
+    const newUsers    = Number(row.metricValues[2].value);
+    const totalUsers  = Number(row.metricValues[3].value);
+    const bounceRate  = Number(row.metricValues[4].value); // 0~1
+    const engRate     = Number(row.metricValues[5].value); // 0~1
+    const engDur      = Number(row.metricValues[6].value); // 秒（總參與時間）
+    const views       = Number(row.metricValues[7].value);
 
-// ── 觸發器管理 ────────────────────────────────────────────────────────────────
-/**
- * 建立每天 08:00（台北時間）自動更新的觸發器。跑一次即可；重複跑會先清掉舊的避免重複。
- */
-function createDailyTrigger() {
-  removeTriggers();
-  ScriptApp.newTrigger('updateGA4Pages')
-    .timeBased()
-    .atHour(8)
-    .everyDays(1)
-    .inTimezone('Asia/Taipei')
-    .create();
-  Logger.log('✅ 已建立每天 08:00 更新觸發器');
-}
+    const newRatio = totalUsers  > 0 ? newUsers / totalUsers      : 0; // 新用戶佔比 0~1
+    const avgEng   = activeUsers > 0 ? Math.round(engDur / activeUsers) : 0; // 平均參與時間(秒/人)
 
-/** 移除本專案所有 updateGA4Pages 觸發器。 */
-function removeTriggers() {
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'updateGA4Pages') ScriptApp.deleteTrigger(t);
+    return [
+      row.dimensionValues[0].value, // 到達頁面
+      sessions,
+      activeUsers,
+      newUsers,
+      newRatio,   // E：% 格式
+      bounceRate, // F：% 格式
+      engRate,    // G：% 格式
+      avgEng,     // 秒
+      views,
+    ];
   });
-}
 
-/*
- * ── 想改成「累加保留歷史」而非每次重寫？──────────────────────────────────────
- * 把 writeToSheet_() 換成 append 邏輯：
- *   1. 縮短 LOOKBACK_DAYS（例如 = 1，只撈昨天）。
- *   2. 用 sheet.appendRow(row) 或 getRange(lastRow+1,...).setValues(rows) 往下加。
- *   3. 注意重複：以 (日期, 頁面路徑) 當唯一鍵，append 前先讀現有資料去重，
- *      或每天固定只在早上跑一次撈「昨天」單日資料即可天然不重複。
- *
- * ── 只想要「全站彙總單列」而非分頁？──────────────────────────────────────────
- *   拿掉 dimensions 裡的 { name: 'pagePath' }，只留 date（或連 date 都拿掉撈區間總和）。
- *
- * ── 只想追 /landing？────────────────────────────────────────────────────────
- *   在 request 加維度篩選：
- *   request.dimensionFilter = {
- *     filter: { fieldName: 'pagePath',
- *               stringFilter: { matchType: 'EXACT', value: '/landing' } }
- *   };
- */
+  sheet.getRange(2, 1, values.length, 9).setValues(values);
+  // 新用戶佔比(E)、跳出率(F)、互動率(G) 三欄套百分比格式
+  sheet.getRange(2, 5, values.length, 3).setNumberFormat('0.0%');
+}
