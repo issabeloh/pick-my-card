@@ -97,7 +97,7 @@
   // 篩選狀態：類型 chips（typeFilter）與「隱藏我持有的卡片」（hideOwned）疊加
   // 運作，統一由 refreshVisibility() 依兩個條件重算每張卡的 hidden，取代原本
   // 只看類型的 applyFilter()（2026-07-16 第四輪站長回饋新增持有卡篩選）。
-  var filterState = { typeFilter: 'all', hideOwned: false };
+  var filterState = { typeFilter: 'all', hideOwned: false, searchQuery: '' };
   var ownedCardIds = null; // 讀到的持有卡 id 清單（Array），沒有持有資料時維持 null
 
   function setupFilters() {
@@ -112,6 +112,31 @@
       filterState.typeFilter = btn.getAttribute('data-filter') || 'all';
       refreshVisibility();
     });
+  }
+
+  // 卡片名稱搜尋（2026-07-22）：即時 substring 比對 data-card-name，疊加在類型/
+  // 持有卡篩選之上（統一由 refreshVisibility 依三個條件重算每張卡的 hidden）。
+  // 比對前一律 toLowerCase + trim——卡名多為中文，但 Richart／iLEO／Ubear 等
+  // 拉丁字要大小寫不敏感。純前端過濾，不 fetch。清除 ✕ 鈕有輸入才顯示，樣式與
+  // 主站 #merchant-input 的清除鈕一致。狀態不記憶——重整回到未搜尋（跟類型/排序
+  // toggle 同哲學）。
+  function setupSearch() {
+    var input = document.getElementById('promos-search-input');
+    var clearBtn = document.getElementById('promos-search-clear-btn');
+    if (!input) return;
+    function apply() {
+      filterState.searchQuery = input.value.trim().toLowerCase();
+      if (clearBtn) clearBtn.hidden = !input.value;
+      refreshVisibility();
+    }
+    input.addEventListener('input', apply);
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        input.value = '';
+        input.focus();
+        apply();
+      });
+    }
   }
 
   function refreshVisibility() {
@@ -129,7 +154,12 @@
         var cardId = card.getAttribute('data-card-id') || '';
         ownedMatch = ownedCardIds.indexOf(cardId) === -1;
       }
-      var show = typeMatch && ownedMatch;
+      var searchMatch = true;
+      if (filterState.searchQuery) {
+        var cardName = (card.getAttribute('data-card-name') || '').toLowerCase();
+        searchMatch = cardName.indexOf(filterState.searchQuery) !== -1;
+      }
+      var show = typeMatch && ownedMatch && searchMatch;
       card.hidden = !show;
       if (show) anyVisible = true;
     });
@@ -692,6 +722,7 @@
     setupBackToTopButton();
     refreshBadgesAndExpiry();
     setupFilters();
+    setupSearch();
     setupOwnedFilter();
     setupSort();
     setupCardToggle();
