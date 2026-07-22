@@ -59,15 +59,19 @@
 把 GA4 全站「分頁」成效指標撈進「PMC數據集中」試算表，給行銷部門討論用。搭配 landing.html
 新加的 GA4 tag（同一 property `G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
 
-- 主函數：`updatePmcMetrics`（撈最近 28 天，維度＝日期×頁面路徑，每次重寫資料區）
+- **⚠️ 屬於不同的 Apps Script 專案**：這支綁在「PMC數據集中」試算表上（那個已有
+  `updateAllReports` / GA4+GSC+Clarity 同步的 Code.gs），跟 cards-export.gs 綁的
+  「信用卡管理系統」不是同一個專案。備份放這裡集中管理，但別搞混執行版位置。
+- 主函數：`updateGA4Pages`（撈最近 28 天，維度＝日期×頁面路徑，每次重寫分頁）
+- 寫入分頁：`GA4_分頁成效`（新分頁，比照既有 `Clarity_每日` 命名）
 - 指標：Sessions、Active users、New users、New users 佔比、Bounce rate、Engagement rate、
   平均參與時間（＝`userEngagementDuration ÷ activeUsers`）、Page views
 - GA4 Property ID：`505426795`（寫在檔頭設定區；非 Measurement ID）
-- 依賴：Apps Script 進階服務「Google Analytics Data API」（識別碼 `AnalyticsData`）＋
-  GCP 專案啟用該 API＋執行帳號有 GA4 檢視權限（設定步驟見檔頭註解）
-- 自動更新：跑一次 `createDailyTrigger()`（每天 08:00 台北時間）
-- 放哪：建議直接加進現有 Apps Script 專案（與 cards-export 並存）。`TARGET_SPREADSHEET_ID`
-  留空＝寫進綁定的試算表分頁；填 ID＝寫進獨立試算表（PMC數據集中 是獨立檔案時）
+- 依賴：進階服務「Google Analytics Data API」（`AnalyticsData`）——PMC數據集中 專案**已加**；
+  執行帳號需對 property 有 GA4 檢視權限（既有 GA4 報表能跑＝已具備）
+- 安裝：把函數貼進 PMC數據集中 專案，並把 `updateGA4Pages()` 加進現有 `updateAllReports()`，
+  跟著既有觸發器一起跑（不必另建 trigger；`createDailyTrigger()` 僅獨立排程時才用）
+- `TARGET_SPREADSHEET_ID`：留空即可（綁定的就是 PMC數據集中）；填 ID 才會改開別份表
 - 檔尾註解含變體：累加保留歷史 / 全站彙總單列 / 只追 /landing 的改法
 
 ## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
