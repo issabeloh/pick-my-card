@@ -95,7 +95,7 @@
 - **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
-## 8. 「我的配卡」modal（分組卡片式，2026-07-17 重造）
+## 8. 「我的配卡組合」modal（分組卡片式，2026-07-17 重造；UI 名稱原為「我的配卡」，2026-07-21 改為「我的配卡組合」，id/函數仍沿用 mappings）
 
 **視圖**（`renderMappingsList()`，Grep "分組卡片式視圖"）：一張信用卡＝一個 `.mapping-group`——卡名色塊（統一淺灰 `#f1eff0`，卡名 14px）＋卡圖小圖＋ⓘ 貼卡名旁（開 showCardDetail，`#card-detail-modal` z-index 1100 疊在所有 modal 之上）。組內一列＝一個**活動**：同卡＋同回饋率＋同截止日的配對合併，商家各自成白底 pill（仿快速搜尋 `.tag-item`；刪除 × 在 pill 內、紅色）；列左活動期限、右綠色回饋率。活動列**不開放拖曳**，固定回饋率高→低（同率截止日近→遠）。舊表格視圖已移除。手機無橫向捲動。
 
