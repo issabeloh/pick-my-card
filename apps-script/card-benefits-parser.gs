@@ -132,14 +132,15 @@ function extractCard_(rawText, idHint, generalText) {
     '',
     '【groups 每組欄位】',
     '12. rate 回饋率數字；items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
-    '13. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，涵蓋（有才寫）：',
-    '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；消費門檻（單筆或當月滿額，如「須單筆滿3,000」）；',
-    '    登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫「詳見官網」）；MCC code 認定；國內/國外認列；',
-    '    排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）；消費上限算法。',
-    '    不要寫免責/罰則樣板（喪失資格、銀行保留權利那類）。',
-    '14. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
-    '15. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
-    '16. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
+    '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限（少見）。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
+    '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
+    '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫詳見官網）；',
+    '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）。',
+    '    【不要寫進 conditions】：單筆滿額門檻（放 min_spend）；一般的回饋上限（已由 cap 表達，只有「以信用額度加計NT$X萬」這種特殊上限定義才寫）；免責/罰則樣板（喪失資格、銀行保留權利）。',
+    '    「認列為國內/國外通路」只在特例寫：同一通路難判國內外、且國內外回饋率不同而拆成兩組時，在國外那組註明「認列為國外通路」。',
+    '15. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
+    '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
+    '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
     '',
     readKeywordAnchors_(),   // 【關鍵字對應】——從「解析關鍵字對應」分頁動態載入，站長可自行維護
     '',
@@ -157,6 +158,8 @@ function extractCard_(rawText, idHint, generalText) {
       period_end: { type: 'STRING', description: 'YYYY/M/D' },
       group_kind: { type: 'STRING', enum: ['指定通路加碼', '國外指定加碼', '排除型', '其他'] },
       is_stacked: { type: 'BOOLEAN' },
+      min_spend: { type: 'NUMBER', description: '單筆最低消費門檻金額' },
+      max_spend: { type: 'NUMBER', description: '單筆消費金額上限（少見）' },
       cap_spend: { type: 'NUMBER' },
       cap_reward: { type: 'NUMBER' },
       evidence: { type: 'STRING' },
@@ -362,7 +365,8 @@ function writeGroupReview_(cardId, groups, basic) {
     const d = deriveGroupModel_(g);
     appendGroupRow_(sheet, now, cardId, nextSlot(), g.group_kind || '', {
       rate: (g.rate != null ? g.rate : ''), model: d.model, modelNeedsHuman: d.modelNeedsHuman,
-      cap: cap, minSpend: '', maxSpend: '', items: (g.items || []).join(','), category: g.category || '',
+      cap: cap, minSpend: (g.min_spend != null ? g.min_spend : ''), maxSpend: (g.max_spend != null ? g.max_spend : ''),
+      items: (g.items || []).join(','), category: g.category || '',
       conditions: g.conditions || '', ps: g.period_start || '', pe: g.period_end || '', hide: d.hide,
       note: d.note, needsReview: g.needs_review, reviewQ: g.review_question || '', evidence: g.evidence || ''
     });
