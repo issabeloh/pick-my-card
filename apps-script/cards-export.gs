@@ -1418,7 +1418,7 @@ const PMC_SITE_URL = 'https://pickmycard.app';
 const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516';
 
 const PMC_CHIP_DEFS = [
-  { key: 'gift', label: '贈品／首刷禮' },
+  { key: 'gift', label: '首刷禮' },
   { key: 'bonus', label: '回饋加碼' },
   { key: 'voucher', label: '定額抵用' }
 ];
@@ -2123,6 +2123,11 @@ o.filterChipsHtml + '\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +
+// 「資料更新於」戳章：放在 controls 下方、grid 上方，讓用戶一眼看到活動新鮮度
+// （2026-07-23 站長回饋，原本在頁尾 footer 較難注意到）。updatedIso 只在活動內容真的
+// 變動時才前進（見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
+'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
+'\n' +
 '  <!-- PROMOS:START -->\n' +
 '  <div class="promo-grid" id="promo-grid">\n' +
 o.cardsHtml + '\n' +
@@ -2172,8 +2177,6 @@ o.cardsHtml + '\n' +
 '    </div>\n' +
 '  </div>\n' +
 '</div>\n' +
-'\n' +
-'<div class="promos-data-update-footer">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '\n' +
 // 回到頂部浮標（手機版，2026-07-16 新增，比照 index.html／faq.html）：捲動超過
 // 300px 才顯示，行為邏輯在 promos.js setupBackToTopButton()。
