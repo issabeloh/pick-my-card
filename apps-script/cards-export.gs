@@ -806,12 +806,31 @@ if (faqSheet) {
     }
   }
 
+  // 新戶活動「更新日期」：只有 newCardholderPromos 內容真的變動時才蓋今天，否則沿用上次那天。
+  // 上次的指紋＋日期存在 Script Properties（Apps Script 端持久化，不佔 repo 檔案、不多一個
+  // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
+  // 同時餵給：generatePromosPageHtml（可見戳章＋JSON-LD dateModified）與 sitemap 的 promos
+  // lastmod，三處同源一致（見 data-pipeline.md 第 9 節）。
+  const promoSig = pmcPromoSignature_(newCardholderPromos);
+  const scriptProps = PropertiesService.getScriptProperties();
+  const prevPromoSig = scriptProps.getProperty('PROMOS_LAST_SIG');
+  const prevPromoDate = scriptProps.getProperty('PROMOS_LAST_DATE');
+  let promosUpdatedIso;
+  if (prevPromoSig === promoSig && prevPromoDate) {
+    promosUpdatedIso = prevPromoDate;
+  } else {
+    promosUpdatedIso = pmcTodayISO_();
+    scriptProps.setProperty('PROMOS_LAST_SIG', promoSig);
+    scriptProps.setProperty('PROMOS_LAST_DATE', promosUpdatedIso);
+  }
+
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
   // 掛進同一次 GitHub commit（見 publishToGitHub）
   const promosPageHtml = generatePromosPageHtml({
     cards: cards,
     newCardholderPromos: newCardholderPromos,
-    cardApplyCtas: cardApplyCtas
+    cardApplyCtas: cardApplyCtas,
+    promosUpdatedIso: promosUpdatedIso
   });
 
   // 生成 cards.json 內容
@@ -838,7 +857,7 @@ if (faqSheet) {
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
-  const version = publishToGitHub(encoded, promosPageHtml);
+  const version = publishToGitHub(encoded, promosPageHtml, undefined, promosUpdatedIso);
 
   ui.alert(
     '✅ 匯出完成',
@@ -1413,6 +1432,11 @@ function generatePromosPageHtml(exportData) {
   cards.forEach(function (c) { if (c && c.id) cardsById[c.id] = c; });
 
   const todayIso = pmcTodayISO_();
+  // 「資料更新於」戳章／sitemap lastmod／JSON-LD dateModified 三處共用的日期：由 exportToJSON
+  // 依 promo 內容指紋決定（內容沒變就沿用上次那天），透過 promosUpdatedIso 傳入；沒傳（Node
+  // 初版 harness、或第一次生成）就退回今天。注意這條「更新日」不等於 todayIso——todayIso 仍
+  // 專責過期過濾與 versionTag 快取破壞（那兩件事必須用「實際今天」），別混用。
+  const updatedIso = (exportData && exportData.promosUpdatedIso) || todayIso;
 
   // 過濾已過期活動：period_end 存在且早於今天才濾掉；無 period_end（不限期）永遠保留
   const activePromos = promos.filter(function (p) {
@@ -1457,7 +1481,7 @@ function generatePromosPageHtml(exportData) {
   const jsonLd = pmcBuildJsonLd_(prepared);
   const breadcrumbJsonLd = pmcBuildBreadcrumbJsonLd_();
 
-  const generatedDisplay = pmcFormatDateDisplay_(todayIso);
+  const generatedDisplay = pmcFormatDateDisplay_(updatedIso);
   const yearMonthLabel = todayIso.slice(0, 4) + '年' + parseInt(todayIso.slice(5, 7), 10) + '月';
   const title = '信用卡新戶活動一覽（' + yearMonthLabel + '更新）｜首刷禮・新戶回饋懶人包 - Pick My Card';
   const seenNames = {};
@@ -1477,15 +1501,19 @@ function generatePromosPageHtml(exportData) {
   const versionTag = (exportData && exportData.versionTagOverride) ||
     todayIso.replace(/-/g, '') + pmcTaipeiHm_();
 
+  const webPageJsonLd = pmcBuildWebPageJsonLd_(updatedIso, title, description);
+
   return pmcPageTemplate_({
     title: title,
     description: description,
+    updatedIso: updatedIso,
     generatedDisplay: generatedDisplay,
     count: prepared.length,
     cardsHtml: cardsHtml,
     filterChipsHtml: filterChipsHtml,
     jsonLd: jsonLd,
     breadcrumbJsonLd: breadcrumbJsonLd,
+    webPageJsonLd: webPageJsonLd,
     versionTag: versionTag
   });
 }
@@ -1535,6 +1563,34 @@ function pmcFormatDateDisplay_(iso) {
   if (!iso) return '';
   const parts = iso.split('-').map(Number);
   return parts[0] + '/' + parts[1] + '/' + parts[2];
+}
+
+// 穩定序列化：物件鍵一律排序，陣列維持傳入順序（呼叫端先排好）。純函數、不依賴任何服務，
+// Node 與 Apps Script 兩邊輸出一致——供 pmcPromoSignature_ 算出「與序列無關」的內容指紋。
+function pmcStableStringify_(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(pmcStableStringify_).join(',') + ']';
+  return '{' + Object.keys(v).sort().map(function (k) {
+    return JSON.stringify(k) + ':' + pmcStableStringify_(v[k]);
+  }).join(',') + '}';
+}
+
+// 新戶活動「內容指紋」：只認 newCardholderPromos 的實際內容，不受 sheet 列順序影響
+// （先依 promo_id 排序）。exportToJSON 拿它跟 Script Properties 存的上次指紋比對，用來
+// 決定 promos 頁「資料更新於」要不要蓋今天（見 data-pipeline.md 第 9 節）。純函數：
+// djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
+function pmcPromoSignature_(promos) {
+  const list = (promos || []).slice().sort(function (a, b) {
+    const ka = String((a && (a.promo_id || a.id)) || '');
+    const kb = String((b && (b.promo_id || b.id)) || '');
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  const payload = pmcStableStringify_(list);
+  let h = 5381;
+  for (let i = 0; i < payload.length; i++) {
+    h = (Math.imul(h, 33) ^ payload.charCodeAt(i)) >>> 0;
+  }
+  return String(h);
 }
 
 function pmcSlug_(s) {
@@ -1868,6 +1924,29 @@ function pmcBuildJsonLd_(prepared) {
   return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
 }
 
+// 頁面層級結構化資料（2026-07-23 新增）：帶 dateModified 的 CollectionPage，讓答案引擎
+// （AEO/GEO）與 Google 讀到「這份新戶活動清單最後更新日」。dateModified 用 updatedIso
+// ——只有 promo 內容真的變動時才前進的那個日期，與可見「資料更新於」戳章、sitemap 的
+// promos lastmod 同源，三處一致（見 data-pipeline.md 第 9 節）。與 ItemList／BreadcrumbList
+// 三個 JSON-LD 並存（同頁多個 <script type="application/ld+json"> 是合法用法）。
+function pmcBuildWebPageJsonLd_(updatedIso, title, description) {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: title,
+    description: description,
+    url: PMC_SITE_URL + '/promos',
+    inLanguage: 'zh-Hant',
+    dateModified: updatedIso,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: '信用卡回饋大師',
+      url: PMC_SITE_URL + '/'
+    }
+  };
+  return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
+}
+
 // 麵包屑結構化資料（2026-07-16 新增）：與頁面可見的 .promos-breadcrumb 對應，
 // 內容固定（只有兩層：首頁／本頁），不依賴任何動態資料，獨立於 pmcBuildJsonLd_
 // 的 ItemList 並存（同頁多個 JSON-LD <script> 是合法用法）。
@@ -1919,6 +1998,7 @@ function pmcPageTemplate_(o) {
 '\n' +
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
+'<script type="application/ld+json">\n' + o.webPageJsonLd + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
@@ -2093,7 +2173,7 @@ o.cardsHtml + '\n' +
 '  </div>\n' +
 '</div>\n' +
 '\n' +
-'<div class="promos-data-update-footer">資料更新於 ' + pmcEscapeHtml_(o.generatedDisplay) + '</div>\n' +
+'<div class="promos-data-update-footer">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '\n' +
 // 回到頂部浮標（手機版，2026-07-16 新增，比照 index.html／faq.html）：捲動超過
 // 300px 才顯示，行為邏輯在 promos.js setupBackToTopButton()。
@@ -2133,7 +2213,7 @@ const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
 const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
@@ -2156,9 +2236,10 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
     commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
   });
 
-  // sitemap.xml 每次匯出重生：promos 與商家頁的內容會隨資料變動，lastmod 跟上匯出
-  // 日期，Google 才知道要重爬（先前 lastmod 手打死、更新後 Google 以為沒變）。
-  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages), `${skip}Update sitemap.xml (${version})`, token);
+  // sitemap.xml 每次匯出重生。promos 的 lastmod 用 promosUpdatedIso（只在活動內容真的變動
+  // 時才前進），不是每次匯出都蓋今天——先前每次都蓋今天等於對 Google 天天喊「我更新了」，
+  // 內容其實沒動，久了 Google 反而不信任 lastmod、降低重爬效率。商家頁仍用當天（另案）。
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
 
   // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
   commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
@@ -2172,13 +2253,15 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
 const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo'];
 
 // 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
-// 更新這裡的常數）；promos 與商家頁每次匯出都可能變 → 用匯出當天日期。
-function generateSitemapXml_(merchantPages) {
-  const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+// 更新這裡的常數）；promos 用 promosUpdatedIso（活動內容真的變動時才前進，沒傳就退回今天）；
+// 商家頁每次匯出都可能變 → 用匯出當天日期。日期一律走 pmcTodayISO_() 的台北時區。
+function generateSitemapXml_(merchantPages, promosUpdatedIso) {
+  const today = pmcTodayISO_();
+  const promosLastmod = promosUpdatedIso || today;
   const urls = [
     { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
     { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
-    { loc: SITE_ORIGIN + '/promos', lastmod: today }
+    { loc: SITE_ORIGIN + '/promos', lastmod: promosLastmod }
   ];
   // 商家頁 slug：試水溫手動清單 + 生成器產出（merchantPages），去重後輸出
   const slugSet = {};
