@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="promos.css?v=202607230245">
+<link rel="stylesheet" href="promos.css?v=202607230253">
 
 <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
 <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
@@ -270,6 +270,22 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "信用卡新戶活動一覽（2026年7月更新）｜首刷禮・新戶回饋懶人包 - Pick My Card",
+  "description": "35 檔信用卡新戶活動一次看，含滙豐 Live+ 卡、滙豐匯鑽卡、滙豐現金回饋御璽卡等首刷禮、新戶回饋加碼、定額回饋活動，依即將截止時間排序，持續更新。",
+  "url": "https://pickmycard.app/promos",
+  "inLanguage": "zh-Hant",
+  "dateModified": "2026-07-23",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "信用卡回饋大師",
+    "url": "https://pickmycard.app/"
+  }
+}
+</script>
 </head>
 <body>
 <div class="promos-container">
@@ -279,7 +295,7 @@
       <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
     </button>
     <a href="/" class="promos-header-content">
-      <img src="assets/images/logo-header.png?v=202607230245" alt="" class="promos-header-logo">
+      <img src="assets/images/logo-header.png?v=202607230253" alt="" class="promos-header-logo">
       <span class="promos-header-title">信用卡回饋大師</span>
     </a>
     <nav class="promos-header-links" aria-label="站內頁面">
@@ -326,6 +342,14 @@
   <section class="promos-hero">
     <h1>信用卡新戶活動一覽</h1>
   </section>
+
+  <div class="promos-search-box">
+    <div class="promos-search-input-wrap">
+      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱" aria-label="搜尋卡片名稱">
+      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>
+    </div>
+  </div>
 
   <section class="promos-controls" aria-label="篩選與排序">
     <div class="promos-control-group">
@@ -1382,7 +1406,7 @@
   </div>
 </div>
 
-<div class="promos-data-update-footer">資料更新於 2026/7/23</div>
+<div class="promos-data-update-footer">資料更新於 <time datetime="2026-07-23">2026/7/23</time></div>
 
 <button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">
   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1406,6 +1430,6 @@
   window.firebaseAnalytics = getAnalytics(app);
   window.logEvent = logEvent;
 </script>
-<script src="promos.js?v=202607230245"></script>
+<script src="promos.js?v=202607230253"></script>
 </body>
 </html>
