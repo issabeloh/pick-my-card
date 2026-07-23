@@ -490,19 +490,21 @@ a {
   margin: 4px 0 14px;
 }
 
+/* 刻意低調（2026-07-22 站長回饋：不是必須看到的東西，用戶需要時找得到就好）：
+   1px 細框（不用主站搜尋框的 3px 粗框）、小圓角、淡灰底線感，聚焦才給輕微藍框。 */
 .promos-search-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
-  border: 3px solid var(--pmc-border);
-  border-radius: 14px;
+  border: 1px solid var(--pmc-border);
+  border-radius: 10px;
   background: var(--pmc-white);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .promos-search-input-wrap:focus-within {
   border-color: var(--pmc-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.10);
 }
 
 /* 單色放大鏡 SVG（Bootstrap search icon，同 header 其他圖示同一套線條）：絕對定位
@@ -510,12 +512,12 @@ a {
    等於點輸入框）。刻意不用彩色 🔍 emoji——站長回饋太顯眼（2026-07-22）。 */
 .promos-search-icon {
   position: absolute;
-  left: 14px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: #9ca3af;
+  width: 15px;
+  height: 15px;
+  color: #b0b5bd;
   pointer-events: none;
 }
 
@@ -525,12 +527,18 @@ a {
   flex: 1;
   min-width: 0;
   border: none;
-  border-radius: 11px;
+  border-radius: 9px;
   background: transparent;
-  padding: 12px 44px 12px 40px; /* 左 40px 讓開放大鏡圖示、右 44px 讓長輸入不壓在清除 ✕ 底下 */
+  padding: 8px 38px 8px 34px; /* 左 34px 讓開放大鏡圖示、右 38px 讓長輸入不壓在清除 ✕ 底下 */
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.8rem; /* 低調小字 */
   color: var(--pmc-ink);
+}
+
+/* placeholder 更淡更小，強調「非必要、需要時才找」的低調定位 */
+#promos-search-input::placeholder {
+  color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 #promos-search-input:focus {
@@ -547,15 +555,15 @@ a {
 .promos-search-clear-btn {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 6px;
   transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: none;
   border-radius: 50%;
   color: #9ca3af;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
