@@ -6,7 +6,7 @@
 ## 怎麼跑（正常情況只需要這個）
 
 ```bash
-npm install playwright   # 一次性
+npm install playwright --no-fund --no-audit --loglevel=error   # 一次性；靜音參數必帶（省下數百行安裝雜訊）
 node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組哪張卡不同
 ```
 
@@ -34,6 +34,10 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 | 12 | `zzz測試`（不存在） | 無匹配 fallback（buildBasicCashbackResult）不噴錯 |
 
 腳本另外全程收集 console error（pageerror + console.error），基準是 0 條。
+
+就緒後另跑**訪客首屏斷言**（2026-07-21 加，非基準比對、失敗直接 exit 1）：
+`#product-intro-section` 不得存在於 DOM（hero 已於 2026-07-20 移除）、`#merchant-input` top 必須在 0–600px。
+守的機制：「HTML 與 JS 不同步」類事故（如 merge 拿錯檔案版本）——搜尋計算可能全綠但首屏已壞（PR #337 事故）。
 
 ## 人工備援流程（只在腳本壞掉時用）
 

@@ -8,8 +8,8 @@
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
-           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
-         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+           → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
+         hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
          ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
          location.replace 讓返回鍵不會跳回造成循環。
          ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
@@ -81,7 +81,7 @@
         }
     </style>
 
-    <link rel="stylesheet" href="styles.css?v=20260717063100">
+    <link rel="stylesheet" href="styles.css?v=dev">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -179,7 +179,7 @@
                      側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
                      手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
                 <nav class="header-page-links" aria-label="站內頁面">
-                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--dot">新戶活動</a>
+                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
                     <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
                 </nav>
                 <div class="auth-section">
@@ -206,11 +206,11 @@
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-my-mappings" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v6H9.5A1.5 1.5 0 0 0 8 10.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V10.5a.5.5 0 0 1 .5-.5h3.293L9 13.793z"/></svg>
-                                    我的配卡
+                                    我的配卡組合
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-feedback" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
-                                    意見回饋
+                                    回報錯誤
                                 </a>
                                 <div class="avatar-dropdown-divider" style="display:none"></div>
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-logout" id="avatar-sign-out">
@@ -220,7 +220,6 @@
                             </div>
                         </div>
                     </div>
-                    <button id="start-using-btn-header" class="auth-btn start-using">開始使用</button>
                     <button id="sign-in-btn" class="auth-btn primary" style="display: none;">登入</button>
                 </div>
             </div>
@@ -245,6 +244,8 @@
                         <button class="announcement-btn" id="announcement-close" title="關閉" aria-label="關閉公告">×</button>
                     </div>
                 </div>
+                <!-- 手機版：圓點指示＋左右滑動換則（桌機隱藏、沿用箭頭） -->
+                <div class="announcement-dots" id="announcement-dots"></div>
             </div>
 
             <!-- Announcement Detail Modal -->
@@ -310,107 +311,6 @@
             </aside>
 
             <main>
-            <!-- Product Introduction Section (shown only when not logged in) -->
-            <section id="product-intro-section" class="product-intro-section">
-                <div class="hero-lead">
-                    <p class="hero-lead-title">結帳前，先 <span class="brand-name">Pick My Card</span></p>
-                    <p class="hero-lead-sub">收錄 <strong class="card-count loading">...</strong> 張台灣主流信用卡</p>
-                </div>
-                <div class="hero-divider" aria-hidden="true"></div>
-                <div class="hero-section">
-                    <h2 class="hero-title">解放腦力，聰明刷卡</h2>
-                    <p class="hero-subtitle">一鍵比較出最高信用卡回饋。幫你記憶卡片、管理配卡、免費使用。</p>
-                </div>
-
-                <div class="features-grid-redesign">
-                    <!-- Feature 1: 記錄配卡 (圖上文下) -->
-                    <div class="feature-card-new feature-card-left">
-                        <div class="feature-media">
-                            <picture>
-                                <source data-srcset="assets/images/feature-credit-cards-customized-combination.webp" type="image/webp">
-                                <img data-src="assets/images/feature-credit-cards-customized-combination.png" alt="記錄配卡組合" class="feature-video lazy-image" width="800" height="450">
-                            </picture>
-                        </div>
-                        <div class="feature-content">
-                            <h3 class="feature-title">記錄配卡</h3>
-                            <p class="feature-description">一鍵收藏你的信用卡組合，<br>下次消費不用再查、不用做筆記，<br>配卡策略一目了然，自由管理更輕鬆。</p>
-                        </div>
-                    </div>
-
-                    <!-- Feature 2: 個人化功能 (文上圖下) -->
-                    <div class="feature-card-new feature-card-right">
-                        <div class="feature-content">
-                            <h3 class="feature-title">個人化功能</h3>
-                            <p class="feature-description">記憶你的信用卡與行動支付，<br>支援自訂快捷選項、筆記與年費追蹤。<br>打造屬於你的專屬信用卡管理工具。</p>
-                        </div>
-                        <div class="feature-media">
-                            <video loop muted playsinline class="feature-video lazy-video" data-src="assets/videos/feature-personalizations.mp4" width="800" height="450">
-                                <!-- 臨時佔位圖示 -->
-                                <div class="icon-box">⚙️</div>
-                            </video>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cta-section">
-                    <button id="start-using-btn" class="cta-button">開始使用</button>
-                </div>
-
-                <!-- Use Cases Section -->
-                <div class="use-cases-section">
-                    <div class="hero-section">
-                        <h2 class="hero-title">使用情境</h2>
-                        <p class="hero-subtitle">從日常消費到用卡規劃</p>
-                    </div>
-
-                    <div class="use-cases-list">
-                        <!-- Use Case 1: 即時消費，快速決策 (圖左文右) -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <picture>
-                                    <source data-srcset="assets/images/use-case-1-instant-check-cashback.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-1-instant-check-cashback.png" alt="即時消費，快速決策" class="use-case-media lazy-image" width="300" height="300">
-                                </picture>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">即時消費，快速決策</h3>
-                                <p class="use-case-description">在新商家結帳不知道該用哪張卡？<br>輸入<strong>商家名稱</strong>或支援的<strong>行動支付</strong>，<br>快速找出回饋最高的卡片。</p>
-                            </div>
-                        </div>
-
-                        <!-- Use Case 2: 主動探索，找最佳通路 -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <video loop muted playsinline class="use-case-media lazy-video" data-src="assets/videos/use-case-2-explore-credit-cards.mp4" width="300" height="300">
-                                </video>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">主動探索，找最佳通路</h3>
-                                <p class="use-case-description">計劃旅遊或大額消費前想知道哪裡刷最划算？<br>用<strong>快捷選項</strong>一次查看指定類別的回饋排名，<br>提前規劃，回饋最大化。</p>
-                            </div>
-                        </div>
-
-                        <!-- Use Case 3: 盤點卡片，辦新卡 (圖左文右) -->
-                        <div class="use-case-item">
-                            <div class="use-case-image">
-                                <picture>
-                                    <source data-srcset="assets/images/use-case-3-review-credit-cards.webp" type="image/webp">
-                                    <img data-src="assets/images/use-case-3-review-credit-cards.png" alt="盤點卡片，辦新卡" class="use-case-media lazy-image" width="300" height="300">
-                                </picture>
-                            </div>
-                            <div class="use-case-content">
-                                <h3 class="use-case-title">盤點卡片，辦新卡</h3>
-                                <p class="use-case-description">半年一次的信用卡健檢時刻，<br>查看常用通路的回饋表現，<br>比較現有卡片與考慮申辦的新卡。</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cta-section">
-                        <button id="start-using-btn-2" class="cta-button">開始使用</button>
-                        <p class="cta-hint">登入後可儲存你的配卡組合</p>
-                    </div>
-                </div>
-            </section>
 
             <section class="input-section" style="display: none;">
                 <div class="input-row-with-button">
@@ -422,9 +322,12 @@
                         <!-- 合併框：上半部輸入、下半部快捷選項（淺灰背景），外層粗框 -->
                         <div class="merchant-search-box">
                         <!-- type=search＋autocomplete=off：避免手機鍵盤跳出聯絡人/電話 autofill 建議 -->
-                        <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
-                               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-                               placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                        <div class="merchant-input-wrap">
+                            <input type="search" id="merchant-input" name="merchant-search" inputmode="search" enterkeyhint="search"
+                                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                                   placeholder="輸入一項商家名稱，或行動支付、或商家類別" />
+                            <button type="button" id="merchant-clear-btn" class="merchant-clear-btn" aria-label="清除輸入" hidden>✕</button>
+                        </div>
 
                         <div class="quick-search-wrapper">
                             <div class="quick-search-visible" id="quick-search-visible">
@@ -559,8 +462,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
-                <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a class="cardholder-promos-more-btn" href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
                 </div>
@@ -619,7 +521,7 @@
                 <div class="modal-body">
                     <p class="modal-description">選擇要加入比較的信用卡，只有選中的卡片會出現在比較結果中。</p>
                     <div class="modal-controls">
-                        <input type="text" id="search-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
+                        <input type="text" id="search-cards-input" class="search-modal-input" placeholder="搜尋卡片...">
                     </div>
                     <div class="tag-filter-section" id="manage-tag-filter-section">
                         <button type="button" class="tag-filter-toggle" aria-expanded="true" aria-controls="tag-filter-chips">
@@ -677,7 +579,7 @@
                 <div class="modal-body">
                     <p class="modal-description">選擇你實際持有的信用卡，方便快速加入比較與隱藏新戶活動。</p>
                     <div class="modal-controls">
-                        <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="🔍 搜尋卡片...">
+                        <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="搜尋卡片...">
                     </div>
                     <div class="tag-filter-section" id="owned-tag-filter-section">
                         <button type="button" class="tag-filter-toggle" aria-expanded="true" aria-controls="owned-tag-filter-chips">
@@ -713,7 +615,7 @@
                 <div class="modal-body">
                     <p class="modal-description">選擇你使用的行動支付方式，只有選中的支付方式會出現在清單中。</p>
                     <div class="modal-controls">
-                        <input type="text" id="search-payments-input" class="search-modal-input" placeholder="🔍 搜尋行動支付...">
+                        <input type="text" id="search-payments-input" class="search-modal-input" placeholder="搜尋行動支付...">
                         <button id="toggle-all-payments" class="toggle-all-btn">全選</button>
                     </div>
                     <div class="payments-selection" id="payments-selection">
@@ -921,7 +823,7 @@
                     <div class="card-info-section" id="card-special-section">
                         <h4>指定通路回饋</h4>
                         <input type="text" id="cashback-search-input" class="cashback-search-input"
-                               placeholder="🔍 搜尋通路或方案（如：全聯、童樂匯）"
+                               placeholder="搜尋通路或方案（如：全聯、童樂匯）"
                                oninput="filterCashbackItems(this.value)">
                         <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
                             找不到符合的活動
@@ -1007,8 +909,9 @@
         </div>
     </div>
 
-    <!-- 最後資料更新日期 -->
+    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
+        <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
     </div>
 
@@ -1054,7 +957,20 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260717063100" defer></script>
+    <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
+         全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
+    <script src="js/core-utils.js?v=dev" defer></script>
+    <script src="js/data-loader.js?v=dev" defer></script>
+    <script src="js/home-ui.js?v=dev" defer></script>
+    <script src="js/search-match.js?v=dev" defer></script>
+    <script src="js/cashback-engine.js?v=dev" defer></script>
+    <script src="js/results-display.js?v=dev" defer></script>
+    <script src="js/auth-user-data.js?v=dev" defer></script>
+    <script src="js/cards-modals.js?v=dev" defer></script>
+    <script src="js/card-detail.js?v=dev" defer></script>
+    <script src="js/spending-mappings.js?v=dev" defer></script>
+    <script src="js/levels-payments.js?v=dev" defer></script>
+    <script src="js/quick-options-misc.js?v=dev" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
@@ -1161,22 +1077,22 @@
     </div>
 
     <!-- My Mappings Button -->
-    <button id="my-mappings-btn" class="my-mappings-floating-btn" title="我的消費配卡" style="display: none;">
+    <button id="my-mappings-btn" class="my-mappings-floating-btn" aria-label="我的配卡組合" style="display: none;">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
         </svg>
-        <span class="btn-text">我的配卡</span>
+        <span class="btn-text">我的配卡組合</span>
     </button>
 
-    <!-- Feedback Button -->
     <!-- 回到頂部浮標（手機版） -->
     <button id="back-to-top-btn" class="back-to-top-btn" title="回到頂部" aria-label="回到頂部">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
 
-    <button id="feedback-btn" class="feedback-floating-btn" title="回報問題 / 意見回饋">
-        <span>🐛</span>
-        <span>回報錯誤</span>
+    <!-- 精選活動快速跳轉浮標（有搜尋結果時由 JS 加 .is-visible 顯示） -->
+    <button id="scroll-to-spotlight-btn" class="scroll-to-spotlight-btn" aria-label="精選活動">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v13M6 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="btn-text">精選活動</span>
     </button>
 
     <!-- 圖片放大檢視 lightbox -->
@@ -1188,9 +1104,7 @@
     <div id="my-mappings-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><svg class="mappings-title-pin" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                    <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/>
-                </svg> 我的配卡</h3>
+                <h3>我的配卡組合</h3>
                 <button class="close-modal" id="close-mappings-modal">&times;</button>
             </div>
             <div class="modal-body">

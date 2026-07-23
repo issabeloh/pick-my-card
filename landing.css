@@ -5,7 +5,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+/* 不能用 scroll-behavior: smooth——landing.js 的捲動引擎（自由區跟手＋snap 動畫）
+   自己逐幀 scrollTo，smooth 會把每次 scrollTo 再包一層瀏覽器平滑動畫，
+   造成跟手大幅延遲、翻頁「滑完要再等一陣子」 */
+html { scroll-behavior: auto; }
 
 body {
     font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -382,6 +385,21 @@ body {
     color: #475569;
     line-height: 1.75;
     transition-delay: 0.15s;
+}
+/* 品牌畫面的「如何使用？」引子——下方接著的 STEP 1~5 各幕就是答案。
+   絕對定位釘在底部灰色下滑箭頭（.lp-scrollcue，佔 bottom 4~52px）上方，
+   保持一段距離，由灰色箭頭本身接手「往下看」的暗示 */
+.lp-brand-how {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    margin: 0 auto;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #475569; /* 深灰：避免藍字看起來像可點的連結（它不是按鈕） */
+    letter-spacing: 0.04em;
+    transition-delay: 0.24s;
 }
 
 /* ============================================================

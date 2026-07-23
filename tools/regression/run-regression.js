@@ -102,6 +102,10 @@ async function extract(page) {
       best: el.classList.contains('best-card'),
       fields,
       matched: el.querySelector('.matched-merchant')?.innerText?.replace(/\s+/g, ' ').trim() || null,
+      // 滿額/未滿門檻列（2026-07-17 起獨立於 .matched-merchant 之外），
+      // 單獨抓取以維持 minSpend/maxSpend 標註的回歸覆蓋
+      threshold: Array.from(el.querySelectorAll('.spend-threshold-note'))
+        .map(n => n.innerText.replace(/\s+/g, ' ').trim()).join(' / ') || null,
     };
   }));
   const parking = await page.$$eval('#parking-benefits-container .parking-benefit-item', els => els.map(el => ({
@@ -148,6 +152,22 @@ async function run(updateBaseline) {
   // 就緒 = 卡片數字出現（cards.data 解析完成）+ 訪客流程把輸入區打開
   await page.waitForFunction(() => /^\d+$/.test(document.querySelector('.card-count')?.textContent?.trim() || ''), null, { timeout: 20000 });
   await page.waitForSelector('#merchant-input', { state: 'visible', timeout: 20000 });
+
+  // 訪客首屏斷言（2026-07-21，PR #337 事故後新增）：守「HTML 與 JS 不同步」類問題——
+  // merge 解衝突拿錯檔案版本時，搜尋計算可能全綠但首屏已壞。hero(product-intro) 已於
+  // 2026-07-20 從 DOM 移除，不該再出現；搜尋框必須在首屏可視高度內。
+  const firstScreen = await page.evaluate(() => ({
+    introPresent: !!document.getElementById('product-intro-section'),
+    searchTop: Math.round(document.getElementById('merchant-input').getBoundingClientRect().top),
+  }));
+  if (firstScreen.introPresent) {
+    console.error('❌ 首屏斷言失敗：#product-intro-section 出現在 DOM（hero 已於 2026-07-20 移除，疑似 merge 蓋回舊 HTML）');
+    process.exit(1);
+  }
+  if (firstScreen.searchTop < 0 || firstScreen.searchTop > 600) {
+    console.error(`❌ 首屏斷言失敗：#merchant-input top=${firstScreen.searchTop}px，不在首屏可視範圍（0–600）`);
+    process.exit(1);
+  }
 
   const checks = [];
   for (const c of CHECKS) {

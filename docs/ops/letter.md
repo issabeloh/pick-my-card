@@ -18,7 +18,7 @@
 留給你的部分：活動到期時換檢查詞並重拍基準（見 `tools/regression/README.md`）；腳本壞掉時
 regression.md 有人工備援流程。）
 
-### 2. `exportToJSON()` 不在 repo 裡（單點故障）
+### 2. ~~`exportToJSON()` 不在 repo 裡（單點故障）~~（✅ 已解決：`apps-script/cards-export.gs` 即其備份副本；2026-07-20 與站長貼出的 Sheets 線上版做 20 點抽查比對一致，並完成一輪審計，見 apps-script/README.md）
 
 主匯出程式只存在 Google Sheets 的 Apps Script 專案中。後果：(a) 文件裡的匯出規則（如 data-pipeline.md
 第 4 節的 rate=0 guard）無法被 code review 驗證，只能信文件；(b) Sheets 端誤改沒有版本記錄；(c) 哪天

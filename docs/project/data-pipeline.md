@@ -10,8 +10,7 @@ Google Sheets（多工作表）→ Apps Script `exportToJSON()` → Base64 JSON 
 
 **查 cards.data 內容的唯一正確姿勢**（488KB base64 單行，絕不 Read）：
 ```bash
-base64 -d cards.data > <scratchpad>/cards.json
-jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
+bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼＋截斷長輸出
 ```
 
 ## 2. 工作表結構
@@ -70,7 +69,7 @@ jq '.cards[] | select(.id=="dbs-eco")' <scratchpad>/cards.json
 
 **匯出後快速自檢**：解 base64，「非 hideInDisplay 的 `rate===0` 槽數量」不該是 0：
 ```bash
-base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hideInDisplay|not))] | length'
+bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hideInDisplay|not))] | length'
 ```
 
 ## 5. cards.data 快取機制
@@ -129,7 +128,7 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   `generatePromosPageHtml()`，產出的 HTML 字串跟著 `cards.data` / `cards.version` 一起
   丟進 `publishToGitHub(encoded, promosPageHtml)` → 同一次 commit 三個檔案。
 - **repo 初版怎麼來的**：用臨時 Node harness（放 scratchpad，不留在 repo）以 `vm.runInContext`
-  載入 `cards-export.gs`、餵 `base64 -d cards.data` 解出來的 JSON，呼叫
+  載入 `cards-export.gs`、餵 cards.data 解碼後的 JSON（跑過 `tools/cards-query.sh` 後快取在 `$TMPDIR/cards-decoded.json`），呼叫
   `generatePromosPageHtml()` 產生 `promos.html`。之後每次 Apps Script 端跑 `exportToJSON()`
   都會用真正的 Sheets 資料重新生成、覆蓋這份檔案——**repo 裡的版本只是初版備份，最新內容以
   GitHub 上次 commit 的為準**。
@@ -146,13 +145,35 @@ base64 -d cards.data | jq '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
   天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
   不 fetch 任何東西，頁面本身就是完整資料。
-- **⚠️ 2026-07-15 v2 改版起，header／footer 是從 `index.html` 手動複製過來的**：
-  `pmcPageTemplate_()` 裡的 `<header class="promos-header">`（logo＋站名＋深藍 bar）、
+- **⚠️ header／footer 是從 `index.html` 手動複製過來的**：
+  `pmcPageTemplate_()` 裡的 `<header class="promos-header">`、
   `.promos-warning-row`（謹慎理財警語）、`.social-media-footer`（探索更多／追蹤我們／
   支持我們）三段，內容與樣式都是照 `index.html` 對應區塊（`header`／`.finance-warning-row`／
   `.social-media-footer`）手動抄的，**不是共用元件**。主站改這幾塊時（換連結、改文案、換
   社群帳號），這裡要記得手動同步，否則 promos 頁會悄悄跟主站不一致。`promos.css` 裡對應的
   樣式規則也在同一段加了「抄自 styles.css」的註解，方便對照。
+  **2026-07-16 header 一致化改版**：header 現在不只是 logo＋站名＋深藍 bar，還含桌機導覽
+  （新戶活動／常見問題，本頁帶 `aria-current="page"`）與手機漢堡抽屜（兩張卡片連回 `/`
+  工具頁與 `/faq`）。互動邏輯（抽屜開合）寫在 `promos.js` 開頭「手機漢堡側選單開合」一段，
+  介面與 `faq.js` 同款。**`faq.html` 的 header 也是同一份 `index.html header-top` 的
+  手抄件**（見 `FAQ-README.md`）——這下有三份手抄件互相要對齊：`index.html` 改動時，
+  `promos.html` 的生成器（本節）與 `faq.html`／`faq.css`／`faq.js` 都要跟著手動同步，缺一邊
+  就會悄悄跟另外兩邊不一致。
+  **同日二輪回饋**：header 右側原本試過頭像＋精簡 dropdown（訪客「註冊／登入」、登入者
+  「前往主站管理」），站長裁定「副頁頭像做不到主站完整功能（無法登出/管理），意義不大」，
+  已撤回改為「返回首頁」鈕（`promos-back-home-btn`，連回 `/`；faq.html 對應 `.back-home-btn`
+  連回 `index.html`）——**header 不含任何登入/頭像狀態**，也不再 import firebase-auth。
+  同一輪還加了：可見麵包屑（hero 上方一行小字，`.promos-breadcrumb`／`.faq-breadcrumb`）＋
+  `<head>` 內的 BreadcrumbList JSON-LD（`pmcBuildBreadcrumbJsonLd_()`，與既有 ItemList/FAQPage
+  JSON-LD 並存）、浮動「回到頂部」鈕（`.promos-back-to-top-btn`／faq 重用 styles.css 既有
+  `.back-to-top-btn`，手機限定、捲動 >300px 顯示，行為同主站）、手機抽屜工具卡改色（promos
+  側 `.promos-sidebar-tool-card` 改糖果薄荷色＋💳 emoji，與 FAQ 卡區隔）、FAQ 側手機抽屜的
+  「新戶活動一覽」卡（`.sidebar-promos-banner`）在 `faq.css` override 壓平立體感（不改
+  `styles.css`，`index.html` 自己的抽屜不受影響）。
+  > 註（2026-07-17 本輪移植）：舊分支同一次改版另外文件化了 `.promo-card-info-btn`
+  > 深連結（`/?start&card=<id>`）的設計，但 main 分支同期已把 ⓘ 按鈕升級成 iframe 內嵌
+  > 詳情彈窗（方案 A，深連結只當攔截失敗的 fallback）——那段說明已過時，**不portover**；
+  > 完整、與現狀一致的說明在 `docs/project/ui-display.md` 第 1 節「Embed 模式」。
 
 ## 10. Apps Script 相關的既有文件
 

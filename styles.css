@@ -14,11 +14,12 @@ body {
     padding: 20px;
 }
 
-/* Pre-paint auth hint: returning logged-in users skip the hero flash.
-   Set by the inline <head> script reading localStorage; cleared after
-   Firebase resolves the real auth state. */
-html.pmc-returning-user #product-intro-section {
-    display: none !important;
+/* 鍵盤導覽焦點指示：:focus-visible 只在鍵盤操作時顯示外框，滑鼠/觸控點擊不出現。
+   !important 必要：全站有 16 處「.xxx:focus { outline:none }」權重比裸 :focus-visible
+   高，會把外框蓋掉；鍵盤焦點可見性必須贏過它們。 */
+:focus-visible {
+    outline: 2px solid #2563eb !important;
+    outline-offset: 2px;
 }
 
 /* Boot loader (small spinner + label) — only visible during the gate,
@@ -75,7 +76,7 @@ html.pmc-embed .social-media-footer,
 html.pmc-embed .data-update-footer,
 html.pmc-embed .disclaimer-footer,
 html.pmc-embed #back-to-top-btn,
-html.pmc-embed #feedback-btn,
+html.pmc-embed #scroll-to-spotlight-btn,
 html.pmc-embed #my-mappings-btn,
 html.pmc-embed #pmc-boot-loader,
 html.pmc-embed .modal:not(#card-detail-modal) {
@@ -165,15 +166,32 @@ header {
         border-right: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* 兩個連結之間的「｜」分隔 */
+    /* 兩個連結之間的「｜」分隔（2026-07-17 四輪回饋修正：原本用 padding-left+
+       border-left 實作，等於把分隔線的留白也框進第二顆連結的 box，導致
+       hover 金色底線（border-bottom，畫在整個 padding box 底部）比「新戶活動」
+       又低又寬。改用 margin-left 把留白移到 box 外面，padding-left 只留
+       2px（與基礎 padding-right:2px 對稱），分隔線改用 ::before 絕對定位畫在
+       margin 區間內——兩顆連結的 box 幾何從此一致，border-bottom 自然對齊。 */
     .header-nav-link + .header-nav-link {
-        padding-left: 18px;
-        border-left: 1px solid rgba(255, 255, 255, 0.3);
+        margin-left: 18px;
+        padding-left: 2px;
+        border-left: none;
+    }
+
+    .header-nav-link + .header-nav-link::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -10px;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.3);
     }
 }
 
-/* 純文字導覽＋紅點（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
-   色彩太重）。新戶活動帶一顆小紅點（App 通知的視覺語言）默默吸睛。 */
+/* 純文字導覽（2026-07-16 站長選定 C 案，取代原亮黃 pill——黃 pill 在深藍 bar 上
+   色彩太重）。新戶活動原本帶一顆小紅點吸睛，2026-07-17 退場改用小煙花
+   （.header-nav-link--sparkle，見下方）。 */
 .header-nav-link {
     position: relative;
     color: rgba(255, 255, 255, 0.92);
@@ -191,15 +209,133 @@ header {
     color: #ffffff;
 }
 
-.header-nav-link--dot::after {
+/* 2026-07-17 站長回饋：紅點退場，改用更輕巧、週期性的小煙花吸睛（純 CSS，
+   box-shadow 清單模擬多顆粒子，不額外加 DOM 節點）。class 隨改名
+   --dot → --sparkle。手機抽屜「新戶活動一覽」卡（.sidebar-promos-banner，
+   index.html/faq.html 共用）套用同一組 keyframes——定義在這裡，套用處在該
+   class 本來的區塊（Grep「sidebar-promos-banner」可找到，本檔約 7000 行附近）。
+   2026-07-17 四輪回饋：單一發射點改左右雙發——::after 維持右側，新增 ::before
+   在左側；左側套用另一組粒子圖樣（nav-sparkle-burst-alt，顏色/位移順序不同，
+   刻意不完全鏡像）並用 animation-delay 錯開半個週期（1.2s／2.4s 的一半），
+   讓兩側交錯綻放（見下方 @keyframes 註解說明交錯時間軸）。
+   2026-07-18 六、七輪回饋連調兩次：週期 4.5s→3.6s→2.4s（站長要的是「播放
+   長度縮短」＝單發綻放播得更快，不是動 delay；縮週期等比縮綻放實長，交錯
+   結構不變）；發射點 top:1px→7px→12px（一路下移到字體中線附近，粒子直接
+   蓋在「新戶活動」文字上——站長明示蓋到 ok，別改回貼齊上緣）。 */
+.header-nav-link--sparkle::after {
     content: "";
     position: absolute;
-    top: -1px;
-    right: -9px;
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    background: #f87171;
+    top: 12px;
+    right: -8px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+}
+
+.header-nav-link--sparkle::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: -8px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.2s;
+}
+
+/* 單次綻放（金／珊瑚／粉 5 顆）佔 2.4s 週期的前 ~72%（0.43s 起爆、1.73s
+   完全熄滅），搭配右側 ::after 不加 delay、左側 ::before 加 1.2s（半週期）
+   delay：右側熄滅點（72%＝1.73s）與左側起爆點（因 delay 1.2s，落在
+   1.2+0.43=1.63s）銜接還小幅重疊，形成「前一發尾聲時下一發已起爆」的交錯視覺，
+   而非兩側各自孤立閃一下。0%/100% 數值相同確保 infinite 循環銜接不跳動。
+   用 box-shadow 清單（而非各自獨立的 transform）是因為單一虛元素的多筆
+   box-shadow 可以各自插值出「向外擴散＋縮小＋淡出」的粒子錯覺，不必多開
+   DOM 節點或多個 ::before/::after。 */
+@keyframes nav-sparkle-burst {
+    0%, 100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0),
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0);
+    }
+    18% {
+        box-shadow:
+            -3px -5px 0 1.6px rgba(255, 201, 51, 0.95),
+            5px -6px 0 1.6px rgba(255, 138, 101, 0.95),
+            -6px 2px 0 1.4px rgba(255, 158, 205, 0.9),
+            6px 3px 0 1.4px rgba(255, 201, 51, 0.9),
+            0px -8px 0 1.3px rgba(255, 138, 101, 0.9);
+    }
+    45% {
+        box-shadow:
+            -6px -9px 0 0.8px rgba(255, 201, 51, 0.45),
+            8px -10px 0 0.8px rgba(255, 138, 101, 0.45),
+            -10px 3px 0 0.7px rgba(255, 158, 205, 0.4),
+            10px 5px 0 0.7px rgba(255, 201, 51, 0.4),
+            0px -13px 0 0.6px rgba(255, 138, 101, 0.4);
+    }
+    72% {
+        box-shadow:
+            -9px -13px 0 0 rgba(255, 201, 51, 0),
+            11px -15px 0 0 rgba(255, 138, 101, 0),
+            -14px 5px 0 0 rgba(255, 158, 205, 0),
+            14px 7px 0 0 rgba(255, 201, 51, 0),
+            1px -18px 0 0 rgba(255, 138, 101, 0);
+    }
+}
+
+/* 左側發射點的變化版：粒子順序／顏色配對與偏移量都跟上面不同（別完全鏡像），
+   時間軸節奏（0%/18%/45%/72%/100%）與 nav-sparkle-burst 一致，方便靠
+   animation-delay 交錯銜接。 */
+@keyframes nav-sparkle-burst-alt {
+    0%, 100% {
+        box-shadow:
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0),
+            0 0 0 0 rgba(255, 138, 101, 0),
+            0 0 0 0 rgba(255, 158, 205, 0),
+            0 0 0 0 rgba(255, 201, 51, 0);
+    }
+    18% {
+        box-shadow:
+            4px -6px 0 1.5px rgba(255, 158, 205, 0.95),
+            -5px -4px 0 1.7px rgba(255, 201, 51, 0.9),
+            6px 3px 0 1.3px rgba(255, 138, 101, 0.9),
+            -7px 4px 0 1.4px rgba(255, 158, 205, 0.85),
+            1px -9px 0 1.2px rgba(255, 201, 51, 0.9);
+    }
+    45% {
+        box-shadow:
+            7px -10px 0 0.7px rgba(255, 158, 205, 0.45),
+            -9px -7px 0 0.8px rgba(255, 201, 51, 0.4),
+            10px 5px 0 0.6px rgba(255, 138, 101, 0.4),
+            -12px 6px 0 0.7px rgba(255, 158, 205, 0.4),
+            2px -15px 0 0.6px rgba(255, 201, 51, 0.4);
+    }
+    72% {
+        box-shadow:
+            12px -16px 0 0 rgba(255, 158, 205, 0),
+            -14px -12px 0 0 rgba(255, 201, 51, 0),
+            15px 8px 0 0 rgba(255, 138, 101, 0),
+            -17px 9px 0 0 rgba(255, 158, 205, 0),
+            3px -20px 0 0 rgba(255, 201, 51, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-nav-link--sparkle::after,
+    .header-nav-link--sparkle::before {
+        content: none;
+        animation: none;
+    }
 }
 
 .auth-section {
@@ -461,18 +597,25 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
-    display: none;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    padding: 0 2px;
 }
 
 .announcement-btn {
     background: none;
     border: none;
     color: #cbd5e1;
-    font-size: 1rem;
+    font-size: 1.05rem;
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 3px;
+    /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
+    padding: 10px 9px;
+    margin: -8px 0;
+    min-width: 36px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     line-height: 1;
     opacity: 0.8;
@@ -487,6 +630,32 @@ header h1 {
     display: none;
 }
 
+/* 手機版圓點指示（方案 B）：桌機隱藏、沿用箭頭；手機隱藏箭頭、改滑動＋圓點 */
+.announcement-dots {
+    display: none;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 3px;
+}
+
+.announcement-dot {
+    width: 6px;
+    height: 6px;
+    padding: 7px; /* content-box＋background-clip：視覺 6px、點擊區 20px */
+    box-sizing: content-box;
+    border: none;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.35);
+    background-clip: content-box;
+    cursor: pointer;
+    transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.announcement-dot.active {
+    width: 14px;
+    background-color: #ffffff;
+}
+
 /* Fade animation */
 .announcement-text.fade-out,
 .announcement-date-badge.fade-out {
@@ -496,6 +665,12 @@ header h1 {
 .announcement-text.fade-in,
 .announcement-date-badge.fade-in {
     opacity: 1;
+}
+
+/* 日期徽章只用自身 opacity transition 淡入，取消全域 .fade-in 的 fadeIn 落下動畫
+   （@keyframes fadeIn 有 translateY，會讓徽章第一次出現時從上方落下；站長要求移除） */
+.announcement-date-badge.fade-in {
+    animation: none;
 }
 
 /* Announcement Modal */
@@ -1388,6 +1563,9 @@ input[type="number"]:focus {
     font-size: 13px;
     line-height: 1.5;
     display: inline-block;
+    /* 無匹配時 displayResults() 會 scrollIntoView({block:'start'}) 把這行紅字捲到接近
+       頂端；留點上緣空間避免貼齊視窗最上緣，也讓上方搜尋框露出一小截當定位參考 */
+    scroll-margin-top: 72px;
 }
 
 .matched-item.no-match {
@@ -1977,17 +2155,29 @@ input[type="number"]:focus {
     font-size: 14px;
 }
 
-/* Regulatory warning under the main-results promo desc — red bordered box, centered. */
-.cardholder-promos-disclaimer {
-    margin: -4px 0 16px;
-    padding: 8px 12px;
-    color: #dc2626;
-    font-size: 14px;
-    font-weight: 600;
-    text-align: center;
-    border: 1px solid #dc2626;
-    border-radius: 8px;
-    background: #fef2f2;
+/* 「看全部新戶活動」pill 連結（2026-07-19 站長定案：原純文字連結改按鈕 pill；
+   同日移除本區的 .cardholder-promos-disclaimer 紅框警語行）。配色走站上
+   淺藍 chip 語言（#7dd3fc／#0369a1，同精準搜尋說明鈕一帶）。 */
+.cardholder-promos-more-btn {
+    display: inline-block;
+    padding: 4px 14px;
+    /* 說明文字換行後 pill 掉到第二行，靠 margin-top 跟上一行拉開（inline-block
+       的 margin-top 有效；同行未換行時只多 6px 無害） */
+    margin-top: 6px;
+    margin-left: 2px;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #0369a1;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.cardholder-promos-more-btn:hover {
+    background: #f0f9ff;
 }
 
 /* Regulatory warning above the 新戶活動 heading — dark band, white text, centered. */
@@ -2052,7 +2242,9 @@ input[type="number"]:focus {
     margin-top: 16px;
 }
 
-/* Apply CTA: shown above promo cards. Text + arrow + yellow button hugged together with a yellow glow. */
+/* Apply CTA: shown above promo cards. Text + arrow + yellow button hugged together.
+   2026-07-19 站長指示：移除外框光暈（box-shadow 三層黃暈），保留淡黃底＋邊框；
+   按鈕本體設計不動。 */
 .card-apply-cta {
     display: inline-flex;
     align-items: center;
@@ -2065,10 +2257,6 @@ input[type="number"]:focus {
     background: #fffbea;
     border: 1px solid #fde68a;
     border-radius: 10px;
-    box-shadow:
-        0 0 0 4px rgba(250, 204, 21, 0.18),
-        0 0 14px 2px rgba(250, 204, 21, 0.35),
-        0 0 28px 4px rgba(234, 179, 8, 0.18);
     max-width: 100%;
 }
 
@@ -2087,62 +2275,37 @@ input[type="number"]:focus {
     color: #b45309;
 }
 
-/* 果凍感「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
-   亮黃漸層＋頂部玻璃光澤＋底部軟糖邊＋暖色環境陰影；active 時往下沉並輕微壓扁，
-   transition 用回彈曲線做 Q 彈手感。個別位置的 padding/font-size 留在各自的規則裡。 */
+/* 「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
+   2026-07-19 站長定案改版：奶油蛋蜜「糖衣亮面」（mockup 代號 C3b＋H4）——蛋黃橘→
+   奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），扁平無厚底、深蜜糖字。
+   與 promos.css .promo-apply-btn 同配方，改配方時兩檔要手動同步。
+   hover＝糖衣變厚（內圈 1.5→2.5px 變白＋微提亮），無位移無掠光；active＝原地
+   縮小回彈。個別位置的 padding/font-size 留在各自的規則裡。 */
 .card-apply-cta-btn,
 .card-detail-apply-header-btn,
 .card-detail-apply-bar-btn {
-    background:
-        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    background-image:
+        radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+        linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
     color: #7a4e00;
     font-weight: 700;
     text-decoration: none;
     border-radius: 999px;
     border: none;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.85),
-        0 4px 0 #e8a800,
-        0 6px 14px rgba(255, 180, 0, 0.35);
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* hover＝單次掠光＋變亮，無放大（2026-07-16 站長定案，與 promos 頁一致）。
-   掠光需要 overflow hidden＋::after 光帶。 */
-.card-apply-cta-btn,
-.card-detail-apply-header-btn,
-.card-detail-apply-bar-btn {
-    position: relative;
-    overflow: hidden;
-}
-
-.card-apply-cta-btn::after,
-.card-detail-apply-header-btn::after,
-.card-detail-apply-bar-btn::after {
-    content: "";
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: 0;
-    width: 34%;
-    background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-    transform: translateX(-140%) skewX(-18deg);
-    pointer-events: none;
-}
-
-.card-apply-cta-btn:hover::after,
-.card-detail-apply-header-btn:hover::after,
-.card-detail-apply-bar-btn:hover::after {
-    transform: translateX(340%) skewX(-18deg);
-    transition: transform 0.65s ease;
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+        0 3px 10px rgba(255, 183, 77, 0.55);
+    transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
 .card-apply-cta-btn:hover,
 .card-detail-apply-header-btn:hover,
 .card-detail-apply-bar-btn:hover {
-    filter: brightness(1.07) saturate(1.05);
+    filter: brightness(1.03);
+    box-shadow:
+        inset 0 0 0 2.5px rgba(255, 255, 255, 1),
+        0 3px 10px rgba(255, 183, 77, 0.55);
 }
 
 /* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
@@ -2153,27 +2316,23 @@ input[type="number"]:focus {
         transition: none;
     }
 
-    .card-apply-cta-btn::after,
-    .card-detail-apply-header-btn::after,
-    .card-detail-apply-bar-btn::after {
-        display: none;
-    }
-
     .card-apply-cta-btn:hover,
     .card-detail-apply-header-btn:hover,
     .card-detail-apply-bar-btn:hover {
         filter: none;
+        box-shadow:
+            inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+            0 3px 10px rgba(255, 183, 77, 0.55);
     }
 }
 
 .card-apply-cta-btn:active,
 .card-detail-apply-header-btn:active,
 .card-detail-apply-bar-btn:active {
-    transform: translateY(3px) scale(1.02, 0.94);
+    transform: scale(0.95);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 1px 0 #e8a800,
-        0 2px 5px rgba(255, 180, 0, 0.3);
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.6),
+        0 2px 6px rgba(255, 183, 77, 0.45);
 }
 
 .card-apply-cta-btn {
@@ -2184,15 +2343,18 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
-/* Mobile: center the CTA box horizontally within the section. */
+/* Mobile: 詳情頁已有底部 sticky 申辦列（.card-detail-apply-bar），新戶活動區
+   上方的 CTA 盒重複，整個隱藏（2026-07-19 站長指示，原本是置中顯示）。
+   若該卡只有 CTA、沒有任何活動卡（renderCardPromos 的 CTA-only 分支），
+   整個新戶活動區在手機上也一併隱藏，避免剩一個空標題——:has() 全站已在用
+   （.avatar-menu-wrapper 等處），不支援的舊瀏覽器只是多看到一個空區塊標題，無害。 */
 @media (max-width: 768px) {
-    .card-apply-cta {
-        display: flex;
-        width: fit-content;
-        max-width: 100%;
-        margin-left: auto;
-        margin-right: auto;
-        justify-content: center;
+    #card-promos-content .card-apply-cta {
+        display: none;
+    }
+
+    #card-promos-section:has(> #card-promos-content > .card-apply-cta:only-child) {
+        display: none !important;
     }
 }
 
@@ -2254,9 +2416,9 @@ input[type="number"]:focus {
     display: block;
 }
 
-/* "馬上辦卡" button at bottom-right of new-customer promo cards in search results.
-   小 pill，配色跟果凍按鈕同一組亮黃語言，但尺寸小不做滿版果凍厚度，
-   只留輕量高光＋按下 squish，避免新舊黃並存。 */
+/* "立即申辦" button at bottom-right of new-customer promo cards in search results.
+   小 pill，2026-07-19 起改用奶油蛋蜜「糖衣亮面」縮小版（同上方共用底座配方，
+   內圈縮成 1px 配合小尺寸）；hover 同樣走糖衣變厚，無位移無放大。 */
 .cardholder-promo-item {
     position: relative;
 }
@@ -2264,43 +2426,58 @@ input[type="number"]:focus {
 .promo-apply-cta-btn {
     display: inline-block;
     flex-shrink: 0;
-    padding: 3px 9px;
-    background:
-        radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-        linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    /* 2026-07-19 站長指示加大一號（原 3px 9px／11px） */
+    padding: 5px 13px;
+    background-image:
+        radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+        linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
     color: #7a4e00;
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 700;
     text-decoration: none;
     border-radius: 999px;
     border: none;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 2px 0 #e8a800,
-        0 3px 7px rgba(255, 180, 0, 0.3);
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-        box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+        0 2px 6px rgba(255, 183, 77, 0.45);
+    transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
     white-space: nowrap;
     line-height: 1.6;
 }
 
 .promo-apply-cta-btn:hover {
-    transform: scale(1.05);
+    filter: brightness(1.03);
+    box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, 1),
+        0 2px 6px rgba(255, 183, 77, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .promo-apply-cta-btn {
+        transition: none;
+    }
+
+    .promo-apply-cta-btn:hover {
+        filter: none;
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+            0 2px 6px rgba(255, 183, 77, 0.45);
+    }
 }
 
 .promo-apply-cta-btn:active {
-    transform: translateY(1px) scale(1.02, 0.94);
+    transform: scale(0.95);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        0 0.5px 0 #e8a800,
-        0 1px 3px rgba(255, 180, 0, 0.25);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+        0 1px 3px rgba(255, 183, 77, 0.35);
 }
 
 .promo-apply-cta-icon {
     display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-left: 3px;
+    width: 12px;
+    height: 12px;
+    margin-left: 4px;
     vertical-align: middle;
     position: relative;
     top: -1px;
@@ -2362,6 +2539,9 @@ input[type="number"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    /* 卡名（連釘選鈕）與右側「最優回饋」pill 之間保底距離：卡名很長（手機換行）時
+       釘選鈕會被推到右緣，沒有 gap 會與 pill 貼在一起 */
+    gap: 12px;
     margin-bottom: 8px;
 }
 
@@ -2453,6 +2633,15 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* 滿額/未滿門檻（搜尋結果卡片）：重要條件，獨立一行置於匹配項目上方、
+   緊貼回饋數字。黑色粗體、字級與 .matched-merchant 一致（2026-07-17 用戶定案） */
+.spend-threshold-note {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #111827;
+}
+
 /* Multi-line condition / gift text: keep manual line breaks readable */
 .matched-merchant.promo-condition {
     line-height: 1.6;
@@ -2478,9 +2667,9 @@ input[type="number"]:focus {
 
 .cardholder-promo-item .ending-soon-badge,
 .card-result .matched-merchant .ending-soon-badge {
-    background: #f3f4f6;
-    color: #4b5563;
-    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #dc2626;
+    border: 1px solid #dc2626;
     padding: 1px 8px;
     font-size: 11px;
     font-weight: 500;
@@ -2547,20 +2736,13 @@ input[type="number"]:focus {
         margin-top: 2px;
     }
 
+    /* 方案 B：手機隱藏箭頭/則數，文字吃滿寬度，改用滑動＋圓點指示 */
     .announcement-controls {
-        gap: 4px;
-        align-self: flex-start;
-        margin-top: 2px;
+        display: none;
     }
 
-    .announcement-indicator {
-        font-size: 0.65rem;
-        padding: 1px 4px;
-    }
-
-    .announcement-btn {
-        font-size: 0.9rem;
-        padding: 2px 4px;
+    .announcement-dots {
+        display: flex;
     }
 
     #announcement-close {
@@ -2604,8 +2786,10 @@ input[type="number"]:focus {
         overflow-wrap: anywhere;
     }
 
+    /* 回饋率不需要太多橫向空間，把省下的寬度給「回饋金額」欄，讓四位數金額
+       （如 NT$1,000）與計算機按鈕 .calc-breakdown-btn 能留在同一行不換行 */
     .card-details {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: 0.8fr 1.35fr 0.85fr;
         gap: 6px;
     }
 
@@ -2619,6 +2803,18 @@ input[type="number"]:focus {
 
     .card-details .cashback-amount {
         font-size: 14px;
+    }
+
+    /* 手機版卡名太長時換到第二行（不再用 … 截斷；overflow-wrap 由 .card-result 繼承） */
+    .card-name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    /* 卡名換行成兩行時，ⓘ／釘選鈕靠齊第一行頂端，不要浮在兩行中間 */
+    .card-name-with-pin {
+        align-items: flex-start;
     }
 
     .cards-selection {
@@ -2753,12 +2949,18 @@ input[type="number"]:focus {
 
 .search-modal-input[type="text"] {
     flex: 1;
-    padding: 8px;
+    padding: 8px 8px 8px 30px; /* 左 30px 讓開放大鏡背景圖示 */
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-size: 13px;
     line-height: 1.3;
     transition: border-color 0.2s ease;
+    /* 單色放大鏡 SVG（同 promos 搜尋框的 Bootstrap search icon，取代原本 placeholder
+       裡的彩色 🔍 emoji，全站搜尋框圖示統一，2026-07-22 站長回饋） */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 9px center;
+    background-size: 14px 14px;
 }
 
 .search-modal-input:focus {
@@ -3651,7 +3853,7 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* 桌機版「立即申辦」按鈕，緊鄰卡名（詳情頁 header）。
-   配色沿用 .card-apply-cta-btn 的黃底樣式。 */
+   配色沿用上方共用底座的糖衣亮面樣式。 */
 .card-detail-apply-header-btn {
     flex-shrink: 0;
     display: inline-block;
@@ -3843,13 +4045,18 @@ input[type="text"].credit-limit-input:focus {
 /* Real-time search input above special cashback */
 .cashback-search-input {
     width: 100%;
-    padding: 5px 10px;
+    padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
     margin-bottom: 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 12px;
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
+    /* 單色放大鏡 SVG（同上，取代 placeholder 的彩色 🔍 emoji，2026-07-22） */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 8px center;
+    background-size: 13px 13px;
 }
 
 .cashback-search-input::placeholder {
@@ -3938,6 +4145,11 @@ input[type="text"].credit-limit-input:focus {
     padding-left: 0.5em;
 }
 
+/* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
+.cashback-condition.spend-threshold {
+    color: #111827;
+}
+
 /* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
    toggle only when the text actually overflows. Uses a max-height clamp
    (line-height 1.6 × 4 lines = 6.4em) rather than -webkit-line-clamp, which
@@ -3969,7 +4181,8 @@ input[type="text"].credit-limit-input:focus {
 
 .cashback-merchants {
     font-size: 12px; /* 縮小字體 */
-    color: #6b7280; /* 降低顏色對比 */
+    color: #3b82f6; /* 適用通路內容：藍色粗體，比照 .matched-merchant strong（2026-07-19 用戶定案，字級不需與 matched-merchant 一致） */
+    font-weight: bold;
     line-height: 1.6; /* 增加行高改善易讀性 */
     margin-top: 6px;
 }
@@ -5047,37 +5260,38 @@ input[type="text"].credit-limit-input:focus {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button（淺綠底＋釘選 icon，與結果卡的釘選視覺呼應） */
+/* Floating My Mappings Button（琥珀底＋釘選 icon，與結果卡釘選態 pin-btn.pinned 同色系） */
+/* 我的配卡組合浮標：唯一「打開 modal」的捷徑鈕，用琥珀色圓角方塊，和灰色圓形的
+   捲動導覽鈕（精選活動／回到頂部）在視覺上分類。排在最下方。桌機/手機都只顯示圖示，
+   桌機 hover 時左側浮現文字標籤（.btn-text）。 */
 .my-mappings-floating-btn {
     position: fixed;
-    bottom: 72px;
+    bottom: 16px;
     right: 16px;
-    padding: 8px 12px;
-    background: #d1fae5;
-    border: 1px solid #a7f3d0;
+    width: 48px;
+    height: 48px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
     border-radius: 6px;
-    font-size: 0.75rem;
-    color: #065f46;
-    font-weight: 600;
+    color: #b45309;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
     transition: all 0.2s ease;
     z-index: 999;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
     overflow: visible;
 }
 
-.my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-    transform: translateY(-2px);
+.my-mappings-floating-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
-/* 配卡 modal 標題的釘選 icon */
-.mappings-title-pin {
-    vertical-align: -2px;
-    color: #667eea;
+.my-mappings-floating-btn:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    transform: translateY(-2px);
 }
 
 .my-mappings-floating-btn:active {
@@ -5217,8 +5431,8 @@ input[type="text"].credit-limit-input:focus {
 }
 
 /* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
-   一張信用卡＝一個群組卡片：卡名色塊（卡面主色，CARD_ACCENT_COLORS）＋商家列。
-   手機不再橫向捲動；過期配對沉底收合；拖曳把手 touch-action:none 供觸控拖曳 */
+   一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
+   的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
 .mapping-groups {
     display: flex;
     flex-direction: column;
@@ -5236,15 +5450,17 @@ input[type="text"].credit-limit-input:focus {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 12px;
-    color: white;
+    padding: 8px 12px;
+    background: #f1eff0;
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
 }
 
+/* 不設 flex:1——讓後面的 ⓘ 貼著卡名，而不是被推到最右側；長卡名靠 shrink+wrap */
 .mapping-group-name {
-    flex: 1;
     min-width: 0;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     overflow-wrap: anywhere;
 }
 
@@ -5268,7 +5484,7 @@ input[type="text"].credit-limit-input:focus {
     padding: 0;
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.9);
+    color: #6b7280;
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -5277,14 +5493,15 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-peek-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
+    color: #1e40af;
+    background: #eef2ff;
 }
 
 .mapping-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 6px 12px;
     border-bottom: 1px solid #f3f4f6;
     background: white;
 }
@@ -5298,6 +5515,56 @@ input[type="text"].credit-limit-input:focus {
     min-width: 0;
 }
 
+.mapping-item-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 商家 pill（仿快速搜尋 .tag-item：白底淺灰框、整顆可拖）；
+   touch-action none 讓觸控拖曳不會捲動 modal */
+.mapping-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.mapping-pill.mapping-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mapping-pill-remove {
+    flex: none;
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 0 0 2px;
+    opacity: 0.75;
+}
+
+.mapping-pill-remove:hover {
+    opacity: 1;
+}
+
 .mapping-item-merchant {
     font-weight: 500;
     color: #1f2937;
@@ -5308,13 +5575,13 @@ input[type="text"].credit-limit-input:focus {
 .mapping-item-date {
     font-size: 12px;
     color: #9ca3af;
-    margin-top: 1px;
+    margin-top: 4px;
     font-variant-numeric: tabular-nums;
 }
 
 .mapping-item-rate {
     flex: none;
-    color: #059669;
+    color: #10b981;
     font-weight: 700;
     font-size: 15px;
     font-variant-numeric: tabular-nums;
@@ -5337,25 +5604,6 @@ input[type="text"].credit-limit-input:focus {
 }
 
 .mapping-group-head .mapping-drag-handle {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* 淺色色塊（白卡面）：前景轉深色、補分隔線，避免白字隱形／與卡片底融合 */
-.mapping-group-head.light {
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.mapping-group-head.light .mapping-peek-btn {
-    color: #6b7280;
-}
-
-.mapping-group-head.light .mapping-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
-}
-
-.mapping-group-head.light .mapping-drag-handle {
     color: #9ca3af;
 }
 
@@ -5469,35 +5717,67 @@ input[type="text"].credit-limit-input:focus {
    ============================================ */
 
 /* Floating Feedback Button */
-.feedback-floating-btn {
+/* 精選活動快速跳轉浮標：功能是「往下捲到精選活動區」，本質是捲動導覽（和回到頂部同類，
+   而非開 modal 的捷徑），因此沿用回到頂部鈕的灰色圓形設計。有搜尋結果時（JS 加 .is-visible）
+   才顯示。桌機/手機都只顯示圖示，桌機 hover 時左側浮現「精選活動」標籤。 */
+.scroll-to-spotlight-btn {
     position: fixed;
     bottom: 16px;
     right: 16px;
-    padding: 8px 12px;
-    background: rgba(107, 114, 128, 0.15);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
     border: 1px solid rgba(107, 114, 128, 0.2);
+    background: rgba(107, 114, 128, 0.15);
+    color: #374151;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(8px);
+    z-index: 999;
+    overflow: visible;
+    transition: all 0.2s ease;
+    /* 預設隱藏，僅在有搜尋結果時由 JS 切換 .is-visible 顯示 */
+    display: none;
+}
+
+.scroll-to-spotlight-btn.is-visible {
+    display: flex;
+}
+
+/* 我的配卡組合（M）排在最下方；M 有顯示時把精選活動鈕往上疊一層 */
+body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
+    bottom: 72px;
+}
+
+.scroll-to-spotlight-btn:active {
+    transform: scale(0.96);
+}
+
+/* 桌機浮標（我的配卡組合／精選活動）的 hover 文字標籤：平常隱藏，
+   hover 時浮現在圖示鈕左側；手機無 hover，於 media query 內整個隱藏 */
+.my-mappings-floating-btn .btn-text,
+.scroll-to-spotlight-btn .btn-text {
+    position: absolute;
+    right: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    background: rgba(31, 41, 55, 0.92);
+    color: #ffffff;
+    padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.75rem;
-    color: #6b7280;
-    cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    backdrop-filter: blur(8px);
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
 }
 
-.feedback-floating-btn:hover {
-    background: rgba(107, 114, 128, 0.25);
-    border-color: rgba(107, 114, 128, 0.3);
-    color: #374151;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.feedback-floating-btn:active {
-    transform: scale(0.98);
+.my-mappings-floating-btn:hover .btn-text,
+.scroll-to-spotlight-btn:hover .btn-text {
+    opacity: 1;
 }
 
 /* Image lightbox (click-to-enlarge for the first-spend gift image) */
@@ -5521,7 +5801,8 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* Back-to-top floating button — mobile only, sits above the feedback button */
+/* Back-to-top floating button — mobile only; top-most of the floating stack
+   (下方依序：我的配卡組合 → 精選活動 → 回到頂部，見 mobile media query 的疊放規則） */
 .back-to-top-btn {
     position: fixed;
     bottom: 16px;
@@ -5811,47 +6092,27 @@ input[type="text"].credit-limit-input:focus {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
-    .my-mappings-floating-btn {
-        bottom: 72px;
-        right: 16px;
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-        padding: 0;
-        justify-content: center;
-    }
-
-    /* Hide text on mobile, only show icon */
-    .my-mappings-floating-btn .btn-text {
+    /* 浮標桌機/手機同尺寸（48×48，樣式在各自 base）；此處只處理手機專屬的疊放與
+       隱藏 hover 文字。堆疊順序（下→上）：我的配卡組合 → 精選活動 → 回到頂部。 */
+    .my-mappings-floating-btn .btn-text,
+    .scroll-to-spotlight-btn .btn-text {
         display: none;
     }
 
-    .feedback-floating-btn {
-        bottom: 16px;
-        right: 16px;
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
-        padding: 0;
-        justify-content: center;
-    }
-
-    /* Back-to-top: mobile only, stacked just above the feedback button.
-       When the "我的消費配卡" button is visible (logged in), it occupies the
-       slot above feedback, so push back-to-top one slot higher to avoid overlap. */
+    /* 回到頂部：手機專用，疊在最上方；下方每多一顆可見浮標就往上讓一層 56px */
     .back-to-top-btn.is-visible {
         display: flex;
-        bottom: 72px;
+        bottom: 16px;
         right: 16px;
     }
 
-    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible {
-        bottom: 128px;
+    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible,
+    body:has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+        bottom: 72px;
     }
 
-    /* Hide text on mobile, only show icon */
-    .feedback-floating-btn span:last-child {
-        display: none;
+    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+        bottom: 128px;
     }
 
     .image-preview-container {
@@ -6907,25 +7168,62 @@ input[type="text"].credit-limit-input:focus {
     }
 }
 
+/* 手機抽屜「新戶活動一覽」卡（🎁）平面樣式：純色底＋細邊框＋無陰影、hover 只換底色。
+   2026-07-18 站長要求 index 抽屜比照 /faq 頁——原本只在 faq.css 該頁 override 壓平，
+   現把壓平後的樣式收進 styles.css 本體，index 與 faq 兩邊抽屜共用同一種平面外觀
+   （糖果黃漸層＋內凹白線＋多層陰影＋彈跳位移的舊立體風已退役）。 */
 .sidebar-promos-banner {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
     border-radius: 12px;
-    background: linear-gradient(180deg, #FFE066 0%, #FFC933 100%);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 3px 0 #E8A800, 0 5px 12px rgba(255, 180, 0, 0.3);
+    background: #fff7e0;
+    border: 1px solid #ffe29a;
+    box-shadow: none;
     text-decoration: none;
-    transition: transform 0.18s cubic-bezier(.34, 1.56, .64, 1), box-shadow 0.18s;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    /* 煙花 ::after 的定位基準（八輪回饋後煙花錨在 .sidebar-promos-banner-text
+       strong 上）；position 保留無害，避免未來疊絕對定位元素再踩一次 */
+    position: relative;
 }
 
 .sidebar-promos-banner:hover {
-    transform: translateY(-1px) scale(1.02);
+    background: #fff2cc;
+    border-color: #ffd97a;
 }
 
-.sidebar-promos-banner:active {
-    transform: translateY(2px) scale(1.01, 0.96);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), 0 1px 0 #E8A800;
+/* 手機抽屜小煙花（2026-07-17 起，跟桌機 header 的 .header-nav-link--sparkle
+   共用 @keyframes nav-sparkle-burst，定義見 styles.css 前段「導覽」區塊；
+   reduced-motion 停用規則見本區塊正下方——必須放在動畫定義「之後」才能靠
+   源碼順序覆蓋，放前段會被這裡的無條件定義蓋掉）。
+   八輪回饋：曾做過卡片左右角雙發（四輪），站長改要「只要一顆，出現在
+   『新戶活動一覽』字尾緊鄰右側，不要右上角」——改錨在
+   .sidebar-promos-banner-text strong 的 ::after（strong 要 align-self:flex-start
+   收縮成內容寬，錨點才貼字尾、不是整欄右緣；見下方 strong 規則），top:50%
+   垂直對齊標題行中線。0.4s 起始 delay 維持（避開跟桌機 header 同步閃爍）。 */
+.sidebar-promos-banner-text strong::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -14px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+    animation-delay: 0.4s;
+}
+
+/* 停用手機抽屜煙花：同 specificity，靠源碼順序勝出，必須排在上面的無條件動畫
+   定義「之後」（四輪回饋驗收抓到：放前段統一停用區塊會被這裡蓋掉，reduced-motion
+   下手機抽屜仍會閃）。 */
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-promos-banner-text strong::after {
+        content: none;
+        animation: none;
+    }
 }
 
 .sidebar-promos-banner-emoji {
@@ -6943,6 +7241,10 @@ input[type="text"].credit-limit-input:focus {
 .sidebar-promos-banner-text strong {
     font-size: 0.92rem;
     color: #7A4E00;
+    /* 煙花錨點（八輪回饋，見上方 strong::after 區塊）：flex-column 下 strong
+       預設被拉伸成整欄寬，收縮成內容寬煙花才會貼在字尾右側 */
+    position: relative;
+    align-self: flex-start;
 }
 
 .sidebar-promos-banner-text small {
@@ -7431,98 +7733,130 @@ input[type="text"].credit-limit-input:focus {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* F-2 版式（2026-07-21 重設計）：左側傾斜卡圖＋淺綠回饋率貼紙，
+   右側活動類型標籤（唯一帶分類色的元素）＋通路名＋描述 */
 .spotlight-card {
     display: flex;
     flex-direction: column;
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    min-height: 260px;
+    min-height: 200px;
+    transition: box-shadow .25s, border-color .25s;
 }
-.spotlight-card-top {
+.spotlight-card:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    border-color: #d1d5db;
+}
+/* min-height 防輪播換頁跳動：有無類型標籤高度都以卡圖列為準 */
+.spotlight-top-row {
     display: flex;
+    gap: 14px;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
     margin-bottom: 10px;
+    min-height: 92px;
 }
-.spotlight-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-width: 0;
-    max-width: 75%;
+.spotlight-ccwrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 118px;
+    height: 84px;
 }
-.spotlight-tag-chip {
-    font-size: 0.72rem;
-    color: #6d28d9;
-    background: #ede9fe;
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-weight: 500;
+/* 直式卡圖靠 contain letterbox；陰影用 drop-shadow 跟著實際像素走 */
+.spotlight-ccimg {
+    position: absolute;
+    left: 0;
+    top: 6px;
+    width: 108px;
+    height: 66px;
+    object-fit: contain;
+    border-radius: 8px;
+    transform: rotate(-6deg);
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
+}
+/* 回饋率貼紙：統一淺綠底＋深綠字＋白邊，貼在卡圖右下角 */
+.spotlight-rate-sticker {
+    position: absolute;
+    right: -6px;
+    bottom: -4px;
+    font-size: 0.98rem;
+    font-weight: 900;
+    color: #15803d;
+    background: #bbf7d0;
+    border-radius: 10px;
+    padding: 6px 9px;
+    transform: rotate(6deg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+    border: 2px solid #fff;
     white-space: nowrap;
 }
-/* 配色對齊快捷搜尋按鈕（.quick-search-btn：白底＋天藍細框＋藍字，
-   2026-07-16 站長要求），尺寸維持原 tag 大小 */
-.spotlight-merchant-tag {
-    font-size: 0.78rem;
-    color: #0369a1;
-    background: #fff;
-    border: 1px solid #7dd3fc;
+/* 缺圖（img onerror）：整欄縮起、貼紙退回靜態擺左側 */
+.spotlight-ccwrap.noimg {
+    width: auto;
+    height: auto;
+    align-self: flex-start;
+}
+.spotlight-ccwrap.noimg .spotlight-rate-sticker {
+    position: static;
+    display: inline-block;
+    transform: none;
+}
+.spotlight-top-right {
+    flex: 1;
+    min-width: 0;
+}
+.spotlight-hype-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: .02em;
     border-radius: 999px;
-    padding: 4px 10px;
+    padding: 3px 10px;
+    margin-bottom: 6px;
+    white-space: nowrap;
+}
+.spotlight-hype-tag.hype-top  { color: #b45309; background: #fef3c7; }
+.spotlight-hype-tag.hype-god  { color: #be123c; background: #ffe4e6; }
+.spotlight-hype-tag.hype-excl { color: #6d28d9; background: #ede9fe; }
+.spotlight-hype-tag.hype-easy { color: #0f766e; background: #ccfbf1; }
+.spotlight-merchant {
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.3;
+    margin-bottom: 3px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.spotlight-rate {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: #059669;
-    flex-shrink: 0;
-}
 .spotlight-desc {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #111827;
-    line-height: 1.4;
-    margin-bottom: 12px;
+    font-size: 0.76rem;
+    color: #6b7280;
+    line-height: 1.5;
     /* Always reserve exactly 2 lines so cards don't jump on rotate */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    height: 2.8em;
+    height: 3em;
 }
-.spotlight-meta {
+.spotlight-info-row {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 14px;
-    min-height: 76px;
-}
-.spotlight-meta-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+    gap: 14px;
+    font-size: 0.72rem;
     color: #6b7280;
-    min-width: 0;
-}
-.spotlight-meta-row > span:last-child {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    border-top: 1px dashed #e5e7eb;
+    padding: 9px 2px 0;
+    margin-bottom: 12px;
+    min-height: 28px;
     white-space: nowrap;
-    min-width: 0;
-    flex: 1;
+    overflow: hidden;
 }
-.spotlight-meta-icon { width: 16px; text-align: center; flex-shrink: 0; }
-.spotlight-meta-card > span:last-child {
-    font-weight: 700;
+.spotlight-info-row b {
     color: #111827;
+    font-weight: 700;
 }
 .spotlight-days-badge {
     display: inline-block;
@@ -7735,6 +8069,36 @@ input[type="text"].credit-limit-input:focus {
 #merchant-input::-webkit-search-cancel-button,
 #merchant-input::-webkit-search-decoration {
     -webkit-appearance: none;
+}
+
+/* 一鍵清除輸入的 ✕（原生 search cancel 已在上面關掉，改用跨瀏覽器一致的自製鈕） */
+.merchant-input-wrap {
+    position: relative;
+}
+
+.merchant-input-wrap #merchant-input {
+    padding-right: 44px; /* 讓長輸入不會壓在 ✕ 底下 */
+}
+
+.merchant-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: #9ca3af;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.merchant-clear-btn:hover {
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
 .merchant-search-box .quick-search-wrapper {

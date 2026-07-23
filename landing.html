@@ -28,10 +28,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="landing.css?v=20260712144800">
+    <link rel="stylesheet" href="landing.css?v=dev">
 
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
     <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
+
+    <!-- Microsoft Clarity（async 注入，不卡 first paint；比照 index.html）
+         landing 過去無追蹤碼＝/landing 在 Clarity 完全不被記錄，補上讓 SEO canonical 頁能被追蹤 -->
+    <script type="text/javascript">
+        (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "u1w7nqgag1");
+    </script>
+
+    <!-- Google Analytics 4（gtag.js，async 不卡 first paint）
+         與 index.html 同一個 GA4 property（G-RW8F159L52）；index.html 走 Firebase Analytics，
+         landing 是獨立靜態頁不載 Firebase 模組，故直接用標準 gtag.js。
+         補上前 /landing 在 GA4 完全無資料（只有 Clarity）；加上後才能用 Data API 撈成效。 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RW8F159L52"></script>
+    <script type="text/javascript">
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-RW8F159L52');
+    </script>
 
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
@@ -73,7 +95,7 @@
     <div class="lp-progress" aria-hidden="true"><div class="lp-progress-bar" id="lp-progress-bar"></div></div>
 
     <!-- 開場提示 -->
-    <div class="lp-hint" id="lp-hint" aria-hidden="true">信用卡回饋的世界<span class="lp-hint-arrow"></span><span class="lp-hint-sub">往下滑</span></div>
+    <div class="lp-hint" id="lp-hint" aria-hidden="true">信用卡回饋的世界<span class="lp-hint-arrow"></span><span class="lp-hint-sub">scroll</span></div>
 
     <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
     <button class="lp-scrollcue" id="lp-scrollcue" type="button" aria-label="跳到下一幕"></button>
@@ -126,6 +148,8 @@
                         <p class="lp-brand-sub fx" data-at="0.78">搞懂回饋規則，不該是你的功課</p>
                     </div>
                 </div>
+                <!-- 「如何使用？」引子：絕對定位釘在底部灰色下滑箭頭上方（樣式見 .lp-brand-how） -->
+                <p class="lp-brand-how fx" data-at="0.80">如何使用？</p>
             </section>
 
             <!-- ============ 第 2 幕｜STEP 1 · 你的信用卡 ============ -->
@@ -304,7 +328,7 @@
                 </div>
                 <h2 class="lp-final-title fx" data-at="0.16">下次結帳前，<br>先 Pick My Card</h2>
                 <p class="lp-final-sub fx" data-at="0.26">免費、免下載，打開網頁就能用</p>
-                <p class="lp-final-stat fx" data-at="0.34">加入 <strong>26,000+</strong> 位用戶的行列，一起輕鬆賺回饋</p>
+                <p class="lp-final-stat fx" data-at="0.34">加入 <strong>28,000+</strong> 位用戶的行列，一起輕鬆賺回饋</p>
                 <a class="lp-cta fx" data-at="0.42" href="index.html?start">開始使用</a>
                 <a class="lp-safety fx" data-at="0.52" href="faq.html#faq-10" target="_blank" rel="noopener noreferrer">本站不收集任何個資，辦卡都在銀行官網完成，請安心使用。</a>
                 <a class="lp-follow fx" data-at="0.60" href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer">
@@ -324,6 +348,6 @@
         免費、免下載，網頁一開即用。</p>
     </footer>
 
-    <script src="landing.js?v=20260712005527" defer></script>
+    <script src="landing.js?v=dev" defer></script>
 </body>
 </html>

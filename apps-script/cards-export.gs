@@ -26,6 +26,8 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🎯 卡片管理')
     .addItem('✅ 檢查資料品質', 'runQACheck')
+    .addItem('🔗 檢查 card_id 參照完整性', 'runReferentialIntegrityCheck')
+    .addItem('🏷️ 檢查通路名稱一致性', 'runMerchantNamingCheck')
     .addItem('📥 匯出 JSON', 'exportToJSON')
     .addSeparator()
     .addItem('🗑️ 清除 QA 報告', 'clearQAReport')
@@ -112,8 +114,10 @@ function runQACheck() {
       issues.push([cardId, cardName, '名稱過長', 'name', `名稱長度 ${cardName.length} 字，建議不超過 20 字`, '⚠️']);
     }
 
-    // 檢查 6: rate 必須有 items
-    for (let j = 1; j <= 5; j++) {
+    // 檢查 6: rate 必須有 items——匯出迴圈的 guard 要求 items 才收槽，rate 有值但
+    // items 空 ＝ 整槽靜默消失。上限依表頭自動偵測（原本寫死 1–5，槽 6+ 完全沒查）；
+    // 槽 1–5 維持 ❌ 擋匯出（沿用既有行為），槽 6 起用 ⚠️ 只警告不擋，避免舊資料突然擋死匯出
+    for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
       const rateCol = headers.indexOf(`rate_${j}`);
       const itemsCol = headers.indexOf(`items_${j}`);
 
@@ -122,7 +126,7 @@ function runQACheck() {
         const items = row[itemsCol];
 
         if (rate && !items) {
-          issues.push([cardId, cardName, '資料不完整', `rate_${j}`, `有設定 rate_${j} 但沒有 items_${j}`, '❌']);
+          issues.push([cardId, cardName, '資料不完整', `rate_${j}`, `有設定 rate_${j} 但沒有 items_${j}（此槽不會匯出）`, j <= 5 ? '❌' : '⚠️']);
         }
       }
     }
@@ -212,6 +216,193 @@ function runQACheck() {
 }
 
 // ==========================================
+// ② 參照完整性檢查（card_id 對得到卡片）
+// ------------------------------------------
+// spotlights.card_id / newCardholderPromos.id / cardApplyCtas 的 key 都必須對得到
+// cards[].id。對不到時前端「靜默」失敗——精選活動 ⓘ 退回手打文字、申辦按鈕不顯示，
+// 不會有錯誤訊息。純函數：吃已解析好的記憶體物件、回傳問題字串陣列（空＝沒問題）。
+// 於 exportToJSON 匯出前呼叫（發布前擋），也可獨立由 runReferentialIntegrityCheck 手動跑。
+// ==========================================
+function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas) {
+  const idSet = {};
+  (cards || []).forEach(function(c) { if (c && c.id) idSet[c.id] = true; });
+
+  const problems = [];
+
+  (spotlights || []).forEach(function(s, i) {
+    if (!s) return;
+    const who = s.merchant || s.card_name || ('第 ' + (i + 1) + ' 列');
+    if (!s.card_id) {
+      problems.push('精選活動（Highlights）「' + who + '」缺 card_id');
+    } else if (!idSet[s.card_id]) {
+      problems.push('精選活動（Highlights）「' + who + '」的 card_id「' + s.card_id + '」對不到任何卡片');
+    }
+  });
+
+  (newCardholderPromos || []).forEach(function(p, i) {
+    if (!p) return;
+    const who = p.promo_name || p.promo_id || ('第 ' + (i + 1) + ' 列');
+    if (!p.id) {
+      problems.push('新戶活動「' + who + '」缺卡片 id');
+    } else if (!idSet[p.id]) {
+      problems.push('新戶活動「' + who + '」的卡片 id「' + p.id + '」對不到任何卡片');
+    }
+  });
+
+  Object.keys(cardApplyCtas || {}).forEach(function(cid) {
+    if (!idSet[cid]) {
+      problems.push('申辦 CTA（cardApplyCtas）的卡片 id「' + cid + '」對不到任何卡片');
+    }
+  });
+
+  return problems;
+}
+
+// 手動版：不做完整匯出，只跑參照完整性檢查並用對話框回報（給選單用）。
+// 重用既有 reader，所以欄位版面改了也不會失準。
+function runReferentialIntegrityCheck() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const cards = readCardsForValidation_();
+    const promoData = readNewCardholderPromos();
+    const spotlights = readHighlights();
+    const problems = validateReferentialIntegrity_(
+      cards, spotlights, promoData.newCardholderPromos, promoData.cardApplyCtas
+    );
+    if (problems.length === 0) {
+      ui.alert('✅ 參照完整性檢查通過', '所有 card_id 都對得到卡片。', ui.ButtonSet.OK);
+    } else {
+      ui.alert('⚠️ 發現 ' + problems.length + ' 個參照問題',
+        problems.slice(0, 25).join('\n') +
+          (problems.length > 25 ? '\n…（其餘略）' : ''),
+        ui.ButtonSet.OK);
+    }
+  } catch (e) {
+    ui.alert('檢查失敗：' + e.message);
+  }
+}
+
+// 只為驗證讀出 cards 的 id/name（不跑完整 exportToJSON）。
+// 若專案已有可重用的「讀 Cards Data」函式，可改呼叫它取代這段。
+function readCardsForValidation_() {
+  const dataSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Cards Data');
+  if (!dataSheet) return [];
+  const data = dataSheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('id');
+  const nameCol = headers.indexOf('name');
+  const cards = [];
+  for (let i = 1; i < data.length; i++) {
+    const id = idCol >= 0 ? data[i][idCol] : '';
+    if (!id) continue;
+    cards.push({ id: String(id), name: nameCol >= 0 ? data[i][nameCol] : '' });
+  }
+  return cards;
+}
+
+// ==========================================
+// ⑥ 通路（商家）名稱一致性檢查
+// ------------------------------------------
+// 搜尋靠 item 名稱比對，同一通路寫法不一（全形/半形、大小寫、空格、常見別名）
+// 會讓匹配分裂。做法：把所有來源的通路字串收齊 → 正規化成一把「鑰匙」→ 同一把
+// 鑰匙底下若出現 2 種以上「原始寫法」，就是疑似同物異名，列進 QA Check 工作表。
+// 這是「警告」不是「錯誤」：正規化後相同不代表一定是同一家（可能真的是兩家），
+// 需人工判讀，所以不擋匯出，只產報告。
+// ==========================================
+function runMerchantNamingCheck() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qaSheet = ss.getSheetByName('QA Check');
+  const ui = SpreadsheetApp.getUi();
+  if (!qaSheet) { ui.alert('找不到 QA Check 工作表！'); return; }
+
+  // 收集所有通路字串 + 來源（能追回哪張卡/哪個活動）
+  const occ = {};  // rawName -> Set(來源說明)
+  const addName = function(raw, source) {
+    if (raw === null || raw === undefined) return;
+    const name = String(raw).trim();
+    if (!name) return;
+    if (!occ[name]) occ[name] = {};
+    occ[name][source] = true;
+  };
+
+  // 來源 1：Cards Data 的 items_N（主來源，佔絕大多數）
+  const dataSheet = ss.getSheetByName('Cards Data');
+  if (dataSheet) {
+    const data = dataSheet.getDataRange().getValues();
+    const headers = data[0];
+    const nameCol = headers.indexOf('name');
+    for (let i = 1; i < data.length; i++) {
+      const cardName = nameCol >= 0 ? data[i][nameCol] : '';
+      if (!cardName) continue;
+      for (let j = 1; j <= maxSlotIndex(headers, 'rate'); j++) {
+        const itemsCol = headers.indexOf('items_' + j);
+        if (itemsCol < 0) continue;
+        splitMerchantCell_(data[i][itemsCol]).forEach(function(m) {
+          addName(m, '卡片:' + cardName);
+        });
+      }
+    }
+  }
+  // 來源 2：快捷搜尋（QuickSearch 的 merchants）與精選活動 merchant——跨來源不一致最常見
+  try {
+    (readHighlights() || []).forEach(function(s) { addName(s.merchant, '精選活動'); });
+  } catch (e) {}
+
+  // 依正規化鑰匙分群，找出「一鑰匙多寫法」
+  const groups = {};  // key -> Set(rawName)
+  Object.keys(occ).forEach(function(name) {
+    const key = normalizeMerchantKey_(name);
+    if (!key) return;
+    if (!groups[key]) groups[key] = {};
+    groups[key][name] = true;
+  });
+
+  const issues = [['正規化鑰匙', '疑似同物異名（原始寫法）', '出現來源']];
+  Object.keys(groups).forEach(function(key) {
+    const variants = Object.keys(groups[key]);
+    if (variants.length < 2) return;  // 只有一種寫法＝沒問題
+    const sources = {};
+    variants.forEach(function(v) { Object.keys(occ[v] || {}).forEach(function(s) { sources[s] = true; }); });
+    issues.push([key, variants.join('  ⇄  '), Object.keys(sources).slice(0, 6).join('、')]);
+  });
+
+  // 寫報告到 QA Check 工作表下方（不覆蓋既有 QA 報告，另起一區）
+  const startRow = Math.max(qaSheet.getLastRow() + 2, 2);
+  if (issues.length > 1) {
+    qaSheet.getRange(startRow, 1).setValue('—— ⑥ 通路名稱一致性（疑似同物異名 ' + (issues.length - 1) + ' 組）——')
+      .setFontWeight('bold');
+    qaSheet.getRange(startRow + 1, 1, issues.length, 3).setValues(issues);
+    qaSheet.getRange(startRow + 1, 1, 1, 3).setFontWeight('bold').setBackground('#fff4ce');
+    ui.alert('⚠️ 通路名稱一致性',
+      '找到 ' + (issues.length - 1) + ' 組疑似同物異名，已寫入 QA Check 工作表。\n' +
+      '請人工判讀——正規化後相同不代表一定是同一家。',
+      ui.ButtonSet.OK);
+  } else {
+    ui.alert('✅ 通路名稱一致性', '沒有發現疑似同物異名。', ui.ButtonSet.OK);
+  }
+}
+
+// 拆一格 items（sheet 內可能用 、 , ，或換行分隔）
+function splitMerchantCell_(cell) {
+  if (cell === null || cell === undefined) return [];
+  return String(cell).split(/[、,，\n]/).map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+}
+
+// 正規化鑰匙：小寫 + 去空白 + 全形轉半形 + 去常見尾綴/符號。
+// 目的是讓「玉山Wallet」「玉山 wallet」「玉山wallet電子支付」落到同一鑰匙以便攤在一起檢視。
+// 尾綴清單刻意保守（只削明顯的通用後綴），寧可少歸併也不要把兩家不同的併成一家。
+function normalizeMerchantKey_(name) {
+  let s = String(name);
+  // 全形英數轉半形
+  s = s.replace(/[！-～]/g, function(ch) { return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); });
+  s = s.toLowerCase();
+  s = s.replace(/[\s　]/g, '');                 // 去所有空白（含全形空格）
+  s = s.replace(/[()（）·・.,\-_/]/g, '');            // 去常見標點
+  s = s.replace(/(電子支付|購物網|購物|股份有限公司|有限公司|公司|服務|系統|超市|超商|門市)$/g, '');
+  return s;
+}
+
+// ==========================================
 // 匯出 JSON 功能（新增 QuickSearch）
 // ==========================================
 
@@ -228,7 +419,9 @@ function exportToJSON() {
 
   // 檢查是否有嚴重問題
   const qaData = qaSheet.getDataRange().getValues();
-  const criticalIssues = qaData.filter(row => row[5] === '❌').length - 1;
+  // 標題列的第 6 欄是「嚴重度」字樣、不是 ❌，filter 本來就不會數到它——
+  // 不能再 -1（2026-07-20 審計發現：舊的 -1 讓「恰好只有 1 個 ❌」時照樣放行匯出）
+  const criticalIssues = qaData.filter(row => row[5] === '❌').length;
 
   if (criticalIssues > 0) {
     ui.alert('❌ 無法匯出',
@@ -594,6 +787,25 @@ if (faqSheet) {
   const cardApplyCtas = promoData.cardApplyCtas;
   const spotlights = readHighlights();
 
+  // 🔒 參照完整性把關：spotlights.card_id／newCardholderPromos.id／cardApplyCtas 的
+  //    key 都必須對得到 cards[].id。對不到時前端不會報錯，會「靜默」退回手打文字
+  //    （精選活動 ⓘ）或不顯示申辦按鈕，上線後肉眼幾乎抓不到。匯出前擋一次，
+  //    讓維護者決定是否仍要發布（見 validateReferentialIntegrity_）。
+  const refProblems = validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas);
+  if (refProblems.length > 0) {
+    const proceed = ui.alert(
+      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片）',
+      refProblems.slice(0, 20).join('\n') +
+        (refProblems.length > 20 ? '\n…（其餘 ' + (refProblems.length - 20) + ' 個略）' : '') +
+        '\n\n這些引用會讓前端靜默退回手打文字或不顯示申辦按鈕。\n仍要繼續匯出嗎？',
+      ui.ButtonSet.YES_NO
+    );
+    if (proceed !== ui.Button.YES) {
+      ui.alert('已取消匯出。請修正上述 card_id 後再匯出一次。');
+      return;
+    }
+  }
+
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
   // 掛進同一次 GitHub commit（見 publishToGitHub）
   const promosPageHtml = generatePromosPageHtml({
@@ -622,7 +834,7 @@ if (faqSheet) {
 
 
   // 🔒 Base64 編碼 → 直接發布到 GitHub（cards.data + cards.version），
-  //    Vercel 自動部署。不再產生 Drive 下載檔（2026-07-12 移除：下載區塊
+  //    Cloudflare Pages 自動部署。不再產生 Drive 下載檔（2026-07-12 移除：下載區塊
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
@@ -630,7 +842,7 @@ if (faqSheet) {
 
   ui.alert(
     '✅ 匯出完成',
-    `已自動發布到 GitHub（版本 ${version}），Vercel 會自動部署。\n\n` +
+    `已自動發布到 GitHub（版本 ${version}），Cloudflare Pages 會自動部署。\n\n` +
     `匯出內容：\n` +
     `・信用卡 ${cards.length} 張\n` +
     `・行動支付 ${payments.length} 個、快捷選項 ${quickSearchOptions.length} 個\n` +
@@ -675,7 +887,12 @@ function addOptionalField(obj, row, headers, fieldName, type = 'string', targetN
     } else if (type === 'boolean') {
       obj[name] = value === true || value === 'TRUE' || value === 'true';
     } else {
-      obj[name] = value;
+      // 字串欄位一律去頭尾空白（含隱形的 \r/\n）——與 rate/cap/name/items 等
+      // 已 trim 的欄位一致。cashbackModel 走這條，先前沒 trim，貼上帶 CRLF 的
+      // 來源會讓儲存格夾帶隱形尾端 \r（如 "rate+overseasCashback\r"），
+      // 前端用 includes()／=== 'rate' 比對時是顆潛在地雷。只 trim 真字串，
+      // 數字/布林/日期型不動。
+      obj[name] = (typeof value === 'string') ? value.trim() : value;
     }
   }
 }
@@ -1238,6 +1455,7 @@ function generatePromosPageHtml(exportData) {
   const cardsHtml = prepared.map(pmcRenderPromoCard_).join('\n');
   const filterChipsHtml = pmcBuildFilterChips_(prepared.length, bucketCounts);
   const jsonLd = pmcBuildJsonLd_(prepared);
+  const breadcrumbJsonLd = pmcBuildBreadcrumbJsonLd_();
 
   const generatedDisplay = pmcFormatDateDisplay_(todayIso);
   const yearMonthLabel = todayIso.slice(0, 4) + '年' + parseInt(todayIso.slice(5, 7), 10) + '月';
@@ -1267,6 +1485,7 @@ function generatePromosPageHtml(exportData) {
     cardsHtml: cardsHtml,
     filterChipsHtml: filterChipsHtml,
     jsonLd: jsonLd,
+    breadcrumbJsonLd: breadcrumbJsonLd,
     versionTag: versionTag
   });
 }
@@ -1365,8 +1584,9 @@ function pmcBuildPromoHero_(promo) {
   const items = [];
   const quickParts = [];
 
-  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字＋既有配色
-  // 區分即可（.promo-hero-item--gift/voucher/bonus 底色已經夠分得出類型）。
+  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字即可。
+  // （2026-07-19 起 .promo-hero-item--gift/voucher/bonus 底色統一淺灰、不再分色，
+  // bucket class 仍照常輸出——CSS 端目前只剩 .promo-hero-big 字色還在用它。）
   if (promo.gift_content) {
     const raw = String(promo.gift_content);
     items.push({
@@ -1402,10 +1622,11 @@ function pmcBuildPromoHero_(promo) {
       : '';
     items.push({
       bucket: 'bonus',
-      bigHtml: '最高 ' + pmcEscapeHtml_(rateDisplay),
+      // 「最高」二字移除（2026-07-18 站長定案）
+      bigHtml: pmcEscapeHtml_(rateDisplay),
       smallHtml: capText ? pmcEscapeHtml_(capText) : ''
     });
-    quickParts.push('最高' + rateDisplay + (capText ? '（' + capText + '）' : ''));
+    quickParts.push(rateDisplay + (capText ? '（' + capText + '）' : ''));
   }
 
   const heroItemsHtml = items.map(function (it) {
@@ -1604,7 +1825,8 @@ function pmcRenderPromoCard_(p) {
     // 那一行）輸出過一次，這裡不再重複——2026-07-15 第三輪站長回饋：收合態一行
     // ＋展開後灰底 summary 區塊是同一段文字重複兩次。
     '        <dl class="promo-card-meta">\n' +
-    definitionHtml + conditionHtml + periodHtml + highlightHtml + '\n' +
+    // 欄位順序（2026-07-18 站長定案）：適用通路、達成條件、活動期間、新戶定義
+    highlightHtml + conditionHtml + periodHtml + definitionHtml + '\n' +
     '        </dl>\n' +
     notesHtml +
     '      </div>\n' +
@@ -1646,6 +1868,21 @@ function pmcBuildJsonLd_(prepared) {
   return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
 }
 
+// 麵包屑結構化資料（2026-07-16 新增）：與頁面可見的 .promos-breadcrumb 對應，
+// 內容固定（只有兩層：首頁／本頁），不依賴任何動態資料，獨立於 pmcBuildJsonLd_
+// 的 ItemList 並存（同頁多個 JSON-LD <script> 是合法用法）。
+function pmcBuildBreadcrumbJsonLd_() {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: PMC_SITE_URL + '/' },
+      { '@type': 'ListItem', position: 2, name: '新戶活動', item: PMC_SITE_URL + '/promos' }
+    ]
+  };
+  return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
+}
+
 function pmcPageTemplate_(o) {
   return '<!DOCTYPE html>\n' +
 '<html lang="zh-Hant">\n' +
@@ -1681,29 +1918,91 @@ function pmcPageTemplate_(o) {
 '<link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">\n' +
 '\n' +
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
+'<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
-// Header：與主站左上角一致（同款 logo＋站名＋深藍 header bar），複製自 index.html
-// 的 header/.header-top/.header-content 結構——主站改動 header 時這裡要手動同步。
+// Header（2026-07-16 v3 全站 header 一致化，同日站長二輪回饋撤回頭像）：與 faq.html
+// 同款結構——漢堡（手機）、logo＋站名整塊連回 `/`、導覽「新戶活動」（本頁，
+// aria-current）＋「常見問題」→ `/faq`、右側「返回首頁」鈕。跟 faq.html 一樣是
+// 手抄件，不是共用元件；faq.html 又是抄 index.html 的 header-top，三邊都要手動
+// 同步（見 FAQ-README.md／data-pipeline.md 第 9 節）。
 // 站名刻意用 <span> 而非 <h1>：這頁真正的 SEO H1 是下面 hero 區塊的
 // 「信用卡新戶活動一覽」，同頁兩個 h1 對文件結構不利。
+// 右側原本試過頭像＋精簡 dropdown，站長裁定「副頁頭像做不到主站完整功能
+// （無法登出/管理），意義不大」，退回「返回首頁」鈕（同款 faq.html 的
+// .back-home-btn，這裡用 promos- 前綴）。
 '<header class="promos-header">\n' +
 '  <div class="promos-header-top">\n' +
-'    <div class="promos-header-content">\n' +
+'    <button id="promos-sidebar-toggle-btn" class="promos-sidebar-toggle-btn" aria-label="開啟選單">\n' +
+'      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>\n' +
+'    </button>\n' +
+'    <a href="/" class="promos-header-content">\n' +
 '      <img src="assets/images/logo-header.png?v=' + o.versionTag + '" alt="" class="promos-header-logo">\n' +
 '      <span class="promos-header-title">信用卡回饋大師</span>\n' +
-'    </div>\n' +
-'    <nav class="promos-header-links" aria-label="站內導覽">\n' +
-'      <a href="/">回主站工具</a>\n' +
+'    </a>\n' +
+'    <nav class="promos-header-links" aria-label="站內頁面">\n' +
+'      <a href="/promos" class="promos-header-nav-link" aria-current="page">新戶活動</a>\n' +
+'      <a href="/faq" class="promos-header-nav-link">常見問題</a>\n' +
 '    </nav>\n' +
+'    <a href="/" class="promos-back-home-btn" title="返回首頁">\n' +
+'      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">\n' +
+'        <path fill-rule="evenodd" d="M8.354 1.146a.5.5 0 0 1 0 .708L2.707 7.5H14.5a.5.5 0 0 1 0 1H2.707l5.647 5.646a.5.5 0 0 1-.708.708l-6.5-6.5a.5.5 0 0 1 0-.708l6.5-6.5a.5.5 0 0 1 .708 0z"/>\n' +
+'      </svg>\n' +
+'      <span>返回首頁</span>\n' +
+'    </a>\n' +
 '  </div>\n' +
 '</header>\n' +
 '\n' +
+// 手機漢堡抽屜（比照 faq.html：抽屜內兩張卡片連回主站兩個頁面）。桌機
+// （≥769px）在 promos.css 顯式隱藏，跟 faq.css 對 .sidebar 的處理一樣——這頁沒有
+// .app-layout 常駐左欄，不隱藏會版面壞。
+'<div class="promos-sidebar-overlay" id="promos-sidebar-overlay"></div>\n' +
+'\n' +
+'<aside class="promos-sidebar" id="promos-sidebar">\n' +
+'  <div class="promos-sidebar-header">\n' +
+'    <button class="promos-sidebar-close-btn" id="promos-sidebar-close-btn" aria-label="關閉選單">\n' +
+'      <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>\n' +
+'    </button>\n' +
+'  </div>\n' +
+'  <div class="promos-sidebar-content">\n' +
+'    <nav class="promos-sidebar-page-links" aria-label="站內頁面">\n' +
+'      <a href="/" class="promos-sidebar-tool-card">\n' +
+'        <span class="promos-sidebar-tool-card-emoji" aria-hidden="true">💳</span>\n' +
+'        <span class="promos-sidebar-tool-card-text"><strong>回饋比較工具</strong><small>查商家回饋・比較信用卡</small></span>\n' +
+'        <span class="promos-sidebar-tool-card-arrow" aria-hidden="true">→</span>\n' +
+'      </a>\n' +
+'      <a href="/faq" class="promos-sidebar-faq-card">\n' +
+'        <span class="promos-sidebar-faq-card-emoji" aria-hidden="true">💬</span>\n' +
+'        <span class="promos-sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>\n' +
+'        <span class="promos-sidebar-faq-card-arrow" aria-hidden="true">→</span>\n' +
+'      </a>\n' +
+'    </nav>\n' +
+'  </div>\n' +
+'</aside>\n' +
+'\n' +
 '<main class="promos-main">\n' +
+// 麵包屑（2026-07-16 新增）：結構化資料另見 <head> 的 BreadcrumbList JSON-LD
+// （pmcBuildBreadcrumbJsonLd_）。
+'  <nav class="promos-breadcrumb" aria-label="breadcrumb">\n' +
+'    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>\n' +
+'  </nav>\n' +
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '  </section>\n' +
+'\n' +
+// 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
+// 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
+// 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
+// promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
+// 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
+'  <div class="promos-search-box">\n' +
+'    <div class="promos-search-input-wrap">\n' +
+'      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱" aria-label="搜尋卡片名稱">\n' +
+'      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
+'    </div>\n' +
+'  </div>\n' +
 '\n' +
 // 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
 // 分不出是「篩選活動類型」跟「排序方式」兩組不同的操作。id 仍留在
@@ -1796,6 +2095,12 @@ o.cardsHtml + '\n' +
 '\n' +
 '<div class="promos-data-update-footer">資料更新於 ' + pmcEscapeHtml_(o.generatedDisplay) + '</div>\n' +
 '\n' +
+// 回到頂部浮標（手機版，2026-07-16 新增，比照 index.html／faq.html）：捲動超過
+// 300px 才顯示，行為邏輯在 promos.js setupBackToTopButton()。
+'<button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">\n' +
+'  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>\n' +
+'</button>\n' +
+'\n' +
 '<script type="module" async>\n' +
 '  // 精簡版 Firebase Analytics 初始化（只取 app+analytics，不含 auth/firestore/storage，\n' +
 '  // 這頁不需要登入或存取用戶資料）；供 promos.js 送 button_click 事件。\n' +
@@ -1826,20 +2131,69 @@ o.cardsHtml + '\n' +
 
 const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
+const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
   const version = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyyMMdd-HHmmss');
 
-  commitFileToGitHub('cards.data', cardsDataContent, `Update cards.data (${version})`, token);
-  commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
+  // Cloudflare Pages 免費方案 500 builds/月，push 到 main 每個 commit 觸發一次 build：
+  // 舊做法一次匯出 4+ 個 commit ＝ 4+ 個 build，且中間幾個 build 部署的是半新半舊的樹。
+  // 改法：除最後一個 commit 外全部加 [CI Skip] 前綴（Cloudflare 認得的跳過標記），
+  // cards.version 移到最後、不加標記——整次匯出只觸發這一次 build，build checkout 時
+  // 樹上已有本次全部檔案，一次部署到位。version 最後落地也順帶保證前端快取檢查
+  // 「版本號前進時，新 cards.data 一定已經在 repo」。
+  const skip = '[CI Skip] ';
+  commitFileToGitHub('cards.data', cardsDataContent, `${skip}Update cards.data (${version})`, token);
   if (promosPageHtml) {
-    commitFileToGitHub('promos.html', promosPageHtml, `Update promos.html (${version})`, token);
+    commitFileToGitHub('promos.html', promosPageHtml, `${skip}Update promos.html (${version})`, token);
   }
 
+  // 商家靜態頁（top-N SEO 落地頁，見 generateMerchantPageHtml_）——選填
+  (merchantPages || []).forEach(function(m) {
+    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
+  });
+
+  // sitemap.xml 每次匯出重生：promos 與商家頁的內容會隨資料變動，lastmod 跟上匯出
+  // 日期，Google 才知道要重爬（先前 lastmod 手打死、更新後 Google 以為沒變）。
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages), `${skip}Update sitemap.xml (${version})`, token);
+
+  // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
+  commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
+
   return version;
+}
+
+// 試水溫階段手動維護的商家頁 slug：生成器尚未移植前，這些頁是手動 commit 的靜態檔，
+// 沒有進 merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把
+// 它們從 sitemap 移除）。生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
+const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo'];
+
+// 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
+// 更新這裡的常數）；promos 與商家頁每次匯出都可能變 → 用匯出當天日期。
+function generateSitemapXml_(merchantPages) {
+  const today = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');
+  const urls = [
+    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
+    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
+    { loc: SITE_ORIGIN + '/promos', lastmod: today }
+  ];
+  // 商家頁 slug：試水溫手動清單 + 生成器產出（merchantPages），去重後輸出
+  const slugSet = {};
+  MERCHANT_PILOT_SLUGS.forEach(function(s) { slugSet[s] = true; });
+  (merchantPages || []).forEach(function(m) { if (m && m.slug) slugSet[m.slug] = true; });
+  Object.keys(slugSet).forEach(function(s) {
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: today });
+  });
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  urls.forEach(function(u) {
+    xml += '  <url>\n    <loc>' + u.loc + '</loc>\n    <lastmod>' + u.lastmod + '</lastmod>\n  </url>\n';
+  });
+  xml += '</urlset>\n';
+  return xml;
 }
 
 function commitFileToGitHub(path, textContent, message, token) {

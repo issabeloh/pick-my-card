@@ -42,6 +42,46 @@
     Drive 堆兩個永不清理的檔案。匯出結果改用簡單 alert 顯示統計。歷史版本備份由 GitHub
     commit 紀錄承擔（cards.data 可解 base64 還原任何一次匯出）、原始資料備份由 Google
     Sheets 版本記錄承擔。
+- 2026-07-20 審計修正（⚠️ **需把整份新版 `cards-export.gs` 貼回 Sheets 才生效**，
+  貼回後跑一次「📥 匯出 JSON」，確認 GitHub 上該次匯出只有 `cards.version` 那個 commit
+  沒有 `[CI Skip]` 前綴、且 Cloudflare Pages 只跑了一次 build）：
+  - **匯出改為單一 build**（省 Cloudflare 免費額度，見下方「免費額度」節）：
+    `publishToGitHub` 除最後一個 commit 外全部加 `[CI Skip]` 前綴，`cards.version`
+    移到最後、獨自觸發唯一一次 build。順帶保證「版本號前進時新資料必已就緒」。
+  - **匯出擋門檻 off-by-one**：`exportToJSON` 的 ❌ 計數原本多減 1（誤以為標題列會被
+    數進去），恰好只有 1 個 ❌ 時會照樣放行匯出——已移除 `- 1`。
+  - **QA 檢查 6 盲區**：「rate 有值但 items 空」原本只掃槽 1–5，槽 6+ 中招時整槽
+    靜默消失且無警告。改為依表頭自動偵測上限；槽 1–5 維持 ❌ 擋匯出、槽 6+ 用 ⚠️
+    警告不擋（避免舊資料突然全面擋死）。
+
+## GA4 成效匯出（`ga4-metrics-export.gs`，2026-07-22 新增）
+
+把 GA4 各「到達頁」成效指標撈進「PMC數據集中」試算表的 `GA4_頁面成效` 分頁，給行銷部門評估
+/landing、/promos 等落地頁表現用。搭配 landing.html 新加的 GA4 tag（同一 property
+`G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
+
+- **⚠️ 這是 drop-in 函數備份，不是獨立可跑檔**：實際執行版在「PMC數據集中」試算表綁定的
+  Apps Script 專案 Code.gs（那支有 `updateAllReports` / GA4+GSC+Clarity 同步）。跟
+  cards-export.gs 綁的「信用卡管理系統」是**不同專案**，別搞混。
+- 函數：`updateGA4Pages()`——`updateAllReports()` 內已呼叫，補上定義即生效；跟著現有每日
+  排程跑，**不另建 trigger**。
+- 沿用 Code.gs 既有全域：`GA4_PROPERTY_ID`（`505426795`）、`getOrCreateSheet()`。
+  **絕不重複宣告**（重複宣告 const 會讓整個專案語法錯誤停擺——舊版範本踩過，已修）。
+- 寫入分頁：`GA4_頁面成效`（比照 `GA4_每日趨勢` / `GA4_流量來源` 命名，每次 `clear()` 重寫）。
+- 維度用 `landingPage`（不是 `pagePath`）：跳出率/互動率/新用戶是「到達頁」概念，跟 pagePath
+  併用 GA4 Data API 可能回「維度指標不相容」；landingPage 相容性有保證，也正好對應目的。
+- 指標：Sessions、活躍用戶、新用戶、新用戶佔比（`newUsers÷totalUsers`）、跳出率、互動率、
+  平均參與時間（`userEngagementDuration÷activeUsers`）、頁面瀏覽。
+- 依賴：進階服務 `AnalyticsData`——PMC數據集中 專案**已加**；執行帳號對 property 有 GA4
+  檢視權限（既有 GA4 報表能跑＝已具備）。
+
+## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
+
+| 服務 | 免費額度 | 本專案用量與注意點 |
+|---|---|---|
+| Cloudflare Pages | **500 builds/月**、同時 1 build | push 到 main 的**每個 commit 各觸發一次 build**。舊匯出流程一次 4+ commits＝4+ builds（每日匯出≈120+/月，一日多次匯出會逼近上限）；2026-07-20 起改單一 build。另外**日常開發 merge 到 main 也各算一次**——多個小 PR 分開 merge 比 squash 成一次更耗額度 |
+| Apps Script（免費帳號） | 單次執行 6 分鐘；觸發器總計 90 分/日；UrlFetchApp 20,000 次/日；MailApp 收件人 100/日 | 匯出目前約 10 餘次 HTTP 呼叫、遠低於上限。**商家頁生成器上線後**每頁多 2 次呼叫＋生成時間，頁數多時留意 6 分鐘上限（逼近時分批或改用 git tree API 一次 commit） |
+| Google Sheets 本體 | 單一試算表 1,000 萬儲存格 | 目前規模（數十卡×數百欄）差 3 個數量級以上；Apps Script 內建 `SpreadsheetApp` 不消耗 Sheets API 配額，無 API 額度問題 |
 
 ## promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
 
@@ -80,6 +120,17 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 排程 | 每月 1 日 9–10 點（由 `setupMonthlyBackupTrigger` 建立；重跑會先清舊觸發器，不會重複寄） |
 | 收件人 | `BACKUP_EMAIL` 常數留空 = 寄給試算表登入帳號（比照權益監控慣例） |
 | 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
+
+## 權益解析（第二階段 MVP，2026-07-16 補上備份）
+
+規劃見 `BENEFITS-AUTOMATION-PLAN.md` 第二階段。
+
+| 項目 | 內容 |
+|---|---|
+| 程式檔案 | Apps Script 專案內的指令碼檔「權益解析」（備份：`benefits-parser.gs`） |
+| 職責 | 讀「情報收件匣」或「解析輸入」分頁的活動原文，呼叫 Gemini 做結構化解析，寫入「待審核-新戶活動」分頁——AI 只做閱讀理解，promo_id／cap／bonus_rate 一律程式生成，絕不直接寫正式資料表 |
+| 選單 | 「🤖 權益自動化」→「解析收件匣（新戶活動）」／「解析『解析輸入』的文字」 |
+| 設定 | `PARSER_CONFIG`（各分頁名稱、`GEMINI_API_KEY` 指令碼屬性、model） |
 
 ## 權益監控（第一階段，2026-07-07 上線）
 

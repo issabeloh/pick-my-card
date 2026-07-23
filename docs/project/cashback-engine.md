@@ -82,8 +82,13 @@ if (!card.specialItems || card.specialItems.length === 0)
 | `rate`（單一字串） | 通路**完全排除**在一般消費外：cap 內用 rate_N，**溢出算 0**（不是套 basic！）例：大戶卡「悠遊卡自動加值」 | 已含 basic 的總率 |
 | （空白） | 舊預設：卡有加碼欄位 → 隱性 `rate>basic>domesticBonusRate`（只支援國內）；卡無加碼欄位 → 簡單路徑：cap 內 rate_N、溢出算 basicCashback | 已含 basic 的總率 |
 
-**國內／海外一律由字串裡有沒有 `domesticBonusRate`/`overseasBonusRate` 決定**（`+`、`>` 通用），
-不看搜尋詞、不看 item 名稱、不自動偵測（原本 3 處國家關鍵字清單已於 2026-07-01 移除）。
+**國內／海外一律由字串裡有沒有海外 token 決定**（`+`、`>` 通用），不看搜尋詞、不看 item 名稱、
+不自動偵測（原本 3 處國家關鍵字清單已於 2026-07-01 移除）。海外 token 有兩個，**任一出現即算海外**
+（決定基準率取 `overseasCashback` 還是 `basicCashback`、加碼取 overseas 還是 domestic 欄位）：
+`overseasBonusRate`（海外**加碼**）與 `overseasCashback`（海外**基準**）。所以 `rate+overseasCashback`
+（只列海外基準、沒列海外加碼）也算海外，基準取 `overseasCashback`——**2026-07-21 修正**：先前海外偵測
+只認 `overseasBonusRate`，漏了 `overseasCashback`，導致這類 model 的基準錯退回 `basicCashback`
+（幣倍卡 slot2 曾顯示 5% 而非 6%，見教訓記錄）。
 有 `overseasBonusRate` 欄位的卡（ctbc-uniopen、ctbc-linepay-card、dbs-eco、firstbank-ileo、tbb-artfun、大戶卡）
 的「國外」item 要走海外加碼**必須明確填** model（如 `rate>basic>overseasBonusRate`），留空一律當國內算。
 
@@ -96,8 +101,9 @@ if (!card.specialItems || card.specialItems.length === 0)
   - **「寫什麼才加什麼」gate（Fix B，2026-07-16 起）**：stacking 的**基本層與加碼層都只在 `cashbackModel` 字串明確列出對應成分時才加**，不再無條件加卡片級 `basicCashback`/`domesticBonusRate`/`overseasBonusRate`：
     - 加碼層（Layer 2）：`applyBonus = model.includes('domesticBonusRate') || model.includes('overseasBonusRate')`。例：`rate+basic` 不加卡片級加碼；`basic+domesticBonusRate` 才加。
     - 基本層（Layer 1）：`applyBase = model.includes('basic') || model.includes('overseasCashback')`（海外 model 用 `basic` 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。例：`rate+basic` 加基本；`rate+domesticBonusRate`（沒寫 basic）**不加**基本。
+      - **注意 `applyBase`（要不要加基準）與 `isOverseas`（基準取哪個值）是兩個 flag，兩者都必須認 `overseasCashback`**——否則 `rate+overseasCashback` 會「加了基準層、卻用國內基準值」，少算海外基準（2026-07-21 修正的 bug 就是 `isOverseas` 漏認 `overseasCashback`，見上方 token 說明與教訓記錄）。
     - 注意「單獨 `rate`」與「留空」不走 stacking、不受此 gate：單獨 `rate`＝排除型（cap 內 rate、溢出 0，不加 basic）；留空＝簡單路徑（cap 內 rate、溢出 basic）。
-  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這兩個 flag。呼叫端（約 script.js:4040 附近）算 `stackedApplyBonus`/`stackedApplyBase` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
+  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這些 flag（含 `isOverseas`——三處的 `isOverseas = includes('overseasBonusRate') || includes('overseasCashback')` 也必須同步）。呼叫端（約 script.js:4040 附近）算 `stackedApplyBonus`/`stackedApplyBase`／`isOverseasModel` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
   - 背景：舊版無條件加卡片級加碼，與「model 字串列出所有適用成分」的文法矛盾；線上掃描 0 張卡受影響，直到 ctbc-uniopen 改採明確槽＋跨槽引用後才第一次觸發（slot1 `rate+basic` 被誤加 dbr）。詳見 `docs/project/cross-slot-ref-and-minspend-spec.md` 功能三。
 - `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
 - 簡單路徑（無加碼卡的空白預設）：cap 內 rate_N、溢出 basicCashback
@@ -163,4 +169,5 @@ if (!card.specialItems || card.specialItems.length === 0)
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-07-21] 幣倍卡 `rate+overseasCashback`（rate=4、overseasCashback=2）顯示 4%+1%=5% 而非 4%+2%=6% → 海外偵測 `isOverseas` 只認 `overseasBonusRate`（海外加碼 token），漏認 `overseasCashback`（海外基準 token）；`applyBase` 認得它、`isOverseas` 認不得，於是加了基準層卻用國內基準 `basicCashback` → `isOverseas` 改為 `includes('overseasBonusRate') || includes('overseasCashback')`，三處同步（getDisplayRate/rateCompositionButtonHtml/呼叫端）。全表僅 5 槽受影響（幣倍卡 slot2、mega-bt21 slot4/5、dbs-aov slot1〔basic=overseas 無視覺變化〕、ubot-linebank slot2），皆為「指定海外通路＋海外基準」意圖，修正即符合資料填寫意圖
 - [2026-07-13] 差點把 37 個合法 `rate+basic` stacking 槽通報為「需清理的殘留別名」 → 第 6 節舊敘述「資料裡若還有，改成純 rate」把所有 `rate+basic` 當成 2026-07-01 前的排除型別名殘留 → `rate+basic` 是合法 stacking 寫法；別名警告只適用「當初以排除型意圖填寫」的舊資料，意圖判定屬資料擁有者，session 不得自行改資料（正文已改寫）

@@ -23,6 +23,69 @@ const faqEmpty = document.getElementById('faq-empty');
 const categoryFilter = document.getElementById('category-filter');
 const retryBtn = document.getElementById('retry-btn');
 
+// ------------------------------------------------------------------
+// 手機側選單開合（2026-07-16 header 改版）。header 右側原本試過頭像＋dropdown，
+// 站長二輪回饋裁定「副頁頭像做不到主站完整功能（無法登出/管理），意義不大」，
+// 已退回「返回首頁」鈕（純 <a> 連結，不需要 JS 狀態切換）。
+// ------------------------------------------------------------------
+
+// 手機漢堡側選單開合：比照 script.js setupSidebarDrawer()（script.js:6727-6772）。
+// faq.js 獨立載入、不共用 script.js 的 disableBodyScroll/enableBodyScroll（那組有
+// refcount 是為了主站多層 modal 疊加），這裡頁面單純，簡化成直接鎖/解鎖 body 捲動。
+function setupSidebarDrawer() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+    if (!sidebar || !overlay || !toggleBtn || !closeBtn) return;
+
+    function openDrawer() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    toggleBtn.addEventListener('click', openDrawer);
+    closeBtn.addEventListener('click', closeDrawer);
+    overlay.addEventListener('click', closeDrawer);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) closeDrawer();
+    });
+}
+
+// 回到頂部浮標（手機版）：比照 script.js setupBackToTopButton()（script.js:1409-1430）——
+// 捲動超過 300px 才顯示，點擊平滑捲回頂部。樣式/顯示門檻沿用 styles.css 既有的
+// .back-to-top-btn（faq.html 已載入 styles.css），這裡只負責行為邏輯。
+function setupBackToTopButton() {
+    const btn = document.getElementById('back-to-top-btn');
+    if (!btn) return;
+
+    const toggle = () => {
+        const scrolled = (window.pageYOffset || document.documentElement.scrollTop) > 300;
+        btn.classList.toggle('is-visible', scrolled);
+    };
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { toggle(); ticking = false; });
+    }, { passive: true });
+
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    toggle();
+}
+
 // Initialize event listeners for pre-rendered FAQ items
 function initPrerenderFAQs() {
     const prerenderItems = faqList.querySelectorAll('.faq-item[data-id]');
@@ -381,6 +444,8 @@ function handleFAQAnchorLinks() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    setupSidebarDrawer();
+    setupBackToTopButton();
     initPrerenderFAQs(); // Initialize pre-rendered FAQ event listeners
     loadFAQData();
     handleFAQAnchorLinks(); // Handle cross-linking between FAQs

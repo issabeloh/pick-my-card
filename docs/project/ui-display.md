@@ -55,17 +55,19 @@
 
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px; border-top: 1px solid #e5e7eb`。
 
-**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填，有值才顯示紫色分類 chip)。
+**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填；2026-07-21 起卡片上不再顯示，欄位保留)。
+
+**卡片版式（2026-07-21 F-2 重設計）**：左側傾斜卡圖（`assets/images/cards/<card_id>.png`，object-fit contain＋drop-shadow；`onerror` 隱藏 img 並在 `.spotlight-ccwrap` 加 `noimg` class 讓貼紙退回靜態）＋淺綠回饋率貼紙（#15803d on #bbf7d0、白邊、微旋轉）；右側＝活動類型標籤＋通路名（粗體）＋描述。**活動類型標籤**：`parseSpotlightHype()` 從 description 開頭抽「XX！」對表（全場最高/壓倒性神卡/獨家回饋/無腦刷 → hype-top/god/excl/easy 四色），是全卡唯一帶分類色的元素；對不到表列類型→不顯示標籤、description 全文照常顯示（資料端不需配合）。下方虛線分隔的資訊列放上限＋期限（含「剩 N 天」徽章）。設計裁定（站長 2026-07-21）：不用 emoji、不用浮起／轉正動畫（hover 只准陰影微調）、回饋率不上分類色。
 
 **輪播**（`renderSpotlights` 一帶）：每頁 3 張（SPOTLIGHT_PAGE_SIZE）、6 秒自動換頁（SPOTLIGHT_INTERVAL）、循環；「看下一組」手動換頁＋頁碼圓點；hover 卡片或開 modal 暫停；最多 12 則（SPOTLIGHT_MAX）依 order 升冪；`active===false` 不顯示；≤3 則自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
-**固定高度（防跳動）**：`.spotlight-card { min-height: 260px }`；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 2.8em`；`.spotlight-meta` min-height 76px、nowrap+ellipsis；卡名列粗體；分類 chip 紫色（#6d28d9 on #ede9fe，刻意避開 sidebar 藍色系）。
+**固定高度（防跳動）**：`.spotlight-card { min-height: 200px }`；`.spotlight-top-row` min-height 92px（有無類型標籤高度都以卡圖列為準）；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 3em`；`.spotlight-info-row` min-height 28px、nowrap。
 
 **兩個動作**：
 - 「比較這個通路 →」（`compareSpotlightMerchant`）：merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。**這是全站唯一自動觸發計算的入口**（兩條路徑都代按計算、金額空白補 1000）——快捷搜尋按鈕與 `handleQuickSearch` 本身自 2026-07-12 起只填入關鍵詞、不自動計算（產品決策：計算由用戶按「計算」觸發），要復原或擴大自動計算屬產品行為變更，先問用戶
 - ⓘ（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap＋卡片第一個級別解析。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）
 
-**相關檔案**：index.html `#spotlight-section` `#spotlight-modal`；styles.css `.spotlight-*`（白底、回饋率粗體綠字、「剩 N 天」徽章 0–14 天顯示）。
+**相關檔案**：index.html `#spotlight-section` `#spotlight-modal`（merchant/momo.html、merchant/蝦皮.html 有同一組容器標記，卡片由 js 動態生成、不需同步改）；styles.css `.spotlight-*`（「剩 N 天」徽章 0–14 天顯示）。
 
 ## 5. 「我的信用卡」modal（錢包堆疊＋單卡頁，2026-07-07 重造）
 
@@ -93,17 +95,17 @@
 - **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
-## 8. 「我的配卡」modal（分組卡片式，2026-07-17 重造）
+## 8. 「我的配卡組合」modal（分組卡片式，2026-07-17 重造；UI 名稱原為「我的配卡」，2026-07-21 改為「我的配卡組合」，id/函數仍沿用 mappings）
 
-**視圖**（`renderMappingsList()`，Grep "分組卡片式視圖"）：一張信用卡＝一個 `.mapping-group`——卡名色塊（卡面主色）＋卡圖小圖＋ⓘ（開 showCardDetail，`#card-detail-modal` z-index 1100 疊在所有 modal 之上）；同卡商家集合在組內，一列＝商家＋活動期限（左）＋綠色回饋率（右）＋刪除 ×。舊表格視圖與欄位排序（rate/expiry sort）已移除，由自訂拖曳排序取代。手機無橫向捲動。
+**視圖**（`renderMappingsList()`，Grep "分組卡片式視圖"）：一張信用卡＝一個 `.mapping-group`——卡名色塊（統一淺灰 `#f1eff0`，卡名 14px）＋卡圖小圖＋ⓘ 貼卡名旁（開 showCardDetail，`#card-detail-modal` z-index 1100 疊在所有 modal 之上）。組內一列＝一個**活動**：同卡＋同回饋率＋同截止日的配對合併，商家各自成白底 pill（仿快速搜尋 `.tag-item`；刪除 × 在 pill 內、紅色）；列左活動期限、右綠色回饋率。活動列**不開放拖曳**，固定回饋率高→低（同率截止日近→遠）。舊表格視圖已移除。手機無橫向捲動。
 
-**卡面主色**：`CARD_ACCENT_COLORS` 常數（script.js，一卡一行 hex）＝**卡面底色**（面積最大的色，非最搶眼的色），由抽色腳本從卡圖外圈環帶取最大色簇產出、人工圖對圖校對後定案；微調直接改 hex，新卡缺項 fallback 深灰。淺色色塊（`isLightAccentColor` 亮度 >0.6）自動切深色前景＋分隔線——黑白卡誠實用黑白也可讀。
+**卡面主色（已退役）**：色塊 2026-07-17 起統一淺灰、不吸卡面色（用戶決定）；原 `CARD_ACCENT_COLORS` 抽色表與 `isLightAccentColor` 已從 script.js 移除，抽色方法與 28 卡 hex 見 git 歷史（commit 訊息搜 accent）與下方教訓記錄。
 
-**過期沉底**：過期配對離開群組、收進底部「已過期（N）」收合區（顯示商家＋卡名），內有「清除全部過期配對」一鍵清理；卡名色塊上**不得**出現過期資訊。14 天內到期顯示黃色「即將到期」章。
+**過期沉底**：過期配對離開群組、收進底部「已過期（N）」收合區（顯示商家＋卡名，仍是舊式單筆列＋`.mapping-delete-btn` 紅 ×），內有「清除全部過期配對」一鍵清理；卡名色塊上**不得**出現過期資訊。14 天內到期顯示黃色「即將到期」章。
 
-**拖曳排序**（`setupMappingsDrag`）：卡片組整組拖＋商家列限組內拖；把手 `touch-action: none` 供觸控。**move/up 監聽掛 document，禁用 setPointerCapture**（Chromium 會在拖曳中途無故 lostpointercapture 斷流，教訓見下）。順序由 `persistMappingsDomOrder()` 依 DOM 序重寫回既有 `order` 欄位（localStorage＋Firestore，資料結構不變）。搜尋過濾時把手不渲染＝停用拖曳（過濾後順序無全域意義）。
+**拖曳排序**（`setupMappingsDrag`）：兩種拖曳——卡片組從把手整組拖（`.mapping-group` 之間換位）、商家 pill 整顆拖（限同一活動列的 pills 容器內；跨列＝不同率/日期，語義不允許）。拖曳元素 `touch-action: none` 供觸控。**move/up 監聽掛 document，禁用 setPointerCapture**（Chromium 會在拖曳中途無故 lostpointercapture 斷流，教訓見下）。順序由 `persistMappingsDomOrder()` 依 DOM 序走 `.mapping-pill` 重寫回既有 `order` 欄位（localStorage＋Firestore，資料結構不變；`order` 同時決定組序與 pill 序，活動列排序則與 order 無關）。搜尋過濾時把手不渲染、pill 拖曳不綁定＝停用拖曳（過濾後順序無全域意義）。
 
-**其他**：搜尋框同時比對商家與卡名；樣式必須用 `#my-mappings-modal .mappings-search-input`（特異性，見教訓）；輸入字級固定 16px 防 iOS 聚焦縮放，矮身靠 padding、預覽字靠 `::placeholder`。進場浮標 `#my-mappings-btn`（淺綠底）與 modal 標題用結果卡釘選同款 SVG icon。
+**其他**：搜尋框同時比對商家與卡名；樣式必須用 `#my-mappings-modal .mappings-search-input`（特異性，見教訓）；輸入字級固定 16px 防 iOS 聚焦縮放，矮身靠 padding、預覽字靠 `::placeholder`。進場浮標 `#my-mappings-btn`（琥珀底 `#fef3c7`/`#f59e0b` 系，與結果卡釘選態同色系）用釘選 SVG icon；modal 標題為純文字（標題 icon 2026-07-17 移除）。
 
 ## 教訓記錄
 

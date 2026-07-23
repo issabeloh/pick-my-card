@@ -4,6 +4,24 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-07-21 ?v= 快取版本改部署時注入（站長核准，起因 PR #337 merge 事故）
+- repo 內所有本站 .css/.js 引用一律 `?v=dev` 佔位；Cloudflare Pages build command 跑 `tools/deploy-version.sh` 在部署時注入 commit hash（CF_PAGES_COMMIT_SHA）
+- 動機：每個分支都 bump 時間戳 → 多分支併行必撞 merge 衝突；#337 解衝突時 `checkout --ours` 整檔蓋掉 main 改動釀 UI 事故。版本號離開版控後衝突源消失
+- 舊 `./update-version.sh` 刪除；faq.html「手動 bump」規則作廢；preflight 規則 1/1b 改為「佔位純度檢查」（非 dev 值一律 ❌）；回歸腳本加訪客首屏斷言
+- 對「無 build 步驟」原則（2026-07-20 判例）的關係：站長知情核准的**窄例外**——build command 只做版本字串替換，邏輯全在 repo 內的腳本，不引入組件/打包系統
+- promos.html 由 Apps Script 匯出、自帶時間戳版本：不受佔位規則管（preflight 排除），部署時照樣被覆寫，匯出端不需配合
+- **商家 SEO 落地頁**：不再手動加頁。蝦皮/momo 兩頁在 Search Console 蹲滿 4–6 週後，任一頁有自然流量訊號（如週曝光 >100，或任何非品牌關鍵字點擊）才值得移植 generateMerchantPageHtml_ 生成器擴大到 top-N；兩頁皆無訊號則從 sitemap 移除、收掉此方向。理由：每頁都是手抄件、加重三邊同步負擔，值不值得該由數據裁決而非猜
+- **權益自動化非 MVP 項**（BENEFITS-AUTOMATION-PLAN 第 3–5 項）：比對引擎＋「一鍵套用」**預設不做**——自動寫入 Cards Data 的爆炸半徑是全站資料事故，換到的只是每週幾分鐘的搬運。重啟條件：待審核表→正式表的人工搬運連續一個月每週實測 >30 分鐘；屆時也必須先有寫入前逐格 diff 預覽。權益/領券 GEM 遷移等新戶活動這條線跑穩一個月再議
+- **header 三邊手抄件**（index/faq/promos）：維持手抄，不引入 build/組件系統——「無 build 步驟」是本專案的結構性選擇，不用全局複雜度換局部方便。可接受的緩解：未來讓 preflight 機械比對三邊 header 結構
+- 通則：每條判例都附**可驗證的重啟條件**——條件成立時回來重審不算「重開已裁決的品味題」（judgment.md 第 6 節），是照判準執行
+
+## 2026-07-20 script.js 拆分為 js/ 12 模組檔（省 token＋可管理性，站長核准）
+- 純前綴切割搬移、內容零改寫：12 檔依載入順序 concat 的 sha256 與原 script.js 逐位一致（8e2b2583…）後才加各檔頭註解
+- 保持傳統全域 script 多標籤依序載入（defer），**禁止改 ES module**——inline onclick 依賴全域函數、type="module" 會變更時序與作用域
+- 載入順序＝依賴順序：載入期跨檔依賴只有 window.toggleMerchants/toggleConditions 賦值（與定義同檔）；其餘跨檔呼叫都在事件/DOMContentLoaded 之後，DOM ready 時 12 檔已全數載入
+- 消費者三頁：index.html＋merchant/*.html（`<base href="/">` 共用根目錄 js/）；update-version.sh 從此連 merchant 頁一起 bump（模組版本必須 lockstep），preflight 新增規則 1c 查覆蓋與順序一致
+- 每階段（P1–P5）獨立 commit＋preflight＋regression 12/12 綠；分支 claude/script-js-modularization-czrvtu
+
 ## 2026-07-12 getOverflowRate 移除 meta/google 廣告寫死特例
 - 舊特例：簡單路徑溢出遇 meta/google 廣告通路改用 overseasCashback（台新 Richart 除外）——用通路名稱判斷海外的 cashbackModel 前遺物
 - 全部 21 個廣告槽位已改明確 stacking model（rate=0），不再進簡單路徑，特例成死碼 → 刪除，溢出一律 basicCashback

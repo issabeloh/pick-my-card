@@ -10,12 +10,12 @@ effort: high
 你是實作 agent。派工 prompt 會給你目標、驗收條件、回報格式（見 docs/ops/templates.md 的格式）；缺驗收條件就先向派工方要，不要自己腦補。
 
 開工前必做：
-1. 讀 CLAUDE.md 的「鐵則」與「大檔案使用規則」
-2. 按 CLAUDE.md 任務路由表讀對應的 docs/project/ 檔案（改計算邏輯讀 cashback-engine.md，以此類推）
+1. CLAUDE.md（鐵則、大檔案使用規則）已由系統自動注入你的 context——**不要再 Read 它**，重讀是純浪費（2026-07-20 實測證實注入）
+2. 按 CLAUDE.md 任務路由表讀對應的 docs/project/ 檔案（改計算邏輯讀 cashback-engine.md，以此類推）；先 `grep -n '^## '` 看節標題，只讀與任務相關的節
 
 完成前必做：
 1. 跑 `bash tools/preflight.sh`，輸出附進回報；❌ 未通過不准回報完成
-2. 改了計算/搜尋/顯示邏輯 → 跑 `node tools/regression/run-regression.js`（需先 `npm install playwright`）：改動前先跑一次確認基準有效，改完再跑，兩次輸出都附進回報；預期內的差異要逐條說明，不准籠統宣稱「差異是預期的」
+2. 改了計算/搜尋/顯示邏輯 → 跑 `node tools/regression/run-regression.js`（需先 `npm install playwright --no-fund --no-audit --loglevel=error`）：改動前先跑一次確認基準有效，改完再跑，兩次輸出都附進回報；預期內的差異要逐條說明，不准籠統宣稱「差異是預期的」
 3. 逐條核對派工的驗收條件，每條標 ✅/❌
 
 回報格式（強制）：

@@ -1,7 +1,7 @@
 /* ==========================================================================
    promos.css — 信用卡新戶活動一覽頁
    v2（2026-07-15）：改回主站設計語言（白底容器＋深藍 header／footer＋主站字級間距），
-   只保留兩個可愛點綴——類型徽章糖果色、「剩 N 天」徽章微抖動。其餘沿用主站
+   只保留兩個可愛點綴——類型徽章糖果色、「最後 N 天」徽章微抖動。其餘沿用主站
    styles.css 的配色／組件配方（見各段落註解標明抄自哪個 class）。
    仍然完全獨立於 styles.css（不 @import、不共用 class），避免跨檔版本耦合；
    顏色數值是手動對照 styles.css 抄過來的，主站配色若改，這裡要跟著手動同步。
@@ -96,10 +96,18 @@ a {
   flex-wrap: wrap;
 }
 
+/* 2026-07-16 v3：整塊 logo+站名包成連回 `/` 的連結（跟 faq.html 一樣，副頁差異——
+   promos 本身也不是「首頁」）。顯式蓋掉 UA 底線／visited 紫色，維持白字視覺。 */
 .promos-header-content {
   display: flex;
   align-items: center;
   gap: 10px;
+  text-decoration: none;
+  color: white;
+}
+
+.promos-header-content:visited {
+  color: white;
 }
 
 .promos-header-logo {
@@ -118,34 +126,348 @@ a {
   line-height: 1.2;
 }
 
+/* 桌機導覽（2026-07-16 v3，抄自 styles.css .header-page-links／.header-nav-link）：
+   純文字＋hover 底線，取代 v2 的半透明按鈕樣式——與 faq.html／index.html 站內導覽同款。
+   手機（≤768px）隱藏，改用漢堡抽屜（.promos-sidebar-page-links 兩張卡片）。 */
 .promos-header-links {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+  margin-left: auto;
+  padding-right: 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
 }
 
-/* 抄自 styles.css .auth-btn（半透明白底圓角按鈕），這裡兩個都當「次要」樣式 */
-.promos-header-links a {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+@media (min-width: 769px) {
+  .promos-header-links {
+    display: flex;
+  }
+}
+
+.promos-header-nav-link {
+  position: relative;
+  color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
-  transition: background 0.15s ease;
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.promos-header-links a:hover {
-  background: rgba(255, 255, 255, 0.28);
+.promos-header-nav-link:visited {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.promos-header-nav-link:hover {
+  border-bottom-color: #ffc933;
+  color: #ffffff;
+}
+
+/* 2026-07-17 四輪回饋：跟 styles.css 的 .header-nav-link + .header-nav-link
+   同步修正——原本 padding-left+border-left 把分隔線留白框進第二顆連結的 box，
+   導致 hover/active 底線（border-bottom）比「新戶活動」又低又寬。改用
+   margin-left 把留白移出 box，padding-left 只留 2px（跟基礎 padding-right:2px
+   對稱），分隔線改用 ::before 畫在 margin 區間內。 */
+.promos-header-nav-link + .promos-header-nav-link {
+  margin-left: 18px;
+  padding-left: 2px;
+  border-left: none;
+}
+
+.promos-header-nav-link + .promos-header-nav-link::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 本頁（新戶活動）在導覽列的 active 視覺：加粗＋底線，抄自 styles.css:119-135
+   一帶對 aria-current="page" 的處理精神（主站導覽本身沒有 active 態，這裡是
+   promos/faq 兩個副頁互相對照才需要標示「目前在哪一頁」）。此頁「新戶活動」是
+   當前頁，不套用 header-nav-link--sparkle 煙花效果（見 styles.css 對應規則）。 */
+.promos-header-nav-link[aria-current="page"] {
+  font-weight: 800;
+  border-bottom-color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------------- 漢堡選單 + 返回首頁（2026-07-16 v3，抄自 styles.css
+   .sidebar-toggle-btn；v3 曾試過頭像＋dropdown，站長二輪回饋裁定「副頁頭像做不到
+   主站完整功能，意義不大」，撤回改用同款 faq.html 的 .back-home-btn，這裡加
+   promos- 前綴）---------------- */
+
+.promos-sidebar-toggle-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.promos-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.promos-back-home-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.promos-back-home-btn:visited {
+  color: white;
+}
+
+.promos-back-home-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateX(-2px);
+}
+
+.promos-back-home-btn svg {
+  transition: transform 0.2s;
+}
+
+.promos-back-home-btn:hover svg {
+  transform: translateX(-2px);
+}
+
+/* ---------------- 手機漢堡抽屜（抄自 styles.css .sidebar／.sidebar-overlay 一帶，
+   styles.css:6694-7108）---------------- */
+
+.promos-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 900;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.promos-sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+.promos-sidebar {
+  background: #ffffff;
+  color: #374151;
+  padding: 0;
+}
+
+.promos-sidebar-header {
+  display: none;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.promos-sidebar-close-btn {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promos-sidebar-close-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.promos-sidebar-content {
+  padding: 16px;
+}
+
+.promos-sidebar-page-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 工具卡（💳）／FAQ 卡（💬）：同構型但配色刻意區隔（2026-07-16 站長二輪回饋：
+   兩卡原本都走灰階，長得太像分不出來）。工具卡改用糖果薄荷色系（沿用類型徽章
+   已有的 --pmc-candy-mint-* 變數，融入本頁糖果果凍風），FAQ 卡維持原本低調灰階。 */
+.promos-sidebar-tool-card,
+.promos-sidebar-faq-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.promos-sidebar-tool-card {
+  background: var(--pmc-candy-mint-bg);
+  border: 1px solid #b7f0d5;
+}
+
+.promos-sidebar-tool-card:hover {
+  background: #c9f5e2;
+  border-color: #9fe9c8;
+}
+
+.promos-sidebar-faq-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.promos-sidebar-faq-card:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.promos-sidebar-tool-card-emoji,
+.promos-sidebar-faq-card-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.promos-sidebar-tool-card-text,
+.promos-sidebar-faq-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.promos-sidebar-tool-card-text strong {
+  font-size: 0.85rem;
+  color: var(--pmc-candy-mint-text);
+}
+
+.promos-sidebar-tool-card-text small {
+  font-size: 0.7rem;
+  color: var(--pmc-candy-mint-text);
+}
+
+.promos-sidebar-faq-card-text strong {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.promos-sidebar-faq-card-text small {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.promos-sidebar-tool-card-arrow {
+  color: var(--pmc-candy-mint-text);
+  font-weight: 700;
+}
+
+.promos-sidebar-faq-card-arrow {
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+/* 桌機（≥769px）：抽屜整組隱藏——這頁沒有 .app-layout 常駐左欄，不隱藏會版面壞
+   （同 faq.css 的處理，見 data-pipeline.md 第 9 節）。 */
+@media (min-width: 769px) {
+  .promos-sidebar,
+  .promos-sidebar-overlay,
+  .promos-sidebar-toggle-btn {
+    display: none !important;
+  }
+}
+
+/* 手機（≤768px）：抽屜滑出式，比照 styles.css:7071-7108 的 .sidebar/.sidebar.open。 */
+@media (max-width: 768px) {
+  .promos-sidebar-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .promos-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 85vw;
+    max-width: 360px;
+    height: 100vh;
+    max-height: 100vh;
+    z-index: 950;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    box-shadow: none;
+  }
+
+  .promos-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .promos-sidebar-header {
+    display: flex;
+  }
 }
 
 /* ---------------- Main / hero ---------------- */
 
 .promos-main {
   padding: 16px 24px 28px;
+}
+
+/* 麵包屑（2026-07-16 新增）：低調小字，「首頁」連回主站，當前頁純文字。
+   結構化資料見 pmcBuildBreadcrumbJsonLd_() 輸出到 <head> 的 BreadcrumbList。 */
+.promos-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.promos-breadcrumb a {
+  color: #9ca3af;
+  text-decoration: none;
+}
+
+.promos-breadcrumb a:hover {
+  color: #6b7280;
+  text-decoration: underline;
+}
+
+.promos-breadcrumb [aria-current="page"] {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.promos-breadcrumb-sep {
+  color: #d1d5db;
 }
 
 .promos-hero {
@@ -158,6 +480,107 @@ a {
   font-weight: 800;
   color: var(--pmc-ink);
   letter-spacing: 0.01em;
+}
+
+/* ---------------- 卡片名稱搜尋框（2026-07-22）----------------
+   抄自 styles.css .merchant-search-box / .merchant-input-wrap / .merchant-clear-btn
+   的配方（白底、粗細框、聚焦藍光暈、自製清除 ✕ 鈕，關掉原生 search cancel），
+   顏色改用本頁 --pmc-* 變數。互動見 promos.js setupSearch()。 */
+.promos-search-box {
+  margin: 4px 0 14px;
+}
+
+/* 刻意低調（2026-07-22 站長回饋：不是必須看到的東西，用戶需要時找得到就好）：
+   1px 細框（不用主站搜尋框的 3px 粗框）、小圓角、淡灰底線感，聚焦才給輕微藍框。 */
+.promos-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--pmc-border);
+  border-radius: 10px;
+  background: var(--pmc-white);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.promos-search-input-wrap:focus-within {
+  border-color: var(--pmc-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.10);
+}
+
+/* 單色放大鏡 SVG（Bootstrap search icon，同 header 其他圖示同一套線條）：絕對定位
+   在框內左側、淡灰不搶眼，pointer-events:none 讓點擊穿透到底下的 input（點圖示
+   等於點輸入框）。刻意不用彩色 🔍 emoji——站長回饋太顯眼（2026-07-22）。 */
+.promos-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: #b0b5bd;
+  pointer-events: none;
+}
+
+#promos-search-input {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  padding: 8px 38px 8px 34px; /* 左 34px 讓開放大鏡圖示、右 38px 讓長輸入不壓在清除 ✕ 底下 */
+  font-family: inherit;
+  font-size: 0.8rem; /* 低調小字 */
+  color: var(--pmc-ink);
+}
+
+/* placeholder 更淡更小，強調「非必要、需要時才找」的低調定位 */
+#promos-search-input::placeholder {
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+#promos-search-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 原生 type=search 的清除叉／裝飾關掉，改用下方跨瀏覽器一致的自製 ✕ 鈕 */
+#promos-search-input::-webkit-search-cancel-button,
+#promos-search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.promos-search-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promos-search-clear-btn:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* [hidden] 的 UA 樣式被上面 display:inline-flex 蓋過（同 specificity 下 author
+   勝），這裡明確補回 display:none，否則沒有輸入時 ✕ 仍會露出（跟
+   #promos-owned-filter-group[hidden] 同一個坑）。 */
+.promos-search-clear-btn[hidden] {
+  display: none;
 }
 
 /* ---------------- Controls: filter chips + sort ---------------- */
@@ -463,22 +886,27 @@ a {
 .promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
 .promo-type-badge--default { background: var(--pmc-candy-default-bg); color: var(--pmc-candy-default-text); }
 
-/* 「剩 N 天」徽章：抄自 styles.css .upcoming-badge 的扁平橘底白字（收斂掉原本
-   的果凍漸層/立體陰影），可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
+/* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
    2026-07-15 bug fix：生成器輸出的是一律存在、初始無文字的 <span>（給
    promos.js 即時填字），舊版這裡直接 display:inline-block 會蓋掉瀏覽器對
    [hidden] 的預設 display:none（author 樣式優先權高於 UA 樣式，即使
    specificity 相同）——結果沒有任何倒數活動時，每張卡還是會顯示一條有底色
    /內距/wiggle 動畫、但沒有文字的紅色殘影。改用 :empty 當顯示開關（[hidden]
    一併覆蓋，雙保險），animation 也只在非空狀態套用，徹底不可見。 */
+/* 紅色細框 pill 徽章（2026-07-19 站長定案）：紅字＋1px 紅色細 pill 框、透明底，
+   移除 2026-07-17 的 pixel 黑描邊（8 方向 text-shadow）。文案「最後 N 天」
+   （promos.js 填字，無驚嘆號；0 天維持「今天截止！」）。
+   靠左的類型徽章之間多留一點距離，用 margin-left（.promo-type-badges 本身
+   gap 只有 6px）。 */
 .promo-ending-badge {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 3px 12px;
+  padding: 1px 9px;
+  color: #dc2626;
+  border: 1px solid #dc2626;
   border-radius: 999px;
-  color: #fff;
-  /* 深橘（原 #f97316 亮橘太搶——2026-07-17 站長回饋頁面顏色太多） */
-  background: #c2410c;
+  margin-left: 8px;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   display: inline-block;
   transform-origin: 50% 90%;
@@ -587,7 +1015,8 @@ a {
 }
 
 /* ---------------- 好康 hero（重點好康區）---------------- */
-/* 保留但收斂：大字重點仍醒目，底色改極淡主站灰／類型淡色，回饋率一律用主站綠 */
+/* 保留但收斂：大字重點仍醒目，底色一律極淡主站灰（2026-07-19 站長定案：取消
+   gift 粉／voucher 綠／bonus 黃的類型底色，全部統一淺灰），回饋率一律用主站綠 */
 
 .promo-hero {
   display: flex;
@@ -604,10 +1033,6 @@ a {
   background: #f9fafb;
   border: 1px solid var(--pmc-border);
 }
-
-.promo-hero-item--gift { background: #fdf2f6; border-color: #f8d9e4; }
-.promo-hero-item--voucher { background: #f0fdf7; border-color: #c9f1de; }
-.promo-hero-item--bonus { background: #fffbeb; border-color: #fde9b0; }
 
 /* 2026-07-15 第三輪站長回饋：定額金額／回饋率的大字＋用途小字改成同一行橫排
    （原本是上下兩行），用 baseline 對齊讓大字數字與小字說明看起來像一句話。 */
@@ -865,6 +1290,9 @@ a {
 .promo-merchants-value {
   display: block;
   line-height: 1.6;
+  /* 藍色粗體，對齊主站搜尋結果的 .matched-merchant strong（2026-07-18 站長定案） */
+  color: var(--pmc-blue);
+  font-weight: 700;
 }
 
 .promo-merchants-value.is-clamped {
@@ -947,8 +1375,10 @@ a {
 }
 
 @media (max-width: 768px) {
+  /* 展開/收合只由箭頭觸發（見 promos.js），所以手型游標放在箭頭上，
+     整塊 toggle 不再給可點暗示，避免「看似整張可點、點了才知道只有箭頭有用」 */
   .promo-card-toggle {
-    cursor: pointer;
+    cursor: default;
   }
 
   .promo-card-toggle:focus-visible {
@@ -957,8 +1387,11 @@ a {
   }
 }
 
-/* 立即申辦按鈕：與主站現行果凍黃「立即申辦」完全一致——配方抄自 styles.css
-   .card-apply-cta-btn（漸層/陰影/邊角/active 壓下效果），padding/字級沿用桌機版 */
+/* 立即申辦按鈕：奶油蛋蜜「糖衣亮面」版（2026-07-19 站長色系決選定案，mockup
+   代號 C3b）：蛋黃橘→奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），
+   扁平無厚底、深蜜糖字。主站三顆申辦按鈕（styles.css .card-apply-cta-btn 家族）
+   同日改用同配方——改配方時兩檔要手動同步。
+   hover 效果見檔尾「申辦按鈕光影」區；active＝原地縮小回彈（無位移） */
 .promo-apply-btn {
   display: inline-flex;
   align-items: center;
@@ -967,29 +1400,25 @@ a {
   font-weight: 700;
   font-size: 14px;
   color: #7a4e00;
-  padding: 8px 16px;
+  padding: 8px 18px;
   border-radius: 999px;
   white-space: nowrap;
-  background:
-    radial-gradient(120% 65% at 50% 0%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+  background-image:
+    radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
   border: none;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 4px 0 #e8a800,
-    0 6px 14px rgba(255, 180, 0, 0.35);
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+    0 3px 10px rgba(255, 183, 77, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
-/* hover 效果見檔尾「申辦按鈕光影」區：單次掠光＋變亮，無放大（2026-07-16 站長定案） */
-
 .promo-apply-btn:active {
-  transform: translateY(3px) scale(1.02, 0.94);
+  transform: scale(0.95);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 0 #e8a800,
-    0 2px 5px rgba(255, 180, 0, 0.3);
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.6),
+    0 2px 6px rgba(255, 183, 77, 0.45);
 }
 
 /* ---------------- Empty state ---------------- */
@@ -1152,6 +1581,34 @@ a {
   color: var(--pmc-muted);
 }
 
+/* 回到頂部浮標（抄自 styles.css .back-to-top-btn，2026-07-16 新增）：手機限定
+   （見下方 Responsive 區塊的 .is-visible 規則），捲動超過門檻才顯示，行為邏輯
+   在 promos.js setupBackToTopButton。 */
+.promos-back-to-top-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  background: rgba(107, 114, 128, 0.15);
+  color: #374151;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  z-index: 999;
+  transition: all 0.2s ease;
+  /* 桌機隱藏；手機顯示由 Responsive 區塊的 .is-visible 規則接手 */
+  display: none;
+}
+
+.promos-back-to-top-btn:active {
+  transform: scale(0.96);
+}
+
 /* ---------------- Responsive ---------------- */
 /* ≤768px＝手機版「摘要卡可展開」版型：卡片預設收合成一行重點好康＋申辦鈕的摘要條，
    點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
@@ -1175,9 +1632,14 @@ a {
     font-size: 1.02rem;
   }
 
-  .promos-header-links a {
-    padding: 5px 10px;
-    font-size: 0.78rem;
+  .promos-back-home-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .promos-back-home-btn svg {
+    width: 16px;
+    height: 16px;
   }
 
   .promos-main {
@@ -1294,6 +1756,9 @@ a {
 
   .promo-card-chevron {
     display: flex;
+    /* 手機版展開/收合箭頭加大（原 1.1rem 太小不好按也不明顯） */
+    font-size: 1.7rem;
+    cursor: pointer;
   }
 
   /* display 已由桌機規則統一設為 block，這裡不用再設一次；字級跟桌機一樣
@@ -1388,39 +1853,34 @@ a {
   .promo-card-detail-inner {
     padding-top: 10px;
   }
+
+  /* 回到頂部浮標：手機限定顯示，行為與 index.html／faq.html 一致（見 promos.js
+     setupBackToTopButton）。桌機維持 display:none（基礎樣式），這裡只在達到
+     捲動門檻時才 display:flex。 */
+  .promos-back-to-top-btn.is-visible {
+    display: flex;
+  }
 }
 
-/* ═══ 申辦按鈕光影（2026-07-16 站長二次定案：hover 才閃一次＋變亮；無 auto、無放大）═══
+/* ═══ 申辦按鈕光影（2026-07-19 站長定案，mockup 代號 H4「糖衣變厚」：
+   hover＝內白圈 1.5px→2.5px 變厚變白＋整顆微提亮；無位移、無掠光、無放大。
+   舊掠光 ::after 配方已隨果凍黃版一起移除。
    「減少動態」系統設定下 hover 完全靜態（站長指示：與其看到殘缺的動畫不如不要動）。 */
-.promo-apply-btn {
-  position: relative;
-  overflow: hidden;
-}
-
-.promo-apply-btn::after {
-  content: "";
-  position: absolute;
-  top: -20%;
-  bottom: -20%;
-  left: 0;
-  width: 34%;
-  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
-  transform: translateX(-140%) skewX(-18deg);
-  pointer-events: none;
-}
-
-.promo-apply-btn:hover::after {
-  transform: translateX(340%) skewX(-18deg);
-  transition: transform 0.65s ease;
-}
-
 .promo-apply-btn:hover {
-  filter: brightness(1.07) saturate(1.05);
+  filter: brightness(1.03);
+  box-shadow:
+    inset 0 0 0 2.5px rgba(255, 255, 255, 1),
+    0 3px 10px rgba(255, 183, 77, 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .promo-apply-btn::after { display: none; }
-  .promo-apply-btn:hover { filter: none; }
   .promo-apply-btn { transition: none; }
+
+  .promo-apply-btn:hover {
+    filter: none;
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
+      0 3px 10px rgba(255, 183, 77, 0.55);
+  }
 }
 /* ═══ 光影區結束 ═══ */

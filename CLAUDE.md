@@ -10,26 +10,26 @@
 
 | 檔案 | 內容 |
 |---|---|
-| `script.js` | 核心邏輯（約 11,900 行——**使用規則見下方「大檔案」節**；檔案頂部有區塊目錄可 Grep） |
-| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號） |
+| `js/`（12 模組檔，2026-07-20 由 script.js 拆分） | 核心邏輯。**傳統全域 script 依 index.html 標籤順序載入（非 ES module，禁止改）**；每檔頂部有區塊目錄可 Grep。依載入順序：core-utils(工具/全域狀態)、data-loader(資料載入/快捷選項)、home-ui(Spotlight/公告/主初始化)、search-match(搜尋匹配)、cashback-engine(回饋計算)、results-display(結果顯示/placeholder/escapeHtml)、auth-user-data(登入/用戶資料)、cards-modals(側選單/卡片選擇/持有卡)、card-detail(詳情頁/CUBE/筆記)、spending-mappings(配卡表/免年費/額度/結帳日)、levels-payments(級別🔒/行動支付)、quick-options-misc(快捷管理/回報/auth modal/GA4) |
+| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號）；`merchant/*.html` 商家落地頁與 index.html 共用 js/、載入清單順序必須一致（preflight 會查） |
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
-| `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 script.js；也引用 styles.css） |
+| `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
 | `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
-| `apps-script/` | Apps Script 備份（⚠️ 主匯出程式 exportToJSON 在 Google Sheets 裡，不在 repo） |
+| `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`./update-version.sh`（repo 根） | 部署前機械檢查／`?v=` 自動 bump |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`（CF Pages build command 執行，開發不用跑） |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
 ## 部署前必做（每次改動，不是選填）
 
-1. 改了 `script.js`/`styles.css` → 跑 `./update-version.sh` bump `index.html` 的 `?v=`；改到 `styles.css`/`faq.js` 時 `faq.html` 的 `?v=` 要**手動**改
+1. `?v=` 一律是 `dev` 佔位、**任何情況都不要手動 bump**（2026-07-21 起版本號由 Cloudflare Pages 部署時執行 `tools/deploy-version.sh` 注入 commit hash；repo 內出現時間戳＝違規，preflight 會擋）
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright`；改動**前**先跑一次確認綠燈。差異→exit 1；語義與基準規則見 `docs/ops/regression.md`）
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1；語義與基準規則見 `docs/ops/regression.md`）
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 
@@ -45,10 +45,11 @@
 
 ## 大檔案使用規則（防上下文塞爆，依據見 docs/ops/diagnosis.md）
 
-- `script.js`（11,900 行）：**永遠不整檔 Read**。先 Grep 區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（一次 ≤200 行）
-- `cards.data`（488KB base64 單行）：**永遠不 Read**。查內容：`base64 -d cards.data > <scratchpad>/cards.json` 後用 `jq`
+- `js/*.js`（12 檔，單檔 565–1,530 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（一次 ≤200 行）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
+- `cards.data`（488KB base64 單行）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）
 - `styles.css`（7,300 行）/ `index.html`（1,350 行）：同樣先 Grep 再讀區段
 - 廣度未知的搜尋（不確定在哪幾個檔）→ 派 `Explore` subagent，主對話只收結論＋檔案:行號（→ `docs/ops/dispatch.md`）
+- `docs/project/` 領域檔：先 `grep -n '^## ' <檔>` 看節標題＋行號，**只讀與任務相關的節**（鐵則括號裡的「第 N 節」即節編號）；教訓記錄區一律連帶讀
 - 文件裡的行號都是快照、會漂移：**以 Grep 關鍵字為準**，行號只當起點
 
 ## 任務路由表（動手前先讀對應檔）
@@ -63,6 +64,7 @@
 | 拿不準「該不該升級/算不算完成/要不要問用戶/方向對不對」 | `docs/ops/judgment.md` |
 | 要寫派工 prompt | `docs/ops/templates.md`（直接套模板填空） |
 | 要更新任何 docs/ 制度檔或本檔 | `docs/ops/maintenance.md` |
+| 安全掃描報錯、要改掃描規則或 security-baseline | `docs/ops/security-monitoring.md` |
 | 考古「為什麼當初這樣設計」 | `docs/project/history.md` |
 | 新 session 開工、或發現制度怪怪的 | `docs/ops/letter.md` |
 
@@ -76,4 +78,4 @@
 - `.claude/agents/` 有專案自訂 subagent（scout/builder/verifier），用法見 `docs/ops/dispatch.md`
 
 ---
-**更新日期**：2026-07-11（Fable 5 立制 session；改寫前原檔在 `docs/archive/CLAUDE-2026-07-11-original.md`）
+**更新日期**：2026-07-20（script.js 模組化拆分 session；改寫前版本在 `docs/archive/CLAUDE.md-2026-07-20.bak`）
