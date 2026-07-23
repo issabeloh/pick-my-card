@@ -442,39 +442,53 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
 // 一次處理有上限（避免 Apps Script 6 分鐘上限），已查過的卡會跳過，再跑一次會接續剩下的
 const AD_CHECK_CONFIG = { sheet: '廣告排除檢查', perRun: 12 };
 
+// 廣告排除是「銀行層級」政策，以銀行為單位查（不是每張卡），銀行＝卡片 id 的連字號前綴
 function checkAdExclusionsForAllCards() {
   const cardsSheet = getCardsSheet_();  // 資料檔 Cards Data
   const data = cardsSheet.getDataRange().getValues();
   const h = data[0].map(function (x) { return String(x).trim(); });
-  const idc = h.indexOf('id'), namec = h.indexOf('name'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
+  const idc = h.indexOf('id'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
   if (idc < 0) { SpreadsheetApp.getUi().alert('資料檔 Cards Data 找不到 id 欄'); return; }
+
+  // 依 id 前綴分組成銀行，保留首次出現順序，記一張代表卡供查詢用
+  const bankOrder = [];
+  const bankInfo = {};  // bankKey -> { fullName, website }
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][idc] || '').trim();
+    if (!id) continue;
+    const bank = id.split('-')[0];
+    if (!bankInfo[bank]) {
+      bankInfo[bank] = {
+        fullName: fullc >= 0 ? String(data[i][fullc] || '') : id,
+        website: webc >= 0 ? String(data[i][webc] || '') : ''
+      };
+      bankOrder.push(bank);
+    }
+  }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let out = ss.getSheetByName(AD_CHECK_CONFIG.sheet);
   if (!out) {
     out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
-    out.appendRow(['檢查時間', 'id', 'name', '是否排除廣告', '依據', 'needs_review', '官網']);
+    out.appendRow(['檢查時間', '銀行(id前綴)', '代表卡', '是否排除廣告', '依據', 'needs_review']);
     out.setFrozenRows(1);
   }
-  const doneIds = {};
+  const doneBanks = {};
   const outData = out.getDataRange().getValues();
-  for (let i = 1; i < outData.length; i++) doneIds[String(outData[i][1])] = true;
+  for (let i = 1; i < outData.length; i++) doneBanks[String(outData[i][1])] = true;
 
   const now = new Date();
   let processed = 0, remaining = 0;
-  for (let i = 1; i < data.length; i++) {
-    const id = String(data[i][idc] || '').trim();
-    if (!id || doneIds[id]) continue;
+  for (let b = 0; b < bankOrder.length; b++) {
+    const bank = bankOrder[b];
+    if (doneBanks[bank]) continue;
     if (processed >= AD_CHECK_CONFIG.perRun) { remaining++; continue; }
 
-    const name = namec >= 0 ? String(data[i][namec] || '') : id;
-    const fullName = fullc >= 0 ? String(data[i][fullc] || '') : name;
-    const website = webc >= 0 ? String(data[i][webc] || '') : '';
-
+    const info = bankInfo[bank];
     let verdict = '未知', basis = '';
     try {
-      const prompt = '用 Google 搜尋查台灣「' + fullName + '」信用卡的「一般消費」回饋，是否明確排除 Facebook/Meta、Google、廣告費 這幾類。' +
-        (website ? '官網參考：' + website + '。' : '') +
+      const prompt = '用 Google 搜尋查台灣發行「' + info.fullName + '」的這家銀行，其信用卡「一般消費」回饋是否明確排除 Facebook/Meta、Google、廣告費 這幾類（這是銀行層級的政策，非單張卡的活動）。' +
+        (info.website ? '官網參考：' + info.website + '。' : '') +
         '依據優先序：①該行官網/公告的原文最優先；②官網查不到時，可採信可靠大站（如卡優新聞、Mobile01、財經媒體、知名部落客彙整）明確寫出的資訊，如「XX銀行刷廣告費沒回饋」。都查不到再回未知。' +
         '嚴格用兩行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句，並註明來自官網或哪個大站>\n';
       const r = callGeminiGrounded_(prompt);
@@ -483,15 +497,15 @@ function checkAdExclusionsForAllCards() {
     } catch (e) {
       basis = '查詢失敗：' + e.message;
     }
-    out.appendRow([now, id, name, verdict, basis, 'TRUE', website]);
+    out.appendRow([now, bank, info.fullName, verdict, basis, 'TRUE']);
     if (verdict !== '否') out.getRange(out.getLastRow(), 4).setBackground('#fff3cd'); // 排除=是/未知 標黃提醒
     processed++;
     Utilities.sleep(800);
   }
 
-  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 張卡，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
-    (remaining ? '\n還有 ' + remaining + ' 張未查——再執行一次即可接續。' : '\n全部查完了。') +
-    '\n\n判讀：排除=是→該卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
+  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 家銀行，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
+    (remaining ? '\n還有 ' + remaining + ' 家未查——再執行一次即可接續。' : '\n全部查完了。') +
+    '\n\n判讀（該行所有卡共用）：排除=是→該行的卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
 }
 
 // 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
