@@ -1998,7 +1998,8 @@ function pmcPageTemplate_(o) {
 // 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
 '  <div class="promos-search-box">\n' +
 '    <div class="promos-search-input-wrap">\n' +
-'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="🔍 搜尋卡片名稱" aria-label="搜尋卡片名稱">\n' +
+'      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱" aria-label="搜尋卡片名稱">\n' +
 '      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
 '    </div>\n' +
 '  </div>\n' +
