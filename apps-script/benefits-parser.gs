@@ -60,7 +60,8 @@ function buildAutomationMenu_() {
     .addItem('解析收件匣（新戶活動）', 'parseInboxNewPromos')
     .addItem('解析「解析輸入」的文字（新戶活動）', 'parsePastedText')
     .addSeparator()
-    .addItem('解析新卡（主要活動）', 'parseNewCard')  // 定義在 card-benefits-parser.gs
+    .addItem('解析新卡（主要活動）', 'parseNewCard')                    // card-benefits-parser.gs
+    .addItem('檢查廣告排除（全卡·每月）', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addToUi();
 }
 

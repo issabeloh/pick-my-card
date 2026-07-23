@@ -124,21 +124,24 @@ function extractCard_(rawText, idHint, generalText) {
     '4. pointsExpiry 點數效期；basicConditions 基本回饋條件；annualFee 年費；feeWaiver 免年費條件；website 官網。',
     '5. tags 從固定清單挑。',
     '6. hasLevels 是否分級（true/false）。',
-    '7. 分級卡：levelSettings_evidence 逐字引用官網描述各級別 rate/cap/期間的原文（JSON 由我人工建，你只給原文）；levelLabelFormat 依官網用詞填，如「方案: {level}」或「分級: {level}」。',
+    '7. 分級卡：levels 陣列，每個級別一個物件——level_name（官網的級別名稱，如 簡單選/任意選/UP選）、rate（該級回饋率數字）、cap_spend（消費上限，官網直接講就填）、cap_reward（回饋金額上限，官網講回饋X元就填）、period_start/period_end（YYYY/M/D）、level_note（達成條件，開頭寫「達成條件：」）。另外 levelLabelFormat 依官網用詞填，如「方案: {level}」或「分級: {level}」。levelSettings_evidence：逐字引用官網描述各級別的原文（供人工複核）。',
     '8. 海外：overseasCashback（基本海外率數字）、overseasBonusRate（海外加碼率數字）、overseasBonusCap_reward（海外加碼「回饋金額上限」數字）、overseasBonusConditions、overseasBonusPeriod_start/overseasBonusPeriod_end（YYYY/M/D）。',
     '9. 國內加碼：domesticBonusRate、domesticBonusCap_reward（回饋金額上限數字）、domesticBonusConditions。',
     '10. general_excludes_ads：一般消費是否排除 Facebook/Meta/Google/廣告費——明確排除填「是」；明確沒排除或明說廣告可享填「否」；沒提到填「未提及」。',
     '11. parking / airport_pickup / airport_lounge：有才填。',
     '',
     '【groups 每組欄位】',
-    '12. rate 回饋率數字；items 適用通路陣列（實體/網購標明）；category 分類標題；conditions 達成條件（登錄類寫「需登錄且限量，詳見官網」）；period_start/period_end YYYY/M/D。',
-    '13. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
-    '14. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
-    '15. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
+    '12. rate 回饋率數字；items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
+    '13. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，涵蓋（有才寫）：',
+    '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；消費門檻（單筆或當月滿額，如「須單筆滿3,000」）；',
+    '    登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫「詳見官網」）；MCC code 認定；國內/國外認列；',
+    '    排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）；消費上限算法。',
+    '    不要寫免責/罰則樣板（喪失資格、銀行保留權利那類）。',
+    '14. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
+    '15. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
+    '16. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
     '',
-    '【關鍵字對應】看到這些字樣時該欄位高度可信（此表會持續增補）：',
-    '- basicCashback ← 「基本回饋 n%」',
-    '- domesticBonusRate ← 「國內加碼 n%」',
+    readKeywordAnchors_(),   // 【關鍵字對應】——從「解析關鍵字對應」分頁動態載入，站長可自行維護
     '',
     '【每個物件都要】evidence（見總則 D）；needs_review：不確定就 true 並把問題寫進 review_question。'
   ].join('\n');
@@ -175,7 +178,24 @@ function extractCard_(rawText, idHint, generalText) {
           annualFee: { type: 'STRING' }, feeWaiver: { type: 'STRING' }, website: { type: 'STRING' },
           tags: { type: 'ARRAY', items: { type: 'STRING', enum: CARD_TAG_ENUM } },
           hasLevels: { type: 'BOOLEAN' },
-          levelSettings_evidence: { type: 'STRING', description: '分級卡：官網描述各級別的原文' },
+          levels: {
+            type: 'ARRAY',
+            description: '分級卡各級別（hasLevels=true 才填）',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                level_name: { type: 'STRING' },
+                rate: { type: 'NUMBER' },
+                cap_spend: { type: 'NUMBER' },
+                cap_reward: { type: 'NUMBER' },
+                period_start: { type: 'STRING' },
+                period_end: { type: 'STRING' },
+                level_note: { type: 'STRING', description: '達成條件，開頭寫「達成條件：」' }
+              },
+              required: ['level_name', 'rate']
+            }
+          },
+          levelSettings_evidence: { type: 'STRING', description: '分級卡：官網描述各級別的原文（供人工複核）' },
           levelLabelFormat: { type: 'STRING', description: '依官網用詞，如 方案: {level}' },
           overseasCashback: { type: 'NUMBER' }, overseasBonusRate: { type: 'NUMBER' },
           overseasBonusCap_reward: { type: 'NUMBER' }, overseasBonusConditions: { type: 'STRING' },
@@ -210,6 +230,56 @@ function spendCapFromReward_(rewardAmount, ratePercent) {
   if (!rewardAmount) return '';
   if (!ratePercent) return String(rewardAmount);
   return Math.round(num_(rewardAmount) / (num_(ratePercent) / 100));
+}
+
+// 由 AI 的 levels 陣列組出 levelSettings JSON：{級別名:{rate,cap,period,"level-note"}}
+function buildLevelSettings_(levels) {
+  if (!levels || !levels.length) return '';
+  const obj = {};
+  levels.forEach(function (lv) {
+    if (!lv || !lv.level_name) return;
+    const cap = (lv.cap_spend != null && lv.cap_spend !== '')
+      ? Math.round(num_(lv.cap_spend))
+      : spendCapFromReward_(lv.cap_reward, lv.rate);
+    const period = (lv.period_start || lv.period_end)
+      ? (lv.period_start || '') + '~' + (lv.period_end || '')
+      : '';
+    const entry = { rate: (lv.rate != null ? Number(lv.rate) : '') };
+    if (cap !== '' && cap != null) entry.cap = Number(cap);
+    if (period) entry.period = period;
+    if (lv.level_note) entry['level-note'] = lv.level_note;
+    obj[lv.level_name] = entry;
+  });
+  return Object.keys(obj).length ? JSON.stringify(obj) : '';
+}
+
+// 【關鍵字對應】種子（站長沒建分頁時用這些）
+const KEYWORD_ANCHOR_SEEDS = [
+  ['basicCashback', '基本回饋 n%', ''],
+  ['domesticBonusRate', '國內加碼 n%', '']
+];
+
+// 從「解析關鍵字對應」分頁讀關鍵字錨點，組成 prompt 片段；分頁不存在就自動建（含種子）讓站長維護
+function readKeywordAnchors_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const name = '解析關鍵字對應';
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(['欄位', '看到這種字樣', '備註（選填）']);
+    KEYWORD_ANCHOR_SEEDS.forEach(function (r) { sheet.appendRow(r); });
+    sheet.setFrozenRows(1);
+  }
+  const data = sheet.getDataRange().getValues();
+  const lines = ['【關鍵字對應】看到這些字樣時該欄位高度可信：'];
+  for (let i = 1; i < data.length; i++) {
+    const field = String(data[i][0] || '').trim();
+    const pattern = String(data[i][1] || '').trim();
+    if (!field || !pattern) continue;
+    const note = String(data[i][2] || '').trim();
+    lines.push('- ' + field + ' ← 「' + pattern + '」' + (note ? '（' + note + '）' : ''));
+  }
+  return lines.length > 1 ? lines.join('\n') : '';
 }
 
 /************** 程式：依 group_kind / is_stacked 決定 cashbackModel **************/
@@ -252,7 +322,8 @@ function writeBasicReview_(basic, link, idCollision) {
     basicConditions: basic.basicConditions || '', annualFee: basic.annualFee || '',
     feeWaiver: basic.feeWaiver || '', website: basic.website || link || '',
     tags: (basic.tags || []).join(','), hasLevels: basic.hasLevels ? 'TRUE' : 'FALSE',
-    levelSettings: '',                                   // 手動（級別名稱=識別碼）
+    // 新卡預填 levelSettings JSON（新卡沒有既存用戶偏好，預填安全；你可直接改）
+    levelSettings: buildLevelSettings_(basic.levels),
     levelLabelFormat: basic.levelLabelFormat || '',      // AI 依官網用詞
     overseasCashback: (basic.overseasCashback != null ? basic.overseasCashback : ''),
     overseasBonusRate: (basic.overseasBonusRate != null ? basic.overseasBonusRate : ''),
@@ -359,4 +430,95 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
   if (f.needsReview || f.modelNeedsHuman) {
     sheet.getRange(sheet.getLastRow(), 1, 1, row.length).setBackground('#fff3cd');
   }
+}
+
+/************** Q1：每月批次查「一般消費是否排除廣告」（Gemini + Google 搜尋 grounding） **************/
+// grounding 開了就不能同時用結構化輸出，故回純文字自行解析；結果一律 needs_review（附來源，你複核）
+// 一次處理有上限（避免 Apps Script 6 分鐘上限），已查過的卡會跳過，再跑一次會接續剩下的
+const AD_CHECK_CONFIG = { sheet: '廣告排除檢查', perRun: 12 };
+
+function checkAdExclusionsForAllCards() {
+  const cardsSheet = getCardsSheet_();  // 資料檔 Cards Data
+  const data = cardsSheet.getDataRange().getValues();
+  const h = data[0].map(function (x) { return String(x).trim(); });
+  const idc = h.indexOf('id'), namec = h.indexOf('name'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
+  if (idc < 0) { SpreadsheetApp.getUi().alert('資料檔 Cards Data 找不到 id 欄'); return; }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let out = ss.getSheetByName(AD_CHECK_CONFIG.sheet);
+  if (!out) {
+    out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
+    out.appendRow(['檢查時間', 'id', 'name', '是否排除廣告', '依據', '來源連結', 'needs_review', '官網']);
+    out.setFrozenRows(1);
+  }
+  const doneIds = {};
+  const outData = out.getDataRange().getValues();
+  for (let i = 1; i < outData.length; i++) doneIds[String(outData[i][1])] = true;
+
+  const now = new Date();
+  let processed = 0, remaining = 0;
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][idc] || '').trim();
+    if (!id || doneIds[id]) continue;
+    if (processed >= AD_CHECK_CONFIG.perRun) { remaining++; continue; }
+
+    const name = namec >= 0 ? String(data[i][namec] || '') : id;
+    const fullName = fullc >= 0 ? String(data[i][fullc] || '') : name;
+    const website = webc >= 0 ? String(data[i][webc] || '') : '';
+
+    let verdict = '未知', basis = '', sources = '';
+    try {
+      const prompt = '用 Google 搜尋查台灣「' + fullName + '」信用卡的「一般消費」回饋，是否明確排除 Facebook/Meta、Google、廣告費 這幾類。' +
+        (website ? '官網參考：' + website + '。' : '') +
+        '只依官網或銀行公告，不要臆測。嚴格用三行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句>\n';
+      const r = callGeminiGrounded_(prompt);
+      const parsed = parseAdVerdict_(r.text);
+      verdict = parsed.verdict; basis = parsed.basis;
+      sources = (r.sources || []).slice(0, 3).join('\n');
+    } catch (e) {
+      basis = '查詢失敗：' + e.message;
+    }
+    out.appendRow([now, id, name, verdict, basis, sources, 'TRUE', website]);
+    if (verdict !== '否') out.getRange(out.getLastRow(), 4).setBackground('#fff3cd'); // 排除=是/未知 標黃提醒
+    processed++;
+    Utilities.sleep(800);
+  }
+
+  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 張卡，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
+    (remaining ? '\n還有 ' + remaining + ' 張未查——再執行一次即可接續。' : '\n全部查完了。') +
+    '\n\n提醒：grounding 結果需你複核（附來源連結）。排除=是→該卡 rate_14 留空；否→建 rate_14 固定模板。');
+}
+
+// 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
+function callGeminiGrounded_(prompt) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('尚未設定 GEMINI_API_KEY');
+  const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ google_search: {} }] };
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('Gemini(grounded) HTTP ' + res.getResponseCode() + '：' + res.getContentText().slice(0, 200));
+  }
+  const body = JSON.parse(res.getContentText());
+  const cand = body.candidates && body.candidates[0];
+  const parts = (cand && cand.content && cand.content.parts) || [];
+  const text = parts.map(function (p) { return p.text || ''; }).join('').trim();
+  const sources = [];
+  const gm = cand && cand.groundingMetadata;
+  if (gm && gm.groundingChunks) {
+    gm.groundingChunks.forEach(function (c) { if (c.web && c.web.uri) sources.push(c.web.uri); });
+  }
+  return { text: text, sources: sources };
+}
+
+// 從「排除:… 依據:…」文字解析
+function parseAdVerdict_(text) {
+  let verdict = '未知', basis = text || '';
+  const mV = String(text).match(/排除\s*[:：]\s*(是|否|未知)/);
+  if (mV) verdict = mV[1];
+  const mB = String(text).match(/依據\s*[:：]\s*([\s\S]*)/);
+  if (mB) basis = mB[1].trim().slice(0, 500);
+  return { verdict: verdict, basis: basis };
 }
