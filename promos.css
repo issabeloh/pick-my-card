@@ -1622,6 +1622,22 @@ a {
     padding: 12px 16px;
   }
 
+  /* 手機版 header 固定單行（2026-07-23 站長回饋）：原本 .promos-header-top 用
+     justify-content:space-between + flex-wrap:wrap，窄螢幕（375px iPhone SE）三顆
+     ——漢堡／logo＋站名／返回首頁——擠不下時「返回首頁」換到第二行，剩下兩顆被
+     space-between 推開，logo＋站名貼到右緣（iPhone 13 的 390px 剛好塞得下才沒事）。
+     改成不換行、靠左起排，logo＋站名緊貼漢堡右側，「返回首頁」用 margin-left:auto
+     推到最右；站名 min-width:0 + 省略號，極窄時截斷而非撐破行。 */
+  .promos-header-top {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .promos-header-content {
+    min-width: 0;
+  }
+
   .promos-header-logo {
     height: 32px;
   }
@@ -1630,9 +1646,14 @@ a {
      這裡文字本來就短，改成截斷＋縮小字級，不整段隱藏，因為沒有 auth 區搶空間） */
   .promos-header-title {
     font-size: 1.02rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .promos-back-home-btn {
+    margin-left: auto;
     padding: 6px 12px;
     font-size: 0.85rem;
   }
@@ -1681,9 +1702,17 @@ a {
   }
 
   .promos-filter-chips,
-  .promos-sort-toggle,
-  .promos-owned-filter-label {
+  .promos-sort-toggle {
     flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* 「隱藏我持有的卡片」label 不吃滿整行（2026-07-23 站長回饋）：原本併入上面
+     flex:1 1 auto，label 撐滿整列 → 把後面同層的「?」說明鈕（.promos-owned-help-wrap）
+     推到最右緣。改成自然寬度（flex-grow:0），讓「?」緊貼 label 右側；min-width:0
+     保留可縮性，避免極窄螢幕撐破 group 的 nowrap 行。 */
+  .promos-owned-filter-label {
+    flex: 0 1 auto;
     min-width: 0;
   }
 
