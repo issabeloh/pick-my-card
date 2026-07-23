@@ -144,7 +144,8 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **versionTag 含台北時分**（2026-07-16 起）：promos.css/js 的 `?v=` 為 `YYYYMMDDHHmm`，同日多次匯出也能破快取。代價是重生成不再天然位元級一致——**做位元級重現驗證時，exportData 傳 `versionTagOverride: '<repo 版的 tag>'` 固定它**再比對。
 - **「資料更新於」戳章只在活動內容真的變動時前進**（2026-07-23 起，`promosUpdatedIso`）：頁腳
   `<time datetime>` 戳章、`sitemap.xml` 的 promos `lastmod`、`<head>` 的 `CollectionPage`
-  JSON-LD `dateModified` 三處**同源**，都用這個日期。它**不是每次匯出的今天**——`exportToJSON`
+  JSON-LD `dateModified` 三處**同源**，都用這個日期（可見戳章 `.promos-data-update` 2026-07-23 起
+  放在 `.promos-controls` 下方、`.promo-grid` 上方，不再在頁尾）。它**不是每次匯出的今天**——`exportToJSON`
   先用 `pmcPromoSignature_(newCardholderPromos)`（依 `promo_id` 排序後的內容指紋，djb2/`Math.imul`
   純函數，不受 sheet 列序影響）跟 Script Properties 的 `PROMOS_LAST_SIG` / `PROMOS_LAST_DATE`
   比對：指紋相同就沿用上次日期，不同（或首次）才蓋 `pmcTodayISO_()` 並寫回。**為什麼不每次蓋今天**：
