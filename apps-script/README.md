@@ -121,16 +121,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 收件人 | `BACKUP_EMAIL` 常數留空 = 寄給試算表登入帳號（比照權益監控慣例） |
 | 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
 
-## 權益解析（第二階段 MVP，2026-07-16 補上備份）
-
-規劃見 `BENEFITS-AUTOMATION-PLAN.md` 第二階段。
-
-| 項目 | 內容 |
-|---|---|
-| 程式檔案 | Apps Script 專案內的指令碼檔「權益解析」（備份：`benefits-parser.gs`） |
-| 職責 | 讀「情報收件匣」或「解析輸入」分頁的活動原文，呼叫 Gemini 做結構化解析，寫入「待審核-新戶活動」分頁——AI 只做閱讀理解，promo_id／cap／bonus_rate 一律程式生成，絕不直接寫正式資料表 |
-| 選單 | 「🤖 權益自動化」→「解析收件匣（新戶活動）」／「解析『解析輸入』的文字」 |
-| 設定 | `PARSER_CONFIG`（各分頁名稱、`GEMINI_API_KEY` 指令碼屬性、model） |
+> 註：權益解析／主要活動解析的完整說明已移至本檔後段（分檔後版本），此處舊段落已於 2026-07-17 併除。
 
 ## 權益監控（第一階段，2026-07-07 上線）
 
@@ -197,25 +188,48 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - HTTP 403 → 該銀行擋非瀏覽器的請求，同上：`fetch_via` 填 `jina`
 - 腳本執行失敗會依觸發器的 Failure notification 設定寄信通知
 
-## 權益解析（第二階段 MVP：新戶活動，2026-07-08 建置）
+## ⚠️ 兩檔架構（2026-07-17 分檔）
+
+自動化的工作台從「信用卡管理系統」試算表**搬到獨立的「PMC 自動化流程」試算表**，兩本各司其職：
+
+| 試算表 | 內容 | Apps Script |
+|---|---|---|
+| **資料檔**「信用卡管理系統」 | 卡片正式資料各分頁（Cards Data 等） | `cards-export.gs`（匯出／QA／promos.html／每月備份） |
+| **自動化檔**「PMC 自動化流程」 | `Watchlist`／`情報收件匣`／`解析輸入`／`待審核-*` | `watchlist-monitor.gs`＋`benefits-parser.gs` |
+
+- **為什麼分**：備份乾淨度（月備份不再打包一堆快照暫存垃圾）、安全邊界（AI 機器與正式資料物理隔離）、檔案不被大快照拖鈍。
+- **唯一接縫**：解析程式要讀合法卡片 ID，用 `openById(CARDS_SPREADSHEET_ID)` 跨檔**唯讀**讀資料檔的 Cards Data，**絕不寫回**。第三階段「一鍵寫回正式表」也走這條接縫。
+- **監控腳本不用改**：`checkWatchlist` 只碰 Watchlist／情報收件匣，兩者都在自動化檔，`getActiveSpreadsheet()` 就對。
+- **觸發器**：每週的時間驅動觸發器要建在**自動化檔**的 Apps Script（舊資料檔那邊的要刪掉）。
+
+## 權益解析（第二階段 MVP：新戶活動，2026-07-08 建置，2026-07-17 移入自動化檔）
 
 | 項目 | 內容 |
 |---|---|
-| 程式檔案 | Apps Script 專案內的 `權益解析.gs`（備份：`benefits-parser.gs`） |
+| 程式檔案 | **自動化檔**的 Apps Script 內 `權益解析.gs`（備份：`benefits-parser.gs`） |
 | AI | Gemini API（`gemini-2.5-flash`，免費額度），**結構化輸出**鎖死欄位格式 |
 | 讀取來源 | ① `情報收件匣` 中狀態=`待解析` 的列（監控的產出）② `解析輸入` 分頁手動貼文字 |
+| 卡片 ID 來源 | 跨檔 `openById` 讀資料檔的 `Cards Data`（唯讀） |
 | 產出 | `待審核-新戶活動` 分頁（自動建立）——**絕不直接寫正式表** |
-| 入口 | 試算表工具列「🤖 權益自動化」選單（打開試算表自動出現） |
+| 入口 | 自動化檔工具列「🤖 權益自動化」選單（打開試算表自動出現） |
 
-### 首次設定（只做一次）
+### 首次設定（只做一次，在「PMC 自動化流程」自動化檔）
 
 1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
-2. Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增 `GEMINI_API_KEY` = 你的金鑰（**絕不寫進程式碼**）
-3. 把 `benefits-parser.gs` 內容貼進 Apps Script 專案的新檔案「權益解析」
-4. **把選單掛到專案既有的 onOpen**：這份檔案「不」自帶 onOpen（一個專案只能有一個 onOpen，
-   否則會蓋掉 `code.gs` 的匯出選單）。到你既有的 `code.gs`（有匯出選單的那個檔）的 `onOpen`
-   函數裡，在結尾 `}` 前加一行 `buildAutomationMenu_();`
-5. 重新整理試算表 → 匯出選單與「🤖 權益自動化」選單會**同時**出現
+2. 自動化檔 → 擴充功能 → Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（**絕不寫進程式碼**）：
+   - `GEMINI_API_KEY` = 你的 Gemini 金鑰
+   - `CARDS_SPREADSHEET_ID` = 資料檔「信用卡管理系統」網址 `/spreadsheets/d/【這段】/edit` 的 ID
+3. 把 `benefits-parser.gs` 貼進新檔案「權益解析」、`watchlist-monitor.gs` 貼進「權益監控」
+4. 重新整理自動化檔 → 工具列出現「🤖 權益自動化」選單（本檔自帶 onOpen，此處無匯出選單可撞）
+
+### 分頁搬遷步驟（一次性）
+
+1. 在**資料檔**逐一右鍵這 4 個分頁 → 「複製到」→ 現有試算表 →「PMC 自動化流程」：
+   `Watchlist`、`情報收件匣`、`解析輸入`、`待審核-新戶活動`
+   （其中 **Watchlist 一定要搬**——它有網址與基準快照；其餘 3 個腳本會自動重建，但搬過去可保留歷史）
+2. 複製過去會變成「Watchlist 的副本」等名字 → **改回原本的名字**（腳本靠分頁名字精準比對，多「的副本」會找不到）
+3. 自動化檔手動跑一次 `checkWatchlist` 確認正常、跑一次解析確認能讀到卡片 ID
+4. 確認無誤後：資料檔那邊**刪掉**這 4 個分頁與監控/解析程式、**刪掉舊的每週觸發器**；自動化檔**新建**每週觸發器（函數 `checkWatchlist`、Time-driven）
 
 ### 分工原則（為什麼比 GEM 準）
 
@@ -247,3 +261,80 @@ voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_te
 2. 黃底列 = AI 沒把握（看「AI想問的問題」欄），對照「原文引用」欄驗證數字
 3. 確認 OK 後，把該列 **id 以後的欄位**（與正式表欄位一一對應）複製貼到正式的新戶活動表，「核准」欄打 V 做記錄
 4. 之後的第三階段會做「勾核准 → 一鍵寫入」，這一步手動複製就消失
+
+## 主要活動解析（新卡權益，2026-07-17 建置）
+
+| 項目 | 內容 |
+|---|---|
+| 程式檔案 | 自動化檔 Apps Script 內 `權益解析-新卡.gs`（備份：`card-benefits-parser.gs`） |
+| 依賴 | 與 `benefits-parser.gs` 同專案，共用 `callGemini_` / `getCardsSheet_` / `getCardIds_` |
+| 輸入 | `新卡解析輸入` 分頁（A2＝官網權益頁文字、B2＝id 提示選填、C2＝網址選填） |
+| 產出 | `待審核-新卡基本`（1 列＝ Cards Data 固定欄位）＋`待審核-新卡組別`（垂直，一組一列） |
+| 入口 | 選單「🤖 權益自動化 → 解析新卡（主要活動）」 |
+
+### 輸入（新卡解析輸入分頁）
+
+A2＝官網權益頁文字；B2＝id 提示（選填）；C2＝網址（選填）；**D2＝一般消費/排除說明頁文字（選填）**——用來判斷一般消費是否排除廣告（決定 rate_14 要不要建）。AI 不會自己上網查別頁，這頁的文字要你貼進 D2。
+
+### cashbackModel 分工（最重要）
+
+- **AI 只抽事實 + 語意旗標**：rate/items/category/條件/期間/cap 金額，`group_kind`（指定通路加碼／國外指定加碼／排除型／其他）、`is_stacked`
+- **程式產出安全模型**：排除型→`rate`；國外指定→`rate>basic>overseasBonusRate`（標需確認）；指定通路加碼→留空（cap 內 rate、溢出 basic）
+- **⚠️ 跨槽疊加（`rate+rate_1+basic`）程式無法從文字推導** → 標黃、留空、`cashbackModel需手填?`＝TRUE、原文引用附完整依據，人工手填
+- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%`
+
+### 固定槽位 14/21/22（程式依基本欄位自動生成，不經 AI）
+
+groups 不放「一般國內/國外/廣告」——這三種由程式生成固定模板：
+
+| 槽位 | 生成條件 | 固定值 |
+|---|---|---|
+| **rate_14 廣告** | `general_excludes_ads≠是`（有排除→不建，留空；未提及→建但標黃要你確認） | rate=0、model=`overseasCashback+overseasBonusRate`、items=`meta廣告,google廣告`、cap=overseasBonusCap、category=有海外→`國外消費特列項目`／無→`一般回饋特列項目` |
+| **rate_21 國內** | 有 `domesticBonusRate` | rate=0、model=`basic+domesticBonusRate`、items=`國內消費`、cap=domesticBonusCap、conditions=domesticBonusConditions、hideInDisplay=TRUE |
+| **rate_22 國外** | 有國外回饋 | rate=0、model=`overseasCashback+overseasBonusRate`、items=`國外消費`、cap=overseasBonusCap、conditions=overseasBonusConditions、期間=overseasBonusPeriod、hideInDisplay=TRUE |
+
+### 自動排除（不放進 groups）
+
+- **領券型**（需到 App/官網領取優惠券）——只需「登錄」的仍算，會放
+- **新戶/核卡限定**——那是新戶活動，另有解析器
+
+### 分級卡
+
+- `levelSettings` JSON **新卡會預填**（新卡沒有既存用戶偏好，預填安全；你可直接改）：AI 抽各級別 `levels`（level_name/rate/cap/期間/達成條件），程式組成 `{級別名:{rate,cap,period,"level-note"}}`。基本表 `levelSettings原文引用` 欄仍附官網原文供複核
+  - ⚠️ **只對新卡預填**：改「既有卡」的級別時仍遵守「級別名稱＝識別碼」鐵則，不可亂改級別名
+- `levelLabelFormat` 由 AI 依官網用詞填（如 `方案: {level}`／`分級: {level}`）
+
+### 關鍵字對應（站長可自行維護）
+
+`【關鍵字對應】` 從自動化檔的 **`解析關鍵字對應` 分頁**動態載入（第一次跑解析會自動建，含種子）。
+欄位：`欄位 | 看到這種字樣 | 備註`。站長直接在分頁加列，下次解析就生效——不用改程式。
+種子：`basicCashback ← 基本回饋 n%`、`domesticBonusRate ← 國內加碼 n%`。
+
+### 每月批次查廣告排除（Google 搜尋 grounding）
+
+選單「🤖 權益自動化 → 檢查廣告排除（全卡·每月）」：對 Cards Data 每張卡，用 Gemini + Google 搜尋
+即時查「一般消費是否排除 Facebook/Meta/Google/廣告費」，結果寫進 `廣告排除檢查` 分頁（附來源連結）。
+
+- 依據優先序：①該行官網/公告原文最優先；②官網查不到時採信可靠大站（卡優、Mobile01、財經媒體、知名部落客彙整）明確資訊；都無則回未知
+- 結果**一律 needs_review**（命中率中等，`依據`欄會註明來自官網或哪個大站，供你判斷）
+- 每次最多查 12 張（避開 Apps Script 6 分鐘上限），已查過的跳過，**再執行一次接續剩下的**
+- 判讀：`排除=是`→該卡 rate_14 留空；`否`→建 rate_14 固定模板；`未知`→標黃，自行確認
+- **全卡月報**（不只新卡）；可設每月觸發器（函數 `checkAdExclusionsForAllCards`）自動跑
+
+### 審核與套用
+
+1. 開 `待審核-新卡基本` + `待審核-新卡組別`；黃底＝AI 沒把握或 cashbackModel 需你手填
+2. 對照 `原文引用` 欄驗證（evidence 已要求完整到不必回官網）
+3. 基本表那列貼進 Cards Data 固定欄位；組別逐組把值填進 `rate_N/cashbackModel_N/cap_N/minSpend_N/maxSpend_N/items_N/category_N/conditions_N/periodStart_N/periodEnd_N/hideInDisplay_N`（N＝建議槽位；14/21/22 用固定槽號）
+4. 之後照現有流程 `runQACheck → exportToJSON`，搭配 `docs/ops/regression.md` 人工回歸驗算
+
+### conditions 欄位規則（已對齊站長慣例，2026-07-17）
+
+- **只寫**：付款方式限定、自動扣繳/電子帳單、登錄與限量（帶日期名額）、MCC 認定、排除項目、可疊加提示、條件式增減（若非Visa則-10% 這類）
+- **不寫**：單筆滿額門檻（→ `min_spend` 欄）、一般回饋上限（→ `cap`；只有「以信用額度加計NT$X萬」這種特殊定義才寫）、免責/罰則樣板
+- 「認列為國內/國外通路」只在特例寫：同一通路難判國內外、且國內外回饋率不同拆成兩組時，於國外那組註明
+- `min_spend`/`max_spend`：單筆消費門檻→程式填進組別表 minSpend/maxSpend 欄（對應 Cards Data `minSpend_N`）
+
+### 待迭代（跟站長協作）
+
+- **關鍵字對應表**：`解析關鍵字對應` 分頁，站長持續補「看到 X 字樣＝Y 欄位高可信」的錨點

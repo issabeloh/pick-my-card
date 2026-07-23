@@ -1,9 +1,13 @@
 /**
  * 權益解析腳本（BENEFITS-AUTOMATION-PLAN.md 第二階段，MVP：新戶活動）
  *
- * 這是備份副本——實際執行的版本貼在 Google Sheets 的 Apps Script 專案裡
- * （擴充功能 → Apps Script → 新增指令碼檔案「權益解析」）。
- * 兩邊改動時請記得同步。
+ * 這是備份副本——實際執行的版本貼在「PMC 自動化流程」試算表的 Apps Script 專案裡
+ * （擴充功能 → Apps Script → 新增指令碼檔案「權益解析」）。兩邊改動時請記得同步。
+ *
+ * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 自動化流程」試算表（＝自動化檔），
+ *   Watchlist / 情報收件匣 / 解析輸入 / 待審核-* 都在這本；
+ *   卡片正式資料（Cards Data）在另一本「信用卡管理系統」試算表（＝資料檔），
+ *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單，絕不寫回資料檔。
  *
  * 核心原則（規劃書三鐵則）：
  *   1. AI 只做閱讀理解，輸出被 JSON Schema 鎖死的結構化資料
@@ -12,9 +16,10 @@
  *
  * 首次設定（只做一次）：
  *   1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
- *   2. Apps Script → 左側齒輪「專案設定」→ 指令碼屬性 → 新增：
- *        屬性名稱 GEMINI_API_KEY，值 = 你的金鑰
- *      ⚠️ 金鑰絕不要直接寫在程式碼裡
+ *   2. Apps Script → 左側齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（⚠️ 值不要直接寫在程式碼裡）：
+ *        GEMINI_API_KEY        = 你的 Gemini 金鑰
+ *        CARDS_SPREADSHEET_ID  = 資料檔「信用卡管理系統」試算表的 ID
+ *                                （從它網址 /spreadsheets/d/【這一段】/edit 複製）
  *   3. 重新整理試算表，工具列會出現「🤖 權益自動化」選單
  *
  * 使用方式（兩個入口）：
@@ -34,22 +39,29 @@ const PARSER_CONFIG = {
   inboxSheet: '情報收件匣',          // 第一階段監控的產出（讀取來源）
   reviewSheet: '待審核-新戶活動',    // 解析結果（自動建立）
   inputSheet: '解析輸入',            // 手動貼文字用（自動建立）
-  cardsSheet: 'Cards Data',          // 用來動態讀取合法的 card_id 清單
+  cardsSheet: 'Cards Data',          // 用來動態讀取合法的 card_id 清單（在「資料檔」，跨檔讀）
   notifyEmail: '',                   // 留空 = 寄給你自己
   model: 'gemini-2.5-flash',         // 免費額度夠用；要更省可改 gemini-2.5-flash-lite
   maxTextChars: 30000                // 送給 AI 的原文長度上限
 };
 
 /************** 自訂選單 **************/
-// ⚠️ 這份檔案「不要」自己定義 onOpen（一個專案只能有一個 onOpen，會蓋掉 code.gs 匯出選單）。
-// 選單的建立改由 code.gs 既有的 onOpen 呼叫 buildAutomationMenu_() 一行來觸發。
+// 本腳本住在專用的「PMC 自動化流程」試算表，這裡沒有匯出選單，onOpen 不會相衝，可安心自帶。
+// （若日後又把它和匯出程式放進同一個專案，改回：刪掉這個 onOpen、由匯出檔的 onOpen 呼叫 buildAutomationMenu_()）
+function onOpen() {
+  buildAutomationMenu_();
+}
+
 function buildAutomationMenu_() {
   SpreadsheetApp.getUi()
     .createMenu('🤖 權益自動化')
     .addItem('立即檢查監控（checkWatchlist）', 'checkWatchlist')
     .addSeparator()
     .addItem('解析收件匣（新戶活動）', 'parseInboxNewPromos')
-    .addItem('解析「解析輸入」的文字', 'parsePastedText')
+    .addItem('解析「解析輸入」的文字（新戶活動）', 'parsePastedText')
+    .addSeparator()
+    .addItem('解析新卡（主要活動）', 'parseNewCard')                    // card-benefits-parser.gs
+    .addItem('檢查廣告排除（全卡·每月）', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addToUi();
 }
 
@@ -355,10 +367,26 @@ function buildCapFormula_(capAmount, ratePercent) {
   return '=' + capAmount + '/' + (ratePercent / 100);
 }
 
+/************** 跨檔開啟「資料檔」試算表（唯讀讀 Cards Data 用） **************/
+function getCardsSheet_() {
+  const id = PropertiesService.getScriptProperties().getProperty('CARDS_SPREADSHEET_ID');
+  if (!id) {
+    throw new Error('尚未設定 CARDS_SPREADSHEET_ID——到「專案設定 → 指令碼屬性」新增，值 = 資料檔「信用卡管理系統」試算表網址裡 /d/ 後面那段 ID');
+  }
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(id);
+  } catch (e) {
+    throw new Error('用 CARDS_SPREADSHEET_ID 開資料檔失敗（ID 可能貼錯，或此帳號沒有該試算表存取權）：' + e.message);
+  }
+  const sheet = ss.getSheetByName(PARSER_CONFIG.cardsSheet);
+  if (!sheet) throw new Error('資料檔裡找不到「' + PARSER_CONFIG.cardsSheet + '」工作表');
+  return sheet;
+}
+
 /************** 從 Cards Data 動態讀取合法卡片 ID（不用再手動維護對照表） **************/
 function getCardIds_() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PARSER_CONFIG.cardsSheet);
-  if (!sheet) throw new Error('找不到「' + PARSER_CONFIG.cardsSheet + '」工作表，無法取得卡片 ID 清單');
+  const sheet = getCardsSheet_();
   const data = sheet.getDataRange().getValues();
   const idCol = data[0].map(function (h) { return String(h).trim(); }).indexOf('id');
   if (idCol < 0) throw new Error(PARSER_CONFIG.cardsSheet + ' 第一列找不到 id 欄');
@@ -373,8 +401,12 @@ function getCardIds_() {
 // id → 卡片簡稱（name 欄），用來給 apply_cta_text 產生「申辦{卡名}」預設值
 function getCardNameMap_() {
   const map = {};
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(PARSER_CONFIG.cardsSheet);
-  if (!sheet) return map;
+  let sheet;
+  try {
+    sheet = getCardsSheet_();
+  } catch (e) {
+    return map;  // 讀不到資料檔就退回空 map（apply_cta_text 留空，不擋解析）
+  }
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(function (h) { return String(h).trim(); });
   const idCol = headers.indexOf('id');
