@@ -132,7 +132,8 @@ function extractCard_(rawText, idHint, generalText) {
     '',
     '【groups 每組欄位】',
     '12. rate 回饋率數字；items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
-    '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限（少見）。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
+    '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
+    '13a. 分級門檻（同通路單筆滿額有更高回饋、未滿有較低回饋）：拆成兩組。高回饋組填 min_spend＝門檻；低回饋組填 max_spend＝同一個門檻數字（不加一減一）。但若「未滿門檻只是落回基本回饋」（沒有獨立的較低率），則【不要】建低回饋那組，只建高回饋組填 min_spend。',
     '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
     '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫詳見官網）；',
     '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）。',
@@ -452,7 +453,7 @@ function checkAdExclusionsForAllCards() {
   let out = ss.getSheetByName(AD_CHECK_CONFIG.sheet);
   if (!out) {
     out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
-    out.appendRow(['檢查時間', 'id', 'name', '是否排除廣告', '依據', '來源連結', 'needs_review', '官網']);
+    out.appendRow(['檢查時間', 'id', 'name', '是否排除廣告', '依據', 'needs_review', '官網']);
     out.setFrozenRows(1);
   }
   const doneIds = {};
@@ -470,19 +471,19 @@ function checkAdExclusionsForAllCards() {
     const fullName = fullc >= 0 ? String(data[i][fullc] || '') : name;
     const website = webc >= 0 ? String(data[i][webc] || '') : '';
 
-    let verdict = '未知', basis = '', sources = '';
+    let verdict = '未知', basis = '';
     try {
       const prompt = '用 Google 搜尋查台灣「' + fullName + '」信用卡的「一般消費」回饋，是否明確排除 Facebook/Meta、Google、廣告費 這幾類。' +
         (website ? '官網參考：' + website + '。' : '') +
-        '只依官網或銀行公告，不要臆測。嚴格用三行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句>\n';
+        '依據優先序：①該行官網/公告的原文最優先；②官網查不到時，可採信可靠大站（如卡優新聞、Mobile01、財經媒體、知名部落客彙整）明確寫出的資訊，如「XX銀行刷廣告費沒回饋」。都查不到再回未知。' +
+        '嚴格用兩行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句，並註明來自官網或哪個大站>\n';
       const r = callGeminiGrounded_(prompt);
       const parsed = parseAdVerdict_(r.text);
       verdict = parsed.verdict; basis = parsed.basis;
-      sources = (r.sources || []).slice(0, 3).join('\n');
     } catch (e) {
       basis = '查詢失敗：' + e.message;
     }
-    out.appendRow([now, id, name, verdict, basis, sources, 'TRUE', website]);
+    out.appendRow([now, id, name, verdict, basis, 'TRUE', website]);
     if (verdict !== '否') out.getRange(out.getLastRow(), 4).setBackground('#fff3cd'); // 排除=是/未知 標黃提醒
     processed++;
     Utilities.sleep(800);
@@ -490,7 +491,7 @@ function checkAdExclusionsForAllCards() {
 
   SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 張卡，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
     (remaining ? '\n還有 ' + remaining + ' 張未查——再執行一次即可接續。' : '\n全部查完了。') +
-    '\n\n提醒：grounding 結果需你複核（附來源連結）。排除=是→該卡 rate_14 留空；否→建 rate_14 固定模板。');
+    '\n\n判讀：排除=是→該卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
 }
 
 // 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
