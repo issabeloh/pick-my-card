@@ -230,16 +230,45 @@ voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_te
 | 產出 | `待審核-新卡基本`（1 列＝ Cards Data 固定欄位）＋`待審核-新卡組別`（垂直，一組一列） |
 | 入口 | 選單「🤖 權益自動化 → 解析新卡（主要活動）」 |
 
+### 輸入（新卡解析輸入分頁）
+
+A2＝官網權益頁文字；B2＝id 提示（選填）；C2＝網址（選填）；**D2＝一般消費/排除說明頁文字（選填）**——用來判斷一般消費是否排除廣告（決定 rate_14 要不要建）。AI 不會自己上網查別頁，這頁的文字要你貼進 D2。
+
 ### cashbackModel 分工（最重要）
 
-- **AI 只抽事實**：rate/items/category/條件/期間/cap 金額，加語意分類 `group_kind`（指定通路加碼／國外一般消費／國外指定加碼／廣告／排除型／其他）與 `is_stacked`（是否疊加）
-- **程式產出安全模型**：排除型→`rate`；一般海外→`overseasCashback+overseasBonusRate`+`hideInDisplay`；指定通路加碼→留空（cap 內 rate、溢出 basic）
-- **⚠️ 跨槽疊加（`rate+rate_1+basic` 這類）程式無法從文字推導** → 該組標黃、cashbackModel 留空、「cashbackModel需手填?」欄＝TRUE、程式備註提示參考同卡其他組。這是資料建模決策，不是抽取，必須人工
-- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%` 換算（海外/國內加碼的 Cap 同理）
+- **AI 只抽事實 + 語意旗標**：rate/items/category/條件/期間/cap 金額，`group_kind`（指定通路加碼／國外指定加碼／排除型／其他）、`is_stacked`
+- **程式產出安全模型**：排除型→`rate`；國外指定→`rate>basic>overseasBonusRate`（標需確認）；指定通路加碼→留空（cap 內 rate、溢出 basic）
+- **⚠️ 跨槽疊加（`rate+rate_1+basic`）程式無法從文字推導** → 標黃、留空、`cashbackModel需手填?`＝TRUE、原文引用附完整依據，人工手填
+- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%`
+
+### 固定槽位 14/21/22（程式依基本欄位自動生成，不經 AI）
+
+groups 不放「一般國內/國外/廣告」——這三種由程式生成固定模板：
+
+| 槽位 | 生成條件 | 固定值 |
+|---|---|---|
+| **rate_14 廣告** | `general_excludes_ads≠是`（有排除→不建，留空；未提及→建但標黃要你確認） | rate=0、model=`overseasCashback+overseasBonusRate`、items=`meta廣告,google廣告`、cap=overseasBonusCap、category=有海外→`國外消費特列項目`／無→`一般回饋特列項目` |
+| **rate_21 國內** | 有 `domesticBonusRate` | rate=0、model=`basic+domesticBonusRate`、items=`國內消費`、cap=domesticBonusCap、conditions=domesticBonusConditions、hideInDisplay=TRUE |
+| **rate_22 國外** | 有國外回饋 | rate=0、model=`overseasCashback+overseasBonusRate`、items=`國外消費`、cap=overseasBonusCap、conditions=overseasBonusConditions、期間=overseasBonusPeriod、hideInDisplay=TRUE |
+
+### 自動排除（不放進 groups）
+
+- **領券型**（需到 App/官網領取優惠券）——只需「登錄」的仍算，會放
+- **新戶/核卡限定**——那是新戶活動，另有解析器
+
+### 分級卡
+
+- `levelSettings` JSON **一律人工**（級別名稱＝識別碼鐵則）；但 AI 會在基本表最後一欄 `levelSettings原文引用` 附上官網描述各級別的原文，你不必回官網就能建 JSON
+- `levelLabelFormat` 由 AI 依官網用詞填（如 `方案: {level}`／`分級: {level}`）
 
 ### 審核與套用
 
 1. 開 `待審核-新卡基本` + `待審核-新卡組別`；黃底＝AI 沒把握或 cashbackModel 需你手填
-2. 對照 `原文引用` 欄驗證數字；`levelSettings`/`levelLabelFormat` 一律人工（級別名稱＝識別碼鐵則）
-3. 基本表那列貼進 Cards Data 對應固定欄位；組別逐組把值填進該卡的 `rate_N/items_N/cap_N/category_N/conditions_N/periodStart_N/periodEnd_N/hideInDisplay_N/cashbackModel_N`（N＝建議槽位）
-4. 之後照現有流程 `runQACheck → exportToJSON`；建議搭配 `docs/ops/regression.md` 人工回歸驗算新卡的回饋計算
+2. 對照 `原文引用` 欄驗證（evidence 已要求完整到不必回官網）
+3. 基本表那列貼進 Cards Data 固定欄位；組別逐組把值填進 `rate_N/cashbackModel_N/cap_N/minSpend_N/maxSpend_N/items_N/category_N/conditions_N/periodStart_N/periodEnd_N/hideInDisplay_N`（N＝建議槽位；14/21/22 用固定槽號）
+4. 之後照現有流程 `runQACheck → exportToJSON`，搭配 `docs/ops/regression.md` 人工回歸驗算
+
+### 待迭代（跟站長協作）
+
+- **關鍵字對應表**：prompt 內 `【關鍵字對應】` 區，站長持續補「看到 X 字樣＝Y 欄位高可信」的錨點（已種子：basicCashback←「基本回饋 n%」、domesticBonusRate←「國內加碼 n%」）
+- **conditions 風格**：站長給「官網原文→期待寫法」對照，抽成規則寫進 prompt（不逐欄標註）
