@@ -142,6 +142,18 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   依 `period_end` 升冪排序（無截止日排最後）；日期解析走生成器自帶的 `pmcNormalizeDate_()`，
   同樣容忍第 8 節說的 ISO／台式雙格式，不假設只有一種。
 - **versionTag 含台北時分**（2026-07-16 起）：promos.css/js 的 `?v=` 為 `YYYYMMDDHHmm`，同日多次匯出也能破快取。代價是重生成不再天然位元級一致——**做位元級重現驗證時，exportData 傳 `versionTagOverride: '<repo 版的 tag>'` 固定它**再比對。
+- **「資料更新於」戳章只在活動內容真的變動時前進**（2026-07-23 起，`promosUpdatedIso`）：頁腳
+  `<time datetime>` 戳章、`sitemap.xml` 的 promos `lastmod`、`<head>` 的 `CollectionPage`
+  JSON-LD `dateModified` 三處**同源**，都用這個日期。它**不是每次匯出的今天**——`exportToJSON`
+  先用 `pmcPromoSignature_(newCardholderPromos)`（依 `promo_id` 排序後的內容指紋，djb2/`Math.imul`
+  純函數，不受 sheet 列序影響）跟 Script Properties 的 `PROMOS_LAST_SIG` / `PROMOS_LAST_DATE`
+  比對：指紋相同就沿用上次日期，不同（或首次）才蓋 `pmcTodayISO_()` 並寫回。**為什麼不每次蓋今天**：
+  對 Google 天天喊 `lastmod` 更新但內容沒動會反被降低重爬信任（狼來了）；只在真的更新時前進才誠實。
+  **注意別跟 `todayIso` 混用**：過期過濾與 versionTag 快取破壞仍必須用「實際今天」（`todayIso`），
+  只有這三個對外「新鮮度信號」才用 `updatedIso`。生成器是純函數、拿 `exportData.promosUpdatedIso`
+  當參數（沒傳退回今天，供 Node 初版 harness 用）；比對狀態存 Script Properties 是刻意選的——
+  Apps Script 端持久化、不佔 repo 檔案、不多一個 commit、維護者流程零改動（代價：repo 看不到、
+  Node harness 重現不了，但初版本來就以 GitHub 上次 commit 為準）。
 - **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
   天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
   不 fetch 任何東西，頁面本身就是完整資料。
