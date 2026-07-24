@@ -182,6 +182,13 @@
                     <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
                     <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
                 </nav>
+                <!-- 桌機版視圖切換（回饋查詢／儀表板）：手機版用底部固定 tab bar 做同功能，
+                     見 #dashboard-bottom-tabbar；兩者共用 data-view 屬性與 js/dashboard.js 的
+                     切換邏輯（docs/project/dashboard.md 第 1 節） -->
+                <div class="header-view-switch" id="header-view-switch" role="tablist" aria-label="切換視圖">
+                    <button type="button" class="header-view-btn active" data-view="tool" role="tab" aria-selected="true">回饋查詢</button>
+                    <button type="button" class="header-view-btn" data-view="dashboard" role="tab" aria-selected="false">儀表板</button>
+                </div>
                 <div class="auth-section">
                     <div id="user-info">
                         <div class="avatar-menu-wrapper">
@@ -497,6 +504,43 @@
 
         <!-- 信用卡警語橫條（精選活動區下方） -->
         <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+
+        <!-- ===== 儀表板分頁（Phase 1，唯讀；docs/project/dashboard.md）=====
+             hash #dashboard 切換顯示，body.view-dashboard 由 js/dashboard.js 控制；
+             merchant/landing 頁沒有這段 DOM，dashboard.js 的 init 會 null-check no-op。 -->
+        <section class="dashboard-view" id="dashboard-view" style="display: none;">
+            <div class="dashboard-top">
+                <div class="dashboard-top-text">
+                    <div class="dashboard-date" id="dashboard-date"></div>
+                    <div class="dashboard-owned-count" id="dashboard-owned-count"></div>
+                </div>
+                <button type="button" class="dashboard-settings-btn" id="dashboard-settings-btn" aria-label="顯示設定" title="顯示設定">
+                    <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="dashboard-grid" id="dashboard-grid">
+                <!-- Blocks injected by js/dashboard.js -->
+            </div>
+        </section>
+
+        <!-- 儀表板顯示設定 modal（勾選要顯示的 block，存 localStorage dashboardBlocks） -->
+        <div id="dashboard-settings-modal" class="modal" style="display: none;">
+            <div class="modal-content dashboard-settings-content">
+                <div class="modal-header">
+                    <h3>儀表板顯示設定</h3>
+                    <button class="modal-close" id="dashboard-settings-close" aria-label="關閉">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-description">選擇要在儀表板顯示的區塊。</p>
+                    <div class="dashboard-settings-list" id="dashboard-settings-list">
+                        <!-- Checkboxes injected by js/dashboard.js -->
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -971,6 +1015,7 @@
     <script src="js/spending-mappings.js?v=dev" defer></script>
     <script src="js/levels-payments.js?v=dev" defer></script>
     <script src="js/quick-options-misc.js?v=dev" defer></script>
+    <script src="js/dashboard.js?v=dev" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
@@ -1271,6 +1316,20 @@
             <div id="loading-text" class="loading-text">載入中...</div>
         </div>
     </div>
+
+    <!-- 手機版底部固定 tab bar（回饋查詢／儀表板）：桌機版同功能在 header 的
+         #header-view-switch，兩者共用 data-view 屬性，切換邏輯見 js/dashboard.js。
+         merchant/landing 頁沒有這個元素，dashboard.js 的 init 會 null-check no-op。 -->
+    <nav class="dashboard-bottom-tabbar" id="dashboard-bottom-tabbar" role="tablist" aria-label="切換視圖">
+        <button type="button" class="dashboard-tab-btn active" data-view="tool" role="tab" aria-selected="true">
+            <span class="dashboard-tab-icon" aria-hidden="true">🔎</span>
+            <span>回饋查詢</span>
+        </button>
+        <button type="button" class="dashboard-tab-btn" data-view="dashboard" role="tab" aria-selected="false">
+            <span class="dashboard-tab-icon" aria-hidden="true">📊</span>
+            <span>儀表板</span>
+        </button>
+    </nav>
 </body>
 </html>
 

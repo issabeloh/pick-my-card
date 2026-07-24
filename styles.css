@@ -8154,3 +8154,400 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     }
 
 }
+
+/* ===== Dashboard（儀表板分頁，2026-07-24 Phase 1；docs/project/dashboard.md）=====
+   視圖切換：body.view-dashboard 時隱藏工具視圖（搜尋/結果/精選活動），顯示 #dashboard-view。
+   切換邏輯與 body class 由 js/dashboard.js 控制；這裡只負責顯隱與外觀。 */
+
+body.view-dashboard .app-layout,
+body.view-dashboard .spotlight-section,
+body.view-dashboard .finance-warning-row,
+body.view-dashboard #my-mappings-btn,
+body.view-dashboard #back-to-top-btn,
+body.view-dashboard #scroll-to-spotlight-btn {
+    display: none !important;
+}
+
+/* 桌機版視圖切換鈕（header 區）：手機版用底部 tab bar 取代，見 .dashboard-bottom-tabbar */
+.header-view-switch {
+    display: none;
+}
+.header-view-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.header-view-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+.header-view-btn.active {
+    background: #fff;
+    color: #1e40af;
+    border-color: #fff;
+}
+@media (min-width: 769px) {
+    .header-view-switch {
+        display: inline-flex;
+        gap: 6px;
+        margin: 0 12px;
+    }
+}
+
+/* 手機版底部固定 tab bar（回饋查詢／儀表板） */
+.dashboard-bottom-tabbar {
+    display: none;
+}
+@media (max-width: 768px) {
+    body.has-dashboard-nav {
+        padding-bottom: 72px;
+    }
+    .dashboard-bottom-tabbar {
+        display: flex;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 500;
+        background: #fff;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .dashboard-tab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-size: 0.72rem;
+        padding: 6px 4px;
+        border-radius: 12px;
+        cursor: pointer;
+    }
+    .dashboard-tab-icon {
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+    .dashboard-tab-btn.active {
+        color: #1e40af;
+        background: #eff6ff;
+        font-weight: 600;
+    }
+}
+
+/* 儀表板本體：暖淺灰背景＋純白內容卡（站長指定的 fintech app 視覺） */
+.dashboard-view {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 24px 30px 40px;
+    background: #F4F1EC;
+}
+
+.dashboard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.dashboard-date {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+.dashboard-owned-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #17171B;
+}
+.dashboard-settings-btn {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.dashboard-settings-btn:hover {
+    background: #f3f4f6;
+    color: #17171B;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+}
+@media (min-width: 769px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1100px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.dashboard-block {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 18px 20px;
+}
+.dashboard-block-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #17171B;
+    margin: 0 0 14px;
+}
+
+.dashboard-empty-all,
+.dashboard-empty-block {
+    text-align: center;
+    color: #9ca3af;
+    padding: 20px 8px;
+}
+.dashboard-empty-all {
+    grid-column: 1 / -1;
+    background: #fff;
+    border-radius: 18px;
+    padding: 40px 20px;
+}
+.dashboard-empty-link {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-top: 4px;
+}
+.dashboard-empty-link:hover {
+    text-decoration: underline;
+}
+
+/* 通用彩色 chip（蜜桃／薄荷／薰衣草，低飽和粉彩） */
+.dashboard-chip {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.dashboard-chip--peach { background: #F8DCC5; color: #7c4a1e; }
+.dashboard-chip--mint { background: #CDE9DD; color: #1f6b4d; }
+.dashboard-chip--lavender { background: #DCD3F2; color: #4b3a82; }
+.dashboard-chip--sm { padding: 2px 8px; font-size: 0.7rem; margin-left: 6px; }
+
+/* Block: 結帳日 / 繳款日（時間軸列表） */
+.dashboard-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.dashboard-timeline-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.dashboard-timeline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d1d5db;
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+.dashboard-timeline-row.is-next .dashboard-timeline-dot {
+    background: #ef8354;
+}
+.dashboard-timeline-card {
+    font-weight: 600;
+    color: #17171B;
+    font-size: 0.9rem;
+}
+.dashboard-timeline-dates {
+    display: flex;
+    gap: 12px;
+    color: #6b7280;
+    font-size: 0.8rem;
+    margin-top: 2px;
+}
+
+/* Block: 年費 */
+.dashboard-fee-total {
+    background: #17171B;
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+.dashboard-fee-total-label {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.65);
+}
+.dashboard-fee-total-amount {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-top: 2px;
+}
+.dashboard-fee-total-note {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 6px;
+}
+.dashboard-fee-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-top: 1px solid #f1eff0;
+    font-size: 0.85rem;
+}
+.dashboard-fee-row:first-of-type {
+    border-top: none;
+}
+.dashboard-fee-card {
+    color: #17171B;
+    font-weight: 500;
+}
+.dashboard-fee-amount {
+    font-weight: 700;
+    color: #17171B;
+}
+.dashboard-fee-raw {
+    color: #9ca3af;
+    font-size: 0.78rem;
+    text-align: right;
+}
+
+/* Block: 我的額度（橫條圖，高→低） */
+.dashboard-limit-row {
+    margin-bottom: 12px;
+}
+.dashboard-limit-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+.dashboard-limit-label span:first-child {
+    color: #17171B;
+    font-weight: 500;
+}
+.dashboard-limit-value {
+    font-weight: 700;
+    color: #17171B;
+}
+.dashboard-limit-bar-track {
+    background: #f1eff0;
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+}
+.dashboard-limit-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: #CDE9DD;
+}
+.dashboard-limit-unfilled {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #e5e7eb;
+    color: #9ca3af;
+    font-size: 0.78rem;
+}
+
+/* Block: 釘選通路 */
+.dashboard-pinned-group {
+    margin-bottom: 14px;
+}
+.dashboard-pinned-group:last-child {
+    margin-bottom: 0;
+}
+.dashboard-pinned-card {
+    font-weight: 600;
+    color: #17171B;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+.dashboard-pinned-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Block: 分級 */
+.dashboard-level-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-top: 1px solid #f1eff0;
+    font-size: 0.85rem;
+}
+.dashboard-level-row:first-of-type {
+    border-top: none;
+}
+.dashboard-level-card {
+    color: #17171B;
+    font-weight: 500;
+}
+
+/* Block: 我的筆記 */
+.dashboard-note-row {
+    padding: 8px 0;
+    border-top: 1px solid #f1eff0;
+}
+.dashboard-note-row:first-of-type {
+    border-top: none;
+}
+.dashboard-note-card {
+    font-weight: 600;
+    color: #17171B;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+.dashboard-note-text {
+    color: #4b5563;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+/* 顯示設定面板（齒輪 modal） */
+.dashboard-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}
+.dashboard-settings-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #17171B;
+    cursor: pointer;
+}
