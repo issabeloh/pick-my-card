@@ -237,6 +237,8 @@ async function displayCouponCashbacks(amount, merchantValue) {
     for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
+                // merchant 可能因 Sheets 欄位錯位不是字串，非字串一律跳過
+                if (typeof coupon.merchant !== 'string') continue;
                 // Split merchant string into array of individual merchants
                 const merchantItems = coupon.merchant.split(',').map(m => m.trim());
 
@@ -1153,7 +1155,7 @@ function createCouponResultElement(coupon, amount) {
     const capText = (coupon.cap && !isNaN(coupon.cap)) ? `NT$${Math.floor(Number(coupon.cap)).toLocaleString()}` : '無上限';
 
     // Debug log to check cap value
-    if (coupon.merchant.includes('星巴克')) {
+    if (typeof coupon.merchant === 'string' && coupon.merchant.includes('星巴克')) {
         console.log('星巴克 coupon cap:', coupon.cap, 'type:', typeof coupon.cap);
     }
 

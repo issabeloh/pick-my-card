@@ -761,7 +761,7 @@ basicCashbackDiv.innerHTML = basicContent;
             }
 
             // 適用通路（超過 5 個時收起顯示）
-            if (coupon.merchant) {
+            if (typeof coupon.merchant === 'string' && coupon.merchant) {
                 const merchantItems = coupon.merchant.split(',').map(m => m.trim()).filter(m => m);
                 if (merchantItems.length <= 5) {
                     const merchantsList = merchantItems.join('、');

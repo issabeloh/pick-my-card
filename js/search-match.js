@@ -359,7 +359,8 @@ function findMatchingItem(searchTerm, options = {}) {
         // Check couponCashbacks merchant field
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
-                if (coupon.merchant) {
+                // merchant 可能因 Sheets 欄位錯位不是字串（如數字），非字串一律跳過
+                if (typeof coupon.merchant === 'string' && coupon.merchant) {
                     // Split merchant string into array (comma-separated)
                     const merchantItems = coupon.merchant.split(',').map(m => m.trim());
                     checkItemMatches(merchantItems, searchTerms, searchLower, allMatches, searchTerm);

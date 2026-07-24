@@ -198,6 +198,8 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 ## 教訓記錄
 
+- [2026-07-24] 搜「日本」噴例外、計算鈕永久停用 → ctbc-linepay-card 領券兩筆欄位錯位（merchant=8000、rate=2026 等數字），前端 `coupon.merchant.split` 崩潰 → 前端 4 處呼叫點已加 `typeof === 'string'` guard；Sheets 該卡 couponMerchant_N 系列欄位待站長修正，QA 檢查可考慮加「merchant 必須是字串」規則
+
 - [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
