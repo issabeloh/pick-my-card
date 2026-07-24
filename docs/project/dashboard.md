@@ -34,7 +34,7 @@
 | block id | 內容 | 資料來源（讀取） | 規則 |
 |---|---|---|---|
 | `billing` | 結帳日/繳款日時間軸 | `loadBillingDates(cardId)`（js/spending-mappings.js） | 依「日」數字小→大排序；距今日最近的下一個結帳日高亮 |
-| `annualFee` | 年費狀態＋加總 | `loadFeeWaiverStatus(cardId)`＋卡片資料 `annualFee` 文字欄位 | 已免年費→綠 badge；未免→regex `/NT\$\s?([\d,]+)/` 抽金額；有年費卡片顯示加總大字；抽不到金額→顯示原文、不計入加總並註記 |
+| `annualFee` | 年費狀態＋加總 | `loadFeeWaiverStatus(cardId)`＋卡片資料 `annualFeeAmount` 數字欄位（2026-07-24 新增，站長核定方案；未重匯出前欄位不存在） | 已免年費→綠 badge；未免且有 `annualFeeAmount`→顯示金額並計入加總大字；欄位不存在→顯示 `annualFee` 原文、不計入加總並註記「待補資料」 |
 | `creditLimit` | 個人信用額度 | `loadCreditLimit(cardId)` | 高→低橫條圖（條長=額度/最大額度）；未填寫的卡灰字列底部 |
 | `pinned` | 各卡釘選通路＋回饋率 | spendingMappings 中 pinned 項（js/spending-mappings.js） | 按卡分組、通路+% 做 chip |
 | `levels` | 個人分級 | `getCardLevel(cardId)`（js/levels-payments.js） | **唯讀**。🔒 鐵則：儀表板任何路徑都不得呼叫 saveCardLevel |
@@ -72,6 +72,13 @@ users/{uid}.paymentSetup   = { [cardId]: { method: <string>, autopay: <bool>, au
 - 新 block 全部登記進 `dashboardBlocks` 設定清單，預設**關閉**（避免空區塊嚇跑用戶；有輸入資料後可考慮自動開）。
 - 動態 innerHTML 一律 `escapeHtml()`；月份 key 用本地時區 `YYYY-MM`。
 - 圓環等圖表：純 SVG/CSS 自繪，不引入圖表庫（全站無 build、無外部依賴的慣例）。
+
+## 5d. 年費數字欄位——站長待辦（資料重匯出前儀表板走降級顯示）
+
+2026-07-24 已在 `apps-script/cards-export.gs` 加入 `addOptionalField(card, row, headers, 'annualFeeAmount', 'number')`。站長需：
+1. Google Sheets「Cards Data」加欄位 `annualFeeAmount`（純數字，如 3000；終身免年費可填 0 或留空）
+2. 把 repo 的 `cards-export.gs` 改動同步到 Sheets 的 Apps Script（兩邊必同步）
+3. 重跑 `exportToJSON()` → 更新 `cards.data`＋`cards.version`
 
 ## 6. Phase 3（構想，未核定細節）
 

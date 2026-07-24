@@ -468,6 +468,7 @@ function exportToJSON() {
     };
 
     // 選填欄位
+    addOptionalField(card, row, headers, 'annualFeeAmount', 'number');
     addOptionalField(card, row, headers, 'basicCashbackType');
     addOptionalField(card, row, headers, 'basicConditions');
     addOptionalField(card, row, headers, 'domesticBonusConditions');
