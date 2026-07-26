@@ -221,7 +221,44 @@ function setupSpotlightControls() {
     if (track) {
         track.addEventListener('mouseenter', stopSpotlightAutoRotate);
         track.addEventListener('mouseleave', startSpotlightAutoRotate);
+        setupSpotlightSwipe(track);
     }
+}
+
+// 手機版左右滑動翻頁：橫向滑動距離夠大、且明顯比縱向大（避免攔截正常上下捲動）
+// 才換頁。翻頁沿用 next/prev（userTriggered=true 會重置自動輪播倒數）。
+function setupSpotlightSwipe(track) {
+    const SWIPE_THRESHOLD = 45;   // 觸發翻頁的最小橫向位移(px)
+    let startX = 0, startY = 0, tracking = false;
+
+    track.addEventListener('touchstart', (e) => {
+        if (spotlightTotalPages() <= 1 || e.touches.length !== 1) { tracking = false; return; }
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        tracking = true;
+        stopSpotlightAutoRotate(); // 滑動中暫停自動輪播
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+        if (!tracking) return;
+        tracking = false;
+        const t = (e.changedTouches && e.changedTouches[0]) || null;
+        if (!t) { startSpotlightAutoRotate(); return; }
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+            if (dx < 0) nextSpotlightPage(true); // 左滑 → 下一組
+            else prevSpotlightPage(true);        // 右滑 → 上一組
+        } else {
+            startSpotlightAutoRotate(); // 未達翻頁門檻，恢復自動輪播
+        }
+    }, { passive: true });
+
+    track.addEventListener('touchcancel', () => {
+        tracking = false;
+        startSpotlightAutoRotate();
+    }, { passive: true });
 }
 
 // Click-to-enlarge: open any .promo-gift-image (or .image-zoomable) in a
@@ -1226,6 +1263,10 @@ function setupEventListeners() {
     }
 }
 
+// 使用者手動關閉搜尋提示後記住該關鍵詞，避免同一詞重複彈出（手機版提示是
+// 浮層、蓋在下方勾選/按鈕上，給關閉鈕才不會擋到操作）。清空輸入時歸零。
+let dismissedHintTerm = null;
+
 // Check and show search hints
 function checkAndShowSearchHint(searchTerm) {
     const searchHintsContainer = document.getElementById('search-hints-container');
@@ -1236,15 +1277,23 @@ function checkAndShowSearchHint(searchTerm) {
     }
 
     if (!searchTerm || searchTerm.length < 2) {
+        if (!searchTerm) dismissedHintTerm = null; // 清空輸入 → 重置關閉狀態
         return;
     }
 
-    const hint = cardsData.searchHints?.[searchTerm.toLowerCase()];
+    const key = searchTerm.toLowerCase();
+    if (key === dismissedHintTerm) {
+        return; // 此關鍵詞的提示已被使用者關閉
+    }
+
+    const hint = cardsData.searchHints?.[key];
 
     if (hint && hint.suggestions.length > 0) {
         const hintDiv = document.createElement('div');
         hintDiv.className = 'search-hint';
+        // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
         hintDiv.innerHTML = `
+            <button type="button" class="search-hint-close" aria-label="關閉提示" onclick="dismissSearchHint()">✕</button>
             <span class="hint-message">${hint.message}</span>
             <div class="hint-suggestions">
                 ${hint.suggestions.map(s =>
@@ -1256,10 +1305,21 @@ function checkAndShowSearchHint(searchTerm) {
     }
 }
 
+// 關閉目前的搜尋提示，並記住關鍵詞，避免同詞再次彈出
+function dismissSearchHint() {
+    const merchantInput = document.getElementById('merchant-input');
+    dismissedHintTerm = merchantInput ? (merchantInput.value || '').trim().toLowerCase() : null;
+    const searchHintsContainer = document.getElementById('search-hints-container');
+    if (searchHintsContainer) {
+        searchHintsContainer.innerHTML = '';
+    }
+}
+
 // Search from hint button
 function searchFromHint(suggestion) {
     const merchantInput = document.getElementById('merchant-input');
     if (merchantInput) {
+        dismissedHintTerm = null; // 使用者採用建議，換新關鍵詞
         merchantInput.value = suggestion;
         // 觸發 input 事件來更新匹配狀態
         merchantInput.dispatchEvent(new Event('input'));
