@@ -2786,10 +2786,14 @@ input[type="number"]:focus {
         overflow-wrap: anywhere;
     }
 
-    /* 回饋率不需要太多橫向空間，把省下的寬度給「回饋金額」欄，讓四位數金額
-       （如 NT$1,000）與計算機按鈕 .calc-breakdown-btn 能留在同一行不換行 */
+    /* 回饋率不需要太多橫向空間，把省下的寬度分給「回饋金額」欄（四位數金額如
+       NT$1,000＋計算機按鈕 .calc-breakdown-btn 要留同一行）與「回饋消費上限」欄。
+       上限欄從 0.85fr → 1fr 並把 detail-value 縮到 12px，讓最寬的
+       「NT$300,000+」(台新 Richart)、「NT$500,000」(國泰 CUBE) 在 ≥360px 手機
+       維持一行；360px 以下才退回換行（此時金額欄仍受保護不換行）。
+       回饋率欄 0.8fr → 0.65fr（只放「X%」，空間充裕）。 */
     .card-details {
-        grid-template-columns: 0.8fr 1.35fr 0.85fr;
+        grid-template-columns: 0.65fr 1.35fr 1fr;
         gap: 6px;
     }
 
@@ -2799,6 +2803,11 @@ input[type="number"]:focus {
 
     .card-details .detail-value {
         font-size: 13px;
+    }
+
+    /* 「回饋消費上限」欄（第 3 欄）的數字略縮，替最寬的上限值換取單行空間 */
+    .card-details .detail-item:nth-child(3) .detail-value {
+        font-size: 12px;
     }
 
     .card-details .cashback-amount {
@@ -3157,23 +3166,32 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
+/* 卡片詳情鈕：原本是淡灰 ⓘ 純字符，用戶反映太低調找不到。改成淺藍膠囊＋
+   「詳情」文字，明顯是可點按鈕（搜尋結果／領券卡共用）。 */
 .card-detail-peek-btn {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 22px;
+    padding: 0 9px 0 7px;
+    border: 1px solid #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    border-radius: 50%;
-    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: 999px;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.card-detail-peek-btn::after {
+    content: '詳情';
 }
 .card-detail-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
+    color: #1e3a8a;
+    background: #dbeafe;
+    border-color: #60a5fa;
 }
 
 /* ── Calculation breakdown button + popup ───────────────────────────────── */
@@ -6960,12 +6978,42 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
 /* 搜尋提示卡片 */
 .search-hint {
+    position: relative; /* 關閉鈕定位基準 */
     background: #e3f2fd;
     border-left: 4px solid #2196f3;
     padding: 12px 16px;
     border-radius: 4px;
     margin-bottom: 10px;
     animation: slideIn 0.3s ease-out;
+}
+
+/* 提示關閉鈕（右上角）：手機版提示是浮層、會蓋在勾選/計算鈕上，
+   給使用者一鍵收起的出口 */
+.search-hint-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #1976d2;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.search-hint-close:hover {
+    background: rgba(25, 118, 210, 0.12);
+}
+/* 訊息文字保留右側空間，避免壓到關閉鈕 */
+.search-hint .hint-message {
+    padding-right: 22px;
 }
 
 @keyframes slideIn {
@@ -7020,8 +7068,25 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
 /* 手機版樣式調整 */
 @media (max-width: 768px) {
+    /* 手機版搜尋提示改「浮層」：絕對定位貼在合併框下方，不再參與版面流，
+       出現時不會把「精準搜尋/新戶活動」勾選與「計算回饋」按鈕往下推
+       （避免開鍵盤時按鈕被擠出畫面）。蓋在下方元素上時，靠陰影凸顯層次、
+       右上角關閉鈕 .search-hint-close 讓使用者收起。 */
+    .input-row-with-button > .form-group:first-child {
+        position: relative;
+    }
+    .input-row-with-button #search-hints-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        margin: 6px 0 0 0;
+    }
+
     .search-hint {
         padding: 10px 12px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
     }
 
     .hint-message {
@@ -7886,19 +7951,29 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     transition: background .2s, border-color .2s, color .2s;
 }
 .spotlight-compare-btn:hover { background: #eef2ff; border-color: #c7d2fe; color: #1e40af; }
+/* 活動詳情鈕：原本是灰色方框 ⓘ，用戶反映太低調。改成淺藍底＋「詳情」文字，
+   凸顯「這裡可看卡片真實活動」。 */
 .spotlight-info-btn {
     flex-shrink: 0;
-    width: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     height: 36px;
-    border: 1px solid #d1d5db;
+    padding: 0 12px;
+    border: 1px solid #93c5fd;
     border-radius: 8px;
-    background: #ffffff;
-    color: #6b7280;
-    font-size: 1rem;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background .2s, color .2s;
+    transition: background .2s, color .2s, border-color .2s;
 }
-.spotlight-info-btn:hover { background: #f3f4f6; color: #1e40af; }
+.spotlight-info-btn::after {
+    content: '詳情';
+}
+.spotlight-info-btn:hover { background: #dbeafe; color: #1e3a8a; border-color: #60a5fa; }
 
 .spotlight-dots {
     display: flex;
