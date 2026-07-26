@@ -2821,9 +2821,15 @@ input[type="number"]:focus {
         text-overflow: clip;
     }
 
-    /* 卡名換行成兩行時，ⓘ／釘選鈕靠齊第一行頂端，不要浮在兩行中間 */
+    /* 手機版：卡名獨佔上方（可換行），詳情鈕／釘選鈕整組落到下一行，
+       避免單行塞太多元素太擁擠。卡名 flex-basis:100% 把後面的鈕擠到次行。 */
     .card-name-with-pin {
-        align-items: flex-start;
+        flex-wrap: wrap;
+        align-items: center;
+        row-gap: 8px;
+    }
+    .card-name-with-pin .card-name {
+        flex: 1 1 100%;
     }
 
     .cards-selection {
