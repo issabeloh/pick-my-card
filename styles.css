@@ -5336,39 +5336,53 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Pin Button on Card */
+/* Pin Button on Card：與進場浮標 #my-mappings-btn 同一組琥珀色系
+   （#fef3c7 底／#f59e0b 邊／#b45309 字），改成膠囊＋「釘選」文字，凸顯可點；
+   不加陰影（不要光暈）。已釘選狀態改實心琥珀＋「已釘選」以區分開關狀態。 */
 .pin-btn {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    width: 20px;
-    height: 20px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 3px;
+    height: 22px;
+    padding: 0 9px 0 7px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 999px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
     cursor: pointer;
-    color: #d1d5db;
-    transition: all 0.3s ease;
-    padding: 0;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     flex-shrink: 0;
+}
+.pin-btn svg {
+    width: 12px;
+    height: 12px;
+}
+.pin-btn::after {
+    content: '釘選';
 }
 
 .pin-btn:hover {
-    background: white;
-    border-color: #667eea;
-    color: #667eea;
-    transform: scale(1.1);
+    background: #fde68a;
+    border-color: #f59e0b;
+    color: #92400e;
 }
 
 .pin-btn.pinned {
-    background: #fef3c7;
+    background: #f59e0b;
     border-color: #f59e0b;
-    color: #f59e0b;
+    color: #ffffff;
+}
+.pin-btn.pinned::after {
+    content: '已釘選';
 }
 
 .pin-btn.pinned:hover {
-    background: #fde68a;
-    transform: scale(1.1);
+    background: #d97706;
+    border-color: #d97706;
+    color: #ffffff;
 }
 
 /* Pin Toast (提示) */
