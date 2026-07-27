@@ -123,7 +123,7 @@ function checkWatchlist() {
 
     if (changedText.length >= rowMinDiff && hasKeyword) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
-      const cls = classifyDiff_(changedText, row[cCard] || '', row[cBank] || '');
+      const cls = classifyDiff_(changedText, text, row[cCard] || '', row[cBank] || '');
       appendToInbox_(ss, {
         time: now,
         cardId: row[cCard] || '',
@@ -245,15 +245,16 @@ function diffSegments_(oldText, newText) {
 
 /************** ① AI 分類：這次變動是不是「實質回饋變動」＋一句人話摘要 **************/
 // 依賴同專案 benefits-parser.gs 的 callGemini_；沒貼或 API 失敗都回 null（不擋監控，照樣寄信）
-function classifyDiff_(changedText, cardId, bank) {
+function classifyDiff_(changedText, newFullText, cardId, bank) {
   if (typeof callGemini_ !== 'function') return null;
   try {
     const sys = [
-      '你是台灣信用卡權益監控助手。我給你某張卡官網頁面「這次偵測到的新增(＋)與消失(－)段落」，你判斷是否為「實質回饋變動」並用一句人話摘要。',
+      '你是台灣信用卡權益監控助手。我給你某張卡官網頁面「這次偵測到的新增(＋)與消失(－)段落」以及「新版全文」，你判斷是否為「實質回饋變動」並用一句人話摘要。',
       '【實質回饋變動 material=true】會改變持卡人實際能拿多少：回饋率、回饋上限、加碼通路增減、達成條件(登錄/自動扣繳/門檻金額)、活動新增或到期下架、新戶首刷禮、續期/延期/縮期。',
-      '【非實質 material=false】純版面/文案/錯字/免責法律樣板/導覽列/日期格式，不影響回饋。',
-      'summary：一句話講重點，有數字寫「X→Y」(如 上限300→500)；material=false 就寫「純版面/文案調整，回饋未變」。結尾不加句號。',
-      '不確定算不算實質 → material=true、confidence=低（寧可誤報不漏報）。',
+      '【非實質 material=false】純版面/文案/錯字/免責法律樣板/導覽列/日期格式/同段落改寫或搬移，不影響回饋。',
+      '⚠️ 判斷「活動下架」要非常謹慎：－(消失)的段落常常只是「改寫、搬移、重新排版」，不代表活動取消。判「下架/改版」前，先在下方【新版全文】搜尋該回饋是否還在——若還找得到（只是換句話說或移到別處），就【不是下架】，可能只是改寫(material 依實際回饋數字有無變化而定)。',
+      'summary：一句話講重點，有數字寫「X→Y」(如 上限300→500)；material=false 就寫「純版面/文案調整或改寫，回饋未變」。結尾不加句號。',
+      '不確定 → material=true、confidence=低（寧可誤報不漏報）。',
       cardId ? ('卡片：' + cardId + (bank ? '（' + bank + '）' : '')) : ''
     ].join('\n');
     const schema = {
@@ -261,12 +262,14 @@ function classifyDiff_(changedText, cardId, bank) {
       properties: {
         material: { type: 'BOOLEAN' },
         summary: { type: 'STRING' },
-        change_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['回饋率', '上限', '通路', '條件', '期間', '新增活動', '活動下架', '新戶禮', '其他'] } },
+        change_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['回饋率', '上限', '通路', '條件', '期間', '新增活動', '活動下架', '新戶禮', '改寫搬移', '其他'] } },
         confidence: { type: 'STRING', enum: ['高', '中', '低'] }
       },
       required: ['material', 'summary', 'confidence']
     };
-    return callGemini_(sys, '變動段落：\n\n' + changedText.slice(0, 12000), schema);
+    const userText = '【這次的變動段落（＋新增／－消失）】\n' + changedText.slice(0, 12000) +
+      '\n\n【新版全文（用來核對「消失」的內容是否真的不見了）】\n' + String(newFullText || '').slice(0, 22000);
+    return callGemini_(sys, userText, schema);
   } catch (e) {
     return null;
   }
