@@ -282,7 +282,6 @@ function ensureGuestUIBound() {
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
         if (t.spotlightSection) t.spotlightSection.style.display = 'none';
         if (t.financeWarningRow) t.financeWarningRow.style.display = 'none';
-        stopSpotlightAutoRotate();
         // 結果收起 → 收起「精選活動」快速跳轉浮標
         if (typeof updateScrollToSpotlightBtn === 'function') updateScrollToSpotlightBtn();
     }

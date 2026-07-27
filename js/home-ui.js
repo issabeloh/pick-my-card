@@ -13,14 +13,13 @@
  *  - 搜尋提示                  → "checkAndShowSearchHint" / "handleMerchantInput"
  * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
-// Editorial highlights from cardsData.spotlights. Shows 3 per page in an
-// auto-rotating carousel; the count cap is decoupled from what's visible.
+// Editorial highlights from cardsData.spotlights. Shows 3 per page in a
+// manual carousel (arrows / dots / swipe, no auto-rotate); the count cap is
+// decoupled from what's visible.
 let spotlightItems = [];
 let spotlightPage = 0;
-let spotlightTimer = null;
 const SPOTLIGHT_PAGE_SIZE = 3;
 const SPOTLIGHT_MAX = 12;
-const SPOTLIGHT_INTERVAL = 6000;
 
 function getSpotlightDaysLeft(deadline) {
     if (!deadline) return null;
@@ -47,7 +46,6 @@ function renderSpotlights() {
 
     if (spotlightItems.length === 0) {
         section.style.display = 'none';
-        stopSpotlightAutoRotate();
         return;
     }
 
@@ -61,9 +59,6 @@ function renderSpotlights() {
     const dots = document.getElementById('spotlight-dots');
     updateSpotlightNav();
     if (dots) dots.style.display = multiPage ? 'flex' : 'none';
-
-    if (multiPage) startSpotlightAutoRotate();
-    else stopSpotlightAutoRotate();
 }
 
 function renderSpotlightPage() {
@@ -170,7 +165,7 @@ function buildSpotlightDots() {
         dot.type = 'button';
         dot.className = 'spotlight-dot';
         dot.setAttribute('aria-label', `第 ${i + 1} 組`);
-        dot.addEventListener('click', () => goToSpotlightPage(i, true));
+        dot.addEventListener('click', () => goToSpotlightPage(i));
         dots.appendChild(dot);
     }
 }
@@ -181,52 +176,35 @@ function updateSpotlightDots() {
     Array.from(dots.children).forEach((d, i) => d.classList.toggle('active', i === spotlightPage));
 }
 
-function goToSpotlightPage(page, userTriggered) {
+function goToSpotlightPage(page) {
     const total = spotlightTotalPages();
     if (total === 0) return;
     spotlightPage = ((page % total) + total) % total;
     renderSpotlightPage();
-    if (userTriggered) startSpotlightAutoRotate(); // reset countdown
 }
 
-function nextSpotlightPage(userTriggered) {
-    goToSpotlightPage(spotlightPage + 1, userTriggered);
+function nextSpotlightPage() {
+    goToSpotlightPage(spotlightPage + 1);
 }
 
-function prevSpotlightPage(userTriggered) {
-    goToSpotlightPage(spotlightPage - 1, userTriggered);
-}
-
-function startSpotlightAutoRotate() {
-    stopSpotlightAutoRotate();
-    if (spotlightTotalPages() <= 1) return;
-    spotlightTimer = setInterval(() => nextSpotlightPage(false), SPOTLIGHT_INTERVAL);
-}
-
-function stopSpotlightAutoRotate() {
-    if (spotlightTimer) {
-        clearInterval(spotlightTimer);
-        spotlightTimer = null;
-    }
+function prevSpotlightPage() {
+    goToSpotlightPage(spotlightPage - 1);
 }
 
 function setupSpotlightControls() {
     const nextBtn = document.getElementById('spotlight-next-btn');
-    if (nextBtn) nextBtn.addEventListener('click', () => nextSpotlightPage(true));
+    if (nextBtn) nextBtn.addEventListener('click', () => nextSpotlightPage());
 
     const prevBtn = document.getElementById('spotlight-prev-btn');
-    if (prevBtn) prevBtn.addEventListener('click', () => prevSpotlightPage(true));
+    if (prevBtn) prevBtn.addEventListener('click', () => prevSpotlightPage());
 
     const track = document.getElementById('spotlight-track');
     if (track) {
-        track.addEventListener('mouseenter', stopSpotlightAutoRotate);
-        track.addEventListener('mouseleave', startSpotlightAutoRotate);
         setupSpotlightSwipe(track);
     }
 }
 
-// 手機版左右滑動翻頁：橫向滑動距離夠大、且明顯比縱向大（避免攔截正常上下捲動）
-// 才換頁。翻頁沿用 next/prev（userTriggered=true 會重置自動輪播倒數）。
+// 手機版左右滑動翻頁：橫向滑動距離夠大、且明顯比縱向大（避免攔截正常上下捲動）才換頁。
 function setupSpotlightSwipe(track) {
     const SWIPE_THRESHOLD = 45;   // 觸發翻頁的最小橫向位移(px)
     let startX = 0, startY = 0, tracking = false;
@@ -237,27 +215,23 @@ function setupSpotlightSwipe(track) {
         startX = t.clientX;
         startY = t.clientY;
         tracking = true;
-        stopSpotlightAutoRotate(); // 滑動中暫停自動輪播
     }, { passive: true });
 
     track.addEventListener('touchend', (e) => {
         if (!tracking) return;
         tracking = false;
         const t = (e.changedTouches && e.changedTouches[0]) || null;
-        if (!t) { startSpotlightAutoRotate(); return; }
+        if (!t) return;
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
         if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-            if (dx < 0) nextSpotlightPage(true); // 左滑 → 下一組
-            else prevSpotlightPage(true);        // 右滑 → 上一組
-        } else {
-            startSpotlightAutoRotate(); // 未達翻頁門檻，恢復自動輪播
+            if (dx < 0) nextSpotlightPage(); // 左滑 → 下一組
+            else prevSpotlightPage();        // 右滑 → 上一組
         }
     }, { passive: true });
 
     track.addEventListener('touchcancel', () => {
         tracking = false;
-        startSpotlightAutoRotate();
     }, { passive: true });
 }
 
@@ -463,7 +437,6 @@ function openSpotlightModal(index) {
 
     modal.style.display = 'flex';
     disableBodyScroll();
-    stopSpotlightAutoRotate();
 
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
@@ -477,7 +450,6 @@ function closeSpotlightModal() {
     const modal = document.getElementById('spotlight-modal');
     if (modal) modal.style.display = 'none';
     enableBodyScroll();
-    startSpotlightAutoRotate();
 }
 
 // Auto-fill the merchant search and run the comparison. If the merchant matches
