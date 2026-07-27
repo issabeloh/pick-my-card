@@ -60,6 +60,8 @@ const fuzzySearchMap = {
     'google pay': 'googlepay',
     'samsungpay': 'samsung pay',
     'samsung pay': 'samsungpay',
+    'iqiyi': '愛奇藝',
+    '愛奇藝': 'iqiyi',
     '街口': '街口支付',
     '街口支付': '街口',
     'jkopay': '街口',

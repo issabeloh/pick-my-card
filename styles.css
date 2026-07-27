@@ -7982,27 +7982,30 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     gap: 8px;
     margin-top: auto;
 }
+/* 兩顆動作鈕等寬（1:1） */
 .spotlight-compare-btn {
-    flex: 1;
+    flex: 1 1 0;
+    height: 36px;
     background: #f9fafb;
     border: 1px solid #d1d5db;
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 0 10px;
     font-size: 0.85rem;
     color: #374151;
+    white-space: nowrap;
     cursor: pointer;
     transition: background .2s, border-color .2s, color .2s;
 }
 .spotlight-compare-btn:hover { background: #eef2ff; border-color: #c7d2fe; color: #1e40af; }
-/* 活動詳情鈕：原本是灰色方框 ⓘ，用戶反映太低調。改成淺藍底＋「詳情」文字，
-   凸顯「這裡可看卡片真實活動」。 */
+/* 活動詳情鈕：淺藍底＋「活動詳情」文字（凸顯可看卡片真實活動），與比較鈕等寬 */
 .spotlight-info-btn {
-    flex-shrink: 0;
+    flex: 1 1 0;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     height: 36px;
-    padding: 0 12px;
+    padding: 0 10px;
     border: 1px solid #93c5fd;
     border-radius: 8px;
     background: #eff6ff;
@@ -8014,7 +8017,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     transition: background .2s, color .2s, border-color .2s;
 }
 .spotlight-info-btn::after {
-    content: '詳情';
+    content: '活動詳情';
 }
 .spotlight-info-btn:hover { background: #dbeafe; color: #1e3a8a; border-color: #60a5fa; }
 
@@ -8076,35 +8079,39 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .spotlight-title { font-size: 1.1rem; }
 }
 
-.spotlight-modal-cardname {
+/* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
+   header 改 flex-wrap，本列 flex-basis:100% 自動落到標題下一行、靠左對齊。 */
+#spotlight-modal .modal-header {
+    flex-wrap: wrap;
+    row-gap: 12px;
+}
+.spotlight-modal-actions {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 12px;
 }
-/* Clickable card name in the spotlight modal → opens card detail */
-.spotlight-cardname-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: #1d4ed8;
-    cursor: pointer;
+#spotlight-modal-actions {
+    flex-basis: 100%;
 }
-.spotlight-cardname-link:hover {
-    text-decoration: underline;
+/* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
+   僅把標籤文字覆蓋成「卡片詳情」。 */
+.spotlight-modal-actions .card-detail-peek-btn::after {
+    content: '卡片詳情';
 }
-.spotlight-cardname-chevron {
-    flex-shrink: 0;
-    margin-left: 2px;
+
+/* 回饋率旁的 category：低調灰字註記（非膠囊、非按鈕，避免與卡片詳情/立即申辦混淆），
+   以中點與「回饋」分隔 */
+.spotlight-rate-category {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+.spotlight-rate-category::before {
+    content: '·';
+    margin: 0 6px 0 2px;
+    color: #9ca3af;
+    font-weight: 700;
 }
 
 .spotlight-apply-cta-btn {
@@ -8121,15 +8128,43 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     padding-top: 0;
     margin-top: 0;
 }
+/* 適用通路：標題獨立一行，通路清單另起一行；超過 3 行預設收合、可點展開 */
 .spotlight-act-items {
-    display: flex;
-    gap: 10px;
     font-size: 0.85rem;
     color: #4b5563;
     line-height: 1.6;
     margin-top: 10px;
 }
-.spotlight-act-items > span:last-child { flex: 1; }
+.spotlight-act-items-label {
+    color: #9ca3af;
+    margin-bottom: 3px;
+}
+/* 通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
+.spotlight-act-items-values {
+    color: #3b82f6;
+    font-weight: 700;
+}
+.spotlight-act-items-values.clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+.spotlight-act-items-toggle {
+    margin-top: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.spotlight-act-items-toggle:hover { text-decoration: underline; }
+/* 條件內容字體略縮（比其他資訊列小一點點） */
+.spotlight-cond-value {
+    font-size: 0.82rem;
+}
 
 /* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
 @media (max-width: 768px) {
