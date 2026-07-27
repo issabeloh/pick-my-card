@@ -122,20 +122,24 @@ function checkWatchlist() {
     });
 
     if (changedText.length >= rowMinDiff && hasKeyword) {
+      // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
+      const cls = classifyDiff_(changedText, row[cCard] || '', row[cBank] || '');
       appendToInbox_(ss, {
         time: now,
         cardId: row[cCard] || '',
         bank: row[cBank] || '',
         url: url,
-        summary: changedText.slice(0, 200),
+        diffText: changedText,
         oldText: oldText,
-        newText: text
+        newText: text,
+        cls: cls
       });
       alerts.push({
         cardId: row[cCard] || '',
         bank: row[cBank] || '',
         url: url,
-        summary: changedText.slice(0, 300)
+        diffText: changedText.slice(0, 300),
+        cls: cls
       });
     }
 
@@ -239,24 +243,64 @@ function diffSegments_(oldText, newText) {
   return added.concat(removed);
 }
 
+/************** ① AI 分類：這次變動是不是「實質回饋變動」＋一句人話摘要 **************/
+// 依賴同專案 benefits-parser.gs 的 callGemini_；沒貼或 API 失敗都回 null（不擋監控，照樣寄信）
+function classifyDiff_(changedText, cardId, bank) {
+  if (typeof callGemini_ !== 'function') return null;
+  try {
+    const sys = [
+      '你是台灣信用卡權益監控助手。我給你某張卡官網頁面「這次偵測到的新增(＋)與消失(－)段落」，你判斷是否為「實質回饋變動」並用一句人話摘要。',
+      '【實質回饋變動 material=true】會改變持卡人實際能拿多少：回饋率、回饋上限、加碼通路增減、達成條件(登錄/自動扣繳/門檻金額)、活動新增或到期下架、新戶首刷禮、續期/延期/縮期。',
+      '【非實質 material=false】純版面/文案/錯字/免責法律樣板/導覽列/日期格式，不影響回饋。',
+      'summary：一句話講重點，有數字寫「X→Y」(如 上限300→500)；material=false 就寫「純版面/文案調整，回饋未變」。結尾不加句號。',
+      '不確定算不算實質 → material=true、confidence=低（寧可誤報不漏報）。',
+      cardId ? ('卡片：' + cardId + (bank ? '（' + bank + '）' : '')) : ''
+    ].join('\n');
+    const schema = {
+      type: 'OBJECT',
+      properties: {
+        material: { type: 'BOOLEAN' },
+        summary: { type: 'STRING' },
+        change_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['回饋率', '上限', '通路', '條件', '期間', '新增活動', '活動下架', '新戶禮', '其他'] } },
+        confidence: { type: 'STRING', enum: ['高', '中', '低'] }
+      },
+      required: ['material', 'summary', 'confidence']
+    };
+    return callGemini_(sys, '變動段落：\n\n' + changedText.slice(0, 12000), schema);
+  } catch (e) {
+    return null;
+  }
+}
+
 /************** 寫進情報收件匣（沒有就自動建） **************/
+// ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的「情報收件匣」請刪掉讓它自動重建新表頭
 function appendToInbox_(ss, info) {
   let sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
   if (!sheet) {
     sheet = ss.insertSheet(MONITOR_CONFIG.inboxSheet);
-    sheet.appendRow(['日期時間', 'card_id', '銀行', '網址', '變化摘要', '舊文字', '新文字', '狀態']);
+    sheet.appendRow(['日期時間', 'card_id', '銀行', '網址',
+      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態']);
     sheet.setFrozenRows(1);
   }
-  sheet.appendRow([
+  const c = info.cls;
+  const row = sheet.appendRow([
     info.time,
     info.cardId,
     info.bank,
     info.url,
-    info.summary,
+    c ? (c.material ? '是' : '否') : '',
+    c ? (c.summary || '') : '',
+    c && c.change_types ? c.change_types.join(',') : '',
+    c ? (c.confidence || '') : '',
+    (info.diffText || '').slice(0, 8000),
     info.oldText.slice(0, 40000),
     info.newText.slice(0, 40000),
     '待解析'
   ]);
+  // 實質變動標紅、其餘標灰，一眼可分
+  if (c) {
+    sheet.getRange(sheet.getLastRow(), 5).setBackground(c.material ? '#f8d7da' : '#e9ecef');
+  }
 }
 
 /************** 寄彙總通知信 **************/
@@ -265,11 +309,28 @@ function sendDigest_(alerts, errors) {
   let body = '';
 
   if (alerts.length) {
-    body += '偵測到 ' + alerts.length + ' 個網頁有權益相關變動：\n\n';
-    alerts.forEach(function (a) {
-      body += '■ ' + a.cardId + (a.bank ? '（' + a.bank + '）' : '') + '\n' +
-              a.url + '\n變動摘要：\n' + a.summary + '\n\n';
-    });
+    const material = alerts.filter(function (a) { return a.cls && a.cls.material; });
+    const minor = alerts.filter(function (a) { return !(a.cls && a.cls.material); });
+    const anyClassified = alerts.some(function (a) { return a.cls; });
+
+    body += '偵測到 ' + alerts.length + ' 個網頁變動' +
+            (anyClassified ? '（🔴 實質 ' + material.length + '、⚪ 其餘 ' + minor.length + '）' : '') + '：\n\n';
+
+    const render = function (a) {
+      let s = '■ ' + a.cardId + (a.bank ? '（' + a.bank + '）' : '');
+      if (a.cls) {
+        s += ' ｜信心' + (a.cls.confidence || '') +
+             (a.cls.change_types && a.cls.change_types.length ? ' ｜' + a.cls.change_types.join('、') : '') + '\n';
+        s += '   ' + (a.cls.summary || '') + '\n';
+      } else {
+        s += '\n   （AI 未分類，原始變動段落）\n   ' + (a.diffText || '') + '\n';
+      }
+      s += '   ' + a.url + '\n\n';
+      return s;
+    };
+
+    if (material.length) { body += '─── 🔴 實質回饋變動（優先看）───\n'; material.forEach(function (a) { body += render(a); }); }
+    if (minor.length) { body += '─── ⚪ 其餘變動（版面/文案等，通常可略）───\n'; minor.forEach(function (a) { body += render(a); }); }
     body += '完整新舊內容請看試算表的「' + MONITOR_CONFIG.inboxSheet + '」分頁。\n\n';
   }
   if (errors.length) {
@@ -279,8 +340,11 @@ function sendDigest_(alerts, errors) {
             '若備援也失敗，把 url 換成該銀行的公告/最新消息列表頁。\n';
   }
 
+  const materialCount = alerts.filter(function (a) { return a.cls && a.cls.material; }).length;
   const subject = '【信用卡權益監控】' +
-    (alerts.length ? alerts.length + ' 筆變動待處理' : '抓取異常通知');
+    (alerts.length
+      ? (materialCount + ' 筆實質變動 / 共 ' + alerts.length + ' 筆')
+      : '抓取異常通知');
   MailApp.sendEmail(to, subject, body);
 }
 
