@@ -2570,6 +2570,8 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
+/* 基礎樣式：膠囊（供 .cashback-detail-item 內「卡名旁最優回饋」的行內徽章沿用，
+   如 CUBE 級別／行動支付比較 modal）。搜尋結果卡另有角標覆蓋（見下） */
 .best-badge {
     background: #10b981;
     color: white;
@@ -2578,6 +2580,27 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
+}
+
+/* 搜尋結果卡的「最優回饋」＝貼合右上框邊的角標（非膠囊，避免被誤認為可點）。
+   絕對定位貼齊 .card-result（position:relative）右上角、壓住 1px 邊框；
+   外角沿用卡片 8px 圓角、內側下緣微圓；純標示、無 hover/點擊態。 */
+.card-result .best-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    z-index: 2;
+    padding: 5px 12px 6px;
+    border-radius: 0 8px 0 10px;
+    letter-spacing: .03em;
+    font-weight: 700;
+    text-transform: none;
+}
+
+/* 角標脫離流，替卡名／按鈕列在右上保留角標寬度（角標約 73px、扣掉卡片內距後
+   僅需 ~57px），長卡名／按鈕不會鑽到標籤下方 */
+.card-result.best-card .card-header {
+    padding-right: 64px;
 }
 
 .card-details {
