@@ -8079,19 +8079,17 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .spotlight-title { font-size: 1.1rem; }
 }
 
-.spotlight-modal-cardname {
+/* 卡片詳情 ⓘ 與立即申辦按鈕列（modal 標題卡名下方；卡名只在 header） */
+.spotlight-modal-actions {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 /* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
-   僅把標籤文字覆蓋成「卡片詳情」。卡名本身為純文字、不可點。 */
-.spotlight-modal-cardname .card-detail-peek-btn::after {
+   僅把標籤文字覆蓋成「卡片詳情」。 */
+.spotlight-modal-actions .card-detail-peek-btn::after {
     content: '卡片詳情';
 }
 
@@ -8109,19 +8107,42 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     padding-top: 0;
     margin-top: 0;
 }
+/* 適用通路：標題獨立一行，通路清單另起一行；超過 3 行預設收合、可點展開 */
 .spotlight-act-items {
-    display: flex;
-    gap: 10px;
     font-size: 0.85rem;
     color: #4b5563;
     line-height: 1.6;
     margin-top: 10px;
 }
-.spotlight-act-items > span:last-child { flex: 1; }
-/* 適用通路的通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
+.spotlight-act-items-label {
+    color: #9ca3af;
+    margin-bottom: 3px;
+}
+/* 通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
 .spotlight-act-items-values {
     color: #3b82f6;
     font-weight: 700;
+}
+.spotlight-act-items-values.clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+.spotlight-act-items-toggle {
+    margin-top: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.spotlight-act-items-toggle:hover { text-decoration: underline; }
+/* 條件內容字體略縮（比其他資訊列小一點點） */
+.spotlight-cond-value {
+    font-size: 0.82rem;
 }
 
 /* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */

@@ -360,13 +360,16 @@ function buildSpotlightModalBody(item) {
     const applyCtaHtml = applyLink
         ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
-    // Card name is a plain label (not clickable). Card detail opens via the
-    // dedicated ⓘ「卡片詳情」button (.spotlight-carddetail-btn) instead.
-    const cardNameText = escapeHtml(item.card_name || (card && card.name) || '');
+    // 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal 標題（卡名）下方；卡名只在 header 顯示、不在 body 重複。
     const cardDetailBtn = card
         ? `<button type="button" class="card-detail-peek-btn spotlight-carddetail-btn" data-card-id="${escapeHtml(card.id)}" aria-label="卡片詳情" title="卡片詳情">ⓘ</button>`
         : '';
-    const cardNameLine = `<div class="spotlight-modal-cardname"><span class="spotlight-modal-cardname-text">💳 ${cardNameText}</span>${cardDetailBtn}${applyCtaHtml}</div>`;
+    const actionsLine = (cardDetailBtn || applyCtaHtml)
+        ? `<div class="spotlight-modal-actions">${cardDetailBtn}${applyCtaHtml}</div>`
+        : '';
+
+    // Highlights 編輯文字（含「壓倒性神卡！」等前綴）
+    const descHtml = item.description ? `<p class="spotlight-modal-desc">${escapeHtml(item.description)}</p>` : '';
 
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
@@ -375,9 +378,9 @@ function buildSpotlightModalBody(item) {
         const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
             ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
         return `
-            ${cardNameLine}
+            ${actionsLine}
+            ${descHtml}
             ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
-            <p class="spotlight-modal-desc">${escapeHtml(item.description || '')}</p>
             <div class="spotlight-modal-info">
                 ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
                 ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
@@ -401,24 +404,48 @@ function buildSpotlightModalBody(item) {
             ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
         const period = group.period || ((group.periodStart && group.periodEnd) ? `${group.periodStart}~${group.periodEnd}` : '');
         const items = Array.isArray(group.items) ? group.items : [];
-        const category = group.category ? escapeHtml(group.category) : '';
+        // 回饋率列：比照卡片詳情頁 .cashback-rate（綠色回饋率＋黑字「回饋」＋藍色 category chip）
+        const categoryLabel = group.category
+            ? ` <span style="${getCategoryStyle(group.category)}">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
+            : '';
+        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋` : ''}${categoryLabel}</div>`;
+        // 適用通路：標題獨立一行、內容下一行；超過 3 行預設收合、點擊展開（toggle 由 setupSpotlightActItemsToggle 開啟）
+        const actItemsHtml = items.length
+            ? `<div class="spotlight-act-items"><div class="spotlight-act-items-label">此活動也適用以下通路</div><div class="spotlight-act-items-values clamped">${items.map(escapeHtml).join('、')}</div><button type="button" class="spotlight-act-items-toggle" hidden>展開</button></div>`
+            : '';
         return `
             <div class="spotlight-activity">
-                <div class="spotlight-modal-rate">${escapeHtml(rateNum ? rateNum + '%' : '')}</div>
-                ${items.length ? `<div class="spotlight-act-items"><span class="spotlight-modal-label">適用通路</span><span class="spotlight-act-items-values">${items.map(escapeHtml).join('、')}</span></div>` : ''}
+                ${rateLine}
+                ${actItemsHtml}
                 <div class="spotlight-modal-info">
-                    ${category ? `<div><span class="spotlight-modal-label">類別</span><span>${category}</span></div>` : ''}
                     <div><span class="spotlight-modal-label">回饋上限</span><span>${capText}</span></div>
                     ${period ? `<div><span class="spotlight-modal-label">活動期間</span><span>${escapeHtml(period)}</span></div>` : ''}
-                    ${group.conditions ? `<div><span class="spotlight-modal-label">條件</span><span>${escapeHtml(group.conditions)}</span></div>` : ''}
+                    ${group.conditions ? `<div><span class="spotlight-modal-label">條件</span><span class="spotlight-cond-value">${escapeHtml(group.conditions)}</span></div>` : ''}
                 </div>
             </div>
         `;
     }).join('');
 
-    // Highlights 編輯文字（含「壓倒性神卡！」等前綴），置於卡名下、活動區塊上方
-    const descHtml = item.description ? `<p class="spotlight-modal-desc">${escapeHtml(item.description)}</p>` : '';
-    return `${cardNameLine}${descHtml}${blocks}`;
+    return `${actionsLine}${descHtml}${blocks}`;
+}
+
+// 「適用通路」內容超過 3 行才顯示展開鈕（收合時 -webkit-line-clamp:3）；點擊切換展開/收合
+function setupSpotlightActItemsToggle(container) {
+    if (!container) return;
+    container.querySelectorAll('.spotlight-act-items').forEach(wrap => {
+        const values = wrap.querySelector('.spotlight-act-items-values');
+        const toggle = wrap.querySelector('.spotlight-act-items-toggle');
+        if (!values || !toggle) return;
+        // clamp 生效時，內容溢出 3 行才提供展開/收合
+        if (values.scrollHeight - values.clientHeight > 2) {
+            toggle.hidden = false;
+            toggle.addEventListener('click', () => {
+                const expanded = values.classList.toggle('expanded');
+                values.classList.toggle('clamped', !expanded);
+                toggle.textContent = expanded ? '收合' : '展開';
+            });
+        }
+    });
 }
 
 function openSpotlightModal(index) {
@@ -442,6 +469,9 @@ function openSpotlightModal(index) {
 
     modal.style.display = 'flex';
     disableBodyScroll();
+
+    // 適用通路收合/展開：需在 modal 顯示後量測行高才準
+    setupSpotlightActItemsToggle(bodyEl);
 
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
