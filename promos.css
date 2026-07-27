@@ -838,24 +838,36 @@ a {
   gap: 6px;
 }
 
-/* ⓘ 卡片詳情深連結（樣式對齊主站詳情 peek 鈕的低調圓 i） */
+/* ⓘ 卡片詳情深連結：對齊主站結果卡 .card-detail-peek-btn 的淺藍膠囊＋「卡片詳情」
+   文字（原為低調灰圓 i，用戶反映太不明顯、找不到）。HTML 由 Apps Script 生成、
+   內容只有 ⓘ 字符，故標籤文字用 ::after 補上，不需改動生成端。 */
 .promo-card-info-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
+  gap: 3px;
   height: 22px;
-  font-size: 15px;
+  padding: 0 9px 0 7px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1;
-  color: var(--pmc-muted);
   text-decoration: none;
+  white-space: nowrap;
   border-radius: 999px;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.promo-card-info-btn::after {
+  content: '卡片詳情';
 }
 
 .promo-card-info-btn:hover {
-  color: var(--pmc-blue);
-  background: var(--pmc-chip-hover-bg);
+  color: #1e3a8a;
+  background: #dbeafe;
+  border-color: #60a5fa;
 }
 
 .promo-type-badges {

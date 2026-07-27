@@ -4128,6 +4128,16 @@ input[type="text"].credit-limit-input:focus {
     margin-bottom: 12px;
 }
 
+/* 詳情頁搜尋命中字詞的即時 highlight（filterCashbackItems 動態插入 <mark>）：
+   琥珀底＋深色字，蓋掉瀏覽器 <mark> 預設的螢光黃 */
+mark.cashback-search-hl {
+    background: #fef08a;
+    color: #78350f;
+    font-weight: 700;
+    padding: 0 1px;
+    border-radius: 3px;
+}
+
 /* 2-column grid for cashback items in card detail modal */
 #card-basic-cashback,
 #card-special-cashback,

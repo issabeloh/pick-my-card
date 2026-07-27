@@ -1315,24 +1315,101 @@ function toggleMerchants(merchantsId, buttonId, shortList, fullList) {
     const isExpanded = buttonElement.textContent.includes('收起');
 
     if (isExpanded) {
-        // 收起
+        // 收起：還原展開前的原始標籤。原本用 fullList.split('、').length 重算數量，
+        // 但通路名本身可能含「、」（如「新光三越(桃園、林口、台中港、台南)」），
+        // 會把 40 個算成 43 個；改用展開時記下的原始文字，數量才不會跑掉。
+        // 存成 JS 屬性而非 data-* 屬性，避免動到 DOM 標記。
         merchantsElement.textContent = shortList;
-        const totalCount = fullList.split('、').length;
-        buttonElement.textContent = `... 顯示全部${totalCount}個`;
+        buttonElement.textContent = buttonElement._collapsedLabel
+            || `... 顯示全部${fullList.split('、').length}個`;
     } else {
         // 展開
+        if (!buttonElement._collapsedLabel) buttonElement._collapsedLabel = buttonElement.textContent;
         merchantsElement.textContent = fullList;
         buttonElement.textContent = '收起';
     }
 }
 
-// 即時過濾「指定通路回饋」中的活動卡片
+// 還原上一次搜尋的 highlight：把 <mark> 換回純文字，再 normalize 合併相鄰文字節點
+// （不合併的話，同一個詞被拆成多個節點，下次搜尋較長的詞會比對不到）
+function clearCashbackHighlights(container) {
+    const marks = container.querySelectorAll('mark.cashback-search-hl');
+    if (marks.length === 0) return;
+    marks.forEach(mark => {
+        mark.parentNode.replaceChild(document.createTextNode(mark.textContent), mark);
+    });
+    container.normalize();
+}
+
+// 將 term 在文字節點上標記出來。全程用 DOM API（createTextNode/createElement），
+// 不碰 innerHTML —— 天然免疫 XSS，也不會破壞既有標籤與屬性（鐵則 3）
+function highlightCashbackTerm(root, term) {
+    if (!term) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            return node.nodeValue.toLowerCase().includes(term)
+                ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+    });
+
+    // 先收集再改動：邊走邊改 DOM 會讓 TreeWalker 的游標失準
+    const targets = [];
+    let node;
+    while ((node = walker.nextNode())) targets.push(node);
+
+    targets.forEach(textNode => {
+        const text = textNode.nodeValue;
+        const lower = text.toLowerCase();
+        const frag = document.createDocumentFragment();
+        let from = 0;
+        let idx = lower.indexOf(term);
+        while (idx !== -1) {
+            if (idx > from) frag.appendChild(document.createTextNode(text.slice(from, idx)));
+            const mark = document.createElement('mark');
+            mark.className = 'cashback-search-hl';
+            mark.textContent = text.slice(idx, idx + term.length); // 保留原始大小寫
+            frag.appendChild(mark);
+            from = idx + term.length;
+            idx = lower.indexOf(term, from);
+        }
+        if (from < text.length) frag.appendChild(document.createTextNode(text.slice(from)));
+        textNode.parentNode.replaceChild(frag, textNode);
+    });
+}
+
+// 搜尋時自動展開被截斷的「適用通路」清單：清單收合時 DOM 內只有前 5 個通路
+// （其餘只存在於 show-more-btn 的 onclick 參數裡），搜尋第 6 個之後的通路不但
+// 標不到，整張活動卡還會被判定為不符而整個隱藏。這裡代按「顯示全部」讓命中處
+// 看得見，並記住是程式展開的，清空搜尋時再收回（使用者自己展開的不動）。
+function syncMerchantListsForSearch(container, hasTerm) {
+    container.querySelectorAll('.show-more-btn').forEach(btn => {
+        const collapsed = btn.textContent.includes('顯示全部');
+        if (hasTerm) {
+            if (collapsed) {
+                btn._autoExpanded = true; // JS 屬性，不留 data-* 在 DOM 上
+                btn.click(); // 沿用既有 toggleMerchants（完整清單在其 onclick 參數中）
+            }
+        } else if (btn._autoExpanded) {
+            if (!collapsed) btn.click();
+            btn._autoExpanded = false;
+        }
+    });
+}
+
+// 即時過濾「指定通路回饋」中的活動卡片，並把命中的字詞即時 highlight
+// （不然使用者看不出是配對到哪個通路／條件）
 // 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
 function filterCashbackItems(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
     const container = document.getElementById('card-special-cashback');
     const emptyMsg = document.getElementById('cashback-search-empty');
     if (!container) return;
+
+    // 必須先還原，textContent 才是乾淨原文（也讓每次輸入都從無標記狀態重算）
+    clearCashbackHighlights(container);
+    // 再展開被截斷的通路清單，比對與標記才看得到完整內容
+    syncMerchantListsForSearch(container, !!term);
 
     const items = container.querySelectorAll('.cashback-detail-item');
     let visibleCount = 0;
@@ -1348,6 +1425,7 @@ function filterCashbackItems(searchTerm) {
         if (text.includes(term)) {
             item.style.display = '';
             visibleCount++;
+            highlightCashbackTerm(item, term); // 只標記顯示中的項目
         } else {
             item.style.display = 'none';
         }
