@@ -7982,27 +7982,30 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     gap: 8px;
     margin-top: auto;
 }
+/* 兩顆動作鈕等寬（1:1） */
 .spotlight-compare-btn {
-    flex: 1;
+    flex: 1 1 0;
+    height: 36px;
     background: #f9fafb;
     border: 1px solid #d1d5db;
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 0 10px;
     font-size: 0.85rem;
     color: #374151;
+    white-space: nowrap;
     cursor: pointer;
     transition: background .2s, border-color .2s, color .2s;
 }
 .spotlight-compare-btn:hover { background: #eef2ff; border-color: #c7d2fe; color: #1e40af; }
-/* 活動詳情鈕：原本是灰色方框 ⓘ，用戶反映太低調。改成淺藍底＋「詳情」文字，
-   凸顯「這裡可看卡片真實活動」。 */
+/* 活動詳情鈕：淺藍底＋「活動詳情」文字（凸顯可看卡片真實活動），與比較鈕等寬 */
 .spotlight-info-btn {
-    flex-shrink: 0;
+    flex: 1 1 0;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
     height: 36px;
-    padding: 0 12px;
+    padding: 0 10px;
     border: 1px solid #93c5fd;
     border-radius: 8px;
     background: #eff6ff;
@@ -8014,7 +8017,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     transition: background .2s, color .2s, border-color .2s;
 }
 .spotlight-info-btn::after {
-    content: '詳情';
+    content: '活動詳情';
 }
 .spotlight-info-btn:hover { background: #dbeafe; color: #1e3a8a; border-color: #60a5fa; }
 
@@ -8086,25 +8089,10 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     color: #374151;
     margin-bottom: 12px;
 }
-/* Clickable card name in the spotlight modal → opens card detail */
-.spotlight-cardname-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: #1d4ed8;
-    cursor: pointer;
-}
-.spotlight-cardname-link:hover {
-    text-decoration: underline;
-}
-.spotlight-cardname-chevron {
-    flex-shrink: 0;
-    margin-left: 2px;
+/* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
+   僅把標籤文字覆蓋成「卡片詳情」。卡名本身為純文字、不可點。 */
+.spotlight-modal-cardname .card-detail-peek-btn::after {
+    content: '卡片詳情';
 }
 
 .spotlight-apply-cta-btn {
@@ -8130,6 +8118,11 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     margin-top: 10px;
 }
 .spotlight-act-items > span:last-child { flex: 1; }
+/* 適用通路的通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
+.spotlight-act-items-values {
+    color: #3b82f6;
+    font-weight: 700;
+}
 
 /* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
 @media (max-width: 768px) {
