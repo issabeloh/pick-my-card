@@ -350,23 +350,23 @@ function findSpotlightCardActivities(card, merchant) {
     return groups;
 }
 
-function buildSpotlightModalBody(item) {
-    const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
-    const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
-
+// 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal
+// 動態插入 header），卡名只在 header 標題顯示、body 不重複。
+function buildSpotlightModalActions(item, card) {
     const applyCta = (cardsData && cardsData.cardApplyCtas && item.card_id) ? cardsData.cardApplyCtas[item.card_id] : null;
     // 鐵則 3：動態 href 先 sanitizeUrl（escapeHtml 擋不住 javascript: scheme）
     const applyLink = applyCta ? sanitizeUrl(applyCta.link) : '';
     const applyCtaHtml = applyLink
         ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
-    // 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal 標題（卡名）下方；卡名只在 header 顯示、不在 body 重複。
     const cardDetailBtn = card
         ? `<button type="button" class="card-detail-peek-btn spotlight-carddetail-btn" data-card-id="${escapeHtml(card.id)}" aria-label="卡片詳情" title="卡片詳情">ⓘ</button>`
         : '';
-    const actionsLine = (cardDetailBtn || applyCtaHtml)
-        ? `<div class="spotlight-modal-actions">${cardDetailBtn}${applyCtaHtml}</div>`
-        : '';
+    return `${cardDetailBtn}${applyCtaHtml}`;
+}
+
+function buildSpotlightModalBody(item, card) {
+    const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
 
     // Highlights 編輯文字（含「壓倒性神卡！」等前綴）
     const descHtml = item.description ? `<p class="spotlight-modal-desc">${escapeHtml(item.description)}</p>` : '';
@@ -378,7 +378,6 @@ function buildSpotlightModalBody(item) {
         const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
             ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
         return `
-            ${actionsLine}
             ${descHtml}
             ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
             <div class="spotlight-modal-info">
@@ -404,9 +403,10 @@ function buildSpotlightModalBody(item) {
             ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
         const period = group.period || ((group.periodStart && group.periodEnd) ? `${group.periodStart}~${group.periodEnd}` : '');
         const items = Array.isArray(group.items) ? group.items : [];
-        // 回饋率列：比照卡片詳情頁 .cashback-rate（綠色回饋率＋黑字「回饋」＋藍色 category chip）
+        // 回饋率列：比照卡片詳情頁 .cashback-rate（綠色回饋率＋黑字「回饋」）；
+        // category 改為低調的灰字註記（不用藍膠囊，避免被誤認成可點按鈕）
         const categoryLabel = group.category
-            ? ` <span style="${getCategoryStyle(group.category)}">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
+            ? ` <span class="spotlight-rate-category">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
             : '';
         const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋` : ''}${categoryLabel}</div>`;
         // 適用通路：標題獨立一行、內容下一行；超過 3 行預設收合、點擊展開（toggle 由 setupSpotlightActItemsToggle 開啟）
@@ -426,7 +426,7 @@ function buildSpotlightModalBody(item) {
         `;
     }).join('');
 
-    return `${actionsLine}${descHtml}${blocks}`;
+    return `${descHtml}${blocks}`;
 }
 
 // 「適用通路」內容超過 3 行才顯示展開鈕（收合時 -webkit-line-clamp:3）；點擊切換展開/收合
@@ -456,13 +456,25 @@ function openSpotlightModal(index) {
     const bodyEl = document.getElementById('spotlight-modal-body');
     if (!modal || !bodyEl) return;
 
+    const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
+
     // Modal 標題改為卡片名稱（原為通路名稱）
     if (titleEl) titleEl.textContent = item.card_name || item.merchant || '活動詳情';
 
-    bodyEl.innerHTML = buildSpotlightModalBody(item);
+    // 卡片詳情/立即申辦按鈕：放在 header 卡名下方（動態插入 .modal-header，第一次開啟時建立）
+    let actionsEl = document.getElementById('spotlight-modal-actions');
+    if (!actionsEl && titleEl && titleEl.parentElement) {
+        actionsEl = document.createElement('div');
+        actionsEl.id = 'spotlight-modal-actions';
+        actionsEl.className = 'spotlight-modal-actions';
+        titleEl.parentElement.appendChild(actionsEl);
+    }
+    if (actionsEl) actionsEl.innerHTML = buildSpotlightModalActions(item, card);
+
+    bodyEl.innerHTML = buildSpotlightModalBody(item, card);
 
     // ⓘ「卡片詳情」按鈕 → 開啟卡片詳情頁（疊在本 modal 之上）；卡名本身不再可點
-    const cardDetailBtn = bodyEl.querySelector('.spotlight-carddetail-btn');
+    const cardDetailBtn = (actionsEl || bodyEl).querySelector('.spotlight-carddetail-btn');
     if (cardDetailBtn) {
         cardDetailBtn.addEventListener('click', () => showCardDetail(cardDetailBtn.dataset.cardId));
     }

@@ -8079,18 +8079,39 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .spotlight-title { font-size: 1.1rem; }
 }
 
-/* 卡片詳情 ⓘ 與立即申辦按鈕列（modal 標題卡名下方；卡名只在 header） */
+/* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
+   header 改 flex-wrap，本列 flex-basis:100% 自動落到標題下一行、靠左對齊。 */
+#spotlight-modal .modal-header {
+    flex-wrap: wrap;
+    row-gap: 12px;
+}
 .spotlight-modal-actions {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+}
+#spotlight-modal-actions {
+    flex-basis: 100%;
 }
 /* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
    僅把標籤文字覆蓋成「卡片詳情」。 */
 .spotlight-modal-actions .card-detail-peek-btn::after {
     content: '卡片詳情';
+}
+
+/* 回饋率旁的 category：低調灰字註記（非膠囊、非按鈕，避免與卡片詳情/立即申辦混淆），
+   以中點與「回饋」分隔 */
+.spotlight-rate-category {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+.spotlight-rate-category::before {
+    content: '·';
+    margin: 0 6px 0 2px;
+    color: #9ca3af;
+    font-weight: 700;
 }
 
 .spotlight-apply-cta-btn {
