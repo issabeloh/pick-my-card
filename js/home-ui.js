@@ -1064,8 +1064,54 @@ function populatePaymentChips() {
     });
 }
 
+// 為搜尋框加上框內右側的清除 ✕（有輸入才顯示）。做法是把輸入框包進一層
+// 相對定位的 .input-clear-wrap，✕ 絕對定位在其中；清除後補送一個 input 事件，
+// 讓各搜尋框既有的即時過濾邏輯（含 HTML 上的 oninput）照常被觸發。
+function attachInputClearButton(input) {
+    if (!input || input.dataset.clearBtnReady === '1') return;
+
+    const wrap = document.createElement('span');
+    wrap.className = 'input-clear-wrap';
+    if (input.id) wrap.dataset.for = input.id;
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'input-clear-btn';
+    btn.setAttribute('aria-label', '清除輸入');
+    btn.textContent = '✕';
+    wrap.appendChild(btn);
+
+    const sync = () => { btn.hidden = !input.value; };
+    input.addEventListener('input', sync);
+    btn.addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        sync();
+        input.focus();
+    });
+    sync();
+
+    input.dataset.clearBtnReady = '1';
+}
+
+// 全站搜尋框的清除鈕（#merchant-input 另有自己的 .merchant-clear-btn、
+// 新戶活動頁 promos 也已內建，故不在此列）
+function setupSearchClearButtons() {
+    [
+        'search-cards-input',      // 管理卡片
+        'search-owned-cards-input',// 我的信用卡
+        'search-payments-input',   // 行動支付
+        'cashback-search-input',   // 卡片詳情頁：指定通路回饋
+        'mappings-search'          // 我的配卡組合
+    ].forEach(id => attachInputClearButton(document.getElementById(id)));
+}
+
 // Setup event listeners
 function setupEventListeners() {
+    setupSearchClearButtons();
+
     // Input guide toggle
     const toggleGuideBtn = document.getElementById('toggle-input-guide');
     const inputGuide = document.getElementById('input-guide');

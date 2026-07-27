@@ -4106,9 +4106,72 @@ input[type="text"].credit-limit-input:focus {
     background-size: 13px 13px;
 }
 
+/* 全域 input[type="text"]（特異性 0-1-1、padding:16px）會壓過上面的純 class
+   規則（0-1-0），導致左內距只剩 16px、輸入文字壓在放大鏡圖示上。這裡用
+   型別+class（0-2-1）把左內距搶回來（教訓見 docs/project/ui-display.md）。 */
+input[type="text"].cashback-search-input {
+    padding-left: 30px;
+}
+
 .cashback-search-input::placeholder {
     font-size: 11px;
     color: #9ca3af;
+}
+
+/* ── 搜尋框框內清除鈕（✕）────────────────────────────────────────────────
+   由 setupSearchClearButtons() 動態把輸入框包進 .input-clear-wrap 並加上 ✕，
+   有輸入時才顯示。wrapper 需能在 flex 容器（如 .modal-controls）中撐開。 */
+.input-clear-wrap {
+    position: relative;
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.input-clear-wrap > input {
+    width: 100%;
+    /* 原本的下外距改掛在 wrapper 上，✕ 才能對齊輸入框垂直置中 */
+    margin-bottom: 0;
+}
+/* 型別+class（0-2-1）勝過全域 input[type="text"]（0-1-1），確保右側留出 ✕ 的空間 */
+.input-clear-wrap > input[type="text"],
+.input-clear-wrap > input[type="search"] {
+    padding-right: 30px;
+}
+/* 配卡搜尋框的樣式帶 id（1-1-0），上面的規則壓不過，這裡補一條同樣帶 id 的（1-2-1） */
+#my-mappings-modal .input-clear-wrap > input[type="text"] {
+    padding-right: 30px;
+}
+/* 還原被移到 wrapper 上的輸入框下外距 */
+.input-clear-wrap[data-for="cashback-search-input"] {
+    margin-bottom: 12px;
+}
+
+.input-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.input-clear-btn:hover {
+    color: #4b5563;
+    background: #f3f4f6;
+}
+.input-clear-btn[hidden] {
+    display: none;
 }
 
 .cashback-search-input:focus {
@@ -5102,7 +5165,8 @@ mark.cashback-search-hl {
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    border-radius: 12px;
+    /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
+    border-radius: 0 0 12px 12px;
     margin-top: 16px;
 }
 
