@@ -825,6 +825,14 @@ header h1 {
     justify-content: center;
 }
 
+/* 卡片清單下方的統計灰字（已選取 xx/nn 張信用卡） */
+.card-chips-count {
+    margin-top: 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
 .card-chip {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -4156,9 +4164,10 @@ input[type="text"].cashback-search-input {
     padding: 0;
     border: none;
     border-radius: 50%;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 12px;
+    /* 常駐淺灰圓底：純字符 ✕ 在白底輸入框裡太不明顯，用戶會找不到 */
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 11px;
     line-height: 1;
     cursor: pointer;
     display: inline-flex;
@@ -4167,8 +4176,8 @@ input[type="text"].cashback-search-input {
     transition: color 0.15s ease, background 0.15s ease;
 }
 .input-clear-btn:hover {
-    color: #4b5563;
-    background: #f3f4f6;
+    color: #374151;
+    background: #d1d5db;
 }
 .input-clear-btn[hidden] {
     display: none;

@@ -1030,6 +1030,26 @@ function populateCardChips() {
         cardChipsContainer.appendChild(chip);
     });
 
+    updateCardChipsCount(cardsToShow.length);
+}
+
+// 卡片清單下方的灰字統計「已選取 xx/nn 張信用卡」。
+// nn＝全站收錄張數、xx＝目前加入比較的張數（未選取時 getCardsForComparison
+// 回傳全部，兩者相等）。元素動態建立，index 與 merchant 落地頁都不必改 HTML。
+function updateCardChipsCount(selectedCount) {
+    const cardChipsContainer = document.getElementById('card-chips');
+    if (!cardChipsContainer || !cardChipsContainer.parentNode) return;
+
+    let note = document.getElementById('card-chips-count');
+    if (!note) {
+        note = document.createElement('div');
+        note.id = 'card-chips-count';
+        note.className = 'card-chips-count';
+        cardChipsContainer.parentNode.insertBefore(note, cardChipsContainer.nextSibling);
+    }
+
+    const total = (cardsData && Array.isArray(cardsData.cards)) ? cardsData.cards.length : 0;
+    note.textContent = `已選取 ${selectedCount}/${total} 張信用卡`;
 }
 
 // Populate payment chips in header
