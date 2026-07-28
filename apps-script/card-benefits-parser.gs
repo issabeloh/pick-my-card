@@ -123,15 +123,17 @@ function extractCard_(rawText, idHint, generalText) {
     '3. basicCashback 基本回饋率數字；basicCashbackType 回饋類型。',
     '4. pointsExpiry 點數效期；basicConditions 基本回饋條件；annualFee 年費；feeWaiver 免年費條件；website 官網。',
     '5. tags 從固定清單挑。',
-    '6. hasLevels 是否分級（true/false）。',
-    '7. 分級卡：levels 陣列，每個級別一個物件——level_name（官網的級別名稱，如 簡單選/任意選/UP選）、rate（該級回饋率數字）、cap_spend（消費上限，官網直接講就填）、cap_reward（回饋金額上限，官網講回饋X元就填）、period_start/period_end（YYYY/M/D）、level_note（達成條件，開頭寫「達成條件：」）。另外 levelLabelFormat 依官網用詞填，如「方案: {level}」或「分級: {level}」。levelSettings_evidence：逐字引用官網描述各級別的原文（供人工複核）。',
+    '6. hasLevels：只有當「卡片本身有使用者可選、或需達標的方案/等級/分級，且那個方案決定卡片全域的回饋率」時才 true（例：玉山 簡單選/任意選/UP選——使用者選一個方案，全卡回饋率跟著變）。',
+    '   ⚠️【以下都不是分級，hasLevels 一律 false、絕不可寫進 levels】：單一活動的「消費滿額級距」（如滿1.5萬回100元、滿3萬回400元）；帳戶類型差異（自扣戶/一般戶、數位帳戶戶）；不同通路各自的回饋率。這些是某個活動的條件，不是卡片分級。',
+    '7. 分級卡（hasLevels=true 才填 levels）：每級一物件——level_name（官網級別名稱，如 簡單選/任意選/UP選）、rate（該級回饋率「百分比數字」，2.5% → 2.5，不是 0.025）、cap_spend（消費上限，官網直接講就填）、cap_reward（回饋金額上限，官網講回饋X元就填）、period_start/period_end（YYYY/M/D）、level_note（達成條件，開頭寫「達成條件：」）。levelLabelFormat 依官網用詞（「方案: {level}」/「分級: {level}」）。levelSettings_evidence：逐字引用官網描述各級別的原文。',
     '8. 海外：overseasCashback（基本海外率數字）、overseasBonusRate（海外加碼率數字）、overseasBonusCap_reward（海外加碼「回饋金額上限」數字）、overseasBonusConditions、overseasBonusPeriod_start/overseasBonusPeriod_end（YYYY/M/D）。',
     '9. 國內加碼：domesticBonusRate、domesticBonusCap_reward（回饋金額上限數字）、domesticBonusConditions。',
     '10. general_excludes_ads：一般消費是否排除 Facebook/Meta/Google/廣告費——明確排除填「是」；明確沒排除或明說廣告可享填「否」；沒提到填「未提及」。',
     '11. parking / airport_pickup / airport_lounge：有才填。',
     '',
     '【groups 每組欄位】',
-    '12. rate 回饋率數字；items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
+    '12. rate：回饋率「百分比數字」——5% → 5、1.5% → 1.5、0.67% → 0.67，【絕不】填小數比例（不是 0.05、不是 0.0067），也【不要】自己把「定額回饋金額÷消費額」算成率。若官網是「消費滿X回饋固定Y元」的定額回饋（不是百分比），rate 留空、needs_review=true、在 review_question 註明「定額回饋，非百分比率、非分級」。',
+    '    items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
     '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
     '13a. 分級門檻（同通路單筆滿額有更高回饋、未滿有較低回饋）：拆成兩組。高回饋組填 min_spend＝門檻；低回饋組填 max_spend＝同一個門檻數字（不加一減一）。但若「未滿門檻只是落回基本回饋」（沒有獨立的較低率），則【不要】建低回饋那組，只建高回饋組填 min_spend。',
     '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
@@ -151,7 +153,7 @@ function extractCard_(rawText, idHint, generalText) {
   const groupItem = {
     type: 'OBJECT',
     properties: {
-      rate: { type: 'NUMBER' },
+      rate: { type: 'NUMBER', description: '百分比數字，如 5 代表 5%，不要填 0.05；定額回饋（滿X回Y元）則留空' },
       items: { type: 'ARRAY', items: { type: 'STRING' } },
       category: { type: 'STRING' },
       conditions: { type: 'STRING' },
@@ -189,7 +191,7 @@ function extractCard_(rawText, idHint, generalText) {
               type: 'OBJECT',
               properties: {
                 level_name: { type: 'STRING' },
-                rate: { type: 'NUMBER' },
+                rate: { type: 'NUMBER', description: '百分比數字，如 2.5 代表 2.5%，不要填 0.025' },
                 cap_spend: { type: 'NUMBER' },
                 cap_reward: { type: 'NUMBER' },
                 period_start: { type: 'STRING' },
@@ -442,39 +444,53 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
 // 一次處理有上限（避免 Apps Script 6 分鐘上限），已查過的卡會跳過，再跑一次會接續剩下的
 const AD_CHECK_CONFIG = { sheet: '廣告排除檢查', perRun: 12 };
 
+// 廣告排除是「銀行層級」政策，以銀行為單位查（不是每張卡），銀行＝卡片 id 的連字號前綴
 function checkAdExclusionsForAllCards() {
   const cardsSheet = getCardsSheet_();  // 資料檔 Cards Data
   const data = cardsSheet.getDataRange().getValues();
   const h = data[0].map(function (x) { return String(x).trim(); });
-  const idc = h.indexOf('id'), namec = h.indexOf('name'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
+  const idc = h.indexOf('id'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
   if (idc < 0) { SpreadsheetApp.getUi().alert('資料檔 Cards Data 找不到 id 欄'); return; }
+
+  // 依 id 前綴分組成銀行，保留首次出現順序，記一張代表卡供查詢用
+  const bankOrder = [];
+  const bankInfo = {};  // bankKey -> { fullName, website }
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][idc] || '').trim();
+    if (!id) continue;
+    const bank = id.split('-')[0];
+    if (!bankInfo[bank]) {
+      bankInfo[bank] = {
+        fullName: fullc >= 0 ? String(data[i][fullc] || '') : id,
+        website: webc >= 0 ? String(data[i][webc] || '') : ''
+      };
+      bankOrder.push(bank);
+    }
+  }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let out = ss.getSheetByName(AD_CHECK_CONFIG.sheet);
   if (!out) {
     out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
-    out.appendRow(['檢查時間', 'id', 'name', '是否排除廣告', '依據', 'needs_review', '官網']);
+    out.appendRow(['檢查時間', '銀行(id前綴)', '代表卡', '是否排除廣告', '依據', 'needs_review']);
     out.setFrozenRows(1);
   }
-  const doneIds = {};
+  const doneBanks = {};
   const outData = out.getDataRange().getValues();
-  for (let i = 1; i < outData.length; i++) doneIds[String(outData[i][1])] = true;
+  for (let i = 1; i < outData.length; i++) doneBanks[String(outData[i][1])] = true;
 
   const now = new Date();
   let processed = 0, remaining = 0;
-  for (let i = 1; i < data.length; i++) {
-    const id = String(data[i][idc] || '').trim();
-    if (!id || doneIds[id]) continue;
+  for (let b = 0; b < bankOrder.length; b++) {
+    const bank = bankOrder[b];
+    if (doneBanks[bank]) continue;
     if (processed >= AD_CHECK_CONFIG.perRun) { remaining++; continue; }
 
-    const name = namec >= 0 ? String(data[i][namec] || '') : id;
-    const fullName = fullc >= 0 ? String(data[i][fullc] || '') : name;
-    const website = webc >= 0 ? String(data[i][webc] || '') : '';
-
+    const info = bankInfo[bank];
     let verdict = '未知', basis = '';
     try {
-      const prompt = '用 Google 搜尋查台灣「' + fullName + '」信用卡的「一般消費」回饋，是否明確排除 Facebook/Meta、Google、廣告費 這幾類。' +
-        (website ? '官網參考：' + website + '。' : '') +
+      const prompt = '用 Google 搜尋查台灣發行「' + info.fullName + '」的這家銀行，其信用卡「一般消費」回饋是否明確排除 Facebook/Meta、Google、廣告費 這幾類（這是銀行層級的政策，非單張卡的活動）。' +
+        (info.website ? '官網參考：' + info.website + '。' : '') +
         '依據優先序：①該行官網/公告的原文最優先；②官網查不到時，可採信可靠大站（如卡優新聞、Mobile01、財經媒體、知名部落客彙整）明確寫出的資訊，如「XX銀行刷廣告費沒回饋」。都查不到再回未知。' +
         '嚴格用兩行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句，並註明來自官網或哪個大站>\n';
       const r = callGeminiGrounded_(prompt);
@@ -483,15 +499,15 @@ function checkAdExclusionsForAllCards() {
     } catch (e) {
       basis = '查詢失敗：' + e.message;
     }
-    out.appendRow([now, id, name, verdict, basis, 'TRUE', website]);
+    out.appendRow([now, bank, info.fullName, verdict, basis, 'TRUE']);
     if (verdict !== '否') out.getRange(out.getLastRow(), 4).setBackground('#fff3cd'); // 排除=是/未知 標黃提醒
     processed++;
     Utilities.sleep(800);
   }
 
-  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 張卡，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
-    (remaining ? '\n還有 ' + remaining + ' 張未查——再執行一次即可接續。' : '\n全部查完了。') +
-    '\n\n判讀：排除=是→該卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
+  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 家銀行，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
+    (remaining ? '\n還有 ' + remaining + ' 家未查——再執行一次即可接續。' : '\n全部查完了。') +
+    '\n\n判讀（該行所有卡共用）：排除=是→該行的卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
 }
 
 // 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
