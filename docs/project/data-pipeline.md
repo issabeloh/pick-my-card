@@ -21,6 +21,11 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
+   - 發卡行：`bank`（選填，2026-07-28 新增）——側欄「加入比較的卡片」膠囊左半顯示的銀行字樣。
+     **沒建這欄也不會壞**：前端會退回用卡片 id 前綴推導（`js/home-ui.js` 的 `CARD_BANK_BY_ID_PREFIX`）；
+     兩者都對不到才退回「單一膠囊＋完整卡名」。想改銀行字樣（如「第一銀行」→「一銀」）或新增發卡行，
+     **建這欄後只改 Sheets 即可、不必動程式**。`tools/check-card-banks.js`（preflight 內）會列出對不到銀行的卡。
+     卡名開頭若重複銀行字樣會自動去掉（`一銀 iLEO 信用卡` → 膠囊顯示 `一銀｜iLEO 信用卡`）
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
@@ -144,7 +149,8 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **versionTag 含台北時分**（2026-07-16 起）：promos.css/js 的 `?v=` 為 `YYYYMMDDHHmm`，同日多次匯出也能破快取。代價是重生成不再天然位元級一致——**做位元級重現驗證時，exportData 傳 `versionTagOverride: '<repo 版的 tag>'` 固定它**再比對。
 - **「資料更新於」戳章只在活動內容真的變動時前進**（2026-07-23 起，`promosUpdatedIso`）：頁腳
   `<time datetime>` 戳章、`sitemap.xml` 的 promos `lastmod`、`<head>` 的 `CollectionPage`
-  JSON-LD `dateModified` 三處**同源**，都用這個日期。它**不是每次匯出的今天**——`exportToJSON`
+  JSON-LD `dateModified` 三處**同源**，都用這個日期（可見戳章 `.promos-data-update` 2026-07-23 起
+  放在 `.promos-controls` 下方、`.promo-grid` 上方，不再在頁尾）。它**不是每次匯出的今天**——`exportToJSON`
   先用 `pmcPromoSignature_(newCardholderPromos)`（依 `promo_id` 排序後的內容指紋，djb2/`Math.imul`
   純函數，不受 sheet 列序影響）跟 Script Properties 的 `PROMOS_LAST_SIG` / `PROMOS_LAST_DATE`
   比對：指紋相同就沿用上次日期，不同（或首次）才蓋 `pmcTodayISO_()` 並寫回。**為什麼不每次蓋今天**：

@@ -59,7 +59,7 @@
 
 **卡片版式（2026-07-21 F-2 重設計）**：左側傾斜卡圖（`assets/images/cards/<card_id>.png`，object-fit contain＋drop-shadow；`onerror` 隱藏 img 並在 `.spotlight-ccwrap` 加 `noimg` class 讓貼紙退回靜態）＋淺綠回饋率貼紙（#15803d on #bbf7d0、白邊、微旋轉）；右側＝活動類型標籤＋通路名（粗體）＋描述。**活動類型標籤**：`parseSpotlightHype()` 從 description 開頭抽「XX！」對表（全場最高/壓倒性神卡/獨家回饋/無腦刷 → hype-top/god/excl/easy 四色），是全卡唯一帶分類色的元素；對不到表列類型→不顯示標籤、description 全文照常顯示（資料端不需配合）。下方虛線分隔的資訊列放上限＋期限（含「剩 N 天」徽章）。設計裁定（站長 2026-07-21）：不用 emoji、不用浮起／轉正動畫（hover 只准陰影微調）、回饋率不上分類色。
 
-**輪播**（`renderSpotlights` 一帶）：每頁 3 張（SPOTLIGHT_PAGE_SIZE）、6 秒自動換頁（SPOTLIGHT_INTERVAL）、循環；「看下一組」手動換頁＋頁碼圓點；hover 卡片或開 modal 暫停；最多 12 則（SPOTLIGHT_MAX）依 order 升冪；`active===false` 不顯示；≤3 則自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
+**輪播**（`renderSpotlights` 一帶）：每頁 3 張（SPOTLIGHT_PAGE_SIZE）、循環；**純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播（原 6 秒自動換頁＋hover/開 modal 暫停整組拿掉）；最多 12 則（SPOTLIGHT_MAX）依 order 升冪；`active===false` 不顯示；≤3 則自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
 **固定高度（防跳動）**：`.spotlight-card { min-height: 200px }`；`.spotlight-top-row` min-height 92px（有無類型標籤高度都以卡圖列為準）；`.spotlight-desc` 用 `-webkit-line-clamp: 2` + `height: 3em`；`.spotlight-info-row` min-height 28px、nowrap。
 

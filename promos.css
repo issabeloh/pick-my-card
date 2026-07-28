@@ -838,24 +838,36 @@ a {
   gap: 6px;
 }
 
-/* ⓘ 卡片詳情深連結（樣式對齊主站詳情 peek 鈕的低調圓 i） */
+/* ⓘ 卡片詳情深連結：對齊主站結果卡 .card-detail-peek-btn 的淺藍膠囊＋「卡片詳情」
+   文字（原為低調灰圓 i，用戶反映太不明顯、找不到）。HTML 由 Apps Script 生成、
+   內容只有 ⓘ 字符，故標籤文字用 ::after 補上，不需改動生成端。 */
 .promo-card-info-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
+  gap: 3px;
   height: 22px;
-  font-size: 15px;
+  padding: 0 9px 0 7px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1;
-  color: var(--pmc-muted);
   text-decoration: none;
+  white-space: nowrap;
   border-radius: 999px;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.promo-card-info-btn::after {
+  content: '卡片詳情';
 }
 
 .promo-card-info-btn:hover {
-  color: var(--pmc-blue);
-  background: var(--pmc-chip-hover-bg);
+  color: #1e3a8a;
+  background: #dbeafe;
+  border-color: #60a5fa;
 }
 
 .promo-type-badges {
@@ -1176,14 +1188,22 @@ a {
    setupCardDetailOverlay）。z-index 故意高於 .promo-lightbox（1000），避免兩者疊在一起
    時被蓋住。手機全版面貼齊螢幕（模擬原生彈窗）；桌機留邊距＋置中直式卡片，寬度貼近
    主站 modal-content 本身的比例，視覺上像原生彈窗而不是「網頁裡的網頁」。 */
+/* 遮罩本身透明：變暗交給 iframe 內 #card-detail-modal 自己的半透明遮罩，
+   這樣本頁內容會像主站一樣「透出來但變暗」，而不是被蓋成一片空白。
+   （載入中還沒有東西可透時，才由下面的 :has() 規則暫時上一層深色底） */
 .promo-detail-overlay {
   position: fixed;
   inset: 0;
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.86);
+  background: transparent;
   z-index: 1200;
+}
+
+/* 尚未 ready（spinner 還在）時給深色底，讓白色 spinner 看得見 */
+.promo-detail-overlay:has(.promo-detail-spinner:not([hidden])) {
+  background: rgba(15, 23, 42, 0.86);
 }
 
 .promo-detail-overlay.is-open {
@@ -1201,7 +1221,9 @@ a {
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff; /* iframe 內容（尤其載入中）先白底，避免透空看到遮罩穿幫 */
+  /* 必須透明：原本 #fff 會把 iframe 整塊塗白，桌機看起來多一個白框、
+     手機則整個背景變空白（embed 模式的 body 本來就已是透明背景） */
+  background: transparent;
 }
 
 .promo-detail-spinner {
@@ -1222,17 +1244,13 @@ a {
   to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+/* 桌機不再把 iframe 框成一個白色圓角方塊：那個外框加上 iframe 內
+   #card-detail-modal 自己的視窗，看起來會是「兩層 modal 框」（2026-07-27 修）。
+   iframe 改滿版，讓詳情彈窗像在主站一樣自己置中、外圍只有半透明遮罩。 */
 @media (min-width: 640px) {
-  .promo-detail-overlay {
-    padding: 24px;
-  }
   .promo-detail-overlay-inner {
-    max-width: 720px;
-    height: 90vh;
-    max-height: 900px;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    width: 100%;
+    height: 100%;
   }
 }
 
@@ -1572,11 +1590,12 @@ a {
 }
 
 /* 最後資料更新日期（抄自 styles.css .data-update-footer） */
-.promos-data-update-footer {
-  max-width: 1200px;
-  margin: 16px auto 0;
-  padding: 0 24px 20px;
-  text-align: center;
+/* 「資料更新於」戳章（2026-07-23 從頁尾 footer 搬到 controls 下方、grid 上方，讓用戶
+   一眼看到新鮮度）。與 controls／grid 同層（.promos-main 內），自動對齊、不需 max-width；
+   右對齊小灰字，不搶排版。 */
+.promos-data-update {
+  margin: -8px 0 14px;
+  text-align: right;
   font-size: 12px;
   color: var(--pmc-muted);
 }
@@ -1622,6 +1641,22 @@ a {
     padding: 12px 16px;
   }
 
+  /* 手機版 header 固定單行（2026-07-23 站長回饋）：原本 .promos-header-top 用
+     justify-content:space-between + flex-wrap:wrap，窄螢幕（375px iPhone SE）三顆
+     ——漢堡／logo＋站名／返回首頁——擠不下時「返回首頁」換到第二行，剩下兩顆被
+     space-between 推開，logo＋站名貼到右緣（iPhone 13 的 390px 剛好塞得下才沒事）。
+     改成不換行、靠左起排，logo＋站名緊貼漢堡右側，「返回首頁」用 margin-left:auto
+     推到最右；站名 min-width:0 + 省略號，極窄時截斷而非撐破行。 */
+  .promos-header-top {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .promos-header-content {
+    min-width: 0;
+  }
+
   .promos-header-logo {
     height: 32px;
   }
@@ -1630,9 +1665,14 @@ a {
      這裡文字本來就短，改成截斷＋縮小字級，不整段隱藏，因為沒有 auth 區搶空間） */
   .promos-header-title {
     font-size: 1.02rem;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .promos-back-home-btn {
+    margin-left: auto;
     padding: 6px 12px;
     font-size: 0.85rem;
   }
@@ -1681,9 +1721,17 @@ a {
   }
 
   .promos-filter-chips,
-  .promos-sort-toggle,
-  .promos-owned-filter-label {
+  .promos-sort-toggle {
     flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* 「隱藏我持有的卡片」label 不吃滿整行（2026-07-23 站長回饋）：原本併入上面
+     flex:1 1 auto，label 撐滿整列 → 把後面同層的「?」說明鈕（.promos-owned-help-wrap）
+     推到最右緣。改成自然寬度（flex-grow:0），讓「?」緊貼 label 右側；min-width:0
+     保留可縮性，避免極窄螢幕撐破 group 的 nowrap 行。 */
+  .promos-owned-filter-label {
+    flex: 0 1 auto;
     min-width: 0;
   }
 

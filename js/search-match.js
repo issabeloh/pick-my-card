@@ -60,6 +60,8 @@ const fuzzySearchMap = {
     'google pay': 'googlepay',
     'samsungpay': 'samsung pay',
     'samsung pay': 'samsungpay',
+    'iqiyi': '愛奇藝',
+    '愛奇藝': 'iqiyi',
     '街口': '街口支付',
     '街口支付': '街口',
     'jkopay': '街口',
@@ -361,7 +363,8 @@ function findMatchingItem(searchTerm, options = {}) {
             for (const coupon of card.couponCashbacks) {
                 if (coupon.merchant) {
                     // Split merchant string into array (comma-separated)
-                    const merchantItems = coupon.merchant.split(',').map(m => m.trim());
+                    // 防禦：merchant 可能被資料匯出成 number（如 "8000"），String() 避免 .split 崩潰
+                    const merchantItems = String(coupon.merchant).split(',').map(m => m.trim());
                     checkItemMatches(merchantItems, searchTerms, searchLower, allMatches, searchTerm);
                 }
             }

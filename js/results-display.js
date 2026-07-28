@@ -237,8 +237,10 @@ async function displayCouponCashbacks(amount, merchantValue) {
     for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
+                if (!coupon.merchant) continue;
                 // Split merchant string into array of individual merchants
-                const merchantItems = coupon.merchant.split(',').map(m => m.trim());
+                // 防禦：merchant 可能被資料匯出成 number（如 "8000"），String() 避免 .split 崩潰
+                const merchantItems = String(coupon.merchant).split(',').map(m => m.trim());
 
                 // Find all matching merchant items
                 const matchedMerchants = [];

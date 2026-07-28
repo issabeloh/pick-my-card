@@ -825,6 +825,41 @@ header h1 {
     justify-content: center;
 }
 
+/* 卡片清單上方的統計灰字（已選取 xx/nn 張信用卡）：
+   在「加入比較的卡片：」之下、卡片膠囊之上。上下留白相同（各 10px），
+   讓它落在標題與膠囊的正中間（.cards-header 實際下緣間距為 10px）。 */
+.card-chips-count {
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
+   .card-chip 原本的左右 padding 移到兩個半邊上，銀行色塊才會齊邊、滿高。
+   ⚠️ 後面的 `.sidebar .card-chip`（0-2-0、padding:3px 8px）與本規則同特異性
+   且位置更後面會蓋掉 padding:0，所以這裡一併列出帶 .sidebar 的選擇器（0-3-0）
+   讓它與檔案順序無關（教訓見 docs/project/ui-display.md「改了沒反應先查特異性」）。 */
+.card-chip.card-chip-split,
+.sidebar .card-chip.card-chip-split {
+    display: inline-flex;
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+}
+.card-chip-bank {
+    padding: 3px 6px;
+    font-weight: 700;
+    background: rgba(30, 64, 175, 0.1);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.card-chip-name {
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
+}
+
 .card-chip {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -2570,6 +2605,8 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
+/* 基礎樣式：膠囊（供 .cashback-detail-item 內「卡名旁最優回饋」的行內徽章沿用，
+   如 CUBE 級別／行動支付比較 modal）。搜尋結果卡另有角標覆蓋（見下） */
 .best-badge {
     background: #10b981;
     color: white;
@@ -2578,6 +2615,27 @@ input[type="number"]:focus {
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
+}
+
+/* 搜尋結果卡的「最優回饋」＝貼合右上框邊的角標（非膠囊，避免被誤認為可點）。
+   絕對定位貼齊 .card-result（position:relative）右上角、壓住 1px 邊框；
+   外角沿用卡片 8px 圓角、內側下緣微圓；純標示、無 hover/點擊態。 */
+.card-result .best-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    z-index: 2;
+    padding: 5px 12px 6px;
+    border-radius: 0 8px 0 10px;
+    letter-spacing: .03em;
+    font-weight: 700;
+    text-transform: none;
+}
+
+/* 角標脫離流，替卡名／按鈕列在右上保留角標寬度（角標約 73px、扣掉卡片內距後
+   僅需 ~57px），長卡名／按鈕不會鑽到標籤下方 */
+.card-result.best-card .card-header {
+    padding-right: 64px;
 }
 
 .card-details {
@@ -2786,10 +2844,14 @@ input[type="number"]:focus {
         overflow-wrap: anywhere;
     }
 
-    /* 回饋率不需要太多橫向空間，把省下的寬度給「回饋金額」欄，讓四位數金額
-       （如 NT$1,000）與計算機按鈕 .calc-breakdown-btn 能留在同一行不換行 */
+    /* 回饋率不需要太多橫向空間，把省下的寬度分給「回饋金額」欄（四位數金額如
+       NT$1,000＋計算機按鈕 .calc-breakdown-btn 要留同一行）與「回饋消費上限」欄。
+       上限欄從 0.85fr → 1fr 並把 detail-value 縮到 12px，讓最寬的
+       「NT$300,000+」(台新 Richart)、「NT$500,000」(國泰 CUBE) 在 ≥360px 手機
+       維持一行；360px 以下才退回換行（此時金額欄仍受保護不換行）。
+       回饋率欄 0.8fr → 0.65fr（只放「X%」，空間充裕）。 */
     .card-details {
-        grid-template-columns: 0.8fr 1.35fr 0.85fr;
+        grid-template-columns: 0.65fr 1.35fr 1fr;
         gap: 6px;
     }
 
@@ -2799,6 +2861,11 @@ input[type="number"]:focus {
 
     .card-details .detail-value {
         font-size: 13px;
+    }
+
+    /* 「回饋消費上限」欄（第 3 欄）的數字略縮，替最寬的上限值換取單行空間 */
+    .card-details .detail-item:nth-child(3) .detail-value {
+        font-size: 12px;
     }
 
     .card-details .cashback-amount {
@@ -2812,9 +2879,15 @@ input[type="number"]:focus {
         text-overflow: clip;
     }
 
-    /* 卡名換行成兩行時，ⓘ／釘選鈕靠齊第一行頂端，不要浮在兩行中間 */
+    /* 手機版：卡名獨佔上方（可換行），詳情鈕／釘選鈕整組落到下一行，
+       避免單行塞太多元素太擁擠。卡名 flex-basis:100% 把後面的鈕擠到次行。 */
     .card-name-with-pin {
-        align-items: flex-start;
+        flex-wrap: wrap;
+        align-items: center;
+        row-gap: 8px;
+    }
+    .card-name-with-pin .card-name {
+        flex: 1 1 100%;
     }
 
     .cards-selection {
@@ -3157,23 +3230,32 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
+/* 卡片詳情鈕：原本是淡灰 ⓘ 純字符，用戶反映太低調找不到。改成淺藍膠囊＋
+   「詳情」文字，明顯是可點按鈕（搜尋結果／領券卡共用）。 */
 .card-detail-peek-btn {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #9ca3af;
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 22px;
+    padding: 0 9px 0 7px;
+    border: 1px solid #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    border-radius: 50%;
-    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: 999px;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.card-detail-peek-btn::after {
+    content: '詳情';
 }
 .card-detail-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
+    color: #1e3a8a;
+    background: #dbeafe;
+    border-color: #60a5fa;
 }
 
 /* ── Calculation breakdown button + popup ───────────────────────────────── */
@@ -4059,9 +4141,73 @@ input[type="text"].credit-limit-input:focus {
     background-size: 13px 13px;
 }
 
+/* 全域 input[type="text"]（特異性 0-1-1、padding:16px）會壓過上面的純 class
+   規則（0-1-0），導致左內距只剩 16px、輸入文字壓在放大鏡圖示上。這裡用
+   型別+class（0-2-1）把左內距搶回來（教訓見 docs/project/ui-display.md）。 */
+input[type="text"].cashback-search-input {
+    padding-left: 30px;
+}
+
 .cashback-search-input::placeholder {
     font-size: 11px;
     color: #9ca3af;
+}
+
+/* ── 搜尋框框內清除鈕（✕）────────────────────────────────────────────────
+   由 setupSearchClearButtons() 動態把輸入框包進 .input-clear-wrap 並加上 ✕，
+   有輸入時才顯示。wrapper 需能在 flex 容器（如 .modal-controls）中撐開。 */
+.input-clear-wrap {
+    position: relative;
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.input-clear-wrap > input {
+    width: 100%;
+    /* 原本的下外距改掛在 wrapper 上，✕ 才能對齊輸入框垂直置中 */
+    margin-bottom: 0;
+}
+/* 型別+class（0-2-1）勝過全域 input[type="text"]（0-1-1），確保右側留出 ✕ 的空間 */
+.input-clear-wrap > input[type="text"],
+.input-clear-wrap > input[type="search"] {
+    padding-right: 30px;
+}
+/* 配卡搜尋框的樣式帶 id（1-1-0），上面的規則壓不過，這裡補一條同樣帶 id 的（1-2-1） */
+#my-mappings-modal .input-clear-wrap > input[type="text"] {
+    padding-right: 30px;
+}
+/* 還原被移到 wrapper 上的輸入框下外距 */
+.input-clear-wrap[data-for="cashback-search-input"] {
+    margin-bottom: 12px;
+}
+
+.input-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    /* 常駐淺灰圓底：純字符 ✕ 在白底輸入框裡太不明顯，用戶會找不到 */
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.input-clear-btn:hover {
+    color: #374151;
+    background: #d1d5db;
+}
+.input-clear-btn[hidden] {
+    display: none;
 }
 
 .cashback-search-input:focus {
@@ -4079,6 +4225,16 @@ input[type="text"].credit-limit-input:focus {
     background: #f9fafb;
     border-radius: 6px;
     margin-bottom: 12px;
+}
+
+/* 詳情頁搜尋命中字詞的即時 highlight（filterCashbackItems 動態插入 <mark>）：
+   琥珀底＋深色字，蓋掉瀏覽器 <mark> 預設的螢光黃 */
+mark.cashback-search-hl {
+    background: #fef08a;
+    color: #78350f;
+    font-weight: 700;
+    padding: 0 1px;
+    border-radius: 3px;
 }
 
 /* 2-column grid for cashback items in card detail modal */
@@ -5045,7 +5201,8 @@ input[type="text"].credit-limit-input:focus {
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    border-radius: 12px;
+    /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
+    border-radius: 0 0 12px 12px;
     margin-top: 16px;
 }
 
@@ -5312,39 +5469,53 @@ input[type="text"].credit-limit-input:focus {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Pin Button on Card */
+/* Pin Button on Card：與進場浮標 #my-mappings-btn 同一組琥珀色系
+   （#fef3c7 底／#f59e0b 邊／#b45309 字），改成膠囊＋「釘選」文字，凸顯可點；
+   不加陰影（不要光暈）。已釘選狀態改實心琥珀＋「已釘選」以區分開關狀態。 */
 .pin-btn {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    width: 20px;
-    height: 20px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 3px;
+    height: 22px;
+    padding: 0 9px 0 7px;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 999px;
+    color: #b45309;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
     cursor: pointer;
-    color: #d1d5db;
-    transition: all 0.3s ease;
-    padding: 0;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     flex-shrink: 0;
+}
+.pin-btn svg {
+    width: 12px;
+    height: 12px;
+}
+.pin-btn::after {
+    content: '釘選';
 }
 
 .pin-btn:hover {
-    background: white;
-    border-color: #667eea;
-    color: #667eea;
-    transform: scale(1.1);
+    background: #fde68a;
+    border-color: #f59e0b;
+    color: #92400e;
 }
 
 .pin-btn.pinned {
-    background: #fef3c7;
+    background: #f59e0b;
     border-color: #f59e0b;
-    color: #f59e0b;
+    color: #ffffff;
+}
+.pin-btn.pinned::after {
+    content: '已釘選';
 }
 
 .pin-btn.pinned:hover {
-    background: #fde68a;
-    transform: scale(1.1);
+    background: #d97706;
+    border-color: #d97706;
+    color: #ffffff;
 }
 
 /* Pin Toast (提示) */
@@ -6960,12 +7131,42 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
 /* 搜尋提示卡片 */
 .search-hint {
+    position: relative; /* 關閉鈕定位基準 */
     background: #e3f2fd;
     border-left: 4px solid #2196f3;
     padding: 12px 16px;
     border-radius: 4px;
     margin-bottom: 10px;
     animation: slideIn 0.3s ease-out;
+}
+
+/* 提示關閉鈕（右上角）：手機版提示是浮層、會蓋在勾選/計算鈕上，
+   給使用者一鍵收起的出口 */
+.search-hint-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #1976d2;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.search-hint-close:hover {
+    background: rgba(25, 118, 210, 0.12);
+}
+/* 訊息文字保留右側空間，避免壓到關閉鈕 */
+.search-hint .hint-message {
+    padding-right: 22px;
 }
 
 @keyframes slideIn {
@@ -7020,8 +7221,25 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
 /* 手機版樣式調整 */
 @media (max-width: 768px) {
+    /* 手機版搜尋提示改「浮層」：絕對定位貼在合併框下方，不再參與版面流，
+       出現時不會把「精準搜尋/新戶活動」勾選與「計算回饋」按鈕往下推
+       （避免開鍵盤時按鈕被擠出畫面）。蓋在下方元素上時，靠陰影凸顯層次、
+       右上角關閉鈕 .search-hint-close 讓使用者收起。 */
+    .input-row-with-button > .form-group:first-child {
+        position: relative;
+    }
+    .input-row-with-button #search-hints-container {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        margin: 6px 0 0 0;
+    }
+
     .search-hint {
         padding: 10px 12px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
     }
 
     .hint-message {
@@ -7874,31 +8092,44 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     gap: 8px;
     margin-top: auto;
 }
+/* 兩顆動作鈕等寬（1:1） */
 .spotlight-compare-btn {
-    flex: 1;
+    flex: 1 1 0;
+    height: 36px;
     background: #f9fafb;
     border: 1px solid #d1d5db;
     border-radius: 8px;
-    padding: 8px 12px;
+    padding: 0 10px;
     font-size: 0.85rem;
     color: #374151;
+    white-space: nowrap;
     cursor: pointer;
     transition: background .2s, border-color .2s, color .2s;
 }
 .spotlight-compare-btn:hover { background: #eef2ff; border-color: #c7d2fe; color: #1e40af; }
+/* 活動詳情鈕：淺藍底＋「活動詳情」文字（凸顯可看卡片真實活動），與比較鈕等寬 */
 .spotlight-info-btn {
-    flex-shrink: 0;
-    width: 36px;
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     height: 36px;
-    border: 1px solid #d1d5db;
+    padding: 0 10px;
+    border: 1px solid #93c5fd;
     border-radius: 8px;
-    background: #ffffff;
-    color: #6b7280;
-    font-size: 1rem;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
-    transition: background .2s, color .2s;
+    transition: background .2s, color .2s, border-color .2s;
 }
-.spotlight-info-btn:hover { background: #f3f4f6; color: #1e40af; }
+.spotlight-info-btn::after {
+    content: '活動詳情';
+}
+.spotlight-info-btn:hover { background: #dbeafe; color: #1e3a8a; border-color: #60a5fa; }
 
 .spotlight-dots {
     display: flex;
@@ -7958,35 +8189,39 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .spotlight-title { font-size: 1.1rem; }
 }
 
-.spotlight-modal-cardname {
+/* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
+   header 改 flex-wrap，本列 flex-basis:100% 自動落到標題下一行、靠左對齊。 */
+#spotlight-modal .modal-header {
+    flex-wrap: wrap;
+    row-gap: 12px;
+}
+.spotlight-modal-actions {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 12px;
 }
-/* Clickable card name in the spotlight modal → opens card detail */
-.spotlight-cardname-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    color: #1d4ed8;
-    cursor: pointer;
+#spotlight-modal-actions {
+    flex-basis: 100%;
 }
-.spotlight-cardname-link:hover {
-    text-decoration: underline;
+/* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
+   僅把標籤文字覆蓋成「卡片詳情」。 */
+.spotlight-modal-actions .card-detail-peek-btn::after {
+    content: '卡片詳情';
 }
-.spotlight-cardname-chevron {
-    flex-shrink: 0;
-    margin-left: 2px;
+
+/* 回饋率旁的 category：低調灰字註記（非膠囊、非按鈕，避免與卡片詳情/立即申辦混淆），
+   以中點與「回饋」分隔 */
+.spotlight-rate-category {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+.spotlight-rate-category::before {
+    content: '·';
+    margin: 0 6px 0 2px;
+    color: #9ca3af;
+    font-weight: 700;
 }
 
 .spotlight-apply-cta-btn {
@@ -8003,15 +8238,43 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     padding-top: 0;
     margin-top: 0;
 }
+/* 適用通路：標題獨立一行，通路清單另起一行；超過 3 行預設收合、可點展開 */
 .spotlight-act-items {
-    display: flex;
-    gap: 10px;
     font-size: 0.85rem;
     color: #4b5563;
     line-height: 1.6;
     margin-top: 10px;
 }
-.spotlight-act-items > span:last-child { flex: 1; }
+.spotlight-act-items-label {
+    color: #9ca3af;
+    margin-bottom: 3px;
+}
+/* 通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
+.spotlight-act-items-values {
+    color: #3b82f6;
+    font-weight: 700;
+}
+.spotlight-act-items-values.clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+.spotlight-act-items-toggle {
+    margin-top: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.spotlight-act-items-toggle:hover { text-decoration: underline; }
+/* 條件內容字體略縮（比其他資訊列小一點點） */
+.spotlight-cond-value {
+    font-size: 0.82rem;
+}
 
 /* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
 @media (max-width: 768px) {
