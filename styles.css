@@ -826,16 +826,21 @@ header h1 {
 }
 
 /* 卡片清單上方的統計灰字（已選取 xx/nn 張信用卡）：
-   在「加入比較的卡片：」之下、卡片膠囊之上 */
+   在「加入比較的卡片：」之下、卡片膠囊之上。上下留白相同（各 10px），
+   讓它落在標題與膠囊的正中間（.cards-header 實際下緣間距為 10px）。 */
 .card-chips-count {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-size: 12px;
     color: #9ca3af;
 }
 
 /* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
-   .card-chip 原本的左右 padding 移到兩個半邊上，中間才不會有空隙。 */
-.card-chip.card-chip-split {
+   .card-chip 原本的左右 padding 移到兩個半邊上，銀行色塊才會齊邊、滿高。
+   ⚠️ 後面的 `.sidebar .card-chip`（0-2-0、padding:3px 8px）與本規則同特異性
+   且位置更後面會蓋掉 padding:0，所以這裡一併列出帶 .sidebar 的選擇器（0-3-0）
+   讓它與檔案順序無關（教訓見 docs/project/ui-display.md「改了沒反應先查特異性」）。 */
+.card-chip.card-chip-split,
+.sidebar .card-chip.card-chip-split {
     display: inline-flex;
     align-items: stretch;
     padding: 0;
