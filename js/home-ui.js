@@ -1024,7 +1024,7 @@ function populateCardChips() {
         chip.className = 'card-chip chip-clickable';
 
         // 左右分割：左半銀行、右半卡名，讓用戶先掃銀行再找卡（2026-07-28）
-        const bank = getCardBankName(card.id);
+        const bank = getCardBankName(card);
         if (bank) {
             chip.classList.add('card-chip-split');
             const bankEl = document.createElement('span');
@@ -1050,12 +1050,24 @@ function populateCardChips() {
     updateCardChipsCount(cardsToShow.length);
 }
 
-// 卡片 id 前綴 → 發卡行顯示名稱。卡片資料本身沒有「發卡行」欄位，但 id 前綴
-// （cathay-cube、hsbc-liveplus…）本來就是依發卡行命名，一個前綴固定對應一家銀行，
-// 所以純前端就能拆出銀行，不必改 Google Sheets／Apps Script。
+// 發卡行來源，依序：
+//   1. 卡片資料的 bank 欄位（Google Sheets 的 bank 欄，唯一權威來源）
+//   2. 下面的 id 前綴對照表（尚未在 Sheets 建 bank 欄時的相容退路）
+//   3. 都沒有 → 回傳空字串，膠囊退回「單一膠囊＋完整卡名」，不會壞掉
+// 想改銀行顯示字樣（例如「第一銀行」改成「一銀」）只要改 Sheets 的 bank 欄，
+// 前端不必動；tools/check-card-banks.js 會在 preflight 檢查有沒有卡對不到銀行。
+function getCardBankName(card) {
+    if (!card) return '';
+    const fromData = typeof card.bank === 'string' ? card.bank.trim() : '';
+    if (fromData) return fromData;
+    const prefix = String(card.id || '').split('-')[0];
+    return CARD_BANK_BY_ID_PREFIX[prefix] || '';
+}
+
+// 【相容退路】卡片 id 前綴 → 發卡行顯示名稱。id 前綴本來就是依發卡行命名，
+// 一個前綴固定對應一家銀行，所以在 Sheets 還沒建 bank 欄前也能正確顯示。
 // 顯示名稱盡量與卡名開頭一致（如 tbb 用「企銀」對上「企銀朝天宮卡」），
 // stripBankPrefix() 才能把重複的銀行字樣去掉。
-// ⚠️ 新增發卡行時要在這裡補一筆；沒補也只是退回顯示完整卡名，不會出錯。
 const CARD_BANK_BY_ID_PREFIX = {
     cathay: '國泰',
     ctbc: '中信',
@@ -1073,12 +1085,6 @@ const CARD_BANK_BY_ID_PREFIX = {
     ubot: '聯邦',
     yushan: '玉山'
 };
-
-function getCardBankName(cardId) {
-    if (!cardId) return '';
-    const prefix = String(cardId).split('-')[0];
-    return CARD_BANK_BY_ID_PREFIX[prefix] || '';
-}
 
 // 卡名開頭若已是銀行字樣就去掉，避免膠囊左右兩半重複（「玉山｜玉山 Uni 卡」）。
 // 對不上的（如 iLEO 信用卡、藝FUN悠遊御璽卡）原樣保留。

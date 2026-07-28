@@ -21,6 +21,11 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
+   - 發卡行：`bank`（選填，2026-07-28 新增）——側欄「加入比較的卡片」膠囊左半顯示的銀行字樣。
+     **沒建這欄也不會壞**：前端會退回用卡片 id 前綴推導（`js/home-ui.js` 的 `CARD_BANK_BY_ID_PREFIX`）；
+     兩者都對不到才退回「單一膠囊＋完整卡名」。想改銀行字樣（如「第一銀行」→「一銀」）或新增發卡行，
+     **建這欄後只改 Sheets 即可、不必動程式**。`tools/check-card-banks.js`（preflight 內）會列出對不到銀行的卡。
+     卡名開頭若重複銀行字樣會自動去掉（`一銀 iLEO 信用卡` → 膠囊顯示 `一銀｜iLEO 信用卡`）
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
