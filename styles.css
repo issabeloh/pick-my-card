@@ -825,6 +825,41 @@ header h1 {
     justify-content: center;
 }
 
+/* 卡片清單上方的統計灰字（已選取 xx/nn 張信用卡）：
+   在「加入比較的卡片：」之下、卡片膠囊之上。上下留白相同（各 10px），
+   讓它落在標題與膠囊的正中間（.cards-header 實際下緣間距為 10px）。 */
+.card-chips-count {
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
+   .card-chip 原本的左右 padding 移到兩個半邊上，銀行色塊才會齊邊、滿高。
+   ⚠️ 後面的 `.sidebar .card-chip`（0-2-0、padding:3px 8px）與本規則同特異性
+   且位置更後面會蓋掉 padding:0，所以這裡一併列出帶 .sidebar 的選擇器（0-3-0）
+   讓它與檔案順序無關（教訓見 docs/project/ui-display.md「改了沒反應先查特異性」）。 */
+.card-chip.card-chip-split,
+.sidebar .card-chip.card-chip-split {
+    display: inline-flex;
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+}
+.card-chip-bank {
+    padding: 3px 6px;
+    font-weight: 700;
+    background: rgba(30, 64, 175, 0.1);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.card-chip-name {
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
+}
+
 .card-chip {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -4106,9 +4141,73 @@ input[type="text"].credit-limit-input:focus {
     background-size: 13px 13px;
 }
 
+/* 全域 input[type="text"]（特異性 0-1-1、padding:16px）會壓過上面的純 class
+   規則（0-1-0），導致左內距只剩 16px、輸入文字壓在放大鏡圖示上。這裡用
+   型別+class（0-2-1）把左內距搶回來（教訓見 docs/project/ui-display.md）。 */
+input[type="text"].cashback-search-input {
+    padding-left: 30px;
+}
+
 .cashback-search-input::placeholder {
     font-size: 11px;
     color: #9ca3af;
+}
+
+/* ── 搜尋框框內清除鈕（✕）────────────────────────────────────────────────
+   由 setupSearchClearButtons() 動態把輸入框包進 .input-clear-wrap 並加上 ✕，
+   有輸入時才顯示。wrapper 需能在 flex 容器（如 .modal-controls）中撐開。 */
+.input-clear-wrap {
+    position: relative;
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.input-clear-wrap > input {
+    width: 100%;
+    /* 原本的下外距改掛在 wrapper 上，✕ 才能對齊輸入框垂直置中 */
+    margin-bottom: 0;
+}
+/* 型別+class（0-2-1）勝過全域 input[type="text"]（0-1-1），確保右側留出 ✕ 的空間 */
+.input-clear-wrap > input[type="text"],
+.input-clear-wrap > input[type="search"] {
+    padding-right: 30px;
+}
+/* 配卡搜尋框的樣式帶 id（1-1-0），上面的規則壓不過，這裡補一條同樣帶 id 的（1-2-1） */
+#my-mappings-modal .input-clear-wrap > input[type="text"] {
+    padding-right: 30px;
+}
+/* 還原被移到 wrapper 上的輸入框下外距 */
+.input-clear-wrap[data-for="cashback-search-input"] {
+    margin-bottom: 12px;
+}
+
+.input-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    /* 常駐淺灰圓底：純字符 ✕ 在白底輸入框裡太不明顯，用戶會找不到 */
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.input-clear-btn:hover {
+    color: #374151;
+    background: #d1d5db;
+}
+.input-clear-btn[hidden] {
+    display: none;
 }
 
 .cashback-search-input:focus {
@@ -4126,6 +4225,16 @@ input[type="text"].credit-limit-input:focus {
     background: #f9fafb;
     border-radius: 6px;
     margin-bottom: 12px;
+}
+
+/* 詳情頁搜尋命中字詞的即時 highlight（filterCashbackItems 動態插入 <mark>）：
+   琥珀底＋深色字，蓋掉瀏覽器 <mark> 預設的螢光黃 */
+mark.cashback-search-hl {
+    background: #fef08a;
+    color: #78350f;
+    font-weight: 700;
+    padding: 0 1px;
+    border-radius: 3px;
 }
 
 /* 2-column grid for cashback items in card detail modal */
@@ -5092,7 +5201,8 @@ input[type="text"].credit-limit-input:focus {
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    border-radius: 12px;
+    /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
+    border-radius: 0 0 12px 12px;
     margin-top: 16px;
 }
 

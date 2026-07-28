@@ -1022,7 +1022,24 @@ function populateCardChips() {
     cardsToShow.forEach(card => {
         const chip = document.createElement('div');
         chip.className = 'card-chip chip-clickable';
-        chip.textContent = card.name;
+
+        // 左右分割：左半銀行、右半卡名，讓用戶先掃銀行再找卡（2026-07-28）
+        const bank = getCardBankName(card.id);
+        if (bank) {
+            chip.classList.add('card-chip-split');
+            const bankEl = document.createElement('span');
+            bankEl.className = 'card-chip-bank';
+            bankEl.textContent = bank;
+            const nameEl = document.createElement('span');
+            nameEl.className = 'card-chip-name';
+            nameEl.textContent = stripBankPrefix(card.name, bank);
+            chip.appendChild(bankEl);
+            chip.appendChild(nameEl);
+        } else {
+            // 未收錄的發卡行（新卡）→ 退回單一膠囊顯示完整卡名，不會壞掉
+            chip.textContent = card.name;
+        }
+
         chip.addEventListener('click', () => {
             if (window.closeSidebarDrawer) window.closeSidebarDrawer();
             showCardDetail(card.id);
@@ -1030,6 +1047,66 @@ function populateCardChips() {
         cardChipsContainer.appendChild(chip);
     });
 
+    updateCardChipsCount(cardsToShow.length);
+}
+
+// 卡片 id 前綴 → 發卡行顯示名稱。卡片資料本身沒有「發卡行」欄位，但 id 前綴
+// （cathay-cube、hsbc-liveplus…）本來就是依發卡行命名，一個前綴固定對應一家銀行，
+// 所以純前端就能拆出銀行，不必改 Google Sheets／Apps Script。
+// 顯示名稱盡量與卡名開頭一致（如 tbb 用「企銀」對上「企銀朝天宮卡」），
+// stripBankPrefix() 才能把重複的銀行字樣去掉。
+// ⚠️ 新增發卡行時要在這裡補一筆；沒補也只是退回顯示完整卡名，不會出錯。
+const CARD_BANK_BY_ID_PREFIX = {
+    cathay: '國泰',
+    ctbc: '中信',
+    dbs: '星展',
+    febank: '遠東',
+    firstbank: '第一銀行',
+    fubon: '富邦',
+    hsbc: '滙豐',
+    kgi: '凱基',
+    mega: '兆豐',
+    sinopac: '永豐',
+    sunny: '陽信',
+    taishin: '台新',
+    tbb: '企銀',
+    ubot: '聯邦',
+    yushan: '玉山'
+};
+
+function getCardBankName(cardId) {
+    if (!cardId) return '';
+    const prefix = String(cardId).split('-')[0];
+    return CARD_BANK_BY_ID_PREFIX[prefix] || '';
+}
+
+// 卡名開頭若已是銀行字樣就去掉，避免膠囊左右兩半重複（「玉山｜玉山 Uni 卡」）。
+// 對不上的（如 iLEO 信用卡、藝FUN悠遊御璽卡）原樣保留。
+function stripBankPrefix(name, bank) {
+    const full = String(name || '');
+    if (!bank || !full.startsWith(bank)) return full;
+    const rest = full.slice(bank.length).trim();
+    return rest || full;
+}
+
+// 卡片清單上方的灰字統計「已選取 xx/nn 張信用卡」（在「加入比較的卡片：」之下、
+// 卡片膠囊之上）。nn＝全站收錄張數、xx＝目前加入比較的張數（未選取時
+// getCardsForComparison 回傳全部，兩者相等）。
+// 元素動態建立，index 與 merchant 落地頁都不必改 HTML。
+function updateCardChipsCount(selectedCount) {
+    const cardChipsContainer = document.getElementById('card-chips');
+    if (!cardChipsContainer || !cardChipsContainer.parentNode) return;
+
+    let note = document.getElementById('card-chips-count');
+    if (!note) {
+        note = document.createElement('div');
+        note.id = 'card-chips-count';
+        note.className = 'card-chips-count';
+        cardChipsContainer.parentNode.insertBefore(note, cardChipsContainer);
+    }
+
+    const total = (cardsData && Array.isArray(cardsData.cards)) ? cardsData.cards.length : 0;
+    note.textContent = `已選取 ${selectedCount}/${total} 張信用卡`;
 }
 
 // Populate payment chips in header
@@ -1064,8 +1141,54 @@ function populatePaymentChips() {
     });
 }
 
+// 為搜尋框加上框內右側的清除 ✕（有輸入才顯示）。做法是把輸入框包進一層
+// 相對定位的 .input-clear-wrap，✕ 絕對定位在其中；清除後補送一個 input 事件，
+// 讓各搜尋框既有的即時過濾邏輯（含 HTML 上的 oninput）照常被觸發。
+function attachInputClearButton(input) {
+    if (!input || input.dataset.clearBtnReady === '1') return;
+
+    const wrap = document.createElement('span');
+    wrap.className = 'input-clear-wrap';
+    if (input.id) wrap.dataset.for = input.id;
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'input-clear-btn';
+    btn.setAttribute('aria-label', '清除輸入');
+    btn.textContent = '✕';
+    wrap.appendChild(btn);
+
+    const sync = () => { btn.hidden = !input.value; };
+    input.addEventListener('input', sync);
+    btn.addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        sync();
+        input.focus();
+    });
+    sync();
+
+    input.dataset.clearBtnReady = '1';
+}
+
+// 全站搜尋框的清除鈕（#merchant-input 另有自己的 .merchant-clear-btn、
+// 新戶活動頁 promos 也已內建，故不在此列）
+function setupSearchClearButtons() {
+    [
+        'search-cards-input',      // 管理卡片
+        'search-owned-cards-input',// 我的信用卡
+        'search-payments-input',   // 行動支付
+        'cashback-search-input',   // 卡片詳情頁：指定通路回饋
+        'mappings-search'          // 我的配卡組合
+    ].forEach(id => attachInputClearButton(document.getElementById(id)));
+}
+
 // Setup event listeners
 function setupEventListeners() {
+    setupSearchClearButtons();
+
     // Input guide toggle
     const toggleGuideBtn = document.getElementById('toggle-input-guide');
     const inputGuide = document.getElementById('input-guide');
