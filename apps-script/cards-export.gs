@@ -468,6 +468,10 @@ function exportToJSON() {
     };
 
     // 選填欄位
+    // bank＝發卡行顯示名稱（側欄「加入比較的卡片」膠囊左半、分組用）。
+    // 沒有這一欄也不會壞：前端會退回用 id 前綴推導（js/home-ui.js
+    // CARD_BANK_BY_ID_PREFIX），但要改顯示字樣或新增發卡行時，建 bank 欄最省事。
+    addOptionalField(card, row, headers, 'bank');
     addOptionalField(card, row, headers, 'basicCashbackType');
     addOptionalField(card, row, headers, 'basicConditions');
     addOptionalField(card, row, headers, 'domesticBonusConditions');
