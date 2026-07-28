@@ -825,12 +825,34 @@ header h1 {
     justify-content: center;
 }
 
-/* 卡片清單下方的統計灰字（已選取 xx/nn 張信用卡） */
+/* 卡片清單上方的統計灰字（已選取 xx/nn 張信用卡）：
+   在「加入比較的卡片：」之下、卡片膠囊之上 */
 .card-chips-count {
-    margin-top: 8px;
-    text-align: center;
+    margin-bottom: 8px;
     font-size: 12px;
     color: #9ca3af;
+}
+
+/* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
+   .card-chip 原本的左右 padding 移到兩個半邊上，中間才不會有空隙。 */
+.card-chip.card-chip-split {
+    display: inline-flex;
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+}
+.card-chip-bank {
+    padding: 3px 6px;
+    font-weight: 700;
+    background: rgba(30, 64, 175, 0.1);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.card-chip-name {
+    padding: 3px 8px;
+    display: flex;
+    align-items: center;
 }
 
 .card-chip {
