@@ -488,12 +488,14 @@ function checkWatchlistConfig() {
   const cType = col('watch_type');
   const cCards = col('cards');
   const cActive = col('active');
+  const cBank = col('bank');
 
   // 問題分組收集，最後才排版——同一件事只講一次，訊息按類型聚合（47 列的清單也不會爆版）
   const notes = [];              // 提醒等級，不算問題
   const g = {
     bankKeepsCardId: [],         // watch_type=bank 但 card_id 還沒清空
     unknownCardId: [],           // card_id 不在 Cards Data（單卡列才報，多卡列併進上一組）
+    bankNoBank: [],              // 多卡頁但 bank 欄空著（通知信會認不出是誰）
     bankNoCards: [],             // 多卡頁但 cards 欄空著
     badWatchType: [],
     cardNoCardId: [],
@@ -545,6 +547,8 @@ function checkWatchlistConfig() {
       // 這時「card_id 不在 Cards Data」是同一件事，不要再報一次
       if (cardId) g.bankKeepsCardId.push({ row: rowNo, cardId: cardId, hasCards: cardsRaw.length > 0 });
       else if (cCards >= 0 && !cardsRaw.length) g.bankNoCards.push(rowNo);
+      // 多卡頁沒有 card_id，bank 就是通知信裡唯一能認人的欄位，空著等於信裡沒署名
+      if (cBank >= 0 && !String(row[cBank] || '').trim()) g.bankNoBank.push(rowNo);
     } else {
       if (type === 'card' && !cardId) g.cardNoCardId.push(rowNo);
       if (cardId && cardIds && cardIds.indexOf(cardId) < 0) g.unknownCardId.push({ row: rowNo, cardId: cardId });
@@ -567,7 +571,7 @@ function checkWatchlistConfig() {
   const rows = Math.max(0, data.length - 1);
   const blocks = [];
   const total = g.bankKeepsCardId.length + g.unknownCardId.length + g.bankNoCards.length +
-    g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
+    g.bankNoBank.length + g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
     g.dupUrl.length + g.badActive.length + g.noUrl.length;
 
   const block = function (title, lines) {
@@ -578,6 +582,8 @@ function checkWatchlistConfig() {
     g.bankKeepsCardId.map(function (x) {
       return '  第 ' + x.row + ' 列：card_id=' + x.cardId + (x.hasCards ? '（cards 已填好）' : '（cards 也還沒填）');
     }));
+  block('多卡頁（watch_type=bank）沒填 bank → 通知信只會顯示「一般消費/公告頁」，認不出是哪家，請補銀行名',
+    g.bankNoBank.map(function (r) { return '  第 ' + r + ' 列'; }));
   block('card_id 不在 Cards Data → 單卡頁請改成正式 id；若其實是多卡頁，watch_type 填 bank 並清空 card_id',
     g.unknownCardId.map(function (x) { return '  第 ' + x.row + ' 列：' + x.cardId; }));
   block('cards 欄的 id 不在 Cards Data → 打錯字，或該卡還沒建',

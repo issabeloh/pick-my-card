@@ -174,6 +174,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 選單「🤖 權益自動化 → 檢查監控清單（填法體檢）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
 
 - `watch_type=bank` 卻還留著 `card_id`（＝改到一半，最常見）
+- `watch_type=bank` 卻沒填 `bank`（多卡頁沒有 card_id，`bank` 是信裡唯一能認人的欄位；單卡列不報，免噪音）
 - `card_id` 填了但不在 Cards Data（單卡列才報；多卡列併進上一條，同一件事不講兩次）
 - `cards` 欄有不存在的 id
 - `watch_type` 填了 `card`/`bank` 以外的值／`watch_type=card` 卻沒填 `card_id`
