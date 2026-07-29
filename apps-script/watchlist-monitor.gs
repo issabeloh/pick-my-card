@@ -36,8 +36,8 @@
 
 /************** 設定區（可自行調整） **************/
 const MONITOR_CONFIG = {
-  watchlistSheet: 'Watchlist',
-  inboxSheet: '情報收件匣',
+  watchlistSheet: '1-監控清單',
+  inboxSheet: '2-變動通知',
   notifyEmail: '',   // 留空 = 寄給你自己（試算表登入帳號）
   // 關鍵字閘門：變動段落至少要含一個才算事件
   keywords: ['回饋', '加碼', '%', '％', '權益', '活動', '調整', '終止', '停止', '新戶', '上限', '登錄', '延長', '生效'],
