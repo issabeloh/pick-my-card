@@ -482,6 +482,17 @@ a {
   letter-spacing: 0.01em;
 }
 
+.promos-hero-intro {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--pmc-muted);
+}
+
+.promos-hero-intro + .promos-hero-intro {
+  margin-top: -4px;
+}
+
 /* ---------------- 卡片名稱搜尋框（2026-07-22）----------------
    抄自 styles.css .merchant-search-box / .merchant-input-wrap / .merchant-clear-btn
    的配方（白底、粗細框、聚焦藍光暈、自製清除 ✕ 鈕，關掉原生 search cancel），
@@ -1695,6 +1706,11 @@ a {
     margin-bottom: 4px;
   }
 
+  .promos-hero-intro {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
   .promos-controls {
     flex-direction: column;
     align-items: flex-start;
@@ -1932,3 +1948,89 @@ a {
   }
 }
 /* ═══ 光影區結束 ═══ */
+
+/* ═══ 申辦前 FAQ（活動列表下方，收合區塊，預設關閉）═══ */
+.promos-faq {
+  margin: 24px 4px 8px;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-lg);
+  padding: 4px 20px;
+}
+
+.promos-faq-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 16px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--pmc-ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.promos-faq-summary::-webkit-details-marker {
+  display: none;
+}
+
+.promos-faq-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pmc-muted);
+  font-size: 1.1rem;
+  transition: transform 0.25s ease;
+}
+
+.promos-faq-chevron::before {
+  content: '▾';
+}
+
+.promos-faq[open] .promos-faq-chevron {
+  transform: rotate(180deg);
+}
+
+.promos-faq-body {
+  padding: 0 0 18px;
+}
+
+.promos-faq-body h3 {
+  margin: 18px 0 6px;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--pmc-ink);
+}
+
+.promos-faq-body h3:first-child {
+  margin-top: 0;
+}
+
+.promos-faq-body p {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--pmc-muted);
+}
+
+@media (max-width: 640px) {
+  .promos-faq {
+    margin: 18px 4px 4px;
+    padding: 2px 14px;
+  }
+
+  .promos-faq-summary {
+    font-size: 0.98rem;
+    padding: 14px 0;
+  }
+
+  .promos-faq-body p {
+    font-size: 0.88rem;
+    line-height: 1.65;
+  }
+}
+/* ═══ 申辦前 FAQ 區結束 ═══ */
