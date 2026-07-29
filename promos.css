@@ -485,6 +485,10 @@ a {
 /* 淡底卡片引言（3 個 mockup 選項中站長選定的 Option 3）：跟白卡本體有區隔，
    但沒有邊框/引號那麼「裝飾」，用主站灰階頁面底色當淡底。 */
 .promos-hero-intro {
+  /* 行長上限（2026-07-29 排版修正）：桌機容器內寬約 1100px，不設限的話第二段會拉成
+     一行 75 個中文字（舒適閱讀約 35–40 字），視覺上像狀態列而不像文案。44em ≈ 40 字。
+     手機容器本來就比這窄，這條不會生效。 */
+  max-width: 44em;
   margin: 14px 0 4px;
   padding: 12px 16px;
   background: var(--pmc-page-bg-1);
@@ -496,6 +500,18 @@ a {
   font-size: 0.85rem;
   line-height: 1.7;
   color: var(--pmc-muted);
+  /* pretty＝避免最後一行只剩一兩個字的孤字（手機實測原本會掉出單獨一行「件。」）。
+     刻意不用 balance：中文沒有詞間空白，balance 為了兩行等長會硬切在詞中間
+     （實測切成「難的不／是找到活動」），比孤字更難讀。 */
+  text-wrap: pretty;
+}
+
+/* 第一句是整頁的主張、第二句是說明——給層次，不要兩段同樣大小同樣灰糊成一塊。 */
+.promos-hero-intro p:first-child {
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pmc-ink);
 }
 
 .promos-hero-intro p:last-child {
@@ -1722,6 +1738,11 @@ a {
   .promos-hero-intro p {
     font-size: 0.8rem;
     line-height: 1.6;
+  }
+
+  /* 領句手機版收斂一級：桌機的 0.95rem 在手機會逼近 h1（1.15rem），層次糊掉 */
+  .promos-hero-intro p:first-child {
+    font-size: 0.88rem;
   }
 
   .promos-controls {
