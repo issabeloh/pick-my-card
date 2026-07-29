@@ -74,6 +74,7 @@ function checkWatchlist() {
 
   const alerts = [];
   const errors = [];
+  const rebaselined = [];   // 基準快照落差懸殊、本次只重建不通知的列
   const now = new Date();
 
   for (let i = 1; i < data.length; i++) {
@@ -98,6 +99,17 @@ function checkWatchlist() {
       // 第一次抓這個網址：只存基準快照，不通知
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+      continue;
+    }
+
+    // 基準快照與本次落差懸殊（舊的不到新的 1/3）＝ 基準本身有問題，不是網頁真的改了。
+    // 常見成因：last_snapshot 是人工貼的片段、或該列從直接抓改走 Jina。
+    // 這種情況整頁都會被算成「新增」，AI 一定誤判成大量新活動 → 只重建基準、不通知。
+    if (oldText.length * 3 < text.length) {
+      sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+      rebaselined.push((row[cCard] || '(未填card_id)') + ' ' + url +
+        '（舊基準 ' + oldText.length + ' 字 → 本次 ' + text.length + ' 字）');
       continue;
     }
 
@@ -148,7 +160,7 @@ function checkWatchlist() {
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
   }
 
-  if (alerts.length || errors.length) sendDigest_(alerts, errors);
+  if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined);
 }
 
 /************** 抓網頁 → 只留人看得到的正文 **************/
@@ -308,7 +320,7 @@ function appendToInbox_(ss, info) {
 }
 
 /************** 寄彙總通知信 **************/
-function sendDigest_(alerts, errors) {
+function sendDigest_(alerts, errors, rebaselined) {
   const to = MONITOR_CONFIG.notifyEmail || Session.getActiveUser().getEmail();
   let body = '';
 
@@ -336,6 +348,13 @@ function sendDigest_(alerts, errors) {
     if (material.length) { body += '─── 🔴 實質回饋變動（優先看）───\n'; material.forEach(function (a) { body += render(a); }); }
     if (minor.length) { body += '─── ⚪ 其餘變動（版面/文案等，通常可略）───\n'; minor.forEach(function (a) { body += render(a); }); }
     body += '完整新舊內容請看試算表的「' + MONITOR_CONFIG.inboxSheet + '」分頁。\n\n';
+  }
+  if (rebaselined && rebaselined.length) {
+    body += '─── 🔧 已重建基準快照（本次不判讀變動）───\n' +
+            '這些列的舊基準與本次抓到的長度落差懸殊，代表舊基準本身有問題\n' +
+            '（常見：last_snapshot 是人工貼的片段，或該列從直接抓改走 Jina），\n' +
+            '整頁會被誤算成「大量新增」。本次已重建基準，下次起即可正常比對：\n' +
+            rebaselined.join('\n') + '\n\n';
   }
   if (errors.length) {
     body += '⚠ 以下網址抓取失敗（可能是動態網頁或擋機器人，見規劃書 §2.4）：\n' +
