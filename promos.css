@@ -482,6 +482,17 @@ a {
   letter-spacing: 0.01em;
 }
 
+.promos-hero-intro {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--pmc-muted);
+}
+
+.promos-hero-intro + .promos-hero-intro {
+  margin-top: -4px;
+}
+
 /* ---------------- 卡片名稱搜尋框（2026-07-22）----------------
    抄自 styles.css .merchant-search-box / .merchant-input-wrap / .merchant-clear-btn
    的配方（白底、粗細框、聚焦藍光暈、自製清除 ✕ 鈕，關掉原生 search cancel），
@@ -1693,6 +1704,11 @@ a {
   .promos-hero h1 {
     font-size: 1.15rem;
     margin-bottom: 4px;
+  }
+
+  .promos-hero-intro {
+    font-size: 0.9rem;
+    line-height: 1.6;
   }
 
   .promos-controls {

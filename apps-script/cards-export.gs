@@ -2073,6 +2073,8 @@ function pmcPageTemplate_(o) {
 '  </nav>\n' +
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
+'    <p class="promos-hero-intro">銀行的辦卡新戶活動，難的不是找到活動，而是搞懂條件。</p>\n' +
+'    <p class="promos-hero-intro">不用再開一堆分頁翻銀行公告了！這裡把每檔的新戶定義、達成條件與期限都攤開，幫你一頁比完多家銀行，還能一併查看卡片平常的回饋活動，辦到真正需要的信用卡。</p>\n' +
 '  </section>\n' +
 '\n' +
 // 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
