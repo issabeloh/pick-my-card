@@ -865,7 +865,8 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     return el;
 }
 
-// Map a promo type label (贈品 / 回饋加碼 / 定額抵用) to a CSS modifier
+// Map a promo type label (贈品 / 回饋加碼 / 定額回饋) to a CSS modifier
+// 定額抵用＝舊標籤，資料裡可能還有殘留，兩個都收
 function promoTypeClass(label) {
     if (label === '贈品' || label === '首刷禮') return 'gift';
     if (label === '回饋加碼') return 'bonus';

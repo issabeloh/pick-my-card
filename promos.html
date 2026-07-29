@@ -366,8 +366,8 @@
   <section class="promos-hero">
     <h1>信用卡新戶活動一覽</h1>
     <div class="promos-hero-intro">
-      <p>銀行的辦卡新戶活動，難的不是找到活動，而是搞懂條件。</p>
-      <p>不用再開一堆分頁翻銀行公告了！這裡把每檔的新戶定義、達成條件與期限都攤開，幫你一頁比完多家銀行，還能一併查看卡片平常的回饋活動，辦到真正需要的信用卡。</p>
+      <p>搞懂新戶辦卡的規則，不該是你的功課</p>
+      <p>不用再開一堆分頁翻看各家銀行網頁了！這裡把每檔活動的新戶定義、達成條件與期限都攤開，幫你一頁比完多家銀行，還能一併查看卡片平常的回饋活動，辦到真正需要的信用卡。</p>
     </div>
   </section>
 
@@ -386,7 +386,7 @@
 <button type="button" class="promo-chip is-active" data-filter="all">全部 (39)</button>
 <button type="button" class="promo-chip" data-filter="gift">首刷禮 (16)</button>
 <button type="button" class="promo-chip" data-filter="bonus">回饋加碼 (8)</button>
-<button type="button" class="promo-chip" data-filter="voucher">定額抵用 (17)</button>
+<button type="button" class="promo-chip" data-filter="voucher">定額回饋 (17)</button>
       </div>
     </div>
     <div class="promos-control-group">
@@ -1509,34 +1509,6 @@
   <!-- PROMOS:END -->
 
   <p class="promos-empty-state" id="promos-empty-state" hidden>目前沒有符合條件的活動，換個篩選試試？</p>
-
-  <details class="promos-faq">
-    <summary class="promos-faq-summary">申辦新的信用卡之前，先確認這幾件事<span class="promos-faq-chevron" aria-hidden="true"></span></summary>
-    <div class="promos-faq-body">
-      <h3>「新戶」的定義每家銀行不一樣</h3>
-      <p>最常見的是「核卡前 6 個月內未持有該行任一信用卡正卡」，但也有算 12 個月的，還有幾家是「從未持有這張卡」就算。辦之前先對一下自己的持卡紀錄，避免拿不到新戶禮。</p>
-
-      <h3>三種活動類型，拿到的新戶禮不同</h3>
-      <p><strong>首刷禮</strong>：實體贈品或好禮多選一。門檻通常最高，送達時間通常也最久。</p>
-      <p><strong>回饋加碼</strong>：指定期間內消費多拿一段百分比。適合在期間內有大筆消費的人。</p>
-      <p><strong>定額抵用</strong>：刷滿指定金額回饋固定刷卡金。門檻最低，入帳最快。</p>
-
-      <h3>「一般消費」通常不包含這些</h3>
-      <p>稅款、學費、罰鍰、水電瓦斯、電信費、預借現金、基金扣款、年費、悠遊卡自動加值。刷這些通常都累積不到門檻，是沒達標最常見的原因。</p>
-
-      <h3>幾乎每檔都要做的三件事</h3>
-      <p>申請電子帳單、設定帳戶自動扣繳、活動登錄。漏掉任何一項，即使消費條件達成了也拿不到。</p>
-
-      <h3>有些銀行還會多要求</h3>
-      <p>核卡後 30 天內登入指定 App、提交年收入通過門檻證明、期限內消費滿額或滿筆數，完全達成才能符合新戶活動資格。</p>
-
-      <h3>贈品不會馬上到</h3>
-      <p>首刷禮多半在達成條件後 2 到 4 個月才發簡訊通知兌換，刷卡金通常在達成條件後 1 到 3 個月入帳。收到兌換連結後也有期限，逾期視同放棄。</p>
-
-      <h3>一戶通常只能領一份</h3>
-      <p>同一家銀行的多檔新戶活動多半不能疊。同時申辦多張卡，也常以最早核卡的那張認定資格。</p>
-    </div>
-  </details>
 </main>
 <div class="promos-warning-row" role="note" aria-label="信用卡警語">謹慎理財、信用至上</div>
 </div>
@@ -1574,6 +1546,36 @@
     </div>
   </div>
 </div>
+
+<!-- 申辦前 FAQ：位置比照 index.html 的 .disclaimer-footer——白色框框外、社群 footer
+     之後、回到頂部鈕之前，收合態只是灰底上一行低調小字。 -->
+<details class="promos-faq">
+  <summary class="promos-faq-summary">申辦新的信用卡之前，先確認這幾件事<span class="promos-faq-chevron" aria-hidden="true"></span></summary>
+  <div class="promos-faq-body">
+    <h3>「新戶」的定義每家銀行不一樣</h3>
+    <p>最常見的是「核卡前 6 個月內未持有該行任一信用卡正卡」，但也有算 12 個月的，還有幾家是「從未持有這張卡」就算。辦之前先對一下自己的持卡紀錄，避免拿不到新戶禮。</p>
+
+    <h3>三種活動類型，拿到的新戶禮不同</h3>
+    <p><strong>首刷禮</strong>：實體贈品或好禮多選一。門檻通常最高，送達時間通常也最久。</p>
+    <p><strong>回饋加碼</strong>：指定期間內消費多拿一段百分比。適合在期間內有大筆消費的人。</p>
+    <p><strong>定額回饋</strong>：刷滿指定金額回饋固定刷卡金。門檻最低，入帳最快。</p>
+
+    <h3>「一般消費」通常不包含這些</h3>
+    <p>稅款、學費、罰鍰、水電瓦斯、電信費、預借現金、基金扣款、年費、悠遊卡自動加值。刷這些通常都累積不到門檻，是沒達標最常見的原因。</p>
+
+    <h3>幾乎每檔都要做的三件事</h3>
+    <p>申請電子帳單、設定帳戶自動扣繳、活動登錄。漏掉任何一項，即使消費條件達成了也拿不到。</p>
+
+    <h3>有些銀行還會多要求</h3>
+    <p>核卡後 30 天內登入指定 App、提交年收入通過門檻證明、期限內消費滿額或滿筆數，完全達成才能符合新戶活動資格。</p>
+
+    <h3>贈品不會馬上到</h3>
+    <p>首刷禮多半在達成條件後 2 到 4 個月才發簡訊通知兌換，刷卡金通常在達成條件後 1 到 3 個月入帳。收到兌換連結後也有期限，逾期視同放棄。</p>
+
+    <h3>一戶通常只能領一份</h3>
+    <p>同一家銀行的多檔新戶活動多半不能疊。同時申辦多張卡，也常以最早核卡的那張認定資格。</p>
+  </div>
+</details>
 
 <button id="promos-back-to-top-btn" class="promos-back-to-top-btn" title="回到頂部" aria-label="回到頂部">
   <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
