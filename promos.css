@@ -25,6 +25,8 @@
   --pmc-page-bg-2: #b0b2b8;
   --pmc-warn-bg: #1f2937;
   --pmc-border: #e5e7eb;
+  /* 白卡上的極淺填色（hero 引言塊）：比 --pmc-page-bg-1 淺一階，只求跟純白有區隔 */
+  --pmc-tint: #f5f6f8;
   --pmc-chip-border: #7dd3fc;
   --pmc-chip-text: #0369a1;
   --pmc-chip-hover-bg: #f0f9ff;
@@ -491,7 +493,7 @@ a {
   max-width: 44em;
   margin: 14px 0 4px;
   padding: 12px 16px;
-  background: var(--pmc-page-bg-1);
+  background: var(--pmc-tint);
   border-radius: 10px;
 }
 
@@ -1982,19 +1984,20 @@ a {
 }
 /* ═══ 光影區結束 ═══ */
 
-/* ═══ 申辦前 FAQ（活動列表下方，收合區塊，預設關閉）═══ */
+/* ═══ 申辦前 FAQ（白色框框外、社群 footer 之後，收合區塊，預設關閉）═══
+   位置與外框比照 styles.css .disclaimer-footer：置中、無底色、直接坐在頁面灰底上，
+   收合態就只是一行低調小字（2026-07-29 從 .promos-main 內搬出來）。 */
 .promos-faq {
-  margin: 24px 4px 8px;
-  background: var(--pmc-white);
-  border: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-lg);
-  padding: 12px 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 24px 24px;
+  text-align: center;
 }
 
 /* 摘要鈕刻意低調（站長回饋：這個區塊不那麼重要，不該比活動列表本身顯眼）——
    配方抄自 styles.css .disclaimer-toggle（主站「使用須知與免責聲明」摺疊鈕）：
    透明底、小巧 inline-flex 藥丸、hover 才有淺底。差異只有兩處：disclaimer-toggle
-   活在深色 footer 上用半透明白字，這裡是白卡淺底所以改半透明黑字；字級也比
+   用半透明白字（主站那行在灰底上幾乎看不見），這裡改半透明黑字；字級也比
    11px 基準稍微加大到 13px（站長要求「比目前明顯但保持低調」）。 */
 .promos-faq-summary {
   cursor: pointer;
@@ -2031,8 +2034,15 @@ a {
   transform: rotate(180deg);
 }
 
+/* 展開後的內容面板：比照 styles.css .disclaimer-content-wrapper（圓角面板、左對齊、
+   跟上方摘要鈕留一段距離）。底色不能照抄主站的 rgba(255,255,255,0.1)——那是配深色
+   白字用的；這裡文字是深色，需要一塊夠亮的底才讀得動，所以用近乎不透明的白。 */
 .promos-faq-body {
-  padding: 8px 12px 14px;
+  margin-top: 12px;
+  padding: 16px 20px 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 8px;
+  text-align: left;
 }
 
 .promos-faq-body h3 {
@@ -2055,13 +2065,17 @@ a {
 
 @media (max-width: 640px) {
   .promos-faq {
-    margin: 18px 4px 4px;
-    padding: 8px 14px;
+    margin: 14px auto;
+    padding: 0 12px 18px;
   }
 
   .promos-faq-summary {
     font-size: 12px;
     padding: 6px 10px;
+  }
+
+  .promos-faq-body {
+    padding: 14px 14px 16px;
   }
 
   .promos-faq-body p {
