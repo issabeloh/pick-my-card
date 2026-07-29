@@ -482,15 +482,24 @@ a {
   letter-spacing: 0.01em;
 }
 
+/* 淡底卡片引言（3 個 mockup 選項中站長選定的 Option 3）：跟白卡本體有區隔，
+   但沒有邊框/引號那麼「裝飾」，用主站灰階頁面底色當淡底。 */
 .promos-hero-intro {
-  margin: 0 0 10px;
-  font-size: 0.95rem;
+  margin: 14px 0 4px;
+  padding: 12px 16px;
+  background: var(--pmc-page-bg-1);
+  border-radius: 10px;
+}
+
+.promos-hero-intro p {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
   line-height: 1.7;
   color: var(--pmc-muted);
 }
 
-.promos-hero-intro + .promos-hero-intro {
-  margin-top: -4px;
+.promos-hero-intro p:last-child {
+  margin-bottom: 0;
 }
 
 /* ---------------- 卡片名稱搜尋框（2026-07-22）----------------
@@ -1707,7 +1716,11 @@ a {
   }
 
   .promos-hero-intro {
-    font-size: 0.9rem;
+    padding: 10px 12px;
+  }
+
+  .promos-hero-intro p {
+    font-size: 0.8rem;
     line-height: 1.6;
   }
 
