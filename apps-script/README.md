@@ -173,15 +173,17 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 
 選單「🤖 權益自動化 → 檢查監控清單（填法體檢）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
 
-- `card_id` 填了但不在 Cards Data（＝還是舊的頁級標籤，或打錯字）
-- `watch_type` 填了 `card`/`bank` 以外的值
-- `watch_type=bank` 卻還留著 `card_id`／`watch_type=card` 卻沒填 `card_id`
+- `watch_type=bank` 卻還留著 `card_id`（＝改到一半，最常見）
+- `card_id` 填了但不在 Cards Data（單卡列才報；多卡列併進上一條，同一件事不講兩次）
 - `cards` 欄有不存在的 id
+- `watch_type` 填了 `card`/`bank` 以外的值／`watch_type=card` 卻沒填 `card_id`
 - 同一個 url 出現在兩列
 - `active` 不是 `TRUE`/`FALSE`
-- 表格還沒有 `cards` 欄、或讀不到 Cards Data（會提醒，但不擋，其餘檢查照跑）
+- 沒填 url 的列
+- （可選提醒）多卡頁還沒填 `cards`——不影響監控與通知，只影響解析階段的卡片線索
+- （提醒）表格還沒有 `cards` 欄、或讀不到 Cards Data：不擋，其餘檢查照跑
 
-表格改完先跑這個，比等下一次監控寄信才發現快。
+**輸出是按類型分組的**（`【問題類型】N 列` ＋ 該類型的列號清單），不是一列一條——47 列的清單也不會被視窗長度截掉。表格改完先跑這個，比等下一次監控寄信才發現快。
 
 ### 日常操作
 

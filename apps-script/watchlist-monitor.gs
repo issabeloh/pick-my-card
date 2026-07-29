@@ -489,16 +489,29 @@ function checkWatchlistConfig() {
   const cCards = col('cards');
   const cActive = col('active');
 
-  const issues = [];
-  if (cUrl < 0) issues.push('表頭缺少 url 欄（監控根本跑不起來）');
-  if (cCards < 0) issues.push('（提醒）還沒有 cards 欄——多卡頁的候選卡片會傳不到解析階段，建議加一欄，表頭小寫 cards');
+  // 問題分組收集，最後才排版——同一件事只講一次，訊息按類型聚合（47 列的清單也不會爆版）
+  const notes = [];              // 提醒等級，不算問題
+  const g = {
+    bankKeepsCardId: [],         // watch_type=bank 但 card_id 還沒清空
+    unknownCardId: [],           // card_id 不在 Cards Data（單卡列才報，多卡列併進上一組）
+    bankNoCards: [],             // 多卡頁但 cards 欄空著
+    badWatchType: [],
+    cardNoCardId: [],
+    unknownCards: [],
+    dupUrl: [],
+    badActive: [],
+    noUrl: []
+  };
+
+  if (cUrl < 0) notes.push('⚠ 表頭缺少 url 欄——監控根本跑不起來，先補表頭');
+  if (cCards < 0) notes.push('ℹ 還沒有 cards 欄：多卡頁的候選卡片傳不到解析階段。建議插一欄，第 1 列打小寫 cards');
 
   // Cards Data 讀不到就跳過「id 存不存在」這類檢查，其餘照驗
   let cardIds = null;
   try {
     if (typeof getCardIds_ === 'function') cardIds = getCardIds_();
   } catch (e) {
-    issues.push('（提醒）讀不到 Cards Data，這次略過「id 是否存在」的檢查：' + e.message);
+    notes.push('ℹ 讀不到 Cards Data，這次略過「id 是否存在」的檢查：' + e.message);
   }
 
   const seenUrl = {};
@@ -510,60 +523,88 @@ function checkWatchlistConfig() {
     if (!url && blankRow) continue;   // 整列空白＝略過
 
     if (!url) {
-      issues.push('第 ' + rowNo + ' 列：沒填 url，這一列不會被監控');
+      g.noUrl.push(rowNo);
       continue;
     }
     const urlKey = url.toLowerCase();
     if (seenUrl[urlKey]) {
-      issues.push('第 ' + rowNo + ' 列：url 與第 ' + seenUrl[urlKey] + ' 列重複（同一頁會抓兩次、同一變動寄兩封信）→ ' + url);
+      g.dupUrl.push({ row: rowNo, first: seenUrl[urlKey], url: url });
     } else {
       seenUrl[urlKey] = rowNo;
     }
 
     const cardId = cCard >= 0 ? String(row[cCard] || '').trim() : '';
-    if (cardId && cardIds && cardIds.indexOf(cardId) < 0) {
-      issues.push('第 ' + rowNo + ' 列：card_id「' + cardId + '」不在 Cards Data。' +
-        '若這是多卡頁請清空 card_id、watch_type 填 bank、涵蓋的卡片改填 cards 欄；' +
-        '若是單卡頁請改成正式 id');
+    const cardsRaw = cCards >= 0 ? splitList_(row[cCards]) : [];
+    const rawType = cType >= 0 ? String(row[cType] || '').trim() : '';
+    const type = rawType.toLowerCase();
+    const knownType = (type === 'card' || type === 'bank');
+    if (rawType && !knownType) g.badWatchType.push({ row: rowNo, raw: rawType });
+
+    if (type === 'bank') {
+      // 多卡頁：card_id 本來就該是空的。還留著＝步驟 3 只做一半，
+      // 這時「card_id 不在 Cards Data」是同一件事，不要再報一次
+      if (cardId) g.bankKeepsCardId.push({ row: rowNo, cardId: cardId, hasCards: cardsRaw.length > 0 });
+      else if (cCards >= 0 && !cardsRaw.length) g.bankNoCards.push(rowNo);
+    } else {
+      if (type === 'card' && !cardId) g.cardNoCardId.push(rowNo);
+      if (cardId && cardIds && cardIds.indexOf(cardId) < 0) g.unknownCardId.push({ row: rowNo, cardId: cardId });
     }
 
-    if (cType >= 0) {
-      const rawType = String(row[cType] || '').trim();
-      const type = rawType.toLowerCase();
-      if (rawType && type !== 'card' && type !== 'bank') {
-        issues.push('第 ' + rowNo + ' 列：watch_type「' + rawType + '」不合法，只能填 card 或 bank（留空＝自動推斷）');
-      }
-      if (type === 'bank' && cardId) {
-        issues.push('第 ' + rowNo + ' 列：watch_type=bank 卻還留著 card_id「' + cardId + '」→ 請清空 card_id，改填 cards 欄');
-      }
-      if (type === 'card' && !cardId) {
-        issues.push('第 ' + rowNo + ' 列：watch_type=card 卻沒填 card_id');
-      }
-    }
-
-    if (cCards >= 0 && cardIds) {
-      splitList_(row[cCards]).forEach(function (id) {
-        if (cardIds.indexOf(id) < 0) {
-          issues.push('第 ' + rowNo + ' 列：cards 欄的「' + id + '」不在 Cards Data（打錯字或該卡還沒建）');
-        }
+    if (cardIds) {
+      cardsRaw.forEach(function (id) {
+        if (cardIds.indexOf(id) < 0) g.unknownCards.push({ row: rowNo, id: id });
       });
     }
 
     if (cActive >= 0) {
       const active = String(row[cActive] || '').trim().toUpperCase();
       if (active && active !== 'TRUE' && active !== 'FALSE') {
-        issues.push('第 ' + rowNo + ' 列：active「' + String(row[cActive]).trim() + '」不是 TRUE/FALSE（只有 FALSE 會停用，其餘一律照抓）');
+        g.badActive.push({ row: rowNo, raw: String(row[cActive]).trim() });
       }
     }
   }
 
   const rows = Math.max(0, data.length - 1);
-  if (!issues.length) {
+  const blocks = [];
+  const total = g.bankKeepsCardId.length + g.unknownCardId.length + g.bankNoCards.length +
+    g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
+    g.dupUrl.length + g.badActive.length + g.noUrl.length;
+
+  const block = function (title, lines) {
+    if (lines.length) blocks.push('【' + title + '】' + lines.length + ' 列\n' + lines.join('\n'));
+  };
+
+  block('watch_type=bank 但 card_id 還沒清空 → 把這幾列的 card_id 整格刪掉，改填 cards 欄',
+    g.bankKeepsCardId.map(function (x) {
+      return '  第 ' + x.row + ' 列：card_id=' + x.cardId + (x.hasCards ? '（cards 已填好）' : '（cards 也還沒填）');
+    }));
+  block('card_id 不在 Cards Data → 單卡頁請改成正式 id；若其實是多卡頁，watch_type 填 bank 並清空 card_id',
+    g.unknownCardId.map(function (x) { return '  第 ' + x.row + ' 列：' + x.cardId; }));
+  block('cards 欄的 id 不在 Cards Data → 打錯字，或該卡還沒建',
+    g.unknownCards.map(function (x) { return '  第 ' + x.row + ' 列：' + x.id; }));
+  block('watch_type 值不合法（只能 card / bank，留空＝自動推斷）',
+    g.badWatchType.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('watch_type=card 卻沒填 card_id',
+    g.cardNoCardId.map(function (r) { return '  第 ' + r + ' 列'; }));
+  block('url 重複 → 同一頁會抓兩次、同一變動寄兩封信，刪掉其中一列',
+    g.dupUrl.map(function (x) { return '  第 ' + x.row + ' 列 ＝ 第 ' + x.first + ' 列：' + x.url; }));
+  block('active 不是 TRUE/FALSE（只有 FALSE 會停用，其餘一律照抓）',
+    g.badActive.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('沒填 url，這一列不會被監控',
+    g.noUrl.map(function (r) { return '  第 ' + r + ' 列'; }));
+  // 這一組不擋監控，只影響解析階段的卡片線索，放最後
+  block('（可選）多卡頁還沒填 cards → 監控與通知都正常，只是解析階段少了卡片線索',
+    g.bankNoCards.map(function (r) { return '  第 ' + r + ' 列'; }));
+
+  if (!total && !notes.length) {
     ui.alert('檢查監控清單', '✅ ' + rows + ' 列都沒問題', ui.ButtonSet.OK);
     return;
   }
-  let msg = '檢查了 ' + rows + ' 列，找到 ' + issues.length + ' 個問題：\n\n' + issues.join('\n');
-  if (msg.length > 2000) msg = msg.slice(0, 2000) + '\n…（還有更多，修完再跑一次）';
+
+  let msg = '檢查了 ' + rows + ' 列' + (total ? '，找到 ' + total + ' 個問題' : '，沒有問題') + '\n';
+  if (notes.length) msg += '\n' + notes.join('\n') + '\n';
+  if (blocks.length) msg += '\n' + blocks.join('\n\n');
+  if (msg.length > 8000) msg = msg.slice(0, 8000) + '\n…（訊息過長已截斷，修完上面幾組再跑一次）';
   ui.alert('檢查監控清單', msg, ui.ButtonSet.OK);
 }
 
