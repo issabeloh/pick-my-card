@@ -143,6 +143,24 @@ function parsePastedText() {
   SpreadsheetApp.getActiveSpreadsheet().toast(msg, '解析完成', 8);
 }
 
+/************** 卡片提示：真 ID 與「銀行層級頁」標記要給 AI 不同指示 **************/
+// 監控清單裡有些列監控的是銀行層級的一般公告頁，card_id 填的是 febank-basic、kgi-basic
+// 這種**不是真的卡片 ID**。若照樣說「這段文字屬於 febank-basic」，AI 在 enum 裡找不到，
+// 只能硬猜一張，容易把整頁活動全掛到同一張卡上。所以要改成「這頁可能涵蓋多張卡」的說法。
+function buildCardHintLine_(cardHint, cardIds) {
+  const hint = String(cardHint || '').trim();
+  if (!hint) return '';
+  if (cardIds.indexOf(hint) >= 0) {
+    return '\n卡片提示：這段文字很可能屬於「' + hint + '」。';
+  }
+  const prefix = hint.split('-')[0];
+  const sameBank = cardIds.filter(function (id) { return id.split('-')[0] === prefix; });
+  return '\n卡片提示：這是銀行層級的頁面（來源標記「' + hint + '」，不是卡片 ID），' +
+    '同一頁可能涵蓋多張卡：請依每個活動的內文各自判斷屬於哪張卡，不要全部歸給同一張；' +
+    '判斷不出來就 needs_review 填 true 並在 review_question 寫明。' +
+    (sameBank.length ? '該行可選的卡片 ID：' + sameBank.join('、') + '。' : '');
+}
+
 /************** 核心：呼叫 Gemini，回傳結構化的活動陣列 **************/
 function extractNewPromos_(rawText, cardHint) {
   const cardIds = getCardIds_();
@@ -181,7 +199,7 @@ function extractNewPromos_(rawText, cardHint) {
     '  gift_content="TRAVEL FOX 25吋上掀式行李箱(最新雙開款)"',
     '  notes="限於2026/10/15前核卡始符合活動資格；無法與本行其他新戶刷卡禮活動同時參與，亦不適用其他通路、辦卡平台之新戶首刷禮活動"',
     '（注意：①用精簡寫法「N筆X元(含)以上的一般消費」而非「N筆一般消費且每筆滿X」；三個任務在 promo_condition 逐點列出、notes 不再重複；notes 沒有收「喪失資格/銀行保留權利」那類樣板；所有欄位無句號；編號連續①②③）',
-    cardHint ? '\n卡片提示：這段文字很可能屬於「' + cardHint + '」。' : ''
+    buildCardHintLine_(cardHint, cardIds)
   ].join('\n');
 
   const schema = {

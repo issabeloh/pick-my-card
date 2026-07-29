@@ -113,6 +113,19 @@ function checkWatchlist() {
       continue;
     }
 
+    // 反方向的落差（本次不到舊基準的 1/3）＝ 這次多半沒抓好（渲染失敗、被擋、只回骨架），
+    // 不是整頁活動真的下架。這種要當成錯誤回報，而且**絕對不能覆寫 last_snapshot**——
+    // 一旦覆寫，好的基準就沒了，下一次會再誤報一次「大量新增」。
+    // 若確認是網頁真的整頁改版，人工把該列 last_snapshot 清空即可重建基準。
+    if (oldText.length >= 300 && text.length * 3 < oldText.length) {
+      errors.push((row[cCard] || '(未填card_id)') + ' ' + url +
+        '：這次只抓到 ' + text.length + ' 字（舊基準 ' + oldText.length +
+        ' 字），疑似抓取失敗，已略過並保留原基準。請人工開網頁確認；' +
+        '若確實整頁改版，請把該列 last_snapshot 清空後重跑');
+      if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+      continue;
+    }
+
     // 這一列專用的關鍵字與雜訊門檻：欄位有填就覆蓋全域設定，留空用 MONITOR_CONFIG
     let rowKeywords = MONITOR_CONFIG.keywords;
     if (cKeywords >= 0) {
@@ -230,19 +243,54 @@ function fetchViaJina_(url) {
   if (code >= 400) throw new Error('Jina HTTP ' + code);
 
   const text = res.getContentText().replace(/\s+/g, ' ').trim();
-  if (text.length < 100) {
-    throw new Error('Jina 抓到的正文太短（' + text.length + ' 字），這一頁可能整頁都是圖片');
+
+  // Jina 有一種「假成功」：HTTP 200，但正文渲染失敗，只回一段標頭
+  //   Title: … URL Source: … Published Time: … Markdown Content: undefined
+  // 這串超過 100 字，會騙過長度檢查、被當成「整頁活動都消失」寫回 last_snapshot，
+  // 下一次再變成「大量新增」。所以要先剝掉標頭、只看真正的內文長度。
+  const body = jinaBodyOnly_(text);
+  if (body === 'undefined' || body.length < 100) {
+    throw new Error('Jina 回傳空殼（內文只有 ' + body.length + ' 字：「' +
+      body.slice(0, 40) + '」），這一頁渲染失敗。請稍後重跑，或把該列 fetch_via 改回 direct');
   }
   return text;
 }
 
+// 剝掉 Jina Reader 的固定標頭（Title / URL Source / Published Time / Markdown Content:），只留內文
+function jinaBodyOnly_(text) {
+  const m = text.match(/Markdown Content:\s*([\s\S]*)$/);
+  if (m) return m[1].trim();
+  return text.replace(/^Title:\s*[\s\S]*?URL Source:\s*\S+\s*/, '').trim();
+}
+
 /************** 比對新舊：回傳「新增的句子」與「消失的句子」 **************/
 function diffSegments_(oldText, newText) {
+  const MAX_SEG = 160;
   const split = function (t) {
-    return t
-      .split(/(?<=[。！？!?；;])|\n/)
-      .map(function (s) { return s.trim(); })
-      .filter(function (s) { return s.length >= 8; });
+    const out = [];
+    t.split(/(?<=[。！？!?；;])|\n/).forEach(function (s) {
+      s = s.trim();
+      if (!s) return;
+      if (s.length <= MAX_SEG) {
+        if (s.length >= 8) out.push(s);
+        return;
+      }
+      // 標點稀疏的頁面（表格、Notion 匯出的活動列表）整頁只有寥寥幾個句號，
+      // 不再切的話全頁會變成一個大段落 → 動一個字就整頁算「換掉」，AI 只能回「整頁改版」。
+      // 先用次級標點切，還是太長就沿空白切成小塊，讓變動能定位到局部。
+      s.split(/(?<=[，,、：:）)】」])/).forEach(function (p) {
+        p = p.trim();
+        while (p.length > MAX_SEG) {
+          let cut = p.lastIndexOf(' ', MAX_SEG);
+          if (cut < 40) cut = MAX_SEG;
+          const head = p.slice(0, cut).trim();
+          if (head.length >= 8) out.push(head);
+          p = p.slice(cut).trim();
+        }
+        if (p.length >= 8) out.push(p);
+      });
+    });
+    return out;
   };
   const oldSet = new Set(split(oldText));
   const newSet = new Set(split(newText));
