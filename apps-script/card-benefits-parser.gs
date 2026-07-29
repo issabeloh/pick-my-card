@@ -14,18 +14,18 @@
  *   - 固定槽位 14/21/22（廣告/國內/國外）：程式依卡片基本欄位「自動生成固定模板」
  *
  * 使用方式：
- *   1. 選單「🤖 權益自動化 → 解析新卡（主要活動）」，第一次會建「新卡解析輸入」分頁
+ *   1. 選單「🤖 權益自動化 → 解析新卡（主要活動）」，第一次會建「3-貼上原文（新卡）」分頁
  *   2. 官網權益頁文字貼 A2；id 提示貼 B2（選填）；網址貼 C2（選填）；
  *      一般消費/排除說明頁文字貼 D2（選填，但沒貼時廣告排除只能靠權益頁本身判斷）
- *   3. 再執行一次 → 產出「待審核-新卡基本」與「待審核-新卡組別」
+ *   3. 再執行一次 → 產出「4-待審核（新卡-基本）」與「4-待審核（新卡-組別）」
  *   4. 審：黃底＝AI 沒把握或 cashbackModel 需你手填；對照 evidence 欄驗證，不必回官網
  */
 
 /************** 設定區 **************/
 const CARD_PARSER_CONFIG = {
-  inputSheet: '新卡解析輸入',
-  basicReviewSheet: '待審核-新卡基本',
-  groupReviewSheet: '待審核-新卡組別',
+  inputSheet: '3-貼上原文（新卡）',
+  basicReviewSheet: '4-待審核（新卡-基本）',
+  groupReviewSheet: '4-待審核（新卡-組別）',
   maxTextChars: 40000
 };
 
@@ -38,7 +38,7 @@ const CARD_TAG_ENUM = [
   '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費'
 ];
 
-// 待審核-新卡基本 的固定欄位（＝ Cards Data 固定欄位順序；levelSettings 留空手動）
+// 4-待審核（新卡-基本）的固定欄位（＝ Cards Data 固定欄位順序；levelSettings 留空手動）
 const CARD_BASIC_FIELDS = [
   'id', 'name', 'fullName', 'basicCashback', 'basicCashbackType', 'pointsExpiry',
   'basicConditions', 'annualFee', 'feeWaiver', 'website', 'tags', 'hasLevels',
@@ -145,7 +145,7 @@ function extractCard_(rawText, idHint, generalText) {
     '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
     '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
     '',
-    readKeywordAnchors_(),   // 【關鍵字對應】——從「解析關鍵字對應」分頁動態載入，站長可自行維護
+    readKeywordAnchors_(),   // 【關鍵字對應】——從「設定-關鍵字對應」分頁動態載入，站長可自行維護
     '',
     '【每個物件都要】evidence（見總則 D）；needs_review：不確定就 true 並把問題寫進 review_question。'
   ].join('\n');
@@ -265,10 +265,10 @@ const KEYWORD_ANCHOR_SEEDS = [
   ['domesticBonusRate', '國內加碼 n%', '']
 ];
 
-// 從「解析關鍵字對應」分頁讀關鍵字錨點，組成 prompt 片段；分頁不存在就自動建（含種子）讓站長維護
+// 從「設定-關鍵字對應」分頁讀關鍵字錨點，組成 prompt 片段；分頁不存在就自動建（含種子）讓站長維護
 function readKeywordAnchors_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const name = '解析關鍵字對應';
+  const name = '設定-關鍵字對應';
   let sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
@@ -307,7 +307,7 @@ function deriveGroupModel_(g) {
   }
 }
 
-/************** 寫「待審核-新卡基本」 **************/
+/************** 寫「4-待審核（新卡-基本）」 **************/
 function writeBasicReview_(basic, link, idCollision) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(CARD_PARSER_CONFIG.basicReviewSheet);
@@ -348,7 +348,7 @@ function writeBasicReview_(basic, link, idCollision) {
   }
 }
 
-/************** 寫「待審核-新卡組別」：一般組別 + 固定槽位 14/21/22。回傳固定槽位數 **************/
+/************** 寫「4-待審核（新卡-組別）」：一般組別 + 固定槽位 14/21/22。回傳固定槽位數 **************/
 function writeGroupReview_(cardId, groups, basic) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(CARD_PARSER_CONFIG.groupReviewSheet);
@@ -442,7 +442,7 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
 /************** Q1：每月批次查「一般消費是否排除廣告」（Gemini + Google 搜尋 grounding） **************/
 // grounding 開了就不能同時用結構化輸出，故回純文字自行解析；結果一律 needs_review（附來源，你複核）
 // 一次處理有上限（避免 Apps Script 6 分鐘上限），已查過的卡會跳過，再跑一次會接續剩下的
-const AD_CHECK_CONFIG = { sheet: '廣告排除檢查', perRun: 12 };
+const AD_CHECK_CONFIG = { sheet: '報告-廣告排除', perRun: 12 };
 
 // 廣告排除是「銀行層級」政策，以銀行為單位查（不是每張卡），銀行＝卡片 id 的連字號前綴
 function checkAdExclusionsForAllCards() {
