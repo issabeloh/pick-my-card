@@ -270,12 +270,15 @@ basicCashbackDiv.innerHTML = basicContent;
                             ${monthOptions}
                         </select>
                     </div>
-                    <div style="font-size: 11px; color: #6b7280;">設定後本活動將僅於生日月份顯示於搜尋結果中</div>
+                    <!-- 「慶生月」方案活動 用 nowrap 包成一個單位：這欄桌機只有約 199px
+                         （三欄格線），不鎖的話會斷在「慶生／月」把方案名切兩半，或讓尾行
+                         只剩「活動」兩字。鎖住後斷行落在「…配對／「慶生月」方案活動」 -->
+                    <div style="font-size: 11px; color: #6b7280;">設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
                 </div>
             ` : `
                 <div>
                     <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
-                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">登入並設定後本活動將僅於生日月份顯示於搜尋結果中</div>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">登入並設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
                 </div>
             `;
 
