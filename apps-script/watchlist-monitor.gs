@@ -570,9 +570,12 @@ function checkWatchlistConfig() {
 
   const rows = Math.max(0, data.length - 1);
   const blocks = [];
-  const total = g.bankKeepsCardId.length + g.unknownCardId.length + g.bankNoCards.length +
+  // 「該修的問題」與「可選提醒」分開算——bankNoCards 不擋監控也不影響通知信，
+  // 混進問題總數會讓人以為有 17 件事要做，其實只有 1 件
+  const total = g.bankKeepsCardId.length + g.unknownCardId.length +
     g.bankNoBank.length + g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
     g.dupUrl.length + g.badActive.length + g.noUrl.length;
+  const optional = g.bankNoCards.length;
 
   const block = function (title, lines) {
     if (lines.length) blocks.push('【' + title + '】' + lines.length + ' 列\n' + lines.join('\n'));
@@ -598,16 +601,18 @@ function checkWatchlistConfig() {
     g.badActive.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
   block('沒填 url，這一列不會被監控',
     g.noUrl.map(function (r) { return '  第 ' + r + ' 列'; }));
-  // 這一組不擋監控，只影響解析階段的卡片線索，放最後
-  block('（可選）多卡頁還沒填 cards → 監控與通知都正常，只是解析階段少了卡片線索',
+  // 這一組不擋監控，只影響解析階段的卡片線索，放最後、也不計入問題數
+  block('可選提醒：多卡頁還沒填 cards → 監控與通知都正常，只是解析階段少了卡片線索',
     g.bankNoCards.map(function (r) { return '  第 ' + r + ' 列'; }));
 
-  if (!total && !notes.length) {
+  if (!total && !optional && !notes.length) {
     ui.alert('檢查監控清單', '✅ ' + rows + ' 列都沒問題', ui.ButtonSet.OK);
     return;
   }
 
-  let msg = '檢查了 ' + rows + ' 列' + (total ? '，找到 ' + total + ' 個問題' : '，沒有問題') + '\n';
+  let msg = '檢查了 ' + rows + ' 列，' +
+    (total ? '找到 ' + total + ' 個要修的問題' : '沒有要修的問題 ✅') +
+    (optional ? '（另有 ' + optional + ' 條可選提醒，不影響監控與通知）' : '') + '\n';
   if (notes.length) msg += '\n' + notes.join('\n') + '\n';
   if (blocks.length) msg += '\n' + blocks.join('\n\n');
   if (msg.length > 8000) msg = msg.slice(0, 8000) + '\n…（訊息過長已截斷，修完上面幾組再跑一次）';
