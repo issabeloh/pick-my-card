@@ -340,13 +340,29 @@ function diffSegments_(oldText, newText) {
     });
     return out;
   };
-  const oldSet = new Set(split(oldText));
-  const newSet = new Set(split(newText));
+  // 比對用的鍵：把空白全部拿掉。銀行改個 HTML 標籤就會讓同一句多／少一個空格
+  // （實例：「中薯券一張 <活動詳情>」→「中薯券一張<活動詳情>」），內容一字未變卻被
+  // 算成一增一減、觸發通知，AI 只能回「純版面調整」。fetchDirect_ 的 \s+→' ' 只能
+  // 統一空白「種類」，管不到空格「有無」，所以要在比對層擋掉這一類雜訊。
+  // 顯示仍用原文（Map 存 鍵→第一次出現的原文），信裡看到的還是實際句子。
+  // 兩個已知取捨：① 英文單字間的空白也會被忽略（LINE Bank／LINEBank 視為同句）；
+  // ② 上面 8 字門檻量的是含空白長度，所以 6~8 字的極短段落若空格數變了仍可能出現幽靈差異
+  //    ——實際頁面的段落遠長於 8 字，不為這個角落改動上面那段切法。
+  const indexByKey = function (segs) {
+    const map = new Map();
+    segs.forEach(function (s) {
+      const k = s.replace(/\s+/g, '');
+      if (!map.has(k)) map.set(k, s);
+    });
+    return map;
+  };
+  const oldMap = indexByKey(split(oldText));
+  const newMap = indexByKey(split(newText));
 
   const added = [];
-  newSet.forEach(function (s) { if (!oldSet.has(s)) added.push('＋ ' + s); });
+  newMap.forEach(function (s, k) { if (!oldMap.has(k)) added.push('＋ ' + s); });
   const removed = [];
-  oldSet.forEach(function (s) { if (!newSet.has(s)) removed.push('－ ' + s); });
+  oldMap.forEach(function (s, k) { if (!newMap.has(k)) removed.push('－ ' + s); });
 
   return added.concat(removed);
 }
