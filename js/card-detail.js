@@ -270,12 +270,15 @@ basicCashbackDiv.innerHTML = basicContent;
                             ${monthOptions}
                         </select>
                     </div>
-                    <div style="font-size: 11px; color: #6b7280;">選取後，在您的生日月份會自動在比較結果納入「慶生月」方案的活動</div>
+                    <!-- 「慶生月」方案活動 用 nowrap 包成一個單位：這欄桌機只有約 199px
+                         （三欄格線），不鎖的話會斷在「慶生／月」把方案名切兩半，或讓尾行
+                         只剩「活動」兩字。鎖住後斷行落在「…配對／「慶生月」方案活動」 -->
+                    <div style="font-size: 11px; color: #6b7280;">設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
                 </div>
             ` : `
                 <div>
                     <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
-                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">輸入後將可以比較「慶生月」活動，請先登入才能設定生日月份</div>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">登入並設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
                 </div>
             `;
 
@@ -313,9 +316,6 @@ basicCashbackDiv.innerHTML = basicContent;
                                     `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
                                 ).join('')}
                             </select>
-                            <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
-                                選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -991,16 +991,16 @@ async function generateCubeSpecialContent(card) {
     let birthdayNoteText;
     let birthdayNoteColor;
     if (!currentUser) {
-        birthdayNoteText = '※ 「慶生月」方案：請登入並設定生日月份，即可在生日當月自動納入比較';
+        birthdayNoteText = '※ 「慶生月」方案：目前一律納入比較；登入並設定生日月份後，只在您的生日月份納入';
         birthdayNoteColor = '#9ca3af';
     } else if (!userBirthdayMonth) {
-        birthdayNoteText = '※ 「慶生月」方案：在上方設定生日月份後，將在您的生日月份自動納入比較';
+        birthdayNoteText = '※ 「慶生月」方案：目前一律納入比較；在上方設定生日月份後，只在您的生日月份納入';
         birthdayNoteColor = '#9ca3af';
     } else if (isBirthdayMonth) {
         birthdayNoteText = `🎂 本月是您的生日月份（${userBirthdayMonth}月），「慶生月」方案已自動納入比較！`;
         birthdayNoteColor = '#be185d';
     } else {
-        birthdayNoteText = `※ 「慶生月」方案：已設定在您的生日月份（${userBirthdayMonth}月）自動納入比較`;
+        birthdayNoteText = `※ 「慶生月」方案：已設定只在您的生日月份（${userBirthdayMonth}月）納入比較，本月不納入`;
         birthdayNoteColor = '#9ca3af';
     }
     content += `
