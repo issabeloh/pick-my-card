@@ -296,7 +296,7 @@ basicCashbackDiv.innerHTML = basicContent;
                         ${levelRatesInfo}
                     </div>
                     ${levelNote}
-                    <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
+                    <div class="cube-settings-grid">
                         ${birthdayRow}
                         <div>
                             <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
