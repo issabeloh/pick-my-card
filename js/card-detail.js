@@ -270,12 +270,12 @@ basicCashbackDiv.innerHTML = basicContent;
                             ${monthOptions}
                         </select>
                     </div>
-                    <div style="font-size: 11px; color: #6b7280;">選取後，「慶生月」方案的活動只會在您的生日月份納入比較結果；未設定則一律納入</div>
+                    <div style="font-size: 11px; color: #6b7280;">設定後本活動將僅於生日月份顯示於搜尋結果中</div>
                 </div>
             ` : `
                 <div>
                     <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
-                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">目前「慶生月」活動一律納入比較；登入並設定生日月份後，只在該月份納入</div>
+                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">登入並設定後本活動將僅於生日月份顯示於搜尋結果中</div>
                 </div>
             `;
 
@@ -313,9 +313,6 @@ basicCashbackDiv.innerHTML = basicContent;
                                     `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
                                 ).join('')}
                             </select>
-                            <div style="margin-top: 4px; font-size: 11px; color: #9ca3af;">
-                                選擇 JCB 才會在比較結果納入「JCB日本賞」方案的活動
-                            </div>
                         </div>
                     </div>
                 </div>

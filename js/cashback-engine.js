@@ -742,6 +742,11 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     return { cashbackAmount: totalCashback, layers, totalRate };
 }
 
+// 註：2026-07-30 移除「切換「JCB日本賞」方案」的發卡組織篩選——該活動已下架，國泰目前
+// 沒有以發卡組織為條件的活動。`cubeIssuer` 僅保留為用戶資料（我的卡片一覽顯示），
+// 不再參與搜尋配對；若日後又出現發卡組織限定活動，比照下方 shouldSkipBirthdayPlan() 的
+// 前綴比對寫法加回，不要用 category 全等。
+
 // 慶生月方案的類別判斷（"切換「慶生月」方案" 為前綴，資料裡帶有子類別後綴，
 // 例如「切換「慶生月」方案 - 購物/體驗」「... - 美食」，所以不能用全等比對）。
 const BIRTHDAY_PLAN_CATEGORY_PREFIX = '切換「慶生月」方案';
@@ -831,11 +836,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
-                        continue;
-                    }
-
-                    // JCB日本賞方案只對 JCB 發卡組織用戶配對
-                    if (rateGroup.category === '切換「JCB日本賞」方案' && cubeIssuer !== 'JCB') {
                         continue;
                     }
 
@@ -1002,11 +1002,6 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
-                        continue;
-                    }
-
-                    // JCB日本賞方案只對 JCB 發卡組織用戶配對
-                    if (rateGroup.category === '切換「JCB日本賞」方案' && cubeIssuer !== 'JCB') {
                         continue;
                     }
 
