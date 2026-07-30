@@ -742,6 +742,21 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     return { cashbackAmount: totalCashback, layers, totalRate };
 }
 
+// 慶生月方案的類別判斷（"切換「慶生月」方案" 為前綴，資料裡帶有子類別後綴，
+// 例如「切換「慶生月」方案 - 購物/體驗」「... - 美食」，所以不能用全等比對）。
+const BIRTHDAY_PLAN_CATEGORY_PREFIX = '切換「慶生月」方案';
+function isBirthdayPlanCategory(category) {
+    return typeof category === 'string' && category.includes(BIRTHDAY_PLAN_CATEGORY_PREFIX);
+}
+
+// 慶生月活動是否該在搜尋結果中被過濾掉：
+// 用戶「有設定生日月份」才篩選（只在該月份顯示）；沒設定就不篩選、一律顯示。
+function shouldSkipBirthdayPlan(category) {
+    if (!isBirthdayPlanCategory(category)) return false;
+    if (userBirthdayMonth === null || userBirthdayMonth === undefined) return false;
+    return !isBirthdayMonth;
+}
+
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
     let allMatches = []; // Collect ALL matching activities
@@ -809,8 +824,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 慶生月方案只在用戶生日當月配對
-                    if (rateGroup.category === '切換「慶生月」方案' && !isBirthdayMonth) {
+                    // 慶生月方案：用戶有設定生日月份時只在該月份配對；未設定則不篩選
+                    if (shouldSkipBirthdayPlan(rateGroup.category)) {
                         continue;
                     }
 
@@ -980,8 +995,8 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         continue;
                     }
 
-                    // 慶生月方案只在用戶生日當月配對
-                    if (rateGroup.category === '切換「慶生月」方案' && !isBirthdayMonth) {
+                    // 慶生月方案：用戶有設定生日月份時只在該月份配對；未設定則不篩選
+                    if (shouldSkipBirthdayPlan(rateGroup.category)) {
                         continue;
                     }
 
