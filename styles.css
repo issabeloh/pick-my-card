@@ -4039,6 +4039,53 @@ input[type="text"].credit-limit-input:focus {
     font-weight: 600;
 }
 
+/* CUBE 卡設定區三欄（生日月份／童樂匯／發卡組織）——2026-07-30 從 card-detail.js 的
+   inline style 抽出來，因為要用 media query 分桌機/手機兩種分隔線方向。
+   桌機：三欄等寬（原本 repeat(auto-fit, minmax(190px,1fr)) 在寬容器下會切出 6 欄、
+   三個區塊只擠在左邊 60%），欄與欄之間垂直線；手機：單欄，區塊之間水平線。 */
+.cube-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 10px;
+    padding-top: 12px;
+}
+
+.cube-settings-grid > * {
+    padding: 0 16px;
+}
+
+.cube-settings-grid > *:first-child {
+    padding-left: 0;
+}
+
+.cube-settings-grid > *:last-child {
+    padding-right: 0;
+}
+
+.cube-settings-grid > * + * {
+    border-left: 1px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+    .cube-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cube-settings-grid > * {
+        padding: 0;
+    }
+
+    /* 單欄時分隔線改成水平（區塊上緣），並讓上下留白對稱 */
+    .cube-settings-grid > * + * {
+        border-left: none;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+}
+
 .info-grid {
     display: grid;
     gap: 12px;
