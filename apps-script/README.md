@@ -67,16 +67,84 @@
 > 2026-07-22 起，舊的 `ga4-metrics-export.gs` drop-in 片段（`updateGA4Pages`）已**併入本完整檔**、
 > 不再單獨保留（避免同一函數存兩處日後漂移）。
 
-- **主流程**：`updateAllReports()`——每天 6 點 trigger 叫醒（`createDailyTrigger`），依序跑
-  GA4（每日趨勢／流量來源／頁面成效）→ GSC（關鍵字／頁面）→ 歷史匯入 → `syncClarityData()`，
-  最後 `writeLastUpdated()` 在「更新紀錄」記一行（格式：`已更新 GA4 + GSC 資料；Clarity …`）。
+- **主流程**：`updateAllReports()`——每天 6 點 trigger 叫醒（`createDailyTrigger`）。
+  **2026-07-31 起改為容錯式執行**：`syncClarityData()` 移到**最前面**（唯一「今天沒抓到就永遠
+  沒有」的資料源），其餘每個報表各自包 `runStep_()` try/catch、互不拖累，最後**無論成敗一定**
+  跑 `writeLastUpdated()`。舊版是一條直線，任一步 throw 就整個中止 → 當天 Clarity 永久遺失，
+  且因為 log 也在最後，失敗完全靜默。更新紀錄格式改為 `✅ N 個報表全部更新成功` /
+  `⚠️ N 個報表中 M 個失敗：<表名>（<錯誤>）`＋本次視窗日期＋Clarity 狀態＋歷史快照狀態。
+  - 註：每個 update 函數都是「先打完 API 才 `clear()` 重寫」，所以某步失敗時該表**維持上次
+    成功的內容**（不會被清空留白），表頭「本次更新」時間戳會停在上次，一眼看得出過期。
+- **統計視窗標註（2026-07-31 新增）**：`GA4_頁面成效`／`GA4_流量來源`／`GSC_頁面`／`GSC_關鍵字`
+  等覆寫式報表都是**滾動視窗快照**，但表上原本沒有任何時間座標。現在每張表第 1–2 列由
+  `writeSnapshotSheet_()` 寫入標註（視窗類型／統計區間起訖與天數／寫入方式／資料來源／本次
+  更新時間／列數上限等注意事項），**欄位標題移到第 3 列、資料從第 4 列開始、凍結前 3 列**。
+  - ⚠️ **資料列從第 2 列變第 4 列**——試算表內若有圖表或 `QUERY()` 指向 `A2:D`，要改成 `A4:D`。
+  - 視窗參數只有一處定義（`GA4_WINDOW_DAYS`／`GSC_WINDOW_DAYS`／`GSC_LAG_DAYS`／各表 rowLimit），
+    送 API 的請求與表頭標註取自同一來源，**兩者不可能漂移**；`fetchGSCData()` 回傳
+    `{ data, window }` 就是為了這件事。
+  - `Clarity_每日` 與各 `*_歷史` 表**刻意不加標註**：它們是 append 表、每列自帶日期欄，時間
+    座標比標註更精確，而在既有資料上方插列有搬錯資料的風險。
 - **GA4**：`GA4_每日趨勢`／`GA4_流量來源`／`GA4_頁面成效`（每次 `clear()` 重寫）；全域
   `GA4_PROPERTY_ID=505426795`。`updateGA4Pages()` 用 `landingPage` 維度（非 `pagePath`，避免
   「維度指標不相容」）評估 /landing、/promos，搭配 landing.html 的 GA4 tag（property
   `G-RW8F159L52`）；指標含 Sessions、活躍／新用戶、新用戶佔比（`newUsers÷totalUsers`）、跳出率、
   互動率、平均參與時間（`userEngagementDuration÷activeUsers`）。
+- **GA4 事件／申辦點擊（2026-07-31 新增）**：補上原本最大的盲區——舊版所有表只回答「有多少人
+  來、從哪來、跳出多少」，完全沒有站內行為與轉換。
+  - `GA4_事件成效`（`updateGA4Events`）：維度 `eventName`，含 `calculate_cashback`（核心功能
+    使用量）、`view_card_detail`、`pin_card` 等；中文說明對照表在 `EVENT_LABELS`。
+  - `GA4_申辦點擊` + `GA4_各卡點擊`（`updateGA4CardClicks`，**一次 API 呼叫產出兩張**）：
+    維度 `customEvent:card_id` × `customEvent:card_name` × `customEvent:button_type`，
+    `dimensionFilter` 只算 `button_click`。前者是卡片×按鈕明細，後者一卡一列、按鈕類型攤成欄
+    （看 CTA 版位分佈）。`button_type` 取值與實際版位對照在 `BUTTON_TYPE_LABELS`。
+    - **樞紐表依 `card_id` 分組而非 `card_name`**：名稱是會變動的顯示字串（呼應鐵則 6），
+      card_id 才是能跟 `cards.data` 對起來的穩定識別碼；視窗中途改過名的卡用 id 分組才會
+      合成一列（顯示名取該 id 底下點擊最多的寫法）而不是裂成兩列。
+  - `GA4_熱門搜尋` + `GA4_搜尋落空`（`updateGA4MerchantSearches`，**一次 API 呼叫產出兩張**）：
+    維度 `customEvent:merchant` × `customEvent:has_match`，只算 `calculate_cashback`
+    事件——**用戶在回饋試算框實際打進去的字**。這是整個資料中心唯一的第一方需求訊號：
+    GSC_關鍵字 告訴你「他們在 Google 搜什麼才找到本站」，這張告訴你「他們進來之後想問
+    什麼」，兩者常常完全不同，**兩張要分開看、不要混為一談**。
+    - `GA4_熱門搜尋` 依試算次數排，has_match 攤成「有對到／沒對到／未知(註冊前)」三欄；
+      `GA4_搜尋落空` 只留沒對到的、依沒對到次數排＝**cards.data 的資料補齊優先順序清單**。
+    - **刻意不放「搜尋用戶數」**：`totalUsers` 在 has_match 拆開後不能相加（同一人既有對到
+      又有沒對到會被算兩次），與其給一個會被誤用的數字，不如只留可加總的次數。
+    - 未對到率＝沒對到÷(有對到+沒對到)，不含未知；分母為 0 時**留空而非寫 0**（全是註冊前
+      的舊資料，不該看起來像「都對到了」）。
+  - ⚠️ **自訂參數要能用 Data API 查，必須先在 GA4「管理 → 自訂定義」註冊成自訂維度**。
+    目前 4 個都已註冊（`card_id`／`card_name`／`merchant` 自 2025-11-23、`button_type`
+    自 2026-06-07），所以這幾個維度都有上線至今的完整歷史。
+    `has_match` 於 2026-07-31 補註冊（`calculate_cashback` 有送，`true`/`false`＝這次試算
+    有沒有對到資料），驅動 `GA4_搜尋落空`。
+    - ⚠️ **GA4 對註冊前的資料不回填**，所以 has_match 剛註冊那陣子，多數列會落在
+      「未知(註冊前)」欄，有對到／沒對到的拆分要等新資料累積，`GA4_搜尋落空` 一開始可能是空的。
+    - 還可考慮註冊 `amount`（試算金額）成**自訂指標**。
+    - 沒註冊就查會回 API 錯誤，但因為有 `runStep_` 隔離，只會壞那一步、不影響其他報表。
 - **GSC**：`GSC_關鍵字`／`GSC_頁面`，`GSC_SITE_URL=sc-domain:pickmycard.app`（Domain property 格式），
   資料抓到「今天−3 天」留延遲緩衝。
+  - **2026-07-31 修正 off-by-one**：Search Console API 的 `startDate`/`endDate` **都是含的**，
+    舊版 `setDate(-28)` 實際取到 **29 天**（多算一個星期幾，週間季節性被灌水）。已改為
+    `-(GSC_WINDOW_DAYS - 1)`，現在正好 28 天＝4 個完整週。**修正後 GSC 兩張表的數字會比舊版
+    略低，是修正不是退步。**
+- **歷史快照累積（2026-07-31 新增）**：滾動視窗表每次都覆寫，今天蓋掉昨天 → 「關鍵字排名從
+  15 爬到 8」「改版前後跳出率差多少」永遠查不到。現在每週存一份帶「快照日期＋視窗起訖」的副本
+  到 `GSC_關鍵字_歷史`／`GSC_頁面_歷史`／`GA4_頁面成效_歷史`／`GA4_流量來源_歷史`／
+  `GA4_申辦點擊_歷史`／`GA4_熱門搜尋_歷史`（append，永不覆蓋）。
+  - **表頭一致性檢查**（`appendHistoryRows_`）：往報表加維度會讓欄數變多，而舊列是照舊表頭
+    排的。沒有這個檢查，新列會從 A 欄開始塞、每欄往右錯開一格**且不會報錯**，整張歷史表靜默
+    壞掉。對不上時直接 throw，每張表各自 try/catch（一張表壞不該讓其他表這週也存不成），
+    訊息會寫進「更新紀錄」。**處理方式：把該張歷史表刪掉讓它以新表頭重建**，再跑
+    `snapshotHistoryNow()`——歷史表是週快照，重建只損失還沒累積的那幾份，比留一張錯位的表好。
+  - **為什麼每週不每天**：底下視窗本來就是 28/30 天滾動，相鄰兩天內容 96% 重疊，天天存只是把
+    幾乎一樣的東西抄 365 遍還撐爆列數。快照日由 `HISTORY_SNAPSHOT_WEEKDAY`（預設 1＝週一）決定，
+    同日重跑用指令碼屬性 `HISTORY_LAST_SNAPSHOT_DATE` 去重。
+  - 資料來源是主流程已經抓回來的結果（各 update 函數回傳 `{ headers, values, window }`），
+    **不會為了存歷史多打 API**；某步失敗時該表這週就不存，不會寫一份空的假快照。
+  - 列數控制：關鍵字只存前 `HISTORY_KEYWORD_TOP_N`（200）名、其餘 `HISTORY_TOP_N`（100）。
+    估算 200×8×52 ≈ 8.3 萬儲存格/年，離 1,000 萬上限很遠。
+  - **`snapshotHistoryNow()`**：手動存一份（不管星期幾、不管存過沒，會重抓 API）。用途是剛上線
+    時先種第一個資料點、或改版前後各留一份對照。
 - **Clarity**：`syncClarityData()` 寫 `Clarity_每日`（**append 累加、不覆蓋**——API 只留 1–3 天資料）。
   硬限制：每專案每天 **10 次** API 呼叫（不分來源、手動也算，超過整專案當天被鎖）。防重複用指令碼
   屬性 `CLARITY_LAST_SYNC_DATE`（**呼叫前擋、成功才記**）；token 存 `CLARITY_API_TOKEN`；401/429 在
