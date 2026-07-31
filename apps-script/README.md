@@ -1,7 +1,9 @@
 # Apps Script 備份與運維紀錄
 
-此資料夾存放 Google Sheets「信用卡管理系統」Apps Script 專案中的程式備份副本。
-**實際執行的版本在 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
+此資料夾存放 Google Sheets Apps Script 專案的程式備份副本，目前涵蓋兩個**不同**的 Sheet 專案：
+**「信用卡管理系統」**（cards.data 匯出／權益監控／權益解析）與 **「PMC數據集中」**
+（GA4+GSC+Clarity 分析同步，見 `pmc-analytics-sync.gs`）。
+**實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
 
 ## 匯出主程式（`cards-export.gs`）
 
@@ -54,26 +56,36 @@
     靜默消失且無警告。改為依表頭自動偵測上限；槽 1–5 維持 ❌ 擋匯出、槽 6+ 用 ⚠️
     警告不擋（避免舊資料突然全面擋死）。
 
-## GA4 成效匯出（`ga4-metrics-export.gs`，2026-07-22 新增）
+## pmc-analytics-sync 完整同步腳本（`pmc-analytics-sync.gs`，2026-07-22 新增）
 
-把 GA4 各「到達頁」成效指標撈進「PMC數據集中」試算表的 `GA4_頁面成效` 分頁，給行銷部門評估
-/landing、/promos 等落地頁表現用。搭配 landing.html 新加的 GA4 tag（同一 property
-`G-RW8F159L52`）——補 tag 前 /landing 在 GA4 完全無資料。
+「PMC數據集中」試算表綁定 Apps Script 專案的**完整 Code.gs 備份**（GA4 + GSC + Clarity 每日同步），
+供 Claude「行銷部門」Project 讀取 Sheet 討論 insights。**這是備份，實際執行版在該試算表的
+擴充功能 → Apps Script，改動兩邊同步。** 跟 cards-export.gs 綁的「信用卡管理系統」是**不同專案**，別搞混。
 
-- **⚠️ 這是 drop-in 函數備份，不是獨立可跑檔**：實際執行版在「PMC數據集中」試算表綁定的
-  Apps Script 專案 Code.gs（那支有 `updateAllReports` / GA4+GSC+Clarity 同步）。跟
-  cards-export.gs 綁的「信用卡管理系統」是**不同專案**，別搞混。
-- 函數：`updateGA4Pages()`——`updateAllReports()` 內已呼叫，補上定義即生效；跟著現有每日
-  排程跑，**不另建 trigger**。
-- 沿用 Code.gs 既有全域：`GA4_PROPERTY_ID`（`505426795`）、`getOrCreateSheet()`。
-  **絕不重複宣告**（重複宣告 const 會讓整個專案語法錯誤停擺——舊版範本踩過，已修）。
-- 寫入分頁：`GA4_頁面成效`（比照 `GA4_每日趨勢` / `GA4_流量來源` 命名，每次 `clear()` 重寫）。
-- 維度用 `landingPage`（不是 `pagePath`）：跳出率/互動率/新用戶是「到達頁」概念，跟 pagePath
-  併用 GA4 Data API 可能回「維度指標不相容」；landingPage 相容性有保證，也正好對應目的。
-- 指標：Sessions、活躍用戶、新用戶、新用戶佔比（`newUsers÷totalUsers`）、跳出率、互動率、
-  平均參與時間（`userEngagementDuration÷activeUsers`）、頁面瀏覽。
-- 依賴：進階服務 `AnalyticsData`——PMC數據集中 專案**已加**；執行帳號對 property 有 GA4
-  檢視權限（既有 GA4 報表能跑＝已具備）。
+> 設置背景／API token／每日額度等文字說明在 pmc-vault `projects/pmc-analytics-sync.md`
+> （分工同「信用卡管理系統」：**vault 存知識、repo 存程式正本**）。
+> 2026-07-22 起，舊的 `ga4-metrics-export.gs` drop-in 片段（`updateGA4Pages`）已**併入本完整檔**、
+> 不再單獨保留（避免同一函數存兩處日後漂移）。
+
+- **主流程**：`updateAllReports()`——每天 6 點 trigger 叫醒（`createDailyTrigger`），依序跑
+  GA4（每日趨勢／流量來源／頁面成效）→ GSC（關鍵字／頁面）→ 歷史匯入 → `syncClarityData()`，
+  最後 `writeLastUpdated()` 在「更新紀錄」記一行（格式：`已更新 GA4 + GSC 資料；Clarity …`）。
+- **GA4**：`GA4_每日趨勢`／`GA4_流量來源`／`GA4_頁面成效`（每次 `clear()` 重寫）；全域
+  `GA4_PROPERTY_ID=505426795`。`updateGA4Pages()` 用 `landingPage` 維度（非 `pagePath`，避免
+  「維度指標不相容」）評估 /landing、/promos，搭配 landing.html 的 GA4 tag（property
+  `G-RW8F159L52`）；指標含 Sessions、活躍／新用戶、新用戶佔比（`newUsers÷totalUsers`）、跳出率、
+  互動率、平均參與時間（`userEngagementDuration÷activeUsers`）。
+- **GSC**：`GSC_關鍵字`／`GSC_頁面`，`GSC_SITE_URL=sc-domain:pickmycard.app`（Domain property 格式），
+  資料抓到「今天−3 天」留延遲緩衝。
+- **Clarity**：`syncClarityData()` 寫 `Clarity_每日`（**append 累加、不覆蓋**——API 只留 1–3 天資料）。
+  硬限制：每專案每天 **10 次** API 呼叫（不分來源、手動也算，超過整專案當天被鎖）。防重複用指令碼
+  屬性 `CLARITY_LAST_SYNC_DATE`（**呼叫前擋、成功才記**）；token 存 `CLARITY_API_TOKEN`；401/429 在
+  log 明講原因。寫入前濾 `.pages.dev`（preview 流量）＋URL 正規化聚合（次數類加總、平均類依工作
+  階段數加權平均）。
+- **全域共用**：`getOrCreateSheet()`、`formatDate()`；`GA4_PROPERTY_ID`、`GSC_SITE_URL`、
+  `CLARITY_*` 常數。**絕不重複宣告 const**（重複宣告會讓整個專案語法錯誤停擺——舊版範本踩過）。
+- **依賴**：進階服務 `AnalyticsData`（GA4，專案已加）；GSC 用執行帳號 OAuth token；Clarity 走
+  `UrlFetchApp` + Bearer token。執行帳號對 GA4 property 有檢視權限（既有 GA4 報表能跑＝已具備）。
 
 ## 免費額度（2026-07-20 盤點；匯出流程設計須顧及）
 
