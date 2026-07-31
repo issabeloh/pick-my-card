@@ -95,13 +95,24 @@
   - `GA4_事件成效`（`updateGA4Events`）：維度 `eventName`，含 `calculate_cashback`（核心功能
     使用量）、`view_card_detail`、`pin_card` 等；中文說明對照表在 `EVENT_LABELS`。
   - `GA4_申辦點擊` + `GA4_各卡點擊`（`updateGA4CardClicks`，**一次 API 呼叫產出兩張**）：
-    維度 `customEvent:card_name` × `customEvent:button_type`，`dimensionFilter` 只算
-    `button_click`。前者是卡片×按鈕明細，後者一卡一列、按鈕類型攤成欄（看 CTA 版位分佈）。
-    `button_type` 取值與實際版位對照在 `BUTTON_TYPE_LABELS`。
+    維度 `customEvent:card_id` × `customEvent:card_name` × `customEvent:button_type`，
+    `dimensionFilter` 只算 `button_click`。前者是卡片×按鈕明細，後者一卡一列、按鈕類型攤成欄
+    （看 CTA 版位分佈）。`button_type` 取值與實際版位對照在 `BUTTON_TYPE_LABELS`。
+    - **樞紐表依 `card_id` 分組而非 `card_name`**：名稱是會變動的顯示字串（呼應鐵則 6），
+      card_id 才是能跟 `cards.data` 對起來的穩定識別碼；視窗中途改過名的卡用 id 分組才會
+      合成一列（顯示名取該 id 底下點擊最多的寫法）而不是裂成兩列。
+  - `GA4_熱門搜尋`（`updateGA4MerchantSearches`）：維度 `customEvent:merchant`，只算
+    `calculate_cashback` 事件——**用戶在回饋試算框實際打進去的字**。這是整個資料中心唯一的
+    第一方需求訊號：GSC_關鍵字 告訴你「他們在 Google 搜什麼才找到本站」，這張告訴你
+    「他們進來之後想問什麼」，兩者常常完全不同，**兩張要分開看、不要混為一談**。
   - ⚠️ **自訂參數要能用 Data API 查，必須先在 GA4「管理 → 自訂定義」註冊成自訂維度**。
-    已註冊：`card_name`、`button_type`。**未註冊：`card_id`、`merchant`**——想按卡片 id 或
-    商家拆得先去加，而且**註冊前的資料 GA4 不回填**，越早加越好。沒註冊就查會回 API 錯誤，
-    但因為有 `runStep_` 隔離，只會壞這一步、不影響其他報表。
+    目前 4 個都已註冊（`card_id`／`card_name`／`merchant` 自 2025-11-23、`button_type`
+    自 2026-06-07），所以這幾個維度都有上線至今的完整歷史。
+    - **尚未註冊、值得補的**：`has_match`（`calculate_cashback` 有送，`true`/`false`＝這次
+      試算有沒有對到資料）。註冊後就能拆出「用戶搜了但我們沒資料」的清單，那等於一份直接可用的
+      資料補齊路線圖。另有 `amount`（試算金額）可考慮註冊成**自訂指標**。
+    - **GA4 對註冊前的資料不回填**，要加就早加。沒註冊就查會回 API 錯誤，但因為有 `runStep_`
+      隔離，只會壞那一步、不影響其他報表。
 - **GSC**：`GSC_關鍵字`／`GSC_頁面`，`GSC_SITE_URL=sc-domain:pickmycard.app`（Domain property 格式），
   資料抓到「今天−3 天」留延遲緩衝。
   - **2026-07-31 修正 off-by-one**：Search Console API 的 `startDate`/`endDate` **都是含的**，
@@ -111,7 +122,12 @@
 - **歷史快照累積（2026-07-31 新增）**：滾動視窗表每次都覆寫，今天蓋掉昨天 → 「關鍵字排名從
   15 爬到 8」「改版前後跳出率差多少」永遠查不到。現在每週存一份帶「快照日期＋視窗起訖」的副本
   到 `GSC_關鍵字_歷史`／`GSC_頁面_歷史`／`GA4_頁面成效_歷史`／`GA4_流量來源_歷史`／
-  `GA4_申辦點擊_歷史`（append，永不覆蓋）。
+  `GA4_申辦點擊_歷史`／`GA4_熱門搜尋_歷史`（append，永不覆蓋）。
+  - **表頭一致性檢查**（`appendHistoryRows_`）：往報表加維度會讓欄數變多，而舊列是照舊表頭
+    排的。沒有這個檢查，新列會從 A 欄開始塞、每欄往右錯開一格**且不會報錯**，整張歷史表靜默
+    壞掉。對不上時直接 throw，每張表各自 try/catch（一張表壞不該讓其他表這週也存不成），
+    訊息會寫進「更新紀錄」。**處理方式：把該張歷史表刪掉讓它以新表頭重建**，再跑
+    `snapshotHistoryNow()`——歷史表是週快照，重建只損失還沒累積的那幾份，比留一張錯位的表好。
   - **為什麼每週不每天**：底下視窗本來就是 28/30 天滾動，相鄰兩天內容 96% 重疊，天天存只是把
     幾乎一樣的東西抄 365 遍還撐爆列數。快照日由 `HISTORY_SNAPSHOT_WEEKDAY`（預設 1＝週一）決定，
     同日重跑用指令碼屬性 `HISTORY_LAST_SNAPSHOT_DATE` 去重。

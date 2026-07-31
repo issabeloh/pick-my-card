@@ -26,6 +26,7 @@ const GSC_LAG_DAYS = 3;      // GSC 資料通常延遲 2–3 天，視窗結束�
 const GSC_QUERY_ROW_LIMIT = 500;  // GSC_關鍵字 取回列數上限（超過會被 API 截斷，標註在表頭）
 const GSC_PAGE_ROW_LIMIT = 100;   // GSC_頁面 取回列數上限
 const GA4_CLICK_ROW_LIMIT = 500;  // GA4_申辦點擊 取回列數上限（卡片 × 按鈕類型的組合數）
+const GA4_SEARCH_ROW_LIMIT = 500; // GA4_熱門搜尋 取回列數上限（不重複的搜尋字串數）
 
 // 歷史快照（把滾動視窗表每週存一份，才有趨勢可比較——見「歷史快照累積」區塊）
 const HISTORY_SNAPSHOT_WEEKDAY = 1;   // 每週幾存一次：0=週日、1=週一 …… 6=週六
@@ -78,6 +79,7 @@ function updateAllReports() {
   collected.ga4Pages    = runStep_(results, 'GA4_頁面成效',  updateGA4Pages);
   collected.ga4Events   = runStep_(results, 'GA4_事件成效',  updateGA4Events);
   collected.cardClicks  = runStep_(results, 'GA4_申辦點擊',  updateGA4CardClicks);
+  collected.searches    = runStep_(results, 'GA4_熱門搜尋',  updateGA4MerchantSearches);
   collected.gscQueries  = runStep_(results, 'GSC_關鍵字',    updateGSCQueries);
   collected.gscPages    = runStep_(results, 'GSC_頁面',      updateGSCPages);
   runStep_(results, 'GA4_歷史每日趨勢', importGA4History);
@@ -698,10 +700,12 @@ function appendHistorySnapshots_(collected, force) {
     { key: 'ga4Pages',    sheet: 'GA4_頁面成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'ga4Channels', sheet: 'GA4_流量來源_歷史',   topN: HISTORY_TOP_N },
     { key: 'cardClicks',  sheet: 'GA4_申辦點擊_歷史',   topN: HISTORY_TOP_N },
+    { key: 'searches',    sheet: 'GA4_熱門搜尋_歷史',   topN: HISTORY_TOP_N },
   ];
 
   const done = [];
   const skipped = [];
+  const failed = [];
   jobs.forEach(job => {
     const src = collected[job.key];
     // 該步驟失敗時 collected[key] 是 null——寧可這週沒存，也不要存一份空的假快照
@@ -713,25 +717,49 @@ function appendHistorySnapshots_(collected, force) {
     const rows = src.values.slice(0, job.topN).map(r =>
       [today, formatDate(src.window.start), formatDate(src.window.end)].concat(r)
     );
-    appendHistoryRows_(job.sheet, headers, rows);
-    done.push(job.sheet + '(' + rows.length + ')');
+    // 每張表各自 try/catch：一張表的表頭對不上不該讓其他表這週也存不成
+    try {
+      appendHistoryRows_(job.sheet, headers, rows);
+      done.push(job.sheet + '(' + rows.length + ')');
+    } catch (e) {
+      failed.push(job.sheet + '：' + errText_(e));
+      Logger.log('歷史快照失敗 ' + job.sheet + '——' + errText_(e));
+    }
   });
 
   props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
 
   let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
   if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
+  if (failed.length) msg += '；⚠️ 寫入失敗 ' + failed.join('｜');
   return msg;
 }
 
 // append 到歷史表（只加列、不覆蓋）。表頭只在第一次建立時寫。
+//
+// ⚠️ 表頭一致性檢查是必要的，不是防禦性冗餘：往報表加一個維度（例如 2026-07-31 給申辦點擊
+// 加了「卡片ID」）就會讓欄數變多，而舊列是照舊表頭排的。少了這個檢查，新列會從 A 欄開始塞、
+// 每一欄都往右錯開一格，**而且不會報錯**——整張歷史表就這樣靜默壞掉，等到有人拿它做趨勢
+// 分析才發現，那時已經分不出哪些列是對的。
+// 對不上時直接 throw，由呼叫端記進「更新紀錄」；處理方式是把該張歷史表刪掉讓它用新表頭重建
+// （歷史表是週快照，重建只損失尚未累積的那幾份，比留著一張錯位的表好）。
 function appendHistoryRows_(sheetName, headers, rows) {
   const sheet = getOrCreateSheet(sheetName);
+
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+  } else {
+    const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+      .map(v => String(v)).filter(v => v !== '');
+    if (existing.join(' ') !== headers.join(' ')) {
+      throw new Error('表頭與現有資料不符（欄位定義變了）。現有：[' + existing.join(', ') +
+        ']；預期：[' + headers.join(', ') + ']。請把「' + sheetName +
+        '」分頁刪掉讓它以新表頭重建，再跑一次 snapshotHistoryNow()');
+    }
   }
+
   if (rows.length === 0) return 0;
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
   return rows.length;
@@ -745,6 +773,7 @@ function snapshotHistoryNow() {
     ga4Pages:    updateGA4Pages(),
     ga4Channels: updateGA4Channels(),
     cardClicks:  updateGA4CardClicks(),
+    searches:    updateGA4MerchantSearches(),
     gscQueries:  updateGSCQueries(),
     gscPages:    updateGSCPages(),
   };
@@ -1126,8 +1155,9 @@ const EVENT_LABELS = {
 function updateGA4CardClicks() {
   const win = ga4Window_();
 
-  const dCard = AnalyticsData.newDimension(); dCard.name = 'customEvent:card_name';
-  const dType = AnalyticsData.newDimension(); dType.name = 'customEvent:button_type';
+  const dCardId = AnalyticsData.newDimension(); dCardId.name = 'customEvent:card_id';
+  const dCard   = AnalyticsData.newDimension(); dCard.name   = 'customEvent:card_name';
+  const dType   = AnalyticsData.newDimension(); dType.name   = 'customEvent:button_type';
 
   const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
 
@@ -1136,7 +1166,7 @@ function updateGA4CardClicks() {
   dateRange.endDate = win.endSpec;
 
   const request = AnalyticsData.newRunReportRequest();
-  request.dimensions = [dCard, dType];
+  request.dimensions = [dCardId, dCard, dType];
   request.metrics = [mCount];
   request.dateRanges = [dateRange];
   request.dimensionFilter = eventNameFilter_('button_click'); // 只算按鈕點擊
@@ -1147,13 +1177,15 @@ function updateGA4CardClicks() {
 
   // ── 明細表：卡片 × 按鈕類型，點擊多的在前 ──
   const detail = rows.map(row => ({
-    card: row.dimensionValues[0].value,
-    type: row.dimensionValues[1].value,
+    cardId: row.dimensionValues[0].value,
+    card: row.dimensionValues[1].value,
+    type: row.dimensionValues[2].value,
     count: Number(row.metricValues[0].value),
   })).sort((a, b) => b.count - a.count);
 
-  const detailHeaders = ['卡片名稱', '按鈕類型', '按鈕位置說明', '點擊數'];
-  const detailValues = detail.map(d => [d.card, d.type, BUTTON_TYPE_LABELS[d.type] || '', d.count]);
+  const detailHeaders = ['卡片ID', '卡片名稱', '按鈕類型', '按鈕位置說明', '點擊數'];
+  const detailValues = detail.map(d =>
+    [d.cardId, d.card, d.type, BUTTON_TYPE_LABELS[d.type] || '', d.count]);
 
   writeSnapshotSheet_('GA4_申辦點擊', {
     window: WINDOW_ROLLING,
@@ -1161,33 +1193,42 @@ function updateGA4CardClicks() {
     end: win.end,
     days: win.days,
     source: 'GA4 property ' + GA4_PROPERTY_ID +
-      '，事件 button_click，維度 customEvent:card_name × customEvent:button_type（' +
+      '，事件 button_click，維度 customEvent:card_id × customEvent:card_name × customEvent:button_type（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定｜最多取 ' + GA4_CLICK_ROW_LIMIT + ' 列' +
-      '｜「(not set)」＝該次點擊沒帶到卡片名稱（多半是非卡片類按鈕，如 spotlight_compare）' +
+      '｜卡片ID＝cards.data 的 card.id，可直接跟卡片資料對照（卡片名稱只是顯示字串、會變動）' +
+      '｜「(not set)」＝該次點擊沒帶到卡片（多半是非卡片類按鈕，如 spotlight_compare）' +
       '｜每週快照存進「GA4_申辦點擊_歷史」',
   }, detailHeaders, detailValues);
 
   // ── 樞紐表：一卡一列，按鈕類型攤成欄 ──
   // 同一張卡的點擊分佈（詳情頁浮動列 vs 搜尋結果 vs 活動頁）就是 CTA 版位效益，
   // 攤成欄才看得出來——明細表一卡多列，人眼很難橫向比較。
+  // 以 card_id 分組而非 card_name：卡片名稱是會變動的顯示字串（改名／全形空格），
+  // card_id 才是能跟 cards.data 對得起來的穩定識別碼。視窗中途改過名的卡，用 id 分組
+  // 才會合成一列而不是裂成兩列（顯示名取該 id 底下點擊最多的那個）。
   const typeTotals = {};
   const byCard = {};
   detail.forEach(d => {
     typeTotals[d.type] = (typeTotals[d.type] || 0) + d.count;
-    if (!byCard[d.card]) byCard[d.card] = { card: d.card, total: 0, types: {} };
-    byCard[d.card].total += d.count;
-    byCard[d.card].types[d.type] = (byCard[d.card].types[d.type] || 0) + d.count;
+    if (!byCard[d.cardId]) byCard[d.cardId] = { cardId: d.cardId, names: {}, total: 0, types: {} };
+    const c = byCard[d.cardId];
+    c.names[d.card] = (c.names[d.card] || 0) + d.count;
+    c.total += d.count;
+    c.types[d.type] = (c.types[d.type] || 0) + d.count;
   });
 
   // 欄順序＝該按鈕類型的總點擊由多到少（欄位會隨資料變動，所以每次重算）
   const typeCols = Object.keys(typeTotals).sort((a, b) => typeTotals[b] - typeTotals[a]);
 
-  const pivotHeaders = ['卡片名稱', '總點擊數'].concat(typeCols);
+  const pivotHeaders = ['卡片ID', '卡片名稱', '總點擊數'].concat(typeCols);
   const pivotValues = Object.keys(byCard)
     .map(k => byCard[k])
     .sort((a, b) => b.total - a.total)
-    .map(c => [c.card, c.total].concat(typeCols.map(t => c.types[t] || 0)));
+    .map(c => {
+      const name = Object.keys(c.names).sort((a, b) => c.names[b] - c.names[a])[0] || '';
+      return [c.cardId, name, c.total].concat(typeCols.map(t => c.types[t] || 0));
+    });
 
   writeSnapshotSheet_('GA4_各卡點擊', {
     window: WINDOW_ROLLING,
@@ -1196,6 +1237,7 @@ function updateGA4CardClicks() {
     days: win.days,
     source: '同「GA4_申辦點擊」（同一次 API 回傳，於指令碼內彙總）',
     note: '一卡一列、按鈕類型攤成欄，看的是同一張卡的 CTA 版位分佈' +
+      '｜依 card_id 分組（穩定識別碼），卡片名稱取該 id 底下點擊最多的寫法' +
       '｜欄位順序依各按鈕類型總點擊排列，會隨資料變動' +
       '｜按鈕類型意義：' + typeCols.map(t => t + '＝' + (BUTTON_TYPE_LABELS[t] || '未知')).join('、'),
   }, pivotHeaders, pivotValues);
@@ -1204,6 +1246,61 @@ function updateGA4CardClicks() {
     headers: detailHeaders, values: detailValues, window: win,
     pivotHeaders: pivotHeaders, pivotValues: pivotValues,
   };
+}
+
+// ---------- GA4：近 30 天站內搜尋的商家／消費項目 ----------
+// 這是整個資料中心**唯一的第一方需求訊號**：用戶在回饋試算框裡實際打了什麼字。
+// GSC 只告訴你「他們在 Google 搜什麼才找到你」，這張表告訴你「他們進來之後想問什麼」——
+// 兩者常常完全不同，而後者才是內容與卡片資料該補哪裡的依據。
+// 資料來源：js/cashback-engine.js 的 calculate_cashback 事件（merchant＝輸入框內容）。
+function updateGA4MerchantSearches() {
+  const win = ga4Window_();
+
+  const dMerchant = AnalyticsData.newDimension(); dMerchant.name = 'customEvent:merchant';
+
+  const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
+  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'totalUsers';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = win.startSpec;
+  dateRange.endDate = win.endSpec;
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dMerchant];
+  request.metrics = [mCount, mUsers];
+  request.dateRanges = [dateRange];
+  request.dimensionFilter = eventNameFilter_('calculate_cashback'); // 只算回饋試算，不含按鈕點擊帶的 merchant
+  request.limit = GA4_SEARCH_ROW_LIMIT;
+
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+
+  const rows = report.rows || [];
+  const sortedRows = rows.slice().sort((a, b) =>
+    Number(b.metricValues[0].value) - Number(a.metricValues[0].value)
+  );
+
+  const values = sortedRows.map(row => [
+    row.dimensionValues[0].value,
+    Number(row.metricValues[0].value),
+    Number(row.metricValues[1].value),
+  ]);
+
+  const headers = ['搜尋的商家／消費項目', '試算次數', '搜尋用戶數'];
+  writeSnapshotSheet_('GA4_熱門搜尋', {
+    window: WINDOW_ROLLING,
+    start: win.start,
+    end: win.end,
+    days: win.days,
+    source: 'GA4 property ' + GA4_PROPERTY_ID +
+      '，事件 calculate_cashback，維度 customEvent:merchant（' +
+      win.startSpec + ' ~ ' + win.endSpec + '）',
+    note: '區間日界線由 GA4 資源時區判定｜最多取 ' + GA4_SEARCH_ROW_LIMIT + ' 列' +
+      '｜這是用戶在站內回饋試算框「實際打進去的字」，與 GSC_關鍵字（Google 上搜什麼找到本站）' +
+      '是兩件事，兩張要分開看｜「(not set)」＝送出試算時輸入框是空的' +
+      '｜每週快照存進「GA4_熱門搜尋_歷史」',
+  }, headers, values);
+
+  return { headers: headers, values: values, window: win };
 }
 
 // button_type 取值 → 按鈕實際位置（對照 js/quick-options-misc.js 與 promos.js）
