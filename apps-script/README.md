@@ -212,7 +212,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 程式檔案 | Apps Script 專案內的 `權益監控.gs`（備份：`watchlist-monitor.gs`） |
 | 主函數 | `checkWatchlist`（觸發器叫醒的就是它） |
 | 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」 |
-| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars` |
+| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars`（`cards` 為 2026-07-29 新增，沒有這一欄也照跑） |
 | 偵測結果 | 自動寫入分頁 `2-變動通知`（不存在會自動建立），並寄 Email 通知 |
 | 通知信箱 | `MONITOR_CONFIG.notifyEmail` 留空 = 寄給試算表登入帳號 |
 
@@ -231,16 +231,44 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 
 兩欄留空 = 沿用全域設定，舊列完全不受影響。
 
-### 欄位注意事項
+### 卡片欄位語意（2026-07-29 改版：card_id 回歸「只放正式 id」）
 
-- `watch_type`、`css_selector` **目前程式不會讀**，只是備註／預留欄（css_selector 屬第二階段）
-- `card_id` 填法：**權益頁**（一卡一頁）必須填 Cards Data 正式 id（第二階段靠它對資料）；**公告頁／一般消費頁**（多卡共用一頁）填頁級標籤即可（例：`sinopac-news`、`febank-basic`、`kgi-basic`），該是哪張卡由公告標題判讀
-  - 頁級標籤**不必是**真的卡片 id：解析程式會比對 Cards Data，發現不是正式 id 就自動改用「這頁可能涵蓋多張卡，請逐則判斷、判不出來就 needs_review」的提示，並附上該行（連字號前綴）所有可選卡片 id，避免 AI 把整頁活動全掛到同一張卡
+**改版前的問題**：`card_id` 一欄兩用——既是正式卡片 id，又拿來當公告頁的頁級標籤（`febank-basic`、`kgi-basic`），只是為了讓通知信看得出是誰。但 `card_id` 的語意是「Cards Data 的正式卡片 ID」，第二階段解析靠它對資料，一欄兩用讓程式只能靠字串猜意圖。現在改由本來就存在、但一直是死欄位的 `watch_type` ＋ 新增的 `cards` 來表達。
+
+| 欄位 | 語意 | 填法 |
+|---|---|---|
+| `card_id` | **只填 Cards Data 的正式卡片 id** | 單卡權益頁填正式 id；**多卡頁一律留空**（不要再填 `febank-basic` 這種標籤） |
+| `watch_type` | 這一列監控的是哪種頁（**程式會讀了**） | `card`＝單卡權益頁、`bank`＝多卡公告／一般消費頁。**留空**＝依 `card_id` 有沒有填自動推斷（有＝card、沒有＝bank），不會報錯 |
+| `cards` | 多卡頁涵蓋哪幾張卡（選填，新增欄） | 逗號分隔的**正式 id**（半形/全形逗號、頓號都吃），例：`febank-jaccard,febank-giftcard`。留空也能跑，只是解析階段少了卡片線索 |
+| `bank` | 銀行名稱 | 維持現狀。多卡頁**一定要填**——通知信靠它認人 |
+| `css_selector` | 仍是備註／預留欄，程式不會讀 | — |
+
+- **通知信怎麼顯示**：`card_id` 有就顯示 `card_id（銀行）`；沒有就顯示「**〈銀行〉 一般消費/公告頁**」。不會再出現「(未填card_id)」這種字樣
+- **`2-變動通知` 的 card_id 欄怎麼寫**：`card_id` 有就寫 `card_id`；沒有就寫 `cards` 清單（逗號分隔）；都沒有才留空。**這一欄是整條鏈的關鍵**——第二階段 `benefits-parser` 讀它當 cardHint，寫空的話解析會完全失去卡片線索
+- **過渡期（還沒清空舊標籤）**：`watch_type=bank` 但 `card_id` 還留著 `febank-basic` → 通知信改顯示銀行頁講法（不再露出假 id），`2-變動通知` 仍寫入舊標籤當線索（解析端有安全網會接住，見下）
+- **舊表格完全相容**：沒有 `cards` 欄、`watch_type` 全空、`card_id` 全填 → 行為與改版前一模一樣。可以先貼程式、隔幾天再整理表格（或反過來）
 - 公告頁**一頁只填一列**，不要每張卡複製一列——同 URL 多列會重複抓取、同一變動寄多封通知
+
+### 檢查監控清單（2026-07-29 新增選單）
+
+選單「🤖 權益自動化 → 檢查監控清單（填法體檢）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
+
+- `watch_type=bank` 卻還留著 `card_id`（＝改到一半，最常見）
+- `watch_type=bank` 卻沒填 `bank`（多卡頁沒有 card_id，`bank` 是信裡唯一能認人的欄位；單卡列不報，免噪音）
+- `card_id` 填了但不在 Cards Data（單卡列才報；多卡列併進上一條，同一件事不講兩次）
+- `cards` 欄有不存在的 id
+- `watch_type` 填了 `card`/`bank` 以外的值／`watch_type=card` 卻沒填 `card_id`
+- 同一個 url 出現在兩列
+- `active` 不是 `TRUE`/`FALSE`
+- 沒填 url 的列
+- （可選提醒）多卡頁還沒填 `cards`——不影響監控與通知，只影響解析階段的卡片線索
+- （提醒）表格還沒有 `cards` 欄、或讀不到 Cards Data：不擋，其餘檢查照跑
+
+**輸出是按類型分組的**（`【問題類型】N 列` ＋ 該類型的列號清單），不是一列一條——47 列的清單也不會被視窗長度截掉。表格改完先跑這個，比等下一次監控寄信才發現快。
 
 ### 日常操作
 
-- **新增監控對象**：Watchlist 加一列即可，不用改程式（last_snapshot 留空，首次執行會自動填基準快照且不通知）
+- **新增監控對象**：Watchlist 加一列即可，不用改程式（last_snapshot 留空，首次執行會自動填基準快照且不通知）；加完跑一次「檢查監控清單」確認欄位沒填錯
 - **暫停某個網址**：該列 active 改 `FALSE`
 - **改執行頻率**：Apps Script → 觸發條件 → 編輯該觸發器（頻率不影響費用，全部免費）
 - **手動跑一次**：編輯器上方函數選 `checkWatchlist` → Run
@@ -357,6 +385,18 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
   每個數字必須附「原文引用」（evidence），不確定就標 `needs_review` + 想問的問題
 - **程式做格式與數學**：promo_id 編號（撞號自動加 -1/-2）、cap 公式（`=200/0.07`）、
   bonus_rate 加 `%`、卡片 ID 清單直接從 `Cards Data` 動態讀取（不用維護對照表）
+
+### 卡片提示 `buildCardHintLine_`（2026-07-29 擴充成三種輸入）
+
+解析的「卡片提示」來自 `2-變動通知` 的 `card_id` 欄（監控寫的）或 `3-貼上原文` 的 B2。同一個函數要吃三種輸入，給 AI 的指示完全不同：
+
+| 輸入 | 來源 | 給 AI 的提示 |
+|---|---|---|
+| 單一正式 id（`cathay-cube`） | 單卡權益頁 | 「這段文字很可能屬於〈id〉」 |
+| 逗號分隔的多個正式 id（`febank-jaccard,febank-giftcard`） | 多卡頁的 `cards` 欄 | 「這一頁涵蓋以下 N 張卡：…，請依每個活動的內文各自判斷屬於哪一張，card_id 只從這幾張裡選」 |
+| 不是正式 id（`febank-basic`、或打錯字） | 舊表格殘留／手滑 | **安全網**：改用「這是銀行層級的頁面」講法，用連字號前綴推整行卡片當候選列出來 |
+
+後兩種都**不會**說「這段文字屬於 X」——AI 在 schema enum 裡找不到 X 只能硬猜一張，會把整頁活動全掛到同一張卡上。混合輸入（有正式 id、也有打錯字的）一律走第三種安全網，候選會包含推出來的同行卡片。
 
 ### 欄位規範（2026-07-09 對齊正式表更新）
 

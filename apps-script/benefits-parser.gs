@@ -56,6 +56,7 @@ function buildAutomationMenu_() {
   SpreadsheetApp.getUi()
     .createMenu('🤖 權益自動化')
     .addItem('立即檢查監控（checkWatchlist）', 'checkWatchlist')
+    .addItem('檢查監控清單（填法體檢）', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
     .addSeparator()
     .addItem('解析收件匣（新戶活動）', 'parseInboxNewPromos')
     .addItem('解析「解析輸入」的文字（新戶活動）', 'parsePastedText')
@@ -119,7 +120,7 @@ function parsePastedText() {
   if (!sheet) {
     sheet = ss.insertSheet(PARSER_CONFIG.inputSheet);
     sheet.getRange('A1').setValue('活動原文（貼在 A2，整段貼一格）');
-    sheet.getRange('B1').setValue('卡片提示（選填，貼 B2，如 yushan-unicard 或「玉山Uni卡」）');
+    sheet.getRange('B1').setValue('卡片提示（選填，貼 B2；單卡填正式 id 如 yushan-unicard，多卡頁用逗號分隔如 febank-jaccard,febank-giftcard）');
     sheet.getRange('C1').setValue('來源網址（選填，貼 C2）');
     sheet.setFrozenRows(1);
     SpreadsheetApp.getUi().alert('已建立「' + PARSER_CONFIG.inputSheet + '」分頁。把活動文字貼進 A2 後再執行一次。');
@@ -143,22 +144,47 @@ function parsePastedText() {
   SpreadsheetApp.getActiveSpreadsheet().toast(msg, '解析完成', 8);
 }
 
-/************** 卡片提示：真 ID 與「銀行層級頁」標記要給 AI 不同指示 **************/
-// 監控清單裡有些列監控的是銀行層級的一般公告頁，card_id 填的是 febank-basic、kgi-basic
-// 這種**不是真的卡片 ID**。若照樣說「這段文字屬於 febank-basic」，AI 在 enum 裡找不到，
-// 只能硬猜一張，容易把整頁活動全掛到同一張卡上。所以要改成「這頁可能涵蓋多張卡」的說法。
+/************** 卡片提示：單卡／多卡／打錯字，要給 AI 三種不同指示 **************/
+// cardHint 來自「2-變動通知」的 card_id 欄（監控寫的）或手動貼上分頁的 B2，可能是：
+//   ① 單一正式卡片 ID（單卡權益頁）        → 直接說「這段文字屬於這張卡」
+//   ② 逗號分隔的多個正式 ID（多卡頁的 cards 欄）→ 說「這頁涵蓋這幾張，請逐則判斷」並列出來
+//   ③ 不是正式 ID（站長手滑打錯、或舊表格還留著 febank-basic 這種頁級標籤）
+//      → 安全網：用連字號前綴推整行卡片當候選，並要求逐則判斷、判不出來就 needs_review
+// ②③ 都不能說「這段文字屬於 X」——AI 在 enum 裡找不到 X 只能硬猜一張，會把整頁活動全掛同一張卡。
 function buildCardHintLine_(cardHint, cardIds) {
   const hint = String(cardHint || '').trim();
   if (!hint) return '';
-  if (cardIds.indexOf(hint) >= 0) {
-    return '\n卡片提示：這段文字很可能屬於「' + hint + '」。';
+
+  const ids = cardIds || [];
+  const parts = hint.split(/[,，、]/)
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s; });
+  const known = parts.filter(function (p) { return ids.indexOf(p) >= 0; });
+
+  // ① 單一正式 ID
+  if (parts.length === 1 && known.length === 1) {
+    return '\n卡片提示：這段文字很可能屬於「' + known[0] + '」。';
   }
-  const prefix = hint.split('-')[0];
-  const sameBank = cardIds.filter(function (id) { return id.split('-')[0] === prefix; });
+
+  // ② 多個正式 ID：這頁涵蓋這幾張卡
+  if (parts.length > 1 && known.length === parts.length) {
+    return '\n卡片提示：這一頁涵蓋以下 ' + known.length + ' 張卡：' + known.join('、') + '，' +
+      '請依每個活動的內文各自判斷屬於哪一張（card_id 只從這幾張裡選），不要全部歸給同一張；' +
+      '判斷不出來就 needs_review 填 true 並在 review_question 寫明。';
+  }
+
+  // ③ 有 hint 但不是正式 ID：用連字號前綴推同一行的卡片當候選（安全網）
+  const candidates = [];
+  const push = function (id) { if (candidates.indexOf(id) === -1) candidates.push(id); };
+  parts.forEach(function (p) {
+    const prefix = p.split('-')[0];
+    ids.forEach(function (id) { if (id.split('-')[0] === prefix) push(id); });
+  });
+  known.forEach(push);
   return '\n卡片提示：這是銀行層級的頁面（來源標記「' + hint + '」，不是卡片 ID），' +
     '同一頁可能涵蓋多張卡：請依每個活動的內文各自判斷屬於哪張卡，不要全部歸給同一張；' +
     '判斷不出來就 needs_review 填 true 並在 review_question 寫明。' +
-    (sameBank.length ? '該行可選的卡片 ID：' + sameBank.join('、') + '。' : '');
+    (candidates.length ? '該行可選的卡片 ID：' + candidates.join('、') + '。' : '');
 }
 
 /************** 核心：呼叫 Gemini，回傳結構化的活動陣列 **************/

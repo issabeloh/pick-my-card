@@ -7,7 +7,7 @@
  *
  * 需要的工作表：
  *   Watchlist —— 第一列表頭至少要有：url、last_snapshot
- *                建議完整表頭：card_id | bank | url | watch_type | css_selector
+ *                建議完整表頭：card_id | bank | url | watch_type | cards | css_selector
  *                             | last_snapshot | last_checked | active | fetch_via
  *                             | keywords | min_diff_chars
  *   情報收件匣 —— 不用自己建，腳本會自動建立
@@ -24,14 +24,23 @@
  *   min_diff_chars —— 這一列專用雜訊門檻。公告標題頁建議填 10
  *                     （一條新標題常見 15~30 字，全域預設 30 會漏掉短標題）
  *
- * 注意：watch_type、css_selector 目前只是備註欄，程式不會讀。
- *   card_id 填法：權益頁（一卡一頁）必須填 Cards Data 的正式 id；
- *               公告頁（多卡共用）填頁級標籤即可，例：sinopac-news
+ * 卡片欄位語意（2026-07-29 改版；css_selector 仍只是備註欄，程式不會讀）：
+ *   card_id    —— **只填 Cards Data 的正式卡片 id**（第二階段解析靠它對資料）。
+ *                 多卡頁（公告頁／一般消費頁）**留空**，不要填 febank-basic 這種頁級標籤
+ *   watch_type —— card＝單卡權益頁；bank＝多卡公告／一般消費頁。
+ *                 留空會依 card_id 有沒有填自動推斷（有＝card、沒有＝bank），不會報錯
+ *   cards      —— 選填。多卡頁涵蓋哪幾張卡的**正式 id**，逗號分隔
+ *                 （半形/全形逗號、頓號都吃）。這一欄會寫進「2-變動通知」的 card_id 欄，
+ *                 讓第二階段解析知道候選卡片有哪幾張
+ *   bank       —— 銀行名稱，通知信與 AI 分類都會用到；多卡頁一定要填（信裡靠它認人）
+ *
+ * 舊表格相容：沒有 cards 欄、watch_type 全空、card_id 全填 → 行為與改版前完全相同。
  *
  * 使用方式：
  *   1. 在 Watchlist 填入要監控的網址（active 填 TRUE）
  *   2. 手動執行一次 checkWatchlist（第一次只存基準快照，不會通知）
  *   3. 設定時間驅動觸發器：函數選 checkWatchlist、事件來源選 Time-driven
+ *   4. 表格改完可用選單「🤖 權益自動化 → 檢查監控清單」機械檢查有沒有填錯
  */
 
 /************** 設定區（可自行調整） **************/
@@ -65,6 +74,8 @@ function checkWatchlist() {
   const cActive = col('active');
   const cCard = col('card_id');
   const cBank = col('bank');
+  const cType = col('watch_type');
+  const cCards = col('cards');      // 新欄位，舊表格沒有時是 -1，下面一律走安全降級
   const cVia = col('fetch_via');
   const cKeywords = col('keywords');
   const cMinDiff = col('min_diff_chars');
@@ -85,11 +96,22 @@ function checkWatchlist() {
 
     const fetchVia = cVia >= 0 ? String(row[cVia] || '').trim().toLowerCase() : '';
 
+    // 卡片欄位：card_id 只認正式 id、多卡頁靠 cards 欄列出候選（欄位不存在就是空的，不報錯）
+    const cardId = cCard >= 0 ? String(row[cCard] || '').trim() : '';
+    const bank = cBank >= 0 ? String(row[cBank] || '').trim() : '';
+    const cardList = cCards >= 0 ? splitList_(row[cCards]) : [];
+    // watch_type=bank ＝站長明講「這是多卡頁」：即使 card_id 還留著舊的頁級標籤，
+    // 也不要拿它當卡片用（信裡顯示銀行頁講法、下游 card_id 優先用 cards 清單）
+    const isBankPage = resolveWatchType_(cType >= 0 ? row[cType] : '', cardId) === 'bank';
+    // 通知信／錯誤訊息的顯示名稱；「2-變動通知」的 card_id 欄則要寫下游解析用得到的 id
+    const label = buildRowLabel_(isBankPage ? '' : cardId, bank);
+    const inboxCardId = isBankPage ? (cardList.join(',') || cardId) : (cardId || cardList.join(','));
+
     let text;
     try {
       text = fetchPageText_(url, fetchVia).slice(0, MONITOR_CONFIG.snapshotMaxChars);
     } catch (e) {
-      errors.push((row[cCard] || '') + ' ' + url + '：' + e.message);
+      errors.push(label + ' ' + url + '：' + e.message);
       continue;
     }
 
@@ -108,7 +130,7 @@ function checkWatchlist() {
     if (oldText.length * 3 < text.length) {
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
-      rebaselined.push((row[cCard] || '(未填card_id)') + ' ' + url +
+      rebaselined.push(label + ' ' + url +
         '（舊基準 ' + oldText.length + ' 字 → 本次 ' + text.length + ' 字）');
       continue;
     }
@@ -118,7 +140,7 @@ function checkWatchlist() {
     // 一旦覆寫，好的基準就沒了，下一次會再誤報一次「大量新增」。
     // 若確認是網頁真的整頁改版，人工把該列 last_snapshot 清空即可重建基準。
     if (oldText.length >= 300 && text.length * 3 < oldText.length) {
-      errors.push((row[cCard] || '(未填card_id)') + ' ' + url +
+      errors.push(label + ' ' + url +
         '：這次只抓到 ' + text.length + ' 字（舊基準 ' + oldText.length +
         ' 字），疑似抓取失敗，已略過並保留原基準。請人工開網頁確認；' +
         '若確實整頁改版，請把該列 last_snapshot 清空後重跑');
@@ -148,11 +170,11 @@ function checkWatchlist() {
 
     if (changedText.length >= rowMinDiff && hasKeyword) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
-      const cls = classifyDiff_(changedText, text, row[cCard] || '', row[cBank] || '');
+      const cls = classifyDiff_(changedText, text, inboxCardId, bank);
       appendToInbox_(ss, {
         time: now,
-        cardId: row[cCard] || '',
-        bank: row[cBank] || '',
+        cardId: inboxCardId,   // 單卡＝card_id；多卡頁＝cards 清單，下游解析靠這一欄當卡片線索
+        bank: bank,
         url: url,
         diffText: changedText,
         oldText: oldText,
@@ -160,8 +182,9 @@ function checkWatchlist() {
         cls: cls
       });
       alerts.push({
-        cardId: row[cCard] || '',
-        bank: row[cBank] || '',
+        cardId: inboxCardId,
+        label: label,
+        bank: (!isBankPage && cardId) ? bank : '',   // 多卡頁的 label 已含銀行名，不再重複掛括號
         url: url,
         diffText: changedText.slice(0, 300),
         cls: cls
@@ -174,6 +197,31 @@ function checkWatchlist() {
   }
 
   if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined);
+}
+
+/************** 欄位小工具（cards / watch_type / 顯示名稱） **************/
+// 逗號分隔清單 → 陣列。半形逗號、全形逗號、頓號都吃；空值回空陣列（欄位不存在時也走這裡）
+function splitList_(raw) {
+  return String(raw || '')
+    .split(/[,，、]/)
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s; });
+}
+
+// watch_type：card＝單卡權益頁、bank＝多卡公告／一般消費頁。
+// 留空或填了看不懂的值 → 依 card_id 有沒有填自動推斷，不報錯（表格還沒整理好也要能跑）
+function resolveWatchType_(raw, cardId) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'card' || v === 'bank') return v;
+  return cardId ? 'card' : 'bank';
+}
+
+// 通知信／錯誤訊息裡這一列叫什麼：有 card_id 就用 card_id，
+// 沒有就用「<銀行> 一般消費/公告頁」——多卡頁本來就不該有 card_id，不是缺漏
+function buildRowLabel_(cardId, bank) {
+  if (cardId) return cardId;
+  if (bank) return bank + ' 一般消費/公告頁';
+  return '一般消費/公告頁';
 }
 
 /************** 抓網頁 → 只留人看得到的正文 **************/
@@ -381,7 +429,8 @@ function sendDigest_(alerts, errors, rebaselined) {
             (anyClassified ? '（🔴 實質 ' + material.length + '、⚪ 其餘 ' + minor.length + '）' : '') + '：\n\n';
 
     const render = function (a) {
-      let s = '■ ' + a.cardId + (a.bank ? '（' + a.bank + '）' : '');
+      // 顯示名稱走 label：單卡＝card_id，多卡頁＝「<銀行> 一般消費/公告頁」
+      let s = '■ ' + (a.label || a.cardId || '一般消費/公告頁') + (a.bank ? '（' + a.bank + '）' : '');
       if (a.cls) {
         s += ' ｜信心' + (a.cls.confidence || '') +
              (a.cls.change_types && a.cls.change_types.length ? ' ｜' + a.cls.change_types.join('、') : '') + '\n';
@@ -417,5 +466,156 @@ function sendDigest_(alerts, errors, rebaselined) {
       ? (materialCount + ' 筆實質變動 / 共 ' + alerts.length + ' 筆')
       : '抓取異常通知');
   MailApp.sendEmail(to, subject, body);
+}
+
+/************** 選單：檢查監控清單（2026-07-29 新增） **************/
+// 一鍵機械檢查表格填法，只讀不寫——不碰 last_snapshot、不寫任何分頁，結果直接跳視窗。
+// 掛在 benefits-parser.gs 的 buildAutomationMenu_（選單「檢查監控清單」）。
+function checkWatchlistConfig() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MONITOR_CONFIG.watchlistSheet);
+  const ui = SpreadsheetApp.getUi();
+  if (!sheet) {
+    ui.alert('檢查監控清單', '找不到工作表：' + MONITOR_CONFIG.watchlistSheet, ui.ButtonSet.OK);
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
+  const col = function (name) { return headers.indexOf(name); };
+  const cUrl = col('url');
+  const cCard = col('card_id');
+  const cType = col('watch_type');
+  const cCards = col('cards');
+  const cActive = col('active');
+  const cBank = col('bank');
+
+  // 問題分組收集，最後才排版——同一件事只講一次，訊息按類型聚合（47 列的清單也不會爆版）
+  const notes = [];              // 提醒等級，不算問題
+  const g = {
+    bankKeepsCardId: [],         // watch_type=bank 但 card_id 還沒清空
+    unknownCardId: [],           // card_id 不在 Cards Data（單卡列才報，多卡列併進上一組）
+    bankNoBank: [],              // 多卡頁但 bank 欄空著（通知信會認不出是誰）
+    bankNoCards: [],             // 多卡頁但 cards 欄空著
+    badWatchType: [],
+    cardNoCardId: [],
+    unknownCards: [],
+    dupUrl: [],
+    badActive: [],
+    noUrl: []
+  };
+
+  if (cUrl < 0) notes.push('⚠ 表頭缺少 url 欄——監控根本跑不起來，先補表頭');
+  if (cCards < 0) notes.push('ℹ 還沒有 cards 欄：多卡頁的候選卡片傳不到解析階段。建議插一欄，第 1 列打小寫 cards');
+
+  // Cards Data 讀不到就跳過「id 存不存在」這類檢查，其餘照驗
+  let cardIds = null;
+  try {
+    if (typeof getCardIds_ === 'function') cardIds = getCardIds_();
+  } catch (e) {
+    notes.push('ℹ 讀不到 Cards Data，這次略過「id 是否存在」的檢查：' + e.message);
+  }
+
+  const seenUrl = {};
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const rowNo = i + 1;
+    const url = cUrl >= 0 ? String(row[cUrl] || '').trim() : '';
+    const blankRow = row.every(function (v) { return !String(v == null ? '' : v).trim(); });
+    if (!url && blankRow) continue;   // 整列空白＝略過
+
+    if (!url) {
+      g.noUrl.push(rowNo);
+      continue;
+    }
+    const urlKey = url.toLowerCase();
+    if (seenUrl[urlKey]) {
+      g.dupUrl.push({ row: rowNo, first: seenUrl[urlKey], url: url });
+    } else {
+      seenUrl[urlKey] = rowNo;
+    }
+
+    const cardId = cCard >= 0 ? String(row[cCard] || '').trim() : '';
+    const cardsRaw = cCards >= 0 ? splitList_(row[cCards]) : [];
+    const rawType = cType >= 0 ? String(row[cType] || '').trim() : '';
+    const type = rawType.toLowerCase();
+    const knownType = (type === 'card' || type === 'bank');
+    if (rawType && !knownType) g.badWatchType.push({ row: rowNo, raw: rawType });
+
+    if (type === 'bank') {
+      // 多卡頁：card_id 本來就該是空的。還留著＝步驟 3 只做一半，
+      // 這時「card_id 不在 Cards Data」是同一件事，不要再報一次
+      if (cardId) g.bankKeepsCardId.push({ row: rowNo, cardId: cardId, hasCards: cardsRaw.length > 0 });
+      else if (cCards >= 0 && !cardsRaw.length) g.bankNoCards.push(rowNo);
+      // 多卡頁沒有 card_id，bank 就是通知信裡唯一能認人的欄位，空著等於信裡沒署名
+      if (cBank >= 0 && !String(row[cBank] || '').trim()) g.bankNoBank.push(rowNo);
+    } else {
+      if (type === 'card' && !cardId) g.cardNoCardId.push(rowNo);
+      if (cardId && cardIds && cardIds.indexOf(cardId) < 0) g.unknownCardId.push({ row: rowNo, cardId: cardId });
+    }
+
+    if (cardIds) {
+      cardsRaw.forEach(function (id) {
+        if (cardIds.indexOf(id) < 0) g.unknownCards.push({ row: rowNo, id: id });
+      });
+    }
+
+    if (cActive >= 0) {
+      const active = String(row[cActive] || '').trim().toUpperCase();
+      if (active && active !== 'TRUE' && active !== 'FALSE') {
+        g.badActive.push({ row: rowNo, raw: String(row[cActive]).trim() });
+      }
+    }
+  }
+
+  const rows = Math.max(0, data.length - 1);
+  const blocks = [];
+  // 「該修的問題」與「可選提醒」分開算——bankNoCards 不擋監控也不影響通知信，
+  // 混進問題總數會讓人以為有 17 件事要做，其實只有 1 件
+  const total = g.bankKeepsCardId.length + g.unknownCardId.length +
+    g.bankNoBank.length + g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
+    g.dupUrl.length + g.badActive.length + g.noUrl.length;
+  const optional = g.bankNoCards.length;
+
+  const block = function (title, lines) {
+    if (lines.length) blocks.push('【' + title + '】' + lines.length + ' 列\n' + lines.join('\n'));
+  };
+
+  block('watch_type=bank 但 card_id 還沒清空 → 把這幾列的 card_id 整格刪掉，改填 cards 欄',
+    g.bankKeepsCardId.map(function (x) {
+      return '  第 ' + x.row + ' 列：card_id=' + x.cardId + (x.hasCards ? '（cards 已填好）' : '（cards 也還沒填）');
+    }));
+  block('多卡頁（watch_type=bank）沒填 bank → 通知信只會顯示「一般消費/公告頁」，認不出是哪家，請補銀行名',
+    g.bankNoBank.map(function (r) { return '  第 ' + r + ' 列'; }));
+  block('card_id 不在 Cards Data → 單卡頁請改成正式 id；若其實是多卡頁，watch_type 填 bank 並清空 card_id',
+    g.unknownCardId.map(function (x) { return '  第 ' + x.row + ' 列：' + x.cardId; }));
+  block('cards 欄的 id 不在 Cards Data → 打錯字，或該卡還沒建',
+    g.unknownCards.map(function (x) { return '  第 ' + x.row + ' 列：' + x.id; }));
+  block('watch_type 值不合法（只能 card / bank，留空＝自動推斷）',
+    g.badWatchType.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('watch_type=card 卻沒填 card_id',
+    g.cardNoCardId.map(function (r) { return '  第 ' + r + ' 列'; }));
+  block('url 重複 → 同一頁會抓兩次、同一變動寄兩封信，刪掉其中一列',
+    g.dupUrl.map(function (x) { return '  第 ' + x.row + ' 列 ＝ 第 ' + x.first + ' 列：' + x.url; }));
+  block('active 不是 TRUE/FALSE（只有 FALSE 會停用，其餘一律照抓）',
+    g.badActive.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('沒填 url，這一列不會被監控',
+    g.noUrl.map(function (r) { return '  第 ' + r + ' 列'; }));
+  // 這一組不擋監控，只影響解析階段的卡片線索，放最後、也不計入問題數
+  block('可選提醒：多卡頁還沒填 cards → 監控與通知都正常，只是解析階段少了卡片線索',
+    g.bankNoCards.map(function (r) { return '  第 ' + r + ' 列'; }));
+
+  if (!total && !optional && !notes.length) {
+    ui.alert('檢查監控清單', '✅ ' + rows + ' 列都沒問題', ui.ButtonSet.OK);
+    return;
+  }
+
+  let msg = '檢查了 ' + rows + ' 列，' +
+    (total ? '找到 ' + total + ' 個要修的問題' : '沒有要修的問題 ✅') +
+    (optional ? '（另有 ' + optional + ' 條可選提醒，不影響監控與通知）' : '') + '\n';
+  if (notes.length) msg += '\n' + notes.join('\n') + '\n';
+  if (blocks.length) msg += '\n' + blocks.join('\n\n');
+  if (msg.length > 8000) msg = msg.slice(0, 8000) + '\n…（訊息過長已截斷，修完上面幾組再跑一次）';
+  ui.alert('檢查監控清單', msg, ui.ButtonSet.OK);
 }
 
