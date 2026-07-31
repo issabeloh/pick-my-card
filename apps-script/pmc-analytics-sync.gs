@@ -25,6 +25,12 @@ const GSC_LAG_DAYS = 3;      // GSC 資料通常延遲 2–3 天，視窗結束�
 
 const GSC_QUERY_ROW_LIMIT = 500;  // GSC_關鍵字 取回列數上限（超過會被 API 截斷，標註在表頭）
 const GSC_PAGE_ROW_LIMIT = 100;   // GSC_頁面 取回列數上限
+const GA4_CLICK_ROW_LIMIT = 500;  // GA4_申辦點擊 取回列數上限（卡片 × 按鈕類型的組合數）
+
+// 歷史快照（把滾動視窗表每週存一份，才有趨勢可比較——見「歷史快照累積」區塊）
+const HISTORY_SNAPSHOT_WEEKDAY = 1;   // 每週幾存一次：0=週日、1=週一 …… 6=週六
+const HISTORY_KEYWORD_TOP_N = 200;    // 關鍵字歷史只存前 N 名（500 全存會很快把列數撐爆）
+const HISTORY_TOP_N = 100;            // 其餘歷史表的每次存檔上限
 
 // 視窗類型（決定表頭第一行怎麼描述這張表）
 const WINDOW_ROLLING = 'rolling';        // 滾動視窗：只有最近 N 天，整表覆寫、不累積
@@ -35,17 +41,75 @@ const BANNER_ROWS = 2;
 const HEADER_ROW = BANNER_ROWS + 1;
 const DATA_START_ROW = HEADER_ROW + 1;
 
-// ---------- 主流程：一次更新全部 ----------
+// ========================================
+// 主流程：一次更新全部
+// ----------------------------------------
+// 執行韌性設計（2026/07/31 改寫）——舊版是一條直線的呼叫串，有兩個會靜默吃掉資料的問題：
+//   (1) 任一步 throw（GA4 暫時性錯誤、GSC 401、配額）整個執行就中止；而 syncClarityData()
+//       排在**最後**，前面隨便哪一步掛掉，當天的 Clarity 資料就永久消失——Clarity API 只留
+//       1–3 天，過了就再也拿不回來。
+//   (2) writeLastUpdated() 也在最後，所以失敗時「更新紀錄」連一行都不會寫，你完全不會發現。
+// 現在改成：Clarity 排第一（最脆弱、最不可補）→ 每個步驟各自 try/catch 不互相拖累 →
+// 無論結果如何最後一定寫一行含各步驟成敗的更新紀錄。
+//
+// 另外注意一個刻意保留的性質：每個 update 函數都是「先打完 API 拿到資料，才呼叫
+// writeSnapshotSheet_ 清空重寫」。所以某步失敗時，那張表**維持上一次成功的內容**（不會被清空
+// 留下空表），而表頭的「本次更新」時間戳會停在上次，一眼看得出資料過期。
+// ========================================
+
 function updateAllReports() {
-  updateGA4Daily();
-  updateGA4Channels();
-  updateGA4Pages();
-  updateGSCQueries();
-  updateGSCPages();
-  importGA4History();
-  importGSCHistory();
-  const clarityResult = syncClarityData();   // Clarity 串進同一次執行
-  writeLastUpdated(clarityResult.message);    // 把 Clarity 狀態併進更新紀錄那行
+  const results = [];
+
+  // ── Clarity 排第一 ──
+  // 唯一「今天沒抓到就永遠沒有」的資料源，必須在任何可能 throw 的步驟之前跑完。
+  // syncClarityData() 內部已把預期錯誤轉成回傳值，這裡再包一層擋未預期例外。
+  let clarityMessage;
+  try {
+    clarityMessage = syncClarityData().message;
+  } catch (e) {
+    clarityMessage = 'Clarity 失敗：未預期例外——' + errText_(e);
+    Logger.log(clarityMessage);
+  }
+
+  // 各報表獨立跑；collected 收下每步的資料，稍後給歷史快照用（避免為了存歷史再打一次 API）
+  const collected = {};
+  collected.ga4Daily    = runStep_(results, 'GA4_每日趨勢',  updateGA4Daily);
+  collected.ga4Channels = runStep_(results, 'GA4_流量來源',  updateGA4Channels);
+  collected.ga4Pages    = runStep_(results, 'GA4_頁面成效',  updateGA4Pages);
+  collected.ga4Events   = runStep_(results, 'GA4_事件成效',  updateGA4Events);
+  collected.cardClicks  = runStep_(results, 'GA4_申辦點擊',  updateGA4CardClicks);
+  collected.gscQueries  = runStep_(results, 'GSC_關鍵字',    updateGSCQueries);
+  collected.gscPages    = runStep_(results, 'GSC_頁面',      updateGSCPages);
+  runStep_(results, 'GA4_歷史每日趨勢', importGA4History);
+  runStep_(results, 'GSC_歷史每日趨勢', importGSCHistory);
+
+  const historyMessage = runStep_(results, '歷史快照累積', () => appendHistorySnapshots_(collected, false));
+
+  // 這行一定要寫得出來，否則「執行過但全掛」跟「根本沒執行」在紀錄上長得一樣
+  try {
+    writeLastUpdated(clarityMessage, results, historyMessage);
+  } catch (e) {
+    Logger.log('連更新紀錄都寫不進去：' + errText_(e));
+  }
+}
+
+// 跑一個步驟：成功回傳該函數的回傳值，失敗記一筆並回 null（不讓它中斷其他步驟）
+function runStep_(results, name, fn) {
+  try {
+    const out = fn();
+    results.push({ name: name, ok: true });
+    return out;
+  } catch (e) {
+    const msg = errText_(e);
+    results.push({ name: name, ok: false, error: msg });
+    Logger.log('步驟失敗：' + name + '——' + msg);
+    return null;
+  }
+}
+
+function errText_(e) {
+  const raw = (e && e.message) ? e.message : String(e);
+  return raw.replace(/\s+/g, ' ').slice(0, 200); // 壓成一行，免得塞爆更新紀錄那格
 }
 
 // ========================================
@@ -184,6 +248,7 @@ function updateGA4Daily() {
     ];
   });
 
+  const headers = ['日期', '活躍用戶', 'Sessions', '頁面瀏覽', '互動率'];
   writeSnapshotSheet_('GA4_每日趨勢', {
     window: WINDOW_ROLLING,
     start: win.start,
@@ -191,7 +256,9 @@ function updateGA4Daily() {
     days: win.days,
     source: 'GA4 property ' + GA4_PROPERTY_ID + '（' + win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定；逐日資料另有「GA4_歷史每日趨勢」保存上線至今全期',
-  }, ['日期', '活躍用戶', 'Sessions', '頁面瀏覽', '互動率'], values);
+  }, headers, values);
+
+  return { headers: headers, values: values, window: win };
 }
 
 // ---------- GA4：近 30 天流量來源 ----------
@@ -231,6 +298,7 @@ function updateGA4Channels() {
     row.metricValues[2].value,
   ]);
 
+  const headers = ['流量來源', 'Sessions', '活躍用戶', '互動率'];
   writeSnapshotSheet_('GA4_流量來源', {
     window: WINDOW_ROLLING,
     start: win.start,
@@ -239,7 +307,9 @@ function updateGA4Channels() {
     source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 sessionDefaultChannelGroup（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定；本表為區間**加總**，非日均值',
-  }, ['流量來源', 'Sessions', '活躍用戶', '互動率'], values);
+  }, headers, values);
+
+  return { headers: headers, values: values, window: win };
 }
 
 // ---------- GSC：近 28 天關鍵字表現 ----------
@@ -255,6 +325,7 @@ function updateGSCQueries() {
     row.position.toFixed(1),
   ]);
 
+  const headers = ['關鍵字', '點擊數', '曝光數', 'CTR', '平均排名'];
   writeSnapshotSheet_('GSC_關鍵字', {
     window: WINDOW_ROLLING,
     start: result.window.start,
@@ -262,8 +333,11 @@ function updateGSCQueries() {
     days: result.window.days,
     source: 'Search Console ' + GSC_SITE_URL + '，維度 query',
     note: '結束日已扣掉 ' + GSC_LAG_DAYS + ' 天資料延遲緩衝｜最多取 ' + GSC_QUERY_ROW_LIMIT +
-      ' 列，超過會被 API 截斷（點擊由多到少）｜CTR/平均排名為區間內加權結果，非每日平均',
-  }, ['關鍵字', '點擊數', '曝光數', 'CTR', '平均排名'], values);
+      ' 列，超過會被 API 截斷（點擊由多到少）｜CTR/平均排名為區間內加權結果，非每日平均' +
+      '｜每週快照存進「GSC_關鍵字_歷史」，排名趨勢看那張',
+  }, headers, values);
+
+  return { headers: headers, values: values, window: result.window };
 }
 
 // ---------- GSC：近 28 天頁面表現 ----------
@@ -279,6 +353,7 @@ function updateGSCPages() {
     row.position.toFixed(1),
   ]);
 
+  const headers = ['頁面', '點擊數', '曝光數', 'CTR', '平均排名'];
   writeSnapshotSheet_('GSC_頁面', {
     window: WINDOW_ROLLING,
     start: result.window.start,
@@ -286,8 +361,11 @@ function updateGSCPages() {
     days: result.window.days,
     source: 'Search Console ' + GSC_SITE_URL + '，維度 page',
     note: '結束日已扣掉 ' + GSC_LAG_DAYS + ' 天資料延遲緩衝｜最多取 ' + GSC_PAGE_ROW_LIMIT +
-      ' 列，超過會被 API 截斷（點擊由多到少）｜CTR/平均排名為區間內加權結果，非每日平均',
-  }, ['頁面', '點擊數', '曝光數', 'CTR', '平均排名'], values);
+      ' 列，超過會被 API 截斷（點擊由多到少）｜CTR/平均排名為區間內加權結果，非每日平均' +
+      '｜每週快照存進「GSC_頁面_歷史」',
+  }, headers, values);
+
+  return { headers: headers, values: values, window: result.window };
 }
 
 // ---------- GSC 共用：呼叫 Search Console API ----------
@@ -329,17 +407,34 @@ function getOrCreateSheet(name) {
   return sheet;
 }
 
-// clarityMessage：選填，把 Clarity 同步狀態接到「已更新 GA4 + GSC 資料」那行後面
-// 同時把本次兩個滾動視窗的實際日期記進 log——事後追「這份數字是哪幾天的」有據可查
-function writeLastUpdated(clarityMessage) {
+// 寫「更新紀錄」一行。三個參數都是選填，但正常流程都會帶：
+//   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果
+// 開頭用 ✅／⚠️ 標整體狀態（失敗的步驟連錯誤訊息一起寫出來，不用去翻執行紀錄），
+// 後面接本次兩個滾動視窗的實際日期——事後追「這份數字是哪幾天的」有據可查。
+function writeLastUpdated(clarityMessage, results, historyMessage) {
   const sheet = getOrCreateSheet('更新紀錄');
   const ga4 = ga4Window_();
   const gsc = gscWindow_();
-  const base = '已更新 GA4 + GSC 資料（GA4 視窗 ' +
-    formatSlash_(ga4.start) + '~' + formatSlash_(ga4.end) + ' 共 ' + ga4.days + ' 天；' +
-    'GSC 視窗 ' + formatSlash_(gsc.start) + '~' + formatSlash_(gsc.end) + ' 共 ' + gsc.days + ' 天）';
-  const line = clarityMessage ? base + '；' + clarityMessage : base;
-  sheet.appendRow([new Date(), line]);
+
+  const steps = results || [];
+  const failed = steps.filter(r => !r.ok);
+  const status = steps.length === 0
+    ? '已更新 GA4 + GSC 資料'
+    : (failed.length === 0
+        ? '✅ ' + steps.length + ' 個報表全部更新成功'
+        : '⚠️ ' + steps.length + ' 個報表中 ' + failed.length + ' 個失敗：' +
+          failed.map(r => r.name + '（' + r.error + '）').join('、') +
+          '——這些表維持上次成功的內容，數字已過期');
+
+  const parts = [
+    status,
+    'GA4 視窗 ' + formatSlash_(ga4.start) + '~' + formatSlash_(ga4.end) + ' 共 ' + ga4.days + ' 天',
+    'GSC 視窗 ' + formatSlash_(gsc.start) + '~' + formatSlash_(gsc.end) + ' 共 ' + gsc.days + ' 天',
+  ];
+  if (clarityMessage) parts.push(clarityMessage);
+  if (historyMessage) parts.push(historyMessage);
+
+  sheet.appendRow([new Date(), parts.join('；')]);
 }
 
 // ========================================
@@ -560,6 +655,105 @@ function appendClarityRows_(rows) {
   }
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
 }
+
+// ============================================================================
+// 歷史快照累積（2026/07/31 新增）
+// ----------------------------------------------------------------------------
+// 解決的問題：四張滾動視窗表每次執行都 clear() 重寫，今天的快照蓋掉昨天的。於是
+// 「某關鍵字排名從 15 爬到 8」「/promos 改版前後跳出率差多少」這類問題**永遠查不到**，
+// 因為比較基準已經不存在。GA4 事後還能重抓，但 GSC 只保留 16 個月，而且事後重抓拿到的是
+// 不同視窗，跟當初那份對不起來。
+//
+// 作法：每週存一份帶「快照日期＋視窗起訖」的副本到 *_歷史 表（append，永不覆蓋）。
+//
+// 為什麼是每週而不是每天：底下的視窗本來就是 28/30 天滾動，相鄰兩天的內容有 96% 重疊，
+// 天天存只是把幾乎一樣的東西抄 365 遍、還會很快撐爆列數。每週一份剛好在一個視窗內取到
+// 4 個資訊量不同的點。
+//
+// 列數估算（關鍵字表最大）：200 列 × 8 欄 × 52 週 ≈ 83,000 儲存格/年，離單一試算表
+// 1,000 萬儲存格上限還很遠。
+//
+// 歷史表刻意**不加視窗標註列**：它是 append 表，每一列自己就帶著快照日期與視窗起訖，
+// 時間座標比標註更精確；而且在既有資料上方插列有搬錯資料的風險（同 Clarity_每日 的理由）。
+// ============================================================================
+
+function appendHistorySnapshots_(collected, force) {
+  const props = PropertiesService.getScriptProperties();
+  const now = new Date();
+  const today = formatDate(now);
+
+  if (!force) {
+    if (now.getDay() !== HISTORY_SNAPSHOT_WEEKDAY) {
+      return '歷史快照：今天非快照日（每週' + WEEKDAY_LABELS[HISTORY_SNAPSHOT_WEEKDAY] + '存一次），略過';
+    }
+    // 同一天手動重跑 updateAllReports 不該存出兩份一模一樣的快照
+    if (props.getProperty('HISTORY_LAST_SNAPSHOT_DATE') === today) {
+      return '歷史快照：今日（' + today + '）已存過，略過';
+    }
+  }
+
+  const jobs = [
+    { key: 'gscQueries',  sheet: 'GSC_關鍵字_歷史',     topN: HISTORY_KEYWORD_TOP_N },
+    { key: 'gscPages',    sheet: 'GSC_頁面_歷史',       topN: HISTORY_TOP_N },
+    { key: 'ga4Pages',    sheet: 'GA4_頁面成效_歷史',   topN: HISTORY_TOP_N },
+    { key: 'ga4Channels', sheet: 'GA4_流量來源_歷史',   topN: HISTORY_TOP_N },
+    { key: 'cardClicks',  sheet: 'GA4_申辦點擊_歷史',   topN: HISTORY_TOP_N },
+  ];
+
+  const done = [];
+  const skipped = [];
+  jobs.forEach(job => {
+    const src = collected[job.key];
+    // 該步驟失敗時 collected[key] 是 null——寧可這週沒存，也不要存一份空的假快照
+    if (!src || !src.values || src.values.length === 0) {
+      skipped.push(job.sheet);
+      return;
+    }
+    const headers = ['快照日期', '視窗起', '視窗迄'].concat(src.headers);
+    const rows = src.values.slice(0, job.topN).map(r =>
+      [today, formatDate(src.window.start), formatDate(src.window.end)].concat(r)
+    );
+    appendHistoryRows_(job.sheet, headers, rows);
+    done.push(job.sheet + '(' + rows.length + ')');
+  });
+
+  props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
+
+  let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
+  if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
+  return msg;
+}
+
+// append 到歷史表（只加列、不覆蓋）。表頭只在第一次建立時寫。
+function appendHistoryRows_(sheetName, headers, rows) {
+  const sheet = getOrCreateSheet(sheetName);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+  }
+  if (rows.length === 0) return 0;
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
+  return rows.length;
+}
+
+// 手動存一份歷史快照（不管今天星期幾、不管今天存過沒）。
+// 用途：剛上線時先種下第一個資料點，不用等到下個快照日；或想在改版前後各留一份對照。
+// 會重新抓一次各報表資料（＝多打幾次 API），一般日常不需要跑。
+function snapshotHistoryNow() {
+  const collected = {
+    ga4Pages:    updateGA4Pages(),
+    ga4Channels: updateGA4Channels(),
+    cardClicks:  updateGA4CardClicks(),
+    gscQueries:  updateGSCQueries(),
+    gscPages:    updateGSCPages(),
+  };
+  const msg = appendHistorySnapshots_(collected, true);
+  Logger.log(msg);
+  return msg;
+}
+
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 // ---------- 排程：每天自動執行 ----------
 function createDailyTrigger() {
@@ -798,6 +992,8 @@ function updateGA4Pages() {
     ];
   });
 
+  const headers = ['到達頁面', 'Sessions', '活躍用戶', '新用戶', '新用戶佔比',
+                   '跳出率', '互動率', '平均參與時間(秒)', '頁面瀏覽'];
   const sheet = writeSnapshotSheet_('GA4_頁面成效', {
     window: WINDOW_ROLLING,
     start: win.start,
@@ -806,12 +1002,218 @@ function updateGA4Pages() {
     source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 landingPage（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定｜「到達頁」＝ session 入口頁，非所有被瀏覽的頁' +
-      '｜平均參與時間＝userEngagementDuration÷activeUsers（同 GA4 後台算法）',
-  }, ['到達頁面', 'Sessions', '活躍用戶', '新用戶', '新用戶佔比',
-      '跳出率', '互動率', '平均參與時間(秒)', '頁面瀏覽'], values);
+      '｜平均參與時間＝userEngagementDuration÷activeUsers（同 GA4 後台算法）' +
+      '｜每週快照存進「GA4_頁面成效_歷史」',
+  }, headers, values);
 
   // 新用戶佔比(E)、跳出率(F)、互動率(G) 三欄套百分比格式
   if (values.length > 0) {
     sheet.getRange(DATA_START_ROW, 5, values.length, 3).setNumberFormat('0.0%');
   }
+
+  return { headers: headers, values: values, window: win };
 }
+
+// ============================================================================
+// GA4 事件 / 申辦點擊（2026/07/31 新增）
+// ----------------------------------------------------------------------------
+// 補上資料中心原本最大的盲區：舊版所有表只回答「有多少人來、從哪來、跳出多少」，
+// 完全沒有站內行為與轉換——而申辦 CTA 點擊是本站最接近轉換的訊號。
+//
+// 前端早就在送這些事件（Firebase Analytics → GA4）：
+//   button_click            js/quick-options-misc.js「GA4 Button Click Tracking」＋ promos.js
+//                           參數：button_type / card_id / card_name / merchant
+//     button_type 取值：spotlight_compare｜spotlight_info｜spotlight_apply｜
+//                       detail_header_apply｜detail_sticky_apply｜card_apply｜
+//                       search_result_apply｜promos_page_apply（promos.js）
+//   view_card_detail        js/card-detail.js
+//   calculate_cashback      js/cashback-engine.js（＝核心功能使用量）
+//   pin_card / unpin_card / remove_mapping / clear_expired_mappings
+//                           js/spending-mappings.js
+//
+// ⚠️ 自訂參數要能用 Data API 查，必須先在 GA4 後台註冊成「自訂維度」。
+//   已註冊（站長確認）：card_name → customEvent:card_name、button_type → customEvent:button_type
+//   尚未註冊：card_id、merchant——想按卡片 id 或商家拆，得先去 GA4「管理 → 自訂定義」加，
+//   且**註冊前的資料補不回來**（GA4 不回填），越早加越好。
+//   若某維度沒註冊就查，Data API 會回錯誤；此步驟失敗不會影響其他報表（見 runStep_）。
+// ============================================================================
+
+// 事件名稱 EXACT 比對用的 dimensionFilter
+function eventNameFilter_(eventName) {
+  const stringFilter = AnalyticsData.newStringFilter();
+  stringFilter.matchType = 'EXACT';
+  stringFilter.value = eventName;
+
+  const filter = AnalyticsData.newFilter();
+  filter.fieldName = 'eventName';
+  filter.stringFilter = stringFilter;
+
+  const expression = AnalyticsData.newFilterExpression();
+  expression.filter = filter;
+  return expression;
+}
+
+// ---------- GA4：近 30 天各事件觸發量 ----------
+// 一眼看出「用戶在站內到底做了什麼」：算回饋幾次、看了幾張卡詳情、釘了幾張卡、點了幾次申辦
+function updateGA4Events() {
+  const win = ga4Window_();
+
+  const dimension = AnalyticsData.newDimension();
+  dimension.name = 'eventName';
+
+  const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
+  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'totalUsers';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = win.startSpec;
+  dateRange.endDate = win.endSpec;
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dimension];
+  request.metrics = [mCount, mUsers];
+  request.dateRanges = [dateRange];
+
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+
+  const rows = report.rows || [];
+  const sortedRows = rows.slice().sort((a, b) =>
+    Number(b.metricValues[0].value) - Number(a.metricValues[0].value)
+  );
+
+  const values = sortedRows.map(row => {
+    const name = row.dimensionValues[0].value;
+    const count = Number(row.metricValues[0].value);
+    const users = Number(row.metricValues[1].value);
+    return [
+      name,
+      EVENT_LABELS[name] || '',          // 中文說明，讓不熟事件命名的人也讀得懂
+      count,
+      users,
+      users > 0 ? Math.round((count / users) * 100) / 100 : 0, // 人均次數
+    ];
+  });
+
+  const headers = ['事件名稱', '說明', '觸發次數', '觸發用戶數', '人均次數'];
+  writeSnapshotSheet_('GA4_事件成效', {
+    window: WINDOW_ROLLING,
+    start: win.start,
+    end: win.end,
+    days: win.days,
+    source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 eventName（' +
+      win.startSpec + ' ~ ' + win.endSpec + '）',
+    note: '區間日界線由 GA4 資源時區判定｜含 GA4 自動蒐集事件（page_view、session_start 等）' +
+      '與本站自訂事件｜申辦點擊的卡片/按鈕拆解看「GA4_申辦點擊」與「GA4_各卡點擊」',
+  }, headers, values);
+
+  return { headers: headers, values: values, window: win };
+}
+
+// 自訂事件的中文說明（GA4 自動蒐集事件不列，留空即可）
+const EVENT_LABELS = {
+  button_click: '按鈕點擊（申辦 CTA／比較／詳情，細分見 GA4_申辦點擊）',
+  view_card_detail: '開啟卡片詳情頁',
+  calculate_cashback: '執行回饋試算（核心功能使用量）',
+  pin_card: '釘選卡片到我的信用卡',
+  unpin_card: '取消釘選卡片',
+  remove_mapping: '移除配卡表項目',
+  clear_expired_mappings: '清除過期配卡',
+};
+
+// ---------- GA4：近 30 天申辦／按鈕點擊（依卡片 × 按鈕類型）----------
+// 一次 API 呼叫產出兩張表：
+//   GA4_申辦點擊 → 卡片 × 按鈕類型明細（對應站長既有探索「辦卡連結點擊」）
+//   GA4_各卡點擊 → 一卡一列、按鈕類型攤成欄（對應站長既有探索「各卡點擊數」，並多了分佈）
+function updateGA4CardClicks() {
+  const win = ga4Window_();
+
+  const dCard = AnalyticsData.newDimension(); dCard.name = 'customEvent:card_name';
+  const dType = AnalyticsData.newDimension(); dType.name = 'customEvent:button_type';
+
+  const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = win.startSpec;
+  dateRange.endDate = win.endSpec;
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dCard, dType];
+  request.metrics = [mCount];
+  request.dateRanges = [dateRange];
+  request.dimensionFilter = eventNameFilter_('button_click'); // 只算按鈕點擊
+  request.limit = GA4_CLICK_ROW_LIMIT;
+
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  const rows = report.rows || [];
+
+  // ── 明細表：卡片 × 按鈕類型，點擊多的在前 ──
+  const detail = rows.map(row => ({
+    card: row.dimensionValues[0].value,
+    type: row.dimensionValues[1].value,
+    count: Number(row.metricValues[0].value),
+  })).sort((a, b) => b.count - a.count);
+
+  const detailHeaders = ['卡片名稱', '按鈕類型', '按鈕位置說明', '點擊數'];
+  const detailValues = detail.map(d => [d.card, d.type, BUTTON_TYPE_LABELS[d.type] || '', d.count]);
+
+  writeSnapshotSheet_('GA4_申辦點擊', {
+    window: WINDOW_ROLLING,
+    start: win.start,
+    end: win.end,
+    days: win.days,
+    source: 'GA4 property ' + GA4_PROPERTY_ID +
+      '，事件 button_click，維度 customEvent:card_name × customEvent:button_type（' +
+      win.startSpec + ' ~ ' + win.endSpec + '）',
+    note: '區間日界線由 GA4 資源時區判定｜最多取 ' + GA4_CLICK_ROW_LIMIT + ' 列' +
+      '｜「(not set)」＝該次點擊沒帶到卡片名稱（多半是非卡片類按鈕，如 spotlight_compare）' +
+      '｜每週快照存進「GA4_申辦點擊_歷史」',
+  }, detailHeaders, detailValues);
+
+  // ── 樞紐表：一卡一列，按鈕類型攤成欄 ──
+  // 同一張卡的點擊分佈（詳情頁浮動列 vs 搜尋結果 vs 活動頁）就是 CTA 版位效益，
+  // 攤成欄才看得出來——明細表一卡多列，人眼很難橫向比較。
+  const typeTotals = {};
+  const byCard = {};
+  detail.forEach(d => {
+    typeTotals[d.type] = (typeTotals[d.type] || 0) + d.count;
+    if (!byCard[d.card]) byCard[d.card] = { card: d.card, total: 0, types: {} };
+    byCard[d.card].total += d.count;
+    byCard[d.card].types[d.type] = (byCard[d.card].types[d.type] || 0) + d.count;
+  });
+
+  // 欄順序＝該按鈕類型的總點擊由多到少（欄位會隨資料變動，所以每次重算）
+  const typeCols = Object.keys(typeTotals).sort((a, b) => typeTotals[b] - typeTotals[a]);
+
+  const pivotHeaders = ['卡片名稱', '總點擊數'].concat(typeCols);
+  const pivotValues = Object.keys(byCard)
+    .map(k => byCard[k])
+    .sort((a, b) => b.total - a.total)
+    .map(c => [c.card, c.total].concat(typeCols.map(t => c.types[t] || 0)));
+
+  writeSnapshotSheet_('GA4_各卡點擊', {
+    window: WINDOW_ROLLING,
+    start: win.start,
+    end: win.end,
+    days: win.days,
+    source: '同「GA4_申辦點擊」（同一次 API 回傳，於指令碼內彙總）',
+    note: '一卡一列、按鈕類型攤成欄，看的是同一張卡的 CTA 版位分佈' +
+      '｜欄位順序依各按鈕類型總點擊排列，會隨資料變動' +
+      '｜按鈕類型意義：' + typeCols.map(t => t + '＝' + (BUTTON_TYPE_LABELS[t] || '未知')).join('、'),
+  }, pivotHeaders, pivotValues);
+
+  return {
+    headers: detailHeaders, values: detailValues, window: win,
+    pivotHeaders: pivotHeaders, pivotValues: pivotValues,
+  };
+}
+
+// button_type 取值 → 按鈕實際位置（對照 js/quick-options-misc.js 與 promos.js）
+const BUTTON_TYPE_LABELS = {
+  spotlight_compare: '首頁 Spotlight「比較」',
+  spotlight_info: '首頁 Spotlight「詳情」',
+  spotlight_apply: '首頁 Spotlight「申辦」',
+  detail_header_apply: '卡片詳情頁頂部申辦',
+  detail_sticky_apply: '卡片詳情頁浮動列申辦',
+  card_apply: '卡片列表申辦',
+  search_result_apply: '搜尋結果申辦',
+  promos_page_apply: '新戶活動頁（promos）申辦',
+};
