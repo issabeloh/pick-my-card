@@ -212,7 +212,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 程式檔案 | Apps Script 專案內的 `權益監控.gs`（備份：`watchlist-monitor.gs`） |
 | 主函數 | `checkWatchlist`（觸發器叫醒的就是它） |
 | 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」 |
-| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars`（`cards` 為 2026-07-29 新增，沒有這一欄也照跑） |
+| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars / check_days`（`cards` 為 2026-07-29、`check_days` 為 2026-07-31 新增，沒有這兩欄也照跑） |
 | 偵測結果 | 自動寫入分頁 `2-變動通知`（不存在會自動建立），並寄 Email 通知 |
 | 通知信箱 | `MONITOR_CONFIG.notifyEmail` 留空 = 寄給試算表登入帳號 |
 
@@ -228,8 +228,25 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 |---|---|---|
 | `keywords` | 這一列專用關鍵字，覆蓋全域 | 逗號分隔（半形/全形逗號、頓號皆可）。公告標題頁填該行卡名，例：`永豐SPORT卡,夢行,幣倍` |
 | `min_diff_chars` | 這一列專用雜訊門檻，覆蓋全域 30 | 公告標題頁填 `10`（一條新標題常見 15~30 字，30 會漏掉短標題） |
+| `check_days` | 這一列**最少隔幾天才抓一次**（2026-07-31 新增） | 正整數。走 Jina 的列建議填 `7`；不急的頁可填 `14`／`30`。留空＝每次觸發器跑到都抓 |
 
-兩欄留空 = 沿用全域設定，舊列完全不受影響。
+三欄留空 = 沿用全域設定／每次都抓，舊列完全不受影響。
+
+#### `check_days` 是省 Jina 額度用的
+
+走 Jina 的頁**一次約 5,000 tokens**，免費額度是一次性的 1,000 萬（用完不會回補）。實測 7 列走 Jina 一輪＝33,676 tokens：
+
+| 排程 | Jina 年用量 | 1,000 萬能撐 |
+|---|---|---|
+| 每天跑、全部不設 `check_days` | 約 1,230 萬 | **不到 10 個月** |
+| 每天跑、Jina 那幾列填 `check_days=7` | 約 175 萬 | **約 5.7 年** |
+
+直接抓的列（`fetch_via` 留空或 `direct`）**完全不花錢**，可以不填，除非你想少收點通知信。
+
+- **這是「下限」不是「排程」**：實際還要等觸發器跑到。觸發器每週的話，填 3 跟填 1 沒差別；填 10 會變成每兩週才抓一次
+- 跳過的列**完全不發請求**，也不動 `last_snapshot` / `last_checked`——所以下次跑到時比對的仍是最後一次成功抓取的基準，不會產生假差異
+- 通知信結尾會註明「本次有 N 列未到 check_days 間隔，略過未抓」，免得你以為程式壞了
+- 代價：該列的變動最晚會延遲 `check_days` 天才發現。權益頁通常沒差，但**新戶活動有時效**，那種頁不建議拉太長
 
 ### 卡片欄位語意（2026-07-29 改版：card_id 回歸「只放正式 id」）
 
@@ -260,6 +277,8 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - `watch_type` 填了 `card`/`bank` 以外的值／`watch_type=card` 卻沒填 `card_id`
 - 同一個 url 出現在兩列
 - `active` 不是 `TRUE`/`FALSE`
+- `check_days` 不是正整數；或填了 `check_days` 但表格沒有 `last_checked` 欄（算不出間隔，設定不會生效）
+- `check_days` 不是正整數／填了 `check_days` 但表格沒有 `last_checked` 欄（設定不會生效）
 - 沒填 url 的列
 - （可選提醒）多卡頁還沒填 `cards`——不影響監控與通知，只影響解析階段的卡片線索
 - （提醒）表格還沒有 `cards` 欄、或讀不到 Cards Data：不擋，其餘檢查照跑

@@ -9,7 +9,7 @@
  *   Watchlist —— 第一列表頭至少要有：url、last_snapshot
  *                建議完整表頭：card_id | bank | url | watch_type | cards | css_selector
  *                             | last_snapshot | last_checked | active | fetch_via
- *                             | keywords | min_diff_chars
+ *                             | keywords | min_diff_chars | check_days
  *   情報收件匣 —— 不用自己建，腳本會自動建立
  *
  * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
@@ -24,6 +24,14 @@
  *   min_diff_chars —— 這一列專用雜訊門檻。公告標題頁建議填 10
  *                     （一條新標題常見 15~30 字，全域預設 30 會漏掉短標題）
  *
+ * check_days 欄（選填，2026-07-31 新增，留空 = 每次觸發器跑到都抓）：
+ *   這一列「最少隔幾天才抓一次」。距上次 last_checked 未滿這個天數就整列跳過，
+ *   完全不發請求、也不動 last_snapshot / last_checked。
+ *   為什麼要有：走 Jina 的頁一次約 5,000 tokens，免費額度是一次性的 1,000 萬。
+ *   每天跑 7 列 Jina 約 10 個月燒光；那幾列填 7 就能拉到 5 年以上，而動態頁
+ *   本來就不會天天改，靈敏度幾乎沒損失。直接抓的列不花錢，可以不填。
+ *   ⚠️ 這是「下限」不是「排程」——實際還要等觸發器跑到。觸發器若是每週，
+ *      填 3 跟填 1 沒差別；填 10 則會變成每兩週才抓一次。
  * 卡片欄位語意（2026-07-29 改版；css_selector 仍只是備註欄，程式不會讀）：
  *   card_id    —— **只填 Cards Data 的正式卡片 id**（第二階段解析靠它對資料）。
  *                 多卡頁（公告頁／一般消費頁）**留空**，不要填 febank-basic 這種頁級標籤
@@ -79,6 +87,7 @@ function checkWatchlist() {
   const cVia = col('fetch_via');
   const cKeywords = col('keywords');
   const cMinDiff = col('min_diff_chars');
+  const cMinDays = col('check_days');   // 選填新欄，舊表格沒有時是 -1，下面安全降級成「每次都跑」
   if (cUrl < 0 || cSnap < 0) {
     throw new Error('Watchlist 第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
   }
@@ -86,6 +95,7 @@ function checkWatchlist() {
   const alerts = [];
   const errors = [];
   const rebaselined = [];   // 基準快照落差懸殊、本次只重建不通知的列
+  let skipped = 0;          // 未到 check_days 間隔、本次略過的列數
   const now = new Date();
 
   for (let i = 1; i < data.length; i++) {
@@ -93,6 +103,19 @@ function checkWatchlist() {
     const url = String(row[cUrl] || '').trim();
     if (!url) continue;
     if (cActive >= 0 && String(row[cActive]).toUpperCase() === 'FALSE') continue;
+
+    // check_days：這一列最少隔幾天才抓一次（留空／0／非數字＝每次都跑）。
+    // 主要是省 Jina token——走 Jina 的頁一次約 5,000 tokens，而那種動態頁本來就不會天天改。
+    // 刻意放在抓取之前：跳過的列完全不發請求，也不動 last_snapshot / last_checked。
+    // 沒有 check_days 欄或沒有 last_checked 欄時一律照跑（算不出間隔就不該擋）。
+    if (cMinDays >= 0 && cChecked >= 0) {
+      const minDays = Number(row[cMinDays]);
+      const lastAt = row[cChecked] instanceof Date ? row[cChecked] : new Date(row[cChecked]);
+      if (minDays > 0 && lastAt && !isNaN(lastAt.getTime())) {
+        const ageDays = (now.getTime() - lastAt.getTime()) / 86400000;
+        if (ageDays < minDays) { skipped++; continue; }
+      }
+    }
 
     const fetchVia = cVia >= 0 ? String(row[cVia] || '').trim().toLowerCase() : '';
 
@@ -196,7 +219,7 @@ function checkWatchlist() {
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
   }
 
-  if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined);
+  if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined, skipped);
 }
 
 /************** 欄位小工具（cards / watch_type / 顯示名稱） **************/
@@ -432,7 +455,7 @@ function appendToInbox_(ss, info) {
 }
 
 /************** 寄彙總通知信 **************/
-function sendDigest_(alerts, errors, rebaselined) {
+function sendDigest_(alerts, errors, rebaselined, skipped) {
   const to = MONITOR_CONFIG.notifyEmail || Session.getActiveUser().getEmail();
   let body = '';
 
@@ -476,6 +499,11 @@ function sendDigest_(alerts, errors, rebaselined) {
             '若備援也失敗，把 url 換成該銀行的公告/最新消息列表頁。\n';
   }
 
+  if (skipped) {
+    body += '（本次有 ' + skipped + ' 列未到 check_days 設定的間隔天數，略過未抓——這是刻意的，' +
+            '用來省 Jina 額度。想改回每次都抓就把該列 check_days 清空。）\n';
+  }
+
   const materialCount = alerts.filter(function (a) { return a.cls && a.cls.material; }).length;
   const subject = '【信用卡權益監控】' +
     (alerts.length
@@ -505,6 +533,8 @@ function checkWatchlistConfig() {
   const cCards = col('cards');
   const cActive = col('active');
   const cBank = col('bank');
+  const cMinDays = col('check_days');
+  const cChecked = col('last_checked');   // check_days 要靠它算間隔，沒有這欄設定會失效
 
   // 問題分組收集，最後才排版——同一件事只講一次，訊息按類型聚合（47 列的清單也不會爆版）
   const notes = [];              // 提醒等級，不算問題
@@ -518,6 +548,8 @@ function checkWatchlistConfig() {
     unknownCards: [],
     dupUrl: [],
     badActive: [],
+    badCheckDays: [],            // check_days 不是正數
+    checkDaysNoLastChecked: [],  // 有 check_days 但表格沒有 last_checked 欄 → 設定無效
     noUrl: []
   };
 
@@ -582,6 +614,15 @@ function checkWatchlistConfig() {
         g.badActive.push({ row: rowNo, raw: String(row[cActive]).trim() });
       }
     }
+
+    if (cMinDays >= 0) {
+      const raw = String(row[cMinDays] || '').trim();
+      if (raw) {
+        const n = Number(raw);
+        if (!(n > 0) || n !== Math.floor(n)) g.badCheckDays.push({ row: rowNo, raw: raw });
+        else if (cChecked < 0) g.checkDaysNoLastChecked.push(rowNo);
+      }
+    }
   }
 
   const rows = Math.max(0, data.length - 1);
@@ -590,7 +631,8 @@ function checkWatchlistConfig() {
   // 混進問題總數會讓人以為有 17 件事要做，其實只有 1 件
   const total = g.bankKeepsCardId.length + g.unknownCardId.length +
     g.bankNoBank.length + g.badWatchType.length + g.cardNoCardId.length + g.unknownCards.length +
-    g.dupUrl.length + g.badActive.length + g.noUrl.length;
+    g.dupUrl.length + g.badActive.length + g.badCheckDays.length +
+    g.checkDaysNoLastChecked.length + g.noUrl.length;
   const optional = g.bankNoCards.length;
 
   const block = function (title, lines) {
@@ -615,6 +657,10 @@ function checkWatchlistConfig() {
     g.dupUrl.map(function (x) { return '  第 ' + x.row + ' 列 ＝ 第 ' + x.first + ' 列：' + x.url; }));
   block('active 不是 TRUE/FALSE（只有 FALSE 會停用，其餘一律照抓）',
     g.badActive.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('check_days 必須是正整數（留空＝每次都抓）',
+    g.badCheckDays.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
+  block('填了 check_days 但表格沒有 last_checked 欄 → 算不出間隔，這個設定不會生效',
+    g.checkDaysNoLastChecked.map(function (r) { return '  第 ' + r + ' 列'; }));
   block('沒填 url，這一列不會被監控',
     g.noUrl.map(function (r) { return '  第 ' + r + ' 列'; }));
   // 這一組不擋監控，只影響解析階段的卡片線索，放最後、也不計入問題數
