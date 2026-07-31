@@ -258,6 +258,26 @@ check('舊分頁的既有內容一格都沒動',
 check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有打勾」提示',
   !r.changelog && r.alerts.join('').indexOf('沒有任何打勾') >= 0, r.alerts);
 
+// B5a: 舊列的「公開摘要／公開卡片」自動從 AI摘要／card_id 回填
+check('舊列「公開卡片」自動回填 card_id', r.inbox[1][13] === 'yushan-unicard', r.inbox[1].slice(12));
+check('舊列「公開摘要」自動回填 AI摘要', r.inbox[1][12] === 'AI內部視角摘要', r.inbox[1].slice(12));
+check('回填筆數有寫進結果視窗', r.alerts.join('').indexOf('回填了 2 格') >= 0, r.alerts);
+
+// 回填只填空格：站長已經改寫過的摘要不能被 AI 摘要蓋掉；「已發布」的列整列不碰
+r = runPublish([OLD_HEADER.concat(['公開摘要', '公開卡片', '公開']),
+  oldRow.concat(['我改寫過的一句話', '', '']),
+  oldRow.concat(['', '', '已發布'])], CARDS_DATA, null);
+check('已改寫的「公開摘要」不被 AI 摘要覆蓋', r.inbox[1][12] === '我改寫過的一句話', r.inbox[1].slice(12));
+check('空的「公開卡片」照樣補上', r.inbox[1][13] === 'yushan-unicard', r.inbox[1].slice(12));
+check('「已發布」的列整列不回填', r.inbox[2][12] === '' && r.inbox[2][13] === '', r.inbox[2].slice(12));
+
+// 回填後同一次就能用：舊列只要打 V 就發得出去（不用等下一次按選單）
+r = runPublish([OLD_HEADER.concat(['公開摘要', '公開卡片', '公開']),
+  oldRow.concat(['改寫好的一句話', '', 'V'])], CARDS_DATA, null);
+check('舊列只打 V、公開卡片留空 → 回填後同一次就發得出去',
+  !!r.changelog && r.changelog.rows.length === 2 && r.changelog.rows[1][0] === 'yushan-unicard',
+  r.changelog && r.changelog.rows);
+
 // B5b: 補完表頭後，站長自己補上舊列的兩格再打 V → 照樣發得出去
 r = runPublish([OLD_HEADER.concat(['公開摘要', '公開卡片', '公開']),
   oldRow.concat(['手動補寫的一句話', 'yushan-unicard', 'V'])], CARDS_DATA, null);
