@@ -168,17 +168,24 @@ function publishChangelog() {
     return;
   }
 
-  const data = inbox.getDataRange().getValues();
-  const headers = data[0].map(function (h) { return String(h).trim(); });
+  let data = inbox.getDataRange().getValues();
+  let headers = data[0].map(function (h) { return String(h).trim(); });
+  if (headers.indexOf('公開') < 0) {
+    // 舊的 12 欄分頁：自動補上表尾三欄再讀一次（分頁裡的歷史內容原封不動，不用刪分頁）
+    ensureInboxPublishColumns_(inbox);   // watchlist-monitor.gs
+    data = inbox.getDataRange().getValues();
+    headers = data[0].map(function (h) { return String(h).trim(); });
+  }
   const cTime = headers.indexOf('日期時間');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
   const cFlag = headers.indexOf('公開');
   if (cSummary < 0 || cCards < 0 || cFlag < 0) {
     ui.alert('發布變動紀錄',
-      '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／公開」三欄。\n\n' +
-      '這三欄是監控寫入時預填的（appendToInbox_）。把舊的「' + PARSER_CONFIG.inboxSheet +
-      '」分頁整個刪掉，下次 checkWatchlist 會自動重建成新表頭——那是可拋棄的 log。',
+      '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／公開」三欄，' +
+      '而且自動補表頭沒成功（表頭跟程式預期對不上，或那幾欄已經被其他內容佔用）。\n\n' +
+      '手動補即可，分頁裡的內容不用刪：在第一列「狀態」欄的右邊三格，' +
+      '依序填「公開摘要」「公開卡片」「公開」（順序不能顛倒，監控寫入是照位置填的）。',
       ui.ButtonSet.OK);
     return;
   }

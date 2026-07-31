@@ -24,12 +24,19 @@ function check(name, cond, extra) {
 }
 
 // ---------- 假試算表 ----------
-function makeSheet(name, rows) {
+function makeSheet(name, rows, maxColumns) {
   return {
     name,
     rows,
-    getDataRange() { return { getValues: () => this.rows.map(r => r.slice()) }; },
+    maxColumns: maxColumns || 26,
+    getDataRange() {
+      const width = this.rows.reduce((w, r) => Math.max(w, r.length), 0);
+      return { getValues: () => this.rows.map(r => { const c = r.slice(); while (c.length < width) c.push(''); return c; }) };
+    },
     getLastRow() { return this.rows.length; },
+    getLastColumn() { return this.rows.reduce((w, r) => Math.max(w, r.length), 0); },
+    getMaxColumns() { return this.maxColumns; },
+    insertColumnsAfter(afterCol, n) { this.maxColumns += n; },
     appendRow(r) { this.rows.push(r.slice()); },
     setFrozenRows() {},
     getRange(row, col, numRows, numCols) {
@@ -45,6 +52,19 @@ function makeSheet(name, rows) {
             while (s.rows.length <= idx) s.rows.push([]);
             r.forEach((v, j) => { s.rows[idx][col - 1 + j] = v; });
           });
+        },
+        getValues() {
+          const out = [];
+          for (let i = 0; i < (numRows || 1); i++) {
+            const src = s.rows[row - 1 + i] || [];
+            const line = [];
+            for (let j = 0; j < (numCols || 1); j++) {
+              const v = src[col - 1 + j];
+              line.push(v === undefined ? '' : v);
+            }
+            out.push(line);
+          }
+          return out;
         },
         setBackground() { return this; }
       };
@@ -226,10 +246,35 @@ check('沒打勾的列不動', r.inbox[6][14] === '', r.inbox[6][14]);
 check('「變動紀錄」表不存在時自動建立＋表頭',
   JSON.stringify(r.changelog.rows[0]) === JSON.stringify(['id', 'date', 'summary', 'active']), r.changelog.rows[0]);
 
-// B5: 舊版收件匣（沒有三欄）→ 給明確指示、不寫入
+// B5: 舊的 12 欄分頁（站長既有內容還在）→ 自動補表頭、舊列一格都不動
+const OLD_HEADER = ['日期時間', 'card_id', '銀行', '網址', '實質變動', 'AI摘要', '變動類型',
+  '信心', '變動段落', '舊文字', '新文字', '狀態'];
+const oldRow = [T, 'yushan-unicard', '玉山', 'https://x', '是', 'AI內部視角摘要', '文案', '高', 'd', 'o', 'n', '已處理'];
+r = runPublish([OLD_HEADER.slice(), oldRow.slice()], CARDS_DATA, null);
+check('舊 12 欄分頁：自動補上表尾三欄（不用刪分頁）',
+  JSON.stringify(r.inbox[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), r.inbox[0]);
+check('舊分頁的既有內容一格都沒動',
+  JSON.stringify(r.inbox[1].slice(0, 12)) === JSON.stringify(oldRow), r.inbox[1]);
+check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有打勾」提示',
+  !r.changelog && r.alerts.join('').indexOf('沒有任何打勾') >= 0, r.alerts);
+
+// B5b: 補完表頭後，站長自己補上舊列的兩格再打 V → 照樣發得出去
+r = runPublish([OLD_HEADER.concat(['公開摘要', '公開卡片', '公開']),
+  oldRow.concat(['手動補寫的一句話', 'yushan-unicard', 'V'])], CARDS_DATA, null);
+check('舊列手動補兩格後可正常發布',
+  !!r.changelog && r.changelog.rows.length === 2 && r.changelog.rows[1][2] === '手動補寫的一句話',
+  r.changelog && r.changelog.rows);
+
+// B5c: 表頭跟程式預期對不上 → 什麼都不寫，改給手動補表頭的指示
 r = runPublish([['日期時間', 'card_id', '銀行', '網址', '狀態'], [T, 'yushan-unicard', '玉山', 'u', '待解析']], CARDS_DATA, null);
-check('舊表頭（缺三欄）→ 提示刪分頁重建、不寫入',
-  r.alerts.join('').indexOf('刪掉') >= 0 && !r.changelog, r.alerts);
+check('表頭對不上 → 不亂寫、指示手動補三格（不叫人刪分頁）',
+  r.inbox[0].length === 5 && r.alerts.join('').indexOf('手動補即可') >= 0 && !r.changelog, r.alerts);
+
+// B5d: 第 13~15 欄已被站長自己的欄位佔用 → 不覆蓋
+r = runPublish([OLD_HEADER.concat(['我的備註']), oldRow.concat(['別動我'])], CARDS_DATA, null);
+check('第 13 欄已有站長自己的欄位 → 不覆蓋、改指示手動補',
+  r.inbox[0][12] === '我的備註' && r.inbox[1][12] === '別動我' &&
+  r.alerts.join('').indexOf('手動補即可') >= 0, r.inbox[0]);
 
 // ============================================================
 // C. appendToInbox_ 預填三欄
@@ -251,6 +296,27 @@ check('舊表頭（缺三欄）→ 提示刪分頁重建、不寫入',
     sheet.rows[1][12] === '純版面調整，回饋未變' &&
     sheet.rows[1][13] === 'febank-jaccard,cathay-cube' &&
     sheet.rows[1][14] === '', sheet.rows[1].slice(12));
+}
+
+// C2: 監控寫入舊的 12 欄分頁時，也會自動補表頭、舊列不動
+{
+  const oldSheet = makeSheet('2-變動通知', [OLD_HEADER.slice(), oldRow.slice()]);
+  const autoSS = makeSS({ '2-變動通知': oldSheet });
+  const ctx = vm.createContext(baseSandbox(autoSS));
+  vm.runInContext(fs.readFileSync(path + 'watchlist-monitor.gs', 'utf8'), ctx);
+  ctx.__info = {
+    time: T, cardId: 'yushan-unicard', bank: '玉山', url: 'https://x',
+    cls: { material: true, summary: '新的一筆', change_types: [], confidence: '高' },
+    diffText: 'd', oldText: 'o', newText: 'n'
+  };
+  vm.runInContext('appendToInbox_(SpreadsheetApp.getActiveSpreadsheet(), __info)', ctx);
+  check('監控寫入舊分頁時自動補表頭',
+    JSON.stringify(oldSheet.rows[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), oldSheet.rows[0]);
+  check('舊分頁的舊列不受影響',
+    JSON.stringify(oldSheet.rows[1].slice(0, 12)) === JSON.stringify(oldRow), oldSheet.rows[1]);
+  check('新寫入的列三欄預填正確',
+    oldSheet.rows[2][12] === '新的一筆' && oldSheet.rows[2][13] === 'yushan-unicard' && oldSheet.rows[2][14] === '',
+    oldSheet.rows[2].slice(12));
 }
 
 console.log(failures ? `\n${failures} 項未通過` : '\n全部通過');
