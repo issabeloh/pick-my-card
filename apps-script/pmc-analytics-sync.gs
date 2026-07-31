@@ -1252,53 +1252,100 @@ function updateGA4CardClicks() {
 // 這是整個資料中心**唯一的第一方需求訊號**：用戶在回饋試算框裡實際打了什麼字。
 // GSC 只告訴你「他們在 Google 搜什麼才找到你」，這張表告訴你「他們進來之後想問什麼」——
 // 兩者常常完全不同，而後者才是內容與卡片資料該補哪裡的依據。
-// 資料來源：js/cashback-engine.js 的 calculate_cashback 事件（merchant＝輸入框內容）。
+// 資料來源：js/cashback-engine.js 的 calculate_cashback 事件
+//   merchant   ＝ 輸入框內容
+//   has_match  ＝ 這次試算有沒有對到資料（true/false）
+//
+// 一次呼叫產出兩張：
+//   GA4_熱門搜尋 → 依試算次數排，看「大家最常查什麼」
+//   GA4_搜尋落空 → 只留沒對到的、依沒對到次數排，看「他們想查但我們答不出來的」
+//                  ——這張基本上就是 cards.data 的資料補齊優先順序清單
+//
+// ⚠️ has_match 是 2026-07-31 才註冊的自訂維度，**GA4 對註冊前的資料不回填**，
+//   所以剛上線那陣子多數列會落在「未知(註冊前)」欄，有對到/沒對到的拆分要等新資料累積。
 function updateGA4MerchantSearches() {
   const win = ga4Window_();
 
   const dMerchant = AnalyticsData.newDimension(); dMerchant.name = 'customEvent:merchant';
+  const dMatch    = AnalyticsData.newDimension(); dMatch.name    = 'customEvent:has_match';
 
   const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
-  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'totalUsers';
 
   const dateRange = AnalyticsData.newDateRange();
   dateRange.startDate = win.startSpec;
   dateRange.endDate = win.endSpec;
 
   const request = AnalyticsData.newRunReportRequest();
-  request.dimensions = [dMerchant];
-  request.metrics = [mCount, mUsers];
+  request.dimensions = [dMerchant, dMatch];
+  request.metrics = [mCount];
   request.dateRanges = [dateRange];
   request.dimensionFilter = eventNameFilter_('calculate_cashback'); // 只算回饋試算，不含按鈕點擊帶的 merchant
   request.limit = GA4_SEARCH_ROW_LIMIT;
 
   const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
-
   const rows = report.rows || [];
-  const sortedRows = rows.slice().sort((a, b) =>
-    Number(b.metricValues[0].value) - Number(a.metricValues[0].value)
-  );
 
-  const values = sortedRows.map(row => [
-    row.dimensionValues[0].value,
-    Number(row.metricValues[0].value),
-    Number(row.metricValues[1].value),
-  ]);
+  // 依商家聚合，把 has_match 攤成「有對到 / 沒對到 / 未知」三欄。
+  // 刻意不放「搜尋用戶數」：totalUsers 在 has_match 拆開後不能相加（同一人既有對到又有沒對到
+  // 會被算兩次），與其給一個會被誤用的數字，不如只留可加總的次數。
+  const byMerchant = {};
+  rows.forEach(row => {
+    const name = row.dimensionValues[0].value;
+    const flag = String(row.dimensionValues[1].value).toLowerCase();
+    const count = Number(row.metricValues[0].value);
+    if (!byMerchant[name]) byMerchant[name] = { name: name, matched: 0, unmatched: 0, unknown: 0, total: 0 };
+    const m = byMerchant[name];
+    if (flag === 'true') m.matched += count;
+    else if (flag === 'false') m.unmatched += count;
+    else m.unknown += count;   // (not set)＝註冊 has_match 之前送出的事件
+    m.total += count;
+  });
 
-  const headers = ['搜尋的商家／消費項目', '試算次數', '搜尋用戶數'];
-  writeSnapshotSheet_('GA4_熱門搜尋', {
+  const list = Object.keys(byMerchant).map(k => byMerchant[k]);
+  const missRate = m => {
+    const known = m.matched + m.unmatched;
+    return known > 0 ? m.unmatched / known : '';   // 全是註冊前的舊資料就留空，不要硬算成 0
+  };
+
+  // ── 表一：熱門搜尋（依試算次數）──
+  const headers = ['搜尋的商家／消費項目', '試算次數', '有對到', '沒對到', '未對到率', '未知(註冊前)'];
+  const values = list.slice().sort((a, b) => b.total - a.total)
+    .map(m => [m.name, m.total, m.matched, m.unmatched, missRate(m), m.unknown]);
+
+  const sheet = writeSnapshotSheet_('GA4_熱門搜尋', {
     window: WINDOW_ROLLING,
     start: win.start,
     end: win.end,
     days: win.days,
     source: 'GA4 property ' + GA4_PROPERTY_ID +
-      '，事件 calculate_cashback，維度 customEvent:merchant（' +
+      '，事件 calculate_cashback，維度 customEvent:merchant × customEvent:has_match（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定｜最多取 ' + GA4_SEARCH_ROW_LIMIT + ' 列' +
       '｜這是用戶在站內回饋試算框「實際打進去的字」，與 GSC_關鍵字（Google 上搜什麼找到本站）' +
       '是兩件事，兩張要分開看｜「(not set)」＝送出試算時輸入框是空的' +
+      '｜「未知(註冊前)」＝ has_match 自訂維度註冊前送出的事件，GA4 不回填，會隨時間歸零' +
+      '｜未對到率＝沒對到÷(有對到+沒對到)，不含未知' +
       '｜每週快照存進「GA4_熱門搜尋_歷史」',
   }, headers, values);
+  if (values.length > 0) sheet.getRange(DATA_START_ROW, 5, values.length, 1).setNumberFormat('0.0%');
+
+  // ── 表二：搜尋落空（依沒對到次數）＝資料補齊優先順序 ──
+  const missHeaders = ['搜尋的商家／消費項目', '沒對到次數', '試算次數', '未對到率'];
+  const missValues = list.filter(m => m.unmatched > 0)
+    .sort((a, b) => b.unmatched - a.unmatched)
+    .map(m => [m.name, m.unmatched, m.total, missRate(m)]);
+
+  const missSheet = writeSnapshotSheet_('GA4_搜尋落空', {
+    window: WINDOW_ROLLING,
+    start: win.start,
+    end: win.end,
+    days: win.days,
+    source: '同「GA4_熱門搜尋」（同一次 API 回傳，於指令碼內篩選重排）',
+    note: '只列出 has_match=false 的搜尋，依沒對到次數由多到少' +
+      '＝**用戶想查、但站上答不出來的東西**，可直接當 cards.data 的資料補齊優先順序' +
+      '｜空表有兩種可能：真的每筆都有對到，或 has_match 剛註冊、還沒累積到新資料',
+  }, missHeaders, missValues);
+  if (missValues.length > 0) missSheet.getRange(DATA_START_ROW, 4, missValues.length, 1).setNumberFormat('0.0%');
 
   return { headers: headers, values: values, window: win };
 }
