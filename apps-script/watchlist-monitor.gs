@@ -11,6 +11,9 @@
  *                             | last_snapshot | last_checked | active | fetch_via
  *                             | keywords | min_diff_chars | check_days
  *   情報收件匣 —— 不用自己建，腳本會自動建立
+ *                （2026-07-31 起表尾多三欄「公開摘要／公開卡片／公開」，給選單
+ *                 「發布變動紀錄」用。**舊分頁不用刪**：三欄加在最右邊、舊內容原封不動，
+ *                 表頭會由 ensureInboxPublishColumns_ 自動補上）
  *
  * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
  *   留空或 auto —— 先直接抓，失敗才走 Jina Reader 備援
@@ -425,13 +428,23 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
 
 /************** 寫進情報收件匣（沒有就自動建） **************/
 // ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的「情報收件匣」請刪掉讓它自動重建新表頭
+// 2026-07-31 在表尾加了「公開摘要／公開卡片／公開」三欄（詳情頁「近期異動」用）。
+//    ✅ **舊分頁不用刪**：三欄是加在最右邊，舊的列與內容原封不動；
+//       ensureInboxPublishColumns_ 會在下次寫入時自動把三個表頭補上去。
+//    三欄都在寫入這一刻就填得出來（值都已經在手上），不需要任何跨檔查詢：
+//      公開摘要 —— 預填 AI 摘要，站長改寫成給用戶看的一句話（AI 摘要是內部視角，通常要改）
+//      公開卡片 —— 預填 info.cardId（單卡＝card_id；多卡頁＝cards 清單，逗號分隔）
+//      公開     —— 留空，站長打 V 才會被「發布變動紀錄」選單撿走（發布後程式改成「已發布」）
 function appendToInbox_(ss, info) {
   let sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
   if (!sheet) {
     sheet = ss.insertSheet(MONITOR_CONFIG.inboxSheet);
     sheet.appendRow(['日期時間', 'card_id', '銀行', '網址',
-      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態']);
+      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態',
+      '公開摘要', '公開卡片', '公開']);
     sheet.setFrozenRows(1);
+  } else {
+    ensureInboxPublishColumns_(sheet);   // 舊的 12 欄分頁：自動補表尾三欄，不用刪分頁重建
   }
   const c = info.cls;
   const row = sheet.appendRow([
@@ -446,12 +459,38 @@ function appendToInbox_(ss, info) {
     (info.diffText || '').slice(0, 8000),
     info.oldText.slice(0, 40000),
     info.newText.slice(0, 40000),
-    '待解析'
+    '待解析',
+    c ? (c.summary || '') : '',   // 公開摘要 ← 與「AI摘要」同一個值，站長在這欄改寫
+    info.cardId,                  // 公開卡片 ← 已算好的 inboxCardId，不用再推導
+    ''                            // 公開 ← 留空，等站長打 V
   ]);
   // 實質變動標紅、其餘標灰，一眼可分
   if (c) {
     sheet.getRange(sheet.getLastRow(), 5).setBackground(c.material ? '#f8d7da' : '#e9ecef');
   }
+}
+
+// 舊的「2-變動通知」分頁（12 欄，沒有「公開摘要／公開卡片／公開」）自動補上表尾三欄。
+// 為什麼要自動補：那個分頁裡有站長還要用的歷史內容，不該為了三個表頭叫人整個刪掉重建。
+// 三欄一律接在「狀態」右邊——appendToInbox_ 的 appendRow 是**照位置**寫的，順序錯了
+// 值就會塞錯欄；publishChangelog 那邊則是照欄名找欄，兩邊都靠這個位置約定成立。
+// 三道保險，任何一道不過就什麼都不寫（寧可讓站長手動補，也不要覆蓋掉他的東西）：
+//   1. 已經有「公開」欄 → 不用補
+//   2. 第 12 欄不是「狀態」→ 表頭跟程式預期對不上（appendRow 本來就會錯位），不亂寫
+//   3. 第 13~15 欄的表頭已有別的內容 → 那是站長自己加的欄，不覆蓋
+function ensureInboxPublishColumns_(sheet) {
+  const need = 15;
+  if (sheet.getMaxColumns() < need) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), need - sheet.getMaxColumns());
+  }
+  const headers = sheet.getRange(1, 1, 1, need).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
+
+  if (headers[14] === '公開') return;
+  if (headers[11] !== '狀態') return;
+  if (headers[12] || headers[13] || headers[14]) return;
+
+  sheet.getRange(1, 13, 1, 3).setValues([['公開摘要', '公開卡片', '公開']]);
 }
 
 /************** 寄彙總通知信 **************/

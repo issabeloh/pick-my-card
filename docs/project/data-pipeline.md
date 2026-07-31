@@ -44,10 +44,19 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     ⚠️ 此工作表尚未建立；建立時 Apps Script 讀取函數照第 7 節標準流程，匯出 JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。工作表建好前，規則暫時直接加在
     script.js 的 `searchExclusionMap`。
+13. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
+    詳情頁「近期異動」的資料來源。**不是手打的**：由自動化檔的選單「發布變動紀錄」
+    跨檔 append 進來（流程見 `apps-script/README.md`「發布變動紀錄」一節）。
+    - 匯出時由 `readChangelog()` 依 `id` 分組、濾掉 `active=FALSE`、依 `date` 由新到舊
+      取前 5 筆，掛成 `card.changelog`（**沒有異動的卡不塞空陣列**，省 cards.data 體積）
+    - `active` 留空視為啟用（append-only 的 log，忘了打 TRUE 不該整批消失）；
+      要撤下就把該列改 `FALSE`，**不用刪列**——表裡保留全部歷史，「最多 5 筆」是匯出時截的
+    - ⚠️ **工作表不存在時安全降級**：整段跳過、不丟例外（可以先貼程式、之後再建表）
+    - `runQACheck` 檢查 10 會列出對不到 `Cards Data` 的 `id`（⚠️ 警告，不擋匯出）
 
 ## 3. exportToJSON() 匯出流程
 
-順序：`runQACheck()` → Cards Data → Payments → QuickSearch → Merchant Payments → Search Hints → FAQ → announcements → `readCardBenefits()` → `readReferralLinks()` → 組 JSON → Base64 輸出。
+順序：`runQACheck()` → Cards Data → Payments → QuickSearch → Merchant Payments → Search Hints → FAQ → announcements → `readCardBenefits()` → `readReferralLinks()` → `readChangelog()`（掛進 `card.changelog`） → 組 JSON → Base64 輸出。
 
 匯出的 JSON 結構：
 ```javascript
@@ -60,6 +69,8 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
   spotlights            // 精選活動（Highlights 工作表）
 }
 ```
+
+「變動紀錄」沒有頂層 key——它掛在每張卡身上：`card.changelog = [{ date, summary }, ...]`（最多 5 筆、由新到舊；**沒有異動的卡沒有這個欄位**，前端判斷要 `!card.changelog || card.changelog.length === 0`，鐵則 4）。
 
 **重要輔助函數**：`getValue(row, headers, fieldName)` 安全讀欄位；`addOptionalField(obj, row, headers, fieldName, type, targetName)`；`formatDateToSlash(dateValue)`（YYYY/M/D）；`generateSearchTerms(id, name)`。
 
