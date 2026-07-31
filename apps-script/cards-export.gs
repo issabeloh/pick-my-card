@@ -188,6 +188,34 @@ function runQACheck() {
     }
   });
 
+  // 檢查 10: 「變動紀錄」的 id 對不到 Cards Data（2026-07-31 新增）
+  // 對不到時該筆異動不會掛到任何卡片，前端「靜默」少一列、沒有錯誤訊息。
+  // ⚠️ 一律 ⚠️ 不擋匯出：這張表是可撤下的展示用 log，不該讓一個打錯的 id 卡住整次發布。
+  const changelogQaSheet = ss.getSheetByName('變動紀錄');
+  if (changelogQaSheet) {
+    const clData = changelogQaSheet.getDataRange().getValues();
+    if (clData.length > 1) {
+      const clIdCol = clData[0].map(h => String(h).trim()).indexOf('id');
+      if (clIdCol < 0) {
+        issues.push(['(變動紀錄)', '', '欄位結構', 'id', '「變動紀錄」第一列找不到 id 欄，整張表都不會匯出', '⚠️']);
+      } else {
+        const knownIds = {};
+        idList.forEach(id => { knownIds[id] = true; });
+        const badRows = {};
+        for (let i = 1; i < clData.length; i++) {
+          const cid = String(clData[i][clIdCol] || '').trim();
+          if (!cid || knownIds[cid]) continue;
+          if (!badRows[cid]) badRows[cid] = [];
+          badRows[cid].push(i + 1);
+        }
+        Object.keys(badRows).forEach(cid => {
+          issues.push(['(變動紀錄)', '', 'id 對不到卡片', 'id',
+            `「變動紀錄」的 id「${cid}」不在 Cards Data（列 ${badRows[cid].join('、')}），該筆異動不會出現在任何卡片`, '⚠️']);
+        });
+      }
+    }
+  }
+
   // 寫入 QA 報告
   if (issues.length > 0) {
     qaSheet.getRange(2, 1, issues.length, 6).setValues(issues);
@@ -791,6 +819,18 @@ if (faqSheet) {
   const cardApplyCtas = promoData.cardApplyCtas;
   const spotlights = readHighlights();
 
+  // 近期異動：掛在每張卡身上（不另開頂層 key），沒有異動的卡不塞空陣列——
+  // 空陣列在 29 張卡上就是白白多出來的體積，前端判斷本來就要防 undefined
+  const changelogByCard = readChangelog();
+  let changelogCardCount = 0;
+  cards.forEach(function (card) {
+    const entries = changelogByCard[card.id];
+    if (entries && entries.length) {
+      card.changelog = entries;
+      changelogCardCount++;
+    }
+  });
+
   // 🔒 參照完整性把關：spotlights.card_id／newCardholderPromos.id／cardApplyCtas 的
   //    key 都必須對得到 cards[].id。對不到時前端不會報錯，會「靜默」退回手打文字
   //    （精選活動 ⓘ）或不顯示申辦按鈕，上線後肉眼幾乎抓不到。匯出前擋一次，
@@ -872,7 +912,7 @@ if (faqSheet) {
     `・商家付款資訊 ${Object.keys(merchantPayments).length} 個、FAQ ${faqList.length} 則、公告 ${announcements.length} 則\n` +
     `・推薦連結 ${referralLinks.length} 個、返利站點 Shopback ${cashbackSites.shopback.length} / LINE購物 ${cashbackSites.linebuy.length}\n` +
     `・新戶活動 ${newCardholderPromos.length} 筆、申辦 CTA ${Object.keys(cardApplyCtas).length} 張卡\n` +
-    `・精選活動 ${spotlights.length} 筆\n` +
+    `・精選活動 ${spotlights.length} 筆、近期異動 ${changelogCardCount} 張卡有紀錄\n` +
     `・promos.html 已同步更新（${newCardholderPromos.length} 筆活動中，未過期的已渲染進頁面）`,
     ui.ButtonSet.OK
   );
@@ -1163,6 +1203,70 @@ function readNewCardholderPromos() {
 
   Logger.log(`✅ 讀取 ${promos.length} 筆新戶活動資料，${Object.keys(cardApplyCtas).length} 張卡片申辦 CTA`);
   return { newCardholderPromos: promos, cardApplyCtas: cardApplyCtas }; // ✨ 回傳物件
+}
+
+// ========== 讀取「變動紀錄」資料（詳情頁「近期異動」，2026-07-31 新增） ==========
+// 資料是自動化檔的選單「發布變動紀錄」跨檔 append 進來的（見 apps-script/README.md）。
+// 回傳 { card_id: [{ date, summary }, ...] }，每張卡最多 CHANGELOG_MAX_PER_CARD 筆、由新到舊。
+//
+// ⚠️ 工作表不存在時安全降級：回空物件、不丟例外——站長可能先貼程式、隔天才建表，
+//    匯出不能因此整個倒掉。
+// ⚠️ 表裡保留全部歷史（撤下用 active=FALSE，不用刪列）；「只顯示最新 5 筆」是在這裡
+//    截的，不是在資料層刪的——之後想改成 10 筆或做完整異動史頁面時資料還在。
+const CHANGELOG_MAX_PER_CARD = 5;
+
+function readChangelog() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('變動紀錄');
+  if (!sheet) {
+    Logger.log('ℹ️ 找不到「變動紀錄」工作表，本次不匯出 changelog（不影響其他資料）');
+    return {};
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return {};
+  const headers = data[0].map(h => String(h).trim());
+  if (headers.indexOf('id') < 0) {
+    Logger.log('⚠️ 「變動紀錄」第一列找不到 id 欄，整張表略過');
+    return {};
+  }
+
+  const byCard = {};
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const id = String(getValue(row, headers, 'id') || '').trim();
+    if (!id) continue;
+
+    // active 留空視為啟用（跟其他表不同：這張表是 append-only 的 log，
+    // 站長要撤下才填 FALSE，不該因為忘了打 TRUE 就整批消失）
+    const active = getValue(row, headers, 'active');
+    if (active === false || String(active).trim().toUpperCase() === 'FALSE') continue;
+
+    const summary = String(getValue(row, headers, 'summary') || '').trim();
+    if (!summary) continue;
+
+    // 一律過 formatDateToISO：Date 儲存格直接輸出會變 UTC 字串、前端差一天（2026-07-12 教訓）
+    const date = formatDateToISO(getValue(row, headers, 'date'));
+    if (!date) {
+      Logger.log(`⚠️ 「變動紀錄」列 ${i + 1}（${id}）日期解析失敗，該列略過`);
+      continue;
+    }
+
+    if (!byCard[id]) byCard[id] = [];
+    byCard[id].push({ date: date, summary: summary, _seq: i });
+  }
+
+  let total = 0;
+  Object.keys(byCard).forEach(id => {
+    // 由新到舊；同一天的以「表裡越後面（越晚 append）＝越新」排前面
+    byCard[id].sort((a, b) => (a.date === b.date ? b._seq - a._seq : (a.date < b.date ? 1 : -1)));
+    byCard[id] = byCard[id].slice(0, CHANGELOG_MAX_PER_CARD)
+      .map(e => ({ date: e.date, summary: e.summary }));
+    total += byCard[id].length;
+  });
+
+  Logger.log(`✅ 讀取變動紀錄：${Object.keys(byCard).length} 張卡、共 ${total} 筆（每卡上限 ${CHANGELOG_MAX_PER_CARD}）`);
+  return byCard;
 }
 
 // ========== 讀取 Announcements 資料 ==========

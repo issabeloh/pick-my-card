@@ -7,12 +7,15 @@
  * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 自動化流程」試算表（＝自動化檔），
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
  *   卡片正式資料（Cards Data）在另一本「信用卡管理系統」試算表（＝資料檔），
- *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單，絕不寫回資料檔。
+ *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單。
+ *   ⚠️ 唯一的跨檔「寫入」是 publishChangelog（2026-07-31 新增）——只 append 到資料檔的
+ *      「變動紀錄」新表，Cards Data 等既有卡片資料一格都不碰（規劃書 §3.3／§3.4 已批准
+ *      的寫回設計，且比它更安全：寫壞了只影響那張新表，版本紀錄就是復原鍵）。
  *
  * 核心原則（規劃書三鐵則）：
  *   1. AI 只做閱讀理解，輸出被 JSON Schema 鎖死的結構化資料
  *   2. promo_id 編號、cap 公式、bonus_rate 加 % ——全部由程式生成，AI 不做算術
- *   3. 結果一律寫進「4-待審核（新戶活動）」工作表，絕不直接碰正式資料表
+ *   3. 解析結果一律寫進「4-待審核（新戶活動）」工作表，絕不直接碰正式卡片資料表
  *
  * 首次設定（只做一次）：
  *   1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
@@ -40,6 +43,8 @@ const PARSER_CONFIG = {
   reviewSheet: '4-待審核（新戶活動）',    // 解析結果（自動建立）
   inputSheet: '3-貼上原文（新戶活動）',            // 手動貼文字用（自動建立）
   cardsSheet: 'Cards Data',          // 用來動態讀取合法的 card_id 清單（在「資料檔」，跨檔讀）
+  changelogSheet: '變動紀錄',         // 發布目的地（在「資料檔」，跨檔寫；沒有會自動建）
+  changelogMaxChars: 60,             // 「公開摘要」上限：一句話。超過＝站長沒改寫，整列跳過
   notifyEmail: '',                   // 留空 = 寄給你自己
   model: 'gemini-2.5-flash',         // 免費額度夠用；要更省可改 gemini-2.5-flash-lite
   maxTextChars: 30000                // 送給 AI 的原文長度上限
@@ -57,6 +62,8 @@ function buildAutomationMenu_() {
     .createMenu('🤖 權益自動化')
     .addItem('立即檢查監控（checkWatchlist）', 'checkWatchlist')
     .addItem('檢查監控清單（填法體檢）', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
+    .addSeparator()
+    .addItem('發布變動紀錄（詳情頁近期異動）', 'publishChangelog')
     .addSeparator()
     .addItem('解析收件匣（新戶活動）', 'parseInboxNewPromos')
     .addItem('解析「解析輸入」的文字（新戶活動）', 'parsePastedText')
@@ -142,6 +149,147 @@ function parsePastedText() {
     ? '解析出 ' + promos.length + ' 個活動，已寫進「' + PARSER_CONFIG.reviewSheet + '」'
     : 'AI 判斷這段文字裡沒有新戶活動（若不對，補上卡片提示再試一次）';
   SpreadsheetApp.getActiveSpreadsheet().toast(msg, '解析完成', 8);
+}
+
+/************** 入口 C：發布變動紀錄（詳情頁「近期異動」，2026-07-31 新增） **************/
+// 站長的操作只有三步：在「2-變動通知」改「公開摘要」→「公開」欄打 V →按這個選單。
+// 程式做掉剩下的：驗證、多卡自動拆列、跨檔寫進資料檔的「變動紀錄」、回頭標「已發布」。
+//
+// ⚠️ 這是整條流程唯一的跨檔「寫入」動作，沿用 getCardsSheet_() 那條 openById 接縫，
+//    但目標是全新的「變動紀錄」表——不碰 Cards Data 任何一格。寫壞了最壞情況只影響
+//    這張新表，且 Google Sheets 版本紀錄就是復原鍵（BENEFITS-AUTOMATION-PLAN.md §3.4）。
+// ⚠️ 防重複發布靠把「公開」改成「已發布」：再按一次選單不會重寫同一列。
+function publishChangelog() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const inbox = ss.getSheetByName(PARSER_CONFIG.inboxSheet);
+  if (!inbox) {
+    ui.alert('發布變動紀錄', '找不到「' + PARSER_CONFIG.inboxSheet + '」——先讓監控跑出結果再來發布。', ui.ButtonSet.OK);
+    return;
+  }
+
+  const data = inbox.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
+  const cTime = headers.indexOf('日期時間');
+  const cSummary = headers.indexOf('公開摘要');
+  const cCards = headers.indexOf('公開卡片');
+  const cFlag = headers.indexOf('公開');
+  if (cSummary < 0 || cCards < 0 || cFlag < 0) {
+    ui.alert('發布變動紀錄',
+      '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／公開」三欄。\n\n' +
+      '這三欄是監控寫入時預填的（appendToInbox_）。把舊的「' + PARSER_CONFIG.inboxSheet +
+      '」分頁整個刪掉，下次 checkWatchlist 會自動重建成新表頭——那是可拋棄的 log。',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // 先掃有沒有人打勾，沒有就不必跨檔開資料檔（省一次 openById）
+  const marked = [];
+  for (let i = 1; i < data.length; i++) {
+    if (isPublishMark_(data[i][cFlag])) marked.push(i);
+  }
+  if (!marked.length) {
+    ui.alert('發布變動紀錄',
+      '「公開」欄沒有任何打勾的列。\n\n要發布哪一列，就把該列的「公開」欄填 V（已發布過的會顯示「已發布」）。',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  let idSet;
+  try {
+    idSet = {};
+    getCardIds_().forEach(function (id) { idSet[id] = true; });
+  } catch (e) {
+    ui.alert('發布變動紀錄', '讀不到資料檔的卡片 id，無法驗證「公開卡片」，本次不寫入：\n' + e.message, ui.ButtonSet.OK);
+    return;
+  }
+
+  const rows = [];          // 要寫進「變動紀錄」的列（一張卡一列）
+  const publishedRows = []; // 對應的收件匣列號，寫入成功後改「已發布」
+  const skipped = [];       // 驗證沒過的列，原因原樣列給站長看
+
+  marked.forEach(function (i) {
+    const rowNo = i + 1;
+    const summary = String(data[i][cSummary] || '').trim();
+    const ids = splitList_(data[i][cCards]);   // watchlist-monitor.gs，半形/全形逗號、頓號都吃
+    const problems = [];
+
+    if (!summary) {
+      problems.push('「公開摘要」是空的');
+    } else if (summary.length > PARSER_CONFIG.changelogMaxChars) {
+      problems.push('「公開摘要」' + summary.length + ' 字，超過 ' +
+        PARSER_CONFIG.changelogMaxChars + ' 字上限（要改寫成給用戶看的一句話）');
+    }
+    if (!ids.length) {
+      problems.push('「公開卡片」是空的');
+    } else {
+      const unknown = ids.filter(function (id) { return !idSet[id]; });
+      if (unknown.length) problems.push('「公開卡片」有 Cards Data 裡不存在的 id：' + unknown.join('、'));
+    }
+
+    if (problems.length) {
+      skipped.push('・列 ' + rowNo + '：' + problems.join('；'));
+      return;
+    }
+
+    const date = toChangelogDate_(cTime >= 0 ? data[i][cTime] : null);
+    ids.forEach(function (id) { rows.push([id, date, summary, true]); });
+    publishedRows.push(rowNo);
+  });
+
+  let written = 0;
+  if (rows.length) {
+    let sheet;
+    try {
+      sheet = getChangelogSheet_();
+    } catch (e) {
+      ui.alert('發布變動紀錄', '開不了資料檔的「' + PARSER_CONFIG.changelogSheet + '」表，本次不寫入：\n' + e.message, ui.ButtonSet.OK);
+      return;
+    }
+    // 一次寫完再回頭標記：中途失敗時收件匣還是 V，重按一次即可（不會半套）
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+    SpreadsheetApp.flush();
+    written = rows.length;
+    publishedRows.forEach(function (rowNo) {
+      inbox.getRange(rowNo, cFlag + 1).setValue('已發布');
+    });
+  }
+
+  ui.alert('發布變動紀錄',
+    '發布 ' + written + ' 筆變動紀錄（來自 ' + publishedRows.length + ' 列）' +
+    '，跳過 ' + skipped.length + ' 列。' +
+    (skipped.length ? '\n\n跳過的列（未寫入，改好再按一次即可）：\n' + skipped.join('\n') : '') +
+    (written ? '\n\n下次在資料檔按「📥 匯出 JSON」才會出現在網站上。' : ''),
+    ui.ButtonSet.OK);
+}
+
+// 「公開」欄算不算打勾：V / v / 全形Ｖ / 勾號 / 核取方塊的 true 都吃；「已發布」不算
+function isPublishMark_(value) {
+  if (value === true) return true;
+  const s = String(value == null ? '' : value).trim().toUpperCase().replace(/Ｖ/g, 'V');
+  return s === 'V' || s === '✓' || s === '✔';
+}
+
+// 收件匣的「日期時間」→ 變動紀錄的 date（yyyy-MM-dd 台北時區）。
+// 為什麼要正規化：Date 儲存格直接搬過去，匯出時容易變成 UTC 字串差一天（2026-07-12 教訓）。
+// 解析不出來就退回今天——寧可日期近似，也不要寫進一列排序會亂掉的壞資料。
+function toChangelogDate_(value) {
+  const d = value instanceof Date ? value : new Date(value);
+  const usable = d && !isNaN(d.getTime()) ? d : new Date();
+  return Utilities.formatDate(usable, 'Asia/Taipei', 'yyyy-MM-dd');
+}
+
+// 跨檔開啟資料檔的「變動紀錄」表（沒有就自動建，站長不用先手動開表）
+function getChangelogSheet_() {
+  const cardsSheet = getCardsSheet_();          // 沿用同一條 openById 接縫與錯誤訊息
+  const ss = cardsSheet.getParent();
+  let sheet = ss.getSheetByName(PARSER_CONFIG.changelogSheet);
+  if (!sheet) sheet = ss.insertSheet(PARSER_CONFIG.changelogSheet);
+  if (sheet.getLastRow() === 0) {   // 新建的、或站長先開了張空表：補表頭，否則匯出讀不到 id 欄
+    sheet.appendRow(['id', 'date', 'summary', 'active']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
 }
 
 /************** 卡片提示：單卡／多卡／打錯字，要給 AI 三種不同指示 **************/

@@ -11,6 +11,8 @@
  *                             | last_snapshot | last_checked | active | fetch_via
  *                             | keywords | min_diff_chars | check_days
  *   情報收件匣 —— 不用自己建，腳本會自動建立
+ *                （2026-07-31 起表尾多三欄「公開摘要／公開卡片／公開」，給選單
+ *                 「發布變動紀錄」用；舊分頁刪掉即可自動重建，見 appendToInbox_）
  *
  * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
  *   留空或 auto —— 先直接抓，失敗才走 Jina Reader 備援
@@ -425,12 +427,19 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
 
 /************** 寫進情報收件匣（沒有就自動建） **************/
 // ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的「情報收件匣」請刪掉讓它自動重建新表頭
+// ⚠️ 2026-07-31 又在尾巴加了「公開摘要／公開卡片／公開」三欄（詳情頁「近期異動」用）：
+//    舊的「2-變動通知」分頁一樣可以整個刪掉讓它自動重建——那是可拋棄的 log。
+//    三欄都在寫入這一刻就填得出來（值都已經在手上），不需要任何跨檔查詢：
+//      公開摘要 —— 預填 AI 摘要，站長改寫成給用戶看的一句話（AI 摘要是內部視角，通常要改）
+//      公開卡片 —— 預填 info.cardId（單卡＝card_id；多卡頁＝cards 清單，逗號分隔）
+//      公開     —— 留空，站長打 V 才會被「發布變動紀錄」選單撿走（發布後程式改成「已發布」）
 function appendToInbox_(ss, info) {
   let sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
   if (!sheet) {
     sheet = ss.insertSheet(MONITOR_CONFIG.inboxSheet);
     sheet.appendRow(['日期時間', 'card_id', '銀行', '網址',
-      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態']);
+      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態',
+      '公開摘要', '公開卡片', '公開']);
     sheet.setFrozenRows(1);
   }
   const c = info.cls;
@@ -446,7 +455,10 @@ function appendToInbox_(ss, info) {
     (info.diffText || '').slice(0, 8000),
     info.oldText.slice(0, 40000),
     info.newText.slice(0, 40000),
-    '待解析'
+    '待解析',
+    c ? (c.summary || '') : '',   // 公開摘要 ← 與「AI摘要」同一個值，站長在這欄改寫
+    info.cardId,                  // 公開卡片 ← 已算好的 inboxCardId，不用再推導
+    ''                            // 公開 ← 留空，等站長打 V
   ]);
   // 實質變動標紅、其餘標灰，一眼可分
   if (c) {
