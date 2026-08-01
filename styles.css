@@ -3831,6 +3831,15 @@ label.personal-field-check input[type="checkbox"] {
     max-width: 100%;
 }
 
+/* 未登入的生日月份：保留選單外型但停用，讓人看得出「這裡本來可以選」。
+   不用 opacity 調淡——各瀏覽器對 disabled select 的預設淡化程度差很多，
+   直接指定顏色比較可控 */
+.personal-level-select:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
 /* 下拉選單 ＋ 說明「i」按鈕同一行 */
 .personal-level-row {
     display: flex;
@@ -4195,6 +4204,27 @@ label.personal-field-check input[type="checkbox"] {
     color: #374151;
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+/* 區塊標題帶 inline SVG icon（目前只有「近期異動」的大聲公）。
+   用 SVG 不用 emoji：emoji 造型隨 OS/字型變、也沒有可靠的單色呈現
+   （同 .card-apply-cta-arrow 當初改用 SVG 的理由）。 */
+.card-info-section h4.section-title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.section-title-icon {
+    width: 1.05em;
+    height: 1.05em;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;       /* 跟著標題顏色走，不另外指定色票 */
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.75;              /* 比標題文字略淡，讓字仍是主體 */
 }
 
 /* CUBE 卡設定區三欄（生日月份／童樂匯／發卡組織）——2026-07-30 從 card-detail.js 的

@@ -287,7 +287,14 @@ basicCashbackDiv.innerHTML = basicContent;
             ` : `
                 <div class="personal-field">
                     <div class="personal-field-title">我的生日月份</div>
-                    <div class="personal-field-hint">登入後即可設定，幫你僅於生日月份配對${birthdayPlan}</div>
+                    <!-- 未登入也擺一個下拉選單（disabled、只有一個說明用選項）：
+                         這格若只剩一行灰字，四格排在一起時會看不出它其實是個可設定的欄位，
+                         只以為是說明文字。留著選單的外型 ＋ disabled，一眼就知道
+                         「這裡本來可以選，但要先登入」 -->
+                    <select class="personal-level-select" disabled aria-label="我的生日月份（需登入）">
+                        <option>登入後即可設定</option>
+                    </select>
+                    <div class="personal-field-hint">自動在你的生日月份配對${birthdayPlan}</div>
                 </div>
             `;
 

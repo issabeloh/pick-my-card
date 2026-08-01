@@ -824,7 +824,17 @@
                          由新到舊）。放在回饋內容上方——權益剛變過是讀下面數字時的前提。
                          沒有異動的卡整塊不渲染（空陣列不是 falsy，見 renderCardDetailChangelog()） -->
                     <div class="card-info-section" id="card-changelog-section" style="display: none;">
-                        <h4>近期異動</h4>
+                        <h4 class="section-title-with-icon">
+                            近期異動
+                            <!-- 大聲公：inline SVG 而不是 emoji，理由同 .card-apply-cta-arrow——
+                                 emoji 造型隨 OS/字型變，且沒有可靠的單色呈現。stroke 走
+                                 currentColor，跟著標題顏色走 -->
+                            <svg class="section-title-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M3.4 10.7 17.6 5.6v12.8L3.4 13.3Z"/>
+                                <path d="M11.3 16.1a2.9 2.9 0 1 1-5.5-1.6"/>
+                                <path d="M20.4 9.6a4 4 0 0 1 0 4.8"/>
+                            </svg>
+                        </h4>
                         <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
 
