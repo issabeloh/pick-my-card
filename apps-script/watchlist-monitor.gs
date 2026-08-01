@@ -443,8 +443,9 @@ function appendToInbox_(ss, info) {
       '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態',
       '公開摘要', '公開卡片', '公開']);
     sheet.setFrozenRows(1);
-  } else {
-    ensureInboxPublishColumns_(sheet);   // 舊的 12 欄分頁：自動補表尾三欄，不用刪分頁重建
+  } else if (ensureInboxPublishColumns_(sheet)) {
+    // 舊的 12 欄分頁：自動補表尾三欄（不用刪分頁重建），並把舊列的兩格一次回填好
+    backfillInboxPublishCells_(sheet);
   }
   const c = info.cls;
   const row = sheet.appendRow([
@@ -478,6 +479,7 @@ function appendToInbox_(ss, info) {
 //   1. 已經有「公開」欄 → 不用補
 //   2. 第 12 欄不是「狀態」→ 表頭跟程式預期對不上（appendRow 本來就會錯位），不亂寫
 //   3. 第 13~15 欄的表頭已有別的內容 → 那是站長自己加的欄，不覆蓋
+// 回傳 true = 這次真的補了表頭（呼叫端據此決定要不要順手回填舊列）
 function ensureInboxPublishColumns_(sheet) {
   const need = 15;
   if (sheet.getMaxColumns() < need) {
@@ -486,11 +488,61 @@ function ensureInboxPublishColumns_(sheet) {
   const headers = sheet.getRange(1, 1, 1, need).getValues()[0]
     .map(function (h) { return String(h).trim(); });
 
-  if (headers[14] === '公開') return;
-  if (headers[11] !== '狀態') return;
-  if (headers[12] || headers[13] || headers[14]) return;
+  if (headers[14] === '公開') return false;
+  if (headers[11] !== '狀態') return false;
+  if (headers[12] || headers[13] || headers[14]) return false;
 
   sheet.getRange(1, 13, 1, 3).setValues([['公開摘要', '公開卡片', '公開']]);
+  return true;
+}
+
+// 補表頭之前就寫進去的舊列，「公開摘要／公開卡片」是空的（那時候還沒這三欄）。
+// 兩個值在同一列上本來就有——`AI摘要` 與 `card_id`——直接回填，站長不用一列一列複製。
+// 回傳實際填了幾格。
+//
+// 只填空格，不覆蓋任何已有內容；「公開」＝已發布的列整列不碰（那是已完成的紀錄）。
+// ⚠️ 刻意不讀 getDataRange()：這張表有「舊文字／新文字」兩欄各上限 4 萬字，整張讀進來
+//    又慢又吃記憶體。改成只讀真正要用的那幾欄（各一次 getValues），寫入也只寫兩欄一次。
+function backfillInboxPublishCells_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 0;
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
+  const cCard = headers.indexOf('card_id');
+  const cAi = headers.indexOf('AI摘要');
+  const cSummary = headers.indexOf('公開摘要');
+  const cCards = headers.indexOf('公開卡片');
+  const cFlag = headers.indexOf('公開');
+  if (cSummary < 0 || cCards < 0 || cFlag < 0) return 0;
+  if (cCard < 0 && cAi < 0) return 0;
+
+  const n = lastRow - 1;
+  const readCol = function (idx) {
+    return idx < 0 ? null : sheet.getRange(2, idx + 1, n, 1).getValues();
+  };
+  const srcCard = readCol(cCard);
+  const srcAi = readCol(cAi);
+  const flags = readCol(cFlag);
+  const curSummary = readCol(cSummary);
+  const curCards = readCol(cCards);
+
+  let filled = 0;
+  let summaryDirty = false, cardsDirty = false;
+  for (let i = 0; i < n; i++) {
+    if (String(flags[i][0]).trim() === '已發布') continue;   // 已完成的紀錄不碰
+    if (srcAi && !String(curSummary[i][0]).trim()) {
+      const ai = String(srcAi[i][0] || '').trim();
+      if (ai) { curSummary[i][0] = ai; summaryDirty = true; filled++; }
+    }
+    if (srcCard && !String(curCards[i][0]).trim()) {
+      const id = String(srcCard[i][0] || '').trim();
+      if (id) { curCards[i][0] = id; cardsDirty = true; filled++; }
+    }
+  }
+  if (summaryDirty) sheet.getRange(2, cSummary + 1, n, 1).setValues(curSummary);
+  if (cardsDirty) sheet.getRange(2, cCards + 1, n, 1).setValues(curCards);
+  return filled;
 }
 
 /************** 寄彙總通知信 **************/

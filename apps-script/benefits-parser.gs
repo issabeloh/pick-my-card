@@ -168,14 +168,20 @@ function publishChangelog() {
     return;
   }
 
-  let data = inbox.getDataRange().getValues();
-  let headers = data[0].map(function (h) { return String(h).trim(); });
-  if (headers.indexOf('公開') < 0) {
-    // 舊的 12 欄分頁：自動補上表尾三欄再讀一次（分頁裡的歷史內容原封不動，不用刪分頁）
-    ensureInboxPublishColumns_(inbox);   // watchlist-monitor.gs
-    data = inbox.getDataRange().getValues();
-    headers = data[0].map(function (h) { return String(h).trim(); });
-  }
+  // 舊的 12 欄分頁：自動補上表尾三欄（分頁裡的歷史內容原封不動，不用刪分頁）。
+  // 接著一律回填「公開摘要／公開卡片」的空格——補表頭之前寫進來的舊列那兩格是空的，
+  // 值卻早就在同一列的 AI摘要／card_id 上，沒理由叫站長一列一列複製。只填空格、
+  // 不覆蓋已打的字、已發布的列不碰（backfillInboxPublishCells_，watchlist-monitor.gs）
+  ensureInboxPublishColumns_(inbox);
+  const backfilled = backfillInboxPublishCells_(inbox);
+
+  const backfillNote = backfilled
+    ? '\n\n（順帶回填了 ' + backfilled + ' 格空的「公開摘要／公開卡片」——那是加這三欄之前就存在的舊列，' +
+      '值本來就在同一列的 AI摘要／card_id 上。摘要記得改寫成給用戶看的話再打 V。）'
+    : '';
+
+  const data = inbox.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
   const cTime = headers.indexOf('日期時間');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
@@ -197,7 +203,8 @@ function publishChangelog() {
   }
   if (!marked.length) {
     ui.alert('發布變動紀錄',
-      '「公開」欄沒有任何打勾的列。\n\n要發布哪一列，就把該列的「公開」欄填 V（已發布過的會顯示「已發布」）。',
+      '「公開」欄沒有任何打勾的列。\n\n要發布哪一列，就把該列的「公開」欄填 V（已發布過的會顯示「已發布」）。' +
+      backfillNote,
       ui.ButtonSet.OK);
     return;
   }
@@ -266,7 +273,8 @@ function publishChangelog() {
     '發布 ' + written + ' 筆變動紀錄（來自 ' + publishedRows.length + ' 列）' +
     '，跳過 ' + skipped.length + ' 列。' +
     (skipped.length ? '\n\n跳過的列（未寫入，改好再按一次即可）：\n' + skipped.join('\n') : '') +
-    (written ? '\n\n下次在資料檔按「📥 匯出 JSON」才會出現在網站上。' : ''),
+    (written ? '\n\n下次在資料檔按「📥 匯出 JSON」才會出現在網站上。' : '') +
+    backfillNote,
     ui.ButtonSet.OK);
 }
 
