@@ -194,63 +194,73 @@ basicCashbackDiv.innerHTML = basicContent;
         // Generate level selector HTML with note (通用支援)
         const { level: savedLevel, data: savedLevelData } = await resolveCardLevel(card, defaultLevel);
 
+        // 級別備註（level-note）與「各級別回饋率」原本是攤在選擇器旁/下方的兩塊小字。
+        // 2026-08-01 改成收進「i」按鈕的浮動說明窗：這兩段是查表用的參考資料，不是
+        // 每次開卡都要讀的東西，攤開來只是把「個人設定」撐高、把真正要操作的下拉選單
+        // 擠到旁邊。內容不變，只是預設收起來。
         const levelNoteText = savedLevelData['level-note'] || '';
-        const noteFs = card.id === 'cathay-cube' ? '9.5px' : '11px';
-        const noteMt = card.id === 'cathay-cube' ? '6px' : '8px';
-        const levelNote = levelNoteText
-            ? `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;">${levelNoteText}</div>`
-            : `<div id="level-note" style="font-size: ${noteFs}; color: #9ca3af; margin-top: ${noteMt}; word-wrap: break-word; white-space: normal; line-height: 1.5;"></div>`;
+        // level-note 由級別切換時就地更新（見下方 levelSelect.onchange），所以固定留這個節點
+        const levelNote = `<div id="level-note" class="level-help-note">${escapeHtml(levelNoteText)}</div>`;
 
         // Generate level rates info
         let levelRatesInfo = '';
-        if (levelNames.length > 1 && card.id === 'cathay-cube') {
-            // CUBE 卡用較小字體，配合統一設定區塊
-            levelRatesInfo = '<div style="margin-left: 16px; flex-shrink: 0; padding: 5px 9px; border-left: 2px solid #e5e7eb; min-width: 0;">';
-            levelRatesInfo += '<div style="font-size: 10.3px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">各級別回饋率：</div>';
-            levelNames.forEach(level => {
-                const data = card.levelSettings[level];
-                const displayRate = data.specialRate || data.rate || 0;
-                levelRatesInfo += `<div style="font-size: 9.5px; color: #6b7280; line-height: 1.4; word-wrap: break-word;">• ${level}: ${displayRate}%</div>`;
-            });
-            levelRatesInfo += `<div style="font-size: 9px; color: #9ca3af; margin-top: 4px; font-style: italic; line-height: 1.3;">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
-            levelRatesInfo += '</div>';
-        } else if (levelNames.length > 1) {
-            levelRatesInfo = '<div style="margin-left: 24px; flex-shrink: 0; padding: 8px 12px; border-left: 3px solid #e5e7eb; background-color: #f9fafb; min-width: 0;">';
-            levelRatesInfo += '<div style="font-size: 12px; color: #6b7280; font-weight: 600; margin-bottom: 4px;">各級別回饋率：</div>';
+        if (levelNames.length > 1) {
+            levelRatesInfo = '<div class="level-help-rates">';
+            levelRatesInfo += '<div class="level-help-rates-title">各級別回饋率</div>';
 
-            if (card.id === 'dbs-eco') {
+            if (card.id === 'cathay-cube') {
+                levelNames.forEach(level => {
+                    const data = card.levelSettings[level];
+                    const displayRate = data.specialRate || data.rate || 0;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${displayRate}%</div>`;
+                });
+                levelRatesInfo += `<div class="level-help-rates-foot">由分級決定回饋率的方案包含：玩數位、樂饗購、趣旅行</div>`;
+            } else if (card.id === 'dbs-eco') {
                 // Simplified format for mobile compatibility
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}%</div>`;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}%</div>`;
                 });
             } else if (card.id === 'sinopac-dawho') {
                 // 永豐大戶卡自訂格式
                 levelRatesInfo += `
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• 大戶Plus等級:</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-left: 8px;">國內外加碼 4% (上限 NT$10,000 / NT$25,000 )</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-left: 8px;">悠遊卡自動加值 5% (上限 NT$10,000)</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-top: 4px;">• 大戶等級:</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-left: 8px;">國內外加碼 2.5% (上限 NT$3,333 / NT$16,000)</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-left: 8px;">悠遊卡自動加值 3% (上限 NT$3,333)</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word; margin-top: 4px;">• 大大等級: 只享有一般回饋</div>
+                    <div class="level-help-rate-line">• 大戶Plus等級:</div>
+                    <div class="level-help-rate-line level-help-rate-sub">國內外加碼 4% (上限 NT$10,000 / NT$25,000 )</div>
+                    <div class="level-help-rate-line level-help-rate-sub">悠遊卡自動加值 5% (上限 NT$10,000)</div>
+                    <div class="level-help-rate-line">• 大戶等級:</div>
+                    <div class="level-help-rate-line level-help-rate-sub">國內外加碼 2.5% (上限 NT$3,333 / NT$16,000)</div>
+                    <div class="level-help-rate-line level-help-rate-sub">悠遊卡自動加值 3% (上限 NT$3,333)</div>
+                    <div class="level-help-rate-line">• 大大等級: 只享有一般回饋</div>
                 `;
             } else if (card.id === 'sinopac-coin') {
                 // 永豐幣倍卡自訂格式
                 levelRatesInfo += `
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">精選通路加碼 4%</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• Level 1：上限 NT$7,500</div>
-                    <div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• Level 2：上限 NT$20,000</div>
+                    <div class="level-help-rate-line">精選通路加碼 4%</div>
+                    <div class="level-help-rate-line">• Level 1：上限 NT$7,500</div>
+                    <div class="level-help-rate-line">• Level 2：上限 NT$20,000</div>
                 `;
             } else {
                 // Default formatting for other cards (like Uni card)
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    levelRatesInfo += `<div style="font-size: 11px; color: #6b7280; line-height: 1.5; word-wrap: break-word;">• ${level}: ${data.rate}% (上限 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (上限 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
                 });
             }
             levelRatesInfo += '</div>';
         }
+
+        // 「i」按鈕＋浮動說明窗。兩段內容都沒有時就不長按鈕（免得點開是空的）。
+        // 窗體用原生 Popover API 進 top layer——modal 自己有 z-index/overflow，
+        // 一般絕對定位的浮層會被 .modal-content 的捲動容器裁掉。
+        const hasLevelHelp = !!(levelRatesInfo || levelNoteText);
+        const levelHelpHtml = hasLevelHelp ? `
+            <button type="button" class="level-help-btn" id="level-help-btn"
+                    aria-expanded="false" aria-label="級別說明">i</button>
+            <div id="level-help-popup" class="level-help-popup" popover>
+                ${levelRatesInfo}
+                ${levelNote}
+            </div>
+        ` : levelNote;   // 沒東西可看時仍保留 level-note 節點（切換級別的更新目標），CSS 讓它不佔位
 
         let levelSelectorHTML;
 
@@ -263,85 +273,79 @@ basicCashbackDiv.innerHTML = basicContent;
                     return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
                 }).join('');
 
+            // 「慶生月」方案活動 用 nowrap 包成一個單位：這欄桌機只有約 199px（三欄格線），
+            // 不鎖的話會斷在「慶生／月」把方案名切兩半，或讓尾行只剩「活動」兩字
+            const birthdayPlan = '<span style="white-space: nowrap;">「慶生月」方案活動</span>';
             const birthdayRow = currentUser ? `
-                <div>
-                    <label style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151; margin-bottom: 4px;">我的生日月份：</label>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                        <select id="birthday-month-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
-                            ${monthOptions}
-                        </select>
-                    </div>
-                    <!-- 「慶生月」方案活動 用 nowrap 包成一個單位：這欄桌機只有約 199px
-                         （三欄格線），不鎖的話會斷在「慶生／月」把方案名切兩半，或讓尾行
-                         只剩「活動」兩字。鎖住後斷行落在「…配對／「慶生月」方案活動」 -->
-                    <div style="font-size: 11px; color: #6b7280;">設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
+                <div class="personal-field">
+                    <div class="personal-field-title">我的生日月份</div>
+                    <select id="birthday-month-select" class="personal-level-select">
+                        ${monthOptions}
+                    </select>
+                    <div class="personal-field-hint">設定後僅於生日月份配對${birthdayPlan}</div>
                 </div>
             ` : `
-                <div>
-                    <span style="font-weight: 600; flex-shrink: 0; font-size: 14px; color: #374151;">我的生日月份：</span>
-                    <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">登入並設定後僅於生日月份配對<span style="white-space: nowrap;">「慶生月」方案活動</span></div>
+                <div class="personal-field">
+                    <div class="personal-field-title">我的生日月份</div>
+                    <div class="personal-field-hint">登入後即可設定，幫你僅於生日月份配對${birthdayPlan}</div>
                 </div>
             `;
 
+            // ⚠️ 外層灰底框已由 index.html 的 .personal-settings-box 提供（2026-08-01
+            //    級別區與額度/筆記併成同一區），這裡不再自帶邊框背景，否則會框中框。
+            //    欄位標題一律 .personal-field-title，與額度/筆記同字級
             levelSelectorHTML = `
-                <div style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; padding: 12px 14px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
-                        <div style="flex-shrink: 0;">
-                            <label style="font-weight: 600; margin-right: 6px; margin-bottom: 0; font-size: 14px; color: #374151;">選擇級別：</label>
-                            <select id="card-level-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
+                <div class="cube-settings-grid">
+                    <div class="personal-field">
+                        <div class="personal-field-title">選擇級別</div>
+                        <div class="personal-level-row">
+                            <select id="card-level-select" class="personal-level-select">
                                 ${levelNames.map(level =>
-                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
+                                    `<option value="${escapeHtml(level)}" ${level === savedLevel ? 'selected' : ''}>${escapeHtml(level)}</option>`
                                 ).join('')}
                             </select>
+                            ${levelHelpHtml}
                         </div>
-                        ${levelRatesInfo}
                     </div>
-                    ${levelNote}
-                    <div class="cube-settings-grid">
-                        ${birthdayRow}
-                        <div>
-                            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 0; cursor: pointer; user-select: none;">
-                                <input type="checkbox" id="children-eligible-checkbox"
-                                    ${isChildrenEligible ? 'checked' : ''}
-                                    style="width: 14px; height: 14px; cursor: pointer; accent-color: #3b82f6;">
-                                <span style="font-weight: 600; font-size: 14px; color: #374151;">我符合「童樂匯」權益</span>
-                            </label>
-                            <div style="margin-top: 4px; padding-left: 20px; font-size: 11px; color: #9ca3af;">
-                                勾選後才會在比較結果納入「童樂匯」方案的活動
-                            </div>
+                    ${birthdayRow}
+                    <div class="personal-field">
+                        <label class="personal-field-title personal-field-check">
+                            <input type="checkbox" id="children-eligible-checkbox" ${isChildrenEligible ? 'checked' : ''}>
+                            <span>我符合「童樂匯」權益</span>
+                        </label>
+                        <div class="personal-field-hint personal-field-hint-indent">
+                            勾選後才會在比較結果納入「童樂匯」方案的活動
                         </div>
-                        <div>
-                            <label for="cube-issuer-select" style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; color: #374151;">發卡組織：</label>
-                            <select id="cube-issuer-select" style="padding: 3px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px;">
-                                ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
-                                    `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
+                    </div>
+                    <div class="personal-field">
+                        <label for="cube-issuer-select" class="personal-field-title">發卡組織</label>
+                        <select id="cube-issuer-select" class="personal-level-select">
+                            ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
+                                `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
+                            ).join('')}
+                        </select>
                     </div>
                 </div>
             `;
         } else {
             levelSelectorHTML = `
-                <div class="level-selector" style="margin-bottom: 16px;">
-                    <div style="display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
-                        <div style="flex-shrink: 0;">
-                            <label style="font-weight: 600; margin-right: 8px;">選擇級別：</label>
-                            <select id="card-level-select" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
-                                ${levelNames.map(level =>
-                                    `<option value="${level}" ${level === savedLevel ? 'selected' : ''}>${level}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
-                        ${levelRatesInfo}
+                <div class="personal-field personal-field-level">
+                    <div class="personal-field-title">選擇級別</div>
+                    <div class="personal-level-row">
+                        <select id="card-level-select" class="personal-level-select">
+                            ${levelNames.map(level =>
+                                `<option value="${escapeHtml(level)}" ${level === savedLevel ? 'selected' : ''}>${escapeHtml(level)}</option>`
+                            ).join('')}
+                        </select>
+                        ${levelHelpHtml}
                     </div>
-                    ${levelNote}
                 </div>
             `;
         }
 
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
+        setupLevelHelpPopover();
 
         // Add change listener
         const levelSelect = document.getElementById('card-level-select');
@@ -389,6 +393,10 @@ basicCashbackDiv.innerHTML = basicContent;
             };
         }
     } else {
+        // 非分級卡：連內容一起清掉，不只是藏起來。留著上一張卡的級別選擇器與說明窗
+        // （含 top layer 的 popover 節點）沒有任何用處，只會讓「這張卡到底有沒有級別」
+        // 在 DOM 上讀起來是錯的
+        cubeLevelSection.innerHTML = '';
         cubeLevelSection.style.display = 'none';
     }
     
@@ -1305,7 +1313,71 @@ async function updateCubeSpecialCashback(card) {
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
 // Apostrophes (e.g. "Tomod's") would otherwise close the single-quoted string early.
-// 近期異動：詳情頁最後一個區塊，每列「日期 ＋ 一句話」，最多 5 筆（筆數與新→舊排序
+// 級別說明「i」按鈕：點一下開浮動窗（各級別回饋率 ＋ 該級別的達成條件備註）。
+// 每次 showCardDetail() 重繪級別區都會重新掛一次——內容是 innerHTML 重生的，
+// 舊節點連同監聽器一起被丟掉，不會累積。
+//
+// ⚠️ 用原生 Popover API 把窗體送進 top layer：詳情頁是 z-index 1100 的 modal，
+//    捲動容器 .modal-content 有 overflow-y:auto，一般絕對定位浮層會被裁掉。
+//    不支援 popover 的舊瀏覽器退回 .is-open class（CSS 那邊有對應規則），
+//    行為一樣，只是少了原生的 light-dismiss，所以下面自己補了「點外面關閉」。
+function setupLevelHelpPopover() {
+    const btn = document.getElementById('level-help-btn');
+    const popup = document.getElementById('level-help-popup');
+    if (!btn || !popup) return;
+
+    const supported = typeof HTMLElement.prototype.showPopover === 'function';
+    const isOpen = () => supported ? popup.matches(':popover-open') : popup.classList.contains('is-open');
+
+    // 位置跟著按鈕走（top layer 不受父層 transform/overflow 影響，用 fixed 座標即可）
+    const position = () => {
+        const rect = btn.getBoundingClientRect();
+        popup.style.position = 'fixed';
+        popup.style.top = `${rect.bottom + 6}px`;
+        popup.style.left = `${rect.left}px`;
+        const pr = popup.getBoundingClientRect();
+        const overflowRight = pr.right - window.innerWidth + 8;
+        if (overflowRight > 0) popup.style.left = `${Math.max(8, rect.left - overflowRight)}px`;
+        // 下方放不下就翻到按鈕上面（手機把說明開在畫面底部時最常遇到）
+        if (pr.bottom > window.innerHeight - 8 && rect.top > pr.height + 12) {
+            popup.style.top = `${rect.top - pr.height - 6}px`;
+        }
+    };
+
+    const open = () => {
+        if (supported) {
+            try { popup.showPopover(); } catch (e) { /* 已開啟等狀況直接忽略 */ }
+        } else {
+            popup.classList.add('is-open');
+        }
+        position();
+        btn.setAttribute('aria-expanded', 'true');
+    };
+    const close = () => {
+        if (supported) {
+            try { popup.hidePopover(); } catch (e) { /* ignore */ }
+        } else {
+            popup.classList.remove('is-open');
+        }
+        btn.setAttribute('aria-expanded', 'false');
+    };
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        isOpen() ? close() : open();
+    };
+    popup.addEventListener('toggle', (e) => {
+        if (e.newState === 'open') position();
+        else btn.setAttribute('aria-expanded', 'false');
+    });
+    if (!supported) {
+        document.addEventListener('click', (e) => {
+            if (isOpen() && !popup.contains(e.target) && e.target !== btn) close();
+        });
+    }
+}
+
+// 近期異動：每列「日期 ＋ 一句話」，最多 5 筆（筆數與新→舊排序
 // 由 Apps Script 匯出時決定，前端照收不再排序，見 apps-script/cards-export.gs 的
 // readChangelog）。資料只在有異動的卡上出現。
 //

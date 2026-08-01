@@ -3716,11 +3716,13 @@ input[type="number"]:focus {
     align-items: center;
     gap: 6px;
     background: #fff;
-    /* 跟 .user-notes-textarea 同規格：2px 邊框、8px 圓角、60px 高 */
+    /* 2026-08-01：高度 60px → 38px。原本是為了跟 .user-notes-textarea 齊高才做那麼高，
+       但額度只是一行數字，60px 有一半是空的；併進「個人設定」後整區要 compact，
+       改矮之後與筆記框改為靠上對齊（.personal-fields-row 的 align-items: flex-start） */
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     padding: 0 12px;
-    height: 60px;
+    height: 38px;
     box-sizing: border-box;
     flex: 1;
 }
@@ -3764,23 +3766,93 @@ input[type="text"].credit-limit-input:focus {
     white-space: nowrap;
 }
 
-/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile.
-   Sections inside the row drop their own border/offsets (they caused
-   stray lines and misaligned headings); the row carries the separator. */
-.personal-fields-row {
+/* --- 個人設定（#card-personal-section，2026-08-01 合併）---
+   原本是分開的兩塊：分級卡的級別區自帶一個灰底框、額度/筆記另外一塊 .personal-fields-row。
+   兩者都是「這張卡在我身上的設定」，切成兩塊只是把同一件事拆開，也讓詳情頁上半部被撐得很長。
+   現在共用同一個灰底框（.personal-settings-box），內層欄位標題一律 .personal-field-title
+   同字級，不再有 h4 與 14px label 混用。 */
+.personal-settings-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+/* 級別/CUBE 設定與下方額度/筆記之間的分隔線。掛在級別區身上而不是額度區身上，
+   是因為非分級卡的 #cube-level-section 是 display:none——邊框跟著整塊消失，
+   不會在框內留一條孤兒線 */
+.personal-settings-box > #cube-level-section {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
     border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 24px;
 }
-.personal-fields-row .card-info-section {
-    border-bottom: none;
+
+.personal-field-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+    display: block;
 }
-.personal-fields-row .user-notes-section {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
+
+.personal-field-hint {
+    font-size: 11px;
+    color: #9ca3af;
+    line-height: 1.5;
+    margin-top: 4px;
+}
+
+.personal-field-hint-indent {
+    padding-left: 20px;
+}
+
+/* 童樂匯那格：標題本身就是 checkbox 的 label，字級與其他欄位標題一致 */
+label.personal-field-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0;
+    cursor: pointer;
+    user-select: none;
+}
+label.personal-field-check input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
+/* 級別/生日月份/發卡組織共用的下拉選單 */
+.personal-level-select {
+    padding: 3px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 13px;
+    max-width: 100%;
+}
+
+/* 下拉選單 ＋ 說明「i」按鈕同一行 */
+.personal-level-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* 非分級卡沒有 cube-settings-grid，級別那格自己撐一行 */
+.personal-field-level {
+    min-width: 0;
+}
+
+/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile. */
+.personal-fields-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 @media (min-width: 768px) {
     .personal-fields-row {
-        display: flex;
+        flex-direction: row;
         gap: 20px;
         align-items: flex-start;
     }
@@ -3791,6 +3863,92 @@ input[type="text"].credit-limit-input:focus {
         flex: 1;
         min-width: 0;
     }
+}
+
+/* --- 級別說明「i」按鈕與浮動說明窗 --- */
+.level-help-btn {
+    background: #9ca3af;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    font-weight: 700;
+    font-style: italic;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+.level-help-btn:hover {
+    background: #6b7280;
+}
+
+/* 說明窗：原生 popover 進 top layer（詳情頁 modal 有 overflow 捲動容器會裁掉一般浮層）。
+   inset:auto 是必要的——不設的話原生 popover 會置中在畫面正中央，JS 的 fixed 座標吃不到 */
+.level-help-popup {
+    display: none;
+    margin: 0;
+    inset: auto;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    max-width: min(320px, calc(100vw - 24px));
+    width: max-content;
+    z-index: 1200;   /* fallback 用（原生 popover 在 top layer，不吃 z-index） */
+}
+.level-help-popup:popover-open,
+.level-help-popup.is-open {
+    display: block;
+}
+
+.level-help-rates-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+}
+.level-help-rate-line {
+    font-size: 11.5px;
+    color: #6b7280;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+.level-help-rate-sub {
+    margin-left: 8px;
+}
+.level-help-rates-foot {
+    font-size: 10.5px;
+    color: #9ca3af;
+    font-style: italic;
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+/* 該級別的達成條件備註。空字串時整塊不佔位——級別切換會就地改寫這個節點的文字，
+   所以節點一定存在，不能靠「有沒有渲染」來決定間距 */
+.level-help-note {
+    font-size: 11.5px;
+    color: #6b7280;
+    line-height: 1.6;
+    word-wrap: break-word;
+    white-space: normal;
+}
+.level-help-note:not(:empty) {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+}
+/* 沒有「i」按鈕時（單一級別且沒有備註）備註節點直接藏起來，不要在框裡留空行 */
+.personal-level-row > .level-help-note:empty {
+    display: none;
 }
 .ow-detail-btn {
     padding: 8px 18px;
@@ -4043,46 +4201,21 @@ input[type="text"].credit-limit-input:focus {
    inline style 抽出來，因為要用 media query 分桌機/手機兩種分隔線方向。
    桌機：三欄等寬（原本 repeat(auto-fit, minmax(190px,1fr)) 在寬容器下會切出 6 欄、
    三個區塊只擠在左邊 60%），欄與欄之間垂直線；手機：單欄，區塊之間水平線。 */
+/* CUBE 設定四格（選擇級別／生日月份／童樂匯／發卡組織）。
+   2026-08-01 改版：原本三欄、欄間有垂直分隔線；「選擇級別」搬進來後變四格，
+   四欄在 modal 寬度下每欄只剩約 150px——生日月份那格的說明文字會斷成四五行
+   （原本三欄 199px 就已經要靠 nowrap 鎖字了）。改成桌機 2×2、手機單欄，
+   分隔線也一併拿掉：外層 .personal-settings-box 已經把這些欄位框成一組，
+   格線只是再切一次。 */
 .cube-settings-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-    border-top: 1px solid #e5e7eb;
-    margin-top: 10px;
-    padding-top: 12px;
-}
-
-.cube-settings-grid > * {
-    padding: 0 16px;
-}
-
-.cube-settings-grid > *:first-child {
-    padding-left: 0;
-}
-
-.cube-settings-grid > *:last-child {
-    padding-right: 0;
-}
-
-.cube-settings-grid > * + * {
-    border-left: 1px solid #e5e7eb;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
 }
 
 @media (max-width: 768px) {
     .cube-settings-grid {
         grid-template-columns: 1fr;
-    }
-
-    .cube-settings-grid > * {
-        padding: 0;
-    }
-
-    /* 單欄時分隔線改成水平（區塊上緣），並讓上下留白對稱 */
-    .cube-settings-grid > * + * {
-        border-left: none;
-        border-top: 1px solid #e5e7eb;
-        margin-top: 12px;
-        padding-top: 12px;
     }
 }
 
@@ -4847,50 +4980,18 @@ mark.cashback-search-hl {
 }
 
 /* 筆記區域額外間距 */
+/* .user-notes-section 的 margin-top/padding-top !important 已於 2026-08-01 移除：
+   那是筆記區還是獨立區塊時用來擠掉上方間距的，併進「個人設定」後只會把「我的筆記」
+   標題壓得比同一列的「我的額度」低一截。原本靠 .personal-fields-row 再寫一次
+   !important 抵銷，兩條互打不如兩條都拿掉。 */
 .user-notes-section {
-    margin-top: 16px !important; /* 縮小間距 */
-    padding-top: 12px !important; /* 縮小內部間距 */
     padding-bottom: 0; /* 桌機版本移除底部內距 */
 }
 
-/* 國泰CUBE等級選擇器樣式 */
-.cube-level-selector {
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 16px;
-    border: 1px solid #e5e7eb;
-}
-
-.level-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #374151;
-    font-size: 14px;
-}
-
-.level-select {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    background: white;
-    color: #374151;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-
-.level-select:hover {
-    border-color: #6bb6ff;
-}
-
-.level-select:focus {
-    outline: none;
-    border-color: #6bb6ff;
-    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
-}
+/* .cube-level-selector / .level-label / .level-select 已於 2026-08-01 移除：
+   那是 index.html 裡寫死的 CUBE 等級下拉選單的樣式，但那段標記早就被
+   showCardDetail() 注入的級別選擇器取代（現在是 .personal-level-select），
+   三個 class 全站已無人引用。 */
 
 .level-description {
     margin-top: 12px;

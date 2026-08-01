@@ -749,13 +749,13 @@
                 <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->
                 <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-notes-section">我的筆記</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-personal-section">個人設定</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
                 </nav>
                 <div class="modal-body">
                     <div class="card-info-section" id="card-basic-info-section">
@@ -786,51 +786,58 @@
                         </div>
                     </div>
                     
-                    <!-- CUBE等級設定區域 -->
-                    <div class="card-info-section" id="cube-level-section" style="display: none;">
-                        <h4>🎯 國泰CUBE等級設定</h4>
-                        <div class="cube-level-selector">
-                            <label for="cube-level-select" class="level-label">請選擇您的CUBE等級：</label>
-                            <select id="cube-level-select" class="level-select">
-                                <option value="level1">Level 1 - 特定通路 2%</option>
-                                <option value="level2">Level 2 - 特定通路 3%</option>
-                                <option value="level3">Level 3 - 特定通路 3.3%</option>
-                            </select>
+                    <!-- 個人設定：級別/CUBE 專屬設定 ＋ 我的額度 ＋ 我的筆記。
+                         原本是分開的兩塊（級別區自帶灰底框、personal-fields-row 另一塊），
+                         2026-08-01 併成同一個灰底框——都是「這張卡在我身上的設定」，
+                         分兩塊只是把同一件事切開。內層標題一律 .personal-field-title，
+                         與 showCardDetail() 注入的級別區欄位標題同字級。 -->
+                    <div class="card-info-section" id="card-personal-section">
+                        <h4>個人設定</h4>
+                        <div class="personal-settings-box">
+                            <!-- 分級卡的級別選擇器／CUBE 三欄設定由 showCardDetail() 注入；
+                                 非分級卡這塊 display:none，框內只剩額度與筆記 -->
+                            <div id="cube-level-section" style="display: none;"></div>
+
+                            <div class="personal-fields-row">
+                                <div class="personal-field" id="credit-limit-section">
+                                    <div class="personal-field-title">我的額度</div>
+                                    <div class="credit-limit-row">
+                                        <div class="credit-limit-field">
+                                            <span class="credit-limit-prefix">NT$</span>
+                                            <input type="text" id="credit-limit-input" class="credit-limit-input"
+                                                   inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                                   placeholder="選填">
+                                        </div>
+                                        <span class="credit-limit-saved" id="credit-limit-saved"></span>
+                                    </div>
+                                </div>
+
+                                <div class="personal-field user-notes-section" id="card-notes-section">
+                                    <div class="personal-field-title">我的筆記</div>
+                                    <div class="user-notes-container">
+                                        <div class="notes-input-row">
+                                            <textarea id="user-notes-input"
+                                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                                      class="user-notes-textarea"></textarea>
+                                            <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
+                                                <span class="btn-icon">💾</span>
+                                            </button>
+                                        </div>
+                                        <div class="notes-status" id="notes-status">
+                                            <span class="save-indicator" id="save-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- 我的額度 + 我的筆記（桌機並排、手機直排） -->
-                    <div class="personal-fields-row">
-                        <div class="card-info-section" id="credit-limit-section">
-                            <h4>💳 我的額度</h4>
-                            <div class="credit-limit-row">
-                                <div class="credit-limit-field">
-                                    <span class="credit-limit-prefix">NT$</span>
-                                    <input type="text" id="credit-limit-input" class="credit-limit-input"
-                                           inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
-                                           placeholder="選填">
-                                </div>
-                                <span class="credit-limit-saved" id="credit-limit-saved"></span>
-                            </div>
-                        </div>
 
-                        <!-- 用戶筆記區域 -->
-                        <div class="card-info-section user-notes-section" id="card-notes-section">
-                            <h4>📝 我的筆記</h4>
-                            <div class="user-notes-container">
-                                <div class="notes-input-row">
-                                    <textarea id="user-notes-input"
-                                              placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                              class="user-notes-textarea"></textarea>
-                                    <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                        <span class="btn-icon">💾</span>
-                                    </button>
-                                </div>
-                                <div class="notes-status" id="notes-status">
-                                    <span class="save-indicator" id="save-indicator"></span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
+                         由新到舊）。放在回饋內容上方——權益剛變過是讀下面數字時的前提。
+                         沒有異動的卡整塊不渲染（空陣列不是 falsy，見 renderCardDetailChangelog()） -->
+                    <div class="card-info-section" id="card-changelog-section" style="display: none;">
+                        <h4>近期異動</h4>
+                        <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
 
                     <div class="card-info-section" id="card-special-section">
@@ -868,14 +875,6 @@
                         <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
                         <h4>新戶活動</h4>
                         <div id="card-promos-content"></div>
-                    </div>
-
-                    <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
-                         由新到舊）。沒有異動的卡整塊不渲染——空陣列不是 falsy，判斷見
-                         renderCardDetailChangelog()。 -->
-                    <div class="card-info-section" id="card-changelog-section" style="display: none;">
-                        <h4>🕐 近期異動</h4>
-                        <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
             </div>
             <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>
