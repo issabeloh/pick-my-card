@@ -743,6 +743,7 @@
                     <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
                 </nav>
                 <div class="modal-body">
                     <div class="card-info-section" id="card-basic-info-section">
@@ -855,6 +856,14 @@
                         <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
                         <h4>新戶活動</h4>
                         <div id="card-promos-content"></div>
+                    </div>
+
+                    <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
+                         由新到舊）。沒有異動的卡整塊不渲染——空陣列不是 falsy，判斷見
+                         renderCardDetailChangelog()。 -->
+                    <div class="card-info-section" id="card-changelog-section" style="display: none;">
+                        <h4>🕐 近期異動</h4>
+                        <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
             </div>
             <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>

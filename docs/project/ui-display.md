@@ -24,6 +24,11 @@
 
 **申辦 CTA（2026-07-15 新增）**：`cardsData.cardApplyCtas[card.id]` 有 `link` 時，`showCardDetail()` 同步填入兩個常駐按鈕（無 link 時兩者都明確 `hidden = true`，防止上一張卡狀態沿用）——`#card-detail-apply-header-btn`（桌機，卡名旁，`≤768px` 隱藏）與 `#card-detail-apply-bar`（手機，`.modal-content` 捲動容器內最後一個子節點、`position: sticky; bottom: 0`，`≥769px` 隱藏）；bar 的文字來自 `applyCta.text`（空字串則只留按鈕）。兩者 href 都走 `sanitizeUrl()`，click 落入 GA4 delegation（`detail_header_apply` / `detail_sticky_apply`）。
 
+**近期異動（2026-08-01 新增，issue #375 PR-2）**：詳情頁**最後一個區塊**（`#card-changelog-section`，nav 也多一顆「近期異動」鈕），資料來自 `card.changelog`（Apps Script「變動紀錄」表匯出，最多 5 筆、由新到舊；來源與發布流程見 `apps-script/README.md`「發布變動紀錄」）。每列「日期 ＋ 一句話」，日期由 ISO 轉斜線顯示（`formatChangelogDate`）。
+- **版位理由**：這是給「喜歡追蹤細節」的用戶的補充資訊，不該跟回饋內容搶視線——所以放最後、不用 `.cashback-detail-item` 的卡片框，只用一條左側時間軸線（`.card-changelog-list`）。手機（≤480px）日期改放句子上方一行，避免句子只剩 60% 寬度而斷成三四行。
+- **渲染函數** `renderCardDetailChangelog()`（`js/card-detail.js`）刻意**不走 innerHTML**，用 `createElement` + `textContent`：`summary` 是站長在 Sheets 自由輸入的文字（鐵則 3），textContent 比事後 `escapeHtml()` 少一個「哪天改成字串拼接就破功」的失誤面。
+- **沒有異動的卡整塊不渲染**（鐵則 4：空陣列不是 falsy，`!card.changelog || length === 0` 兩個都要判），nav 鈕由 `setupCardDetailNav` 的 `offsetParent` 檢查自動隱藏。
+
 **進入詳情頁的入口**：搜尋結果卡片點擊；sidebar 卡片 chips；`#cards-selection`/`#owned-cards-selection` 每張卡的 ⓘ 按鈕（由 `_renderCardSelectionModal` 注入，click 呼叫 `showCardDetail(card.id)` 並 `stopPropagation()` 防誤勾 checkbox；詳情 modal 疊在原 modal 之上）。
 
 **Embed 模式（2026-07-16 新增，方案 A：新戶活動頁 iframe 內嵌詳情彈窗）**：

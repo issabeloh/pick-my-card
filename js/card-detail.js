@@ -2,6 +2,7 @@
  * Pick My Card — js/card-detail.js（載入順序 9/12）
  * 區塊目錄（Grep 關鍵字）：
  *  - 卡片詳情頁主體            → "showCardDetail"
+ *  - 近期異動（changelog）      → "renderCardDetailChangelog"
  *  - CUBE 卡專屬內容            → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
  *  - onclick 轉義               → "escapeForOnclick"
  *  - 商家/條件展開收合（含 window 賦值）→ "toggleMerchants" / "toggleConditions"
@@ -842,6 +843,9 @@ basicCashbackDiv.innerHTML = basicContent;
     // Display new cardholder promos for this card (hidden if user owns the card)
     renderCardDetailPromos(card);
 
+    // 近期異動（權益變化 log）
+    renderCardDetailChangelog(card);
+
     // Load and setup user notes
     currentNotesCardId = card.id;
     const notesTextarea = document.getElementById('user-notes-input');
@@ -1301,6 +1305,61 @@ async function updateCubeSpecialCashback(card) {
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
 // Apostrophes (e.g. "Tomod's") would otherwise close the single-quoted string early.
+// 近期異動：詳情頁最後一個區塊，每列「日期 ＋ 一句話」，最多 5 筆（筆數與新→舊排序
+// 由 Apps Script 匯出時決定，前端照收不再排序，見 apps-script/cards-export.gs 的
+// readChangelog）。資料只在有異動的卡上出現。
+//
+// ⚠️ 空陣列不是 falsy（鐵則 4）：`!card.changelog` 擋不掉 `[]`，長度也要判，
+//    否則會渲染出一個只有標題、下面空空的區塊。
+// ⚠️ summary 是站長在 Google Sheets 自由輸入的文字（鐵則 3）。這裡刻意不走 innerHTML，
+//    改用 createElement + textContent——瀏覽器不會把內容當標記解析，比事後 escapeHtml
+//    少一個「哪天有人改成字串拼接就破功」的失誤面。
+function renderCardDetailChangelog(card) {
+    const section = document.getElementById('card-changelog-section');
+    const list = document.getElementById('card-changelog-content');
+    if (!section || !list) return;
+
+    list.textContent = '';
+
+    const entries = (card && card.changelog) || [];
+    if (entries.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    entries.forEach(entry => {
+        if (!entry) return;
+        const summary = String(entry.summary || '').trim();
+        if (!summary) return;   // 沒有句子就沒有這一列可看，不留空 bullet
+
+        const li = document.createElement('li');
+        li.className = 'card-changelog-item';
+
+        const dateEl = document.createElement('span');
+        dateEl.className = 'card-changelog-date';
+        dateEl.textContent = formatChangelogDate(entry.date);
+
+        const textEl = document.createElement('span');
+        textEl.className = 'card-changelog-text';
+        textEl.textContent = summary;
+
+        li.appendChild(dateEl);
+        li.appendChild(textEl);
+        list.appendChild(li);
+    });
+
+    // 每一筆的 summary 都是空的（理論上匯出端已擋掉）→ 整塊仍然不顯示
+    section.style.display = list.children.length ? 'block' : 'none';
+}
+
+// ISO "2026-07-31" → "2026/07/31"（站內日期慣例是斜線）。
+// 認不得的格式原樣顯示，不猜、也不吐 Invalid Date——資料來自試算表，什麼都可能填。
+function formatChangelogDate(value) {
+    const raw = String(value || '').trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+    return m ? `${m[1]}/${m[2]}/${m[3]}` : raw;
+}
+
 function escapeForOnclick(s) {
     return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }

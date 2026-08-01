@@ -4353,6 +4353,51 @@ mark.cashback-search-hl {
     color: #111827;
 }
 
+/* 近期異動（詳情頁最後一區，#card-changelog-section）。
+   刻意做得比回饋內容輕：這是給「喜歡追蹤細節」的人看的補充資訊，不該跟主要回饋
+   內容搶視線——所以沒有卡片邊框（不用 .cashback-detail-item），只用一條左側時間軸線
+   串起最多 5 列。日期固定寬度不換行，句子自己佔一欄，長句換行後靠齊句子的起點。 */
+.card-changelog-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 14px;
+    border-left: 2px solid #e5e7eb;
+}
+
+.card-changelog-item {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 7px 0;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.card-changelog-item + .card-changelog-item {
+    border-top: 1px solid #f3f4f6;
+}
+
+.card-changelog-date {
+    flex: 0 0 auto;
+    color: #9ca3af;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;   /* 日期直排對齊，不會因數字寬度不同歪掉 */
+    white-space: nowrap;
+}
+
+.card-changelog-text {
+    color: #374151;
+    min-width: 0;   /* flex 子項預設 min-width:auto，長句不加這行不會換行、會撐破容器 */
+}
+
+/* 手機：日期改放句子上方一行。並排時句子只剩約 60% 寬度，五列全部斷成三四行更難讀 */
+@media (max-width: 480px) {
+    .card-changelog-item {
+        flex-direction: column;
+        gap: 2px;
+    }
+}
+
 /* Collapsible 條件 line: clamp to ~4 lines; initConditionClamps() reveals the
    toggle only when the text actually overflows. Uses a max-height clamp
    (line-height 1.6 × 4 lines = 6.4em) rather than -webkit-line-clamp, which
