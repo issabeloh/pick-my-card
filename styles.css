@@ -71,6 +71,7 @@ html.pmc-embed header,
 html.pmc-embed .sidebar-overlay,
 html.pmc-embed .app-layout,
 html.pmc-embed .spotlight-section,
+html.pmc-embed .ad-row,
 html.pmc-embed .finance-warning-row,
 html.pmc-embed .social-media-footer,
 html.pmc-embed .data-update-footer,
@@ -5235,6 +5236,32 @@ mark.cashback-search-hl {
     text-align: center;
     font-size: 12px;
     color: #6b7280;
+}
+
+/* 廣告列 — 精選活動下方、警語橫條上方
+   桌機：置中、最寬 728px（對齊 leaderboard 尺寸）
+   手機：滿版扣掉左右留白，由 AdSense 回應式自動挑合適尺寸
+   min-height 是刻意保留的位子，避免廣告載入時把下面的內容往下推。 */
+.ad-row {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 760px;      /* 728 廣告 + 左右 16px padding */
+    margin: 16px auto 0;
+    padding: 0 16px;
+    min-height: 100px;
+    overflow: hidden;
+    text-align: center;
+}
+
+.ad-row-unit {
+    display: block;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .ad-row {
+        padding: 0 12px;
+    }
 }
 
 /* 信用卡警語橫條 — 精選活動區下方的一整行警語 */
