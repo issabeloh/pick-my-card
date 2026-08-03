@@ -522,6 +522,10 @@ function expandSearchTerm(term) {
             if (String(v).toLowerCase() === t) variants.add(k.toLowerCase());
         });
     }
+    // 片語級同義詞展開：「海外消費」→「國外消費」（定義在 search-match.js，載入順序在前）
+    if (typeof expandSynonymPhrases === 'function') {
+        expandSynonymPhrases(t).forEach(variant => variants.add(variant));
+    }
     return Array.from(variants);
 }
 
