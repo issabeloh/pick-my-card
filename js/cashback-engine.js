@@ -257,7 +257,14 @@ function getAllSearchVariants(searchTerm) {
             searchTerms.push(key);
         }
     });
-    
+
+    // 片語級同義詞展開：「海外消費」→「國外消費」（定義在 search-match.js，載入順序在前）
+    if (typeof expandSynonymPhrases === 'function') {
+        expandSynonymPhrases(searchLower).forEach(variant => {
+            if (!searchTerms.includes(variant)) searchTerms.push(variant);
+        });
+    }
+
     return searchTerms;
 }
 

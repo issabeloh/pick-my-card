@@ -168,6 +168,31 @@ const fuzzySearchMap = {
     '臺北捷運': '台北捷運'
 };
 
+// 詞素級同義詞（片語展開用）。
+// fuzzySearchMap 是「完全一致」查表：表裡有 '海外'→'國外'，但使用者輸入「海外消費」
+// 查不到這個鍵，展開不出「國外消費」，就跟資料裡 137 筆的「國外消費」擦身而過。
+// 這裡改成把詞素換掉再比一次，一條規則覆蓋 海外消費／海外實體／海外線上／海外購物
+// 整個家族，不必為每個組合各補一列別名。
+const synonymPhrasePairs = [
+    ['海外', '國外']
+];
+
+// 回傳 termLower 做完詞素替換後的其他寫法（不含 termLower 自己）。
+// 雙向替換：輸入「海外消費」得到「國外消費」，輸入「國外消費」也得到「海外消費」。
+function expandSynonymPhrases(termLower) {
+    const variants = [];
+    synonymPhrasePairs.forEach(([left, right]) => {
+        [[left, right], [right, left]].forEach(([from, to]) => {
+            if (!termLower.includes(from)) return;
+            const variant = termLower.split(from).join(to);
+            if (variant !== termLower && !variants.includes(variant)) {
+                variants.push(variant);
+            }
+        });
+    });
+    return variants;
+}
+
 // Search term exclusion rules - prevents unwanted matches
 // Format: 'searchTerm': ['excluded item 1', 'excluded item 2', ...]
 // 比對規則：searchTerm 對 fuzzy 展開後的每個搜尋詞生效，excluded item 與 item 名做小寫全等比對。
@@ -244,6 +269,11 @@ function findMatchingItem(searchTerm, options = {}) {
         if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
             searchTerms.push(key);
         }
+    });
+
+    // 片語級同義詞展開：「海外消費」→「國外消費」
+    expandSynonymPhrases(searchLower).forEach(variant => {
+        if (!searchTerms.includes(variant)) searchTerms.push(variant);
     });
 
     console.log(`🔎 findMatchingItem 開始搜尋:`, {
