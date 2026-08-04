@@ -23,7 +23,7 @@
 ## 2. Build watch paths
 
 Include 維持 `*`（黑名單制：**未來新增的目錄預設都會觸發 build**，不會靜默漏掉）。
-Exclude 放純粹不會被部署的路徑：
+Exclude 放純粹不會被部署的路徑，**2026-08-04 已套用為以下內容**：
 
 ```
 docs/*  apps-script/*  tools/*  .claude/*  .github/*
