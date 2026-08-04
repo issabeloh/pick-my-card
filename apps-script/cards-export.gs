@@ -764,6 +764,42 @@ if (searchHintsSheet) {
   Logger.log('Search Hints 載入成功：' + Object.keys(searchHints).length + ' 個關鍵詞');
 }
 
+// ========== 匯出搜尋排除規則（searchExclusions 工作表） ==========
+// 前端 mergeDataSearchExclusions() 早就備好接收端，但匯出這一側一直漏掉，
+// 導致工作表填了規則也不會生效（2026-08-04 修：「搜尋全家仍出現鞋全家福」）。
+// 語義：搜尋詞（含 fuzzy 展開後的別名）＝term 時，item 名與 excludedItems 小寫全等者不匹配。
+// 工作表分頁名稱大小寫兩種都收（現況是 searchExclusions）。
+const searchExclusions = [];
+
+const searchExclusionsSheet = ss.getSheetByName('searchExclusions') || ss.getSheetByName('SearchExclusions');
+if (searchExclusionsSheet) {
+  const exclusionData = searchExclusionsSheet.getDataRange().getValues();
+  const exclusionHeaders = exclusionData[0];
+
+  for (let i = 1; i < exclusionData.length; i++) {
+    const row = exclusionData[i];
+    const term = getValue(row, exclusionHeaders, 'term');
+    const excludedItemsStr = getValue(row, exclusionHeaders, 'excludedItems');
+    const active = getValue(row, exclusionHeaders, 'active');
+
+    // 只匯出啟用的規則
+    if (!term || !excludedItemsStr || (active !== true && active !== 'TRUE' && active !== 'true')) {
+      continue;
+    }
+
+    // excludedItems 逗號分隔；item 名本身含逗號的情況目前沒有，有的話改用別的分隔符
+    const excludedItems = String(excludedItemsStr).split(',').map(s => s.trim()).filter(s => s);
+    if (excludedItems.length === 0) continue;
+
+    searchExclusions.push({
+      term: String(term).trim(),
+      excludedItems: excludedItems
+    });
+  }
+
+  Logger.log('搜尋排除規則載入成功：' + searchExclusions.length + ' 條');
+}
+
 // ========== 新增讀取FAQ資料 ==========
 const faqSheet = ss.getSheetByName('FAQ');
 let faqList = [];
@@ -887,6 +923,7 @@ if (faqSheet) {
   faq: faqList,
   announcements: announcements,
   searchHints: searchHints,
+  searchExclusions: searchExclusions,
   benefits: benefits,
   referralLinks: referralLinks,
   cashbackSites: cashbackSites,
@@ -910,6 +947,7 @@ if (faqSheet) {
     `・信用卡 ${cards.length} 張\n` +
     `・行動支付 ${payments.length} 個、快捷選項 ${quickSearchOptions.length} 個\n` +
     `・商家付款資訊 ${Object.keys(merchantPayments).length} 個、FAQ ${faqList.length} 則、公告 ${announcements.length} 則\n` +
+    `・搜尋排除規則 ${searchExclusions.length} 條\n` +
     `・推薦連結 ${referralLinks.length} 個、返利站點 Shopback ${cashbackSites.shopback.length} / LINE購物 ${cashbackSites.linebuy.length}\n` +
     `・新戶活動 ${newCardholderPromos.length} 筆、申辦 CTA ${Object.keys(cardApplyCtas).length} 張卡\n` +
     `・精選活動 ${spotlights.length} 筆、近期異動 ${changelogCardCount} 張卡有紀錄\n` +
@@ -2398,7 +2436,7 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
 // 試水溫階段手動維護的商家頁 slug：生成器尚未移植前，這些頁是手動 commit 的靜態檔，
 // 沒有進 merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把
 // 它們從 sitemap 移除）。生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
-const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo'];
+const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華航空', '中油'];
 
 // 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
 // 更新這裡的常數）；promos 用 promosUpdatedIso（活動內容真的變動時才前進，沒傳就退回今天）；
