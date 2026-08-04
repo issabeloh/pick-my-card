@@ -37,13 +37,16 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 9. **ReferralLinks** —— merchant, url, description, active
 10. **Highlights** —— 精選活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
 11. **Watchlist** —— 權益監控清單（見 `apps-script/README.md`，與 cards.data 匯出無關）
-12. **SearchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
-    `mergeDataSearchExclusions()` 併入 script.js 的 `searchExclusionMap`（程式內只留兜底預設）。
+12. **searchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
+    `mergeDataSearchExclusions()`（`js/search-match.js`）併入 `searchExclusionMap`（程式內只留兜底預設）。
     語義：搜尋詞（含 fuzzy 展開後的別名）＝term 時，item 名與 excludedItems **小寫全等**者不匹配。
     例：`term=sia, excludedItems=AsiaYo`（新加坡航空的別名 sia 子字串誤中 a"sia"yo）。
-    ⚠️ 此工作表尚未建立；建立時 Apps Script 讀取函數照第 7 節標準流程，匯出 JSON key 為
-    `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。工作表建好前，規則暫時直接加在
-    script.js 的 `searchExclusionMap`。
+    ⚠️ **教訓（2026-08-04）**：工作表建好了、前端接收端也早就寫好了，但**匯出這一側漏掉沒寫**，
+    造成「工作表填了規則卻完全沒效果」（`cards.data` 的 `.searchExclusions` 是 `null`，只有寫死在
+    `searchExclusionMap` 的 sia 生效）。查這類「資料填了沒反應」先用
+    `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
+    匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
+    `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
 13. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
     詳情頁「近期異動」的資料來源。**不是手打的**：由自動化檔的選單「發布變動紀錄」
     跨檔 append 進來（流程見 `apps-script/README.md`「發布變動紀錄」一節）。
