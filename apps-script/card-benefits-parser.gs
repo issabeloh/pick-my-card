@@ -14,10 +14,14 @@
  *   - 固定槽位 14/21/22（廣告/國內/國外）：程式依卡片基本欄位「自動生成固定模板」
  *
  * 使用方式：
- *   1. 選單「🤖 權益自動化 → 解析新卡（主要活動）」，第一次會建「3-貼上原文（新卡）」分頁
- *   2. 官網權益頁文字貼 A2；id 提示貼 B2（選填）；網址貼 C2（選填）；
- *      一般消費/排除說明頁文字貼 D2（選填，但沒貼時廣告排除只能靠權益頁本身判斷）
- *   3. 再執行一次 → 產出「4-待審核（新卡-基本）」與「4-待審核（新卡-組別）」
+ *   1. 選單「🤖 權益自動化 → 解析新卡：3-貼上原文 → 4-待審核（基本＋組別）」，
+ *      第一次執行會自動建「3-貼上原文（新卡）」分頁
+ *   2. 官網權益頁文字貼 A 欄；id 提示貼 B 欄（選填）；網址貼 C 欄（選填）；
+ *      一般消費/排除說明頁文字貼 D 欄（選填，但沒貼時廣告排除只能靠權益頁本身判斷）
+ *      ⚠️ 一列＝一張卡，可以一次貼很多列（2026-08-05 前只會解析第 2 列，其餘被忽略）
+ *   3. 再執行一次 → 每一列各產出「4-待審核（新卡-基本）」1 列與「4-待審核（新卡-組別）」數列
+ *      E 欄「狀態」由程式回填：「已解析…」下次會跳過（清空該格即可重跑）、「失敗：…」下次自動重試
+ *      單次執行最多 CARD_PARSER_CONFIG.maxRowsPerRun 列，沒跑完再按一次選單接著跑
  *   4. 審：黃底＝AI 沒把握或 cashbackModel 需你手填；對照 evidence 欄驗證，不必回官網
  */
 
@@ -26,10 +30,20 @@ const CARD_PARSER_CONFIG = {
   inputSheet: '3-貼上原文（新卡）',
   basicReviewSheet: '4-待審核（新卡-基本）',
   groupReviewSheet: '4-待審核（新卡-組別）',
-  maxTextChars: 40000
+  maxTextChars: 40000,
+  maxRowsPerRun: 5,      // 一次最多解析幾列（Apps Script 單次執行 6 分鐘上限；剩下的再按一次選單接著跑）
+  statusCol: 5           // 輸入分頁的「狀態」欄＝E 欄（程式回填「已解析…」／「失敗：…」）
 };
 
 const RESERVED_SLOTS = [14, 21, 22];  // 廣告/國內/國外固定槽位，一般組別編號要跳過
+
+// bank 欄＝發卡行「二字簡稱」（側欄卡片膠囊、分組顯示用）。
+// 這是站長給的填寫範例清單（2026-08-05），AI 擇一使用、統一用詞；
+// 清單外的銀行用該行慣用二字簡稱（如 華銀、日盛），新增銀行時直接加進這個陣列。
+const BANK_SHORT_NAMES = [
+  '玉山', '國泰', '永豐', '遠東', '企銀', '滙豐', '台新', '富邦',
+  '中信', '星展', '聯邦', '兆豐', '凱基', '陽信', '一銀', '彰銀'
+];
 
 // tags 固定清單（對齊 tags GEM）——AI 只能從這裡選
 const CARD_TAG_ENUM = [
@@ -40,7 +54,7 @@ const CARD_TAG_ENUM = [
 
 // 4-待審核（新卡-基本）的固定欄位（＝ Cards Data 固定欄位順序；levelSettings 留空手動）
 const CARD_BASIC_FIELDS = [
-  'id', 'name', 'fullName', 'basicCashback', 'basicCashbackType', 'pointsExpiry',
+  'id', 'name', 'fullName', 'bank', 'basicCashback', 'basicCashbackType', 'pointsExpiry',
   'basicConditions', 'annualFee', 'feeWaiver', 'website', 'tags', 'hasLevels',
   'levelSettings', 'levelLabelFormat', 'overseasCashback', 'overseasBonusRate',
   'overseasBonusCap', 'overseasBonusConditions', 'domesticBonusRate',
@@ -55,49 +69,103 @@ const GROUP_REVIEW_HEADER = [
   '程式備註', 'needs_review', 'AI想問的問題', '原文引用'
 ];
 
-/************** 入口：解析新卡 **************/
+/************** 入口：解析新卡（一次可解析多列，一列＝一張卡） **************/
+// ⚠️ 2026-08-05 修正：原本只讀 A2/B2/C2/D2，貼了 5 列也只會解析第一列（其餘無聲無息被忽略）。
+//    現在會掃第 2 列到最後一列，每一列各解析成一張卡；E 欄「狀態」記錄結果：
+//      「已解析 …」→ 下次執行自動跳過（要重跑就把該格清空）
+//      「失敗：…」→ 下次執行會自動重試
+//    單次執行最多 maxRowsPerRun 列（Apps Script 6 分鐘上限），沒跑完的再按一次選單接著跑。
 function parseNewCard() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
   let input = ss.getSheetByName(CARD_PARSER_CONFIG.inputSheet);
   if (!input) {
     input = ss.insertSheet(CARD_PARSER_CONFIG.inputSheet);
-    input.getRange('A1').setValue('官網權益頁文字（貼在 A2，整段貼一格）');
-    input.getRange('B1').setValue('卡片 id 提示（選填，貼 B2，如 fubon-jcard；留空 AI 會擬一個）');
-    input.getRange('C1').setValue('官網網址（選填，貼 C2）');
-    input.getRange('D1').setValue('一般消費/排除說明頁文字（選填，貼 D2；用來判斷一般消費是否排除廣告）');
+    input.getRange('A1').setValue('官網權益頁文字（貼在 A 欄，整段貼一格；一列＝一張卡，可一次貼多列）');
+    input.getRange('B1').setValue('卡片 id 提示（選填，如 fubon-jcard；留空 AI 會擬一個）');
+    input.getRange('C1').setValue('官網網址（選填）');
+    input.getRange('D1').setValue('一般消費/排除說明頁文字（選填；用來判斷一般消費是否排除廣告）');
+    input.getRange('E1').setValue('狀態（程式回填，清空該格可重跑該列）');
     input.setFrozenRows(1);
-    SpreadsheetApp.getUi().alert('已建立「' + CARD_PARSER_CONFIG.inputSheet + '」分頁，把官網權益頁文字貼進 A2 後再執行一次。');
+    ui.alert('已建立「' + CARD_PARSER_CONFIG.inputSheet + '」分頁，把官網權益頁文字貼進 A2（多張卡就一列一張）後再執行一次。');
+    return;
+  }
+  ensureCardInputStatusHeader_(input);
+
+  const lastRow = input.getLastRow();
+  if (lastRow < 2) {
+    ui.alert('「' + CARD_PARSER_CONFIG.inputSheet + '」的 A2 是空的——先把官網權益頁文字貼進去');
+    return;
+  }
+  const rows = input.getRange(2, 1, lastRow - 1, CARD_PARSER_CONFIG.statusCol).getValues();
+
+  let doneCount = 0, skipped = 0, remaining = 0, textRows = 0;
+  const results = [], failures = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const text = String(rows[i][0] || '').slice(0, CARD_PARSER_CONFIG.maxTextChars);
+    if (!text.trim()) continue;                       // 空列跳過（中間留白也不會中斷）
+    textRows++;
+
+    const status = String(rows[i][CARD_PARSER_CONFIG.statusCol - 1] || '').trim();
+    if (status.indexOf('已解析') === 0) { skipped++; continue; }   // 已解析過：清空 E 欄才會重跑
+    if (doneCount >= CARD_PARSER_CONFIG.maxRowsPerRun) { remaining++; continue; }
+
+    const idHint = String(rows[i][1] || '').trim();
+    const link = String(rows[i][2] || '').trim();
+    const generalText = String(rows[i][3] || '').slice(0, CARD_PARSER_CONFIG.maxTextChars);
+
+    try {
+      const parsed = extractCard_(text, idHint, generalText);
+      const basic = parsed.basic || {};
+      const groups = parsed.groups || [];
+
+      let idCollision = false;
+      try {
+        if (basic.id && getCardIds_().indexOf(basic.id) !== -1) idCollision = true;
+      } catch (e) { /* 讀不到資料檔就跳過檢查 */ }
+
+      writeBasicReview_(basic, link, idCollision);
+      const cardId = basic.id || idHint || '(未定id)';
+      const specialCount = writeGroupReview_(cardId, groups, basic);
+      const flagged = groups.filter(function (g) { return g.needs_review; }).length;
+
+      input.getRange(rowNum, CARD_PARSER_CONFIG.statusCol).setValue(
+        '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + cardId);
+      results.push('列' + rowNum + '　' + cardId + '：組別 ' + groups.length + ' 組、固定槽位 ' + specialCount + ' 組' +
+        (flagged ? '、' + flagged + ' 組 AI 沒把握' : '') +
+        (idCollision ? '　⚠️ id 已存在於 Cards Data，若是新卡請改 id' : ''));
+      doneCount++;
+    } catch (e) {
+      input.getRange(rowNum, CARD_PARSER_CONFIG.statusCol).setValue('失敗：' + e.message);
+      failures.push('列' + rowNum + '：' + e.message);
+    }
+  }
+
+  if (!textRows) {
+    ui.alert('「' + CARD_PARSER_CONFIG.inputSheet + '」的 A 欄沒有任何文字——先把官網權益頁文字貼進 A2');
     return;
   }
 
-  const text = String(input.getRange('A2').getValue() || '').slice(0, CARD_PARSER_CONFIG.maxTextChars);
-  const idHint = String(input.getRange('B2').getValue() || '').trim();
-  const link = String(input.getRange('C2').getValue() || '').trim();
-  const generalText = String(input.getRange('D2').getValue() || '').slice(0, CARD_PARSER_CONFIG.maxTextChars);
-  if (!text.trim()) {
-    SpreadsheetApp.getUi().alert('「' + CARD_PARSER_CONFIG.inputSheet + '」的 A2 是空的——先把官網權益頁文字貼進去');
-    return;
+  let msg = '這次解析了 ' + doneCount + ' 列（共 ' + textRows + ' 列有文字）\n\n' +
+    (results.length ? results.join('\n') + '\n\n' : '');
+  if (skipped) msg += '↷ 跳過 ' + skipped + ' 列：E 欄狀態已是「已解析」。要重跑那幾列，把 E 欄清空再按一次選單。\n';
+  if (remaining) msg += '⏳ 還有 ' + remaining + ' 列沒跑（單次上限 ' + CARD_PARSER_CONFIG.maxRowsPerRun +
+    ' 列，避免 Apps Script 6 分鐘逾時）——再按一次選單就會接著跑。\n';
+  if (failures.length) msg += '\n❌ 失敗（E 欄已記錄，下次執行會自動重試）：\n' + failures.join('\n') + '\n';
+  msg += '\n黃底列＝需你確認；cashbackModel 標「需手填」的請參考同卡其他組（原文引用欄已附完整依據）。';
+
+  ss.toast('解析 ' + doneCount + ' 列' + (remaining ? '，還剩 ' + remaining + ' 列' : ''), '新卡解析完成', 8);
+  ui.alert(msg);
+}
+
+// 舊的輸入分頁沒有 E 欄「狀態」表頭：補上（只寫表頭，資料一格不動）
+function ensureCardInputStatusHeader_(input) {
+  const cell = input.getRange(1, CARD_PARSER_CONFIG.statusCol);
+  if (!String(cell.getValue() || '').trim()) {
+    cell.setValue('狀態（程式回填，清空該格可重跑該列）');
   }
-
-  const parsed = extractCard_(text, idHint, generalText);
-  const basic = parsed.basic || {};
-  const groups = parsed.groups || [];
-
-  let idCollision = false;
-  try {
-    if (basic.id && getCardIds_().indexOf(basic.id) !== -1) idCollision = true;
-  } catch (e) { /* 讀不到資料檔就跳過檢查 */ }
-
-  writeBasicReview_(basic, link, idCollision);
-  const specialCount = writeGroupReview_(basic.id || idHint || '(未定id)', groups, basic);
-
-  const flagged = groups.filter(function (g) { return g.needs_review; }).length;
-  const msg = '解析完成：基本資料 1 列、一般回饋組別 ' + groups.length + ' 組、固定槽位 ' + specialCount + ' 組（14/21/22）' +
-    (flagged ? '\n其中 ' + flagged + ' 組 AI 沒把握' : '') +
-    (idCollision ? '\n⚠️ 這個 id 已存在於 Cards Data，若是新卡請改 id' : '') +
-    '\n\n黃底列＝需你確認；cashbackModel 標「需手填」的請參考同卡其他組（原文引用欄已附完整依據）。';
-  SpreadsheetApp.getActiveSpreadsheet().toast('基本 1 列 + 組別 ' + groups.length + ' + 固定 ' + specialCount, '新卡解析完成', 8);
-  SpreadsheetApp.getUi().alert(msg);
 }
 
 /************** 核心：呼叫 Gemini 抽取新卡資料 **************/
@@ -108,7 +176,7 @@ function extractCard_(rawText, idHint, generalText) {
     '【總則】',
     'A. 只抽文字中明確寫出的資訊，絕不假設或腦補；找不到的欄位省略。',
     'B. 你只負責讀懂與抽取事實。不要算 cap 消費上限、不要編 cashbackModel、不要處理「一般國內/國外消費」與「廣告」這三種固定槽位——那些程式會依基本欄位自動生成。',
-    'C. 所有文字欄位不要以句號結尾。',
+    'C. 所有文字欄位不要以句號結尾——唯一例外是 feeWaiver（照 X3 的範例，結尾「即免年費。」帶句號）。',
     'D. evidence 要「完整到我不必回官網」：把支撐該筆數字/條件的官網原句整句引用；疊加型組別（is_stacked）務必把描述疊加關係的每一句都引用進來。',
     '',
     '【groups 要放什麼、不放什麼】',
@@ -119,9 +187,10 @@ function extractCard_(rawText, idHint, generalText) {
     '',
     '【basic 基本資料】',
     '1. id：小寫英文加連字號；' + (idHint ? '優先用提示「' + idHint + '」。' : '依銀行簡稱與卡名自擬。'),
-    '2. name 簡稱；fullName 含銀行完整名稱。',
+    '2. name 簡稱（如「玉山 Uni 卡」）；fullName 含銀行完整名稱（如「玉山銀行 UniCard 信用卡」）；',
+    '   bank 發卡行「二字簡稱」——從這個清單擇一：' + BANK_SHORT_NAMES.join('、') + '；不在清單裡的銀行用該行慣用二字簡稱（如 華銀、日盛）。',
     '3. basicCashback 基本回饋率數字；basicCashbackType 回饋類型。',
-    '4. pointsExpiry 點數效期；basicConditions 基本回饋條件；annualFee 年費；feeWaiver 免年費條件；website 官網。',
+    '4. pointsExpiry 點數效期；website 官網。basicConditions／annualFee／feeWaiver 見下面【三個最常寫錯的欄位】。',
     '5. tags 從固定清單挑。',
     '6. hasLevels：只有當「卡片本身有使用者可選、或需達標的方案/等級/分級，且那個方案決定卡片全域的回饋率」時才 true（例：玉山 簡單選/任意選/UP選——使用者選一個方案，全卡回饋率跟著變）。',
     '   ⚠️【以下都不是分級，hasLevels 一律 false、絕不可寫進 levels】：單一活動的「消費滿額級距」（如滿1.5萬回100元、滿3萬回400元）；帳戶類型差異（自扣戶/一般戶、數位帳戶戶）；不同通路各自的回饋率。這些是某個活動的條件，不是卡片分級。',
@@ -131,9 +200,41 @@ function extractCard_(rawText, idHint, generalText) {
     '10. general_excludes_ads：一般消費是否排除 Facebook/Meta/Google/廣告費——明確排除填「是」；明確沒排除或明說廣告可享填「否」；沒提到填「未提及」。',
     '11. parking / airport_pickup / airport_lounge：有才填。',
     '',
+    '【items 只放實際商家名，不放分類標題】',
+    'Y1. items 是「使用者會搜尋的通路/品牌名稱」，所以一律填【官網列舉的每一家實際商家】，一家一個元素。',
+    '    官網常寫成「【分類】商家A、商家B、商家C。」這種格式：分類名（蔬食餐廳、電動車充/換電、共享交通、生機選品、綠色捐贈、指定超商…）',
+    '    是標題不是通路，⛔【絕不】把分類名填進 items——那樣使用者搜「小小樹食」永遠找不到這張卡。分類名要寫進 category。',
+    '    ❌ 錯誤示範：items=["蔬食餐廳","電動車充/換電","共享交通","生機選品","綠色捐贈"]',
+    '    ✅ 正確示範：items=["仙桃素","鈺善閣．素．養生懷石","祥和蔬食料理",…,"iRent","GoShare",…,"主婦聯盟環境保護基金會"]（把每個分類底下的商家全部展開）',
+    'Y2. 商家名去掉贅字後綴，只留品牌本身：「EVALUE(華城電能)官方APP之充電費用」→「EVALUE」；',
+    '    「台灣特斯拉官方網站,官方APP之充電費用」→「特斯拉」；「Gogoro官方APP之資費方案」→「Gogoro」。',
+    '    括號裡的公司全名、「官方APP」「官方網站」「之充電費用」「之資費方案」都不要留。',
+    'Y3. 商家名裡本身就有的標點（如「鈺善閣．素．養生懷石」的間隔號）保持原樣，不要當成分隔符拆成多家。',
+    'Y4. 官網用「※」「*」補的但書（如「位於百貨公司/商場內或透過第三方串接之商店交易…恕不適用」「排除百貨店、店中店」）',
+    '    不是商家，不要進 items——精簡後寫進該組的 conditions。',
+    '',
+    '【三個最常寫錯的欄位：basicConditions／annualFee／feeWaiver】',
+    'X1. basicConditions＝「要拿到基本回饋，持卡人必須先做到什麼」，通常很短、一句就夠。',
+    '    正確範例：「申辦電子帳單」「綁定電子帳單 且 設定自動扣繳」「申辦帳單e化及該行臺幣帳戶自動扣繳」。',
+    '    大多數卡其實沒有這種條件 →【留空】。留空是正常且正確的答案，不要硬湊。',
+    '    ⛔ 絕對不要寫進來（這是最常見的錯誤）：「不列入回饋計算」「不得折抵回饋金」的排除項目清單',
+    '    （全支付、預借現金、代繳稅款/學費、停車費、分期付款、eTag自動儲值、電信費、政府規費、',
+    '    醫療費用、繳費平台、投資平台、年費/手續費/違約金…）；活動期間日期；一般注意事項；免責與罰則。',
+    '    那些是全卡通用的排除說明，跟「基本回饋的達成條件」無關，一個字都不要抄。',
+    '    自我檢查：basicConditions 若超過 30 字、或出現頓號長串通路名、或出現日期，就是抄錯了——刪掉重寫或留空。',
+    'X2. annualFee＝「首年是否免年費＋正卡年費金額」，寫成一句話。',
+    '    格式照這兩個例子：「首年免年費，正卡NT$2,000元」；卡別有差就寫卡別「首年免年費，御璽卡NT$3,000元」。',
+    '    沒有首年免年費就只寫「正卡NT$2,000元」。金額用千分位逗號、幣別寫 NT$。',
+    '    ⛔ 不要用分號列多項（不要寫成「正卡2000元;附卡每卡1000元」）、不要寫附卡年費、',
+    '    不要把免年費條件寫進來（那是 feeWaiver）。',
+    'X3. feeWaiver＝免年費條件，完整一句、結尾用「即免年費。」。',
+    '    格式照這個例子：「申請電子帳單且取消實體帳單，或年消費不限金額1次即免年費。」',
+    '    多個擇一條件用「或」連接；必須同時成立的條件用「且」連接。',
+    '    ⛔ 不要寫「第一年免年費」（那屬 annualFee）、不要用分號列點。',
+    '',
     '【groups 每組欄位】',
     '12. rate：回饋率「百分比數字」——5% → 5、1.5% → 1.5、0.67% → 0.67，【絕不】填小數比例（不是 0.05、不是 0.0067），也【不要】自己把「定額回饋金額÷消費額」算成率。若官網是「消費滿X回饋固定Y元」的定額回饋（不是百分比），rate 留空、needs_review=true、在 review_question 註明「定額回饋，非百分比率、非分級」。',
-    '    items 適用通路陣列（實體/網購標明）；category 分類標題；period_start/period_end YYYY/M/D。',
+    '    items 適用通路陣列（實體/網購標明）——填法見下面【items 只放實際商家名】；category 分類標題；period_start/period_end YYYY/M/D。',
     '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
     '13a. 分級門檻（同通路單筆滿額有更高回饋、未滿有較低回饋）：拆成兩組。高回饋組填 min_spend＝門檻；低回饋組填 max_spend＝同一個門檻數字（不加一減一）。但若「未滿門檻只是落回基本回饋」（沒有獨立的較低率），則【不要】建低回饋那組，只建高回饋組填 min_spend。',
     '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
@@ -141,6 +242,11 @@ function extractCard_(rawText, idHint, generalText) {
     '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）。',
     '    【不要寫進 conditions】：單筆滿額門檻（放 min_spend）；一般的回饋上限（已由 cap 表達，只有「以信用額度加計NT$X萬」這種特殊上限定義才寫）；免責/罰則樣板（喪失資格、銀行保留權利）。',
     '    「認列為國內/國外通路」只在特例寫：同一通路難判國內外、且國內外回饋率不同而拆成兩組時，在國外那組註明「認列為國外通路」。',
+    '14a. conditions 每一項都要「精簡到剩下動作本身」：拿掉主詞（「◯◯卡持卡人」「本行持卡人」）、',
+    '    拿掉「成功」「並」「且需」這類贅字、拿掉官網的客套與重複描述，用最短的動詞短語。',
+    '    ❌「聯邦綠卡持卡人成功申辦電子化帳單並成功申辦自動代扣繳」 → ✅「申辦電子化帳單及自動扣繳」',
+    '    ❌「需事先於本行官方網站完成活動登錄始得享有」 → ✅「需登錄」',
+    '    一項條件一句、用全形分號「；」分隔；寧可短，不要照抄官網整句。',
     '15. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
     '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
     '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
@@ -179,9 +285,13 @@ function extractCard_(rawText, idHint, generalText) {
         type: 'OBJECT',
         properties: {
           id: { type: 'STRING' }, name: { type: 'STRING' }, fullName: { type: 'STRING' },
+          bank: { type: 'STRING', description: '發卡行二字簡稱，如 玉山／國泰／永豐／中信' },
           basicCashback: { type: 'NUMBER' }, basicCashbackType: { type: 'STRING' },
-          pointsExpiry: { type: 'STRING' }, basicConditions: { type: 'STRING' },
-          annualFee: { type: 'STRING' }, feeWaiver: { type: 'STRING' }, website: { type: 'STRING' },
+          pointsExpiry: { type: 'STRING' },
+          basicConditions: { type: 'STRING', description: '拿到「基本回饋」的達成條件，通常一句如「申辦電子帳單」；沒有條件就留空。絕不放排除項目清單、日期或注意事項' },
+          annualFee: { type: 'STRING', description: '一句話，如「首年免年費，正卡NT$2,000元」；不寫附卡、不寫免年費條件' },
+          feeWaiver: { type: 'STRING', description: '一句話，如「申請電子帳單且取消實體帳單，或年消費不限金額1次即免年費。」；擇一用「或」、並存用「且」' },
+          website: { type: 'STRING' },
           tags: { type: 'ARRAY', items: { type: 'STRING', enum: CARD_TAG_ENUM } },
           hasLevels: { type: 'BOOLEAN' },
           levels: {
@@ -307,6 +417,19 @@ function deriveGroupModel_(g) {
   }
 }
 
+// 待審核-基本表加新欄位時：舊分頁的表頭少一欄，直接 appendRow 會整列錯位一格。
+// 這裡在 afterHeader 右邊插入一欄並補表頭，舊列各自多一個空格、內容不動。
+function ensureBasicReviewColumn_(sheet, colName, afterHeader) {
+  const lastCol = sheet.getLastColumn();
+  const header = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
+  if (header.indexOf(colName) !== -1) return;
+  const at = header.indexOf(afterHeader);
+  if (at === -1) return;                      // 連參考欄都找不到＝表頭被改過，不動它
+  sheet.insertColumnAfter(at + 1);
+  sheet.getRange(1, at + 2).setValue(colName);
+}
+
 /************** 寫「4-待審核（新卡-基本）」 **************/
 function writeBasicReview_(basic, link, idCollision) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -317,12 +440,13 @@ function writeBasicReview_(basic, link, idCollision) {
       .concat(CARD_BASIC_FIELDS).concat(['levelSettings原文引用']));
     sheet.setFrozenRows(1);
   }
+  ensureBasicReviewColumn_(sheet, 'bank', 'fullName');   // 2026-08-05 新增欄位，舊分頁自動補
 
   const overseasCap = spendCapFromReward_(basic.overseasBonusCap_reward, basic.overseasBonusRate);
   const domesticCap = spendCapFromReward_(basic.domesticBonusCap_reward, basic.domesticBonusRate);
 
   const valueByField = {
-    id: basic.id || '', name: basic.name || '', fullName: basic.fullName || '',
+    id: basic.id || '', name: basic.name || '', fullName: basic.fullName || '', bank: basic.bank || '',
     basicCashback: (basic.basicCashback != null ? basic.basicCashback : ''),
     basicCashbackType: basic.basicCashbackType || '', pointsExpiry: basic.pointsExpiry || '',
     basicConditions: basic.basicConditions || '', annualFee: basic.annualFee || '',

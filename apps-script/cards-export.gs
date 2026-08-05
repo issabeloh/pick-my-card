@@ -1,5 +1,5 @@
 // ==========================================
-// 信用卡管理系統 - Apps Script（新增 QuickSearch）
+// PMC 管理系統 - Apps Script（新增 QuickSearch）
 // ==========================================
 //
 // ⚠️ 這是 Google Sheets Apps Script 專案內「匯出主程式」的備份副本。

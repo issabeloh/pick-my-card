@@ -1,12 +1,12 @@
 /**
  * 權益解析腳本（BENEFITS-AUTOMATION-PLAN.md 第二階段，MVP：新戶活動）
  *
- * 這是備份副本——實際執行的版本貼在「PMC 自動化流程」試算表的 Apps Script 專案裡
- * （擴充功能 → Apps Script → 新增指令碼檔案「權益解析」）。兩邊改動時請記得同步。
+ * 這是備份副本——實際執行的版本貼在「PMC 資料自動化」試算表的 Apps Script 專案裡
+ * （擴充功能 → Apps Script → 指令碼檔案「權益解析-新戶」）。兩邊改動時請記得同步。
  *
- * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 自動化流程」試算表（＝自動化檔），
+ * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 資料自動化」試算表（＝自動化檔），
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
- *   卡片正式資料（Cards Data）在另一本「信用卡管理系統」試算表（＝資料檔），
+ *   卡片正式資料（Cards Data）在另一本「PMC 管理系統」試算表（＝資料檔），
  *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單。
  *   ⚠️ 唯一的跨檔「寫入」是 publishChangelog（2026-07-31 新增）——只 append 到資料檔的
  *      「變動紀錄」新表，Cards Data 等既有卡片資料一格都不碰（規劃書 §3.3／§3.4 已批准
@@ -21,15 +21,15 @@
  *   1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
  *   2. Apps Script → 左側齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（⚠️ 值不要直接寫在程式碼裡）：
  *        GEMINI_API_KEY        = 你的 Gemini 金鑰
- *        CARDS_SPREADSHEET_ID  = 資料檔「信用卡管理系統」試算表的 ID
+ *        CARDS_SPREADSHEET_ID  = 資料檔「PMC 管理系統」試算表的 ID
  *                                （從它網址 /spreadsheets/d/【這一段】/edit 複製）
  *   3. 重新整理試算表，工具列會出現「🤖 權益自動化」選單
  *
- * 使用方式（兩個入口）：
- *   A. 解析收件匣：監控偵測到變動後，選單 → 「解析收件匣（新戶活動）」
- *      會處理「情報收件匣」中狀態=待解析 的每一列
- *   B. 解析貼上的文字：把官網活動文字貼進「解析輸入」分頁 A2（卡片提示貼 B2），
- *      選單 → 「解析『解析輸入』的文字」——取代原本貼給 GEM 的流程
+ * 使用方式（兩個入口，選單標籤已寫明吃哪個分頁、產出到哪個分頁）：
+ *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知 → 4-待審核」
+ *      會處理「2-變動通知」中狀態=待解析 的每一列
+ *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A2（卡片提示貼 B2），
+ *      選單 →「解析新戶活動：3-貼上原文 → 4-待審核」——取代原本貼給 GEM 的流程
  *
  * 審核流程：
  *   到「4-待審核（新戶活動）」分頁逐列檢查（AI 沒把握的列 needs_review=TRUE、附上它想問的問題），
@@ -51,29 +51,34 @@ const PARSER_CONFIG = {
 };
 
 /************** 自訂選單 **************/
-// 本腳本住在專用的「PMC 自動化流程」試算表，這裡沒有匯出選單，onOpen 不會相衝，可安心自帶。
+// 本腳本住在專用的「PMC 資料自動化」試算表，這裡沒有匯出選單，onOpen 不會相衝，可安心自帶。
 // （若日後又把它和匯出程式放進同一個專案，改回：刪掉這個 onOpen、由匯出檔的 onOpen 呼叫 buildAutomationMenu_()）
 function onOpen() {
   buildAutomationMenu_();
 }
 
+// 選單標籤＝「動作：來源分頁 → 產出分頁」，分頁只寫編號＋簡稱（動作名已經指明新戶活動/新卡，
+// 分頁全名裡的括號後綴是多餘的）。原本的標籤用的是改名前的舊分頁名（「解析輸入」「收件匣」），
+// 對不上現在的 1~4 編號分頁，2026-08-05 改成現在這樣。
+// ⚠️ 分頁的實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG），
+//    這裡只是給人看的簡稱；真的改了分頁名，記得回來對一下這幾行字。
 function buildAutomationMenu_() {
   SpreadsheetApp.getUi()
     .createMenu('🤖 權益自動化')
-    .addItem('立即檢查監控（checkWatchlist）', 'checkWatchlist')
-    .addItem('檢查監控清單（填法體檢）', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
+    .addItem('執行監控：1-監控清單 → 2-變動通知', 'checkWatchlist')
+    .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
     .addSeparator()
-    .addItem('發布變動紀錄（詳情頁近期異動）', 'publishChangelog')
+    .addItem('發布變動紀錄：2-變動通知 → 資料檔', 'publishChangelog')
     .addSeparator()
-    .addItem('解析收件匣（新戶活動）', 'parseInboxNewPromos')
-    .addItem('解析「解析輸入」的文字（新戶活動）', 'parsePastedText')
+    .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
+    .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
     .addSeparator()
-    .addItem('解析新卡（主要活動）', 'parseNewCard')                    // card-benefits-parser.gs
-    .addItem('檢查廣告排除（全卡·每月）', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
+    .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
+    .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addToUi();
 }
 
-/************** 入口 A：解析情報收件匣中「待解析」的列 **************/
+/************** 入口 A：解析「2-變動通知」中狀態=待解析 的列 **************/
 function parseInboxNewPromos() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const inbox = ss.getSheetByName(PARSER_CONFIG.inboxSheet);
@@ -88,7 +93,7 @@ function parseInboxNewPromos() {
   const cCard = headers.indexOf('card_id');
   const cUrl = headers.indexOf('網址');
   const cNew = headers.indexOf('新文字');
-  if (cStatus < 0 || cNew < 0) throw new Error('情報收件匣缺少「狀態」或「新文字」欄');
+  if (cStatus < 0 || cNew < 0) throw new Error('「' + PARSER_CONFIG.inboxSheet + '」缺少「狀態」或「新文字」欄');
 
   let parsed = 0, promoCount = 0, reviewCount = 0;
   const failures = [];
@@ -102,7 +107,7 @@ function parseInboxNewPromos() {
 
     try {
       const promos = extractNewPromos_(text, cardHint);
-      writePromosToReview_(promos, '收件匣列 ' + (i + 1) + (url ? '｜' + url : ''), url);
+      writePromosToReview_(promos, PARSER_CONFIG.inboxSheet + ' 列 ' + (i + 1) + (url ? '｜' + url : ''), url);
       promoCount += promos.length;
       reviewCount += promos.filter(function (p) { return p.needs_review; }).length;
       inbox.getRange(i + 1, cStatus + 1).setValue(
@@ -113,14 +118,14 @@ function parseInboxNewPromos() {
     }
   }
 
-  const msg = '處理了 ' + parsed + ' 列收件匣，解析出 ' + promoCount + ' 個新戶活動' +
+  const msg = '處理了「' + PARSER_CONFIG.inboxSheet + '」' + parsed + ' 列，解析出 ' + promoCount + ' 個新戶活動' +
     (reviewCount ? '（其中 ' + reviewCount + ' 個 AI 沒把握，標了 needs_review）' : '') +
     (failures.length ? '\n失敗：\n' + failures.join('\n') : '');
   notifyParseResult_(msg, promoCount);
   SpreadsheetApp.getActiveSpreadsheet().toast(msg.split('\n')[0], '解析完成', 8);
 }
 
-/************** 入口 B：解析「解析輸入」分頁貼上的文字 **************/
+/************** 入口 B：解析「3-貼上原文（新戶活動）」分頁貼上的文字 **************/
 function parsePastedText() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(PARSER_CONFIG.inputSheet);
@@ -219,7 +224,7 @@ function publishChangelog() {
   }
 
   const rows = [];          // 要寫進「變動紀錄」的列（一張卡一列）
-  const publishedRows = []; // 對應的收件匣列號，寫入成功後改「已發布」
+  const publishedRows = []; // 對應的「2-變動通知」列號，寫入成功後改「已發布」
   const skipped = [];       // 驗證沒過的列，原因原樣列給站長看
 
   marked.forEach(function (i) {
@@ -260,7 +265,7 @@ function publishChangelog() {
       ui.alert('發布變動紀錄', '開不了資料檔的「' + PARSER_CONFIG.changelogSheet + '」表，本次不寫入：\n' + e.message, ui.ButtonSet.OK);
       return;
     }
-    // 一次寫完再回頭標記：中途失敗時收件匣還是 V，重按一次即可（不會半套）
+    // 一次寫完再回頭標記：中途失敗時「2-變動通知」那格還是 V，重按一次即可（不會半套）
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
     SpreadsheetApp.flush();
     written = rows.length;
@@ -285,7 +290,7 @@ function isPublishMark_(value) {
   return s === 'V' || s === '✓' || s === '✔';
 }
 
-// 收件匣的「日期時間」→ 變動紀錄的 date（yyyy-MM-dd 台北時區）。
+// 「2-變動通知」的「日期時間」→ 變動紀錄的 date（yyyy-MM-dd 台北時區）。
 // 為什麼要正規化：Date 儲存格直接搬過去，匯出時容易變成 UTC 字串差一天（2026-07-12 教訓）。
 // 解析不出來就退回今天——寧可日期近似，也不要寫進一列排序會亂掉的壞資料。
 function toChangelogDate_(value) {
@@ -578,7 +583,7 @@ function buildCapFormula_(capAmount, ratePercent) {
 function getCardsSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('CARDS_SPREADSHEET_ID');
   if (!id) {
-    throw new Error('尚未設定 CARDS_SPREADSHEET_ID——到「專案設定 → 指令碼屬性」新增，值 = 資料檔「信用卡管理系統」試算表網址裡 /d/ 後面那段 ID');
+    throw new Error('尚未設定 CARDS_SPREADSHEET_ID——到「專案設定 → 指令碼屬性」新增，值 = 資料檔「PMC 管理系統」試算表網址裡 /d/ 後面那段 ID');
   }
   let ss;
   try {

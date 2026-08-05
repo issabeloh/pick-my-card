@@ -941,7 +941,7 @@ function writeHistoricalImportLog() {
 // ----------------------------------------------------------------------------
 // 這是「PMC數據集中」試算表綁定 Apps Script 專案（Code.gs：GA4+GSC+Clarity 同步）的
 // 一段【drop-in 函數】備份，不是獨立可跑的檔。實際執行版在該試算表的 Code.gs 裡，改動兩邊同步。
-//   ※ 與 cards-export.gs（綁「信用卡管理系統」）是不同的 Apps Script 專案，別搞混。
+//   ※ 與 cards-export.gs（綁「PMC 管理系統」）是不同的 Apps Script 專案，別搞混。
 //
 // 安裝：把下面 updateGA4Pages() 貼進 Code.gs（或新增一個 .gs 檔）。
 //   - updateAllReports() 裡已經有 updateGA4Pages();（先前加的），補上本定義即可運作。
