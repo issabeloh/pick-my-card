@@ -6,7 +6,7 @@
  *
  * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 資料自動化」試算表（＝自動化檔），
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
- *   卡片正式資料（Cards Data）在另一本「信用卡管理系統」試算表（＝資料檔），
+ *   卡片正式資料（Cards Data）在另一本「PMC 管理系統」試算表（＝資料檔），
  *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單。
  *   ⚠️ 唯一的跨檔「寫入」是 publishChangelog（2026-07-31 新增）——只 append 到資料檔的
  *      「變動紀錄」新表，Cards Data 等既有卡片資料一格都不碰（規劃書 §3.3／§3.4 已批准
@@ -21,7 +21,7 @@
  *   1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
  *   2. Apps Script → 左側齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（⚠️ 值不要直接寫在程式碼裡）：
  *        GEMINI_API_KEY        = 你的 Gemini 金鑰
- *        CARDS_SPREADSHEET_ID  = 資料檔「信用卡管理系統」試算表的 ID
+ *        CARDS_SPREADSHEET_ID  = 資料檔「PMC 管理系統」試算表的 ID
  *                                （從它網址 /spreadsheets/d/【這一段】/edit 複製）
  *   3. 重新整理試算表，工具列會出現「🤖 權益自動化」選單
  *
@@ -583,7 +583,7 @@ function buildCapFormula_(capAmount, ratePercent) {
 function getCardsSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('CARDS_SPREADSHEET_ID');
   if (!id) {
-    throw new Error('尚未設定 CARDS_SPREADSHEET_ID——到「專案設定 → 指令碼屬性」新增，值 = 資料檔「信用卡管理系統」試算表網址裡 /d/ 後面那段 ID');
+    throw new Error('尚未設定 CARDS_SPREADSHEET_ID——到「專案設定 → 指令碼屬性」新增，值 = 資料檔「PMC 管理系統」試算表網址裡 /d/ 後面那段 ID');
   }
   let ss;
   try {

@@ -1,7 +1,7 @@
 # Apps Script 備份與運維紀錄
 
 此資料夾存放 Google Sheets Apps Script 專案的程式備份副本，目前涵蓋兩個**不同**的 Sheet 專案：
-**「信用卡管理系統」**（cards.data 匯出／權益監控／權益解析）與 **「PMC數據集中」**
+**「PMC 管理系統」**（cards.data 匯出／權益監控／權益解析）與 **「PMC數據集中」**
 （GA4+GSC+Clarity 分析同步，見 `pmc-analytics-sync.gs`）。
 **實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
 
@@ -66,10 +66,10 @@
 
 「PMC數據集中」試算表綁定 Apps Script 專案的**完整 Code.gs 備份**（GA4 + GSC + Clarity 每日同步），
 供 Claude「行銷部門」Project 讀取 Sheet 討論 insights。**這是備份，實際執行版在該試算表的
-擴充功能 → Apps Script，改動兩邊同步。** 跟 cards-export.gs 綁的「信用卡管理系統」是**不同專案**，別搞混。
+擴充功能 → Apps Script，改動兩邊同步。** 跟 cards-export.gs 綁的「PMC 管理系統」是**不同專案**，別搞混。
 
 > 設置背景／API token／每日額度等文字說明在 pmc-vault `projects/pmc-analytics-sync.md`
-> （分工同「信用卡管理系統」：**vault 存知識、repo 存程式正本**）。
+> （分工同「PMC 管理系統」：**vault 存知識、repo 存程式正本**）。
 > 2026-07-22 起，舊的 `ga4-metrics-export.gs` drop-in 片段（`updateGA4Pages`）已**併入本完整檔**、
 > 不再單獨保留（避免同一函數存兩處日後漂移）。
 
@@ -432,11 +432,11 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 
 ## ⚠️ 兩檔架構（2026-07-17 分檔）
 
-自動化的工作台從「信用卡管理系統」試算表**搬到獨立的「PMC 資料自動化」試算表**，兩本各司其職：
+自動化的工作台從「PMC 管理系統」試算表**搬到獨立的「PMC 資料自動化」試算表**，兩本各司其職：
 
 | 試算表 | 內容 | Apps Script |
 |---|---|---|
-| **資料檔**「信用卡管理系統」 | 卡片正式資料各分頁（Cards Data 等） | `cards-export.gs`（匯出／QA／promos.html／每月備份） |
+| **資料檔**「PMC 管理系統」 | 卡片正式資料各分頁（Cards Data 等） | `cards-export.gs`（匯出／QA／promos.html／每月備份） |
 | **自動化檔**「PMC 資料自動化」 | `1-監控清單`／`2-變動通知`／`3-貼上原文（新戶活動）`／`待審核-*` | `watchlist-monitor.gs`＋`benefits-parser.gs` |
 
 - **為什麼分**：備份乾淨度（月備份不再打包一堆快照暫存垃圾）、安全邊界（AI 機器與正式資料物理隔離）、檔案不被大快照拖鈍。
@@ -521,7 +521,7 @@ Google Sheets 版本紀錄就是復原鍵（規劃書 §3.3／§3.4）。「變�
 1. 到 https://aistudio.google.com/apikey 免費申請 Gemini API 金鑰
 2. 自動化檔 → 擴充功能 → Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（**絕不寫進程式碼**）：
    - `GEMINI_API_KEY` = 你的 Gemini 金鑰
-   - `CARDS_SPREADSHEET_ID` = 資料檔「信用卡管理系統」網址 `/spreadsheets/d/【這段】/edit` 的 ID
+   - `CARDS_SPREADSHEET_ID` = 資料檔「PMC 管理系統」網址 `/spreadsheets/d/【這段】/edit` 的 ID
 3. 把 `benefits-parser.gs` 貼進新檔案「權益解析-新戶」、`watchlist-monitor.gs` 貼進「權益監控」
 4. 重新整理自動化檔 → 工具列出現「🤖 權益自動化」選單（本檔自帶 onOpen，此處無匯出選單可撞）
 
