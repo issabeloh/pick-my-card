@@ -616,7 +616,7 @@ E 欄「狀態」由程式回填，是「這列跑過沒」的唯一依據：
 prompt 裡對 `basicConditions` 另有一條自我檢查：**超過 30 字、出現頓號長串通路名、或出現日期 → 就是抄錯了**，要刪掉重寫或留空。
 
 `bank` 欄（2026-08-05 新增，放在 `fullName` 之後，對齊 Cards Data 欄位順序）＝發卡行**二字簡稱**，
-AI 會拿 `BANK_SHORT_NAMES`（`card-benefits-parser.gs` 裡的現行用字：一銀／中信／企銀／兆豐／凱基／台新／國泰／富邦／星展／永豐／滙豐／玉山／聯邦／遠東／陽信）當統一用詞，清單外的銀行用該行慣用二字簡稱。
+AI 從 `BANK_SHORT_NAMES`（`card-benefits-parser.gs`，站長給的填寫範例清單：玉山／國泰／永豐／遠東／企銀／滙豐／台新／富邦／中信／星展／聯邦／兆豐／凱基／陽信／一銀／彰銀）擇一，清單外的銀行用該行慣用二字簡稱。**新增銀行時直接加進那個陣列**即可。
 匯出端不用改——`cards-export.gs` 早就用 `addOptionalField(card, row, headers, 'bank')` 依表頭讀，欄位插在哪都行。
 **舊的 `4-待審核（新卡-基本）` 分頁不用刪**：`ensureBasicReviewColumn_` 會在 `fullName` 右邊自動插一欄補表頭，舊列各自多一個空格、內容不動。
 
