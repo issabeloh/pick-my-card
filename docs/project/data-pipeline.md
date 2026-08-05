@@ -36,7 +36,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
 9. **ReferralLinks** —— merchant, url, description, active
 10. **Highlights** —— 精選活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
-11. ~~**Watchlist**~~ —— 已於 2026-07-17 搬到「PMC 自動化流程」自動化檔並改名 `1-監控清單`（見 `apps-script/README.md` 的「選單 ↔ 分頁對照表」，與 cards.data 匯出無關）
+11. ~~**Watchlist**~~ —— 已於 2026-07-17 搬到「PMC 資料自動化」自動化檔並改名 `1-監控清單`（見 `apps-script/README.md` 的「選單 ↔ 分頁對照表」，與 cards.data 匯出無關）
 12. **searchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
     `mergeDataSearchExclusions()`（`js/search-match.js`）併入 `searchExclusionMap`（程式內只留兜底預設）。
     語義：搜尋詞（含 fuzzy 展開後的別名）＝term 時，item 名與 excludedItems **小寫全等**者不匹配。

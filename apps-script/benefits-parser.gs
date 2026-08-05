@@ -1,10 +1,10 @@
 /**
  * 權益解析腳本（BENEFITS-AUTOMATION-PLAN.md 第二階段，MVP：新戶活動）
  *
- * 這是備份副本——實際執行的版本貼在「PMC 自動化流程」試算表的 Apps Script 專案裡
- * （擴充功能 → Apps Script → 新增指令碼檔案「權益解析」）。兩邊改動時請記得同步。
+ * 這是備份副本——實際執行的版本貼在「PMC 資料自動化」試算表的 Apps Script 專案裡
+ * （擴充功能 → Apps Script → 指令碼檔案「權益解析-新戶」）。兩邊改動時請記得同步。
  *
- * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 自動化流程」試算表（＝自動化檔），
+ * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 資料自動化」試算表（＝自動化檔），
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
  *   卡片正式資料（Cards Data）在另一本「信用卡管理系統」試算表（＝資料檔），
  *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單。
@@ -26,10 +26,10 @@
  *   3. 重新整理試算表，工具列會出現「🤖 權益自動化」選單
  *
  * 使用方式（兩個入口，選單標籤已寫明吃哪個分頁、產出到哪個分頁）：
- *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知（狀態=待解析）→ 4-待審核（新戶活動）」
+ *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知 → 4-待審核」
  *      會處理「2-變動通知」中狀態=待解析 的每一列
  *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A2（卡片提示貼 B2），
- *      選單 →「解析新戶活動：3-貼上原文（新戶活動）→ 4-待審核（新戶活動）」——取代原本貼給 GEM 的流程
+ *      選單 →「解析新戶活動：3-貼上原文 → 4-待審核」——取代原本貼給 GEM 的流程
  *
  * 審核流程：
  *   到「4-待審核（新戶活動）」分頁逐列檢查（AI 沒把握的列 needs_review=TRUE、附上它想問的問題），
@@ -51,51 +51,31 @@ const PARSER_CONFIG = {
 };
 
 /************** 自訂選單 **************/
-// 本腳本住在專用的「PMC 自動化流程」試算表，這裡沒有匯出選單，onOpen 不會相衝，可安心自帶。
+// 本腳本住在專用的「PMC 資料自動化」試算表，這裡沒有匯出選單，onOpen 不會相衝，可安心自帶。
 // （若日後又把它和匯出程式放進同一個專案，改回：刪掉這個 onOpen、由匯出檔的 onOpen 呼叫 buildAutomationMenu_()）
 function onOpen() {
   buildAutomationMenu_();
 }
 
-// ⚠️ 選單標籤一律「動作：來源分頁 → 產出分頁」，而且分頁名**由各腳本的 CONFIG 生成、不寫死**。
-//    2026-08-05 的教訓：分頁改名成 1~4 編號制後，選單還在叫舊名（「解析輸入」＝現在的
-//    「3-貼上原文（新戶活動）」、「收件匣」＝現在的「2-變動通知」），站長對不上哪個動作吃哪個分頁。
-//    改分頁名時只要改各檔設定區的 CONFIG，選單就自動跟著對。
+// 選單標籤＝「動作：來源分頁 → 產出分頁」，分頁只寫編號＋簡稱（動作名已經指明新戶活動/新卡，
+// 分頁全名裡的括號後綴是多餘的）。原本的標籤用的是改名前的舊分頁名（「解析輸入」「收件匣」），
+// 對不上現在的 1~4 編號分頁，2026-08-05 改成現在這樣。
+// ⚠️ 分頁的實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG），
+//    這裡只是給人看的簡稱；真的改了分頁名，記得回來對一下這幾行字。
 function buildAutomationMenu_() {
-  const s = automationSheetNames_();
   SpreadsheetApp.getUi()
     .createMenu('🤖 權益自動化')
-    .addItem('執行監控：' + s.watchlist + ' → ' + s.inbox + '（checkWatchlist）', 'checkWatchlist')
-    .addItem('體檢填法：' + s.watchlist + '（只讀不寫）', 'checkWatchlistConfig')   // watchlist-monitor.gs
+    .addItem('執行監控：1-監控清單 → 2-變動通知', 'checkWatchlist')
+    .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
     .addSeparator()
-    .addItem('發布變動紀錄：' + s.inbox + ' → 資料檔「' + s.changelog + '」', 'publishChangelog')
+    .addItem('發布變動紀錄：2-變動通知 → 資料檔', 'publishChangelog')
     .addSeparator()
-    .addItem('解析新戶活動：' + s.inbox + '（狀態=待解析）→ ' + s.promoReview, 'parseInboxNewPromos')
-    .addItem('解析新戶活動：' + s.promoInput + ' → ' + s.promoReview, 'parsePastedText')
+    .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
+    .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
     .addSeparator()
-    .addItem('解析新卡：' + s.cardInput + ' → ' + s.cardBasic + '＋' + s.cardGroup, 'parseNewCard')   // card-benefits-parser.gs
-    .addItem('檢查廣告排除（全卡·每月）→ ' + s.adReport, 'checkAdExclusionsForAllCards')              // card-benefits-parser.gs
+    .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
+    .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addToUi();
-}
-
-// 選單要用到的分頁名，全部取自各腳本檔設定區的 CONFIG（同專案共用全域，onOpen 時都已初始化）。
-// 萬一某個腳本檔不在這個專案裡（例如只貼了監控），typeof 檢查會退回字面值，選單照樣建得起來。
-function automationSheetNames_() {
-  const m = (typeof MONITOR_CONFIG !== 'undefined') ? MONITOR_CONFIG : {};
-  const p = (typeof PARSER_CONFIG !== 'undefined') ? PARSER_CONFIG : {};
-  const c = (typeof CARD_PARSER_CONFIG !== 'undefined') ? CARD_PARSER_CONFIG : {};
-  const a = (typeof AD_CHECK_CONFIG !== 'undefined') ? AD_CHECK_CONFIG : {};
-  return {
-    watchlist:   m.watchlistSheet   || '1-監控清單',
-    inbox:       p.inboxSheet       || m.inboxSheet || '2-變動通知',
-    promoInput:  p.inputSheet       || '3-貼上原文（新戶活動）',
-    promoReview: p.reviewSheet      || '4-待審核（新戶活動）',
-    changelog:   p.changelogSheet   || '變動紀錄',
-    cardInput:   c.inputSheet       || '3-貼上原文（新卡）',
-    cardBasic:   c.basicReviewSheet || '4-待審核（新卡-基本）',
-    cardGroup:   c.groupReviewSheet || '4-待審核（新卡-組別）',
-    adReport:    a.sheet            || '報告-廣告排除'
-  };
 }
 
 /************** 入口 A：解析「2-變動通知」中狀態=待解析 的列 **************/
