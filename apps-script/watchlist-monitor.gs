@@ -6,11 +6,11 @@
  * 兩邊改動時請記得同步。
  *
  * 需要的工作表：
- *   Watchlist —— 第一列表頭至少要有：url、last_snapshot
+ *   1-監控清單 —— 第一列表頭至少要有：url、last_snapshot
  *                建議完整表頭：card_id | bank | url | watch_type | cards | css_selector
  *                             | last_snapshot | last_checked | active | fetch_via
  *                             | keywords | min_diff_chars | check_days
- *   情報收件匣 —— 不用自己建，腳本會自動建立
+ *   2-變動通知 —— 不用自己建，腳本會自動建立
  *                （2026-07-31 起表尾多三欄「公開摘要／公開卡片／公開」，給選單
  *                 「發布變動紀錄」用。**舊分頁不用刪**：三欄加在最右邊、舊內容原封不動，
  *                 表頭會由 ensureInboxPublishColumns_ 自動補上）
@@ -48,10 +48,10 @@
  * 舊表格相容：沒有 cards 欄、watch_type 全空、card_id 全填 → 行為與改版前完全相同。
  *
  * 使用方式：
- *   1. 在 Watchlist 填入要監控的網址（active 填 TRUE）
+ *   1. 在「1-監控清單」填入要監控的網址（active 填 TRUE）
  *   2. 手動執行一次 checkWatchlist（第一次只存基準快照，不會通知）
  *   3. 設定時間驅動觸發器：函數選 checkWatchlist、事件來源選 Time-driven
- *   4. 表格改完可用選單「🤖 權益自動化 → 檢查監控清單」機械檢查有沒有填錯
+ *   4. 表格改完可用選單「🤖 權益自動化 → 體檢填法：1-監控清單」機械檢查有沒有填錯
  */
 
 /************** 設定區（可自行調整） **************/
@@ -92,7 +92,7 @@ function checkWatchlist() {
   const cMinDiff = col('min_diff_chars');
   const cMinDays = col('check_days');   // 選填新欄，舊表格沒有時是 -1，下面安全降級成「每次都跑」
   if (cUrl < 0 || cSnap < 0) {
-    throw new Error('Watchlist 第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
+    throw new Error('「' + MONITOR_CONFIG.watchlistSheet + '」第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
   }
 
   const alerts = [];
@@ -426,8 +426,8 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
   }
 }
 
-/************** 寫進情報收件匣（沒有就自動建） **************/
-// ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的「情報收件匣」請刪掉讓它自動重建新表頭
+/************** 寫進「2-變動通知」（沒有就自動建） **************/
+// ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的變動通知分頁請刪掉讓它自動重建新表頭
 // 2026-07-31 在表尾加了「公開摘要／公開卡片／公開」三欄（詳情頁「近期異動」用）。
 //    ✅ **舊分頁不用刪**：三欄是加在最右邊，舊的列與內容原封不動；
 //       ensureInboxPublishColumns_ 會在下次寫入時自動把三個表頭補上去。
@@ -586,7 +586,7 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
   if (errors.length) {
     body += '⚠ 以下網址抓取失敗（可能是動態網頁或擋機器人，見規劃書 §2.4）：\n' +
             errors.join('\n') + '\n\n' +
-            '提示：在 Watchlist 該列的 fetch_via 欄填 jina 可強制走備援抓法；' +
+            '提示：在「' + MONITOR_CONFIG.watchlistSheet + '」該列的 fetch_via 欄填 jina 可強制走備援抓法；' +
             '若備援也失敗，把 url 換成該銀行的公告/最新消息列表頁。\n';
   }
 
@@ -605,7 +605,7 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
 
 /************** 選單：檢查監控清單（2026-07-29 新增） **************/
 // 一鍵機械檢查表格填法，只讀不寫——不碰 last_snapshot、不寫任何分頁，結果直接跳視窗。
-// 掛在 benefits-parser.gs 的 buildAutomationMenu_（選單「檢查監控清單」）。
+// 掛在 benefits-parser.gs 的 buildAutomationMenu_（選單「體檢填法：1-監控清單」）。
 function checkWatchlistConfig() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(MONITOR_CONFIG.watchlistSheet);

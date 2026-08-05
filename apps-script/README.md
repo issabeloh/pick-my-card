@@ -195,7 +195,7 @@
 
 ## 每月自動備份（.xlsx 寄信，2026-07-12 新增）
 
-Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、Watchlist/QA 等工作表），
+Google Sheet 是唯一存放「原始資料全貌」的地方（公式、欄位結構、監控清單/QA 等工作表），
 cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 Google 帳號單點。每月自動把
 整本試算表以 .xlsx 附件寄到信箱，收到後存到 Google 以外的位置即補上此缺口。
 
@@ -208,6 +208,48 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 啟用步驟 | 貼上新版程式 → 選單「⏰ 啟用每月自動備份」跑一次（會要求授權寄信/觸發器權限）→ 可用「📦 立即寄送」先測試一封 |
 
 > 註：權益解析／主要活動解析的完整說明已移至本檔後段（分檔後版本），此處舊段落已於 2026-07-17 併除。
+
+## 「🤖 權益自動化」選單 ↔ 分頁對照表（2026-08-05 建立，自動化檔用）
+
+分頁改成 `1~4` 編號制後，選單標籤還在用舊名（「解析輸入」「收件匣」），對不上哪個動作吃哪個分頁。
+現在**選單標籤一律寫成「動作：來源分頁 → 產出分頁」，而且分頁名是由各腳本的 CONFIG 生成的**
+（`buildAutomationMenu_` ＋ `automationSheetNames_`，在 `benefits-parser.gs`），不再寫死。
+
+| 選單動作（打開試算表看到的字） | 函數 | 讀哪個分頁 | 寫哪個分頁 | 程式檔 |
+|---|---|---|---|---|
+| 執行監控：1-監控清單 → 2-變動通知（checkWatchlist） | `checkWatchlist` | `1-監控清單`（`active=TRUE` 的列） | `2-變動通知`（沒有會自動建）＋寄 Email；回寫 `last_snapshot`／`last_checked` | `watchlist-monitor.gs` |
+| 體檢填法：1-監控清單（只讀不寫） | `checkWatchlistConfig` | `1-監控清單` | 不寫任何分頁，結果跳視窗 | `watchlist-monitor.gs` |
+| 發布變動紀錄：2-變動通知 → 資料檔「變動紀錄」 | `publishChangelog` | `2-變動通知`（「公開」欄＝`V` 的列） | **跨檔**寫資料檔的 `變動紀錄`；回頭把「公開」改 `已發布` | `benefits-parser.gs` |
+| 解析新戶活動：2-變動通知（狀態=待解析）→ 4-待審核（新戶活動） | `parseInboxNewPromos` | `2-變動通知`（狀態＝`待解析` 的列） | `4-待審核（新戶活動）`；回寫狀態＝`已解析`／`已解析-無新戶活動` | `benefits-parser.gs` |
+| 解析新戶活動：3-貼上原文（新戶活動）→ 4-待審核（新戶活動） | `parsePastedText` | `3-貼上原文（新戶活動）` A2 原文／B2 卡片提示／C2 網址 | `4-待審核（新戶活動）` | `benefits-parser.gs` |
+| 解析新卡：3-貼上原文（新卡）→ 4-待審核（新卡-基本）＋4-待審核（新卡-組別） | `parseNewCard` | `3-貼上原文（新卡）` A2 權益頁原文／B2 id 提示／C2 網址／D2 一般消費說明 | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）` | `card-benefits-parser.gs` |
+| 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+
+所有分頁名的唯一出處（改名時要改的就是這幾行）：
+
+| 分頁 | 定義在 |
+|---|---|
+| `1-監控清單` | `watchlist-monitor.gs` → `MONITOR_CONFIG.watchlistSheet` |
+| `2-變動通知` | `watchlist-monitor.gs` → `MONITOR_CONFIG.inboxSheet`（＋`benefits-parser.gs` → `PARSER_CONFIG.inboxSheet`，**兩處要一致**） |
+| `3-貼上原文（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.inputSheet` |
+| `4-待審核（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.reviewSheet` |
+| `變動紀錄`（在資料檔） | `benefits-parser.gs` → `PARSER_CONFIG.changelogSheet` |
+| `3-貼上原文（新卡）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.inputSheet` |
+| `4-待審核（新卡-基本）`／`（新卡-組別）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.basicReviewSheet`／`groupReviewSheet` |
+| `報告-廣告排除` | `card-benefits-parser.gs` → `AD_CHECK_CONFIG.sheet` |
+
+⚠️ **在 Google Sheets 改分頁名 ≠ 程式跟著改**：腳本一律用 `getSheetByName(CONFIG.…)` 找分頁，
+名字對不上就是「找不到分頁」（有些動作會**自動建一個空的新分頁**，看起來像資料不見了）。
+改名的正確順序：先改上表對應的 CONFIG 常數 → 存檔 → 再去試算表改分頁名 → 重新整理試算表看選單標籤是否跟著變。
+
+舊名對照（文件／舊截圖裡若看到左欄，指的就是右欄）：
+
+| 舊名 | 現行分頁 |
+|---|---|
+| Watchlist | `1-監控清單` |
+| 情報收件匣、收件匣 | `2-變動通知` |
+| 解析輸入 | `3-貼上原文（新戶活動）` |
+| 待審核-新戶活動 | `4-待審核（新戶活動）` |
 
 ## 權益監控（第一階段，2026-07-07 上線）
 
@@ -228,7 +270,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - `minDiffChars`：30，變動總字數低於此門檻視為雜訊
 - `snapshotMaxChars`：45000，快照長度上限（Sheets 單格上限 5 萬字）
 
-### Per-row 覆蓋（2026-07-08 加入，在 Watchlist 直接維護、不用改程式）
+### Per-row 覆蓋（2026-07-08 加入，在 `1-監控清單` 直接維護、不用改程式）
 
 | 欄位 | 作用 | 填法 |
 |---|---|---|
@@ -272,9 +314,9 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - **舊表格完全相容**：沒有 `cards` 欄、`watch_type` 全空、`card_id` 全填 → 行為與改版前一模一樣。可以先貼程式、隔幾天再整理表格（或反過來）
 - 公告頁**一頁只填一列**，不要每張卡複製一列——同 URL 多列會重複抓取、同一變動寄多封通知
 
-### 檢查監控清單（2026-07-29 新增選單）
+### 體檢填法：1-監控清單（2026-07-29 新增選單）
 
-選單「🤖 權益自動化 → 檢查監控清單（填法體檢）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
+選單「🤖 權益自動化 → 體檢填法：1-監控清單（只讀不寫）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
 
 - `watch_type=bank` 卻還留著 `card_id`（＝改到一半，最常見）
 - `watch_type=bank` 卻沒填 `bank`（多卡頁沒有 card_id，`bank` 是信裡唯一能認人的欄位；單卡列不報，免噪音）
@@ -293,7 +335,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 
 ### 日常操作
 
-- **新增監控對象**：Watchlist 加一列即可，不用改程式（last_snapshot 留空，首次執行會自動填基準快照且不通知）；加完跑一次「檢查監控清單」確認欄位沒填錯
+- **新增監控對象**：`1-監控清單` 加一列即可，不用改程式（last_snapshot 留空，首次執行會自動填基準快照且不通知）；加完跑一次「體檢填法：1-監控清單」確認欄位沒填錯
 - **暫停某個網址**：該列 active 改 `FALSE`
 - **改執行頻率**：Apps Script → 觸發條件 → 編輯該觸發器（頻率不影響費用，全部免費）
 - **手動跑一次**：編輯器上方函數選 `checkWatchlist` → Run
@@ -354,7 +396,7 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 直接抓失敗（正文太短或 HTTP 403）時，腳本會**自動改走 Jina Reader**
 （`https://r.jina.ai/<原網址>`，免費服務，會用真的瀏覽器把 JS 動態網頁渲染完再回傳純文字）。
 
-- Watchlist 新增選填欄位 `fetch_via`（加在 active 右邊，表頭小寫）：
+- `1-監控清單` 新增選填欄位 `fetch_via`（加在 active 右邊，表頭小寫）：
   - 留空或 `auto`：先直接抓，失敗才走 Jina
   - `jina`：**一律走 Jina**——已知是動態網頁的銀行（cathay-cube、ubot 系列）建議填這個，
     避免「偶爾直接抓成功、偶爾走 Jina」兩種抓法的文字格式不同造成假警報
@@ -377,7 +419,7 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 
 ### 已知問題與排錯
 
-- 錯誤「Watchlist 第一列必須有 url 與 last_snapshot」→ 表頭不在第 1 列、大小寫不對、或全形字，重打表頭即可
+- 錯誤「『1-監控清單』第一列必須有 url 與 last_snapshot」→ 表頭不在第 1 列、大小寫不對、或全形字，重打表頭即可
 - 錯誤「抓到的正文太短」→ 該銀行是動態網頁（JS 載入），該列 `fetch_via` 填 `jina`；仍失敗就把 url 換成銀行「公告/最新消息列表頁」（規劃書 §2.4）
 - HTTP 403 → 該銀行擋非瀏覽器的請求，同上：`fetch_via` 填 `jina`
 - 錯誤「Jina 回傳空殼」→ 見上一節，稍後重跑；基準未被覆寫，不用補救
@@ -399,7 +441,7 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 - **為什麼分**：備份乾淨度（月備份不再打包一堆快照暫存垃圾）、安全邊界（AI 機器與正式資料物理隔離）、檔案不被大快照拖鈍。
 - **唯一接縫**：解析程式要讀合法卡片 ID，用 `openById(CARDS_SPREADSHEET_ID)` 跨檔**唯讀**讀資料檔的 Cards Data，**絕不寫回卡片資料**。第三階段「一鍵寫回正式表」也走這條接縫。
   - 2026-07-31 起這條接縫上多了一個**寫入**動作：`publishChangelog` append 到資料檔的「變動紀錄」表（見「發布變動紀錄」一節）。它只碰那張新表，`Cards Data` 等既有卡片資料仍是唯讀。
-- **監控腳本不用改**：`checkWatchlist` 只碰 Watchlist／情報收件匣，兩者都在自動化檔，`getActiveSpreadsheet()` 就對。
+- **監控腳本不用改**：`checkWatchlist` 只碰 `1-監控清單`／`2-變動通知`，兩者都在自動化檔，`getActiveSpreadsheet()` 就對。
 - **觸發器**：每週的時間驅動觸發器要建在**自動化檔**的 Apps Script（舊資料檔那邊的要刪掉）。
 
 ## 權益解析（第二階段 MVP：新戶活動，2026-07-08 建置，2026-07-17 移入自動化檔）
@@ -415,7 +457,7 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 
 ### `2-變動通知` 的「狀態」欄＝要不要解析的開關
 
-那是**只增不減的 log 分頁**，處理完的列**不用移動、不用刪**。狀態欄是程式判斷「這列要不要撿」的唯一依據：**只有 `待解析` 會被「解析收件匣」處理，填任何其他字都會被跳過。**
+那是**只增不減的 log 分頁**，處理完的列**不用移動、不用刪**。狀態欄是程式判斷「這列要不要撿」的唯一依據：**只有 `待解析` 會被「解析新戶活動：2-變動通知」那個選單動作處理，填任何其他字都會被跳過。**
 
 | 狀態值 | 誰寫的 | 意思 |
 |---|---|---|
@@ -486,8 +528,8 @@ Google Sheets 版本紀錄就是復原鍵（規劃書 §3.3／§3.4）。「變�
 
 1. 在**資料檔**逐一右鍵這 4 個分頁 → 「複製到」→ 現有試算表 →「PMC 自動化流程」：
    `1-監控清單`、`2-變動通知`、`3-貼上原文（新戶活動）`、`4-待審核（新戶活動）`
-   （其中 **Watchlist 一定要搬**——它有網址與基準快照；其餘 3 個腳本會自動重建，但搬過去可保留歷史）
-2. 複製過去會變成「Watchlist 的副本」等名字 → **改回原本的名字**（腳本靠分頁名字精準比對，多「的副本」會找不到）
+   （其中 **`1-監控清單` 一定要搬**——它有網址與基準快照；其餘 3 個腳本會自動重建，但搬過去可保留歷史）
+2. 複製過去會變成「1-監控清單 的副本」等名字 → **改回原本的名字**（腳本靠分頁名字精準比對，多「的副本」會找不到）
 3. 自動化檔手動跑一次 `checkWatchlist` 確認正常、跑一次解析確認能讀到卡片 ID
 4. 確認無誤後：資料檔那邊**刪掉**這 4 個分頁與監控/解析程式、**刪掉舊的每週觸發器**；自動化檔**新建**每週觸發器（函數 `checkWatchlist`、Time-driven）
 
@@ -542,7 +584,7 @@ voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_te
 | 依賴 | 與 `benefits-parser.gs` 同專案，共用 `callGemini_` / `getCardsSheet_` / `getCardIds_` |
 | 輸入 | `3-貼上原文（新卡）` 分頁（A2＝官網權益頁文字、B2＝id 提示選填、C2＝網址選填） |
 | 產出 | `4-待審核（新卡-基本）`（1 列＝ Cards Data 固定欄位）＋`4-待審核（新卡-組別）`（垂直，一組一列） |
-| 入口 | 選單「🤖 權益自動化 → 解析新卡（主要活動）」 |
+| 入口 | 選單「🤖 權益自動化 → 解析新卡：3-貼上原文（新卡）→ 4-待審核（新卡-基本）＋4-待審核（新卡-組別）」 |
 
 ### 輸入（新卡解析輸入分頁）
 
