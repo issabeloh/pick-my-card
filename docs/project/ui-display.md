@@ -5,10 +5,18 @@
 
 ## 1. 卡片詳情頁（#card-detail-modal，showCardDetail(cardId) 開啟）
 
-**級別選擇器區域**（約 script.js:2932-2998）：
-- 下拉選單選級別；「各級別回饋率」顯示在選擇器旁（同一行 flexbox，flex-wrap: wrap 支援換行）
-- DBS Eco 的 level-note 顯示在下拉選單下方
-- **鐵則：級別回饋率只在選擇器旁顯示一次，回饋內容區（specialContent）不再重複顯示**
+**個人設定區塊**（`#card-personal-section`，2026-08-01 合併；Grep `personal-settings-box`）：
+「這張卡在我身上的設定」全部收在同一個灰底框裡——級別選擇器／CUBE 專屬設定（發卡組織、生日月份、童樂匯）＋ 我的額度 ＋ 我的筆記。合併前是分開的兩塊（級別區自帶灰底框、`.personal-fields-row` 另一塊），等於把同一件事切成兩半、還把詳情頁上半部撐長。
+- **標題一律同字級**：區塊標題是 `h4`「個人設定」（無 emoji），內層欄位標題一律 `.personal-field-title`（14px/600），不再有 h4 與 inline 14px label 混用
+- **級別區與額度/筆記之間的分隔線掛在 `#cube-level-section` 身上**，不是掛在額度區——非分級卡那塊是 `display:none`，邊框跟著整塊消失，框內不會留一條孤兒線
+- `cube-settings-grid` 桌機 **2×2**（「選擇級別」搬進來後變四格，四欄每欄只剩約 150px，生日月份的說明會斷成四五行）、手機單欄，欄間分隔線移除（外框已經把它們框成一組）
+- 非分級卡：`showCardDetail()` 會把 `#cube-level-section` 的 **innerHTML 一起清掉**（不只 `display:none`），免得上一張卡的級別選擇器與說明窗留在 DOM 裡
+
+**級別選擇器與「i」說明窗**（Grep `setupLevelHelpPopover`）：
+- 下拉選單選級別；「各級別回饋率」與該級別的 `level-note` **收在下拉選單旁的「i」按鈕裡**，點擊開浮動說明窗（2026-08-01 改；原本兩段小字攤在選擇器旁/下方，把個人設定區撐高又擠掉真正要操作的選單）。兩段都沒內容時不長按鈕
+- 說明窗用**原生 Popover API** 進 top layer：詳情頁是 z-index 1100 的 modal、`.modal-content` 有 `overflow-y:auto`，一般絕對定位浮層會被裁掉。CSS 必須寫 `inset: auto`，否則原生 popover 會置中在畫面正中央、JS 的 fixed 座標吃不到。不支援的瀏覽器退回 `.is-open` class，並自己補「點外面關閉」
+- `#level-note` 節點**一定存在**（級別切換時就地改寫它的文字），空字串時靠 `:not(:empty)` 不佔位——不能靠「有沒有渲染」來決定間距
+- **鐵則：級別回饋率只在「i」說明窗顯示一次，回饋內容區（specialContent）不再重複顯示**
 
 **回饋內容區域**（2026-07-09 起逐筆顯示，不再按 rate+cap 合併）：
 - 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（CUBE 用自己的 `generateCubeSpecialContent`，不受影響）
@@ -23,6 +31,12 @@
 **Header 與連結**：modal 標題就是 `card.name`（無「詳情」後綴）；header 左上有卡片圖；卡全名純文字（無「信用卡官網連結:」標籤）；新戶活動區塊無「官網連結」。
 
 **申辦 CTA（2026-07-15 新增）**：`cardsData.cardApplyCtas[card.id]` 有 `link` 時，`showCardDetail()` 同步填入兩個常駐按鈕（無 link 時兩者都明確 `hidden = true`，防止上一張卡狀態沿用）——`#card-detail-apply-header-btn`（桌機，卡名旁，`≤768px` 隱藏）與 `#card-detail-apply-bar`（手機，`.modal-content` 捲動容器內最後一個子節點、`position: sticky; bottom: 0`，`≥769px` 隱藏）；bar 的文字來自 `applyCta.text`（空字串則只留按鈕）。兩者 href 都走 `sanitizeUrl()`，click 落入 GA4 delegation（`detail_header_apply` / `detail_sticky_apply`）。
+
+**近期異動（2026-08-01 新增，issue #375 PR-2）**：位在**「指定通路回饋」上方**（`#card-changelog-section`，nav 也多一顆「近期異動」鈕），資料來自 `card.changelog`（Apps Script「變動紀錄」表匯出，最多 5 筆、由新到舊；來源與發布流程見 `apps-script/README.md`「發布變動紀錄」）。每列「日期 ＋ 一句話」，日期由 ISO 轉斜線顯示（`formatChangelogDate`）。
+- **版位理由**：權益剛變過是讀下面那些回饋數字時的前提，所以擺在回饋內容之前。但它只是補充資訊、不該搶視線——所以不用 `.cashback-detail-item` 的卡片框。
+- **樣式（站長 2026-08-01 從三種 mockup 選定「連續清單」）**：`.card-changelog-list` 整區一塊淺灰底（`#f9fafb` ＋ `#edeff2` 細框），條與條之間用髮絲線分隔。讀這區的動作是「快速掃過去看最近有沒有變動」，連續底色比一條一條的獨立卡片好掃、垂直空間也最省；獨立卡片版在實際頁面會變成「個人設定的框 ＋ 一堆小框」。手機（≤480px）日期改放句子上方一行，避免句子只剩 60% 寬度而斷成三四行。
+- **渲染函數** `renderCardDetailChangelog()`（`js/card-detail.js`）刻意**不走 innerHTML**，用 `createElement` + `textContent`：`summary` 是站長在 Sheets 自由輸入的文字（鐵則 3），textContent 比事後 `escapeHtml()` 少一個「哪天改成字串拼接就破功」的失誤面。
+- **沒有異動的卡整塊不渲染**（鐵則 4：空陣列不是 falsy，`!card.changelog || length === 0` 兩個都要判），nav 鈕由 `setupCardDetailNav` 的 `offsetParent` 檢查自動隱藏。
 
 **進入詳情頁的入口**：搜尋結果卡片點擊；sidebar 卡片 chips；`#cards-selection`/`#owned-cards-selection` 每張卡的 ⓘ 按鈕（由 `_renderCardSelectionModal` 注入，click 呼叫 `showCardDetail(card.id)` 並 `stopPropagation()` 防誤勾 checkbox；詳情 modal 疊在原 modal 之上）。
 
