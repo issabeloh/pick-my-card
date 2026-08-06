@@ -33,7 +33,8 @@
 **申辦 CTA（2026-07-15 新增）**：`cardsData.cardApplyCtas[card.id]` 有 `link` 時，`showCardDetail()` 同步填入兩個常駐按鈕（無 link 時兩者都明確 `hidden = true`，防止上一張卡狀態沿用）——`#card-detail-apply-header-btn`（桌機，卡名旁，`≤768px` 隱藏）與 `#card-detail-apply-bar`（手機，`.modal-content` 捲動容器內最後一個子節點、`position: sticky; bottom: 0`，`≥769px` 隱藏）；bar 的文字來自 `applyCta.text`（空字串則只留按鈕）。兩者 href 都走 `sanitizeUrl()`，click 落入 GA4 delegation（`detail_header_apply` / `detail_sticky_apply`）。
 
 **近期異動（2026-08-01 新增，issue #375 PR-2）**：位在**「指定通路回饋」上方**（`#card-changelog-section`，nav 也多一顆「近期異動」鈕），資料來自 `card.changelog`（Apps Script「變動紀錄」表匯出，最多 5 筆、由新到舊；來源與發布流程見 `apps-script/README.md`「發布變動紀錄」）。每列「日期 ＋ 一句話」，日期由 ISO 轉斜線顯示（`formatChangelogDate`）。
-- **版位理由**：權益剛變過是讀下面那些回饋數字時的前提，所以擺在回饋內容之前。但它只是補充資訊、不該搶視線——所以不用 `.cashback-detail-item` 的卡片框，只用一條左側時間軸線（`.card-changelog-list`）。手機（≤480px）日期改放句子上方一行，避免句子只剩 60% 寬度而斷成三四行。
+- **版位理由**：權益剛變過是讀下面那些回饋數字時的前提，所以擺在回饋內容之前。但它只是補充資訊、不該搶視線——所以不用 `.cashback-detail-item` 的卡片框。
+- **樣式（站長 2026-08-01 從三種 mockup 選定「連續清單」）**：`.card-changelog-list` 整區一塊淺灰底（`#f9fafb` ＋ `#edeff2` 細框），條與條之間用髮絲線分隔。讀這區的動作是「快速掃過去看最近有沒有變動」，連續底色比一條一條的獨立卡片好掃、垂直空間也最省；獨立卡片版在實際頁面會變成「個人設定的框 ＋ 一堆小框」。手機（≤480px）日期改放句子上方一行，避免句子只剩 60% 寬度而斷成三四行。
 - **渲染函數** `renderCardDetailChangelog()`（`js/card-detail.js`）刻意**不走 innerHTML**，用 `createElement` + `textContent`：`summary` 是站長在 Sheets 自由輸入的文字（鐵則 3），textContent 比事後 `escapeHtml()` 少一個「哪天改成字串拼接就破功」的失誤面。
 - **沒有異動的卡整塊不渲染**（鐵則 4：空陣列不是 falsy，`!card.changelog || length === 0` 兩個都要判），nav 鈕由 `setupCardDetailNav` 的 `offsetParent` 檢查自動隱藏。
 

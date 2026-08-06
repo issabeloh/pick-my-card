@@ -4516,28 +4516,31 @@ mark.cashback-search-hl {
     color: #111827;
 }
 
-/* 近期異動（詳情頁最後一區，#card-changelog-section）。
-   刻意做得比回饋內容輕：這是給「喜歡追蹤細節」的人看的補充資訊，不該跟主要回饋
-   內容搶視線——所以沒有卡片邊框（不用 .cashback-detail-item），只用一條左側時間軸線
-   串起最多 5 列。日期固定寬度不換行，句子自己佔一欄，長句換行後靠齊句子的起點。 */
+/* 近期異動（#card-changelog-section）。「連續清單」樣式：整區一塊淺灰底，
+   條與條之間用髮絲線分隔——讀這區的動作是「快速掃過去看最近有沒有變動」，
+   連續的底色比一條一條的獨立卡片更好掃，垂直空間也最省。
+   刻意不用 .cashback-detail-item 的卡片框：這是補充資訊，不該跟主要回饋內容搶視線。
+   日期固定寬度不換行，句子自己佔一欄，長句換行後靠齊句子的起點。 */
 .card-changelog-list {
     list-style: none;
     margin: 0;
-    padding: 0 0 0 14px;
-    border-left: 2px solid #e5e7eb;
+    padding: 0 12px;
+    background: #f9fafb;
+    border: 1px solid #edeff2;
+    border-radius: 8px;
 }
 
 .card-changelog-item {
     display: flex;
     gap: 10px;
     align-items: baseline;
-    padding: 7px 0;
+    padding: 9px 0;
     font-size: 13px;
     line-height: 1.6;
 }
 
 .card-changelog-item + .card-changelog-item {
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid #eaecef;
 }
 
 .card-changelog-date {
