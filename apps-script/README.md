@@ -468,6 +468,13 @@ Google Sheets 版本紀錄就是復原鍵（規劃書 §3.3／§3.4）。「變�
 - `active` 留空視為啟用（這張表是 append-only 的 log，忘了打 TRUE 不該整批消失）
 - 發布後還要在資料檔按一次「📥 匯出 JSON」才會上線
 
+**發布本身不花任何額度**：沒有 `UrlFetchApp`、沒有 `MailApp`、沒有 Gemini 呼叫、也不 commit 到
+GitHub，所以 Jina／Gemini／寄信／Cloudflare build 一格都不動（Cloudflare 的 build 只有匯出時才
+產生，一次匯出＝1 build——**先發布好幾筆再一次匯出反而最省**）。唯一的成本是執行時間，而
+`publishChangelog` 只讀它要用的四欄、不讀「舊文字／新文字」那兩欄各 4 萬字的大格子（見程式內
+⚠️ 註解），所以 `2-變動通知` 長到幾千列也不會變慢。改這支時別為了圖方便改回 `getDataRange()`，
+`tools/test-changelog.js` 有一條斷言在守這件事。
+
 改到這條流程的程式時，先在 repo 跑 `node tools/test-changelog.js`——它用假的 `SpreadsheetApp`
 把 `readChangelog` / `publishChangelog` / `appendToInbox_` 真的執行一遍，驗取 5 筆／排序／
 `active=FALSE`／表不存在／多卡拆列／重複按不重寫等邊界。**綠燈不代表線上一定會動**（stub 只

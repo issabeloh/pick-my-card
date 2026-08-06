@@ -29,9 +29,14 @@ function makeSheet(name, rows, maxColumns) {
     name,
     rows,
     maxColumns: maxColumns || 26,
+    reads: [],
     getDataRange() {
       const width = this.rows.reduce((w, r) => Math.max(w, r.length), 0);
-      return { getValues: () => this.rows.map(r => { const c = r.slice(); while (c.length < width) c.push(''); return c; }) };
+      const s = this;
+      return { getValues: () => {
+        s.reads.push({ row: 1, col: 1, numRows: s.rows.length, numCols: width, full: true });
+        return s.rows.map(r => { const c = r.slice(); while (c.length < width) c.push(''); return c; });
+      } };
     },
     getLastRow() { return this.rows.length; },
     getLastColumn() { return this.rows.reduce((w, r) => Math.max(w, r.length), 0); },
@@ -54,6 +59,8 @@ function makeSheet(name, rows, maxColumns) {
           });
         },
         getValues() {
+          // 記錄每次讀取涵蓋的範圍，供「沒去讀大欄位」那條斷言檢查
+          s.reads.push({ row, col, numRows: numRows || 1, numCols: numCols || 1 });
           const out = [];
           for (let i = 0; i < (numRows || 1); i++) {
             const src = s.rows[row - 1 + i] || [];
@@ -184,7 +191,7 @@ function runPublish(inboxRows, cardsDataRows, existingChangelog) {
   vm.runInContext(fs.readFileSync(path + 'watchlist-monitor.gs', 'utf8'), ctx);   // splitList_
   vm.runInContext(fs.readFileSync(path + 'benefits-parser.gs', 'utf8'), ctx);
   vm.runInContext('publishChangelog()', ctx);
-  return { inbox: autoSheets['2-變動通知'].rows, changelog: dataSS.getSheetByName('變動紀錄'), alerts: alerts.slice() };
+  return { inbox: autoSheets['2-變動通知'].rows, inboxSheet: autoSheets['2-變動通知'], changelog: dataSS.getSheetByName('變動紀錄'), alerts: alerts.slice() };
 }
 
 const CARDS_DATA = [['id', 'name'], ['yushan-unicard', '玉山'], ['febank-jaccard', '遠銀'], ['cathay-cube', '國泰']];
@@ -295,6 +302,29 @@ r = runPublish([OLD_HEADER.concat(['我的備註']), oldRow.concat(['別動我']
 check('第 13 欄已有站長自己的欄位 → 不覆蓋、改指示手動補',
   r.inbox[0][12] === '我的備註' && r.inbox[1][12] === '別動我' &&
   r.alerts.join('').indexOf('手動補即可') >= 0, r.inbox[0]);
+
+// B6: 效能防呆——publishChangelog 不可以整張表讀進來。
+// 「舊文字／新文字」各上限 4 萬字，log 長到幾百列時 getDataRange() 會吞進數十 MB，
+// 愈按愈慢、最終撞 Apps Script 單次執行 6 分鐘上限。這條擋的是「哪天有人圖方便改回
+// getDataRange()」——功能測試全綠也看不出來，只會在一年後變成「選單怎麼卡住了」。
+const FULL_HEADER = OLD_HEADER.concat(['公開摘要', '公開卡片', '公開']);
+const bigRow = (flag) => {
+  const r = [T, 'yushan-unicard', '玉山', 'https://x', '是', 'AI摘要', '文案', '高',
+    'D'.repeat(8000), 'O'.repeat(40000), 'N'.repeat(40000), '待解析'];
+  return r.concat(['一句話摘要', 'yushan-unicard', flag]);
+};
+r = runPublish([FULL_HEADER, bigRow('V'), bigRow('')], CARDS_DATA, null);
+const reads = r.inboxSheet.reads;
+const BIG_COLS = [9, 10, 11];   // 變動段落／舊文字／新文字（1-indexed）
+const touchedBig = reads.filter(x => x.numRows > 1 &&
+  BIG_COLS.some(c => c >= x.col && c < x.col + x.numCols));
+check('publishChangelog 沒有整張表讀進來（getDataRange 未被呼叫）',
+  !reads.some(x => x.full), reads.filter(x => x.full));
+check('沒有讀到「變動段落／舊文字／新文字」的資料列',
+  touchedBig.length === 0, touchedBig);
+check('功能不受影響：大欄位的列照樣發得出去',
+  !!r.changelog && r.changelog.rows.length === 2 && r.changelog.rows[1][2] === '一句話摘要',
+  r.changelog && r.changelog.rows);
 
 // ============================================================
 // C. appendToInbox_ 預填三欄
