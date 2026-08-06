@@ -185,8 +185,13 @@ function publishChangelog() {
       '值本來就在同一列的 AI摘要／card_id 上。摘要記得改寫成給用戶看的話再打 V。）'
     : '';
 
-  const data = inbox.getDataRange().getValues();
-  const headers = data[0].map(function (h) { return String(h).trim(); });
+  // ⚠️ 刻意不用 getDataRange()：這張表的「舊文字」「新文字」兩欄各上限 4 萬字、
+  //    「變動段落」8 千字，整張讀進來單列最壞情況約 88KB。這是只增不減的 log，
+  //    幾百列之後每按一次選單就要吞進數十 MB，會愈按愈慢、最終撞上 Apps Script
+  //    單次執行 6 分鐘的上限。這裡真正要用的只有四欄，逐欄讀（同 backfillInboxPublishCells_），
+  //    讀取量從每列 ~88KB 降到 ~100 bytes，表長到幾千列也不會慢。
+  const headers = inbox.getRange(1, 1, 1, Math.max(inbox.getLastColumn(), 1)).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
   const cTime = headers.indexOf('日期時間');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
@@ -201,10 +206,21 @@ function publishChangelog() {
     return;
   }
 
+  // 以下 i 一律是「資料列序號」（0 = 表頭下的第一列），試算表列號 = i + 2
+  const rowCount = Math.max(inbox.getLastRow() - 1, 0);
+  const readCol = function (idx) {
+    return (idx < 0 || rowCount === 0) ? [] : inbox.getRange(2, idx + 1, rowCount, 1).getValues();
+  };
+  const colTime = readCol(cTime);
+  const colSummary = readCol(cSummary);
+  const colCards = readCol(cCards);
+  const colFlag = readCol(cFlag);
+  const cell = function (col, i) { return col.length ? col[i][0] : ''; };
+
   // 先掃有沒有人打勾，沒有就不必跨檔開資料檔（省一次 openById）
   const marked = [];
-  for (let i = 1; i < data.length; i++) {
-    if (isPublishMark_(data[i][cFlag])) marked.push(i);
+  for (let i = 0; i < rowCount; i++) {
+    if (isPublishMark_(cell(colFlag, i))) marked.push(i);
   }
   if (!marked.length) {
     ui.alert('發布變動紀錄',
@@ -228,9 +244,9 @@ function publishChangelog() {
   const skipped = [];       // 驗證沒過的列，原因原樣列給站長看
 
   marked.forEach(function (i) {
-    const rowNo = i + 1;
-    const summary = String(data[i][cSummary] || '').trim();
-    const ids = splitList_(data[i][cCards]);   // watchlist-monitor.gs，半形/全形逗號、頓號都吃
+    const rowNo = i + 2;   // +1 表頭、+1 試算表列號從 1 起算
+    const summary = String(cell(colSummary, i) || '').trim();
+    const ids = splitList_(cell(colCards, i));   // watchlist-monitor.gs，半形/全形逗號、頓號都吃
     const problems = [];
 
     if (!summary) {
@@ -251,7 +267,7 @@ function publishChangelog() {
       return;
     }
 
-    const date = toChangelogDate_(cTime >= 0 ? data[i][cTime] : null);
+    const date = toChangelogDate_(cell(colTime, i));
     ids.forEach(function (id) { rows.push([id, date, summary, true]); });
     publishedRows.push(rowNo);
   });
