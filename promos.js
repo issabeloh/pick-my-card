@@ -392,9 +392,17 @@
   // 外部連結防護：只允許 http/https 開頭，語義同 apps-script/cards-export.gs 的
   // pmcSanitizeUrl_（縮圖 src 已在生成器端過濾過，這裡是多一層保險，不假設
   // data-full-src 屬性值一定乾淨）。
+  // 2026-08-07 追加本地資產例外：宣傳圖搬進 repo 後，data-full-src 會是站內
+  // 相對路徑（assets/images/promos/*.png）而不是 http(s) 開頭，舊寫法會一律
+  // 判定為不安全、回傳空字串，openLightbox 就直接 return（症狀：點縮圖沒反應）。
+  // 只放行「這一個固定目錄下、檔名限英數與 _-、且副檔名是圖片」的相對路徑：
+  // 檔名段不允許 / : % 與 .（副檔名之外），因此組不出 ..／跨站網址／javascript:，
+  // 防護強度與原本相同。
+  var LOCAL_PROMO_IMG_RE = /^assets\/images\/promos\/[A-Za-z0-9_-]+\.(png|jpe?g|webp)$/i;
   function sanitizeImgUrl(url) {
     if (typeof url !== 'string') return '';
     var trimmed = url.trim();
+    if (LOCAL_PROMO_IMG_RE.test(trimmed)) return trimmed;
     return /^https?:\/\//i.test(trimmed) ? trimmed : '';
   }
 

@@ -1766,6 +1766,43 @@ function pmcSanitizeUrl_(url) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : '';
 }
 
+// 活動宣傳圖：已搬進 repo 的改指本地檔（省 Firebase Storage egress）。
+// 與前端 js/core-utils.js 的 localizePromoImageUrl() 是同一條規則、同一份名單，
+// 兩邊都要改（前端管詳情頁的圖，這裡管 promos.html 靜態頁的圖）。
+//
+// ⚠️ 白名單制：不在名單內的（Sheets 新增、還沒搬進 repo 的圖）原樣走 Firebase。
+//    無條件改寫會指到不存在的檔案，而 onerror 會把整個縮圖列隱藏——壞掉不會被發現。
+//    搬新圖的流程見 docs/ops/quota-limits.md。
+const PMC_LOCAL_PROMO_IMAGE_DIR = 'assets/images/promos/';
+const PMC_LOCAL_PROMO_IMAGES = [
+  'ctbc-uniopen-2026-july.png',
+  'febank-happy-2026july.png',
+  'febank-lejia-2026July.png',
+  'hsbc-cashback-2026-Aug.png',
+  'hsbc-liveplus-2026-Aug.png',
+  'kgi-eslite-2026-july.png',
+  'sinopac-green-2026-june.png',
+  'taishin-richart-2026June.png',
+  'taishin-richart-2026july.png'
+];
+
+// 傳入的必須是已經過 pmcSanitizeUrl_ 的值（空字串照樣安全回傳空字串）。
+// promos.html 在站台根目錄，所以相對路徑就對得到。
+function pmcLocalizePromoImage_(url) {
+  if (typeof url !== 'string' || !url) return url;
+  const m = url.match(/promo-images%2F([^?&/]+)/i);
+  if (!m) return url;
+  let filename;
+  try {
+    filename = decodeURIComponent(m[1]);
+  } catch (e) {
+    return url;   // 畸形字串不該讓整份匯出掛掉
+  }
+  return PMC_LOCAL_PROMO_IMAGES.indexOf(filename) !== -1
+    ? PMC_LOCAL_PROMO_IMAGE_DIR + filename
+    : url;
+}
+
 // 活動類型字串 → 糖果色分類（語義同 script.js 的 promoTypeClass，並把資料裡實際出現、
 // 未列在原枚舉的「定額點數」也正規化進 voucher 桶，行為更寬鬆但不影響原三桶）
 function pmcPromoTypeBucket_(label) {
@@ -1908,7 +1945,7 @@ function pmcRenderPromoCard_(p) {
   // 第二個理由：promos.js 的 click 監聽都掛在 document 上，同一層兩個監聽器
   // 彼此的 stopPropagation 攔不住對方（不是真正的冒泡攔截），若把縮圖塞進
   // .promo-card-toggle 內，點縮圖會連帶觸發卡片展開/收合。
-  const giftImgUrl = pmcSanitizeUrl_(promo.gift_image_url);
+  const giftImgUrl = pmcLocalizePromoImage_(pmcSanitizeUrl_(promo.gift_image_url));
   const giftImgAlt = title + ' 活動宣傳圖';
   const giftThumbHtml = giftImgUrl
     ? '<div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="' +

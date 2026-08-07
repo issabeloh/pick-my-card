@@ -65,6 +65,7 @@
 | 要寫派工 prompt | `docs/ops/templates.md`（直接套模板填空） |
 | 要更新任何 docs/ 制度檔或本檔 | `docs/ops/maintenance.md` |
 | 安全掃描報錯、要改掃描規則或 security-baseline | `docs/ops/security-monitoring.md` |
+| 外部 API／金鑰名稱／免費額度／會不會被扣錢、新增活動宣傳圖 | `docs/ops/quota-limits.md` |
 | 考古「為什麼當初這樣設計」 | `docs/project/history.md` |
 | 新 session 開工、或發現制度怪怪的 | `docs/ops/letter.md` |
 

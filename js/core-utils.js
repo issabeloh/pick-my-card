@@ -15,6 +15,7 @@
  *  - 過期活動過濾              → "filterExpiredRates"
  *  - 比較卡集合                → "getCardsForComparison"
  *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
+ *  - 宣傳圖改走本地資產         → "localizePromoImageUrl" / "LOCAL_PROMO_IMAGES"
  *  - 卡片項目彙整              → "collectCardItems"
  * ============================================================ */
 
@@ -584,6 +585,47 @@ function getActiveCardholderPromos(cardId) {
             const pb = typeof b.priority === 'number' ? b.priority : 99;
             return pa - pb;
         });
+}
+
+// ========== 新戶活動宣傳圖：改走本地資產 ==========
+// promo.gift_image_url 的值來自 Google Sheets，指向 Firebase Storage。
+// Firebase 是 Blaze 從量計費、Storage egress 隨流量成長；同一張圖放進 repo
+// 交給 Cloudflare Pages 送則完全不計流量。所以這裡在「渲染前」把已經搬進
+// repo 的圖改寫成本地路徑，Firebase 那邊自然就沒有流量了。
+//
+// ⚠️ 刻意用白名單而不是無條件改寫：Sheets 之後新增的宣傳圖還沒搬進 repo，
+//    無條件改寫會指到不存在的檔案，而 <img onerror> 會把圖整個隱藏起來
+//    （壞掉還不會被發現）。不在名單內的一律原樣回傳、繼續走 Firebase，
+//    所以「忘記搬新圖」最差只是沒省到流量，不會讓畫面出錯。
+//    搬新圖進 repo 的完整流程見 docs/ops/quota-limits.md。
+const PROMO_IMAGE_LOCAL_DIR = 'assets/images/promos/';
+const LOCAL_PROMO_IMAGES = new Set([
+    'ctbc-uniopen-2026-july.png',
+    'febank-happy-2026july.png',
+    'febank-lejia-2026July.png',
+    'hsbc-cashback-2026-Aug.png',
+    'hsbc-liveplus-2026-Aug.png',
+    'kgi-eslite-2026-july.png',
+    'sinopac-green-2026-june.png',
+    'taishin-richart-2026June.png',
+    'taishin-richart-2026july.png'
+]);
+
+// Rewrite a Firebase Storage promo-image URL to its local copy when we have one.
+// Anything else (other hosts, unknown filenames, empty values) passes through
+// untouched. Paths stay relative because merchant/*.html carry <base href="/">.
+function localizePromoImageUrl(url) {
+    if (typeof url !== 'string' || !url) return url;
+    const m = url.match(/promo-images%2F([^?&/]+)/i);
+    if (!m) return url;
+    // decodeURIComponent 可能因為來源字串畸形而丟例外——壞資料不該讓整頁掛掉
+    let filename;
+    try {
+        filename = decodeURIComponent(m[1]);
+    } catch (e) {
+        return url;
+    }
+    return LOCAL_PROMO_IMAGES.has(filename) ? PROMO_IMAGE_LOCAL_DIR + filename : url;
 }
 
 // True if the bonus_merchants value (string or array) represents the *all_items wildcard.

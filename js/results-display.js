@@ -722,7 +722,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const giftImageHtml = (opts.showExtras
         && Array.isArray(promo.promo_types) && promo.promo_types.some(t => t === '贈品' || t === '首刷禮')
         && promo.gift_image_url)
-        ? `<img class="promo-gift-image" src="${escapeHtml(promo.gift_image_url)}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`
+        ? `<img class="promo-gift-image" src="${escapeHtml(localizePromoImageUrl(promo.gift_image_url))}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`
         : '';
     if (giftImageHtml) el.className += ' has-gift';
 
