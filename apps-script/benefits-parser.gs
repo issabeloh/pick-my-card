@@ -69,6 +69,8 @@ function buildAutomationMenu_() {
     .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
     .addSeparator()
     .addItem('發布變動紀錄：2-變動通知 → 資料檔', 'publishChangelog')
+    .addItem('封存已處理列：2-變動通知 → 2-封存', 'archiveInboxDoneRows')  // watchlist-monitor.gs
+    .addItem('整理版面：2-變動通知', 'tidyInboxLayout')                    // watchlist-monitor.gs，只搬欄不動值
     .addSeparator()
     .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
     .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
@@ -200,8 +202,9 @@ function publishChangelog() {
     ui.alert('發布變動紀錄',
       '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／公開」三欄，' +
       '而且自動補表頭沒成功（表頭跟程式預期對不上，或那幾欄已經被其他內容佔用）。\n\n' +
-      '手動補即可，分頁裡的內容不用刪：在第一列「狀態」欄的右邊三格，' +
-      '依序填「公開摘要」「公開卡片」「公開」（順序不能顛倒，監控寫入是照位置填的）。',
+      '手動補即可，分頁裡的內容不用刪：在第一列任何三個空欄的表頭，' +
+      '填上「公開摘要」「公開卡片」「公開」（欄位擺哪、順序如何都沒關係，' +
+      '程式是照第一列的欄名找欄的——但欄名要一字不差）。',
       ui.ButtonSet.OK);
     return;
   }
