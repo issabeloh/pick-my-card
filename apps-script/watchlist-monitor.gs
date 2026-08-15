@@ -11,9 +11,12 @@
  *                             | last_snapshot | last_checked | active | fetch_via
  *                             | keywords | min_diff_chars | check_days
  *   2-變動通知 —— 不用自己建，腳本會自動建立
- *                （2026-07-31 起表尾多三欄「公開摘要／公開卡片／公開」，給選單
- *                 「發布變動紀錄」用。**舊分頁不用刪**：三欄加在最右邊、舊內容原封不動，
- *                 表頭會由 ensureInboxPublishColumns_ 自動補上）
+ *                （2026-07-31 起多三欄「公開摘要／公開卡片／公開」，給選單
+ *                 「發布變動紀錄」用。**舊分頁不用刪**：缺的表頭會由
+ *                 ensureInboxPublishColumns_ 自動補在最右邊、舊內容原封不動）
+ *                2026-08-15 起：欄序可以自己拖（程式照第一列的**欄名**對位，見 INBOX_HEADERS），
+ *                每輪監控結尾會畫一條分隔線，純版面/文案的變動預設不寫進來（skipCosmeticRows）。
+ *                分頁太長就在「公開」欄打「封存」或「刪除」，按選單「處理變動通知」一次收掉
  *
  * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
  *   留空或 auto —— 先直接抓，失敗才走 Jina Reader 備援
@@ -66,7 +69,59 @@ const MONITOR_CONFIG = {
   // 動態網頁/擋機器人的備援：直接抓失敗時改走 Jina Reader（免費的「網頁轉純文字」服務，
   // 會用真的瀏覽器幫你渲染 JS 動態網頁）。不需申請就能用（每分鐘額度較低）；
   // 用量大再到 https://jina.ai/reader 免費申請金鑰，存進「專案設定 → 指令碼屬性」JINA_API_KEY
-  jinaFallback: true
+  jinaFallback: true,
+
+  // 純版面/文案變動不寫進「2-變動通知」（2026-08-15 新增，站長要求）。
+  // 只有 AI 明確判 material=false、信心不是「低」、且變動類型全落在「改寫搬移/其他」
+  // 才會略過（判斷在 isCosmeticChange_）——條件刻意收得緊，寧可多留幾列也不要丟掉真的變動。
+  // ⚠️ 略過的列**不會**留下新舊全文（快照照樣更新，下次不會再報一次），
+  //    所以通知信仍會一行一筆列出來，讓站長至少看得到「有這件事、我沒收進表」。
+  //    覺得漏了東西 → 改成 false，全部照舊寫進分頁。
+  skipCosmeticRows: true,
+
+  // 每輪監控寫完後，在最後一列下面畫一條粗底線，讓不同日期的批次一眼分得開（markInboxRoundEnd_）
+  drawRoundSeparator: true
+};
+
+/************** 「2-變動通知」欄位順序（2026-08-15 改版） **************/
+// 站長每天要動的欄（狀態／公開摘要／公開卡片／公開）以前排在「變動段落／舊文字／新文字」
+// 這三根巨無霸文字欄後面，每次都要往右捲一大段才看得到。改成「人要看的全部擠在左半邊、
+// 機器留存的三欄一律放最後」。
+//
+// ⚠️ 欄序現在是「可以改的」：寫入端 appendToInbox_ 改成**照表頭名字**對位（不再照位置
+//    appendRow），讀取端（benefits-parser.gs）本來就是 headers.indexOf。所以你在試算表裡
+//    自己拖動欄位不會弄壞任何東西，這份清單只是「程式新建分頁時」的預設順序而已。
+//    唯一不能改的是**表頭字串本身**——那才是程式認欄位的依據。
+// 動作欄：2026-08-15 從「公開」改名成「公開／封存／刪除」——欄名本身就是操作說明，
+// 站長不用記得可以打哪些字。舊名與半形斜線寫法都照認（下方 ALIASES），
+// 舊分頁也不用自己改：ensureInboxPublishColumns_ 下次寫入時會就地把表頭改成新名。
+const INBOX_ACTION_HEADER = '公開／封存／刪除';
+const INBOX_ACTION_ALIASES = [INBOX_ACTION_HEADER, '公開/封存/刪除', '公開'];
+
+// 找動作欄在第幾欄（0-based，找不到回 -1）。⚠️ 一律用這個，不要自己 indexOf('公開')——
+// 那樣舊名改新名之後就找不到欄了。注意是**完全比對**，不會誤中「公開摘要」「公開卡片」。
+function findInboxActionCol_(headers) {
+  for (let i = 0; i < INBOX_ACTION_ALIASES.length; i++) {
+    const idx = headers.indexOf(INBOX_ACTION_ALIASES[i]);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+const INBOX_HEADERS = [
+  '日期時間', 'card_id', '銀行',
+  '實質變動', 'AI摘要', '變動類型', '信心',
+  '狀態', '公開摘要', '公開卡片', INBOX_ACTION_HEADER,
+  '網址', '變動段落', '舊文字', '新文字'
+];
+
+// 新建分頁時套的欄寬（沒列到的欄不動）。巨無霸文字欄給窄寬度，反正是給程式讀的
+const INBOX_COL_WIDTHS = {
+  '日期時間': 140, 'card_id': 150, '銀行': 90,
+  '實質變動': 70, 'AI摘要': 320, '變動類型': 110, '信心': 50,
+  '狀態': 90, '公開摘要': 320, '公開卡片': 150,
+  [INBOX_ACTION_HEADER]: 140,   // 欄名變長了，給得下八個字的寬度
+  '網址': 200, '變動段落': 110, '舊文字': 110, '新文字': 110
 };
 
 /************** 主函數：觸發器要叫醒的就是它 **************/
@@ -99,6 +154,7 @@ function checkWatchlist() {
   const errors = [];
   const rebaselined = [];   // 基準快照落差懸殊、本次只重建不通知的列
   let skipped = 0;          // 未到 check_days 間隔、本次略過的列數
+  let inboxWrites = 0;      // 本輪真的寫進「2-變動通知」的列數（決定要不要畫批次分隔線）
   const now = new Date();
 
   for (let i = 1; i < data.length; i++) {
@@ -197,23 +253,29 @@ function checkWatchlist() {
     if (changedText.length >= rowMinDiff && hasKeyword) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
       const cls = classifyDiff_(changedText, text, inboxCardId, bank);
-      appendToInbox_(ss, {
-        time: now,
-        cardId: inboxCardId,   // 單卡＝card_id；多卡頁＝cards 清單，下游解析靠這一欄當卡片線索
-        bank: bank,
-        url: url,
-        diffText: changedText,
-        oldText: oldText,
-        newText: text,
-        cls: cls
-      });
+      // ② 純版面/文案的列不進分頁（分頁只留站長真的要處理的東西），但信裡照樣列一行
+      const cosmetic = MONITOR_CONFIG.skipCosmeticRows && isCosmeticChange_(cls);
+      if (!cosmetic) {
+        appendToInbox_(ss, {
+          time: now,
+          cardId: inboxCardId,   // 單卡＝card_id；多卡頁＝cards 清單，下游解析靠這一欄當卡片線索
+          bank: bank,
+          url: url,
+          diffText: changedText,
+          oldText: oldText,
+          newText: text,
+          cls: cls
+        });
+        inboxWrites++;
+      }
       alerts.push({
         cardId: inboxCardId,
         label: label,
         bank: (!isBankPage && cardId) ? bank : '',   // 多卡頁的 label 已含銀行名，不再重複掛括號
         url: url,
         diffText: changedText.slice(0, 300),
-        cls: cls
+        cls: cls,
+        cosmetic: cosmetic   // true＝只在信裡出現，沒寫進「2-變動通知」
       });
     }
 
@@ -222,7 +284,52 @@ function checkWatchlist() {
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
   }
 
+  // 本輪有寫入才畫分隔線——沒寫入還畫的話，線會疊在上一輪的線上（等於沒作用）
+  if (inboxWrites && MONITOR_CONFIG.drawRoundSeparator) markInboxRoundEnd_(ss);
+
   if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined, skipped);
+}
+
+/************** 純版面/文案變動的判定（決定要不要寫進分頁） **************/
+// 站長的原話：「摘要是『純版面/文案調整或改寫，回饋未變』的，能不能直接不列出給我」。
+// 這種列他不會處理、卻會一直把分頁撐長，所以直接不寫。
+//
+// 判定刻意保守——只要有一點點「可能是實質變動」的跡象就留著寫進分頁：
+//   ・AI 沒分類成功（cls 是 null）→ 一律寫（沒人判讀過的東西不能丟）
+//   ・material=true → 一律寫
+//   ・信心「低」→ 一律寫（prompt 明講「不確定就填低」，那是 AI 自己舉手說沒把握）
+//   ・變動類型只要出現「改寫搬移／其他」以外的任何一個（回饋率、上限、通路、條件、期間、
+//     新增活動、活動下架、新戶禮）→ 一律寫。material 與 change_types 打架時以 change_types 為準
+// 剩下的（material=false ＋ 信心高/中 ＋ 類型全是改寫搬移/其他）才算純版面。
+function isCosmeticChange_(cls) {
+  if (!cls) return false;
+  if (cls.material) return false;
+  if (String(cls.confidence || '').trim() === '低') return false;
+  const harmless = ['改寫搬移', '其他'];
+  const types = cls.change_types || [];
+  for (let i = 0; i < types.length; i++) {
+    if (harmless.indexOf(String(types[i]).trim()) < 0) return false;
+  }
+  return true;
+}
+
+/************** 每輪監控結尾畫一條分隔線 **************/
+// 為什麼要有：分頁是只增不減的 log，每輪寫進去幾列後，下一輪又接著寫，
+// 日期時間欄要一格一格對才知道哪幾列是同一批。最後一列補一條粗底線＝天然的批次分隔。
+// 只畫底線、不動任何值；下一輪寫進來的新列在線的下面，所以線永遠落在兩批之間。
+function markInboxRoundEnd_(ss) {
+  try {
+    const sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
+    if (!sheet) return;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;   // 只有表頭
+    sheet.getRange(lastRow, 1, 1, Math.max(sheet.getLastColumn(), 1))
+      .setBorder(null, null, true, null, null, null,
+        '#5f6368', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  } catch (e) {
+    // 畫線失敗不該讓整輪監控算失敗——資料早就寫進去了，少一條線而已
+    console.error('markInboxRoundEnd_ 失敗：' + e.message);
+  }
 }
 
 /************** 欄位小工具（cards / watch_type / 顯示名稱） **************/
@@ -427,72 +534,106 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
 }
 
 /************** 寫進「2-變動通知」（沒有就自動建） **************/
-// ⚠️ 2026-07 加了 AI 分類欄位，欄位順序變了：舊的變動通知分頁請刪掉讓它自動重建新表頭
 // 2026-07-31 在表尾加了「公開摘要／公開卡片／公開」三欄（詳情頁「近期異動」用）。
-//    ✅ **舊分頁不用刪**：三欄是加在最右邊，舊的列與內容原封不動；
-//       ensureInboxPublishColumns_ 會在下次寫入時自動把三個表頭補上去。
 //    三欄都在寫入這一刻就填得出來（值都已經在手上），不需要任何跨檔查詢：
 //      公開摘要 —— 預填 AI 摘要，站長改寫成給用戶看的一句話（AI 摘要是內部視角，通常要改）
 //      公開卡片 —— 預填 info.cardId（單卡＝card_id；多卡頁＝cards 清單，逗號分隔）
 //      公開     —— 留空，站長打 V 才會被「發布變動紀錄」選單撿走（發布後程式改成「已發布」）
+//
+// ⚠️ 2026-08-15 起這裡**照表頭名字**對位，不再照位置 appendRow。
+//    差別很重要：以前欄序是硬約定（第 12 欄一定要是「狀態」），站長在試算表裡拖一下欄位
+//    就會讓監控把值寫錯格；現在是先讀第一列表頭，再把值對到同名欄，欄序隨便排都對。
+//    表頭沒認得的欄（站長自己加的）一律寫空字串，不會覆蓋到別人的公式或內容。
 function appendToInbox_(ss, info) {
   let sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
   if (!sheet) {
     sheet = ss.insertSheet(MONITOR_CONFIG.inboxSheet);
-    sheet.appendRow(['日期時間', 'card_id', '銀行', '網址',
-      '實質變動', 'AI摘要', '變動類型', '信心', '變動段落', '舊文字', '新文字', '狀態',
-      '公開摘要', '公開卡片', '公開']);
+    sheet.appendRow(INBOX_HEADERS.slice());
     sheet.setFrozenRows(1);
+    applyInboxLayout_(sheet);
   } else if (ensureInboxPublishColumns_(sheet)) {
     // 舊的 12 欄分頁：自動補表尾三欄（不用刪分頁重建），並把舊列的兩格一次回填好
     backfillInboxPublishCells_(sheet);
   }
+
   const c = info.cls;
-  const row = sheet.appendRow([
-    info.time,
-    info.cardId,
-    info.bank,
-    info.url,
-    c ? (c.material ? '是' : '否') : '',
-    c ? (c.summary || '') : '',
-    c && c.change_types ? c.change_types.join(',') : '',
-    c ? (c.confidence || '') : '',
-    (info.diffText || '').slice(0, 8000),
-    info.oldText.slice(0, 40000),
-    info.newText.slice(0, 40000),
-    '待解析',
-    c ? (c.summary || '') : '',   // 公開摘要 ← 與「AI摘要」同一個值，站長在這欄改寫
-    info.cardId,                  // 公開卡片 ← 已算好的 inboxCardId，不用再推導
-    ''                            // 公開 ← 留空，等站長打 V
-  ]);
+  const byHeader = {
+    '日期時間': info.time,
+    'card_id': info.cardId,
+    '銀行': info.bank,
+    '網址': info.url,
+    '實質變動': c ? (c.material ? '是' : '否') : '',
+    'AI摘要': c ? (c.summary || '') : '',
+    '變動類型': c && c.change_types ? c.change_types.join(',') : '',
+    '信心': c ? (c.confidence || '') : '',
+    '變動段落': (info.diffText || '').slice(0, 8000),
+    '舊文字': info.oldText.slice(0, 40000),
+    '新文字': info.newText.slice(0, 40000),
+    '狀態': '待解析',
+    '公開摘要': c ? (c.summary || '') : '',   // 與「AI摘要」同一個值，站長在這欄改寫
+    '公開卡片': info.cardId,                  // 已算好的 inboxCardId，不用再推導
+    // 動作欄留空＝還沒決定／還沒處理。新舊欄名都給值，分頁還沒改名也不會漏
+    [INBOX_ACTION_HEADER]: '',
+    '公開': ''
+  };
+
+  const headers = readInboxHeaders_(sheet);
+  const row = headers.map(function (h) {
+    return Object.prototype.hasOwnProperty.call(byHeader, h) ? byHeader[h] : '';
+  });
+  sheet.appendRow(row);
+
   // 實質變動標紅、其餘標灰，一眼可分
-  if (c) {
-    sheet.getRange(sheet.getLastRow(), 5).setBackground(c.material ? '#f8d7da' : '#e9ecef');
+  const cMaterial = headers.indexOf('實質變動');
+  if (c && cMaterial >= 0) {
+    sheet.getRange(sheet.getLastRow(), cMaterial + 1)
+      .setBackground(c.material ? '#f8d7da' : '#e9ecef');
   }
 }
 
-// 舊的「2-變動通知」分頁（12 欄，沒有「公開摘要／公開卡片／公開」）自動補上表尾三欄。
-// 為什麼要自動補：那個分頁裡有站長還要用的歷史內容，不該為了三個表頭叫人整個刪掉重建。
-// 三欄一律接在「狀態」右邊——appendToInbox_ 的 appendRow 是**照位置**寫的，順序錯了
-// 值就會塞錯欄；publishChangelog 那邊則是照欄名找欄，兩邊都靠這個位置約定成立。
-// 三道保險，任何一道不過就什麼都不寫（寧可讓站長手動補，也不要覆蓋掉他的東西）：
-//   1. 已經有「公開」欄 → 不用補
-//   2. 第 12 欄不是「狀態」→ 表頭跟程式預期對不上（appendRow 本來就會錯位），不亂寫
-//   3. 第 13~15 欄的表頭已有別的內容 → 那是站長自己加的欄，不覆蓋
-// 回傳 true = 這次真的補了表頭（呼叫端據此決定要不要順手回填舊列）
+// 第一列表頭（去空白）。整份檔案認欄位都走這裡，欄序才會是「可以改的」
+function readInboxHeaders_(sheet) {
+  const cols = Math.max(sheet.getLastColumn(), 1);
+  return sheet.getRange(1, 1, 1, cols).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
+}
+
+// 舊的「2-變動通知」分頁自動補上缺的表頭，並把舊的「公開」欄就地改名成「公開／封存／刪除」。
+// 為什麼要自動做：那個分頁裡有站長還要用的歷史內容，不該為了改個表頭叫人整個刪掉重建。
+// 缺的表頭一律**接在現有欄位的最右邊**（不插欄，免得把站長的內容擠位移）；
+// 位置無所謂，寫入與讀取兩端現在都是照欄名找欄。
+// 兩道保險，不過就什麼都不寫（寧可讓站長手動補，也不要覆蓋掉他的東西）：
+//   1. 三欄都在、名字也是新的 → 不用動
+//   2. 連「狀態」欄都找不到 → 這張表根本不是監控的產出，不亂寫
+// 回傳 true = 這次真的動了表頭（呼叫端據此決定要不要順手回填舊列）
 function ensureInboxPublishColumns_(sheet) {
-  const need = 15;
+  let headers = readInboxHeaders_(sheet);
+  if (headers.indexOf('狀態') < 0) return false;
+
+  // ① 舊名 →新名就地改（只改表頭那一格，整欄的值原封不動）
+  let renamed = false;
+  if (headers.indexOf(INBOX_ACTION_HEADER) < 0) {
+    const oldIdx = findInboxActionCol_(headers);
+    if (oldIdx >= 0) {
+      sheet.getRange(1, oldIdx + 1).setValue(INBOX_ACTION_HEADER);
+      headers = readInboxHeaders_(sheet);
+      renamed = true;
+    }
+  }
+
+  // ② 缺的表頭補在最右邊
+  const wanted = ['公開摘要', '公開卡片', INBOX_ACTION_HEADER];
+  const missing = wanted.filter(function (h) { return headers.indexOf(h) < 0; });
+  if (!missing.length) return renamed;
+
+  // 從最後一個有表頭的欄之後接上去（getLastColumn 可能含站長留白的欄，取表頭實際邊界）
+  let end = 0;
+  headers.forEach(function (h, i) { if (h) end = i + 1; });
+  const need = end + missing.length;
   if (sheet.getMaxColumns() < need) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), need - sheet.getMaxColumns());
   }
-  const headers = sheet.getRange(1, 1, 1, need).getValues()[0]
-    .map(function (h) { return String(h).trim(); });
-
-  if (headers[14] === '公開') return false;
-  if (headers[11] !== '狀態') return false;
-  if (headers[12] || headers[13] || headers[14]) return false;
-
-  sheet.getRange(1, 13, 1, 3).setValues([['公開摘要', '公開卡片', '公開']]);
+  sheet.getRange(1, end + 1, 1, missing.length).setValues([missing]);
   return true;
 }
 
@@ -513,7 +654,7 @@ function backfillInboxPublishCells_(sheet) {
   const cAi = headers.indexOf('AI摘要');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
-  const cFlag = headers.indexOf('公開');
+  const cFlag = findInboxActionCol_(headers);
   if (cSummary < 0 || cCards < 0 || cFlag < 0) return 0;
   if (cCard < 0 && cAi < 0) return 0;
 
@@ -545,6 +686,153 @@ function backfillInboxPublishCells_(sheet) {
   return filled;
 }
 
+// 把 sheet 的欄位搬成 order 指定的順序（order 裡沒有的欄自動被擠到右邊，不刪不動值）。
+// ⚠️ 2026-08-15：原本有個「整理版面」選單會拿它重排「2-變動通知」，站長說欄位他自己搬，
+//    選單已移除。這裡保留是因為**封存分頁必須跟主分頁欄序一致**（copyTo 照位置貼），
+//    getInboxArchiveSheet_ 每次搬列前都要靠它對齊——別看沒有選單就把它一起刪了。
+// 由左往右一欄一欄就位：走到第 t 欄時，左邊 t-1 欄都已經是對的，要的那欄必定在右邊，
+// 所以永遠是「往左搬」——moveColumns 的 destinationIndex 直接給目標欄號就對
+// （往右搬才要 +1，這裡刻意避開那個坑）。
+function reorderColumnsByHeaders_(sheet, order) {
+  let moved = 0;
+  for (let t = 0; t < order.length; t++) {
+    const cur = readInboxHeaders_(sheet);
+    const from = cur.indexOf(order[t]) + 1;   // 1-based；找不到回 0
+    if (from <= 0 || from === t + 1) continue;
+    sheet.moveColumns(sheet.getRange(1, from, sheet.getMaxRows(), 1), t + 1);
+    moved++;
+  }
+  return moved;
+}
+
+// 欄寬、凍結表頭、表頭樣式，以及全表 CLIP（不然 4 萬字的「新文字」會整片溢出到右邊的欄）。
+// ⚠️ 只在**程式自己新建**分頁時套（主分頁第一次自動建、封存分頁第一次自動建）——
+//    絕不套在站長已經在用的分頁上，他的欄寬與排版是他的事。
+function applyInboxLayout_(sheet) {
+  const headers = readInboxHeaders_(sheet);
+  headers.forEach(function (h, i) {
+    if (INBOX_COL_WIDTHS[h]) sheet.setColumnWidth(i + 1, INBOX_COL_WIDTHS[h]);
+  });
+  if (sheet.getFrozenRows() < 1) sheet.setFrozenRows(1);
+  const cols = Math.max(sheet.getLastColumn(), 1);
+  sheet.getRange(1, 1, 1, cols).setFontWeight('bold').setBackground('#f1f3f4');
+  sheet.getRange(1, 1, sheet.getMaxRows(), cols)
+    .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+}
+
+/************** 「公開」欄的三個動作：公開／封存／刪除（2026-08-15 改版） **************/
+// 站長要的是「一個按鈕跑完一輪」：在「公開」欄打字，按選單，程式照著做。
+//   公開 → 發布成詳情頁的「近期異動」（benefits-parser.gs 的 processInboxRows）
+//   封存 → 整列搬到「2-封存（變動通知）」，主分頁清掉
+//   刪除 → 真的刪掉（會先跳確認）
+// 三個動作的判定函數放在這裡，執行搬/刪的 applyInboxRowActions_ 也在這裡；
+// orchestrator（讀欄位、驗證、跳視窗）在 benefits-parser.gs，因為發布邏輯本來就在那邊。
+//
+// ⚠️ 封存不影響監控：比對基準存在「1-監控清單」的 last_snapshot，跟這張表無關。
+const INBOX_ARCHIVE_SHEET = '2-封存（變動通知）';
+const INBOX_ACTION_MAX_BLOCKS = 120;   // 一次最多處理幾個連續區塊，避免撞 Apps Script 6 分鐘上限
+
+// 「封存」：搬走但留著。X 是舊講法（2026-08-15 早上版本用過），一併認，免得站長打了沒反應
+function isArchiveMark_(value) {
+  const s = String(value == null ? '' : value).trim().toUpperCase().replace(/Ｘ/g, 'X');
+  return s === '封存' || s === '存' || s === 'X' || s === '✗' || s === '✘' ||
+         s === '不公開' || s === '略過';
+}
+
+// 「刪除」：真的刪掉。刻意只認完整字樣＋「刪」，不認單一英文字母（怕手滑）
+function isDeleteMark_(value) {
+  const s = String(value == null ? '' : value).trim();
+  return s === '刪除' || s === '刪' || s === '删除' || s === '删';
+}
+
+// 把標好的列一次處理掉：archiveRows 搬到封存分頁再刪、deleteRows 直接刪。
+// 兩件事一起做是為了列號安全——分兩次跑的話，第一次刪完第二次的列號就全錯位了。
+// 做法：合成一張「列號 → 動作」表，切成「連續且同動作」的區塊，**由下往上**逐塊處理，
+// 上面區塊的列號才不會被下面的刪除推移。
+// 回傳 { archived, deleted, remaining }：remaining > 0 代表超過區塊上限、這次沒做完。
+function applyInboxRowActions_(ss, sheet, headers, archiveRows, deleteRows) {
+  const action = {};
+  (archiveRows || []).forEach(function (r) { action[r] = 'archive'; });
+  (deleteRows || []).forEach(function (r) { action[r] = 'delete'; });   // 同列不會兩種動作（「公開」欄只有一個值）
+  const all = Object.keys(action).map(Number).sort(function (a, b) { return a - b; });
+  if (!all.length) return { archived: 0, deleted: 0, remaining: 0 };
+
+  // 連續**且同動作**才併成一塊
+  const blocks = [];
+  all.forEach(function (r) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.start + last.count === r && last.action === action[r]) last.count++;
+    else blocks.push({ start: r, count: 1, action: action[r] });
+  });
+
+  const doing = blocks.slice(0, INBOX_ACTION_MAX_BLOCKS);   // 超量時先做上面（比較舊）的
+  const done = doing.reduce(function (s, b) { return s + b.count; }, 0);
+
+  const needArchive = doing.some(function (b) { return b.action === 'archive'; });
+  const archive = needArchive ? getInboxArchiveSheet_(ss, headers) : null;
+  const width = Math.max(sheet.getLastColumn(), 1);
+
+  let archived = 0, deleted = 0;
+  for (let b = doing.length - 1; b >= 0; b--) {
+    const blk = doing[b];
+    if (blk.action === 'archive') {
+      // copyTo 是照位置貼的，所以 getInboxArchiveSheet_ 已經先把封存表的欄序對齊過
+      sheet.getRange(blk.start, 1, blk.count, width)
+        .copyTo(archive.getRange(archive.getLastRow() + 1, 1, blk.count, width));
+      archived += blk.count;
+    } else {
+      deleted += blk.count;
+    }
+    sheet.deleteRows(blk.start, blk.count);
+  }
+  SpreadsheetApp.flush();
+
+  // 由下往上搬會讓封存表裡的批次順序顛倒，照「日期時間」排回來
+  const cTime = headers.indexOf('日期時間');
+  if (archive && cTime >= 0 && archive.getLastRow() > 2) {
+    archive.getRange(2, 1, archive.getLastRow() - 1, Math.max(archive.getLastColumn(), 1))
+      .sort({ column: cTime + 1, ascending: true });
+  }
+
+  return { archived: archived, deleted: deleted, remaining: all.length - done };
+}
+
+// [3,4,5,9,10] → [{start:3,count:3},{start:9,count:2}]。整批搬比一列一列搬快得多
+function toContiguousBlocks_(rows) {
+  const blocks = [];
+  rows.forEach(function (r) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.start + last.count === r) last.count++;
+    else blocks.push({ start: r, count: 1 });
+  });
+  return blocks;
+}
+
+// 封存分頁（沒有就建）。⚠️ 欄序必須跟主分頁一模一樣——copyTo 是照位置貼的，
+// 對不齊就會把「新文字」貼到「公開摘要」那一欄。所以每次都先對齊表頭再搬。
+function getInboxArchiveSheet_(ss, headers) {
+  let archive = ss.getSheetByName(INBOX_ARCHIVE_SHEET);
+  if (!archive) {
+    archive = ss.insertSheet(INBOX_ARCHIVE_SHEET);
+    archive.getRange(1, 1, 1, headers.length).setValues([headers]);
+    archive.setFrozenRows(1);
+    applyInboxLayout_(archive);
+    return archive;
+  }
+  const cur = readInboxHeaders_(archive);
+  const missing = headers.filter(function (h) { return h && cur.indexOf(h) < 0; });
+  if (missing.length) {
+    let end = 0;
+    cur.forEach(function (h, i) { if (h) end = i + 1; });
+    if (archive.getMaxColumns() < end + missing.length) {
+      archive.insertColumnsAfter(archive.getMaxColumns(), end + missing.length - archive.getMaxColumns());
+    }
+    archive.getRange(1, end + 1, 1, missing.length).setValues([missing]);
+  }
+  reorderColumnsByHeaders_(archive, headers.filter(function (h) { return h; }));
+  return archive;
+}
+
 /************** 寄彙總通知信 **************/
 function sendDigest_(alerts, errors, rebaselined, skipped) {
   const to = MONITOR_CONFIG.notifyEmail || Session.getActiveUser().getEmail();
@@ -572,9 +860,25 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
       return s;
     };
 
+    // 純版面/文案的列沒寫進分頁（MONITOR_CONFIG.skipCosmeticRows），信裡改成一行一筆帶過：
+    // 分頁保持乾淨，但站長還是看得到「有這件事」，覺得漏了就把設定關掉
+    const kept = minor.filter(function (a) { return !a.cosmetic; });
+    const cosmetic = minor.filter(function (a) { return a.cosmetic; });
+
     if (material.length) { body += '─── 🔴 實質回饋變動（優先看）───\n'; material.forEach(function (a) { body += render(a); }); }
-    if (minor.length) { body += '─── ⚪ 其餘變動（版面/文案等，通常可略）───\n'; minor.forEach(function (a) { body += render(a); }); }
-    body += '完整新舊內容請看試算表的「' + MONITOR_CONFIG.inboxSheet + '」分頁。\n\n';
+    if (kept.length) { body += '─── ⚪ 其餘變動（版面/文案等，通常可略）───\n'; kept.forEach(function (a) { body += render(a); }); }
+    if (cosmetic.length) {
+      body += '─── ⚪ 純版面/文案（' + cosmetic.length + ' 筆，已略過未寫入分頁）───\n';
+      cosmetic.forEach(function (a) {
+        body += '・' + (a.label || a.cardId || '一般消費/公告頁') +
+                '：' + ((a.cls && a.cls.summary) || '') + '\n  ' + a.url + '\n';
+      });
+      body += '（AI 判定非實質變動、信心不低、且變動類型只有改寫搬移/其他，才會落到這一段；\n' +
+              ' 覺得這樣會漏事情，把 MONITOR_CONFIG.skipCosmeticRows 改成 false 就會全部寫進分頁）\n\n';
+    }
+    if (material.length || kept.length) {
+      body += '完整新舊內容請看試算表的「' + MONITOR_CONFIG.inboxSheet + '」分頁。\n\n';
+    }
   }
   if (rebaselined && rebaselined.length) {
     body += '─── 🔧 已重建基準快照（本次不判讀變動）───\n' +

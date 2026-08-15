@@ -8492,11 +8492,14 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     margin-top: 0;
 }
 /* 適用通路：標題獨立一行，通路清單另起一行；超過 3 行預設收合、可點展開 */
+/* margin-bottom 是刻意的：下面緊接著 .spotlight-modal-info 那塊灰底資訊卡，
+   只給 margin-top 的話通路清單會幾乎貼著灰底上緣（2026-08-15 站長回報）。
+   跟 .spotlight-modal-info 自己的 margin-bottom: 14px 同值，上下留白才對稱。 */
 .spotlight-act-items {
     font-size: 0.85rem;
     color: #4b5563;
     line-height: 1.6;
-    margin-top: 10px;
+    margin: 10px 0 14px;
 }
 .spotlight-act-items-label {
     color: #9ca3af;

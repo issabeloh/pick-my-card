@@ -14,7 +14,8 @@
  *
  * 核心原則（規劃書三鐵則）：
  *   1. AI 只做閱讀理解，輸出被 JSON Schema 鎖死的結構化資料
- *   2. promo_id 編號、cap 公式、bonus_rate 加 % ——全部由程式生成，AI 不做算術
+ *   2. cap 公式、bonus_rate 加 % ——由程式生成，AI 不做算術
+ *      （promo_id 編號 2026-08-15 移除：前端從沒讀過它，維護它純粹是白工）
  *   3. 解析結果一律寫進「4-待審核（新戶活動）」工作表，絕不直接碰正式卡片資料表
  *
  * 首次設定（只做一次）：
@@ -68,7 +69,8 @@ function buildAutomationMenu_() {
     .addItem('執行監控：1-監控清單 → 2-變動通知', 'checkWatchlist')
     .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
     .addSeparator()
-    .addItem('發布變動紀錄：2-變動通知 → 資料檔', 'publishChangelog')
+    // 一個按鈕跑完一輪：照「公開／封存／刪除」欄打的字分派動作（processInboxRows）
+    .addItem('處理變動通知：公開／封存／刪除', 'processInboxRows')
     .addSeparator()
     .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
     .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
@@ -156,20 +158,30 @@ function parsePastedText() {
   SpreadsheetApp.getActiveSpreadsheet().toast(msg, '解析完成', 8);
 }
 
-/************** 入口 C：發布變動紀錄（詳情頁「近期異動」，2026-07-31 新增） **************/
-// 站長的操作只有三步：在「2-變動通知」改「公開摘要」→「公開」欄打 V →按這個選單。
-// 程式做掉剩下的：驗證、多卡自動拆列、跨檔寫進資料檔的「變動紀錄」、回頭標「已發布」。
+/************** 入口 C：處理變動通知（公開／封存／刪除，2026-08-15 改版） **************/
+// 一個按鈕跑完一輪。站長在「公開／封存／刪除」欄打字（2026-08-15 前這欄叫「公開」，
+// 兩個名字程式都認、舊分頁下次寫入會自動改成新名），程式照著做：
 //
-// ⚠️ 這是整條流程唯一的跨檔「寫入」動作，沿用 getCardsSheet_() 那條 openById 接縫，
+//   公開（或 V／✓／核取方塊）→ 發布成卡片詳情頁的「近期異動」，該格改成「已發布」
+//   封存                     → 整列搬到「2-封存（變動通知）」，主分頁清掉
+//   刪除                     → 真的刪掉（會先跳確認，這是唯一不可逆的動作）
+//   空白／其他字             → 不動它
+//
+// 三種可以混著打，一次按完：程式先發布（只寫格子、不動結構），再一起搬/刪
+// （applyInboxRowActions_ 由下往上處理，列號才不會錯位）。
+//
+// ⚠️ 發布是整條流程唯一的跨檔「寫入」動作，沿用 getCardsSheet_() 那條 openById 接縫，
 //    但目標是全新的「變動紀錄」表——不碰 Cards Data 任何一格。寫壞了最壞情況只影響
 //    這張新表，且 Google Sheets 版本紀錄就是復原鍵（BENEFITS-AUTOMATION-PLAN.md §3.4）。
-// ⚠️ 防重複發布靠把「公開」改成「已發布」：再按一次選單不會重寫同一列。
-function publishChangelog() {
+// ⚠️ 防重複發布靠把動作欄改成「已發布」：再按一次選單不會重寫同一列。
+//
+// 舊名 publishChangelog 保留成一行轉呼叫（下面），免得誰的觸發器/書籤還指著它。
+function processInboxRows() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const inbox = ss.getSheetByName(PARSER_CONFIG.inboxSheet);
   if (!inbox) {
-    ui.alert('發布變動紀錄', '找不到「' + PARSER_CONFIG.inboxSheet + '」——先讓監控跑出結果再來發布。', ui.ButtonSet.OK);
+    ui.alert('處理變動通知', '找不到「' + PARSER_CONFIG.inboxSheet + '」——先讓監控跑出結果再來處理。', ui.ButtonSet.OK);
     return;
   }
 
@@ -195,13 +207,14 @@ function publishChangelog() {
   const cTime = headers.indexOf('日期時間');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
-  const cFlag = headers.indexOf('公開');
+  const cFlag = findInboxActionCol_(headers);   // watchlist-monitor.gs：新舊欄名都認
   if (cSummary < 0 || cCards < 0 || cFlag < 0) {
-    ui.alert('發布變動紀錄',
-      '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／公開」三欄，' +
+    ui.alert('處理變動通知',
+      '「' + PARSER_CONFIG.inboxSheet + '」還沒有「公開摘要／公開卡片／' + INBOX_ACTION_HEADER + '」三欄，' +
       '而且自動補表頭沒成功（表頭跟程式預期對不上，或那幾欄已經被其他內容佔用）。\n\n' +
-      '手動補即可，分頁裡的內容不用刪：在第一列「狀態」欄的右邊三格，' +
-      '依序填「公開摘要」「公開卡片」「公開」（順序不能顛倒，監控寫入是照位置填的）。',
+      '手動補即可，分頁裡的內容不用刪：在第一列任何三個空欄的表頭，' +
+      '填上「公開摘要」「公開卡片」「公開／封存／刪除」（欄位擺哪、順序如何都沒關係，' +
+      '程式是照第一列的欄名找欄的——但欄名要一字不差）。',
       ui.ButtonSet.OK);
     return;
   }
@@ -217,26 +230,42 @@ function publishChangelog() {
   const colFlag = readCol(cFlag);
   const cell = function (col, i) { return col.length ? col[i][0] : ''; };
 
-  // 先掃有沒有人打勾，沒有就不必跨檔開資料檔（省一次 openById）
-  const marked = [];
+  // 先分類動作欄打了什麼：三種動作各自收一份，沒人打字就早退（省一次跨檔 openById）
+  const marked = [];        // 要發布的（資料列序號 i）
+  const archiveRows = [];   // 要封存的（試算表列號）
+  const deleteRows = [];    // 要刪除的（試算表列號）
   for (let i = 0; i < rowCount; i++) {
-    if (isPublishMark_(cell(colFlag, i))) marked.push(i);
+    const v = cell(colFlag, i);
+    if (isPublishMark_(v)) marked.push(i);
+    else if (isArchiveMark_(v)) archiveRows.push(i + 2);        // watchlist-monitor.gs
+    else if (isDeleteMark_(v)) deleteRows.push(i + 2);          // watchlist-monitor.gs
   }
-  if (!marked.length) {
-    ui.alert('發布變動紀錄',
-      '「公開」欄沒有任何打勾的列。\n\n要發布哪一列，就把該列的「公開」欄填 V（已發布過的會顯示「已發布」）。' +
+  if (!marked.length && !archiveRows.length && !deleteRows.length) {
+    ui.alert('處理變動通知',
+      '「' + INBOX_ACTION_HEADER + '」欄沒有任何指示，所以沒東西可做。\n\n' +
+      '在該列的「' + INBOX_ACTION_HEADER + '」欄打字，再按一次這個選單：\n\n' +
+      '・公開（或 V／✓／打勾）→ 發布成詳情頁的「近期異動」\n' +
+      '・封存 → 整列搬到「' + INBOX_ARCHIVE_SHEET + '」，主分頁清掉\n' +
+      '・刪除 → 真的刪掉（會再問你一次）\n\n' +
+      '三種可以混著打，一次按完。已發布過的列會顯示「已發布」。' +
       backfillNote,
       ui.ButtonSet.OK);
     return;
   }
 
-  let idSet;
-  try {
-    idSet = {};
-    getCardIds_().forEach(function (id) { idSet[id] = true; });
-  } catch (e) {
-    ui.alert('發布變動紀錄', '讀不到資料檔的卡片 id，無法驗證「公開卡片」，本次不寫入：\n' + e.message, ui.ButtonSet.OK);
-    return;
+  let idSet = null;
+  if (marked.length) {
+    try {
+      idSet = {};
+      getCardIds_().forEach(function (id) { idSet[id] = true; });
+    } catch (e) {
+      // 只有「發布」需要驗卡片 id；封存/刪除不該被資料檔連不上拖累，所以只放棄發布那段
+      ui.alert('處理變動通知',
+        '讀不到資料檔的卡片 id，無法驗證「公開卡片」，本次**不發布**任何列：\n' + e.message +
+        (archiveRows.length || deleteRows.length ? '\n\n（封存／刪除不受影響，繼續執行。）' : ''),
+        ui.ButtonSet.OK);
+      marked.length = 0;
+    }
   }
 
   const rows = [];          // 要寫進「變動紀錄」的列（一張卡一列）
@@ -273,37 +302,87 @@ function publishChangelog() {
   });
 
   let written = 0;
+  let publishAborted = '';
   if (rows.length) {
-    let sheet;
+    let sheet = null;
     try {
       sheet = getChangelogSheet_();
     } catch (e) {
-      ui.alert('發布變動紀錄', '開不了資料檔的「' + PARSER_CONFIG.changelogSheet + '」表，本次不寫入：\n' + e.message, ui.ButtonSet.OK);
-      return;
+      // 開不了資料檔就只放棄發布——封存/刪除是本檔內的事，不該被連累
+      publishAborted = '開不了資料檔的「' + PARSER_CONFIG.changelogSheet + '」表，本次沒有發布任何列：\n' + e.message;
+      publishedRows.length = 0;
     }
-    // 一次寫完再回頭標記：中途失敗時「2-變動通知」那格還是 V，重按一次即可（不會半套）
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
-    SpreadsheetApp.flush();
-    written = rows.length;
-    publishedRows.forEach(function (rowNo) {
-      inbox.getRange(rowNo, cFlag + 1).setValue('已發布');
-    });
+    if (sheet) {
+      // 一次寫完再回頭標記：中途失敗時「2-變動通知」那格還是 V，重按一次即可（不會半套）
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+      SpreadsheetApp.flush();
+      written = rows.length;
+      publishedRows.forEach(function (rowNo) {
+        inbox.getRange(rowNo, cFlag + 1).setValue('已發布');
+      });
+    }
   }
 
-  ui.alert('發布變動紀錄',
-    '發布 ' + written + ' 筆變動紀錄（來自 ' + publishedRows.length + ' 列）' +
-    '，跳過 ' + skipped.length + ' 列。' +
-    (skipped.length ? '\n\n跳過的列（未寫入，改好再按一次即可）：\n' + skipped.join('\n') : '') +
-    (written ? '\n\n下次在資料檔按「📥 匯出 JSON」才會出現在網站上。' : '') +
-    backfillNote,
-    ui.ButtonSet.OK);
+  // ② 剛發布完的列：問一次要不要順手收走，免得為了同幾列再跑一趟「打封存→按選單」
+  if (publishedRows.length) {
+    const alsoArchive = ui.alert('處理變動通知',
+      '已發布 ' + publishedRows.length + ' 列。要順便把這幾列封存嗎？\n\n' +
+      '（整列搬到「' + INBOX_ARCHIVE_SHEET + '」，主分頁就清乾淨了；' +
+      '選「否」就留在原地標「已發布」，之後想收再打「封存」。）',
+      ui.ButtonSet.YES_NO);
+    if (alsoArchive === ui.Button.YES) {
+      publishedRows.forEach(function (rowNo) {
+        if (archiveRows.indexOf(rowNo) < 0) archiveRows.push(rowNo);
+      });
+    }
+  }
+
+  // ③ 刪除是唯一不可逆的動作，一定要當面問清楚——順手把前幾列的摘要列出來讓他認人
+  let deleteCancelled = false;
+  if (deleteRows.length) {
+    const preview = deleteRows.slice(0, 5).map(function (rowNo) {
+      const s = String(cell(colSummary, rowNo - 2) || '').trim();
+      return '・列 ' + rowNo + '：' + (s ? s.slice(0, 40) : '（沒有公開摘要）');
+    }).join('\n');
+    const okDelete = ui.alert('處理變動通知 — 確認刪除',
+      '要**永久刪除** ' + deleteRows.length + ' 列嗎？這個動作不可逆。\n\n' +
+      preview + (deleteRows.length > 5 ? '\n…等共 ' + deleteRows.length + ' 列' : '') +
+      '\n\n只是想清版面的話，選「否」再把那幾格改成「封存」——內容會留在「' +
+      INBOX_ARCHIVE_SHEET + '」。\n' +
+      '（真的刪錯了，Google Sheets 的「檔案 → 版本記錄」還能還原。）',
+      ui.ButtonSet.YES_NO);
+    if (okDelete !== ui.Button.YES) { deleteRows.length = 0; deleteCancelled = true; }
+  }
+
+  // ④ 搬與刪一起做：由下往上，列號才不會錯位（applyInboxRowActions_，watchlist-monitor.gs）
+  const moved = applyInboxRowActions_(ss, inbox, headers, archiveRows, deleteRows);
+
+  const lines = [];
+  if (publishAborted) lines.push('⚠ ' + publishAborted);
+  if (written) lines.push('✅ 發布 ' + written + ' 筆變動紀錄（來自 ' + publishedRows.length + ' 列）');
+  if (skipped.length) lines.push('⚠ 驗證沒過、沒發布的 ' + skipped.length + ' 列（改好再按一次即可）：\n' + skipped.join('\n'));
+  if (moved.archived) lines.push('📦 封存 ' + moved.archived + ' 列到「' + INBOX_ARCHIVE_SHEET + '」');
+  if (moved.deleted) lines.push('🗑 刪除 ' + moved.deleted + ' 列');
+  if (deleteCancelled) lines.push('（刪除已取消，那幾列原封不動）');
+  if (moved.remaining) lines.push('ℹ 還有 ' + moved.remaining + ' 列沒處理完（一次的量有上限，避免執行超時）——再按一次選單即可');
+  if (written) lines.push('下次在資料檔按「📥 匯出 JSON」，發布的內容才會出現在網站上。');
+  if (!lines.length) lines.push('這次沒有任何列符合處理條件。');
+
+  ui.alert('處理變動通知', lines.join('\n\n') + backfillNote, ui.ButtonSet.OK);
 }
 
-// 「公開」欄算不算打勾：V / v / 全形Ｖ / 勾號 / 核取方塊的 true 都吃；「已發布」不算
+// 舊名保留：以前的選單／觸發器／筆記可能還指著 publishChangelog，讓它轉呼叫新流程就好
+function publishChangelog() {
+  processInboxRows();
+}
+
+// 動作欄算不算「要公開」：公開 / V / v / 全形Ｖ / 勾號 / 核取方塊的 true 都吃；「已發布」不算。
+// ⚠️「公開」這個詞是 2026-08-15 欄位改名時補上的——欄名叫「公開／封存／刪除」，
+//    站長當然會直接打「公開」，只認 V 的話會整批沒反應（另外兩個動作本來就認中文字）。
 function isPublishMark_(value) {
   if (value === true) return true;
   const s = String(value == null ? '' : value).trim().toUpperCase().replace(/Ｖ/g, 'V');
-  return s === 'V' || s === '✓' || s === '✔';
+  return s === '公開' || s === 'V' || s === '✓' || s === '✔';
 }
 
 // 「2-變動通知」的「日期時間」→ 變動紀錄的 date（yyyy-MM-dd 台北時區）。
@@ -496,7 +575,9 @@ function callGemini_(systemPrompt, userText, responseSchema) {
   return JSON.parse(part.text);
 }
 
-/************** 程式負責的部分：編號、公式、格式，然後寫進待審核表 **************/
+/************** 程式負責的部分：公式、格式，然後寫進待審核表 **************/
+// ⚠️ 這裡的欄位順序必須跟正式「新戶活動」表一致——審核完是整段複製貼過去的。
+//    2026-08-15 拿掉 promo_id 之後，**正式表那欄也要刪掉**，否則貼過去會整排錯位。
 function writePromosToReview_(promos, source, link) {
   if (!promos.length) return;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -506,23 +587,29 @@ function writePromosToReview_(promos, source, link) {
     sheet.appendRow([
       '核准', '解析時間', '來源', 'AI信心', 'needs_review', 'AI想問的問題', '原文引用',
       // ↓ 從這裡開始與正式「新戶活動」表的欄位一一對應，審核後整段複製即可
-      'id', 'promo_id', 'promo_types', 'new_customer_definition', 'new_customer_summary',
+      'id', 'promo_types', 'new_customer_definition', 'new_customer_summary',
       'promo_condition', 'period_start', 'period_end', 'gift_content', 'gift_image_url',
       'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage',
       'notes', 'link', 'priority', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'
     ]);
     sheet.setFrozenRows(1);
+  } else {
+    // 舊的待審核表表頭還留著 promo_id → 這支已經不寫那一格了，硬寫下去整排會左移錯位
+    // （id 之後每一欄都差一格，而這張表存在的意義就是「整段複製貼到正式表」）。
+    // 寧可停下來講清楚，也不要產生看起來正常、貼過去才爆的資料。
+    const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+      .map(function (h) { return String(h).trim(); });
+    if (cur.indexOf('promo_id') >= 0) {
+      throw new Error('「' + PARSER_CONFIG.reviewSheet + '」還有 promo_id 欄，但程式 2026-08-15 起不再產生它。' +
+        '請先把該分頁的 promo_id 欄刪掉（或整個分頁刪掉讓它自動重建），' +
+        '並確認正式「新戶活動」表的 promo_id 欄也刪了，再跑一次解析。');
+    }
   }
 
-  const existingIds = sheet.getDataRange().getValues()
-    .map(function (r) { return String(r[8] || ''); });  // promo_id 欄（第 9 欄，index 8）
   const nameMap = getCardNameMap_();
 
   const now = new Date();
   promos.forEach(function (p) {
-    const promoId = buildPromoId_(p.card_id, p.period_start, existingIds);
-    existingIds.push(promoId);
-
     const bonusRate = (p.bonus_rate_percent !== undefined && p.bonus_rate_percent !== null && p.bonus_rate_percent !== 0)
       ? p.bonus_rate_percent + '%' : '';
     const bonusCap = buildCapFormula_(p.bonus_cap_amount, p.bonus_rate_percent);
@@ -541,7 +628,6 @@ function writePromosToReview_(promos, source, link) {
       p.evidence || '',
       // ↓ 與正式表一一對應
       p.card_id,                                 // id
-      promoId,                                   // promo_id
       (p.promo_types || []).join(','),           // promo_types
       p.new_customer_definition || '',           // new_customer_definition
       p.new_customer_summary || '',              // new_customer_summary
@@ -568,24 +654,6 @@ function writePromosToReview_(promos, source, link) {
       sheet.getRange(sheet.getLastRow(), 1, 1, row.length).setBackground('#fff3cd'); // 標黃
     }
   });
-}
-
-// promo_id：{card_id}-{年}-{月縮寫}，撞號自動加 -1、-2…（規則寫死在程式，AI 不編號）
-function buildPromoId_(cardId, periodStart, existingIds) {
-  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-  let year, month;
-  const m = String(periodStart || '').match(/^(\d{4})\/(\d{1,2})/);
-  if (m) { year = m[1]; month = months[parseInt(m[2], 10) - 1]; }
-  else {
-    const today = new Date();
-    year = String(today.getFullYear());
-    month = months[today.getMonth()];
-  }
-  const base = cardId + '-' + year + '-' + month;
-  if (existingIds.indexOf(base) === -1) return base;
-  for (let n = 1; ; n++) {
-    if (existingIds.indexOf(base + '-' + n) === -1) return base + '-' + n;
-  }
 }
 
 // cap 公式：=回饋上限金額/加碼率小數（如 =200/0.07）。AI 只給兩個原始數字，公式由程式組

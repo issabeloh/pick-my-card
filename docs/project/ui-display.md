@@ -121,6 +121,19 @@
 
 **其他**：搜尋框同時比對商家與卡名；樣式必須用 `#my-mappings-modal .mappings-search-input`（特異性，見教訓）；輸入字級固定 16px 防 iOS 聚焦縮放，矮身靠 padding、預覽字靠 `::placeholder`。進場浮標 `#my-mappings-btn`（琥珀底 `#fef3c7`/`#f59e0b` 系，與結果卡釘選態同色系）用釘選 SVG icon；modal 標題為純文字（標題 icon 2026-07-17 移除）。
 
+## 9. 禁用手法：卡片頂部彩色條（2026-08-15 站長裁定）
+
+**規則：任何卡片／區塊都不得再用「頂部一條彩色 bar」當裝飾或分類指示。** 站長的原話是「太有 AI 設計感」——
+那種 4px 彩條橫在卡片上緣的做法，是 AI 生成版面的招牌手法，掛在本站會讓頁面看起來像模板產物。
+新版面要表達分類，用**已經在講同一件事的元素**（徽章、標籤、文字），不要再加一條色帶重複一次。
+
+- 已移除的實例：`promos.html` 新戶活動卡的 `.promo-type-bar`（生成端 `cards-export.gs` 的
+  `pmcRenderPromoCard_`、樣式端 `promos.css`，兩邊都在 2026-08-15 拿掉）。類型仍由卡內的
+  `.promo-type-badge` 表達，`primaryBucket` 保留給篩選/排序用
+- **改了生成端要兩邊同步**：`promos.html` 是 Apps Script 匯出時生成的（見 `data-pipeline.md` 第 9 節），
+  改 `cards-export.gs` 後要把整份貼回 Google Sheets，否則下次匯出又會長回來
+- 驗證方式（同一份資料跑新舊兩版生成器比對輸出差異）記在下方教訓記錄
+
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
@@ -129,3 +142,4 @@
 - [2026-07-17] 配卡列拖到一半不再跟手、放開也不存檔 → Chromium 對 setPointerCapture 的元素在拖曳中途無故 lostpointercapture、事件斷流 → 自訂拖曳的 pointermove/up 監聽掛 document，不依賴 pointer capture
 - [2026-07-17] 配卡搜尋框樣式怎麼改都沒反應 → 全域 `input[type="text"]`（特異性 0-1-1）壓過純 class（0-1-0），該 class 樣式從未生效 → 元件覆蓋全域 input 樣式時用 `#modal-id .class` 提特異性；「改了沒反應」先查特異性再查快取
 - [2026-07-17] 從配卡 modal 點 ⓘ 詳情頁開在後面 → 全部 .modal 同 z-index 1000、同層疊序由 DOM 順序決定，而 #card-detail-modal 在 HTML 較早 → 詳情頁固定 z-index 1100；任何「modal 疊 modal」需求不得靠 DOM 順序
+- [2026-08-15] 站長指卡片頂部彩色條「太有 AI 設計感」要求全面不用 → 那是 AI 生成版面的招牌手法，且與卡內類型徽章重複表達同一資訊 → 見第 9 節禁用規則；改 promos 生成邏輯時，用 `vm` 載入新舊兩版 `cards-export.gs` 跑同一份 exportData（固定 `versionTagOverride`／`promosUpdatedIso`）比對輸出，確認差異只有預期的那幾行

@@ -811,18 +811,10 @@ a {
   display: none;
 }
 
-/* 頂色條沿用類型色（與徽章同一套糖果色系，是保留的可愛點綴之一的延伸），
-   但收斂成細線，不再是粗粗的果凍漸層 bar */
-.promo-type-bar {
-  height: 4px;
-  width: 100%;
-  background: var(--pmc-candy-default-text);
-}
-
-.promo-type-bar--gift { background: var(--pmc-candy-pink-text); }
-.promo-type-bar--bonus { background: var(--pmc-candy-yellow-text); }
-.promo-type-bar--voucher { background: var(--pmc-candy-mint-text); }
-.promo-type-bar--default { background: var(--pmc-candy-default-text); }
+/* 2026-08-15：卡片頂部的類型色條（.promo-type-bar）整組移除。
+   站長裁定「彩色頂條」太有 AI 生成模板的味道，本站明令不再使用這個手法
+   （通則寫在 docs/project/ui-display.md）。類型資訊仍由卡片內的
+   .promo-type-badge 表達，色條只是同一份資訊的裝飾性重複。 */
 
 .promo-card-body {
   padding: 16px 18px 18px;

@@ -269,7 +269,8 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
 
   (newCardholderPromos || []).forEach(function(p, i) {
     if (!p) return;
-    const who = p.promo_name || p.promo_id || ('第 ' + (i + 1) + ' 列');
+    // promo_id 移除後改用摘要當人看的識別（promo_name 實務上都是空的）
+    const who = p.promo_name || String(p.new_customer_summary || '').slice(0, 20) || ('第 ' + (i + 1) + ' 列');
     if (!p.id) {
       problems.push('新戶活動「' + who + '」缺卡片 id');
     } else if (!idSet[p.id]) {
@@ -1116,6 +1117,24 @@ function readCardBenefits() {
   return benefits;
 }
 
+// 「New Cardholder Promos」的一列到底是不是一檔活動（取代 2026-08-15 前的 `if (promo_id)`）。
+// 只要下列任一欄有值就算——這些都是「活動才會填」的欄位，只掛申辦 CTA 的列一格都不會有。
+// ⚠️ 刻意不放 link / notes / priority / apply_cta_*：
+//    前兩者情境 B 也可能順手填；後兩者不是活動的內容本身。
+const PROMO_DEFINING_FIELDS = [
+  'new_customer_summary', 'new_customer_definition', 'promo_types', 'promo_condition',
+  'period_start', 'period_end', 'gift_content', 'bonus_rate', 'bonus_merchants',
+  'bonus_cap', 'voucher_amount', 'voucher_usage'
+];
+
+function isPromoRow_(row, headers) {
+  for (let i = 0; i < PROMO_DEFINING_FIELDS.length; i++) {
+    const v = getValue(row, headers, PROMO_DEFINING_FIELDS[i]);
+    if (v !== null && v !== undefined && String(v).trim() !== '') return true;
+  }
+  return false;
+}
+
 // ========== 讀取 New Cardholder Promos 資料 ==========
 function readNewCardholderPromos() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1146,7 +1165,6 @@ function readNewCardholderPromos() {
     }
 
     const id = String(getValue(row, headers, 'id') || '');
-    const promo_id = String(getValue(row, headers, 'promo_id') || '');
 
     // ==========================================
     // ✨ 新增：處理 CTA 資料 (情境 A & B)
@@ -1185,12 +1203,18 @@ function readNewCardholderPromos() {
     }
 
     // ==========================================
-    // 處理新戶活動資料 (僅在有 promo_id 時處理 - 情境 A)
+    // 處理新戶活動資料（情境 A：這一列是一檔活動）
     // ==========================================
-    if (promo_id) {
+    // 這張表一列有兩種可能：情境 A＝一檔新戶活動、情境 B＝只掛卡片層級的申辦 CTA
+    // （上面那段已經處理掉了）。2026-08-15 之前是用「有沒有填 promo_id」來分辨，
+    // 站長裁定那個欄位純粹是多餘的維護負擔（前端從來沒讀過它），已整組移除。
+    //
+    // 現在的判準：**只要有任何一個「活動才會有」的欄位有值，這列就是一檔活動**。
+    // 為什麼不改成單一必填欄（如 period_start）：那會變成「漏填一格就整檔活動人間蒸發」，
+    // 跟舊的 promo_id 是同一種陷阱。用 any 就不會靜默掉資料——情境 B 的列天生一格都不會有。
+    if (isPromoRow_(row, headers)) {
       const promo = {
         id: id,
-        promo_id: promo_id,
         promo_name: String(getValue(row, headers, 'promo_name') || ''),
         new_customer_definition: getValue(row, headers, 'new_customer_definition') || '',
         new_customer_summary: getValue(row, headers, 'new_customer_summary') || ''
@@ -1608,7 +1632,9 @@ function generatePromosPageHtml(exportData) {
     const uniqueBuckets = bucketList.filter(function (b, i) { return bucketList.indexOf(b) === i; });
     const buckets = uniqueBuckets.length ? uniqueBuckets : ['default'];
     const primaryBucket = buckets.indexOf('bonus') !== -1 ? 'bonus' : buckets[0];
-    const anchorId = 'promo-' + (idx + 1) + '-' + pmcSlug_(promo.promo_id || promo.id || 'x');
+    // 錨點＝序號＋卡片 id。序號本來就會隨活動到期而位移，所以這串字從來就不是穩定連結，
+    // 拿掉 promo_id 不會讓它更不穩（2026-08-15 移除 promo_id 時確認過）。
+    const anchorId = 'promo-' + (idx + 1) + '-' + pmcSlug_(promo.id || 'x');
     const periodEndIso = pmcNormalizeDate_(promo.period_end);
     const periodStartIso = pmcNormalizeDate_(promo.period_start);
     const cta = cardApplyCtas[promo.id] || null;
@@ -1722,16 +1748,14 @@ function pmcStableStringify_(v) {
 }
 
 // 新戶活動「內容指紋」：只認 newCardholderPromos 的實際內容，不受 sheet 列順序影響
-// （先依 promo_id 排序）。exportToJSON 拿它跟 Script Properties 存的上次指紋比對，用來
+// （把每一筆各自序列化成字串後排序——2026-08-15 移除 promo_id 之前是拿它當排序鍵，
+// 現在直接用內容本身排，同一張卡有多檔活動時也不會有排序歧義，比舊做法更穩）。
+// exportToJSON 拿它跟 Script Properties 存的上次指紋比對，用來
 // 決定 promos 頁「資料更新於」要不要蓋今天（見 data-pipeline.md 第 9 節）。純函數：
 // djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
 function pmcPromoSignature_(promos) {
-  const list = (promos || []).slice().sort(function (a, b) {
-    const ka = String((a && (a.promo_id || a.id)) || '');
-    const kb = String((b && (b.promo_id || b.id)) || '');
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
-  });
-  const payload = pmcStableStringify_(list);
+  const list = (promos || []).map(pmcStableStringify_).sort();
+  const payload = '[' + list.join(',') + ']';
   let h = 5381;
   for (let i = 0; i < payload.length; i++) {
     h = (Math.imul(h, 33) ^ payload.charCodeAt(i)) >>> 0;
@@ -1984,7 +2008,10 @@ function pmcRenderPromoCard_(p) {
   return '<article class="promo-card" id="' + pmcEscapeHtml_(p.anchorId) + '" data-card-id="' + pmcEscapeHtml_(cardId) +
     '" data-card-name="' + pmcEscapeHtml_(cardName) + '" data-period-end="' + (p.periodEndIso || '') +
     '" data-order-index="' + p.orderIndex + '" data-type-buckets="' + pmcEscapeHtml_(p.buckets.join(' ')) + '">\n' +
-    '  <div class="promo-type-bar promo-type-bar--' + p.primaryBucket + '"></div>\n' +
+    // 2026-08-15 移除卡片頂部的類型色條（.promo-type-bar）——站長裁定那種「彩色頂條」
+    // 太有 AI 生成模板的樣子，是本站明令不再使用的手法（見 docs/project/ui-display.md）。
+    // 類型資訊沒有消失：卡片內的類型徽章（.promo-type-badge）本來就在講同一件事，
+    // 色條只是同一份資訊的裝飾性重複。p.primaryBucket 仍留著給篩選/排序用。
     '  <div class="promo-card-body">\n' +
     // role="button" 而非真的 <button>：裡面包 <h2> 標題，<button> 的內容模型是
     // phrasing content 不允許 heading 後代（HTML5 規範），用 div+role=button 才合法；
