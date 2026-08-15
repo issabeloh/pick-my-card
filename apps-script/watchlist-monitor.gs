@@ -16,7 +16,7 @@
  *                 ensureInboxPublishColumns_ 自動補在最右邊、舊內容原封不動）
  *                2026-08-15 起：欄序可以自己拖（程式照第一列的**欄名**對位，見 INBOX_HEADERS），
  *                每輪監控結尾會畫一條分隔線，純版面/文案的變動預設不寫進來（skipCosmeticRows）。
- *                分頁太長就按選單「封存已處理列」把處理完的整列搬到「2-封存（變動通知）」
+ *                分頁太長就在「公開」欄打「封存」或「刪除」，按選單「處理變動通知」一次收掉
  *
  * fetch_via 欄（選填，2026-07-08 新增，處理動態網頁/擋機器人）：
  *   留空或 auto —— 先直接抓，失敗才走 Jina Reader 備援
@@ -80,10 +80,7 @@ const MONITOR_CONFIG = {
   skipCosmeticRows: true,
 
   // 每輪監控寫完後，在最後一列下面畫一條粗底線，讓不同日期的批次一眼分得開（markInboxRoundEnd_）
-  drawRoundSeparator: true,
-
-  // 「封存已處理列」預設把幾天以前的非實質變動也一起收走（見 archiveInboxDoneRows）
-  archiveJunkAfterDays: 30
+  drawRoundSeparator: true
 };
 
 /************** 「2-變動通知」欄位順序（2026-08-15 改版） **************/
@@ -718,124 +715,81 @@ function applyInboxLayout_(sheet) {
     .setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
 }
 
-/************** 選單：封存已處理列（2-變動通知，2026-08-15 新增） **************/
-// 站長問「已完成且無需公開的列建議如何處理？是直接刪除嗎？」——答案是**別直接刪，用搬的**。
-// 這張表是 log，刪掉就沒了；但一直留著又會愈捲愈久。所以整列搬到「2-封存（變動通知）」，
-// 主分頁只留還沒處理完的，要考古時封存分頁還在（覺得沒用了再自己整張刪掉，程式不依賴它）。
+/************** 「公開」欄的三個動作：公開／封存／刪除（2026-08-15 改版） **************/
+// 站長要的是「一個按鈕跑完一輪」：在「公開」欄打字，按選單，程式照著做。
+//   公開 → 發布成詳情頁的「近期異動」（benefits-parser.gs 的 processInboxRows）
+//   封存 → 整列搬到「2-封存（變動通知）」，主分頁清掉
+//   刪除 → 真的刪掉（會先跳確認）
+// 三個動作的判定函數放在這裡，執行搬/刪的 applyInboxRowActions_ 也在這裡；
+// orchestrator（讀欄位、驗證、跳視窗）在 benefits-parser.gs，因為發布邏輯本來就在那邊。
 //
-// ⚠️ 不搬 last_snapshot：比對基準存在「1-監控清單」，跟這張表沒關係，搬走不影響監控。
-//
-// 哪些列算「已完成」（三選一）：
-//   1. 「公開」＝已發布      —— 發布過了，這列的任務結束
-//   2. 「公開」＝X／不公開／略過 —— 站長看過、決定不公開（要的就是這個標記法：看完打個 X）
-//   3. 「公開」空白 ＋「實質變動」＝否 ＋ 超過 archiveJunkAfterDays 天 —— 純雜訊，本來就不會處理
-// 只要「公開」是空的又還在觀察期、或打了 V 還沒發布，一律留在主分頁（不猜站長的意思）。
+// ⚠️ 封存不影響監控：比對基準存在「1-監控清單」的 last_snapshot，跟這張表無關。
 const INBOX_ARCHIVE_SHEET = '2-封存（變動通知）';
-const INBOX_ARCHIVE_MAX_BLOCKS = 120;   // 一次最多搬幾個連續區塊，避免撞 Apps Script 6 分鐘上限
+const INBOX_ACTION_MAX_BLOCKS = 120;   // 一次最多處理幾個連續區塊，避免撞 Apps Script 6 分鐘上限
 
-function archiveInboxDoneRows() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
-  if (!sheet) {
-    ui.alert('封存已處理列', '找不到「' + MONITOR_CONFIG.inboxSheet + '」。', ui.ButtonSet.OK);
-    return;
-  }
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    ui.alert('封存已處理列', '「' + MONITOR_CONFIG.inboxSheet + '」還沒有資料列。', ui.ButtonSet.OK);
-    return;
-  }
+// 「封存」：搬走但留著。X 是舊講法（2026-08-15 早上版本用過），一併認，免得站長打了沒反應
+function isArchiveMark_(value) {
+  const s = String(value == null ? '' : value).trim().toUpperCase().replace(/Ｘ/g, 'X');
+  return s === '封存' || s === '存' || s === 'X' || s === '✗' || s === '✘' ||
+         s === '不公開' || s === '略過';
+}
 
-  const headers = readInboxHeaders_(sheet);
-  const cFlag = headers.indexOf('公開');
-  const cMaterial = headers.indexOf('實質變動');
-  const cTime = headers.indexOf('日期時間');
-  if (cFlag < 0) {
-    ui.alert('封存已處理列', '「' + MONITOR_CONFIG.inboxSheet + '」沒有「公開」欄，判斷不出哪些列處理完了。', ui.ButtonSet.OK);
-    return;
-  }
+// 「刪除」：真的刪掉。刻意只認完整字樣＋「刪」，不認單一英文字母（怕手滑）
+function isDeleteMark_(value) {
+  const s = String(value == null ? '' : value).trim();
+  return s === '刪除' || s === '刪' || s === '删除' || s === '删';
+}
 
-  // ⚠️ 刻意逐欄讀、不用 getDataRange()：這張表有「舊文字／新文字」各上限 4 萬字，
-  //    整張讀進來幾百列就是幾十 MB（同 backfillInboxPublishCells_ 的理由）
-  const n = lastRow - 1;
-  const readCol = function (idx) {
-    return idx < 0 ? null : sheet.getRange(2, idx + 1, n, 1).getValues();
-  };
-  const colFlag = readCol(cFlag);
-  const colMaterial = readCol(cMaterial);
-  const colTime = readCol(cTime);
+// 把標好的列一次處理掉：archiveRows 搬到封存分頁再刪、deleteRows 直接刪。
+// 兩件事一起做是為了列號安全——分兩次跑的話，第一次刪完第二次的列號就全錯位了。
+// 做法：合成一張「列號 → 動作」表，切成「連續且同動作」的區塊，**由下往上**逐塊處理，
+// 上面區塊的列號才不會被下面的刪除推移。
+// 回傳 { archived, deleted, remaining }：remaining > 0 代表超過區塊上限、這次沒做完。
+function applyInboxRowActions_(ss, sheet, headers, archiveRows, deleteRows) {
+  const action = {};
+  (archiveRows || []).forEach(function (r) { action[r] = 'archive'; });
+  (deleteRows || []).forEach(function (r) { action[r] = 'delete'; });   // 同列不會兩種動作（「公開」欄只有一個值）
+  const all = Object.keys(action).map(Number).sort(function (a, b) { return a - b; });
+  if (!all.length) return { archived: 0, deleted: 0, remaining: 0 };
 
-  const cutoff = new Date().getTime() - Number(MONITOR_CONFIG.archiveJunkAfterDays || 30) * 86400000;
-  const rows = [];
-  const reason = { published: 0, nopublish: 0, junk: 0 };
-  for (let i = 0; i < n; i++) {
-    const flag = String(colFlag[i][0] == null ? '' : colFlag[i][0]).trim();
-    let why = '';
-    if (flag === '已發布') {
-      why = 'published';
-    } else if (isNoPublishMark_(flag)) {
-      why = 'nopublish';
-    } else if (!flag && colMaterial && String(colMaterial[i][0]).trim() === '否' && colTime) {
-      const t = colTime[i][0] instanceof Date ? colTime[i][0] : new Date(colTime[i][0]);
-      if (t && !isNaN(t.getTime()) && t.getTime() < cutoff) why = 'junk';
-    }
-    if (why) { rows.push(i + 2); reason[why]++; }
-  }
+  // 連續**且同動作**才併成一塊
+  const blocks = [];
+  all.forEach(function (r) {
+    const last = blocks[blocks.length - 1];
+    if (last && last.start + last.count === r && last.action === action[r]) last.count++;
+    else blocks.push({ start: r, count: 1, action: action[r] });
+  });
 
-  if (!rows.length) {
-    ui.alert('封存已處理列',
-      '沒有可封存的列。判定方式：\n' +
-      '・「公開」＝已發布\n' +
-      '・「公開」＝X／不公開／略過（看完不想公開就打 X，這列就會被收走）\n' +
-      '・「公開」空白 ＋「實質變動」＝否 ＋ 超過 ' + MONITOR_CONFIG.archiveJunkAfterDays + ' 天',
-      ui.ButtonSet.OK);
-    return;
-  }
+  const doing = blocks.slice(0, INBOX_ACTION_MAX_BLOCKS);   // 超量時先做上面（比較舊）的
+  const done = doing.reduce(function (s, b) { return s + b.count; }, 0);
 
-  const blocks = toContiguousBlocks_(rows).slice(0, INBOX_ARCHIVE_MAX_BLOCKS);
-  const moving = blocks.reduce(function (s, b) { return s + b.count; }, 0);
-  const rest = rows.length - moving;
-
-  const ok = ui.alert('封存已處理列',
-    '要把 ' + moving + ' 列搬到「' + INBOX_ARCHIVE_SHEET + '」嗎？\n' +
-    '（已發布 ' + reason.published + '、不公開 ' + reason.nopublish +
-    '、逾期的非實質變動 ' + reason.junk + '）\n\n' +
-    '整列連同新舊全文一起搬過去，資料不會消失，主分頁只留還沒處理完的列。\n' +
-    (rest > 0 ? '\n本次只搬前 ' + moving + ' 列（避免執行超時），剩下的 ' + rest + ' 列再按一次即可。\n' : ''),
-    ui.ButtonSet.YES_NO);
-  if (ok !== ui.Button.YES) return;
-
-  const archive = getInboxArchiveSheet_(ss, headers);
+  const needArchive = doing.some(function (b) { return b.action === 'archive'; });
+  const archive = needArchive ? getInboxArchiveSheet_(ss, headers) : null;
   const width = Math.max(sheet.getLastColumn(), 1);
-  // 由下往上搬：先複製再刪，刪除從下往上做，上面區塊的列號才不會被前一次刪除推移
-  for (let b = blocks.length - 1; b >= 0; b--) {
-    const blk = blocks[b];
-    sheet.getRange(blk.start, 1, blk.count, width)
-      .copyTo(archive.getRange(archive.getLastRow() + 1, 1, blk.count, width));
+
+  let archived = 0, deleted = 0;
+  for (let b = doing.length - 1; b >= 0; b--) {
+    const blk = doing[b];
+    if (blk.action === 'archive') {
+      // copyTo 是照位置貼的，所以 getInboxArchiveSheet_ 已經先把封存表的欄序對齊過
+      sheet.getRange(blk.start, 1, blk.count, width)
+        .copyTo(archive.getRange(archive.getLastRow() + 1, 1, blk.count, width));
+      archived += blk.count;
+    } else {
+      deleted += blk.count;
+    }
     sheet.deleteRows(blk.start, blk.count);
   }
   SpreadsheetApp.flush();
 
   // 由下往上搬會讓封存表裡的批次順序顛倒，照「日期時間」排回來
-  if (cTime >= 0 && archive.getLastRow() > 2) {
+  const cTime = headers.indexOf('日期時間');
+  if (archive && cTime >= 0 && archive.getLastRow() > 2) {
     archive.getRange(2, 1, archive.getLastRow() - 1, Math.max(archive.getLastColumn(), 1))
       .sort({ column: cTime + 1, ascending: true });
   }
 
-  ui.alert('封存已處理列',
-    '已搬 ' + moving + ' 列到「' + INBOX_ARCHIVE_SHEET + '」。' +
-    (rest > 0 ? '\n還有 ' + rest + ' 列符合條件，再按一次選單即可。' : '') +
-    '\n\n封存分頁純粹是給人考古用的，程式完全不會讀它——確定用不到了整張刪掉也不會壞。',
-    ui.ButtonSet.OK);
-}
-
-// 「公開」欄算不算「看過了，不公開」。V 系列（要發布）由 benefits-parser.gs 的 isPublishMark_ 認，
-// 兩邊不能重疊：這裡只認 X／✗／不公開／略過／略／-
-function isNoPublishMark_(value) {
-  const s = String(value == null ? '' : value).trim().toUpperCase().replace(/Ｘ/g, 'X');
-  return s === 'X' || s === '✗' || s === '✘' || s === '-' ||
-         s === '不公開' || s === '略過' || s === '略';
+  return { archived: archived, deleted: deleted, remaining: all.length - done };
 }
 
 // [3,4,5,9,10] → [{start:3,count:3},{start:9,count:2}]。整批搬比一列一列搬快得多

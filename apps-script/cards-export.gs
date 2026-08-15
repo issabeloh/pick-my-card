@@ -1984,7 +1984,10 @@ function pmcRenderPromoCard_(p) {
   return '<article class="promo-card" id="' + pmcEscapeHtml_(p.anchorId) + '" data-card-id="' + pmcEscapeHtml_(cardId) +
     '" data-card-name="' + pmcEscapeHtml_(cardName) + '" data-period-end="' + (p.periodEndIso || '') +
     '" data-order-index="' + p.orderIndex + '" data-type-buckets="' + pmcEscapeHtml_(p.buckets.join(' ')) + '">\n' +
-    '  <div class="promo-type-bar promo-type-bar--' + p.primaryBucket + '"></div>\n' +
+    // 2026-08-15 移除卡片頂部的類型色條（.promo-type-bar）——站長裁定那種「彩色頂條」
+    // 太有 AI 生成模板的樣子，是本站明令不再使用的手法（見 docs/project/ui-display.md）。
+    // 類型資訊沒有消失：卡片內的類型徽章（.promo-type-badge）本來就在講同一件事，
+    // 色條只是同一份資訊的裝飾性重複。p.primaryBucket 仍留著給篩選/排序用。
     '  <div class="promo-card-body">\n' +
     // role="button" 而非真的 <button>：裡面包 <h2> 標題，<button> 的內容模型是
     // phrasing content 不允許 heading 後代（HTML5 規範），用 div+role=button 才合法；
