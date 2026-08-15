@@ -20,6 +20,10 @@
   --pmc-label: #374151;
   --pmc-muted: #6b7280;
   --pmc-green: #059669;
+  /* 卡片主數字（.promo-hero-big）專用綠，2026-08-15 站長指定。刻意與 --pmc-green
+     分開放：那個是「跟主站回饋率同色」的語意，這個是本頁自己的視覺決定，
+     日後只想動其中一個時不會互相牽連。 */
+  --pmc-hero-green: #10b981;
   --pmc-white: #ffffff;
   --pmc-page-bg-1: #e4e5e8;
   --pmc-page-bg-2: #b0b2b8;
@@ -906,24 +910,40 @@ a {
 .promo-type-badges {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 0;
   /* 2026-07-16 第五輪：badges 現在自己一列（.promo-card-topline），不再疊在卡名
      上方，原本用來跟卡名留白的 margin-bottom 已無意義；改給 flex:1/min-width:0
      讓徽章多時能自然換行收縮，不會把右側「立即申辦」按鈕擠出容器。 */
   flex: 1;
   min-width: 0;
+  /* 2026-08-15 站長裁定：類型徽章要「貼齊卡框的 label」，不要獨立浮著的 pill。
+     作法＝用負 margin 抵銷 .promo-card-body 的上／左 padding，把整排推到卡片邊框上；
+     .promo-card 有 overflow:hidden ＋ border-radius，左上角會自動被卡片圓角切齊，
+     不用自己算圓角。
+     ⚠️ 這兩個負值必須跟 .promo-card-body 的 padding 一致——手機版 padding 不同，
+        下面 @media (max-width: 768px) 有一組對應值，**改任何一邊都要一起改**。 */
+  margin: -16px 0 0 -18px;
 }
 
 /* 可愛點綴 1/2：類型徽章維持糖果色，其餘元素一律收斂成主站風 */
 .promo-type-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 999px;
+  padding: 4px 11px;
+  /* 外側三角切齊卡框、只留內側（右下）圓角＝「從邊框長出來的 label」。
+     兩個徽章相鄰時（少數卡片）會連成一條分段色帶，這是預期的樣子。 */
+  border-radius: 0 0 9px 0;
   color: var(--pmc-candy-default-text);
   background: var(--pmc-candy-default-bg);
   white-space: nowrap;
+}
+
+/* 倒數徽章跟著容器被拉上去了，用等量的正 margin 推回原位——
+   「貼邊」是類型 label 專屬的樣子，紅色 pill 貼在卡框上會很奇怪。
+   ⚠️ 這個值＝上面 .promo-type-badges 負 margin 的絕對值，改一邊要改兩邊。 */
+.promo-ending-badge {
+  margin-top: 16px;
 }
 
 .promo-type-badge--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
@@ -1100,10 +1120,12 @@ a {
   text-wrap: balance;
 }
 
-/* 回饋率／金額一律用主站的回饋率綠字（抄自 styles.css .cashback-rate-num #059669） */
+/* 回饋率／金額的綠字。2026-08-15 站長指定改用 #10b981（比原本的 #059669 亮一階）。
+   ⚠️ 這裡因此**不再**與主站 styles.css 的 .cashback-rate-num（#059669）同色——
+      是刻意的，不是漏改；主站那邊要不要跟進由站長決定。 */
 .promo-hero-item--voucher .promo-hero-big,
 .promo-hero-item--bonus .promo-hero-big {
-  color: var(--pmc-green);
+  color: var(--pmc-hero-green);
 }
 
 .promo-hero-item--gift .promo-hero-big {
@@ -1826,15 +1848,24 @@ a {
     gap: 8px;
   }
 
+  /* 貼邊 label 的手機版對應值：負 margin 必須等於上面 .promo-card-body 的
+     padding（8px 10px 10px）的上／左，不然 label 會浮在半空或超出卡框 */
   .promo-type-badges {
-    gap: 4px;
+    gap: 0;
+    margin: -8px 0 0 -10px;
   }
 
+  /* 2026-08-15 站長要求手機版字加大：0.58rem（實測 9.28px）小到吃力，
+     拉到 0.72rem（≈11.5px，與桌機同級）。倒數徽章同一列、一起放大才不會失衡。 */
   .promo-type-badge,
   .promo-ending-badge {
-    font-size: 0.58rem;
-    padding: 1px 7px;
-    line-height: 1.3;
+    font-size: 0.72rem;
+    padding: 2px 9px;
+    line-height: 1.35;
+  }
+
+  .promo-ending-badge {
+    margin-top: 8px;   /* ＝上面負 margin 的絕對值，把倒數徽章推回原位 */
   }
 
   /* 2026-07-16 第四輪站長回饋：卡名旁曾經多過「立即申辦」按鈕（第五輪已移到
