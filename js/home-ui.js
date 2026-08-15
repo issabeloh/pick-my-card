@@ -82,14 +82,15 @@ function renderSpotlightPage() {
     updateSpotlightNav();
 }
 
-// Show the next arrow whenever there are multiple pages; show the prev arrow
-// only when we're past the first page (no "previous" on page 1).
+// 有多頁就兩顆箭頭都顯示。2026-08-15 起第一頁也給「上一組」——輪播本來就是循環的
+// （goToSpotlightPage 用 modulo 收尾，第一頁按上一組會跳到最後一頁），
+// 原本在第一頁把它藏起來，反而讓按鈕列忽有忽無、位置還會左右跳。
 function updateSpotlightNav() {
     const multiPage = spotlightTotalPages() > 1;
     const prevBtn = document.getElementById('spotlight-prev-btn');
     const nextBtn = document.getElementById('spotlight-next-btn');
     if (nextBtn) nextBtn.style.display = multiPage ? 'inline-flex' : 'none';
-    if (prevBtn) prevBtn.style.display = (multiPage && spotlightPage > 0) ? 'inline-flex' : 'none';
+    if (prevBtn) prevBtn.style.display = multiPage ? 'inline-flex' : 'none';
 }
 
 // description 開頭的「XX！」＝活動類型標籤（全卡唯一帶分類色的元素）。

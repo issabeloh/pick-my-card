@@ -70,7 +70,6 @@ function buildAutomationMenu_() {
     .addSeparator()
     // 一個按鈕跑完一輪：照「公開」欄打的字做公開／封存／刪除（processInboxRows）
     .addItem('處理變動通知：公開／封存／刪除', 'processInboxRows')
-    .addItem('整理版面：2-變動通知', 'tidyInboxLayout')                    // watchlist-monitor.gs，只搬欄不動值
     .addSeparator()
     .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
     .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')

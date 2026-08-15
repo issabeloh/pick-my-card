@@ -90,7 +90,7 @@ const MONITOR_CONFIG = {
 //
 // ⚠️ 欄序現在是「可以改的」：寫入端 appendToInbox_ 改成**照表頭名字**對位（不再照位置
 //    appendRow），讀取端（benefits-parser.gs）本來就是 headers.indexOf。所以你在試算表裡
-//    自己拖動欄位不會弄壞任何東西，這份清單只是「新建分頁」與選單「整理版面」的預設順序。
+//    自己拖動欄位不會弄壞任何東西，這份清單只是「程式新建分頁時」的預設順序而已。
 //    唯一不能改的是**表頭字串本身**——那才是程式認欄位的依據。
 const INBOX_HEADERS = [
   '日期時間', 'card_id', '銀行',
@@ -99,7 +99,7 @@ const INBOX_HEADERS = [
   '網址', '變動段落', '舊文字', '新文字'
 ];
 
-// 「整理版面」用的欄寬（沒列到的欄不動）。巨無霸文字欄給窄寬度，反正是給程式讀的
+// 新建分頁時套的欄寬（沒列到的欄不動）。巨無霸文字欄給窄寬度，反正是給程式讀的
 const INBOX_COL_WIDTHS = {
   '日期時間': 140, 'card_id': 150, '銀行': 90,
   '實質變動': 70, 'AI摘要': 320, '變動類型': 110, '信心': 50,
@@ -654,39 +654,10 @@ function backfillInboxPublishCells_(sheet) {
   return filled;
 }
 
-/************** 選單：整理版面（2-變動通知，2026-08-15 新增） **************/
-// 把欄位排回 INBOX_HEADERS 的順序（站長要看要改的欄全部靠左、三根巨無霸文字欄丟到最後），
-// 順便統一欄寬、凍結表頭。只搬欄、不動任何一格的值。
-// 為什麼是「選單手動按」而不是監控時自動做：自動重組站長的表是越權——
-// 他可能有自己的排法。程式端已經不在乎欄序了（照欄名對位），排版純粹是他的偏好。
-function tidyInboxLayout() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(MONITOR_CONFIG.inboxSheet);
-  if (!sheet) {
-    ui.alert('整理版面', '找不到「' + MONITOR_CONFIG.inboxSheet + '」——先讓監控跑出結果。', ui.ButtonSet.OK);
-    return;
-  }
-
-  if (ensureInboxPublishColumns_(sheet)) backfillInboxPublishCells_(sheet);
-  const headers = readInboxHeaders_(sheet);
-  const known = INBOX_HEADERS.filter(function (h) { return headers.indexOf(h) >= 0; });
-  const extra = headers.filter(function (h) { return h && INBOX_HEADERS.indexOf(h) < 0; });
-  const moved = reorderColumnsByHeaders_(sheet, known.concat(extra));  // 站長自己加的欄排在後面，不丟掉
-  applyInboxLayout_(sheet);
-
-  // 報「實際排完長怎樣」而不是「我打算排成怎樣」——搬錯了要看得出來
-  const after = readInboxHeaders_(sheet).filter(function (h) { return h; });
-  ui.alert('整理版面',
-    '已整理「' + MONITOR_CONFIG.inboxSheet + '」，搬了 ' + moved + ' 欄。現在的欄序：\n' +
-    after.join(' → ') +
-    '\n\n「狀態／公開摘要／公開卡片／公開」都在左半邊了，不用再往右捲；' +
-    '「變動段落／舊文字／新文字」那三根巨無霸文字欄推到最後（那是留給程式讀的）。\n' +
-    '欄序之後隨你拖動——程式是照第一列的欄名找欄的，只要別改到欄名本身。',
-    ui.ButtonSet.OK);
-}
-
 // 把 sheet 的欄位搬成 order 指定的順序（order 裡沒有的欄自動被擠到右邊，不刪不動值）。
+// ⚠️ 2026-08-15：原本有個「整理版面」選單會拿它重排「2-變動通知」，站長說欄位他自己搬，
+//    選單已移除。這裡保留是因為**封存分頁必須跟主分頁欄序一致**（copyTo 照位置貼），
+//    getInboxArchiveSheet_ 每次搬列前都要靠它對齊——別看沒有選單就把它一起刪了。
 // 由左往右一欄一欄就位：走到第 t 欄時，左邊 t-1 欄都已經是對的，要的那欄必定在右邊，
 // 所以永遠是「往左搬」——moveColumns 的 destinationIndex 直接給目標欄號就對
 // （往右搬才要 +1，這裡刻意避開那個坑）。
@@ -702,7 +673,9 @@ function reorderColumnsByHeaders_(sheet, order) {
   return moved;
 }
 
-// 欄寬、凍結表頭、表頭樣式，以及全表 CLIP（不然 4 萬字的「新文字」會整片溢出到右邊的欄）
+// 欄寬、凍結表頭、表頭樣式，以及全表 CLIP（不然 4 萬字的「新文字」會整片溢出到右邊的欄）。
+// ⚠️ 只在**程式自己新建**分頁時套（主分頁第一次自動建、封存分頁第一次自動建）——
+//    絕不套在站長已經在用的分頁上，他的欄寬與排版是他的事。
 function applyInboxLayout_(sheet) {
   const headers = readInboxHeaders_(sheet);
   headers.forEach(function (h, i) {
