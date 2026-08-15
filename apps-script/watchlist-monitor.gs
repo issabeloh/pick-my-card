@@ -92,10 +92,26 @@ const MONITOR_CONFIG = {
 //    appendRow），讀取端（benefits-parser.gs）本來就是 headers.indexOf。所以你在試算表裡
 //    自己拖動欄位不會弄壞任何東西，這份清單只是「程式新建分頁時」的預設順序而已。
 //    唯一不能改的是**表頭字串本身**——那才是程式認欄位的依據。
+// 動作欄：2026-08-15 從「公開」改名成「公開／封存／刪除」——欄名本身就是操作說明，
+// 站長不用記得可以打哪些字。舊名與半形斜線寫法都照認（下方 ALIASES），
+// 舊分頁也不用自己改：ensureInboxPublishColumns_ 下次寫入時會就地把表頭改成新名。
+const INBOX_ACTION_HEADER = '公開／封存／刪除';
+const INBOX_ACTION_ALIASES = [INBOX_ACTION_HEADER, '公開/封存/刪除', '公開'];
+
+// 找動作欄在第幾欄（0-based，找不到回 -1）。⚠️ 一律用這個，不要自己 indexOf('公開')——
+// 那樣舊名改新名之後就找不到欄了。注意是**完全比對**，不會誤中「公開摘要」「公開卡片」。
+function findInboxActionCol_(headers) {
+  for (let i = 0; i < INBOX_ACTION_ALIASES.length; i++) {
+    const idx = headers.indexOf(INBOX_ACTION_ALIASES[i]);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
 const INBOX_HEADERS = [
   '日期時間', 'card_id', '銀行',
   '實質變動', 'AI摘要', '變動類型', '信心',
-  '狀態', '公開摘要', '公開卡片', '公開',
+  '狀態', '公開摘要', '公開卡片', INBOX_ACTION_HEADER,
   '網址', '變動段落', '舊文字', '新文字'
 ];
 
@@ -103,7 +119,8 @@ const INBOX_HEADERS = [
 const INBOX_COL_WIDTHS = {
   '日期時間': 140, 'card_id': 150, '銀行': 90,
   '實質變動': 70, 'AI摘要': 320, '變動類型': 110, '信心': 50,
-  '狀態': 90, '公開摘要': 320, '公開卡片': 150, '公開': 60,
+  '狀態': 90, '公開摘要': 320, '公開卡片': 150,
+  [INBOX_ACTION_HEADER]: 140,   // 欄名變長了，給得下八個字的寬度
   '網址': 200, '變動段落': 110, '舊文字': 110, '新文字': 110
 };
 
@@ -555,7 +572,9 @@ function appendToInbox_(ss, info) {
     '狀態': '待解析',
     '公開摘要': c ? (c.summary || '') : '',   // 與「AI摘要」同一個值，站長在這欄改寫
     '公開卡片': info.cardId,                  // 已算好的 inboxCardId，不用再推導
-    '公開': ''                                // 留空，等站長打 V
+    // 動作欄留空＝還沒決定／還沒處理。新舊欄名都給值，分頁還沒改名也不會漏
+    [INBOX_ACTION_HEADER]: '',
+    '公開': ''
   };
 
   const headers = readInboxHeaders_(sheet);
@@ -579,20 +598,33 @@ function readInboxHeaders_(sheet) {
     .map(function (h) { return String(h).trim(); });
 }
 
-// 舊的「2-變動通知」分頁（12 欄，沒有「公開摘要／公開卡片／公開」）自動補上缺的表頭。
-// 為什麼要自動補：那個分頁裡有站長還要用的歷史內容，不該為了三個表頭叫人整個刪掉重建。
+// 舊的「2-變動通知」分頁自動補上缺的表頭，並把舊的「公開」欄就地改名成「公開／封存／刪除」。
+// 為什麼要自動做：那個分頁裡有站長還要用的歷史內容，不該為了改個表頭叫人整個刪掉重建。
 // 缺的表頭一律**接在現有欄位的最右邊**（不插欄，免得把站長的內容擠位移）；
 // 位置無所謂，寫入與讀取兩端現在都是照欄名找欄。
 // 兩道保險，不過就什麼都不寫（寧可讓站長手動補，也不要覆蓋掉他的東西）：
-//   1. 三欄都在 → 不用補
+//   1. 三欄都在、名字也是新的 → 不用動
 //   2. 連「狀態」欄都找不到 → 這張表根本不是監控的產出，不亂寫
-// 回傳 true = 這次真的補了表頭（呼叫端據此決定要不要順手回填舊列）
+// 回傳 true = 這次真的動了表頭（呼叫端據此決定要不要順手回填舊列）
 function ensureInboxPublishColumns_(sheet) {
-  const wanted = ['公開摘要', '公開卡片', '公開'];
   let headers = readInboxHeaders_(sheet);
-  const missing = wanted.filter(function (h) { return headers.indexOf(h) < 0; });
-  if (!missing.length) return false;
   if (headers.indexOf('狀態') < 0) return false;
+
+  // ① 舊名 →新名就地改（只改表頭那一格，整欄的值原封不動）
+  let renamed = false;
+  if (headers.indexOf(INBOX_ACTION_HEADER) < 0) {
+    const oldIdx = findInboxActionCol_(headers);
+    if (oldIdx >= 0) {
+      sheet.getRange(1, oldIdx + 1).setValue(INBOX_ACTION_HEADER);
+      headers = readInboxHeaders_(sheet);
+      renamed = true;
+    }
+  }
+
+  // ② 缺的表頭補在最右邊
+  const wanted = ['公開摘要', '公開卡片', INBOX_ACTION_HEADER];
+  const missing = wanted.filter(function (h) { return headers.indexOf(h) < 0; });
+  if (!missing.length) return renamed;
 
   // 從最後一個有表頭的欄之後接上去（getLastColumn 可能含站長留白的欄，取表頭實際邊界）
   let end = 0;
@@ -622,7 +654,7 @@ function backfillInboxPublishCells_(sheet) {
   const cAi = headers.indexOf('AI摘要');
   const cSummary = headers.indexOf('公開摘要');
   const cCards = headers.indexOf('公開卡片');
-  const cFlag = headers.indexOf('公開');
+  const cFlag = findInboxActionCol_(headers);
   if (cSummary < 0 || cCards < 0 || cFlag < 0) return 0;
   if (cCard < 0 && cAi < 0) return 0;
 
