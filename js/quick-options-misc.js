@@ -159,6 +159,8 @@ function createTagElement(option, type, index) {
             const isOpen = panel.classList.contains('open');
             panel.classList.toggle('open', !isOpen);
             expandBtn.classList.toggle('expanded', !isOpen);
+            // 手機兩欄 grid 下讓展開中的那一列橫跨兩欄（樣式見 styles.css 600px 斷點）
+            wrapper.classList.toggle('panel-open', !isOpen);
         };
         expandBtn.addEventListener('click', toggle);
         expandBtn.addEventListener('touchend', toggle);
@@ -417,8 +419,10 @@ function renderCustomOptionsList() {
             const toggle = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                panel.classList.toggle('open');
-                expandBtn.classList.toggle('expanded');
+                const isOpen = panel.classList.contains('open');
+                panel.classList.toggle('open', !isOpen);
+                expandBtn.classList.toggle('expanded', !isOpen);
+                wrapper.classList.toggle('panel-open', !isOpen);
             };
             expandBtn.addEventListener('click', toggle);
             expandBtn.addEventListener('touchend', toggle);
