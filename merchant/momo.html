@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <base href="/">
-    <script>window.__PMC_MERCHANT__="momo";</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <script>window.__PMC_MERCHANT__="momo";</script>
     <title>momo 購物網刷哪張信用卡回饋最高？2026 比較 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
-           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
-         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+           → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
+         hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
          ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
          location.replace 讓返回鍵不會跳回造成循環。
          ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
@@ -25,7 +25,7 @@
         } catch (e) {
             // URLSearchParams 不支援時忽略——embed 只是顯示精簡化，非必要流程
         }
-        var pmcFromLanding = true; /* merchant landing page */
+        var pmcFromLanding = true; /* 商家落地頁：一律直接進工具 */
         try {
             if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 localStorage.setItem('pmc_seen_landing', '1');
@@ -159,7 +159,7 @@
 .mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}
 .mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"momo 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":2,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":3,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"滙豐匯鑽卡"},{"@type":"ListItem","position":6,"name":"台新 Richart 卡"},{"@type":"ListItem","position":7,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":8,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":9,"name":"iLEO 信用卡"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"momo 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"遠東快樂卡"},{"@type":"ListItem","position":2,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":3,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":4,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":5,"name":"台新 Richart 卡"},{"@type":"ListItem","position":6,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":7,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":8,"name":"滙豐匯鑽卡"},{"@type":"ListItem","position":9,"name":"iLEO 信用卡"},{"@type":"ListItem","position":10,"name":"國泰 CUBE 卡"}]}</script>
 </head>
 <body>
     <!-- Boot loader for returning logged-in users — visible only while
@@ -469,7 +469,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="/promos" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a class="cardholder-promos-more-btn" href="/promos" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
@@ -503,14 +503,13 @@
             <div class="spotlight-dots" id="spotlight-dots" style="display:none;"></div>
         </section>
 
-        <!-- 信用卡警語橫條（精選活動區下方） -->
         <section class="mc-seo-footer" aria-label="momo 信用卡回饋說明">
   <h1>momo 信用卡回饋比較</h1>
-  <p>想知道刷 momo 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 momo 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 玉山 Uni 卡、玉山 Ubear 卡、國泰 CUBE 卡、滙豐 Live+ 卡、滙豐匯鑽卡、台新 Richart 卡、聯邦 LINE Bank 卡、兆豐 BT21 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
+  <p>想知道刷 momo 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 momo 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 遠東快樂卡、滙豐 Live+ 卡、聯邦 LINE Bank 卡、兆豐 BT21 卡、台新 Richart 卡、玉山 Uni 卡、玉山 Ubear 卡、滙豐匯鑽卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
 </section>
 
-        <!-- 廣告列（SEO 說明區下方、警語橫條上方）
-             回應式版位，樣式沿用 styles.css 的 .ad-row。
+        <!-- 廣告列（精選活動下方、警語橫條上方）
+             回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
              loader script 已在 <head> 載入，這裡只放版位本身。 -->
         <div class="ad-row">
             <ins class="adsbygoogle ad-row-unit"
@@ -524,7 +523,8 @@
             (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
 
-<div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+        <!-- 信用卡警語橫條（精選活動區下方） -->
+        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -955,7 +955,7 @@
         </div>
     </div>
 
-    <!-- 最後資料更新日期＋收錄卡數 -->
+    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
         <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
@@ -1003,7 +1003,8 @@
         </div>
     </div>
 
-    <!-- 主程式模組：清單與順序必須與 index.html 一致（preflight 會檢查）。 -->
+    <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
+         全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
     <script src="js/core-utils.js?v=dev" defer></script>
     <script src="js/data-loader.js?v=dev" defer></script>
     <script src="js/home-ui.js?v=dev" defer></script>

@@ -899,6 +899,10 @@ if (faqSheet) {
   // 搜尋結果都是），所以「首頁變了沒」等同「匯出資料變了沒」。指紋刻意排除 jsonContent
   // 第一個欄位 lastUpdated——那是匯出當下的時間戳，每次匯出必變，含進來指紋就永遠不相等，
   // 等於退回「天天蓋今天」。其餘欄位與 jsonContent 同一份資料，順序不影響（stable stringify）。
+  // 商家落地頁清單（MerchantPages 工作表）。只是「要生哪些頁、文案是什麼」，
+  // 頁面本體由 Cloudflare Pages build 時的 tools/build-merchant-pages.js 生成。
+  const merchantPages = readMerchantPages();
+
   const homeUpdatedIso = pmcStampedDate_('HOME', pmcHashString_(pmcStableStringify_({
     cards: cards,
     payments: payments,
@@ -913,7 +917,8 @@ if (faqSheet) {
     cashbackSites: cashbackSites,
     newCardholderPromos: newCardholderPromos,
     cardApplyCtas: cardApplyCtas,
-    spotlights: spotlights
+    spotlights: spotlights,
+    merchantPages: merchantPages
   })));
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
@@ -941,7 +946,8 @@ if (faqSheet) {
   cashbackSites: cashbackSites,
   newCardholderPromos: newCardholderPromos,
   cardApplyCtas: cardApplyCtas,
-  spotlights: spotlights
+  spotlights: spotlights,
+  merchantPages: merchantPages
   }, null, 2);
 
 
@@ -950,7 +956,7 @@ if (faqSheet) {
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
-  const version = publishToGitHub(encoded, promosPageHtml, undefined, promosUpdatedIso, homeUpdatedIso);
+  const version = publishToGitHub(encoded, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso);
 
   ui.alert(
     '✅ 匯出完成',
@@ -1437,6 +1443,58 @@ function readReferralLinks() {
 }
 
 // ========== 讀取 Highlights 資料 ==========
+// 商家落地頁清單（MerchantPages 工作表，2026-08-16 新增）。工作表不存在＝回傳空陣列，
+// 此時 tools/build-merchant-pages.js 會退回 tools/merchant-pages.fallback.json（過渡用）。
+//
+// 欄位：
+//   slug         URL 用的字串（/merchant/<slug>，中文會自動百分比編碼）
+//   merchant     餵給搜尋引擎的「搜尋詞」，必須跟站上搜得到的商家一致（如 LinePay）
+//   displayName  頁面上顯示的名稱，留空＝同 merchant（如 merchant=LinePay → 顯示 LINE Pay）
+//   title        <title> 與 og:title，整句自己寫
+//   description  meta description 與 og:description
+//   active       FALSE 就不生成該頁（也不會進 sitemap）
+//   order        排序用，非必要
+//
+// ⚠️ 改了任何一欄，下次匯出後 Cloudflare Pages build 會重生該頁；slug 改掉等於換網址，
+// 舊網址會變 404，非必要別動（要動就自己去 GSC 提交新網址）。
+function readMerchantPages() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('MerchantPages');
+  if (!sheet) {
+    Logger.log('ℹ️ 找不到 MerchantPages 工作表——商家頁改用 repo 的 fallback 清單');
+    return [];
+  }
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const headers = data[0];
+  const str = (row, field) => {
+    const val = getValue(row, headers, field);
+    return val !== null && val !== undefined && val !== '' ? String(val).trim() : '';
+  };
+  const pages = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const slug = str(row, 'slug');
+    const merchant = str(row, 'merchant');
+    if (!slug || !merchant) continue; // slug 或搜尋詞缺一就不是有效的一列
+    const activeRaw = getValue(row, headers, 'active');
+    pages.push({
+      slug: slug,
+      merchant: merchant,
+      displayName: str(row, 'displayName') || merchant,
+      title: str(row, 'title'),
+      description: str(row, 'description'),
+      order: parseFloat(getValue(row, headers, 'order')) || 999,
+      // 空白＝啟用（新增一列時不必特地填 TRUE）；只有明確填 FALSE 才關掉
+      active: !(activeRaw === false || String(activeRaw).toUpperCase() === 'FALSE')
+    });
+  }
+  pages.sort(function (a, b) { return a.order - b.order; });
+  Logger.log('✅ 讀取 ' + pages.length + ' 筆 MerchantPages 資料');
+  return pages;
+}
+
 function readHighlights() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Highlights');
@@ -2476,10 +2534,11 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
     commitFileToGitHub('promos.html', promosPageHtml, `${skip}Update promos.html (${version})`, token);
   }
 
-  // 商家靜態頁（top-N SEO 落地頁，見 generateMerchantPageHtml_）——選填
-  (merchantPages || []).forEach(function(m) {
-    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
-  });
+  // 商家落地頁的 HTML 不在這裡生成（2026-08-16 改）：那些頁是 index.html 的複製品，
+  // 若由 Apps Script 生成，等於要在 Sheets 腳本裡再存一份 index.html 的版面——就是第三份
+  // 會走鐘的副本。改成 Cloudflare Pages build 時跑 tools/build-merchant-pages.js，
+  // 從 repo 當下的 index.html ＋ cards.data 現場組出來。這裡只負責把 merchantPages
+  // 清單放進 cards.data（上面的 jsonContent），讓 build 端知道要生哪幾頁。
 
   // sitemap.xml 每次匯出重生。所有 lastmod 都只在「該頁內容真的變動」時才前進（2026-08-16
   // 起商家頁也比照辦理，先前每次匯出都蓋今天＝對 Google 天天喊「我更新了」，內容其實沒動，
@@ -2493,50 +2552,35 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
   return version;
 }
 
-// 試水溫階段手動維護的商家頁：生成器尚未移植前，這些頁是手動 commit 的靜態檔，沒有進
-// merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把它們從 sitemap
-// 移除）。lastmod 寫死＝該頁 HTML 最後一次真的被改的日期（2026-08-16 起，見下方註解）——
-// **改了 merchant/<slug>.html 就要一併改這裡的日期**，不改就等於沒通知 Google。
-// 生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
-const MERCHANT_PILOT_PAGES = [
-  { slug: '蝦皮', lastmod: '2026-08-16' },
-  { slug: 'momo', lastmod: '2026-08-16' },
-  { slug: '高鐵', lastmod: '2026-08-16' },
-  { slug: 'linepay', lastmod: '2026-08-16' },
-  { slug: '中華航空', lastmod: '2026-08-16' },
-  { slug: '中油', lastmod: '2026-08-16' }
-];
+// MerchantPages 工作表還沒建立時的退路：沒有這個清單，sitemap 會把現有 6 頁整組移除。
+// 工作表建好之後這個陣列就不再被用到（但別急著刪，它是工作表被誤刪時的安全網）。
+// 與 tools/merchant-pages.fallback.json 是同一份清單，兩邊要一致。
+const MERCHANT_FALLBACK_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華航空', '中油'];
 
 // 產生 sitemap.xml 全文。lastmod 一律是「該頁內容最後真的變動的日期」，不是匯出日期：
 //  - landing/faq：不隨匯出變動 → 固定日期常數（改版時更新這裡）
 //  - 首頁 /：homeUpdatedIso（cards.data 內容指紋，首頁內容全由它渲染）
 //  - promos：promosUpdatedIso（活動內容指紋，與頁面可見戳章／JSON-LD dateModified 同源）
-//  - 商家頁：手動頁用 MERCHANT_PILOT_PAGES 寫死的日期；生成頁（merchantPages）用該頁
-//    HTML 的內容指紋，HTML 一模一樣就沿用上次那天
+//  - 商家頁：同樣用 homeUpdatedIso。那些頁＝index.html 版面 ＋ cards.data 算出來的卡片
+//    清單，內容會變的來源就是 cards.data，與首頁同一個訊號（2026-08-16 改；在那之前是
+//    每次匯出蓋當天，等於對 Google 天天喊更新，久了 lastmod 就不被信任）
 // 沒傳的日期一律退回今天（Node harness／第一次生成）。日期都走 pmcTodayISO_() 台北時區。
 function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const today = pmcTodayISO_();
+  const merchantLastmod = homeUpdatedIso || today;
   const urls = [
     { loc: SITE_ORIGIN + '/', lastmod: homeUpdatedIso || today },
     { loc: SITE_ORIGIN + '/landing', lastmod: '2026-08-16' },
     { loc: SITE_ORIGIN + '/faq', lastmod: '2026-08-16' },
     { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
-  // 商家頁：試水溫手動清單 + 生成器產出（merchantPages）。同 slug 兩邊都有時以生成頁為準
-  // （生成器上線後才會發生，那時該 slug 的內容由生成器負責）。
-  const lastmodBySlug = {};
-  const slugs = [];
-  MERCHANT_PILOT_PAGES.forEach(function(p) {
-    if (!lastmodBySlug[p.slug]) slugs.push(p.slug);
-    lastmodBySlug[p.slug] = p.lastmod;
-  });
-  (merchantPages || []).forEach(function(m) {
-    if (!m || !m.slug) return;
-    if (!lastmodBySlug[m.slug]) slugs.push(m.slug);
-    lastmodBySlug[m.slug] = pmcStampedDate_('MERCHANT_' + pmcHashString_(m.slug), pmcHashString_(m.html || ''));
-  });
+  // 商家頁清單以 MerchantPages 工作表為準（active=FALSE 的不收）；工作表不存在才用退路清單
+  const active = (merchantPages || []).filter(function (m) { return m && m.slug && m.active !== false; });
+  const slugs = active.length
+    ? active.map(function (m) { return m.slug; })
+    : MERCHANT_FALLBACK_SLUGS;
   slugs.forEach(function(s) {
-    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: lastmodBySlug[s] || today });
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: merchantLastmod });
   });
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';

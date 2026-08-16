@@ -44,20 +44,18 @@ for page in merchant/*.html; do
   fi
 done
 
-# ---- 1d) 商家頁改動 → MERCHANT_PILOT_PAGES 的 lastmod 必須同步（sitemap 誠實度）----
-# 那 6 頁是手動 commit 的靜態檔，Apps Script 端沒有內容可以指紋比對，日期只能手動維護
-# （見 docs/project/data-pipeline.md 第 10 節）。忘了改＝sitemap 對 Google 說「這頁沒動過」。
-# 生成器上線、MERCHANT_PILOT_PAGES 清空後，這個檢查會自動變成 no-op。
-GS=apps-script/cards-export.gs
-if [ -f "$GS" ]; then
-  gs_added=$(git diff HEAD -- "$GS" | grep '^+' | grep -v '^+++' || true)
-  for page in $(echo "$changed" | grep '^merchant/.*\.html$' || true); do
-    slug=$(basename "$page" .html)
-    if ! grep -q "slug: '$slug'" "$GS"; then continue; fi   # 已改由生成器產出 → 不需手動日期
-    if ! echo "$gs_added" | grep -q "slug: '$slug'"; then
-      echo "❌ $page 有改動，但 $GS 的 MERCHANT_PILOT_PAGES 沒更新 '$slug' 的 lastmod（sitemap 會對 Google 謊稱這頁沒動過）"; fail=1
-    fi
-  done
+# ---- 1d) 商家頁必須與生成器輸出一致（2026-08-16 起 merchant/*.html 不再手維護）----
+# 商家頁改由 tools/build-merchant-pages.js 從 index.html ＋ cards.data 生成。手改那些檔案
+# 會在下次部署被覆蓋，所以這裡直接擋：改版面去改 index.html，改文案去改 MerchantPages
+# 工作表（見 docs/project/data-pipeline.md 第 11 節）。
+if command -v node >/dev/null 2>&1 && [ -f tools/build-merchant-pages.js ]; then
+  if ! node tools/build-merchant-pages.js --check > /tmp/pmc-merchant-check.$$ 2>&1; then
+    cat /tmp/pmc-merchant-check.$$
+    echo "❌ merchant/*.html 與生成結果不一致——跑 node tools/build-merchant-pages.js 重新生成後再 commit"; fail=1
+  fi
+  rm -f /tmp/pmc-merchant-check.$$
+else
+  echo "⚠️  找不到 node 或生成器，略過商家頁一致性檢查"; warn=1
 fi
 
 # ---- 1e) 內部連結禁止指向 *.html（會 301 到 clean URL，GSC 報 Page with redirect）----

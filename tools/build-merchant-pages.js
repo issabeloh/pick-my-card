@@ -1,0 +1,258 @@
+#!/usr/bin/env node
+/* ============================================================
+ * 商家落地頁生成器（2026-08-16）
+ *
+ * 為什麼存在：merchant/*.html 原本是 index.html 的手抄副本，抄一份就多一份會歪的
+ * 東西。實際歪掉的證據（動手當天量到的）：
+ *  - 6 頁裡有 4 頁還停在舊版介面（少「個人設定」「近期異動」兩個區塊）
+ *  - 頁面裡寫死的 JSON-LD 卡片清單與 SEO 文案早就過期（momo 頁實際第一名是
+ *    遠東快樂卡，兩份清單裡都沒有它）
+ * 解法：頁面不再手維護，改成每次部署時從 index.html ＋ cards.data 現場組出來。
+ * index.html 永遠是版面的唯一來源，卡片清單永遠跟著資料走。
+ *
+ * 用法：
+ *   node tools/build-merchant-pages.js            # 生成（Cloudflare Pages build 會跑）
+ *   node tools/build-merchant-pages.js --check    # 只檢查是否與現有檔案一致，不寫入（preflight 用）
+ *   node tools/build-merchant-pages.js --verify   # 額外用 Playwright 開真頁比對卡片清單
+ *
+ * 設定來源：cards.data 的 merchantPages（Google Sheets 的 MerchantPages 工作表）；
+ * 沒有這個欄位時退回 tools/merchant-pages.fallback.json（工作表建好之前的過渡用）。
+ * 欄位：slug, merchant(搜尋詞), displayName(選填，預設同 merchant), title, description, active
+ * ============================================================ */
+const fs = require('fs');
+const path = require('path');
+const { createEngine, computeMerchantCards } = require('./lib/merchant-cards');
+
+const REPO = path.resolve(__dirname, '..');
+const SITE = 'https://pickmycard.app';
+const AMOUNT = 1000; // 與頁面開頁自動計算的預設金額一致（compareSpotlightMerchant 代填 1000）
+
+const argv = process.argv.slice(2);
+const CHECK_ONLY = argv.includes('--check');
+const VERIFY = argv.includes('--verify');
+
+function readCardsData() {
+  const raw = fs.readFileSync(path.join(REPO, 'cards.data'), 'utf8').trim();
+  return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+}
+
+function loadConfig(cardsData) {
+  const fromSheet = cardsData && Array.isArray(cardsData.merchantPages) ? cardsData.merchantPages : null;
+  if (fromSheet && fromSheet.length) return { source: 'cards.data (MerchantPages 工作表)', pages: fromSheet };
+  const fallback = JSON.parse(fs.readFileSync(path.join(REPO, 'tools', 'merchant-pages.fallback.json'), 'utf8'));
+  return { source: 'tools/merchant-pages.fallback.json（工作表尚未建立）', pages: fallback };
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// 一定要換到的東西：換不到就是 index.html 改了結構，寧可炸掉也不要默默生出半殘的頁。
+// build 收 (完整比對字串, 群組1, 群組2…) 回傳替換內容——刻意不用字串替換，
+// 因為 title/description 是使用者填的，裡面若出現 $& 或 $1 會被 replace 當成反向參照。
+function replaceOnce(html, pattern, build, what) {
+  if (!pattern.test(html)) {
+    throw new Error(`index.html 找不到「${what}」的錨點，生成器需要跟著更新：${pattern}`);
+  }
+  if (pattern.global) pattern.lastIndex = 0;
+  return html.replace(pattern, (...args) => build(...args));
+}
+
+function buildJsonLd(displayName, cardNames) {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: displayName + ' 信用卡回饋比較',
+    itemListElement: cardNames.map((name, i) => ({
+      '@type': 'ListItem', position: i + 1, name: name
+    }))
+  };
+  return JSON.stringify(ld).replace(/<\//g, '<\\/');
+}
+
+function buildSeoFooter(displayName, cardNames) {
+  // 文案裡列的卡片刻意比 JSON-LD 少一張：JSON-LD 是給機器讀的完整清單，
+  // 這段是給人讀的，列太長會變成關鍵字堆砌。與 2026-08-16 之前的手寫版同樣做法。
+  const listed = cardNames.slice(0, 8).join('、');
+  const d = escapeHtml(displayName);
+  return '        <section class="mc-seo-footer" aria-label="' + d + ' 信用卡回饋說明">\n' +
+    '  <h1>' + d + ' 信用卡回饋比較</h1>\n' +
+    '  <p>想知道刷 ' + d + ' 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 ' + d +
+    ' 的回饋率、消費上限、達成條件與活動期間，資料持續更新。' +
+    (listed ? '涵蓋 ' + escapeHtml(listed) + ' 等信用卡。' : '') +
+    '你也可以用上方搜尋框改查其他商家。</p>\n' +
+    '</section>\n';
+}
+
+const SEO_FOOTER_STYLE =
+  '<style>\n' +
+  '.mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}\n' +
+  '.mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}\n' +
+  '</style>\n';
+
+function buildPage(indexHtml, page, cardNames) {
+  const merchant = String(page.merchant);
+  const displayName = String(page.displayName || page.merchant);
+  const slug = String(page.slug);
+  const url = SITE + '/merchant/' + encodeURIComponent(slug);
+  const title = escapeHtml(page.title);
+  const desc = escapeHtml(page.description);
+  let html = indexHtml;
+
+  // 1) <base href="/"> ＋ 商家注入。商家頁在 /merchant/ 底下，沒有 base 的話所有
+  //    相對路徑（js/、styles.css、assets/）都會找去 /merchant/ 底下。
+  html = replaceOnce(html, /(<meta name="viewport"[^>]*>\n)/,
+    (m, p1) => p1 + '    <base href="/">\n    <script>window.__PMC_MERCHANT__=' +
+      JSON.stringify(merchant) + ';</script>\n',
+    '<base> 與商家注入點（viewport meta）');
+
+  // 2) 標題與 meta
+  html = replaceOnce(html, /<title>[^<]*<\/title>/, () => '<title>' + title + '</title>', '<title>');
+  html = replaceOnce(html, /(<meta name="description" content=")[^"]*(")/,
+    (m, p1, p2) => p1 + desc + p2, 'meta description');
+  html = replaceOnce(html, /(<link rel="canonical" href=")[^"]*(")/,
+    (m, p1, p2) => p1 + url + p2, 'canonical');
+  for (const [attr, key, value] of [
+    ['property', 'og:url', url], ['property', 'og:title', title], ['property', 'og:description', desc],
+    ['name', 'twitter:url', url], ['name', 'twitter:title', title], ['name', 'twitter:description', desc]
+  ]) {
+    const re = new RegExp('(<meta ' + attr + '="' + key + '" content=")[^"]*(")');
+    html = replaceOnce(html, re, (m, p1, p2) => p1 + value + p2, key);
+  }
+
+  // 3) 商家頁一律直接進工具，不走「首次訪客導去 landing」那條路
+  html = replaceOnce(html, /var pmcFromLanding = location\.search\.indexOf\('start'\) !== -1;/,
+    () => "var pmcFromLanding = true; /* 商家落地頁：一律直接進工具 */",
+    'pmcFromLanding 判斷');
+
+  // 3b) 新戶活動區的警語：商家頁專屬，index.html 從來沒有過（查過 git log -S，不是 drift）。
+  //     商家頁是從 Google 進來的陌生訪客第一個看到的頁，這行留著。
+  html = replaceOnce(html, /(<p class="cardholder-promos-desc">[\s\S]*?<\/p>\n)/,
+    (m, p1) => p1 + '                <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>\n',
+    '新戶活動說明段落（警語插入點）');
+
+  // 4) SEO footer 樣式 ＋ JSON-LD（塞在 </head> 前）
+  html = replaceOnce(html, /(\n<\/head>)/,
+    (m, p1) => '\n' + SEO_FOOTER_STYLE +
+      '<script type="application/ld+json">' + buildJsonLd(displayName, cardNames) + '</script>' + p1,
+    '</head>');
+
+  // 5) SEO 說明區（精選活動區之後、廣告列之前）
+  html = replaceOnce(html,
+    /(<div class="spotlight-dots" id="spotlight-dots" style="display:none;"><\/div>\n        <\/section>\n)/,
+    (m, p1) => p1 + '\n' + buildSeoFooter(displayName, cardNames),
+    'SEO 說明區插入點（精選活動區結尾）');
+
+  return html;
+}
+
+async function main() {
+  const cardsData = readCardsData();
+  const { source, pages } = loadConfig(cardsData);
+  const active = pages.filter(p => p && p.active !== false && p.active !== 'FALSE' && p.slug && p.merchant);
+  const indexHtml = fs.readFileSync(path.join(REPO, 'index.html'), 'utf8');
+
+  process.stdout.write('商家頁設定來源：' + source + '（' + active.length + ' 頁）\n');
+
+  const engine = createEngine(cardsData);
+  const results = [];
+  let changed = 0;
+
+  for (const page of active) {
+    const cardNames = await computeMerchantCards(engine, page.merchant, AMOUNT);
+    if (cardNames.length === 0) {
+      throw new Error(`商家「${page.merchant}」（${page.slug}）算不出任何卡片——搜尋詞可能打錯或資料已無對應項目`);
+    }
+    const html = buildPage(indexHtml, page, cardNames);
+    const file = path.join(REPO, 'merchant', page.slug + '.html');
+    const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+    const same = before === html;
+    if (!same) changed++;
+    if (!CHECK_ONLY && !same) fs.writeFileSync(file, html);
+    results.push({ slug: page.slug, merchant: page.merchant, cards: cardNames, same });
+    process.stdout.write('  ' + (same ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' merchant/' + page.slug +
+      '.html（' + cardNames.length + ' 張卡，首位 ' + cardNames[0] + '）\n');
+  }
+
+  if (VERIFY) await verifyAgainstBrowser(results);
+
+  if (CHECK_ONLY && changed > 0) {
+    process.stdout.write('\n❌ 有 ' + changed + ' 頁與生成結果不一致——跑 node tools/build-merchant-pages.js 重新生成\n');
+    process.exit(1);
+  }
+  process.stdout.write(CHECK_ONLY ? '\n✅ 全部與生成結果一致\n'
+    : '\n✅ 完成（' + changed + ' 頁有變動）\n');
+}
+
+// 用真的瀏覽器開生成出來的頁，比對畫面上的卡片與我們烤進 JSON-LD 的清單。
+// 這是「Node 版引擎 == 前端引擎」的唯一證明，改了 js/ 或這支工具都該重跑一次。
+async function verifyAgainstBrowser(results) {
+  let chromium;
+  try { ({ chromium } = require('playwright')); }
+  catch (e) {
+    process.stdout.write('\n⚠️  找不到 playwright，跳過瀏覽器比對（npm install playwright）\n');
+    return;
+  }
+  const http = require('http');
+  const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png',
+    '.data': 'text/plain', '.version': 'text/plain', '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+  const srv = http.createServer((req, res) => {
+    let p = decodeURIComponent(req.url.split('?')[0]);
+    const file = path.join(REPO, p);
+    fs.readFile(file, (err, data) => {
+      if (err) { res.statusCode = 404; return res.end(); }
+      res.setHeader('Content-Type', MIME[path.extname(file)] || 'application/octet-stream');
+      res.end(data);
+    });
+  }).listen(0);
+  const base = 'http://127.0.0.1:' + srv.address().port;
+  const exec = fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
+  const browser = await chromium.launch(exec ? { executablePath: exec } : {});
+  const stub = 'export default {};';
+  let bad = 0;
+  process.stdout.write('\n瀏覽器比對（畫面實際跑出來的卡片 vs 烤進頁面的清單）：\n');
+  for (const r of results) {
+    const page = await browser.newPage();
+    await page.route('**/*', route => {
+      const u = route.request().url();
+      if (u.startsWith(base)) return route.continue();
+      if (u.includes('gstatic.com/firebasejs')) {
+        const body = u.includes('firebase-auth')
+          ? 'export function getAuth(){return {};} export function onAuthStateChanged(a,cb){setTimeout(function(){cb(null);},0);} export class GoogleAuthProvider{setCustomParameters(){}} export function signInWithPopup(){return Promise.resolve({});} export function signOut(){return Promise.resolve({});} export function createUserWithEmailAndPassword(){return Promise.resolve({});} export function signInWithEmailAndPassword(){return Promise.resolve({});} export function sendPasswordResetEmail(){return Promise.resolve({});}'
+          : u.includes('firebase-firestore')
+          ? 'export function getFirestore(){return {};} export function doc(){return {};} export function getDoc(){return Promise.resolve({exists:function(){return false;},data:function(){}});} export function setDoc(){return Promise.resolve({});} export function addDoc(){return Promise.resolve({});} export function collection(){return {};} export function serverTimestamp(){return 0;} export function deleteField(){return 0;}'
+          : u.includes('firebase-app') ? 'export function initializeApp(){return {};}'
+          : u.includes('firebase-analytics') ? 'export function getAnalytics(){return {};} export function logEvent(){}'
+          : u.includes('firebase-storage') ? 'export function getStorage(){return {};} export function ref(){return {};} export function uploadBytes(){return Promise.resolve({});} export function getDownloadURL(){return Promise.resolve("");}'
+          : stub;
+        return route.fulfill({ status: 200, contentType: 'text/javascript', body: body });
+      }
+      return route.abort();
+    });
+    await page.goto(base + '/merchant/' + encodeURIComponent(r.slug) + '.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#results-container .card-name', { timeout: 30000 });
+    await page.waitForTimeout(800);
+    const shown = await page.$$eval('#results-container .card-name',
+      els => els.map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+    const uniqueShown = shown.filter((n, i) => shown.indexOf(n) === i);
+    const ok = JSON.stringify(uniqueShown) === JSON.stringify(r.cards);
+    if (!ok) {
+      bad++;
+      process.stdout.write('  ❌ ' + r.slug + '\n     畫面：' + uniqueShown.join(' / ') +
+        '\n     頁面清單：' + r.cards.join(' / ') + '\n');
+    } else {
+      process.stdout.write('  ✅ ' + r.slug + '（' + r.cards.length + ' 張，逐筆一致）\n');
+    }
+    await page.close();
+  }
+  await browser.close();
+  srv.close();
+  if (bad > 0) {
+    process.stdout.write('\n❌ 有 ' + bad + ' 頁的清單與畫面不一致——Node 版引擎與前端已分岔，先修這個再部署\n');
+    process.exit(1);
+  }
+}
+
+main().catch(err => { process.stderr.write('❌ ' + (err && err.stack || err) + '\n'); process.exit(1); });
