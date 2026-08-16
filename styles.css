@@ -1130,27 +1130,36 @@ main {
     gap: 4px;
 }
 
-/* Expand toggle button on chips */
+/* Expand toggle button on chips
+   2026-08-16：原本 7.6×11.2px（font-size .7rem + padding 0 1px）桌機手機都難點也難看清，
+   改成固定 22px 圓形按鈕＋1.05rem 字級；手機再放大到 26px（見下方 600px 斷點）。 */
 .tag-expand-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 1px;
-    color: #9ca3af;
-    font-size: 0.7rem;
+    padding: 0;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: #6b7280;
+    font-size: 1.05rem;
     line-height: 1;
-    transition: transform 0.2s, color 0.15s;
+    transition: transform 0.2s, color 0.15s, background 0.15s;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 .tag-expand-btn:hover {
-    color: #4b5563;
+    color: #374151;
+    background: #e5e7eb;
 }
 
 .tag-expand-btn.expanded {
     transform: rotate(180deg);
-    color: #3b82f6;
+    color: #2563eb;
+    background: #dbeafe;
 }
 
 /* Merchants panel (collapsed by default) */
@@ -1163,7 +1172,9 @@ main {
     padding: 4px 10px;
     line-height: 1.5;
     max-width: 280px;
-    word-break: break-all;
+    /* 2026-08-16：原本 break-all 會把 trip.com 這種商家名從中間硬切成 tri/p.com，
+       改 anywhere——仍可在必要時斷行，但優先在頓號等正常斷點斷 */
+    overflow-wrap: anywhere;
 }
 
 .tag-merchants-panel.open {
@@ -1248,6 +1259,82 @@ main {
 
 .custom-option-delete:hover {
     background: #fee2e2;
+}
+
+/* ============================================
+   管理快捷選項 modal — 手機兩欄化（2026-08-16）
+   問題：chip 寬度隨名稱長度浮動（實測 135–194px），iPhone 13（390px）容器可用內寬只有
+   287px，兩顆＋gap 必須 ≤287 才排得下，結果 28 個預設選項只有 4 顆湊得成兩欄。
+   解法：≤600px 改固定兩欄 grid——欄寬由容器決定、長名在 chip 內折行，
+   再把 modal/modal-body/容器內距收窄，把每欄從 139px 拉到 ~157px。
+   ============================================ */
+@media (max-width: 600px) {
+    #manage-quick-options-modal .modal-content {
+        width: calc(100% - 20px);
+    }
+
+    #manage-quick-options-modal .modal-body {
+        padding: 16px 12px;
+    }
+
+    .selected-tags-container,
+    .available-tags-container,
+    .custom-options-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 8px;
+    }
+
+    .selected-tags-container,
+    .available-tags-container {
+        padding: 8px;
+    }
+
+    /* grid 欄內：wrapper 撐滿欄寬，min-width:0 才允許 chip 折行而不是撐爆欄位 */
+    .tag-wrapper,
+    .custom-option-wrapper {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .tag-item,
+    .custom-option-item {
+        width: 100%;
+        gap: 1px;
+        padding: 6px 4px;
+        border-radius: 12px;
+    }
+
+    /* 欄寬固定後字級要收一級，否則 6 字名稱（如「兩大便利商店」）會折成 4+2 行 */
+    .tag-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.76rem;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
+    }
+
+    .tag-icon {
+        font-size: 0.9rem;
+    }
+
+    /* 展開箭頭在手機再放大一級（22 → 24px） */
+    .tag-expand-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 1.1rem;
+    }
+
+    /* 展開商家清單時該列橫跨兩欄，免得 ~157px 窄欄把商家擠成一長條 */
+    .tag-wrapper.panel-open,
+    .custom-option-wrapper.panel-open {
+        grid-column: 1 / -1;
+    }
+
+    .tag-merchants-panel {
+        max-width: 100%;
+    }
 }
 
 /* Custom option form */
@@ -2690,6 +2777,12 @@ input[type="number"]:focus {
 
 .matched-merchant strong {
     color: #3b82f6;
+}
+
+/* 「活動期間 / 條件」在 results-display.js 是用 <small> 包的，瀏覽器預設 0.83em 讓它
+   縮到約 10px 讀不清。2026-08-16 用戶定案：與同一區塊的「匹配項目」同字級。 */
+.matched-merchant small {
+    font-size: inherit;
 }
 
 /* 滿額/未滿門檻（搜尋結果卡片）：重要條件，獨立一行置於匹配項目上方、
