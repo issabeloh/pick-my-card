@@ -57,6 +57,7 @@
 | 任務類型 | 必讀 |
 |---|---|
 | 改搜尋/回饋計算/匹配（calculateCashback、cashbackModel、placeholder、停車） | `docs/project/cashback-engine.md` |
+| **填**（不是改邏輯）某張卡的 cashbackModel／加碼欄位／骨幹槽 | `docs/project/cashbackmodel-fill-guide.md`（官網「回饋組成」句 → 欄位的填表範本） |
 | 改顯示/UI（詳情頁、Spotlight、我的信用卡、各 modal、卡圖） | `docs/project/ui-display.md` |
 | 改資料（Google Sheets、Apps Script、cards.data、級別設定、新工作表） | `docs/project/data-pipeline.md` |
 | 改用戶資料/登入登出/localStorage/Firestore/XSS 相關 | `docs/project/storage-and-security.md` |
