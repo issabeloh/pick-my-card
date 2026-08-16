@@ -13,9 +13,11 @@
 有這句，整張卡的**骨幹**（卡片級四欄）＋**一般國內／國外槽**就是抄的，不是猜的。
 
 **❌ 不適用（仍需人工判斷，本檔不涵蓋）**：
-- 官網只寫「最高 X%」、不拆解成分 → 成分要自己查條款、拆錯就算錯
-- **`>` 瀑布模型的卡**（如 dbs-eco 的部分槽）：組成句是「各成分同時作用」的疊加語意，瀑布是
-  「cap 用完才溢出下一層」，兩者算出來的數字不同——組成句**不能**直接翻成 `>`
+- 官網只寫「最高 X%」、不拆解成分 → 改走**第 8 節**的「無組成句」流程（從官網句型反推，信心分級）
+- **瀑布語意的槽**：組成句是「各成分同時作用於全額」的**疊加**語意，瀑布是「cap 用完才溢出下一層」，
+  兩者算出來的數字不同——組成句**不能**直接翻成 `>`。現行資料**沒有任何槽明寫 `>`**（實測 0 筆），
+  但**留空**的槽若該卡有 `domesticBonusRate`/`overseasBonusRate` 欄位，引擎會走**隱性國內 waterfall**
+  （→ cashback-engine.md 第 6 節「留空」列）。現行有 **14 個這種槽**，見第 8 節
 - **`hasLevels` 分級卡**（kgi-eslite、sinopac-dawho、cathay-cube…）：骨幹四欄照填，但指定通路槽的
   `{rate}`/`{cap}` placeholder 要對**每個級別**各驗一次（→ cashback-engine.md 第 1、2 節）
 - 需要 `minSpend`/`maxSpend` 互斥槽、或跨槽引用 `rate_N` 的活動（→ `cross-slot-ref-and-minspend-spec.md`）
@@ -53,7 +55,8 @@ cap = 回饋上限金額(元) ÷ (加碼率% ÷ 100)
 | 國內加碼 | 2.5% | 500 ÷ 0.025 | `domesticBonusCap = 20000` |
 | 國外加碼 | 1% | 500 ÷ 0.01 | `overseasBonusCap = 50000` |
 
-**反向自檢（填完必做）**：`cap × 率` 應該回到一個整數的上限金額。現行 cards.data 全部通過：
+**反向自檢（填完必做）**：`cap × 率` 應該回到一個整數的上限金額。
+現行 cards.data（`cards.version` = **20260816-181542**）全部通過：
 
 | 卡 | cap × 率 | ＝上限 |
 |---|---|---|
@@ -84,10 +87,22 @@ rate_N ＝ 組成句的「最高 Y%」 −（cashbackModel 裡列出的成分之
 | 原卡回饋 **＋** 一般加碼 **都照給**，通路再加碼 | `rate+basic+domesticBonusRate` ／ `rate+overseasCashback+overseasBonusRate` |
 | 只提「原一般消費回饋」、**沒提加碼** | `rate+basic` ／ `rate+overseasCashback` |
 | Y 完全由骨幹組成、通路本身沒有額外加碼 | `basic+domesticBonusRate` ／ `overseasCashback+overseasBonusRate`（**`rate_N` 填 0**） |
-| 該通路**完全排除**在一般消費外（cap 內固定率、溢出算 0） | 單獨 `rate`（填前必須確認真的排除，→ 第 6 節 ⚠️） |
+| 該通路**完全排除**在一般消費外（cap 內固定率、溢出算 0） | 單獨 `rate`（填前必須確認真的排除，→ cashback-engine.md 第 6 節 ⚠️） |
 
 **國內／海外只看字串**：有 `overseasBonusRate` 或 `overseasCashback` 任一 token 就走海外基準，
 不看搜尋詞、不看 item 名稱（→ cashback-engine.md 第 6 節）。
+
+**寫法要跟現行資料同調**（cards.version 20260816-181542 實際用值，共 277 槽）：
+
+| 用值 | 槽數 | | 用值 | 槽數 |
+|---|---|---|---|---|
+| `rate+basic` | 82 | | `rate+overseasCashback` | 8 |
+| （留空） | 72 | | `rate+basic+domesticBonusRate` | 5 |
+| `basic+domesticBonusRate` | 43 | | `rate+overseasCashback+overseasBonusRate` | 3 |
+| `overseasCashback+overseasBonusRate` | 38 | | 跨槽引用 `rate_N` 系列 | 16 |
+| `rate`（排除型） | 10 | | | |
+
+冷門寫法不是錯，但**填出一個表上沒有的組合前先確認你真的需要它**。
 
 四個實例（都經第 6 節實測）：
 
@@ -221,6 +236,37 @@ const got = await page.evaluate(async ({ id, term, amount }) => {
 `calculationLayers` 是對帳關鍵：逐層列出率、適用金額、該層回饋，**cap 有沒有咬到一眼可見**。
 （外部資源被 `route.abort()` 擋掉會留 3 筆 `net::ERR_FAILED` console error，屬預期。）
 
+## 8. 沒有組成句時（本範本的邊界外）
+
+官網不拆解成分時，只能從**句型**反推，且**必須標信心**。既有的派工規則正本在
+**pmc-vault `projects/2026-07-cashbackModel補填/解析規則-RULES.md`**（含逐字引用要求、期間核對、
+輸出合約、誠實條款）——要批次補填就照那份派，不要重寫一套。四個最有力的句型：
+
+| 官網句型 | 推論 |
+|---|---|
+| 「N% 回饋＝基本回饋 a% ＋加碼 b%」 | stacking 直接證據：`rate_N` 填 b（＝本檔第 3 節的退化情形） |
+| 「每月／每波段回饋上限 X 元（點）」 | cap 證據：cap = X ÷ 率（＝第 2 節） |
+| 「超過上限後仍享 c% 無上限」 | **waterfall 證據** → 這種才寫 `>`，不是疊加 |
+| 「不列入一般消費」「不予回饋」 | 排除型單獨 `rate`（溢出算 0） |
+
+**沒有逐字引用就不能給「高」信心；判斷不了就寫兩個候選＋各自成立的條件。**
+
+### 現行待補的空白槽（cards.version 20260816-181542 實測）
+
+| 類別 | 槽數 | 風險 |
+|---|---|---|
+| 空白槽總數 | 72 | |
+| ↳ 在**有**加碼欄位的卡上 → 走**隱性 waterfall** | **14** | ⚠️ 行為與「疊加」直覺不同，優先補 |
+| ↳ 在**無**加碼欄位的卡上 → 簡單路徑（cap 內 rate、溢出 basic） | 58 | 行為明確，低優先 |
+
+那 14 槽集中在 `firstbank-ileo`(9)、`ctbc-linepay-card`(2)、`tbb-artfun`/`dbs-eco`/`kgi-eslite` 各 1。
+其中 ileo 正是 vault README「已知缺口」列的動態網頁抓不全卡——補它要先拿到官網文字。
+
+⚠️ **已知待釐清（vault README 記錄，涉及本檔第 6 節的驗證卡）**：tbb-artfun slot4（迪士尼／環球影城）
+`cap=50000` 疑應與國內加碼共用 20000 池。若之後確認要改，第 6 節 artfun 的實測數字要重跑。
+
 ## 教訓記錄
 
+- [2026-08-16] 憑 cashback-engine.md 的舉例（「DBS Eco…waterfall」）就在本檔寫「dbs-eco 是瀑布卡」→ 實掃 cards.data 發現**現行 0 槽明寫 `>`**，該舉例是早期資料的快照 → 文件裡的卡片舉例一律回頭掃一次現行資料再寫，並標 `cards.version`
+- [2026-08-16] 想用 vault 的 2026-07-13「95 槽提案」對帳現行資料，slot 號與陣列位置兩種 join 都有 ~80 筆對不上 → 該提案早於 `rateObj.slot` 匯出（2026-07-16），且一個月來槽位 universe 已大幅變動 → **跨版本的槽位提案不能靠 join 對帳**，要重新對現行資料量測
 - [2026-08-16] 手算指定通路槽期望值時漏算該槽自己的 `cap`（uniopen 統一超商 10,000 算成 1,100、實際 850）→ 顯示率是各層率加總、實得率會被任一層的 cap 拉低 → 對帳一律讀 `calculationLayers` 的 `applicableAmount`，不要用「金額 × 顯示率」反推
