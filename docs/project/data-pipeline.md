@@ -231,8 +231,24 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 **⚠️ 改了 `merchant/<slug>.html` 就要一併改 `MERCHANT_PILOT_PAGES` 裡那筆的日期**，不改等於沒通知 Google。
 這是試水溫階段的代價：那 6 頁是手動 commit 的靜態檔、不經匯出生成，Apps Script 端沒有內容可以指紋比對。
-生成器移植完成後這個陣列清空，日期改由 HTML 指紋自動判斷，就不用再手動維護。
+**但不用靠記性**：`tools/preflight.sh` 第 1d 項會擋——只要 diff 裡有 `merchant/*.html`，就要求同一個 diff 裡
+`cards-export.gs` 也改了那個 slug 的那一行，否則 ❌ 擋 commit。生成器移植完成、陣列清空後這個檢查自動變 no-op。
 （2026-08-16 之前商家頁一律蓋匯出當天，而那些 HTML 其實從 8/04、8/06 起就沒動過——正是上面說的狼來了。）
+
+**已知限制**：首頁的指紋只看 `cards.data`，看不到 `index.html` 本身。純 HTML 改動（例如改連結、改版面）
+不會讓 `/` 的 lastmod 前進——Apps Script 端根本讀不到 repo 的 HTML。實務上影響很小（資料幾乎每次匯出都會變、
+`/` 的日期本來就常前進），真的在意就在改 HTML 那次順手改 repo 的 `sitemap.xml`（下次匯出會重生，但至少即時）。
+`/landing`、`/faq` 同理，日期是 `generateSitemapXml_` 裡的寫死常數，**改了那兩頁要手動更新**。
+
+### 內部連結一律用 clean URL（2026-08-16）
+
+Cloudflare Pages 會把 `/faq.html` 301 到 `/faq`，所以站內寫 `href="faq.html"` 等於每次都多繞一跳：
+浪費爬取預算，GSC「Page with redirect」報表被自家連結灌爆。**一律寫 `/`、`/?start`、`/faq`、`/faq#faq-10`、
+`/promos`、`/landing`**；`tools/preflight.sh` 第 1e 項會擋回頭路。
+2026-08-16 全站 66 個連結一次改完（index 8、faq 7、landing 3、商家頁各 8）——`promos.html` 因為是
+Apps Script 生成的，模板本來就寫 clean URL，是唯一沒中的頁。
+**代價**：`python3 -m http.server` 之類的本機靜態伺服器不做 clean URL 對應，本機點這些連結會 404
+（clean URL 是 Cloudflare Pages 的行為）。回歸腳本直接開 `index.html`，不受影響。
 
 **共用機制 `pmcStampedDate_(key, signature)`**：指紋與日期成對存在 Script Properties
 （`<KEY>_LAST_SIG` / `<KEY>_LAST_DATE`）；指紋相同就回上次那天，不同或首次才蓋 `pmcTodayISO_()` 並寫回。

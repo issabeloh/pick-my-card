@@ -44,6 +44,34 @@ for page in merchant/*.html; do
   fi
 done
 
+# ---- 1d) 商家頁改動 → MERCHANT_PILOT_PAGES 的 lastmod 必須同步（sitemap 誠實度）----
+# 那 6 頁是手動 commit 的靜態檔，Apps Script 端沒有內容可以指紋比對，日期只能手動維護
+# （見 docs/project/data-pipeline.md 第 10 節）。忘了改＝sitemap 對 Google 說「這頁沒動過」。
+# 生成器上線、MERCHANT_PILOT_PAGES 清空後，這個檢查會自動變成 no-op。
+GS=apps-script/cards-export.gs
+if [ -f "$GS" ]; then
+  gs_added=$(git diff HEAD -- "$GS" | grep '^+' | grep -v '^+++' || true)
+  for page in $(echo "$changed" | grep '^merchant/.*\.html$' || true); do
+    slug=$(basename "$page" .html)
+    if ! grep -q "slug: '$slug'" "$GS"; then continue; fi   # 已改由生成器產出 → 不需手動日期
+    if ! echo "$gs_added" | grep -q "slug: '$slug'"; then
+      echo "❌ $page 有改動，但 $GS 的 MERCHANT_PILOT_PAGES 沒更新 '$slug' 的 lastmod（sitemap 會對 Google 謊稱這頁沒動過）"; fail=1
+    fi
+  done
+fi
+
+# ---- 1e) 內部連結禁止指向 *.html（會 301 到 clean URL，GSC 報 Page with redirect）----
+# Cloudflare Pages 把 /faq.html 301 到 /faq，所以站內連 faq.html 等於每次都多繞一跳：
+# 浪費爬取預算、GSC「Page with redirect」報表被自家連結灌爆。一律寫 /、/faq、/promos、/landing。
+# （2026-08-16 全站 66 個連結一次改完；promos.html 由 Apps Script 生成、本來就是 clean URL。）
+for page in index.html faq.html landing.html merchant/*.html; do
+  [ -e "$page" ] || continue
+  bad=$(grep -oE 'href="(index|faq|promos|landing)\.html[^"]*"' "$page" || true)
+  if [ -n "$bad" ]; then
+    echo "❌ $page 有指向 *.html 的內部連結（會 301，請改 clean URL：/ 、/faq 、/promos 、/landing）：$(echo $bad | head -c 200)"; fail=1
+  fi
+done
+
 # ---- 2) cards.data 改動 → cards.version 必須同步更新 ----
 if has cards.data && ! has cards.version; then
   echo "❌ cards.data 有改動但 cards.version 沒更新（改成任何不同短字串，建議 YYYYMMDD-N；見 CARDS-DATA-CACHE-README.md）"; fail=1

@@ -2499,12 +2499,12 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
 // **改了 merchant/<slug>.html 就要一併改這裡的日期**，不改就等於沒通知 Google。
 // 生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
 const MERCHANT_PILOT_PAGES = [
-  { slug: '蝦皮', lastmod: '2026-08-06' },
-  { slug: 'momo', lastmod: '2026-08-06' },
-  { slug: '高鐵', lastmod: '2026-08-04' },
-  { slug: 'linepay', lastmod: '2026-08-04' },
-  { slug: '中華航空', lastmod: '2026-08-04' },
-  { slug: '中油', lastmod: '2026-08-04' }
+  { slug: '蝦皮', lastmod: '2026-08-16' },
+  { slug: 'momo', lastmod: '2026-08-16' },
+  { slug: '高鐵', lastmod: '2026-08-16' },
+  { slug: 'linepay', lastmod: '2026-08-16' },
+  { slug: '中華航空', lastmod: '2026-08-16' },
+  { slug: '中油', lastmod: '2026-08-16' }
 ];
 
 // 產生 sitemap.xml 全文。lastmod 一律是「該頁內容最後真的變動的日期」，不是匯出日期：
@@ -2518,8 +2518,8 @@ function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const today = pmcTodayISO_();
   const urls = [
     { loc: SITE_ORIGIN + '/', lastmod: homeUpdatedIso || today },
-    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
-    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
+    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-08-16' },
+    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-08-16' },
     { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
   // 商家頁：試水溫手動清單 + 生成器產出（merchantPages）。同 slug 兩邊都有時以生成頁為準
