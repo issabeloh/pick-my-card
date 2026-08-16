@@ -10,7 +10,8 @@
  *
  * ⚠️ cashbackModel 的分界：
  *   - 單層安全模型（純指定通路→留空、排除型→'rate'、國外指定→海外模型）：程式產出
- *   - 跨槽疊加（rate+rate_1+basic 這類）：程式無法從文字推導，標黃留空、附完整原文引用，人工手填
+ *   - 跨槽疊加（rate+rate_1+basic 這類）與「國外指定加碼」：程式無法從文字推導，標黃留空、
+ *     在「程式備註」列出候選與選用時機，人工手填（2026-08-16 起不再瞎猜一個 model 填進去）
  *   - 固定槽位 14/21/22（廣告/國內/國外）：程式依卡片基本欄位「自動生成固定模板」
  *
  * 使用方式：
@@ -22,7 +23,8 @@
  *   3. 再執行一次 → 每一列各產出「4-待審核（新卡-基本）」1 列與「4-待審核（新卡-組別）」數列
  *      E 欄「狀態」由程式回填：「已解析…」下次會跳過（清空該格即可重跑）、「失敗：…」下次自動重試
  *      單次執行最多 CARD_PARSER_CONFIG.maxRowsPerRun 列，沒跑完再按一次選單接著跑
- *   4. 審：黃底＝AI 沒把握或 cashbackModel 需你手填；對照 evidence 欄驗證，不必回官網
+ *   4. 審：黃底＝AI 沒把握或 cashbackModel 需你手填；先看「回饋組成原文」快速理解結構，
+ *      要驗證再對照最右邊的 evidence 欄，都不必回官網
  */
 
 /************** 設定區 **************/
@@ -62,9 +64,17 @@ const CARD_BASIC_FIELDS = [
 ];
 
 // 組別待審核表欄位（順序貼近 Cards Data 槽位，方便你橫向填回去）
+//
+// ⚠️ 2026-08-16 改版（站長要求）：
+//   ・刪掉「cashbackModel需手填?」——它卡在 rate…hideInDisplay 這段「要複製到正式表」的
+//     欄位正中間，每次複製都會被一起帶過去。它的訊號改寫進「程式備註」（在複製區右邊）。
+//   ・新增「回饋組成原文」，**刻意放在 group_kind 之後、rate 之前**——同樣是為了讓
+//     複製區（rate → hideInDisplay）保持連續乾淨。內容是 AI 一句話講清楚這組的率怎麼來的，
+//     省得每次都要翻最右邊那一大段 evidence 才看得懂回饋結構。
+//   改了欄位＝舊分頁表頭對不上（本表是照位置 appendRow），writeGroupReview_ 有擋。
 const GROUP_REVIEW_HEADER = [
-  '核准', '解析時間', 'card_id', '建議槽位N', 'group_kind',
-  'rate', 'cashbackModel', 'cashbackModel需手填?', 'cap(消費上限)', 'minSpend', 'maxSpend',
+  '核准', '解析時間', 'card_id', '建議槽位N', 'group_kind', '回饋組成原文',
+  'rate', 'cashbackModel', 'cap(消費上限)', 'minSpend', 'maxSpend',
   'items', 'category', 'conditions', 'period_start', 'period_end', 'hideInDisplay',
   '程式備註', 'needs_review', 'AI想問的問題', '原文引用'
 ];
@@ -129,11 +139,13 @@ function parseNewCard() {
       writeBasicReview_(basic, link, idCollision);
       const cardId = basic.id || idHint || '(未定id)';
       const specialCount = writeGroupReview_(cardId, groups, basic);
+      const droppedZeroRate = writeGroupReview_.lastSkipped || 0;   // 非百分比回饋（定額/折扣/券）
       const flagged = groups.filter(function (g) { return g.needs_review; }).length;
 
       input.getRange(rowNum, CARD_PARSER_CONFIG.statusCol).setValue(
         '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + cardId);
-      results.push('列' + rowNum + '　' + cardId + '：組別 ' + groups.length + ' 組、固定槽位 ' + specialCount + ' 組' +
+      results.push('列' + rowNum + '　' + cardId + '：組別 ' + (groups.length - droppedZeroRate) + ' 組、固定槽位 ' + specialCount + ' 組' +
+        (droppedZeroRate ? '、略過 ' + droppedZeroRate + ' 組非百分比回饋（定額/折扣/折價券）' : '') +
         (flagged ? '、' + flagged + ' 組 AI 沒把握' : '') +
         (idCollision ? '　⚠️ id 已存在於 Cards Data，若是新卡請改 id' : ''));
       doneCount++;
@@ -154,7 +166,7 @@ function parseNewCard() {
   if (remaining) msg += '⏳ 還有 ' + remaining + ' 列沒跑（單次上限 ' + CARD_PARSER_CONFIG.maxRowsPerRun +
     ' 列，避免 Apps Script 6 分鐘逾時）——再按一次選單就會接著跑。\n';
   if (failures.length) msg += '\n❌ 失敗（E 欄已記錄，下次執行會自動重試）：\n' + failures.join('\n') + '\n';
-  msg += '\n黃底列＝需你確認；cashbackModel 標「需手填」的請參考同卡其他組（原文引用欄已附完整依據）。';
+  msg += '\n黃底列＝需你確認；「程式備註」寫著需手填 cashbackModel 的，看同一列的「回饋組成原文」就知道該填什麼。';
 
   ss.toast('解析 ' + doneCount + ' 列' + (remaining ? '，還剩 ' + remaining + ' 列' : ''), '新卡解析完成', 8);
   ui.alert(msg);
@@ -184,6 +196,11 @@ function extractCard_(rawText, idHint, generalText) {
     'F. 「一般國內消費」「一般國外消費」「廣告平台(Meta/Google)」這三種【不要】放進 groups——它們由程式從基本欄位生成固定槽位。',
     'G. 【排除領券型】需到 App/官網「領取優惠券、領券」才享的活動，不是回饋組別，不要放進 groups（注意：只需「登錄」的活動仍算，要放）。',
     'H. 【排除新戶型】僅新戶/核卡限定的活動不要放進 groups（那是新戶活動，另有解析器）。',
+    'I. 【排除非百分比回饋】以下三種一律【不要】放進 groups——本站的計算模型是「率×金額」，表達不了它們：',
+    '   ① 定額型：消費滿 X 元送固定 Y 元/Y 點（如「滿3萬送500點」「滿1,500送50點」）；',
+    '   ② 折扣型：打折、現折、OFF（如「享10%OFF」「單筆現折200元」「95折」）；',
+    '   ③ 券類：折價券、優惠券、好禮即享券、抽獎、贈品、貴賓室/接送等權益。',
+    '   判準很簡單：算不出一個「每消費 100 元回饋幾元」的固定百分比，就不是回饋組別。',
     '',
     '【basic 基本資料】',
     '1. id：小寫英文加連字號；' + (idHint ? '優先用提示「' + idHint + '」。' : '依銀行簡稱與卡名自擬。'),
@@ -212,6 +229,12 @@ function extractCard_(rawText, idHint, generalText) {
     'Y3. 商家名裡本身就有的標點（如「鈺善閣．素．養生懷石」的間隔號）保持原樣，不要當成分隔符拆成多家。',
     'Y4. 官網用「※」「*」補的但書（如「位於百貨公司/商場內或透過第三方串接之商店交易…恕不適用」「排除百貨店、店中店」）',
     '    不是商家，不要進 items——精簡後寫進該組的 conditions。',
+    'Y5. 【國家前綴】這一組限定在某個國家消費才享（日本/韓國…），而該品牌【台灣也有據點】時，',
+    '    items 要加國家前綴，否則使用者在台灣搜「UNIQLO」會誤中這張只在日本適用的卡。',
+    '    ✅ 要加：日本UNIQLO、日本松屋、日本壽司郎、日本牛角、日本松本清、日本無印良品、日本TOYOTA Rent a Car、日本樂天旅遊',
+    '    ✅ 不用加（台灣沒有據點，名稱本身已無歧義）：東橫INN、勝烈亭、六歌仙燒肉、吉伊卡哇樂園、BicCamera、Yodobashi',
+    '    ✅ 不用加（名稱本身已含國名或只在該國通用）：日本航空、JR鐵路公司、SUICA、PASMO、ICOCA、NIPPON RENT-A-CAR',
+    '    判準：「台灣人在台灣也可能刷到同名商店嗎？」會 → 加前綴；不會 → 不加。拿不準就加，寧可多加也不要漏。',
     '',
     '【三個最常寫錯的欄位：basicConditions／annualFee／feeWaiver】',
     'X1. basicConditions＝「要拿到基本回饋，持卡人必須先做到什麼」，通常很短、一句就夠。',
@@ -233,13 +256,18 @@ function extractCard_(rawText, idHint, generalText) {
     '    ⛔ 不要寫「第一年免年費」（那屬 annualFee）、不要用分號列點。',
     '',
     '【groups 每組欄位】',
-    '12. rate：回饋率「百分比數字」——5% → 5、1.5% → 1.5、0.67% → 0.67，【絕不】填小數比例（不是 0.05、不是 0.0067），也【不要】自己把「定額回饋金額÷消費額」算成率。若官網是「消費滿X回饋固定Y元」的定額回饋（不是百分比），rate 留空、needs_review=true、在 review_question 註明「定額回饋，非百分比率、非分級」。',
+    '12. rate：回饋率「百分比數字」——5% → 5、1.5% → 1.5、0.67% → 0.67，【絕不】填小數比例（不是 0.05、不是 0.0067），也【不要】自己把「定額回饋金額÷消費額」算成率。算不出百分比率的活動見總則 I，整組不要輸出。',
     '    items 適用通路陣列（實體/網購標明）——填法見下面【items 只放實際商家名】；category 分類標題；period_start/period_end YYYY/M/D。',
     '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
     '13a. 分級門檻（同通路單筆滿額有更高回饋、未滿有較低回饋）：拆成兩組。高回饋組填 min_spend＝門檻；低回饋組填 max_spend＝同一個門檻數字（不加一減一）。但若「未滿門檻只是落回基本回饋」（沒有獨立的較低率），則【不要】建低回饋那組，只建高回饋組填 min_spend。',
+    '13b. 累積消費級距（同一活動依累積金額分多段不同回饋率，如「4萬~7.9萬 0.5%／8萬~15.9萬 0.8%／16萬以上 1.5%」）：',
+    '     【每一段各自成一組】，min_spend＝該段下界、max_spend＝【下一段的下界】（排他，不要填 79,999 這種減一的數字；最高一段的 max_spend 留空）。',
+    '     ✅ 正確：三組——(0.5, min 40000, max 80000)、(0.8, min 80000, max 160000)、(1.5, min 160000, max 空)。',
+    '     ⛔ 級距的金額範圍【絕不】寫進 conditions（那是 min_spend/max_spend 的工作），conditions 只留登錄之類的真條件。',
     '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
     '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫詳見官網）；',
-    '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）。',
+    '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）；',
+    '    國外消費要收的交易服務費（如「需收取1.5%國外交易服務費」——這會直接吃掉回饋，一定要寫）。',
     '    【不要寫進 conditions】：單筆滿額門檻（放 min_spend）；一般的回饋上限（已由 cap 表達，只有「以信用額度加計NT$X萬」這種特殊上限定義才寫）；免責/罰則樣板（喪失資格、銀行保留權利）。',
     '    「認列為國內/國外通路」只在特例寫：同一通路難判國內外、且國內外回饋率不同而拆成兩組時，在國外那組註明「認列為國外通路」。',
     '14a. conditions 每一項都要「精簡到剩下動作本身」：拿掉主詞（「◯◯卡持卡人」「本行持卡人」）、',
@@ -250,6 +278,11 @@ function extractCard_(rawText, idHint, generalText) {
     '15. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
     '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
     '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
+    '18. structure_note【回饋組成原文】：用一句話講清楚「這組的率是怎麼來的」，讓人不用翻 evidence 就懂回饋結構。要寫到的重點：',
+    '    這個率是合計還是單一成分、疊在誰之上、各成分的上限分別是多少、有沒有額外費用會吃掉回饋。',
+    '    ✅ 範例：「疊在日本一般消費 2.5% 之上，合計 8.5%；加碼 6% 每期上限 500 元，2.5% 部分無上限」',
+    '    ✅ 範例：「日本地區消費的完整率，不與其他組疊加；另收 1.5% 國外交易服務費」',
+    '    ⛔ 不要只複製官網整段（那是 evidence 的工作），也不要寫成「詳見官網」。',
     '',
     readKeywordAnchors_(),   // 【關鍵字對應】——從「設定-關鍵字對應」分頁動態載入，站長可自行維護
     '',
@@ -267,6 +300,7 @@ function extractCard_(rawText, idHint, generalText) {
       period_end: { type: 'STRING', description: 'YYYY/M/D' },
       group_kind: { type: 'STRING', enum: ['指定通路加碼', '國外指定加碼', '排除型', '其他'] },
       is_stacked: { type: 'BOOLEAN' },
+      structure_note: { type: 'STRING', description: '一句話說明這組的率怎麼組成／疊在誰之上／各成分上限／有無額外費用' },
       min_spend: { type: 'NUMBER', description: '單筆最低消費門檻金額' },
       max_spend: { type: 'NUMBER', description: '單筆消費金額上限（少見）' },
       cap_spend: { type: 'NUMBER' },
@@ -275,7 +309,7 @@ function extractCard_(rawText, idHint, generalText) {
       needs_review: { type: 'BOOLEAN' },
       review_question: { type: 'STRING' }
     },
-    required: ['rate', 'group_kind', 'evidence', 'needs_review']
+    required: ['rate', 'group_kind', 'structure_note', 'evidence', 'needs_review']
   };
 
   const schema = {
@@ -399,22 +433,47 @@ function readKeywordAnchors_() {
 }
 
 /************** 程式：依 group_kind / is_stacked 決定 cashbackModel **************/
-function deriveGroupModel_(g) {
+// ⚠️ 2026-08-16：「國外指定加碼」原本無條件回 'rate>basic>overseasBonusRate'。那個字串本身
+//    是合法的（cashback-engine.md 有記載的 waterfall 寫法），但**只有卡片自己填了
+//    overseasBonusRate 欄位時才成立**，套在沒有那個欄位的卡上是錯的。實例：玉山熊本熊卡的
+//    「日本一般消費 2.5%」被判成國外指定加碼，套了那個 model，站長改成 `rate`——因為那 2.5%
+//    是「日本這個通路的完整率、無上限、不跟別的疊」（該卡真正的一般消費只有 0.5%），
+//    正是 `rate`（排除型）的語意。
+//    一個 group_kind 對應不到唯一的 model，所以**不再猜**：留空，改在備註列出候選與選用時機。
+function deriveGroupModel_(g, basic) {
   if (g.is_stacked) {
     return { model: '', hide: '', modelNeedsHuman: true,
-      note: '疑似疊加組，cashbackModel 請參考同卡其他組手填（如 rate+rate_1+basic）' };
+      note: '疊加組：cashbackModel 請手填。同卡疊在第 N 槽之上就寫 rate+rate_N（如 rate+rate_1）；若還要疊基本回饋再加 +basic' };
   }
   switch (g.group_kind) {
     case '排除型':
       return { model: 'rate', hide: '', modelNeedsHuman: false, note: '排除型：cap 內用本組 rate、溢出算 0' };
-    case '國外指定加碼':
-      return { model: 'rate>basic>overseasBonusRate', hide: '', modelNeedsHuman: true,
-        note: '國外指定加碼，請確認基準/加碼成分正確' };
+    case '國外指定加碼': {
+      // 候選清單依這張卡實際有哪些海外欄位給，避免建議一個卡片根本沒有的成分
+      const hasBonus = num_(basic && basic.overseasBonusRate) > 0;
+      const hasBase = num_(basic && basic.overseasCashback) > 0;
+      const cands = ['rate＝這個通路的完整率、無上限也不跟別的疊（最常見）'];
+      if (hasBase) cands.push('rate+overseasCashback＝本組加碼疊在海外基準率上');
+      if (hasBonus) cands.push('rate>basic>overseasBonusRate＝瀑布式，cap 用完才落到下一層');
+      return { model: '', hide: '', modelNeedsHuman: true,
+        note: '國外指定加碼：cashbackModel 請手填，候選——' + cands.join('｜') +
+          (hasBase || hasBonus ? '' : '（這張卡沒填 overseasCashback／overseasBonusRate，通常就是 rate）') };
+    }
     case '指定通路加碼':
       return { model: '', hide: '', modelNeedsHuman: false, note: '' };
     default:
       return { model: '', hide: '', modelNeedsHuman: false, note: '' };
   }
+}
+
+// conditions 正規化：AI 常常無視 prompt 用半形「; 」當分隔（實測 2026-08-16 熊本熊卡兩處都是）。
+// 這種格式問題不該靠 prompt 拜託，程式統一收尾：分隔符一律全形「；」、去掉結尾句號與多餘空白。
+function normalizeConditions_(s) {
+  return String(s == null ? '' : s)
+    .replace(/\s*[;；]\s*/g, '；')   // 半形/全形分號 + 前後空白 → 全形分號
+    .replace(/；+/g, '；')            // 連續分號收成一個
+    .replace(/^；|[；。\s]+$/g, '')   // 去掉頭尾的分號、句號、空白
+    .trim();
 }
 
 // 待審核-基本表加新欄位時：舊分頁的表頭少一欄，直接 appendRow 會整列錯位一格。
@@ -480,24 +539,55 @@ function writeGroupReview_(cardId, groups, basic) {
     sheet = ss.insertSheet(CARD_PARSER_CONFIG.groupReviewSheet);
     sheet.appendRow(GROUP_REVIEW_HEADER);
     sheet.setFrozenRows(1);
+  } else {
+    // 2026-08-16 欄位改版（刪「cashbackModel需手填?」、加「回饋組成原文」）。本表是照位置
+    // appendRow，舊表頭直接寫下去會整列錯位——而這張表的用途就是整段複製到 Cards Data，
+    // 錯位的資料看起來完全正常、貼過去才會發現。寧可停下來講清楚。
+    const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+      .map(function (h) { return String(h).trim(); });
+    if (cur.indexOf('cashbackModel需手填?') >= 0 || cur.indexOf('回饋組成原文') < 0) {
+      throw new Error('「' + CARD_PARSER_CONFIG.groupReviewSheet + '」的表頭是舊版（2026-08-16 前）。' +
+        '這張表是照欄位位置寫入的，硬寫下去整列會錯位。' +
+        '請把該分頁整個刪掉讓它自動重建（那是暫存審核表，刪掉不影響任何正式資料），再跑一次解析。');
+    }
   }
   const now = new Date();
 
   // 一般組別：編號 1 起、跳過保留槽 14/21/22
   let slot = 1;
+  let skipped = 0;   // 非百分比回饋（定額/折扣/折價券）被略過的組數
   const nextSlot = function () { while (RESERVED_SLOTS.indexOf(slot) !== -1) slot++; return slot++; };
   (groups || []).forEach(function (g) {
-    const cap = (g.cap_spend != null && g.cap_spend !== '') ? Math.round(num_(g.cap_spend))
+    // 站長 2026-08-16 定案：rate 是 0/空的組別不要列出來——那是「滿額送固定金額」「打折」
+    // 「折價券」這類非百分比回饋，本站的計算模型表達不了，列出來只是佔位子讓人一列一列刪。
+    // ⚠️ 這條**只管 AI 解析出來的組別**；固定模板 14/21/22 的 rate 本來就刻意是 0
+    //    （率由 cashbackModel 的成分決定），那是 appendSpecialSlots_ 另外走的路徑，不受影響。
+    if (num_(g.rate) <= 0) { skipped++; return; }
+
+    // cap 消費上限：官網直接講就用；否則由「回饋金額上限 ÷ 率」換算。
+    // ⚠️ 級距組（有 max_spend）要再取小值：max_spend 是排他的（引擎判 amount >= maxSpend
+    //    就不匹配，見 js/cashback-engine.js「滿額門檻」一段），所以這一級最大的合格消費額
+    //    是 max_spend - 1。例：0.5% 級距 4萬~未滿8萬、回饋上限 3,000 點
+    //    → 換算 600,000 但實際刷不到，cap 應為 79,999。
+    let cap = (g.cap_spend != null && g.cap_spend !== '') ? Math.round(num_(g.cap_spend))
       : spendCapFromReward_(g.cap_reward, g.rate);
-    const d = deriveGroupModel_(g);
+    const tierMax = num_(g.max_spend);
+    if (tierMax > 0) {
+      const ceiling = tierMax - 1;
+      cap = (cap === '' || cap == null) ? ceiling : Math.min(num_(cap), ceiling);
+    }
+
+    const d = deriveGroupModel_(g, basic);
     appendGroupRow_(sheet, now, cardId, nextSlot(), g.group_kind || '', {
+      structure: g.structure_note || '',
       rate: (g.rate != null ? g.rate : ''), model: d.model, modelNeedsHuman: d.modelNeedsHuman,
       cap: cap, minSpend: (g.min_spend != null ? g.min_spend : ''), maxSpend: (g.max_spend != null ? g.max_spend : ''),
       items: (g.items || []).join(','), category: g.category || '',
-      conditions: g.conditions || '', ps: g.period_start || '', pe: g.period_end || '', hide: d.hide,
+      conditions: normalizeConditions_(g.conditions), ps: g.period_start || '', pe: g.period_end || '', hide: d.hide,
       note: d.note, needsReview: g.needs_review, reviewQ: g.review_question || '', evidence: g.evidence || ''
     });
   });
+  writeGroupReview_.lastSkipped = skipped;   // 呼叫端拿去回報「略過了幾組」
 
   // 固定槽位（依基本欄位生成）
   return appendSpecialSlots_(sheet, now, cardId, basic || {});
@@ -552,11 +642,14 @@ function appendSpecialSlots_(sheet, now, cardId, basic) {
 }
 
 // 依 GROUP_REVIEW_HEADER 順序寫一列，黃底條件：needs_review 或 cashbackModel 需手填
+// （「需手填」不再有自己的欄位，改成併進「程式備註」的一句話＋整列標黃）
 function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
-  const row = ['', now, cardId, slotN, kind,
-    f.rate, f.model, f.modelNeedsHuman ? 'TRUE' : '', f.cap, f.minSpend, f.maxSpend,
+  const note = [f.modelNeedsHuman ? '⚠️ cashbackModel 需手填' : '', f.note || '']
+    .filter(function (s) { return s; }).join('；');
+  const row = ['', now, cardId, slotN, kind, f.structure || '',
+    f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
     f.items, f.category, f.conditions, f.ps, f.pe, f.hide,
-    f.note || '', f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || ''];
+    note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || ''];
   sheet.appendRow(row);
   if (f.needsReview || f.modelNeedsHuman) {
     sheet.getRange(sheet.getLastRow(), 1, 1, row.length).setBackground('#fff3cd');

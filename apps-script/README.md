@@ -664,6 +664,12 @@ voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_te
 | 依賴 | 與 `benefits-parser.gs` 同專案，共用 `callGemini_` / `getCardsSheet_` / `getCardIds_` |
 | 輸入 | `3-貼上原文（新卡）` 分頁，**第 2 列起每一列＝一張卡**（A 原文、B id 提示選填、C 網址選填、D 一般消費說明選填、E 狀態由程式回填） |
 | 產出 | `4-待審核（新卡-基本）`（每張卡 1 列＝ Cards Data 固定欄位）＋`4-待審核（新卡-組別）`（垂直，一組一列） |
+
+> **⚠️ 2026-08-16 組別表欄位改版**：刪掉 `cashbackModel需手填?`、新增 `回饋組成原文`。
+> 理由：前者卡在 `rate`→`hideInDisplay` 這段「要整段複製到 Cards Data」的欄位正中間，每次複製都被帶過去；
+> 後者刻意放在 `group_kind` 之後、`rate` 之前，同樣是為了讓複製區保持連續乾淨。
+> **舊分頁請整個刪掉讓它自動重建**（那是暫存審核表，刪掉不影響正式資料）——沒刪的話
+> `writeGroupReview_` 會直接報錯擋下，不會產生「看起來正常、貼到正式表才整排錯位」的資料。
 | 入口 | 選單「🤖 權益自動化 → 解析新卡：3-貼上原文 → 4-待審核（基本＋組別）」 |
 
 ### 輸入（新卡解析輸入分頁）：一列＝一張卡，可一次貼多列
@@ -721,10 +727,21 @@ AI 從 `BANK_SHORT_NAMES`（`card-benefits-parser.gs`，站長給的填寫範例
 
 ### cashbackModel 分工（最重要）
 
-- **AI 只抽事實 + 語意旗標**：rate/items/category/條件/期間/cap 金額，`group_kind`（指定通路加碼／國外指定加碼／排除型／其他）、`is_stacked`
-- **程式產出安全模型**：排除型→`rate`；國外指定→`rate>basic>overseasBonusRate`（標需確認）；指定通路加碼→留空（cap 內 rate、溢出 basic）
-- **⚠️ 跨槽疊加（`rate+rate_1+basic`）程式無法從文字推導** → 標黃、留空、`cashbackModel需手填?`＝TRUE、原文引用附完整依據，人工手填
-- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%`
+- **AI 只抽事實 + 語意旗標**：rate/items/category/條件/期間/cap 金額，`group_kind`（指定通路加碼／國外指定加碼／排除型／其他）、`is_stacked`、`structure_note`（回饋組成一句話）
+- **程式產出安全模型**：排除型→`rate`；指定通路加碼→留空（cap 內 rate、溢出 basic）
+- **⚠️ 跨槽疊加（`rate+rate_1+basic`）與「國外指定加碼」程式都無法從文字推導** → 標黃、model 留空、
+  在「程式備註」列出候選與選用時機，人工手填
+  （2026-08-16 改：國外指定加碼原本無條件填 `rate>basic>overseasBonusRate`。那字串本身合法，但**只有卡片
+  自己填了 `overseasBonusRate` 才成立**。實例：熊本熊卡「日本一般消費 2.5%」被套上它，正確答案是 `rate`——
+  那 2.5% 是「日本這個通路的完整率、無上限、不與別的疊」，而該卡真正的一般消費只有 0.5%。
+  一個 group_kind 對應不到唯一 model，所以不再猜）
+- **cap 消費上限一律程式算**：官網給消費上限→直接用；只給回饋金額上限→`÷加碼率%`；
+  **級距組（有 `max_spend`）再取小值＝`max_spend − 1`**（`max_spend` 是排他的，引擎判 `amount >= maxSpend` 就不匹配）。
+  例：0.5% 級距 4萬~未滿8萬、回饋上限 3,000 點 → 換算 600,000 但實際刷不到，cap 應為 79,999
+- **conditions 分隔符程式正規化**：AI 常無視 prompt 用半形 `; `，寫入前一律轉全形「；」、去尾句號（`normalizeConditions_`）
+- **rate 是 0／空的組別直接不輸出**（2026-08-16 站長定案）：定額型（滿 X 送固定 Y 元）、折扣型（打折/現折/OFF）、
+  券類（折價券/抽獎/贈品/權益）本站的「率×金額」模型表達不了，列出來只是佔位子。
+  略過幾組會寫在解析完成的視窗裡。⚠️ 只管 AI 組別；固定槽位 14/21/22 的 `rate=0` 是刻意的，不受影響
 
 ### 固定槽位 14/21/22（程式依基本欄位自動生成，不經 AI）
 
@@ -777,7 +794,8 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 
 ### 審核與套用
 
-1. 開 `4-待審核（新卡-基本）` + `4-待審核（新卡-組別）`；黃底＝AI 沒把握或 cashbackModel 需你手填
+1. 開 `4-待審核（新卡-基本）` + `4-待審核（新卡-組別）`；黃底＝AI 沒把握或 cashbackModel 需你手填。
+   先看「回饋組成原文」欄（一句話講清楚這組的率怎麼來的），要驗證再看最右邊的原文引用
 2. 對照 `原文引用` 欄驗證（evidence 已要求完整到不必回官網）
 3. 基本表那列貼進 Cards Data 固定欄位；組別逐組把值填進 `rate_N/cashbackModel_N/cap_N/minSpend_N/maxSpend_N/items_N/category_N/conditions_N/periodStart_N/periodEnd_N/hideInDisplay_N`（N＝建議槽位；14/21/22 用固定槽號）
 4. 之後照現有流程 `runQACheck → exportToJSON`，搭配 `docs/ops/regression.md` 人工回歸驗算
