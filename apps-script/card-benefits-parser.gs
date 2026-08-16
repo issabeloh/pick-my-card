@@ -257,6 +257,12 @@ function extractCard_(rawText, idHint, generalText) {
     '',
     '【groups 每組欄位】',
     '12. rate：回饋率「百分比數字」——5% → 5、1.5% → 1.5、0.67% → 0.67，【絕不】填小數比例（不是 0.05、不是 0.0067），也【不要】自己把「定額回饋金額÷消費額」算成率。算不出百分比率的活動見總則 I，整組不要輸出。',
+    '12a. ⚠️【免收國外交易服務費不是回饋，不可算進 rate】官網常把「免收/回饋 1.5% 國外交易服務費」加進「最高享 X%」的標題數字裡。',
+    '     那 1.5% 是「少付一筆費用」，不是回到持卡人手上的回饋——而本站對其他卡也從來不扣這筆費用，把它算進來這張卡就會被高估。',
+    '     ✅ 正確：官網「最高享5%優惠／含日本PayPay消費3.5%+免收1.5%國外交易服務費」→ rate 填 **3.5**（不是 5），',
+    '        「免收1.5%國外交易服務費」寫進 conditions，完整的官網拆解句放 structure_note。',
+    '     同理，官網若說「需收取1.5%國外交易服務費」，也【不要】從 rate 裡扣掉——一樣只寫進 conditions。',
+    '     一句話：rate 只放「回饋率本身」，所有跟國外交易服務費有關的加減一律不動 rate。',
     '    items 適用通路陣列（實體/網購標明）——填法見下面【items 只放實際商家名】；category 分類標題；period_start/period_end YYYY/M/D。',
     '13. min_spend：單筆最低消費門檻金額（如「單筆滿3,000」→3000）；max_spend：單筆消費金額上限。⚠️「單筆滿額」門檻一律放這裡，【絕不】寫進 conditions。',
     '13a. 分級門檻（同通路單筆滿額有更高回饋、未滿有較低回饋）：拆成兩組。高回饋組填 min_spend＝門檻；低回饋組填 max_spend＝同一個門檻數字（不加一減一）。但若「未滿門檻只是落回基本回饋」（沒有獨立的較低率），則【不要】建低回饋那組，只建高回饋組填 min_spend。',
@@ -267,7 +273,7 @@ function extractCard_(rawText, idHint, generalText) {
     '14. conditions 達成/限定條件——用全形分號「；」分隔、逐項精簡、無句號，只寫：',
     '    付款方式限定（如「限使用實體卡、LINE Pay、Apple Pay」）；自動扣繳/電子帳單設定；登錄與限量（有日期名額就寫出來，如「需登錄(7/23,8/23 12:00起)，限量」，不要只寫詳見官網）；',
     '    MCC code 認定；排除項目（如「排除餐券」「排除分期、第三方支付」）；可疊加提示（如「可與X權益疊加」）；條件式增減（如「若非Visa卡則-10%」）；',
-    '    國外消費要收的交易服務費（如「需收取1.5%國外交易服務費」——這會直接吃掉回饋，一定要寫）。',
+    '    國外交易服務費的有無（「需收取1.5%國外交易服務費」會吃掉回饋、「免收1.5%國外交易服務費」是額外好處，兩種都要寫）。',
     '    【不要寫進 conditions】：單筆滿額門檻（放 min_spend）；一般的回饋上限（已由 cap 表達，只有「以信用額度加計NT$X萬」這種特殊上限定義才寫）；免責/罰則樣板（喪失資格、銀行保留權利）。',
     '    「認列為國內/國外通路」只在特例寫：同一通路難判國內外、且國內外回饋率不同而拆成兩組時，在國外那組註明「認列為國外通路」。',
     '14a. conditions 每一項都要「精簡到剩下動作本身」：拿掉主詞（「◯◯卡持卡人」「本行持卡人」）、',
@@ -278,11 +284,13 @@ function extractCard_(rawText, idHint, generalText) {
     '15. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
     '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
     '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
-    '18. structure_note【回饋組成原文】：用一句話講清楚「這組的率是怎麼來的」，讓人不用翻 evidence 就懂回饋結構。要寫到的重點：',
-    '    這個率是合計還是單一成分、疊在誰之上、各成分的上限分別是多少、有沒有額外費用會吃掉回饋。',
-    '    ✅ 範例：「疊在日本一般消費 2.5% 之上，合計 8.5%；加碼 6% 每期上限 500 元，2.5% 部分無上限」',
-    '    ✅ 範例：「日本地區消費的完整率，不與其他組疊加；另收 1.5% 國外交易服務費」',
-    '    ⛔ 不要只複製官網整段（那是 evidence 的工作），也不要寫成「詳見官網」。',
+    '18. structure_note【回饋組成原文】：欄名的重點是「原文」——',
+    '    ⭐【第一優先】官網通常會有一句把「最高 X%」拆解成各成分的話，**逐字照抄那一句**（可去掉「※」開頭符號，其餘一字不改）。',
+    '       這種句子長這樣：「最高回饋含：日本一般消費2.5%＋指定日本商店加碼6%＋日本實體滿額1.5%玉山e point（上限3,000點）」',
+    '       「含日本PayPay消費3.5%+免收1.5%國外交易服務費」「20% = 指定五大通路加碼10% +新戶網路消費加碼7%+…」。',
+    '       看到「最高…含：」「X% = A% + B%」「含…＋…」這類拆解式，一律照抄，【不要】自己改寫、精簡或換算。',
+    '    ・找不到那種拆解句時，才自己寫一句：這個率是合計還是單一成分、疊在誰之上、各成分上限、有無額外費用。',
+    '    ⛔ 不要複製整段注意事項（那是 evidence 的工作），也不要寫「詳見官網」。',
     '',
     readKeywordAnchors_(),   // 【關鍵字對應】——從「設定-關鍵字對應」分頁動態載入，站長可自行維護
     '',
@@ -466,6 +474,37 @@ function deriveGroupModel_(g, basic) {
   }
 }
 
+// 級距組的 max_spend 補齊（2026-08-16 第二輪：prompt 教了，AI 三級距還是只填中間那級）。
+// 級距的定義本來就是「這一級的上界＝下一級的下界」，所以這是**算得出來的**，不必靠 AI 聽話。
+//
+// 分組依據：category ＋ 活動期間都一樣、且都有 min_spend ＝ 同一個活動的不同級距。
+// 排好序後，每一級的 max_spend ← 下一級的 min_spend；最高一級維持空白（無上界）。
+// ⚠️ 三道保險，避免把「剛好同分類但不是級距」的組別亂接起來：
+//    1. 只補**空的** max_spend，AI 有填就尊重它
+//    2. category 空白的不分組（沒有可靠的分組依據就不要猜）
+//    3. 同一組 key 底下少於 2 級的不處理（單一組沒有「下一級」可言）
+function fillTierMaxSpend_(groups) {
+  const buckets = {};
+  (groups || []).forEach(function (g) {
+    if (!g || num_(g.min_spend) <= 0) return;
+    const cat = String(g.category || '').trim();
+    if (!cat) return;
+    const key = cat + '｜' + (g.period_start || '') + '｜' + (g.period_end || '');
+    (buckets[key] = buckets[key] || []).push(g);
+  });
+  Object.keys(buckets).forEach(function (key) {
+    const tiers = buckets[key];
+    if (tiers.length < 2) return;
+    tiers.sort(function (a, b) { return num_(a.min_spend) - num_(b.min_spend); });
+    for (let i = 0; i < tiers.length - 1; i++) {
+      const next = num_(tiers[i + 1].min_spend);
+      if (num_(tiers[i].max_spend) <= 0 && next > num_(tiers[i].min_spend)) {
+        tiers[i].max_spend = next;   // 排他上界：引擎判 amount >= maxSpend 就不匹配
+      }
+    }
+  });
+}
+
 // conditions 正規化：AI 常常無視 prompt 用半形「; 」當分隔（實測 2026-08-16 熊本熊卡兩處都是）。
 // 這種格式問題不該靠 prompt 拜託，程式統一收尾：分隔符一律全形「；」、去掉結尾句號與多餘空白。
 function normalizeConditions_(s) {
@@ -552,6 +591,7 @@ function writeGroupReview_(cardId, groups, basic) {
     }
   }
   const now = new Date();
+  fillTierMaxSpend_(groups);   // 級距組的 max_spend 由下一級的 min_spend 補齊（AI 常漏填）
 
   // 一般組別：編號 1 起、跳過保留槽 14/21/22
   let slot = 1;
@@ -602,14 +642,24 @@ function appendSpecialSlots_(sheet, now, cardId, basic) {
   let count = 0;
 
   // 14 廣告：一般消費未明確排除廣告時才建（'是'＝有排除→不建，slot 14 留空）
+  // ⚠️ 2026-08-16 修正（站長回報）：model 原本**寫死**成 overseasCashback+overseasBonusRate，
+  //    但 category 早就會依 hasOverseas 切換。卡片根本沒有海外回饋設定時，廣告消費就是一般
+  //    國內消費，model 硬填海外模型是錯的。現在 model／category／cap／期間四者**一起**切換：
+  //      有海外設定 → overseasCashback+overseasBonusRate ＋「國外消費特列項目」＋海外 cap/期間
+  //      沒有       → basic+domesticBonusRate         ＋「一般回饋特列項目」＋國內 cap、期間留空
   if (basic.general_excludes_ads !== '是') {
     const unknown = (basic.general_excludes_ads !== '否');  // 未提及或空 → 需你確認
     appendGroupRow_(sheet, now, cardId, 14, '（固定模板·廣告）', {
-      rate: 0, model: 'overseasCashback+overseasBonusRate', modelNeedsHuman: false,
-      cap: overseasCap, minSpend: '', maxSpend: '', items: 'meta廣告,google廣告',
+      rate: 0,
+      model: hasOverseas ? 'overseasCashback+overseasBonusRate' : 'basic+domesticBonusRate',
+      modelNeedsHuman: false,
+      cap: hasOverseas ? overseasCap : domesticCap, minSpend: '', maxSpend: '', items: 'meta廣告,google廣告',
       category: hasOverseas ? '國外消費特列項目' : '一般回饋特列項目',
-      conditions: '', ps: basic.overseasBonusPeriod_start || '', pe: basic.overseasBonusPeriod_end || '', hide: '',
-      note: '程式生成固定模板；' + (unknown ? '⚠️ 無法確認一般消費是否排除廣告——請補一般消費頁(D2)或自行確認；若有排除請刪掉本列(slot 14 留空)' : '一般消費未排除廣告，保留本列'),
+      conditions: '',
+      ps: hasOverseas ? (basic.overseasBonusPeriod_start || '') : '',
+      pe: hasOverseas ? (basic.overseasBonusPeriod_end || '') : '', hide: '',
+      note: '程式生成固定模板（' + (hasOverseas ? '卡片有海外回饋設定→用海外模型' : '卡片無海外回饋設定→當一般國內消費') + '）；' +
+        (unknown ? '⚠️ 無法確認一般消費是否排除廣告——請補一般消費頁(D2)或自行確認；若有排除請刪掉本列(slot 14 留空)' : '一般消費未排除廣告，保留本列'),
       needsReview: unknown, reviewQ: unknown ? '一般消費是否排除 Facebook/Google/廣告費？' : '',
       evidence: '（程式依基本欄位與 general_excludes_ads 生成）'
     });
