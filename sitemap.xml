@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://pickmycard.app/</loc>
+    <lastmod>2026-08-16</lastmod>
+  </url>
+  <url>
     <loc>https://pickmycard.app/landing</loc>
     <lastmod>2026-07-12</lastmod>
   </url>
@@ -14,26 +18,26 @@
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-06</lastmod>
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/momo</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-06</lastmod>
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/%E9%AB%98%E9%90%B5</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-04</lastmod>
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/linepay</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-04</lastmod>
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/%E4%B8%AD%E8%8F%AF%E8%88%AA%E7%A9%BA</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-04</lastmod>
   </url>
   <url>
     <loc>https://pickmycard.app/merchant/%E4%B8%AD%E6%B2%B9</loc>
-    <lastmod>2026-08-16</lastmod>
+    <lastmod>2026-08-04</lastmod>
   </url>
 </urlset>

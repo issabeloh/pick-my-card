@@ -207,7 +207,39 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   > 詳情彈窗（方案 A，深連結只當攔截失敗的 fallback）——那段說明已過時，**不portover**；
   > 完整、與現狀一致的說明在 `docs/project/ui-display.md` 第 1 節「Embed 模式」。
 
-## 10. Apps Script 相關的既有文件
+## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
+
+`sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**
+（`publishToGitHub` 內，帶 `[CI Skip]`）。repo 裡那份跟 `promos.html` 一樣只是快照，
+**改生成邏輯要把整份 `cards-export.gs` 貼回 Google Sheets**，否則下次匯出照樣蓋回舊格式。
+`robots.txt` 指向它，不需另外維護。
+
+**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
+首頁 2026-08-16 才補進去——它是全站最重要的頁、`index.html` 本來就 self-canonical 到 `https://pickmycard.app/`，
+先前漏收純粹是疏忽（漏收不會讓 Google 不索引首頁，但少一個明確信號）。
+
+**鐵則：`lastmod` 只在「該頁內容真的變動」時前進，絕不每次匯出蓋今天。**
+每次蓋今天＝對 Google 天天喊「我更新了」而內容沒動，久了 Google 直接不信任你的 `lastmod`、降低重爬效率（狼來了）。
+各頁的日期來源：
+
+| 頁 | lastmod 來源 |
+|---|---|
+| `/` | `homeUpdatedIso`＝`cards.data` 內容指紋（首頁內容整份由 cards.data 前端渲染）。**指紋刻意排除 `lastUpdated` 欄位**——那是匯出當下的時間戳，每次必變，含進去指紋就永遠不相等 |
+| `/landing` `/faq` | 寫死的常數（不隨匯出變動；改版時手動更新 `generateSitemapXml_` 裡的日期） |
+| `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
+| `/merchant/<slug>` | 手動維護的頁（`MERCHANT_PILOT_PAGES`）用寫死日期；生成器產出的頁用該頁 HTML 的內容指紋 |
+
+**⚠️ 改了 `merchant/<slug>.html` 就要一併改 `MERCHANT_PILOT_PAGES` 裡那筆的日期**，不改等於沒通知 Google。
+這是試水溫階段的代價：那 6 頁是手動 commit 的靜態檔、不經匯出生成，Apps Script 端沒有內容可以指紋比對。
+生成器移植完成後這個陣列清空，日期改由 HTML 指紋自動判斷，就不用再手動維護。
+（2026-08-16 之前商家頁一律蓋匯出當天，而那些 HTML 其實從 8/04、8/06 起就沒動過——正是上面說的狼來了。）
+
+**共用機制 `pmcStampedDate_(key, signature)`**：指紋與日期成對存在 Script Properties
+（`<KEY>_LAST_SIG` / `<KEY>_LAST_DATE`）；指紋相同就回上次那天，不同或首次才蓋 `pmcTodayISO_()` 並寫回。
+promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<slug hash>`）共用同一支。
+純函數 `pmcHashString_`（djb2 + `Math.imul`，Node/Apps Script 結果一致）負責算指紋。
+
+## 11. Apps Script 相關的既有文件
 
 - `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃

@@ -892,18 +892,29 @@ if (faqSheet) {
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
   // 同時餵給：generatePromosPageHtml（可見戳章＋JSON-LD dateModified）與 sitemap 的 promos
   // lastmod，三處同源一致（見 data-pipeline.md 第 9 節）。
-  const promoSig = pmcPromoSignature_(newCardholderPromos);
-  const scriptProps = PropertiesService.getScriptProperties();
-  const prevPromoSig = scriptProps.getProperty('PROMOS_LAST_SIG');
-  const prevPromoDate = scriptProps.getProperty('PROMOS_LAST_DATE');
-  let promosUpdatedIso;
-  if (prevPromoSig === promoSig && prevPromoDate) {
-    promosUpdatedIso = prevPromoDate;
-  } else {
-    promosUpdatedIso = pmcTodayISO_();
-    scriptProps.setProperty('PROMOS_LAST_SIG', promoSig);
-    scriptProps.setProperty('PROMOS_LAST_DATE', promosUpdatedIso);
-  }
+  // （2026-08-16 起共用 pmcStampedDate_，key 沿用 PROMOS_*，語義與存的屬性都不變）
+  const promosUpdatedIso = pmcStampedDate_('PROMOS', pmcPromoSignature_(newCardholderPromos));
+
+  // 首頁（/）的 sitemap lastmod：首頁內容整份由 cards.data 前端渲染（卡片數、精選活動、
+  // 搜尋結果都是），所以「首頁變了沒」等同「匯出資料變了沒」。指紋刻意排除 jsonContent
+  // 第一個欄位 lastUpdated——那是匯出當下的時間戳，每次匯出必變，含進來指紋就永遠不相等，
+  // 等於退回「天天蓋今天」。其餘欄位與 jsonContent 同一份資料，順序不影響（stable stringify）。
+  const homeUpdatedIso = pmcStampedDate_('HOME', pmcHashString_(pmcStableStringify_({
+    cards: cards,
+    payments: payments,
+    quickSearchOptions: quickSearchOptions,
+    merchantPayments: merchantPayments,
+    faq: faqList,
+    announcements: announcements,
+    searchHints: searchHints,
+    searchExclusions: searchExclusions,
+    benefits: benefits,
+    referralLinks: referralLinks,
+    cashbackSites: cashbackSites,
+    newCardholderPromos: newCardholderPromos,
+    cardApplyCtas: cardApplyCtas,
+    spotlights: spotlights
+  })));
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
   // 掛進同一次 GitHub commit（見 publishToGitHub）
@@ -939,7 +950,7 @@ if (faqSheet) {
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
-  const version = publishToGitHub(encoded, promosPageHtml, undefined, promosUpdatedIso);
+  const version = publishToGitHub(encoded, promosPageHtml, undefined, promosUpdatedIso, homeUpdatedIso);
 
   ui.alert(
     '✅ 匯出完成',
@@ -1755,12 +1766,33 @@ function pmcStableStringify_(v) {
 // djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
 function pmcPromoSignature_(promos) {
   const list = (promos || []).map(pmcStableStringify_).sort();
-  const payload = '[' + list.join(',') + ']';
+  return pmcHashString_('[' + list.join(',') + ']');
+}
+
+// djb2 雜湊（原本內嵌在 pmcPromoSignature_，2026-08-16 抽出共用）：配 Math.imul 固定
+// 在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
+function pmcHashString_(payload) {
   let h = 5381;
-  for (let i = 0; i < payload.length; i++) {
-    h = (Math.imul(h, 33) ^ payload.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < String(payload).length; i++) {
+    h = (Math.imul(h, 33) ^ String(payload).charCodeAt(i)) >>> 0;
   }
   return String(h);
+}
+
+// 「內容真的變動時才前進的日期」通用版（2026-08-16 從 promos 的做法抽出）。
+// 指紋與日期成對存在 Script Properties（`<KEY>_LAST_SIG` / `<KEY>_LAST_DATE`）：
+// 指紋與上次相同 → 沿用上次那天；不同或第一次 → 蓋今天並寫回。
+// 這是 sitemap lastmod 的唯一正確來源：每次匯出都蓋今天等於對 Google 天天喊
+// 「我更新了」，內容其實沒動，久了 Google 反而不信任 lastmod、降低重爬效率。
+function pmcStampedDate_(key, signature) {
+  const props = PropertiesService.getScriptProperties();
+  const prevSig = props.getProperty(key + '_LAST_SIG');
+  const prevDate = props.getProperty(key + '_LAST_DATE');
+  if (prevSig === signature && prevDate) return prevDate;
+  const today = pmcTodayISO_();
+  props.setProperty(key + '_LAST_SIG', signature);
+  props.setProperty(key + '_LAST_DATE', today);
+  return today;
 }
 
 function pmcSlug_(s) {
@@ -2426,7 +2458,7 @@ const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
 const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
@@ -2449,10 +2481,11 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
     commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
   });
 
-  // sitemap.xml 每次匯出重生。promos 的 lastmod 用 promosUpdatedIso（只在活動內容真的變動
-  // 時才前進），不是每次匯出都蓋今天——先前每次都蓋今天等於對 Google 天天喊「我更新了」，
-  // 內容其實沒動，久了 Google 反而不信任 lastmod、降低重爬效率。商家頁仍用當天（另案）。
-  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
+  // sitemap.xml 每次匯出重生。所有 lastmod 都只在「該頁內容真的變動」時才前進（2026-08-16
+  // 起商家頁也比照辦理，先前每次匯出都蓋今天＝對 Google 天天喊「我更新了」，內容其實沒動，
+  // 久了 Google 反而不信任 lastmod、降低重爬效率）：promos → promosUpdatedIso、
+  // 首頁 → homeUpdatedIso（cards.data 內容指紋）、商家頁 → 見 generateSitemapXml_。
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
 
   // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
   commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
@@ -2460,28 +2493,50 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
   return version;
 }
 
-// 試水溫階段手動維護的商家頁 slug：生成器尚未移植前，這些頁是手動 commit 的靜態檔，
-// 沒有進 merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把
-// 它們從 sitemap 移除）。生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
-const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華航空', '中油'];
+// 試水溫階段手動維護的商家頁：生成器尚未移植前，這些頁是手動 commit 的靜態檔，沒有進
+// merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把它們從 sitemap
+// 移除）。lastmod 寫死＝該頁 HTML 最後一次真的被改的日期（2026-08-16 起，見下方註解）——
+// **改了 merchant/<slug>.html 就要一併改這裡的日期**，不改就等於沒通知 Google。
+// 生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
+const MERCHANT_PILOT_PAGES = [
+  { slug: '蝦皮', lastmod: '2026-08-06' },
+  { slug: 'momo', lastmod: '2026-08-06' },
+  { slug: '高鐵', lastmod: '2026-08-04' },
+  { slug: 'linepay', lastmod: '2026-08-04' },
+  { slug: '中華航空', lastmod: '2026-08-04' },
+  { slug: '中油', lastmod: '2026-08-04' }
+];
 
-// 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
-// 更新這裡的常數）；promos 用 promosUpdatedIso（活動內容真的變動時才前進，沒傳就退回今天）；
-// 商家頁每次匯出都可能變 → 用匯出當天日期。日期一律走 pmcTodayISO_() 的台北時區。
-function generateSitemapXml_(merchantPages, promosUpdatedIso) {
+// 產生 sitemap.xml 全文。lastmod 一律是「該頁內容最後真的變動的日期」，不是匯出日期：
+//  - landing/faq：不隨匯出變動 → 固定日期常數（改版時更新這裡）
+//  - 首頁 /：homeUpdatedIso（cards.data 內容指紋，首頁內容全由它渲染）
+//  - promos：promosUpdatedIso（活動內容指紋，與頁面可見戳章／JSON-LD dateModified 同源）
+//  - 商家頁：手動頁用 MERCHANT_PILOT_PAGES 寫死的日期；生成頁（merchantPages）用該頁
+//    HTML 的內容指紋，HTML 一模一樣就沿用上次那天
+// 沒傳的日期一律退回今天（Node harness／第一次生成）。日期都走 pmcTodayISO_() 台北時區。
+function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const today = pmcTodayISO_();
-  const promosLastmod = promosUpdatedIso || today;
   const urls = [
+    { loc: SITE_ORIGIN + '/', lastmod: homeUpdatedIso || today },
     { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
     { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
-    { loc: SITE_ORIGIN + '/promos', lastmod: promosLastmod }
+    { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
-  // 商家頁 slug：試水溫手動清單 + 生成器產出（merchantPages），去重後輸出
-  const slugSet = {};
-  MERCHANT_PILOT_SLUGS.forEach(function(s) { slugSet[s] = true; });
-  (merchantPages || []).forEach(function(m) { if (m && m.slug) slugSet[m.slug] = true; });
-  Object.keys(slugSet).forEach(function(s) {
-    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: today });
+  // 商家頁：試水溫手動清單 + 生成器產出（merchantPages）。同 slug 兩邊都有時以生成頁為準
+  // （生成器上線後才會發生，那時該 slug 的內容由生成器負責）。
+  const lastmodBySlug = {};
+  const slugs = [];
+  MERCHANT_PILOT_PAGES.forEach(function(p) {
+    if (!lastmodBySlug[p.slug]) slugs.push(p.slug);
+    lastmodBySlug[p.slug] = p.lastmod;
+  });
+  (merchantPages || []).forEach(function(m) {
+    if (!m || !m.slug) return;
+    if (!lastmodBySlug[m.slug]) slugs.push(m.slug);
+    lastmodBySlug[m.slug] = pmcStampedDate_('MERCHANT_' + pmcHashString_(m.slug), pmcHashString_(m.html || ''));
+  });
+  slugs.forEach(function(s) {
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: lastmodBySlug[s] || today });
   });
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
