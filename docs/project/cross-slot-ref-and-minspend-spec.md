@@ -65,12 +65,23 @@ stacking 的**加碼層（domesticBonusRate/overseasBonusRate）只在 model 字
 
 呼叫端（stacking 分支，約 4018）計算 `const stackedApplyBonus = cashbackModel.includes('domesticBonusRate') || cashbackModel.includes('overseasBonusRate');` 傳入。
 
-**基本回饋層（basic/overseasCashback，Layer 1）不 gate**——每個 stacking 活動都含基準、且 `basic` 在海外 model 被寬鬆用來指代 overseasCashback base（如 `rate+basic+overseasBonusRate`），gate 它會脆。Layer 1 一律保留。
+~~**基本回饋層（basic/overseasCashback，Layer 1）不 gate**——每個 stacking 活動都含基準、且 `basic` 在海外 model 被寬鬆用來指代 overseasCashback base（如 `rate+basic+overseasBonusRate`），gate 它會脆。Layer 1 一律保留。~~
+> **⚠️ 上面這段是提案當下的設計，實作沒有照它走**（2026-08-16 對照 `js/cashback-engine.js` 更正）：
+> 上線版本**Layer 1 也 gate 了**——`calculateStackedCashback(..., applyBase)`，
+> `applyBase = model.includes('basic') || model.includes('overseasCashback')`（見 `js/cashback-engine.js:694,704`）。
+> 也就是 `rate+domesticBonusRate`（沒寫 basic）**不會**加基本層。行為正本以
+> `cashback-engine.md` 第 6 節為準，本檔只是決策紀錄。
 
 ### 影響與驗收
-- 線上卡：**0 張改變**（已掃描證實）→ regression 應維持零 diff，不需重拍基準（若真零 diff）。
+- ~~線上卡：**0 張改變**（已掃描證實）→ regression 應維持零 diff，不需重拍基準（若真零 diff）。~~
+  **⚠️ 事後證明是錯的（2026-08-16 依 pmc-vault 補填專案 README 更正）**：那次掃描用的是舊
+  `cards.data`（20260713），但 main 當時已到 20260716、dbs-eco 的 model 已不同。
+  **Fix B 實際影響 9 槽**：uniopen 5 槽（原本就要修）＋ dbs-eco 4 槽（eco 品牌 12.5→10%、
+  海外 7.5→5%，皆對照官網＝修正舊引擎灌水，海外 5% 已由資料擁有者於 2026-07-16 確認）。
+  其餘卡零 diff。**教訓：「零線上影響」的掃描結論綁定資料版本，必須用最新 `cards.data` 重掃。**
 - 新測試：合成卡有卡片級 dbr、slot model=`rate+basic` → 不再加 dbr；model=`basic+domesticBonusRate` → 照加 dbr。
-- uniopen 實測（卡片級 dbr 保留）：slot1=3%、slot2=7%、slot3=11%、slot5=7%、slot21=5%。
+- uniopen 實測（卡片級 dbr 保留）：slot1=3%、slot2=7%、slot3=11%、slot5=7%、slot21=5%
+  （**這是 2026-07-16 的資料快照**；cards.data 20260816-181542 上 slot5 已改為 `rate=8` ⇒ 11%）。
 
 ## 命名澄清（避免未來混淆）
 `{rate_1}`（大括號，在 rate/cap **值欄位**，hasLevels 卡讀 levelSettings）與 `rate_5`（無括號，在 **cashbackModel 欄位**，引用兄弟槽）是**兩套不同語法、不同欄位**，不衝突。文件要寫清楚。
