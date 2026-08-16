@@ -23,6 +23,23 @@ if [ -z "$VERSION" ]; then
   VERSION=$(git rev-parse --short=12 HEAD 2>/dev/null || date +%Y%m%d%H%M%S)
 fi
 
+# 商家落地頁：每次部署從 index.html ＋ cards.data 重新生成（2026-08-16 起，見
+# tools/build-merchant-pages.js）。一定要在注入 ?v= 之前跑——生成出來的頁帶的是
+# index.html 的 `?v=dev` 佔位，靠下面那圈迴圈一起換成 commit hash。
+#
+# 失敗就讓整個 build 掛掉是刻意的：商家頁的病就是「沒人發現它過期」，
+# 這裡吞掉錯誤等於把病放回去。Apps Script 匯出的 commit 不跑 preflight，
+# 這一步是 cards.data 更新後唯一會重算卡片清單的地方。
+# 本機想跳過（例如只想還原 ?v= 佔位）：PMC_SKIP_MERCHANT_BUILD=1 bash tools/deploy-version.sh dev
+if [ "${PMC_SKIP_MERCHANT_BUILD:-0}" != "1" ]; then
+  if command -v node >/dev/null 2>&1; then
+    node tools/build-merchant-pages.js
+  else
+    echo "❌ 找不到 node，無法生成商家頁（部署環境必須有 node）" >&2
+    exit 1
+  fi
+fi
+
 count=0
 for page in *.html merchant/*.html; do
   [ -e "$page" ] || continue

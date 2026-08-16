@@ -1,0 +1,45 @@
+[
+  {
+    "slug": "linepay",
+    "merchant": "LinePay",
+    "displayName": "LINE Pay",
+    "title": "LINE Pay 信用卡回饋比較 2026｜哪張卡綁 LINE Pay 最高回饋 - Pick My Card",
+    "description": "綁 LINE Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在 LINE Pay 消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。",
+    "active": true
+  },
+  {
+    "slug": "momo",
+    "merchant": "momo",
+    "title": "momo 購物網刷哪張信用卡回饋最高？2026 比較 - Pick My Card",
+    "description": "一鍵比較你手上的信用卡在 momo 要刷哪張，並試算回饋金額。一眼看懂消費上限、達成條件與活動期間，因為研究信用卡規則，不該是你的功課。",
+    "active": true
+  },
+  {
+    "slug": "中油",
+    "merchant": "中油",
+    "title": "中油加油刷哪張信用卡回饋最高？2026 比較 - Pick My Card",
+    "description": "中油直營站加油、綁中油 Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在中油消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。",
+    "active": true
+  },
+  {
+    "slug": "中華航空",
+    "merchant": "中華航空",
+    "title": "中華航空刷哪張信用卡回饋最高？2026 華航機票比較 - Pick My Card",
+    "description": "買華航機票刷哪張信用卡回饋最高？即時試算你的信用卡中，在中華航空官網、APP 與臨櫃購票的回饋率、消費上限、達成條件與活動期間，資料持續更新。",
+    "active": true
+  },
+  {
+    "slug": "蝦皮",
+    "merchant": "蝦皮",
+    "title": "蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card",
+    "description": "刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。",
+    "active": true
+  },
+  {
+    "slug": "高鐵",
+    "merchant": "高鐵",
+    "title": "高鐵訂票刷哪張信用卡回饋最高？2026 比較 - Pick My Card",
+    "description": "高鐵訂票、T-EX 行動購票刷哪張信用卡回饋最高？即時試算你的信用卡中，在高鐵消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。",
+    "active": true
+  }
+]

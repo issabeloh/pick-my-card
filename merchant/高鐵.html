@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <base href="/">
-    <script>window.__PMC_MERCHANT__="高鐵";</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <script>window.__PMC_MERCHANT__="高鐵";</script>
     <title>高鐵訂票刷哪張信用卡回饋最高？2026 比較 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
-           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
-         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+           → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
+         hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
          ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
          location.replace 讓返回鍵不會跳回造成循環。
          ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
@@ -25,7 +25,7 @@
         } catch (e) {
             // URLSearchParams 不支援時忽略——embed 只是顯示精簡化，非必要流程
         }
-        var pmcFromLanding = true; /* merchant landing page */
+        var pmcFromLanding = true; /* 商家落地頁：一律直接進工具 */
         try {
             if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 localStorage.setItem('pmc_seen_landing', '1');
@@ -186,8 +186,8 @@
                      側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
                      手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
                 <nav class="header-page-links" aria-label="站內頁面">
-                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
                 </nav>
                 <div class="auth-section">
                     <div id="user-info">
@@ -303,12 +303,12 @@
                     </div>
 
                     <nav class="sidebar-page-links" aria-label="站內頁面">
-                        <a href="promos.html" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
+                        <a href="/promos" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
                             <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>
                             <span class="sidebar-promos-banner-text"><strong>新戶活動一覽</strong><small>首刷禮・回饋加碼 好康快報</small></span>
                             <span class="sidebar-promos-banner-arrow" aria-hidden="true">→</span>
                         </a>
-                        <a href="faq.html" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
+                        <a href="/faq" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
                             <span class="sidebar-faq-card-emoji" aria-hidden="true">💬</span>
                             <span class="sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
                             <span class="sidebar-faq-card-arrow" aria-hidden="true">→</span>
@@ -469,7 +469,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a class="cardholder-promos-more-btn" href="/promos" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
@@ -503,14 +503,13 @@
             <div class="spotlight-dots" id="spotlight-dots" style="display:none;"></div>
         </section>
 
-        <!-- 信用卡警語橫條（精選活動區下方） -->
         <section class="mc-seo-footer" aria-label="高鐵 信用卡回饋說明">
   <h1>高鐵 信用卡回饋比較</h1>
   <p>想知道刷 高鐵 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 高鐵 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 台新街口卡(豬富卡)、台新 Richart 卡、玉山 Uni 卡、玉山 Ubear 卡、國泰 CUBE 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
 </section>
 
-        <!-- 廣告列（SEO 說明區下方、警語橫條上方）
-             回應式版位，樣式沿用 styles.css 的 .ad-row。
+        <!-- 廣告列（精選活動下方、警語橫條上方）
+             回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
              loader script 已在 <head> 載入，這裡只放版位本身。 -->
         <div class="ad-row">
             <ins class="adsbygoogle ad-row-unit"
@@ -524,7 +523,8 @@
             (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
 
-<div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+        <!-- 信用卡警語橫條（精選活動區下方） -->
+        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -765,7 +765,8 @@
                 <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->
                 <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-notes-section">我的筆記</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-personal-section">個人設定</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
@@ -801,51 +802,68 @@
                         </div>
                     </div>
                     
-                    <!-- CUBE等級設定區域 -->
-                    <div class="card-info-section" id="cube-level-section" style="display: none;">
-                        <h4>🎯 國泰CUBE等級設定</h4>
-                        <div class="cube-level-selector">
-                            <label for="cube-level-select" class="level-label">請選擇您的CUBE等級：</label>
-                            <select id="cube-level-select" class="level-select">
-                                <option value="level1">Level 1 - 特定通路 2%</option>
-                                <option value="level2">Level 2 - 特定通路 3%</option>
-                                <option value="level3">Level 3 - 特定通路 3.3%</option>
-                            </select>
+                    <!-- 個人設定：級別/CUBE 專屬設定 ＋ 我的額度 ＋ 我的筆記。
+                         原本是分開的兩塊（級別區自帶灰底框、personal-fields-row 另一塊），
+                         2026-08-01 併成同一個灰底框——都是「這張卡在我身上的設定」，
+                         分兩塊只是把同一件事切開。內層標題一律 .personal-field-title，
+                         與 showCardDetail() 注入的級別區欄位標題同字級。 -->
+                    <div class="card-info-section" id="card-personal-section">
+                        <h4>個人設定</h4>
+                        <div class="personal-settings-box">
+                            <!-- 分級卡的級別選擇器／CUBE 三欄設定由 showCardDetail() 注入；
+                                 非分級卡這塊 display:none，框內只剩額度與筆記 -->
+                            <div id="cube-level-section" style="display: none;"></div>
+
+                            <div class="personal-fields-row">
+                                <div class="personal-field" id="credit-limit-section">
+                                    <div class="personal-field-title">我的額度</div>
+                                    <div class="credit-limit-row">
+                                        <div class="credit-limit-field">
+                                            <span class="credit-limit-prefix">NT$</span>
+                                            <input type="text" id="credit-limit-input" class="credit-limit-input"
+                                                   inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                                   placeholder="選填">
+                                        </div>
+                                        <span class="credit-limit-saved" id="credit-limit-saved"></span>
+                                    </div>
+                                </div>
+
+                                <div class="personal-field user-notes-section" id="card-notes-section">
+                                    <div class="personal-field-title">我的筆記</div>
+                                    <div class="user-notes-container">
+                                        <div class="notes-input-row">
+                                            <textarea id="user-notes-input"
+                                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                                      class="user-notes-textarea"></textarea>
+                                            <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
+                                                <span class="btn-icon">💾</span>
+                                            </button>
+                                        </div>
+                                        <div class="notes-status" id="notes-status">
+                                            <span class="save-indicator" id="save-indicator"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- 我的額度 + 我的筆記（桌機並排、手機直排） -->
-                    <div class="personal-fields-row">
-                        <div class="card-info-section" id="credit-limit-section">
-                            <h4>💳 我的額度</h4>
-                            <div class="credit-limit-row">
-                                <div class="credit-limit-field">
-                                    <span class="credit-limit-prefix">NT$</span>
-                                    <input type="text" id="credit-limit-input" class="credit-limit-input"
-                                           inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
-                                           placeholder="選填">
-                                </div>
-                                <span class="credit-limit-saved" id="credit-limit-saved"></span>
-                            </div>
-                        </div>
 
-                        <!-- 用戶筆記區域 -->
-                        <div class="card-info-section user-notes-section" id="card-notes-section">
-                            <h4>📝 我的筆記</h4>
-                            <div class="user-notes-container">
-                                <div class="notes-input-row">
-                                    <textarea id="user-notes-input"
-                                              placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                              class="user-notes-textarea"></textarea>
-                                    <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                        <span class="btn-icon">💾</span>
-                                    </button>
-                                </div>
-                                <div class="notes-status" id="notes-status">
-                                    <span class="save-indicator" id="save-indicator"></span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
+                         由新到舊）。放在回饋內容上方——權益剛變過是讀下面數字時的前提。
+                         沒有異動的卡整塊不渲染（空陣列不是 falsy，見 renderCardDetailChangelog()） -->
+                    <div class="card-info-section" id="card-changelog-section" style="display: none;">
+                        <h4 class="section-title-with-icon">
+                            近期異動
+                            <!-- 大聲公：inline SVG 而不是 emoji，理由同 .card-apply-cta-arrow——
+                                 emoji 造型隨 OS/字型變，且沒有可靠的單色呈現。stroke 走
+                                 currentColor，跟著標題顏色走 -->
+                            <svg class="section-title-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M3.4 10.7 17.6 5.6v12.8L3.4 13.3Z"/>
+                                <path d="M11.3 16.1a2.9 2.9 0 1 1-5.5-1.6"/>
+                                <path d="M20.4 9.6a4 4 0 0 1 0 4.8"/>
+                            </svg>
+                        </h4>
+                        <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
 
                     <div class="card-info-section" id="card-special-section">
@@ -901,13 +919,13 @@
             <div class="explore-section">
                 <p class="social-media-title">探索更多</p>
                 <div class="social-media-links">
-                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
                         <span class="social-text">🎁 新戶活動一覽 ↗</span>
                     </a>
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
                         <span class="social-text">常見問題 FAQ ↗</span>
                     </a>
-                    <a href="landing.html" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
                         <span class="social-text">Pick My Card 是什麼？↗</span>
                     </a>
                 </div>
@@ -937,7 +955,7 @@
         </div>
     </div>
 
-    <!-- 最後資料更新日期＋收錄卡數 -->
+    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
         <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
@@ -985,7 +1003,8 @@
         </div>
     </div>
 
-    <!-- 主程式模組：清單與順序必須與 index.html 一致（preflight 會檢查）。 -->
+    <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
+         全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
     <script src="js/core-utils.js?v=dev" defer></script>
     <script src="js/data-loader.js?v=dev" defer></script>
     <script src="js/home-ui.js?v=dev" defer></script>

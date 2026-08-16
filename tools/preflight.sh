@@ -44,6 +44,32 @@ for page in merchant/*.html; do
   fi
 done
 
+# ---- 1d) 商家頁必須與生成器輸出一致（2026-08-16 起 merchant/*.html 不再手維護）----
+# 商家頁改由 tools/build-merchant-pages.js 從 index.html ＋ cards.data 生成。手改那些檔案
+# 會在下次部署被覆蓋，所以這裡直接擋：改版面去改 index.html，改文案去改 MerchantPages
+# 工作表（見 docs/project/data-pipeline.md 第 11 節）。
+if command -v node >/dev/null 2>&1 && [ -f tools/build-merchant-pages.js ]; then
+  if ! node tools/build-merchant-pages.js --check > /tmp/pmc-merchant-check.$$ 2>&1; then
+    cat /tmp/pmc-merchant-check.$$
+    echo "❌ merchant/*.html 與生成結果不一致——跑 node tools/build-merchant-pages.js 重新生成後再 commit"; fail=1
+  fi
+  rm -f /tmp/pmc-merchant-check.$$
+else
+  echo "⚠️  找不到 node 或生成器，略過商家頁一致性檢查"; warn=1
+fi
+
+# ---- 1e) 內部連結禁止指向 *.html（會 301 到 clean URL，GSC 報 Page with redirect）----
+# Cloudflare Pages 把 /faq.html 301 到 /faq，所以站內連 faq.html 等於每次都多繞一跳：
+# 浪費爬取預算、GSC「Page with redirect」報表被自家連結灌爆。一律寫 /、/faq、/promos、/landing。
+# （2026-08-16 全站 66 個連結一次改完；promos.html 由 Apps Script 生成、本來就是 clean URL。）
+for page in index.html faq.html landing.html merchant/*.html; do
+  [ -e "$page" ] || continue
+  bad=$(grep -oE 'href="(index|faq|promos|landing)\.html[^"]*"' "$page" || true)
+  if [ -n "$bad" ]; then
+    echo "❌ $page 有指向 *.html 的內部連結（會 301，請改 clean URL：/ 、/faq 、/promos 、/landing）：$(echo $bad | head -c 200)"; fail=1
+  fi
+done
+
 # ---- 2) cards.data 改動 → cards.version 必須同步更新 ----
 if has cards.data && ! has cards.version; then
   echo "❌ cards.data 有改動但 cards.version 沒更新（改成任何不同短字串，建議 YYYYMMDD-N；見 CARDS-DATA-CACHE-README.md）"; fail=1

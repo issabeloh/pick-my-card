@@ -207,7 +207,118 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   > 詳情彈窗（方案 A，深連結只當攔截失敗的 fallback）——那段說明已過時，**不portover**；
   > 完整、與現狀一致的說明在 `docs/project/ui-display.md` 第 1 節「Embed 模式」。
 
-## 10. Apps Script 相關的既有文件
+## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
+
+`sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**
+（`publishToGitHub` 內，帶 `[CI Skip]`）。repo 裡那份跟 `promos.html` 一樣只是快照，
+**改生成邏輯要把整份 `cards-export.gs` 貼回 Google Sheets**，否則下次匯出照樣蓋回舊格式。
+`robots.txt` 指向它，不需另外維護。
+
+**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
+首頁 2026-08-16 才補進去——它是全站最重要的頁、`index.html` 本來就 self-canonical 到 `https://pickmycard.app/`，
+先前漏收純粹是疏忽（漏收不會讓 Google 不索引首頁，但少一個明確信號）。
+
+**鐵則：`lastmod` 只在「該頁內容真的變動」時前進，絕不每次匯出蓋今天。**
+每次蓋今天＝對 Google 天天喊「我更新了」而內容沒動，久了 Google 直接不信任你的 `lastmod`、降低重爬效率（狼來了）。
+各頁的日期來源：
+
+| 頁 | lastmod 來源 |
+|---|---|
+| `/` | `homeUpdatedIso`＝`cards.data` 內容指紋（首頁內容整份由 cards.data 前端渲染）。**指紋刻意排除 `lastUpdated` 欄位**——那是匯出當下的時間戳，每次必變，含進去指紋就永遠不相等 |
+| `/landing` `/faq` | 寫死的常數（不隨匯出變動；改版時手動更新 `generateSitemapXml_` 裡的日期） |
+| `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
+| `/merchant/<slug>` | 同 `homeUpdatedIso`——商家頁＝index.html 版面 ＋ cards.data 算出的卡片清單，會變的來源就是 cards.data，與首頁同一個訊號 |
+
+收哪些商家頁由 `MerchantPages` 工作表的 `active` 欄決定（見第 11 節）；工作表不存在時退回
+`MERCHANT_FALLBACK_SLUGS`，避免 sitemap 把現有 6 頁整組移除。
+
+**已知限制**：首頁的指紋只看 `cards.data`，看不到 `index.html` 本身。純 HTML 改動（例如改連結、改版面）
+不會讓 `/` 的 lastmod 前進——Apps Script 端根本讀不到 repo 的 HTML。實務上影響很小（資料幾乎每次匯出都會變、
+`/` 的日期本來就常前進），真的在意就在改 HTML 那次順手改 repo 的 `sitemap.xml`（下次匯出會重生，但至少即時）。
+`/landing`、`/faq` 同理，日期是 `generateSitemapXml_` 裡的寫死常數，**改了那兩頁要手動更新**。
+
+### 內部連結一律用 clean URL（2026-08-16）
+
+Cloudflare Pages 會把 `/faq.html` 301 到 `/faq`，所以站內寫 `href="faq.html"` 等於每次都多繞一跳：
+浪費爬取預算，GSC「Page with redirect」報表被自家連結灌爆。**一律寫 `/`、`/?start`、`/faq`、`/faq#faq-10`、
+`/promos`、`/landing`**；`tools/preflight.sh` 第 1e 項會擋回頭路。
+2026-08-16 全站 66 個連結一次改完（index 8、faq 7、landing 3、商家頁各 8）——`promos.html` 因為是
+Apps Script 生成的，模板本來就寫 clean URL，是唯一沒中的頁。
+**代價**：`python3 -m http.server` 之類的本機靜態伺服器不做 clean URL 對應，本機點這些連結會 404
+（clean URL 是 Cloudflare Pages 的行為）。回歸腳本直接開 `index.html`，不受影響。
+
+**共用機制 `pmcStampedDate_(key, signature)`**：指紋與日期成對存在 Script Properties
+（`<KEY>_LAST_SIG` / `<KEY>_LAST_DATE`）；指紋相同就回上次那天，不同或首次才蓋 `pmcTodayISO_()` 並寫回。
+promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<slug hash>`）共用同一支。
+純函數 `pmcHashString_`（djb2 + `Math.imul`，Node/Apps Script 結果一致）負責算指紋。
+
+## 11. 商家落地頁生成器（2026-08-16）
+
+`merchant/<slug>.html` **不是手維護的檔案**，每次 Cloudflare Pages 部署時由
+`tools/build-merchant-pages.js` 從 `index.html` ＋ `cards.data` 現場組出來。
+手改那些檔案會在下次部署被蓋掉——`tools/preflight.sh` 第 1d 項會先擋下來。
+
+`--check` 刻意把「不一致」分成兩類（用 `stripDataRegions()` 挖掉 JSON-LD 與 SEO 說明區後比對版面）：
+**版面不一致 → ❌ 擋 commit**（手改過，或 index.html 改了沒重生）；
+**只有卡片清單落後 → ⚠️ 放行**（Apps Script 每次匯出都會動 cards.data，部署時自己會重生，不影響線上）。
+不分這兩類的話，每次匯出後所有不相干的 commit 都會被擋，結果只會是大家習慣性忽略 preflight——比沒有檢查更糟。
+
+**為什麼要有這支**：那 6 頁本來是 `index.html` 的手抄副本，抄一份就多一份會歪的東西。
+動手當天量到的實際傷害：
+
+- 6 頁裡有 4 頁還停在舊版介面（少「個人設定」「近期異動」兩個區塊，還留著早已從
+  `index.html` 移除的 `cube-level-selector` 等死碼）
+- 頁面裡寫死的 JSON-LD 卡片清單與 SEO 文案早就過期：momo 頁畫面上第一名是遠東快樂卡，
+  但兩份清單裡都沒有它——**對使用者講一套、對 Google 講另一套，而且沒有任何機制會發現**
+
+**要改什麼去改哪裡**：
+
+| 想改的東西 | 去哪改 |
+|---|---|
+| 版面、區塊、共用元件 | `index.html`（商家頁自動跟著變） |
+| 開哪些商家頁、標題、描述 | Google Sheets 的 `MerchantPages` 工作表 |
+| 卡片清單、JSON-LD、SEO 文案 | 都不用改，跟著 `cards.data` 自動更新 |
+| 每頁專屬的結構（注入點、警語） | `tools/build-merchant-pages.js` 的 `buildPage()` |
+
+**`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
+`slug`（URL）、`merchant`（**搜尋詞**，要跟站上搜得到的商家一致）、`displayName`（顯示名稱，
+留空＝同 merchant）、`title`、`description`、`active`（留空＝啟用，填 FALSE 關掉）、`order`。
+⚠️ `merchant` 與 `displayName` 是兩件事：linepay 頁的搜尋詞是 `LinePay`，顯示是 `LINE Pay`。
+⚠️ 改 `slug` ＝換網址，舊網址變 404，非必要別動。
+工作表還沒建立時退回 `tools/merchant-pages.fallback.json`（與 `.gs` 的 `MERCHANT_FALLBACK_SLUGS` 同一份清單）。
+
+**卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那 12 個模組
+**原封不動載進來跑**，不另寫一套比對規則——另寫一套就是「頁面講一套、JSON-LD 講另一套」的病根。
+它照抄 `loadCardsData()` 與 `calculateCashback()` 的完整流程，四個步驟一個都不能少：
+
+1. `filterExpiredRates` —— 濾過期活動
+2. `mergeDataSearchExclusions` —— 併入 SearchExclusions 排除規則
+3. `buildCardItemsIndex` —— 建搜尋索引
+4. 商家名若等於某快捷搜尋的 `displayName` → 走 `handleQuickSearch` 的多關鍵詞路徑
+
+**踩過的坑（都會讓清單與畫面對不上，且不會報錯）**：
+
+- `js/core-utils.js` 會把 `console.log/warn` 靜音。傳給 vm 的 `console` 必須是獨立物件，
+  否則它連 Node 這邊的 console 一起關掉，除錯時畫面全黑
+- 模組頂層的 `let cardsData` 是 vm context 的**語彙綁定**，不是 global 屬性——
+  從外面 `ctx.cardsData = x` 只會多一個沒人看的變數，必須用 `runInContext` 從裡面指派
+- 漏掉 `mergeDataSearchExclusions` → linepay 頁多出「LINE Pay 找體驗 APP」，排名整個變了
+- `calculateCashback` 每處理完一個匹配項就先排序才累加，最後才總排一次。JS 的 sort 是穩定
+  排序，少了那個先排，同分的卡片順序就會不一樣
+
+**驗證方式（改了 `js/` 或這支工具就要重跑）**：
+
+```bash
+node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐筆比對畫面 vs 烤進去的清單
+```
+
+這是「Node 版引擎 == 前端引擎」的唯一證明。不一致就是兩邊分岔了，先修再部署。
+
+**接在哪**：`tools/deploy-version.sh`（CF Pages build command）在注入 `?v=` **之前**先跑生成器
+——生成出來的頁帶 `?v=dev` 佔位，靠後面那圈迴圈一起換成 commit hash。生成失敗直接讓 build 掛掉
+是刻意的：商家頁的病就是「沒人發現它過期」，吞掉錯誤等於把病放回去。
+
+## 12. Apps Script 相關的既有文件
 
 - `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃
