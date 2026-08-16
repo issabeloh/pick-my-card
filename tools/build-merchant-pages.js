@@ -148,6 +148,14 @@ function buildPage(indexHtml, page, cardNames) {
   return html;
 }
 
+// 把「跟著 cards.data 走」的兩塊挖掉，剩下的就是版面。用來分辨「資料更新造成的落後」
+// 與「有人手改了版面」——前者部署時自己會修好，後者一定要擋。
+function stripDataRegions(html) {
+  return html
+    .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
+    .replace(/<section class="mc-seo-footer"[\s\S]*?<\/section>/g, '');
+}
+
 async function main() {
   const cardsData = readCardsData();
   const { source, pages } = loadConfig(cardsData);
@@ -159,6 +167,8 @@ async function main() {
   const engine = createEngine(cardsData);
   const results = [];
   let changed = 0;
+  let shellDrift = 0;   // 版面對不上：手改過，或 index.html 改了沒重生 → 擋 commit
+  let dataDrift = 0;    // 只有卡片清單對不上：cards.data 更新後的正常現象 → 只提醒
 
   for (const page of active) {
     const cardNames = await computeMerchantCards(engine, page.merchant, AMOUNT);
@@ -169,21 +179,40 @@ async function main() {
     const file = path.join(REPO, 'merchant', page.slug + '.html');
     const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
     const same = before === html;
-    if (!same) changed++;
+    let kind = '';
+    if (!same) {
+      changed++;
+      // 兩種不一致要分開對待，否則每次 Apps Script 匯出（cards.data 一變）都會擋住
+      // 所有不相干的 commit——那只會讓人習慣性忽略 preflight，比沒有檢查還糟。
+      if (before !== null && stripDataRegions(before) === stripDataRegions(html)) {
+        dataDrift++; kind = '（卡片清單隨 cards.data 更新）';
+      } else {
+        shellDrift++; kind = '（版面不一致：手改過或 index.html 改了沒重生）';
+      }
+    }
     if (!CHECK_ONLY && !same) fs.writeFileSync(file, html);
     results.push({ slug: page.slug, merchant: page.merchant, cards: cardNames, same });
     process.stdout.write('  ' + (same ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' merchant/' + page.slug +
-      '.html（' + cardNames.length + ' 張卡，首位 ' + cardNames[0] + '）\n');
+      '.html（' + cardNames.length + ' 張卡，首位 ' + cardNames[0] + '）' + kind + '\n');
   }
 
   if (VERIFY) await verifyAgainstBrowser(results);
 
-  if (CHECK_ONLY && changed > 0) {
-    process.stdout.write('\n❌ 有 ' + changed + ' 頁與生成結果不一致——跑 node tools/build-merchant-pages.js 重新生成\n');
-    process.exit(1);
+  if (CHECK_ONLY) {
+    if (shellDrift > 0) {
+      process.stdout.write('\n❌ 有 ' + shellDrift + ' 頁的版面與生成結果不一致' +
+        '——跑 node tools/build-merchant-pages.js 重新生成後再 commit\n');
+      process.exit(1);
+    }
+    if (dataDrift > 0) {
+      process.stdout.write('\n⚠️  有 ' + dataDrift + ' 頁的卡片清單落後 cards.data（部署時會自動重生，' +
+        '不影響線上；想讓 repo 同步就跑 node tools/build-merchant-pages.js）\n');
+      process.exit(0);
+    }
+    process.stdout.write('\n✅ 全部與生成結果一致\n');
+    return;
   }
-  process.stdout.write(CHECK_ONLY ? '\n✅ 全部與生成結果一致\n'
-    : '\n✅ 完成（' + changed + ' 頁有變動）\n');
+  process.stdout.write('\n✅ 完成（' + changed + ' 頁有變動）\n');
 }
 
 // 用真的瀏覽器開生成出來的頁，比對畫面上的卡片與我們烤進 JSON-LD 的清單。

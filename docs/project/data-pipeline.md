@@ -258,6 +258,11 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 `tools/build-merchant-pages.js` 從 `index.html` ＋ `cards.data` 現場組出來。
 手改那些檔案會在下次部署被蓋掉——`tools/preflight.sh` 第 1d 項會先擋下來。
 
+`--check` 刻意把「不一致」分成兩類（用 `stripDataRegions()` 挖掉 JSON-LD 與 SEO 說明區後比對版面）：
+**版面不一致 → ❌ 擋 commit**（手改過，或 index.html 改了沒重生）；
+**只有卡片清單落後 → ⚠️ 放行**（Apps Script 每次匯出都會動 cards.data，部署時自己會重生，不影響線上）。
+不分這兩類的話，每次匯出後所有不相干的 commit 都會被擋，結果只會是大家習慣性忽略 preflight——比沒有檢查更糟。
+
 **為什麼要有這支**：那 6 頁本來是 `index.html` 的手抄副本，抄一份就多一份會歪的東西。
 動手當天量到的實際傷害：
 
