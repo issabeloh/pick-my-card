@@ -14,12 +14,12 @@
  * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
 // Editorial highlights from cardsData.spotlights. Shows 3 per page in a
-// manual carousel (arrows / dots / swipe, no auto-rotate); the count cap is
-// decoupled from what's visible.
+// manual carousel (arrows / dots / swipe, no auto-rotate); 2026-08-16 起不再
+// 截斷筆數（原 SPOTLIGHT_MAX = 12），資料端有幾則 active 就顯示幾則，
+// 頁數／圓點跟著長度自動增加。
 let spotlightItems = [];
 let spotlightPage = 0;
 const SPOTLIGHT_PAGE_SIZE = 3;
-const SPOTLIGHT_MAX = 12;
 
 function getSpotlightDaysLeft(deadline) {
     if (!deadline) return null;
@@ -41,8 +41,7 @@ function renderSpotlights() {
     const all = (cardsData && Array.isArray(cardsData.spotlights)) ? cardsData.spotlights : [];
     spotlightItems = all
         .filter(s => s && s.active !== false && s.active !== 'FALSE')
-        .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999))
-        .slice(0, SPOTLIGHT_MAX);
+        .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
 
     if (spotlightItems.length === 0) {
         section.style.display = 'none';
