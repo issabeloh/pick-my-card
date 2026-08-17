@@ -285,6 +285,9 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 留空＝同 merchant）、`title`、`description`、`active`（留空＝啟用，填 FALSE 關掉）、`order`。
 ⚠️ `merchant` 與 `displayName` 是兩件事：linepay 頁的搜尋詞是 `LinePay`，顯示是 `LINE Pay`。
 ⚠️ 改 `slug` ＝換網址，舊網址變 404，非必要別動。
+⚠️ **文案裡不要寫死數字。** 蝦皮頁的 description 原本寫「整理 9 張在蝦皮有加碼的信用卡」，
+生成器實際算出來是 11 張——卡片清單會自動跟著 `cards.data` 更新，但寫在 `title`/`description`
+裡的數字不會，沒有任何機制會發現它過期（2026-08-16 已改掉）。
 工作表還沒建立時退回 `tools/merchant-pages.fallback.json`（與 `.gs` 的 `MERCHANT_FALLBACK_SLUGS` 同一份清單）。
 
 **卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那 12 個模組
