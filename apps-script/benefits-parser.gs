@@ -76,6 +76,8 @@ function buildAutomationMenu_() {
     .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
     .addSeparator()
     .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
+    // 舊卡的活動更新（年中/年底大批更新用）：同一支解析器，輸入換成監控存的整頁新文字
+    .addItem('解析活動更新：2-變動通知 → 4-待審核（活動更新）', 'parseInboxCardGroups') // card-benefits-parser.gs
     .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addToUi();
 }
