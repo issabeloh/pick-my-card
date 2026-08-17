@@ -617,6 +617,28 @@ GitHub，所以 Jina／Gemini／寄信／Cloudflare build 一格都不動（Clou
 
 後兩種都**不會**說「這段文字屬於 X」——AI 在 schema enum 裡找不到 X 只能硬猜一張，會把整頁活動全掛到同一張卡上。混合輸入（有正式 id、也有打錯字的）一律走第三種安全網，候選會包含推出來的同行卡片。
 
+### 新卡基本表：期間欄位與分級卡的界線（2026-08-16）
+
+- **補上 `overseasBonusPeriod`／`domesticBonusPeriod`**（站長回報這兩欄從來是空的）。查證結果：
+  前者 AI 早就有抽（schema 的 `overseasBonusPeriod_start/end`），但基本待審核表**沒有對應欄位**，
+  抽到的值只被拿去填廣告槽的期間就丟了；後者連 schema 都沒有，從沒被抽過。
+  兩欄在 Cards Data 都是單欄、格式 `2026/1/1~2026/12/31`。
+  **舊的基本表不用刪重建**——`ensureBasicReviewColumn_` 會自動插在各自的 `*Conditions` 右邊。
+  ⚠️ 若你的 Cards Data 欄序跟這裡不同，改 `CARD_BASIC_FIELDS` 陣列即可（那張表是照位置複製的）
+- **`cashbackModel` 不在基本表**：它是**槽位層級**的（Cards Data 的 `cashbackModel_N`），住在組別表
+- **分級卡：程式只產最單純的一種 `levelSettings`**。全站 4 張分級卡有三種形狀（2026-08-16 盤點）：
+
+  | 卡片 | 形狀 | 程式 |
+  |---|---|---|
+  | 玉山 Uni／凱基誠品 | `{rate, cap, period, level-note}` | ✅ 自動產出 |
+  | 國泰 CUBE | `{specialRate, level-note}`（分級改的是指定通路的率） | ❌ 留空給人填 |
+  | 永豐大戶卡 | `{rate_1, cap_1, rate_14, cap_hide, overseasBonusRate…}` 共 11 個 key（逐槽覆寫） | ❌ 留空給人填 |
+
+  後兩種由 AI 舉手（`levels_beyond_simple=true`，prompt 規則 7a）→ `levelSettings` 留空、
+  在「AI想問的問題」欄寫明要手填並指出參考寫法、各級別原文留在 `levelSettings原文引用` 欄。
+  **為什麼不自動化**：分級卡數量少、形狀又雜，硬套簡單格式會產出「看起來對、算出來錯」的
+  `levelSettings`（站長未必看得出來）——產錯比不產危險（站長 2026-08-16 裁定）
+
 ### 欄位規範（2026-07-09 對齊正式表更新；2026-08-15 移除 promo_id）
 
 > ⚠️ **promo_id 已整組移除（2026-08-15，站長裁定）**。理由：前端從沒讀過它，

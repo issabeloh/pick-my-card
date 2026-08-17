@@ -55,12 +55,19 @@ const CARD_TAG_ENUM = [
 ];
 
 // 4-待審核（新卡-基本）的固定欄位（＝ Cards Data 固定欄位順序；levelSettings 留空手動）
+// ⚠️ 2026-08-16 補上 overseasBonusPeriod／domesticBonusPeriod（站長回報這兩欄從來是空的）：
+//    前者 AI 早就有抽（schema 的 overseasBonusPeriod_start/end），但這裡沒有欄位可放，
+//    抽到的值只被拿去填廣告槽的期間就丟了；後者連 schema 都沒有，從沒被抽過。
+//    兩欄在 Cards Data 都是單一欄位、格式「2026/1/1~2026/12/31」（cards-export.gs:514-515）。
+//    ⚠️ 這裡的欄序要跟 Cards Data 一致（審核完是整段複製過去的）——放在各自的
+//       Conditions 右邊；若你的 Cards Data 欄序不同，改這個陣列即可。
 const CARD_BASIC_FIELDS = [
   'id', 'name', 'fullName', 'bank', 'basicCashback', 'basicCashbackType', 'pointsExpiry',
   'basicConditions', 'annualFee', 'feeWaiver', 'website', 'tags', 'hasLevels',
   'levelSettings', 'levelLabelFormat', 'overseasCashback', 'overseasBonusRate',
-  'overseasBonusCap', 'overseasBonusConditions', 'domesticBonusRate',
-  'domesticBonusCap', 'domesticBonusConditions', 'parking', 'airport_pickup', 'airport_lounge'
+  'overseasBonusCap', 'overseasBonusConditions', 'overseasBonusPeriod', 'domesticBonusRate',
+  'domesticBonusCap', 'domesticBonusConditions', 'domesticBonusPeriod',
+  'parking', 'airport_pickup', 'airport_lounge'
 ];
 
 // 組別待審核表欄位（順序貼近 Cards Data 槽位，方便你橫向填回去）
@@ -212,8 +219,15 @@ function extractCard_(rawText, idHint, generalText) {
     '6. hasLevels：只有當「卡片本身有使用者可選、或需達標的方案/等級/分級，且那個方案決定卡片全域的回饋率」時才 true（例：玉山 簡單選/任意選/UP選——使用者選一個方案，全卡回饋率跟著變）。',
     '   ⚠️【以下都不是分級，hasLevels 一律 false、絕不可寫進 levels】：單一活動的「消費滿額級距」（如滿1.5萬回100元、滿3萬回400元）；帳戶類型差異（自扣戶/一般戶、數位帳戶戶）；不同通路各自的回饋率。這些是某個活動的條件，不是卡片分級。',
     '7. 分級卡（hasLevels=true 才填 levels）：每級一物件——level_name（官網級別名稱，如 簡單選/任意選/UP選）、rate（該級回饋率「百分比數字」，2.5% → 2.5，不是 0.025）、cap_spend（消費上限，官網直接講就填）、cap_reward（回饋金額上限，官網講回饋X元就填）、period_start/period_end（YYYY/M/D）、level_note（達成條件，開頭寫「達成條件：」）。levelLabelFormat 依官網用詞（「方案: {level}」/「分級: {level}」）。levelSettings_evidence：逐字引用官網描述各級別的原文。',
+    '7a. ⚠️【分級太複雜就舉手，不要硬填 levels】程式只能把 levels 組成最單純的一種 levelSettings：',
+    '    每一級＝一個「全卡回饋率＋上限」（如玉山 Uni 的 簡單選/任意選/UP選）。碰到下面兩種請把',
+    '    levels_beyond_simple 設成 true、**levels 留空**，並把描述各級別的官網原文完整放進 levelSettings_evidence：',
+    '    ① 分級改變的是「某個指定通路的率」而不是全卡的率（國泰 CUBE 那種 specialRate）；',
+    '    ② 分級會分別覆寫多個通路槽位的率與上限（永豐大戶卡那種，一級裡有 rate_1/cap_1/rate_14… 一整組）。',
+    '    這兩種硬套簡單格式會產生「看起來對、算出來錯」的資料，寧可留空讓人手填。',
     '8. 海外：overseasCashback（基本海外率數字）、overseasBonusRate（海外加碼率數字）、overseasBonusCap_reward（海外加碼「回饋金額上限」數字）、overseasBonusConditions、overseasBonusPeriod_start/overseasBonusPeriod_end（YYYY/M/D）。',
-    '9. 國內加碼：domesticBonusRate、domesticBonusCap_reward（回饋金額上限數字）、domesticBonusConditions。',
+    '9. 國內加碼：domesticBonusRate、domesticBonusCap_reward（回饋金額上限數字）、domesticBonusConditions、',
+    '   domesticBonusPeriod_start/domesticBonusPeriod_end（YYYY/M/D，國內加碼的活動期間；官網常寫在加碼段落開頭，別漏）。',
     '10. general_excludes_ads：一般消費是否排除 Facebook/Meta/Google/廣告費——明確排除填「是」；明確沒排除或明說廣告可享填「否」；沒提到填「未提及」。',
     '11. parking / airport_pickup / airport_lounge：有才填。',
     '',
@@ -353,6 +367,7 @@ function extractCard_(rawText, idHint, generalText) {
               required: ['level_name', 'rate']
             }
           },
+          levels_beyond_simple: { type: 'BOOLEAN', description: '這張卡的分級無法用「每級一個全卡回饋率＋上限」表達時填 true（見 prompt 規則 7a）' },
           levelSettings_evidence: { type: 'STRING', description: '分級卡：官網描述各級別的原文（供人工複核）' },
           levelLabelFormat: { type: 'STRING', description: '依官網用詞，如 方案: {level}' },
           overseasCashback: { type: 'NUMBER' }, overseasBonusRate: { type: 'NUMBER' },
@@ -360,6 +375,8 @@ function extractCard_(rawText, idHint, generalText) {
           overseasBonusPeriod_start: { type: 'STRING' }, overseasBonusPeriod_end: { type: 'STRING' },
           domesticBonusRate: { type: 'NUMBER' }, domesticBonusCap_reward: { type: 'NUMBER' },
           domesticBonusConditions: { type: 'STRING' },
+          domesticBonusPeriod_start: { type: 'STRING', description: 'YYYY/M/D' },
+          domesticBonusPeriod_end: { type: 'STRING', description: 'YYYY/M/D' },
           general_excludes_ads: { type: 'STRING', enum: ['是', '否', '未提及'] },
           parking: { type: 'STRING' }, airport_pickup: { type: 'STRING' }, airport_lounge: { type: 'STRING' },
           evidence: { type: 'STRING' }, needs_review: { type: 'BOOLEAN' }, review_question: { type: 'STRING' }
@@ -390,7 +407,21 @@ function spendCapFromReward_(rewardAmount, ratePercent) {
   return Math.round(num_(rewardAmount) / (num_(ratePercent) / 100));
 }
 
+// 起訖日 → Cards Data 的單欄期間字串「2026/1/1~2026/12/31」；兩邊都空就回空字串
+function joinPeriod_(start, end) {
+  const s = String(start || '').trim(), e = String(end || '').trim();
+  return (s || e) ? (s + '~' + e) : '';
+}
+
 // 由 AI 的 levels 陣列組出 levelSettings JSON：{級別名:{rate,cap,period,"level-note"}}
+//
+// ⚠️ 它只做得出**最單純的那一種**形狀。實際資料裡三種形狀只有一種吃得下（2026-08-16 盤點）：
+//     ✅ 玉山 Uni／凱基誠品：{rate, cap, period, level-note}
+//     ❌ 國泰 CUBE：{specialRate, level-note}（分級改的是指定通路的率）
+//     ❌ 永豐大戶卡：{rate_1, cap_1, rate_14, cap_hide, overseasBonusRate…} 共 11 個 key（逐槽覆寫）
+//   後兩種硬套簡單格式會產出「看起來對、算出來錯」的 levelSettings，而站長未必看得出來——
+//   所以由 AI 舉手（levels_beyond_simple）、這裡直接留空讓人手填（站長 2026-08-16 裁定：
+//   分級卡數量少（全站 4 張）、形狀又雜，自動化的投報率遠低於產錯的代價）。
 function buildLevelSettings_(levels) {
   if (!levels || !levels.length) return '';
   const obj = {};
@@ -539,6 +570,10 @@ function writeBasicReview_(basic, link, idCollision) {
     sheet.setFrozenRows(1);
   }
   ensureBasicReviewColumn_(sheet, 'bank', 'fullName');   // 2026-08-05 新增欄位，舊分頁自動補
+  // 2026-08-16 新增兩個期間欄，同樣自動補在各自的 Conditions 右邊——
+  // 舊分頁不用刪重建（這張表是照位置寫的，少一欄整列就會左移錯位，所以一定要補）
+  ensureBasicReviewColumn_(sheet, 'overseasBonusPeriod', 'overseasBonusConditions');
+  ensureBasicReviewColumn_(sheet, 'domesticBonusPeriod', 'domesticBonusConditions');
 
   const overseasCap = spendCapFromReward_(basic.overseasBonusCap_reward, basic.overseasBonusRate);
   const domesticCap = spendCapFromReward_(basic.domesticBonusCap_reward, basic.domesticBonusRate);
@@ -550,18 +585,29 @@ function writeBasicReview_(basic, link, idCollision) {
     basicConditions: basic.basicConditions || '', annualFee: basic.annualFee || '',
     feeWaiver: basic.feeWaiver || '', website: basic.website || link || '',
     tags: (basic.tags || []).join(','), hasLevels: basic.hasLevels ? 'TRUE' : 'FALSE',
-    // 新卡預填 levelSettings JSON（新卡沒有既存用戶偏好，預填安全；你可直接改）
-    levelSettings: buildLevelSettings_(basic.levels),
+    // 新卡預填 levelSettings JSON（新卡沒有既存用戶偏好，預填安全；你可直接改）。
+    // AI 舉手說這張卡的分級超出簡單形狀（CUBE 的 specialRate、大戶卡的逐槽覆寫）→ 留空給人手填
+    levelSettings: basic.levels_beyond_simple ? '' : buildLevelSettings_(basic.levels),
     levelLabelFormat: basic.levelLabelFormat || '',      // AI 依官網用詞
     overseasCashback: (basic.overseasCashback != null ? basic.overseasCashback : ''),
     overseasBonusRate: (basic.overseasBonusRate != null ? basic.overseasBonusRate : ''),
     overseasBonusCap: overseasCap, overseasBonusConditions: basic.overseasBonusConditions || '',
+    overseasBonusPeriod: joinPeriod_(basic.overseasBonusPeriod_start, basic.overseasBonusPeriod_end),
     domesticBonusRate: (basic.domesticBonusRate != null ? basic.domesticBonusRate : ''),
     domesticBonusCap: domesticCap, domesticBonusConditions: basic.domesticBonusConditions || '',
+    domesticBonusPeriod: joinPeriod_(basic.domesticBonusPeriod_start, basic.domesticBonusPeriod_end),
     parking: basic.parking || '', airport_pickup: basic.airport_pickup || '', airport_lounge: basic.airport_lounge || ''
   };
   const fixedCells = CARD_BASIC_FIELDS.map(function (f) { return valueByField[f]; });
-  const reviewQ = (basic.review_question || '') + (idCollision ? '（id 已存在，若為新卡請改 id）' : '');
+  const levelWarn = basic.levels_beyond_simple
+    ? '【levelSettings 需手填】這張卡的分級超出程式能產的簡單格式（每級一個全卡率＋上限）——' +
+      '可能是分級改的是指定通路的率（參考國泰 CUBE 的 specialRate 寫法），' +
+      '或一級要覆寫多個槽位（參考永豐大戶卡的 rate_1/cap_1/rate_14… 寫法）。' +
+      '各級別的官網原文已放在最右邊的「levelSettings原文引用」欄。'
+    : '';
+  const reviewQ = [basic.review_question || '', levelWarn,
+    idCollision ? '（id 已存在，若為新卡請改 id）' : '']
+    .filter(function (x) { return x; }).join('　');
   const row = ['', new Date(), basic.needs_review ? 'TRUE' : '', reviewQ, basic.evidence || '']
     .concat(fixedCells).concat([basic.levelSettings_evidence || '']);
   sheet.appendRow(row);
