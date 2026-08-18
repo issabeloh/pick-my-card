@@ -118,9 +118,11 @@ const MERCHANT_PAGE_STYLE =
   '<style>\n' +
   '.mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}\n' +
   '.mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}\n' +
-  '.mc-body{max-width:1100px;margin:0 auto;padding:4px 24px 20px;color:#374151;font-size:14px;line-height:1.9;}\n' +
-  '.mc-body h2{font-size:17px;font-weight:700;color:#111827;margin:20px 0 8px;}\n' +
-  '.mc-body h3{font-size:15px;font-weight:700;color:#111827;margin:16px 0 6px;}\n' +
+  // 字級／行距／顏色刻意與 .mc-seo-footer 完全相同：兩塊在頁面上緊鄰，
+  // 只差一點就會看起來像沒對齊（13px/1.8/#6b7280，標題 #374151）。
+  '.mc-body{max-width:1100px;margin:0 auto;padding:4px 24px 20px;color:#6b7280;font-size:13px;line-height:1.8;}\n' +
+  '.mc-body h2{font-size:15px;font-weight:700;color:#374151;margin:18px 0 8px;}\n' +
+  '.mc-body h3{font-size:14px;font-weight:700;color:#374151;margin:14px 0 6px;}\n' +
   '.mc-body p{margin:0 0 10px;}\n' +
   '.mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}\n' +
   '.mc-body a{color:#1d4ed8;}\n' +
