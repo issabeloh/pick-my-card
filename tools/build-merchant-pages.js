@@ -17,7 +17,8 @@
  *
  * 設定來源：cards.data 的 merchantPages（Google Sheets 的 MerchantPages 工作表）；
  * 沒有這個欄位時退回 tools/merchant-pages.fallback.json（工作表建好之前的過渡用）。
- * 欄位：slug, merchant(搜尋詞), displayName(選填，預設同 merchant), title, description, active
+ * 欄位：slug, merchant(搜尋詞), displayName(選填，預設同 merchant), title, description, active,
+ *       bodyHtml(選填，站長手寫的正文 HTML；信任層級同 promos，直接烤進頁面不 escape)
  * ============================================================ */
 const fs = require('fs');
 const path = require('path');
@@ -86,13 +87,60 @@ function buildSeoFooter(displayName, cardNames) {
     '</section>\n';
 }
 
-const SEO_FOOTER_STYLE =
+// 「推薦比較」內鏈工具列（2026-08-18）。刻意不做成卡片：站長要的是「工具欄，有空
+// 才會看看的地方」，不是又一塊內容區——所以灰底出血、字級小、一眼看得出是連結
+// （藍字＋底線＋箭頭），與上下的白底內容區明顯區隔。
+// 回饋數字取該頁自己排第一名那列的 rate 與卡名，跟點進去看到的第一張卡一致。
+function buildRelatedBar(currentSlug, allPages) {
+  const others = allPages.filter(p => p.slug !== currentSlug && p.top);
+  if (others.length === 0) return '';
+  const items = others.map(p =>
+    '    <li><a class="mc-related-link" href="/merchant/' + encodeURIComponent(p.slug) + '">' +
+    '<span class="mc-related-name">' + escapeHtml(p.displayName) + '</span>' +
+    '<span class="mc-related-meta">最高 ' + escapeHtml(String(p.top.rate)) + '%（' +
+    escapeHtml(p.top.cardName) + '）</span>' +
+    '<span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>'
+  ).join('\n');
+  return '        <nav class="mc-related" aria-label="推薦比較">\n' +
+    '  <span class="mc-related-label">推薦比較</span>\n' +
+    '  <ul class="mc-related-list">\n' + items + '\n  </ul>\n</nav>\n';
+}
+
+// MerchantPages 的 bodyHtml 欄：站長手寫的正文，信任層級同 promos（工作表只有站長能改），
+// 所以刻意**不 escape**——escape 掉就等於這個欄位不能用。外部來源的內容永遠不該進這欄。
+function buildBodyHtml(bodyHtml) {
+  const body = String(bodyHtml == null ? '' : bodyHtml).trim();
+  if (!body) return '';
+  return '        <section class="mc-body">\n' + body + '\n</section>\n';
+}
+
+const MERCHANT_PAGE_STYLE =
   '<style>\n' +
   '.mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}\n' +
   '.mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}\n' +
+  '.mc-body{max-width:1100px;margin:0 auto;padding:4px 24px 20px;color:#374151;font-size:14px;line-height:1.9;}\n' +
+  '.mc-body h2{font-size:17px;font-weight:700;color:#111827;margin:20px 0 8px;}\n' +
+  '.mc-body h3{font-size:15px;font-weight:700;color:#111827;margin:16px 0 6px;}\n' +
+  '.mc-body p{margin:0 0 10px;}\n' +
+  '.mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}\n' +
+  '.mc-body a{color:#1d4ed8;}\n' +
+  '.mc-related{padding:11px 30px;background:#f3f4f6;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;' +
+  'display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:13px;line-height:1.7;}\n' +
+  '.mc-related-label{flex:none;font-weight:700;color:#4b5563;}\n' +
+  '.mc-related-label::after{content:"：";}\n' +
+  // 項目之間留得比項目內寬，否則行末的「→」會被讀成下一項的開頭
+  '.mc-related-list{display:flex;flex-wrap:wrap;gap:4px 26px;list-style:none;margin:0;padding:0;}\n' +
+  '.mc-related-link{display:inline-flex;align-items:baseline;gap:4px;text-decoration:none;}\n' +
+  '.mc-related-name{color:#1d4ed8;text-decoration:underline;text-underline-offset:2px;font-weight:500;}\n' +
+  '.mc-related-link:hover .mc-related-name{color:#1e3a8a;}\n' +
+  '.mc-related-meta{color:#6b7280;}\n' +
+  '.mc-related-go{color:#1d4ed8;}\n' +
+  // 手機：標籤自成一列，連結才不會被擠成一條窄欄
+  '@media (max-width:768px){.mc-related{flex-direction:column;padding:11px 16px;gap:6px;}' +
+  '.mc-related-list{flex-direction:column;gap:8px;}}\n' +
   '</style>\n';
 
-function buildPage(indexHtml, page, cardNames) {
+function buildPage(indexHtml, page, cardNames, allPages) {
   const merchant = String(page.merchant);
   const displayName = String(page.displayName || page.merchant);
   const slug = String(page.slug);
@@ -135,14 +183,18 @@ function buildPage(indexHtml, page, cardNames) {
 
   // 4) SEO footer 樣式 ＋ JSON-LD（塞在 </head> 前）
   html = replaceOnce(html, /(\n<\/head>)/,
-    (m, p1) => '\n' + SEO_FOOTER_STYLE +
+    (m, p1) => '\n' + MERCHANT_PAGE_STYLE +
       '<script type="application/ld+json">' + buildJsonLd(displayName, cardNames) + '</script>' + p1,
     '</head>');
 
-  // 5) SEO 說明區（精選活動區之後、廣告列之前）
+  // 5) 精選活動區之後、廣告列之前依序插入三塊：
+  //    推薦比較工具列 → SEO 說明區 → bodyHtml（站長手寫正文）
+  //    位置是站長 2026-08-18 選定的：工具列擺在內容講完之前，滿版灰底自成一條，
+  //    不打斷上方任何既有區塊。
   html = replaceOnce(html,
     /(<div class="spotlight-dots" id="spotlight-dots" style="display:none;"><\/div>\n        <\/section>\n)/,
-    (m, p1) => p1 + '\n' + buildSeoFooter(displayName, cardNames),
+    (m, p1) => p1 + '\n' + buildRelatedBar(slug, allPages) +
+      '\n' + buildSeoFooter(displayName, cardNames) + buildBodyHtml(page.bodyHtml),
     'SEO 說明區插入點（精選活動區結尾）');
 
   return html;
@@ -153,7 +205,8 @@ function buildPage(indexHtml, page, cardNames) {
 function stripDataRegions(html) {
   return html
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
-    .replace(/<section class="mc-seo-footer"[\s\S]*?<\/section>/g, '');
+    .replace(/<section class="mc-seo-footer"[\s\S]*?<\/section>/g, '')
+    .replace(/<nav class="mc-related"[\s\S]*?<\/nav>/g, '');
 }
 
 async function main() {
@@ -170,12 +223,26 @@ async function main() {
   let shellDrift = 0;   // 版面對不上：手改過，或 index.html 改了沒重生 → 擋 commit
   let dataDrift = 0;    // 只有卡片清單對不上：cards.data 更新後的正常現象 → 只提醒
 
+  // 分成兩輪的理由：「推薦比較」工具列要寫出其他每一頁的最高回饋，
+  // 所以任何一頁都得等全部算完才組得出來，不能邊算邊寫檔。
+  const computed = [];
   for (const page of active) {
-    const cardNames = await computeMerchantCards(engine, page.merchant, AMOUNT);
-    if (cardNames.length === 0) {
+    const { names, top } = await computeMerchantCards(engine, page.merchant, AMOUNT);
+    if (names.length === 0) {
       throw new Error(`商家「${page.merchant}」（${page.slug}）算不出任何卡片——搜尋詞可能打錯或資料已無對應項目`);
     }
-    const html = buildPage(indexHtml, page, cardNames);
+    computed.push({
+      page,
+      cardNames: names,
+      slug: String(page.slug),
+      displayName: String(page.displayName || page.merchant),
+      top
+    });
+  }
+
+  for (const entry of computed) {
+    const { page, cardNames } = entry;
+    const html = buildPage(indexHtml, page, cardNames, computed);
     const file = path.join(REPO, 'merchant', page.slug + '.html');
     const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
     const same = before === html;

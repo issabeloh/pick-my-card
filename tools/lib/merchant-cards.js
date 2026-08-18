@@ -127,11 +127,15 @@ function resolveMatchedItems(engine, merchant) {
  * findMatchingItem → 逐卡 calculateCardCashback → 濾掉 cashbackAmount<=0 →
  * mergeResultsByActivity → 依金額排序。
  *
- * @returns {Promise<string[]>} 卡片名稱（已去重，保留頁面順序）
+ * @returns {Promise<{names: string[], top: {rate: number, cardName: string}|null}>}
+ *   names＝卡片名稱（已去重，保留頁面順序）；top＝第一名那列的回饋率與卡名，
+ *   給「推薦比較」內鏈區塊寫「最高 X%（某某卡）」用。rate 直接取結果物件的
+ *   `rate` 欄，與畫面上那張卡顯示的「回饋率」是同一個數字（見 results-display.js
+ *   的 rateDisplay），不另外用金額回推，否則兩邊會對不上。
  */
 async function computeMerchantCards(engine, merchant, amount) {
   const matched = resolveMatchedItems(engine, merchant);
-  if (!matched || matched.length === 0) return [];
+  if (!matched || matched.length === 0) return { names: [], top: null };
 
   // ⚠️ 這裡的兩段排序都是照抄 calculateCashback()，順序不能省：它每處理完一個匹配項
   // 就先把該項結果排一次序才累加，最後合併完再排一次。JS 的 sort 是穩定排序，所以
@@ -166,7 +170,11 @@ async function computeMerchantCards(engine, merchant, amount) {
     seen.add(name);
     names.push(name);
   }
-  return names;
+  const first = merged[0];
+  const top = first && first.card
+    ? { rate: first.rate, cardName: first.card.name }
+    : null;
+  return { names, top };
 }
 
 module.exports = { createEngine, computeMerchantCards, MODULES };

@@ -1485,6 +1485,9 @@ function readMerchantPages() {
       displayName: str(row, 'displayName') || merchant,
       title: str(row, 'title'),
       description: str(row, 'description'),
+      // 站長手寫的正文 HTML（選填）。信任層級同 promos：直接烤進商家頁、不 escape，
+      // 所以這欄只能由站長自己填，不接受任何外部來源的內容。
+      bodyHtml: str(row, 'bodyHtml'),
       order: parseFloat(getValue(row, headers, 'order')) || 999,
       // 空白＝啟用（新增一列時不必特地填 TRUE）；只有明確填 FALSE 才關掉
       active: !(activeRaw === false || String(activeRaw).toUpperCase() === 'FALSE')
