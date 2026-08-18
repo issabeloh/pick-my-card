@@ -276,13 +276,30 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 | 想改的東西 | 去哪改 |
 |---|---|
 | 版面、區塊、共用元件 | `index.html`（商家頁自動跟著變） |
-| 開哪些商家頁、標題、描述 | Google Sheets 的 `MerchantPages` 工作表 |
-| 卡片清單、JSON-LD、SEO 文案 | 都不用改，跟著 `cards.data` 自動更新 |
+| 開哪些商家頁、標題、描述、每頁的手寫正文 | Google Sheets 的 `MerchantPages` 工作表 |
+| 卡片清單、JSON-LD、SEO 文案、推薦比較的回饋數字 | 都不用改，跟著 `cards.data` 自動更新 |
 | 每頁專屬的結構（注入點、警語） | `tools/build-merchant-pages.js` 的 `buildPage()` |
+
+**每頁尾端依序有三塊**（都由 `buildPage()` 第 5 步插在精選活動區之後、廣告列之前）：
+
+1. **推薦比較工具列**（`<nav class="mc-related">`，2026-08-18 加）——連到其他每一個商家頁，
+   每條帶「最高 X%（某某卡）」。數字取**該頁自己排第一名那列**的 `rate` 與卡名，與點進去看到的
+   第一張卡一致；不用金額回推，否則兩邊會對不上。因為要列出其他頁的數字，`main()` 拆成兩輪：
+   先把所有頁的卡片算完，再組頁面寫檔。
+   ⚠️ 它的數字跟著 `cards.data` 走，所以**必須列進 `stripDataRegions()`**——沒挖掉的話每次
+   Apps Script 匯出都會被判成「版面不一致」而擋住所有不相干的 commit。
+   UI 刻意做成灰底出血的**工具列**（小字、藍字底線＋箭頭），不是卡片、不是內容區
+   ——站長 2026-08-18 定調：「它是一個工具欄，有空才會看看的地方，UI 要區隔開來」。
+2. **SEO 說明區**（`<section class="mc-seo-footer">`）——H1 ＋ 說明文，卡片清單跟著資料走。
+3. **`bodyHtml`**（`<section class="mc-body">`）——站長在工作表手寫的正文，留空就不輸出。
 
 **`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
 `slug`（URL）、`merchant`（**搜尋詞**，要跟站上搜得到的商家一致）、`displayName`（顯示名稱，
-留空＝同 merchant）、`title`、`description`、`active`（留空＝啟用，填 FALSE 關掉）、`order`。
+留空＝同 merchant）、`title`、`description`、`bodyHtml`（選填，見下）、
+`active`（留空＝啟用，填 FALSE 關掉）、`order`。
+⚠️ `bodyHtml` 是站長手寫的正文 HTML，**信任層級同 promos：直接烤進頁面、不 escape**
+（escape 掉這欄就沒用了）。所以它只能由站長自己填，任何外部來源的內容都不准進這欄。
+留空就整段不輸出。位置在 SEO 說明區之後。
 ⚠️ `merchant` 與 `displayName` 是兩件事：linepay 頁的搜尋詞是 `LinePay`，顯示是 `LINE Pay`。
 ⚠️ 改 `slug` ＝換網址，舊網址變 404，非必要別動。
 工作表還沒建立時退回 `tools/merchant-pages.fallback.json`（與 `.gs` 的 `MERCHANT_FALLBACK_SLUGS` 同一份清單）。
