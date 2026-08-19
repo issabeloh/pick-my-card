@@ -5536,6 +5536,144 @@ mark.cashback-search-hl {
     }
 }
 
+/* 去廣告付費牆 —— 廣告列下方的入口、以及付費 modal
+   .pmc-adfree 是付費用戶的根層旗標（index.html <head> 的閘門會加上）。
+   JS 已經把 #ad-row 整個移出 DOM，這條規則是保險：萬一 JS 因故沒跑到，
+   版面也不會留下一塊空的廣告位。 */
+html.pmc-adfree .ad-row,
+html.pmc-adfree .adfree-cta {
+    display: none !important;
+}
+
+.adfree-cta {
+    width: 100%;
+    max-width: 760px;
+    margin: 6px auto 0;
+    padding: 0 16px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.adfree-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.adfree-cta-btn:hover {
+    color: #374151;
+    background: #f3f4f6;
+}
+
+.adfree-modal-content {
+    max-width: 460px;
+}
+
+.adfree-price {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.adfree-price-amount {
+    display: block;
+    font-size: 34px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+}
+
+.adfree-price-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.adfree-benefits {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #374151;
+}
+
+.adfree-account {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #4b5563;
+    word-break: break-all;
+}
+
+.adfree-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.adfree-consent input {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.adfree-terms {
+    margin-bottom: 14px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #4b5563;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.adfree-terms p {
+    margin: 0 0 8px;
+}
+
+.adfree-terms p:last-child {
+    margin-bottom: 0;
+}
+
+.adfree-error {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #b91c1c;
+}
+
+.adfree-footer {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 12.5px;
+    color: #6b7280;
+}
+
+.adfree-footer a {
+    color: #2563eb;
+}
+
 /* 信用卡警語橫條 — 精選活動區下方的一整行警語 */
 .finance-warning-row {
     width: 100%;

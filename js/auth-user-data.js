@@ -90,6 +90,7 @@ function setupAvatarDropdown() {
         'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openMyPaymentsModal(),
         'avatar-my-mappings': () => openMyMappingsModal(),
+        'avatar-remove-ads': () => openAdfreeModal(),
         'avatar-feedback': () => {
             const modal = document.getElementById('feedback-modal');
             if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
@@ -142,7 +143,10 @@ function clearPersonalLocalDataOnSignOut(uid) {
     // 這裡清掉的是殘留值）
     const guestExact = [
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
-        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
+        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest',
+        // 去廣告旗標只是本機快取，權威狀態在後端；共用電腦上不該留給下一位使用者，
+        // 本人下次登入時 refreshAdfreeEntitlement() 會重新向 /api/entitlement 拿回來。
+        'pmc_adfree'
     ];
     const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
     // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
@@ -324,6 +328,10 @@ function ensureAuthSubscribed() {
     window.onAuthStateChanged(auth, async (user) => {
         // Card levels are user-scoped; drop cached values when the user changes.
         clearCardLevelCache();
+
+        // 去廣告權益跟著帳號走：登入/登出/換帳號都要重新向後端核對本機旗標。
+        // fire-and-forget——不擋這個 callback 後面的資料載入流程。
+        if (typeof onPaywallAuthChanged === 'function') onPaywallAuthChanged(user);
 
         // Update the pre-paint auth hint so the next visit skips the boot loader delay
         // (or correctly shows it if the user signed out / token expired).

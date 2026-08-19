@@ -152,9 +152,34 @@
         })(window, document, "clarity", "script", "u1w7nqgag1");
     </script>
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3478658382505422"
-     crossorigin="anonymous"></script>
+    <!-- Google AdSense — 由去廣告付費牆決定要不要載入這支 loader -->
+    <!-- ⚠️ 付費用戶是「根本不注入 loader」，不是把版位 display:none。
+         loader 一旦載入，Auto ads 仍會自己插廣告，藏起來的版位也照樣計曝光；
+         「完全沒有廣告」唯一做得到的方式就是不載入它。
+         判斷只看 localStorage 的 pmc_adfree 旗標（由 js/paywall.js 維護，每次
+         登入向 /api/entitlement 重新核對、對不上就清掉），未付費用戶零延遲、
+         行為與改版前完全相同。
+         旗標刻意存成 "<uid>|<到期毫秒>" 純字串而非 JSON：這段跑在 <head>，
+         比 defer 的 js/core-utils.js 早，readLocalJSON()（鐵則 2）此時還不存在。 -->
+    <script>
+        (function () {
+            var adfree = false;
+            try {
+                var parts = (localStorage.getItem('pmc_adfree') || '').split('|');
+                adfree = parts.length === 2 && parts[0] !== '' && Number(parts[1]) > Date.now();
+            } catch (e) { /* localStorage 被停用 → 當作未付費，照常顯示廣告 */ }
+            window.pmcAdfree = adfree;
+            if (adfree) {
+                document.documentElement.classList.add('pmc-adfree');
+                return;
+            }
+            var s = document.createElement('script');
+            s.async = true;
+            s.crossOrigin = 'anonymous';
+            s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3478658382505422';
+            document.head.appendChild(s);
+        })();
+    </script>
 <style>
 .mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}
 .mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}
@@ -225,6 +250,10 @@
                                 <a href="#" class="avatar-dropdown-item" id="avatar-my-mappings" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v6H9.5A1.5 1.5 0 0 0 8 10.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V10.5a.5.5 0 0 1 .5-.5h3.293L9 13.793z"/></svg>
                                     我的配卡組合
+                                </a>
+                                <a href="#" class="avatar-dropdown-item" id="avatar-remove-ads" style="display:none">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/><path d="M4.5 7.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/></svg>
+                                    移除廣告
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-feedback" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
@@ -541,7 +570,7 @@
         <!-- 廣告列（精選活動下方、警語橫條上方）
              回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
              loader script 已在 <head> 載入，這裡只放版位本身。 -->
-        <div class="ad-row">
+        <div class="ad-row" id="ad-row">
             <ins class="adsbygoogle ad-row-unit"
                  style="display:block"
                  data-ad-client="ca-pub-3478658382505422"
@@ -549,8 +578,21 @@
                  data-ad-format="auto"
                  data-full-width-responsive="true"></ins>
         </div>
+        <!-- 去廣告入口：預設隱藏，由 js/paywall.js 在確認「未購買」後才顯示 -->
+        <div class="adfree-cta" id="adfree-cta" style="display: none;">
+            <button type="button" class="adfree-cta-btn" id="adfree-cta-btn">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+                移除廣告 · NT$100 一次買斷
+            </button>
+        </div>
         <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
+            // 付費用戶：整個版位從 DOM 拿掉（連保留高度都不留），且不呼叫 push()
+            if (window.pmcAdfree) {
+                var pmcAdRow = document.getElementById('ad-row');
+                if (pmcAdRow && pmcAdRow.parentNode) pmcAdRow.parentNode.removeChild(pmcAdRow);
+            } else {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            }
         </script>
 
         <!-- 信用卡警語橫條（精選活動區下方） -->
@@ -1033,6 +1075,55 @@
         </div>
     </div>
 
+    <!-- 去廣告付費 Modal（js/paywall.js 控制） -->
+    <div id="adfree-modal" class="modal" style="display: none;">
+        <div class="modal-content adfree-modal-content">
+            <div class="modal-header">
+                <h3>移除廣告</h3>
+                <button class="close-modal" id="close-adfree-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="adfree-price">
+                    <span class="adfree-price-amount">NT$100</span>
+                    <span class="adfree-price-note">一次付清 · 永久有效 · 不自動續扣</span>
+                </div>
+
+                <ul class="adfree-benefits">
+                    <li>本站所有頁面完全不載入廣告（不是隱藏，是不載入）</li>
+                    <li>權益綁定你的帳號，換手機、換瀏覽器登入後同樣生效</li>
+                    <li>信用卡 / Apple Pay 付款，由綠界金流處理，本站不接觸卡號</li>
+                </ul>
+
+                <div class="adfree-account" id="adfree-account"></div>
+
+                <label class="adfree-consent">
+                    <input type="checkbox" id="adfree-consent-check">
+                    <span>我已閱讀並同意
+                        <a href="#" id="adfree-terms-toggle">購買條款</a>，
+                        並同意本服務於付款完成後立即提供，依《通訊交易解除權合理例外情事適用準則》不適用七天猶豫期。</span>
+                </label>
+
+                <div class="adfree-terms" id="adfree-terms" style="display: none;">
+                    <p><strong>商品內容：</strong>Pick My Card 網站的去廣告權益，一次性費用 NT$100，付款完成後永久有效，不會自動續扣。</p>
+                    <p><strong>權益範圍：</strong>綁定你付款當下登入的帳號。以同一帳號在任何裝置登入皆生效；未登入時無法辨識身分，會顯示廣告。</p>
+                    <p><strong>提供時間：</strong>付款完成、金流通知送達後立即生效（通常數秒內）。</p>
+                    <p><strong>猶豫期：</strong>本服務屬「非以有形媒介提供之數位內容，經消費者事先同意始提供」，依《通訊交易解除權合理例外情事適用準則》第 2 條第 5 款，不適用七天猶豫期。</p>
+                    <p><strong>退款：</strong>若因系統問題導致付款成功但權益未生效，且「重新查詢訂單」仍無法修復，請透過「回報錯誤」聯繫，我們會協助開通或全額退款。</p>
+                    <p><strong>服務變更：</strong>若本站未來停止營運，已購買的權益將隨網站一併終止，恕不另行退費。</p>
+                </div>
+
+                <div class="adfree-error" id="adfree-error" style="display: none;"></div>
+
+                <button type="button" id="adfree-pay-btn" class="auth-btn primary full-width" disabled>前往付款</button>
+
+                <div class="adfree-footer">
+                    已經付款但廣告還在？
+                    <a href="#" id="adfree-recheck">重新查詢訂單</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
          全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
     <script src="js/core-utils.js?v=dev" defer></script>
@@ -1047,6 +1138,7 @@
     <script src="js/spending-mappings.js?v=dev" defer></script>
     <script src="js/levels-payments.js?v=dev" defer></script>
     <script src="js/quick-options-misc.js?v=dev" defer></script>
+    <script src="js/paywall.js?v=dev" defer></script>
 
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個

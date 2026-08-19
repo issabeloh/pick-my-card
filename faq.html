@@ -125,9 +125,34 @@
         })(window, document, "clarity", "script", "u1w7nqgag1");
     </script>
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3478658382505422"
-     crossorigin="anonymous"></script>
+    <!-- Google AdSense — 由去廣告付費牆決定要不要載入這支 loader -->
+    <!-- ⚠️ 付費用戶是「根本不注入 loader」，不是把版位 display:none。
+         loader 一旦載入，Auto ads 仍會自己插廣告，藏起來的版位也照樣計曝光；
+         「完全沒有廣告」唯一做得到的方式就是不載入它。
+         判斷只看 localStorage 的 pmc_adfree 旗標（由 js/paywall.js 維護，每次
+         登入向 /api/entitlement 重新核對、對不上就清掉），未付費用戶零延遲、
+         行為與改版前完全相同。
+         旗標刻意存成 "<uid>|<到期毫秒>" 純字串而非 JSON：這段跑在 <head>，
+         比 defer 的 js/core-utils.js 早，readLocalJSON()（鐵則 2）此時還不存在。 -->
+    <script>
+        (function () {
+            var adfree = false;
+            try {
+                var parts = (localStorage.getItem('pmc_adfree') || '').split('|');
+                adfree = parts.length === 2 && parts[0] !== '' && Number(parts[1]) > Date.now();
+            } catch (e) { /* localStorage 被停用 → 當作未付費，照常顯示廣告 */ }
+            window.pmcAdfree = adfree;
+            if (adfree) {
+                document.documentElement.classList.add('pmc-adfree');
+                return;
+            }
+            var s = document.createElement('script');
+            s.async = true;
+            s.crossOrigin = 'anonymous';
+            s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3478658382505422';
+            document.head.appendChild(s);
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
