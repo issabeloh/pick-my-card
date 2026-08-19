@@ -56,6 +56,10 @@ const fuzzySearchMap = {
     '國外': '海外',
     'overseas': '海外',
     'apple wallet': 'apple pay',
+    // Apple 直營通路別名：資料裡「apple官網」與「Apple store」／「Apple Store 在線商城」
+    // 是同一件事的不同寫法，彼此不含子字串，靠這張表打通（反向展開讓搜「apple store」
+    // 也吃得到「apple官網」的活動）。
+    'apple官網': 'apple store',
     'googlepay': 'google pay',
     'google pay': 'googlepay',
     'samsungpay': 'samsung pay',
