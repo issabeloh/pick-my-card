@@ -1,0 +1,50 @@
+/* ============================================================
+ * POST /api/order-status — 自我修復：主動跟綠界查訂單，補開通
+ *
+ * 用在「用戶付了錢，但綠界的通知遲到或漏送」。前端的「重新查詢訂單」按鈕會打這支。
+ * 只查本人的訂單（tradeNo 必須屬於 token 的 uid），不接受任意訂單編號。
+ * ============================================================ */
+import { requireUser } from '../_lib/firebase-auth.js';
+import { getOrder, getEntitlement, latestPendingOrder, markOrderPaid, grantAdfree } from '../_lib/db.js';
+import { resolveEcpayConfig, queryTradeInfo } from '../_lib/ecpay.js';
+import { json, fail } from '../_lib/http.js';
+
+export async function onRequestPost({ request, env }) {
+    let user;
+    try {
+        user = await requireUser(request, env);
+    } catch (err) {
+        return fail(401, '未登入', err);
+    }
+
+    try {
+        if (await getEntitlement(env, user.uid)) return json({ adfree: true, status: 'paid' });
+
+        let body = {};
+        try { body = await request.json(); } catch (e) { /* 沒帶 body 就用最近一筆未完成訂單 */ }
+
+        const order = body.tradeNo
+            ? await getOrder(env, String(body.tradeNo))
+            : await latestPendingOrder(env, user.uid);
+
+        // 訂單不屬於本人＝當作不存在，不洩漏他人訂單是否存在
+        if (!order || order.uid !== user.uid) return json({ adfree: false, status: 'no-order' });
+
+        const cfg = resolveEcpayConfig(env);
+        const info = await queryTradeInfo(cfg, order.trade_no);
+
+        // TradeStatus：0=未付款、1=已付款、10200095=交易失敗
+        if (info.TradeStatus === '1' && Number(info.TradeAmt) === Number(order.amount)) {
+            await markOrderPaid(env, order.trade_no, {
+                ecpayTradeNo: info.TradeNo, paymentType: info.PaymentType,
+                rtnCode: 1, rtnMsg: 'recovered by query', raw: JSON.stringify(info),
+            });
+            await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'ecpay-query' });
+            console.error('[paywall] 由主動查詢補開通：uid=' + user.uid + ' 訂單=' + order.trade_no);
+            return json({ adfree: true, status: 'paid' });
+        }
+        return json({ adfree: false, status: 'pending', tradeNo: order.trade_no });
+    } catch (err) {
+        return fail(500, '查詢訂單失敗，請稍後再試', err);
+    }
+}
