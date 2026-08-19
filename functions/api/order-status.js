@@ -6,7 +6,7 @@
  * ============================================================ */
 import { requireUser } from '../_lib/firebase-auth.js';
 import { getOrder, getEntitlement, latestPendingOrder, markOrderPaid, grantAdfree } from '../_lib/db.js';
-import { resolveEcpayConfig, queryTradeInfo } from '../_lib/ecpay.js';
+import { resolvePaymentConfig, queryTradeInfo } from '../_lib/payment.js';
 import { json, fail } from '../_lib/http.js';
 
 export async function onRequestPost({ request, env }) {
@@ -30,7 +30,7 @@ export async function onRequestPost({ request, env }) {
         // 訂單不屬於本人＝當作不存在，不洩漏他人訂單是否存在
         if (!order || order.uid !== user.uid) return json({ adfree: false, status: 'no-order' });
 
-        const cfg = resolveEcpayConfig(env);
+        const cfg = resolvePaymentConfig(env);
         const info = await queryTradeInfo(cfg, order.trade_no);
 
         // TradeStatus：0=未付款、1=已付款、10200095=交易失敗

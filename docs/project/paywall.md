@@ -3,7 +3,7 @@
 一句話：**登入 → 綠界付款 → 綠界通知後端 → 後端寫權益 → 前端不載入 AdSense loader。**
 
 - 前端：`js/paywall.js`（順序 13）＋ `index.html`/`faq.html` 的 `<head>` 廣告閘門
-- 後端：`functions/`（Cloudflare Pages Functions，與靜態站同一個 CF Pages 專案）
+- 後端：`functions/`（Cloudflare Pages Functions，與靜態站同一個 CF Pages 專案）；金流商可切換，見第 3 節
 - 資料：Cloudflare D1（`orders`、`entitlements`），schema 在 `tools/paywall/schema.sql`
 
 ## 1. 為什麼是這個架構
@@ -33,6 +33,35 @@
 - 帶到期時間（7 天）→ 退款或撤銷後最多 7 天一定回頭問一次後端
 - 這是前端旗標，改 devtools 的人擋不住——但那等同裝擋廣告外掛，**不構成金流風險**，因為訂單與開通全在後端
 
+## 2.5 成本結構
+
+**這套架構不會新增任何月費**：
+
+- **Firebase 不需要升 Blaze**——後端完全沒用 Cloud Functions 或 Admin SDK，Firebase 的用量與加付費牆前一模一樣（這是當初選 CF Pages Functions 而非 Firebase Functions 的主因之一）。可用 `grep -rn "firebase-admin\|firestore" functions/` 自我驗證
+- **Cloudflare** 用量（可據此自行估算是否會超出免費額度）：
+
+  | 情境 | 請求數 |
+  |---|---|
+  | 未登入訪客瀏覽 | **0**（`refreshAdfreeEntitlement()` 在 user 為 null 時直接 return，不打 API） |
+  | 已登入用戶開一次頁 | 1 次 `/api/entitlement` ＋ 1 row read |
+  | 完成一筆購買 | 約 10 次（建單＋通知＋導回＋輪詢） |
+
+- 唯一的實質成本是**金流手續費**（NT$100 約 2.75%，≈2.75 元/筆）
+
+若哪天登入用戶的瀏覽量真的逼近 Workers 免費額度，最省的優化是幫「查到未付費」的結果也加上幾小時的本機快取（目前只快取「已付費」），代價是換裝置購買後生效變慢。
+
+## 2.6 金流商的選擇與切換
+
+台灣多數金流商（綠界、藍新）的特店申請對**持永久居留證的外國人**不一定開放，這是選型的實際限制，不是技術問題。
+
+程式碼對此的準備：`functions/_lib/payment.js` 把端點抽成 `ENDPOINTS[provider][mode]`，並提供 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 兩個覆寫變數。
+
+| 金流商 | 狀態 |
+|---|---|
+| 綠界 ECPay | 已實作，CheckMacValue 演算法有自我測試 |
+| 歐付寶 O'Pay | 端點已備妥，但**網址是依同一命名慣例推得、尚未實測**。帳號下來後先跑 `mac-selftest.mjs`，再送一筆測試訂單確認不是回 CheckMacValue Error；若網址不同，設 `PMC_PAY_CHECKOUT_URL` 覆蓋即可 |
+| 其他（如 OEN 應援科技） | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
+
 ## 3. 上線前要做的事（人工，程式碼幫不了）
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
@@ -41,12 +70,15 @@
 
    | 變數 | 值 | 說明 |
    |---|---|---|
-   | `PMC_ECPAY_ENV` | `stage` / `prod` | 沒設＝stage。**prod 缺任何一把金鑰會直接報錯**，不會靜默退回測試帳號 |
-   | `PMC_ECPAY_MERCHANT_ID` | 你的特店代號 | stage 不設會用綠界公開測試帳號 |
-   | `PMC_ECPAY_HASH_KEY` | 🔒 Secret | 同上 |
-   | `PMC_ECPAY_HASH_IV` | 🔒 Secret | 同上 |
+   | `PMC_PAY_PROVIDER` | `ecpay` / `opay` | 沒設＝ecpay。綠界與歐付寶同源、規格同家族，共用 `functions/_lib/payment.js` |
+   | `PMC_PAY_ENV` | `stage` / `prod` | 沒設＝stage。**prod 缺任何一把金鑰會直接報錯**，不會靜默退回測試帳號 |
+   | `PMC_PAY_MERCHANT_ID` | 特店代號 | 只有「ecpay + stage」會退回綠界公開測試帳號；歐付寶一律要自己填 |
+   | `PMC_PAY_HASH_KEY` | 🔒 Secret | 同上 |
+   | `PMC_PAY_HASH_IV` | 🔒 Secret | 同上 |
+   | `PMC_PAY_CHECKOUT_URL` | （通常不用設） | **端點逃生門**：金流商換網址、或實際規格與 `ENDPOINTS` 的推測不符時，設這個就能覆蓋，不必改程式碼 |
+   | `PMC_PAY_QUERY_URL` | （通常不用設） | 同上，對帳查詢用 |
    | `PMC_SITE_ORIGIN` | `https://pickmycard.app` | ReturnURL 的來源。不設會用當次請求的 origin（preview 部署因此可自行測試） |
-   | `PMC_ECPAY_CHOOSE_PAYMENT` | `Credit` | Apple Pay 在綠界後台開通後會出現在信用卡頁。若綠界確認 `ApplePay` 可當獨立值，改這裡即可 |
+   | `PMC_PAY_CHOOSE_PAYMENT` | `Credit` | Apple Pay 在金流商後台開通後會出現在信用卡頁 |
    | `PMC_ADFREE_PRICE` | `100` | |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
 

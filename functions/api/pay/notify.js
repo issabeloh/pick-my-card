@@ -9,7 +9,7 @@
  * 冪等：綠界收不到 1|OK 會重送，markOrderPaid 只有第一次會真的改到列，
  * grantAdfree 是 INSERT OR IGNORE，重複通知不會重複開通。
  * ============================================================ */
-import { resolveEcpayConfig, verifyCheckMacValue } from '../../_lib/ecpay.js';
+import { resolvePaymentConfig, verifyCheckMacValue } from '../../_lib/payment.js';
 import { getOrder, markOrderPaid, markOrderFailed, grantAdfree } from '../../_lib/db.js';
 import { readFormParams } from '../../_lib/http.js';
 
@@ -26,7 +26,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     try {
-        const cfg = resolveEcpayConfig(env);
+        const cfg = resolvePaymentConfig(env);
 
         if (!(await verifyCheckMacValue(params, cfg.hashKey, cfg.hashIV))) {
             console.error('[paywall] notify CheckMacValue 驗證失敗，訂單=' + params.MerchantTradeNo);

@@ -5,7 +5,7 @@
  * 這條路徑上的參數使用者改得動，開通一律以 /api/ecpay/notify 為準。
  * 前端拿到 pmc_pay 參數後會再向 /api/entitlement 要一次真實狀態。
  * ============================================================ */
-import { resolveEcpayConfig, verifyCheckMacValue } from '../../_lib/ecpay.js';
+import { resolvePaymentConfig, verifyCheckMacValue } from '../../_lib/payment.js';
 import { readFormParams, siteOrigin } from '../../_lib/http.js';
 
 async function handle(request, env) {
@@ -17,7 +17,7 @@ async function handle(request, env) {
             ? await readFormParams(request)
             : Object.fromEntries(new URL(request.url).searchParams);
         tradeNo = params.MerchantTradeNo || '';
-        const cfg = resolveEcpayConfig(env);
+        const cfg = resolvePaymentConfig(env);
         if (await verifyCheckMacValue(params, cfg.hashKey, cfg.hashIV)) {
             status = params.RtnCode === '1' ? 'success' : 'failed';
         }

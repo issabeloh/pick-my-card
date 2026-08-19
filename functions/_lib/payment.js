@@ -1,10 +1,10 @@
 /* ============================================================
- * functions/_lib/ecpay.js — 綠界 AIO 全方位金流工具
+ * functions/_lib/payment.js — 金流工具（綠界 ECPay / 歐付寶 O'Pay 家族）
  * 區塊目錄（Grep 關鍵字）：
  *  - .NET 相容 URL encode  → "dotNetUrlEncode"
  *  - CheckMacValue 計算     → "makeCheckMacValue"
  *  - 驗證回呼               → "verifyCheckMacValue"
- *  - 端點與設定             → "resolveEcpayConfig"
+ *  - 端點與設定             → "resolvePaymentConfig" / "ENDPOINTS"
  *  - 訂單編號生成           → "newTradeNo"
  *  - 查詢訂單               → "queryTradeInfo"
  *
@@ -15,22 +15,42 @@
  * ============================================================ */
 
 // 綠界測試環境的公開測試特店（官方文件公布，任何人可用）。
-// 只有在 PMC_ECPAY_ENV 不是 'prod' 時才會被拿來當預設值——正式環境沒設金鑰
-// 一律直接報錯，避免「上線了但錢進到綠界的測試帳號」這種災難。
-const STAGE_DEFAULTS = {
+// 只有在 provider=ecpay 且非 prod 時才會被拿來當預設值——正式環境沒設金鑰
+// 一律直接報錯，避免「上線了但錢進到別人的測試帳號」這種災難。
+const ECPAY_STAGE_DEFAULTS = {
     merchantId: '2000132',
     hashKey: '5294y06JbISpM5x9',
     hashIV: 'v77hoKGq4kWxNNIS',
 };
 
+// 綠界與歐付寶同源（綠界的團隊自歐付寶分出），CheckMacValue 的演算法與
+// AioCheckOut 的參數規格屬同一家族，因此共用本檔的實作，只有端點不同。
+//
+// ⚠️ 歐付寶的端點網址是依同一命名慣例推得的，**尚未實測**。帳號下來後：
+//    1. 先跑 node tools/paywall/mac-selftest.mjs（演算法層）
+//    2. 再用測試環境送一筆真的訂單，確認不是回 CheckMacValue Error
+//    若歐付寶的網址或規格與此不同，不必改程式——直接設
+//    PMC_PAY_CHECKOUT_URL / PMC_PAY_QUERY_URL 覆蓋即可（見下方 resolvePaymentConfig）。
 const ENDPOINTS = {
-    stage: {
-        checkout: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5',
-        query: 'https://payment-stage.ecpay.com.tw/Cashier/QueryTradeInfo/V5',
+    ecpay: {
+        stage: {
+            checkout: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5',
+            query: 'https://payment-stage.ecpay.com.tw/Cashier/QueryTradeInfo/V5',
+        },
+        prod: {
+            checkout: 'https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5',
+            query: 'https://payment.ecpay.com.tw/Cashier/QueryTradeInfo/V5',
+        },
     },
-    prod: {
-        checkout: 'https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5',
-        query: 'https://payment.ecpay.com.tw/Cashier/QueryTradeInfo/V5',
+    opay: {
+        stage: {
+            checkout: 'https://payment-stage.opay.tw/Cashier/AioCheckOut/V5',
+            query: 'https://payment-stage.opay.tw/Cashier/QueryTradeInfo/V5',
+        },
+        prod: {
+            checkout: 'https://payment.opay.tw/Cashier/AioCheckOut/V5',
+            query: 'https://payment.opay.tw/Cashier/QueryTradeInfo/V5',
+        },
     },
 };
 
@@ -82,27 +102,42 @@ export async function verifyCheckMacValue(params, hashKey, hashIV) {
 }
 
 /**
- * 從 Cloudflare 環境變數解析綠界設定。
- * 正式環境（PMC_ECPAY_ENV=prod）缺任何一把金鑰就丟錯，不會靜默退回測試帳號。
+ * 從 Cloudflare 環境變數解析金流設定。
+ *
+ * PMC_PAY_PROVIDER  ecpay（預設）| opay
+ * PMC_PAY_ENV       stage（預設）| prod
+ * PMC_PAY_CHECKOUT_URL / PMC_PAY_QUERY_URL
+ *                   端點逃生門：金流商換網址、或實際規格與上面的推測不符時，
+ *                   設這兩個變數就能覆蓋，不必改程式碼、不必重新部署程式。
+ *
+ * 正式環境（PMC_PAY_ENV=prod）缺任何一把金鑰就丟錯，不會靜默退回測試帳號。
  */
-export function resolveEcpayConfig(env) {
-    const mode = (env.PMC_ECPAY_ENV || 'stage').toLowerCase() === 'prod' ? 'prod' : 'stage';
-    const merchantId = env.PMC_ECPAY_MERCHANT_ID || (mode === 'stage' ? STAGE_DEFAULTS.merchantId : '');
-    const hashKey = env.PMC_ECPAY_HASH_KEY || (mode === 'stage' ? STAGE_DEFAULTS.hashKey : '');
-    const hashIV = env.PMC_ECPAY_HASH_IV || (mode === 'stage' ? STAGE_DEFAULTS.hashIV : '');
-    if (!merchantId || !hashKey || !hashIV) {
-        throw new Error('綠界設定不完整：PMC_ECPAY_MERCHANT_ID / PMC_ECPAY_HASH_KEY / PMC_ECPAY_HASH_IV 必須設定');
+export function resolvePaymentConfig(env) {
+    const provider = (env.PMC_PAY_PROVIDER || 'ecpay').toLowerCase();
+    if (!ENDPOINTS[provider]) {
+        throw new Error(`不支援的金流商 PMC_PAY_PROVIDER=${provider}（可用：${Object.keys(ENDPOINTS).join(' / ')}）`);
     }
+    const mode = (env.PMC_PAY_ENV || 'stage').toLowerCase() === 'prod' ? 'prod' : 'stage';
+
+    // 公開測試帳號只有綠界有；歐付寶一律要自己填，不做任何猜測
+    const canUseStageDefaults = provider === 'ecpay' && mode === 'stage';
+    const merchantId = env.PMC_PAY_MERCHANT_ID || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.merchantId : '');
+    const hashKey = env.PMC_PAY_HASH_KEY || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.hashKey : '');
+    const hashIV = env.PMC_PAY_HASH_IV || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.hashIV : '');
+    if (!merchantId || !hashKey || !hashIV) {
+        throw new Error('金流設定不完整：PMC_PAY_MERCHANT_ID / PMC_PAY_HASH_KEY / PMC_PAY_HASH_IV 必須設定');
+    }
+
     return {
+        provider,
         mode,
         merchantId,
         hashKey,
         hashIV,
-        checkoutUrl: ENDPOINTS[mode].checkout,
-        queryUrl: ENDPOINTS[mode].query,
-        // Credit＝信用卡頁（Apple Pay 在綠界後台開通後會出現在同一頁）。
-        // 若綠界確認 ApplePay 可當獨立 ChoosePayment 值，改這個環境變數即可。
-        choosePayment: env.PMC_ECPAY_CHOOSE_PAYMENT || 'Credit',
+        checkoutUrl: env.PMC_PAY_CHECKOUT_URL || ENDPOINTS[provider][mode].checkout,
+        queryUrl: env.PMC_PAY_QUERY_URL || ENDPOINTS[provider][mode].query,
+        // Credit＝信用卡頁（Apple Pay 在金流商後台開通後會出現在同一頁）。
+        choosePayment: env.PMC_PAY_CHOOSE_PAYMENT || 'Credit',
     };
 }
 

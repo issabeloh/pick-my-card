@@ -4,7 +4,7 @@
  * bug 幾乎全出在這一步（空白→+、冒號/斜線要編、大小寫），雜湊本身不會出錯。
  * 跑法：node tools/paywall/mac-selftest.mjs
  */
-import { buildMacSource, makeCheckMacValue, dotNetUrlEncode } from '../../functions/_lib/ecpay.js';
+import { buildMacSource, makeCheckMacValue, dotNetUrlEncode } from '../../functions/_lib/payment.js';
 
 const HASH_KEY = '5294y06JbISpM5x9';
 const HASH_IV = 'v77hoKGq4kWxNNIS';

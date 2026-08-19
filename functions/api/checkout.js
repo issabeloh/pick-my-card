@@ -6,7 +6,7 @@
  * ============================================================ */
 import { requireUser } from '../_lib/firebase-auth.js';
 import { createOrder, getEntitlement } from '../_lib/db.js';
-import { resolveEcpayConfig, makeCheckMacValue, taipeiTradeDate, newTradeNo } from '../_lib/ecpay.js';
+import { resolvePaymentConfig, makeCheckMacValue, taipeiTradeDate, newTradeNo } from '../_lib/payment.js';
 import { json, fail, siteOrigin } from '../_lib/http.js';
 
 export async function onRequestPost({ request, env }) {
@@ -23,7 +23,7 @@ export async function onRequestPost({ request, env }) {
             return json({ alreadyPaid: true });
         }
 
-        const cfg = resolveEcpayConfig(env);
+        const cfg = resolvePaymentConfig(env);
         const origin = siteOrigin(request, env);
         const amount = Number(env.PMC_ADFREE_PRICE || 100);
         const tradeNo = newTradeNo();
@@ -41,8 +41,8 @@ export async function onRequestPost({ request, env }) {
             // 用不需編碼的字串就讓歧義消失（ItemName 才是用戶在刷卡頁看到的名稱）。
             TradeDesc: 'PickMyCard AdFree',
             ItemName: '去廣告權益（一次買斷）',
-            ReturnURL: origin + '/api/ecpay/notify',       // 綠界 server 對 server 通知＝唯一開通依據
-            OrderResultURL: origin + '/api/ecpay/return',  // 瀏覽器導回，只做畫面顯示
+            ReturnURL: origin + '/api/pay/notify',       // 綠界 server 對 server 通知＝唯一開通依據
+            OrderResultURL: origin + '/api/pay/return',  // 瀏覽器導回，只做畫面顯示
             ClientBackURL: origin + '/',
             ChoosePayment: cfg.choosePayment,
             EncryptType: 1,
