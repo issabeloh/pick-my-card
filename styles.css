@@ -5993,25 +5993,13 @@ mark.cashback-search-hl {
     padding: 2px;
 }
 
-/* ⓘ 與全站其他 peek 按鈕同款：只有字元自帶的圓圈，不畫外框 */
-.mapping-peek-btn {
-    flex: none;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #6b7280;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 50%;
-    transition: color 0.15s ease, background 0.15s ease;
-}
-
-.mapping-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
+/* 我的配卡組合的「卡片詳情」鈕：與結果卡、精選活動 modal 同一顆藍膠囊
+   （HTML 直接掛 .card-detail-peek-btn），這裡只把標籤覆蓋成「卡片詳情」
+   ——做法比照 .spotlight-modal-actions .card-detail-peek-btn::after。
+   .mapping-peek-btn 本身不再帶樣式，純粹當 spending-mappings.js 綁事件的掛勾。
+   （2026-08-18 之前是一顆灰色圓形 ⓘ，與另外兩處不一致） */
+.mapping-peek-btn::after {
+    content: '卡片詳情';
 }
 
 .mapping-item {

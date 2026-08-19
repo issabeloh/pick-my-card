@@ -564,7 +564,7 @@ function renderMappingsList(searchTerm = '') {
                     ${dragHandleHtml()}
                     <img class="mapping-group-cardimg" src="assets/images/cards/${escapeHtml(group.cardId)}.png" alt="" onerror="this.style.display='none'">
                     <span class="mapping-group-name">${escapeHtml(group.cardName)}</span>
-                    <button type="button" class="mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
+                    <button type="button" class="card-detail-peek-btn mapping-peek-btn" data-card-id="${escapeHtml(group.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 </div>
                 <div class="mapping-group-rows">
                     ${buildActivities(group.rows).map(activityHtml).join('')}
