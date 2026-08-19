@@ -89,11 +89,18 @@ function buildSeoFooter(displayName, cardNames) {
 
 // 「推薦比較」內鏈工具列（2026-08-18）。刻意不做成卡片：站長要的是「工具欄，有空
 // 才會看看的地方」，不是又一塊內容區——所以灰底出血、字級小、一眼看得出是連結
-// （藍字＋底線＋箭頭），與上下的白底內容區明顯區隔。
+// （藍字＋底線＋箭頭），與上下的白底內容區明顯區隔。樣式在 styles.css（兩種頁共用）。
 // 回饋數字取該頁自己排第一名那列的 rate 與卡名，跟點進去看到的第一張卡一致。
+//
+// index.html 放一個空的 <nav class="mc-related"> 當佔位，這裡把它整段換掉：
+// 首頁列全部商家頁（currentSlug 傳 null），商家頁各自排除自己。
+const RELATED_EMPTY = '<nav class="mc-related" aria-label="推薦比較"></nav>';
+const RELATED_RE = /<nav class="mc-related"[\s\S]*?<\/nav>/;
+
 function buildRelatedBar(currentSlug, allPages) {
   const others = allPages.filter(p => p.slug !== currentSlug && p.top);
-  if (others.length === 0) return '';
+  // 只有一個商家頁時沒有別的可連——留空的 <nav>，styles.css 的 :empty 會整條收起來
+  if (others.length === 0) return RELATED_EMPTY;
   const items = others.map(p =>
     '    <li><a class="mc-related-link" href="/merchant/' + encodeURIComponent(p.slug) + '">' +
     '<span class="mc-related-name">' + escapeHtml(p.displayName) + '</span>' +
@@ -101,9 +108,16 @@ function buildRelatedBar(currentSlug, allPages) {
     escapeHtml(p.top.cardName) + '）</span>' +
     '<span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>'
   ).join('\n');
-  return '        <nav class="mc-related" aria-label="推薦比較">\n' +
+  return '<nav class="mc-related" aria-label="推薦比較">\n' +
     '  <span class="mc-related-label">推薦比較</span>\n' +
-    '  <ul class="mc-related-list">\n' + items + '\n  </ul>\n</nav>\n';
+    '  <ul class="mc-related-list">\n' + items + '\n  </ul>\n        </nav>';
+}
+
+// index.html 在 repo 裡也帶著上一次生成的內容（它自己就是輸出之一），所以每次都要先
+// 清回空佔位再拿來當模板，否則會拿到「上一版的工具列」去生商家頁。
+function stripRelatedBar(html) {
+  return replaceOnce(html, RELATED_RE, () => RELATED_EMPTY,
+    '推薦比較工具列佔位（index.html 的 <nav class="mc-related">）');
 }
 
 // MerchantPages 的 bodyHtml 欄：站長手寫的正文，信任層級同 promos（工作表只有站長能改），
@@ -126,21 +140,9 @@ const MERCHANT_PAGE_STYLE =
   '.mc-body p{margin:0 0 10px;}\n' +
   '.mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}\n' +
   '.mc-body a{color:#1d4ed8;}\n' +
-  '.mc-related{padding:11px 30px;background:#f3f4f6;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;' +
-  'display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:13px;line-height:1.7;}\n' +
-  '.mc-related-label{flex:none;font-weight:700;color:#4b5563;}\n' +
-  '.mc-related-label::after{content:"：";}\n' +
-  // 項目之間留得比項目內寬，否則行末的「→」會被讀成下一項的開頭
-  '.mc-related-list{display:flex;flex-wrap:wrap;gap:4px 26px;list-style:none;margin:0;padding:0;}\n' +
-  '.mc-related-link{display:inline-flex;align-items:baseline;gap:4px;text-decoration:none;}\n' +
-  '.mc-related-name{color:#1d4ed8;text-decoration:underline;text-underline-offset:2px;font-weight:500;}\n' +
-  '.mc-related-link:hover .mc-related-name{color:#1e3a8a;}\n' +
-  '.mc-related-meta{color:#6b7280;}\n' +
-  '.mc-related-go{color:#1d4ed8;}\n' +
-  // 手機：標籤自成一列，連結才不會被擠成一條窄欄
-  '@media (max-width:768px){.mc-related{flex-direction:column;padding:11px 16px;gap:6px;}' +
-  '.mc-related-list{flex-direction:column;gap:8px;}}\n' +
   '</style>\n';
+// 註：.mc-related（推薦比較工具列）的樣式**不在這裡**——首頁也要用，所以收在
+// styles.css，兩種頁共用同一份。這個 <style> 只放 merchant 頁專屬的兩塊。
 
 function buildPage(indexHtml, page, cardNames, allPages) {
   const merchant = String(page.merchant);
@@ -189,15 +191,14 @@ function buildPage(indexHtml, page, cardNames, allPages) {
       '<script type="application/ld+json">' + buildJsonLd(displayName, cardNames) + '</script>' + p1,
     '</head>');
 
-  // 5) 精選活動區之後、廣告列之前依序插入三塊：
-  //    推薦比較工具列 → SEO 說明區 → bodyHtml（站長手寫正文）
-  //    位置是站長 2026-08-18 選定的：工具列擺在內容講完之前，滿版灰底自成一條，
-  //    不打斷上方任何既有區塊。
-  html = replaceOnce(html,
-    /(<div class="spotlight-dots" id="spotlight-dots" style="display:none;"><\/div>\n        <\/section>\n)/,
-    (m, p1) => p1 + '\n' + buildRelatedBar(slug, allPages) +
-      '\n' + buildSeoFooter(displayName, cardNames) + buildBodyHtml(page.bodyHtml),
-    'SEO 說明區插入點（精選活動區結尾）');
+  // 5) 換掉 index.html 的推薦比較佔位，並在它後面接上 SEO 說明區與 bodyHtml。
+  //    三塊都掛在同一個錨點，順序才保證是：
+  //      精選活動 → 推薦比較工具列 → SEO 說明區 → bodyHtml → 廣告列
+  //    （位置是站長 2026-08-18 選定的：不打斷上方任何既有區塊。）
+  html = replaceOnce(html, RELATED_RE,
+    () => buildRelatedBar(slug, allPages) + '\n\n' +
+      buildSeoFooter(displayName, cardNames) + buildBodyHtml(page.bodyHtml),
+    '推薦比較工具列佔位（index.html 的 <nav class="mc-related">）');
 
   return html;
 }
@@ -215,7 +216,10 @@ async function main() {
   const cardsData = readCardsData();
   const { source, pages } = loadConfig(cardsData);
   const active = pages.filter(p => p && p.active !== false && p.active !== 'FALSE' && p.slug && p.merchant);
-  const indexHtml = fs.readFileSync(path.join(REPO, 'index.html'), 'utf8');
+  const indexFile = path.join(REPO, 'index.html');
+  const indexOnDisk = fs.readFileSync(indexFile, 'utf8');
+  // index.html 自己也是輸出之一（首頁那條工具列），所以先清回空佔位再當模板
+  const indexHtml = stripRelatedBar(indexOnDisk);
 
   process.stdout.write('商家頁設定來源：' + source + '（' + active.length + ' 頁）\n');
 
@@ -264,6 +268,21 @@ async function main() {
     process.stdout.write('  ' + (same ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' merchant/' + page.slug +
       '.html（' + cardNames.length + ' 張卡，首位 ' + cardNames[0] + '）' + kind + '\n');
   }
+
+  // 首頁：同一條工具列，列出全部商家頁（沒有「自己」要排除，所以 currentSlug 傳 null）
+  const indexOut = replaceOnce(indexHtml, RELATED_RE,
+    () => buildRelatedBar(null, computed),
+    '推薦比較工具列佔位（index.html 的 <nav class="mc-related">）');
+  const indexSame = indexOnDisk === indexOut;
+  if (!indexSame) {
+    changed++;
+    // 首頁只有工具列這一塊是生成的，其餘全是手寫——所以差異一律當資料面看待
+    // （手改版面不會動到 <nav class="mc-related">，動到了也是這裡重生就好）
+    dataDrift++;
+    if (!CHECK_ONLY) fs.writeFileSync(indexFile, indexOut);
+  }
+  process.stdout.write('  ' + (indexSame ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' index.html（首頁工具列，' +
+    computed.length + ' 個商家頁）\n');
 
   if (VERIFY) await verifyAgainstBrowser(results);
 
