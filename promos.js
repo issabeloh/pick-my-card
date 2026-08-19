@@ -114,7 +114,8 @@
     });
   }
 
-  // 卡片名稱搜尋（2026-07-22）：即時 substring 比對 data-card-name，疊加在類型/
+  // 卡片名稱＋適用通路搜尋（2026-07-22 起卡名，2026-08-18 加通路）：即時 substring
+  // 比對 data-card-name 與該卡的「適用通路」文字，疊加在類型/
   // 持有卡篩選之上（統一由 refreshVisibility 依三個條件重算每張卡的 hidden）。
   // 比對前一律 toLowerCase + trim——卡名多為中文，但 Richart／iLEO／Ubear 等
   // 拉丁字要大小寫不敏感。純前端過濾，不 fetch。清除 ✕ 鈕有輸入才顯示，樣式與
@@ -139,6 +140,22 @@
     }
   }
 
+  // 「適用通路」（bonus_merchants）也要能搜到，例如輸入「line pay」要找出所有
+  // 加碼通路含 LINE Pay 的活動。刻意直接讀已經渲染在卡片裡的 .promo-merchants-value
+  // ——不請生成器另外多輸出一份 data-bonus-merchants：同一份資料兩個來源遲早分岔，
+  // 而且這樣現有的 promos.html 不用重新匯出就生效。
+  // 只有回饋加碼型活動會有這個節點（生成器僅在 bonus_merchants 非空時輸出），
+  // 正好就是需要被通路搜到的那些；沒有的卡回傳空字串、永遠比不中。
+  // 每張卡只讀一次就快取在元素上——每按一個鍵都會重算全部卡片，不快取等於每次
+  // 都對整份 DOM 取一次 textContent。
+  function promoMerchantsText(card) {
+    if (card.__pmcMerchantsText === undefined) {
+      var el = card.querySelector('.promo-merchants-value');
+      card.__pmcMerchantsText = el ? (el.textContent || '').toLowerCase() : '';
+    }
+    return card.__pmcMerchantsText;
+  }
+
   function refreshVisibility() {
     var cards = document.querySelectorAll('.promo-card');
     var anyVisible = false;
@@ -157,7 +174,8 @@
       var searchMatch = true;
       if (filterState.searchQuery) {
         var cardName = (card.getAttribute('data-card-name') || '').toLowerCase();
-        searchMatch = cardName.indexOf(filterState.searchQuery) !== -1;
+        searchMatch = cardName.indexOf(filterState.searchQuery) !== -1 ||
+          promoMerchantsText(card).indexOf(filterState.searchQuery) !== -1;
       }
       var show = typeMatch && ownedMatch && searchMatch;
       card.hidden = !show;
