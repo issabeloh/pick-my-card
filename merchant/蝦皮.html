@@ -195,6 +195,11 @@
                     <a href="/promos" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
                     <a href="/faq" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
                 </nav>
+                <!-- 手機（≤768px）的「新戶活動」入口：桌機用上面的 .header-page-links 純文字
+                     導覽，手機那條被隱藏，等於手機從 header 進不去 /promos。這顆 pill 只在
+                     手機顯示，靠 .header-content 的 flex:1 被推到右邊、緊貼頭像左側（不置中）。
+                     煙花沿用桌機同一組 @keyframes nav-sparkle-burst（見 styles.css 導覽區塊）。 -->
+                <a href="/promos" target="_blank" rel="noopener noreferrer" class="header-promos-pill">新戶活動</a>
                 <div class="auth-section">
                     <div id="user-info">
                         <div class="avatar-menu-wrapper">

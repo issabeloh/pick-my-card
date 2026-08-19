@@ -8118,6 +8118,90 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     font-size: 0.8rem;
 }
 
+/* 手機版「新戶活動」pill（2026-08-18）
+   為什麼要有：桌機的站內導覽是 .header-page-links（純文字），它在 ≤768px 被隱藏，
+   等於手機從 header 完全進不去 /promos——只剩側選單抽屜裡那張卡。這顆 pill 補上
+   手機的直接入口。
+   位置：DOM 上排在 .auth-section 之前，靠 .header-content 的 flex:1 把它推到右側、
+   緊貼頭像左邊。刻意不置中（站長指定），也不用 margin-left:auto——手機的
+   .header-content 已經是 flex:1，再加 auto margin 是多餘的。
+   外觀：半透明白 pill。深藍 header 上不用亮黃底——2026-07-16 站長已否決過
+   「黃 pill 在深藍 bar 上色彩太重」，這裡沿用那個結論。
+   桌機（≥769px）不顯示：那邊已經有 .header-page-links 的「新戶活動」，兩個並存
+   等於同一個入口出現兩次。 */
+.header-promos-pill {
+    display: none;
+    position: relative;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.header-promos-pill:hover,
+.header-promos-pill:active {
+    background: rgba(255, 255, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .header-promos-pill {
+        display: inline-flex;
+    }
+}
+
+/* 小煙花：與桌機 header 的 .header-nav-link--sparkle 共用同一組 @keyframes
+   （nav-sparkle-burst / nav-sparkle-burst-alt，定義在本檔前段「導覽」區塊）。
+   發射點錨在 pill 的左右外緣、垂直置中（桌機那組是 top:12px 對齊文字中線，
+   這裡 pill 有自己的高度，用 top:50% 才會落在中線）。
+   ::before 加半週期 delay，兩側交錯綻放——同桌機的做法。
+   ⚠️ reduced-motion 的停用規則必須排在這些動畫定義「之後」（同 specificity 靠
+   源碼順序勝出）；2026-07-17 手機抽屜煙花就是踩過這個坑（見 .sidebar-promos-banner
+   附近的註解）。 */
+.header-promos-pill::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -7px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+}
+
+.header-promos-pill::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -7px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-promos-pill::after,
+    .header-promos-pill::before {
+        content: none;
+        animation: none;
+    }
+}
+
 /* ============================================
    Mobile header adjustments
    ============================================ */
