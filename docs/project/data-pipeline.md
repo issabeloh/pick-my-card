@@ -311,7 +311,9 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 - 三塊（工具列／SEO 說明區／bodyHtml）都掛在這同一個錨點上，順序才保證正確
 - `tools/deploy-version.sh` 是**先跑生成器、再注入 `?v=`**，所以生成器寫回的 index.html
   帶的是 `?v=dev` 佔位，之後被同一支腳本換掉——順序不能對調
-- 後果：改了 cards.data 或 MerchantPages 之後沒跑生成器，preflight 會連 index.html 一起擋
+- 資料落後時 index.html 走的是 **dataDrift（⚠️ 提醒、exit 0）而不是 shellDrift（❌ 擋）**：
+  首頁只有工具列這一塊是生成的，其餘全手寫，所以差異一律當資料面看待——理由同商家頁，
+  每次 Apps Script 匯出都擋住不相干的 commit 只會讓人習慣性忽略 preflight
 
 **`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
 `slug`（URL）、`merchant`（**搜尋詞**，要跟站上搜得到的商家一致）、`displayName`（顯示名稱，
