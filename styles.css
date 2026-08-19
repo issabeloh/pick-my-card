@@ -8134,7 +8134,11 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     position: relative;
     flex-shrink: 0;
     align-items: center;
-    padding: 5px 12px;
+    /* 高度對齊右邊的頭像鈕：.avatar-btn 是 3px padding + 28px 圖示 + 3px padding
+       + 上下各 1px 框 = 36px。用 min-height 而非 height，字級被使用者放大時還能撐開。
+       ⚠️ .avatar-btn 或 .guest-avatar-icon 的尺寸改了，這個數字要跟著改。 */
+    min-height: 36px;
+    padding: 5px 14px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.16);
     border: 1px solid rgba(255, 255, 255, 0.3);
