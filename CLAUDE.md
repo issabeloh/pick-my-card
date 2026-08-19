@@ -11,7 +11,7 @@
 | 檔案 | 內容 |
 |---|---|
 | `js/`（12 模組檔，2026-07-20 由 script.js 拆分） | 核心邏輯。**傳統全域 script 依 index.html 標籤順序載入（非 ES module，禁止改）**；每檔頂部有區塊目錄可 Grep。依載入順序：core-utils(工具/全域狀態)、data-loader(資料載入/快捷選項)、home-ui(Spotlight/公告/主初始化)、search-match(搜尋匹配)、cashback-engine(回饋計算)、results-display(結果顯示/placeholder/escapeHtml)、auth-user-data(登入/用戶資料)、cards-modals(側選單/卡片選擇/持有卡)、card-detail(詳情頁/CUBE/筆記)、spending-mappings(配卡表/免年費/額度/結帳日)、levels-payments(級別🔒/行動支付)、quick-options-misc(快捷管理/回報/auth modal/GA4) |
-| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號）；`merchant/*.html` 商家落地頁**由 `tools/build-merchant-pages.js` 從 index.html 生成、禁止手改**（改版面改 index.html，改文案改 Sheets 的 MerchantPages 工作表；見 data-pipeline.md 第 11 節） |
+| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號）；`merchant/*.html` 商家落地頁**由 `tools/build-merchant-pages.js` 從 index.html 生成、禁止手改**（改版面改 index.html，改文案改 Sheets 的 MerchantPages 工作表；見 data-pipeline.md 第 11 節）。⚠️ index.html 裡的 `<nav class="mc-related">`（推薦比較工具列）**內容也是同一支生成器產的、同樣禁止手改**——index.html 因此既是模板也是輸出 |
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |

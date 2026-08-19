@@ -8767,3 +8767,89 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     }
 
 }
+
+/* ============================================================
+   推薦比較工具列（.mc-related，2026-08-18）
+   首頁與 merchant/*.html 共用；HTML 內容由 tools/build-merchant-pages.js
+   在部署時生成（首頁列全部商家頁，商家頁各自排除自己）。
+
+   刻意不是卡片、不是內容區：站長定調「它是一個工具欄，有空才會看看的地方，
+   UI 要區隔開來」——所以灰底出血、字級小、藍字底線＋箭頭，一眼看得出按了會跳頁。
+   空的 <nav>（還沒生成、或只有一個商家頁時）靠 :empty 整條收起來，不留空白條。
+   ============================================================ */
+.mc-related {
+    padding: 11px 30px;
+    background: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.mc-related:empty {
+    display: none;
+}
+
+.mc-related-label {
+    flex: none;
+    font-weight: 700;
+    color: #4b5563;
+}
+
+.mc-related-label::after {
+    content: "：";
+}
+
+/* 項目之間留得比項目內寬，否則行末的「→」會被讀成下一項的開頭 */
+.mc-related-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 26px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mc-related-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.mc-related-name {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 500;
+}
+
+.mc-related-link:hover .mc-related-name {
+    color: #1e3a8a;
+}
+
+.mc-related-meta {
+    color: #6b7280;
+}
+
+.mc-related-go {
+    color: #1d4ed8;
+}
+
+@media (max-width: 768px) {
+    /* 標籤自成一列，連結才不會被擠成一條窄欄 */
+    .mc-related {
+        flex-direction: column;
+        padding: 11px 16px;
+        gap: 6px;
+    }
+
+    .mc-related-list {
+        flex-direction: column;
+        gap: 8px;
+    }
+}

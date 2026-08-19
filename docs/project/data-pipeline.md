@@ -290,8 +290,28 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
    Apps Script 匯出都會被判成「版面不一致」而擋住所有不相干的 commit。
    UI 刻意做成灰底出血的**工具列**（小字、藍字底線＋箭頭），不是卡片、不是內容區
    ——站長 2026-08-18 定調：「它是一個工具欄，有空才會看看的地方，UI 要區隔開來」。
+   樣式在 `styles.css`（首頁與商家頁共用），**不在**生成器注入的那個 `<style>` 裡。
 2. **SEO 說明區**（`<section class="mc-seo-footer">`）——H1 ＋ 說明文，卡片清單跟著資料走。
 3. **`bodyHtml`**（`<section class="mc-body">`）——站長在工作表手寫的正文，留空就不輸出。
+
+### index.html 既是模板、也是輸出（2026-08-18 起）
+
+首頁也要有推薦比較工具列（站長要求：首頁是權重最高的頁，從這裡發出的內鏈最有價值，
+所以要靜態 HTML、不要 JS 現算）。做法是 index.html 放一個**空的佔位**：
+
+```html
+<nav class="mc-related" aria-label="推薦比較"></nav>
+```
+
+生成器每次跑都會：**先 `stripRelatedBar()` 把它清回空佔位**當模板 → 生 7 個商家頁
+（各自排除自己）→ 最後把「列出全部商家頁」的版本寫回 index.html。
+
+- 先清空再當模板這步不能省：index.html 自己帶著上一次的結果，不清就會拿舊工具列去生商家頁
+- 生成器**冪等**：同樣的 cards.data 連跑兩次，第二次應該 0 頁有變動（改壞了先驗這個）
+- 三塊（工具列／SEO 說明區／bodyHtml）都掛在這同一個錨點上，順序才保證正確
+- `tools/deploy-version.sh` 是**先跑生成器、再注入 `?v=`**，所以生成器寫回的 index.html
+  帶的是 `?v=dev` 佔位，之後被同一支腳本換掉——順序不能對調
+- 後果：改了 cards.data 或 MerchantPages 之後沒跑生成器，preflight 會連 index.html 一起擋
 
 **`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
 `slug`（URL）、`merchant`（**搜尋詞**，要跟站上搜得到的商家一致）、`displayName`（顯示名稱，

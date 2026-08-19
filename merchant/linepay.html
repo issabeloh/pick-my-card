@@ -164,16 +164,6 @@
 .mc-body p{margin:0 0 10px;}
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
-.mc-related{padding:11px 30px;background:#f3f4f6;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:13px;line-height:1.7;}
-.mc-related-label{flex:none;font-weight:700;color:#4b5563;}
-.mc-related-label::after{content:"：";}
-.mc-related-list{display:flex;flex-wrap:wrap;gap:4px 26px;list-style:none;margin:0;padding:0;}
-.mc-related-link{display:inline-flex;align-items:baseline;gap:4px;text-decoration:none;}
-.mc-related-name{color:#1d4ed8;text-decoration:underline;text-underline-offset:2px;font-weight:500;}
-.mc-related-link:hover .mc-related-name{color:#1e3a8a;}
-.mc-related-meta{color:#6b7280;}
-.mc-related-go{color:#1d4ed8;}
-@media (max-width:768px){.mc-related{flex-direction:column;padding:11px 16px;gap:6px;}.mc-related-list{flex-direction:column;gap:8px;}}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"LINE Pay 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"遠東快樂卡"},{"@type":"ListItem","position":2,"name":"陽信 JCB 晶緻卡"},{"@type":"ListItem","position":3,"name":"永豐 DAWAY 卡"},{"@type":"ListItem","position":4,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":5,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":6,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":7,"name":"iLEO 信用卡"},{"@type":"ListItem","position":8,"name":"台新 Richart 卡"},{"@type":"ListItem","position":9,"name":"聯邦賴點卡"}]}</script>
 </head>
@@ -519,6 +509,9 @@
             <div class="spotlight-dots" id="spotlight-dots" style="display:none;"></div>
         </section>
 
+        <!-- 推薦比較工具列：**內容由 tools/build-merchant-pages.js 生成，不要手改**。
+             這裡留空的 <nav> 當佔位，生成器每次部署把商家頁清單與回饋數字烤進來
+             （首頁列全部，商家頁各自排除自己）。詳見 docs/project/data-pipeline.md 第 11 節。 -->
         <nav class="mc-related" aria-label="推薦比較">
   <span class="mc-related-label">推薦比較</span>
   <ul class="mc-related-list">
@@ -529,12 +522,13 @@
     <li><a class="mc-related-link" href="/merchant/%E9%AB%98%E9%90%B5"><span class="mc-related-name">高鐵</span><span class="mc-related-meta">最高 3.5%（台新街口卡(豬富卡)）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A"><span class="mc-related-name">所有計程車</span><span class="mc-related-meta">最高 6%（聯邦 M 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
   </ul>
-</nav>
+        </nav>
 
         <section class="mc-seo-footer" aria-label="LINE Pay 信用卡回饋說明">
   <h1>LINE Pay 信用卡回饋比較</h1>
   <p>想知道刷 LINE Pay 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 LINE Pay 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 遠東快樂卡、陽信 JCB 晶緻卡、永豐 DAWAY 卡、兆豐 BT21 卡、玉山 Uni 卡、玉山 Ubear 卡、iLEO 信用卡、台新 Richart 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
 </section>
+
 
         <!-- 廣告列（精選活動下方、警語橫條上方）
              回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
