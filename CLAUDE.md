@@ -16,6 +16,7 @@
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
 | `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
+| `functions/` ＋ `js/paywall.js` | 去廣告付費牆（NT$100 一次買斷）。後端是 Cloudflare Pages Functions＋綠界金流＋D1；前端的廣告閘門在 `index.html`/`faq.html` 的 `<head>`。⚠️ 付費旗標**絕不能**放進 Firestore `users/{uid}`——那份文件用戶自己寫得動（見 `docs/project/paywall.md`） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
@@ -61,6 +62,7 @@
 | 改顯示/UI（詳情頁、Spotlight、我的信用卡、各 modal、卡圖） | `docs/project/ui-display.md` |
 | 改資料（Google Sheets、Apps Script、cards.data、級別設定、新工作表） | `docs/project/data-pipeline.md` |
 | 改用戶資料/登入登出/localStorage/Firestore/XSS 相關 | `docs/project/storage-and-security.md` |
+| 改去廣告付費牆（金流、綠界、權益、廣告要不要載入） | `docs/project/paywall.md` |
 | 任何多步驟任務開工前（派工、選模型、subagent） | `docs/ops/dispatch.md` |
 | 拿不準「該不該升級/算不算完成/要不要問用戶/方向對不對」 | `docs/ops/judgment.md` |
 | 要寫派工 prompt | `docs/ops/templates.md`（直接套模板填空） |
