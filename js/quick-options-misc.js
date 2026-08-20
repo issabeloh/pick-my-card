@@ -1237,6 +1237,7 @@ document.addEventListener('click', function(e) {
         card_id:     btn.dataset.cardId   || '',
         card_name:   btn.dataset.cardName || '',
         merchant:    btn.dataset.merchant || '',
+        surface:     getAnalyticsSurface(),
     });
 });
 
