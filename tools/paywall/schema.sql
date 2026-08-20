@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS orders (
   status         TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | failed
   created_at     INTEGER NOT NULL,
   paid_at        INTEGER,
-  ecpay_trade_no TEXT,
+  provider_txn_id TEXT,   -- 金流商端的交易 ID（OEN 的 data.id／綠界的 TradeNo）
   payment_type   TEXT,
   rtn_code       INTEGER,
   rtn_msg        TEXT,

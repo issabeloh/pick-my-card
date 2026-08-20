@@ -6,7 +6,7 @@
  * ============================================================ */
 import { requireUser } from '../_lib/firebase-auth.js';
 import { getOrder, getEntitlement, latestPendingOrder, markOrderPaid, grantAdfree } from '../_lib/db.js';
-import { resolvePaymentConfig, queryTradeInfo } from '../_lib/payment.js';
+import { resolvePaymentConfig, queryTradeInfo, oenVerifyCharged } from '../_lib/payment.js';
 import { json, fail } from '../_lib/http.js';
 
 export async function onRequestPost({ request, env }) {
@@ -31,12 +31,28 @@ export async function onRequestPost({ request, env }) {
         if (!order || order.uid !== user.uid) return json({ adfree: false, status: 'no-order' });
 
         const cfg = resolvePaymentConfig(env);
+
+        if (cfg.provider === 'oen') {
+            const { paid, tx } = await oenVerifyCharged(cfg, order);
+            if (paid) {
+                await markOrderPaid(env, order.trade_no, {
+                    providerTxnId: (tx && tx.id) || order.provider_txn_id,
+                    paymentType: (tx && tx.paymentMethod) || null,
+                    rtnCode: 1, rtnMsg: 'recovered by OEN query', raw: JSON.stringify(tx),
+                });
+                await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'oen-query' });
+                console.error('[paywall] 由主動查詢補開通：uid=' + user.uid + ' 訂單=' + order.trade_no);
+                return json({ adfree: true, status: 'paid' });
+            }
+            return json({ adfree: false, status: 'pending', tradeNo: order.trade_no });
+        }
+
         const info = await queryTradeInfo(cfg, order.trade_no);
 
         // TradeStatus：0=未付款、1=已付款、10200095=交易失敗
         if (info.TradeStatus === '1' && Number(info.TradeAmt) === Number(order.amount)) {
             await markOrderPaid(env, order.trade_no, {
-                ecpayTradeNo: info.TradeNo, paymentType: info.PaymentType,
+                providerTxnId: info.TradeNo, paymentType: info.PaymentType,
                 rtnCode: 1, rtnMsg: 'recovered by query', raw: JSON.stringify(info),
             });
             await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'ecpay-query' });

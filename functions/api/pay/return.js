@@ -12,6 +12,26 @@ async function handle(request, env) {
     const origin = siteOrigin(request, env);
     let status = 'unknown';
     let tradeNo = '';
+
+    // OEN：付款後以 GET 轉址回來。successUrl 我方帶了 r=ok；failureUrl 無參數、
+    // OEN 失敗時自己附 ?payment_error=<code>。這條路沒有簽章可驗——沒關係，
+    // 本頁本來就只做畫面翻譯，真實狀態由前端再向 /api/entitlement 要。
+    try {
+        const cfg = resolvePaymentConfig(env);
+        if (cfg.provider === 'oen') {
+            const sp = new URL(request.url).searchParams;
+            if (sp.get('payment_error')) status = 'failed';
+            else if (sp.get('r') === 'ok') status = 'success';
+            const url = status === 'unknown'
+                ? origin + '/'
+                : origin + '/?pmc_pay=' + encodeURIComponent(status);
+            return Response.redirect(url, 303);
+        }
+    } catch (err) {
+        console.error('[paywall] return 金流設定錯誤 →', err);
+        return Response.redirect(origin + '/', 303);
+    }
+
     try {
         const params = request.method === 'POST'
             ? await readFormParams(request)

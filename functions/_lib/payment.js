@@ -52,22 +52,22 @@ const ENDPOINTS = {
             query: 'https://payment.opay.tw/Cashier/QueryTradeInfo/V5',
         },
     },
-    // OEN 應援科技（全跳轉）。已知事實（2026-08-20）：
-    //   API base（我方伺服器 → OEN）：正式 https://payment-api.oen.tw
-    //                                測試 https://payment-api.testing.oen.tw
-    //   結帳頁（瀏覽器跳轉目的地）：https://{merchantId}.oen.tw/checkout/{data.id}
-    //     ——這兩個是不同網域，別混用：前者是 API，後者是使用者看到的付款頁
-    //   merchantId：pick-my-card（＝申請時填的 domain，字串代號非數字編號）
-    //   認證：Header `Authorization: Bearer {token}`、Content-Type: application/json
-    //   建立交易：POST /checkout（單次）、POST /checkout-subscription（定期定額）
-    //   Webhook：在應援 CRM 後台設定 endpoint，交易完成時拋送 JSON；
-    //            失敗會重試三次，間隔 2/4/6 秒（我方的冪等處理因此是必要的）
-    // 仍未知：webhook 的**來源驗證方式**（文件未載明是否有簽章標頭）——
-    //   在確認之前不可信任 webhook 內容，必須反向呼叫查詢 API 覆核。
-    // 因此這裡**不給任何預設路徑**——沒有真實文件就不猜，猜錯的驗章不是
-    // 「不能用」就是「誰都能偽造已付款通知」。要用 OEN 必須顯式設定
-    // PMC_PAY_CHECKOUT_URL / PMC_PAY_QUERY_URL，否則下面會丟出帶指引的錯誤。
-    oen: { stage: {}, prod: {} },
+    // OEN 應援科技（全跳轉；端點依官方 API 文件，2026-08-20 站長提供）。
+    //   checkout：POST，JSON body，回 {code,message,data}，data.id 拿去組結帳頁網址
+    //   query：GET {query}/{transactionId}，覆核交易狀態（webhook 只當鈴聲，事實以此為準）
+    //   結帳頁（瀏覽器跳轉目的地）是另一個網域：https://{merchantId}[.testing].oen.tw/checkout/{id}
+    //   認證：Authorization: Bearer {PMC_PAY_TOKEN}（CRM 後台產製，只顯示一次）
+    //   webhook 無簽章標頭 → 一律不信任其內容，收到後反查 query API 才算數
+    oen: {
+        stage: {
+            checkout: 'https://payment-api.testing.oen.tw/checkout',
+            query: 'https://payment-api.testing.oen.tw/transactions',
+        },
+        prod: {
+            checkout: 'https://payment-api.oen.tw/checkout',
+            query: 'https://payment-api.oen.tw/transactions',
+        },
+    },
 };
 
 // .NET HttpUtility.UrlEncode 相容編碼。
@@ -174,7 +174,65 @@ export function resolvePaymentConfig(env) {
         queryUrl: env.PMC_PAY_QUERY_URL || ENDPOINTS[provider][mode].query || '',
         // Credit＝信用卡頁（Apple Pay 在金流商後台開通後會出現在同一頁）。
         choosePayment: env.PMC_PAY_CHOOSE_PAYMENT || 'Credit',
+        // OEN 結帳頁 base（瀏覽器跳轉目的地；API base 是上面的 checkoutUrl，兩者不同網域）
+        pageBase: env.PMC_PAY_PAGE_BASE ||
+            (mode === 'stage' ? `https://${merchantId}.testing.oen.tw` : `https://${merchantId}.oen.tw`),
     };
+}
+
+// ============================================
+// OEN 應援科技（JSON API + Bearer token）
+// ============================================
+
+/** POST /checkout 建立交易。成功回傳 data（含 id）；code 非 S0000 一律丟錯。 */
+export async function oenCreateCheckout(cfg, body) {
+    const res = await fetch(cfg.checkoutUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.bearerToken },
+        body: JSON.stringify(body),
+    });
+    let out = null;
+    try { out = await res.json(); } catch (e) { /* 非 JSON → 走下面的錯誤路徑 */ }
+    if (!res.ok || !out || out.code !== 'S0000' || !out.data || !out.data.id) {
+        throw new Error(`OEN 建立交易失敗：HTTP ${res.status} code=${out && out.code} message=${out && out.message}`);
+    }
+    return out.data;
+}
+
+/** GET /transactions/{id} 查交易明細。回傳 data；查不到丟錯。 */
+export async function oenGetTransaction(cfg, txnId) {
+    const res = await fetch(cfg.queryUrl + '/' + encodeURIComponent(txnId), {
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + cfg.bearerToken },
+    });
+    let out = null;
+    try { out = await res.json(); } catch (e) { /* ignore */ }
+    if (!res.ok || !out || out.code !== 'S0000' || !out.data) {
+        throw new Error(`OEN 查詢交易失敗：HTTP ${res.status} code=${out && out.code} message=${out && out.message}`);
+    }
+    return out.data;
+}
+
+/** 消費者要跳轉去的 OEN 結帳頁網址。 */
+export function oenCheckoutPageUrl(cfg, txnId) {
+    return cfg.pageBase + '/checkout/' + encodeURIComponent(txnId);
+}
+
+/**
+ * 用 OEN 查詢 API 覆核一筆訂單是否真的付款成功。
+ * 這是 OEN 流程唯一的事實來源——webhook 沒有簽章，只當「該來查了」的鈴聲。
+ * 三道檢查：狀態是 charged/claimed、金額相符、OEN 記錄的 orderId 就是這筆訂單。
+ * fallbackTxnId：訂單上沒存 provider_txn_id 時（建單後補寫失敗的邊角），
+ * 可用 webhook 給的 id 查——安全，因為 orderId 綁定是由 OEN 的回應確認的。
+ */
+export async function oenVerifyCharged(cfg, order, fallbackTxnId) {
+    const txnId = order.provider_txn_id || fallbackTxnId || '';
+    if (!txnId) return { paid: false, reason: 'no-txn-id' };
+    const tx = await oenGetTransaction(cfg, txnId);
+    const statusOk = tx.status === 'charged' || tx.status === 'claimed';
+    const amountOk = Number(tx.amount) === Number(order.amount);
+    const orderOk = !('orderId' in tx) || tx.orderId === order.trade_no;
+    if (!orderOk) console.error(`[paywall] OEN 交易 ${txnId} 的 orderId=${tx.orderId} 與訂單 ${order.trade_no} 不符`);
+    return { paid: statusOk && amountOk && orderOk, tx };
 }
 
 /** 綠界要求 MerchantTradeDate 是台灣時間 yyyy/MM/dd HH:mm:ss。 */

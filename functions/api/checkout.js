@@ -5,8 +5,9 @@
  * 訂單「一出生就綁 uid」——不存在「先付款、事後才知道是誰」的空窗。
  * ============================================================ */
 import { requireUser } from '../_lib/firebase-auth.js';
-import { createOrder, getEntitlement } from '../_lib/db.js';
-import { resolvePaymentConfig, makeCheckMacValue, taipeiTradeDate, newTradeNo } from '../_lib/payment.js';
+import { createOrder, getEntitlement, setOrderProviderTxn } from '../_lib/db.js';
+import { resolvePaymentConfig, makeCheckMacValue, taipeiTradeDate, newTradeNo,
+         oenCreateCheckout, oenCheckoutPageUrl } from '../_lib/payment.js';
 import { json, fail, siteOrigin } from '../_lib/http.js';
 
 export async function onRequestPost({ request, env }) {
@@ -28,8 +29,37 @@ export async function onRequestPost({ request, env }) {
         const amount = Number(env.PMC_ADFREE_PRICE || 100);
         const tradeNo = newTradeNo();
 
-        // 先寫訂單再送綠界：綠界的通知一定找得到對應的 uid
+        // 先寫訂單再呼叫金流商：對方的通知回來時一定找得到對應的 uid。
+        // 若後續呼叫失敗，這筆訂單留在 pending，無害。
         await createOrder(env, { tradeNo, uid: user.uid, email: user.email, amount });
+
+        if (cfg.provider === 'oen') {
+            // OEN：JSON API 建立交易 → 把瀏覽器導去它的結帳頁。
+            // 不帶 allowedPaymentMethods＝只開信用卡（OEN 預設）。超商/ATM 是
+            // 非即時付款，會破壞「付款完成立即生效」的前提，刻意不開。
+            const tx = await oenCreateCheckout(cfg, {
+                merchantId: cfg.merchantId,
+                amount,
+                currency: 'TWD',
+                orderId: tradeNo,
+                // successUrl 帶 r=ok；failureUrl 保持無參數（OEN 失敗時會自己
+                // 附上 ?payment_error=<code>，預先帶參數可能被拼壞）
+                successUrl: origin + '/api/pay/return?r=ok',
+                failureUrl: origin + '/api/pay/return',
+                use3d: env.PMC_PAY_USE3D === '1',
+                customId: user.uid, // 對帳備援；開通仍以訂單表的 uid 為準
+                productDetails: [{
+                    productionCode: 'adfree',
+                    description: '去廣告權益（一次買斷）',
+                    quantity: 1,
+                    unit: '式',
+                    unitPrice: amount,
+                }],
+            });
+            // 交易 ID 存回訂單：webhook 覆核與自我修復都靠它
+            await setOrderProviderTxn(env, tradeNo, tx.id);
+            return json({ redirectUrl: oenCheckoutPageUrl(cfg, tx.id), tradeNo, amount });
+        }
 
         const params = {
             MerchantID: cfg.merchantId,

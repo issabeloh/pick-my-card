@@ -39,14 +39,22 @@ export async function markOrderPaid(env, tradeNo, info) {
     const res = await requireDB(env)
         .prepare(
             `UPDATE orders
-                SET status = 'paid', paid_at = ?, ecpay_trade_no = ?, payment_type = ?,
+                SET status = 'paid', paid_at = ?, provider_txn_id = ?, payment_type = ?,
                     rtn_code = ?, rtn_msg = ?, raw = ?
               WHERE trade_no = ? AND status != 'paid'`,
         )
-        .bind(Date.now(), info.ecpayTradeNo || null, info.paymentType || null,
+        .bind(Date.now(), info.providerTxnId || null, info.paymentType || null,
               info.rtnCode ?? null, info.rtnMsg || null, info.raw || null, tradeNo)
         .run();
     return (res.meta?.changes || 0) > 0;
+}
+
+/** 建單後補寫金流商的交易 ID（OEN 的 data.id）。只補空值，不覆寫。 */
+export async function setOrderProviderTxn(env, tradeNo, txnId) {
+    await requireDB(env)
+        .prepare('UPDATE orders SET provider_txn_id = ? WHERE trade_no = ? AND provider_txn_id IS NULL')
+        .bind(txnId, tradeNo)
+        .run();
 }
 
 export async function markOrderFailed(env, tradeNo, info) {

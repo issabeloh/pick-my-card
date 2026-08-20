@@ -63,6 +63,30 @@
 | OEN 應援科技（全跳轉） | **已選定**。API base：正式 `https://payment-api.oen.tw`／測試 `https://payment-api.testing.oen.tw`；結帳頁是另一個網域 `https://{merchantId}.oen.tw/checkout/{id}`（別混用）。`merchantId` = `pick-my-card`。認證用 `Authorization: Bearer {token}`。建立交易 `POST /checkout`。Webhook 在 CRM 後台設定，失敗重試三次（2/4/6 秒）。**仍未知：webhook 的來源驗證方式**——文件未載明是否有簽章標頭，確認前不可信任 webhook 內容 |
 | 其他 | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
 
+## 2.7b OEN 流程（已實作，2026-08-20）
+
+```
+前端點「前往付款」→ POST /api/checkout（帶 Firebase ID token）
+  → 後端建訂單（綁 uid）→ POST payment-api/checkout（Bearer token）
+  → 存 data.id（provider_txn_id）→ 回 redirectUrl
+  → 瀏覽器整頁跳轉 https://pick-my-card[.testing].oen.tw/checkout/{id}
+付款完成 → OEN 轉址回 /api/pay/return（成功帶 r=ok，失敗帶 payment_error）
+        → 303 到 /?pmc_pay=… → 前端輪詢 /api/entitlement
+同時    → OEN webhook POST /api/pay/notify（JSON）
+```
+
+**安全模型**：OEN 的 webhook 沒有簽章 → 一律當「鈴聲」。收到後拿**訂單上存的**
+provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
+狀態 charged/claimed ＋金額相符＋OEN 記錄的 orderId 就是這筆訂單，三關都過才開通。
+偽造 webhook、借用他人交易 ID、金額不符、purpose=token 都拿不到權益——
+這些情境在 `tools/paywall/oen-selftest.mjs` 有假 D1＋假 OEN API 的自動化證明（17 項）。
+
+**付款方式刻意只開信用卡**（不帶 allowedPaymentMethods＝OEN 預設）：超商/ATM 是
+非即時付款，會破壞「付款完成立即生效」的前提與現有輪詢/條款文案。要開放時
+除了帶參數，還得先處理繳費代碼顯示、pending 數天的訂單、與條款措辭。
+
+改了 OEN 相關邏輯 → 跑 `node tools/paywall/oen-selftest.mjs`（改動前先確認綠燈）。
+
 ## 2.7a OEN 串接的三個環境決定（2026-08-20，依站長的 CF 專案實況）
 
 1. **CRM 的「交易資料回傳位置」直接填正式網址** `https://pickmycard.app/api/pay/notify`，
@@ -117,7 +141,10 @@
    | `PMC_PAY_QUERY_URL` | （通常不用設） | 同上，對帳查詢用 |
    | `PMC_SITE_ORIGIN` | `https://pickmycard.app` | ReturnURL 的來源。不設會用當次請求的 origin（preview 部署因此可自行測試） |
    | `PMC_PAY_CHOOSE_PAYMENT` | `Credit` | Apple Pay 在金流商後台開通後會出現在信用卡頁 |
-   | `PMC_ADFREE_PRICE` | `100` | |
+   | `PMC_PAY_TOKEN` | 🔒 Secret | OEN 專用。CRM 後台產製，只顯示一次、重產即覆蓋 |
+   | `PMC_PAY_USE3D` | `1` 開啟 | OEN 信用卡 3D 驗證，預設關（同 OEN 預設）。開啟可轉移盜刷爭議責任 |
+   | `PMC_PAY_PAGE_BASE` | （通常不用設） | OEN 結帳頁 base 覆寫（預設依 merchantId＋環境推得） |
+   | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境「成功要 >100、失敗要 <100」，剛好 100 是未定義行為——**Preview 環境要設 150** |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
 
 4. **發票**：綠界電子發票要另外申請，涉及你的稅務身分，本專案沒有整合

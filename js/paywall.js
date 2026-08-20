@@ -209,6 +209,19 @@ async function startAdfreeCheckout() {
         closeAdfreeModal();
         return;
     }
+    // OEN（全跳轉）：後端回 redirectUrl，整頁導去它的結帳頁
+    if (ok && data.redirectUrl) {
+        const safeUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(data.redirectUrl) : data.redirectUrl;
+        if (!safeUrl) {
+            setAdfreeError('付款頁網址異常，請稍後再試。');
+            if (payBtn) { payBtn.disabled = false; payBtn.textContent = '前往付款'; }
+            return;
+        }
+        if (typeof gtagEvent === 'function') gtagEvent('adfree_checkout_start');
+        location.assign(safeUrl);
+        return;
+    }
+
     if (!ok || !data.action || !data.params) {
         setAdfreeError(status === 401 ? '登入狀態已過期，請重新登入後再試。'
                                       : (data.error || '建立訂單失敗，請稍後再試。'));
