@@ -135,12 +135,22 @@ export function resolvePaymentConfig(env) {
     }
     const mode = (env.PMC_PAY_ENV || 'stage').toLowerCase() === 'prod' ? 'prod' : 'stage';
 
-    // 公開測試帳號只有綠界有；歐付寶一律要自己填，不做任何猜測
+    // 憑證需求依金流商而異：
+    //   綠界/歐付寶家族 → HashKey + HashIV（CheckMacValue 簽章）
+    //   OEN            → Bearer token（PMC_PAY_TOKEN；在應援 CRM 後台產製，
+    //                    只顯示一次、重產即覆蓋。存 CF Pages 環境變數並勾 Secret，
+    //                    絕不進 git、絕不出現在前端）
+    // 公開測試帳號只有綠界有；其他一律要自己填，不做任何猜測。
     const canUseStageDefaults = provider === 'ecpay' && mode === 'stage';
     const merchantId = env.PMC_PAY_MERCHANT_ID || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.merchantId : '');
     const hashKey = env.PMC_PAY_HASH_KEY || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.hashKey : '');
     const hashIV = env.PMC_PAY_HASH_IV || (canUseStageDefaults ? ECPAY_STAGE_DEFAULTS.hashIV : '');
-    if (!merchantId || !hashKey || !hashIV) {
+    const bearerToken = env.PMC_PAY_TOKEN || '';
+    if (provider === 'oen') {
+        if (!merchantId || !bearerToken) {
+            throw new Error('OEN 設定不完整：PMC_PAY_MERCHANT_ID 與 PMC_PAY_TOKEN 必須設定（token 於應援 CRM 後台產製）');
+        }
+    } else if (!merchantId || !hashKey || !hashIV) {
         throw new Error('金流設定不完整：PMC_PAY_MERCHANT_ID / PMC_PAY_HASH_KEY / PMC_PAY_HASH_IV 必須設定');
     }
 
@@ -159,6 +169,7 @@ export function resolvePaymentConfig(env) {
         merchantId,
         hashKey,
         hashIV,
+        bearerToken,
         checkoutUrl,
         queryUrl: env.PMC_PAY_QUERY_URL || ENDPOINTS[provider][mode].query || '',
         // Credit＝信用卡頁（Apple Pay 在金流商後台開通後會出現在同一頁）。
