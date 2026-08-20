@@ -10,6 +10,8 @@
  * 設計要點：
  * - 自帶靜態伺服器（隨機 port），不依賴 python
  * - 攔截 gstatic 的 Firebase SDK 回傳替身模組：onAuthStateChanged 立刻回 null → 確定性進訪客模式
+ *   ⚠️ index.html 的 import 清單一旦新增名稱，firebaseStub() 必須同步補上同名 export——
+ *      ES module 找不到具名 export 會整支 script 失敗，全站等於沒載入（症狀是全部檢查掛掉）
  * - 其餘外部請求全部 abort（廣告/字型/analytics 不影響測試也不外洩流量）
  * - localStorage 全空的訪客 + ?start（跳過 landing 轉址）+ ?debug=1（console.error 可見）
  * - 基準與 cards.version 綁定；活動有期限，日期前進造成的差異屬預期，重拍基準即可
@@ -69,7 +71,11 @@ function firebaseStub(url) {
     export function signOut(){return ${resolveP};}
     export function createUserWithEmailAndPassword(){return ${resolveP};}
     export function signInWithEmailAndPassword(){return ${resolveP};}
-    export function sendPasswordResetEmail(){return ${resolveP};}`;
+    export function sendPasswordResetEmail(){return ${resolveP};}
+    export function deleteUser(){return ${resolveP};}
+    export function reauthenticateWithPopup(){return ${resolveP};}
+    export function reauthenticateWithCredential(){return ${resolveP};}
+    export class EmailAuthProvider { static credential(){return {};} }`;
   if (url.includes('firebase-firestore')) return `
     export function getFirestore(){return {};}
     export function doc(){return {};}
@@ -78,7 +84,8 @@ function firebaseStub(url) {
     export function addDoc(){return ${resolveP};}
     export function collection(){return {};}
     export function serverTimestamp(){return 0;}
-    export function deleteField(){return 0;}`;
+    export function deleteField(){return 0;}
+    export function deleteDoc(){return ${resolveP};}`;
   if (url.includes('firebase-storage')) return `
     export function getStorage(){return {};}
     export function ref(){return {};}
