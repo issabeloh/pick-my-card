@@ -256,6 +256,16 @@ main {
     margin-top: 8px;
 }
 
+/* 資訊型提示框（藍）：與警示型（琥珀）區分——「這是說明」不是「這要小心」 */
+.pp-callout--info {
+    border-left-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.pp-callout--info p {
+    color: #1e3a5f;
+}
+
 /* 刪除資料的操作步驟 */
 .pp-steps {
     counter-reset: pp-step;
