@@ -63,6 +63,21 @@
 | OEN 應援科技（全跳轉） | **已選定**。API base：正式 `https://payment-api.oen.tw`／測試 `https://payment-api.testing.oen.tw`；結帳頁是另一個網域 `https://{merchantId}.oen.tw/checkout/{id}`（別混用）。`merchantId` = `pick-my-card`。認證用 `Authorization: Bearer {token}`。建立交易 `POST /checkout`。Webhook 在 CRM 後台設定，失敗重試三次（2/4/6 秒）。**仍未知：webhook 的來源驗證方式**——文件未載明是否有簽章標頭，確認前不可信任 webhook 內容 |
 | 其他 | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
 
+## 2.7a OEN 串接的三個環境決定（2026-08-20，依站長的 CF 專案實況）
+
+1. **CRM 的「交易資料回傳位置」直接填正式網址** `https://pickmycard.app/api/pay/notify`，
+   一次填好、不再改。測試期它會 404（付費牆分支還沒合併）→ OEN 重試三次後放棄，無害；
+   我們的測試流程**不依賴 webhook**（見下條）。上線合併後同一個網址自動生效。
+2. **webhook 只當通知鈴，不當事實來源**：站長的 CF 專案對 preview 部署開了
+   Cloudflare Access（要登入才看得到）→ OEN 的 server 對 server webhook 打 preview
+   一定被擋。與其去改 Access 政策，不如順著本來就更安全的設計——付款導回後
+   前端輪詢 `/api/order-status`，由後端拿自己的 token 呼叫 OEN 查詢 API 覆核。
+   webhook 收不到，流程照樣走得通。因此 `/api/pay/inspect` 在 OEN 串接中**不再需要**。
+3. **preview 部署用 Deploy Hook 觸發**（站長已關自動 preview）：CF 後台
+   Settings → Deploy Hooks → 建一個指向付費牆分支的 hook，要部署時對該 URL 發 POST。
+   注意 hook URL 等同「任何人可觸發 build」的鑰匙，不進 git、不貼公開處。
+   本開發環境連不到 api.cloudflare.com（egress 擋），觸發要在站長自己的終端機執行。
+
 ## 2.7 串接新金流商：先抓真實樣本，不要猜驗章
 
 新金流商（如 OEN 應援科技）的回呼格式與驗證機制若沒有可靠文件，**不要憑推測寫驗章邏輯**。
