@@ -18,7 +18,15 @@
 const MAX_BODY_LOG = 8000; // 避免超長 body 灌爆日誌
 
 export async function onRequest({ request, env }) {
-    if (env.PMC_PAY_INSPECT !== '1') {
+    // 啟用條件（二擇一）：
+    //   a. 顯式設 PMC_PAY_INSPECT=1
+    //   b. 這是 preview 部署（CF Pages 會給 CF_PAGES_BRANCH；非正式分支即 preview）
+    // (b) 是為了少一個手動步驟：串接期本來就在 preview 上做。正式站永遠不會啟用，
+    //     因為正式站的 CF_PAGES_BRANCH 就是 PRODUCTION_BRANCH。
+    const productionBranch = env.PMC_PRODUCTION_BRANCH || 'main';
+    const branch = env.CF_PAGES_BRANCH || '';
+    const enabled = env.PMC_PAY_INSPECT === '1' || (branch !== '' && branch !== productionBranch);
+    if (!enabled) {
         return new Response('Not Found', { status: 404 });
     }
 
