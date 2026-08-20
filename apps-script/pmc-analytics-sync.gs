@@ -802,7 +802,7 @@ function lastSnapshotDateOf_(sheet) {
   return String(v).trim();
 }
 
-// 手動存一份歷史快照（不管今天星期幾、不管今天存過沒）。
+// 手動存一份歷史快照（不管今天星期幾、不管全域的「今日已存過」記號）。
 // 用途：剛上線時先種下第一個資料點，不用等到下個快照日；或想在改版前後各留一份對照。
 // 會重新抓一次各報表資料（＝多打幾次 API），一般日常不需要跑。
 //
@@ -1181,7 +1181,8 @@ function updateGA4Events() {
     source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 eventName（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定｜含 GA4 自動蒐集事件（page_view、session_start 等）' +
-      '與本站自訂事件｜申辦點擊的卡片/按鈕拆解看「GA4_申辦點擊」與「GA4_各卡點擊」',
+      '與本站自訂事件｜申辦點擊的卡片/按鈕拆解看「GA4_申辦點擊」與「GA4_各卡點擊」' +
+      '｜每週快照存進「GA4_事件成效_歷史」',
   }, headers, values);
 
   return { headers: headers, values: values, window: win };
