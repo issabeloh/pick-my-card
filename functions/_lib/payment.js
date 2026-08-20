@@ -52,11 +52,18 @@ const ENDPOINTS = {
             query: 'https://payment.opay.tw/Cashier/QueryTradeInfo/V5',
         },
     },
-    // OEN 應援科技（全跳轉）。已知事實（2026-08-20，由 OEN 業務提供）：
-    //   測試環境入口 https://pick-my-card.testing.oen.tw/ ——注意是「每個特店一個子網域」
-    //   merchantId   pick-my-card ——是字串代號，不是綠界那種數字特店編號
-    // 未知：API 路徑、請求格式、回呼格式與驗章方式（API 文件在 Postman 上，
-    //       本開發環境的 egress 政策讀不到）。
+    // OEN 應援科技（全跳轉）。已知事實（2026-08-20）：
+    //   API base（我方伺服器 → OEN）：正式 https://payment-api.oen.tw
+    //                                測試 https://payment-api.testing.oen.tw
+    //   結帳頁（瀏覽器跳轉目的地）：https://{merchantId}.oen.tw/checkout/{data.id}
+    //     ——這兩個是不同網域，別混用：前者是 API，後者是使用者看到的付款頁
+    //   merchantId：pick-my-card（＝申請時填的 domain，字串代號非數字編號）
+    //   認證：Header `Authorization: Bearer {token}`、Content-Type: application/json
+    //   建立交易：POST /checkout（單次）、POST /checkout-subscription（定期定額）
+    //   Webhook：在應援 CRM 後台設定 endpoint，交易完成時拋送 JSON；
+    //            失敗會重試三次，間隔 2/4/6 秒（我方的冪等處理因此是必要的）
+    // 仍未知：webhook 的**來源驗證方式**（文件未載明是否有簽章標頭）——
+    //   在確認之前不可信任 webhook 內容，必須反向呼叫查詢 API 覆核。
     // 因此這裡**不給任何預設路徑**——沒有真實文件就不猜，猜錯的驗章不是
     // 「不能用」就是「誰都能偽造已付款通知」。要用 OEN 必須顯式設定
     // PMC_PAY_CHECKOUT_URL / PMC_PAY_QUERY_URL，否則下面會丟出帶指引的錯誤。
