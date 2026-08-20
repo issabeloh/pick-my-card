@@ -62,6 +62,28 @@
 | 歐付寶 O'Pay | 端點已備妥，但**網址是依同一命名慣例推得、尚未實測**。帳號下來後先跑 `mac-selftest.mjs`，再送一筆測試訂單確認不是回 CheckMacValue Error；若網址不同，設 `PMC_PAY_CHECKOUT_URL` 覆蓋即可 |
 | 其他（如 OEN 應援科技） | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
 
+## 2.7 串接新金流商：先抓真實樣本，不要猜驗章
+
+新金流商（如 OEN 應援科技）的回呼格式與驗證機制若沒有可靠文件，**不要憑推測寫驗章邏輯**。
+猜錯只有兩種結果：全部擋掉（不能用），或放寬驗證——後者等於任何人都能 POST 一筆
+偽造的「已付款」通知白拿權益，是真的資安漏洞。
+
+正確流程：
+
+1. CF Pages 設 `PMC_PAY_INSPECT=1`（**只在 Preview 環境**），部署分支
+2. 金流商後台的「交易資料回傳網址」先填 `https://<preview 網址>/api/pay/inspect`
+3. 跑一筆測試交易 → 到 Cloudflare Pages → Deployment → Real-time Logs
+   看 `[pay-inspect]` 那筆 JSON，裡面有對方實際送出的 method、headers、原始 body
+4. 依真實樣本寫 `payment.js` 的驗章與 `pay/notify.js` 的解析
+5. 回傳網址改指 `/api/pay/notify`，**移除 `PMC_PAY_INSPECT`**
+
+`/api/pay/inspect` 預設 404（要顯式設 `PMC_PAY_INSPECT=1` 才啟用），永遠不碰 D1、
+不開通任何權益——它只是一台錄音機。標頭原樣記錄（驗證機制常藏在標頭裡），
+所以只在測試環境用。
+
+⚠️ Cloudflare Pages 的 **Preview 與 Production 是兩組獨立的環境變數與 D1 綁定**。
+在 Production 設好不代表 Preview 有——preview 部署上 API 回 500 時，先查這個。
+
 ## 3. 上線前要做的事（人工，程式碼幫不了）
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
