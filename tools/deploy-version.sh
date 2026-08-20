@@ -43,7 +43,7 @@ fi
 count=0
 for page in *.html merchant/*.html; do
   [ -e "$page" ] || continue
-  sed -i.bak -E "s/((styles|faq|landing|promos)\.css|(script|faq|landing|promos)\.js|js\/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+/\1?v=$VERSION/g" "$page"
+  sed -i.bak -E "s/((styles|faq|landing|promos|privacy)\.css|(script|faq|landing|promos)\.js|js\/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+/\1?v=$VERSION/g" "$page"
   rm -f "$page.bak"
   count=$((count+1))
 done

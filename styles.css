@@ -5500,6 +5500,28 @@ mark.cashback-search-hl {
     background: #e5e7eb;
 }
 
+/* 法務頁尾（2026-08-20 新增）：全站每頁都要有的隱私權政策入口。
+   AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的告知義務
+   也需要常設入口，所以這條 bar 是「每一頁都要出現」的東西，不是裝飾。 */
+.site-legal-footer {
+    max-width: 1200px;
+    margin: 12px auto 20px;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.site-legal-footer a {
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.site-legal-footer a:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
 /* Data Update Footer */
 .data-update-footer {
     max-width: 1200px;

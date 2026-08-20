@@ -2450,6 +2450,12 @@ o.cardsHtml + '\n' +
 '  </div>\n' +
 '</div>\n' +
 '\n' +
+// 法務頁尾（2026-08-20 新增）：隱私權政策入口，與 index.html 的 .site-legal-footer 同步。
+// 全站每頁都要有——AdSense/Analytics 條款＋個資法告知義務。
+'<div class="site-legal-footer">\n' +
+'  <a href="/privacy">隱私權政策</a>\n' +
+'</div>\n' +
+'\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到
 // 這裡）：位置比照 index.html 的 .disclaimer-footer——白色框框外、社群 footer 之後、
 // 回到頂部鈕之前。純靜態文案（不吃 exportData），跟其他手抄段落一樣兩邊同步即可。
