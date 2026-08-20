@@ -398,7 +398,8 @@
           window.logEvent(window.firebaseAnalytics, 'button_click', {
             button_type: 'promos_page_apply',
             card_id: link.getAttribute('data-card-id') || '',
-            card_name: link.getAttribute('data-card-name') || ''
+            card_name: link.getAttribute('data-card-name') || '',
+            surface: 'promos_page'
           });
         }
       } catch (err) {

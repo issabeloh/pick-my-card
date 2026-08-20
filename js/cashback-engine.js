@@ -52,7 +52,8 @@ async function calculateCashback() {
         window.logEvent(window.firebaseAnalytics, 'calculate_cashback', {
             merchant: merchantValue,
             amount: amount,
-            has_match: currentMatchedItem ? true : false
+            has_match: currentMatchedItem ? true : false,
+            surface: getAnalyticsSurface()
         });
     }
 
