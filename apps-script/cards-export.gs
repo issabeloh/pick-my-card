@@ -2418,17 +2418,6 @@ o.cardsHtml + '\n' +
 // 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
 '<div class="social-media-footer">\n' +
 '  <div class="social-media-container">\n' +
-'    <div class="explore-section">\n' +
-'      <p class="social-media-title">探索更多</p>\n' +
-'      <div class="social-media-links">\n' +
-'        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
-'          <span class="social-text">常見問題 FAQ ↗</span>\n' +
-'        </a>\n' +
-'        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
-'          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
-'        </a>\n' +
-'      </div>\n' +
-'    </div>\n' +
 '    <div class="social-section">\n' +
 '      <p class="social-media-title">追蹤我們</p>\n' +
 '      <div class="social-media-links">\n' +
@@ -2447,13 +2436,24 @@ o.cardsHtml + '\n' +
 '        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'  </div>\n' +
+'      <div class="explore-section">\n' +
+'      <p class="social-media-title">探索更多</p>\n' +
+'      <div class="social-media-links">\n' +
+'        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
+'          <span class="social-text">常見問題 FAQ ↗</span>\n' +
+'        </a>\n' +
+'        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
+'          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
+'        </a>\n' +
+'        <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。\n' +
+'             AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的\n' +
+'             告知義務也需要常設入口——新增頁面時記得一起帶上。 -->\n' +
+'        <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">\n' +
+'            <span class="social-text">隱私權政策</span>\n' +
+'        </a>\n' +
+'      </div>\n' +
+'    </div>\n' +
 '</div>\n' +
-'\n' +
-// 法務頁尾（2026-08-20 新增）：隱私權政策入口，與 index.html 的 .site-legal-footer 同步。
-// 全站每頁都要有——AdSense/Analytics 條款＋個資法告知義務。
-'<div class="site-legal-footer">\n' +
-'  <a href="/privacy">隱私權政策</a>\n' +
 '</div>\n' +
 '\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到

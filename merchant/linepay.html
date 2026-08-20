@@ -952,20 +952,6 @@
     <!-- 社群媒體與贊助區塊 -->
     <div class="social-media-footer">
         <div class="social-media-container">
-            <div class="explore-section">
-                <p class="social-media-title">探索更多</p>
-                <div class="social-media-links">
-                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
-                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
-                    </a>
-                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
-                        <span class="social-text">常見問題 FAQ ↗</span>
-                    </a>
-                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
-                        <span class="social-text">Pick My Card 是什麼？↗</span>
-                    </a>
-                </div>
-            </div>
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
                 <div class="social-media-links">
@@ -988,7 +974,27 @@
                     </a>
                 </div>
             </div>
-        </div>
+                    <div class="explore-section">
+                <p class="social-media-title">探索更多</p>
+                <div class="social-media-links">
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
+                    </a>
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                        <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？↗</span>
+                    </a>
+                    <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。
+                         AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的
+                         告知義務也需要常設入口——新增頁面時記得一起帶上。 -->
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="隱私權政策">
+                        <span class="social-text">隱私權政策</span>
+                    </a>
+                </div>
+            </div>
+</div>
     </div>
 
     <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
@@ -1039,12 +1045,6 @@
         </div>
     </div>
 
-    <!-- 法務頁尾（2026-08-20 新增）：隱私權政策入口。Google AdSense 與 Google Analytics
-         的服務條款都要求發布商提供隱私權政策，個資法第 8 條的告知義務也需要一個常設入口，
-         所以「每一頁都要看得到這個連結」——新增頁面時記得一起加。 -->
-    <div class="site-legal-footer">
-        <a href="/privacy">隱私權政策</a>
-    </div>
 
     <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
          全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
