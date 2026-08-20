@@ -504,6 +504,171 @@ header {
     background: #fef2f2;
 }
 
+/* 刪除帳號入口（2026-08-20）：比登出更危險，所以視覺上更「冷」——預設灰字，
+   hover 才轉紅。登出用的是常態紅字，兩者刻意不同，避免在下拉裡看成同一類動作。 */
+.avatar-dropdown-danger {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.avatar-dropdown-danger svg {
+    color: #9ca3af;
+}
+
+.avatar-dropdown-danger:hover {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.avatar-dropdown-danger:hover svg {
+    color: #b91c1c;
+}
+
+/* ==========================================================================
+   刪除帳號與資料 Modal（2026-08-20）
+   隱私權政策第 8.1 節的自助刪除途徑。設計刻意「不好按」：紅色主鈕、確認文字
+   輸入、逐項列出會失去什麼。改版時不要把這些關卡當成阻力拿掉。
+   ========================================================================== */
+.delete-account-content {
+    max-width: 540px;
+}
+
+.da-lead {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #374151;
+}
+
+.da-lead strong {
+    color: #b91c1c;
+}
+
+.da-list-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.da-list {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    color: #4b5563;
+    font-size: 13.5px;
+    line-height: 1.8;
+}
+
+.da-email {
+    font-weight: 600;
+    color: #1f2937;
+    word-break: break-all;
+}
+
+.da-note {
+    border-left: 3px solid #f59e0b;
+    background: #fffbeb;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #78350f;
+}
+
+.da-note a {
+    color: #92400e;
+    font-weight: 600;
+}
+
+.da-reauth-hint {
+    margin: 0 0 14px;
+    font-size: 12.5px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.da-reauth-hint:empty {
+    display: none;
+}
+
+.da-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.da-input:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.da-code {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: #b91c1c;
+}
+
+.da-status {
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 1em;
+}
+
+.da-status:empty {
+    display: none;
+}
+
+.da-status.loading {
+    color: #2563eb;
+}
+
+.da-status.error {
+    color: #b91c1c;
+}
+
+.da-status.success {
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* 危險動作主鈕：與 .save-btn/.cancel-btn 同一組幾何，只換配色。
+   disabled 態要明顯——確認文字沒打對之前它就該看起來按不下去。 */
+.danger-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #dc2626;
+    color: white;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.danger-btn:hover:not(:disabled) {
+    background: #b91c1c;
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+}
+
+.danger-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 header h1 {
     font-size: 2.5rem;
     font-weight: 700;
@@ -5498,6 +5663,28 @@ mark.cashback-search-hl {
 
 .auth-btn.secondary:hover {
     background: #e5e7eb;
+}
+
+/* 法務頁尾（2026-08-20 新增）：全站每頁都要有的隱私權政策入口。
+   AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的告知義務
+   也需要常設入口，所以這條 bar 是「每一頁都要出現」的東西，不是裝飾。 */
+.site-legal-footer {
+    max-width: 1200px;
+    margin: 12px auto 20px;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.site-legal-footer a {
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.site-legal-footer a:hover {
+    color: #2563eb;
+    text-decoration: underline;
 }
 
 /* Data Update Footer */
