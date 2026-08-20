@@ -147,6 +147,18 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
    | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境「成功要 >100、失敗要 <100」，剛好 100 是未定義行為——**Preview 環境要設 150** |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
 
+3.5 **⚠️ OEN 正式環境的 IP 白名單（上線前必解的問題）**：業務告知正式環境要提供
+   **固定 IP** 讓應援設白名單才能呼叫 API。但我們的後端是 Cloudflare Pages Functions，
+   **出口 IP 不固定**（走 Cloudflare 共用 IP 池）。測試環境不受影響（不需綁 IP）。
+   解法優先順序：① 問應援可否改用 Cloudflare 官方公布的 IP 區段（https://www.cloudflare.com/ips/）
+   設白名單，或以 Bearer token 本身為準免綁 IP；② 都不行才考慮自架固定 IP 的轉發層（增加成本與故障點）。
+   **在這題有答案前不要排上線。**
+
+3.6 **OEN 代開發票**：CRM 若開啟代開發票，建立交易時**必須**帶 userName＋userEmail，
+   否則回 V0001 USER_NAME_AND_EMAIL_REQUIRED。目前程式碼**沒有帶**這兩欄
+   （測試期請先別在 CRM 開發票功能）。要開的話：checkout.js 補 userEmail（Firebase 有）
+   與 userName（可用 displayName，沒有時退回 email），並更新購買條款的個資告知。
+
 4. **發票**：綠界電子發票要另外申請，涉及你的稅務身分，本專案沒有整合
 5. **端到端實測**（環境限制：本 session 的網路政策擋掉 `ecpay.com.tw`，這步只能由你在真實部署上跑）：
    用 stage 設定部署 preview → 登入 → 購買 → 用綠界測試卡號 `4311-9522-2222-2222`（有效期填未來、安全碼任意、3D 驗證碼 `1234`）付款 → 確認導回後廣告消失 → 到 D1 檢查 `orders.status='paid'` 且 `entitlements` 有那筆 uid
