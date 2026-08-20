@@ -727,7 +727,14 @@ function appendHistorySnapshots_(collected, force) {
     }
   });
 
-  props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
+  // 「今天存過了」只在**真的有存進東西**時才記（同 syncClarityData 的成功才記狀態）。
+  // 舊版無條件寫入：週一若上游步驟全失敗、六張表一張都沒存成，仍會記下今天，
+  // 當天重跑 updateAllReports() 會被上面的防重複擋掉 → 那週快照永久消失、且無補跑邏輯。
+  // 代價：部分成功時重跑會讓已存成的表多一份重複列——但重複列看得見也刪得掉，
+  // 遺失的週快照拿不回來，這筆交換划算。
+  if (done.length > 0) {
+    props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
+  }
 
   let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
   if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
@@ -785,6 +792,11 @@ function snapshotHistoryNow() {
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 // ---------- 排程：每天自動執行 ----------
+// ⚠️ 現行那條 trigger 不是這個函式建的，是在「觸發條件」畫面手動建的，每天約 17:37 跑。
+//    這個函式會**先刪掉所有 updateAllReports 的觸發條件再重建一條**——
+//    為了「設定排程」隨手跑一次，就會把現行的 17:37 靜默換成下面 atHour 指定的時間。
+//    要改執行時間請去「觸發條件」畫面改，不要跑這個函式。
+//    （atHour 已從原本的 6 改成 17，與現況一致，避免真的被跑到時把排程整個挪走。）
 function createDailyTrigger() {
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(t => {
@@ -795,7 +807,7 @@ function createDailyTrigger() {
   ScriptApp.newTrigger('updateAllReports')
     .timeBased()
     .everyDays(1)
-    .atHour(6)
+    .atHour(17)
     .create();
 }
 
@@ -807,8 +819,9 @@ function debugGSC() {
 }
 
 // ========================================
-// 一次性：匯入 2025/11/07 上線至今的完整歷史資料
-// 只需要手動執行一次，不會被每日排程自動觸發
+// 匯入 2025/11/07 上線至今的完整歷史資料（整表覆寫、每次重抓全區間）
+// ⚠️ 不是一次性：importGA4History() / importGSCHistory() 由 updateAllReports() 每天呼叫。
+//    手動跑的只有 importHistoricalData()（三步包在一起、含寫匯入紀錄）。
 // ========================================
 
 const LAUNCH_DATE = '2025-11-07';
@@ -1061,9 +1074,11 @@ function updateGA4Pages() {
 //                           js/spending-mappings.js
 //
 // ⚠️ 自訂參數要能用 Data API 查，必須先在 GA4 後台註冊成「自訂維度」。
-//   已註冊（站長確認）：card_name → customEvent:card_name、button_type → customEvent:button_type
-//   尚未註冊：card_id、merchant——想按卡片 id 或商家拆，得先去 GA4「管理 → 自訂定義」加，
+//   已註冊：card_id、card_name、merchant（2025/11/23）、button_type（2026/06/07）、
+//   has_match（2026/07/31）、surface（2026/08/20）——本檔多支查詢正在用這些維度。
+//   要加新的自訂參數，得先去 GA4「管理 → 自訂定義」註冊，
 //   且**註冊前的資料補不回來**（GA4 不回填），越早加越好。
+//   ⚠️ 用剛註冊的維度下判斷前先確認資料滿了沒：註冊日以前一律是 (not set)。
 //   若某維度沒註冊就查，Data API 會回錯誤；此步驟失敗不會影響其他報表（見 runStep_）。
 // ============================================================================
 
