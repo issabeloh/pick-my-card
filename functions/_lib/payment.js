@@ -52,6 +52,15 @@ const ENDPOINTS = {
             query: 'https://payment.opay.tw/Cashier/QueryTradeInfo/V5',
         },
     },
+    // OEN 應援科技（全跳轉）。已知事實（2026-08-20，由 OEN 業務提供）：
+    //   測試環境入口 https://pick-my-card.testing.oen.tw/ ——注意是「每個特店一個子網域」
+    //   merchantId   pick-my-card ——是字串代號，不是綠界那種數字特店編號
+    // 未知：API 路徑、請求格式、回呼格式與驗章方式（API 文件在 Postman 上，
+    //       本開發環境的 egress 政策讀不到）。
+    // 因此這裡**不給任何預設路徑**——沒有真實文件就不猜，猜錯的驗章不是
+    // 「不能用」就是「誰都能偽造已付款通知」。要用 OEN 必須顯式設定
+    // PMC_PAY_CHECKOUT_URL / PMC_PAY_QUERY_URL，否則下面會丟出帶指引的錯誤。
+    oen: { stage: {}, prod: {} },
 };
 
 // .NET HttpUtility.UrlEncode 相容編碼。
@@ -128,14 +137,23 @@ export function resolvePaymentConfig(env) {
         throw new Error('金流設定不完整：PMC_PAY_MERCHANT_ID / PMC_PAY_HASH_KEY / PMC_PAY_HASH_IV 必須設定');
     }
 
+    // 沒有內建端點的金流商（目前是 oen）必須顯式指定，錯誤訊息要講清楚該設什麼
+    const checkoutUrl = env.PMC_PAY_CHECKOUT_URL || ENDPOINTS[provider][mode].checkout;
+    if (!checkoutUrl) {
+        throw new Error(
+            `金流商 ${provider} 沒有內建結帳端點，請設定 PMC_PAY_CHECKOUT_URL` +
+            `（${provider === 'oen' ? '測試環境入口為 https://pick-my-card.testing.oen.tw/，實際 API 路徑見 OEN 文件' : '見金流商文件'}）`,
+        );
+    }
+
     return {
         provider,
         mode,
         merchantId,
         hashKey,
         hashIV,
-        checkoutUrl: env.PMC_PAY_CHECKOUT_URL || ENDPOINTS[provider][mode].checkout,
-        queryUrl: env.PMC_PAY_QUERY_URL || ENDPOINTS[provider][mode].query,
+        checkoutUrl,
+        queryUrl: env.PMC_PAY_QUERY_URL || ENDPOINTS[provider][mode].query || '',
         // Credit＝信用卡頁（Apple Pay 在金流商後台開通後會出現在同一頁）。
         choosePayment: env.PMC_PAY_CHOOSE_PAYMENT || 'Credit',
     };

@@ -60,7 +60,8 @@
 |---|---|
 | 綠界 ECPay | 已實作，CheckMacValue 演算法有自我測試 |
 | 歐付寶 O'Pay | 端點已備妥，但**網址是依同一命名慣例推得、尚未實測**。帳號下來後先跑 `mac-selftest.mjs`，再送一筆測試訂單確認不是回 CheckMacValue Error；若網址不同，設 `PMC_PAY_CHECKOUT_URL` 覆蓋即可 |
-| 其他（如 OEN 應援科技） | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
+| OEN 應援科技（全跳轉） | **已選定**。已知：測試環境入口 `https://pick-my-card.testing.oen.tw/`（每特店一個子網域）、`merchantId` = `pick-my-card`（字串代號，非數字編號）、採 token 驗證。未知：API 路徑、請求／回呼格式、驗章方式——API 文件在 Postman documenter 上，開發環境的 egress 政策讀不到。`ENDPOINTS.oen` 刻意留空，未設 `PMC_PAY_CHECKOUT_URL` 會丟出帶指引的錯誤 |
+| 其他 | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
 
 ## 2.7 串接新金流商：先抓真實樣本，不要猜驗章
 
