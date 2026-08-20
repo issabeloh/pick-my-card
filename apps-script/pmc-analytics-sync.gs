@@ -699,12 +699,14 @@ function appendHistorySnapshots_(collected, force) {
     { key: 'gscPages',    sheet: 'GSC_頁面_歷史',       topN: HISTORY_TOP_N },
     { key: 'ga4Pages',    sheet: 'GA4_頁面成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'ga4Channels', sheet: 'GA4_流量來源_歷史',   topN: HISTORY_TOP_N },
+    { key: 'ga4Events',   sheet: 'GA4_事件成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'cardClicks',  sheet: 'GA4_申辦點擊_歷史',   topN: HISTORY_TOP_N },
     { key: 'searches',    sheet: 'GA4_熱門搜尋_歷史',   topN: HISTORY_TOP_N },
   ];
 
   const done = [];
   const skipped = [];
+  const duplicated = [];
   const failed = [];
   jobs.forEach(job => {
     const src = collected[job.key];
@@ -719,25 +721,30 @@ function appendHistorySnapshots_(collected, force) {
     );
     // 每張表各自 try/catch：一張表的表頭對不上不該讓其他表這週也存不成
     try {
-      appendHistoryRows_(job.sheet, headers, rows);
-      done.push(job.sheet + '(' + rows.length + ')');
+      const written = appendHistoryRows_(job.sheet, headers, rows, today);
+      if (written === null) {
+        duplicated.push(job.sheet);   // 這張表今天已經有一份，沒有再寫
+      } else {
+        done.push(job.sheet + '(' + written + ')');
+      }
     } catch (e) {
       failed.push(job.sheet + '：' + errText_(e));
       Logger.log('歷史快照失敗 ' + job.sheet + '——' + errText_(e));
     }
   });
 
-  // 「今天存過了」只在**真的有存進東西**時才記（同 syncClarityData 的成功才記狀態）。
-  // 舊版無條件寫入：週一若上游步驟全失敗、六張表一張都沒存成，仍會記下今天，
+  // 「今天存過了」只在**真的有動到東西**時才記（同 syncClarityData 的成功才記狀態）。
+  // 舊版無條件寫入：週一若上游步驟全失敗、七張表一張都沒存成，仍會記下今天，
   // 當天重跑 updateAllReports() 會被上面的防重複擋掉 → 那週快照永久消失、且無補跑邏輯。
-  // 代價：部分成功時重跑會讓已存成的表多一份重複列——但重複列看得見也刪得掉，
-  // 遺失的週快照拿不回來，這筆交換划算。
-  if (done.length > 0) {
+  // duplicated 也算「動到了」：那代表今天確實已有快照，只是被每表去重擋下，不需要再重試。
+  // 全部落在 skipped/failed（＝上游沒資料或寫入失敗）時才不記，留著讓當天可以重跑。
+  if (done.length > 0 || duplicated.length > 0) {
     props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
   }
 
   let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
   if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
+  if (duplicated.length) msg += '；今日已有快照略過 ' + duplicated.join('、');
   if (failed.length) msg += '；⚠️ 寫入失敗 ' + failed.join('｜');
   return msg;
 }
@@ -750,7 +757,16 @@ function appendHistorySnapshots_(collected, force) {
 // 分析才發現，那時已經分不出哪些列是對的。
 // 對不上時直接 throw，由呼叫端記進「更新紀錄」；處理方式是把該張歷史表刪掉讓它用新表頭重建
 // （歷史表是週快照，重建只損失尚未累積的那幾份，比留著一張錯位的表好）。
-function appendHistoryRows_(sheetName, headers, rows) {
+//
+// ⚠️ snapshotDate 去重（2026-08-03 加）：同一個快照日期在同一張表只能存在一份。
+// 沒有這道檢查時，只要 appendHistorySnapshots_(collected, true)（＝snapshotHistoryNow()）
+// 在同一天被跑第二次，整份快照就會原封不動再 append 一遍——**而且完全不會報錯**。
+// 2026-07-31 導入歷史快照那天就是這樣：當天為了補欄位改了三版、每改一版就手動種一次資料點，
+// 於是 GA4_頁面成效_歷史／GA4_流量來源_歷史（那天表頭沒變動、三次都寫得進去）各多出兩份
+// 完全相同的 2026-07-31 快照。重複列在「某頁 sessions 趨勢」這種圖上會被加總三倍，
+// 而且因為每一欄都一模一樣，事後很難分辨是重複還是真的有三筆。
+// 回傳 null＝這張表今天已有快照、本次沒寫（呼叫端據此報告，不算成功也不算失敗）。
+function appendHistoryRows_(sheetName, headers, rows, snapshotDate) {
   const sheet = getOrCreateSheet(sheetName);
 
   if (sheet.getLastRow() === 0) {
@@ -760,11 +776,13 @@ function appendHistoryRows_(sheetName, headers, rows) {
   } else {
     const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
       .map(v => String(v)).filter(v => v !== '');
-    if (existing.join(' ') !== headers.join(' ')) {
+    if (existing.join('\u0000') !== headers.join('\u0000')) {
       throw new Error('表頭與現有資料不符（欄位定義變了）。現有：[' + existing.join(', ') +
         ']；預期：[' + headers.join(', ') + ']。請把「' + sheetName +
         '」分頁刪掉讓它以新表頭重建，再跑一次 snapshotHistoryNow()');
     }
+    // 表頭沒問題才檢查重複——表頭對不上要優先讓它 throw 出來
+    if (snapshotDate && lastSnapshotDateOf_(sheet) === snapshotDate) return null;
   }
 
   if (rows.length === 0) return 0;
@@ -772,13 +790,30 @@ function appendHistoryRows_(sheetName, headers, rows) {
   return rows.length;
 }
 
+// 歷史表最後一列的快照日期（yyyy-MM-dd 字串；只有表頭或全空時回 ''）。
+// 快照永遠是整批 append 在最尾端，所以看最後一列就夠，不必掃全表。
+// ⚠️ 不能直接 String(值) 比對：A 欄寫進去的雖然是 'yyyy-MM-dd' 字串，Sheets 會把它自動
+// 解析成日期，讀回來是 Date 物件，String() 出來長得像 'Fri Jul 31 2026 ...' 而永遠對不上。
+function lastSnapshotDateOf_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return '';
+  const v = sheet.getRange(lastRow, 1).getValue();
+  if (v && typeof v.getTime === 'function') return formatDate(v); // Date 物件 → 轉回 yyyy-MM-dd
+  return String(v).trim();
+}
+
 // 手動存一份歷史快照（不管今天星期幾、不管今天存過沒）。
 // 用途：剛上線時先種下第一個資料點，不用等到下個快照日；或想在改版前後各留一份對照。
 // 會重新抓一次各報表資料（＝多打幾次 API），一般日常不需要跑。
+//
+// ⚠️ force 只跳過「星期幾」和 HISTORY_LAST_SNAPSHOT_DATE 兩道全域檢查；每張表仍有
+// 「同一個快照日期只留一份」的去重（見 appendHistoryRows_），所以同一天重跑不會再寫一次。
+// 想在同一天留下第二個對照點，要嘛等隔天，要嘛先把那幾列手動刪掉——重複列會讓趨勢圖加總翻倍。
 function snapshotHistoryNow() {
   const collected = {
     ga4Pages:    updateGA4Pages(),
     ga4Channels: updateGA4Channels(),
+    ga4Events:   updateGA4Events(),
     cardClicks:  updateGA4CardClicks(),
     searches:    updateGA4MerchantSearches(),
     gscQueries:  updateGSCQueries(),
