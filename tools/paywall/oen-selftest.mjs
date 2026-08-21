@@ -177,7 +177,8 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
     check('成功導回 → /?pmc_pay=success', ok.status === 303 && ok.headers.get('Location') === 'https://pickmycard.app/?pmc_pay=success',
         ok.headers.get('Location'));
     const bad = await getReturn('?payment_error=T0002');
-    check('失敗導回 → /?pmc_pay=failed', bad.headers.get('Location') === 'https://pickmycard.app/?pmc_pay=failed',
+    check('失敗導回 → /?pmc_pay=failed 並帶回錯誤代碼（供管理員通報用）',
+        bad.headers.get('Location') === 'https://pickmycard.app/?pmc_pay=failed&pmc_err=T0002',
         bad.headers.get('Location'));
     const bare = await getReturn('');
     check('無參數亂逛 → 靜默回首頁', bare.headers.get('Location') === 'https://pickmycard.app/', bare.headers.get('Location'));
