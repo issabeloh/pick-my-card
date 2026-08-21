@@ -39,6 +39,18 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 `#product-intro-section` 不得存在於 DOM（hero 已於 2026-07-20 移除）、`#merchant-input` top 必須在 0–600px。
 守的機制：「HTML 與 JS 不同步」類事故（如 merge 拿錯檔案版本）——搜尋計算可能全綠但首屏已壞（PR #337 事故）。
 
+## 刪除帳號與資料（獨立一支，2026-08-20 新增）
+
+```bash
+node tools/regression/delete-account-test.js   # 24 項，全過 → exit 0
+```
+
+`run-regression.js` 的 Firebase 替身固定回訪客（onAuthStateChanged → null），跑不到登入後的
+路徑；刪除帳號是全站唯一會永久毀掉用戶資料的功能，所以另外一支自帶「已登入用戶」替身。
+**改 `js/auth-user-data.js` 的「刪除帳號與全部資料」區塊後必跑。**
+最重要的一組是「身分驗證失敗時一筆資料都不能刪」——刪除順序寫錯會留下沒有任何人刪得掉的
+孤兒文件（Firestore 規則按 `<uid>_<cardId>` 授權，帳號一沒了就再也碰不到那些文件）。
+
 ## 人工備援流程（只在腳本壞掉時用）
 
 ```bash

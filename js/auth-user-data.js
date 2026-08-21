@@ -5,6 +5,7 @@
  *  - 認證入口/訪客 UI           → "setupAuthentication" / "ensureGuestUIBound"
  *  - 頭像下拉                  → "setupAvatarDropdown"
  *  - 登出個資清理（鐵則 9）     → "clearPersonalLocalDataOnSignOut"
+ *  - 刪除帳號與全部資料         → "deleteAccountAndAllData" / "openDeleteAccountModal"
  *  - Firebase 認證訂閱          → "ensureAuthSubscribed" / "onAuthStateChanged"
  *  - 用戶資料載入              → "loadUserData"
  *  - 訪客資料吸收              → "absorbGuestPersonalData"
@@ -96,6 +97,7 @@ function setupAvatarDropdown() {
             const modal = document.getElementById('feedback-modal');
             if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
         },
+        'avatar-delete-account': () => openDeleteAccountModal(),
         'avatar-sign-out': async () => {
             if (currentUser) {
                 // 先清本機個人資料再登出：順序固定，避免與 onAuthStateChanged
@@ -208,6 +210,12 @@ function ensureGuestUIBound() {
             signOutItem.classList.remove('avatar-dropdown-logout');
             signOutItem.classList.add('avatar-dropdown-signin');
         }
+        // 刪除帳號入口對訪客永遠不顯示（沒有帳號可刪），不受 appStarted 影響，
+        // 所以不放進 setGuestDropdownVisibility() 的清單裡。
+        ['avatar-delete-account', 'avatar-delete-divider'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
         setGuestDropdownVisibility();
     }
 
@@ -228,7 +236,10 @@ function ensureGuestUIBound() {
             signOutItem.classList.remove('avatar-dropdown-signin');
         }
         // Always show all menu items for logged-in users
-        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
+        // （'avatar-delete-account'/'avatar-delete-divider' 也在這裡才打開——
+        //   只有登入者才有帳號可刪。）
+        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback',
+                     'avatar-delete-account', 'avatar-delete-divider'];
         const divider = document.querySelector('.avatar-dropdown-divider');
         ids.forEach(id => {
             const el = document.getElementById(id);
@@ -242,6 +253,7 @@ function ensureGuestUIBound() {
 
     // Setup avatar dropdown menu
     setupAvatarDropdown();
+    setupDeleteAccountModal();
     
     // Cache shared DOM references for show/hide
     const toolElements = {
@@ -906,3 +918,256 @@ function setupManageCardsModal() {
     }
 }
 
+
+// ============================================================
+// 刪除帳號與全部資料（2026-08-20 新增）
+//
+// 為什麼存在：隱私權政策第 8.1 節向用戶承諾「不必寄信、不必等回覆」的自助刪除
+// 途徑（個資法第 3 條的刪除權）。UI 入口是頭像下拉的「刪除帳號與資料」。
+//
+// 改這段之前先讀懂三件事：
+//  1. 【順序不可調換】重新驗證身分 → 刪雲端資料 → 刪 Auth 帳號 → 清本機。
+//     先刪帳號的話，firestore.rules 會立刻擋掉後續刪除（規則要求
+//     request.auth.uid 與文件相符），那些資料會變成「沒有任何人刪得掉」的孤兒。
+//  2. 【失敗就中止】雲端刪除只要有一筆失敗就拋錯、絕不往下刪帳號。寧可讓用戶
+//     原樣重試，也不要留下刪不掉的殘骸。users/{uid} 主文件永遠最後刪。
+//  3. 【只能由用戶親自點擊觸發】這是全站唯一允許刪除用戶資料的路徑。不可以放進
+//     任何自動流程、錯誤處理或 onAuthStateChanged 分支（同鐵則 9 的精神）。
+// ============================================================
+
+const DELETE_CONFIRM_PHRASE = '刪除我的帳號';
+
+function openDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    if (!currentUser) { openAuthModal('login'); return; }
+
+    const emailEl = document.getElementById('da-user-email');
+    if (emailEl) emailEl.textContent = currentUser.email || currentUser.displayName || '目前登入的帳號';
+
+    // 重新驗證的方式跟登入方式走：密碼帳號要當場輸入密碼，Google 帳號則跳 popup。
+    const usesPassword = (currentUser.providerData || []).some(p => p && p.providerId === 'password');
+    const pwdGroup = document.getElementById('da-password-group');
+    const pwdInput = document.getElementById('da-password');
+    const hint = document.getElementById('da-reauth-hint');
+    if (pwdGroup) pwdGroup.style.display = usesPassword ? '' : 'none';
+    if (pwdInput) pwdInput.value = '';
+    if (hint) hint.textContent = usesPassword ? '' : '按下刪除後會跳出 Google 視窗請你重新登入一次，用來確認是本人操作。';
+
+    const confirmInput = document.getElementById('da-confirm-text');
+    if (confirmInput) confirmInput.value = '';
+    setDeleteAccountStatus('', '');
+    updateDeleteAccountButtonState();
+
+    const cancelBtn = document.getElementById('cancel-delete-account-btn');
+    if (cancelBtn) cancelBtn.disabled = false;
+
+    modal.style.display = 'flex';
+    disableBodyScroll();
+}
+
+function closeDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    enableBodyScroll();
+    // 密碼不留在 DOM 裡
+    const pwdInput = document.getElementById('da-password');
+    if (pwdInput) pwdInput.value = '';
+}
+
+// 狀態列一律用 textContent（不是 innerHTML）：這裡會顯示 Firebase 回傳的錯誤訊息，
+// 是外部字串，走 textContent 就沒有 XSS 面。
+function setDeleteAccountStatus(kind, text) {
+    const el = document.getElementById('da-status');
+    if (!el) return;
+    el.className = 'da-status' + (kind ? ' ' + kind : '');
+    el.textContent = text || '';
+}
+
+// 兩個條件都滿足才解鎖刪除鈕：確認文字逐字相符 ＋（密碼帳號）密碼已填。
+function updateDeleteAccountButtonState() {
+    const btn = document.getElementById('confirm-delete-account-btn');
+    if (!btn) return;
+    const confirmInput = document.getElementById('da-confirm-text');
+    const phraseOk = !!confirmInput && confirmInput.value.trim() === DELETE_CONFIRM_PHRASE;
+
+    const pwdGroup = document.getElementById('da-password-group');
+    const pwdInput = document.getElementById('da-password');
+    const needsPwd = !!pwdGroup && pwdGroup.style.display !== 'none';
+    const pwdOk = !needsPwd || (!!pwdInput && pwdInput.value.length > 0);
+
+    btn.disabled = !(phraseOk && pwdOk);
+}
+
+function setupDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-delete-account-modal');
+    const cancelBtn = document.getElementById('cancel-delete-account-btn');
+    const confirmBtn = document.getElementById('confirm-delete-account-btn');
+    const confirmInput = document.getElementById('da-confirm-text');
+    const pwdInput = document.getElementById('da-password');
+
+    if (closeBtn) closeBtn.addEventListener('click', closeDeleteAccountModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeDeleteAccountModal);
+    if (confirmInput) confirmInput.addEventListener('input', updateDeleteAccountButtonState);
+    if (pwdInput) pwdInput.addEventListener('input', updateDeleteAccountButtonState);
+    if (confirmBtn) confirmBtn.addEventListener('click', deleteAccountAndAllData);
+
+    // 點背景關閉（與站內其他 modal 一致）；刪除進行中（取消鈕已 disabled）不讓關。
+    modal.addEventListener('click', (e) => {
+        if (e.target !== modal) return;
+        if (cancelBtn && cancelBtn.disabled) return;
+        closeDeleteAccountModal();
+    });
+}
+
+// 重新驗證身分：Firebase 對 deleteUser() 要求近期登入憑證，同時這也是防止他人
+// 在你未登出的裝置上惡意刪除帳號的關卡。驗證失敗一律往外拋，由呼叫端中止流程。
+async function reauthenticateForDeletion(user) {
+    const providers = (user.providerData || []).map(p => p && p.providerId);
+
+    if (providers.includes('password')) {
+        const pwdInput = document.getElementById('da-password');
+        const password = (pwdInput && pwdInput.value) || '';
+        if (!password) {
+            const err = new Error('need-password');
+            err.code = 'pmc/need-password';
+            throw err;
+        }
+        if (!window.EmailAuthProvider || !window.reauthenticateWithCredential) {
+            const err = new Error('firebase-not-ready');
+            err.code = 'pmc/not-ready';
+            throw err;
+        }
+        const credential = window.EmailAuthProvider.credential(user.email, password);
+        await window.reauthenticateWithCredential(user, credential);
+        return;
+    }
+
+    if (providers.includes('google.com')) {
+        if (!window.reauthenticateWithPopup || !window.googleProvider) {
+            const err = new Error('firebase-not-ready');
+            err.code = 'pmc/not-ready';
+            throw err;
+        }
+        await window.reauthenticateWithPopup(user, window.googleProvider);
+        return;
+    }
+
+    // 未知登入方式：不擋，讓 deleteUser() 自己決定要不要求近期登入
+    // （真的需要時會回 auth/requires-recent-login，錯誤訊息會告訴用戶重新登入）。
+}
+
+// 刪掉這個 uid 在 Firestore 的所有文件。
+//
+// 卡片級別（cardSettings）與筆記（userNotes）是「每張卡一份文件」、文件 ID 為
+// `<uid>_<cardId>`。firestore.rules 是按文件 ID 比對授權的，沒辦法用 collection
+// 查詢列出自己的文件，所以只能拿目前的卡片清單逐一刪。刪一個不存在的文件在
+// Firestore 不算錯誤，因此不需要先查存在與否。
+//
+// 已知限制：如果某張卡已從 cards.data 下架，該卡留下的級別/筆記文件會刪不到。
+// 隱私權政策裡留了來信管道，這種殘留由人工清除。
+async function deleteAllCloudUserData(uid) {
+    const cardIds = ((cardsData && cardsData.cards) || []).map(c => c && c.id).filter(Boolean);
+
+    const refs = [];
+    for (const cardId of cardIds) {
+        refs.push(window.doc(window.db, 'cardSettings', `${uid}_${cardId}`));
+        refs.push(window.doc(window.db, 'userNotes', `${uid}_${cardId}`));
+    }
+
+    // 分批送，避免一次開太多連線；任何一批有失敗就整個中止（見本區塊開頭第 2 點）。
+    const CHUNK = 20;
+    for (let i = 0; i < refs.length; i += CHUNK) {
+        const results = await Promise.allSettled(refs.slice(i, i + CHUNK).map(ref => window.deleteDoc(ref)));
+        const failed = results.find(r => r.status === 'rejected');
+        if (failed) throw failed.reason;
+    }
+
+    // 主設定文件最後刪：前面任何一步失敗都已經拋出，帳號不會被刪，用戶可原樣重試。
+    await window.deleteDoc(window.doc(window.db, 'users', uid));
+}
+
+function describeDeleteAccountError(error) {
+    const code = (error && error.code) || '';
+    switch (code) {
+        case 'pmc/need-password':
+            return '請先輸入密碼再按刪除。';
+        case 'pmc/not-ready':
+            return '功能尚未就緒（Firebase 還沒載入完成），請重新整理頁面後再試。';
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return '密碼不正確，請重新輸入。';
+        case 'auth/user-mismatch':
+            return '你在 Google 視窗選到的是另一個帳號，請選擇目前登入的帳號。';
+        case 'auth/popup-closed-by-user':
+        case 'auth/cancelled-popup-request':
+            return '已取消——身分驗證視窗被關閉，沒有刪除任何資料。';
+        case 'auth/popup-blocked':
+            return '瀏覽器擋掉了驗證視窗，請允許本站的彈出視窗後再試。';
+        case 'auth/too-many-requests':
+            return '嘗試次數過多，請稍等幾分鐘後再試。';
+        case 'auth/requires-recent-login':
+            return '登入憑證已過期，請登出後重新登入，再執行刪除。';
+        case 'auth/network-request-failed':
+            return '網路連線失敗，沒有刪除任何資料，請確認網路後重試。';
+        case 'permission-denied':
+            return '權限不足，沒有刪除任何資料。請登出後重新登入再試一次。';
+        default:
+            return '刪除失敗' + (code ? `（${code}）` : '') + '，沒有刪除完成。請稍後再試，或來信 support@pickmycard.app。';
+    }
+}
+
+async function deleteAccountAndAllData() {
+    const confirmBtn = document.getElementById('confirm-delete-account-btn');
+    const cancelBtn = document.getElementById('cancel-delete-account-btn');
+    const closeBtn = document.getElementById('close-delete-account-modal');
+
+    const user = (auth && auth.currentUser) || null;
+    if (!user) {
+        setDeleteAccountStatus('error', '登入狀態已失效，請重新登入後再試。');
+        return;
+    }
+    if (!window.deleteUser || !window.deleteDoc || !window.doc || !window.db) {
+        setDeleteAccountStatus('error', '功能尚未就緒（Firebase 還沒載入完成），請重新整理頁面後再試。');
+        return;
+    }
+    // 沒有卡片清單就刪不乾淨級別與筆記（見 deleteAllCloudUserData 的說明），
+    // 這種情況下寧可不動手，也不要刪一半留下孤兒文件。
+    if (!cardsData || !cardsData.cards || cardsData.cards.length === 0) {
+        setDeleteAccountStatus('error', '卡片資料還沒載入完成，請等幾秒後再試（需要卡片清單才能把你的級別與筆記刪乾淨）。');
+        return;
+    }
+
+    const uid = user.uid;
+    if (confirmBtn) confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (closeBtn) closeBtn.disabled = true;
+
+    try {
+        setDeleteAccountStatus('loading', '正在確認身分…');
+        await reauthenticateForDeletion(user);
+
+        setDeleteAccountStatus('loading', '正在刪除雲端資料…');
+        await deleteAllCloudUserData(uid);
+
+        setDeleteAccountStatus('loading', '正在刪除帳號…');
+        await window.deleteUser(user);
+
+        // 帳號已經不存在，本機鏡像沒有留下的理由——沿用登出那份清單（鐵則 9 的
+        // 「用戶親自觸發」條件在這裡同樣成立，而且更強）。
+        clearPersonalLocalDataOnSignOut(uid);
+
+        setDeleteAccountStatus('success', '✅ 已刪除你的帳號與全部資料。即將重新整理頁面…');
+        setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+        console.error('Delete account failed:', error);
+        setDeleteAccountStatus('error', describeDeleteAccountError(error));
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (closeBtn) closeBtn.disabled = false;
+        updateDeleteAccountButtonState();
+    }
+}

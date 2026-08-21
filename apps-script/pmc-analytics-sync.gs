@@ -699,12 +699,14 @@ function appendHistorySnapshots_(collected, force) {
     { key: 'gscPages',    sheet: 'GSC_頁面_歷史',       topN: HISTORY_TOP_N },
     { key: 'ga4Pages',    sheet: 'GA4_頁面成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'ga4Channels', sheet: 'GA4_流量來源_歷史',   topN: HISTORY_TOP_N },
+    { key: 'ga4Events',   sheet: 'GA4_事件成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'cardClicks',  sheet: 'GA4_申辦點擊_歷史',   topN: HISTORY_TOP_N },
     { key: 'searches',    sheet: 'GA4_熱門搜尋_歷史',   topN: HISTORY_TOP_N },
   ];
 
   const done = [];
   const skipped = [];
+  const duplicated = [];
   const failed = [];
   jobs.forEach(job => {
     const src = collected[job.key];
@@ -719,18 +721,30 @@ function appendHistorySnapshots_(collected, force) {
     );
     // 每張表各自 try/catch：一張表的表頭對不上不該讓其他表這週也存不成
     try {
-      appendHistoryRows_(job.sheet, headers, rows);
-      done.push(job.sheet + '(' + rows.length + ')');
+      const written = appendHistoryRows_(job.sheet, headers, rows, today);
+      if (written === null) {
+        duplicated.push(job.sheet);   // 這張表今天已經有一份，沒有再寫
+      } else {
+        done.push(job.sheet + '(' + written + ')');
+      }
     } catch (e) {
       failed.push(job.sheet + '：' + errText_(e));
       Logger.log('歷史快照失敗 ' + job.sheet + '——' + errText_(e));
     }
   });
 
-  props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
+  // 「今天存過了」只在**真的有動到東西**時才記（同 syncClarityData 的成功才記狀態）。
+  // 舊版無條件寫入：週一若上游步驟全失敗、七張表一張都沒存成，仍會記下今天，
+  // 當天重跑 updateAllReports() 會被上面的防重複擋掉 → 那週快照永久消失、且無補跑邏輯。
+  // duplicated 也算「動到了」：那代表今天確實已有快照，只是被每表去重擋下，不需要再重試。
+  // 全部落在 skipped/failed（＝上游沒資料或寫入失敗）時才不記，留著讓當天可以重跑。
+  if (done.length > 0 || duplicated.length > 0) {
+    props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
+  }
 
   let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
   if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
+  if (duplicated.length) msg += '；今日已有快照略過 ' + duplicated.join('、');
   if (failed.length) msg += '；⚠️ 寫入失敗 ' + failed.join('｜');
   return msg;
 }
@@ -743,7 +757,16 @@ function appendHistorySnapshots_(collected, force) {
 // 分析才發現，那時已經分不出哪些列是對的。
 // 對不上時直接 throw，由呼叫端記進「更新紀錄」；處理方式是把該張歷史表刪掉讓它用新表頭重建
 // （歷史表是週快照，重建只損失尚未累積的那幾份，比留著一張錯位的表好）。
-function appendHistoryRows_(sheetName, headers, rows) {
+//
+// ⚠️ snapshotDate 去重（2026-08-03 加）：同一個快照日期在同一張表只能存在一份。
+// 沒有這道檢查時，只要 appendHistorySnapshots_(collected, true)（＝snapshotHistoryNow()）
+// 在同一天被跑第二次，整份快照就會原封不動再 append 一遍——**而且完全不會報錯**。
+// 2026-07-31 導入歷史快照那天就是這樣：當天為了補欄位改了三版、每改一版就手動種一次資料點，
+// 於是 GA4_頁面成效_歷史／GA4_流量來源_歷史（那天表頭沒變動、三次都寫得進去）各多出兩份
+// 完全相同的 2026-07-31 快照。重複列在「某頁 sessions 趨勢」這種圖上會被加總三倍，
+// 而且因為每一欄都一模一樣，事後很難分辨是重複還是真的有三筆。
+// 回傳 null＝這張表今天已有快照、本次沒寫（呼叫端據此報告，不算成功也不算失敗）。
+function appendHistoryRows_(sheetName, headers, rows, snapshotDate) {
   const sheet = getOrCreateSheet(sheetName);
 
   if (sheet.getLastRow() === 0) {
@@ -753,11 +776,13 @@ function appendHistoryRows_(sheetName, headers, rows) {
   } else {
     const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
       .map(v => String(v)).filter(v => v !== '');
-    if (existing.join(' ') !== headers.join(' ')) {
+    if (existing.join('\u0000') !== headers.join('\u0000')) {
       throw new Error('表頭與現有資料不符（欄位定義變了）。現有：[' + existing.join(', ') +
         ']；預期：[' + headers.join(', ') + ']。請把「' + sheetName +
         '」分頁刪掉讓它以新表頭重建，再跑一次 snapshotHistoryNow()');
     }
+    // 表頭沒問題才檢查重複——表頭對不上要優先讓它 throw 出來
+    if (snapshotDate && lastSnapshotDateOf_(sheet) === snapshotDate) return null;
   }
 
   if (rows.length === 0) return 0;
@@ -765,13 +790,30 @@ function appendHistoryRows_(sheetName, headers, rows) {
   return rows.length;
 }
 
-// 手動存一份歷史快照（不管今天星期幾、不管今天存過沒）。
+// 歷史表最後一列的快照日期（yyyy-MM-dd 字串；只有表頭或全空時回 ''）。
+// 快照永遠是整批 append 在最尾端，所以看最後一列就夠，不必掃全表。
+// ⚠️ 不能直接 String(值) 比對：A 欄寫進去的雖然是 'yyyy-MM-dd' 字串，Sheets 會把它自動
+// 解析成日期，讀回來是 Date 物件，String() 出來長得像 'Fri Jul 31 2026 ...' 而永遠對不上。
+function lastSnapshotDateOf_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return '';
+  const v = sheet.getRange(lastRow, 1).getValue();
+  if (v && typeof v.getTime === 'function') return formatDate(v); // Date 物件 → 轉回 yyyy-MM-dd
+  return String(v).trim();
+}
+
+// 手動存一份歷史快照（不管今天星期幾、不管全域的「今日已存過」記號）。
 // 用途：剛上線時先種下第一個資料點，不用等到下個快照日；或想在改版前後各留一份對照。
 // 會重新抓一次各報表資料（＝多打幾次 API），一般日常不需要跑。
+//
+// ⚠️ force 只跳過「星期幾」和 HISTORY_LAST_SNAPSHOT_DATE 兩道全域檢查；每張表仍有
+// 「同一個快照日期只留一份」的去重（見 appendHistoryRows_），所以同一天重跑不會再寫一次。
+// 想在同一天留下第二個對照點，要嘛等隔天，要嘛先把那幾列手動刪掉——重複列會讓趨勢圖加總翻倍。
 function snapshotHistoryNow() {
   const collected = {
     ga4Pages:    updateGA4Pages(),
     ga4Channels: updateGA4Channels(),
+    ga4Events:   updateGA4Events(),
     cardClicks:  updateGA4CardClicks(),
     searches:    updateGA4MerchantSearches(),
     gscQueries:  updateGSCQueries(),
@@ -785,6 +827,11 @@ function snapshotHistoryNow() {
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 // ---------- 排程：每天自動執行 ----------
+// ⚠️ 現行那條 trigger 不是這個函式建的，是在「觸發條件」畫面手動建的，每天約 17:37 跑。
+//    這個函式會**先刪掉所有 updateAllReports 的觸發條件再重建一條**——
+//    為了「設定排程」隨手跑一次，就會把現行的 17:37 靜默換成下面 atHour 指定的時間。
+//    要改執行時間請去「觸發條件」畫面改，不要跑這個函式。
+//    （atHour 已從原本的 6 改成 17，與現況一致，避免真的被跑到時把排程整個挪走。）
 function createDailyTrigger() {
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(t => {
@@ -795,7 +842,7 @@ function createDailyTrigger() {
   ScriptApp.newTrigger('updateAllReports')
     .timeBased()
     .everyDays(1)
-    .atHour(6)
+    .atHour(17)
     .create();
 }
 
@@ -807,8 +854,9 @@ function debugGSC() {
 }
 
 // ========================================
-// 一次性：匯入 2025/11/07 上線至今的完整歷史資料
-// 只需要手動執行一次，不會被每日排程自動觸發
+// 匯入 2025/11/07 上線至今的完整歷史資料（整表覆寫、每次重抓全區間）
+// ⚠️ 不是一次性：importGA4History() / importGSCHistory() 由 updateAllReports() 每天呼叫。
+//    手動跑的只有 importHistoricalData()（三步包在一起、含寫匯入紀錄）。
 // ========================================
 
 const LAUNCH_DATE = '2025-11-07';
@@ -1061,9 +1109,11 @@ function updateGA4Pages() {
 //                           js/spending-mappings.js
 //
 // ⚠️ 自訂參數要能用 Data API 查，必須先在 GA4 後台註冊成「自訂維度」。
-//   已註冊（站長確認）：card_name → customEvent:card_name、button_type → customEvent:button_type
-//   尚未註冊：card_id、merchant——想按卡片 id 或商家拆，得先去 GA4「管理 → 自訂定義」加，
+//   已註冊：card_id、card_name、merchant（2025/11/23）、button_type（2026/06/07）、
+//   has_match（2026/07/31）、surface（2026/08/20）——本檔多支查詢正在用這些維度。
+//   要加新的自訂參數，得先去 GA4「管理 → 自訂定義」註冊，
 //   且**註冊前的資料補不回來**（GA4 不回填），越早加越好。
+//   ⚠️ 用剛註冊的維度下判斷前先確認資料滿了沒：註冊日以前一律是 (not set)。
 //   若某維度沒註冊就查，Data API 會回錯誤；此步驟失敗不會影響其他報表（見 runStep_）。
 // ============================================================================
 
@@ -1131,7 +1181,8 @@ function updateGA4Events() {
     source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 eventName（' +
       win.startSpec + ' ~ ' + win.endSpec + '）',
     note: '區間日界線由 GA4 資源時區判定｜含 GA4 自動蒐集事件（page_view、session_start 等）' +
-      '與本站自訂事件｜申辦點擊的卡片/按鈕拆解看「GA4_申辦點擊」與「GA4_各卡點擊」',
+      '與本站自訂事件｜申辦點擊的卡片/按鈕拆解看「GA4_申辦點擊」與「GA4_各卡點擊」' +
+      '｜每週快照存進「GA4_事件成效_歷史」',
   }, headers, values);
 
   return { headers: headers, values: values, window: win };

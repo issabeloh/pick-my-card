@@ -15,8 +15,8 @@ has() { echo "$changed" | grep -qx "$1"; }
 # 部署時 Cloudflare Pages build command 跑 tools/deploy-version.sh 把 dev 換成 commit hash。
 # repo 裡出現非 dev 的值＝有人手動 bump（舊流程回潮）或解衝突拿錯版本，一律擋下。
 # promos.html 除外：由 Apps Script 匯出生成、自帶時間戳，部署時照樣被覆寫、無害。
-VER_RE='((styles|faq|landing)\.css|(script|faq|landing)\.js|js/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+'
-for page in index.html faq.html landing.html merchant/*.html; do
+VER_RE='((styles|faq|landing|privacy)\.css|(script|faq|landing)\.js|js/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+'
+for page in index.html faq.html landing.html privacy.html merchant/*.html; do
   [ -e "$page" ] || continue
   bad=$(grep -oE "$VER_RE" "$page" | grep -v '?v=dev$' || true)
   if [ -n "$bad" ]; then
@@ -62,7 +62,7 @@ fi
 # Cloudflare Pages 把 /faq.html 301 到 /faq，所以站內連 faq.html 等於每次都多繞一跳：
 # 浪費爬取預算、GSC「Page with redirect」報表被自家連結灌爆。一律寫 /、/faq、/promos、/landing。
 # （2026-08-16 全站 66 個連結一次改完；promos.html 由 Apps Script 生成、本來就是 clean URL。）
-for page in index.html faq.html landing.html merchant/*.html; do
+for page in index.html faq.html landing.html privacy.html merchant/*.html; do
   [ -e "$page" ] || continue
   bad=$(grep -oE 'href="(index|faq|promos|landing)\.html[^"]*"' "$page" || true)
   if [ -n "$bad" ]; then

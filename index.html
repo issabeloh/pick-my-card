@@ -255,6 +255,15 @@
                                     <svg id="sign-out-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
                                     <span id="sign-out-label">登出</span>
                                 </a>
+                                <!-- 刪除帳號與資料（2026-08-20 新增）：隱私權政策第 8.1 節承諾的
+                                     自助刪除途徑。只有登入者看得到（訪客沒有帳號可刪），所以預設
+                                     display:none，由 setLoggedInAvatarState() 打開。刻意放在登出
+                                     之後、單獨一段——這是不可復原的操作，不該跟日常動作混在一起。 -->
+                                <div class="avatar-dropdown-divider" id="avatar-delete-divider" style="display:none"></div>
+                                <a href="#" class="avatar-dropdown-item avatar-dropdown-danger" id="avatar-delete-account" style="display:none">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                    刪除帳號與資料
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -963,20 +972,6 @@
     <!-- 社群媒體與贊助區塊 -->
     <div class="social-media-footer">
         <div class="social-media-container">
-            <div class="explore-section">
-                <p class="social-media-title">探索更多</p>
-                <div class="social-media-links">
-                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
-                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
-                    </a>
-                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
-                        <span class="social-text">常見問題 FAQ ↗</span>
-                    </a>
-                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
-                        <span class="social-text">Pick My Card 是什麼？↗</span>
-                    </a>
-                </div>
-            </div>
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
                 <div class="social-media-links">
@@ -999,7 +994,27 @@
                     </a>
                 </div>
             </div>
-        </div>
+                    <div class="explore-section">
+                <p class="social-media-title">探索更多</p>
+                <div class="social-media-links">
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
+                    </a>
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                        <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？↗</span>
+                    </a>
+                    <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。
+                         AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的
+                         告知義務也需要常設入口——新增頁面時記得一起帶上。 -->
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="隱私權政策">
+                        <span class="social-text">隱私權政策</span>
+                    </a>
+                </div>
+            </div>
+</div>
     </div>
 
     <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
@@ -1171,8 +1186,8 @@
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
-      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
       // Your web app's Firebase configuration
@@ -1215,10 +1230,19 @@
       window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
       window.signInWithEmailAndPassword = signInWithEmailAndPassword;
       window.sendPasswordResetEmail = sendPasswordResetEmail;
+      // 刪除帳號與資料（隱私權政策 8.1 的自助刪除途徑，見 js/auth-user-data.js
+      // 的「刪除帳號與全部資料」區塊）。reauthenticate* 是 deleteUser 的前置：
+      // Firebase 對刪除帳號要求近期登入憑證，且這也是防止他人在未登出的裝置上
+      // 惡意刪除的第一道關卡。
+      window.deleteUser = deleteUser;
+      window.reauthenticateWithPopup = reauthenticateWithPopup;
+      window.reauthenticateWithCredential = reauthenticateWithCredential;
+      window.EmailAuthProvider = EmailAuthProvider;
       window.doc = doc;
       window.getDoc = getDoc;
       window.setDoc = setDoc;
       window.deleteField = deleteField;
+      window.deleteDoc = deleteDoc;
       window.addDoc = addDoc;
       window.collection = collection;
       window.serverTimestamp = serverTimestamp;
@@ -1360,6 +1384,56 @@
             <div class="modal-footer">
                 <button type="button" id="submit-feedback-btn" class="save-btn">送出</button>
                 <button type="button" id="cancel-feedback-btn" class="cancel-btn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刪除帳號與資料 Modal（2026-08-20 新增）
+         隱私權政策第 8.1 節承諾「不必寄信、不必等回覆」的自助刪除途徑。
+         三道關卡刻意都留著，不要為了「順手」拿掉任何一道：
+           1. 逐項列出會刪掉什麼（用戶要知道自己按下去失去什麼）
+           2. 重新驗證身分（防止他人在未登出的裝置上惡意刪除）
+           3. 輸入確認文字（防手滑；destructive action 的標準做法）
+         實作見 js/auth-user-data.js 的「刪除帳號與全部資料」區塊。 -->
+    <div id="delete-account-modal" class="modal" style="display: none;">
+        <div class="modal-content delete-account-content">
+            <div class="modal-header">
+                <h3>⚠️ 刪除帳號與資料</h3>
+                <button class="close-modal" id="close-delete-account-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="da-lead">這個動作<strong>無法復原</strong>——我們沒有備份可以還給你。</p>
+
+                <div class="da-list-title">以下資料會被永久刪除：</div>
+                <ul class="da-list">
+                    <li>你的登入帳號（<span id="da-user-email" class="da-email"></span>）</li>
+                    <li>雲端的個人化設定：持有卡片、卡片級別、行動支付、配卡組合、免年費、結帳日、生日月、我的額度</li>
+                    <li>你寫過的所有卡片筆記</li>
+                    <li>這台裝置上的本機資料</li>
+                </ul>
+
+                <div class="da-note">
+                    你曾送出的「問題回報」內容與截圖<strong>不會</strong>自動刪除——基於安全考量，前端沒有讀取那些紀錄的權限。需要一併刪除請來信
+                    <a href="mailto:support@pickmycard.app">support@pickmycard.app</a>，我們手動處理。
+                </div>
+
+                <div class="form-group" id="da-password-group" style="display:none;">
+                    <label for="da-password">請輸入密碼以確認是本人操作 <span class="required">*</span></label>
+                    <input type="password" id="da-password" class="da-input" autocomplete="current-password" placeholder="你的登入密碼">
+                </div>
+
+                <p class="da-reauth-hint" id="da-reauth-hint"></p>
+
+                <div class="form-group">
+                    <label for="da-confirm-text">請輸入 <code class="da-code">刪除我的帳號</code> 以確認 <span class="required">*</span></label>
+                    <input type="text" id="da-confirm-text" class="da-input" autocomplete="off" placeholder="刪除我的帳號">
+                </div>
+
+                <div id="da-status" class="da-status"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="confirm-delete-account-btn" class="danger-btn" disabled>永久刪除</button>
+                <button type="button" id="cancel-delete-account-btn" class="cancel-btn">取消</button>
             </div>
         </div>
     </div>
