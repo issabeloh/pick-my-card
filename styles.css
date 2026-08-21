@@ -5583,14 +5583,10 @@ html.pmc-adfree .adfree-fab {
     transform: scale(0.96);
 }
 
-/* 堆疊規則：下方每多一顆可見浮標就往上疊一層（48 高 + 8 間距 = 56） */
-body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab,
-body:has(.scroll-to-spotlight-btn.is-visible) .adfree-fab {
+/* 堆疊順序（下→上）：配卡組合 → 本鈕 → 精選活動 → 回到頂部(手機)。
+   本鈕只讓位給下方的配卡組合；上方的精選活動/回到頂部各自讓位給本鈕。 */
+body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     bottom: 72px;
-}
-
-body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .adfree-fab {
-    bottom: 128px;
 }
 
 .adfree-modal-content {
@@ -6409,9 +6405,14 @@ body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotligh
     display: flex;
 }
 
-/* 我的配卡組合（M）排在最下方；M 有顯示時把精選活動鈕往上疊一層 */
-body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
+/* 精選活動：下方的配卡組合(M)與去廣告(Ads)各佔一層，每多一顆可見就往上讓 56px */
+body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-btn.is-visible,
+body:has(.adfree-fab:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
     bottom: 72px;
+}
+
+body:has(.my-mappings-floating-btn:not([style*="none"])):has(.adfree-fab:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
+    bottom: 128px;
 }
 
 .scroll-to-spotlight-btn:active {
@@ -6770,12 +6771,19 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     }
 
     body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible,
+    body:has(.adfree-fab:not([style*="none"])) .back-to-top-btn.is-visible,
     body:has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
         bottom: 72px;
     }
 
-    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.adfree-fab:not([style*="none"])) .back-to-top-btn.is-visible,
+    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible,
+    body:has(.adfree-fab:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
         bottom: 128px;
+    }
+
+    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.adfree-fab:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
+        bottom: 184px;
     }
 
     .image-preview-container {
