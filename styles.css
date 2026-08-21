@@ -5545,39 +5545,52 @@ html.pmc-adfree .adfree-fab {
     display: none !important;
 }
 
-/* 右下角浮動入口。z-index 900：壓在內容上、但在所有 modal（1000+）之下，
-   modal 開啟時它會被遮罩蓋住，不會浮在對話框上面。 */
+/* 右下角浮動入口：與 #my-mappings-btn 同規格（48×48、圓角 6px），
+   加入既有的右下浮標堆疊——配卡組合(M)最下、精選活動其次、本鈕最上，
+   用與 scroll-to-spotlight 相同的 :has 疊層機制（見「排在最下方」該段）。
+   z-index 999 與其他浮標同層、低於 modal（1000+）。 */
 .adfree-fab {
     position: fixed;
+    bottom: 16px;
     right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    z-index: 900;
-    display: inline-flex;
+    width: 48px;
+    height: 48px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 9px 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 999px;
+    justify-content: center;
+    gap: 2px;
     background: #fff;
-    color: #4b5563;
-    font-size: 13px;
-    font-weight: 500;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-    transition: color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s ease;
 }
 
 .adfree-fab:hover {
-    color: #111827;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
-    transform: translateY(-1px);
+    color: #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    transform: translateY(-2px);
 }
 
-@media (max-width: 600px) {
-    .adfree-fab {
-        padding: 8px 12px;
-        font-size: 12px;
-    }
+.adfree-fab:active {
+    transform: scale(0.96);
+}
+
+/* 堆疊規則：下方每多一顆可見浮標就往上疊一層（48 高 + 8 間距 = 56） */
+body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab,
+body:has(.scroll-to-spotlight-btn.is-visible) .adfree-fab {
+    bottom: 72px;
+}
+
+body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .adfree-fab {
+    bottom: 128px;
 }
 
 .adfree-modal-content {
