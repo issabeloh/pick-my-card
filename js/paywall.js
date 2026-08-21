@@ -182,6 +182,15 @@ function showAdfreeResult(kind, title, message, opts = {}) {
         recheckBtn.disabled = false;
         recheckBtn.textContent = '重新查詢訂單';
     }
+
+    // opts.busy＝流程還在跑（例如付款後正在向金流商確認）。此時把「知道了」和
+    // 右上角的 X 都收起來：讓用戶關掉一個還沒有結論的畫面，等於讓他錯過結果。
+    const closeBtn = document.getElementById('adfree-result-close');
+    if (closeBtn) closeBtn.style.display = opts.busy ? 'none' : '';
+    const xBtn = document.getElementById('close-adfree-modal');
+    if (xBtn) xBtn.style.display = opts.busy ? 'none' : '';
+    const spinner = document.getElementById('adfree-result-spinner');
+    if (spinner) spinner.style.display = opts.busy ? '' : 'none';
 }
 
 function showAdfreePurchaseView() {
@@ -311,7 +320,8 @@ async function handlePaymentReturn() {
         return;
     }
 
-    showAdfreeResult('pending', '確認付款中…', '正在向金流商確認這筆交易，請稍候。');
+    showAdfreeResult('pending', '確認付款中…', '正在向金流商確認這筆交易，請稍候，不要關閉這個頁面。',
+        { busy: true });
 
     for (let attempt = 0; attempt < 6; attempt++) {
         const { ok, data } = await callPaywallApi('/api/entitlement');
@@ -544,6 +554,8 @@ function setupPaywall() {
         resultRecheck.addEventListener('click', () => {
             resultRecheck.disabled = true;
             resultRecheck.textContent = '查詢中…';
+            const closeBtn = document.getElementById('adfree-result-close');
+            if (closeBtn) closeBtn.style.display = 'none';
             recheckOrder().catch((err) => {
                 console.error('查詢訂單失敗', err);
                 showAdfreeResult('failed', '查詢失敗', '請稍後再試一次。', { showRecheck: true });

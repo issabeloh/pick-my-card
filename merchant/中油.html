@@ -263,7 +263,6 @@
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
                                     回報錯誤
                                 </a>
-                                <div class="avatar-dropdown-divider" style="display:none"></div>
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-logout" id="avatar-sign-out">
                                     <svg id="sign-out-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
                                     <span id="sign-out-label">登出</span>
@@ -272,7 +271,6 @@
                                      自助刪除途徑。只有登入者看得到（訪客沒有帳號可刪），所以預設
                                      display:none，由 setLoggedInAvatarState() 打開。刻意放在登出
                                      之後、單獨一段——這是不可復原的操作，不該跟日常動作混在一起。 -->
-                                <div class="avatar-dropdown-divider" id="avatar-delete-divider" style="display:none"></div>
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-danger" id="avatar-delete-account" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
                                     刪除帳號與資料
@@ -1110,7 +1108,7 @@
                 <div class="account-note" id="account-adfree-note" style="display: none;"></div>
 
                 <button type="button" id="account-buy-adfree" class="auth-btn primary full-width" style="display: none;">移除廣告 · NT$100</button>
-                <button type="button" id="account-sign-out" class="auth-btn full-width">登出</button>
+                <button type="button" id="account-sign-out" class="auth-btn secondary full-width">登出</button>
 
                 <!-- 刪除帳戶：與上面的操作之間留出明顯間距與分隔線，避免誤按 -->
                 <div class="account-danger-zone">
@@ -1175,7 +1173,8 @@
                 <div class="adfree-result-icon" id="adfree-result-icon" aria-hidden="true"></div>
                 <h4 class="adfree-result-title" id="adfree-result-title"></h4>
                 <p class="adfree-result-message" id="adfree-result-message"></p>
-                <button type="button" id="adfree-result-recheck" class="auth-btn full-width" style="display: none;">重新查詢訂單</button>
+                <div class="adfree-result-spinner" id="adfree-result-spinner" style="display: none;" aria-hidden="true"></div>
+                <button type="button" id="adfree-result-recheck" class="auth-btn secondary full-width" style="display: none;">重新查詢訂單</button>
                 <button type="button" id="adfree-result-close" class="auth-btn primary full-width">知道了</button>
               </div>
             </div>

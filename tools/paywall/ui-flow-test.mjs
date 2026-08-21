@@ -297,6 +297,65 @@ for (const entitled of [true, false]) {
     await ctx.close();
 }
 
+// ── M. modal 內的按鈕必須看得見（.auth-btn 基礎樣式是白字白底，曾整顆隱形）──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => openAccountModal());
+    await page.waitForTimeout(400);
+    const contrast = await page.evaluate(() => {
+        // 取元素與其背後 modal 內容的顏色，粗略比對亮度差
+        const lum = (c) => {
+            const m = c.match(/\d+(\.\d+)?/g).map(Number);
+            return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+        };
+        const out = {};
+        for (const id of ['account-sign-out', 'account-delete', 'account-buy-adfree']) {
+            const el = document.getElementById(id);
+            if (!el) { out[id] = null; continue; }
+            const st = getComputedStyle(el);
+            let bg = st.backgroundColor;
+            // 背景透明就往上找到第一個不透明的祖先
+            let node = el;
+            while (bg === 'rgba(0, 0, 0, 0)' && node.parentElement) {
+                node = node.parentElement;
+                bg = getComputedStyle(node).backgroundColor;
+            }
+            out[id] = Math.abs(lum(st.color) - lum(bg));
+        }
+        return out;
+    });
+    for (const [id, diff] of Object.entries(contrast)) {
+        check(`#${id} 的文字與背景有足夠對比（不是白字白底）`, diff !== null && diff > 40,
+            '亮度差=' + diff);
+    }
+    await ctx.close();
+}
+
+// ── N. 「確認付款中」時不能讓用戶關掉（流程還在跑）──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => showAdfreeResult('pending', '確認付款中…', '測試', { busy: true }));
+    await page.waitForTimeout(200);
+    check('確認中：「知道了」隱藏', !(await vis(page, '#adfree-result-close')));
+    check('確認中：右上角 X 也隱藏', !(await vis(page, '#close-adfree-modal')));
+    check('確認中：顯示轉圈告訴用戶還在跑', await vis(page, '#adfree-result-spinner'));
+    // 有結論後兩顆都要回來
+    await page.evaluate(() => showAdfreeResult('success', '完成', '測試'));
+    await page.waitForTimeout(200);
+    check('有結論後：「知道了」回來', await vis(page, '#adfree-result-close'));
+    check('有結論後：X 回來', await vis(page, '#close-adfree-modal'));
+    check('有結論後：轉圈消失', !(await vis(page, '#adfree-result-spinner')));
+    await ctx.close();
+}
+
+// ── O. 下拉選單不再有孤兒分隔線 ──
+{
+    const { ctx, page } = await open({});
+    check('下拉選單已無 avatar-dropdown-divider 元素',
+        await page.evaluate(() => document.querySelectorAll('.avatar-dropdown-divider').length === 0));
+    await ctx.close();
+}
+
 await browser.close();
 console.log(fail ? '\n❌ 有項目未通過' : '\n✅ 全部通過');
 process.exit(fail);

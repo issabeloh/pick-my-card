@@ -58,12 +58,10 @@ function setupAuthentication() {
 function setGuestDropdownVisibility() {
     if (currentUser) return; // logged-in users always see full menu
     const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
-    const divider = document.querySelector('.avatar-dropdown-divider');
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = appStarted ? '' : 'none';
     });
-    if (divider) divider.style.display = appStarted ? '' : 'none';
 }
 
 function setupAvatarDropdown() {
@@ -212,7 +210,7 @@ function ensureGuestUIBound() {
         }
         // 刪除帳號入口對訪客永遠不顯示（沒有帳號可刪），不受 appStarted 影響，
         // 所以不放進 setGuestDropdownVisibility() 的清單裡。
-        ['avatar-delete-account', 'avatar-delete-divider', 'avatar-remove-ads'].forEach(id => {
+        ['avatar-delete-account', 'avatar-remove-ads'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
@@ -246,16 +244,14 @@ function ensureGuestUIBound() {
         // ⚠️ 那三個元素刻意留在 DOM 裡不移除：#avatar-sign-out 同時是訪客的
         //    「註冊／登入」入口，而 modal 的登出按鈕是轉呼叫它的 click。
         const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
-        const divider = document.querySelector('.avatar-dropdown-divider');
         ids.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = '';
         });
-        ['avatar-delete-account', 'avatar-delete-divider', 'avatar-remove-ads', 'avatar-sign-out'].forEach(id => {
+        ['avatar-delete-account', 'avatar-remove-ads', 'avatar-sign-out'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
-        if (divider) divider.style.display = '';
     }
 
     // Initialize as guest state on page load

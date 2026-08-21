@@ -5677,9 +5677,13 @@ mark.cashback-search-hl {
     }
 }
 
+/* modal 內的次要按鈕。⚠️ .auth-btn 的基礎樣式是為藍色 header 設計的
+   （白字＋半透明白底＋半透明白框），直接放進白底 modal 會變成白字白底＝看不見。
+   modal 裡的非 primary 按鈕一律要加 .secondary（2026-08-21 踩過這個坑）。 */
 .auth-btn.secondary {
     background: #f3f4f6;
     color: #374151;
+    border-color: #d1d5db;
 }
 
 .auth-btn.secondary:hover {
@@ -5828,6 +5832,22 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     font-size: 14px;
     line-height: 1.7;
     color: #4b5563;
+}
+
+/* 「確認付款中」的轉圈：此時關閉鈕與 X 都被藏起來（見 showAdfreeResult 的
+   opts.busy），這個轉圈是唯一告訴用戶「還在跑、別關」的視覺訊號。 */
+.adfree-result-spinner {
+    width: 24px;
+    height: 24px;
+    margin: 0 auto 16px;
+    border: 2.5px solid #e5e7eb;
+    border-top-color: #b45309;
+    border-radius: 50%;
+    animation: adfree-spin 0.8s linear infinite;
+}
+
+@keyframes adfree-spin {
+    to { transform: rotate(360deg); }
 }
 
 #adfree-result-recheck {
