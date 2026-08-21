@@ -59,8 +59,8 @@ function applyAdfreeUI() {
     document.documentElement.classList.add('pmc-adfree');
     const adRow = document.getElementById('ad-row');
     if (adRow && adRow.parentNode) adRow.parentNode.removeChild(adRow);
-    const cta = document.getElementById('adfree-cta');
-    if (cta) cta.style.display = 'none';
+    const fab = document.getElementById('adfree-fab');
+    if (fab) fab.style.display = 'none';
     const menuItem = document.getElementById('avatar-remove-ads');
     if (menuItem) menuItem.style.display = 'none';
 }
@@ -68,8 +68,8 @@ function applyAdfreeUI() {
 // 未購買時：顯示入口。訪客也看得到（點下去會先請他登入）。
 function showAdfreeEntryPoints(isLoggedIn) {
     document.documentElement.classList.remove('pmc-adfree');
-    const cta = document.getElementById('adfree-cta');
-    if (cta) cta.style.display = '';
+    const fab = document.getElementById('adfree-fab');
+    if (fab) fab.style.display = '';
     const menuItem = document.getElementById('avatar-remove-ads');
     if (menuItem) menuItem.style.display = isLoggedIn ? '' : 'none';
 }
@@ -301,8 +301,8 @@ async function recheckOrder(silentWhenPending) {
 // ============================================
 
 function setupPaywall() {
-    const ctaBtn = document.getElementById('adfree-cta-btn');
-    if (ctaBtn) ctaBtn.addEventListener('click', openAdfreeModal);
+    const fabBtn = document.getElementById('adfree-fab');
+    if (fabBtn) fabBtn.addEventListener('click', openAdfreeModal);
 
     const closeBtn = document.getElementById('close-adfree-modal');
     if (closeBtn) closeBtn.addEventListener('click', closeAdfreeModal);

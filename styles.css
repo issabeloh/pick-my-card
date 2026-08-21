@@ -5541,36 +5541,43 @@ mark.cashback-search-hl {
    JS 已經把 #ad-row 整個移出 DOM，這條規則是保險：萬一 JS 因故沒跑到，
    版面也不會留下一塊空的廣告位。 */
 html.pmc-adfree .ad-row,
-html.pmc-adfree .adfree-cta {
+html.pmc-adfree .adfree-fab {
     display: none !important;
 }
 
-.adfree-cta {
-    width: 100%;
-    max-width: 760px;
-    margin: 6px auto 0;
-    padding: 0 16px;
-    box-sizing: border-box;
-    text-align: center;
-}
-
-.adfree-cta-btn {
+/* 右下角浮動入口。z-index 900：壓在內容上、但在所有 modal（1000+）之下，
+   modal 開啟時它會被遮罩蓋住，不會浮在對話框上面。 */
+.adfree-fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 900;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    font-size: 12px;
-    color: #6b7280;
+    padding: 9px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+    background: #fff;
+    color: #4b5563;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    border-radius: 6px;
-    transition: color 0.15s ease, background 0.15s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    transition: color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
-.adfree-cta-btn:hover {
-    color: #374151;
-    background: #f3f4f6;
+.adfree-fab:hover {
+    color: #111827;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+    .adfree-fab {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
 }
 
 .adfree-modal-content {

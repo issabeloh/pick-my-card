@@ -45,7 +45,7 @@ async function visit(path, { adfree }) {
         loaderTags: document.querySelectorAll('script[src*="googlesyndication"]').length,
         htmlClass: document.documentElement.className,
         ctaVisible: (() => {
-            const el = document.getElementById('adfree-cta');
+            const el = document.getElementById('adfree-fab');
             return !!el && el.style.display !== 'none';
         })(),
         modalExists: !!document.getElementById('adfree-modal'),
@@ -71,7 +71,7 @@ for (const path of PAGES) {
     check(path + ' 已付費：根元素帶 pmc-adfree', paid.htmlClass.includes('pmc-adfree'), paid.htmlClass);
 
     if (path === '/index.html' || path.startsWith('/merchant/')) {
-        check(path + ' 未付費：廣告版位存在且有去廣告入口', free.adRow && free.insCount === 1 && free.ctaVisible,
+        check(path + ' 未付費：廣告版位存在且浮動入口顯示', free.adRow && free.insCount === 1 && free.ctaVisible,
             `adRow=${free.adRow} ins=${free.insCount} cta=${free.ctaVisible}`);
         check(path + ' 已付費：廣告版位已從 DOM 移除', !paid.adRow && paid.insCount === 0,
             `adRow=${paid.adRow} ins=${paid.insCount}`);
