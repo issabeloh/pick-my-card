@@ -132,7 +132,7 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 
    | 變數 | 值 | 說明 |
    |---|---|---|
-   | `PMC_PAY_PROVIDER` | `ecpay` / `opay` | 沒設＝ecpay。綠界與歐付寶同源、規格同家族，共用 `functions/_lib/payment.js` |
+   | `PMC_PAY_PROVIDER` | `ecpay` / `opay` / `oen` | 沒設＝ecpay。**用 OEN 必須設 `oen`**，否則 checkout 會走綠界測試流程 |
    | `PMC_PAY_ENV` | `stage` / `prod` | 沒設＝stage。**prod 缺任何一把金鑰會直接報錯**，不會靜默退回測試帳號 |
    | `PMC_PAY_MERCHANT_ID` | 特店代號 | 只有「ecpay + stage」會退回綠界公開測試帳號；歐付寶一律要自己填 |
    | `PMC_PAY_HASH_KEY` | 🔒 Secret | 同上 |
@@ -158,6 +158,14 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
    否則回 V0001 USER_NAME_AND_EMAIL_REQUIRED。目前程式碼**沒有帶**這兩欄
    （測試期請先別在 CRM 開發票功能）。要開的話：checkout.js 補 userEmail（Firebase 有）
    與 userName（可用 displayName，沒有時退回 email），並更新購買條款的個資告知。
+
+3.7 **上線前雜項清單**：
+   - [ ] 刪除測試期的 Deploy Hook 並重建（該 hook URL 在開發對話中傳遞過；
+         位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
+   - [ ] Preview 用的 `PMC_ADFREE_PRICE=150` 不要帶到正式環境（正式要回到預設 100）
+   - [ ] `PMC_PAY_TOKEN` 換成 OEN **正式環境**產的 token（測試/正式 token 不互通）
+   - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
+   - [ ] IP 白名單問題已有答案（見 3.5）
 
 4. **發票**：綠界電子發票要另外申請，涉及你的稅務身分，本專案沒有整合
 5. **端到端實測**（環境限制：本 session 的網路政策擋掉 `ecpay.com.tw`，這步只能由你在真實部署上跑）：
