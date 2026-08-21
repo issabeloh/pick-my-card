@@ -162,9 +162,20 @@ webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署�
   DELETE FROM orders       WHERE uid = '<uid>';
   ```
 
-- 想在 preview 實測 webhook：到 Cloudflare Zero Trust 的 Access 政策，
-  為該 preview 網域的 `/api/*` 路徑加一條 Bypass，再把 CRM 的 webhook
-  位置暫時指向 preview。上線前記得改回正式網址。
+- **不建議為了測 webhook 而放行 preview**：帳號層的 deny-by-default 只能
+  「整個網域豁免」，而本站 `robots.txt` 是 `Allow: /`——preview 一旦公開就可能
+  被索引，造成與正式站重複內容的 SEO 傷害。付出的代價和拿到的資訊不成比例。
+
+- **改用零成本的驗證方式**：`entitlements.source` 會記錄開通是哪條路徑來的
+  （`oen-notify` ＝ webhook 有送達、`oen-query` ＝ 靠主動對帳補的）。上線後
+  自己買一筆，然後查：
+
+  ```sql
+  SELECT uid, source, granted_at FROM entitlements ORDER BY granted_at DESC LIMIT 5;
+  ```
+
+  `source='oen-notify'` 就代表 webhook 在正式站運作正常。就算是 `oen-query`
+  也不影響用戶（權益照樣開通），只是慢一兩秒——所以這件事可以放心留到上線後驗。
 
 **設計上這不是災難**：webhook 只是「快一點」的路徑，事實來源一直是主動對帳。
 付款導回後前端第一件事就是打 `/api/order-status` 主動對帳（2026-08-21 起），
@@ -304,6 +315,10 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
    - [ ] 已向 OEN 問出測試環境要怎麼觸發付款失敗（見 3.4），並實測過失敗路徑
+   - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
+         發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
+   - [ ] 上線後買一筆，用 `SELECT source FROM entitlements` 確認 webhook
+         在正式站真的有送達（見 2.85）
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
 
