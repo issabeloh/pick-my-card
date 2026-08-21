@@ -20,11 +20,14 @@ async function handle(request, env) {
         const cfg = resolvePaymentConfig(env);
         if (cfg.provider === 'oen') {
             const sp = new URL(request.url).searchParams;
-            if (sp.get('payment_error')) status = 'failed';
+            const errCode = sp.get('payment_error') || '';
+            if (errCode) status = 'failed';
             else if (sp.get('r') === 'ok') status = 'success';
-            const url = status === 'unknown'
-                ? origin + '/'
-                : origin + '/?pmc_pay=' + encodeURIComponent(status);
+            if (status === 'unknown') return Response.redirect(origin + '/', 303);
+            // 失敗時把 OEN 的錯誤代碼一起帶回去：前端會寫進給管理員的自動回報，
+            // 讓站長一眼看出是額度不足（T0004）還是 CVV 錯誤（T0002）等等。
+            const url = origin + '/?pmc_pay=' + encodeURIComponent(status)
+                + (errCode ? '&pmc_err=' + encodeURIComponent(errCode) : '');
             return Response.redirect(url, 303);
         }
     } catch (err) {

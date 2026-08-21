@@ -313,19 +313,27 @@ async function handlePaymentReturn() {
     const params = new URLSearchParams(location.search);
     const result = params.get('pmc_pay');
     if (!result) return;
+    const errCode = params.get('pmc_err') || '';
 
     // 先把網址上的付款參數清掉，重新整理才不會又跑一次
     try {
         const url = new URL(location.href);
         url.searchParams.delete('pmc_pay');
         url.searchParams.delete('pmc_trade');
+        url.searchParams.delete('pmc_err');
         history.replaceState(null, '', url.pathname + url.search + url.hash);
     } catch (e) { /* ignore */ }
 
     if (result !== 'success') {
-        showAdfreeResult('failed', '付款未完成',
-            '未向你收取任何費用。如果你認為這是錯誤，可以點下方重新查詢訂單。',
-            { showRecheck: true });
+        // 明確失敗也通知管理員（站長要求）。不提供「重新查詢訂單」——這條路徑
+        // 代表金流商已明確回報失敗，再查一次只會查到同樣的結果或用戶既有的權益，
+        // 反而讓人以為付款成功了。
+        showAdfreeResult('failed', '付款失敗', '正在通知管理員…', { busy: true });
+        const notified = await notifyAdminPaymentIssue('', 'failed', errCode);
+        showAdfreeResult('failed', '付款失敗',
+            notified
+                ? '已通知管理員，我們將儘快處理！請您稍後再嘗試！未向你收取任何費用。'
+                : '未向你收取任何費用。請稍後再試一次；若持續失敗，請用「回報錯誤」聯繫我們。');
         return;
     }
 
@@ -378,20 +386,35 @@ async function recheckOrder() {
     return false;
 }
 
+// OEN 系統回應代碼對照表（只收錄交易相關的，供管理員回報用）
+function describePayError(code) {
+    const map = {
+        T0001: '交易失敗', T0002: '安全碼 CVV 錯誤', T0003: '卡片過期',
+        T0004: '額度不足', T0005: '拒絕授權',
+        V0001: '請求錯誤', V0002: '交易狀態錯誤', A0001: '未授權', F0001: '系統錯誤',
+    };
+    return map[code] || '未知代碼';
+}
+
 /**
- * 把「可能已付款但確認不到」寫進既有的 feedback 集合。
+ * 把付款異常寫進既有的 feedback 集合。
  * 刻意重用問題回報的管道而不是另做一套通知：管理員本來就會看那份清單，
  * 多一個各自獨立的通知管道只會多一個沒人看的地方。
  * 回傳是否成功送出——送不出去就不要對用戶說「已通知管理員」。
  */
-async function notifyAdminPaymentIssue(tradeNo) {
+async function notifyAdminPaymentIssue(tradeNo, kind = 'unconfirmed', errCode = '') {
     const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
     if (!user || !window.addDoc || !window.collection || !window.db) return false;
+    const detail = kind === 'failed'
+        ? '金流商明確回報付款失敗' + (errCode ? ('，錯誤代碼 ' + errCode + '（' + describePayError(errCode) + '）') : '')
+            + '。用戶未被扣款，但請留意是否為系統性問題（例如商戶設定或額度）。'
+        : '用戶已完成付款流程但系統查不到成功紀錄，請至金流商後台比對是否已扣款。';
     try {
         await window.addDoc(window.collection(window.db, 'feedback'), {
-            message: '[自動回報] 去廣告付款結果無法確認'
-                + (tradeNo ? ('，訂單編號 ' + tradeNo) : '，查無對應訂單')
-                + '。用戶已完成付款流程但系統查不到成功紀錄，請至金流商後台比對。',
+            message: '[自動回報] 去廣告付款'
+                + (kind === 'failed' ? '失敗' : '結果無法確認')
+                + (tradeNo ? ('，訂單編號 ' + tradeNo) : '')
+                + '。' + detail,
             userName: user.displayName || 'Unknown',
             userId: user.uid,
             userEmail: user.email || '',

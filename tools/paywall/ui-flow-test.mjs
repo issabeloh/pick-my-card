@@ -129,15 +129,27 @@ const text = (page, sel) => page.evaluate((s) => (document.querySelector(s) || {
     await ctx.close();
 }
 
-// ── E. 付款失敗導回 ───────────────────────────────────
+// ── E. 付款失敗導回：通知管理員、不提供會誤導的「重新查詢」 ──
 {
-    const { ctx, page } = await open({ entitled: false, query: '?pmc_pay=failed' });
-    await page.waitForTimeout(600);
-    check('付款失敗 → modal 內顯示失敗結果、無系統彈窗',
-        (await text(page, '#adfree-result-title')).includes('未完成')
+    const { ctx, page } = await open({ entitled: false, query: '?pmc_pay=failed&pmc_err=T0004' });
+    await page.waitForTimeout(900);
+    check('付款失敗 → 標題為「付款失敗」、無系統彈窗',
+        (await text(page, '#adfree-result-title')) === '付款失敗'
         && (await page.evaluate(() => window.__alerts.length)) === 0,
         await text(page, '#adfree-result-title'));
-    check('付款失敗 → 提供「重新查詢訂單」', await vis(page, '#adfree-result-recheck'));
+    const msg = await text(page, '#adfree-result-message');
+    check('付款失敗 → 文案包含三個要點',
+        msg.includes('已通知管理員') && msg.includes('稍後再嘗試') && msg.includes('未向你收取任何費用'), msg);
+    const fb = await page.evaluate(() => window.__feedback);
+    check('付款失敗 → 自動通知管理員且帶上錯誤代碼與中文說明',
+        fb.length === 1 && fb[0].message.includes('T0004') && fb[0].message.includes('額度不足'),
+        JSON.stringify(fb));
+    check('付款失敗 → 不提供「重新查詢訂單」（避免顯示既有權益而誤導）',
+        !(await vis(page, '#adfree-result-recheck')));
+    check('付款失敗 → 可以關閉（流程已結束）', await vis(page, '#adfree-result-close'));
+    check('付款失敗 → 網址上的錯誤代碼已清掉',
+        !(await page.evaluate(() => location.search)).includes('pmc_err'),
+        await page.evaluate(() => location.search));
     await ctx.close();
 }
 
