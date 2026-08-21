@@ -63,6 +63,9 @@ function applyAdfreeUI() {
     if (fab) fab.style.display = 'none';
     const menuItem = document.getElementById('avatar-remove-ads');
     if (menuItem) menuItem.style.display = 'none';
+    // 「我的帳號」不隨付費狀態隱藏——已購買者正是要靠它查詢自己的權益
+    const accountItem = document.getElementById('avatar-account');
+    if (accountItem && (window.firebaseAuth && window.firebaseAuth.currentUser)) accountItem.style.display = '';
 }
 
 // 未購買時：顯示入口。訪客也看得到（點下去會先請他登入）。
@@ -72,6 +75,8 @@ function showAdfreeEntryPoints(isLoggedIn) {
     if (fab) fab.style.display = '';
     const menuItem = document.getElementById('avatar-remove-ads');
     if (menuItem) menuItem.style.display = isLoggedIn ? '' : 'none';
+    const accountItem = document.getElementById('avatar-account');
+    if (accountItem) accountItem.style.display = isLoggedIn ? '' : 'none';
 }
 
 // ============================================
@@ -142,6 +147,53 @@ function setAdfreeError(message) {
     box.style.display = message ? 'block' : 'none';
 }
 
+// 只開 modal 外框，不決定內容（內容由 showAdfreePurchaseView/showAdfreeResult 決定）
+function showAdfreeModalShell() {
+    const modal = document.getElementById('adfree-modal');
+    if (!modal) return false;
+    modal.style.display = 'flex';
+    if (typeof disableBodyScroll === 'function') disableBodyScroll();
+    return true;
+}
+
+/**
+ * 切到結果視圖。取代原本的系統彈窗——手機上它會蓋住整頁、體驗差，
+ * 而且付款結果本來就該留在畫面上讓用戶看得完、看得懂。
+ * kind：success | pending | failed
+ */
+function showAdfreeResult(kind, title, message, opts = {}) {
+    if (!showAdfreeModalShell()) return;
+    const purchase = document.getElementById('adfree-purchase-view');
+    const result = document.getElementById('adfree-result-view');
+    if (purchase) purchase.style.display = 'none';
+    if (result) result.style.display = 'block';
+
+    const icon = document.getElementById('adfree-result-icon');
+    if (icon) {
+        icon.textContent = kind === 'success' ? '\u2713' : kind === 'pending' ? '\u22ef' : '\u2715';
+        icon.className = 'adfree-result-icon is-' + kind;
+    }
+    // textContent：不走 innerHTML，無 XSS 風險（鐵則 3）
+    const titleEl = document.getElementById('adfree-result-title');
+    if (titleEl) titleEl.textContent = title;
+    const msgEl = document.getElementById('adfree-result-message');
+    if (msgEl) msgEl.textContent = message;
+
+    const recheckBtn = document.getElementById('adfree-result-recheck');
+    if (recheckBtn) {
+        recheckBtn.style.display = opts.showRecheck ? '' : 'none';
+        recheckBtn.disabled = false;
+        recheckBtn.textContent = '重新查詢訂單';
+    }
+}
+
+function showAdfreePurchaseView() {
+    const purchase = document.getElementById('adfree-purchase-view');
+    const result = document.getElementById('adfree-result-view');
+    if (purchase) purchase.style.display = 'block';
+    if (result) result.style.display = 'none';
+}
+
 function openAdfreeModal() {
     const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
     if (!user) {
@@ -151,8 +203,12 @@ function openAdfreeModal() {
         return;
     }
 
-    const modal = document.getElementById('adfree-modal');
-    if (!modal) return;
+    // 已購買者再次開啟 → 直接顯示狀態，不要再給他看一次購買表單
+    if (readAdfreeFlag()) {
+        showAdfreeResult('success', '你已移除廣告',
+            '此帳號已購買去廣告權益，永久有效。在任何裝置用同一個帳號登入都會生效。');
+        return;
+    }
 
     const account = document.getElementById('adfree-account');
     if (account) account.textContent = '權益將綁定此帳號：' + (user.email || user.uid);
@@ -162,9 +218,8 @@ function openAdfreeModal() {
     if (check) check.checked = false;
     if (payBtn) { payBtn.disabled = true; payBtn.textContent = '前往付款'; }
     setAdfreeError('');
-
-    modal.style.display = 'flex';
-    if (typeof disableBodyScroll === 'function') disableBodyScroll();
+    showAdfreePurchaseView();
+    showAdfreeModalShell();
 }
 
 function closeAdfreeModal() {
@@ -253,9 +308,13 @@ async function handlePaymentReturn() {
     } catch (e) { /* ignore */ }
 
     if (result !== 'success') {
-        alert('付款未完成，未向你收取任何費用。如果你認為這是錯誤，可以稍後在「移除廣告」裡點「重新查詢訂單」。');
+        showAdfreeResult('failed', '付款未完成',
+            '未向你收取任何費用。如果你認為這是錯誤，可以點下方重新查詢訂單。',
+            { showRecheck: true });
         return;
     }
+
+    showAdfreeResult('pending', '確認付款中…', '正在向金流商確認這筆交易，請稍候。');
 
     for (let attempt = 0; attempt < 6; attempt++) {
         const { ok, data } = await callPaywallApi('/api/entitlement');
@@ -264,17 +323,18 @@ async function handlePaymentReturn() {
             if (user) writeAdfreeFlag(user.uid);
             applyAdfreeUI();
             if (typeof gtagEvent === 'function') gtagEvent('adfree_purchase_complete');
-            alert('付款完成，廣告已移除，感謝你的支持！');
+            showAdfreeResult('success', '付款完成，廣告已移除',
+                '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
             return;
         }
         await new Promise((resolve) => setTimeout(resolve, 1500));
     }
     // 輪詢都沒等到 → 走主動查詢補救
-    await recheckOrder(true);
+    await recheckOrder();
 }
 
 // 主動跟綠界對帳補開通（「重新查詢訂單」按鈕，以及上面輪詢失敗時的最後一招）
-async function recheckOrder(silentWhenPending) {
+async function recheckOrder() {
     const { ok, data } = await callPaywallApi('/api/order-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -284,16 +344,94 @@ async function recheckOrder(silentWhenPending) {
         const user = window.firebaseAuth && window.firebaseAuth.currentUser;
         if (user) writeAdfreeFlag(user.uid);
         applyAdfreeUI();
-        closeAdfreeModal();
-        alert('已確認付款，廣告已移除，感謝你的支持！');
+        showAdfreeResult('success', '已確認付款，廣告已移除',
+            '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
         return true;
     }
-    if (!silentWhenPending) {
-        setAdfreeError('查詢後仍未看到成功的付款紀錄。若你確定已扣款，請用「回報錯誤」聯繫我們，附上你的訂單編號。');
-    } else {
-        alert('付款結果還在確認中。稍後重新整理頁面即可；若超過十分鐘仍有廣告，請用「回報錯誤」聯繫我們。');
-    }
+    showAdfreeResult('pending', '付款結果尚未確認',
+        '還沒看到這筆付款的成功紀錄。金流商的通知偶爾會慢幾分鐘，可以稍後再查一次；'
+        + '若你確定已扣款且超過十分鐘仍有廣告，請用「回報錯誤」聯繫我們。',
+        { showRecheck: true });
     return false;
+}
+
+// ============================================
+// 我的帳號 modal
+// ============================================
+
+function openAccountModal() {
+    const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
+    if (!user) {
+        if (typeof openAuthModal === 'function') openAuthModal('login');
+        return;
+    }
+    const modal = document.getElementById('account-modal');
+    if (!modal) return;
+
+    const email = document.getElementById('account-email');
+    if (email) email.textContent = user.email || user.uid;
+
+    // 先用本機旗標給即時答案（避免空白閃爍），再向後端要權威狀態覆蓋
+    renderAccountAdfree(!!readAdfreeFlag(), null, true);
+    modal.style.display = 'flex';
+    if (typeof disableBodyScroll === 'function') disableBodyScroll();
+
+    callPaywallApi('/api/entitlement').then(({ ok, data }) => {
+        if (ok) renderAccountAdfree(!!data.adfree, data.grantedAt, false);
+    }).catch((e) => console.error('查詢權益失敗', e));
+}
+
+// provisional=true 代表這是本機旗標的推測值，還沒經後端確認
+function renderAccountAdfree(adfree, grantedAt, provisional) {
+    const status = document.getElementById('account-adfree-status');
+    const note = document.getElementById('account-adfree-note');
+    const buyBtn = document.getElementById('account-buy-adfree');
+
+    if (status) {
+        status.textContent = adfree ? '已購買' : (provisional ? '查詢中…' : '未購買');
+        status.className = 'account-value ' + (adfree ? 'is-on' : 'is-off');
+    }
+    if (note) {
+        if (adfree && grantedAt) {
+            note.textContent = '購買於 ' + new Date(Number(grantedAt)).toLocaleDateString('zh-TW')
+                + '，一次買斷、永久有效，不會自動續扣。';
+            note.style.display = 'block';
+        } else if (adfree) {
+            note.textContent = '一次買斷、永久有效，不會自動續扣。';
+            note.style.display = 'block';
+        } else {
+            note.style.display = 'none';
+        }
+    }
+    // 還在查詢時不顯示購買鈕，免得已購買者閃一下看到「再買一次」
+    if (buyBtn) buyBtn.style.display = (!adfree && !provisional) ? '' : 'none';
+}
+
+function closeAccountModal() {
+    const modal = document.getElementById('account-modal');
+    if (modal) modal.style.display = 'none';
+    if (typeof enableBodyScroll === 'function') enableBodyScroll();
+}
+
+function setupAccountModal() {
+    const closeBtn = document.getElementById('close-account-modal');
+    if (closeBtn) closeBtn.addEventListener('click', closeAccountModal);
+
+    const modal = document.getElementById('account-modal');
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeAccountModal(); });
+
+    const buyBtn = document.getElementById('account-buy-adfree');
+    if (buyBtn) buyBtn.addEventListener('click', () => { closeAccountModal(); openAdfreeModal(); });
+
+    // 登出沿用既有選單項的流程（含鐵則 9 的本機個資清理），不另寫一份實作
+    const signOutBtn = document.getElementById('account-sign-out');
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', () => {
+            closeAccountModal();
+            const item = document.getElementById('avatar-sign-out');
+            if (item) item.click();
+        });
+    }
 }
 
 // ============================================
@@ -330,12 +468,29 @@ function setupPaywall() {
         });
     }
 
+    const resultClose = document.getElementById('adfree-result-close');
+    if (resultClose) resultClose.addEventListener('click', closeAdfreeModal);
+
+    const resultRecheck = document.getElementById('adfree-result-recheck');
+    if (resultRecheck) {
+        resultRecheck.addEventListener('click', () => {
+            resultRecheck.disabled = true;
+            resultRecheck.textContent = '查詢中…';
+            recheckOrder().catch((err) => {
+                console.error('查詢訂單失敗', err);
+                showAdfreeResult('failed', '查詢失敗', '請稍後再試一次。', { showRecheck: true });
+            });
+        });
+    }
+
+    setupAccountModal();
+
     const recheck = document.getElementById('adfree-recheck');
     if (recheck) {
         recheck.addEventListener('click', (e) => {
             e.preventDefault();
             setAdfreeError('');
-            recheckOrder(false).catch((err) => {
+            recheckOrder().catch((err) => {
                 console.error('查詢訂單失敗', err);
                 setAdfreeError('查詢訂單失敗，請稍後再試。');
             });

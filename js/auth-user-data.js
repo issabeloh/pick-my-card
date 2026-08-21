@@ -90,6 +90,7 @@ function setupAvatarDropdown() {
         'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openMyPaymentsModal(),
         'avatar-my-mappings': () => openMyMappingsModal(),
+        'avatar-account': () => openAccountModal(),
         'avatar-remove-ads': () => openAdfreeModal(),
         'avatar-feedback': () => {
             const modal = document.getElementById('feedback-modal');

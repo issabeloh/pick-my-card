@@ -5589,6 +5589,93 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     bottom: 72px;
 }
 
+/* 付款結果視圖（取代系統彈窗）與我的帳號 modal */
+.adfree-result-icon {
+    width: 52px;
+    height: 52px;
+    margin: 4px auto 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.adfree-result-icon.is-success { background: #dcfce7; color: #15803d; }
+.adfree-result-icon.is-pending { background: #fef3c7; color: #b45309; }
+.adfree-result-icon.is-failed  { background: #fee2e2; color: #b91c1c; }
+
+.adfree-result-title {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.adfree-result-message {
+    margin: 0 0 18px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #4b5563;
+}
+
+#adfree-result-recheck {
+    margin-bottom: 8px;
+}
+
+.account-modal-content {
+    max-width: 420px;
+}
+
+.account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+}
+
+.account-label {
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.account-value {
+    color: #111827;
+    text-align: right;
+    word-break: break-all;
+}
+
+.account-value.is-on {
+    color: #15803d;
+    font-weight: 600;
+}
+
+.account-value.is-off {
+    color: #6b7280;
+}
+
+.account-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #4b5563;
+}
+
+#account-buy-adfree,
+#account-sign-out {
+    margin-top: 14px;
+}
+
 .adfree-modal-content {
     max-width: 460px;
 }

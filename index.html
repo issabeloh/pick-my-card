@@ -238,6 +238,10 @@
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v6H9.5A1.5 1.5 0 0 0 8 10.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V10.5a.5.5 0 0 1 .5-.5h3.293L9 13.793z"/></svg>
                                     我的配卡組合
                                 </a>
+                                <a href="#" class="avatar-dropdown-item" id="avatar-account" style="display:none">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/></svg>
+                                    我的帳號
+                                </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-remove-ads" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/><path d="M4.5 7.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/></svg>
                                     移除廣告
@@ -1053,6 +1057,30 @@
         <span>Ads</span>
     </button>
 
+    <!-- 我的帳號 Modal（js/paywall.js 控制） -->
+    <div id="account-modal" class="modal" style="display: none;">
+        <div class="modal-content account-modal-content">
+            <div class="modal-header">
+                <h3>我的帳號</h3>
+                <button class="close-modal" id="close-account-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="account-row">
+                    <span class="account-label">登入帳號</span>
+                    <span class="account-value" id="account-email"></span>
+                </div>
+                <div class="account-row">
+                    <span class="account-label">廣告移除</span>
+                    <span class="account-value" id="account-adfree-status">查詢中…</span>
+                </div>
+                <div class="account-note" id="account-adfree-note" style="display: none;"></div>
+
+                <button type="button" id="account-buy-adfree" class="auth-btn primary full-width" style="display: none;">移除廣告 · NT$100</button>
+                <button type="button" id="account-sign-out" class="auth-btn full-width">登出</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 去廣告付費 Modal（js/paywall.js 控制） -->
     <div id="adfree-modal" class="modal" style="display: none;">
         <div class="modal-content adfree-modal-content">
@@ -1061,6 +1089,8 @@
                 <button class="close-modal" id="close-adfree-modal">&times;</button>
             </div>
             <div class="modal-body">
+              <!-- 購買視圖：未購買時顯示 -->
+              <div id="adfree-purchase-view">
                 <div class="adfree-price">
                     <span class="adfree-price-amount">NT$100</span>
                     <span class="adfree-price-note">一次付清 · 永久有效 · 不自動續扣</span>
@@ -1098,6 +1128,17 @@
                     已經付款但廣告還在？
                     <a href="#" id="adfree-recheck">重新查詢訂單</a>
                 </div>
+              </div>
+
+              <!-- 結果視圖：付款導回、或已購買者再次開啟時顯示。
+                   刻意不用 alert()——手機上的系統彈窗體驗差，且會蓋住頁面 -->
+              <div id="adfree-result-view" style="display: none;">
+                <div class="adfree-result-icon" id="adfree-result-icon" aria-hidden="true"></div>
+                <h4 class="adfree-result-title" id="adfree-result-title"></h4>
+                <p class="adfree-result-message" id="adfree-result-message"></p>
+                <button type="button" id="adfree-result-recheck" class="auth-btn full-width" style="display: none;">重新查詢訂單</button>
+                <button type="button" id="adfree-result-close" class="auth-btn primary full-width">知道了</button>
+              </div>
             </div>
         </div>
     </div>
