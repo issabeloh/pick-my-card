@@ -141,6 +141,35 @@ Firebase 帳號**之前**呼叫 `POST /api/account/purge`。時機是關鍵：�
 **全自動，站長不需要手動刪任何東西。** 刪除帳號 modal 會對已購買者多顯示一條
 警告：權益一併消失、不予退款、重新註冊無法復原（未購買者不會看到這條）。
 
+## 2.85 ⚠️ webhook 在 preview 上收不到（測試期的重要事實，2026-08-21）
+
+站長的 CF 專案對 preview 部署開了 Cloudflare Access（要登入才進得去），而 CRM 的
+webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署付費牆 → 404）。
+**兩條路都不通，所以測試期的 webhook 從來沒有真正送達過。**
+
+後果與應對：
+
+- **測試期所有的開通，全部來自「主動對帳」那條路**（`/api/order-status` 拿自己的
+  token 問 OEN），webhook handler 只有 `oen-selftest.mjs` 的假資料測過。
+  上線後 webhook 會是主要路徑，**上線後要實測一次**。
+- **付款成功但訂單留在 `pending`**：webhook 沒到就不會有人把 `orders.status`
+  翻成 `paid`。因此測試時只刪 `entitlements` 是不夠的——舊的 pending 訂單
+  仍會被「重新查詢訂單」找到、向 OEN 確認為已付款、於是重新開通。
+  **乾淨重測要連訂單一起清**：
+
+  ```sql
+  DELETE FROM entitlements WHERE uid = '<uid>';
+  DELETE FROM orders       WHERE uid = '<uid>';
+  ```
+
+- 想在 preview 實測 webhook：到 Cloudflare Zero Trust 的 Access 政策，
+  為該 preview 網域的 `/api/*` 路徑加一條 Bypass，再把 CRM 的 webhook
+  位置暫時指向 preview。上線前記得改回正式網址。
+
+**設計上這不是災難**：webhook 只是「快一點」的路徑，事實來源一直是主動對帳。
+付款導回後前端第一件事就是打 `/api/order-status` 主動對帳（2026-08-21 起），
+webhook 完全不通也能在 1~2 秒內開通。
+
 ## 2.9 付款異常的自動通報（兩種情境）
 
 | 情境 | 觸發點 | 用戶看到 | 管理員收到 |

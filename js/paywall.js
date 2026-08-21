@@ -340,20 +340,32 @@ async function handlePaymentReturn() {
     showAdfreeResult('pending', '確認付款中…', '正在向金流商確認這筆交易，請稍候，不要關閉這個頁面。',
         { busy: true });
 
+    const markGranted = () => {
+        const user = window.firebaseAuth && window.firebaseAuth.currentUser;
+        if (user) writeAdfreeFlag(user.uid);
+        applyAdfreeUI();
+        if (typeof gtagEvent === 'function') gtagEvent('adfree_purchase_complete');
+        showAdfreeResult('success', '付款完成，廣告已移除',
+            '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
+    };
+
+    // ① 先主動要後端跟金流商對帳（/api/order-status 會自己查、自己開通）。
+    //    不先等 webhook 的理由：webhook 只是「快一點」的路徑，而它可能慢、
+    //    可能被擋、也可能根本沒送到。主動查通常 1~2 秒就有答案，
+    //    比空等 9 秒輪詢好得多。
+    const first = await callPaywallApi('/api/order-status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    });
+    if (first.ok && first.data.adfree) { markGranted(); return; }
+
+    // ② 還沒有結果（例如金流商那邊仍在處理）→ 等 webhook 落地，輪詢權益
     for (let attempt = 0; attempt < 6; attempt++) {
-        const { ok, data } = await callPaywallApi('/api/entitlement');
-        if (ok && data.adfree) {
-            const user = window.firebaseAuth && window.firebaseAuth.currentUser;
-            if (user) writeAdfreeFlag(user.uid);
-            applyAdfreeUI();
-            if (typeof gtagEvent === 'function') gtagEvent('adfree_purchase_complete');
-            showAdfreeResult('success', '付款完成，廣告已移除',
-                '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
-            return;
-        }
         await new Promise((resolve) => setTimeout(resolve, 1500));
+        const { ok, data } = await callPaywallApi('/api/entitlement');
+        if (ok && data.adfree) { markGranted(); return; }
     }
-    // 輪詢都沒等到 → 走主動查詢補救
+
+    // ③ 都沒等到 → 再對帳一次；仍失敗就通知管理員
     await recheckOrder();
 }
 
