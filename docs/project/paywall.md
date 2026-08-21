@@ -191,8 +191,34 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_PAY_TOKEN` | 🔒 Secret | OEN 專用。CRM 後台產製，只顯示一次、重產即覆蓋 |
    | `PMC_PAY_USE3D` | `1` 開啟 | OEN 信用卡 3D 驗證，預設關（同 OEN 預設）。開啟可轉移盜刷爭議責任 |
    | `PMC_PAY_PAGE_BASE` | （通常不用設） | OEN 結帳頁 base 覆寫（預設依 merchantId＋環境推得） |
-   | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境「成功要 >100、失敗要 <100」，剛好 100 是未定義行為——**Preview 環境要設 150** |
+   | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境要求金額 >100（見 3.4），正式定價 100 剛好在邊界上——**Preview 要設 150**，Production 不設此變數 |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
+
+3.4 **OEN 測試環境的測試卡號與金額**（業務提供的第三階段文件，2026-08-21）：
+
+   | 項目 | 值 |
+   |---|---|
+   | Visa 成功 | `4242 4242 4242 4242` |
+   | Visa 失敗 | `4242 0000 4242 0000` |
+   | Master | `5` 開頭任意卡號 |
+   | 測試金額 | **一律高於 100** |
+
+   ⚠️ **測失敗情境要換卡號，不是把金額壓到 100 以下。** API 文件另有一句
+   「欲測試失敗情境金額 < 100」，但業務的串接指引明確要求「測試金額請高於 100」，
+   兩者衝突時以卡號為準——用失敗卡號、金額維持 >100 最不會踩到未定義行為。
+
+   由此衍生一個永久限制：**正式定價 NT$100 剛好落在測試環境的邊界上，
+   在測試環境永遠測不到真實金額**。Preview 因此固定用 `PMC_ADFREE_PRICE=150`，
+   而 Production 不設此變數（回到預設 100）。
+
+3.45 **OEN 官方 MCP server（選用，非必要）**：業務另提供
+   `oen-payment-mcp-server`，可在本機的 Claude Desktop／Claude Code 裡以對話方式
+   呼叫 OEN API（建單、查交易、讀 API 文件…）。
+
+   **本專案的串接不需要它**——`functions/_lib/payment.js` 已直接串接 REST API 並
+   實測成功。它的價值在於「臨時查一筆交易」或「用 `readDocs` 撈官方文件原文」，
+   要在**站長自己的機器**上跑（本開發容器的 egress 政策擋掉 oen.tw，裝不了）。
+   官方註明它屬開發測試階段、不可用於 Production，也不會再更新。
 
 3.5 **⚠️ OEN 正式環境的 IP 白名單（上線前必解的問題）**：業務告知正式環境要提供
    **固定 IP** 讓應援設白名單才能呼叫 API。但我們的後端是 Cloudflare Pages Functions，
