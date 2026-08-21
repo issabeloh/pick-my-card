@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_type   TEXT,
   rtn_code       INTEGER,
   rtn_msg        TEXT,
-  raw            TEXT                -- 綠界原始回呼，對帳/客訴時的證據
+  raw            TEXT,
+  deleted_at     INTEGER   -- 帳號刪除時去識別化的時間（email/raw 已清空）                -- 綠界原始回呼，對帳/客訴時的證據
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_uid_status ON orders (uid, status);

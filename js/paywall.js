@@ -348,11 +348,73 @@ async function recheckOrder() {
             '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
         return true;
     }
-    showAdfreeResult('pending', '付款結果尚未確認',
-        '還沒看到這筆付款的成功紀錄。金流商的通知偶爾會慢幾分鐘，可以稍後再查一次；'
-        + '若你確定已扣款且超過十分鐘仍有廣告，請用「回報錯誤」聯繫我們。',
+    // 到這裡代表「用戶可能已經付錢，但系統確認不到」——這是最需要人介入的情況，
+    // 不能只叫用戶自己去回報。自動建立一筆問題回報，管理員在既有的回報清單就看得到。
+    const tradeNo = (data && data.tradeNo) || '';
+    const notified = await notifyAdminPaymentIssue(tradeNo);
+    showAdfreeResult('pending', '付款結果確認中',
+        notified
+            ? '我們還沒收到金流商的確認。這筆問題已自動通知管理員處理，'
+              + '請明天再開啟本頁確認一次——若已扣款，權益會補上，你不需要再付一次。'
+            : '我們還沒收到金流商的確認。金流商的通知偶爾會慢幾分鐘，可以稍後再查一次；'
+              + '若你確定已扣款且超過十分鐘仍有廣告，請用「回報錯誤」聯繫我們。',
         { showRecheck: true });
     return false;
+}
+
+/**
+ * 把「可能已付款但確認不到」寫進既有的 feedback 集合。
+ * 刻意重用問題回報的管道而不是另做一套通知：管理員本來就會看那份清單，
+ * 多一個各自獨立的通知管道只會多一個沒人看的地方。
+ * 回傳是否成功送出——送不出去就不要對用戶說「已通知管理員」。
+ */
+async function notifyAdminPaymentIssue(tradeNo) {
+    const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
+    if (!user || !window.addDoc || !window.collection || !window.db) return false;
+    try {
+        await window.addDoc(window.collection(window.db, 'feedback'), {
+            message: '[自動回報] 去廣告付款結果無法確認'
+                + (tradeNo ? ('，訂單編號 ' + tradeNo) : '，查無對應訂單')
+                + '。用戶已完成付款流程但系統查不到成功紀錄，請至金流商後台比對。',
+            userName: user.displayName || 'Unknown',
+            userId: user.uid,
+            userEmail: user.email || '',
+            imageUrls: [],
+            timestamp: window.serverTimestamp(),
+            createdAt: new Date().toISOString(),
+        });
+        return true;
+    } catch (err) {
+        console.error('自動回報付款問題失敗', err);
+        return false;
+    }
+}
+
+// ============================================
+// 帳號刪除的付費資料清理
+// ============================================
+
+// 由 js/auth-user-data.js 的 deleteAccountAndAllData() 呼叫，時機必須在
+// Firebase 帳號被刪除**之前**——帳號沒了就拿不到能證明身分的 ID token。
+// 失敗會丟錯讓刪除流程中止：寧可讓用戶重試，也不要留下刪不乾淨的個資。
+async function purgePaywallDataForAccountDeletion() {
+    const { ok, status, data } = await callPaywallApi('/api/account/purge', { method: 'POST' });
+    if (!ok) {
+        throw new Error('清除付費資料失敗（' + status + '）：' + ((data && data.error) || '請稍後再試'));
+    }
+    clearAdfreeFlag();
+    return data;
+}
+
+// 刪除帳號 modal 開啟時呼叫：已購買者才顯示「權益會消失且不退款」那條警告
+function updateDeleteAccountAdfreeWarning() {
+    const item = document.getElementById('da-adfree-item');
+    if (!item) return;
+    item.style.display = readAdfreeFlag() ? '' : 'none';
+    // 本機旗標可能過期或不存在（換裝置），再跟後端確認一次
+    callPaywallApi('/api/entitlement').then(({ ok, data }) => {
+        if (ok) item.style.display = data.adfree ? '' : 'none';
+    }).catch((e) => console.error('查詢權益失敗', e));
 }
 
 // ============================================

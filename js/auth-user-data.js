@@ -959,6 +959,9 @@ function openDeleteAccountModal() {
     setDeleteAccountStatus('', '');
     updateDeleteAccountButtonState();
 
+    // 已購買去廣告的人要先看到「權益會消失且不退款」
+    if (typeof updateDeleteAccountAdfreeWarning === 'function') updateDeleteAccountAdfreeWarning();
+
     const cancelBtn = document.getElementById('cancel-delete-account-btn');
     if (cancelBtn) cancelBtn.disabled = false;
 
@@ -1153,6 +1156,13 @@ async function deleteAccountAndAllData() {
 
         setDeleteAccountStatus('loading', '正在刪除雲端資料…');
         await deleteAllCloudUserData(uid);
+
+        // 付費牆的資料在 D1（用戶碰不到的地方），要由後端刪——必須趁帳號還在、
+        // 還拿得到 ID token 的時候做。失敗就中止整個流程，不留下刪不乾淨的個資。
+        if (typeof purgePaywallDataForAccountDeletion === 'function') {
+            setDeleteAccountStatus('loading', '正在刪除付費紀錄…');
+            await purgePaywallDataForAccountDeletion();
+        }
 
         setDeleteAccountStatus('loading', '正在刪除帳號…');
         await window.deleteUser(user);

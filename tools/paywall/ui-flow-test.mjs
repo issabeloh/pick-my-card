@@ -35,6 +35,12 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
         // 記錄系統彈窗是否被呼叫（本專案的要求是永遠不用）
         window.__alerts = [];
         window.alert = (m) => window.__alerts.push(m);
+        // 攔截 Firestore 寫入，驗證「自動通知管理員」有沒有真的送出
+        window.__feedback = [];
+        window.addDoc = async (_col, doc) => { window.__feedback.push(doc); return { id: 'fake' }; };
+        window.collection = () => ({});
+        window.serverTimestamp = () => 'ts';
+        window.db = {};
         // 假後端
         const realFetch = window.fetch;
         window.fetch = async (input, init) => {
@@ -44,8 +50,12 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
                     { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
             if (u.includes('/api/order-status')) {
-                return new Response(JSON.stringify({ adfree: entitled, status: entitled ? 'paid' : 'pending' }),
+                return new Response(JSON.stringify({ adfree: entitled, status: entitled ? 'paid' : 'pending', tradeNo: 'PMCTEST01' }),
                     { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (u.includes('/api/account/purge')) {
+                window.__purged = true;
+                return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
             return realFetch(input, init);
         };
@@ -148,6 +158,69 @@ for (const entitled of [true, false]) {
             (await text(page, '#account-adfree-note')).includes('永久有效'),
             await text(page, '#account-adfree-note'));
     }
+    await ctx.close();
+}
+
+// ── G. 付款確認不到 → 自動通知管理員，並如實告知用戶 ──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => recheckOrder());
+    await page.waitForTimeout(400);
+    const fb = await page.evaluate(() => window.__feedback);
+    check('確認不到付款 → 自動建立一筆問題回報', fb.length === 1 && fb[0].message.includes('PMCTEST01'),
+        JSON.stringify(fb));
+    check('確認不到付款 → 回報帶著用戶身分（管理員才對得起來）',
+        fb[0] && fb[0].userId === 'testuid123' && fb[0].userEmail === 'test@example.com');
+    check('確認不到付款 → 畫面告知已通知管理員、請明天再試',
+        (await text(page, '#adfree-result-message')).includes('已自動通知管理員')
+        && (await text(page, '#adfree-result-message')).includes('明天'),
+        await text(page, '#adfree-result-message'));
+    check('確認不到付款 → 仍然沒有系統彈窗',
+        (await page.evaluate(() => window.__alerts.length)) === 0);
+    await ctx.close();
+}
+
+// ── H. 刪除帳號：已購買才顯示權益警告；清理會呼叫後端 ──
+for (const entitled of [true, false]) {
+    const { ctx, page } = await open({ entitled, adfreeFlag: entitled });
+    // 真的開啟刪除帳號 modal（而不是只呼叫那個更新函式）——順便驗證
+    // openDeleteAccountModal 裡的整合點有接上。currentUser 是 auth-user-data.js
+    // 的全域變數，Firebase 沒載入時要自己補上。
+    await page.evaluate(() => {
+        currentUser = { uid: 'testuid123', email: 'test@example.com', providerData: [{ providerId: 'google.com' }] };
+        openDeleteAccountModal();
+    });
+    await page.waitForTimeout(400);
+    check(`刪除帳號 modal（${entitled ? '已購買' : '未購買'}）→ 有開起來`,
+        await vis(page, '#delete-account-modal'));
+    check(`刪除帳號警告（${entitled ? '已購買' : '未購買'}）→ 顯示狀態正確`,
+        (await vis(page, '#da-adfree-item')) === entitled);
+    if (entitled) {
+        check('刪除帳號警告 → 說明權益消失且不退款',
+            (await text(page, '#da-adfree-item')).includes('不予退款'),
+            await text(page, '#da-adfree-item'));
+    }
+    await ctx.close();
+}
+{
+    const { ctx, page } = await open({ entitled: true, adfreeFlag: true });
+    const res = await page.evaluate(async () => {
+        await purgePaywallDataForAccountDeletion();
+        return { purged: !!window.__purged, flag: localStorage.getItem('pmc_adfree') };
+    });
+    check('刪除帳號 → 呼叫後端清除付費資料且清掉本機旗標',
+        res.purged === true && res.flag === null, JSON.stringify(res));
+    await ctx.close();
+}
+
+// ── I. header logo 可點擊回首頁 ──
+{
+    const { ctx, page } = await open({});
+    check('header logo 是連往首頁的連結',
+        await page.evaluate(() => {
+            const a = document.querySelector('.header-logo-link');
+            return !!a && new URL(a.href).pathname === '/' && !!a.querySelector('img.header-logo');
+        }));
     await ctx.close();
 }
 

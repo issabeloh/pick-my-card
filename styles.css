@@ -5821,6 +5821,14 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     margin-bottom: 8px;
 }
 
+/* header logo 連結：只是把既有的 logo 包成連結，不改變任何版面尺寸 */
+.header-logo-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    line-height: 0;
+}
+
 .account-modal-content {
     max-width: 420px;
 }

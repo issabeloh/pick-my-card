@@ -124,6 +124,33 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 ⚠️ Cloudflare Pages 的 **Preview 與 Production 是兩組獨立的環境變數與 D1 綁定**。
 在 Production 設好不代表 Preview 有——preview 部署上 API 回 500 時，先查這個。
 
+## 2.8 帳號刪除與付費資料（2026-08-21）
+
+main 的「刪除帳號與全部資料」流程（`deleteAccountAndAllData`）會在刪除
+Firebase 帳號**之前**呼叫 `POST /api/account/purge`。時機是關鍵：帳號一旦刪除
+就拿不到能證明身分的 ID token。該呼叫失敗會中止整個刪除流程——寧可讓用戶重試，
+也不要留下刪不乾淨的個資。
+
+兩種資料、兩種處置：
+
+| 資料 | 處置 | 理由 |
+|---|---|---|
+| `entitlements` | **刪除** | 純粹是「這個 uid 有權益」的個人資料 |
+| `orders` | **去識別化**：清空 `email`、`raw`，記下 `deleted_at`；保留訂單編號、金額、時間、金流商交易編號 | 交易憑證涉及對帳與退款爭議不能刪；Firebase 帳號刪除後 uid 不再對應任何人，等同匿名代號，卻仍能與金流商後台的紀錄對起來 |
+
+**全自動，站長不需要手動刪任何東西。** 刪除帳號 modal 會對已購買者多顯示一條
+警告：權益一併消失、不予退款、重新註冊無法復原（未購買者不會看到這條）。
+
+## 2.9 付款確認不到時的自動通報
+
+`recheckOrder()` 走到「查不到成功紀錄」時，代表最需要人介入的情況——用戶可能
+已經付錢但系統確認不到。此時自動往既有的 `feedback` 集合寫一筆記錄（含訂單編號、
+uid、email），並告訴用戶「已通知管理員，請明天再確認一次」。
+
+刻意重用問題回報的管道而不是另做一套通知：管理員本來就會看那份清單，多一個
+各自獨立的通知管道只會多一個沒人看的地方。送不出去時（Firestore 不通）不會
+對用戶謊稱已通知，改回原本的自助文案。
+
 ## 3. 上線前要做的事（人工，程式碼幫不了）
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
@@ -179,6 +206,8 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
+   - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
+         `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
 
 4. **發票**：綠界電子發票要另外申請，涉及你的稅務身分，本專案沒有整合
 5. **端到端實測**（環境限制：本 session 的網路政策擋掉 `ecpay.com.tw`，這步只能由你在真實部署上跑）：

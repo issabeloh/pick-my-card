@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_type   TEXT,
   rtn_code       INTEGER,
   rtn_msg        TEXT,
-  raw            TEXT
+  raw            TEXT,
+  deleted_at     INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_orders_uid_status ON orders (uid, status);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders (created_at);
