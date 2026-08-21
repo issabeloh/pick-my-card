@@ -135,6 +135,19 @@ export function resolvePaymentConfig(env) {
     }
     const mode = (env.PMC_PAY_ENV || 'stage').toLowerCase() === 'prod' ? 'prod' : 'stage';
 
+    // 🔒 正式部署的防呆：PMC_PAY_ENV 沒設會預設 stage，如果上線時忘了在 Production
+    // 補這個變數，真實用戶會被送去金流商的「測試環境」——沒有真的收到錢，卻照樣
+    // 開通權益，而且不會有任何錯誤訊息。這種靜默失敗比壞掉更糟，所以正式分支的
+    // 部署一律要求顯式宣告 prod，寧可讓購買功能報錯也不要假裝在收錢。
+    // （只擋建立訂單與回呼；/api/entitlement 不經過本函式，已購買的用戶不受影響。）
+    const productionBranch = env.PMC_PRODUCTION_BRANCH || 'main';
+    if (env.CF_PAGES_BRANCH === productionBranch && mode !== 'prod') {
+        throw new Error(
+            `正式部署（分支 ${productionBranch}）必須顯式設定 PMC_PAY_ENV=prod。` +
+            '未設定時會落到金流商的測試環境：收不到錢卻照常開通權益。',
+        );
+    }
+
     // 憑證需求依金流商而異：
     //   綠界/歐付寶家族 → HashKey + HashIV（CheckMacValue 簽章）
     //   OEN            → Bearer token（PMC_PAY_TOKEN；在應援 CRM 後台產製，

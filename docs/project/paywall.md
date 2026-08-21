@@ -159,11 +159,24 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
    （測試期請先別在 CRM 開發票功能）。要開的話：checkout.js 補 userEmail（Firebase 有）
    與 userName（可用 displayName，沒有時退回 email），並更新購買條款的個資告知。
 
+3.65 **⚠️ CF Pages 的 Preview 與 Production 是兩組完全獨立的設定**——D1 綁定與
+   環境變數都要「各設一份」。在 Production 設好不代表 Preview 有（反之亦然）。
+   preview 部署上 API 報「D1 綁定 DB 未設定」或「OEN 設定不完整」時，先查這個。
+   加完任何綁定或變數都要**重新部署**才生效。
+
+   Secret 型變數（如 `PMC_PAY_TOKEN`）加密後**永久無法讀回**——這是 CF 的設計，
+   不是介面問題。OEN 的 token 在 CRM 也只顯示一次。因此：**產生 token 的當下就要
+   存進密碼管理器**，否則兩邊都取不回，只能到 CRM 重新產生（重產會使舊 token 失效）。
+
 3.7 **上線前雜項清單**：
+   - [ ] **`PMC_PAY_ENV=prod` 設在 Production**（漏設會被程式擋下並報錯——見
+         `resolvePaymentConfig` 的防呆；沒有這道防呆的話會靜默走測試環境：
+         收不到錢卻照常開通權益）
+   - [ ] Production 的 `PMC_PAY_TOKEN` 換成 OEN **正式環境**產的 token（測試/正式不互通）
+   - [ ] Production **不可**留著 `PMC_ADFREE_PRICE=150`（那是 OEN 測試環境
+         「>100 才成功」的權宜值；正式要移除變數回到預設 100）
    - [ ] 刪除測試期的 Deploy Hook 並重建（該 hook URL 在開發對話中傳遞過；
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
-   - [ ] Preview 用的 `PMC_ADFREE_PRICE=150` 不要帶到正式環境（正式要回到預設 100）
-   - [ ] `PMC_PAY_TOKEN` 換成 OEN **正式環境**產的 token（測試/正式 token 不互通）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
 
