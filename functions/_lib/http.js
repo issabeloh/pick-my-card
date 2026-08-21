@@ -7,10 +7,16 @@ export function json(data, status = 200) {
     });
 }
 
-/** 對外只吐通用訊息，細節寫 console.error（正式環境永遠輸出，符合鐵則 8）。 */
-export function fail(status, publicMessage, err) {
-    if (err) console.error('[paywall] ' + publicMessage + ' → ' + (err && err.message ? err.message : err));
-    return json({ error: publicMessage }, status);
+/** 對外只吐通用訊息，細節寫 console.error（正式環境永遠輸出，符合鐵則 8）。
+ *  傳入 env 時，preview 部署（CF_PAGES_BRANCH 非正式分支）會把細節附在訊息裡
+ *  ——測試期直接在畫面上看到原因，不用去挖日誌；正式站永遠只有通用訊息。 */
+export function fail(status, publicMessage, err, env) {
+    const detail = err && err.message ? err.message : String(err || '');
+    if (err) console.error('[paywall] ' + publicMessage + ' → ' + detail);
+    const prodBranch = (env && env.PMC_PRODUCTION_BRANCH) || 'main';
+    const isPreview = !!(env && env.CF_PAGES_BRANCH && env.CF_PAGES_BRANCH !== prodBranch);
+    const msg = isPreview && detail ? publicMessage + '【debug，僅測試環境顯示：' + detail + '】' : publicMessage;
+    return json({ error: msg }, status);
 }
 
 /** 讀取 x-www-form-urlencoded 的請求（綠界回呼一律是這個格式）。 */

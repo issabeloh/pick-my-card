@@ -83,6 +83,6 @@ export async function onRequestPost({ request, env }) {
 
         return json({ action: cfg.checkoutUrl, params, tradeNo, amount });
     } catch (err) {
-        return fail(500, '建立訂單失敗，請稍後再試', err);
+        return fail(500, '建立訂單失敗，請稍後再試', err, env);
     }
 }

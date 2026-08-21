@@ -61,6 +61,6 @@ export async function onRequestPost({ request, env }) {
         }
         return json({ adfree: false, status: 'pending', tradeNo: order.trade_no });
     } catch (err) {
-        return fail(500, '查詢訂單失敗，請稍後再試', err);
+        return fail(500, '查詢訂單失敗，請稍後再試', err, env);
     }
 }

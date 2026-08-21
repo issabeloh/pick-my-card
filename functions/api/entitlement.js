@@ -14,6 +14,6 @@ export async function onRequestGet({ request, env }) {
         const row = await getEntitlement(env, user.uid);
         return json({ adfree: !!row, grantedAt: row ? row.granted_at : null });
     } catch (err) {
-        return fail(500, '查詢權益失敗', err);
+        return fail(500, '查詢權益失敗', err, env);
     }
 }
