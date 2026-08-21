@@ -151,6 +151,26 @@ uid、email），並告訴用戶「已通知管理員，請明天再確認一次
 各自獨立的通知管道只會多一個沒人看的地方。送不出去時（Firestore 不通）不會
 對用戶謊稱已通知，改回原本的自助文案。
 
+## 2.10 上線策略：分支等到 OEN 正式環境就緒再一次 merge（站長決定，2026-08-21）
+
+付費牆的程式碼**刻意不先進 main**。理由：merge 就等於上正式站，而 OEN 正式
+環境尚未就緒（IP 白名單未解，見 3.5），正式站會出現一顆點下去必然報錯的
+「移除廣告」按鈕。站長已在「加總開關先 merge」與「分支繼續等」之間選擇後者。
+
+**代價是分支漂移**，而且已經發生過一次：2026-08-21 這個分支落後 main 22 個
+commit，導致 preview 看不到 main 已上線的「刪除帳號」功能，並在合併時產生
+index.html 1 段、styles.css 7 段衝突。
+
+**因此每次開工的第一件事**（不是選填）：
+
+```bash
+git fetch origin main && git rev-list --count HEAD..origin/main
+# 不是 0 就先 merge origin/main 再開始改，不要累積
+```
+
+衝突解法見 `docs/ops/judgment.md` 2026-07-21 的教訓：逐段處理，禁止整檔
+`--ours`/`--theirs`；`merchant/*.html` 是生成檔，直接重跑生成器並以 `--check` 驗證。
+
 ## 3. 上線前要做的事（人工，程式碼幫不了）
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
