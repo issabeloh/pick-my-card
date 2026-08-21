@@ -212,21 +212,27 @@ function ensureGuestUIBound() {
         }
         // 刪除帳號入口對訪客永遠不顯示（沒有帳號可刪），不受 appStarted 影響，
         // 所以不放進 setGuestDropdownVisibility() 的清單裡。
-        ['avatar-delete-account', 'avatar-delete-divider'].forEach(id => {
+        ['avatar-delete-account', 'avatar-delete-divider', 'avatar-remove-ads'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
+        // 訪客反過來：登入入口要看得見（登入後才收進「我的帳號」modal）
+        const signInEntry = document.getElementById('avatar-sign-out');
+        if (signInEntry) signInEntry.style.display = '';
         setGuestDropdownVisibility();
     }
 
     function setLoggedInAvatarState(user) {
         if (avatarBtn) avatarBtn.classList.remove('guest-mode');
-        if (guestAvatarIcon) guestAvatarIcon.style.display = 'none';
+        // 沒有 photoURL 的帳號（email/密碼註冊）改用同尺寸的預設圓形圖示，
+        // 而不是留白——否則按鈕少了 28px 的圓，高度會塌掉、看起來變形。
         if (user.photoURL) {
             userPhoto.src = user.photoURL;
             userPhoto.style.display = 'block';
+            if (guestAvatarIcon) guestAvatarIcon.style.display = 'none';
         } else {
             userPhoto.style.display = 'none';
+            if (guestAvatarIcon) guestAvatarIcon.style.display = '';
         }
         if (userName) userName.textContent = user.displayName || user.email;
         if (signOutLabel) signOutLabel.textContent = '登出';
@@ -235,15 +241,19 @@ function ensureGuestUIBound() {
             signOutItem.classList.add('avatar-dropdown-logout');
             signOutItem.classList.remove('avatar-dropdown-signin');
         }
-        // Always show all menu items for logged-in users
-        // （'avatar-delete-account'/'avatar-delete-divider' 也在這裡才打開——
-        //   只有登入者才有帳號可刪。）
-        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback',
-                     'avatar-delete-account', 'avatar-delete-divider'];
+        // 登入後的下拉只留「功能入口」：帳號相關的三件事（移除廣告、登出、
+        // 刪除帳號）都收進「我的帳號」modal，下拉不再重複顯示（2026-08-21 站長指定）。
+        // ⚠️ 那三個元素刻意留在 DOM 裡不移除：#avatar-sign-out 同時是訪客的
+        //    「註冊／登入」入口，而 modal 的登出按鈕是轉呼叫它的 click。
+        const ids = ['avatar-manage-cards', 'avatar-manage-payments', 'avatar-my-mappings', 'avatar-feedback'];
         const divider = document.querySelector('.avatar-dropdown-divider');
         ids.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = '';
+        });
+        ['avatar-delete-account', 'avatar-delete-divider', 'avatar-remove-ads', 'avatar-sign-out'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
         });
         if (divider) divider.style.display = '';
     }

@@ -371,6 +371,13 @@ header {
     background: rgba(59, 130, 246, 0.85);
 }
 
+#user-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .user-photo {
     width: 28px;
     height: 28px;
@@ -395,6 +402,12 @@ header {
     display: flex;
     align-items: center;
     gap: 6px;
+    /* 固定高度與最小寬度：登入/訪客、有頭像/無頭像四種狀態的外框一致，
+       不會因為少了頭像或名稱而塌掉變形（2026-08-21）。 */
+    box-sizing: border-box;
+    min-height: 38px;
+    min-width: 72px;
+    justify-content: center;
     background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 24px;
@@ -5819,6 +5832,30 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
 
 #adfree-result-recheck {
     margin-bottom: 8px;
+}
+
+/* 我的帳號 modal 的危險區：與上方操作拉開距離並加分隔線，避免誤按刪除 */
+.account-danger-zone {
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid #f3f4f6;
+    text-align: center;
+}
+
+.account-danger-btn {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #9ca3af;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.account-danger-btn:hover {
+    color: #b91c1c;
+    background: #fef2f2;
 }
 
 /* header logo 連結：只是把既有的 logo 包成連結，不改變任何版面尺寸 */

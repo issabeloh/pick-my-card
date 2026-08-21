@@ -61,9 +61,8 @@ function applyAdfreeUI() {
     if (adRow && adRow.parentNode) adRow.parentNode.removeChild(adRow);
     const fab = document.getElementById('adfree-fab');
     if (fab) fab.style.display = 'none';
-    const menuItem = document.getElementById('avatar-remove-ads');
-    if (menuItem) menuItem.style.display = 'none';
-    // 「我的帳號」不隨付費狀態隱藏——已購買者正是要靠它查詢自己的權益
+    // 「我的帳號」不隨付費狀態隱藏——已購買者正是要靠它查詢自己的權益。
+    // 移除廣告的入口已收進該 modal，下拉不再有獨立項目。
     const accountItem = document.getElementById('avatar-account');
     if (accountItem && (window.firebaseAuth && window.firebaseAuth.currentUser)) accountItem.style.display = '';
 }
@@ -73,8 +72,6 @@ function showAdfreeEntryPoints(isLoggedIn) {
     document.documentElement.classList.remove('pmc-adfree');
     const fab = document.getElementById('adfree-fab');
     if (fab) fab.style.display = '';
-    const menuItem = document.getElementById('avatar-remove-ads');
-    if (menuItem) menuItem.style.display = isLoggedIn ? '' : 'none';
     const accountItem = document.getElementById('avatar-account');
     if (accountItem) accountItem.style.display = isLoggedIn ? '' : 'none';
 }
@@ -484,6 +481,15 @@ function setupAccountModal() {
 
     const buyBtn = document.getElementById('account-buy-adfree');
     if (buyBtn) buyBtn.addEventListener('click', () => { closeAccountModal(); openAdfreeModal(); });
+
+    // 刪除帳戶沿用 main 既有的流程（重新驗證、確認文字、逐項警告）
+    const deleteBtn = document.getElementById('account-delete');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            closeAccountModal();
+            if (typeof openDeleteAccountModal === 'function') openDeleteAccountModal();
+        });
+    }
 
     // 登出沿用既有選單項的流程（含鐵則 9 的本機個資清理），不另寫一份實作
     const signOutBtn = document.getElementById('account-sign-out');

@@ -224,6 +224,79 @@ for (const entitled of [true, false]) {
     await ctx.close();
 }
 
+// ── J. 下拉選單瘦身：帳號相關三項只在「我的帳號」modal 裡 ──
+{
+    const { ctx, page } = await open({ entitled: false });
+    const state = await page.evaluate(() => {
+        // 模擬登入後的頭像狀態（Firebase 沒載入，直接呼叫既有函式）
+        const btn = document.getElementById('avatar-btn');
+        btn.click();  // 開下拉
+        return null;
+    });
+    // 直接檢查三個下拉項目在「登入狀態」下是否被隱藏
+    await page.evaluate(() => {
+        ['avatar-delete-account', 'avatar-delete-divider', 'avatar-remove-ads', 'avatar-sign-out']
+            .forEach((id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        document.getElementById('avatar-account').style.display = '';
+    });
+    for (const id of ['avatar-remove-ads', 'avatar-sign-out', 'avatar-delete-account']) {
+        check(`下拉選單不再顯示 #${id}`, !(await vis(page, '#' + id)));
+        check(`#${id} 仍留在 DOM（訪客登入入口與 modal 轉呼叫需要它）`,
+            await page.evaluate((i) => !!document.getElementById(i), id));
+    }
+    check('下拉選單保留「我的帳號」', await vis(page, '#avatar-account'));
+    await ctx.close();
+}
+
+// ── K. 我的帳號 modal 三顆按鈕都在 ──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => openAccountModal());
+    await page.waitForTimeout(400);
+    check('帳號 modal：有購買、登出、刪除帳戶三個入口',
+        (await vis(page, '#account-buy-adfree')) && (await vis(page, '#account-sign-out'))
+        && (await vis(page, '#account-delete')));
+    check('帳號 modal：刪除帳戶會開啟 main 的刪除流程', await page.evaluate(async () => {
+        currentUser = { uid: 'testuid123', email: 'test@example.com', providerData: [{ providerId: 'google.com' }] };
+        document.getElementById('account-delete').click();
+        await new Promise((r) => setTimeout(r, 300));
+        const m = document.getElementById('delete-account-modal');
+        return getComputedStyle(m).display !== 'none';
+    }));
+    await ctx.close();
+}
+
+// ── L. 頭像按鈕四種狀態尺寸一致 ──
+{
+    const { ctx, page } = await open({});
+    const sizes = await page.evaluate(() => {
+        const btn = document.getElementById('avatar-btn');
+        const photo = document.getElementById('user-photo');
+        const icon = document.getElementById('guest-avatar-icon');
+        const name = document.getElementById('user-name');
+        const measure = () => { const r = btn.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width) }; };
+        const out = {};
+        // 訪客
+        icon.style.display = ''; photo.style.display = 'none'; name.textContent = '';
+        out.guest = measure();
+        // 登入有頭像
+        icon.style.display = 'none'; photo.style.display = 'block';
+        photo.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        name.textContent = '測試使用者';
+        out.withPhoto = measure();
+        // 登入無頭像（email 帳號）→ 走預設圓形圖示
+        photo.style.display = 'none'; icon.style.display = '';
+        out.noPhoto = measure();
+        return out;
+    });
+    check('登入有無頭像時按鈕高度一致', sizes.withPhoto.h === sizes.noPhoto.h, JSON.stringify(sizes));
+    check('訪客狀態按鈕高度也一致', sizes.guest.h === sizes.withPhoto.h, JSON.stringify(sizes));
+    check('按鈕高度符合固定值 38px', sizes.withPhoto.h === 38, JSON.stringify(sizes));
+    check('登入有無頭像時按鈕寬度一致', sizes.withPhoto.w === sizes.noPhoto.w, JSON.stringify(sizes));
+    check('訪客按鈕不會塌成一條（最小寬度生效）', sizes.guest.w >= 72, JSON.stringify(sizes));
+    await ctx.close();
+}
+
 await browser.close();
 console.log(fail ? '\n❌ 有項目未通過' : '\n✅ 全部通過');
 process.exit(fail);
