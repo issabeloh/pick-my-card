@@ -5854,6 +5854,34 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     margin-bottom: 8px;
 }
 
+/* 「廣告移除」那一列右側：狀態文字＋購買 pill */
+.account-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.account-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.account-pill-btn:hover {
+    background: #1d4ed8;
+}
+
 /* 我的帳號 modal 的危險區：與上方操作拉開距離並加分隔線，避免誤按刪除 */
 .account-danger-zone {
     margin-top: 22px;

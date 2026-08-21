@@ -200,6 +200,10 @@ function showAdfreePurchaseView() {
     if (result) result.style.display = 'none';
 }
 
+function clearAdfreeIntent() {
+    try { sessionStorage.removeItem('pmc_adfree_intent'); } catch (e) { /* ignore */ }
+}
+
 function openAdfreeModal() {
     const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
     if (!user) {
@@ -279,6 +283,10 @@ async function startAdfreeCheckout() {
             return;
         }
         if (typeof gtagEvent === 'function') gtagEvent('adfree_checkout_start');
+        // 意圖已達成（人都要去付款了），清掉它。sessionStorage 會活過
+        // 「跳去金流商再回來」，不清的話回站時會被它重新開出購買視窗，
+        // 蓋掉付款結果畫面幾秒鐘（2026-08-21 站長回報的閃現問題）。
+        clearAdfreeIntent();
         location.assign(safeUrl);
         return;
     }
@@ -291,6 +299,7 @@ async function startAdfreeCheckout() {
     }
 
     if (typeof gtagEvent === 'function') gtagEvent('adfree_checkout_start');
+    clearAdfreeIntent();
     submitToEcpay(data.action, data.params);
 }
 
@@ -588,12 +597,22 @@ function setupPaywall() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ⚠️ 必須在 setupPaywall() 之前讀：handlePaymentReturn() 會把 pmc_pay
+    // 從網址上清掉（避免重整時重跑），之後就再也判斷不出「剛從金流商回來」。
+    const isPaymentReturn = new URLSearchParams(location.search).has('pmc_pay');
+
     setupPaywall();
 
-    // 登入前點過「移除廣告」→ 登入完成後自動把 modal 接回來
+    // 登入前點過「移除廣告」→ 登入完成後自動把 modal 接回來。
+    // 網址帶著付款結果時一律跳過：那代表人剛從金流商回來，畫面該顯示的是
+    // 付款結果，不是再開一次購買視窗（會蓋掉結果畫面）。
     try {
-        if (sessionStorage.getItem('pmc_adfree_intent') === '1') {
-            sessionStorage.removeItem('pmc_adfree_intent');
+        if (isPaymentReturn) {
+            // 剛付完款，舊意圖已無意義——不清的話它會留到下次開頁時
+            // 莫名其妙彈出購買視窗。
+            clearAdfreeIntent();
+        } else if (sessionStorage.getItem('pmc_adfree_intent') === '1') {
+            clearAdfreeIntent();
             const timer = setInterval(() => {
                 if (window.firebaseAuth && window.firebaseAuth.currentUser) {
                     clearInterval(timer);

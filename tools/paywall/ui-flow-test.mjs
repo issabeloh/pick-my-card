@@ -15,7 +15,7 @@ const check = (name, ok, detail) => {
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
 // adfree=true 時預先寫入本機旗標；entitled 決定假 API 回什麼
-async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '' } = {}) {
+async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '', staleIntent = false } = {}) {
     const ctx = await browser.newContext();
     await ctx.route('**/*', (route) => {
         const url = route.request().url();
@@ -23,8 +23,9 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
         return route.abort();   // 擋掉 firebase/adsense/clarity 等外部資源
     });
     const page = await ctx.newPage();
-    await page.addInitScript(([loggedIn, adfreeFlag, entitled]) => {
+    await page.addInitScript(([loggedIn, adfreeFlag, entitled, staleIntent]) => {
         localStorage.setItem('pmc_seen_landing', '1');
+        if (staleIntent) sessionStorage.setItem('pmc_adfree_intent', '1');
         if (adfreeFlag) localStorage.setItem('pmc_adfree', 'testuid123|' + (Date.now() + 86400000));
         if (loggedIn) {
             window.firebaseAuth = { currentUser: {
@@ -59,7 +60,7 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
             }
             return realFetch(input, init);
         };
-    }, [loggedIn, adfreeFlag, entitled]);
+    }, [loggedIn, adfreeFlag, entitled, staleIntent]);
     await page.goto(BASE + '/index.html' + query, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(900);
     return { ctx, page };
@@ -353,6 +354,53 @@ for (const entitled of [true, false]) {
     const { ctx, page } = await open({});
     check('下拉選單已無 avatar-dropdown-divider 元素',
         await page.evaluate(() => document.querySelectorAll('.avatar-dropdown-divider').length === 0));
+    await ctx.close();
+}
+
+// ── P. 付款導回時，殘留的「登入後自動開購買視窗」意圖不得蓋掉結果畫面 ──
+//    sessionStorage 會活過「跳去金流商再回來」，這正是站長看到購買畫面
+//    閃現幾秒的原因（2026-08-21）。
+{
+    const { ctx, page } = await open({ entitled: true, query: '?pmc_pay=success', staleIntent: true });
+    // 觀察整段期間：只要曾經出現購買視圖就算失敗
+    const sawPurchase = await page.evaluate(async () => {
+        let seen = false;
+        for (let i = 0; i < 40; i++) {
+            const el = document.getElementById('adfree-purchase-view');
+            if (el && getComputedStyle(el).display !== 'none'
+                && el.getBoundingClientRect().height > 0) { seen = true; break; }
+            await new Promise((r) => setTimeout(r, 100));
+        }
+        return seen;
+    });
+    check('付款導回：全程都不會閃出購買視圖', !sawPurchase);
+    check('付款導回：最後顯示成功結果',
+        (await text(page, '#adfree-result-title')).includes('付款完成'),
+        await text(page, '#adfree-result-title'));
+    check('付款導回：殘留意圖旗標已清除',
+        (await page.evaluate(() => sessionStorage.getItem('pmc_adfree_intent'))) === null);
+    await ctx.close();
+}
+
+// ── Q. 購買 pill 在「廣告移除」那一列內、且看得見 ──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => openAccountModal());
+    await page.waitForTimeout(400);
+    check('購買 pill 在「廣告移除」那一列內',
+        await page.evaluate(() => {
+            const pill = document.getElementById('account-buy-adfree');
+            const row = document.getElementById('account-adfree-status').closest('.account-row');
+            return !!pill && !!row && row.contains(pill);
+        }));
+    check('購買 pill 看得見（未購買時）', await vis(page, '#account-buy-adfree'));
+    await ctx.close();
+}
+{
+    const { ctx, page } = await open({ entitled: true, adfreeFlag: true });
+    await page.evaluate(() => openAccountModal());
+    await page.waitForTimeout(400);
+    check('已購買時購買 pill 隱藏', !(await vis(page, '#account-buy-adfree')));
     await ctx.close();
 }
 

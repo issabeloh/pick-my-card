@@ -194,23 +194,27 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境要求金額 >100（見 3.4），正式定價 100 剛好在邊界上——**Preview 要設 150**，Production 不設此變數 |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
 
-3.4 **OEN 測試環境怎麼決定成敗：金額，不是卡號**（2026-08-21 實測結論）
+3.4 **OEN 測試環境測不出失敗情境（2026-08-21 實測，暫無解）**
 
-   業務的第三階段文件列了「Visa 失敗測試卡號 4242 0000 4242 0000」，但**實測用
-   該卡號、金額 150，連續兩個帳號都付款成功**。API 文件那句才是對的：
+   業務文件與 API 文件各給了一種觸發失敗的方法，**兩種都試過、都失敗**：
 
-   > 欲測試成功情境金額需 > 100；欲測試失敗情境金額 < 100
+   | 方法 | 出處 | 實測結果 |
+   |---|---|---|
+   | 失敗卡號 `4242 0000 4242 0000` | 第三階段串接文件 | 金額 150，兩個帳號都**付款成功** |
+   | 金額 < 100 | API 文件注意事項 | 金額 50 ＋ 失敗卡號，仍**付款成功** |
 
-   | 要測 | 怎麼做 |
-   |---|---|
-   | 成功 | `PMC_ADFREE_PRICE=150`，卡號 `4242 4242 4242 4242` |
-   | 失敗 | `PMC_ADFREE_PRICE=50`，卡號不影響 |
+   結論：這個測試商戶目前無論怎麼刷都會成功，觸發條件不明。**要問 OEN 業務**。
 
-   卡號只要格式正確即可（Master 用 `5` 開頭）。**測完失敗情境記得把
-   `PMC_ADFREE_PRICE` 改回 150**，否則後續的成功測試會全部變成失敗。
+   **在那之前，失敗路徑要用直接打網址的方式驗證**——這樣測到的是我方程式碼
+   完全相同的分支，不需要依賴 OEN 的測試環境：
 
-   由此衍生的永久限制：正式定價 NT$100 剛好落在測試環境的成敗邊界上，
-   在測試環境永遠測不到真實金額。Preview 固定 150、Production 不設此變數（預設 100）。
+   ```
+   https://<preview 網址>/api/pay/return?payment_error=T0001   → 應導向 /?pmc_pay=failed 並顯示紅色 ✕
+   https://<preview 網址>/?pmc_pay=failed                        → 直接驗前端的失敗畫面
+   ```
+
+   由此衍生的永久限制：正式定價 NT$100 剛好落在 API 文件所述的成敗邊界上。
+   Preview 用 `PMC_ADFREE_PRICE=150`、Production 不設此變數（預設 100）。
 
 3.45 **OEN 官方 MCP server（選用，非必要）**：業務另提供
    `oen-payment-mcp-server`，可在本機的 Claude Desktop／Claude Code 裡以對話方式
@@ -253,6 +257,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
+   - [ ] 已向 OEN 問出測試環境要怎麼觸發付款失敗（見 3.4），並實測過失敗路徑
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
 
