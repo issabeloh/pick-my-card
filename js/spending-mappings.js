@@ -23,6 +23,7 @@ async function loadSpendingMappings() {
     // 檢查是否有登入用戶
     if (!currentUser) {
         // 未登入用戶
+        mappingsLoadState = 'guest';
         userSpendingMappings = readLocalJSONArray('spendingMappings');
         console.log('📋 [配卡] 未登入，從本地載入:', userSpendingMappings.length, '筆');
         return userSpendingMappings;
@@ -36,6 +37,7 @@ async function loadSpendingMappings() {
 
             if (docSnap.exists() && docSnap.data().spendingMappings) {
                 const mappings = docSnap.data().spendingMappings;
+                mappingsLoadState = 'ok';
                 userSpendingMappings = mappings;
                 console.log('✅ [配卡] 從 Firestore 讀取成功:', mappings.length, '筆');
 
@@ -43,6 +45,14 @@ async function loadSpendingMappings() {
                 localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
                 return mappings;
             }
+
+            // 讀得到雲端文件、但沒有配卡欄位 → 這位用戶真的還沒配過卡（空清單可信）
+            mappingsLoadState = 'ok';
+        } else {
+            // Firebase SDK 還沒就緒（例：手機冷啟動時 gstatic 模組載入超過 4 秒，
+            // auth 逾時 fallback 先跑）——此時的空清單不可信，標成 error 讓 UI 提供重試。
+            mappingsLoadState = 'error';
+            console.error('❌ [配卡] Firestore SDK 尚未就緒，改用本地快取');
         }
 
         // Fallback to localStorage if Firestore fails or no data
@@ -50,6 +60,10 @@ async function loadSpendingMappings() {
         console.log('📦 [配卡] 從本地快取載入 (fallback):', userSpendingMappings.length, '筆');
         return userSpendingMappings;
     } catch (error) {
+        // 雲端讀取失敗：本地快取在「新裝置／新容器」（如 iPhone 加到桌面的 App，
+        // 它的 localStorage 與 Safari 完全隔離）是空的，直接顯示空清單會被誤讀成
+        // 「配卡不見了」。標成 error，由 renderMappingsList 顯示錯誤與重試。
+        mappingsLoadState = 'error';
         console.error('❌ [配卡] 讀取失敗，使用本地快取:', error);
         userSpendingMappings = readLocalJSONArray(`spendingMappings_${currentUser.uid}`);
         return userSpendingMappings;
@@ -82,6 +96,7 @@ async function saveSpendingMappings(mappings) {
             }, { merge: true });
 
             console.log('☁️ [配卡] 已同步到 Firestore:', mappings.length, '筆');
+            mappingsLoadState = 'ok'; // 寫入成功＝雲端狀態已知，記憶體版本可信
         }
 
         return true;
@@ -369,6 +384,14 @@ async function openMyMappingsModal() {
 
     if (!modal || !mappingsList) return;
 
+    // 配卡表原本只在 onAuthStateChanged 載入一次：那次若失敗（手機冷啟動、Firebase
+    // 逾時 fallback、網路瞬斷），使用者要重新整理整頁才有機會補救。這裡在「登入中、
+    // 雲端狀態未確認、且手上是空的」時補讀一次——手上有資料就絕不重讀，避免把還沒
+    // 成功同步上雲的本地配卡蓋掉。
+    if (currentUser && mappingsLoadState !== 'ok' && userSpendingMappings.length === 0) {
+        await loadSpendingMappings();
+    }
+
     // 渲染配卡表（過期收合區每次開 modal 都從收合狀態開始）
     mappingsExpiredOpen = false;
     renderMappingsList();
@@ -443,16 +466,48 @@ function renderMappingsList(searchTerm = '') {
     }
 
     if (filteredMappings.length === 0) {
+        // 空清單有四種完全不同的成因，過去共用同一句「還沒有配卡記錄」——使用者
+        // （尤其在 iPhone 加到桌面的 App，localStorage 與 Safari 完全隔離）看到的
+        // 是「配卡不見了」，但真正的原因可能是沒登入或雲端沒讀到。這裡分流成四種
+        // 文案，讀取失敗時另外提供重試按鈕，讓畫面本身就是診斷訊號。
+        // 文案全為固定字串（無使用者輸入），故不需 escapeHtml。
+        let emptyTitle, emptyHint, retryHtml = '';
+        if (searchTerm) {
+            emptyTitle = '找不到符合的配對';
+            emptyHint = '換個商家或卡片名稱再試試';
+        } else if (!currentUser) {
+            emptyTitle = '尚未登入';
+            emptyHint = '配卡組合存在雲端帳號裡，請先登入才看得到自己的配卡';
+        } else if (mappingsLoadState === 'error') {
+            emptyTitle = '配卡讀取失敗';
+            emptyHint = '你的配卡還在雲端，只是這次沒讀到（網路不穩或 App 剛冷啟動）。請確認連線後重試。';
+            retryHtml = '<button type="button" id="mappings-retry-btn" class="mappings-retry-btn">重新載入</button>';
+        } else {
+            emptyTitle = '還沒有配卡記錄';
+            emptyHint = '在搜尋結果的卡片上點釘選，即可加入我的配卡組合';
+        }
+
         mappingsList.innerHTML = `
             <div class="mappings-empty">
                 <svg width="48" height="48" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
-                <p>${searchTerm ? '找不到符合的配對' : '還沒有配卡記錄'}</p>
-                <p style="font-size: 12px; margin-top: 8px;">登入後，釘選結果卡片即可加入我的配卡組合</p>
+                <p>${emptyTitle}</p>
+                <p style="font-size: 12px; margin-top: 8px;">${emptyHint}</p>
+                ${retryHtml}
             </div>
         `;
+
+        const retryBtn = document.getElementById('mappings-retry-btn');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', async () => {
+                retryBtn.disabled = true;
+                retryBtn.textContent = '讀取中…';
+                await loadSpendingMappings();
+                renderMappingsList(searchTerm);
+            });
+        }
         return;
     }
 

@@ -39,6 +39,11 @@ let cardsInComparison = new Set();
 let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
 let userSpendingMappings = []; // 用戶的消費配卡表
+// 配卡表最近一次載入的結果：'guest'（未登入／尚未為登入者載過）/ 'ok'（雲端讀取成功，
+// 空陣列＝雲端真的沒資料）/ 'error'（雲端讀不到，畫面上的空陣列不可信）。
+// 存在理由：空清單過去在三種情況下長得一模一樣（沒登入 / 讀取失敗 / 真的沒配卡），
+// iPhone 桌面 App 回報「配卡不見了」時無從分辨。見 js/spending-mappings.js。
+let mappingsLoadState = 'guest';
 let auth = null;
 let db = null;
 let cardsData = null;
