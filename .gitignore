@@ -2,3 +2,8 @@ node_modules/
 package.json
 package-lock.json
 tools/regression/last-run.json
+
+# functions/ 是要部署的 Cloud Functions 專案，它的 package.json 必須進版控
+# （上面的 package.json 是不帶斜線的樣式，會匹配所有層級）。
+# package-lock.json 沿用本 repo 慣例不進版控。
+!functions/package.json
