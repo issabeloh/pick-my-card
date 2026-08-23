@@ -3,10 +3,11 @@
 一句話：**登入 → 綠界付款 → 綠界通知後端 → 後端寫權益 → 前端不載入 AdSense loader。**
 
 - 前端：`js/paywall.js`（順序 13）＋ `index.html`/`faq.html` 的 `<head>` 廣告閘門
-- 後端：`functions/`（Cloudflare Pages Functions，與靜態站同一個 CF Pages 專案）；金流商可切換，見第 3 節
+- 後端：`functions/`（Cloudflare Pages Functions，與靜態站同一個 CF Pages 專案）；金流商可切換，見 2.9
 - 資料：Cloudflare D1（`orders`、`entitlements`），schema 在 `tools/paywall/schema.sql`
 
 ## 1. 為什麼是這個架構
+
 
 | 決定 | 理由 |
 |---|---|
@@ -16,6 +17,7 @@
 | 永久買斷、不自動續扣 | NT$100 的金額做定期定額不划算（授權管理、取消、扣款失敗處理的複雜度遠超收益） |
 
 ## 2. 三個保證怎麼成立的
+
 
 **登入**：`/api/checkout` 只接受 `Authorization: Bearer <Firebase ID token>`，後端用 Google 的 JWK 端點＋Web Crypto 自驗 RS256（Worker 上沒有 firebase-admin）。前端傳來的 uid 一律不信，uid 只從驗過的 token 的 `sub` 取。未登入點購買 → 先開登入 modal，登入後自動接回購買流程。
 
@@ -33,14 +35,8 @@
 - 帶到期時間（7 天）→ 退款或撤銷後最多 7 天一定回頭問一次後端
 - 這是前端旗標，改 devtools 的人擋不住——但那等同裝擋廣告外掛，**不構成金流風險**，因為訂單與開通全在後端
 
-## 2.45 OEN 手續費（實測資料，2026-08-23）
+## 2.1 ⚠️ `functions/` 這個目錄名屬於 Cloudflare，不可與 Firebase 共用
 
-測試交易的 `raw` 回應含 `fee` 欄位：**金額 50 → fee 2**（4%）。單筆樣本、
-且是測試環境，不足以推定費率結構（可能是百分比、可能有最低收費）。
-**上線前請向業務確認實際費率**——若為 4%，NT$100 的單筆成本是 4 元，
-比先前依綠界估的 2.75 元高。這會影響定價是否划算的判斷。
-
-## 2.2 ⚠️ `functions/` 這個目錄名屬於 Cloudflare，不可與 Firebase 共用
 
 2026-08-23 合併 main 時發現：另一個 session 把 Firebase Cloud Functions
 （意見回饋通知）也放進了 `functions/`，與付費牆的 Cloudflare Pages Functions 同居。
@@ -70,37 +66,8 @@
 （或在乾淨的 clone 重新產生）才會突然消失，屆時 `firebase deploy` 會因為
 少了 `package.json` 而失敗。驗證方式：刪檔再 `git add`，加得回去才算對。
 
-## 2.5 成本結構
+## 2.2 OEN 流程（已實作，2026-08-20）
 
-**這套架構不會新增任何月費**：
-
-- **Firebase 不需要升 Blaze**——後端完全沒用 Cloud Functions 或 Admin SDK，Firebase 的用量與加付費牆前一模一樣（這是當初選 CF Pages Functions 而非 Firebase Functions 的主因之一）。可用 `grep -rn "firebase-admin\|firestore" functions/` 自我驗證
-- **Cloudflare** 用量（可據此自行估算是否會超出免費額度）：
-
-  | 情境 | 請求數 |
-  |---|---|
-  | 未登入訪客瀏覽 | **0**（`refreshAdfreeEntitlement()` 在 user 為 null 時直接 return，不打 API） |
-  | 已登入用戶開一次頁 | 1 次 `/api/entitlement` ＋ 1 row read |
-  | 完成一筆購買 | 約 10 次（建單＋通知＋導回＋輪詢） |
-
-- 唯一的實質成本是**金流手續費**（NT$100 約 2.75%，≈2.75 元/筆）
-
-若哪天登入用戶的瀏覽量真的逼近 Workers 免費額度，最省的優化是幫「查到未付費」的結果也加上幾小時的本機快取（目前只快取「已付費」），代價是換裝置購買後生效變慢。
-
-## 2.6 金流商的選擇與切換
-
-台灣多數金流商（綠界、藍新）的特店申請對**持永久居留證的外國人**不一定開放，這是選型的實際限制，不是技術問題。
-
-程式碼對此的準備：`functions/_lib/payment.js` 把端點抽成 `ENDPOINTS[provider][mode]`，並提供 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 兩個覆寫變數。
-
-| 金流商 | 狀態 |
-|---|---|
-| 綠界 ECPay | 已實作，CheckMacValue 演算法有自我測試 |
-| 歐付寶 O'Pay | 端點已備妥，但**網址是依同一命名慣例推得、尚未實測**。帳號下來後先跑 `mac-selftest.mjs`，再送一筆測試訂單確認不是回 CheckMacValue Error；若網址不同，設 `PMC_PAY_CHECKOUT_URL` 覆蓋即可 |
-| OEN 應援科技（全跳轉） | **已選定**。API base：正式 `https://payment-api.oen.tw`／測試 `https://payment-api.testing.oen.tw`；結帳頁是另一個網域 `https://{merchantId}.oen.tw/checkout/{id}`（別混用）。`merchantId` = `pick-my-card`。認證用 `Authorization: Bearer {token}`。建立交易 `POST /checkout`。Webhook 在 CRM 後台設定，失敗重試三次（2/4/6 秒）。**仍未知：webhook 的來源驗證方式**——文件未載明是否有簽章標頭，確認前不可信任 webhook 內容 |
-| 其他 | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
-
-## 2.7b OEN 流程（已實作，2026-08-20）
 
 ```
 前端點「前往付款」→ POST /api/checkout（帶 Firebase ID token）
@@ -124,44 +91,8 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 
 改了 OEN 相關邏輯 → 跑 `node tools/paywall/oen-selftest.mjs`（改動前先確認綠燈）。
 
-## 2.7a OEN 串接的三個環境決定（2026-08-20，依站長的 CF 專案實況）
+## 2.3 帳號刪除與付費資料（2026-08-21）
 
-1. **CRM 的「交易資料回傳位置」直接填正式網址** `https://pickmycard.app/api/pay/notify`，
-   一次填好、不再改。測試期它會 404（付費牆分支還沒合併）→ OEN 重試三次後放棄，無害；
-   我們的測試流程**不依賴 webhook**（見下條）。上線合併後同一個網址自動生效。
-2. **webhook 只當通知鈴，不當事實來源**：站長的 CF 專案對 preview 部署開了
-   Cloudflare Access（要登入才看得到）→ OEN 的 server 對 server webhook 打 preview
-   一定被擋。與其去改 Access 政策，不如順著本來就更安全的設計——付款導回後
-   前端輪詢 `/api/order-status`，由後端拿自己的 token 呼叫 OEN 查詢 API 覆核。
-   webhook 收不到，流程照樣走得通。因此 `/api/pay/inspect` 在 OEN 串接中**不再需要**。
-3. **preview 部署用 Deploy Hook 觸發**（站長已關自動 preview）：CF 後台
-   Settings → Deploy Hooks → 建一個指向付費牆分支的 hook，要部署時對該 URL 發 POST。
-   注意 hook URL 等同「任何人可觸發 build」的鑰匙，不進 git、不貼公開處。
-   本開發環境連不到 api.cloudflare.com（egress 擋），觸發要在站長自己的終端機執行。
-
-## 2.7 串接新金流商：先抓真實樣本，不要猜驗章
-
-新金流商（如 OEN 應援科技）的回呼格式與驗證機制若沒有可靠文件，**不要憑推測寫驗章邏輯**。
-猜錯只有兩種結果：全部擋掉（不能用），或放寬驗證——後者等於任何人都能 POST 一筆
-偽造的「已付款」通知白拿權益，是真的資安漏洞。
-
-正確流程：
-
-1. CF Pages 設 `PMC_PAY_INSPECT=1`（**只在 Preview 環境**），部署分支
-2. 金流商後台的「交易資料回傳網址」先填 `https://<preview 網址>/api/pay/inspect`
-3. 跑一筆測試交易 → 到 Cloudflare Pages → Deployment → Real-time Logs
-   看 `[pay-inspect]` 那筆 JSON，裡面有對方實際送出的 method、headers、原始 body
-4. 依真實樣本寫 `payment.js` 的驗章與 `pay/notify.js` 的解析
-5. 回傳網址改指 `/api/pay/notify`，**移除 `PMC_PAY_INSPECT`**
-
-`/api/pay/inspect` 預設 404（要顯式設 `PMC_PAY_INSPECT=1` 才啟用），永遠不碰 D1、
-不開通任何權益——它只是一台錄音機。標頭原樣記錄（驗證機制常藏在標頭裡），
-所以只在測試環境用。
-
-⚠️ Cloudflare Pages 的 **Preview 與 Production 是兩組獨立的環境變數與 D1 綁定**。
-在 Production 設好不代表 Preview 有——preview 部署上 API 回 500 時，先查這個。
-
-## 2.8 帳號刪除與付費資料（2026-08-21）
 
 main 的「刪除帳號與全部資料」流程（`deleteAccountAndAllData`）會在刪除
 Firebase 帳號**之前**呼叫 `POST /api/account/purge`。時機是關鍵：帳號一旦刪除
@@ -178,7 +109,26 @@ Firebase 帳號**之前**呼叫 `POST /api/account/purge`。時機是關鍵：�
 **全自動，站長不需要手動刪任何東西。** 刪除帳號 modal 會對已購買者多顯示一條
 警告：權益一併消失、不予退款、重新註冊無法復原（未購買者不會看到這條）。
 
-## 2.85 ⚠️ webhook 在 preview 上收不到（測試期的重要事實，2026-08-21）
+## 2.4 付款異常的自動通報（兩種情境）
+
+
+| 情境 | 觸發點 | 用戶看到 | 管理員收到 |
+|---|---|---|---|
+| **明確失敗**（金流商回 `payment_error`） | `handlePaymentReturn` | 「付款失敗，已通知管理員…請稍後再嘗試！未向你收取任何費用。」**不給「重新查詢訂單」** | 含 OEN 錯誤代碼與中文說明（如 `T0004（額度不足）`） |
+| **確認不到**（可能已扣款但查不到） | `recheckOrder()` 查無成功紀錄 | 「已通知管理員，請明天再確認一次」 | 訂單編號＋「請至後台比對是否已扣款」 |
+
+明確失敗刻意**不提供「重新查詢訂單」**：那條路徑會先回答「你已經有權益了」
+（若該帳號本來就買過），讓剛失敗的用戶誤以為付款成功。
+
+兩種都寫進既有的 `feedback` 集合（含 uid、email）。刻意重用問題回報的管道而不是
+另做一套通知：管理員本來就會看那份清單。送不出去時不會謊稱已通知，改回自助文案。
+
+⚠️ 「重新查詢訂單」在**已有權益的帳號**上一律回「已確認付款」——這是正確行為
+（`/api/order-status` 第一件事就是檢查權益），不是 bug。要乾淨地測失敗流程，
+得先在 D1 刪掉該 uid 的 entitlements 列。
+
+## 2.5 ⚠️ webhook 在 preview 上收不到（測試期的重要事實，2026-08-21）
+
 
 站長的 CF 專案對 preview 部署開了 Cloudflare Access（要登入才進得去），而 CRM 的
 webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署付費牆 → 404）。
@@ -229,7 +179,8 @@ webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署�
 付款導回後前端第一件事就是打 `/api/order-status` 主動對帳（2026-08-21 起），
 webhook 完全不通也能在 1~2 秒內開通。
 
-## 2.88 ⚠️ 付款導回是「整頁重載」——動 API 之前要等登入狀態還原
+## 2.6 ⚠️ 付款導回是「整頁重載」——動 API 之前要等登入狀態還原
+
 
 `handlePaymentReturn()` 在 DOMContentLoaded 就執行，但那一刻
 `firebaseAuth.currentUser` 幾乎一定還是 `null`（Firebase 要先跟伺服器換過 token）。
@@ -243,34 +194,87 @@ webhook 完全不通也能在 1~2 秒內開通。
 成功路徑當時沒被發現，純粹是因為它會輪詢六次、拖過空窗自己補救——
 **「有重試所以看起來沒事」不等於沒有 bug**。
 
-## 2.9 付款異常的自動通報（兩種情境）
+## 2.7 成本結構
 
-| 情境 | 觸發點 | 用戶看到 | 管理員收到 |
-|---|---|---|---|
-| **明確失敗**（金流商回 `payment_error`） | `handlePaymentReturn` | 「付款失敗，已通知管理員…請稍後再嘗試！未向你收取任何費用。」**不給「重新查詢訂單」** | 含 OEN 錯誤代碼與中文說明（如 `T0004（額度不足）`） |
-| **確認不到**（可能已扣款但查不到） | `recheckOrder()` 查無成功紀錄 | 「已通知管理員，請明天再確認一次」 | 訂單編號＋「請至後台比對是否已扣款」 |
 
-明確失敗刻意**不提供「重新查詢訂單」**：那條路徑會先回答「你已經有權益了」
-（若該帳號本來就買過），讓剛失敗的用戶誤以為付款成功。
+**這套架構不會新增任何月費**：
 
-兩種都寫進既有的 `feedback` 集合（含 uid、email）。刻意重用問題回報的管道而不是
-另做一套通知：管理員本來就會看那份清單。送不出去時不會謊稱已通知，改回自助文案。
+- **Firebase 不需要升 Blaze**——後端完全沒用 Cloud Functions 或 Admin SDK，Firebase 的用量與加付費牆前一模一樣（這是當初選 CF Pages Functions 而非 Firebase Functions 的主因之一）。可用 `grep -rn "firebase-admin\|firestore" functions/` 自我驗證
+- **Cloudflare** 用量（可據此自行估算是否會超出免費額度）：
 
-⚠️ 「重新查詢訂單」在**已有權益的帳號**上一律回「已確認付款」——這是正確行為
-（`/api/order-status` 第一件事就是檢查權益），不是 bug。要乾淨地測失敗流程，
-得先在 D1 刪掉該 uid 的 entitlements 列。
+  | 情境 | 請求數 |
+  |---|---|
+  | 未登入訪客瀏覽 | **0**（`refreshAdfreeEntitlement()` 在 user 為 null 時直接 return，不打 API） |
+  | 已登入用戶開一次頁 | 1 次 `/api/entitlement` ＋ 1 row read |
+  | 完成一筆購買 | 約 10 次（建單＋通知＋導回＋輪詢） |
 
-## 2.9b 舊版說明（保留備查）
+- 唯一的實質成本是**金流手續費**（NT$100 約 2.75%，≈2.75 元/筆）
 
-`recheckOrder()` 走到「查不到成功紀錄」時，代表最需要人介入的情況——用戶可能
-已經付錢但系統確認不到。此時自動往既有的 `feedback` 集合寫一筆記錄（含訂單編號、
-uid、email），並告訴用戶「已通知管理員，請明天再確認一次」。
+若哪天登入用戶的瀏覽量真的逼近 Workers 免費額度，最省的優化是幫「查到未付費」的結果也加上幾小時的本機快取（目前只快取「已付費」），代價是換裝置購買後生效變慢。
 
-刻意重用問題回報的管道而不是另做一套通知：管理員本來就會看那份清單，多一個
-各自獨立的通知管道只會多一個沒人看的地方。送不出去時（Firestore 不通）不會
-對用戶謊稱已通知，改回原本的自助文案。
+## 2.8 OEN 手續費（實測資料，2026-08-23）
 
-## 2.10 上線策略：分支等到 OEN 正式環境就緒再一次 merge（站長決定，2026-08-21）
+
+測試交易的 `raw` 回應含 `fee` 欄位：**金額 50 → fee 2**（4%）。單筆樣本、
+且是測試環境，不足以推定費率結構（可能是百分比、可能有最低收費）。
+**上線前請向業務確認實際費率**——若為 4%，NT$100 的單筆成本是 4 元，
+比先前依綠界估的 2.75 元高。這會影響定價是否划算的判斷。
+
+## 2.9 金流商的選擇與切換
+
+
+台灣多數金流商（綠界、藍新）的特店申請對**持永久居留證的外國人**不一定開放，這是選型的實際限制，不是技術問題。
+
+程式碼對此的準備：`functions/_lib/payment.js` 把端點抽成 `ENDPOINTS[provider][mode]`，並提供 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 兩個覆寫變數。
+
+| 金流商 | 狀態 |
+|---|---|
+| 綠界 ECPay | 已實作，CheckMacValue 演算法有自我測試 |
+| 歐付寶 O'Pay | 端點已備妥，但**網址是依同一命名慣例推得、尚未實測**。帳號下來後先跑 `mac-selftest.mjs`，再送一筆測試訂單確認不是回 CheckMacValue Error；若網址不同，設 `PMC_PAY_CHECKOUT_URL` 覆蓋即可 |
+| OEN 應援科技（全跳轉） | **已選定**。API base：正式 `https://payment-api.oen.tw`／測試 `https://payment-api.testing.oen.tw`；結帳頁是另一個網域 `https://{merchantId}.oen.tw/checkout/{id}`（別混用）。`merchantId` = `pick-my-card`。認證用 `Authorization: Bearer {token}`。建立交易 `POST /checkout`。Webhook 在 CRM 後台設定，失敗重試三次（2/4/6 秒）。**仍未知：webhook 的來源驗證方式**——文件未載明是否有簽章標頭，確認前不可信任 webhook 內容 |
+| 其他 | 規格未知。若同屬 CheckMacValue 家族 → 加一組 `ENDPOINTS` 即可；若是完全不同的 API（例如 JSON + HMAC header），要新寫一個 adapter，但只會動到 `payment.js` 與 `api/pay/notify.js` 兩個檔，前端與 D1 結構不受影響 |
+
+## 2.10 串接新金流商：先抓真實樣本，不要猜驗章
+
+
+新金流商（如 OEN 應援科技）的回呼格式與驗證機制若沒有可靠文件，**不要憑推測寫驗章邏輯**。
+猜錯只有兩種結果：全部擋掉（不能用），或放寬驗證——後者等於任何人都能 POST 一筆
+偽造的「已付款」通知白拿權益，是真的資安漏洞。
+
+正確流程：
+
+1. CF Pages 設 `PMC_PAY_INSPECT=1`（**只在 Preview 環境**），部署分支
+2. 金流商後台的「交易資料回傳網址」先填 `https://<preview 網址>/api/pay/inspect`
+3. 跑一筆測試交易 → 到 Cloudflare Pages → Deployment → Real-time Logs
+   看 `[pay-inspect]` 那筆 JSON，裡面有對方實際送出的 method、headers、原始 body
+4. 依真實樣本寫 `payment.js` 的驗章與 `pay/notify.js` 的解析
+5. 回傳網址改指 `/api/pay/notify`，**移除 `PMC_PAY_INSPECT`**
+
+`/api/pay/inspect` 預設 404（要顯式設 `PMC_PAY_INSPECT=1` 才啟用），永遠不碰 D1、
+不開通任何權益——它只是一台錄音機。標頭原樣記錄（驗證機制常藏在標頭裡），
+所以只在測試環境用。
+
+⚠️ Cloudflare Pages 的 **Preview 與 Production 是兩組獨立的環境變數與 D1 綁定**。
+在 Production 設好不代表 Preview 有——preview 部署上 API 回 500 時，先查這個。
+
+## 2.11 OEN 串接的三個環境決定（2026-08-20，依站長的 CF 專案實況）
+
+
+1. **CRM 的「交易資料回傳位置」直接填正式網址** `https://pickmycard.app/api/pay/notify`，
+   一次填好、不再改。測試期它會 404（付費牆分支還沒合併）→ OEN 重試三次後放棄，無害；
+   我們的測試流程**不依賴 webhook**（見下條）。上線合併後同一個網址自動生效。
+2. **webhook 只當通知鈴，不當事實來源**：站長的 CF 專案對 preview 部署開了
+   Cloudflare Access（要登入才看得到）→ OEN 的 server 對 server webhook 打 preview
+   一定被擋。與其去改 Access 政策，不如順著本來就更安全的設計——付款導回後
+   前端輪詢 `/api/order-status`，由後端拿自己的 token 呼叫 OEN 查詢 API 覆核。
+   webhook 收不到，流程照樣走得通。因此 `/api/pay/inspect` 在 OEN 串接中**不再需要**。
+3. **preview 部署用 Deploy Hook 觸發**（站長已關自動 preview）：CF 後台
+   Settings → Deploy Hooks → 建一個指向付費牆分支的 hook，要部署時對該 URL 發 POST。
+   注意 hook URL 等同「任何人可觸發 build」的鑰匙，不進 git、不貼公開處。
+   本開發環境連不到 api.cloudflare.com（egress 擋），觸發要在站長自己的終端機執行。
+
+## 2.12 上線策略：分支等到 OEN 正式環境就緒再一次 merge（站長決定，2026-08-21）
+
 
 付費牆的程式碼**刻意不先進 main**。理由：merge 就等於上正式站，而 OEN 正式
 環境尚未就緒（IP 白名單未解，見 3.5），正式站會出現一顆點下去必然報錯的
@@ -290,7 +294,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
 衝突解法見 `docs/ops/judgment.md` 2026-07-21 的教訓：逐段處理，禁止整檔
 `--ours`/`--theirs`；`merchant/*.html` 是生成檔，直接重跑生成器並以 `--check` 驗證。
 
-## 2.95 測試環境的端到端驗收狀態（2026-08-23）
+## 2.13 測試環境的端到端驗收狀態（2026-08-23）
+
 
 | 情境 | 結果 |
 |---|---|
@@ -301,10 +306,11 @@ git fetch origin main && git rev-list --count HEAD..origin/main
 | 帳號刪除連帶清除權益 | ✅ |
 | 去廣告實際生效（請求數為 0） | ✅ 自動化測試涵蓋三種頁面 |
 
-**唯一未在真實環境驗過的是 webhook 送達**（preview 收不到，見 2.85），
+**唯一未在真實環境驗過的是 webhook 送達**（preview 收不到，見 2.5），
 上線後用 `SELECT source FROM entitlements` 確認即可。
 
 ## 3. 上線前要做的事（人工，程式碼幫不了）
+
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
 2. **D1**：`wrangler d1 create pick-my-card` → `wrangler d1 execute pick-my-card --remote --file=tools/paywall/schema.sql` → CF Pages → Settings → Functions → D1 bindings 綁成 `DB`
@@ -362,7 +368,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
      （用失敗卡號／低金額仍然扣款成功）→ 這題只能問業務
    - 其他值卻仍開通 → 那才是我方的 bug，立刻回報
 
-   `orders.status` 仍是 `pending` 但用戶已開通，是 webhook 沒送達的正常現象（見 2.85）。
+   `orders.status` 仍是 `pending` 但用戶已開通，是 webhook 沒送達的正常現象（見 2.5）。
 
 3.45 **OEN 官方 MCP server（選用，非必要）**：業務另提供
    `oen-payment-mcp-server`，可在本機的 Claude Desktop／Claude Code 裡以對話方式
@@ -405,11 +411,11 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
-   - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.95）
+   - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
    - [ ] 上線後買一筆，用 `SELECT source FROM entitlements` 確認 webhook
-         在正式站真的有送達（見 2.85）
+         在正式站真的有送達（見 2.5）
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
 
@@ -418,6 +424,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    用 stage 設定部署 preview → 登入 → 購買 → 用綠界測試卡號 `4311-9522-2222-2222`（有效期填未來、安全碼任意、3D 驗證碼 `1234`）付款 → 確認導回後廣告消失 → 到 D1 檢查 `orders.status='paid'` 且 `entitlements` 有那筆 uid
 
 ## 4. 對帳與客訴
+
 
 ```bash
 # 某人說付了錢沒開通
@@ -433,12 +440,37 @@ wrangler d1 execute pick-my-card --remote --command \
 
 ## 5. 改這塊之前要知道的
 
+
 - 改 `functions/_lib/ecpay.js` 的編碼邏輯 → **一定要跑 `node tools/paywall/mac-selftest.mjs`**。CheckMacValue 的 bug 幾乎全出在 URL encode 那一步，症狀是綠界回 `10200073 CheckMacValue Error`
 - 改廣告閘門或 `js/paywall.js` → 跑 `tools/paywall/adfree-smoke.mjs`（需先起 `python3 -m http.server 8000`）
 - `<head>` 的閘門在 `index.html` 與 `faq.html` **各有一份、內容必須一致**；`merchant/*.html` 由 `tools/build-merchant-pages.js` 從 index.html 生成，改完記得重新生成
 - 綠界 CheckMacValue 用的是 **.NET `HttpUtility.UrlEncode` 語意**（安全字元只有 `A-Za-z0-9-_.!*()`、空白→`+`、`~`→`%7e`、`'`→`%27`），跟 JS 的 `encodeURIComponent` 有三處差異，全部在 `dotNetUrlEncode()` 補齊。**整串字串（含 `=` 與 `&` 分隔符）一起編碼**，所以分隔符會變成 `%3d`/`%26`——這是最多人踩錯的一點
 
+## 6. 怎麼部署 preview（測試用）
+
+站長已關閉自動 preview 部署，改用 Deploy Hook 手動觸發。
+
+1. **建立**（一次性）：CF Pages → Settings → Deploy Hooks → Add，
+   branch 選付費牆分支，存檔後得到一串網址
+2. **觸發**（每次要部署）：在自己的電腦執行
+
+   ```powershell
+   curl.exe -X POST "<deploy hook 網址>"
+   ```
+
+   ⚠️ Windows PowerShell 的 `curl` 是 `Invoke-WebRequest` 的別名，**吃不懂 `-X`／`-d`**，
+   一定要寫 `curl.exe`（或改用 `Invoke-RestMethod -Method Post -Uri "..."`）。
+3. 到 Deployments 等建置完成，複製**分支別名**那個網址（開頭是分支名的那個，
+   每次部署都不變；開頭是亂數 hash 的那個每次都會變）
+4. 首次使用該網址前，要把它加進 Firebase Console → Authentication → Settings →
+   Authorized domains，否則站內登入會被擋（`auth/unauthorized-domain`）
+
+**改了環境變數或 D1 綁定，一定要重新部署才會生效。**
+hook 網址等同「任何人可觸發你的部署」的鑰匙，不進 git、不貼公開處；
+測試期結束後刪掉重建（見第 3 節上線清單）。
+
 ## 教訓記錄
+
 
 - **2026-08-19｜不要靠記憶寫金流的黃金值**：寫 CheckMacValue 的自我測試時，我憑記憶寫下綠界文件範例的預期字串，把分隔符寫成未編碼的 `=`/`&`，測試因此紅燈。查證後確認綠界是「整串一起 URL encode」，分隔符會變 `%3d`/`%26`——是我的預期值錯、實作對。教訓：金流這種對錯只有二元結果的地方，黃金值要嘛查官方文件、要嘛用另一個獨立實作（這裡用 Python 的 `urllib.parse.quote_plus`）算出來，不能拿自己的實作當對照組，也不能靠記憶。
 - **2026-08-19｜煙霧測試紅燈先懷疑測試環境，不要急著改產品碼**：首次跑 `adfree-smoke.mjs` 時 `index.html` 量到「沒有廣告位、沒有 modal」，看起來像頁面壞了。實際是 index.html 會把 `localStorage.length === 0` 的首訪者 `location.replace` 到 landing.html，而付費情境因為寫了旗標所以不會被導走——量到的根本是兩個不同頁面。已在測試裡加上「停在受測頁」的斷言，讓這種情況直接顯示成路徑不符而不是功能異常。
