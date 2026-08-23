@@ -273,6 +273,24 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    由此衍生的永久限制：正式定價 NT$100 剛好落在 API 文件所述的成敗邊界上。
    Preview 用 `PMC_ADFREE_PRICE=150`、Production 不設此變數（預設 100）。
 
+3.42 **判斷「是我方誤判成功，還是 OEN 真的收款了」** —— 決定性證據在自己的資料庫
+
+   開通的唯一條件是 OEN 的 `GET /transactions/{id}` 回報 `status` 為
+   `charged`／`claimed`（見 `oenVerifyCharged`），而**那次查詢的完整回應會原封
+   不動存進 `orders.raw`**。所以不需要任何額外工具就能定案：
+
+   ```sql
+   SELECT trade_no, status, amount, provider_txn_id, rtn_msg, raw
+   FROM orders ORDER BY created_at DESC LIMIT 5;
+   ```
+
+   看 `raw` 裡的 `"status"`：
+   - `"charged"` → **OEN 真的收款了**，我方判斷正確，問題在 OEN 的測試環境
+     （用失敗卡號／低金額仍然扣款成功）→ 這題只能問業務
+   - 其他值卻仍開通 → 那才是我方的 bug，立刻回報
+
+   `orders.status` 仍是 `pending` 但用戶已開通，是 webhook 沒送達的正常現象（見 2.85）。
+
 3.45 **OEN 官方 MCP server（選用，非必要）**：業務另提供
    `oen-payment-mcp-server`，可在本機的 Claude Desktop／Claude Code 裡以對話方式
    呼叫 OEN API（建單、查交易、讀 API 文件…）。
