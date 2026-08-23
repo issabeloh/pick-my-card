@@ -63,6 +63,13 @@
 
 **不要把任何 Firebase 檔案放回 `functions/`。**
 
+搬家時連帶要改的第三個地方（由建立 Cloud Functions 的那個 session 提醒才補上）：
+根目錄 `.gitignore` 全域忽略 `package.json`，靠一條 `!<目錄>/package.json` 例外
+放行 Cloud Functions 的那一份。**改目錄名時這條例外必須跟著改**——因為
+`git mv` 會保留追蹤狀態，改名當下一切正常，要等到有人把它移出索引再加回
+（或在乾淨的 clone 重新產生）才會突然消失，屆時 `firebase deploy` 會因為
+少了 `package.json` 而失敗。驗證方式：刪檔再 `git add`，加得回去才算對。
+
 ## 2.5 成本結構
 
 **這套架構不會新增任何月費**：

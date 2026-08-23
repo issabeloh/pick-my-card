@@ -3,7 +3,11 @@ package.json
 package-lock.json
 tools/regression/last-run.json
 
-# functions/ 是要部署的 Cloud Functions 專案，它的 package.json 必須進版控
+# firebase-functions/ 是要部署的 Cloud Functions 專案，它的 package.json 必須進版控
 # （上面的 package.json 是不帶斜線的樣式，會匹配所有層級）。
+# ⚠️ 2026-08-23 目錄改名：原本例外寫的是 functions/package.json，但那個目錄
+#    已改由 Cloudflare Pages Functions 使用（且不該有 package.json）。
+#    改名時這條例外沒跟著改——因為 git mv 保留追蹤狀態，當下不會壞，
+#    要等到有人把它移出索引再加回才會突然消失。
 # package-lock.json 沿用本 repo 慣例不進版控。
-!functions/package.json
+!firebase-functions/package.json
