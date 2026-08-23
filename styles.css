@@ -6142,6 +6142,29 @@ mark.cashback-search-hl {
     opacity: 0.5;
 }
 
+/* 配卡讀取失敗時的重試按鈕（空狀態四分流之一，見 js/spending-mappings.js
+   renderMappingsList 的空清單分支） */
+.mappings-retry-btn {
+    margin-top: 16px;
+    padding: 8px 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mappings-retry-btn:hover {
+    background: #f3f4f6;
+}
+
+.mappings-retry-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
    一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
    的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
