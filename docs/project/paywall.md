@@ -165,9 +165,20 @@ webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署�
   **乾淨重測要連訂單一起清**：
 
   ```sql
-  DELETE FROM entitlements WHERE uid = '<uid>';
-  DELETE FROM orders       WHERE uid = '<uid>';
+  -- 測試期最省事：整張清空（⚠️ 上線後絕對不可以這樣做）
+  DELETE FROM entitlements;
+  DELETE FROM orders;
+
+  -- 只想清某個帳號時，先查 uid：
+  --   SELECT uid, email FROM orders ORDER BY created_at DESC;
+  --   SELECT uid, source, granted_at FROM entitlements;
+  -- DELETE FROM entitlements WHERE uid = '<uid>';
+  -- DELETE FROM orders       WHERE uid = '<uid>';
   ```
+
+  清完後瀏覽器可能還留著 `pmc_adfree` 本機旗標（最長 7 天），會讓你以為還是已購買。
+  重新整理後 `refreshAdfreeEntitlement()` 會向後端核對並自動清掉；想立刻歸零就到
+  DevTools → Application → Local Storage 刪掉 `pmc_adfree`。
 
 - **不建議為了測 webhook 而放行 preview**：帳號層的 deny-by-default 只能
   「整個網域豁免」，而本站 `robots.txt` 是 `Allow: /`——preview 一旦公開就可能
