@@ -40,6 +40,29 @@
 **上線前請向業務確認實際費率**——若為 4%，NT$100 的單筆成本是 4 元，
 比先前依綠界估的 2.75 元高。這會影響定價是否划算的判斷。
 
+## 2.2 ⚠️ `functions/` 這個目錄名屬於 Cloudflare，不可與 Firebase 共用
+
+2026-08-23 合併 main 時發現：另一個 session 把 Firebase Cloud Functions
+（意見回饋通知）也放進了 `functions/`，與付費牆的 Cloudflare Pages Functions 同居。
+**兩套建置流程會互相踩到**：
+
+- Firebase `deploy --only functions` 會把整個來源目錄上傳，連 Cloudflare 的檔案
+  一起打包；而 `functions/package.json` 宣告 `"type": "commonjs"`，
+  付費牆的檔案卻是 ESM
+- Cloudflare Pages 會把 `functions/` 底下的每個檔案當成路由候選，
+  `index.js` 卻是 Firebase 進入點，`require` 的 firebase-admin／nodemailer
+  在 Workers 執行環境根本不存在
+
+**Cloudflare 的目錄名寫死在平台約定裡、不可改；Firebase 的可以在 `firebase.json`
+指定**，所以 Firebase 搬到 `firebase-functions/`。
+
+| 目錄 | 屬於 | 部署方式 |
+|---|---|---|
+| `functions/` | Cloudflare Pages Functions（付費牆 API） | 隨 CF Pages 部署 |
+| `firebase-functions/` | Firebase Cloud Functions（回饋通知） | `firebase deploy --only functions` |
+
+**不要把任何 Firebase 檔案放回 `functions/`。**
+
 ## 2.5 成本結構
 
 **這套架構不會新增任何月費**：

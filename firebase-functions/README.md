@@ -10,7 +10,7 @@
 
 兩個管道獨立：只設定其中一個也能運作。
 
-- 程式碼：`functions/index.js`（函式名 `notifyOnFeedback`）
+- 程式碼：`firebase-functions/index.js`（函式名 `notifyOnFeedback`）
 - 觸發來源：前端 `js/quick-options-misc.js` 的 "Submit Feedback" → `addDoc(collection(db, 'feedback'))`
 - 不需要改 `firestore.rules`：Admin SDK 不受安全規則限制（規則裡 feedback 仍是「只能新增、誰都不能讀」）
 
@@ -55,7 +55,7 @@ firebase functions:secrets:set NOTIFY_WEBHOOK_URL
 firebase deploy --only functions:notifyOnFeedback
 ```
 
-第一次部署會互動詢問三個非密鑰參數（之後存在 `functions/.env.pick-my-card-28f2a`，該檔已被 gitignore）：
+第一次部署會互動詢問三個非密鑰參數（之後存在 `firebase-functions/.env.pick-my-card-28f2a`，該檔已被 gitignore）：
 
 | 參數 | 說明 | 範例 |
 |---|---|---|
@@ -65,7 +65,7 @@ firebase deploy --only functions:notifyOnFeedback
 | `SMTP_USER` | 寄件帳號 | `you@gmail.com` |
 
 > 部署若因區域不符失敗（錯誤訊息會指出 Firestore 資料庫所在區域），
-> 改 `functions/index.js` 最上面的 `REGION` 常數再部署一次。
+> 改 `firebase-functions/index.js` 最上面的 `REGION` 常數再部署一次。
 
 ### 3. 驗證
 
