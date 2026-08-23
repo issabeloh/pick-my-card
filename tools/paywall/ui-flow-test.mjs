@@ -15,7 +15,7 @@ const check = (name, ok, detail) => {
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
 // adfree=true 時預先寫入本機旗標；entitled 決定假 API 回什麼
-async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '', staleIntent = false } = {}) {
+async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '', staleIntent = false, authDelayMs = 0 } = {}) {
     const ctx = await browser.newContext();
     await ctx.route('**/*', (route) => {
         const url = route.request().url();
@@ -23,15 +23,22 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
         return route.abort();   // 擋掉 firebase/adsense/clarity 等外部資源
     });
     const page = await ctx.newPage();
-    await page.addInitScript(([loggedIn, adfreeFlag, entitled, staleIntent]) => {
+    await page.addInitScript(([loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs]) => {
         localStorage.setItem('pmc_seen_landing', '1');
         if (staleIntent) sessionStorage.setItem('pmc_adfree_intent', '1');
         if (adfreeFlag) localStorage.setItem('pmc_adfree', 'testuid123|' + (Date.now() + 86400000));
         if (loggedIn) {
-            window.firebaseAuth = { currentUser: {
+            const fakeUser = {
                 uid: 'testuid123', email: 'test@example.com',
                 getIdToken: async () => 'faketoken',
-            } };
+            };
+            if (authDelayMs > 0) {
+                // 模擬真實情況：整頁重載後 Firebase 要一段時間才還原 currentUser
+                window.firebaseAuth = { currentUser: null };
+                setTimeout(() => { window.firebaseAuth.currentUser = fakeUser; }, authDelayMs);
+            } else {
+                window.firebaseAuth = { currentUser: fakeUser };
+            }
         }
         // 記錄系統彈窗是否被呼叫（本專案的要求是永遠不用）
         window.__alerts = [];
@@ -62,7 +69,7 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
             }
             return realFetch(input, init);
         };
-    }, [loggedIn, adfreeFlag, entitled, staleIntent]);
+    }, [loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs]);
     await page.goto(BASE + '/index.html' + query, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(900);
     return { ctx, page };
@@ -440,6 +447,32 @@ for (const entitled of [true, false]) {
     await page.waitForTimeout(400);
     check('確認不到（非處理中）→ 仍會通報管理員',
         (await page.evaluate(() => window.__feedback.length)) === 1);
+    await ctx.close();
+}
+
+// ── S. 登入狀態延遲還原時，付款結果處理仍要正確 ──
+//    付款導回是整頁重載，DOMContentLoaded 當下 currentUser 還是 null。
+//    2026-08-23 站長回報「付款失敗卻沒通知管理員」就是這個空窗造成的。
+{
+    const { ctx, page } = await open({
+        entitled: false, query: '?pmc_pay=failed&pmc_err=T0001', authDelayMs: 1200,
+    });
+    await page.waitForTimeout(3000);
+    const fb = await page.evaluate(() => window.__feedback);
+    check('登入延遲還原：付款失敗仍會通知管理員', fb.length === 1, JSON.stringify(fb));
+    check('登入延遲還原：畫面顯示「已通知管理員」而非備用文案',
+        (await text(page, '#adfree-result-message')).includes('已通知管理員'),
+        await text(page, '#adfree-result-message'));
+    await ctx.close();
+}
+{
+    const { ctx, page } = await open({
+        entitled: true, query: '?pmc_pay=success', authDelayMs: 1200,
+    });
+    await page.waitForTimeout(3500);
+    check('登入延遲還原：付款成功仍會開通',
+        (await text(page, '#adfree-result-title')).includes('付款完成'),
+        await text(page, '#adfree-result-title'));
     await ctx.close();
 }
 

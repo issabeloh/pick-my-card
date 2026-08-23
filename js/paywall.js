@@ -80,6 +80,25 @@ function showAdfreeEntryPoints(isLoggedIn) {
 // 向後端核對權益
 // ============================================
 
+/**
+ * 等 Firebase 把登入狀態還原完成，回傳 user（逾時則 null）。
+ *
+ * ⚠️ 為什麼需要它：付款導回是「整頁重新載入」，DOMContentLoaded 當下
+ * firebaseAuth.currentUser 幾乎一定還是 null——Firebase 要先跟伺服器換過
+ * token 才會填上。2026-08-23 站長回報「付款失敗卻沒收到通知」就是這個原因：
+ * notifyAdminPaymentIssue() 第一行看到 currentUser 是 null 就直接放棄了。
+ * 成功路徑當時沒被發現，是因為它會輪詢六次、拖過那段空窗自己補救。
+ */
+async function waitForAuthUser(timeoutMs = 8000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
+        if (user) return user;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return null;
+}
+
 async function getIdToken() {
     const user = (window.firebaseAuth && window.firebaseAuth.currentUser) || null;
     if (!user) return null;
@@ -329,6 +348,7 @@ async function handlePaymentReturn() {
         // 代表金流商已明確回報失敗，再查一次只會查到同樣的結果或用戶既有的權益，
         // 反而讓人以為付款成功了。
         showAdfreeResult('failed', '付款失敗', '正在通知管理員…', { busy: true });
+        await waitForAuthUser();
         const notified = await notifyAdminPaymentIssue('', 'failed', errCode);
         showAdfreeResult('failed', '付款失敗',
             notified
@@ -348,6 +368,10 @@ async function handlePaymentReturn() {
         showAdfreeResult('success', '付款完成，廣告已移除',
             '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
     };
+
+    // ⓪ 先等登入狀態還原——整頁重載後 currentUser 需要一點時間才會填上，
+    //    沒等就打 API 只會拿到 401，白白浪費一輪。
+    await waitForAuthUser();
 
     // ① 先主動要後端跟金流商對帳（/api/order-status 會自己查、自己開通）。
     //    不先等 webhook 的理由：webhook 只是「快一點」的路徑，而它可能慢、

@@ -199,6 +199,20 @@ webhook 位置填的是正式站 `pickmycard.app/api/pay/notify`（尚未部署�
 付款導回後前端第一件事就是打 `/api/order-status` 主動對帳（2026-08-21 起），
 webhook 完全不通也能在 1~2 秒內開通。
 
+## 2.88 ⚠️ 付款導回是「整頁重載」——動 API 之前要等登入狀態還原
+
+`handlePaymentReturn()` 在 DOMContentLoaded 就執行，但那一刻
+`firebaseAuth.currentUser` 幾乎一定還是 `null`（Firebase 要先跟伺服器換過 token）。
+任何在那個空窗裡呼叫 `callPaywallApi()` 或 `notifyAdminPaymentIssue()` 的程式碼
+都會靜默失敗。
+
+**動手前一律先 `await waitForAuthUser()`。**
+
+這個坑實際咬過一次（2026-08-23）：付款失敗的通報只呼叫一次、又沒等，
+於是永遠通知不到管理員，畫面還顯示「請稍後再試」的備用文案，看起來像功能沒做。
+成功路徑當時沒被發現，純粹是因為它會輪詢六次、拖過空窗自己補救——
+**「有重試所以看起來沒事」不等於沒有 bug**。
+
 ## 2.9 付款異常的自動通報（兩種情境）
 
 | 情境 | 觸發點 | 用戶看到 | 管理員收到 |
