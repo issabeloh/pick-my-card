@@ -6083,8 +6083,33 @@ mark.cashback-search-hl {
 }
 
 /* My Mappings Modal */
+/* 單一捲軸原則：.modal-content 預設 overflow-y:auto，加上 .mappings-list 自己的
+   max-height+overflow 會變成兩層捲軸（外層要先捲到底，才看得到內層最後幾筆）。
+   這裡把 modal 改成 flex 直欄：標題與搜尋列固定，只有配卡清單捲。 */
 #my-mappings-modal .modal-content {
     max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#my-mappings-modal .modal-header,
+#my-mappings-modal .modal-body > .form-group {
+    flex-shrink: 0;
+}
+
+#my-mappings-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 沒有這行，flex 子項不會收縮，內層永遠捲不起來 */
+    overflow: hidden;
+}
+
+#my-mappings-modal .mappings-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none; /* 蓋掉 .mappings-list 的 500px 上限，改由 flex 決定 */
+    overscroll-behavior: contain;
 }
 
 /* 用 #my-mappings-modal 提高特異性——全域 input[type="text"]（padding 16px、
