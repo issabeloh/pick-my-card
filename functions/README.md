@@ -86,3 +86,36 @@ log 會明確寫出每個管道是「送出成功」「因未設定而略過」�
 - **Gmail 每日寄信上限**：一般帳號約 500 封/日，對回饋量而言不會碰到。
 - **想改成一天一封摘要**：把 `onDocumentCreated` 換成 `onSchedule`（`firebase-functions/v2/scheduler`）
   並在函式內查詢當天的 feedback 文件。目前選的是「即時」路線。
+
+---
+
+## 什麼時候需要回來動這裡？
+
+平常**完全不用管**——函式部署上去就一直在跑，沒有需要定期維護的東西。
+只有下列情況才需要回 Cloud Shell 重新部署：
+
+| 情況 | 要做什麼 |
+|---|---|
+| 想換收通知的信箱 | 重跑部署指令，問到 `NOTIFY_EMAIL_TO` 時填新信箱 |
+| Gmail 密碼改了、或應用程式密碼被撤銷 → 突然收不到信 | 重新產生 16 碼 → `firebase functions:secrets:set SMTP_PASSWORD` → 重新部署 |
+| 想改成手機推播（Discord / Telegram） | `firebase functions:secrets:set NOTIFY_WEBHOOK_URL` 填 webhook 網址 → 重新部署 |
+| 想改通知信的內容或排版 | 改 `index.js` 的 `buildPlainText()` / `buildHtml()` → 重新部署 |
+| 使用者說送了回饋、但你沒收到通知 | `firebase functions:log --only notifyOnFeedback` 看是哪個管道失敗（回饋本身仍安全存在 Firestore，通知失敗不影響資料） |
+| 想完全停掉通知 | `firebase functions:delete notifyOnFeedback` |
+
+重新部署的完整流程（Cloud Shell，https://shell.cloud.google.com）：
+
+```bash
+cd ~/pick-my-card && git pull
+cd functions && npm install
+firebase deploy --only functions:notifyOnFeedback --project pick-my-card-28f2a
+```
+
+> Cloud Shell 的家目錄是持久的，`~/pick-my-card` 這份副本會一直留著，
+> 下次直接 `git pull` 更新即可，不用重新 clone。
+
+### 帳單
+
+Blaze 方案的從量計費，這個函式的用量遠低於免費額度，實際約 0 元。
+Artifact Registry 的舊建置映像檔已設定 3 天自動清理（部署時詢問的那題）。
+2026-08 另設有 Google Cloud 預算警示當保險。
