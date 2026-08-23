@@ -260,6 +260,20 @@ git fetch origin main && git rev-list --count HEAD..origin/main
 衝突解法見 `docs/ops/judgment.md` 2026-07-21 的教訓：逐段處理，禁止整檔
 `--ours`/`--theirs`；`merchant/*.html` 是生成檔，直接重跑生成器並以 `--check` 驗證。
 
+## 2.95 測試環境的端到端驗收狀態（2026-08-23）
+
+| 情境 | 結果 |
+|---|---|
+| 成功付款（`4242 4242 4242 4242`、150 元） | ✅ 開通、廣告消失、`raw` 顯示 `status=charged` |
+| 3D 驗證（`PMC_PAY_USE3D=1`） | ✅ 生效，`raw` 顯示 `use3d=true` |
+| **失敗付款**（`4012 8888 1888 8333`） | ✅ 紅色 ✕ 畫面、**訂單留在 `pending` 未誤開通**、自動通報管理員成功，OEN 回報 `T0001（交易失敗）` |
+| 付款導回後的自我修復 | ✅ 主動對帳 1~2 秒內開通，不依賴 webhook |
+| 帳號刪除連帶清除權益 | ✅ |
+| 去廣告實際生效（請求數為 0） | ✅ 自動化測試涵蓋三種頁面 |
+
+**唯一未在真實環境驗過的是 webhook 送達**（preview 收不到，見 2.85），
+上線後用 `SELECT source FROM entitlements` 確認即可。
+
 ## 3. 上線前要做的事（人工，程式碼幫不了）
 
 1. **綠界特店**：申請後把 MerchantID / HashKey / HashIV 填進 CF 環境變數，並在綠界後台**開通 Apple Pay**、設定網域驗證
@@ -361,7 +375,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [ ] IP 白名單問題已有答案（見 3.5）
-   - [ ] 用 `4012 8888 1888 8333` 實測過失敗路徑（見 3.4）
+   - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.95）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
    - [ ] 上線後買一筆，用 `SELECT source FROM entitlements` 確認 webhook
