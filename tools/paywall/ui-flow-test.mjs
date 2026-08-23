@@ -51,7 +51,9 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
                     { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
             if (u.includes('/api/order-status')) {
-                return new Response(JSON.stringify({ adfree: entitled, status: entitled ? 'paid' : 'pending', tradeNo: 'PMCTEST01' }),
+                const body = { adfree: entitled, status: entitled ? 'paid' : 'pending', tradeNo: 'PMCTEST01' };
+                if (window.__providerStatus) body.providerStatus = window.__providerStatus;
+                return new Response(JSON.stringify(body),
                     { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
             if (u.includes('/api/account/purge')) {
@@ -413,6 +415,31 @@ for (const entitled of [true, false]) {
     await page.evaluate(() => openAccountModal());
     await page.waitForTimeout(400);
     check('已購買時購買 pill 隱藏', !(await vis(page, '#account-buy-adfree')));
+    await ctx.close();
+}
+
+// ── R. 金流商回報「處理中」時不該驚動管理員（3D 驗證常見）──
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => { window.__providerStatus = 'charging'; });
+    await page.evaluate(() => recheckOrder());
+    await page.waitForTimeout(400);
+    check('交易處理中 → 不建立問題回報',
+        (await page.evaluate(() => window.__feedback.length)) === 0);
+    check('交易處理中 → 告知用戶稍候再查、不會重複扣款',
+        (await text(page, '#adfree-result-title')).includes('處理中')
+        && (await text(page, '#adfree-result-message')).includes('不需要再付一次'),
+        await text(page, '#adfree-result-title'));
+    check('交易處理中 → 提供再查一次的入口', await vis(page, '#adfree-result-recheck'));
+    await ctx.close();
+}
+// 對照組：沒有 charging 時仍要通報
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.evaluate(() => recheckOrder());
+    await page.waitForTimeout(400);
+    check('確認不到（非處理中）→ 仍會通報管理員',
+        (await page.evaluate(() => window.__feedback.length)) === 1);
     await ctx.close();
 }
 

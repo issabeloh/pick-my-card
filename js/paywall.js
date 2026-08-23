@@ -384,6 +384,16 @@ async function recheckOrder() {
             '感謝你的支持！權益已綁定你的帳號、永久有效，換裝置登入同樣生效。');
         return true;
     }
+    // 金流商說「還在處理中」（3D 驗證等情況會出現）→ 這不是異常，只是還沒好。
+    // 不要通報管理員，也不要嚇用戶——請他稍後再查即可。
+    if (data && data.providerStatus === 'charging') {
+        showAdfreeResult('pending', '交易處理中',
+            '金流商還在處理這筆交易（開啟 3D 驗證時常見）。請稍候幾分鐘後點下方再查一次；'
+            + '權益確認後會自動生效，你不需要再付一次。',
+            { showRecheck: true });
+        return false;
+    }
+
     // 到這裡代表「用戶可能已經付錢，但系統確認不到」——這是最需要人介入的情況，
     // 不能只叫用戶自己去回報。自動建立一筆問題回報，管理員在既有的回報清單就看得到。
     const tradeNo = (data && data.tradeNo) || '';

@@ -44,7 +44,13 @@ export async function onRequestPost({ request, env }) {
                 console.error('[paywall] 由主動查詢補開通：uid=' + user.uid + ' 訂單=' + order.trade_no);
                 return json({ adfree: true, status: 'paid' });
             }
-            return json({ adfree: false, status: 'pending', tradeNo: order.trade_no });
+            // 把 OEN 的實際狀態帶回去：前端才分得出「還在處理（charging）」
+            // 與「真的沒下文」——前者不該驚動管理員，後者才該。
+            return json({
+                adfree: false, status: 'pending', tradeNo: order.trade_no,
+                providerStatus: (tx && tx.status) || null,
+                providerMessage: (tx && tx.message) || null,
+            });
         }
 
         const info = await queryTradeInfo(cfg, order.trade_no);
