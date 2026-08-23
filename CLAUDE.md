@@ -19,6 +19,7 @@
 | `functions/` ＋ `js/paywall.js` | 去廣告付費牆（NT$100 一次買斷）。後端是 Cloudflare Pages Functions＋綠界金流＋D1；前端的廣告閘門在 `index.html`/`faq.html` 的 `<head>`。⚠️ 付費旗標**絕不能**放進 Firestore `users/{uid}`——那份文件用戶自己寫得動（見 `docs/project/paywall.md`） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
+| `functions/` | Firebase Cloud Functions（`notifyOnFeedback`：使用者送出意見回饋時即時 email／webhook 通知站長）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
 | `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成（後兩者由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify`） |
