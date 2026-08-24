@@ -384,12 +384,38 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    要在**站長自己的機器**上跑（本開發容器的 egress 政策擋掉 oen.tw，裝不了）。
    官方註明它屬開發測試階段、不可用於 Production，也不會再更新。
 
-3.5 **⚠️ OEN 正式環境的 IP 白名單（上線前必解的問題）**：業務告知正式環境要提供
-   **固定 IP** 讓應援設白名單才能呼叫 API。但我們的後端是 Cloudflare Pages Functions，
-   **出口 IP 不固定**（走 Cloudflare 共用 IP 池）。測試環境不受影響（不需綁 IP）。
-   解法優先順序：① 問應援可否改用 Cloudflare 官方公布的 IP 區段（https://www.cloudflare.com/ips/）
-   設白名單，或以 Bearer token 本身為準免綁 IP；② 都不行才考慮自架固定 IP 的轉發層（增加成本與故障點）。
-   **在這題有答案前不要排上線。**
+3.5 **OEN 正式環境的 IP 白名單（2026-08-24 應援已同意接受 Cloudflare 區段）**：
+   正式環境要設來源 IP 白名單，但我們的後端是 Cloudflare Pages Functions，
+   **出口 IP 不固定**（走 Cloudflare 共用 IP 池，實務上落在 `172.64.0.0/13`）。
+   測試環境不受此限。應援回覆**可接受 Cloudflare 官方公布的 outbound IP 區段**，
+   但提出顧慮：他們無從得知 Cloudflare 何時變更區段，若變更會導致我方被擋。
+
+   **風險評估**：
+   - Cloudflare 的區段清單極少變動，且有機器可讀來源可訂閱：
+     `https://api.cloudflare.com/client/v4/ips`（免驗證、回傳帶 `etag`）、
+     `https://www.cloudflare.com/ips-v4` / `ips-v6`。變更會事先公告。
+   - ⚠️ 但要誠實記著：那份清單官方定位是「Cloudflare 反向代理的 IP」，
+     Cloudflare **沒有正式保證** Workers/Pages Functions 的 `fetch` 出口
+     永遠落在該清單內。這是本方案的殘餘不確定性。
+   - **真的被擋時的後果分兩種，不是同一件事**：
+     | 被擋的呼叫 | 後果 | 嚴重度 |
+     |---|---|---|
+     | `POST /checkout` | 用戶連付款頁都開不了，**沒有扣款** | 可用性受損，不涉及金錢 |
+     | `GET /transactions/{id}` | 用戶**已扣款但權益開不了**（我們刻意不信任 webhook，一律回查） | 這才是痛點 |
+     後者已有既有安全網（見 2.4）：訂單留在 D1、自動通報管理員、事後可手動開通或退款，
+     不會出現「收了錢查無此人」的黑洞——但用戶體驗仍然很差，所以要靠監控在用戶之前發現。
+
+   **決定的作法**：接受 Cloudflare 區段，並由**我方承擔監控與通知責任**（正面回應
+   應援「無法追蹤變動」的顧慮）。待辦：
+   - [ ] 每日排程從 Cloudflare 端打一次 OEN API（查一筆已知交易），非 2xx／403 即通報站長
+   - [ ] 同一支排程比對 `api.cloudflare.com/client/v4/ips` 的 `etag`，變動即通報，
+         由站長主動告知應援更新白名單
+   （Pages Functions 沒有 cron handler，排程要靠外部觸發，例如 GitHub Actions 定時打
+   我方的健檢端點——重點是**請求必須從 Cloudflare 出去**才驗得到白名單。）
+
+   最後手段（目前不採用）：自架固定 IP 的轉發層（小型 VPS 約 US$5/月），
+   多一份成本與單點故障。Cloudflare 的 dedicated egress IP 屬 Cloudflare One／
+   Zero Trust 產品線，是給使用者端流量用的，**不適用** Workers/Pages Functions。
 
 3.6 **OEN 代開發票**：CRM 若開啟代開發票，建立交易時**必須**帶 userName＋userEmail，
    否則回 V0001 USER_NAME_AND_EMAIL_REQUIRED。目前程式碼**沒有帶**這兩欄
@@ -415,7 +441,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - [ ] 刪除測試期的 Deploy Hook 並重建（該 hook URL 在開發對話中傳遞過；
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
-   - [ ] IP 白名單問題已有答案（見 3.5）
+   - [x] ~~IP 白名單問題已有答案~~（2026-08-24 應援同意接受 Cloudflare 區段，見 3.5）
+   - [ ] 上線前建好白名單健檢排程（見 3.5 待辦），否則區段變更時只能等用戶客訴
    - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
