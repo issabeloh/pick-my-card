@@ -17,7 +17,8 @@ async function showCardDetail(cardId) {
     if (window.logEvent && window.firebaseAnalytics) {
         window.logEvent(window.firebaseAnalytics, 'view_card_detail', {
             card_id: cardId,
-            card_name: card.name
+            card_name: card.name,
+            surface: getAnalyticsSurface()
         });
     }
 

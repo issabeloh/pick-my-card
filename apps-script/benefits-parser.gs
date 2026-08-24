@@ -29,8 +29,9 @@
  * 使用方式（兩個入口，選單標籤已寫明吃哪個分頁、產出到哪個分頁）：
  *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知 → 4-待審核」
  *      會處理「2-變動通知」中狀態=待解析 的每一列
- *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A2（卡片提示貼 B2），
- *      選單 →「解析新戶活動：3-貼上原文 → 4-待審核」——取代原本貼給 GEM 的流程
+ *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A 欄（卡片提示貼 B 欄、
+ *      來源網址貼 C 欄），**一列＝一段原文，可一次貼多列**，選單 →「解析新戶活動：3-貼上原文
+ *      → 4-待審核」——取代原本貼給 GEM 的流程。D 欄「狀態」由程式回填，清空該格可重跑該列
  *
  * 審核流程：
  *   到「4-待審核（新戶活動）」分頁逐列檢查（AI 沒把握的列 needs_review=TRUE、附上它想問的問題），
@@ -48,7 +49,9 @@ const PARSER_CONFIG = {
   changelogMaxChars: 60,             // 「公開摘要」上限：一句話。超過＝站長沒改寫，整列跳過
   notifyEmail: '',                   // 留空 = 寄給你自己
   model: 'gemini-2.5-flash',         // 免費額度夠用；要更省可改 gemini-2.5-flash-lite
-  maxTextChars: 30000                // 送給 AI 的原文長度上限
+  maxTextChars: 30000,               // 送給 AI 的原文長度上限
+  maxRowsPerRun: 5,                  // 入口 B 一次最多解析幾列（Apps Script 單次 6 分鐘上限；剩下的再按一次選單接著跑）
+  statusCol: 4                       // 入口 B 輸入分頁的「狀態」欄＝D 欄（程式回填「已解析…」／「失敗：…」）
 };
 
 /************** 自訂選單 **************/
@@ -130,34 +133,105 @@ function parseInboxNewPromos() {
 }
 
 /************** 入口 B：解析「3-貼上原文（新戶活動）」分頁貼上的文字 **************/
+// ⚠️ 2026-08-20 修正：原本只讀 A2/B2/C2——貼了兩列也只解析第一列，其餘無聲無息被忽略
+//    （站長回報；跟 2026-08-05 新卡解析器修掉的是同一個坑，那時沒一起修這支）。
+//    現在會掃第 2 列到最後一列，**一列＝一段原文**（A 原文、B 卡片提示選填、C 來源網址選填），
+//    D 欄「狀態」記錄結果：
+//      「已解析 …」→ 下次執行自動跳過（要重跑就把該格清空）
+//      「失敗：…」→ 下次執行會自動重試
+//    單次執行最多 PARSER_CONFIG.maxRowsPerRun 列，沒跑完的再按一次選單接著跑。
 function parsePastedText() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
   let sheet = ss.getSheetByName(PARSER_CONFIG.inputSheet);
   if (!sheet) {
     sheet = ss.insertSheet(PARSER_CONFIG.inputSheet);
-    sheet.getRange('A1').setValue('活動原文（貼在 A2，整段貼一格）');
-    sheet.getRange('B1').setValue('卡片提示（選填，貼 B2；單卡填正式 id 如 yushan-unicard，多卡頁用逗號分隔如 febank-jaccard,febank-giftcard）');
-    sheet.getRange('C1').setValue('來源網址（選填，貼 C2）');
+    sheet.getRange('A1').setValue('活動原文（貼在 A 欄，整段貼一格；一列＝一段原文，可一次貼多列）');
+    sheet.getRange('B1').setValue('卡片提示（選填，貼同列 B 欄；單卡填正式 id 如 yushan-unicard，多卡頁用逗號分隔如 febank-jaccard,febank-giftcard）');
+    sheet.getRange('C1').setValue('來源網址（選填，貼同列 C 欄）');
+    sheet.getRange(1, PARSER_CONFIG.statusCol).setValue(PASTED_STATUS_HEADER);
     sheet.setFrozenRows(1);
-    SpreadsheetApp.getUi().alert('已建立「' + PARSER_CONFIG.inputSheet + '」分頁。把活動文字貼進 A2 後再執行一次。');
+    ui.alert('已建立「' + PARSER_CONFIG.inputSheet + '」分頁。把活動文字貼進 A2（多段就一列一段）後再執行一次。');
+    return;
+  }
+  ensurePastedInputStatusHeader_(sheet);
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    ui.alert('「' + PARSER_CONFIG.inputSheet + '」的 A2 是空的——先把活動原文貼進去');
+    return;
+  }
+  const rows = sheet.getRange(2, 1, lastRow - 1, PARSER_CONFIG.statusCol).getValues();
+
+  let doneCount = 0, skipped = 0, remaining = 0, textRows = 0;
+  let promoCount = 0, reviewCount = 0;
+  const results = [], failures = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const text = String(rows[i][0] || '').slice(0, PARSER_CONFIG.maxTextChars);
+    if (!text.trim()) continue;                       // 空列跳過（中間留白也不會中斷）
+    textRows++;
+
+    const status = String(rows[i][PARSER_CONFIG.statusCol - 1] || '').trim();
+    if (status.indexOf('已解析') === 0) { skipped++; continue; }   // 已解析過：清空 D 欄才會重跑
+    if (doneCount >= PARSER_CONFIG.maxRowsPerRun) { remaining++; continue; }
+
+    const cardHint = String(rows[i][1] || '').trim();
+    const link = String(rows[i][2] || '').trim();
+
+    try {
+      const promos = extractNewPromos_(text, cardHint);
+      writePromosToReview_(promos, '手動貼上 列 ' + rowNum + (link ? '｜' + link : ''), link);
+      const flagged = promos.filter(function (p) { return p.needs_review; }).length;
+      promoCount += promos.length;
+      reviewCount += flagged;
+
+      sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue(
+        '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') +
+        '｜' + promos.length + ' 個活動');
+      results.push('列' + rowNum + '：解析出 ' + promos.length + ' 個活動' +
+        (flagged ? '、其中 ' + flagged + ' 個 AI 沒把握' : '') +
+        (promos.length ? '' : '（AI 判斷這段沒有新戶活動）'));
+      doneCount++;
+    } catch (e) {
+      sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：' + e.message);
+      failures.push('列' + rowNum + '：' + e.message);
+    }
+  }
+
+  if (!textRows) {
+    ui.alert('「' + PARSER_CONFIG.inputSheet + '」的 A 欄沒有任何文字——先把活動原文貼進 A2');
     return;
   }
 
-  const text = String(sheet.getRange('A2').getValue() || '').slice(0, PARSER_CONFIG.maxTextChars);
-  const cardHint = String(sheet.getRange('B2').getValue() || '');
-  const link = String(sheet.getRange('C2').getValue() || '');
-  if (!text.trim()) {
-    SpreadsheetApp.getUi().alert('「' + PARSER_CONFIG.inputSheet + '」的 A2 是空的——先把活動原文貼進去');
-    return;
+  let msg = '這次解析了 ' + doneCount + ' 列（共 ' + textRows + ' 列有文字），' +
+    '得到 ' + promoCount + ' 個新戶活動' +
+    (reviewCount ? '（其中 ' + reviewCount + ' 個 AI 沒把握，標了 needs_review）' : '') + '\n\n' +
+    (results.length ? results.join('\n') + '\n\n' : '');
+  if (doneCount && !promoCount) {
+    msg += 'AI 判斷這些文字裡沒有新戶活動（若不對，補上同列 B 欄的卡片提示再試一次）\n';
   }
+  if (skipped) msg += '↷ 跳過 ' + skipped + ' 列：D 欄狀態已是「已解析」。要重跑那幾列，把 D 欄清空再按一次選單。\n';
+  if (remaining) msg += '⏳ 還有 ' + remaining + ' 列沒跑（單次上限 ' + PARSER_CONFIG.maxRowsPerRun +
+    ' 列，避免 Apps Script 6 分鐘逾時）——再按一次選單就會接著跑。\n';
+  if (failures.length) msg += '\n❌ 失敗（D 欄已記錄，下次執行會自動重試）：\n' + failures.join('\n') + '\n';
+  if (promoCount) msg += '\n請到「' + PARSER_CONFIG.reviewSheet + '」分頁審核（黃底列＝AI 沒把握）。';
 
-  const promos = extractNewPromos_(text, cardHint);
-  writePromosToReview_(promos, '手動貼上', link);
+  ss.toast('解析 ' + doneCount + ' 列、' + promoCount + ' 個活動' +
+    (remaining ? '，還剩 ' + remaining + ' 列' : ''), '解析完成', 8);
+  ui.alert(msg);
+}
 
-  const msg = promos.length
-    ? '解析出 ' + promos.length + ' 個活動，已寫進「' + PARSER_CONFIG.reviewSheet + '」'
-    : 'AI 判斷這段文字裡沒有新戶活動（若不對，補上卡片提示再試一次）';
-  SpreadsheetApp.getActiveSpreadsheet().toast(msg, '解析完成', 8);
+// 輸入分頁的「狀態」欄表頭（D 欄）。舊分頁只有 A/B/C 三欄表頭，補上這格才看得懂 D 欄在幹嘛
+const PASTED_STATUS_HEADER = '狀態（程式回填，清空該格可重跑該列）';
+
+// 舊的輸入分頁沒有 D 欄「狀態」表頭：補上（只寫表頭，資料一格不動）
+function ensurePastedInputStatusHeader_(sheet) {
+  const cell = sheet.getRange(1, PARSER_CONFIG.statusCol);
+  if (!String(cell.getValue() || '').trim()) {
+    cell.setValue(PASTED_STATUS_HEADER);
+  }
 }
 
 /************** 入口 C：處理變動通知（公開／封存／刪除，2026-08-15 改版） **************/

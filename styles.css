@@ -504,6 +504,171 @@ header {
     background: #fef2f2;
 }
 
+/* 刪除帳號入口（2026-08-20）：比登出更危險，所以視覺上更「冷」——預設灰字，
+   hover 才轉紅。登出用的是常態紅字，兩者刻意不同，避免在下拉裡看成同一類動作。 */
+.avatar-dropdown-danger {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.avatar-dropdown-danger svg {
+    color: #9ca3af;
+}
+
+.avatar-dropdown-danger:hover {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.avatar-dropdown-danger:hover svg {
+    color: #b91c1c;
+}
+
+/* ==========================================================================
+   刪除帳號與資料 Modal（2026-08-20）
+   隱私權政策第 8.1 節的自助刪除途徑。設計刻意「不好按」：紅色主鈕、確認文字
+   輸入、逐項列出會失去什麼。改版時不要把這些關卡當成阻力拿掉。
+   ========================================================================== */
+.delete-account-content {
+    max-width: 540px;
+}
+
+.da-lead {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #374151;
+}
+
+.da-lead strong {
+    color: #b91c1c;
+}
+
+.da-list-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.da-list {
+    margin: 0 0 16px;
+    padding-left: 20px;
+    color: #4b5563;
+    font-size: 13.5px;
+    line-height: 1.8;
+}
+
+.da-email {
+    font-weight: 600;
+    color: #1f2937;
+    word-break: break-all;
+}
+
+.da-note {
+    border-left: 3px solid #f59e0b;
+    background: #fffbeb;
+    border-radius: 0 6px 6px 0;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: #78350f;
+}
+
+.da-note a {
+    color: #92400e;
+    font-weight: 600;
+}
+
+.da-reauth-hint {
+    margin: 0 0 14px;
+    font-size: 12.5px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.da-reauth-hint:empty {
+    display: none;
+}
+
+.da-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.da-input:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.da-code {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    color: #b91c1c;
+}
+
+.da-status {
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 1em;
+}
+
+.da-status:empty {
+    display: none;
+}
+
+.da-status.loading {
+    color: #2563eb;
+}
+
+.da-status.error {
+    color: #b91c1c;
+}
+
+.da-status.success {
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* 危險動作主鈕：與 .save-btn/.cancel-btn 同一組幾何，只換配色。
+   disabled 態要明顯——確認文字沒打對之前它就該看起來按不下去。 */
+.danger-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #dc2626;
+    color: white;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.danger-btn:hover:not(:disabled) {
+    background: #b91c1c;
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+    transform: translateY(-1px);
+}
+
+.danger-btn:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 header h1 {
     font-size: 2.5rem;
     font-weight: 700;
@@ -1130,27 +1295,36 @@ main {
     gap: 4px;
 }
 
-/* Expand toggle button on chips */
+/* Expand toggle button on chips
+   2026-08-16：原本 7.6×11.2px（font-size .7rem + padding 0 1px）桌機手機都難點也難看清，
+   改成固定 22px 圓形按鈕＋1.05rem 字級；手機再放大到 26px（見下方 600px 斷點）。 */
 .tag-expand-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 1px;
-    color: #9ca3af;
-    font-size: 0.7rem;
+    padding: 0;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    color: #6b7280;
+    font-size: 1.05rem;
     line-height: 1;
-    transition: transform 0.2s, color 0.15s;
+    transition: transform 0.2s, color 0.15s, background 0.15s;
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 .tag-expand-btn:hover {
-    color: #4b5563;
+    color: #374151;
+    background: #e5e7eb;
 }
 
 .tag-expand-btn.expanded {
     transform: rotate(180deg);
-    color: #3b82f6;
+    color: #2563eb;
+    background: #dbeafe;
 }
 
 /* Merchants panel (collapsed by default) */
@@ -1163,7 +1337,9 @@ main {
     padding: 4px 10px;
     line-height: 1.5;
     max-width: 280px;
-    word-break: break-all;
+    /* 2026-08-16：原本 break-all 會把 trip.com 這種商家名從中間硬切成 tri/p.com，
+       改 anywhere——仍可在必要時斷行，但優先在頓號等正常斷點斷 */
+    overflow-wrap: anywhere;
 }
 
 .tag-merchants-panel.open {
@@ -1248,6 +1424,82 @@ main {
 
 .custom-option-delete:hover {
     background: #fee2e2;
+}
+
+/* ============================================
+   管理快捷選項 modal — 手機兩欄化（2026-08-16）
+   問題：chip 寬度隨名稱長度浮動（實測 135–194px），iPhone 13（390px）容器可用內寬只有
+   287px，兩顆＋gap 必須 ≤287 才排得下，結果 28 個預設選項只有 4 顆湊得成兩欄。
+   解法：≤600px 改固定兩欄 grid——欄寬由容器決定、長名在 chip 內折行，
+   再把 modal/modal-body/容器內距收窄，把每欄從 139px 拉到 ~157px。
+   ============================================ */
+@media (max-width: 600px) {
+    #manage-quick-options-modal .modal-content {
+        width: calc(100% - 20px);
+    }
+
+    #manage-quick-options-modal .modal-body {
+        padding: 16px 12px;
+    }
+
+    .selected-tags-container,
+    .available-tags-container,
+    .custom-options-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+        gap: 8px;
+    }
+
+    .selected-tags-container,
+    .available-tags-container {
+        padding: 8px;
+    }
+
+    /* grid 欄內：wrapper 撐滿欄寬，min-width:0 才允許 chip 折行而不是撐爆欄位 */
+    .tag-wrapper,
+    .custom-option-wrapper {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .tag-item,
+    .custom-option-item {
+        width: 100%;
+        gap: 1px;
+        padding: 6px 4px;
+        border-radius: 12px;
+    }
+
+    /* 欄寬固定後字級要收一級，否則 6 字名稱（如「兩大便利商店」）會折成 4+2 行 */
+    .tag-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 0.76rem;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
+    }
+
+    .tag-icon {
+        font-size: 0.9rem;
+    }
+
+    /* 展開箭頭在手機再放大一級（22 → 24px） */
+    .tag-expand-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 1.1rem;
+    }
+
+    /* 展開商家清單時該列橫跨兩欄，免得 ~157px 窄欄把商家擠成一長條 */
+    .tag-wrapper.panel-open,
+    .custom-option-wrapper.panel-open {
+        grid-column: 1 / -1;
+    }
+
+    .tag-merchants-panel {
+        max-width: 100%;
+    }
 }
 
 /* Custom option form */
@@ -2690,6 +2942,12 @@ input[type="number"]:focus {
 
 .matched-merchant strong {
     color: #3b82f6;
+}
+
+/* 「活動期間 / 條件」在 results-display.js 是用 <small> 包的，瀏覽器預設 0.83em 讓它
+   縮到約 10px 讀不清。2026-08-16 用戶定案：與同一區塊的「匹配項目」同字級。 */
+.matched-merchant small {
+    font-size: inherit;
 }
 
 /* 滿額/未滿門檻（搜尋結果卡片）：重要條件，獨立一行置於匹配項目上方、
@@ -5339,6 +5597,14 @@ mark.cashback-search-hl {
     color: white;
 }
 
+/* 隱私權政策：同一組膠囊，但刻意不給品牌色。它是法務連結不是行銷連結——
+   要找得到、不要搶戲。也因此文字不帶 emoji 與 ↗（其餘站內連結都有）。 */
+.social-link.privacy:hover {
+    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
+    border-color: transparent;
+    color: white;
+}
+
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -5405,6 +5671,28 @@ mark.cashback-search-hl {
 
 .auth-btn.secondary:hover {
     background: #e5e7eb;
+}
+
+/* 法務頁尾（2026-08-20 新增）：全站每頁都要有的隱私權政策入口。
+   AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的告知義務
+   也需要常設入口，所以這條 bar 是「每一頁都要出現」的東西，不是裝飾。 */
+.site-legal-footer {
+    max-width: 1200px;
+    margin: 12px auto 20px;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.site-legal-footer a {
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.site-legal-footer a:hover {
+    color: #2563eb;
+    text-decoration: underline;
 }
 
 /* Data Update Footer */
@@ -5795,8 +6083,33 @@ mark.cashback-search-hl {
 }
 
 /* My Mappings Modal */
+/* 單一捲軸原則：.modal-content 預設 overflow-y:auto，加上 .mappings-list 自己的
+   max-height+overflow 會變成兩層捲軸（外層要先捲到底，才看得到內層最後幾筆）。
+   這裡把 modal 改成 flex 直欄：標題與搜尋列固定，只有配卡清單捲。 */
 #my-mappings-modal .modal-content {
     max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#my-mappings-modal .modal-header,
+#my-mappings-modal .modal-body > .form-group {
+    flex-shrink: 0;
+}
+
+#my-mappings-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* 沒有這行，flex 子項不會收縮，內層永遠捲不起來 */
+    overflow: hidden;
+}
+
+#my-mappings-modal .mappings-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none; /* 蓋掉 .mappings-list 的 500px 上限，改由 flex 決定 */
+    overscroll-behavior: contain;
 }
 
 /* 用 #my-mappings-modal 提高特異性——全域 input[type="text"]（padding 16px、
@@ -5854,6 +6167,29 @@ mark.cashback-search-hl {
     opacity: 0.5;
 }
 
+/* 配卡讀取失敗時的重試按鈕（空狀態四分流之一，見 js/spending-mappings.js
+   renderMappingsList 的空清單分支） */
+.mappings-retry-btn {
+    margin-top: 16px;
+    padding: 8px 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mappings-retry-btn:hover {
+    background: #f3f4f6;
+}
+
+.mappings-retry-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
    一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
    的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
@@ -5900,25 +6236,13 @@ mark.cashback-search-hl {
     padding: 2px;
 }
 
-/* ⓘ 與全站其他 peek 按鈕同款：只有字元自帶的圓圈，不畫外框 */
-.mapping-peek-btn {
-    flex: none;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #6b7280;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    border-radius: 50%;
-    transition: color 0.15s ease, background 0.15s ease;
-}
-
-.mapping-peek-btn:hover {
-    color: #1e40af;
-    background: #eef2ff;
+/* 我的配卡組合的「卡片詳情」鈕：與結果卡、精選活動 modal 同一顆藍膠囊
+   （HTML 直接掛 .card-detail-peek-btn），這裡只把標籤覆蓋成「卡片詳情」
+   ——做法比照 .spotlight-modal-actions .card-detail-peek-btn::after。
+   .mapping-peek-btn 本身不再帶樣式，純粹當 spending-mappings.js 綁事件的掛勾。
+   （2026-08-18 之前是一顆灰色圓形 ⓘ，與另外兩處不一致） */
+.mapping-peek-btn::after {
+    content: '卡片詳情';
 }
 
 .mapping-item {
@@ -8037,6 +8361,94 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     font-size: 0.8rem;
 }
 
+/* 手機版「新戶活動」pill（2026-08-18）
+   為什麼要有：桌機的站內導覽是 .header-page-links（純文字），它在 ≤768px 被隱藏，
+   等於手機從 header 完全進不去 /promos——只剩側選單抽屜裡那張卡。這顆 pill 補上
+   手機的直接入口。
+   位置：DOM 上排在 .auth-section 之前，靠 .header-content 的 flex:1 把它推到右側、
+   緊貼頭像左邊。刻意不置中（站長指定），也不用 margin-left:auto——手機的
+   .header-content 已經是 flex:1，再加 auto margin 是多餘的。
+   外觀：半透明白 pill。深藍 header 上不用亮黃底——2026-07-16 站長已否決過
+   「黃 pill 在深藍 bar 上色彩太重」，這裡沿用那個結論。
+   桌機（≥769px）不顯示：那邊已經有 .header-page-links 的「新戶活動」，兩個並存
+   等於同一個入口出現兩次。 */
+.header-promos-pill {
+    display: none;
+    position: relative;
+    flex-shrink: 0;
+    align-items: center;
+    /* 高度對齊右邊的頭像鈕：.avatar-btn 是 3px padding + 28px 圖示 + 3px padding
+       + 上下各 1px 框 = 36px。用 min-height 而非 height，字級被使用者放大時還能撐開。
+       ⚠️ .avatar-btn 或 .guest-avatar-icon 的尺寸改了，這個數字要跟著改。 */
+    min-height: 36px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.header-promos-pill:hover,
+.header-promos-pill:active {
+    background: rgba(255, 255, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .header-promos-pill {
+        display: inline-flex;
+    }
+}
+
+/* 小煙花：與桌機 header 的 .header-nav-link--sparkle 共用同一組 @keyframes
+   （nav-sparkle-burst / nav-sparkle-burst-alt，定義在本檔前段「導覽」區塊）。
+   發射點錨在 pill 的左右外緣、垂直置中（桌機那組是 top:12px 對齊文字中線，
+   這裡 pill 有自己的高度，用 top:50% 才會落在中線）。
+   ::before 加半週期 delay，兩側交錯綻放——同桌機的做法。
+   ⚠️ reduced-motion 的停用規則必須排在這些動畫定義「之後」（同 specificity 靠
+   源碼順序勝出）；2026-07-17 手機抽屜煙花就是踩過這個坑（見 .sidebar-promos-banner
+   附近的註解）。 */
+.header-promos-pill::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -7px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst 2.4s ease-out infinite;
+}
+
+.header-promos-pill::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -7px;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    animation: nav-sparkle-burst-alt 2.4s ease-out infinite;
+    animation-delay: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-promos-pill::after,
+    .header-promos-pill::before {
+        content: none;
+        animation: none;
+    }
+}
+
 /* ============================================
    Mobile header adjustments
    ============================================ */
@@ -8386,6 +8798,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
 .spotlight-dots {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 7px;
     margin-top: 14px;
@@ -8672,4 +9085,90 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         display: none;
     }
 
+}
+
+/* ============================================================
+   推薦比較工具列（.mc-related，2026-08-18）
+   首頁與 merchant/*.html 共用；HTML 內容由 tools/build-merchant-pages.js
+   在部署時生成（首頁列全部商家頁，商家頁各自排除自己）。
+
+   刻意不是卡片、不是內容區：站長定調「它是一個工具欄，有空才會看看的地方，
+   UI 要區隔開來」——所以灰底出血、字級小、藍字底線＋箭頭，一眼看得出按了會跳頁。
+   空的 <nav>（還沒生成、或只有一個商家頁時）靠 :empty 整條收起來，不留空白條。
+   ============================================================ */
+.mc-related {
+    padding: 11px 30px;
+    background: #f3f4f6;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.mc-related:empty {
+    display: none;
+}
+
+.mc-related-label {
+    flex: none;
+    font-weight: 700;
+    color: #4b5563;
+}
+
+.mc-related-label::after {
+    content: "：";
+}
+
+/* 項目之間留得比項目內寬，否則行末的「→」會被讀成下一項的開頭 */
+.mc-related-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 26px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mc-related-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    text-decoration: none;
+}
+
+.mc-related-name {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: 500;
+}
+
+.mc-related-link:hover .mc-related-name {
+    color: #1e3a8a;
+}
+
+.mc-related-meta {
+    color: #6b7280;
+}
+
+.mc-related-go {
+    color: #1d4ed8;
+}
+
+@media (max-width: 768px) {
+    /* 標籤自成一列，連結才不會被擠成一條窄欄 */
+    .mc-related {
+        flex-direction: column;
+        padding: 11px 16px;
+        gap: 6px;
+    }
+
+    .mc-related-list {
+        flex-direction: column;
+        gap: 8px;
+    }
 }

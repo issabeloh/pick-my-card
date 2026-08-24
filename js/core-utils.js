@@ -5,6 +5,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - Debug 日誌閘門            → "Debug 日誌閘門"
  *  - 全域狀態                  → "Global variables"
+ *  - GA4 版位標記              → "getAnalyticsSurface"
  *  - Body scroll lock          → "disableBodyScroll"
  *  - 全域 loading overlay      → "loadingOverlay"
  *  - WebView 內建瀏覽器警告     → "isInAppBrowser" / "showWebViewWarning"
@@ -38,6 +39,11 @@ let cardsInComparison = new Set();
 let myOwnedCards = new Set();
 let userSelectedPayments = new Set();
 let userSpendingMappings = []; // 用戶的消費配卡表
+// 配卡表最近一次載入的結果：'guest'（未登入／尚未為登入者載過）/ 'ok'（雲端讀取成功，
+// 空陣列＝雲端真的沒資料）/ 'error'（雲端讀不到，畫面上的空陣列不可信）。
+// 存在理由：空清單過去在三種情況下長得一模一樣（沒登入 / 讀取失敗 / 真的沒配卡），
+// iPhone 桌面 App 回報「配卡不見了」時無從分辨。見 js/spending-mappings.js。
+let mappingsLoadState = 'guest';
 let auth = null;
 let db = null;
 let cardsData = null;
@@ -57,6 +63,24 @@ try {
     isEmbedMode = new URLSearchParams(location.search).get('embed') === '1';
 } catch (e) {
     // URLSearchParams 不支援時維持 false（退回一般模式，不影響核心功能）
+}
+
+// ========== GA4 版位標記（2026-08-20）==========
+// 同一支事件可能來自三種脈絡，但 page_location 都指向 `/`，在 GA4 裡分不開：
+//  - promos_embed：/promos 用 iframe 載 `/?start&embed=1` 開卡片詳情。詳情瀏覽與
+//    申辦點擊全被記成首頁的，/promos 因此看起來「0 申辦」——那是歸因問題不是行為。
+//  - merchant_page：商家落地頁與 `?merchant=` 深連結開頁就自動試算（設計如此），
+//    那筆 calculate_cashback 不是用戶按計算鍵，混在一起會高估試算率。
+// ⚠️ `surface` 要在 GA4 後台註冊成自訂維度才查得到，且 GA4 不回填——沒註冊的期間永遠是空的。
+function getAnalyticsSurface() {
+    try {
+        if (isEmbedMode) return 'promos_embed';
+        if (window.__PMC_MERCHANT__) return 'merchant_page';
+        if (new URLSearchParams(location.search).get('merchant')) return 'merchant_page';
+    } catch (e) {
+        // URLSearchParams 不支援時退回 'site'——標記不準不值得擋掉事件本身
+    }
+    return 'site';
 }
 
 // Body scroll lock utilities (compensate scrollbar width to prevent layout shift).

@@ -892,18 +892,34 @@ if (faqSheet) {
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
   // 同時餵給：generatePromosPageHtml（可見戳章＋JSON-LD dateModified）與 sitemap 的 promos
   // lastmod，三處同源一致（見 data-pipeline.md 第 9 節）。
-  const promoSig = pmcPromoSignature_(newCardholderPromos);
-  const scriptProps = PropertiesService.getScriptProperties();
-  const prevPromoSig = scriptProps.getProperty('PROMOS_LAST_SIG');
-  const prevPromoDate = scriptProps.getProperty('PROMOS_LAST_DATE');
-  let promosUpdatedIso;
-  if (prevPromoSig === promoSig && prevPromoDate) {
-    promosUpdatedIso = prevPromoDate;
-  } else {
-    promosUpdatedIso = pmcTodayISO_();
-    scriptProps.setProperty('PROMOS_LAST_SIG', promoSig);
-    scriptProps.setProperty('PROMOS_LAST_DATE', promosUpdatedIso);
-  }
+  // （2026-08-16 起共用 pmcStampedDate_，key 沿用 PROMOS_*，語義與存的屬性都不變）
+  const promosUpdatedIso = pmcStampedDate_('PROMOS', pmcPromoSignature_(newCardholderPromos));
+
+  // 首頁（/）的 sitemap lastmod：首頁內容整份由 cards.data 前端渲染（卡片數、精選活動、
+  // 搜尋結果都是），所以「首頁變了沒」等同「匯出資料變了沒」。指紋刻意排除 jsonContent
+  // 第一個欄位 lastUpdated——那是匯出當下的時間戳，每次匯出必變，含進來指紋就永遠不相等，
+  // 等於退回「天天蓋今天」。其餘欄位與 jsonContent 同一份資料，順序不影響（stable stringify）。
+  // 商家落地頁清單（MerchantPages 工作表）。只是「要生哪些頁、文案是什麼」，
+  // 頁面本體由 Cloudflare Pages build 時的 tools/build-merchant-pages.js 生成。
+  const merchantPages = readMerchantPages();
+
+  const homeUpdatedIso = pmcStampedDate_('HOME', pmcHashString_(pmcStableStringify_({
+    cards: cards,
+    payments: payments,
+    quickSearchOptions: quickSearchOptions,
+    merchantPayments: merchantPayments,
+    faq: faqList,
+    announcements: announcements,
+    searchHints: searchHints,
+    searchExclusions: searchExclusions,
+    benefits: benefits,
+    referralLinks: referralLinks,
+    cashbackSites: cashbackSites,
+    newCardholderPromos: newCardholderPromos,
+    cardApplyCtas: cardApplyCtas,
+    spotlights: spotlights,
+    merchantPages: merchantPages
+  })));
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
   // 掛進同一次 GitHub commit（見 publishToGitHub）
@@ -930,7 +946,8 @@ if (faqSheet) {
   cashbackSites: cashbackSites,
   newCardholderPromos: newCardholderPromos,
   cardApplyCtas: cardApplyCtas,
-  spotlights: spotlights
+  spotlights: spotlights,
+  merchantPages: merchantPages
   }, null, 2);
 
 
@@ -939,7 +956,7 @@ if (faqSheet) {
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
-  const version = publishToGitHub(encoded, promosPageHtml, undefined, promosUpdatedIso);
+  const version = publishToGitHub(encoded, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso);
 
   ui.alert(
     '✅ 匯出完成',
@@ -1426,6 +1443,61 @@ function readReferralLinks() {
 }
 
 // ========== 讀取 Highlights 資料 ==========
+// 商家落地頁清單（MerchantPages 工作表，2026-08-16 新增）。工作表不存在＝回傳空陣列，
+// 此時 tools/build-merchant-pages.js 會退回 tools/merchant-pages.fallback.json（過渡用）。
+//
+// 欄位：
+//   slug         URL 用的字串（/merchant/<slug>，中文會自動百分比編碼）
+//   merchant     餵給搜尋引擎的「搜尋詞」，必須跟站上搜得到的商家一致（如 LinePay）
+//   displayName  頁面上顯示的名稱，留空＝同 merchant（如 merchant=LinePay → 顯示 LINE Pay）
+//   title        <title> 與 og:title，整句自己寫
+//   description  meta description 與 og:description
+//   active       FALSE 就不生成該頁（也不會進 sitemap）
+//   order        排序用，非必要
+//
+// ⚠️ 改了任何一欄，下次匯出後 Cloudflare Pages build 會重生該頁；slug 改掉等於換網址，
+// 舊網址會變 404，非必要別動（要動就自己去 GSC 提交新網址）。
+function readMerchantPages() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('MerchantPages');
+  if (!sheet) {
+    Logger.log('ℹ️ 找不到 MerchantPages 工作表——商家頁改用 repo 的 fallback 清單');
+    return [];
+  }
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+
+  const headers = data[0];
+  const str = (row, field) => {
+    const val = getValue(row, headers, field);
+    return val !== null && val !== undefined && val !== '' ? String(val).trim() : '';
+  };
+  const pages = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const slug = str(row, 'slug');
+    const merchant = str(row, 'merchant');
+    if (!slug || !merchant) continue; // slug 或搜尋詞缺一就不是有效的一列
+    const activeRaw = getValue(row, headers, 'active');
+    pages.push({
+      slug: slug,
+      merchant: merchant,
+      displayName: str(row, 'displayName') || merchant,
+      title: str(row, 'title'),
+      description: str(row, 'description'),
+      // 站長手寫的正文 HTML（選填）。信任層級同 promos：直接烤進商家頁、不 escape，
+      // 所以這欄只能由站長自己填，不接受任何外部來源的內容。
+      bodyHtml: str(row, 'bodyHtml'),
+      order: parseFloat(getValue(row, headers, 'order')) || 999,
+      // 空白＝啟用（新增一列時不必特地填 TRUE）；只有明確填 FALSE 才關掉
+      active: !(activeRaw === false || String(activeRaw).toUpperCase() === 'FALSE')
+    });
+  }
+  pages.sort(function (a, b) { return a.order - b.order; });
+  Logger.log('✅ 讀取 ' + pages.length + ' 筆 MerchantPages 資料');
+  return pages;
+}
+
 function readHighlights() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Highlights');
@@ -1755,12 +1827,33 @@ function pmcStableStringify_(v) {
 // djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
 function pmcPromoSignature_(promos) {
   const list = (promos || []).map(pmcStableStringify_).sort();
-  const payload = '[' + list.join(',') + ']';
+  return pmcHashString_('[' + list.join(',') + ']');
+}
+
+// djb2 雜湊（原本內嵌在 pmcPromoSignature_，2026-08-16 抽出共用）：配 Math.imul 固定
+// 在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
+function pmcHashString_(payload) {
   let h = 5381;
-  for (let i = 0; i < payload.length; i++) {
-    h = (Math.imul(h, 33) ^ payload.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < String(payload).length; i++) {
+    h = (Math.imul(h, 33) ^ String(payload).charCodeAt(i)) >>> 0;
   }
   return String(h);
+}
+
+// 「內容真的變動時才前進的日期」通用版（2026-08-16 從 promos 的做法抽出）。
+// 指紋與日期成對存在 Script Properties（`<KEY>_LAST_SIG` / `<KEY>_LAST_DATE`）：
+// 指紋與上次相同 → 沿用上次那天；不同或第一次 → 蓋今天並寫回。
+// 這是 sitemap lastmod 的唯一正確來源：每次匯出都蓋今天等於對 Google 天天喊
+// 「我更新了」，內容其實沒動，久了 Google 反而不信任 lastmod、降低重爬效率。
+function pmcStampedDate_(key, signature) {
+  const props = PropertiesService.getScriptProperties();
+  const prevSig = props.getProperty(key + '_LAST_SIG');
+  const prevDate = props.getProperty(key + '_LAST_DATE');
+  if (prevSig === signature && prevDate) return prevDate;
+  const today = pmcTodayISO_();
+  props.setProperty(key + '_LAST_SIG', signature);
+  props.setProperty(key + '_LAST_DATE', today);
+  return today;
 }
 
 function pmcSlug_(s) {
@@ -2256,7 +2349,7 @@ function pmcPageTemplate_(o) {
 '  <div class="promos-search-box">\n' +
 '    <div class="promos-search-input-wrap">\n' +
 '      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
-'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱" aria-label="搜尋卡片名稱">\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">\n' +
 '      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
 '    </div>\n' +
 '  </div>\n' +
@@ -2325,17 +2418,6 @@ o.cardsHtml + '\n' +
 // 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
 '<div class="social-media-footer">\n' +
 '  <div class="social-media-container">\n' +
-'    <div class="explore-section">\n' +
-'      <p class="social-media-title">探索更多</p>\n' +
-'      <div class="social-media-links">\n' +
-'        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
-'          <span class="social-text">常見問題 FAQ ↗</span>\n' +
-'        </a>\n' +
-'        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
-'          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
-'        </a>\n' +
-'      </div>\n' +
-'    </div>\n' +
 '    <div class="social-section">\n' +
 '      <p class="social-media-title">追蹤我們</p>\n' +
 '      <div class="social-media-links">\n' +
@@ -2354,7 +2436,24 @@ o.cardsHtml + '\n' +
 '        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'  </div>\n' +
+'      <div class="explore-section">\n' +
+'      <p class="social-media-title">探索更多</p>\n' +
+'      <div class="social-media-links">\n' +
+'        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
+'          <span class="social-text">常見問題 FAQ ↗</span>\n' +
+'        </a>\n' +
+'        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
+'          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
+'        </a>\n' +
+'        <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。\n' +
+'             AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的\n' +
+'             告知義務也需要常設入口——新增頁面時記得一起帶上。 -->\n' +
+'        <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">\n' +
+'            <span class="social-text">隱私權政策</span>\n' +
+'        </a>\n' +
+'      </div>\n' +
+'    </div>\n' +
+'</div>\n' +
 '</div>\n' +
 '\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到
@@ -2426,7 +2525,7 @@ const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
 const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
@@ -2444,15 +2543,17 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
     commitFileToGitHub('promos.html', promosPageHtml, `${skip}Update promos.html (${version})`, token);
   }
 
-  // 商家靜態頁（top-N SEO 落地頁，見 generateMerchantPageHtml_）——選填
-  (merchantPages || []).forEach(function(m) {
-    commitFileToGitHub('merchant/' + m.slug + '.html', m.html, `${skip}Update merchant/${m.slug}.html (${version})`, token);
-  });
+  // 商家落地頁的 HTML 不在這裡生成（2026-08-16 改）：那些頁是 index.html 的複製品，
+  // 若由 Apps Script 生成，等於要在 Sheets 腳本裡再存一份 index.html 的版面——就是第三份
+  // 會走鐘的副本。改成 Cloudflare Pages build 時跑 tools/build-merchant-pages.js，
+  // 從 repo 當下的 index.html ＋ cards.data 現場組出來。這裡只負責把 merchantPages
+  // 清單放進 cards.data（上面的 jsonContent），讓 build 端知道要生哪幾頁。
 
-  // sitemap.xml 每次匯出重生。promos 的 lastmod 用 promosUpdatedIso（只在活動內容真的變動
-  // 時才前進），不是每次匯出都蓋今天——先前每次都蓋今天等於對 Google 天天喊「我更新了」，
-  // 內容其實沒動，久了 Google 反而不信任 lastmod、降低重爬效率。商家頁仍用當天（另案）。
-  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
+  // sitemap.xml 每次匯出重生。所有 lastmod 都只在「該頁內容真的變動」時才前進（2026-08-16
+  // 起商家頁也比照辦理，先前每次匯出都蓋今天＝對 Google 天天喊「我更新了」，內容其實沒動，
+  // 久了 Google 反而不信任 lastmod、降低重爬效率）：promos → promosUpdatedIso、
+  // 首頁 → homeUpdatedIso（cards.data 內容指紋）、商家頁 → 見 generateSitemapXml_。
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
 
   // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
   commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
@@ -2460,28 +2561,35 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
   return version;
 }
 
-// 試水溫階段手動維護的商家頁 slug：生成器尚未移植前，這些頁是手動 commit 的靜態檔，
-// 沒有進 merchantPages。列在這裡讓每次匯出重生的 sitemap 仍包含它們（否則匯出會把
-// 它們從 sitemap 移除）。生成器正式上線、改由 merchantPages 提供後，把這個陣列清空即可。
-const MERCHANT_PILOT_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華航空', '中油'];
+// MerchantPages 工作表還沒建立時的退路：沒有這個清單，sitemap 會把現有 6 頁整組移除。
+// 工作表建好之後這個陣列就不再被用到（但別急著刪，它是工作表被誤刪時的安全網）。
+// 與 tools/merchant-pages.fallback.json 是同一份清單，兩邊要一致。
+const MERCHANT_FALLBACK_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華航空', '中油'];
 
-// 產生 sitemap.xml 全文。landing/faq 不隨匯出變動 → lastmod 維持固定日期（改版時
-// 更新這裡的常數）；promos 用 promosUpdatedIso（活動內容真的變動時才前進，沒傳就退回今天）；
-// 商家頁每次匯出都可能變 → 用匯出當天日期。日期一律走 pmcTodayISO_() 的台北時區。
-function generateSitemapXml_(merchantPages, promosUpdatedIso) {
+// 產生 sitemap.xml 全文。lastmod 一律是「該頁內容最後真的變動的日期」，不是匯出日期：
+//  - landing/faq：不隨匯出變動 → 固定日期常數（改版時更新這裡）
+//  - 首頁 /：homeUpdatedIso（cards.data 內容指紋，首頁內容全由它渲染）
+//  - promos：promosUpdatedIso（活動內容指紋，與頁面可見戳章／JSON-LD dateModified 同源）
+//  - 商家頁：同樣用 homeUpdatedIso。那些頁＝index.html 版面 ＋ cards.data 算出來的卡片
+//    清單，內容會變的來源就是 cards.data，與首頁同一個訊號（2026-08-16 改；在那之前是
+//    每次匯出蓋當天，等於對 Google 天天喊更新，久了 lastmod 就不被信任）
+// 沒傳的日期一律退回今天（Node harness／第一次生成）。日期都走 pmcTodayISO_() 台北時區。
+function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
   const today = pmcTodayISO_();
-  const promosLastmod = promosUpdatedIso || today;
+  const merchantLastmod = homeUpdatedIso || today;
   const urls = [
-    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-07-12' },
-    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-07-12' },
-    { loc: SITE_ORIGIN + '/promos', lastmod: promosLastmod }
+    { loc: SITE_ORIGIN + '/', lastmod: homeUpdatedIso || today },
+    { loc: SITE_ORIGIN + '/landing', lastmod: '2026-08-16' },
+    { loc: SITE_ORIGIN + '/faq', lastmod: '2026-08-16' },
+    { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
-  // 商家頁 slug：試水溫手動清單 + 生成器產出（merchantPages），去重後輸出
-  const slugSet = {};
-  MERCHANT_PILOT_SLUGS.forEach(function(s) { slugSet[s] = true; });
-  (merchantPages || []).forEach(function(m) { if (m && m.slug) slugSet[m.slug] = true; });
-  Object.keys(slugSet).forEach(function(s) {
-    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: today });
+  // 商家頁清單以 MerchantPages 工作表為準（active=FALSE 的不收）；工作表不存在才用退路清單
+  const active = (merchantPages || []).filter(function (m) { return m && m.slug && m.active !== false; });
+  const slugs = active.length
+    ? active.map(function (m) { return m.slug; })
+    : MERCHANT_FALLBACK_SLUGS;
+  slugs.forEach(function(s) {
+    urls.push({ loc: SITE_ORIGIN + '/merchant/' + encodeURIComponent(s), lastmod: merchantLastmod });
   });
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';

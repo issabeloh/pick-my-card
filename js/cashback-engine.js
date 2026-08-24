@@ -52,7 +52,8 @@ async function calculateCashback() {
         window.logEvent(window.firebaseAnalytics, 'calculate_cashback', {
             merchant: merchantValue,
             amount: amount,
-            has_match: currentMatchedItem ? true : false
+            has_match: currentMatchedItem ? true : false,
+            surface: getAnalyticsSurface()
         });
     }
 
@@ -1480,7 +1481,7 @@ function displayReferralLink(searchedItem) {
         <div class="referral-link-content">
             <span class="referral-link-icon">🎁</span>
             <span class="referral-link-text">${escapeHtml(matchedReferral.description)}</span>
-            ${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+            ${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="sponsored noopener noreferrer" class="referral-link-button">
                 前往註冊 →
             </a>` : ''}
         </div>

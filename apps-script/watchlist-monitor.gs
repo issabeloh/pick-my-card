@@ -14,6 +14,8 @@
  *                （2026-07-31 起多三欄「公開摘要／公開卡片／公開」，給選單
  *                 「發布變動紀錄」用。**舊分頁不用刪**：缺的表頭會由
  *                 ensureInboxPublishColumns_ 自動補在最右邊、舊內容原封不動）
+ *                （2026-08-20 再多一欄「所屬活動」＝這次變動是哪一檔活動底下的，同樣由
+ *                 ensureInboxPublishColumns_ 自動補；舊列留空，那時 AI 沒回過這個值）
  *                2026-08-15 起：欄序可以自己拖（程式照第一列的**欄名**對位，見 INBOX_HEADERS），
  *                每輪監控結尾會畫一條分隔線，純版面/文案的變動預設不寫進來（skipCosmeticRows）。
  *                分頁太長就在「公開」欄打「封存」或「刪除」，按選單「處理變動通知」一次收掉
@@ -110,7 +112,7 @@ function findInboxActionCol_(headers) {
 
 const INBOX_HEADERS = [
   '日期時間', 'card_id', '銀行',
-  '實質變動', 'AI摘要', '變動類型', '信心',
+  '實質變動', '所屬活動', 'AI摘要', '變動類型', '信心',
   '狀態', '公開摘要', '公開卡片', INBOX_ACTION_HEADER,
   '網址', '變動段落', '舊文字', '新文字'
 ];
@@ -118,7 +120,7 @@ const INBOX_HEADERS = [
 // 新建分頁時套的欄寬（沒列到的欄不動）。巨無霸文字欄給窄寬度，反正是給程式讀的
 const INBOX_COL_WIDTHS = {
   '日期時間': 140, 'card_id': 150, '銀行': 90,
-  '實質變動': 70, 'AI摘要': 320, '變動類型': 110, '信心': 50,
+  '實質變動': 70, '所屬活動': 220, 'AI摘要': 320, '變動類型': 110, '信心': 50,
   '狀態': 90, '公開摘要': 320, '公開卡片': 150,
   [INBOX_ACTION_HEADER]: 140,   // 欄名變長了，給得下八個字的寬度
   '網址': 200, '變動段落': 110, '舊文字': 110, '新文字': 110
@@ -636,6 +638,11 @@ function classifyDiff_(changedText, newFullText, cardId, bank, oldFullText, refi
       '    ✅ 新增機場貴賓室權益：〈內容〉',
       'S6. 有數字一律寫「X→Y」（如 上限 300→500）。material=false 就只寫「純版面/文案調整或改寫，回饋未變」一句，不必列細節。',
       'S7. 結尾不加句號。',
+      // scope＝「這段字是哪一檔活動底下的」。沒有它，站長收到「指定行動支付回饋條件變嚴格」
+      // 這種摘要，還得自己開官網翻是哪一檔活動——2026-08-20 站長回報後補的欄位。
+      'scope：這次變動位於頁面上的哪一檔活動／哪個區塊。**照抄官網原文的標題**（如「【新申辦加碼】指定行動支付 +2%」「新戶指定行動支付最高享20%現金回饋」「基本回饋」），不要自己另外命名。',
+      'scope 找法：在【新版全文】裡往上找這段字最靠近的活動標題；同一頁通常有好幾檔活動與注意事項，注意事項要歸到它所屬的那一檔活動（如「第六條 加碼回饋『指定行動支付』」屬於上方那檔活動的注意事項，就寫那檔活動的標題）。',
+      'scope 特例：變動橫跨多檔活動 → 寫主要那一檔再加「等」；頁尾樣板/導覽列/年費說明這類不屬於任何活動 → 寫「非活動區塊」；真的判斷不出來 → 寫「未標明」。scope 結尾不加句號，不要重複寫進 summary。',
       '不確定 → material=true、confidence=低（寧可誤報不漏報）。',
       cardId ? ('卡片：' + cardId + (bank ? '（' + bank + '）' : '')) : ''
     ].join('\n');
@@ -643,11 +650,12 @@ function classifyDiff_(changedText, newFullText, cardId, bank, oldFullText, refi
       type: 'OBJECT',
       properties: {
         material: { type: 'BOOLEAN' },
+        scope: { type: 'STRING' },
         summary: { type: 'STRING', description: '第一行＝一句話重點（會被拿去預填公開摘要）；第二行起＝具體名單/條件。禁止用「多個/若干/部分」代替實際名稱，見 S1~S5' },
         change_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['回饋率', '上限', '通路', '條件', '期間', '新增活動', '活動下架', '新戶禮', '改寫搬移', '其他'] } },
         confidence: { type: 'STRING', enum: ['高', '中', '低'] }
       },
-      required: ['material', 'summary', 'confidence']
+      required: ['material', 'scope', 'summary', 'confidence']
     };
     const novelList = function (arr, label) {
       const a = (arr || []).slice(0, 120);
@@ -695,6 +703,7 @@ function appendToInbox_(ss, info) {
     '銀行': info.bank,
     '網址': info.url,
     '實質變動': c ? (c.material ? '是' : '否') : '',
+    '所屬活動': c ? (c.scope || '') : '',   // 這段變動屬於哪一檔活動（AI 照抄官網標題）
     'AI摘要': c ? (c.summary || '') : '',
     '變動類型': c && c.change_types ? c.change_types.join(',') : '',
     '信心': c ? (c.confidence || '') : '',
@@ -756,7 +765,9 @@ function ensureInboxPublishColumns_(sheet) {
   }
 
   // ② 缺的表頭補在最右邊
-  const wanted = ['公開摘要', '公開卡片', INBOX_ACTION_HEADER];
+  // 「所屬活動」是 2026-08-20 加的（AI 標出這段變動屬於哪一檔活動），跟三個發布欄同一條
+  // 補欄路徑：缺了就接在最右邊，舊列留空（那是加欄前的紀錄，AI 沒回過這個值，補不出來）。
+  const wanted = ['所屬活動', '公開摘要', '公開卡片', INBOX_ACTION_HEADER];
   const missing = wanted.filter(function (h) { return headers.indexOf(h) < 0; });
   if (!missing.length) return renamed;
 
@@ -986,6 +997,9 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
       if (a.cls) {
         s += ' ｜信心' + (a.cls.confidence || '') +
              (a.cls.change_types && a.cls.change_types.length ? ' ｜' + a.cls.change_types.join('、') : '') + '\n';
+        // 活動名稱獨立一行放在摘要上面：一頁常有好幾檔活動，只看摘要會不知道改的是哪一檔
+        // （站長 2026-08-20 回報：收到「指定行動支付回饋條件變嚴格」還得自己開官網查是哪檔）
+        if (a.cls.scope) s += '   〔' + a.cls.scope + '〕\n';
         // 摘要現在可能多行（第一行重點、第二行起具體名單），每一行都要縮排才對得齊
         s += String(a.cls.summary || '').split('\n')
           .map(function (line) { return '   ' + line; }).join('\n') + '\n';
@@ -1007,7 +1021,8 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
       body += '─── ⚪ 純版面/文案（' + cosmetic.length + ' 筆，已略過未寫入分頁）───\n';
       cosmetic.forEach(function (a) {
         body += '・' + (a.label || a.cardId || '一般消費/公告頁') +
-                '：' + ((a.cls && a.cls.summary) || '') + '\n  ' + a.url + '\n';
+                '：' + (a.cls && a.cls.scope ? '〔' + a.cls.scope + '〕' : '') +
+                ((a.cls && a.cls.summary) || '') + '\n  ' + a.url + '\n';
       });
       body += '（AI 判定非實質變動、信心不低、且變動類型只有改寫搬移/其他，才會落到這一段；\n' +
               ' 覺得這樣會漏事情，把 MONITOR_CONFIG.skipCosmeticRows 改成 false 就會全部寫進分頁）\n\n';

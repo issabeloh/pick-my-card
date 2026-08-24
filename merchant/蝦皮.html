@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <base href="/">
-    <script>window.__PMC_MERCHANT__="蝦皮";</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
+    <script>window.__PMC_MERCHANT__="蝦皮";</script>
     <title>蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
          - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
-           → 直接進工具，並加上 pmc-returning-user 讓首屏不閃 hero（改顯示 boot loader）
-         hero 正式從 DOM 移除是獨立的 follow-up；這裡只是不再顯示它。
+           → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
+         hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
          ?start 是 landing CTA 的逃生參數：storage 被封鎖時，沒有它會 landing↔工具無限循環。
          location.replace 讓返回鍵不會跳回造成循環。
          ?embed=1（2026-07-16 新增，新戶活動頁 iframe 內嵌卡片詳情用）：加 pmc-embed
@@ -25,7 +25,7 @@
         } catch (e) {
             // URLSearchParams 不支援時忽略——embed 只是顯示精簡化，非必要流程
         }
-        var pmcFromLanding = true; /* merchant landing page */
+        var pmcFromLanding = true; /* 商家落地頁：一律直接進工具 */
         try {
             if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 localStorage.setItem('pmc_seen_landing', '1');
@@ -41,14 +41,14 @@
     </script>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
+    <meta name="description" content="刷蝦皮哪張信用卡回饋最高？即時試算你的信用卡中，在蝦皮購物能享有的回饋，包含消費上限、達成條件與活動期間，資料持續更新。">
     <link rel="canonical" href="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
     <meta property="og:title" content="蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card">
-    <meta property="og:description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
+    <meta property="og:description" content="刷蝦皮哪張信用卡回饋最高？即時試算你的信用卡中，在蝦皮購物能享有的回饋，包含消費上限、達成條件與活動期間，資料持續更新。">
     <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
     <meta property="og:locale" content="zh_TW">
 
@@ -56,7 +56,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://pickmycard.app/merchant/%E8%9D%A6%E7%9A%AE">
     <meta name="twitter:title" content="蝦皮 信用卡回饋比較 2026｜哪張卡刷蝦皮最高回饋 - Pick My Card">
-    <meta name="twitter:description" content="刷蝦皮哪張信用卡回饋最高？整理 9 張在蝦皮有加碼的信用卡，開頁即時精算你的回饋，含消費上限、達成條件與活動期間，資料持續更新。">
+    <meta name="twitter:description" content="刷蝦皮哪張信用卡回饋最高？即時試算你的信用卡中，在蝦皮購物能享有的回饋，包含消費上限、達成條件與活動期間，資料持續更新。">
     <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
 
     <!-- Google Fonts Preconnect for better performance -->
@@ -158,8 +158,14 @@
 <style>
 .mc-seo-footer{max-width:1100px;margin:8px auto 0;padding:20px 24px;color:#6b7280;font-size:13px;line-height:1.8;border-top:1px solid #e5e7eb;}
 .mc-seo-footer h1{font-size:16px;font-weight:700;color:#374151;margin:0 0 8px;}
+.mc-body{max-width:1100px;margin:0 auto;padding:4px 24px 20px;color:#6b7280;font-size:13px;line-height:1.8;}
+.mc-body h2{font-size:15px;font-weight:700;color:#374151;margin:18px 0 8px;}
+.mc-body h3{font-size:14px;font-weight:700;color:#374151;margin:14px 0 6px;}
+.mc-body p{margin:0 0 10px;}
+.mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
+.mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"蝦皮 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":2,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":3,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"台新 Richart 卡"},{"@type":"ListItem","position":6,"name":"星展傳說對決聯名卡"},{"@type":"ListItem","position":7,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":8,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":9,"name":"iLEO 信用卡"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"蝦皮 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"星展傳說對決聯名卡"},{"@type":"ListItem","position":2,"name":"遠東快樂卡"},{"@type":"ListItem","position":3,"name":"中信 LINE Pay 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":6,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":7,"name":"台新 Richart 卡"},{"@type":"ListItem","position":8,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":9,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":10,"name":"iLEO 信用卡"},{"@type":"ListItem","position":11,"name":"國泰 CUBE 卡"}]}</script>
 </head>
 <body>
     <!-- Boot loader for returning logged-in users — visible only while
@@ -186,9 +192,14 @@
                      側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
                      手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
                 <nav class="header-page-links" aria-label="站內頁面">
-                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="header-nav-link header-nav-link--sparkle">新戶活動</a>
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="header-nav-link">常見問題</a>
                 </nav>
+                <!-- 手機（≤768px）的「新戶活動」入口：桌機用上面的 .header-page-links 純文字
+                     導覽，手機那條被隱藏，等於手機從 header 進不去 /promos。這顆 pill 只在
+                     手機顯示，靠 .header-content 的 flex:1 被推到右邊、緊貼頭像左側（不置中）。
+                     煙花沿用桌機同一組 @keyframes nav-sparkle-burst（見 styles.css 導覽區塊）。 -->
+                <a href="/promos" target="_blank" rel="noopener noreferrer" class="header-promos-pill">新戶活動</a>
                 <div class="auth-section">
                     <div id="user-info">
                         <div class="avatar-menu-wrapper">
@@ -223,6 +234,15 @@
                                 <a href="#" class="avatar-dropdown-item avatar-dropdown-logout" id="avatar-sign-out">
                                     <svg id="sign-out-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
                                     <span id="sign-out-label">登出</span>
+                                </a>
+                                <!-- 刪除帳號與資料（2026-08-20 新增）：隱私權政策第 8.1 節承諾的
+                                     自助刪除途徑。只有登入者看得到（訪客沒有帳號可刪），所以預設
+                                     display:none，由 setLoggedInAvatarState() 打開。刻意放在登出
+                                     之後、單獨一段——這是不可復原的操作，不該跟日常動作混在一起。 -->
+                                <div class="avatar-dropdown-divider" id="avatar-delete-divider" style="display:none"></div>
+                                <a href="#" class="avatar-dropdown-item avatar-dropdown-danger" id="avatar-delete-account" style="display:none">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                                    刪除帳號與資料
                                 </a>
                             </div>
                         </div>
@@ -303,12 +323,12 @@
                     </div>
 
                     <nav class="sidebar-page-links" aria-label="站內頁面">
-                        <a href="promos.html" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
+                        <a href="/promos" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
                             <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>
                             <span class="sidebar-promos-banner-text"><strong>新戶活動一覽</strong><small>首刷禮・回饋加碼 好康快報</small></span>
                             <span class="sidebar-promos-banner-arrow" aria-hidden="true">→</span>
                         </a>
-                        <a href="faq.html" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
+                        <a href="/faq" target="_blank" rel="noopener noreferrer" class="sidebar-faq-card">
                             <span class="sidebar-faq-card-emoji" aria-hidden="true">💬</span>
                             <span class="sidebar-faq-card-text"><strong>常見問題 FAQ</strong><small>使用教學・功能說明</small></span>
                             <span class="sidebar-faq-card-arrow" aria-hidden="true">→</span>
@@ -469,7 +489,7 @@
 
             <section class="cardholder-promos-section" id="cardholder-promos-section" style="display: none;">
                 <h2>新戶活動</h2>
-                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a href="promos.html" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
+                <p class="cardholder-promos-desc">以下為您未持有的卡片中，符合此商家的新戶活動　<a class="cardholder-promos-more-btn" href="/promos" target="_blank" rel="noopener noreferrer">🎁 看全部新戶活動 →</a></p>
                 <p class="cardholder-promos-disclaimer">謹慎理財、信用至上</p>
                 <div class="cardholder-promos-container" id="cardholder-promos-container">
                     <!-- Cardholder promos will be dynamically inserted here -->
@@ -503,14 +523,32 @@
             <div class="spotlight-dots" id="spotlight-dots" style="display:none;"></div>
         </section>
 
-        <!-- 信用卡警語橫條（精選活動區下方） -->
+        <!-- 推薦比較工具列：**內容由 tools/build-merchant-pages.js 生成，不要手改**。
+             這裡留空的 <nav> 當佔位，生成器每次部署把商家頁清單與回饋數字烤進來
+             （首頁列全部，商家頁各自排除自己）。詳見 docs/project/data-pipeline.md 第 11 節。 -->
+        <nav class="mc-related" aria-label="推薦比較">
+  <span class="mc-related-label">推薦比較</span>
+  <ul class="mc-related-list">
+    <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/momo"><span class="mc-related-name">momo</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E6%B2%B9"><span class="mc-related-name">中油</span><span class="mc-related-meta">最高 3.3%（台新 Richart 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E8%8F%AF%E8%88%AA%E7%A9%BA"><span class="mc-related-name">中華航空</span><span class="mc-related-meta">最高 5%（永豐幣倍卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E9%AB%98%E9%90%B5"><span class="mc-related-name">高鐵</span><span class="mc-related-meta">最高 3.5%（台新街口卡(豬富卡)）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A"><span class="mc-related-name">所有計程車</span><span class="mc-related-meta">最高 6%（聯邦 M 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+  </ul>
+        </nav>
+
         <section class="mc-seo-footer" aria-label="蝦皮 信用卡回饋說明">
   <h1>蝦皮 信用卡回饋比較</h1>
-  <p>想知道刷 蝦皮 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 蝦皮 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 玉山 Uni 卡、玉山 Ubear 卡、國泰 CUBE 卡、滙豐 Live+ 卡、台新 Richart 卡、星展傳說對決聯名卡、聯邦 LINE Bank 卡、兆豐 BT21 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
+  <p>想知道刷 蝦皮 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 蝦皮 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 星展傳說對決聯名卡、遠東快樂卡、中信 LINE Pay 卡、滙豐 Live+ 卡、聯邦 LINE Bank 卡、兆豐 BT21 卡、台新 Richart 卡、玉山 Uni 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
+</section>
+        <section class="mc-body">
+<p>在蝦皮購物，除了刷卡本身的回饋，還有常被漏掉的導購加碼：先經過 <a href="https://www.shopback.com.tw/search?keyword=%E8%9D%A6%E7%9A%AE" target="_blank" rel="noopener nofollow">Shopback</a> 導購再進蝦皮下單，可以多拿一筆現金回饋，和信用卡回饋不衝突。蝦皮購物也支援<strong>街口支付</strong>結帳，比較看看是否比信用卡本身的回饋更高！</p>
 </section>
 
-        <!-- 廣告列（SEO 說明區下方、警語橫條上方）
-             回應式版位，樣式沿用 styles.css 的 .ad-row。
+
+        <!-- 廣告列（精選活動下方、警語橫條上方）
+             回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
              loader script 已在 <head> 載入，這裡只放版位本身。 -->
         <div class="ad-row">
             <ins class="adsbygoogle ad-row-unit"
@@ -524,7 +562,8 @@
             (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
 
-<div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+        <!-- 信用卡警語橫條（精選活動區下方） -->
+        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -916,20 +955,6 @@
     <!-- 社群媒體與贊助區塊 -->
     <div class="social-media-footer">
         <div class="social-media-container">
-            <div class="explore-section">
-                <p class="social-media-title">探索更多</p>
-                <div class="social-media-links">
-                    <a href="promos.html" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
-                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
-                    </a>
-                    <a href="faq.html" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
-                        <span class="social-text">常見問題 FAQ ↗</span>
-                    </a>
-                    <a href="landing.html" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
-                        <span class="social-text">Pick My Card 是什麼？↗</span>
-                    </a>
-                </div>
-            </div>
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
                 <div class="social-media-links">
@@ -952,10 +977,30 @@
                     </a>
                 </div>
             </div>
-        </div>
+                    <div class="explore-section">
+                <p class="social-media-title">探索更多</p>
+                <div class="social-media-links">
+                    <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
+                        <span class="social-text">🎁 新戶活動一覽 ↗</span>
+                    </a>
+                    <a href="/faq" target="_blank" rel="noopener noreferrer" class="social-link faq" aria-label="常見問題">
+                        <span class="social-text">常見問題 FAQ ↗</span>
+                    </a>
+                    <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
+                        <span class="social-text">Pick My Card 是什麼？↗</span>
+                    </a>
+                    <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。
+                         AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的
+                         告知義務也需要常設入口——新增頁面時記得一起帶上。 -->
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="隱私權政策">
+                        <span class="social-text">隱私權政策</span>
+                    </a>
+                </div>
+            </div>
+</div>
     </div>
 
-    <!-- 最後資料更新日期＋收錄卡數 -->
+    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
         <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
@@ -1003,7 +1048,9 @@
         </div>
     </div>
 
-    <!-- 主程式模組：清單與順序必須與 index.html 一致（preflight 會檢查）。 -->
+
+    <!-- 主程式模組（傳統全域 script，非 ES module）：依依賴順序載入，被依賴的在前；
+         全部 defer，執行順序＝標籤順序。清單與順序必須與 merchant/*.html 一致（preflight 會檢查）。 -->
     <script src="js/core-utils.js?v=dev" defer></script>
     <script src="js/data-loader.js?v=dev" defer></script>
     <script src="js/home-ui.js?v=dev" defer></script>
@@ -1029,8 +1076,8 @@
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
-      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
       // Your web app's Firebase configuration
@@ -1073,10 +1120,19 @@
       window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
       window.signInWithEmailAndPassword = signInWithEmailAndPassword;
       window.sendPasswordResetEmail = sendPasswordResetEmail;
+      // 刪除帳號與資料（隱私權政策 8.1 的自助刪除途徑，見 js/auth-user-data.js
+      // 的「刪除帳號與全部資料」區塊）。reauthenticate* 是 deleteUser 的前置：
+      // Firebase 對刪除帳號要求近期登入憑證，且這也是防止他人在未登出的裝置上
+      // 惡意刪除的第一道關卡。
+      window.deleteUser = deleteUser;
+      window.reauthenticateWithPopup = reauthenticateWithPopup;
+      window.reauthenticateWithCredential = reauthenticateWithCredential;
+      window.EmailAuthProvider = EmailAuthProvider;
       window.doc = doc;
       window.getDoc = getDoc;
       window.setDoc = setDoc;
       window.deleteField = deleteField;
+      window.deleteDoc = deleteDoc;
       window.addDoc = addDoc;
       window.collection = collection;
       window.serverTimestamp = serverTimestamp;
@@ -1218,6 +1274,56 @@
             <div class="modal-footer">
                 <button type="button" id="submit-feedback-btn" class="save-btn">送出</button>
                 <button type="button" id="cancel-feedback-btn" class="cancel-btn">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 刪除帳號與資料 Modal（2026-08-20 新增）
+         隱私權政策第 8.1 節承諾「不必寄信、不必等回覆」的自助刪除途徑。
+         三道關卡刻意都留著，不要為了「順手」拿掉任何一道：
+           1. 逐項列出會刪掉什麼（用戶要知道自己按下去失去什麼）
+           2. 重新驗證身分（防止他人在未登出的裝置上惡意刪除）
+           3. 輸入確認文字（防手滑；destructive action 的標準做法）
+         實作見 js/auth-user-data.js 的「刪除帳號與全部資料」區塊。 -->
+    <div id="delete-account-modal" class="modal" style="display: none;">
+        <div class="modal-content delete-account-content">
+            <div class="modal-header">
+                <h3>⚠️ 刪除帳號與資料</h3>
+                <button class="close-modal" id="close-delete-account-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="da-lead">這個動作<strong>無法復原</strong>——我們沒有備份可以還給你。</p>
+
+                <div class="da-list-title">以下資料會被永久刪除：</div>
+                <ul class="da-list">
+                    <li>你的登入帳號（<span id="da-user-email" class="da-email"></span>）</li>
+                    <li>雲端的個人化設定：持有卡片、卡片級別、行動支付、配卡組合、免年費、結帳日、生日月、我的額度</li>
+                    <li>你寫過的所有卡片筆記</li>
+                    <li>這台裝置上的本機資料</li>
+                </ul>
+
+                <div class="da-note">
+                    你曾送出的「問題回報」內容與截圖<strong>不會</strong>自動刪除——基於安全考量，前端沒有讀取那些紀錄的權限。需要一併刪除請來信
+                    <a href="mailto:support@pickmycard.app">support@pickmycard.app</a>，我們手動處理。
+                </div>
+
+                <div class="form-group" id="da-password-group" style="display:none;">
+                    <label for="da-password">請輸入密碼以確認是本人操作 <span class="required">*</span></label>
+                    <input type="password" id="da-password" class="da-input" autocomplete="current-password" placeholder="你的登入密碼">
+                </div>
+
+                <p class="da-reauth-hint" id="da-reauth-hint"></p>
+
+                <div class="form-group">
+                    <label for="da-confirm-text">請輸入 <code class="da-code">刪除我的帳號</code> 以確認 <span class="required">*</span></label>
+                    <input type="text" id="da-confirm-text" class="da-input" autocomplete="off" placeholder="刪除我的帳號">
+                </div>
+
+                <div id="da-status" class="da-status"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="confirm-delete-account-btn" class="danger-btn" disabled>永久刪除</button>
+                <button type="button" id="cancel-delete-account-btn" class="cancel-btn">取消</button>
             </div>
         </div>
     </div>

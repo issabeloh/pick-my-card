@@ -18,7 +18,7 @@ SEC6|js/results-display.js|btn.href = ctaLink;
 # levels-payments.js：paymentSite = sanitizeUrl(payment.website)（緊鄰上一行）
 SEC6|js/levels-payments.js|websiteLink.href = paymentSite;
 # cashback-engine.js referralUrl/shopbackUrl/linebuyUrl 皆已 sanitizeUrl
-SEC6|js/cashback-engine.js|${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="noopener noreferrer" class="referral-link-button">
+SEC6|js/cashback-engine.js|${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="sponsored noopener noreferrer" class="referral-link-button">
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
 

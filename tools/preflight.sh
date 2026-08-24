@@ -15,8 +15,8 @@ has() { echo "$changed" | grep -qx "$1"; }
 # 部署時 Cloudflare Pages build command 跑 tools/deploy-version.sh 把 dev 換成 commit hash。
 # repo 裡出現非 dev 的值＝有人手動 bump（舊流程回潮）或解衝突拿錯版本，一律擋下。
 # promos.html 除外：由 Apps Script 匯出生成、自帶時間戳，部署時照樣被覆寫、無害。
-VER_RE='((styles|faq|landing)\.css|(script|faq|landing)\.js|js/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+'
-for page in index.html faq.html landing.html merchant/*.html; do
+VER_RE='((styles|faq|landing|privacy)\.css|(script|faq|landing)\.js|js/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+'
+for page in index.html faq.html landing.html privacy.html merchant/*.html; do
   [ -e "$page" ] || continue
   bad=$(grep -oE "$VER_RE" "$page" | grep -v '?v=dev$' || true)
   if [ -n "$bad" ]; then
@@ -41,6 +41,32 @@ for page in merchant/*.html; do
   seq_page=$(grep -oE 'src="(js/[A-Za-z0-9_-]+\.js|script\.js)\?v=' "$page" | sed 's/^src="//;s/?v=$//')
   if [ "$seq_page" != "$seq_index" ]; then
     echo "❌ $page 的 script 載入清單/順序與 index.html 不一致（必須完全相同）"; fail=1
+  fi
+done
+
+# ---- 1d) 商家頁必須與生成器輸出一致（2026-08-16 起 merchant/*.html 不再手維護）----
+# 商家頁改由 tools/build-merchant-pages.js 從 index.html ＋ cards.data 生成。手改那些檔案
+# 會在下次部署被覆蓋，所以這裡直接擋：改版面去改 index.html，改文案去改 MerchantPages
+# 工作表（見 docs/project/data-pipeline.md 第 11 節）。
+if command -v node >/dev/null 2>&1 && [ -f tools/build-merchant-pages.js ]; then
+  if ! node tools/build-merchant-pages.js --check > /tmp/pmc-merchant-check.$$ 2>&1; then
+    cat /tmp/pmc-merchant-check.$$
+    echo "❌ merchant/*.html 與生成結果不一致——跑 node tools/build-merchant-pages.js 重新生成後再 commit"; fail=1
+  fi
+  rm -f /tmp/pmc-merchant-check.$$
+else
+  echo "⚠️  找不到 node 或生成器，略過商家頁一致性檢查"; warn=1
+fi
+
+# ---- 1e) 內部連結禁止指向 *.html（會 301 到 clean URL，GSC 報 Page with redirect）----
+# Cloudflare Pages 把 /faq.html 301 到 /faq，所以站內連 faq.html 等於每次都多繞一跳：
+# 浪費爬取預算、GSC「Page with redirect」報表被自家連結灌爆。一律寫 /、/faq、/promos、/landing。
+# （2026-08-16 全站 66 個連結一次改完；promos.html 由 Apps Script 生成、本來就是 clean URL。）
+for page in index.html faq.html landing.html privacy.html merchant/*.html; do
+  [ -e "$page" ] || continue
+  bad=$(grep -oE 'href="(index|faq|promos|landing)\.html[^"]*"' "$page" || true)
+  if [ -n "$bad" ]; then
+    echo "❌ $page 有指向 *.html 的內部連結（會 301，請改 clean URL：/ 、/faq 、/promos 、/landing）：$(echo $bad | head -c 200)"; fail=1
   fi
 done
 

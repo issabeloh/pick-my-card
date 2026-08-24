@@ -11,16 +11,17 @@
 | 檔案 | 內容 |
 |---|---|
 | `js/`（12 模組檔，2026-07-20 由 script.js 拆分） | 核心邏輯。**傳統全域 script 依 index.html 標籤順序載入（非 ES module，禁止改）**；每檔頂部有區塊目錄可 Grep。依載入順序：core-utils(工具/全域狀態)、data-loader(資料載入/快捷選項)、home-ui(Spotlight/公告/主初始化)、search-match(搜尋匹配)、cashback-engine(回饋計算)、results-display(結果顯示/placeholder/escapeHtml)、auth-user-data(登入/用戶資料)、cards-modals(側選單/卡片選擇/持有卡)、card-detail(詳情頁/CUBE/筆記)、spending-mappings(配卡表/免年費/額度/結帳日)、levels-payments(級別🔒/行動支付)、quick-options-misc(快捷管理/回報/auth modal/GA4) |
-| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號）；`merchant/*.html` 商家落地頁與 index.html 共用 js/、載入清單順序必須一致（preflight 會查） |
+| `index.html` / `styles.css` | 主頁面／樣式（引用處有 `?v=` 快取版本號）；`merchant/*.html` 商家落地頁**由 `tools/build-merchant-pages.js` 從 index.html 生成、禁止手改**（改版面改 index.html，改文案改 Sheets 的 MerchantPages 工作表；見 data-pipeline.md 第 11 節）。⚠️ index.html 裡的 `<nav class="mc-related">`（推薦比較工具列）**內容也是同一支生成器產的、同樣禁止手改**——index.html 因此既是模板也是輸出 |
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
 | `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
+| `functions/` | Firebase Cloud Functions（`notifyOnFeedback`：使用者送出意見回饋時即時 email／webhook 通知站長）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`（CF Pages build command 執行，開發不用跑） |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成（後兩者由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify`） |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
@@ -57,6 +58,7 @@
 | 任務類型 | 必讀 |
 |---|---|
 | 改搜尋/回饋計算/匹配（calculateCashback、cashbackModel、placeholder、停車） | `docs/project/cashback-engine.md` |
+| **填**（不是改邏輯）某張卡的 cashbackModel／加碼欄位／骨幹槽 | `docs/project/cashbackmodel-fill-guide.md`（官網「回饋組成」句 → 欄位的填表範本） |
 | 改顯示/UI（詳情頁、Spotlight、我的信用卡、各 modal、卡圖） | `docs/project/ui-display.md` |
 | 改資料（Google Sheets、Apps Script、cards.data、級別設定、新工作表） | `docs/project/data-pipeline.md` |
 | 改用戶資料/登入登出/localStorage/Firestore/XSS 相關 | `docs/project/storage-and-security.md` |

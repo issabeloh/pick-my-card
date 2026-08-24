@@ -1,0 +1,339 @@
+/* 隱私權政策頁專屬樣式（2026-08-20 新增）
+ *
+ * 版面骨架（.container / header / .header-top / .header-content / .back-home-btn /
+ * .social-media-footer）都在 styles.css，本檔只補這一頁專屬的正文排版。
+ * 這頁刻意「零 JavaScript」：沒有 Firebase、沒有廣告、沒有 analytics——
+ * 一份說明我們怎麼蒐集資料的文件，自己不該再蒐集資料。
+ */
+
+/* ==========================================================================
+   Header：結構抄自 faq.html，視覺本體在 styles.css。這裡補 styles.css 沒涵蓋的部分
+   ——.header-content 在副頁是 <a>（主站 index.html 不是），要蓋掉 UA 的底線與
+   visited 紫色；.back-home-btn 只有副頁用得到。與 faq.css 同源，改一邊要看另一邊。
+   ========================================================================== */
+.header-content {
+    text-decoration: none;
+    color: white;
+}
+
+.header-content:visited {
+    color: white;
+}
+
+.header-content .header-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* 返回首頁鈕：半透明白底膠囊，疊在深藍 header bar 上；hover 左移 2px 暗示「返回」。 */
+.back-home-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.back-home-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateX(-2px);
+}
+
+.back-home-btn svg {
+    transition: transform 0.2s;
+}
+
+.pp-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 4px 0;
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
+.pp-breadcrumb a {
+    color: #9ca3af;
+    text-decoration: none;
+}
+
+.pp-breadcrumb a:hover {
+    color: #6b7280;
+    text-decoration: underline;
+}
+
+.pp-breadcrumb [aria-current="page"] {
+    color: #6b7280;
+}
+
+.pp-breadcrumb-sep {
+    color: #d1d5db;
+}
+
+.pp-hero {
+    padding: 20px 4px 8px;
+}
+
+.pp-hero h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1f2937;
+    letter-spacing: 0.01em;
+}
+
+.pp-updated {
+    margin: 8px 0 0;
+    font-size: 0.85rem;
+    color: #9ca3af;
+}
+
+main {
+    padding: 32px 24px;
+    min-height: 400px;
+}
+
+/* 摘要卡：整頁的 TL;DR，讓不想讀完的人也拿得到重點 */
+.pp-summary {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 20px 0 28px;
+}
+
+.pp-summary h2 {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0369a1;
+}
+
+.pp-summary ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #0c4a6e;
+    font-size: 0.92rem;
+    line-height: 1.75;
+}
+
+/* 目錄 */
+.pp-toc {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+}
+
+.pp-toc h2 {
+    margin: 0 0 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #374151;
+}
+
+.pp-toc ol {
+    margin: 0;
+    padding-left: 20px;
+    columns: 2;
+    column-gap: 24px;
+    font-size: 0.9rem;
+    line-height: 1.9;
+}
+
+.pp-toc a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.pp-toc a:hover {
+    text-decoration: underline;
+}
+
+/* 正文區塊 */
+.pp-section {
+    margin-bottom: 34px;
+    scroll-margin-top: 20px;
+}
+
+.pp-section h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.pp-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 20px 0 8px;
+}
+
+.pp-section p,
+.pp-section li {
+    color: #4b5563;
+    font-size: 0.95rem;
+    line-height: 1.8;
+}
+
+.pp-section p {
+    margin: 0 0 12px;
+}
+
+.pp-section ul {
+    margin: 0 0 12px;
+    padding-left: 22px;
+}
+
+.pp-section strong {
+    color: #1f2937;
+}
+
+.pp-section a {
+    color: #2563eb;
+}
+
+/* 資料表格（蒐集項目、第三方服務） */
+.pp-table-wrap {
+    overflow-x: auto;
+    margin: 0 0 16px;
+}
+
+.pp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 480px;
+}
+
+.pp-table th,
+.pp-table td {
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+    color: #4b5563;
+    line-height: 1.7;
+}
+
+.pp-table th {
+    background: #f9fafb;
+    color: #374151;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* 重點提示框 */
+.pp-callout {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+    margin: 0 0 16px;
+}
+
+.pp-callout p {
+    margin: 0;
+    color: #78350f;
+    font-size: 0.92rem;
+}
+
+.pp-callout p + p {
+    margin-top: 8px;
+}
+
+/* 資訊型提示框（藍）：與警示型（琥珀）區分——「這是說明」不是「這要小心」 */
+.pp-callout--info {
+    border-left-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.pp-callout--info p {
+    color: #1e3a5f;
+}
+
+/* 刪除資料的操作步驟 */
+.pp-steps {
+    counter-reset: pp-step;
+    list-style: none;
+    padding-left: 0;
+    margin: 0 0 16px;
+}
+
+.pp-steps li {
+    counter-increment: pp-step;
+    position: relative;
+    padding-left: 36px;
+    margin-bottom: 10px;
+}
+
+.pp-steps li::before {
+    content: counter(pp-step);
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 聯絡區塊 */
+.pp-contact {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 8px;
+}
+
+.pp-contact p {
+    margin: 0 0 6px;
+}
+
+.pp-contact a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pp-contact a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    main {
+        padding: 24px 16px;
+    }
+
+    .pp-hero h1 {
+        font-size: 1.45rem;
+    }
+
+    .pp-toc ol {
+        columns: 1;
+    }
+
+    .pp-section h2 {
+        font-size: 1.05rem;
+    }
+}
