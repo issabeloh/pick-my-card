@@ -247,14 +247,37 @@ function checkWatchlist() {
       if (n > 0) rowMinDiff = n;
     }
 
-    const changedText = diffSegments_(oldText, text).join('\n');
+    // 先濾掉「只是搬移/重新分段」的假差異（refineDiff_ 的註解有完整來由），
+    // 關鍵字閘門與雜訊門檻都改用濾過的版本——純粹重排版面從此不會再觸發通知
+    const refined = refineDiff_(diffSegments_(oldText, text), oldText, text);
+    const changedText = refined.lines.join('\n');
+
+    // 抓取殘缺防呆（2026-08-16 新增，同一次血淚修正）：
+    // 舊基準的一大半內容消失、卻幾乎沒有新內容 → 這通常不是銀行砍了半頁，
+    // 是這次只抓到「摺疊起來」的版本（注意事項/活動明細常放在展開區或 tab 裡）。
+    // 實例：遠東樂家+卡新文字只有舊的 42%（躲過上面 1/3 的門檻），整個「注意事項」
+    // 區塊沒抓到，AI 就把它讀成「新戶LINE Pay 活動下架」。
+    // 處理方式比照上面那個反方向落差：回報錯誤、**絕不覆寫 last_snapshot**——
+    // 一旦把殘缺快照存成基準，好的基準就沒了，下次還會再誤報一次「大量新增」。
+    if (refined.removedRatio >= 0.5 && refined.addedChars < 200) {
+      errors.push(label + ' ' + url +
+        '：舊基準有 ' + Math.round(refined.removedRatio * 100) + '% 的內容在這次抓取中消失，' +
+        '而新增內容只有 ' + refined.addedChars + ' 字，疑似只抓到摺疊/未展開的版本（常見於注意事項、活動明細放在展開區）。' +
+        '已略過並保留原基準，不會誤報成活動下架。請人工開網頁確認；' +
+        '若確認銀行真的砍掉這些內容，把該列 last_snapshot 清空後重跑即可');
+      if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+      continue;
+    }
+
     const hasKeyword = rowKeywords.some(function (k) {
       return changedText.indexOf(k) !== -1;
     });
 
     if (changedText.length >= rowMinDiff && hasKeyword) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
-      const cls = classifyDiff_(changedText, text, inboxCardId, bank);
+      //    連同「真正的新詞/消失詞」一起給——那是程式用字串比對算出來的事實，
+      //    比讓 AI 自己從一堆切片裡猜可靠得多（見 refineDiff_）
+      const cls = classifyDiff_(changedText, text, inboxCardId, bank, oldText, refined);
       // ② 純版面/文案的列不進分頁（分頁只留站長真的要處理的東西），但信裡照樣列一行
       const cosmetic = MONITOR_CONFIG.skipCosmeticRows && isCosmeticChange_(cls);
       if (!cosmetic) {
@@ -290,6 +313,12 @@ function checkWatchlist() {
   if (inboxWrites && MONITOR_CONFIG.drawRoundSeparator) markInboxRoundEnd_(ss);
 
   if (alerts.length || errors.length || rebaselined.length) sendDigest_(alerts, errors, rebaselined, skipped);
+}
+
+// 多行字串的第一行（去頭尾空白）。摘要的第一行是刻意設計成「能獨立成句的重點」，
+// 公開摘要預填、信件標題這類「只放得下一句」的地方都用它。
+function firstLine_(s) {
+  return String(s == null ? '' : s).split('\n')[0].trim();
 }
 
 /************** 純版面/文案變動的判定（決定要不要寫進分頁） **************/
@@ -499,12 +528,68 @@ function diffSegments_(oldText, newText) {
   const removed = [];
   oldMap.forEach(function (s, k) { if (!newMap.has(k)) removed.push('－ ' + s); });
 
-  return added.concat(removed);
+  return { added: added, removed: removed };
+}
+
+/************** 濾掉「只是搬移／重新分段」的假差異（2026-08-16 血淚修正） **************/
+// 【為什麼要有這一層】2026-08-16 站長抽查遠東樂家+卡，發現摘要寫的三件事全部不屬實：
+// 「新增多個指定通路」（通路一個都沒變）、「新戶LINE Pay 5%下架」（活動還在）、
+// 「新增海外指定地區加碼」（舊版就有）。追下去才發現不是 AI 亂編，是**餵給它的材料本來就是錯的**：
+//
+//   上面 diffSegments_ 是「切段 → 比對整段字串」。商店清單那種沒有句號、只用「●」分隔的長列表，
+//   會落到「每 160 字沿空白硬切」那條路。銀行把母嬰百貨那組搬到清單前面之後，**每一刀的位置全變了**，
+//   於是每個切片都成了「舊版沒有的新字串」→ 8 行假新增、99 行假消失。
+//   AI 看到一堆 ＋ 行裡有商店名，當然會說「新增了這些通路」——它無從得知這些店舊版全都有。
+//
+// 【解法】不比整段，比「詞」。把每一行沿 ●、·、、、，、／、空白 切成詞，逐一去對方全文裡找：
+//   ・一行裡**每個詞對方都有** → 純粹是搬移/重切，整行丟掉
+//   ・有任何一個詞是對方沒有的 → 保留該行，並把那些「真正的新詞」單獨挑出來給 AI
+//
+// 【為什麼門檻是「零新詞才丟」而不是「新詞佔比低就丟」】
+//   後者看起來更能降噪，但有漏判風險：長清單裡偷加一家新店，新詞佔比只有 1/40，會被當成雜訊丟掉。
+//   實測（遠東樂家+卡真實案例）兩者的降噪效果一樣（＋ 行 8→1），所以取零風險的那個。
+//   已用「在長清單裡塞一家假店」驗證過保守版仍抓得到。
+function refineDiff_(diff, oldText, newText) {
+  const key = function (s) { return String(s || '').replace(/\s+/g, ''); };
+  const oldKey = key(oldText), newKey = key(newText);
+  // 詞的切法：商店清單就是靠這些符號排版的；長度 <2 的碎片（單字、標點）不算詞
+  const unitsOf = function (line) {
+    return line.replace(/^[＋－]\s*/, '')
+      .split(/[●·・、，,；;：:／/｜|]|\s{1,}/)
+      .map(key)
+      .filter(function (u) { return u.length >= 2; });
+  };
+
+  const sift = function (lines, otherKey) {
+    const kept = [], novel = [];
+    lines.forEach(function (line) {
+      const us = unitsOf(line);
+      if (!us.length) return;                       // 切不出詞（純標點）→ 沒有資訊量
+      const fresh = us.filter(function (u) { return otherKey.indexOf(u) === -1; });
+      if (!fresh.length) return;                    // 每個詞對方都有 → 只是搬移
+      kept.push(line);
+      fresh.forEach(function (u) { if (novel.indexOf(u) === -1) novel.push(u); });
+    });
+    return { lines: kept, novel: novel, chars: kept.reduce(function (a, l) { return a + key(l).length; }, 0) };
+  };
+
+  const a = sift(diff.added, oldKey);
+  const r = sift(diff.removed, newKey);
+  return {
+    lines: a.lines.concat(r.lines),
+    addedNovel: a.novel, removedNovel: r.novel,
+    addedChars: a.chars, removedChars: r.chars,
+    // 消失量佔舊全文的比例——用來判斷「這次是不是根本沒抓完整」
+    removedRatio: oldKey.length ? (r.chars / oldKey.length) : 0
+  };
 }
 
 /************** ① AI 分類：這次變動是不是「實質回饋變動」＋一句人話摘要 **************/
 // 依賴同專案 benefits-parser.gs 的 callGemini_；沒貼或 API 失敗都回 null（不擋監控，照樣寄信）
-function classifyDiff_(changedText, newFullText, cardId, bank) {
+// ⚠️ 2026-08-16 起多收兩個參數：oldFullText 與 refined（refineDiff_ 的產出）。
+//    在那之前 AI **物理上沒辦法**驗證「這個＋段落是不是舊版本來就有」——它只拿得到新版全文，
+//    prompt 卻要求它判斷新增與否，等於逼它猜。遠東樂家+卡那次三個誤判全出在這裡。
+function classifyDiff_(changedText, newFullText, cardId, bank, oldFullText, refined) {
   if (typeof callGemini_ !== 'function') return null;
   try {
     const sys = [
@@ -513,7 +598,46 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
       '【非實質 material=false】純版面/文案/錯字/免責法律樣板/導覽列/日期格式/同段落改寫或搬移，不影響回饋。',
       '⚠️ 判斷「活動下架」要非常謹慎：－(消失)的段落常常只是「改寫、搬移、重新排版」，不代表活動取消。判「下架/改版」前，先在下方【新版全文】搜尋該回饋是否還在——若還找得到（只是換句話說或移到別處），就【不是下架】，可能只是改寫(material 依實際回饋數字有無變化而定)。',
       '⚠️ 反過來也要抓「真的新增」：若＋段落裡有「舊版完全沒有的全新卡片/銀行/活動/回饋率」（不是把舊內容換句話說），那就是實質新增 material=true、change_types 含「新增活動」——不要因為頁面同時有大量改版雜訊，就把夾在裡面的真新增一起當成改寫漏掉。整頁重排的聚合頁（如多家卡片列表）尤其要留意有沒有多出新的一批。',
-      'summary：一句話講重點，有數字寫「X→Y」(如 上限300→500)；material=false 就寫「純版面/文案調整或改寫，回饋未變」。結尾不加句號。',
+      '',
+      '【⚠️ 判新增/下架之前，先看「程式算出來的新詞/消失詞」】',
+      'D1. 下面會給你兩份清單，那是**程式用字串比對算出來的事實**，不是推測：',
+      '    「真正新出現的詞」＝在舊版全文裡完全找不到的詞；「真正消失的詞」＝在新版全文裡完全找不到的詞。',
+      'D2. ⛔【最常見的誤判】＋段落裡出現商店名/活動名，**不等於**它是新增的。',
+      '    網頁把清單重新排序或換個分段方式，就會讓整段變成「＋」，但那些店舊版全都有。',
+      '    ✅ 正確做法：某個東西要說「新增」，它**必須出現在「真正新出現的詞」清單裡**；不在清單裡就是舊版本來就有，不要說新增。',
+      '    同理，要說「下架/取消」，該活動的關鍵詞必須出現在「真正消失的詞」清單裡。',
+      'D3. 兩份清單都空 → 這次只是排版變動，material=false。',
+      'D4. 若「真正消失的詞」多到像是整個區塊不見（例如整段注意事項、整組活動說明），',
+      '    但新版全文裡看不出對應的新內容 → 那多半是**這次沒抓到完整頁面**（摺疊區/tab 沒展開），',
+      '    不是活動下架。這種請在 summary 明說「疑似頁面未完整抓取」、material=false、confidence=低。',
+      '',
+      '【summary 怎麼寫】（2026-08-16 站長回報「太沒具體資訊，無法判斷是不是真的新增」後重寫）',
+      'S0. 格式：**第一行一句話講重點，第二行起列具體內容**。程式會拿第一行去預填「公開摘要」，所以第一行要能獨立成句。',
+      'S1. ⛔【最重要：不准用模糊量詞代替內容】「新增多個指定通路」「新增指定地區加碼」這種寫法資訊量是零——',
+      '    站長看了還是得自己回官網讀一遍，等於這個摘要沒作用。寫下「多個/若干/部分/一些/幾家」之前先問自己「是哪些？」，',
+      '    然後把**實際名稱**寫出來。最多列 10 個，超過就寫「…等 N 家」。地區、通路、卡別、商店名一律適用。',
+      '    ❌ 生活禮遇3.5%加碼回饋新增多個指定通路',
+      '    ✅ 生活禮遇 3.5% 加碼（每期每戶上限 200 元）新增 12 家指定商店',
+      '       新增：卡多摩嬰童館、宜兒樂婦嬰用品、營養銀行、麗兒采家、IKEA、環球購物中心、秀泰生活、故宮博物院(南北院)、躍獅連鎖藥局、媽咪樂居家服務、潔客幫、台灣蔦屋',
+      'S2. 【原文沒寫就明說沒寫】舉不出具體名稱時，寫「原文未列出〈X〉」並把 confidence 降到「低」。',
+      '    ⛔ 絕不可以用「指定地區」「指定通路」這種詞，去代替你其實沒在原文讀到的內容——那會讓站長以為你查證過。',
+      '    ❌ 新增2026下半年海外指定地區加碼滿額活動最高3.5%回饋',
+      '    ✅ 新增 2026 下半年海外加碼滿額活動，最高 3.5%（原文未列出適用地區與門檻，需回官網確認）',
+      'S3. 【權益類要講清楚「是什麼權益」】機場貴賓室／接送／保險／禮遇這類，只寫「新增某某權益」等於沒寫。',
+      '    要帶出：〈次數或額度〉〈適用範圍〉〈達成條件〉——照原文實際內容填，原文沒有的就依 S2 明說。',
+      '    ❌ 新增明確的機場貴賓室服務權益',
+      '    ✅ 新增機場貴賓室權益：〈每年 N 次〉〈適用哪些機場/貴賓室〉，〈需達成什麼條件〉',
+      'S4. 【新戶／門檻類活動一定要帶條件】新戶活動幾乎都有條件，只寫獎勵金額就是講一半。',
+      '    要帶出：新戶定義、消費門檻與期限、需不需要登錄或線上申辦。',
+      '    ❌ 遠東商銀樂家+卡、快樂卡、樂行卡、我的卡等新增新戶大禮包350元刷卡金',
+      '    ✅ 樂家+卡、快樂卡、樂行卡、我的卡新增新戶大禮包 350 元刷卡金',
+      '       條件：〈新戶定義〉、〈核卡後多久內消費滿多少〉、〈是否需線上申辦/登錄〉',
+      'S5. ⛔【不要寫「沒有變的部分」】摘要只講變了什麼。「其餘為文案改寫」「回饋內容未變」這類句子一律刪掉，',
+      '    它們佔位置又不幫助判斷（material=false 的那一句除外，見 S6）。',
+      '    ❌ 新增機場貴賓室權益，其餘機場接送與尊寵禮遇為文案改寫或拆分，回饋內容未變',
+      '    ✅ 新增機場貴賓室權益：〈內容〉',
+      'S6. 有數字一律寫「X→Y」（如 上限 300→500）。material=false 就只寫「純版面/文案調整或改寫，回饋未變」一句，不必列細節。',
+      'S7. 結尾不加句號。',
       // scope＝「這段字是哪一檔活動底下的」。沒有它，站長收到「指定行動支付回饋條件變嚴格」
       // 這種摘要，還得自己開官網翻是哪一檔活動——2026-08-20 站長回報後補的欄位。
       'scope：這次變動位於頁面上的哪一檔活動／哪個區塊。**照抄官網原文的標題**（如「【新申辦加碼】指定行動支付 +2%」「新戶指定行動支付最高享20%現金回饋」「基本回饋」），不要自己另外命名。',
@@ -527,14 +651,22 @@ function classifyDiff_(changedText, newFullText, cardId, bank) {
       properties: {
         material: { type: 'BOOLEAN' },
         scope: { type: 'STRING' },
-        summary: { type: 'STRING' },
+        summary: { type: 'STRING', description: '第一行＝一句話重點（會被拿去預填公開摘要）；第二行起＝具體名單/條件。禁止用「多個/若干/部分」代替實際名稱，見 S1~S5' },
         change_types: { type: 'ARRAY', items: { type: 'STRING', enum: ['回饋率', '上限', '通路', '條件', '期間', '新增活動', '活動下架', '新戶禮', '改寫搬移', '其他'] } },
         confidence: { type: 'STRING', enum: ['高', '中', '低'] }
       },
       required: ['material', 'scope', 'summary', 'confidence']
     };
-    const userText = '【這次的變動段落（＋新增／－消失）】\n' + changedText.slice(0, 12000) +
-      '\n\n【新版全文（用來核對「消失」的內容是否真的不見了）】\n' + String(newFullText || '').slice(0, 22000);
+    const novelList = function (arr, label) {
+      const a = (arr || []).slice(0, 120);
+      if (!a.length) return '【' + label + '】（一個都沒有——代表這個方向沒有真正的內容變動）';
+      return '【' + label + '】共 ' + (arr || []).length + ' 個：' + a.join('、');
+    };
+    const userText = '【這次的變動段落（＋新增／－消失）】\n' + changedText.slice(0, 10000) +
+      '\n\n' + novelList(refined && refined.addedNovel, '真正新出現的詞（舊版全文裡找不到）') +
+      '\n\n' + novelList(refined && refined.removedNovel, '真正消失的詞（新版全文裡找不到）') +
+      '\n\n【新版全文（用來核對「消失」的內容是否真的不見了）】\n' + String(newFullText || '').slice(0, 16000) +
+      '\n\n【舊版全文（用來核對「新增」的內容是不是本來就有）】\n' + String(oldFullText || '').slice(0, 16000);
     return callGemini_(sys, userText, schema);
   } catch (e) {
     return null;
@@ -579,7 +711,9 @@ function appendToInbox_(ss, info) {
     '舊文字': info.oldText.slice(0, 40000),
     '新文字': info.newText.slice(0, 40000),
     '狀態': '待解析',
-    '公開摘要': c ? (c.summary || '') : '',   // 與「AI摘要」同一個值，站長在這欄改寫
+    // 公開摘要只取 AI 摘要的**第一行**：2026-08-16 起摘要改成「第一行重點＋第二行起具體名單」，
+    // 整段塞進來一定超過「發布變動紀錄」的 60 字上限，等於每次都要重打。第一行本來就設計成能獨立成句。
+    '公開摘要': c ? firstLine_(c.summary) : '',
     '公開卡片': info.cardId,                  // 已算好的 inboxCardId，不用再推導
     // 動作欄留空＝還沒決定／還沒處理。新舊欄名都給值，分頁還沒改名也不會漏
     [INBOX_ACTION_HEADER]: '',
@@ -866,7 +1000,9 @@ function sendDigest_(alerts, errors, rebaselined, skipped) {
         // 活動名稱獨立一行放在摘要上面：一頁常有好幾檔活動，只看摘要會不知道改的是哪一檔
         // （站長 2026-08-20 回報：收到「指定行動支付回饋條件變嚴格」還得自己開官網查是哪檔）
         if (a.cls.scope) s += '   〔' + a.cls.scope + '〕\n';
-        s += '   ' + (a.cls.summary || '') + '\n';
+        // 摘要現在可能多行（第一行重點、第二行起具體名單），每一行都要縮排才對得齊
+        s += String(a.cls.summary || '').split('\n')
+          .map(function (line) { return '   ' + line; }).join('\n') + '\n';
       } else {
         s += '\n   （AI 未分類，原始變動段落）\n   ' + (a.diffText || '') + '\n';
       }
