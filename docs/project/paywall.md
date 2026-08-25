@@ -66,6 +66,23 @@
 （或在乾淨的 clone 重新產生）才會突然消失，屆時 `firebase deploy` 會因為
 少了 `package.json` 而失敗。驗證方式：刪檔再 `git add`，加得回去才算對。
 
+### 2.1.1 main 上的殘留：CF 建置會報紅字但不會壞（2026-08-24 實測）
+
+搬家的改動還在功能分支上，`origin/main` 仍留著 Firebase 版的 `functions/`。
+Production 的建置 log 因此出現：
+
+```
+Found Functions directory at /functions. Uploading.
+✘ [ERROR] No routes found when building Functions directory
+Warning: Wrangler did not find routes when building functions. Skipping.
+```
+
+**是空包彈**：那些檔案沒有 `onRequest*` 匯出 → 產不出路由 → Wrangler 跳過，
+部署照樣 success，站台正常。功能分支 merge 後這行就會消失。
+
+順帶確認了兩件對 merge 有利的事：CF 的 root directory 策略是 v2、
+`functions/` 偵測路徑正確——我們真正的 Pages Functions merge 後會被抓到。
+
 ## 2.2 OEN 流程（已實作，2026-08-20）
 
 
@@ -506,6 +523,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          `PMC_HEALTHCHECK_TOKEN`，然後把印出的 etag 填進 `tools/paywall/cf-ips.etag`
    - [ ] **站長本人改一次 cron 那行並 commit**，否則失敗通知不會寄給你（見 3.55）
    - [ ] 向應援取得正式環境資料（見 3.75）
+   - [ ] 確認 Production **沒有**設 `PMC_PAY_INSPECT=1`（那支端點會原樣記錄請求標頭，
+         只該用在測試環境。它預設在正式分支回 404，設了這個變數才會反過來啟用）
    - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
