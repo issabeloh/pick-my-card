@@ -16,7 +16,7 @@ name: paywall-healthcheck
 on:
   schedule:
     # 每天 09:00 台北時間（01:00 UTC）
-    - cron: '0 1 * * *'
+    - cron: '5 1 * * *'
   workflow_dispatch:
 
 permissions:
