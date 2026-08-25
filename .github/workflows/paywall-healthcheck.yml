@@ -1,0 +1,46 @@
+# 去廣告付費牆的白名單健檢：每天叫一次 /api/pay/healthcheck，確認我們的出口 IP
+# 仍通得過應援科技（OEN）的白名單，並比對 Cloudflare 官方 IP 區段清單有沒有變動。
+# 背景與處理方式見 docs/project/paywall.md 3.5。
+#
+# ⚠️ 通知管道就是「這個 job 失敗時 GitHub 寄的信」，沒有另外接告警服務。
+#    所以請確認 GitHub 帳號的 Notifications 有開啟 Actions 失敗通知。
+# ⚠️ GitHub 會在 repo 連續 60 天沒有活動時自動停用排程 workflow，
+#    長期沒動的話要回來手動啟用。
+#
+# 需要的設定（Settings → Secrets and variables → Actions）：
+#   Variables → PMC_HEALTHCHECK_URL    例如 https://pickmycard.app/api/pay/healthcheck
+#   Secrets   → PMC_HEALTHCHECK_TOKEN  與 CF Pages 上同名變數一致
+# 兩者任一沒設，job 會直接跳過（不是失敗）——上線前才需要它。
+name: paywall-healthcheck
+
+on:
+  schedule:
+    # 每天 09:00 台北時間（01:00 UTC）
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 檢查是否已設定（未設定就跳過）
+        id: guard
+        env:
+          URL: ${{ vars.PMC_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "尚未設定 PMC_HEALTHCHECK_URL，付費牆應該還沒上線 → 跳過健檢。"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 執行白名單健檢
+        if: steps.guard.outputs.configured == 'true'
+        env:
+          PMC_HEALTHCHECK_URL: ${{ vars.PMC_HEALTHCHECK_URL }}
+          PMC_HEALTHCHECK_TOKEN: ${{ secrets.PMC_HEALTHCHECK_TOKEN }}
+        run: node tools/paywall/healthcheck-client.mjs

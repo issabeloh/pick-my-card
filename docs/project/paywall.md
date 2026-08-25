@@ -332,6 +332,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_PAY_PAGE_BASE` | （通常不用設） | OEN 結帳頁 base 覆寫（預設依 merchantId＋環境推得） |
    | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境要求金額 >100（見 3.4），正式定價 100 剛好在邊界上——**Preview 要設 150**，Production 不設此變數 |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
+   | `PMC_HEALTHCHECK_TOKEN` | 🔒 Secret | 白名單健檢端點的通行碼（見 3.55）。**沒設＝該端點整支停用**，不留後門 |
+   | `PMC_HEALTHCHECK_TXN_ID` | （選用） | 一筆真實舊交易 id，設了健檢判準會更嚴（要求 `code=S0000`） |
 
 3.4 **OEN 測試卡號（2026-08-23 定案，以官方「注意事項」為準）**
 
@@ -405,17 +407,58 @@ git fetch origin main && git rev-list --count HEAD..origin/main
      後者已有既有安全網（見 2.4）：訂單留在 D1、自動通報管理員、事後可手動開通或退款，
      不會出現「收了錢查無此人」的黑洞——但用戶體驗仍然很差，所以要靠監控在用戶之前發現。
 
-   **決定的作法**：接受 Cloudflare 區段，並由**我方承擔監控與通知責任**（正面回應
-   應援「無法追蹤變動」的顧慮）。待辦：
-   - [ ] 每日排程從 Cloudflare 端打一次 OEN API（查一筆已知交易），非 2xx／403 即通報站長
-   - [ ] 同一支排程比對 `api.cloudflare.com/client/v4/ips` 的 `etag`，變動即通報，
-         由站長主動告知應援更新白名單
-   （Pages Functions 沒有 cron handler，排程要靠外部觸發，例如 GitHub Actions 定時打
-   我方的健檢端點——重點是**請求必須從 Cloudflare 出去**才驗得到白名單。）
+   **決定的作法（站長 2026-08-24 拍板）**：接受 Cloudflare 區段、不買固定 IP，
+   由**我方承擔監控與通知責任**（正面回應應援「無法追蹤變動」的顧慮）。
+   已實作，見下面的 3.55。
 
-   最後手段（目前不採用）：自架固定 IP 的轉發層（小型 VPS 約 US$5/月），
-   多一份成本與單點故障。Cloudflare 的 dedicated egress IP 屬 Cloudflare One／
-   Zero Trust 產品線，是給使用者端流量用的，**不適用** Workers/Pages Functions。
+   **固定 IP 的選項全部評估過，結論是不值得**（成本／可靠度都不划算）：
+
+   | 方案 | 成本 | 為什麼不採用 |
+   |---|---|---|
+   | Cloudflare Dedicated CDN Egress IP（原 Aegis） | Enterprise，年約數千美金 | 方案門檻遠超本站規模 |
+   | Cloudflare One／Gateway 專屬 egress IP（含 BYOIP） | Enterprise | 那是 Zero Trust 產品線，管的是**使用者裝置**流量，不是 Workers 的 `fetch` |
+   | 自架 VPS 轉發層（Hetzner／Vultr／DO 最小方案） | 約 US$4.5–6/月 | 在金流路徑中間多一個單點故障，還要自己顧 TLS 與更新 |
+   | Oracle Cloud Always Free VM | US$0 | ⚠️ 看似免費實則不能用：Oracle 對閒置實例有回收政策（7 天 CPU 95 百分位 <20%），一天轉幾筆付款的機器定義上就是閒置 |
+   | 搬去 Firebase／GCP Cloud Functions（已有 Blaze） | 概估 US$10+/月 | GCP 的出口 IP 預設也是浮動的，要固定得另開 VPC + Cloud NAT，收費且複雜 |
+   | 商用固定 IP proxy（QuotaGuard／Fixie 類） | US$20/月起 | 貴，且金流 token 要經過第三方 |
+
+   花錢買到的只是「被擋的那幾小時也不中斷」，但代價是多一台機器夾在金流路徑中間，
+   它自己掛掉的機率恐怕比 Cloudflare 改區段還高。真的發生一次再回頭評估也不遲。
+
+## 3.55 白名單健檢（2026-08-24 實作）
+
+   三個檔案構成，成本 US$0：
+
+   | 檔案 | 角色 |
+   |---|---|
+   | `functions/api/pay/healthcheck.js` | `GET /api/pay/healthcheck`。**必須從 Cloudflare 這端執行**——從 GitHub Actions 直接打 OEN 驗不到白名單，來源 IP 不一樣 |
+   | `tools/paywall/healthcheck-client.mjs` | 排程端。判斷 ok 與 etag，有問題就 exit 1 |
+   | `.github/workflows/paywall-healthcheck.yml` | 每天 09:00（台北）跑一次；**job 失敗時 GitHub 寄的信就是通知管道**，沒有另接告警服務 |
+
+   端點做兩件事：
+   1. 用現行金流設定實際打一次 OEN 的 `GET /transactions/{id}`。判準是**連得到**，
+      不是查得到交易——OEN 有回帶 `code` 的 JSON（哪怕是查無此交易）就算通過；
+      連線層失敗或 401/403 才是被擋。設了 `PMC_HEALTHCHECK_TXN_ID`（一筆真實舊交易）
+      判準會更嚴，要求 `code=S0000`。
+   2. 抓 `https://api.cloudflare.com/client/v4/ips` 的 `etag`，交給排程端比對。
+
+   基準值存在 `tools/paywall/cf-ips.etag`（初始內容 `BOOTSTRAP`，第一次跑會**故意失敗**
+   並印出該填的值——這是刻意的，強迫完成這個一次性動作）。
+
+   ⚠️ **etag 變動時的處理順序不可顛倒**：先寄新區段給應援更新白名單 → 確認生效
+   → 才更新 `cf-ips.etag`。先改基準檔會讓警報消失，但白名單其實還沒更新。
+
+   拿不到 Cloudflare 清單時只印警告、不算失敗——那是 Cloudflare 端的暫時性問題，
+   與「我們被擋了」是兩回事，混在一起會製造假警報。
+
+   需要的設定（缺任一，workflow 會**跳過**而不是失敗，所以上線前放著也不會吵）：
+   - CF Pages（Production）：`PMC_HEALTHCHECK_TOKEN`（Secret，自己產一串隨機字）；
+     選用 `PMC_HEALTHCHECK_TXN_ID`
+   - GitHub → Settings → Secrets and variables → Actions：
+     Variables `PMC_HEALTHCHECK_URL`（`https://pickmycard.app/api/pay/healthcheck`）、
+     Secrets `PMC_HEALTHCHECK_TOKEN`（與 CF 那把相同）
+
+   ⚠️ GitHub 會在 repo 連續 60 天沒活動時自動停用排程 workflow，長期沒動要回來手動啟用。
 
 3.6 **OEN 代開發票**：CRM 若開啟代開發票，建立交易時**必須**帶 userName＋userEmail，
    否則回 V0001 USER_NAME_AND_EMAIL_REQUIRED。目前程式碼**沒有帶**這兩欄
@@ -442,7 +485,9 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
    - [x] ~~IP 白名單問題已有答案~~（2026-08-24 應援同意接受 Cloudflare 區段，見 3.5）
-   - [ ] 上線前建好白名單健檢排程（見 3.5 待辦），否則區段變更時只能等用戶客訴
+   - [ ] 設定白名單健檢的四個變數並跑一次 `workflow_dispatch`（見 3.55）：
+         CF Pages 的 `PMC_HEALTHCHECK_TOKEN`、GitHub 的 `PMC_HEALTHCHECK_URL`＋
+         `PMC_HEALTHCHECK_TOKEN`，然後把印出的 etag 填進 `tools/paywall/cf-ips.etag`
    - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
