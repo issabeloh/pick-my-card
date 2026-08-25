@@ -7,7 +7,7 @@
 import { requireUser } from '../_lib/firebase-auth.js';
 import { createOrder, getEntitlement, setOrderProviderTxn } from '../_lib/db.js';
 import { resolvePaymentConfig, makeCheckMacValue, taipeiTradeDate, newTradeNo,
-         oenCreateCheckout, oenCheckoutPageUrl } from '../_lib/payment.js';
+         oenCreateCheckout, oenCheckoutPageUrl, resolveChargeAmount } from '../_lib/payment.js';
 import { json, fail, siteOrigin } from '../_lib/http.js';
 
 export async function onRequestPost({ request, env }) {
@@ -24,9 +24,16 @@ export async function onRequestPost({ request, env }) {
             return json({ alreadyPaid: true });
         }
 
+        // 隨喜加碼：前端送 tip（加碼金額），總額一律由伺服器端算並驗證。
+        // body 讀不到就當作沒加碼——不要因為缺 body 就整個失敗。
+        let body = {};
+        try { body = await request.json(); } catch (e) { /* 無 body 或非 JSON → 視為未加碼 */ }
+        const priced = resolveChargeAmount(env, body && body.tip);
+        if (priced.error) return json({ error: priced.error }, 400);
+        const amount = priced.amount;
+
         const cfg = resolvePaymentConfig(env);
         const origin = siteOrigin(request, env);
-        const amount = Number(env.PMC_ADFREE_PRICE || 100);
         const tradeNo = newTradeNo();
 
         // 先寫訂單再呼叫金流商：對方的通知回來時一定找得到對應的 uid。
@@ -50,7 +57,9 @@ export async function onRequestPost({ request, env }) {
                 customId: user.uid, // 對帳備援；開通仍以訂單表的 uid 為準
                 productDetails: [{
                     productionCode: 'adfree',
-                    description: '去廣告權益（一次買斷）',
+                    description: priced.tip > 0
+                        ? `去廣告權益（一次買斷）＋加碼支持 NT$${priced.tip}`
+                        : '去廣告權益（一次買斷）',
                     quantity: 1,
                     unit: '式',
                     unitPrice: amount,
@@ -70,7 +79,9 @@ export async function onRequestPost({ request, env }) {
             // TradeDesc 刻意用純英數：綠界文件對這欄是否要預先 UrlEncode 的敘述有歧義，
             // 用不需編碼的字串就讓歧義消失（ItemName 才是用戶在刷卡頁看到的名稱）。
             TradeDesc: 'PickMyCard AdFree',
-            ItemName: '去廣告權益（一次買斷）',
+            ItemName: priced.tip > 0
+                ? `去廣告權益（一次買斷）＋加碼支持 NT$${priced.tip}`
+                : '去廣告權益（一次買斷）',
             ReturnURL: origin + '/api/pay/notify',       // 綠界 server 對 server 通知＝唯一開通依據
             OrderResultURL: origin + '/api/pay/return',  // 瀏覽器導回，只做畫面顯示
             ClientBackURL: origin + '/',

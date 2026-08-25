@@ -6,6 +6,7 @@
  *  - 套用去廣告 UI         → "applyAdfreeUI"
  *  - 向後端核對權益        → "refreshAdfreeEntitlement"
  *  - 認證狀態掛鉤          → "onPaywallAuthChanged"
+ *  - 隨喜加碼              → "renderAdfreeTip" / "fetchAdfreePricing"
  *  - 付費 modal            → "openAdfreeModal" / "closeAdfreeModal"
  *  - 送出付款              → "startAdfreeCheckout"
  *  - 付款導回處理          → "handlePaymentReturn"
@@ -153,6 +154,105 @@ function onPaywallAuthChanged(user) {
 }
 
 // ============================================
+// 隨喜加碼
+// ============================================
+
+// 定價的唯一真實來源是後端 GET /api/pricing（底價會隨 PMC_ADFREE_PRICE 變動）。
+// 這裡的預設值只在「還沒拿到回應」或「拿不到回應」時當保底顯示用；
+// 就算保底值跟後端不一致也不會多扣錢——真正的金額由後端算，前端只送 tip。
+const ADFREE_PRICING_FALLBACK = { base: 100, max: 1000, steps: [25, 50] };
+let adfreePricing = null;   // 拿到後快取，同一次載入不重複要
+let adfreeTip = 0;          // 目前累積的加碼金額
+
+function currentAdfreePricing() {
+    return adfreePricing || ADFREE_PRICING_FALLBACK;
+}
+
+function currentAdfreeAmount() {
+    return currentAdfreePricing().base + adfreeTip;
+}
+
+/** 付款按鈕永遠把總額寫在上面：用戶按下去之前就知道會被扣多少。 */
+function adfreePayLabel() {
+    return '前往付款 NT$' + currentAdfreeAmount();
+}
+
+async function fetchAdfreePricing() {
+    if (adfreePricing) return adfreePricing;
+    try {
+        const res = await fetch('/api/pricing');
+        const data = await res.json();
+        // 後端萬一回了怪東西就用保底值，不要讓畫面顯示 NaN
+        if (res.ok && Number.isFinite(data.base) && Number.isFinite(data.max) && Array.isArray(data.steps)) {
+            adfreePricing = {
+                base: data.base,
+                max: data.max,
+                steps: data.steps.filter((n) => Number.isFinite(n) && n > 0),
+            };
+        }
+    } catch (err) {
+        console.error('取得定價失敗，改用預設值', err);
+    }
+    return currentAdfreePricing();
+}
+
+/** 依級距建出 +25 / +50 按鈕。用 createElement＋textContent，不碰 innerHTML（鐵則 3）。 */
+function buildAdfreeTipButtons() {
+    const box = document.getElementById('adfree-tip-buttons');
+    if (!box) return;
+    box.textContent = '';
+    for (const step of currentAdfreePricing().steps) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'adfree-tip-btn';
+        btn.dataset.tipStep = String(step);
+        btn.textContent = '+' + step;
+        btn.addEventListener('click', () => addAdfreeTip(step));
+        box.appendChild(btn);
+    }
+}
+
+function addAdfreeTip(step) {
+    const { base, max } = currentAdfreePricing();
+    // 夾在上限內：按超過不會失敗，就停在上限（比彈錯誤訊息友善）
+    adfreeTip = Math.min(adfreeTip + step, Math.max(0, max - base));
+    renderAdfreeTip();
+}
+
+function resetAdfreeTip() {
+    adfreeTip = 0;
+    renderAdfreeTip();
+}
+
+function renderAdfreeTip() {
+    const { base, max } = currentAdfreePricing();
+    const amount = currentAdfreeAmount();
+
+    const priceEl = document.getElementById('adfree-price-amount');
+    if (priceEl) priceEl.textContent = 'NT$' + amount;
+
+    const resetBtn = document.getElementById('adfree-tip-reset');
+    if (resetBtn) resetBtn.style.display = adfreeTip > 0 ? '' : 'none';
+
+    const note = document.getElementById('adfree-tip-note');
+    if (note) {
+        if (amount >= max) note.textContent = '已達上限 NT$' + max + '，謝謝你的支持！';
+        else if (adfreeTip > 0) note.textContent = '含加碼 NT$' + adfreeTip + '（底價 NT$' + base + '）';
+        else note.textContent = '加碼完全自願，權益內容不會因此不同。';
+    }
+
+    // 到上限就把加碼按鈕停用，避免用戶一直按卻沒反應
+    const atMax = amount >= max;
+    for (const btn of document.querySelectorAll('#adfree-tip-buttons .adfree-tip-btn')) {
+        btn.disabled = atMax;
+    }
+
+    // 只有在按鈕還可以按的時候才改字：正在建立訂單中不要把「建立訂單中…」蓋掉
+    const payBtn = document.getElementById('adfree-pay-btn');
+    if (payBtn && !payBtn.dataset.busy) payBtn.textContent = adfreePayLabel();
+}
+
+// ============================================
 // 付費 modal
 // ============================================
 
@@ -245,8 +345,20 @@ function openAdfreeModal() {
     const check = document.getElementById('adfree-consent-check');
     const payBtn = document.getElementById('adfree-pay-btn');
     if (check) check.checked = false;
-    if (payBtn) { payBtn.disabled = true; payBtn.textContent = '前往付款'; }
+    if (payBtn) { delete payBtn.dataset.busy; payBtn.disabled = true; }
     setAdfreeError('');
+
+    // 每次重新開啟都從底價起算：上一次按到一半的加碼不該默默留著，
+    // 那會讓用戶在不知情的狀況下付出比預期多的錢。
+    adfreeTip = 0;
+    buildAdfreeTipButtons();
+    renderAdfreeTip();
+    // 定價是非同步取得的：先用保底值把畫面畫出來（modal 不要空等），
+    // 拿到真值再重畫一次。
+    fetchAdfreePricing()
+        .then(() => { buildAdfreeTipButtons(); renderAdfreeTip(); })
+        .catch((err) => console.error('定價更新失敗', err));
+
     showAdfreePurchaseView();
     showAdfreeModalShell();
 }
@@ -281,10 +393,16 @@ function submitToEcpay(action, params) {
 
 async function startAdfreeCheckout() {
     const payBtn = document.getElementById('adfree-pay-btn');
-    if (payBtn) { payBtn.disabled = true; payBtn.textContent = '建立訂單中…'; }
+    // busy 旗標讓 renderAdfreeTip() 不要把「建立訂單中…」蓋回金額
+    if (payBtn) { payBtn.dataset.busy = '1'; payBtn.disabled = true; payBtn.textContent = '建立訂單中…'; }
     setAdfreeError('');
 
-    const { ok, status, data } = await callPaywallApi('/api/checkout', { method: 'POST' });
+    // 只送 tip，不送總額：總額由後端用自己的底價算，前端說了不算（見 resolveChargeAmount）
+    const { ok, status, data } = await callPaywallApi('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tip: adfreeTip }),
+    });
 
     if (ok && data.alreadyPaid) {
         const user = window.firebaseAuth && window.firebaseAuth.currentUser;
@@ -298,7 +416,7 @@ async function startAdfreeCheckout() {
         const safeUrl = typeof sanitizeUrl === 'function' ? sanitizeUrl(data.redirectUrl) : data.redirectUrl;
         if (!safeUrl) {
             setAdfreeError('付款頁網址異常，請稍後再試。');
-            if (payBtn) { payBtn.disabled = false; payBtn.textContent = '前往付款'; }
+            if (payBtn) { delete payBtn.dataset.busy; payBtn.disabled = false; payBtn.textContent = adfreePayLabel(); }
             return;
         }
         if (typeof gtagEvent === 'function') gtagEvent('adfree_checkout_start');
@@ -313,7 +431,7 @@ async function startAdfreeCheckout() {
     if (!ok || !data.action || !data.params) {
         setAdfreeError(status === 401 ? '登入狀態已過期，請重新登入後再試。'
                                       : (data.error || '建立訂單失敗，請稍後再試。'));
-        if (payBtn) { payBtn.disabled = false; payBtn.textContent = '前往付款'; }
+        if (payBtn) { delete payBtn.dataset.busy; payBtn.disabled = false; payBtn.textContent = adfreePayLabel(); }
         return;
     }
 
@@ -612,8 +730,12 @@ function setupPaywall() {
         console.error('建立訂單失敗', e);
         setAdfreeError('建立訂單失敗，請稍後再試。');
         payBtn.disabled = false;
-        payBtn.textContent = '前往付款';
+        delete payBtn.dataset.busy;
+        payBtn.textContent = adfreePayLabel();
     }); });
+
+    const tipReset = document.getElementById('adfree-tip-reset');
+    if (tipReset) tipReset.addEventListener('click', resetAdfreeTip);
 
     const termsToggle = document.getElementById('adfree-terms-toggle');
     if (termsToggle) {

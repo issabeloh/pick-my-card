@@ -15,7 +15,8 @@ const check = (name, ok, detail) => {
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 
 // adfree=true 時預先寫入本機旗標；entitled 決定假 API 回什麼
-async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '', staleIntent = false, authDelayMs = 0 } = {}) {
+async function open({ loggedIn = true, adfreeFlag = false, entitled = false, query = '', staleIntent = false, authDelayMs = 0,
+                      pricing = { base: 100, max: 1000, steps: [25, 50] }, pricingFails = false } = {}) {
     const ctx = await browser.newContext();
     await ctx.route('**/*', (route) => {
         const url = route.request().url();
@@ -23,7 +24,7 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
         return route.abort();   // 擋掉 firebase/adsense/clarity 等外部資源
     });
     const page = await ctx.newPage();
-    await page.addInitScript(([loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs]) => {
+    await page.addInitScript(([loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs, pricing, pricingFails]) => {
         localStorage.setItem('pmc_seen_landing', '1');
         if (staleIntent) sessionStorage.setItem('pmc_adfree_intent', '1');
         if (adfreeFlag) localStorage.setItem('pmc_adfree', 'testuid123|' + (Date.now() + 86400000));
@@ -63,13 +64,24 @@ async function open({ loggedIn = true, adfreeFlag = false, entitled = false, que
                 return new Response(JSON.stringify(body),
                     { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
+            if (u.includes('/api/pricing')) {
+                if (pricingFails) return new Response('boom', { status: 500 });
+                return new Response(JSON.stringify(pricing),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (u.includes('/api/checkout')) {
+                // 攔下來記錄前端到底送了什麼 tip；回 400 讓流程停住（不要真的跳轉）
+                window.__checkoutBody = init && init.body ? JSON.parse(init.body) : null;
+                return new Response(JSON.stringify({ error: '測試攔截' }),
+                    { status: 400, headers: { 'Content-Type': 'application/json' } });
+            }
             if (u.includes('/api/account/purge')) {
                 window.__purged = true;
                 return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
             return realFetch(input, init);
         };
-    }, [loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs]);
+    }, [loggedIn, adfreeFlag, entitled, staleIntent, authDelayMs, pricing, pricingFails]);
     await page.goto(BASE + '/index.html' + query, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(900);
     return { ctx, page };
@@ -473,6 +485,95 @@ for (const entitled of [true, false]) {
     check('登入延遲還原：付款成功仍會開通',
         (await text(page, '#adfree-result-title')).includes('付款完成'),
         await text(page, '#adfree-result-title'));
+    await ctx.close();
+}
+
+// ── T. 隨喜加碼：累加、上限、重設、送出的金額 ──────────
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);   // 等 /api/pricing 回來重畫
+
+    const amount = () => text(page, '#adfree-price-amount');
+    const payLabel = () => text(page, '#adfree-pay-btn');
+
+    check('加碼：初始顯示底價 NT$100', (await amount()).trim() === 'NT$100', await amount());
+    check('加碼：付款鈕帶總額（用戶按之前就知道要付多少）',
+        (await payLabel()).includes('NT$100'), await payLabel());
+    check('加碼：未加碼時「重設」不出現', !(await vis(page, '#adfree-tip-reset')));
+
+    await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="25"]');
+    await page.waitForTimeout(120);
+    check('加碼：+25 → NT$125', (await amount()).trim() === 'NT$125', await amount());
+    check('加碼：有加碼後「重設」才出現', await vis(page, '#adfree-tip-reset'));
+
+    await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="50"]');
+    await page.waitForTimeout(120);
+    check('加碼：再 +50 → NT$175（可連按累加）', (await amount()).trim() === 'NT$175', await amount());
+    check('加碼：付款鈕金額同步更新', (await payLabel()).includes('NT$175'), await payLabel());
+
+    await page.click('#adfree-tip-reset');
+    await page.waitForTimeout(120);
+    check('加碼：重設 → 回到 NT$100', (await amount()).trim() === 'NT$100', await amount());
+    check('加碼：重設後「重設」自己收起來', !(await vis(page, '#adfree-tip-reset')));
+
+    // 狂按 +50 共 30 次（1500 > 上限 1000），必須停在上限而不是超過
+    for (let i = 0; i < 30; i += 1) {
+        await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="50"]', { force: true }).catch(() => {});
+    }
+    await page.waitForTimeout(200);
+    check('加碼：按超過上限 → 停在 NT$1000，不會超收', (await amount()).trim() === 'NT$1000', await amount());
+    check('加碼：到上限後按鈕停用', await page.evaluate(
+        () => [...document.querySelectorAll('#adfree-tip-buttons .adfree-tip-btn')].every((b) => b.disabled)));
+    check('加碼：到上限時提示文字說明已達上限',
+        (await text(page, '#adfree-tip-note')).includes('上限'), await text(page, '#adfree-tip-note'));
+
+    // 送出：前端只該送 tip（總額由後端算）
+    await page.check('#adfree-consent-check');
+    await page.click('#adfree-pay-btn');
+    await page.waitForTimeout(400);
+    const sent = await page.evaluate(() => window.__checkoutBody);
+    check('加碼：送出的 body 只帶 tip=900（不帶總額，總額由後端算）',
+        sent && sent.tip === 900 && sent.amount === undefined, JSON.stringify(sent));
+    check('加碼：建立訂單失敗後，付款鈕文字還原成含金額的樣子',
+        (await payLabel()).includes('NT$1000'), await payLabel());
+
+    // 關掉重開 → 加碼要歸零，否則用戶會在不知情下付到上次的金額
+    await page.click('#close-adfree-modal');
+    await page.waitForTimeout(200);
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);
+    check('加碼：關掉再開 → 加碼歸零回到底價', (await amount()).trim() === 'NT$100', await amount());
+    await ctx.close();
+}
+
+// ── U. 底價與上限一律以後端 /api/pricing 為準 ──────────
+{
+    const { ctx, page } = await open({ entitled: false, pricing: { base: 150, max: 300, steps: [25, 50] } });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);
+    check('定價：底價跟著後端走（150，不是前端寫死的 100）',
+        (await text(page, '#adfree-price-amount')).trim() === 'NT$150', await text(page, '#adfree-price-amount'));
+    for (let i = 0; i < 6; i += 1) {
+        await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="50"]', { force: true }).catch(() => {});
+    }
+    await page.waitForTimeout(200);
+    check('定價：上限也跟著後端走（停在 300）',
+        (await text(page, '#adfree-price-amount')).trim() === 'NT$300', await text(page, '#adfree-price-amount'));
+    await ctx.close();
+}
+
+// ── V. /api/pricing 掛掉 → 用保底值，畫面不能出現 NaN ──
+{
+    const { ctx, page } = await open({ entitled: false, pricingFails: true });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(500);
+    const shown = (await text(page, '#adfree-price-amount')).trim();
+    check('定價 API 掛掉 → 顯示保底底價 NT$100，不是 NaN', shown === 'NT$100', shown);
+    await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="25"]');
+    await page.waitForTimeout(120);
+    check('定價 API 掛掉 → 加碼仍可運作（NT$125）',
+        (await text(page, '#adfree-price-amount')).trim() === 'NT$125', await text(page, '#adfree-price-amount'));
     await ctx.close();
 }
 

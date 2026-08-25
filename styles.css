@@ -5988,6 +5988,78 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     color: #6b7280;
 }
 
+/* 隨喜加碼（「加碼支持！」）——按 +25 / +50 累加，上限由 /api/pricing 決定 */
+.adfree-tip {
+    margin: -6px 0 18px;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.adfree-tip-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.adfree-tip-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.adfree-tip-reset {
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: #6b7280;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.adfree-tip-reset:hover {
+    color: #374151;
+}
+
+.adfree-tip-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.adfree-tip-btn {
+    flex: 1;
+    padding: 8px 0;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.adfree-tip-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.adfree-tip-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.adfree-tip-note {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+
 .adfree-benefits {
     margin: 0 0 16px;
     padding-left: 20px;

@@ -108,6 +108,40 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 
 改了 OEN 相關邏輯 → 跑 `node tools/paywall/oen-selftest.mjs`（改動前先確認綠燈）。
 
+## 2.25 隨喜加碼「加碼支持！」（2026-08-25）
+
+底價之外可自願加碼，按 `+25` / `+50` 累加，按幾次都可以，設有上限。
+應援不需要知道加碼這件事——**我方算完總額再呼叫他們**（業務原話：
+「按鈕隨喜這段程式要由您那端計算完畢後再呼叫應援」）。
+
+| 檔案 | 角色 |
+|---|---|
+| `functions/_lib/payment.js` → `resolveAdfreePricing` / `resolveChargeAmount` | 定價與**金額驗證**（唯一守門員） |
+| `functions/api/pricing.js` | `GET /api/pricing`（公開，不需登入）→ `{base, max, steps}` |
+| `functions/api/checkout.js` | 讀 body 的 `tip`，總額由 `resolveChargeAmount` 算 |
+| `js/paywall.js` → `renderAdfreeTip` / `fetchAdfreePricing` | 前端狀態與畫面 |
+
+⚠️ **這個功能唯一的資安要點：金額不能信前端。**
+前端只送 `tip`，總額一律由後端用自己的底價算。`resolveChargeAmount()` 會擋掉
+負數、小數、非級距倍數、超過上限——**沒有這道驗證，任何人都能直接
+`POST {"tip": -99}` 用一塊錢買走權益**。前端把按鈕 disabled 只是體驗，不是防線。
+
+⚠️ **定價只有一個來源**：底價會隨 `PMC_ADFREE_PRICE` 變動（測試環境調高過），
+所以前端一律以 `GET /api/pricing` 為準。前端那份 `ADFREE_PRICING_FALLBACK`
+只在 API 拿不到時保底顯示，**不是真實來源**——若在前端另寫死一份數字，
+用戶看到的金額會跟實際扣款不一致，加了加碼之後這種不一致等於多扣錢。
+
+其他刻意的行為：
+- **關掉 modal 再開，加碼歸零**。留著上次的加碼會讓用戶在不知情下付更多。
+- **按超過上限不報錯，直接停在上限**，同時把加碼按鈕停用（比彈錯誤訊息友善）。
+- **付款按鈕永遠寫著總額**（「前往付款 NT$175」），按下去之前就知道要付多少。
+- 加碼金額會寫進送給金流商的品項名稱（`去廣告權益（一次買斷）＋加碼支持 NT$75`），
+  對帳時看得出來。
+- 購買條款加了一段：加碼純屬自願、**不影響權益內容**、屬同一筆數位內容價金。
+
+新增環境變數 `PMC_ADFREE_MAX`（預設 1000）。測試涵蓋在
+`oen-selftest.mjs`（金額驗證 22 項）與 `ui-flow-test.mjs`（UI 流程 16 項）。
+
 ## 2.3 帳號刪除與付費資料（2026-08-21）
 
 
@@ -347,6 +381,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_PAY_TOKEN` | 🔒 Secret | OEN 專用。CRM 後台產製，只顯示一次、重產即覆蓋 |
    | `PMC_PAY_USE3D` | `1` 開啟 | OEN 信用卡 3D 驗證，預設關（同 OEN 預設）。開啟可轉移盜刷爭議責任 |
    | `PMC_PAY_PAGE_BASE` | （通常不用設） | OEN 結帳頁 base 覆寫（預設依 merchantId＋環境推得） |
+   | `PMC_ADFREE_MAX` | `1000` | 隨喜加碼後的總額上限（見 2.25）。不設＝1000 |
    | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境要求金額 >100（見 3.4），正式定價 100 剛好在邊界上——**Preview 要設 150**，Production 不設此變數 |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
    | `PMC_HEALTHCHECK_TOKEN` | 🔒 Secret | 白名單健檢端點的通行碼（見 3.55）。**沒設＝該端點整支停用**，不留後門 |

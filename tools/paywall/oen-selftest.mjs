@@ -2,7 +2,8 @@
  * 重點是攻擊面：webhook 沒有簽章，所以「偽造 webhook 拿不到權益」必須被證明。
  * 跑法：node tools/paywall/oen-selftest.mjs
  */
-import { oenCreateCheckout, oenCheckoutPageUrl, resolvePaymentConfig } from '../../functions/_lib/payment.js';
+import { oenCreateCheckout, oenCheckoutPageUrl, resolvePaymentConfig,
+         resolveChargeAmount, resolveAdfreePricing } from '../../functions/_lib/payment.js';
 import { onRequestPost as notifyPost } from '../../functions/api/pay/notify.js';
 import { onRequestPost as returnPost, onRequestGet as returnGet } from '../../functions/api/pay/return.js';
 
@@ -182,6 +183,48 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
         bad.headers.get('Location'));
     const bare = await getReturn('');
     check('無參數亂逛 → 靜默回首頁', bare.headers.get('Location') === 'https://pickmycard.app/', bare.headers.get('Location'));
+}
+
+// ── 4. 隨喜加碼的金額驗證 ─────────────────────────────────────
+// 金額改由前端決定之後，伺服器端的驗證就是唯一防線：擋不住的話有人直接
+// POST 一個小數字就能用一塊錢買走權益。
+{
+    const e = {};                       // 底價 100、上限 1000（預設值）
+    const ok = (tip, expect) => {
+        const r = resolveChargeAmount(e, tip);
+        check(`加碼 ${JSON.stringify(tip)} → NT$${expect}`, r.amount === expect && !r.error, JSON.stringify(r));
+    };
+    const rejected = (tip, why) => {
+        const r = resolveChargeAmount(e, tip);
+        check(`拒絕 ${JSON.stringify(tip)}（${why}）`, !!r.error && r.amount === undefined, JSON.stringify(r));
+    };
+
+    ok(undefined, 100);                 // 沒帶 tip＝只付底價
+    ok(0, 100);
+    ok(25, 125);
+    ok(50, 150);
+    ok(75, 175);                        // +25 +50 連按
+    ok('50', 150);                      // 字串數字可接受（JSON 有可能這樣送）
+    ok(900, 1000);                      // 剛好到上限
+
+    rejected(-25, '負數＝想少付錢');
+    rejected(-100, '負數＝想免費拿權益');
+    rejected(30, '不是級距的倍數');
+    rejected(1.5, '不是整數');
+    rejected(925, '超過上限 NT$1000');
+    rejected('abc', '不是數字');
+    rejected(Infinity, '無限大');
+
+    // 底價被 PMC_ADFREE_PRICE 調高時，上限仍以總額計算
+    const e2 = { PMC_ADFREE_PRICE: '150', PMC_ADFREE_MAX: '300' };
+    check('底價 150／上限 300：加碼 150 → NT$300',
+        resolveChargeAmount(e2, 150).amount === 300, JSON.stringify(resolveChargeAmount(e2, 150)));
+    check('底價 150／上限 300：加碼 175 被拒',
+        !!resolveChargeAmount(e2, 175).error, JSON.stringify(resolveChargeAmount(e2, 175)));
+
+    const pricing = resolveAdfreePricing({});
+    check('GET /api/pricing 的內容：底價 100／上限 1000／級距 25,50',
+        pricing.base === 100 && pricing.max === 1000 && String(pricing.steps) === '25,50', JSON.stringify(pricing));
 }
 
 globalThis.fetch = realFetch;

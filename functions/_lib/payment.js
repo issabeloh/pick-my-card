@@ -194,6 +194,58 @@ export function resolvePaymentConfig(env) {
 }
 
 // ============================================
+// 去廣告定價（底價 ＋ 隨喜加碼）
+// ============================================
+
+/** 加碼級距。前端的按鈕與後端的驗證共用這一組數字，改這裡兩邊一起變。 */
+export const ADFREE_TIP_STEPS = [25, 50];
+
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+/**
+ * 定價設定。底價 PMC_ADFREE_PRICE 在測試環境會被調高（OEN 測試環境要求 >100），
+ * 上限 PMC_ADFREE_MAX 用來擋惡意或誤觸的極端金額。
+ * 前端靠 GET /api/pricing 拿這份設定來畫按鈕——**不可以在前端另外寫死一份**，
+ * 兩邊數字不同會讓用戶看到的金額與實際扣款不一致。
+ */
+export function resolveAdfreePricing(env) {
+    const base = Math.trunc(Number(env.PMC_ADFREE_PRICE || 100)) || 100;
+    const rawMax = Math.trunc(Number(env.PMC_ADFREE_MAX || 1000)) || 1000;
+    return { base, max: Math.max(base, rawMax), steps: ADFREE_TIP_STEPS.slice() };
+}
+
+/**
+ * 把前端送來的加碼金額換算成實際要收的總額。
+ *
+ * ⚠️ 金額一旦交給前端決定，伺服器端就必須自己驗一次——不然有人直接
+ * POST {"tip": -99} 就能用一塊錢買走權益。**這裡是唯一的守門員**，
+ * 前端把按鈕 disabled 掉只是體驗，不是防線。
+ *
+ * 回傳 { amount, base, tip } 或 { error }。
+ */
+export function resolveChargeAmount(env, rawTip) {
+    const { base, max, steps } = resolveAdfreePricing(env);
+    if (rawTip === undefined || rawTip === null || rawTip === '') {
+        return { amount: base, base, tip: 0 };
+    }
+    const tip = Number(rawTip);
+    if (!Number.isInteger(tip) || tip < 0) {
+        return { error: '加碼金額必須是 0 或正整數' };
+    }
+    // 級距的最大公因數＝允許的最小顆粒（[25,50] → 25）。用 gcd 而不是寫死 25，
+    // 這樣改 ADFREE_TIP_STEPS 時驗證會自動跟上。
+    const unit = steps.reduce((a, b) => gcd(a, b));
+    if (tip % unit !== 0) {
+        return { error: `加碼金額必須是 ${unit} 的倍數` };
+    }
+    const amount = base + tip;
+    if (amount > max) {
+        return { error: `總金額上限為 NT$${max}` };
+    }
+    return { amount, base, tip };
+}
+
+// ============================================
 // OEN 應援科技（JSON API + Bearer token）
 // ============================================
 
