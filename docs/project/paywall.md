@@ -460,6 +460,11 @@ git fetch origin main && git rev-list --count HEAD..origin/main
      `PMC_HEALTHCHECK_URL`＝`https://pickmycard.app/api/pay/healthcheck`；
      **Repository secret** `PMC_HEALTHCHECK_TOKEN`（與 CF 那把相同）
 
+   ⚠️ **workflow 要等檔案進到預設分支（main）才會出現在 Actions 頁**——`workflow_dispatch`
+   的「Run workflow」按鈕與 `schedule` 都只認預設分支（GitHub 官方限制）。
+   本 workflow 目前還在功能分支上，所以**merge 之前完全跑不了，Actions 頁也看不到它**，
+   這是正常的，不是設定錯誤。健檢的第一次執行排在 merge 上線之後（見 3.7 清單）。
+
    ⚠️ GitHub 會在 repo 連續 60 天沒活動時自動停用排程 workflow，長期沒動要回來手動啟用。
 
    ⚠️ **排程 workflow 的失敗通知只寄給「最後修改過 cron 那一行的人」**（GitHub 官方行為，
