@@ -455,10 +455,21 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - CF Pages（Production）：`PMC_HEALTHCHECK_TOKEN`（Secret，自己產一串隨機字）；
      選用 `PMC_HEALTHCHECK_TXN_ID`
    - GitHub → Settings → Secrets and variables → Actions：
-     Variables `PMC_HEALTHCHECK_URL`（`https://pickmycard.app/api/pay/healthcheck`）、
-     Secrets `PMC_HEALTHCHECK_TOKEN`（與 CF 那把相同）
+     **Repository variable**（不是 Environment variable——workflow 沒有宣告 `environment:`，
+     設成 Environment 層級的話 `vars` / `secrets` 讀不到）
+     `PMC_HEALTHCHECK_URL`＝`https://pickmycard.app/api/pay/healthcheck`；
+     **Repository secret** `PMC_HEALTHCHECK_TOKEN`（與 CF 那把相同）
 
    ⚠️ GitHub 會在 repo 連續 60 天沒活動時自動停用排程 workflow，長期沒動要回來手動啟用。
+
+   ⚠️ **排程 workflow 的失敗通知只寄給「最後修改過 cron 那一行的人」**（GitHub 官方行為，
+   見 <https://docs.github.com/en/actions/concepts/workflows-and-actions/notifications-for-workflow-runs>）。
+   這個檔案是由 AI 以 `Claude <noreply@anthropic.com>` 身分建立的，那不是站長的 GitHub 帳號
+   ——**站長必須自己動一次 cron 那行並用自己的帳號 commit**（例如把 `0 1 * * *` 改成
+   `5 1 * * *`），通知才會寄到自己信箱。否則整套監控形同虛設：壞了也沒人知道。
+   另需在 <https://github.com/settings/notifications> 的 Actions 區塊勾選 Email
+   （建議一併勾「Only notify for failed workflows」，否則每天成功也會寄一封）。
+   ⚠️ 這是個人帳號設定，不在 repo 的 Settings 裡。
 
 3.6 **OEN 代開發票**：CRM 若開啟代開發票，建立交易時**必須**帶 userName＋userEmail，
    否則回 V0001 USER_NAME_AND_EMAIL_REQUIRED。目前程式碼**沒有帶**這兩欄
@@ -488,6 +499,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - [ ] 設定白名單健檢的四個變數並跑一次 `workflow_dispatch`（見 3.55）：
          CF Pages 的 `PMC_HEALTHCHECK_TOKEN`、GitHub 的 `PMC_HEALTHCHECK_URL`＋
          `PMC_HEALTHCHECK_TOKEN`，然後把印出的 etag 填進 `tools/paywall/cf-ips.etag`
+   - [ ] **站長本人改一次 cron 那行並 commit**，否則失敗通知不會寄給你（見 3.55）
+   - [ ] 向應援取得正式環境資料（見 3.75）
    - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
@@ -495,6 +508,21 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          在正式站真的有送達（見 2.5）
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
+
+3.75 **上線前一定要先向應援取得／確認的事**（這些程式碼給不了，只能等對方回覆）：
+
+   | 要問的事 | 為什麼非問不可 |
+   |---|---|
+   | **正式環境是否已開通**（合約／審核完成） | 沒開通就沒有正式 CRM，後面全部免談 |
+   | **正式環境的 API base 網址** | 我們目前填的 `https://payment-api.oen.tw` 是**由測試環境的 `payment-api.testing.oen.tw` 推得的，沒有經對方確認**。猜錯的話 checkout 會直接失敗。真的不同時不用改程式碼，設 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 覆蓋即可 |
+   | **正式環境的 merchantId** | 測試是 `pick-my-card`，正式不一定相同；它同時決定結帳頁網址 `https://{merchantId}.oen.tw/checkout/{id}` |
+   | **正式環境的 Bearer token** | 在正式 CRM 產製，與測試互不相通。⚠️ 只顯示一次，產出當下就要存進密碼管理器 |
+   | **白名單已設好 Cloudflare 區段、且已生效** | 這是我們同意的方案，但要對方實際設定完成並回報，不能假設 |
+   | **正式環境的 webhook／導回網址要填 `https://pickmycard.app`** | 兩邊都要指到正式網域，不能留測試的 pages.dev |
+   | **撥款週期與實際費率** | 測試期觀察到 50 元交易 `fee: 2`（約 4%），要確認正式費率與撥款頻率 |
+
+   ⚠️ **在這些拿到之前不要 merge 上線**——不是「先上再說，之後補設定」：
+   缺 token 或網址錯誤時，用戶按下購買會直接失敗，等於用真實流量在踩雷。
 
 4. **發票**：綠界電子發票要另外申請，涉及你的稅務身分，本專案沒有整合
 5. **端到端實測**（環境限制：本 session 的網路政策擋掉 `ecpay.com.tw`，這步只能由你在真實部署上跑）：
