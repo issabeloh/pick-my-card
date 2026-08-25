@@ -225,6 +225,23 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
     const pricing = resolveAdfreePricing({});
     check('GET /api/pricing 的內容：底價 100／上限 1000／級距 25,50',
         pricing.base === 100 && pricing.max === 1000 && String(pricing.steps) === '25,50', JSON.stringify(pricing));
+
+    // 環境變數誤設也不能讓底價掉下來——設定失誤的後果跟被攻擊一樣
+    for (const [bad, label] of [['-50', '負數'], ['0', '零'], ['abc', '非數字'], ['', '空字串']]) {
+        const got = resolveAdfreePricing({ PMC_ADFREE_PRICE: bad });
+        check(`底價設成 ${label}（${JSON.stringify(bad)}）→ 退回 100，不會變成免費`,
+            got.base === 100, JSON.stringify(got));
+    }
+    check('上限設成負數 → 退回 1000',
+        resolveAdfreePricing({ PMC_ADFREE_MAX: '-1' }).max === 1000);
+
+    // 收費永遠不低於底價：這是整個加碼功能的下限保證，用窮舉釘死
+    let floorHeld = true;
+    for (let t = -500; t <= 500; t += 1) {
+        const r = resolveChargeAmount({}, t);
+        if (!r.error && r.amount < 100) { floorHeld = false; break; }
+    }
+    check('窮舉 tip = -500…500：沒有任何一個能讓收費低於底價 NT$100', floorHeld);
 }
 
 globalThis.fetch = realFetch;

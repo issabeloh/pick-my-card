@@ -200,6 +200,9 @@ export function resolvePaymentConfig(env) {
 /** 加碼級距。前端的按鈕與後端的驗證共用這一組數字，改這裡兩邊一起變。 */
 export const ADFREE_TIP_STEPS = [25, 50];
 
+/** 任何情況下都不接受低於這個數字的收費。設定失誤與程式改壞都被它擋住。 */
+export const ADFREE_MIN_AMOUNT = 1;
+
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
 /**
@@ -209,9 +212,13 @@ function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
  * 兩邊數字不同會讓用戶看到的金額與實際扣款不一致。
  */
 export function resolveAdfreePricing(env) {
-    const base = Math.trunc(Number(env.PMC_ADFREE_PRICE || 100)) || 100;
-    const rawMax = Math.trunc(Number(env.PMC_ADFREE_MAX || 1000)) || 1000;
-    return { base, max: Math.max(base, rawMax), steps: ADFREE_TIP_STEPS.slice() };
+    // 環境變數誤設成負數或 0 時不能讓它變成底價——那等於免費送權益。
+    // 這不是攻擊路徑（設定只有站長改得動），但後果跟被攻擊一樣，所以照樣夾住。
+    const rawBase = Math.trunc(Number(env.PMC_ADFREE_PRICE));
+    const base = Number.isFinite(rawBase) && rawBase >= ADFREE_MIN_AMOUNT ? rawBase : 100;
+    const rawMax = Math.trunc(Number(env.PMC_ADFREE_MAX));
+    const max = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1000;
+    return { base, max: Math.max(base, max), steps: ADFREE_TIP_STEPS.slice() };
 }
 
 /**
@@ -241,6 +248,12 @@ export function resolveChargeAmount(env, rawTip) {
     const amount = base + tip;
     if (amount > max) {
         return { error: `總金額上限為 NT$${max}` };
+    }
+    // 明寫的下限。今天 tip >= 0 已經保證 amount >= base，這行看起來是多餘的——
+    // 但那條保證是「推導」出來的：哪天有人把介面改成直接收 amount，
+    // 下限就會無聲消失。這行讓那種改法會在測試裡當場失敗，而不是上線後才發現。
+    if (!Number.isFinite(amount) || amount < base || amount < ADFREE_MIN_AMOUNT) {
+        return { error: '金額異常' };
     }
     return { amount, base, tip };
 }

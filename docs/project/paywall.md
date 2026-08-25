@@ -121,6 +121,20 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 | `functions/api/checkout.js` | 讀 body 的 `tip`，總額由 `resolveChargeAmount` 算 |
 | `js/paywall.js` → `renderAdfreeTip` / `fetchAdfreePricing` | 前端狀態與畫面 |
 
+### 下限是怎麼成立的（被問過，值得寫清楚）
+
+**前端沒有辦法表達「總額」**——它只能送 `tip`，總額永遠是後端 `base + tip`，
+而 `base` 來自環境變數、前端碰不到。所以「不得低於底價」是**結構上的必然**，
+不是靠某一行檢查。`{"tip": -99}` 會在型別檢查那關就被 400 擋掉。
+
+即使如此還是補了兩道明寫的防線，因為上面那個保證是「推導」出來的：
+- `resolveChargeAmount` 末尾明寫 `amount < base` 即拒絕。今天多餘，但哪天有人
+  把介面改成直接收 `amount`，下限會**無聲消失**——這行讓那種改法在測試裡當場失敗。
+- `resolveAdfreePricing` 夾住 `PMC_ADFREE_PRICE`：誤設成負數、0、亂碼一律退回 100。
+  這不是攻擊路徑（只有站長改得動），但後果跟被攻擊一樣。
+
+測試用窮舉 `tip = -500…500` 釘死「沒有任何一個值能讓收費低於底價」。
+
 ⚠️ **這個功能唯一的資安要點：金額不能信前端。**
 前端只送 `tip`，總額一律由後端用自己的底價算。`resolveChargeAmount()` 會擋掉
 負數、小數、非級距倍數、超過上限——**沒有這道驗證，任何人都能直接
@@ -563,6 +577,9 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - [x] ~~用 `4012 8888 1888 8333` 實測過失敗路徑~~（2026-08-23 完成，見 2.13）
    - [ ] 決定要不要開 3D 驗證（`PMC_PAY_USE3D=1`）：開啟後盜刷爭議責任轉移給
          發卡行，代價是多一道驗證、轉換率略降。預設關閉（同 OEN 預設）
+   - [ ] **第一筆正式測試就用「＋25 加碼」買**（見 2.25）：一次驗證加碼金額有沒有
+         正確傳到金流商、實際扣款是不是 NT$125、訂單 `amount` 與 OEN 回報是否相符。
+         用底價買會漏掉整條加碼路徑
    - [ ] 上線後買一筆，用 `SELECT source FROM entitlements` 確認 webhook
          在正式站真的有送達（見 2.5）
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
