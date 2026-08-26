@@ -30,6 +30,7 @@ const GA4_SEARCH_ROW_LIMIT = 500; // GA4_熱門搜尋 取回列數上限（不�
 
 // 歷史快照（把滾動視窗表每週存一份，才有趨勢可比較——見「歷史快照累積」區塊）
 const HISTORY_SNAPSHOT_WEEKDAY = 1;   // 每週幾存一次：0=週日、1=週一 …… 6=週六
+const HISTORY_SNAPSHOT_MAX_GAP_DAYS = 7;  // 距上次快照超過這天數就補存（不必等到快照日）
 const HISTORY_KEYWORD_TOP_N = 200;    // 關鍵字歷史只存前 N 名（500 全存會很快把列數撐爆）
 const HISTORY_TOP_N = 100;            // 其餘歷史表的每次存檔上限
 
@@ -684,13 +685,32 @@ function appendHistorySnapshots_(collected, force) {
   const now = new Date();
   const today = formatDate(now);
 
+  // 快照時機（2026-08-26 改）：快照日照常存；不是快照日、但距上次已滿
+  // HISTORY_SNAPSHOT_MAX_GAP_DAYS 天，也存一份補回來。
+  //
+  // 為什麼要補跑：舊版只認「今天是不是快照日」。那天只要沒跑完——排程沒觸發、或跑到一半
+  // 中斷都算——整週就沒有資料點，之後幾天再跑幾次都會被這道檢查擋掉，永遠補不回來。
+  // 實際發生過兩次：2026-07-27 與 2026-08-24 兩個週一在「更新紀錄」裡連一行都沒有，
+  // 歷史表就直接從 08-17 跳到下一次，那兩週的趨勢點永久消失。
+  //
+  // 補跑不會讓節奏愈飄愈後面：補完之後距下個快照日只剩幾天，「今天是快照日」那條會接手，
+  // 自己回到原本的星期。重複寫入由每張表的快照日期去重擋掉（見 appendHistoryRows_）。
+  let catchUp = false;
   if (!force) {
-    if (now.getDay() !== HISTORY_SNAPSHOT_WEEKDAY) {
-      return '歷史快照：今天非快照日（每週' + WEEKDAY_LABELS[HISTORY_SNAPSHOT_WEEKDAY] + '存一次），略過';
-    }
     // 同一天手動重跑 updateAllReports 不該存出兩份一模一樣的快照
-    if (props.getProperty('HISTORY_LAST_SNAPSHOT_DATE') === today) {
+    const last = props.getProperty('HISTORY_LAST_SNAPSHOT_DATE');
+    if (last === today) {
       return '歷史快照：今日（' + today + '）已存過，略過';
+    }
+
+    const isSnapshotDay = now.getDay() === HISTORY_SNAPSHOT_WEEKDAY;
+    // gap 為 null＝沒有可用的上次日期（第一次跑，或屬性被清掉）→ 當成該存
+    const gap = daysBetweenDateStrings_(last, today);
+    catchUp = !isSnapshotDay && (gap === null || gap >= HISTORY_SNAPSHOT_MAX_GAP_DAYS);
+
+    if (!isSnapshotDay && !catchUp) {
+      return '歷史快照：今天非快照日（每週' + WEEKDAY_LABELS[HISTORY_SNAPSHOT_WEEKDAY] +
+        '存一次），距上次快照 ' + gap + ' 天未滿 ' + HISTORY_SNAPSHOT_MAX_GAP_DAYS + ' 天，略過';
     }
   }
 
@@ -742,7 +762,8 @@ function appendHistorySnapshots_(collected, force) {
     props.setProperty('HISTORY_LAST_SNAPSHOT_DATE', today);
   }
 
-  let msg = '歷史快照：已存 ' + (done.length ? done.join('、') : '0 張表');
+  let msg = '歷史快照：' + (catchUp ? '⚠️ 補跑（上一個快照日沒存成）——' : '') +
+    '已存 ' + (done.length ? done.join('、') : '0 張表');
   if (skipped.length) msg += '；無資料略過 ' + skipped.join('、');
   if (duplicated.length) msg += '；今日已有快照略過 ' + duplicated.join('、');
   if (failed.length) msg += '；⚠️ 寫入失敗 ' + failed.join('｜');
@@ -788,6 +809,18 @@ function appendHistoryRows_(sheetName, headers, rows, snapshotDate) {
   if (rows.length === 0) return 0;
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
   return rows.length;
+}
+
+// 兩個 yyyy-MM-dd 字串相差幾天（b - a）。任一格式不合就回 null，由呼叫端當成「無法判斷」。
+// 用數字拆解＋Date.UTC，不走字串解析也不碰本地時區，夏令時間或時區設定都不會讓結果差一天。
+function daysBetweenDateStrings_(a, b) {
+  const re = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const ma = re.exec(String(a || ''));
+  const mb = re.exec(String(b || ''));
+  if (!ma || !mb) return null;
+  const ta = Date.UTC(Number(ma[1]), Number(ma[2]) - 1, Number(ma[3]));
+  const tb = Date.UTC(Number(mb[1]), Number(mb[2]) - 1, Number(mb[3]));
+  return Math.round((tb - ta) / 86400000);
 }
 
 // 歷史表最後一列的快照日期（yyyy-MM-dd 字串；只有表頭或全空時回 ''）。
