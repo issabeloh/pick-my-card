@@ -224,21 +224,47 @@ function resetAdfreeTip() {
     renderAdfreeTip();
 }
 
+// 加碼提示文案的階梯：從加碼金額由大到小找第一個符合的。
+// 用「便當加菜」這條線一路長大，讓加碼有回饋感而不是冷冰冰的數字。
+const ADFREE_TIP_MESSAGES = [
+    { min: 500, text: '這金額我收得有點不好意思，但真的非常感謝 🥹' },
+    { min: 300, text: '太豐盛了！作者會把站台顧好回報你 💪' },
+    { min: 175, text: '這已經是加菜等級，真的謝謝你 🙏' },
+    { min: 100, text: '主菜加雞腿，這餐很有份量 🍗' },
+    { min: 50,  text: '雙主菜達成，作者今天很有精神 🍱' },
+    { min: 25,  text: '加一顆滷蛋，謝謝你 🥚' },
+    { min: 0,   text: '加碼支持作者，便當升級雙主菜！' },
+];
+
+function adfreeTipMessage(tip) {
+    const hit = ADFREE_TIP_MESSAGES.find((m) => tip >= m.min);
+    return hit ? hit.text : ADFREE_TIP_MESSAGES[ADFREE_TIP_MESSAGES.length - 1].text;
+}
+
+/** 條款裡的金額也要跟著後端定價走，否則會出現「條款寫 100、實收 150」。 */
+function syncAdfreeTermsPrice(base) {
+    for (const id of ['adfree-terms-base', 'adfree-terms-base-2']) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = 'NT$' + base;
+    }
+}
+
 function renderAdfreeTip() {
     const { base, max } = currentAdfreePricing();
     const amount = currentAdfreeAmount();
 
     const priceEl = document.getElementById('adfree-price-amount');
     if (priceEl) priceEl.textContent = 'NT$' + amount;
+    syncAdfreeTermsPrice(base);
 
     const resetBtn = document.getElementById('adfree-tip-reset');
     if (resetBtn) resetBtn.style.display = adfreeTip > 0 ? '' : 'none';
 
     const note = document.getElementById('adfree-tip-note');
     if (note) {
-        if (amount >= max) note.textContent = '已達上限 NT$' + max + '，謝謝你的支持！';
-        else if (adfreeTip > 0) note.textContent = '含加碼 NT$' + adfreeTip + '（底價 NT$' + base + '）';
-        else note.textContent = '加碼完全自願，權益內容不會因此不同。';
+        if (amount >= max) note.textContent = '已達上限 NT$' + max + '，真的夠了，謝謝你！';
+        else if (adfreeTip > 0) note.textContent = adfreeTipMessage(adfreeTip) + '（含加碼 NT$' + adfreeTip + '）';
+        else note.textContent = adfreeTipMessage(0);
     }
 
     // 到上限就把加碼按鈕停用，避免用戶一直按卻沒反應

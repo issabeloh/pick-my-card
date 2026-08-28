@@ -5988,6 +5988,34 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .adfree-fab {
     color: #6b7280;
 }
 
+/* ⚠️ .auth-btn.primary 的原始配色（白底藍字）是設計給藍色頁首用的，
+   放進白底 modal 會變成白底白按鈕、看起來只剩一行藍字，認不出是按鈕
+   （2026-08-25 站長回報「前往付款看不出要按它」）。
+   這裡把付費 modal 裡的 primary 改成實心藍按鈕。 */
+.adfree-modal-content .auth-btn.primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+    padding: 13px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+    transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.adfree-modal-content .auth-btn.primary:hover:not(:disabled) {
+    background: #1d4ed8;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.adfree-modal-content .auth-btn.primary:disabled {
+    background: #cbd5e1;
+    border-color: #cbd5e1;
+    color: #f8fafc;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
 /* 隨喜加碼（「加碼支持！」）——按 +25 / +50 累加，上限由 /api/pricing 決定 */
 .adfree-tip {
     margin: -6px 0 18px;

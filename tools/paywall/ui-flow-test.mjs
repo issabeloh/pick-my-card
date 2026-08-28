@@ -547,6 +547,56 @@ for (const entitled of [true, false]) {
     await ctx.close();
 }
 
+// ── T2. 加碼提示文案隨金額變化 ──────────────────────
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);
+    const noteAt = async (tip) => {
+        await page.evaluate((t) => { adfreeTip = t; renderAdfreeTip(); }, tip);
+        await page.waitForTimeout(50);
+        return (await text(page, '#adfree-tip-note')).trim();
+    };
+    const seen = [];
+    for (const tip of [0, 25, 50, 100, 175, 300, 500]) seen.push(await noteAt(tip));
+    check('加碼文案：未加碼時是「便當升級雙主菜」', seen[0].includes('雙主菜'), seen[0]);
+    check('加碼文案：7 個級距各有不同文案（沒有重複或漏接）',
+        new Set(seen).size === seen.length, JSON.stringify(seen));
+    check('加碼文案：有加碼時仍看得到金額明細', seen[1].includes('NT$25'), seen[1]);
+    await ctx.close();
+}
+
+// ── T3. 購買條款的金額跟著後端走（不能寫死） ──────────
+{
+    const { ctx, page } = await open({ entitled: false, pricing: { base: 150, max: 1000, steps: [25, 50] } });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);
+    const terms = await page.evaluate(() => document.getElementById('adfree-terms').textContent);
+    check('條款：金額顯示 NT$150（跟著 /api/pricing，不是寫死的 100）',
+        terms.includes('NT$150') && !terms.includes('NT$100'), terms.slice(0, 120));
+    check('條款：服務終止承諾至少提前六個月公告', terms.includes('六個月'), '');
+    await ctx.close();
+}
+
+// ── T4. 「前往付款」看得出來是按鈕（不是一行藍字） ──────
+{
+    const { ctx, page } = await open({ entitled: false });
+    await page.click('#adfree-fab');
+    await page.waitForTimeout(400);
+    await page.check('#adfree-consent-check');
+    await page.waitForTimeout(120);
+    const style = await page.evaluate(() => {
+        const cs = getComputedStyle(document.getElementById('adfree-pay-btn'));
+        return { bg: cs.backgroundColor, color: cs.color };
+    });
+    // 白底 modal 裡的白底按鈕＝看不出是按鈕（2026-08-25 站長回報）
+    const parse = (c) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const lum = (c) => { const [r, g, b] = parse(c); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+    check('付款鈕：底色不是白的（看得出是按鈕）', lum(style.bg) < 0.8, JSON.stringify(style));
+    check('付款鈕：文字與底色對比足夠', Math.abs(lum(style.bg) - lum(style.color)) > 0.4, JSON.stringify(style));
+    await ctx.close();
+}
+
 // ── U. 底價與上限一律以後端 /api/pricing 為準 ──────────
 {
     const { ctx, page } = await open({ entitled: false, pricing: { base: 150, max: 300, steps: [25, 50] } });

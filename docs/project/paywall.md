@@ -590,8 +590,8 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | 要問的事 | 為什麼非問不可 |
    |---|---|
    | **正式環境是否已開通**（合約／審核完成） | 沒開通就沒有正式 CRM，後面全部免談 |
-   | **正式環境的 API base 網址** | 我們目前填的 `https://payment-api.oen.tw` 是**由測試環境的 `payment-api.testing.oen.tw` 推得的，沒有經對方確認**。猜錯的話 checkout 會直接失敗。真的不同時不用改程式碼，設 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 覆蓋即可 |
-   | **正式環境的 merchantId** | 測試是 `pick-my-card`，正式不一定相同；它同時決定結帳頁網址 `https://{merchantId}.oen.tw/checkout/{id}` |
+   | **正式環境的 API base 網址**（仍未確認） | 我們目前填的 `https://payment-api.oen.tw` 是**由測試環境的 `payment-api.testing.oen.tw` 推得的，沒有經對方確認**。⚠️ 2026-08-25 對方給的 `https://pick-my-card.oen.tw/` 是**結帳頁**網域，不是 API 網域，這一項還沒被回答。猜錯的話 checkout 會直接失敗。真的不同時不用改程式碼，設 `PMC_PAY_CHECKOUT_URL` / `PMC_PAY_QUERY_URL` 覆蓋即可 |
+   | ~~**正式環境的 merchantId**~~ | ✅ 2026-08-25 確認：正式平台網域為 `https://pick-my-card.oen.tw/`，即 merchantId 仍是 `pick-my-card`。我們推導結帳頁的規則 `https://{merchantId}.oen.tw` 與之相符，`PMC_PAY_PAGE_BASE` 不用設 |
    | **正式環境的 Bearer token** | 在正式 CRM 產製，與測試互不相通。⚠️ 只顯示一次，產出當下就要存進密碼管理器 |
    | **白名單已設好 Cloudflare 區段、且已生效** | 這是我們同意的方案，但要對方實際設定完成並回報，不能假設 |
    | **正式環境的 webhook／導回網址要填 `https://pickmycard.app`** | 兩邊都要指到正式網域，不能留測試的 pages.dev |
