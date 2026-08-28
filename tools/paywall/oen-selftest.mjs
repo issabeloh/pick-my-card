@@ -225,6 +225,10 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
             mail.text.includes('Issabel') && mail.html.includes('Issabel'), mail.text.slice(0, 40));
         check(`感謝信（${label}）：有作者自述那段`,
             mail.text.includes('解決自己的日常煩惱') && mail.html.includes('解決自己的日常煩惱'));
+        check(`感謝信（${label}）：有邀請回饋與結尾`,
+            mail.text.includes('每封都會看') && mail.text.includes('盡情比較回饋'));
+        check(`感謝信（${label}）：權益說明與回報指引都在`,
+            mail.text.includes('再也看不到廣告') && mail.text.includes('請填寫回報錯誤表格'));
     }
     check('感謝信：HTML 版有做跳脫（不會把 < 原樣輸出）',
         !buildThanksEmail({ amount: 100, tip: 0, tradeNo: '<script>' }).html.includes('<script>'));
