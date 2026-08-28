@@ -713,7 +713,7 @@ ORDER BY created_at DESC LIMIT 20;
 
 | 變數 | 值 |
 |---|---|
-| `PMC_MAIL_API_KEY` | 🔒 Secret，Resend 後台產生 |
+| `PMC_MAIL_API_KEY` | 🔒 Secret，Resend 後台產生。⚠️ 權限選 **Sending access** 就夠——本專案只呼叫 `POST /emails`。給 Full access 的話，這把 key 一旦外洩還能刪掉已驗證網域（全站信件停擺）、增刪其他 key、讀取寄件紀錄（含收件人與內文） |
 | `PMC_MAIL_FROM` | `Pick My Card 信用卡回饋大師 <hello@pickmycard.app>`。⚠️ 位址的網域必須是 Resend 已驗證的網域（`pickmycard.app` 2026-08-25 確認已驗證，不必再動 DNS） |
 | `PMC_MAIL_REPLY_TO` | `support@pickmycard.app`。⚠️ **建議一定要設**：感謝信裡寫了「直接回覆這封信」，沒設的話用戶回覆會落到 `hello@`，或在收件匣顯示成無法回覆 |
 | `PMC_MAIL_ENDPOINT` | 選用逃生門，換供應商時不必改程式碼 |
