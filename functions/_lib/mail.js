@@ -47,6 +47,7 @@ export function buildThanksEmail({ amount, tip, tradeNo, siteOrigin }) {
     const benefit = '這次付費後您獲得的權益：所有頁面不再載入廣告。此權益綁定您的帳號，因此只要登入就再也看不到廣告！';
     const footnote = '*如果登入後仍然看到廣告，請填寫回報錯誤表格，將盡速處理！';
     const closing = '謝謝！盡情比較回饋！';
+    const signature = '— Issabel｜Pick My Card 信用卡回饋大師';
     const amountLine = `· 付款金額：NT$${amount}${hasTip ? `（底價 NT$${amount - tip} ＋ 加碼 NT$${tip}）` : ''}`;
 
     const text = [
@@ -63,6 +64,8 @@ export function buildThanksEmail({ amount, tip, tradeNo, siteOrigin }) {
         `${footnote}（${site}）`,
         '',
         closing,
+        '',
+        signature,
     ].join('\n');
 
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.8;color:#1f2937;max-width:560px">
@@ -76,6 +79,7 @@ export function buildThanksEmail({ amount, tip, tradeNo, siteOrigin }) {
 </ul>
 <p style="margin-top:22px;color:#6b7280;font-size:13px">${esc(footnote)}</p>
 <p style="margin-top:22px">${esc(closing)}</p>
+<p style="margin-top:8px;color:#6b7280;font-size:13px">${esc(signature)}</p>
 </div>`;
 
     return { subject, text, html };

@@ -221,8 +221,9 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
         plain.subject.includes('PMC002') && plain.text.includes('PMC002'), plain.subject);
     // 作者自述兩種情況都要有——那是這封信的重點，不是加碼者的專屬待遇
     for (const [label, mail] of [['有加碼', tipped], ['未加碼', plain]]) {
-        check(`感謝信（${label}）：有作者署名 Issabel`,
-            mail.text.includes('Issabel') && mail.html.includes('Issabel'), mail.text.slice(0, 40));
+        check(`感謝信（${label}）：開頭自我介紹與結尾署名都有 Issabel`,
+            mail.text.includes('作者，Issabel') && mail.text.includes('— Issabel｜Pick My Card')
+            && mail.html.includes('— Issabel｜Pick My Card'), mail.text.slice(-40));
         check(`感謝信（${label}）：有作者自述那段`,
             mail.text.includes('解決自己的日常煩惱') && mail.html.includes('解決自己的日常煩惱'));
         check(`感謝信（${label}）：有邀請回饋與結尾`,
