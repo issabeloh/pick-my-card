@@ -227,13 +227,18 @@ function resetAdfreeTip() {
 // 加碼提示文案的階梯：從加碼金額由大到小找第一個符合的。
 // 用「便當加菜」這條線一路長大，讓加碼有回饋感而不是冷冰冰的數字。
 const ADFREE_TIP_MESSAGES = [
-    { min: 500, text: '這金額我收得有點不好意思，但真的非常感謝 🥹' },
-    { min: 300, text: '太豐盛了！作者會把站台顧好回報你 💪' },
-    { min: 175, text: '這已經是加菜等級，真的謝謝你 🙏' },
-    { min: 100, text: '主菜加雞腿，這餐很有份量 🍗' },
-    { min: 50,  text: '雙主菜達成，作者今天很有精神 🍱' },
-    { min: 25,  text: '加一顆滷蛋，謝謝你 🥚' },
-    { min: 0,   text: '加碼支持作者，便當升級雙主菜！' },
+    { min: 800, text: '高級乾媽乾爹！謝謝！！' },
+    { min: 600, text: '補貼作者升級開發裝備，新滑鼠我來了~~' },
+    { min: 500, text: '支援作者一週份的葉黃素 ♥ 眼神透亮更新網站！' },
+    { min: 400, text: '星巴克沒有買一送一，一次點兩杯！謝謝 ♥' },
+    { min: 300, text: '哇嗚~便利商店財富自由！謝謝 ♥' },
+    { min: 250, text: '今天補貨衛生紙，買四層加厚！謝謝 ♥' },
+    { min: 200, text: '加碼200？！乾媽乾爹！！' },
+    { min: 150, text: '今天不喝美式，喝拿鐵！謝謝 ♥' },
+    { min: 100, text: '加碼100？！You & Me 百年好合 ♥' },
+    { min: 50,  text: '今天便當升級雙主菜！謝謝 ♥' },
+    { min: 25,  text: '毫不猶豫薯條加大！謝謝 ♥' },
+    { min: 0,   text: '加碼支持，鼓勵持續營運！' },
 ];
 
 function adfreeTipMessage(tip) {
@@ -262,7 +267,7 @@ function renderAdfreeTip() {
 
     const note = document.getElementById('adfree-tip-note');
     if (note) {
-        if (amount >= max) note.textContent = '已達上限 NT$' + max + '，真的夠了，謝謝你！';
+        if (amount >= max) note.textContent = '已達上限 NT$' + max + '，謝謝重磅支持！';
         else if (adfreeTip > 0) note.textContent = adfreeTipMessage(adfreeTip) + '（含加碼 NT$' + adfreeTip + '）';
         else note.textContent = adfreeTipMessage(0);
     }

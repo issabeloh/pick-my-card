@@ -557,12 +557,17 @@ for (const entitled of [true, false]) {
         await page.waitForTimeout(50);
         return (await text(page, '#adfree-tip-note')).trim();
     };
+    const tiers = [0, 25, 50, 100, 150, 200, 250, 300, 400, 500, 600, 800];
     const seen = [];
-    for (const tip of [0, 25, 50, 100, 175, 300, 500]) seen.push(await noteAt(tip));
-    check('加碼文案：未加碼時是「便當升級雙主菜」', seen[0].includes('雙主菜'), seen[0]);
-    check('加碼文案：7 個級距各有不同文案（沒有重複或漏接）',
+    for (const tip of tiers) seen.push(await noteAt(tip));
+    check('加碼文案：未加碼時是「鼓勵持續營運」', seen[0].includes('鼓勵持續營運'), seen[0]);
+    check(`加碼文案：${tiers.length} 個級距各有不同文案（沒有重複或漏接）`,
         new Set(seen).size === seen.length, JSON.stringify(seen));
     check('加碼文案：有加碼時仍看得到金額明細', seen[1].includes('NT$25'), seen[1]);
+    // 級距之間的金額（75、125…）要落到下一階，不能變空白或掉回第 0 階
+    const between = await noteAt(125);
+    check('加碼文案：級距之間（125）落到 100 那階，不會掉回未加碼文案',
+        between.includes('You & Me'), between);
     await ctx.close();
 }
 
