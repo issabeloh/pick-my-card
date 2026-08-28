@@ -602,6 +602,18 @@ for (const entitled of [true, false]) {
     await ctx.close();
 }
 
+// ── T5. 「我的帳號」的購買 pill 金額也跟著後端走 ──────
+{
+    const { ctx, page } = await open({ entitled: false, pricing: { base: 150, max: 1000, steps: [25, 50] } });
+    await page.click('#user-avatar').catch(() => {});
+    await page.evaluate(() => { if (typeof openAccountModal === 'function') openAccountModal(); });
+    await page.waitForTimeout(600);
+    const label = (await text(page, '#account-buy-adfree')).trim();
+    check('我的帳號：購買 pill 顯示 NT$150（跟著 /api/pricing，不是寫死的 100）',
+        label.includes('NT$150'), label);
+    await ctx.close();
+}
+
 // ── U. 底價與上限一律以後端 /api/pricing 為準 ──────────
 {
     const { ctx, page } = await open({ entitled: false, pricing: { base: 150, max: 300, steps: [25, 50] } });

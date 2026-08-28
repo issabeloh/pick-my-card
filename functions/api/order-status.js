@@ -6,6 +6,7 @@
  * ============================================================ */
 import { requireUser } from '../_lib/firebase-auth.js';
 import { getOrder, getEntitlement, latestPendingOrder, markOrderPaid, grantAdfree } from '../_lib/db.js';
+import { thankBuyer } from '../_lib/mail.js';
 import { resolvePaymentConfig, queryTradeInfo, oenVerifyCharged } from '../_lib/payment.js';
 import { json, fail } from '../_lib/http.js';
 
@@ -40,8 +41,10 @@ export async function onRequestPost({ request, env }) {
                     paymentType: (tx && tx.paymentMethod) || null,
                     rtnCode: 1, rtnMsg: 'recovered by OEN query', raw: JSON.stringify(tx),
                 });
-                await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'oen-query' });
+                const newlyGranted = await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'oen-query' });
                 console.error('[paywall] 由主動查詢補開通：uid=' + user.uid + ' 訂單=' + order.trade_no);
+                // 只有真的第一次開通才寄信（webhook 已經寄過就不會再寄一次）
+                if (newlyGranted) await thankBuyer(env, order);
                 return json({ adfree: true, status: 'paid' });
             }
             // 把 OEN 的實際狀態帶回去：前端才分得出「還在處理（charging）」
@@ -61,8 +64,9 @@ export async function onRequestPost({ request, env }) {
                 providerTxnId: info.TradeNo, paymentType: info.PaymentType,
                 rtnCode: 1, rtnMsg: 'recovered by query', raw: JSON.stringify(info),
             });
-            await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'ecpay-query' });
+            const newlyGrantedEcpay = await grantAdfree(env, user.uid, { tradeNo: order.trade_no, source: 'ecpay-query' });
             console.error('[paywall] 由主動查詢補開通：uid=' + user.uid + ' 訂單=' + order.trade_no);
+            if (newlyGrantedEcpay) await thankBuyer(env, order);
             return json({ adfree: true, status: 'paid' });
         }
         return json({ adfree: false, status: 'pending', tradeNo: order.trade_no });

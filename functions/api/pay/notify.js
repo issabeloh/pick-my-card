@@ -14,6 +14,7 @@
  * ============================================================ */
 import { resolvePaymentConfig, verifyCheckMacValue, oenVerifyCharged } from '../../_lib/payment.js';
 import { getOrder, markOrderPaid, markOrderFailed, grantAdfree } from '../../_lib/db.js';
+import { thankBuyer } from '../../_lib/mail.js';
 import { readFormParams } from '../../_lib/http.js';
 
 const OK = () => new Response('1|OK', { headers: { 'Content-Type': 'text/plain' } });
@@ -68,8 +69,10 @@ async function handleOenNotify(request, env, cfg) {
                 paymentType: (tx && tx.paymentMethod) || body.paymentMethod || null,
                 rtnCode: 1, rtnMsg: 'verified via OEN query API', raw,
             });
-            await grantAdfree(env, order.uid, { tradeNo, source: 'oen-notify' });
+            const newlyGranted = await grantAdfree(env, order.uid, { tradeNo, source: 'oen-notify' });
             if (firstTime) console.error('[paywall] 已開通去廣告：uid=' + order.uid + ' 訂單=' + tradeNo);
+            // 只有真的第一次開通才寄信；重送 webhook 不會讓用戶收到一疊重複的信
+            if (newlyGranted) await thankBuyer(env, order);
         } else if (tx && tx.status === 'failed') {
             await markOrderFailed(env, tradeNo, { rtnCode: 0, rtnMsg: tx.message || 'failed', raw });
         } else {
@@ -134,7 +137,8 @@ async function handleEcpayNotify(request, env, cfg) {
             providerTxnId: params.TradeNo, paymentType: params.PaymentType,
             rtnCode: Number(params.RtnCode), rtnMsg: params.RtnMsg, raw,
         });
-        await grantAdfree(env, order.uid, { tradeNo, source: 'ecpay-notify' });
+        const newlyGrantedEcpay = await grantAdfree(env, order.uid, { tradeNo, source: 'ecpay-notify' });
+        if (newlyGrantedEcpay) await thankBuyer(env, order);
         if (firstTime) console.error('[paywall] 已開通去廣告：uid=' + order.uid + ' 訂單=' + tradeNo);
         return OK();
     } catch (err) {

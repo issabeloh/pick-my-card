@@ -400,6 +400,9 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
    | `PMC_HEALTHCHECK_TOKEN` | 🔒 Secret | 白名單健檢端點的通行碼（見 3.55）。**沒設＝該端點整支停用**，不留後門 |
    | `PMC_HEALTHCHECK_TXN_ID` | （選用） | 一筆真實舊交易 id，設了健檢判準會更嚴（要求 `code=S0000`） |
+   | `PMC_MAIL_API_KEY` | 🔒 Secret | 感謝信（見 4.3）。**沒設＝不寄信**，其餘流程不受影響 |
+   | `PMC_MAIL_FROM` | `Pick My Card <no-reply@pickmycard.app>` | 寄件人；網域要先在 Resend 驗證過 |
+   | `PMC_MAIL_REPLY_TO` | （選用） | 用戶按回覆時的收件地址 |
 
 3.4 **OEN 測試卡號（2026-08-23 定案，以官方「注意事項」為準）**
 
@@ -584,6 +587,11 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          在正式站真的有送達（見 2.5）
    - [ ] D1 已補上 `orders.deleted_at` 欄位（2026-08-21 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN deleted_at INTEGER;`）
+   - [ ] D1 已補上 `orders.tip` 欄位（2026-08-25 新增；既有資料庫執行
+         `ALTER TABLE orders ADD COLUMN tip INTEGER NOT NULL DEFAULT 0;`）
+         ⚠️ **沒補會讓建立訂單直接失敗**（欄位不存在），不是只有感謝信少一行
+   - [ ] 感謝信：Resend 註冊、驗證 pickmycard.app 網域（SPF/DKIM）、
+         設好 `PMC_MAIL_API_KEY` 與 `PMC_MAIL_FROM`（見 4.3）
 
 3.75 **上線前一定要先向應援取得／確認的事**（這些程式碼給不了，只能等對方回覆）：
 
@@ -671,15 +679,47 @@ ORDER BY created_at DESC LIMIT 20;
 
 `orders.raw` 存了金流商回應的原始內容，是爭議時的證據。
 
-### 4.3 目前不會寄 email 給用戶（2026-08-25 確認）
+### 4.3 購買成功的感謝信（2026-08-25 實作）
 
-購買成功後**用戶不會收到任何 email**：
-- 我方沒有寄信功能（`firebase-functions/` 的 `notifyOnFeedback` 只寄給站長）
-- OEN 也不會寄——建立交易時我們**刻意沒有帶 `userEmail`／`userName`**（那兩欄是
-  代開發票用的，見 3.6），所以對方手上根本沒有買家信箱
+**OEN 不會寄信給買家**——建立交易時我們刻意沒帶 `userEmail`／`userName`
+（那兩欄是代開發票用的，見 3.6），對方手上根本沒有買家信箱。所以信由我方寄。
 
-用戶的憑據是：畫面上的「付款完成」、信用卡帳單、以及登入後隨時可在
-「我的帳號」看到的權益狀態。要補寄收據信的話得另外做（見 5.）。
+| 檔案 | 角色 |
+|---|---|
+| `functions/_lib/mail.js` | 信件內容與寄送（`buildThanksEmail` / `sendPurchaseThanks` / `thankBuyer`） |
+| `functions/_lib/db.js` → `grantAdfree` | 回傳「這次是否真的寫入權益」 |
+| `functions/api/pay/notify.js`、`functions/api/order-status.js` | 開通成功且是第一次 → 寄信 |
+
+⚠️ **不能重用 `firebase-functions/` 那套寄信**：它用 nodemailer + Gmail SMTP，
+而 Cloudflare Workers/Pages Functions **沒有 raw TCP，寄不了 SMTP**。
+這裡走 HTTP API，預設 Resend（Cloudflare 官方文件現在指的就是它，免費額度
+每月 3,000 封）。⚠️ 舊教學講的「MailChannels 免費寄信」已於 2024-08-31 終止，
+網路上照抄得到的做法多半是過期的。
+
+⚠️ **兩條鐵則（違反就是實際傷害）**：
+1. **寄信失敗絕不能影響開通**。權益是用戶花錢買的，信只是禮貌。
+   `sendPurchaseThanks` 內部把所有錯誤吞掉並 `console.error`，永不往上拋。
+2. **只在「權益真的第一次寫入」時寄**。判斷依據是 `grantAdfree` 回傳的
+   `meta.changes > 0`，**不是**「訂單付款成功」——OEN 的 webhook 會依 2/4/6 秒
+   重送三次，用後者判斷的話用戶會收到一疊重複的信。
+
+`orders` 新增 `tip` 欄位（既有資料庫要跑
+`ALTER TABLE orders ADD COLUMN tip INTEGER NOT NULL DEFAULT 0;`），
+信裡才寫得出「底價 NT$100 ＋ 加碼 NT$50」的拆解，對帳時也才算得出加碼收入。
+
+**要設定的環境變數**（缺任一 → 整個功能靜默停用，不會壞掉）：
+
+| 變數 | 值 |
+|---|---|
+| `PMC_MAIL_API_KEY` | 🔒 Secret，Resend 後台產生 |
+| `PMC_MAIL_FROM` | 例如 `Pick My Card <no-reply@pickmycard.app>`。⚠️ 網域要先在 Resend 完成驗證（DNS 加 SPF/DKIM），否則信會被退或進垃圾桶 |
+| `PMC_MAIL_REPLY_TO` | 選用。設了用戶才回得到你信箱 |
+| `PMC_MAIL_ENDPOINT` | 選用逃生門，換供應商時不必改程式碼 |
+
+### 4.4 其他常見問題
+
+用戶問「有沒有收據／發票」：目前沒有整合電子發票（見 3.6），感謝信裡有訂單編號
+與金額，可以當作交易憑據；信用卡帳單上會有應援科技的請款紀錄。
 
 ## 5. 改這塊之前要知道的
 

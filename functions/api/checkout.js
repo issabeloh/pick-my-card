@@ -38,7 +38,7 @@ export async function onRequestPost({ request, env }) {
 
         // 先寫訂單再呼叫金流商：對方的通知回來時一定找得到對應的 uid。
         // 若後續呼叫失敗，這筆訂單留在 pending，無害。
-        await createOrder(env, { tradeNo, uid: user.uid, email: user.email, amount });
+        await createOrder(env, { tradeNo, uid: user.uid, email: user.email, amount, tip: priced.tip });
 
         if (cfg.provider === 'oen') {
             // OEN：JSON API 建立交易 → 把瀏覽器導去它的結帳頁。

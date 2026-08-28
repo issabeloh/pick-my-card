@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS orders (
   trade_no       TEXT PRIMARY KEY,   -- 送給綠界的 MerchantTradeNo
   uid            TEXT NOT NULL,      -- Firebase uid（建單當下就綁定）
   email          TEXT,
-  amount         INTEGER NOT NULL,
+  amount         INTEGER NOT NULL,   -- 實收總額（底價＋加碼）
+  tip            INTEGER NOT NULL DEFAULT 0,  -- 其中的隨喜加碼，對帳與感謝信用得到
   status         TEXT NOT NULL DEFAULT 'pending',  -- pending | paid | failed
   created_at     INTEGER NOT NULL,
   paid_at        INTEGER,

@@ -17,10 +17,10 @@ export function requireDB(env) {
     return env.DB;
 }
 
-export async function createOrder(env, { tradeNo, uid, email, amount }) {
+export async function createOrder(env, { tradeNo, uid, email, amount, tip }) {
     await requireDB(env)
-        .prepare('INSERT INTO orders (trade_no, uid, email, amount, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(tradeNo, uid, email, amount, 'pending', Date.now())
+        .prepare('INSERT INTO orders (trade_no, uid, email, amount, tip, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(tradeNo, uid, email, amount, Number(tip) || 0, 'pending', Date.now())
         .run();
 }
 
@@ -67,12 +67,17 @@ export async function markOrderFailed(env, tradeNo, info) {
         .run();
 }
 
-/** 授予永久去廣告權益。INSERT OR IGNORE：重複授予是安全的（冪等）。 */
+/**
+ * 授予永久去廣告權益。INSERT OR IGNORE：重複授予是安全的（冪等）。
+ * 回傳 true 代表「這次真的寫進去了」——webhook 重送時會是 false。
+ * 感謝信靠這個判斷才不會重複寄（見 _lib/mail.js 檔頭鐵則 2）。
+ */
 export async function grantAdfree(env, uid, { tradeNo, source }) {
-    await requireDB(env)
+    const res = await requireDB(env)
         .prepare('INSERT OR IGNORE INTO entitlements (uid, product, granted_at, trade_no, source) VALUES (?, ?, ?, ?, ?)')
         .bind(uid, 'adfree', Date.now(), tradeNo || null, source || 'ecpay')
         .run();
+    return !!(res && res.meta && res.meta.changes > 0);
 }
 
 export async function getEntitlement(env, uid) {

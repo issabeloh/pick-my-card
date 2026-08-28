@@ -700,7 +700,17 @@ function renderAccountAdfree(adfree, grantedAt, provisional) {
         }
     }
     // 還在查詢時不顯示購買鈕，免得已購買者閃一下看到「再買一次」
-    if (buyBtn) buyBtn.style.display = (!adfree && !provisional) ? '' : 'none';
+    if (buyBtn) {
+        buyBtn.style.display = (!adfree && !provisional) ? '' : 'none';
+        // 金額跟著後端定價走。這顆按鈕之前寫死 NT$100，底價調成 150 時就對不上了
+        // ——跟條款那次是同一個坑，所以一律不在前端寫死金額。
+        buyBtn.textContent = '移除廣告 NT$' + currentAdfreePricing().base;
+        if (!adfree && !provisional) {
+            fetchAdfreePricing()
+                .then((p) => { buyBtn.textContent = '移除廣告 NT$' + p.base; })
+                .catch((err) => console.error('定價更新失敗', err));
+        }
+    }
 }
 
 function closeAccountModal() {
