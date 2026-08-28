@@ -219,6 +219,13 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
     check('感謝信：未加碼時不會硬提加碼', !plain.subject.includes('加碼') && !plain.text.includes('加碼'), plain.subject);
     check('感謝信：訂單編號有帶進主旨與內文',
         plain.subject.includes('PMC002') && plain.text.includes('PMC002'), plain.subject);
+    // 作者自述兩種情況都要有——那是這封信的重點，不是加碼者的專屬待遇
+    for (const [label, mail] of [['有加碼', tipped], ['未加碼', plain]]) {
+        check(`感謝信（${label}）：有作者署名 Issabel`,
+            mail.text.includes('Issabel') && mail.html.includes('Issabel'), mail.text.slice(0, 40));
+        check(`感謝信（${label}）：有作者自述那段`,
+            mail.text.includes('解決自己的日常煩惱') && mail.html.includes('解決自己的日常煩惱'));
+    }
     check('感謝信：HTML 版有做跳脫（不會把 < 原樣輸出）',
         !buildThanksEmail({ amount: 100, tip: 0, tradeNo: '<script>' }).html.includes('<script>'));
 

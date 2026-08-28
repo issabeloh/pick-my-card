@@ -32,13 +32,21 @@ export function buildThanksEmail({ amount, tip, tradeNo, siteOrigin }) {
     const site = siteOrigin || 'https://pickmycard.app';
     const hasTip = Number(tip) > 0;
     const subject = hasTip
-        ? `謝謝你的加碼支持！廣告已移除（訂單 ${tradeNo}）`
-        : `付款完成，廣告已移除（訂單 ${tradeNo}）`;
+        ? `感謝加碼支持！廣告已移除（訂單 ${tradeNo}）`
+        : `感謝支持！廣告已移除（訂單 ${tradeNo}）`;
 
-    const lines = [
-        hasTip
-            ? `謝謝你！你付了 NT$${amount}，其中 NT$${tip} 是你自願加碼的支持——這對一個人維護的小站真的很有幫助。`
-            : `謝謝你的支持！你的去廣告權益已經生效。`,
+    // 開場依有無加碼換句話，後面那段站長的自述兩種情況都要出現
+    const opening = hasTip
+        ? `我是 Pick My Card 的作者，Issabel。謝謝你！你付了 NT$${amount}，其中 NT$${tip} 是你自願加碼的支持。這對一個人營運的網站是很大的鼓勵！`
+        : `我是 Pick My Card 的作者，Issabel。謝謝你的支持！這對一個人營運的網站是很大的鼓勵！`;
+    const story = '我從想要解決自己的日常煩惱，到推出給身邊的人用，再到大力推廣給台灣人用，'
+        + '經歷好多驚喜和挫折。建立和經營這個網站讓我學到很多，也享受致力做出最好用的網站的過程。';
+    const amountLine = `· 付款金額：NT$${amount}${hasTip ? `（底價 NT$${amount - tip} ＋ 加碼 NT$${tip}）` : ''}`;
+
+    const text = [
+        opening,
+        '',
+        story,
         '',
         '【你獲得的權益】',
         '· Pick My Card 所有頁面不再載入廣告',
@@ -47,32 +55,32 @@ export function buildThanksEmail({ amount, tip, tradeNo, siteOrigin }) {
         '',
         '【訂單資訊】',
         `· 訂單編號：${tradeNo}`,
-        `· 付款金額：NT$${amount}${hasTip ? `（底價 NT$${amount - tip} ＋ 加碼 NT$${tip}）` : ''}`,
+        amountLine,
         '',
         `如果登入後仍然看到廣告，請到 ${site} 開啟「我的帳號」查看權益狀態；`,
         '若有任何問題，直接回覆這封信或用網站上的「回報錯誤」聯絡我們。',
         '',
-        '— Pick My Card 信用卡回饋大師',
-    ];
-    const text = lines.join('\n');
+        '— Issabel｜Pick My Card 信用卡回饋大師',
+    ].join('\n');
 
-    const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.75;color:#1f2937;max-width:560px">
-<p>${esc(lines[0])}</p>
-<p style="margin:20px 0 6px"><strong>你獲得的權益</strong></p>
+    const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.8;color:#1f2937;max-width:560px">
+<p>${esc(opening)}</p>
+<p>${esc(story)}</p>
+<p style="margin:22px 0 6px"><strong>你獲得的權益</strong></p>
 <ul style="margin:0;padding-left:20px">
 <li>Pick My Card 所有頁面不再載入廣告</li>
 <li>權益綁定你的帳號，永久有效，不會自動續扣</li>
 <li>換手機、換瀏覽器，用同一個帳號登入就同樣生效</li>
 </ul>
-<p style="margin:20px 0 6px"><strong>訂單資訊</strong></p>
+<p style="margin:22px 0 6px"><strong>訂單資訊</strong></p>
 <ul style="margin:0;padding-left:20px">
 <li>訂單編號：${esc(tradeNo)}</li>
 <li>付款金額：NT$${esc(amount)}${hasTip ? `（底價 NT$${esc(amount - tip)} ＋ 加碼 NT$${esc(tip)}）` : ''}</li>
 </ul>
-<p style="margin-top:20px;color:#6b7280;font-size:13px">
+<p style="margin-top:22px;color:#6b7280;font-size:13px">
 如果登入後仍然看到廣告，請到 <a href="${esc(site)}">${esc(site)}</a> 開啟「我的帳號」查看權益狀態；
 若有任何問題，直接回覆這封信或用網站上的「回報錯誤」聯絡我們。</p>
-<p style="margin-top:20px;color:#6b7280;font-size:13px">— Pick My Card 信用卡回饋大師</p>
+<p style="margin-top:22px;color:#6b7280;font-size:13px">— Issabel｜Pick My Card 信用卡回饋大師</p>
 </div>`;
 
     return { subject, text, html };
