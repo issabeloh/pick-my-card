@@ -590,8 +590,10 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    - [ ] D1 已補上 `orders.tip` 欄位（2026-08-25 新增；既有資料庫執行
          `ALTER TABLE orders ADD COLUMN tip INTEGER NOT NULL DEFAULT 0;`）
          ⚠️ **沒補會讓建立訂單直接失敗**（欄位不存在），不是只有感謝信少一行
-   - [ ] 感謝信：Resend 註冊、驗證 pickmycard.app 網域（SPF/DKIM）、
-         設好 `PMC_MAIL_API_KEY` 與 `PMC_MAIL_FROM`（見 4.3）
+   - [x] ~~感謝信：Resend 註冊、驗證 pickmycard.app 網域（SPF/DKIM）~~
+         （2026-08-25 站長確認已有帳號、網域已驗證、已有 API key）
+   - [ ] 感謝信：Production 設好 `PMC_MAIL_API_KEY`（Secret）、`PMC_MAIL_FROM`、
+         `PMC_MAIL_REPLY_TO`（見 4.3）
 
 3.75 **上線前一定要先向應援取得／確認的事**（這些程式碼給不了，只能等對方回覆）：
 
@@ -712,9 +714,13 @@ ORDER BY created_at DESC LIMIT 20;
 | 變數 | 值 |
 |---|---|
 | `PMC_MAIL_API_KEY` | 🔒 Secret，Resend 後台產生 |
-| `PMC_MAIL_FROM` | 例如 `Pick My Card <no-reply@pickmycard.app>`。⚠️ 網域要先在 Resend 完成驗證（DNS 加 SPF/DKIM），否則信會被退或進垃圾桶 |
-| `PMC_MAIL_REPLY_TO` | 選用。設了用戶才回得到你信箱 |
+| `PMC_MAIL_FROM` | `Pick My Card 信用卡回饋大師 <hello@pickmycard.app>`。⚠️ 位址的網域必須是 Resend 已驗證的網域（`pickmycard.app` 2026-08-25 確認已驗證，不必再動 DNS） |
+| `PMC_MAIL_REPLY_TO` | `support@pickmycard.app`。⚠️ **建議一定要設**：感謝信裡寫了「直接回覆這封信」，沒設的話用戶回覆會落到 `hello@`，或在收件匣顯示成無法回覆 |
 | `PMC_MAIL_ENDPOINT` | 選用逃生門，換供應商時不必改程式碼 |
+
+⚠️ 送出的 JSON 用 **`reply_to`（底線）**，不是 `replyTo`——後者是 Resend 官方
+Node SDK 的寫法，我們走的是 raw HTTP API，欄位名不同。抄 SDK 範例會靜默失效
+（Resend 會忽略不認得的欄位，不會報錯）。
 
 ### 4.4 其他常見問題
 
