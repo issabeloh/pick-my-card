@@ -606,18 +606,80 @@ git fetch origin main && git rev-list --count HEAD..origin/main
 
 ## 4. 對帳與客訴
 
+### 4.1 手動補開通的完整步驟（收到「付款結果確認中」通報時）
 
-```bash
-# 某人說付了錢沒開通
-wrangler d1 execute pick-my-card --remote --command \
-  "SELECT trade_no, status, amount, created_at, rtn_msg FROM orders WHERE email='xxx@example.com' ORDER BY created_at DESC"
+通報會落在 Firestore 的 `feedback` 集合（跟問題回報同一份清單），內容含 uid 與訂單編號。
+**全程可以在 Cloudflare D1 Console 用滑鼠做完，不需要裝 wrangler。**
 
-# 手動補開通（確認綠界後台真的收到錢之後才做）
-wrangler d1 execute pick-my-card --remote --command \
-  "INSERT OR IGNORE INTO entitlements (uid, product, granted_at, trade_no, source) VALUES ('<uid>','adfree',$(date +%s000),'<訂單編號>','manual')"
+**第 1 步：查這筆訂單到底有沒有收到錢。** 這是唯一的判斷依據，不要憑用戶說法補開通。
+
+```sql
+SELECT trade_no, uid, email, amount, status, provider_txn_id, rtn_msg, raw
+FROM orders WHERE uid = '<uid>' ORDER BY created_at DESC LIMIT 5;
 ```
 
-`orders.raw` 存了綠界回呼的原始內容，是爭議時的證據。
+看 `raw` 欄位裡 OEN 回報的 `"status"`：
+- `charged` 或 `claimed` → **真的收到錢了**，往第 2 步
+- 其他值、或 `raw` 是空的 → 沒收到錢。回覆用戶「查無扣款紀錄，請重新購買」，**不要補開通**
+
+`raw` 是空的但用戶堅持有扣款時，到 OEN 的 CRM 後台用 `provider_txn_id` 查那筆交易，
+以 OEN 後台顯示的為準。
+
+**第 2 步：補開通。** `granted_at` 是毫秒時間戳，直接用 SQLite 的函式算，不用自己查：
+
+```sql
+INSERT OR IGNORE INTO entitlements (uid, product, granted_at, trade_no, source)
+VALUES ('<uid>', 'adfree', CAST(strftime('%s','now') AS INTEGER) * 1000, '<訂單編號>', 'manual');
+```
+
+`source` 一定要填 `manual`——之後查「有多少筆是人工補的」全靠這個欄位。
+`INSERT OR IGNORE` 表示重複執行是安全的（已經有權益就什麼都不做）。
+
+**第 3 步：把訂單狀態補正**（不影響權益，但對帳時看得懂）：
+
+```sql
+UPDATE orders SET status = 'paid', paid_at = CAST(strftime('%s','now') AS INTEGER) * 1000
+WHERE trade_no = '<訂單編號>' AND status != 'paid';
+```
+
+**第 4 步：確認生效。**
+
+```sql
+SELECT * FROM entitlements WHERE uid = '<uid>';
+```
+
+然後請用戶重新整理頁面即可——前端每次載入都會向 `/api/entitlement` 核對，
+不需要用戶重新登入，也不需要他再點「重新查詢訂單」。
+
+⚠️ **只有 `entitlements` 這張表決定權益。** 改 `orders.status` 不會開通任何東西，
+反過來也一樣：補了 entitlements 就生效，即使 orders 還是 pending。
+
+### 4.2 其他常用查詢
+
+```sql
+-- 某人說付了錢沒開通（用 email 找）
+SELECT trade_no, status, amount, created_at, rtn_msg FROM orders
+WHERE email = 'xxx@example.com' ORDER BY created_at DESC;
+
+-- 人工補開通了幾筆（數字一直長＝webhook 或對帳有問題，要查根因）
+SELECT source, COUNT(*) FROM entitlements GROUP BY source;
+
+-- 最近的訂單總覽
+SELECT trade_no, uid, amount, status, created_at FROM orders
+ORDER BY created_at DESC LIMIT 20;
+```
+
+`orders.raw` 存了金流商回應的原始內容，是爭議時的證據。
+
+### 4.3 目前不會寄 email 給用戶（2026-08-25 確認）
+
+購買成功後**用戶不會收到任何 email**：
+- 我方沒有寄信功能（`firebase-functions/` 的 `notifyOnFeedback` 只寄給站長）
+- OEN 也不會寄——建立交易時我們**刻意沒有帶 `userEmail`／`userName`**（那兩欄是
+  代開發票用的，見 3.6），所以對方手上根本沒有買家信箱
+
+用戶的憑據是：畫面上的「付款完成」、信用卡帳單、以及登入後隨時可在
+「我的帳號」看到的權益狀態。要補寄收據信的話得另外做（見 5.）。
 
 ## 5. 改這塊之前要知道的
 
