@@ -215,7 +215,7 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
     check('感謝信：有加碼時主旨點名加碼', tipped.subject.includes('加碼'), tipped.subject);
     check('感謝信：有加碼時內文寫出底價與加碼的拆解',
         tipped.text.includes('NT$100') && tipped.text.includes('NT$50'), tipped.text.slice(0, 80));
-    const plain = buildThanksEmail({ amount: 100, tip: 0, tradeNo: 'PMC002' });
+    const plain = buildThanksEmail({ amount: 150, tip: 0, tradeNo: 'PMC002' });
     check('感謝信：未加碼時不會硬提加碼', !plain.subject.includes('加碼') && !plain.text.includes('加碼'), plain.subject);
     check('感謝信：訂單編號有帶進主旨與內文',
         plain.subject.includes('PMC002') && plain.text.includes('PMC002'), plain.subject);
@@ -274,7 +274,7 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
 // 金額改由前端決定之後，伺服器端的驗證就是唯一防線：擋不住的話有人直接
 // POST 一個小數字就能用一塊錢買走權益。
 {
-    const e = {};                       // 底價 100、上限 1000（預設值）
+    const e = {};                       // 底價 150、上限 1000（預設值）
     const ok = (tip, expect) => {
         const r = resolveChargeAmount(e, tip);
         check(`加碼 ${JSON.stringify(tip)} → NT$${expect}`, r.amount === expect && !r.error, JSON.stringify(r));
@@ -284,19 +284,19 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
         check(`拒絕 ${JSON.stringify(tip)}（${why}）`, !!r.error && r.amount === undefined, JSON.stringify(r));
     };
 
-    ok(undefined, 100);                 // 沒帶 tip＝只付底價
-    ok(0, 100);
-    ok(25, 125);
-    ok(50, 150);
-    ok(75, 175);                        // +25 +50 連按
-    ok('50', 150);                      // 字串數字可接受（JSON 有可能這樣送）
-    ok(900, 1000);                      // 剛好到上限
+    ok(undefined, 150);                 // 沒帶 tip＝只付底價
+    ok(0, 150);
+    ok(25, 175);
+    ok(50, 200);
+    ok(75, 225);                        // +25 +50 連按
+    ok('50', 200);                      // 字串數字可接受（JSON 有可能這樣送）
+    ok(850, 1000);                      // 剛好到上限
 
     rejected(-25, '負數＝想少付錢');
     rejected(-100, '負數＝想免費拿權益');
     rejected(30, '不是級距的倍數');
     rejected(1.5, '不是整數');
-    rejected(925, '超過上限 NT$1000');
+    rejected(875, '超過上限 NT$1000');
     rejected('abc', '不是數字');
     rejected(Infinity, '無限大');
 
@@ -308,14 +308,14 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
         !!resolveChargeAmount(e2, 175).error, JSON.stringify(resolveChargeAmount(e2, 175)));
 
     const pricing = resolveAdfreePricing({});
-    check('GET /api/pricing 的內容：底價 100／上限 1000／級距 25,50',
-        pricing.base === 100 && pricing.max === 1000 && String(pricing.steps) === '25,50', JSON.stringify(pricing));
+    check('GET /api/pricing 的內容：底價 150／上限 1000／級距 25,50',
+        pricing.base === 150 && pricing.max === 1000 && String(pricing.steps) === '25,50', JSON.stringify(pricing));
 
     // 環境變數誤設也不能讓底價掉下來——設定失誤的後果跟被攻擊一樣
     for (const [bad, label] of [['-50', '負數'], ['0', '零'], ['abc', '非數字'], ['', '空字串']]) {
         const got = resolveAdfreePricing({ PMC_ADFREE_PRICE: bad });
-        check(`底價設成 ${label}（${JSON.stringify(bad)}）→ 退回 100，不會變成免費`,
-            got.base === 100, JSON.stringify(got));
+        check(`底價設成 ${label}（${JSON.stringify(bad)}）→ 退回 150，不會變成免費`,
+            got.base === 150, JSON.stringify(got));
     }
     check('上限設成負數 → 退回 1000',
         resolveAdfreePricing({ PMC_ADFREE_MAX: '-1' }).max === 1000);
@@ -324,9 +324,9 @@ const getReturn = (qs) => returnGet({ request: new Request('https://pickmycard.a
     let floorHeld = true;
     for (let t = -500; t <= 500; t += 1) {
         const r = resolveChargeAmount({}, t);
-        if (!r.error && r.amount < 100) { floorHeld = false; break; }
+        if (!r.error && r.amount < 150) { floorHeld = false; break; }
     }
-    check('窮舉 tip = -500…500：沒有任何一個能讓收費低於底價 NT$100', floorHeld);
+    check('窮舉 tip = -500…500：沒有任何一個能讓收費低於底價 NT$150', floorHeld);
 }
 
 globalThis.fetch = realFetch;

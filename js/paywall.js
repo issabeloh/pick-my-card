@@ -160,7 +160,7 @@ function onPaywallAuthChanged(user) {
 // 定價的唯一真實來源是後端 GET /api/pricing（底價會隨 PMC_ADFREE_PRICE 變動）。
 // 這裡的預設值只在「還沒拿到回應」或「拿不到回應」時當保底顯示用；
 // 就算保底值跟後端不一致也不會多扣錢——真正的金額由後端算，前端只送 tip。
-const ADFREE_PRICING_FALLBACK = { base: 100, max: 1000, steps: [25, 50] };
+const ADFREE_PRICING_FALLBACK = { base: 150, max: 1000, steps: [25, 50] };
 let adfreePricing = null;   // 拿到後快取，同一次載入不重複要
 let adfreeTip = 0;          // 目前累積的加碼金額
 
@@ -248,7 +248,7 @@ function adfreeTipMessage(tip) {
 
 /** 條款裡的金額也要跟著後端定價走，否則會出現「條款寫 100、實收 150」。 */
 function syncAdfreeTermsPrice(base) {
-    for (const id of ['adfree-terms-base', 'adfree-terms-base-2']) {
+    for (const id of ['adfree-terms-base', 'adfree-terms-base-2', 'da-adfree-price']) {
         const el = document.getElementById(id);
         if (el) el.textContent = 'NT$' + base;
     }
@@ -702,7 +702,7 @@ function renderAccountAdfree(adfree, grantedAt, provisional) {
     // 還在查詢時不顯示購買鈕，免得已購買者閃一下看到「再買一次」
     if (buyBtn) {
         buyBtn.style.display = (!adfree && !provisional) ? '' : 'none';
-        // 金額跟著後端定價走。這顆按鈕之前寫死 NT$100，底價調成 150 時就對不上了
+        // 金額跟著後端定價走。這顆按鈕之前寫死金額，底價一調就對不上
         // ——跟條款那次是同一個坑，所以一律不在前端寫死金額。
         buyBtn.textContent = '移除廣告 NT$' + currentAdfreePricing().base;
         if (!adfree && !provisional) {

@@ -636,11 +636,11 @@ for (const entitled of [true, false]) {
     await page.click('#adfree-fab');
     await page.waitForTimeout(500);
     const shown = (await text(page, '#adfree-price-amount')).trim();
-    check('定價 API 掛掉 → 顯示保底底價 NT$100，不是 NaN', shown === 'NT$100', shown);
+    check('定價 API 掛掉 → 顯示保底底價 NT$150，不是 NaN', shown === 'NT$150', shown);
     await page.click('#adfree-tip-buttons .adfree-tip-btn[data-tip-step="25"]');
     await page.waitForTimeout(120);
-    check('定價 API 掛掉 → 加碼仍可運作（NT$125）',
-        (await text(page, '#adfree-price-amount')).trim() === 'NT$125', await text(page, '#adfree-price-amount'));
+    check('定價 API 掛掉 → 加碼仍可運作（NT$175）',
+        (await text(page, '#adfree-price-amount')).trim() === 'NT$175', await text(page, '#adfree-price-amount'));
     await ctx.close();
 }
 

@@ -203,6 +203,11 @@ export const ADFREE_TIP_STEPS = [25, 50];
 /** 任何情況下都不接受低於這個數字的收費。設定失誤與程式改壞都被它擋住。 */
 export const ADFREE_MIN_AMOUNT = 1;
 
+/** 正式定價（2026-08-25 站長定為 150）。沒設 PMC_ADFREE_PRICE 時就是它。
+ *  改這裡等於改全站售價——前端保底值、購買條款、感謝信、刪除帳戶警告
+ *  全都是向 /api/pricing 拿這個數字，不會各自寫死。 */
+export const ADFREE_DEFAULT_BASE = 150;
+
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
 /**
@@ -215,7 +220,7 @@ export function resolveAdfreePricing(env) {
     // 環境變數誤設成負數或 0 時不能讓它變成底價——那等於免費送權益。
     // 這不是攻擊路徑（設定只有站長改得動），但後果跟被攻擊一樣，所以照樣夾住。
     const rawBase = Math.trunc(Number(env.PMC_ADFREE_PRICE));
-    const base = Number.isFinite(rawBase) && rawBase >= ADFREE_MIN_AMOUNT ? rawBase : 100;
+    const base = Number.isFinite(rawBase) && rawBase >= ADFREE_MIN_AMOUNT ? rawBase : ADFREE_DEFAULT_BASE;
     const rawMax = Math.trunc(Number(env.PMC_ADFREE_MAX));
     const max = Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 1000;
     return { base, max: Math.max(base, max), steps: ADFREE_TIP_STEPS.slice() };

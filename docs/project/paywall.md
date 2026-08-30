@@ -1,4 +1,4 @@
-# 去廣告付費牆（NT$100 一次買斷）
+# 去廣告付費牆（NT$150 一次買斷 ＋ 隨喜加碼）
 
 一句話：**登入 → 綠界付款 → 綠界通知後端 → 後端寫權益 → 前端不載入 AdSense loader。**
 
@@ -14,7 +14,7 @@
 | 後端用 Cloudflare Pages Functions | 站本來就部署在 CF Pages，加 `functions/` 就有 API，不必另一套部署或 Firebase Blaze 方案。綠界的 `CheckMacValue` 要用 HashKey/HashIV 計算，那兩把金鑰**絕不能出現在前端** |
 | 權益放 D1，不放 Firestore | `firestore.rules` 允許用戶讀寫自己的 `users/{uid}`。付費旗標放那等於**用戶可以自行開通**。權益必須放在用戶碰不到、只有伺服器寫得動的地方 |
 | 開通只認 server 對 server 通知 | 瀏覽器導回頁（`OrderResultURL`）的參數使用者改得動，拿它開通等於改網址就能白嫖 |
-| 永久買斷、不自動續扣 | NT$100 的金額做定期定額不划算（授權管理、取消、扣款失敗處理的複雜度遠超收益） |
+| 永久買斷、不自動續扣 | 這個金額做定期定額不划算（授權管理、取消、扣款失敗處理的複雜度遠超收益） |
 
 ## 2. 三個保證怎麼成立的
 
@@ -108,6 +108,24 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 
 改了 OEN 相關邏輯 → 跑 `node tools/paywall/oen-selftest.mjs`（改動前先確認綠燈）。
 
+## 2.24 定價：底價 NT$150（2026-08-25 站長定案）
+
+正式售價 NT$150，寫在 `functions/_lib/payment.js` 的 `ADFREE_DEFAULT_BASE`。
+在此之前開發期用的是 100，測試 OEN 時又用環境變數蓋成 150／50，
+因此**舊 commit 與舊截圖裡的 100 都是過時的**。
+
+⚠️ **改售價只改 `ADFREE_DEFAULT_BASE` 一個地方**。底下這些全都是向
+`GET /api/pricing` 拿同一個數字，不可以各自寫死（每寫死一處，就多一個
+「畫面寫 A、實收 B」的機會，加了隨喜加碼之後那等於多收錢）：
+
+- 購買 modal 的大字價格、購買條款的兩處金額
+- 「我的帳號」的「移除廣告 NT$X」pill
+- 刪除帳戶警告裡的「你已購買的去廣告權益（NT$X）」
+- 感謝信的金額與拆解
+
+`js/paywall.js` 的 `ADFREE_PRICING_FALLBACK` 與 `index.html` 裡的靜態數字
+只是 API 還沒回來前的暫時顯示，改售價時要一起更新，但它們**不是真實來源**。
+
 ## 2.25 隨喜加碼「加碼支持！」（2026-08-25）
 
 底價之外可自願加碼，按 `+25` / `+50` 累加，按幾次都可以，設有上限。
@@ -130,7 +148,7 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 即使如此還是補了兩道明寫的防線，因為上面那個保證是「推導」出來的：
 - `resolveChargeAmount` 末尾明寫 `amount < base` 即拒絕。今天多餘，但哪天有人
   把介面改成直接收 `amount`，下限會**無聲消失**——這行讓那種改法在測試裡當場失敗。
-- `resolveAdfreePricing` 夾住 `PMC_ADFREE_PRICE`：誤設成負數、0、亂碼一律退回 100。
+- `resolveAdfreePricing` 夾住 `PMC_ADFREE_PRICE`：誤設成負數、0、亂碼一律退回預設底價。
   這不是攻擊路徑（只有站長改得動），但後果跟被攻擊一樣。
 
 測試用窮舉 `tip = -500…500` 釘死「沒有任何一個值能讓收費低於底價」。
@@ -140,7 +158,7 @@ provider_txn_id（不是 webhook 給的 id）反查 `GET /transactions/{id}`，
 負數、小數、非級距倍數、超過上限——**沒有這道驗證，任何人都能直接
 `POST {"tip": -99}` 用一塊錢買走權益**。前端把按鈕 disabled 只是體驗，不是防線。
 
-⚠️ **定價只有一個來源**：底價會隨 `PMC_ADFREE_PRICE` 變動（測試環境調高過），
+⚠️ **定價只有一個來源**：底價是 `payment.js` 的 `ADFREE_DEFAULT_BASE`（150），可被 `PMC_ADFREE_PRICE` 覆寫，
 所以前端一律以 `GET /api/pricing` 為準。前端那份 `ADFREE_PRICING_FALLBACK`
 只在 API 拿不到時保底顯示，**不是真實來源**——若在前端另寫死一份數字，
 用戶看到的金額會跟實際扣款不一致，加了加碼之後這種不一致等於多扣錢。
@@ -273,7 +291,7 @@ webhook 完全不通也能在 1~2 秒內開通。
   | 已登入用戶開一次頁 | 1 次 `/api/entitlement` ＋ 1 row read |
   | 完成一筆購買 | 約 10 次（建單＋通知＋導回＋輪詢） |
 
-- 唯一的實質成本是**金流手續費**（NT$100 約 2.75%，≈2.75 元/筆）
+- 唯一的實質成本是**金流手續費**（NT$150 約 2.75%，≈4 元/筆）
 
 若哪天登入用戶的瀏覽量真的逼近 Workers 免費額度，最省的優化是幫「查到未付費」的結果也加上幾小時的本機快取（目前只快取「已付費」），代價是換裝置購買後生效變慢。
 
@@ -282,7 +300,7 @@ webhook 完全不通也能在 1~2 秒內開通。
 
 測試交易的 `raw` 回應含 `fee` 欄位：**金額 50 → fee 2**（4%）。單筆樣本、
 且是測試環境，不足以推定費率結構（可能是百分比、可能有最低收費）。
-**上線前請向業務確認實際費率**——若為 4%，NT$100 的單筆成本是 4 元，
+**上線前請向業務確認實際費率**——若為 4%，NT$150 的單筆成本是 6 元，
 比先前依綠界估的 2.75 元高。這會影響定價是否划算的判斷。
 
 ## 2.9 金流商的選擇與切換
@@ -396,7 +414,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `PMC_PAY_USE3D` | `1` 開啟 | OEN 信用卡 3D 驗證，預設關（同 OEN 預設）。開啟可轉移盜刷爭議責任 |
    | `PMC_PAY_PAGE_BASE` | （通常不用設） | OEN 結帳頁 base 覆寫（預設依 merchantId＋環境推得） |
    | `PMC_ADFREE_MAX` | `1000` | 隨喜加碼後的總額上限（見 2.25）。不設＝1000 |
-   | `PMC_ADFREE_PRICE` | `100` | ⚠️ OEN 測試環境要求金額 >100（見 3.4），正式定價 100 剛好在邊界上——**Preview 要設 150**，Production 不設此變數 |
+   | `PMC_ADFREE_PRICE` | （通常不用設） | 底價覆寫。**正式定價 150 已經是程式預設值**（`ADFREE_DEFAULT_BASE`），Preview 與 Production 都不需要設這個變數；150 也滿足 OEN 測試環境「>100 才會成功」的要求（見 3.4） |
    | `PMC_FIREBASE_PROJECT_ID` | `pick-my-card-28f2a` | 驗 ID token 的 aud |
    | `PMC_HEALTHCHECK_TOKEN` | 🔒 Secret | 白名單健檢端點的通行碼（見 3.55）。**沒設＝該端點整支停用**，不留後門 |
    | `PMC_HEALTHCHECK_TXN_ID` | （選用） | 一筆真實舊交易 id，設了健檢判準會更嚴（要求 `code=S0000`） |
@@ -413,7 +431,7 @@ git fetch origin main && git rev-list --count HEAD..origin/main
    | `4000 0000 0000 2503` | 觸發 3D 驗證 |
    | `5200 0000 0000 2151` | 觸發 3D 驗證（Master） |
 
-   金額：成功情境 >100（Preview 用 `PMC_ADFREE_PRICE=150`）。
+   金額：成功情境 >100。預設底價 150 已符合，不必另設 `PMC_ADFREE_PRICE`。
 
    ⚠️ **踩過的坑**：業務另一份「第三階段」文件把 `4242 0000 4242 0000` 標為
    「Visa 失敗測試卡號」，實測用它（金額 150 與 50 各試過）交易一律
@@ -564,8 +582,9 @@ git fetch origin main && git rev-list --count HEAD..origin/main
          `resolvePaymentConfig` 的防呆；沒有這道防呆的話會靜默走測試環境：
          收不到錢卻照常開通權益）
    - [ ] Production 的 `PMC_PAY_TOKEN` 換成 OEN **正式環境**產的 token（測試/正式不互通）
-   - [ ] Production **不可**留著 `PMC_ADFREE_PRICE=150`（那是 OEN 測試環境
-         「>100 才成功」的權宜值；正式要移除變數回到預設 100）
+   - [ ] 確認 Preview 與 Production **都沒有**設 `PMC_ADFREE_PRICE`
+         （2026-08-25 起正式定價 150 就是程式預設值；殘留舊的 50／150 覆寫值
+         會讓實收金額與定價不一致）
    - [ ] 刪除測試期的 Deploy Hook 並重建（該 hook URL 在開發對話中傳遞過；
          位置：CF Pages → Settings → Deploy Hooks → 垃圾桶圖示刪除 → Add 重建）
    - [ ] Firebase 授權網域移除測試用的 pages.dev 網域（如果加過）
@@ -707,7 +726,7 @@ ORDER BY created_at DESC LIMIT 20;
 
 `orders` 新增 `tip` 欄位（既有資料庫要跑
 `ALTER TABLE orders ADD COLUMN tip INTEGER NOT NULL DEFAULT 0;`），
-信裡才寫得出「底價 NT$100 ＋ 加碼 NT$50」的拆解，對帳時也才算得出加碼收入。
+信裡才寫得出「底價 NT$150 ＋ 加碼 NT$50」的拆解，對帳時也才算得出加碼收入。
 
 **要設定的環境變數**（缺任一 → 整個功能靜默停用，不會壞掉）：
 
