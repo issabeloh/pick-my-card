@@ -122,10 +122,12 @@ function stripRelatedBar(html) {
 
 // MerchantPages 的 bodyHtml 欄：站長手寫的正文，信任層級同 promos（工作表只有站長能改），
 // 所以刻意**不 escape**——escape 掉就等於這個欄位不能用。外部來源的內容永遠不該進這欄。
-function buildBodyHtml(bodyHtml) {
+function buildBodyHtml(bodyHtml, displayName) {
   const body = String(bodyHtml == null ? '' : bodyHtml).trim();
   if (!body) return '';
-  return '        <section class="mc-body">\n' + body + '\n</section>\n';
+  // aria-label 是必要的：沒有無障礙名稱的 <section> 不算 region 地標，裡面的正文
+  // 會被判成「不在任何地標裡」（axe region）。
+  return '        <section class="mc-body" aria-label="' + escapeHtml(displayName) + ' 補充說明">\n' + body + '\n</section>\n';
 }
 
 const MERCHANT_PAGE_STYLE =
@@ -197,7 +199,7 @@ function buildPage(indexHtml, page, cardNames, allPages) {
   //    （位置是站長 2026-08-18 選定的：不打斷上方任何既有區塊。）
   html = replaceOnce(html, RELATED_RE,
     () => buildRelatedBar(slug, allPages) + '\n\n' +
-      buildSeoFooter(displayName, cardNames) + buildBodyHtml(page.bodyHtml),
+      buildSeoFooter(displayName, cardNames) + buildBodyHtml(page.bodyHtml, displayName),
     '推薦比較工具列佔位（index.html 的 <nav class="mc-related">）');
 
   return html;

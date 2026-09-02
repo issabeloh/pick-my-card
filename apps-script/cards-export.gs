@@ -2410,7 +2410,7 @@ o.cardsHtml + '\n' +
 // .container 的直接子元素（不包在有 padding 的 <main> 裡），才能 width:100% 貼齊
 // 容器左右邊界、底部圓角跟容器本身的圓角無縫銜接（2026-07-29 從 main 內移出到這裡，
 // 修正之前套用 max-width+置中的獨立浮動樣式，跟主站不一致）。
-'<div class="promos-warning-row" role="note" aria-label="信用卡警語">謹慎理財、信用至上</div>\n' +
+'<section class="promos-warning-row" aria-label="信用卡警語">謹慎理財、信用至上</section>\n' +
 '</div>\n' +
 '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
