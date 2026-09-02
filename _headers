@@ -5,9 +5,8 @@
 # 語法：路徑樣式一行，接著縮排兩空格的 `標頭名: 值`。
 #
 # ⚠️ 改這個檔前先看清楚每一條的註解。這裡有兩條「不是改完就算數」的標頭：
-#    CSP 目前是 -Report-Only 觀察模式（白名單漏一個就整站壞），
-#    HSTS 目前在階梯式上線的第一階（max-age 只有 300 秒）。
-#    兩條都寫了下一步該怎麼走，照著做，不要跳級。
+#    CSP 目前是 -Report-Only 觀察模式（白名單漏一個就整站壞），轉正條件寫在該條註解。
+#    HSTS 已上到 max-age=31536000（一年），日後新增瀏覽器用的子網域前必讀該條註解。
 
 /*
   # 禁止本站頁面被別的網域用 iframe 嵌入（防點擊劫持／冒名嵌站）。
@@ -31,22 +30,30 @@
   # 只切斷「別人開本站」。改成 same-origin 會弄壞登入，不要改。
   Cross-Origin-Opener-Policy: same-origin-allow-popups
 
-  # ---- HSTS：階梯式上線中，目前在第一階（2026-09-02）----
+  # ---- HSTS：已上到一年（2026-09-02 當天完成階梯）----
   # 作用：在使用者瀏覽器留一張「這個網域只走 https」的字條，消滅「網址列直接打
-  # pickmycard.app」時那一次明文 http 請求的中間人空窗。字條的倒數在每次來訪時重置。
+  # pickmycard.app」時那一次明文 http 請求的中間人空窗。字條的倒數在每次來訪時重置，
+  # 所以只要使用者一年內回訪過就不會過期；伺服器端設定一次即可，不用續約。
   #
-  # ⚠️ 現在是 max-age=300（5 分鐘），刻意設得很短——這一階是在確認
-  #    「includeSubDomains 有沒有害到哪個子網域」。要往上爬請照這個階梯：
-  #      300（現在）→ 觀察數天無異常 → 86400（1 天）→ 觀察一週 → 31536000（1 年）
-  #    任何一階出事：把 max-age 改成 0 部署，最多等前一階的秒數就清乾淨。
+  # 為什麼敢直接上 31536000（原本從 max-age=300 起步）：站長 2026-09-02 提供 Cloudflare
+  # DNS 全表，確認 *.pickmycard.app 底下**沒有任何會被瀏覽器以 HTTP 開啟的子網域**——
+  # 現存的子網域紀錄只有 _dmarc（DMARC 政策）、send（Amazon SES 的 MX/SPF）與兩筆
+  # _domainkey（DKIM），全都是郵件與驗證用途，走 SMTP/DNS 不走 HTTP，includeSubDomains
+  # 碰不到它們。主網域 pickmycard.app 是 Proxied CNAME → pick-my-card.pages.dev，
+  # 憑證由 Cloudflare 自動續。既然沒有要觀察的對象，階梯就沒有意義。
   #
-  # ⚠️ includeSubDomains 影響的是「所有 *.pickmycard.app」，不只 Cloudflare Pages
-  #    服務的這些頁。如果日後有子網域架在別的地方而且沒有 https，它會連不上。
+  # ⚠️ 日後新增任何「用瀏覽器開的」子網域（blog.、api.、www. 之類），它**必須從第一天
+  #    就有有效 HTTPS**——includeSubDomains 已經在使用者瀏覽器裡生效，沒有 https 的
+  #    新子網域會直接連不上，而且你不會收到任何回報。掛在 Cloudflare 上（Proxied）
+  #    就自動有憑證，沒問題；掛在別處的話先確認憑證再上線。
+  #
+  # ⚠️ 要反悔：把 max-age 改成 0 並保持部署，等回訪者的字條被清掉（最長一年）。
+  #    所以網域若有轉手可能，提前一兩個月改成 0 就能乾淨交接。
   #
   # ⚠️ 絕對不要加 preload 參數、也不要去 hstspreload.org 提交網域。
-  #    那份名單是烤進 Chrome 的，要移除得申請並等好幾個月，才是真正不可逆的東西。
-  #    網域若有轉手可能，提前一兩個月把 max-age 改成 0 就能乾淨交接。
-  Strict-Transport-Security: max-age=300; includeSubDomains
+  #    那份名單是烤進 Chrome 的，要移除得申請並等好幾個月——那才是真正不可逆的東西，
+  #    上面那條「改成 0 就能退場」的路對 preload 名單無效。
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
 
   # ---- CSP：目前是「只回報、不攔截」模式（2026-09-02 起觀察中）----
   # ⚠️ 標頭名稱結尾的 -Report-Only 是關鍵：違規只會印在瀏覽器 Console，
