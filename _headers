@@ -37,12 +37,19 @@
   #
   # 為什麼敢直接上 31536000（原本從 max-age=300 起步）：站長 2026-09-02 提供 Cloudflare
   # DNS 全表，確認 *.pickmycard.app 底下**沒有任何會被瀏覽器以 HTTP 開啟的子網域**——
-  # 現存的子網域紀錄只有 _dmarc（DMARC 政策）、send（Amazon SES 的 MX/SPF）與兩筆
+  # 當時的子網域紀錄只有 _dmarc（DMARC 政策）、send（Amazon SES 的 MX/SPF）與兩筆
   # _domainkey（DKIM），全都是郵件與驗證用途，走 SMTP/DNS 不走 HTTP，includeSubDomains
-  # 碰不到它們。主網域 pickmycard.app 是 Proxied CNAME → pick-my-card.pages.dev，
+  # 碰不到它們（www 是同日稍晚才加的，見下）。主網域 pickmycard.app 是 Proxied CNAME → pick-my-card.pages.dev，
   # 憑證由 Cloudflare 自動續。既然沒有要觀察的對象，階梯就沒有意義。
   #
-  # ⚠️ 日後新增任何「用瀏覽器開的」子網域（blog.、api.、www. 之類），它**必須從第一天
+  # 同日稍晚新增了 www：CNAME www → pickmycard.app（**Proxied**，所以 Universal SSL
+  # 自動涵蓋、符合下面那條規則），並在 Cloudflare 的 Redirect Rules 加一條
+  # 「https://www.pickmycard.app/* → https://pickmycard.app/${1}」301（保留 query string）。
+  # 轉址在邊緣就完成，請求不會送到 Pages，所以 www 不必登記成 Pages 的自訂網域。
+  # 這兩項都是 Cloudflare 後台設定、不在 repo 裡——在這裡留一筆是因為它們與下面那條
+  # 規則直接相關，改動時要一起想。
+  #
+  # ⚠️ 日後新增任何「用瀏覽器開的」子網域（blog.、api. 之類），它**必須從第一天
   #    就有有效 HTTPS**——includeSubDomains 已經在使用者瀏覽器裡生效，沒有 https 的
   #    新子網域會直接連不上，而且你不會收到任何回報。掛在 Cloudflare 上（Proxied）
   #    就自動有憑證，沒問題；掛在別處的話先確認憑證再上線。
