@@ -20,3 +20,33 @@
   # 本站資源（頁面、卡片圖、cards.data…）只給本站自己載入，不給別的網站盜連嵌入。
   # 只影響瀏覽器端的跨站嵌入；社群平台抓 og:image 是伺服器端抓取，不受影響。
   Cross-Origin-Resource-Policy: same-origin
+
+  # ---- CSP：目前是「只回報、不攔截」模式（2026-09-02 起觀察中）----
+  # ⚠️ 標頭名稱結尾的 -Report-Only 是關鍵：違規只會印在瀏覽器 Console，
+  #    東西照常載入，線上使用者完全不受影響。確認 Console 乾淨之前，
+  #    絕對不要把 -Report-Only 拿掉。
+  #
+  # 觀察方法：部署後打開 F12 Console，正常走一輪
+  #   首頁搜尋 → 選卡／持有卡 → 卡片詳情 → 登入／登出 → FAQ → 新戶活動 → 隱私權 → 使用須知 → 商家頁
+  # 看到 "Refused to load ... violates the following Content Security Policy directive"
+  # 就把那個網域補進對應的 directive，重新部署再看一輪。
+  #
+  # 白名單怎麼來的（改動前先確認你要加的東西屬於哪一類）：
+  #   www.gstatic.com          Firebase SDK（index.html/faq.html 的 modulepreload + import）
+  #   googletagmanager / google-analytics   GA4
+  #   www.clarity.ms           Microsoft Clarity
+  #   googlesyndication / doubleclick / adservice / adtrafficquality / fundingchoicesmessages   AdSense
+  #   fonts.googleapis.com（樣式）＋ fonts.gstatic.com（字型檔）   Noto Sans TC
+  #   *.googleapis.com（connect）  Firestore／Auth／Storage 的 API 呼叫
+  #   pick-my-card-28f2a.firebaseapp.com（frame）  Firebase 登入 popup
+  #
+  # 刻意先不寫 'unsafe-eval'：想從觀察結果確認廣告腳本到底需不需要它，
+  # 而不是先給了就永遠拿不掉。Console 若出現 eval 相關違規再補。
+  #
+  # 'unsafe-inline' 則是拿不掉的：本站沒有 build 步驟，index.html 等頁面有大量
+  # 內聯 <script> 與 style="" 屬性，改用 nonce 得先有打包流程。即使如此，
+  # CSP 仍然把「可以載入程式的網域」鎖死在上面這份清單，這才是主要價值。
+  #
+  # 沒有設 report-uri／report-to：本站沒有收集違規回報的後端，
+  # 違規只看瀏覽器 Console 就好，不要為了這個去接第三方服務。
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net https://partner.googleadservices.com https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://fundingchoicesmessages.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://*.firebaseio.com wss://*.firebaseio.com https://*.doubleclick.net https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; frame-src 'self' https://pick-my-card-28f2a.firebaseapp.com https://accounts.google.com https://*.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.gstatic.com; worker-src 'self' blob:; manifest-src 'self'
