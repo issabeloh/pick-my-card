@@ -1,0 +1,22 @@
+# Cloudflare Pages 回應標頭設定（2026-09-02 新增）
+#
+# 這個檔由 Cloudflare Pages 讀取（必須放在部署輸出根目錄＝repo 根目錄），
+# 部署後對每個回應加上下面的安全標頭。改完不用改任何 HTML。
+# 語法：路徑樣式一行，接著縮排兩空格的 `標頭名: 值`。
+#
+# ⚠️ 這裡故意「只放不會擋掉現有第三方服務」的三組標頭。
+#    CSP 與 HSTS 影響大（CSP 白名單漏一個就整站壞、HSTS 設了 max-age 內無法反悔），
+#    要加請先走 Content-Security-Policy-Report-Only 觀察，不要直接往這裡塞。
+
+/*
+  # 禁止本站頁面被別的網域用 iframe 嵌入（防點擊劫持／冒名嵌站）。
+  # 同網域自己嵌自己仍可以，所以不影響站內任何功能。
+  X-Frame-Options: SAMEORIGIN
+
+  # 明確關掉本站永遠用不到的瀏覽器功能。沒列出來的功能維持瀏覽器預設，
+  # 所以 GA／Clarity／AdSense 用到的 attribution-reporting、browsing-topics 等不受影響。
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+  # 本站資源（頁面、卡片圖、cards.data…）只給本站自己載入，不給別的網站盜連嵌入。
+  # 只影響瀏覽器端的跨站嵌入；社群平台抓 og:image 是伺服器端抓取，不受影響。
+  Cross-Origin-Resource-Policy: same-origin
