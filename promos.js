@@ -335,20 +335,22 @@
     function syncAriaForBreakpoint() {
       var toggles = document.querySelectorAll('.promo-card-toggle');
       toggles.forEach(function (el) {
+        // 桌機拿掉按鈕語意（role/tabindex），避免「可聚焦、看似可點、點了沒反應」
+        // （2026-07-16 站長回饋）；縮回手機寬度時還原。
+        //
+        // aria-expanded 必須跟著 role 一起進退（2026-09-02）：它只允許出現在有
+        // 對應角色的元素上，掛在沒有 role 的 <div> 上是規範禁止的（axe
+        // aria-prohibited-attr／aria-allowed-attr），螢幕閱讀器也只會忽略它。
+        // 桌機本來就一律展開、沒有收合這回事，少了這個屬性不損失任何資訊。
         if (mq.matches) {
           var card = el.closest('.promo-card');
-          el.setAttribute('aria-expanded', card && card.classList.contains('is-open') ? 'true' : 'false');
-        } else {
-          el.setAttribute('aria-expanded', 'true'); // 桌機視覺上一律展開
-        }
-        // 桌機拿掉按鈕語意（role/tabindex），避免「可聚焦、看似可點、點了沒反應」
-        // （2026-07-16 站長回饋）；縮回手機寬度時還原
-        if (mq.matches) {
           el.setAttribute('role', 'button');
           el.setAttribute('tabindex', '0');
+          el.setAttribute('aria-expanded', card && card.classList.contains('is-open') ? 'true' : 'false');
         } else {
           el.removeAttribute('role');
           el.removeAttribute('tabindex');
+          el.removeAttribute('aria-expanded');
         }
       });
     }
