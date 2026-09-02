@@ -4,9 +4,10 @@
 # 部署後對每個回應加上下面的安全標頭。改完不用改任何 HTML。
 # 語法：路徑樣式一行，接著縮排兩空格的 `標頭名: 值`。
 #
-# ⚠️ 這裡故意「只放不會擋掉現有第三方服務」的三組標頭。
-#    CSP 與 HSTS 影響大（CSP 白名單漏一個就整站壞、HSTS 設了 max-age 內無法反悔），
-#    要加請先走 Content-Security-Policy-Report-Only 觀察，不要直接往這裡塞。
+# ⚠️ 改這個檔前先看清楚每一條的註解。這裡有兩條「不是改完就算數」的標頭：
+#    CSP 目前是 -Report-Only 觀察模式（白名單漏一個就整站壞），
+#    HSTS 目前在階梯式上線的第一階（max-age 只有 300 秒）。
+#    兩條都寫了下一步該怎麼走，照著做，不要跳級。
 
 /*
   # 禁止本站頁面被別的網域用 iframe 嵌入（防點擊劫持／冒名嵌站）。
@@ -20,6 +21,32 @@
   # 本站資源（頁面、卡片圖、cards.data…）只給本站自己載入，不給別的網站盜連嵌入。
   # 只影響瀏覽器端的跨站嵌入；社群平台抓 og:image 是伺服器端抓取，不受影響。
   Cross-Origin-Resource-Policy: same-origin
+
+  # 切斷「別的網站用 window.open 開了本站之後，還一直握著本站視窗參照」這條線。
+  # 擋掉的實際攻擊：反向分頁劫持（使用者切走後，那個站在背後把本站分頁換成
+  # 長得一樣的假登入頁）、以視窗屬性做的狀態側信道探測。
+  #
+  # 為什麼是 -allow-popups 而不是 same-origin：本站的 Google 登入走
+  # signInWithPopup，是「本站開別人」。allow-popups 保留這個方向的關係，
+  # 只切斷「別人開本站」。改成 same-origin 會弄壞登入，不要改。
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+  # ---- HSTS：階梯式上線中，目前在第一階（2026-09-02）----
+  # 作用：在使用者瀏覽器留一張「這個網域只走 https」的字條，消滅「網址列直接打
+  # pickmycard.app」時那一次明文 http 請求的中間人空窗。字條的倒數在每次來訪時重置。
+  #
+  # ⚠️ 現在是 max-age=300（5 分鐘），刻意設得很短——這一階是在確認
+  #    「includeSubDomains 有沒有害到哪個子網域」。要往上爬請照這個階梯：
+  #      300（現在）→ 觀察數天無異常 → 86400（1 天）→ 觀察一週 → 31536000（1 年）
+  #    任何一階出事：把 max-age 改成 0 部署，最多等前一階的秒數就清乾淨。
+  #
+  # ⚠️ includeSubDomains 影響的是「所有 *.pickmycard.app」，不只 Cloudflare Pages
+  #    服務的這些頁。如果日後有子網域架在別的地方而且沒有 https，它會連不上。
+  #
+  # ⚠️ 絕對不要加 preload 參數、也不要去 hstspreload.org 提交網域。
+  #    那份名單是烤進 Chrome 的，要移除得申請並等好幾個月，才是真正不可逆的東西。
+  #    網域若有轉手可能，提前一兩個月把 max-age 改成 0 就能乾淨交接。
+  Strict-Transport-Security: max-age=300; includeSubDomains
 
   # ---- CSP：目前是「只回報、不攔截」模式（2026-09-02 起觀察中）----
   # ⚠️ 標頭名稱結尾的 -Report-Only 是關鍵：違規只會印在瀏覽器 Console，
