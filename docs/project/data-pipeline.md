@@ -368,4 +368,5 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 
 - [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
 - [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
+- [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

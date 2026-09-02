@@ -46,7 +46,11 @@
 
 以上 4 項已全數修復（escapeHtml／sanitizeUrl／textContent），對應 baseline 條目已刪除；現存 baseline 皆為「上游已淨化」型安全條目。修復驗證：回歸 12/12 綠燈＋Playwright 冒煙測試（快捷按鈕渲染、行動支付官網連結）。
 
-**未來可再加強（非本次範圍）**：CSP meta tag（因大量 inline script/style，需先整理才可行）、Subresource Integrity（目前第三方只有 Firebase SDK 走官方 CDN）。
+**未來可再加強（非本次範圍）**：（2026-09-02 更新——這兩項都已有結論，不必再重新評估）
+
+- **CSP：已做，但不是 meta tag。**改用回應標頭（repo 根目錄 `_headers`，Cloudflare Pages 讀），因為 meta tag 表達不了 `frame-ancestors`。大量 inline script/style 的問題沒有消失，所以 `'unsafe-inline'` 保留——沒有 build 步驟就沒有 nonce；但把「可以載入程式的網域」鎖進白名單才是主要價值。**目前仍是 `-Report-Only` 觀察模式**，轉正條件與白名單來源寫在 `_headers` 檔內註解。
+- **SRI：評估後判定做不到，不要再嘗試。**第三方是 GA、Clarity、Google Fonts、AdSense、Firebase SDK——全是供應商會自行更新的檔案，釘 hash 等於他們一改版本站就壞。唯一能做的是給 Google Fonts 那行補 `crossorigin`。
+- **回應標頭是第四層防線**，不在上面那張三層分工表裡：它不進 security-scan（掃的是 repo 內容），驗證方式是部署後看 DevTools → Network → Doc → Response Headers。
 
 ## 教訓記錄
 
