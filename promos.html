@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="promos.css?v=202609020202">
+<link rel="stylesheet" href="promos.css?v=202609020754">
 
 <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
 <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
@@ -307,7 +307,7 @@
       <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>
     </button>
     <a href="/" class="promos-header-content">
-      <img src="assets/images/logo-header.png?v=202609020202" alt="" class="promos-header-logo">
+      <img src="assets/images/logo-header.png?v=202609020754" alt="" class="promos-header-logo">
       <span class="promos-header-title">信用卡回饋大師</span>
     </a>
     <nav class="promos-header-links" aria-label="站內頁面">
@@ -1405,10 +1405,10 @@
 
   <p class="promos-empty-state" id="promos-empty-state" hidden>目前沒有符合條件的活動，換個篩選試試？</p>
 </main>
-<div class="promos-warning-row" role="note" aria-label="信用卡警語">謹慎理財、信用至上</div>
+<section class="promos-warning-row" aria-label="信用卡警語">謹慎理財、信用至上</section>
 </div>
 
-<div class="social-media-footer">
+<footer class="social-media-footer">
   <div class="social-media-container">
     <div class="social-section">
       <p class="social-media-title">追蹤我們</p>
@@ -1443,10 +1443,15 @@
         <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">
             <span class="social-text">隱私權政策</span>
         </a>
+        <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁 /terms。
+             同樣是每一頁都要有的入口——新增頁面時記得一起帶上。 -->
+        <a href="/terms" class="social-link privacy" aria-label="使用須知與免責聲明">
+            <span class="social-text">使用須知與免責聲明</span>
+        </a>
       </div>
     </div>
 </div>
-</div>
+</footer>
 
 <details class="promos-faq">
   <summary class="promos-faq-summary">申辦新的信用卡之前，先確認這幾件事<span class="promos-faq-chevron" aria-hidden="true"></span></summary>
@@ -1498,6 +1503,6 @@
   window.firebaseAnalytics = getAnalytics(app);
   window.logEvent = logEvent;
 </script>
-<script src="promos.js?v=202609020202"></script>
+<script src="promos.js?v=202609020754"></script>
 </body>
 </html>
