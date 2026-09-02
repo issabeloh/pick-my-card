@@ -2,6 +2,7 @@
  * Pick My Card — js/home-ui.js（載入順序 3/12）
  * 區塊目錄（Grep 關鍵字）：
  *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
+ *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"
  *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
  *  - 錯誤訊息                  → "showErrorMessage"
  *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
@@ -29,6 +30,39 @@ function getSpotlightDaysLeft(deadline) {
     return Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
 }
 
+// 亮點卡的期限：優先用「這張卡在這個通路的真實活動期限」，Highlights 工作表的
+// deadline 只當後備。理由：sheet 的 deadline 是人工填的、會跟活動脫節——2026-09-02
+// 實測 20 則裡有 4 則對不上（陽信 JCB 晶緻卡日本 7-ELEVEN sheet 寫 2026/12/31、
+// 真實活動 2026/9/30 就結束；玉山 Ubear Gemini sheet 寫 2026/8/31 但活動其實已
+// 展延到 2027/2/28，卡片上顯示一個過去的日期）。
+//
+// ⚠️ 一張卡對同一通路可能命中多個活動（如中信統一openpossible 的夢時代有 4 組、
+// 玉山熊本熊卡的日本松本清有 4 組）。這裡取「最早到期」的那一個：亮點宣稱的
+// 回饋率常是多組疊加出來的（松本清 8.5% ＝ 6% 指定日本商店 ＋ 滿額加碼），
+// 最早到期的那組一過期，亮點宣稱的數字就不成立了；取最晚會讓卡片顯示一個
+// 其實已經拿不到的期限——寧可保守。
+//
+// 過期活動在載入時就被 filterExpiredRates 濾掉、不會進 _itemsIndex，
+// 所以這裡拿到的活動都還在有效期內。
+function resolveSpotlightDeadline(item) {
+    const fallback = (item && item.deadline) || '';
+    if (!item || !item.card_id || !item.merchant) return fallback;
+
+    const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
+    if (!card) return fallback;
+
+    const ends = findSpotlightCardActivities(card, item.merchant)
+        .map(group => group.periodEnd)
+        .filter(Boolean)
+        // periodEnd 可能是 ISO 或台式斜線，統一轉 ISO 後字典序 = 日期序
+        .map(end => (end.includes('-') ? end : slashDateToISO(end)))
+        .filter(Boolean);
+    if (ends.length === 0) return fallback; // 沒對到活動、或活動沒寫結束日 → 用 sheet 的
+
+    // 顯示格式沿用 sheet 的 YYYY/MM/DD
+    return ends.sort()[0].replace(/-/g, '/');
+}
+
 function spotlightTotalPages() {
     return Math.ceil(spotlightItems.length / SPOTLIGHT_PAGE_SIZE);
 }
@@ -42,6 +76,9 @@ function renderSpotlights() {
     spotlightItems = all
         .filter(s => s && s.active !== false && s.active !== 'FALSE')
         .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
+
+    // 期限在建清單時算一次就好（卡片版式與 modal 後備路徑共用，翻頁重繪不必重算）
+    spotlightItems.forEach(item => { item._resolvedDeadline = resolveSpotlightDeadline(item); });
 
     if (spotlightItems.length === 0) {
         section.style.display = 'none';
@@ -118,7 +155,9 @@ function buildSpotlightCard(item, index) {
     card.className = 'spotlight-card';
 
     const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
-    const daysLeft = getSpotlightDaysLeft(item.deadline);
+    // 期限以真實活動為準（resolveSpotlightDeadline），renderSpotlights 已先算好
+    const deadline = item._resolvedDeadline || item.deadline || '';
+    const daysLeft = getSpotlightDaysLeft(deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
 
@@ -142,7 +181,7 @@ function buildSpotlightCard(item, index) {
         </div>
         <div class="spotlight-info-row">
             ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
-            ${item.deadline ? `<span>至 <b>${escapeHtml(item.deadline)}</b>${daysBadge}</span>` : ''}
+            ${deadline ? `<span>至 <b>${escapeHtml(deadline)}</b>${daysBadge}</span>` : ''}
         </div>
         <div class="spotlight-card-actions">
             <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較這個通路 →</button>
@@ -374,7 +413,9 @@ function buildSpotlightModalBody(item, card) {
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
         const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
-        const daysLeft = getSpotlightDaysLeft(item.deadline);
+        // 走到這裡代表沒對到真實活動，_resolvedDeadline 必然已退回 sheet 的 deadline
+        const deadline = item._resolvedDeadline || item.deadline || '';
+        const daysLeft = getSpotlightDaysLeft(deadline);
         const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
             ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
         return `
@@ -382,7 +423,7 @@ function buildSpotlightModalBody(item, card) {
             ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
             <div class="spotlight-modal-info">
                 ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
-                ${item.deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(item.deadline)} ${daysBadge}</span></div>` : ''}
+                ${deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(deadline)} ${daysBadge}</span></div>` : ''}
             </div>
         `;
     }
