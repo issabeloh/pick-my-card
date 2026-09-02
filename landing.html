@@ -100,10 +100,18 @@
     <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
     <button class="lp-scrollcue" id="lp-scrollcue" type="button" aria-label="跳到下一幕"></button>
 
-    <!-- 右上角快速入口：舊用戶誤入 landing 時可直接進工具（第 2 幕起淡出） -->
-    <a class="lp-skip" id="lp-skip" href="/?start">開始使用</a>
+    <!-- 右上角快速入口：舊用戶誤入 landing 時可直接進工具（第 2 幕起淡出）。
+         2026-09-02：外面補一層 <header>——axe region 規則要求所有可見內容都要落在
+         地標（header/nav/main/footer…）裡，否則用區塊跳躍瀏覽的人永遠遇不到它。
+         .lp-skip 本身是 position:fixed，多包一層 block 容器不影響版面。 -->
+    <header class="lp-topbar">
+        <a class="lp-skip" id="lp-skip" href="/?start">開始使用</a>
+    </header>
 
-    <div class="lp-scrolly" id="lp-scrolly">
+    <!-- 2026-09-02：從 <div> 改成 <main>（axe landmark-one-main）。
+         螢幕閱讀器的「跳到主要內容」要靠這個標籤才有作用。
+         CSS 全用 class 選擇器、JS 全用 getElementById，換標籤不影響任何行為。 -->
+    <main class="lp-scrolly" id="lp-scrolly">
         <div class="lp-stage">
 
             <!-- 桌機左右淡色裝飾 -->
@@ -195,7 +203,7 @@
                 <h2 class="lp-title fx" data-at="0.06">UNIQLO 結帳，刷哪張？</h2>
                 <div class="lp-search fx" data-at="0.10">
                     <span class="lp-search-icon" aria-hidden="true"></span>
-                    <span class="lp-typed" id="lp-typed" data-text="uniqlo" aria-label="搜尋 uniqlo"></span><span class="lp-caret" aria-hidden="true"></span>
+                    <span class="lp-sr-only">搜尋 uniqlo</span><span class="lp-typed" id="lp-typed" data-text="uniqlo" aria-hidden="true"></span><span class="lp-caret" aria-hidden="true"></span>
                 </div>
                 <p class="lp-result-head fx" data-at="0.30">找到 <strong>UNIQLO</strong>，你的卡片中回饋最高的是：</p>
                 <ol class="lp-ranking">
@@ -338,7 +346,7 @@
             </section>
 
         </div>
-    </div>
+    </main>
 
     <!-- 頁尾說明（可爬的 SEO 文字；位於 scrolly 之後，不參與任何一幕動畫） -->
     <footer class="lp-footer">
@@ -346,13 +354,19 @@
         回饋上限、指定通路、行動支付等，<span class="lp-fbr">都交給 Pick My Card！</span><br>
         結帳前，一鍵比較你的個人信用卡，找出哪張回饋最高。<br>
         免費、免下載，網頁一開即用。</p>
+
+        <!-- 法務頁尾（2026-08-20 新增）：隱私權政策入口。Google AdSense 與 Google Analytics
+             的服務條款都要求發布商提供隱私權政策，個資法第 8 條的告知義務也需要一個常設入口，
+             所以「每一頁都要看得到這個連結」——新增頁面時記得一起加。
+             2026-09-02：從 <footer> 外面搬進來（axe region）。不能讓它自己當第二個
+             <footer>——body 直屬的 <footer> 是 contentinfo 地標，一頁只能有一個。
+             視覺位置靠 landing.css 的 .lp-footer .site-legal-footer 補回原本的間距。 -->
+        <div class="site-legal-footer">
+            <a href="/privacy">隱私權政策</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms">使用須知與免責聲明</a>
+        </div>
     </footer>
-    <!-- 法務頁尾（2026-08-20 新增）：隱私權政策入口。Google AdSense 與 Google Analytics
-         的服務條款都要求發布商提供隱私權政策，個資法第 8 條的告知義務也需要一個常設入口，
-         所以「每一頁都要看得到這個連結」——新增頁面時記得一起加。 -->
-    <div class="site-legal-footer">
-        <a href="/privacy">隱私權政策</a>
-    </div>
 
     <script src="landing.js?v=dev" defer></script>
 </body>
