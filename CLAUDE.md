@@ -16,6 +16,8 @@
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
 | `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
+| `privacy.html` `privacy.css` `terms.html` | 隱私權政策／使用須知與免責聲明（兩頁共用 `privacy.css` 的 `pp-*` 版面，都刻意零 JavaScript）。`terms.html` 是免責聲明與資料收錄原則的**唯一正本**（2026-09-02 起；首頁那份重複的折疊區同日移除）。改文案只改這裡 |
+| `_headers` | Cloudflare Pages 讀的回應標頭設定（安全標頭）。⚠️ CSP 在 `-Report-Only` 觀察模式（轉正條件見檔內註解）；HSTS 已上到一年，**日後新增任何用瀏覽器開的子網域前必讀該條註解**（沒有 HTTPS 會直接連不上且無回報） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
 | `functions/` | Firebase Cloud Functions（`notifyOnFeedback`：使用者送出意見回饋時即時 email／webhook 通知站長）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |

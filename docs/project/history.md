@@ -4,6 +4,14 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-09-02 安全標頭上線（新增 `_headers`）＋ `/terms` 獨立頁（起因：Seges Trust 檢測報告）
+- 新增 repo 根目錄 `_headers`（Cloudflare Pages 讀）：X-Frame-Options、Permissions-Policy、CORP、COOP、HSTS、CSP，不用改任何 HTML。**COEP 刻意不做**——會弄壞 GA／Clarity／AdSense，本站沒有需要跨源隔離的功能
+- **COOP 選 `same-origin-allow-popups` 而非 `same-origin`**：Google 登入走 signInWithPopup，是「本站開別人」；same-origin 會弄壞登入。看到報告寫 same-origin 也不要改
+- **CSP 帶 `-Report-Only` 上線**：白名單漏一個就整站壞，先觀察 Console。`'unsafe-inline'` 拿不掉（無 build 步驟、內聯 script/style 遍布），但把「可載入程式的網域」鎖進清單才是主要價值。觀察期抓到兩個事前盤不出來的網域：scripts.clarity.ms（www.clarity.ms 只是 loader）、static.cloudflareinsights.com（Cloudflare 在邊緣自動注入，repo 裡搜不到）
+- **HSTS 階梯式上線**：300 → 86400 → 31536000，每階觀察後才往上。**刻意不加 preload、不提交 hstspreload.org**——那份名單烤進 Chrome、移除要等數月，是唯一真正不可逆的部分（站長不排除未來轉手，保留退場路徑）
+- `/terms` 獨立頁：免責聲明與資料收錄原則原本只活在首頁折疊區，檢測工具與搜尋引擎都讀不到，且與 /terms 內容重複。獨立成頁後首頁那份整塊移除（含 .disclaimer-* 樣式與 home-ui.js 開合處理），全站頁尾統一放入口
+- 顏色對比（WCAG AA）站長決定**不做**：結果卡片的綠色回饋金額、徽章等 2.4–4.4:1 未達 4.5:1，做了整體調性會變沉。已出對照 mockup 後拍板維持現狀——下次掃描報告再提出時不必重新評估
+
 ## 2026-07-21 ?v= 快取版本改部署時注入（站長核准，起因 PR #337 merge 事故）
 - repo 內所有本站 .css/.js 引用一律 `?v=dev` 佔位；Cloudflare Pages build command 跑 `tools/deploy-version.sh` 在部署時注入 commit hash（CF_PAGES_COMMIT_SHA）
 - 動機：每個分支都 bump 時間戳 → 多分支併行必撞 merge 衝突；#337 解衝突時 `checkout --ours` 整檔蓋掉 main 改動釀 UI 事故。版本號離開版控後衝突源消失
