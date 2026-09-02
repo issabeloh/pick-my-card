@@ -499,7 +499,7 @@
         </main>
         </div><!-- /.app-layout -->
 
-        <section class="spotlight-section" id="spotlight-section" style="display: none;">
+        <section class="spotlight-section" id="spotlight-section" aria-label="精選卡片" style="display: none;">
             <div class="spotlight-header">
                 <h2 class="spotlight-title">
                     <span class="spotlight-fire">🔥</span> 精選活動
@@ -542,7 +542,7 @@
   <h1>momo 信用卡回饋比較</h1>
   <p>想知道刷 momo 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 momo 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 遠東快樂卡、滙豐 Live+ 卡、聯邦 LINE Bank 卡、兆豐 BT21 卡、台新 Richart 卡、玉山 Uni 卡、玉山 Ubear 卡、滙豐匯鑽卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
 </section>
-        <section class="mc-body">
+        <section class="mc-body" aria-label="momo 補充說明">
 <p>momo 購物網也支援<strong> LINE Pay、Google Pay、Apple Pay、街口支付、悠遊付</strong>結帳，比較看看改用行動支付是否比信用卡本身的回饋更高！</p>
 </section>
 
@@ -563,7 +563,7 @@
         </script>
 
         <!-- 信用卡警語橫條（精選活動區下方） -->
-        <div class="finance-warning-row" id="finance-warning-row" role="note" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</div>
+        <section class="finance-warning-row" id="finance-warning-row" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</section>
 
         <!-- Spotlight activity detail modal -->
         <div id="spotlight-modal" class="modal" style="display: none;">
@@ -952,8 +952,14 @@
 </div>
     </div>
 
+    <!-- 頁尾（2026-09-02）：社群區塊與「資料更新」列一起包在同一個 <footer> 裡。
+         為什麼要外包一層而不是各自當 <footer>：body 直屬的 <footer> 是 contentinfo
+         地標，一頁只能有一個；兩塊分別當 <footer> 會變成重複地標。外層 <footer>
+         沒有任何樣式（display:block），視覺零影響。faq/privacy/terms 沒有「資料更新」
+         列，所以那幾頁維持 <footer class="social-media-footer"> 單層就夠。 -->
+    <footer>
     <!-- 社群媒體與贊助區塊 -->
-    <footer class="social-media-footer">
+    <div class="social-media-footer">
         <div class="social-media-container">
             <div class="social-section">
                 <p class="social-media-title">追蹤我們</p>
@@ -1004,13 +1010,14 @@
                 </div>
             </div>
 </div>
-    </footer>
+    </div>
 
     <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
     <div class="data-update-footer">
         <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
     </div>
+    </footer>
 
     <!-- 2026-09-02：這裡原本有一塊「使用須知與免責聲明」折疊區（.disclaimer-footer）。
          內容與 /terms 完全重複，而且折疊起來的文字檢測工具與搜尋引擎都讀不到，
