@@ -2451,6 +2451,11 @@ o.cardsHtml + '\n' +
 '        <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">\n' +
 '            <span class="social-text">隱私權政策</span>\n' +
 '        </a>\n' +
+'        <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁 /terms。\n' +
+'             同樣是每一頁都要有的入口——新增頁面時記得一起帶上。 -->\n' +
+'        <a href="/terms" class="social-link privacy" aria-label="使用須知與免責聲明">\n' +
+'            <span class="social-text">使用須知與免責聲明</span>\n' +
+'        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
 '</div>\n' +
@@ -2581,6 +2586,7 @@ function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
     { loc: SITE_ORIGIN + '/', lastmod: homeUpdatedIso || today },
     { loc: SITE_ORIGIN + '/landing', lastmod: '2026-08-16' },
     { loc: SITE_ORIGIN + '/faq', lastmod: '2026-08-16' },
+    { loc: SITE_ORIGIN + '/terms', lastmod: '2026-09-02' },
     { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
   // 商家頁清單以 MerchantPages 工作表為準（active=FALSE 的不收）；工作表不存在才用退路清單

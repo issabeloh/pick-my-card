@@ -531,7 +531,7 @@
   <ul class="mc-related-list">
     <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/momo"><span class="mc-related-name">momo</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
-    <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E6%B2%B9"><span class="mc-related-name">中油</span><span class="mc-related-meta">最高 3.3%（台新 Richart 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E6%B2%B9"><span class="mc-related-name">中油</span><span class="mc-related-meta">最高 5%（玉山 Pi 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E8%9D%A6%E7%9A%AE"><span class="mc-related-name">蝦皮</span><span class="mc-related-meta">最高 10%（星展傳說對決聯名卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E9%AB%98%E9%90%B5"><span class="mc-related-name">高鐵</span><span class="mc-related-meta">最高 3.5%（台新街口卡(豬富卡)）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A"><span class="mc-related-name">所有計程車</span><span class="mc-related-meta">最高 6%（聯邦 M 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
@@ -995,6 +995,12 @@
                     <a href="/privacy" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="隱私權政策">
                         <span class="social-text">隱私權政策</span>
                     </a>
+                    <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁。
+                         內容原本只存在於首頁的折疊區塊，檢測工具與搜尋引擎都看不到，
+                         所以獨立成 /terms 並在每一頁的頁尾留入口——新增頁面時記得一起帶上。 -->
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="使用須知與免責聲明">
+                        <span class="social-text">使用須知與免責聲明</span>
+                    </a>
                 </div>
             </div>
 </div>
@@ -1007,6 +1013,9 @@
     </div>
 
     <!-- 使用須知 - 放在白色框框外 -->
+    <!-- ⚠️ 這一段的文字與 terms.html（/terms）第 1、2 節是同一份內容的兩個副本。
+         改一邊記得改另一邊——沒有 build 步驟能幫你同步。為什麼要有兩份：首頁要能就地
+         展開看到，/terms 則要能被搜尋引擎與第三方檢測工具當成一份正式文件抓到。 -->
     <div class="disclaimer-footer">
         <button class="disclaimer-toggle" id="disclaimer-toggle">
             使用須知與免責聲明
@@ -1045,6 +1054,10 @@
             </ul>
 
             <div class="disclaimer-goal">收錄目標：讓您能快速找到「日常消費該用哪張卡」的答案，而非被過多活動資訊淹沒。</div>
+
+            <div class="disclaimer-divider"></div>
+
+            <div class="disclaimer-intro">完整版（含活動名額來源、服務性質與費用、廣告與外部連結說明）：<a href="/terms" target="_blank" rel="noopener noreferrer">使用須知與免責聲明 ↗</a></div>
         </div>
     </div>
 
