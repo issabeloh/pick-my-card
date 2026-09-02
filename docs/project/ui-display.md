@@ -71,6 +71,10 @@
 
 **資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填；2026-07-21 起卡片上不再顯示，欄位保留)。
 
+**期限自動匹配真實活動（2026-09-02 起）**：卡片與 modal 顯示的「至 X」不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **退回 sheet 的 deadline**。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
+**一卡一通路命中多個活動時取「最早到期」**（實測有兩則會這樣：中信 Uniopen 夢時代 4 組、玉山熊本熊卡日本松本清 4 組）——亮點宣稱的回饋率常是多組疊加出來的（松本清 8.5% ＝ 6% 指定日本商店 ＋ 滿額加碼 1.5%），最早到期的那組一過期宣稱的數字就不成立；取最晚會讓卡片顯示一個其實已經拿不到的期限。過期活動在載入時已被 `filterExpiredRates()` 濾掉、不會進 `_itemsIndex`，所以這裡拿到的活動都還在效期內。
+⚠️ 亮點本身**不做過期隱藏**：顯示哪幾則仍由 Sheets 的 `active` 欄控制（見下方輪播段），期限只影響顯示的日期與「剩 N 天」徽章。
+
 **卡片版式（2026-07-21 F-2 重設計）**：左側傾斜卡圖（`assets/images/cards/<card_id>.png`，object-fit contain＋drop-shadow；`onerror` 隱藏 img 並在 `.spotlight-ccwrap` 加 `noimg` class 讓貼紙退回靜態）＋淺綠回饋率貼紙（#15803d on #bbf7d0、白邊、微旋轉）；右側＝活動類型標籤＋通路名（粗體）＋描述。**活動類型標籤**：`parseSpotlightHype()` 從 description 開頭抽「XX！」對表（全場最高/壓倒性神卡/獨家回饋/無腦刷 → hype-top/god/excl/easy 四色），是全卡唯一帶分類色的元素；對不到表列類型→不顯示標籤、description 全文照常顯示（資料端不需配合）。下方虛線分隔的資訊列放上限＋期限（含「剩 N 天」徽章）。設計裁定（站長 2026-07-21）：不用 emoji、不用浮起／轉正動畫（hover 只准陰影微調）、回饋率不上分類色。
 
 **輪播**（`renderSpotlights` 一帶）：每頁 3 張（SPOTLIGHT_PAGE_SIZE）、循環；**純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播（原 6 秒自動換頁＋hover/開 modal 暫停整組拿掉）；依 order 升冪，**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12` 截斷——站長反映資料有 20 則卻只顯示 12 則；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；≤3 則自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
@@ -143,3 +147,4 @@
 - [2026-07-17] 配卡搜尋框樣式怎麼改都沒反應 → 全域 `input[type="text"]`（特異性 0-1-1）壓過純 class（0-1-0），該 class 樣式從未生效 → 元件覆蓋全域 input 樣式時用 `#modal-id .class` 提特異性；「改了沒反應」先查特異性再查快取
 - [2026-07-17] 從配卡 modal 點 ⓘ 詳情頁開在後面 → 全部 .modal 同 z-index 1000、同層疊序由 DOM 順序決定，而 #card-detail-modal 在 HTML 較早 → 詳情頁固定 z-index 1100；任何「modal 疊 modal」需求不得靠 DOM 順序
 - [2026-08-15] 站長指卡片頂部彩色條「太有 AI 設計感」要求全面不用 → 那是 AI 生成版面的招牌手法，且與卡內類型徽章重複表達同一資訊 → 見第 9 節禁用規則；改 promos 生成邏輯時，用 `vm` 載入新舊兩版 `cards-export.gs` 跑同一份 exportData（固定 `versionTagOverride`／`promosUpdatedIso`）比對輸出，確認差異只有預期的那幾行
+- [2026-09-02] 精選活動卡片上的「至 X」有 6/20 則與卡片真實活動期限對不上，其中 3 則顯示的是已經過去的日期 → 期限直接讀 Highlights 工作表人工填的 `deadline`，活動改期／展延時沒人回頭改 sheet → 亮點的期限改由 `resolveSpotlightDeadline()` 從真實活動的 `periodEnd` 取（多個活動取最早到期），sheet 只當後備；凡是「sheet 編輯欄位」與「卡片真實資料」都描述同一件事的地方，顯示一律以真實資料為準、編輯欄位當 fallback

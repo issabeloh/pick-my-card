@@ -142,6 +142,8 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 欄位：`id, benefit_type:"parking", benefit_desc, merchants[], conditions, benefit_period, notes, active`。
 
+**期限過濾（2026-09-02 新增）**：`benefit_period` 過期的權益在載入時就被 `filterExpiredRates()` 濾掉（與 cashbackRates／couponCashbacks／新戶活動同一支），四個消費端（`displayParkingBenefits`、卡片詳情頁權益區、`showMatchedItem`／`showNoMatchMessage` 兩處搜尋提示）因此一次到位、不需各自判斷。解析走 `parseBenefitPeriod()`（core-utils）：`benefit_period` 是自由格式字串，用「抓出字串裡所有日期樣式」拆 `{start, end}`——0 個日期（如「依官網公告」）→ 不設限、**永不隱藏**（自由文字不可以被當成過期）；1 個日期 → 只當結束日（現行資料全是這種）；≥2 個 → 頭尾當起訖。只濾 `expired`，`upcoming` 留著。
+
 `displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)`（約 script.js:3193-3269）：
 - 快捷搜尋時 `searchKeywords` 是關鍵詞陣列（如 `["停車","嘟嘟房","台灣聯通","24TPS永固","VIVI PARK"]`），任一匹配即成功
 - 一般搜尋時只用 merchantValue
@@ -174,3 +176,4 @@ if (!card.specialItems || card.specialItems.length === 0)
 - [2026-07-13] 差點把 37 個合法 `rate+basic` stacking 槽通報為「需清理的殘留別名」 → 第 6 節舊敘述「資料裡若還有，改成純 rate」把所有 `rate+basic` 當成 2026-07-01 前的排除型別名殘留 → `rate+basic` 是合法 stacking 寫法；別名警告只適用「當初以排除型意圖填寫」的舊資料，意圖判定屬資料擁有者，session 不得自行改資料（正文已改寫）
 - [2026-07-30] CUBE 慶生月方案不論月份都出現在搜尋結果（篩選完全失效） → 篩選用 `category === '切換「慶生月」方案'` 全等比對，但資料早已改成帶子類別後綴（`切換「慶生月」方案 - 購物/體驗`／`- 美食`／`- 娛樂`／`- 遊樂園`），全等永不成立 → 方案類別判斷一律用前綴/`includes` 比對（`isBirthdayPlanCategory()`）；同時改成「用戶有設定生日月份才篩選（只在該月顯示），未設定＝不篩選一律顯示」（舊行為是未設定就全部隱藏，對訪客反而少給資訊）。同款全等比對還剩 `切換「童樂匯」方案`（`切換「JCB日本賞」方案` 的發卡組織篩選已於同日移除——活動下架、國泰目前無發卡組織限定活動；`cubeIssuer` 只留作用戶資料），資料若也加後綴會同樣失效——改資料類別名前先 Grep 前端的全等比對
 - [2026-08-16] 本檔與 `cross-slot-ref-and-minspend-spec.md` 都寫著 Fix B「線上 0 張卡受影響」，但 pmc-vault 補填專案 README 記錄實際影響 9 槽（uniopen 5＋dbs-eco 4，含 eco 品牌 12.5→10%） → 當初的影響掃描用舊 `cards.data`（20260713）跑，main 已到 20260716、dbs-eco 的 model 不同，回歸測試（對最新資料）才抓出來 → **任何「零影響」結論都必須標註掃描時的 `cards.version`，並在上線前用當下最新 `cards.data` 重掃**；同批更正還發現該 spec 寫「Layer 1 不 gate」但實作有 gate（`applyBase`）——**設計文件寫的是提案，行為正本永遠是程式碼與本檔第 6 節**
+- [2026-09-02] 遠東樂家+卡、中信 Uniopen 已於 2026/6/30 到期的停車折抵，搜尋結果與詳情頁都還照常顯示 → `cardsData.benefits` 是全站唯一沒做期限判斷的活動類資料（cashbackRates／couponCashbacks／新戶活動都有），四個消費端各自只檢查 `active` → 新增的活動類 top-level 陣列一律在 `filterExpiredRates()` 裡加一段期限過濾，不要讓各消費端自己判斷；期限欄位是自由文字時（無日期）一律當「不設限」，不可以當成過期

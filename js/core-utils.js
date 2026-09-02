@@ -14,6 +14,7 @@
  *  - 級別快取                  → "cardLevelCache"
  *  - localStorage 安全讀取      → "localStorage 安全讀取 helpers" / "readLocalJSON"
  *  - 過期活動過濾              → "filterExpiredRates"
+ *  - 卡片權益期限解析           → "parseBenefitPeriod" / "getBenefitStatus"
  *  - 比較卡集合                → "getCardsForComparison"
  *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
  *  - 卡片項目彙整              → "collectCardItems"
@@ -495,6 +496,33 @@ function getDaysUntilEnd(periodEnd) {
     }
 }
 
+// 卡片權益（cardsData.benefits，停車折抵那類）的期限欄位只有一個自由格式字串
+// `benefit_period`：現行資料全是「單一結束日」（"2026-12-31" 或 "2026/12/31"），
+// 但資料端隨時可能改寫成區間（"2026/7/1~2026/12/31"）或非日期文字（"依官網公告"）。
+// 這裡一律用「抓出字串裡所有日期樣式」的方式拆成 { start, end }：
+//   0 個日期 → 兩邊都 null（＝不設限，永不隱藏；自由文字不可以被當成過期）
+//   1 個日期 → 只當結束日（現行資料的寫法）
+//   ≥2 個   → 第一個當開始日、最後一個當結束日
+function parseBenefitPeriod(benefitPeriod) {
+    if (!benefitPeriod || typeof benefitPeriod !== 'string') return { start: null, end: null };
+    const found = benefitPeriod.match(/\d{4}[/-]\d{1,2}[/-]\d{1,2}/g);
+    if (!found || found.length === 0) return { start: null, end: null };
+    const toISO = (raw) => {
+        const [y, m, d] = raw.split(/[/-]/).map(Number);
+        if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+        return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    };
+    if (found.length === 1) return { start: null, end: toISO(found[0]) };
+    return { start: toISO(found[0]), end: toISO(found[found.length - 1]) };
+}
+
+// 卡片權益的期間狀態，語義與 getRateStatus 相同：'active' | 'upcoming' | 'expired' | 'always'
+function getBenefitStatus(benefit) {
+    if (!benefit) return 'always';
+    const { start, end } = parseBenefitPeriod(benefit.benefit_period);
+    return getRateStatus(start, end);
+}
+
 // Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
@@ -586,6 +614,23 @@ function filterExpiredRates(cardsData) {
             return isActive;
         });
         console.log(`✨ 新戶活動: ${before} → ${cardsData.newCardholderPromos.length} 筆有效`);
+    }
+
+    // Filter expired card benefits（停車折抵等「卡片權益」，top-level 陣列）
+    // 2026-09-02：權益過去完全沒有期限判斷，過期的（如遠東樂家+卡 ~2026/6/30）
+    // 在搜尋結果與卡片詳情頁都還照常顯示。與 cashbackRates 一樣在載入時就濾掉，
+    // 四個消費端（displayParkingBenefits、詳情頁權益區、兩處搜尋提示）一次到位。
+    // 只濾 expired：upcoming 留著（權益資料目前不寫開始日，留著也不會誤顯示）。
+    if (cardsData.benefits && Array.isArray(cardsData.benefits)) {
+        const before = cardsData.benefits.length;
+        cardsData.benefits = cardsData.benefits.filter(benefit => {
+            if (getBenefitStatus(benefit) !== 'expired') return true;
+            console.log(`🕒 隱藏過期卡片權益 - ${benefit.id} ${benefit.benefit_desc || ''} (~${benefit.benefit_period})`);
+            return false;
+        });
+        if (before !== cardsData.benefits.length) {
+            console.log(`🅿️ 卡片權益: ${before} → ${cardsData.benefits.length} 筆有效`);
+        }
     }
 
     return cardsData;
