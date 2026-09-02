@@ -2380,10 +2380,41 @@ input[type="number"]:focus {
     accent-color: #2563eb;
 }
 
+/* 手機版限定：搜尋框與 toggles 之間的「正在比較 N 張信用卡」提示。
+   桌機／平板側欄常駐、卡片清單本來就看得到，所以只在 ≤768px 顯示；
+   桌機保持 display:none ⇒ 不會變成 .input-row-with-button 的 grid item。 */
+.mobile-comparison-hint {
+    display: none;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4b5563;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+}
+
+.mobile-comparison-hint strong {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.mobile-comparison-hint-menu {
+    font-weight: 700;
+    color: #374151;
+}
+
 /* toggles 是 .input-row-with-button 的直接網格子元素 */
 @media (max-width: 768px) {
     /* 手機：佔滿整列（合併框下方），左右各一框 */
     .show-promos-toggle { grid-column: 1 / -1; margin: 0; }
+
+    .mobile-comparison-hint {
+        display: block;
+        grid-column: 1 / -1;
+        margin: 0;
+    }
 }
 
 @media (min-width: 769px) {
@@ -8093,10 +8124,23 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         grid-template-columns: 1fr;
     }
 
+    /* 手機版漢堡鍵：原本是透明底的白色線條 icon，壓在漸層 header 上很容易被忽略。
+       改成半透明白底＋白框的實體按鈕，並加大點擊區到 40x40（≥ 觸控最小尺寸）。 */
     .sidebar-toggle-btn {
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        background: rgba(255, 255, 255, 0.22);
+        border: 1.5px solid rgba(255, 255, 255, 0.75);
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    }
+
+    .sidebar-toggle-btn:active {
+        background: rgba(255, 255, 255, 0.38);
     }
 
     .sidebar {
@@ -8414,7 +8458,6 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     margin: 0;
     font-size: 1.25rem;
 }
-.spotlight-fire { font-size: 1.1em; }
 .spotlight-nav {
     display: flex;
     align-items: center;

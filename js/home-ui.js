@@ -1141,6 +1141,11 @@ function stripBankPrefix(name, bank) {
 // getCardsForComparison 回傳全部，兩者相等）。
 // 元素動態建立，index 與 merchant 落地頁都不必改 HTML。
 function updateCardChipsCount(selectedCount) {
+    // 手機版限定的「正在比較 N 張信用卡」提示（index.html 的 #mobile-comparison-hint）。
+    // 放在 card-chips 的 guard 之前：手機側欄是抽屜，這行提示不該依賴膠囊容器存在與否。
+    const mobileCount = document.getElementById('mobile-comparison-count');
+    if (mobileCount) mobileCount.textContent = String(selectedCount);
+
     const cardChipsContainer = document.getElementById('card-chips');
     if (!cardChipsContainer || !cardChipsContainer.parentNode) return;
 
