@@ -2416,7 +2416,7 @@ o.cardsHtml + '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
 // 複製自 index.html 的 .social-media-footer——主站改動這塊時，這裡要手動同步（同一句
 // 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
-'<div class="social-media-footer">\n' +
+'<footer class="social-media-footer">\n' +
 '  <div class="social-media-container">\n' +
 '    <div class="social-section">\n' +
 '      <p class="social-media-title">追蹤我們</p>\n' +
@@ -2459,11 +2459,12 @@ o.cardsHtml + '\n' +
 '      </div>\n' +
 '    </div>\n' +
 '</div>\n' +
-'</div>\n' +
+'</footer>\n' +
 '\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到
-// 這裡）：位置比照 index.html 的 .disclaimer-footer——白色框框外、社群 footer 之後、
-// 回到頂部鈕之前。純靜態文案（不吃 exportData），跟其他手抄段落一樣兩邊同步即可。
+// 這裡）：白色框框外、社群 footer 之後、回到頂部鈕之前（2026-09-02 前這個位置的參照
+// 是 index.html 的 .disclaimer-footer，那塊當天連同重複的免責聲明一起移除了）。
+// 純靜態文案（不吃 exportData），跟其他手抄段落一樣兩邊同步即可。
 '<details class="promos-faq">\n' +
 '  <summary class="promos-faq-summary">申辦新的信用卡之前，先確認這幾件事<span class="promos-faq-chevron" aria-hidden="true"></span></summary>\n' +
 '  <div class="promos-faq-body">\n' +

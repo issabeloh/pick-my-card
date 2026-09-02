@@ -156,13 +156,15 @@
     color: #9ca3af;
 }
 
+/* 2026-09-02：#9ca3af 在白底只有 2.6:1，未達 WCAG AA 的 4.5:1；
+   改用全站既有的 #6b7280（4.8:1），hover 再深一階。 */
 .faq-breadcrumb a {
-    color: #9ca3af;
+    color: #6b7280;
     text-decoration: none;
 }
 
 .faq-breadcrumb a:hover {
-    color: #6b7280;
+    color: #374151;
     text-decoration: underline;
 }
 
@@ -298,9 +300,11 @@ main {
     background: #eff6ff;
 }
 
+/* 2026-09-02：白字配 #3b82f6 只有 3.7:1，未達 WCAG AA 的 4.5:1。
+   改用全站既有的深一階藍 #2563eb（5.2:1）。 */
 .category-btn.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
+    background: #2563eb;
+    border-color: #2563eb;
     color: white;
 }
 

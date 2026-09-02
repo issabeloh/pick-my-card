@@ -1207,17 +1207,8 @@ function setupEventListeners() {
         });
     }
 
-    // Disclaimer toggle
-    const disclaimerToggle = document.getElementById('disclaimer-toggle');
-    const disclaimerContent = document.getElementById('disclaimer-content');
-
-    if (disclaimerToggle && disclaimerContent) {
-        disclaimerToggle.addEventListener('click', () => {
-            const isVisible = disclaimerContent.style.display !== 'none';
-            disclaimerContent.style.display = isVisible ? 'none' : 'block';
-            disclaimerToggle.classList.toggle('active', !isVisible);
-        });
-    }
+    // （2026-09-02 移除）首頁「使用須知與免責聲明」折疊區的開合處理：
+    // 那塊內容與 /terms 完全重複，已從 index.html 整塊移除，改用頁尾連結導向 /terms。
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);

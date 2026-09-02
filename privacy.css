@@ -63,13 +63,15 @@
     color: #9ca3af;
 }
 
+/* 2026-09-02：#9ca3af 在白底只有 2.6:1，未達 WCAG AA 的 4.5:1；
+   改用全站既有的 #6b7280（4.8:1），hover 再深一階。 */
 .pp-breadcrumb a {
-    color: #9ca3af;
+    color: #6b7280;
     text-decoration: none;
 }
 
 .pp-breadcrumb a:hover {
-    color: #6b7280;
+    color: #374151;
     text-decoration: underline;
 }
 
