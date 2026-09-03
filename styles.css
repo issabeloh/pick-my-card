@@ -9144,7 +9144,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     letter-spacing: -0.01em;
 }
 /* 金額本體：左邊只留一點空隙（原本吃 .app-layout 的 12px padding，NT$ 與數字
-   之間會空一大塊），數字用等寬字避免補逗號時左右跳動 */
+   之間會空一大塊），數字用等寬字讓位數變動時不會左右跳。
+   選擇器刻意不綁 type：2026-09-03 曾短暫改成 type="text"，不綁 type 的話日後再換型別也不會漏改。 */
 .amount-input-wrap input#amount-input {
     padding-left: 5px;
     font-variant-numeric: tabular-nums;

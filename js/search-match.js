@@ -582,12 +582,11 @@ function scrollToParkingBenefits() {
 // Validate inputs
 function validateInputs() {
     const merchantValue = merchantInput.value.trim();
-    const amountRaw = readAmountInputValue(amountInput);
-    const amountValue = parseFloat(amountRaw);
+    const amountValue = parseFloat(amountInput.value);
 
     // Empty amount is valid (defaults to 1000)
     const isValid = merchantValue.length > 0 &&
-                   (amountRaw === '' || (!isNaN(amountValue) && amountValue > 0));
+                   (amountInput.value === '' || (!isNaN(amountValue) && amountValue > 0));
 
     calculateBtn.disabled = !isValid;
 }

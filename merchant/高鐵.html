@@ -437,10 +437,11 @@
                         <label for="amount-input">消費金額</label>
                         <div class="amount-input-wrap">
                             <span class="amount-prefix">NT$</span>
-                            <!-- type 是 text 不是 number：number 型別不允許框內出現逗號，做不出「100,000」。
-                                 讀值端一律走 stripThousands()（js/core-utils.js）。 -->
-                            <input type="text" id="amount-input" inputmode="numeric" autocomplete="off"
-                                   value="1,000" maxlength="11" placeholder="金額" />
+                            <!-- 刻意用 type="number" 而不是 text＋自訂格式化：曾在 2026-09-03 改成
+                                 text 以顯示千分位「100,000」，但那需要自己寫格式化與去逗號，
+                                 逐字輸入「1500.5」時小數點被吃掉會算成 15005（差 10 倍且靜默）。
+                                 千分位不值得換掉瀏覽器原生的數值輸入保證，同日改回。 -->
+                            <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
                     </div>
 

@@ -651,7 +651,7 @@ function compareSpotlightMerchant(merchant, opts) {
         merchantInputEl.value = merchant;
         handleMerchantInput();
     }
-    if (amountInput && !amountInput.value) amountInput.value = '1,000';
+    if (amountInput && !amountInput.value) amountInput.value = '1000';
 
     // fillOnly（推薦活動的「帶入查詢」鈕）：只帶入條件、捲回搜尋框，計算交給使用者。
     // 直接算完再把人丟到結果頁，使用者不知道自己按了什麼、也不知道條件是什麼，
@@ -1403,40 +1403,23 @@ function setupEventListeners() {
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {
-        if (readAmountInputValue(amountInput) === '1000' && amountInput.dataset.userModified !== 'true') {
+        if (amountInput.value === '1000' && amountInput.dataset.userModified !== 'true') {
             amountInput.value = '';
             validateInputs();
         }
     });
     amountInput.addEventListener('blur', () => {
         if (amountInput.value === '') {
-            amountInput.value = '1,000';
+            amountInput.value = '1000';
             delete amountInput.dataset.userModified;
             validateInputs();
         }
     });
-    // 邊打邊補千分位逗號。游標位置用「游標前有幾個數字」重算，否則每打一個字
-    // 游標就會被踢到最後面（在中間插入數字時特別明顯）。
     amountInput.addEventListener('input', () => {
         amountInput.dataset.userModified = 'true';
-        const before = amountInput.value;
-        const caret = amountInput.selectionStart;
-        // 計數要含小數點（只跳過逗號），否則游標打完「.」之後會被推到小數點前面
-        const digitsBeforeCaret = stripThousands(before.slice(0, caret)).replace(/[^0-9.]/g, '').length;
-        const formatted = formatThousands(before);
-        if (formatted !== before) {
-            amountInput.value = formatted;
-            // 往回數，找出第 digitsBeforeCaret 個數字之後的位置
-            let seen = 0, pos = 0;
-            while (pos < formatted.length && seen < digitsBeforeCaret) {
-                if (/[0-9.]/.test(formatted[pos])) seen++;
-                pos++;
-            }
-            try { amountInput.setSelectionRange(pos, pos); } catch (e) { /* 部分瀏覽器不支援就算了 */ }
-        }
         validateInputs();
     });
-    
+
     // Calculate button
     calculateBtn.addEventListener('click', () => {
         calculateCashback();
