@@ -86,12 +86,14 @@ function updateAllReports() {
   runStep_(results, 'GA4_歷史每日趨勢', importGA4History);
   runStep_(results, 'GSC_歷史每日趨勢', importGSCHistory);
   runStep_(results, 'GA4_按鈕點擊',     importGA4ButtonClicksDaily);
+  // ⚠️ 這一步會寫進人工維護表，但只 append、且同月已存在就略過（見該函數上方註解）
+  const monthlyMessage = runStep_(results, 'GA4_每月新舊用戶', appendMonthlyUserRow);
 
   const historyMessage = runStep_(results, '歷史快照累積', () => appendHistorySnapshots_(collected, false));
 
   // 這行一定要寫得出來，否則「執行過但全掛」跟「根本沒執行」在紀錄上長得一樣
   try {
-    writeLastUpdated(clarityMessage, results, historyMessage);
+    writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage);
   } catch (e) {
     Logger.log('連更新紀錄都寫不進去：' + errText_(e));
   }
@@ -412,10 +414,12 @@ function getOrCreateSheet(name) {
 }
 
 // 寫「更新紀錄」一行。三個參數都是選填，但正常流程都會帶：
-//   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果
+//   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果；
+//   monthlyMessage：GA4_每月新舊用戶 有沒有補列（補了一列時這是唯一的通知管道，
+//                   因為那張表的「備註」欄要人工回去填，沒看到訊息就不會有人去填）
 // 開頭用 ✅／⚠️ 標整體狀態（失敗的步驟連錯誤訊息一起寫出來，不用去翻執行紀錄），
 // 後面接本次兩個滾動視窗的實際日期——事後追「這份數字是哪幾天的」有據可查。
-function writeLastUpdated(clarityMessage, results, historyMessage) {
+function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage) {
   const sheet = getOrCreateSheet('更新紀錄');
   const ga4 = ga4Window_();
   const gsc = gscWindow_();
@@ -437,6 +441,7 @@ function writeLastUpdated(clarityMessage, results, historyMessage) {
   ];
   if (clarityMessage) parts.push(clarityMessage);
   if (historyMessage) parts.push(historyMessage);
+  if (monthlyMessage) parts.push(monthlyMessage);
 
   sheet.appendRow([new Date(), parts.join('；')]);
 }
@@ -1644,4 +1649,229 @@ function buttonTypeLabel_(type) {
   return BUTTON_TYPE_RETIRED[type]
     ? base + '（已停用 ' + BUTTON_TYPE_RETIRED[type] + '，保留歷史）'
     : base;
+}
+
+// ============================================================================
+// GA4_每月新舊用戶：每月自動補上個月那一列（2026/09/03 加入）
+// ----------------------------------------------------------------------------
+// ⚠️ 這是全檔**唯一會寫進「人工維護表」的函數**，寫法刻意跟其他所有報表都不一樣，
+//    改動前先讀完這段。那張表有站長手寫的「備註」欄（當月做了什麼動作）與整片條件式
+//    格式，是全表唯一不可再生的資料——2026/09/03 初版曾誤用 writeSnapshotSheet_，
+//    那會 sheet.clear()、等於每天把備註清空一次，已改成現在這個做法。
+//
+// 五個安全性質，缺一不可：
+//   1. **只 append、永遠不 clear**。禁止在這裡使用 writeSnapshotSheet_。
+//   2. **欄位用表頭文字定位、不寫死欄號**。站長日後插欄／搬欄不會靜默寫錯位；
+//      找不到必要欄位就 throw，runStep_ 會把原因寫進「更新紀錄」。
+//      （並檢查表頭重複——`headers.indexOf()` 遇到重複欄名只會抓最前面那個，
+//        cards-export 就是這樣掉過整組資料，見 apps-script/README.md）
+//   3. **先把上一列整列 copyTo 下來**（連公式、數字格式、條件式格式一起），
+//      再覆寫純資料欄、清空備註。佔比／較前月／日均／當月申辦點擊數那些**公式欄
+//      因此自動延續**——程式裡不需要、也不應該重寫任何一條試算表公式。
+//   4. **同月已存在就略過**。它跟著 updateAllReports 每天跑，沒有這道防重複
+//      會每天多一列。
+//   5. **只補「已完整結束的上一個月」**，且要等到次月第 MONTHLY_ROW_APPEND_DAY 天。
+//
+// 補完的列**備註是空的**——那欄只有站長寫得出來，程式不碰。
+// ============================================================================
+
+const MONTHLY_SHEET = 'GA4_每月新舊用戶';
+
+// 次月第幾天才補上個月那列。刻意不是 1：GA4 對最近 1–2 天的數字還會事後微調
+// （同一次改動裡實測到 GA4_按鈕點擊 兩次執行之間 155→158 列，就是這件事），
+// 1 號抓等於把還在沉澱的月底數字定稿。要改成 1 就改這個數字。
+const MONTHLY_ROW_APPEND_DAY = 2;
+
+// 程式用的名字 → 表頭上的實際文字。這支只寫這幾個「純資料欄」，其餘都是公式欄。
+// ⚠️ 改表頭文字就要同步改這裡（對不到會 throw，不會靜默寫錯位）。
+const MONTHLY_COLS = {
+  month:      '月份',
+  totalUsers: '總用戶',
+  newUsers:   '新用戶',
+  returning:  '回訪用戶',
+  engagement: '平均參與時間',
+};
+
+// 找得到就清空（不讓新列繼承上一列的備註）；找不到不影響其他欄位的寫入
+const MONTHLY_NOTE_COL = '備註';
+
+function appendMonthlyUserRow() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MONTHLY_SHEET);
+  if (!sheet) return MONTHLY_SHEET + '：分頁不存在，略過';
+
+  const today = atMidnight_(new Date());
+  if (today.getDate() < MONTHLY_ROW_APPEND_DAY) {
+    return MONTHLY_SHEET + '：每月 ' + MONTHLY_ROW_APPEND_DAY + ' 號起才補列，今天略過';
+  }
+
+  // 目標＝上一個月（到今天為止已經完整結束的那個月）
+  const target = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const targetKey = monthKeyOf_(target);
+
+  // ── 先做所有不花 API 的檢查，確定要寫才打 GA4 ──
+  // （所以平常日子這支的 API 成本是 0，一個月只花一次）
+  const layout = monthlyLayout_(sheet);
+  if (layout.months[targetKey]) {
+    return MONTHLY_SHEET + '：' + formatMonthLabel_(target) + ' 已經有了，略過';
+  }
+  if (layout.lastDataRow <= layout.headerRow) {
+    throw new Error('「' + MONTHLY_SHEET + '」一列資料都沒有，無法複製上一列的公式與格式；' +
+      '請先手動建好第一列再交給排程');
+  }
+
+  const stats = fetchMonthlyUserStats_(target);
+
+  // ── 整列複製上一列：公式（相對參照會自己往下位移）、數字格式、條件式格式一起帶下來 ──
+  const width = sheet.getLastColumn();
+  const newRow = layout.lastDataRow + 1;
+  sheet.getRange(layout.lastDataRow, 1, 1, width)
+    .copyTo(sheet.getRange(newRow, 1, 1, width));
+
+  // ── 只覆寫純資料欄 ──
+  // 月份格式跟著上一列走：上一列是真日期就寫該月 1 號，是文字就寫 'YYYY/MM'
+  const prevMonthCell = sheet.getRange(layout.lastDataRow, layout.cols.month).getValue();
+  sheet.getRange(newRow, layout.cols.month)
+    .setValue(prevMonthCell instanceof Date ? target : formatMonthLabel_(target));
+
+  sheet.getRange(newRow, layout.cols.totalUsers).setValue(stats.totalUsers);
+  sheet.getRange(newRow, layout.cols.newUsers).setValue(stats.newUsers);
+  sheet.getRange(newRow, layout.cols.returning).setValue(stats.returningUsers);
+  // 平均參與時間寫成「一天的分數」（試算表的時間長度就是這樣存的），
+  // 顯示格式 0:00:20 由上面 copyTo 從上一列帶下來，這裡不設格式
+  sheet.getRange(newRow, layout.cols.engagement).setValue(stats.avgEngagementSeconds / 86400);
+
+  // 備註是人工欄：清掉複製下來的舊內容，留空白給站長寫
+  if (layout.noteCol) sheet.getRange(newRow, layout.noteCol).clearContent();
+
+  return MONTHLY_SHEET + '：已補 ' + formatMonthLabel_(target) + ' 一列（第 ' + newRow +
+    ' 列；總用戶 ' + stats.totalUsers + '／新 ' + stats.newUsers +
+    '／回訪 ' + stats.returningUsers + '）⚠️ 備註欄待手動填寫';
+}
+
+// 讀表頭與現有月份。所有「這張表長得跟預期不一樣」的情況都在這裡 throw，
+// 訊息要直接講得出下一步該做什麼——它會原封不動出現在「更新紀錄」那一格。
+function monthlyLayout_(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) throw new Error('「' + MONTHLY_SHEET + '」是空的');
+
+  // 表頭不一定在第 1 列（這張表是手工建的，不走 writeSnapshotSheet_ 的三列標註），
+  // 所以往下找前幾列裡出現「月份」的那一列
+  const scanRows = Math.min(6, lastRow);
+  const top = sheet.getRange(1, 1, scanRows, lastCol).getValues();
+  let headerRow = 0;
+  for (let r = 0; r < top.length; r++) {
+    if (top[r].some(v => String(v).trim() === MONTHLY_COLS.month)) { headerRow = r + 1; break; }
+  }
+  if (!headerRow) {
+    throw new Error('「' + MONTHLY_SHEET + '」前 ' + scanRows + ' 列找不到標題「' +
+      MONTHLY_COLS.month + '」，無法定位表頭');
+  }
+
+  const header = top[headerRow - 1].map(v => String(v).trim());
+  const cols = {};
+  Object.keys(MONTHLY_COLS).forEach(key => {
+    const label = MONTHLY_COLS[key];
+    const first = header.indexOf(label);
+    if (first === -1) {
+      throw new Error('「' + MONTHLY_SHEET + '」找不到欄位「' + label +
+        '」（表頭文字要完全一致，注意空格與全形字元）；改過欄名的話請同步改程式的 MONTHLY_COLS');
+    }
+    // 欄名重複時 indexOf 只會抓最前面那個，會靜默寫錯欄——寧可停下來
+    if (header.indexOf(label, first + 1) !== -1) {
+      throw new Error('「' + MONTHLY_SHEET + '」的欄位「' + label + '」出現不只一次，' +
+        '無法判斷該寫哪一欄；請先把重複的表頭改掉');
+    }
+    cols[key] = first + 1;
+  });
+
+  const noteIdx = header.indexOf(MONTHLY_NOTE_COL);
+
+  // 用「月份」欄判斷資料到哪一列（不用 getLastRow：備註欄可能比資料多出幾列）
+  const monthValues = lastRow > headerRow
+    ? sheet.getRange(headerRow + 1, cols.month, lastRow - headerRow, 1).getValues()
+    : [];
+  const months = {};
+  let lastDataRow = headerRow;
+  monthValues.forEach((row, i) => {
+    const key = monthKeyOf_(row[0]);
+    if (key) { months[key] = true; lastDataRow = headerRow + 1 + i; }
+  });
+
+  return {
+    headerRow: headerRow,
+    cols: cols,
+    noteCol: noteIdx === -1 ? 0 : noteIdx + 1,
+    lastDataRow: lastDataRow,
+    months: months,
+  };
+}
+
+// 儲存格 → 'YYYYMM'。月份欄可能是真日期，也可能是 '2026/09' 這種文字，兩種都要吃得下
+function monthKeyOf_(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyyMM');
+  }
+  const matched = String(value).trim().match(/^(\d{4})\D(\d{1,2})/);
+  return matched ? matched[1] + ('0' + matched[2]).slice(-2) : '';
+}
+
+function formatMonthLabel_(date) {
+  return date.getFullYear() + '/' + ('0' + (date.getMonth() + 1)).slice(-2);
+}
+
+// 抓某個月的用戶數字。兩支查詢，因為它們回答的是不同的問題：
+//   A：newVsReturning 拆新／回訪（各自去重，兩者相加會略大於實際人數）
+//   B：不拆維度的整月 activeUsers＝真正的月活躍人數，以及平均參與時間的分子
+// 這也是為什麼「總用戶」不能用「新用戶＋回訪用戶」自己算出來。
+function fetchMonthlyUserStats_(monthStart) {
+  const tz = Session.getScriptTimeZone();
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+  const startStr = Utilities.formatDate(monthStart, tz, 'yyyy-MM-dd');
+  const endStr = Utilities.formatDate(monthEnd, tz, 'yyyy-MM-dd');
+
+  const range = AnalyticsData.newDateRange();
+  range.startDate = startStr;
+  range.endDate = endStr;
+
+  // ── A：新舊拆分 ──
+  const dKind = AnalyticsData.newDimension(); dKind.name = 'newVsReturning';
+  const mUsersA = AnalyticsData.newMetric(); mUsersA.name = 'activeUsers';
+
+  const reqA = AnalyticsData.newRunReportRequest();
+  reqA.dimensions = [dKind];
+  reqA.metrics = [mUsersA];
+  reqA.dateRanges = [range];
+
+  const repA = runReportWithOneRetry_(reqA);
+  let newUsers = 0;
+  let returningUsers = 0;
+  (repA.rows || []).forEach(row => {
+    const kind = row.dimensionValues[0].value;
+    const users = Number(row.metricValues[0].value);
+    if (kind === 'new') newUsers += users;
+    else if (kind === 'returning') returningUsers += users;
+    // 其餘（空字串＝GA4 判不出新舊）刻意不併進任一邊，也不寫進表
+  });
+
+  // ── B：整月總數與參與時間 ──
+  const mUsersB = AnalyticsData.newMetric(); mUsersB.name = 'activeUsers';
+  const mEngage = AnalyticsData.newMetric(); mEngage.name = 'userEngagementDuration';
+
+  const reqB = AnalyticsData.newRunReportRequest();
+  reqB.metrics = [mUsersB, mEngage];
+  reqB.dateRanges = [range];
+
+  const repB = runReportWithOneRetry_(reqB);
+  const rowB = (repB.rows || [])[0];
+  const totalUsers = rowB ? Number(rowB.metricValues[0].value) : 0;
+  const engagementSeconds = rowB ? Number(rowB.metricValues[1].value) : 0;
+
+  return {
+    totalUsers: totalUsers,
+    newUsers: newUsers,
+    returningUsers: returningUsers,
+    // 與 GA4 介面「平均參與時間」同一個定義：總參與時間 ÷ 活躍使用者
+    avgEngagementSeconds: totalUsers > 0 ? engagementSeconds / totalUsers : 0,
+  };
 }
