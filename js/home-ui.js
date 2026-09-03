@@ -113,9 +113,16 @@ function renderSpotlightPage() {
     const start = spotlightPage * size;
     const pageItems = spotlightItems.slice(start, start + size);
 
+    // 桌機（每頁 6 則）採版式 E：前 2 則放大成主打卡（各佔 2 欄），其餘 4 則收成小格。
+    // 手機／平板不分大小，六張／三張一視同仁。
+    const featureLayout = size === 6;
+    track.classList.toggle('spotlight-track--feature', featureLayout);
+
     const frag = document.createDocumentFragment();
     pageItems.forEach((item, i) => {
-        frag.appendChild(buildSpotlightCard(item, start + i));
+        const el = buildSpotlightCard(item, start + i);
+        if (featureLayout) el.classList.add(i < 2 ? 'is-feature' : 'is-mini');
+        frag.appendChild(el);
     });
 
     track.classList.remove('spotlight-fade-in');
@@ -174,9 +181,13 @@ function buildSpotlightCard(item, index) {
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
         ? `<span class="spotlight-hype-tag ${hype.cssClass}">${escapeHtml(hype.label)}</span>` : '';
+    const desc = hype ? hype.rest : (item.description || '');   // 只在桌機主打卡顯示
 
-    // 版式 C（2026-09-03，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
+    // 手機／平板（版式 C，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
     // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
+    // 桌機（版式 E）：同一份 DOM 換 CSS——.spotlight-body 在手機是 display:contents
+    // （等於不存在），桌機才變成右半欄；.spotlight-desc 只有主打卡顯示、
+    // .spotlight-cardname-line 只有小格顯示（小格太窄，壓在卡圖上的膠囊放不下）。
     // 到期日「至 X」不再上卡片，只留在
     // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
     // 「剩 N 天」保留，那是急迫感提示、不是日期。
@@ -185,23 +196,25 @@ function buildSpotlightCard(item, index) {
             <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
             ${item.card_name ? `<span class="spotlight-cardname">${escapeHtml(item.card_name)}</span>` : ''}
         </div>
-        <div class="spotlight-rate-row">
-            ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
-            ${hypeTag}
-        </div>
-        <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-        <div class="spotlight-info-row">
-            ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
-            ${daysBadge}
-        </div>
-        <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入搜尋</button>
-            <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
+        <div class="spotlight-body">
+            <div class="spotlight-rate-row">
+                ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
+                ${hypeTag}
+            </div>
+            <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+            <div class="spotlight-cardname-line">${escapeHtml(item.card_name || '')}</div>
+            ${desc ? `<div class="spotlight-desc">${escapeHtml(desc)}</div>` : ''}
+            <div class="spotlight-info-row">
+                ${item.cap ? `<span class="spotlight-cap">上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
+                ${daysBadge}
+            </div>
+            <div class="spotlight-card-actions">
+                <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
+                <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
+            </div>
         </div>
     `;
 
-    // fillOnly：只把商家帶進搜尋框並捲回上方，計算由使用者自己按（2026-09-03）。
-    // 原本點了就直接算完＋捲到結果，使用者會突然被丟到一個沒印象的結果頁。
     card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant, { fillOnly: true }));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
@@ -595,7 +608,7 @@ function compareSpotlightMerchant(merchant, opts) {
     }
     if (amountInput && !amountInput.value) amountInput.value = '1000';
 
-    // fillOnly（推薦活動的「帶入搜尋」鈕）：只帶入條件、捲回搜尋框，計算交給使用者。
+    // fillOnly（推薦活動的「帶入查詢」鈕）：只帶入條件、捲回搜尋框，計算交給使用者。
     // 直接算完再把人丟到結果頁，使用者不知道自己按了什麼、也不知道條件是什麼，
     // 反而更難操作（2026-09-03 站長依 GA4 使用情況決定改成兩段式）。
     if (opts.fillOnly) {

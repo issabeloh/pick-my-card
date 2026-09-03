@@ -3097,9 +3097,10 @@ input[type="number"]:focus {
     }
 
     /* 金額欄只放「NT$ 1000」這種短數字，不需要吃掉大半列寬；
-       比重改成 0.8 : 1，多出來的寬度給「計算回饋」——那才是這一列的主要動作。 */
+       比重 0.6 : 1，大部分寬度給「計算回饋」——那才是這一列的主要動作。
+       （390px 時約 128 : 214） */
     .input-row-with-button {
-        grid-template-columns: 0.8fr 1fr;
+        grid-template-columns: 0.6fr 1fr;
         gap: 8px;
     }
 
@@ -8550,6 +8551,100 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 @media (min-width: 769px) and (max-width: 1024px) {
     .spotlight-track { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ===== 桌機版式 E：上排 2 張主打卡（各跨 2 欄）＋ 下排 4 張小格 =====
+   同一份 DOM，只換 CSS：卡片從「上下堆疊」改成「卡圖在左、內容在右」的兩欄
+   grid。前 2 / 後 4 的 is-feature / is-mini 由 renderSpotlightPage 掛上。 */
+@media (min-width: 1025px) {
+    .spotlight-track--feature {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    .spotlight-track--feature .spotlight-card {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+    }
+    .spotlight-track--feature .spotlight-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .spotlight-track--feature .spotlight-ccwrap {
+        margin-bottom: 0;
+        align-self: start;
+    }
+
+    /* 主打卡：跨 2 欄（約 561px），卡圖 196px */
+    .spotlight-card.is-feature {
+        grid-column: span 2;
+        grid-template-columns: 196px 1fr;
+        padding: 16px;
+    }
+    .spotlight-card.is-feature .spotlight-ccwrap { width: 196px; padding: 7px; }
+    .spotlight-card.is-feature .spotlight-rate-num { font-size: 2rem; }
+    /* 主打卡有 561px 寬，標籤靠 margin-left:auto 推到最右會離回饋率太遠，
+       中間空一大塊。這裡改成緊跟在數字旁邊。 */
+    .spotlight-card.is-feature .spotlight-hype-tag { margin-left: 0; }
+    .spotlight-card.is-feature .spotlight-merchant { font-size: 1.06rem; margin-top: 7px; }
+    .spotlight-card.is-feature .spotlight-desc {
+        display: block;
+        font-size: 0.8rem;
+        color: #6b7280;
+        line-height: 1.45;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .spotlight-card.is-feature .spotlight-info-row { margin: 6px 0 12px; }
+    /* 主打卡的 ⓘ 補上文字，小格維持純圖示 */
+    .spotlight-card.is-feature .spotlight-info-btn {
+        width: auto;
+        gap: 5px;
+        padding: 0 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .spotlight-card.is-feature .spotlight-info-btn::after { content: '活動詳情'; }
+
+    /* 小格：1 欄（約 273px），卡圖 76px；一樣保留兩顆按鈕 */
+    .spotlight-card.is-mini {
+        grid-template-columns: 76px 1fr;
+        gap: 10px;
+        padding: 11px;
+    }
+    .spotlight-card.is-mini .spotlight-ccwrap {
+        width: 76px;
+        padding: 3px;
+        border-radius: 7px;
+    }
+    .spotlight-card.is-mini .spotlight-ccimg { border-radius: 4px; }
+    .spotlight-card.is-mini .spotlight-cardname { display: none; }
+    .spotlight-card.is-mini .spotlight-cardname-line {
+        display: block;
+        font-size: 0.7rem;
+        color: #6b7280;
+        line-height: 1.35;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .spotlight-card.is-mini .spotlight-rate-row { min-height: 0; gap: 6px; }
+    .spotlight-card.is-mini .spotlight-rate-num { font-size: 1.2rem; }
+    .spotlight-card.is-mini .spotlight-hype-tag { font-size: 0.6rem; padding: 1px 6px; }
+    .spotlight-card.is-mini .spotlight-merchant { font-size: 0.83rem; margin-top: 3px; }
+    /* 小格放不下「上限」，但「剩 N 天」要留著——那是急迫感提示 */
+    .spotlight-card.is-mini .spotlight-cap { display: none; }
+    .spotlight-card.is-mini .spotlight-info-row { margin: 3px 0 7px; min-height: 0; }
+    .spotlight-card.is-mini .spotlight-info-row:empty { margin: 0 0 7px; }
+    .spotlight-card.is-mini .spotlight-compare-btn {
+        height: 30px;
+        font-size: 0.72rem;
+        padding: 0 6px;
+    }
+    .spotlight-card.is-mini .spotlight-info-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+}
 .spotlight-fade-in { animation: spotlightFade .4s ease; }
 @keyframes spotlightFade {
     from { opacity: 0; transform: translateY(6px); }
@@ -8595,6 +8690,19 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     border-radius: 6px;   /* 卡片圖一律圓角 */
     display: block;
 }
+/* 手機／平板：.spotlight-body 等於不存在（display:contents），裡面的元素直接
+   當 .spotlight-card 這個 flex column 的子項——版面與拆分前完全一樣。
+   桌機（版式 E）才把它變成卡片右半欄，見 min-width:1025px 的區塊。 */
+.spotlight-body {
+    display: contents;
+}
+/* 這兩個只有桌機用得到：說明句只出現在主打卡，卡名文字行只出現在小格
+   （小格的卡圖只有 76px 寬，壓在圖上的卡名膠囊放不下） */
+.spotlight-desc,
+.spotlight-cardname-line {
+    display: none;
+}
+
 .spotlight-rate-row {
     display: flex;
     align-items: center;
