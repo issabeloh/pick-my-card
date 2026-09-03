@@ -12,6 +12,63 @@
 // Sidebar Drawer (Mobile)
 // ==========================================
 
+// 首訪引導動畫：手機版剛進到工具頁時，把側選單「探頭」露出約 1/4 再收回，
+// 收回後漢堡鍵抖一下，讓使用者知道左上角那個 icon 底下有東西。
+// 演滿 SIDEBAR_PEEK_MAX 次就不再演——第一次很可能人還沒看螢幕就錯過了，
+// 所以給兩次機會（分兩次造訪，不是同一次連演兩遍：同一次連演只會在同一個
+// 時間點重複，錯過的人還是錯過）。次數存在 localStorage 的
+// pmc_sidebar_peek_count，與 index.html 的 pmc_seen_landing 一樣是純字串
+// 旗標、不是 JSON，所以不走 readLocalJSON。
+//
+// 刻意不用 openDrawer()：探頭階段不掛遮罩、不鎖 body 捲動、側欄本身
+// pointer-events:none，純粹是視覺提示，使用者要捲要點都不受影響。
+const SIDEBAR_PEEK_FLAG = 'pmc_sidebar_peek_count';
+const SIDEBAR_PEEK_MAX = 2;
+
+function playSidebarPeekHint(sidebar, toggleBtn) {
+    if (window.innerWidth > 768) return;                       // 桌機／平板側欄常駐，不需要提示
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let played = SIDEBAR_PEEK_MAX;
+    try {
+        played = parseInt(localStorage.getItem(SIDEBAR_PEEK_FLAG), 10) || 0;
+    } catch (e) {
+        return;  // localStorage 不可用（無痕強化）：不演，免得每次進來都動一次
+    }
+    if (played >= SIDEBAR_PEEK_MAX) return;
+
+    // 等 boot loader 收掉再演，否則動畫會被載入遮罩蓋住等於沒演。
+    // 最多等 5 秒，逾時就放棄（auth 卡住時不要無限等）。
+    let waited = 0;
+    const startWhenReady = () => {
+        const booting = document.documentElement.classList.contains('pmc-returning-user');
+        if (booting && waited < 5000) {
+            waited += 200;
+            setTimeout(startWhenReady, 200);
+            return;
+        }
+        if (booting) return;
+        setTimeout(runPeek, 600);   // 讓首屏先安定一下再動
+    };
+
+    const runPeek = () => {
+        if (sidebar.classList.contains('open')) return;   // 使用者已自己打開，提示就沒必要了
+        try { localStorage.setItem(SIDEBAR_PEEK_FLAG, String(played + 1)); } catch (e) { /* 寫不進去就算了 */ }
+
+        sidebar.classList.add('peek');
+        setTimeout(() => {
+            sidebar.classList.remove('peek');
+            // 等側欄滑回去（CSS transition 0.3s）再讓漢堡鍵抖，兩段動作才有因果感
+            setTimeout(() => {
+                toggleBtn.classList.add('hb-nudge');
+                setTimeout(() => toggleBtn.classList.remove('hb-nudge'), 1500);  // 動畫 0.7s x 2 次
+            }, 320);
+        }, 900);
+    };
+
+    startWhenReady();
+}
+
 function setupSidebarDrawer() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
@@ -25,6 +82,7 @@ function setupSidebarDrawer() {
         const supportedCards = sidebar.querySelector('.supported-cards');
         if (supportedCards) supportedCards.style.display = 'block';
 
+        sidebar.classList.remove('peek');   // 使用者自己開了就中斷首訪探頭提示
         sidebar.classList.add('open');
         overlay.classList.add('active');
         disableBodyScroll();
@@ -47,6 +105,8 @@ function setupSidebarDrawer() {
             closeDrawer();
         }
     });
+
+    playSidebarPeekHint(sidebar, toggleBtn);
 
     // Close drawer when resizing to desktop
     let wasMobileDrawer = window.innerWidth <= 768;

@@ -167,8 +167,13 @@
             <div class="header-top">
                 <!-- Hamburger menu button (mobile only) -->
                 <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" aria-label="開啟選單" style="display: none;">
-                    <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    <!-- 粗線條漢堡：原本用 1 單位高的填色長方形（viewBox 16），在漸層 header 上
+                         線條太細看不清楚。改成 stroke-width 2.4 的三條線＋圓端點。 -->
+                    <svg class="sidebar-toggle-icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                        <line class="hb-line hb-line-1" x1="4" y1="7" x2="20" y2="7"/>
+                        <line class="hb-line hb-line-2" x1="4" y1="12" x2="20" y2="12"/>
+                        <line class="hb-line hb-line-3" x1="4" y1="17" x2="20" y2="17"/>
                     </svg>
                 </button>
                 <div class="header-content">
@@ -376,6 +381,13 @@
                         <div id="search-hints-container"></div>
                     </div>
 
+                    <!-- 手機版限定的比較張數提示（桌機／平板隱藏：那邊側欄常駐，卡片清單本來就看得到）。
+                         張數由 updateCardChipsCount() 與卡片膠囊同步更新（js/home-ui.js）。
+                         桌機 display:none ⇒ 不是 grid item，不影響 .input-row-with-button 的顯式定位。 -->
+                    <div class="mobile-comparison-hint" id="mobile-comparison-hint">
+                        正在比較 <span id="mobile-comparison-count">—</span> 張信用卡（點擊左上角的 ☰ 修改選項）
+                    </div>
+
                     <!-- 精準搜尋＋新戶活動 toggles（桌機/手機共用一份，合併框下方同一列；說明點「?」內嵌展開） -->
                     <div class="show-promos-toggle">
                         <div class="promo-toggle-row">
@@ -412,6 +424,10 @@
                         <label for="amount-input">消費金額</label>
                         <div class="amount-input-wrap">
                             <span class="amount-prefix">NT$</span>
+                            <!-- 刻意用 type="number" 而不是 text＋自訂格式化：曾在 2026-09-03 改成
+                                 text 以顯示千分位「100,000」，但那需要自己寫格式化與去逗號，
+                                 逐字輸入「1500.5」時小數點被吃掉會算成 15005（差 10 倍且靜默）。
+                                 千分位不值得換掉瀏覽器原生的數值輸入保證，同日改回。 -->
                             <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
                         </div>
                     </div>
@@ -485,10 +501,10 @@
         </main>
         </div><!-- /.app-layout -->
 
-        <section class="spotlight-section" id="spotlight-section" aria-label="精選卡片" style="display: none;">
+        <section class="spotlight-section" id="spotlight-section" aria-label="推薦活動" style="display: none;">
             <div class="spotlight-header">
                 <h2 class="spotlight-title">
-                    <span class="spotlight-fire">🔥</span> 精選活動
+                    推薦活動
                 </h2>
                 <div class="spotlight-nav">
                     <button type="button" class="spotlight-nav-btn spotlight-prev-btn" id="spotlight-prev-btn" aria-label="上一組" title="上一組" style="display:none;">
@@ -990,9 +1006,11 @@
 </div>
     </div>
 
-    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
+    <!-- 最後資料更新日期。「收錄 N 張」那句 2026-09-03 起不顯示，但整段 DOM 必須留著：
+         .card-count 同時是回歸框架（tools/regression）的「資料已載入」信號，
+         用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
-        <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
+        <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
     </div>
     </footer>
@@ -1144,9 +1162,9 @@
     </button>
 
     <!-- 精選活動快速跳轉浮標（有搜尋結果時由 JS 加 .is-visible 顯示） -->
-    <button id="scroll-to-spotlight-btn" class="scroll-to-spotlight-btn" aria-label="精選活動">
+    <button id="scroll-to-spotlight-btn" class="scroll-to-spotlight-btn" aria-label="推薦活動">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v13M6 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="btn-text">精選活動</span>
+        <span class="btn-text">推薦活動</span>
     </button>
 
     <!-- 圖片放大檢視 lightbox -->

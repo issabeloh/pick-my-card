@@ -20,7 +20,61 @@
 // 頁數／圓點跟著長度自動增加。
 let spotlightItems = [];
 let spotlightPage = 0;
-const SPOTLIGHT_PAGE_SIZE = 3;
+// ============ 版位配置與分頁 ============
+// 🚧 主打卡版位（.is-feature 大卡）2026-09-03 暫時停用。
+// 停用原因：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打
+// 的頁」卡片形狀不同，看起來很亂。Highlights 工作表的 featured 欄照常匯出、
+// 前端照常收到（item.featured），只是暫時不拿來排版。
+// 要重新啟用：把 SPOTLIGHT_FEATURE_SLOTS 改回 true 即可，主打卡的
+// buildSpotlightPages 分支與 .is-feature / .is-mini 樣式都還在。
+const SPOTLIGHT_FEATURE_SLOTS = false;
+
+// 每頁筆數＝欄數 x 列數，一定填滿、不留落單的半排。
+// 斷點（768 / 1024）必須與 styles.css 的 .spotlight-track 一致。
+//   feat  ＝ 每頁的主打卡數（停用時不使用）
+//   grid  ＝ 有主打卡那一頁的一般卡數（停用時不使用）
+//   plain ＝ 沒有主打卡那一頁的一般卡數（＝目前每頁的實際張數）
+function spotlightLayout() {
+    const w = window.innerWidth;
+    if (w <= 768)  return { key: 'mobile',  feat: 1, grid: 4, plain: 4 };  // 2 欄 x 2 列
+    if (w <= 1024) return { key: 'tablet',  feat: 1, grid: 3, plain: 3 };  // 3 欄 x 1 列
+    return                { key: 'desktop', feat: 2, grid: 4, plain: 4 };  // 4 欄 x 1 列
+}
+
+// 每頁的內容：{ feature: [...], normal: [...] }
+let spotlightPages = [];
+let spotlightLastLayout = spotlightLayout().key;
+
+function buildSpotlightPages() {
+    const cfg = spotlightLayout();
+    const featured = SPOTLIGHT_FEATURE_SLOTS ? spotlightItems.filter(it => it.featured) : [];
+    const pages = [];
+
+    // 主打卡停用（或沒有人標 featured）→ 每頁等分成 cfg.plain 張一般卡
+    if (featured.length === 0) {
+        for (let i = 0; i < spotlightItems.length; i += cfg.plain) {
+            pages.push({ feature: [], normal: spotlightItems.slice(i, i + cfg.plain) });
+        }
+        return pages;
+    }
+
+    // 有標記 → 主打卡每頁最多 cfg.feat 則，用完之後的頁面就沒有主打位
+    const normal = spotlightItems.filter(it => !it.featured);
+    let fi = 0, ni = 0;
+    while (fi < featured.length || ni < normal.length) {
+        const page = { feature: [], normal: [] };
+        for (let k = 0; k < cfg.feat && fi < featured.length; k++) page.feature.push(featured[fi++]);
+        const quota = page.feature.length > 0 ? cfg.grid : cfg.plain;
+        for (let k = 0; k < quota && ni < normal.length; k++) page.normal.push(normal[ni++]);
+        if (page.feature.length === 0 && page.normal.length === 0) break;
+        pages.push(page);
+    }
+    return pages;
+}
+
+function spotlightTotalPages() {
+    return spotlightPages.length;
+}
 
 function getSpotlightDaysLeft(deadline) {
     if (!deadline) return null;
@@ -63,10 +117,6 @@ function resolveSpotlightDeadline(item) {
     return ends.sort()[0].replace(/-/g, '/');
 }
 
-function spotlightTotalPages() {
-    return Math.ceil(spotlightItems.length / SPOTLIGHT_PAGE_SIZE);
-}
-
 function renderSpotlights() {
     const section = document.getElementById('spotlight-section');
     const track = document.getElementById('spotlight-track');
@@ -88,8 +138,10 @@ function renderSpotlights() {
     section.style.display = 'block';
 
     spotlightPage = 0;
+    spotlightPages = buildSpotlightPages();
     buildSpotlightDots();
     renderSpotlightPage();
+    setupSpotlightResizeReflow();
 
     const multiPage = spotlightTotalPages() > 1;
     const dots = document.getElementById('spotlight-dots');
@@ -100,12 +152,22 @@ function renderSpotlights() {
 function renderSpotlightPage() {
     const track = document.getElementById('spotlight-track');
     if (!track) return;
-    const start = spotlightPage * SPOTLIGHT_PAGE_SIZE;
-    const pageItems = spotlightItems.slice(start, start + SPOTLIGHT_PAGE_SIZE);
+    const page = spotlightPages[spotlightPage];
+    if (!page) return;
 
+    // 主打卡在版面上是「整列（手機／平板）／跨兩欄（桌機）」，靠 .is-feature 掛樣式；
+    // 同頁其餘卡片掛 .is-mini（桌機才會縮成橫式小格）。index 要用原始
+    // spotlightItems 的位置，活動詳情 modal 才對得上。
     const frag = document.createDocumentFragment();
-    pageItems.forEach((item, i) => {
-        frag.appendChild(buildSpotlightCard(item, start + i));
+    page.feature.forEach(item => {
+        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
+        el.classList.add('is-feature');
+        frag.appendChild(el);
+    });
+    page.normal.forEach(item => {
+        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
+        if (page.feature.length > 0) el.classList.add('is-mini');
+        frag.appendChild(el);
     });
 
     track.classList.remove('spotlight-fade-in');
@@ -164,34 +226,62 @@ function buildSpotlightCard(item, index) {
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
         ? `<span class="spotlight-hype-tag ${hype.cssClass}">${escapeHtml(hype.label)}</span>` : '';
-    const desc = hype ? hype.rest : (item.description || '');
-    const sticker = rate ? `<span class="spotlight-rate-sticker">${escapeHtml(rate)}</span>` : '';
 
+    // 手機／平板（版式 C，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
+    // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
+    // 主打卡（.is-feature）：同一份 DOM 換 CSS——.spotlight-body 在一般卡是
+    // display:contents（等於不存在），主打卡與小格才變成卡片的右半欄。
+    // .spotlight-cardname-line 只有桌機小格顯示（在商家名下方）——小格的卡圖
+    // 換成純圖、不壓卡名膠囊，卡名改用這行文字。
+    // 到期日「至 X」不再上卡片，只留在
+    // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
+    // 「剩 N 天」保留，那是急迫感提示、不是日期。
     card.innerHTML = `
-        <div class="spotlight-top-row">
-            <div class="spotlight-ccwrap">
-                <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
-                ${sticker}
-            </div>
-            <div class="spotlight-top-right">
-                ${hypeTag}
-                <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-                <div class="spotlight-desc">${escapeHtml(desc)}</div>
-            </div>
+        <div class="spotlight-ccwrap">
+            <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
+            ${item.card_name ? `<span class="spotlight-cardname">${escapeHtml(item.card_name)}</span>` : ''}
         </div>
-        <div class="spotlight-info-row">
-            ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
-            ${deadline ? `<span>至 <b>${escapeHtml(deadline)}</b>${daysBadge}</span>` : ''}
+        <div class="spotlight-body">
+            <div class="spotlight-rate-row">
+                ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
+                ${hypeTag}
+            </div>
+            <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+            <div class="spotlight-cardname-line">${escapeHtml(item.card_name || '')}</div>
+            <div class="spotlight-info-row">
+                ${item.cap ? `<span class="spotlight-cap">上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
+                ${daysBadge}
+            </div>
         </div>
         <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較這個通路 →</button>
+            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
             <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
         </div>
     `;
 
-    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
+    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant, { fillOnly: true }));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
+}
+
+// 轉向／改變視窗寬度跨過 768px 時，每頁筆數會從 3 變 4（或反過來），
+// 分頁數與圓點必須重算，否則會出現空白頁或有幾則永遠顯示不到。
+// 只在筆數真的改變時才重繪，一般的捲動列縮放不會觸發。
+let spotlightResizeBound = false;
+function setupSpotlightResizeReflow() {
+    if (spotlightResizeBound) return;
+    spotlightResizeBound = true;
+    window.addEventListener('resize', () => {
+        const key = spotlightLayout().key;
+        if (key === spotlightLastLayout) return;
+        spotlightLastLayout = key;
+        spotlightPage = 0;
+        spotlightPages = buildSpotlightPages();
+        buildSpotlightDots();
+        renderSpotlightPage();   // 內含 updateSpotlightDots / updateSpotlightNav
+        const dots = document.getElementById('spotlight-dots');
+        if (dots) dots.style.display = spotlightTotalPages() > 1 ? 'flex' : 'none';
+    });
 }
 
 function buildSpotlightDots() {
@@ -555,23 +645,37 @@ function compareSpotlightMerchant(merchant, opts) {
 
     if (matchedOption) {
         // handleQuickSearch 只填入關鍵詞（不自動計算）；其結尾的 validateInputs()
-        // 已依「商家非空」啟用計算鈕，這裡代替用戶按下計算，維持本按鈕「點了就比較」的承諾
+        // 已依「商家非空」啟用計算鈕
         handleQuickSearch(matchedOption);
-        if (amountInput && !amountInput.value) amountInput.value = '1000';
+    } else if (merchantInputEl) {
+        merchantInputEl.value = merchant;
+        handleMerchantInput();
+    }
+    if (amountInput && !amountInput.value) amountInput.value = '1000';
+
+    // fillOnly（推薦活動的「帶入查詢」鈕）：只帶入條件、捲回搜尋框，計算交給使用者。
+    // 直接算完再把人丟到結果頁，使用者不知道自己按了什麼、也不知道條件是什麼，
+    // 反而更難操作（2026-09-03 站長依 GA4 使用情況決定改成兩段式）。
+    if (opts.fillOnly) {
+        const box = document.querySelector('.merchant-search-box') || merchantInputEl;
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 不 focus 輸入框：手機上會彈出鍵盤蓋住「計算回饋」。改成讓計算鈕閃一下，
+        // 指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
         const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn && !calcBtn.disabled) calcBtn.click();
-    } else {
-        if (merchantInputEl) {
-            merchantInputEl.value = merchant;
-            handleMerchantInput();
+        if (calcBtn) {
+            calcBtn.classList.remove('calc-nudge');
+            void calcBtn.offsetWidth;
+            calcBtn.classList.add('calc-nudge');
+            setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
         }
-        if (amountInput && !amountInput.value) amountInput.value = '1000';
-        const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn && !calcBtn.disabled) calcBtn.click();
+        return;
     }
 
-    // 商家落地頁（noScroll）不自動捲到結果，讓頂部標題區塊與搜尋框先入眼；
-    // 一般 spotlight 點擊維持「點了就捲到結果」。
+    // 其餘呼叫端（商家落地頁 ?merchant= 深連結）維持「開頁就算好」
+    const calcBtn = document.getElementById('calculate-btn');
+    if (calcBtn && !calcBtn.disabled) calcBtn.click();
+
+    // 商家落地頁（noScroll）不自動捲到結果，讓頂部標題區塊與搜尋框先入眼。
     if (opts.noScroll) return;
     setTimeout(() => {
         const results = document.getElementById('results-section');
@@ -1141,6 +1245,11 @@ function stripBankPrefix(name, bank) {
 // getCardsForComparison 回傳全部，兩者相等）。
 // 元素動態建立，index 與 merchant 落地頁都不必改 HTML。
 function updateCardChipsCount(selectedCount) {
+    // 手機版限定的「正在比較 N 張信用卡」提示（index.html 的 #mobile-comparison-hint）。
+    // 放在 card-chips 的 guard 之前：手機側欄是抽屜，這行提示不該依賴膠囊容器存在與否。
+    const mobileCount = document.getElementById('mobile-comparison-count');
+    if (mobileCount) mobileCount.textContent = String(selectedCount);
+
     const cardChipsContainer = document.getElementById('card-chips');
     if (!cardChipsContainer || !cardChipsContainer.parentNode) return;
 
@@ -1310,7 +1419,7 @@ function setupEventListeners() {
         amountInput.dataset.userModified = 'true';
         validateInputs();
     });
-    
+
     // Calculate button
     calculateBtn.addEventListener('click', () => {
         calculateCashback();
