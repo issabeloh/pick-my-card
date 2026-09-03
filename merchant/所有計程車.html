@@ -180,8 +180,13 @@
             <div class="header-top">
                 <!-- Hamburger menu button (mobile only) -->
                 <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" aria-label="開啟選單" style="display: none;">
-                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    <!-- 粗線條漢堡：原本用 1 單位高的填色長方形（viewBox 16），在漸層 header 上
+                         線條太細看不清楚。改成 stroke-width 2.4 的三條線＋圓端點。 -->
+                    <svg class="sidebar-toggle-icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                        <line class="hb-line hb-line-1" x1="4" y1="7" x2="20" y2="7"/>
+                        <line class="hb-line hb-line-2" x1="4" y1="12" x2="20" y2="12"/>
+                        <line class="hb-line hb-line-3" x1="4" y1="17" x2="20" y2="17"/>
                     </svg>
                 </button>
                 <div class="header-content">
@@ -393,7 +398,7 @@
                          張數由 updateCardChipsCount() 與卡片膠囊同步更新（js/home-ui.js）。
                          桌機 display:none ⇒ 不是 grid item，不影響 .input-row-with-button 的顯式定位。 -->
                     <div class="mobile-comparison-hint" id="mobile-comparison-hint">
-                        正在比較 <strong id="mobile-comparison-count">—</strong> 張信用卡（點擊左上角的 <span class="mobile-comparison-hint-menu">☰</span> 修改選項）
+                        正在比較 <span id="mobile-comparison-count">—</span> 張信用卡（點擊左上角的 ☰ 修改選項）
                     </div>
 
                     <!-- 精準搜尋＋新戶活動 toggles（桌機/手機共用一份，合併框下方同一列；說明點「?」內嵌展開） -->

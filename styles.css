@@ -2385,24 +2385,12 @@ input[type="number"]:focus {
    桌機保持 display:none ⇒ 不會變成 .input-row-with-button 的 grid item。 */
 .mobile-comparison-hint {
     display: none;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #4b5563;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #9ca3af;      /* 備註灰：比 label 與 toggles 都淡，不跟主要操作搶注意力 */
+    font-weight: 400;
     text-align: center;
-}
-
-.mobile-comparison-hint strong {
-    color: #2563eb;
-    font-weight: 700;
-}
-
-.mobile-comparison-hint-menu {
-    font-weight: 700;
-    color: #374151;
+    padding: 0 2px;
 }
 
 /* toggles 是 .input-row-with-button 的直接網格子元素 */
@@ -2413,7 +2401,7 @@ input[type="number"]:focus {
     .mobile-comparison-hint {
         display: block;
         grid-column: 1 / -1;
-        margin: 0;
+        margin: -6px 0 -4px;   /* 備註不該佔滿一格 gap，往上下各收一點 */
     }
 }
 
@@ -3036,8 +3024,18 @@ input[type="number"]:focus {
 
 /* Responsive design */
 @media (max-width: 768px) {
+    /* 手機版滿版：拿掉 body 的灰漸層底與 10px 內距，.container 也不再是「浮在灰底上
+       的白卡片」（圓角＋陰影）。手機螢幕窄，那圈灰邊框只是白白吃掉左右各 10px 的
+       可用寬度，也讓 header／main／各 section 看起來像三塊互不相連的浮板。
+       桌機維持原本的灰底＋白卡片外觀，不受影響。 */
     body {
-        padding: 10px;
+        padding: 0;
+        background: #ffffff;
+    }
+
+    .container {
+        border-radius: 0;
+        box-shadow: none;
     }
 
     main {
@@ -8124,8 +8122,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         grid-template-columns: 1fr;
     }
 
-    /* 手機版漢堡鍵：原本是透明底的白色線條 icon，壓在漸層 header 上很容易被忽略。
-       改成半透明白底＋白框的實體按鈕，並加大點擊區到 40x40（≥ 觸控最小尺寸）。 */
+    /* 手機版漢堡鍵：維持透明底（不加白底白框，那會變成一顆搶眼的實體按鈕），
+       改用加粗的線條讓它在漸層 header 上看得清楚。點擊區固定 40x40（≥ 觸控最小尺寸）。 */
     .sidebar-toggle-btn {
         display: flex;
         align-items: center;
@@ -8133,14 +8131,10 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         width: 40px;
         height: 40px;
         padding: 0;
-        background: rgba(255, 255, 255, 0.22);
-        border: 1.5px solid rgba(255, 255, 255, 0.75);
-        border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
     }
 
     .sidebar-toggle-btn:active {
-        background: rgba(255, 255, 255, 0.38);
+        background: rgba(255, 255, 255, 0.18);
     }
 
     .sidebar {
@@ -8163,6 +8157,39 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .sidebar.open {
         transform: translateX(0);
         box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    }
+
+    /* 首訪引導「探頭」：只露出約 1/4 寬度再收回（見 playSidebarPeekHint）。
+       :not(.open) 讓使用者中途自己點開時 .open 一定贏；pointer-events:none
+       確保這段純視覺提示不會攔截點擊。 */
+    .sidebar.peek:not(.open) {
+        transform: translateX(-76%);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
+        pointer-events: none;
+    }
+
+    /* 探頭收回後漢堡鍵抖一下：icon 左右晃＋放大，按鈕外圈同步亮一圈白光暈。
+       兩者都只在 .hb-nudge 期間跑，動畫結束由 JS 移除 class。 */
+    .sidebar-toggle-btn.hb-nudge {
+        animation: hb-nudge-glow 0.7s ease-out 2;
+    }
+
+    .sidebar-toggle-btn.hb-nudge .sidebar-toggle-icon {
+        animation: hb-nudge-shake 0.7s ease-in-out 2;
+    }
+
+    @keyframes hb-nudge-shake {
+        0%, 100% { transform: none; }
+        15%      { transform: translateX(-2.5px) scale(1.14); }
+        40%      { transform: translateX(2.5px) scale(1.14); }
+        65%      { transform: translateX(-1.5px) scale(1.07); }
+        85%      { transform: translateX(0) scale(1.03); }
+    }
+
+    @keyframes hb-nudge-glow {
+        0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.22); }
+        70%  { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); background: rgba(255, 255, 255, 0.08); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); background: transparent; }
     }
 
     .sidebar-header {
