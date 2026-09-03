@@ -1473,10 +1473,17 @@ const BUTTON_TYPE_LABELS = {
 //    projects/pmc-analytics-sync.md。**不要為它加自動化寫入。**
 // ============================================================================
 
-// GA4_按鈕點擊 的回填起點。刻意早於 button_type 自訂維度的註冊日，理由見下面 note：
-// 註冊前那段期間 button_type 一律是 (not set)，但「按鈕點擊總量」的逐日趨勢仍然成立，
-// 保留它才看得出 06/07 之後的拆解是從什麼基準長出來的。
-const BUTTON_CLICK_START_DATE = '2026-01-01';
+// GA4_按鈕點擊 的回填起點＝button_type 自訂維度的註冊日。
+// ⚠️ 2026/09/03 實測修正：原本設 '2026-01-01'，是基於「註冊前那段會回 (not set)、
+//    至少留得住按鈕點擊總量的逐日趨勢」這個假設——**這個假設是錯的**。
+//    實跑後表上第一列就是 2026/06/07，01/01~06/06 **一列都沒有**：查詢帶了
+//    customEvent:button_type 這個維度時，GA4 對註冊日之前的事件是「不回傳」，
+//    不是「回傳 (not set)」。所以往前多要 158 天純粹是白跑——
+//    只是把一支本來就是全檔最重的查詢（3 維度 × 數個月）再拉長 2.8 倍，
+//    而那正是它在 updateAllReports() 裡吃到 502 的原因之一。
+//    要看「不分版位的按鈕點擊總量」逐日趨勢，該查的是不帶 button_type 維度的
+//    eventName=button_click（GA4_事件成效 那條路），不是這裡。
+const BUTTON_CLICK_START_DATE = '2026-06-07';
 
 // button_type 自訂維度的註冊日（GA4 不回填，此日之前查不到值）。
 // 對照 vault 的 pmc-analytics-事實與否決清單.md：用 button_type 過濾的漏斗，可用起點是這天。
@@ -1496,6 +1503,23 @@ const GA4_BUTTON_DAILY_ROW_LIMIT = 10000;
 //    真的停用那顆按鈕之後，再回來填上停用年月即可。
 const BUTTON_TYPE_RETIRED = {};
 
+// GA4 Data API 偶發 502（Google 後端暫時性錯誤）。這支是全檔最重的查詢
+// （3 個維度 × 數個月區間），2026/09/03 第一次跑 updateAllReports() 就中了一次，
+// 單獨重跑立刻成功＝典型暫時性錯誤，不是查詢寫錯。
+// 就算重試也失敗也不會掉資料：runStep_ 會隔離這一步、表維持上次成功的內容，
+// 而這張表每天重抓全區間，隔天自己就補回來了。多這一次重試純粹是為了不要在
+// 「更新紀錄」留一行沒必要的 ⚠️，讓真正該看的失敗不被雜訊淹掉。
+// 只包這一支：其餘 7 支 GA4 查詢都輕得多、也有數月的乾淨紀錄，沒有理由一起改。
+function runReportWithOneRetry_(request) {
+  try {
+    return AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  } catch (e) {
+    Logger.log('runReport 第一次失敗，3 秒後重試一次：' + errText_(e));
+    Utilities.sleep(3000);
+    return AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  }
+}
+
 function buttonClickStartDate_() {
   const parts = BUTTON_CLICK_START_DATE.split('-');
   return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
@@ -1506,7 +1530,7 @@ function atMidnight_(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-// ---------- GA4：按鈕點擊逐日趨勢（2026/01/01 起，日期 × 按鈕類型）----------
+// ---------- GA4：按鈕點擊逐日趨勢（2026/06/07 起，日期 × 按鈕類型）----------
 // 需求涵蓋的 button_type（皆已在 BUTTON_TYPE_LABELS 有中文對照）：
 //   spotlight_compare／spotlight_info／spotlight_apply／detail_sticky_apply／
 //   detail_header_apply／card_apply／promos_page_apply／search_result_apply
@@ -1545,7 +1569,7 @@ function importGA4ButtonClicksDaily() {
   request.orderBys = [orderDate];
   request.limit = GA4_BUTTON_DAILY_ROW_LIMIT;
 
-  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  const report = runReportWithOneRetry_(request);
   const rows = report.rows || [];
   const truncated = rows.length >= GA4_BUTTON_DAILY_ROW_LIMIT;
 
@@ -1591,9 +1615,10 @@ function importGA4ButtonClicksDaily() {
       '，事件 button_click，維度 eventName × customEvent:button_type × date（' +
       BUTTON_CLICK_START_DATE + ' ~ yesterday）',
     note: '每次執行重抓全區間並覆寫｜區間日界線由 GA4 資源時區判定' +
-      '｜⚠️ button_type 自訂維度 ' + BUTTON_TYPE_REGISTERED_DATE + ' 才註冊、GA4 不回填，' +
-      '該日之前的列一律是「(not set)」＝當天的按鈕點擊「總量」，不是某個特定按鈕；' +
-      '要比較各按鈕版位請只取 ' + BUTTON_TYPE_REGISTERED_DATE + ' 之後的資料' +
+      '｜⚠️ 起點就是 button_type 自訂維度的註冊日 ' + BUTTON_TYPE_REGISTERED_DATE + '：' +
+      'GA4 對註冊日之前的事件在帶這個維度查詢時**完全不回傳**（不是回 (not set)），' +
+      '所以這張表沒有、也不可能有更早的資料；' +
+      '第一個完整月是 2026/07，跨月比較請從那裡開始' +
       '｜點擊次數＝eventCount（同一人多次點算多次）；觸發用戶數＝totalUsers（當天不重複人數），' +
       '兩者不可跨列相加（用戶會在不同天／不同按鈕重複出現）' +
       '｜某個按鈕類型某天沒有點擊時 GA4 不會回傳該列（不是 0，是沒有列）' +
