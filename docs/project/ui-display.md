@@ -155,18 +155,25 @@
 
 ## 10. 問卷邀請 Modal（#survey-invite-modal，2026-09-03）
 
+> 標題列：公告 modal 與這個 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，
+> 2026-09-03 站長指定）。特異性掛在 `.announcement-modal-content` / `.survey-invite-content` 上，沒動全站 `.modal-header`。
+
 登入用戶「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
 modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.js` 的 `maybeShowSurveyInvite` / `survey invite`。
 
 - **觸發點在 `onAuthStateChanged` 的登入分支尾端**（`js/auth-user-data.js`，所有使用者資料載完之後），延遲
   `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
+- **有期限：只在 2026/9 整月**（`isSurveyInvitePeriod()`，裝置本地時間，`SURVEY_INVITE_START`／`END` 兩個常數）。
+  過期自動變 no-op，不用趕在月底手動下架
+- **只在主站首頁彈**：用 `getAnalyticsSurface() !== 'site'` 一次擋掉 `/promos` 的 iframe（promos_embed）與
+  `/merchant/xxx` 落地頁、`?merchant=` 深連結（merchant_page）——那些頁面的用戶帶著任務進來，不擋路
 - **問卷連結不在程式裡**：按鈕只負責開公告 modal，問卷網址／iframe 都寫在該則公告的 `fullText`（Sheets 公告工作表）
 - **公告用關鍵字找、不寫死 index 0**：`findSurveyAnnouncementIndex()` 比對 `text` 含「問卷」。找不到就整個不彈——
   Sheets 把那則公告下架後邀請自動失效，不用回頭改程式
 - **只記 localStorage `pmc_survey_invite_seen_v1`**（值 `shown`/`accepted`/`dismissed`），不寫 Firestore：短期活動不值得
   在 users 文件加永久欄位，換裝置多問一次可接受。**顯示的當下就記帳**，用戶關分頁沒回答也不再問第二次
-- scroll lock 只由這個 modal 成對持有（開 `disableBodyScroll()`／關 `enableBodyScroll()`）；接手的公告 modal 沿用它
-  原本「不上鎖」的行為，兩者不會打架
+- 開啟時 `disableBodyScroll()`、關閉時 `enableBodyScroll()` 成對呼叫（背景頁不會跟著捲）；公告 modal 本來就不上鎖，
+  維持原樣
 - 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）與 `surface`
 
 ## 教訓記錄

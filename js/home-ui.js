@@ -873,10 +873,22 @@ function showAnnouncementModal(index) {
 //    不值得為它在 users 文件加一個永久欄位；換裝置多問一次可以接受。
 //  - 找不到問卷公告就完全不彈（見 findSurveyAnnouncementIndex）：Sheets 把那則
 //    公告下架後這個邀請自動失效，不用回頭改程式。
+//  - 兩道自動下架保險：期限（只在 2026/9 整月）＋ 公告還在不在。任一不成立就完全不彈。
+//  - 只在主站首頁彈：/promos 的 iframe 與 /merchant/xxx 落地頁不打擾。
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
 const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
 const SURVEY_INVITE_DELAY_MS = 1200;
+// 只在 2026 年 9 月整月彈（用裝置本地時間；台灣用戶＝台灣時間）。
+// 過期後這段程式自動變 no-op，不用趕在月底手動下架。
+const SURVEY_INVITE_START = '2026-09-01T00:00:00';
+const SURVEY_INVITE_END   = '2026-10-01T00:00:00';  // 不含這一刻
 let surveyInviteHandledThisSession = false;
+
+function isSurveyInvitePeriod() {
+    const now = Date.now();
+    return now >= new Date(SURVEY_INVITE_START).getTime() &&
+           now <  new Date(SURVEY_INVITE_END).getTime();
+}
 
 // 問卷公告在 announcements 裡的位置。目前是第一則，但不寫死 index 0——
 // 公告順序由 Sheets 決定，之後插新公告時 index 會漂掉。
@@ -910,8 +922,12 @@ function logSurveyInviteEvent(outcome) {
 // 由 onAuthStateChanged 的「已登入」分支呼叫（auth-user-data.js）。
 function maybeShowSurveyInvite() {
     if (surveyInviteHandledThisSession) return;
-    if (isEmbedMode) return;              // /promos 的 iframe 內不打擾
+    if (!isSurveyInvitePeriod()) return;  // 只在 9 月
     if (!currentUser) return;             // 只問登入用戶
+    // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
+    // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
+    // ?merchant= 深連結）——那些頁面用戶是帶著任務進來的，不彈 modal 擋路。
+    if (typeof getAnalyticsSurface === 'function' && getAnalyticsSurface() !== 'site') return;
     if (!document.getElementById('survey-invite-modal')) return;
     if (findSurveyAnnouncementIndex() < 0) return;  // 問卷公告已下架
     let seen = null;

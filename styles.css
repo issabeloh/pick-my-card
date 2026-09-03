@@ -843,6 +843,19 @@ header h1 {
     max-width: 500px;
 }
 
+/* 公告／問卷邀請的標題列刻意比其他 modal 矮一截（2026-09-03 站長指定）：
+   這兩個 modal 的重點是內文，標題只是個名牌，不需要 20px padding + 1.25rem。
+   只提這兩個 content class 的特異性，不動全站共用的 .modal-header。 */
+.announcement-modal-content .modal-header,
+.survey-invite-content .modal-header {
+    padding: 10px 20px;
+}
+
+.announcement-modal-content .modal-header h3,
+.survey-invite-content .modal-header h3 {
+    font-size: 1.05rem;
+}
+
 .announcement-modal-close {
     font-size: 32px;
     padding: 0;
