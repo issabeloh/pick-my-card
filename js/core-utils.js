@@ -15,6 +15,7 @@
  *  - localStorage 安全讀取      → "localStorage 安全讀取 helpers" / "readLocalJSON"
  *  - 過期活動過濾              → "filterExpiredRates"
  *  - 卡片權益期限解析           → "parseBenefitPeriod" / "getBenefitStatus"
+ *  - 金額千分位格式化           → "stripThousands" / "formatThousands"
  *  - 比較卡集合                → "getCardsForComparison"
  *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
  *  - 卡片項目彙整              → "collectCardItems"
@@ -638,6 +639,31 @@ function filterExpiredRates(cardsData) {
 
 // Returns the cards to use in comparison results, based on the user's selection.
 // Falls back to all cards if cardsInComparison is empty (e.g., before auth state fires).
+// ==========================================
+// 金額千分位格式化
+// ==========================================
+// #amount-input 從 type="number" 改成 type="text"（2026-09-03）——number 型別
+// 不允許輸入框內出現逗號，做不出「100,000」的顯示。代價是所有讀取端都必須
+// 先過 stripThousands()，否則 parseFloat('100,000') 會得到 100。
+
+// 去掉逗號（與全形逗號），回傳純數字字串；讀 #amount-input 一律先過這個
+function stripThousands(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/[,，]/g, '');
+}
+
+// 加上千分位逗號。只處理整數部分，非數字字元一律丟掉
+function formatThousands(v) {
+    const digits = stripThousands(v).replace(/[^0-9]/g, '');
+    if (digits === '') return '';
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// 讀 #amount-input 的純數字字串（沒有這個元素時回傳空字串）
+function readAmountInputValue() {
+    const el = document.getElementById('amount-input');
+    return el ? stripThousands(el.value) : '';
+}
+
 function getCardsForComparison() {
     if (cardsInComparison.size === 0) return cardsData.cards;
     return cardsData.cards.filter(card => cardsInComparison.has(card.id));

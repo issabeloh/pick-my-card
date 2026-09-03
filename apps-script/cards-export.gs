@@ -1561,7 +1561,10 @@ function readHighlights() {
       cap: getStr(row, 'cap'),
       deadline: deadlineStr,
       order: getNum(row, 'order'),
-      active: getBool(row, 'active') // active 為 false 也照常 push
+      active: getBool(row, 'active'), // active 為 false 也照常 push
+      // featured：勾選的活動會排到「主打卡」版位（手機每頁 1 則、桌機每頁 2 則）。
+      // 欄位不存在時 getValue 回 null → getBool 回 false，所以舊 sheet 不會壞。
+      featured: getBool(row, 'featured')
     });
   }
 

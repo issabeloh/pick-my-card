@@ -8479,7 +8479,51 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     cursor: pointer;
 }
 
-/* 「帶入搜尋」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
+/* ===== 主打卡 .is-feature：卡圖在左、內容在右，橫向利用整列寬度 =====
+   桌機跨 2 欄（約 562px），平板與手機整列。一般卡（沒有 .is-feature／.is-mini）
+   維持原本的直式堆疊，所以 .spotlight-body 在那裡是 display:contents。 */
+.spotlight-card.is-feature {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 136px 1fr;
+    grid-template-rows: auto auto;
+    gap: 10px 12px;
+    align-content: start;
+}
+.spotlight-card.is-feature .spotlight-ccwrap {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    margin-bottom: 0;
+    align-self: start;
+}
+.spotlight-card.is-feature .spotlight-body {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.spotlight-card.is-feature .spotlight-cardname-line { display: none; }
+.spotlight-card.is-feature .spotlight-card-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+.spotlight-card.is-feature .spotlight-rate-num { font-size: 1.7rem; }
+.spotlight-card.is-feature .spotlight-merchant { font-size: 1rem; margin-top: 6px; }
+/* 主打卡的 ⓘ 補上文字（小格與一般卡維持純圖示） */
+.spotlight-card.is-feature .spotlight-info-btn {
+    width: auto;
+    gap: 5px;
+    padding: 0 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.spotlight-card.is-feature .spotlight-info-btn::after { content: '活動詳情'; }
+/* 主打卡有整列寬度，標籤靠 margin-left:auto 推到最右會離回饋率太遠 */
+.spotlight-card.is-feature .spotlight-hype-tag { margin-left: 0; }
+
+/* 「帶入查詢」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
    （見 js/home-ui.js 的 compareSpotlightMerchant fillOnly 分支） */
 .calculate-btn.calc-nudge {
     animation: calcNudgePulse 0.8s ease-out 2;
@@ -8541,94 +8585,81 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     border-color: #c7d2fe;
 }
 
-/* 欄數：桌機 6 / 平板 3 / 手機 2。每頁筆數由 js 的 spotlightPageSize() 對齊，
-   兩邊的斷點（768 / 1024）必須一致，否則會出現填不滿的半排。 */
+/* 欄數：桌機 4 / 平板 3 / 手機 2。主打卡（.is-feature）在桌機跨 2 欄、
+   在平板與手機整列。每頁筆數由 js 的 spotlightLayout() 對齊，兩邊的斷點
+   （768 / 1024）必須一致，否則會出現填不滿的半排。 */
 .spotlight-track {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 14px;
 }
 @media (min-width: 769px) and (max-width: 1024px) {
     .spotlight-track { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* ===== 桌機版式 E：上排 2 張主打卡（各跨 2 欄）＋ 下排 4 張小格 =====
-   同一份 DOM，只換 CSS：卡片從「上下堆疊」改成「卡圖在左、內容在右」的兩欄
-   grid。前 2 / 後 4 的 is-feature / is-mini 由 renderSpotlightPage 掛上。 */
+/* ===== 桌機（>=1025px）版式 E =====
+   主打卡跨 2 欄（562px）、卡圖放大到 196px；一般卡收成 .is-mini 橫式小格
+   （273px）：卡圖 76px 在左，卡名獨立成整列放在下方——右半欄只有約 180px，
+   長卡名（如「台新街口卡(豬富卡)」）擠在那裡一定被省略號吃掉。 */
 @media (min-width: 1025px) {
-    .spotlight-track--feature {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-    }
-
-    .spotlight-track--feature .spotlight-card {
-        display: grid;
-        gap: 14px;
-        align-content: start;
-    }
-    .spotlight-track--feature .spotlight-body {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-    .spotlight-track--feature .spotlight-ccwrap {
-        margin-bottom: 0;
-        align-self: start;
-    }
-
-    /* 主打卡：跨 2 欄（約 561px），卡圖 196px */
     .spotlight-card.is-feature {
         grid-column: span 2;
         grid-template-columns: 196px 1fr;
         padding: 16px;
     }
-    .spotlight-card.is-feature .spotlight-ccwrap { width: 196px; padding: 7px; }
+    /* 卡圖跨兩列：拿掉說明句後右欄內容變短，卡圖只佔第 1 列的話，
+       按鈕與「上限」之間會空出一大塊 */
+    .spotlight-card.is-feature .spotlight-ccwrap { padding: 7px; grid-row: 1 / -1; }
     .spotlight-card.is-feature .spotlight-rate-num { font-size: 2rem; }
-    /* 主打卡有 561px 寬，標籤靠 margin-left:auto 推到最右會離回饋率太遠，
-       中間空一大塊。這裡改成緊跟在數字旁邊。 */
-    .spotlight-card.is-feature .spotlight-hype-tag { margin-left: 0; }
     .spotlight-card.is-feature .spotlight-merchant { font-size: 1.06rem; margin-top: 7px; }
-    .spotlight-card.is-feature .spotlight-desc {
-        display: block;
-        font-size: 0.8rem;
-        color: #6b7280;
-        line-height: 1.45;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .spotlight-card.is-feature .spotlight-info-row { margin: 6px 0 10px; }
+    /* 桌機主打卡的按鈕收在右欄，左欄整條留給卡圖 */
+    .spotlight-card.is-feature .spotlight-card-actions {
+        grid-column: 2;
+        grid-row: 2;
     }
-    .spotlight-card.is-feature .spotlight-info-row { margin: 6px 0 12px; }
-    /* 主打卡的 ⓘ 補上文字，小格維持純圖示 */
-    .spotlight-card.is-feature .spotlight-info-btn {
-        width: auto;
-        gap: 5px;
-        padding: 0 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-    .spotlight-card.is-feature .spotlight-info-btn::after { content: '活動詳情'; }
 
-    /* 小格：1 欄（約 273px），卡圖 76px；一樣保留兩顆按鈕 */
     .spotlight-card.is-mini {
+        display: grid;
         grid-template-columns: 76px 1fr;
-        gap: 10px;
+        grid-template-rows: auto auto auto;
+        gap: 4px 10px;
         padding: 11px;
+        align-content: start;
     }
     .spotlight-card.is-mini .spotlight-ccwrap {
+        grid-column: 1;
+        grid-row: 1;
         width: 76px;
         padding: 3px;
         border-radius: 7px;
+        margin-bottom: 0;
     }
     .spotlight-card.is-mini .spotlight-ccimg { border-radius: 4px; }
     .spotlight-card.is-mini .spotlight-cardname { display: none; }
+    .spotlight-card.is-mini .spotlight-body {
+        grid-column: 2;
+        grid-row: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    /* 卡名整列放在卡圖與按鈕之間，拿得到整張卡的寬度 */
     .spotlight-card.is-mini .spotlight-cardname-line {
         display: block;
-        font-size: 0.7rem;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        font-size: 0.72rem;
         color: #6b7280;
         line-height: 1.35;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    .spotlight-card.is-mini .spotlight-card-actions {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin-top: 4px;
     }
     .spotlight-card.is-mini .spotlight-rate-row { min-height: 0; gap: 6px; }
     .spotlight-card.is-mini .spotlight-rate-num { font-size: 1.2rem; }
@@ -8636,11 +8667,10 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .spotlight-card.is-mini .spotlight-merchant { font-size: 0.83rem; margin-top: 3px; }
     /* 小格放不下「上限」，但「剩 N 天」要留著——那是急迫感提示 */
     .spotlight-card.is-mini .spotlight-cap { display: none; }
-    .spotlight-card.is-mini .spotlight-info-row { margin: 3px 0 7px; min-height: 0; }
-    .spotlight-card.is-mini .spotlight-info-row:empty { margin: 0 0 7px; }
+    .spotlight-card.is-mini .spotlight-info-row { margin: 2px 0 0; min-height: 0; }
     .spotlight-card.is-mini .spotlight-compare-btn {
         height: 30px;
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         padding: 0 6px;
     }
     .spotlight-card.is-mini .spotlight-info-btn { width: 30px; height: 30px; font-size: 0.8rem; }
@@ -8696,9 +8726,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 .spotlight-body {
     display: contents;
 }
-/* 這兩個只有桌機用得到：說明句只出現在主打卡，卡名文字行只出現在小格
-   （小格的卡圖只有 76px 寬，壓在圖上的卡名膠囊放不下） */
-.spotlight-desc,
+/* 卡名文字行只在桌機小格顯示（小格的卡圖只有 76px 寬，壓在圖上的卡名膠囊
+   放不下）；其餘版位一律用卡圖上的膠囊。 */
 .spotlight-cardname-line {
     display: none;
 }
@@ -8886,8 +8915,10 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     width: 64px;
 }
 @media (max-width: 768px) {
-    /* 一排 2 張（每頁 4 則，見 js/home-ui.js spotlightPageSize） */
+    /* 一排 2 張；主打卡靠 .is-feature 的 grid-column:1/-1 佔滿整列
+       （見 js/home-ui.js spotlightLayout） */
     .spotlight-track { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .spotlight-card.is-feature { grid-template-columns: 132px 1fr; padding: 12px; }
     .spotlight-title { font-size: 1.1rem; }
     .spotlight-section { padding: 20px 16px 24px; }
     .spotlight-card { padding: 10px; }
@@ -9088,7 +9119,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     border: 3px solid #dbe1ea;
     border-radius: 14px;
     background: #fff;
-    padding-left: 14px;
+    padding-left: 9px;   /* 原 14px：NT$ 往左靠，把寬度讓給金額（要放得下 6 位數） */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -9098,13 +9129,20 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 }
 
 .amount-input-wrap .amount-prefix {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    color: #6b7280;
+    color: #9ca3af;   /* 比金額本身淡：它是單位不是數值 */
     flex-shrink: 0;
+    letter-spacing: -0.01em;
+}
+/* 金額本體：左邊只留一點空隙（原本吃 .app-layout 的 12px padding，NT$ 與數字
+   之間會空一大塊），數字用等寬字避免補逗號時左右跳動 */
+.amount-input-wrap input#amount-input {
+    padding-left: 5px;
+    font-variant-numeric: tabular-nums;
 }
 
-.amount-input-wrap input[type="number"] {
+.amount-input-wrap input {
     flex: 1;
     min-width: 0;
     width: auto;
@@ -9113,7 +9151,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     box-shadow: none;
 }
 
-.amount-input-wrap input[type="number"]:focus {
+.amount-input-wrap input:focus {
     border: none;
     box-shadow: none;
     outline: none;

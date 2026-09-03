@@ -35,7 +35,10 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
 9. **ReferralLinks** —— merchant, url, description, active
-10. **Highlights** —— 精選活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
+10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
+    - **`featured`（2026-09-03 新增，TRUE/FALSE）**：勾選的活動會排進首頁推薦活動區的「主打卡」版位——手機／平板每頁 1 則（整列大卡），桌機每頁 2 則（各跨 2 欄）。勾了 3 則就會分別出現在第 1、2、3 頁；主打卡用完之後的頁面沒有主打位，全是一般卡。
+    - **一則都沒勾時退回舊行為**：桌機自動把每頁前 2 則當主打卡、手機／平板不分大小。所以 sheet 沒加這欄也不會壞（`getBool` 讀不到欄位回 false）。
+    - 版位配置寫在 `js/home-ui.js` 的 `spotlightLayout()`，欄數在 `styles.css` 的 `.spotlight-track`，**兩邊的斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
 11. ~~**Watchlist**~~ —— 已於 2026-07-17 搬到「PMC 資料自動化」自動化檔並改名 `1-監控清單`（見 `apps-script/README.md` 的「選單 ↔ 分頁對照表」，與 cards.data 匯出無關）
 12. **searchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
     `mergeDataSearchExclusions()`（`js/search-match.js`）併入 `searchExclusionMap`（程式內只留兜底預設）。

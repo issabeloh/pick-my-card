@@ -440,7 +440,10 @@
                         <label for="amount-input">消費金額</label>
                         <div class="amount-input-wrap">
                             <span class="amount-prefix">NT$</span>
-                            <input type="number" id="amount-input" value="1000" min="1" step="1" placeholder="金額" />
+                            <!-- type 是 text 不是 number：number 型別不允許框內出現逗號，做不出「100,000」。
+                                 讀值端一律走 stripThousands()（js/core-utils.js）。 -->
+                            <input type="text" id="amount-input" inputmode="numeric" autocomplete="off"
+                                   value="1,000" maxlength="11" placeholder="金額" />
                         </div>
                     </div>
 
