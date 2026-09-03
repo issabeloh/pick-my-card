@@ -8621,21 +8621,23 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
     .spotlight-card.is-mini {
         display: grid;
-        grid-template-columns: 76px 1fr;
-        grid-template-rows: auto auto auto;
-        gap: 4px 10px;
+        grid-template-columns: 104px 1fr;
+        grid-template-rows: auto auto;
+        gap: 8px 10px;
         padding: 11px;
         align-content: start;
     }
+    /* 卡圖 76 → 104px：按鈕列改成整列之後，上半部有空間把卡圖放大 */
     .spotlight-card.is-mini .spotlight-ccwrap {
         grid-column: 1;
         grid-row: 1;
-        width: 76px;
-        padding: 3px;
-        border-radius: 7px;
+        width: 104px;
+        padding: 4px;
+        border-radius: 8px;
         margin-bottom: 0;
     }
-    .spotlight-card.is-mini .spotlight-ccimg { border-radius: 4px; }
+    .spotlight-card.is-mini .spotlight-ccimg { border-radius: 5px; }
+    /* 卡名回到商家名下方（右欄），卡圖上的膠囊就不重複顯示 */
     .spotlight-card.is-mini .spotlight-cardname { display: none; }
     .spotlight-card.is-mini .spotlight-body {
         grid-column: 2;
@@ -8644,11 +8646,9 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         flex-direction: column;
         min-width: 0;
     }
-    /* 卡名整列放在卡圖與按鈕之間，拿得到整張卡的寬度 */
+    /* 卡名在右欄、商家名正下方。右欄約 137px，長卡名會用省略號收尾 */
     .spotlight-card.is-mini .spotlight-cardname-line {
         display: block;
-        grid-column: 1 / -1;
-        grid-row: 2;
         font-size: 0.72rem;
         color: #6b7280;
         line-height: 1.35;
@@ -8658,22 +8658,30 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     }
     .spotlight-card.is-mini .spotlight-card-actions {
         grid-column: 1 / -1;
-        grid-row: 3;
-        margin-top: 4px;
+        grid-row: 2;
     }
     .spotlight-card.is-mini .spotlight-rate-row { min-height: 0; gap: 6px; }
-    .spotlight-card.is-mini .spotlight-rate-num { font-size: 1.2rem; }
-    .spotlight-card.is-mini .spotlight-hype-tag { font-size: 0.6rem; padding: 1px 6px; }
-    .spotlight-card.is-mini .spotlight-merchant { font-size: 0.83rem; margin-top: 3px; }
+    .spotlight-card.is-mini .spotlight-rate-num { font-size: 1.3rem; }
+    .spotlight-card.is-mini .spotlight-hype-tag { font-size: 0.62rem; padding: 1px 6px; }
+    .spotlight-card.is-mini .spotlight-merchant { font-size: 0.88rem; margin-top: 4px; }
     /* 小格放不下「上限」，但「剩 N 天」要留著——那是急迫感提示 */
     .spotlight-card.is-mini .spotlight-cap { display: none; }
-    .spotlight-card.is-mini .spotlight-info-row { margin: 2px 0 0; min-height: 0; }
+    .spotlight-card.is-mini .spotlight-info-row { margin: 3px 0 0; min-height: 0; }
     .spotlight-card.is-mini .spotlight-compare-btn {
-        height: 30px;
-        font-size: 0.74rem;
-        padding: 0 6px;
+        height: 32px;
+        font-size: 0.78rem;
+        padding: 0 8px;
     }
-    .spotlight-card.is-mini .spotlight-info-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+    /* 按鈕列橫跨整張卡（251px），放得下「活動詳情」四個字 */
+    .spotlight-card.is-mini .spotlight-info-btn {
+        width: auto;
+        height: 32px;
+        gap: 5px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .spotlight-card.is-mini .spotlight-info-btn::after { content: '活動詳情'; }
 }
 .spotlight-fade-in { animation: spotlightFade .4s ease; }
 @keyframes spotlightFade {

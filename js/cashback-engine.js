@@ -41,7 +41,7 @@ async function calculateCashback() {
 
     try {
 
-    const amountRaw = stripThousands(amountInput.value);   // 框內是「1,000」這種格式
+    const amountRaw = readAmountInputValue(amountInput);   // 框內是「1,000」這種格式
     const amount = amountRaw === '' ? 1000 : parseFloat(amountRaw);
     const merchantValue = merchantInput.value.trim();
 

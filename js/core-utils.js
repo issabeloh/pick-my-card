@@ -651,17 +651,30 @@ function stripThousands(v) {
     return String(v === null || v === undefined ? '' : v).replace(/[,，]/g, '');
 }
 
-// 加上千分位逗號。只處理整數部分，非數字字元一律丟掉
+// 加上千分位逗號。
+// ⚠️ 小數點必須原樣保留，不能只留整數：使用者是一個字一個字打的，若在打完
+// 「1500.」時把小數點吃掉，下一個「5」就會直接接到整數後面變成 15005
+// （金額差 10 倍，而且靜默）。所以這裡允許一個小數點、最多兩位小數。
 function formatThousands(v) {
-    const digits = stripThousands(v).replace(/[^0-9]/g, '');
-    if (digits === '') return '';
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    let raw = stripThousands(v).replace(/[^0-9.]/g, '');
+    // 只留第一個小數點
+    const firstDot = raw.indexOf('.');
+    if (firstDot !== -1) {
+        raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+    }
+    const parts = raw.split('.');
+    const grouped = parts[0] === '' ? '' : parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (parts.length < 2) return grouped;
+    return grouped + '.' + parts[1].slice(0, 2);
 }
 
-// 讀 #amount-input 的純數字字串（沒有這個元素時回傳空字串）
-function readAmountInputValue() {
-    const el = document.getElementById('amount-input');
-    return el ? stripThousands(el.value) : '';
+// 讀 #amount-input 的純數字字串（沒有這個元素時回傳空字串）。
+// 🔒 讀消費金額一律走這支，不要自己 parseFloat(amountInput.value)——
+// 框內是「100,000」這種格式，直接 parseFloat 會靜默得到 100（不會拋錯、
+// 只會算錯，而且只在金額 >= 1000 時才錯），是最難發現的一類 bug。
+function readAmountInputValue(el) {
+    const input = el || document.getElementById('amount-input');
+    return input ? stripThousands(input.value) : '';
 }
 
 function getCardsForComparison() {

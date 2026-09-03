@@ -1066,7 +1066,7 @@ function renderCardDetailPromos(card) {
 
     // Use current amount-input value for bonus calculation; fall back to 1000.
     const amountInputEl = document.getElementById('amount-input');
-    const amountRaw = amountInputEl ? stripThousands(amountInputEl.value) : '';
+    const amountRaw = readAmountInputValue(amountInputEl);
     const amount = amountRaw !== '' ? parseFloat(amountRaw) : 1000;
 
     const fragment = document.createDocumentFragment();

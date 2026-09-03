@@ -582,7 +582,7 @@ function scrollToParkingBenefits() {
 // Validate inputs
 function validateInputs() {
     const merchantValue = merchantInput.value.trim();
-    const amountRaw = stripThousands(amountInput.value);
+    const amountRaw = readAmountInputValue(amountInput);
     const amountValue = parseFloat(amountRaw);
 
     // Empty amount is valid (defaults to 1000)

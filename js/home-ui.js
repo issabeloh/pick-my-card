@@ -226,8 +226,8 @@ function buildSpotlightCard(item, index) {
     // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
     // 主打卡（.is-feature）：同一份 DOM 換 CSS——.spotlight-body 在一般卡是
     // display:contents（等於不存在），主打卡與小格才變成卡片的右半欄。
-    // .spotlight-cardname-line 只有小格顯示成整列文字（小格的卡圖只有 76px，
-    // 壓在圖上的卡名膠囊放不下）。
+    // .spotlight-cardname-line 只有桌機小格顯示（在商家名下方）——小格的卡圖
+    // 換成純圖、不壓卡名膠囊，卡名改用這行文字。
     // 到期日「至 X」不再上卡片，只留在
     // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
     // 「剩 N 天」保留，那是急迫感提示、不是日期。
@@ -242,12 +242,12 @@ function buildSpotlightCard(item, index) {
                 ${hypeTag}
             </div>
             <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+            <div class="spotlight-cardname-line">${escapeHtml(item.card_name || '')}</div>
             <div class="spotlight-info-row">
                 ${item.cap ? `<span class="spotlight-cap">上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
                 ${daysBadge}
             </div>
         </div>
-        <div class="spotlight-cardname-line">${escapeHtml(item.card_name || '')}</div>
         <div class="spotlight-card-actions">
             <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
             <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
@@ -1398,7 +1398,7 @@ function setupEventListeners() {
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {
-        if (stripThousands(amountInput.value) === '1000' && amountInput.dataset.userModified !== 'true') {
+        if (readAmountInputValue(amountInput) === '1000' && amountInput.dataset.userModified !== 'true') {
             amountInput.value = '';
             validateInputs();
         }
@@ -1416,14 +1416,15 @@ function setupEventListeners() {
         amountInput.dataset.userModified = 'true';
         const before = amountInput.value;
         const caret = amountInput.selectionStart;
-        const digitsBeforeCaret = stripThousands(before.slice(0, caret)).replace(/[^0-9]/g, '').length;
+        // 計數要含小數點（只跳過逗號），否則游標打完「.」之後會被推到小數點前面
+        const digitsBeforeCaret = stripThousands(before.slice(0, caret)).replace(/[^0-9.]/g, '').length;
         const formatted = formatThousands(before);
         if (formatted !== before) {
             amountInput.value = formatted;
             // 往回數，找出第 digitsBeforeCaret 個數字之後的位置
             let seen = 0, pos = 0;
             while (pos < formatted.length && seen < digitsBeforeCaret) {
-                if (/[0-9]/.test(formatted[pos])) seen++;
+                if (/[0-9.]/.test(formatted[pos])) seen++;
                 pos++;
             }
             try { amountInput.setSelectionRange(pos, pos); } catch (e) { /* 部分瀏覽器不支援就算了 */ }
