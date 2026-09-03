@@ -899,6 +899,31 @@ header h1 {
     border-top: 1px solid #e5e7eb;
 }
 
+/* 問卷邀請 Modal（2026-09-03）：登入後一次性彈出，按「沒問題！」接到公告 modal。
+   刻意比一般 modal 窄（420px），視覺上是「一句話的請求」不是設定面板。 */
+.survey-invite-content {
+    max-width: 420px;
+}
+
+.survey-invite-content .modal-body {
+    padding: 20px;
+}
+
+.survey-invite-lead {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.survey-invite-sub {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #1e40af, #3b82f6);
     color: white;
@@ -8458,6 +8483,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
     .auth-modal-content,
     .announcement-modal-content,
+    .survey-invite-content,
     #my-mappings-modal .modal-content,
     #feedback-modal .modal-content {
         max-height: 75vh;

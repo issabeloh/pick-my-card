@@ -153,6 +153,22 @@
   改 `cards-export.gs` 後要把整份貼回 Google Sheets，否則下次匯出又會長回來
 - 驗證方式（同一份資料跑新舊兩版生成器比對輸出差異）記在下方教訓記錄
 
+## 10. 問卷邀請 Modal（#survey-invite-modal，2026-09-03）
+
+登入用戶「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
+modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.js` 的 `maybeShowSurveyInvite` / `survey invite`。
+
+- **觸發點在 `onAuthStateChanged` 的登入分支尾端**（`js/auth-user-data.js`，所有使用者資料載完之後），延遲
+  `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
+- **問卷連結不在程式裡**：按鈕只負責開公告 modal，問卷網址／iframe 都寫在該則公告的 `fullText`（Sheets 公告工作表）
+- **公告用關鍵字找、不寫死 index 0**：`findSurveyAnnouncementIndex()` 比對 `text` 含「問卷」。找不到就整個不彈——
+  Sheets 把那則公告下架後邀請自動失效，不用回頭改程式
+- **只記 localStorage `pmc_survey_invite_seen_v1`**（值 `shown`/`accepted`/`dismissed`），不寫 Firestore：短期活動不值得
+  在 users 文件加永久欄位，換裝置多問一次可接受。**顯示的當下就記帳**，用戶關分頁沒回答也不再問第二次
+- scroll lock 只由這個 modal 成對持有（開 `disableBodyScroll()`／關 `enableBodyScroll()`）；接手的公告 modal 沿用它
+  原本「不上鎖」的行為，兩者不會打架
+- 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）與 `surface`
+
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

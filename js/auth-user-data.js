@@ -399,6 +399,10 @@ function ensureAuthSubscribed() {
             populateCardChips();
             populatePaymentChips();
 
+            // 問卷邀請（每台裝置一次；邏輯與停用條件見 home-ui.js "survey invite"）。
+            // 放在所有資料載入之後：畫面安定了再問，也才不會蓋住載入中的內容。
+            if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
+
         } else {
             // User is signed out — guest mode
             console.log('User signed out');

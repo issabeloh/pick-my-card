@@ -7,6 +7,7 @@
  *  - 錯誤訊息                  → "showErrorMessage"
  *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
  *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
+ *  - 問卷邀請 modal（登入後）   → "maybeShowSurveyInvite" / "survey invite"
  *  - 主初始化（DOMContentLoaded）→ "DOMContentLoaded"
  *  - 圖片 lazy loading          → "initializeLazyLoading"
  *  - 卡片/支付 chips            → "populateCardChips" / "populatePaymentChips"
@@ -860,6 +861,111 @@ function showAnnouncementModal(index) {
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
+}
+
+// ==========================================
+// 問卷邀請 Modal（survey invite，2026-09-03）
+// ==========================================
+// 登入用戶「一次性」邀請填問卷：按「沒問題！」直接開問卷那則公告的 modal
+// （問卷連結寫在該公告的 fullText 裡，這裡不另外維護一份連結）。
+// 設計取捨：
+//  - 只記在 localStorage（每台裝置問一次），不寫 Firestore——問卷是短期活動，
+//    不值得為它在 users 文件加一個永久欄位；換裝置多問一次可以接受。
+//  - 找不到問卷公告就完全不彈（見 findSurveyAnnouncementIndex）：Sheets 把那則
+//    公告下架後這個邀請自動失效，不用回頭改程式。
+const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
+const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
+const SURVEY_INVITE_DELAY_MS = 1200;
+let surveyInviteHandledThisSession = false;
+
+// 問卷公告在 announcements 裡的位置。目前是第一則，但不寫死 index 0——
+// 公告順序由 Sheets 決定，之後插新公告時 index 會漂掉。
+function findSurveyAnnouncementIndex() {
+    if (!Array.isArray(announcements)) return -1;
+    return announcements.findIndex(a =>
+        a && typeof a.text === 'string' && a.text.includes(SURVEY_ANNOUNCEMENT_KEYWORD));
+}
+
+function markSurveyInviteSeen(outcome) {
+    surveyInviteHandledThisSession = true;
+    try {
+        localStorage.setItem(SURVEY_INVITE_SEEN_KEY, outcome);
+    } catch (e) {
+        // localStorage 不可用（無痕/被封鎖）：至少靠 session flag 不在同一次瀏覽重複打擾
+    }
+}
+
+function logSurveyInviteEvent(outcome) {
+    if (!window.logEvent || !window.firebaseAnalytics) return;
+    try {
+        window.logEvent(window.firebaseAnalytics, 'survey_invite', {
+            outcome: outcome,
+            surface: typeof getAnalyticsSurface === 'function' ? getAnalyticsSurface() : 'site',
+        });
+    } catch (e) {
+        // 追蹤失敗不影響功能
+    }
+}
+
+// 由 onAuthStateChanged 的「已登入」分支呼叫（auth-user-data.js）。
+function maybeShowSurveyInvite() {
+    if (surveyInviteHandledThisSession) return;
+    if (isEmbedMode) return;              // /promos 的 iframe 內不打擾
+    if (!currentUser) return;             // 只問登入用戶
+    if (!document.getElementById('survey-invite-modal')) return;
+    if (findSurveyAnnouncementIndex() < 0) return;  // 問卷公告已下架
+    let seen = null;
+    try {
+        seen = localStorage.getItem(SURVEY_INVITE_SEEN_KEY);
+    } catch (e) {
+        // 讀不到就當作沒問過，靠 surveyInviteHandledThisSession 收斂
+    }
+    if (seen) return;
+
+    surveyInviteHandledThisSession = true;  // 先佔位，避免 auth 狀態抖動時排兩次
+    // 等登入後的資料渲染安定下來再問，避免蓋在剛畫出來的內容上。
+    setTimeout(showSurveyInviteModal, SURVEY_INVITE_DELAY_MS);
+}
+
+function showSurveyInviteModal() {
+    const modal = document.getElementById('survey-invite-modal');
+    const acceptBtn = document.getElementById('survey-invite-accept');
+    const cancelBtn = document.getElementById('survey-invite-cancel');
+    const closeBtn = document.getElementById('survey-invite-close');
+    if (!modal || !acceptBtn) return;
+
+    // 顯示的當下就記帳：用戶直接關分頁沒回答，下次也不再問。
+    markSurveyInviteSeen('shown');
+
+    modal.style.display = 'flex';
+    disableBodyScroll();
+
+    let closed = false;
+    const close = (outcome) => {
+        if (closed) return;
+        closed = true;
+        markSurveyInviteSeen(outcome);
+        modal.style.display = 'none';
+        enableBodyScroll();
+        document.removeEventListener('keydown', onKeydown);
+        logSurveyInviteEvent(outcome);
+    };
+    const onKeydown = (e) => {
+        if (e.key === 'Escape') close('dismissed');
+    };
+
+    acceptBtn.onclick = () => {
+        close('accepted');
+        // 接到公告 modal（公告 modal 自己不上 scroll lock，與點公告列的行為一致）
+        const index = findSurveyAnnouncementIndex();
+        if (index >= 0) showAnnouncementModal(index);
+    };
+    if (cancelBtn) cancelBtn.onclick = () => close('dismissed');
+    if (closeBtn) closeBtn.onclick = () => close('dismissed');
+    modal.onclick = (e) => {
+        if (e.target === modal) close('dismissed');
+    };
+    document.addEventListener('keydown', onKeydown);
 }
 
 // 手機版圓點指示：一則一顆，點擊可直接跳到該則（點擊區用 padding 撐到 ~20px）
