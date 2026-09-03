@@ -61,7 +61,7 @@ function playSidebarPeekHint(sidebar, toggleBtn) {
             // 等側欄滑回去（CSS transition 0.3s）再讓漢堡鍵抖，兩段動作才有因果感
             setTimeout(() => {
                 toggleBtn.classList.add('hb-nudge');
-                setTimeout(() => toggleBtn.classList.remove('hb-nudge'), 1400);
+                setTimeout(() => toggleBtn.classList.remove('hb-nudge'), 800);  // 動畫 0.7s 跑一次
             }, 320);
         }, 900);
     };

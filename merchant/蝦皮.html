@@ -1027,9 +1027,11 @@
 </div>
     </div>
 
-    <!-- 最後資料更新日期＋收錄卡數（.card-count 同時是回歸框架的資料就緒信號，勿移除） -->
+    <!-- 最後資料更新日期。「收錄 N 張」那句 2026-09-03 起不顯示，但整段 DOM 必須留著：
+         .card-count 同時是回歸框架（tools/regression）的「資料已載入」信號，
+         用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
-        <span>收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
+        <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
         <span id="last-update-date"></span>
     </div>
     </footer>

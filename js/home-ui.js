@@ -20,10 +20,13 @@
 // 頁數／圓點跟著長度自動增加。
 let spotlightItems = [];
 let spotlightPage = 0;
-// 每頁筆數跟著欄數走：手機 2 欄放 4 則（2x2，不會留下落單的半排），
-// 桌機 3 欄放 3 則。斷點在 768px，與 styles.css 的 .spotlight-track 一致。
+// 每頁筆數＝欄數 x 列數，一定填滿、不留落單的半排。
+// 斷點（768 / 1024）與 styles.css 的 .spotlight-track 必須一致。
 function spotlightPageSize() {
-    return window.innerWidth <= 768 ? 4 : 3;
+    const w = window.innerWidth;
+    if (w <= 768) return 4;    // 手機 2 欄 x 2 列
+    if (w <= 1024) return 3;   // 平板 3 欄（側欄固定吃掉 240px，欄再多會太窄）
+    return 6;                  // 桌機 6 欄 x 1 列
 }
 let spotlightLastPageSize = spotlightPageSize();
 
@@ -172,20 +175,21 @@ function buildSpotlightCard(item, index) {
     const hypeTag = hype
         ? `<span class="spotlight-hype-tag ${hype.cssClass}">${escapeHtml(hype.label)}</span>` : '';
 
-    // 版式 C（2026-09-03，參考 LINE 購物商品卡）：卡圖方塊在上 → 大回饋率 →
-    // 商家＋卡名 → 上限一行 → 底部兩顆按鈕。到期日「至 X」不再上卡片，只留在
+    // 版式 C（2026-09-03，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
+    // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
+    // 到期日「至 X」不再上卡片，只留在
     // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
     // 「剩 N 天」保留，那是急迫感提示、不是日期。
     card.innerHTML = `
         <div class="spotlight-ccwrap">
             <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
+            ${item.card_name ? `<span class="spotlight-cardname">${escapeHtml(item.card_name)}</span>` : ''}
         </div>
         <div class="spotlight-rate-row">
             ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
             ${hypeTag}
         </div>
         <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-        <div class="spotlight-cardname">${escapeHtml(item.card_name || '')}</div>
         <div class="spotlight-info-row">
             ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
             ${daysBadge}

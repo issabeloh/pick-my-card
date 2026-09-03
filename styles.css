@@ -5731,10 +5731,17 @@ mark.cashback-search-hl {
 .data-update-footer {
     max-width: 1200px;
     margin: 16px auto 0;
-    padding: 0 24px;
+    padding: 0 24px 28px;   /* 下方留白：這是全頁最後一行，貼著螢幕底緣很擠 */
     text-align: center;
     font-size: 12px;
     color: #6b7280;
+}
+
+/* 「收錄 N 張台灣主流信用卡」2026-09-03 起不顯示。
+   ⚠️ 只能用 display:none 藏，不能把元素刪掉——裡面的 .card-count 是
+   tools/regression 判斷「資料已載入」的信號（見 index.html 該處註解）。 */
+.data-update-cards {
+    display: none;
 }
 
 /* 廣告列 — 精選活動下方、警語橫條上方
@@ -5776,7 +5783,7 @@ mark.cashback-search-hl {
     letter-spacing: 2px;
     /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
     border-radius: 0 0 12px 12px;
-    margin-top: 16px;
+    margin-top: 0;
 }
 
 @media (max-width: 768px) {
@@ -8175,19 +8182,16 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
        :not(.open) 讓使用者中途自己點開時 .open 一定贏；pointer-events:none
        確保這段純視覺提示不會攔截點擊。 */
     .sidebar.peek:not(.open) {
-        transform: translateX(-76%);
+        transform: translateX(-58%);
         box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
         pointer-events: none;
     }
 
-    /* 探頭收回後漢堡鍵抖一下：icon 左右晃＋放大，按鈕外圈同步亮一圈白光暈。
-       兩者都只在 .hb-nudge 期間跑，動畫結束由 JS 移除 class。 */
-    .sidebar-toggle-btn.hb-nudge {
-        animation: hb-nudge-glow 0.7s ease-out 2;
-    }
-
+    /* 探頭收回後漢堡鍵抖一下：只有 icon 左右晃＋放大，跑一次就結束
+       （不加背景光暈——那會讓透明底的漢堡鍵又變回一顆實體按鈕）。
+       class 由 JS 在動畫結束後移除。 */
     .sidebar-toggle-btn.hb-nudge .sidebar-toggle-icon {
-        animation: hb-nudge-shake 0.7s ease-in-out 2;
+        animation: hb-nudge-shake 0.7s ease-in-out 1;
     }
 
     @keyframes hb-nudge-shake {
@@ -8198,11 +8202,6 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         85%      { transform: translateX(0) scale(1.03); }
     }
 
-    @keyframes hb-nudge-glow {
-        0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.22); }
-        70%  { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); background: rgba(255, 255, 255, 0.08); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); background: transparent; }
-    }
 
     .sidebar-header {
         display: flex;
@@ -8483,7 +8482,6 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     width: 100%;
     margin: 0;
     padding: 24px 30px 30px;
-    border-top: 1px solid #e5e7eb;
 }
 .spotlight-header {
     display: flex;
@@ -8524,10 +8522,15 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     border-color: #c7d2fe;
 }
 
+/* 欄數：桌機 6 / 平板 3 / 手機 2。每頁筆數由 js 的 spotlightPageSize() 對齊，
+   兩邊的斷點（768 / 1024）必須一致，否則會出現填不滿的半排。 */
 .spotlight-track {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 14px;
+}
+@media (min-width: 769px) and (max-width: 1024px) {
+    .spotlight-track { grid-template-columns: repeat(3, 1fr); }
 }
 .spotlight-fade-in { animation: spotlightFade .4s ease; }
 @keyframes spotlightFade {
@@ -8552,23 +8555,26 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
     border-color: #d1d5db;
 }
-/* 卡圖方塊：固定 4:3，卡圖 contain 置中，缺圖時留一塊素底不讓版面塌陷。
+/* 卡圖方塊：比例鎖成 8:5，＝橫式卡圖規範（800x500）的比例，所以橫式卡圖剛好
+   填滿、不留上下黑邊，卡片高度也就固定了。少數直式卡圖靠 object-fit:contain
+   自動縮到框內（變小，但不會撐高卡片）。
    底色用白＋淺灰細框（不用灰底）：卡圖 PNG 本身是白底，灰底會在卡圖外圍
    多出一圈白色方框，變成「框中框」。 */
 .spotlight-ccwrap {
     position: relative;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 8 / 5;
     background: #ffffff;
     border: 1px solid #eef0f4;
     border-radius: 10px;
-    padding: 10px;
+    padding: 6px;
     margin-bottom: 10px;
+    overflow: hidden;
 }
 .spotlight-ccimg {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 8px;   /* 卡片圖一律圓角 */
+    border-radius: 6px;   /* 卡片圖一律圓角 */
     display: block;
 }
 .spotlight-rate-row {
@@ -8603,20 +8609,34 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.3;
-    margin-top: 6px;
+    margin-top: 5px;
     color: #111827;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* 卡名壓在卡圖左下角（省掉正文的一整行）。半透明白底＋模糊，讓深色卡面
+   （星展 eco 綠、遠東快樂卡紅）上的字也讀得到；過長時省略號收尾。 */
 .spotlight-cardname {
-    font-size: 0.8rem;
-    color: #6b7280;
-    line-height: 1.35;
-    margin-top: 2px;
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    max-width: calc(100% - 12px);
+    display: block;
+    width: fit-content;   /* 只包住文字，不橫貫整張卡圖 */
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    border-radius: 5px;
+    padding: 2px 6px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 .spotlight-info-row {
     display: flex;
