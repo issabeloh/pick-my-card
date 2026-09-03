@@ -21,16 +21,24 @@
 let spotlightItems = [];
 let spotlightPage = 0;
 // ============ 版位配置與分頁 ============
-// 一頁 ＝ feat 張主打卡（整列／跨兩欄的大卡）＋ grid 張一般卡。
-// 主打卡由 Highlights 工作表的 featured 欄決定（見 docs/project/data-pipeline.md
-// 第 10 節）；沒有任何一則標記 featured 時，退回舊行為：桌機把每頁前 2 則當
-// 主打卡、手機／平板不分大小，這樣沒改 sheet 也不會突然變版。
+// 🚧 主打卡版位（.is-feature 大卡）2026-09-03 暫時停用。
+// 停用原因：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打
+// 的頁」卡片形狀不同，看起來很亂。Highlights 工作表的 featured 欄照常匯出、
+// 前端照常收到（item.featured），只是暫時不拿來排版。
+// 要重新啟用：把 SPOTLIGHT_FEATURE_SLOTS 改回 true 即可，主打卡的
+// buildSpotlightPages 分支與 .is-feature / .is-mini 樣式都還在。
+const SPOTLIGHT_FEATURE_SLOTS = false;
+
+// 每頁筆數＝欄數 x 列數，一定填滿、不留落單的半排。
 // 斷點（768 / 1024）必須與 styles.css 的 .spotlight-track 一致。
+//   feat  ＝ 每頁的主打卡數（停用時不使用）
+//   grid  ＝ 有主打卡那一頁的一般卡數（停用時不使用）
+//   plain ＝ 沒有主打卡那一頁的一般卡數（＝目前每頁的實際張數）
 function spotlightLayout() {
     const w = window.innerWidth;
-    if (w <= 768)  return { key: 'mobile',  feat: 1, grid: 4, plain: 4, legacy: 4 };
-    if (w <= 1024) return { key: 'tablet',  feat: 1, grid: 3, plain: 3, legacy: 3 };
-    return                { key: 'desktop', feat: 2, grid: 4, plain: 4, legacy: 6 };
+    if (w <= 768)  return { key: 'mobile',  feat: 1, grid: 4, plain: 4 };  // 2 欄 x 2 列
+    if (w <= 1024) return { key: 'tablet',  feat: 1, grid: 3, plain: 3 };  // 3 欄 x 1 列
+    return                { key: 'desktop', feat: 2, grid: 4, plain: 4 };  // 4 欄 x 1 列
 }
 
 // 每頁的內容：{ feature: [...], normal: [...] }
@@ -39,16 +47,13 @@ let spotlightLastLayout = spotlightLayout().key;
 
 function buildSpotlightPages() {
     const cfg = spotlightLayout();
-    const featured = spotlightItems.filter(it => it.featured);
+    const featured = SPOTLIGHT_FEATURE_SLOTS ? spotlightItems.filter(it => it.featured) : [];
     const pages = [];
 
-    // 沒有人標 featured → 舊行為：整頁等分，桌機前 2 則自動當主打卡
+    // 主打卡停用（或沒有人標 featured）→ 每頁等分成 cfg.plain 張一般卡
     if (featured.length === 0) {
-        for (let i = 0; i < spotlightItems.length; i += cfg.legacy) {
-            const chunk = spotlightItems.slice(i, i + cfg.legacy);
-            pages.push(cfg.key === 'desktop'
-                ? { feature: chunk.slice(0, 2), normal: chunk.slice(2) }
-                : { feature: [], normal: chunk });
+        for (let i = 0; i < spotlightItems.length; i += cfg.plain) {
+            pages.push({ feature: [], normal: spotlightItems.slice(i, i + cfg.plain) });
         }
         return pages;
     }
