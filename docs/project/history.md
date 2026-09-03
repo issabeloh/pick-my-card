@@ -4,6 +4,15 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-09-03 手機／桌機 UI 整修：推薦活動卡片重做、首訪引導動畫、手機滿版
+- 「精選活動」UI 名稱改為「**推薦活動**」；程式內部命名一律沿用 `spotlight`（id/class/函數/資料 key），刻意不改——牽動十幾個檔案卻沒有好處
+- 卡片版式從 F-2（傾斜卡圖＋綠貼紙）改為**參考 LINE 購物商品卡**：卡圖方塊在上、大回饋率、通路名、上限、底部兩顆按鈕。卡圖方塊 `aspect-ratio: 8/5` ＝橫式卡圖規範，卡片高度因此固定；卡名壓在卡圖左下角省一行
+- **「比較這個通路 →」改成「帶入查詢」且不再自動計算**：只帶入搜尋框、捲回上方，計算由使用者按。原本點了就算完再把人丟到結果頁，站長依 GA4（`spotlight_compare` 2026 年至今 243 次／179 人）判斷「很不直觀，會迷失」。class 名稱不動，GA4 事件才能延續比對
+- **主打卡（大卡）寫好但停用**：`SPOTLIGHT_FEATURE_SLOTS = false`。`featured` 欄照常匯出、前端不用。停用原因是主打卡用完之後的頁面沒有主打位，翻頁時卡片形狀不同、看起來很亂
+- **手機滿版**：body 去內距、container 去圓角陰影。⚠️ body 的灰漸層要留著——`.container` 之外的頁尾社群按鈕是白字白框，靠它撐色（改的當下就踩到這個坑）
+- **首訪引導動畫**：前兩次造訪時側選單探頭露出 42% 再收回、漢堡鍵搖頭一次。探頭階段不掛遮罩、不鎖捲動、`pointer-events: none`，尊重 `prefers-reduced-motion`
+- **金額千分位試做後放棄**：`type="number"` 不允許框內出現逗號，改 `type="text"` 自製格式化後出現「1500.5 → 15005」的 10 倍靜默錯誤，且每個讀值點都要記得去逗號。站長決定不值得，改回 `type="number"`；index.html 該行留註解記錄取捨，避免日後重踩
+
 ## 2026-09-02 安全標頭上線（新增 `_headers`）＋ `/terms` 獨立頁（起因：Seges Trust 檢測報告）
 - 新增 repo 根目錄 `_headers`（Cloudflare Pages 讀）：X-Frame-Options、Permissions-Policy、CORP、COOP、HSTS、CSP，不用改任何 HTML。**COEP 刻意不做**——會弄壞 GA／Clarity／AdSense，本站沒有需要跨源隔離的功能
 - **COOP 選 `same-origin-allow-popups` 而非 `same-origin`**：Google 登入走 signInWithPopup，是「本站開別人」；same-origin 會弄壞登入。看到報告寫 same-origin 也不要改

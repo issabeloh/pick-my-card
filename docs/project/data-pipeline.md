@@ -73,7 +73,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
   cashbackSites,        // 領券/回饋網站
   newCardholderPromos,  // 新戶活動
   cardApplyCtas,        // 辦卡 CTA
-  spotlights            // 精選活動（Highlights 工作表）
+  spotlights            // 推薦活動（Highlights 工作表；UI 名稱 2026-09-03 改，資料 key 不動）
 }
 ```
 
@@ -284,7 +284,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 | 卡片清單、JSON-LD、SEO 文案、推薦比較的回饋數字 | 都不用改，跟著 `cards.data` 自動更新 |
 | 每頁專屬的結構（注入點、警語） | `tools/build-merchant-pages.js` 的 `buildPage()` |
 
-**每頁尾端依序有三塊**（都由 `buildPage()` 第 5 步插在精選活動區之後、廣告列之前）：
+**每頁尾端依序有三塊**（都由 `buildPage()` 第 5 步插在推薦活動區之後、廣告列之前）：
 
 1. **推薦比較工具列**（`<nav class="mc-related">`，2026-08-18 加）——連到其他每一個商家頁，
    每條帶「最高 X%（某某卡）」。數字取**該頁自己排第一名那列**的 `rate` 與卡名，與點進去看到的
