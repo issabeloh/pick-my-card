@@ -1549,12 +1549,19 @@ function importGA4ButtonClicksDaily() {
   const rows = report.rows || [];
   const truncated = rows.length >= GA4_BUTTON_DAILY_ROW_LIMIT;
 
-  // 寫進表裡再翻回「日期由舊到新」——讀表／畫折線圖都是時間順著看比較自然
+  // 寫進表裡再翻回「日期由舊到新」——讀表／畫折線圖都是時間順著看比較自然。
+  // ⚠️ 日期寫成**真正的 Date 物件**（不是 'YYYY/MM/DD' 字串），下面再把整欄設成日期格式。
+  //    理由有兩個，都是踩過才知道的：
+  //      1. 別張表要用 SUMIFS 依月份彙總這張表（GA4_每月新舊用戶 的「當月申辦按鈕點擊數」），
+  //         條件得寫成 ">="&月初 這種日期比較——欄位是文字的話一筆都對不到，而且**不報錯、
+  //         只是回 0**，看起來像「那個月真的沒人點」。
+  //      2. 文字日期在 Google 圖表裡不會被當成時間軸（會變成等距的類別軸），
+  //         逐日趨勢表最主要的用途就廢了。
   const parsed = rows.map(row => {
     const d = row.dimensionValues[2].value; // YYYYMMDD
     return {
       dateKey: d,
-      date: d.slice(0, 4) + '/' + d.slice(4, 6) + '/' + d.slice(6, 8),
+      date: new Date(Number(d.slice(0, 4)), Number(d.slice(4, 6)) - 1, Number(d.slice(6, 8))),
       event: row.dimensionValues[0].value,
       type: row.dimensionValues[1].value,
       count: Number(row.metricValues[0].value),
@@ -1575,7 +1582,7 @@ function importGA4ButtonClicksDaily() {
     p.users,
   ]);
 
-  writeSnapshotSheet_('GA4_按鈕點擊', {
+  const sheet = writeSnapshotSheet_('GA4_按鈕點擊', {
     window: WINDOW_CUMULATIVE,
     start: start,
     end: end,
@@ -1596,6 +1603,11 @@ function importGA4ButtonClicksDaily() {
         ? '｜⚠️ 已達 ' + GA4_BUTTON_DAILY_ROW_LIMIT + ' 列上限，更早的日期被截斷，需改為分頁抓取'
         : '｜列數上限 ' + GA4_BUTTON_DAILY_ROW_LIMIT + '（目前 ' + values.length + ' 列，尚未逼近）'),
   }, headers, values);
+
+  // 日期欄設成日期格式（值本來就是 Date 物件，這行只是讓它顯示成 2026/09/02 而不是序號）
+  if (values.length > 0) {
+    sheet.getRange(DATA_START_ROW, 1, values.length, 1).setNumberFormat('yyyy/mm/dd');
+  }
 
   return { headers: headers, values: values };
 }
