@@ -86,7 +86,6 @@ function updateAllReports() {
   runStep_(results, 'GA4_歷史每日趨勢', importGA4History);
   runStep_(results, 'GSC_歷史每日趨勢', importGSCHistory);
   runStep_(results, 'GA4_按鈕點擊',     importGA4ButtonClicksDaily);
-  runStep_(results, 'GA4_每月新舊用戶', updateGA4MonthlyNewReturning);
 
   const historyMessage = runStep_(results, '歷史快照累積', () => appendHistorySnapshots_(collected, false));
 
@@ -905,7 +904,6 @@ function importHistoricalData() {
   importGA4History();
   importGSCHistory();
   importGA4ButtonClicksDaily();
-  updateGA4MonthlyNewReturning();
   writeHistoricalImportLog();
 }
 
@@ -1451,19 +1449,28 @@ const BUTTON_TYPE_LABELS = {
 };
 
 // ============================================================================
-// GA4：按鈕點擊逐日趨勢 ＋ 每月新舊用戶（2026/09/03 新增）
+// GA4：按鈕點擊逐日趨勢（2026/09/03 新增）
 // ----------------------------------------------------------------------------
-// 為什麼要再開這兩張表（既有表答不出來的問題）：
-//   1. GA4_申辦點擊／GA4_各卡點擊 都是**滾動 30 天**、且以「卡片」為主軸——
-//      看得出「哪張卡的哪個版位被點」，看不出「某個 CTA 版位隨時間怎麼變」。
-//      改版了某個按鈕、上了新版位，效果是漲是跌，30 天快照沒有時間軸可比。
-//      GA4_按鈕點擊 補這一塊：日期 × 按鈕類型的長表，一列一天一種按鈕，可直接拉樞紐／折線。
-//   2. GA4_頁面成效 有「新用戶佔比」但只有滾動 30 天；GA4_歷史每日趨勢 有全期但不分新舊。
-//      GA4_每月新舊用戶 用月粒度回答「拉新 vs 留存」的長期走勢。
+// 補的盲區：GA4_申辦點擊／GA4_各卡點擊 都是**滾動 30 天**、且以「卡片」為主軸——
+// 看得出「哪張卡的哪個版位被點」，看不出「某個 CTA 版位隨時間怎麼變」。改版了某個按鈕、
+// 上了新版位，效果是漲是跌，30 天快照沒有時間軸可比。這張是日期 × 按鈕類型的長表，
+// 一列一天一種按鈕，可直接拉樞紐／折線。
 //
-// 兩張都是**累積期間、每次執行重抓全區間覆寫**（同 importGA4History 的做法）：
-// GA4 的歷史數字會因為身分識別（signals／建模）而事後微調，每天重抓才不會留下舊的錯數字；
-// 逐日累積表也因此不需要週快照——它本身就是歷史。
+// 這張是**累積期間、每次執行重抓全區間覆寫**（同 importGA4History 的做法）。
+// 為什麼不是「只抓昨天、append」——同樣一天的資料抓一次就定案了，重抓看似浪費：
+//   1. **漏一天就永久漏掉**。append 式的表只要排程沒觸發或跑到一半中斷，那天就沒有第二次
+//      機會（週快照 2026-07-27 與 08-24 兩次就是這樣永久遺失，見 README 的補跑那節）。
+//      重抓全區間的表天生自癒：今天沒跑成，明天跑一次就全部回來了。
+//   2. **GA4 的近期數字會事後微調**（身分識別／建模、跨裝置歸戶），只抓昨天會把當下那版
+//      暫時的數字永久固化在表裡。
+//   3. **成本是零**：一天 1 次 runReport、目前約 1,500 列，兩年後也才約 4,500 列，
+//      執行時間以秒計。真的跑到有感時再改成「append 昨天 ＋ 重抓最近 7 天」即可。
+//
+// ⚠️ **GA4_每月新舊用戶 刻意不由程式維護**：那張表有人工維護的「備註」欄（當月做了什麼
+//    動作）與條件式格式，而 writeSnapshotSheet_() 第一件事就是 sheet.clear()——
+//    掛上排程等於每天把備註清空一次。那張表的「平均每日新／回訪用戶」用試算表公式算
+//    （月份天數當分母），維護方式寫在 apps-script/README.md 與 vault 的
+//    projects/pmc-analytics-sync.md。**不要為它加自動化寫入。**
 // ============================================================================
 
 // GA4_按鈕點擊 的回填起點。刻意早於 button_type 自訂維度的註冊日，理由見下面 note：
@@ -1600,100 +1607,4 @@ function buttonTypeLabel_(type) {
   return BUTTON_TYPE_RETIRED[type]
     ? base + '（已停用 ' + BUTTON_TYPE_RETIRED[type] + '，保留歷史）'
     : base;
-}
-
-// ---------- GA4：每月新舊用戶（上線至今）----------
-// 「平均每日新／回訪用戶」用的分母是**該月實際被統計到的天數**，不是月曆天數：
-// 上線首月（2025/11 從 07 號起）與當月（只到 yesterday）都是不完整的月，
-// 用 30 天去除會把這兩個月的日均硬壓低，跨月比較直接失真。
-function updateGA4MonthlyNewReturning() {
-  const end = atMidnight_(new Date());
-  end.setDate(end.getDate() - 1); // yesterday
-  const start = launchDate_();
-
-  const dMonth = AnalyticsData.newDimension(); dMonth.name = 'yearMonth';
-  const dKind  = AnalyticsData.newDimension(); dKind.name  = 'newVsReturning';
-
-  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'activeUsers';
-
-  const dateRange = AnalyticsData.newDateRange();
-  dateRange.startDate = LAUNCH_DATE;
-  dateRange.endDate = 'yesterday';
-
-  const request = AnalyticsData.newRunReportRequest();
-  request.dimensions = [dMonth, dKind];
-  request.metrics = [mUsers];
-  request.dateRanges = [dateRange];
-
-  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
-  const rows = report.rows || [];
-
-  // newVsReturning 的取值是 'new' / 'returning' / ''（識別不出來的那一群，別靜默併進任一邊）
-  const byMonth = {};
-  rows.forEach(row => {
-    const ym = row.dimensionValues[0].value;   // YYYYMM
-    const kind = row.dimensionValues[1].value;
-    const users = Number(row.metricValues[0].value);
-    if (!byMonth[ym]) byMonth[ym] = { newUsers: 0, returning: 0, unknown: 0 };
-    if (kind === 'new') byMonth[ym].newUsers += users;
-    else if (kind === 'returning') byMonth[ym].returning += users;
-    else byMonth[ym].unknown += users;
-  });
-
-  const headers = ['月份', '新用戶', '回訪用戶', '未分類', '新＋回訪合計', '新用戶佔比',
-                   '統計天數', '平均每日新用戶', '平均每日回訪用戶'];
-
-  const values = Object.keys(byMonth).sort().map(ym => {
-    const m = byMonth[ym];
-    const sum = m.newUsers + m.returning;
-    const days = effectiveDaysInMonth_(ym, start, end);
-    return [
-      ym.slice(0, 4) + '/' + ym.slice(4, 6),
-      m.newUsers,
-      m.returning,
-      m.unknown,
-      sum,
-      sum > 0 ? m.newUsers / sum : 0,
-      days,
-      days > 0 ? Math.round((m.newUsers / days) * 10) / 10 : 0,
-      days > 0 ? Math.round((m.returning / days) * 10) / 10 : 0,
-    ];
-  });
-
-  const sheet = writeSnapshotSheet_('GA4_每月新舊用戶', {
-    window: WINDOW_CUMULATIVE,
-    start: start,
-    end: end,
-    days: daysInclusive_(start, end),
-    source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 yearMonth × newVsReturning，' +
-      '指標 activeUsers（' + LAUNCH_DATE + ' ~ yesterday）',
-    note: '每次執行重抓全期並覆寫｜區間日界線由 GA4 資源時區判定' +
-      '｜⚠️「新＋回訪合計」不等於該月的實際活躍用戶：同一人可能當月先被算成新用戶、' +
-      '之後又出現在回訪，GA4 是各維度值各自去重，加起來會略為灌水（趨勢可看，絕對值別當總人數用）' +
-      '｜「未分類」＝ GA4 判不出新舊的那群（跨裝置／清 cookie／同意模式），不併進任一邊' +
-      '｜⚠️ 平均每日的分母是「統計天數」＝該月與 ' + LAUNCH_DATE +
-      '~yesterday 的交集天數，不是月曆天數——上線首月與當月都是不完整的月，' +
-      '用 30 天去除會把日均壓低、跨月比較失真；當月的數字每天都會變，月中不要拿去對月底' +
-      '｜逐日（不分新舊）看「GA4_歷史每日趨勢」；到達頁的新用戶佔比看「GA4_頁面成效」',
-  }, headers, values);
-
-  if (values.length > 0) {
-    sheet.getRange(DATA_START_ROW, 6, values.length, 1).setNumberFormat('0.0%');   // 新用戶佔比
-    sheet.getRange(DATA_START_ROW, 8, values.length, 2).setNumberFormat('0.0');    // 平均每日新／回訪
-  }
-
-  return { headers: headers, values: values };
-}
-
-// 某個 YYYYMM 落在 [rangeStart, rangeEnd] 內的實際天數（含頭尾）。
-// 完整的月就是該月天數；上線首月與當月會被裁短——這正是「平均每日」該用的分母。
-function effectiveDaysInMonth_(ym, rangeStart, rangeEnd) {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(4, 6));
-  const monthStart = new Date(y, m - 1, 1);
-  const monthEnd = new Date(y, m, 0);  // 下個月的第 0 天＝本月最後一天
-  const from = monthStart.getTime() > rangeStart.getTime() ? monthStart : atMidnight_(rangeStart);
-  const to   = monthEnd.getTime()   < rangeEnd.getTime()   ? monthEnd   : atMidnight_(rangeEnd);
-  const days = daysInclusive_(from, to);
-  return days > 0 ? days : 0;
 }
