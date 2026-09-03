@@ -195,12 +195,14 @@ function buildSpotlightCard(item, index) {
             ${daysBadge}
         </div>
         <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較 →</button>
+            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入搜尋</button>
             <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
         </div>
     `;
 
-    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
+    // fillOnly：只把商家帶進搜尋框並捲回上方，計算由使用者自己按（2026-09-03）。
+    // 原本點了就直接算完＋捲到結果，使用者會突然被丟到一個沒印象的結果頁。
+    card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant, { fillOnly: true }));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
 }
@@ -585,23 +587,37 @@ function compareSpotlightMerchant(merchant, opts) {
 
     if (matchedOption) {
         // handleQuickSearch 只填入關鍵詞（不自動計算）；其結尾的 validateInputs()
-        // 已依「商家非空」啟用計算鈕，這裡代替用戶按下計算，維持本按鈕「點了就比較」的承諾
+        // 已依「商家非空」啟用計算鈕
         handleQuickSearch(matchedOption);
-        if (amountInput && !amountInput.value) amountInput.value = '1000';
+    } else if (merchantInputEl) {
+        merchantInputEl.value = merchant;
+        handleMerchantInput();
+    }
+    if (amountInput && !amountInput.value) amountInput.value = '1000';
+
+    // fillOnly（推薦活動的「帶入搜尋」鈕）：只帶入條件、捲回搜尋框，計算交給使用者。
+    // 直接算完再把人丟到結果頁，使用者不知道自己按了什麼、也不知道條件是什麼，
+    // 反而更難操作（2026-09-03 站長依 GA4 使用情況決定改成兩段式）。
+    if (opts.fillOnly) {
+        const box = document.querySelector('.merchant-search-box') || merchantInputEl;
+        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 不 focus 輸入框：手機上會彈出鍵盤蓋住「計算回饋」。改成讓計算鈕閃一下，
+        // 指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
         const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn && !calcBtn.disabled) calcBtn.click();
-    } else {
-        if (merchantInputEl) {
-            merchantInputEl.value = merchant;
-            handleMerchantInput();
+        if (calcBtn) {
+            calcBtn.classList.remove('calc-nudge');
+            void calcBtn.offsetWidth;
+            calcBtn.classList.add('calc-nudge');
+            setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
         }
-        if (amountInput && !amountInput.value) amountInput.value = '1000';
-        const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn && !calcBtn.disabled) calcBtn.click();
+        return;
     }
 
-    // 商家落地頁（noScroll）不自動捲到結果，讓頂部標題區塊與搜尋框先入眼；
-    // 一般 spotlight 點擊維持「點了就捲到結果」。
+    // 其餘呼叫端（商家落地頁 ?merchant= 深連結）維持「開頁就算好」
+    const calcBtn = document.getElementById('calculate-btn');
+    if (calcBtn && !calcBtn.disabled) calcBtn.click();
+
+    // 商家落地頁（noScroll）不自動捲到結果，讓頂部標題區塊與搜尋框先入眼。
     if (opts.noScroll) return;
     setTimeout(() => {
         const results = document.getElementById('results-section');
