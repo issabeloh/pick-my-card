@@ -20,7 +20,12 @@
 // 頁數／圓點跟著長度自動增加。
 let spotlightItems = [];
 let spotlightPage = 0;
-const SPOTLIGHT_PAGE_SIZE = 3;
+// 每頁筆數跟著欄數走：手機 2 欄放 4 則（2x2，不會留下落單的半排），
+// 桌機 3 欄放 3 則。斷點在 768px，與 styles.css 的 .spotlight-track 一致。
+function spotlightPageSize() {
+    return window.innerWidth <= 768 ? 4 : 3;
+}
+let spotlightLastPageSize = spotlightPageSize();
 
 function getSpotlightDaysLeft(deadline) {
     if (!deadline) return null;
@@ -64,7 +69,7 @@ function resolveSpotlightDeadline(item) {
 }
 
 function spotlightTotalPages() {
-    return Math.ceil(spotlightItems.length / SPOTLIGHT_PAGE_SIZE);
+    return Math.ceil(spotlightItems.length / spotlightPageSize());
 }
 
 function renderSpotlights() {
@@ -90,6 +95,7 @@ function renderSpotlights() {
     spotlightPage = 0;
     buildSpotlightDots();
     renderSpotlightPage();
+    setupSpotlightResizeReflow();
 
     const multiPage = spotlightTotalPages() > 1;
     const dots = document.getElementById('spotlight-dots');
@@ -100,8 +106,9 @@ function renderSpotlights() {
 function renderSpotlightPage() {
     const track = document.getElementById('spotlight-track');
     if (!track) return;
-    const start = spotlightPage * SPOTLIGHT_PAGE_SIZE;
-    const pageItems = spotlightItems.slice(start, start + SPOTLIGHT_PAGE_SIZE);
+    const size = spotlightPageSize();
+    const start = spotlightPage * size;
+    const pageItems = spotlightItems.slice(start, start + size);
 
     const frag = document.createDocumentFragment();
     pageItems.forEach((item, i) => {
@@ -164,27 +171,27 @@ function buildSpotlightCard(item, index) {
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
         ? `<span class="spotlight-hype-tag ${hype.cssClass}">${escapeHtml(hype.label)}</span>` : '';
-    const desc = hype ? hype.rest : (item.description || '');
-    const sticker = rate ? `<span class="spotlight-rate-sticker">${escapeHtml(rate)}</span>` : '';
 
+    // 版式 C（2026-09-03，參考 LINE 購物商品卡）：卡圖方塊在上 → 大回饋率 →
+    // 商家＋卡名 → 上限一行 → 底部兩顆按鈕。到期日「至 X」不再上卡片，只留在
+    // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
+    // 「剩 N 天」保留，那是急迫感提示、不是日期。
     card.innerHTML = `
-        <div class="spotlight-top-row">
-            <div class="spotlight-ccwrap">
-                <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
-                ${sticker}
-            </div>
-            <div class="spotlight-top-right">
-                ${hypeTag}
-                <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-                <div class="spotlight-desc">${escapeHtml(desc)}</div>
-            </div>
+        <div class="spotlight-ccwrap">
+            <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
         </div>
+        <div class="spotlight-rate-row">
+            ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
+            ${hypeTag}
+        </div>
+        <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+        <div class="spotlight-cardname">${escapeHtml(item.card_name || '')}</div>
         <div class="spotlight-info-row">
             ${item.cap ? `<span>上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
-            ${deadline ? `<span>至 <b>${escapeHtml(deadline)}</b>${daysBadge}</span>` : ''}
+            ${daysBadge}
         </div>
         <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較這個通路 →</button>
+            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">比較 →</button>
             <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
         </div>
     `;
@@ -192,6 +199,25 @@ function buildSpotlightCard(item, index) {
     card.querySelector('.spotlight-compare-btn').addEventListener('click', () => compareSpotlightMerchant(item.merchant));
     card.querySelector('.spotlight-info-btn').addEventListener('click', () => openSpotlightModal(index));
     return card;
+}
+
+// 轉向／改變視窗寬度跨過 768px 時，每頁筆數會從 3 變 4（或反過來），
+// 分頁數與圓點必須重算，否則會出現空白頁或有幾則永遠顯示不到。
+// 只在筆數真的改變時才重繪，一般的捲動列縮放不會觸發。
+let spotlightResizeBound = false;
+function setupSpotlightResizeReflow() {
+    if (spotlightResizeBound) return;
+    spotlightResizeBound = true;
+    window.addEventListener('resize', () => {
+        const size = spotlightPageSize();
+        if (size === spotlightLastPageSize) return;
+        spotlightLastPageSize = size;
+        spotlightPage = 0;
+        buildSpotlightDots();
+        renderSpotlightPage();   // 內含 updateSpotlightDots / updateSpotlightNav
+        const dots = document.getElementById('spotlight-dots');
+        if (dots) dots.style.display = spotlightTotalPages() > 1 ? 'flex' : 'none';
+    });
 }
 
 function buildSpotlightDots() {
