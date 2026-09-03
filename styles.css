@@ -843,6 +843,19 @@ header h1 {
     max-width: 500px;
 }
 
+/* 公告／問卷邀請的標題列刻意比其他 modal 矮一截（2026-09-03 站長指定）：
+   這兩個 modal 的重點是內文，標題只是個名牌，不需要 20px padding + 1.25rem。
+   只提這兩個 content class 的特異性，不動全站共用的 .modal-header。 */
+.announcement-modal-content .modal-header,
+.survey-invite-content .modal-header {
+    padding: 10px 20px;
+}
+
+.announcement-modal-content .modal-header h3,
+.survey-invite-content .modal-header h3 {
+    font-size: 1.05rem;
+}
+
 .announcement-modal-close {
     font-size: 32px;
     padding: 0;
@@ -897,6 +910,31 @@ header h1 {
     justify-content: flex-end;
     padding: 16px 20px;
     border-top: 1px solid #e5e7eb;
+}
+
+/* 問卷邀請 Modal（2026-09-03）：登入後一次性彈出，按「沒問題！」接到公告 modal。
+   刻意比一般 modal 窄（420px），視覺上是「一句話的請求」不是設定面板。 */
+.survey-invite-content {
+    max-width: 420px;
+}
+
+.survey-invite-content .modal-body {
+    padding: 20px;
+}
+
+.survey-invite-lead {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.6;
+}
+
+.survey-invite-sub {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6b7280;
+    line-height: 1.6;
 }
 
 .btn-primary {
@@ -8458,6 +8496,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 
     .auth-modal-content,
     .announcement-modal-content,
+    .survey-invite-content,
     #my-mappings-modal .modal-content,
     #feedback-modal .modal-content {
         max-height: 75vh;
