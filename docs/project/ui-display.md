@@ -163,7 +163,8 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 
 - **觸發點在 `onAuthStateChanged` 的登入分支尾端**（`js/auth-user-data.js`，所有使用者資料載完之後），延遲
   `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
-- **有期限：只在 2026/9 整月**（`isSurveyInvitePeriod()`，裝置本地時間，`SURVEY_INVITE_START`／`END` 兩個常數）。
+- **有期限：只在 2026/9 整月**（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
+  `+08:00`（台灣時間）**——省略時區後綴會退化成「裝置本地時間」，人在國外或時區設錯的用戶起訖點會整個偏掉。
   過期自動變 no-op，不用趕在月底手動下架
 - **只在主站首頁彈**：用 `getAnalyticsSurface() !== 'site'` 一次擋掉 `/promos` 的 iframe（promos_embed）與
   `/merchant/xxx` 落地頁、`?merchant=` 深連結（merchant_page）——那些頁面的用戶帶著任務進來，不擋路

@@ -878,10 +878,11 @@ function showAnnouncementModal(index) {
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
 const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
 const SURVEY_INVITE_DELAY_MS = 1200;
-// 只在 2026 年 9 月整月彈（用裝置本地時間；台灣用戶＝台灣時間）。
-// 過期後這段程式自動變 no-op，不用趕在月底手動下架。
-const SURVEY_INVITE_START = '2026-09-01T00:00:00';
-const SURVEY_INVITE_END   = '2026-10-01T00:00:00';  // 不含這一刻
+// 只在 2026 年 9 月整月彈。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
+// 那樣會變成「裝置本地時間」，人在國外或裝置時區設錯的用戶起訖點會整個偏掉。
+// 寫成帶時區的絕對時刻後，全世界同一瞬間開關。過期自動變 no-op，不用月底手動下架。
+const SURVEY_INVITE_START = '2026-09-01T00:00:00+08:00';
+const SURVEY_INVITE_END   = '2026-10-01T00:00:00+08:00';  // 不含這一刻
 let surveyInviteHandledThisSession = false;
 
 function isSurveyInvitePeriod() {
