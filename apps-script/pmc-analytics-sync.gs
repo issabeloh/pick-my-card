@@ -85,6 +85,8 @@ function updateAllReports() {
   collected.gscPages    = runStep_(results, 'GSC_頁面',      updateGSCPages);
   runStep_(results, 'GA4_歷史每日趨勢', importGA4History);
   runStep_(results, 'GSC_歷史每日趨勢', importGSCHistory);
+  runStep_(results, 'GA4_按鈕點擊',     importGA4ButtonClicksDaily);
+  runStep_(results, 'GA4_每月新舊用戶', updateGA4MonthlyNewReturning);
 
   const historyMessage = runStep_(results, '歷史快照累積', () => appendHistorySnapshots_(collected, false));
 
@@ -902,6 +904,8 @@ function launchDate_() {
 function importHistoricalData() {
   importGA4History();
   importGSCHistory();
+  importGA4ButtonClicksDaily();
+  updateGA4MonthlyNewReturning();
   writeHistoricalImportLog();
 }
 
@@ -1445,3 +1449,251 @@ const BUTTON_TYPE_LABELS = {
   search_result_apply: '搜尋結果申辦',
   promos_page_apply: '新戶活動頁（promos）申辦',
 };
+
+// ============================================================================
+// GA4：按鈕點擊逐日趨勢 ＋ 每月新舊用戶（2026/09/03 新增）
+// ----------------------------------------------------------------------------
+// 為什麼要再開這兩張表（既有表答不出來的問題）：
+//   1. GA4_申辦點擊／GA4_各卡點擊 都是**滾動 30 天**、且以「卡片」為主軸——
+//      看得出「哪張卡的哪個版位被點」，看不出「某個 CTA 版位隨時間怎麼變」。
+//      改版了某個按鈕、上了新版位，效果是漲是跌，30 天快照沒有時間軸可比。
+//      GA4_按鈕點擊 補這一塊：日期 × 按鈕類型的長表，一列一天一種按鈕，可直接拉樞紐／折線。
+//   2. GA4_頁面成效 有「新用戶佔比」但只有滾動 30 天；GA4_歷史每日趨勢 有全期但不分新舊。
+//      GA4_每月新舊用戶 用月粒度回答「拉新 vs 留存」的長期走勢。
+//
+// 兩張都是**累積期間、每次執行重抓全區間覆寫**（同 importGA4History 的做法）：
+// GA4 的歷史數字會因為身分識別（signals／建模）而事後微調，每天重抓才不會留下舊的錯數字；
+// 逐日累積表也因此不需要週快照——它本身就是歷史。
+// ============================================================================
+
+// GA4_按鈕點擊 的回填起點。刻意早於 button_type 自訂維度的註冊日，理由見下面 note：
+// 註冊前那段期間 button_type 一律是 (not set)，但「按鈕點擊總量」的逐日趨勢仍然成立，
+// 保留它才看得出 06/07 之後的拆解是從什麼基準長出來的。
+const BUTTON_CLICK_START_DATE = '2026-01-01';
+
+// button_type 自訂維度的註冊日（GA4 不回填，此日之前查不到值）。
+// 對照 vault 的 pmc-analytics-事實與否決清單.md：用 button_type 過濾的漏斗，可用起點是這天。
+const BUTTON_TYPE_REGISTERED_DATE = '2026-06-07';
+
+// 日期 × 按鈕類型：一天約 8–10 列，10000 列＝約 3 年份。逼近上限會被截斷，表頭會示警。
+const GA4_BUTTON_DAILY_ROW_LIMIT = 10000;
+
+// 已停止發送、但歷史資料要保留的 button_type：填 { 類型: '停用年月' }，
+// 表上的「按鈕位置說明」就會加註「（已停用 YYYY/MM，保留歷史）」，
+// 免得日後有人看到那個類型的量歸零，以為是追蹤壞掉。
+// ⚠️ 目前刻意留空：search_result_apply **還在發送中**，不能標成已停用。
+//    查證（2026/09/03）：js/results-display.js 在搜尋結果列產出 class 只有
+//    `.promo-apply-cta-btn` 的「立即申辦」pill（`if (!opts.showExtras)` 那段），
+//    而 js/quick-options-misc.js 的 button_type 判斷鏈最後一支 else 就是
+//    search_result_apply——沒有其他 class 的 promo-apply-cta-btn 一律落到這裡。
+//    真的停用那顆按鈕之後，再回來填上停用年月即可。
+const BUTTON_TYPE_RETIRED = {};
+
+function buttonClickStartDate_() {
+  const parts = BUTTON_CLICK_START_DATE.split('-');
+  return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+}
+
+// 去掉時分秒，只留日期——跨月天數計算要用純日期比大小，帶著時間會差一天
+function atMidnight_(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// ---------- GA4：按鈕點擊逐日趨勢（2026/01/01 起，日期 × 按鈕類型）----------
+// 需求涵蓋的 button_type（皆已在 BUTTON_TYPE_LABELS 有中文對照）：
+//   spotlight_compare／spotlight_info／spotlight_apply／detail_sticky_apply／
+//   detail_header_apply／card_apply／promos_page_apply／search_result_apply
+// ⚠️ 刻意**不**用 inListFilter 把查詢限制在上面這 8 個值：那樣前端日後新增按鈕類型時，
+//    新類型會被靜默丟掉、沒有人會發現。這裡只用 eventName=button_click 過濾，
+//    取回全部類型，未知類型在「按鈕位置說明」欄留白（一眼看得出「有新東西要補對照」）。
+function importGA4ButtonClicksDaily() {
+  const end = atMidnight_(new Date());
+  end.setDate(end.getDate() - 1); // yesterday
+  const start = buttonClickStartDate_();
+
+  const dEvent = AnalyticsData.newDimension(); dEvent.name = 'eventName';
+  const dType  = AnalyticsData.newDimension(); dType.name  = 'customEvent:button_type';
+  const dDate  = AnalyticsData.newDimension(); dDate.name  = 'date';
+
+  const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
+  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'totalUsers';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = BUTTON_CLICK_START_DATE;
+  dateRange.endDate = 'yesterday';
+
+  // 排序刻意用「日期由新到舊」：request.limit 是從尾端截斷的，
+  // 日期新→舊排的話被截掉的是最早的日期（跟 GSC_歷史每日趨勢 的行為一致、也比較無害）；
+  // 若排成舊→新，撞到上限時消失的會是最近幾天，等於天天看到的表少了新資料還不會發現。
+  const orderDate = AnalyticsData.newOrderBy();
+  orderDate.dimension = AnalyticsData.newDimensionOrderBy();
+  orderDate.dimension.dimensionName = 'date';
+  orderDate.desc = true;
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dEvent, dType, dDate];
+  request.metrics = [mCount, mUsers];
+  request.dateRanges = [dateRange];
+  request.dimensionFilter = eventNameFilter_('button_click'); // 只算按鈕點擊
+  request.orderBys = [orderDate];
+  request.limit = GA4_BUTTON_DAILY_ROW_LIMIT;
+
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  const rows = report.rows || [];
+  const truncated = rows.length >= GA4_BUTTON_DAILY_ROW_LIMIT;
+
+  // 寫進表裡再翻回「日期由舊到新」——讀表／畫折線圖都是時間順著看比較自然
+  const parsed = rows.map(row => {
+    const d = row.dimensionValues[2].value; // YYYYMMDD
+    return {
+      dateKey: d,
+      date: d.slice(0, 4) + '/' + d.slice(4, 6) + '/' + d.slice(6, 8),
+      event: row.dimensionValues[0].value,
+      type: row.dimensionValues[1].value,
+      count: Number(row.metricValues[0].value),
+      users: Number(row.metricValues[1].value),
+    };
+  }).sort((a, b) => {
+    if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
+    return b.count - a.count; // 同一天內點擊多的排前面
+  });
+
+  const headers = ['日期', '事件名稱', '按鈕類型', '按鈕位置說明', '點擊次數', '觸發用戶數'];
+  const values = parsed.map(p => [
+    p.date,
+    p.event,
+    p.type,
+    buttonTypeLabel_(p.type),
+    p.count,
+    p.users,
+  ]);
+
+  writeSnapshotSheet_('GA4_按鈕點擊', {
+    window: WINDOW_CUMULATIVE,
+    start: start,
+    end: end,
+    days: daysInclusive_(start, end),
+    source: 'GA4 property ' + GA4_PROPERTY_ID +
+      '，事件 button_click，維度 eventName × customEvent:button_type × date（' +
+      BUTTON_CLICK_START_DATE + ' ~ yesterday）',
+    note: '每次執行重抓全區間並覆寫｜區間日界線由 GA4 資源時區判定' +
+      '｜⚠️ button_type 自訂維度 ' + BUTTON_TYPE_REGISTERED_DATE + ' 才註冊、GA4 不回填，' +
+      '該日之前的列一律是「(not set)」＝當天的按鈕點擊「總量」，不是某個特定按鈕；' +
+      '要比較各按鈕版位請只取 ' + BUTTON_TYPE_REGISTERED_DATE + ' 之後的資料' +
+      '｜點擊次數＝eventCount（同一人多次點算多次）；觸發用戶數＝totalUsers（當天不重複人數），' +
+      '兩者不可跨列相加（用戶會在不同天／不同按鈕重複出現）' +
+      '｜某個按鈕類型某天沒有點擊時 GA4 不會回傳該列（不是 0，是沒有列）' +
+      '｜「按鈕位置說明」留白＝前端新增了還沒補進 BUTTON_TYPE_LABELS 的按鈕類型' +
+      '｜卡片維度的拆解看「GA4_申辦點擊」「GA4_各卡點擊」（滾動 30 天）' +
+      (truncated
+        ? '｜⚠️ 已達 ' + GA4_BUTTON_DAILY_ROW_LIMIT + ' 列上限，更早的日期被截斷，需改為分頁抓取'
+        : '｜列數上限 ' + GA4_BUTTON_DAILY_ROW_LIMIT + '（目前 ' + values.length + ' 列，尚未逼近）'),
+  }, headers, values);
+
+  return { headers: headers, values: values };
+}
+
+// 按鈕類型 → 中文說明。已停用的類型會加註，免得有人看到量歸零以為追蹤壞掉
+function buttonTypeLabel_(type) {
+  const base = BUTTON_TYPE_LABELS[type];
+  if (!base) return '';
+  return BUTTON_TYPE_RETIRED[type]
+    ? base + '（已停用 ' + BUTTON_TYPE_RETIRED[type] + '，保留歷史）'
+    : base;
+}
+
+// ---------- GA4：每月新舊用戶（上線至今）----------
+// 「平均每日新／回訪用戶」用的分母是**該月實際被統計到的天數**，不是月曆天數：
+// 上線首月（2025/11 從 07 號起）與當月（只到 yesterday）都是不完整的月，
+// 用 30 天去除會把這兩個月的日均硬壓低，跨月比較直接失真。
+function updateGA4MonthlyNewReturning() {
+  const end = atMidnight_(new Date());
+  end.setDate(end.getDate() - 1); // yesterday
+  const start = launchDate_();
+
+  const dMonth = AnalyticsData.newDimension(); dMonth.name = 'yearMonth';
+  const dKind  = AnalyticsData.newDimension(); dKind.name  = 'newVsReturning';
+
+  const mUsers = AnalyticsData.newMetric(); mUsers.name = 'activeUsers';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = LAUNCH_DATE;
+  dateRange.endDate = 'yesterday';
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dMonth, dKind];
+  request.metrics = [mUsers];
+  request.dateRanges = [dateRange];
+
+  const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
+  const rows = report.rows || [];
+
+  // newVsReturning 的取值是 'new' / 'returning' / ''（識別不出來的那一群，別靜默併進任一邊）
+  const byMonth = {};
+  rows.forEach(row => {
+    const ym = row.dimensionValues[0].value;   // YYYYMM
+    const kind = row.dimensionValues[1].value;
+    const users = Number(row.metricValues[0].value);
+    if (!byMonth[ym]) byMonth[ym] = { newUsers: 0, returning: 0, unknown: 0 };
+    if (kind === 'new') byMonth[ym].newUsers += users;
+    else if (kind === 'returning') byMonth[ym].returning += users;
+    else byMonth[ym].unknown += users;
+  });
+
+  const headers = ['月份', '新用戶', '回訪用戶', '未分類', '新＋回訪合計', '新用戶佔比',
+                   '統計天數', '平均每日新用戶', '平均每日回訪用戶'];
+
+  const values = Object.keys(byMonth).sort().map(ym => {
+    const m = byMonth[ym];
+    const sum = m.newUsers + m.returning;
+    const days = effectiveDaysInMonth_(ym, start, end);
+    return [
+      ym.slice(0, 4) + '/' + ym.slice(4, 6),
+      m.newUsers,
+      m.returning,
+      m.unknown,
+      sum,
+      sum > 0 ? m.newUsers / sum : 0,
+      days,
+      days > 0 ? Math.round((m.newUsers / days) * 10) / 10 : 0,
+      days > 0 ? Math.round((m.returning / days) * 10) / 10 : 0,
+    ];
+  });
+
+  const sheet = writeSnapshotSheet_('GA4_每月新舊用戶', {
+    window: WINDOW_CUMULATIVE,
+    start: start,
+    end: end,
+    days: daysInclusive_(start, end),
+    source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 yearMonth × newVsReturning，' +
+      '指標 activeUsers（' + LAUNCH_DATE + ' ~ yesterday）',
+    note: '每次執行重抓全期並覆寫｜區間日界線由 GA4 資源時區判定' +
+      '｜⚠️「新＋回訪合計」不等於該月的實際活躍用戶：同一人可能當月先被算成新用戶、' +
+      '之後又出現在回訪，GA4 是各維度值各自去重，加起來會略為灌水（趨勢可看，絕對值別當總人數用）' +
+      '｜「未分類」＝ GA4 判不出新舊的那群（跨裝置／清 cookie／同意模式），不併進任一邊' +
+      '｜⚠️ 平均每日的分母是「統計天數」＝該月與 ' + LAUNCH_DATE +
+      '~yesterday 的交集天數，不是月曆天數——上線首月與當月都是不完整的月，' +
+      '用 30 天去除會把日均壓低、跨月比較失真；當月的數字每天都會變，月中不要拿去對月底' +
+      '｜逐日（不分新舊）看「GA4_歷史每日趨勢」；到達頁的新用戶佔比看「GA4_頁面成效」',
+  }, headers, values);
+
+  if (values.length > 0) {
+    sheet.getRange(DATA_START_ROW, 6, values.length, 1).setNumberFormat('0.0%');   // 新用戶佔比
+    sheet.getRange(DATA_START_ROW, 8, values.length, 2).setNumberFormat('0.0');    // 平均每日新／回訪
+  }
+
+  return { headers: headers, values: values };
+}
+
+// 某個 YYYYMM 落在 [rangeStart, rangeEnd] 內的實際天數（含頭尾）。
+// 完整的月就是該月天數；上線首月與當月會被裁短——這正是「平均每日」該用的分母。
+function effectiveDaysInMonth_(ym, rangeStart, rangeEnd) {
+  const y = Number(ym.slice(0, 4));
+  const m = Number(ym.slice(4, 6));
+  const monthStart = new Date(y, m - 1, 1);
+  const monthEnd = new Date(y, m, 0);  // 下個月的第 0 天＝本月最後一天
+  const from = monthStart.getTime() > rangeStart.getTime() ? monthStart : atMidnight_(rangeStart);
+  const to   = monthEnd.getTime()   < rangeEnd.getTime()   ? monthEnd   : atMidnight_(rangeEnd);
+  const days = daysInclusive_(from, to);
+  return days > 0 ? days : 0;
+}

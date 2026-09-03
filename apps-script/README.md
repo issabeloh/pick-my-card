@@ -151,6 +151,38 @@
     估算 200×8×52 ≈ 8.3 萬儲存格/年，離 1,000 萬上限很遠。
   - **`snapshotHistoryNow()`**：手動存一份（不管星期幾、不管存過沒，會重抓 API）。用途是剛上線
     時先種第一個資料點、或改版前後各留一份對照。
+- **GA4 按鈕點擊逐日／每月新舊用戶（2026-09-03 新增）**：兩張都是**累積期間表**——每天由
+  `updateAllReports()` 重抓全區間覆寫（同 `importGA4History` 的做法），因此**不需要週快照**，
+  它們本身就是歷史。
+  - `GA4_按鈕點擊`（`importGA4ButtonClicksDaily`）：維度 `eventName` × `customEvent:button_type`
+    × `date`，指標 `eventCount` + `totalUsers`，`dimensionFilter` 只算 `button_click`，
+    回填起點 `BUTTON_CLICK_START_DATE = 2026-01-01`。
+    - **補的是哪個盲區**：`GA4_申辦點擊`／`GA4_各卡點擊` 是滾動 30 天、以「卡片」為主軸——
+      看得出「哪張卡的哪個版位被點」，看不出「某個 CTA 版位隨時間怎麼變」。改了按鈕、上了新版位，
+      效果是漲是跌，30 天快照沒有時間軸可比。這張是日期 × 按鈕類型的長表，可直接拉樞紐／折線。
+    - ⚠️ **`button_type` 自訂維度 2026-06-07 才註冊、GA4 不回填**：2026-01-01～06-06 的列
+      一律是 `(not set)`＝那天的按鈕點擊**總量**，不是某個特定按鈕。要比較各版位只能取 06-07
+      之後。回填起點仍刻意設在 01-01——保留總量趨勢，才看得出 06-07 之後的拆解是從什麼基準長出來的。
+    - **刻意不用 `inListFilter` 只查指定的 8 個 button_type**：那樣前端日後新增按鈕類型會被
+      靜默丟掉、沒人會發現。只用 `eventName=button_click` 過濾取回全部，未知類型在「按鈕位置
+      說明」欄留白＝一眼看得出「有新東西要補進 `BUTTON_TYPE_LABELS`」。
+    - **`orderBys` 用日期由新到舊**：`request.limit` 是從尾端截斷的，排新→舊時被截掉的是最早
+      的日期；排舊→新則會是最近幾天憑空消失、而且不會有人發現。寫進表前再翻回舊→新。
+    - `BUTTON_TYPE_RETIRED`（預設空）：某個 button_type 真的停用後填 `{ 類型: 'YYYY/MM' }`，
+      說明欄就會加註「已停用，保留歷史」，免得看到量歸零以為追蹤壞了。
+      ⚠️ **`search_result_apply` 目前還在發送中，不能標成已停用**——`js/results-display.js`
+      在搜尋結果列產出的「立即申辦」pill 只有 `.promo-apply-cta-btn` 這一個 class，
+      而 `js/quick-options-misc.js` 判斷鏈最後一支 `else` 就是它。
+  - `GA4_每月新舊用戶`（`updateGA4MonthlyNewReturning`）：維度 `yearMonth` × `newVsReturning`，
+    指標 `activeUsers`，上線至今。欄位：月份／新用戶／回訪用戶／未分類／新＋回訪合計／
+    新用戶佔比／**統計天數／平均每日新用戶／平均每日回訪用戶**。
+    - ⚠️ **平均每日的分母是「統計天數」＝該月與 `LAUNCH_DATE`~yesterday 的交集天數，不是月曆
+      天數**（`effectiveDaysInMonth_`）。上線首月（2025/11 從 07 號起＝24 天）與當月（只到
+      yesterday）都是不完整的月，硬除 30 會把這兩個月的日均壓低、跨月比較直接失真。
+      「統計天數」欄刻意露出分母，讓讀表的人驗算得出來。
+    - ⚠️ **「新＋回訪合計」不等於該月實際活躍用戶**：同一人可能當月先被算成新用戶、之後又出現
+      在回訪，GA4 是各維度值各自去重，加起來會略為灌水。趨勢可看，絕對值別當總人數用。
+    - 「未分類」＝ GA4 判不出新舊的那群（跨裝置／清 cookie／同意模式），**不併進任一邊**。
 - **Clarity**：`syncClarityData()` 寫 `Clarity_每日`（**append 累加、不覆蓋**——API 只留 1–3 天資料）。
   硬限制：每專案每天 **10 次** API 呼叫（不分來源、手動也算，超過整專案當天被鎖）。防重複用指令碼
   屬性 `CLARITY_LAST_SYNC_DATE`（**呼叫前擋、成功才記**）；token 存 `CLARITY_API_TOKEN`；401/429 在
@@ -167,6 +199,7 @@
 |---|---|---|
 | Cloudflare Pages | **500 builds/月**、同時 1 build | push 到 main 的**每個 commit 各觸發一次 build**。舊匯出流程一次 4+ commits＝4+ builds（每日匯出≈120+/月，一日多次匯出會逼近上限）；2026-07-20 起改單一 build。另外**日常開發 merge 到 main 也各算一次**——多個小 PR 分開 merge 比 squash 成一次更耗額度 |
 | Apps Script（免費帳號） | 單次執行 6 分鐘；觸發器總計 90 分/日；UrlFetchApp 20,000 次/日；MailApp 收件人 100/日 | 匯出目前約 10 餘次 HTTP 呼叫、遠低於上限。**商家頁生成器上線後**每頁多 2 次呼叫＋生成時間，頁數多時留意 6 分鐘上限（逼近時分批或改用 git tree API 一次 commit） |
+| GA4 Data API（標準資源） | 每資源每日約 20 萬 tokens／每小時約 4 萬；並行 10 個請求；**API 本身不收費，超額是被拒絕不是被計費** | `updateAllReports()` 每天呼叫 `runReport` **9 次**（2026-09-03 新增兩張表前是 7 次），距離配額 3 個數量級以上。兩張新表都是**累積期間、每天重抓全區間**，token 成本會隨資料期間緩慢變大——但成長的是單次查詢的列數（每年約 +3,000 列），不是呼叫次數 |
 | Google Sheets 本體 | 單一試算表 1,000 萬儲存格 | 目前規模（數十卡×數百欄）差 3 個數量級以上；Apps Script 內建 `SpreadsheetApp` 不消耗 Sheets API 配額，無 API 額度問題 |
 
 ## promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
