@@ -1695,7 +1695,18 @@ const MONTHLY_COLS = {
 // 找得到就清空（不讓新列繼承上一列的備註）；找不到不影響其他欄位的寫入
 const MONTHLY_NOTE_COL = '備註';
 
+// 對外入口：跑完一定把結果寫進 Logger。
+// ⚠️ 這行不是除錯用的，是這支函數「手動跑」時唯一的回饋管道——
+//    Apps Script 編輯器按 Run 只會顯示「執行完畢」，**不會顯示回傳值**，
+//    所以少了它就分不出「正確略過（同月已存在）」和「根本沒跑到那段邏輯」。
+//    排程執行時另有 writeLastUpdated() 把同一句話寫進「更新紀錄」。
 function appendMonthlyUserRow() {
+  const message = appendMonthlyUserRow_();
+  Logger.log(message);
+  return message;
+}
+
+function appendMonthlyUserRow_() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MONTHLY_SHEET);
   if (!sheet) return MONTHLY_SHEET + '：分頁不存在，略過';
 
