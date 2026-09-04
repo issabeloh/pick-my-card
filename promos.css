@@ -1690,8 +1690,24 @@ a {
    點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
    維持原本全部展開的 grid 卡片版型不變。 */
 @media (max-width: 768px) {
+  /* 手機版滿版：拿掉 body 的 10px 內距，.promos-container 也不再是「浮在灰底上
+     的白卡片」（圓角＋陰影）。手機螢幕窄，那圈灰邊框只是白白吃掉左右各 10px。
+     與首頁（styles.css 同名處理，2026-09-03）一致。
+     ⚠️ body 的灰漸層要留著：.promos-container 之外的 <footer class="social-media-footer">
+     文字是白色的（.social-media-title 用 rgba(255,255,255,.7)），靠的就是這層灰底；
+     把 body 洗白會讓那些按鈕整組看不見——首頁改這裡時就踩過一次。 */
   body {
-    padding: 10px;
+    padding: 0;
+  }
+
+  .promos-container {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* container 沒有圓角之後，警語橫條再留 12px 下圓角會在左右下角露出白色缺口 */
+  .promos-warning-row {
+    border-radius: 0;
   }
 
   .promos-header {
