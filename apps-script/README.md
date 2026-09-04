@@ -190,7 +190,7 @@
   - **`orderBys` 用日期由新到舊**：`request.limit` 是從尾端截斷的，排新→舊時被截掉的是最早
     的日期；排舊→新則會是最近幾天憑空消失、而且不會有人發現。寫進表前再翻回舊→新。
   - ⚠️ **A 欄日期寫的是真正的 `Date` 物件、不是 `'YYYY/MM/DD'` 字串**（另設
-    `setNumberFormat('yyyy/mm/dd')`）。兩個理由：① `GA4_每月新舊用戶` 的「當月申辦按鈕點擊數」
+    `setNumberFormat('yyyy/mm/dd')`）。兩個理由：① `GA4_每月新舊用戶` 的「申辦按鈕點擊數」
     要用 `SUMIFS` 依 `">="&月初` 這種**日期比較**彙總這張表，欄位是文字的話一筆都對不到，
     而且**不報錯、只回 0**，看起來像「那個月真的沒人點」；② 文字日期在 Google 圖表裡
     不會被當成時間軸（變成等距類別軸），逐日趨勢表最主要的用途就廢了。
@@ -234,16 +234,20 @@
       手動填寫」寫進「更新紀錄」——那是唯一的通知管道，沒看到就不會有人回去填。
     - **`總用戶` 由查詢 B（不拆維度的整月 `activeUsers`）取得**，這正是它不能用
       `新用戶＋回訪用戶` 算出來的原因：那兩個是各自去重的，相加會略為灌水。
-  - **`當月申辦按鈕點擊數`**（插在 `備註` 左邊）：從 `GA4_按鈕點擊` 用 `SUMIFS` 彙總，
+  - **`申辦按鈕點擊數`**（K 欄，`備註` 左邊；2026-09-03 由「當月申辦按鈕點擊數」改名——
+    **改欄名不影響程式**，`appendMonthlyUserRow()` 只用表頭文字定位它自己要寫的 5 個純資料欄，
+    公式欄一律靠 `copyTo` 延續）：從 `GA4_按鈕點擊` 用 `SUMIFS` 彙總，
     只算 `button_type` 含 `apply` 的 6 種（`spotlight_apply`／`detail_header_apply`／
     `detail_sticky_apply`／`card_apply`／`search_result_apply`／`promos_page_apply`），
     排除 `spotlight_compare`／`spotlight_info`。
     ```
-    =LET(ms,IF(ISNUMBER($A2),EOMONTH($A2,-1)+1,DATEVALUE($A2&"/01")),me,EOMONTH(ms,0),
+    =IFERROR(LET(ms,IF(ISNUMBER($A2),EOMONTH($A2,-1)+1,DATEVALUE($A2&"/01")),me,EOMONTH(ms,0),
      IF(ms<DATE(2026,7,1),"—",
       SUMIFS('GA4_按鈕點擊'!$E$4:$E,'GA4_按鈕點擊'!$A$4:$A,">="&ms,
-             'GA4_按鈕點擊'!$A$4:$A,"<="&me,'GA4_按鈕點擊'!$C$4:$C,"*apply*")))
+             'GA4_按鈕點擊'!$A$4:$A,"<="&me,'GA4_按鈕點擊'!$C$4:$C,"*apply*"))),"")
     ```
+    - **最外層的 `IFERROR` 不是裝飾**：這欄會被預先下拉到還沒有資料的空列，
+      而 `A` 空白時 `DATEVALUE("/01")` 會炸出 `#VALUE!` 塞滿整欄（I／J 一開始就有包所以沒事）。
     - `"*apply*"` 是**萬用字元比對，不是硬編清單**——前端日後新增 `xxx_apply` 會自動被納入。
     - `$4` 起算是因為 `writeSnapshotSheet_()` 的前 3 列是視窗標註與欄位標題。
     - ⚠️ **2026/07 以前一律顯示 `—`，這是刻意的**：`GA4_按鈕點擊` 的資料就是從
