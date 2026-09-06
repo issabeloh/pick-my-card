@@ -873,6 +873,7 @@ function showAnnouncementModal(index) {
 //    不值得為它在 users 文件加一個永久欄位；換裝置多問一次可以接受。
 //  - 找不到問卷公告就完全不彈（見 findSurveyAnnouncementIndex）：Sheets 把那則
 //    公告下架後這個邀請自動失效，不用回頭改程式。
+//  - 受眾：登入用戶 ＋ 回訪訪客（見 isSurveyInviteAudience），首訪的人不問。
 //  - 兩道自動下架保險：期限（只在 2026/9 整月）＋ 公告還在不在。任一不成立就完全不彈。
 //  - 只在主站首頁彈：/promos 的 iframe 與 /merchant/xxx 落地頁不打擾。
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
@@ -913,6 +914,7 @@ function logSurveyInviteEvent(outcome) {
     try {
         window.logEvent(window.firebaseAnalytics, 'survey_invite', {
             outcome: outcome,
+            user_state: currentUser ? 'logged_in' : 'guest',
             surface: typeof getAnalyticsSurface === 'function' ? getAnalyticsSurface() : 'site',
         });
     } catch (e) {
@@ -920,11 +922,28 @@ function logSurveyInviteEvent(outcome) {
     }
 }
 
-// 由 onAuthStateChanged 的「已登入」分支呼叫（auth-user-data.js）。
+// 這次進站的人算不算「該問的對象」（2026-09-06 擴大受眾）。
+// 原本只問登入用戶，兩天只收到 1 份回覆，所以訪客也問——但仍避開「這輩子第一次來」
+// 的人：他們還沒用過工具，沒有體驗可以分享，問了只是擋路。
+// 訪客判準 ＝「這次不是從 landing 點進來的」＋「這台裝置已經有本站的 localStorage 痕跡」。
+// 首訪動線一定是「進 index → 被首屏路由導去 landing → 帶 ?start 回來」（見 index.html
+// 開頭的 pre-paint script），所以帶 start 參數的這一輪＝首訪，不問；反過來說，沒帶
+// start 又已經有痕跡，就是以前來過的人。
+function isSurveyInviteAudience() {
+    if (currentUser) return true;   // 登入用戶一律算
+    try {
+        if (new URLSearchParams(location.search).has('start')) return false;
+        return localStorage.length > 0;
+    } catch (e) {
+        return false;  // localStorage 被封鎖：既判斷不了回訪，也記不住「問過了」
+    }
+}
+
+// 由 onAuthStateChanged 的登入／訪客兩個分支呼叫（auth-user-data.js）。
 function maybeShowSurveyInvite() {
     if (surveyInviteHandledThisSession) return;
     if (!isSurveyInvitePeriod()) return;  // 只在 9 月
-    if (!currentUser) return;             // 只問登入用戶
+    if (!isSurveyInviteAudience()) return;  // 登入用戶或回訪訪客，首訪不問
     // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
     // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
     // ?merchant= 深連結）——那些頁面用戶是帶著任務進來的，不彈 modal 擋路。
