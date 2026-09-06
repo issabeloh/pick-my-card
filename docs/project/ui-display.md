@@ -158,10 +158,16 @@
 > 標題列：公告 modal 與這個 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，
 > 2026-09-03 站長指定）。特異性掛在 `.announcement-modal-content` / `.survey-invite-content` 上，沒動全站 `.modal-header`。
 
-登入用戶「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
+「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
 modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.js` 的 `maybeShowSurveyInvite` / `survey invite`。
 
-- **觸發點在 `onAuthStateChanged` 的登入分支尾端**（`js/auth-user-data.js`，所有使用者資料載完之後），延遲
+- **受眾＝登入用戶 ＋ 回訪訪客**（`isSurveyInviteAudience()`，2026-09-06 由「只問登入用戶」擴大——原本兩天只收到
+  1 份回覆）。訪客的「回訪」判準：**這次沒帶 `?start`** ＋ **localStorage 有本站痕跡**。首訪動線一定是
+  「進 index → 被首屏路由導去 landing → 帶 `?start` 回來」（見 `index.html` 開頭的 pre-paint script），所以帶
+  `start` 的那一輪就是首訪，不問——沒用過工具的人沒有體驗可以分享
+- **觸發點在 `onAuthStateChanged` 的登入分支與訪客分支尾端**（`js/auth-user-data.js`，所有資料載完之後），另外
+  **Firebase 逾時 fallback 也補呼叫一次**（廣告阻擋器擋掉 Firebase 時 `onAuthStateChanged` 永遠不觸發，
+  這些人否則永遠問不到）。三處都靠 `surveyInviteHandledThisSession` 收斂成一次。延遲
   `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
 - **有期限：只在 2026/9 整月**（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
   `+08:00`（台灣時間）**——省略時區後綴會退化成「裝置本地時間」，人在國外或時區設錯的用戶起訖點會整個偏掉。
@@ -175,7 +181,7 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
   在 users 文件加永久欄位，換裝置多問一次可接受。**顯示的當下就記帳**，用戶關分頁沒回答也不再問第二次
 - 開啟時 `disableBodyScroll()`、關閉時 `enableBodyScroll()` 成對呼叫（背景頁不會跟著捲）；公告 modal 本來就不上鎖，
   維持原樣
-- 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）與 `surface`
+- 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）、`user_state`（logged_in/guest）與 `surface`
 
 ## 教訓記錄
 
