@@ -46,6 +46,7 @@
 - **網址本身不顯示**：那些網址又長又醜，而且同一組的 `conditions` 早就在講「需登錄」了，這裡只是給一個可以直接點過去的去處
 - **四條 render 路徑都要接**（改一條會漏掉其他）：`renderCashbackRatesIndividually()`（分級卡，`js/cashback-engine.js`）、非分級卡的 `specialContent`（`js/card-detail.js`）、CUBE 的合併路徑（`mergedRate.registerLink`，合併時留先遇到的那一個）、搜尋結果卡片（`js/results-display.js` 的 `result.matchedRateGroup`）。全部都**不依賴 `conditions` 有沒有值**（沒有條件的組別一樣要能顯示登錄連結）
 - ⚠️ **搜尋結果那一條要放在三個分支「之外」**（2026-09-08 上線第一天踩到）：`additionalInfo` 是由 `if (isUpcoming) / else if (matchedRateGroup) / else if (endingSoonInlineBadge)` 三支分別組出來的，登錄連結原本只寫在中間那支，於是「即將開始的活動」與「只有即將結束徽章」兩種情況都看不到登錄連結——而那兩種恰恰最需要提醒用戶「記得先登錄」。現在改成三支跑完後，只要 `matchedRateGroup.registerLink` 有值就補上
+- ⚠️⚠️ **但光是移出分支還不夠**（同日第二次修）：「即將開始」的結果**根本沒有 `matchedRateGroup`**——見下方 1d 節。要先讓 `findUpcomingActivity()` 帶上槽位原件，那個 `if (result.matchedRateGroup)` 才對即將開始的活動成立
 - ⚠️ **「詳情頁看得到、搜尋結果沒有」不一定是 bug**：詳情頁列出該卡**所有**槽位，搜尋結果只顯示**引擎實際命中的那一個**槽位。例：搜「中油Pay」時玉山 Ubear 卡命中的是 3% 的行動支付槽（沒有登錄連結），而不是 3% 的中油Pay 專屬槽（有連結）——兩者是不同活動。回報這類問題前先確認「搜尋結果顯示的活動期間/條件」跟「詳情頁那個有連結的槽位」是不是同一筆
 - **鐵則 3**：`renderRegisterLinkLine` 內 `sanitizeUrl()` 只放行 http/https，不合法就整行不渲染。`sanitizeUrl` 刻意在 href 那一行**再叫一次**（不用上面存好的變數）——`tools/security-scan.sh` 的 SEC6a 是逐行掃的，同一行看不到 `sanitizeUrl` 就報錯
 - **App 專屬 scheme 一律擋掉**（`cathaybk://`、`linepay://`…）：沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 scheme 沒有公開保證、改版就失效。只能在 App 內操作的活動請把步驟寫成文字放進 `conditions_N`
@@ -92,6 +93,25 @@
 - **查不到色碼就退回中性灰**（工作表沒建、這家沒填、色碼格式錯被匯出端擋掉）。沒顏色比錯顏色好，也讓這功能可以慢慢補齊
 
 **目的是「快速定位」不是「品牌辨識」**：站長 2026-09-08 明確表示同色系撞色沒關係（綠族五家、紅族四家）——有顏色分區就已經把 33 顆膠囊的搜尋範圍縮掉一大半，不需要每家獨一無二。
+
+## 1d. 為什麼搜尋結果的 `additionalInfo` 分成三支（2026-09-08 追查）
+
+站長問「即將開始只是多一個徽章，為什麼要走不同分支？」——追下去發現**不是徽章的問題，是兩種結果根本由不同的產生器造出來、欄位形狀不一樣**：
+
+| | 進行中的活動 | 即將開始的活動 |
+|---|---|---|
+| 產生器 | `calculateCashback()`（`js/cashback-engine.js`） | `findUpcomingActivity()`（同檔，另一支） |
+| 期間怎麼拿 | `result.matchedRateGroup.period` | `result.period`（自己抄一份） |
+| 條件、門檻 | `matchedRateGroup.conditions` / `.minSpend` | **沒有**，那支沒抄 |
+| 槽位原件 | `matchedRateGroup`＝槽位物件本身 | ~~沒有~~ → **2026-09-08 補上** |
+
+`findUpcomingActivity()` 是把需要的欄位**一個一個抄進新物件**（rate / cap / matchedItem / periodStart / periodEnd / period / …），沒有帶槽位本身。所以 `displayResults()` 面對兩種結果必須讀不同的欄位，才被迫分裂成三支；徽章只是表象。
+
+**已做的修正（低風險、純新增）**：`findUpcomingActivity()` 推入結果時多帶一個 `matchedRateGroup: rateGroup`。純新增欄位、沒有任何既有讀取被影響，但需要槽位資料的顯示邏輯（目前是銀行官方登錄連結）從此兩種結果共用同一條路。
+
+**還沒做的（要做要另外評估）**：把三支真正合併成一支。那等於讓「即將開始」的卡片也開始顯示 `conditions` 與滿額門檻——是合理的，但那是**可見的行為改變**，不該夾在修 bug 裡順手做。真要做時 `tools/regression` 的 12 組要重錄基準。
+
+**通則**：兩個產生器在描述同一種東西（一檔活動）時，**要嘛共用同一個物件形狀，要嘛其中一個帶著原件**。各自抄欄位的下場就是顯示端每加一個欄位都要記得改兩個地方，而漏掉的那邊不會報錯、只會靜默少一行。
 
 ## 2. 卡片圖片資產
 
