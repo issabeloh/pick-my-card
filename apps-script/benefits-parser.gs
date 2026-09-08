@@ -82,6 +82,11 @@ function buildAutomationMenu_() {
     // 舊卡的活動更新（年中/年底大批更新用）：同一支解析器，輸入換成監控存的整頁新文字
     .addItem('解析活動更新：2-變動通知 → 4-待審核（活動更新）', 'parseInboxCardGroups') // card-benefits-parser.gs
     .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
+    .addSeparator()
+    // 登錄連結兩階段（register-link-finder.gs）；兩者都只寫資料檔的
+    // 「Cards Data-登錄連結草稿」，正式 Cards Data 完全不動
+    .addItem('① 標出需登錄的活動（不用 AI）→ Cards Data 草稿', 'markRegisterSlotsInDraft')
+    .addItem('② 找登錄連結：1-監控清單 → Cards Data 草稿', 'fillRegisterLinksFromSnapshots')
     .addToUi();
 }
 

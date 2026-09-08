@@ -338,6 +338,8 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 解析新卡：3-貼上原文 → 4-待審核（基本＋組別） | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
 | 解析活動更新：2-變動通知 → 4-待審核（活動更新） | `parseInboxCardGroups` | `2-變動通知`（「組別解析」欄空白、實質變動≠否、60 天內、card_id 剛好一張既有卡）的「新文字」欄 | `4-待審核（活動更新）`（自動建）；回寫「組別解析」欄狀態 | `card-benefits-parser.gs` |
 | 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+| ① 標出需登錄的活動（不用 AI）→ Cards Data 草稿 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
+| ② 找登錄連結：1-監控清單 → Cards Data 草稿 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
 
 所有分頁名的唯一出處（改名時要改的就是這幾行）：
 
@@ -348,6 +350,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | `2-封存（變動通知）` | `watchlist-monitor.gs` → `INBOX_ARCHIVE_SHEET` |
 | `3-貼上原文（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.inputSheet` |
 | `4-待審核（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.reviewSheet` |
+| `Cards Data-登錄連結草稿`（在資料檔） | `register-link-finder.gs` → `REGLINK_CONFIG.draftSheetName` |
 | `變動紀錄`（在資料檔） | `benefits-parser.gs` → `PARSER_CONFIG.changelogSheet` |
 | `3-貼上原文（新卡）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.inputSheet` |
 | `4-待審核（新卡-基本）`／`（新卡-組別）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.basicReviewSheet`／`groupReviewSheet` |
@@ -1109,3 +1112,44 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 
 ⚠️ **「疑似消失」先別急著刪**。監控的 prompt 早就警告過「－(消失)的段落常常只是改寫、搬移」——
 官網改版就會造成這種結果，不一定是活動真的下架。那幾列標紅、`needs_review=TRUE`，是要你回官網確認的清單，不是判決。
+
+## 找登錄連結：`registerLink_N` 兩階段（`register-link-finder.gs`，2026-09-08 新增）
+
+**要解決的事**：Cards Data 新增 `registerLink_N` 欄之後，沒有人要一格一格去官網翻登錄頁網址；而且「哪些活動要登錄」本身就難掃——Cards Data 的槽位太多了。
+
+### ① 標出需登錄的活動（`markRegisterSlotsInDraft`，不呼叫 AI）
+
+純機械、不用任何額度、幾秒跑完全部卡片。**關鍵洞察**：站長寫 `conditions_N` 時本來就會寫「需登錄」「須當月登錄活動」「需登錄且限量」，所以「這個槽位要不要登錄」根本不用問 AI——比對「登錄」兩個字就好，100% 準確且零成本。
+
+- 判斷式 `regLinkNeedsRegister_()`：conditions 用全形分號拆成多條，**逐條**看有沒有「登錄」；`免登錄／不需登錄／無需登錄／無須登錄／毋須登錄／不用登錄` 先排除（意思剛好相反）。逐條而不是整串判斷，是為了「同一串裡 A 條寫免登錄、B 條寫需登錄」時仍然正確
+- 標色：`conditions_N` 與 `registerLink_N` 兩格一起上色，方便橫向掃
+  - 🟡 `#fff3cd`＝要登錄、還沒有連結（等你補）
+  - 🟢 `#d4edda`＝要登錄、連結已經有了
+- **順手撈出 conditions 裡本來就寫著的登錄網址**（`regLinkExtractFromConditions_`）。⚠️ 不可以「看到 https 就抓」：實測 cards.data 裡三個帶網址的 conditions，其中**兩個是永豐 DAWAY 的「指定店家清單 https://…」——那是通路清單頁、不是登錄頁**，抓了就是錯的。正確做法是逐條看：**同一條**條件裡同時有「登錄」與網址才算
+- `登錄連結說明` 欄逐槽位列出**機械產生**的摘要（回饋率／上限／適用通路／分類）。這四樣 Cards Data 裡本來就有，機械讀比 AI 轉述準；官網的「活動名稱」不在 Cards Data 裡，由②的 AI 補
+
+**實測基準（2026-09-08 的 cards.data）**：41 個槽位、17 張卡的 conditions 提到「登錄」；其中 1 個（兆豐 BT21 槽 3）的登錄網址本來就寫在 conditions 裡會被直接撈出；永豐 DAWAY 槽 6/7 的通路清單網址正確地**不**被誤判。
+
+### ② 用監控快照找剩下的連結（`fillRegisterLinksFromSnapshots`，呼叫 AI）
+
+只處理①標黃的槽位（要登錄、但沒連結），拿 `1-監控清單` 的 `last_snapshot` 問 Gemini。①沒標黃的槽位完全不會進 AI，省下大半的呼叫。
+
+- snapshot 依 `card_id` ＋ `cards` 欄歸到卡片（一頁蓋多張卡的公告總覽頁會歸給每一張）
+- AI 只負責「在原文裡找網址」與「活動名稱」，回饋率/上限/通路①已經給了，不要它重複
+- 一次 `REGLINK_CONFIG.maxCardsPerRun`（**預設 3**，先試水溫；順了再調大）。`AI 搜尋狀態` 欄有值的卡自動跳過，再按一次選單接著跑
+
+### 共通的安全底線（這支會寫到資料檔，是全站資料的來源）
+
+- **絕不寫正式 `Cards Data`**：只寫草稿分頁，每個入口都先過 `regLinkAssertDraft_()` 名稱斷言
+- **`1-監控清單` 只讀不寫**，完全不碰 `last_snapshot`
+- **AI 回的網址必須逐字出現在 snapshot 裡才採用**（`regLinkVerifyInSnapshot_`，比對前去掉尾端標點與斜線）。硬性機械檢查、不是靠 prompt 拜託——LLM 生一個「看起來很像那家銀行」的網址是這個任務最可能出的錯，錯的登錄連結會把用戶帶到 404，**比沒有連結更糟**。被擋下的會用 ⚠️ 寫進說明欄
+- AI 回的 slot 不在①的待找清單裡 → 直接丟棄
+- 只收 https（沿用 `normalizeRegisterLink_`）；App scheme、App Store 下載頁、只能在 App 內操作的活動一律不回
+
+### 草稿分頁在哪裡
+
+建在**資料檔**裡（跟 `Cards Data` 同一本），不是自動化檔——`sheet.copyTo(ss)` 本來就能跨檔複製，這裡是複製到來源自己那一本，連跨檔都不算；跨檔存取靠的是 `getCardsSheet_()` 的 `CARDS_SPREADSHEET_ID`，`checkAdExclusionsForAllCards` 早就在用同一條路。
+
+⚠️ **貼回正式表時用「選擇性貼上 → 只貼值」**，否則黃綠底色會一起貼過去。
+
+⚠️ 整批重跑：把草稿分頁刪掉再執行①（會重新複製一份最新的 Cards Data）。
