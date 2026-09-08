@@ -422,8 +422,8 @@ function getOrCreateSheet(name) {
 //   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果；
 //   monthlyMessage：GA4_每月新舊用戶 有沒有補列（補了一列時這是唯一的通知管道，
 //                   因為那張表的「備註」欄要人工回去填，沒看到訊息就不會有人去填）
-//   uncoveredMessage：未覆蓋商家追蹤 本次新增／自動結案了幾個詞（同理：新詞要有人去看、
-//                   自動結案的列要有人回頭確認，不寫在這裡就沒有人會知道表變了）
+//   uncoveredMessage：未覆蓋商家追蹤 本次新增／標記待確認了幾個詞（同理：新詞要有人去看、
+//                   標成「待確認」的列要有人回頭查證，不寫在這裡就沒有人會知道表變了）
 // 開頭用 ✅／⚠️ 標整體狀態（失敗的步驟連錯誤訊息一起寫出來，不用去翻執行紀錄），
 // 後面接本次兩個滾動視窗的實際日期——事後追「這份數字是哪幾天的」有據可查。
 function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage, uncoveredMessage) {
@@ -1904,7 +1904,7 @@ function fetchMonthlyUserStats_(monthStart) {
 // 三個安全性質（跟 `GA4_每月新舊用戶` 同一類：**會被人手動編輯的表**，寫法刻意與覆寫式
 // 報表不同，改動前先讀完這段）：
 //   1. **只 append／只改指定儲存格，永遠不 clear**。禁止在這裡使用 writeSnapshotSheet_()。
-//   2. **狀態／覆蓋日期／備註 是人工欄**。只有「自動結案」那一種情況會動 狀態＋覆蓋日期
+//   2. **狀態／覆蓋日期／備註 是人工欄**。只有「自動標記待確認」那一種情況會動 狀態＋覆蓋日期
 //      （條件嚴格，見 uncoveredApply_）；**備註程式完全不碰**。站長把狀態改成「不處理」的
 //      列，這三欄從此不再被程式碰，只更新日期與次數欄。
 //   3. **欄位用表頭文字定位、不寫死欄號**，並檢查表頭重複（`headers.indexOf()` 遇到重複欄名
@@ -1929,9 +1929,14 @@ const UNCOVERED_COLS = {
 // 純人工欄：找得到就在新列留白，程式**永遠不寫入**（找不到也不影響其他欄位）
 const UNCOVERED_NOTE_COL = '備註';
 
-const UNCOVERED_STATUS_OPEN   = '未覆蓋';  // 新詞的預設狀態
-const UNCOVERED_STATUS_DONE   = '已覆蓋';  // 自動結案時寫入
-const UNCOVERED_STATUS_IGNORE = '不處理';  // 人工設定：設了之後程式不再碰狀態／覆蓋日期／備註
+// ⚠️ 分工：**程式只寫觀察，人寫結論**。
+// 程式看得到的事實只有「最近 30 天沒人以會落空的方式查到它」——那不等於「我們補好了」
+// （見 uncoveredApply_ 的自動標記段落），所以程式只寫得起「待確認」；「已覆蓋」是人親自
+// 確認資料真的補上了才填的，而程式只處理狀態為「未覆蓋」的列，填了之後就永遠不會再被碰。
+const UNCOVERED_STATUS_OPEN    = '未覆蓋';  // 新詞的預設狀態（唯一會被程式改動的狀態）
+const UNCOVERED_STATUS_PENDING = '待確認';  // 程式偵測到不再落空時寫入，等人確認
+const UNCOVERED_STATUS_DONE    = '已覆蓋';  // **只有人寫得起**，程式只會讀不會寫
+const UNCOVERED_STATUS_IGNORE  = '不處理';  // 人工設定：設了之後程式不再碰狀態／覆蓋日期／備註
 
 // 從 updateGA4MerchantSearches() 的回傳值取欄位時用的表頭文字。
 // 用表頭對位而不是寫死欄序：那張表日後加欄，這裡才不會靜默錯位（對不到會 throw）。
@@ -1968,7 +1973,7 @@ function updateUncoveredMerchants(searchData) {
 
   const parts = [
     UNCOVERED_SHEET + '：新增 ' + outcome.added + ' 個新未覆蓋詞',
-    '自動結案 ' + outcome.resolved + ' 個',
+    '標記待確認 ' + outcome.resolved + ' 個（⚠️ 需人工查證後改成「' + UNCOVERED_STATUS_DONE + '」）',
     '更新 ' + outcome.updated + ' 列既有記錄',
     '本次視窗未對到詞共 ' + outcome.missTerms + ' 個',
   ];
@@ -2082,9 +2087,14 @@ function uncoveredWriteBanner_(sheet, layout, win) {
     '⚠️ 次數是「覆寫」不是「累加」：來源視窗滾動 30 天、相鄰兩次執行高度重疊，累加會把同一批' +
       '試算重複計算約 30 倍。「最近視窗未對到次數」＝本次執行看到的數；歷史嚴重度看' +
       '「歷史最高未對到次數」（取 max）',
-    '自動結案：本次視窗「沒對到＝0 且 有對到>0」，且該列狀態仍是「' + UNCOVERED_STATUS_OPEN +
-      '」、覆蓋日期空白 → 自動改成「' + UNCOVERED_STATUS_DONE + '」並寫上覆蓋日期（同時把最近視窗' +
-      '未對到次數歸 0；最近出現日刻意停在最後一次落空那天）',
+    '自動標記待確認：本次視窗「沒對到＝0 且 有對到>0」，且該列狀態仍是「' + UNCOVERED_STATUS_OPEN +
+      '」、覆蓋日期空白 → 改成「' + UNCOVERED_STATUS_PENDING + '」並寫上偵測到的日期（同時把最近' +
+      '視窗未對到次數歸 0；最近出現日刻意停在最後一次落空那天，跟覆蓋日期並排就看得出隔了多久）',
+    '⚠️ 「' + UNCOVERED_STATUS_PENDING + '」不是驗收：程式只知道「最近 30 天沒人以會落空的方式查它」，' +
+      '那有三種可能——① 你真的補了資料 ② 這陣子剛好只有沒勾「精準搜尋」的人查它（勾了要完全一致' +
+      '才算對到，沒勾走放寬比對）③ 舊的落空事件滾出 30 天視窗了。查證資料真的補上後，' +
+      '請自己把狀態改成「' + UNCOVERED_STATUS_DONE + '」（程式只動「' + UNCOVERED_STATUS_OPEN +
+      '」的列，改完就不會再被碰）；確認是誤判就改回「' + UNCOVERED_STATUS_OPEN + '」並**清掉覆蓋日期**',
     '人工欄：狀態／覆蓋日期／備註 由人維護——備註程式永遠不寫；狀態設成「' +
       UNCOVERED_STATUS_IGNORE + '」的列，程式從此只更新日期與次數，不碰這三欄',
     '沒出現在本次視窗的詞：整列不動（數字停在最後一次出現時），新鮮度看「最近出現日」',
@@ -2154,16 +2164,23 @@ function uncoveredApply_(sheet, layout, stats, today) {
       return;
     }
 
-    // ── 自動結案：這個視窗完全沒落空、而且真的有對到（全是 has_match 註冊前的舊資料不算） ──
+    // ── 自動標記「待確認」：這個視窗完全沒落空、而且真的有對到 ──
+    // ⚠️ 這**不是驗收**，程式驗不了。has_match 是「findMatchingItem(輸入字串) 有沒有回傳東西」
+    //    （js/cashback-engine.js），而它吃前端「精準搜尋」勾選框（js/home-ui.js 的 exactOnly）
+    //    ——同一個字串，勾了要完全一致才算對到、沒勾走放寬比對。所以「這 30 天沒落空」有三種
+    //    可能：① 真的補了資料 ② 這陣子剛好只有沒勾精準搜尋的人查它 ③ 舊的落空事件滾出視窗了。
+    //    程式只寫得起「待確認」，「已覆蓋」留給人查證後自己填。
+    //    另外要求 matched > 0：全是 has_match 註冊前的「未知」資料不能當成補好了。
     if (at === undefined || stat.matched <= 0) return;
     const status = String(block[at][cols.status - 1] || '').trim();
     const coveredAt = block[at][cols.coveredAt - 1];
     const coveredBlank = coveredAt === '' || coveredAt === null || coveredAt === undefined;
-    // 「不處理」「已覆蓋」或覆蓋日期已填的列一律不碰——狀態與覆蓋日期是人工欄
+    // 只動狀態還停在「未覆蓋」且覆蓋日期空白的列——其餘（待確認／已覆蓋／不處理／人工填過
+    // 日期的）一律不碰。誤判想重新打開：狀態改回「未覆蓋」**並清掉覆蓋日期**，缺一不可
     if (status !== UNCOVERED_STATUS_OPEN || !coveredBlank) return;
 
     resolvedRows.push(layout.headerRow + 1 + at);
-    recentMissCol[at][0] = 0;   // 剛結案卻留著舊次數會自相矛盾；歷史嚴重度在「歷史最高」那欄
+    recentMissCol[at][0] = 0;   // 剛標記卻留著舊次數會自相矛盾；歷史嚴重度在「歷史最高」那欄
     touched.recentMiss = true;
     resolved++;
   });
@@ -2182,7 +2199,7 @@ function uncoveredApply_(sheet, layout, stats, today) {
     }
   }
   resolvedRows.forEach(row => {
-    sheet.getRange(row, cols.status).setValue(UNCOVERED_STATUS_DONE);
+    sheet.getRange(row, cols.status).setValue(UNCOVERED_STATUS_PENDING);
     sheet.getRange(row, cols.coveredAt).setValue(today).setNumberFormat('yyyy/mm/dd');
   });
 
