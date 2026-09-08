@@ -8197,6 +8197,13 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         background: rgba(255, 255, 255, 0.18);
     }
 
+    /* 抽屜高度用 dvh（2026-09-08 站長回報 iPhone 13 上 FAQ 卡被截斷、又捲不動）：
+       iOS Safari 的 100vh 是「工具列收起後」的大視窗高度（iPhone 13 = 844px），
+       但實際可視只有約 659px——抽屜底部近 190px 被網址列/工具列蓋住，而內容高度
+       又不到 844px、不會產生捲軸，於是「看不到又滾不下去」。dvh 是實際可視高度，
+       工具列在不在都對得上；保留 vh 那行當不支援 dvh 的舊瀏覽器 fallback
+       （寫法比照本檔「Mobile modal sizing」區塊）。
+       overscroll-behavior:contain 讓抽屜捲到底時不要把底下的頁面一起帶著捲。 */
     .sidebar {
         position: fixed;
         top: 0;
@@ -8204,7 +8211,9 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         width: 85vw;
         max-width: 360px;
         height: 100vh;
+        height: 100dvh;
         max-height: 100vh;
+        max-height: 100dvh;
         z-index: 950;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
@@ -8212,6 +8221,13 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         border-right: none;
         box-shadow: none;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 全螢幕抽屜的最後一塊內容不要貼齊 home indicator（iPhone 底部橫條） */
+    .sidebar-content {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     }
 
     .sidebar.open {
