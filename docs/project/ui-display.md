@@ -75,7 +75,46 @@
 - **膠囊 3 欄**是 `display: grid; repeat(3, minmax(0,1fr))`（原本 flex 自動換行）。等寬格線的代價是最長的卡名（「彰銀｜My樂現金回饋卡」）在格子裡折成兩行——刻意選折行而非 `text-overflow: ellipsis`：膠囊是用來認卡的，截成「My樂現金回…」就失去意義
 - 搜尋結果卡片跟著受惠：`.results-container`（以及 `.coupon-results-container` / `.parking-benefits-container` / `.cardholder-promos-container`）都是 `repeat(auto-fit, minmax(300px, 1fr))`，主內容 1180px 時自動從一排 2 張變成一排 3 張——不用另外改
 - 這幾條 CSS **必須排在本檔前段無媒體查詢的 `.container` / `.app-layout` 之後**——媒體查詢不加特異性，同特異性靠源碼順序決勝
-- ⚠️ **還沒做的是「字級/密度」那一半**：`styles.css` 有 191 條 px 字級 ＋ 170 條 rem 字級，`html { font-size }` 只會拉動 rem 那一半、把比例扯歪，沒有單一開關可以整體縮小。真要做得逐條盤點桌機專屬的字級與內距，屬於獨立任務（見教訓記錄 2026-09-08 條）
+- 「字級/密度」那一半已於同日補上，見下一節 1c
+
+## 1c. 桌機密度調整（≥1025px，2026-09-08 新增）
+
+1b 只放寬了「可用寬度」，站長回報桌機仍要縮到瀏覽器 75% 才舒服——剩下的是**字級與留白的密度**。這一節就是那一半。
+
+**沒有單一開關，這是前提不是偷懶**（兩條路都實測過）：
+
+| 想過的做法 | 為什麼不行 |
+|---|---|
+| `html { font-size: 87.5% }` | `styles.css` 的 px 字級與 rem 字級各約一半（191 vs 170 條），只拉得動 rem 那一半，比例會歪 |
+| `zoom` / `transform: scale()` | 詳情頁 sticky nav 的捲動定位靠 `getBoundingClientRect` 與 `scrollTop` 換算（`js/results-display.js` 的 `setupCardDetailNav`），縮放會讓這兩個單位對不上 |
+
+**實際做法：三個 `@media (min-width: 1025px)` 區塊，逐條覆寫。** 分三類、分三個 commit，每類都截圖確認：
+
+| 類別 | 內容 | 比例 | 條數 |
+|---|---|---|---|
+| 第 1 類 字級 | `font-size` | ~0.87×（24→21 / 16→14 / 15→13 / 13→11.5 / 12→11，rem 同比例），小字下限約 10.2px | 133 |
+| 第 2 類 內距 | `padding` / `margin` / `gap` | ~0.85×，只縮 >3px 的值、下限 3px，`auto`/`0`/`em`/`%` 不動，負值同比例 | 211 |
+| 第 3 類 控制項高度 | 寫死 px 的 `width`/`height`/`min-height` | ~0.87× | 26 |
+
+**清單怎麼來的（不是憑印象列的）**：用 Playwright 在 1920×1080 實跑六個畫面（首頁／搜尋結果「家樂福」／卡片詳情 modal／推薦活動／`/promos`／`/faq`），掃 `document.styleSheets` 取出「桌機會套用且元素真的存在於頁面上」的規則。要重做或往下再縮一階時，照同一個流程重新產生清單，不要手動維護。
+
+**三個檔各寫一份，不能集中在 styles.css**：`faq.css` 在 `styles.css` **之後**載入（寫進 styles.css 會被 faq.css 原規則蓋掉）、`promos.html` **根本不載入 styles.css**。三個區塊都必須留在各自檔案的**最後**——媒體查詢不加特異性，同特異性靠源碼順序決勝。
+
+**斷點壓在 1025px**：手機（≤768）與平板（769–1024）完全不受影響。桌機專屬也是輸入框能從 16px 降到 14px 的前提——那個 16px 是防 iOS 聚焦自動縮放用的，只在手機有意義。
+
+**刻意不縮的三類**（縮了就是 bug，不是密度）：
+
+1. **替絕對定位的圖示／徽章保留的空間**——那是位置不是留白，縮了文字會壓到圖示上：`#merchant-input` 的 `padding-right:44px`（清除鈕）、`.cashback-search-input` 的 `padding-left:30px`（放大鏡）、`.input-clear-wrap > input` 的 `padding-right:30px`、`.card-result.best-card .card-header` 的 `padding-right:64px`（「最優回饋」徽章）、`.personal-field-hint-indent` 的 `padding-left:20px`
+2. **18px 以下的圖示與核取方塊**（`.promo-help-btn`／`.level-help-btn` 的 18px、`.checkmark` 與 svg 的 16px、核取方塊 14/16px、`.spotlight-dot` 的 8px）——再縮就從「小」變成「看不清也點不到」，而它們佔的版面本來就微不足道
+3. **`em` / `%` / `auto` 的值**（如 `.cashback-condition` 的 `padding-left:0.5em`）——會自己跟著縮過的字級走，再乘一次就縮兩次
+
+**成對規則**：`width` 與 `height` 都有寫死的圓形／方形按鈕必須一起改，只改一邊會從圓變橢圓（`.guest-avatar-icon`／`.scroll-to-spotlight-btn`／`.spotlight-nav-btn`／`.spotlight-info-btn`／`.merchant-clear-btn`／`.close-modal`）。
+
+**兩個「不能照抄比例」的特例**：
+- `.matched-item-row` 的 `min-height` 原為 46px 並註明「與計算按鈕同高」。按鈕在第 2 類之後實測 35px，所以這裡填 35px 而不是 0.87×（那會得到 40px，反而讓那句註解描述的對齊關係失效）。**凡是註解寫著「與 X 同高／同寬」的值，改的時候要去量 X 的新尺寸，不能照乘比例。**
+- `.calculate-btn.compact` 的 `height:53.5px` 不用改——桌機被更具體的 `.app-layout main .calculate-btn.compact { height: auto }` 蓋掉，實際高度由縮過的 padding 決定。
+
+**副作用與處理**：膠囊變小後，快捷搜尋可視列（`.quick-search-visible` 是 `overflow:hidden` 硬切）會多擠進「半顆」第 7 顆膠囊，看起來像壞掉。不用隱藏也不用截字（站長否決過為了整齊犧牲內容），改成右緣 24px 漸淡（`mask-image`）——被切到的那顆讀起來是「後面還有」，而它本來就完整收在「更多」下拉裡，一個字都沒少。
 
 ## 2. 卡片圖片資產
 
@@ -227,3 +266,4 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-08] iPhone 13 上手機抽屜的 FAQ 卡被截斷、又捲不下去 → `.sidebar` 的 height/max-height 吃 `100vh`，而 iOS Safari 的 100vh 是「工具列收起後」的大視窗高度（844px），實際可視只有約 659px：底部近 190px 被工具列蓋住，內容（約 780px）又小於 844px 不產生捲軸 → 任何「滿版高度的固定面板」（抽屜、全螢幕 modal）一律 `100vh` 後面再補一行 `100dvh`，vh 那行只當舊瀏覽器 fallback
 - [2026-09-03] 用 `s[start:end]` 整段替換 CSS 區塊時，誤刪了夾在中間的 modal 樣式與手機 media query → `end` 錨點抓成「下一個大註解」，但那之間還有別的規則 → 整段替換前先確認 start/end 之間**只有**要換掉的東西（`grep -n` 列出區間內的選擇器），或改用逐條 replace
 
+- [2026-09-08] 桌機密度調整想用一條 CSS 解決 → 沒有單一開關（見第 1c 節的兩條死路），只能逐條覆寫；而「逐條」不等於「手工列清單」→ 用 Playwright 實跑目標畫面掃 `document.styleSheets`，取出「桌機會套用且元素真的存在」的規則自動產生清單，再機械套比例；憑印象列會漏掉 faq.css／promos.css 這種載入順序不同的檔案
