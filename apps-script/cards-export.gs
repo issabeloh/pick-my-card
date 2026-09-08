@@ -572,6 +572,10 @@ function exportToJSON() {
     addOptionalField(rateObj, row, headers, `conditions_${j}`, 'string', 'conditions');
     addOptionalField(rateObj, row, headers, `period_${j}`, 'string', 'period');
     addOptionalField(rateObj, row, headers, `hideInDisplay_${j}`, 'boolean', 'hideInDisplay');
+    // 銀行官方登錄連結（2026-09-08 新增）：需登錄才算數的活動，其登錄頁網址。
+    // 前端 renderRegisterLinkLine() 會過 sanitizeUrl()（只放行 http/https）再顯示成
+    // 「銀行官方登錄連結」超連結。欄位不存在時 addOptionalField 直接跳過，舊表相容。
+    addOptionalField(rateObj, row, headers, `registerLink_${j}`, 'string', 'registerLink');
     addOptionalField(rateObj, row, headers, `cashbackModel_${j}`, 'string', 'cashbackModel');
     addOptionalField(rateObj, row, headers, `minSpend_${j}`, 'number', 'minSpend');
     addOptionalField(rateObj, row, headers, `maxSpend_${j}`, 'number', 'maxSpend');

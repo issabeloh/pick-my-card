@@ -587,6 +587,9 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += renderConditionLine(rate.conditions);
             }
 
+            // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+            specialContent += renderRegisterLinkLine(rate.registerLink);
+
             if (rate.period) {
                 specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
             }
@@ -1233,6 +1236,10 @@ async function generateCubeSpecialContent(card) {
                         existing.conditions = rate.conditions;
                     }
                 }
+                // 登錄連結：留先遇到的那一個，不串接（見下方顯示處的說明）
+                if (!existing.registerLink && rate.registerLink) {
+                    existing.registerLink = rate.registerLink;
+                }
             } else {
                 // First time seeing this rate+category+period combination
                 mergedActiveRates.set(mergeKey, {
@@ -1240,6 +1247,7 @@ async function generateCubeSpecialContent(card) {
                     parsedCap,
                     items: rate.items ? [...rate.items] : [],
                     conditions: rate.conditions || '',
+                    registerLink: rate.registerLink || '',
                     period: rate.period,
                     periodEnd: rate.periodEnd,
                     category: rate.category
@@ -1277,6 +1285,11 @@ async function generateCubeSpecialContent(card) {
             if (mergedRate.conditions) {
                 content += renderConditionLine(mergedRate.conditions);
             }
+
+            // 銀行官方登錄連結。⚠️ 這條路徑會把 rate+category+period 相同的組別合併成
+            // 一列，合併後只留第一個有登錄連結的（同一個活動的不同槽位不該有兩個登錄頁；
+            // 真的出現時以先遇到的為準，其餘在 Cards Data 裡就該修掉）。
+            content += renderRegisterLinkLine(mergedRate.registerLink);
 
             // 显示活動期間
             if (mergedRate.period) {

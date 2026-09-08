@@ -4843,6 +4843,33 @@ mark.cashback-search-hl {
     padding-left: 0.5em;
 }
 
+/* 銀行官方登錄連結（2026-09-08 新增，renderRegisterLinkLine 產生）：資料來自
+   Cards Data 的 registerLink_N。刻意不顯示網址本身，只把文字掛成超連結＋方框箭頭
+   icon（＝「會開新分頁」的通用符號）。不用 .cashback-condition 的斜體灰字——那是
+   「補充說明」的調性，這一行是可以點的動作，要看得出來是連結。 */
+.cashback-condition.cashback-register-link {
+    font-style: normal;
+}
+
+.cashback-register-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.cashback-register-link a:hover {
+    color: #1d4ed8;
+}
+
+.external-link-icon {
+    flex-shrink: 0;
+    /* 方框箭頭在視覺上比同字級的中文字重，縮一點並往上對齊字的中線 */
+    opacity: 0.85;
+}
+
 /* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
 .cashback-condition.spend-threshold {
     color: #111827;
@@ -7870,6 +7897,79 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     opacity: 1;
 }
 
+/* 側選單「最近異動」（2026-09-08 新增）：跨卡最新 5 筆的變動摘要，位置在卡片 chips
+   之下、站內頁面連結之上；桌機側欄與手機抽屜都顯示（.sidebar-page-links 在 ≥769px
+   是隱藏的，這塊不跟著隱藏——桌機側欄下半部本來就是空的）。
+   外觀刻意比 .sidebar-promos-banner 低調：它是「順手看一眼有沒有變動」的資訊，不是入口。
+   清單用整區淺灰底＋髮絲線分隔，比照詳情頁 .card-changelog-list 的「連續清單」。
+   ⚠️ 摘要最長可以到 200 多字（實測 2026-09-03 永豐幣倍卡那筆），一定要單行 ellipsis
+      截斷，否則 5 筆會把側欄撐成一面文字牆；全文看 title hover 或點進詳情頁。 */
+.sidebar-changelog {
+    padding-top: 14px;
+    margin-bottom: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-changelog-title {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.sidebar-changelog-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: #f9fafb;
+    border: 1px solid #edeff2;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.sidebar-changelog-list li + li {
+    border-top: 1px solid #edeff2;
+}
+
+.sidebar-changelog-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    background: none;
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.sidebar-changelog-item:hover,
+.sidebar-changelog-item:focus-visible {
+    background: #f1f3f5;
+}
+
+/* 卡名也可能很長（「台新街口卡(豬富卡)」等），同樣單行截斷不換行 */
+.sidebar-changelog-card,
+.sidebar-changelog-summary {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-changelog-card {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.sidebar-changelog-summary {
+    margin-top: 2px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #6b7280;
+}
+
 /* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
    （2026-07-16：桌機改搬到 header 導覽，這裡只留給手機側選單用；DOM 保留不刪，
    ≥769px 隱藏即可） */
@@ -8197,6 +8297,13 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         background: rgba(255, 255, 255, 0.18);
     }
 
+    /* 抽屜高度用 dvh（2026-09-08 站長回報 iPhone 13 上 FAQ 卡被截斷、又捲不動）：
+       iOS Safari 的 100vh 是「工具列收起後」的大視窗高度（iPhone 13 = 844px），
+       但實際可視只有約 659px——抽屜底部近 190px 被網址列/工具列蓋住，而內容高度
+       又不到 844px、不會產生捲軸，於是「看不到又滾不下去」。dvh 是實際可視高度，
+       工具列在不在都對得上；保留 vh 那行當不支援 dvh 的舊瀏覽器 fallback
+       （寫法比照本檔「Mobile modal sizing」區塊）。
+       overscroll-behavior:contain 讓抽屜捲到底時不要把底下的頁面一起帶著捲。 */
     .sidebar {
         position: fixed;
         top: 0;
@@ -8204,7 +8311,9 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         width: 85vw;
         max-width: 360px;
         height: 100vh;
+        height: 100dvh;
         max-height: 100vh;
+        max-height: 100dvh;
         z-index: 950;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
@@ -8212,6 +8321,13 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         border-right: none;
         box-shadow: none;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 全螢幕抽屜的最後一塊內容不要貼齊 home indicator（iPhone 底部橫條） */
+    .sidebar-content {
+        padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     }
 
     .sidebar.open {

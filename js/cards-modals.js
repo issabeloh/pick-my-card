@@ -7,6 +7,7 @@
  *  - 持有卡總覽（wallet stack） → "renderOwnedCardsOverview"
  *  - 持有卡管理 modal           → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
  *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderConditionLine"
+ *  - 側選單「最近異動」          → "renderSidebarChangelog"
  * ============================================================ */
 // ==========================================
 // Sidebar Drawer (Mobile)
@@ -794,6 +795,30 @@ function renderConditionLine(text) {
         `</div>`;
 }
 
+// 「銀行官方登錄連結」（2026-09-08 新增）：有些活動要先到銀行的網頁登錄才算數，
+// 登錄頁網址存在該組的 registerLink（Cards Data 的 registerLink_N 欄）。
+// 刻意只把「銀行官方登錄連結」幾個字掛成超連結、不把網址攤在畫面上——那些網址又長又醜，
+// 而且同一組的 conditions 早就在講「需登錄」了，這裡只是給一個可以直接點過去的去處。
+// 字尾的方框箭頭 icon 是站內「這會開新分頁」的既有慣例（其他站內連結用純文字 ↗）。
+//
+// ⚠️ 鐵則 3：href 一律過 sanitizeUrl()（只放行 http/https），不合法就整行不渲染。
+// ⚠️ App 專屬 scheme（cathaybk://、linepay:// 之類）會被 sanitizeUrl 擋掉，這是刻意的：
+//    那種連結在沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 App 的 scheme 沒有
+//    公開保證、改版就失效。只能在 App 內操作的活動（「打開 App → 我的優惠 → 登錄」）
+//    請把步驟寫成文字放進該組的 conditions，不要塞進這一欄。
+//    （sanitizeUrl 刻意在 href 那一行**再叫一次**、不用上面存好的變數：security-scan 的
+//    SEC6a 規則是逐行掃「範本字串裡的動態 href 插值」，同一行看不到 sanitizeUrl 就報錯，
+//    保證要在掃得到的位置才算數——多一次字串比對，換一條機械擋得住的規則）
+function renderRegisterLinkLine(url) {
+    if (!sanitizeUrl(url)) return '';
+    return `<div class="cashback-condition cashback-register-link">` +
+        `<a href="${escapeHtml(sanitizeUrl(url))}" target="_blank" rel="noopener noreferrer">銀行官方登錄連結` +
+        `<svg class="external-link-icon" width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">` +
+        `<path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>` +
+        `<path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>` +
+        `</svg></a></div>`;
+}
+
 // After the detail content is in the DOM AND visible, reveal a toggle only on
 // conditions whose text is actually clamped (overflowing). Must run while the
 // modal is displayed, otherwise clientHeight/scrollHeight are 0.
@@ -817,3 +842,98 @@ function initConditionClamps(container) {
     });
 }
 
+// ==========================================
+// 側選單「最近異動」（2026-09-08 新增）
+// ==========================================
+// 詳情頁的 #card-changelog-section 是「這張卡有什麼變動」；這裡是全站視角的
+// 「最近哪幾張卡變動過」——把每張卡的 card.changelog 攤平、跨卡依日期由新到舊
+// 取前 SIDEBAR_CHANGELOG_MAX 筆，點一列就開那張卡的詳情頁並捲到近期異動區。
+//
+// ⚠️ 排序完全靠 entry.date（ISO 字串，可直接字典序比大小），**不需要**站長手動排序：
+//    「變動紀錄」工作表新增一列、重新匯出，它自己就會浮到最上面。
+// ⚠️ 同一天的多筆維持卡片在 cardsData.cards 裡的順序（Array.prototype.sort 是穩定
+//    排序，ES2019 起規格保證）——匯出的 changelog 只有 date，沒有「同日誰先發布」
+//    的資訊（readChangelog 的 _seq 在匯出時就被丟掉了），站長 2026-09-08 定案
+//    不為此改匯出程式。要精確到同日先後，得讓 cards-export.gs 把列序一起帶出來。
+// ⚠️ 每張卡只取「最新 1 筆」（站長 2026-09-08 定案）：同一張卡連續佔掉兩三列時，
+//    點哪一列都是進同一張卡的詳情頁，等於用掉名額卻沒多給一個去處；一卡一列才能讓
+//    這 5 列涵蓋到 5 張不同的卡。該卡其餘異動在詳情頁的「近期異動」區看得到。
+// ⚠️ 鐵則 4：空陣列不是 falsy，`!card.changelog` 擋不掉 `[]`，長度也要判。
+// ⚠️ 鐵則 3：cardName／summary 都是站長在 Sheets 自由輸入的文字，這裡刻意不走
+//    innerHTML，用 createElement + textContent（與 renderCardDetailChangelog 同理由）。
+const SIDEBAR_CHANGELOG_MAX = 5;
+
+function renderSidebarChangelog() {
+    const section = document.getElementById('sidebar-changelog');
+    const list = document.getElementById('sidebar-changelog-list');
+    if (!section || !list) return;
+
+    list.textContent = '';
+
+    const entries = [];
+    const cards = (cardsData && cardsData.cards) || [];
+    cards.forEach(card => {
+        if (!card || !card.changelog || card.changelog.length === 0) return;
+        // 每卡只取一筆：card.changelog 匯出時已是由新到舊（readChangelog 排好的），
+        // 所以「第一筆有效的」就是這張卡最新的異動。缺日期或摘要的跳過往下找，
+        // 不要因為第一筆是壞資料就整張卡消失。
+        const latest = card.changelog.find(e =>
+            e && String(e.date || '').trim() && String(e.summary || '').trim());
+        if (!latest) return;
+        entries.push({
+            cardId: card.id,
+            cardName: card.name || card.id,
+            date: String(latest.date).trim(),
+            summary: String(latest.summary).trim()
+        });
+    });
+
+    // ISO 日期字串可直接比大小；回 0 的同日組維持原順序（穩定排序）
+    entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+    entries.slice(0, SIDEBAR_CHANGELOG_MAX).forEach(e => {
+        const li = document.createElement('li');
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sidebar-changelog-item';
+        btn.dataset.cardId = e.cardId;
+        // 摘要在畫面上是單行截斷的，title 讓桌機 hover 看得到日期與全文
+        btn.title = `${formatChangelogDate(e.date)}　${e.summary}`;
+
+        const nameEl = document.createElement('span');
+        nameEl.className = 'sidebar-changelog-card';
+        nameEl.textContent = e.cardName;
+
+        const summaryEl = document.createElement('span');
+        summaryEl.className = 'sidebar-changelog-summary';
+        summaryEl.textContent = e.summary;
+
+        btn.appendChild(nameEl);
+        btn.appendChild(summaryEl);
+        btn.addEventListener('click', () => openCardDetailAtChangelog(e.cardId));
+
+        li.appendChild(btn);
+        list.appendChild(li);
+    });
+
+    section.style.display = list.children.length ? 'block' : 'none';
+}
+
+// 開卡片詳情頁並捲到「近期異動」區。
+// ⚠️ 捲動刻意「借用」詳情頁 sticky nav 那顆『近期異動』鈕的 onclick（由
+//    setupCardDetailNav 掛上），不要自己寫一份 scrollIntoView——nav 的版本會扣掉
+//    sticky nav 高度、把標題停在 nav 下方 8px，並同步點亮該顆按鈕；自己寫一份的
+//    下場是標題被 nav 蓋住、而且日後 nav 改高度時兩邊會各走各的。
+// ⚠️ 要等 showCardDetail() 把 modal 顯示出來（rAF 等一幀）才量得到位置，
+//    modal 還是 display:none 時 getBoundingClientRect 全是 0。
+async function openCardDetailAtChangelog(cardId) {
+    if (typeof window.closeSidebarDrawer === 'function') window.closeSidebarDrawer();
+    await showCardDetail(cardId);
+    requestAnimationFrame(() => {
+        const navBtn = document.querySelector(
+            '#card-detail-nav .card-detail-nav-btn[data-section="card-changelog-section"]');
+        // hidden＝那張卡沒有異動區塊（理論上不會發生，資料就是從它來的），此時停在頁首即可
+        if (navBtn && !navBtn.hidden && typeof navBtn.onclick === 'function') navBtn.onclick();
+    });
+}

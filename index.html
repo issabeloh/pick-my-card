@@ -333,6 +333,15 @@
                         </div>
                     </div>
 
+                    <!-- 側選單「最近異動」（2026-09-08 新增）：把所有卡片的 card.changelog
+                         攤平後依日期新→舊取前 5 筆，每列＝卡名＋摘要（單行截斷），
+                         點擊開該卡詳情頁並自動捲到 #card-changelog-section。
+                         沒有任何異動資料時整塊不顯示（display 由 renderSidebarChangelog 控制）。 -->
+                    <section class="sidebar-changelog" id="sidebar-changelog" style="display: none;">
+                        <h3 class="sidebar-changelog-title">📢 最近異動</h3>
+                        <ul class="sidebar-changelog-list" id="sidebar-changelog-list"></ul>
+                    </section>
+
                     <nav class="sidebar-page-links" aria-label="站內頁面">
                         <a href="/promos" target="_blank" rel="noopener noreferrer" class="sidebar-promos-banner">
                             <span class="sidebar-promos-banner-emoji" aria-hidden="true">🎁</span>

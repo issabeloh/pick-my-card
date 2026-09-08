@@ -90,10 +90,18 @@ const CARD_BASIC_FIELDS = [
 //     複製區（rate → hideInDisplay）保持連續乾淨。內容是 AI 一句話講清楚這組的率怎麼來的，
 //     省得每次都要翻最右邊那一大段 evidence 才看得懂回饋結構。
 //   改了欄位＝舊分頁表頭對不上（本表是照位置 appendRow），writeGroupReview_ 有擋。
+//
+// ⚠️ 2026-09-08 再改版（站長要求）：新增「登錄連結」，放在 hideInDisplay 右邊——
+//   它是要複製到 Cards Data 的 registerLink_N 欄的，所以必須留在複製區
+//   （rate → 登錄連結）的**尾端**，複製區才維持一段連續範圍。
+//   ⚠️ 只收 https 網址、不收文字：前端顯示時會過 sanitizeUrl()（只放行 http/https），
+//      填文字進去會被靜默丟掉。只能在 App 內操作的活動（「打開 App → 我的優惠 → 登錄」）
+//      把步驟寫成文字放進 conditions，不要塞這一欄。
 const GROUP_REVIEW_HEADER = [
   '核准', '解析時間', 'card_id', '建議槽位N', 'group_kind', '回饋組成原文',
   'rate', 'cashbackModel', 'cap(消費上限)', 'minSpend', 'maxSpend',
   'items', 'category', 'conditions', 'period_start', 'period_end', 'hideInDisplay',
+  '登錄連結',
   '程式備註', 'needs_review', 'AI想問的問題', '原文引用'
 ];
 
@@ -306,6 +314,13 @@ function extractCard_(rawText, idHint, generalText) {
     '    ❌「聯邦綠卡持卡人成功申辦電子化帳單並成功申辦自動代扣繳」 → ✅「申辦電子化帳單及自動扣繳」',
     '    ❌「需事先於本行官方網站完成活動登錄始得享有」 → ✅「需登錄」',
     '    一項條件一句、用全形分號「；」分隔；寧可短，不要照抄官網整句。',
+    '14b. register_link【登錄連結】：這組活動要「登錄」才算數，而官網有給登錄頁網址時，填【https:// 開頭的完整網址】。',
+    '     ⛔ 只能填網址，【絕不】填說明文字。以下情況一律留空：',
+    '       ・官網只說「請至本行APP登錄」「打開App→我的優惠→登錄」這種 App 內操作步驟（步驟寫進 conditions，不填這欄）',
+    '       ・只找得到 App Store／Google Play 下載頁（那不是登錄頁）',
+    '       ・只找得到活動說明頁、沒有真正的登錄入口，或你要自己拼湊網址',
+    '     ⛔ 不要填 cathaybk:// linepay:// 這類 App 專屬 scheme——顯示端只放行 http/https，填了會被丟掉。',
+    '     這一欄留空是完全正常的（多數組別都沒有），沒有網址就是沒有，不要硬生一個出來。',
     '15. cap_spend：官網直接講的消費上限數字；cap_reward：官網講的回饋金額上限數字（兩者擇一，沒有省略）。',
     '16. group_kind：指定通路加碼 / 國外指定加碼 / 排除型 / 其他（排除型＝該通路回饋獨立、超額不回退基本，如悠遊卡自動加值）。',
     '17. is_stacked：這組是否疊加在另一組之上才成立（如踩點任務疊在基礎通路組）。是→true。',
@@ -334,6 +349,7 @@ function extractCard_(rawText, idHint, generalText) {
       group_kind: { type: 'STRING', enum: ['指定通路加碼', '國外指定加碼', '排除型', '其他'] },
       is_stacked: { type: 'BOOLEAN' },
       structure_note: { type: 'STRING', description: '一句話說明這組的率怎麼組成／疊在誰之上／各成分上限／有無額外費用' },
+      register_link: { type: 'STRING', description: '這組活動的登錄頁網址，必須是 https:// 開頭的完整網址；只能在 App 內操作或找不到網址時一律留空' },
       min_spend: { type: 'NUMBER', description: '單筆最低消費門檻金額' },
       max_spend: { type: 'NUMBER', description: '單筆消費金額上限（少見）' },
       cap_spend: { type: 'NUMBER' },
@@ -547,6 +563,16 @@ function fillTierMaxSpend_(groups) {
   });
 }
 
+// 登錄連結正規化：這一欄只收 https 網址（站長 2026-09-08 定案）。AI 偶爾會無視 prompt
+// 塞說明文字（「請至APP登錄」）或 App scheme（linepay://）進來——擋在這裡，別讓它流到
+// 待審核表：那一格是要整段複製進 Cards Data 的 registerLink_N，而前端顯示時會過
+// sanitizeUrl()（只放行 http/https），非網址的內容會被靜默丟掉、站長根本不會發現填錯了。
+// 擋掉的內容不另外回報：留空本來就是這一欄的常態，App 內操作步驟該寫在 conditions。
+function normalizeRegisterLink_(v) {
+  const s = String(v == null ? '' : v).trim();
+  return /^https?:\/\//i.test(s) ? s : '';
+}
+
 // conditions 正規化：AI 常常無視 prompt 用半形「; 」當分隔（實測 2026-08-16 熊本熊卡兩處都是）。
 // 這種格式問題不該靠 prompt 拜託，程式統一收尾：分隔符一律全形「；」、去掉結尾句號與多餘空白。
 function normalizeConditions_(s) {
@@ -641,8 +667,9 @@ function writeGroupReview_(cardId, groups, basic) {
     // 錯位的資料看起來完全正常、貼過去才會發現。寧可停下來講清楚。
     const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
       .map(function (h) { return String(h).trim(); });
-    if (cur.indexOf('cashbackModel需手填?') >= 0 || cur.indexOf('回饋組成原文') < 0) {
-      throw new Error('「' + CARD_PARSER_CONFIG.groupReviewSheet + '」的表頭是舊版（2026-08-16 前）。' +
+    if (cur.indexOf('cashbackModel需手填?') >= 0 || cur.indexOf('回饋組成原文') < 0 ||
+        cur.indexOf('登錄連結') < 0) {
+      throw new Error('「' + CARD_PARSER_CONFIG.groupReviewSheet + '」的表頭是舊版（2026-09-08 前）。' +
         '這張表是照欄位位置寫入的，硬寫下去整列會錯位。' +
         '請把該分頁整個刪掉讓它自動重建（那是暫存審核表，刪掉不影響任何正式資料），再跑一次解析。');
     }
@@ -681,6 +708,7 @@ function writeGroupReview_(cardId, groups, basic) {
       cap: cap, minSpend: (g.min_spend != null ? g.min_spend : ''), maxSpend: (g.max_spend != null ? g.max_spend : ''),
       items: (g.items || []).join(','), category: g.category || '',
       conditions: normalizeConditions_(g.conditions), ps: g.period_start || '', pe: g.period_end || '', hide: d.hide,
+      registerLink: normalizeRegisterLink_(g.register_link),
       note: d.note, needsReview: g.needs_review, reviewQ: g.review_question || '', evidence: g.evidence || ''
     });
   });
@@ -755,7 +783,7 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.ps, f.pe, f.hide,
+    f.items, f.category, f.conditions, f.ps, f.pe, f.hide, f.registerLink || '',
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || ''];
   sheet.appendRow(row);
   if (f.needsReview || f.modelNeedsHuman) {
@@ -1153,6 +1181,7 @@ function writeGroupUpdateReview_(cardId, groups, url) {
       cap: cap, minSpend: (g.min_spend != null ? g.min_spend : ''), maxSpend: (g.max_spend != null ? g.max_spend : ''),
       items: (g.items || []).join(','), category: g.category || '',
       conditions: normalizeConditions_(g.conditions), ps: g.period_start || '', pe: g.period_end || '', hide: '',
+      registerLink: normalizeRegisterLink_(g.register_link),
       note: d.note, needsReview: g.needs_review, reviewQ: g.review_question || '',
       evidence: g.evidence || (url ? '來源：' + url : '')
     }, hint);
@@ -1185,7 +1214,7 @@ function appendGroupUpdateRow_(sheet, now, cardId, slotN, kind, f, hint) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.ps, f.pe, f.hide,
+    f.items, f.category, f.conditions, f.ps, f.pe, f.hide, f.registerLink || '',
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || '', hint || ''];
   sheet.appendRow(row);
   // 標色：疑似消失＝紅底（要人判斷是不是真的下架）；率變了或需手填＝黃底
