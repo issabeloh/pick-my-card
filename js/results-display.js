@@ -1337,10 +1337,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
 
                     if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
                     if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
-                    // 銀行官方登錄連結：搜尋結果是獨立於詳情頁的 render 路徑，要在這裡另外補
-                    // （renderRegisterLinkLine 自帶 sanitizeUrl，網址不合法就回空字串）
-                    const registerLinkLine = renderRegisterLinkLine(result.matchedRateGroup.registerLink);
-                    if (registerLinkLine) additionalInfo += registerLinkLine;
                     // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
                     // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
                     // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
@@ -1353,6 +1349,16 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     additionalInfo += `<br><small>活動期間: ${periodDisplay}${endingSoonInlineBadge}</small>`;
                 }
                 
+                // 銀行官方登錄連結（2026-09-08）：搜尋結果是獨立於詳情頁的 render 路徑，要另外補。
+                // ⚠️ 刻意放在上面三個分支「之外」——上線第一天就踩到：原本只寫在
+                //    `else if (result.matchedRateGroup)` 那一支裡，於是「即將開始的活動」
+                //    （走 isUpcoming 分支）與「只有即將結束徽章」那一支都看不到登錄連結，
+                //    而那兩種恰恰是最需要提醒用戶「記得先登錄」的情況。
+                //    renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結時回空字串。
+                if (result.matchedRateGroup) {
+                    additionalInfo += renderRegisterLinkLine(result.matchedRateGroup.registerLink);
+                }
+
                 const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
                 
                 // Special handling for Yushan Uni card exclusions in search results
