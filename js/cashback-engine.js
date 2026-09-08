@@ -578,6 +578,9 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
             html += renderConditionLine(rate.conditions);
         }
 
+        // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+        html += renderRegisterLinkLine(rate.registerLink);
+
         if (rate.period) {
             html += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
         }

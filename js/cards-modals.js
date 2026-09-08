@@ -795,6 +795,30 @@ function renderConditionLine(text) {
         `</div>`;
 }
 
+// 「銀行官方登錄連結」（2026-09-08 新增）：有些活動要先到銀行的網頁登錄才算數，
+// 登錄頁網址存在該組的 registerLink（Cards Data 的 registerLink_N 欄）。
+// 刻意只把「銀行官方登錄連結」幾個字掛成超連結、不把網址攤在畫面上——那些網址又長又醜，
+// 而且同一組的 conditions 早就在講「需登錄」了，這裡只是給一個可以直接點過去的去處。
+// 字尾的方框箭頭 icon 是站內「這會開新分頁」的既有慣例（其他站內連結用純文字 ↗）。
+//
+// ⚠️ 鐵則 3：href 一律過 sanitizeUrl()（只放行 http/https），不合法就整行不渲染。
+// ⚠️ App 專屬 scheme（cathaybk://、linepay:// 之類）會被 sanitizeUrl 擋掉，這是刻意的：
+//    那種連結在沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 App 的 scheme 沒有
+//    公開保證、改版就失效。只能在 App 內操作的活動（「打開 App → 我的優惠 → 登錄」）
+//    請把步驟寫成文字放進該組的 conditions，不要塞進這一欄。
+//    （sanitizeUrl 刻意在 href 那一行**再叫一次**、不用上面存好的變數：security-scan 的
+//    SEC6a 規則是逐行掃「範本字串裡的動態 href 插值」，同一行看不到 sanitizeUrl 就報錯，
+//    保證要在掃得到的位置才算數——多一次字串比對，換一條機械擋得住的規則）
+function renderRegisterLinkLine(url) {
+    if (!sanitizeUrl(url)) return '';
+    return `<div class="cashback-condition cashback-register-link">` +
+        `<a href="${escapeHtml(sanitizeUrl(url))}" target="_blank" rel="noopener noreferrer">銀行官方登錄連結` +
+        `<svg class="external-link-icon" width="11" height="11" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">` +
+        `<path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>` +
+        `<path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>` +
+        `</svg></a></div>`;
+}
+
 // After the detail content is in the DOM AND visible, reveal a toggle only on
 // conditions whose text is actually clamped (overflowing). Must run while the
 // modal is displayed, otherwise clientHeight/scrollHeight are 0.
@@ -831,6 +855,9 @@ function initConditionClamps(container) {
 //    排序，ES2019 起規格保證）——匯出的 changelog 只有 date，沒有「同日誰先發布」
 //    的資訊（readChangelog 的 _seq 在匯出時就被丟掉了），站長 2026-09-08 定案
 //    不為此改匯出程式。要精確到同日先後，得讓 cards-export.gs 把列序一起帶出來。
+// ⚠️ 每張卡只取「最新 1 筆」（站長 2026-09-08 定案）：同一張卡連續佔掉兩三列時，
+//    點哪一列都是進同一張卡的詳情頁，等於用掉名額卻沒多給一個去處；一卡一列才能讓
+//    這 5 列涵蓋到 5 張不同的卡。該卡其餘異動在詳情頁的「近期異動」區看得到。
 // ⚠️ 鐵則 4：空陣列不是 falsy，`!card.changelog` 擋不掉 `[]`，長度也要判。
 // ⚠️ 鐵則 3：cardName／summary 都是站長在 Sheets 自由輸入的文字，這裡刻意不走
 //    innerHTML，用 createElement + textContent（與 renderCardDetailChangelog 同理由）。
@@ -847,12 +874,17 @@ function renderSidebarChangelog() {
     const cards = (cardsData && cardsData.cards) || [];
     cards.forEach(card => {
         if (!card || !card.changelog || card.changelog.length === 0) return;
-        card.changelog.forEach(entry => {
-            if (!entry) return;
-            const date = String(entry.date || '').trim();
-            const summary = String(entry.summary || '').trim();
-            if (!date || !summary) return;   // 缺任一邊就沒有一列可看，不留空殼
-            entries.push({ cardId: card.id, cardName: card.name || card.id, date, summary });
+        // 每卡只取一筆：card.changelog 匯出時已是由新到舊（readChangelog 排好的），
+        // 所以「第一筆有效的」就是這張卡最新的異動。缺日期或摘要的跳過往下找，
+        // 不要因為第一筆是壞資料就整張卡消失。
+        const latest = card.changelog.find(e =>
+            e && String(e.date || '').trim() && String(e.summary || '').trim());
+        if (!latest) return;
+        entries.push({
+            cardId: card.id,
+            cardName: card.name || card.id,
+            date: String(latest.date).trim(),
+            summary: String(latest.summary).trim()
         });
     });
 

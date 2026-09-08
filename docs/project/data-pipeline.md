@@ -26,6 +26,14 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
      兩者都對不到才退回「單一膠囊＋完整卡名」。想改銀行字樣（如「第一銀行」→「一銀」）或新增發卡行，
      **建這欄後只改 Sheets 即可、不必動程式**。`tools/check-card-banks.js`（preflight 內）會列出對不到銀行的卡。
      卡名開頭若重複銀行字樣會自動去掉（`一銀 iLEO 信用卡` → 膠囊顯示 `一銀｜iLEO 信用卡`）
+   - 登錄連結：`registerLink_N`（選填，2026-09-08 新增）——需登錄才算數的活動，其**銀行官方登錄頁網址**。
+     前端 `renderRegisterLinkLine()`（`js/cards-modals.js`）在該組的條件下方渲染成「銀行官方登錄連結 ⧉」超連結
+     （詳情頁與搜尋結果兩條路徑都有），**網址本身不顯示**。
+     - **只收 `https://` 開頭的網址**：顯示端一律過 `sanitizeUrl()`（鐵則 3），填文字進去會被靜默丟掉、畫面上什麼都不會出現
+     - **不要填 App 專屬 scheme**（`cathaybk://`、`linepay://`…）：同樣被 `sanitizeUrl()` 擋掉。
+       那種連結在沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 App 的 scheme 沒有公開保證、改版就失效
+     - **只能在 App 內操作的活動**（「打開 App → 我的優惠 → 登錄」）→ 把步驟寫成文字放進 `conditions_N`，這一欄留空
+     - 這欄不存在時匯出直接跳過（`addOptionalField`），舊表完全相容；不必 22 個槽位一次補齊，用到哪個補哪個
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）

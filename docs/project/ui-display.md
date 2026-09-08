@@ -37,9 +37,16 @@
 - **樣式（站長 2026-08-01 從三種 mockup 選定「連續清單」）**：`.card-changelog-list` 整區一塊淺灰底（`#f9fafb` ＋ `#edeff2` 細框），條與條之間用髮絲線分隔。讀這區的動作是「快速掃過去看最近有沒有變動」，連續底色比一條一條的獨立卡片好掃、垂直空間也最省；獨立卡片版在實際頁面會變成「個人設定的框 ＋ 一堆小框」。手機（≤480px）日期改放句子上方一行，避免句子只剩 60% 寬度而斷成三四行。
 - **渲染函數** `renderCardDetailChangelog()`（`js/card-detail.js`）刻意**不走 innerHTML**，用 `createElement` + `textContent`：`summary` 是站長在 Sheets 自由輸入的文字（鐵則 3），textContent 比事後 `escapeHtml()` 少一個「哪天改成字串拼接就破功」的失誤面。
 - **沒有異動的卡整塊不渲染**（鐵則 4：空陣列不是 falsy，`!card.changelog || length === 0` 兩個都要判），nav 鈕由 `setupCardDetailNav` 的 `offsetParent` 檢查自動隱藏。
-- **側選單「最近異動」（2026-09-08 新增）**：`#sidebar-changelog`，位在側選單卡片 chips 之下、`.sidebar-page-links` 之上，**桌機側欄與手機抽屜都顯示**（`.sidebar-page-links` 在 ≥769px 隱藏，這塊刻意不跟著隱藏——桌機側欄下半部本來就是空的）。渲染函數 `renderSidebarChangelog()`（`js/cards-modals.js`，由 `home-ui.js` 主初始化在 `populateCardChips()` 之後呼叫）把所有卡的 `card.changelog` 攤平、跨卡依 `date` 由新到舊取前 5 筆，每列＝卡名＋摘要單行 ellipsis 截斷（摘要最長實測 206 字，不截會把側欄撐成文字牆；全文靠 `title` hover 或點進詳情頁）。
+- **側選單「最近異動」（2026-09-08 新增）**：`#sidebar-changelog`，位在側選單卡片 chips 之下、`.sidebar-page-links` 之上，**桌機側欄與手機抽屜都顯示**（`.sidebar-page-links` 在 ≥769px 隱藏，這塊刻意不跟著隱藏——桌機側欄下半部本來就是空的）。渲染函數 `renderSidebarChangelog()`（`js/cards-modals.js`，由 `home-ui.js` 主初始化在 `populateCardChips()` 之後呼叫）**每張卡只取最新 1 筆**（`card.changelog` 匯出時已是新→舊，取第一筆有效的），再跨卡依 `date` 由新到舊取前 5 筆，每列＝卡名＋摘要單行 ellipsis 截斷（摘要最長實測 206 字，不截會把側欄撐成文字牆；全文靠 `title` hover 或點進詳情頁）。
   - **排序不需要人工維護**：`entry.date` 是 ISO 字串可直接字典序比大小，「變動紀錄」表新增一列重新匯出就會自己浮上來。**同日多筆維持 `cardsData.cards` 的順序**（`Array.prototype.sort` 穩定排序）——匯出的 changelog 只有 `date`，`readChangelog()` 的 `_seq`（試算表列序）在匯出時就丟掉了，站長 2026-09-08 定案不為此改匯出程式；要精確到同日先後才需要讓 `cards-export.gs` 把列序一起帶出來。
+  - **一卡一列的理由**（站長 2026-09-08 定案）：同一張卡連續佔掉兩三列時，點哪一列都是進同一張卡的詳情頁，等於用掉名額卻沒多給一個去處；一卡一列才能讓這 5 列涵蓋到 5 張不同的卡，該卡其餘異動在詳情頁的「近期異動」區看得到。
   - **點擊行為** `openCardDetailAtChangelog()`：先 `window.closeSidebarDrawer()`（手機）→ `await showCardDetail()` → `requestAnimationFrame` 後**借用詳情頁 sticky nav 那顆「近期異動」鈕的 `onclick`**（`setupCardDetailNav` 掛的）來捲動。刻意不自己寫 `scrollIntoView`：nav 的版本會扣掉 sticky nav 高度、把標題停在 nav 下方 8px 並同步點亮該鈕，自己寫一份的下場是標題被 nav 蓋住、日後 nav 改高度兩邊各走各的。rAF 是必要的——modal 還 `display:none` 時 `getBoundingClientRect` 全是 0。
+
+**銀行官方登錄連結（2026-09-08 新增）**：需登錄才算數的活動，其登錄頁網址存在該回饋組的 `rate.registerLink`（Cards Data 的 `registerLink_N`，見 `docs/project/data-pipeline.md` 第 2 節）。`renderRegisterLinkLine(url)`（`js/cards-modals.js`，緊鄰 `renderConditionLine`）把它渲染成該組條件下方的一行「銀行官方登錄連結 ⧉」超連結（方框箭頭 SVG ＝「會開新分頁」，站內其他連結用純文字 ↗）。
+- **網址本身不顯示**：那些網址又長又醜，而且同一組的 `conditions` 早就在講「需登錄」了，這裡只是給一個可以直接點過去的去處
+- **四條 render 路徑都要接**（改一條會漏掉其他）：`renderCashbackRatesIndividually()`（分級卡，`js/cashback-engine.js`）、非分級卡的 `specialContent`（`js/card-detail.js`）、CUBE 的合併路徑（`mergedRate.registerLink`，合併時留先遇到的那一個）、搜尋結果卡片（`js/results-display.js` 的 `result.matchedRateGroup`）。全部都放在條件行之後、活動期間之前，且**不依賴 `conditions` 有沒有值**（沒有條件的組別一樣要能顯示登錄連結）
+- **鐵則 3**：`renderRegisterLinkLine` 內 `sanitizeUrl()` 只放行 http/https，不合法就整行不渲染。`sanitizeUrl` 刻意在 href 那一行**再叫一次**（不用上面存好的變數）——`tools/security-scan.sh` 的 SEC6a 是逐行掃的，同一行看不到 `sanitizeUrl` 就報錯
+- **App 專屬 scheme 一律擋掉**（`cathaybk://`、`linepay://`…）：沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 scheme 沒有公開保證、改版就失效。只能在 App 內操作的活動請把步驟寫成文字放進 `conditions_N`
 
 **進入詳情頁的入口**：搜尋結果卡片點擊；sidebar 卡片 chips；`#cards-selection`/`#owned-cards-selection` 每張卡的 ⓘ 按鈕（由 `_renderCardSelectionModal` 注入，click 呼叫 `showCardDetail(card.id)` 並 `stopPropagation()` 防誤勾 checkbox；詳情 modal 疊在原 modal 之上）。
 

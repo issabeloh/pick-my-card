@@ -4843,6 +4843,33 @@ mark.cashback-search-hl {
     padding-left: 0.5em;
 }
 
+/* 銀行官方登錄連結（2026-09-08 新增，renderRegisterLinkLine 產生）：資料來自
+   Cards Data 的 registerLink_N。刻意不顯示網址本身，只把文字掛成超連結＋方框箭頭
+   icon（＝「會開新分頁」的通用符號）。不用 .cashback-condition 的斜體灰字——那是
+   「補充說明」的調性，這一行是可以點的動作，要看得出來是連結。 */
+.cashback-condition.cashback-register-link {
+    font-style: normal;
+}
+
+.cashback-register-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.cashback-register-link a:hover {
+    color: #1d4ed8;
+}
+
+.external-link-icon {
+    flex-shrink: 0;
+    /* 方框箭頭在視覺上比同字級的中文字重，縮一點並往上對齊字的中線 */
+    opacity: 0.85;
+}
+
 /* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
 .cashback-condition.spend-threshold {
     color: #111827;
