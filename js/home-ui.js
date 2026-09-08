@@ -1156,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     console.log('🎨 填充卡片和支付選項...');
     populateCardChips();
+    renderSidebarChangelog();   // 側選單「最近異動」（cards-modals.js）：跨卡最新 5 筆
     populatePaymentChips();
     renderQuickSearchButtons();
 
