@@ -907,6 +907,9 @@ if (faqSheet) {
   // 頁面本體由 Cloudflare Pages build 時的 tools/build-merchant-pages.js 生成。
   const merchantPages = readMerchantPages();
 
+  // 側欄膠囊的銀行品牌色（BankColors 工作表）。前端只拿色碼，底色/文字色即時算。
+  const bankColors = readBankColors();
+
   const homeUpdatedIso = pmcStampedDate_('HOME', pmcHashString_(pmcStableStringify_({
     cards: cards,
     payments: payments,
@@ -922,7 +925,8 @@ if (faqSheet) {
     newCardholderPromos: newCardholderPromos,
     cardApplyCtas: cardApplyCtas,
     spotlights: spotlights,
-    merchantPages: merchantPages
+    merchantPages: merchantPages,
+    bankColors: bankColors
   })));
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
@@ -951,7 +955,8 @@ if (faqSheet) {
   newCardholderPromos: newCardholderPromos,
   cardApplyCtas: cardApplyCtas,
   spotlights: spotlights,
-  merchantPages: merchantPages
+  merchantPages: merchantPages,
+  bankColors: bankColors
   }, null, 2);
 
 
@@ -1286,6 +1291,55 @@ function readNewCardholderPromos() {
 
   Logger.log(`✅ 讀取 ${promos.length} 筆新戶活動資料，${Object.keys(cardApplyCtas).length} 張卡片申辦 CTA`);
   return { newCardholderPromos: promos, cardApplyCtas: cardApplyCtas }; // ✨ 回傳物件
+}
+
+// ========== 讀取「BankColors」資料（側欄膠囊的銀行品牌色，2026-09-08 新增） ==========
+// 回傳 { 銀行字樣: '#RRGGBB' }。key 必須與 Cards Data 的 bank 欄**完全一致**
+// （前端就是拿 bank 欄的字去查這張表），例如 bank 欄寫「玉山」，這裡就要寫「玉山」。
+//
+// 前端只拿這一支色碼，膠囊左半色塊的實際底色與文字色是前端即時算的
+// （品牌色 50% 疊在膠囊底上；文字取黑或白，看哪個對比度高）——所以這裡**一行一家、
+// 只填一支主色**就好，不用填底色與文字色。
+//
+// ⚠️ 工作表不存在時安全降級：回空物件、不丟例外。前端查不到色碼的銀行會退回中性灰底，
+//    不會壞掉——所以可以先貼程式、之後再慢慢把 16 家補齊。
+// ⚠️ 只收 #RRGGBB / #RGB；填錯格式的那一列會被跳過並留 log，不會把壞值送到前端。
+function readBankColors() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('BankColors');
+  if (!sheet) {
+    Logger.log('ℹ️ 找不到「BankColors」工作表，本次不匯出銀行品牌色（膠囊會全部退回中性灰）');
+    return {};
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return {};
+  const headers = data[0].map(h => String(h).trim());
+  if (headers.indexOf('bank') < 0 || headers.indexOf('color') < 0) {
+    Logger.log('⚠️ 「BankColors」第一列找不到 bank 或 color 欄，整張表略過');
+    return {};
+  }
+
+  const out = {};
+  let skipped = 0;
+  for (let i = 1; i < data.length; i++) {
+    const bank = String(getValue(data[i], headers, 'bank') || '').trim();
+    if (!bank) continue;
+
+    // active 留空視為啟用（跟「變動紀錄」同慣例：忘了打 TRUE 不該整批消失）
+    const active = getValue(data[i], headers, 'active');
+    if (active === false || String(active).trim().toUpperCase() === 'FALSE') continue;
+
+    const color = String(getValue(data[i], headers, 'color') || '').trim();
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
+      if (color) { skipped++; Logger.log(`⚠️ 「BankColors」列 ${i + 1}（${bank}）色碼格式不對：${color}`); }
+      continue;
+    }
+    out[bank] = color;
+  }
+
+  Logger.log(`✅ 讀取銀行品牌色：${Object.keys(out).length} 家${skipped ? `（${skipped} 列色碼格式錯誤已略過）` : ''}`);
+  return out;
 }
 
 // ========== 讀取「變動紀錄」資料（詳情頁「近期異動」，2026-07-31 新增） ==========
