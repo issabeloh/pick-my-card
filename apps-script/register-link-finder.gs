@@ -345,6 +345,7 @@ function regLinkEnsureDraftSheet_(cardsSheet, ui) {
 
   const draft = cardsSheet.copyTo(dataFile);
   draft.setName(REGLINK_CONFIG.draftSheetName);
+  regLinkAssertDraft_(draft);   // 改名沒成功就不准往下寫（下面幾行會寫表頭）
 
   const lastCol = draft.getLastColumn();
   draft.getRange(1, lastCol + 1).setValue(REGLINK_CONFIG.noteHeader);
