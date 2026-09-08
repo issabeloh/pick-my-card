@@ -88,12 +88,17 @@ function updateAllReports() {
   runStep_(results, 'GA4_按鈕點擊',     importGA4ButtonClicksDaily);
   // ⚠️ 這一步會寫進人工維護表，但只 append、且同月已存在就略過（見該函數上方註解）
   const monthlyMessage = runStep_(results, 'GA4_每月新舊用戶', appendMonthlyUserRow);
+  // ⚠️ 這一步也會寫進人工維護表，但只 upsert（新詞 append、舊詞更新日期與次數）、永不重建整表，
+  //    且不碰狀態／覆蓋日期／備註三個人工欄（見該函數上方註解）。
+  //    資料直接用上面 collected.searches 已經抓回來的，不會為了這張表多打一次 GA4。
+  const uncoveredMessage = runStep_(results, '未覆蓋商家追蹤',
+    () => updateUncoveredMerchants(collected.searches));
 
   const historyMessage = runStep_(results, '歷史快照累積', () => appendHistorySnapshots_(collected, false));
 
   // 這行一定要寫得出來，否則「執行過但全掛」跟「根本沒執行」在紀錄上長得一樣
   try {
-    writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage);
+    writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage, uncoveredMessage);
   } catch (e) {
     Logger.log('連更新紀錄都寫不進去：' + errText_(e));
   }
@@ -417,9 +422,11 @@ function getOrCreateSheet(name) {
 //   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果；
 //   monthlyMessage：GA4_每月新舊用戶 有沒有補列（補了一列時這是唯一的通知管道，
 //                   因為那張表的「備註」欄要人工回去填，沒看到訊息就不會有人去填）
+//   uncoveredMessage：未覆蓋商家追蹤 本次新增／自動結案了幾個詞（同理：新詞要有人去看、
+//                   自動結案的列要有人回頭確認，不寫在這裡就沒有人會知道表變了）
 // 開頭用 ✅／⚠️ 標整體狀態（失敗的步驟連錯誤訊息一起寫出來，不用去翻執行紀錄），
 // 後面接本次兩個滾動視窗的實際日期——事後追「這份數字是哪幾天的」有據可查。
-function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage) {
+function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage, uncoveredMessage) {
   const sheet = getOrCreateSheet('更新紀錄');
   const ga4 = ga4Window_();
   const gsc = gscWindow_();
@@ -442,6 +449,7 @@ function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessag
   if (clarityMessage) parts.push(clarityMessage);
   if (historyMessage) parts.push(historyMessage);
   if (monthlyMessage) parts.push(monthlyMessage);
+  if (uncoveredMessage) parts.push(uncoveredMessage);
 
   sheet.appendRow([new Date(), parts.join('；')]);
 }
@@ -1873,5 +1881,341 @@ function fetchMonthlyUserStats_(monthStart) {
     returningUsers: returningUsers,
     // 與 GA4 介面「平均參與時間」同一個定義：總參與時間 ÷ 活躍使用者
     avgEngagementSeconds: totalUsers > 0 ? engagementSeconds / totalUsers : 0,
+  };
+}
+
+// ============================================================================
+// 未覆蓋商家追蹤（2026/09/08 新增）
+// ----------------------------------------------------------------------------
+// 補的盲區：`GA4_搜尋落空` 是**滾動 30 天覆寫表**，它只回答「現在還有誰在問我們答不出來的
+// 東西」。答不出來的是另外三件事：這個詞**什麼時候第一次出現**、我們**什麼時候補好的**、
+// 補完之後**是不是真的沒人再問了**。那些問題要有跨執行的持久記錄才答得出來，而覆寫表天生
+// 沒有——今天的數字每天早上都被蓋掉一次。
+// 這張表就是那份記錄：每次執行拿 `updateGA4MerchantSearches()` **已經抓回來的同一份資料**
+// （不多打一次 API）做 upsert——新詞 append、既有詞只更新日期與次數欄，**永不重建整表**。
+//
+// ⚠️⚠️ 全段最容易寫錯、錯了也看不出來的一件事：**未對到次數是「覆寫」不是「累加」**。
+//   來源視窗是滾動 30 天，今天與昨天的區間有 29 天重疊，同一批事件會被連續約 30 次執行
+//   各看到一次。任何 `舊值 + 本次值` 的寫法都會把同一批試算乘上約 30 倍——數字看起來很嚴重
+//   但完全是假的，而且因為它「只是偏大」不會 throw、不會有人發現。
+//   「最近視窗未對到次數」永遠 ＝ 本次執行看到的值；要看歷史嚴重度看「歷史最高未對到次數」
+//   （取 max，同樣不是加總）。
+//
+// 三個安全性質（跟 `GA4_每月新舊用戶` 同一類：**會被人手動編輯的表**，寫法刻意與覆寫式
+// 報表不同，改動前先讀完這段）：
+//   1. **只 append／只改指定儲存格，永遠不 clear**。禁止在這裡使用 writeSnapshotSheet_()。
+//   2. **狀態／覆蓋日期／備註 是人工欄**。只有「自動結案」那一種情況會動 狀態＋覆蓋日期
+//      （條件嚴格，見 uncoveredApply_）；**備註程式完全不碰**。站長把狀態改成「不處理」的
+//      列，這三欄從此不再被程式碰，只更新日期與次數欄。
+//   3. **欄位用表頭文字定位、不寫死欄號**，並檢查表頭重複（`headers.indexOf()` 遇到重複欄名
+//      只會抓最前面那個，cards-export 就是這樣掉過整組資料）。找不到必要欄位就 throw，
+//      runStep_ 會把原因原封不動寫進「更新紀錄」。
+// ============================================================================
+
+const UNCOVERED_SHEET = '未覆蓋商家追蹤';
+
+// 程式用的名字 → 表頭上的實際文字。
+// ⚠️ 改表頭文字就要同步改這裡（對不到會 throw，不會靜默寫錯位）。
+const UNCOVERED_COLS = {
+  term:       '商家詞',
+  firstSeen:  '首次出現日',
+  lastSeen:   '最近出現日',
+  recentMiss: '最近視窗未對到次數',
+  peakMiss:   '歷史最高未對到次數',
+  status:     '狀態',
+  coveredAt:  '覆蓋日期',
+};
+
+// 純人工欄：找得到就在新列留白，程式**永遠不寫入**（找不到也不影響其他欄位）
+const UNCOVERED_NOTE_COL = '備註';
+
+const UNCOVERED_STATUS_OPEN   = '未覆蓋';  // 新詞的預設狀態
+const UNCOVERED_STATUS_DONE   = '已覆蓋';  // 自動結案時寫入
+const UNCOVERED_STATUS_IGNORE = '不處理';  // 人工設定：設了之後程式不再碰狀態／覆蓋日期／備註
+
+// 從 updateGA4MerchantSearches() 的回傳值取欄位時用的表頭文字。
+// 用表頭對位而不是寫死欄序：那張表日後加欄，這裡才不會靜默錯位（對不到會 throw）。
+const UNCOVERED_SOURCE_COLS = {
+  term:      '搜尋的商家／消費項目',
+  matched:   '有對到',
+  unmatched: '沒對到',
+};
+
+// 送出試算時輸入框是空的，GA4 會回這幾個字串——那是「空框按了試算」，不是覆蓋缺口，要跳過
+const UNCOVERED_SKIP_TERMS = { '(not set)': true, '(not provided)': true, '(other)': true };
+
+// 由 updateAllReports() 呼叫，資料來自同一次執行的 collected.searches（不多打 API）。
+// 回傳一句話交給 writeLastUpdated() 併進「更新紀錄」那一行。
+function updateUncoveredMerchants(searchData) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(UNCOVERED_SHEET);
+  if (!sheet) return UNCOVERED_SHEET + '：分頁不存在，略過';
+
+  // 上游那步失敗（runStep_ 回 null）時什麼都不動：既有記錄維持原樣，
+  // 失敗原因已經由 runStep_ 寫在同一行更新紀錄裡，這裡不必也不該再寫一份空資料
+  if (!searchData || !searchData.values) {
+    return UNCOVERED_SHEET + '：GA4_熱門搜尋 本次沒有資料，略過（既有記錄未變動）';
+  }
+
+  // 先把表頭上方的標註空間喬好（必要時插列），再定位——順序反過來會拿到過期的列號
+  uncoveredEnsureBannerRoom_(sheet);
+  const layout = uncoveredLayout_(sheet);
+
+  const today = atMidnight_(new Date());
+  const stats = uncoveredSourceRows_(searchData);
+  const outcome = uncoveredApply_(sheet, layout, stats, today);
+
+  uncoveredWriteBanner_(sheet, layout, searchData.window);
+
+  const parts = [
+    UNCOVERED_SHEET + '：新增 ' + outcome.added + ' 個新未覆蓋詞',
+    '自動結案 ' + outcome.resolved + ' 個',
+    '更新 ' + outcome.updated + ' 列既有記錄',
+    '本次視窗未對到詞共 ' + outcome.missTerms + ' 個',
+  ];
+  if (outcome.duplicates > 0) {
+    parts.push('⚠️ 表內有 ' + outcome.duplicates + ' 列重複商家詞，只更新最前面那一列（請手動合併）');
+  }
+  return parts.join('／');
+}
+
+// 從 GA4_熱門搜尋 的回傳值取出 [{ term, matched, unmatched }]，並濾掉空框送出的那幾種值
+function uncoveredSourceRows_(searchData) {
+  const headers = (searchData.headers || []).map(h => String(h).trim());
+  const idx = {};
+  Object.keys(UNCOVERED_SOURCE_COLS).forEach(key => {
+    const label = UNCOVERED_SOURCE_COLS[key];
+    const at = headers.indexOf(label);
+    if (at === -1) {
+      throw new Error('GA4_熱門搜尋 的回傳表頭找不到「' + label + '」欄，無法對位；' +
+        'updateGA4MerchantSearches() 改過欄位的話請同步改 UNCOVERED_SOURCE_COLS');
+    }
+    idx[key] = at;
+  });
+
+  const out = [];
+  (searchData.values || []).forEach(row => {
+    const term = String(row[idx.term] == null ? '' : row[idx.term]).trim();
+    if (!term) return;                                          // 空字串＝空框送出
+    if (UNCOVERED_SKIP_TERMS[term.toLowerCase()]) return;        // (not set) 等佔位字串同理
+    out.push({
+      term: term,
+      matched: Number(row[idx.matched]) || 0,
+      unmatched: Number(row[idx.unmatched]) || 0,
+    });
+  });
+  return out;
+}
+
+// 讀表頭與資料範圍。所有「這張表長得跟預期不一樣」的情況都在這裡 throw，
+// 訊息要直接講得出下一步該做什麼——它會原封不動出現在「更新紀錄」那一格。
+function uncoveredLayout_(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) {
+    throw new Error('「' + UNCOVERED_SHEET + '」是空的；請先照約定建好表頭列（' +
+      Object.keys(UNCOVERED_COLS).map(k => UNCOVERED_COLS[k]).join('｜') + '｜' + UNCOVERED_NOTE_COL + '）');
+  }
+
+  // 表頭不一定在第 1 列（上方可能有標註列），往下找前幾列裡出現「商家詞」的那一列
+  const scanRows = Math.min(6, lastRow);
+  const top = sheet.getRange(1, 1, scanRows, lastCol).getValues();
+  let headerRow = 0;
+  for (let r = 0; r < top.length; r++) {
+    if (top[r].some(v => String(v).trim() === UNCOVERED_COLS.term)) { headerRow = r + 1; break; }
+  }
+  if (!headerRow) {
+    throw new Error('「' + UNCOVERED_SHEET + '」前 ' + scanRows + ' 列找不到標題「' +
+      UNCOVERED_COLS.term + '」，無法定位表頭');
+  }
+
+  const header = top[headerRow - 1].map(v => String(v).trim());
+  const cols = {};
+  Object.keys(UNCOVERED_COLS).forEach(key => {
+    const label = UNCOVERED_COLS[key];
+    const first = header.indexOf(label);
+    if (first === -1) {
+      throw new Error('「' + UNCOVERED_SHEET + '」找不到欄位「' + label +
+        '」（表頭文字要完全一致，注意空格與全形字元）；改過欄名的話請同步改程式的 UNCOVERED_COLS');
+    }
+    // 欄名重複時 indexOf 只會抓最前面那個，會靜默寫錯欄——寧可停下來
+    if (header.indexOf(label, first + 1) !== -1) {
+      throw new Error('「' + UNCOVERED_SHEET + '」的欄位「' + label + '」出現不只一次，' +
+        '無法判斷該寫哪一欄；請先把重複的表頭改掉');
+    }
+    cols[key] = first + 1;
+  });
+
+  const noteIdx = header.indexOf(UNCOVERED_NOTE_COL);
+  return {
+    headerRow: headerRow,
+    lastRow: lastRow,
+    lastCol: lastCol,
+    cols: cols,
+    noteCol: noteIdx === -1 ? 0 : noteIdx + 1,
+  };
+}
+
+// 表頭上方要留 BANNER_ROWS 列給標註（跟其他報表一樣：第 1–2 列標註、第 3 列表頭）。
+// 站長手建的表通常表頭就在第 1 列，這裡**插列**而不是覆寫——插列會把既有資料連同格式一起
+// 往下推，不會蓋掉任何一格。喬過一次之後 headerRow 就是 HEADER_ROW，之後每次執行都是 no-op。
+function uncoveredEnsureBannerRoom_(sheet) {
+  const layout = uncoveredLayout_(sheet);
+  if (layout.headerRow >= HEADER_ROW) return;
+  sheet.insertRowsBefore(1, HEADER_ROW - layout.headerRow);
+  SpreadsheetApp.flush();
+}
+
+// 標註列：這張表的規則全寫在這裡——尤其「次數是覆寫不是累加」與自動結案條件，
+// 讀表的人（或 AI）不看程式也要能正確解讀這些數字。
+function uncoveredWriteBanner_(sheet, layout, win) {
+  const titleRow = layout.headerRow - BANNER_ROWS;
+  if (titleRow < 1) return;   // 表頭太靠上（理論上 uncoveredEnsureBannerRoom_ 已排除）
+
+  const windowText = win
+    ? formatSlash_(win.start) + ' ~ ' + formatSlash_(win.end) + '（含頭尾共 ' + win.days + ' 天）'
+    : '（本次未取得視窗資訊）';
+
+  const parts = [
+    '寫入方式：每次執行 upsert——新詞新增一列、既有詞只更新日期與次數欄，**永不清空重建**',
+    '資料來源：與「GA4_熱門搜尋」同一份（事件 calculate_cashback，維度 customEvent:merchant ' +
+      '× customEvent:has_match），本次來源視窗 ' + windowText,
+    '⚠️ 次數是「覆寫」不是「累加」：來源視窗滾動 30 天、相鄰兩次執行高度重疊，累加會把同一批' +
+      '試算重複計算約 30 倍。「最近視窗未對到次數」＝本次執行看到的數；歷史嚴重度看' +
+      '「歷史最高未對到次數」（取 max）',
+    '自動結案：本次視窗「沒對到＝0 且 有對到>0」，且該列狀態仍是「' + UNCOVERED_STATUS_OPEN +
+      '」、覆蓋日期空白 → 自動改成「' + UNCOVERED_STATUS_DONE + '」並寫上覆蓋日期（同時把最近視窗' +
+      '未對到次數歸 0；最近出現日刻意停在最後一次落空那天）',
+    '人工欄：狀態／覆蓋日期／備註 由人維護——備註程式永遠不寫；狀態設成「' +
+      UNCOVERED_STATUS_IGNORE + '」的列，程式從此只更新日期與次數，不碰這三欄',
+    '沒出現在本次視窗的詞：整列不動（數字停在最後一次出現時），新鮮度看「最近出現日」',
+    '已覆蓋的詞若再度落空：程式不會自動翻回「' + UNCOVERED_STATUS_OPEN + '」（狀態是人工欄），' +
+      '但「最近視窗未對到次數」會 > 0，用它就篩得出退步的項目',
+    '空框送出（GA4 的 (not set)）不列入：那是沒輸入，不是覆蓋缺口',
+    '本次更新：' + formatStamp_(new Date()),
+  ];
+
+  sheet.getRange(titleRow, 1)
+    .setValue('📊 ' + UNCOVERED_SHEET + '｜持久累積表（來源是滾動 30 天視窗，但本表跨執行累積、不覆寫整表）')
+    .setFontWeight('bold').setFontSize(11);
+  sheet.getRange(titleRow + 1, 1)
+    .setValue(parts.join('｜'))
+    .setFontSize(9).setFontColor('#666666');
+  sheet.setFrozenRows(layout.headerRow);
+}
+
+// upsert 本體。所有寫入都集中在這裡，方便一眼核對「哪幾欄會被程式碰」。
+function uncoveredApply_(sheet, layout, stats, today) {
+  const cols = layout.cols;
+  const rowCount = Math.max(0, layout.lastRow - layout.headerRow);
+  const block = rowCount > 0
+    ? sheet.getRange(layout.headerRow + 1, 1, rowCount, layout.lastCol).getValues()
+    : [];
+
+  // 商家詞 → 表上的相對列索引（只認最前面那列；重複的另外計數提醒站長合併）
+  const indexOf = {};
+  let duplicates = 0;
+  let lastDataRow = layout.headerRow;
+  block.forEach((row, i) => {
+    const term = String(row[cols.term - 1] == null ? '' : row[cols.term - 1]).trim();
+    if (!term) return;
+    lastDataRow = layout.headerRow + 1 + i;
+    if (indexOf[term] === undefined) indexOf[term] = i;
+    else duplicates++;
+  });
+
+  // 三個「程式管的」欄先在記憶體改好，最後整欄一次寫回（有變動才寫）
+  const lastSeenCol   = block.map(row => [row[cols.lastSeen - 1]]);
+  const recentMissCol = block.map(row => [row[cols.recentMiss - 1]]);
+  const peakMissCol   = block.map(row => [row[cols.peakMiss - 1]]);
+  const touched = { lastSeen: false, recentMiss: false, peakMiss: false };
+
+  const appends = [];
+  const resolvedRows = [];
+  let added = 0, resolved = 0, updated = 0, missTerms = 0;
+
+  stats.forEach(stat => {
+    const at = indexOf[stat.term];
+
+    if (stat.unmatched > 0) {
+      missTerms++;
+      if (at === undefined) {
+        appends.push(stat);
+        added++;
+        return;
+      }
+      // ⚠️ 覆寫，不是累加（理由見本區塊開頭）；歷史最高只往上抬，不往下修
+      lastSeenCol[at][0] = today;
+      recentMissCol[at][0] = stat.unmatched;
+      const peak = Number(peakMissCol[at][0]) || 0;
+      if (stat.unmatched > peak) { peakMissCol[at][0] = stat.unmatched; touched.peakMiss = true; }
+      touched.lastSeen = true;
+      touched.recentMiss = true;
+      updated++;
+      return;
+    }
+
+    // ── 自動結案：這個視窗完全沒落空、而且真的有對到（全是 has_match 註冊前的舊資料不算） ──
+    if (at === undefined || stat.matched <= 0) return;
+    const status = String(block[at][cols.status - 1] || '').trim();
+    const coveredAt = block[at][cols.coveredAt - 1];
+    const coveredBlank = coveredAt === '' || coveredAt === null || coveredAt === undefined;
+    // 「不處理」「已覆蓋」或覆蓋日期已填的列一律不碰——狀態與覆蓋日期是人工欄
+    if (status !== UNCOVERED_STATUS_OPEN || !coveredBlank) return;
+
+    resolvedRows.push(layout.headerRow + 1 + at);
+    recentMissCol[at][0] = 0;   // 剛結案卻留著舊次數會自相矛盾；歷史嚴重度在「歷史最高」那欄
+    touched.recentMiss = true;
+    resolved++;
+  });
+
+  // ── 寫回既有列（只碰程式管的三欄；狀態／覆蓋日期只動自動結案那幾格） ──
+  if (rowCount > 0) {
+    if (touched.lastSeen) {
+      sheet.getRange(layout.headerRow + 1, cols.lastSeen, rowCount, 1)
+        .setValues(lastSeenCol).setNumberFormat('yyyy/mm/dd');
+    }
+    if (touched.recentMiss) {
+      sheet.getRange(layout.headerRow + 1, cols.recentMiss, rowCount, 1).setValues(recentMissCol);
+    }
+    if (touched.peakMiss) {
+      sheet.getRange(layout.headerRow + 1, cols.peakMiss, rowCount, 1).setValues(peakMissCol);
+    }
+  }
+  resolvedRows.forEach(row => {
+    sheet.getRange(row, cols.status).setValue(UNCOVERED_STATUS_DONE);
+    sheet.getRange(row, cols.coveredAt).setValue(today).setNumberFormat('yyyy/mm/dd');
+  });
+
+  // ── 新列 append 在最後一列資料之後（備註欄留白給站長） ──
+  if (appends.length > 0) {
+    const usedCols = Object.keys(cols).map(k => cols[k]);
+    if (layout.noteCol) usedCols.push(layout.noteCol);
+    const startCol = Math.min.apply(null, usedCols);
+    const endCol = Math.max.apply(null, usedCols);
+    const width = endCol - startCol + 1;
+
+    const values = appends.map(stat => {
+      const row = new Array(width).fill('');
+      row[cols.term - startCol]       = stat.term;
+      row[cols.firstSeen - startCol]  = today;
+      row[cols.lastSeen - startCol]   = today;
+      row[cols.recentMiss - startCol] = stat.unmatched;
+      row[cols.peakMiss - startCol]   = stat.unmatched;
+      row[cols.status - startCol]     = UNCOVERED_STATUS_OPEN;
+      return row;                      // 覆蓋日期／備註留空白：一個等自動結案，一個只有人寫得出來
+    });
+
+    const startRow = lastDataRow + 1;
+    sheet.getRange(startRow, startCol, values.length, width).setValues(values);
+    sheet.getRange(startRow, cols.firstSeen, values.length, 1).setNumberFormat('yyyy/mm/dd');
+    sheet.getRange(startRow, cols.lastSeen, values.length, 1).setNumberFormat('yyyy/mm/dd');
+  }
+
+  return {
+    added: added,
+    resolved: resolved,
+    updated: updated,
+    missTerms: missTerms,
+    duplicates: duplicates,
   };
 }
