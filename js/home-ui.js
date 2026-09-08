@@ -1318,6 +1318,7 @@ function populateCardChips() {
             const bankEl = document.createElement('span');
             bankEl.className = 'card-chip-bank';
             bankEl.textContent = bank;
+            applyBankChipColor(bankEl, bank);   // 品牌色（BankColors 工作表），查不到就維持 CSS 的中性灰
             const nameEl = document.createElement('span');
             nameEl.className = 'card-chip-name';
             nameEl.textContent = stripBankPrefix(card.name, bank);
@@ -1336,6 +1337,51 @@ function populateCardChips() {
     });
 
     updateCardChipsCount(cardsToShow.length);
+}
+
+// 側欄膠囊左半的銀行品牌色（2026-09-08 新增）。
+//
+// 資料驅動：色碼唯一來源是 Google Sheets 的「BankColors」工作表（bank / color / active），
+// 匯出成 cards.data 的 bankColors。**銀行改 CI 只要改 Sheets 一格、不必動程式**，
+// 新增發卡行也一樣——這條規則跟 bank 欄本身是同一個設計（見 data-pipeline.md 第 2 節）。
+//
+// Sheets 只填「一支主色」，畫面上的底色與文字色都在這裡即時算：
+//   底色 = 品牌色 50% 疊在膠囊底 CARD_CHIP_BASE 上
+//   文字 = 黑或白，取對比度高的那個（實測 16 家全部都是黑字勝出，但公式留著，
+//          日後新增深色系銀行時會自動切成白字，不用有人回頭檢查）
+//
+// ⚠️ 查不到色碼（工作表還沒建、這家還沒填、色碼格式錯被匯出端擋掉）→ 什麼都不做，
+//    膠囊維持 CSS 裡的中性灰。這是刻意的：沒顏色比錯顏色好，也讓這功能可以慢慢補齊。
+const CARD_CHIP_BASE = [249, 250, 251];   // 膠囊底 #f9fafb，與 styles.css 的 .card-chip 一致
+const CARD_CHIP_BANK_ALPHA = 0.5;
+
+function applyBankChipColor(el, bank) {
+    const hex = cardsData && cardsData.bankColors && cardsData.bankColors[bank];
+    const rgb = parseHexColor(hex);
+    if (!rgb) return;
+
+    const bg = rgb.map((v, i) => v * CARD_CHIP_BANK_ALPHA + CARD_CHIP_BASE[i] * (1 - CARD_CHIP_BANK_ALPHA));
+    el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
+    el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+}
+
+// '#abc' / '#aabbcc' → [r, g, b]；其他一律回 null（呼叫端就當作沒有色碼）
+function parseHexColor(hex) {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || '').trim());
+    if (!m) return null;
+    let h = m[1];
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    const n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// WCAG 相對亮度。0.179 是「黑字與白字對比度相等」的分界點（sqrt(1.05*0.05)-0.05）
+function relativeLuminance(rgb) {
+    const [r, g, b] = rgb.map(v => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 // 發卡行來源，依序：

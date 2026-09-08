@@ -44,7 +44,9 @@
 
 **銀行官方登錄連結（2026-09-08 新增）**：需登錄才算數的活動，其登錄頁網址存在該回饋組的 `rate.registerLink`（Cards Data 的 `registerLink_N`，見 `docs/project/data-pipeline.md` 第 2 節）。`renderRegisterLinkLine(url)`（`js/cards-modals.js`，緊鄰 `renderConditionLine`）把它渲染成該組條件下方的一行「銀行官方登錄連結 ⧉」超連結（方框箭頭 SVG ＝「會開新分頁」，站內其他連結用純文字 ↗）。
 - **網址本身不顯示**：那些網址又長又醜，而且同一組的 `conditions` 早就在講「需登錄」了，這裡只是給一個可以直接點過去的去處
-- **四條 render 路徑都要接**（改一條會漏掉其他）：`renderCashbackRatesIndividually()`（分級卡，`js/cashback-engine.js`）、非分級卡的 `specialContent`（`js/card-detail.js`）、CUBE 的合併路徑（`mergedRate.registerLink`，合併時留先遇到的那一個）、搜尋結果卡片（`js/results-display.js` 的 `result.matchedRateGroup`）。全部都放在條件行之後、活動期間之前，且**不依賴 `conditions` 有沒有值**（沒有條件的組別一樣要能顯示登錄連結）
+- **四條 render 路徑都要接**（改一條會漏掉其他）：`renderCashbackRatesIndividually()`（分級卡，`js/cashback-engine.js`）、非分級卡的 `specialContent`（`js/card-detail.js`）、CUBE 的合併路徑（`mergedRate.registerLink`，合併時留先遇到的那一個）、搜尋結果卡片（`js/results-display.js` 的 `result.matchedRateGroup`）。全部都**不依賴 `conditions` 有沒有值**（沒有條件的組別一樣要能顯示登錄連結）
+- ⚠️ **搜尋結果那一條要放在三個分支「之外」**（2026-09-08 上線第一天踩到）：`additionalInfo` 是由 `if (isUpcoming) / else if (matchedRateGroup) / else if (endingSoonInlineBadge)` 三支分別組出來的，登錄連結原本只寫在中間那支，於是「即將開始的活動」與「只有即將結束徽章」兩種情況都看不到登錄連結——而那兩種恰恰最需要提醒用戶「記得先登錄」。現在改成三支跑完後，只要 `matchedRateGroup.registerLink` 有值就補上
+- ⚠️ **「詳情頁看得到、搜尋結果沒有」不一定是 bug**：詳情頁列出該卡**所有**槽位，搜尋結果只顯示**引擎實際命中的那一個**槽位。例：搜「中油Pay」時玉山 Ubear 卡命中的是 3% 的行動支付槽（沒有登錄連結），而不是 3% 的中油Pay 專屬槽（有連結）——兩者是不同活動。回報這類問題前先確認「搜尋結果顯示的活動期間/條件」跟「詳情頁那個有連結的槽位」是不是同一筆
 - **鐵則 3**：`renderRegisterLinkLine` 內 `sanitizeUrl()` 只放行 http/https，不合法就整行不渲染。`sanitizeUrl` 刻意在 href 那一行**再叫一次**（不用上面存好的變數）——`tools/security-scan.sh` 的 SEC6a 是逐行掃的，同一行看不到 `sanitizeUrl` 就報錯
 - **App 專屬 scheme 一律擋掉**（`cathaybk://`、`linepay://`…）：沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 scheme 沒有公開保證、改版就失效。只能在 App 內操作的活動請把步驟寫成文字放進 `conditions_N`
 
@@ -77,6 +79,19 @@
 - 搜尋結果卡片跟著受惠：`.results-container`（以及 `.coupon-results-container` / `.parking-benefits-container` / `.cardholder-promos-container`）都是 `repeat(auto-fit, minmax(300px, 1fr))`，主內容 1180px 時自動從一排 2 張變成一排 3 張——不用另外改
 - 這幾條 CSS **必須排在本檔前段無媒體查詢的 `.container` / `.app-layout` 之後**——媒體查詢不加特異性，同特異性靠源碼順序決勝
 - ⚠️ **還沒做的是「字級/密度」那一半**：`styles.css` 有 191 條 px 字級 ＋ 170 條 rem 字級，`html { font-size }` 只會拉動 rem 那一半、把比例扯歪，沒有單一開關可以整體縮小。真要做得逐條盤點桌機專屬的字級與內距，屬於獨立任務（見教訓記錄 2026-09-08 條）
+
+## 1c. 側欄卡片膠囊的銀行品牌色（2026-09-08）
+
+膠囊維持「左半銀行、右半卡名」的分割結構，但配色整個換掉：
+
+- **膠囊本體中性化**：底 `#f9fafb`、框 `#e5e7eb`、卡名 `#6b7280`。站長要求「pill 上完全不要有藍色」——原本的 `#eff6ff` 淡藍底＋`#1e40af` 藍字全部拿掉，讓左半的銀行色塊成為整顆膠囊**唯一**的顏色
+  - 卡名 `#6b7280` 在 `#f9fafb` 上是 **4.63:1**，剛好過 AA。⚠️ **不要再調淺**：`#8b929c` 只有 3.00:1、`#9ca3af` 只有 2.43:1，33 顆膠囊全部讀不清楚——那不是「低調」是「看不到」
+- **左半色塊 = 品牌色 50% 疊在膠囊底上**，文字取黑或白（哪個對比度高用哪個）。由 `applyBankChipColor()`（`js/home-ui.js`）即時算並寫成 inline style；`styles.css` 的 `.card-chip-bank` 只留「查不到色碼時」的中性灰 `#eceef1`，刻意不寫任何有色相的值
+  - 實測 16 家**全部是黑字勝出**，連星展（純黑 @50% = `#7c7d7e`）也是黑 5.10:1 對白 4.12:1。公式仍保留白字分支——日後新增更深的品牌色會自動切換，不用有人回頭檢查
+- **色碼是資料驅動**：唯一來源是 Sheets 的 `BankColors` 工作表（見 `docs/project/data-pipeline.md` 第 2 節第 13 項），匯出成 `cardsData.bankColors`。**銀行改 CI 只要改 Sheets 一格、不必動程式**
+- **查不到色碼就退回中性灰**（工作表沒建、這家沒填、色碼格式錯被匯出端擋掉）。沒顏色比錯顏色好，也讓這功能可以慢慢補齊
+
+**目的是「快速定位」不是「品牌辨識」**：站長 2026-09-08 明確表示同色系撞色沒關係（綠族五家、紅族四家）——有顏色分區就已經把 33 顆膠囊的搜尋範圍縮掉一大半，不需要每家獨一無二。
 
 ## 2. 卡片圖片資產
 

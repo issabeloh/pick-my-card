@@ -59,7 +59,15 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
-13. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
+13. **BankColors** —— 側欄膠囊左半的銀行品牌色（bank, color, active），2026-09-08 新增。
+    - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）
+    - `color` 只收 `#RRGGBB` / `#RGB`，格式錯的那一列會被 `readBankColors()` 跳過並留 log，不會把壞值送到前端
+    - `active` 留空視為啟用（同「變動紀錄」慣例）
+    - **一家只填一支主色**：畫面上的底色（品牌色 50% 疊在膠囊底 `#f9fafb` 上）與文字色（黑或白，取對比度高的）都由前端即時算（`applyBankChipColor()`，`js/home-ui.js`），工作表不用維護那兩個值
+    - 匯出 JSON key 是 `bankColors`，格式 `{ "玉山": "#00755E", ... }`
+    - ⚠️ **工作表不存在或某家沒填 → 安全降級**：該銀行的色塊退回中性灰 `#eceef1`，不會壞掉。所以可以先貼程式、之後慢慢補齊
+    - **銀行改 CI 只要改這張表一格、不必動程式**，新增發卡行也一樣（與 `bank` 欄同一個設計）
+14. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
     詳情頁「近期異動」的資料來源。**不是手打的**：由自動化檔的選單「發布變動紀錄」
     跨檔 append 進來（流程見 `apps-script/README.md`「發布變動紀錄」一節）。
     - 匯出時由 `readChangelog()` 依 `id` 分組、濾掉 `active=FALSE`、依 `date` 由新到舊

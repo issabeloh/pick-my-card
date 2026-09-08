@@ -1049,10 +1049,14 @@ header h1 {
     padding: 0;
     overflow: hidden;
 }
+/* 左半銀行色塊。底色與文字色由 JS 即時算並寫成 inline style
+   （applyBankChipColor，js/home-ui.js）——色碼來自 Sheets 的 BankColors 工作表。
+   這裡只留「查不到色碼時」的中性灰退路，所以刻意不寫任何有色相的值。 */
 .card-chip-bank {
     padding: 3px 6px;
     font-weight: 700;
-    background: rgba(30, 64, 175, 0.1);
+    background: #eceef1;
+    color: #4b5563;
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -8126,16 +8130,25 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     gap: 5px;
 }
 
+/* 側欄膠囊改中性配色（2026-09-08，站長要求「pill 上完全不要有藍色」）：
+   膠囊本體與卡名都退成灰階，讓左半的銀行品牌色塊成為整顆膠囊唯一的顏色。
+   卡名用 #6b7280（在 #f9fafb 上對比 4.63:1，剛好過 AA）——再淺就掉到 3:1 以下，
+   33 顆膠囊全部讀不清楚，不是「低調」是「看不到」。 */
 .sidebar .card-chip {
     font-size: 0.7rem;
     padding: 3px 8px;
-    background: #eff6ff;
-    color: #1e40af;
-    border-color: #bfdbfe;
+    background: #f9fafb;
+    color: #6b7280;
+    border-color: #e5e7eb;
 }
 
 .sidebar .card-chip:hover {
-    background: #dbeafe;
+    background: #f1f3f5;
+    border-color: #d8dce1;
+}
+
+.sidebar .card-chip-name {
+    color: #6b7280;
 }
 
 #my-payments-modal {

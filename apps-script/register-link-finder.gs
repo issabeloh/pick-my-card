@@ -17,17 +17,30 @@
  *   ・綠底＝要登錄、連結已經有了
  *   ・順手把 conditions_N 裡「已經寫在裡面」的登錄網址抓出來填進 registerLink_N
  *
- * 【第二階段】用監控快照找剩下的連結（fillRegisterLinksFromSnapshots）
- *   只處理第一階段標黃的槽位（要登錄、但沒有連結），拿「1-監控清單」的 last_snapshot
- *   問 Gemini。一次 maxCardsPerRun 張卡。第一階段沒標黃的槽位完全不會問 AI。
+ * 【第二階段】到官網現抓超連結，找剩下的連結（fillRegisterLinksFromSnapshots）
+ *   只處理第一階段標黃的槽位（要登錄、但沒有連結）。一次 maxCardsPerRun 張卡。
+ *
+ *   ⚠️⚠️ 為什麼不能只靠 last_snapshot（2026-09-08 第一次實跑 3 張卡、0 個結果的原因）：
+ *   監控存的快照是**純文字**，超連結的網址在存進去之前就被丟掉了——
+ *     ・fetchDirect_() 有一行 `.replace(/<[^>]+>/g, ' ')`，把整個 <a href="..."> 標籤剝掉，
+ *       只留下錨點文字。官網寫「立即登錄」四個字掛超連結時，快照裡就只有「立即登錄」
+ *     ・fetchViaJina_() 明確送 `X-Return-Format: text`（註解寫「不要 markdown 連結雜訊」），
+ *       markdown 格式本來會保留 [文字](網址)，text 格式一樣只剩文字
+ *   所以快照裡**只可能有「官網把網址當成可見文字印出來」的那種網址**（少數條款頁會這樣寫），
+ *   絕大多數銀行的「點這裡登錄」通通抓不到。這不是 AI 不夠聰明，是資料源裡根本沒有那個網址。
+ *
+ *   ⚠️ 解法刻意**不是**去改監控：改 fetchDirect_/fetchViaJina_ 會讓每一頁的 last_snapshot
+ *      內容整批變樣，下一輪監控會把全部頁面都判成「大量變動」，等於製造一次全站假警報。
+ *      改成這一支自己去官網**現抓一次原始 HTML**、只解析 <a href>，完全不碰快照。
+ *      快照仍然有用——它提供活動的敘述文字，讓 AI 判斷某個登錄連結屬於哪一個槽位。
  *
  * ⚠️⚠️ 安全底線（這支會寫到「資料檔」，是全站資料的來源）：
  *   - **絕不寫正式的 Cards Data**。只寫 draftSheet（Cards Data 的完整複本），
  *     每個寫入點都先過 regLinkAssertDraft_()。站長複核後自己貼回去
  *   - **1-監控清單 只讀不寫**，完全不碰 last_snapshot
- *   - **AI 回的網址必須逐字出現在 snapshot 裡**才採用（regLinkVerifyInSnapshot_）。
- *     這是硬性機械檢查，不是靠 prompt 拜託——LLM 生一個「看起來很合理」的銀行網址
- *     是這個任務最可能出的錯，而錯的登錄連結會把用戶帶到 404，比沒有連結更糟
+ *   - **AI 只能從「程式剛剛從官網 HTML 抓下來的候選連結清單」裡挑一個**，回了清單以外的
+ *     網址一律丟棄。這是硬性機械檢查，不是靠 prompt 拜託——LLM 生一個「看起來很合理」
+ *     的銀行網址是這個任務最可能出的錯，而錯的登錄連結會把用戶帶到 404，比沒有連結更糟
  *   - 只收 https 網址（沿用 card-benefits-parser.gs 的 normalizeRegisterLink_）
  *
  * ⚠️ 草稿分頁建在**資料檔**裡（跟 Cards Data 同一本），不是建在自動化檔。
@@ -43,7 +56,9 @@ const REGLINK_CONFIG = {
   noteHeader: '登錄連結說明',
   aiStatusHeader: 'AI 搜尋狀態',
   maxCardsPerRun: 3,        // 第二階段一張卡＝一次 Gemini 呼叫。先設小值試水溫，順了再調大
-  maxSnapshotChars: 40000,  // 單張卡送給 AI 的官網文字上限
+  maxSnapshotChars: 30000,  // 單張卡送給 AI 的官網文字上限（要留位置給候選連結清單）
+  maxCandidateLinks: 40,    // 單張卡送給 AI 的候選超連結上限
+  maxAnchorContext: 80,     // 每個超連結取前後多少字當上下文（判斷是不是登錄入口）
   maxSlots: 22,             // Cards Data 的槽位上限（與 cards-export.gs 的迴圈一致）
   colorNeedLink: '#fff3cd', // 黃：要登錄、還沒有連結
   colorHasLink: '#d4edda'   // 綠：要登錄、連結已經有了
@@ -223,6 +238,7 @@ function fillRegisterLinksFromSnapshots() {
   const backgrounds = draft.getRange(1, 1, data.length, headers.length).getBackgrounds();
   let processed = 0, skipped = 0, remaining = 0, found = 0, rejected = 0;
   const failures = [];
+  const handled = [];   // 這一輪實際處理了哪幾張卡（結果視窗會列出來，站長要去複核）
 
   for (let i = 1; i < data.length; i++) {
     const cardId = String(data[i][idCol] || '').trim();
@@ -247,16 +263,28 @@ function fillRegisterLinksFromSnapshots() {
     }
 
     const cardName = nameCol >= 0 ? String(data[i][nameCol] || '').trim() : cardId;
+
+    // 到官網現抓一次原始 HTML、解析 <a href>——快照裡沒有超連結網址（見檔頭說明）
+    const candidates = regLinkHarvestLinks_(snapshots.map(function (s) { return s.url; }));
+    if (candidates.length === 0) {
+      draft.getRange(i + 1, statusCol + 1).setValue(
+        '已搜尋（0/' + pendingNumbers.length + '）：官網頁面抓不到任何「登錄」超連結' +
+        '——可能是 JS 動態產生的按鈕、或該頁本來就沒有登錄入口，這幾格要人工去官網補');
+      handled.push(cardId + '（0/' + pendingNumbers.length + '，頁面無登錄超連結）');
+      processed++;
+      continue;
+    }
+
     let result;
     try {
       result = regLinkAskGemini_(cardName,
-        regLinkPendingSlotDetails_(headers, data[i], pendingNumbers), snapshots);
+        regLinkPendingSlotDetails_(headers, data[i], pendingNumbers), snapshots, candidates);
     } catch (e) {
       failures.push(cardId + '：' + e.message);
       continue;   // 不寫狀態欄 → 下次執行會自動重試這張卡
     }
 
-    const snapshotText = snapshots.map(function (s) { return s.text; }).join('\n');
+    const allowed = candidates.map(function (c) { return c.href; });
     const addedLines = [];
 
     (result || []).forEach(function (item) {
@@ -266,10 +294,11 @@ function fillRegisterLinksFromSnapshots() {
       const link = normalizeRegisterLink_(item.register_link);
       if (!link) return;
 
-      // ⚠️ 硬性檢查：網址必須逐字出現在官網原文裡
-      if (!regLinkVerifyInSnapshot_(link, snapshotText)) {
+      // ⚠️ 硬性檢查：網址必須是剛剛從官網 HTML 抓下來的那批候選之一。
+      //    AI 只能「從清單裡選一個」，不能自己生——這是本支最重要的一道防線。
+      if (allowed.indexOf(link) < 0) {
         rejected++;
-        addedLines.push('⚠️ 槽 ' + slotN + '：AI 給的網址不在官網原文裡，已丟棄（' +
+        addedLines.push('⚠️ 槽 ' + slotN + '：AI 給的網址不在官網抓到的連結清單裡，已丟棄（' +
           link.slice(0, 80) + '）');
         return;
       }
@@ -295,9 +324,11 @@ function fillRegisterLinksFromSnapshots() {
       draft.getRange(i + 1, noteCol + 1)
         .setValue((prev ? prev + '\n' : '') + addedLines.join('\n')).setWrap(true);
     }
+    const hit = addedLines.filter(function (l) { return l.indexOf('✅') >= 0; }).length;
     draft.getRange(i + 1, statusCol + 1)
-      .setValue('已搜尋（找到 ' + addedLines.filter(function (l) { return l.indexOf('✅') >= 0; }).length +
-        ' / 待找 ' + pendingNumbers.length + '）');
+      .setValue('已搜尋（找到 ' + hit + ' / 待找 ' + pendingNumbers.length +
+        '；官網候選連結 ' + candidates.length + ' 個）');
+    handled.push(cardId + '（' + hit + '/' + pendingNumbers.length + '）');
     processed++;
   }
 
@@ -305,6 +336,7 @@ function fillRegisterLinksFromSnapshots() {
 
   ui.alert([
     '本輪處理 ' + processed + ' 張卡，找到 ' + found + ' 個登錄連結。',
+    handled.length ? '\n這一輪處理的卡片（找到數／待找數）：\n  ・' + handled.join('\n  ・') + '\n' : '',
     skipped ? '跳過 ' + skipped + ' 張（已搜尋過）。' : '',
     remaining ? '還有 ' + remaining + ' 張沒跑到——再按一次選單接著跑。' : '需要搜尋的卡片都跑完了。',
     rejected ? '⚠️ 丟棄 ' + rejected + ' 個「不在官網原文裡」的網址（已記在說明欄）。' : '',
@@ -345,6 +377,7 @@ function regLinkEnsureDraftSheet_(cardsSheet, ui) {
 
   const draft = cardsSheet.copyTo(dataFile);
   draft.setName(REGLINK_CONFIG.draftSheetName);
+  regLinkAssertDraft_(draft);   // 改名沒成功就不准往下寫（下面幾行會寫表頭）
 
   const lastCol = draft.getLastColumn();
   draft.getRange(1, lastCol + 1).setValue(REGLINK_CONFIG.noteHeader);
@@ -409,24 +442,25 @@ function regLinkBuildSnapshotIndex_() {
 }
 
 /************** 問 Gemini：這些槽位的登錄連結在官網哪裡？ **************/
-function regLinkAskGemini_(cardName, pendingSlots, snapshots) {
+function regLinkAskGemini_(cardName, pendingSlots, snapshots, candidates) {
   const systemPrompt = [
     '你是信用卡權益資料的整理助理。我已經知道哪些活動需要登錄了（下面會給你槽位編號），',
-    '你的唯一任務是：在銀行官網的原始文字裡，找出這些活動的「登錄頁網址」。',
+    '也已經把官網頁面上所有跟「登錄」有關的超連結抓下來了（候選連結清單）。',
+    '你的唯一任務是：把候選連結清單裡的網址，對應到正確的槽位。',
     '',
     '【最重要的規則】',
-    '1. register_link **只能是官網原文裡逐字出現過的網址**。不可以自己組、自己猜、自己補全，',
-    '   也不可以把活動說明頁或通路清單頁的網址當成登錄頁。找不到就不要回那個槽位——',
-    '   寧可漏掉，也不要給錯的連結（我這邊有機械檢查，網址沒出現在原文裡會被直接丟掉）。',
-    '2. 只回 https:// 開頭的完整網址。App 專屬 scheme（cathaybk://、linepay:// 之類）、',
-    '   App Store／Google Play 下載頁一律不要回。',
+    '1. register_link **只能原封不動複製候選連結清單裡的某一個網址**。',
+    '   不可以自己組、自己猜、自己補全，也不可以改動任何一個字元。',
+    '   （我這邊有機械檢查：不在清單裡的網址會被直接丟棄，你回了也沒用。）',
+    '2. 一個候選連結對不到任何槽位就不要用它。清單裡的連結不一定每個都有對應的槽位，',
+    '   也可能整份清單都跟這些槽位無關——那就回空陣列。寧可漏掉，也不要硬湊。',
     '3. 只能在 App 內操作的活動（「請至本行APP登錄」「打開App→我的優惠→登錄」）→ 不要回。',
     '4. slot 只能填我給你的那些編號，不要自己發明、也不要回沒列在清單裡的槽位。',
-    '5. 完全找不到是很常見的正常結果，直接回空陣列。',
+    '5. 完全對不上是很常見的正常結果，直接回空陣列。',
     '',
     '【activity_name】官網如果有這檔活動的名稱（如「夏日饗樂」「新戶首刷禮」「台灣Pay天天1.5%」），',
     '  填進去；沒有就留空。回饋率、上限、適用通路我這邊已經有了，你不用重複。',
-    '【evidence】把官網原文裡「講到要登錄、並且出現這個網址」的那一小段原句貼回來（50 字內）。'
+    '【evidence】說明你為什麼把這個連結配到這個槽位——引用官網文字或候選連結的上下文（50 字內）。'
   ].join('\n');
 
   const slotLines = pendingSlots.map(function (s) {
@@ -442,13 +476,22 @@ function regLinkAskGemini_(cardName, pendingSlots, snapshots) {
     snapText = snapText.slice(0, REGLINK_CONFIG.maxSnapshotChars);
   }
 
+  const candidateLines = (candidates || []).map(function (c, idx) {
+    return (idx + 1) + '. 網址：' + c.href +
+      '\n   連結文字：' + (c.text || '(空)') +
+      '\n   連結前方文字：' + (c.context || '(空)');
+  }).join('\n');
+
   const userText = [
     '卡片：' + cardName,
     '',
     '【需要找登錄連結的槽位】',
     slotLines,
     '',
-    '【銀行官網原始文字（監控快照）】',
+    '【候選連結清單——register_link 只能從這裡原封不動複製】',
+    candidateLines || '(空)',
+    '',
+    '【銀行官網文字（監控快照，只是給你判斷連結屬於哪個活動用的上下文）】',
     snapText
   ].join('\n');
 
@@ -487,13 +530,85 @@ function regLinkPendingSlotDetails_(headers, row, pendingNumbers) {
   });
 }
 
-/************** 硬性檢查：網址必須逐字出現在官網原文裡 **************/
-// 為什麼要有：LLM 產生「看起來很像那家銀行」的網址是這個任務最可能出的錯，
-// 而錯的登錄連結會把用戶帶到 404 或別家頁面，比沒有連結更糟。
-// 比對前把尾端標點與斜線去掉——snapshot 常見「…請至 https://x.com/reg 登錄。」這種黏標點的情況。
-function regLinkVerifyInSnapshot_(link, snapshotText) {
-  if (!link || !snapshotText) return false;
-  const trimmed = link.replace(/[.,;:)\]}、。，）]+$/, '').replace(/\/+$/, '');
-  if (!trimmed) return false;
-  return snapshotText.indexOf(trimmed) >= 0;
+/************** 到官網現抓超連結（快照裡沒有網址，見檔頭說明） **************/
+// 回傳 [{ text, href, context }]，只留「看起來跟登錄有關」的候選。
+// 只讀不寫、對銀行網站也只是一次 GET，跟監控完全無關，不會動到 last_snapshot。
+//
+// ⚠️ 這裡**故意不重用** watchlist-monitor.gs 的 fetchDirect_()：那支第一件事就是把
+//    所有標籤剝掉（含 <a href>），拿到的東西正好缺少我們要的網址。
+// ⚠️ JS 動態產生的登錄按鈕抓不到（原始 HTML 裡根本沒有那個 <a>）。這種情況回空陣列，
+//    呼叫端會在狀態欄註明「官網頁面抓不到任何登錄超連結」，那幾格就是人工補的。
+function regLinkHarvestLinks_(urls) {
+  const seen = {};
+  const out = [];
+
+  (urls || []).forEach(function (url) {
+    if (!url || out.length >= REGLINK_CONFIG.maxCandidateLinks) return;
+    let html;
+    try {
+      html = regLinkFetchHtml_(url);
+    } catch (e) {
+      return;   // 單一頁抓不到不影響其他頁
+    }
+
+    const re = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+      if (out.length >= REGLINK_CONFIG.maxCandidateLinks) break;
+
+      const href = normalizeRegisterLink_(regLinkResolveUrl_(m[1].trim(), url));
+      if (!href || seen[href]) continue;
+
+      const text = regLinkStripTags_(m[2]);
+      // 錨點前面那一小段文字：官網常寫「…請於活動期間完成登錄 <a>這裡</a>」，
+      // 「登錄」在錨點外面，只看錨點文字會漏掉
+      const before = regLinkStripTags_(
+        html.slice(Math.max(0, m.index - REGLINK_CONFIG.maxAnchorContext * 3), m.index)
+      ).slice(-REGLINK_CONFIG.maxAnchorContext);
+
+      if ((text + ' ' + before).indexOf('登錄') < 0) continue;   // 跟登錄無關的連結不送進 AI
+
+      seen[href] = true;
+      out.push({ text: text.slice(0, 40), href: href, context: before });
+    }
+  });
+
+  return out;
+}
+
+// 原始 HTML（不剝標籤）。只做一次 GET，失敗就丟例外讓呼叫端跳過這一頁。
+function regLinkFetchHtml_(url) {
+  const res = UrlFetchApp.fetch(url, {
+    muteHttpExceptions: true,
+    followRedirects: true,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+    }
+  });
+  if (res.getResponseCode() >= 400) throw new Error('HTTP ' + res.getResponseCode());
+  return res.getContentText();
+}
+
+function regLinkStripTags_(html) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#?\w+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// 相對網址補成絕對網址（官網的登錄連結常寫成 /event/xxx 或 ../reg.html）
+function regLinkResolveUrl_(href, pageUrl) {
+  if (/^https?:\/\//i.test(href)) return href;
+  const m = String(pageUrl || '').match(/^(https?:\/\/[^\/]+)(\/[^?#]*)?/i);
+  if (!m) return '';
+  const origin = m[1];
+  if (href.indexOf('//') === 0) return 'https:' + href;
+  if (href.charAt(0) === '/') return origin + href;
+  if (href.charAt(0) === '#' || href.charAt(0) === '?') return '';   // 頁內錨點/查詢字串，不是登錄頁
+  const dir = (m[2] || '/').replace(/[^\/]*$/, '');
+  return origin + dir + href;
 }
