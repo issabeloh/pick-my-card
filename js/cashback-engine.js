@@ -1328,6 +1328,13 @@ async function findUpcomingActivity(card, searchTerm, amount) {
                     periodStart: rateGroup.periodStart,
                     periodEnd: rateGroup.periodEnd,
                     period: rateGroup.period,
+                    // 命中的槽位原件。⚠️ 2026-09-08 補上：這一支（即將開始的活動）原本把
+                    // 需要的欄位一個一個抄出來，沒有帶槽位本身，於是 displayResults 面對
+                    // 「即將開始」與「進行中」兩種結果時必須讀不同的欄位，才會分裂成
+                    // 三個分支（見 docs/project/ui-display.md）。帶上它之後，需要槽位資料的
+                    // 顯示邏輯（目前是銀行官方登錄連結）兩種結果就能共用同一條路。
+                    // 純新增欄位，不影響任何既有讀取。
+                    matchedRateGroup: rateGroup,
                     selectedLevel: selectedLevel
                 });
             }
