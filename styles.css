@@ -9473,3 +9473,229 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         gap: 8px;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 1 類：字級（≥1025px，2026-09-08）
+   （站長回報「桌機要縮到 75% 才舒服」的第二步；第一步「放寬容器與側欄」
+     在上面的「寬螢幕（≥1400px）」區塊，只動可用寬度、不動字級。）
+
+   為什麼是逐條列舉而不是一個開關：
+   - `html {{ font-size: X% }}` 只拉得動 rem 那一半（本檔 px 與 rem 字級各約一半），
+     比例會歪；
+   - `zoom` / `transform: scale()` 會讓詳情頁 sticky nav 的 getBoundingClientRect
+     與 scrollTop 對不上（js/results-display.js 的 setupCardDetailNav）。
+   所以只能把「桌機實際會渲染到」的字級逐條盤點、逐條縮。清單由 1920×1080 實跑
+   首頁／搜尋結果／詳情頁／推薦活動四個畫面、掃 document.styleSheets 取出
+   「桌機會套用且元素真的存在」的規則產生，不是憑印象列的。
+
+   縮放比例約 0.87×，小字有下限（最小到 10.2px 左右就不再往下）：
+     24→21 / 20→17.5 / 18→15.5 / 16→14 / 15→13 / 14→12.5 / 13→11.5 / 12→11 / 11→10.5
+     rem 同比例（2.5→2.1、1.25→1.1、0.9→0.79、0.75→0.68…）
+
+   ⚠️ 選擇器一律照抄原規則（含 `.app-layout main xxx` 這種較高特異性的版本），
+      靠「同特異性、源碼在後」取勝——**這個區塊必須留在本檔最後**。
+   ⚠️ 斷點 1025px：手機（≤768）與平板（769–1024）完全不受影響。
+      桌機專屬也是輸入框能從 16px 降到 14px 的前提（16px 是防 iOS 聚焦縮放用的，
+      只在手機有意義）。
+   ⚠️ faq.css 在 styles.css **之後**載入、promos.html 根本不載入 styles.css，
+      所以那兩頁的字級各自寫在 faq.css / promos.css 的同名區塊。
+   ============================================ */
+@media (min-width: 1025px) {
+    /* 2.5rem → 2.1rem */
+    header h1 {
+        font-size: 2.1rem;
+    }
+
+    /* 1.6rem → 1.4rem */
+    .spotlight-rate-num {
+        font-size: 1.4rem;
+    }
+
+    /* 1.5rem → 1.3rem */
+    .results-section h2,
+    .parking-benefits-section h2 {
+        font-size: 1.3rem;
+    }
+
+    /* 24px → 21px */
+    .close-modal {
+        font-size: 21px;
+    }
+
+    /* 1.25rem → 1.1rem */
+    .header-content h1,
+    .spotlight-title,
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    /* 20px → 17.5px */
+    .cashback-rate-num {
+        font-size: 17.5px;
+    }
+
+    /* 1.2rem → 1.05rem */
+    .card-name,
+    .app-layout main .results-section h2, .app-layout main .coupon-results-section h2, .app-layout main .parking-benefits-section h2 {
+        font-size: 1.05rem;
+    }
+
+    /* 18px → 15.5px */
+    .calculate-btn {
+        font-size: 15.5px;
+    }
+
+    /* 1.1rem → 0.97rem */
+    .parking-card-name,
+    .parking-benefit-highlight,
+    .app-layout main label,
+    .card-info-section h4 {
+        font-size: 0.97rem;
+    }
+
+    /* 1.05rem → 0.92rem */
+    .announcement-btn,
+    .merchant-clear-btn {
+        font-size: 0.92rem;
+    }
+
+    /* 16px → 14px */
+    input[type="text"], input[type="search"], input[type="number"],
+    .cashback-amount {
+        font-size: 14px;
+    }
+
+    /* 0.95rem → 0.84rem */
+    .spotlight-merchant {
+        font-size: 0.84rem;
+    }
+
+    /* 15px → 13px */
+    .calculate-btn.compact,
+    .finance-warning-row,
+    .app-layout main input[type="text"], .app-layout main input[type="search"], .app-layout main input[type="number"],
+    .card-apply-cta-text,
+    .cashback-rate {
+        font-size: 13px;
+    }
+
+    /* 0.9rem → 0.79rem */
+    .cards-header p,
+    .app-layout main,
+    .app-layout main .calculate-btn.compact,
+    .spotlight-info-btn {
+        font-size: 0.79rem;
+    }
+
+    /* 14px → 12.5px */
+    .avatar-btn,
+    .quick-search-btn .icon,
+    .parking-detail-item,
+    .show-promos-toggle,
+    .show-promos-toggle, .show-promos-toggle label,
+    .detail-value,
+    .card-apply-cta-btn,
+    .personal-field-title,
+    .card-detail-apply-header-btn,
+    .info-value,
+    .user-notes-textarea,
+    .btn-icon {
+        font-size: 12.5px;
+    }
+
+    /* 0.85rem → 0.75rem */
+    .header-nav-link,
+    .announcement-text,
+    .sidebar .cards-header p,
+    .sidebar-changelog-title {
+        font-size: 0.75rem;
+    }
+
+    /* 13px → 11.5px */
+    .quick-search-dropdown-footer .manage-quick-options-btn,
+    .quick-search-btn,
+    .matched-item,
+    .btn-text,
+    .social-link,
+    .amount-input-wrap .amount-prefix,
+    .mc-related,
+    #card-benefits-section .cashback-condition.parking-strong-line,
+    input[type="text"].credit-limit-input,
+    .personal-level-select,
+    .card-detail-nav-btn,
+    .info-label,
+    .fee-waiver-checkbox,
+    .save-notes-btn {
+        font-size: 11.5px;
+    }
+
+    /* 0.8rem → 0.72rem */
+    .app-layout main .quick-search-btn,
+    .app-layout main #payment-disclaimer,
+    .spotlight-compare-btn {
+        font-size: 0.72rem;
+    }
+
+    /* 0.78rem → 0.7rem */
+    .sidebar-changelog-card {
+        font-size: 0.7rem;
+    }
+
+    /* 0.75rem → 0.68rem */
+    .announcement-date-badge,
+    .announcement-indicator,
+    .card-chip,
+    .merchant-payment-info,
+    .my-mappings-floating-btn .btn-text, .scroll-to-spotlight-btn .btn-text {
+        font-size: 0.68rem;
+    }
+
+    /* 12px → 11px */
+    .card-chips-count,
+    .quick-search-expand-btn,
+    .promo-help-btn,
+    .best-badge,
+    .detail-label,
+    .matched-merchant,
+    .card-detail-peek-btn,
+    .help-btn,
+    .social-media-title,
+    .social-text,
+    .data-update-footer,
+    .pin-btn,
+    .credit-limit-prefix,
+    .level-help-btn,
+    .cashback-search-input,
+    .cashback-merchants,
+    .show-more-btn,
+    .info-value-small {
+        font-size: 11px;
+    }
+
+    /* 0.72rem → 0.66rem */
+    .sidebar-changelog-summary,
+    .spotlight-info-row {
+        font-size: 0.66rem;
+    }
+
+    /* 0.7rem → 0.65rem */
+    .sidebar .card-chip,
+    .spotlight-cardname {
+        font-size: 0.65rem;
+    }
+
+    /* 11px → 10.5px */
+    .cashback-type-label,
+    .personal-field-hint,
+    .cashback-condition,
+    .cond-toggle,
+    .card-tag {
+        font-size: 10.5px;
+    }
+
+    /* 0.68rem → 0.64rem */
+    .spotlight-hype-tag {
+        font-size: 0.64rem;
+    }
+}

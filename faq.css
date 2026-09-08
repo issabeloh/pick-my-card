@@ -578,3 +578,43 @@ main {
         font-size: 0.875rem;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 1 類：字級（≥1025px，2026-09-08）
+   本檔在 styles.css **之後**載入，所以 FAQ 專屬選擇器的桌機縮放要寫在這裡，
+   寫進 styles.css 會被本檔同特異性的原規則蓋掉。做法與比例見 styles.css
+   同名區塊的長註解。
+   ============================================ */
+@media (min-width: 1025px) {
+    /* 1.75rem → 1.5rem */
+    .faq-hero h1 {
+        font-size: 1.5rem;
+    }
+
+    /* 1.25rem → 1.1rem */
+    .header-content .header-title {
+        font-size: 1.1rem;
+    }
+
+    /* 1rem → 0.88rem */
+    .question-text {
+        font-size: 0.88rem;
+    }
+
+    /* 0.9rem → 0.79rem */
+    .back-home-btn,
+    .category-btn {
+        font-size: 0.79rem;
+    }
+
+    /* 0.875rem → 0.78rem */
+    .faq-question .toggle-icon {
+        font-size: 0.78rem;
+    }
+
+    /* 0.8rem → 0.72rem */
+    .faq-breadcrumb {
+        font-size: 0.72rem;
+    }
+}
