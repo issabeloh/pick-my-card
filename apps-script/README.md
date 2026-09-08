@@ -338,6 +338,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 解析新卡：3-貼上原文 → 4-待審核（基本＋組別） | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
 | 解析活動更新：2-變動通知 → 4-待審核（活動更新） | `parseInboxCardGroups` | `2-變動通知`（「組別解析」欄空白、實質變動≠否、60 天內、card_id 剛好一張既有卡）的「新文字」欄 | `4-待審核（活動更新）`（自動建）；回寫「組別解析」欄狀態 | `card-benefits-parser.gs` |
 | 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+| 找登錄連結：1-監控清單 → Cards Data 草稿 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋**跨檔唯讀**資料檔 `Cards Data` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
 
 所有分頁名的唯一出處（改名時要改的就是這幾行）：
 
@@ -348,6 +349,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | `2-封存（變動通知）` | `watchlist-monitor.gs` → `INBOX_ARCHIVE_SHEET` |
 | `3-貼上原文（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.inputSheet` |
 | `4-待審核（新戶活動）` | `benefits-parser.gs` → `PARSER_CONFIG.reviewSheet` |
+| `Cards Data-登錄連結草稿`（在資料檔） | `register-link-finder.gs` → `REGLINK_CONFIG.draftSheetName` |
 | `變動紀錄`（在資料檔） | `benefits-parser.gs` → `PARSER_CONFIG.changelogSheet` |
 | `3-貼上原文（新卡）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.inputSheet` |
 | `4-待審核（新卡-基本）`／`（新卡-組別）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.basicReviewSheet`／`groupReviewSheet` |
@@ -1109,3 +1111,23 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 
 ⚠️ **「疑似消失」先別急著刪**。監控的 prompt 早就警告過「－(消失)的段落常常只是改寫、搬移」——
 官網改版就會造成這種結果，不一定是活動真的下架。那幾列標紅、`needs_review=TRUE`，是要你回官網確認的清單，不是判決。
+
+## 找登錄連結：從監控快照撈 `registerLink_N`（`register-link-finder.gs`，2026-09-08 新增）
+
+**要解決的事**：Cards Data 新增了 `registerLink_N` 欄之後，既有 33 張卡、400 多個槽位沒有人要一格一格去官網翻登錄頁網址。而 `1-監控清單` 的 `last_snapshot` 本來就存著每一頁官網的完整文字——登錄連結十之八九就在裡面，只是從來沒被撈出來過。
+
+**流程**：`1-監控清單` 的 `last_snapshot`（依 `card_id` ＋ `cards` 欄歸到卡片；一頁蓋多張卡的公告總覽頁會歸給每一張）→ 對每張卡讀 Cards Data 的槽位（rate/cap/items/category/conditions/period）→ 每張卡問一次 Gemini「哪個槽位有登錄連結」→ 寫進資料檔的草稿分頁。
+
+**產出**：資料檔的 `Cards Data-登錄連結草稿`，是**當下 Cards Data 的完整複本**，多了：
+- 填好的 `registerLink_N` 各欄
+- 最右邊一欄 `登錄連結說明`：每個填入槽位一行「槽 N：活動摘要（含回饋率／上限／適用通路／活動名稱）→ 網址」，給站長人工複核。複核完自己把 `registerLink_N` 那幾欄貼回正式表
+
+**安全底線**（這支會寫到資料檔，是全站資料的來源）：
+- **絕不寫正式 `Cards Data`**：只寫草稿分頁，另有 `regLinkAssertDraft_()` 做名稱斷言
+- **`1-監控清單` 只讀不寫**，完全不碰 `last_snapshot`
+- **AI 回的網址必須逐字出現在 snapshot 裡才採用**（`regLinkVerifyInSnapshot_`，比對前去掉尾端標點與斜線）。這是硬性機械檢查、不是靠 prompt 拜託——LLM 生一個「看起來很像那家銀行」的網址是這個任務最可能出的錯，而錯的登錄連結會把用戶帶到 404 或別家頁面，**比沒有連結更糟**。被擋下的網址會寫進說明欄（⚠️ 開頭）讓站長知道
+- 只收 https（沿用 `normalizeRegisterLink_`）；App scheme、App Store 下載頁、只能在 App 內操作的活動一律不回
+
+**分批**：一次最多 `REGLINK_CONFIG.maxCardsPerRun`（預設 8）張卡（Apps Script 單次 6 分鐘上限）。`登錄連結說明` 有值的卡會自動跳過，再按一次選單就接著跑剩下的。要整批重跑就把草稿分頁刪掉再執行（會重新複製一份最新的 Cards Data）。
+
+**可預期的結果**：不會每張卡都撈得到。監控清單裡沒有該卡頁面、官網只寫「請至APP登錄」、或登錄入口藏在 JS 裡沒進快照的，都會回「找不到」——這是正常的，說明欄會寫明原因。撈到的部分省下的是逐頁人工翻找的時間，**不是免除複核**。
