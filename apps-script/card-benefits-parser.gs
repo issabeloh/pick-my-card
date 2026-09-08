@@ -91,17 +91,17 @@ const CARD_BASIC_FIELDS = [
 //     省得每次都要翻最右邊那一大段 evidence 才看得懂回饋結構。
 //   改了欄位＝舊分頁表頭對不上（本表是照位置 appendRow），writeGroupReview_ 有擋。
 //
-// ⚠️ 2026-09-08 再改版（站長要求）：新增「登錄連結」，放在 hideInDisplay 右邊——
-//   它是要複製到 Cards Data 的 registerLink_N 欄的，所以必須留在複製區
-//   （rate → 登錄連結）的**尾端**，複製區才維持一段連續範圍。
+// ⚠️ 2026-09-08 再改版（站長要求）：新增「登錄連結」，位置**緊接在 conditions 右邊**
+//   ——站長的 Cards Data 就是把 registerLink_N 建在 conditions_N 右邊的，這張表存在的
+//   意義是「rate → hideInDisplay 整段橫向複製過去」，兩邊欄序必須一致，否則貼過去會
+//   整段錯位、而且看起來完全正常（貼完才會發現）。日後 Cards Data 挪動欄位，這裡要跟著挪。
 //   ⚠️ 只收 https 網址、不收文字：前端顯示時會過 sanitizeUrl()（只放行 http/https），
 //      填文字進去會被靜默丟掉。只能在 App 內操作的活動（「打開 App → 我的優惠 → 登錄」）
 //      把步驟寫成文字放進 conditions，不要塞這一欄。
 const GROUP_REVIEW_HEADER = [
   '核准', '解析時間', 'card_id', '建議槽位N', 'group_kind', '回饋組成原文',
   'rate', 'cashbackModel', 'cap(消費上限)', 'minSpend', 'maxSpend',
-  'items', 'category', 'conditions', 'period_start', 'period_end', 'hideInDisplay',
-  '登錄連結',
+  'items', 'category', 'conditions', '登錄連結', 'period_start', 'period_end', 'hideInDisplay',
   '程式備註', 'needs_review', 'AI想問的問題', '原文引用'
 ];
 
@@ -783,7 +783,7 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.ps, f.pe, f.hide, f.registerLink || '',
+    f.items, f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || ''];
   sheet.appendRow(row);
   if (f.needsReview || f.modelNeedsHuman) {
@@ -1214,7 +1214,7 @@ function appendGroupUpdateRow_(sheet, now, cardId, slotN, kind, f, hint) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.ps, f.pe, f.hide, f.registerLink || '',
+    f.items, f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || '', hint || ''];
   sheet.appendRow(row);
   // 標色：疑似消失＝紅底（要人判斷是不是真的下架）；率變了或需手填＝黃底

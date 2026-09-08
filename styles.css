@@ -8205,6 +8205,65 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 }
 
 
+/* ============================================
+   寬螢幕（≥1400px）：把 .container 的 1200px 上限放寬，並讓側欄變寬
+   （2026-09-08 站長回報「桌機一切都太大、很浪費顯示空間」的第一步）
+
+   量到的現況：1920px 螢幕上 .container 固定 1200px，等於 720px（37%）是純背景；
+   側欄 280px、膠囊平均寬 102px（最寬 143px）只排得下一行 2 顆。
+   這裡只動「可用寬度」，**不碰任何字級**——放寬容器與側欄就能一次解決
+   「空間浪費」與「一行只有 2 顆膠囊」，而字級是另一件事（全站密度調整，範圍大得多）。
+
+   ⚠️ 斷點刻意壓在 1400px：1280/1366 這類常見筆電維持現狀（容器 1200 / 側欄 280），
+      不會因為側欄變寬反而把主內容區擠窄。
+   ⚠️ 這幾條必須排在本檔前段無媒體查詢的 .container / .app-layout 之後——
+      媒體查詢不加特異性，同特異性靠源碼順序決勝（教訓見 ui-display.md）。
+   ============================================ */
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1360px;
+    }
+
+    .app-layout {
+        grid-template-columns: 340px 1fr;
+    }
+
+    /* 側欄膠囊改 3 欄等寬格線（原本是 flex 自動換行，一行只排得下 2 顆）。
+       等寬格線的代價是最長的卡名（如「彰銀｜My樂現金回饋卡」）會在格子裡折成兩行——
+       這比截字加「…」好：膠囊是用來認卡的，認不出來就失去意義。 */
+    .sidebar .card-chips {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        justify-content: stretch;
+    }
+
+    /* 格線子項要撐滿格子（原本是 inline-flex 收縮成內容寬），
+       卡名允許折行、銀行色塊不折 */
+    .sidebar .card-chip {
+        width: 100%;
+    }
+
+    .sidebar .card-chip.card-chip-split {
+        display: flex;
+    }
+
+    .sidebar .card-chip-name {
+        white-space: normal;
+        word-break: break-word;
+    }
+}
+
+@media (min-width: 1700px) {
+    .container {
+        max-width: 1560px;
+    }
+
+    .app-layout {
+        grid-template-columns: 380px 1fr;
+    }
+}
+
 /* Desktop: hide hamburger and sidebar close button */
 @media (min-width: 1025px) {
     .sidebar-toggle-btn {
