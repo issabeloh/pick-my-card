@@ -9699,3 +9699,671 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         font-size: 0.64rem;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-09-08）
+
+   接續上面的「第 1 類：字級」。字級縮了但盒子的留白沒縮的話，看起來只是
+   「小字配大框」，密度並沒有真的變高——這一輪把 padding / margin / gap
+   一起縮到約 0.85×。
+
+   規則（機械套用，不是逐條憑感覺調）：
+   - 只縮 >3px 的值；3px 以下是視覺微調（分隔線、圖示對位），縮了只會歪
+   - 縮完的下限是 3px，`auto` / `0` / `em` / `%` 一律不動
+   - 負值同比例（例：.announcement-btn 的 -8px → -7px），不然它跟父層的
+     padding 對消關係會跑掉
+
+   **刻意不縮**的一類：「替絕對定位的圖示／徽章保留的空間」，不是留白：
+     .merchant-input-wrap #merchant-input 的 padding-right:44px（清除鈕）
+     .cashback-search-input 的 padding-left:30px（放大鏡）
+     .input-clear-wrap > input 的 padding-right:30px（清除鈕）
+     .card-result.best-card .card-header 的 padding-right:64px（「最優回饋」徽章）
+     .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）
+   縮這些會讓文字直接壓到圖示上。同理 .cashback-condition 的 0.5em 不動——
+   em 會自己跟著第 1 類縮過的字級走。
+
+   ⚠️ 與第 1 類同樣的三個前提：選擇器照抄原規則、區塊留在檔案最後、
+      斷點 1025px（手機與平板完全不受影響）。
+   ============================================ */
+@media (min-width: 1025px) {
+    body {
+        padding: 17px;   /* 原 20px */
+    }
+
+    header {
+        padding: 9px 17px;   /* 原 10px 20px */
+    }
+
+    .header-top {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .header-content {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .header-content h1 {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .header-page-links {
+        margin-right: 5px;   /* 原 6px */
+        gap: 15px;   /* 原 18px */
+    }
+
+    .header-page-links {
+        padding-right: 14px;   /* 原 16px */
+    }
+
+    .header-nav-link + .header-nav-link {
+        margin-left: 15px;   /* 原 18px */
+    }
+
+    .header-nav-link {
+        padding: 3px 2px;   /* 原 4px 2px */
+    }
+
+    .auth-section {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .avatar-btn {
+        padding: 3px 9px 3px 3px;   /* 原 4px 10px 4px 4px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    header h1 {
+        margin-bottom: 7px;   /* 原 8px */
+    }
+
+    .announcement-bar {
+        padding: 7px 14px;   /* 原 8px 16px */
+        margin-top: 7px;   /* 原 8px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .announcement-content {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .announcement-date-badge {
+        padding: 2px 7px;   /* 原 2px 8px */
+        margin-right: 7px;   /* 原 8px */
+    }
+
+    .announcement-controls {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .announcement-btn {
+        padding: 9px 8px;   /* 原 10px 9px */
+        margin: -7px 0px;   /* 原 -8px 0px */
+    }
+
+    .cards-header {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .card-chips {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-chips-count {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .card-chip-bank {
+        padding: 3px 5px;   /* 原 3px 6px */
+    }
+
+    .card-chip-name {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    .card-chip {
+        padding: 3px 9px;   /* 原 4px 10px */
+    }
+
+    main {
+        padding: 26px;   /* 原 30px */
+    }
+
+    .input-section {
+        margin-bottom: 26px;   /* 原 30px */
+    }
+
+    .input-row-with-button {
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 14px;   /* 原 16px */
+    }
+
+    .form-group {
+        margin-bottom: 17px;   /* 原 20px */
+    }
+
+    .quick-search-wrapper {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-visible {
+        padding: 3px 0px;   /* 原 4px 0px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-expand-btn {
+        padding: 5px 9px;   /* 原 6px 10px */
+        gap: 3px;   /* 原 4px */
+    }
+
+    .quick-search-dropdown-content {
+        padding: 10px;   /* 原 12px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-dropdown-footer {
+        padding: 9px 10px;   /* 原 10px 12px */
+    }
+
+    .quick-search-dropdown-footer .manage-quick-options-btn {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .quick-search-btn {
+        padding: 5px 10px;   /* 原 6px 12px */
+        gap: 3px;   /* 原 4px */
+    }
+
+    label {
+        margin-bottom: 12px;   /* 原 14px */
+    }
+
+    input[type="text"], input[type="search"], input[type="number"] {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .calculate-btn {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .calculate-btn.compact {
+        padding: 10px 17px;   /* 原 12px 20px */
+    }
+
+    .results-section {
+        padding-top: 17px;   /* 原 20px */
+    }
+
+    .results-section h2 {
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .merchant-payment-info {
+        padding: 9px 12px;   /* 原 10px 14px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .merchant-payment-title {
+        margin-bottom: 5px;   /* 原 6px */
+    }
+
+    .merchant-payment-item {
+        margin-bottom: 3px;   /* 原 4px */
+    }
+
+    .merchant-payment-item .payment-label {
+        margin-right: 3px;   /* 原 4px */
+    }
+
+    .merchant-info-row {
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .parking-benefits-section {
+        padding-top: 17px;   /* 原 20px */
+        margin-top: 26px;   /* 原 30px */
+    }
+
+    .parking-benefits-section h2 {
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .parking-benefits-container {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .parking-benefit-item {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .parking-header {
+        padding-bottom: 7px;   /* 原 8px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .parking-benefit-highlight {
+        padding: 10px 14px;   /* 原 12px 16px */
+        margin: 10px 0px;   /* 原 12px 0px */
+    }
+
+    .parking-details {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .parking-detail-item {
+        padding: 3px 0px;   /* 原 4px 0px */
+    }
+
+    .show-promos-toggle {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .promo-toggle-row {
+        padding: 3px 10px;   /* 原 4px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .show-promos-toggle label {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .results-container {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .card-result {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .card-header {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .card-name-with-pin {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .best-badge {
+        padding: 3px 10px;   /* 原 4px 12px */
+    }
+
+    .card-result .best-badge {
+        padding: 4px 10px 5px;   /* 原 5px 12px 6px */
+    }
+
+    .card-details {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .matched-merchant {
+        margin-top: 5px;   /* 原 6px */
+    }
+
+    .card-detail-peek-btn {
+        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
+    }
+
+    .calc-breakdown-btn {
+        margin-left: 5px;   /* 原 6px */
+    }
+
+    .help-btn {
+        margin-left: 5px;   /* 原 6px */
+    }
+
+    .social-media-footer {
+        padding: 0px 20px;   /* 原 0px 24px */
+        margin: 17px auto 9px;   /* 原 20px auto 10px */
+    }
+
+    .social-media-container {
+        gap: 41px;   /* 原 48px */
+    }
+
+    .social-section, .sponsor-section, .explore-section {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .social-media-links {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .social-link {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .data-update-footer {
+        padding: 0px 20px 24px;   /* 原 0px 24px 28px */
+        margin: 14px auto 0px;   /* 原 16px auto 0px */
+    }
+
+    .ad-row {
+        padding: 0px 14px;   /* 原 0px 16px */
+        margin: 14px auto 0px;   /* 原 16px auto 0px */
+    }
+
+    .finance-warning-row {
+        padding: 12px 20px;   /* 原 14px 24px */
+    }
+
+    .pin-btn {
+        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
+    }
+
+    .my-mappings-floating-btn .btn-text, .scroll-to-spotlight-btn .btn-text {
+        padding: 3px 9px;   /* 原 4px 10px */
+    }
+
+    .sidebar-content {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .sidebar .supported-cards {
+        margin-bottom: 17px;   /* 原 20px */
+    }
+
+    .sidebar .cards-header {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .sidebar-changelog {
+        padding-top: 12px;   /* 原 14px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .sidebar-changelog-title {
+        margin: 0px 0px 7px;   /* 原 0px 0px 8px */
+    }
+
+    .sidebar-changelog-item {
+        padding: 7px 9px;   /* 原 8px 10px */
+    }
+
+    .sidebar .card-chips {
+        gap: 4px;   /* 原 5px */
+    }
+
+    .sidebar .card-chip {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    .sidebar .card-chips {
+        gap: 4px;   /* 原 5px */
+    }
+
+    .app-layout main label {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .app-layout main input[type="text"], .app-layout main input[type="search"], .app-layout main input[type="number"] {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .app-layout main .calculate-btn.compact {
+        padding: 9px 14px;   /* 原 10px 16px */
+    }
+
+    .spotlight-section {
+        padding: 20px 26px 26px;   /* 原 24px 30px 30px */
+    }
+
+    .spotlight-header {
+        margin-bottom: 12px;   /* 原 14px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .spotlight-title {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .spotlight-nav {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .spotlight-track {
+        gap: 12px;   /* 原 14px */
+    }
+
+    .spotlight-card {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .spotlight-ccwrap {
+        padding: 5px;   /* 原 6px */
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .spotlight-rate-row {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .spotlight-hype-tag {
+        padding: 2px 7px;   /* 原 2px 8px */
+    }
+
+    .spotlight-merchant {
+        margin-top: 4px;   /* 原 5px */
+    }
+
+    .spotlight-cardname {
+        padding: 2px 5px;   /* 原 2px 6px */
+    }
+
+    .spotlight-info-row {
+        margin: 6px 0px 9px;   /* 原 7px 0px 10px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .spotlight-compare-btn {
+        padding: 0px 7px;   /* 原 0px 8px */
+    }
+
+    .spotlight-dots {
+        margin-top: 12px;   /* 原 14px */
+        gap: 6px;   /* 原 7px */
+    }
+
+    .merchant-search-box .quick-search-wrapper {
+        padding: 9px 10px;   /* 原 10px 12px */
+    }
+
+    .mc-related {
+        padding: 9px 26px;   /* 原 11px 30px */
+        gap: 5px 12px;   /* 原 6px 14px */
+    }
+
+    .mc-related-list {
+        gap: 3px 22px;   /* 原 4px 26px */
+    }
+
+    .mc-related-link {
+        gap: 3px;   /* 原 4px */
+    }
+
+    .card-apply-cta {
+        padding: 10px 12px;   /* 原 12px 14px */
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 12px 7px;   /* 原 14px 8px */
+    }
+
+    .card-apply-cta-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+    }
+
+    .modal-header {
+        padding: 17px;   /* 原 20px */
+    }
+
+    .card-detail-title-group {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .modal-body {
+        padding: 17px;   /* 原 20px */
+    }
+
+    .credit-limit-row {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .credit-limit-field {
+        padding: 0px 10px;   /* 原 0px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-settings-box {
+        padding: 10px 12px;   /* 原 12px 14px */
+    }
+
+    .personal-settings-box > #cube-level-section {
+        padding-bottom: 10px;   /* 原 12px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .personal-field-title {
+        margin-bottom: 4px;   /* 原 5px */
+    }
+
+    .personal-field-hint {
+        margin-top: 3px;   /* 原 4px */
+    }
+
+    label.personal-field-check {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-level-select {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    .personal-level-row {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-fields-row {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .personal-fields-row {
+        gap: 17px;   /* 原 20px */
+    }
+
+    .card-detail-nav {
+        padding: 9px 17px;   /* 原 10px 20px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-detail-nav-btn {
+        padding: 5px 10px;   /* 原 6px 12px */
+    }
+
+    .card-detail-apply-header-btn {
+        padding: 5px 14px;   /* 原 6px 16px */
+    }
+
+    .card-info-section {
+        margin-bottom: 20px;   /* 原 24px */
+    }
+
+    .card-info-section h4 {
+        margin: 0px 0px 14px;   /* 原 0px 0px 16px */
+    }
+
+    .cube-settings-grid {
+        gap: 10px 17px;   /* 原 12px 20px */
+    }
+
+    .info-grid-2col {
+        gap: 17px;   /* 原 20px */
+    }
+
+    .info-column-left {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .info-item {
+        gap: 3px;   /* 原 4px */
+    }
+
+    .cashback-detail-item {
+        padding: 14px;   /* 原 16px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .input-clear-wrap[data-for="cashback-search-input"] {
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    #card-basic-cashback, #card-special-cashback, #card-coupon-cashback {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .cashback-rate {
+        margin-bottom: 7px;   /* 原 8px */
+    }
+
+    .cashback-merchants {
+        margin-top: 5px;   /* 原 6px */
+    }
+
+    .show-more-btn {
+        padding: 2px 3px;   /* 原 2px 4px */
+        margin-left: 4px;   /* 原 5px */
+    }
+
+    .notes-input-row {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .fee-waiver-status {
+        margin-top: 3px;   /* 原 4px */
+    }
+
+    .fee-waiver-checkbox {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .user-notes-textarea {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .notes-status {
+        margin-top: 3px;   /* 原 4px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .save-notes-btn {
+        padding: 7px 9px;   /* 原 8px 10px */
+    }
+
+    .fee-annual-section {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .card-tags-container {
+        margin-top: 14px;   /* 原 16px */
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-tag {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    /* 密度變高的副作用：膠囊變小之後，原本剛好排滿 6 顆的可視列會多擠進「半顆」
+       第 7 顆（`.quick-search-visible` 是 overflow:hidden 硬切，切在哪由寬度決定）。
+       半顆膠囊看起來像壞掉，但**不能用隱藏或截字解決**——站長明確否決過為了
+       整齊犧牲內容。這裡只把右緣做成漸淡：被切到的那顆讀起來是「後面還有」，
+       而且它本來就完整收在「更多」下拉裡，一個字都沒少。
+       沒溢出時右緣 24px 是 gap 的空白，漸淡看不出來。 */
+    .quick-search-visible {
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+    }
+}

@@ -618,3 +618,71 @@ main {
         font-size: 0.72rem;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-09-08）
+
+   接續上面的「第 1 類：字級」。字級縮了但盒子的留白沒縮的話，看起來只是
+   「小字配大框」，密度並沒有真的變高——這一輪把 padding / margin / gap
+   一起縮到約 0.85×。
+
+   規則（機械套用，不是逐條憑感覺調）：
+   - 只縮 >3px 的值；3px 以下是視覺微調（分隔線、圖示對位），縮了只會歪
+   - 縮完的下限是 3px，`auto` / `0` / `em` / `%` 一律不動
+   - 負值同比例（例：.announcement-btn 的 -8px → -7px），不然它跟父層的
+     padding 對消關係會跑掉
+
+   **刻意不縮**的一類：「替絕對定位的圖示／徽章保留的空間」，不是留白：
+     .merchant-input-wrap #merchant-input 的 padding-right:44px（清除鈕）
+     .cashback-search-input 的 padding-left:30px（放大鏡）
+     .input-clear-wrap > input 的 padding-right:30px（清除鈕）
+     .card-result.best-card .card-header 的 padding-right:64px（「最優回饋」徽章）
+     .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）
+   縮這些會讓文字直接壓到圖示上。同理 .cashback-condition 的 0.5em 不動——
+   em 會自己跟著第 1 類縮過的字級走。
+
+   ⚠️ 與第 1 類同樣的三個前提：選擇器照抄原規則、區塊留在檔案最後、
+      斷點 1025px（手機與平板完全不受影響）。
+   ============================================ */
+@media (min-width: 1025px) {
+    .back-home-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .faq-breadcrumb {
+        padding: 12px 3px 0px;   /* 原 14px 4px 0px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .faq-hero {
+        padding: 17px 3px 7px;   /* 原 20px 4px 8px */
+    }
+
+    main {
+        padding: 27px 20px;   /* 原 32px 24px */
+    }
+
+    .category-filter {
+        padding-bottom: 17px;   /* 原 20px */
+        margin-bottom: 20px;   /* 原 24px */
+        gap: 9px;   /* 原 10px */
+    }
+
+    .category-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+    }
+
+    .faq-list {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .faq-question {
+        padding: 15px 17px;   /* 原 18px 20px */
+    }
+
+    .question-text {
+        padding-right: 14px;   /* 原 16px */
+    }
+}

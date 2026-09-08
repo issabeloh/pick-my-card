@@ -2234,3 +2234,267 @@ a {
         font-size: 0.66rem;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-09-08）
+
+   接續上面的「第 1 類：字級」。字級縮了但盒子的留白沒縮的話，看起來只是
+   「小字配大框」，密度並沒有真的變高——這一輪把 padding / margin / gap
+   一起縮到約 0.85×。
+
+   規則（機械套用，不是逐條憑感覺調）：
+   - 只縮 >3px 的值；3px 以下是視覺微調（分隔線、圖示對位），縮了只會歪
+   - 縮完的下限是 3px，`auto` / `0` / `em` / `%` 一律不動
+   - 負值同比例（例：.announcement-btn 的 -8px → -7px），不然它跟父層的
+     padding 對消關係會跑掉
+
+   **刻意不縮**的一類：「替絕對定位的圖示／徽章保留的空間」，不是留白：
+     .merchant-input-wrap #merchant-input 的 padding-right:44px（清除鈕）
+     .cashback-search-input 的 padding-left:30px（放大鏡）
+     .input-clear-wrap > input 的 padding-right:30px（清除鈕）
+     .card-result.best-card .card-header 的 padding-right:64px（「最優回饋」徽章）
+     .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）
+   縮這些會讓文字直接壓到圖示上。同理 .cashback-condition 的 0.5em 不動——
+   em 會自己跟著第 1 類縮過的字級走。
+
+   ⚠️ 與第 1 類同樣的三個前提：選擇器照抄原規則、區塊留在檔案最後、
+      斷點 1025px（手機與平板完全不受影響）。
+   ============================================ */
+@media (min-width: 1025px) {
+    body {
+        padding: 17px;   /* 原 20px */
+    }
+
+    .promos-header {
+        padding: 9px 17px;   /* 原 10px 20px */
+    }
+
+    .promos-header-top {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .promos-header-content {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .promos-header-links {
+        padding-right: 14px;   /* 原 16px */
+        gap: 15px;   /* 原 18px */
+    }
+
+    .promos-header-nav-link {
+        padding: 3px 2px;   /* 原 4px 2px */
+    }
+
+    .promos-header-nav-link + .promos-header-nav-link {
+        margin-left: 15px;   /* 原 18px */
+    }
+
+    .promos-back-home-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promos-main {
+        padding: 14px 20px 24px;   /* 原 16px 24px 28px */
+    }
+
+    .promos-breadcrumb {
+        padding: 3px 0px 0px;   /* 原 4px 0px 0px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promos-hero {
+        padding: 17px 3px 7px;   /* 原 20px 4px 8px */
+    }
+
+    .promos-hero h1 {
+        margin: 0px 0px 5px;   /* 原 0px 0px 6px */
+    }
+
+    .promos-hero-intro {
+        padding: 10px 14px;   /* 原 12px 16px */
+        margin: 12px 0px 3px;   /* 原 14px 0px 4px */
+    }
+
+    .promos-hero-intro p {
+        margin: 0px 0px 5px;   /* 原 0px 0px 6px */
+    }
+
+    .promos-hero-intro p:first-child {
+        margin-bottom: 7px;   /* 原 8px */
+    }
+
+    .promos-search-box {
+        margin: 3px 0px 12px;   /* 原 4px 0px 14px */
+    }
+
+    #promos-search-input {
+        padding: 7px 32px 7px 29px;   /* 原 8px 38px 8px 34px */
+    }
+
+    .promos-controls {
+        padding: 10px 12px;   /* 原 12px 14px */
+        margin: 3px 0px 17px;   /* 原 4px 0px 20px */
+        gap: 12px;   /* 原 14px */
+    }
+
+    .promos-control-group {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promos-filter-chips, .promos-sort-toggle {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-chip, .promo-sort-btn {
+        padding: 5px 12px;   /* 原 6px 14px */
+    }
+
+    .promo-grid {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .promo-card-body {
+        padding: 14px 15px 15px;   /* 原 16px 18px 18px */
+        gap: 9px;   /* 原 10px */
+    }
+
+    .promo-card-header {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promo-card-topline {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-card-mainline {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .promo-card-cardimg {
+        padding: 3px;   /* 原 4px */
+    }
+
+    .promo-card-headline {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promo-card-info-btn {
+        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
+    }
+
+    .promo-type-badges {
+        margin: -14px 0px 0px -15px;   /* 原 -16px 0px 0px -18px */
+    }
+
+    .promo-type-badge {
+        padding: 3px 9px;   /* 原 4px 11px */
+    }
+
+    .promo-quick-highlight {
+        margin: 3px 0px 0px;   /* 原 4px 0px 0px */
+    }
+
+    .promo-highlight-row {
+        margin: 5px 0px 0px;   /* 原 6px 0px 0px */
+        gap: 9px;   /* 原 10px */
+    }
+
+    .promo-hero {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-hero-item {
+        padding: 9px 12px;   /* 原 10px 14px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-hero-main {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promo-gift-thumb-row {
+        margin: 5px 0px 0px;   /* 原 6px 0px 0px */
+    }
+
+    .promo-card-meta {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-meta-row {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .promo-notes-text {
+        margin: 5px 0px 0px;   /* 原 6px 0px 0px */
+    }
+
+    .promo-notes-toggle {
+        margin-top: 3px;   /* 原 4px */
+    }
+
+    .promo-card-detail-inner {
+        padding-top: 10px;   /* 原 12px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .promo-apply-btn {
+        padding: 7px 15px;   /* 原 8px 18px */
+    }
+
+    .promos-warning-row {
+        padding: 12px 20px;   /* 原 14px 24px */
+        margin-top: 14px;   /* 原 16px */
+    }
+
+    .social-media-footer {
+        padding: 0px 20px;   /* 原 0px 24px */
+        margin: 17px auto 9px;   /* 原 20px auto 10px */
+    }
+
+    .social-media-container {
+        gap: 41px;   /* 原 48px */
+    }
+
+    .social-section, .sponsor-section, .explore-section {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .social-media-links {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .social-link {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promos-data-update {
+        margin: -7px 0px 12px;   /* 原 -8px 0px 14px */
+    }
+
+    .promos-faq {
+        padding: 0px 20px 20px;   /* 原 0px 24px 24px */
+        margin: 17px auto;   /* 原 20px auto */
+    }
+
+    .promos-faq-summary {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .promos-faq-body {
+        padding: 14px 17px 15px;   /* 原 16px 20px 18px */
+        margin-top: 10px;   /* 原 12px */
+    }
+
+    .promos-faq-body h3 {
+        margin: 15px 0px 5px;   /* 原 18px 0px 6px */
+    }
+
+    .promos-faq-body p {
+        margin: 0px 0px 3px;   /* 原 0px 0px 4px */
+    }
+}
