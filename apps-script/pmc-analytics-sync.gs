@@ -1949,6 +1949,18 @@ const UNCOVERED_SOURCE_COLS = {
 // 送出試算時輸入框是空的，GA4 會回這幾個字串——那是「空框按了試算」，不是覆蓋缺口，要跳過
 const UNCOVERED_SKIP_TERMS = { '(not set)': true, '(not provided)': true, '(other)': true };
 
+// 手動跑一次（編輯器上方函數選這支 → Run）。
+// ⚠️ 存在的理由：updateUncoveredMerchants() **需要參數**，而編輯器的 Run 按鈕沒辦法傳參數，
+//    直接選它去跑會拿到 undefined、只回一句「略過」，看起來像壞掉其實只是沒資料。
+// 這支自己去抓一次 GA4（1 次 runReport），所以會順便重寫 GA4_熱門搜尋／GA4_搜尋落空
+// ——那本來就是每天會被覆寫的兩張表，內容與排程跑出來的一樣，不會有副作用。
+// 不跑 Clarity、不動其他任何分頁（Clarity 每天只有 10 次額度，測試不該浪費在它身上）。
+function runUncoveredMerchantsNow() {
+  const msg = updateUncoveredMerchants(updateGA4MerchantSearches());
+  Logger.log(msg);
+  return msg;
+}
+
 // 由 updateAllReports() 呼叫，資料來自同一次執行的 collected.searches（不多打 API）。
 // 回傳一句話交給 writeLastUpdated() 併進「更新紀錄」那一行。
 function updateUncoveredMerchants(searchData) {
