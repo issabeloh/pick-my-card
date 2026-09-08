@@ -2498,3 +2498,31 @@ a {
         margin: 0px 0px 3px;   /* 原 0px 0px 4px */
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 3 類：控制項高度（≥1025px，2026-09-08）
+   規則與取捨見 styles.css 同名區塊的註解（成對改 width/height、
+   18px 以下的圖示不動）。
+   ============================================ */
+@media (min-width: 1025px) {
+    .promos-header-logo {
+        height: 35px;   /* 原 40px（width:auto，不用動） */
+    }
+
+    .promo-card-cardimg {
+        height: 35px;   /* 原 40px */
+    }
+
+    .promo-card-info-btn {
+        height: 19px;   /* 原 22px */
+    }
+
+    .promo-gift-thumb {
+        height: 70px;   /* 原 80px */
+    }
+
+    .social-media-footer {
+        min-height: 85px;   /* 原 100px */
+    }
+}

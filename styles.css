@@ -10367,3 +10367,110 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 3 類：控制項高度（≥1025px，2026-09-08）
+
+   第 1、2 類縮了字級與留白之後，剩下一批「用固定 px 寫死高度」的控制項
+   還是原尺寸，跟旁邊縮過的東西不成比例。這一輪把它們縮到約 0.87×。
+
+   規則：
+   - **width 與 height 成對的圓形／方形按鈕一定要一起改**，只改一邊會從圓
+     變成橢圓（.guest-avatar-icon / .scroll-to-spotlight-btn / .spotlight-nav-btn
+     / .spotlight-info-btn / .merchant-clear-btn / .close-modal 都是 border-radius:50%
+     或固定方框）
+   - **18px 以下的圖示與核取方塊一律不動**（.promo-help-btn / .level-help-btn 的
+     18px、.checkmark 與 svg 的 16px、核取方塊的 14/16px、.spotlight-dot 的 8px）：
+     再縮就從「小」變成「看不清也點不到」，而且它們佔的版面本來就微不足道
+   - .calculate-btn.compact 的 height:53.5px **不用改**——桌機被更具體的
+     `.app-layout main .calculate-btn.compact { height: auto }` 蓋掉，實際高度
+     由第 2 類縮過的 padding 決定（實測 35px）
+
+   .matched-item-row 的 min-height 是特例：它原本寫 46px 並註明「與計算按鈕同高，
+   讓文字垂直置中對齊按鈕」。按鈕在第 2 類之後量到 35px，所以這裡跟著改成 35px——
+   照抄 0.87× 會得到 40px，反而讓那句註解描述的對齊關係失效。
+   ============================================ */
+@media (min-width: 1025px) {
+    .header-logo {
+        height: 35px;   /* 原 40px（width:auto，不用動） */
+    }
+
+    .auth-section {
+        min-height: 38px;   /* 原 44px */
+    }
+
+    .guest-avatar-icon {
+        width: 24px;    /* 原 28px */
+        height: 24px;   /* 原 28px */
+    }
+
+    /* 原 46px＝「與計算按鈕同高」；按鈕在第 2 類之後實測 35px，跟著對齊 */
+    .matched-item-row {
+        min-height: 35px;
+    }
+
+    .merchant-clear-btn {
+        width: 31px;    /* 原 36px */
+        height: 31px;   /* 原 36px */
+    }
+
+    .pin-btn,
+    .card-detail-peek-btn {
+        height: 19px;   /* 原 22px */
+    }
+
+    .scroll-to-spotlight-btn {
+        width: 42px;    /* 原 48px */
+        height: 42px;   /* 原 48px */
+    }
+
+    .spotlight-nav-btn,
+    .spotlight-info-btn {
+        width: 30px;    /* 原 34px */
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-compare-btn {
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-rate-row {
+        min-height: 23px;   /* 原 26px */
+    }
+
+    .spotlight-info-row {
+        min-height: 16px;   /* 原 18px */
+    }
+
+    .card-detail-image {
+        height: 48px;   /* 原 56px（width:auto，不用動） */
+    }
+
+    .close-modal {
+        width: 26px;    /* 原 30px */
+        height: 26px;   /* 原 30px */
+    }
+
+    .credit-limit-field {
+        height: 33px;   /* 原 38px */
+    }
+
+    .user-notes-textarea {
+        height: 52px;        /* 原 60px */
+        min-height: 52px;    /* 原 60px */
+        max-height: 174px;   /* 原 200px */
+    }
+
+    .notes-status {
+        min-height: 17px;   /* 原 20px */
+    }
+
+    .social-media-footer {
+        min-height: 85px;   /* 原 100px */
+    }
+
+    .ad-row {
+        min-height: 85px;   /* 原 100px */
+    }
+}
