@@ -14,6 +14,29 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 `--update-baseline` 重拍，新基準連同改動一起 commit。基準檔在 `tools/regression/baseline.json`
 （綁定 cards.version；cards.data 更新或活動到期造成的差異屬預期，見 README）。
 
+**重拍前的判斷標準**：差異只落在 `matched` 這類文字欄（通路名稱改寫、conditions 文案修訂、
+新增的顯示元素）→ 可以重拍；只要 `回饋率／回饋金額／回饋消費上限／筆數／排序／threshold`
+任何一項變了 → **先查清楚為什麼，不要重拍**，那是計算或匹配真的變了。
+逐條比對可以直接 diff 兩個 JSON：
+
+```bash
+python3 -c "
+import json,difflib
+r=json.load(open('tools/regression/last-run.json'))['checks']
+b={c['id']:c for c in json.load(open('tools/regression/baseline.json'))['checks']}
+for x in r:
+    y=b.get(x['id'])
+    if not y or json.dumps(x,sort_keys=True)==json.dumps(y,sort_keys=True): continue
+    print('=== #%s %s ===' % (x['id'], x['query']))
+    for l in difflib.unified_diff(json.dumps(y,ensure_ascii=False,indent=1,sort_keys=True).split(chr(10)),
+                                  json.dumps(x,ensure_ascii=False,indent=1,sort_keys=True).split(chr(10)),
+                                  lineterm='', n=0):
+        if not l.startswith(('+++','---','@@')): print(l[:400])
+"
+```
+
+**基準快照**：`20260908-165106`（2026-09-08 重拍；上一版 `20260902-155444` 累積到 5 組紅燈）。
+
 ## 12 組檢查的語義（腳本 CHECKS 陣列與此表同步維護）
 
 金額統一 NT$30,000。「守的機制」欄是這組存在的理由——改腳本或換搜尋詞時不可以讓機制失去覆蓋。
@@ -64,4 +87,5 @@ python3 -m http.server 8000   # 開 http://localhost:8000/index.html?start&debug
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
 - [2026-07-12] 快捷搜尋自動計算在測試中不觸發 → handleQuickSearch 檢查 calculateBtn.disabled 的時機早於 validateInputs()（script.js:1181 vs 1193 的時序）→ 自動化腳本比照真實用戶：點快捷按鈕後自己按計算鈕；此時序若要修屬 UX 行為變更，先問用戶
+- [2026-09-08] 基準停在 20260902-155444 沒重拍，資料一路更新到 20260908-165106，12 組長期紅 2→4→5 組 → 每次改動都要靠「stash 後再跑一次比對」才知道差異是不是新的，等於這套機制暫時失效 → **基準過期就當天重拍**，不要累積；重拍前一定逐條看差異報告（本次 6 條差異全部只動到 `matched` 文字欄，回饋率／回饋金額／回饋消費上限／筆數／排序／threshold／parking／coupons 全部逐字相同，才敢重拍）
 - [2026-07-12] 領券檢查用了已到期商家（台灣永生 2026/6/30 止）導致 0 券 → 檢查詞要挑檔期最長的活動並在表格註明到期日 → 到期時換商家並重拍基準
