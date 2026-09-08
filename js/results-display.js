@@ -1322,41 +1322,43 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 // （緊貼回饋數字；2026-07-17 用戶定案，字級與匹配項目一致、不加特別色）
                 let thresholdLine = '';
 
-                // For upcoming activities, show period from result directly
-                if (isUpcoming) {
-                    if (result.period) {
-                        additionalInfo += `<br><small>活動期間: ${result.period}</small>`;
-                    } else if (result.periodStart && result.periodEnd) {
-                        additionalInfo += `<br><small>活動期間: ${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}</small>`;
-                    }
-                } else if (result.matchedRateGroup) {
-                    // For active activities, use matchedRateGroup
-                    const period = result.matchedRateGroup.period;
-                    const conditions = result.matchedRateGroup.conditions;
-                    const minSpend = result.matchedRateGroup.minSpend;
+                // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。
+                //
+                // ⚠️ 2026-09-08 之前這裡是三個分支（isUpcoming ／ matchedRateGroup ／
+                //    只有即將結束徽章）。那不是設計，是意外：「即將開始」的結果由
+                //    findUpcomingActivity() 另外抄了一份欄位、沒帶槽位，讀不到同一個地方，
+                //    顯示端只好分頭讀。代價是每加一個要顯示的欄位都得記得改三處，而漏掉的
+                //    那一支不會報錯、只會靜默少一行——登錄連結上線第一天就這樣漏掉兩種情況。
+                //    findUpcomingActivity() 補上 matchedRateGroup 之後三支已無存在理由，合併成一條。
+                //
+                // **三種活動的卡片內容完全相同，差別只在徽章**（「即將開始」在
+                // .badges-container、「即將結束」是 endingSoonInlineBadge，兩者本來就與這裡無關）。
+                // 不要為了「某種活動少顯示一點」再把它拆回分支。
+                const group = result.matchedRateGroup;
 
-                    if (period) additionalInfo += `<br><small>活動期間: ${period}${endingSoonInlineBadge}</small>`;
-                    if (conditions) additionalInfo += `<br><small>條件: ${conditions}</small>`;
-                    // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
-                    // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
-                    // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
-                    // maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
-                    if (minSpend) thresholdLine += `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())}</div>`;
-                } else if (endingSoonInlineBadge && result.periodEnd) {
-                    const periodDisplay = result.periodStart
-                        ? `${formatISODateForDisplay(result.periodStart)}~${formatISODateForDisplay(result.periodEnd)}`
-                        : `~${formatISODateForDisplay(result.periodEnd)}`;
-                    additionalInfo += `<br><small>活動期間: ${periodDisplay}${endingSoonInlineBadge}</small>`;
+                // 期間：優先用槽位寫好的字串；沒有字串但有起訖日就自己組
+                // （原本只有「即將結束」那一支會這樣組，現在一視同仁）
+                const periodStart = (group && group.periodStart) || result.periodStart || null;
+                const periodEnd = (group && group.periodEnd) || result.periodEnd || null;
+                let periodText = (group && group.period) || result.period || '';
+                if (!periodText && periodEnd) {
+                    periodText = periodStart
+                        ? `${formatISODateForDisplay(periodStart)}~${formatISODateForDisplay(periodEnd)}`
+                        : `~${formatISODateForDisplay(periodEnd)}`;
                 }
-                
-                // 銀行官方登錄連結（2026-09-08）：搜尋結果是獨立於詳情頁的 render 路徑，要另外補。
-                // ⚠️ 刻意放在上面三個分支「之外」——上線第一天就踩到：原本只寫在
-                //    `else if (result.matchedRateGroup)` 那一支裡，於是「即將開始的活動」
-                //    （走 isUpcoming 分支）與「只有即將結束徽章」那一支都看不到登錄連結，
-                //    而那兩種恰恰是最需要提醒用戶「記得先登錄」的情況。
-                //    renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結時回空字串。
-                if (result.matchedRateGroup) {
-                    additionalInfo += renderRegisterLinkLine(result.matchedRateGroup.registerLink);
+                if (periodText) additionalInfo += `<br><small>活動期間: ${periodText}${endingSoonInlineBadge}</small>`;
+
+                if (group && group.conditions) additionalInfo += `<br><small>條件: ${group.conditions}</small>`;
+
+                // 銀行官方登錄連結（renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結回空字串）
+                if (group) additionalInfo += renderRegisterLinkLine(group.registerLink);
+
+                // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
+                // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
+                // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
+                // maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+                if (group && group.minSpend) {
+                    thresholdLine += `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(group.minSpend).toLocaleString())}</div>`;
                 }
 
                 const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
