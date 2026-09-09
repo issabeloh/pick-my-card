@@ -1360,9 +1360,34 @@ function applyBankChipColor(el, bank) {
     const rgb = parseHexColor(hex);
     if (!rgb) return;
 
-    const bg = rgb.map((v, i) => v * CARD_CHIP_BANK_ALPHA + CARD_CHIP_BASE[i] * (1 - CARD_CHIP_BANK_ALPHA));
+    const bg = bankChipBackground(rgb);
     el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
     el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+}
+
+// 底色亮度下限（2026-09-09 新增）。
+//
+// 純粹 50% 疊底對「很深的品牌色」會疊出一塊死灰：星展的 #000000 疊出 rgb(125,125,126)，
+// 黑字只有 5.10:1，站長回報「文字不太看得到」。所以底色太暗時就一路降 alpha
+// （＝品牌色摻少一點、膠囊底摻多一點）直到過門檻，色相不變、只是變淺。
+//
+// 門檻 0.28 是照現況挑的：16 家裡星展 0.205 是唯一的異常值，第二暗的凱基 0.294 剛好在線上，
+// 所以這條規則今天只救星展一家、其他 15 家完全不動（實測 alpha 停在 0.40 →
+// rgb(149,150,151)、黑字 7.09:1）。日後 Sheets 換上更深的品牌色也會自動接住，
+// 不需要有人回頭發現「又有一家變死灰」——這是刻意不寫成「星展特例」的原因。
+const CARD_CHIP_BANK_MIN_LUM = 0.28;
+const CARD_CHIP_BANK_ALPHA_STEP = 0.05;
+const CARD_CHIP_BANK_ALPHA_MIN = 0.2;   // 再低就幾乎看不出是哪家的顏色了，寧可留一點暗
+
+function bankChipBackground(rgb) {
+    const blend = a => rgb.map((v, i) => v * a + CARD_CHIP_BASE[i] * (1 - a));
+    let alpha = CARD_CHIP_BANK_ALPHA;
+    let bg = blend(alpha);
+    while (relativeLuminance(bg) < CARD_CHIP_BANK_MIN_LUM && alpha > CARD_CHIP_BANK_ALPHA_MIN) {
+        alpha -= CARD_CHIP_BANK_ALPHA_STEP;
+        bg = blend(alpha);
+    }
+    return bg;
 }
 
 // '#abc' / '#aabbcc' → [r, g, b]；其他一律回 null（呼叫端就當作沒有色碼）

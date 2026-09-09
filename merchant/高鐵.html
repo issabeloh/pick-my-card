@@ -189,10 +189,14 @@
                         <line class="hb-line hb-line-3" x1="4" y1="17" x2="20" y2="17"/>
                     </svg>
                 </button>
-                <div class="header-content">
+                <!-- logo＋站名整塊是回首頁的連結（2026-09-09）。href 用 "/" 而不是寫死
+                     https://pickmycard.app/：正式站上兩者同一個去處，但相對路徑在 Cloudflare
+                     Pages 的 preview 部署與本機伺服器上不會把人踢回正式站。faq/privacy/terms
+                     三頁的 header 本來就是這個寫法，這裡是補上主站。 -->
+                <a href="/" class="header-content">
                     <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
                     <h1>信用卡回饋大師</h1>
-                </div>
+                </a>
                 <!-- 桌機 header 導覽（≥769px）：原本在側選單的兩個站內頁面入口搬來這裡——
                      側選單在桌機是常駐欄，放行銷/工具入口突兀；header 導覽列才是桌機標準位置。
                      手機側選單的 .sidebar-page-links 兩張卡片照舊，不受影響。 -->
