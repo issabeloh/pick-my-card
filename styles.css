@@ -1058,20 +1058,27 @@ header h1 {
     padding: 0;
     overflow: hidden;
 }
-/* 左半銀行色塊。底色與文字色由 JS 即時算並寫成 inline style
-   （applyBankChipColor，js/home-ui.js）——色碼來自 Sheets 的 BankColors 工作表。
-   這裡只留「查不到色碼時」的中性灰退路，所以刻意不寫任何有色相的值。 */
+/* 左緣的銀行雙色帶（2026-09-09；原本是「左半銀行色塊」，見 ui-display.md 第 1c 節）。
+   上下二色的漸層由 JS 寫成 inline style（applyBankChipEdge，js/home-ui.js），
+   色碼來自 Sheets 的 BankColors 工作表。這裡只留「查不到色碼時」的中性灰退路，
+   所以刻意不寫任何有色相的值。
+   ⚠️ box-shadow 那圈 inset 細邊不是裝飾：玉山／遠東／滙豐／台新／永豐 的副色是白色，
+   沒有這圈邊，色帶下半在 #f9fafb 膠囊上會看起來像「膠囊破了個洞」。 */
+.card-chip-edge {
+    width: 5px;
+    flex-shrink: 0;
+    background: #dfe3e8;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
 .card-chip-bank {
-    padding: 3px 6px;
+    padding: 3px 3px 3px 8px;
     font-weight: 700;
-    background: #eceef1;
-    color: #4b5563;
     display: flex;
     align-items: center;
     flex-shrink: 0;
 }
 .card-chip-name {
-    padding: 3px 8px;
+    padding: 3px 8px 3px 3px;
     display: flex;
     align-items: center;
 }
