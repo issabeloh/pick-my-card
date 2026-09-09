@@ -87,6 +87,9 @@ function buildAutomationMenu_() {
     // 「Cards Data-登錄連結草稿」，正式 Cards Data 完全不動
     .addItem('① 標出需登錄的活動（不用 AI）→ Cards Data 草稿', 'markRegisterSlotsInDraft')
     .addItem('② 找登錄連結：1-監控清單 → Cards Data 草稿', 'fillRegisterLinksFromSnapshots')
+    // ⚠️ ③ 是整個自動化檔裡唯一會寫入正式 Cards Data 的動作（只寫 registerLink_N 欄，
+    //    寫前跳確認視窗）——其餘所有選單項都只寫草稿或待審核表
+    .addItem('③ 把打勾的登錄連結寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
     .addToUi();
 }
 

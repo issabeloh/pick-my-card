@@ -34,9 +34,18 @@
  *      改成這一支自己去官網**現抓一次原始 HTML**、只解析 <a href>，完全不碰快照。
  *      快照仍然有用——它提供活動的敘述文字，讓 AI 判斷某個登錄連結屬於哪一個槽位。
  *
+ * 【第三階段】把複核過的連結寫回正式 Cards Data（applyRegisterLinksToCardsData）
+ *   站長在草稿的「貼回正式表」欄對複核完的列打 V，這一支就照 **id 對列、欄名對格**
+ *   把該列的 registerLink_N 寫進正式表，成功後把 V 換成「已貼上 <時間>」。
+ *   ⚠️ 這是本檔**唯一**會寫入正式 Cards Data 的函數（2026-09-09 站長要求，取代人工
+ *      copy-paste 找格子）。防線寫死在程式裡，見該函數上方的七條說明。
+ *
  * ⚠️⚠️ 安全底線（這支會寫到「資料檔」，是全站資料的來源）：
- *   - **絕不寫正式的 Cards Data**。只寫 draftSheet（Cards Data 的完整複本），
- *     每個寫入點都先過 regLinkAssertDraft_()。站長複核後自己貼回去
+ *   - **①②絕不寫正式的 Cards Data**。只寫 draftSheet（Cards Data 的完整複本），
+ *     每個寫入點都先過 regLinkAssertDraft_()
+ *   - **③是唯一的例外，而且只寫 registerLink_N 欄**：每一格寫入前再過一次
+ *     regLinkAssertRegisterCol_()（欄名必須符合 /^registerLink_\d+$/），
+ *     程式沒有任何路徑能碰到其他欄位；寫之前還會跳確認視窗
  *   - **1-監控清單 只讀不寫**，完全不碰 last_snapshot
  *   - **AI 只能從「程式剛剛從官網 HTML 抓下來的候選連結清單」裡挑一個**，回了清單以外的
  *     網址一律丟棄。這是硬性機械檢查，不是靠 prompt 拜託——LLM 生一個「看起來很合理」
@@ -55,7 +64,17 @@ const REGLINK_CONFIG = {
   draftSheetName: 'Cards Data-登錄連結草稿',
   noteHeader: '登錄連結說明',
   aiStatusHeader: 'AI 搜尋狀態',
-  maxCardsPerRun: 3,        // 第二階段一張卡＝一次 Gemini 呼叫。先設小值試水溫，順了再調大
+  applyHeader: '貼回正式表',   // 站長在這欄打 V ＝這張卡複核完、可以寫回正式 Cards Data
+  appliedMark: '已貼上',       // 寫回成功後把 V 換成這個＋時間戳，避免重複貼
+  // 第二階段一張卡＝數次官網 GET ＋ 一次 Gemini 呼叫。這個數字只是上限，
+  // 真正的煞車是下面的 maxRunSeconds——先到哪個算哪個。
+  maxCardsPerRun: 6,
+  // ⚠️ Apps Script 單次執行硬上限是 6 分鐘，**超時是直接砍掉**：那一輪最後的
+  //    setBackgrounds 批次寫入與結果視窗都不會執行（已寫好的連結與狀態欄不受影響，
+  //    那些是逐張即時寫的）。所以不靠「算得剛剛好」，而是每張卡開跑前先看錶：
+  //    已經超過這個秒數就不再開新的一張，把剩下的留給下一次。
+  //    240 秒留 2 分鐘餘裕給「最後一張卡跑很久」＋收尾寫入。
+  maxRunSeconds: 240,
   maxSnapshotChars: 30000,  // 單張卡送給 AI 的官網文字上限（要留位置給候選連結清單）
   maxCandidateLinks: 40,    // 單張卡送給 AI 的候選超連結上限
   maxAnchorContext: 80,     // 每個超連結取前後多少字當上下文（判斷是不是登錄入口）
@@ -239,6 +258,8 @@ function fillRegisterLinksFromSnapshots() {
   let processed = 0, skipped = 0, remaining = 0, found = 0, rejected = 0;
   const failures = [];
   const handled = [];   // 這一輪實際處理了哪幾張卡（結果視窗會列出來，站長要去複核）
+  const startedAt = Date.now();
+  let stoppedByClock = false;
 
   for (let i = 1; i < data.length; i++) {
     const cardId = String(data[i][idCol] || '').trim();
@@ -252,7 +273,14 @@ function fillRegisterLinksFromSnapshots() {
       continue;
     }
 
-    if (processed >= REGLINK_CONFIG.maxCardsPerRun) { remaining++; continue; }
+    // 兩道煞車，先到哪個算哪個：張數上限，以及「看錶」。
+    // 看錶是主要的那道——Apps Script 超時是直接砍掉，收尾的批次寫入會整個不執行。
+    const elapsed = (Date.now() - startedAt) / 1000;
+    if (processed >= REGLINK_CONFIG.maxCardsPerRun || elapsed > REGLINK_CONFIG.maxRunSeconds) {
+      if (elapsed > REGLINK_CONFIG.maxRunSeconds) stoppedByClock = true;
+      remaining++;
+      continue;
+    }
 
     const snapshots = snapshotsByCard[cardId] || [];
     if (snapshots.length === 0) {
@@ -338,7 +366,13 @@ function fillRegisterLinksFromSnapshots() {
     '本輪處理 ' + processed + ' 張卡，找到 ' + found + ' 個登錄連結。',
     handled.length ? '\n這一輪處理的卡片（找到數／待找數）：\n  ・' + handled.join('\n  ・') + '\n' : '',
     skipped ? '跳過 ' + skipped + ' 張（已搜尋過）。' : '',
-    remaining ? '還有 ' + remaining + ' 張沒跑到——再按一次選單接著跑。' : '需要搜尋的卡片都跑完了。',
+    remaining
+      ? '還有 ' + remaining + ' 張沒跑到' +
+        (stoppedByClock
+          ? '（本輪跑了 ' + Math.round((Date.now() - startedAt) / 1000) + ' 秒，達到 ' +
+            REGLINK_CONFIG.maxRunSeconds + ' 秒的時間上限先收工，避免被 Apps Script 的 6 分鐘硬上限砍掉）'
+          : '') + '——再按一次選單接著跑。'
+      : '需要搜尋的卡片都跑完了。',
     rejected ? '⚠️ 丟棄 ' + rejected + ' 個「不在官網原文裡」的網址（已記在說明欄）。' : '',
     failures.length ? '\n失敗（下次執行會自動重試）：\n' + failures.join('\n') : '',
     '\n貼回正式 Cards Data 時記得用「選擇性貼上 → 只貼值」，不然黃綠底色會一起貼過去。'
@@ -379,13 +413,32 @@ function regLinkEnsureDraftSheet_(cardsSheet, ui) {
   draft.setName(REGLINK_CONFIG.draftSheetName);
   regLinkAssertDraft_(draft);   // 改名沒成功就不准往下寫（下面幾行會寫表頭）
 
+  // ⚠️ 三個工作欄一律加在**最右邊**（Cards Data 原本的欄位全部保持原位）。
+  //    這樣草稿左半的欄位順序與正式表逐格對齊，站長想手動整段複製時位置不會跑掉。
   const lastCol = draft.getLastColumn();
-  draft.getRange(1, lastCol + 1).setValue(REGLINK_CONFIG.noteHeader);
-  draft.setColumnWidth(lastCol + 1, 560);
-  draft.getRange(1, lastCol + 2).setValue(REGLINK_CONFIG.aiStatusHeader);
-  draft.setColumnWidth(lastCol + 2, 220);
+  draft.getRange(1, lastCol + 1).setValue(REGLINK_CONFIG.applyHeader);
+  draft.setColumnWidth(lastCol + 1, 110);
+  draft.getRange(1, lastCol + 2).setValue(REGLINK_CONFIG.noteHeader);
+  draft.setColumnWidth(lastCol + 2, 560);
+  draft.getRange(1, lastCol + 3).setValue(REGLINK_CONFIG.aiStatusHeader);
+  draft.setColumnWidth(lastCol + 3, 220);
   draft.setFrozenRows(1);
   return draft;
+}
+
+// 舊草稿（2026-09-09 前建的）沒有「貼回正式表」欄——在說明欄左邊插一欄補上。
+// 只動草稿分頁，而且插在工作欄那一段，Cards Data 原本的欄位一格都不會位移。
+function regLinkEnsureApplyColumn_(draft) {
+  regLinkAssertDraft_(draft);
+  const headers = draft.getRange(1, 1, 1, draft.getLastColumn()).getValues()[0]
+    .map(function (h) { return String(h).trim(); });
+  if (headers.indexOf(REGLINK_CONFIG.applyHeader) >= 0) return;
+
+  const noteIdx = headers.indexOf(REGLINK_CONFIG.noteHeader);
+  const insertAt = noteIdx >= 0 ? noteIdx + 1 : draft.getLastColumn() + 1;
+  draft.insertColumnBefore(insertAt);
+  draft.getRange(1, insertAt).setValue(REGLINK_CONFIG.applyHeader);
+  draft.setColumnWidth(insertAt, 110);
 }
 
 // 寫入前的最後一道保險：確認拿到的真的是草稿分頁，不是正式 Cards Data
@@ -528,6 +581,173 @@ function regLinkPendingSlotDetails_(headers, row, pendingNumbers) {
     };
     return { slot: n, items: get('items'), category: get('category'), conditions: get('conditions') };
   });
+}
+
+/************** 第三階段：把複核過的 registerLink 寫回正式 Cards Data **************/
+// ⚠️⚠️⚠️ 這是本檔**唯一**會寫入正式 Cards Data 的函數（2026-09-09 新增，站長明確要求）。
+//    前兩階段的「絕不寫正式表」保證只涵蓋它們自己；這一支是刻意的例外，因此把防線寫死在程式裡：
+//
+//    1. **只寫 registerLink_N 欄**。每一格寫入前都再檢查一次目標欄名是否符合
+//       /^registerLink_\d+$/，不符合就整張卡中止（regLinkAssertRegisterCol_）。
+//       程式沒有任何路徑能碰到 rate_N／items_N／conditions_N 或其他任何一欄。
+//    2. **靠欄名對位，不靠欄位位置**。草稿右邊多了三個工作欄也無所謂；
+//       正式表哪天插欄、搬欄，一樣不會貼錯格——這正是站長擔心的那件事。
+//    3. **靠 id 對列**。草稿的第 N 列不會拿去對正式表的第 N 列。
+//    4. **不覆蓋既有的不同值**。正式表那格已經有值、而且與草稿不同 → 跳過該格並回報衝突
+//       （代表草稿建立之後有人動過正式表，該由人判斷，不是程式）。
+//    5. **一張卡是一個整體**：該卡任何一格出現問題就整張卡不寫，不會寫一半。
+//    6. **寫之前先跳確認視窗**，把「要寫幾張卡、幾個連結」講清楚再動手。
+//    7. 寫成功才把 V 換成「已貼上 <時間>」——沒換成功就代表沒寫成功，下次會重試。
+//
+// 用法：在草稿的「貼回正式表」欄，對複核完的那一列打 V（或 v／✓／TRUE），
+//       然後按選單「③ 把複核過的登錄連結寫回正式 Cards Data」。
+function applyRegisterLinksToCardsData() {
+  const ui = SpreadsheetApp.getUi();
+  const cardsSheet = getCardsSheet_();                 // 正式 Cards Data
+  const dataFile = cardsSheet.getParent();
+  const draft = dataFile.getSheetByName(REGLINK_CONFIG.draftSheetName);
+  if (!draft) {
+    ui.alert('找不到草稿分頁「' + REGLINK_CONFIG.draftSheetName + '」——先跑第一階段。');
+    return;
+  }
+  regLinkAssertDraft_(draft);
+  regLinkEnsureApplyColumn_(draft);
+
+  // ── 讀草稿 ──
+  const dData = draft.getDataRange().getValues();
+  const dHead = dData[0].map(function (h) { return String(h).trim(); });
+  const dId = dHead.indexOf('id');
+  const dApply = dHead.indexOf(REGLINK_CONFIG.applyHeader);
+  if (dId < 0 || dApply < 0) {
+    ui.alert('草稿分頁找不到 id 或「' + REGLINK_CONFIG.applyHeader + '」欄。');
+    return;
+  }
+
+  // ── 讀正式表（先只讀，確認要寫什麼、寫得成嗎）──
+  const cData = cardsSheet.getDataRange().getValues();
+  const cHead = cData[0].map(function (h) { return String(h).trim(); });
+  const cId = cHead.indexOf('id');
+  if (cId < 0) { ui.alert('正式 Cards Data 找不到 id 欄，中止。'); return; }
+  const cRowById = {};
+  for (let i = 1; i < cData.length; i++) {
+    const id = String(cData[i][cId] || '').trim();
+    if (id && cRowById[id] === undefined) cRowById[id] = i;   // 第一次出現的那一列為準
+  }
+
+  const plan = [];        // [{ draftRow, cardId, cardRow, cells: [{col, slot, link}] }]
+  const problems = [];
+  const conflicts = [];
+
+  for (let i = 1; i < dData.length; i++) {
+    if (!regLinkIsChecked_(dData[i][dApply])) continue;
+
+    const cardId = String(dData[i][dId] || '').trim();
+    if (!cardId) continue;
+
+    const cardRow = cRowById[cardId];
+    if (cardRow === undefined) {
+      problems.push(cardId + '：正式 Cards Data 找不到這個 id，整張卡跳過');
+      continue;
+    }
+
+    const cells = [];
+    let cardBroken = false;
+    for (let n = 1; n <= REGLINK_CONFIG.maxSlots && !cardBroken; n++) {
+      const name = 'registerLink_' + n;
+      const dCol = dHead.indexOf(name);
+      if (dCol < 0) continue;
+      const link = normalizeRegisterLink_(dData[i][dCol]);
+      if (!link) continue;
+
+      const cCol = cHead.indexOf(name);
+      if (cCol < 0) {
+        problems.push(cardId + '：正式表沒有 ' + name + ' 欄，整張卡跳過（先在正式表補這一欄）');
+        cardBroken = true;
+        break;
+      }
+      const existing = String(cData[cardRow][cCol] == null ? '' : cData[cardRow][cCol]).trim();
+      if (existing && existing !== link) {
+        conflicts.push(cardId + ' ' + name + '：正式表已有不同的值，跳過該格\n      正式表：' +
+          existing.slice(0, 60) + '\n      草稿：' + link.slice(0, 60));
+        continue;   // 只跳這一格，不整張卡中止——衝突是人要判斷的事
+      }
+      if (existing === link) continue;   // 已經一樣，不用重寫
+
+      cells.push({ col: cCol, slot: n, link: link });
+    }
+    if (cardBroken) continue;
+
+    plan.push({ draftRow: i + 1, cardId: cardId, cardRow: cardRow + 1, cells: cells });
+  }
+
+  if (plan.length === 0) {
+    ui.alert([
+      '沒有可以寫回的資料。',
+      '',
+      '請在草稿的「' + REGLINK_CONFIG.applyHeader + '」欄，對複核完的那一列打 V。',
+      problems.length ? '\n問題：\n・' + problems.join('\n・') : '',
+      conflicts.length ? '\n衝突（都已跳過）：\n・' + conflicts.join('\n・') : ''
+    ].filter(function (x) { return x; }).join('\n'));
+    return;
+  }
+
+  // ── 寫之前先確認 ──
+  const totalCells = plan.reduce(function (a, p) { return a + p.cells.length; }, 0);
+  const preview = plan.slice(0, 12).map(function (p) {
+    return '・' + p.cardId + '（' + p.cells.length + ' 個連結：槽 ' +
+      p.cells.map(function (c) { return c.slot; }).join('、') + '）';
+  }).join('\n');
+  const answer = ui.alert(
+    '要寫回正式 Cards Data 嗎？',
+    '將把 ' + plan.length + ' 張卡、共 ' + totalCells + ' 個登錄連結寫進正式的「' +
+    cardsSheet.getName() + '」。\n\n' + preview +
+    (plan.length > 12 ? '\n…（其餘 ' + (plan.length - 12) + ' 張）' : '') +
+    '\n\n只會寫 registerLink_N 這些欄，其他欄位一格都不會動。' +
+    (conflicts.length ? '\n\n⚠️ 另有 ' + conflicts.length + ' 格衝突會被跳過（寫完會列出來）。' : ''),
+    ui.ButtonSet.OK_CANCEL);
+  if (answer !== ui.Button.OK) { ui.alert('已取消，正式表沒有任何變動。'); return; }
+
+  // ── 真正寫入 ──
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy/MM/dd HH:mm');
+  let written = 0, cardsDone = 0;
+  plan.forEach(function (p) {
+    p.cells.forEach(function (c) {
+      regLinkAssertRegisterCol_(cHead[c.col]);   // 每一格寫入前最後一道確認
+      cardsSheet.getRange(p.cardRow, c.col + 1).setValue(c.link);
+      written++;
+    });
+    // 寫成功才蓋章。沒蓋到＝沒寫成功，下次執行會重來
+    draft.getRange(p.draftRow, dApply + 1)
+      .setValue(REGLINK_CONFIG.appliedMark + ' ' + stamp)
+      .setBackground(REGLINK_CONFIG.colorHasLink);
+    cardsDone++;
+  });
+
+  ui.alert([
+    '完成：' + cardsDone + ' 張卡、' + written + ' 個登錄連結已寫進正式 Cards Data。',
+    '草稿那幾列的「' + REGLINK_CONFIG.applyHeader + '」欄已改成「' +
+      REGLINK_CONFIG.appliedMark + ' ' + stamp + '」，再按一次不會重複寫。',
+    problems.length ? '\n問題：\n・' + problems.join('\n・') : '',
+    conflicts.length ? '\n衝突（已跳過，請人工判斷）：\n・' + conflicts.join('\n・') : '',
+    '\n⚠️ 別忘了重新匯出（🎯 卡片管理 → 匯出），網站才會吃到新的連結。'
+  ].filter(function (x) { return x; }).join('\n'));
+}
+
+// 「打勾了沒」：V／v／✓／✔／TRUE／1 都算；已經蓋過「已貼上」章的一律不算
+function regLinkIsChecked_(v) {
+  if (v === true) return true;
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return false;
+  if (s.indexOf(REGLINK_CONFIG.appliedMark) === 0) return false;
+  return ['V', 'v', '✓', '✔', 'TRUE', 'true', '1', 'ｖ', 'Ｖ'].indexOf(s) >= 0;
+}
+
+// 寫入正式表前的最後一道鎖：目標欄名必須是 registerLink_<數字>
+function regLinkAssertRegisterCol_(headerName) {
+  if (!/^registerLink_\d+$/.test(String(headerName || '').trim())) {
+    throw new Error('安全檢查失敗：這支程式只允許寫入 registerLink_N 欄，' +
+      '但拿到的欄名是「' + headerName + '」。已中止，正式表不會被改。');
+  }
 }
 
 /************** 到官網現抓超連結（快照裡沒有網址，見檔頭說明） **************/
