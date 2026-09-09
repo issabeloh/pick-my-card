@@ -1355,14 +1355,45 @@ function populateCardChips() {
 const CARD_CHIP_BASE = [249, 250, 251];   // 膠囊底 #f9fafb，與 styles.css 的 .card-chip 一致
 const CARD_CHIP_BANK_ALPHA = 0.5;
 
-function applyBankChipColor(el, bank) {
-    const hex = cardsData && cardsData.bankColors && cardsData.bankColors[bank];
-    const rgb = parseHexColor(hex);
-    if (!rgb) return;
+// 銀行色塊與卡名之間的粗豎線（2026-09-09 新增，站長指定的雙色辨識設計）。
+//
+// 兩色（色塊＋豎線）比單一底色更好認：綠族五家、紅族四家本來就撒色，
+// 加上各家的 CI 副色之後就能一眼分開。對應不到的發卡行→不畫豎線（與「查不到色碼就保持中性灰」
+// 同一個原則：沒顏色比錯顏色好）。
+//
+// ⚙️ `bg` 是「對這家而言，Sheets 的 BankColors 不是膠囊要的那支色」時的前端覆寫：
+//   • 星展：Sheets 填純黑（logo 主色），50% 疊出來是一塊死灰 #7c7d7e、字看不清→ 底改紅、豎線才是黑
+//   • 中信：原本的綠 #007166 改當豎線，底改紅
+// 色碼仍然走同一條 50% 疊底公式（所以這裡填的是品牌色、不是最終底色），豎線則用原色。
+// 這張表是前端常數而非 Sheets 資料：豎線是版面設計、不是發卡行資料，且這版還在試看階段。
+const CARD_CHIP_DIVIDER_WIDTH = '4px';
+const CARD_CHIP_BANK_ACCENT = {
+    '玉山': { divider: '#ffffff' },
+    '遠東': { divider: '#ffffff' },
+    '滙豐': { divider: '#ffffff' },
+    '台新': { divider: '#ffffff' },
+    '永豐': { divider: '#ffffff' },
+    '富邦': { divider: '#009e9a' },
+    '聯邦': { divider: '#004ea1' },
+    '星展': { divider: '#000000', bg: '#ec1d25' },
+    '國泰': { divider: '#fdf500' },
+    '中信': { divider: '#007166', bg: '#e92429' },
+    '一銀': { divider: '#b3863b' }
+};
 
-    const bg = rgb.map((v, i) => v * CARD_CHIP_BANK_ALPHA + CARD_CHIP_BASE[i] * (1 - CARD_CHIP_BANK_ALPHA));
-    el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
-    el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+function applyBankChipColor(el, bank) {
+    const accent = CARD_CHIP_BANK_ACCENT[bank];
+    const hex = (accent && accent.bg) ||
+        (cardsData && cardsData.bankColors && cardsData.bankColors[bank]);
+    const rgb = parseHexColor(hex);
+    if (rgb) {
+        const bg = rgb.map((v, i) => v * CARD_CHIP_BANK_ALPHA + CARD_CHIP_BASE[i] * (1 - CARD_CHIP_BANK_ALPHA));
+        el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
+        el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+    }
+    if (accent && parseHexColor(accent.divider)) {
+        el.style.borderRight = `${CARD_CHIP_DIVIDER_WIDTH} solid ${accent.divider}`;
+    }
 }
 
 // '#abc' / '#aabbcc' → [r, g, b]；其他一律回 null（呼叫端就當作沒有色碼）

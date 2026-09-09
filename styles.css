@@ -8131,14 +8131,15 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 }
 
 /* 側欄膠囊改中性配色（2026-09-08，站長要求「pill 上完全不要有藍色」）：
-   膠囊本體與卡名都退成灰階，讓左半的銀行品牌色塊成為整顆膠囊唯一的顏色。
-   卡名用 #6b7280（在 #f9fafb 上對比 4.63:1，剛好過 AA）——再淺就掉到 3:1 以下，
-   33 顆膠囊全部讀不清楚，不是「低調」是「看不到」。 */
+   膠囊本體維持灰階底，讓左半的銀行品牌色塊成為整顆膠囊唯一的顏色。
+   卡名 2026-09-09 由 #6b7280（4.63:1，剛好過 AA）改為近黑 #111827（16.1:1）——
+   站長回報灰字在 33 顆膠囊裡「看不清楚」。⚠️ 只准更深、不准再調淺：
+   #8b929c 只有 3.00:1、#9ca3af 只有 2.43:1，那不是「低調」是「看不到」。 */
 .sidebar .card-chip {
     font-size: 0.7rem;
     padding: 3px 8px;
     background: #f9fafb;
-    color: #6b7280;
+    color: #111827;
     border-color: #e5e7eb;
 }
 
@@ -8148,7 +8149,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 }
 
 .sidebar .card-chip-name {
-    color: #6b7280;
+    color: #111827;
 }
 
 #my-payments-modal {
