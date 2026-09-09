@@ -1355,45 +1355,39 @@ function populateCardChips() {
 const CARD_CHIP_BASE = [249, 250, 251];   // 膠囊底 #f9fafb，與 styles.css 的 .card-chip 一致
 const CARD_CHIP_BANK_ALPHA = 0.5;
 
-// 銀行色塊與卡名之間的粗豎線（2026-09-09 新增，站長指定的雙色辨識設計）。
-//
-// 兩色（色塊＋豎線）比單一底色更好認：綠族五家、紅族四家本來就撒色，
-// 加上各家的 CI 副色之後就能一眼分開。對應不到的發卡行→不畫豎線（與「查不到色碼就保持中性灰」
-// 同一個原則：沒顏色比錯顏色好）。
-//
-// ⚙️ `bg` 是「對這家而言，Sheets 的 BankColors 不是膠囊要的那支色」時的前端覆寫：
-//   • 星展：Sheets 填純黑（logo 主色），50% 疊出來是一塊死灰 #7c7d7e、字看不清→ 底改紅、豎線才是黑
-//   • 中信：原本的綠 #007166 改當豎線，底改紅
-// 色碼仍然走同一條 50% 疊底公式（所以這裡填的是品牌色、不是最終底色），豎線則用原色。
-// 這張表是前端常數而非 Sheets 資料：豎線是版面設計、不是發卡行資料，且這版還在試看階段。
-const CARD_CHIP_DIVIDER_WIDTH = '4px';
-const CARD_CHIP_BANK_ACCENT = {
-    '玉山': { divider: '#ffffff' },
-    '遠東': { divider: '#ffffff' },
-    '滙豐': { divider: '#ffffff' },
-    '台新': { divider: '#ffffff' },
-    '永豐': { divider: '#ffffff' },
-    '富邦': { divider: '#009e9a' },
-    '聯邦': { divider: '#004ea1' },
-    '星展': { divider: '#000000', bg: '#ec1d25' },
-    '國泰': { divider: '#fdf500' },
-    '中信': { divider: '#007166', bg: '#e92429' },
-    '一銀': { divider: '#b3863b' }
-};
-
 function applyBankChipColor(el, bank) {
-    const accent = CARD_CHIP_BANK_ACCENT[bank];
-    const hex = (accent && accent.bg) ||
-        (cardsData && cardsData.bankColors && cardsData.bankColors[bank]);
+    const hex = cardsData && cardsData.bankColors && cardsData.bankColors[bank];
     const rgb = parseHexColor(hex);
-    if (rgb) {
-        const bg = rgb.map((v, i) => v * CARD_CHIP_BANK_ALPHA + CARD_CHIP_BASE[i] * (1 - CARD_CHIP_BANK_ALPHA));
-        el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
-        el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+    if (!rgb) return;
+
+    const bg = bankChipBackground(rgb);
+    el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
+    el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+}
+
+// 底色亮度下限（2026-09-09 新增）。
+//
+// 純粹 50% 疊底對「很深的品牌色」會疊出一塊死灰：星展的 #000000 疊出 rgb(125,125,126)，
+// 黑字只有 5.10:1，站長回報「文字不太看得到」。所以底色太暗時就一路降 alpha
+// （＝品牌色摻少一點、膠囊底摻多一點）直到過門檻，色相不變、只是變淺。
+//
+// 門檻 0.28 是照現況挑的：16 家裡星展 0.205 是唯一的異常值，第二暗的凱基 0.294 剛好在線上，
+// 所以這條規則今天只救星展一家、其他 15 家完全不動（實測 alpha 停在 0.40 →
+// rgb(149,150,151)、黑字 7.09:1）。日後 Sheets 換上更深的品牌色也會自動接住，
+// 不需要有人回頭發現「又有一家變死灰」——這是刻意不寫成「星展特例」的原因。
+const CARD_CHIP_BANK_MIN_LUM = 0.28;
+const CARD_CHIP_BANK_ALPHA_STEP = 0.05;
+const CARD_CHIP_BANK_ALPHA_MIN = 0.2;   // 再低就幾乎看不出是哪家的顏色了，寧可留一點暗
+
+function bankChipBackground(rgb) {
+    const blend = a => rgb.map((v, i) => v * a + CARD_CHIP_BASE[i] * (1 - a));
+    let alpha = CARD_CHIP_BANK_ALPHA;
+    let bg = blend(alpha);
+    while (relativeLuminance(bg) < CARD_CHIP_BANK_MIN_LUM && alpha > CARD_CHIP_BANK_ALPHA_MIN) {
+        alpha -= CARD_CHIP_BANK_ALPHA_STEP;
+        bg = blend(alpha);
     }
-    if (accent && parseHexColor(accent.divider)) {
-        el.style.borderRight = `${CARD_CHIP_DIVIDER_WIDTH} solid ${accent.divider}`;
-    }
+    return bg;
 }
 
 // '#abc' / '#aabbcc' → [r, g, b]；其他一律回 null（呼叫端就當作沒有色碼）
