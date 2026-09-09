@@ -79,7 +79,13 @@
   #                            它會再去 scripts.clarity.ms 抓本體——所以用萬用字元）
   #   *.cloudflareinsights.com Cloudflare Web Analytics 的 beacon。這支不是我們掛的，
   #                            是 Cloudflare 在邊緣自動注入的，所以 repo 裡搜不到
-  #   googlesyndication / doubleclick / adservice / adtrafficquality / fundingchoicesmessages   AdSense
+  #   AdSense 一整組（*.googlesyndication.com / *.doubleclick.net /
+  #                            *.googleadservices.com / *.adtrafficquality.google /
+  #                            adservice.google.com / fundingchoicesmessages.google.com）
+  #                            ⚠️ 刻意用萬用字元而非逐一列舉：廣告網域是移動目標，
+  #                            Google 隨時會冒出新的兄弟網域（2026-09-09 就為了
+  #                            ep2.adtrafficquality.google 的 iframe 改過一次）。
+  #                            逐一列舉＝每次都要再來一輪 Console 觀察。
   #   fonts.googleapis.com（樣式）＋ fonts.gstatic.com（字型檔）   Noto Sans TC
   #   *.googleapis.com（connect）  Firestore／Auth／Storage 的 API 呼叫
   #   pick-my-card-28f2a.firebaseapp.com（frame）  Firebase 登入 popup
@@ -93,4 +99,4 @@
   #
   # 沒有設 report-uri／report-to：本站沒有收集違規回報的後端，
   # 違規只看瀏覽器 Console 就好，不要為了這個去接第三方服務。
-  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net https://partner.googleadservices.com https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://fundingchoicesmessages.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://*.firebaseio.com wss://*.firebaseio.com https://*.doubleclick.net https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; frame-src 'self' https://pick-my-card-28f2a.firebaseapp.com https://accounts.google.com https://*.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.gstatic.com; worker-src 'self' blob:; manifest-src 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://static.cloudflareinsights.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://adservice.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://*.firebaseio.com wss://*.firebaseio.com https://*.doubleclick.net https://*.googlesyndication.com https://*.googleadservices.com https://*.adtrafficquality.google https://adservice.google.com https://fundingchoicesmessages.google.com https://*.gstatic.com https://www.google.com; frame-src 'self' https://pick-my-card-28f2a.firebaseapp.com https://accounts.google.com https://*.google.com https://*.doubleclick.net https://*.googlesyndication.com https://*.googleadservices.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://*.gstatic.com; worker-src 'self' blob:; manifest-src 'self'
