@@ -1357,35 +1357,10 @@ function populateCardChips() {
 // ⚠️ 白色副色（玉山／遠東／滙豐／台新／永豐）在淺色膠囊上會消失，靠 CSS 那圈 inset 細邊
 //    才讀得出來是「白」而不是「膠囊破了個洞」——站長 2026-09-09 裁定就這樣、不替那五家
 //    另指定第二色。要動 .card-chip-edge 的 box-shadow 前先想清楚這條。
-// ⏳ 過渡用的副色對照表。BankColors 工作表的 accent 欄還沒建，這裡先頂著，
-//    格式 [主色覆寫, 副色]——主色填 null 表示「用 BankColors 那支」。
-//    星展與中信要覆寫主色，是因為站長挑的那支（星展紅、中信紅）與工作表現有的
-//    color 欄（星展黑、中信綠）不同，而那兩支現有的色正好變成它們的副色。
-//
-//    ✅ 收工條件：BankColors 建好 accent 欄、星展/中信的 color 欄改成下面的主色、
-//       重跑匯出之後，**整張表連同下面那三行判斷一起刪掉**——applyBankChipEdge
-//       已經優先讀工作表，刪掉不用改邏輯。判斷規則只有一條：
-//       **某家在工作表填了 accent，那家就整組以工作表為準**（主色也回頭讀工作表）。
-const CARD_CHIP_FALLBACK_ACCENTS = {
-    '玉山': [null, '#ffffff'],
-    '遠東': [null, '#ffffff'],
-    '滙豐': [null, '#ffffff'],
-    '台新': [null, '#ffffff'],
-    '永豐': [null, '#ffffff'],
-    '富邦': [null, '#009e9a'],
-    '聯邦': [null, '#004ea1'],
-    '國泰': [null, '#fdf500'],
-    '一銀': [null, '#b3863b'],
-    '星展': ['#ec1d25', '#000000'],
-    '中信': ['#e92429', '#007166']
-};
-
 function applyBankChipEdge(el, bank) {
-    const sheetAccent = bankChipColor('bankAccentColors', bank);
-    const fallback = (!sheetAccent && CARD_CHIP_FALLBACK_ACCENTS[bank]) || [];
-    const main = validHex(fallback[0]) || bankChipColor('bankColors', bank);
+    const main = bankChipColor('bankColors', bank);
     if (!main) return;
-    const accent = sheetAccent || validHex(fallback[1]) || main;
+    const accent = bankChipColor('bankAccentColors', bank) || main;
     el.style.background = `linear-gradient(to bottom, ${main} 0 50%, ${accent} 50% 100%)`;
 }
 
