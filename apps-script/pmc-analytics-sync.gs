@@ -1992,6 +1992,10 @@ function updateUncoveredMerchants(searchData) {
   if (outcome.duplicates > 0) {
     parts.push('⚠️ 表內有 ' + outcome.duplicates + ' 列重複商家詞，只更新最前面那一列（請手動合併）');
   }
+  if (outcome.coerced > 0) {
+    parts.push('⚠️ 表內有 ' + outcome.coerced + ' 列的商家詞被試算表判讀成日期（例如 7-11），' +
+      '這種列對不到來源資料、會被重複新增——請手動刪掉那幾列，下次執行會以純文字重建');
+  }
   return parts.join('／');
 }
 
@@ -2113,6 +2117,8 @@ function uncoveredWriteBanner_(sheet, layout, win) {
     '已覆蓋的詞若再度落空：程式不會自動翻回「' + UNCOVERED_STATUS_OPEN + '」（狀態是人工欄），' +
       '但「最近視窗未對到次數」會 > 0，用它就篩得出退步的項目',
     '空框送出（GA4 的 (not set)）不列入：那是沒輸入，不是覆蓋缺口',
+    '商家詞欄由程式設成純文字格式：不這樣做的話「7-11」會被試算表判讀成日期，那列就再也對不到' +
+      '來源資料、每天被重複新增（欄位靠左對齊＝文字，靠右＝被轉型了，看到就刪掉讓它重建）',
     '本次更新：' + formatStamp_(new Date()),
   ];
 
@@ -2136,11 +2142,18 @@ function uncoveredApply_(sheet, layout, stats, today) {
   // 商家詞 → 表上的相對列索引（只認最前面那列；重複的另外計數提醒站長合併）
   const indexOf = {};
   let duplicates = 0;
+  let coerced = 0;      // 商家詞被試算表判讀成日期的列（見下）
   let lastDataRow = layout.headerRow;
   block.forEach((row, i) => {
-    const term = String(row[cols.term - 1] == null ? '' : row[cols.term - 1]).trim();
-    if (!term) return;
+    const raw = row[cols.term - 1];
+    if (raw === '' || raw === null || raw === undefined) return;
     lastDataRow = layout.headerRow + 1 + i;
+    // 被存成 Date 的商家詞救不回來：'7-11' 與 '7/11' 都會變成同一個日期，反推是猜的。
+    // 這種列永遠對不到 GA4 的字串、會每天被重複 append，所以點出來請人工刪掉重建。
+    // （數字沒這個問題：711 轉回字串還是 '711'，對得回去。）
+    if (raw instanceof Date) { coerced++; return; }
+    const term = String(raw).trim();
+    if (!term) return;
     if (indexOf[term] === undefined) indexOf[term] = i;
     else duplicates++;
   });
@@ -2235,6 +2248,11 @@ function uncoveredApply_(sheet, layout, stats, today) {
     });
 
     const startRow = lastDataRow + 1;
+    // ⚠️ 一定要**先**把商家詞欄設成純文字（@）再寫值。setValues 寫字串等同於「在儲存格打字」，
+    //    Sheets 會照樣做自動判讀：'7-11' 會變成日期 2026/7/11、'711' 會變成數字 711。
+    //    變成日期就完了——下次執行讀回來是 Date、跟 GA4 的字串對不上，那個詞會**每天被重複
+    //    append 一次**、而且原本那列永遠不會更新。（2026-09-09 首次上線實測到 7-11 中招。）
+    sheet.getRange(startRow, cols.term, values.length, 1).setNumberFormat('@');
     sheet.getRange(startRow, startCol, values.length, width).setValues(values);
     sheet.getRange(startRow, cols.firstSeen, values.length, 1).setNumberFormat('yyyy/mm/dd');
     sheet.getRange(startRow, cols.lastSeen, values.length, 1).setNumberFormat('yyyy/mm/dd');
@@ -2246,5 +2264,6 @@ function uncoveredApply_(sheet, layout, stats, today) {
     updated: updated,
     missTerms: missTerms,
     duplicates: duplicates,
+    coerced: coerced,
   };
 }
