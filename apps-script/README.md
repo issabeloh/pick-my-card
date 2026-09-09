@@ -1172,34 +1172,23 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 | 5 | 在 **`貼回正式表`** 欄對複核完的列打 **V** | 資料檔草稿 | `V`／`v`／`✓`／`✔`／`TRUE`／`1` 都收 |
 | 6 | 選單 **③ 把打勾的登錄連結寫回正式 Cards Data** | 自動化檔 | 跳確認視窗 → 確定 → 寫入 → V 變成「已貼上 <時間>」 |
 | 7 | 選單 **🎯 卡片管理 → 匯出** | 資料檔 | 產生新的 `cards.data` ＋ `cards.version`，推上 GitHub |
-| 8 | **驗證這次匯出只動了該動的東西** | 本機 repo | `node tools/cards-data-diff.js HEAD~1 HEAD`（見下） |
+| 8 | 確認網站上看得到新的登錄連結 | 瀏覽器 | 搜一個該卡有登錄連結的通路，結果卡片與詳情頁都該出現「銀行官方登錄連結」 |
 
-#### 第 8 步：匯出後要檢查什麼
+#### 匯出後要檢查什麼
 
-**不用一格一格去看正式表。** ③ 在程式層面只可能寫 `registerLink_N`（每格寫入前都過 `regLinkAssertRegisterCol_`），但「相信程式」不是驗證——`tools/cards-data-diff.js` 才是。它解碼兩版 `cards.data` 逐欄位比對，直接告訴你這次匯出動了哪些欄位：
+**只要看該卡的 `registerLink_N` 那幾格填對了就好，其他欄位不用檢查。**
 
-```bash
-node tools/cards-data-diff.js               # 上一個 commit vs 工作目錄現況
-node tools/cards-data-diff.js HEAD~1 HEAD   # 指定兩版
-node tools/cards-data-diff.js --fields      # 只看統計，不看逐筆
-```
+理由不是「相信程式」，是程式在結構上就只可能寫那些格子：③ 每一格寫入前都過
+`regLinkAssertRegisterCol_()`（欄名必須符合 `/^registerLink_\d+$/`，不符就丟例外中止），
+沒有任何程式路徑能碰到 `rate_N`／`items_N`／`conditions_N` 或其他欄位。
 
-輸出長這樣：
+這件事在 2026-09-09 首次啟用 ③ 之後**已經用實際匯出的 `cards.data` 逐欄位比對驗證過一次**：
+那一輪的差異只有 `registerLink`（③ 寫的）、`period`（站長手動補的 3 格）、
+`cashbackModel`（站長替 yushan-ubear slot 9 填的 `rate+rate_2`）三類，全部對得上實際做過的事，
+沒有任何意外欄位。既然行為已確認，之後每輪不用再重驗。
 
-```
-📋 有變動的欄位種類（共 7 筆）：
-      3 筆  rate[N].registerLink
-      3 筆  rate[N].period
-      1 筆  rate[N].cashbackModel
-```
-
-**判讀規則**：
-
-- 只看到 `rate[N].registerLink` → 這次就是純補登錄連結，收工
-- 看到別的欄位 → **問自己「這是我改的嗎」**。上面那個實例裡，`period` 是站長手動補的 3 格、`cashbackModel` 是站長替玉山 Ubear 卡 slot 9 填的 `rate+rate_2`，都對得上
-- 看到 `rate` / `cap` / `items` / `cashbackModel` 有變而你沒印象改過 → **停下來查清楚再推上線**，那是真的會影響計算結果的欄位
-
-⚠️ 這一步不只在跑 ③ 之後有用——**每次從 Sheets 匯出都值得跑一次**，它是目前唯一能機械回答「這次匯出到底改了什麼」的工具。
+⚠️ 真的覺得哪裡怪怪的（例如網站上出現沒印象改過的回饋率）時，才需要回頭比對兩版
+`cards.data`——那是例外處理，不是常規步驟。
 
 ### 共通的安全底線（這支會寫到資料檔，是全站資料的來源）
 
