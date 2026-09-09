@@ -59,14 +59,23 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
-13. **BankColors** —— 側欄膠囊左半的銀行品牌色（bank, color, active），2026-09-08 新增。
+13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
+    2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）
-    - `color` 只收 `#RRGGBB` / `#RGB`，格式錯的那一列會被 `readBankColors()` 跳過並留 log，不會把壞值送到前端
+    - `color`＝色帶**上半**的主色，`accent`＝**下半**的副色。兩者都只收 `#RRGGBB` / `#RGB`，
+      畫面上直接用原色、**不做任何淡化**（2026-09-08 那版的「50% 疊底」已隨左半色塊一起移除）
+    - **`accent` 整欄是選填的**：沒這欄、或某家沒填 → 前端畫成上下同色的單色帶。
+      ⚠️ 格式錯的 `accent` **只丟掉那一格、主色照常匯出**（副色是加分項，不該把整家拖下水）；
+      格式錯的 `color` 則整列跳過。兩種都會留 log
     - `active` 留空視為啟用（同「變動紀錄」慣例）
-    - **一家只填一支主色**：畫面上的底色（品牌色 50% 疊在膠囊底 `#f9fafb` 上）與文字色（黑或白，取對比度高的）都由前端即時算（`applyBankChipColor()`，`js/home-ui.js`），工作表不用維護那兩個值
-    - 匯出 JSON key 是 `bankColors`，格式 `{ "玉山": "#00755E", ... }`
-    - ⚠️ **工作表不存在或某家沒填 → 安全降級**：該銀行的色塊退回中性灰 `#eceef1`，不會壞掉。所以可以先貼程式、之後慢慢補齊
+    - 匯出 JSON key 是 `bankColors` 與 `bankAccentColors`，格式都是 `{ "玉山": "#019c96", ... }`；
+      `readBankColors()` 回傳 `{ colors, accents }` 兩張表
+    - ⚠️ **工作表不存在或某家沒填 → 安全降級**：該銀行的色帶退回中性灰 `#dfe3e8`，不會壞掉。
+      所以可以先貼程式、之後慢慢補齊
     - **銀行改 CI 只要改這張表一格、不必動程式**，新增發卡行也一樣（與 `bank` 欄同一個設計）
+    - ⏳ **過渡中**：`accent` 欄還沒建之前，副色暫時放在 `js/home-ui.js` 的
+      `CARD_CHIP_FALLBACK_ACCENTS`。工作表補齊後那張表要刪掉——判斷規則是
+      「某家在工作表填了 accent，那家就整組以工作表為準」，所以刪掉不用改邏輯
 14. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
     詳情頁「近期異動」的資料來源。**不是手打的**：由自動化檔的選單「發布變動紀錄」
     跨檔 append 進來（流程見 `apps-script/README.md`「發布變動紀錄」一節）。

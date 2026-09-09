@@ -1315,13 +1315,16 @@ function populateCardChips() {
         const bank = getCardBankName(card);
         if (bank) {
             chip.classList.add('card-chip-split');
+            const edgeEl = document.createElement('i');
+            edgeEl.className = 'card-chip-edge';
+            applyBankChipEdge(edgeEl, bank);    // 主色／副色（BankColors 工作表），查不到就整條不上色
             const bankEl = document.createElement('span');
             bankEl.className = 'card-chip-bank';
             bankEl.textContent = bank;
-            applyBankChipColor(bankEl, bank);   // 品牌色（BankColors 工作表），查不到就維持 CSS 的中性灰
             const nameEl = document.createElement('span');
             nameEl.className = 'card-chip-name';
             nameEl.textContent = stripBankPrefix(card.name, bank);
+            chip.appendChild(edgeEl);
             chip.appendChild(bankEl);
             chip.appendChild(nameEl);
         } else {
@@ -1339,55 +1342,63 @@ function populateCardChips() {
     updateCardChipsCount(cardsToShow.length);
 }
 
-// 側欄膠囊左半的銀行品牌色（2026-09-08 新增）。
+// 側欄膠囊左緣的銀行雙色帶（2026-09-08 建立為左半色塊，2026-09-09 改成左緣色帶）。
 //
-// 資料驅動：色碼唯一來源是 Google Sheets 的「BankColors」工作表（bank / color / active），
-// 匯出成 cards.data 的 bankColors。**銀行改 CI 只要改 Sheets 一格、不必動程式**，
-// 新增發卡行也一樣——這條規則跟 bank 欄本身是同一個設計（見 data-pipeline.md 第 2 節）。
+// 上半＝主色、下半＝副色，兩色都用原色不淡化。站長從五種「小面積二色」mockup 選定這版：
+// 顏色貼在膠囊起點、不切斷任何文字（前一版把色帶插在銀行名與卡名中間，33 顆一起看就是
+// 33 道斷點）。膠囊本體因此整顆維持中性 #f9fafb ＋ 黑字，色帶是唯一的顏色。
 //
-// Sheets 只填「一支主色」，畫面上的底色與文字色都在這裡即時算：
-//   底色 = 品牌色 50% 疊在膠囊底 CARD_CHIP_BASE 上
-//   文字 = 黑或白，取對比度高的那個（實測 16 家全部都是黑字勝出，但公式留著，
-//          日後新增深色系銀行時會自動切成白字，不用有人回頭檢查）
+// 資料驅動：色碼唯一來源是 Google Sheets 的「BankColors」工作表，匯出成 cards.data 的
+// bankColors（主色 color 欄）與 bankAccentColors（副色 accent 欄）。
+// **銀行改 CI 只要改 Sheets 一格、不必動程式**，新增發卡行也一樣。
 //
-// ⚠️ 查不到色碼（工作表還沒建、這家還沒填、色碼格式錯被匯出端擋掉）→ 什麼都不做，
-//    膠囊維持 CSS 裡的中性灰。這是刻意的：沒顏色比錯顏色好，也讓這功能可以慢慢補齊。
-const CARD_CHIP_BASE = [249, 250, 251];   // 膠囊底 #f9fafb，與 styles.css 的 .card-chip 一致
-const CARD_CHIP_BANK_ALPHA = 0.5;
+// ⚠️ 查不到主色 → 整條不上色，維持 CSS 的中性灰。這是刻意的：沒顏色比錯顏色好，
+//    也讓這功能可以慢慢補齊。查不到副色 → 上下同色的單色帶（那家 CI 本來就只有一支色）。
+// ⚠️ 白色副色（玉山／遠東／滙豐／台新／永豐）在淺色膠囊上會消失，靠 CSS 那圈 inset 細邊
+//    才讀得出來是「白」而不是「膠囊破了個洞」——站長 2026-09-09 裁定就這樣、不替那五家
+//    另指定第二色。要動 .card-chip-edge 的 box-shadow 前先想清楚這條。
+// ⏳ 過渡用的副色對照表。BankColors 工作表的 accent 欄還沒建，這裡先頂著，
+//    格式 [主色覆寫, 副色]——主色填 null 表示「用 BankColors 那支」。
+//    星展與中信要覆寫主色，是因為站長挑的那支（星展紅、中信紅）與工作表現有的
+//    color 欄（星展黑、中信綠）不同，而那兩支現有的色正好變成它們的副色。
+//
+//    ✅ 收工條件：BankColors 建好 accent 欄、星展/中信的 color 欄改成下面的主色、
+//       重跑匯出之後，**整張表連同下面那三行判斷一起刪掉**——applyBankChipEdge
+//       已經優先讀工作表，刪掉不用改邏輯。判斷規則只有一條：
+//       **某家在工作表填了 accent，那家就整組以工作表為準**（主色也回頭讀工作表）。
+const CARD_CHIP_FALLBACK_ACCENTS = {
+    '玉山': [null, '#ffffff'],
+    '遠東': [null, '#ffffff'],
+    '滙豐': [null, '#ffffff'],
+    '台新': [null, '#ffffff'],
+    '永豐': [null, '#ffffff'],
+    '富邦': [null, '#009e9a'],
+    '聯邦': [null, '#004ea1'],
+    '國泰': [null, '#fdf500'],
+    '一銀': [null, '#b3863b'],
+    '星展': ['#ec1d25', '#000000'],
+    '中信': ['#e92429', '#007166']
+};
 
-function applyBankChipColor(el, bank) {
-    const hex = cardsData && cardsData.bankColors && cardsData.bankColors[bank];
-    const rgb = parseHexColor(hex);
-    if (!rgb) return;
-
-    const bg = bankChipBackground(rgb);
-    el.style.background = `rgb(${bg.map(v => Math.round(v)).join(',')})`;
-    el.style.color = relativeLuminance(bg) > 0.179 ? '#000' : '#fff';
+function applyBankChipEdge(el, bank) {
+    const sheetAccent = bankChipColor('bankAccentColors', bank);
+    const fallback = (!sheetAccent && CARD_CHIP_FALLBACK_ACCENTS[bank]) || [];
+    const main = validHex(fallback[0]) || bankChipColor('bankColors', bank);
+    if (!main) return;
+    const accent = sheetAccent || validHex(fallback[1]) || main;
+    el.style.background = `linear-gradient(to bottom, ${main} 0 50%, ${accent} 50% 100%)`;
 }
 
-// 底色亮度下限（2026-09-09 新增）。
-//
-// 純粹 50% 疊底對「很深的品牌色」會疊出一塊死灰：星展的 #000000 疊出 rgb(125,125,126)，
-// 黑字只有 5.10:1，站長回報「文字不太看得到」。所以底色太暗時就一路降 alpha
-// （＝品牌色摻少一點、膠囊底摻多一點）直到過門檻，色相不變、只是變淺。
-//
-// 門檻 0.28 是照現況挑的：16 家裡星展 0.205 是唯一的異常值，第二暗的凱基 0.294 剛好在線上，
-// 所以這條規則今天只救星展一家、其他 15 家完全不動（實測 alpha 停在 0.40 →
-// rgb(149,150,151)、黑字 7.09:1）。日後 Sheets 換上更深的品牌色也會自動接住，
-// 不需要有人回頭發現「又有一家變死灰」——這是刻意不寫成「星展特例」的原因。
-const CARD_CHIP_BANK_MIN_LUM = 0.28;
-const CARD_CHIP_BANK_ALPHA_STEP = 0.05;
-const CARD_CHIP_BANK_ALPHA_MIN = 0.2;   // 再低就幾乎看不出是哪家的顏色了，寧可留一點暗
+function bankChipColor(key, bank) {
+    const table = cardsData && cardsData[key];
+    return validHex(table && table[bank]);
+}
 
-function bankChipBackground(rgb) {
-    const blend = a => rgb.map((v, i) => v * a + CARD_CHIP_BASE[i] * (1 - a));
-    let alpha = CARD_CHIP_BANK_ALPHA;
-    let bg = blend(alpha);
-    while (relativeLuminance(bg) < CARD_CHIP_BANK_MIN_LUM && alpha > CARD_CHIP_BANK_ALPHA_MIN) {
-        alpha -= CARD_CHIP_BANK_ALPHA_STEP;
-        bg = blend(alpha);
-    }
-    return bg;
+// 只放行格式正確的色碼（#RGB / #RRGGBB）。匯出端也擋一次，這裡是第二道——
+// 壞值進了 linear-gradient 會被 CSS 當成無效宣告整條丟掉，變成「某一家的色帶莫名其妙
+// 不見了」，比直接退回中性灰難查得多。
+function validHex(hex) {
+    return parseHexColor(hex) ? String(hex).trim() : '';
 }
 
 // '#abc' / '#aabbcc' → [r, g, b]；其他一律回 null（呼叫端就當作沒有色碼）
@@ -1398,15 +1409,6 @@ function parseHexColor(hex) {
     if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
     const n = parseInt(h, 16);
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// WCAG 相對亮度。0.179 是「黑字與白字對比度相等」的分界點（sqrt(1.05*0.05)-0.05）
-function relativeLuminance(rgb) {
-    const [r, g, b] = rgb.map(v => {
-        const c = v / 255;
-        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 // 發卡行來源，依序：
