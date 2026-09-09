@@ -107,11 +107,20 @@ header {
     gap: 16px;
 }
 
+/* 2026-09-09 起 index.html 的 .header-content 也是 <a>（logo＋站名點了回首頁），
+   faq/privacy/terms 三頁本來就是。UA 的底線與 visited 紫色在這裡一次蓋掉，
+   副頁 css 各自那份重複宣告就只是保險。色票用 inherit，跟著 header 的白字走。 */
 .header-content {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.header-content:visited {
+    color: inherit;
 }
 
 .header-logo {

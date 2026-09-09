@@ -10,8 +10,9 @@
    ========================================================================== */
 
 /* .header-content 現在是 <a> 包 logo+站名：styles.css 只定義 .header-content h1
-   的字級（原本是 <h1>），這裡補 span 版本的等效字級，並蓋掉連結的 UA 底線／
-   visited 紫色（styles.css 沒處理，因為主站 index.html 的 header-content 不是連結）。 */
+   的字級（副頁這裡是 <span>），所以下面補 span 版本的等效字級。
+   底線／visited 紫色 2026-09-09 起由 styles.css 一次蓋掉（主站 index.html 的 header
+   同日也變成連結），這裡那兩條留著只是保險。 */
 .header-content {
     text-decoration: none;
     color: white;
