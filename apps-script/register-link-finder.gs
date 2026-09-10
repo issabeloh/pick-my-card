@@ -108,7 +108,7 @@ function markRegisterSlotsInDraft() {
   // 底色一次讀、一次寫（33 列 × 兩三百欄逐格 setBackground 會慢到爆）
   const backgrounds = draft.getRange(1, 1, data.length, headers.length).getBackgrounds();
   const notes = [];
-  let cardsWithNeed = 0, needSlots = 0, extracted = 0;
+  let cardsWithNeed = 0, needSlots = 0, extracted = 0, greenSlots = 0;
 
   for (let i = 1; i < data.length; i++) {
     if (!String(data[i][idCol] || '').trim()) { notes.push([data[i][noteCol]]); continue; }
@@ -143,6 +143,7 @@ function markRegisterSlotsInDraft() {
         }
       }
 
+      if (link) greenSlots++;
       const color = link ? REGLINK_CONFIG.colorHasLink : REGLINK_CONFIG.colorNeedLink;
       backgrounds[i][condCol] = color;
       if (linkCol >= 0) backgrounds[i][linkCol] = color;
@@ -158,14 +159,23 @@ function markRegisterSlotsInDraft() {
   draft.getRange(1, 1, data.length, headers.length).setBackgrounds(backgrounds);
   draft.getRange(2, noteCol + 1, notes.length, 1).setValues(notes).setWrap(true);
 
+  // 下一步提示：看還有沒有黃格子決定。沒有黃格子就別叫人去跑 AI。
+  const stillYellow = needSlots - greenSlots;
+  const nextStep = stillYellow > 0
+    ? '👉 下一步：按選單「② 找登錄連結」。\n' +
+      '   還有 ' + stillYellow + ' 個黃格子要補連結，一次跑最多 ' +
+      REGLINK_CONFIG.maxCardsPerRun + ' 張卡，重複按到它說「都跑完了」為止。'
+    : '👉 下一步：不用跑 ②，沒有缺連結的槽位。\n' +
+      '   直接去資料檔匯出（🎯 卡片管理 → 匯出）就好。';
+
   ui.alert(
-    '第一階段完成（沒有呼叫 AI、沒有用掉任何額度）\n\n' +
+    '① 完成（沒有呼叫 AI、沒有用掉任何額度）\n\n' +
     '・' + cardsWithNeed + ' 張卡、共 ' + needSlots + ' 個槽位的 conditions 提到「登錄」\n' +
-    '・其中 ' + extracted + ' 個的登錄網址本來就寫在 conditions 裡，已直接填進 registerLink_N\n\n' +
-    '底色：黃＝要登錄但還沒有連結、綠＝連結已經有了。\n' +
+    '・其中 ' + greenSlots + ' 個已經有連結（綠底）、' + stillYellow + ' 個還沒有（黃底）\n' +
+    '・這一輪從 conditions 直接撈出 ' + extracted + ' 個網址填進 registerLink_N\n\n' +
     'conditions_N 與 registerLink_N 兩格都會上色，方便你橫向掃。\n' +
     '「' + REGLINK_CONFIG.noteHeader + '」欄逐槽位列出了回饋率／上限／適用通路。\n\n' +
-    '接下來要讓 AI 去監控快照裡找剩下那些黃色的連結，按選單第二項。'
+    nextStep
   );
 }
 
@@ -375,7 +385,14 @@ function fillRegisterLinksFromSnapshots() {
       : '需要搜尋的卡片都跑完了。',
     rejected ? '⚠️ 丟棄 ' + rejected + ' 個「不在官網原文裡」的網址（已記在說明欄）。' : '',
     failures.length ? '\n失敗（下次執行會自動重試）：\n' + failures.join('\n') : '',
-    '\n貼回正式 Cards Data 時記得用「選擇性貼上 → 只貼值」，不然黃綠底色會一起貼過去。'
+    remaining
+      ? '\n👉 下一步：再按一次「② 找登錄連結」，把剩下的跑完。'
+      : '\n👉 下一步：到資料檔草稿分頁**複核**「' + REGLINK_CONFIG.noteHeader + '」欄。\n' +
+        '   ⚠️ AI 會抓錯，這一步不能跳過——每一行都附了「原文佐證」，看它憑什麼把那個\n' +
+        '   連結配到那個槽位。抓錯就直接在該格 registerLink_N 改成正確的網址\n' +
+        '   （你改的優先，③ 不會覆蓋你手動填的值）。\n' +
+        '   一次配了很多個連結的那張卡最值得看。\n\n' +
+        '   複核完在「' + REGLINK_CONFIG.applyHeader + '」欄打 V，再按選單 ③。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 
@@ -729,7 +746,9 @@ function applyRegisterLinksToCardsData() {
       REGLINK_CONFIG.appliedMark + ' ' + stamp + '」，再按一次不會重複寫。',
     problems.length ? '\n問題：\n・' + problems.join('\n・') : '',
     conflicts.length ? '\n衝突（已跳過，請人工判斷）：\n・' + conflicts.join('\n・') : '',
-    '\n⚠️ 別忘了重新匯出（🎯 卡片管理 → 匯出），網站才會吃到新的連結。'
+    '\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」。\n' +
+      '   不匯出的話網站還是舊資料，這些連結不會出現。\n' +
+      '   匯出後到網站搜一個該卡有登錄連結的通路，確認結果卡片上看得到「銀行官方登錄連結」。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 
@@ -747,6 +766,119 @@ function regLinkAssertRegisterCol_(headerName) {
   if (!/^registerLink_\d+$/.test(String(headerName || '').trim())) {
     throw new Error('安全檢查失敗：這支程式只允許寫入 registerLink_N 欄，' +
       '但拿到的欄名是「' + headerName + '」。已中止，正式表不會被改。');
+  }
+}
+
+/************** 第四階段：檢查登錄連結有沒有死掉 **************/
+// ⚠️ **只讀不寫**：讀正式 Cards Data 的 registerLink_N，對每個網址發一次請求，回報死掉的。
+//    不碰任何一格資料、不寫草稿、不寫正式表。
+//
+// 為什麼是「查死連結」而不是「用 AI 重抓比對」（2026-09-10 站長與我一起否決了後者）：
+//   站長複核時修正過幾筆 AI 抓錯的連結——那些正確網址是**人判斷出來的**，AI 重跑一次
+//   還是會找到同一個錯的。所以「重抓來比對現有值」每次都會對著站長最用心修正過的那幾張卡
+//   誤報，噪音剛好集中在最不該吵的地方。
+//   真正的風險是「銀行換網址、舊的死掉」，那個不需要 AI：發個請求看回什麼碼就知道，
+//   而且站長手改的正確連結會回 200、完全不會被提到 → 平常零審核工作。
+//
+// ⚠️ 擋機器人的站會回 403/405，那不代表連結死了。所以分成兩級：
+//    「確定死了」（404/410）才是要處理的；其餘非 200 一律歸「無法確認」，只是列出來，
+//    不當成問題——寧可漏報，也不要製造假警報，那會讓這支工具很快就沒人想按。
+function checkRegisterLinksAlive() {
+  const ui = SpreadsheetApp.getUi();
+  const cardsSheet = getCardsSheet_();      // 正式 Cards Data，只讀
+  const data = cardsSheet.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
+  const idCol = headers.indexOf('id');
+  const nameCol = headers.indexOf('name');
+  if (idCol < 0) { ui.alert('正式 Cards Data 找不到 id 欄，中止。'); return; }
+
+  // 同一個網址常被多個槽位共用（例如玉山那個 esun.co 短網址），去重後只發一次請求
+  const byUrl = {};   // url -> ['卡名 槽3', ...]
+  for (let i = 1; i < data.length; i++) {
+    const cardName = nameCol >= 0 ? String(data[i][nameCol] || '').trim() : String(data[i][idCol] || '');
+    for (let n = 1; n <= REGLINK_CONFIG.maxSlots; n++) {
+      const col = headers.indexOf('registerLink_' + n);
+      if (col < 0) continue;
+      const url = normalizeRegisterLink_(data[i][col]);
+      if (!url) continue;
+      (byUrl[url] = byUrl[url] || []).push(cardName + ' 槽' + n);
+    }
+  }
+
+  const urls = Object.keys(byUrl);
+  if (urls.length === 0) {
+    ui.alert('Cards Data 裡還沒有任何登錄連結。');
+    return;
+  }
+
+  const dead = [], unknown = [];
+  let ok = 0;
+  const startedAt = Date.now();
+  let stoppedByClock = false;
+
+  for (let i = 0; i < urls.length; i++) {
+    if ((Date.now() - startedAt) / 1000 > REGLINK_CONFIG.maxRunSeconds) {
+      stoppedByClock = true;
+      break;
+    }
+    const url = urls[i];
+    const where = byUrl[url].join('、');
+    const res = regLinkProbeUrl_(url);
+
+    if (res.code === 404 || res.code === 410) {
+      dead.push('❌ ' + where + '\n      HTTP ' + res.code + '（頁面已不存在）\n      ' + url);
+    } else if (res.code >= 200 && res.code < 400) {
+      ok++;
+    } else {
+      unknown.push('❔ ' + where + '\n      ' + (res.code ? 'HTTP ' + res.code : res.error) +
+        '（可能是擋機器人，不一定是壞的）\n      ' + url);
+    }
+  }
+
+  const lines = [
+    '檢查了 ' + (ok + dead.length + unknown.length) + ' 個登錄連結（' + urls.length + ' 個不重複網址）。',
+    '',
+    dead.length
+      ? '❌ 確定死掉的 ' + dead.length + ' 個——這些要去官網找新網址替換：\n\n' + dead.join('\n\n')
+      : '✅ 沒有任何確定死掉的連結。',
+    unknown.length
+      ? '\n\n❔ 另有 ' + unknown.length + ' 個無法確認（銀行網站擋機器人時會這樣，' +
+        '自己點開看一下就知道，不一定要處理）：\n\n' + unknown.join('\n\n')
+      : '',
+    stoppedByClock
+      ? '\n\n⚠️ 跑到 ' + REGLINK_CONFIG.maxRunSeconds + ' 秒的時間上限先收工，還有 ' +
+        (urls.length - ok - dead.length - unknown.length) + ' 個沒檢查到，再按一次可以接著看。'
+      : '',
+    dead.length
+      ? '\n\n👉 下一步：到官網找新的登錄網址，直接改正式 Cards Data 的那一格，然後重新匯出。'
+      : '\n\n👉 下一步：不用做任何事。'
+  ].filter(function (x) { return x; });
+
+  ui.alert(lines.join('\n'));
+}
+
+// 發一次請求看回什麼。先試 HEAD（省流量），被拒絕就改 GET——不少站不接受 HEAD。
+function regLinkProbeUrl_(url) {
+  const opts = {
+    muteHttpExceptions: true,
+    followRedirects: true,
+    validateHttpsCertificates: false,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+    }
+  };
+  try {
+    let res = UrlFetchApp.fetch(url, Object.assign({ method: 'head' }, opts));
+    let code = res.getResponseCode();
+    // 405/501＝不支援 HEAD；403 也可能只是對 HEAD 特別嚴格，都再用 GET 確認一次
+    if (code === 405 || code === 501 || code === 403) {
+      res = UrlFetchApp.fetch(url, Object.assign({ method: 'get' }, opts));
+      code = res.getResponseCode();
+    }
+    return { code: code, error: '' };
+  } catch (e) {
+    return { code: 0, error: '連不上：' + String(e.message || e).slice(0, 80) };
   }
 }
 

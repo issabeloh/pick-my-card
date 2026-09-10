@@ -90,6 +90,8 @@ function buildAutomationMenu_() {
     // ⚠️ ③ 是整個自動化檔裡唯一會寫入正式 Cards Data 的動作（只寫 registerLink_N 欄，
     //    寫前跳確認視窗）——其餘所有選單項都只寫草稿或待審核表
     .addItem('③ 把打勾的登錄連結寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
+    // ④ 只讀不寫：對正式表的每個 registerLink 發一次請求，回報死掉的
+    .addItem('④ 檢查登錄連結是否有死網址', 'checkRegisterLinksAlive')
     .addToUi();
 }
 
