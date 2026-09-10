@@ -524,6 +524,16 @@ function regLinkAskGemini_(cardName, pendingSlots, snapshots, candidates) {
     '   （我這邊有機械檢查：不在清單裡的網址會被直接丟棄，你回了也沒用。）',
     '2. 一個候選連結對不到任何槽位就不要用它。清單裡的連結不一定每個都有對應的槽位，',
     '   也可能整份清單都跟這些槽位無關——那就回空陣列。寧可漏掉，也不要硬湊。',
+    '2a.【最常見的錯誤，特別注意】**不要拿「活動總入口頁」充當某個活動的登錄連結。**',
+    '   銀行網站上常有一個「信用卡活動登錄專區／活動總覽／登錄查詢」的頁面，',
+    '   它列出該行所有活動、每個活動各自有自己的登錄按鈕。那種頁面對「這一組活動要去哪登錄」',
+    '   來說太籠統——使用者點進去還要自己找，跟沒給差不多。',
+    '   ・判斷方式：連結文字或前方文字如果是「活動登錄」「登錄專區」「活動總覽」「我的活動」',
+    '     這類**沒有指名是哪一檔活動**的字眼，而清單裡另有一個連結的文字或上下文',
+    '     **明確對應到這個槽位的活動**（提到該活動名稱、該通路、該回饋率），',
+    '     一律選那個具體的，不要選總入口。',
+    '   ・如果清單裡**只有**總入口頁、沒有任何具體的連結 → 回空陣列，不要退而求其次。',
+    '     人工去官網找得到更直接的入口，給一個籠統的反而會蓋掉正確答案。',
     '3. 只能在 App 內操作的活動（「請至本行APP登錄」「打開App→我的優惠→登錄」）→ 不要回。',
     '4. slot 只能填我給你的那些編號，不要自己發明、也不要回沒列在清單裡的槽位。',
     '5. 完全對不上是很常見的正常結果，直接回空陣列。',
@@ -766,6 +776,119 @@ function regLinkAssertRegisterCol_(headerName) {
   if (!/^registerLink_\d+$/.test(String(headerName || '').trim())) {
     throw new Error('安全檢查失敗：這支程式只允許寫入 registerLink_N 欄，' +
       '但拿到的欄名是「' + headerName + '」。已中止，正式表不會被改。');
+  }
+}
+
+/************** 第四階段：檢查登錄連結有沒有死掉 **************/
+// ⚠️ **只讀不寫**：讀正式 Cards Data 的 registerLink_N，對每個網址發一次請求，回報死掉的。
+//    不碰任何一格資料、不寫草稿、不寫正式表。
+//
+// 為什麼是「查死連結」而不是「用 AI 重抓比對」（2026-09-10 站長與我一起否決了後者）：
+//   站長複核時修正過幾筆 AI 抓錯的連結——那些正確網址是**人判斷出來的**，AI 重跑一次
+//   還是會找到同一個錯的。所以「重抓來比對現有值」每次都會對著站長最用心修正過的那幾張卡
+//   誤報，噪音剛好集中在最不該吵的地方。
+//   真正的風險是「銀行換網址、舊的死掉」，那個不需要 AI：發個請求看回什麼碼就知道，
+//   而且站長手改的正確連結會回 200、完全不會被提到 → 平常零審核工作。
+//
+// ⚠️ 擋機器人的站會回 403/405，那不代表連結死了。所以分成兩級：
+//    「確定死了」（404/410）才是要處理的；其餘非 200 一律歸「無法確認」，只是列出來，
+//    不當成問題——寧可漏報，也不要製造假警報，那會讓這支工具很快就沒人想按。
+function checkRegisterLinksAlive() {
+  const ui = SpreadsheetApp.getUi();
+  const cardsSheet = getCardsSheet_();      // 正式 Cards Data，只讀
+  const data = cardsSheet.getDataRange().getValues();
+  const headers = data[0].map(function (h) { return String(h).trim(); });
+  const idCol = headers.indexOf('id');
+  const nameCol = headers.indexOf('name');
+  if (idCol < 0) { ui.alert('正式 Cards Data 找不到 id 欄，中止。'); return; }
+
+  // 同一個網址常被多個槽位共用（例如玉山那個 esun.co 短網址），去重後只發一次請求
+  const byUrl = {};   // url -> ['卡名 槽3', ...]
+  for (let i = 1; i < data.length; i++) {
+    const cardName = nameCol >= 0 ? String(data[i][nameCol] || '').trim() : String(data[i][idCol] || '');
+    for (let n = 1; n <= REGLINK_CONFIG.maxSlots; n++) {
+      const col = headers.indexOf('registerLink_' + n);
+      if (col < 0) continue;
+      const url = normalizeRegisterLink_(data[i][col]);
+      if (!url) continue;
+      (byUrl[url] = byUrl[url] || []).push(cardName + ' 槽' + n);
+    }
+  }
+
+  const urls = Object.keys(byUrl);
+  if (urls.length === 0) {
+    ui.alert('Cards Data 裡還沒有任何登錄連結。');
+    return;
+  }
+
+  const dead = [], unknown = [];
+  let ok = 0;
+  const startedAt = Date.now();
+  let stoppedByClock = false;
+
+  for (let i = 0; i < urls.length; i++) {
+    if ((Date.now() - startedAt) / 1000 > REGLINK_CONFIG.maxRunSeconds) {
+      stoppedByClock = true;
+      break;
+    }
+    const url = urls[i];
+    const where = byUrl[url].join('、');
+    const res = regLinkProbeUrl_(url);
+
+    if (res.code === 404 || res.code === 410) {
+      dead.push('❌ ' + where + '\n      HTTP ' + res.code + '（頁面已不存在）\n      ' + url);
+    } else if (res.code >= 200 && res.code < 400) {
+      ok++;
+    } else {
+      unknown.push('❔ ' + where + '\n      ' + (res.code ? 'HTTP ' + res.code : res.error) +
+        '（可能是擋機器人，不一定是壞的）\n      ' + url);
+    }
+  }
+
+  const lines = [
+    '檢查了 ' + (ok + dead.length + unknown.length) + ' 個登錄連結（' + urls.length + ' 個不重複網址）。',
+    '',
+    dead.length
+      ? '❌ 確定死掉的 ' + dead.length + ' 個——這些要去官網找新網址替換：\n\n' + dead.join('\n\n')
+      : '✅ 沒有任何確定死掉的連結。',
+    unknown.length
+      ? '\n\n❔ 另有 ' + unknown.length + ' 個無法確認（銀行網站擋機器人時會這樣，' +
+        '自己點開看一下就知道，不一定要處理）：\n\n' + unknown.join('\n\n')
+      : '',
+    stoppedByClock
+      ? '\n\n⚠️ 跑到 ' + REGLINK_CONFIG.maxRunSeconds + ' 秒的時間上限先收工，還有 ' +
+        (urls.length - ok - dead.length - unknown.length) + ' 個沒檢查到，再按一次可以接著看。'
+      : '',
+    dead.length
+      ? '\n\n👉 下一步：到官網找新的登錄網址，直接改正式 Cards Data 的那一格，然後重新匯出。'
+      : '\n\n👉 下一步：不用做任何事。'
+  ].filter(function (x) { return x; });
+
+  ui.alert(lines.join('\n'));
+}
+
+// 發一次請求看回什麼。先試 HEAD（省流量），被拒絕就改 GET——不少站不接受 HEAD。
+function regLinkProbeUrl_(url) {
+  const opts = {
+    muteHttpExceptions: true,
+    followRedirects: true,
+    validateHttpsCertificates: false,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+        '(KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+    }
+  };
+  try {
+    let res = UrlFetchApp.fetch(url, Object.assign({ method: 'head' }, opts));
+    let code = res.getResponseCode();
+    // 405/501＝不支援 HEAD；403 也可能只是對 HEAD 特別嚴格，都再用 GET 確認一次
+    if (code === 405 || code === 501 || code === 403) {
+      res = UrlFetchApp.fetch(url, Object.assign({ method: 'get' }, opts));
+      code = res.getResponseCode();
+    }
+    return { code: code, error: '' };
+  } catch (e) {
+    return { code: 0, error: '連不上：' + String(e.message || e).slice(0, 80) };
   }
 }
 
