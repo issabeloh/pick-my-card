@@ -108,7 +108,7 @@ function markRegisterSlotsInDraft() {
   // 底色一次讀、一次寫（33 列 × 兩三百欄逐格 setBackground 會慢到爆）
   const backgrounds = draft.getRange(1, 1, data.length, headers.length).getBackgrounds();
   const notes = [];
-  let cardsWithNeed = 0, needSlots = 0, extracted = 0;
+  let cardsWithNeed = 0, needSlots = 0, extracted = 0, greenSlots = 0;
 
   for (let i = 1; i < data.length; i++) {
     if (!String(data[i][idCol] || '').trim()) { notes.push([data[i][noteCol]]); continue; }
@@ -143,6 +143,7 @@ function markRegisterSlotsInDraft() {
         }
       }
 
+      if (link) greenSlots++;
       const color = link ? REGLINK_CONFIG.colorHasLink : REGLINK_CONFIG.colorNeedLink;
       backgrounds[i][condCol] = color;
       if (linkCol >= 0) backgrounds[i][linkCol] = color;
@@ -158,14 +159,23 @@ function markRegisterSlotsInDraft() {
   draft.getRange(1, 1, data.length, headers.length).setBackgrounds(backgrounds);
   draft.getRange(2, noteCol + 1, notes.length, 1).setValues(notes).setWrap(true);
 
+  // 下一步提示：看還有沒有黃格子決定。沒有黃格子就別叫人去跑 AI。
+  const stillYellow = needSlots - greenSlots;
+  const nextStep = stillYellow > 0
+    ? '👉 下一步：按選單「② 找登錄連結」。\n' +
+      '   還有 ' + stillYellow + ' 個黃格子要補連結，一次跑最多 ' +
+      REGLINK_CONFIG.maxCardsPerRun + ' 張卡，重複按到它說「都跑完了」為止。'
+    : '👉 下一步：不用跑 ②，沒有缺連結的槽位。\n' +
+      '   直接去資料檔匯出（🎯 卡片管理 → 匯出）就好。';
+
   ui.alert(
-    '第一階段完成（沒有呼叫 AI、沒有用掉任何額度）\n\n' +
+    '① 完成（沒有呼叫 AI、沒有用掉任何額度）\n\n' +
     '・' + cardsWithNeed + ' 張卡、共 ' + needSlots + ' 個槽位的 conditions 提到「登錄」\n' +
-    '・其中 ' + extracted + ' 個的登錄網址本來就寫在 conditions 裡，已直接填進 registerLink_N\n\n' +
-    '底色：黃＝要登錄但還沒有連結、綠＝連結已經有了。\n' +
+    '・其中 ' + greenSlots + ' 個已經有連結（綠底）、' + stillYellow + ' 個還沒有（黃底）\n' +
+    '・這一輪從 conditions 直接撈出 ' + extracted + ' 個網址填進 registerLink_N\n\n' +
     'conditions_N 與 registerLink_N 兩格都會上色，方便你橫向掃。\n' +
     '「' + REGLINK_CONFIG.noteHeader + '」欄逐槽位列出了回饋率／上限／適用通路。\n\n' +
-    '接下來要讓 AI 去監控快照裡找剩下那些黃色的連結，按選單第二項。'
+    nextStep
   );
 }
 
@@ -375,7 +385,14 @@ function fillRegisterLinksFromSnapshots() {
       : '需要搜尋的卡片都跑完了。',
     rejected ? '⚠️ 丟棄 ' + rejected + ' 個「不在官網原文裡」的網址（已記在說明欄）。' : '',
     failures.length ? '\n失敗（下次執行會自動重試）：\n' + failures.join('\n') : '',
-    '\n貼回正式 Cards Data 時記得用「選擇性貼上 → 只貼值」，不然黃綠底色會一起貼過去。'
+    remaining
+      ? '\n👉 下一步：再按一次「② 找登錄連結」，把剩下的跑完。'
+      : '\n👉 下一步：到資料檔草稿分頁**複核**「' + REGLINK_CONFIG.noteHeader + '」欄。\n' +
+        '   ⚠️ AI 會抓錯，這一步不能跳過——每一行都附了「原文佐證」，看它憑什麼把那個\n' +
+        '   連結配到那個槽位。抓錯就直接在該格 registerLink_N 改成正確的網址\n' +
+        '   （你改的優先，③ 不會覆蓋你手動填的值）。\n' +
+        '   一次配了很多個連結的那張卡最值得看。\n\n' +
+        '   複核完在「' + REGLINK_CONFIG.applyHeader + '」欄打 V，再按選單 ③。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 
@@ -729,7 +746,9 @@ function applyRegisterLinksToCardsData() {
       REGLINK_CONFIG.appliedMark + ' ' + stamp + '」，再按一次不會重複寫。',
     problems.length ? '\n問題：\n・' + problems.join('\n・') : '',
     conflicts.length ? '\n衝突（已跳過，請人工判斷）：\n・' + conflicts.join('\n・') : '',
-    '\n⚠️ 別忘了重新匯出（🎯 卡片管理 → 匯出），網站才會吃到新的連結。'
+    '\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」。\n' +
+      '   不匯出的話網站還是舊資料，這些連結不會出現。\n' +
+      '   匯出後到網站搜一個該卡有登錄連結的通路，確認結果卡片上看得到「銀行官方登錄連結」。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 
