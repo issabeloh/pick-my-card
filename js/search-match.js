@@ -6,6 +6,7 @@
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
+ *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
@@ -578,6 +579,58 @@ function scrollToParkingBenefits() {
     }
 }
 
+
+// 送出時重新推導匹配（2026-09-10）：輸入框的值是唯一真相。
+//
+// calculateCashback() 原本直接讀 currentMatchedItem，而那個全域只有輸入框的 input 事件
+// （handleMerchantInput）和快捷搜尋會更新。於是任何「值已經變了、但 input 的處理還沒跑完
+// 就觸發計算」的情況，都會用舊關鍵詞算出結果——畫面上更詭異的是匹配狀態列由晚到的 input
+// 更新成新詞，結果列表卻是舊詞算的（實例：狀態列寫「✓ 匹配到: 樂天KOBO」，結果卻是「樂天」
+// 的 6 張卡，台新 Richart 不在裡面）。已知觸發路徑：IME 組字送出時 Enter 與 compositionend
+// 的到達順序、瀏覽器還原表單值（F5／上一頁回來都不派 input）、程式填值忘了 dispatch。
+//
+// 這裡只改「什麼時候算」，不改「怎麼算」：呼叫的是同一支 findMatchingItem()、同一個
+// 精準搜尋開關，所以本來就正確的情況重算會得到一樣的結果（等冪）。成本實測 ≤0.7ms。
+//
+// 與 handleMerchantInput() 刻意不共用的兩點：
+// - 快捷搜尋的 currentMatchedItem 是多個關鍵詞的聯集，輸入框裡只有 displayName（不是 item），
+//   拿它重算會變成無匹配 → 輸入框仍等於當前快捷選項的 displayName 時直接跳過不動。
+// - 不碰 checkAndShowSearchHint：搜尋提示是打字中的引導，不屬於送出流程。
+function syncMatchedItemToInput() {
+    if (!cardsData || !merchantInput) return;
+
+    const raw = merchantInput.value.trim();
+
+    // 快捷搜尋的結果不能用 displayName 重算（理由見上）
+    if (currentQuickSearchOption &&
+        raw === (currentQuickSearchOption.displayName || '').trim()) {
+        return;
+    }
+    // 走到這裡代表輸入框的內容已不是那個快捷選項 → 選項不再適用
+    currentQuickSearchOption = null;
+
+    if (raw.length === 0) {
+        hideMatchedItem();
+        toggleExactSearchEmptyHint(false);
+        currentMatchedItem = null;
+        return;
+    }
+
+    const input = raw.toLowerCase();
+    const exactOnly = isExactSearchEnabled();
+    const matchedItems = findMatchingItem(input, { exactOnly });
+
+    if (matchedItems && matchedItems.length > 0) {
+        showMatchedItem(matchedItems, input, getCardsForComparison());
+        toggleExactSearchEmptyHint(false);
+        currentMatchedItem = matchedItems;
+    } else {
+        hideMatchedItem();
+        currentMatchedItem = null;
+        // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
+        toggleExactSearchEmptyHint(exactOnly && (findMatchingItem(input) || []).length > 0);
+    }
+}
 
 // Validate inputs
 function validateInputs() {

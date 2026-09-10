@@ -44,6 +44,11 @@ async function calculateCashback() {
     const amount = amountInput.value === '' ? 1000 : parseFloat(amountInput.value);
     const merchantValue = merchantInput.value.trim();
 
+    // 送出這一刻以輸入框的值為準重新推導匹配，讓匹配狀態列與結果一定同步
+    // （為什麼需要、以及為什麼不直接呼叫 handleMerchantInput，見 search-match.js
+    //  的 syncMatchedItemToInput 註解）
+    syncMatchedItemToInput();
+
     console.log('輸入：', { merchantValue, amount });
     console.log('currentMatchedItem:', currentMatchedItem);
 
