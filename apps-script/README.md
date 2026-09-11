@@ -381,7 +381,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 |---|---|
 | 程式檔案 | Apps Script 專案內的 `權益監控.gs`（備份：`watchlist-monitor.gs`） |
 | 主函數 | `checkWatchlist`（觸發器叫醒的就是它） |
-| 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」 |
+| 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」。清單長到一次跑不完時會自動分段接續，見下方「分段執行與自動接續」 |
 | 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars / check_days`（`cards` 為 2026-07-29、`check_days` 為 2026-07-31 新增，沒有這兩欄也照跑） |
 | 偵測結果 | 自動寫入分頁 `2-變動通知`（不存在會自動建立），並寄 Email 通知 |
 | 通知信箱 | `MONITOR_CONFIG.notifyEmail` 留空 = 寄給試算表登入帳號 |
@@ -461,6 +461,44 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - **暫停某個網址**：該列 active 改 `FALSE`
 - **改執行頻率**：Apps Script → 觸發條件 → 編輯該觸發器（頻率不影響費用，全部免費）
 - **手動跑一次**：編輯器上方函數選 `checkWatchlist` → Run
+
+### 分段執行與自動接續（2026-09-11 新增，修每週的「Exceeded maximum execution time」失敗信）
+
+**症狀**：每週收到 Apps Script 的 `Summary of failures` 信，`checkWatchlist`、錯誤訊息
+`Exceeded maximum execution time`，開始到結束剛好 6 分 00 秒。
+
+**這不是授權/同意的問題**——觸發器有正常叫醒腳本，重新授權也不會好。那是 Apps Script
+單次執行的硬上限（免費帳號 6 分鐘），**時間到直接砍掉**。監控清單一長，一列＝一次
+網頁抓取（走 Jina 的頁要等真瀏覽器渲染，30~60 秒是常態）＋一次 Gemini 呼叫，
+十幾列就撞得到。
+
+**被砍掉會怎樣**：已跑過的列不受影響（快照、`last_checked`、「2-變動通知」都是逐列即時寫的），
+但那一輪的 `sendDigest_` 完全不會執行 → **通知信整封消失**，而且清單後半段根本沒抓到。
+也就是說：真的有變動被寫進分頁了，站長卻不會收到信。
+
+**現在的做法**（比照 `register-link-finder.gs` 的看錶煞車，再加上自動接續）：
+
+| 機制 | 說明 |
+|---|---|
+| 看錶煞車 | 每一列**開跑前**先看錶，已超過 `MONITOR_CONFIG.maxRunSeconds`（210 秒）就不再開新的一列。210 的算法：單列最壞 ≈ 抓取 60 秒＋Gemini 40 秒＋重試 sleep 9 秒 ≈ 110 秒，210＋110＝320 秒 < 360 秒 |
+| 自動接續 | 沒跑完就排一個 `MONITOR_CONFIG.resumeAfterMinutes`（2）分鐘後的**一次性**觸發器接著跑，不用人工重按。設成 0 就關掉，改回人工重跑 |
+| 進度游標 | 存在指令碼屬性 `WATCHLIST_RESUME_ROW`（＋時間戳 `WATCHLIST_RESUME_AT`），**逐列更新**——萬一某列離譜地慢、把 6 分鐘硬撞爆，收尾一行都不會跑，那時就只剩這個游標知道跑到哪裡 |
+| 游標過期 | 超過 60 分鐘的游標一律忽略、從頭跑。每週排程觸發器叫醒時若還撿著上一輪的舊游標，清單前半段會被**整段靜悄悄跳過**，那比超時失敗更糟 |
+| 段數上限 | 單輪最多 `MONITOR_CONFIG.maxResumeChunks`（8）段。防「某一列每次都把執行撞爆 → 游標卡死 → 無限接力」把每日 90 分鐘的觸發器額度燒光；達上限會停手並寄信說明 |
+| 分隔線 | 「2-變動通知」的批次分隔線改成**整份清單跑完才畫**（累計寫入數存在 `WATCHLIST_ROUND_WRITES`），不會每段各畫一條 |
+
+**信會長怎樣**：分段時每一段有變動才各寄一封，主旨帶「（第 N 段，尚餘 M 列）」，
+信首多一段 `⏱` 說明還有幾列沒檢查、幾分鐘後接續。沒有任何變動的中間段**不寄信**
+（否則一輪會洗進來好幾封空信）。刻意不把 alerts 累積起來最後一次寄——
+指令碼屬性單值上限 9KB，摘要＋變動段落很容易撐爆，寧可多收幾封也不要弄丟通知。
+
+**⚠️ 改這段程式時最容易踩的雷**：清除接力觸發器**只能認存下來的 `uniqueId`**
+（`WATCHLIST_RESUME_TRIGGER`）。千萬不要用「handler 是 checkWatchlist 的 CLOCK 觸發器」
+去掃著刪——Trigger API 無法從外觀分辨一次性與週期性觸發器，那樣會把站長手設的
+**每週觸發器一起刪掉**，整套監控靜悄悄停擺，而且不會有任何錯誤信。
+
+**還是一直分段怎麼辦**（代表清單真的變長了）：把慢的那幾列（走 Jina 的）填 `check_days`，
+讓它們不必每輪都抓；或把不再需要的列 `active` 改 `FALSE`。
 
 ### ① AI 摘要變動（2026-07-17 新增，解決「diff 頭昏眼花」）
 
