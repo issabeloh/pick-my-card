@@ -465,7 +465,11 @@ function findMatchingItem(searchTerm, options = {}) {
 }
 
 // Show matched item(s)
-function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
+// summaryText：送出後才知道「你的選項下符合幾筆」，打字時不傳（打字階段還沒算結果）。
+// 由呼叫端組好字串（活動與領券的量詞不同），這裡只負責接在 ✓ 那行後面。
+// 這一行的職責始終是「你打的詞我認得，認到這幾個」；「你的設定下有沒有結果」是另一回事，
+// 沒有結果時由 showMatchedButNoActivityMessage() 用紅字第二行講，不會把 ✓ 覆蓋掉。
+function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = [], summaryText = null) {
     let messageHtml = '';
 
     if (Array.isArray(matchedItems)) {
@@ -484,6 +488,10 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
     } else {
         // Backward compatibility for single item
         messageHtml = `✓ 匹配到: <strong>${escapeHtml(matchedItems.originalItem)}</strong>`;
+    }
+
+    if (summaryText) {
+        messageHtml += ` | ${escapeHtml(summaryText)}`;
     }
 
     // Check if there are parking benefits matches
@@ -520,8 +528,8 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = []) {
 function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     // 回顯商家名讓用戶能確認「是打錯字還是真的沒活動」；用戶輸入必過 escapeHtml（鐵則）
     const safeMerchant = escapeHtml((merchantValue || '').trim());
-    const merchantPart = safeMerchant ? `『<strong>${safeMerchant}</strong>』的商家` : '任何商家';
-    let messageHtml = `✘ 沒有匹配到${merchantPart}，修改信用卡選項試看看！（以下結果為所有卡片的基本回饋）`;
+    const merchantPart = safeMerchant ? `<strong>${safeMerchant}</strong>` : '任何商家';
+    let messageHtml = `✘ 沒有匹配到 ${merchantPart} 的活動（以下結果顯示基本回饋）`;
     let hasParkingMatch = false;
 
     // Check if there are parking benefits matches
@@ -571,17 +579,29 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
 // 尚未開始、或算出來是 0 的卡也會被算進去，等於叫用戶去加一張同樣沒用的卡。
 // N 為 0 時（例如只靠 couponCashbacks 匹配到，或所有活動都算不出回饋）換一句話講，
 // 不要顯示「有 0 張卡有」。
-async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000) {
+async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000, couponCount = 0) {
     const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
     const names = [...new Set(list.map(m => (m && m.originalItem) || '').filter(Boolean))];
     const displayName = names.join('、');
 
     const outsideCount = await countCardsWithActivityOutside(names, cardsToCheck, amount);
 
-    let messageHtml = `✓ 匹配到 <strong>${escapeHtml(displayName)}</strong>，`;
-    messageHtml += outsideCount > 0
-        ? `但你加入比較的卡片中沒有此商家的活動（其他卡片中有 ${outsideCount} 張卡有）`
-        : '但目前沒有卡片有這個商家的進行中活動';
+    // 兩行分工：第一行只講「詞認得」（綠色，跟打字時同一句，不推翻它）；
+    // 第二行才講「你的設定下沒有結果」（紅色）。合成一句會變成「✓ 開頭、否定結尾」，
+    // 要讀完整句才懂——那正是 2026-09-11 用戶回報的困惑點。
+    let warn;
+    if (outsideCount > 0) {
+        warn = `✘ 你的選項中沒有符合的活動，試看看修改信用卡選項！（其他卡片中有 ${outsideCount} 張卡符合）`;
+    } else if (couponCount > 0) {
+        // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個這種），領券結果在下方另一區塊，
+        // 說「沒有活動」會與畫面矛盾——要指出領券那一區
+        warn = `✘ 沒有卡片有這個商家的一般活動（下方有 ${couponCount} 筆領券優惠）`;
+    } else {
+        warn = '✘ 目前沒有卡片有這個商家的活動';
+    }
+
+    let messageHtml = `✓ 匹配到 <strong>${escapeHtml(displayName)}</strong>`;
+    messageHtml += `<br><span class="matched-item-warn">${warn}</span>`;
 
     // 停車折抵與一般活動是兩套資料，這裡沒活動不代表停車也沒有——沿用 showNoMatchMessage 的附加
     if (cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
@@ -604,29 +624,48 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
     }
 
     matchedItemDiv.innerHTML = messageHtml;
-    // partial-match：匹配成功但這次給不出結果，視覺上要跟「完全沒匹配到」(no-match) 分得開
-    matchedItemDiv.className = 'matched-item partial-match';
+    // 容器維持預設（綠）讓第一行是 ✓ 的顏色；紅字只落在第二行的 .matched-item-warn
+    matchedItemDiv.className = 'matched-item';
     matchedItemDiv.style.display = 'block';
     toggleExactSearchEmptyHint(false);
 }
 
-// 比較清單「以外」、真的算得出回饋的卡有幾張（理由見 showMatchedButNoActivityMessage）
+// 比較清單「以外」、真的有東西可看的卡有幾張（理由見 showMatchedButNoActivityMessage）。
+// 一般活動與領券活動要分開查：領券的商家欄不會進 _itemsIndex（那支索引只收
+// cashbackRates／specialItems／generalItems），只看索引會把「只有券的卡」算成 0，
+// 於是明明別張卡有券，卻對使用者說「沒有卡片有這個商家的活動」。
 async function countCardsWithActivityOutside(itemNames, cardsToCheck, amount) {
     if (!cardsData || !Array.isArray(cardsData.cards)) return 0;
     const inSet = new Set((cardsToCheck || []).map(c => c.id));
-    const names = itemNames.map(n => n.toLowerCase()).filter(Boolean);
+    const names = itemNames.map(n => String(n).toLowerCase()).filter(Boolean);
     if (names.length === 0) return 0;
 
-    // _itemsIndex 是載入時建好的 Map（已濾掉過期活動），用它挑候選避免掃全卡
-    const candidates = cardsData.cards.filter(card =>
-        !inSet.has(card.id) && card._itemsIndex && names.some(n => card._itemsIndex.has(n)));
-
     let count = 0;
-    for (const card of candidates) {
-        for (const name of names) {
-            const rs = await calculateCardCashback(card, name, amount);
-            if (rs && rs.some(r => r.cashbackAmount > 0)) { count++; break; }
+    for (const card of cardsData.cards) {
+        if (inSet.has(card.id)) continue;
+
+        // ① 一般活動：先用 _itemsIndex 挑候選（O(1) 查表），再實際算一次，只認回饋 > 0 的。
+        //    不實算的話，活動已結束／尚未開始／算出來是 0 的卡也會被算進去，
+        //    等於叫使用者去加一張同樣沒用的卡。
+        let hit = false;
+        if (card._itemsIndex && names.some(n => card._itemsIndex.has(n))) {
+            for (const name of names) {
+                const rs = await calculateCardCashback(card, name, amount);
+                if (rs && rs.some(r => r.cashbackAmount > 0)) { hit = true; break; }
+            }
         }
+
+        // ② 領券活動：merchant 是逗號分隔字串，逐項比對（過期的券已由 filterExpiredRates 濾掉）
+        if (!hit && Array.isArray(card.couponCashbacks)) {
+            hit = card.couponCashbacks.some(coupon => {
+                if (!coupon.merchant) return false;
+                return String(coupon.merchant).split(',')
+                    .map(x => x.trim().toLowerCase())
+                    .some(x => x && names.includes(x));
+            });
+        }
+
+        if (hit) count++;
     }
     return count;
 }
