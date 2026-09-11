@@ -13,7 +13,9 @@
  *  - 計算明細 popover           → "showCalcBreakdown"
  *  - 率組成展開                → "toggleRateComposition"
  * ============================================================ */
-function displayResults(results, originalAmount, searchedItem, isBasicCashback = false) {
+// suppressEmptyMessage：結果是空的、但畫面上別處已經有東西可看時（目前唯一情況是
+// 「只有領券優惠」），不要印「無符合的信用卡」——那會與下方列出來的領券結果矛盾。
+function displayResults(results, originalAmount, searchedItem, isBasicCashback = false, suppressEmptyMessage = false) {
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
     console.log('isBasicCashback:', isBasicCashback);
@@ -35,13 +37,15 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     
     if (results.length === 0) {
         // No cards have cashback for this item
-        const noResultsDiv = document.createElement('div');
-        noResultsDiv.className = 'no-results';
-        noResultsDiv.innerHTML = `
-            <h3>無符合的信用卡</h3>
-            <p>沒有任何信用卡對「${escapeHtml(searchedItem)}」提供現金回饋。</p>
-        `;
-        resultsContainer.appendChild(noResultsDiv);
+        if (!suppressEmptyMessage) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'no-results';
+            noResultsDiv.innerHTML = `
+                <h3>無符合的信用卡</h3>
+                <p>沒有任何信用卡對「${escapeHtml(searchedItem)}」提供現金回饋。</p>
+            `;
+            resultsContainer.appendChild(noResultsDiv);
+        }
     } else {
         const maxCashback = results[0].cashbackAmount;
 

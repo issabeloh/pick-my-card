@@ -64,6 +64,7 @@ async function calculateCashback() {
 
     let results;
     let isBasicCashback = false;
+    let matchedButNoActivity = false;  // 匹配成功、但這次的卡片選擇下算不出任何活動
     let uniqueUpcomingResults = [];  // Define here for proper scope
 
     // Get cards to compare (user selected or all)
@@ -157,9 +158,12 @@ async function calculateCashback() {
 
         console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
-        // Show no-match message and basic rates when no special rates found
+        // 走到這裡代表**匹配成功**（currentMatchedItem 有值），只是算不出任何結果——
+        // 最常見的原因是有這個活動的卡不在「加入比較的卡片」裡。這跟「沒匹配到」是兩件事，
+        // 訊息不能共用（2026-09-11 用戶回報：✓ 開頭卻是否定結尾，要讀完整句才懂）。
+        // 這裡只記旗標，實際訊息統一延到結果與領券都定案之後才寫——那時才講得出「幾筆」。
         if (results.length === 0 && merchantValue.length > 0) {
-            showNoMatchMessage(merchantValue, cardsToCompare);
+            matchedButNoActivity = true;
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 
@@ -170,11 +174,6 @@ async function calculateCashback() {
         isBasicCashback = true;
 
         results = cardsToCompare.map(card => buildBasicCashbackResult(card, amount));
-
-        // Show no match message if user has typed something
-        if (merchantValue.length > 0) {
-            showNoMatchMessage(merchantValue, cardsToCompare);
-        }
 
         // Still search for upcoming activities even without active matches
         if (merchantValue.length > 0) {
@@ -218,10 +217,39 @@ async function calculateCashback() {
         displayedMatchItem = merchantValue;
     }
 
-    displayResults(results, amount, displayedMatchItem, isBasicCashback);
-
-    // Display coupon cashbacks
+    // 領券結果先算：只靠 couponCashbacks 匹配到的商家（資料裡有 49 個），
+    // 訊息要講得出「下方有幾筆領券優惠」，不先算就只能說「沒有活動」而與畫面矛盾
     await displayCouponCashbacks(amount, merchantValue);
+    const couponCount = couponResultsContainer
+        ? couponResultsContainer.querySelectorAll('.coupon-item').length : 0;
+
+    // 只有領券優惠、沒有任何一般活動時：把基本回饋那 30 幾張拿掉。
+    // 留著的話領券區會被推到畫面很下面，而使用者真正要看的就是那幾張券。
+    // 即將開始的活動不受影響（它們不是 isBasic，會留下）。
+    const couponOnly = matchedButNoActivity && couponCount > 0;
+    if (couponOnly) {
+        results = results.filter(r => !r.isBasic);
+        isBasicCashback = false;
+    }
+
+    // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
+    // ⚠️ couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
+    //    若讓「有結果」那條先接手，會說出「有 0 筆活動符合你的選項」。
+    if (currentMatchedItem && couponOnly) {
+        // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個）：一般活動是 0 筆，但下方
+        // 確實列出了領券優惠。這種情況說「沒有活動」會與畫面矛盾——它有結果，只是型別不同。
+        showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
+            `有 ${couponCount} 筆領券型活動符合你的選項`);
+    } else if (currentMatchedItem && !isBasicCashback) {
+        showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
+            `有 ${results.length} 筆活動符合你的選項`);
+    } else if (currentMatchedItem && matchedButNoActivity) {
+        await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount);
+    } else if (merchantValue.length > 0) {
+        showNoMatchMessage(merchantValue, cardsToCompare);
+    }
+
+    displayResults(results, amount, displayedMatchItem, isBasicCashback, couponOnly);
 
     // Display parking benefits - pass quick search keywords if available
     displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);

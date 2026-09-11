@@ -6,15 +6,25 @@
  * 沒有預裝時退回 playwright 自帶的 chromium——本機要先 npx playwright install chromium）：
  *   node tools/regression/run-regression.js                  # 跑並與 baseline.json 比對（差異→exit 1）
  *   node tools/regression/run-regression.js --update-baseline # 重拍基準（改動「前」的版本跑！）
+ *   node tools/regression/run-regression.js --update-fixture  # 重拍凍結資料（時機見 docs/ops/regression.md）
+ *   node tools/regression/run-regression.js --live            # 改用線上 cards.data 跑（不比對基準，只看有無錯誤）
  *
  * 設計要點：
  * - 自帶靜態伺服器（隨機 port），不依賴 python
+ * - **資料與時鐘都凍結**（2026-09-11 改）：測試讀 tools/regression/fixture.data 而不是線上
+ *   cards.data，並把瀏覽器的 Date 固定在 fixture.json 的 frozenDate。
+ *   為什麼：基準存的是「答案」，而答案＝程式×資料×日期。線上 cards.data 一天更新 3–5 次，
+ *   基準因此一天就過期，每次紅燈幾乎都是資料文案改動或活動到期造成的，真正的程式回歸
+ *   會被埋在噪音裡（2026-09-10 實測：6 組紅燈，0 組是程式問題）。凍結之後紅燈＝程式真的變了。
+ *   ⚠️ 只凍資料不凍時鐘沒有用——filterExpiredRates()／getRateStatus() 會拿「今天」比對活動
+ *   期限，日期一天天往前走，凍結資料裡的活動照樣會到期，結果一樣漂移。
+ * - 要驗「線上資料有沒有把引擎弄壞」是另一件事，用 --live 跑（那是資料驗證，不是程式回歸）
  * - 攔截 gstatic 的 Firebase SDK 回傳替身模組：onAuthStateChanged 立刻回 null → 確定性進訪客模式
  *   ⚠️ index.html 的 import 清單一旦新增名稱，firebaseStub() 必須同步補上同名 export——
  *      ES module 找不到具名 export 會整支 script 失敗，全站等於沒載入（症狀是全部檢查掛掉）
  * - 其餘外部請求全部 abort（廣告/字型/analytics 不影響測試也不外洩流量）
  * - localStorage 全空的訪客 + ?start（跳過 landing 轉址）+ ?debug=1（console.error 可見）
- * - 基準與 cards.version 綁定；活動有期限，日期前進造成的差異屬預期，重拍基準即可
+ * - 基準綁定的是「凍結資料的版本 ＋ 凍結日期」，不是線上 cards.version——兩者對不上時會示警
  */
 'use strict';
 const http = require('http');
@@ -43,10 +53,35 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
   '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.data': 'text/plain', '.version': 'text/plain',
   '.ico': 'image/x-icon', '.txt': 'text/plain', '.webmanifest': 'application/manifest+json' };
 
-function startServer() {
+// 凍結資料：/cards.data 與 /cards.version 不從 repo 根目錄拿，改端出 fixture。
+// 前端的載入流程是「先抓 cards.version → 拿它當 cards.data 的 ?v=」，所以兩條路徑都要換掉，
+// 否則版本指標會指向線上資料、快取行為與實際內容對不起來。
+const FIXTURE_DATA = path.join(__dirname, 'fixture.data');
+const FIXTURE_META = path.join(__dirname, 'fixture.json');
+
+function readFixtureMeta() {
+  if (!fs.existsSync(FIXTURE_META)) {
+    throw new Error(`找不到 ${path.relative(REPO, FIXTURE_META)}——先跑 --update-fixture 拍一份凍結資料`);
+  }
+  const meta = JSON.parse(fs.readFileSync(FIXTURE_META, 'utf8'));
+  if (!meta.frozenDate || isNaN(new Date(meta.frozenDate).getTime())) {
+    throw new Error(`fixture.json 的 frozenDate 不是合法日期：${meta.frozenDate}`);
+  }
+  return meta;
+}
+
+function startServer(useLive) {
   return new Promise(resolve => {
     const srv = http.createServer((req, res) => {
       const urlPath = decodeURIComponent(req.url.split('?')[0]);
+      if (!useLive && (urlPath === '/cards.data' || urlPath === '/cards.version')) {
+        const body = urlPath === '/cards.data'
+          ? fs.readFileSync(FIXTURE_DATA)
+          : Buffer.from(readFixtureMeta().cardsVersion, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(body);
+        return;
+      }
       let file = path.join(REPO, urlPath === '/' ? 'index.html' : urlPath);
       if (!file.startsWith(REPO) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404); res.end('not found'); return;
@@ -94,6 +129,31 @@ function firebaseStub(url) {
   return 'export default {};';
 }
 
+// 把瀏覽器的時鐘固定在某個瞬間。只凍資料不凍時鐘沒有用：filterExpiredRates() 與
+// getRateStatus() 都拿「今天」去比活動期限，真實日期一天天往前走，凍結資料裡的活動照樣
+// 會到期、結果照樣漂移（就是基準每天過期的原因之一）。
+//
+// 只改「不帶參數的 new Date()」與「Date.now()」——帶參數的建構（解析 '2026-09-30' 這種
+// 期限字串）必須維持原樣，否則所有日期比較都會壞掉。prototype 沿用原生的，instanceof
+// 與所有實例方法因此完全不受影響。
+function freezeClockScript(iso) {
+  return `(() => {
+    const FIXED = ${JSON.stringify(iso)};
+    const RealDate = Date;
+    const fixedMs = new RealDate(FIXED).getTime();
+    function FrozenDate(...args) {
+      if (!(this instanceof FrozenDate)) return new RealDate(fixedMs).toString();
+      return args.length === 0 ? new RealDate(fixedMs) : new RealDate(...args);
+    }
+    FrozenDate.prototype = RealDate.prototype;
+    FrozenDate.now = () => fixedMs;
+    FrozenDate.parse = RealDate.parse;
+    FrozenDate.UTC = RealDate.UTC;
+    Object.setPrototypeOf(FrozenDate, RealDate);
+    window.Date = FrozenDate;
+  })();`;
+}
+
 const norm = s => (s || '').replace(/\s+/g, ' ').trim();
 
 async function extract(page) {
@@ -135,12 +195,21 @@ async function extract(page) {
   return { results, parking, coupons };
 }
 
-async function run(updateBaseline) {
-  const srv = await startServer();
+async function run(opts) {
+  const { updateBaseline, useLive } = opts;
+  const fixtureMeta = useLive ? null : readFixtureMeta();
+  const srv = await startServer(useLive);
   const base = `http://127.0.0.1:${srv.address().port}`;
   const execPath = fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
   const browser = await chromium.launch(execPath ? { executablePath: execPath } : {});
   const page = await browser.newPage();
+  if (fixtureMeta) {
+    // addInitScript 在每個 document 的任何頁面腳本之前執行，所以 js/ 載入時看到的已經是凍結的 Date
+    await page.addInitScript(freezeClockScript(fixtureMeta.frozenDate));
+    process.stderr.write(`🧊 凍結資料 ${fixtureMeta.cardsVersion}／凍結日期 ${fixtureMeta.frozenDate}\n`);
+  } else {
+    process.stderr.write('🌐 --live：使用線上 cards.data 與真實日期（不與基準比對）\n');
+  }
 
   const consoleErrors = [];
   page.on('pageerror', e => consoleErrors.push('pageerror: ' + norm(e.message).slice(0, 200)));
@@ -221,17 +290,26 @@ async function run(updateBaseline) {
 
   const meta = {
     generatedAt: new Date().toISOString(),
-    cardsVersion: fs.readFileSync(path.join(REPO, 'cards.version'), 'utf8').trim(),
-    note: '基準綁定 cards.version；活動期限日期敏感——cards.data 更新或活動到期造成的差異屬預期，確認後重拍基準',
+    fixtureVersion: fixtureMeta ? fixtureMeta.cardsVersion : null,
+    frozenDate: fixtureMeta ? fixtureMeta.frozenDate : null,
+    liveCardsVersion: fs.readFileSync(path.join(REPO, 'cards.version'), 'utf8').trim(),
+    note: '基準綁定「凍結資料版本 ＋ 凍結日期」（tools/regression/fixture.json），不是線上 cards.version。' +
+      '資料與時鐘都凍住，所以差異＝程式行為真的變了；重拍凍結資料的時機見 docs/ops/regression.md',
   };
   const out = { meta, checks };
   const baselineFile = path.join(__dirname, 'baseline.json');
   const lastRunFile = path.join(__dirname, 'last-run.json');
   fs.writeFileSync(lastRunFile, JSON.stringify(out, null, 2));
 
+  if (useLive) {
+    const errs = out.checks.reduce((n, c) => n + c.consoleErrors.length, 0);
+    console.log(`✅ --live 跑完 12 組（線上 cards.version=${meta.liveCardsVersion}）：console error ${errs} 條。` +
+      `\n   這是資料驗證，不與基準比對——結果見 ${path.relative(REPO, lastRunFile)}`);
+    return errs > 0 ? 1 : 0;
+  }
   if (updateBaseline) {
     fs.writeFileSync(baselineFile, JSON.stringify(out, null, 2));
-    console.log(`✅ 基準已更新：${path.relative(REPO, baselineFile)}（cards.version=${meta.cardsVersion}，12 組全跑完）`);
+    console.log(`✅ 基準已更新：${path.relative(REPO, baselineFile)}（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}，12 組全跑完）`);
     return 0;
   }
   if (!fs.existsSync(baselineFile)) {
@@ -239,8 +317,10 @@ async function run(updateBaseline) {
     return 2;
   }
   const baseline = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
-  if (baseline.meta.cardsVersion !== meta.cardsVersion) {
-    console.error(`⚠️ cards.version 不一致（基準 ${baseline.meta.cardsVersion} vs 現在 ${meta.cardsVersion}）——基準已過期，比對結果僅供參考`);
+  // 凍結之後這兩個值平常不會變；一旦不一致代表有人重拍了 fixture 卻忘了重拍基準
+  if (baseline.meta.fixtureVersion !== meta.fixtureVersion || baseline.meta.frozenDate !== meta.frozenDate) {
+    console.error(`⚠️ 基準與凍結資料對不上（基準 ${baseline.meta.fixtureVersion}／${baseline.meta.frozenDate}` +
+      ` vs 現在 ${meta.fixtureVersion}／${meta.frozenDate}）——重拍過 fixture 就要跟著重拍基準，否則比對無意義`);
   }
   let failed = 0;
   for (const cur of out.checks) {
@@ -270,10 +350,40 @@ async function run(updateBaseline) {
     console.error(`\n❌ 回歸未通過：${failed}/12 組有差異。完整結果見 tools/regression/last-run.json`);
     return 1;
   }
-  console.log(`✅ 回歸通過：12 組結果與基準逐字一致（cards.version=${meta.cardsVersion}）`);
+  console.log(`✅ 回歸通過：12 組結果與基準逐字一致（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}）`);
   return 0;
 }
 
-run(process.argv.includes('--update-baseline'))
+// 重拍凍結資料：把當下的線上 cards.data 複製成 fixture，凍結日期設為今天中午（台北）。
+// ⚠️ 拍完一定要接著跑 --update-baseline，否則基準還停在舊資料上、比對沒有意義。
+// 什麼時候該重拍：見 docs/ops/regression.md「凍結資料的重拍時機」。
+function updateFixture() {
+  const liveVersion = fs.readFileSync(path.join(REPO, 'cards.version'), 'utf8').trim();
+  const now = new Date();
+  // 中午（台北）而不是當下時刻：避開日界線，同一天重拍幾次結果都一樣
+  const frozenDate = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-` +
+    `${String(now.getUTCDate()).padStart(2, '0')}T12:00:00+08:00`;
+  fs.copyFileSync(path.join(REPO, 'cards.data'), FIXTURE_DATA);
+  const meta = {
+    cardsVersion: liveVersion,
+    frozenDate: frozenDate,
+    capturedAt: now.toISOString(),
+    note: '回歸測試專用的凍結資料。測試不讀線上 cards.data，改讀這份；同時把瀏覽器的時鐘固定在 ' +
+      'frozenDate，否則凍結資料裡的活動會隨真實日期一天天到期、結果照樣漂移。重拍時機見 docs/ops/regression.md。',
+  };
+  fs.writeFileSync(FIXTURE_META, JSON.stringify(meta, null, 2) + '\n');
+  console.log(`✅ 凍結資料已更新：cards.version=${liveVersion}，凍結日期=${frozenDate}`);
+  console.log('⚠️ 接著必須跑 node tools/regression/run-regression.js --update-baseline 重拍基準');
+  return 0;
+}
+
+if (process.argv.includes('--update-fixture')) {
+  process.exit(updateFixture());
+}
+
+run({
+  updateBaseline: process.argv.includes('--update-baseline'),
+  useLive: process.argv.includes('--live'),
+})
   .then(code => process.exit(code))
   .catch(e => { console.error('❌ 測試框架本身出錯（非回歸差異）：', e.message); process.exit(2); });

@@ -9482,3 +9482,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         gap: 8px;
     }
 }
+
+/* 匹配狀態列的第二行警示（綠色 ✓ 那行之下）：紅色沿用 .no-match 的色票 */
+.matched-item-warn {
+    color: #dc2626;
+}

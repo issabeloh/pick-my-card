@@ -1,0 +1,6 @@
+{
+  "cardsVersion": "20260910-175104",
+  "frozenDate": "2026-09-11T12:00:00+08:00",
+  "capturedAt": "2026-09-11T03:37:25Z",
+  "note": "回歸測試專用的凍結資料。測試不讀線上 cards.data，改讀這份；同時把瀏覽器的時鐘固定在 frozenDate，否則凍結資料裡的活動會隨真實日期一天天到期、結果照樣漂移。重拍時機見 docs/ops/regression.md。"
+}
