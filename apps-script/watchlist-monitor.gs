@@ -99,7 +99,17 @@ const MONITOR_CONFIG = {
   resumeAfterMinutes: 2,
   // 同一輪最多接力幾段（防呆）：若有某一列每次都把執行撞爆，游標會永遠卡在那裡無限接力，
   // 把每日 90 分鐘的觸發器額度燒光。達到上限就停手並寄信說明，等下次排程觸發器。
-  maxResumeChunks: 8
+  maxResumeChunks: 8,
+
+  // 單次執行最多實際抓幾列（0 = 不限，只靠上面的看錶煞車）。
+  // ⚠️ 這跟 maxRunSeconds 是**兩種不同的停法**，差別在「剩下的什麼時候跑」：
+  //   ・maxRunSeconds（被動煞車，快撞到 6 分鐘）→ 兩分鐘後自動接力，因為不接的話
+  //     清單後半段要等下一次排程觸發器，等於整整一週沒監控
+  //   ・maxRowsPerRun（主動節流，站長刻意要分次跑）→ **不自動接力**，剩下的留給
+  //     下一次排程觸發器。想「一週分兩天跑」就是用這個：觸發器改成每週兩次，
+  //     這裡填大約清單的一半，第一天跑前半、第二天接著跑後半，游標會自己記住進度
+  // 兩者同時生效，先到哪個算哪個（列數先到＝主動節流，時間先到＝被動煞車）。
+  maxRowsPerRun: 0
 };
 
 /************** 分段執行用的指令碼屬性 key **************/
@@ -109,9 +119,17 @@ const WATCHLIST_CURSOR_AT_KEY = 'WATCHLIST_RESUME_AT';    // 游標寫下的時�
 const WATCHLIST_CHUNK_KEY = 'WATCHLIST_RESUME_CHUNK';     // 這一輪已經跑到第幾段
 const WATCHLIST_WRITES_KEY = 'WATCHLIST_ROUND_WRITES';    // 這一輪累計寫進分頁幾列（決定要不要畫分隔線）
 const WATCHLIST_TRIGGER_KEY = 'WATCHLIST_RESUME_TRIGGER'; // 接力觸發器的 uniqueId
-// 游標多久算過期（分鐘）。排程觸發器（每週）一叫醒就該從頭跑，不能撿上週沒跑完的游標，
-// 否則清單前半段會被整段跳過。接力是分鐘級的，60 分鐘的窗夠寬也夠安全。
+const WATCHLIST_MODE_KEY = 'WATCHLIST_RESUME_MODE';       // 上一段為什麼停：'clock'（看錶煞車）或 'cap'（列數節流）
+const WATCHLIST_CLOCK_CHUNK_KEY = 'WATCHLIST_CLOCK_CHUNKS'; // 連續幾段是被看錶煞車停的（只有這個算進 maxResumeChunks）
+
+// 游標多久算過期。⚠️ 兩種停法的有效期完全不同，混用會出事：
+//   ・'clock'（兩分鐘後自動接力）→ 60 分鐘。排程觸發器（每週）叫醒時若還撿著上一輪的
+//     舊游標，清單前半段會被**整段靜悄悄跳過**，那比超時失敗更糟，所以窗要收緊。
+//   ・'cap'（刻意留給下次排程觸發器）→ 10 天。這個游標本來就是要跨天存活的，
+//     用 60 分鐘的窗會讓它在下次觸發器來之前就過期，「分兩天跑」直接失效變成每次都跑前半段。
+//     10 天＝比「每週一次」的間隔多一點餘裕，又短到不會讓停用兩週後的游標復活。
 const WATCHLIST_CURSOR_TTL_MINUTES = 60;
+const WATCHLIST_CAP_CURSOR_TTL_MINUTES = 10 * 24 * 60;
 
 /************** 「2-變動通知」欄位順序（2026-08-15 改版） **************/
 // 站長每天要動的欄（狀態／公開摘要／公開卡片／公開）以前排在「變動段落／舊文字／新文字」
@@ -198,8 +216,9 @@ function checkWatchlist() {
   const startIndex = readResumeCursor_(props, data.length);
   const chunkNo = startIndex > 1 ? (Number(props.getProperty(WATCHLIST_CHUNK_KEY)) || 1) + 1 : 1;
   const startedAt = Date.now();
-  let stoppedByClock = false;   // true ＝時間到、還有列沒跑，要排接力
-  let remaining = 0;            // 這一段沒跑到的列數（只用於信件說明）
+  let stopReason = '';   // ''＝跑完；'clock'＝看錶煞車（要自動接力）；'cap'＝列數節流（留給下次排程）
+  let remaining = 0;     // 這一段沒跑到的列數（只用於信件說明）
+  let processed = 0;     // 這一段真的抓了幾列（不含 check_days／active=FALSE 跳過的）
 
   for (let i = startIndex; i < data.length; i++) {
     const row = data[i];
@@ -220,11 +239,18 @@ function checkWatchlist() {
       }
     }
 
-    // 看錶煞車：這一列會發網路請求（Jina 渲染可能 30~60 秒）又可能呼叫 Gemini，
-    // 真的開下去就收不回來了，所以「開跑前」判斷，而不是事後補救。
+    // 兩道煞車，都必須在「這一列真的開跑之前」判斷——這一列會發網路請求
+    // （Jina 渲染可能 30~60 秒）又可能呼叫 Gemini，真的開下去就收不回來了。
     // 刻意放在 check_days 那些零成本的跳過之後——被跳過的列不花時間，不該讓它們提早觸發煞車。
-    if ((Date.now() - startedAt) / 1000 > MONITOR_CONFIG.maxRunSeconds) {
-      stoppedByClock = true;
+    //   ① 列數節流（maxRowsPerRun）：站長刻意要分次跑，剩下的留給下次排程觸發器
+    //   ② 看錶煞車（maxRunSeconds）：快撞到 6 分鐘上限，剩下的兩分鐘後自動接力
+    // 先判列數：兩個都成立時，「是我叫它停的」比「差點撞牆」更貼近事實，接力策略也不同。
+    if (MONITOR_CONFIG.maxRowsPerRun && processed >= MONITOR_CONFIG.maxRowsPerRun) {
+      stopReason = 'cap';
+    } else if ((Date.now() - startedAt) / 1000 > MONITOR_CONFIG.maxRunSeconds) {
+      stopReason = 'clock';
+    }
+    if (stopReason) {
       // remaining 是上限值（含空白列與 active=FALSE 的列），只用來在信裡給個量感
       remaining = data.length - i;
       // 游標一定要在這裡再寫一次指向 i。下面那個「逐列寫」寫的是**正在跑的那一列**，
@@ -234,6 +260,7 @@ function checkWatchlist() {
       props.setProperty(WATCHLIST_CURSOR_AT_KEY, String(Date.now()));
       break;
     }
+    processed++;
     // 游標逐列更新（不是只在 break 時寫一次）：萬一某列離譜地慢、把 6 分鐘硬撞爆，
     // 執行會被直接砍掉、下面的收尾一行都不會跑，這時就只剩這個游標知道跑到哪裡了。
     // 一次 setProperty 約數十毫秒，相對於一列的網路往返可以忽略。
@@ -376,11 +403,19 @@ function checkWatchlist() {
   const roundWrites = (Number(props.getProperty(WATCHLIST_WRITES_KEY)) || 0) + inboxWrites;
 
   let resume = null;
-  if (stoppedByClock) {
-    // 還有列沒跑：把進度存好，排一個一次性觸發器接著跑（游標已在迴圈裡逐列寫過了）
+  if (stopReason) {
+    // 還有列沒跑：把進度存好（游標已在迴圈裡寫過了），再依停止原因決定剩下的什麼時候跑
     props.setProperty(WATCHLIST_CHUNK_KEY, String(chunkNo));
     props.setProperty(WATCHLIST_WRITES_KEY, String(roundWrites));
-    resume = scheduleWatchlistResume_(props, chunkNo, remaining);
+    props.setProperty(WATCHLIST_MODE_KEY, stopReason);
+    if (stopReason === 'cap') {
+      // 主動節流：**不排接力**，剩下的留給下一次排程觸發器（這才是「一週分兩天跑」）。
+      // 連續看錶段數歸零——這一段是照設定正常收工的，不該算進無限接力的防呆計數。
+      props.deleteProperty(WATCHLIST_CLOCK_CHUNK_KEY);
+      resume = { mode: 'cap', chunk: chunkNo, remaining: remaining, rows: processed };
+    } else {
+      resume = scheduleWatchlistResume_(props, chunkNo, remaining, processed);
+    }
   } else {
     // 整份清單跑完了：畫分隔線、清掉所有分段狀態，下次排程觸發器就是乾淨的從頭跑
     if (roundWrites && MONITOR_CONFIG.drawRoundSeparator) markInboxRoundEnd_(ss);
@@ -407,34 +442,43 @@ function readResumeCursor_(props, dataLength) {
   if (!raw || raw < 1 || raw >= dataLength) return 1;
   const at = Number(props.getProperty(WATCHLIST_CURSOR_AT_KEY));
   if (!at) return 1;
-  const ageMinutes = (Date.now() - at) / 60000;
-  if (ageMinutes > WATCHLIST_CURSOR_TTL_MINUTES) return 1;   // 太舊＝不是接力，是新的一輪
+  // 有效期看上一段是怎麼停的：看錶煞車是分鐘級的接力（60 分鐘），
+  // 列數節流本來就是要跨天等下次排程觸發器（10 天）。詳見常數上方的註解。
+  const ttl = props.getProperty(WATCHLIST_MODE_KEY) === 'cap'
+    ? WATCHLIST_CAP_CURSOR_TTL_MINUTES
+    : WATCHLIST_CURSOR_TTL_MINUTES;
+  if ((Date.now() - at) / 60000 > ttl) return 1;   // 太舊＝不是接續，是新的一輪
   return raw;
 }
 
 // 排一個「N 分鐘後跑一次 checkWatchlist」的一次性觸發器，並把 uniqueId 存起來給下一段清除。
 // 回傳給 sendDigest_ 用的說明物件；達到段數上限或設定關閉時回傳 stopped 說明（不排接力）。
-function scheduleWatchlistResume_(props, chunkNo, remaining) {
+function scheduleWatchlistResume_(props, chunkNo, remaining, rows) {
+  const base = { mode: 'clock', remaining: remaining, chunk: chunkNo, rows: rows };
   if (!MONITOR_CONFIG.resumeAfterMinutes) {
-    return { remaining: remaining, chunk: chunkNo, stopped: '自動接續已關閉（resumeAfterMinutes = 0）' };
+    base.stopped = '自動接續已關閉（resumeAfterMinutes = 0），剩下的要人工再 Run 一次';
+    return base;
   }
-  if (chunkNo >= MONITOR_CONFIG.maxResumeChunks) {
+  // 只有「被看錶煞車停的」才算進防呆計數——列數節流是照設定正常收工，不該把額度算到它頭上
+  const clockChunks = (Number(props.getProperty(WATCHLIST_CLOCK_CHUNK_KEY)) || 0) + 1;
+  props.setProperty(WATCHLIST_CLOCK_CHUNK_KEY, String(clockChunks));
+  if (clockChunks >= MONITOR_CONFIG.maxResumeChunks) {
     // 防無限接力：正常清單不該需要這麼多段，走到這裡通常代表有一列每次都把執行撞爆。
     // 停手並把狀態清乾淨，下次排程觸發器從頭開始，不要讓它繼續燒每日 90 分鐘的額度。
     clearResumeState_(props);
-    return {
-      remaining: remaining, chunk: chunkNo,
-      stopped: '已達單輪 ' + MONITOR_CONFIG.maxResumeChunks + ' 段上限，停止自動接續。' +
-               '請檢查是不是有某一列特別慢（Jina 渲染逾時的頁最常見），' +
-               '或把該列的 check_days 調大／active 改 FALSE'
-    };
+    base.stopped = '已連續 ' + MONITOR_CONFIG.maxResumeChunks + ' 段被 6 分鐘上限煞車，停止自動接續。' +
+                   '請檢查是不是有某一列特別慢（Jina 渲染逾時的頁最常見），' +
+                   '或把該列的 check_days 調大／active 改 FALSE；' +
+                   '也可以設 MONITOR_CONFIG.maxRowsPerRun 改成分次跑';
+    return base;
   }
   const trigger = ScriptApp.newTrigger('checkWatchlist')
     .timeBased()
     .after(MONITOR_CONFIG.resumeAfterMinutes * 60 * 1000)
     .create();
   props.setProperty(WATCHLIST_TRIGGER_KEY, trigger.getUniqueId());
-  return { remaining: remaining, chunk: chunkNo, minutes: MONITOR_CONFIG.resumeAfterMinutes };
+  base.minutes = MONITOR_CONFIG.resumeAfterMinutes;
+  return base;
 }
 
 // 刪掉存下來的那一個接力觸發器。⚠️ 只認 uniqueId，不做任何模糊比對——理由見 checkWatchlist 開頭。
@@ -454,6 +498,8 @@ function clearResumeState_(props) {
   props.deleteProperty(WATCHLIST_CURSOR_AT_KEY);
   props.deleteProperty(WATCHLIST_CHUNK_KEY);
   props.deleteProperty(WATCHLIST_WRITES_KEY);
+  props.deleteProperty(WATCHLIST_MODE_KEY);
+  props.deleteProperty(WATCHLIST_CLOCK_CHUNK_KEY);
 }
 
 // 多行字串的第一行（去頭尾空白）。摘要的第一行是刻意設計成「能獨立成句的重點」，
@@ -1126,11 +1172,16 @@ function sendDigest_(alerts, errors, rebaselined, skipped, resume) {
 
   // 分段執行說明擺最前面：這封信只涵蓋這一段跑到的列，不講清楚會讓人以為整份清單只有這些變動
   if (resume) {
-    body += '⏱ 本輪清單沒有一次跑完（單次執行 6 分鐘上限），這封信只涵蓋第 ' + resume.chunk + ' 段。\n' +
-            '   還有 ' + resume.remaining + ' 列未檢查；' +
-            (resume.stopped
-              ? '⚠ ' + resume.stopped + '\n'
-              : '約 ' + resume.minutes + ' 分鐘後會自動接續，跑完會再寄一封。\n') +
+    const why = resume.mode === 'cap'
+      ? '本次到達單次上限 ' + MONITOR_CONFIG.maxRowsPerRun + ' 列（MONITOR_CONFIG.maxRowsPerRun，刻意分次跑）'
+      : '本輪清單一次跑不完（快撞到單次執行 6 分鐘上限）';
+    const next = resume.stopped
+      ? '⚠ ' + resume.stopped
+      : (resume.mode === 'cap'
+          ? '剩下的會在**下一次排程觸發器**接著跑，不用做任何事（進度已記住，不會從頭來）。'
+          : '約 ' + resume.minutes + ' 分鐘後會自動接續，跑完會再寄一封。');
+    body += '⏱ ' + why + '，這封信只涵蓋第 ' + resume.chunk + ' 段（實抓 ' + resume.rows + ' 列）。\n' +
+            '   還有最多 ' + resume.remaining + ' 列未檢查；' + next + '\n' +
             '   （已跑過的列都已即時寫入快照與「' + MONITOR_CONFIG.inboxSheet + '」，不會重複檢查）\n\n';
   }
 
