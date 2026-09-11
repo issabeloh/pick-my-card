@@ -579,7 +579,9 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
 // 尚未開始、或算出來是 0 的卡也會被算進去，等於叫用戶去加一張同樣沒用的卡。
 // N 為 0 時（例如只靠 couponCashbacks 匹配到，或所有活動都算不出回饋）換一句話講，
 // 不要顯示「有 0 張卡有」。
-async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000, couponCount = 0) {
+// 只在「匹配成功、但你選的卡連一筆活動都算不出來，而且也沒有領券」時使用——
+// 有領券的情況在呼叫端（calculateCashback 的 couponOnly）就先接走了，不會走到這裡。
+async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000) {
     const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
     const names = [...new Set(list.map(m => (m && m.originalItem) || '').filter(Boolean))];
     const displayName = names.join('、');
@@ -589,16 +591,9 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
     // 兩行分工：第一行只講「詞認得」（綠色，跟打字時同一句，不推翻它）；
     // 第二行才講「你的設定下沒有結果」（紅色）。合成一句會變成「✓ 開頭、否定結尾」，
     // 要讀完整句才懂——那正是 2026-09-11 用戶回報的困惑點。
-    let warn;
-    if (outsideCount > 0) {
-        warn = `✘ 你的選項中沒有符合的活動，試看看修改信用卡選項！（其他卡片中有 ${outsideCount} 張卡符合）`;
-    } else if (couponCount > 0) {
-        // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個這種），領券結果在下方另一區塊，
-        // 說「沒有活動」會與畫面矛盾——要指出領券那一區
-        warn = `✘ 沒有卡片有這個商家的一般活動（下方有 ${couponCount} 筆領券優惠）`;
-    } else {
-        warn = '✘ 目前沒有卡片有這個商家的活動';
-    }
+    const warn = outsideCount > 0
+        ? `✘ 你的選項中沒有符合的活動，試看看修改信用卡選項！（其他卡片中有 ${outsideCount} 張卡符合）`
+        : '✘ 目前沒有卡片有這個商家的活動';
 
     let messageHtml = `✓ 匹配到 <strong>${escapeHtml(displayName)}</strong>`;
     messageHtml += `<br><span class="matched-item-warn">${warn}</span>`;

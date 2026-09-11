@@ -239,12 +239,12 @@ async function calculateCashback() {
         // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個）：一般活動是 0 筆，但下方
         // 確實列出了領券優惠。這種情況說「沒有活動」會與畫面矛盾——它有結果，只是型別不同。
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
-            `有 ${couponCount} 筆領券優惠符合你的選項`);
+            `有 ${couponCount} 筆領券型活動符合你的選項`);
     } else if (currentMatchedItem && !isBasicCashback) {
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
             `有 ${results.length} 筆活動符合你的選項`);
     } else if (currentMatchedItem && matchedButNoActivity) {
-        await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount, couponCount);
+        await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount);
     } else if (merchantValue.length > 0) {
         showNoMatchMessage(merchantValue, cardsToCompare);
     }
