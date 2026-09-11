@@ -157,9 +157,11 @@ async function calculateCashback() {
 
         console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
-        // Show no-match message and basic rates when no special rates found
+        // 走到這裡代表**匹配成功**（currentMatchedItem 有值），只是算不出任何結果——
+        // 最常見的原因是有這個活動的卡不在「加入比較的卡片」裡。這時候不能用
+        // showNoMatchMessage()：那句「✘ 沒有匹配到」會被讀成搜尋失敗（2026-09-11 用戶回報）。
         if (results.length === 0 && merchantValue.length > 0) {
-            showNoMatchMessage(merchantValue, cardsToCompare);
+            await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount);
             // Show basic cashback for selected cards when no special rates found
             isBasicCashback = true;
 

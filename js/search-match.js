@@ -6,6 +6,7 @@
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
+ *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
@@ -555,6 +556,79 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     matchedItemDiv.style.display = 'block';
     // 匹配狀態列一次只顯示一行：✘/部分匹配訊息出現時收起精準搜尋的橙色提示
     toggleExactSearchEmptyHint(false);
+}
+
+// 「匹配到了，但你加入比較的卡片裡沒有這個活動」（2026-09-11 新增）
+//
+// 修的是一個會讓人以為搜尋壞掉的訊息：打字時的提示掃**全部卡片**，按下計算卻只算
+// **加入比較的卡片**。於是「樂天KOBO 只有台新 Richart 有、而用戶沒把那張卡加入比較」
+// 這種情況，畫面會先顯示「✓ 匹配到: 樂天KOBO」，按下計算後被 showNoMatchMessage()
+// 改寫成「✘ 沒有匹配到『樂天kobo』的商家」——但匹配根本沒失敗，只是被卡片篩選擋掉。
+// 用戶（與站長）都會把它讀成搜尋壞了。
+//
+// 「其他卡片中有 N 張」只認**真的算得出回饋**的卡：先用 _itemsIndex 挑候選（O(1) 查表，
+// 不掃全卡），再對候選實際算一次，取 cashbackAmount > 0 的。不這樣做的話，活動已結束、
+// 尚未開始、或算出來是 0 的卡也會被算進去，等於叫用戶去加一張同樣沒用的卡。
+// N 為 0 時（例如只靠 couponCashbacks 匹配到，或所有活動都算不出回饋）換一句話講，
+// 不要顯示「有 0 張卡有」。
+async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000) {
+    const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
+    const names = [...new Set(list.map(m => (m && m.originalItem) || '').filter(Boolean))];
+    const displayName = names.join('、');
+
+    const outsideCount = await countCardsWithActivityOutside(names, cardsToCheck, amount);
+
+    let messageHtml = `✓ 匹配到 <strong>${escapeHtml(displayName)}</strong>，`;
+    messageHtml += outsideCount > 0
+        ? `但你加入比較的卡片中沒有此商家的活動（其他卡片中有 ${outsideCount} 張卡有）`
+        : '但目前沒有卡片有這個商家的進行中活動';
+
+    // 停車折抵與一般活動是兩套資料，這裡沒活動不代表停車也沒有——沿用 showNoMatchMessage 的附加
+    if (cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
+        const merchantLower = displayName.toLowerCase().trim();
+        const matchingBenefits = cardsData.benefits.filter(benefit => {
+            if (!benefit.active) return false;
+            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+            if (!shouldShow) return false;
+            if (benefit.merchants && Array.isArray(benefit.merchants)) {
+                return benefit.merchants.some(merchant => {
+                    const merchantItemLower = merchant.toLowerCase();
+                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
+                });
+            }
+            return false;
+        });
+        if (matchingBenefits.length > 0) {
+            messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
+        }
+    }
+
+    matchedItemDiv.innerHTML = messageHtml;
+    // partial-match：匹配成功但這次給不出結果，視覺上要跟「完全沒匹配到」(no-match) 分得開
+    matchedItemDiv.className = 'matched-item partial-match';
+    matchedItemDiv.style.display = 'block';
+    toggleExactSearchEmptyHint(false);
+}
+
+// 比較清單「以外」、真的算得出回饋的卡有幾張（理由見 showMatchedButNoActivityMessage）
+async function countCardsWithActivityOutside(itemNames, cardsToCheck, amount) {
+    if (!cardsData || !Array.isArray(cardsData.cards)) return 0;
+    const inSet = new Set((cardsToCheck || []).map(c => c.id));
+    const names = itemNames.map(n => n.toLowerCase()).filter(Boolean);
+    if (names.length === 0) return 0;
+
+    // _itemsIndex 是載入時建好的 Map（已濾掉過期活動），用它挑候選避免掃全卡
+    const candidates = cardsData.cards.filter(card =>
+        !inSet.has(card.id) && card._itemsIndex && names.some(n => card._itemsIndex.has(n)));
+
+    let count = 0;
+    for (const card of candidates) {
+        for (const name of names) {
+            const rs = await calculateCardCashback(card, name, amount);
+            if (rs && rs.some(r => r.cashbackAmount > 0)) { count++; break; }
+        }
+    }
+    return count;
 }
 
 // Hide matched item
