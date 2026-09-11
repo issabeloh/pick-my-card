@@ -1,8 +1,10 @@
 {
   "meta": {
-    "generatedAt": "2026-09-10T10:11:08.540Z",
-    "cardsVersion": "20260910-140838",
-    "note": "基準綁定 cards.version；活動期限日期敏感——cards.data 更新或活動到期造成的差異屬預期，確認後重拍基準"
+    "generatedAt": "2026-09-11T03:39:06.197Z",
+    "fixtureVersion": "20260910-175104",
+    "frozenDate": "2026-09-11T12:00:00+08:00",
+    "liveCardsVersion": "20260910-175104",
+    "note": "基準綁定「凍結資料版本 ＋ 凍結日期」（tools/regression/fixture.json），不是線上 cards.version。資料與時鐘都凍住，所以差異＝程式行為真的變了；重拍凍結資料的時機見 docs/ops/regression.md"
   },
   "checks": [
     {
