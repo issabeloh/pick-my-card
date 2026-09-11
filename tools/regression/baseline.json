@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-09-11T03:39:06.197Z",
+    "generatedAt": "2026-09-11T07:09:30.200Z",
     "fixtureVersion": "20260910-175104",
     "frozenDate": "2026-09-11T12:00:00+08:00",
     "liveCardsVersion": "20260910-175104",
@@ -1616,6 +1616,27 @@
       ],
       "parking": [],
       "coupons": [],
+      "consoleErrors": []
+    },
+    {
+      "id": 13,
+      "type": "search",
+      "query": "Youbike 2.0",
+      "guards": "只有領券型活動：活動結果必須是 0 筆（不列基本回饋）＋領券 1 筆（玉山 Uni Card 的券，檔期至 2026/9/30，到期要換一張只存在於 couponCashbacks 的活商家）",
+      "amount": "30000",
+      "results": [],
+      "parking": [],
+      "coupons": [
+        {
+          "card": "玉山 Uni 卡",
+          "fields": {
+            "回饋率": "4%",
+            "回饋金額": "NT$600",
+            "回饋消費上限": "NT$10,000"
+          },
+          "matched": "條件: 需領券；當月消費滿3筆享加碼3%；限使用實體卡貨Apple Pay、Google Pay、Samsung Pay支付 匹配項目: Youbike 2.0 活動期間: 2026/7/1~2026/9/30"
+        }
+      ],
       "consoleErrors": []
     }
   ]

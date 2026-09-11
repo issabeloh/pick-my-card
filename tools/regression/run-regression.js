@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 自動化回歸測試：把 docs/ops/regression.md 的 12 組檢查跑成機器比對。
+ * 自動化回歸測試：把 docs/ops/regression.md 的檢查清單跑成機器比對（組數以 CHECKS 陣列為準）。
  *
  * 用法（repo 根目錄，需先 npm install playwright；瀏覽器用預裝的 /opt/pw-browsers/chromium，
  * 沒有預裝時退回 playwright 自帶的 chromium——本機要先 npx playwright install chromium）：
@@ -47,6 +47,8 @@ const CHECKS = [
   { id: 10, type: 'search', query: 'Hotels.com',    guards: 'coupon 搜尋 + 領券溢出用 basicCashback（CUBE 領券，檔期至 2026/12/31，到期要換活的）' },
   { id: 11, type: 'quick',  displayName: '所有加油站', guards: 'handleQuickSearch 多關鍵詞路徑' },
   { id: 12, type: 'search', query: 'zzz測試',       guards: '無匹配 fallback 不噴錯' },
+  { id: 13, type: 'search', query: 'Youbike 2.0',  guards: '只有領券型活動：活動結果必須是 0 筆（不列基本回饋）＋領券 1 筆'
+    + '（玉山 Uni Card 的券，檔期至 2026/9/30，到期要換一張只存在於 couponCashbacks 的活商家）' },
 ];
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
@@ -303,13 +305,13 @@ async function run(opts) {
 
   if (useLive) {
     const errs = out.checks.reduce((n, c) => n + c.consoleErrors.length, 0);
-    console.log(`✅ --live 跑完 12 組（線上 cards.version=${meta.liveCardsVersion}）：console error ${errs} 條。` +
+    console.log(`✅ --live 跑完 ${CHECKS.length} 組（線上 cards.version=${meta.liveCardsVersion}）：console error ${errs} 條。` +
       `\n   這是資料驗證，不與基準比對——結果見 ${path.relative(REPO, lastRunFile)}`);
     return errs > 0 ? 1 : 0;
   }
   if (updateBaseline) {
     fs.writeFileSync(baselineFile, JSON.stringify(out, null, 2));
-    console.log(`✅ 基準已更新：${path.relative(REPO, baselineFile)}（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}，12 組全跑完）`);
+    console.log(`✅ 基準已更新：${path.relative(REPO, baselineFile)}（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}，${CHECKS.length} 組全跑完）`);
     return 0;
   }
   if (!fs.existsSync(baselineFile)) {
@@ -347,10 +349,10 @@ async function run(opts) {
     }
   }
   if (failed) {
-    console.error(`\n❌ 回歸未通過：${failed}/12 組有差異。完整結果見 tools/regression/last-run.json`);
+    console.error(`\n❌ 回歸未通過：${failed}/${CHECKS.length} 組有差異。完整結果見 tools/regression/last-run.json`);
     return 1;
   }
-  console.log(`✅ 回歸通過：12 組結果與基準逐字一致（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}）`);
+  console.log(`✅ 回歸通過：${CHECKS.length} 組結果與基準逐字一致（凍結資料 ${meta.fixtureVersion}／凍結日期 ${meta.frozenDate}）`);
   return 0;
 }
 
