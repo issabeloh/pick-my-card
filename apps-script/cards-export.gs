@@ -908,7 +908,9 @@ if (faqSheet) {
   const merchantPages = readMerchantPages();
 
   // 側欄膠囊的銀行品牌色（BankColors 工作表）。前端只拿色碼，底色/文字色即時算。
-  const bankColors = readBankColors();
+  const bankColorTables = readBankColors();
+  const bankColors = bankColorTables.colors;
+  const bankAccentColors = bankColorTables.accents;
 
   const homeUpdatedIso = pmcStampedDate_('HOME', pmcHashString_(pmcStableStringify_({
     cards: cards,
@@ -926,7 +928,8 @@ if (faqSheet) {
     cardApplyCtas: cardApplyCtas,
     spotlights: spotlights,
     merchantPages: merchantPages,
-    bankColors: bankColors
+    bankColors: bankColors,
+    bankAccentColors: bankAccentColors
   })));
 
   // 靜態生成新戶活動一覽頁（純函數，見下方「promos.html 靜態生成」一節），
@@ -956,7 +959,8 @@ if (faqSheet) {
   cardApplyCtas: cardApplyCtas,
   spotlights: spotlights,
   merchantPages: merchantPages,
-  bankColors: bankColors
+  bankColors: bankColors,
+  bankAccentColors: bankAccentColors
   }, null, 2);
 
 
@@ -1309,18 +1313,19 @@ function readBankColors() {
   const sheet = ss.getSheetByName('BankColors');
   if (!sheet) {
     Logger.log('ℹ️ 找不到「BankColors」工作表，本次不匯出銀行品牌色（膠囊會全部退回中性灰）');
-    return {};
+    return { colors: {}, accents: {} };
   }
 
   const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return {};
+  if (data.length < 2) return { colors: {}, accents: {} };
   const headers = data[0].map(h => String(h).trim());
   if (headers.indexOf('bank') < 0 || headers.indexOf('color') < 0) {
     Logger.log('⚠️ 「BankColors」第一列找不到 bank 或 color 欄，整張表略過');
-    return {};
+    return { colors: {}, accents: {} };
   }
 
   const out = {};
+  const accents = {};
   let skipped = 0;
   for (let i = 1; i < data.length; i++) {
     const bank = String(getValue(data[i], headers, 'bank') || '').trim();
@@ -1336,10 +1341,19 @@ function readBankColors() {
       continue;
     }
     out[bank] = color;
+
+    // accent（副色）＝膠囊左緣色帶的下半段，2026-09-09 新增。整欄是選填的：
+    // 沒這一欄、或某家沒填 → 前端畫成上下同色的單色帶，不會壞掉。
+    // ⚠️ 格式錯的 accent 只丟掉那一格，主色照常匯出——副色是加分項，不該把整家拖下水。
+    const accent = String(getValue(data[i], headers, 'accent') || '').trim();
+    if (accent) {
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(accent)) accents[bank] = accent;
+      else { skipped++; Logger.log(`⚠️ 「BankColors」列 ${i + 1}（${bank}）副色格式不對：${accent}`); }
+    }
   }
 
-  Logger.log(`✅ 讀取銀行品牌色：${Object.keys(out).length} 家${skipped ? `（${skipped} 列色碼格式錯誤已略過）` : ''}`);
-  return out;
+  Logger.log(`✅ 讀取銀行品牌色：${Object.keys(out).length} 家（其中 ${Object.keys(accents).length} 家有副色）${skipped ? `（${skipped} 格色碼格式錯誤已略過）` : ''}`);
+  return { colors: out, accents: accents };
 }
 
 // ========== 讀取「變動紀錄」資料（詳情頁「近期異動」，2026-07-31 新增） ==========

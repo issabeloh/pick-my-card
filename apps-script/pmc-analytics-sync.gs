@@ -422,8 +422,6 @@ function getOrCreateSheet(name) {
 //   clarityMessage：Clarity 同步狀態；results：各步驟成敗；historyMessage：歷史快照結果；
 //   monthlyMessage：GA4_每月新舊用戶 有沒有補列（補了一列時這是唯一的通知管道，
 //                   因為那張表的「備註」欄要人工回去填，沒看到訊息就不會有人去填）
-//   uncoveredMessage：未覆蓋商家追蹤 本次新增／標記待確認了幾個詞（同理：新詞要有人去看、
-//                   標成「待確認」的列要有人回頭查證，不寫在這裡就沒有人會知道表變了）
 // 開頭用 ✅／⚠️ 標整體狀態（失敗的步驟連錯誤訊息一起寫出來，不用去翻執行紀錄），
 // 後面接本次兩個滾動視窗的實際日期——事後追「這份數字是哪幾天的」有據可查。
 function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessage, uncoveredMessage) {
@@ -1885,14 +1883,14 @@ function fetchMonthlyUserStats_(monthStart) {
 }
 
 // ============================================================================
-// 未覆蓋商家追蹤（2026/09/08 新增）
+// 未覆蓋商家追蹤（2026/09/08 新增；2026/09/11 改掉「最近出現日」的語義）
 // ----------------------------------------------------------------------------
 // 補的盲區：`GA4_搜尋落空` 是**滾動 30 天覆寫表**，它只回答「現在還有誰在問我們答不出來的
 // 東西」。答不出來的是另外三件事：這個詞**什麼時候第一次出現**、我們**什麼時候補好的**、
 // 補完之後**是不是真的沒人再問了**。那些問題要有跨執行的持久記錄才答得出來，而覆寫表天生
 // 沒有——今天的數字每天早上都被蓋掉一次。
 // 這張表就是那份記錄：每次執行拿 `updateGA4MerchantSearches()` **已經抓回來的同一份資料**
-// （不多打一次 API）做 upsert——新詞 append、既有詞只更新日期與次數欄，**永不重建整表**。
+// 做 upsert——新詞 append、既有詞只更新日期與次數欄，**永不重建整表**。
 //
 // ⚠️⚠️ 全段最容易寫錯、錯了也看不出來的一件事：**未對到次數是「覆寫」不是「累加」**。
 //   來源視窗是滾動 30 天，今天與昨天的區間有 29 天重疊，同一批事件會被連續約 30 次執行
@@ -1900,6 +1898,14 @@ function fetchMonthlyUserStats_(monthStart) {
 //   但完全是假的，而且因為它「只是偏大」不會 throw、不會有人發現。
 //   「最近視窗未對到次數」永遠 ＝ 本次執行看到的值；要看歷史嚴重度看「歷史最高未對到次數」
 //   （取 max，同樣不是加總）。
+//
+// ⚠️ 2026/09/11 修正——「最近出現日」原本寫的是**程式執行日**（`today`）：
+//   條件是「這個詞在本次視窗裡還有落空」就蓋上今天。可是來源視窗滾動 30 天，只要視窗裡還
+//   留著一筆舊落空，這個日期就**每天被刷成今天**，看起來像「今天還有人落空」，但事件最晚
+//   只到視窗結束日（昨天）。站長因此誤判「昨天才修好的匹配 bug 今天又復發」。
+//   現在改成寫 **GA4 事件日期**（該詞最後一次落空實際發生的那天），由 uncoveredLastMissDates_()
+//   另外查一次拿到——`updateGA4MerchantSearches()` 的查詢沒有 date 維度，拿不到這個資訊。
+//   「首次出現日」維持原本語義（＝這個詞第一次被本表記錄下來的執行日），刻意不改。
 //
 // 三個安全性質（跟 `GA4_每月新舊用戶` 同一類：**會被人手動編輯的表**，寫法刻意與覆寫式
 // 報表不同，改動前先讀完這段）：
@@ -1949,10 +1955,90 @@ const UNCOVERED_SOURCE_COLS = {
 // 送出試算時輸入框是空的，GA4 會回這幾個字串——那是「空框按了試算」，不是覆蓋缺口，要跳過
 const UNCOVERED_SKIP_TERMS = { '(not set)': true, '(not provided)': true, '(other)': true };
 
+// merchant × date，一個詞一天一列。多數詞只在少數幾天落空，實際遠小於上限。
+const UNCOVERED_MISS_DATE_ROW_LIMIT = 10000;
+
+// ---------- 每個詞「最後一次落空」是哪一天（2026/09/11 新增）----------
+// 為什麼要多打一次 GA4：updateGA4MerchantSearches() 的查詢只有
+// customEvent:merchant × customEvent:has_match 兩個維度、**沒有 date**，
+// 所以它回傳的資料裡根本不存在「這筆落空發生在哪一天」。
+//
+// 刻意不改 updateGA4MerchantSearches() 加上 date 維度：那支的回傳同時餵給
+// GA4_熱門搜尋、GA4_搜尋落空 與週歷史快照三處，加維度會讓列數乘上天數、
+// 撞上 GA4_SEARCH_ROW_LIMIT 而把熱門搜尋表截斷。獨立一支互不影響。
+//
+// 成本：每天多 1 次 runReport（伺服器端已過濾成只有 has_match=false，回傳量遠小於熱門搜尋那支）。
+function uncoveredLastMissDates_() {
+  const win = ga4Window_();
+
+  const dMerchant = AnalyticsData.newDimension(); dMerchant.name = 'customEvent:merchant';
+  const dDate     = AnalyticsData.newDimension(); dDate.name     = 'date';
+
+  const mCount = AnalyticsData.newMetric(); mCount.name = 'eventCount';
+
+  const dateRange = AnalyticsData.newDateRange();
+  dateRange.startDate = win.startSpec;
+  dateRange.endDate = win.endSpec;
+
+  // has_match = 'false'（大小寫不敏感：前端送的是布林值，GA4 轉成字串時的大小寫不該是本表的假設）
+  const missString = AnalyticsData.newStringFilter();
+  missString.matchType = 'EXACT';
+  missString.value = 'false';
+  missString.caseSensitive = false;
+  const missFilter = AnalyticsData.newFilter();
+  missFilter.fieldName = 'customEvent:has_match';
+  missFilter.stringFilter = missString;
+  const missExpr = AnalyticsData.newFilterExpression();
+  missExpr.filter = missFilter;
+
+  // eventName = calculate_cashback AND has_match = false
+  const andList = AnalyticsData.newFilterExpressionList();
+  andList.expressions = [eventNameFilter_('calculate_cashback'), missExpr];
+  const andExpr = AnalyticsData.newFilterExpression();
+  andExpr.andGroup = andList;
+
+  // 日期由新到舊：request.limit 是從尾端截斷的，排成新→舊時被丟掉的是**最早**的日期，
+  // 而這支只取每個詞的最大日期，所以截斷不影響結果（同 importGA4ButtonClicksDaily 的理由）。
+  const orderDate = AnalyticsData.newOrderBy();
+  orderDate.dimension = AnalyticsData.newDimensionOrderBy();
+  orderDate.dimension.dimensionName = 'date';
+  orderDate.desc = true;
+
+  const request = AnalyticsData.newRunReportRequest();
+  request.dimensions = [dMerchant, dDate];
+  request.metrics = [mCount];
+  request.dateRanges = [dateRange];
+  request.dimensionFilter = andExpr;
+  request.orderBys = [orderDate];
+  request.limit = UNCOVERED_MISS_DATE_ROW_LIMIT;
+
+  const report = runReportWithOneRetry_(request);
+  const rows = report.rows || [];
+
+  const latest = {};   // term → 'YYYYMMDD'（字串比大小就是日期比大小，不必先轉物件）
+  rows.forEach(row => {
+    const raw = row.dimensionValues[0].value;
+    const term = String(raw == null ? '' : raw).trim();
+    if (!term) return;
+    if (UNCOVERED_SKIP_TERMS[term.toLowerCase()]) return;
+    const d = String(row.dimensionValues[1].value);
+    if (!/^\d{8}$/.test(d)) return;
+    if (!latest[term] || d > latest[term]) latest[term] = d;
+  });
+
+  const dates = {};
+  Object.keys(latest).forEach(term => {
+    const d = latest[term];
+    dates[term] = new Date(Number(d.slice(0, 4)), Number(d.slice(4, 6)) - 1, Number(d.slice(6, 8)));
+  });
+
+  return { dates: dates, truncated: rows.length >= UNCOVERED_MISS_DATE_ROW_LIMIT };
+}
+
 // 手動跑一次（編輯器上方函數選這支 → Run）。
 // ⚠️ 存在的理由：updateUncoveredMerchants() **需要參數**，而編輯器的 Run 按鈕沒辦法傳參數，
 //    直接選它去跑會拿到 undefined、只回一句「略過」，看起來像壞掉其實只是沒資料。
-// 這支自己去抓一次 GA4（1 次 runReport），所以會順便重寫 GA4_熱門搜尋／GA4_搜尋落空
+// 這支自己去抓一次 GA4，所以會順便重寫 GA4_熱門搜尋／GA4_搜尋落空
 // ——那本來就是每天會被覆寫的兩張表，內容與排程跑出來的一樣，不會有副作用。
 // 不跑 Clarity、不動其他任何分頁（Clarity 每天只有 10 次額度，測試不該浪費在它身上）。
 function runUncoveredMerchantsNow() {
@@ -1961,7 +2047,7 @@ function runUncoveredMerchantsNow() {
   return msg;
 }
 
-// 由 updateAllReports() 呼叫，資料來自同一次執行的 collected.searches（不多打 API）。
+// 由 updateAllReports() 呼叫，搜尋資料來自同一次執行的 collected.searches（不多打 API）。
 // 回傳一句話交給 writeLastUpdated() 併進「更新紀錄」那一行。
 function updateUncoveredMerchants(searchData) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(UNCOVERED_SHEET);
@@ -1979,7 +2065,18 @@ function updateUncoveredMerchants(searchData) {
 
   const today = atMidnight_(new Date());
   const stats = uncoveredSourceRows_(searchData);
-  const outcome = uncoveredApply_(sheet, layout, stats, today);
+
+  // 落空日期查不到時**不要退回寫執行日**——那正是 2026/09/11 修掉的誤導行為。
+  // 拿不到就讓 dates 是空的，uncoveredApply_ 會讓最近出現日整欄不動（維持上次的正確值）。
+  let missDates = { dates: {}, truncated: false };
+  let dateError = '';
+  try {
+    missDates = uncoveredLastMissDates_();
+  } catch (e) {
+    dateError = errText_(e);
+  }
+
+  const outcome = uncoveredApply_(sheet, layout, stats, today, missDates.dates);
 
   uncoveredWriteBanner_(sheet, layout, searchData.window);
 
@@ -1989,6 +2086,17 @@ function updateUncoveredMerchants(searchData) {
     '更新 ' + outcome.updated + ' 列既有記錄',
     '本次視窗未對到詞共 ' + outcome.missTerms + ' 個',
   ];
+  if (dateError) {
+    parts.push('⚠️ 落空日期查詢失敗（' + dateError + '）——最近出現日這次整欄未更新，' +
+      '其餘欄位照常；隔天重跑即可補回');
+  } else if (missDates.truncated) {
+    parts.push('⚠️ 落空日期查詢已達 ' + UNCOVERED_MISS_DATE_ROW_LIMIT + ' 列上限' +
+      '（被截掉的是最早的日期，不影響「最後一次」的正確性，但表示落空量已經很大）');
+  }
+  if (outcome.missingDate > 0) {
+    parts.push('⚠️ ' + outcome.missingDate + ' 個詞在落空日期查詢裡找不到對應列，' +
+      '最近出現日維持原值（兩支查詢的門檻／取樣可能略有差異）');
+  }
   if (outcome.duplicates > 0) {
     parts.push('⚠️ 表內有 ' + outcome.duplicates + ' 列重複商家詞，只更新最前面那一列（請手動合併）');
   }
@@ -2086,8 +2194,8 @@ function uncoveredEnsureBannerRoom_(sheet) {
   SpreadsheetApp.flush();
 }
 
-// 標註列：這張表的規則全寫在這裡——尤其「次數是覆寫不是累加」與自動結案條件，
-// 讀表的人（或 AI）不看程式也要能正確解讀這些數字。
+// 標註列：這張表的規則全寫在這裡——尤其「次數是覆寫不是累加」、兩個日期欄各是什麼意思、
+// 以及自動結案條件，讀表的人（或 AI）不看程式也要能正確解讀這些數字。
 function uncoveredWriteBanner_(sheet, layout, win) {
   const titleRow = layout.headerRow - BANNER_ROWS;
   if (titleRow < 1) return;   // 表頭太靠上（理論上 uncoveredEnsureBannerRoom_ 已排除）
@@ -2103,9 +2211,13 @@ function uncoveredWriteBanner_(sheet, layout, win) {
     '⚠️ 次數是「覆寫」不是「累加」：來源視窗滾動 30 天、相鄰兩次執行高度重疊，累加會把同一批' +
       '試算重複計算約 30 倍。「最近視窗未對到次數」＝本次執行看到的數；歷史嚴重度看' +
       '「歷史最高未對到次數」（取 max）',
+    '「最近出現日」＝GA4 **事件日期**：這個詞最後一次落空實際發生的那天，不是程式執行日，' +
+      '所以最晚只會到視窗結束日（昨天）。詞不再落空之後這個日期就停住不動',
+    '「首次出現日」＝這個詞第一次被本表**記錄下來的執行日**（不是它第一次被搜尋的日子）；' +
+      '2026/09/09 那批是本表建立當天一次補登的',
     '自動標記待確認：本次視窗「沒對到＝0 且 有對到>0」，且該列狀態仍是「' + UNCOVERED_STATUS_OPEN +
       '」、覆蓋日期空白 → 改成「' + UNCOVERED_STATUS_PENDING + '」並寫上偵測到的日期（同時把最近' +
-      '視窗未對到次數歸 0；最近出現日刻意停在最後一次落空那天，跟覆蓋日期並排就看得出隔了多久）',
+      '視窗未對到次數歸 0；最近出現日停在最後一次落空那天，跟覆蓋日期並排就看得出隔了多久）',
     '⚠️ 「' + UNCOVERED_STATUS_PENDING + '」不是驗收：程式只知道「最近 30 天沒人以會落空的方式查它」，' +
       '那有三種可能——① 你真的補了資料 ② 這陣子剛好只有沒勾「精準搜尋」的人查它（勾了要完全一致' +
       '才算對到，沒勾走放寬比對）③ 舊的落空事件滾出 30 天視窗了。查證資料真的補上後，' +
@@ -2113,7 +2225,7 @@ function uncoveredWriteBanner_(sheet, layout, win) {
       '」的列，改完就不會再被碰）；確認是誤判就改回「' + UNCOVERED_STATUS_OPEN + '」並**清掉覆蓋日期**',
     '人工欄：狀態／覆蓋日期／備註 由人維護——備註程式永遠不寫；狀態設成「' +
       UNCOVERED_STATUS_IGNORE + '」的列，程式從此只更新日期與次數，不碰這三欄',
-    '沒出現在本次視窗的詞：整列不動（數字停在最後一次出現時），新鮮度看「最近出現日」',
+    '沒出現在本次視窗的詞：整列不動（數字停在最後一次出現時）',
     '已覆蓋的詞若再度落空：程式不會自動翻回「' + UNCOVERED_STATUS_OPEN + '」（狀態是人工欄），' +
       '但「最近視窗未對到次數」會 > 0，用它就篩得出退步的項目',
     '空框送出（GA4 的 (not set)）不列入：那是沒輸入，不是覆蓋缺口',
@@ -2132,12 +2244,16 @@ function uncoveredWriteBanner_(sheet, layout, win) {
 }
 
 // upsert 本體。所有寫入都集中在這裡，方便一眼核對「哪幾欄會被程式碰」。
-function uncoveredApply_(sheet, layout, stats, today) {
+// missDates：term → Date（該詞最後一次落空的**事件日期**），由 uncoveredLastMissDates_() 提供；
+//            查不到的詞不寫最近出現日（維持原值），絕不退回寫執行日。
+function uncoveredApply_(sheet, layout, stats, today, missDates) {
   const cols = layout.cols;
   const rowCount = Math.max(0, layout.lastRow - layout.headerRow);
   const block = rowCount > 0
     ? sheet.getRange(layout.headerRow + 1, 1, rowCount, layout.lastCol).getValues()
     : [];
+
+  const dates = missDates || {};
 
   // 商家詞 → 表上的相對列索引（只認最前面那列；重複的另外計數提醒站長合併）
   const indexOf = {};
@@ -2166,24 +2282,30 @@ function uncoveredApply_(sheet, layout, stats, today) {
 
   const appends = [];
   const resolvedRows = [];
-  let added = 0, resolved = 0, updated = 0, missTerms = 0;
+  let added = 0, resolved = 0, updated = 0, missTerms = 0, missingDate = 0;
 
   stats.forEach(stat => {
     const at = indexOf[stat.term];
 
     if (stat.unmatched > 0) {
       missTerms++;
+      // 最近出現日＝事件日期，不是執行日（理由見本區塊開頭的 2026/09/11 修正說明）
+      const missDate = dates[stat.term];
+      if (!missDate) missingDate++;
+
       if (at === undefined) {
-        appends.push(stat);
+        appends.push({ term: stat.term, unmatched: stat.unmatched, lastMiss: missDate || '' });
         added++;
         return;
       }
+      if (missDate) {
+        lastSeenCol[at][0] = missDate;
+        touched.lastSeen = true;
+      }
       // ⚠️ 覆寫，不是累加（理由見本區塊開頭）；歷史最高只往上抬，不往下修
-      lastSeenCol[at][0] = today;
       recentMissCol[at][0] = stat.unmatched;
       const peak = Number(peakMissCol[at][0]) || 0;
       if (stat.unmatched > peak) { peakMissCol[at][0] = stat.unmatched; touched.peakMiss = true; }
-      touched.lastSeen = true;
       touched.recentMiss = true;
       updated++;
       return;
@@ -2191,7 +2313,7 @@ function uncoveredApply_(sheet, layout, stats, today) {
 
     // ── 自動標記「待確認」：這個視窗完全沒落空、而且真的有對到 ──
     // ⚠️ 這**不是驗收**，程式驗不了。has_match 是「findMatchingItem(輸入字串) 有沒有回傳東西」
-    //    （js/cashback-engine.js），而它吃前端「精準搜尋」勾選框（js/home-ui.js 的 exactOnly）
+    //    （js/cashback-engine.js），而它吃前端「精準搜尋」勾選框（js/search-match.js 的 exactOnly）
     //    ——同一個字串，勾了要完全一致才算對到、沒勾走放寬比對。所以「這 30 天沒落空」有三種
     //    可能：① 真的補了資料 ② 這陣子剛好只有沒勾精準搜尋的人查它 ③ 舊的落空事件滾出視窗了。
     //    程式只寫得起「待確認」，「已覆蓋」留給人查證後自己填。
@@ -2239,8 +2361,8 @@ function uncoveredApply_(sheet, layout, stats, today) {
     const values = appends.map(stat => {
       const row = new Array(width).fill('');
       row[cols.term - startCol]       = stat.term;
-      row[cols.firstSeen - startCol]  = today;
-      row[cols.lastSeen - startCol]   = today;
+      row[cols.firstSeen - startCol]  = today;          // 首次出現日：維持「執行日」語義
+      row[cols.lastSeen - startCol]   = stat.lastMiss;  // 最近出現日：事件日期；查不到就留白
       row[cols.recentMiss - startCol] = stat.unmatched;
       row[cols.peakMiss - startCol]   = stat.unmatched;
       row[cols.status - startCol]     = UNCOVERED_STATUS_OPEN;
@@ -2263,6 +2385,7 @@ function uncoveredApply_(sheet, layout, stats, today) {
     resolved: resolved,
     updated: updated,
     missTerms: missTerms,
+    missingDate: missingDate,
     duplicates: duplicates,
     coerced: coerced,
   };

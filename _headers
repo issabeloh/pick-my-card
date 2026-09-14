@@ -5,7 +5,8 @@
 # 語法：路徑樣式一行，接著縮排兩空格的 `標頭名: 值`。
 #
 # ⚠️ 改這個檔前先看清楚每一條的註解。這裡有兩條「不是改完就算數」的標頭：
-#    CSP 目前是 -Report-Only 觀察模式（白名單漏一個就整站壞），轉正條件寫在該條註解。
+#    CSP 拆成兩條：強制版只鎖三條零風險指令；完整的嚴格版仍在 -Report-Only 觀察
+#    （白名單漏一個就整站壞）。兩者的分工與搬遷條件寫在該處註解。
 #    HSTS 已上到 max-age=31536000（一年），日後新增瀏覽器用的子網域前必讀該條註解。
 
 /*
@@ -62,7 +63,33 @@
   #    上面那條「改成 0 就能退場」的路對 preload 名單無效。
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
-  # ---- CSP：目前是「只回報、不攔截」模式（2026-09-02 起觀察中）----
+  # ---- CSP 之一：強制版（2026-09-09 起真的在攔）----
+  # 為什麼要拆成兩個標頭：CSP 是全有全無的，一旦把下面那條的 -Report-Only 拿掉，
+  # 整套規則同時生效——而 script-src/connect-src/frame-src 那串廣告網域是移動目標
+  # （Google 隨時冒出新的兄弟網域），等於「等到完全確定」這天可能永遠不會來，
+  # 結果就是一條防護都沒生效。所以把規則拆成兩份各走各的：
+  #   這一條（強制）只放三條「本站根本沒在用、廣告也碰不到」的指令，現在就上鎖；
+  #   下面那條（只回報）維持完整的嚴格版，繼續觀察 script-src 那串。
+  #
+  # 這三條為什麼零風險（動之前先確認前提還成立）：
+  #   object-src 'none'      擋 <object>/<embed> 老式外掛嵌入——全 repo grep 過，零使用
+  #   base-uri 'self'        擋動態插入 <base> 竄改全站連結目標。
+  #                          ⚠️ 商家頁 merchant/*.html **有** <base href="/">（生成器產的，
+  #                          整頁的 css/js/圖片相對路徑都靠它）。`/` 解析後是同源，
+  #                          符合 'self' 所以照常運作——2026-09-09 用本機送強制版標頭
+  #                          實測過：base 正常解析、4 個 stylesheet 全載入、零違規。
+  #                          但日後若把 base 的 href 改成別的網域就會被擋（那本來也該擋）。
+  #   frame-ancestors 'self' 擋被別站 iframe 嵌入——與上面的 X-Frame-Options 同一件事，
+  #                          兩者並存是刻意的（舊瀏覽器只認 X-Frame-Options）
+  # 刻意**不放** form-action：本站的表單行為都走 JS 不走 form submit，但廣告若在
+  # 繼承本頁 CSP 的 iframe（about:blank/srcdoc）裡送 form 就會被擋。它留在下面那條
+  # 只回報版裡繼續觀察，確認沒有違規再考慮搬上來。
+  #
+  # ⚠️ 這裡刻意沒有 default-src：沒列出的資源類型完全不受這條限制，
+  #    才不會在白名單還沒驗完的情況下誤擋。要加指令請先在下面那條觀察乾淨再搬上來。
+  Content-Security-Policy: object-src 'none'; base-uri 'self'; frame-ancestors 'self'
+
+  # ---- CSP 之二：只回報、不攔截（2026-09-02 起觀察中）----
   # ⚠️ 標頭名稱結尾的 -Report-Only 是關鍵：違規只會印在瀏覽器 Console，
   #    東西照常載入，線上使用者完全不受影響。確認 Console 乾淨之前，
   #    絕對不要把 -Report-Only 拿掉。
@@ -79,7 +106,13 @@
   #                            它會再去 scripts.clarity.ms 抓本體——所以用萬用字元）
   #   *.cloudflareinsights.com Cloudflare Web Analytics 的 beacon。這支不是我們掛的，
   #                            是 Cloudflare 在邊緣自動注入的，所以 repo 裡搜不到
-  #   googlesyndication / doubleclick / adservice / adtrafficquality / fundingchoicesmessages   AdSense
+  #   AdSense 一整組（*.googlesyndication.com / *.doubleclick.net /
+  #                            *.googleadservices.com / *.adtrafficquality.google /
+  #                            adservice.google.com / fundingchoicesmessages.google.com）
+  #                            ⚠️ 刻意用萬用字元而非逐一列舉：廣告網域是移動目標，
+  #                            Google 隨時會冒出新的兄弟網域（2026-09-09 就為了
+  #                            ep2.adtrafficquality.google 的 iframe 改過一次）。
+  #                            逐一列舉＝每次都要再來一輪 Console 觀察。
   #   fonts.googleapis.com（樣式）＋ fonts.gstatic.com（字型檔）   Noto Sans TC
   #   *.googleapis.com（connect）  Firestore／Auth／Storage 的 API 呼叫
   #   pick-my-card-28f2a.firebaseapp.com（frame）  Firebase 登入 popup
@@ -93,4 +126,4 @@
   #
   # 沒有設 report-uri／report-to：本站沒有收集違規回報的後端，
   # 違規只看瀏覽器 Console 就好，不要為了這個去接第三方服務。
-  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net https://partner.googleadservices.com https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google https://fundingchoicesmessages.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://*.firebaseio.com wss://*.firebaseio.com https://*.doubleclick.net https://pagead2.googlesyndication.com https://*.adtrafficquality.google https://www.google.com; frame-src 'self' https://pick-my-card-28f2a.firebaseapp.com https://accounts.google.com https://*.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.gstatic.com; worker-src 'self' blob:; manifest-src 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com https://*.clarity.ms https://static.cloudflareinsights.com https://*.googlesyndication.com https://*.doubleclick.net https://*.googleadservices.com https://adservice.google.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self'; connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://*.firebaseio.com wss://*.firebaseio.com https://*.doubleclick.net https://*.googlesyndication.com https://*.googleadservices.com https://*.adtrafficquality.google https://adservice.google.com https://fundingchoicesmessages.google.com https://*.gstatic.com https://www.google.com; frame-src 'self' https://pick-my-card-28f2a.firebaseapp.com https://accounts.google.com https://*.google.com https://*.doubleclick.net https://*.googlesyndication.com https://*.googleadservices.com https://*.adtrafficquality.google https://fundingchoicesmessages.google.com https://*.gstatic.com; worker-src 'self' blob:; manifest-src 'self'

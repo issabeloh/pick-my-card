@@ -59,14 +59,22 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
-13. **BankColors** —— 側欄膠囊左半的銀行品牌色（bank, color, active），2026-09-08 新增。
+13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
+    2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）
-    - `color` 只收 `#RRGGBB` / `#RGB`，格式錯的那一列會被 `readBankColors()` 跳過並留 log，不會把壞值送到前端
+    - `color`＝色帶**上半**的主色，`accent`＝**下半**的副色。兩者都只收 `#RRGGBB` / `#RGB`，
+      畫面上直接用原色、**不做任何淡化**（2026-09-08 那版的「50% 疊底」已隨左半色塊一起移除）
+    - **`accent` 整欄是選填的**：沒這欄、或某家沒填 → 前端畫成上下同色的單色帶。
+      ⚠️ 格式錯的 `accent` **只丟掉那一格、主色照常匯出**（副色是加分項，不該把整家拖下水）；
+      格式錯的 `color` 則整列跳過。兩種都會留 log
     - `active` 留空視為啟用（同「變動紀錄」慣例）
-    - **一家只填一支主色**：畫面上的底色（品牌色 50% 疊在膠囊底 `#f9fafb` 上）與文字色（黑或白，取對比度高的）都由前端即時算（`applyBankChipColor()`，`js/home-ui.js`），工作表不用維護那兩個值
-    - 匯出 JSON key 是 `bankColors`，格式 `{ "玉山": "#00755E", ... }`
-    - ⚠️ **工作表不存在或某家沒填 → 安全降級**：該銀行的色塊退回中性灰 `#eceef1`，不會壞掉。所以可以先貼程式、之後慢慢補齊
+    - 匯出 JSON key 是 `bankColors` 與 `bankAccentColors`，格式都是 `{ "玉山": "#019c96", ... }`；
+      `readBankColors()` 回傳 `{ colors, accents }` 兩張表
+    - ⚠️ **工作表不存在或某家沒填 → 安全降級**：該銀行的色帶退回中性灰 `#dfe3e8`，不會壞掉。
+      所以可以先貼程式、之後慢慢補齊
     - **銀行改 CI 只要改這張表一格、不必動程式**，新增發卡行也一樣（與 `bank` 欄同一個設計）
+    - 2026-09-09 已由站長填齊 16 家的 `color`／`accent`（星展 `#ec1d25`／`#000000`、
+      中信 `#e92429`／`#007166` 兩家連 `color` 欄一起換過），前端沒有任何硬寫的色碼
 14. **變動紀錄** —— 卡片近期異動（id, date, summary, active），2026-07-31 新增。
     詳情頁「近期異動」的資料來源。**不是手打的**：由自動化檔的選單「發布變動紀錄」
     跨檔 append 進來（流程見 `apps-script/README.md`「發布變動紀錄」一節）。
@@ -389,4 +397,5 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
 - [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
 - [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
+- [2026-09-11] `checkWatchlist` 每週寄回 Apps Script 失敗信（`Exceeded maximum execution time`，起訖剛好 6 分 00 秒），一度以為是「排程要人工重新授權」 → 不是授權問題，是 Apps Script 單次執行 6 分鐘硬上限：監控清單一長，每列一次網頁抓取（Jina 渲染 30~60 秒）＋一次 Gemini 呼叫就撞得到；超時是**直接砍掉**，逐列即時寫的快照與分頁都在，但收尾的 `sendDigest_` 整個不執行＝通知信無聲消失 → 凡是「每列都要打外部 API」的 Apps Script 迴圈，一律加「開跑前看錶」的煞車（`maxRunSeconds`，比照 `register-link-finder.gs`）＋指令碼屬性存進度游標＋一次性觸發器自動接續；游標一定要設過期時間（排程觸發器撿到舊游標會靜悄悄跳過清單前半段），清除接力觸發器**只能比對 uniqueId**（Trigger API 分辨不出一次性與週期性，掃著刪會把每週觸發器一起刪掉）
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

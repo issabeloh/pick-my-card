@@ -8,8 +8,9 @@
 
 /* ==========================================================================
    Header：結構抄自 faq.html，視覺本體在 styles.css。這裡補 styles.css 沒涵蓋的部分
-   ——.header-content 在副頁是 <a>（主站 index.html 不是），要蓋掉 UA 的底線與
-   visited 紫色；.back-home-btn 只有副頁用得到。與 faq.css 同源，改一邊要看另一邊。
+   ——.header-content 是 <a>，要蓋掉 UA 的底線與 visited 紫色（2026-09-09 起 styles.css
+   已經一次蓋掉，主站 index.html 的 header 同日也變成連結，這裡留著只是保險）；
+   .back-home-btn 只有副頁用得到。與 faq.css 同源，改一邊要看另一邊。
    ========================================================================== */
 .header-content {
     text-decoration: none;
