@@ -7,3 +7,12 @@ tools/regression/last-run.json
 # （上面的 package.json 是不帶斜線的樣式，會匹配所有層級）。
 # package-lock.json 沿用本 repo 慣例不進版控。
 !functions/package.json
+
+# 金鑰：Portaly Payment 等第三方憑證一律走環境變數／Secret Manager，
+# 絕不進版控。functions/.env* 是 Firebase Functions 本機模擬器用的。
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.env.*
+functions/.secret.local
