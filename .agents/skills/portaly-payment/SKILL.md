@@ -1,0 +1,374 @@
+---
+name: portaly-payment
+# Top-level `version` is what portaly-vercel's skill-versions endpoint parses (its
+# regex is anchored to the start of a line, so it cannot read the indented
+# metadata.version). Keep the two in sync until that parser reads YAML. See POR-4237.
+version: 0.12.0
+metadata:
+  version: "0.12.0"
+description: Help users integrate Portaly Payment hosted checkout, including merchant setup, subscription plans (monthly, yearly with 12-month deferred disbursement, one-time), checkout sessions, recurring renewal callbacks, and callback verification. Also covers test mode — which test card to use, why a test subscription never renews, and where test orders end up. Trigger when the user mentions Portaly Payment, creator subscription, wants to add subscription-based checkout to their application, or is troubleshooting a Portaly test payment, test card, sandbox order, or a renewal callback that never arrived.
+---
+
+# Portaly Payment Integration
+
+Use this skill to help a human user finish a Portaly Payment API integration quickly. Keep answers operational: prefer step lists, API request and response bullets, and copy-ready examples over long architecture explanations.
+
+## Portaly Payment Environments
+
+Portaly Payment supports two modes per API key: **live** and **test**.
+
+### API Host & Payment site
+
+Both the API host and the payment site (where buyers are redirected for checkout) live on the same unified domain for both modes:
+
+- `https://portaly.ai` (default)
+
+The host is overridable via the `PORTALY_API_HOST` environment variable. When generating code that calls the Portaly API, prefer this pattern over hardcoding the URL:
+
+```ts
+const PORTALY_API_HOST = process.env.PORTALY_API_HOST || 'https://portaly.ai'
+```
+
+See `PROVIDER.md` at the repo root for the backend compatibility contract.
+
+### Mode behavior
+
+| Aspect | Live mode | Test mode |
+|---|---|---|
+| API key prefix | `pcs_live_` | `pcs_test_` |
+| Payment provider | 91APP — the buyer is redirected out and the charge finishes on its callback | TapPay sandbox — charged on the checkout page itself |
+| Order storage | The creator's live order ledger | A separate sandbox ledger |
+| Callback payload | `mode: "live"` or absent | `mode: "test"` |
+
+- Mode is set at API key creation time and cannot be changed after creation.
+- A single merchant (`profileId`) can have both a live key and a test key active at the same time.
+- API endpoints accept both live and test keys except order refund: `POST /orders/{orderId}/refund` currently requires a live full-scope key. The mode is derived from the key, not from a request parameter.
+- Test mode is intended for integration testing. Real charges are not made in test mode when using TapPay sandbox credentials.
+- **Never invent a card number.** A test-mode checkout page prints the test card to use, in a highlighted box just below the card fields — tell the user to read it off the page. That card only works on the `checkoutUrl` this integration creates; it is rejected anywhere a real charge is taken, with a raw gateway error rather than a friendly one.
+- **Test mode and live mode do not use the same payment provider.** A test checkout charges through TapPay on the checkout page itself; a live checkout hands the buyer to 91APP and finishes on its callback. So a green test run has not exercised the live redirect-and-return path, and `paymentMethod` in the callback is `tappay` in test and `91app` in live — don't hardcode it. Don't treat those two as the only possible values either: a subscription completed through `POST /checkout-sessions/{sessionId}/complete` carries whatever `paymentMethod` the merchant sent.
+- **A test-mode subscription never renews.** The renewal job skips test subscriptions outright, so a second-cycle `creator_subscription.payment.succeeded` will never arrive however long the user waits. Exercise the renewal handler with a replayed payload, not by waiting for the clock.
+- **The sandbox ledger is off the settlement chain.** Tell the creator before they test, so they don't go hunting for something that was never meant to be there: test orders never reach revenue, balance or payouts, generate no affiliate or promotion commission, issue no invoice, and cannot be reviewed (so no review invite is sent). They *are* listed in `https://portaly.cc/admin/creator-subscription` once the orders table's **Live/Test** toggle is switched to **Test**, which is also where they can be refunded — that is the check to hand the creator. Don't call it a "test tab": the page's tabs are Subscriptions and Orders, and the mode toggle sits in the table's own toolbar.
+- **Plans and merchant config are shared across modes.** They belong to the merchant (`profileId`), not to the API key mode. A plan created with a live key is visible and usable with a test key, and vice versa. Do **not** create duplicate plans when switching between live and test keys — query existing plans first with `GET /api/creator-subscription/plans` and reuse them.
+
+## Quick Start
+
+> **Precondition — a Portaly Payment account is required.** This integration needs a Portaly Payment API key. **If the user has no Portaly Payment account yet, stop and get them registered first at `https://portaly.cc/payment` before anything else** — offer to open the page for them, and open it once they say yes:
+>
+> ```bash
+> # Open the Portaly Payment registration page — pick the line for the user's OS
+> Start-Process "https://portaly.cc/payment"   # Windows (PowerShell)
+> open "https://portaly.cc/payment"            # macOS
+> xdg-open "https://portaly.cc/payment"        # Linux
+> ```
+>
+> Do not continue until they have an account and have created a key. Once registered, they create the key in the dashboard at `https://portaly.cc/admin/creator-subscription`.
+
+- Before starting, AI agent should ask the human user to claim or create a Portaly Payment API key/CallbackSecret in the Portaly Payment Dashboard at `https://portaly.cc/admin/creator-subscription` and store the issued secret material safely.
+- Ask the human user whether they want a **live** or **test** key, but make the constraints clear: a **live key requires all three of** — the merchant (the person) has passed Portaly payment verification (金流審核 / KYC, else `403 PAYMENT_KYC_NOT_VERIFIED`), holds a paid membership (Portaly premium or a Portaly Vibe subscription, else `403 PREMIUM_REQUIRED`), and, **from their second product onward, that particular product has passed its own review** (else `403 PRODUCT_REVIEW_NOT_VERIFIED` — the person's identity is already verified and must not be re-submitted; only *this product* is pending). All three are enforced server-side, not just hidden in the dashboard UI. First-time users have almost always not passed verification yet, so Live is not available to them. **Recommend starting with a test key** to build and test the whole integration now; once all three are in place, they can come back to the dashboard and create a live key for production.
+
+1. Confirm what the human user is trying to build.
+   Prepare for payment integration tasks such as:
+   1. create merchant config
+   2. create subscription plans
+   3. upload merchant or plan images (Agent should ask human user to provide image assets if needed)
+2. After setup, integrate the checkout session creation and callback handling into current system:
+   1. create checkout session before buyer initiates payment
+   2. redirect buyer to Portaly checkout
+   3. verify and consume the callback from Portaly after checkout completion
+   4. if the integration needs subscription lifecycle management, also wire cancel and resume APIs for recurring plans
+   5. if the integration needs subscriber self-service (letting subscribers manage their own subscriptions), wire the portal session API
+3. Start with `references/api-contract.md`.
+   Use it for endpoint lists, auth, request bodies, response bodies, and callback headers.
+4. Before generating or repairing a callback receiver, inspect the repository's language, framework, and runtime, then load `references/callback-signature-v1.md`.
+   Select the matching bundled adapter and run its production-derived vectors. For an unlisted runtime, use the documented server-side bridge or keep the integration blocked until a native implementation passes the vectors; never translate the Node signer from memory.
+5. Load `references/checkout-and-renewal.md` only when needed.
+   Use it only as supplemental reference when the human user asks about post-checkout charging, renewal, payout, invoice, or bridge-order behavior.
+6. Return implementation-ready output.
+   Prefer numbered steps, API endpoint lists, request and response bullets, and examples that match the repository's existing stack.
+
+## Output Style
+
+- Write for an AI agent that is helping a human user complete integration work.
+- Lead with the next concrete steps the human should take.
+- Be explicit when an API can be called directly by the Agent with the Portaly Payment API key.
+- Prefer using the setup APIs directly for merchant config, plan creation, plan updates, image uploads, and checkout session creation when the user has already provided valid credentials and required inputs.
+- Use lists for:
+  - setup steps
+  - API endpoints
+  - required headers
+  - request fields
+  - response fields
+  - callback verification steps
+- For general API examples, prefer concise JavaScript or TypeScript when no stack is available. For callback verification, inspect or ask for the stack first and follow `references/callback-signature-v1.md`; do not default to JavaScript silently.
+- Keep Portaly-owned behavior and third-party-owned behavior clearly separated.
+
+## Workflow
+
+### 1. Apply for the API key
+
+- Require a Portaly Payment API key and CallbackSecret for this integration.
+- Instruct the human user to apply for or create the Portaly Payment API key in the Portaly Payment Dashboard at `https://portaly.cc/admin/creator-subscription`.
+- Ask whether the user wants a **live** key (`pcs_live_…`) or a **test** key (`pcs_test_…`), and explain the gate up front so they don't get stuck:
+  - **A live key requires passing Portaly payment verification (金流審核 / KYC) first.** Until the merchant completes verification, the dashboard offers only the Test option and explains why the Live one is unavailable; the merchant starts verification via the "金流審核" entry on that page. The server enforces it as well, so there is no way around the dashboard: key creation returns `403 PAYMENT_KYC_NOT_VERIFIED`.
+  - **A live key also requires a paid membership** — Portaly premium or a Portaly Vibe subscription (`403 PREMIUM_REQUIRED`). Passing verification is not enough on a free plan; they upgrade first.
+  - **From the merchant's second product onward, every product is reviewed on its own** (its own service URL and business description). If the person is verified but this particular product is not, key creation returns `403 PRODUCT_REVIEW_NOT_VERIFIED`. Do **not** send them back through identity verification — that part is done; they submit *this product* for review in the dashboard (Payment > 金流審核) and wait for approval.
+  - **First-time installers have typically not passed verification yet**, so live is not available to them. Tell them this is expected, not an error.
+  - **Recommend starting with a test key** (`pcs_test_…`) — it lets them build and exercise most of the integration (config, plans, checkout, callbacks) against TapPay sandbox immediately, with no real charges — but not all of it. See the test-mode bullets above for what a green test run leaves unproven: renewals, the live 91APP redirect-and-return, invoicing and settlement. After payment verification passes, they return to the dashboard, create a live key, and swap `PORTALY_API_KEY` to the `pcs_live_…` value for production. No code changes are needed — the mode is derived from the key.
+- Be explicit that this step is performed by a human operator in Portaly Payment Dashboard, not by the third-party integration code.
+- Tell the human user to store the issued secret material safely, or store it on the user's behalf only in an appropriate secret manager or secure environment store.
+- Explain that the API key is used for bearer authentication in API calls and the `callbackSecret` is used for verifying the authenticity of callbacks from Portaly If user asking.
+- **Never ask the user to paste the API key or `callbackSecret` into chat.** Chat transcripts can be logged, cached, or echoed back by the model in summaries, diffs, or tool call arguments. Treat secrets as values the agent never needs to see in plaintext.
+- Instead, instruct the human user to place the secrets into `.env` **themselves** (via their editor or shell), using this template:
+
+  ```
+  PORTALY_API_KEY=pcs_live_xxx        # or pcs_test_xxx for test mode
+  PORTALY_CALLBACK_SECRET=xxx
+  ```
+
+- The agent reads these at runtime via `process.env.PORTALY_API_KEY` (Node) or `os.environ["PORTALY_API_KEY"]` (Python) — it never needs the literal secret value in-context.
+- If the project uses a secret manager (1Password CLI, Doppler, AWS/GCP Secrets Manager, Vault, etc.), prefer that over `.env`.
+- **Before proceeding, verify that `.gitignore` includes `.env`.** If `.gitignore` does not exist or does not include `.env`, create or update it immediately. Never allow credentials to be committed to version control.
+- If the user does paste a secret into chat by mistake, advise them to **rotate the key** in the Portaly Payment Dashboard before using it — assume the pasted value is compromised.
+
+### 1.5 Report the installed skill version
+
+Report this skill's version to Portaly so the merchant's dashboard can flag when their installed skill is out of date. This is a single, non-blocking version check — its body carries only the skill name and version, nothing about the user's project or data. **Mention it to the user once** (e.g. "Reporting the installed Portaly skill version so your dashboard can detect outdated skills") — you don't need to pause for approval, but don't conceal it either.
+
+**When to send it — send once per session, at whichever of these happens first, as long as `process.env.PORTALY_API_KEY` is set:**
+
+1. **Right after you install or update this skill**, if a key is already in the environment.
+2. **Otherwise, the first time you make any Portaly API call** (configuring the merchant, listing plans, creating a checkout session, etc.) — the version report rides along with that first real API usage.
+
+- If `PORTALY_API_KEY` is not in the environment yet, skip the report for now (case 2 will cover it later). Never prompt the user for a key just to send this.
+- The request:
+  ```
+  POST https://portaly.ai/api/creator-subscription/skill-version
+  Authorization: Bearer {PORTALY_API_KEY}
+  Content-Type: application/json
+
+  { "skillName": "portaly-payment", "version": "0.12.0" }
+  ```
+- `version` is this skill's `metadata.version` from the frontmatter at the top of THIS file — use the literal value of the SKILL.md you are currently running, so the report reflects what is actually installed.
+- The request body carries only `skillName` and `version`. If the call fails, ignore it and continue — it never blocks anything.
+- On success, check the response's `data.available` array — skills this merchant account has never sent a version report for, each shaped like `{ id, installPackage, latestVersion, description }`. That's not the same as not installed: the server only learns a skill exists here when that skill's own version report fires, which happens on first real use — not on `npx skills add`. So a skill already sitting in this project, just not used yet, still shows up in this list. Before saying anything, filter it yourself against the actual project: drop any entry whose skill directory or files already exist locally — the server can't see the project tree, only you can. If nothing survives that filter, say nothing. For what remains, mention it to the user **once this session** as something they could add (`npx skills add ...`), never as something they're missing — name each skill and its one-line `description`. This is discovery only — **do not run `npx skills add` yourself** unless the user asks for it.
+- If more than one Portaly skill is installed in this project, each sends its own version report and gets back the same `available` list — surface it once per session total, not once per skill. Skip this step here if you (or another Portaly skill) already surfaced an `available` list earlier in this session.
+- If `data.available` is absent, empty, or the response doesn't match this shape, do nothing — same ignore-and-move-on spirit as a failed call; this must never become a step that blocks anything.
+
+### 2. Configure merchant settings
+
+- Agent should perform these setup actions directly by API call with the Portaly Payment API key.
+- Use the Config APIs when the human user needs to set merchant branding before any product goes live.
+- AI Agent should ask the human user to provide a `merchantLogo` image asset, use the config image upload API to upload image to Portaly. The merchant logo is optional — if the user does not have one ready, skip this step and proceed with plan creation.
+- Use `PUT /api/creator-subscription/config` and `POST /api/creator-subscription/config/images` to set up merchant branding with the Portaly Payment API key.
+
+### 3. Create a valid subscription plan
+
+- Agent should perform plan creation, plan updates, and plan image uploads directly by API call with the Portaly Payment API key.
+- **Before creating a new plan, always query existing plans** with `GET /api/creator-subscription/plans` using the current API key. Plans are shared across live and test modes; if a suitable plan already exists, reuse it instead of creating a duplicate.
+- Require at least one active plan in Portaly before creating a checkout session. Only render a pay button for a plan whose `status` is `active`; a checkout session for an archived (`inactive`) plan is rejected with `422 PLAN_INACTIVE`. Handle that as a friendly "this plan is no longer available" state, not a generic payment error — see the Error responses table under Session Creation in `references/api-contract.md`.
+- Use the Plan APIs to create or update the product basics that the human user wants to list on Portaly.
+- Confirm the plan name, description, amount, currency, billing period (`monthly`, `yearly`, or `one-time`), pricing type (`fixed` or `dynamic`), and status match the intended product.
+- **Yearly plans use 12-month deferred disbursement**: the buyer pays the full annual amount up front, but the creator's payout is released across 12 monthly installments (1/12 of net revenue per month). Refunds on a yearly order are **blocked once the first installment has been released**. Surface this trade-off to the human user before creating a yearly plan — it controls refund risk for the creator but means buyers cannot get any refund after that point.
+- For dynamic pricing plans: set `pricingType` to `dynamic` and `billingPeriod` to `one-time`. The amount is not set on the plan; instead, the caller passes `amount` when creating each checkout session.
+- If the third party has its own product catalog, persist the Portaly `planId` together with the merchant's internal product or entitlement identifier.
+- AI Agent should ask the human user to provide a plan image, use the plan image upload API to upload the image to Portaly.
+- Treat the `checkoutUrl` returned by Portaly as authoritative. Do not reconstruct it from guessed domains.
+- After creating or updating a plan, check the response `name` and `description` for garbled text (mojibake). If corrupted, fix shell encoding and use `PUT /api/creator-subscription/plans/{planId}` to correct it. See the Windows encoding note in Guardrails.
+
+### 3.5 Create discount codes (optional)
+
+- Use the Discount Code APIs after at least one plan exists.
+- A code carries an array of **rules**; each rule can target a different set of plans with its own discount and duration. Example: code `EARLYBIRD` with two rules — 50% off for 3 cycles (= 3 months) on the monthly plan, and NT$200 off for 1 cycle on the one-time plan. For a yearly code, see `ANNUAL20`: 20% off for 1 cycle (= 1 year) on the yearly plan.
+- Per rule, confirm with the human user:
+  - **Discount type**: `fixed` (TWD off) / `percent` (% off) / `free` (100% off).
+  - **Duration**: `repeating N cycles` (default 1) or `forever` (typically with `fixed`). One cycle equals one billing period — a month for a monthly plan, a year for a yearly plan.
+  - **appliesTo**: `all` (fallback for any plan not covered by a specific rule) or `specific` planIds (e.g. the yearly plan only). At most one `all` rule per code; planIds may not appear in more than one rule.
+- Code-level params:
+  - **Custom code**: 3-40 chars, `[A-Z0-9_-]`. Stored and displayed in **UPPERCASE**; lookup is case-insensitive on input. Unique per profile. Immutable post-create.
+  - **Redemption window**: `redeemFrom` / `redeemBy`.
+  - **Caps**: `maxRedemptions` (total) / `maxRedemptionsPerCustomer` (per email).
+- Codes are shared across **live and test** modes (same as plans).
+- Codes also serve as **ref codes**: record the code as `signupRefCode` at user registration. When a buyer with a recorded `signupRefCode` later checks out and verifies their email, Portaly auto-applies the matching rule, provided the code is still within its `redeemBy` window.
+- See `references/discount-code-examples.md` for example prompts and the parameter cheatsheet.
+- **Money-moving guard**: live-mode discount creation requires explicit user confirmation (same rule as live-mode plan creation).
+
+### 4. Create the checkout session
+
+- Create a checkout session before the buyer initiates payment.
+- Call `POST /api/creator-subscription/checkout-sessions` with `Authorization: Bearer {api_key}`.
+- Send `planId` and optional `successRedirectUrl`, `cancelRedirectUrl`, `callbackUrl`, `subscriptionCallbackUrl`, `merchantOrderNumber`, and string-keyed `metadata`.
+- **If the buyer already signed in to the merchant's own product, skip making them re-enter anything**: send `customerEmail` + `customerName` to pre-fill the checkout form, and `emailVerified: true` to declare that the merchant already verified that email, which drops the emailed verification code. `emailVerified` is accepted **only** on this API-key-authenticated call — never from the buyer's browser — and is ignored without a non-blank `customerEmail`. The email field becomes read-only at checkout. See `references/api-contract.md` for the full field rules.
+  - **Custom `metadata` keys are echoed into the signed callback body. Only the Node and WebCrypto adapters can verify callbacks carrying metadata keys outside the committed schema; the Python and Go v1 adapters fail closed on them (v1 sorts keys with JavaScript `localeCompare`, which those adapters cannot reproduce for arbitrary keys). Use a Node/WebCrypto receiver, or omit custom metadata, until a future raw-byte callback contract removes this limitation.**
+- `callbackUrl` receives the `checkout.completed` callback and — unless `subscriptionCallbackUrl` is set — also the recurring renewal (`payment.succeeded` / `payment.failed`) and lifecycle callbacks. Set `subscriptionCallbackUrl` to route renewal/lifecycle events to a dedicated endpoint instead.
+- **Optional `discountCode`**: when provided, Portaly validates and applies the discount up-front. Invalid codes return `400 INVALID_DISCOUNT_CODE`. When omitted, Portaly attempts to auto-apply a discount via the buyer's `signupRefCode` — at session creation if you sent `emailVerified: true` with a `customerEmail`, otherwise after the buyer verifies their email inside hosted checkout (no extra call needed from the merchant).
+- **Optional `profitSharingId`**: the referral code a buyer arrived with, when the product has buyer promotion switched on. Read it **server-side** from your own cookie and pass it here — never accept it from the browser's request body, or anyone can claim someone else's sale. Unknown or mismatched codes are ignored and the checkout still completes — but **omit the field when you have no cookie value**: it must be 1–64 characters, so an empty string is a `400`, not a silent ignore. Setting up the promotion itself belongs to the `portaly-affiliate` skill.
+- Persist `sessionId`, `checkoutToken`, `checkoutUrl`, and `expiresAt` on the third-party side.
+- The session response includes `appliedDiscount` when a discount was applied at session creation; `session.amount` is always the **post-discount** amount the buyer will be charged. **With `emailVerified: true` this can happen without any `discountCode`** — the buyer's `signupRefCode` resolves right away (`source: 'ref_code'`), so a merchant reconciling against `amount` may see a different number than before adopting it.
+- Redirect the buyer to `checkoutUrl`.
+
+### 5. Let Portaly run hosted checkout
+
+- Treat Portaly hosted checkout as a black box from the third-party perspective.
+- Do not ask the third party to collect card tokens or implement Portaly-owned payment steps.
+
+### 6. Consume the result
+
+- The primary external confirmation is the signed callback to `callbackUrl`.
+- **Two checkout-time callbacks exist**: `creator_subscription.checkout.completed` when the first charge succeeds, and `creator_subscription.checkout.failed` when it is declined. Handle both — a merchant who only listens for `.completed` never learns which buyers failed to pay.
+- `creator_subscription.checkout.failed` carries `sessionId`, `profileId`, `planId`, `planName`, `mode`, `amount`, `currency`, `customerEmail`, `failureReason`, `failedAt`. It **deliberately has no `subscriptionId`** — a failed first charge means no subscription was ever created, so use `sessionId` as both the identifier and the idempotency key.
+- **`test`-mode sessions emit it too** (the payload's `mode` says which), so a sandbox endpoint will start receiving `checkout.failed` as soon as you deploy a handler.
+- Cancelled and expired checkouts still have no callback — poll `GET /api/creator-subscription/checkout-sessions/{sessionId}` for those.
+- To re-deliver a checkout callback your endpoint missed: `POST /api/creator-subscription/checkout-sessions/{sessionId}/retry-callback`. Use the session-keyed route for a failed first charge; `/subscriptions/{id}/retry-callback` cannot find it, because there is no subscription.
+- **Recurring renewals and refunds also emit signed callbacks** (same signing/verification as the checkout callback): `creator_subscription.payment.succeeded` / `.failed` cover renewal charges; `creator_subscription.payment.refunded` / `.refund_failed` are terminal outcomes for one payment order. Refund events deduplicate on `orderId`, not `subscriptionId`. Lifecycle events (`creator_subscription.active` / `.cancel_requested` / `.canceled`) are delivered the same way. Switch on the `x-portaly-event` header. See `references/api-contract.md` → Signed Callback for the full event table and payloads, and `references/checkout-and-renewal.md` for renewal behavior.
+- Use manual `POST /api/creator-subscription/checkout-sessions/{sessionId}/complete` only as an exception flow when the user is building a non-hosted or recovery flow.
+- **Current implementation contract:** `subscriptionId === checkoutSessionId === sessionId`.
+- When a recurring checkout succeeds, human user's system may use the callback's `sessionId` directly as the `subscriptionId` for later cancel or resume API calls.
+- Make it explicit to the human user that this is the current Portaly implementation contract and should be persisted on their side after checkout completion.
+
+### 7. Verify and persist
+
+- Inspect the repository's language, framework, server/edge runtime, body parser, and existing verifier before generating code. Load `references/callback-signature-v1.md` and choose the matching Node, WebCrypto, Python, or Go adapter.
+- Run `scripts/check_callback_vectors.mjs` for that runtime before shipping. Passing self-generated signatures is not enough; the expected values come from a committed Portaly production signer.
+- Require all three callback headers. Use the exact ISO string from `x-portaly-timestamp`; reject it when invalid or more than five minutes from now in either direction. The symmetric window tolerates ordinary clock skew — a strict "reject any future timestamp" rule would make legitimate callbacks fail intermittently.
+- Verify `x-portaly-signature` with the API key's `callbackSecret`, then require the authenticated body `event` to equal `x-portaly-event`.
+- V1 signs `stableJson(JSON.parse(wireBody))`, not the raw HTTP body. Never substitute code-point key sorting for JavaScript `localeCompare` semantics.
+- After verification, persist the minimum audit fields allowed by the application's data policy: `sessionId`, `subscriptionId` if present, `merchantOrderNumber`, payment identity, event, and status. Do not log the secret or full signing base.
+- If the callback payload does not include `subscriptionId`, persist `sessionId` as the recurring subscription identifier because the current implementation uses `sessionId` as `subscriptionId`.
+- Use event-specific idempotency: checkout completion uses `event + sessionId`; renewal success/failure uses `event + paymentId` or the documented `paymentReference`; refund success/failure uses `event + orderId`. Do not permanently deduplicate all lifecycle events by `sessionId`/`subscriptionId`; the current lifecycle payload has no documented delivery identifier, so keep state assignments idempotent and flag stronger deduplication requirements as a product-contract gap.
+- **`callbackUrl` must use HTTPS.** Serving over plain HTTP exposes the `callbackSecret` signature and payload in transit.
+
+### 8. Manage recurring subscriptions
+
+- Only recurring plans with `billingPeriod = monthly | yearly` support cancel or resume.
+- Cancellation means stopping the next recurring charge. It is not a refund. In your system, the rights or content associated should remain active until the end of the current paid period, which is indicated by `cancelEffectiveAt` in the subscription record.
+- For yearly subscriptions, cancellation does **not** trigger a refund of the unreleased deferred portion — the creator continues to receive remaining monthly installments through the original 12-month schedule, and the buyer retains access until `cancelEffectiveAt` (i.e. the next yearly renewal date that will no longer be charged).
+- Portaly currently supports merchant-system initiated subscription lifecycle actions through API key authenticated endpoints.
+- Use the same Portaly Payment API key for these calls.
+
+Recurring management APIs:
+
+- `GET /api/creator-subscription/subscriptions` — list all subscriptions with pagination and filtering
+- `GET /api/creator-subscription/subscriptions/{subscriptionId}`
+- `POST /api/creator-subscription/subscriptions/{subscriptionId}/cancel`
+- `POST /api/creator-subscription/subscriptions/{subscriptionId}/resume`
+
+Order query API:
+
+- `GET /api/creator-subscription/orders` — list payment/order records, filterable by `startDate`/`endDate`, `status` (comma-separated for multiple), and `planId`, with cursor pagination. The dates filter `createdAt`, which for these orders is the payment time (`createdAt === paidAt`), so this is the endpoint for reconciling a payout period
+- `GET /api/creator-subscription/orders/{orderId}` — poll one order's `refundRequestedAt`, `refundedAt`, `refundFailedAt`, and `refundFailureReason` without scanning the list
+- `POST /api/creator-subscription/orders/{orderId}/refund` — request a full refund with a **live full-scope key**. Body: `{ "reason": "customer_requested", "reasonNote": "optional", "amount": 400 }`; `reason` is required for API-key callers and `amount` may only equal the full order amount. A new request returns `202`; an already-complete or already-processing request returns `200`. Test keys return `409 TEST_MODE_REFUND_UNSUPPORTED`; integration-scope keys return `403 KEY_SCOPE_FORBIDDEN`.
+
+After a `202`, handle `creator_subscription.payment.refunded` or `.refund_failed` and keep `GET /orders/{orderId}` as the reconciliation fallback. A delayed TapPay refund can remain pending through up to three daily scheduled attempts, so a terminal outcome can take about three days from the `202`. Keep polling while both terminal timestamps are null; contact Portaly support if `refundFailedAt` appears or neither terminal outcome arrives after that retry window. A refund can independently emit `creator_subscription.canceled`; there is no ordering guarantee, so sort by payload timestamps and deduplicate canceled by `subscriptionId` and refund outcomes by `orderId`.
+
+Recurring management rules:
+
+- These APIs only accept `Authorization: Bearer {api_key}`
+- Do not use Firebase auth for merchant-system integrations
+- `billingPeriod = one-time` does not support cancel or resume
+- **A subscription's `amount` is its base price, not a payment record.** It is frozen at checkout and renewals charge off it. A subscription that was discounted carries a `discount` snapshot (`code`, `appliedRule`, `startedAt`, `endsAt` — `null` = forever, `source`, plus `originalAmount` / `finalAmount` on subscriptions created after those were recorded) and is charged less than `amount` while it is in effect. Reconcile against the renewal callback's `amount` or the order records — never against the subscription's `amount`.
+- `cancel` marks the subscription as `cancelAtPeriodEnd = true`
+- `resume` only works before the subscription has become fully `canceled`
+
+Cancel request body:
+
+```json
+{
+  "reason": "customer_requested",
+  "reasonNote": "optional note"
+}
+```
+
+Resume request body:
+
+```json
+{}
+```
+
+What to persist for recurring lifecycle:
+
+- `subscriptionId`
+- `sessionId`
+- `planId`
+- `billingPeriod`
+- `status`
+- `cancelAtPeriodEnd`
+- `cancelEffectiveAt`
+
+### 9. Enable subscriber self-service portal (optional)
+
+- Use this when the merchant wants subscribers to manage their own subscriptions directly.
+- The merchant backend creates a portal session via `POST /api/creator-subscription/portal-sessions` on `https://portaly.ai`, then redirects the subscriber to the returned `portalUrl`.
+- This is a **server-to-server** call — the API key must never be exposed to the client.
+- The subscriber lands on Portaly's hosted portal page, already authenticated via the session token. No additional login is required.
+- In the portal, subscribers can view subscriptions, cancel, resume, and view payment history.
+- Portal sessions expire after 30 minutes.
+- The merchant must provide a `returnUrl` so the subscriber can navigate back after managing their subscriptions.
+- See `Portal Session (Subscriber Self-Service)` in `references/api-contract.md` for full endpoint details and code examples.
+
+## Preferred Response Shape
+
+When answering with this skill, prefer this order:
+
+1. Goal summary
+2. Human setup steps
+3. API list
+4. Request fields
+5. Response fields
+6. Callback handling steps
+7. Example code
+8. Troubleshooting notes
+
+## Guardrails
+
+- **Default to test mode for development.** If the loaded key starts with `pcs_live_`, confirm with the human user that live mode is intended before making any API call. Never silently run against production billing.
+- **Money-moving actions require explicit user confirmation.** Before calling any of the following, state the exact action, target (`subscriptionId` / `sessionId`), and mode (live/test), then wait for the user's "yes":
+  - `POST /subscriptions/{id}/cancel`
+  - `POST /subscriptions/{id}/resume`
+  - `POST /checkout-sessions/{id}/complete` (manual completion)
+  - Any plan creation/update in **live** mode
+- Do **not** batch or loop these actions across multiple subscriptions without per-action confirmation.
+- Prefer the hosted checkout flow whenever possible. It already handles email verification, payment-method persistence, callback dispatch, subscription creation, payment creation, invoice task creation, and order bridge writes.
+- Distinguish clearly between:
+  - setup APIs that the Agent can call directly with the Portaly Payment API key
+- Do not invent provider behavior. TapPay and 91APP differ materially.
+- Do not assume callback delivery means success without checking the `status` and verified signature.
+- Do not derive subscription state from redirect success pages alone. Redirects are UX only; callback or status query is the source of truth.
+- Treat `references/checkout-and-renewal.md` as non-API background material. Load it only if the task explicitly touches recurring billing, payout, invoice follow-up, or bridge-order behavior.
+- **Windows encoding:** On Windows, run `chcp 65001` (cmd) or `$OutputEncoding = [System.Text.Encoding]::UTF8` (PowerShell) before API calls containing non-ASCII text. If a plan's `name` or `description` comes back garbled, fix encoding and `PUT` the correct values.
+- **Rate limiting:** All creator-subscription API endpoints (except `POST /checkout-sessions`) are rate limited. Read endpoints allow 120 requests/min, write endpoints allow 20 requests/min. If a `429` response is received, use the `Retry-After` header to schedule retries. When paginating through large result sets, be mindful of the rate limit budget.
+
+## Deliverables
+
+When using this skill, aim to return one or more of:
+
+- a minimal step-by-step integration plan for the human user
+- a flat list of relevant APIs
+- request and response field breakdowns
+- callback verification code in the user's stack
+- sample `curl`, `fetch`, or TypeScript snippets
+- a troubleshooting list keyed by session status
+
+## Resources
+
+- `references/api-contract.md`
+  Use for bearer auth, endpoint contract, callback headers, payload fields, and third-party implementation shape.
+- `references/checkout-and-renewal.md`
+  Use only as optional background for the high-level checkout lifecycle and renewal behavior.
+- `references/discount-code-examples.md`
+  Example prompts, parameter cheatsheet, and ref-code usage for the Discount Code APIs.
+- `references/callback-signature-v1.md`
+  Runtime routing, exact v1 contract, safe handler order, fail-closed boundaries, and diagnosis guidance.
+- `references/callback-signature-v1-vectors.json`
+  Synthetic payloads with signatures generated by the committed production contract. Use these instead of self-sign/self-verify fixtures.
+- `scripts/check_callback_vectors.mjs`
+  Run the selected Node, WebCrypto, Python, or Go adapter against the committed positive, negative, and fail-closed cases.
+- `scripts/sign_callback.py`
+  Python adapter for the committed callback key domain; it fails closed for arbitrary metadata keys and unsupported numbers.
+- `scripts/sign_callback.mjs`
+  Prefer this for Node.js, JavaScript, TypeScript, Express, or Next.js integrations.
+- `scripts/sign_callback.webcrypto.mjs`
+  Use on edge / WebCrypto runtimes that can't import `node:crypto` (Cloudflare/Vercel Edge, Deno, InsForge edge functions). Same scheme + byte-identical `stableJson`; verifies via the global `crypto.subtle`.
+- `scripts/verify_callback.go` and `scripts/verify_callback_test.go`
+  Go adapter plus its production-derived and fail-closed tests.
+- `../portaly-affiliate/SKILL.md`
+  Read it when the merchant wants their own buyers to refer others and earn a commission. It builds on the plans and checkout sessions set up here, and adds one field to session creation.

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "portaly-payment": {
+      "source": "portaly-ai/portaly-skills",
+      "sourceType": "github",
+      "skillPath": "skills/portaly-payment/SKILL.md",
+      "computedHash": "598fac30a15bc7c9f738b8105279c923cc9f4eecbcb5b889fc3debfe2a484adf"
+    }
+  }
+}
