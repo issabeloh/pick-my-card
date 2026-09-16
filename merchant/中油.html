@@ -479,7 +479,10 @@
                                  部分 Android 鍵盤仍會跳一般全鍵盤（2026-09-03 站長在正式站回報）。
                                  用 decimal 而不是 numeric：numeric 的鍵盤沒有小數點鍵，而 type="number"
                                  本來就允許小數，用 numeric 會讓使用者打不出 1500.5。 -->
-                            <input type="number" id="amount-input" inputmode="decimal"
+                            <!-- autocomplete="off"：金額框不是帳號欄，不該跳任何 autofill 建議。
+                                 真正讓 Chrome 密碼管理員誤判的根因是刪除帳號 modal 的密碼欄沒有
+                                 <form> 擁有者（見該處註解），這行只是第二道保險，兩處都要留著。 -->
+                            <input type="number" id="amount-input" inputmode="decimal" autocomplete="off"
                                    value="1000" min="1" step="1" placeholder="金額" />
                         </div>
                     </div>
@@ -590,6 +593,8 @@
     <li><a class="mc-related-link" href="/merchant/%E8%9D%A6%E7%9A%AE"><span class="mc-related-name">蝦皮</span><span class="mc-related-meta">最高 10%（星展傳說對決聯名卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E9%AB%98%E9%90%B5"><span class="mc-related-name">高鐵</span><span class="mc-related-meta">最高 3.5%（台新街口卡(豬富卡)）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A"><span class="mc-related-name">所有計程車</span><span class="mc-related-meta">最高 6%（聯邦 M 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/%E9%81%A0%E5%A4%A7%E5%94%AE%E7%A5%A8"><span class="mc-related-name">遠大售票系統</span><span class="mc-related-meta">最高 3%（玉山 Ubear 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/Apple%20Pay"><span class="mc-related-name">Apple Pay</span><span class="mc-related-meta">最高 5%（永豐 Sport 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
   </ul>
         </nav>
 
@@ -1339,17 +1344,27 @@
                     <a href="mailto:support@pickmycard.app">support@pickmycard.app</a>，我們手動處理。
                 </div>
 
-                <div class="form-group" id="da-password-group" style="display:none;">
-                    <label for="da-password">請輸入密碼以確認是本人操作 <span class="required">*</span></label>
-                    <input type="password" id="da-password" class="da-input" autocomplete="current-password" placeholder="你的登入密碼">
-                </div>
+                <!-- 這個 <form> 是必要的、不是裝飾（2026-09-16 站長回報首頁金額框跳出「儲存的帳密」下拉）：
+                     #da-password 若不被任何 <form> 擁有，Chrome 會把整份文件的「無主欄位」併成一個
+                     合成表單，然後挑密碼欄前方最近的文字欄當帳號欄——那就是首頁的 #amount-input。
+                     把密碼欄關進自己的 <form>，合成表單裡就沒有密碼欄，首頁不再被當成登入表單。
+                     ⚠️ 不要把這層拿掉，也不要把密碼欄搬出去。
+                     display:contents＝不影響既有版面；form 內刻意包含兩個輸入欄（密碼＋確認文字），
+                     依 HTML 隱含送出規則「超過一個欄位就不送出」，Enter 不會觸發送出，
+                     另外 setupDeleteAccountModal() 還會擋一次 submit（密碼欄隱藏時的雙保險）。 -->
+                <form id="da-form" style="display: contents;">
+                    <div class="form-group" id="da-password-group" style="display:none;">
+                        <label for="da-password">請輸入密碼以確認是本人操作 <span class="required">*</span></label>
+                        <input type="password" id="da-password" class="da-input" autocomplete="current-password" placeholder="你的登入密碼">
+                    </div>
 
-                <p class="da-reauth-hint" id="da-reauth-hint"></p>
+                    <p class="da-reauth-hint" id="da-reauth-hint"></p>
 
-                <div class="form-group">
-                    <label for="da-confirm-text">請輸入 <code class="da-code">刪除我的帳號</code> 以確認 <span class="required">*</span></label>
-                    <input type="text" id="da-confirm-text" class="da-input" autocomplete="off" placeholder="刪除我的帳號">
-                </div>
+                    <div class="form-group">
+                        <label for="da-confirm-text">請輸入 <code class="da-code">刪除我的帳號</code> 以確認 <span class="required">*</span></label>
+                        <input type="text" id="da-confirm-text" class="da-input" autocomplete="off" placeholder="刪除我的帳號">
+                    </div>
+                </form>
 
                 <div id="da-status" class="da-status"></div>
             </div>
