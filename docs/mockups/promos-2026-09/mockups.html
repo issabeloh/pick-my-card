@@ -1,0 +1,430 @@
+<title>新戶活動頁改版提案</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --ground:#eceef3; --panel:#ffffff; --panel-2:#f6f7fa; --ink:#14171f; --ink-2:#39404e;
+  --muted:#626b7c; --line:#dcdfe7; --line-soft:#e9ebf1;
+  --accent:#1e40af; --accent-soft:#e8edfb; --warn:#a8335c; --warn-soft:#fceef3;
+  --good:#0b7a56; --good-soft:#e4f7ef; --code-bg:#eef0f6;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --ground:#10131a; --panel:#181c25; --panel-2:#1f2430; --ink:#e9ecf4; --ink-2:#c2c8d6;
+  --muted:#939cb0; --line:#2b313e; --line-soft:#232935;
+  --accent:#8fb0ff; --accent-soft:#1c2740; --warn:#ff9cbd; --warn-soft:#331d27;
+  --good:#5fd7ad; --good-soft:#12302a; --code-bg:#232935;
+}}
+:root[data-theme="dark"]{
+  --ground:#10131a; --panel:#181c25; --panel-2:#1f2430; --ink:#e9ecf4; --ink-2:#c2c8d6;
+  --muted:#939cb0; --line:#2b313e; --line-soft:#232935;
+  --accent:#8fb0ff; --accent-soft:#1c2740; --warn:#ff9cbd; --warn-soft:#331d27;
+  --good:#5fd7ad; --good-soft:#12302a; --code-bg:#232935;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:32px 72px}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.88em;background:var(--code-bg);
+  padding:1px 5px;border-radius:4px}
+b{font-weight:700}
+
+/* ---- 頁首 ---- */
+.top{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:34px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h1{font-size:clamp(26px,5vw,38px);line-height:1.25;margin:0 0 12px;font-weight:900;letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:0;max-width:64ch;color:var(--ink-2);font-size:16px}
+
+/* ---- 診斷 ---- */
+.diag{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-bottom:40px}
+.diag h2{margin:0 0 12px;font-size:16px;font-weight:700}
+.diag ol{margin:0;padding-left:1.3em}
+.diag li{margin-bottom:7px;color:var(--ink-2)}
+.diag li:last-child{margin-bottom:0}
+
+/* ---- 章節 ---- */
+.part{margin:56px 0 28px;padding-top:4px}
+.part-n{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.12em;color:var(--warn);font-weight:600}
+.part h2{margin:4px 0 8px;font-size:24px;font-weight:900;letter-spacing:-.01em}
+.part p{margin:0;color:var(--muted);max-width:66ch}
+
+/* ---- 單個方案 ---- */
+.opt{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:22px}
+.opt-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:16px;
+  border-bottom:1px solid var(--line-soft);padding-bottom:12px}
+.code{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;color:var(--panel);
+  background:var(--ink);border-radius:5px;padding:2px 8px;flex:none}
+.opt-hd h3{margin:0;font-size:19px;font-weight:700}
+.opt-hd p{margin:0;flex:1 1 320px;color:var(--muted);font-size:14px;line-height:1.6}
+.opt-body{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.spec{flex:1 1 300px;margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-content:start}
+.spec dt{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--muted);
+  white-space:nowrap;padding-top:4px}
+.spec dd{margin:0;font-size:14px;line-height:1.7;color:var(--ink-2)}
+.spec dd b{color:var(--ink)}
+
+/* ---- 手機框（永遠是淺色：這是在畫一個只有淺色的網站）---- */
+.dv{flex:none;width:352px;max-width:100%;background:#2b2f38;border-radius:24px;padding:8px;
+  box-shadow:0 10px 30px rgba(15,20,35,.22)}
+.dv-bar{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#a8aebc;text-align:center;padding:2px 0 7px}
+.dv-scr{background:#e4e5e8;border-radius:17px;overflow:hidden;padding:10px;color:#333}
+.dv-scr *{box-sizing:border-box}
+.m-head{background:#1e40af;color:#fff;border-radius:12px 12px 0 0;padding:11px 13px;margin:-10px -10px 10px}
+.m-h1{font-size:15px;font-weight:700}
+.m-sub{font-size:11px;opacity:.82;margin-top:1px}
+
+/* A 排行榜 */
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ra{background:#fff;border-radius:10px;padding:9px 11px;display:grid;
+  grid-template-columns:14px 90px 1fr;gap:8px;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.ra-n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:#9aa1ad;text-align:center}
+.ra-v{font-family:"IBM Plex Mono",monospace;font-size:17px;font-weight:600;color:#059669;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ra-v.gv{font-size:13px;color:#8a5c00;font-family:inherit}
+.ra-b{display:flex;flex-direction:column;min-width:0}
+.ra-b b{font-size:13px;font-weight:700;color:#333;line-height:1.35}
+.ra-b em{font-style:normal;font-size:11.5px;color:#4b5563;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ra-b i{font-style:normal;font-size:10.5px;color:#9aa1ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.divider{font-size:11px;color:#6b7280;padding:12px 2px 6px}
+
+/* B 分頁 */
+.tabs{display:flex;gap:5px;margin-bottom:8px}
+.tab{flex:1;font:inherit;font-size:10.5px;line-height:1.3;padding:7px 4px;border-radius:9px;
+  border:1px solid #cfd4dd;background:#fff;color:#4b5563;cursor:default}
+.tab.on{background:#1e40af;border-color:#1e40af;color:#fff;font-weight:700}
+.tabnote{font-size:10.5px;color:#6b7280;margin-bottom:8px;padding-left:2px}
+.tblist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tb{background:#fff;border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:82px 1fr;
+  gap:10px;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tb-v{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600;color:#059669;font-variant-numeric:tabular-nums}
+.tb-b{display:flex;flex-direction:column;min-width:0}
+.tb-b b{font-size:13px}
+.tb-b i{font-style:normal;font-size:11px;color:#6b7280}
+.peek{margin-top:9px;background:#f5f6f8;border-radius:9px;padding:8px 10px;font-size:11px;color:#4b5563}
+
+/* C 比較表 */
+.cp-hd{display:flex;justify-content:space-between;font-size:10.5px;color:#6b7280;padding:0 4px 5px}
+.cplist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cp{background:#fff;border-radius:10px;padding:10px 11px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.cp-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cp-top b{font-size:13px}
+.cp-sum{font-family:"IBM Plex Mono",monospace;font-size:16px;font-weight:600;color:#059669;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.cp-chips{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}
+.chip{font-size:10px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;border-radius:20px;padding:1px 7px}
+.cp-foot{font-size:10.5px;color:#9aa1ad}
+
+/* D 級距 */
+.tier{margin-bottom:9px}
+.tier-h{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:#374151;
+  padding:0 3px 5px;border-bottom:1px solid #cfd4dd;margin-bottom:5px}
+.tier-h span{font-family:"IBM Plex Mono",monospace;color:#9aa1ad;font-weight:500}
+.tier-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.tier-l li{background:#fff;border-radius:8px;padding:7px 10px;font-size:12px;display:flex;
+  align-items:baseline;gap:7px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tier-l b{font-family:"IBM Plex Mono",monospace;font-size:13px;color:#059669;font-variant-numeric:tabular-nums}
+.tier-l i{font-style:normal;font-size:10.5px;color:#9aa1ad;margin-left:auto;white-space:nowrap}
+
+/* E 長條 */
+.bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.bar{background:#fff;border-radius:9px;padding:8px 11px;box-shadow:0 1px 3px rgba(0,0,0,.05);
+  display:block;list-style:none}
+.bar-l{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:5px}
+.bar-t{display:flex;align-items:center;gap:7px}
+.bar-f{height:9px;border-radius:5px;background:linear-gradient(90deg,#10b981,#059669);flex:none}
+.bar-f.hatch{background:repeating-linear-gradient(45deg,#d8dbe2,#d8dbe2 3px,#eef0f4 3px,#eef0f4 6px)}
+.bar-v{font-family:"IBM Plex Mono",monospace;font-size:12px;color:#4b5563;font-variant-numeric:tabular-nums}
+.bar-g{margin-top:7px}
+
+/* F 大字卡 */
+.fcs{display:flex;flex-direction:column;gap:8px}
+.fc{background:#fff;border-radius:12px;padding:12px 13px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.fc-top{display:flex;gap:4px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.bdg{font-size:9.5px;border-radius:20px;padding:2px 7px;font-weight:700}
+.b-gift{background:#ffe3ec;color:#b03a63}
+.b-bonus{background:#ddfbef;color:#0b7a56}
+.b-cash{background:#fff3c4;color:#8a5c00}
+.urg{font-size:9.5px;background:#fee2e2;color:#b91c1c;border-radius:20px;padding:2px 7px;font-weight:700;margin-left:auto}
+.fc-big{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;color:#10b981;
+  line-height:1.15;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.fc-big small{display:block;font-family:"Noto Sans TC",sans-serif;font-size:11px;color:#6b7280;
+  font-weight:400;letter-spacing:0;margin-top:2px}
+.fc-cd{display:flex;align-items:center;gap:7px;margin:9px 0 5px}
+.fc-img{width:34px;height:22px;border-radius:3px;background:linear-gradient(135deg,#cfd6e4,#aab4c8);flex:none}
+.fc-cd b{font-size:12.5px;flex:1}
+.fc-i{color:#9aa1ad;font-size:13px}
+.fc-cond{font-size:11px;color:#6b7280;padding-bottom:9px;border-bottom:1px solid #eef0f4}
+.fc-cta{display:block;margin-top:9px;text-align:center;background:#1e40af;color:#fff;border-radius:8px;
+  padding:7px;font-size:12px;font-weight:700}
+
+/* 方法區塊（卡片內的常態活動清單） */
+.hlb{background:#fff;border-radius:11px;padding:11px 12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.hlb-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hlb-img{width:34px;height:22px;border-radius:3px;background:linear-gradient(135deg,#cfd6e4,#aab4c8);flex:none}
+.hlb-h b{font-size:13px}
+.hls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.hl{display:flex;align-items:baseline;gap:6px;font-size:11.5px;line-height:1.5;
+  padding-bottom:7px;border-bottom:1px dashed #f1f2f6}
+.hl:last-child{border-bottom:0;padding-bottom:0}
+.hl-r{font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:600;color:#059669;
+  min-width:46px;font-variant-numeric:tabular-nums}
+.hl-m{color:#333;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hl-c{font-size:10px;color:#9aa1ad;white-space:nowrap}
+.hl.pin{background:#f0f9ff;margin:0 -6px;padding:4px 6px;border-radius:6px;border-bottom:0}
+.hl.bad .hl-m{color:#b03a63;text-decoration:underline wavy #e79fb8 1px;text-underline-offset:3px}
+.hy{font-size:9px;font-weight:700;border-radius:20px;padding:1px 6px;white-space:nowrap}
+.hy-top{background:#ffe3ec;color:#b03a63}
+.hy-god{background:#ede6ff;color:#5b3fbf}
+.hy-excl{background:#fff3c4;color:#8a5c00}
+.hy-easy{background:#ddfbef;color:#0b7a56}
+.hlb-n{margin-top:8px;font-size:10.5px;color:#6b7280;background:#f5f6f8;border-radius:7px;padding:6px 8px}
+.hlb-n code{background:#e4e7ee;font-size:10px}
+
+/* ---- 建議區 ---- */
+.rec{background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:22px;margin-top:48px}
+.rec h2{margin:0 0 12px;font-size:19px;font-weight:900}
+.rec p{margin:0 0 12px;color:var(--ink-2)}
+.rec p:last-child{margin-bottom:0}
+.rec .pick{font-weight:700;color:var(--ink)}
+.caveat{border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:0 8px 8px 0;
+  padding:14px 16px;margin-top:22px}
+.caveat h3{margin:0 0 7px;font-size:14px;font-weight:700;color:var(--warn)}
+.caveat p{margin:0;font-size:14px;color:var(--ink-2)}
+.caveat ul{margin:6px 0 0;padding-left:1.2em;font-size:14px;color:var(--ink-2)}
+.caveat li{margin-bottom:4px}
+
+@media (max-width:760px){
+  .opt-body{gap:18px}
+  .dv{width:100%}
+  .spec{grid-template-columns:1fr;gap:3px 0}
+  .spec dt{padding-top:10px}
+}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="eyebrow">pickmycard.app / promos</div>
+  <h1>新戶活動頁：先看到獎勵，再看到卡片</h1>
+  <p class="lede">兩個問題、十個方案。所有 mockup 都用 <code>cards.data</code> 的真實資料渲染（39 檔未過期活動、23 張卡），不是示意文字——挑的時候看到的數字就是上線後會看到的數字。</p>
+</header>
+
+<div class="diag">
+  <h2>先確認我讀到的現況（<code>pmcRenderPromoCard_()</code>，<code>apps-script/cards-export.gs</code>）</h2>
+  <ol>
+    <li><b>獎勵本身被收合藏起來了。</b><code>.promo-hero</code>（NT$500 刷卡金／20% 那幾個大字）現在放在 <code>.promo-card-detail</code> 裡面，手機收合態看不到。第一眼看到的是卡名＋<code>new_customer_summary</code> 一長句——正是你說的「要讀幾秒」。</li>
+    <li><b>預設排序是「即將截止」</b>（<code>period_end</code> 升冪），不是卡片名稱；「依卡片」是右邊那顆切換鈕。但兩種都跟「獎勵多大」無關，所以結論一樣：排序沒有回答使用者的問題。</li>
+    <li><b>沒有共同單位就不可能 side-by-side。</b>現在三種獎勵（首刷禮／定額回饋／回饋加碼）用三種寫法混排，眼睛沒有可以往下掃的固定欄位。</li>
+    <li><b>一張卡的多檔活動被拆成多張卡片。</b>iLEO 4 檔、遠東快樂卡 4 檔、幣倍卡 3 檔、uniopen 4 檔——39 列其實只有 23 張卡。</li>
+  </ol>
+</div>
+
+<div class="part">
+  <div class="part-n">問題 1</div>
+  <h2>資訊層級：六種排法</h2>
+  <p>共同前提：先講獎勵、再講是誰送的。差別在「怎麼讓不同種類的獎勵可以並排比較」——這是全部設計的真正難點，六個方案各給一個答案。</p>
+</div>
+<section class="opt" id="A">
+  <div class="opt-hd"><span class="code">A</span><h3>獎勵排行榜</h3><p>一檔活動一列，全部換算成「最高可拿多少錢」後由大到小排。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">39 檔・依「最高可拿」排序</div></div><ul class="rank">
+    <li class="ra">
+      <span class="ra-n">1</span>
+      <span class="ra-v">NT$2,000</span>
+      <span class="ra-b"><b>iLEO 信用卡</b><em>10% 加碼・國外消費</em><i>上限消費 NT$20,000</i></span>
+    </li>
+    <li class="ra">
+      <span class="ra-n">2</span>
+      <span class="ra-v">NT$1,000</span>
+      <span class="ra-b"><b>滙豐 Live+ 卡</b><em>刷卡金</em><i>線上申辦  累積一般消費刷滿5,… ・剩 14 天</i></span>
+    </li>
+    <li class="ra">
+      <span class="ra-n">3</span>
+      <span class="ra-v">NT$1,000</span>
+      <span class="ra-b"><b>滙豐匯鑽卡</b><em>刷卡金</em><i>線上申辦  累積一般消費刷滿5,… ・剩 14 天</i></span>
+    </li>
+    <li class="ra">
+      <span class="ra-n">4</span>
+      <span class="ra-v">NT$1,000</span>
+      <span class="ra-b"><b>滙豐現金回饋御璽卡</b><em>刷卡金</em><i>線上申辦  累積一般消費刷滿5,… ・剩 14 天</i></span>
+    </li>
+    <li class="ra">
+      <span class="ra-n">5</span>
+      <span class="ra-v">NT$500</span>
+      <span class="ra-b"><b>永豐 Sport 卡</b><em>20% 加碼・Line Pay、Apple Pay</em><i>上限消費 NT$2,500</i></span>
+    </li>
+    <li class="ra">
+      <span class="ra-n">6</span>
+      <span class="ra-v">NT$500</span>
+      <span class="ra-b"><b>永豐大戶卡</b><em>現金</em><i>新申辦並首次登入DAWHO AP…</i></span>
+    </li></ul><div class="divider">🎁 獎品類（無現金定價，另外排）</div><ul class="rank">
+    <li class="ra ra-g">
+      <span class="ra-n">🎁</span>
+      <span class="ra-v gv">獎品</span>
+      <span class="ra-b"><b>永豐 Green 卡</b><em>M.Rino萬向四輪折疊購物車</em><i>無現金定價</i></span>
+    </li>
+    <li class="ra ra-g">
+      <span class="ra-n">🎁</span>
+      <span class="ra-v gv">獎品</span>
+      <span class="ra-b"><b>富邦 J 卡</b><em>TRAVEL FOX 24 吋上掀式</em><i>無現金定價</i></span>
+    </li></ul></div></div><dl class="spec"><dt>第一眼看到</dt><dd>金額。位置固定在左欄同一條垂直線上，眼睛只要往下掃一排數字。</dd><dt>為什麼能比</dt><dd><b>定額回饋＝票面金額</b>；<b>回饋加碼＝加碼率 × 上限消費</b>（資料裡的 bonus_cap 就是消費上限，兩者相乘剛好是這檔活動的回饋天花板）。39 檔裡 31 檔算得出金額。</dd><dt>取捨</dt><dd>8 檔純贈品沒有現金定價，只能另開一區排在後面——等於承認「這 8 檔不參與排序」。</dd><dt>工程成本</dt><dd>小。生成器多算一個 value 欄位、改排序、換版型；篩選/搜尋/展開邏輯全部沿用。</dd></dl></div>
+</section>
+<section class="opt" id="B">
+  <div class="opt-hd"><span class="code">B</span><h3>獎勵類型分頁</h3><p>先問「你想要現金、禮物、還是高回饋率」，同類才互相比較。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">先選你想要哪一種獎勵</div></div><div class="tabs"><button class="tab on">💰 現金 / 刷卡金 23</button><button class="tab">🎁 首刷禮 7</button><button class="tab">⚡ 回饋加碼 10</button></div>
+     <div class="tabnote">同一分頁內單位相同，數字可以直接比</div>
+     <ul class="tblist"><li class="tb"><span class="tb-v">NT$1,000</span><span class="tb-b"><b>滙豐 Live+ 卡</b><i>刷卡金・線上申辦  累積一般消費刷滿5,…</i></span></li><li class="tb"><span class="tb-v">NT$1,000</span><span class="tb-b"><b>滙豐匯鑽卡</b><i>刷卡金・線上申辦  累積一般消費刷滿5,…</i></span></li><li class="tb"><span class="tb-v">NT$1,000</span><span class="tb-b"><b>滙豐現金回饋御璽卡</b><i>刷卡金・線上申辦  累積一般消費刷滿5,…</i></span></li><li class="tb"><span class="tb-v">NT$500</span><span class="tb-b"><b>永豐大戶卡</b><i>現金・新申辦並首次登入DAWHO AP…</i></span></li></ul>
+     <div class="peek">切到 ⚡ 分頁：<b>20%</b> 永豐 Sport 卡・<b>10%</b> iLEO・<b>10%</b> 星展 eco…</div></div></div><dl class="spec"><dt>第一眼看到</dt><dd>三個分頁按鈕。使用者自己宣告需求後，看到的清單單位一致。</dd><dt>為什麼能比</dt><dd>不做跨單位換算——現金頁比 NT$、加碼頁比 %、禮物頁比品項。誠實但多一次點擊。</dd><dt>取捨</dt><dd>一檔活動可能同時是「首刷禮＋定額回饋」（現有資料有 3 檔），會重複出現在兩個分頁；要嘛去重要嘛接受。現有的類型篩選 chips 會被這組分頁取代。</dd><dt>工程成本</dt><dd>小。現有篩選 chips 已經是同一組 bucket（gift / bonus / voucher），改成分頁＋各自排序即可。</dd></dl></div>
+</section>
+<section class="opt" id="C">
+  <div class="opt-hd"><span class="code">C</span><h3>一卡一列比較表</h3><p>同一張卡的多檔活動收成一列，欄位對齊，真正的 side-by-side。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">一張卡一列・合計最高可拿</div></div>
+    <div class="cp-hd"><span>卡片</span><span>全檔合計上看</span></div><ul class="cplist">
+    <li class="cp">
+      <div class="cp-top"><b>iLEO 信用卡</b><span class="cp-sum">NT$2,800</span></div>
+      <div class="cp-chips"><span class="chip">NT$200 即享券</span><span class="chip">NT$2,000 10%</span><span class="chip">NT$500 10%</span><span class="chip">NT$100 刷卡金</span></div>
+      <div class="cp-foot">4 檔活動・最快 106 天到期</div>
+    </li>
+    <li class="cp">
+      <div class="cp-top"><b>永豐幣倍卡</b><span class="cp-sum">NT$1,100</span></div>
+      <div class="cp-chips"><span class="chip">NT$300 3%</span><span class="chip">NT$500 20%</span><span class="chip">NT$300 刷卡金</span></div>
+      <div class="cp-foot">3 檔活動・最快 106 天到期</div>
+    </li>
+    <li class="cp">
+      <div class="cp-top"><b>永豐大戶卡</b><span class="cp-sum">NT$1,000</span></div>
+      <div class="cp-chips"><span class="chip">NT$500 現金</span><span class="chip">NT$500 20%</span></div>
+      <div class="cp-foot">2 檔活動・最快 106 天到期</div>
+    </li>
+    <li class="cp">
+      <div class="cp-top"><b>滙豐 Live+ 卡</b><span class="cp-sum">NT$1,000</span></div>
+      <div class="cp-chips"><span class="chip">NT$1,000 刷卡金</span></div>
+      <div class="cp-foot">1 檔活動・最快 14 天到期</div>
+    </li>
+    <li class="cp">
+      <div class="cp-top"><b>滙豐匯鑽卡</b><span class="cp-sum">NT$1,000</span></div>
+      <div class="cp-chips"><span class="chip">NT$1,000 刷卡金</span></div>
+      <div class="cp-foot">1 檔活動・最快 14 天到期</div>
+    </li></ul></div></div><dl class="spec"><dt>第一眼看到</dt><dd>卡片名 ＋ 該卡全部新戶活動的合計金額，右欄對齊。</dd><dt>為什麼能比</dt><dd>把 39 列壓成 23 列（iLEO 有 4 檔、遠東快樂卡 4 檔、幣倍卡 3 檔、uniopen 4 檔），欄位固定寬度、數字靠右對齊 → 掃描成本最低。</dd><dt>取捨</dt><dd>「合計」有風險：同一張卡的多檔活動不見得能同時拿（可能二選一）。要嘛文案寫成「全檔合計上看」並在展開處逐檔說明，要嘛只顯示最大一檔。<b>這是資料目前答不出來的問題</b>——Sheets 沒有欄位標記「互斥」。</dd><dt>工程成本</dt><dd>中。要改分組結構（現在一張 promo 一個 article），錨點 id、JSON-LD ItemList、篩選/排序都要跟著改。</dd></dl></div>
+</section>
+<section class="opt" id="D">
+  <div class="opt-hd"><span class="code">D</span><h3>金額級距分組</h3><p>用金額切段落：1000 以上 / 500–999 / 100–499 / 獎品。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">先挑你要的金額級距</div></div><div class="tier"><div class="tier-h">NT$1,000 以上<span>4</span></div><ul class="tier-l"><li><b>NT$2,000</b> iLEO 信用卡<i>10% 加碼・國外消費</i></li><li><b>NT$1,000</b> 滙豐 Live+ 卡<i>刷卡金</i></li><li><b>NT$1,000</b> 滙豐匯鑽卡<i>刷卡金</i></li></ul></div><div class="tier"><div class="tier-h">NT$500 – 999<span>9</span></div><ul class="tier-l"><li><b>NT$500</b> 永豐 Sport 卡<i>20% 加碼・Line Pay、</i></li><li><b>NT$500</b> 永豐大戶卡<i>現金</i></li><li><b>NT$500</b> 永豐大戶卡<i>20% 加碼・LINE Pay、</i></li></ul></div><div class="tier"><div class="tier-h">NT$100 – 499<span>16</span></div><ul class="tier-l"><li><b>NT$387</b> 玉山 Uni 卡<i>20% 加碼・玉山Wallet</i></li><li><b>NT$300</b> 永豐幣倍卡<i>3% 加碼・Apple Pay、</i></li><li><b>NT$300</b> 永豐幣倍卡<i>刷卡金</i></li></ul></div><div class="tier"><div class="tier-h">🎁 獎品類<span>7</span></div><ul class="tier-l"><li><b>🎁</b> 永豐 Green 卡<i>M.Rino萬向四輪折疊購物</i></li><li><b>🎁</b> 富邦 J 卡<i>TRAVEL FOX 24 </i></li></ul></div></div></div><dl class="spec"><dt>第一眼看到</dt><dd>級距標題。使用者先決定「我要的量級」，再在段落內挑卡。</dd><dt>為什麼能比</dt><dd>同一段落內金額接近，比較的重點自動轉移到「條件難不難」，而不是數字大小。</dd><dt>取捨</dt><dd>級距的切點是人訂的，資料一變就可能整段只剩 1 筆（現在 1000 以上只有 4 筆、其中 3 筆是滙豐同金額）。段落數量會隨季節浮動。</dd><dt>工程成本</dt><dd>小。同 A 的換算，只是改成分段渲染。</dd></dl></div>
+</section>
+<section class="opt" id="E">
+  <div class="opt-hd"><span class="code">E</span><h3>長條圖排行</h3><p>在排行榜上加一條長度＝金額的橫條，用視覺長度取代讀數字。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">長度＝最高可拿的錢</div></div><ul class="bars">
+    <li class="bar">
+      <span class="bar-l">iLEO 信用卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:100%"></span><span class="bar-v">NT$2,000</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">滙豐 Live+ 卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:50%"></span><span class="bar-v">NT$1,000</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">滙豐匯鑽卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:50%"></span><span class="bar-v">NT$1,000</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">滙豐現金回饋御璽卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:50%"></span><span class="bar-v">NT$1,000</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">永豐 Sport 卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:25%"></span><span class="bar-v">NT$500</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">永豐大戶卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:25%"></span><span class="bar-v">NT$500</span></span>
+    </li>
+    <li class="bar">
+      <span class="bar-l">永豐大戶卡</span>
+      <span class="bar-t"><span class="bar-f" style="width:25%"></span><span class="bar-v">NT$500</span></span>
+    </li></ul>
+     <li class="bar bar-g"><span class="bar-l">富邦 J 卡</span><span class="bar-t"><span class="bar-f hatch" style="width:38%"></span><span class="bar-v">獎品</span></span></li>
+     <div class="peek">獎品沒有現金定價，畫斜線條、不參與長度比較</div></div></div><dl class="spec"><dt>第一眼看到</dt><dd>長度差異。不需要讀完數字就知道「這檔比那檔大很多」。</dd><dt>為什麼能比</dt><dd>長度是最快的視覺比較通道，比讀 4 位數字快。</dd><dt>取捨</dt><dd>最大值 NT$2,000 會把其餘 NT$100 的條壓成一小截（20:1），視覺上變成「只有第一名有意義」。可以改用對數或封頂，但那會讓長度不再誠實。</dd><dt>工程成本</dt><dd>小。A 的版型加一個 CSS 寬度百分比。</dd></dl></div>
+</section>
+<section class="opt" id="F">
+  <div class="opt-hd"><span class="code">F</span><h3>獎勵大字卡（最小改動）</h3><p>維持現在的卡片外型，只把資訊順序倒過來：獎勵大字在最上面。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub">獎勵大字在前、卡片在後</div></div><div class="fcs">
+    <article class="fc">
+      <div class="fc-top"><span class="bdg b-bonus">回饋加碼</span></div>
+      <div class="fc-big">NT$2,000<small>（10%・上限消費 NT$20,000）</small></div>
+      <div class="fc-cd"><span class="fc-img"></span><b>iLEO 信用卡</b><span class="fc-i">ⓘ</span></div>
+      <div class="fc-cond">上限消費 NT$20,000</div>
+      <a class="fc-cta">立即申辦</a>
+    </article>
+    <article class="fc">
+      <div class="fc-top"><span class="bdg b-cash">定額回饋</span><span class="urg">剩 14 天</span></div>
+      <div class="fc-big">NT$1,000<small>刷卡金</small></div>
+      <div class="fc-cd"><span class="fc-img"></span><b>滙豐 Live+ 卡</b><span class="fc-i">ⓘ</span></div>
+      <div class="fc-cond">線上申辦  累積一般消費刷滿5,…</div>
+      <a class="fc-cta">立即申辦</a>
+    </article>
+    <article class="fc">
+      <div class="fc-top"><span class="bdg b-gift">首刷禮</span><span class="urg">剩 14 天</span></div>
+      <div class="fc-big">TRAVEL FOX 2<small>首刷禮</small></div>
+      <div class="fc-cd"><span class="fc-img"></span><b>富邦 J 卡</b><span class="fc-i">ⓘ</span></div>
+      <div class="fc-cond">新增3筆NT$1,000元(含)…</div>
+      <a class="fc-cta">立即申辦</a>
+    </article></div></div></div><dl class="spec"><dt>第一眼看到</dt><dd>獎勵本身。現在藏在收合區 <code>.promo-hero</code> 裡的大字直接升到卡片頂端。</dd><dt>為什麼能比</dt><dd>每張卡同一個位置都是同樣大小的大字＋同樣格式的括號補充，卡片之間自然對齊。</dd><dt>取捨</dt><dd>仍然是一卡一檔、垂直堆疊，一個螢幕只看得到 2–3 檔，比較半徑最小——資訊層級對了，但「side-by-side」只解決一半。</dd><dt>工程成本</dt><dd><b>最小</b>。<code>pmcRenderPromoCard_()</code> 內部搬動幾段字串：把 <code>heroSectionHtml</code> 從 <code>.promo-card-detail</code> 移到 <code>.promo-card-toggle</code> 最前面，標題降級。CSS 改字級。排序照舊或搭 A 的換算。</dd></dl></div>
+</section>
+
+<div class="part">
+  <div class="part-n">問題 2</div>
+  <h2>卡片的常態活動：四種取得方式</h2>
+  <p>目標是在 <code>promo-card-body</code> 裡直接列出這張卡最高回饋的 5 個常態活動。<b>四個方法的「算數字」那一段完全一樣</b>（都用主站的 <code>getDisplayRate()</code>，數字不會漂移），差別只在<b>「挑哪 5 個」</b>——而我實跑過真資料，挑錯的代價比算錯還大。</p>
+</div>
+<section class="opt" id="①">
+  <div class="opt-hd"><span class="code">①</span><h3>全自動：build 時用真引擎算 Top 5</h3><p>不新增任何人工欄位。部署時把前端那 12 支模組載進 Node，用主站同一支 <code>getDisplayRate()</code> 算出每張卡的回饋率，取前 5 名。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>中信 LINE Pay 卡</b></div>
+   <ul class="hls"><li class="hl bad"><span class="hl-r">10%</span><span class="hl-m">撥撥貓砂官網</span><span class="hl-c">上限消費 NT$3,333</span></li><li class="hl"><span class="hl-r">10%</span><span class="hl-m">LOPIA、壽司郎 Sushiro</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl"><span class="hl-r">10%</span><span class="hl-m">Uniqlo、GU</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl"><span class="hl-r">8%</span><span class="hl-m">KAFEN</span><span class="hl-c">上限消費 NT$2,857</span></li><li class="hl"><span class="hl-r">6%</span><span class="hl-m">sisley</span><span class="hl-c">上限消費 NT$25,000</span></li></ul>
+   </div><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>聯邦 M 卡</b></div>
+   <ul class="hls"><li class="hl"><span class="hl-r">6%</span><span class="hl-m">國內航空、國外航空</span><span class="hl-c">上限消費 NT$5,000</span></li><li class="hl"><span class="hl-r">5%</span><span class="hl-m">美廉社、心樸市集</span><span class="hl-c">上限消費 NT$3,000</span></li><li class="hl"><span class="hl-r">3%</span><span class="hl-m">國外實體消費</span><span class="hl-c">無上限</span></li><li class="hl"><span class="hl-r">1.2%</span><span class="hl-m">保費、保險</span><span class="hl-c">上限消費 NT$833,333</span></li></ul>
+   </div></div></div><dl class="spec"><dt>數字可靠度</dt><dd><b>高</b>。用的是主站計算搜尋結果時同一支函數，連 stacking 加總（3%+1%+1%=5%）、跨槽引用 <code>rate_N</code>、級別 placeholder 都一致。已有現成前例：<code>tools/lib/merchant-cards.js</code> 就是這樣把 <code>js/</code> 載進 vm 生成商家頁，<code>--verify</code> 還會用 Playwright 開真頁逐筆比對。</dd><dt>選題可靠度</dt><dd><b>低</b>。我用真資料實跑過：中信 LINE Pay 卡的第一名是「<b>10% 撥撥貓砂官網</b>」（單一貓砂官網，20 個槽裡最窄的一個），而它真正該講的 LINE Pay 支付根本排不進去。台新 Richart 卡更糟——18 個槽全是「切換○○刷方案」，五個方案是<b>互斥</b>的，並排列出等於暗示可以同時拿。</dd><dt>標籤可靠度</dt><dd><b>中</b>。名稱取 <code>category</code> 欄，但 23 張促銷卡<b>會出現在畫面上的 146 個槽位只有 59% 有填</b>；沒填就退回前兩個 item 名——聯邦 M 卡 4 槽全空，那個 34 項的旅遊槽會顯示成「國內航空、國外航空」，而網站自己的推薦活動說它的賣點是<b>計程車</b>。</dd><dt>人工成本</dt><dd>零。</dd></dl></div>
+</section>
+<section class="opt" id="②">
+  <div class="opt-hd"><span class="code">②</span><h3>半自動：Sheets 加一欄「精選槽位」</h3><p>Cards Data 加一欄 <code>highlightSlots</code>，填槽號如 <code>13,16,9,12,6</code>。程式只負責把那些槽的回饋率／上限算出來，<b>選哪幾個由人決定，數字由程式算</b>。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>中信 LINE Pay 卡</b></div>
+   <ul class="hls"><li class="hl pin"><span class="hl-r">10%</span><span class="hl-m">LOPIA、壽司郎 Sushiro</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl pin"><span class="hl-r">10%</span><span class="hl-m">Uniqlo、GU</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl pin"><span class="hl-r">5%</span><span class="hl-m">國外實體消費</span><span class="hl-c">上限消費 NT$20,454</span></li><li class="hl pin"><span class="hl-r">5%</span><span class="hl-m">Uber Eats、星巴克</span><span class="hl-c">上限消費 NT$2,500</span></li><li class="hl pin"><span class="hl-r">1%</span><span class="hl-m">捷運輕軌、台鐵</span><span class="hl-c">無上限</span></li></ul>
+   <div class="hlb-n">站長填：<code>highlightSlots = 13,16,9,12,6</code></div></div><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>聯邦 M 卡</b></div>
+   <ul class="hls"><li class="hl pin"><span class="hl-r">6%</span><span class="hl-m">國內航空、國外航空</span><span class="hl-c">上限消費 NT$5,000</span></li><li class="hl pin"><span class="hl-r">5%</span><span class="hl-m">美廉社、心樸市集</span><span class="hl-c">上限消費 NT$3,000</span></li><li class="hl pin"><span class="hl-r">3%</span><span class="hl-m">國外實體消費</span><span class="hl-c">無上限</span></li><li class="hl pin"><span class="hl-r">1.2%</span><span class="hl-m">保費、保險</span><span class="hl-c">上限消費 NT$833,333</span></li></ul>
+   <div class="hlb-n">站長填：<code>highlightSlots = 1,3,4,2</code></div></div></div></div><dl class="spec"><dt>數字可靠度</dt><dd><b>高</b>，同方法①（同一支 <code>getDisplayRate()</code>）。填的是槽號不是數字，銀行改回饋率時這一欄不用動。</dd><dt>選題可靠度</dt><dd><b>高</b>。上面兩張卡的清單就是我照「哪個賣點值得講」挑的：LINE Pay 卡改成日系餐飲 10%／Uniqlo 10%／國外 5%（上限 20,454 最寬）／Uber Eats 5%／交通 1%；M 卡把 34 項的旅遊交通槽放第一。</dd><dt>標籤可靠度</dt><dd><b>高</b>，但要順手補 <code>category</code>——不然槽號挑對了名字還是「國內航空、國外航空」。可再加一個選填的 <code>highlightLabel</code> 覆寫顯示名（例：slot 1 → 「計程車・航空・飯店」）。</dd><dt>人工成本</dt><dd><b>一張卡填一格</b>，23 張卡約 30 分鐘；留空自動退回方法①。新增槽位時要回頭確認一次。</dd><dt>漂移風險</dt><dd>槽號會因為 Sheets 插入/刪除槽位而位移。<code>rate_N</code> 跨槽引用已經踩過同一個坑，解法現成：用 <code>.slot</code> 真實槽號比對（<code>findRateGroupBySlot()</code>），並在 <code>preflight</code> 加一條「<code>highlightSlots</code> 指到不存在的槽就擋 commit」，跟 <code>tools/check-cross-slot-refs.js</code> 同款。</dd></dl></div>
+</section>
+<section class="opt" id="③">
+  <div class="opt-hd"><span class="code">③</span><h3>Highlights 必列 ＋ 自動補滿</h3><p>你已經在維護的「推薦活動」（Highlights 工作表）當必列項，帶「全場最高！」字眼；不足 5 則用方法①自動補。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>聯邦 M 卡</b></div>
+   <ul class="hls"><li class="hl pin"><span class="hy hy-top">全場最高！</span><span class="hl-r">6%</span><span class="hl-m">所有計程車</span><span class="hl-c">上限消費 NT$5,000</span></li><li class="hl"><span class="hl-r">5%</span><span class="hl-m">美廉社、心樸市集</span><span class="hl-c">上限消費 NT$3,000</span></li><li class="hl"><span class="hl-r">3%</span><span class="hl-m">國外實體消費</span><span class="hl-c">無上限</span></li><li class="hl"><span class="hl-r">1.2%</span><span class="hl-m">保費、保險</span><span class="hl-c">上限消費 NT$833,333</span></li></ul>
+   <div class="hlb-n">Highlights 有這張卡 → 第一列釘選＋帶 hype 字眼</div></div><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>中信 LINE Pay 卡</b></div>
+   <ul class="hls"><li class="hl bad"><span class="hl-r">10%</span><span class="hl-m">撥撥貓砂官網</span><span class="hl-c">上限消費 NT$3,333</span></li><li class="hl"><span class="hl-r">10%</span><span class="hl-m">LOPIA、壽司郎 Sushiro</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl"><span class="hl-r">10%</span><span class="hl-m">Uniqlo、GU</span><span class="hl-c">上限消費 NT$2,222</span></li></ul>
+   <div class="hlb-n">Highlights <b>沒有</b>這張卡 → 整塊退回方法①，貓砂照樣上榜</div></div></div></div><dl class="spec"><dt>數字可靠度</dt><dd><b>高，但必須反查</b>。Highlights 的 rate/cap 是<b>手打的、已經證實會漂移</b>（2026-09-02 查出 20 則有 6 則期限對不上，3 則顯示已過去的日期，所以期限那條早就改成反查真活動了）。回饋率要比照辦理：用 <code>card_id + merchant</code> 反查真活動取 rate，現成函數是 <code>findSpotlightCardActivities()</code>。</dd><dt>選題可靠度</dt><dd><b>必列項高，其餘同方法①</b>。關鍵限制：<b>24 則 Highlights 只覆蓋 12/23 張有新戶活動的卡（52%）</b>，另外 11 張（含最需要救的中信 LINE Pay 卡）完全沒被覆蓋，那些卡會 100% 退回方法①的問題。</dd><dt>標籤可靠度</dt><dd><b>必列項高</b>——merchant 是人寫的，「所有計程車」正是那個自動選法講不出來的名字。</dd><dt>人工成本</dt><dd>零新增（表已在維護）。想提高覆蓋率就是繼續往 Highlights 加列，而那本來就會同時改善首頁的推薦活動區。</dd><dt>要注意</dt><dd>merchant 可能是快捷搜尋的 displayName（如「所有計程車」＝台灣大車隊/yoxi/uber/…），比對時要走 <code>findSpotlightCardActivities()</code> 那條快捷展開分支，不能只做字串比對——我第一版原型就在這裡漏抓。</dd></dl></div>
+</section>
+<section class="opt" id="④">
+  <div class="opt-hd"><span class="code">④</span><h3>加權自動選（不只看回饋率）</h3><p>全自動，但排序分數＝回饋率 ＋ 通路廣度 ＋ 上限寬鬆度 −「方案/任務/綁定」這類條件式活動的懲罰。</p></div>
+  <div class="opt-body"><div class="dv"><div class="dv-bar">pickmycard.app/promos</div><div class="dv-scr"><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>中信 LINE Pay 卡</b></div>
+   <ul class="hls"><li class="hl"><span class="hl-r">10%</span><span class="hl-m">LOPIA、壽司郎 Sushiro</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl"><span class="hl-r">10%</span><span class="hl-m">Uniqlo、GU</span><span class="hl-c">上限消費 NT$2,222</span></li><li class="hl bad"><span class="hl-r">10%</span><span class="hl-m">撥撥貓砂官網</span><span class="hl-c">上限消費 NT$3,333</span></li><li class="hl"><span class="hl-r">8%</span><span class="hl-m">KAFEN</span><span class="hl-c">上限消費 NT$2,857</span></li><li class="hl"><span class="hl-r">6%</span><span class="hl-m">sisley</span><span class="hl-c">上限消費 NT$25,000</span></li></ul>
+   </div><div class="hlb"><div class="hlb-h"><span class="hlb-img"></span><b>台新 Richart 卡</b></div>
+   <ul class="hls"><li class="hl"><span class="hl-r">10%</span><span class="hl-m">切換「Chill刷」方案</span><span class="hl-c">上限消費 NT$300,000</span></li><li class="hl"><span class="hl-r">3.3%</span><span class="hl-m">切換「玩旅刷」方案</span><span class="hl-c">上限消費 NT$300,000</span></li><li class="hl"><span class="hl-r">3.3%</span><span class="hl-m">切換「數趣刷」方案</span><span class="hl-c">上限消費 NT$300,000</span></li><li class="hl"><span class="hl-r">3.3%</span><span class="hl-m">切換「大筆刷」方案</span><span class="hl-c">上限消費 NT$300,000</span></li><li class="hl"><span class="hl-r">3.3%</span><span class="hl-m">切換「天天刷」方案</span><span class="hl-c">上限消費 NT$300,000</span></li></ul>
+   <div class="hlb-n">互斥的「切換○○刷方案」還是並排了</div></div></div></div><dl class="spec"><dt>數字可靠度</dt><dd><b>高</b>，同方法①。</dd><dt>選題可靠度</dt><dd><b>不穩定</b>。我實際寫了一版權重（廣度 ×0.6、上限、骨幹槽 −6、條件式關鍵字 −8、Highlights 命中 +25）跑真資料：貓砂從第 1 名掉到第 3，<b>但還在榜上</b>；Richart 卡的互斥方案完全沒被擋住。</dd><dt>可維護性</dt><dd><b>最差的一項</b>。權重是黑箱：調一個數字，23 張卡的清單同時變動，沒有「正確答案」可以回歸測試。本專案已有明文判準——「為了讓某個 case 通過而加的 if 已經是第 3 個」就是方向錯了（<code>docs/ops/judgment.md</code> 第 4 節）。</dd><dt>人工成本</dt><dd>零，但換成無限的調參成本。</dd></dl></div>
+</section>
+
+<div class="rec">
+  <h2>如果要我選</h2>
+  <p>問題 1 選 <span class="pick">A（獎勵排行榜）</span>，問題 2 選 <span class="pick">③＋②</span>：Highlights 有的卡釘選在最前面並帶「全場最高！」，沒有的卡用 Sheets 的 <code>highlightSlots</code> 人工挑槽號，兩者都沒填才退回自動 Top 5。</p>
+  <p>理由：A 的換算（加碼率 × 上限消費）是<b>資料本來就答得出來</b>的共同單位，31/39 檔算得出金額，改動又小；而問題 2 的實跑結果很明確——<b>數字可以全自動，選題不行</b>。「10% 撥撥貓砂官網」不是 bug，是「照回饋率排序」這個規則本身的正確輸出，加權也只是把它從第 1 名推到第 3 名。你要的「可靠、不漂移、又不用全部手寫」，唯一同時滿足的組合就是<b>人挑槽號、程式算數字</b>：一張卡填一格，數字永遠跟著 <code>cards.data</code> 走。</p>
+</div>
+
+<div class="caveat">
+  <h3>動工前需要你先裁決的三件事</h3>
+  <ul>
+    <li><b>多檔活動能不能相加？</b>方案 C 的「合計」與 A 的排序都會碰到：同一張卡的 4 檔活動是可以疊加還是二選一？Sheets 目前沒有欄位表達，程式推不出來。</li>
+    <li><b>分級卡顯示哪一級？</b>玉山 Uni／永豐大戶／凱基誠品／國泰 CUBE 的回饋率隨級別變動。現在 spotlight modal 的慣例是取第一個級別，但永豐大戶卡取第一級（大戶Plus）會顯示 6%，對大多數人是拿不到的數字。要標「以 ○○ 等級計」還是改取最低級？</li>
+    <li><b>promos 頁的生成位置。</b>方法①～④ 都需要 <code>getDisplayRate()</code>，而它在 <code>js/</code>、Apps Script 讀不到。兩條路：(a) 照 <code>tools/build-merchant-pages.js</code> 的成例，<b>在 Cloudflare Pages build 時</b>用 Node vm 載入真引擎、把常態活動注入已生成的 <code>promos.html</code>（不用改 Apps Script，也不會多一份計算邏輯）；(b) 把 <code>getDisplayRate()</code> 移植進 <code>cards-export.gs</code>——但那會變成同一段邏輯的<b>第四份副本</b>，<code>docs/project/cashback-engine.md</code> 已經明文警告「三處實作必須一致」。我會走 (a)。</li>
+  </ul>
+</div>
+
+<div class="caveat" style="border-left-color:var(--muted);background:var(--panel-2)">
+  <h3 style="color:var(--muted)">順手發現的資料問題（與本次改版無關，但會顯示在頁面上）</h3>
+  <p><code>newCardholderPromos</code> 裡有一列 <b>中信 LINE Pay 卡</b>的活動：<code>promo_types</code>、獎勵欄位、<code>period_end</code> 全空。它沒被過期過濾擋掉（無 <code>period_end</code> ＝不限期），所以現在就渲染在 /promos 上，是一張什麼都沒寫的空卡片。</p>
+</div>
+</div>
