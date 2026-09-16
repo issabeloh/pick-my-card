@@ -1019,6 +1019,13 @@ function setupDeleteAccountModal() {
     if (pwdInput) pwdInput.addEventListener('input', updateDeleteAccountButtonState);
     if (confirmBtn) confirmBtn.addEventListener('click', deleteAccountAndAllData);
 
+    // #da-form 存在的理由是「讓密碼欄有 <form> 擁有者」（見 index.html 該處註解），
+    // 它沒有 action、也沒有 submit 鈕，任何送出都只會讓頁面重載、把 modal 狀態洗掉。
+    // 隱含送出理論上被「表單內有兩個輸入欄」擋住，但這裡再擋一次，免得日後有人
+    // 增減欄位就靜默退化成重新整理。
+    const daForm = document.getElementById('da-form');
+    if (daForm) daForm.addEventListener('submit', (e) => e.preventDefault());
+
     // 點背景關閉（與站內其他 modal 一致）；刪除進行中（取消鈕已 disabled）不讓關。
     modal.addEventListener('click', (e) => {
         if (e.target !== modal) return;

@@ -281,4 +281,5 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-08] 「桌機 UI 全部縮小」聽起來像一行 `html { font-size: 87.5% }` → 實測 `styles.css` 有 191 條 px 字級與 170 條 rem 字級各半，rem 開關只拉動一半、比例會歪；改用 `zoom` 則會扯到 `getBoundingClientRect` 的量測（詳情頁 nav 捲動就靠它）→ 全站密度調整沒有單一開關，要當獨立任務逐條盤點；先做「放寬容器與側欄」這種只動可用寬度、不動字級的部分，風險與收益比好得多
 - [2026-09-08] iPhone 13 上手機抽屜的 FAQ 卡被截斷、又捲不下去 → `.sidebar` 的 height/max-height 吃 `100vh`，而 iOS Safari 的 100vh 是「工具列收起後」的大視窗高度（844px），實際可視只有約 659px：底部近 190px 被工具列蓋住，內容（約 780px）又小於 844px 不產生捲軸 → 任何「滿版高度的固定面板」（抽屜、全螢幕 modal）一律 `100vh` 後面再補一行 `100dvh`，vh 那行只當舊瀏覽器 fallback
 - [2026-09-03] 用 `s[start:end]` 整段替換 CSS 區塊時，誤刪了夾在中間的 modal 樣式與手機 media query → `end` 錨點抓成「下一個大註解」，但那之間還有別的規則 → 整段替換前先確認 start/end 之間**只有**要換掉的東西（`grep -n` 列出區間內的選擇器），或改用逐條 replace
+- [2026-09-16] 首頁「消費金額」框在桌機 Chrome 跳出儲存的帳號/密碼下拉（站長截圖回報）→ 刪除帳號 modal 的 `#da-password` 沒有 `<form>` 擁有者，Chrome 會把全文件的無主欄位併成一個合成表單、再挑密碼欄前方最近的文字欄當帳號欄，也就是 `#amount-input`（`type="number"` 一樣會被選中，`autocomplete="off"` 擋不住密碼管理員）→ **頁面上任何 `type="password"` 欄位一律要被某個 `<form>` 擁有**，否則它會把同頁不相干的輸入框變成「帳號欄」；本專案的作法是 `<form id="da-form" style="display: contents;">`（不影響版面）＋ JS 攔 submit。新增密碼欄時照做
 
