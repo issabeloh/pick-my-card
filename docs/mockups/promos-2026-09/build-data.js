@@ -25,8 +25,8 @@ const COND_RE = /方案|切換|任務|首次|綁定|登錄|滿額|滿千|加碼�
 function itemsLabel(items) {
   const a = (items || []).filter(Boolean);
   if (!a.length) return '';
-  const head = a.slice(0, 2).join('、');
-  return a.length > 2 ? head + '…等 ' + a.length + ' 項' : head;
+  const head = a.slice(0, 3).join('、');
+  return a.length > 3 ? head + '…等 ' + a.length + ' 項' : head;
 }
 function labelOf(rg) {
   const cat = (rg.category || '').trim();
@@ -126,19 +126,31 @@ function features(card, n) {
     unmatched.push({ label: m, rate: Number(sp.rate), cap: null, hype: hy, sheetOnly: true });
   });
 
-  const sorted = slots.slice().sort((a, b) => b.rate - a.rate);
+  // 同一個顯示標籤只留回饋率最高的那一個（站長 2026-09-17：聯邦 LINE Bank 卡的
+  // 「萊爾富門市」同時有 10% 與 5% 兩槽，並列會被當成資料錯誤）。
+  // ⚠️ 必須在挑 n 之前去重，否則重複的那行會佔掉名額、把真正的第 5 名擠掉。
+  // 被丟掉的那個若帶著 hype／保證入列旗標，要移轉給留下來的那個。
+  const byLabel = new Map();
+  slots.forEach(s => {
+    const key = s.spotMerchant || s.label;
+    const prev = byLabel.get(key);
+    if (!prev) { byLabel.set(key, s); return; }
+    const keep = s.rate > prev.rate ? s : prev;
+    const drop = s.rate > prev.rate ? prev : s;
+    if (!keep.hype && drop.hype) keep.hype = drop.hype;
+    if (!keep.spotMerchant && drop.spotMerchant) keep.spotMerchant = drop.spotMerchant;
+    if (must.includes(drop.slot) && !must.includes(keep.slot)) must.push(keep.slot);
+    byLabel.set(key, keep);
+  });
+  const sorted = [...byLabel.values()].sort((a, b) => b.rate - a.rate);
+
   const picked = [];
   const seen = new Set();
-  // 先放「保證入列」的，再依序補到 n —— 但最後整份一起重排，維持回饋率倒序
+  // 保證入列的先進，其餘依回饋率補到 n，最後整份一起重排維持倒序
   sorted.forEach(s => { if (must.includes(s.slot)) { picked.push(s); seen.add(s.slot); } });
   unmatched.forEach(u => picked.push(u));
   sorted.forEach(s => { if (picked.length >= n) return; if (seen.has(s.slot)) return; seen.add(s.slot); picked.push(s); });
   picked.sort((a, b) => b.rate - a.rate);
-  // 同一張卡常有「同商家清單、同回饋率」的多個槽（中信 uniopen 的統一集團 38 項就有兩個），
-  // 顯示上是同一行，去重免得看起來像重複列了一次。
-  const dedup = [], sig = new Set();
-  picked.forEach(x => { const k = (x.spotMerchant || x.label) + '|' + x.rate; if (sig.has(k)) return; sig.add(k); dedup.push(x); });
-  picked.length = 0; picked.push(...dedup);
 
   const base = baseLines(card, lvS).map(b => Object.assign({}, b, baseHype[b.label] ? { hype: baseHype[b.label] } : {}));
   return {
