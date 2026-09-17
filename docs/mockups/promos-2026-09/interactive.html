@@ -33,7 +33,6 @@ h1{font-size:clamp(25px,5vw,36px);line-height:1.25;margin:0 0 12px;font-weight:9
 .stage{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
 .stage-side{flex:1 1 330px;min-width:0}
 
-/* 控制台 */
 .ctl{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px}
 .ctl h2{margin:0 0 4px;font-size:14px;font-weight:700}
 .ctl .hint{margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.6}
@@ -48,22 +47,19 @@ h1{font-size:clamp(25px,5vw,36px);line-height:1.25;margin:0 0 12px;font-weight:9
 .note{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px}
 .note h2{margin:0 0 8px;font-size:14px;font-weight:700}
 .note ul{margin:0;padding-left:1.2em}
-.note li{font-size:13.5px;line-height:1.7;color:var(--ink-2);margin-bottom:5px}
+.note li{font-size:13.5px;line-height:1.7;color:var(--ink-2);margin-bottom:6px}
 .note li:last-child{margin-bottom:0}
 .note p{margin:0 0 8px;font-size:13.5px;line-height:1.7;color:var(--ink-2)}
 .note p:last-child{margin-bottom:0}
-table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:8px}
-th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line-soft)}
-th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted);font-weight:500;letter-spacing:.04em}
-td.num{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums}
-tr.over td{color:var(--warn)}
+.note.warn{border-left:3px solid var(--warn);background:var(--warn-soft)}
+.note.warn h2{color:var(--warn)}
 
 /* ===== 手機：刻意單一淺色（在畫一個只有淺色的網站） ===== */
 .dv{flex:none;width:352px;max-width:100%;background:#2b2f38;border-radius:26px;padding:9px;
   box-shadow:0 12px 34px rgba(15,20,35,.24);position:sticky;top:16px}
 .dv-bar{font-family:"IBM Plex Mono",monospace;font-size:10px;color:#a8aebc;text-align:center;padding:2px 0 7px}
 .dv-scr{background:#e4e5e8;border-radius:18px;overflow-y:auto;overscroll-behavior:contain;
-  height:660px;padding:0 10px 14px;color:#333;position:relative}
+  height:680px;padding:0 10px 14px;color:#333;position:relative}
 .dv-scr *{box-sizing:border-box}
 .m-head{background:#1e40af;color:#fff;border-radius:0 0 12px 12px;padding:11px 13px;margin:0 -10px 10px;
   position:sticky;top:0;z-index:20}
@@ -71,13 +67,15 @@ tr.over td{color:var(--warn)}
 .m-sub{font-size:11px;opacity:.85;margin-top:1px}
 
 .grp{margin-bottom:15px}
-/* 主卡：卡圖前導緊湊列 */
-.pc{background:#fff;border-radius:12px;padding:12px 13px 13px;box-shadow:0 2px 8px rgba(0,0,0,.07);position:relative;z-index:5}
+.pc{background:#fff;border-radius:12px;padding:12px 13px 13px;box-shadow:0 2px 8px rgba(0,0,0,.07);position:relative;z-index:9}
 .pc-name-top{font-size:12.5px;font-weight:700;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid #eef0f4}
-.pc-row{display:flex;gap:11px;align-items:flex-start}
+.pc-row{display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;
+  background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
 .pc-left{flex:none;width:78px}
 body[data-name="under"] .pc-left{width:118px}
-.pc-img{width:100%;aspect-ratio:8/5;border-radius:5px;background:linear-gradient(135deg,#cfd6e4,#aab4c8)}
+.thumb{width:100%;aspect-ratio:8/5;border-radius:5px;background:linear-gradient(135deg,#cfd6e4,#aab4c8);
+  display:flex;align-items:center;justify-content:center;font-size:8.5px;color:#5d6675;text-align:center;line-height:1.3}
+.thumb.gift{aspect-ratio:1/1;background:repeating-linear-gradient(135deg,#dfe4ec,#dfe4ec 6px,#eef1f6 6px,#eef1f6 12px);color:#8a93a3}
 .pc-name-under{font-size:11px;font-weight:700;margin-top:5px;white-space:nowrap;line-height:1.35}
 .pc-right{flex:1;min-width:0}
 .pc-top{display:flex;gap:4px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
@@ -88,11 +86,12 @@ body[data-name="under"] .pc-left{width:118px}
 .urg{font-size:9.5px;background:#fee2e2;color:#b91c1c;border-radius:20px;padding:2px 7px;font-weight:700;margin-left:auto}
 .pc-big{font-family:"IBM Plex Mono",monospace;font-size:25px;font-weight:600;color:#10b981;
   line-height:1.12;letter-spacing:-.02em;font-variant-numeric:tabular-nums;word-break:break-word}
-.pc-big.is-gift{font-family:"Noto Sans TC",sans-serif;font-size:15px;color:#8a5c00;line-height:1.35}
+.pc-big.is-gift{font-family:"Noto Sans TC",sans-serif;font-size:12.5px;color:#8a5c00;line-height:1.55;font-weight:700}
 .pc-big small{display:block;font-family:"Noto Sans TC",sans-serif;font-size:11px;color:#6b7280;
   font-weight:400;letter-spacing:0;margin-top:3px}
 .pc-sum{margin:7px 0 0;font-size:11.5px;line-height:1.5;color:#4b5563;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pc-more{display:flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;color:#1e40af;font-weight:700}
 .pc-acts{display:flex;gap:7px;margin-top:11px}
 .pc-cta{flex:1;text-align:center;background:#1e40af;color:#fff;border-radius:8px;padding:8px;
   font:inherit;font-size:12.5px;font-weight:700;border:0;cursor:pointer}
@@ -101,28 +100,52 @@ body[data-name="under"] .pc-left{width:118px}
   display:inline-flex;align-items:center;gap:5px}
 .feat-btn[aria-expanded="true"]{background:#1e40af;color:#fff;border-color:#1e40af}
 .chev{display:inline-block;transition:transform .18s ease}
-.feat-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.pc-cta:focus-visible,.feat-btn:focus-visible{outline:2px solid #1e40af;outline-offset:2px}
+[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.pc-cta:focus-visible,.feat-btn:focus-visible,.pc-row:focus-visible,.stk-row:focus-visible{outline:2px solid #1e40af;outline-offset:2px}
 
-/* 厚堆疊：卡疊卡（上緣方角、只留下方兩個圓角、逐層內縮） */
+/* 活動詳情（每檔活動各自一份） */
+.pd{background:#fbfcfe;border-top:1px solid #e7ebf1;border-radius:0 0 12px 12px;
+  padding:12px 13px;position:relative;z-index:8}
+.pc > .pd{margin:12px -13px -13px}
+.pd[hidden]{display:none}
+.pd dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 11px}
+.pd dt{font-size:11px;font-weight:700;color:#374151;white-space:nowrap}
+.pd dd{margin:0;font-size:11px;line-height:1.6;color:#4b5563;white-space:pre-line}
+.pd-notes{margin-top:10px;padding-top:9px;border-top:1px dashed #e7ebf1}
+.pd-notes-l{font-size:11px;font-weight:700;color:#374151;margin-bottom:3px}
+.pd-notes-t{font-size:11px;line-height:1.6;color:#6b7280;white-space:pre-line}
+.pd-notes-t.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pd-exp{margin-top:4px;background:none;border:0;padding:0;font:inherit;font-size:11px;
+  color:#1e40af;font-weight:700;cursor:pointer}
+.pd-exp[hidden]{display:none}
+
+/* 活動堆疊：卡疊卡 */
 .stack[hidden]{display:none}
 .stk{background:#fff;border-radius:0 0 12px 12px;margin-top:-9px;padding:17px 13px 11px;
   width:calc(100% - 12px);margin-inline:auto;border-top:1px solid #e7ebf1;
-  box-shadow:0 2px 6px rgba(0,0,0,.06);position:relative;z-index:4}
-.stk+.stk{z-index:3;width:calc(100% - 22px)}
-.stk+.stk+.stk{z-index:2;width:calc(100% - 32px)}
-.stk+.stk+.stk+.stk{z-index:1;width:calc(100% - 42px)}
+  box-shadow:0 2px 6px rgba(0,0,0,.06);position:relative;z-index:7}
+.stk:nth-of-type(2){z-index:6;width:calc(100% - 22px)}
+.stk:nth-of-type(3){z-index:5;width:calc(100% - 32px)}
+.stk:nth-of-type(4){z-index:4;width:calc(100% - 42px)}
+.stk.open{border-bottom-left-radius:0;border-bottom-right-radius:0}
+.stk-row{display:block;width:100%;text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.stk-head{display:flex;align-items:flex-start;gap:9px}
+.stk-thumb{width:42px;flex:none}
+.stk-b{flex:1;min-width:0}
 .stk-top{display:flex;align-items:baseline;gap:8px}
 .stk-v{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;color:#059669;
   font-variant-numeric:tabular-nums;flex:none}
-.stk-v.is-gift{font-family:"Noto Sans TC",sans-serif;font-size:12px;color:#8a5c00;font-weight:700}
+.stk-v.is-gift{font-family:"Noto Sans TC",sans-serif;font-size:11.5px;color:#8a5c00;font-weight:700}
 .stk-t{color:#374151;font-weight:500;font-size:11px;flex:1;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stk-gift{font-size:11.5px;font-weight:700;color:#8a5c00;line-height:1.55;margin-bottom:2px}
 .stk-sum{font-size:11px;color:#6b7280;line-height:1.5;margin-top:3px}
+.stk-more{margin-top:6px;font-size:10.5px;color:#1e40af;font-weight:700;display:flex;align-items:center;gap:4px}
+.stk .pd{margin:11px -13px -11px;border-radius:0 0 12px 12px;border-left:0;border-right:0;border-bottom:0}
 
-/* 卡片特色：刻意不是「卡片」——是主卡拉出來的抽屜（淺藍底、無卡片陰影） */
+/* 卡片特色：抽屜（刻意不是卡片） */
 .drawer{background:#f4f7fd;border:1px solid #d8e2f7;border-top:0;border-radius:0 0 12px 12px;
-  margin-top:-4px;padding:13px;position:relative;z-index:4}
+  margin-top:-4px;padding:13px;position:relative;z-index:8}
 .drawer[hidden]{display:none}
 .dr-h{display:flex;align-items:baseline;gap:7px;margin-bottom:9px}
 .dr-h b{font-size:12.5px;color:#1e3a8a}
@@ -132,7 +155,7 @@ body[data-name="under"] .pc-left{width:118px}
 .dr-all:focus-visible{outline:2px solid #1e40af;outline-offset:2px}
 .dr-usage{margin:0 0 10px;font-size:11.5px;line-height:1.6;color:#1e3a5f;background:#fff;
   border-left:3px solid #1e40af;border-radius:0 7px 7px 0;padding:7px 9px}
-.ft-list{list-style:none;margin:0;padding:0;background:#fff;border-radius:8px;padding:4px 10px}
+.ft-list{list-style:none;margin:0;padding:4px 10px;background:#fff;border-radius:8px}
 .ft{padding:6px 0;border-bottom:1px dashed #eef1f6}
 .ft:last-child{border-bottom:0}
 .ft-row{display:flex;align-items:baseline;gap:7px;font-size:11.5px;line-height:1.5}
@@ -148,42 +171,27 @@ body[data-name="under"] .pc-left{width:118px}
 .hy-god .ft-pre{color:#5b3fbf}
 .hy-excl .ft-pre{color:#8a5c00}
 .hy-easy .ft-pre{color:#0b7a56}
-.ft-fb{font-size:9px;color:#b58a2b;background:#fdf4e0;border-radius:3px;padding:0 4px;margin-left:5px}
 
-/* 獎品區 */
-.gsec{margin-top:18px}
-.gsec-h{font-size:11.5px;font-weight:700;color:#374151;padding:0 3px 6px;border-bottom:1px solid #cfd4dd;margin-bottom:7px}
-.gc{background:#fff;border-radius:11px;padding:11px 12px;margin-bottom:7px;display:flex;gap:11px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.gc-thumb{width:64px;height:64px;border-radius:7px;flex:none;
-  background:repeating-linear-gradient(135deg,#dfe4ec,#dfe4ec 6px,#eef1f6 6px,#eef1f6 12px);
-  display:flex;align-items:center;justify-content:center;font-size:9px;color:#8a93a3;text-align:center;line-height:1.3}
-.gc-thumb.noimg{background:#f2f4f8;color:#b6bcc8}
-.gc-b{flex:1;min-width:0}
-.gc-name{font-size:12.5px;font-weight:700;margin-bottom:3px}
-.gc-full{font-size:11.5px;line-height:1.65;color:#374151}
-
-/* toast */
 .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%) translateY(8px);
   background:#1f2937;color:#fff;font-size:11.5px;line-height:1.5;padding:8px 13px;border-radius:9px;
   max-width:280px;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:40}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){.chev,.toast{transition:none}}
-
 @media (max-width:760px){ .dv{width:100%;position:static} .stage{gap:20px} }
 </style>
 
 <div class="wrap">
 <header class="top">
-  <div class="eyebrow">pickmycard.app / promos · v3 互動原型</div>
+  <div class="eyebrow">pickmycard.app / promos · v4 互動原型</div>
   <h1>新戶活動頁互動原型</h1>
-  <p class="lede">可以真的點。22 組卡片、38 檔活動全部來自 <code>cards.data</code>，不是示意文字。右邊的控制台可以切換那兩個還沒定案的選項。</p>
+  <p class="lede">點卡片看<b>那一檔活動的詳情</b>，點「卡片特色」看常態回饋。22 組卡片、38 檔活動全部來自 <code>cards.data</code>。</p>
 </header>
 
 <div class="stage">
   <div class="dv">
     <div class="dv-bar">pickmycard.app/promos</div>
     <div class="dv-scr" id="scr">
-      <div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub" id="mSub">22 張卡・依「最高可拿」倒序</div></div>
+      <div class="m-head"><div class="m-h1">新戶活動一覽</div><div class="m-sub" id="mSub"></div></div>
       <div id="list"></div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
@@ -192,7 +200,7 @@ body[data-name="under"] .pc-left{width:118px}
   <div class="stage-side">
     <div class="ctl">
       <h2>控制台</h2>
-      <p class="hint">這兩項是這一輪還沒定案的。切換之後直接看手機裡的變化。</p>
+      <p class="hint">點主卡或任何一層堆疊 → 展開那一檔活動的詳情。點「卡片特色」→ 整疊活動收起、換成常態回饋。</p>
       <div class="ctl-grp">
         <span class="ctl-lbl">卡名位置</span>
         <div class="seg" role="group" aria-label="卡名位置">
@@ -207,45 +215,38 @@ body[data-name="under"] .pc-left{width:118px}
           <button type="button" id="usOff" aria-pressed="false">全部當作未填</button>
         </div>
       </div>
-      <div class="ctl-grp">
-        <span class="ctl-lbl">卡片特色（預設收合）</span>
-        <div class="seg" role="group" aria-label="卡片特色批次操作">
-          <button type="button" id="exAll" aria-pressed="false">全部展開</button>
-          <button type="button" id="clAll" aria-pressed="true">全部收合</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="note">
-      <h2>「卡圖下方一行」放不下最長的卡名</h2>
-      <p>實測 Noto Sans TC 700 的渲染寬度（<code>measure.js</code>，22 個卡名全量）：</p>
-      <table>
-        <thead><tr><th>卡名</th><th>10px</th><th>11px</th><th>12px</th></tr></thead>
-        <tbody><tr><td>中信 Uniopen 聯名卡</td><td class="num">104</td><td class="num">114</td><td class="num">125</td></tr><tr><td>聯邦 LINE Bank 卡</td><td class="num">94</td><td class="num">104</td><td class="num">113</td></tr><tr><td>滙豐現金回饋御璽卡</td><td class="num">90</td><td class="num">99</td><td class="num">108</td></tr><tr><td>台新 Richart 卡</td><td class="num">82</td><td class="num">90</td><td class="num">98</td></tr><tr><td>星展 eco 永續卡</td><td class="num">78</td><td class="num">86</td><td class="num">93</td></tr><tr><td>藝FUN悠遊御璽卡</td><td class="num">76</td><td class="num">84</td><td class="num">91</td></tr></tbody>
-      </table>
-      <p style="margin-top:10px">卡圖若維持 78px 寬，<b>11px 時有 6/22 個卡名放不下</b>，最長的「中信 Uniopen 聯名卡」要 114px。要一行不截斷只有兩條路：把卡圖欄<b>加寬到 118px</b>（就是控制台的「卡圖下方」——代價是右欄從 217px 縮到 177px，獎勵大字被擠小），或照你說的<b>把卡名移到最上方</b>（全寬 306px，任何卡名都放得下）。</p>
-      <p><b>我的預設是「最上方」</b>，因為那個獎勵大字是這次改版的全部重點，不該為了卡名讓位。兩種都在控制台裡，可以直接比。</p>
     </div>
 
     <div class="note">
       <h2>這一輪改了什麼</h2>
       <ul>
-        <li><b>卡片特色預設收合</b>，點右下角那顆「卡片特色」按鈕才展開。</li>
-        <li><b>特色不再用堆疊法</b>：堆疊是「卡疊卡」（白底、卡片陰影、逐層內縮），特色是<b>從主卡拉出來的抽屜</b>（淺藍底、有邊框、沒有卡片陰影）——兩種形狀刻意不一樣，不會看錯。</li>
-        <li><b>兩者互斥</b>：展開特色時其他活動整疊收起，收回特色它們才回來。同一個位置只會有一種東西。</li>
-        <li>堆疊用<b>厚堆疊</b>（金額＋單位一行、summary 一行）。</li>
-        <li>版型用<b>卡圖前導緊湊列</b>。</li>
-        <li><b>卡片用途沒填就整行不出現</b>——22 張裡目前只有 5 張有，其餘卡片的抽屜直接從回饋清單開始。這跟匯出端既有的 <code>addOptionalField</code> 慣例一致，舊資料完全相容，可以慢慢填。</li>
+        <li><b>活動詳情回來了。</b>你截圖那一整塊（適用通路／達成條件／活動期間／新戶定義／備註，備註長就收成兩行加「展開 ▾」）現在掛在<b>每一檔活動自己身上</b>——主卡點一下看主檔的，堆疊層點一下看那一層的。同一組內一次只開一個，開另一個會把前一個收起來。</li>
+        <li><b>同卡多檔活動各自獨立、不相加。</b>排序只看「單檔最大值」，畫面上沒有任何加總數字。</li>
+        <li><b>沒有 <code>slot22</code> ＝ 沒有國外消費回饋</b>，整行不顯示（不再推算）。實測 8 張卡因此只有「國內一般消費」一行：滙豐 Live+、滙豐匯鑽、玉山 Uni、聯邦 LINE Bank、星展 eco、玉山 Pi、遠東快樂卡、富邦 J 卡。</li>
+        <li><b>分級卡改取最高級別。</b>永豐大戶卡 → 大戶Plus等級、玉山 Uni 卡 → UP選、凱基誠品 → 黑卡。</li>
+        <li><b>Highlights 保證入列，但跟其他活動一起排序。</b>滙豐 Live+ 的「無腦刷！國內餐飲 4.88%」現在正確地排在 5.88% 下面，上一版那個「4.88% 在 5.88% 上面」的怪現象沒有了。</li>
+        <li><b>卡片特色一律顯示商家。</b>標籤永遠取 <code>items</code>，不再顯示 <code>category</code>。</li>
+        <li><b>獎品沒有活動宣傳圖就顯示卡片圖</b>（原型裡的縮圖是示意方塊，斜線＝活動宣傳圖、漸層＝卡片圖）。</li>
       </ul>
     </div>
 
+    <div class="note warn">
+      <h2>「獎品類」那一區被我拿掉了——你說得對，它是重複的</h2>
+      <p>那是第一版留下來的：當時清單一檔活動一列，獎品沒有現金價、排不進金額倒序，所以另闢一區。<b>改成依卡片分組之後這個理由就不成立了</b>——獎品活動本來就在各自卡片的堆疊裡（中信 uniopen 那 3 檔獎品就在它自己的堆疊第 2～4 層），下面再列一次就是同一批資料出現兩次。已刪。</p>
+      <p>現在只有<b>三張卡完全沒有現金價</b>（永豐 Green、富邦 J、兆豐 BT21，各 1 檔純首刷禮），它們的「最高可拿」＝0，自然排在清單最後，不需要特別處理。</p>
+    </div>
+
     <div class="note">
-      <h2>還沒解決的（跟上一版一樣，等你決定）</h2>
+      <h2>還有一項我沒照做，要你確認</h2>
+      <p>你說卡片特色「不要顯示 category，都顯示商家」——標籤已經全部改成商家了。但我<b>留下了灰色的條件後綴</b>（例：<code>10% 詹記麻辣火鍋、萬客什鍋…等 34 項〔切換「Chill刷」方案〕</code>）。</p>
+      <p>理由：台新那五行是<b>五個互斥的方案</b>，一個月只能選一個。把〔切換○○刷方案〕拿掉之後，五行看起來就像可以同時拿 10%＋5%＋3.8%＋3.8%。這是我在第一輪就標為「自動規則講不出來」的那個坑。<b>要拿掉的話跟我說一聲</b>，一行就改掉。</p>
+    </div>
+
+    <div class="note">
+      <h2>剩下這兩項還沒定</h2>
       <ul>
-        <li>Highlights 反查對到多組活動時取「回饋率最高」那組——玉山 Uni「支付寶」（sheet 4.5% / 真活動 3%）與中信 uniopen「夢時代」（sheet 7% / 真活動 11%）因此與 sheet 不一致。</li>
-        <li>分級卡取第一個級別，抽屜標題旁有灰色的「以『○○』計」。永豐大戶卡因此顯示大戶Plus 的數字。</li>
-        <li>8 張卡缺 <code>slot22</code>，「國外消費」那行退回卡片級欄位推算，畫面上標了黃色的<b>推算</b>小字。</li>
-        <li>同一張卡的多檔活動能不能相加，資料裡答不出來——所以這版<b>沒有做任何加總</b>，排序只看單檔最大值。</li>
+        <li><b>Highlights 反查對到多組活動</b>時取回饋率最高的那組。目前兩則與 sheet 不一致：玉山 Uni「支付寶」（sheet 4.5%／真活動 3%）、中信 uniopen「夢時代購物中心」（sheet 7%／真活動 11%）。要以真活動為準（目前預設），還是同時在匯出 log 標成待修？</li>
+        <li><b>中信 LINE Pay 卡</b>那列全空的活動（<code>promo_types</code>、獎勵欄位、<code>period_end</code> 全空）目前在正式站上是一張空卡片。要補完還是刪列？</li>
       </ul>
     </div>
   </div>
@@ -253,90 +254,122 @@ body[data-name="under"] .pc-left{width:118px}
 </div>
 
 <script>
-const DATA = {"groups":[{"id":"firstbank-ileo","card":"iLEO 信用卡","best":2000,"usage":"行動支付與網購為主，多數加碼要單筆滿千才成立。","list":[{"v":2000,"t":["回饋加碼"],"rate":10,"cap":20000,"usage":"","gift":"","sum":"核卡後90天內，國外外幣消費享10%","days":106},{"v":500,"t":["回饋加碼"],"rate":10,"cap":5000,"usage":"","gift":"","sum":"核卡後90天內，國內刷指定行動支付享10%","days":106},{"v":200,"t":["定額回饋"],"rate":null,"cap":null,"usage":"即享券","gift":"","sum":"【大師加碼】透過本站連結申辦，再享200元即享券","days":106},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後90天內，單筆一般消費滿NT1,000享100元刷卡金","days":106}],"lv":"","feat":[{"r":3,"c":20000,"l":"LINE Pay、街口支付","cond":"行動支付滿千加碼","hy":null,"pin":false},{"r":3,"c":33333,"l":"國外實體消費","cond":"","hy":null,"pin":false},{"r":3,"c":33333,"l":"蝦皮購物、momo…等 3 項","cond":"滿千加碼","hy":null,"pin":false},{"r":2,"c":33333,"l":"行動支付","cond":"","hy":null,"pin":false},{"r":2,"c":33333,"l":"電信/影音/串流","cond":"","hy":null,"pin":false}],"base":[{"r":0.5,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2,"c":33333,"l":"國外消費","hy":null,"fb":false}]},{"id":"hsbc-liveplus","card":"滙豐 Live+ 卡","best":1000,"usage":"","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14}],"lv":"","feat":[{"r":4.88,"c":29600,"l":"國內餐飲","cond":"","hy":{"label":"無腦刷","cls":"easy"},"pin":true},{"r":5.88,"c":20000,"l":"指定國家餐飲","cond":"","hy":null,"pin":false},{"r":4.88,"c":29600,"l":"娛樂","cond":"","hy":null,"pin":false},{"r":4.88,"c":29600,"l":"購物","cond":"","hy":null,"pin":false},{"r":1.88,"c":20000,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1.88,"c":20000,"l":"國內一般消費","hy":null,"fb":false},{"r":0.88,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"hsbc-titanium","card":"滙豐匯鑽卡","best":1000,"usage":"","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14}],"lv":"","feat":[{"r":3,"c":66666,"l":"街口支付、PAYPAL…等 21 項","cond":"","hy":null,"pin":false},{"r":1,"c":null,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"hsbc-cashback-signature","card":"滙豐現金回饋御璽卡","best":1000,"usage":"無腦刷型：不用挑通路、不用登錄，國外比國內更划算。","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14}],"lv":"","feat":[{"r":1.22,"c":null,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1.22,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2.22,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"sinopac-sport","card":"永豐 Sport 卡","best":500,"usage":"","list":[{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","sum":"核卡後30日內，符合條件即可享有綁定之行動支付最高20%刷卡金回饋","days":106}],"lv":"","feat":[{"r":5,"c":10000,"l":"Apple Pay","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true}],"base":[{"r":2,"c":5000,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"sinopac-dawho","card":"永豐大戶卡","best":500,"usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"現金","gift":"","sum":"新申辦並首次登入DAWHO APP且完成活動登錄，即享新臺幣$500元回饋","days":106},{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","sum":"新戶核卡後30日內，綁定指定支付刷一般消費享20%刷卡金回饋","days":106}],"lv":"大戶Plus等級","feat":[{"r":5,"c":10000,"l":"悠遊卡自動加值","cond":"","hy":null,"pin":false}],"base":[{"r":5,"c":null,"l":"國內一般消費","hy":{"label":"無腦刷","cls":"easy"},"fb":false},{"r":6,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"sinopac-coin","card":"永豐幣倍卡","best":500,"usage":"","list":[{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","sum":"核卡後30日內以新臺幣結購外幣，享有指定行動支付一般消費最高20%刷卡金回饋","days":106},{"v":300,"t":["回饋加碼"],"rate":3,"cap":10000,"usage":"","gift":"","sum":"Apple Pay、Google Pay加碼2%現金回饋","days":106},{"v":300,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"永豐薪轉戶新辦卡，核卡後30日內綁定特選行動支付一般消費累積滿600元，贈300元刷卡金","days":106}],"lv":"","feat":[{"r":6,"c":20000,"l":"Amazon","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":5,"c":20000,"l":"國內指定通路","cond":"","hy":null,"pin":false},{"r":1.2,"c":null,"l":"保費","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"tbb-chaotian","card":"企銀朝天宮卡","best":500,"usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30日內累積一般消費達3,888元、申辦電子帳單且設定帳戶自動扣繳，享500元刷卡金","days":106}],"lv":"","feat":[{"r":5,"c":10638,"l":"Uber Eats、foodpanda…等 26 項","cond":"","hy":null,"pin":false},{"r":1.8,"c":6666,"l":"台灣pay","cond":"","hy":null,"pin":false}],"base":[{"r":0.3,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1.5,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"ubot-mcard","card":"聯邦 M 卡","best":500,"usage":"旅遊交通萬用卡：計程車、航空、飯店同一組，出國實體消費另有加碼。","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡三個月內，保費單筆滿15,000元(含)以上，贈500元刷卡金","days":106}],"lv":"","feat":[{"r":6,"c":5000,"l":"所有計程車","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":5,"c":3000,"l":"美廉社、心樸市集…等 3 項","cond":"","hy":null,"pin":false},{"r":3,"c":null,"l":"國外實體消費","cond":"","hy":null,"pin":false},{"r":1.2,"c":833333,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1.5,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"taishin-richart","card":"台新 Richart 卡","best":500,"usage":"每月選一個方案綁生活場景——選對了是全場前段班，沒選就只剩基本。","list":[{"v":500,"t":["回饋加碼"],"rate":6,"cap":8333,"usage":"","gift":"","sum":"保險新戶首筆保費。符合條件享最高8%","days":45}],"lv":"","feat":[{"r":2,"c":300000,"l":"假日","cond":"切換「假日刷」方案","hy":{"label":"無腦刷","cls":"easy"},"pin":true},{"r":10,"c":300000,"l":"詹記麻辣火鍋、萬客什鍋…等 34 項","cond":"切換「Chill刷」方案","hy":null,"pin":false},{"r":5,"c":300000,"l":"饗饗 INPARADISE、NAGOMI…等 38 項","cond":"切換「Chill刷」方案","hy":null,"pin":false},{"r":3.8,"c":300000,"l":"台新Pay、台灣Pay…等 3 項","cond":"切換「Pay著刷」方案","hy":null,"pin":false},{"r":3.8,"c":300000,"l":"韓國 Hana pay、日本 PayPay","cond":"切換「Pay著刷」方案","hy":null,"pin":false}],"base":[{"r":0.3,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":3.3,"c":300000,"l":"國外消費","hy":null,"fb":false}]},{"id":"tbb-artfun","card":"藝FUN悠遊御璽卡","best":500,"usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"新增3筆一般消費，且每筆達新臺幣666元(含)以上送NT$500刷卡金","days":106}],"lv":"","feat":[{"r":3,"c":50000,"l":"指定國外通路加碼","cond":"","hy":null,"pin":false},{"r":3,"c":20000,"l":"指定國內通路加碼","cond":"","hy":null,"pin":false},{"r":2,"c":6666,"l":"行動支付","cond":"","hy":null,"pin":false},{"r":2,"c":50000,"l":"全球迪士尼樂園、全球環球影城","cond":"","hy":null,"pin":false},{"r":0.5,"c":null,"l":"保費","cond":"","hy":null,"pin":false}],"base":[{"r":0.5,"c":20000,"l":"國內一般消費","hy":null,"fb":false},{"r":2,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"yushan-unicard","card":"玉山 Uni 卡","best":387,"usage":"","list":[{"v":387,"t":["回饋加碼"],"rate":20,"cap":1935,"usage":"","gift":"","sum":"核卡後次月起3個月內綁定玉山Wallet電子支付消費，最高享20%","days":14}],"lv":"簡單選","feat":[{"r":3,"c":50000,"l":"支付寶","cond":"","hy":{"label":"獨家回饋","cls":"excl"},"pin":true},{"r":3,"c":50000,"l":"加油交通","cond":"","hy":null,"pin":false},{"r":3,"c":50000,"l":"ESG消費","cond":"","hy":null,"pin":false},{"r":3,"c":50000,"l":"國外實體","cond":"","hy":null,"pin":false},{"r":3,"c":50000,"l":"電商平台","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"ubot-linebank","card":"聯邦 LINE Bank 卡","best":300,"usage":"","list":[{"v":300,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30日內消費累積滿1,288元，贈 300 元刷卡金","days":137}],"lv":"","feat":[{"r":10,"c":null,"l":"現折活動","cond":"","hy":null,"pin":false},{"r":5.5,"c":10000,"l":"國外指定通路加碼","cond":"","hy":null,"pin":false},{"r":4,"c":10000,"l":"國內指定通路加碼","cond":"","hy":null,"pin":false},{"r":3,"c":6666,"l":"Uber Eats、foodpanda","cond":"","hy":null,"pin":false},{"r":1,"c":null,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2.5,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"kgi-eslite","card":"凱基誠品聯名卡","best":300,"usage":"","list":[{"v":300,"t":["首刷禮"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"核卡後30日內達指定條件，享300元刷卡金","days":106},{"v":null,"t":["定額回饋"],"rate":null,"cap":null,"usage":"","gift":"①20吋登機箱\n②多功能後背包\n③純鈦旅行摺疊鍋","sum":"核卡後30日內達指定條件且持有凱基銀行帳戶，享誠品限定好禮3選1","days":106}],"lv":"黑卡","feat":[{"r":7,"c":89362,"l":"誠品通路、誠品台大店…等 49 項","cond":"","hy":null,"pin":false},{"r":0.3,"c":null,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":2.3,"c":20000,"l":"國內一般消費","hy":null,"fb":false},{"r":2.3,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"dbs-eco","card":"星展 eco 永續卡","best":167,"usage":"","list":[{"v":167,"t":["回饋加碼"],"rate":10,"cap":1667,"usage":"","gift":"","sum":"核卡後30天內符合條件，透過 LINE Pay 刷卡享最高 10% 回饋","days":14}],"lv":"","feat":[{"r":10,"c":5555,"l":"綠藤生機","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":15,"c":10000,"l":"指定國家實體餐廳","cond":"","hy":null,"pin":false},{"r":11,"c":10000,"l":"海外實體餐廳","cond":"","hy":null,"pin":false},{"r":10,"c":5555,"l":"Tesla充電資費","cond":"","hy":null,"pin":false},{"r":10,"c":5555,"l":"Gogoro電池資費","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":12000,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"yushan-pi-card","card":"玉山 Pi 卡","best":150,"usage":"","list":[{"v":150,"t":["回饋加碼"],"rate":5,"cap":3000,"usage":"","gift":"","sum":"核卡後3個月內，一般消費享加碼5%Pi幣回饋","days":75}],"lv":"","feat":[{"r":5,"c":7500,"l":"POYA 寶雅、PChome24h購物…等 197 項","cond":"單筆滿額綁 Pi 拍錢包消費","hy":null,"pin":false},{"r":3,"c":150000,"l":"國內消費、國外消費","cond":"","hy":null,"pin":false},{"r":1.2,"c":null,"l":"保費","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"febank-lejia","card":"遠東樂家+卡","best":100,"usage":"","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"綁定LINE Pay任刷一筆，享100元刷卡金","days":106},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"新申辦遠銀帳戶自扣卡費，享100元刷卡金","days":106},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"刷卡不限金額且分期並登錄，享100元刷卡金","days":106},{"v":50,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"首次申辦電子帳單，於當月刷卡滿500元，享50元刷卡金","days":106}],"lv":"","feat":[{"r":4,"c":5714,"l":"台灣大哥大","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":10,"c":4210,"l":"寵物公園、東森寵物…等 20 項","cond":"","hy":null,"pin":false},{"r":4,"c":5714,"l":"大小安心刷","cond":"","hy":null,"pin":false}],"base":[{"r":0.5,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2.5,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"febank-happy","card":"遠東快樂卡","best":100,"usage":"","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"綁定LINE Pay任刷一筆，享100元刷卡金","days":106},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"新申辦遠銀帳戶自扣卡費，享100元刷卡金","days":106},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"刷卡不限金額且分期並登錄，享100元刷卡金","days":106},{"v":50,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","sum":"首次申辦電子帳單，於當月刷卡滿500元，享50元刷卡金","days":106}],"lv":"","feat":[{"r":5,"c":6000,"l":"LINE Pay","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":5,"c":6000,"l":"SOGO百貨、遠東百貨…等 16 項","cond":"","hy":null,"pin":false},{"r":5,"c":1000,"l":"悠遊卡自動加值","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"ctbc-uniopen","card":"中信 Uniopen 聯名卡","best":100,"usage":"統一集團生態系專用：超商、康是美、icashPay 綁在一起才吃得到最高那一段。","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"OPENPOINT","gift":"","sum":"核卡30天內任刷1筆，享新卡禮 OPENPOINT 100點","days":106},{"v":null,"t":["首刷禮","定額回饋"],"rate":null,"cap":null,"usage":"","gift":"星巴克行動收納組（含木蓋折疊收納箱及收納袋)\n(或) OPENPOINT 500點好禮","sum":"核卡30天內任刷1筆，享新戶禮二選一","days":106},{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"200元商品抵用券","sum":"核卡30天內，於指定櫃位消費單筆滿NT$999，再贈200元商品抵用券","days":106},{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"夢時代電子抵用券300元","sum":"核卡30天內，於指定店櫃累計消費滿1,200元，加碼贈夢時代電子抵用券300元","days":14}],"lv":"","feat":[{"r":11,"c":6250,"l":"國外實體消費","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":11,"c":3750,"l":"夢時代購物中心","cond":"icashPay + 統一集團踩點任務","hy":{"label":"壓倒性神卡","cls":"god"},"pin":true},{"r":7,"c":3750,"l":"icashPay + 統一集團","cond":"","hy":null,"pin":false},{"r":7,"c":833,"l":"台北捷運","cond":"首次綁定搭北捷","hy":null,"pin":false},{"r":3,"c":25000,"l":"統一集團消費","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":3750,"l":"國內一般消費","hy":null,"fb":false},{"r":3,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"sinopac-green","card":"永豐 Green 卡","best":0,"usage":"","list":[{"v":null,"t":["首刷禮","定額回饋"],"rate":null,"cap":null,"usage":"","gift":"①M.Rino萬向四輪折疊購物車\n②MunaKami多功能304不鏽鋼雙層防燙料理鍋\n③刷卡金500元","sum":"核卡後30天內，完成任一消費條件，享首刷「好禮3選1」","days":106}],"lv":"","feat":[{"r":5,"c":7500,"l":"臺北捷運","cond":"","hy":{"label":"全場最高","cls":"top"},"pin":true},{"r":1,"c":null,"l":"保費、保險","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2,"c":null,"l":"國外消費","hy":null,"fb":false}]},{"id":"fubon-jcard","card":"富邦 J 卡","best":0,"usage":"","list":[{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"TRAVEL FOX 24 吋上掀式行李箱(最新雙開款)乙個","sum":"核卡後30天內，符合條件即贈行李箱","days":14}],"lv":"","feat":[{"r":10,"c":2857,"l":"日本Suica、日本PASMO、日本ICOCA","cond":"","hy":null,"pin":false},{"r":6,"c":33333,"l":"日本實體消費、韓國實體消費…等 3 項","cond":"指定國家單筆滿千實體消費","hy":null,"pin":false},{"r":3,"c":null,"l":"指定國家基本回饋","cond":"","hy":null,"pin":false},{"r":0.5,"c":null,"l":"國內保費、國內保險","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":1,"c":null,"l":"國外消費","hy":null,"fb":true}]},{"id":"mega-bt21","card":"兆豐 BT21 卡","best":0,"usage":"","list":[{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"BT21摺疊拉桿購物車乙個","sum":"核卡後30日內完成指定任務，享BT21摺疊拉桿購物車乙個","days":106}],"lv":"","feat":[{"r":5.5,"c":6666,"l":"台灣Pay","cond":"台灣Pay多條件加碼活動","hy":null,"pin":false},{"r":5,"c":20000,"l":"優惠自由選(國外)","cond":"","hy":null,"pin":false},{"r":4,"c":20000,"l":"優惠自由選(國內)","cond":"","hy":null,"pin":false},{"r":4,"c":10000,"l":"指定行動支付國外消費","cond":"","hy":null,"pin":false},{"r":3,"c":10000,"l":"指定行動支付國內消費","cond":"","hy":null,"pin":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null,"fb":false},{"r":2,"c":null,"l":"國外消費","hy":null,"fb":false}]}],"gifts":[{"card":"永豐 Green 卡","gift":"①M.Rino萬向四輪折疊購物車\n②MunaKami多功能304不鏽鋼雙層防燙料理鍋\n③刷卡金500元","img":true},{"card":"富邦 J 卡","gift":"TRAVEL FOX 24 吋上掀式行李箱(最新雙開款)乙個","img":false},{"card":"中信 Uniopen 聯名卡","gift":"星巴克行動收納組（含木蓋折疊收納箱及收納袋)\n(或) OPENPOINT 500點好禮","img":true},{"card":"中信 Uniopen 聯名卡","gift":"200元商品抵用券","img":false},{"card":"中信 Uniopen 聯名卡","gift":"夢時代電子抵用券300元","img":false},{"card":"兆豐 BT21 卡","gift":"BT21摺疊拉桿購物車乙個","img":false},{"card":"凱基誠品聯名卡","gift":"①20吋登機箱\n②多功能後背包\n③純鈦旅行摺疊鍋","img":true}]};
-
+const DATA = {"groups":[{"id":"firstbank-ileo","card":"iLEO 信用卡","usage":"行動支付與網購為主，多數加碼要單筆滿千才成立。","list":[{"v":2000,"t":["回饋加碼"],"rate":10,"cap":20000,"usage":"","gift":"","img":false,"sum":"核卡後90天內，國外外幣消費享10%","days":106,"merchants":["國外消費"],"cond":"①申辦iLEO數位帳戶扣繳與電子帳單","ps":"2026/7/1","pe":"2026/12/31","def":"核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者","notes":"排除部分歐洲地區國家實體商店消費；限於國外且使用外幣交易；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出"},{"v":500,"t":["回饋加碼"],"rate":10,"cap":5000,"usage":"","gift":"","img":false,"sum":"核卡後90天內，國內刷指定行動支付享10%","days":106,"merchants":["LINE Pay","街口支付","Apple Pay","Google Pay","Samsung Pay","台灣Pay"],"cond":"①申辦iLEO數位帳戶扣繳與電子帳單","ps":"2026/7/1","pe":"2026/12/31","def":"核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者","notes":"若申辦本行帳戶扣繳與電子帳單，且單筆消費滿NT$1,000再加碼1%；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出"},{"v":200,"t":["定額回饋"],"rate":null,"cap":null,"usage":"即享券","gift":"","img":false,"sum":"【大師加碼】透過本站連結申辦，再享200元即享券","days":106,"merchants":[],"cond":"①於本站點擊連結線上申辦\n②核卡60天內單筆一般消費滿1,000元（含）以上\n③申辦iLEO數位帳戶扣繳與電子帳單","ps":"2026/7/1","pe":"2026/12/31","def":"從未申辦持有iLEO信用卡","notes":"即享券可用於百家連鎖品牌（如7-11、全家、屈臣氏、家樂福、百貨等）；此活動名額限量"},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"核卡後90天內，單筆一般消費滿NT1,000享100元刷卡金","days":106,"merchants":[],"cond":"①單筆一般消費滿NT1,000\n②申辦iLEO數位帳戶扣繳與電子帳單","ps":"2026/7/1","pe":"2026/12/31","def":"核卡前 12 個月內未曾持有任何一一銀信用卡者、從未持有iLEO信用卡者","notes":"100元回饋不累加；透過本站連結申辦可再享有的即享券，其序號簡訊將於次次月底前寄出"}],"lv":"","feat":[{"r":3,"c":20000,"l":"LINE Pay、街口支付","cond":"行動支付滿千加碼","hy":null,"must":false},{"r":3,"c":33333,"l":"國外實體消費","cond":"","hy":null,"must":false},{"r":3,"c":33333,"l":"蝦皮購物、momo…等 3 項","cond":"滿千加碼","hy":null,"must":false},{"r":2,"c":33333,"l":"LINE Pay、街口支付","cond":"","hy":null,"must":false},{"r":2,"c":33333,"l":"中華電信、台灣大哥大…等 13 項","cond":"","hy":null,"must":false}],"base":[{"r":0.5,"c":null,"l":"國內一般消費","hy":null},{"r":2,"c":33333,"l":"國外消費","hy":null}]},{"id":"hsbc-liveplus","card":"滙豐 Live+ 卡","usage":"","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":true,"sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14,"merchants":[],"cond":"①線上申辦\n②累積一般消費刷滿5,000元\n③勾選使用電子或行動帳單\n④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)\n⑤需提供年收入70萬元以上之薪資所得證明","ps":"2026/7/1","pe":"2026/9/30","def":"核卡前十二個月內須未持有滙豐任何信用卡","notes":"「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額"}],"lv":"","feat":[{"r":5.88,"c":20000,"l":"日本實體餐飲、新加坡實體餐飲…等 7 項","cond":"","hy":null,"must":false},{"r":4.88,"c":29600,"l":"國內餐飲","cond":"","hy":{"label":"無腦刷","cls":"easy"},"must":true},{"r":4.88,"c":29600,"l":"國外娛樂、國內娛樂…等 44 項","cond":"","hy":null,"must":false},{"r":4.88,"c":29600,"l":"國內購物、國外購物…等 59 項","cond":"","hy":null,"must":false},{"r":1.88,"c":20000,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1.88,"c":20000,"l":"國內一般消費","hy":null}]},{"id":"hsbc-titanium","card":"滙豐匯鑽卡","usage":"","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14,"merchants":[],"cond":"①線上申辦\n②累積一般消費刷滿5,000元\n③勾選使用電子或行動帳單\n④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)\n⑤需提供年收入70萬元以上之薪資所得證明","ps":"2026/7/1","pe":"2026/9/30","def":"核卡前十二個月內須未持有滙豐任何信用卡","notes":"「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額"}],"lv":"","feat":[{"r":3,"c":66666,"l":"街口支付、PAYPAL…等 21 項","cond":"","hy":null,"must":false},{"r":1,"c":null,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"hsbc-cashback-signature","card":"滙豐現金回饋御璽卡","usage":"無腦刷型：不用挑通路、不用登錄，國外比國內更划算。","list":[{"v":1000,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":true,"sum":"核卡後30天內刷滿5,000元，享1,000元刷卡金","days":14,"merchants":[],"cond":"①線上申辦\n②累積一般消費刷滿5,000元\n③勾選使用電子或行動帳單\n④核卡後30天內登入滙豐銀行信用卡行動App(HSBC Card+)\n⑤需提供年收入70萬元以上之薪資所得證明","ps":"2026/7/1","pe":"2026/9/30","def":"核卡前十二個月內須未持有滙豐任何信用卡","notes":"「一般消費」定義：排除政府與民生規費（ 各項稅款、學費、罰鍰、水電瓦斯費、中華電信費，以及透過公務機關/電子化繳費平台繳納之費用）、理財與財務費用（ 預借現金、基金扣款、年費、循環利息、違約金與各項手續費）及高風險與類現金交易（ 預付型交易、旅行支票、博弈籌碼、超過信用額度（含臨調）之消費）以外的實際交易金額"}],"lv":"","feat":[{"r":1.22,"c":null,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1.22,"c":null,"l":"國內一般消費","hy":null},{"r":2.22,"c":null,"l":"國外消費","hy":null}]},{"id":"sinopac-sport","card":"永豐 Sport 卡","usage":"","list":[{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","img":false,"sum":"核卡後30日內，符合條件即可享有綁定之行動支付最高20%刷卡金回饋","days":106,"merchants":["Line Pay","Apple Pay","Google Pay","Samsung Pay","Garmin Pay","全支付","55688 APP","Mitsui Shopping Park Pay"],"cond":"①以新臺幣結購外幣\n②綁定指定行動支付刷一般消費","ps":"2026/7/1","pe":"2026/12/31","def":"從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶","notes":""}],"lv":"","feat":[{"r":5,"c":10000,"l":"Apple Pay","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true}],"base":[{"r":2,"c":5000,"l":"國內一般消費","hy":null},{"r":1,"c":null,"l":"國外消費","hy":null}]},{"id":"sinopac-dawho","card":"永豐大戶卡","usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"現金","gift":"","img":false,"sum":"新申辦並首次登入DAWHO APP且完成活動登錄，即享新臺幣$500元回饋","days":106,"merchants":[],"cond":"","ps":"2026/7/1","pe":"2026/12/31","def":"","notes":"限量2,500名"},{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","img":false,"sum":"新戶核卡後30日內，綁定指定支付刷一般消費享20%刷卡金回饋","days":106,"merchants":["LINE Pay","Apple Pay","Google Pay","Samsung Pay","全支付","55688 APP","Mitsui Shopping Park Pay"],"cond":"","ps":"2026/7/1","pe":"2026/12/31","def":"","notes":"限量活動"}],"lv":"大戶Plus等級","feat":[{"r":5,"c":10000,"l":"悠遊卡自動加值","cond":"","hy":null,"must":false}],"base":[{"r":5,"c":null,"l":"國內一般消費","hy":{"label":"無腦刷","cls":"easy"}},{"r":6,"c":null,"l":"國外消費","hy":null}]},{"id":"sinopac-coin","card":"永豐幣倍卡","usage":"","list":[{"v":500,"t":["回饋加碼"],"rate":20,"cap":2500,"usage":"","gift":"","img":false,"sum":"核卡後30日內以新臺幣結購外幣，享有指定行動支付一般消費最高20%刷卡金回饋","days":106,"merchants":["LINE Pay","Apple Pay","Google Pay","Samsung Pay","全支付","55688 APP","Mitsui Shopping Park Pay"],"cond":"指定綁定的行動支付為LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay","ps":"2026/7/1","pe":"2026/12/31","def":"從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶","notes":"限量活動"},{"v":300,"t":["回饋加碼"],"rate":3,"cap":10000,"usage":"","gift":"","img":false,"sum":"Apple Pay、Google Pay加碼2%現金回饋","days":106,"merchants":["Apple Pay","Google Pay"],"cond":"綁定Apple Pay／Google Pay行動支付並完成一般消費","ps":"2026/7/1","pe":"2026/12/31","def":"活動期間內申辦幣倍卡者（含永豐信用卡新戶、既有卡友，及既有幣倍卡友加辦不同幣別）","notes":"若為國外交易再加1%；回饋上限以每月計算；於國外消費時（含實體及網路交易），請務必選擇以當地幣別結帳；限一般消費且不含保費代繳；Google Pay限以手機實體感應交易或網路線上使用Google Pay APP之代碼化卡片交易，且交易時須透過手機設定之密碼驗證，若透過自動記錄卡號且須輸入卡片後三碼完成結帳之實體卡交易或帳單明細未顯示G-，則不符合回饋；回饋時持卡人須持有有效永豐銀行臺幣及外幣帳戶，如有關戶、終止自動扣繳、停止使用電子或行動帳單(或未取消實體帳單）、停卡、延滯繳款或其他違反信用卡契約之情事者，恕不符合回饋資格"},{"v":300,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"永豐薪轉戶新辦卡，核卡後30日內綁定特選行動支付一般消費累積滿600元，贈300元刷卡金","days":106,"merchants":["LINE Pay","Apple Pay","Google Pay","Samsung Pay","全支付","55688 APP","Mitsui Shopping Park Pay"],"cond":"","ps":"2026/1/1","pe":"2026/12/31","def":"從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶。","notes":"限永豐薪轉客戶（近3個月內有代撥薪紀錄）；特選行動支付含LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay；JCB卡不適用GP及SP；符合資格後第3個月起陸續回饋"}],"lv":"","feat":[{"r":6,"c":20000,"l":"Amazon","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":5,"c":20000,"l":"國內航空公司、國內旅行社…等 9 項","cond":"","hy":null,"must":false},{"r":1.2,"c":null,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null},{"r":2,"c":null,"l":"國外消費","hy":null}]},{"id":"tbb-chaotian","card":"企銀朝天宮卡","usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"核卡後30日內累積一般消費達3,888元、申辦電子帳單且設定帳戶自動扣繳，享500元刷卡金","days":106,"merchants":[],"cond":"","ps":"2026/1/1","pe":"2026/12/31","def":"112.1.1以後同一身分證字號（ID）下從未持有兆豐銀行任一信用卡正卡之客戶","notes":"500元回饋為刷卡金；需於核卡30天內完成一般消費滿3,888元、申辦電子帳單且設定帳戶自動扣繳三項任務；電子帳單不含行動帳單，且不可與紙本帳單併行；消費須於核卡後60天內請款入帳；分期交易以總額計算；刷卡金於核卡滿30日之次月確認資格後8週內回饋；刷卡金僅能折抵回饋當月及次二個月帳單，逾期視同放棄；每戶限領一份，限參加一種新戶活動；適用卡別包含e秒Happy、Mega One、e秒刷、利多御璽、雙幣鈦金商旅、中興保全、中鼎、雅芳及將來銀行聯名卡"}],"lv":"","feat":[{"r":5,"c":10638,"l":"Uber Eats、foodpanda…等 26 項","cond":"","hy":null,"must":false},{"r":1.8,"c":6666,"l":"台灣pay","cond":"","hy":null,"must":false}],"base":[{"r":0.3,"c":null,"l":"國內一般消費","hy":null},{"r":1.5,"c":null,"l":"國外消費","hy":null}]},{"id":"ubot-mcard","card":"聯邦 M 卡","usage":"旅遊交通萬用卡：計程車、航空、飯店同一組，出國實體消費另有加碼。","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"核卡三個月內，保費單筆滿15,000元(含)以上，贈500元刷卡金","days":106,"merchants":[],"cond":"需申辦電子化帳單（電子帳單-Email／行動帳單-簡訊／LINE帳單）且於回饋時仍為有效","ps":"2026/1/1","pe":"2026/12/31","def":"核卡前6個月內未曾持有任一聯邦信用卡者","notes":"活動限量1,000名，贈完為止；保費回饋與分期活動僅可擇一參加"}],"lv":"","feat":[{"r":6,"c":5000,"l":"所有計程車","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":5,"c":3000,"l":"美廉社、心樸市集…等 3 項","cond":"","hy":null,"must":false},{"r":3,"c":null,"l":"國外實體消費","cond":"","hy":null,"must":false},{"r":1.2,"c":833333,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null},{"r":1.5,"c":null,"l":"國外消費","hy":null}]},{"id":"taishin-richart","card":"台新 Richart 卡","usage":"每月選一個方案綁生活場景——選對了是全場前段班，沒選就只剩基本。","list":[{"v":500,"t":["回饋加碼"],"rate":6,"cap":8333,"usage":"","gift":"","img":true,"sum":"保險新戶首筆保費。符合條件享最高8%","days":45,"merchants":["保費"],"cond":"①保險新戶首筆保費，享6%台新Point\n②搭配切換「假日刷」+2%；即使不切換權益也可+1.3%\n③需領券，限量","ps":"2026/7/1","pe":"2026/10/31","def":"2025/4/1~2026/3/31期間，未使用任一張台新信用卡刷保費，或刷保費金額1,000元(含)以下者","notes":""}],"lv":"","feat":[{"r":10,"c":300000,"l":"詹記麻辣火鍋、萬客什鍋…等 34 項","cond":"切換「Chill刷」方案","hy":null,"must":false},{"r":5,"c":300000,"l":"饗饗 INPARADISE、NAGOMI…等 38 項","cond":"切換「Chill刷」方案","hy":null,"must":false},{"r":3.8,"c":300000,"l":"台新Pay、台灣Pay…等 3 項","cond":"切換「Pay著刷」方案","hy":null,"must":false},{"r":3.8,"c":300000,"l":"韓國 Hana pay、日本 PayPay","cond":"切換「Pay著刷」方案","hy":null,"must":false},{"r":2,"c":300000,"l":"假日","cond":"切換「假日刷」方案","hy":{"label":"無腦刷","cls":"easy"},"must":true}],"base":[{"r":0.3,"c":null,"l":"國內一般消費","hy":null},{"r":3.3,"c":300000,"l":"國外消費","hy":null}]},{"id":"tbb-artfun","card":"藝FUN悠遊御璽卡","usage":"","list":[{"v":500,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"新增3筆一般消費，且每筆達新臺幣666元(含)以上送NT$500刷卡金","days":106,"merchants":[],"cond":"","ps":"2026/1/1","pe":"2026/12/31","def":"申請日前六個月內未持有企銀任一信用卡正卡者","notes":""}],"lv":"","feat":[{"r":3,"c":50000,"l":"國外航空公司、agoda…等 4 項","cond":"","hy":null,"must":false},{"r":3,"c":20000,"l":"OPENTIX兩廳院文化生活、tixCraft拓元售票系統…等 36 項","cond":"","hy":null,"must":false},{"r":2,"c":6666,"l":"台灣Pay","cond":"","hy":null,"must":false},{"r":2,"c":50000,"l":"全球迪士尼樂園、全球環球影城","cond":"","hy":null,"must":false},{"r":0.5,"c":null,"l":"保費","cond":"","hy":null,"must":false}],"base":[{"r":0.5,"c":20000,"l":"國內一般消費","hy":null},{"r":2,"c":null,"l":"國外消費","hy":null}]},{"id":"yushan-unicard","card":"玉山 Uni 卡","usage":"","list":[{"v":387,"t":["回饋加碼"],"rate":20,"cap":1935,"usage":"","gift":"","img":false,"sum":"核卡後次月起3個月內綁定玉山Wallet電子支付消費，最高享20%","days":14,"merchants":["玉山Wallet"],"cond":"①2026/9/30前申辦且核卡\n②當月的百大指定消費選項要包含「玉山Wallet電子支付」","ps":"2026/7/1","pe":"2026/9/30","def":"核卡日前六個月內未持有玉山銀行任一張流通正卡卡片(含認同卡、聯名卡)","notes":"20%包含一般消費最高1%(無上限)+百大指定消費加碼最高3.5%(每月回饋上限5,000點)+限時辦卡新戶加碼最高15.5%(每月回饋上限300點)"}],"lv":"UP選","feat":[{"r":4.5,"c":142857,"l":"支付寶","cond":"","hy":{"label":"獨家回饋","cls":"excl"},"must":true},{"r":4.5,"c":142857,"l":"台灣中油直營店、55688台灣大車隊…等 7 項","cond":"","hy":null,"must":false},{"r":4.5,"c":142857,"l":"玉山wallet愛心捐款單筆、玉山wallet愛心捐款定期定額…等 3 項","cond":"","hy":null,"must":false},{"r":4.5,"c":142857,"l":"日本實體消費、韓國實體消費…等 18 項","cond":"","hy":null,"must":false},{"r":4.5,"c":142857,"l":"momo購物網、蝦皮購物…等 4 項","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"ubot-linebank","card":"聯邦 LINE Bank 卡","usage":"","list":[{"v":300,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"核卡後30日內消費累積滿1,288元，贈 300 元刷卡金","days":137,"merchants":[],"cond":"","ps":"2026/8/1","pe":"2027/1/31","def":"核卡前6個月內未曾持有任何一聯邦信用卡者","notes":""}],"lv":"","feat":[{"r":10,"c":null,"l":"萊爾富門市","cond":"","hy":null,"must":false},{"r":5.5,"c":10000,"l":"Netflix、Disney+…等 8 項","cond":"","hy":null,"must":false},{"r":5,"c":null,"l":"萊爾富門市","cond":"","hy":null,"must":false},{"r":4,"c":10000,"l":"CatchPlay、LINE TV 官網訂閱…等 13 項","cond":"","hy":null,"must":false},{"r":3,"c":6666,"l":"Uber Eats、foodpanda","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"kgi-eslite","card":"凱基誠品聯名卡","usage":"","list":[{"v":300,"t":["首刷禮"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":true,"sum":"核卡後30日內達指定條件，享300元刷卡金","days":106,"merchants":[],"cond":"累積一般消費或全聯消費合計達新臺幣3,000元（含）以上\n於116/1/15前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡前6個月內未持有本行任一有效流通信用卡正卡者","notes":"刷卡金與誠品限定好禮擇一回饋乙份"},{"v":null,"t":["定額回饋"],"rate":null,"cap":null,"usage":"","gift":"①20吋登機箱\n②多功能後背包\n③純鈦旅行摺疊鍋","img":true,"sum":"核卡後30日內達指定條件且持有凱基銀行帳戶，享誠品限定好禮3選1","days":106,"merchants":[],"cond":"累積一般消費或全聯消費合計達新臺幣3,000元（含）以上\n持有凱基銀行帳戶(不限新舊戶)\n於116/1/15前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡前6個月內未持有本行任一有效流通信用卡正卡者","notes":"刷卡金與誠品限定好禮擇一回饋乙份；好禮限量提供，滿額贈畢後將改贈300元刷卡金；凱基誠品20吋對開式行李箱：尺寸約34 x 23 x 54公分（含輪高度），淨重約3公斤、材質ABS+PC塑膠、上蓋可放置隨時取用物品、三段式拉桿、海關密碼鎖、X型固定伸縮束帶、網袋隔間夾層、掛鉤設計、貼合式提把(上邊、側邊)、360度萬向輪；凱基誠品多功能後背包：尺寸約30 x 14 x 43公分，淨重約0.78公斤、材質聚酯纖維、折蓋搭配按扣、包體兩側有束扣可固定前袋以及包形、減壓背帶、胸扣設計、U型大開口拉鏈前袋、網袋隔間夾層、主袋筆電夾層；凱基誠品純鈦旅行折疊鍋：展開尺寸約20 x 13.8 x 19.5公分，折疊收納後尺寸約15.8 x 13.8 x 13.8公分，淨重約0.9公斤、寬電壓110V-240、內鍋材質為純鈦、內蓋/蒸架材質為#304不鏽鋼、外殼採用耐熱PP塑膠、LED 顯示面板、微電腦控制、分離式電源底座、質感絨毛收納袋"}],"lv":"黑卡","feat":[{"r":7,"c":89362,"l":"誠品通路、誠品台大店…等 49 項","cond":"","hy":null,"must":false},{"r":0.3,"c":null,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":2.3,"c":20000,"l":"國內一般消費","hy":null},{"r":2.3,"c":null,"l":"國外消費","hy":null}]},{"id":"dbs-eco","card":"星展 eco 永續卡","usage":"","list":[{"v":167,"t":["回饋加碼"],"rate":10,"cap":1667,"usage":"","gift":"","img":false,"sum":"核卡後30天內符合條件，透過 LINE Pay 刷卡享最高 10% 回饋","days":14,"merchants":["LINE Pay"],"cond":"透過 LINE Pay 刷星展 eco 永續卡累積達NT$3,000","ps":"2026/7/1","pe":"2026/9/30","def":"辦卡前180天內未持有本行任一信用卡正卡","notes":"10%回饋包含1%現金積點無上限＋加碼9%；每人每月上限150現金積點，含本行其他LINE Pay 10%加碼活動；需於指定日期前核卡成功"}],"lv":"","feat":[{"r":15,"c":10000,"l":"日本實體餐廳、韓國實體餐廳…等 6 項","cond":"","hy":null,"must":false},{"r":11,"c":10000,"l":"海外實體餐廳","cond":"","hy":null,"must":false},{"r":10,"c":5555,"l":"綠藤生機","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":10,"c":5555,"l":"Tesla充電資費","cond":"","hy":null,"must":false},{"r":10,"c":5555,"l":"Gogoro電池資費","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":12000,"l":"國內一般消費","hy":null}]},{"id":"yushan-pi-card","card":"玉山 Pi 卡","usage":"","list":[{"v":150,"t":["回饋加碼"],"rate":5,"cap":3000,"usage":"","gift":"","img":false,"sum":"核卡後3個月內，一般消費享加碼5%Pi幣回饋","days":75,"merchants":[],"cond":"","ps":"2026/9/1","pe":"2026/11/30","def":"","notes":""}],"lv":"","feat":[{"r":5,"c":7500,"l":"POYA 寶雅、PChome24h購物…等 197 項","cond":"單筆滿額綁 Pi 拍錢包消費","hy":null,"must":false},{"r":3,"c":150000,"l":"國內消費、國外消費","cond":"","hy":null,"must":false},{"r":1.8,"c":null,"l":"國內消費、國外消費","cond":"","hy":null,"must":false},{"r":1.2,"c":null,"l":"保費","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"febank-lejia","card":"遠東樂家+卡","usage":"","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"綁定LINE Pay任刷一筆，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次月底前綁定 LINE Pay 任刷一筆\n② 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"新申辦遠銀帳戶自扣卡費，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次次月底前新申辦遠銀帳戶自動扣繳遠銀信用卡費且成功扣款\n② 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"刷卡不限金額且分期並登錄，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次次月底前刷卡不限金額且分期\n② 登錄活動\n③ 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":50,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"首次申辦電子帳單，於當月刷卡滿500元，享50元刷卡金","days":106,"merchants":[],"cond":"① 首次申辦信用卡電子帳單\n② 登錄活動\n③ 於申辦電子帳單並登錄的當月，新增一般消費累積達500元(含)以上\n④ 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動；Bankee產品皆不適用本活動"}],"lv":"","feat":[{"r":10,"c":4210,"l":"寵物公園、東森寵物…等 20 項","cond":"","hy":null,"must":false},{"r":4,"c":5714,"l":"台灣大哥大","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":4,"c":5714,"l":"大樹連鎖藥局、杏一醫療用品…等 37 項","cond":"","hy":null,"must":false},{"r":4,"c":5714,"l":"國內餐飲","cond":"","hy":null,"must":false}],"base":[{"r":0.5,"c":null,"l":"國內一般消費","hy":null},{"r":2.5,"c":null,"l":"國外消費","hy":null}]},{"id":"febank-happy","card":"遠東快樂卡","usage":"","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"綁定LINE Pay任刷一筆，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次月底前綁定 LINE Pay 任刷一筆\n② 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"新申辦遠銀帳戶自扣卡費，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次次月底前新申辦遠銀帳戶自動扣繳遠銀信用卡費且成功扣款\n② 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"刷卡不限金額且分期並登錄，享100元刷卡金","days":106,"merchants":[],"cond":"① 核卡後次次月底前刷卡不限金額且分期\n② 登錄活動\n③ 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動，達到上限後將於本行官網公告；Bankee產品皆不適用本活動"},{"v":50,"t":["定額回饋"],"rate":null,"cap":null,"usage":"刷卡金","gift":"","img":false,"sum":"首次申辦電子帳單，於當月刷卡滿500元，享50元刷卡金","days":106,"merchants":[],"cond":"① 首次申辦信用卡電子帳單\n② 登錄活動\n③ 於申辦電子帳單並登錄的當月，新增一般消費累積達500元(含)以上\n④ 線上申辦且於2027/1/24前核卡","ps":"2026/7/1","pe":"2026/12/31","def":"核卡日前6個月內未持有本行任一張有效正卡卡片","notes":"限量活動；Bankee產品皆不適用本活動"}],"lv":"","feat":[{"r":5,"c":6000,"l":"LINE Pay","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":5,"c":6000,"l":"SOGO百貨、遠東百貨…等 16 項","cond":"","hy":null,"must":false},{"r":5,"c":1000,"l":"悠遊卡自動加值","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"ctbc-uniopen","card":"中信 Uniopen 聯名卡","usage":"統一集團生態系專用：超商、康是美、icashPay 綁在一起才吃得到最高那一段。","list":[{"v":100,"t":["定額回饋"],"rate":null,"cap":null,"usage":"OPENPOINT","gift":"","img":false,"sum":"核卡30天內任刷1筆，享新卡禮 OPENPOINT 100點","days":106,"merchants":[],"cond":"①首次辦此卡且核准日須為 2027/1/15(含) 前核卡\n②核卡30天內任刷1筆","ps":"2026/7/1","pe":"2026/12/31","def":"首次申辦 uniopen 聯名卡正卡者","notes":""},{"v":null,"t":["首刷禮","定額回饋"],"rate":null,"cap":null,"usage":"","gift":"星巴克行動收納組（含木蓋折疊收納箱及收納袋)\n(或) OPENPOINT 500點好禮","img":true,"sum":"核卡30天內任刷1筆，享新戶禮二選一","days":106,"merchants":[],"cond":"①新戶申辦且核准日須為 2027/1/15(含) 前核卡\n②核卡30天內任刷1筆","ps":"2026/7/1","pe":"2026/12/31","def":"本次申辦前 12 個月內未曾持有任何中國信託信用卡正卡(不含簽帳金融卡)之客戶","notes":"收納箱展開尺寸:長41.7x寬28.6x高23.5公分；收納袋尺寸:長50x寬60x高35公分"},{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"200元商品抵用券","img":false,"sum":"核卡30天內，於指定櫃位消費單筆滿NT$999，再贈200元商品抵用券","days":106,"merchants":[],"cond":"①新申辦uniopen聯名卡且於2026/12/31(含) 前核卡\n②核卡30天內於統一時代百貨台北店/DREAM PLAZA任刷一筆NT$999元(含)以上","ps":"2026/1/1","pe":"2026/12/31","def":"首次申辦 uniopen 聯名卡正卡者","notes":"7-ELEVEN及麥當勞消費不適用；適用uniopen 聯名卡實體卡與感應式支付(如：Apple Pay、Google Pay、Samsung Pay)；每卡每戶限領一份不累贈"},{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"夢時代電子抵用券300元","img":false,"sum":"核卡30天內，於指定店櫃累計消費滿1,200元，加碼贈夢時代電子抵用券300元","days":14,"merchants":[],"cond":"①首次申辦此卡，且2026/9/30前申辦並核卡\n②核卡30天內於指定店櫃（夢時代購物中心 / 統一時代百貨高雄店）累計消費滿NT$1,200元","ps":"","pe":"2026/9/30","def":"首次申辦 uniopen 聯名卡正卡者","notes":"限量15,000份，額滿不另行公告或通知；每卡每戶限領一份不累贈；限使用實體卡刷卡消費；限夢時代APP升級uniopen會員參加，且須於中信銀行APP內完成同夢時代APP升級之uniopen會員帳號連結，始符合加碼贈資格；電子抵用券發放當日起算45日內有效，每次折抵以100元為單位，逾期失效"}],"lv":"","feat":[{"r":11,"c":3750,"l":"夢時代購物中心","cond":"icashPay + 統一集團踩點任務","hy":{"label":"壓倒性神卡","cls":"god"},"must":true},{"r":11,"c":6250,"l":"國外實體消費","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":7,"c":12500,"l":"統一超商、康是美(含網購eShop)…等 38 項","cond":"統一集團踩點任務","hy":null,"must":false},{"r":7,"c":833,"l":"台北捷運","cond":"首次綁定搭北捷","hy":null,"must":false}],"base":[{"r":1,"c":3750,"l":"國內一般消費","hy":null},{"r":3,"c":null,"l":"國外消費","hy":null}]},{"id":"sinopac-green","card":"永豐 Green 卡","usage":"","list":[{"v":null,"t":["首刷禮","定額回饋"],"rate":null,"cap":null,"usage":"","gift":"①M.Rino萬向四輪折疊購物車\n②MunaKami多功能304不鏽鋼雙層防燙料理鍋\n③刷卡金500元","img":true,"sum":"核卡後30天內，完成任一消費條件，享首刷「好禮3選1」","days":106,"merchants":[],"cond":"①消費條件A: 『一般消費』或『大全聯、全聯消費』，累積滿2,000元\n②消費條件B: 綁定特選行動支付*，『一般消費』或『大全聯、全聯消費』累積滿1,000元\n*特選行動支付：LINE Pay、Apple Pay、Google Pay、Samsung Pay、全支付、55688 APP、Mitsui Shopping Park Pay","ps":"2026/7/1","pe":"2026/12/31","def":"從未持有永豐銀行信用卡或停卡已滿6個月(含)以上之客戶","notes":"「購物車」的展開尺寸為39x35x90cm±5% (高度含輪及拉桿)，收納尺寸為39x10x44cm±5%，材質為PP(塑膠)+金屬拉桿，顏色為時尚白；「料理鍋」的材質為外層PP+304不鏽鋼內鍋，滿水容量為約1.8L，額定電壓為110V；「刷卡金」使用方法為下載並註冊永豐大咖DACARD APP，並於『大亞國際行銷(股)公司』提供之活動專屬網頁兌換後3個月內，任刷一筆一般消費金額新臺幣500 元(含)以上且成功入帳。符合條件者，將於消費次月回饋 NT$500 元至信用卡帳單。"}],"lv":"","feat":[{"r":5,"c":7500,"l":"臺北捷運","cond":"","hy":{"label":"全場最高","cls":"top"},"must":true},{"r":1,"c":null,"l":"保費、保險","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null},{"r":2,"c":null,"l":"國外消費","hy":null}]},{"id":"fubon-jcard","card":"富邦 J 卡","usage":"","list":[{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"TRAVEL FOX 24 吋上掀式行李箱(最新雙開款)乙個","img":false,"sum":"核卡後30天內，符合條件即贈行李箱","days":14,"merchants":[],"cond":"①新增3筆NT$1,000元(含)以上的一般消費\n②設定本行帳戶自動扣繳富邦信用卡費 或 申請電子帳單(並取消紙本帳單)\n③完成活動登錄","ps":"2026/7/1","pe":"2026/9/30","def":"辦卡前6個月內未曾持有任何一張富邦信用卡正卡者","notes":"須以正卡持卡人資料登錄；名額無上限；分期付款以總金額計算；一般消費排除自動加值、基金、eToro、預借現金及相關利息手續費；贈品於次次月底起配送"}],"lv":"","feat":[{"r":10,"c":2857,"l":"日本Suica、日本PASMO、日本ICOCA","cond":"","hy":null,"must":false},{"r":6,"c":33333,"l":"日本實體消費、韓國實體消費…等 3 項","cond":"指定國家單筆滿千實體消費","hy":null,"must":false},{"r":3,"c":null,"l":"日本網購、韓國網購…等 6 項","cond":"","hy":null,"must":false},{"r":0.5,"c":null,"l":"國內保費、國內保險","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null}]},{"id":"mega-bt21","card":"兆豐 BT21 卡","usage":"","list":[{"v":null,"t":["首刷禮"],"rate":null,"cap":null,"usage":"","gift":"BT21摺疊拉桿購物車乙個","img":false,"sum":"核卡後30日內完成指定任務，享BT21摺疊拉桿購物車乙個","days":106,"merchants":[],"cond":"①持卡新增一般消費累積滿NT$3,888\n②綁定電子帳單(不含行動帳單且需取消紙本帳單成功)\n③設定本行或其他銀行帳戶自動扣繳本行信用卡款\n④需登錄成功","ps":"2026/1/1","pe":"2026/12/31","def":"112/1/1 後同一身分證字號下從未持有兆豐銀行任一信用卡正卡之客戶","notes":"首刷禮指限量2,400個"}],"lv":"","feat":[{"r":5.5,"c":6666,"l":"台灣Pay","cond":"台灣Pay多條件加碼活動","hy":null,"must":false},{"r":5,"c":20000,"l":"Agoda、Trip.com…等 7 項","cond":"","hy":null,"must":false},{"r":4,"c":20000,"l":"易遊網、雄獅旅遊…等 14 項","cond":"","hy":null,"must":false},{"r":4,"c":10000,"l":"Apple Pay、Google Pay…等 6 項","cond":"","hy":null,"must":false},{"r":3,"c":10000,"l":"Apple Pay、Google Pay…等 6 項","cond":"","hy":null,"must":false}],"base":[{"r":1,"c":null,"l":"國內一般消費","hy":null},{"r":2,"c":null,"l":"國外消費","hy":null}]}]};
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const nt = n => 'NT$' + Number(n).toLocaleString('en-US');
 const TONE = { '首刷禮':'gift', '回饋加碼':'bonus', '定額回饋':'cash' };
+const capOf = c => c == null ? '無上限' : '上限 ' + nt(Math.round(c));
 
-function bigOf(p){
-  if (p.v == null) return { html: esc((p.gift||'').split('\n')[0]), gift: true };
-  return { html: nt(p.v), gift: false };
-}
 function subOf(p){
   if (p.v == null) return '首刷禮';
   if (p.rate != null) return p.rate + '%・上限消費 ' + nt(p.cap);
   return p.usage || '刷卡金';
 }
-function capOf(c){ return c == null ? '無上限' : '上限 ' + nt(Math.round(c)); }
 
-function featRow(f){
-  const hy = f.hy ? '<span class="ft-pre">' + esc(f.hy.label) + '！</span>' : '';
-  const cond = f.cond ? '<span class="ft-cond">' + esc(f.cond) + '</span>' : '';
-  const cls = (f.hy ? ' hy-' + f.hy.cls : '') + (f.base ? ' ft-base' : '');
-  const fb = f.fb ? '<span class="ft-fb">推算</span>' : '';
-  return '<li class="ft' + cls + '"><span class="ft-row"><span class="ft-r">' + f.r + '%</span>' +
-    '<span class="ft-m">' + hy + esc(f.l) + cond + '</span>' +
-    '<span class="ft-c">' + capOf(f.c) + fb + '</span></span></li>';
+/* 一檔活動自己的詳情——就是舊卡片那一整塊 dl ＋ 備註 */
+function detailHtml(p, uid){
+  const rows = [];
+  if (p.merchants && p.merchants.length) rows.push(['適用通路', p.merchants.join('、')]);
+  if (p.cond) rows.push(['達成條件', p.cond]);
+  const period = (p.ps && p.pe) ? p.ps + ' ~ ' + p.pe : (p.pe ? '至 ' + p.pe + ' 止' : (p.ps ? p.ps + ' 起' : '不限期'));
+  rows.push(['活動期間', period]);
+  if (p.def) rows.push(['新戶定義', p.def]);
+  const dl = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>').join('');
+  const notes = p.notes
+    ? '<div class="pd-notes"><div class="pd-notes-l">備註</div>' +
+      '<div class="pd-notes-t clamp" id="nt' + uid + '">' + esc(p.notes) + '</div>' +
+      '<button type="button" class="pd-exp" data-exp="nt' + uid + '" hidden>展開 <span class="chev">▾</span></button></div>'
+    : '';
+  return '<div class="pd" data-detail hidden><dl>' + dl + '</dl>' + notes + '</div>';
 }
 
-function groupHtml(g, i){
+function thumbHtml(p, cls){
+  // 獎品有活動宣傳圖就用它，沒有就退回卡片圖（站長 2026-09-17）
+  if (p.v == null || p.gift) {
+    return p.img ? '<div class="thumb gift' + (cls||'') + '">活動<br>宣傳圖</div>'
+                 : '<div class="thumb' + (cls||'') + '">卡片圖</div>';
+  }
+  return '<div class="thumb' + (cls||'') + '">卡片圖</div>';
+}
+
+function groupHtml(g, gi){
   const p = g.list[0];
-  const big = bigOf(p);
   const badges = (p.t||[]).map(t => '<span class="bdg b-' + (TONE[t]||'cash') + '">' + esc(t) + '</span>').join('');
   const urg = (p.days != null && p.days <= 20) ? '<span class="urg">剩 ' + p.days + ' 天</span>' : '';
+  const isGift = p.v == null;
+  const big = isGift ? esc(p.gift).replace(/\n/g,'<br>') : nt(p.v);
 
-  const stack = g.list.slice(1).map(q => {
-    const b = bigOf(q);
-    return '<div class="stk"><div class="stk-top">' +
-      '<span class="stk-v' + (b.gift ? ' is-gift' : '') + '">' + (q.v == null ? '獎品' : nt(q.v)) + '</span>' +
-      '<span class="stk-t">' + esc(subOf(q)) + '</span></div>' +
-      '<div class="stk-sum">' + esc(q.sum || (q.gift||'').split('\n')[0]) + '</div></div>';
-  }).join('');
-
-  const rows = g.feat.map(featRow).join('') +
-               g.base.map(b => featRow(Object.assign({}, b, { base: true }))).join('');
-  const lv = g.lv ? '<span class="dr-lv">以「' + esc(g.lv) + '」計</span>' : '';
-  const usage = g.usage
-    ? '<p class="dr-usage" data-usage>' + esc(g.usage) + '</p>' : '';
-
-  return '<div class="grp" data-i="' + i + '">' +
-    '<article class="pc">' +
+  const main =
+    '<article class="pc" data-card>' +
       '<div class="pc-name-top" data-nm="top">' + esc(g.card) + '</div>' +
-      '<div class="pc-row"><div class="pc-left"><div class="pc-img"></div>' +
-        '<div class="pc-name-under" data-nm="under" hidden>' + esc(g.card) + '</div></div>' +
+      '<button type="button" class="pc-row" data-promo aria-expanded="false">' +
+        '<div class="pc-left">' + thumbHtml(p) +
+          '<div class="pc-name-under" data-nm="under" hidden>' + esc(g.card) + '</div></div>' +
         '<div class="pc-right"><div class="pc-top">' + badges + urg + '</div>' +
-        '<div class="pc-big' + (big.gift ? ' is-gift' : '') + '">' + big.html +
-          '<small>' + esc(subOf(p)) + '</small></div>' +
-        '<p class="pc-sum">' + esc(p.sum) + '</p></div></div>' +
+          '<div class="pc-big' + (isGift ? ' is-gift' : '') + '">' + big +
+            '<small>' + esc(subOf(p)) + '</small></div>' +
+          '<p class="pc-sum">' + esc(p.sum) + '</p>' +
+          '<span class="pc-more">活動詳情 <span class="chev">▾</span></span>' +
+        '</div>' +
+      '</button>' +
       '<div class="pc-acts"><button type="button" class="pc-cta" data-apply>立即申辦</button>' +
         '<button type="button" class="feat-btn" data-feat aria-expanded="false">卡片特色 <span class="chev">▾</span></button>' +
       '</div>' +
-    '</article>' +
-    (stack ? '<div class="stack" data-stack>' + stack + '</div>' : '') +
-    '<div class="drawer" data-drawer hidden>' +
-      '<div class="dr-h"><b>卡片特色</b>' + lv +
-        '<button type="button" class="dr-all" data-all>查看全部 ›</button></div>' +
-      usage + '<ul class="ft-list">' + rows + '</ul></div>' +
-  '</div>';
-}
+      detailHtml(p, gi + '-0') +
+    '</article>';
 
-function giftHtml(x){
-  return '<div class="gc"><div class="gc-thumb' + (x.img ? '' : ' noimg') + '">' +
-    (x.img ? '活動<br>宣傳圖' : '無圖') + '</div>' +
-    '<div class="gc-b"><div class="gc-name">' + esc(x.card) + '</div>' +
-    '<div class="gc-full">' + esc(x.gift).replace(/\n/g,'<br>') + '</div></div></div>';
+  const stack = g.list.slice(1).map((q, i) => {
+    const qGift = q.v == null;
+    return '<div class="stk">' +
+      '<button type="button" class="stk-row" data-promo aria-expanded="false"><div class="stk-head">' +
+        '<div class="stk-thumb">' + thumbHtml(q) + '</div><div class="stk-b">' +
+        (qGift
+          ? '<div class="stk-gift">' + esc(q.gift).replace(/\n/g,'<br>') + '</div>'
+          : '<div class="stk-top"><span class="stk-v">' + nt(q.v) + '</span>' +
+            '<span class="stk-t">' + esc(subOf(q)) + '</span></div>') +
+        '<div class="stk-sum">' + esc(q.sum) + '</div>' +
+        '<div class="stk-more">活動詳情 <span class="chev">▾</span></div>' +
+      '</div></div></button>' + detailHtml(q, gi + '-' + (i + 1)) + '</div>';
+  }).join('');
+
+  const featRow = f => {
+    const hy = f.hy ? '<span class="ft-pre">' + esc(f.hy.label) + '！</span>' : '';
+    const cond = f.cond ? '<span class="ft-cond">' + esc(f.cond) + '</span>' : '';
+    const cls = (f.hy ? ' hy-' + f.hy.cls : '') + (f.base ? ' ft-base' : '');
+    return '<li class="ft' + cls + '"><span class="ft-row"><span class="ft-r">' + f.r + '%</span>' +
+      '<span class="ft-m">' + hy + esc(f.l) + cond + '</span>' +
+      '<span class="ft-c">' + capOf(f.c) + '</span></span></li>';
+  };
+  const drawer =
+    '<div class="drawer" data-drawer hidden>' +
+      '<div class="dr-h"><b>卡片特色</b>' + (g.lv ? '<span class="dr-lv">以「' + esc(g.lv) + '」計</span>' : '') +
+        '<button type="button" class="dr-all" data-all>查看全部 ›</button></div>' +
+      (g.usage ? '<p class="dr-usage" data-usage>' + esc(g.usage) + '</p>' : '') +
+      '<ul class="ft-list">' + g.feat.map(featRow).join('') +
+        g.base.map(b => featRow(Object.assign({}, b, { base: true }))).join('') + '</ul>' +
+    '</div>';
+
+  return '<div class="grp" data-i="' + gi + '">' + main +
+    (stack ? '<div class="stack" data-stack>' + stack + '</div>' : '') + drawer + '</div>';
 }
 
 const list = document.getElementById('list');
-list.innerHTML = DATA.groups.map(groupHtml).join('') +
-  '<div class="gsec"><div class="gsec-h">獎品類（' + DATA.gifts.length + ' 檔・完整品名不截斷）</div>' +
-  DATA.gifts.map(giftHtml).join('') + '</div>';
+list.innerHTML = DATA.groups.map(groupHtml).join('');
 document.getElementById('mSub').textContent =
   DATA.groups.length + ' 張卡・' + DATA.groups.reduce((n,g)=>n+g.list.length,0) + ' 檔活動・依「最高可拿」倒序';
 
-/* ---- toast ---- */
+/* 備註超過兩行才出現「展開」——同正式站的客戶端量測做法。
+   ⚠️ 必須在詳情展開之後才量：收合時 display:none，scrollHeight 恆為 0，
+   一開始在渲染後就量會全部判定成「不需要收合」（實測踩到）。 */
+function measureNotes(detail){
+  const el = detail.querySelector('.pd-notes-t');
+  if (!el || el.dataset.measured) return;
+  el.dataset.measured = '1';
+  const btn = detail.querySelector('.pd-exp');
+  if (btn && el.scrollHeight > el.clientHeight + 2) btn.hidden = false;
+}
+
 let toastT;
 const toastEl = document.getElementById('toast');
 function toast(msg){
@@ -346,62 +379,73 @@ function toast(msg){
   toastT = setTimeout(() => toastEl.classList.remove('on'), 2400);
 }
 
-/* ---- 展開／收合：特色抽屜與活動堆疊互斥 ---- */
-function setOpen(grp, open){
+function closeAllIn(grp){
+  grp.querySelectorAll('[data-promo]').forEach(b => {
+    b.setAttribute('aria-expanded','false');
+    b.closest('.pc, .stk').classList.remove('open');
+    const d = b.closest('.pc, .stk').querySelector(':scope > [data-detail]');
+    if (d) d.hidden = true;
+  });
+}
+function setFeat(grp, open){
   const btn = grp.querySelector('[data-feat]');
   const drawer = grp.querySelector('[data-drawer]');
   const stack = grp.querySelector('[data-stack]');
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   drawer.hidden = !open;
   if (stack) stack.hidden = open;
+  if (open) closeAllIn(grp);
 }
 
 list.addEventListener('click', e => {
   const grp = e.target.closest('.grp');
   if (!grp) return;
+
+  const exp = e.target.closest('.pd-exp');
+  if (exp) {
+    const t = document.getElementById(exp.dataset.exp);
+    const on = t.classList.toggle('clamp');
+    exp.setAttribute('aria-expanded', on ? 'false' : 'true');
+    exp.firstChild.textContent = on ? '展開 ' : '收合 ';
+    return;
+  }
   if (e.target.closest('[data-feat]')) {
-    const open = grp.querySelector('[data-feat]').getAttribute('aria-expanded') === 'true';
-    setOpen(grp, !open);
+    setFeat(grp, grp.querySelector('[data-feat]').getAttribute('aria-expanded') !== 'true');
     return;
   }
-  if (e.target.closest('[data-all]')) {
-    toast('（示意）開啟卡片詳情並捲到「指定通路回饋」');
-    return;
-  }
-  if (e.target.closest('[data-apply]')) {
-    toast('（示意）開啟申辦連結，並送出 GA4 button_click');
+  if (e.target.closest('[data-all]')) { toast('（示意）開啟卡片詳情並捲到「指定通路回饋」'); return; }
+  if (e.target.closest('[data-apply]')) { toast('（示意）開啟申辦連結，並送出 GA4 button_click'); return; }
+
+  const row = e.target.closest('[data-promo]');
+  if (row) {
+    const wasOpen = row.getAttribute('aria-expanded') === 'true';
+    closeAllIn(grp);
+    setFeat(grp, false);
+    if (!wasOpen) {
+      row.setAttribute('aria-expanded','true');
+      row.closest('.pc, .stk').classList.add('open');
+      const d = row.closest('.pc, .stk').querySelector(':scope > [data-detail]');
+      if (d) { d.hidden = false; measureNotes(d); }
+    }
   }
 });
 
-/* ---- 控制台 ---- */
 function pair(onBtn, offBtn, apply){
-  function set(isOn){
-    onBtn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
-    offBtn.setAttribute('aria-pressed', isOn ? 'false' : 'true');
-    apply(isOn);
-  }
+  const set = on => {
+    onBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    offBtn.setAttribute('aria-pressed', on ? 'false' : 'true');
+    apply(on);
+  };
   onBtn.addEventListener('click', () => set(true));
   offBtn.addEventListener('click', () => set(false));
 }
-
 pair(document.getElementById('nmTop'), document.getElementById('nmUnder'), isTop => {
   document.body.dataset.name = isTop ? 'top' : 'under';
   list.querySelectorAll('[data-nm="top"]').forEach(el => { el.hidden = !isTop; });
   list.querySelectorAll('[data-nm="under"]').forEach(el => { el.hidden = isTop; });
 });
 document.body.dataset.name = 'top';
-
 pair(document.getElementById('usOn'), document.getElementById('usOff'), show => {
   list.querySelectorAll('[data-usage]').forEach(el => { el.hidden = !show; });
 });
-
-pair(document.getElementById('exAll'), document.getElementById('clAll'), () => {});
-document.getElementById('exAll').addEventListener('click', () => {
-  list.querySelectorAll('.grp').forEach(g => setOpen(g, true));
-});
-document.getElementById('clAll').addEventListener('click', () => {
-  list.querySelectorAll('.grp').forEach(g => setOpen(g, false));
-});
-document.getElementById('exAll').setAttribute('aria-pressed','false');
-document.getElementById('clAll').setAttribute('aria-pressed','true');
 </script>
