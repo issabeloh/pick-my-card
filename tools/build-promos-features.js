@@ -15,7 +15,10 @@
  *
  * 用法：
  *   node tools/build-promos-features.js          # 注入（Cloudflare Pages build 會跑）
- *   node tools/build-promos-features.js --check  # 只檢查是否已是最新，不寫入（preflight 用）
+ *   node tools/build-promos-features.js --check  # 只檢查是否已是最新，不寫入
+ *
+ * ⚠️ preflight 刻意**不**跑 --check：Apps Script 匯出的 commit 產出的是空容器，
+ *    那才是正常狀態（內容部署時才注入），拿它當違規會讓每次匯出都擋住 commit。
  *
  * 沒跑過這支腳本時容器是空的，promos.js 會把「卡片特色」按鈕一起藏起來，
  * 頁面其餘部分照常可用——不會壞掉，只是少一個區塊。

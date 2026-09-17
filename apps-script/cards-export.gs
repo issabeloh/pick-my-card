@@ -532,6 +532,11 @@ function exportToJSON() {
   addOptionalField(card, row, headers, 'levelLabelFormat');
 }
 
+    // cardUsage（選填，2026-09-17 新增）：一句話描述這張卡的性格，顯示在 /promos
+    // 卡片特色區塊最上方。沒這欄／沒填 → addOptionalField 直接跳過，前端那一行不出現
+    // （見 docs/project/data-pipeline.md 第 12b 與 9a 節）。
+    addOptionalField(card, row, headers, 'cardUsage');
+
     // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];
     const maxRateSlot = maxSlotIndex(headers, 'rate');

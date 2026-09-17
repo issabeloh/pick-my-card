@@ -61,7 +61,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
-12b. **Cards Data 的 `cardUsage` 欄**（選填，2026-09-17 新增）—— 一句話描述這張卡的性格，
+12b. **Cards Data 的 `cardUsage` 欄**（選填，2026-09-17 新增；匯出端 `addOptionalField(card, row, headers, 'cardUsage')`）—— 一句話描述這張卡的性格，
     顯示在 /promos 卡片特色區塊的最上方。**沒填就整行不出現**（同 `addOptionalField` 慣例，
     舊表完全相容，可以慢慢填）。
     - **只寫性格、不寫數字**：句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率——
@@ -302,7 +302,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 **待清理**：`promos.css` 前段還留著舊卡片版型的死碼（`.promo-card-toggle`／
 `.promo-card-detail`／`.promo-card-header`／`.promo-card-mainline`／
-`.promo-quick-highlight`／`.promo-gift-thumb` 等），對應的 class 已經不再出現在
+`.promo-quick-highlight`／`.promo-gift-thumb`／`.promo-card-info-btn` 等），對應的 class 已經不再出現在
 生成的 HTML 裡。留著不影響畫面，下次動這支 CSS 時應一併刪掉。
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
