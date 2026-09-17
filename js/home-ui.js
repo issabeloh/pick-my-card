@@ -1207,6 +1207,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cardId = data.cardId;
             if (cardId && cardsData && cardsData.cards.some(c => c.id === cardId)) {
                 showCardDetail(cardId);
+                // data.section（2026-09-17）：新戶活動頁的「查看全部 ›」要求開完詳情
+                // 直接捲到指定區塊（目前只用 card-special-section＝指定通路回饋）。
+                // 刻意重用詳情頁自己的導覽鈕而不是另寫一套捲動：那顆鈕已經處理好
+                // sticky header 的偏移與 active 狀態同步。showCardDetail 是 async、
+                // 內容要等渲染完才捲得到，所以放在 requestAnimationFrame 後面。
+                if (data.section) {
+                    requestAnimationFrame(() => {
+                        const navBtn = document.querySelector(
+                            '#card-detail-nav .card-detail-nav-btn[data-section="' + data.section + '"]');
+                        if (navBtn) navBtn.click();
+                    });
+                }
             }
         });
         try {

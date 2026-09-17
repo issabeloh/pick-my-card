@@ -34,8 +34,13 @@ fi
 if [ "${PMC_SKIP_MERCHANT_BUILD:-0}" != "1" ]; then
   if command -v node >/dev/null 2>&1; then
     node tools/build-merchant-pages.js
+    # 新戶活動頁的「卡片特色」區塊（2026-09-17 起）：Apps Script 只生成空容器，
+    # 內容在這裡注入——回饋率必須用主站自己的 getDisplayRate()，而那支函數住在
+    # js/，Apps Script 讀不到。同樣要在注入 ?v= 之前跑。
+    # 失敗一樣讓 build 掛掉：寧可部署失敗，也不要上線一個少了整個區塊的頁面。
+    node tools/build-promos-features.js
   else
-    echo "❌ 找不到 node，無法生成商家頁（部署環境必須有 node）" >&2
+    echo "❌ 找不到 node，無法生成商家頁／卡片特色（部署環境必須有 node）" >&2
     exit 1
   fi
 fi

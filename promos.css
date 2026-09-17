@@ -662,8 +662,7 @@ a {
   letter-spacing: 0.02em;
 }
 
-.promos-filter-chips,
-.promos-sort-toggle {
+.promos-filter-chips{
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -757,10 +756,9 @@ a {
   color: #fbbf24;
 }
 
-/* 篩選鈕／排序鈕：抄自 styles.css .quick-search-btn 配方（白底細框圓角），
-   不再用果凍漸層。active 用主站藍底白字。 */
-.promo-chip,
-.promo-sort-btn {
+/* 篩選鈕：抄自 styles.css .quick-search-btn 配方（白底細框圓角），不再用果凍漸層。
+   active 用主站藍底白字。（排序鈕的樣式已於 2026-09-17 隨排序切換一起移除。）*/
+.promo-chip{
   display: inline-flex;
   align-items: center;
   font-family: inherit;
@@ -775,15 +773,13 @@ a {
   transition: border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 
-.promo-chip:hover,
-.promo-sort-btn:hover {
+.promo-chip:hover{
   background: var(--pmc-chip-hover-bg);
   border-color: var(--pmc-blue);
   transform: translateY(-1px);
 }
 
-.promo-chip.is-active,
-.promo-sort-btn.is-active {
+.promo-chip.is-active{
   background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
   border-color: var(--pmc-blue-deep);
   color: white;
@@ -1807,8 +1803,7 @@ a {
     align-items: flex-start;
   }
 
-  .promos-filter-chips,
-  .promos-sort-toggle {
+  .promos-filter-chips{
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -1822,15 +1817,13 @@ a {
     min-width: 0;
   }
 
-  .promos-filter-chips,
-  .promos-sort-toggle {
+  .promos-filter-chips{
     flex-wrap: wrap;
     overflow-x: visible;
     max-width: 100%;
   }
 
-  .promo-chip,
-  .promo-sort-btn {
+  .promo-chip{
     font-size: 0.72rem;
     padding: 5px 11px;
     white-space: nowrap;
@@ -2128,3 +2121,360 @@ a {
   }
 }
 /* ═══ 申辦前 FAQ 區結束 ═══ */
+
+/* ==========================================================================
+   卡片組版型（2026-09-17 改版）
+   一張卡一組：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，卡片特色是
+   另一種形狀的抽屜。三者的形狀刻意不同，避免看起來錯亂（站長 2026-09-17）。
+
+   ⚠️ 本段以下的規則覆寫檔案前段的舊卡片樣式（.promo-card 從「白卡本體」變成
+   「整組的容器」）。前段那些 .promo-card-toggle / .promo-card-detail /
+   .promo-card-header / .promo-card-mainline / .promo-quick-highlight /
+   .promo-gift-thumb 等規則所對應的 class 已經不再出現在生成的 HTML 裡，
+   是待清理的死碼——留著不影響畫面，但下次動這支 CSS 時應該一併刪掉。
+   ========================================================================== */
+
+/* 整組的容器：不再是白卡，白色表面移到 .promo-card-main */
+.promo-card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  display: block;
+  align-self: start;
+}
+.promo-card:hover { box-shadow: none; }
+
+.promo-card-main {
+  position: relative;
+  z-index: 5;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-lg);
+  box-shadow: var(--pmc-shadow-card);
+  padding: 14px 16px 16px;
+}
+
+.promo-card-name {
+  margin: 0 0 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--pmc-border);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pmc-ink);
+  line-height: 1.4;
+}
+
+/* ---- 一檔活動 ---- */
+.promo-act[hidden] { display: none; }
+
+.promo-act-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.promo-act-row:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.promo-act-thumb {
+  flex: none;
+  width: 84px;
+  aspect-ratio: 8 / 5;
+  border-radius: 6px;
+  border: 1px solid var(--pmc-border);
+  background: var(--pmc-white);
+  overflow: hidden;
+  display: block;
+}
+.promo-act-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+/* 獎品的活動宣傳圖：方形、可點開 lightbox */
+.promo-act-thumb--gift {
+  aspect-ratio: 1 / 1;
+  width: 72px;
+  cursor: zoom-in;
+}
+.promo-act-thumb--gift img { object-fit: cover; }
+
+.promo-act-body { flex: 1; min-width: 0; display: block; }
+
+.promo-act-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+/* 獎勵大字：整個改版的重點，它上面不放任何東西 */
+.promo-act-reward {
+  display: block;
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--pmc-hero-green);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級跟著降下來才排得下 */
+.promo-act-reward.is-gift {
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  color: #8a5c00;
+}
+.promo-act-reward small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--pmc-muted);
+  line-height: 1.5;
+}
+
+/* 摘要：刷卡金類要立刻看得到，最多兩行、截斷不補救（站長 2026-09-17） */
+.promo-act-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--pmc-label);
+}
+
+.promo-act-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pmc-blue-deep);
+}
+
+.promo-chevron {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 0.18s ease;
+}
+[aria-expanded="true"] .promo-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .promo-chevron { transition: none; } }
+
+/* ---- 活動詳情（每檔各自一份）---- */
+.promo-act-detail {
+  background: #fbfcfe;
+  border-top: 1px solid var(--pmc-border);
+  margin: 12px -16px -16px;
+  padding: 13px 16px;
+  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
+}
+.promo-act-detail[hidden] { display: none; }
+.promo-card-stack .promo-act-detail { margin: 12px -16px -12px; }
+
+/* ---- 動作列 ---- */
+.promo-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 13px;
+}
+.promo-card-actions .promo-apply-btn {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+}
+.promo-feat-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f4ff;
+  color: var(--pmc-blue-deep);
+  border: 1px solid #c7d6f7;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.promo-feat-btn[aria-expanded="true"] {
+  background: var(--pmc-blue-deep);
+  border-color: var(--pmc-blue-deep);
+  color: var(--pmc-white);
+}
+.promo-feat-btn[hidden] { display: none; }
+.promo-feat-btn:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 2px;
+}
+
+/* ---- 活動堆疊：卡疊卡（上緣方角、只留下方兩個圓角、逐層內縮）---- */
+.promo-card-stack[hidden] { display: none; }
+.promo-card-stack .promo-act {
+  position: relative;
+  z-index: 4;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-top: 0;
+  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
+  box-shadow: var(--pmc-shadow-card);
+  margin-top: -10px;
+  padding: 18px 16px 12px;
+  width: calc(100% - 14px);
+  margin-inline: auto;
+}
+.promo-card-stack .promo-act:nth-of-type(2) { z-index: 3; width: calc(100% - 26px); }
+.promo-card-stack .promo-act:nth-of-type(3) { z-index: 2; width: calc(100% - 38px); }
+.promo-card-stack .promo-act:nth-of-type(n+4) { z-index: 1; width: calc(100% - 50px); }
+/* 堆疊層的獎勵字級降一階：它是「還有什麼」，不跟主活動搶視線 */
+.promo-card-stack .promo-act-reward { font-size: 19px; }
+.promo-card-stack .promo-act-reward.is-gift { font-size: 13px; }
+.promo-card-stack .promo-act-thumb { width: 56px; }
+.promo-card-stack .promo-act-thumb--gift { width: 52px; }
+
+/* ---- 卡片特色：抽屜（刻意不是卡片：淺藍底、有框、無卡片陰影）---- */
+.promo-card-feat {
+  position: relative;
+  z-index: 4;
+  background: #f4f7fd;
+  border: 1px solid #d8e2f7;
+  border-top: 0;
+  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
+  margin-top: -4px;
+  padding: 14px 16px;
+}
+.promo-card-feat[hidden] { display: none; }
+
+.promo-feat-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.promo-feat-head b { font-size: 14px; color: #1e3a8a; }
+.promo-feat-level {
+  font-size: 11px;
+  color: #64748b;
+  background: #e2e9f7;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.promo-feat-all {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pmc-blue-deep);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.promo-feat-all:hover { text-decoration: underline; }
+
+/* 卡片用途：Sheets 的 cardUsage 欄，沒填就整行不出現 */
+.promo-feat-usage {
+  margin: 0 0 10px;
+  background: var(--pmc-white);
+  border-left: 3px solid var(--pmc-blue-deep);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1e3a5f;
+}
+
+.promo-feat-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 11px;
+  background: var(--pmc-white);
+  border-radius: 9px;
+}
+.promo-feat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px dashed #eef1f6;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.promo-feat-row:last-child { border-bottom: 0; }
+.promo-feat-row.is-base {
+  background: #f7f9fc;
+  margin: 0 -11px;
+  padding-inline: 11px;
+}
+.promo-feat-rate {
+  flex: none;
+  min-width: 50px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pmc-green);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.32;
+}
+/* 兩行才截斷：單行截掉太多會看不懂在講哪個通路（站長 2026-09-17） */
+.promo-feat-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--pmc-ink);
+  font-weight: 500;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.promo-feat-cap {
+  flex: none;
+  padding-top: 2px;
+  font-size: 11px;
+  color: var(--pmc-muted);
+  white-space: nowrap;
+}
+/* 條件後綴（如「切換「Chill刷」方案」）：台新那五行互斥，拿掉會讓人以為能同時拿 */
+.promo-feat-cond {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--pmc-muted);
+  white-space: nowrap;
+}
+/* Highlights 的「全場最高！」等字眼：純彩色文字、無背景無 padding——
+   做成 chip 會撐開行寬把版面擠爆（站長 2026-09-17 實測回饋） */
+.promo-feat-hype { font-weight: 700; }
+.promo-feat-hype--top { color: var(--pmc-candy-pink-text); }
+.promo-feat-hype--god { color: var(--pmc-candy-default-text); }
+.promo-feat-hype--excl { color: var(--pmc-candy-yellow-text); }
+.promo-feat-hype--easy { color: var(--pmc-candy-mint-text); }
+
+@media (max-width: 480px) {
+  .promo-card-main { padding: 13px 14px 14px; }
+  .promo-act-detail { margin-inline: -14px; padding-inline: 14px; }
+  .promo-act-thumb { width: 72px; }
+  .promo-act-reward { font-size: 24px; }
+  .promo-card-feat { padding: 13px 14px; }
+  .promo-card-stack .promo-act { padding-inline: 14px; }
+}

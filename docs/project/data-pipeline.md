@@ -48,6 +48,8 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - 原本的用途是把勾選的活動排進「主打卡」版位（手機每頁 1 則整列大卡、桌機每頁 2 則各跨 2 欄）。**停用原因**：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打的頁」卡片形狀不同，看起來很亂（2026-09-03 站長決定）。
     - 要重新啟用：把 `js/home-ui.js` 的 `SPOTLIGHT_FEATURE_SLOTS` 改回 `true`，主打卡的分頁分支與 `.is-feature` / `.is-mini` 樣式都還留著。
     - 目前每頁張數：手機 4（2 欄 x 2 列）、平板 3、桌機 4（4 欄 x 1 列）。版位配置寫在 `spotlightLayout()`，欄數在 `styles.css` 的 `.spotlight-track`，**兩邊的斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
+    - **2026-09-17 起這張表同時餵 /promos 的「卡片特色」**：命中的通路保證入列並帶
+      hype 字眼（見第 9a 節）。因此往 Highlights 加一列會同時改善首頁推薦活動與新戶活動頁。
 11. ~~**Watchlist**~~ —— 已於 2026-07-17 搬到「PMC 資料自動化」自動化檔並改名 `1-監控清單`（見 `apps-script/README.md` 的「選單 ↔ 分頁對照表」，與 cards.data 匯出無關）
 12. **searchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
     `mergeDataSearchExclusions()`（`js/search-match.js`）併入 `searchExclusionMap`（程式內只留兜底預設）。
@@ -59,6 +61,13 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
+12b. **Cards Data 的 `cardUsage` 欄**（選填，2026-09-17 新增）—— 一句話描述這張卡的性格，
+    顯示在 /promos 卡片特色區塊的最上方。**沒填就整行不出現**（同 `addOptionalField` 慣例，
+    舊表完全相容，可以慢慢填）。
+    - **只寫性格、不寫數字**：句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率——
+      回饋率會跟著 `cards.data` 走，這句話不會
+    - 用途是講自動規則講不出來的事，例如台新 Richart 卡的「每月選一個方案綁生活場景」
+      （那五行都掛著〔切換○○刷方案〕，但「只能選一個」這件事沒有任何一行講得出來）
 13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
     2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）
@@ -234,6 +243,67 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   > 深連結（`/?start&card=<id>`）的設計，但 main 分支同期已把 ⓘ 按鈕升級成 iframe 內嵌
   > 詳情彈窗（方案 A，深連結只當攔截失敗的 fallback）——那段說明已過時，**不portover**；
   > 完整、與現狀一致的說明在 `docs/project/ui-display.md` 第 1 節「Embed 模式」。
+
+### 9a. 2026-09-17 改版：一張卡一組 ＋ 卡片特色
+
+站長回報「資訊層級不對：應該馬上看到獎勵，被吸引後才看到是哪張卡送的」。改版後：
+
+**版面**（`pmcRenderCardGroup_` 取代舊的 `pmcRenderPromoCard_`）
+
+- **一張卡一組**，不再一檔活動一張卡片（iLEO 4 檔、遠東快樂卡 4 檔、中信 uniopen 4 檔
+  以前會出現 4 次）。主活動在白卡 `.promo-card-main` 裡，同卡其餘活動以「卡疊卡」
+  堆在下面（`.promo-card-stack`，上緣方角、只留下方兩個圓角、逐層內縮）
+- **排序固定依「最高可拿」倒序**，排序切換 UI 已移除（保留類型 chips 與
+  「隱藏我持有的卡片」）。換算：定額回饋＝`voucher_amount`；
+  回饋加碼＝`bonus_rate × bonus_cap`（`bonus_cap` 是消費上限，相乘即回饋天花板）；
+  首刷禮沒有現金定價，大字改放贈品全名。**⚠️ 同一張卡的多檔活動各自獨立、不相加**
+  （各有不同達成條件），排序只看單檔最大值
+- **每檔活動各有自己的詳情**（`pmcRenderPromoDetail_`：適用通路／達成條件／活動期間／
+  新戶定義／備註）。同卡多檔的條件不同，所以詳情掛在活動上、不是卡片上。
+  同組內一次只開一個
+- **卡片特色**（`.promo-card-feat`）與活動堆疊**互斥**：展開特色時整疊活動收起。
+  兩者形狀刻意不同——堆疊是白卡有陰影，特色是淺藍底有框無陰影，否則看起來錯亂
+- 「查看全部 ›」取代舊的卡名旁 ⓘ 鈕，`data-section="card-special-section"`
+  讓內嵌詳情開完直接捲到「指定通路回饋」（`promos.js` 的 `pmc-open-card` 多帶一個
+  `section` 欄位，`js/home-ui.js` 收到後點一下對應的導覽鈕）
+
+**卡片特色的內容是部署時注入的，不是 Apps Script 生成的**
+
+`generatePromosPageHtml()` 只輸出空容器
+`<div class="promo-card-feat" data-feat-for="<card id>"></div>`，內容由
+`tools/build-promos-features.js` 在 Cloudflare Pages build 時填入（接在
+`tools/deploy-version.sh` 裡，跟商家頁生成器同一段、都在注入 `?v=` 之前）。
+
+**為什麼不在 Apps Script 算**：卡片特色的回饋率必須跟主站搜尋結果是同一個數字，
+而那份邏輯住在 `js/cashback-engine.js` 的 `getDisplayRate()`（stacking 加總、跨槽引用
+`rate_N`、級別 placeholder 都在裡面），Apps Script 讀不到 `js/`。抄進 `cards-export.gs`
+就會變成同一段邏輯的**第四份副本**——`cashback-engine.md` 第 6 節已明文警告
+「三處實作必須一致」。所以照 `tools/lib/merchant-cards.js` 的成例把 `js/` 載進 Node 的 vm 跑。
+
+**這個分工是自癒的**：Apps Script 下次匯出會把 `promos.html` 蓋掉、容器變回空的，
+部署時再注入一次。沒跑注入器時容器是空的，`promos.js` 會把「卡片特色」按鈕一起藏起來，
+頁面其餘部分照常可用——所以 preflight **不檢查**這個區塊（匯出的 commit 本來就沒有它）。
+
+**卡片特色的選題規則**（全部在 `tools/build-promos-features.js`，逐條有註解）
+
+| 規則 | 內容 |
+|---|---|
+| 標籤 | 一律顯示商家（`items` 前 3 個），**不顯示 `category`**；`category` 只在它描述達成條件（`/方案\|切換\|任務\|首次\|綁定\|登錄\|滿額\|滿千/`）時留成灰色後綴 |
+| 去重 | 同一個顯示標籤只留回饋率最高的那個（聯邦 LINE Bank 卡「萊爾富門市」有 10% 與 5% 兩槽）。**必須在挑前 5 名之前去重**，否則重複那行會佔掉名額 |
+| 固定行 | 「國內一般消費」讀骨幹槽 21（23/23 張都有）；「國外消費」讀 slot22，**沒有 slot22 就是沒有國外回饋，整行不顯示**（不推算） |
+| 分級卡 | 取**最高級別**。⚠️ 不能用 `levelSettings` 鍵順序——玉山 Uni／國泰 CUBE 由低到高，永豐大戶／凱基誠品由高到低。改成實算每個級別的最高回饋率再取最大 |
+| Highlights | 命中的槽**保證入列**，但跟其他槽一起依回饋率倒序（固定顯示 ≠ 排最前面）。merchant 可能是快捷搜尋 displayName（「所有計程車」），要先展開再比對；一卡一通路命中多組時**取回饋率最高**的那組 |
+| 卡片用途 | Sheets 的 `cardUsage` 欄（選填，2026-09-17 新增）。**沒填就整行不出現**，可以慢慢填 |
+
+**本機重生 promos.html**：`node tools/build-promos-page.js` —— 用 vm 載入
+`cards-export.gs` 呼叫同一支純函數，沿用現有的 versionTag 與「資料更新於」日期，
+所以差異只會是生成邏輯本身的差異。⚠️ 這不改變「實際執行版在 Sheets」：
+改了 `cards-export.gs` 仍然必須把整份貼回 Sheets，否則下次匯出會用舊邏輯蓋掉。
+
+**待清理**：`promos.css` 前段還留著舊卡片版型的死碼（`.promo-card-toggle`／
+`.promo-card-detail`／`.promo-card-header`／`.promo-card-mainline`／
+`.promo-quick-highlight`／`.promo-gift-thumb` 等），對應的 class 已經不再出現在
+生成的 HTML 裡。留著不影響畫面，下次動這支 CSS 時應一併刪掉。
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 

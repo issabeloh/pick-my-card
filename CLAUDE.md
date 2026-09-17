@@ -23,7 +23,7 @@
 | `functions/` | Firebase Cloud Functions（`notifyOnFeedback`：使用者送出意見回饋時即時 email／webhook 通知站長）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成（後兩者由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify`） |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。中間三支由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify` |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
