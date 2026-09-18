@@ -2284,15 +2284,22 @@ a {
 @media (prefers-reduced-motion: reduce) { .promo-chevron { transition: none; } }
 
 /* ---- 活動詳情（每檔各自一份）---- */
+/* 詳情是一條滿版色帶。主活動的詳情**後面還有按鈕列**，所以它不是卡片的最後一個
+   元素——下邊界要歸零、下方不收圓角，改用一條下框線收邊；堆疊層的詳情才是該層的
+   最後一個元素，保留負的下邊界與下方圓角讓它貼齊卡片底緣。 */
 .promo-act-detail {
   background: #fbfcfe;
   border-top: 1px solid var(--pmc-border);
-  margin: 12px -16px -16px;
+  border-bottom: 1px solid var(--pmc-border);
+  margin: 12px -16px 0;
   padding: 13px 16px;
-  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
 }
 .promo-act-detail[hidden] { display: none; }
-.promo-card-stack .promo-act-detail { margin: 12px -16px -12px; }
+.promo-card-stack .promo-act-detail {
+  border-bottom: 0;
+  margin: 12px -16px -12px;
+  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
+}
 
 /* ---- 動作列 ---- */
 .promo-card-actions {
@@ -2525,4 +2532,67 @@ a {
    沒有宣傳圖的獎品活動會退回卡片圖，因此同樣落在這條規則裡被隱藏。 */
 .promo-card-stack .promo-act-thumb:not(.promo-act-thumb--gift) {
   display: none;
+}
+
+/* --------------------------------------------------------------------------
+   桌機（≥1025px）：卡片組的大小配置（2026-09-18）
+   改版時整組尺寸都照手機開，塞進桌機 373px 的欄位就只是「縮小的手機版」。
+   這一段只調大小/間距/hover，**不動 DOM、不改任何行為**——展開收合、堆疊與特色
+   互斥的規則手機桌機一致。
+   欄數維持舊版的 .promo-grid（auto-fit minmax 320px）：1440px ＝ 3 欄，與改版前相同。
+   -------------------------------------------------------------------------- */
+@media (min-width: 1025px) {
+  .promo-grid { gap: 20px; }
+
+  .promo-card-main { padding: 18px 20px 18px; }
+  .promo-card-name { font-size: 16.5px; margin-bottom: 12px; padding-bottom: 11px; }
+
+  .promo-act-row { gap: 14px; }
+  .promo-act-thumb { width: 104px; }
+  .promo-act-thumb--gift { width: 88px; }
+
+  .promo-act-reward { font-size: 30px; }
+  .promo-act-reward.is-gift { font-size: 15px; }
+  .promo-act-reward small { font-size: 13px; margin-top: 5px; }
+  .promo-act-summary { font-size: 13.5px; line-height: 1.65; margin-top: 9px; }
+  .promo-act-more { font-size: 13px; margin-top: 10px; }
+
+  /* 活動詳情：手機的 11px 在桌機太小，且桌機有空間讓 dt 欄固定寬、dd 好讀 */
+  .promo-act-detail { margin: 14px -20px 0; padding: 16px 20px; }
+  .promo-act-detail dt { font-size: 12.5px; }
+  .promo-act-detail dd { font-size: 12.5px; line-height: 1.7; }
+  .promo-notes-label { font-size: 12.5px; }
+  .promo-notes-text { font-size: 12.5px; line-height: 1.7; }
+
+  .promo-card-actions { gap: 10px; margin-top: 16px; }
+  .promo-card-actions .promo-apply-btn { padding: 11px 18px; font-size: 15px; }
+  .promo-feat-btn { padding: 11px 15px; font-size: 15px; }
+
+  /* 堆疊層：桌機把內縮收斂（寬卡片上 14/26/38px 的階梯很搶眼），
+     字級比主活動小一階即可，不必像手機壓那麼小 */
+  .promo-card-stack .promo-act { padding: 20px 20px 13px; width: calc(100% - 10px); }
+  .promo-card-stack .promo-act:nth-of-type(2) { width: calc(100% - 20px); }
+  .promo-card-stack .promo-act:nth-of-type(3) { width: calc(100% - 30px); }
+  .promo-card-stack .promo-act:nth-of-type(n+4) { width: calc(100% - 40px); }
+  .promo-card-stack .promo-act-reward { font-size: 22px; }
+  .promo-card-stack .promo-act-reward.is-gift { font-size: 14px; }
+  .promo-card-stack .promo-act-detail { margin: 14px -20px -13px; }
+  /* 主活動詳情展開後，按鈕列要跟色帶留出呼吸 */
+  .promo-card-main .promo-act-detail + .promo-card-actions { margin-top: 18px; }
+
+  /* 卡片特色 */
+  .promo-card-feat { padding: 16px 20px; }
+  .promo-feat-head b { font-size: 15px; }
+  .promo-feat-all { font-size: 14px; }
+  .promo-feat-usage { font-size: 13.5px; padding: 9px 12px; }
+  .promo-feat-list { padding: 5px 13px; }
+  .promo-feat-row { font-size: 13.5px; padding: 8px 0; }
+  .promo-feat-row.is-base { margin: 0 -13px; padding-inline: 13px; }
+  .promo-feat-rate { font-size: 16px; min-width: 56px; }
+  .promo-feat-cap { font-size: 12px; }
+  .promo-feat-cond { font-size: 12.5px; }
+
+  /* 桌機有滑鼠：整列可點就要有 hover 回饋（手機沒有 hover，不套） */
+  .promo-act-row:hover .promo-act-more { text-decoration: underline; }
+  .promo-card-stack .promo-act:hover { background: #fcfdff; }
 }
