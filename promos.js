@@ -318,17 +318,91 @@
   // 收回特色它們才回來——同一個位置只會有一種東西，否則兩種卡片形狀交疊會看不懂
   // （站長指正）。特色內容由部署時的 tools/build-promos-features.js 注入；
   // 沒跑生成器時容器是空的，這裡直接把按鈕藏起來，頁面其餘部分照常可用。
-  // 卡片特色展開時，「其他活動」要不要收起來，交給 CSS 依版面決定，這裡只掛一個
-  // 狀態 class：
-  //   手機 —— 特色與其他活動搶同一個位置（都在主卡下方），所以 CSS 會把後者收起來
-  //   桌機 —— 多活動的卡跨 2 欄，其他活動在右半格、特色在整組下方，兩者不打架，
-  //           就讓其他活動繼續留著（站長 2026-09-18：特色要向下展開，不要覆蓋它們）
+  // 手機展開抽屜時，「其他活動」要收起來（兩者搶同一個位置，都在主卡下方）——
+  // 交給 CSS 依版面決定，這裡只掛 .is-feat-open 這個狀態 class。桌機走 modal，
+  // 頁面版面完全不動，所以不需要這個 class。
   // ⚠️ 刻意不用 stack.hidden：author 樣式的 display 會蓋掉瀏覽器對 [hidden] 的預設
   //   display:none，這頁已經因此踩過三次（倒數徽章、堆疊層、卡片本身的篩選）。
+  // 桌機（≥1025px）改用 modal（站長 2026-09-18 第二輪：「目前要展開的東西太多了」）——
+  // 特色有 5~7 列＋國內外基準列，就地展開會把整組卡片撐掉一整屏，下面的卡全被推走。
+  // 手機維持原本的抽屜：小螢幕上 modal 反而蓋掉整頁、還得處理捲動鎖，抽屜更自然。
+  var featDesktopMQ = window.matchMedia('(min-width: 1025px)');
+  var featModal = null;
+  var featModalBody = null;
+  var featModalTitle = null;
+  var featModalBtn = null;   // 開啟這個 modal 的「卡片特色」按鈕，關閉時要還原 aria/焦點
+
+  function ensureFeatModal() {
+    if (featModal) return;
+    featModal = document.createElement('div');
+    featModal.className = 'promo-feat-modal';
+    featModal.setAttribute('role', 'dialog');
+    featModal.setAttribute('aria-modal', 'true');
+    featModal.setAttribute('aria-label', '卡片特色');
+    featModal.innerHTML =
+      '<div class="promo-feat-modal-inner">' +
+      '<div class="promo-feat-modal-head">' +
+      '<span class="promo-feat-modal-heading">' +
+      '<span class="promo-feat-modal-kicker">卡片特色</span>' +
+      '<b class="promo-feat-modal-title"></b>' +
+      '</span>' +
+      '<button type="button" class="promo-feat-modal-close" aria-label="關閉卡片特色">&times;</button>' +
+      '</div>' +
+      '<div class="promo-feat-modal-body"></div>' +
+      '</div>';
+    document.body.appendChild(featModal);
+    featModalBody = featModal.querySelector('.promo-feat-modal-body');
+    featModalTitle = featModal.querySelector('.promo-feat-modal-title');
+    featModal.addEventListener('click', function (e) {
+      // 點「查看全部」也要關：它接著會開卡片詳情 overlay（setupCardDetailOverlay 的
+      // document 委派會收到同一次點擊），兩層遮罩疊著會看不懂。這時焦點交給 overlay，
+      // 不要搶回按鈕。
+      if (e.target.closest('.promo-feat-all')) { closeFeatModal(false); return; }
+      if (e.target === featModal || e.target.closest('.promo-feat-modal-close')) closeFeatModal(true);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeFeatModal(true);
+    });
+  }
+
+  function openFeatModal(card, btn) {
+    var drawer = card.querySelector('.promo-card-feat');
+    if (!drawer || !drawer.innerHTML.trim()) return false;
+    ensureFeatModal();
+    featModalTitle.textContent = card.getAttribute('data-card-name') || '卡片特色';
+    // 內容是部署時由 tools/build-promos-features.js 注入的靜態片段：沒有 id、也沒有
+    // 綁在節點上的事件（「查看全部」走 document 委派），所以複製 HTML 就夠，
+    // 不必把節點搬進搬出——搬動會讓收合狀態與 DOM 順序變得難以推理。
+    featModalBody.innerHTML = drawer.innerHTML;
+    featModal.classList.add('is-open');
+    featModalBtn = btn || null;
+    featModal.querySelector('.promo-feat-modal-close').focus();
+    return true;
+  }
+
+  function closeFeatModal(restoreFocus) {
+    if (!featModal || !featModal.classList.contains('is-open')) return;
+    featModal.classList.remove('is-open');
+    featModalBody.innerHTML = '';
+    if (featModalBtn) {
+      featModalBtn.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) featModalBtn.focus();
+      featModalBtn = null;
+    }
+  }
+
   function setFeatOpen(card, open) {
     var btn = card.querySelector('.promo-feat-btn');
     var drawer = card.querySelector('.promo-card-feat');
     if (!btn || !drawer) return;
+    if (featDesktopMQ.matches) {
+      if (open) { if (!openFeatModal(card, btn)) return; }
+      else closeFeatModal(false);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      drawer.hidden = true;            // 桌機抽屜永遠收著，內容改由 modal 呈現
+      card.classList.remove('is-feat-open');
+      return;
+    }
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     drawer.hidden = !open;
     card.classList.toggle('is-feat-open', open);
@@ -719,6 +793,11 @@
     setupOwnedFilter();
     setupActToggle();
     setupFeatToggle();
+    // 桌機 modal ↔ 手機抽屜是兩套呈現；跨過斷點時先把 modal 收掉，
+    // 否則縮窗後會留下一層蓋住整頁的遮罩。
+    if (featDesktopMQ.addEventListener) {
+      featDesktopMQ.addEventListener('change', function () { closeFeatModal(false); });
+    }
     setupApplyTracking();
     setupGiftLightbox();
     setupShineTrial();

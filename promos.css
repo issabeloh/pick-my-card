@@ -2623,9 +2623,10 @@ a {
 }
 
 @media (min-width: 1025px) {
-  /* 多活動的卡跨 2 欄，內部切成「左：主活動＋按鈕／右：其他活動」，
-     卡片特色則橫跨兩欄、展開在整組下方（站長 2026-09-18：特色要向下展開，
-     不要向右覆蓋第二、第三檔活動）。 */
+  /* 多活動的卡跨 2 欄，內部切成「左：主活動＋按鈕／右：其他活動」。
+     卡片特色在桌機改開 modal（站長 2026-09-18 第二輪），抽屜永遠是收的——下面那個
+     "feat feat" 區域與 .promo-card-feat 的規則保留著當退路：JS 沒跑到、或日後又想
+     改回就地展開時，版面不用重寫。 */
   .promo-card[data-act-count]:not([data-act-count="1"]):not([hidden]) {
     grid-column: span 2;
     display: grid;
@@ -2633,7 +2634,7 @@ a {
     grid-template-areas:
       "main side"
       "feat feat";
-    column-gap: 14px;
+    column-gap: 30px;          /* 留給欄間那支向右箭頭的空間（見下方 ::before/::after） */
     align-items: start;
   }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main { grid-area: main; }
@@ -2645,16 +2646,41 @@ a {
     border-radius: var(--pmc-radius-lg);
   }
 
-  /* 右半格的活動：不用文字說明「這是誰的活動」，用形狀講——
-     第 2 檔從主卡「後方」向右延伸（左緣方角、往左塞進主卡底下），
-     第 3 檔以後從上一張向下延伸（上緣方角、往上塞）。同一套「卡疊卡」語彙，
-     只是第一張轉了 90 度。z-index 讓主卡與較前面的活動壓在上面。
-     ⚠️ :not([hidden]) 不能省——author 的 display 會蓋掉 [hidden] 的 display:none。 */
+  /* 右半格的活動（站長 2026-09-18 第二輪）：
+     前一版讓第 2 檔「從主卡後方向右延伸」、第 3 檔以後「向下延伸並逐層內縮」——
+     站長回報兩個問題：向右再向下的雙向延伸看起來很亂，且向下那幾張越縮越小。
+     現在改成：右半格就是一疊「等寬、等大」的獨立活動卡，彼此只用 gap 分開；
+     「這是左邊那張卡的其他活動」這件事改由欄間的一支向右箭頭交代（--pmc-arrow）。
+     好處：三、四檔活動並排時每張都一樣寬，沒有透視錯覺，也不必替每一層寫規則。 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden]) {
     display: flex;
     flex-direction: column;
-    margin-left: -26px;          /* 整欄往左塞進主卡底下 */
+    gap: 8px;
+    position: relative;
   }
+  /* 欄間的向右箭頭：桿（::before）＋ 頭（::after），畫在 column-gap 讓出的空間裡。
+     aria 上不需要它——卡片標題與 data-stack-label 已經說明了歸屬，這只是視覺提示。 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::before,
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+  }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::before {
+    left: -27px;
+    top: 30px;
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    background: #93b0e6;
+  }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::after {
+    left: -13px;
+    top: 24px;
+    border: 7px solid transparent;
+    border-left-color: #93b0e6;
+  }
+  /* 每一檔都是完整、等寬的卡：蓋掉手機版「卡疊卡」那組逐層內縮的寬度與負 margin */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act,
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(2),
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(3),
@@ -2663,28 +2689,12 @@ a {
     margin: 0;
     padding: 13px 15px;
     border: 1px solid var(--pmc-border);
+    border-radius: var(--pmc-radius-lg);
     box-shadow: var(--pmc-shadow-card);
     background: var(--pmc-white);
     position: relative;
+    z-index: 1;
   }
-  /* 第 2 檔：從主卡後方向右延伸 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:first-of-type {
-    z-index: 4;
-    border-left: 0;
-    border-radius: 0 var(--pmc-radius-lg) var(--pmc-radius-lg) 0;
-    padding-left: 32px;          /* 補回被主卡蓋掉的那一段，文字才不會躲在後面 */
-  }
-  /* 第 3 檔以後：從上一張向下延伸 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:not(:first-of-type) {
-    margin-top: -10px;
-    margin-left: 14px;
-    padding-top: 22px;
-    border-top: 0;
-    border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
-  }
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(2) { z-index: 3; }
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(3) { z-index: 2; margin-left: 26px; }
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(n+4) { z-index: 1; margin-left: 38px; }
 
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act-detail {
     margin: 11px -15px -13px;
@@ -2723,3 +2733,89 @@ a {
 .promo-feat-btn[hidden] {
   display: none !important;
 }
+
+/* --------------------------------------------------------------------------
+   卡片特色 modal（桌機 ≥1025px；站長 2026-09-18 第二輪）
+
+   為什麼不是就地展開：特色有 5~7 列加上固定的國內／國外基準列，在跨 2 欄的卡片
+   下方展開會多出一整屏高度，把後面的卡全部推走——站長的原話是「目前要展開的東西
+   太多了」。改成 modal 之後，頁面版面在展開前後完全不動。
+   手機仍然走 .promo-card-feat 抽屜（見上方），這組樣式只在桌機被 JS 叫出來。
+
+   內容是 .promo-card-feat 的 innerHTML 複製品，所以 .promo-feat-head / -list /
+   -row / -rate ... 那些既有樣式（全是不綁父層的 class 選擇器）會原封不動生效。
+   -------------------------------------------------------------------------- */
+.promo-feat-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+.promo-feat-modal.is-open { display: flex; }
+.promo-feat-modal-inner {
+  width: min(560px, 100%);
+  max-height: min(78vh, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--pmc-white);
+  border-radius: var(--pmc-radius-lg);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+}
+.promo-feat-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #d8e2f7;
+  background: #eef4ff;
+}
+.promo-feat-modal-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.promo-feat-modal-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6b86bd;
+}
+.promo-feat-modal-title {
+  font-size: 15px;
+  color: #1e3a8a;
+  line-height: 1.35;
+}
+.promo-feat-modal-close {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(30, 58, 138, 0.08);
+  color: #1e3a8a;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.promo-feat-modal-close:hover { background: rgba(30, 58, 138, 0.16); }
+.promo-feat-modal-close:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 2px;
+}
+.promo-feat-modal-body {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* modal 已經有自己的標題列，內容裡那條「卡片特色」抬頭就不用再出現一次；
+   但同一列右邊的「查看全部」與級別標籤要留著，所以只藏 <b>，不藏整列。 */
+.promo-feat-modal-body .promo-feat-head > b { display: none; }
+.promo-feat-modal-body .promo-feat-head { padding-top: 0; }
