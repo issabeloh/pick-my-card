@@ -2193,10 +2193,14 @@ function pmcRenderCardGroup_(group) {
   // 沒跑生成器時這裡是空的，promos.js 會把按鈕一起藏起來，頁面仍然完整可用。
   const featId = anchorId + '-feat';
 
+  // data-act-count：這張卡有幾檔活動。桌機用它決定「跨幾欄」——有多檔的卡跨 2 欄、
+  // 其他活動排在主活動右邊，讓每一列的高度接近（站長 2026-09-18：同一列裡有些卡
+  // 多檔、有些單檔，向下堆會在列尾留一大片空白）。刻意輸出成屬性而不是靠 CSS :has()，
+  // 對舊瀏覽器也是確定的行為。
   return '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
       pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
-      '" data-order-index="' + group.orderIndex + '" data-type-buckets="' +
-      pmcEscapeHtml_(group.buckets.join(' ')) + '">\n' +
+      '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
+      '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n' +
     '  <div class="promo-card-main">\n' +
     '    <h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>\n' +
     mainHtml + '\n' +
@@ -2206,7 +2210,10 @@ function pmcRenderCardGroup_(group) {
       pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>\n' +
     '    </div>\n' +
     '  </div>\n' +
-    (stackHtml ? '  <div class="promo-card-stack" data-stack>\n' + stackHtml + '\n  </div>\n' : '') +
+    // data-stack-label：桌機把其他活動移到主活動右邊後，那一欄看起來像「另一張卡」，
+    // 需要一句歸屬。手機維持「卡疊卡」、不顯示這個標題（CSS 只在 ≥1025px 顯示）。
+    (stackHtml ? '  <div class="promo-card-stack" data-stack data-stack-label="' +
+      pmcEscapeHtml_('這張卡的其他 ' + (acts.length - 1) + ' 檔活動') + '">\n' + stackHtml + '\n  </div>\n' : '') +
     '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
       pmcEscapeHtml_(cardId) + '" hidden></div>\n' +
     '</article>';

@@ -2602,3 +2602,92 @@ a {
   .promo-act-row:hover .promo-act-more { text-decoration: underline; }
   .promo-card-stack .promo-act:hover { background: #fcfdff; }
 }
+
+/* --------------------------------------------------------------------------
+   桌機（≥1025px）：多活動的卡跨 2 欄，其他活動排在主活動「右邊」
+   （站長 2026-09-18）
+
+   為什麼：同一列裡有些卡 4 檔、有些 1 檔，向下堆會讓 grid 這一列的高度由最高
+   那張決定，矮卡右邊留一大片灰底空白（實測前 6 張高度 848/683/674/324/324/324）。
+   改成多活動的卡跨 2 欄、其他活動移到右半邊之後，每張卡的高度都回到「主活動＋
+   按鈕列」那一個量級，列高自然接近。
+
+   欄數在這裡改成明確的 repeat(N, 1fr)：auto-fit 會依內容收合空軌道，跟「跨 2 欄」
+   併用時欄數會飄。手機（<1025px）維持檔案前段的 auto-fit 單欄流。
+   -------------------------------------------------------------------------- */
+@media (min-width: 1025px) {
+  .promo-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1280px) {
+  .promo-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1025px) {
+  /* 多活動的卡跨 2 欄，內部切成「左：主活動＋按鈕／右：其他活動或卡片特色」。
+     堆疊與卡片特色本來就互斥（promos.js 保證），所以兩者共用右半格、不會同時出現，
+     切換時版面也不會跳。 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "main side";
+    gap: 14px;
+    align-items: start;
+  }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main { grid-area: main; }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack { grid-area: side; }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-feat { grid-area: side; }
+
+  /* 右半格的活動不再是「卡疊卡」——那個手法是為了表達「塞在主卡底下」，
+     橫向排時沒有底下可塞。改成各自獨立的小卡，垂直緊湊排。
+     ⚠️ 選擇器一定要帶 :not([hidden])：author 樣式的 display 會蓋掉瀏覽器對 [hidden]
+     的預設 display:none（即使 specificity 相同），少了它，展開卡片特色時「收起來」的
+     那疊活動會從特色面板底下露出來（2026-09-18 實測；同一個坑本檔前段的
+     .promo-ending-badge 也記過一次）。 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act,
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(2),
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(3),
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(n+4) {
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--pmc-border);
+    border-radius: var(--pmc-radius-md);
+    box-shadow: var(--pmc-shadow-card);
+  }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act-detail {
+    margin: 10px -14px -11px;
+    border-radius: 0 0 var(--pmc-radius-md) var(--pmc-radius-md);
+    padding: 12px 14px;
+  }
+
+  /* 右半格的卡片特色：獨立面板，不再是「塞在主卡底下」的抽屜 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-feat {
+    margin-top: 0;
+    border-top: 1px solid #d8e2f7;
+    border-radius: var(--pmc-radius-lg);
+  }
+
+  /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
+    font-size: 26px;
+  }
+}
+
+/* 右半格的標題：桌機把其他活動移到主活動旁邊之後，那一欄看起來像獨立的卡片，
+   需要一句歸屬（手機維持「卡疊卡」、緊貼主卡底下，不需要標題，所以不顯示）。 */
+@media (min-width: 1025px) {
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack::before {
+    content: attr(data-stack-label);
+    display: block;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--pmc-muted);
+    padding: 0 2px 2px;
+  }
+}
