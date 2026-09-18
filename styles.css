@@ -4398,6 +4398,28 @@ label.personal-field-check input[type="checkbox"] {
     max-height: 90vh;
 }
 
+/* 桌機把卡片詳情的標題列也釘住（站長 2026-09-18：捲動時不要被捲走）。
+   手機不套——modal 幾乎滿版，再釘一條 97px 的標題會吃掉太多可讀高度。
+   z-index 要高於 .card-detail-nav 的 10，否則 nav 捲上來會蓋住標題。
+   nav 的 top 改成「標題高度」，才會黏在標題底下而不是蓋住它；標題高度隨卡名
+   長度變動，由 setupCardDetailNav() 量完寫進 --pmc-detail-header-h，
+   這裡的 97px 只是量不到時的 fallback。
+   ⚠️ 捲動落點的計算（js/results-display.js 的 stickyOffset()）會自己判斷標題
+   是不是 sticky，改這裡的斷點不需要動 JS。 */
+@media (min-width: 769px) {
+    #card-detail-modal .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 11;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+    }
+    #card-detail-modal .card-detail-nav {
+        top: var(--pmc-detail-header-h, 97px);
+    }
+}
+
 /* Sticky section nav lives between modal-header and modal-body so it sticks
    flush to the top of the modal-content scroll viewport. */
 .card-detail-nav {

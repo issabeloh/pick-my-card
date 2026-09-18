@@ -318,14 +318,20 @@
   // 收回特色它們才回來——同一個位置只會有一種東西，否則兩種卡片形狀交疊會看不懂
   // （站長指正）。特色內容由部署時的 tools/build-promos-features.js 注入；
   // 沒跑生成器時容器是空的，這裡直接把按鈕藏起來，頁面其餘部分照常可用。
+  // 卡片特色展開時，「其他活動」要不要收起來，交給 CSS 依版面決定，這裡只掛一個
+  // 狀態 class：
+  //   手機 —— 特色與其他活動搶同一個位置（都在主卡下方），所以 CSS 會把後者收起來
+  //   桌機 —— 多活動的卡跨 2 欄，其他活動在右半格、特色在整組下方，兩者不打架，
+  //           就讓其他活動繼續留著（站長 2026-09-18：特色要向下展開，不要覆蓋它們）
+  // ⚠️ 刻意不用 stack.hidden：author 樣式的 display 會蓋掉瀏覽器對 [hidden] 的預設
+  //   display:none，這頁已經因此踩過三次（倒數徽章、堆疊層、卡片本身的篩選）。
   function setFeatOpen(card, open) {
     var btn = card.querySelector('.promo-feat-btn');
     var drawer = card.querySelector('.promo-card-feat');
     if (!btn || !drawer) return;
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     drawer.hidden = !open;
-    var stack = card.querySelector('.promo-card-stack');
-    if (stack) stack.hidden = open;
+    card.classList.toggle('is-feat-open', open);
     if (open) closeActsIn(card);
   }
 
