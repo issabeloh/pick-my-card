@@ -2130,7 +2130,8 @@ function pmcRenderPromoAct_(p, actId, isMain) {
   }).join('');
 
   // 縮圖：獎品有活動宣傳圖就用它，沒有就退回卡片圖（站長 2026-09-17）。
-  // 兩者都靠 onerror 隱藏，圖裂掉不會留空框。
+  // ⚠️ onerror 要藏掉**整個 .promo-act-thumb 外框**，不能只藏 <img>——外框有 1px 細框，
+  // 只藏 img 會留下一個空的方框（2026-09-18 實測）。
   const giftImgUrl = (pmcPromoValue_(promo) === null) ? pmcSanitizeUrl_(promo.gift_image_url) : '';
   const cardImgSrc = 'assets/images/cards/' + encodeURIComponent(p.promo.id || '') + '.png';
   const thumbSrc = giftImgUrl || cardImgSrc;
@@ -2144,7 +2145,7 @@ function pmcRenderPromoAct_(p, actId, isMain) {
     '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
       pmcEscapeHtml_(detailId) + '">\n' +
     '    <span class="' + thumbCls + '"><img src="' + pmcEscapeHtml_(thumbSrc) + '" alt="' +
-      pmcEscapeHtml_(thumbAlt) + '" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span>\n' +
+      pmcEscapeHtml_(thumbAlt) + '" loading="lazy" onerror="this.closest(\'.promo-act-thumb\').style.display=\'none\'"></span>\n' +
     '    <span class="promo-act-body">\n' +
     '      <span class="promo-act-badges">' + typeBadges +
       '<span class="promo-ending-badge" hidden></span></span>\n' +

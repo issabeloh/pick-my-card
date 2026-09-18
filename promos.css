@@ -2204,11 +2204,15 @@ a {
   object-fit: contain;
   display: block;
 }
-/* 獎品的活動宣傳圖：方形、可點開 lightbox */
+/* 獎品的活動宣傳圖：方形、可點開 lightbox。
+   放在右邊（站長 2026-09-18）——獎品的重點是品名那段文字，圖是佐證；
+   擺左邊會把文字擠成窄長條。用 order 換位，DOM 順序不動（螢幕閱讀器與
+   鍵盤 Tab 仍然是「圖 → 文字」的原始順序，不受影響）。 */
 .promo-act-thumb--gift {
   aspect-ratio: 1 / 1;
   width: 72px;
   cursor: zoom-in;
+  order: 2;
 }
 .promo-act-thumb--gift img { object-fit: cover; }
 
@@ -2540,57 +2544,59 @@ a {
    這一段只調大小/間距/hover，**不動 DOM、不改任何行為**——展開收合、堆疊與特色
    互斥的規則手機桌機一致。
    欄數維持舊版的 .promo-grid（auto-fit minmax 320px）：1440px ＝ 3 欄，與改版前相同。
+   ⚠️ 2026-09-18 二修：第一版把桌機字級/尺寸「放大」，站長實測要縮到 80% 才順眼，
+   整組改成比手機再小一階——桌機欄寬 371px 比手機視窗還窄，本來就不該放大。
    -------------------------------------------------------------------------- */
 @media (min-width: 1025px) {
-  .promo-grid { gap: 20px; }
+  .promo-grid { gap: 16px; }
 
-  .promo-card-main { padding: 18px 20px 18px; }
-  .promo-card-name { font-size: 16.5px; margin-bottom: 12px; padding-bottom: 11px; }
+  .promo-card-main { padding: 14px 16px; }
+  .promo-card-name { font-size: 14px; margin-bottom: 10px; padding-bottom: 9px; }
 
-  .promo-act-row { gap: 14px; }
-  .promo-act-thumb { width: 104px; }
-  .promo-act-thumb--gift { width: 88px; }
+  .promo-act-row { gap: 11px; }
+  .promo-act-thumb { width: 84px; }
+  .promo-act-thumb--gift { width: 70px; }
 
-  .promo-act-reward { font-size: 30px; }
-  .promo-act-reward.is-gift { font-size: 15px; }
-  .promo-act-reward small { font-size: 13px; margin-top: 5px; }
-  .promo-act-summary { font-size: 13.5px; line-height: 1.65; margin-top: 9px; }
-  .promo-act-more { font-size: 13px; margin-top: 10px; }
+  .promo-act-reward { font-size: 24px; }
+  .promo-act-reward.is-gift { font-size: 12.5px; }
+  .promo-act-reward small { font-size: 11px; margin-top: 4px; }
+  .promo-act-summary { font-size: 12px; line-height: 1.6; margin-top: 8px; }
+  .promo-act-more { font-size: 11.5px; margin-top: 8px; }
 
   /* 活動詳情：手機的 11px 在桌機太小，且桌機有空間讓 dt 欄固定寬、dd 好讀 */
-  .promo-act-detail { margin: 14px -20px 0; padding: 16px 20px; }
-  .promo-act-detail dt { font-size: 12.5px; }
-  .promo-act-detail dd { font-size: 12.5px; line-height: 1.7; }
-  .promo-notes-label { font-size: 12.5px; }
-  .promo-notes-text { font-size: 12.5px; line-height: 1.7; }
+  .promo-act-detail { margin: 12px -16px 0; padding: 13px 16px; }
+  .promo-act-detail dt { font-size: 11.5px; }
+  .promo-act-detail dd { font-size: 11.5px; line-height: 1.65; }
+  .promo-notes-label { font-size: 11.5px; }
+  .promo-notes-text { font-size: 11.5px; line-height: 1.65; }
 
-  .promo-card-actions { gap: 10px; margin-top: 16px; }
-  .promo-card-actions .promo-apply-btn { padding: 11px 18px; font-size: 15px; }
-  .promo-feat-btn { padding: 11px 15px; font-size: 15px; }
+  .promo-card-actions { gap: 8px; margin-top: 12px; }
+  .promo-card-actions .promo-apply-btn { padding: 9px 14px; font-size: 13px; }
+  .promo-feat-btn { padding: 9px 12px; font-size: 13px; }
 
   /* 堆疊層：桌機把內縮收斂（寬卡片上 14/26/38px 的階梯很搶眼），
      字級比主活動小一階即可，不必像手機壓那麼小 */
-  .promo-card-stack .promo-act { padding: 20px 20px 13px; width: calc(100% - 10px); }
+  .promo-card-stack .promo-act { padding: 17px 16px 11px; width: calc(100% - 10px); }
   .promo-card-stack .promo-act:nth-of-type(2) { width: calc(100% - 20px); }
   .promo-card-stack .promo-act:nth-of-type(3) { width: calc(100% - 30px); }
   .promo-card-stack .promo-act:nth-of-type(n+4) { width: calc(100% - 40px); }
-  .promo-card-stack .promo-act-reward { font-size: 22px; }
-  .promo-card-stack .promo-act-reward.is-gift { font-size: 14px; }
-  .promo-card-stack .promo-act-detail { margin: 14px -20px -13px; }
+  .promo-card-stack .promo-act-reward { font-size: 18px; }
+  .promo-card-stack .promo-act-reward.is-gift { font-size: 12px; }
+  .promo-card-stack .promo-act-detail { margin: 12px -16px -11px; }
   /* 主活動詳情展開後，按鈕列要跟色帶留出呼吸 */
-  .promo-card-main .promo-act-detail + .promo-card-actions { margin-top: 18px; }
+  .promo-card-main .promo-act-detail + .promo-card-actions { margin-top: 14px; }
 
   /* 卡片特色 */
-  .promo-card-feat { padding: 16px 20px; }
-  .promo-feat-head b { font-size: 15px; }
-  .promo-feat-all { font-size: 14px; }
-  .promo-feat-usage { font-size: 13.5px; padding: 9px 12px; }
-  .promo-feat-list { padding: 5px 13px; }
-  .promo-feat-row { font-size: 13.5px; padding: 8px 0; }
-  .promo-feat-row.is-base { margin: 0 -13px; padding-inline: 13px; }
-  .promo-feat-rate { font-size: 16px; min-width: 56px; }
-  .promo-feat-cap { font-size: 12px; }
-  .promo-feat-cond { font-size: 12.5px; }
+  .promo-card-feat { padding: 13px 16px; }
+  .promo-feat-head b { font-size: 13px; }
+  .promo-feat-all { font-size: 12px; }
+  .promo-feat-usage { font-size: 12px; padding: 8px 10px; }
+  .promo-feat-list { padding: 4px 11px; }
+  .promo-feat-row { font-size: 12px; padding: 6px 0; }
+  .promo-feat-row.is-base { margin: 0 -11px; padding-inline: 11px; }
+  .promo-feat-rate { font-size: 14px; min-width: 48px; }
+  .promo-feat-cap { font-size: 10.5px; }
+  .promo-feat-cond { font-size: 11px; }
 
   /* 桌機有滑鼠：整列可點就要有 hover 回饋（手機沒有 hover，不套） */
   .promo-act-row:hover .promo-act-more { text-decoration: underline; }
