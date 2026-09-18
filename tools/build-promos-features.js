@@ -276,17 +276,55 @@ function build() {
   let html = fs.readFileSync(PAGE, 'utf8');
   let filled = 0, empty = 0, missing = [];
 
-  // 只換容器內容，容器本身（id / class / data-feat-for）維持生成器輸出的樣子
-  const re = /(<div class="promo-card-feat" id="[^"]*" data-feat-for="([^"]*)"[^>]*>)([\s\S]*?)(<\/div>)/g;
-  html = html.replace(re, function (_m, open, cardId, _inner, close) {
+  // 只換容器內容，容器本身（id / class / data-feat-for）維持生成器輸出的樣子。
+  //
+  // ⚠️ 2026-09-18 修：這裡原本用 /<div ...>([\s\S]*?)<\/div>/ 這種「非貪婪配到第一個
+  // </div>」的寫法，**不具冪等性**——容器一旦裝進帶巢狀 <div> 的內容（.promo-feat-head
+  // 就是一個），第二次執行時「第一個 </div>」變成 head 的結尾，於是只換掉前半段、
+  // 後半段的 <ul> 原地留下 → 卡片特色整份變成兩份。實際上線踩到：repo 裡 commit 的是
+  // 已注入版，Cloudflare build 又跑一次，preview 上每張卡的特色都出現兩次。
+  //
+  // 現在改成從開頭標籤往後**數 <div> 巢狀深度**找出真正配對的 </div>，重跑幾次都一樣。
+  // 另外 repo 現在一律 commit「空容器」版（Apps Script 匯出本來就是空的），
+  // 注入只發生在部署時——即使冪等，也不該讓 repo 與匯出端的內容分岔。
+  const OPEN_RE = /<div class="promo-card-feat"[^>]*data-feat-for="([^"]*)"[^>]*>/g;
+  const TAG_RE = /<\/?div\b[^>]*>/g;
+  const out = [];
+  let cursor = 0, m;
+  OPEN_RE.lastIndex = 0;
+  while ((m = OPEN_RE.exec(html)) !== null) {
+    const cardId = m[1];
+    const innerStart = m.index + m[0].length;
+    // 從內容開頭掃，深度歸零時那個 </div> 就是配對的結尾
+    TAG_RE.lastIndex = innerStart;
+    let depth = 1, innerEnd = -1, closeEnd = -1, t;
+    while ((t = TAG_RE.exec(html)) !== null) {
+      if (t[0][1] === '/') {
+        depth--;
+        if (depth === 0) { innerEnd = t.index; closeEnd = t.index + t[0].length; break; }
+      } else {
+        depth++;
+      }
+    }
+    if (innerEnd === -1) {
+      throw new Error('卡片特色容器沒有配對的 </div>（card id: ' + cardId + '）——生成器的標記可能改了');
+    }
     const card = byId[cardId];
-    if (!card) { missing.push(cardId); return open + close; }
-    const feat = featuresFor(engine, cd, spotByCard, card);
-    const usage = (card.cardUsage || '').trim();     // 欄位不存在時自然是空字串
-    const inner = blockHtml(cardId, feat, usage);
-    if (inner) filled++; else empty++;
-    return open + inner + close;
-  });
+    let inner = '';
+    if (!card) {
+      missing.push(cardId);
+    } else {
+      const feat = featuresFor(engine, cd, spotByCard, card);
+      const usage = (card.cardUsage || '').trim();   // 欄位不存在時自然是空字串
+      inner = blockHtml(cardId, feat, usage);
+      if (inner) filled++; else empty++;
+    }
+    out.push(html.slice(cursor, innerStart), inner, '</div>');
+    cursor = closeEnd;
+    OPEN_RE.lastIndex = closeEnd;
+  }
+  out.push(html.slice(cursor));
+  html = out.join('');
 
   if (missing.length) {
     throw new Error('promos.html 有對不到 cards.data 的卡片 id：' + missing.join('、'));

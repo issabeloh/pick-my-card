@@ -284,6 +284,10 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 部署時再注入一次。沒跑注入器時容器是空的，`promos.js` 會把「卡片特色」按鈕一起藏起來，
 頁面其餘部分照常可用——所以 preflight **不檢查**這個區塊（匯出的 commit 本來就沒有它）。
 
+🔴 **repo 一律 commit「空容器」版**（＝`tools/build-promos-page.js` 的原樣輸出），
+注入只發生在部署時。本機注入過要驗畫面沒問題，但 commit 前要用
+`node tools/build-promos-page.js` 還原。理由見下方教訓記錄 2026-09-18。
+
 **卡片特色的選題規則**（全部在 `tools/build-promos-features.js`，逐條有註解）
 
 | 規則 | 內容 |
@@ -463,6 +467,15 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
 ## 教訓記錄
+- [2026-09-18] `tools/build-promos-features.js` 的注入用 `/<div ...>([\s\S]*?)<\/div>/`（非貪婪配第一個
+  `</div>`）**不具冪等性**：容器裝進帶巢狀 `<div>` 的內容後，第二次執行時「第一個 `</div>`」
+  變成內層元素的結尾，只換掉前半段、後半段原地留下 → 卡片特色整份變兩份。上線才發現：
+  repo commit 的是已注入版，Cloudflare build 又跑一次，preview 上每張卡都重複。
+  兩個修法都要做：(1) 改成**數 `<div>` 巢狀深度**找配對的結尾標籤；
+  (2) **repo 只 commit 空容器版**，注入僅發生在部署時——即使冪等，repo 與匯出端的內容
+  也不該分岔。通則：**任何「就地改寫 HTML」的生成器都要能重複執行**，
+  因為部署流程沒有保證只跑一次。
+
 
 - [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
 - [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡

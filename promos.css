@@ -2478,3 +2478,51 @@ a {
   .promo-card-feat { padding: 13px 14px; }
   .promo-card-stack .promo-act { padding-inline: 14px; }
 }
+
+/* --------------------------------------------------------------------------
+   2026-09-18 站長回饋：倒數徽章與申辦鈕改用互動原型那版（實心、扁平），
+   堆疊層不再重複顯示卡片圖。
+   都只作用在新版卡片組（`.promo-card-actions` / `.promo-act-badges` /
+   `.promo-card-stack` 這三個 class 只有改版後的標記才有），不影響其他頁面。
+   -------------------------------------------------------------------------- */
+
+/* 倒數徽章：淺紅底＋深紅字的實心 pill，取代紅框透明底＋wiggle。
+   .promo-ending-badge:not(:empty) 的權重要壓過檔案前段的舊規則（同一個 class、
+   多一個 :not() → specificity 較高），animation 明確設成 none 才不會殘留抖動。 */
+.promo-act-badges .promo-ending-badge:not(:empty) {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0 0 0 auto;      /* 推到該列最右邊，跟原型一致 */
+  animation: none;
+  text-shadow: none;
+}
+
+/* 申辦鈕：主站藍實心、扁平圓角，取代金色果凍漸層＋光暈 */
+.promo-card-actions .promo-apply-btn {
+  background-image: none;
+  background-color: var(--pmc-blue-deep);
+  color: var(--pmc-white);
+  border-radius: 10px;
+  padding: 9px 16px;
+  box-shadow: none;
+  text-shadow: none;
+}
+.promo-card-actions .promo-apply-btn:hover {
+  background-color: #1b3a9c;
+}
+.promo-card-actions .promo-apply-btn:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* 堆疊層不再重複顯示卡片圖（同一張卡的圖在主活動已經有了）。
+   獎品自己的活動宣傳圖仍然顯示——那是這一檔活動獨有的資訊，不是重複。
+   沒有宣傳圖的獎品活動會退回卡片圖，因此同樣落在這條規則裡被隱藏。 */
+.promo-card-stack .promo-act-thumb:not(.promo-act-thumb--gift) {
+  display: none;
+}
