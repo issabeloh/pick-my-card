@@ -371,12 +371,15 @@
     </div>
   </section>
 
+  <div class="promos-search-row">
   <div class="promos-search-box">
     <div class="promos-search-input-wrap">
       <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
       <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">
       <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>
     </div>
+  </div>
+  <div class="promos-data-update">資料更新於 <time datetime="2026-09-04">2026/9/4</time></div>
   </div>
 
   <section class="promos-controls" aria-label="篩選與排序">
@@ -387,6 +390,7 @@
 <button type="button" class="promo-chip" data-filter="gift">首刷禮 (5)</button>
 <button type="button" class="promo-chip" data-filter="bonus">回饋加碼 (8)</button>
 <button type="button" class="promo-chip" data-filter="voucher">定額回饋 (15)</button>
+<button type="button" class="promo-chip promo-chip--ending" data-filter="ending" id="promos-chip-ending" hidden>即將結束 (<span id="promos-chip-ending-count">0</span>)</button>
       </div>
     </div>
     <div class="promos-control-group" id="promos-owned-filter-group" hidden>
@@ -402,13 +406,11 @@
     </div>
   </section>
 
-  <div class="promos-data-update">資料更新於 <time datetime="2026-09-04">2026/9/4</time></div>
-
   <!-- PROMOS:START -->
   <div class="promo-grid" id="promo-grid">
 <article class="promo-card" id="promo-1-firstbank-ileo" data-card-id="firstbank-ileo" data-card-name="iLEO 信用卡" data-order-index="0" data-act-count="4" data-type-buckets="bonus voucher">
+  <h2 class="promo-card-name">iLEO 信用卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">iLEO 信用卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-1-firstbank-ileo-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/firstbank-ileo.png" alt="iLEO 信用卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -467,8 +469,8 @@
   <div class="promo-card-feat" id="promo-1-firstbank-ileo-feat" data-feat-for="firstbank-ileo" hidden></div>
 </article>
 <article class="promo-card" id="promo-2-hsbc-liveplus" data-card-id="hsbc-liveplus" data-card-name="滙豐 Live+ 卡" data-order-index="1" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">滙豐 Live+ 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">滙豐 Live+ 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-2-hsbc-liveplus-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/hsbc-liveplus.png" alt="滙豐 Live+ 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -489,8 +491,8 @@
   <div class="promo-card-feat" id="promo-2-hsbc-liveplus-feat" data-feat-for="hsbc-liveplus" hidden></div>
 </article>
 <article class="promo-card" id="promo-3-hsbc-titanium" data-card-id="hsbc-titanium" data-card-name="滙豐匯鑽卡" data-order-index="2" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">滙豐匯鑽卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">滙豐匯鑽卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-3-hsbc-titanium-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/hsbc-titanium.png" alt="滙豐匯鑽卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -511,8 +513,8 @@
   <div class="promo-card-feat" id="promo-3-hsbc-titanium-feat" data-feat-for="hsbc-titanium" hidden></div>
 </article>
 <article class="promo-card" id="promo-4-hsbc-cashback-signature" data-card-id="hsbc-cashback-signature" data-card-name="滙豐現金回饋御璽卡" data-order-index="3" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">滙豐現金回饋御璽卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">滙豐現金回饋御璽卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-4-hsbc-cashback-signature-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/hsbc-cashback-signature.png" alt="滙豐現金回饋御璽卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -533,8 +535,8 @@
   <div class="promo-card-feat" id="promo-4-hsbc-cashback-signature-feat" data-feat-for="hsbc-cashback-signature" hidden></div>
 </article>
 <article class="promo-card" id="promo-5-taishin-richart" data-card-id="taishin-richart" data-card-name="台新 Richart 卡" data-order-index="4" data-act-count="1" data-type-buckets="bonus">
+  <h2 class="promo-card-name">台新 Richart 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">台新 Richart 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-10-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-5-taishin-richart-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/taishin-richart.png" alt="台新 Richart 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -555,8 +557,8 @@
   <div class="promo-card-feat" id="promo-5-taishin-richart-feat" data-feat-for="taishin-richart" hidden></div>
 </article>
 <article class="promo-card" id="promo-6-sinopac-sport" data-card-id="sinopac-sport" data-card-name="永豐 Sport 卡" data-order-index="5" data-act-count="1" data-type-buckets="bonus">
+  <h2 class="promo-card-name">永豐 Sport 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">永豐 Sport 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-6-sinopac-sport-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/sinopac-sport.png" alt="永豐 Sport 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -577,8 +579,8 @@
   <div class="promo-card-feat" id="promo-6-sinopac-sport-feat" data-feat-for="sinopac-sport" hidden></div>
 </article>
 <article class="promo-card" id="promo-7-sinopac-dawho" data-card-id="sinopac-dawho" data-card-name="永豐大戶卡" data-order-index="6" data-act-count="2" data-type-buckets="voucher bonus">
+  <h2 class="promo-card-name">永豐大戶卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">永豐大戶卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-7-sinopac-dawho-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/sinopac-dawho.png" alt="永豐大戶卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -613,8 +615,8 @@
   <div class="promo-card-feat" id="promo-7-sinopac-dawho-feat" data-feat-for="sinopac-dawho" hidden></div>
 </article>
 <article class="promo-card" id="promo-8-sinopac-coin" data-card-id="sinopac-coin" data-card-name="永豐幣倍卡" data-order-index="7" data-act-count="3" data-type-buckets="bonus voucher">
+  <h2 class="promo-card-name">永豐幣倍卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">永豐幣倍卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-8-sinopac-coin-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/sinopac-coin.png" alt="永豐幣倍卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -661,8 +663,8 @@
   <div class="promo-card-feat" id="promo-8-sinopac-coin-feat" data-feat-for="sinopac-coin" hidden></div>
 </article>
 <article class="promo-card" id="promo-9-tbb-chaotian" data-card-id="tbb-chaotian" data-card-name="企銀朝天宮卡" data-order-index="8" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">企銀朝天宮卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">企銀朝天宮卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-9-tbb-chaotian-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/tbb-chaotian.png" alt="企銀朝天宮卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -683,8 +685,8 @@
   <div class="promo-card-feat" id="promo-9-tbb-chaotian-feat" data-feat-for="tbb-chaotian" hidden></div>
 </article>
 <article class="promo-card" id="promo-10-ubot-mcard" data-card-id="ubot-mcard" data-card-name="聯邦 M 卡" data-order-index="9" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">聯邦 M 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">聯邦 M 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-10-ubot-mcard-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/ubot-mcard.png" alt="聯邦 M 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -705,8 +707,8 @@
   <div class="promo-card-feat" id="promo-10-ubot-mcard-feat" data-feat-for="ubot-mcard" hidden></div>
 </article>
 <article class="promo-card" id="promo-11-tbb-artfun" data-card-id="tbb-artfun" data-card-name="藝FUN悠遊御璽卡" data-order-index="10" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">藝FUN悠遊御璽卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">藝FUN悠遊御璽卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-11-tbb-artfun-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/tbb-artfun.png" alt="藝FUN悠遊御璽卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -727,8 +729,8 @@
   <div class="promo-card-feat" id="promo-11-tbb-artfun-feat" data-feat-for="tbb-artfun" hidden></div>
 </article>
 <article class="promo-card" id="promo-12-yushan-unicard" data-card-id="yushan-unicard" data-card-name="玉山 Uni 卡" data-order-index="11" data-act-count="1" data-type-buckets="bonus">
+  <h2 class="promo-card-name">玉山 Uni 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">玉山 Uni 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-12-yushan-unicard-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/yushan-unicard.png" alt="玉山 Uni 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -749,8 +751,8 @@
   <div class="promo-card-feat" id="promo-12-yushan-unicard-feat" data-feat-for="yushan-unicard" hidden></div>
 </article>
 <article class="promo-card" id="promo-13-kgi-eslite" data-card-id="kgi-eslite" data-card-name="凱基誠品聯名卡" data-order-index="12" data-act-count="2" data-type-buckets="gift voucher">
+  <h2 class="promo-card-name">凱基誠品聯名卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">凱基誠品聯名卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-13-kgi-eslite-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/kgi-eslite.png" alt="凱基誠品聯名卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -785,8 +787,8 @@
   <div class="promo-card-feat" id="promo-13-kgi-eslite-feat" data-feat-for="kgi-eslite" hidden></div>
 </article>
 <article class="promo-card" id="promo-14-ubot-linebank" data-card-id="ubot-linebank" data-card-name="聯邦 LINE Bank 卡" data-order-index="13" data-act-count="1" data-type-buckets="voucher">
+  <h2 class="promo-card-name">聯邦 LINE Bank 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">聯邦 LINE Bank 卡</h2>
 <div class="promo-act is-main" data-period-end="2027-01-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-14-ubot-linebank-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/ubot-linebank.png" alt="聯邦 LINE Bank 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -807,8 +809,8 @@
   <div class="promo-card-feat" id="promo-14-ubot-linebank-feat" data-feat-for="ubot-linebank" hidden></div>
 </article>
 <article class="promo-card" id="promo-15-dbs-eco" data-card-id="dbs-eco" data-card-name="星展 eco 永續卡" data-order-index="14" data-act-count="1" data-type-buckets="bonus">
+  <h2 class="promo-card-name">星展 eco 永續卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">星展 eco 永續卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-15-dbs-eco-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/dbs-eco.png" alt="星展 eco 永續卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -829,8 +831,8 @@
   <div class="promo-card-feat" id="promo-15-dbs-eco-feat" data-feat-for="dbs-eco" hidden></div>
 </article>
 <article class="promo-card" id="promo-16-yushan-pi-card" data-card-id="yushan-pi-card" data-card-name="玉山 Pi 卡" data-order-index="15" data-act-count="1" data-type-buckets="bonus">
+  <h2 class="promo-card-name">玉山 Pi 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">玉山 Pi 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-11-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-16-yushan-pi-card-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/yushan-pi-card.png" alt="玉山 Pi 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -851,8 +853,8 @@
   <div class="promo-card-feat" id="promo-16-yushan-pi-card-feat" data-feat-for="yushan-pi-card" hidden></div>
 </article>
 <article class="promo-card" id="promo-17-febank-lejia" data-card-id="febank-lejia" data-card-name="遠東樂家+卡" data-order-index="16" data-act-count="4" data-type-buckets="voucher">
+  <h2 class="promo-card-name">遠東樂家+卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">遠東樂家+卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-17-febank-lejia-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/febank-lejia.png" alt="遠東樂家+卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -911,8 +913,8 @@
   <div class="promo-card-feat" id="promo-17-febank-lejia-feat" data-feat-for="febank-lejia" hidden></div>
 </article>
 <article class="promo-card" id="promo-18-febank-happy" data-card-id="febank-happy" data-card-name="遠東快樂卡" data-order-index="17" data-act-count="4" data-type-buckets="voucher">
+  <h2 class="promo-card-name">遠東快樂卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">遠東快樂卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-18-febank-happy-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/febank-happy.png" alt="遠東快樂卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -971,8 +973,8 @@
   <div class="promo-card-feat" id="promo-18-febank-happy-feat" data-feat-for="febank-happy" hidden></div>
 </article>
 <article class="promo-card" id="promo-19-ctbc-uniopen" data-card-id="ctbc-uniopen" data-card-name="中信 Uniopen 聯名卡" data-order-index="18" data-act-count="4" data-type-buckets="voucher gift">
+  <h2 class="promo-card-name">中信 Uniopen 聯名卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">中信 Uniopen 聯名卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-19-ctbc-uniopen-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/ctbc-uniopen.png" alt="中信 Uniopen 聯名卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -1031,8 +1033,8 @@
   <div class="promo-card-feat" id="promo-19-ctbc-uniopen-feat" data-feat-for="ctbc-uniopen" hidden></div>
 </article>
 <article class="promo-card" id="promo-20-fubon-jcard" data-card-id="fubon-jcard" data-card-name="富邦 J 卡" data-order-index="19" data-act-count="1" data-type-buckets="gift">
+  <h2 class="promo-card-name">富邦 J 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">富邦 J 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-09-30">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-20-fubon-jcard-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/fubon-jcard.png" alt="富邦 J 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -1053,8 +1055,8 @@
   <div class="promo-card-feat" id="promo-20-fubon-jcard-feat" data-feat-for="fubon-jcard" hidden></div>
 </article>
 <article class="promo-card" id="promo-21-sinopac-green" data-card-id="sinopac-green" data-card-name="永豐 Green 卡" data-order-index="20" data-act-count="1" data-type-buckets="gift voucher">
+  <h2 class="promo-card-name">永豐 Green 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">永豐 Green 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-21-sinopac-green-a1-detail">
     <span class="promo-act-thumb promo-act-thumb--gift"><img src="https://firebasestorage.googleapis.com/v0/b/pick-my-card-28f2a.firebasestorage.app/o/promo-images%2Fsinopac-green-2026-june.png?alt=media" alt="永豐 Green 卡 活動宣傳圖" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -1075,8 +1077,8 @@
   <div class="promo-card-feat" id="promo-21-sinopac-green-feat" data-feat-for="sinopac-green" hidden></div>
 </article>
 <article class="promo-card" id="promo-22-mega-bt21" data-card-id="mega-bt21" data-card-name="兆豐 BT21 卡" data-order-index="21" data-act-count="1" data-type-buckets="gift">
+  <h2 class="promo-card-name">兆豐 BT21 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">兆豐 BT21 卡</h2>
 <div class="promo-act is-main" data-period-end="2026-12-31">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-22-mega-bt21-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/mega-bt21.png" alt="兆豐 BT21 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>
@@ -1097,8 +1099,8 @@
   <div class="promo-card-feat" id="promo-22-mega-bt21-feat" data-feat-for="mega-bt21" hidden></div>
 </article>
 <article class="promo-card" id="promo-23-ctbc-linepay-card" data-card-id="ctbc-linepay-card" data-card-name="中信 LINE Pay 卡" data-order-index="22" data-act-count="1" data-type-buckets="default">
+  <h2 class="promo-card-name">中信 LINE Pay 卡</h2>
   <div class="promo-card-main">
-    <h2 class="promo-card-name">中信 LINE Pay 卡</h2>
 <div class="promo-act is-main" data-period-end="">
   <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="promo-23-ctbc-linepay-card-a1-detail">
     <span class="promo-act-thumb"><img src="assets/images/cards/ctbc-linepay-card.png" alt="中信 LINE Pay 卡" loading="lazy" onerror="this.closest('.promo-act-thumb').style.display='none'"></span>

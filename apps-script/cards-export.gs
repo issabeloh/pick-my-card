@@ -2197,12 +2197,18 @@ function pmcRenderCardGroup_(group) {
   // 其他活動排在主活動右邊，讓每一列的高度接近（站長 2026-09-18：同一列裡有些卡
   // 多檔、有些單檔，向下堆會在列尾留一大片空白）。刻意輸出成屬性而不是靠 CSS :has()，
   // 對舊瀏覽器也是確定的行為。
+  //
+  // ⚠️ <h2 class="promo-card-name"> 是 <article> 的**直接子元素**，不在
+  // .promo-card-main 裡（2026-09-20 站長：桌機多活動的卡，卡名要橫跨兩欄）。
+  // 桌機的 grid-template-areas 是 "name name" / "main side" / "feat feat"，
+  // 卡名必須自己是一個 grid item 才排得上去。手機則是「卡名一條白色橫幅、
+  // 主活動接在它下面」，視覺與拆出來之前一樣（見 promos.css .promo-card-name）。
   return '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
       pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
       '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
       '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n' +
+    '  <h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>\n' +
     '  <div class="promo-card-main">\n' +
-    '    <h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>\n' +
     mainHtml + '\n' +
     '    <div class="promo-card-actions">\n' +
     ctaHtml + '\n' +
@@ -2229,6 +2235,12 @@ function pmcBuildFilterChips_(total, bucketCounts) {
       chips.push('<button type="button" class="promo-chip" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + ' (' + n + ')</button>');
     }
   });
+  // 「即將結束」（2026-09-20 站長需求）：篩出有「最後 N 天／今天截止！」徽章的卡片。
+  // ⚠️ 數量**不能**在這裡算——徽章是 promos.js 拿「今天」跟 period_end 逐檔比出來的，
+  // 靜態生成當下算的數字隔天就錯（這頁一次匯出可以掛好幾週）。所以這裡只輸出骨架＋
+  // hidden，由 promos.js 的 refreshBadgesAndExpiry() 填數字並決定要不要顯示
+  // （一張都沒有就整顆不出現）。
+  chips.push('<button type="button" class="promo-chip promo-chip--ending" data-filter="ending" id="promos-chip-ending" hidden>即將結束 (<span id="promos-chip-ending-count">0</span>)</button>');
   return chips.join('\n');
 }
 
@@ -2408,12 +2420,20 @@ function pmcPageTemplate_(o) {
 // 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
 // promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
 // 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
+// 2026-09-20：搜尋框與「資料更新於」併成同一列（站長：桌機搜尋框不必佔整行）。
+// 桌機＝搜尋框靠左（有 max-width）、戳章靠右；手機＝wrap 成兩列，戳章仍右對齊。
+'  <div class="promos-search-row">\n' +
 '  <div class="promos-search-box">\n' +
 '    <div class="promos-search-input-wrap">\n' +
 '      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
 '      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">\n' +
 '      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
 '    </div>\n' +
+'  </div>\n' +
+// 「資料更新於」戳章：2026-07-23 從頁尾搬到 grid 上方讓用戶一眼看到新鮮度；
+// 2026-09-20 再搬進搜尋列的右側（站長）。updatedIso 只在活動內容真的變動時才前進
+// （見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
+'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '  </div>\n' +
 '\n' +
 // 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
@@ -2450,11 +2470,6 @@ o.filterChipsHtml + '\n' +
 '      </span>\n' +
 '    </div>\n' +
 '  </section>\n' +
-'\n' +
-// 「資料更新於」戳章：放在 controls 下方、grid 上方，讓用戶一眼看到活動新鮮度
-// （2026-07-23 站長回饋，原本在頁尾 footer 較難注意到）。updatedIso 只在活動內容真的
-// 變動時才前進（見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
-'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '\n' +
 '  <!-- PROMOS:START -->\n' +
 '  <div class="promo-grid" id="promo-grid">\n' +

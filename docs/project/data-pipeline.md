@@ -253,13 +253,21 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **一張卡一組**，不再一檔活動一張卡片（iLEO 4 檔、遠東快樂卡 4 檔、中信 uniopen 4 檔
   以前會出現 4 次）。主活動在白卡 `.promo-card-main` 裡，同卡其餘活動以「卡疊卡」
   堆在下面（`.promo-card-stack`，上緣方角、只留下方兩個圓角、逐層內縮）
+- **堆疊的活動卡一律等寬**（2026-09-20 站長）。只留 z-index 遞減讓上面那張壓住下面
+  那張的上框線，不再有 14/26/38px 的階梯。⚠️ 這條被要求過兩次（桌機 09-18、手機
+  09-20），改版時不要又把「逐層內縮」加回來
 - **桌機（≥1025px）：多活動的卡跨 2 欄**，其他活動移到右半格。理由是同一列裡 4 檔的卡
   與 1 檔的卡放一起時，列高被最高那張決定、矮卡右邊留一大片空白。
-  右半格是一疊**等寬等大的獨立活動卡**，只用 8px gap 分開；「這是左邊那張卡的活動」
-  由欄間一支向右箭頭（`.promo-card-stack::before/::after`，靠 30px 的 `column-gap`
-  讓位）交代。⚠️ 2026-09-18 第一版讓第 2 檔「從主卡後方向右延伸」、第 3 檔以後
-  「向下延伸並逐層內縮」，站長回報雙向延伸看起來很亂、向下那幾張越縮越小——
-  **桌機不要再做逐層內縮**，那是手機版單欄堆疊才成立的語彙
+  `grid-template-areas` 是 `"name name" / "main side" / "feat feat"`——
+  **卡名橫跨兩欄**，主活動與整疊其他活動都從這條白色橫幅底下長出來，跟手機版是
+  同一套語彙。因此右半欄**完全沿用手機版的堆疊規則**，桌機不再覆寫。
+  ⚠️ 為了讓卡名能當 grid item，`<h2 class="promo-card-name">` 是 `<article>` 的
+  **直接子元素**，不在 `.promo-card-main` 裡（見 `pmcRenderCardGroup_` 的註解）。
+  CSS 上卡名＝白卡的上半段（上方圓角＋下緣分隔線）、`.promo-card-main`＝下半段，
+  陰影只掛 main（往下打的陰影掛在卡名上會在接縫留一條灰線）
+- ⚠️ 歸屬提示的兩版都被退回，別再走回頭路：①「第 2 檔向右延伸＋第 3 檔以後向下逐層
+  內縮」（太亂、越縮越小）②「等寬卡＋欄間一支淺藍箭頭」（站長要求拿掉箭頭）。
+  現在靠卡名橫幅本身交代，不需要任何額外符號
 - **排序固定依「最高可拿」倒序**，排序切換 UI 已移除（保留類型 chips 與
   「隱藏我持有的卡片」）。換算：定額回饋＝`voucher_amount`；
   回饋加碼＝`bonus_rate × bonus_cap`（`bonus_cap` 是消費上限，相乘即回饋天花板）；
@@ -268,15 +276,22 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **每檔活動各有自己的詳情**（`pmcRenderPromoDetail_`：適用通路／達成條件／活動期間／
   新戶定義／備註）。同卡多檔的條件不同，所以詳情掛在活動上、不是卡片上。
   同組內一次只開一個
-- **卡片特色**（`.promo-card-feat`）在手機是抽屜，與活動堆疊**互斥**：展開特色時整疊
-  活動收起。兩者形狀刻意不同——堆疊是白卡有陰影，特色是淺藍底有框無陰影，否則錯亂
-- **桌機（≥1025px）的卡片特色改開 modal**（2026-09-18 第二輪；站長：「目前要展開的
-  東西太多了」）。特色有 5~7 列加國內／國外基準列，在跨 2 欄的卡片下方就地展開會多出
-  一整屏高度，把後面的卡全部推走。`promos.js` 的 `openFeatModal()` 懶建立一層
+- **卡片特色一律開 modal**（桌機 2026-09-18、手機 2026-09-20；站長：「目前要展開的
+  東西太多了」）。特色有 5~7 列加國內／國外基準列，就地展開會多出一整屏高度、
+  把後面的卡全部推走，手機尤其嚴重。`promos.js` 的 `openFeatModal()` 懶建立一層
   `.promo-feat-modal`（比照 `setupGiftLightbox` 的作法，**不需要動 Apps Script 模板**），
   把 `.promo-card-feat` 的 innerHTML 複製進去——那段是注入的靜態片段，沒有 id、
   沒有綁在節點上的事件（「查看全部」走 document 委派），所以複製即可，不必搬節點。
-  桌機抽屜因此永遠 `hidden`；`.is-feat-open` 只在手機掛
+  `.promo-card-feat` 抽屜因此永遠 `hidden`，只當內容來源與退路
+- **「即將結束」篩選 chip**（2026-09-20）：篩出有「最後 N 天／今天截止！」徽章的卡片。
+  ⚠️ **數量只能在前端算**——徽章是 `promos.js` 拿「今天」逐檔比 `period_end` 比出來的，
+  靜態生成當下寫死的數字隔天就錯（一次匯出可能掛好幾週）。`pmcBuildFilterChips_()`
+  只輸出一顆 `hidden` 的骨架 chip（`#promos-chip-ending`），數字與顯示與否由
+  `refreshEndingChip()` 決定，一張都沒有時整顆不出現、並把停在該篩選的狀態退回「全部」。
+  卡片上的 `data-has-ending` 也是它寫的
+- **搜尋框與「資料更新於」同一列**（2026-09-20 站長：桌機搜尋框不必佔整行）。
+  `.promos-search-row` 是 `flex-wrap: wrap`＋戳章 `margin-left: auto`：寬螢幕一左一右，
+  窄到放不下自然換成兩列、戳章仍靠右，不需要為手機另寫一組規則
 - 「查看全部 ›」取代舊的卡名旁 ⓘ 鈕，`data-section="card-special-section"`
   讓內嵌詳情開完直接捲到「指定通路回饋」（`promos.js` 的 `pmc-open-card` 多帶一個
   `section` 欄位，`js/home-ui.js` 收到後點一下對應的導覽鈕）
@@ -481,6 +496,12 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
 ## 教訓記錄
+- [2026-09-20] `/promos` 第四次踩「author 的 `display` 蓋掉 `[hidden]`」：新增的「即將結束」
+  chip 在沒有任何即將到期的卡時仍然露出來，因為 `.promo-chip` 設了 `display:inline-flex`。
+  前三次是倒數徽章、堆疊層、卡片本身的類型篩選 → 通則：**這頁（以及任何 author 大量設
+  `display` 的頁）每新增一個「靠 `el.hidden` 控制顯示」的元素，就要同時補一條
+  `[hidden] { display: none; }`**；驗收一律看 `getComputedStyle(el).display`，
+  不要看 `el.hidden`（屬性是 true 不代表真的沒顯示，2026-09-18 就是這樣驗錯過）。
 - [2026-09-18] `tools/build-promos-features.js` 的注入用 `/<div ...>([\s\S]*?)<\/div>/`（非貪婪配第一個
   `</div>`）**不具冪等性**：容器裝進帶巢狀 `<div>` 的內容後，第二次執行時「第一個 `</div>`」
   變成內層元素的結尾，只換掉前半段、後半段原地留下 → 卡片特色整份變兩份。上線才發現：

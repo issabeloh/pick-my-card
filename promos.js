@@ -91,6 +91,37 @@
         card.setAttribute('data-expired', '1');
       }
     });
+    refreshEndingChip();
+  }
+
+  // 「即將結束」篩選（2026-09-20 站長需求）：只要這張卡還有任何一檔活動掛著
+  // 「最後 N 天／今天截止！」徽章，就算即將結束。**數量只能在這裡算**——徽章是拿
+  // 「今天」逐檔比出來的，靜態生成當下寫死的數字隔天就錯（一次匯出可能掛好幾週）。
+  // 生成器只輸出一顆 hidden 的骨架 chip，數字與顯示與否都由這裡決定。
+  function refreshEndingChip() {
+    var count = 0;
+    document.querySelectorAll('.promo-card').forEach(function (card) {
+      if (card.getAttribute('data-expired') === '1') { card.removeAttribute('data-has-ending'); return; }
+      var has = false;
+      card.querySelectorAll('.promo-act').forEach(function (act) {
+        if (act.hidden) return;
+        var badge = act.querySelector('.promo-ending-badge');
+        if (badge && !badge.hidden) has = true;
+      });
+      if (has) { card.setAttribute('data-has-ending', '1'); count++; }
+      else card.removeAttribute('data-has-ending');
+    });
+    var chip = document.getElementById('promos-chip-ending');
+    if (!chip) return;
+    var countEl = document.getElementById('promos-chip-ending-count');
+    if (countEl) countEl.textContent = String(count);
+    chip.hidden = count === 0;
+    // 一張都沒有時把 chip 藏起來；若當下正停在這個篩選上，退回「全部」，
+    // 否則使用者會看到空清單卻找不到是哪個篩選造成的。
+    if (count === 0 && filterState.typeFilter === 'ending') {
+      var allChip = document.querySelector('.promo-chip[data-filter="all"]');
+      if (allChip) allChip.click();
+    }
   }
 
   // 篩選狀態：類型 chips（typeFilter）與「隱藏我持有的卡片」（hideOwned）疊加
@@ -163,8 +194,17 @@
         card.hidden = true; // 過期卡永遠不重新顯示
         return;
       }
-      var buckets = (card.getAttribute('data-type-buckets') || '').split(' ');
-      var typeMatch = filterState.typeFilter === 'all' || buckets.indexOf(filterState.typeFilter) !== -1;
+      var typeMatch;
+      if (filterState.typeFilter === 'all') {
+        typeMatch = true;
+      } else if (filterState.typeFilter === 'ending') {
+        // 「即將結束」不是 promo_types 的一種，是由徽章推出來的狀態
+        // （data-has-ending 由 refreshEndingChip() 每次重算徽章時寫上）
+        typeMatch = card.getAttribute('data-has-ending') === '1';
+      } else {
+        typeMatch = (card.getAttribute('data-type-buckets') || '').split(' ')
+          .indexOf(filterState.typeFilter) !== -1;
+      }
       var ownedMatch = true;
       if (filterState.hideOwned && ownedCardIds) {
         var cardId = card.getAttribute('data-card-id') || '';
@@ -314,19 +354,15 @@
     });
   }
 
-  // 卡片特色抽屜（2026-09-17）。與活動堆疊「互斥」：展開特色時整疊活動收起，
-  // 收回特色它們才回來——同一個位置只會有一種東西，否則兩種卡片形狀交疊會看不懂
-  // （站長指正）。特色內容由部署時的 tools/build-promos-features.js 注入；
+  // 卡片特色（2026-09-17 做成抽屜，2026-09-20 起一律改 modal）。
+  // 特色內容由部署時的 tools/build-promos-features.js 注入；
   // 沒跑生成器時容器是空的，這裡直接把按鈕藏起來，頁面其餘部分照常可用。
-  // 手機展開抽屜時，「其他活動」要收起來（兩者搶同一個位置，都在主卡下方）——
-  // 交給 CSS 依版面決定，這裡只掛 .is-feat-open 這個狀態 class。桌機走 modal，
-  // 頁面版面完全不動，所以不需要這個 class。
-  // ⚠️ 刻意不用 stack.hidden：author 樣式的 display 會蓋掉瀏覽器對 [hidden] 的預設
-  //   display:none，這頁已經因此踩過三次（倒數徽章、堆疊層、卡片本身的篩選）。
-  // 桌機（≥1025px）改用 modal（站長 2026-09-18 第二輪：「目前要展開的東西太多了」）——
-  // 特色有 5~7 列＋國內外基準列，就地展開會把整組卡片撐掉一整屏，下面的卡全被推走。
-  // 手機維持原本的抽屜：小螢幕上 modal 反而蓋掉整頁、還得處理捲動鎖，抽屜更自然。
-  var featDesktopMQ = window.matchMedia('(min-width: 1025px)');
+  // 2026-09-20 起手機也走 modal，所以不再需要「展開特色時把整疊活動收起來」的
+  // .is-feat-open 狀態 class——版面在展開前後完全不動，兩者不會搶同一個位置。
+  // 一律用 modal 呈現（2026-09-18 桌機先改，2026-09-20 站長要求手機也跟進）——
+  // 特色有 5~7 列＋國內外基準列，就地展開會把整組卡片撐掉一整屏、下面的卡全被推走，
+  // 手機上尤其嚴重（一展開就看不到自己原本在看哪張卡）。抽屜容器 .promo-card-feat
+  // 保留著當內容來源與退路，但永遠不再展開。
   var featModal = null;
   var featModalBody = null;
   var featModalTitle = null;
@@ -395,18 +431,10 @@
     var btn = card.querySelector('.promo-feat-btn');
     var drawer = card.querySelector('.promo-card-feat');
     if (!btn || !drawer) return;
-    if (featDesktopMQ.matches) {
-      if (open) { if (!openFeatModal(card, btn)) return; }
-      else closeFeatModal(false);
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      drawer.hidden = true;            // 桌機抽屜永遠收著，內容改由 modal 呈現
-      card.classList.remove('is-feat-open');
-      return;
-    }
+    if (open) { if (!openFeatModal(card, btn)) return; }
+    else closeFeatModal(false);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    drawer.hidden = !open;
-    card.classList.toggle('is-feat-open', open);
-    if (open) closeActsIn(card);
+    drawer.hidden = true;              // 抽屜永遠收著，內容一律由 modal 呈現
   }
 
   function setupFeatToggle() {
@@ -793,11 +821,6 @@
     setupOwnedFilter();
     setupActToggle();
     setupFeatToggle();
-    // 桌機 modal ↔ 手機抽屜是兩套呈現；跨過斷點時先把 modal 收掉，
-    // 否則縮窗後會留下一層蓋住整頁的遮罩。
-    if (featDesktopMQ.addEventListener) {
-      featDesktopMQ.addEventListener('change', function () { closeFeatModal(false); });
-    }
     setupApplyTracking();
     setupGiftLightbox();
     setupShineTrial();

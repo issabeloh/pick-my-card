@@ -533,8 +533,24 @@ a {
    抄自 styles.css .merchant-search-box / .merchant-input-wrap / .merchant-clear-btn
    的配方（白底、粗細框、聚焦藍光暈、自製清除 ✕ 鈕，關掉原生 search cancel），
    顏色改用本頁 --pmc-* 變數。互動見 promos.js setupSearch()。 */
-.promos-search-box {
+/* 搜尋框與「資料更新於」併成一列（2026-09-20 站長：桌機搜尋框不必佔整行）。
+   wrap + margin-left:auto：寬螢幕是「搜尋框靠左、戳章靠右」，窄到放不下時自然
+   換行成兩列、戳章仍然靠右——不需要為手機另寫一組規則。
+   flex-basis 260px 是搜尋框還讀得懂 placeholder 的下限；max-width 讓它在
+   1440px 下不會拉成一整條。 */
+.promos-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
   margin: 4px 0 14px;
+}
+
+.promos-search-box {
+  flex: 1 1 260px;
+  max-width: 440px;
+  min-width: 0;
+  margin: 0;
 }
 
 /* 刻意低調（2026-07-22 站長回饋：不是必須看到的東西，用戶需要時找得到就好）：
@@ -783,6 +799,24 @@ a {
   background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
   border-color: var(--pmc-blue-deep);
   color: white;
+}
+
+/* ⚠️ .promo-chip 設了 display:inline-flex，會蓋掉瀏覽器對 [hidden] 的預設
+   display:none（同 specificity 下 author 樣式勝）。「即將結束」chip 在沒有任何
+   即將到期的卡時要整顆不出現，所以這條不能省——這頁已經因為同一個坑出過三次 bug
+   （倒數徽章、堆疊層、卡片本身的類型篩選），這是第四個。 */
+.promo-chip[hidden] { display: none; }
+
+/* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
+.promo-chip--ending {
+  border-color: #f3c0c0;
+  color: #b91c1c;
+}
+.promo-chip--ending:hover { background: #fef2f2; border-color: #dc2626; }
+.promo-chip--ending.is-active {
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  border-color: #b91c1c;
+  color: #fff;
 }
 
 /* ---------------- Promo grid + cards ---------------- */
@@ -1647,10 +1681,11 @@ a {
    一眼看到新鮮度）。與 controls／grid 同層（.promos-main 內），自動對齊、不需 max-width；
    右對齊小灰字，不搶排版。 */
 .promos-data-update {
-  margin: -8px 0 14px;
+  margin: 0 0 0 auto;      /* 靠右；同列放不下時自己換行，仍然靠右 */
   text-align: right;
   font-size: 12px;
   color: var(--pmc-muted);
+  white-space: nowrap;
 }
 
 /* 回到頂部浮標（抄自 styles.css .back-to-top-btn，2026-07-16 新增）：手機限定
@@ -2146,24 +2181,37 @@ a {
 }
 .promo-card:hover { box-shadow: none; }
 
+/* 卡名（2026-09-20 起是 <article> 的直接子元素，不在 .promo-card-main 裡——
+   桌機多活動的卡要讓它橫跨兩欄，必須自己是一個 grid item）。
+   為了讓手機／單活動卡看起來跟拆出來之前一模一樣，它自己戴上白卡的上半段：
+   左右上三邊有框、上方兩個圓角、下緣一條分隔線；.promo-card-main 則改成
+   「白卡的下半段」（無上框、只留下方圓角）。兩塊貼在一起＝原本那張白卡。
+   ⚠️ 陰影只掛在 .promo-card-main：--pmc-shadow-card 是往下打的，若卡名也掛，
+   它的陰影會落在正下方的 main 上，接縫處出現一條灰線。 */
+.promo-card-name {
+  position: relative;
+  z-index: 6;
+  margin: 0;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-bottom: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-lg) var(--pmc-radius-lg) 0 0;
+  padding: 13px 16px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--pmc-ink);
+  line-height: 1.4;
+}
+
 .promo-card-main {
   position: relative;
   z-index: 5;
   background: var(--pmc-white);
   border: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-lg);
+  border-top: 0;
+  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
   box-shadow: var(--pmc-shadow-card);
-  padding: 14px 16px 16px;
-}
-
-.promo-card-name {
-  margin: 0 0 10px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid var(--pmc-border);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--pmc-ink);
-  line-height: 1.4;
+  padding: 12px 16px 16px;
 }
 
 /* ---- 一檔活動 ---- */
@@ -2357,9 +2405,12 @@ a {
   width: calc(100% - 14px);
   margin-inline: auto;
 }
-.promo-card-stack .promo-act:nth-of-type(2) { z-index: 3; width: calc(100% - 26px); }
-.promo-card-stack .promo-act:nth-of-type(3) { z-index: 2; width: calc(100% - 38px); }
-.promo-card-stack .promo-act:nth-of-type(n+4) { z-index: 1; width: calc(100% - 50px); }
+/* 2026-09-20 站長：疊下來的活動卡**不要一張比一張窄**，全部跟第一張堆疊卡同寬。
+   只留 z-index 遞減，讓上面那張壓住下面那張的上框線（「卡疊卡」的層次還在，
+   但不再有透視感的階梯）。 */
+.promo-card-stack .promo-act:nth-of-type(2) { z-index: 3; }
+.promo-card-stack .promo-act:nth-of-type(3) { z-index: 2; }
+.promo-card-stack .promo-act:nth-of-type(n+4) { z-index: 1; }
 /* 堆疊層的獎勵字級降一階：它是「還有什麼」，不跟主活動搶視線 */
 .promo-card-stack .promo-act-reward { font-size: 19px; }
 .promo-card-stack .promo-act-reward.is-gift { font-size: 13px; }
@@ -2551,7 +2602,7 @@ a {
   .promo-grid { gap: 16px; }
 
   .promo-card-main { padding: 14px 16px; }
-  .promo-card-name { font-size: 14px; margin-bottom: 10px; padding-bottom: 9px; }
+  .promo-card-name { font-size: 14px; padding: 12px 16px 9px; }
 
   .promo-act-row { gap: 11px; }
   .promo-act-thumb { width: 84px; }
@@ -2574,12 +2625,9 @@ a {
   .promo-card-actions .promo-apply-btn { padding: 9px 14px; font-size: 13px; }
   .promo-feat-btn { padding: 9px 12px; font-size: 13px; }
 
-  /* 堆疊層：桌機把內縮收斂（寬卡片上 14/26/38px 的階梯很搶眼），
-     字級比主活動小一階即可，不必像手機壓那麼小 */
+  /* 堆疊層：桌機的內縮再收斂一點，字級比主活動小一階即可，不必像手機壓那麼小。
+     寬度一律 calc(100% - 10px)，不逐層變窄（2026-09-20 站長）。 */
   .promo-card-stack .promo-act { padding: 17px 16px 11px; width: calc(100% - 10px); }
-  .promo-card-stack .promo-act:nth-of-type(2) { width: calc(100% - 20px); }
-  .promo-card-stack .promo-act:nth-of-type(3) { width: calc(100% - 30px); }
-  .promo-card-stack .promo-act:nth-of-type(n+4) { width: calc(100% - 40px); }
   .promo-card-stack .promo-act-reward { font-size: 18px; }
   .promo-card-stack .promo-act-reward.is-gift { font-size: 12px; }
   .promo-card-stack .promo-act-detail { margin: 12px -16px -11px; }
@@ -2623,20 +2671,29 @@ a {
 }
 
 @media (min-width: 1025px) {
-  /* 多活動的卡跨 2 欄，內部切成「左：主活動＋按鈕／右：其他活動」。
-     卡片特色在桌機改開 modal（站長 2026-09-18 第二輪），抽屜永遠是收的——下面那個
-     "feat feat" 區域與 .promo-card-feat 的規則保留著當退路：JS 沒跑到、或日後又想
-     改回就地展開時，版面不用重寫。 */
+  /* 多活動的卡跨 2 欄：卡名橫跨整組（"name name"），底下左邊是主活動、
+     右邊是其他活動（站長 2026-09-20）。
+     ⚠️ 2026-09-18 的兩版都被退回：第一版「第 2 檔向右延伸＋第 3 檔以後向下逐層
+     內縮」太亂且越縮越小；第二版改等寬卡＋欄間一支淺藍箭頭，站長要求拿掉箭頭。
+     現在靠「卡名是一條橫跨兩欄的白色橫幅」交代歸屬——主活動與整疊其他活動都從
+     它下面長出來，跟手機版是同一套語彙，不需要任何額外的指示符號。
+     所以這裡**不再覆寫** .promo-card-stack 的堆疊規則：右半欄直接沿用手機版的
+     「卡疊卡」（等寬、上緣方角、-10px 塞進上一張底下），只是位置換到右欄。
+
+     卡片特色在桌機與手機都走 modal（2026-09-18／09-20），抽屜永遠是收的——
+     下面的 "feat feat" 區域保留著當退路，JS 沒跑到時版面不用重寫。 */
   .promo-card[data-act-count]:not([data-act-count="1"]):not([hidden]) {
     grid-column: span 2;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas:
+      "name name"
       "main side"
       "feat feat";
-    column-gap: 30px;          /* 留給欄間那支向右箭頭的空間（見下方 ::before/::after） */
+    column-gap: 14px;
     align-items: start;
   }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-name { grid-area: name; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main { grid-area: main; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack { grid-area: side; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-feat {
@@ -2645,75 +2702,15 @@ a {
     border-top: 1px solid #d8e2f7;
     border-radius: var(--pmc-radius-lg);
   }
-
-  /* 右半格的活動（站長 2026-09-18 第二輪）：
-     前一版讓第 2 檔「從主卡後方向右延伸」、第 3 檔以後「向下延伸並逐層內縮」——
-     站長回報兩個問題：向右再向下的雙向延伸看起來很亂，且向下那幾張越縮越小。
-     現在改成：右半格就是一疊「等寬、等大」的獨立活動卡，彼此只用 gap 分開；
-     「這是左邊那張卡的其他活動」這件事改由欄間的一支向右箭頭交代（--pmc-arrow）。
-     好處：三、四檔活動並排時每張都一樣寬，沒有透視錯覺，也不必替每一層寫規則。 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden]) {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    position: relative;
-  }
-  /* 欄間的向右箭頭：桿（::before）＋ 頭（::after），畫在 column-gap 讓出的空間裡。
-     aria 上不需要它——卡片標題與 data-stack-label 已經說明了歸屬，這只是視覺提示。 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::before,
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::after {
-    content: '';
-    position: absolute;
-    pointer-events: none;
-  }
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::before {
-    left: -27px;
-    top: 30px;
-    width: 16px;
-    height: 3px;
-    border-radius: 2px;
-    background: #93b0e6;
-  }
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack:not([hidden])::after {
-    left: -13px;
-    top: 24px;
-    border: 7px solid transparent;
-    border-left-color: #93b0e6;
-  }
-  /* 每一檔都是完整、等寬的卡：蓋掉手機版「卡疊卡」那組逐層內縮的寬度與負 margin */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act,
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(2),
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(3),
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act:nth-of-type(n+4) {
-    width: auto;
-    margin: 0;
-    padding: 13px 15px;
-    border: 1px solid var(--pmc-border);
-    border-radius: var(--pmc-radius-lg);
-    box-shadow: var(--pmc-shadow-card);
-    background: var(--pmc-white);
-    position: relative;
-    z-index: 1;
-  }
-
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-stack .promo-act-detail {
-    margin: 11px -15px -13px;
-    border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
-    padding: 12px 15px;
-  }
+  /* 右半欄的堆疊完全沿用手機版的規則（等寬、上緣方角、-10px 塞進上一張底下）：
+     最上面那張塞進「卡名橫幅」底下，跟手機版塞進主卡底下是同一件事。
+     ⚠️ 這裡刻意不給 .promo-card-stack 任何 display —— 留著瀏覽器對 [hidden] 的
+     預設 display:none 生效（這頁踩過三次 author display 蓋掉 [hidden] 的坑）。 */
 
   /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 26px;
   }
-}
-
-/* 卡片特色展開時「其他活動」怎麼辦：手機兩者搶同一個位置（都在主卡下方），
-   所以收起來；桌機多活動的卡跨 2 欄，其他活動在右半格、特色在整組下方，不打架，
-   就留著（站長 2026-09-18）。狀態由 promos.js 掛的 .is-feat-open 表示——刻意不用
-   stack.hidden，理由見下方的 [hidden] 安全網。 */
-@media (max-width: 1024px) {
-  .promo-card.is-feat-open .promo-card-stack { display: none; }
 }
 
 /* ⚠️ [hidden] 安全網（2026-09-18 立）
@@ -2819,3 +2816,12 @@ a {
    但同一列右邊的「查看全部」與級別標籤要留著，所以只藏 <b>，不藏整列。 */
 .promo-feat-modal-body .promo-feat-head > b { display: none; }
 .promo-feat-modal-body .promo-feat-head { padding-top: 0; }
+
+/* 手機（2026-09-20 起手機也走 modal）：遮罩外距收到 12px、面板可以更高，
+   小螢幕上 7 列特色＋國內外基準列才不會一直卡在捲動區裡。 */
+@media (max-width: 600px) {
+  .promo-feat-modal { padding: 12px; align-items: flex-end; }
+  .promo-feat-modal-inner { width: 100%; max-height: 86vh; }
+  .promo-feat-modal-head { padding: 12px 14px; }
+  .promo-feat-modal-body { padding: 10px 14px 14px; }
+}
