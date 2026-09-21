@@ -331,9 +331,10 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   - 🔴 **類型徽章的選色有兩個禁區**（2026-09-21 晚上站長回報後定案）：
     **紅／粉**會跟「最後 N 天」倒數徽章（`#dc2626` 紅字紅框）混淆、**綠**會跟獎勵數值的
     文字色（`--pmc-hero-green` `#10b981`）撞在一起。現行配色＝首刷禮**紫**
-    `--pmc-candy-purple-*`、回饋加碼**黃** `--pmc-candy-yellow-*`、定額回饋**天空藍**
-    `--pmc-candy-sky-*`（刻意比「詳情」連結的 `--pmc-blue-deep` 更亮更偏青，
-    同一列裡兩個藍才不會看起來像同一個東西），未知類型 fallback＝灰 `--pmc-candy-slate-*`。
+    `--pmc-candy-purple-*`、回饋加碼**黃** `--pmc-candy-yellow-*`、定額回饋**棕**
+    `--pmc-candy-brown-*`（站長指定；棕與黃是鄰近色，分辨靠的是**底色飽和度**——
+    黃底 `#fff3c4` 是鮮明糖果黃、棕底 `#ece0d6` 是去飽和米灰，只改文字色會分不出來），
+    未知類型 fallback＝灰 `--pmc-candy-slate-*`。四組的文字／底色對比都在 5.2:1 以上。
     ⚠️ `--pmc-candy-pink-*` 與 `--pmc-candy-mint-*` 現在沒有類型徽章在用，**但別刪**：
     pink 給 `.promo-feat-hype--top`、mint 給側欄工具卡與 `.promo-feat-hype--easy`。
     ⚠️ token 一律用**顏色**命名不是角色命名——原本的 `--pmc-candy-default-*` 已改名為

@@ -50,8 +50,8 @@
   --pmc-candy-mint-text: #0b7a56;
   --pmc-candy-purple-bg: #ede6ff;
   --pmc-candy-purple-text: #5b3fbf;
-  --pmc-candy-sky-bg: #e0f2fe;
-  --pmc-candy-sky-text: #0369a1;
+  --pmc-candy-brown-bg: #ece0d6;
+  --pmc-candy-brown-text: #6b4423;
   --pmc-candy-slate-bg: #eef1f6;
   --pmc-candy-slate-text: #475569;
 
@@ -851,11 +851,12 @@ a {
    ⚠️ 兩個顏色**不能**用在類型徽章上，選色前先讀這兩條：
      - 紅／粉：會跟「最後 N 天」倒數徽章（#dc2626 紅字紅框）混淆
      - 綠：會跟獎勵數值的文字色（--pmc-hero-green #10b981）撞在一起
-   所以 首刷禮＝紫、回饋加碼＝黃、定額回饋＝天空藍。天空藍刻意挑得比「詳情」連結的
-   --pmc-blue-deep #1e40af 更亮更偏青，同一列裡兩個藍才不會看起來像同一個東西。 */
+   所以 首刷禮＝紫、回饋加碼＝黃、定額回饋＝棕（站長 2026-09-21 指定棕色）。
+   ⚠️ 棕與黃是鄰近色，分辨靠的是**底色的飽和度**：黃底 #fff3c4 是鮮明的糖果黃，
+      棕底 #ece0d6 是去飽和的米灰，兩者並排一眼就分得開；只改文字色會分不出來。 */
 .promo-type-badge--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
 .promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-type-badge--voucher { background: var(--pmc-candy-sky-bg); color: var(--pmc-candy-sky-text); }
+.promo-type-badge--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
 
 
 /* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
@@ -2092,7 +2093,7 @@ a {
 }
 .promo-sub-type--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
 .promo-sub-type--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-sub-type--voucher { background: var(--pmc-candy-sky-bg); color: var(--pmc-candy-sky-text); }
+.promo-sub-type--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
 /* 「值」＝這一檔能拿到什麼。三種類型同一個起點，這就是對齊的來源。
    與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green）。 */
 .promo-sub-amt {
