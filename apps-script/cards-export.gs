@@ -532,10 +532,11 @@ function exportToJSON() {
   addOptionalField(card, row, headers, 'levelLabelFormat');
 }
 
-    // cardUsage（選填，2026-09-17 新增）：一句話描述這張卡的性格，顯示在 /promos
-    // 卡片特色區塊最上方。沒這欄／沒填 → addOptionalField 直接跳過，前端那一行不出現
-    // （見 docs/project/data-pipeline.md 第 12b 與 9a 節）。
-    addOptionalField(card, row, headers, 'cardUsage');
+    // cardUseCase（選填，2026-09-17 新增；2026-09-21 由 cardUsage 更名——usage 讀起來
+    // 像「用量」，這個欄位講的是「這張卡適合什麼情境」）：一句話描述這張卡的性格，
+    // 顯示在卡片詳情頁「基本資訊」最上方與 /promos 的卡片特色 modal。沒填就整行不出現。
+    // ⚠️ 只寫性格、不寫數字——句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率。
+    addOptionalField(card, row, headers, 'cardUseCase');
 
     // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];

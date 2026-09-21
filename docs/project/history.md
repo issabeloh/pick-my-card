@@ -16,7 +16,7 @@
 - 每檔活動各自保留完整詳情；卡片特色抽屜與活動堆疊互斥
 - 卡片特色的內容改由**部署時**的 `tools/build-promos-features.js` 注入，
   用主站自己的 `getDisplayRate()` 算——不把那段邏輯抄進 Apps Script 變成第四份副本
-- 新增選填 Sheets 欄位 `cardUsage`（手寫一句卡片性格，沒填就不顯示）
+- 新增選填 Sheets 欄位 `cardUseCase`（手寫一句卡片性格，沒填就不顯示；2026-09-21 由 `cardUsage` 更名）
 
 細節見 `docs/project/data-pipeline.md` 第 9a 節。
 

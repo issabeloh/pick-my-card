@@ -61,9 +61,18 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     `bash tools/cards-query.sh '.<key>'` 確認 key 有沒有真的出現在 cards.data，別從前端開始查。
     匯出端讀取函數在 `apps-script/cards-export.gs`（分頁名大小寫兩種都收），JSON key 為
     `searchExclusions`，格式 `[{ term, excludedItems: [...] }]`。
-12b. **Cards Data 的 `cardUsage` 欄**（選填，2026-09-17 新增；匯出端 `addOptionalField(card, row, headers, 'cardUsage')`）—— 一句話描述這張卡的性格，
-    顯示在 /promos 卡片特色區塊的最上方。**沒填就整行不出現**（同 `addOptionalField` 慣例，
-    舊表完全相容，可以慢慢填）。
+12b. **Cards Data 的 `cardUseCase` 欄**（選填，2026-09-17 新增；2026-09-21 由 `cardUsage` 更名，
+    匯出端 `addOptionalField(card, row, headers, 'cardUseCase')`）—— 一句話描述這張卡的性格，
+    顯示在**卡片詳情頁「基本資訊」最上方**與 **/promos 的卡片特色 modal 最上方**。
+    **沒填就整行不出現**（同 `addOptionalField` 慣例，舊表完全相容，可以慢慢填）。
+    - **為什麼在 Cards Data 不在 New Cardholder Promos**（2026-09-21 站長問）：它是**卡片**屬性
+      不是活動屬性。Promos 分頁是一列一檔活動（61 列對 28 張卡，iLEO 一張佔 4 列），放進去
+      同一句話要寫 4 遍、遲早分岔；而且有 5 張卡沒有新戶活動、在那邊根本沒有列可以寫；
+      活動每月換、卡片性格不會。若要的是**活動層級**的手寫註記（「這檔跟第 3 檔不能併用」），
+      那是另一個欄位，才該放 Promos 分頁
+    - **欄名為什麼不是 `cardUsage`**：usage 讀起來像「用量」；也不叫 `cardSummary`——
+      這份 codebase 裡 summary 已經是 `new_customer_summary`／`.promo-act-summary`（活動摘要），
+      再加一個 summary 會讀不出差別
     - **只寫性格、不寫數字**：句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率——
       回饋率會跟著 `cards.data` 走，這句話不會
     - 用途是講自動規則講不出來的事，例如台新 Richart 卡的「每月選一個方案綁生活場景」
@@ -367,7 +376,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 | 固定行 | 「國內一般消費」讀骨幹槽 21（23/23 張都有）；「國外消費」讀 slot22，**沒有 slot22 就是沒有國外回饋，整行不顯示**（不推算） |
 | 分級卡 | 取**最高級別**。⚠️ 不能用 `levelSettings` 鍵順序——玉山 Uni／國泰 CUBE 由低到高，永豐大戶／凱基誠品由高到低。改成實算每個級別的最高回饋率再取最大 |
 | Highlights | 命中的槽**保證入列**，但跟其他槽一起依回饋率倒序（固定顯示 ≠ 排最前面）。merchant 可能是快捷搜尋 displayName（「所有計程車」），要先展開再比對；一卡一通路命中多組時**取回饋率最高**的那組 |
-| 卡片用途 | Sheets 的 `cardUsage` 欄（選填，2026-09-17 新增）。**沒填就整行不出現**，可以慢慢填 |
+| 卡片用途 | Sheets 的 `cardUseCase` 欄（選填）。**沒填就整行不出現**，可以慢慢填 |
 
 **本機重生 promos.html**：`node tools/build-promos-page.js` —— 用 vm 載入
 `cards-export.gs` 呼叫同一支純函數，沿用現有的 versionTag 與「資料更新於」日期，

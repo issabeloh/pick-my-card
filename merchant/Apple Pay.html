@@ -874,6 +874,11 @@ Apple Pay 國內消費 2026 下半年推薦永豐 Sport 卡 5%（消費 NT$10,00
                 </nav>
                 <div class="modal-body">
                     <div class="card-info-section" id="card-basic-info-section">
+                        <!-- 卡片用途：Cards Data 的 cardUseCase 欄（選填），一句話講這張卡
+                             適合什麼情境。由 showCardDetail() 用 textContent 填入、沒填就
+                             hidden。擺在最上面是因為它是讀下面那些數字之前的前提，
+                             同 #card-changelog-section 的版位理由。 -->
+                        <p class="card-use-case" id="card-use-case" hidden></p>
                         <div class="info-grid-2col">
                             <div class="info-column-left">
                                 <div class="info-item">

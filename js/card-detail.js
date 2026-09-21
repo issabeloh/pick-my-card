@@ -33,6 +33,18 @@ async function showCardDetail(cardId) {
     // Update basic information
     document.getElementById('card-detail-title').textContent = card.name;
 
+    // 卡片用途（Cards Data 的 cardUseCase 欄，選填）：一句話講這張卡適合什麼情境。
+    // 用 textContent 不用 innerHTML——這是站長在 Sheets 自由輸入的文字（鐵則 3），
+    // textContent 比事後 escapeHtml() 少一個「哪天改成字串拼接就破功」的失誤面
+    // （同 renderCardDetailChangelog 的作法）。
+    // 每次呼叫都要明確設 hidden：上一張卡有、這張沒有時不能沿用舊狀態。
+    const useCaseEl = document.getElementById('card-use-case');
+    if (useCaseEl) {
+        const useCase = (card.cardUseCase || '').trim();
+        useCaseEl.textContent = useCase;
+        useCaseEl.hidden = !useCase;
+    }
+
     // Header 申辦按鈕（桌機）＋ sticky 申辦列（手機）：兩者共用同一份 applyCta 資料。
     // 每次呼叫都要明確重設 hidden——上一張卡有 CTA、這張沒有時不能沿用舊狀態。
     const applyCta = cardsData && cardsData.cardApplyCtas && cardsData.cardApplyCtas[card.id];

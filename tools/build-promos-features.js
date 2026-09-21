@@ -244,7 +244,7 @@ function blockHtml(cardId, feat, usage) {
   const all = '<a class="promo-feat-all" href="' + escapeHtml('/?start&card=' + cardId) +
     '" data-card-id="' + escapeHtml(cardId) + '" data-section="card-special-section"' +
     ' target="_blank" rel="noopener noreferrer">查看卡片詳情</a>';
-  // 卡片用途：Sheets 的 cardUsage 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
+  // 卡片用途：Sheets 的 cardUseCase 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
   const usageHtml = usage
     ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p>' : '';
   return '<div class="promo-feat-head"><b>卡片特色</b>' + lv + all + '</div>' + usageHtml +
@@ -318,7 +318,7 @@ function build() {
       missing.push(cardId);
     } else {
       const feat = featuresFor(engine, cd, spotByCard, card);
-      const usage = (card.cardUsage || '').trim();   // 欄位不存在時自然是空字串
+      const usage = (card.cardUseCase || '').trim();  // 欄位不存在時自然是空字串
       inner = blockHtml(cardId, feat, usage);
       if (inner) filled++; else empty++;
     }
