@@ -2120,7 +2120,9 @@ function pmcRenderPromoDetail_(p, detailId) {
 // 一檔活動（主活動與堆疊層共用同一份標記，只差外層 class）。
 // data-period-end 掛在活動上而不是卡片上——同一張卡的多檔活動到期日各不相同，
 // promos.js 的「最後 N 天」徽章與過期隱藏都是逐檔判斷。
-function pmcRenderPromoAct_(p, actId, isMain) {
+// 只渲染「最高可拿的那一檔」——第 2 檔起走 pmcRenderPromoSubRow_ 的附屬列
+// （2026-09-21 起就沒有第二個呼叫端了，原本的 isMain 參數一併移除）。
+function pmcRenderPromoAct_(p, actId) {
   const promo = p.promo;
   const big = pmcRewardBig_(promo);
   const detailId = actId + '-detail';
@@ -2140,7 +2142,7 @@ function pmcRenderPromoAct_(p, actId, isMain) {
 
   const summary = promo.new_customer_summary || '';
 
-  return '<div class="promo-act' + (isMain ? ' is-main' : ' is-stacked') + '" data-period-end="' +
+  return '<div class="promo-act is-main" data-period-end="' +
       (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
       pmcEscapeHtml_(detailId) + '">\n' +
@@ -2239,7 +2241,7 @@ function pmcRenderCardGroup_(group) {
   const cardId = group.cardId;
   const anchorId = group.anchorId;
 
-  const mainHtml = pmcRenderPromoAct_(main, anchorId + '-a1', true);
+  const mainHtml = pmcRenderPromoAct_(main, anchorId + '-a1');
   // 這一組裡有沒有任何一檔有獎品圖（決定沒圖的列要不要補等寬空位）
   const anyImg = acts.slice(1).some(function (p) {
     return pmcPromoValue_(p.promo) === null && !!pmcSanitizeUrl_(p.promo.gift_image_url);
@@ -2310,7 +2312,7 @@ function pmcRenderCardGroup_(group) {
     '    </div>\n' +
     '  </div>\n' +
     '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
-    '  <div class="promo-card-stack" data-stack>\n' +
+    '  <div class="promo-card-stack">\n' +
     '    <h3 class="promo-stack-label">' +
       pmcEscapeHtml_('這張卡的其他 ' + (acts.length - 1) + ' 檔活動') + '</h3>\n' +
     stackHtml + '\n  </div>\n' +

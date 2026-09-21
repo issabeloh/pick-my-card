@@ -323,8 +323,6 @@
   function closeActsIn(card) {
     card.querySelectorAll('.promo-act-row[aria-expanded="true"]').forEach(function (row) {
       row.setAttribute('aria-expanded', 'false');
-      var act = row.closest('.promo-act');
-      if (act) act.classList.remove('is-open');
       var detail = document.getElementById(row.getAttribute('aria-controls') || '');
       if (detail) detail.hidden = true;
     });
@@ -343,9 +341,8 @@
       closeActsIn(card);
       setFeatOpen(card, false);
       if (wasOpen) return;
+      // 狀態一律掛在 row 的 aria-expanded 上（CSS 也是用它選），不另外掛 class
       row.setAttribute('aria-expanded', 'true');
-      var act = row.closest('.promo-act');
-      if (act) act.classList.add('is-open');
       var detail = document.getElementById(row.getAttribute('aria-controls') || '');
       if (!detail) return;
       detail.hidden = false;
@@ -358,8 +355,7 @@
   // 卡片特色（2026-09-17 做成抽屜，2026-09-20 起一律改 modal）。
   // 特色內容由部署時的 tools/build-promos-features.js 注入；
   // 沒跑生成器時容器是空的，這裡直接把按鈕藏起來，頁面其餘部分照常可用。
-  // 2026-09-20 起手機也走 modal，所以不再需要「展開特色時把整疊活動收起來」的
-  // .is-feat-open 狀態 class——版面在展開前後完全不動，兩者不會搶同一個位置。
+  // 手機與桌機都走 modal，版面在展開前後完全不動，所以不需要任何狀態 class。
   // 一律用 modal 呈現（2026-09-18 桌機先改，2026-09-20 站長要求手機也跟進）——
   // 特色有 5~7 列＋國內外基準列，就地展開會把整組卡片撐掉一整屏、下面的卡全被推走，
   // 手機上尤其嚴重（一展開就看不到自己原本在看哪張卡）。抽屜容器 .promo-card-feat
@@ -813,7 +809,7 @@
     // 入口：卡片特色區右上角的「查看全部 ›」（2026-09-17 起取代舊的卡名旁 ⓘ 鈕）。
     // data-section 讓詳情開啟後直接捲到「指定通路回饋」那一段，不用使用者自己找。
     document.addEventListener('click', function (e) {
-      var link = e.target.closest('.promo-feat-all, .promo-card-info-btn');
+      var link = e.target.closest('.promo-feat-all');
       if (!link) return;
       var cardId = link.getAttribute('data-card-id');
       if (!cardId || iframeGaveUp) return; // 沒有 id，或已逾時放棄 → 放行原生 <a> 行為

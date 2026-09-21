@@ -531,6 +531,18 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
 ## 教訓記錄
+- [2026-09-21] 上線前清 `/promos` 死碼，一併修掉兩個沒被發現的 bug：
+  `.promo-card-stack .promo-act { padding: 17px 16px 11px }`（桌機）與
+  `{ padding-inline: 14px }`（≤480px）是「卡疊卡」時代寫給活動卡本體的，改成附屬列之後
+  `.promo-act` 只剩一層外框，那些內距變成**多出來的**——每一列白白高了 28px。
+  → 規則：**把一個 class 的角色換掉（從「卡片」變成「外框」）時，要把所有
+  `.祖先 .那個 class` 的規則重新掃一遍**，不是只改新寫的那幾條。
+  清理判準（可重複使用）：**選擇器裡只要有一個 class 不會出現在生成的 HTML，
+  整條就永遠不可能命中**——用這個判準掃出 53 條死規則（改版前的 `.promo-hero*` /
+  `.promo-card-toggle` / `.promo-card-detail` 那一整套）。
+  ⚠️ 用腳本刪 CSS 規則時**必須先剝掉註解再分析選擇器**：註解裡出現的 class
+  （例如提到 `.cashback-rate-num`）會讓判斷失準，也不能用 regex 直接刪，
+  逗號分隔的選擇器群組會被切壞（2026-09-17 就是這樣把 chips 的樣式刪掉過）。
 - [2026-09-21] `/promos` 附屬列「NT$500 貼死左緣、箭頭貼死右緣」：`.promo-sub-row`
   寫了 `padding: 9px 16px`，但它同時掛著 `promo-act-row`，而 `.promo-act-row`（0,1,0）
   設了 `padding: 0`——**兩條同分，後定義的 `.promo-act-row` 贏**，內距整個沒生效 →

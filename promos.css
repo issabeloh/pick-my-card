@@ -639,12 +639,6 @@ a {
   color: #4b5563;
 }
 
-/* [hidden] 的 UA 樣式被上面 display:inline-flex 蓋過（同 specificity 下 author
-   勝），這裡明確補回 display:none，否則沒有輸入時 ✕ 仍會露出（跟
-   #promos-owned-filter-group[hidden] 同一個坑）。 */
-.promos-search-clear-btn[hidden] {
-  display: none;
-}
 
 /* ---------------- Controls: filter chips + sort ---------------- */
 
@@ -687,12 +681,7 @@ a {
 /* 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：generatePromosPageHtml()
    一律先輸出 hidden（生成當下不知道訪客/用戶持有哪些卡），promos.js 偵測到
    localStorage 有持有資料才拿掉 hidden。.promos-control-group 已設
-   display:flex，同 specificity 下 author 樣式蓋過 [hidden] 的 UA 樣式
-   （跟 .promo-ending-badge 同一個坑，見上方註解），這裡明確補一條規則覆蓋回去，
-   否則沒有持有資料時這組控制項還是會露出來。 */
-#promos-owned-filter-group[hidden] {
-  display: none;
-}
+   顯示與否由檔案最後那道 [hidden] 安全網統一處理。 */
 
 .promos-owned-filter-label {
   display: inline-flex;
@@ -764,9 +753,6 @@ a {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
-.promos-owned-help-pop[hidden] {
-  display: none;
-}
 
 .promos-owned-help-pop strong {
   color: #fbbf24;
@@ -801,11 +787,6 @@ a {
   color: white;
 }
 
-/* ⚠️ .promo-chip 設了 display:inline-flex，會蓋掉瀏覽器對 [hidden] 的預設
-   display:none（同 specificity 下 author 樣式勝）。「即將結束」chip 在沒有任何
-   即將到期的卡時要整顆不出現，所以這條不能省——這頁已經因為同一個坑出過三次 bug
-   （倒數徽章、堆疊層、卡片本身的類型篩選），這是第四個。 */
-.promo-chip[hidden] { display: none; }
 
 /* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
 .promo-chip--ending {
@@ -832,136 +813,6 @@ a {
   grid-auto-flow: dense;
 }
 
-.promo-card {
-  position: relative;
-  background: var(--pmc-white);
-  border: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-lg);
-  box-shadow: var(--pmc-shadow-card);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: box-shadow 0.18s ease;
-}
-
-.promo-card:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-}
-
-.promo-card[hidden] {
-  display: none;
-}
-
-/* 2026-08-15：卡片頂部的類型色條（.promo-type-bar）整組移除。
-   站長裁定「彩色頂條」太有 AI 生成模板的味道，本站明令不再使用這個手法
-   （通則寫在 docs/project/ui-display.md）。類型資訊仍由卡片內的
-   .promo-type-badge 表達，色條只是同一份資訊的裝飾性重複。 */
-
-.promo-card-body {
-  padding: 16px 18px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-}
-
-/* 2026-07-16 第五輪站長回饋：header 改兩列——.promo-card-topline（類型徽章＋
-   「立即申辦」，靠右）在上，.promo-card-mainline（卡圖＋卡名＋chevron）在下。
-   topline 跟 mainline 是完全不同的兩列，CTA 按鈕（topline 右側）跟 chevron
-   （mainline 右側、垂直置中）天生落在不同列，不需要額外調校就不會重疊。 */
-.promo-card-header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.promo-card-topline {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.promo-card-topline .promo-apply-btn {
-  flex-shrink: 0;
-}
-
-.promo-card-mainline {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-/* 卡圖左上角保留——站長點名喜歡，維持原尺寸與位置 */
-.promo-card-cardimg {
-  width: 64px;
-  height: 40px;
-  object-fit: contain;
-  border-radius: 8px;
-  background: #f9fafb;
-  flex-shrink: 0;
-  padding: 4px;
-  border: 1px solid var(--pmc-border);
-}
-
-.promo-card-headline {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ⓘ 卡片詳情深連結：對齊主站結果卡 .card-detail-peek-btn 的淺藍膠囊＋「卡片詳情」
-   文字（原為低調灰圓 i，用戶反映太不明顯、找不到）。HTML 由 Apps Script 生成、
-   內容只有 ⓘ 字符，故標籤文字用 ::after 補上，不需改動生成端。 */
-.promo-card-info-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 22px;
-  padding: 0 9px 0 7px;
-  border: 1px solid #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  text-decoration: none;
-  white-space: nowrap;
-  border-radius: 999px;
-  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-}
-
-.promo-card-info-btn::after {
-  content: '卡片詳情';
-}
-
-.promo-card-info-btn:hover {
-  color: #1e3a8a;
-  background: #dbeafe;
-  border-color: #60a5fa;
-}
-
-.promo-type-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0;
-  /* 2026-07-16 第五輪：badges 現在自己一列（.promo-card-topline），不再疊在卡名
-     上方，原本用來跟卡名留白的 margin-bottom 已無意義；改給 flex:1/min-width:0
-     讓徽章多時能自然換行收縮，不會把右側「立即申辦」按鈕擠出容器。 */
-  flex: 1;
-  min-width: 0;
-  /* 2026-08-15 站長裁定：類型徽章要「貼齊卡框的 label」，不要獨立浮著的 pill。
-     作法＝用負 margin 抵銷 .promo-card-body 的上／左 padding，把整排推到卡片邊框上；
-     .promo-card 有 overflow:hidden ＋ border-radius，左上角會自動被卡片圓角切齊，
-     不用自己算圓角。
-     ⚠️ 這兩個負值必須跟 .promo-card-body 的 padding 一致——手機版 padding 不同，
-        下面 @media (max-width: 768px) 有一組對應值，**改任何一邊都要一起改**。 */
-  margin: -16px 0 0 -18px;
-}
 
 /* 可愛點綴 1/2：類型徽章維持糖果色，其餘元素一律收斂成主站風 */
 .promo-type-badge {
@@ -986,7 +837,7 @@ a {
 .promo-type-badge--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
 .promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
 .promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
-.promo-type-badge--default { background: var(--pmc-candy-default-bg); color: var(--pmc-candy-default-text); }
+
 
 /* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
    2026-07-15 bug fix：生成器輸出的是一律存在、初始無文字的 <span>（給
@@ -1040,186 +891,6 @@ a {
   }
 }
 
-.promo-card-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.4;
-  color: var(--pmc-ink);
-  overflow-wrap: break-word;
-  /* 2026-07-16 第四輪站長回饋：標題/hero 用 balance 避免最後一行只剩單字（如
-     「首刷禮3選1」的「1」單獨掉到下一行）——不支援的瀏覽器（<Chromium 117）
-     自動忽略，退回原本的自然斷行，無害。 */
-  text-wrap: balance;
-}
-
-/* 展開 chevron：加大點擊/視覺目標至 44×44（原本只是個小箭頭字元） */
-.promo-card-chevron {
-  display: none;
-  flex-shrink: 0;
-  align-self: center;
-  width: 44px;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  color: var(--pmc-muted);
-  transition: transform 0.25s ease;
-}
-
-.promo-card-chevron::before {
-  content: '▾';
-}
-
-.promo-card.is-open .promo-card-chevron {
-  transform: rotate(180deg);
-}
-
-/* 摘要行——顯示 new_customer_summary（活動摘要），不是贈品內容；字級/顏色比照
-   主站內文，不再用粉色跳色強調。2026-07-15 站長回饋：拿掉單行 ellipsis 截斷，
-   完整顯示摘要（卡片收合態高度會因此變動，可接受）。2026-07-15 第三輪站長
-   回饋：桌機／手機都要顯示這一行（不再只在手機收合態靠 media query 打開），
-   因為展開後的詳情區塊已經移除重複的 .promo-card-summary，這行是全頁唯一的
-   摘要文字來源；同時字級從 14px 升到 16px，可感知地變大、跟卡片標題層次更協調。 */
-.promo-quick-highlight {
-  display: block;
-  margin: 4px 0 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--pmc-label);
-  overflow-wrap: break-word;
-  /* 2026-07-16 第四輪站長回饋：內文用 pretty 避免單字孤行（orphan），例如
-     「首刷禮3選1」的「1」單獨掉到下一行——不支援的瀏覽器自動忽略，無害。 */
-  text-wrap: pretty;
-}
-
-/* 帶宣傳圖縮圖的卡片：縮圖（左）＋摘要文字（右）橫排一列（2026-07-15 第三輪
-   站長回饋）。這個容器由 cards-export.gs 的 pmcRenderPromoCard_ 只在有縮圖時
-   才輸出（見 highlightRowHtml），無圖的卡完全沒有這個容器、不佔任何空間。
-   容器本身刻意放在 .promo-card-toggle 之外（跟舊版縮圖位置一樣），理由見
-   cards-export.gs 對應註解：promos.js 的點擊監聽都掛在 document 上，
-   stopPropagation 攔不住同層另一個監聽器，縮圖若塞進 toggle 內點擊會誤觸展開。 */
-.promo-highlight-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 6px 0 0;
-}
-
-.promo-highlight-row .promo-gift-thumb-row {
-  margin: 0;
-}
-
-.promo-highlight-row .promo-quick-highlight {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-}
-
-/* ---------------- 好康 hero（重點好康區）---------------- */
-/* 保留但收斂：大字重點仍醒目，底色一律極淡主站灰（2026-07-19 站長定案：取消
-   gift 粉／voucher 綠／bonus 黃的類型底色，全部統一淺灰），回饋率一律用主站綠 */
-
-.promo-hero {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.promo-hero-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: var(--pmc-radius-md);
-  background: #f9fafb;
-  border: 1px solid var(--pmc-border);
-}
-
-/* 2026-07-15 第三輪站長回饋：定額金額／回饋率的大字＋用途小字改成同一行橫排
-   （原本是上下兩行），用 baseline 對齊讓大字數字與小字說明看起來像一句話。 */
-.promo-hero-main {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-}
-
-.promo-hero-big {
-  font-size: 1.2rem;
-  font-weight: 800;
-  line-height: 1.3;
-  color: var(--pmc-ink);
-  overflow-wrap: break-word;
-  /* hero 大字同樣套 balance（見 .promo-card-title 的說明），不支援的瀏覽器無害忽略 */
-  text-wrap: balance;
-}
-
-/* 回饋率／金額的綠字。2026-08-15 站長指定改用 #10b981（比原本的 #059669 亮一階）。
-   ⚠️ 這裡因此**不再**與主站 styles.css 的 .cashback-rate-num（#059669）同色——
-      是刻意的，不是漏改；主站那邊要不要跟進由站長決定。 */
-.promo-hero-item--voucher .promo-hero-big,
-.promo-hero-item--bonus .promo-hero-big {
-  color: var(--pmc-hero-green);
-}
-
-.promo-hero-item--gift .promo-hero-big {
-  color: var(--pmc-label);
-}
-
-/* 贈品內容是商品名稱（可能多行、偏長），字級比金額/百分比數字克制一點；
-   行距拉開讓多行清單好讀（2026-07-16 第六輪站長回饋） */
-.promo-hero-big--gift {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.65;
-}
-
-.promo-hero-small {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--pmc-muted);
-  text-wrap: balance;
-}
-
-/* 活動宣傳圖小縮圖＋lightbox（2026-07-15 新增）：獨立於可收合的
-   .promo-card-toggle 之外，手機收合態、桌機都看得到；點擊由 promos.js 開
-   lightbox 看原圖。放在 .promo-card-toggle 與 CTA 按鈕之間，收合態摘要行
-   下方。 */
-.promo-gift-thumb-row {
-  display: flex;
-  margin: 6px 0 0;
-}
-
-.promo-gift-thumb {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  padding: 0;
-  border: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-md);
-  overflow: hidden;
-  background: #f9fafb;
-  cursor: zoom-in;
-}
-
-.promo-gift-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.promo-gift-thumb:hover {
-  border-color: var(--pmc-blue);
-}
-
-.promo-gift-thumb:focus-visible {
-  outline: 3px solid var(--pmc-blue);
-  outline-offset: 2px;
-}
 
 /* Lightbox：全螢幕深色遮罩置中放大圖，promos.js 用 .is-open 切換顯示；
    點遮罩／關閉鈕／Esc 都會關閉（行為見 promos.js setupGiftLightbox）。 */
@@ -1460,42 +1131,6 @@ a {
   color: var(--pmc-blue);
 }
 
-/* 收合／展開的可折疊容器：用 grid-template-rows 0fr→1fr 做高度動畫（比 max-height
-   更準確，不用猜內容高度上限）。桌機（預設，見檔尾 min-width:769px 以下都不受
-   media query 限制）grid-template-rows 固定 1fr＝一律展開，跟收合機制無關——桌機
-   版型維持「全部展開」。收合行為只在 ≤768px 的 media query 內生效。 */
-.promo-card-detail {
-  display: grid;
-  grid-template-rows: 1fr;
-}
-
-.promo-card-detail-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 12px;
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* 收合/展開觸控區只在手機有作用；桌機卡片永遠展開，游標與可點語意都要拿掉
-   （2026-07-16 站長回饋：桌機整塊 hover 出現手型、點了卻沒反應＋醜藍框） */
-.promo-card-toggle {
-  border-radius: 12px;
-}
-
-@media (max-width: 768px) {
-  /* 展開/收合只由箭頭觸發（見 promos.js），所以手型游標放在箭頭上，
-     整塊 toggle 不再給可點暗示，避免「看似整張可點、點了才知道只有箭頭有用」 */
-  .promo-card-toggle {
-    cursor: default;
-  }
-
-  .promo-card-toggle:focus-visible {
-    outline: 3px solid var(--pmc-blue);
-    outline-offset: 3px;
-  }
-}
 
 /* 立即申辦按鈕：奶油蛋蜜「糖衣亮面」版（2026-07-19 站長色系決選定案，mockup
    代號 C3b）：蛋黃橘→奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），
@@ -1874,37 +1509,6 @@ a {
     gap: 8px;
   }
 
-  /* 收合態卡片目標高度 ~110-130px：下面每個元素都刻意壓縮，一屏（390x844）
-     才塞得下 4-5 張。展開後（.promo-card-detail 撐開）不受這裡影響。 */
-  .promo-card-body {
-    padding: 8px 10px 10px;
-    gap: 0;
-  }
-
-  .promo-card-cardimg {
-    width: 40px;
-    height: 28px;
-    padding: 3px;
-  }
-
-  /* 2026-07-16 第五輪：header 是 topline（徽章＋按鈕）／mainline（卡圖＋卡名＋
-     chevron）兩列，手機版面較擠，列間距收窄成 4px；mainline 內部（圖／卡名／
-     chevron）維持跟桌機一樣的 gap 判斷，這裡沿用原本收合態緊湊值改到
-     mainline 上。 */
-  .promo-card-header {
-    gap: 4px;
-  }
-
-  .promo-card-mainline {
-    gap: 8px;
-  }
-
-  /* 貼邊 label 的手機版對應值：負 margin 必須等於上面 .promo-card-body 的
-     padding（8px 10px 10px）的上／左，不然 label 會浮在半空或超出卡框 */
-  .promo-type-badges {
-    gap: 0;
-    margin: -8px 0 0 -10px;
-  }
 
   /* 2026-08-15 站長要求手機版字加大：0.58rem（實測 9.28px）小到吃力，
      拉到 0.72rem（≈11.5px，與桌機同級）。倒數徽章同一列、一起放大才不會失衡。 */
@@ -1919,33 +1523,6 @@ a {
     margin-top: 8px;   /* ＝上面負 margin 的絕對值，把倒數徽章推回原位 */
   }
 
-  /* 2026-07-16 第四輪站長回饋：卡名旁曾經多過「立即申辦」按鈕（第五輪已移到
-     topline，不再跟卡名同一列），但單行 line-clamp 限制維持移除——多行卡名
-     直接自然換行，收合態高度因此可能變動，可接受。字級/line-height 沿用原本
-     收合態的緊湊值。 */
-  .promo-card-title {
-    font-size: 0.86rem;
-    line-height: 1.2;
-    margin: 0;
-  }
-
-  /* 卡名副標（.promo-card-cardname）已從生成器移除，這裡不再需要對應規則 */
-
-  .promo-card-chevron {
-    display: flex;
-    /* 手機版展開/收合箭頭加大（原 1.1rem 太小不好按也不明顯） */
-    font-size: 1.7rem;
-    cursor: pointer;
-  }
-
-  /* display 已由桌機規則統一設為 block，這裡不用再設一次；字級跟桌機一樣
-     比原本（0.76rem≈12px）調升一階，維持「可感知變大」但仍比桌機 16px 收斂，
-     手機版面較擠 */
-  .promo-quick-highlight {
-    margin-top: 4px;
-    font-size: 0.86rem;
-    line-height: 1.3;
-  }
 
   .promo-apply-btn {
     padding: 6px 16px;
@@ -1959,24 +1536,6 @@ a {
     font-size: 0.82rem;
   }
 
-  .promo-hero-big {
-    font-size: 1.05rem;
-  }
-
-  /* 贈品清單手機再小一階（桌機 15px；行距沿用桌機的 1.65）。
-     必須排在上面的 .promo-hero-big 之後，否則同特異度會被它蓋掉 */
-  .promo-hero-big--gift {
-    font-size: 13px;
-  }
-
-  .promo-hero-item {
-    padding: 8px 12px;
-  }
-
-  .promo-gift-thumb {
-    width: 72px;
-    height: 72px;
-  }
 
   .promos-warning-row {
     font-size: 14px;
@@ -2014,21 +1573,6 @@ a {
     font-size: 11px;
   }
 
-  /* 收合機制：只在手機生效。桌機的 .promo-card-detail 維持檔案前段預設的
-     grid-template-rows: 1fr（一律展開），這裡覆寫成 0fr 當收合態，配合
-     .is-open 展開，靠 grid-template-rows 動畫做過渡。 */
-  .promo-card-detail {
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.32s ease;
-  }
-
-  .promo-card.is-open .promo-card-detail {
-    grid-template-rows: 1fr;
-  }
-
-  .promo-card-detail-inner {
-    padding-top: 10px;
-  }
 
   /* 回到頂部浮標：手機限定顯示，行為與 index.html／faq.html 一致（見 promos.js
      setupBackToTopButton）。桌機維持 display:none（基礎樣式），這裡只在達到
@@ -2167,23 +1711,18 @@ a {
    一張卡一組：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，卡片特色是
    另一種形狀的抽屜。三者的形狀刻意不同，避免看起來錯亂（站長 2026-09-17）。
 
-   ⚠️ 本段以下的規則覆寫檔案前段的舊卡片樣式（.promo-card 從「白卡本體」變成
-   「整組的容器」）。前段那些 .promo-card-toggle / .promo-card-detail /
-   .promo-card-header / .promo-card-mainline / .promo-quick-highlight /
-   .promo-gift-thumb 等規則所對應的 class 已經不再出現在生成的 HTML 裡，
-   是待清理的死碼——留著不影響畫面，但下次動這支 CSS 時應該一併刪掉。
+   2026-09-21 已清掉改版前遺留的死規則（.promo-card-toggle / -detail / -header /
+   -mainline / .promo-hero* / .promo-quick-highlight / .promo-gift-thumb 等共 53 條）。
+   判準：**選擇器裡只要有一個 class 不會出現在生成的 HTML，整條就永遠不可能命中**。
    ========================================================================== */
 
-/* 整組的容器：不再是白卡，白色表面移到 .promo-card-main。
-   2026-09-21 站長：同一列的卡片要等高（行高以最高的為準），所以不再 align-self:start
-   ——改成直向 flex，白卡（.promo-card-main）吃掉剩下的高度，灰底不再從卡片下方露出來。
+/* 整組的容器。它本身不是白卡——單檔卡的白色表面在 .promo-card-main、多檔卡的在
+   <article> 自己身上（見下方 [data-act-count] 那組規則）。
+   同一列的卡片要等高（站長 2026-09-21：行高以最高的為準），所以是直向 flex ＋
+   align-self: stretch，讓白卡吃掉剩下的高度、灰底不再從卡片下方露出來。
    混合列（多檔卡＋單檔卡）時多檔卡通常就是最高的那張，實務上等於「只調整單檔卡」。 */
 .promo-card {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  overflow: visible;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-self: stretch;
@@ -2198,7 +1737,6 @@ a {
   margin-top: auto;
   padding-top: 13px;
 }
-.promo-card:hover { box-shadow: none; }
 
 /* 卡名（2026-09-20 起是 <article> 的直接子元素，不在 .promo-card-main 裡——
    桌機多活動的卡要讓它橫跨兩欄，必須自己是一個 grid item）。
@@ -2303,7 +1841,6 @@ a {
 }
 
 /* ---- 一檔活動 ---- */
-.promo-act[hidden] { display: none; }
 
 .promo-act-row {
   display: flex;
@@ -2437,7 +1974,6 @@ a {
   margin: 12px -16px 0;
   padding: 13px 16px;
 }
-.promo-act-detail[hidden] { display: none; }
 
 /* ---- 動作列 ---- */
 .promo-card-actions {
@@ -2470,7 +2006,6 @@ a {
   border-color: var(--pmc-blue-deep);
   color: var(--pmc-white);
 }
-.promo-feat-btn[hidden] { display: none; }
 .promo-feat-btn:focus-visible {
   outline: 2px solid var(--pmc-blue-deep);
   outline-offset: 2px;
@@ -2489,7 +2024,6 @@ a {
       「NT$500 靠到格子最邊緣」）。這是這支 CSS 的第二類 specificity 陷阱，
       和 `[hidden]` 被 author display 蓋掉那組並列。
    -------------------------------------------------------------------------- */
-.promo-card-stack[hidden] { display: none; }
 .promo-stack-label {
   margin: 0;
   padding: 11px 16px 7px;
@@ -2630,7 +2164,6 @@ a {
   margin-top: -4px;
   padding: 14px 16px;
 }
-.promo-card-feat[hidden] { display: none; }
 
 .promo-feat-head {
   display: flex;
@@ -2740,7 +2273,7 @@ a {
   .promo-act-thumb { width: 72px; }
   .promo-act-reward { font-size: 24px; }
   .promo-card-feat { padding: 13px 14px; }
-  .promo-card-stack .promo-act { padding-inline: 14px; }
+  .promo-act-row.promo-sub-row { padding-inline: 14px; }
 }
 
 /* --------------------------------------------------------------------------
@@ -2827,12 +2360,6 @@ a {
   .promo-card-actions .promo-apply-btn { padding: 9px 14px; font-size: 13px; }
   .promo-feat-btn { padding: 9px 12px; font-size: 13px; }
 
-  /* 堆疊層：桌機的內縮再收斂一點，字級比主活動小一階即可，不必像手機壓那麼小。
-     寬度一律 calc(100% - 10px)，不逐層變窄（2026-09-20 站長）。 */
-  .promo-card-stack .promo-act { padding: 17px 16px 11px; width: calc(100% - 10px); }
-  .promo-card-stack .promo-act-reward { font-size: 18px; }
-  .promo-card-stack .promo-act-reward.is-gift { font-size: 12px; }
-  .promo-card-stack .promo-act-detail { margin: 12px -16px -11px; }
   /* 主活動詳情展開後，按鈕列要跟色帶留出呼吸 */
   .promo-card-main .promo-act-detail + .promo-card-actions { margin-top: 14px; }
 
@@ -2927,7 +2454,6 @@ a {
   .promo-card-rail .promo-feat-btn { justify-content: center; }
 
 
-
   /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 26px;
@@ -2972,7 +2498,14 @@ a {
 .promo-card-feat[hidden],
 .promo-act[hidden],
 .promo-act-detail[hidden],
-.promo-feat-btn[hidden] {
+.promo-feat-btn[hidden],
+.promo-feat-head[hidden],
+.promo-feat-modal-foot[hidden],
+.promo-chip[hidden],
+.promo-ending-badge[hidden],
+.promos-search-clear-btn[hidden],
+#promos-owned-filter-group[hidden],
+.promos-owned-help-pop[hidden] {
   display: none !important;
 }
 
@@ -3064,7 +2597,6 @@ a {
    （這頁第五次踩同一個坑）。 */
 .promo-feat-modal-body .promo-feat-head > b { display: none; }
 .promo-feat-modal-body .promo-feat-head { padding-top: 0; }
-.promo-feat-head[hidden] { display: none; }
 
 /* 「查看卡片詳情」CTA（站長 2026-09-21：原本是抬頭右邊的小連結，改成按鈕移到最下方）。
    在捲動區外面，所以特色列表再長也一直看得到。 */
@@ -3074,7 +2606,6 @@ a {
   border-top: 1px solid #d8e2f7;
   background: #fbfcfe;
 }
-.promo-feat-modal-foot[hidden] { display: none; }
 .promo-feat-modal-foot .promo-feat-all {
   display: block;
   margin: 0;
