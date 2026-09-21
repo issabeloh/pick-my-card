@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>附屬列類型標示 4 案對照（2026-09-21）</title>
+<link rel="stylesheet" href="../../../promos.css">
+<style>
+  body { background: #eef2f9; font-family: system-ui, "Noto Sans TC", sans-serif; margin: 0; padding: 24px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .note { font-size: 13px; color: #475569; max-width: 900px; line-height: 1.7; margin: 0 0 20px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .opt { width: 470px; }
+  .opt > h2 { font-size: 14px; margin: 0 0 2px; color: #1e3a8a; }
+  .opt > p { font-size: 12px; color: #64748b; margin: 0 0 10px; line-height: 1.6; min-height: 58px; }
+  .stack { background: #fff; border: 1px solid var(--pmc-border); border-radius: 12px; overflow: hidden; }
+  .stack .promo-sub-row:first-child { border-top: 0; }
+
+  /* ---------- 方案 1：三種類型都掛 chip，金額退到 chip 右邊 ---------- */
+  .o1 .promo-sub-amt { min-width: 0; display: inline-flex; align-items: center; gap: 8px; }
+  .o1 .promo-sub-amt { width: 148px; flex: none; }
+  .o1 .promo-sub-tag { flex: none; }
+
+  /* ---------- 方案 2：取消 chip，首刷禮跟金額同一種排版（粉字保留類型暗示） ---------- */
+  .o2 .promo-sub-tag { background: none; padding: 0; border-radius: 0;
+    font-size: 17px; font-weight: 800; color: var(--pmc-candy-pink-text); }
+
+  /* ---------- 方案 3：類型收進左側 3px 色條，金額欄純放數值 ---------- */
+  .o3 .promo-sub-row { position: relative; }
+  .o3 .promo-sub-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .o3 .t-gift::before    { background: var(--pmc-candy-pink-text); }
+  .o3 .t-bonus::before   { background: #7c3aed; }
+  .o3 .t-voucher::before { background: #059669; }
+  .o3 .promo-sub-tag { background: none; padding: 0; font-size: 12px; font-weight: 700;
+    color: var(--pmc-muted); }
+
+  /* ---------- 方案 4：類型 chip 移到右側 meta，三列都有 ---------- */
+  .o4 .promo-sub-amt .promo-sub-tag { display: none; }
+  .o4 .promo-sub-amt.is-giftamt::after { content: "贈品"; font-size: 17px; font-weight: 800; color: var(--pmc-hero-green); }
+  .o4 .promo-sub-meta { gap: 8px; }
+  .o4 .meta-type { flex: none; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .o4 .m-gift    { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
+  .o4 .m-bonus   { background: #ede9fe; color: #5b21b6; }
+  .o4 .m-voucher { background: #d1fae5; color: #065f46; }
+</style>
+</head>
+<body>
+<h1>附屬列的類型標示：4 案對照</h1>
+<p class="note">
+  現況（＝方案 0）：只有首刷禮那一列有粉色 chip，回饋加碼與定額回饋在附屬列**沒有任何類型標示**——
+  而主活動三種類型都有 badge。下面每一案都用同一組三列（首刷禮／回饋加碼／定額回饋）在桌機寬度下比較。
+</p>
+
+<div class="opts">
+
+<div class="opt o0">
+  <h2>方案 0（現況）</h2>
+  <p>首刷禮是 chip、另外兩種只有數字。金額欄的規則其實是「放這一檔的價值，沒有現金價值的就標示成首刷禮」——一致的是規則，不一致的是外觀。</p>
+  <div class="stack" id="s0"></div>
+</div>
+
+<div class="opt o1">
+  <h2>方案 1：三種類型都掛 chip</h2>
+  <p>金額欄變成「chip ＋ 數值」，與主活動完全對齊。代價：金額欄要 148px（「回饋加碼」4 字＋數字），標題欄少掉約 60px。</p>
+  <div class="stack" id="s1"></div>
+</div>
+
+<div class="opt o2">
+  <h2>方案 2：取消 chip，首刷禮寫成文字</h2>
+  <p>「首刷禮」改用跟金額同樣的 17px／800 排版、保留糖果粉當類型暗示。欄位語意統一成「這一檔能拿到什麼」，零高度與寬度成本。</p>
+  <div class="stack" id="s2"></div>
+</div>
+
+<div class="opt o3">
+  <h2>方案 3：類型收進左側 3px 色條</h2>
+  <p>三種類型＝三種顏色的細色條，金額欄純放數值（首刷禮仍需文字，用灰色小字）。最省空間，但顏色要靠學習，第一次看不知道紫色是什麼。</p>
+  <div class="stack" id="s3"></div>
+</div>
+
+<div class="opt o4">
+  <h2>方案 4：類型 chip 移到右側</h2>
+  <p>金額欄純放數值（首刷禮放「贈品」），類型 chip 放到右側「詳情」左邊，三列都有。不增加列高，但右側會擁擠、類型離視線焦點遠。</p>
+  <div class="stack" id="s4"></div>
+</div>
+
+</div>
+
+<script>
+const ROWS = [
+  { type: 'gift',    amt: '<span class="promo-sub-tag">首刷禮</span>', title: '星巴克行動收納組（含木蓋折疊收納箱及收納袋）', cls: 'is-gift t-gift',  m: '首刷禮' },
+  { type: 'bonus',   amt: '10%',    title: '國內指定通路加碼 10%', cls: 't-bonus',   m: '回饋加碼' },
+  { type: 'voucher', amt: 'NT$100', title: '核卡30天內任刷1筆，享新卡禮 OPENPOINT 100點', cls: 't-voucher', m: '定額回饋' },
+];
+const CHIP = { gift: '首刷禮', bonus: '回饋加碼', voucher: '定額回饋' };
+const CHIPCLS = { gift: 'm-gift', bonus: 'm-bonus', voucher: 'm-voucher' };
+
+function build(id, opt) {
+  document.getElementById(id).innerHTML = ROWS.map(r => {
+    let amt = r.amt;
+    if (opt === 1 && r.type !== 'gift') amt = '<span class="promo-sub-tag" style="background:' +
+      (r.type === 'bonus' ? '#ede9fe;color:#5b21b6' : '#d1fae5;color:#065f46') + '">' + CHIP[r.type] + '</span>' + r.amt;
+    if (opt === 1 && r.type === 'gift') amt = r.amt;
+    if (opt === 3 && r.type === 'gift') amt = '<span class="promo-sub-tag">贈品</span>';
+    const amtCls = 'promo-sub-amt' + (opt === 4 && r.type === 'gift' ? ' is-giftamt' : '');
+    const metaChip = opt === 4 ? '<span class="meta-type ' + CHIPCLS[r.type] + '">' + CHIP[r.type] + '</span>' : '';
+    return '<button type="button" class="promo-act-row promo-sub-row ' + r.cls + '" aria-expanded="false">' +
+      '<span class="' + amtCls + '">' + (opt === 4 && r.type === 'gift' ? '' : amt) + '</span>' +
+      '<span class="promo-sub-title">' + r.title + '</span>' +
+      '<span class="promo-sub-meta">' + metaChip + '<span class="promo-sub-more">詳情</span>' +
+      '<span class="promo-chevron" aria-hidden="true"></span></span></button>';
+  }).join('');
+}
+[0,1,2,3,4].forEach(i => build('s' + i, i));
+</script>
+</body>
+</html>
