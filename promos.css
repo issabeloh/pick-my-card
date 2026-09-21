@@ -802,8 +802,11 @@ a {
 
 
 /* 三個「類型」chip 用該類型徽章的顏色，讓篩選鈕與卡片上的徽章對得起來
-   （站長 2026-09-21：「讓用戶更容易連結」）。收起時＝淺色框＋深色字，
-   選取時＝深色實心底＋白字，跟「即將結束」同一套邏輯。
+   （站長 2026-09-21：「讓用戶更容易連結」）。
+   **選取時用的是徽章本人的淺底＋深字**，不是深色實心底＋白字——深色實心把徽章的
+   顏色整個換掉了，反而連不回去（站長 2026-09-21 回報）。選取與未選取的差別改由
+   「有沒有淺色底」＋「外框加粗成 2px」來表達（用 inset box-shadow 疊出第二圈，
+   避免改 border-width 造成 chip 位移）。
    ⚠️ 這幾條**必須排在 `.promo-chip.is-active` 之後**：
       `.promo-chip--gift.is-active` 與 `.promo-chip.is-active` 同為兩個 class、
       specificity 打平，靠「後定義的贏」才蓋得過那顆主站藍。這是這支 CSS 的
@@ -814,23 +817,26 @@ a {
 .promo-chip--gift { border-color: #cbbdf2; color: var(--pmc-candy-purple-text); }
 .promo-chip--gift:hover { background: var(--pmc-candy-purple-bg); border-color: var(--pmc-candy-purple-text); }
 .promo-chip--gift.is-active {
-  background: var(--pmc-candy-purple-text);
+  background: var(--pmc-candy-purple-bg);
   border-color: var(--pmc-candy-purple-text);
-  color: #fff;
+  color: var(--pmc-candy-purple-text);
+  box-shadow: inset 0 0 0 1px var(--pmc-candy-purple-text);
 }
 .promo-chip--bonus { border-color: #e8c86a; color: var(--pmc-candy-yellow-text); }
 .promo-chip--bonus:hover { background: var(--pmc-candy-yellow-bg); border-color: var(--pmc-candy-yellow-text); }
 .promo-chip--bonus.is-active {
-  background: var(--pmc-candy-yellow-text);
+  background: var(--pmc-candy-yellow-bg);
   border-color: var(--pmc-candy-yellow-text);
-  color: #fff;
+  color: var(--pmc-candy-yellow-text);
+  box-shadow: inset 0 0 0 1px var(--pmc-candy-yellow-text);
 }
 .promo-chip--voucher { border-color: #d2bba6; color: var(--pmc-candy-brown-text); }
 .promo-chip--voucher:hover { background: var(--pmc-candy-brown-bg); border-color: var(--pmc-candy-brown-text); }
 .promo-chip--voucher.is-active {
-  background: var(--pmc-candy-brown-text);
+  background: var(--pmc-candy-brown-bg);
   border-color: var(--pmc-candy-brown-text);
-  color: #fff;
+  color: var(--pmc-candy-brown-text);
+  box-shadow: inset 0 0 0 1px var(--pmc-candy-brown-text);
 }
 
 /* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
