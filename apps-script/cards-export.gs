@@ -2312,10 +2312,25 @@ function pmcRenderCardGroup_(group) {
   const featBox = '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
     pmcEscapeHtml_(cardId) + '" hidden></div>\n';
 
-  // ---- 單檔活動的卡：維持原本的直式（卡名橫幅＋主活動＋按鈕列）----
-  // data-act-count 也讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器是確定的行為。
+  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  const thumbHtml = '<span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) +
+    '" alt="' + pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
+    'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>';
+
+  // ---- 單檔活動的卡（站長 2026-09-21：要更像多檔卡）----
+  // 跟多檔卡一樣，先來一個「身分區塊」：放大的卡片圖在上、卡名在圖下面，
+  // 活動內容接在底下**整列**展開——而不是舊版「小卡圖在左、文字擠在右半邊」。
+  // 兩種骨架共用 .promo-card-rail／.promo-rail-thumb／.promo-card-name，只差在
+  // --solo（橫幅，圖在上名在下）與 --side（側欄，桌機時是左邊那一直欄）。
+  // 主活動裡那顆卡片圖由 CSS 藏起來（.promo-card-main .promo-act-thumb:not(--gift)），
+  // 獎品自己的活動宣傳圖仍然留著——那是這一檔活動獨有的資訊，不是重複。
+  // data-act-count 讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器也是確定的行為。
   if (acts.length === 1) {
-    return openTag + '  ' + nameHtml + '\n' +
+    return openTag +
+      '  <div class="promo-card-rail promo-card-rail--solo">\n' +
+      '    ' + thumbHtml + '\n' +
+      '    ' + nameHtml + '\n' +
+      '  </div>\n' +
       '  <div class="promo-card-main">\n' + mainHtml + '\n' +
       '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
       '    </div>\n  </div>\n' + featBox + '</article>';
@@ -2328,13 +2343,10 @@ function pmcRenderCardGroup_(group) {
   // 七成是空的，底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後，
   // 卡名永遠跟卡圖在一起、不會落單，兩欄長度不一致也不再是問題（左右關係不是上下關係）。
   // 參考：Booking.com「一間飯店、多種房型」、MoneySuperMarket 商品列。
-  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
   return openTag +
-    '  <div class="promo-card-rail">\n' +
+    '  <div class="promo-card-rail promo-card-rail--side">\n' +
     '    <div class="promo-rail-id">\n' +
-    '      <span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) + '" alt="' +
-      pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
-      'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>\n' +
+    '      ' + thumbHtml + '\n' +
     '      <div class="promo-rail-text">\n' +
     '        ' + nameHtml + '\n' +
     '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
