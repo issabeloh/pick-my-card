@@ -266,8 +266,11 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   Booking.com「一間飯店、多種房型」與 MoneySuperMarket 商品列）。
   `pmcRenderCardGroup_` 依 `acts.length` 走兩條路：
   - `=== 1`：**同樣有身分區塊**（2026-09-21 站長：單檔卡要更像多檔卡）——
-    `.promo-card-rail--solo`＝放大的卡片圖（140px）在上、卡名在圖正下方，
-    活動內容接在底下**整列**展開。舊版是「小卡圖在左、文字擠在右半邊」
+    `.promo-card-rail--solo`＝**橫向身分列**：小卡圖（84px）在左、卡名在右，
+    活動內容接在底下**整列**展開。舊版是「小卡圖在左、文字擠在右半邊」。
+    刻意與多檔卡**在手機上**的身分區塊長得一模一樣，零件／尺寸／間距全部共用
+    （站長從三案中選定「方案 3 橫向身分列」，見 docs/mockups 的實測比較）。
+    **不放「1 檔新戶活動」那一行**（站長指定）：只有一檔時它跟正下方的獎勵數字重複
   - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最多可拿 …（需分別達成）」／立即申辦／
     卡片特色）＋ `.promo-card-main`（最高那一檔的完整卡）＋ `.promo-card-stack`
     （第 2 檔起的附屬列）。桌機 `grid-template-areas` 是
@@ -283,6 +286,10 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   與 `--side`（多檔卡，桌機時變成左邊那一直欄）。因此 2026-09-21 收掉了三組
   「單檔／多檔各一份」的 CSS：白卡表面（改掛在 `.promo-card` 本身）、卡名樣式
   （不再是自帶框線的白色橫幅）、主活動藏卡片圖（改成對所有卡生效）
+  - **`.promo-card-name` 沒有任何覆寫規則**：單檔／多檔、手機／桌機四種情況同一個
+    字級與零內距（白卡表面掛 `<article>`、內距由 rail 給）。2026-09-21 清掉兩條遺留——
+    多檔卡專屬的「取消橫幅樣式」與桌機的 `padding: 12px 16px 9px`（後者讓卡名平白
+    高了 21px、又右移 16px）
   - **主活動的卡片圖一律藏起來**（`.promo-card-main .promo-act-thumb:not(--gift)`）——
     身分區塊已經有一張，藏掉它活動摘要才用得到整列寬度。
     獎品自己的活動宣傳圖仍然顯示，那是該檔活動獨有的資訊

@@ -1742,11 +1742,15 @@ a {
   padding-top: 13px;
 }
 
-/* 卡名一律住在 .promo-card-rail 裡（2026-09-21 起單檔卡也有 rail），
-   所以它只管字，白卡表面由 <article> 負責。 */
+/* 卡名一律住在 .promo-card-rail 裡（2026-09-21 起單檔卡也有 rail），所以它只管字：
+   白卡表面由 <article> 負責、內距由 rail 負責。單檔卡與多檔卡、手機與桌機，
+   四種情況同一個字級——不再有任何 .promo-card-name 的覆寫規則。
+   ⚠️ 2026-09-21 清掉兩條遺留：多檔卡專屬的「取消橫幅樣式」（base 已經沒有橫幅了）
+   與桌機的 padding: 12px 16px 9px（白色橫幅時代留的，會讓卡名平白高 21px、右移 16px）。
+   同一類漏網：元素換了角色，舊規則沒跟著掃。 */
 .promo-card-name {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--pmc-ink);
   line-height: 1.4;
@@ -1800,24 +1804,22 @@ a {
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
 
-/* 單檔卡的身分區塊：卡片圖放大、卡名在圖的正下方，活動內容接在底下整列展開
-   （站長 2026-09-21：單檔卡要更像多檔卡）。不用 .promo-rail-id 的橫排包裝，
-   靠預設的 block 流就是「圖在上、名在下」。 */
-.promo-card-rail--solo .promo-rail-thumb { width: 140px; }
-.promo-card-rail--solo .promo-card-name { margin-top: 11px; }
+/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右，活動內容接在底下整列展開
+   （站長 2026-09-21 從三案中選定方案 3）。
+   刻意跟多檔卡在**手機上**的身分區塊長得一模一樣——零件、尺寸、間距全部共用，
+   差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄。
+   ⚠️ 不放「1 檔新戶活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
+   ⚠️ 這條不包在 media query 裡——單檔卡在所有寬度都是這個橫列。 */
+.promo-card-rail--solo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
+.promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
 /* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
    免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
 .promo-rail-caveat { display: block; font-size: 11px; }
-/* 多檔卡的卡名在品牌欄裡，不再是自帶框線的白色橫幅 */
-.promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-name {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  margin: 0;
-  font-size: 14px;
-}
-
 /* 白卡表面掛在 <article> 本身，內部的 rail／main／stack 只是它的分區。
    單檔卡與多檔卡共用同一條（2026-09-21 起兩種骨架都有 rail，不必再分兩份）。
    ⚠️ :not([hidden]) 不能省——author 的 display/background 會蓋掉 [hidden]
@@ -2322,7 +2324,6 @@ a {
   .promo-grid { gap: 16px; }
 
   .promo-card-main { padding: 14px 16px; }
-  .promo-card-name { font-size: 14px; padding: 12px 16px 9px; }
 
   .promo-act-row { gap: 11px; }
   .promo-act-thumb { width: 84px; }
