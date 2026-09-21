@@ -2055,7 +2055,23 @@ function pmcMoney_(n) {
 
 // 獎勵大字（上）＋單位小字（下）。獎品沒有金額，大字改放贈品全名（不截斷，
 // 站長 2026-09-17：獎品那區的重點就是獎品內容）。
+// 「回饋加碼」型＝有回饋率、且不是定額回饋。大字、小字、附屬列三個地方都要用同一個
+// 判斷，所以抽成一支——各寫各的 typeof 檢查遲早會分岔。
+// ⚠️ 判斷順序：voucher_amount 優先（與 pmcPromoValue_ 一致），一列同時有兩種欄位時
+// 一律當定額回饋。
+function pmcIsBonus_(promo) {
+  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) return false;
+  return promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '';
+}
+
+// 回饋加碼的大字放**回饋率**，金額退到小字（站長 2026-09-21）——「10%」一眼就看得出
+// 這檔活動的性質，「NT$2,000」則要配上「上限消費多少」才有意義。
+// 定額回饋（金額）與首刷禮（贈品全名）維持原樣，它們本來就沒有回饋率。
 function pmcRewardBig_(promo) {
+  if (pmcIsBonus_(promo)) {
+    const rate = pmcRateDisplay_(promo);
+    if (rate) return { html: pmcEscapeHtml_(rate), isGift: false };
+  }
   const v = pmcPromoValue_(promo);
   if (v === null) {
     const gift = String(promo.gift_content || '').trim();
@@ -2063,15 +2079,25 @@ function pmcRewardBig_(promo) {
   }
   return { html: pmcEscapeHtml_(pmcMoney_(v)), isGift: false };
 }
+
 function pmcRewardSub_(promo) {
+  if (pmcIsBonus_(promo)) {
+    // 大字已經是回饋率，小字改講「能拿多少・要刷多少」。
+    // 金額放**前面**：它是結果、上限是條件，而附屬列的 meta 會被寬度截斷，
+    // 截掉條件比截掉結果好。沒有上限（cap 空）時只出現金額，兩者都沒有就整句空白。
+    const v = pmcPromoValue_(promo);
+    const parts = [];
+    if (v !== null) parts.push('最多可拿 ' + pmcMoney_(v));
+    if (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap)) {
+      parts.push('上限消費 ' + pmcMoney_(promo.bonus_cap));
+    }
+    return parts.join('・');
+  }
   if (pmcPromoValue_(promo) === null) return '首刷禮';
   if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
     return promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
   }
-  const rate = pmcRateDisplay_(promo);
-  const cap = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
-    ? '・上限消費 ' + pmcMoney_(promo.bonus_cap) : '';
-  return rate + cap;
+  return '';
 }
 
 // ---------- HTML 片段渲染 ----------
@@ -2201,13 +2227,15 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   const promo = p.promo;
   const detailId = actId + '-detail';
   const value = pmcPromoValue_(promo);
-  const isGift = value === null;
+  const isBonus = pmcIsBonus_(promo);
+  const isGift = !isBonus && value === null;
   const summary = String(promo.new_customer_summary || '');
   const giftName = String(promo.gift_content || '').trim();
   const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
 
-  const amt = isGift
-    ? '<span class="promo-sub-tag">首刷禮</span>'
+  // 金額欄：回饋加碼放回饋率、首刷禮放小標、其餘放金額——與主活動的大字同一套規則
+  const amt = isBonus ? pmcEscapeHtml_(pmcRateDisplay_(promo))
+    : isGift ? '<span class="promo-sub-tag">首刷禮</span>'
     : pmcEscapeHtml_(pmcMoney_(value));
   const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
   // 右側 meta：首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
