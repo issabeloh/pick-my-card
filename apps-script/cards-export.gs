@@ -2133,9 +2133,12 @@ function pmcRewardSub_(promo) {
 // 2026-09-17 站長指正——改版中期這一整塊一度被拿掉，但它是使用者判斷「自己算不算
 // 新戶、要做什麼才拿得到」的唯一依據，必須留著；而且同一張卡的多檔活動條件各不相同，
 // 所以它掛在「每一檔活動」身上，不是掛在卡片上。
-// leadHtml：塞在詳情最上方的一段（附屬列用）。手機版的附屬列把 meta 文字從收合狀態
-// 移進來，收合時那一行只留「活動詳情 ▾」（站長 2026-09-21）。
-function pmcRenderPromoDetail_(p, detailId, leadHtml) {
+// 附屬列把收合那行的 meta 文字整段移進詳情裡（兩個寬度都是，站長 2026-09-21），
+// 收合時那一行只留「活動詳情 ▾」。移進來的位置有兩種，由呼叫端決定：
+//   leadHtml    ＝ <dl> 之前的一段話（首刷禮的達成條件、回饋加碼的「最多可拿…」）
+//   leadRowHtml ＝ <dl> 的第一列（定額回饋的「OPENPOINT」「刷卡金」這種單一名詞，
+//                 單獨一段看不懂在講什麼，要掛「回饋類型」標題——站長指定）
+function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
   const promo = p.promo;
   const rows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
@@ -2171,7 +2174,8 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml) {
     : '';
   return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
     (leadHtml || '') +
-    '<dl class="promo-card-meta">' + rows.join('') + '</dl>' + notesHtml + '</div>';
+    '<dl class="promo-card-meta">' + (leadRowHtml || '') + rows.join('') + '</dl>' +
+    notesHtml + '</div>';
 }
 
 // 一檔活動（主活動與堆疊層共用同一份標記，只差外層 class）。
@@ -2259,6 +2263,7 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   const value = pmcPromoValue_(promo);
   const isBonus = pmcIsBonus_(promo);
   const isGift = !isBonus && value === null;
+  const isVoucher = !isBonus && !isGift;
   const summary = String(promo.new_customer_summary || '');
   const giftName = String(promo.gift_content || '').trim();
   const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
@@ -2268,12 +2273,10 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     : isGift ? '<span class="promo-sub-tag">首刷禮</span>'
     : pmcEscapeHtml_(pmcMoney_(value));
   const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
-  // 右側 meta：首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
-  // ⚠️ 刻意不帶類型名（「回饋加碼」「定額回饋」）：設計稿的右半欄有 686px，正式頁只有
-  //    495px，把類型帶進來會讓 meta 吃掉 203px、標題只剩 141px（實測）。類型在卡片層
-  //    的篩選 chip 已經有了，這一列真正要回答的是「多少％、上限多少」。
-  //    「上限消費」也縮成「上限」，同樣是為了把寬度讓給標題。
-  const meta = isGift ? summary : String(pmcRewardSub_(promo)).replace('上限消費', '上限');
+  // meta＝這一檔的補充說明，首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
+  // 2026-09-21 晚上起它**不再出現在收合那一行**（兩個寬度都是），只出現在展開後的詳情，
+  // 所以「上限消費」不必再為了讓寬度而縮成「上限」。
+  const meta = isGift ? summary : String(pmcRewardSub_(promo));
 
   let thumb = '';
   if (giftImgUrl) {
@@ -2292,16 +2295,16 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
     '    <span class="promo-sub-title">' + title + '</span>\n' +
     '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
-      '<span class="promo-sub-metatext">' + pmcEscapeHtml_(meta) + '</span>' +
       '<span class="promo-sub-more">活動詳情</span>' +
       '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '  </button>\n' +
-    // 同一段 meta 文字輸出兩份：收合那行的 .promo-sub-metatext（桌機看得到）與
-    // 詳情最上方的 .promo-sub-summary（手機看得到）。CSS 依寬度只顯示其中一份，
-    // 所以畫面上不會重複。刻意不在 promos.js 搬節點——那會讓「收合時長什麼樣」
-    // 變成要跑過 JS 才知道的事。
+    // meta 文字只輸出一份，位置在展開後的詳情最上方。定額回饋走 <dl> 的第一列
+    // （「回饋類型：OPENPOINT」），其餘走 <dl> 之前的一段話。
+    // 刻意不在 promos.js 搬節點——那會讓「收合時長什麼樣」變成要跑過 JS 才知道的事。
     '  ' + pmcRenderPromoDetail_(p, detailId,
-      meta ? '<p class="promo-sub-summary">' + pmcEscapeHtml_(meta) + '</p>' : '') + '\n' +
+      (meta && !isVoucher) ? '<p class="promo-sub-summary">' + pmcEscapeHtml_(meta) + '</p>' : '',
+      (meta && isVoucher) ? '<div class="promo-meta-row"><dt>回饋類型</dt><dd>' +
+        pmcEscapeHtml_(meta) + '</dd></div>' : '') + '\n' +
     '</div>';
 }
 

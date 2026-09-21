@@ -1810,7 +1810,8 @@ a {
 }
 .promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
 .promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
-.promo-card-rail--solo .promo-card-actions { margin-top: 12px; }
+ /* ⚠️ 這裡刻意不宣告 .promo-card-actions 的 margin-top——base 的 13px 就是站長要的
+   間距（2026-09-21）。桌機另有 min-width:1025px 的 12px，那是同列 CTA 對齊用的。 */
 /* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
    免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
 .promo-rail-caveat { display: block; font-size: 11px; }
@@ -1897,9 +1898,10 @@ a {
   word-break: break-word;
 }
 /* 獎品沒有金額，大字改放贈品全名（不截斷）——字級比金額小一階才排得下。
-   規格與附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-title）**必須一致**：
-   20px／--pmc-hero-green。同一張卡上主活動與附屬列的禮物名稱如果一大一小、
-   一橘一綠，看起來就是壞掉的（2026-09-21 實測畫面）。
+   **顏色**要跟附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-title）一致：
+   同一張卡上一橘一綠就是壞掉的。**字級**則刻意分兩階——主活動 20px、附屬列 17px
+   （站長 2026-09-21 晚上指定），對齊「主活動大、附屬列小」的既有層級，也跟附屬列
+   金額欄 .promo-sub-amt 的 17px 同高。
    ⚠️ 配色沿革：#8a5c00 深金褐 → #c2410c 燒橘（2026-09-21 早上）→ #10b981
    （2026-09-21 晚上，站長指定 --pmc-hero-green，與獎勵數字同色）。 */
 .promo-act-reward.is-gift {
@@ -2075,13 +2077,11 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* meta 要能被壓縮：首刷禮那幾列的 meta 是一整句達成條件，若 flex:none 它會把
-   標題欄擠到 0 寬（實測中信 uniopen 就是整列只剩徽章）。basis 190、可縮不可長。 */
-/* flex-basis 用 auto（＝內容寬）＋ max-width 封頂：固定 basis 會讓「即享券」這種
-   短 meta 也霸佔 190px，白白吃掉標題的空間（2026-09-21 實測 218→155）。 */
+/* meta 欄現在只剩「倒數徽章＋活動詳情＋箭頭」這組固定寬度的零件（meta 文字已經
+   移進展開後的詳情，見 .promo-sub-summary），所以 flex:none 即可——不再需要當初那組
+   「可縮不可長＋max-width 封頂」的保護（那是為了擋住整句達成條件把標題擠到 0 寬）。 */
 .promo-sub-meta {
-  flex: 0 1 auto;
-  max-width: 170px;
+  flex: none;
   min-width: 0;
   display: inline-flex;
   align-items: center;
@@ -2100,19 +2100,12 @@ a {
   padding: 0 6px;
   letter-spacing: 0;
 }
-/* meta 讓位給標題：正式頁的右半欄比設計稿窄（495px vs 686px），meta 吃滿會把
-   標題擠掉。標題是「這檔在做什麼」，優先權較高；兩邊都能省略號截斷。 */
-.promo-sub-metatext {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* 手機專用的兩個零件（桌機隱藏，見下方 max-width 區塊）：
-   .promo-sub-more   收合那行的「活動詳情」字樣，取代桌機顯示的 meta 文字
-   .promo-sub-summary 同一段 meta 文字，改放在展開後的最上方
-   生成器兩份都輸出，CSS 依寬度只顯示其中一份，畫面上不會重複。 */
-.promo-sub-more,
-.promo-sub-summary { display: none; }
+/* 收合那行的右側固定是「活動詳情 ▾」（兩個寬度都是，站長 2026-09-21 晚上）；
+   原本桌機顯示、手機隱藏的 .promo-sub-metatext 一併從生成器拿掉了，
+   meta 文字現在只有一個去處＝展開後最上方的 .promo-sub-summary。
+   ⚠️ 定額回饋那幾列的 meta 是「OPENPOINT」「刷卡金」這種單一名詞，單獨一段看不懂，
+      生成器改把它送進 <dl> 的第一列並掛上「回饋類型」標題，不走 .promo-sub-summary。 */
+.promo-sub-more { color: var(--pmc-blue-deep); font-weight: 700; }
 .promo-sub-summary {
   margin: 0 0 10px;
   font-size: 13px;
@@ -2127,7 +2120,13 @@ a {
   border-top-width: 7px;
   color: #94a3b8;
 }
-.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; align-items: flex-start; }
+/* 展開只換底色，**不換排版**。
+   ⚠️ 這裡原本還有一條 [aria-expanded="true"] { align-items: flex-start }（外加給
+   金額欄／meta／獎品圖的 margin-top: 1px），用意是「展開後標題攤成多行時，金額要對到
+   第一行」。但它讓每一列在點開的瞬間整排跳一次位——首刷禮列的標題根本不隨展開變高，
+   卻照樣被推；非首刷禮列在手機上標題也常常前後一樣高（2026-09-21 站長回報）。
+   正解是把對齊方式寫成**與展開狀態無關**：見下面的 :not(.is-gift) 那兩條。 */
+.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; }
 .promo-act-row.promo-sub-row[aria-expanded="true"] .promo-chevron { transform: rotate(180deg); }
 /* 展開後標題不再截斷：收合時一行、省略號帶過，展開時整句攤開（站長 2026-09-21）。
    金額欄與 meta 跟著對到第一行的高度，所以展開時 align-items 改成 flex-start。 */
@@ -2136,9 +2135,17 @@ a {
   overflow: visible;
   text-overflow: clip;
 }
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-amt,
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-meta,
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-thumb { margin-top: 1px; }
+/* 非首刷禮列：金額欄與 meta **永遠**對齊標題的第一行（不是垂直置中），
+   收合展開都一樣，所以點開時不會有任何東西移動。
+   首刷禮列不套——那裡標題就是獎勵本身、整段攤開且高度不隨展開改變，置中最好看。
+   margin-top: 1px 是純視覺補償：金額 17px/1.25 的行盒比標題 12.5px/1.5 高一點，
+   齊頂時字看起來會高一階。 */
+.promo-act-row.promo-sub-row:not(.is-gift) { align-items: flex-start; }
+.promo-act-row.promo-sub-row:not(.is-gift) .promo-sub-amt,
+.promo-act-row.promo-sub-row:not(.is-gift) .promo-sub-meta { margin-top: 1px; }
+/* 沒有獎品圖的等寬空位只負責「把標題欄對齊」，不該撐高整列——齊頂之後它那 34px
+   會在文字底下留一塊空白（2026-09-21）。留寬度、不留高度。 */
+.promo-act-row.promo-sub-row:not(.is-gift) .promo-sub-thumb.is-empty { height: 0; }
 .promo-card-stack .promo-act-detail {
   margin: 0;
   border-top: 1px solid #e6ecf5;
@@ -2147,15 +2154,17 @@ a {
   background: #f8fafc;
 }
 /* 首刷禮那一列的禮物名稱＝這一檔的「獎勵本身」，所以照獎勵數字的規格走：
-   20px、粗體、--pmc-hero-green（站長 2026-09-21；先前試過 #c2410c 橘，已改回綠）。
+   粗體、--pmc-hero-green（站長 2026-09-21；先前試過 #c2410c 橘，已改回綠）。
+   字級 17px＝跟同一列的金額欄 .promo-sub-amt 同高，比主活動的 20px 小一階
+   （站長 2026-09-21 晚上；主活動大、附屬列小的層級要看得出來）。
    兩個寬度都套——同一個東西在手機與桌機不同色是 bug 不是設計。 */
 .promo-act-row.promo-sub-row.is-gift .promo-sub-title {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.25;
   color: var(--pmc-hero-green);
   /* 不截斷（兩個寬度都是）：禮物名稱就是這一列的獎勵本身，截掉就看不懂送什麼。
-     20px 之下桌機一行只排得下五六個字（實測截成「星巴克行動…」），所以
+     這個字級下桌機一行只排得下七八個字（20px 時實測截成「星巴克行動…」），所以
      `.promo-sub-title` 那組 nowrap／ellipsis 在首刷禮這一列一律取消。 */
   white-space: normal;
   overflow: visible;
@@ -2165,15 +2174,6 @@ a {
 @media (max-width: 560px) {
   .promo-act-row.promo-sub-row { flex-wrap: wrap; }
   .promo-sub-title { flex: 1 1 140px; }
-  /* meta 掉到自己那一行、靠左接在標題下方。
-     ⚠️ max-width: none 不能省——base 的 170px 會壓過 width: 100%，於是 meta 只佔
-     170px 縮在左邊，宣告的 justify-content: flex-end 看起來像沒生效
-     （2026-09-21 查出來；順帶讓它在自己那一行能顯示更多字）。 */
-  .promo-sub-meta {
-    width: 100%;
-    max-width: none;
-    justify-content: flex-start;
-  }
 }
 
 /* ==========================================================================
@@ -2183,31 +2183,14 @@ a {
    一律加在這一段裡面，不要去動 base。
    ========================================================================== */
 @media (max-width: 1024px) {
-  /* 1. 單檔卡的按鈕移到卡片圖與名稱的正下方，跟多檔卡一致。
-        不動標記：按鈕本來就是 .promo-card-main 的最後一個子元素，而 main 對單檔卡
-        已經是直向 flex，order: -1 就把它提到活動內容之前。桌機維持釘在卡片底部
-        （那是同列 CTA 對齊成一條線的來源，見 margin-top: auto）。 */
-  .promo-card[data-act-count="1"] .promo-card-actions {
-    order: -1;
-    margin-top: 0;
-    padding-top: 0;
-    padding-bottom: 14px;
-  }
-
-  /* 2. 附屬列：沒有獎品圖的列不留空位、金額欄收成內容寬。
+  /* 1. 附屬列：沒有獎品圖的列不留空位、金額欄收成內容寬。
         桌機留空位是為了讓標題欄對齊；手機寬度本來就吃緊，站長選擇把空間讓給文字。 */
   .promo-sub-thumb.is-empty { display: none; }
   .promo-act-row.promo-sub-row { gap: 8px; }
   /* 「首刷禮」小標只有約 60px，卻佔著 86px 的金額欄，害獎品圖離它很遠 */
   .promo-act-row.promo-sub-row.is-gift .promo-sub-amt { width: auto; }
 
-  /* 3a. 收合那行只留「活動詳情 ▾」，meta 文字改在展開後的最上方出現
-         （站長 2026-09-21；與主活動的「活動詳情 ▾」一致）。桌機維持顯示 meta。 */
-  .promo-sub-metatext { display: none; }
-  .promo-sub-more { display: inline; color: var(--pmc-blue-deep); font-weight: 700; }
-  .promo-sub-summary { display: block; }
-
-  /* 4. 摘要文字：未展開多顯示一行，展開後整段攤開。兩處都要——
+  /* 2. 摘要文字：未展開多顯示一行，展開後整段攤開。兩處都要——
         主活動的 .promo-act-summary，以及附屬列裡擔任同樣角色的 .promo-sub-title
         （桌機那邊是「一行＋省略號」，手機寬度夠讓它排兩行）。
         ⚠️ 現行資料中最長的主活動摘要在 390px 只有 2 行、其實沒被截到；真正會被截的
@@ -2557,7 +2540,6 @@ a {
     grid-template-columns: 208px minmax(0, 1fr);
   }
   .promo-rail-thumb { width: 124px; }
-  .promo-sub-meta { max-width: 140px; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 24px;
   }
