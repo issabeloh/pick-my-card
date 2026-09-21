@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>附屬列「值」對齊 3 案（2026-09-21）</title>
+<link rel="stylesheet" href="../../../promos.css">
+<style>
+  body { background:#eef2f9; font-family:system-ui,"Noto Sans TC",sans-serif; margin:0; padding:20px 24px 28px; }
+  h1 { font-size:17px; margin:0 0 4px; }
+  .lead { font-size:12.5px; color:#475569; max-width:1020px; line-height:1.75; margin:0 0 18px; }
+  .row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+  .opt { width:458px; }
+  .opt h2 { font-size:13.5px; margin:0 0 3px; color:#1e3a8a; }
+  .opt .desc { font-size:11.5px; color:#64748b; line-height:1.65; margin:0 0 5px; min-height:60px; }
+  .opt .stat { font-size:11px; color:#0f766e; background:#e6fffa; border:1px solid #99f6e4;
+    border-radius:6px; padding:3px 8px; display:inline-block; margin:0 0 9px; }
+  .stack { background:#fff; border:1px solid var(--pmc-border); border-radius:12px; overflow:hidden; }
+  .stack .promo-sub-row:first-child { border-top:0; }
+  .wrap { position:relative; }
+  .guide { position:absolute; top:0; bottom:0; left:16px; width:0; border-left:1px dashed #f43f5e; opacity:.8; }
+
+  /* 共用：值欄一律用「獎勵」的排版（17px／800／綠），首刷禮不再是 chip */
+  .v .promo-sub-tag { background:none; padding:0; border-radius:0;
+    font-size:17px; font-weight:700; line-height:1.3; color:var(--pmc-hero-green); }
+  /* 摘要欄一律回到中性小灰字（要壓過 .promo-act-row.promo-sub-row.is-gift 那條） */
+  .v .promo-sub-row.is-gift .promo-sub-title,
+  .v .promo-sub-row .promo-sub-title {
+    font-size:12.5px; font-weight:400; color:var(--pmc-muted); line-height:1.5; }
+
+  /* ===== 方案 A：值欄撐到 170px，禮物名完整換行 ===== */
+  .A .promo-sub-amt { width:170px; min-width:170px; white-space:normal; }
+  .A .promo-sub-row.is-gift .promo-sub-title,
+  .A .promo-sub-row .promo-sub-title { white-space:normal; overflow:visible; text-overflow:clip; }
+
+  /* ===== 方案 B：值獨佔一行、摘要在下 ===== */
+  .B .promo-sub-row { display:grid; grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"val meta" "sum meta"; align-items:start; gap:1px 10px; }
+  .B .promo-sub-amt { grid-area:val; width:auto; min-width:0; white-space:normal; }
+  .B .promo-sub-row.is-gift .promo-sub-title,
+  .B .promo-sub-row .promo-sub-title { grid-area:sum; white-space:normal; overflow:visible; text-overflow:clip; }
+  .B .promo-sub-meta { grid-area:meta; align-self:center; }
+
+  /* ===== 方案 C：值欄 170px ＋ 禮物名最多 2 行省略 ===== */
+  .C .promo-sub-amt { width:170px; min-width:170px; white-space:normal; }
+  .C .promo-sub-row.is-gift .promo-sub-tag {
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .C .promo-sub-row.is-gift .promo-sub-title,
+  .C .promo-sub-row .promo-sub-title { white-space:normal; overflow:visible; text-overflow:clip; }
+</style>
+</head>
+<body>
+<h1>附屬列：讓「回饋率／金額／禮物名稱」對齊在同一欄的 3 種做法</h1>
+<p class="lead">
+  限制：桌機一條附屬列的內容寬只有 <b>426px</b>（1440px、多檔卡跨兩欄）。現行最長的禮物名是
+  <b>43 個字</b>，17px 排一行要 <b>731px</b>——比整列還寬，<b>不可能塞進窄欄位</b>。
+  所以「三種值對齊」只有兩條路：<b>把值欄撐寬</b>（A／C，摘要欄讓出寬度）或
+  <b>讓值獨佔一行</b>（B，換列高）。三案的首刷禮都不再用 chip，改用跟金額同一套排版。
+  紅色虛線＝三列的值對齊的那條線。
+</p>
+
+<div class="row">
+
+<div class="opt v">
+  <h2>現況（沒有對齊）</h2>
+  <p class="desc">金額與回饋率在第一欄、禮物名在第二欄，兩者不在同一條線上——這就是你看到的不一致。
+  第二欄同時兼「禮物名」與「活動摘要」兩種角色，也是問題的根。</p>
+  <span class="stat" id="k0">—</span>
+  <div class="wrap"><div class="stack" id="s0"></div><div class="guide"></div></div>
+</div>
+
+<div class="opt v A">
+  <h2>方案 A：值欄撐到 170px，禮物名完整換行</h2>
+  <p class="desc">三種值共用一個 170px 的欄。對齊最直觀、禮物名一字不漏，但摘要欄從 302px 掉到 194px，
+  而長禮物名會把那一列撐到四行高。</p>
+  <span class="stat" id="kA">—</span>
+  <div class="wrap"><div class="stack" id="sA"></div><div class="guide"></div></div>
+</div>
+
+<div class="opt v B">
+  <h2>方案 B：值獨佔一行，摘要退到第二行</h2>
+  <p class="desc">值一律從最左邊開始，寬度限制整個消失——禮物名有整列可用，摘要欄也最寬。
+  代價是每一列都變兩行，形狀變成「小一號的主活動」。</p>
+  <span class="stat" id="kB">—</span>
+  <div class="wrap"><div class="stack" id="sB"></div><div class="guide"></div></div>
+</div>
+
+<div class="opt v C">
+  <h2>方案 C：值欄 170px ＋ 禮物名最多兩行</h2>
+  <p class="desc">A 的折衷版：超過兩行就省略號帶過，完整名稱在展開後的詳情裡。
+  列高回到接近現況，對齊也保住，代價是最長的那個禮物名在收合時看不完。</p>
+  <span class="stat" id="kC">—</span>
+  <div class="wrap"><div class="stack" id="sC"></div><div class="guide"></div></div>
+</div>
+
+</div>
+
+<script>
+const GIFT = '星巴克行動收納組（含木蓋折疊收納箱及收納袋)(或) OPENPOINT 500點好禮';
+const ROWS = [
+  { kind:'gift',    val:'首刷禮', sum:'核卡30天內任刷1筆，享新戶禮二選一' },
+  { kind:'bonus',   val:'10%',    sum:'國內指定通路加碼 10%' },
+  { kind:'voucher', val:'NT$100', sum:'核卡30天內任刷1筆，享新卡禮 OPENPOINT 100點' },
+];
+function row(o, r) {
+  const isGift = r.kind === 'gift';
+  // 現況：值欄放「首刷禮」chip、禮物名在摘要欄；其餘三案：值欄放禮物名
+  const val = isGift
+    ? (o === '0' ? '<span class="promo-sub-tag" style="background:var(--pmc-candy-pink-bg);color:var(--pmc-candy-pink-text);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;line-height:1.5">首刷禮</span>'
+                 : '<span class="promo-sub-tag">' + GIFT + '</span>')
+    : r.val;
+  const sum = (isGift && o === '0')
+    ? '<span style="font-size:17px;font-weight:700;color:var(--pmc-hero-green);line-height:1.25">' + GIFT + '</span>'
+    : r.sum;
+  return '<button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
+    '" aria-expanded="false">' +
+    '<span class="promo-sub-amt">' + val + '</span>' +
+    '<span class="promo-sub-title">' + sum + '</span>' +
+    '<span class="promo-sub-meta"><span class="promo-sub-more">詳情</span>' +
+    '<span class="promo-chevron" aria-hidden="true"></span></span></button>';
+}
+['0','A','B','C'].forEach(o => {
+  document.getElementById('s' + o).innerHTML = ROWS.map(r => row(o, r)).join('');
+});
+// ⚠️「值」的定義依方案而不同——現況的首刷禮列，值是第二欄的禮物名，不是第一欄的 chip
+requestAnimationFrame(() => {
+  ['0','A','B','C'].forEach(o => {
+    const st = document.getElementById('s' + o);
+    const xs = [...st.querySelectorAll('.promo-sub-row')].map(r => {
+      const el = (o === '0' && r.classList.contains('is-gift'))
+        ? r.querySelector('.promo-sub-title') : r.querySelector('.promo-sub-amt');
+      return Math.round(el.getBoundingClientRect().x);
+    });
+    const spread = Math.max(...xs) - Math.min(...xs);
+    const sumW = Math.round([...st.querySelectorAll('.promo-sub-title')].pop().getBoundingClientRect().width);
+    document.getElementById('k' + o).textContent =
+      '整疊高 ' + Math.round(st.getBoundingClientRect().height) + 'px ・ 值對齊 ' +
+      (spread === 0 ? '✅' : '❌（差 ' + spread + 'px）') + ' ・ 摘要欄 ' + sumW + 'px';
+  });
+});
+</script>
+</body>
+</html>
