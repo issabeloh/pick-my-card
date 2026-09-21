@@ -2572,8 +2572,18 @@ a {
   border-top-width: 7px;
   color: #94a3b8;
 }
-.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; }
+.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; align-items: flex-start; }
 .promo-act-row.promo-sub-row[aria-expanded="true"] .promo-chevron { transform: rotate(180deg); }
+/* 展開後標題不再截斷：收合時一行、省略號帶過，展開時整句攤開（站長 2026-09-21）。
+   金額欄與 meta 跟著對到第一行的高度，所以展開時 align-items 改成 flex-start。 */
+.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-title {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-amt,
+.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-meta,
+.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-thumb { margin-top: 1px; }
 .promo-card-stack .promo-act-detail {
   margin: 0;
   border-top: 1px solid #e6ecf5;
@@ -2888,12 +2898,39 @@ a {
   }
   .promo-card-rail .promo-card-actions .promo-apply-btn,
   .promo-card-rail .promo-feat-btn { width: 100%; }
+  /* .promo-feat-btn 是 inline-flex，拉成整欄寬之後內容會停在 flex-start（靠左）——
+     直排的按鈕要置中（站長 2026-09-21）。 */
+  .promo-card-rail .promo-feat-btn { justify-content: center; }
 
 
 
   /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 26px;
+  }
+}
+
+/* 寬螢幕（≥1400px）：一列放得下 4 張活動卡（站長 2026-09-21）。
+   欄數要加一格，容器就得跟著放寬——1200px 切成 4 欄只剩 286px/欄，卡圖與獎勵大字
+   會擠在一起。1440px 容器（body 左右各 20px padding，實際 1400）切 4 欄是 326px/欄，
+   跟原本 1200px 三欄的 373px 同一個量級。
+   斷點壓在 1400：低於它維持 3 欄，1366 那類筆電不會拿到過窄的欄位。
+   ⚠️ 這一段必須排在上面 ≥1025px 那個 block **之後**——品牌欄寬度等規則同分，
+   後定義的才會贏（放前面會被 236px 蓋回去，2026-09-21 實測）。
+   ⚠️ .social-media-footer 的 max-width 要一起改，否則頁尾會比主體窄一截。 */
+@media (min-width: 1400px) {
+  .promos-container,
+  .social-media-footer { max-width: 1440px; }
+  .promo-grid { grid-template-columns: repeat(4, 1fr); }
+
+  /* 4 欄時多檔卡跨 2 欄＝半列，比 3 欄窄：品牌欄與 meta 各讓一點寬度給標題 */
+  .promo-card[data-act-count]:not([data-act-count="1"]):not([hidden]) {
+    grid-template-columns: 208px minmax(0, 1fr);
+  }
+  .promo-rail-thumb { width: 124px; }
+  .promo-sub-meta { max-width: 140px; }
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
+    font-size: 24px;
   }
 }
 
@@ -2997,9 +3034,44 @@ a {
   -webkit-overflow-scrolling: touch;
 }
 /* modal 已經有自己的標題列，內容裡那條「卡片特色」抬頭就不用再出現一次；
-   但同一列右邊的「查看全部」與級別標籤要留著，所以只藏 <b>，不藏整列。 */
+   級別標籤（「以『○○』計」）要留著，所以只藏 <b>，不藏整列。
+   ⚠️ .promo-feat-head 是 display:flex，author display 會蓋掉 [hidden] 的預設
+   display:none——promos.js 在連結搬走後會 head.hidden = true，這條不能省
+   （這頁第五次踩同一個坑）。 */
 .promo-feat-modal-body .promo-feat-head > b { display: none; }
 .promo-feat-modal-body .promo-feat-head { padding-top: 0; }
+.promo-feat-head[hidden] { display: none; }
+
+/* 「查看卡片詳情」CTA（站長 2026-09-21：原本是抬頭右邊的小連結，改成按鈕移到最下方）。
+   在捲動區外面，所以特色列表再長也一直看得到。 */
+.promo-feat-modal-foot {
+  flex: none;
+  padding: 12px 16px 14px;
+  border-top: 1px solid #d8e2f7;
+  background: #fbfcfe;
+}
+.promo-feat-modal-foot[hidden] { display: none; }
+.promo-feat-modal-foot .promo-feat-all {
+  display: block;
+  margin: 0;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: var(--pmc-blue-deep);
+  color: var(--pmc-white);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.promo-feat-modal-foot .promo-feat-all:hover {
+  background: #17307a;
+  text-decoration: none;
+}
+.promo-feat-modal-foot .promo-feat-all:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 2px;
+}
 
 /* 手機（2026-09-20 起手機也走 modal）：遮罩外距收到 12px、面板可以更高，
    小螢幕上 7 列特色＋國內外基準列才不會一直卡在捲動區裡。 */

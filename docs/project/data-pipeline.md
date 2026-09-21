@@ -271,6 +271,9 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，標題才對齊
   - meta **不帶類型名**、「上限消費」縮成「上限」：正式頁右半欄只有 495px（設計稿有
     686px），帶了類型會讓 meta 吃 203px、標題只剩 141px。類型在卡片層的篩選 chip 已經有
+  - **收合時一行截斷、展開時整句攤開**（2026-09-21 站長）：
+    `[aria-expanded="true"]` 才把 `white-space` 放回 `normal`，同時 `align-items` 改
+    `flex-start`，金額與 meta 才會對到第一行
 - ⚠️ 歸屬提示改過三版，別再走回頭路：①「第 2 檔向右延伸＋第 3 檔以後向下逐層內縮」
   （太亂、越縮越小）②「等寬卡＋欄間一支淺藍箭頭」（要求拿掉箭頭）
   ③「卡名橫跨兩欄的白色橫幅」（橫幅七成是空的、底下兩根柱子長度差很多，看起來怪）。
@@ -283,6 +286,17 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **每檔活動各有自己的詳情**（`pmcRenderPromoDetail_`：適用通路／達成條件／活動期間／
   新戶定義／備註）。同卡多檔的條件不同，所以詳情掛在活動上、不是卡片上。
   同組內一次只開一個
+- **卡片特色 modal 的「查看卡片詳情」是 footer CTA**（2026-09-21 站長；原本是抬頭右邊的
+  小連結「查看全部 ›」）。`tools/build-promos-features.js` 仍然把 `<a class="promo-feat-all">`
+  輸出在 `.promo-feat-head` 裡，由 `promos.js` 的 `openFeatModal()` 把**節點本身**搬到
+  `.promo-feat-modal-foot`（搬節點而不是複製字串，`setupCardDetailOverlay` 的 document
+  委派才收得到點擊）。連結搬走後抬頭可能整列空掉，所以會 `head.hidden = true`——
+  ⚠️ `.promo-feat-head` 是 `display:flex`，CSS 必須補
+  `.promo-feat-head[hidden]{display:none}`（這頁第五次踩同一個坑）
+- **寬螢幕（≥1400px）一列 4 張卡**（2026-09-21 站長）：容器 `max-width` 放寬到 1440px、
+  `.promo-grid` 改 4 欄、品牌欄縮到 208px。⚠️ 這個 media block 必須排在
+  `@media (min-width: 1025px)` 那段**之後**——品牌欄寬度等規則同分，後定義的才會贏。
+  `.social-media-footer` 的 `max-width` 要一起改，否則頁尾比主體窄一截
 - **卡片特色一律開 modal**（桌機 2026-09-18、手機 2026-09-20；站長：「目前要展開的
   東西太多了」）。特色有 5~7 列加國內／國外基準列，就地展開會多出一整屏高度、
   把後面的卡全部推走，手機尤其嚴重。`promos.js` 的 `openFeatModal()` 懶建立一層

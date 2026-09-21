@@ -366,6 +366,7 @@
   // 保留著當內容來源與退路，但永遠不再展開。
   var featModal = null;
   var featModalBody = null;
+  var featModalFoot = null;
   var featModalTitle = null;
   var featModalBtn = null;   // 開啟這個 modal 的「卡片特色」按鈕，關閉時要還原 aria/焦點
 
@@ -386,9 +387,11 @@
       '<button type="button" class="promo-feat-modal-close" aria-label="關閉卡片特色">&times;</button>' +
       '</div>' +
       '<div class="promo-feat-modal-body"></div>' +
+      '<div class="promo-feat-modal-foot" hidden></div>' +
       '</div>';
     document.body.appendChild(featModal);
     featModalBody = featModal.querySelector('.promo-feat-modal-body');
+    featModalFoot = featModal.querySelector('.promo-feat-modal-foot');
     featModalTitle = featModal.querySelector('.promo-feat-modal-title');
     featModal.addEventListener('click', function (e) {
       // 點「查看全部」也要關：它接著會開卡片詳情 overlay（setupCardDetailOverlay 的
@@ -411,6 +414,17 @@
     // 綁在節點上的事件（「查看全部」走 document 委派），所以複製 HTML 就夠，
     // 不必把節點搬進搬出——搬動會讓收合狀態與 DOM 順序變得難以推理。
     featModalBody.innerHTML = drawer.innerHTML;
+    // 「查看卡片詳情」從內容區搬到 footer 當 CTA（站長 2026-09-21）。
+    // 搬的是節點本身，所以 setupCardDetailOverlay 的 document 委派照常收得到點擊。
+    var all = featModalBody.querySelector('.promo-feat-all');
+    featModalFoot.innerHTML = '';
+    featModalFoot.hidden = !all;
+    if (all) featModalFoot.appendChild(all);
+    // 連結搬走後，抬頭那一列可能只剩被 CSS 藏起來的 <b>（沒有級別標籤時就整列空了），
+    // 留著會多出一段空白邊距。⚠️ .promo-feat-head 有 display:flex，author display 會蓋掉
+    // [hidden] 的預設值——CSS 另外補了 .promo-feat-head[hidden]{display:none}。
+    var head = featModalBody.querySelector('.promo-feat-head');
+    if (head && !head.querySelector('.promo-feat-level')) head.hidden = true;
     featModal.classList.add('is-open');
     featModalBtn = btn || null;
     featModal.querySelector('.promo-feat-modal-close').focus();
@@ -421,6 +435,7 @@
     if (!featModal || !featModal.classList.contains('is-open')) return;
     featModal.classList.remove('is-open');
     featModalBody.innerHTML = '';
+    if (featModalFoot) { featModalFoot.innerHTML = ''; featModalFoot.hidden = true; }
     if (featModalBtn) {
       featModalBtn.setAttribute('aria-expanded', 'false');
       if (restoreFocus) featModalBtn.focus();

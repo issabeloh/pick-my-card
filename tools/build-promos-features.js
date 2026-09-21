@@ -236,11 +236,14 @@ function blockHtml(cardId, feat, usage) {
   if (!feat.rows.length && !feat.base.length) return '';
   const lv = feat.level
     ? '<span class="promo-feat-level">以「' + escapeHtml(feat.level) + '」計</span>' : '';
-  // 「查看全部 ›」＝原本卡名旁那顆 ⓘ，改成文字並移到這裡（站長 2026-09-17）。
+  // 原本是卡名旁那顆 ⓘ（2026-09-17 改成「查看全部 ›」文字連結）；
+  // 2026-09-21 站長：在 modal 裡改當 CTA 按鈕、移到最下方、文字改「查看卡片詳情」。
+  // 這裡仍然輸出在 .promo-feat-head 裡——promos.js 的 openFeatModal() 會把這個節點
+  // 搬到 modal 的 footer 再套 CTA 樣式，注入器不必知道它最後長什麼樣子。
   // href 保留深連結當 fallback；promos.js 攔截後開內嵌詳情並捲到「指定通路回饋」。
   const all = '<a class="promo-feat-all" href="' + escapeHtml('/?start&card=' + cardId) +
     '" data-card-id="' + escapeHtml(cardId) + '" data-section="card-special-section"' +
-    ' target="_blank" rel="noopener noreferrer">查看全部 ›</a>';
+    ' target="_blank" rel="noopener noreferrer">查看卡片詳情</a>';
   // 卡片用途：Sheets 的 cardUsage 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
   const usageHtml = usage
     ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p>' : '';
