@@ -20,7 +20,9 @@
   --pmc-label: #374151;
   --pmc-muted: #6b7280;
   --pmc-green: #059669;
-  /* 卡片主數字（.promo-hero-big）專用綠，2026-08-15 站長指定。刻意與 --pmc-green
+  /* 獎勵數字專用綠（.promo-act-reward 大字與 .promo-sub-amt 附屬列金額），
+     2026-08-15 站長指定。原本的使用者 .promo-hero-big 已於 2026-09-21 隨舊版面移除。
+     刻意與 --pmc-green
      分開放：那個是「跟主站回饋率同色」的語意，這個是本頁自己的視覺決定，
      日後只想動其中一個時不會互相牽連。 */
   --pmc-hero-green: #10b981;
@@ -782,7 +784,9 @@ a {
 }
 
 .promo-chip.is-active{
-  background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
+  /* 單色，不用漸層（站長 2026-09-21）——chip 只有 28px 高，漸層在這個尺寸上
+     只會讓邊緣看起來髒，看不出是漸層 */
+  background: var(--pmc-blue-deep);
   border-color: var(--pmc-blue-deep);
   color: white;
 }
@@ -795,7 +799,7 @@ a {
 }
 .promo-chip--ending:hover { background: #fef2f2; border-color: #dc2626; }
 .promo-chip--ending.is-active {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+  background: #b91c1c;
   border-color: #b91c1c;
   color: #fff;
 }
@@ -1738,37 +1742,22 @@ a {
   padding-top: 13px;
 }
 
-/* 卡名（2026-09-20 起是 <article> 的直接子元素，不在 .promo-card-main 裡——
-   桌機多活動的卡要讓它橫跨兩欄，必須自己是一個 grid item）。
-   為了讓手機／單活動卡看起來跟拆出來之前一模一樣，它自己戴上白卡的上半段：
-   左右上三邊有框、上方兩個圓角、下緣一條分隔線；.promo-card-main 則改成
-   「白卡的下半段」（無上框、只留下方圓角）。兩塊貼在一起＝原本那張白卡。
-   ⚠️ 陰影只掛在 .promo-card-main：--pmc-shadow-card 是往下打的，若卡名也掛，
-   它的陰影會落在正下方的 main 上，接縫處出現一條灰線。 */
+/* 卡名一律住在 .promo-card-rail 裡（2026-09-21 起單檔卡也有 rail），所以它只管字：
+   白卡表面由 <article> 負責、內距由 rail 負責。單檔卡與多檔卡、手機與桌機，
+   四種情況同一個字級——不再有任何 .promo-card-name 的覆寫規則。
+   ⚠️ 2026-09-21 清掉兩條遺留：多檔卡專屬的「取消橫幅樣式」（base 已經沒有橫幅了）
+   與桌機的 padding: 12px 16px 9px（白色橫幅時代留的，會讓卡名平白高 21px、右移 16px）。
+   同一類漏網：元素換了角色，舊規則沒跟著掃。 */
 .promo-card-name {
-  position: relative;
-  z-index: 6;
   margin: 0;
-  background: var(--pmc-white);
-  border: 1px solid var(--pmc-border);
-  border-bottom: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-lg) var(--pmc-radius-lg) 0 0;
-  padding: 13px 16px 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--pmc-ink);
   line-height: 1.4;
 }
 
 .promo-card-main {
-  position: relative;
-  z-index: 5;
-  background: var(--pmc-white);
-  border: 1px solid var(--pmc-border);
-  border-top: 0;
-  border-radius: 0 0 var(--pmc-radius-lg) var(--pmc-radius-lg);
-  box-shadow: var(--pmc-shadow-card);
-  padding: 12px 16px 16px;
+  padding: 14px 16px 16px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1781,7 +1770,9 @@ a {
    底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後卡名永遠跟
    卡圖在一起、不會落單，兩欄長度不一致也不再是問題（左右關係，不是上下關係）。
 
-   這裡寫的是**手機版**（品牌欄橫在最上面），桌機的兩欄配置在檔案後段。
+   兩種型態共用這支 class，差別只在修飾字：
+     --solo（單檔卡）  放大的卡片圖在上、卡名在圖下面，永遠是一條橫幅
+     --side（多檔卡）  手機同樣是橫幅（圖左名右），桌機變成左邊那一直欄
    -------------------------------------------------------------------------- */
 .promo-card-rail {
   padding: 13px 16px 14px;
@@ -1812,35 +1803,33 @@ a {
   color: var(--pmc-muted);
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
+
+/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右，活動內容接在底下整列展開
+   （站長 2026-09-21 從三案中選定方案 3）。
+   刻意跟多檔卡在**手機上**的身分區塊長得一模一樣——零件、尺寸、間距全部共用，
+   差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄。
+   ⚠️ 不放「1 檔新戶活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
+   ⚠️ 這條不包在 media query 裡——單檔卡在所有寬度都是這個橫列。 */
+.promo-card-rail--solo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
+.promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
 /* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
    免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
 .promo-rail-caveat { display: block; font-size: 11px; }
-/* 多檔卡的卡名在品牌欄裡，不再是自帶框線的白色橫幅 */
-.promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-name {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  margin: 0;
-  font-size: 14px;
-}
-
-/* 多檔卡：白卡表面移到 <article> 本身，內部的 main／stack 只是它的分區。
+/* 白卡表面掛在 <article> 本身，內部的 rail／main／stack 只是它的分區。
+   單檔卡與多檔卡共用同一條（2026-09-21 起兩種骨架都有 rail，不必再分兩份）。
    ⚠️ :not([hidden]) 不能省——author 的 display/background 會蓋掉 [hidden]
-   （這頁踩過四次），檔案最後還有一道 !important 安全網。 */
-.promo-card[data-act-count]:not([data-act-count="1"]):not([hidden]) {
+   （這頁踩過五次），檔案最後還有一道 !important 安全網。 */
+.promo-card:not([hidden]) {
   background: var(--pmc-white);
   border: 1px solid var(--pmc-border);
   border-radius: var(--pmc-radius-lg);
   box-shadow: var(--pmc-shadow-card);
   overflow: hidden;
-}
-.promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main {
-  background: none;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 14px 16px 16px;
 }
 
 /* ---- 一檔活動 ---- */
@@ -2044,7 +2033,9 @@ a {
   width: 86px;
   font-size: 17px;
   font-weight: 800;
-  color: var(--pmc-green, #059669);
+  /* 與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green #10b981）。
+     先前是 --pmc-green #059669，同一張卡上兩種綠並排，看起來像沒對齊的色票。 */
+  color: var(--pmc-hero-green);
   line-height: 1.25;
 }
 /* 首刷禮沒有現金價值：金額欄改放這個小標，標題欄才放獎品全名 */
@@ -2313,10 +2304,10 @@ a {
   box-shadow: none;
 }
 
-/* 多檔卡的主活動不再重複顯示卡片圖——左側品牌欄已經有一張了。
+/* 主活動不重複顯示卡片圖——身分區塊（.promo-card-rail）已經有一張了，
+   藏掉它之後活動摘要才能用到整列的寬度（站長 2026-09-21）。
    獎品自己的活動宣傳圖仍然顯示：那是這一檔活動獨有的資訊，不是重複。 */
-.promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main
-  .promo-act-thumb:not(.promo-act-thumb--gift) {
+.promo-card-main .promo-act-thumb:not(.promo-act-thumb--gift) {
   display: none;
 }
 
@@ -2333,7 +2324,6 @@ a {
   .promo-grid { gap: 16px; }
 
   .promo-card-main { padding: 14px 16px; }
-  .promo-card-name { font-size: 14px; padding: 12px 16px 9px; }
 
   .promo-act-row { gap: 11px; }
   .promo-act-thumb { width: 84px; }
@@ -2429,25 +2419,27 @@ a {
     border-radius: 0;
   }
 
-  /* 桌機的品牌欄是直的：卡圖放大、名稱在圖下方、兩顆按鈕直排 */
-  .promo-card-rail {
+  /* 桌機的側欄品牌欄是直的：卡圖放大、名稱在圖下方、兩顆按鈕直排。
+     ⚠️ 只套 --side：單檔卡的 --solo 永遠是橫幅，套了 border-right 會在卡片中間
+     畫一條沒有意義的直線、下緣的分隔線也會不見。 */
+  .promo-card-rail--side {
     padding: 14px 16px 16px;
     border-bottom: 0;
     border-right: 1px solid #e8eef8;
   }
-  .promo-rail-id { display: block; }
-  .promo-rail-thumb { width: 140px; }
-  .promo-rail-text { margin-top: 11px; }
-  .promo-card-rail .promo-card-actions {
+  .promo-card-rail--side .promo-rail-id { display: block; }
+  .promo-card-rail--side .promo-rail-thumb { width: 140px; }
+  .promo-card-rail--side .promo-rail-text { margin-top: 11px; }
+  .promo-card-rail--side .promo-card-actions {
     flex-direction: column;
     gap: 8px;
     margin-top: 13px;
   }
-  .promo-card-rail .promo-card-actions .promo-apply-btn,
-  .promo-card-rail .promo-feat-btn { width: 100%; }
+  .promo-card-rail--side .promo-card-actions .promo-apply-btn,
+  .promo-card-rail--side .promo-feat-btn { width: 100%; }
   /* .promo-feat-btn 是 inline-flex，拉成整欄寬之後內容會停在 flex-start（靠左）——
      直排的按鈕要置中（站長 2026-09-21）。 */
-  .promo-card-rail .promo-feat-btn { justify-content: center; }
+  .promo-card-rail--side .promo-feat-btn { justify-content: center; }
 
 
   /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */

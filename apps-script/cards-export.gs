@@ -2055,7 +2055,23 @@ function pmcMoney_(n) {
 
 // 獎勵大字（上）＋單位小字（下）。獎品沒有金額，大字改放贈品全名（不截斷，
 // 站長 2026-09-17：獎品那區的重點就是獎品內容）。
+// 「回饋加碼」型＝有回饋率、且不是定額回饋。大字、小字、附屬列三個地方都要用同一個
+// 判斷，所以抽成一支——各寫各的 typeof 檢查遲早會分岔。
+// ⚠️ 判斷順序：voucher_amount 優先（與 pmcPromoValue_ 一致），一列同時有兩種欄位時
+// 一律當定額回饋。
+function pmcIsBonus_(promo) {
+  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) return false;
+  return promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '';
+}
+
+// 回饋加碼的大字放**回饋率**，金額退到小字（站長 2026-09-21）——「10%」一眼就看得出
+// 這檔活動的性質，「NT$2,000」則要配上「上限消費多少」才有意義。
+// 定額回饋（金額）與首刷禮（贈品全名）維持原樣，它們本來就沒有回饋率。
 function pmcRewardBig_(promo) {
+  if (pmcIsBonus_(promo)) {
+    const rate = pmcRateDisplay_(promo);
+    if (rate) return { html: pmcEscapeHtml_(rate), isGift: false };
+  }
   const v = pmcPromoValue_(promo);
   if (v === null) {
     const gift = String(promo.gift_content || '').trim();
@@ -2063,15 +2079,25 @@ function pmcRewardBig_(promo) {
   }
   return { html: pmcEscapeHtml_(pmcMoney_(v)), isGift: false };
 }
+
 function pmcRewardSub_(promo) {
+  if (pmcIsBonus_(promo)) {
+    // 大字已經是回饋率，小字改講「能拿多少・要刷多少」。
+    // 金額放**前面**：它是結果、上限是條件，而附屬列的 meta 會被寬度截斷，
+    // 截掉條件比截掉結果好。沒有上限（cap 空）時只出現金額，兩者都沒有就整句空白。
+    const v = pmcPromoValue_(promo);
+    const parts = [];
+    if (v !== null) parts.push('最多可拿 ' + pmcMoney_(v));
+    if (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap)) {
+      parts.push('上限消費 ' + pmcMoney_(promo.bonus_cap));
+    }
+    return parts.join('・');
+  }
   if (pmcPromoValue_(promo) === null) return '首刷禮';
   if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
     return promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
   }
-  const rate = pmcRateDisplay_(promo);
-  const cap = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
-    ? '・上限消費 ' + pmcMoney_(promo.bonus_cap) : '';
-  return rate + cap;
+  return '';
 }
 
 // ---------- HTML 片段渲染 ----------
@@ -2201,13 +2227,15 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   const promo = p.promo;
   const detailId = actId + '-detail';
   const value = pmcPromoValue_(promo);
-  const isGift = value === null;
+  const isBonus = pmcIsBonus_(promo);
+  const isGift = !isBonus && value === null;
   const summary = String(promo.new_customer_summary || '');
   const giftName = String(promo.gift_content || '').trim();
   const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
 
-  const amt = isGift
-    ? '<span class="promo-sub-tag">首刷禮</span>'
+  // 金額欄：回饋加碼放回饋率、首刷禮放小標、其餘放金額——與主活動的大字同一套規則
+  const amt = isBonus ? pmcEscapeHtml_(pmcRateDisplay_(promo))
+    : isGift ? '<span class="promo-sub-tag">首刷禮</span>'
     : pmcEscapeHtml_(pmcMoney_(value));
   const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
   // 右側 meta：首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
@@ -2284,10 +2312,25 @@ function pmcRenderCardGroup_(group) {
   const featBox = '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
     pmcEscapeHtml_(cardId) + '" hidden></div>\n';
 
-  // ---- 單檔活動的卡：維持原本的直式（卡名橫幅＋主活動＋按鈕列）----
-  // data-act-count 也讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器是確定的行為。
+  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  const thumbHtml = '<span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) +
+    '" alt="' + pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
+    'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>';
+
+  // ---- 單檔活動的卡（站長 2026-09-21：要更像多檔卡）----
+  // 跟多檔卡一樣，先來一個「身分區塊」：放大的卡片圖在上、卡名在圖下面，
+  // 活動內容接在底下**整列**展開——而不是舊版「小卡圖在左、文字擠在右半邊」。
+  // 兩種骨架共用 .promo-card-rail／.promo-rail-thumb／.promo-card-name，只差在
+  // --solo（橫幅，圖在上名在下）與 --side（側欄，桌機時是左邊那一直欄）。
+  // 主活動裡那顆卡片圖由 CSS 藏起來（.promo-card-main .promo-act-thumb:not(--gift)），
+  // 獎品自己的活動宣傳圖仍然留著——那是這一檔活動獨有的資訊，不是重複。
+  // data-act-count 讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器也是確定的行為。
   if (acts.length === 1) {
-    return openTag + '  ' + nameHtml + '\n' +
+    return openTag +
+      '  <div class="promo-card-rail promo-card-rail--solo">\n' +
+      '    ' + thumbHtml + '\n' +
+      '    ' + nameHtml + '\n' +
+      '  </div>\n' +
       '  <div class="promo-card-main">\n' + mainHtml + '\n' +
       '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
       '    </div>\n  </div>\n' + featBox + '</article>';
@@ -2300,13 +2343,10 @@ function pmcRenderCardGroup_(group) {
   // 七成是空的，底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後，
   // 卡名永遠跟卡圖在一起、不會落單，兩欄長度不一致也不再是問題（左右關係不是上下關係）。
   // 參考：Booking.com「一間飯店、多種房型」、MoneySuperMarket 商品列。
-  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
   return openTag +
-    '  <div class="promo-card-rail">\n' +
+    '  <div class="promo-card-rail promo-card-rail--side">\n' +
     '    <div class="promo-rail-id">\n' +
-    '      <span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) + '" alt="' +
-      pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
-      'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>\n' +
+    '      ' + thumbHtml + '\n' +
     '      <div class="promo-rail-text">\n' +
     '        ' + nameHtml + '\n' +
     '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
