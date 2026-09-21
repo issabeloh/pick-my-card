@@ -293,6 +293,20 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   委派才收得到點擊）。連結搬走後抬頭可能整列空掉，所以會 `head.hidden = true`——
   ⚠️ `.promo-feat-head` 是 `display:flex`，CSS 必須補
   `.promo-feat-head[hidden]{display:none}`（這頁第五次踩同一個坑）
+- **同一列的卡片等高 ＋ 空白遞補**（2026-09-21 站長）：
+  - `.promo-card` 不再 `align-self: start`，改成直向 flex＋`align-self: stretch`；
+    單檔卡的 `.promo-card-main` `flex: 1`、按鈕列 `margin-top: auto`，所以同一列的
+    「立即申辦」會對齊成一條線。多檔卡的 `grid-template-rows: auto 1fr auto` 讓
+    **附屬列那一格**吸收多出來的高度（原本 `align-content: start` 會把它留在整組下方
+    變成白色空帶）。混合列時多檔卡通常就是最高的那張，實務上等於「只調整單檔卡」
+  - `.promo-grid` 加 `grid-auto-flow: dense`：多檔卡跨 2 欄、塞不進列尾剩下 1 欄時會整欄
+    空著，dense 讓後面較窄的卡回填。代價是視覺順序不再嚴格遞減（站長同意「順序有點
+    交錯 ok」）；**DOM 順序仍然是遞減的**，JSON-LD／螢幕閱讀器／SEO 不受影響
+  - 實測 23 張卡：1280px 三欄 填滿率 100%、空欄 0、高度不齊的列 0、grid 高 4188 → 3555；
+    1440px 四欄 填滿率 95%、grid 高 2847
+- **首刷禮大字是深橘 `#c2410c`**（2026-09-21 站長選的「燒橘」，原本 `#8a5c00` 深金褐）。
+  白底對比 4.9:1 過 AA。⚠️ 它跟「最後 N 天」徽章的紅 `#dc2626` 是相鄰色相，
+  同一張卡上兩個都會出現，別再把任何一邊往對方推
 - **寬螢幕（≥1400px）一列 4 張卡**（2026-09-21 站長）：容器 `max-width` 放寬到 1440px、
   `.promo-grid` 改 4 欄、品牌欄縮到 208px。⚠️ 這個 media block 必須排在
   `@media (min-width: 1025px)` 那段**之後**——品牌欄寬度等規則同分，後定義的才會贏。

@@ -825,6 +825,11 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
+  /* 空白遞補（站長 2026-09-21 同意）：多檔卡跨 2 欄，塞不進列尾剩下的 1 欄時會整欄
+     空著。dense 會讓後面較窄的卡回填那個洞——代價是視覺順序不再嚴格遞減
+     （DOM 順序仍然是，JSON-LD／螢幕閱讀器／SEO 不受影響）。
+     實測 23 張卡在 1440px 三欄時：空欄 3 → 0、grid 高度 4188 → 3861。 */
+  grid-auto-flow: dense;
 }
 
 .promo-card {
@@ -2169,15 +2174,29 @@ a {
    是待清理的死碼——留著不影響畫面，但下次動這支 CSS 時應該一併刪掉。
    ========================================================================== */
 
-/* 整組的容器：不再是白卡，白色表面移到 .promo-card-main */
+/* 整組的容器：不再是白卡，白色表面移到 .promo-card-main。
+   2026-09-21 站長：同一列的卡片要等高（行高以最高的為準），所以不再 align-self:start
+   ——改成直向 flex，白卡（.promo-card-main）吃掉剩下的高度，灰底不再從卡片下方露出來。
+   混合列（多檔卡＋單檔卡）時多檔卡通常就是最高的那張，實務上等於「只調整單檔卡」。 */
 .promo-card {
   background: transparent;
   border: 0;
   border-radius: 0;
   box-shadow: none;
   overflow: visible;
-  display: block;
-  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+/* 單檔卡：白卡撐到列高，按鈕列釘在底部——同一列的「立即申辦」會對齊成一條線 */
+.promo-card[data-act-count="1"] .promo-card-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.promo-card[data-act-count="1"] .promo-card-actions {
+  margin-top: auto;
+  padding-top: 13px;
 }
 .promo-card:hover { box-shadow: none; }
 
@@ -2354,12 +2373,15 @@ a {
   font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
-/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級跟著降下來才排得下 */
+/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級跟著降下來才排得下。
+   顏色：2026-09-21 站長選了「燒橘」#c2410c（原本是 #8a5c00 深金褐，橘味太淡）。
+   白底對比 4.9:1，過 WCAG AA。⚠️ 它跟「最後 N 天」徽章的紅（#dc2626）是相鄰色相，
+   同一張卡上兩個都出現時別再把任何一邊往對方推。 */
 .promo-act-reward.is-gift {
   font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0;
-  color: #8a5c00;
+  color: #c2410c;
 }
 .promo-act-reward small {
   display: block;
@@ -2871,7 +2893,9 @@ a {
       "rail main"
       "rail side"
       "feat feat";
-    align-content: start;
+    /* side（附屬列）吸收列高多出來的部分，主活動與卡片特色維持內容高度。
+       原本是 align-content: start，會把多出來的高度留在整組下方變成白色空帶。 */
+    grid-template-rows: auto 1fr auto;
   }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-rail { grid-area: rail; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main { grid-area: main; }
