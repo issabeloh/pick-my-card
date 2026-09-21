@@ -2245,18 +2245,30 @@ function pmcRailCount_(acts) {
     '</b><span class="promo-rail-caveat">（需分別達成）</span>';
 }
 
-// 第 2 檔起的「附屬列」（做法 A，站長 2026-09-21 定案）：一行一檔的清單列，
-// 三欄＝金額｜標題｜右側 meta＋收合箭頭，獎品圖夾在金額與標題之間。
+// 第 2 檔起的「附屬列」（做法 A → 2026-09-21 晚上改成「方案 B：值獨佔一行」）：
+// 一列兩排的清單列，右側掛獎品圖與展開箭頭。
 //
-//   一般活動：NT$500 │ 活動一句話 │ 回饋加碼・10%・上限消費 NT$5,000 ▾
-//   首刷禮　：[首刷禮] │ 獎品全名 │ 達成條件 ▾      ← 首刷禮沒有現金價值
+//   ┌ 上排：[類型 chip] 這一檔的「值」            ┐ [獎品圖] 詳情 ▾
+//   └ 下排：活動摘要（灰色小字）                  ┘
+//
+// **值＝這一檔能拿到什麼**，三種類型共用同一個起點（這就是「對齊」的來源）：
+//   首刷禮   → 獎品全名（沒有現金價值）
+//   回饋加碼 → 回饋率（「10%」）
+//   定額回饋 → 金額（「NT$500」）
+// ⚠️ 為什麼不能用「欄」來對齊：桌機一條附屬列的內容寬只有 426px，而現行最長的獎品名
+//    43 個字、17px 排一行要 731px——比整列還寬。所以對齊只能靠「值自己佔一排」，
+//    不能靠把欄位撐寬（站長 2026-09-21 在三案 mockup 中選定方案 B）。
+//
+// 類型 chip 用 .promo-sub-type，**顏色 token 與主活動的 .promo-type-badge 共用**
+// （2026-09-21 就是因為附屬列自己硬寫顏色，同一張卡上「首刷禮」出現粉綠兩色）。
+// 形狀不共用：主活動那顆是「從卡框長出來的 label」（只有右下圓角），放進列裡要用一般 pill。
 //
 // class 刻意沿用 `promo-act-row`：promos.js 的 setupActToggle 靠它做展開收合，
 // 這樣附屬列不必另外寫一套互動（樣式用 `.promo-act-row.promo-sub-row` 雙 class 覆蓋，
 // 單 class 的 `.promo-sub-row` 會輸給 `.promo-act-row` 的 padding:0）。
 //
 // anyImg：這一組裡有沒有任何一檔有獎品圖。有的話，沒圖的那幾列也要補一個等寬空位，
-// 否則標題欄會一列一個起點、看起來像沒對齊。
+// 否則右側的「詳情」會一列一個位置、看起來像沒對齊。
 function pmcRenderPromoSubRow_(p, actId, anyImg) {
   const promo = p.promo;
   const detailId = actId + '-detail';
@@ -2268,15 +2280,23 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   const giftName = String(promo.gift_content || '').trim();
   const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
 
-  // 金額欄：回饋加碼放回饋率、首刷禮放小標、其餘放金額——與主活動的大字同一套規則
+  // 上排左側的類型 chip：跟主活動渲染同一組 p.types（少數活動有兩個類型，都輸出）
+  // 包一層 .promo-sub-types：那是一個**固定寬度的槽**，讓右邊的「值」在各列對到同一條線。
+  // 少數活動有兩個類型（現行 61 檔中 5 檔），那幾列的槽會被撐開、值跟著右移——
+  // 用 15/16 的對齊換「不丟掉任何一個類型」，這是刻意的取捨。
+  const typeHtml = '<span class="promo-sub-types">' + p.types.map(function (t) {
+    return '<span class="promo-sub-type promo-sub-type--' + pmcPromoTypeBucket_(t) + '">' +
+      pmcEscapeHtml_(t) + '</span>';
+  }).join('') + '</span>';
+
+  // 上排右側的「值」
   const amt = isBonus ? pmcEscapeHtml_(pmcRateDisplay_(promo))
-    : isGift ? '<span class="promo-sub-tag">首刷禮</span>'
+    : isGift ? pmcEscapeHtml_(giftName || '首刷禮')
     : pmcEscapeHtml_(pmcMoney_(value));
-  const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
-  // meta＝這一檔的補充說明，首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
-  // 2026-09-21 晚上起它**不再出現在收合那一行**（兩個寬度都是），只出現在展開後的詳情，
-  // 所以「上限消費」不必再為了讓寬度而縮成「上限」。
-  const meta = isGift ? summary : String(pmcRewardSub_(promo));
+
+  // 詳情最上方的補充說明（收合時看不到）。首刷禮不需要——它的摘要就在下排，
+  // 再放一次會變成同一句話出現兩遍。
+  const lead = isGift ? '' : String(pmcRewardSub_(promo));
 
   let thumb = '';
   if (giftImgUrl) {
@@ -2287,24 +2307,24 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     thumb = '<span class="promo-sub-thumb is-empty" aria-hidden="true"></span>';
   }
 
-  // is-gift 掛在整列上，CSS 靠它同時處理「金額欄收成內容寬」「禮物名稱用橘色」
-  // 「手機不截斷」三件事——刻意輸出成 class 而不是靠 :has()，對舊瀏覽器是確定的行為。
+  // is-gift 掛在整列上，CSS 靠它處理「獎品名不是數字，字重輕一階且可換行」。
+  // 刻意輸出成 class 而不是靠 :has()，對舊瀏覽器是確定的行為。
   return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
       '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
-    '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
-    '    <span class="promo-sub-title">' + title + '</span>\n' +
-    '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
+    '    <span class="promo-sub-head">' + typeHtml +
+      '<span class="promo-sub-amt">' + amt + '</span></span>\n' +
+    '    <span class="promo-sub-title">' + pmcEscapeHtml_(summary) + '</span>\n' +
+    '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' + thumb +
       '<span class="promo-sub-more">詳情</span>' +
       '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '  </button>\n' +
-    // meta 文字只輸出一份，位置在展開後的詳情最上方。定額回饋走 <dl> 的第一列
-    // （「回饋類型：OPENPOINT」），其餘走 <dl> 之前的一段話。
-    // 刻意不在 promos.js 搬節點——那會讓「收合時長什麼樣」變成要跑過 JS 才知道的事。
+    // 定額回饋的補充是「OPENPOINT」「刷卡金」這種單一名詞，單獨一段看不懂在講什麼，
+    // 走 <dl> 的第一列並掛上「回饋類型」標題；回饋加碼的是完整句子，走 <dl> 之前的段落。
     '  ' + pmcRenderPromoDetail_(p, detailId,
-      (meta && !isVoucher) ? '<p class="promo-sub-summary">' + pmcEscapeHtml_(meta) + '</p>' : '',
-      (meta && isVoucher) ? '<div class="promo-meta-row"><dt>回饋類型</dt><dd>' +
-        pmcEscapeHtml_(meta) + '</dd></div>' : '') + '\n' +
+      (lead && !isVoucher) ? '<p class="promo-sub-summary">' + pmcEscapeHtml_(lead) + '</p>' : '',
+      (lead && isVoucher) ? '<div class="promo-meta-row"><dt>回饋類型</dt><dd>' +
+        pmcEscapeHtml_(lead) + '</dd></div>' : '') + '\n' +
     '</div>';
 }
 
