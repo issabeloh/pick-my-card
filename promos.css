@@ -2027,14 +2027,7 @@ a {
       「NT$500 靠到格子最邊緣」）。這是這支 CSS 的第二類 specificity 陷阱，
       和 `[hidden]` 被 author display 蓋掉那組並列。
    -------------------------------------------------------------------------- */
-.promo-stack-label {
-  margin: 0;
-  padding: 11px 16px 7px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #6b86bd;
-}
+.promo-card-stack { padding-top: 6px; }
 .promo-card-stack .promo-act { position: relative; }
 .promo-act-row.promo-sub-row {
   display: flex;

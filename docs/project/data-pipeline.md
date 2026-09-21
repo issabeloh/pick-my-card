@@ -257,11 +257,17 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   Booking.com「一間飯店、多種房型」與 MoneySuperMarket 商品列）。
   `pmcRenderCardGroup_` 依 `acts.length` 走兩條路：
   - `=== 1`：維持原本直式（卡名橫幅＋主活動＋按鈕列）
-  - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最高可拿 …」／立即申辦／
+  - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最多可拿 …（需分別達成）」／立即申辦／
     卡片特色）＋ `.promo-card-main`（最高那一檔的完整卡）＋ `.promo-card-stack`
     （第 2 檔起的附屬列）。桌機 `grid-template-areas` 是
     `"rail main" / "rail side" / "feat feat"`，品牌欄跨兩列；手機品牌欄橫在最上面。
     白卡表面移到 `<article>` 本身，main／stack 只是它的分區
+- **左欄那句「N 檔新戶活動・最多可拿 NT$X（需分別達成）」**（`pmcRailCount_`）：
+  金額是同卡多檔**相加**出來的，所以「（需分別達成）」不能省——每一檔的達成條件都不同，
+  少了這句會被讀成「刷一次就拿得到」。首刷禮沒有現金價值，改成「＋N 項首刷禮」分開講。
+  2026-09-21 從「最高可拿」改成現在的寫法
+- **附屬列上方沒有標題**：曾經有一行「這張卡的其他 N 檔活動」，2026-09-21 站長認為
+  多餘而移除——附屬列的形狀已經說明歸屬，檔數在左欄也講過一次了
 - **第 2 檔起是「附屬列」不是卡片**（取代原本的卡疊卡）：一行一檔的三欄清單列
   ——金額｜〔獎品圖 34px〕｜標題｜右側 meta＋收合箭頭。參考 Amazon
   「Other sellers on Amazon」把次要選項降級成緊湊清單。列很矮，多檔卡的高度掉到

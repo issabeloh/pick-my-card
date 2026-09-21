@@ -2315,10 +2315,10 @@ function pmcRenderCardGroup_(group) {
     '    </div>\n' +
     '  </div>\n' +
     '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
-    '  <div class="promo-card-stack">\n' +
-    '    <h3 class="promo-stack-label">' +
-      pmcEscapeHtml_('這張卡的其他 ' + (acts.length - 1) + ' 檔活動') + '</h3>\n' +
-    stackHtml + '\n  </div>\n' +
+    // 這一區刻意沒有標題：附屬列的形狀（灰底、縮排的一行一檔）已經說明它是
+    // 「同一張卡的其他活動」，再加一行「這張卡的其他 N 檔活動」是多餘的
+    // （站長 2026-09-21）。檔數在左欄的「N 檔新戶活動」已經講過一次。
+    '  <div class="promo-card-stack">\n' + stackHtml + '\n  </div>\n' +
     featBox + '</article>';
 }
 
