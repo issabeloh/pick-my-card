@@ -2437,7 +2437,10 @@ function pmcBuildFilterChips_(total, bucketCounts) {
   PMC_CHIP_DEFS.forEach(function (c) {
     const n = bucketCounts[c.key] || 0;
     if (n > 0) {
-      chips.push('<button type="button" class="promo-chip" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + ' (' + n + ')</button>');
+      // modifier class 讓篩選 chip 帶上該類型的顏色，跟卡片上的類型徽章對得起來
+      // （站長 2026-09-21：「讓用戶更容易連結」）。key 與徽章的 bucket 同名。
+      chips.push('<button type="button" class="promo-chip promo-chip--' + c.key +
+        '" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + ' (' + n + ')</button>');
     }
   });
   // 「即將結束」（2026-09-20 站長需求）：篩出有「最後 N 天／今天截止！」徽章的卡片。

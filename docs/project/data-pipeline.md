@@ -335,8 +335,15 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     `--pmc-candy-brown-*`（站長指定；棕與黃是鄰近色，分辨靠的是**底色飽和度**——
     黃底 `#fff3c4` 是鮮明糖果黃、棕底 `#ece0d6` 是去飽和米灰，只改文字色會分不出來），
     未知類型 fallback＝灰 `--pmc-candy-slate-*`。四組的文字／底色對比都在 5.2:1 以上。
-    ⚠️ `--pmc-candy-pink-*` 與 `--pmc-candy-mint-*` 現在沒有類型徽章在用，**但別刪**：
-    pink 給 `.promo-feat-hype--top`、mint 給側欄工具卡與 `.promo-feat-hype--easy`。
+    **篩選 chip 也用同一組色**（`.promo-chip--gift/--bonus/--voucher`，站長 2026-09-21：
+    「讓用戶更容易連結」）：收起＝淺框深字、選取＝深色實心底白字，四種選取態的白字
+    對比 5.8～8.5。⚠️ 那幾條 CSS **必須排在 `.promo-chip.is-active` 之後**——
+    兩者 specificity 打平，靠後定義才蓋得過主站藍。
+    ⚠️ `--pmc-candy-pink-*` 與 `--pmc-candy-mint-*` 沒有類型徽章在用，**但別刪**：
+    pink 給 `.promo-feat-hype`（四種誇飾詞 2026-09-21 起統一用它，原本一種一色——
+    那四個詞跟「類型」是兩套不相干的分類，共用色盤只會讓人以為有對應關係，而且
+    「無腦刷」的薄荷就貼著同一列的綠色回饋率）、mint 給側欄工具卡
+    （`.promos-sidebar-tool-card`，**與類型完全無關**，純粹是側欄那張卡自己的底色）。
     ⚠️ token 一律用**顏色**命名不是角色命名——原本的 `--pmc-candy-default-*` 已改名為
     `--pmc-candy-purple-*`，因為「哪個類型用哪個顏色」本來就會變
   - **獎品圖在右側、「詳情」的左邊，42px＝上下兩排文字的高度**（站長 2026-09-21 指定）。

@@ -40,8 +40,9 @@
   /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風）。
      ⚠️ 命名一律用**顏色**不是角色——2026-09-21 把原本的 `default` 改名成 `purple`，
      因為它其實是一個顏色、而「哪個類型用哪個顏色」會變（見下方類型徽章的註解）。
-     pink 與 mint 現在沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype--top，
-     mint 給側欄工具卡與 .promo-feat-hype--easy。 */
+     pink 與 mint 沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype（四種誇飾詞
+     統一用它），mint 給側欄工具卡（`.promos-sidebar-tool-card`，與類型無關，
+     純粹是側欄那張卡自己的底色）。 */
   --pmc-candy-pink-bg: #ffe3ec;
   --pmc-candy-pink-text: #b03a63;
   --pmc-candy-yellow-bg: #fff3c4;
@@ -799,6 +800,38 @@ a {
   color: white;
 }
 
+
+/* 三個「類型」chip 用該類型徽章的顏色，讓篩選鈕與卡片上的徽章對得起來
+   （站長 2026-09-21：「讓用戶更容易連結」）。收起時＝淺色框＋深色字，
+   選取時＝深色實心底＋白字，跟「即將結束」同一套邏輯。
+   ⚠️ 這幾條**必須排在 `.promo-chip.is-active` 之後**：
+      `.promo-chip--gift.is-active` 與 `.promo-chip.is-active` 同為兩個 class、
+      specificity 打平，靠「後定義的贏」才蓋得過那顆主站藍。這是這支 CSS 的
+      第二類 specificity 陷阱，搬動這一段前先看清楚。
+   ⚠️ 顏色一律引用 token，不要硬寫——徽章改色時這裡要跟著動，硬寫就會分岔
+      （2026-09-21 附屬列的「首刷禮」出現粉、綠兩色就是這樣來的）。
+   邊框是底色與文字色之間的中間調，沒有 token（只有這裡用得到）。 */
+.promo-chip--gift { border-color: #cbbdf2; color: var(--pmc-candy-purple-text); }
+.promo-chip--gift:hover { background: var(--pmc-candy-purple-bg); border-color: var(--pmc-candy-purple-text); }
+.promo-chip--gift.is-active {
+  background: var(--pmc-candy-purple-text);
+  border-color: var(--pmc-candy-purple-text);
+  color: #fff;
+}
+.promo-chip--bonus { border-color: #e8c86a; color: var(--pmc-candy-yellow-text); }
+.promo-chip--bonus:hover { background: var(--pmc-candy-yellow-bg); border-color: var(--pmc-candy-yellow-text); }
+.promo-chip--bonus.is-active {
+  background: var(--pmc-candy-yellow-text);
+  border-color: var(--pmc-candy-yellow-text);
+  color: #fff;
+}
+.promo-chip--voucher { border-color: #d2bba6; color: var(--pmc-candy-brown-text); }
+.promo-chip--voucher:hover { background: var(--pmc-candy-brown-bg); border-color: var(--pmc-candy-brown-text); }
+.promo-chip--voucher.is-active {
+  background: var(--pmc-candy-brown-text);
+  border-color: var(--pmc-candy-brown-text);
+  color: #fff;
+}
 
 /* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
 .promo-chip--ending {
@@ -2327,11 +2360,13 @@ a {
 }
 /* Highlights 的「全場最高！」等字眼：純彩色文字、無背景無 padding——
    做成 chip 會撐開行寬把版面擠爆（站長 2026-09-17 實測回饋） */
-.promo-feat-hype { font-weight: 700; }
-.promo-feat-hype--top { color: var(--pmc-candy-pink-text); }
-.promo-feat-hype--god { color: var(--pmc-candy-purple-text); }
-.promo-feat-hype--excl { color: var(--pmc-candy-yellow-text); }
-.promo-feat-hype--easy { color: var(--pmc-candy-mint-text); }
+/* 四種誇飾詞（全場最高／壓倒性神卡／獨家回饋／無腦刷）**一律桃紅**
+   （站長 2026-09-21）。原本一種一色，但那四個顏色跟「類型」是兩套不相干的分類，
+   用同一組色盤只會讓人以為它們有對應關係；而且「無腦刷」的薄荷就貼著同一列的
+   綠色回饋率，兩個綠糊在一起。
+   `--top/--god/--excl/--easy` 的 class 仍由 tools/build-promos-features.js 輸出、
+   這裡不再分色——留著是為了日後要分辨時不必改生成器，也方便從 DOM 看出是哪一種。 */
+.promo-feat-hype { font-weight: 700; color: var(--pmc-candy-pink-text); }
 
 @media (max-width: 480px) {
   .promo-card-main { padding: 13px 14px 14px; }
