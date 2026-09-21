@@ -2134,10 +2134,77 @@ a {
   border-radius: 0;
   background: #f8fafc;
 }
+/* 首刷禮那一列的禮物名稱用與主活動大字相同的橘（.promo-act-reward.is-gift #c2410c）。
+   ⚠️ 顏色刻意兩個寬度都套：同一個東西在手機是橘色、桌機是黑色，那是 bug 不是設計。
+   版面相關的調整（不截斷、收掉空位）才只在手機（站長 2026-09-21）。 */
+.promo-act-row.promo-sub-row.is-gift .promo-sub-title { color: #c2410c; font-weight: 700; }
+
 @media (max-width: 560px) {
   .promo-act-row.promo-sub-row { flex-wrap: wrap; }
   .promo-sub-title { flex: 1 1 140px; }
-  .promo-sub-meta { width: 100%; justify-content: flex-end; }
+  /* meta 掉到自己那一行、靠左接在標題下方。
+     ⚠️ max-width: none 不能省——base 的 170px 會壓過 width: 100%，於是 meta 只佔
+     170px 縮在左邊，宣告的 justify-content: flex-end 看起來像沒生效
+     （2026-09-21 查出來；順帶讓它在自己那一行能顯示更多字）。 */
+  .promo-sub-meta {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
+
+/* ==========================================================================
+   手機專屬調整（站長 2026-09-21）
+   ⚠️ 整段包在 max-width: 1024px 裡——這支 CSS 是 mobile-first，base 規則會一路
+   套到桌機，只有寫進 max-width 才保證不影響桌機。日後再收到「只改手機」的需求，
+   一律加在這一段裡面，不要去動 base。
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* 1. 單檔卡的按鈕移到卡片圖與名稱的正下方，跟多檔卡一致。
+        不動標記：按鈕本來就是 .promo-card-main 的最後一個子元素，而 main 對單檔卡
+        已經是直向 flex，order: -1 就把它提到活動內容之前。桌機維持釘在卡片底部
+        （那是同列 CTA 對齊成一條線的來源，見 margin-top: auto）。 */
+  .promo-card[data-act-count="1"] .promo-card-actions {
+    order: -1;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 14px;
+  }
+
+  /* 2. 附屬列：沒有獎品圖的列不留空位、金額欄收成內容寬。
+        桌機留空位是為了讓標題欄對齊；手機寬度本來就吃緊，站長選擇把空間讓給文字。 */
+  .promo-sub-thumb.is-empty { display: none; }
+  .promo-act-row.promo-sub-row { gap: 8px; }
+  /* 「首刷禮」小標只有約 60px，卻佔著 86px 的金額欄，害獎品圖離它很遠 */
+  .promo-act-row.promo-sub-row.is-gift .promo-sub-amt { width: auto; }
+
+  /* 3. 禮物名稱未展開就完整顯示（不截斷）——它是這一列的主詞，截掉就看不懂送什麼 */
+  .promo-act-row.promo-sub-row.is-gift .promo-sub-title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* 4. 摘要文字：未展開多顯示一行，展開後整段攤開。兩處都要——
+        主活動的 .promo-act-summary，以及附屬列裡擔任同樣角色的 .promo-sub-title
+        （桌機那邊是「一行＋省略號」，手機寬度夠讓它排兩行）。
+        ⚠️ 現行資料中最長的主活動摘要在 390px 只有 2 行、其實沒被截到；真正會被截的
+        是附屬列標題。clamp: 3 留著當日後文案變長時的餘裕。 */
+  .promo-act-summary { -webkit-line-clamp: 3; }
+  .promo-act-row.promo-sub-row:not(.is-gift) .promo-sub-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 展開後兩者都整段攤開（這兩條要排在上面之後，同分時後定義的贏） */
+  .promo-act-row[aria-expanded="true"] .promo-act-summary,
+  .promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-title {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+  }
 }
 
 /* ---- 卡片特色：抽屜（刻意不是卡片：淺藍底、有框、無卡片陰影）---- */

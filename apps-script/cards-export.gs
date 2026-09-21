@@ -1799,8 +1799,9 @@ function generatePromosPageHtml(exportData) {
   // ---- 依卡片分組（2026-09-17 改版）----
   // 舊版一檔活動一張卡片，同一張卡有 4 檔就出現 4 次（iLEO、遠東快樂卡、中信 uniopen
   // 都是）。改成一張卡一組：主活動在白卡裡，其餘以「卡疊卡」堆在下面。
-  // 組內依「最高可拿」倒序；組間也依各自的最大單檔金額倒序——**不相加**，
-  // 同一張卡的多檔活動各有不同達成條件，加總會講出一個拿不到的數字。
+  // 組內與組間都依 pmcPromoSortKey_（首刷禮 → 回饋率大到小 → 回饋金額大到小）。
+  // ⚠️ 排序用的一律是**單檔**的數字，不相加——同一張卡的多檔活動各有不同達成條件，
+  // 加總會講出一個拿不到的數字（左欄的「最多可拿」是另一回事，那是揭露上限不是排名）。
   const groupMap = {};
   const groupOrder = [];
   prepared.forEach(function (p) {
@@ -1812,18 +1813,10 @@ function generatePromosPageHtml(exportData) {
     groupMap[id].items.push(p);
   });
   groupOrder.forEach(function (g) {
-    g.items.sort(function (a, b) {
-      const av = pmcPromoValue_(a.promo), bv = pmcPromoValue_(b.promo);
-      // 沒有現金定價的獎品排在有金額的後面；其餘依金額倒序
-      if (av === null && bv === null) return 0;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      return bv - av;
-    });
-    g.bestValue = g.items.reduce(function (m, p) {
-      const v = pmcPromoValue_(p.promo);
-      return (v !== null && v > m) ? v : m;
-    }, 0);
+    // 組內：首刷禮 → 回饋率大到小 → 回饋金額大到小（見 pmcPromoSortKey_）
+    g.items.sort(function (a, b) { return pmcCompareSortKey_(a.promo, b.promo); });
+    // 組間排序用的鍵＝這一組「最前面那一檔」的鍵（items 已排好，取第一筆即可）
+    g.sortKey = pmcPromoSortKey_(g.items[0].promo);
     const bs = [];
     g.items.forEach(function (p) {
       p.buckets.forEach(function (b) { if (bs.indexOf(b) === -1) bs.push(b); });
@@ -1831,8 +1824,9 @@ function generatePromosPageHtml(exportData) {
     g.buckets = bs.length ? bs : ['default'];
   });
   const groups = groupOrder.slice().sort(function (a, b) {
-    if (a.bestValue !== b.bestValue) return b.bestValue - a.bestValue;
-    return a.items[0].orderIndex - b.items[0].orderIndex;   // 同金額用原本的即將截止序當穩定次鍵
+    if (a.sortKey.tier !== b.sortKey.tier) return a.sortKey.tier - b.sortKey.tier;
+    if (a.sortKey.primary !== b.sortKey.primary) return b.sortKey.primary - a.sortKey.primary;
+    return a.items[0].orderIndex - b.items[0].orderIndex;   // 同分用原本的即將截止序當穩定次鍵
   });
   groups.forEach(function (g, i) {
     g.orderIndex = i;
@@ -2067,6 +2061,39 @@ function pmcIsBonus_(promo) {
 // 回饋加碼的大字放**回饋率**，金額退到小字（站長 2026-09-21）——「10%」一眼就看得出
 // 這檔活動的性質，「NT$2,000」則要配上「上限消費多少」才有意義。
 // 定額回饋（金額）與首刷禮（贈品全名）維持原樣，它們本來就沒有回饋率。
+// bonus_rate 的數值版（pmcRateDisplay_ 回傳的是給人看的字串，不能拿來排序）。
+// Sheets 可能存 0.1 也可能存 10，一律正規化成百分比數字。
+function pmcRateNumber_(promo) {
+  const r = promo.bonus_rate;
+  if (r === undefined || r === null || r === '') return null;
+  const n = (typeof r === 'number') ? r : parseFloat(r);
+  if (isNaN(n)) return null;
+  return n <= 1 ? n * 100 : n;
+}
+
+// 排序鍵（站長 2026-09-21 定序）：**首刷禮優先 → 回饋率大到小 → 回饋金額大到小**。
+// 大字改顯示回饋率之後，舊的「一律依金額」會讓清單看起來沒有規律（2% 排在 10% 前面），
+// 所以改成先分三層、層內再各自比自己的主數字。
+//   tier 0 首刷禮：沒有現金定價，排最前面
+//   tier 1 回饋加碼：比 bonus_rate
+//   tier 2 定額回饋：比 voucher_amount
+// 回傳 { tier, primary }；比較規則是 tier 升冪、primary 降冪。
+function pmcPromoSortKey_(promo) {
+  if (pmcIsBonus_(promo)) {
+    const r = pmcRateNumber_(promo);
+    return { tier: 1, primary: r === null ? 0 : r };
+  }
+  const v = pmcPromoValue_(promo);
+  if (v === null) return { tier: 0, primary: 0 };
+  return { tier: 2, primary: v };
+}
+
+function pmcCompareSortKey_(a, b) {
+  const ka = pmcPromoSortKey_(a), kb = pmcPromoSortKey_(b);
+  if (ka.tier !== kb.tier) return ka.tier - kb.tier;
+  return kb.primary - ka.primary;
+}
+
 function pmcRewardBig_(promo) {
   if (pmcIsBonus_(promo)) {
     const rate = pmcRateDisplay_(promo);
@@ -2254,9 +2281,11 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     thumb = '<span class="promo-sub-thumb is-empty" aria-hidden="true"></span>';
   }
 
+  // is-gift 掛在整列上，CSS 靠它同時處理「金額欄收成內容寬」「禮物名稱用橘色」
+  // 「手機不截斷」三件事——刻意輸出成 class 而不是靠 :has()，對舊瀏覽器是確定的行為。
   return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
-    '  <button type="button" class="promo-act-row promo-sub-row" aria-expanded="false" aria-controls="' +
-      pmcEscapeHtml_(detailId) + '">\n' +
+    '  <button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
+      '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
     '    <span class="promo-sub-title">' + title + '</span>\n' +
     '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
