@@ -37,15 +37,24 @@
   --pmc-chip-text: #0369a1;
   --pmc-chip-hover-bg: #f0f9ff;
 
-  /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風） */
+  /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風）。
+     ⚠️ 命名一律用**顏色**不是角色——2026-09-21 把原本的 `default` 改名成 `purple`，
+     因為它其實是一個顏色、而「哪個類型用哪個顏色」會變（見下方類型徽章的註解）。
+     pink 與 mint 沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype（四種誇飾詞
+     統一用它），mint 給側欄工具卡（`.promos-sidebar-tool-card`，與類型無關，
+     純粹是側欄那張卡自己的底色）。 */
   --pmc-candy-pink-bg: #ffe3ec;
   --pmc-candy-pink-text: #b03a63;
   --pmc-candy-yellow-bg: #fff3c4;
   --pmc-candy-yellow-text: #8a5c00;
   --pmc-candy-mint-bg: #ddfbef;
   --pmc-candy-mint-text: #0b7a56;
-  --pmc-candy-default-bg: #ede6ff;
-  --pmc-candy-default-text: #5b3fbf;
+  --pmc-candy-purple-bg: #ede6ff;
+  --pmc-candy-purple-text: #5b3fbf;
+  --pmc-candy-brown-bg: #ece0d6;
+  --pmc-candy-brown-text: #6b4423;
+  --pmc-candy-slate-bg: #eef1f6;
+  --pmc-candy-slate-text: #475569;
 
   --pmc-radius-lg: 16px;
   --pmc-radius-md: 12px;
@@ -792,6 +801,38 @@ a {
 }
 
 
+/* 三個「類型」chip 用該類型徽章的顏色，讓篩選鈕與卡片上的徽章對得起來
+   （站長 2026-09-21：「讓用戶更容易連結」）。收起時＝淺色框＋深色字，
+   選取時＝深色實心底＋白字，跟「即將結束」同一套邏輯。
+   ⚠️ 這幾條**必須排在 `.promo-chip.is-active` 之後**：
+      `.promo-chip--gift.is-active` 與 `.promo-chip.is-active` 同為兩個 class、
+      specificity 打平，靠「後定義的贏」才蓋得過那顆主站藍。這是這支 CSS 的
+      第二類 specificity 陷阱，搬動這一段前先看清楚。
+   ⚠️ 顏色一律引用 token，不要硬寫——徽章改色時這裡要跟著動，硬寫就會分岔
+      （2026-09-21 附屬列的「首刷禮」出現粉、綠兩色就是這樣來的）。
+   邊框是底色與文字色之間的中間調，沒有 token（只有這裡用得到）。 */
+.promo-chip--gift { border-color: #cbbdf2; color: var(--pmc-candy-purple-text); }
+.promo-chip--gift:hover { background: var(--pmc-candy-purple-bg); border-color: var(--pmc-candy-purple-text); }
+.promo-chip--gift.is-active {
+  background: var(--pmc-candy-purple-text);
+  border-color: var(--pmc-candy-purple-text);
+  color: #fff;
+}
+.promo-chip--bonus { border-color: #e8c86a; color: var(--pmc-candy-yellow-text); }
+.promo-chip--bonus:hover { background: var(--pmc-candy-yellow-bg); border-color: var(--pmc-candy-yellow-text); }
+.promo-chip--bonus.is-active {
+  background: var(--pmc-candy-yellow-text);
+  border-color: var(--pmc-candy-yellow-text);
+  color: #fff;
+}
+.promo-chip--voucher { border-color: #d2bba6; color: var(--pmc-candy-brown-text); }
+.promo-chip--voucher:hover { background: var(--pmc-candy-brown-bg); border-color: var(--pmc-candy-brown-text); }
+.promo-chip--voucher.is-active {
+  background: var(--pmc-candy-brown-text);
+  border-color: var(--pmc-candy-brown-text);
+  color: #fff;
+}
+
 /* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
 .promo-chip--ending {
   border-color: #f3c0c0;
@@ -826,8 +867,9 @@ a {
   /* 外側三角切齊卡框、只留內側（右下）圓角＝「從邊框長出來的 label」。
      兩個徽章相鄰時（少數卡片）會連成一條分段色帶，這是預期的樣子。 */
   border-radius: 0 0 9px 0;
-  color: var(--pmc-candy-default-text);
-  background: var(--pmc-candy-default-bg);
+  /* 未知類型的 fallback＝中性灰（紫已經給首刷禮了）。現行資料 61 檔都有類型，走不到這裡 */
+  color: var(--pmc-candy-slate-text);
+  background: var(--pmc-candy-slate-bg);
   white-space: nowrap;
 }
 
@@ -838,9 +880,16 @@ a {
   margin-top: 16px;
 }
 
-.promo-type-badge--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
+/* 三種類型的配色（2026-09-21 晚上改；主活動與附屬列共用同一組 token，改這裡兩邊一起動）
+   ⚠️ 兩個顏色**不能**用在類型徽章上，選色前先讀這兩條：
+     - 紅／粉：會跟「最後 N 天」倒數徽章（#dc2626 紅字紅框）混淆
+     - 綠：會跟獎勵數值的文字色（--pmc-hero-green #10b981）撞在一起
+   所以 首刷禮＝紫、回饋加碼＝黃、定額回饋＝棕（站長 2026-09-21 指定棕色）。
+   ⚠️ 棕與黃是鄰近色，分辨靠的是**底色的飽和度**：黃底 #fff3c4 是鮮明的糖果黃，
+      棕底 #ece0d6 是去飽和的米灰，兩者並排一眼就分得開；只改文字色會分不出來。 */
+.promo-type-badge--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
 .promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
+.promo-type-badge--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
 
 
 /* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
@@ -1731,16 +1780,9 @@ a {
   flex-direction: column;
   align-self: stretch;
 }
-/* 單檔卡：白卡撐到列高，按鈕列釘在底部——同一列的「立即申辦」會對齊成一條線 */
-.promo-card[data-act-count="1"] .promo-card-main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-.promo-card[data-act-count="1"] .promo-card-actions {
-  margin-top: auto;
-  padding-top: 13px;
-}
+/* 單檔卡：白卡撐到列高（同一列等高）。按鈕 2026-09-21 起住在 rail 裡，
+   所以這裡不再需要「釘在底部」那組規則。 */
+.promo-card[data-act-count="1"] .promo-card-main { flex: 1; }
 
 /* 卡名一律住在 .promo-card-rail 裡（2026-09-21 起單檔卡也有 rail），所以它只管字：
    白卡表面由 <article> 負責、內距由 rail 負責。單檔卡與多檔卡、手機與桌機，
@@ -1804,19 +1846,21 @@ a {
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
 
-/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右，活動內容接在底下整列展開
-   （站長 2026-09-21 從三案中選定方案 3）。
+/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右（站長 2026-09-21 選定
+   三案中的方案 3），底下接兩顆按鈕，再往下才是分割線與活動內容。
    刻意跟多檔卡在**手機上**的身分區塊長得一模一樣——零件、尺寸、間距全部共用，
    差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄。
    ⚠️ 不放「1 檔新戶活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
-   ⚠️ 這條不包在 media query 裡——單檔卡在所有寬度都是這個橫列。 */
-.promo-card-rail--solo {
+   ⚠️ 這幾條不包在 media query 裡——單檔卡在所有寬度都是這個排法。 */
+.promo-card-rail--solo .promo-rail-id {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 .promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
 .promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+ /* ⚠️ 這裡刻意不宣告 .promo-card-actions 的 margin-top——base 的 13px 就是站長要的
+   間距（2026-09-21）。桌機另有 min-width:1025px 的 12px，那是同列 CTA 對齊用的。 */
 /* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
    免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
 .promo-rail-caveat { display: block; font-size: 11px; }
@@ -1902,15 +1946,18 @@ a {
   font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
-/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級跟著降下來才排得下。
-   顏色：2026-09-21 站長選了「燒橘」#c2410c（原本是 #8a5c00 深金褐，橘味太淡）。
-   白底對比 4.9:1，過 WCAG AA。⚠️ 它跟「最後 N 天」徽章的紅（#dc2626）是相鄰色相，
-   同一張卡上兩個都出現時別再把任何一邊往對方推。 */
+/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級比金額小一階才排得下。
+   **顏色**要跟附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-amt）一致：
+   同一張卡上一橘一綠就是壞掉的。**字級**則刻意分兩階——主活動 20px、附屬列 17px
+   （站長 2026-09-21 晚上指定），對齊「主活動大、附屬列小」的既有層級，也跟附屬列
+   金額欄 .promo-sub-amt 的 17px 同高。
+   ⚠️ 配色沿革：#8a5c00 深金褐 → #c2410c 燒橘（2026-09-21 早上）→ #10b981
+   （2026-09-21 晚上，站長指定 --pmc-hero-green，與獎勵數字同色）。 */
 .promo-act-reward.is-gift {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 20px;
+  line-height: 1.45;
   letter-spacing: 0;
-  color: #c2410c;
+  color: var(--pmc-hero-green);
 }
 .promo-act-reward small {
   display: block;
@@ -2018,43 +2065,107 @@ a {
    -------------------------------------------------------------------------- */
 .promo-card-stack { padding-top: 6px; }
 .promo-card-stack .promo-act { position: relative; }
+/* 附屬列的骨架＝**一列兩排**（方案 B，站長 2026-09-21 晚上在三案 mockup 中選定）：
+
+     ┌ 上排 val：[類型 chip] 這一檔的「值」        ┐  meta：[獎品圖] 詳情 ▾
+     └ 下排 sum：活動摘要（灰色小字）              ┘
+
+   為什麼是兩排而不是兩欄：桌機一條附屬列的內容寬只有 426px，而現行最長的獎品名
+   43 字、17px 排一行要 731px——比整列還寬。用欄位對齊就一定得截斷獎品名或把摘要欄
+   壓到 194px；讓值自己佔一排，寬度限制整個消失（實測三列整疊 206px、摘要欄 374px）。
+   meta 跨兩排、垂直置中，所以獎品圖與「詳情」永遠在同一個位置，不隨文字行數移動。 */
 .promo-act-row.promo-sub-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "val  meta"
+    "sum  meta";
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 2px;
   width: 100%;
-  padding: 9px 16px;
+  padding: 10px 16px;
   border-top: 1px solid #e6ecf5;
   cursor: pointer;
+  text-align: left;
 }
 .promo-act-row.promo-sub-row:hover { background: #f1f6ff; }
-.promo-sub-amt {
-  flex: none;
-  width: 86px;
-  font-size: 17px;
-  font-weight: 800;
-  /* 與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green #10b981）。
-     先前是 --pmc-green #059669，同一張卡上兩種綠並排，看起來像沒對齊的色票。 */
-  color: var(--pmc-hero-green);
-  line-height: 1.25;
+/* 上排：chip 與值對到**第一行的基線**。用 baseline 而不是 center——獎品名會換行，
+   置中會讓 chip 飄到第二行旁邊。 */
+.promo-sub-head {
+  grid-area: val;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
 }
-/* 首刷禮沒有現金價值：金額欄改放這個小標，標題欄才放獎品全名 */
-.promo-sub-tag {
-  display: inline-block;
+/* 類型 chip 的槽：固定最小寬度＝最寬的單一 chip（「定額回饋」四個字），讓右邊的「值」
+   在各列對到同一條線——這就是方案 B 的「對齊」真正靠的東西。
+   ⚠️ 兩個類型的那幾列（16 條裡 1 條）會把槽撐開、值跟著右移。這是刻意的：
+      用 15/16 的對齊換「不丟掉任何一個類型」。 */
+.promo-sub-types {
+  flex: none;
+  min-width: 62px;
+  display: flex;
+  gap: 6px;
+}
+/* 類型 chip：**顏色 token 與主活動的 .promo-type-badge 共用**——2026-09-21 就是因為
+   附屬列自己硬寫顏色，同一張卡上「首刷禮」出現粉、綠兩種顏色。形狀不共用：主活動那顆是
+   「從卡框長出來的 label」（只有右下圓角），放進列裡要用一般 pill。 */
+.promo-sub-type {
+  flex: none;
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.5;
   padding: 2px 8px;
   border-radius: 6px;
-  background: #d1fae5;
-  color: #065f46;
+  white-space: nowrap;
+  background: var(--pmc-candy-slate-bg);
+  color: var(--pmc-candy-slate-text);
 }
-/* 獎品圖：夾在金額欄與標題之間，只有 34px，不搶版面。點它放大看原圖
-   （promos.js 的 setupGiftLightbox 會 stopPropagation，不會連帶展開詳情）。
-   同一組只要有一列有圖，沒圖的列就補 .is-empty 等寬空位，標題欄才對得齊。 */
+.promo-sub-type--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
+.promo-sub-type--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
+.promo-sub-type--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+/* 「值」＝這一檔能拿到什麼。三種類型同一個起點，這就是對齊的來源。
+   與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green）。 */
+.promo-sub-amt {
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--pmc-hero-green);
+  line-height: 1.3;
+}
+/* 首刷禮的值是**一個名字**不是數字：字重輕一階、允許換行（不截斷——截掉就看不懂送什麼） */
+.promo-act-row.promo-sub-row.is-gift .promo-sub-amt {
+  font-weight: 700;
+  white-space: normal;
+}
+/* 下排：活動摘要。最長的一筆 79 個字，所以兩行封頂、其餘交給展開後的詳情。 */
+.promo-sub-title {
+  grid-area: sum;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--pmc-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* 展開後摘要整段攤開（收合時的兩行封頂只是為了讓列高一致） */
+.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-title {
+  display: block;
+  -webkit-line-clamp: none;
+  overflow: visible;
+}
+/* 獎品圖：掛在右側、「詳情」的左邊，高度＝上下兩排文字的高度（站長 2026-09-21 指定）。
+   點它放大看原圖（promos.js 的 setupGiftLightbox 會 stopPropagation，不會連帶展開詳情）。
+   同一組只要有一列有圖，沒圖的列就補 .is-empty 等寬空位，「詳情」才對得齊。 */
 .promo-sub-thumb {
   flex: none;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--pmc-border);
   border-radius: 6px;
   overflow: hidden;
@@ -2064,29 +2175,14 @@ a {
 .promo-sub-thumb--gift { cursor: zoom-in; }
 .promo-sub-thumb.is-empty { border-color: transparent; background: none; }
 .promo-sub-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.promo-sub-title {
-  flex: 1 1 0;
-  min-width: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--pmc-ink);
-  /* 一行就好，看不完點開有完整詳情（站長：被截斷也沒關係） */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* meta 要能被壓縮：首刷禮那幾列的 meta 是一整句達成條件，若 flex:none 它會把
-   標題欄擠到 0 寬（實測中信 uniopen 就是整列只剩徽章）。basis 190、可縮不可長。 */
-/* flex-basis 用 auto（＝內容寬）＋ max-width 封頂：固定 basis 會讓「即享券」這種
-   短 meta 也霸佔 190px，白白吃掉標題的空間（2026-09-21 實測 218→155）。 */
+/* meta 跨兩排、垂直置中：獎品圖與「詳情」的位置因此完全不受文字行數影響
+   ——展開收合都不動（2026-09-21 的「點開會跑位」就是為了根治這件事）。 */
 .promo-sub-meta {
-  flex: 0 1 auto;
-  max-width: 170px;
-  min-width: 0;
+  grid-area: meta;
+  align-self: center;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   font-size: 11px;
   color: var(--pmc-muted);
   white-space: nowrap;
@@ -2100,12 +2196,15 @@ a {
   padding: 0 6px;
   letter-spacing: 0;
 }
-/* meta 讓位給標題：正式頁的右半欄比設計稿窄（495px vs 686px），meta 吃滿會把
-   標題擠掉。標題是「這檔在做什麼」，優先權較高；兩邊都能省略號截斷。 */
-.promo-sub-metatext {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* 收合那行的右側固定是「詳情 ▾」（兩個寬度都是；主活動那顆維持全稱「活動詳情 ▾」，
+   附屬列的位置窄、縮成兩個字）。meta 文字（回饋加碼的「最多可拿…」、定額回饋的
+   「回饋類型」）只出現在展開後的詳情裡。 */
+.promo-sub-more { color: var(--pmc-blue-deep); font-weight: 700; }
+.promo-sub-summary {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pmc-ink);
 }
 /* 收合箭頭比內文的大一階（站長 2026-09-21：箭頭加大一些） */
 .promo-sub-meta .promo-chevron {
@@ -2115,18 +2214,13 @@ a {
   border-top-width: 7px;
   color: #94a3b8;
 }
-.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; align-items: flex-start; }
+/* 展開只換底色，**不換排版**。
+   ⚠️ 這裡曾經有一條 [aria-expanded="true"] { align-items: flex-start } 外加給金額欄／
+   meta／獎品圖的 margin-top: 1px，結果每一列點開的瞬間整排跳一次位（站長回報
+   「首刷禮 chip 和圖片點開會跑位」）。改成 grid 之後 meta 跨兩排置中，位置與文字
+   行數無關，這類補償規則一條都不需要——別再加回來。 */
+.promo-act-row.promo-sub-row[aria-expanded="true"] { background: #f1f6ff; }
 .promo-act-row.promo-sub-row[aria-expanded="true"] .promo-chevron { transform: rotate(180deg); }
-/* 展開後標題不再截斷：收合時一行、省略號帶過，展開時整句攤開（站長 2026-09-21）。
-   金額欄與 meta 跟著對到第一行的高度，所以展開時 align-items 改成 flex-start。 */
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-title {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-}
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-amt,
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-meta,
-.promo-act-row.promo-sub-row[aria-expanded="true"] .promo-sub-thumb { margin-top: 1px; }
 .promo-card-stack .promo-act-detail {
   margin: 0;
   border-top: 1px solid #e6ecf5;
@@ -2134,10 +2228,28 @@ a {
   border-radius: 0;
   background: #f8fafc;
 }
-@media (max-width: 560px) {
-  .promo-act-row.promo-sub-row { flex-wrap: wrap; }
-  .promo-sub-title { flex: 1 1 140px; }
-  .promo-sub-meta { width: 100%; justify-content: flex-end; }
+
+/* ==========================================================================
+   手機專屬調整（站長 2026-09-21）
+   ⚠️ 整段包在 max-width: 1024px 裡——這支 CSS 是 mobile-first，base 規則會一路
+   套到桌機，只有寫進 max-width 才保證不影響桌機。日後再收到「只改手機」的需求，
+   一律加在這一段裡面，不要去動 base。
+   ========================================================================== */
+@media (max-width: 1024px) {
+  /* 1. 附屬列：沒有獎品圖的列不補空位。桌機補空位是為了讓右側的「詳情」對齊；
+        手機寬度本來就吃緊，站長選擇把空間讓給文字。 */
+  .promo-sub-thumb.is-empty { display: none; }
+  .promo-act-row.promo-sub-row { column-gap: 10px; }
+
+  /* 2. 主活動的摘要未展開多顯示一行、展開後整段攤開。
+        ⚠️ 附屬列的 .promo-sub-title 不在這裡——改成一列兩排（方案 B）之後，它的
+        兩行封頂與展開攤開已經寫進 base，兩個寬度共用同一組規則。 */
+  .promo-act-summary { -webkit-line-clamp: 3; }
+  .promo-act-row[aria-expanded="true"] .promo-act-summary {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+  }
 }
 
 /* ---- 卡片特色：抽屜（刻意不是卡片：淺藍底、有框、無卡片陰影）---- */
@@ -2248,11 +2360,13 @@ a {
 }
 /* Highlights 的「全場最高！」等字眼：純彩色文字、無背景無 padding——
    做成 chip 會撐開行寬把版面擠爆（站長 2026-09-17 實測回饋） */
-.promo-feat-hype { font-weight: 700; }
-.promo-feat-hype--top { color: var(--pmc-candy-pink-text); }
-.promo-feat-hype--god { color: var(--pmc-candy-default-text); }
-.promo-feat-hype--excl { color: var(--pmc-candy-yellow-text); }
-.promo-feat-hype--easy { color: var(--pmc-candy-mint-text); }
+/* 四種誇飾詞（全場最高／壓倒性神卡／獨家回饋／無腦刷）**一律桃紅**
+   （站長 2026-09-21）。原本一種一色，但那四個顏色跟「類型」是兩套不相干的分類，
+   用同一組色盤只會讓人以為它們有對應關係；而且「無腦刷」的薄荷就貼著同一列的
+   綠色回饋率，兩個綠糊在一起。
+   `--top/--god/--excl/--easy` 的 class 仍由 tools/build-promos-features.js 輸出、
+   這裡不再分色——留著是為了日後要分辨時不必改生成器，也方便從 DOM 看出是哪一種。 */
+.promo-feat-hype { font-weight: 700; color: var(--pmc-candy-pink-text); }
 
 @media (max-width: 480px) {
   .promo-card-main { padding: 13px 14px 14px; }
@@ -2330,7 +2444,9 @@ a {
   .promo-act-thumb--gift { width: 70px; }
 
   .promo-act-reward { font-size: 24px; }
-  .promo-act-reward.is-gift { font-size: 12.5px; }
+  /* .promo-act-reward.is-gift 不在這裡降級：禮物名稱的規格（20px／hero-green）
+     兩個寬度一致，顏色要跟附屬列的 .promo-sub-amt 一致（2026-09-21）。
+     先前這裡寫 12.5px，結果桌機的主活動禮物名比附屬列的還小一半。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
   .promo-act-summary { font-size: 12px; line-height: 1.6; margin-top: 8px; }
   .promo-act-more { font-size: 11.5px; margin-top: 8px; }
@@ -2466,7 +2582,6 @@ a {
     grid-template-columns: 208px minmax(0, 1fr);
   }
   .promo-rail-thumb { width: 124px; }
-  .promo-sub-meta { max-width: 140px; }
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 24px;
   }
