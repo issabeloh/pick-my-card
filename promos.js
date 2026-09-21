@@ -4,17 +4,20 @@
    generatePromosPageHtml() 靜態生成進 HTML）。
 
    職責：
-   1. 依 data-period-end 即時重算「最後 N 天」徽章（靜態生成的天數會過時）
-   2. 隱藏已過期活動（防呆：靜態生成後才過期，或站長忘了重新匯出）
+   1. 依每檔活動的 data-period-end 即時重算「最後 N 天」徽章（靜態生成的天數會過時）
+   2. 隱藏已過期活動（逐檔；整組都過期才藏整張卡）
    3. 活動類型篩選 chips
-   4. 排序切換（即將截止 / 依卡片）
-   5. 「立即申辦」點擊送 GA4 button_click 事件
-   6. 活動宣傳圖小縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
-   7. 備註／適用通路客戶端量測：scrollHeight 超過 N 行高才收合＋加「展開 ▾」
-      toggle（setupLineClamp 通用機制，備註 2 行、適用通路 3 行，2026-07-16
-      第五輪把適用通路併入同一套機制）
-   8. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
+   4. 活動詳情展開／收合（一張卡一組、組內一次只開一檔）
+   5. 卡片特色抽屜（與活動堆疊互斥）＋「查看全部 ›」開內嵌詳情並捲到指定通路回饋
+   6. 「立即申辦」點擊送 GA4 button_click 事件
+   7. 活動宣傳圖縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
+   8. 備註／適用通路客戶端量測：scrollHeight 超過 N 行高才收合＋加「展開 ▾」
+      toggle。⚠️ 2026-09-17 起詳情預設收合，量測改到「展開之後」才做——
+      display:none 時 scrollHeight 恆為 0
+   9. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
       不寫入/刪除任何 key（2026-07-16 第四輪新增）
+
+   ⚠️ 排序切換已於 2026-09-17 移除（站長裁定）：清單固定依「最高可拿」倒序。
    ========================================================================== */
 
 (function () {
@@ -61,37 +64,64 @@
   // 「最後 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「最後 N 天」，其餘隱藏；
   // 文案與主站搜尋結果一致（script.js 的 isEndingSoon / getDaysUntilEnd 語義）。
   // 順便隱藏已過期活動（data-expired 標記，篩選/排序都不會再讓它重新出現）。
+  // 「最後 N 天」徽章與過期隱藏：2026-09-17 改版後改成**逐檔活動**判斷——一張卡
+  // 可能有 4 檔活動、到期日各不相同（中信 uniopen 就是），掛在卡片上會算錯。
+  // 整組活動都過期時，才把整張卡標記成過期（篩選/搜尋都不會再讓它重新出現）。
   function refreshBadgesAndExpiry() {
     var today = todayISO();
-    var cards = document.querySelectorAll('.promo-card');
-    cards.forEach(function (card) {
-      var endIso = card.getAttribute('data-period-end');
-      var badge = card.querySelector('.promo-ending-badge');
-      if (!endIso) {
-        if (badge) badge.hidden = true;
-        return;
-      }
-      var diff = daysBetween(today, endIso);
-      if (diff === null) {
-        if (badge) badge.hidden = true;
-        return;
-      }
-      if (diff < 0) {
+    document.querySelectorAll('.promo-card').forEach(function (card) {
+      var acts = card.querySelectorAll('.promo-act');
+      if (!acts.length) return;
+      var aliveCount = 0;
+      acts.forEach(function (act) {
+        var endIso = act.getAttribute('data-period-end');
+        var badge = act.querySelector('.promo-ending-badge');
+        if (!endIso) { aliveCount++; if (badge) badge.hidden = true; return; }
+        var diff = daysBetween(today, endIso);
+        if (diff === null) { aliveCount++; if (badge) badge.hidden = true; return; }
+        if (diff < 0) { act.hidden = true; return; }   // 這一檔過期 → 只藏這一檔
+        aliveCount++;
+        if (!badge) return;
+        if (diff === 0) { badge.textContent = '今天截止！'; badge.hidden = false; }
+        else if (diff <= 14) { badge.textContent = '最後 ' + diff + ' 天'; badge.hidden = false; }
+        else { badge.hidden = true; }
+      });
+      if (aliveCount === 0) {
         card.hidden = true;
         card.setAttribute('data-expired', '1');
-        return;
-      }
-      if (!badge) return;
-      if (diff === 0) {
-        badge.textContent = '今天截止！';
-        badge.hidden = false;
-      } else if (diff <= 14) {
-        badge.textContent = '最後 ' + diff + ' 天';
-        badge.hidden = false;
-      } else {
-        badge.hidden = true;
       }
     });
+    refreshEndingChip();
+  }
+
+  // 「即將結束」篩選（2026-09-20 站長需求）：只要這張卡還有任何一檔活動掛著
+  // 「最後 N 天／今天截止！」徽章，就算即將結束。**數量只能在這裡算**——徽章是拿
+  // 「今天」逐檔比出來的，靜態生成當下寫死的數字隔天就錯（一次匯出可能掛好幾週）。
+  // 生成器只輸出一顆 hidden 的骨架 chip，數字與顯示與否都由這裡決定。
+  function refreshEndingChip() {
+    var count = 0;
+    document.querySelectorAll('.promo-card').forEach(function (card) {
+      if (card.getAttribute('data-expired') === '1') { card.removeAttribute('data-has-ending'); return; }
+      var has = false;
+      card.querySelectorAll('.promo-act').forEach(function (act) {
+        if (act.hidden) return;
+        var badge = act.querySelector('.promo-ending-badge');
+        if (badge && !badge.hidden) has = true;
+      });
+      if (has) { card.setAttribute('data-has-ending', '1'); count++; }
+      else card.removeAttribute('data-has-ending');
+    });
+    var chip = document.getElementById('promos-chip-ending');
+    if (!chip) return;
+    var countEl = document.getElementById('promos-chip-ending-count');
+    if (countEl) countEl.textContent = String(count);
+    chip.hidden = count === 0;
+    // 一張都沒有時把 chip 藏起來；若當下正停在這個篩選上，退回「全部」，
+    // 否則使用者會看到空清單卻找不到是哪個篩選造成的。
+    if (count === 0 && filterState.typeFilter === 'ending') {
+      var allChip = document.querySelector('.promo-chip[data-filter="all"]');
+      if (allChip) allChip.click();
+    }
   }
 
   // 篩選狀態：類型 chips（typeFilter）與「隱藏我持有的卡片」（hideOwned）疊加
@@ -164,8 +194,17 @@
         card.hidden = true; // 過期卡永遠不重新顯示
         return;
       }
-      var buckets = (card.getAttribute('data-type-buckets') || '').split(' ');
-      var typeMatch = filterState.typeFilter === 'all' || buckets.indexOf(filterState.typeFilter) !== -1;
+      var typeMatch;
+      if (filterState.typeFilter === 'all') {
+        typeMatch = true;
+      } else if (filterState.typeFilter === 'ending') {
+        // 「即將結束」不是 promo_types 的一種，是由徽章推出來的狀態
+        // （data-has-ending 由 refreshEndingChip() 每次重算徽章時寫上）
+        typeMatch = card.getAttribute('data-has-ending') === '1';
+      } else {
+        typeMatch = (card.getAttribute('data-type-buckets') || '').split(' ')
+          .indexOf(filterState.typeFilter) !== -1;
+      }
       var ownedMatch = true;
       if (filterState.hideOwned && ownedCardIds) {
         var cardId = card.getAttribute('data-card-id') || '';
@@ -275,117 +314,154 @@
     });
   }
 
-  function setupSort() {
-    var toggle = document.getElementById('promos-sort-toggle');
-    if (!toggle) return;
-    toggle.addEventListener('click', function (e) {
-      var btn = e.target.closest('.promo-sort-btn');
-      if (!btn || !toggle.contains(btn)) return;
-      Array.prototype.forEach.call(toggle.querySelectorAll('.promo-sort-btn'), function (b) {
-        b.classList.toggle('is-active', b === btn);
-      });
-      applySort(btn.getAttribute('data-sort') || 'deadline');
+  // 活動詳情展開／收合（2026-09-17 改版）。
+  // 一張卡一組、組內可能有多檔活動，每一檔都有自己的詳情（適用通路／達成條件／
+  // 活動期間／新戶定義／備註）——同一張卡的多檔活動條件各不相同，所以詳情掛在
+  // 「活動」身上而不是「卡片」身上。
+  // 同一組內一次只開一個：開另一檔會先把前一檔收起來，避免整組被撐到看不完。
+  // 桌機手機一致（不再像舊版那樣桌機強制全展開——那會讓 23 組卡片的頁面長到失控）。
+  function closeActsIn(card) {
+    card.querySelectorAll('.promo-act-row[aria-expanded="true"]').forEach(function (row) {
+      row.setAttribute('aria-expanded', 'false');
+      var detail = document.getElementById(row.getAttribute('aria-controls') || '');
+      if (detail) detail.hidden = true;
     });
   }
 
-  function applySort(mode) {
-    var grid = document.getElementById('promo-grid');
-    if (!grid) return;
-    var cards = Array.prototype.slice.call(grid.querySelectorAll('.promo-card'));
-    cards.sort(function (a, b) {
-      if (mode === 'card') {
-        var an = a.getAttribute('data-card-name') || '';
-        var bn = b.getAttribute('data-card-name') || '';
-        return an.localeCompare(bn, 'zh-Hant');
-      }
-      // 即將截止：period_end 升冪，無截止日（空字串）排最後；同日期用生成順序
-      // （data-order-index，來自生成器的 priority 排序）當穩定的次要鍵，
-      // 這樣來回切換排序模式時，同日期的相對順序不會因瀏覽器 sort 穩定性而漂移。
-      var ae = a.getAttribute('data-period-end') || '';
-      var be = b.getAttribute('data-period-end') || '';
-      if (!ae) ae = '9999-99-99';
-      if (!be) be = '9999-99-99';
-      if (ae !== be) return ae < be ? -1 : 1;
-      var ai = parseInt(a.getAttribute('data-order-index'), 10) || 0;
-      var bi = parseInt(b.getAttribute('data-order-index'), 10) || 0;
-      return ai - bi;
-    });
-    cards.forEach(function (card) { grid.appendChild(card); });
-  }
-
-  // 手機版「摘要卡可展開」：點卡片收合區（.promo-card-toggle，除申辦鈕外的整個收合
-  // 態表面）展開/收回詳情（新戶定義、達成條件、活動期間、宣傳圖、備註、次要連結）。
-  // 用 role="button" 的 div 而非真 <button>——裡面包 <h2> 標題，<button> 的內容模型
-  // 不允許 heading 後代（見 cards-export.gs pmcRenderPromoCard_ 註解），所以鍵盤可及性
-  // （Enter/Space 觸發）要自己補。
-  //
-  // 桌機（≥769px）版型維持全部展開、無收合行為（CSS 在該寬度一律強制
-  // .promo-card-detail 展開，不看 is-open class）；這裡用 matchMedia 讓桌機寬度下
-  // 點擊/按鍵不做事，並讓 aria-expanded 誠實反映「桌機一律展開」的視覺事實。
-  function setupCardToggle() {
-    var mq = window.matchMedia('(max-width: 768px)');
-
-    function toggle(el) {
-      var card = el.closest('.promo-card');
-      if (!card) return;
-      var isOpen = card.classList.toggle('is-open');
-      el.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    }
-
-    function syncAriaForBreakpoint() {
-      var toggles = document.querySelectorAll('.promo-card-toggle');
-      toggles.forEach(function (el) {
-        // 桌機拿掉按鈕語意（role/tabindex），避免「可聚焦、看似可點、點了沒反應」
-        // （2026-07-16 站長回饋）；縮回手機寬度時還原。
-        //
-        // aria-expanded 必須跟著 role 一起進退（2026-09-02）：它只允許出現在有
-        // 對應角色的元素上，掛在沒有 role 的 <div> 上是規範禁止的（axe
-        // aria-prohibited-attr／aria-allowed-attr），螢幕閱讀器也只會忽略它。
-        // 桌機本來就一律展開、沒有收合這回事，少了這個屬性不損失任何資訊。
-        if (mq.matches) {
-          var card = el.closest('.promo-card');
-          el.setAttribute('role', 'button');
-          el.setAttribute('tabindex', '0');
-          el.setAttribute('aria-expanded', card && card.classList.contains('is-open') ? 'true' : 'false');
-        } else {
-          el.removeAttribute('role');
-          el.removeAttribute('tabindex');
-          el.removeAttribute('aria-expanded');
-        }
-      });
-    }
-
-    // 2026-07-16 第四輪站長回饋：「立即申辦」按鈕移到卡名右側後變成
-    // .promo-card-toggle 的後代，點按鈕的 click/keydown 事件會冒泡到這裡；
-    // 明確排除 .promo-apply-btn，避免點申辦按鈕時「連帶」觸發卡片展開/收合
-    // （按鈕本身的連結行為完全不受影響，仍走瀏覽器預設開新分頁）。
+  function setupActToggle() {
     document.addEventListener('click', function (e) {
-      var el = e.target.closest('.promo-card-toggle');
-      if (!el || !mq.matches) return;
-      if (e.target.closest('.promo-apply-btn')) return;
-      // 只有點在展開箭頭（.promo-card-chevron）上才展開/收合；一般手指點到徽章、
-      // 卡圖、標題等後代元素不再觸發（站長回饋：點擊範圍太大會誤觸）。
-      // e.target === el 這條保留給無障礙輔具：AT 觸發 role="button" 時 click 的
-      // target 會是 toggle 本身（而非某個後代），這種情況仍要能展開。
-      if (e.target !== el && !e.target.closest('.promo-card-chevron')) return;
-      toggle(el);
+      // 活動宣傳圖縮圖在 row 內，點它是要看大圖、不是展開詳情（見 setupGiftLightbox）。
+      // 附屬列的小獎品圖（.promo-sub-thumb--gift）同理。
+      if (e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift')) return;
+      var row = e.target.closest('.promo-act-row');
+      if (!row) return;
+      var card = row.closest('.promo-card');
+      if (!card) return;
+      var wasOpen = row.getAttribute('aria-expanded') === 'true';
+      closeActsIn(card);
+      setFeatOpen(card, false);
+      if (wasOpen) return;
+      // 狀態一律掛在 row 的 aria-expanded 上（CSS 也是用它選），不另外掛 class
+      row.setAttribute('aria-expanded', 'true');
+      var detail = document.getElementById(row.getAttribute('aria-controls') || '');
+      if (!detail) return;
+      detail.hidden = false;
+      // ⚠️ 收合時 display:none，scrollHeight 恆為 0——量測一定要等展開之後才做，
+      // 否則備註／適用通路會全部被判定成「不需要收合」（2026-09-17 實測踩到）。
+      clampWithin(detail);
     });
+  }
 
+  // 卡片特色（2026-09-17 做成抽屜，2026-09-20 起一律改 modal）。
+  // 特色內容由部署時的 tools/build-promos-features.js 注入；
+  // 沒跑生成器時容器是空的，這裡直接把按鈕藏起來，頁面其餘部分照常可用。
+  // 手機與桌機都走 modal，版面在展開前後完全不動，所以不需要任何狀態 class。
+  // 一律用 modal 呈現（2026-09-18 桌機先改，2026-09-20 站長要求手機也跟進）——
+  // 特色有 5~7 列＋國內外基準列，就地展開會把整組卡片撐掉一整屏、下面的卡全被推走，
+  // 手機上尤其嚴重（一展開就看不到自己原本在看哪張卡）。抽屜容器 .promo-card-feat
+  // 保留著當內容來源與退路，但永遠不再展開。
+  var featModal = null;
+  var featModalBody = null;
+  var featModalFoot = null;
+  var featModalTitle = null;
+  var featModalBtn = null;   // 開啟這個 modal 的「卡片特色」按鈕，關閉時要還原 aria/焦點
+
+  function ensureFeatModal() {
+    if (featModal) return;
+    featModal = document.createElement('div');
+    featModal.className = 'promo-feat-modal';
+    featModal.setAttribute('role', 'dialog');
+    featModal.setAttribute('aria-modal', 'true');
+    featModal.setAttribute('aria-label', '卡片特色');
+    featModal.innerHTML =
+      '<div class="promo-feat-modal-inner">' +
+      '<div class="promo-feat-modal-head">' +
+      '<span class="promo-feat-modal-heading">' +
+      '<span class="promo-feat-modal-kicker">卡片特色</span>' +
+      '<b class="promo-feat-modal-title"></b>' +
+      '</span>' +
+      '<button type="button" class="promo-feat-modal-close" aria-label="關閉卡片特色">&times;</button>' +
+      '</div>' +
+      '<div class="promo-feat-modal-body"></div>' +
+      '<div class="promo-feat-modal-foot" hidden></div>' +
+      '</div>';
+    document.body.appendChild(featModal);
+    featModalBody = featModal.querySelector('.promo-feat-modal-body');
+    featModalFoot = featModal.querySelector('.promo-feat-modal-foot');
+    featModalTitle = featModal.querySelector('.promo-feat-modal-title');
+    featModal.addEventListener('click', function (e) {
+      // 點「查看全部」也要關：它接著會開卡片詳情 overlay（setupCardDetailOverlay 的
+      // document 委派會收到同一次點擊），兩層遮罩疊著會看不懂。這時焦點交給 overlay，
+      // 不要搶回按鈕。
+      if (e.target.closest('.promo-feat-all')) { closeFeatModal(false); return; }
+      if (e.target === featModal || e.target.closest('.promo-feat-modal-close')) closeFeatModal(true);
+    });
     document.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-      var el = e.target.closest('.promo-card-toggle');
-      if (!el || !mq.matches) return;
-      if (e.target.closest('.promo-apply-btn')) return;
-      e.preventDefault();
-      toggle(el);
+      if (e.key === 'Escape') closeFeatModal(true);
     });
+  }
 
-    if (typeof mq.addEventListener === 'function') {
-      mq.addEventListener('change', syncAriaForBreakpoint);
-    } else if (typeof mq.addListener === 'function') {
-      mq.addListener(syncAriaForBreakpoint); // Safari < 14 fallback
+  function openFeatModal(card, btn) {
+    var drawer = card.querySelector('.promo-card-feat');
+    if (!drawer || !drawer.innerHTML.trim()) return false;
+    ensureFeatModal();
+    featModalTitle.textContent = card.getAttribute('data-card-name') || '卡片特色';
+    // 內容是部署時由 tools/build-promos-features.js 注入的靜態片段：沒有 id、也沒有
+    // 綁在節點上的事件（「查看全部」走 document 委派），所以複製 HTML 就夠，
+    // 不必把節點搬進搬出——搬動會讓收合狀態與 DOM 順序變得難以推理。
+    featModalBody.innerHTML = drawer.innerHTML;
+    // 「查看卡片詳情」從內容區搬到 footer 當 CTA（站長 2026-09-21）。
+    // 搬的是節點本身，所以 setupCardDetailOverlay 的 document 委派照常收得到點擊。
+    var all = featModalBody.querySelector('.promo-feat-all');
+    featModalFoot.innerHTML = '';
+    featModalFoot.hidden = !all;
+    if (all) featModalFoot.appendChild(all);
+    // 連結搬走後，抬頭那一列可能只剩被 CSS 藏起來的 <b>（沒有級別標籤時就整列空了），
+    // 留著會多出一段空白邊距。⚠️ .promo-feat-head 有 display:flex，author display 會蓋掉
+    // [hidden] 的預設值——CSS 另外補了 .promo-feat-head[hidden]{display:none}。
+    var head = featModalBody.querySelector('.promo-feat-head');
+    if (head && !head.querySelector('.promo-feat-level')) head.hidden = true;
+    featModal.classList.add('is-open');
+    featModalBtn = btn || null;
+    featModal.querySelector('.promo-feat-modal-close').focus();
+    return true;
+  }
+
+  function closeFeatModal(restoreFocus) {
+    if (!featModal || !featModal.classList.contains('is-open')) return;
+    featModal.classList.remove('is-open');
+    featModalBody.innerHTML = '';
+    if (featModalFoot) { featModalFoot.innerHTML = ''; featModalFoot.hidden = true; }
+    if (featModalBtn) {
+      featModalBtn.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) featModalBtn.focus();
+      featModalBtn = null;
     }
-    syncAriaForBreakpoint();
+  }
+
+  function setFeatOpen(card, open) {
+    var btn = card.querySelector('.promo-feat-btn');
+    var drawer = card.querySelector('.promo-card-feat');
+    if (!btn || !drawer) return;
+    if (open) { if (!openFeatModal(card, btn)) return; }
+    else closeFeatModal(false);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    drawer.hidden = true;              // 抽屜永遠收著，內容一律由 modal 呈現
+  }
+
+  function setupFeatToggle() {
+    document.querySelectorAll('.promo-card').forEach(function (card) {
+      var drawer = card.querySelector('.promo-card-feat');
+      var btn = card.querySelector('.promo-feat-btn');
+      if (btn && (!drawer || !drawer.innerHTML.trim())) btn.hidden = true;
+    });
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.promo-feat-btn');
+      if (!btn) return;
+      var card = btn.closest('.promo-card');
+      if (!card) return;
+      setFeatOpen(card, btn.getAttribute('aria-expanded') !== 'true');
+    });
   }
 
   // 「立即申辦」點擊 → GA4 button_click（promos.html 內嵌的精簡版 Firebase
@@ -419,11 +495,8 @@
     return /^https?:\/\//i.test(trimmed) ? trimmed : '';
   }
 
-  // 活動宣傳圖 lightbox：點小縮圖（.promo-gift-thumb）開全螢幕深色遮罩置中
-  // 看原圖，點遮罩／關閉鈕／Esc 都會關閉。lightbox 元素懶建立（第一次點擊才
-  // 塞進 DOM），縮圖按鈕本身在 .promo-card-toggle 之外（見 cards-export.gs
-  // pmcRenderPromoCard_ 註解），不需要特別擋 toggle 展開的冒泡，但仍保留
-  // stopPropagation 當防禦性寫法，避免未來版面調整後行為悄悄改變。
+  // 活動宣傳圖 lightbox：點縮圖（.promo-act-thumb--gift）開全螢幕深色遮罩置中
+  // 看原圖，點遮罩／關閉鈕／Esc 都會關閉。lightbox 元素懶建立（第一次點擊才塞進 DOM）。
   function setupGiftLightbox() {
     var lightbox = null;
     var imgEl = null;
@@ -466,12 +539,18 @@
       if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
     }
 
+    // 縮圖在 .promo-act-row（<button>）內部，點它會冒泡成「展開活動詳情」——
+    // setupActToggle 開頭已經先排除 .promo-act-thumb--gift，這裡再 stopPropagation
+    // 當第二層保險。只有活動宣傳圖（獎品）可放大；退回卡片圖的縮圖不進 lightbox。
+    // 附屬列的 34px 小圖（.promo-sub-thumb--gift）走同一條路。
     document.addEventListener('click', function (e) {
-      var thumb = e.target.closest('.promo-gift-thumb');
+      var thumb = e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift');
       if (!thumb) return;
+      var img = thumb.querySelector('img');
+      if (!img) return;
       e.preventDefault();
       e.stopPropagation();
-      openLightbox(thumb.getAttribute('data-full-src'), thumb.getAttribute('data-full-alt'));
+      openLightbox(img.getAttribute('src'), img.getAttribute('alt'));
     });
 
     document.addEventListener('keydown', function (e) {
@@ -486,8 +565,8 @@
   // px 值——見 promos.css .promo-notes-text／.promo-merchants-value。
   // 2026-07-16 第五輪新增「適用通路」3 行收合，跟備註 2 行收合共用同一套邏輯
   // （原本各自一份函數，抽成通用版避免兩份幾乎一樣的程式碼分岔）。
-  function setupLineClamp(selector, maxLines, toggleClassName) {
-    var blocks = document.querySelectorAll(selector);
+  function setupLineClamp(selector, maxLines, toggleClassName, root) {
+    var blocks = (root || document).querySelectorAll(selector);
     blocks.forEach(function (el) {
       var lineHeight = parseFloat(window.getComputedStyle(el).lineHeight);
       if (!lineHeight || isNaN(lineHeight)) return; // 量不到就保留完整顯示，不冒然收合
@@ -514,12 +593,13 @@
     });
   }
 
-  function setupNotesClamp() {
-    setupLineClamp('.promo-notes-text', 2, 'promo-notes-toggle');
-  }
-
-  function setupMerchantsClamp() {
-    setupLineClamp('.promo-merchants-value', 3, 'promo-notes-toggle');
+  // 2026-09-17：活動詳情預設收合（display:none），量測必須改成「展開之後才做」，
+  // 而且同一個區塊只量一次（用 data-clamped 記號防重複插入 toggle 按鈕）。
+  function clampWithin(root) {
+    if (!root || root.dataset.clamped === '1') return;
+    root.dataset.clamped = '1';
+    setupLineClamp('.promo-notes-text', 2, 'promo-notes-toggle', root);
+    setupLineClamp('.promo-merchants-value', 3, 'promo-notes-toggle', root);
   }
 
   // 光影效果試用（TRIAL，站長選定後移除——對應 promos.css 底部試用區塊）：
@@ -612,6 +692,7 @@
     var iframeReady = false;
     var iframeGaveUp = false;
     var readyTimer = null;
+    var pendingSection = '';
     var pendingCardId = null; // ready 之前點擊時先記住，ready 到達後補送
     var scrollLocked = false;
     var scrollLockY = 0;
@@ -687,10 +768,11 @@
       window.open('/?start&card=' + encodeURIComponent(cardId), '_blank', 'noopener,noreferrer');
     }
 
-    function requestCard(cardId) {
+    function requestCard(cardId, section) {
       if (!iframeEl || !iframeEl.contentWindow) return;
       try {
-        iframeEl.contentWindow.postMessage({ type: 'pmc-open-card', cardId: cardId }, location.origin);
+        iframeEl.contentWindow.postMessage(
+          { type: 'pmc-open-card', cardId: cardId, section: section || '' }, location.origin);
       } catch (err) {
         console.error('❌ promos.js postMessage pmc-open-card 失敗:', err);
       }
@@ -708,8 +790,9 @@
         }
         if (spinnerEl) spinnerEl.hidden = true;
         if (pendingCardId) {
-          requestCard(pendingCardId);
+          requestCard(pendingCardId, pendingSection);
           pendingCardId = null;
+          pendingSection = '';
         }
       } else if (data.type === 'pmc-detail-closed') {
         hideOverlay();
@@ -723,17 +806,21 @@
       }
     });
 
+    // 入口：卡片特色區右上角的「查看全部 ›」（2026-09-17 起取代舊的卡名旁 ⓘ 鈕）。
+    // data-section 讓詳情開啟後直接捲到「指定通路回饋」那一段，不用使用者自己找。
     document.addEventListener('click', function (e) {
-      var link = e.target.closest('.promo-card-info-btn');
+      var link = e.target.closest('.promo-feat-all');
       if (!link) return;
       var cardId = link.getAttribute('data-card-id');
       if (!cardId || iframeGaveUp) return; // 沒有 id，或已逾時放棄 → 放行原生 <a> 行為
       e.preventDefault();
       showOverlay();
+      var section = link.getAttribute('data-section') || '';
       if (iframeReady) {
-        requestCard(cardId);
+        requestCard(cardId, section);
       } else {
         pendingCardId = cardId;
+        pendingSection = section;
       }
     });
   }
@@ -745,12 +832,10 @@
     setupFilters();
     setupSearch();
     setupOwnedFilter();
-    setupSort();
-    setupCardToggle();
+    setupActToggle();
+    setupFeatToggle();
     setupApplyTracking();
     setupGiftLightbox();
-    setupNotesClamp();
-    setupMerchantsClamp();
     setupShineTrial();
     setupCardDetailOverlay();
   });

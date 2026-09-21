@@ -4398,6 +4398,28 @@ label.personal-field-check input[type="checkbox"] {
     max-height: 90vh;
 }
 
+/* 桌機把卡片詳情的標題列也釘住（站長 2026-09-18：捲動時不要被捲走）。
+   手機不套——modal 幾乎滿版，再釘一條 97px 的標題會吃掉太多可讀高度。
+   z-index 要高於 .card-detail-nav 的 10，否則 nav 捲上來會蓋住標題。
+   nav 的 top 改成「標題高度」，才會黏在標題底下而不是蓋住它；標題高度隨卡名
+   長度變動，由 setupCardDetailNav() 量完寫進 --pmc-detail-header-h，
+   這裡的 97px 只是量不到時的 fallback。
+   ⚠️ 捲動落點的計算（js/results-display.js 的 stickyOffset()）會自己判斷標題
+   是不是 sticky，改這裡的斷點不需要動 JS。 */
+@media (min-width: 769px) {
+    #card-detail-modal .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 11;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+    }
+    #card-detail-modal .card-detail-nav {
+        top: var(--pmc-detail-header-h, 97px);
+    }
+}
+
 /* Sticky section nav lives between modal-header and modal-body so it sticks
    flush to the top of the modal-content scroll viewport. */
 .card-detail-nav {
@@ -4545,6 +4567,23 @@ label.personal-field-check input[type="checkbox"] {
     padding-bottom: 0;
     border-bottom: 1px solid #e5e7eb;
 }
+
+/* 卡片用途（cardUseCase，2026-09-21）：一句話講這張卡適合什麼情境，擺在詳情頁最上面。
+   刻意不做成卡片／不加標題——它是一句註解，不是一個區塊；左側藍線就夠把它跟下面的
+   欄位分開了。/promos 的卡片特色 modal 用同一套視覺（.promo-feat-usage）。
+   ⚠️ [hidden] 那條不能省：沒填時靠 el.hidden 收起來，日後若有人給這個 class 加上
+   display 就會蓋掉瀏覽器的預設值（promos.css 為同一個坑補過五次）。 */
+.card-use-case {
+    margin: 0 0 14px;
+    padding: 9px 12px;
+    background: #f8fafc;
+    border-left: 3px solid #1e3a8a;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #1e3a5f;
+}
+.card-use-case[hidden] { display: none; }
 
 .card-info-section:last-child {
     border-bottom: none;

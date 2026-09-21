@@ -532,6 +532,12 @@ function exportToJSON() {
   addOptionalField(card, row, headers, 'levelLabelFormat');
 }
 
+    // cardUseCase（選填，2026-09-17 新增；2026-09-21 由 cardUsage 更名——usage 讀起來
+    // 像「用量」，這個欄位講的是「這張卡適合什麼情境」）：一句話描述這張卡的性格，
+    // 顯示在卡片詳情頁「基本資訊」最上方與 /promos 的卡片特色 modal。沒填就整行不出現。
+    // ⚠️ 只寫性格、不寫數字——句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率。
+    addOptionalField(card, row, headers, 'cardUseCase');
+
     // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];
     const maxRateSlot = maxSlotIndex(headers, 'rate');
@@ -1790,13 +1796,59 @@ function generatePromosPageHtml(exportData) {
       periodEndIso: periodEndIso, cta: cta, orderIndex: idx };
   });
 
-  const bucketCounts = {};
+  // ---- 依卡片分組（2026-09-17 改版）----
+  // 舊版一檔活動一張卡片，同一張卡有 4 檔就出現 4 次（iLEO、遠東快樂卡、中信 uniopen
+  // 都是）。改成一張卡一組：主活動在白卡裡，其餘以「卡疊卡」堆在下面。
+  // 組內依「最高可拿」倒序；組間也依各自的最大單檔金額倒序——**不相加**，
+  // 同一張卡的多檔活動各有不同達成條件，加總會講出一個拿不到的數字。
+  const groupMap = {};
+  const groupOrder = [];
   prepared.forEach(function (p) {
-    p.buckets.forEach(function (b) { bucketCounts[b] = (bucketCounts[b] || 0) + 1; });
+    const id = p.promo.id || '';
+    if (!groupMap[id]) {
+      groupMap[id] = { cardId: id, cardName: p.cardName, card: p.card, items: [], cta: p.cta };
+      groupOrder.push(groupMap[id]);
+    }
+    groupMap[id].items.push(p);
+  });
+  groupOrder.forEach(function (g) {
+    g.items.sort(function (a, b) {
+      const av = pmcPromoValue_(a.promo), bv = pmcPromoValue_(b.promo);
+      // 沒有現金定價的獎品排在有金額的後面；其餘依金額倒序
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return bv - av;
+    });
+    g.bestValue = g.items.reduce(function (m, p) {
+      const v = pmcPromoValue_(p.promo);
+      return (v !== null && v > m) ? v : m;
+    }, 0);
+    const bs = [];
+    g.items.forEach(function (p) {
+      p.buckets.forEach(function (b) { if (bs.indexOf(b) === -1) bs.push(b); });
+    });
+    g.buckets = bs.length ? bs : ['default'];
+  });
+  const groups = groupOrder.slice().sort(function (a, b) {
+    if (a.bestValue !== b.bestValue) return b.bestValue - a.bestValue;
+    return a.items[0].orderIndex - b.items[0].orderIndex;   // 同金額用原本的即將截止序當穩定次鍵
+  });
+  groups.forEach(function (g, i) {
+    g.orderIndex = i;
+    g.anchorId = 'promo-' + (i + 1) + '-' + pmcSlug_(g.cardId || 'x');
+    // JSON-LD 與錨點共用同一組 id：一張卡一個錨點，活動用 -a1/-a2 後綴
+    g.items.forEach(function (p, j) { p.anchorId = g.anchorId + '-a' + (j + 1); });
   });
 
-  const cardsHtml = prepared.map(pmcRenderPromoCard_).join('\n');
-  const filterChipsHtml = pmcBuildFilterChips_(prepared.length, bucketCounts);
+  // 篩選 chips 的數量改算「卡片組」——篩選隱藏的單位就是整組卡片
+  const bucketCounts = {};
+  groups.forEach(function (g) {
+    g.buckets.forEach(function (b) { bucketCounts[b] = (bucketCounts[b] || 0) + 1; });
+  });
+
+  const cardsHtml = groups.map(pmcRenderCardGroup_).join('\n');
+  const filterChipsHtml = pmcBuildFilterChips_(groups.length, bucketCounts);
   const jsonLd = pmcBuildJsonLd_(prepared);
   const breadcrumbJsonLd = pmcBuildBreadcrumbJsonLd_();
 
@@ -1968,169 +2020,81 @@ function pmcPromoTypeBucket_(label) {
   return 'default';
 }
 
-// ---------- 好康 hero（重點好康區）----------
-// 依活動類型抽出「一眼看到」的重點：贈品內容／定額金額（＋用途）／加碼回饋率（＋上限）。
-// 同一筆 promo 可能同時具備多種類型（如 cathay-cube 同時有 gift_content 與
-// voucher_amount），因此回傳陣列讓卡片渲染時並列顯示，而不是只挑一種。
-// 回傳的 quickHighlightPlain 是給手機收合態「一行重點好康」用的純文字版（無 HTML、
-// 換行轉頓號），交由呼叫端自己 escape 後塞進單行 CSS ellipsis 容器。
-function pmcBuildPromoHero_(promo) {
-  const items = [];
-  const quickParts = [];
-
-  // 2026-07-15 站長回饋：hero 區塊移除 🎁💰⚡ 等 emoji 圖示，純文字即可。
-  // （2026-07-19 起 .promo-hero-item--gift/voucher/bonus 底色統一淺灰、不再分色，
-  // bucket class 仍照常輸出——CSS 端目前只剩 .promo-hero-big 字色還在用它。）
-  if (promo.gift_content) {
-    const raw = String(promo.gift_content);
-    items.push({
-      bucket: 'gift',
-      bigHtml: pmcEscapeHtmlMultiline_(raw),
-      bigModifier: 'promo-hero-big--gift'
-    });
-    quickParts.push(raw.replace(/\r\n|\r|\n/g, '、'));
-  }
-
+// ---------- 獎勵金額換算（2026-09-17 改版）----------
+// 三種獎勵換算成同一個單位「最高可拿多少錢」，卡片組排序與大字都用它：
+//   定額回饋 → voucher_amount（票面金額）
+//   回饋加碼 → bonus_rate × bonus_cap（bonus_cap 是「消費上限」，相乘即回饋天花板）
+//   首刷禮   → 沒有現金定價，回 null（大字改顯示贈品全名）
+// ⚠️ 同一張卡的多檔活動各自獨立、不相加（各有不同達成條件，2026-09-17 站長裁定）——
+// 分組排序只看「單檔最大值」，全站沒有任何加總數字。
+function pmcPromoValue_(promo) {
   if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
-    const amountDisplay = promo.voucher_amount.toLocaleString('en-US');
-    const usage = promo.voucher_usage ? String(promo.voucher_usage) : '';
-    // voucher_amount 匯出時已 parseFloat 成純數字（見讀取端），不會有「NT$」「元」殘留，
-    // 前綴固定加不會重複（2026-07-16 第六輪站長回饋：「500 刷卡金」→「NT$500 刷卡金」）
-    items.push({
-      bucket: 'voucher',
-      bigHtml: pmcEscapeHtml_('NT$' + amountDisplay),
-      smallHtml: usage ? pmcEscapeHtml_(usage) : ''
-    });
-    quickParts.push('NT$' + amountDisplay + (usage ? ' ' + usage : ''));
+    return promo.voucher_amount;
   }
-
-  if (promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '') {
-    let rateDisplay;
-    if (typeof promo.bonus_rate === 'number') {
-      rateDisplay = (promo.bonus_rate <= 1 ? (promo.bonus_rate * 100) : promo.bonus_rate) + '%';
-    } else {
-      rateDisplay = String(promo.bonus_rate);
-    }
-    const capText = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
-      ? '消費上限 NT$' + Math.round(promo.bonus_cap).toLocaleString('en-US')
-      : '';
-    items.push({
-      bucket: 'bonus',
-      // 「最高」二字移除（2026-07-18 站長定案）
-      bigHtml: pmcEscapeHtml_(rateDisplay),
-      smallHtml: capText ? pmcEscapeHtml_(capText) : ''
-    });
-    quickParts.push(rateDisplay + (capText ? '（' + capText + '）' : ''));
+  const hasRate = promo.bonus_rate !== undefined && promo.bonus_rate !== null && promo.bonus_rate !== '';
+  if (hasRate && typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap)) {
+    const r = typeof promo.bonus_rate === 'number'
+      ? (promo.bonus_rate <= 1 ? promo.bonus_rate * 100 : promo.bonus_rate)
+      : parseFloat(promo.bonus_rate);
+    if (!isNaN(r)) return Math.round(r / 100 * promo.bonus_cap);
   }
+  return null;
+}
 
-  const heroItemsHtml = items.map(function (it) {
-    return '<div class="promo-hero-item promo-hero-item--' + it.bucket + '">' +
-      '<span class="promo-hero-main">' +
-      '<span class="promo-hero-big' + (it.bigModifier ? ' ' + it.bigModifier : '') + '">' + it.bigHtml + '</span>' +
-      (it.smallHtml ? '<span class="promo-hero-small">' + it.smallHtml + '</span>' : '') +
-      '</span></div>';
-  }).join('');
+function pmcRateDisplay_(promo) {
+  if (promo.bonus_rate === undefined || promo.bonus_rate === null || promo.bonus_rate === '') return '';
+  if (typeof promo.bonus_rate === 'number') {
+    return (promo.bonus_rate <= 1 ? (promo.bonus_rate * 100) : promo.bonus_rate) + '%';
+  }
+  return String(promo.bonus_rate);
+}
 
-  return {
-    heroItemsHtml: heroItemsHtml,
-    hasHero: items.length > 0,
-    quickHighlightPlain: quickParts.join('｜')
-  };
+function pmcMoney_(n) {
+  return 'NT$' + Math.round(n).toLocaleString('en-US');
+}
+
+// 獎勵大字（上）＋單位小字（下）。獎品沒有金額，大字改放贈品全名（不截斷，
+// 站長 2026-09-17：獎品那區的重點就是獎品內容）。
+function pmcRewardBig_(promo) {
+  const v = pmcPromoValue_(promo);
+  if (v === null) {
+    const gift = String(promo.gift_content || '').trim();
+    return { html: gift ? pmcEscapeHtmlMultiline_(gift) : '首刷禮', isGift: true };
+  }
+  return { html: pmcEscapeHtml_(pmcMoney_(v)), isGift: false };
+}
+function pmcRewardSub_(promo) {
+  if (pmcPromoValue_(promo) === null) return '首刷禮';
+  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
+    return promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
+  }
+  const rate = pmcRateDisplay_(promo);
+  const cap = (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
+    ? '・上限消費 ' + pmcMoney_(promo.bonus_cap) : '';
+  return rate + cap;
 }
 
 // ---------- HTML 片段渲染 ----------
 
-function pmcRenderPromoCard_(p) {
+// 一檔活動自己的詳情：適用通路／達成條件／活動期間／新戶定義／備註。
+// 2026-09-17 站長指正——改版中期這一整塊一度被拿掉，但它是使用者判斷「自己算不算
+// 新戶、要做什麼才拿得到」的唯一依據，必須留著；而且同一張卡的多檔活動條件各不相同，
+// 所以它掛在「每一檔活動」身上，不是掛在卡片上。
+function pmcRenderPromoDetail_(p, detailId) {
   const promo = p.promo;
-  const cardId = promo.id || '';
-  const cardName = p.cardName;
-
-  const typeBadgesHtml = p.types.map(function (t) {
-    const bucket = pmcPromoTypeBucket_(t);
-    return '<span class="promo-type-badge promo-type-badge--' + bucket + '">' + pmcEscapeHtml_(t) + '</span>';
-  }).join('');
-
-  // 標題只留卡名：不再附加「新戶優惠」字樣（2026-07-15 站長回饋，卡名旁的
-  // 「新戶優惠」文字被認為多餘——activity 類型已經由下方 promo-type-badges 表達）。
-  const title = (promo.promo_name && String(promo.promo_name).trim())
-    ? String(promo.promo_name).trim()
-    : (cardName || '新戶優惠');
-
-  const summary = promo.new_customer_summary || '';
-
-  // 好康 hero：贈品內容／定額金額／加碼回饋率抽出來大字呈現（見 pmcBuildPromoHero_），
-  // 下面 dl 列表不再重複這三種欄位，只留適用通路（hero 沒地方放的細節）。
-  const hero = pmcBuildPromoHero_(promo);
-  const heroSectionHtml = hero.hasHero ? '<div class="promo-hero">' + hero.heroItemsHtml + '</div>' : '';
-
-  // 摘要行：優先顯示 new_customer_summary（活動摘要，一句話講清楚活動在幹嘛），
-  // summary 空的極少數情況才退用 hero 的贈品/金額/回饋率純文字版（2026-07-15
-  // 站長回饋：收合態原本顯示贈品內容，容易被誤讀成「活動只有這個」）。這一行是
-  // 全頁唯一的摘要文字——桌機／手機收合態都看得到（見 promos.css .promo-quick-highlight
-  // 已移除 display:none）；詳情展開區不再重複輸出第二份相同文字（2026-07-15
-  // 第三輪站長回饋：原本展開後灰底 summary 區塊跟這行內容重複）。
-  const collapsedSummaryPlain = summary || hero.quickHighlightPlain;
-  const quickHighlightHtml = collapsedSummaryPlain
-    ? '<p class="promo-quick-highlight">' + pmcEscapeHtml_(collapsedSummaryPlain) + '</p>'
-    : '';
-  // 摘要（有圖時圖左文右）一律在 toggle 之外的 .promo-highlight-row 輸出，
-  // 見下方 highlightRowHtml 組裝處的說明。
-
-  const highlightRows = [];
+  const rows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
-    // 2026-07-16 第五輪站長回饋：適用通路可能很長（多個通路逗號分隔），超過 3 行
-    // 高才收合＋加「展開 ▾」toggle（機制同備註，見 promos.js setupMerchantsClamp）。
-    // clampClass 包一層 <span> 而不是直接 class 加在 <dd> 上——<dl> 內容模型只允許
-    // dt/dd 當子元素，toggle 按鈕必須插在 <dd> 內部（span 之後）才合法，不能像備註
-    // 那樣直接掛在量測目標的 afterend（那是 <div> 不是 <dd>，情境不同）。
-    highlightRows.push({ label: '適用通路', value: promo.bonus_merchants.join('、'), clampClass: 'promo-merchants-value' });
+    rows.push('<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">' +
+      pmcEscapeHtml_(promo.bonus_merchants.join('、')) + '</span></dd></div>');
   }
-  const highlightHtml = highlightRows.map(function (r) {
-    const val = r.multiline ? pmcEscapeHtmlMultiline_(r.value) : pmcEscapeHtml_(r.value);
-    const inner = r.clampClass ? '<span class="' + r.clampClass + '">' + val + '</span>' : val;
-    return '<div class="promo-meta-row"><dt>' + pmcEscapeHtml_(r.label) + '</dt><dd>' + inner + '</dd></div>';
-  }).join('');
-
-  // 活動宣傳圖：可能空、也可能是資料誤填的非網址字串（如 "picture link"），
-  // 一律走 pmcSanitizeUrl_ 過濾，無效值直接不輸出縮圖（不留空位）。改成小縮圖
-  // （約 80px、圓角、cover）＋點擊開 lightbox 看原圖（promos.js 監聽
-  // .promo-gift-thumb 點擊）。縮圖獨立放在可收合的 .promo-card-toggle 之外，
-  // 手機收合態、桌機都看得到——不像舊版大圖藏在收合的 detail 區塊裡
-  // （2026-07-15 站長回饋：活動宣傳圖沒顯示在頁面上）。維持在 toggle 之外還有
-  // 第二個理由：promos.js 的 click 監聽都掛在 document 上，同一層兩個監聽器
-  // 彼此的 stopPropagation 攔不住對方（不是真正的冒泡攔截），若把縮圖塞進
-  // .promo-card-toggle 內，點縮圖會連帶觸發卡片展開/收合。
-  const giftImgUrl = pmcSanitizeUrl_(promo.gift_image_url);
-  const giftImgAlt = title + ' 活動宣傳圖';
-  const giftThumbHtml = giftImgUrl
-    ? '<div class="promo-gift-thumb-row"><button type="button" class="promo-gift-thumb" data-full-src="' +
-      pmcEscapeHtml_(giftImgUrl) + '" data-full-alt="' + pmcEscapeHtml_(giftImgAlt) +
-      '" aria-label="放大看' + pmcEscapeHtml_(giftImgAlt) + '"><img src="' + pmcEscapeHtml_(giftImgUrl) +
-      '" alt="' + pmcEscapeHtml_(giftImgAlt) + '" loading="lazy" onerror="this.closest(\'.promo-gift-thumb-row\').style.display=\'none\'"></button></div>'
-    : '';
-
-  // 摘要一律放 toggle 之外的 .promo-highlight-row（2026-07-16 第六輪站長回饋：
-  // 有圖與無圖卡的 summary 起始位置要一致——舊做法無圖時塞在 toggle 內、有圖時
-  // 在 toggle 外的 highlight-row，兩者 top 不同）。無圖時 row 內只有文字；
-  // 圖與摘要皆無時不產生空容器。
-  const highlightRowHtml = (giftThumbHtml || quickHighlightHtml)
-    ? '<div class="promo-highlight-row">' + giftThumbHtml + quickHighlightHtml + '</div>'
-    : '';
-
-  // 新戶定義：直接顯示全文（2026-07-15 站長回饋移除收合，這是判斷自己是不是
-  // 新戶的關鍵資訊，不該藏在一個要點開的 details 裡）
-  const definitionHtml = promo.new_customer_definition
-    ? '<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>' +
-      pmcEscapeHtmlMultiline_(promo.new_customer_definition) + '</dd></div>'
-    : '';
-
-  const conditionHtml = promo.promo_condition
-    ? '<div class="promo-meta-row"><dt>達成條件</dt><dd>' + pmcEscapeHtmlMultiline_(promo.promo_condition) + '</dd></div>'
-    : '';
-
+  if (promo.promo_condition) {
+    rows.push('<div class="promo-meta-row"><dt>達成條件</dt><dd>' +
+      pmcEscapeHtmlMultiline_(promo.promo_condition) + '</dd></div>');
+  }
   let periodValueHtml;
   if (p.periodStartIso && p.periodEndIso) {
-    periodValueHtml = '<time datetime="' + p.periodStartIso + '">' + pmcFormatDateDisplay_(p.periodStartIso) + '</time> ~ <time datetime="' + p.periodEndIso + '">' + pmcFormatDateDisplay_(p.periodEndIso) + '</time>';
+    periodValueHtml = '<time datetime="' + p.periodStartIso + '">' + pmcFormatDateDisplay_(p.periodStartIso) +
+      '</time> ~ <time datetime="' + p.periodEndIso + '">' + pmcFormatDateDisplay_(p.periodEndIso) + '</time>';
   } else if (p.periodEndIso) {
     periodValueHtml = '至 <time datetime="' + p.periodEndIso + '">' + pmcFormatDateDisplay_(p.periodEndIso) + '</time> 止';
   } else if (p.periodStartIso) {
@@ -2138,98 +2102,225 @@ function pmcRenderPromoCard_(p) {
   } else {
     periodValueHtml = '不限期';
   }
-  const periodHtml = '<div class="promo-meta-row"><dt>活動期間</dt><dd>' + periodValueHtml + '</dd></div>';
-
-  // 備註：一律完整輸出成純 div，收不收合交給 promos.js 客戶端量測——
-  // scrollHeight 超過兩行高才套 clamp＋「展開 ▾」toggle，兩行內的備註完全不
-  // 收合（2026-07-15 站長回饋：短備註不該無條件被收合藏起來）。不再用
-  // <details>／<summary>：那套原生元件只能「一律收合」，沒辦法依內容長度
-  // 決定要不要收合。標題樣式（見 promos.css .promo-notes-label）跟「活動期間」
-  // 等 dt label 完全一樣，沿用同一視覺配方。
+  rows.push('<div class="promo-meta-row"><dt>活動期間</dt><dd>' + periodValueHtml + '</dd></div>');
+  if (promo.new_customer_definition) {
+    rows.push('<div class="promo-meta-row promo-definition-row"><dt>新戶定義</dt><dd>' +
+      pmcEscapeHtmlMultiline_(promo.new_customer_definition) + '</dd></div>');
+  }
+  // 備註一律完整輸出；收不收合交給 promos.js 客戶端量測（scrollHeight 超過兩行才
+  // 套 clamp＋「展開 ▾」）。⚠️ 量測必須在詳情展開之後才做——收合時 display:none，
+  // scrollHeight 恆為 0（2026-09-17 原型實測踩到）。
   const notesHtml = promo.notes
     ? '<div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div>' +
       '<div class="promo-notes-text">' + pmcEscapeHtmlMultiline_(promo.notes) + '</div></div>'
     : '';
+  return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
+    '<dl class="promo-card-meta">' + rows.join('') + '</dl>' + notesHtml + '</div>';
+}
 
-  // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有的話退用 promo.link
-  // （銀行活動頁）當主按鈕，文字改「活動詳情」。
-  // 「立即申辦」要在手機收合態就可點（分潤入口不能藏在展開後），所以按鈕仍放在
-  // .promo-card-toggle 內、跟可收合的 promo-card-detail 分開。位置沿革：第四輪
-  // 移到卡名右側（站長回饋位置尷尬），2026-07-16 第五輪再移到卡片右上角、跟類型
-  // 徽章同一水平帶（見下方 topline 組裝）；promos.js 的收合展開點擊處理需忽略
-  // 按鈕本身的點擊（見 promos.js setupCardToggle 的 .promo-apply-btn 排除判斷），
-  // 避免點按鈕同時觸發卡片展開/收合。
-  // 2026-07-15 站長回饋：移除「銀行活動頁」次要連結——有分潤連結時 promo.link
-  // 不再另外顯示，避免使用者被導去銀行官網、繞過分潤申辦連結。
-  const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
-  const promoLink = pmcSanitizeUrl_(promo.link);
-  let primaryCtaHtml = '';
-  if (ctaLink) {
-    primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) + '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(cardName) + '">立即申辦</a>';
-  } else if (promoLink) {
-    primaryCtaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) + '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
+// 一檔活動（主活動與堆疊層共用同一份標記，只差外層 class）。
+// data-period-end 掛在活動上而不是卡片上——同一張卡的多檔活動到期日各不相同，
+// promos.js 的「最後 N 天」徽章與過期隱藏都是逐檔判斷。
+// 只渲染「最高可拿的那一檔」——第 2 檔起走 pmcRenderPromoSubRow_ 的附屬列
+// （2026-09-21 起就沒有第二個呼叫端了，原本的 isMain 參數一併移除）。
+function pmcRenderPromoAct_(p, actId) {
+  const promo = p.promo;
+  const big = pmcRewardBig_(promo);
+  const detailId = actId + '-detail';
+  const typeBadges = p.types.map(function (t) {
+    const bucket = pmcPromoTypeBucket_(t);
+    return '<span class="promo-type-badge promo-type-badge--' + bucket + '">' + pmcEscapeHtml_(t) + '</span>';
+  }).join('');
+
+  // 縮圖：獎品有活動宣傳圖就用它，沒有就退回卡片圖（站長 2026-09-17）。
+  // ⚠️ onerror 要藏掉**整個 .promo-act-thumb 外框**，不能只藏 <img>——外框有 1px 細框，
+  // 只藏 img 會留下一個空的方框（2026-09-18 實測）。
+  const giftImgUrl = (pmcPromoValue_(promo) === null) ? pmcSanitizeUrl_(promo.gift_image_url) : '';
+  const cardImgSrc = 'assets/images/cards/' + encodeURIComponent(p.promo.id || '') + '.png';
+  const thumbSrc = giftImgUrl || cardImgSrc;
+  const thumbAlt = giftImgUrl ? (p.cardName + ' 活動宣傳圖') : p.cardName;
+  const thumbCls = 'promo-act-thumb' + (giftImgUrl ? ' promo-act-thumb--gift' : '');
+
+  const summary = promo.new_customer_summary || '';
+
+  return '<div class="promo-act is-main" data-period-end="' +
+      (p.periodEndIso || '') + '">\n' +
+    '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
+      pmcEscapeHtml_(detailId) + '">\n' +
+    '    <span class="' + thumbCls + '"><img src="' + pmcEscapeHtml_(thumbSrc) + '" alt="' +
+      pmcEscapeHtml_(thumbAlt) + '" loading="lazy" onerror="this.closest(\'.promo-act-thumb\').style.display=\'none\'"></span>\n' +
+    '    <span class="promo-act-body">\n' +
+    '      <span class="promo-act-badges">' + typeBadges +
+      '<span class="promo-ending-badge" hidden></span></span>\n' +
+    '      <span class="promo-act-reward' + (big.isGift ? ' is-gift' : '') + '">' + big.html +
+      '<small>' + pmcEscapeHtml_(pmcRewardSub_(promo)) + '</small></span>\n' +
+    (summary ? '      <span class="promo-act-summary">' + pmcEscapeHtml_(summary) + '</span>\n' : '') +
+    '      <span class="promo-act-more">活動詳情<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
+    '    </span>\n' +
+    '  </button>\n' +
+    '  ' + pmcRenderPromoDetail_(p, detailId) + '\n' +
+    '</div>';
+}
+
+// 一張卡一組（2026-09-17 改版）：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，
+// 卡片特色是另一種形狀的抽屜（不能跟堆疊用同一套視覺，否則看起來錯亂——站長指正）。
+// 堆疊與特色互斥：展開特色時整疊活動收起，收回特色它們才回來（promos.js 負責）。
+// 左欄那句「N 檔新戶活動・最多可拿 …（需分別達成）」。
+// 首刷禮沒有現金價值，不能併進金額，改成「＋N 項首刷禮」分開講。
+// ⚠️ 這是把同卡多檔的金額**相加**，所以句尾一定要帶「（需分別達成）」——
+//    2026-09-17 的「同一張卡的多檔活動各自獨立、不相加」講的是**排序只看單檔最大值**，
+//    不是禁止揭露總上限；但每一檔的達成條件都不同，不加這句會被讀成「刷一次就拿得到」
+//    （站長 2026-09-21 定稿，原本是「最高可拿」）。
+function pmcRailCount_(acts) {
+  let cash = 0, gifts = 0;
+  acts.forEach(function (p) {
+    const v = pmcPromoValue_(p.promo);
+    if (v === null) gifts++; else cash += v;
+  });
+  const parts = [];
+  if (cash > 0) parts.push(pmcMoney_(cash));
+  if (gifts > 0) parts.push(gifts + ' 項首刷禮');
+  if (!parts.length) return acts.length + ' 檔新戶活動';
+  return acts.length + ' 檔新戶活動・最多可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) +
+    '</b><span class="promo-rail-caveat">（需分別達成）</span>';
+}
+
+// 第 2 檔起的「附屬列」（做法 A，站長 2026-09-21 定案）：一行一檔的清單列，
+// 三欄＝金額｜標題｜右側 meta＋收合箭頭，獎品圖夾在金額與標題之間。
+//
+//   一般活動：NT$500 │ 活動一句話 │ 回饋加碼・10%・上限消費 NT$5,000 ▾
+//   首刷禮　：[首刷禮] │ 獎品全名 │ 達成條件 ▾      ← 首刷禮沒有現金價值
+//
+// class 刻意沿用 `promo-act-row`：promos.js 的 setupActToggle 靠它做展開收合，
+// 這樣附屬列不必另外寫一套互動（樣式用 `.promo-act-row.promo-sub-row` 雙 class 覆蓋，
+// 單 class 的 `.promo-sub-row` 會輸給 `.promo-act-row` 的 padding:0）。
+//
+// anyImg：這一組裡有沒有任何一檔有獎品圖。有的話，沒圖的那幾列也要補一個等寬空位，
+// 否則標題欄會一列一個起點、看起來像沒對齊。
+function pmcRenderPromoSubRow_(p, actId, anyImg) {
+  const promo = p.promo;
+  const detailId = actId + '-detail';
+  const value = pmcPromoValue_(promo);
+  const isGift = value === null;
+  const summary = String(promo.new_customer_summary || '');
+  const giftName = String(promo.gift_content || '').trim();
+  const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
+
+  const amt = isGift
+    ? '<span class="promo-sub-tag">首刷禮</span>'
+    : pmcEscapeHtml_(pmcMoney_(value));
+  const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
+  // 右側 meta：首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
+  // ⚠️ 刻意不帶類型名（「回饋加碼」「定額回饋」）：設計稿的右半欄有 686px，正式頁只有
+  //    495px，把類型帶進來會讓 meta 吃掉 203px、標題只剩 141px（實測）。類型在卡片層
+  //    的篩選 chip 已經有了，這一列真正要回答的是「多少％、上限多少」。
+  //    「上限消費」也縮成「上限」，同樣是為了把寬度讓給標題。
+  const meta = isGift ? summary : String(pmcRewardSub_(promo)).replace('上限消費', '上限');
+
+  let thumb = '';
+  if (giftImgUrl) {
+    thumb = '<span class="promo-sub-thumb promo-sub-thumb--gift"><img src="' +
+      pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(p.cardName + ' 活動宣傳圖') +
+      '" loading="lazy" onerror="this.closest(\'.promo-sub-thumb\').style.visibility=\'hidden\'"></span>';
+  } else if (anyImg) {
+    thumb = '<span class="promo-sub-thumb is-empty" aria-hidden="true"></span>';
   }
 
-  const imgSrc = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
-  const detailId = p.anchorId + '-detail';
+  return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
+    '  <button type="button" class="promo-act-row promo-sub-row" aria-expanded="false" aria-controls="' +
+      pmcEscapeHtml_(detailId) + '">\n' +
+    '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
+    '    <span class="promo-sub-title">' + title + '</span>\n' +
+    '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
+      '<span class="promo-sub-metatext">' + pmcEscapeHtml_(meta) + '</span>' +
+      '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
+    '  </button>\n' +
+    '  ' + pmcRenderPromoDetail_(p, detailId) + '\n' +
+    '</div>';
+}
 
-  return '<article class="promo-card" id="' + pmcEscapeHtml_(p.anchorId) + '" data-card-id="' + pmcEscapeHtml_(cardId) +
-    '" data-card-name="' + pmcEscapeHtml_(cardName) + '" data-period-end="' + (p.periodEndIso || '') +
-    '" data-order-index="' + p.orderIndex + '" data-type-buckets="' + pmcEscapeHtml_(p.buckets.join(' ')) + '">\n' +
-    // 2026-08-15 移除卡片頂部的類型色條（.promo-type-bar）——站長裁定那種「彩色頂條」
-    // 太有 AI 生成模板的樣子，是本站明令不再使用的手法（見 docs/project/ui-display.md）。
-    // 類型資訊沒有消失：卡片內的類型徽章（.promo-type-badge）本來就在講同一件事，
-    // 色條只是同一份資訊的裝飾性重複。p.primaryBucket 仍留著給篩選/排序用。
-    '  <div class="promo-card-body">\n' +
-    // role="button" 而非真的 <button>：裡面包 <h2> 標題，<button> 的內容模型是
-    // phrasing content 不允許 heading 後代（HTML5 規範），用 div+role=button 才合法；
-    // 鍵盤可及性（Enter/Space 觸發）與 aria-expanded 同步由 promos.js 補上。
-    '    <div class="promo-card-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
-    '      <div class="promo-card-header">\n' +
-    // 「立即申辦」再移到卡片右上角（2026-07-16 第五輪站長回饋：卡名右側的位置很
-    // 尷尬）——跟類型徽章同一水平帶（.promo-card-topline），靠右。這一整列在
-    // .promo-card-mainline（卡圖＋卡名＋chevron）之上，跟 chevron 完全不同一列，
-    // 天生不會重疊（chevron 只在 mainline 內垂直置中，topline 在它上方另起一行）；
-    // primaryCtaHtml 可能是空字串（沒有任何連結可用時），topline 此時只剩徽章，
-    // justify-content:space-between 對單一子元素無副作用。
-    '        <div class="promo-card-topline">\n' +
-    '          <div class="promo-type-badges">' + typeBadgesHtml + '<span class="promo-ending-badge" hidden></span></div>\n' +
-    primaryCtaHtml + '\n' +
-    '        </div>\n' +
-    '        <div class="promo-card-mainline">\n' +
-    '          <img class="promo-card-cardimg" src="' + imgSrc + '" alt="' + pmcEscapeHtml_(cardName) + '" loading="lazy" onerror="this.style.display=\'none\'">\n' +
-    // 卡名只出現一次：title 已含卡名（promo_name 自訂時假設含卡名／預設 fallback
-    // 就是 cardName 本身，2026-07-15 第三輪站長回饋起不再附加「新戶優惠」字樣），
-    // 不再另外重複一行 .promo-card-cardname（2026-07-15 第二輪站長回饋：「滙豐
-    // Live+ 卡 新戶優惠」標題下又重複一行「滙豐 Live+ 卡」）。
-    '          <div class="promo-card-headline">\n' +
-    '            <h2 class="promo-card-title">' + pmcEscapeHtml_(title) + '</h2>\n' +
-    // ⓘ 卡片詳情（2026-07-16 站長要求；同日方案 A 改為 iframe 內嵌彈窗）：href 保留
-    // 原本的深連結（?card= 由 script.js 開 modal；?start 繞過 landing 首訪轉址）當
-    // SEO／JS 失效或 promos.js 逾時放棄攔截時的 fallback；data-card-id 給 promos.js
-    // 的 detail overlay 模組讀取，postMessage 換卡不用重新解析 href。
-    '            <a class="promo-card-info-btn" href="' + pmcEscapeHtml_('/?start&card=' + cardId) + '" data-card-id="' + pmcEscapeHtml_(cardId) + '" target="_blank" rel="noopener noreferrer" aria-label="查看卡片詳情" title="查看卡片詳情">&#9432;</a>\n' +
-    '          </div>\n' +
-    '          <span class="promo-card-chevron" aria-hidden="true"></span>\n' +
-    '        </div>\n' +
+function pmcRenderCardGroup_(group) {
+  const acts = group.items;          // 已依「最高可拿」倒序
+  const main = acts[0];
+  const cardId = group.cardId;
+  const anchorId = group.anchorId;
+
+  const mainHtml = pmcRenderPromoAct_(main, anchorId + '-a1');
+  // 這一組裡有沒有任何一檔有獎品圖（決定沒圖的列要不要補等寬空位）
+  const anyImg = acts.slice(1).some(function (p) {
+    return pmcPromoValue_(p.promo) === null && !!pmcSanitizeUrl_(p.promo.gift_image_url);
+  });
+  const stackHtml = acts.slice(1).map(function (p, i) {
+    return pmcRenderPromoSubRow_(p, anchorId + '-a' + (i + 2), anyImg);
+  }).join('\n');
+
+  // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有就退用主活動的
+  // promo.link（銀行活動頁）、文字改「活動詳情」。同一張卡只出現一次。
+  const ctaLink = group.cta ? pmcSanitizeUrl_(group.cta.link) : '';
+  const promoLink = pmcSanitizeUrl_(main.promo.link);
+  let ctaHtml = '';
+  if (ctaLink) {
+    ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) +
+      '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-card-id="' +
+      pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) + '">立即申辦</a>';
+  } else if (promoLink) {
+    ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) +
+      '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
+  }
+
+  // 卡片特色：內容由部署時的 tools/build-promos-features.js 注入（它把 js/ 那 12 支
+  // 模組載進 Node 的 vm，用主站自己的 getDisplayRate() 算，絕不在這裡另寫一套回饋率
+  // 邏輯——見 docs/project/cashback-engine.md 第 6 節「三處實作必須一致」的警告）。
+  // 沒跑生成器時這裡是空的，promos.js 會把按鈕一起藏起來，頁面仍然完整可用。
+  const featId = anchorId + '-feat';
+
+  const featBtn = '<button type="button" class="promo-feat-btn" aria-expanded="false" aria-controls="' +
+    pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
+  const nameHtml = '<h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>';
+  const openTag = '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
+    pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
+    '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
+    '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n';
+  const featBox = '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
+    pmcEscapeHtml_(cardId) + '" hidden></div>\n';
+
+  // ---- 單檔活動的卡：維持原本的直式（卡名橫幅＋主活動＋按鈕列）----
+  // data-act-count 也讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器是確定的行為。
+  if (acts.length === 1) {
+    return openTag + '  ' + nameHtml + '\n' +
+      '  <div class="promo-card-main">\n' + mainHtml + '\n' +
+      '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
+      '    </div>\n  </div>\n' + featBox + '</article>';
+  }
+
+  // ---- 多檔活動的卡：做法 A「左側品牌欄」（站長 2026-09-21 定案）----
+  // 卡圖／卡名／「N 檔新戶活動・最高可拿 …」／申辦鈕／卡片特色全部收進左欄，
+  // 右欄上半是最高那一檔的完整卡、下半是第 2 檔起的附屬列。
+  // 為什麼不是「卡名橫跨兩欄」（2026-09-20 那版）：那條橫幅裡只有一行短字、
+  // 七成是空的，底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後，
+  // 卡名永遠跟卡圖在一起、不會落單，兩欄長度不一致也不再是問題（左右關係不是上下關係）。
+  // 參考：Booking.com「一間飯店、多種房型」、MoneySuperMarket 商品列。
+  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  return openTag +
+    '  <div class="promo-card-rail">\n' +
+    '    <div class="promo-rail-id">\n' +
+    '      <span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) + '" alt="' +
+      pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
+      'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>\n' +
+    '      <div class="promo-rail-text">\n' +
+    '        ' + nameHtml + '\n' +
+    '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
     '      </div>\n' +
     '    </div>\n' +
-    highlightRowHtml +
-    '    <div class="promo-card-detail" id="' + pmcEscapeHtml_(detailId) + '">\n' +
-    '      <div class="promo-card-detail-inner">\n' +
-    heroSectionHtml +
-    // summary 已經在 quickHighlightHtml（.promo-quick-highlight，展開前就看得到
-    // 那一行）輸出過一次，這裡不再重複——2026-07-15 第三輪站長回饋：收合態一行
-    // ＋展開後灰底 summary 區塊是同一段文字重複兩次。
-    '        <dl class="promo-card-meta">\n' +
-    // 欄位順序（2026-07-18 站長定案）：適用通路、達成條件、活動期間、新戶定義
-    highlightHtml + conditionHtml + periodHtml + definitionHtml + '\n' +
-    '        </dl>\n' +
-    notesHtml +
-    '      </div>\n' +
+    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
     '    </div>\n' +
     '  </div>\n' +
-    '</article>';
+    '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
+    // 這一區刻意沒有標題：附屬列的形狀（灰底、縮排的一行一檔）已經說明它是
+    // 「同一張卡的其他活動」，再加一行「這張卡的其他 N 檔活動」是多餘的
+    // （站長 2026-09-21）。檔數在左欄的「N 檔新戶活動」已經講過一次。
+    '  <div class="promo-card-stack">\n' + stackHtml + '\n  </div>\n' +
+    featBox + '</article>';
 }
 
 // 數量括號用半形 (n)，不用全形（） ——2026-07-15 站長回饋：全形括號跟其餘半形
@@ -2242,6 +2333,12 @@ function pmcBuildFilterChips_(total, bucketCounts) {
       chips.push('<button type="button" class="promo-chip" data-filter="' + c.key + '">' + pmcEscapeHtml_(c.label) + ' (' + n + ')</button>');
     }
   });
+  // 「即將結束」（2026-09-20 站長需求）：篩出有「最後 N 天／今天截止！」徽章的卡片。
+  // ⚠️ 數量**不能**在這裡算——徽章是 promos.js 拿「今天」跟 period_end 逐檔比出來的，
+  // 靜態生成當下算的數字隔天就錯（這頁一次匯出可以掛好幾週）。所以這裡只輸出骨架＋
+  // hidden，由 promos.js 的 refreshBadgesAndExpiry() 填數字並決定要不要顯示
+  // （一張都沒有就整顆不出現）。
+  chips.push('<button type="button" class="promo-chip promo-chip--ending" data-filter="ending" id="promos-chip-ending" hidden>即將結束 (<span id="promos-chip-ending-count">0</span>)</button>');
   return chips.join('\n');
 }
 
@@ -2250,7 +2347,7 @@ function pmcBuildJsonLd_(prepared) {
     return {
       '@type': 'ListItem',
       position: idx + 1,
-      // 與卡片標題（pmcRenderPromoCard_ 的 title）同一套 fallback 邏輯，一律只留卡名
+      // 一律只留卡名（promo_name 有填就用它）；url 指向該檔活動在卡片組內的錨點
       name: (p.promo.promo_name && String(p.promo.promo_name).trim()) ? String(p.promo.promo_name).trim() : (p.cardName || '新戶優惠'),
       url: PMC_SITE_URL + '/promos#' + p.anchorId
     };
@@ -2411,8 +2508,8 @@ function pmcPageTemplate_(o) {
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '    <div class="promos-hero-intro">\n' +
-'      <p>搞懂新戶辦卡的規則，不該是你的功課</p>\n' +
-'      <p>不用再開一堆分頁翻看各家銀行網頁了！這裡把每檔活動的新戶定義、達成條件與期限都攤開，幫你一頁比完多家銀行<br>還能一併查看卡片平常的回饋活動，辦到真正需要的信用卡。</p>\n' +
+'      <p>信用卡首刷禮排行榜！新戶辦卡推薦</p>\n' +
+'      <p>各大銀行信用卡新戶活動一次比較，為你列出刷卡金、加碼回饋及首刷禮，一真比較多張信用卡新戶活動、快速看懂活動條件及回饋方式。</p>\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +
@@ -2421,12 +2518,20 @@ function pmcPageTemplate_(o) {
 // 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
 // promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
 // 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
+// 2026-09-20：搜尋框與「資料更新於」併成同一列（站長：桌機搜尋框不必佔整行）。
+// 桌機＝搜尋框靠左（有 max-width）、戳章靠右；手機＝wrap 成兩列，戳章仍右對齊。
+'  <div class="promos-search-row">\n' +
 '  <div class="promos-search-box">\n' +
 '    <div class="promos-search-input-wrap">\n' +
 '      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
 '      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">\n' +
 '      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
 '    </div>\n' +
+'  </div>\n' +
+// 「資料更新於」戳章：2026-07-23 從頁尾搬到 grid 上方讓用戶一眼看到新鮮度；
+// 2026-09-20 再搬進搜尋列的右側（站長）。updatedIso 只在活動內容真的變動時才前進
+// （見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
+'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '  </div>\n' +
 '\n' +
 // 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
@@ -2441,13 +2546,9 @@ function pmcPageTemplate_(o) {
 o.filterChipsHtml + '\n' +
 '      </div>\n' +
 '    </div>\n' +
-'    <div class="promos-control-group">\n' +
-'      <span class="promos-control-label">排序</span>\n' +
-'      <div class="promos-sort-toggle" role="group" aria-label="排序方式" id="promos-sort-toggle">\n' +
-'        <button type="button" class="promo-sort-btn is-active" data-sort="deadline">按截止日期排序</button>\n' +
-'        <button type="button" class="promo-sort-btn" data-sort="card">按卡片名稱排序</button>\n' +
-'      </div>\n' +
-'    </div>\n' +
+    // 排序切換已移除（2026-09-17 站長裁定）：清單固定依「最高可拿」倒序，
+    // 不再讓使用者選排序方式。保留的是「類型」chips 與「隱藏我持有的卡片」。
+
     // 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：讀主站
     // localStorage 的 myOwnedCards_*（見 promos.js），這裡靜態生成時完全不知道
     // 訪客/用戶持有哪些卡，所以一律先 hidden，交給 promos.js 在偵測到有持有資料
@@ -2467,11 +2568,6 @@ o.filterChipsHtml + '\n' +
 '      </span>\n' +
 '    </div>\n' +
 '  </section>\n' +
-'\n' +
-// 「資料更新於」戳章：放在 controls 下方、grid 上方，讓用戶一眼看到活動新鮮度
-// （2026-07-23 站長回饋，原本在頁尾 footer 較難注意到）。updatedIso 只在活動內容真的
-// 變動時才前進（見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
-'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
 '\n' +
 '  <!-- PROMOS:START -->\n' +
 '  <div class="promo-grid" id="promo-grid">\n' +

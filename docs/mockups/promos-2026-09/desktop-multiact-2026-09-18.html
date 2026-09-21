@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>桌機多活動卡版面提案</title>
+<style>
+  :root {
+    --border: #e2e8f0;
+    --shadow: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+    --blue: #1e3a8a;
+    --green: #059669;
+    --arrow: #93b0e6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px 24px 80px;
+    font-family: -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+    background: #f1f5f9; color: #0f172a;
+  }
+  .wrap { max-width: 1392px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .lede { font-size: 14px; color: #475569; margin: 0 0 28px; line-height: 1.7; }
+  .lede code { background: #e2e8f0; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+
+  section { margin-bottom: 44px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .sec-head h2 { font-size: 17px; margin: 0; }
+  .tag {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: #dbeafe; color: #1e40af;
+  }
+  .tag.now { background: #dcfce7; color: #166534; }
+  .why { font-size: 13px; color: #475569; margin: 0 0 14px; line-height: 1.75; max-width: 980px; }
+  .why b { color: #0f172a; }
+
+  /* ---- 共用：一列三欄的 grid，多活動的卡跨 2 欄 ---- */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+  .card { background: #fff; border-radius: 14px; }
+  .card.multi { grid-column: span 2; }
+  .solo { border: 1px solid var(--border); box-shadow: var(--shadow); padding: 14px 16px; }
+  .cname {
+    font-size: 14px; font-weight: 700; margin: 0 0 10px;
+    padding-bottom: 9px; border-bottom: 1px solid #eef2f7;
+  }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; margin-bottom: 6px;
+  }
+  .b-bonus { background: #fef3c7; color: #92400e; }
+  .b-voucher { background: #d1fae5; color: #065f46; }
+  .reward { font-size: 24px; font-weight: 800; color: var(--green); line-height: 1.15; }
+  .reward small { display: block; font-size: 11.5px; font-weight: 500; color: #64748b; margin-top: 3px; }
+  .sum { font-size: 12.5px; color: #334155; line-height: 1.6; margin-top: 7px; }
+  .more { font-size: 12px; color: #1d4ed8; font-weight: 700; margin-top: 7px; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .apply {
+    flex: 1; text-align: center; background: var(--blue); color: #fff;
+    border-radius: 9px; padding: 10px; font-size: 13px; font-weight: 700;
+  }
+  .feat {
+    border: 1px solid #c7d7f5; color: var(--blue); background: #fff;
+    border-radius: 9px; padding: 10px 12px; font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .thumb { width: 84px; border-radius: 7px; background: linear-gradient(135deg,#dbeafe,#fce7f3); aspect-ratio: 8/5; flex: none; }
+  .row { display: flex; gap: 11px; }
+  .row > div:last-child { min-width: 0; }
+
+  /* ================= 現況（箭頭 ＋ 等寬右欄） ================= */
+  .now-multi { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30px; }
+  .now-main { border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; padding: 14px 16px; background:#fff; }
+  .now-side { position: relative; display: flex; flex-direction: column; gap: 8px; }
+  .now-side::before {
+    content: ''; position: absolute; left: -27px; top: 30px;
+    width: 16px; height: 3px; border-radius: 2px; background: var(--arrow);
+  }
+  .now-side::after {
+    content: ''; position: absolute; left: -13px; top: 24px;
+    border: 7px solid transparent; border-left-color: var(--arrow);
+  }
+  .now-side .act {
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 13px 15px;
+  }
+  .now-side .reward { font-size: 19px; }
+
+  /* ================= A：條列式 ================= */
+  .a-multi { display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; overflow: hidden; background: #fff; }
+  .a-main { padding: 14px 16px; }
+  .a-side { border-left: 1px solid #eef2f7; background: #fafcff; padding: 12px 0 4px; }
+  .a-side-h {
+    font-size: 11.5px; font-weight: 700; color: #6b86bd;
+    letter-spacing: .04em; padding: 0 16px 8px;
+  }
+  .a-item {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 9px 16px; border-top: 1px solid #eef2f7;
+  }
+  .a-item .amt { font-size: 17px; font-weight: 800; color: var(--green); flex: none; min-width: 78px; }
+  .a-item .txt { font-size: 12.5px; color: #334155; line-height: 1.55; }
+  .a-item .txt em { font-style: normal; display: block; font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .a-item .chev { margin-left: auto; color: #94a3b8; font-size: 12px; flex: none; }
+
+  /* ================= B：單框分欄 ================= */
+  .b-multi { display: grid; grid-template-columns: 1fr 1fr; column-gap: 0;
+    border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; overflow: hidden; background: #fff; }
+  .b-main { padding: 14px 16px; border-right: 1px solid #eef2f7; }
+  .b-side { padding: 0; }
+  .b-act { padding: 12px 16px; border-bottom: 1px solid #eef2f7; }
+  .b-act:last-child { border-bottom: 0; }
+  .b-side .reward { font-size: 19px; }
+  .b-rail {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; background: #f1f6ff; border-top: 1px solid #e2eafb;
+    font-size: 12px; color: #4b6ba8; font-weight: 700;
+  }
+
+  /* ================= C：右欄雙格 ================= */
+  .c-multi { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); column-gap: 16px; }
+  .c-main { border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; padding: 14px 16px; background:#fff; }
+  .c-side { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+  .c-side-h {
+    grid-column: 1 / -1; font-size: 11.5px; font-weight: 700;
+    color: #6b86bd; letter-spacing: .04em;
+  }
+  .c-act {
+    background: #fff; border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 11px 13px;
+  }
+  .c-act .reward { font-size: 18px; }
+  .c-act .sum { font-size: 12px; }
+
+  .note { font-size: 12px; color: #64748b; margin-top: 10px; line-height: 1.7; }
+  .note b { color: #0f172a; }
+  .pm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin-top: 10px; max-width: 980px; }
+  .pm div { font-size: 12.5px; line-height: 1.7; }
+  .pm .p::before { content: '＋ '; color: #059669; font-weight: 800; }
+  .pm .m::before { content: '－ '; color: #dc2626; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>桌機多活動卡：現況修正版 ＋ 三個提案</h1>
+<p class="lede">
+  1440px、3 欄、多活動的卡跨 2 欄。示範用同一組真資料：<b>iLEO 信用卡</b>（4 檔）、
+  <b>永豐幣倍卡</b>（3 檔）、<b>滙豐 Live+ 卡</b>（1 檔）。
+  前三檔活動的金額／文案與線上一致，卡圖以色塊示意。
+</p>
+
+<!-- ============ 現況 ============ -->
+<section>
+  <div class="sec-head"><h2>現況（本次已改好的版本）</h2><span class="tag now">已上 preview</span></div>
+  <p class="why">
+    右欄改成<b>等寬、等大</b>的獨立活動卡，彼此只用 8px gap 分開；歸屬關係改由欄間那支
+    <b>向右箭頭</b>交代。上一版「第 2 檔向右延伸＋第 3 檔以後向下逐層內縮」已移除。
+  </p>
+  <div class="grid">
+    <div class="card multi now-multi">
+      <div class="now-main">
+        <div class="cname">iLEO 信用卡</div>
+        <div class="row">
+          <div class="thumb"></div>
+          <div>
+            <span class="badge b-bonus">回饋加碼</span>
+            <div class="reward">NT$2,000<small>10%・上限消費 NT$20,000</small></div>
+            <div class="sum">核卡後90天內，國外外幣消費享10%</div>
+            <div class="more">活動詳情 ▾</div>
+          </div>
+        </div>
+        <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色 ▾</span></div>
+      </div>
+      <div class="now-side">
+        <div class="act"><span class="badge b-bonus">回饋加碼</span><div class="reward">NT$500<small>10%・上限消費 NT$5,000</small></div><div class="sum">核卡後90天內，國內刷指定行動支付享10%</div><div class="more">活動詳情 ▾</div></div>
+        <div class="act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$200<small>即享券</small></div><div class="sum">【大師加碼】透過本站連結申辦，再享200元即享券</div><div class="more">活動詳情 ▾</div></div>
+        <div class="act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$100<small>刷卡金</small></div><div class="sum">核卡後90天內，單筆一般消費滿NT1,000享100元刷卡金</div><div class="more">活動詳情 ▾</div></div>
+      </div>
+    </div>
+    <div class="card solo">
+      <div class="cname">滙豐 Live+ 卡</div>
+      <div class="row"><div class="thumb"></div><div>
+        <span class="badge b-voucher">定額回饋</span>
+        <div class="reward">NT$1,000<small>刷卡金</small></div>
+        <div class="sum">核卡後30天內刷滿5,000元，享1,000元刷卡金</div>
+        <div class="more">活動詳情 ▾</div></div></div>
+      <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色 ▾</span></div>
+    </div>
+  </div>
+  <div class="pm">
+    <div class="p">每一檔都是完整卡片，資訊量與手機版一致</div>
+    <div class="m">4 檔時右欄仍然比左欄高出一截，列高還是被它決定</div>
+  </div>
+</section>
+
+<!-- ============ A ============ -->
+<section>
+  <div class="sec-head"><h2>方案 A：主活動大卡 ＋ 右欄「一行一檔」條列</h2><span class="tag">最省高度</span></div>
+  <p class="why">
+    右欄不再是一張張卡片，而是<b>一行一檔的條列</b>：金額靠左對齊成一欄，右邊一句話說明，
+    點任一行就地展開該檔詳情。整組只有一個外框，主活動是唯一的「卡片」。
+  </p>
+  <div class="grid">
+    <div class="card multi a-multi">
+      <div class="a-main">
+        <div class="cname">iLEO 信用卡</div>
+        <div class="row"><div class="thumb"></div><div>
+          <span class="badge b-bonus">回饋加碼</span>
+          <div class="reward">NT$2,000<small>10%・上限消費 NT$20,000</small></div>
+          <div class="sum">核卡後90天內，國外外幣消費享10%</div>
+          <div class="more">活動詳情 ▾</div></div></div>
+        <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色</span></div>
+      </div>
+      <div class="a-side">
+        <div class="a-side-h">這張卡的其他 3 檔活動</div>
+        <div class="a-item"><span class="amt">NT$500</span><span class="txt">國內刷指定行動支付享 10%<em>回饋加碼・上限消費 NT$5,000</em></span><span class="chev">▾</span></div>
+        <div class="a-item"><span class="amt">NT$200</span><span class="txt">【大師加碼】透過本站連結申辦<em>定額回饋・即享券</em></span><span class="chev">▾</span></div>
+        <div class="a-item"><span class="amt">NT$100</span><span class="txt">單筆一般消費滿 NT$1,000<em>定額回饋・刷卡金</em></span><span class="chev">▾</span></div>
+      </div>
+    </div>
+    <div class="card solo">
+      <div class="cname">滙豐 Live+ 卡</div>
+      <div class="row"><div class="thumb"></div><div>
+        <span class="badge b-voucher">定額回饋</span>
+        <div class="reward">NT$1,000<small>刷卡金</small></div>
+        <div class="sum">核卡後30天內刷滿5,000元，享1,000元刷卡金</div>
+        <div class="more">活動詳情 ▾</div></div></div>
+      <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色 ▾</span></div>
+    </div>
+  </div>
+  <div class="pm">
+    <div class="p">金額排成一直欄，同一張卡的其他活動一眼掃完、可比大小</div>
+    <div class="p">4 檔也塞得進主活動的高度，列高幾乎被拉平</div>
+    <div class="m">其他活動的「卡片感」消失，視覺權重明顯低於主活動</div>
+    <div class="m">首刷禮的獎品圖沒地方放（只能進展開後的詳情）</div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<section>
+  <div class="sec-head"><h2>方案 B：單一外框、內部用分隔線切欄</h2><span class="tag">最單純</span></div>
+  <p class="why">
+    整組是<b>一張卡</b>，沒有卡中卡：左右用一條直線分欄，右欄的活動之間用橫線分隔。
+    底部一條淺藍窄帶寫「同一張卡，3 檔活動可同時參加」，把歸屬關係講死。
+  </p>
+  <div class="grid">
+    <div class="card multi b-multi">
+      <div class="b-main">
+        <div class="cname">iLEO 信用卡</div>
+        <div class="row"><div class="thumb"></div><div>
+          <span class="badge b-bonus">回饋加碼</span>
+          <div class="reward">NT$2,000<small>10%・上限消費 NT$20,000</small></div>
+          <div class="sum">核卡後90天內，國外外幣消費享10%</div>
+          <div class="more">活動詳情 ▾</div></div></div>
+        <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色</span></div>
+      </div>
+      <div class="b-side">
+        <div class="b-act"><span class="badge b-bonus">回饋加碼</span><div class="reward">NT$500<small>10%・上限消費 NT$5,000</small></div><div class="sum">核卡後90天內，國內刷指定行動支付享10%</div><div class="more">活動詳情 ▾</div></div>
+        <div class="b-act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$200<small>即享券</small></div><div class="sum">【大師加碼】透過本站連結申辦，再享200元即享券</div><div class="more">活動詳情 ▾</div></div>
+        <div class="b-act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$100<small>刷卡金</small></div><div class="sum">單筆一般消費滿NT$1,000享100元刷卡金</div><div class="more">活動詳情 ▾</div></div>
+      </div>
+      <div class="b-rail">同一張卡・3 檔活動可同時參加</div>
+    </div>
+    <div class="card solo">
+      <div class="cname">滙豐 Live+ 卡</div>
+      <div class="row"><div class="thumb"></div><div>
+        <span class="badge b-voucher">定額回饋</span>
+        <div class="reward">NT$1,000<small>刷卡金</small></div>
+        <div class="sum">核卡後30天內刷滿5,000元，享1,000元刷卡金</div>
+        <div class="more">活動詳情 ▾</div></div></div>
+      <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色 ▾</span></div>
+    </div>
+  </div>
+  <div class="pm">
+    <div class="p">沒有卡中卡、沒有陰影疊陰影，跟單活動的卡放在一起很齊</div>
+    <div class="p">歸屬關係靠「同一個外框」，不必再加箭頭或文字</div>
+    <div class="m">右欄活動之間只有一條線，多檔時仍會比左欄長</div>
+    <div class="m">左右兩欄的視覺份量接近，主活動不再明顯是主角</div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<section>
+  <div class="sec-head"><h2>方案 C：右欄改成 2×N 小格</h2><span class="tag">最矮</span></div>
+  <p class="why">
+    其他活動改排成<b>兩欄小格</b>：3~4 檔只佔兩列，整組高度直接砍半，
+    一列裡的多活動卡與單活動卡高度幾乎一樣。小格保留徽章＋金額＋一句話。
+  </p>
+  <div class="grid">
+    <div class="card multi c-multi">
+      <div class="c-main">
+        <div class="cname">iLEO 信用卡</div>
+        <div class="row"><div class="thumb"></div><div>
+          <span class="badge b-bonus">回饋加碼</span>
+          <div class="reward">NT$2,000<small>10%・上限消費 NT$20,000</small></div>
+          <div class="sum">核卡後90天內，國外外幣消費享10%</div>
+          <div class="more">活動詳情 ▾</div></div></div>
+        <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色</span></div>
+      </div>
+      <div class="c-side">
+        <div class="c-side-h">這張卡的其他 3 檔活動</div>
+        <div class="c-act"><span class="badge b-bonus">回饋加碼</span><div class="reward">NT$500</div><div class="sum">國內刷指定行動支付享 10%</div></div>
+        <div class="c-act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$200</div><div class="sum">本站連結申辦再享即享券</div></div>
+        <div class="c-act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$100</div><div class="sum">單筆一般消費滿 NT$1,000</div></div>
+      </div>
+    </div>
+    <div class="card solo">
+      <div class="cname">滙豐 Live+ 卡</div>
+      <div class="row"><div class="thumb"></div><div>
+        <span class="badge b-voucher">定額回饋</span>
+        <div class="reward">NT$1,000<small>刷卡金</small></div>
+        <div class="sum">核卡後30天內刷滿5,000元，享1,000元刷卡金</div>
+        <div class="more">活動詳情 ▾</div></div></div>
+      <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色 ▾</span></div>
+    </div>
+  </div>
+  <div class="pm">
+    <div class="p">整組最矮，一列裡的空白最少</div>
+    <div class="p">每一格仍是獨立卡片，維持「各自獨立、條件不同」的語意</div>
+    <div class="m">小格寬度只剩一半，長文案（永豐幣倍卡那種）一定要截斷</div>
+    <div class="m">奇數檔數會缺一格，右下角留一塊空位</div>
+  </div>
+</section>
+
+<!-- ============ 三檔卡對照 ============ -->
+<section>
+  <div class="sec-head"><h2>3 檔活動時的對照（永豐幣倍卡）</h2></div>
+  <p class="why">文案較長的一張卡，用來看三個方案的截斷風險。</p>
+  <div class="grid">
+    <div class="card multi a-multi">
+      <div class="a-main">
+        <div class="cname">永豐幣倍卡（方案 A）</div>
+        <div class="row"><div class="thumb"></div><div>
+          <span class="badge b-bonus">回饋加碼</span>
+          <div class="reward">NT$500<small>20%・上限消費 NT$2,500</small></div>
+          <div class="sum">核卡後30日內以新臺幣結購外幣，享指定行動支付一般消費最高20%刷卡金</div>
+          <div class="more">活動詳情 ▾</div></div></div>
+        <div class="actions"><span class="apply">立即申辦</span><span class="feat">卡片特色</span></div>
+      </div>
+      <div class="a-side">
+        <div class="a-side-h">這張卡的其他 2 檔活動</div>
+        <div class="a-item"><span class="amt">NT$300</span><span class="txt">Apple Pay、Google Pay 加碼 2% 現金回饋<em>回饋加碼・上限消費 NT$10,000</em></span><span class="chev">▾</span></div>
+        <div class="a-item"><span class="amt">NT$300</span><span class="txt">薪轉戶新辦卡，綁定特選行動支付滿 600 元<em>定額回饋・刷卡金</em></span><span class="chev">▾</span></div>
+      </div>
+    </div>
+    <div class="card multi c-multi" style="grid-column: span 1">
+      <div class="c-main">
+        <div class="cname">永豐幣倍卡（方案 C 的小格）</div>
+        <div class="c-side" style="display:grid">
+          <div class="c-act"><span class="badge b-bonus">回饋加碼</span><div class="reward">NT$300</div><div class="sum">Apple Pay、Google Pay 加碼 2%</div></div>
+          <div class="c-act"><span class="badge b-voucher">定額回饋</span><div class="reward">NT$300</div><div class="sum">薪轉戶新辦卡綁定行動支付…</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

@@ -57,9 +57,11 @@
 - 觸發：URL 帶 `?embed=1`。index.html pre-paint script（`<head>` 內，Grep "pmc-embed"）在首屏前於 `<html>` 加 `pmc-embed` class，避免閃一下完整工具介面；styles.css 對應規則（Grep "html.pmc-embed"）只留 `#card-detail-modal` 可見，其餘全站 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight/boot loader）一律 `display:none !important`，`body`/`.container` 背景轉透明——`#card-detail-modal` 本身是 `position:fixed` 全螢幕深色遮罩，天生蓋滿 iframe viewport，不用另外改它的樣式。
 - postMessage 協定（script.js 主 `DOMContentLoaded` 尾端，Grep "pmc-embed-ready"；origin 兩端都檢查 `location.origin`，非 embed 模式完全不掛 listener、不送訊息）：
   - iframe → 父頁：`{type:'pmc-embed-ready'}`（初始化完成，可以開卡了）；`{type:'pmc-detail-closed'}`（modal 被關閉——關閉鈕與點遮罩兩條路徑共用 `showCardDetail()` 內定義的 `closeModal`，勾子加在那裡，不是複製一份關閉邏輯）
-  - 父頁 → iframe：`{type:'pmc-open-card', cardId}`（開/換卡，`showCardDetail()` 本身的 `wasAlreadyOpen` guard 已處理「modal 已開啟時換卡」不重複上鎖的問題，這裡不用額外處理）
+  - 父頁 → iframe：`{type:'pmc-open-card', cardId, section}`（開/換卡；`section` 選填，見下方入口鈕段，`showCardDetail()` 本身的 `wasAlreadyOpen` guard 已處理「modal 已開啟時換卡」不重複上鎖的問題，這裡不用額外處理）
   - 也支援直接開 `/?start&embed=1&card=<id>`——沿用既有的 `?card=` 深連結機制（2026-07-16 稍早新增），不需要 postMessage 往返
-- 消費端：`promos.js` 的 `setupCardDetailOverlay()`（新戶活動頁點 ⓘ）。iframe（`src="/?start&embed=1"`）只建立一次、常駐重用，換卡靠 postMessage，不重新載入；首次載入 8 秒內沒收到 `pmc-embed-ready` 視為攔截失敗，改用 `.promo-card-info-btn` 原本保留的 `href`（`/?start&card=<id>`，`target="_blank"`）開新分頁，之後的點擊也不再嘗試 iframe。`.promo-card-info-btn` 額外帶 `data-card-id`（由 `apps-script/cards-export.gs` 的 `pmcRenderPromoCard_` 生成，Grep "data-card-id"）供 postMessage 用，不用重新解析 href。
+- 消費端：`promos.js` 的 `setupCardDetailOverlay()`。iframe（`src="/?start&embed=1"`）只建立一次、常駐重用，換卡靠 postMessage，不重新載入；首次載入 8 秒內沒收到 `pmc-embed-ready` 視為攔截失敗，改用入口鈕原本保留的 `href`（`/?start&card=<id>`，`target="_blank"`）開新分頁，之後的點擊也不再嘗試 iframe。入口鈕額外帶 `data-card-id` 供 postMessage 用，不用重新解析 href。
+  - **入口鈕 2026-09-17 改版**：舊的卡名旁 ⓘ（`.promo-card-info-btn`，由已移除的 `pmcRenderPromoCard_` 生成）已不存在；現在是卡片特色區右上角的「查看全部 ›」（`.promo-feat-all`，由 `tools/build-promos-features.js` 部署時生成）。`promos.js` 的點擊選擇器寫成 `'.promo-feat-all, .promo-card-info-btn'` 兩個都收，只是為了讓尚未重新部署的舊 `promos.html` 也還能用，**不是現行標記**。
+  - **`data-section`（2026-09-17 新增）**：`.promo-feat-all` 帶 `data-section="card-special-section"`，`promos.js` 把它放進 `pmc-open-card` 訊息，`js/home-ui.js` 收到後點一下詳情頁對應的導覽鈕，讓詳情開完直接捲到「指定通路回饋」。刻意重用那顆導覽鈕而不是另寫捲動——它已經處理好 sticky header 偏移與 active 狀態同步。
 - 不動 auth／登出流程：`onAuthStateChanged` 在 embed 模式下照常跑，iframe 與主站同網域，個人化資料（分級、筆記、額度等）自然可用。
 
 ## 1b. 寬螢幕桌機版面（≥1400px，2026-09-08 新增）

@@ -917,6 +917,21 @@ function setupCardDetailNav(modalContent) {
 
     const buttons = Array.from(nav.querySelectorAll('.card-detail-nav-btn'));
 
+    // 捲動時「被黏住的那一塊」有多高。2026-09-18 起桌機把 .modal-header 也設成
+    // sticky（站長要求標題不要被捲走），所以黏住的高度＝header＋nav；手機 header
+    // 不 sticky，就只有 nav。用 getComputedStyle 判斷而不是寫死斷點，CSS 改斷點時
+    // 這裡不用跟著改。下面所有「讓區塊落在黏住區塊下方」的計算都走這支。
+    const detailHeader = modalContent.querySelector('.modal-header');
+    const stickyOffset = () => {
+        const headerSticky = detailHeader && getComputedStyle(detailHeader).position === 'sticky';
+        return (headerSticky ? detailHeader.offsetHeight : 0) + nav.offsetHeight;
+    };
+    // nav 要黏在 header 底下而不是蓋住它——header 高度隨卡名長度變動，量完寫進
+    // CSS 變數給 .card-detail-nav 的 top 用（CSS 端有 fallback 值）。
+    if (detailHeader) {
+        modalContent.style.setProperty('--pmc-detail-header-h', detailHeader.offsetHeight + 'px');
+    }
+
     // Disconnect any prior observer (modal opens once per card, but be safe)
     if (_cardDetailNavObserver) {
         _cardDetailNavObserver.disconnect();
@@ -962,7 +977,7 @@ function setupCardDetailNav(modalContent) {
             // Rect-based delta (same basis as updateActive) so the section's
             // heading lands just below the sticky nav, not hidden under it.
             // offsetTop was relative to the wrong offsetParent and overshot on mobile.
-            const navHeight = nav.offsetHeight;
+            const navHeight = stickyOffset();
             const containerTop = modalContent.getBoundingClientRect().top;
             const sectionTop = section.getBoundingClientRect().top;
             const delta = sectionTop - containerTop - navHeight - 8;
@@ -976,7 +991,7 @@ function setupCardDetailNav(modalContent) {
     // (nav + 8px): a section a nav button just scrolled to must count as
     // past the line, otherwise the previous section stays highlighted.
     const updateActive = () => {
-        const navHeight = nav.offsetHeight;
+        const navHeight = stickyOffset();
         const containerTop = modalContent.getBoundingClientRect().top;
         let current = visibleSections[0];
         for (const s of visibleSections) {
