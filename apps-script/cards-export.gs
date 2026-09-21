@@ -2133,7 +2133,9 @@ function pmcRewardSub_(promo) {
 // 2026-09-17 站長指正——改版中期這一整塊一度被拿掉，但它是使用者判斷「自己算不算
 // 新戶、要做什麼才拿得到」的唯一依據，必須留著；而且同一張卡的多檔活動條件各不相同，
 // 所以它掛在「每一檔活動」身上，不是掛在卡片上。
-function pmcRenderPromoDetail_(p, detailId) {
+// leadHtml：塞在詳情最上方的一段（附屬列用）。手機版的附屬列把 meta 文字從收合狀態
+// 移進來，收合時那一行只留「活動詳情 ▾」（站長 2026-09-21）。
+function pmcRenderPromoDetail_(p, detailId, leadHtml) {
   const promo = p.promo;
   const rows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
@@ -2168,6 +2170,7 @@ function pmcRenderPromoDetail_(p, detailId) {
       '<div class="promo-notes-text">' + pmcEscapeHtmlMultiline_(promo.notes) + '</div></div>'
     : '';
   return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
+    (leadHtml || '') +
     '<dl class="promo-card-meta">' + rows.join('') + '</dl>' + notesHtml + '</div>';
 }
 
@@ -2290,9 +2293,15 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     '    <span class="promo-sub-title">' + title + '</span>\n' +
     '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
       '<span class="promo-sub-metatext">' + pmcEscapeHtml_(meta) + '</span>' +
+      '<span class="promo-sub-more">活動詳情</span>' +
       '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '  </button>\n' +
-    '  ' + pmcRenderPromoDetail_(p, detailId) + '\n' +
+    // 同一段 meta 文字輸出兩份：收合那行的 .promo-sub-metatext（桌機看得到）與
+    // 詳情最上方的 .promo-sub-summary（手機看得到）。CSS 依寬度只顯示其中一份，
+    // 所以畫面上不會重複。刻意不在 promos.js 搬節點——那會讓「收合時長什麼樣」
+    // 變成要跑過 JS 才知道的事。
+    '  ' + pmcRenderPromoDetail_(p, detailId,
+      meta ? '<p class="promo-sub-summary">' + pmcEscapeHtml_(meta) + '</p>' : '') + '\n' +
     '</div>';
 }
 
@@ -2354,15 +2363,21 @@ function pmcRenderCardGroup_(group) {
   // 主活動裡那顆卡片圖由 CSS 藏起來（.promo-card-main .promo-act-thumb:not(--gift)），
   // 獎品自己的活動宣傳圖仍然留著——那是這一檔活動獨有的資訊，不是重複。
   // data-act-count 讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器也是確定的行為。
+  // 兩顆按鈕跟多檔卡一樣住在 rail 裡（站長 2026-09-21）：桌機與手機都是
+  // 「卡片圖＋名稱 → 按鈕 → 分割線 → 活動內容」。放進 rail 才會在分割線**上方**
+  // ——rail 的 border-bottom 就是那條線，按鈕留在 .promo-card-main 裡怎麼排都在線下。
+  const actionsHtml = '  <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n  </div>\n';
   if (acts.length === 1) {
     return openTag +
       '  <div class="promo-card-rail promo-card-rail--solo">\n' +
-      '    ' + thumbHtml + '\n' +
-      '    ' + nameHtml + '\n' +
+      '    <div class="promo-rail-id">\n' +
+      '      ' + thumbHtml + '\n' +
+      '      ' + nameHtml + '\n' +
+      '    </div>\n' +
+      '  ' + actionsHtml +
       '  </div>\n' +
-      '  <div class="promo-card-main">\n' + mainHtml + '\n' +
-      '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
-      '    </div>\n  </div>\n' + featBox + '</article>';
+      '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
+      featBox + '</article>';
   }
 
   // ---- 多檔活動的卡：做法 A「左側品牌欄」（站長 2026-09-21 定案）----

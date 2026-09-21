@@ -1731,16 +1731,9 @@ a {
   flex-direction: column;
   align-self: stretch;
 }
-/* 單檔卡：白卡撐到列高，按鈕列釘在底部——同一列的「立即申辦」會對齊成一條線 */
-.promo-card[data-act-count="1"] .promo-card-main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-.promo-card[data-act-count="1"] .promo-card-actions {
-  margin-top: auto;
-  padding-top: 13px;
-}
+/* 單檔卡：白卡撐到列高（同一列等高）。按鈕 2026-09-21 起住在 rail 裡，
+   所以這裡不再需要「釘在底部」那組規則。 */
+.promo-card[data-act-count="1"] .promo-card-main { flex: 1; }
 
 /* 卡名一律住在 .promo-card-rail 裡（2026-09-21 起單檔卡也有 rail），所以它只管字：
    白卡表面由 <article> 負責、內距由 rail 負責。單檔卡與多檔卡、手機與桌機，
@@ -1804,19 +1797,20 @@ a {
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
 
-/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右，活動內容接在底下整列展開
-   （站長 2026-09-21 從三案中選定方案 3）。
+/* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右（站長 2026-09-21 選定
+   三案中的方案 3），底下接兩顆按鈕，再往下才是分割線與活動內容。
    刻意跟多檔卡在**手機上**的身分區塊長得一模一樣——零件、尺寸、間距全部共用，
    差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄。
    ⚠️ 不放「1 檔新戶活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
-   ⚠️ 這條不包在 media query 裡——單檔卡在所有寬度都是這個橫列。 */
-.promo-card-rail--solo {
+   ⚠️ 這幾條不包在 media query 裡——單檔卡在所有寬度都是這個排法。 */
+.promo-card-rail--solo .promo-rail-id {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 .promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
 .promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+.promo-card-rail--solo .promo-card-actions { margin-top: 12px; }
 /* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
    免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
 .promo-rail-caveat { display: block; font-size: 11px; }
@@ -1902,15 +1896,17 @@ a {
   font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
-/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級跟著降下來才排得下。
-   顏色：2026-09-21 站長選了「燒橘」#c2410c（原本是 #8a5c00 深金褐，橘味太淡）。
-   白底對比 4.9:1，過 WCAG AA。⚠️ 它跟「最後 N 天」徽章的紅（#dc2626）是相鄰色相，
-   同一張卡上兩個都出現時別再把任何一邊往對方推。 */
+/* 獎品沒有金額，大字改放贈品全名（不截斷）——字級比金額小一階才排得下。
+   規格與附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-title）**必須一致**：
+   20px／--pmc-hero-green。同一張卡上主活動與附屬列的禮物名稱如果一大一小、
+   一橘一綠，看起來就是壞掉的（2026-09-21 實測畫面）。
+   ⚠️ 配色沿革：#8a5c00 深金褐 → #c2410c 燒橘（2026-09-21 早上）→ #10b981
+   （2026-09-21 晚上，站長指定 --pmc-hero-green，與獎勵數字同色）。 */
 .promo-act-reward.is-gift {
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 20px;
+  line-height: 1.45;
   letter-spacing: 0;
-  color: #c2410c;
+  color: var(--pmc-hero-green);
 }
 .promo-act-reward small {
   display: block;
@@ -2038,15 +2034,19 @@ a {
   color: var(--pmc-hero-green);
   line-height: 1.25;
 }
-/* 首刷禮沒有現金價值：金額欄改放這個小標，標題欄才放獎品全名 */
+/* 首刷禮沒有現金價值：金額欄改放這個小標，標題欄才放獎品全名。
+   ⚠️ 配色**必須**跟主活動的 .promo-type-badge--gift 一致（糖果粉）。
+   2026-09-21 修正：原本硬寫 #d1fae5/#065f46，那是**定額回饋**的薄荷綠——
+   於是同一張卡上「首刷禮」出現兩種顏色（主活動粉、附屬列綠），站長回報。
+   用同一組 token 就不會再分岔。 */
 .promo-sub-tag {
   display: inline-block;
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 6px;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--pmc-candy-pink-bg);
+  color: var(--pmc-candy-pink-text);
 }
 /* 獎品圖：夾在金額欄與標題之間，只有 34px，不搶版面。點它放大看原圖
    （promos.js 的 setupGiftLightbox 會 stopPropagation，不會連帶展開詳情）。
@@ -2107,6 +2107,18 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 手機專用的兩個零件（桌機隱藏，見下方 max-width 區塊）：
+   .promo-sub-more   收合那行的「活動詳情」字樣，取代桌機顯示的 meta 文字
+   .promo-sub-summary 同一段 meta 文字，改放在展開後的最上方
+   生成器兩份都輸出，CSS 依寬度只顯示其中一份，畫面上不會重複。 */
+.promo-sub-more,
+.promo-sub-summary { display: none; }
+.promo-sub-summary {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pmc-ink);
+}
 /* 收合箭頭比內文的大一階（站長 2026-09-21：箭頭加大一些） */
 .promo-sub-meta .promo-chevron {
   flex: none;
@@ -2134,10 +2146,21 @@ a {
   border-radius: 0;
   background: #f8fafc;
 }
-/* 首刷禮那一列的禮物名稱用與主活動大字相同的橘（.promo-act-reward.is-gift #c2410c）。
-   ⚠️ 顏色刻意兩個寬度都套：同一個東西在手機是橘色、桌機是黑色，那是 bug 不是設計。
-   版面相關的調整（不截斷、收掉空位）才只在手機（站長 2026-09-21）。 */
-.promo-act-row.promo-sub-row.is-gift .promo-sub-title { color: #c2410c; font-weight: 700; }
+/* 首刷禮那一列的禮物名稱＝這一檔的「獎勵本身」，所以照獎勵數字的規格走：
+   20px、粗體、--pmc-hero-green（站長 2026-09-21；先前試過 #c2410c 橘，已改回綠）。
+   兩個寬度都套——同一個東西在手機與桌機不同色是 bug 不是設計。 */
+.promo-act-row.promo-sub-row.is-gift .promo-sub-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pmc-hero-green);
+  /* 不截斷（兩個寬度都是）：禮物名稱就是這一列的獎勵本身，截掉就看不懂送什麼。
+     20px 之下桌機一行只排得下五六個字（實測截成「星巴克行動…」），所以
+     `.promo-sub-title` 那組 nowrap／ellipsis 在首刷禮這一列一律取消。 */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
 
 @media (max-width: 560px) {
   .promo-act-row.promo-sub-row { flex-wrap: wrap; }
@@ -2178,12 +2201,11 @@ a {
   /* 「首刷禮」小標只有約 60px，卻佔著 86px 的金額欄，害獎品圖離它很遠 */
   .promo-act-row.promo-sub-row.is-gift .promo-sub-amt { width: auto; }
 
-  /* 3. 禮物名稱未展開就完整顯示（不截斷）——它是這一列的主詞，截掉就看不懂送什麼 */
-  .promo-act-row.promo-sub-row.is-gift .promo-sub-title {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
+  /* 3a. 收合那行只留「活動詳情 ▾」，meta 文字改在展開後的最上方出現
+         （站長 2026-09-21；與主活動的「活動詳情 ▾」一致）。桌機維持顯示 meta。 */
+  .promo-sub-metatext { display: none; }
+  .promo-sub-more { display: inline; color: var(--pmc-blue-deep); font-weight: 700; }
+  .promo-sub-summary { display: block; }
 
   /* 4. 摘要文字：未展開多顯示一行，展開後整段攤開。兩處都要——
         主活動的 .promo-act-summary，以及附屬列裡擔任同樣角色的 .promo-sub-title
@@ -2397,7 +2419,9 @@ a {
   .promo-act-thumb--gift { width: 70px; }
 
   .promo-act-reward { font-size: 24px; }
-  .promo-act-reward.is-gift { font-size: 12.5px; }
+  /* .promo-act-reward.is-gift 不在這裡降級：禮物名稱的規格（20px／hero-green）
+     兩個寬度一致，且要跟附屬列的 .promo-sub-title 對齊（2026-09-21）。
+     先前這裡寫 12.5px，結果桌機的主活動禮物名比附屬列的還小一半。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
   .promo-act-summary { font-size: 12px; line-height: 1.6; margin-top: 8px; }
   .promo-act-more { font-size: 11.5px; margin-top: 8px; }
