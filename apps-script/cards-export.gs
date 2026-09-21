@@ -2134,7 +2134,7 @@ function pmcRewardSub_(promo) {
 // 新戶、要做什麼才拿得到」的唯一依據，必須留著；而且同一張卡的多檔活動條件各不相同，
 // 所以它掛在「每一檔活動」身上，不是掛在卡片上。
 // 附屬列把收合那行的 meta 文字整段移進詳情裡（兩個寬度都是，站長 2026-09-21），
-// 收合時那一行只留「活動詳情 ▾」。移進來的位置有兩種，由呼叫端決定：
+// 收合時那一行只留「詳情 ▾」（主活動那顆維持全稱）。移進來的位置有兩種，由呼叫端決定：
 //   leadHtml    ＝ <dl> 之前的一段話（首刷禮的達成條件、回饋加碼的「最多可拿…」）
 //   leadRowHtml ＝ <dl> 的第一列（定額回饋的「OPENPOINT」「刷卡金」這種單一名詞，
 //                 單獨一段看不懂在講什麼，要掛「回饋類型」標題——站長指定）
@@ -2295,7 +2295,7 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
     '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
     '    <span class="promo-sub-title">' + title + '</span>\n' +
     '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
-      '<span class="promo-sub-more">活動詳情</span>' +
+      '<span class="promo-sub-more">詳情</span>' +
       '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '  </button>\n' +
     // meta 文字只輸出一份，位置在展開後的詳情最上方。定額回饋走 <dl> 的第一列
