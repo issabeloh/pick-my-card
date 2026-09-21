@@ -1812,6 +1812,9 @@ a {
   color: var(--pmc-muted);
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
+/* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
+   免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
+.promo-rail-caveat { display: block; font-size: 11px; }
 /* 多檔卡的卡名在品牌欄裡，不再是自帶框線的白色橫幅 */
 .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-name {
   background: none;

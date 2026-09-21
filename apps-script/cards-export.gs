@@ -2164,10 +2164,12 @@ function pmcRenderPromoAct_(p, actId) {
 // 一張卡一組（2026-09-17 改版）：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，
 // 卡片特色是另一種形狀的抽屜（不能跟堆疊用同一套視覺，否則看起來錯亂——站長指正）。
 // 堆疊與特色互斥：展開特色時整疊活動收起，收回特色它們才回來（promos.js 負責）。
-// 左欄那句「N 檔新戶活動・最高可拿 …」（站長 2026-09-20 指定保留的文案）。
+// 左欄那句「N 檔新戶活動・最多可拿 …（需分別達成）」。
 // 首刷禮沒有現金價值，不能併進金額，改成「＋N 項首刷禮」分開講。
-// ⚠️ 這是把同卡多檔的金額**相加**。2026-09-17 的「同一張卡的多檔活動各自獨立、
-//    不相加」講的是**排序只看單檔最大值**，不是禁止揭露總上限（站長 2026-09-21 裁定）。
+// ⚠️ 這是把同卡多檔的金額**相加**，所以句尾一定要帶「（需分別達成）」——
+//    2026-09-17 的「同一張卡的多檔活動各自獨立、不相加」講的是**排序只看單檔最大值**，
+//    不是禁止揭露總上限；但每一檔的達成條件都不同，不加這句會被讀成「刷一次就拿得到」
+//    （站長 2026-09-21 定稿，原本是「最高可拿」）。
 function pmcRailCount_(acts) {
   let cash = 0, gifts = 0;
   acts.forEach(function (p) {
@@ -2177,8 +2179,9 @@ function pmcRailCount_(acts) {
   const parts = [];
   if (cash > 0) parts.push(pmcMoney_(cash));
   if (gifts > 0) parts.push(gifts + ' 項首刷禮');
-  return acts.length + ' 檔新戶活動' +
-    (parts.length ? '・最高可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) + '</b>' : '');
+  if (!parts.length) return acts.length + ' 檔新戶活動';
+  return acts.length + ' 檔新戶活動・最多可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) +
+    '</b><span class="promo-rail-caveat">（需分別達成）</span>';
 }
 
 // 第 2 檔起的「附屬列」（做法 A，站長 2026-09-21 定案）：一行一檔的清單列，
