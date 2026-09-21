@@ -332,8 +332,9 @@
 
   function setupActToggle() {
     document.addEventListener('click', function (e) {
-      // 活動宣傳圖縮圖在 row 內，點它是要看大圖、不是展開詳情（見 setupGiftLightbox）
-      if (e.target.closest('.promo-act-thumb--gift')) return;
+      // 活動宣傳圖縮圖在 row 內，點它是要看大圖、不是展開詳情（見 setupGiftLightbox）。
+      // 附屬列的小獎品圖（.promo-sub-thumb--gift）同理。
+      if (e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift')) return;
       var row = e.target.closest('.promo-act-row');
       if (!row) return;
       var card = row.closest('.promo-card');
@@ -530,8 +531,9 @@
     // 縮圖在 .promo-act-row（<button>）內部，點它會冒泡成「展開活動詳情」——
     // setupActToggle 開頭已經先排除 .promo-act-thumb--gift，這裡再 stopPropagation
     // 當第二層保險。只有活動宣傳圖（獎品）可放大；退回卡片圖的縮圖不進 lightbox。
+    // 附屬列的 34px 小圖（.promo-sub-thumb--gift）走同一條路。
     document.addEventListener('click', function (e) {
-      var thumb = e.target.closest('.promo-act-thumb--gift');
+      var thumb = e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift');
       if (!thumb) return;
       var img = thumb.querySelector('img');
       if (!img) return;

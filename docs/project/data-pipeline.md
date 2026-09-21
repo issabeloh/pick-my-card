@@ -253,21 +253,28 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 - **一張卡一組**，不再一檔活動一張卡片（iLEO 4 檔、遠東快樂卡 4 檔、中信 uniopen 4 檔
   以前會出現 4 次）。主活動在白卡 `.promo-card-main` 裡，同卡其餘活動以「卡疊卡」
   堆在下面（`.promo-card-stack`，上緣方角、只留下方兩個圓角、逐層內縮）
-- **堆疊的活動卡一律等寬**（2026-09-20 站長）。只留 z-index 遞減讓上面那張壓住下面
-  那張的上框線，不再有 14/26/38px 的階梯。⚠️ 這條被要求過兩次（桌機 09-18、手機
-  09-20），改版時不要又把「逐層內縮」加回來
-- **桌機（≥1025px）：多活動的卡跨 2 欄**，其他活動移到右半格。理由是同一列裡 4 檔的卡
-  與 1 檔的卡放一起時，列高被最高那張決定、矮卡右邊留一大片空白。
-  `grid-template-areas` 是 `"name name" / "main side" / "feat feat"`——
-  **卡名橫跨兩欄**，主活動與整疊其他活動都從這條白色橫幅底下長出來，跟手機版是
-  同一套語彙。因此右半欄**完全沿用手機版的堆疊規則**，桌機不再覆寫。
-  ⚠️ 為了讓卡名能當 grid item，`<h2 class="promo-card-name">` 是 `<article>` 的
-  **直接子元素**，不在 `.promo-card-main` 裡（見 `pmcRenderCardGroup_` 的註解）。
-  CSS 上卡名＝白卡的上半段（上方圓角＋下緣分隔線）、`.promo-card-main`＝下半段，
-  陰影只掛 main（往下打的陰影掛在卡名上會在接縫留一條灰線）
-- ⚠️ 歸屬提示的兩版都被退回，別再走回頭路：①「第 2 檔向右延伸＋第 3 檔以後向下逐層
-  內縮」（太亂、越縮越小）②「等寬卡＋欄間一支淺藍箭頭」（站長要求拿掉箭頭）。
-  現在靠卡名橫幅本身交代，不需要任何額外符號
+- **多檔活動的卡＝「左側品牌欄」骨架**（做法 A，2026-09-21 站長定案；參考
+  Booking.com「一間飯店、多種房型」與 MoneySuperMarket 商品列）。
+  `pmcRenderCardGroup_` 依 `acts.length` 走兩條路：
+  - `=== 1`：維持原本直式（卡名橫幅＋主活動＋按鈕列）
+  - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最高可拿 …」／立即申辦／
+    卡片特色）＋ `.promo-card-main`（最高那一檔的完整卡）＋ `.promo-card-stack`
+    （第 2 檔起的附屬列）。桌機 `grid-template-areas` 是
+    `"rail main" / "rail side" / "feat feat"`，品牌欄跨兩列；手機品牌欄橫在最上面。
+    白卡表面移到 `<article>` 本身，main／stack 只是它的分區
+- **第 2 檔起是「附屬列」不是卡片**（取代原本的卡疊卡）：一行一檔的三欄清單列
+  ——金額｜〔獎品圖 34px〕｜標題｜右側 meta＋收合箭頭。參考 Amazon
+  「Other sellers on Amazon」把次要選項降級成緊湊清單。列很矮，多檔卡的高度掉到
+  接近單檔卡（iLEO 桌機 483px → 410px），桌機每一列的空洞跟著縮小
+  - 首刷禮沒有現金價值：金額欄放「首刷禮」小標、標題欄放**獎品全名**、meta 放達成條件
+  - 獎品圖點了開 lightbox（沿用 `setupGiftLightbox`，`stopPropagation` 擋掉展開詳情）；
+    同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，標題才對齊
+  - meta **不帶類型名**、「上限消費」縮成「上限」：正式頁右半欄只有 495px（設計稿有
+    686px），帶了類型會讓 meta 吃 203px、標題只剩 141px。類型在卡片層的篩選 chip 已經有
+- ⚠️ 歸屬提示改過三版，別再走回頭路：①「第 2 檔向右延伸＋第 3 檔以後向下逐層內縮」
+  （太亂、越縮越小）②「等寬卡＋欄間一支淺藍箭頭」（要求拿掉箭頭）
+  ③「卡名橫跨兩欄的白色橫幅」（橫幅七成是空的、底下兩根柱子長度差很多，看起來怪）。
+  現在身分整個收進左欄，不需要任何額外符號
 - **排序固定依「最高可拿」倒序**，排序切換 UI 已移除（保留類型 chips 與
   「隱藏我持有的卡片」）。換算：定額回饋＝`voucher_amount`；
   回饋加碼＝`bonus_rate × bonus_cap`（`bonus_cap` 是消費上限，相乘即回饋天花板）；
@@ -496,6 +503,16 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
 ## 教訓記錄
+- [2026-09-21] `/promos` 附屬列「NT$500 貼死左緣、箭頭貼死右緣」：`.promo-sub-row`
+  寫了 `padding: 9px 16px`，但它同時掛著 `promo-act-row`，而 `.promo-act-row`（0,1,0）
+  設了 `padding: 0`——**兩條同分，後定義的 `.promo-act-row` 贏**，內距整個沒生效 →
+  規則：**沿用既有 class 換一套樣式時，覆寫選擇器一律寫成雙 class**
+  （`.promo-act-row.promo-sub-row`），並在驗收時直接讀 `getComputedStyle(el).padding`，
+  不要只看 CSS 原始碼有沒有寫。這是本頁第二類 specificity 陷阱，與
+  「author `display` 蓋掉 `[hidden]`」並列。
+  同一輪還踩到 flex 版的同類問題：`.promo-sub-meta` 設 `flex: none` 時，
+  首刷禮那幾列的長 meta 會把 `flex: 1 1 0` 的標題擠成 0 寬（整列只剩徽章）；
+  改成 `flex: 0 1 auto` ＋ `max-width` 封頂才對——**會變長的欄位一定要可壓縮**。
 - [2026-09-20] `/promos` 第四次踩「author 的 `display` 蓋掉 `[hidden]`」：新增的「即將結束」
   chip 在沒有任何即將到期的卡時仍然露出來，因為 `.promo-chip` 設了 `display:inline-flex`。
   前三次是倒數徽章、堆疊層、卡片本身的類型篩選 → 通則：**這頁（以及任何 author 大量設

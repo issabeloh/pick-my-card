@@ -2162,6 +2162,77 @@ function pmcRenderPromoAct_(p, actId, isMain) {
 // 一張卡一組（2026-09-17 改版）：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，
 // 卡片特色是另一種形狀的抽屜（不能跟堆疊用同一套視覺，否則看起來錯亂——站長指正）。
 // 堆疊與特色互斥：展開特色時整疊活動收起，收回特色它們才回來（promos.js 負責）。
+// 左欄那句「N 檔新戶活動・最高可拿 …」（站長 2026-09-20 指定保留的文案）。
+// 首刷禮沒有現金價值，不能併進金額，改成「＋N 項首刷禮」分開講。
+// ⚠️ 這是把同卡多檔的金額**相加**。2026-09-17 的「同一張卡的多檔活動各自獨立、
+//    不相加」講的是**排序只看單檔最大值**，不是禁止揭露總上限（站長 2026-09-21 裁定）。
+function pmcRailCount_(acts) {
+  let cash = 0, gifts = 0;
+  acts.forEach(function (p) {
+    const v = pmcPromoValue_(p.promo);
+    if (v === null) gifts++; else cash += v;
+  });
+  const parts = [];
+  if (cash > 0) parts.push(pmcMoney_(cash));
+  if (gifts > 0) parts.push(gifts + ' 項首刷禮');
+  return acts.length + ' 檔新戶活動' +
+    (parts.length ? '・最高可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) + '</b>' : '');
+}
+
+// 第 2 檔起的「附屬列」（做法 A，站長 2026-09-21 定案）：一行一檔的清單列，
+// 三欄＝金額｜標題｜右側 meta＋收合箭頭，獎品圖夾在金額與標題之間。
+//
+//   一般活動：NT$500 │ 活動一句話 │ 回饋加碼・10%・上限消費 NT$5,000 ▾
+//   首刷禮　：[首刷禮] │ 獎品全名 │ 達成條件 ▾      ← 首刷禮沒有現金價值
+//
+// class 刻意沿用 `promo-act-row`：promos.js 的 setupActToggle 靠它做展開收合，
+// 這樣附屬列不必另外寫一套互動（樣式用 `.promo-act-row.promo-sub-row` 雙 class 覆蓋，
+// 單 class 的 `.promo-sub-row` 會輸給 `.promo-act-row` 的 padding:0）。
+//
+// anyImg：這一組裡有沒有任何一檔有獎品圖。有的話，沒圖的那幾列也要補一個等寬空位，
+// 否則標題欄會一列一個起點、看起來像沒對齊。
+function pmcRenderPromoSubRow_(p, actId, anyImg) {
+  const promo = p.promo;
+  const detailId = actId + '-detail';
+  const value = pmcPromoValue_(promo);
+  const isGift = value === null;
+  const summary = String(promo.new_customer_summary || '');
+  const giftName = String(promo.gift_content || '').trim();
+  const giftImgUrl = isGift ? pmcSanitizeUrl_(promo.gift_image_url) : '';
+
+  const amt = isGift
+    ? '<span class="promo-sub-tag">首刷禮</span>'
+    : pmcEscapeHtml_(pmcMoney_(value));
+  const title = isGift ? pmcEscapeHtml_(giftName || '首刷禮') : pmcEscapeHtml_(summary);
+  // 右側 meta：首刷禮放達成條件（站長指定），其餘放「回饋率・上限」。
+  // ⚠️ 刻意不帶類型名（「回饋加碼」「定額回饋」）：設計稿的右半欄有 686px，正式頁只有
+  //    495px，把類型帶進來會讓 meta 吃掉 203px、標題只剩 141px（實測）。類型在卡片層
+  //    的篩選 chip 已經有了，這一列真正要回答的是「多少％、上限多少」。
+  //    「上限消費」也縮成「上限」，同樣是為了把寬度讓給標題。
+  const meta = isGift ? summary : String(pmcRewardSub_(promo)).replace('上限消費', '上限');
+
+  let thumb = '';
+  if (giftImgUrl) {
+    thumb = '<span class="promo-sub-thumb promo-sub-thumb--gift"><img src="' +
+      pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(p.cardName + ' 活動宣傳圖') +
+      '" loading="lazy" onerror="this.closest(\'.promo-sub-thumb\').style.visibility=\'hidden\'"></span>';
+  } else if (anyImg) {
+    thumb = '<span class="promo-sub-thumb is-empty" aria-hidden="true"></span>';
+  }
+
+  return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
+    '  <button type="button" class="promo-act-row promo-sub-row" aria-expanded="false" aria-controls="' +
+      pmcEscapeHtml_(detailId) + '">\n' +
+    '    <span class="promo-sub-amt">' + amt + '</span>' + thumb + '\n' +
+    '    <span class="promo-sub-title">' + title + '</span>\n' +
+    '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' +
+      '<span class="promo-sub-metatext">' + pmcEscapeHtml_(meta) + '</span>' +
+      '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
+    '  </button>\n' +
+    '  ' + pmcRenderPromoDetail_(p, detailId) + '\n' +
+    '</div>';
+}
+
 function pmcRenderCardGroup_(group) {
   const acts = group.items;          // 已依「最高可拿」倒序
   const main = acts[0];
@@ -2169,8 +2240,12 @@ function pmcRenderCardGroup_(group) {
   const anchorId = group.anchorId;
 
   const mainHtml = pmcRenderPromoAct_(main, anchorId + '-a1', true);
+  // 這一組裡有沒有任何一檔有獎品圖（決定沒圖的列要不要補等寬空位）
+  const anyImg = acts.slice(1).some(function (p) {
+    return pmcPromoValue_(p.promo) === null && !!pmcSanitizeUrl_(p.promo.gift_image_url);
+  });
   const stackHtml = acts.slice(1).map(function (p, i) {
-    return pmcRenderPromoAct_(p, anchorId + '-a' + (i + 2), false);
+    return pmcRenderPromoSubRow_(p, anchorId + '-a' + (i + 2), anyImg);
   }).join('\n');
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有就退用主活動的
@@ -2193,36 +2268,53 @@ function pmcRenderCardGroup_(group) {
   // 沒跑生成器時這裡是空的，promos.js 會把按鈕一起藏起來，頁面仍然完整可用。
   const featId = anchorId + '-feat';
 
-  // data-act-count：這張卡有幾檔活動。桌機用它決定「跨幾欄」——有多檔的卡跨 2 欄、
-  // 其他活動排在主活動右邊，讓每一列的高度接近（站長 2026-09-18：同一列裡有些卡
-  // 多檔、有些單檔，向下堆會在列尾留一大片空白）。刻意輸出成屬性而不是靠 CSS :has()，
-  // 對舊瀏覽器也是確定的行為。
-  //
-  // ⚠️ <h2 class="promo-card-name"> 是 <article> 的**直接子元素**，不在
-  // .promo-card-main 裡（2026-09-20 站長：桌機多活動的卡，卡名要橫跨兩欄）。
-  // 桌機的 grid-template-areas 是 "name name" / "main side" / "feat feat"，
-  // 卡名必須自己是一個 grid item 才排得上去。手機則是「卡名一條白色橫幅、
-  // 主活動接在它下面」，視覺與拆出來之前一樣（見 promos.css .promo-card-name）。
-  return '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
-      pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
-      '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
-      '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n' +
-    '  <h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>\n' +
-    '  <div class="promo-card-main">\n' +
-    mainHtml + '\n' +
-    '    <div class="promo-card-actions">\n' +
-    ctaHtml + '\n' +
-    '      <button type="button" class="promo-feat-btn" aria-expanded="false" aria-controls="' +
-      pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>\n' +
+  const featBtn = '<button type="button" class="promo-feat-btn" aria-expanded="false" aria-controls="' +
+    pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
+  const nameHtml = '<h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>';
+  const openTag = '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
+    pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
+    '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
+    '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n';
+  const featBox = '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
+    pmcEscapeHtml_(cardId) + '" hidden></div>\n';
+
+  // ---- 單檔活動的卡：維持原本的直式（卡名橫幅＋主活動＋按鈕列）----
+  // data-act-count 也讓 CSS 不必靠 :has() 就能分辨兩種骨架，對舊瀏覽器是確定的行為。
+  if (acts.length === 1) {
+    return openTag + '  ' + nameHtml + '\n' +
+      '  <div class="promo-card-main">\n' + mainHtml + '\n' +
+      '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
+      '    </div>\n  </div>\n' + featBox + '</article>';
+  }
+
+  // ---- 多檔活動的卡：做法 A「左側品牌欄」（站長 2026-09-21 定案）----
+  // 卡圖／卡名／「N 檔新戶活動・最高可拿 …」／申辦鈕／卡片特色全部收進左欄，
+  // 右欄上半是最高那一檔的完整卡、下半是第 2 檔起的附屬列。
+  // 為什麼不是「卡名橫跨兩欄」（2026-09-20 那版）：那條橫幅裡只有一行短字、
+  // 七成是空的，底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後，
+  // 卡名永遠跟卡圖在一起、不會落單，兩欄長度不一致也不再是問題（左右關係不是上下關係）。
+  // 參考：Booking.com「一間飯店、多種房型」、MoneySuperMarket 商品列。
+  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  return openTag +
+    '  <div class="promo-card-rail">\n' +
+    '    <div class="promo-rail-id">\n' +
+    '      <span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) + '" alt="' +
+      pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
+      'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>\n' +
+    '      <div class="promo-rail-text">\n' +
+    '        ' + nameHtml + '\n' +
+    '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
+    '      </div>\n' +
+    '    </div>\n' +
+    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
     '    </div>\n' +
     '  </div>\n' +
-    // data-stack-label：桌機把其他活動移到主活動右邊後，那一欄看起來像「另一張卡」，
-    // 需要一句歸屬。手機維持「卡疊卡」、不顯示這個標題（CSS 只在 ≥1025px 顯示）。
-    (stackHtml ? '  <div class="promo-card-stack" data-stack data-stack-label="' +
-      pmcEscapeHtml_('這張卡的其他 ' + (acts.length - 1) + ' 檔活動') + '">\n' + stackHtml + '\n  </div>\n' : '') +
-    '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
-      pmcEscapeHtml_(cardId) + '" hidden></div>\n' +
-    '</article>';
+    '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
+    '  <div class="promo-card-stack" data-stack>\n' +
+    '    <h3 class="promo-stack-label">' +
+      pmcEscapeHtml_('這張卡的其他 ' + (acts.length - 1) + ' 檔活動') + '</h3>\n' +
+    stackHtml + '\n  </div>\n' +
+    featBox + '</article>';
 }
 
 // 數量括號用半形 (n)，不用全形（） ——2026-07-15 站長回饋：全形括號跟其餘半形
