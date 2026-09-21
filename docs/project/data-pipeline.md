@@ -325,9 +325,19 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     （61 檔中 5 檔、附屬列 16 條中 1 條），那幾列的槽會被撐開、值跟著右移——
     **刻意用 15/16 的對齊換「不丟掉任何一個類型」**
   - **chip 的顏色 token 與主活動的 `.promo-type-badge` 共用**（`--pmc-candy-*`）。
-    2026-09-21 就是因為附屬列自己硬寫顏色，同一張卡上「首刷禮」出現粉、綠兩種顏色。
+    2026-09-21 就是因為附屬列自己硬寫顏色，同一張卡上「首刷禮」出現兩種顏色。
     **形狀不共用**：主活動那顆是「從卡框長出來的 label」（只有右下圓角），
     放進列裡要用一般 pill
+  - 🔴 **類型徽章的選色有兩個禁區**（2026-09-21 晚上站長回報後定案）：
+    **紅／粉**會跟「最後 N 天」倒數徽章（`#dc2626` 紅字紅框）混淆、**綠**會跟獎勵數值的
+    文字色（`--pmc-hero-green` `#10b981`）撞在一起。現行配色＝首刷禮**紫**
+    `--pmc-candy-purple-*`、回饋加碼**黃** `--pmc-candy-yellow-*`、定額回饋**天空藍**
+    `--pmc-candy-sky-*`（刻意比「詳情」連結的 `--pmc-blue-deep` 更亮更偏青，
+    同一列裡兩個藍才不會看起來像同一個東西），未知類型 fallback＝灰 `--pmc-candy-slate-*`。
+    ⚠️ `--pmc-candy-pink-*` 與 `--pmc-candy-mint-*` 現在沒有類型徽章在用，**但別刪**：
+    pink 給 `.promo-feat-hype--top`、mint 給側欄工具卡與 `.promo-feat-hype--easy`。
+    ⚠️ token 一律用**顏色**命名不是角色命名——原本的 `--pmc-candy-default-*` 已改名為
+    `--pmc-candy-purple-*`，因為「哪個類型用哪個顏色」本來就會變
   - **獎品圖在右側、「詳情」的左邊，42px＝上下兩排文字的高度**（站長 2026-09-21 指定）。
     點了開 lightbox（沿用 `setupGiftLightbox`，`stopPropagation` 擋掉展開詳情）；
     同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，「詳情」才對齊

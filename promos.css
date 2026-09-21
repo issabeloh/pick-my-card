@@ -37,15 +37,23 @@
   --pmc-chip-text: #0369a1;
   --pmc-chip-hover-bg: #f0f9ff;
 
-  /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風） */
+  /* 可愛點綴專用：類型徽章糖果色（僅這一處保留糖果配色，其餘元素一律主站風）。
+     ⚠️ 命名一律用**顏色**不是角色——2026-09-21 把原本的 `default` 改名成 `purple`，
+     因為它其實是一個顏色、而「哪個類型用哪個顏色」會變（見下方類型徽章的註解）。
+     pink 與 mint 現在沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype--top，
+     mint 給側欄工具卡與 .promo-feat-hype--easy。 */
   --pmc-candy-pink-bg: #ffe3ec;
   --pmc-candy-pink-text: #b03a63;
   --pmc-candy-yellow-bg: #fff3c4;
   --pmc-candy-yellow-text: #8a5c00;
   --pmc-candy-mint-bg: #ddfbef;
   --pmc-candy-mint-text: #0b7a56;
-  --pmc-candy-default-bg: #ede6ff;
-  --pmc-candy-default-text: #5b3fbf;
+  --pmc-candy-purple-bg: #ede6ff;
+  --pmc-candy-purple-text: #5b3fbf;
+  --pmc-candy-sky-bg: #e0f2fe;
+  --pmc-candy-sky-text: #0369a1;
+  --pmc-candy-slate-bg: #eef1f6;
+  --pmc-candy-slate-text: #475569;
 
   --pmc-radius-lg: 16px;
   --pmc-radius-md: 12px;
@@ -826,8 +834,9 @@ a {
   /* 外側三角切齊卡框、只留內側（右下）圓角＝「從邊框長出來的 label」。
      兩個徽章相鄰時（少數卡片）會連成一條分段色帶，這是預期的樣子。 */
   border-radius: 0 0 9px 0;
-  color: var(--pmc-candy-default-text);
-  background: var(--pmc-candy-default-bg);
+  /* 未知類型的 fallback＝中性灰（紫已經給首刷禮了）。現行資料 61 檔都有類型，走不到這裡 */
+  color: var(--pmc-candy-slate-text);
+  background: var(--pmc-candy-slate-bg);
   white-space: nowrap;
 }
 
@@ -838,9 +847,15 @@ a {
   margin-top: 16px;
 }
 
-.promo-type-badge--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
+/* 三種類型的配色（2026-09-21 晚上改；主活動與附屬列共用同一組 token，改這裡兩邊一起動）
+   ⚠️ 兩個顏色**不能**用在類型徽章上，選色前先讀這兩條：
+     - 紅／粉：會跟「最後 N 天」倒數徽章（#dc2626 紅字紅框）混淆
+     - 綠：會跟獎勵數值的文字色（--pmc-hero-green #10b981）撞在一起
+   所以 首刷禮＝紫、回饋加碼＝黃、定額回饋＝天空藍。天空藍刻意挑得比「詳情」連結的
+   --pmc-blue-deep #1e40af 更亮更偏青，同一列裡兩個藍才不會看起來像同一個東西。 */
+.promo-type-badge--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
 .promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-type-badge--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
+.promo-type-badge--voucher { background: var(--pmc-candy-sky-bg); color: var(--pmc-candy-sky-text); }
 
 
 /* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
@@ -2072,12 +2087,12 @@ a {
   padding: 2px 8px;
   border-radius: 6px;
   white-space: nowrap;
-  background: var(--pmc-candy-default-bg);
-  color: var(--pmc-candy-default-text);
+  background: var(--pmc-candy-slate-bg);
+  color: var(--pmc-candy-slate-text);
 }
-.promo-sub-type--gift { background: var(--pmc-candy-pink-bg); color: var(--pmc-candy-pink-text); }
+.promo-sub-type--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
 .promo-sub-type--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-sub-type--voucher { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
+.promo-sub-type--voucher { background: var(--pmc-candy-sky-bg); color: var(--pmc-candy-sky-text); }
 /* 「值」＝這一檔能拿到什麼。三種類型同一個起點，這就是對齊的來源。
    與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green）。 */
 .promo-sub-amt {
@@ -2313,7 +2328,7 @@ a {
    做成 chip 會撐開行寬把版面擠爆（站長 2026-09-17 實測回饋） */
 .promo-feat-hype { font-weight: 700; }
 .promo-feat-hype--top { color: var(--pmc-candy-pink-text); }
-.promo-feat-hype--god { color: var(--pmc-candy-default-text); }
+.promo-feat-hype--god { color: var(--pmc-candy-purple-text); }
 .promo-feat-hype--excl { color: var(--pmc-candy-yellow-text); }
 .promo-feat-hype--easy { color: var(--pmc-candy-mint-text); }
 
