@@ -43,7 +43,8 @@
      pink 與 mint 沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype（四種誇飾詞
      統一用它），mint 給側欄工具卡（`.promos-sidebar-tool-card`，與類型無關，
      純粹是側欄那張卡自己的底色）。 */
-  --pmc-candy-pink-bg: #ffe3ec;
+  /* pink 只留文字色：唯一的用戶是 .promo-feat-hype（純文字，沒有底色）。
+     2026-09-21 類型徽章改色後 --pmc-candy-pink-bg 就沒人引用了，一併移除。 */
   --pmc-candy-pink-text: #b03a63;
   --pmc-candy-yellow-bg: #fff3c4;
   --pmc-candy-yellow-text: #8a5c00;
@@ -2243,9 +2244,10 @@ a {
    ========================================================================== */
 @media (max-width: 1024px) {
   /* 1. 附屬列：沒有獎品圖的列不補空位。桌機補空位是為了讓右側的「詳情」對齊；
-        手機寬度本來就吃緊，站長選擇把空間讓給文字。 */
+        手機寬度本來就吃緊，站長選擇把空間讓給文字。
+        （這裡原本還有一條 column-gap: 10px 覆寫 base 的 12px，2026-09-21 實測
+         390px 下列高／摘要行數／溢出數全部相同，等於沒作用，已移除。） */
   .promo-sub-thumb.is-empty { display: none; }
-  .promo-act-row.promo-sub-row { column-gap: 10px; }
 
   /* 2. 主活動的摘要未展開多顯示一行、展開後整段攤開。
         ⚠️ 附屬列的 .promo-sub-title 不在這裡——改成一列兩排（方案 B）之後，它的

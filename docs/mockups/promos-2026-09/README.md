@@ -267,7 +267,7 @@ promos 頁已有常駐 iframe ＋ `postMessage({type:'pmc-open-card', cardId})`�
 
 ---
 
-## `sub-row-type-2026-09-21.html` — 附屬列的類型標示（4 案）
+## 附屬列的類型標示（4 案）～ 已結案，mockup 檔已刪
 
 站長：「附屬列中，只有首刷禮會顯示『首刷禮』chip，這樣會不一致，提出幾個解法讓我選。」
 
@@ -291,7 +291,7 @@ promos 頁已有常駐 iframe ＋ `postMessage({type:'pmc-open-card', cardId})`�
 
 ---
 
-## `sub-row-align-2026-09-21.html` — 附屬列「值」對齊（3 案）
+## 附屬列「值」對齊（3 案）～ 已結案，mockup 檔已刪
 
 站長：「如果回饋率、金額和禮物名稱都要對齊的話呢？目前寬度已經不太夠。」
 
@@ -316,3 +316,15 @@ A 是 B 與 C 之間的中庸，但 228px 是三案最高的。
 **落地（2026-09-21 晚上）**：站長選 **方案 B**，並追加「類型 chip 放上排左側」與
 「獎品圖放右側、『詳情』左邊，高度＝兩排文字」。實作後實測：5 張多檔卡的單一 chip 列
 值全部對齊、16 條附屬列的「詳情」全部對齊、展開前後零位移（1440／390 都是）。
+
+---
+
+## 關於這個資料夾裡的 HTML
+
+mockup 的任務是**幫一個決定收斂**，決定落地之後它就過期了（裡面的 class 與尺寸是當時的快照，
+再打開只會誤導）。所以結案後刪檔、**把結論與實測數字留在這份 README**——要考古去翻 git 史。
+
+2026-09-21 已刪：`sub-row-type-*.html`、`sub-row-align-*.html`（結論見上面兩節）。
+還留著的：`mockups.html`、`interactive.html`、`desktop-multiact-*.html`、
+`group-header-patterns-*.html`、`solo-card-options-*.html`（約 240KB）——
+這幾案也都已經落地，同樣可以刪，等站長確認。
