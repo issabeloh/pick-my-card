@@ -2090,7 +2090,10 @@ a {
     "sum  meta";
   align-items: start;
   column-gap: 12px;
-  row-gap: 2px;
+  /* 上下兩排之間的呼吸：2px 太擠，獎品名（17px）與摘要（12.5px）會黏成一團
+     （站長 2026-09-22）。6px 之後兩排各自成段，但仍明顯比列與列之間的分隔近，
+     讀得出「這兩排是同一檔」。 */
+  row-gap: 6px;
   width: 100%;
   padding: 10px 16px;
   border-top: 1px solid #e6ecf5;
