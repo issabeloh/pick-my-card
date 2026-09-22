@@ -43,7 +43,8 @@
      pink 與 mint 沒有任何類型徽章在用，但別刪：pink 給 .promo-feat-hype（四種誇飾詞
      統一用它），mint 給側欄工具卡（`.promos-sidebar-tool-card`，與類型無關，
      純粹是側欄那張卡自己的底色）。 */
-  --pmc-candy-pink-bg: #ffe3ec;
+  /* pink 只留文字色：唯一的用戶是 .promo-feat-hype（純文字，沒有底色）。
+     2026-09-21 類型徽章改色後 --pmc-candy-pink-bg 就沒人引用了，一併移除。 */
   --pmc-candy-pink-text: #b03a63;
   --pmc-candy-yellow-bg: #fff3c4;
   --pmc-candy-yellow-text: #8a5c00;
@@ -1855,21 +1856,22 @@ a {
 /* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右（站長 2026-09-21 選定
    三案中的方案 3），底下接兩顆按鈕，再往下才是分割線與活動內容。
    刻意跟多檔卡在**手機上**的身分區塊長得一模一樣——零件、尺寸、間距全部共用，
-   差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄。
-   ⚠️ 不放「1 檔新戶活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
-   ⚠️ 這幾條不包在 media query 裡——單檔卡在所有寬度都是這個排法。 */
-.promo-card-rail--solo .promo-rail-id {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.promo-card-rail--solo .promo-rail-thumb { width: 84px; flex: none; }
-.promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; margin-top: 0; }
+   差別只剩桌機時多檔卡的 rail 會轉成左邊那一直欄（`--side`，在 min-width:1025px 裡）。
+   ⚠️ 不放「1 檔活動」那一行（站長指定）：只有一檔時它跟正下方的獎勵數字重複。
+
+   **分工**：橫向排法本身是 base（`.promo-rail-id` / `.promo-rail-thumb`），不是 solo 專屬——
+   多檔卡在手機上也走同一套。所以 `--solo` 只需要處理它**唯一的結構差異**：
+   卡名是 `.promo-rail-id` 的直接 flex 子元素（多檔卡的卡名包在 `.promo-rail-text` 裡）。
+   2026-09-22 刪掉兩條假的 solo 規則：`--solo .promo-rail-id` 與 base 逐字相同；
+   `--solo .promo-rail-thumb { width: 84px }` 則是在擋 min-width:1400px 那條同樣沒作用的
+   `.promo-rail-thumb { width: 124px }`（詳見該處註解），兩條一起拆掉。 */
+.promo-card-rail--solo .promo-card-name { flex: 1 1 auto; min-width: 0; }
  /* ⚠️ 這裡刻意不宣告 .promo-card-actions 的 margin-top——base 的 13px 就是站長要的
    間距（2026-09-21）。桌機另有 min-width:1025px 的 12px，那是同列 CTA 對齊用的。 */
-/* 「（需分別達成）」：金額是同卡多檔相加出來的，這句不能省。獨立一行、字級再小一階，
-   免得跟金額搶視線，也避免在 208px 的品牌欄裡把數字擠到換行中間 */
-.promo-rail-caveat { display: block; font-size: 11px; }
+/* 「・需分別達成」：金額是同卡多檔相加出來的，這句不能省。字級小一階、**接在同一行**
+   （站長 2026-09-22：不要換行，用「・」隔開就好）。整句放不下時跟著自然換行即可，
+   但這五個字本身不斷開（nowrap），免得「需分別」「達成」拆兩行。 */
+.promo-rail-caveat { font-size: 11px; white-space: nowrap; }
 /* 白卡表面掛在 <article> 本身，內部的 rail／main／stack 只是它的分區。
    單檔卡與多檔卡共用同一條（2026-09-21 起兩種骨架都有 rail，不必再分兩份）。
    ⚠️ :not([hidden]) 不能省——author 的 display/background 會蓋掉 [hidden]
@@ -2088,7 +2090,10 @@ a {
     "sum  meta";
   align-items: start;
   column-gap: 12px;
-  row-gap: 2px;
+  /* 上下兩排之間的呼吸：2px 太擠，獎品名（17px）與摘要（12.5px）會黏成一團
+     （站長 2026-09-22）。6px 之後兩排各自成段，但仍明顯比列與列之間的分隔近，
+     讀得出「這兩排是同一檔」。 */
+  row-gap: 6px;
   width: 100%;
   padding: 10px 16px;
   border-top: 1px solid #e6ecf5;
@@ -2243,9 +2248,10 @@ a {
    ========================================================================== */
 @media (max-width: 1024px) {
   /* 1. 附屬列：沒有獎品圖的列不補空位。桌機補空位是為了讓右側的「詳情」對齊；
-        手機寬度本來就吃緊，站長選擇把空間讓給文字。 */
+        手機寬度本來就吃緊，站長選擇把空間讓給文字。
+        （這裡原本還有一條 column-gap: 10px 覆寫 base 的 12px，2026-09-21 實測
+         390px 下列高／摘要行數／溢出數全部相同，等於沒作用，已移除。） */
   .promo-sub-thumb.is-empty { display: none; }
-  .promo-act-row.promo-sub-row { column-gap: 10px; }
 
   /* 2. 主活動的摘要未展開多顯示一行、展開後整段攤開。
         ⚠️ 附屬列的 .promo-sub-title 不在這裡——改成一列兩排（方案 B）之後，它的
@@ -2587,7 +2593,12 @@ a {
   .promo-card[data-act-count]:not([data-act-count="1"]):not([hidden]) {
     grid-template-columns: 208px minmax(0, 1fr);
   }
-  .promo-rail-thumb { width: 124px; }
+  /* ⚠️ 這裡原本有一條 `.promo-rail-thumb { width: 124px }`，用意是「4 欄時品牌欄變窄，
+     卡圖跟著縮一點」。但它**從來沒生效過**：多檔卡被 `.promo-card-rail--side
+     .promo-rail-thumb { width: 140px }`（兩個 class）壓過、單檔卡被 `--solo` 那條壓過，
+     兩邊都選不中（2026-09-22 實測 1280/1440/1500 三個寬度，side 恆 140、solo 恆 84）。
+     真要縮就得寫成 `.promo-card-rail--side .promo-rail-thumb`；但 rail 從 236px 縮到
+     208px 之後，扣掉 32px 內距還有 176px，140px 的卡圖放得下，所以直接刪掉不補。 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 24px;
   }

@@ -267,7 +267,7 @@ promos 頁已有常駐 iframe ＋ `postMessage({type:'pmc-open-card', cardId})`�
 
 ---
 
-## `sub-row-type-2026-09-21.html` — 附屬列的類型標示（4 案）
+## 附屬列的類型標示（4 案）～ 已結案，mockup 檔已刪
 
 站長：「附屬列中，只有首刷禮會顯示『首刷禮』chip，這樣會不一致，提出幾個解法讓我選。」
 
@@ -291,7 +291,7 @@ promos 頁已有常駐 iframe ＋ `postMessage({type:'pmc-open-card', cardId})`�
 
 ---
 
-## `sub-row-align-2026-09-21.html` — 附屬列「值」對齊（3 案）
+## 附屬列「值」對齊（3 案）～ 已結案，mockup 檔已刪
 
 站長：「如果回饋率、金額和禮物名稱都要對齊的話呢？目前寬度已經不太夠。」
 
@@ -316,3 +316,20 @@ A 是 B 與 C 之間的中庸，但 228px 是三案最高的。
 **落地（2026-09-21 晚上）**：站長選 **方案 B**，並追加「類型 chip 放上排左側」與
 「獎品圖放右側、『詳情』左邊，高度＝兩排文字」。實作後實測：5 張多檔卡的單一 chip 列
 值全部對齊、16 條附屬列的「詳情」全部對齊、展開前後零位移（1440／390 都是）。
+
+---
+
+## 關於這個資料夾裡的 HTML
+
+mockup 的任務是**幫一個決定收斂**，決定落地之後它就過期了（裡面的 class 與尺寸是當時的快照，
+再打開只會誤導）。所以結案後刪檔、**把結論與實測數字留在這份 README**——要考古去翻 git 史。
+
+**2026-09-22：這個資料夾裡的 mockup HTML 已全部刪除**（7 份、約 260KB）。
+每一案的結論、參考對象與實測數字都留在這份 README 的各節，要看當時的畫面就翻 git 史
+（`git log --diff-filter=D --name-only -- docs/mockups/promos-2026-09/` 找到刪除的
+commit，再 `git show <commit>^:<路徑>`）。
+
+留下來的 `probe-highlights.js` 是當時的取證腳本，不是 mockup：它把 `js/` 載進 Node 的 vm
+直接呼叫主站自己的 `getDisplayRate()`，而這個技法後來成了 `tools/build-promos-features.js`
+的作法，留著當範例。`build-data.js` 與 `measure-card-names.js`（餵資料給 mockup、量卡名寬度）
+已隨 mockup 一起刪除。

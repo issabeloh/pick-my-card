@@ -2120,7 +2120,9 @@ function pmcRewardSub_(promo) {
     }
     return parts.join('・');
   }
-  if (pmcPromoValue_(promo) === null) return '首刷禮';
+  // 首刷禮回空字串：大字已經是獎品全名、上方又有「首刷禮」類型徽章，
+  // 這裡再印一次「首刷禮」就是同一張卡上出現兩遍（站長 2026-09-22）。
+  if (pmcPromoValue_(promo) === null) return '';
   if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount)) {
     return promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
   }
@@ -2202,6 +2204,7 @@ function pmcRenderPromoAct_(p, actId) {
   const thumbCls = 'promo-act-thumb' + (giftImgUrl ? ' promo-act-thumb--gift' : '');
 
   const summary = promo.new_customer_summary || '';
+  const rewardSub = pmcRewardSub_(promo);
 
   return '<div class="promo-act is-main" data-period-end="' +
       (p.periodEndIso || '') + '">\n' +
@@ -2213,7 +2216,9 @@ function pmcRenderPromoAct_(p, actId) {
     '      <span class="promo-act-badges">' + typeBadges +
       '<span class="promo-ending-badge" hidden></span></span>\n' +
     '      <span class="promo-act-reward' + (big.isGift ? ' is-gift' : '') + '">' + big.html +
-      '<small>' + pmcEscapeHtml_(pmcRewardSub_(promo)) + '</small></span>\n' +
+      // 小字可能是空的（首刷禮）——空的時候整個 <small> 不輸出，留一個空標籤會讓
+      // .promo-act-reward small 的 margin-top 撐出一條沒有東西的空白
+      (rewardSub ? '<small>' + pmcEscapeHtml_(rewardSub) + '</small>' : '') + '</span>\n' +
     (summary ? '      <span class="promo-act-summary">' + pmcEscapeHtml_(summary) + '</span>\n' : '') +
     '      <span class="promo-act-more">活動詳情<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '    </span>\n' +
@@ -2225,7 +2230,9 @@ function pmcRenderPromoAct_(p, actId) {
 // 一張卡一組（2026-09-17 改版）：主活動在白卡裡，同卡其餘活動以「卡疊卡」堆在下面，
 // 卡片特色是另一種形狀的抽屜（不能跟堆疊用同一套視覺，否則看起來錯亂——站長指正）。
 // 堆疊與特色互斥：展開特色時整疊活動收起，收回特色它們才回來（promos.js 負責）。
-// 左欄那句「N 檔新戶活動・最多可拿 …（需分別達成）」。
+// 左欄那句「N 檔活動・最多可拿 …・需分別達成」（站長 2026-09-22 定稿）。
+// ⚠️ 不寫「新戶活動」：這頁整頁都在講新戶活動（h1／title／description／每張卡的
+//    「新戶定義」都有），左欄這句是版面標籤不是內文，重複那兩個字只是佔寬度。
 // 首刷禮沒有現金價值，不能併進金額，改成「＋N 項首刷禮」分開講。
 // ⚠️ 這是把同卡多檔的金額**相加**，所以句尾一定要帶「（需分別達成）」——
 //    2026-09-17 的「同一張卡的多檔活動各自獨立、不相加」講的是**排序只看單檔最大值**，
@@ -2240,9 +2247,9 @@ function pmcRailCount_(acts) {
   const parts = [];
   if (cash > 0) parts.push(pmcMoney_(cash));
   if (gifts > 0) parts.push(gifts + ' 項首刷禮');
-  if (!parts.length) return acts.length + ' 檔新戶活動';
-  return acts.length + ' 檔新戶活動・最多可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) +
-    '</b><span class="promo-rail-caveat">（需分別達成）</span>';
+  if (!parts.length) return acts.length + ' 檔活動';
+  return acts.length + ' 檔活動・最多可拿 <b>' + pmcEscapeHtml_(parts.join('＋')) +
+    '</b><span class="promo-rail-caveat">・需分別達成</span>';
 }
 
 // 第 2 檔起的「附屬列」（做法 A → 2026-09-21 晚上改成「方案 B：值獨佔一行」）：
@@ -2404,7 +2411,7 @@ function pmcRenderCardGroup_(group) {
   }
 
   // ---- 多檔活動的卡：做法 A「左側品牌欄」（站長 2026-09-21 定案）----
-  // 卡圖／卡名／「N 檔新戶活動・最高可拿 …」／申辦鈕／卡片特色全部收進左欄，
+  // 卡圖／卡名／「N 檔活動・最多可拿 …」／申辦鈕／卡片特色全部收進左欄，
   // 右欄上半是最高那一檔的完整卡、下半是第 2 檔起的附屬列。
   // 為什麼不是「卡名橫跨兩欄」（2026-09-20 那版）：那條橫幅裡只有一行短字、
   // 七成是空的，底下又掛著兩根長度差很多的柱子，站長回報看起來怪。身分收進左欄之後，
@@ -2425,7 +2432,7 @@ function pmcRenderCardGroup_(group) {
     '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
     // 這一區刻意沒有標題：附屬列的形狀（灰底、縮排的一行一檔）已經說明它是
     // 「同一張卡的其他活動」，再加一行「這張卡的其他 N 檔活動」是多餘的
-    // （站長 2026-09-21）。檔數在左欄的「N 檔新戶活動」已經講過一次。
+    // （站長 2026-09-21）。檔數在左欄的「N 檔活動」已經講過一次。
     '  <div class="promo-card-stack">\n' + stackHtml + '\n  </div>\n' +
     featBox + '</article>';
 }

@@ -542,7 +542,7 @@
     // 縮圖在 .promo-act-row（<button>）內部，點它會冒泡成「展開活動詳情」——
     // setupActToggle 開頭已經先排除 .promo-act-thumb--gift，這裡再 stopPropagation
     // 當第二層保險。只有活動宣傳圖（獎品）可放大；退回卡片圖的縮圖不進 lightbox。
-    // 附屬列的 34px 小圖（.promo-sub-thumb--gift）走同一條路。
+    // 附屬列右側的小圖（.promo-sub-thumb--gift，42px）走同一條路。
     document.addEventListener('click', function (e) {
       var thumb = e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift');
       if (!thumb) return;
