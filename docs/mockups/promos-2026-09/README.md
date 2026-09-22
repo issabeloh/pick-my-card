@@ -324,7 +324,13 @@ A 是 B 與 C 之間的中庸，但 228px 是三案最高的。
 mockup 的任務是**幫一個決定收斂**，決定落地之後它就過期了（裡面的 class 與尺寸是當時的快照，
 再打開只會誤導）。所以結案後刪檔、**把結論與實測數字留在這份 README**——要考古去翻 git 史。
 
-2026-09-21 已刪：`sub-row-type-*.html`、`sub-row-align-*.html`（結論見上面兩節）。
-還留著的：`mockups.html`、`interactive.html`、`desktop-multiact-*.html`、
-`group-header-patterns-*.html`、`solo-card-options-*.html`（約 240KB）——
-這幾案也都已經落地，同樣可以刪，等站長確認。
+**2026-09-22：這個資料夾裡的 mockup HTML 已全部刪除**（7 份、約 260KB）。
+每一案的結論、參考對象與實測數字都留在這份 README 的各節，要看當時的畫面就翻 git 史
+（`git log --diff-filter=D --name-only -- docs/mockups/promos-2026-09/` 找到刪除的
+commit，再 `git show <commit>^:<路徑>`）。
+
+留下來的三支 `.js` 是當時的取證腳本，不是 mockup：
+`probe-highlights.js`（把 `js/` 載進 Node 的 vm 直接呼叫 `getDisplayRate()`——
+這個技法後來成了 `tools/build-promos-features.js` 的作法）、
+`build-data.js` 與 `measure-card-names.js`（餵資料給已刪的 mockup、量卡名寬度）。
+後兩支已經沒有服務對象，下次整理時可以一併刪。
