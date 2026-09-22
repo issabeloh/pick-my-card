@@ -14,6 +14,7 @@ rules_version = '2';
 //   userNotes/{uid}_{cardId}     卡片筆記（每張卡一份）
 //   feedback/{autoId}            問題回報（需登入，只能新增）
 //   reviews/{autoId}             星星評分（訪客也能送出，只能新增）
+//   entitlements/{uid}           付費權益（去廣告買斷）——本人唯讀，只有後端寫得進去
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -60,6 +61,29 @@ service cloud.firestore {
                              && request.resource.data.comment.size() <= 2000)
                        );
       allow read, update, delete: if false;
+    }
+
+    // ── 付費權益（去廣告買斷）：本人唯讀，前端永遠不能寫 ──────────────
+    //
+    //    🔒 write: if false 是這條規則的重點，不是保守而已：
+    //    用戶對 users/{uid} 有完整寫入權（見上面第一條），所以付費狀態
+    //    **絕對不能**放進 users/{uid}——放進去等於任何人打開 console
+    //    寫一行 setDoc 就能自己開通，付費牆直接失效。
+    //
+    //    這裡的資料只由 Cloud Functions 用 Admin SDK 寫入（Admin SDK 繞過
+    //    本規則），而且只在金流商的付款通知**通過簽章驗證之後**才寫。
+    //    前端只負責讀 adFree 決定要不要顯示廣告。
+    //
+    //    文件形狀（欄位刻意與金流商無關，換廠商不用改這裡）：
+    //      adFree: true            買斷永久，沒有到期日
+    //      paidAt: timestamp       付款完成時間
+    //      amount: number          實付金額（最低 150，可加碼）
+    //      provider: string        'ecpay' | 'inline' | … 事後對帳用
+    //      providerOrderId: string 金流商的訂單編號，對帳與防重複入帳用
+    match /entitlements/{userId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
+      allow write: if false;
     }
 
     // ── 其他一律拒絕（新 collection 需在此明確加規則才可用） ─────────
