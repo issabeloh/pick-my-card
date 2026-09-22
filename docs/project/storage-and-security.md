@@ -57,6 +57,15 @@
 - `console.error` 永遠輸出——錯誤處理用 error，不要用 log
 - 熱迴圈不要為了 log 做額外計算
 
+## 8. Firebase 方案與用量現況（別再問用戶）
+
+- **方案：Blaze（按量計費）**，因 `functions/notifyOnFeedback` 需要。Blaze 仍保有每日免費額度，超出才計費
+- **用量快照（2026-09-22，用戶提供 Firebase Console 截圖）**：Firestore 讀取約 **63 次/日**（近一週峰值約 200），寫入約 **6 次/日**，Cloud Storage 佔用 **12.5MB**（用途只有意見回饋的截圖上傳，見 `js/quick-options-misc.js` 的 `uploadBytes`）
+- **對照免費額度**：讀取 50,000/日、寫入 20,000/日、Storage 5GB → 目前用掉約 **0.1%**，實際帳單趨近 $0
+- **因此：禁止以「省成本」為由提案 Firestore 讀寫優化**（例如把 `cardSettings` 的一卡一筆合併成一包）。要動那塊必須有「效能/使用者體驗」的實測理由，且受第 2 節🔒鐵則約束
+- **重新評估的觸發條件**：Firestore 日讀取持續 > 25,000（免費額度一半）時才值得重看；在那之前用量不是議題
+- **旁證**：Firestore 只有登入用戶會觸發讀寫（`getCardLevelUncached()` 未登入直接走 localStorage 返回）。日讀取僅兩位數 ⇒ 實際登入並使用雲端同步的人極少，與網站累計用戶數不成比例。做任何「登入後才有的功能」前，先把這件事納入考量
+
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
