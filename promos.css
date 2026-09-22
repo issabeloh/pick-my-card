@@ -1332,12 +1332,11 @@ a {
   color: white;
 }
 
-/* 站內頁連結 hover 上色（抄自 styles.css 同名規則，主站改動需同步） */
-.social-link.promos:hover {
-  background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
-  border-color: transparent;
-  color: #7a4e00;
-}
+/* 站內頁連結 hover 上色（抄自 styles.css 同名規則，主站改動需同步）。
+   ⚠️ 這裡**不放** `.social-link.promos:hover`：這一頁的 footer 沒有「新戶活動」那顆連結
+   （使用者已經在這一頁了，不會再連回自己），而 promos.css 只被 promos.html 載入，
+   所以那條規則在這裡永遠選不中。當初整段從 styles.css 抄過來時沒篩掉，2026-09-22 移除。
+   首頁那顆的黃色 hover 由 styles.css 自己那條負責，與這裡無關。 */
 
 .social-link.faq:hover {
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
