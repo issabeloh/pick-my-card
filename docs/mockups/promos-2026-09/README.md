@@ -329,8 +329,7 @@ mockup 的任務是**幫一個決定收斂**，決定落地之後它就過期了
 （`git log --diff-filter=D --name-only -- docs/mockups/promos-2026-09/` 找到刪除的
 commit，再 `git show <commit>^:<路徑>`）。
 
-留下來的三支 `.js` 是當時的取證腳本，不是 mockup：
-`probe-highlights.js`（把 `js/` 載進 Node 的 vm 直接呼叫 `getDisplayRate()`——
-這個技法後來成了 `tools/build-promos-features.js` 的作法）、
-`build-data.js` 與 `measure-card-names.js`（餵資料給已刪的 mockup、量卡名寬度）。
-後兩支已經沒有服務對象，下次整理時可以一併刪。
+留下來的 `probe-highlights.js` 是當時的取證腳本，不是 mockup：它把 `js/` 載進 Node 的 vm
+直接呼叫主站自己的 `getDisplayRate()`，而這個技法後來成了 `tools/build-promos-features.js`
+的作法，留著當範例。`build-data.js` 與 `measure-card-names.js`（餵資料給 mockup、量卡名寬度）
+已隨 mockup 一起刪除。
