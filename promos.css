@@ -523,10 +523,12 @@ a {
   font-size: 0.85rem;
   line-height: 1.7;
   color: var(--pmc-muted);
-  /* pretty＝避免最後一行只剩一兩個字的孤字（手機實測原本會掉出單獨一行「件。」）。
-     刻意不用 balance：中文沒有詞間空白，balance 為了兩行等長會硬切在詞中間
-     （實測切成「難的不／是找到活動」），比孤字更難讀。 */
-  text-wrap: pretty;
+  /* 刻意不用 text-wrap: pretty（2026-09-23 移除）：Safari 的 pretty 會重排「整段」
+     讓各行右緣參差平均，中文沒有詞間空白，結果在 iPhone 上每行都提早斷（實測斷在
+     「列出／張信」、右側留一大塊空白）；Chromium 只調最後幾行所以桌機看不出來。
+     也不用 balance：會為了等長硬切在詞中間（實測「難的不／是找到活動」）。
+     孤字問題改由文案長度自己避開，不靠瀏覽器。 */
+  text-wrap: wrap;
 }
 
 /* 第一句是整頁的主張、第二句是說明——給層次，不要兩段同樣大小同樣灰糊成一塊。 */
@@ -1510,6 +1512,22 @@ a {
   /* 領句手機版收斂一級：桌機的 0.95rem 在手機會逼近 h1（1.15rem），層次糊掉 */
   .promos-hero-intro p:first-child {
     font-size: 0.88rem;
+  }
+
+  /* 手機版搜尋框與「資料更新於」同一列（2026-09-23 站長：搜尋詞很短，不必獨佔一行）。
+     桌機規則的 flex-basis 260px ＋ 戳章在 390px 寬放不下會換行，手機改成不換行、
+     搜尋框吃掉戳章以外的剩餘寬度；戳章縮一號讓出空間。 */
+  .promos-search-row {
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .promos-search-box {
+    flex: 1 1 0;
+  }
+
+  .promos-data-update {
+    font-size: 11px;
   }
 
   .promos-controls {
