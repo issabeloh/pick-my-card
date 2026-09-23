@@ -2426,7 +2426,7 @@ function pmcRenderPicks_(picks, monthLabel) {
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-picks" id="picks" aria-labelledby="pmc-picks-title">\n' +
-    '    <div class="pmc-section-head"><h2 id="pmc-picks-title">站長推薦</h2><span>' + pmcEscapeHtml_(monthLabel) + '</span></div>\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-picks-title">站長推薦 Top ' + picks.length + '</h2><span>' + pmcEscapeHtml_(monthLabel) + '</span></div>\n' +
     '    <div class="pmc-picks-row">\n' + items + '\n    </div>\n' +
     // 手機橫滑的分頁點：數量、目前位置由 promos.js setupPicksDots() 依實際可見張數產生
     '    <div class="pmc-dots" hidden></div>\n' +

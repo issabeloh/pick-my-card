@@ -3163,17 +3163,18 @@ a {
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  border: 1px solid var(--pmc-chip-border);
+  border: 1px solid #d1d5db;
   border-radius: 999px;
-  color: var(--pmc-chip-text);
-  background: var(--pmc-white);
+  color: var(--pmc-label);
+  background: #f3f4f6;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
 }
 
-.pmc-jump a:hover { background: var(--pmc-chip-hover-bg); }
-.pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; }
+/* 灰色系（站長 2026-09-23）：索引列只是導覽，不跟藍色的篩選 chip 搶注意力 */
+.pmc-jump a:hover { background: #e5e7eb; border-color: #c4c8cf; }
+.pmc-jump a:focus-visible { outline: 2px solid #6b7280; outline-offset: 2px; }
 .pmc-jump a[hidden] { display: none; }
 
 /* 錨點跳過來時，標題不要貼齊視窗頂端 */
