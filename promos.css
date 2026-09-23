@@ -68,6 +68,10 @@ html, body {
   padding: 0;
   max-width: 100%;
   overflow-x: hidden;
+  /* clip 而不是 hidden（2026-09-23）：hidden 會讓 html/body 變成捲動容器，
+     頁內分頁列 .pmc-jump 的 position: sticky 就黏不住；clip 一樣裁掉橫向溢出但不建捲動容器。
+     不支援 clip 的舊瀏覽器停在上一行的 hidden（只是分頁列不貼頂，其餘照常）。 */
+  overflow-x: clip;
 }
 
 /* 頁面底色：抄自 styles.css body{}（灰階漸層，.container 白卡浮在上面）。
@@ -3153,31 +3157,49 @@ a {
 
 /* ---- 頁內索引列＋「新戶活動」標題 ---- */
 .pmc-jump {
+  /* 頁內分頁列（站長 2026-09-23）：參考 Apple 產品頁的 local nav、Booking 飯店頁的
+     「概覽／房型／評價」分頁——一條貼頂的橫列，目前所在的區塊用深色字＋底線標出，
+     捲動時由 promos.js setupJumpSpy() 自動切換。滿版：左右用負 margin 抵掉 .promos-main 的 padding。 */
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 16px;
+  gap: 4px;
+  margin: 0 -24px 16px;
+  padding: 0 24px;
+  background: var(--pmc-white);
+  border-bottom: 1px solid var(--pmc-border);
 }
 
 .pmc-jump a {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
-  border: 1px solid var(--pmc-chip-border);
-  border-radius: 999px;
-  color: var(--pmc-chip-text);
-  background: var(--pmc-white);
-  font-size: 13px;
+  padding: 12px 14px 11px;
+  color: var(--pmc-muted);
+  font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  white-space: nowrap;
 }
 
-.pmc-jump a:hover { background: var(--pmc-chip-hover-bg); }
-.pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; }
-.pmc-jump a[hidden] { display: none; }
+.pmc-jump a::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+}
 
-/* 錨點跳過來時，標題不要貼齊視窗頂端 */
-#picks, #luggage, #all-promos { scroll-margin-top: 12px; }
+.pmc-jump a:hover { color: var(--pmc-ink); }
+.pmc-jump a[aria-current="true"] { color: var(--pmc-ink); }
+.pmc-jump a[aria-current="true"]::after { background: var(--pmc-blue-deep); }
+.pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: -2px; border-radius: 6px; }
+/* 錨點跳過來時，要讓出貼頂分頁列的高度 */
+#picks, #luggage, #all-promos { scroll-margin-top: 60px; }
 
 .pmc-list-head { margin-top: 6px; }
 
@@ -3233,8 +3255,9 @@ a {
     margin-right: -12px;     /* 滑動列延伸到螢幕右緣，下一張露出一截 */
     padding-right: 12px;
   }
-  .pmc-jump { gap: 6px; margin-bottom: 12px; }
-  .pmc-jump a { padding: 5px 12px; font-size: 12.5px; }
+  .pmc-jump { gap: 0; margin: 0 -12px 12px; padding: 0 4px; }
+  .pmc-jump a { flex: 1; justify-content: center; padding: 11px 6px 10px; font-size: 13.5px; }
+  .pmc-jump a::after { left: 18%; right: 18%; }
 
   .pmc-luggage { padding: 12px; }
   .pmc-lg-row { grid-template-columns: 1fr; gap: 10px; }

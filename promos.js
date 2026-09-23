@@ -119,6 +119,42 @@
       if (jump) jump.hidden = section.hidden;
     });
     setupPicksDots();
+    setupJumpSpy();
+  }
+
+  // 分頁列的「目前在哪一區」（站長 2026-09-23：要看得出選取了哪個）。
+  // 規則：分頁列底下那條線以上、最後一個已經捲過的區塊就是目前的區塊；還沒捲到第一區時標第一個。
+  // 用 scroll 事件（passive）＋ requestAnimationFrame 節流，區塊只有三個，量位置很便宜。
+  var jumpSpyBound = false;
+  function setupJumpSpy() {
+    var nav = document.querySelector('.pmc-jump');
+    if (!nav) return;
+    var links = Array.prototype.filter.call(nav.querySelectorAll('a'), function (a) { return !a.hidden; });
+    var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+    var ticking = false;
+    function mark(i) {
+      links.forEach(function (a, j) { a.setAttribute('aria-current', j === i ? 'true' : 'false'); });
+    }
+    function update() {
+      ticking = false;
+      var line = nav.getBoundingClientRect().bottom + 24;   // 要大於 scroll-margin-top 與分頁列高度的差，點分頁跳過去時才會算到該區
+      var current = 0;
+      targets.forEach(function (t, i) {
+        if (t && t.getBoundingClientRect().top <= line) current = i;
+      });
+      mark(current);
+    }
+    update();
+    if (jumpSpyBound) return;
+    jumpSpyBound = true;
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    // 點了馬上標起來，不用等捲動動畫結束
+    nav.addEventListener('click', function (e) {
+      var a = e.target.closest('a');
+      if (a) mark(links.indexOf(a));
+    });
   }
 
   // 站長推薦手機橫滑的分頁點（站長 2026-09-23：mockup 有、上線版沒有）。
