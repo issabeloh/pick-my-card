@@ -1858,7 +1858,8 @@ function generatePromosPageHtml(exportData) {
     }
   });
   const sampleNames = sampleNameList.join('、');
-  const description = prepared.length + ' 檔信用卡新戶活動一次看' + (sampleNames ? '，含' + sampleNames + '等' : '') +
+  // 不寫檔數：活動數每次匯出都變，放進描述會讓搜尋結果摘要跟頁面實況對不上（2026-09-23）
+  const description = '信用卡新戶活動一次看' + (sampleNames ? '，含' + sampleNames + '等' : '') +
     '首刷禮、新戶回饋加碼、定額回饋活動，依即將截止時間排序，持續更新。';
   // 版本含台北時間的時分：同一天多次匯出／改版也能破 promos.css/js 快取
   // （2026-07-16 教訓：純日期版本讓當天稍早的舊 CSS/JS 被瀏覽器快取住）。
@@ -2626,7 +2627,7 @@ function pmcPageTemplate_(o) {
 '    <h1>信用卡新戶活動一覽</h1>\n' +
 '    <div class="promos-hero-intro">\n' +
 '      <p>信用卡首刷禮排行榜！新戶辦卡推薦</p>\n' +
-'      <p>各大銀行信用卡新戶活動一次比較，為你列出刷卡金、加碼回饋及首刷禮，一真比較多張信用卡新戶活動、快速看懂活動條件及回饋方式。</p>\n' +
+'      <p>各大銀行信用卡新戶活動一次比較，為你列出刷卡金、加碼回饋及首刷禮，一次比較多張信用卡新戶活動、快速看懂活動條件及回饋方式。</p>\n' +
 '    </div>\n' +
 '  </section>\n' +
 '\n' +
