@@ -1233,7 +1233,6 @@ function pmcRowToPromo_(row, headers, id) {
   // 站長推薦／行李箱專區用的欄位（2026-09-23）：
   //   min_spend     拿到獎勵的最低消費門檻；多段門檻填第一段。**空白＝不限金額**（站長定義）
   //   luggage_inch  行李箱吋數（有填＝這檔的贈品含行李箱，進行李箱專區）
-  //   luggage_open  前開式／上掀式／拉鍊式
   //   luggage_value 參考價（官網公告價值或市售估價）
   //   pick_rank     1–5＝手動指定進「站長推薦」的位置；x＝不要自動選入；空白＝交給自動
   //   pick_question／pick_reason  手動情境問句／推薦理由；空白＝用自動產生的
@@ -1241,7 +1240,6 @@ function pmcRowToPromo_(row, headers, id) {
     const n = pmcParseNumber_(getValue(row, headers, k));
     if (n !== null) promo[k] = n;
   });
-  addOptionalField(promo, row, headers, 'luggage_open');
   addOptionalField(promo, row, headers, 'pick_rank');
   addOptionalField(promo, row, headers, 'pick_question');
   addOptionalField(promo, row, headers, 'pick_reason');
@@ -2436,15 +2434,6 @@ function pmcRenderPicks_(picks, monthLabel) {
 }
 
 // ---- 行李箱專區 ----
-function pmcLuggageOpen_(s) {
-  const t = String(s || '');
-  if (t.indexOf('前開') !== -1) return { cls: 'front', label: '前開式' };
-  if (t.indexOf('上掀') !== -1) return { cls: 'top', label: '上掀式' };
-  if (t.indexOf('拉鍊') !== -1) return { cls: 'zip', label: '拉鍊式' };
-  if (t.trim()) return { cls: 'other', label: t.trim() };
-  return { cls: 'unk', label: '開法未標示' };
-}
-
 // 等比例的行李箱圖示：viewBox 固定，高度由 CSS 依 --inch 決定（桌機、手機倍率不同）
 function pmcSuitcaseSvg_() {
   return '<svg class="pmc-lg-svg" viewBox="0 0 40 64" aria-hidden="true">' +
@@ -2462,9 +2451,7 @@ function pmcSelectLuggage_(prepared) {
     const options = pmcGiftOptions_(p.promo.gift_content);
     const lugs = options.filter(function (o) { return PMC_LUGGAGE_RE.test(o); });
     const lugText = (lugs.length ? lugs : options.slice(0, 1)).join(' 或 ');
-    // luggage_open 空白時，從贈品文字推（「24 吋上掀式行李箱」本身就寫了開法）
-    const open = pmcLuggageOpen_(p.promo.luggage_open || (/前開/.test(lugText) ? '前開式' : /上掀/.test(lugText) ? '上掀式' : ''));
-    return { p: p, inch: p.promo.luggage_inch, open: open,
+    return { p: p, inch: p.promo.luggage_inch,
       gift: lugText + (options.length > 1 ? '（好禮 ' + options.length + ' 選 1）' : ''),
       img: pmcSanitizeUrl_(p.promo.gift_image_url),
       link: pmcApplyLink_(p) };
@@ -2479,36 +2466,40 @@ function pmcSelectLuggage_(prepared) {
 
 function pmcRenderLuggage_(items) {
   if (items.length < 2) return '';   // 只有一檔就不成「比較」，整區不出現
-  // 桌機、手機同一套「一列一檔」的比較列（站長 2026-09-23：桌機改得像手機版），
-  // 差別只在 CSS：桌機兩欄並排、尺寸放大。
+  // 版面（站長 2026-09-23 第三輪）：整區是一個淡底的獨立區塊，裡面一檔一張白卡。
+  // 卡片：左＝等比例行李箱＋吋數；中＝卡名、贈品、參考價／門檻（倒數徽章掛在這一行尾，
+  // 只是提醒，不搶位置）；右＝贈品圖（有圖才有這一欄）；底部一列＝卡片特色＋申辦。
   const rows = items.map(function (l) {
     const p = l.p;
     const v = p.promo.luggage_value;
     const inchText = String(Math.round(l.inch * 10) / 10);
     // 贈品宣傳圖：可點擊放大（promos.js setupGiftLightbox 的委派認 .pmc-lg-thumb）
     const thumb = l.img
-      ? '<button type="button" class="pmc-lg-thumb" aria-label="放大檢視贈品圖"><img src="' + pmcEscapeHtml_(l.img) +
-        '" alt="' + pmcEscapeHtml_(p.cardName + ' 贈品') + '" loading="lazy" onerror="this.closest(\'.pmc-lg-thumb\').style.display=\'none\'"></button>'
+      ? '      <button type="button" class="pmc-lg-thumb" aria-label="放大檢視贈品圖"><img src="' + pmcEscapeHtml_(l.img) +
+        '" alt="' + pmcEscapeHtml_(p.cardName + ' 贈品') + '" loading="lazy" onerror="this.closest(\'.pmc-lg\').classList.remove(\'pmc-lg--img\');this.closest(\'.pmc-lg-thumb\').remove()"></button>\n'
       : '';
     // 卡片特色：內容借用下方清單同一張卡的 .promo-card-feat（部署時注入），
     // promos.js 依 data-feat-card 找到那張卡再開同一個 modal
     const featBtn = '<button type="button" class="promo-feat-btn pmc-lg-feat" aria-expanded="false" data-feat-card="' +
       pmcEscapeHtml_(p.promo.id) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
-    return '    <article class="pmc-lg" data-period-end="' + (p.periodEndIso || '') + '" style="--inch:' + l.inch + '">\n' +
+    return '    <article class="pmc-lg' + (l.img ? ' pmc-lg--img' : '') + '" data-period-end="' + (p.periodEndIso || '') +
+        '" style="--inch:' + l.inch + '">\n' +
       '      <div class="pmc-lg-size">' + pmcSuitcaseSvg_() + '<span class="pmc-lg-inch">' + inchText + '<small>吋</small></span></div>\n' +
-      '      <div class="pmc-lg-top"><h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>' +
-        '<span class="pmc-lg-open pmc-lg-open--' + l.open.cls + '">' + pmcEscapeHtml_(l.open.label) + '</span></div>\n' +
-      (l.link ? '      ' + pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') + '\n' : '') +
-      '      <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
-      (thumb ? '      ' + thumb + '\n' : '') +
-      '      <dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
+      '      <div class="pmc-lg-body">\n' +
+      '        <h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      '        <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
+      '        <div class="pmc-lg-meta"><dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
         (typeof v === 'number' && v > 0 ? pmcEscapeHtml_(pmcMoney_(v)) : '—') + '</dd></div>' +
-        '<div><dt>門檻</dt><dd>' + pmcEscapeHtml_(pmcThresholdText_(p.promo)) + '</dd></div></dl>\n' +
-      '      <div class="pmc-lg-foot"><span class="promo-ending-badge" hidden></span>' + featBtn + '</div>\n' +
+        '<div><dt>門檻</dt><dd>' + pmcEscapeHtml_(pmcThresholdText_(p.promo)) + '</dd></div></dl>' +
+        '<span class="promo-ending-badge" hidden></span></div>\n' +
+      '      </div>\n' +
+      thumb +
+      '      <div class="pmc-lg-actions">' + featBtn +
+        (l.link ? pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') : '') + '</div>\n' +
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-luggage" id="luggage" aria-labelledby="pmc-luggage-title">\n' +
-    '    <div class="pmc-section-head"><h2 id="pmc-luggage-title">行李箱專區</h2><span>辦卡送行李箱，尺寸、開法、參考價一次比</span></div>\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-luggage-title">行李箱專區</h2><span>辦卡送行李箱，尺寸、參考價一次比</span></div>\n' +
     '    <div class="pmc-lg-row">\n' + rows + '\n    </div>\n' +
     '    <p class="pmc-lg-fn">參考價依官網公告價值，或以相同或相近款式的市售價格估算，銀行贈品規格可能不同，僅供參考。</p>\n' +
     '  </section>\n';
