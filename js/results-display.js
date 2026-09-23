@@ -911,6 +911,7 @@ function sanitizeUrl(url) {
 // Sticky nav inside the card detail modal: hide buttons whose section is
 // missing or empty, smooth-scroll on click, highlight active section.
 let _cardDetailNavObserver = null;
+let _cardDetailHeaderObserver = null;   // 標題列高度 → --pmc-detail-header-h（見下方 syncHeaderHeight）
 function setupCardDetailNav(modalContent) {
     const nav = document.getElementById('card-detail-nav');
     if (!nav || !modalContent) return;
@@ -918,9 +919,10 @@ function setupCardDetailNav(modalContent) {
     const buttons = Array.from(nav.querySelectorAll('.card-detail-nav-btn'));
 
     // 捲動時「被黏住的那一塊」有多高。2026-09-18 起桌機把 .modal-header 也設成
-    // sticky（站長要求標題不要被捲走），所以黏住的高度＝header＋nav；手機 header
-    // 不 sticky，就只有 nav。用 getComputedStyle 判斷而不是寫死斷點，CSS 改斷點時
-    // 這裡不用跟著改。下面所有「讓區塊落在黏住區塊下方」的計算都走這支。
+    // sticky（站長要求標題不要被捲走），2026-09-23 手機也跟上（精簡版標題列），
+    // 所以黏住的高度＝header＋nav。仍用 getComputedStyle 判斷而不是寫死斷點——
+    // 哪天又有某個斷點不釘標題，這裡不用跟著改。下面所有「讓區塊落在黏住區塊
+    // 下方」的計算都走這支。
     const detailHeader = modalContent.querySelector('.modal-header');
     const stickyOffset = () => {
         const headerSticky = detailHeader && getComputedStyle(detailHeader).position === 'sticky';
@@ -928,8 +930,27 @@ function setupCardDetailNav(modalContent) {
     };
     // nav 要黏在 header 底下而不是蓋住它——header 高度隨卡名長度變動，量完寫進
     // CSS 變數給 .card-detail-nav 的 top 用（CSS 端有 fallback 值）。
+    // ⚠️ 開啟當下量一次不夠：卡圖是 height:36px/width:auto，圖片 load 完才開始佔
+    // 寬度，窄螢幕上會把卡名從一行擠成兩行，header 57px → 85px（iPhone SE 320px
+    // ×「中信 Uniopen 聯名卡」實測）。只量一次的話 nav 會蓋掉半條標題，所以改用
+    // ResizeObserver 持續同步，順便涵蓋轉向與視窗縮放。
+    if (_cardDetailHeaderObserver) {
+        _cardDetailHeaderObserver.disconnect();
+        _cardDetailHeaderObserver = null;
+    }
     if (detailHeader) {
-        modalContent.style.setProperty('--pmc-detail-header-h', detailHeader.offsetHeight + 'px');
+        const syncHeaderHeight = () => {
+            const px = detailHeader.offsetHeight + 'px';
+            // 只在真的變了才寫，避免 ResizeObserver 自己觸發自己
+            if (modalContent.style.getPropertyValue('--pmc-detail-header-h') !== px) {
+                modalContent.style.setProperty('--pmc-detail-header-h', px);
+            }
+        };
+        syncHeaderHeight();
+        if (typeof ResizeObserver === 'function') {
+            _cardDetailHeaderObserver = new ResizeObserver(syncHeaderHeight);
+            _cardDetailHeaderObserver.observe(detailHeader);
+        }
     }
 
     // Disconnect any prior observer (modal opens once per card, but be safe)

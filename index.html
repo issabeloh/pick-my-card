@@ -569,7 +569,10 @@
 
         <!-- 推薦比較工具列：**內容由 tools/build-merchant-pages.js 生成，不要手改**。
              這裡留空的 <nav> 當佔位，生成器每次部署把商家頁清單與回饋數字烤進來
-             （首頁列全部，商家頁各自排除自己）。詳見 docs/project/data-pipeline.md 第 11 節。 -->
+             （首頁列全部，商家頁各自排除自己）。詳見 docs/project/data-pipeline.md 第 11 節。
+             ⚠️ 這塊在 embed 模式（promos 的詳情 iframe）要隱藏，規則在 styles.css
+             的 html.pmc-embed 清單裡（Grep "html.pmc-embed"）——2026-08-18 新增時漏加，
+             在詳情彈窗背景透出一片灰塊，2026-09-23 才修。 -->
         <nav class="mc-related" aria-label="推薦比較">
   <span class="mc-related-label">推薦比較</span>
   <ul class="mc-related-list">

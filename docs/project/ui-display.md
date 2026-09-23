@@ -30,6 +30,11 @@
 
 **Header 與連結**：modal 標題就是 `card.name`（無「詳情」後綴）；header 左上有卡片圖；卡全名純文字（無「信用卡官網連結:」標籤）；新戶活動區塊無「官網連結」。
 
+**Sticky 標題列（桌機 2026-09-18、手機 2026-09-23）**：`#card-detail-modal .modal-header` 是 `position: sticky; top: 0`（`z-index: 11` > nav 的 10），捲動時卡名、卡圖與右上角 ✕ 都留在畫面上。**手機是精簡版**：卡圖 56→36px、padding 20→10px/16px、卡名 1.25→1.05rem，整列 97→57px（iPhone 13 實測）。
+- **為什麼手機要精簡**：手機 modal 只有 80dvh（iPhone 13 可視 531px），照桌機的 97px 釘，標題＋導覽列會吃掉 28% 可讀高度——2026-09-18 首次上線時就是為此只給桌機；收到 57px 後降到 11%，才換得回「捲到一半還看得到自己在看哪張卡、也隨時按得到 ✕」。
+- **`.card-detail-nav` 的 `top` ＝ `var(--pmc-detail-header-h)`**，才會黏在標題底下而不是蓋住它。這個變數由 `setupCardDetailNav()` 的 `syncHeaderHeight()`（`js/results-display.js`）寫入，且**掛了 ResizeObserver 持續同步**：卡圖是 `height:36px; width:auto`，圖片 load 完才開始佔寬度，窄螢幕上會把卡名擠成兩行（320px ×「中信 Uniopen 聯名卡」實測 57→75px），只量開啟當下的話 nav 會蓋掉半條標題。ResizeObserver 順帶涵蓋轉向與視窗縮放。
+- **捲動落點 `stickyOffset()` 用 `getComputedStyle(...).position === 'sticky'` 判斷**，不寫死斷點——CSS 改斷點不必動 JS。
+
 **申辦 CTA（2026-07-15 新增）**：`cardsData.cardApplyCtas[card.id]` 有 `link` 時，`showCardDetail()` 同步填入兩個常駐按鈕（無 link 時兩者都明確 `hidden = true`，防止上一張卡狀態沿用）——`#card-detail-apply-header-btn`（桌機，卡名旁，`≤768px` 隱藏）與 `#card-detail-apply-bar`（手機，`.modal-content` 捲動容器內最後一個子節點、`position: sticky; bottom: 0`，`≥769px` 隱藏）；bar 的文字來自 `applyCta.text`（空字串則只留按鈕）。兩者 href 都走 `sanitizeUrl()`，click 落入 GA4 delegation（`detail_header_apply` / `detail_sticky_apply`）。
 
 **近期異動（2026-08-01 新增，issue #375 PR-2）**：位在**「指定通路回饋」上方**（`#card-changelog-section`，nav 也多一顆「近期異動」鈕），資料來自 `card.changelog`（Apps Script「變動紀錄」表匯出，最多 5 筆、由新到舊；來源與發布流程見 `apps-script/README.md`「發布變動紀錄」）。每列「日期 ＋ 一句話」，日期由 ISO 轉斜線顯示（`formatChangelogDate`）。
@@ -54,7 +59,7 @@
 **進入詳情頁的入口**：搜尋結果卡片點擊；sidebar 卡片 chips；`#cards-selection`/`#owned-cards-selection` 每張卡的 ⓘ 按鈕（由 `_renderCardSelectionModal` 注入，click 呼叫 `showCardDetail(card.id)` 並 `stopPropagation()` 防誤勾 checkbox；詳情 modal 疊在原 modal 之上）。
 
 **Embed 模式（2026-07-16 新增，方案 A：新戶活動頁 iframe 內嵌詳情彈窗）**：
-- 觸發：URL 帶 `?embed=1`。index.html pre-paint script（`<head>` 內，Grep "pmc-embed"）在首屏前於 `<html>` 加 `pmc-embed` class，避免閃一下完整工具介面；styles.css 對應規則（Grep "html.pmc-embed"）只留 `#card-detail-modal` 可見，其餘全站 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight/boot loader）一律 `display:none !important`，`body`/`.container` 背景轉透明——`#card-detail-modal` 本身是 `position:fixed` 全螢幕深色遮罩，天生蓋滿 iframe viewport，不用另外改它的樣式。
+- 觸發：URL 帶 `?embed=1`。index.html pre-paint script（`<head>` 內，Grep "pmc-embed"）在首屏前於 `<html>` 加 `pmc-embed` class，避免閃一下完整工具介面；styles.css 對應規則（Grep "html.pmc-embed"）只留 `#card-detail-modal` 可見，其餘全站 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight/推薦比較工具列/boot loader）一律 `display:none !important`，`body`/`.container` 背景轉透明——`#card-detail-modal` 本身是 `position:fixed` 全螢幕深色遮罩，天生蓋滿 iframe viewport，不用另外改它的樣式。
 - postMessage 協定（script.js 主 `DOMContentLoaded` 尾端，Grep "pmc-embed-ready"；origin 兩端都檢查 `location.origin`，非 embed 模式完全不掛 listener、不送訊息）：
   - iframe → 父頁：`{type:'pmc-embed-ready'}`（初始化完成，可以開卡了）；`{type:'pmc-detail-closed'}`（modal 被關閉——關閉鈕與點遮罩兩條路徑共用 `showCardDetail()` 內定義的 `closeModal`，勾子加在那裡，不是複製一份關閉邏輯）
   - 父頁 → iframe：`{type:'pmc-open-card', cardId, section}`（開/換卡；`section` 選填，見下方入口鈕段，`showCardDetail()` 本身的 `wasAlreadyOpen` guard 已處理「modal 已開啟時換卡」不重複上鎖的問題，這裡不用額外處理）
@@ -62,6 +67,7 @@
 - 消費端：`promos.js` 的 `setupCardDetailOverlay()`。iframe（`src="/?start&embed=1"`）只建立一次、常駐重用，換卡靠 postMessage，不重新載入；首次載入 8 秒內沒收到 `pmc-embed-ready` 視為攔截失敗，改用入口鈕原本保留的 `href`（`/?start&card=<id>`，`target="_blank"`）開新分頁，之後的點擊也不再嘗試 iframe。入口鈕額外帶 `data-card-id` 供 postMessage 用，不用重新解析 href。
   - **入口鈕 2026-09-17 改版**：舊的卡名旁 ⓘ（`.promo-card-info-btn`，由已移除的 `pmcRenderPromoCard_` 生成）已不存在；現在是卡片特色區右上角的「查看全部 ›」（`.promo-feat-all`，由 `tools/build-promos-features.js` 部署時生成）。`promos.js` 的點擊選擇器寫成 `'.promo-feat-all, .promo-card-info-btn'` 兩個都收，只是為了讓尚未重新部署的舊 `promos.html` 也還能用，**不是現行標記**。
   - **`data-section`（2026-09-17 新增）**：`.promo-feat-all` 帶 `data-section="card-special-section"`，`promos.js` 把它放進 `pmc-open-card` 訊息，`js/home-ui.js` 收到後點一下詳情頁對應的導覽鈕，讓詳情開完直接捲到「指定通路回饋」。刻意重用那顆導覽鈕而不是另寫捲動——它已經處理好 sticky header 偏移與 active 狀態同步。
+- ⚠️ **那份隱藏清單是黑名單不是白名單**：index.html 在 body 層級新增任何區塊，都要同步加進 `html.pmc-embed` 的選擇器清單，否則會在 promos 的詳情遮罩背景透出來（詳情 modal 自己的遮罩只有 `rgba(0,0,0,0.5)`，蓋不掉、只會壓暗）。見教訓記錄 2026-09-23。
 - 不動 auth／登出流程：`onAuthStateChanged` 在 embed 模式下照常跑，iframe 與主站同網域，個人化資料（分級、筆記、額度等）自然可用。
 
 ## 1b. 寬螢幕桌機版面（≥1400px，2026-09-08 新增）
@@ -283,5 +289,7 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-08] 「桌機 UI 全部縮小」聽起來像一行 `html { font-size: 87.5% }` → 實測 `styles.css` 有 191 條 px 字級與 170 條 rem 字級各半，rem 開關只拉動一半、比例會歪；改用 `zoom` 則會扯到 `getBoundingClientRect` 的量測（詳情頁 nav 捲動就靠它）→ 全站密度調整沒有單一開關，要當獨立任務逐條盤點；先做「放寬容器與側欄」這種只動可用寬度、不動字級的部分，風險與收益比好得多
 - [2026-09-08] iPhone 13 上手機抽屜的 FAQ 卡被截斷、又捲不下去 → `.sidebar` 的 height/max-height 吃 `100vh`，而 iOS Safari 的 100vh 是「工具列收起後」的大視窗高度（844px），實際可視只有約 659px：底部近 190px 被工具列蓋住，內容（約 780px）又小於 844px 不產生捲軸 → 任何「滿版高度的固定面板」（抽屜、全螢幕 modal）一律 `100vh` 後面再補一行 `100dvh`，vh 那行只當舊瀏覽器 fallback
 - [2026-09-03] 用 `s[start:end]` 整段替換 CSS 區塊時，誤刪了夾在中間的 modal 樣式與手機 media query → `end` 錨點抓成「下一個大註解」，但那之間還有別的規則 → 整段替換前先確認 start/end 之間**只有**要換掉的東西（`grep -n` 列出區間內的選擇器），或改用逐條 replace
+- [2026-09-23] promos 點「查看卡片詳情」後，詳情彈窗背景上方浮出一整片灰色的「推薦比較」工具列（手機上 315px 高、連結還點得下去會把 iframe 導去商家頁）→ embed 模式的隱藏清單（`html.pmc-embed ...`，2026-07-16 寫的）是**黑名單**，而 `.mc-related` 是 2026-08-18 才加進 index.html 的，沒人回頭補清單；詳情 modal 自己的遮罩是半透明的，於是它就從背景透出來 → 在 index.html 的 body 層級新增區塊時，同步檢查 embed 清單；styles.css 與 index.html 兩邊都補了警告註解。判「這東西是誰畫的」時先確認自己看的是父頁還是 iframe——它會隨詳情關閉一起消失，正是因為它活在 iframe 裡
+- [2026-09-23] 手機標題列改 sticky 後，320px 螢幕上長卡名被導覽列蓋掉半行 → `--pmc-detail-header-h` 只在 `setupCardDetailNav()` 開啟當下量一次，而卡圖 `width:auto` 要等圖片 load 完才佔寬度、進而把卡名從一行擠成兩行（57→85px），變數還停在舊值 → 凡是「量某元素高度寫進 CSS 變數」的地方，只要那元素裡有圖片或會換行的文字，就用 ResizeObserver 持續同步，不要只量一次（寫入前比對舊值，避免 observer 自己觸發自己）
 - [2026-09-16] 首頁「消費金額」框在桌機 Chrome 跳出儲存的帳號/密碼下拉（站長截圖回報）→ 刪除帳號 modal 的 `#da-password` 沒有 `<form>` 擁有者，Chrome 會把全文件的無主欄位併成一個合成表單、再挑密碼欄前方最近的文字欄當帳號欄，也就是 `#amount-input`（`type="number"` 一樣會被選中，`autocomplete="off"` 擋不住密碼管理員）→ **頁面上任何 `type="password"` 欄位一律要被某個 `<form>` 擁有**，否則它會把同頁不相干的輸入框變成「帳號欄」；本專案的作法是 `<form id="da-form" style="display: contents;">`（不影響版面）＋ JS 攔 submit。新增密碼欄時照做
 
