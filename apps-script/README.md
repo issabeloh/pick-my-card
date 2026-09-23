@@ -11,6 +11,10 @@
 `exportToJSON()` 那支。**這是備份，改動請同步回 Google Sheets。**
 
 - 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
+- 2026-09-23 新增「站長推薦／行李箱專區」：New Cardholder Promos 多讀 `min_spend`、`luggage_inch`／`luggage_value`、
+  `pick_*` 共六欄（說明見 `docs/project/data-pipeline.md` 第 9b 節）。同專案另加
+  **`promo-picks-fill.gs`**（新檔，要在 Apps Script 編輯器「＋ 檔案」貼進去）：執行
+  `fillPickSuggestions()` 會把目前上榜 5 檔的自動問句／理由填進空白格。
 - 2026-07-31 新增 `readChangelog()`（詳情頁「近期異動」）：讀資料檔的「變動紀錄」表，依 `id`
   分組、濾掉 `active=FALSE`、依 `date` 由新到舊取前 5 筆，掛成 `card.changelog`。
   **沒有異動的卡不塞空陣列**（省 `cards.data` 體積）；日期一律過 `formatDateToISO`。

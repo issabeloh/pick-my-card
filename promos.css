@@ -2429,8 +2429,11 @@ a {
   text-shadow: none;
 }
 
-/* 申辦鈕：主站藍實心、扁平圓角，取代金色果凍漸層＋光暈 */
-.promo-card-actions .promo-apply-btn {
+/* 申辦鈕：主站藍實心、扁平圓角，取代金色果凍漸層＋光暈。
+   站長推薦／行李箱專區的按鈕也用同一款（站長 2026-09-23：全頁 CTA 一致） */
+.promo-card-actions .promo-apply-btn,
+.pmc-picks .promo-apply-btn,
+.pmc-luggage .promo-apply-btn {
   background-image: none;
   background-color: var(--pmc-blue-deep);
   color: var(--pmc-white);
@@ -2439,10 +2442,14 @@ a {
   box-shadow: none;
   text-shadow: none;
 }
-.promo-card-actions .promo-apply-btn:hover {
+.promo-card-actions .promo-apply-btn:hover,
+.pmc-picks .promo-apply-btn:hover,
+.pmc-luggage .promo-apply-btn:hover {
   background-color: #1b3a9c;
 }
-.promo-card-actions .promo-apply-btn:active {
+.promo-card-actions .promo-apply-btn:active,
+.pmc-picks .promo-apply-btn:active,
+.pmc-luggage .promo-apply-btn:active {
   transform: scale(0.98);
   box-shadow: none;
 }
@@ -2774,9 +2781,477 @@ a {
   .promo-feat-modal-body { padding: 10px 14px 14px; }
 }
 
-/* 臨時隱藏（2026-09-23 hotfix）：站長推薦／行李箱專區的 HTML 已由匯出推上 main，但樣式還在
-   claude/laughing-allen-haxmxg 分支待審。合併該分支時**必須刪除這條**，否則兩區永遠不顯示。 */
+/* ================================================================
+   站長推薦＋行李箱專區（2026-09-23）
+   HTML 由 apps-script/cards-export.gs 的 pmcRenderPicks_／pmcRenderLuggage_ 生成，
+   放在 hero 與搜尋列之間；不受篩選、搜尋、「隱藏我持有的卡片」影響（站長指定）。
+   按鈕沿用清單的 .promo-apply-btn（糖果黃），全站只有一種「立即申辦」長相。
+   mockup：推薦區 A1（桌機 5 張一排、手機橫滑）、行李箱桌機三欄／手機 M1 精簡比較列。
+   ================================================================ */
 .pmc-picks,
 .pmc-luggage {
+  margin: 4px 0 22px;
+}
+
+/* author 樣式設了 display（flex／grid）的元素，[hidden] 會被蓋掉——promos.js 靠 el.hidden
+   藏過期活動與整區，所以每個都要補這條（data-pipeline.md 教訓記錄 2026-09-18）。 */
+.pmc-picks[hidden],
+.pmc-luggage[hidden],
+.pmc-pick[hidden],
+.pmc-lg[hidden] {
   display: none;
+}
+
+.pmc-section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 0 4px 10px;
+}
+
+.pmc-section-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--pmc-ink);
+}
+
+.pmc-section-head span {
+  font-size: 12px;
+  color: var(--pmc-muted);
+}
+
+/* 類型小徽章：顏色 token 與清單的 .promo-type-badge 共用，形狀用一般 pill
+   （清單那顆是「從卡框長出來的 label」，放在這裡會缺一角）。 */
+.pmc-kind {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pmc-kind--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
+.pmc-kind--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
+.pmc-kind--fixed { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+
+/* 倒數徽章：跟清單卡片內（.promo-act-badges .promo-ending-badge）同一款——
+   淺紅底深紅字實心 pill、不抖動（站長 2026-09-23：兩區要跟卡片內一致） */
+.pmc-picks .promo-ending-badge:not(:empty),
+.pmc-luggage .promo-ending-badge:not(:empty) {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  animation: none;
+  text-shadow: none;
+}
+
+/* ---- 站長推薦 ---- */
+.pmc-picks-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.pmc-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-md);
+  box-shadow: var(--pmc-shadow-card);
+}
+
+.pmc-pick-q {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.4;
+  color: var(--pmc-blue-deep);
+}
+
+.pmc-pick-img {
+  display: block;
+  aspect-ratio: 8 / 5;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.pmc-pick-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pmc-pick-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pmc-label);
+}
+
+.pmc-pick-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pmc-pick-headline {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+  color: var(--pmc-ink);
+  overflow-wrap: anywhere;
+}
+
+.pmc-pick-headline small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-thr {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 12px;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-rate {
+  font-weight: 700;
+  color: var(--pmc-green);
+}
+
+.pmc-pick-reason {
+  flex: 1;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.pmc-pick-note {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-cta {
+  align-self: stretch;
+  margin-top: 2px;
+}
+
+/* ---- 行李箱專區（站長 2026-09-23 第三輪）----
+   整區是一個淡藍灰底的獨立區塊，裡面一檔一張白卡（桌機兩欄、手機一欄）。
+   卡片欄位：
+     size（等比例行李箱＋吋數）｜ body（卡名／贈品／參考價・門檻・倒數徽章）｜ thumb（贈品圖，有圖才有）
+     actions（卡片特色＋申辦，整列靠右）
+   倒數徽章只是提醒，放在參考價／門檻那一行的尾巴，不佔醒目位置。 */
+.pmc-luggage {
+  padding: 16px;
+  background: #f3f6fb;
+  border: 1px solid #e2e8f3;
+  border-radius: var(--pmc-radius-lg);
+}
+
+.pmc-luggage .pmc-section-head {
+  margin: 0 2px 12px;
+}
+
+.pmc-lg-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pmc-lg {
+  --lg-scale: 2.2px;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  grid-template-areas:
+    "size    body"
+    "actions actions";
+  gap: 10px 14px;
+  padding: 14px;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-md);
+  box-shadow: var(--pmc-shadow-card);
+}
+
+.pmc-lg--img {
+  grid-template-columns: 60px minmax(0, 1fr) 96px;
+  grid-template-areas:
+    "size    body    thumb"
+    "actions actions actions";
+}
+
+.pmc-lg-size {
+  grid-area: size;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 圖示高度＝吋數 × 倍率，所以 28、24、20 吋的大小差異是真的比例 */
+.pmc-lg-svg {
+  display: block;
+  height: calc(var(--inch) * var(--lg-scale));
+  width: auto;
+}
+
+.pmc-lg-inch {
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--pmc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.pmc-lg-inch small {
+  font-size: 0.65rem;
+  margin-left: 1px;
+}
+
+.pmc-lg-body {
+  grid-area: body;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pmc-lg-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pmc-ink);
+}
+
+.pmc-lg-gift {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pmc-label);
+}
+
+.pmc-lg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 2px;
+}
+
+.pmc-lg-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.pmc-lg-facts div {
+  display: flex;
+  gap: 5px;
+}
+
+.pmc-lg-facts dt {
+  color: #9ca3af;
+}
+
+.pmc-lg-facts dd {
+  margin: 0;
+  color: var(--pmc-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.pmc-lg-facts div:first-child dd {
+  font-weight: 700;
+  color: var(--pmc-ink);
+}
+
+.pmc-luggage .pmc-lg-meta .promo-ending-badge:not(:empty) {
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+/* 贈品圖：右欄固定正方形（拉伸會把整張卡撐高、圖也被裁掉），點擊放大 */
+.pmc-lg-thumb {
+  grid-area: thumb;
+  align-self: start;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  border: 1px solid var(--pmc-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--pmc-white);
+  cursor: zoom-in;
+}
+
+.pmc-lg-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pmc-lg-thumb:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 2px;
+}
+
+.pmc-lg-actions {
+  grid-area: actions;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f1f4;
+}
+
+/* 卡片特色：跟清單同一顆按鈕、同一個 modal，這裡縮小尺寸 */
+.pmc-lg .pmc-lg-feat {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.pmc-lg .pmc-lg-feat[hidden] { display: none; }
+
+.pmc-luggage .pmc-lg-cta {
+  padding: 7px 16px;
+  font-size: 13px;
+}
+
+.pmc-lg-fn {
+  margin: 12px 2px 0;
+  font-size: 11px;
+  color: #8a94a6;
+}
+
+/* ---- 頁內索引列＋「新戶活動」標題 ---- */
+.pmc-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.pmc-jump a {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--pmc-chip-border);
+  border-radius: 999px;
+  color: var(--pmc-chip-text);
+  background: var(--pmc-white);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pmc-jump a:hover { background: var(--pmc-chip-hover-bg); }
+.pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; }
+.pmc-jump a[hidden] { display: none; }
+
+/* 錨點跳過來時，標題不要貼齊視窗頂端 */
+#picks, #luggage, #all-promos { scroll-margin-top: 12px; }
+
+.pmc-list-head { margin-top: 6px; }
+
+/* ---- 手機橫滑分頁點（站長推薦）---- */
+.pmc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pmc-dots[hidden] { display: none; }
+.pmc-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+.pmc-dots button[aria-current="true"] {
+  width: 20px;
+  background: var(--pmc-blue-deep);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmc-dots button { transition: none; }
+}
+
+/* 平板：推薦改成可橫滑（5 張擠在 768–1000px 會太窄） */
+@media (max-width: 1000px) {
+  .pmc-picks-row {
+    grid-auto-columns: 230px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .pmc-picks-row::-webkit-scrollbar { display: none; }
+  .pmc-pick { scroll-snap-align: start; }
+}
+
+/* 手機：推薦橫滑露出下一張的邊；行李箱改單欄、尺寸縮小，「立即申辦」縮成「申辦」 */
+@media (max-width: 768px) {
+  .pmc-picks,
+  .pmc-luggage {
+    margin-bottom: 18px;
+  }
+  .pmc-section-head h2 { font-size: 1rem; }
+  .pmc-picks-row {
+    grid-auto-columns: 72%;
+    gap: 10px;
+    margin-right: -12px;     /* 滑動列延伸到螢幕右緣，下一張露出一截 */
+    padding-right: 12px;
+  }
+  .pmc-jump { gap: 6px; margin-bottom: 12px; }
+  .pmc-jump a { padding: 5px 12px; font-size: 12.5px; }
+
+  .pmc-luggage { padding: 12px; }
+  .pmc-lg-row { grid-template-columns: 1fr; gap: 10px; }
+  .pmc-lg {
+    --lg-scale: 1.6px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px 10px;
+    padding: 12px;
+  }
+  .pmc-lg--img { grid-template-columns: 48px minmax(0, 1fr) 76px; }
+  .pmc-lg-inch { font-size: 1.1rem; }
+  .pmc-lg-name { font-size: 13.5px; }
+  .pmc-lg-gift { font-size: 12.5px; }
+  .pmc-lg-facts { font-size: 12px; gap: 2px 12px; }
+  .pmc-lg-thumb { width: 76px; height: 76px; }
+  .pmc-lg-actions { padding-top: 8px; }
+  .pmc-lg .pmc-lg-feat { padding: 5px 10px; font-size: 12.5px; }
+  .pmc-luggage .pmc-lg-cta { padding: 6px 16px; font-size: 13px; }
+  .pmc-luggage .pmc-cta-long { display: none; }
 }

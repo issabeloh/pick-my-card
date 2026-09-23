@@ -91,7 +91,85 @@
         card.setAttribute('data-expired', '1');
       }
     });
+    refreshSectionBadges(today);
     refreshEndingChip();
+  }
+
+  // 站長推薦／行李箱專區（2026-09-23）：一格一檔活動，規則同上——過期藏起來、14 天內掛徽章。
+  // 整區都過期時連標題一起藏；行李箱剩不到 2 檔就不成比較，也整區藏。
+  function refreshSectionBadges(today) {
+    [['.pmc-picks', '.pmc-pick', 1], ['.pmc-luggage', '.pmc-lg', 2]].forEach(function (def) {
+      var section = document.querySelector(def[0]);
+      if (!section) return;
+      var alive = 0;
+      section.querySelectorAll(def[1]).forEach(function (item) {
+        var endIso = item.getAttribute('data-period-end');
+        var badge = item.querySelector('.promo-ending-badge');
+        var diff = endIso ? daysBetween(today, endIso) : null;
+        if (diff !== null && diff < 0) { item.hidden = true; return; }
+        alive++;
+        if (!badge) return;
+        if (diff === 0) { badge.textContent = '今天截止！'; badge.hidden = false; }
+        else if (diff !== null && diff <= 14) { badge.textContent = '最後 ' + diff + ' 天'; badge.hidden = false; }
+        else { badge.hidden = true; }
+      });
+      section.hidden = alive < def[2];
+      // 索引列的對應連結跟著整區顯示／隱藏
+      var jump = document.querySelector('.pmc-jump a[data-jump="' + section.id + '"]');
+      if (jump) jump.hidden = section.hidden;
+    });
+    setupPicksDots();
+  }
+
+  // 站長推薦手機橫滑的分頁點（站長 2026-09-23：mockup 有、上線版沒有）。
+  // 只有真的能橫滑（內容比容器寬）才顯示；點數＝可見的推薦張數，滑動時更新目前位置，
+  // 點某一顆就滑到那一張。視窗寬度改變（轉向）時重算。
+  var picksDotsBound = false;
+  function setupPicksDots() {
+    var row = document.querySelector('.pmc-picks-row');
+    var dots = document.querySelector('.pmc-dots');
+    if (!row || !dots) return;
+    function visibleItems() {
+      return Array.prototype.filter.call(row.querySelectorAll('.pmc-pick'), function (el) { return !el.hidden; });
+    }
+    function render() {
+      var items = visibleItems();
+      var scrollable = row.scrollWidth > row.clientWidth + 2;
+      dots.hidden = !scrollable || items.length < 2;
+      if (dots.hidden) return;
+      if (dots.children.length !== items.length) {
+        dots.innerHTML = '';
+        items.forEach(function (item, i) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('aria-label', '第 ' + (i + 1) + ' 張推薦');
+          b.addEventListener('click', function () {
+            row.scrollTo({ left: item.offsetLeft - row.offsetLeft, behavior: 'smooth' });
+          });
+          dots.appendChild(b);
+        });
+      }
+      update();
+    }
+    function update() {
+      var items = visibleItems();
+      var left = row.scrollLeft;
+      var current = 0, best = Infinity;
+      items.forEach(function (item, i) {
+        var d = Math.abs(item.offsetLeft - row.offsetLeft - left);
+        if (d < best) { best = d; current = i; }
+      });
+      // 滑到底時最後一張可能對不齊左緣，直接算最後一張
+      if (left + row.clientWidth >= row.scrollWidth - 2) current = items.length - 1;
+      Array.prototype.forEach.call(dots.children, function (b, i) {
+        b.setAttribute('aria-current', i === current ? 'true' : 'false');
+      });
+    }
+    render();
+    if (picksDotsBound) return;
+    picksDotsBound = true;
+    row.addEventListener('scroll', function () { if (!dots.hidden) update(); }, { passive: true });
+    window.addEventListener('resize', render);
   }
 
   // 「即將結束」篩選（2026-09-20 站長需求）：只要這張卡還有任何一檔活動掛著
@@ -439,8 +517,10 @@
     }
   }
 
-  function setFeatOpen(card, open) {
-    var btn = card.querySelector('.promo-feat-btn');
+  // btnOverride：行李箱專區的「卡片特色」鈕不在卡片裡，借用清單那張卡的內容，
+  // aria-expanded／焦點要還給被點的那顆，不是清單裡那顆（站長 2026-09-23）。
+  function setFeatOpen(card, open, btnOverride) {
+    var btn = btnOverride || card.querySelector('.promo-feat-btn');
     var drawer = card.querySelector('.promo-card-feat');
     if (!btn || !drawer) return;
     if (open) { if (!openFeatModal(card, btn)) return; }
@@ -449,18 +529,29 @@
     drawer.hidden = true;              // 抽屜永遠收著，內容一律由 modal 呈現
   }
 
+  // 行李箱專區的按鈕帶 data-feat-card＝卡片 id，對應清單裡同一張卡（內容只注入在那裡）
+  function featCardFor(btn) {
+    var id = btn.getAttribute('data-feat-card');
+    if (!id) return btn.closest('.promo-card');
+    var cards = document.querySelectorAll('.promo-card');
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].getAttribute('data-card-id') === id) return cards[i];
+    }
+    return null;
+  }
+
   function setupFeatToggle() {
-    document.querySelectorAll('.promo-card').forEach(function (card) {
-      var drawer = card.querySelector('.promo-card-feat');
-      var btn = card.querySelector('.promo-feat-btn');
-      if (btn && (!drawer || !drawer.innerHTML.trim())) btn.hidden = true;
+    document.querySelectorAll('.promo-feat-btn').forEach(function (btn) {
+      var card = featCardFor(btn);
+      var drawer = card && card.querySelector('.promo-card-feat');
+      if (!drawer || !drawer.innerHTML.trim()) btn.hidden = true;
     });
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('.promo-feat-btn');
       if (!btn) return;
-      var card = btn.closest('.promo-card');
+      var card = featCardFor(btn);
       if (!card) return;
-      setFeatOpen(card, btn.getAttribute('aria-expanded') !== 'true');
+      setFeatOpen(card, btn.getAttribute('aria-expanded') !== 'true', btn);
     });
   }
 
@@ -477,7 +568,9 @@
             button_type: 'promos_page_apply',
             card_id: link.getAttribute('data-card-id') || '',
             card_name: link.getAttribute('data-card-name') || '',
-            surface: 'promos_page'
+            surface: 'promos_page',
+            // 站長推薦／行李箱專區的按鈕帶 data-ga-section（picks／luggage），清單的按鈕是 list
+            section: link.getAttribute('data-ga-section') || 'list'
           });
         }
       } catch (err) {
@@ -544,7 +637,8 @@
     // 當第二層保險。只有活動宣傳圖（獎品）可放大；退回卡片圖的縮圖不進 lightbox。
     // 附屬列右側的小圖（.promo-sub-thumb--gift，42px）走同一條路。
     document.addEventListener('click', function (e) {
-      var thumb = e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift');
+      // 行李箱專區的贈品圖（.pmc-lg-thumb，2026-09-23）也走同一個 lightbox
+      var thumb = e.target.closest('.promo-act-thumb--gift, .promo-sub-thumb--gift, .pmc-lg-thumb');
       if (!thumb) return;
       var img = thumb.querySelector('img');
       if (!img) return;

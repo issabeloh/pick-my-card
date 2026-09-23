@@ -80,6 +80,7 @@
 - 無自動化測試：品質底線靠 `tools/preflight.sh` ＋ `docs/ops/regression.md` 人工回歸
 - Chromium/Playwright 已預裝（executablePath `/opt/pw-browsers/chromium`），本機驗證可起 `python3 -m http.server`
 - `.claude/agents/` 有專案自訂 subagent（scout/builder/verifier），用法見 `docs/ops/dispatch.md`
+- **預覽部署只認 `preview/*` 分支**（站長的 Cloudflare Pages 設定；`claude/*` 工作分支推了**不會**有預覽）：要給站長看效果 → 從工作分支開或更新 `preview/<主題>` 並 push。需要真實資料時，請站長把 Apps Script `cards-export.gs` 的 `GITHUB_BRANCH` 暫時改成該 preview 分支再匯出，看完改回 `main`
 
 ---
 **更新日期**：2026-07-20（script.js 模組化拆分 session；改寫前版本在 `docs/archive/CLAUDE.md-2026-07-20.bak`）
