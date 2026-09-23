@@ -2861,7 +2861,9 @@ a {
 .pmc-picks-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
+  /* 每張固定佔 1/5 寬（站長 2026-09-23：不滿 5 張時只顯示有的張數）——
+     用 1fr 的話 3 張會各撐到 1/3 寬、卡圖跟著放大一倍，看起來像壞掉；固定寬度則靠左排好 */
+  grid-auto-columns: calc((100% - 4 * 12px) / 5);
   gap: 12px;
 }
 
