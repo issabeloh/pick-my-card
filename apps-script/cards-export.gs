@@ -1171,6 +1171,84 @@ function isPromoRow_(row, headers) {
   return false;
 }
 
+// 數字欄容錯：儲存格可能是數字，也可能是文字格式的 "3,280"、"NT$3,280"、"24吋"。
+// 直接 parseFloat("3,280") 會得到 3，所以先把數字與小數點以外的字元拿掉。空白回 null。
+function pmcParseNumber_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? null : n;
+}
+
+// 「New Cardholder Promos」的一列 → 一檔活動物件。readNewCardholderPromos() 與
+// promo-picks-fill.gs 的 fillPickSuggestions() 共用，兩邊讀出來的活動才會一模一樣
+// （2026-09-23 從 readNewCardholderPromos 抽出，內容未改，只多了下面的新欄位）。
+function pmcRowToPromo_(row, headers, id) {
+  const promo = {
+    id: id,
+    promo_name: String(getValue(row, headers, 'promo_name') || ''),
+    new_customer_definition: getValue(row, headers, 'new_customer_definition') || '',
+    new_customer_summary: getValue(row, headers, 'new_customer_summary') || ''
+  };
+
+  // 處理 promo_types (以逗號分割成陣列)
+  const promoTypesStr = getValue(row, headers, 'promo_types');
+  promo.promo_types = promoTypesStr
+    ? String(promoTypesStr).split(',').map(s => s.trim()).filter(s => s.length > 0)
+    : [];
+
+  // 處理日期欄位 (維持 ISO 格式)
+  const periodStart = getValue(row, headers, 'period_start');
+  promo.period_start = periodStart ? formatDateToISO(periodStart) : null;
+
+  const periodEnd = getValue(row, headers, 'period_end');
+  promo.period_end = periodEnd ? formatDateToISO(periodEnd) : null;
+
+  // 處理 priority (預設為 99)
+  const priorityVal = getValue(row, headers, 'priority');
+  promo.priority = (priorityVal !== null && priorityVal !== '') ? parseInt(priorityVal) : 99;
+
+  // 處理 bonus_merchants (以逗號分割成陣列)
+  const bonusMerchantsStr = getValue(row, headers, 'bonus_merchants');
+  if (bonusMerchantsStr && String(bonusMerchantsStr).trim() !== '') {
+    promo.bonus_merchants = String(bonusMerchantsStr).split(',').map(s => s.trim());
+  }
+
+  // 處理數字型別的選填欄位
+  const bonusCap = getValue(row, headers, 'bonus_cap');
+  if (bonusCap !== null && bonusCap !== '') promo.bonus_cap = parseFloat(bonusCap);
+
+  const voucherAmount = getValue(row, headers, 'voucher_amount');
+  if (voucherAmount !== null && voucherAmount !== '') promo.voucher_amount = parseFloat(voucherAmount);
+
+  // 使用 addOptionalField 處理其他選填字串欄位
+  addOptionalField(promo, row, headers, 'gift_content');
+  addOptionalField(promo, row, headers, 'gift_image_url', 'string');
+  addOptionalField(promo, row, headers, 'bonus_rate');
+  addOptionalField(promo, row, headers, 'voucher_usage');
+  addOptionalField(promo, row, headers, 'notes');
+  addOptionalField(promo, row, headers, 'link');
+  addOptionalField(promo, row, headers, 'promo_condition');
+
+  // 站長推薦／行李箱專區用的欄位（2026-09-23）：
+  //   min_spend     拿到獎勵的最低消費門檻；多段門檻填第一段。**空白＝不限金額**（站長定義）
+  //   luggage_inch  行李箱吋數（有填＝這檔的贈品含行李箱，進行李箱專區）
+  //   luggage_open  前開式／上掀式／拉鍊式
+  //   luggage_value 參考價（官網公告價值或市售估價）
+  //   pick_rank     1–5＝手動指定進「站長推薦」的位置；x＝不要自動選入；空白＝交給自動
+  //   pick_question／pick_reason  手動情境問句／推薦理由；空白＝用自動產生的
+  ['min_spend', 'luggage_inch', 'luggage_value'].forEach(function (k) {
+    const n = pmcParseNumber_(getValue(row, headers, k));
+    if (n !== null) promo[k] = n;
+  });
+  addOptionalField(promo, row, headers, 'luggage_open');
+  addOptionalField(promo, row, headers, 'pick_rank');
+  addOptionalField(promo, row, headers, 'pick_question');
+  addOptionalField(promo, row, headers, 'pick_reason');
+  if (promo.pick_rank !== undefined) promo.pick_rank = String(promo.pick_rank).trim();
+  return promo;
+}
+
 // ========== 讀取 New Cardholder Promos 資料 ==========
 function readNewCardholderPromos() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1249,53 +1327,7 @@ function readNewCardholderPromos() {
     // 為什麼不改成單一必填欄（如 period_start）：那會變成「漏填一格就整檔活動人間蒸發」，
     // 跟舊的 promo_id 是同一種陷阱。用 any 就不會靜默掉資料——情境 B 的列天生一格都不會有。
     if (isPromoRow_(row, headers)) {
-      const promo = {
-        id: id,
-        promo_name: String(getValue(row, headers, 'promo_name') || ''),
-        new_customer_definition: getValue(row, headers, 'new_customer_definition') || '',
-        new_customer_summary: getValue(row, headers, 'new_customer_summary') || ''
-      };
-
-      // 處理 promo_types (以逗號分割成陣列)
-      const promoTypesStr = getValue(row, headers, 'promo_types');
-      promo.promo_types = promoTypesStr
-        ? String(promoTypesStr).split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : [];
-
-      // 處理日期欄位 (維持 ISO 格式)
-      const periodStart = getValue(row, headers, 'period_start');
-      promo.period_start = periodStart ? formatDateToISO(periodStart) : null;
-
-      const periodEnd = getValue(row, headers, 'period_end');
-      promo.period_end = periodEnd ? formatDateToISO(periodEnd) : null;
-
-      // 處理 priority (預設為 99)
-      const priorityVal = getValue(row, headers, 'priority');
-      promo.priority = (priorityVal !== null && priorityVal !== '') ? parseInt(priorityVal) : 99;
-
-      // 處理 bonus_merchants (以逗號分割成陣列)
-      const bonusMerchantsStr = getValue(row, headers, 'bonus_merchants');
-      if (bonusMerchantsStr && String(bonusMerchantsStr).trim() !== '') {
-        promo.bonus_merchants = String(bonusMerchantsStr).split(',').map(s => s.trim());
-      }
-
-      // 處理數字型別的選填欄位
-      const bonusCap = getValue(row, headers, 'bonus_cap');
-      if (bonusCap !== null && bonusCap !== '') promo.bonus_cap = parseFloat(bonusCap);
-
-      const voucherAmount = getValue(row, headers, 'voucher_amount');
-      if (voucherAmount !== null && voucherAmount !== '') promo.voucher_amount = parseFloat(voucherAmount);
-
-      // 使用 addOptionalField 處理其他選填字串欄位
-      addOptionalField(promo, row, headers, 'gift_content');
-      addOptionalField(promo, row, headers, 'gift_image_url', 'string');
-      addOptionalField(promo, row, headers, 'bonus_rate');
-      addOptionalField(promo, row, headers, 'voucher_usage');
-      addOptionalField(promo, row, headers, 'notes');
-      addOptionalField(promo, row, headers, 'link');
-      addOptionalField(promo, row, headers, 'promo_condition');
-
-      promos.push(promo);
+      promos.push(pmcRowToPromo_(row, headers, id));
     }
   }
 
@@ -1842,6 +1874,16 @@ function generatePromosPageHtml(exportData) {
   });
 
   const cardsHtml = groups.map(pmcRenderCardGroup_).join('\n');
+
+  // 站長推薦＋行李箱專區（2026-09-23）。舊版匯出程式不會輸出 min_spend／pick_rank／luggage_inch，
+  // 這三個欄位都不存在時代表 Sheets 還沒貼上新版程式——整段不出現，免得用缺資料的自動評分上榜。
+  const hasPickData = prepared.some(function (p) {
+    return p.promo.min_spend !== undefined || p.promo.pick_rank !== undefined || p.promo.luggage_inch !== undefined;
+  });
+  const picksHtml = hasPickData
+    ? pmcRenderPicks_(pmcSelectPicks_(prepared), todayIso.slice(0, 4) + ' 年 ' + parseInt(todayIso.slice(5, 7), 10) + ' 月')
+    : '';
+  const luggageHtml = hasPickData ? pmcRenderLuggage_(pmcSelectLuggage_(prepared)) : '';
   const filterChipsHtml = pmcBuildFilterChips_(groups.length, bucketCounts);
   const jsonLd = pmcBuildJsonLd_(prepared);
   const breadcrumbJsonLd = pmcBuildBreadcrumbJsonLd_();
@@ -1876,6 +1918,8 @@ function generatePromosPageHtml(exportData) {
     generatedDisplay: generatedDisplay,
     count: prepared.length,
     cardsHtml: cardsHtml,
+    picksHtml: picksHtml,
+    luggageHtml: luggageHtml,
     filterChipsHtml: filterChipsHtml,
     jsonLd: jsonLd,
     breadcrumbJsonLd: breadcrumbJsonLd,
@@ -2128,6 +2172,317 @@ function pmcRewardSub_(promo) {
     return promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
   }
   return '';
+}
+
+// ---------- 站長推薦／行李箱專區（2026-09-23）----------
+// 兩個區塊都放在清單上方、不受篩選／搜尋／「隱藏我持有的卡片」影響（站長指定）。
+// 資料欄位見 pmcRowToPromo_ 的說明；規則的完整說明在 docs/project/data-pipeline.md 第 9b 節。
+//
+// 選榜規則（站長 2026-09-23 定案）：
+//   1. pick_rank 填 1–5 的活動，強制排在該位置；填 x 的永遠不自動選入
+//   2. 首刷禮／定額回饋／回饋加碼三類各至少 1 名（手動已涵蓋的類型就不再補）
+//   3. 剩下的位置讓「定額回饋」與「回饋加碼」比換算回饋率；首刷禮之間只比得出門檻
+//      （沒有價值欄位，站長不做 gift_value），第 2 檔以後的首刷禮要靠 pick_rank
+//   4. 同一張卡只出現一次；同分時截止日較近的排前面
+//   5. 只送行李箱的活動不進推薦區（它們在行李箱專區）；多選一裡有行李箱的，
+//      推薦區只顯示非行李箱的選項
+const PMC_PICK_MAX = 5;
+// 定額回饋換算回饋率時的門檻下限：min_spend 空白（不限金額）或很小時，
+// 100 元 ÷ 0 元會變成無限大、把小額活動全推上榜，所以最少當作刷了 1,000 元。
+const PMC_PICK_SPEND_FLOOR = 1000;
+// 回饋加碼的通路包含這些熱門支付時，分數 ×1.2（站長：「熱門通路的高回饋率」）
+const PMC_HOT_PAY = ['line pay', 'linepay', 'apple pay', 'google pay', 'samsung pay', '全支付',
+  '街口', '悠遊付', '玉山wallet', 'icash pay', '全盈+pay', 'pi 拍錢包'];
+const PMC_LUGGAGE_RE = /行李箱|登機箱|旅行箱/;
+
+function pmcHasValue_(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '';
+}
+
+// gift_content 拆成選項：「①A\n②B」或「A、B」以外的寫法都當成單一選項
+function pmcGiftOptions_(text) {
+  const s = String(text || '').trim();
+  if (!s) return [];
+  return s.split(/\n|(?=[①②③④⑤⑥⑦⑧⑨⑩])/)
+    .map(function (x) { return x.replace(/^[\s①②③④⑤⑥⑦⑧⑨⑩]+/, '').trim(); })
+    .filter(function (x) { return x.length > 0; });
+}
+
+function pmcIsHotPay_(merchants) {
+  return (merchants || []).some(function (m) {
+    const k = String(m).toLowerCase().replace(/\s+/g, ' ').trim();
+    return PMC_HOT_PAY.indexOf(k) !== -1;
+  });
+}
+
+function pmcPickRankNumber_(promo) {
+  if (!pmcHasValue_(promo.pick_rank)) return null;
+  const n = parseInt(promo.pick_rank, 10);
+  return (n >= 1 && n <= PMC_PICK_MAX) ? n : null;
+}
+
+function pmcPickExcluded_(promo) {
+  return pmcHasValue_(promo.pick_rank) && String(promo.pick_rank).trim().toLowerCase() === 'x';
+}
+
+function pmcThresholdText_(promo) {
+  return typeof promo.min_spend === 'number' && promo.min_spend > 0
+    ? '刷滿 ' + pmcMoney_(promo.min_spend) : '不限金額';
+}
+
+// 申辦連結：有分潤 CTA 用「立即申辦」，沒有就退用活動頁「活動詳情」（同清單的規則）
+function pmcApplyLink_(p) {
+  const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
+  if (ctaLink) return { href: ctaLink, label: '立即申辦', sponsored: true };
+  const promoLink = pmcSanitizeUrl_(p.promo.link);
+  if (promoLink) return { href: promoLink, label: '活動詳情', sponsored: false };
+  return null;
+}
+
+// 一檔活動 → 推薦候選（不符資格回 null）。p 是 generatePromosPageHtml 的 prepared 項目。
+function pmcBuildPickCandidate_(p) {
+  const promo = p.promo;
+  const link = pmcApplyLink_(p);
+  if (!link) return null;
+  const base = { p: p, promo: promo, link: link, luggageNote: '' };
+
+  if (pmcIsBonus_(promo)) {
+    const r = pmcRateNumber_(promo);
+    if (r === null || r <= 0) return null;
+    const merchants = promo.bonus_merchants || [];
+    const hot = pmcIsHotPay_(merchants);
+    const v = pmcPromoValue_(promo);
+    base.kind = 'bonus';
+    base.score = r * (hot ? 1.2 : 1);
+    base.headline = pmcRateDisplay_(promo) + ' 回饋';
+    base.sub = merchants.length ? merchants.slice(0, 3).join('、') + (merchants.length > 3 ? ' 等' : '') : '';
+    base.thr = typeof promo.bonus_cap === 'number' ? '上限消費 ' + pmcMoney_(promo.bonus_cap) : '門檻：' + pmcThresholdText_(promo);
+    base.rateText = '';
+    base.hot = hot;
+    base.autoReason = (merchants.length ? base.sub + '都算，' : '') + '享 ' + pmcRateDisplay_(promo) + ' 回饋' +
+      (v !== null ? '，最多可拿 ' + pmcMoney_(v) : '') + '。';
+    return base;
+  }
+
+  if (typeof promo.voucher_amount === 'number' && !isNaN(promo.voucher_amount) && promo.voucher_amount > 0) {
+    const spend = typeof promo.min_spend === 'number' && promo.min_spend > 0 ? promo.min_spend : 0;
+    const rate = promo.voucher_amount / Math.max(spend, PMC_PICK_SPEND_FLOOR) * 100;
+    base.kind = 'fixed';
+    base.score = rate;
+    base.headline = pmcMoney_(promo.voucher_amount);
+    base.sub = promo.voucher_usage ? String(promo.voucher_usage) : '刷卡金';
+    base.thr = '門檻：' + pmcThresholdText_(promo);
+    base.rateText = spend ? '≈ ' + Math.round(promo.voucher_amount / spend * 100) + '%' : '';
+    base.autoReason = (spend ? '刷滿 ' + pmcMoney_(spend) + ' 就拿 ' : '不限消費金額，就拿 ') +
+      pmcMoney_(promo.voucher_amount) + (base.rateText ? '，換算回饋率約 ' + base.rateText.replace('≈ ', '') : '') + '。';
+    return base;
+  }
+
+  const options = pmcGiftOptions_(promo.gift_content);
+  if (!options.length) return null;
+  const nonLuggage = options.filter(function (o) { return !PMC_LUGGAGE_RE.test(o); });
+  if (!nonLuggage.length) return null;                       // 只送行李箱 → 只在行李箱專區
+  if (nonLuggage.length < options.length || typeof promo.luggage_inch === 'number') {
+    base.luggageNote = '另有行李箱選項，見下方行李箱專區';
+  }
+  base.kind = 'gift';
+  base.score = -(typeof promo.min_spend === 'number' ? promo.min_spend : 0);   // 門檻越低越好
+  base.headline = nonLuggage.join(' 或 ');
+  base.sub = '';
+  base.thr = '門檻：' + pmcThresholdText_(promo);
+  base.rateText = '';
+  base.autoReason = String(promo.new_customer_summary || '').trim();
+  return base;
+}
+
+function pmcAutoQuestion_(c) {
+  const spend = typeof c.promo.min_spend === 'number' ? c.promo.min_spend : 0;
+  if (c.kind === 'gift') return spend <= 1000 ? '只想刷一筆就收工？' : spend <= 3000 ? '想用小額換好禮？' : '想拿實體好禮？';
+  if (c.kind === 'fixed') {
+    if (!spend) return '不想刻意消費也能拿？';
+    return spend <= 1000 ? '小額就想拿回饋？' : spend <= 3000 ? '平常刷刷就能達標？' : '首月剛好有大筆開銷？';
+  }
+  const text = (c.promo.bonus_merchants || []).join(' ') + ' ' + (c.promo.new_customer_summary || '');
+  if (c.hot) return '天天用手機付款？';
+  if (/國外|海外|外幣/.test(text)) return '常出國刷卡？';
+  if (/保費/.test(text)) return '最近要繳保費？';
+  const m = (c.promo.bonus_merchants || [])[0];
+  return m ? '常在' + m + '消費？' : '想多拿一點回饋？';
+}
+
+// 同一次推薦裡問句撞在一起時的替代句（兩張都是「小額就想拿回饋？」會很怪）
+function pmcAltQuestion_(c) {
+  if (c.kind === 'fixed') return '想拿 ' + c.headline + ' ' + c.sub + '？';
+  if (c.kind === 'bonus') return '想要 ' + c.headline + '？';
+  return '想拿' + c.headline.split(' 或 ')[0] + '？';
+}
+
+function pmcCompareCandidates_(a, b) {
+  if (a.score !== b.score) return b.score - a.score;
+  const ae = a.p.periodEndIso || '9999-99-99', be = b.p.periodEndIso || '9999-99-99';
+  return ae < be ? -1 : ae > be ? 1 : 0;
+}
+
+// prepared（未過期、已排序）→ 最多 5 筆推薦，已決定好問句與理由
+function pmcSelectPicks_(prepared) {
+  const cands = prepared.map(pmcBuildPickCandidate_).filter(function (c) { return c; });
+  const usedCards = {};
+  const slots = [];
+
+  // 1) 手動指定位置
+  cands.filter(function (c) { return pmcPickRankNumber_(c.promo) !== null; })
+    .sort(function (a, b) { return pmcPickRankNumber_(a.promo) - pmcPickRankNumber_(b.promo); })
+    .forEach(function (c) {
+      if (usedCards[c.promo.id]) return;
+      let i = pmcPickRankNumber_(c.promo) - 1;
+      while (i < PMC_PICK_MAX && slots[i]) i++;
+      if (i >= PMC_PICK_MAX) return;
+      slots[i] = c;
+      usedCards[c.promo.id] = true;
+    });
+
+  // 2) 自動候選池
+  const pool = cands.filter(function (c) {
+    return pmcPickRankNumber_(c.promo) === null && !pmcPickExcluded_(c.promo);
+  }).sort(pmcCompareCandidates_);
+  const autos = [];
+  const take = function (c) { autos.push(c); usedCards[c.promo.id] = true; };
+  const freeCount = function () { return PMC_PICK_MAX - slots.filter(Boolean).length - autos.length; };
+  const hasKind = function (k) {
+    return slots.some(function (c) { return c && c.kind === k; }) || autos.some(function (c) { return c.kind === k; });
+  };
+
+  ['gift', 'fixed', 'bonus'].forEach(function (k) {
+    if (freeCount() <= 0 || hasKind(k)) return;
+    const best = pool.filter(function (c) { return c.kind === k && !usedCards[c.promo.id]; })[0];
+    if (best) take(best);
+  });
+  // 剩下的位置：定額回饋與回饋加碼比換算回饋率；不夠才輪到首刷禮
+  [['fixed', 'bonus'], ['gift']].forEach(function (kinds) {
+    pool.forEach(function (c) {
+      if (freeCount() > 0 && kinds.indexOf(c.kind) !== -1 && !usedCards[c.promo.id]) take(c);
+    });
+  });
+
+  let ai = 0;
+  for (let i = 0; i < PMC_PICK_MAX && ai < autos.length; i++) {
+    if (!slots[i]) slots[i] = autos[ai++];
+  }
+  const picks = slots.filter(Boolean);
+
+  const usedQ = {};
+  picks.forEach(function (c) {
+    const manualQ = pmcHasValue_(c.promo.pick_question) ? String(c.promo.pick_question).trim() : '';
+    let q = manualQ || pmcAutoQuestion_(c);
+    if (!manualQ && usedQ[q]) q = pmcAltQuestion_(c);
+    usedQ[q] = true;
+    c.question = q;
+    c.reason = pmcHasValue_(c.promo.pick_reason) ? String(c.promo.pick_reason).trim() : c.autoReason;
+  });
+  return picks;
+}
+
+function pmcApplyLinkHtml_(link, p, cls, surface) {
+  return '<a class="' + cls + '" href="' + pmcEscapeHtml_(link.href) + '" target="_blank" rel="noopener noreferrer' +
+    (link.sponsored ? ' sponsored" data-ga-track="1' : '') + '" data-ga-section="' + surface +
+    '" data-card-id="' + pmcEscapeHtml_(p.promo.id) + '" data-card-name="' + pmcEscapeHtml_(p.cardName) + '">' +
+    link.label + '</a>';
+}
+
+function pmcCardImgHtml_(p, cls) {
+  const src = 'assets/images/cards/' + encodeURIComponent(p.promo.id) + '.png';
+  return '<span class="' + cls + '"><img src="' + pmcEscapeHtml_(src) + '" alt="' + pmcEscapeHtml_(p.cardName) +
+    '" loading="lazy" onerror="this.closest(\'.' + cls + '\').style.display=\'none\'"></span>';
+}
+
+const PMC_KIND_LABEL = { gift: '首刷禮', fixed: '定額回饋', bonus: '回饋加碼' };
+
+function pmcRenderPicks_(picks, monthLabel) {
+  if (!picks.length) return '';
+  const items = picks.map(function (c) {
+    const p = c.p;
+    return '    <article class="pmc-pick pmc-pick--' + c.kind + '" data-period-end="' + (p.periodEndIso || '') + '">\n' +
+      '      <p class="pmc-pick-q">' + pmcEscapeHtml_(c.question) + '</p>\n' +
+      '      ' + pmcCardImgHtml_(p, 'pmc-pick-img') + '\n' +
+      '      <h3 class="pmc-pick-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      '      <div class="pmc-pick-badges"><span class="pmc-kind pmc-kind--' + c.kind + '">' + PMC_KIND_LABEL[c.kind] +
+        '</span><span class="promo-ending-badge" hidden></span></div>\n' +
+      '      <p class="pmc-pick-headline">' + pmcEscapeHtml_(c.headline) +
+        (c.sub ? '<small>' + pmcEscapeHtml_(c.sub) + '</small>' : '') + '</p>\n' +
+      '      <p class="pmc-pick-thr">' + pmcEscapeHtml_(c.thr) +
+        (c.rateText ? '<span class="pmc-pick-rate">回饋率 ' + pmcEscapeHtml_(c.rateText) + '</span>' : '') + '</p>\n' +
+      (c.reason ? '      <p class="pmc-pick-reason">' + pmcEscapeHtml_(c.reason) + '</p>\n' : '') +
+      (c.luggageNote ? '      <p class="pmc-pick-note">' + pmcEscapeHtml_(c.luggageNote) + '</p>\n' : '') +
+      '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
+      '    </article>';
+  }).join('\n');
+  return '  <section class="pmc-picks" id="picks" aria-labelledby="pmc-picks-title">\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-picks-title">站長推薦</h2><span>' + pmcEscapeHtml_(monthLabel) + '</span></div>\n' +
+    '    <div class="pmc-picks-row">\n' + items + '\n    </div>\n' +
+    '  </section>\n';
+}
+
+// ---- 行李箱專區 ----
+function pmcLuggageOpen_(s) {
+  const t = String(s || '');
+  if (t.indexOf('前開') !== -1) return { cls: 'front', label: '前開式' };
+  if (t.indexOf('上掀') !== -1) return { cls: 'top', label: '上掀式' };
+  if (t.indexOf('拉鍊') !== -1) return { cls: 'zip', label: '拉鍊式' };
+  if (t.trim()) return { cls: 'other', label: t.trim() };
+  return { cls: 'unk', label: '開法未標示' };
+}
+
+// 等比例的行李箱圖示：viewBox 固定，高度由 CSS 依 --inch 決定（桌機、手機倍率不同）
+function pmcSuitcaseSvg_() {
+  return '<svg class="pmc-lg-svg" viewBox="0 0 40 64" aria-hidden="true">' +
+    '<rect x="13" y="1.5" width="14" height="8" rx="3" fill="none" stroke="#94a3b8" stroke-width="2.5"/>' +
+    '<rect x="2" y="8" width="36" height="49" rx="6" fill="#dbe4f5" stroke="#1e40af" stroke-width="2"/>' +
+    '<line x1="14" y1="13" x2="14" y2="52" stroke="#1e40af" stroke-opacity=".35" stroke-width="1.5"/>' +
+    '<line x1="26" y1="13" x2="26" y2="52" stroke="#1e40af" stroke-opacity=".35" stroke-width="1.5"/>' +
+    '<circle cx="9" cy="60" r="3" fill="#475569"/><circle cx="31" cy="60" r="3" fill="#475569"/></svg>';
+}
+
+function pmcSelectLuggage_(prepared) {
+  return prepared.filter(function (p) {
+    return typeof p.promo.luggage_inch === 'number' && p.promo.luggage_inch > 0;
+  }).map(function (p) {
+    const options = pmcGiftOptions_(p.promo.gift_content);
+    const lug = options.filter(function (o) { return PMC_LUGGAGE_RE.test(o); })[0] || options[0] || '';
+    return { p: p, inch: p.promo.luggage_inch, open: pmcLuggageOpen_(p.promo.luggage_open),
+      gift: lug + (options.length > 1 ? '（好禮 ' + options.length + ' 選 1）' : ''),
+      link: pmcApplyLink_(p) };
+  }).sort(function (a, b) {
+    if (a.inch !== b.inch) return b.inch - a.inch;
+    const as = a.p.promo.min_spend || 0, bs = b.p.promo.min_spend || 0;
+    if (as !== bs) return as - bs;
+    const ae = a.p.periodEndIso || '9999-99-99', be = b.p.periodEndIso || '9999-99-99';
+    return ae < be ? -1 : ae > be ? 1 : 0;
+  });
+}
+
+function pmcRenderLuggage_(items) {
+  if (items.length < 2) return '';   // 只有一檔就不成「比較」，整區不出現
+  const rows = items.map(function (l) {
+    const p = l.p;
+    const v = p.promo.luggage_value;
+    const inchText = String(Math.round(l.inch * 10) / 10);
+    return '    <article class="pmc-lg" data-period-end="' + (p.periodEndIso || '') + '" style="--inch:' + l.inch + '">\n' +
+      '      <div class="pmc-lg-size">' + pmcSuitcaseSvg_() + '<span class="pmc-lg-inch">' + inchText + '<small>吋</small></span></div>\n' +
+      '      <div class="pmc-lg-top"><h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>' +
+        '<span class="pmc-lg-open pmc-lg-open--' + l.open.cls + '">' + pmcEscapeHtml_(l.open.label) + '</span></div>\n' +
+      '      <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
+      '      <dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
+        (typeof v === 'number' && v > 0 ? pmcEscapeHtml_(pmcMoney_(v)) : '—') + '</dd></div>' +
+        '<div><dt>門檻</dt><dd>' + pmcEscapeHtml_(pmcThresholdText_(p.promo)) + '</dd></div></dl>\n' +
+      '      <div class="pmc-lg-foot"><span class="promo-ending-badge" hidden></span>' +
+        (l.link ? pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') : '') + '</div>\n' +
+      '    </article>';
+  }).join('\n');
+  return '  <section class="pmc-luggage" id="luggage" aria-labelledby="pmc-luggage-title">\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-luggage-title">行李箱專區</h2><span>辦卡送行李箱，尺寸、開法、參考價一次比</span></div>\n' +
+    '    <div class="pmc-lg-row">\n' + rows + '\n    </div>\n' +
+    '    <p class="pmc-lg-fn">參考價依官網公告價值，或以相同或相近款式的市售價格估算，銀行贈品規格可能不同，僅供參考。</p>\n' +
+    '  </section>\n';
 }
 
 // ---------- HTML 片段渲染 ----------
@@ -2631,6 +2986,9 @@ function pmcPageTemplate_(o) {
 '    </div>\n' +
 '  </section>\n' +
 '\n' +
+// 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
+// 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。
+(o.picksHtml || '') + (o.luggageHtml || '') +
 // 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
 // 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
 // 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，

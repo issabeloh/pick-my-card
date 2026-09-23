@@ -2773,3 +2773,356 @@ a {
   .promo-feat-modal-head { padding: 12px 14px; }
   .promo-feat-modal-body { padding: 10px 14px 14px; }
 }
+
+/* ================================================================
+   站長推薦＋行李箱專區（2026-09-23）
+   HTML 由 apps-script/cards-export.gs 的 pmcRenderPicks_／pmcRenderLuggage_ 生成，
+   放在 hero 與搜尋列之間；不受篩選、搜尋、「隱藏我持有的卡片」影響（站長指定）。
+   按鈕沿用清單的 .promo-apply-btn（糖果黃），全站只有一種「立即申辦」長相。
+   mockup：推薦區 A1（桌機 5 張一排、手機橫滑）、行李箱桌機三欄／手機 M1 精簡比較列。
+   ================================================================ */
+.pmc-picks,
+.pmc-luggage {
+  margin: 4px 0 22px;
+}
+
+.pmc-section-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 0 4px 10px;
+}
+
+.pmc-section-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--pmc-ink);
+}
+
+.pmc-section-head span {
+  font-size: 12px;
+  color: var(--pmc-muted);
+}
+
+/* 類型小徽章：顏色 token 與清單的 .promo-type-badge 共用，形狀用一般 pill
+   （清單那顆是「從卡框長出來的 label」，放在這裡會缺一角）。 */
+.pmc-kind {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pmc-kind--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
+.pmc-kind--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
+.pmc-kind--fixed { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+
+.pmc-picks .promo-ending-badge,
+.pmc-luggage .promo-ending-badge {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* ---- 站長推薦 ---- */
+.pmc-picks-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.pmc-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-md);
+  box-shadow: var(--pmc-shadow-card);
+}
+
+.pmc-pick-q {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.4;
+  color: var(--pmc-blue-deep);
+}
+
+.pmc-pick-img {
+  display: block;
+  aspect-ratio: 8 / 5;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.pmc-pick-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pmc-pick-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pmc-label);
+}
+
+.pmc-pick-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.pmc-pick-headline {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+  color: var(--pmc-ink);
+  overflow-wrap: anywhere;
+}
+
+.pmc-pick-headline small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-thr {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: 12px;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-rate {
+  font-weight: 700;
+  color: var(--pmc-green);
+}
+
+.pmc-pick-reason {
+  flex: 1;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.pmc-pick-note {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--pmc-muted);
+}
+
+.pmc-pick-cta {
+  align-self: stretch;
+  margin-top: 2px;
+}
+
+/* ---- 行李箱專區 ---- */
+.pmc-lg-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pmc-lg {
+  --lg-scale: 3px;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-areas:
+    "size top"
+    "size gift"
+    "size facts"
+    "foot foot";
+  gap: 4px 14px;
+  padding: 14px;
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
+  border-radius: var(--pmc-radius-md);
+}
+
+/* 圖示高度＝吋數 × 倍率，所以 24 吋和 20 吋的大小差異是真的比例 */
+.pmc-lg-size {
+  grid-area: size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.pmc-lg-svg {
+  display: block;
+  height: calc(var(--inch) * var(--lg-scale));
+  width: auto;
+}
+
+.pmc-lg-inch {
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--pmc-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.pmc-lg-inch small {
+  font-size: 0.65rem;
+  margin-left: 1px;
+}
+
+.pmc-lg-top {
+  grid-area: top;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+.pmc-lg-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pmc-ink);
+}
+
+.pmc-lg-open {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  background: var(--pmc-candy-slate-bg);
+  color: var(--pmc-candy-slate-text);
+}
+.pmc-lg-open--front { background: var(--pmc-candy-mint-bg); color: var(--pmc-candy-mint-text); }
+.pmc-lg-open--top { background: #e0f2fe; color: #0369a1; }
+.pmc-lg-open--unk { background: #f3f4f6; color: #9ca3af; }
+
+.pmc-lg-gift {
+  grid-area: gift;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--pmc-label);
+}
+
+.pmc-lg-facts {
+  grid-area: facts;
+  display: grid;
+  gap: 1px;
+  margin: 2px 0 0;
+  font-size: 12px;
+}
+
+.pmc-lg-facts div {
+  display: flex;
+  gap: 10px;
+}
+
+.pmc-lg-facts dt {
+  color: #9ca3af;
+  flex: none;
+}
+
+.pmc-lg-facts dd {
+  margin: 0;
+  color: var(--pmc-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.pmc-lg-facts div:first-child dd {
+  font-weight: 700;
+  color: var(--pmc-ink);
+}
+
+.pmc-lg-foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* 徽章藏起來時，按鈕仍靠右 */
+.pmc-lg-cta {
+  margin-left: auto;
+}
+
+.pmc-lg-fn {
+  margin: 10px 4px 0;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* 平板：推薦改成可橫滑（5 張擠在 768–1000px 會太窄），行李箱兩欄 */
+@media (max-width: 1000px) {
+  .pmc-picks-row {
+    grid-auto-columns: 230px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .pmc-picks-row::-webkit-scrollbar { display: none; }
+  .pmc-pick { scroll-snap-align: start; }
+  .pmc-lg-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* 手機：推薦橫滑露出下一張的邊（提示可以滑）；行李箱改 M1 精簡比較列 */
+@media (max-width: 768px) {
+  .pmc-picks,
+  .pmc-luggage {
+    margin-bottom: 18px;
+  }
+  .pmc-section-head h2 { font-size: 1rem; }
+  .pmc-picks-row {
+    grid-auto-columns: 72%;
+    gap: 10px;
+    margin-right: -12px;     /* 滑動列延伸到螢幕右緣，下一張露出一截 */
+    padding-right: 12px;
+    scroll-padding-left: 0;
+  }
+
+  .pmc-lg-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid #f0f1f4;
+  }
+  .pmc-lg {
+    --lg-scale: 1.5px;
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "size top cta"
+      "size gift gift"
+      "size facts facts"
+      "size badge badge";
+    gap: 2px 10px;
+    padding: 10px 0;
+    border: 0;
+    border-bottom: 1px solid #f0f1f4;
+    border-radius: 0;
+  }
+  .pmc-lg-size { gap: 3px; justify-content: center; }
+  .pmc-lg-inch { font-size: 1.1rem; }
+  /* foot 拆開：按鈕上到右上角、徽章到最後一列，不再讓按鈕獨佔一列 */
+  .pmc-lg-foot { display: contents; }
+  .pmc-lg-foot .promo-ending-badge { grid-area: badge; justify-self: start; margin-top: 2px; }
+  .pmc-lg-cta { grid-area: cta; align-self: start; margin-left: 0; padding: 4px 12px; font-size: 12.5px; }
+  .pmc-lg-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  .pmc-lg-facts div { gap: 4px; }
+}

@@ -492,6 +492,47 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 `.promo-quick-highlight`／`.promo-gift-thumb`／`.promo-card-info-btn` 等），對應的 class 已經不再出現在
 生成的 HTML 裡。留著不影響畫面，下次動這支 CSS 時應一併刪掉。
 
+### 9b. 站長推薦＋行李箱專區（2026-09-23）
+
+promos.html 在 hero 與搜尋列之間多了兩區，都由 `generatePromosPageHtml()` 生成
+（`pmcSelectPicks_`／`pmcRenderPicks_`／`pmcSelectLuggage_`／`pmcRenderLuggage_`），
+**不受篩選、搜尋、「隱藏我持有的卡片」影響**（站長指定）。按鈕沿用清單的 `.promo-apply-btn`，
+GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期隱藏由 promos.js 的
+`refreshSectionBadges()` 處理。
+
+**New Cardholder Promos 新欄位**（依表頭名稱讀取，位置不拘，只是別插在 A 欄前）：
+
+| 欄位 | 填法 |
+|---|---|
+| `min_spend` | 拿到獎勵的最低消費，純數字。多段門檻填第一段最低的。**空白＝不限金額** |
+| `luggage_inch` | 行李箱吋數，純數字。有填＝這檔進行李箱專區 |
+| `luggage_open` | 前開式／上掀式／拉鍊式；空白顯示「開法未標示」 |
+| `luggage_value` | 參考價（官網公告價值或市售估價），純數字；空白顯示「—」 |
+| `pick_rank` | 1–5＝強制排在該位置；`x`＝不要自動選入；空白＝交給自動 |
+| `pick_question`／`pick_reason` | 手動情境問句／推薦理由；空白＝用自動產生的 |
+
+數字欄由 `pmcParseNumber_()` 讀，文字格式的 "3,280"、"NT$3,280" 也讀得對。
+
+**自動選榜規則**（`pmcSelectPicks_`）：
+1. `pick_rank` 1–5 先就位；同一張卡只出現一次
+2. 首刷禮／定額回饋／回饋加碼三類各至少 1 名（手動已涵蓋的類型不再補）
+3. 剩下的位置由定額回饋與回饋加碼比分數：定額＝`voucher_amount ÷ max(min_spend, 1000)`
+   （下限 1,000 是為了不讓「不限金額送 100 元」變成無限大）；加碼＝`bonus_rate`，通路含熱門
+   行動支付（`PMC_HOT_PAY`）×1.2。首刷禮沒有價值欄位（站長不做 gift_value），只比門檻低，
+   第 2 檔以後的首刷禮要靠 `pick_rank`
+4. 同分時截止日近的在前
+5. 只送行李箱的活動不進推薦區；多選一含行李箱的，推薦區只顯示非行李箱選項並附「另有行李箱選項」
+
+**行李箱專區**：依吋數大到小、同吋數門檻低的在前；少於 2 檔整區不出現。圖示高度＝吋數×倍率，
+所以大小差異是真比例。底部固定小字說明參考價來源（站長指定文案）。
+
+**舊資料保護**：`min_spend`／`pick_rank`／`luggage_inch` 三欄在整份資料裡都不存在時（Sheets 還沒貼
+新版程式），兩區都不輸出——免得用缺欄位的資料自動上榜。
+
+**`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
+寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
+寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
+
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
 `sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**

@@ -91,7 +91,30 @@
         card.setAttribute('data-expired', '1');
       }
     });
+    refreshSectionBadges(today);
     refreshEndingChip();
+  }
+
+  // 站長推薦／行李箱專區（2026-09-23）：一格一檔活動，規則同上——過期藏起來、14 天內掛徽章。
+  // 整區都過期時連標題一起藏；行李箱剩不到 2 檔就不成比較，也整區藏。
+  function refreshSectionBadges(today) {
+    [['.pmc-picks', '.pmc-pick', 1], ['.pmc-luggage', '.pmc-lg', 2]].forEach(function (def) {
+      var section = document.querySelector(def[0]);
+      if (!section) return;
+      var alive = 0;
+      section.querySelectorAll(def[1]).forEach(function (item) {
+        var endIso = item.getAttribute('data-period-end');
+        var badge = item.querySelector('.promo-ending-badge');
+        var diff = endIso ? daysBetween(today, endIso) : null;
+        if (diff !== null && diff < 0) { item.hidden = true; return; }
+        alive++;
+        if (!badge) return;
+        if (diff === 0) { badge.textContent = '今天截止！'; badge.hidden = false; }
+        else if (diff !== null && diff <= 14) { badge.textContent = '最後 ' + diff + ' 天'; badge.hidden = false; }
+        else { badge.hidden = true; }
+      });
+      section.hidden = alive < def[2];
+    });
   }
 
   // 「即將結束」篩選（2026-09-20 站長需求）：只要這張卡還有任何一檔活動掛著
@@ -477,7 +500,9 @@
             button_type: 'promos_page_apply',
             card_id: link.getAttribute('data-card-id') || '',
             card_name: link.getAttribute('data-card-name') || '',
-            surface: 'promos_page'
+            surface: 'promos_page',
+            // 站長推薦／行李箱專區的按鈕帶 data-ga-section（picks／luggage），清單的按鈕是 list
+            section: link.getAttribute('data-ga-section') || 'list'
           });
         }
       } catch (err) {
