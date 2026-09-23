@@ -2420,7 +2420,9 @@ function pmcRenderPicks_(picks, monthLabel) {
         (c.sub ? '<small>' + pmcEscapeHtml_(c.sub) + '</small>' : '') + '</p>\n' +
       '      <p class="pmc-pick-thr">' + pmcEscapeHtml_(c.thr) +
         (c.rateText ? '<span class="pmc-pick-rate">回饋率 ' + pmcEscapeHtml_(c.rateText) + '</span>' : '') + '</p>\n' +
-      (c.reason ? '      <p class="pmc-pick-reason">' + pmcEscapeHtml_(c.reason) + '</p>\n' : '') +
+      // 推薦理由＝「為什麼值得辦」，是這張卡最重要的一句話（站長 2026-09-23），給它標題與底色
+      (c.reason ? '      <div class="pmc-pick-reason"><span class="pmc-pick-reason-label">推薦理由</span><p>' +
+        pmcEscapeHtml_(c.reason) + '</p></div>\n' : '') +
       (c.luggageNote ? '      <p class="pmc-pick-note">' + pmcEscapeHtml_(c.luggageNote) + '</p>\n' : '') +
       '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
       '    </article>';
