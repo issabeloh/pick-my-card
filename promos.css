@@ -2429,8 +2429,11 @@ a {
   text-shadow: none;
 }
 
-/* 申辦鈕：主站藍實心、扁平圓角，取代金色果凍漸層＋光暈 */
-.promo-card-actions .promo-apply-btn {
+/* 申辦鈕：主站藍實心、扁平圓角，取代金色果凍漸層＋光暈。
+   站長推薦／行李箱專區的按鈕也用同一款（站長 2026-09-23：全頁 CTA 一致） */
+.promo-card-actions .promo-apply-btn,
+.pmc-picks .promo-apply-btn,
+.pmc-luggage .promo-apply-btn {
   background-image: none;
   background-color: var(--pmc-blue-deep);
   color: var(--pmc-white);
@@ -2439,10 +2442,14 @@ a {
   box-shadow: none;
   text-shadow: none;
 }
-.promo-card-actions .promo-apply-btn:hover {
+.promo-card-actions .promo-apply-btn:hover,
+.pmc-picks .promo-apply-btn:hover,
+.pmc-luggage .promo-apply-btn:hover {
   background-color: #1b3a9c;
 }
-.promo-card-actions .promo-apply-btn:active {
+.promo-card-actions .promo-apply-btn:active,
+.pmc-picks .promo-apply-btn:active,
+.pmc-luggage .promo-apply-btn:active {
   transform: scale(0.98);
   box-shadow: none;
 }
@@ -2786,6 +2793,15 @@ a {
   margin: 4px 0 22px;
 }
 
+/* author 樣式設了 display（flex／grid）的元素，[hidden] 會被蓋掉——promos.js 靠 el.hidden
+   藏過期活動與整區，所以每個都要補這條（data-pipeline.md 教訓記錄 2026-09-18）。 */
+.pmc-picks[hidden],
+.pmc-luggage[hidden],
+.pmc-pick[hidden],
+.pmc-lg[hidden] {
+  display: none;
+}
+
 .pmc-section-head {
   display: flex;
   align-items: baseline;
@@ -3122,7 +3138,7 @@ a {
   /* foot 拆開：按鈕上到右上角、徽章到最後一列，不再讓按鈕獨佔一列 */
   .pmc-lg-foot { display: contents; }
   .pmc-lg-foot .promo-ending-badge { grid-area: badge; justify-self: start; margin-top: 2px; }
-  .pmc-lg-cta { grid-area: cta; align-self: start; margin-left: 0; padding: 4px 12px; font-size: 12.5px; }
+  .pmc-luggage .pmc-lg-cta { grid-area: cta; align-self: start; margin-left: 0; padding: 5px 12px; font-size: 12.5px; }
   .pmc-lg-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; }
   .pmc-lg-facts div { gap: 4px; }
 }
