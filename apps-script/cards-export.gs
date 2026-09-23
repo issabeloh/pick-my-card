@@ -2193,7 +2193,9 @@ const PMC_PICK_SPEND_FLOOR = 1000;
 // 回饋加碼的通路包含這些熱門支付時，分數 ×1.2（站長：「熱門通路的高回饋率」）
 const PMC_HOT_PAY = ['line pay', 'linepay', 'apple pay', 'google pay', 'samsung pay', '全支付',
   '街口', '悠遊付', '玉山wallet', 'icash pay', '全盈+pay', 'pi 拍錢包'];
-const PMC_LUGGAGE_RE = /行李箱|登機箱|旅行箱/;
+// 「行李箱」選項的判斷：行李箱／登機箱／旅行箱，或「N吋…箱」（擴充箱、胖胖箱、城市漫步旅行箱…）。
+// 2026-09-23 實際資料：「Disegno 28吋爵美旅行胖胖箱」「SNOOPY 28吋上掀時尚擴充箱」原本漏判。
+const PMC_LUGGAGE_RE = /行李箱|登機箱|旅行箱|吋[^①-⑩]*箱/;
 
 function pmcHasValue_(v) {
   return v !== undefined && v !== null && String(v).trim() !== '';
@@ -2386,7 +2388,7 @@ function pmcApplyLinkHtml_(link, p, cls, surface) {
   return '<a class="' + cls + '" href="' + pmcEscapeHtml_(link.href) + '" target="_blank" rel="noopener noreferrer' +
     (link.sponsored ? ' sponsored" data-ga-track="1' : '') + '" data-ga-section="' + surface +
     '" data-card-id="' + pmcEscapeHtml_(p.promo.id) + '" data-card-name="' + pmcEscapeHtml_(p.cardName) + '">' +
-    link.label + '</a>';
+    (link.label === '立即申辦' ? '<span class="pmc-cta-long">立即</span>申辦' : link.label) + '</a>';
 }
 
 function pmcCardImgHtml_(p, cls) {
@@ -2396,6 +2398,15 @@ function pmcCardImgHtml_(p, cls) {
 }
 
 const PMC_KIND_LABEL = { gift: '首刷禮', fixed: '定額回饋', bonus: '回饋加碼' };
+
+// 頁內索引列（站長 2026-09-23）：站長推薦／行李箱專區／新戶活動。
+// 沒產生的區塊不出連結；整區被 promos.js 因過期藏起來時，連結也會一起藏。
+function pmcJumpNav_(hasPicks, hasLuggage) {
+  return '  <nav class="pmc-jump" aria-label="頁內導覽">' +
+    (hasPicks ? '<a href="#picks" data-jump="picks">站長推薦</a>' : '') +
+    (hasLuggage ? '<a href="#luggage" data-jump="luggage">行李箱專區</a>' : '') +
+    '<a href="#all-promos">新戶活動</a></nav>\n';
+}
 
 function pmcRenderPicks_(picks, monthLabel) {
   if (!picks.length) return '';
@@ -2419,6 +2430,8 @@ function pmcRenderPicks_(picks, monthLabel) {
   return '  <section class="pmc-picks" id="picks" aria-labelledby="pmc-picks-title">\n' +
     '    <div class="pmc-section-head"><h2 id="pmc-picks-title">站長推薦</h2><span>' + pmcEscapeHtml_(monthLabel) + '</span></div>\n' +
     '    <div class="pmc-picks-row">\n' + items + '\n    </div>\n' +
+    // 手機橫滑的分頁點：數量、目前位置由 promos.js setupPicksDots() 依實際可見張數產生
+    '    <div class="pmc-dots" hidden></div>\n' +
     '  </section>\n';
 }
 
@@ -2447,9 +2460,13 @@ function pmcSelectLuggage_(prepared) {
     return typeof p.promo.luggage_inch === 'number' && p.promo.luggage_inch > 0;
   }).map(function (p) {
     const options = pmcGiftOptions_(p.promo.gift_content);
-    const lug = options.filter(function (o) { return PMC_LUGGAGE_RE.test(o); })[0] || options[0] || '';
-    return { p: p, inch: p.promo.luggage_inch, open: pmcLuggageOpen_(p.promo.luggage_open),
-      gift: lug + (options.length > 1 ? '（好禮 ' + options.length + ' 選 1）' : ''),
+    const lugs = options.filter(function (o) { return PMC_LUGGAGE_RE.test(o); });
+    const lugText = (lugs.length ? lugs : options.slice(0, 1)).join(' 或 ');
+    // luggage_open 空白時，從贈品文字推（「24 吋上掀式行李箱」本身就寫了開法）
+    const open = pmcLuggageOpen_(p.promo.luggage_open || (/前開/.test(lugText) ? '前開式' : /上掀/.test(lugText) ? '上掀式' : ''));
+    return { p: p, inch: p.promo.luggage_inch, open: open,
+      gift: lugText + (options.length > 1 ? '（好禮 ' + options.length + ' 選 1）' : ''),
+      img: pmcSanitizeUrl_(p.promo.gift_image_url),
       link: pmcApplyLink_(p) };
   }).sort(function (a, b) {
     if (a.inch !== b.inch) return b.inch - a.inch;
@@ -2462,20 +2479,32 @@ function pmcSelectLuggage_(prepared) {
 
 function pmcRenderLuggage_(items) {
   if (items.length < 2) return '';   // 只有一檔就不成「比較」，整區不出現
+  // 桌機、手機同一套「一列一檔」的比較列（站長 2026-09-23：桌機改得像手機版），
+  // 差別只在 CSS：桌機兩欄並排、尺寸放大。
   const rows = items.map(function (l) {
     const p = l.p;
     const v = p.promo.luggage_value;
     const inchText = String(Math.round(l.inch * 10) / 10);
+    // 贈品宣傳圖：可點擊放大（promos.js setupGiftLightbox 的委派認 .pmc-lg-thumb）
+    const thumb = l.img
+      ? '<button type="button" class="pmc-lg-thumb" aria-label="放大檢視贈品圖"><img src="' + pmcEscapeHtml_(l.img) +
+        '" alt="' + pmcEscapeHtml_(p.cardName + ' 贈品') + '" loading="lazy" onerror="this.closest(\'.pmc-lg-thumb\').style.display=\'none\'"></button>'
+      : '';
+    // 卡片特色：內容借用下方清單同一張卡的 .promo-card-feat（部署時注入），
+    // promos.js 依 data-feat-card 找到那張卡再開同一個 modal
+    const featBtn = '<button type="button" class="promo-feat-btn pmc-lg-feat" aria-expanded="false" data-feat-card="' +
+      pmcEscapeHtml_(p.promo.id) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
     return '    <article class="pmc-lg" data-period-end="' + (p.periodEndIso || '') + '" style="--inch:' + l.inch + '">\n' +
       '      <div class="pmc-lg-size">' + pmcSuitcaseSvg_() + '<span class="pmc-lg-inch">' + inchText + '<small>吋</small></span></div>\n' +
       '      <div class="pmc-lg-top"><h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>' +
         '<span class="pmc-lg-open pmc-lg-open--' + l.open.cls + '">' + pmcEscapeHtml_(l.open.label) + '</span></div>\n' +
+      (l.link ? '      ' + pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') + '\n' : '') +
       '      <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
+      (thumb ? '      ' + thumb + '\n' : '') +
       '      <dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
         (typeof v === 'number' && v > 0 ? pmcEscapeHtml_(pmcMoney_(v)) : '—') + '</dd></div>' +
         '<div><dt>門檻</dt><dd>' + pmcEscapeHtml_(pmcThresholdText_(p.promo)) + '</dd></div></dl>\n' +
-      '      <div class="pmc-lg-foot"><span class="promo-ending-badge" hidden></span>' +
-        (l.link ? pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') : '') + '</div>\n' +
+      '      <div class="pmc-lg-foot"><span class="promo-ending-badge" hidden></span>' + featBtn + '</div>\n' +
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-luggage" id="luggage" aria-labelledby="pmc-luggage-title">\n' +
@@ -2988,7 +3017,10 @@ function pmcPageTemplate_(o) {
 '\n' +
 // 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
 // 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。
+(o.picksHtml || o.luggageHtml ? pmcJumpNav_(!!o.picksHtml, !!o.luggageHtml) : '') +
 (o.picksHtml || '') + (o.luggageHtml || '') +
+// 「新戶活動」標題：完整清單的起點，也是索引列第三個連結的錨點（站長 2026-09-23）
+'  <div class="pmc-section-head pmc-list-head" id="all-promos"><h2>新戶活動</h2></div>\n' +
 // 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
 // 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
 // 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，

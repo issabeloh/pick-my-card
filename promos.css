@@ -2836,10 +2836,21 @@ a {
 .pmc-kind--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
 .pmc-kind--fixed { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
 
-.pmc-picks .promo-ending-badge,
-.pmc-luggage .promo-ending-badge {
+/* 倒數徽章：跟清單卡片內（.promo-act-badges .promo-ending-badge）同一款——
+   淺紅底深紅字實心 pill、不抖動（站長 2026-09-23：兩區要跟卡片內一致） */
+.pmc-picks .promo-ending-badge:not(:empty),
+.pmc-luggage .promo-ending-badge:not(:empty) {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
   margin: 0;
-  font-size: 11px;
+  animation: none;
+  text-shadow: none;
 }
 
 /* ---- 站長推薦 ---- */
@@ -2948,39 +2959,44 @@ a {
   margin-top: 2px;
 }
 
-/* ---- 行李箱專區 ---- */
+/* ---- 行李箱專區：桌機、手機同一種「一列一檔」比較列（站長 2026-09-23）----
+   桌機兩欄並排、尺寸放大；手機單欄。欄位：
+     size（等比例行李箱＋吋數）｜ top（卡名＋開法）｜ cta（申辦）
+                                ｜ gift（贈品）      ｜ thumb（贈品圖，可放大）
+                                ｜ facts（參考價、門檻）
+                                ｜ foot（倒數徽章＋卡片特色） */
 .pmc-lg-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+  border-top: 1px solid #eef0f3;
 }
 
 .pmc-lg {
-  --lg-scale: 3px;
+  --lg-scale: 2.2px;
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr) auto;
   grid-template-areas:
-    "size top"
-    "size gift"
-    "size facts"
-    "foot foot";
-  gap: 4px 14px;
-  padding: 14px;
-  background: var(--pmc-white);
-  border: 1px solid var(--pmc-border);
-  border-radius: var(--pmc-radius-md);
+    "size top   cta"
+    "size gift  thumb"
+    "size facts thumb"
+    "size foot  foot";
+  align-items: start;
+  gap: 3px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eef0f3;
 }
 
-/* 圖示高度＝吋數 × 倍率，所以 24 吋和 20 吋的大小差異是真的比例 */
 .pmc-lg-size {
   grid-area: size;
+  align-self: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* 圖示高度＝吋數 × 倍率，所以 28、24、20 吋的大小差異是真的比例 */
 .pmc-lg-svg {
   display: block;
   height: calc(var(--inch) * var(--lg-scale));
@@ -2988,7 +3004,7 @@ a {
 }
 
 .pmc-lg-inch {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 900;
   line-height: 1;
   color: var(--pmc-ink);
@@ -3002,6 +3018,7 @@ a {
 
 .pmc-lg-top {
   grid-area: top;
+  align-self: center;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3011,7 +3028,7 @@ a {
 
 .pmc-lg-name {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--pmc-ink);
 }
@@ -3029,29 +3046,63 @@ a {
 .pmc-lg-open--top { background: #e0f2fe; color: #0369a1; }
 .pmc-lg-open--unk { background: #f3f4f6; color: #9ca3af; }
 
+.pmc-luggage .pmc-lg-cta {
+  grid-area: cta;
+  justify-self: end;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
 .pmc-lg-gift {
   grid-area: gift;
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--pmc-label);
+}
+
+.pmc-lg-thumb {
+  grid-area: thumb;
+  justify-self: end;
+  width: 64px;
+  height: 64px;
+  margin-top: 4px;
+  padding: 0;
+  border: 1px solid var(--pmc-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--pmc-white);
+  cursor: zoom-in;
+}
+
+.pmc-lg-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pmc-lg-thumb:focus-visible {
+  outline: 2px solid var(--pmc-blue-deep);
+  outline-offset: 2px;
 }
 
 .pmc-lg-facts {
   grid-area: facts;
-  display: grid;
-  gap: 1px;
-  margin: 2px 0 0;
-  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin: 0;
+  font-size: 12.5px;
 }
 
 .pmc-lg-facts div {
   display: flex;
-  gap: 10px;
+  gap: 5px;
 }
 
 .pmc-lg-facts dt {
   color: #9ca3af;
-  flex: none;
 }
 
 .pmc-lg-facts dd {
@@ -3068,16 +3119,19 @@ a {
 .pmc-lg-foot {
   grid-area: foot;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 6px 8px;
+  margin-top: 4px;
 }
 
-/* 徽章藏起來時，按鈕仍靠右 */
-.pmc-lg-cta {
-  margin-left: auto;
+/* 卡片特色：跟清單同一顆按鈕、同一個 modal，這裡只縮小尺寸 */
+.pmc-lg .pmc-lg-feat {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 8px;
 }
+.pmc-lg .pmc-lg-feat[hidden] { display: none; }
 
 .pmc-lg-fn {
   margin: 10px 4px 0;
@@ -3085,7 +3139,63 @@ a {
   color: #9ca3af;
 }
 
-/* 平板：推薦改成可橫滑（5 張擠在 768–1000px 會太窄），行李箱兩欄 */
+/* ---- 頁內索引列＋「新戶活動」標題 ---- */
+.pmc-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.pmc-jump a {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--pmc-chip-border);
+  border-radius: 999px;
+  color: var(--pmc-chip-text);
+  background: var(--pmc-white);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pmc-jump a:hover { background: var(--pmc-chip-hover-bg); }
+.pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; }
+.pmc-jump a[hidden] { display: none; }
+
+/* 錨點跳過來時，標題不要貼齊視窗頂端 */
+#picks, #luggage, #all-promos { scroll-margin-top: 12px; }
+
+.pmc-list-head { margin-top: 6px; }
+
+/* ---- 手機橫滑分頁點（站長推薦）---- */
+.pmc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.pmc-dots[hidden] { display: none; }
+.pmc-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+.pmc-dots button[aria-current="true"] {
+  width: 20px;
+  background: var(--pmc-blue-deep);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pmc-dots button { transition: none; }
+}
+
+/* 平板：推薦改成可橫滑（5 張擠在 768–1000px 會太窄） */
 @media (max-width: 1000px) {
   .pmc-picks-row {
     grid-auto-columns: 230px;
@@ -3096,10 +3206,9 @@ a {
   }
   .pmc-picks-row::-webkit-scrollbar { display: none; }
   .pmc-pick { scroll-snap-align: start; }
-  .pmc-lg-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* 手機：推薦橫滑露出下一張的邊（提示可以滑）；行李箱改 M1 精簡比較列 */
+/* 手機：推薦橫滑露出下一張的邊；行李箱改單欄、尺寸縮小，「立即申辦」縮成「申辦」 */
 @media (max-width: 768px) {
   .pmc-picks,
   .pmc-luggage {
@@ -3111,34 +3220,22 @@ a {
     gap: 10px;
     margin-right: -12px;     /* 滑動列延伸到螢幕右緣，下一張露出一截 */
     padding-right: 12px;
-    scroll-padding-left: 0;
   }
+  .pmc-jump { gap: 6px; margin-bottom: 12px; }
+  .pmc-jump a { padding: 5px 12px; font-size: 12.5px; }
 
-  .pmc-lg-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-    border-top: 1px solid #f0f1f4;
-  }
+  .pmc-lg-row { grid-template-columns: 1fr; }
   .pmc-lg {
     --lg-scale: 1.5px;
     grid-template-columns: 50px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "size top cta"
-      "size gift gift"
-      "size facts facts"
-      "size badge badge";
     gap: 2px 10px;
     padding: 10px 0;
-    border: 0;
-    border-bottom: 1px solid #f0f1f4;
-    border-radius: 0;
   }
-  .pmc-lg-size { gap: 3px; justify-content: center; }
   .pmc-lg-inch { font-size: 1.1rem; }
-  /* foot 拆開：按鈕上到右上角、徽章到最後一列，不再讓按鈕獨佔一列 */
-  .pmc-lg-foot { display: contents; }
-  .pmc-lg-foot .promo-ending-badge { grid-area: badge; justify-self: start; margin-top: 2px; }
-  .pmc-luggage .pmc-lg-cta { grid-area: cta; align-self: start; margin-left: 0; padding: 5px 12px; font-size: 12.5px; }
-  .pmc-lg-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; }
-  .pmc-lg-facts div { gap: 4px; }
+  .pmc-lg-name { font-size: 13px; }
+  .pmc-lg-gift { font-size: 12.5px; }
+  .pmc-lg-facts { font-size: 12px; gap: 2px 12px; }
+  .pmc-lg-thumb { width: 52px; height: 52px; }
+  .pmc-luggage .pmc-lg-cta { padding: 5px 12px; font-size: 12.5px; }
+  .pmc-luggage .pmc-cta-long { display: none; }
 }
