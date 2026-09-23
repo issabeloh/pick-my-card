@@ -55,8 +55,9 @@ html.pmc-returning-user #pmc-boot-loader {
 
 /* Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：<html> 帶 pmc-embed
    class 時（index.html pre-paint script 依 ?embed=1 加上）只留 #card-detail-modal
-   可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight）
-   隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的 .promo-detail-overlay）遮罩區時，
+   可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight/
+   推薦比較工具列）隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的
+   .promo-detail-overlay）遮罩區時，
    視覺上就像原生彈窗。#card-detail-modal 本身的樣式（position:fixed 全螢幕深色遮罩）
    完全不用改，它天生就會蓋滿 iframe viewport。 */
 html.pmc-embed body {
@@ -67,10 +68,15 @@ html.pmc-embed .container {
     background: transparent;
     box-shadow: none;
 }
+/* ⚠️ index.html 在 body 層級新增任何區塊時，要同步加進這份清單——這是黑名單不是
+   白名單，漏了就會在 promos 的詳情遮罩裡透出來。實例：推薦比較工具列
+   （.mc-related，2026-08-18 新增）漏加，手機上直排成 315px 高的灰塊面積卡在
+   詳情彈窗上方，連結還點得下去（會把 iframe 導到商家頁），2026-09-23 才修。 */
 html.pmc-embed header,
 html.pmc-embed .sidebar-overlay,
 html.pmc-embed .app-layout,
 html.pmc-embed .spotlight-section,
+html.pmc-embed .mc-related,
 html.pmc-embed .ad-row,
 html.pmc-embed .finance-warning-row,
 html.pmc-embed .social-media-footer,
@@ -4398,25 +4404,51 @@ label.personal-field-check input[type="checkbox"] {
     max-height: 90vh;
 }
 
-/* 桌機把卡片詳情的標題列也釘住（站長 2026-09-18：捲動時不要被捲走）。
-   手機不套——modal 幾乎滿版，再釘一條 97px 的標題會吃掉太多可讀高度。
+/* 卡片詳情的標題列釘住，捲動時不要被捲走（站長 2026-09-18 先上桌機；
+   2026-09-23 手機補上，改用下面的精簡版標題列）。
    z-index 要高於 .card-detail-nav 的 10，否則 nav 捲上來會蓋住標題。
    nav 的 top 改成「標題高度」，才會黏在標題底下而不是蓋住它；標題高度隨卡名
    長度變動，由 setupCardDetailNav() 量完寫進 --pmc-detail-header-h，
-   這裡的 97px 只是量不到時的 fallback。
+   這裡的 97px 只是量不到時的 fallback（桌機實測值；手機見下方 57px）。
    ⚠️ 捲動落點的計算（js/results-display.js 的 stickyOffset()）會自己判斷標題
-   是不是 sticky，改這裡的斷點不需要動 JS。 */
-@media (min-width: 769px) {
+   是不是 sticky、也直接讀實際 offsetHeight，改這裡不需要動 JS。 */
+#card-detail-modal .modal-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 11;
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+}
+#card-detail-modal .card-detail-nav {
+    top: var(--pmc-detail-header-h, 97px);
+}
+
+/* 手機精簡標題列（2026-09-23）：卡圖 56→36px、左右 padding 20→16px、上下 20→10px、
+   卡名 1.25→1.05rem，整列從 97px 收到 57px。當初（2026-09-18）手機不釘就是因為
+   97px 太貴——手機 modal 只有 80dvh（iPhone 13 實測可視 531px），97px 標題＋53px
+   導覽列要吃掉 28%；收到 57px 後標題只佔 11%，換回來的是捲動時看得到卡名、
+   也隨時按得到右上角的 ✕
+   （✕ 在標題列裡，之前一捲下去就沒有關閉鈕，只能點遮罩或 Esc）。
+   卡圖不整個藏掉：它是「現在看的是哪張卡」最快的辨識物，縮小比消失好。 */
+@media (max-width: 768px) {
     #card-detail-modal .modal-header {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 11;
-        border-top-left-radius: inherit;
-        border-top-right-radius: inherit;
+        padding: 10px 16px;
+    }
+    /* 卡名 1.25rem → 1.05rem（同公告 modal 的精簡標題規格）：長卡名在窄螢幕上
+       會折成兩行把標題列撐高，20px 時 85px、17px 時 75px（iPhone SE 320px
+       ×「中信 Uniopen 聯名卡」實測，320px 上最長的卡名仍然會折）。折行本身
+       不會壞——ResizeObserver 會把實際高度同步給 nav 的 top（見
+       js/results-display.js 的 syncHeaderHeight）——只是會吃掉可讀高度。 */
+    #card-detail-modal .modal-header h3 {
+        font-size: 1.05rem;
+    }
+    #card-detail-modal .card-detail-image {
+        height: 36px;
+        max-width: 64px;
     }
     #card-detail-modal .card-detail-nav {
-        top: var(--pmc-detail-header-h, 97px);
+        top: var(--pmc-detail-header-h, 57px);
     }
 }
 
