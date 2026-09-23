@@ -2420,7 +2420,11 @@ function pmcRenderPicks_(picks, monthLabel) {
         (c.sub ? '<small>' + pmcEscapeHtml_(c.sub) + '</small>' : '') + '</p>\n' +
       '      <p class="pmc-pick-thr">' + pmcEscapeHtml_(c.thr) +
         (c.rateText ? '<span class="pmc-pick-rate">回饋率 ' + pmcEscapeHtml_(c.rateText) + '</span>' : '') + '</p>\n' +
-      (c.reason ? '      <p class="pmc-pick-reason">' + pmcEscapeHtml_(c.reason) + '</p>\n' : '') +
+      // 推薦理由＝「為什麼值得辦」：前面一個小綠勾，讀起來像這張卡的好處（站長 2026-09-23 選 R4）
+      (c.reason ? '      <p class="pmc-pick-reason"><svg class="pmc-pick-check" viewBox="0 0 16 16" aria-hidden="true">' +
+        '<circle cx="8" cy="8" r="8" fill="#d1fae5"/><path d="M4.5 8.2l2.2 2.2 4.8-4.8" fill="none" stroke="#059669" ' +
+        'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' +
+        pmcEscapeHtml_(c.reason) + '</span></p>\n' : '') +
       (c.luggageNote ? '      <p class="pmc-pick-note">' + pmcEscapeHtml_(c.luggageNote) + '</p>\n' : '') +
       '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
       '    </article>';
