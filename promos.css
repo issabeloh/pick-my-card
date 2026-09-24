@@ -3291,7 +3291,7 @@ a {
   .pmc-luggage .pmc-cta-long { display: none; }
 }
 
-/* ---- 行李箱專區「查看條件」跳轉（站長 2026-09-24）----
+/* ---- 行李箱專區「活動詳情 ↓」跳轉（站長 2026-09-24）----
    按鈕長得像文字連結（↓ 暗示往下跳），跟「卡片特色」「申辦」兩顆實體按鈕分出層級。 */
 .pmc-lg-jump {
   margin-right: auto;               /* 靠左，另外兩顆按鈕維持靠右 */
@@ -3309,12 +3309,19 @@ a {
 .promo-card,
 .promo-act { scroll-margin-top: 64px; }
 
-/* 跳到的那一檔亮一下（淡黃底 1.8 秒淡掉），讓人知道要看哪裡 */
+/* 跳到的那一檔：粗框閃兩下（站長 2026-09-24：淡黃底在桌機看不出來）。
+   用 outline（內縮 3px）而不是 border／inset 陰影：outline 畫在子元素之上、不佔版面，
+   不會被活動列自己的底色蓋住。延遲 0.5 秒開始，讓平滑捲動先到位再閃 */
 @keyframes pmc-flash {
-  0%, 35% { background-color: #fff7d1; }
-  100% { background-color: transparent; }
+  0%, 50%, 100% { outline-color: rgba(30, 64, 175, 0); }
+  20%, 30%, 70%, 80% { outline-color: var(--pmc-blue-deep); }
 }
-.pmc-flash { animation: pmc-flash 1.8s ease-out; }
+.pmc-flash {
+  outline: 3px solid rgba(30, 64, 175, 0);
+  outline-offset: -3px;
+  border-radius: 10px;
+  animation: pmc-flash 1.6s ease-in-out 0.5s 1 both;
+}
 
 /* 畫面中間的短提示（例：「已清除篩選」），1.6 秒後淡出 */
 .pmc-toast {

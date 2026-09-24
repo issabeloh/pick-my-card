@@ -2499,11 +2499,11 @@ function pmcRenderLuggage_(items) {
         '<span class="promo-ending-badge" hidden></span></div>\n' +
       '      </div>\n' +
       thumb +
-      // 查看條件：跳到下方清單裡「這一檔」活動（p.anchorId 在分組時已定好，精確到卡片內第幾檔）。
+      // 活動詳情 ↓（2026-09-24 站長由「查看條件」改名）：跳到下方清單裡「這一檔」活動（p.anchorId 在分組時已定好，精確到卡片內第幾檔）。
       // href 指向卡片本身（沒 JS 也跳得到那張卡）；data-jump-act 是那一檔，JS 用它展開詳情。
       // promos.js setupLuggageJump() 會先清掉篩選、展開那一檔的詳情，再捲過去並亮一下
       '      <div class="pmc-lg-actions"><a class="pmc-lg-jump" href="#' + pmcEscapeHtml_(String(p.anchorId).replace(/-a\d+$/, '')) +
-        '" data-jump-act="' + pmcEscapeHtml_(p.anchorId) + '">查看條件</a>' + featBtn +
+        '" data-jump-act="' + pmcEscapeHtml_(p.anchorId) + '">活動詳情</a>' + featBtn +
         (l.link ? pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') : '') + '</div>\n' +
       '    </article>';
   }).join('\n');

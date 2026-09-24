@@ -157,30 +157,31 @@
     });
   }
 
-  // 行李箱專區「查看條件」→ 跳到下方清單裡那一檔活動（站長 2026-09-24）。
+  // 行李箱專區「活動詳情 ↓」→ 跳到下方清單裡那一檔活動（站長 2026-09-24）。
   // 1. 先清掉所有篩選（類型、搜尋、隱藏持有卡），不然目標卡可能正被藏著；有清掉東西才跳提示
   // 2. 展開那一檔的詳情（附屬列預設收合，只跳到卡片會看不到行李箱那檔的條件）
   // 3. 捲過去（錨點的 scroll-margin 會讓出貼頂分頁列），亮一下底色讓人知道看哪裡
   // 用 pushState 記進瀏覽器紀錄：按瀏覽器／手機的「上一頁」就回到行李箱專區。
+  // 回傳清掉了什麼：{ owned: 取消了「隱藏我持有的卡片」, other: 清了類型或搜尋 }
   function clearAllFilters() {
-    var cleared = false;
+    var r = { owned: false, other: false };
     if (filterState.typeFilter !== 'all') {
       var allChip = document.querySelector('.promo-chip[data-filter="all"]');
-      if (allChip) { allChip.click(); cleared = true; }
+      if (allChip) { allChip.click(); r.other = true; }
     }
     var input = document.getElementById('promos-search-input');
     if (input && input.value) {
       input.value = '';
       input.dispatchEvent(new Event('input'));
-      cleared = true;
+      r.other = true;
     }
     var owned = document.getElementById('promos-hide-owned-checkbox');
     if (owned && owned.checked) {
       owned.checked = false;
       owned.dispatchEvent(new Event('change'));
-      cleared = true;
+      r.owned = true;
     }
-    return cleared;
+    return r;
   }
 
   var toastEl = null, toastTimer = null;
@@ -220,17 +221,23 @@
       var card = document.getElementById(cardId);
       if (!card) return;                       // 找不到就讓瀏覽器照一般錨點處理
       e.preventDefault();
-      if (clearAllFilters()) showToast('已清除篩選');
+      // 提示文字（站長 2026-09-24）：取消了持有卡隱藏就明講；只清了類型／搜尋則用通用句
+      var cleared = clearAllFilters();
+      if (cleared.owned) showToast('已取消隱藏您持有的卡片');
+      else if (cleared.other) showToast('已清除篩選');
       var actId = link.getAttribute('data-jump-act') || '';
       var row = actId ? card.querySelector('[aria-controls="' + actId + '-detail"]') : null;
       if (row && row.getAttribute('aria-expanded') !== 'true') row.click();
-      var target = (row && row.closest('.promo-act')) || card;
+      // 捲到卡片頂端（卡名那一段，站長 2026-09-24），不是直接跳到活動本體——
+      // 先看到是哪張卡，再用粗框閃兩下標出是卡裡的哪一檔
+      var act = (row && row.closest('.promo-act')) || card;
       if (history.pushState) history.pushState(null, '', '#' + cardId);
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      alignAfterScroll(target);
-      target.classList.remove('pmc-flash');
-      void target.offsetWidth;                 // 重新觸發動畫
-      target.classList.add('pmc-flash');
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      alignAfterScroll(card);
+      act.classList.remove('pmc-flash');
+      void act.offsetWidth;                    // 重新觸發動畫
+      act.classList.add('pmc-flash');
+      setTimeout(function () { act.classList.remove('pmc-flash'); }, 2600);
     });
   }
 
