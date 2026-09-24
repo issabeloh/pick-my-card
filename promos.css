@@ -3317,17 +3317,11 @@ a {
   20%, 30%, 70%, 80% { outline-color: var(--pmc-blue-deep); }
 }
 .pmc-flash {
+  /* 方形、內縮 3px，框的大小＝目標區塊本身（主活動是整個 .promo-card-main，
+     附屬列是那一條），站長 2026-09-24 指定不要圓角 */
   outline: 3px solid rgba(30, 64, 175, 0);
   outline-offset: -3px;
-  border-radius: 10px;
   animation: pmc-flash 1.6s ease-in-out 0.5s 1 both;
-}
-/* 主活動本身沒有 padding，內縮的框會緊貼文字（站長 2026-09-24）——改往外推 8px，
-   落在 .promo-card-main 的 14–16px 內距裡，不會被卡片的 overflow:hidden 裁掉。
-   附屬列本身貼齊卡片左右邊、內部已有留白，維持內縮才不會被裁。 */
-.promo-act.is-main.pmc-flash {
-  outline-offset: 8px;
-  border-radius: 12px;
 }
 
 /* 畫面中間的短提示（例：「已清除篩選」），1.6 秒後淡出 */

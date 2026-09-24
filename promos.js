@@ -231,6 +231,9 @@
       // 捲到卡片頂端（卡名那一段，站長 2026-09-24），不是直接跳到活動本體——
       // 先看到是哪張卡，再用粗框閃兩下標出是卡裡的哪一檔
       var act = (row && row.closest('.promo-act')) || card;
+      // 主活動：框住整個 .promo-card-main（站長 2026-09-24：框要跟那一區一樣大）；
+      // 附屬列：框住那一列本身（它本來就是滿版的一條）
+      if (act.classList && act.classList.contains('is-main')) act = act.closest('.promo-card-main') || act;
       if (history.pushState) history.pushState(null, '', '#' + cardId);
       card.scrollIntoView({ behavior: 'smooth', block: 'start' });
       alignAfterScroll(card);
