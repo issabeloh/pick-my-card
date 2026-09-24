@@ -3290,3 +3290,55 @@ a {
   .pmc-luggage .pmc-lg-cta { padding: 6px 16px; font-size: 13px; }
   .pmc-luggage .pmc-cta-long { display: none; }
 }
+
+/* ---- 行李箱專區「查看條件」跳轉（站長 2026-09-24）----
+   按鈕長得像文字連結（↓ 暗示往下跳），跟「卡片特色」「申辦」兩顆實體按鈕分出層級。 */
+.pmc-lg-jump {
+  margin-right: auto;               /* 靠左，另外兩顆按鈕維持靠右 */
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pmc-blue-deep);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pmc-lg-jump::after { content: " ↓"; }
+.pmc-lg-jump:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pmc-lg-jump:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; border-radius: 4px; }
+
+/* 跳過來時讓出貼頂分頁列的高度 */
+.promo-card,
+.promo-act { scroll-margin-top: 64px; }
+
+/* 跳到的那一檔亮一下（淡黃底 1.8 秒淡掉），讓人知道要看哪裡 */
+@keyframes pmc-flash {
+  0%, 35% { background-color: #fff7d1; }
+  100% { background-color: transparent; }
+}
+.pmc-flash { animation: pmc-flash 1.8s ease-out; }
+
+/* 畫面中間的短提示（例：「已清除篩選」），1.6 秒後淡出 */
+.pmc-toast {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 1000;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.96);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.pmc-toast.is-show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmc-flash { animation: none; }
+  .pmc-toast { transition: none; }
+}

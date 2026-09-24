@@ -2230,12 +2230,13 @@ function pmcThresholdText_(promo) {
     ? '刷滿 ' + pmcMoney_(promo.min_spend) : '不限金額';
 }
 
-// 申辦連結：有分潤 CTA 用「立即申辦」，沒有就退用活動頁「活動詳情」（同清單的規則）
+// 申辦連結：有分潤 CTA 用「立即申辦」，沒有就退用銀行活動頁「活動頁面」（同清單的規則；
+// 2026-09-24 站長：所有卡都已有辦卡連結，這只是退路，且不能跟卡片內展開用的「活動詳情」撞名）
 function pmcApplyLink_(p) {
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
   if (ctaLink) return { href: ctaLink, label: '立即申辦', sponsored: true };
   const promoLink = pmcSanitizeUrl_(p.promo.link);
-  if (promoLink) return { href: promoLink, label: '活動詳情', sponsored: false };
+  if (promoLink) return { href: promoLink, label: '活動頁面', sponsored: false };
   return null;
 }
 
@@ -2498,7 +2499,11 @@ function pmcRenderLuggage_(items) {
         '<span class="promo-ending-badge" hidden></span></div>\n' +
       '      </div>\n' +
       thumb +
-      '      <div class="pmc-lg-actions">' + featBtn +
+      // 查看條件：跳到下方清單裡「這一檔」活動（p.anchorId 在分組時已定好，精確到卡片內第幾檔）。
+      // href 指向卡片本身（沒 JS 也跳得到那張卡）；data-jump-act 是那一檔，JS 用它展開詳情。
+      // promos.js setupLuggageJump() 會先清掉篩選、展開那一檔的詳情，再捲過去並亮一下
+      '      <div class="pmc-lg-actions"><a class="pmc-lg-jump" href="#' + pmcEscapeHtml_(String(p.anchorId).replace(/-a\d+$/, '')) +
+        '" data-jump-act="' + pmcEscapeHtml_(p.anchorId) + '">查看條件</a>' + featBtn +
         (l.link ? pmcApplyLinkHtml_(l.link, p, 'promo-apply-btn pmc-lg-cta', 'luggage') : '') + '</div>\n' +
       '    </article>';
   }).join('\n');
@@ -2731,7 +2736,8 @@ function pmcRenderCardGroup_(group) {
   }).join('\n');
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有就退用主活動的
-  // promo.link（銀行活動頁）、文字改「活動詳情」。同一張卡只出現一次。
+  // promo.link（銀行活動頁）、文字改「活動頁面」（2026-09-24 起；原本叫「活動詳情」，
+  // 跟卡片內展開詳情的按鈕同名、點下去卻是開銀行網站）。同一張卡只出現一次。
   const ctaLink = group.cta ? pmcSanitizeUrl_(group.cta.link) : '';
   const promoLink = pmcSanitizeUrl_(main.promo.link);
   let ctaHtml = '';
@@ -2741,7 +2747,7 @@ function pmcRenderCardGroup_(group) {
       pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) + '">立即申辦</a>';
   } else if (promoLink) {
     ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) +
-      '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動詳情</a>';
+      '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動頁面</a>';
   }
 
   // 卡片特色：內容由部署時的 tools/build-promos-features.js 注入（它把 js/ 那 12 支
