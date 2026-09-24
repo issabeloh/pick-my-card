@@ -2508,7 +2508,7 @@ function pmcRenderLuggage_(items) {
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-luggage" id="luggage" aria-labelledby="pmc-luggage-title">\n' +
-    '    <div class="pmc-section-head"><h2 id="pmc-luggage-title">行李箱專區</h2><span>辦卡送行李箱，尺寸、參考價一次比</span></div>\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-luggage-title">行李箱專區</h2><span>哪些信用卡首刷禮送行李箱？消費門檻、行李箱尺寸一次看</span></div>\n' +
     '    <div class="pmc-lg-row">\n' + rows + '\n    </div>\n' +
     '    <p class="pmc-lg-fn">參考價依官網公告價值，或以相同或相近款式的市售價格估算，銀行贈品規格可能不同，僅供參考。</p>\n' +
     '  </section>\n';
