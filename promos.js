@@ -157,6 +157,90 @@
     });
   }
 
+  // 行李箱專區「活動詳情 ↓」→ 跳到下方清單裡那一檔活動（站長 2026-09-24）。
+  // 1. 先清掉所有篩選（類型、搜尋、隱藏持有卡），不然目標卡可能正被藏著；有清掉東西才跳提示
+  // 2. 展開那一檔的詳情（附屬列預設收合，只跳到卡片會看不到行李箱那檔的條件）
+  // 3. 捲過去（錨點的 scroll-margin 會讓出貼頂分頁列），亮一下底色讓人知道看哪裡
+  // 用 pushState 記進瀏覽器紀錄：按瀏覽器／手機的「上一頁」就回到行李箱專區。
+  // 回傳清掉了什麼：{ owned: 取消了「隱藏我持有的卡片」, other: 清了類型或搜尋 }
+  function clearAllFilters() {
+    var r = { owned: false, other: false };
+    if (filterState.typeFilter !== 'all') {
+      var allChip = document.querySelector('.promo-chip[data-filter="all"]');
+      if (allChip) { allChip.click(); r.other = true; }
+    }
+    var input = document.getElementById('promos-search-input');
+    if (input && input.value) {
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      r.other = true;
+    }
+    var owned = document.getElementById('promos-hide-owned-checkbox');
+    if (owned && owned.checked) {
+      owned.checked = false;
+      owned.dispatchEvent(new Event('change'));
+      r.owned = true;
+    }
+    return r;
+  }
+
+  var toastEl = null, toastTimer = null;
+  function showToast(text) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'pmc-toast';
+      toastEl.setAttribute('role', 'status');
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = text;
+    toastEl.classList.add('is-show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('is-show'); }, 1600);
+  }
+
+  // 捲動途中，上方延遲載入（loading="lazy"）的卡圖會陸續載入、把版面往下推，
+  // 平滑捲動停下來時目標可能已經偏到分頁列底下。停下後檢查幾次，偏了就直接校正。
+  function alignAfterScroll(target) {
+    var tries = 0;
+    (function check() {
+      setTimeout(function () {
+        var nav = document.querySelector('.pmc-jump');
+        var want = (nav ? nav.getBoundingClientRect().bottom : 0) + 14;
+        var off = target.getBoundingClientRect().top - want;
+        if (Math.abs(off) > 6) window.scrollBy(0, off);
+        if (++tries < 3) check();
+      }, tries === 0 ? 650 : 350);
+    })();
+  }
+
+  function setupLuggageJump() {
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('.pmc-lg-jump');
+      if (!link) return;
+      var cardId = (link.getAttribute('href') || '').slice(1);
+      var card = document.getElementById(cardId);
+      if (!card) return;                       // 找不到就讓瀏覽器照一般錨點處理
+      e.preventDefault();
+      // 提示文字（站長 2026-09-24）：取消了持有卡隱藏就明講；只清了類型／搜尋則用通用句
+      var cleared = clearAllFilters();
+      if (cleared.owned) showToast('已取消隱藏您持有的卡片');
+      else if (cleared.other) showToast('已清除篩選');
+      var actId = link.getAttribute('data-jump-act') || '';
+      var row = actId ? card.querySelector('[aria-controls="' + actId + '-detail"]') : null;
+      if (row && row.getAttribute('aria-expanded') !== 'true') row.click();
+      // 捲到卡片頂端（卡名那一段，站長 2026-09-24），不是直接跳到活動本體——
+      // 先看到是哪張卡，再用粗框閃兩下標出是卡裡的哪一檔
+      var act = (row && row.closest('.promo-act')) || card;
+      if (history.pushState) history.pushState(null, '', '#' + cardId);
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      alignAfterScroll(card);
+      act.classList.remove('pmc-flash');
+      void act.offsetWidth;                    // 重新觸發動畫
+      act.classList.add('pmc-flash');
+      setTimeout(function () { act.classList.remove('pmc-flash'); }, 2600);
+    });
+  }
+
   // 站長推薦手機橫滑的分頁點（站長 2026-09-23：mockup 有、上線版沒有）。
   // 只有真的能橫滑（內容比容器寬）才顯示；點數＝可見的推薦張數，滑動時更新目前位置，
   // 點某一顆就滑到那一張。視窗寬度改變（轉向）時重算。
@@ -964,6 +1048,7 @@
     setupOwnedFilter();
     setupActToggle();
     setupFeatToggle();
+    setupLuggageJump();
     setupApplyTracking();
     setupGiftLightbox();
     setupShineTrial();
