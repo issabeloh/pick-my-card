@@ -9214,11 +9214,13 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-savebtn:disabled { opacity: .4; cursor: default; }
 .mp-layout { max-width: 1120px; margin: 0 auto; }
 .mp-side { padding: 0 8px; display: flex; flex-direction: column; gap: 8px; }
-.mp-introrow { display: flex; align-items: flex-start; gap: 12px; max-width: 760px; margin: 0 auto 12px; padding: 0 8px; }
-.mp-intro { margin: 0; flex: 1; font-size: 13.5px; line-height: 1.6; color: #4b5563; }
+.mp-intro { max-width: 760px; margin: 0 auto 12px; padding: 0 8px; font-size: 13.5px; line-height: 1.6; color: #4b5563; }
+/* 搜尋框＋「編輯」同一列（編輯在右側）；沒有配對時搜尋框隱藏，編輯鈕靠右 */
+.mp-searchrow { display: flex; align-items: center; gap: 8px; max-width: 460px; margin: 0 auto 8px; }
+.mp-searchrow .mp-searchbox { flex: 1; min-width: 0; margin: 0; }
 .mp-edit-btn {
-    flex: none; border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 999px;
-    padding: 6px 16px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+    flex: none; margin-left: auto; height: 42px; box-sizing: border-box; border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 12px;
+    padding: 0 16px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
 }
 .mp-edit-btn.on { background: #1e40af; color: #fff; }
 .mp-tools[hidden] { display: none; }
@@ -9262,6 +9264,9 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 #mappings-page label.mp-pk { font-size: 14px; font-weight: 500; margin: 0; color: #111827; display: flex; }
 .mp-chk input { width: 16px; height: 16px; margin: 0; accent-color: #111827; }
 .mp-chk.na { color: #9ca3af; font-weight: 500; cursor: default; }
+/* 雙欄時「顯示等級／方案」仍在原位，只是變灰不可勾 */
+#mappings-page label.mp-chk.dis, .mp-chk.dis { color: #b6bcc6; cursor: not-allowed; }
+.mp-chk.dis input { accent-color: #b6bcc6; cursor: not-allowed; }
 .mp-upd {
     display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid #c7ced9; background: #fff;
     border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 700; color: #111827; cursor: pointer; white-space: nowrap;
@@ -9422,8 +9427,20 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-export[hidden] { display: none; }
 .mp-exp-box { flex: 1; display: grid; grid-template-columns: 1fr; background: #dfe4ec; min-height: 0; }
 .mp-exp-pane { display: flex; flex-direction: column; min-height: 0; }
-.mp-export[data-step="settings"] .mp-exp-preview { display: none; }
-.mp-export[data-step="preview"] .mp-exp-settings-pane { display: none; }
+/* 設定區＝白底；預覽區＝深色／淺灰整塊（跟著圖片顏色），兩區一眼分得出來 */
+.mp-exp-settings-pane { background: #fff; }
+.mp-exp-sub { font-size: 12px; opacity: .65; }
+/* 手機：設定在上、預覽接在下面同一頁捲動（2026-09-28 取代「預覽圖片 →」兩步驟）。
+   設定＝淺灰底白卡片；預覽＝深色／淺色整塊、上方大圓角，一眼看得出是另一區 */
+@media (max-width: 1023px) {
+    .mp-exp-box { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .mp-exp-settings-pane .mp-exp-head { position: sticky; top: 0; z-index: 2; background: #fff; }
+    .mp-exp-body { overflow: visible; padding-bottom: 22px; }
+    .mp-exp-preview { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 18px rgba(15, 20, 30, .12); }
+    .mp-exp-preview .mp-exp-head { padding-top: 16px; }
+    .mp-exp-stage { overflow: visible; }
+    .mp-exp-img.wall { max-height: 72vh; }
+}
 .mp-exp-head { flex: none; display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; }
 .mp-exp-head h2 { margin: 0; font-size: 18px; font-weight: 900; flex: 1; }
 .mp-exp-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; display: grid; gap: 14px; align-content: start; }
@@ -9444,17 +9461,18 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-cnt { font: 700 12px ui-monospace, Menlo, monospace; color: #374151; }
 .mp-cnt.over { color: #c2410c; }
 .mp-all { border: 1.5px solid #111827; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 900; cursor: pointer; color: #111827; min-width: 66px; }
-.mp-picks { background: #fff; border-radius: 14px; padding: 4px 12px; }
-.mp-pk { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f2f5; font-size: 14px; cursor: pointer; }
-.mp-pk:last-child { border-bottom: 0; }
+.mp-picks { background: #f5f7fa; border-radius: 14px; padding: 4px 12px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+.mp-pk { display: flex; align-items: center; gap: 7px; padding: 8px 0; border-bottom: 1px solid #e6e9ee; font-size: 14px; cursor: pointer; min-width: 0; }
+.mp-pk-sec { grid-column: 1 / -1; }
 .mp-pk input { width: 18px; height: 18px; margin: 0; accent-color: #111827; flex: none; }
-.mp-pk-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mp-pk-name small { color: #b45309; font-size: 11px; margin-left: 4px; }
+.mp-pk-name { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
+.mp-pk-name small { display: block; margin-left: 0; }
+.mp-pk-name small { color: #b45309; font-size: 11px; }
 .mp-pk.off { opacity: .45; cursor: not-allowed; }
 .mp-pk-sec { font-size: 11px; font-weight: 900; color: #1d4ed8; padding: 8px 0 2px; letter-spacing: .08em; }
 .mp-pk-sec.pay { color: #ea580c; }
 .mp-exp-preview { background: #1b1f27; color: #fff; }
-.mp-exp-preview.lt { background: #eef1f5; color: #111827; }
+.mp-exp-preview.lt { background: #e3e8ef; color: #111827; }
 .mp-exp-preview .mp-iconbtn { background: rgba(255, 255, 255, .12); color: #fff; }
 .mp-exp-preview.lt .mp-iconbtn { background: rgba(17, 24, 39, .08); color: #374151; }
 .mp-exp-preview .mp-seg { background: rgba(255, 255, 255, .12); }
@@ -9492,7 +9510,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-sheet { border-radius: 18px; }
     .mp-export { align-items: center; justify-content: center; }
     .mp-exp-box { flex: none; width: min(920px, 94vw); height: min(720px, 92vh); grid-template-columns: 1fr 380px; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 70px rgba(0, 0, 0, .35); }
-    .mp-export[data-step] .mp-exp-preview, .mp-export[data-step] .mp-exp-settings-pane { display: flex; }
     .mp-exp-mobile-only { display: none !important; }
     .mp-exp-desk-only { display: flex; }
     .mp-exp-head { padding-top: 16px; }

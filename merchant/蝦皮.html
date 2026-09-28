@@ -391,10 +391,7 @@
                  面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
             <!-- ===== 畫面：我的配卡組合（data-view="mappings"）===== -->
             <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的配卡組合">
-                <div class="mp-introrow">
-                    <p class="mp-intro">在查詢結果中按「加到我的配卡」，自動把「商家 × 信用卡」的組合存到這裡，還能把圖存到手機快速查看。</p>
-                    <button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false">編輯</button>
-                </div>
+                <p class="mp-intro">在查詢結果中按「加到我的配卡」，自動把「商家 × 信用卡」的組合存到這裡，還能把圖存到手機快速查看。</p>
                 <div class="mp-layout">
                     <div class="mp-side">
                         <div class="mp-tools" id="mp-tools" hidden></div>
@@ -406,9 +403,12 @@
                             <button type="button" class="mp-big" id="mp-guest-login">登入 / 註冊</button>
                         </div>
                         <div class="mp-tip" id="mp-tip" hidden><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>點商家名稱可改顯示名稱</span><span class="mp-dot">・</span><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>點卡圖可看信用卡詳情</span><span class="mp-dot mp-tip-drag" hidden>・</span><span class="mp-tip-drag" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>按住拖曳調整順序</span></div>
-                        <div class="mp-searchbox" id="mp-searchbox">
-                            <input type="text" id="mp-search" class="mp-search" inputmode="search" enterkeyhint="search" placeholder="搜尋商家或信用卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="搜尋商家或信用卡">
-                            <button type="button" class="mp-search-clear" id="mp-search-clear" aria-label="清除搜尋" hidden>✕</button>
+                        <div class="mp-searchrow">
+                            <div class="mp-searchbox" id="mp-searchbox">
+                                <input type="text" id="mp-search" class="mp-search" inputmode="search" enterkeyhint="search" placeholder="搜尋商家或信用卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="搜尋商家或信用卡">
+                                <button type="button" class="mp-search-clear" id="mp-search-clear" aria-label="清除搜尋" hidden>✕</button>
+                            </div>
+                            <button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false">編輯</button>
                         </div>
                         <div class="mp-notice" id="mp-notice" hidden></div>
                         <div class="mp-demo-tag" id="mp-demo-tag" hidden>範　例</div>
@@ -453,10 +453,9 @@
                         <div class="mp-exp-pane mp-exp-settings-pane">
                             <div class="mp-exp-head"><h2>存成圖片</h2><button type="button" class="mp-iconbtn" data-mp-exp-close aria-label="關閉">×</button></div>
                             <div class="mp-exp-body" id="mp-exp-settings"></div>
-                            <div class="mp-exp-foot mp-exp-mobile-only"><button type="button" class="mp-big" data-mp-exp-next>預覽圖片 →</button></div>
                         </div>
                         <div class="mp-exp-pane mp-exp-preview" id="mp-exp-preview-pane">
-                            <div class="mp-exp-head"><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-prev aria-label="返回設定">←</button><h2>預覽</h2><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-close aria-label="關閉">×</button></div>
+                            <div class="mp-exp-head"><h2>預覽</h2><span class="mp-exp-sub">這就是會存下來的圖</span></div>
                             <div class="mp-exp-stage"><img id="mp-exp-img" class="mp-exp-img" alt="刷卡小抄預覽" hidden></div>
                             <div class="mp-exp-foot">
                                 <div class="mp-exp-tools"><div class="mp-seg" id="mp-exp-theme" role="group" aria-label="顏色"><button type="button" data-mp-theme="light">淺色</button><button type="button" data-mp-theme="dark">深色</button></div></div>

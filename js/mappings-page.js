@@ -553,6 +553,12 @@ function mpReceiptHtml(sections, o) {
 // ============================================
 // 頁面渲染
 // ============================================
+// 「顯示等級／方案」常駐；雙欄放不下標籤，改成灰色不可勾（不改用戶存的勾選值）
+function mpLabelsChk(id, p) {
+    const two = p.layout !== 'F';
+    return `<label class="mp-chk${two ? ' dis' : ''}"${two ? ' title="雙欄放不下等級／方案標籤，切回單欄才能顯示"' : ''}><input type="checkbox" id="${id}" ${p.labels && !two ? 'checked' : ''} ${two ? 'disabled' : ''}>顯示等級／方案</label>`;
+}
+
 function mpSegHtml(name, cur, opts) {
     return `<div class="mp-seg" role="group" aria-label="${escapeHtml(name)}">${opts.map(([v, label, aria]) => `<button type="button" data-mp-${name === '排列方式' ? 'sort' : name === '版面' ? 'layout' : name === '字級' ? 'size' : 'x'}="${v}" class="${cur === v ? 'on' : ''}"${aria ? ` aria-label="${aria}" title="${aria}"` : ''}>${label}</button>`).join('')}</div>`;
 }
@@ -593,9 +599,7 @@ function mpRender() {
             ${mpSegHtml('版面', p.layout, [['F', MP_ICON.one, '單欄'], ['E', MP_ICON.two, '雙欄']])}
         </div>
         <div class="mp-bar">
-            ${p.layout === 'F'
-                ? `<label class="mp-chk"><input type="checkbox" id="mp-labels-toggle" ${p.labels ? 'checked' : ''}>顯示等級／方案</label>`
-                : '<span class="mp-chk na">雙欄不顯示等級／方案</span>'}
+            ${mpLabelsChk('mp-labels-toggle', p)}
             <span class="mp-grow"></span>
             <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
@@ -1300,7 +1304,7 @@ async function mpRenderExport() {
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
             <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.size, [['small', '小字'], ['large', '大字']])}</div>
         </div>
-        ${p.layout === 'F' ? `<label class="mp-chk"><input type="checkbox" id="mp-exp-labels" ${p.labels ? 'checked' : ''}>顯示等級／方案</label>` : ''}
+        ${mpLabelsChk('mp-exp-labels', p)}
         <div class="mp-set-block">
             <div class="mp-pick-head"><h4>要放進圖片的商家</h4><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''}</span>
                 <button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
@@ -1436,8 +1440,6 @@ function mpBind() {
                 const cur = mpExportSelection(pool);
                 p.sel = cur.length >= Math.min(pool.length, lim) && cur.length > 0 ? [] : pool.slice(0, lim).map(g => g.key);
             }
-            else if (b.hasAttribute('data-mp-exp-next')) { mpEl('mp-export').dataset.step = 'preview'; return; }
-            else if (b.hasAttribute('data-mp-exp-prev')) { mpEl('mp-export').dataset.step = 'settings'; return; }
             else if (b.id === 'mp-exp-save') { await mpSaveImage(); return; }
             else return;
             mpSavePrefs();

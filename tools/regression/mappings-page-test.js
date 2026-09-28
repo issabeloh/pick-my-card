@@ -192,6 +192,8 @@ const PAIRS = [
   check('分頁在藍色頁首裡、貼齊頁首底邊（文件夾分頁）', tabs.inHeader && tabs.flush, JSON.stringify(tabs));
   check('配卡組合畫面：左側「加入比較的卡片」欄與 ☰ 都隱藏', tabs.sidebarHidden);
   const clean = await pg.evaluate(() => ({ tools: document.getElementById('mp-tools').hidden, tip: document.getElementById('mp-tip').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle') && document.getElementById('mp-edit-toggle').textContent.trim() === '編輯', grips: document.querySelectorAll('#mp-list [data-mp-grip]').length }));
+  const erow = await pg.evaluate(() => { const a = document.getElementById('mp-search').getBoundingClientRect(), b = document.getElementById('mp-edit-toggle').getBoundingClientRect(); return { sameRow: Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) <= 2, right: b.left >= a.right - 1 }; });
+  check('「編輯」在搜尋框同一列的右側', erow.sameRow && erow.right, JSON.stringify(erow));
   check('預設只顯示乾淨的小抄＋搜尋框（設定、提示都收起來）', clean.tools && clean.tip && clean.search && clean.edit && clean.grips === 0, JSON.stringify(clean));
   await pg.click('#mp-edit-toggle');
   const editOn = await pg.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, tip: !document.getElementById('mp-tip').hidden, label: document.getElementById('mp-edit-toggle').textContent.trim() }));
@@ -327,6 +329,13 @@ const PAIRS = [
   await pg.keyboard.press('Escape');
   await pg.evaluate(() => { const m = document.getElementById('card-detail-modal'); if (m && getComputedStyle(m).display !== 'none') { const b = m.querySelector('.close-modal, [id*=close]'); if (b) b.click(); } });
 
+  // 顯示等級／方案：常駐；雙欄灰色不可勾
+  await pg.click('#mp-tools [data-mp-layout="E"]');
+  const chkE = await pg.evaluate(() => { const c = document.getElementById('mp-labels-toggle'); return c && { disabled: c.disabled, color: getComputedStyle(c.closest('label')).color }; });
+  await pg.click('#mp-tools [data-mp-layout="F"]');
+  const chkF = await pg.evaluate(() => { const c = document.getElementById('mp-labels-toggle'); return c && { disabled: c.disabled, checked: c.checked }; });
+  check('「顯示等級／方案」常駐；雙欄變灰不可勾、切回單欄恢復', !!chkE && chkE.disabled && chkE.color === 'rgb(182, 188, 198)' && chkF && !chkF.disabled && chkF.checked, JSON.stringify({ chkE, chkF }));
+
   // A–Z
   await pg.click('#mp-tools [data-mp-sort="az"]');
   const letters = await pg.$$eval('#mp-list .mp-ltr', els => els.map(e => e.textContent));
@@ -390,6 +399,15 @@ const PAIRS = [
     const eo = await p2.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
     check(`${vp.name} 編輯中：沒有左右捲動`, eo);
     if (SHOTS) await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-editing.png`) });
+    if (SHOTS && vp.name === 'desktop-1440') {
+      await p2.evaluate(() => { MP.prefs.layout = 'E'; mpRender(); });
+      await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-editing-E.png`) });
+      await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.sel = null; mpRender(); });
+      await p2.click('#mp-savebar [data-mp-open-export]');
+      await p2.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
+      await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-export.png`) });
+      await p2.click('.mp-exp-settings-pane [data-mp-exp-close]');
+    }
     await p2.context().close();
   }
 
@@ -413,7 +431,12 @@ const PAIRS = [
   });
   check('桌布：收據在時鐘下方、手電筒／相機鈕上方', band.top >= 0.27 && band.bottom <= 0.86, `上緣 ${(band.top * 100).toFixed(1)}%／下緣 ${(band.bottom * 100).toFixed(1)}%`);
   check('桌布預設勾選「放得下的前 N 家」且放得下', img.sel === Math.min(img.cap, img.pool) && img.fits, `選 ${img.sel}／上限 ${img.cap}／可選 ${img.pool}`);
-  check('按鈕是「預覽圖片 →」', (await pg.textContent('[data-mp-exp-next]')).includes('預覽圖片'));
+  const stack = await pg.evaluate(() => { const s = document.querySelector('.mp-exp-settings-pane'), v = document.getElementById('mp-exp-preview-pane');
+    const picks = [...document.querySelectorAll('.mp-picks .mp-pk')].slice(0, 2).map(e => e.getBoundingClientRect());
+    return { noNextBtn: !document.querySelector('[data-mp-exp-next]'), bothShown: getComputedStyle(s).display !== 'none' && getComputedStyle(v).display !== 'none', below: v.getBoundingClientRect().top >= s.getBoundingClientRect().bottom - 1,
+      diffBg: getComputedStyle(v).backgroundColor !== getComputedStyle(document.querySelector('.mp-exp-box')).backgroundColor, twoCol: picks.length === 2 && Math.abs(picks[0].top - picks[1].top) <= 1 && picks[1].left > picks[0].right - 1 }; });
+  check('手機：預覽直接接在設定下方（不用按按鈕），兩區背景不同', stack.noNextBtn && stack.bothShown && stack.below && stack.diffBg, JSON.stringify(stack));
+  check('要放進圖片的商家用兩欄顯示', stack.twoCol);
   check('失效商家不會出現在可存的清單', await pg.evaluate(() => mpExportPool().every(g => !g.dead) && [...document.querySelectorAll('.mp-pk.off input')].every(i => i.disabled)));
   await pg.click('#mp-exp-all');
   let s1 = await pg.evaluate(() => mpExportSelection(mpExportPool()).length);
@@ -423,18 +446,14 @@ const PAIRS = [
   await pg.click('#mp-exp-all');
   s1 = await pg.evaluate(() => ({ n: mpExportSelection(mpExportPool()).length, cap: MP.exp.capacity }));
   check('全選時自動選前面放得下的家數', s1.n === s1.cap, `${s1.n}／${s1.cap}`);
-  await pg.click('[data-mp-exp-next]');
-  const pvVisible = await pg.isVisible('#mp-exp-preview-pane');
-  check('手機：按「預覽圖片 →」切到預覽', pvVisible);
   const bgLight = await pg.evaluate(() => getComputedStyle(document.getElementById('mp-exp-preview-pane')).backgroundColor);
   await pg.click('[data-mp-theme="dark"]');
   await pg.waitForFunction(() => MP.prefs.theme === 'dark' && document.getElementById('mp-exp-img').src, null, { timeout: 10000 });
   await pg.waitForTimeout(500);
   const bgDark = await pg.evaluate(() => getComputedStyle(document.getElementById('mp-exp-preview-pane')).backgroundColor);
-  check('預覽背景：淺色＝淺底、深色＝深底', bgLight === 'rgb(238, 241, 245)' && bgDark === 'rgb(27, 31, 39)', `${bgLight} / ${bgDark}`);
+  check('預覽背景：淺色＝淺底、深色＝深底', bgLight === 'rgb(227, 232, 239)' && bgDark === 'rgb(27, 31, 39)', `${bgLight} / ${bgDark}`);
   const px = await pg.evaluate(async () => { const i = document.getElementById('mp-exp-img'); await i.decode(); const c = document.createElement('canvas'); c.width = 4; c.height = 4; const x = c.getContext('2d'); x.drawImage(i, 0, 0, i.naturalWidth, i.naturalHeight, 0, 0, 400, 800); return [...x.getImageData(1, 1, 1, 1).data].slice(0, 3); });
   check('深色圖片的底色是深色', px[0] < 40 && px[1] < 40 && px[2] < 40, px.join(','));
-  await pg.click('[data-mp-exp-prev]');
   await pg.click('[data-mp-fmt="long"]');
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth === 1080, null, { timeout: 10000 }).catch(() => {});
   img = await pg.evaluate(() => ({ w: document.getElementById('mp-exp-img').naturalWidth, h: document.getElementById('mp-exp-img').naturalHeight, sel: mpExportSelection(mpExportPool()).length }));
@@ -443,7 +462,8 @@ const PAIRS = [
   await pg.waitForTimeout(800);
   const capLarge = await pg.evaluate(() => MP.exp.capacity);
   check('大字的桌布上限比小字少', capLarge < s1.cap, `${capLarge} < ${s1.cap}`);
-  if (SHOTS) { await pg.click('[data-mp-exp-next]'); await pg.screenshot({ path: path.join(SHOTS, 'export-preview-iphone13.png') }); await pg.click('[data-mp-exp-prev]'); }
+  if (SHOTS) { await pg.evaluate(() => { MP.prefs.size = 'small'; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
+    await pg.evaluate(() => document.getElementById('mp-exp-preview-pane').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'export-preview-iphone13.png') }); }
   await pg.click('.mp-exp-settings-pane [data-mp-exp-close]');
 
   // ============ D. 返回、網址 ============
