@@ -31,7 +31,7 @@ const META = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture.json'), 'u
 // 已登入用戶；級別存在 cardSettings/<uid>_<cardId>（同正式站）
 const LEVELS = { 'cathay-cube': 'Level 3', 'yushan-unicard': 'UP選', 'sinopac-dawho': '大戶Plus等級', 'kgi-eslite': '黑卡' };
 
-function stub(url) {
+function stub(url, guest) {
   const R = 'Promise.resolve()';
   if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
   if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
@@ -39,7 +39,7 @@ function stub(url) {
     const USER = { uid:'testuid', email:'test@example.com', displayName:'測試用戶', photoURL:'', providerData:[{ providerId:'google.com' }] };
     const AUTH = { currentUser: USER };
     export function getAuth(){ return AUTH; }
-    export function onAuthStateChanged(auth, cb){ setTimeout(()=>cb(USER),0); }
+    export function onAuthStateChanged(auth, cb){ setTimeout(()=>cb(${guest ? 'null' : 'USER'}),0); }
     export class GoogleAuthProvider { setCustomParameters(){} }
     export function signInWithPopup(){return ${R};}
     export function signOut(){return ${R};}
@@ -110,7 +110,7 @@ const PAIRS = [
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   let pageErrors = 0;
 
-  async function newPage(vp, urlPath = '/index.html?start') {
+  async function newPage(vp, urlPath = '/index.html?start', guest = false) {
     const ctx = await browser.newContext({ viewport: { width: vp.w, height: vp.h }, deviceScaleFactor: vp.dpr || 1, hasTouch: !!vp.touch, isMobile: !!vp.touch });
     const pg = await ctx.newPage();
     pg.on('pageerror', e => { pageErrors++; console.log('   PAGE ERROR:', e.message); });
@@ -121,11 +121,11 @@ const PAIRS = [
     await pg.route('**/*', route => {
       const u = route.request().url();
       if (u.startsWith(base)) return route.continue();
-      if (u.includes('gstatic.com/firebasejs')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: stub(u) });
+      if (u.includes('gstatic.com/firebasejs')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: stub(u, guest) });
       return route.abort();
     });
     await pg.goto(base + urlPath, { waitUntil: 'domcontentloaded' });
-    await pg.waitForFunction(() => typeof currentUser !== 'undefined' && currentUser && typeof cardsData !== 'undefined' && cardsData && cardsData.cards, null, { timeout: 20000 });
+    await pg.waitForFunction((g) => typeof currentUser !== 'undefined' && (g || currentUser) && typeof cardsData !== 'undefined' && cardsData && cardsData.cards && typeof appStarted !== 'undefined' && appStarted, guest, { timeout: 20000 });
     await pg.waitForFunction(() => !document.getElementById('home-view-switch').hidden, null, { timeout: 10000 });
     return pg;
   }
@@ -186,6 +186,16 @@ const PAIRS = [
   check('配卡組合顯示在切換鈕下方（不是蓋住整頁）', inline.inMain && inline.notFixed && inline.below && inline.swOn, JSON.stringify(inline));
   check('切到配卡組合時，查詢區塊都隱藏', inline.othersHidden);
   check('沒有返回箭頭', inline.noBack);
+  const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related'].every(sel => [...document.querySelectorAll(sel)].every(el => getComputedStyle(el).display === 'none')));
+  check('切到配卡組合時，推薦活動與推薦比較也隱藏', extHidden);
+  const order = await pg.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
+    return { intro: !!document.querySelector('.mp-intro'), searchAboveTip: y('mp-searchbox') < y('mp-tip'), tipAboveList: y('mp-tip') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
+  check('順序：說明 → 搜尋框 → 提示 → 小抄 → 存成圖片', order.intro && order.searchAboveTip && order.tipAboveList && order.saveBelow, JSON.stringify(order));
+  await pg.fill('#mp-search', '麥當勞');
+  await pg.dispatchEvent('#mp-search', 'input');
+  const clr = await pg.isVisible('#mp-search-clear');
+  await pg.click('#mp-search-clear');
+  check('搜尋框有 ✕，一鍵清除', clr && (await pg.inputValue('#mp-search')) === '' && !(await pg.isVisible('#mp-search-clear')));
 
   // 預設：單欄＋分類
   const defaults = await pg.evaluate(() => ({ sort: MP.prefs.sort, layout: MP.prefs.layout, size: MP.prefs.size }));
@@ -372,7 +382,7 @@ const PAIRS = [
   // ============ C. 存成圖片 ============
   console.log('\n【C】存成圖片');
   await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.theme = 'light'; MP.prefs.sel = null; mpRender(); });
-  await pg.click('.mp-searchrow [data-mp-open-export]');
+  await pg.click('#mp-savebar [data-mp-open-export]');
   await pg.waitForSelector('#mp-export:not([hidden])');
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
   let img = await pg.evaluate(() => { const i = document.getElementById('mp-exp-img'); return { w: i.naturalWidth, h: i.naturalHeight, cap: MP.exp.capacity, sel: mpExportSelection(mpExportPool()).length, pool: mpExportPool().length, fits: MP.exp.fits }; });
@@ -440,6 +450,18 @@ const PAIRS = [
     await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; });
     await pg.screenshot({ path: path.join(SHOTS, 'home-switch-iphone13.png') });
   }
+  // ============ E. 未登入 ============
+  console.log('\n【E】未登入');
+  const gp = await newPage(VIEWPORTS[1], '/index.html?start', true);
+  check('未登入也看得到切換鈕', await gp.isVisible('#home-view-switch-mappings'));
+  await gp.click('#home-view-switch-mappings');
+  await gp.waitForSelector('#mappings-page:not([hidden])');
+  await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
+  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !!document.querySelector('.mp-demo-tag'), noPointer: getComputedStyle(document.getElementById('mp-list')).pointerEvents === 'none', searchHidden: document.getElementById('mp-searchbox').hidden, loginBtn: !!document.getElementById('mp-guest-login') }));
+  check('未登入：顯示範例小抄（標示範例、不能點）＋登入提示', gs.guest && gs.demoRows >= 3 && gs.tag && gs.noPointer && gs.searchHidden && gs.loginBtn, JSON.stringify(gs));
+  if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
+  await gp.context().close();
+
   check('過程中沒有 JavaScript 錯誤', pageErrors === 0, `${pageErrors} 個`);
 
   await browser.close();

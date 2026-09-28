@@ -382,6 +382,7 @@ function mpSetSwitchState(onMappings) {
     if (b) { b.classList.toggle('on', onMappings); b.setAttribute('aria-pressed', String(onMappings)); }
     const main = mpEl('mappings-page') && mpEl('mappings-page').closest('main');
     if (main) main.classList.toggle('mp-view', onMappings);
+    document.documentElement.classList.toggle('mp-view-on', onMappings);   // 推薦活動、推薦比較在 main 外面，靠這個 class 藏
 }
 
 async function openMappingsPage(options = {}) {
@@ -426,10 +427,11 @@ function closeMappingsPage(options = {}) {
 }
 
 // 登入／登出完成後由 auth-user-data.js 呼叫：更新首頁切換鈕、若網址是 /mappings 就開頁
+// 切換鈕登入與否都顯示（未登入切過去看範例＋登入提示）；登入狀態改變時重畫
 function updateMappingsSwitch() {
     const sw = mpEl('home-view-switch');
-    if (sw) sw.hidden = !currentUser;
-    if (!currentUser && MP.open) closeMappingsPage();
+    if (sw) sw.hidden = false;
+    if (MP.open) mpRender();
 }
 
 function refreshMappingsEntry() {
@@ -503,7 +505,7 @@ function mpReceiptHtml(sections, o) {
     const flag = e => e.changed ? `<button type="button" class="mp-flag" data-mp-changed="${esc(e.m.id)}" title="點一下看新的回饋率">回饋已變</button>` : '';
     const labs = e => o.labels && e.labels.length ? `<span class="mp-labs">${e.labels.map(l => `<span class="mp-lab">${esc(l)}</span>`).join('')}</span>` : '';
     const rate = e => `<span class="mp-rate">${esc(String(e.rate))}%</span>`;
-    const sec = s => s.title === null ? '' : (MP.prefs.sort === 'az'
+    const sec = s => s.title === null ? '' : (!o.demo && MP.prefs.sort === 'az'
         ? `<div class="mp-sec az"><span class="mp-ltr">${esc(s.title)}</span></div>`
         : `<div class="mp-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>`);
 
@@ -531,6 +533,30 @@ function mpReceiptHtml(sections, o) {
 // ============================================
 function mpSegHtml(name, cur, opts) {
     return `<div class="mp-seg" role="group" aria-label="${escapeHtml(name)}">${opts.map(([v, label, aria]) => `<button type="button" data-mp-${name === '排列方式' ? 'sort' : name === '版面' ? 'layout' : name === '字級' ? 'size' : 'x'}="${v}" class="${cur === v ? 'on' : ''}"${aria ? ` aria-label="${aria}" title="${aria}"` : ''}>${label}</button>`).join('')}</div>`;
+}
+
+// 未登入時的範例小抄：用站上同一支 calculateCardCashback()（訪客的預設級別）算出真實回饋率
+const MP_DEMO_PAIRS = [['taishin-richart', 'Line Pay'], ['yushan-unicard', 'Uber Eats'], ['hsbc-liveplus', '麥當勞'],
+    ['taishin-richart', 'momo'], ['cathay-cube', '全聯'], ['yushan-unicard', '高鐵'], ['sinopac-dawho', '國外']];
+let mpDemoCache = null;
+async function mpDemoGroups() {
+    if (mpDemoCache) return mpDemoCache;
+    if (!cardsData || !cardsData.cards) return null;
+    const groups = [];
+    for (const [cardId, term] of MP_DEMO_PAIRS) {
+        const card = cardsData.cards.find(c => c.id === cardId);
+        if (!card) continue;
+        let r = [];
+        try { r = await calculateCardCashback(card, term, 1000); } catch (e) { r = []; }
+        const x = Array.isArray(r) && r[0];
+        if (!x) continue;
+        const name = String(x.matchedItem || term);
+        const end = mpISO(x.matchedRateGroup && x.matchedRateGroup.periodEnd) || null;
+        groups.push({ key: name.toLowerCase(), name, order: groups.length, cat: mpCategoryOf(name.toLowerCase()), dead: false,
+            entries: [{ m: { id: 'demo' + groups.length, cardId, cardName: card.name, merchant: name, cashbackRate: x.rate }, rate: Number(x.rate) || 0, end, days: mpDaysLeft(end), dead: null, labels: [], changed: false, ext: false }] });
+    }
+    mpDemoCache = groups;
+    return groups;
 }
 
 function mpRender() {
@@ -569,12 +595,34 @@ function mpRender() {
     }
 
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
-    // 空狀態（沿用舊 modal 的四種分流：未登入／讀取失敗／真的沒資料／搜尋無結果）
+    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), savebar = mpEl('mp-savebar'), deadbarEl = mpEl('mp-deadbar');
+    const show = (el, on) => { if (el) el.hidden = !on; };
+    // 未登入：範例小抄＋登入提示（範例用站上同一支計算、預設級別算出來，不能點）
+    if (!currentUser) {
+        show(guest, true); show(searchbox, false); show(tip, false); show(savebar, false); show(deadbarEl, false);
+        if (notice) notice.hidden = true;
+        tools.innerHTML = '';
+        list.classList.add('mp-demo');
+        list.setAttribute('aria-label', '範例');
+        if (!list.querySelector('.mp-rc')) list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
+        mpDemoGroups().then(gs => {
+            if (!MP.open || currentUser) return;
+            list.innerHTML = gs && gs.length
+                ? '<div class="mp-demo-tag">範　例</div>' + mpReceiptHtml(mpArrange(gs, 'cat'), { layout: 'F', labels: false, big: false, drag: false, demo: true })
+                : '<div class="mp-empty"><p>登入後，在查詢結果按「釘選」，活動就會存到這裡。</p></div>';
+        });
+        return;
+    }
+    show(guest, false); show(tip, true);
+    list.classList.remove('mp-demo');
+    list.removeAttribute('aria-label');
+    // 空狀態（讀取失敗／真的沒資料）
     const mappings = userSpendingMappings || [];
-    if (!currentUser || !mappings.length) {
+    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0);
+    if (!mappings.length) {
         let title, hint, retry = false;
-        if (!currentUser) { title = '尚未登入'; hint = '配卡組合存在雲端帳號裡，請先登入才看得到自己的配卡'; }
-        else if (mappingsLoadState === 'error') { title = '配卡讀取失敗'; hint = '你的配卡還在雲端，只是這次沒讀到（網路不穩或 App 剛冷啟動）。請確認連線後重試。'; retry = true; }
+        show(deadbarEl, false); show(tip, false);
+        if (mappingsLoadState === 'error') { title = '配卡讀取失敗'; hint = '你的配卡還在雲端，只是這次沒讀到（網路不穩或 App 剛冷啟動）。請確認連線後重試。'; retry = true; }
         else { title = '還沒有配卡記錄'; hint = '在搜尋結果的卡片上點釘選，就會出現在這張刷卡小抄裡'; }
         list.innerHTML = `<div class="mp-empty"><p class="mp-empty-title">${escapeHtml(title)}</p><p>${escapeHtml(hint)}</p>` +
             (retry ? '<button type="button" class="mp-retry" id="mp-retry-btn">重新載入</button>' : '') + '</div>';
@@ -866,7 +914,9 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
         ? { name: 17, rate: 16, due: 12, lab: 11, th: [32, 20], cols: [32, 58, 58], row: 36, sub: 26, labRow: 20, sec: 14 }
         : { name: 14, rate: 13.5, due: 10, lab: 9.5, th: [26, 16], cols: [26, 48, 48], row: 28, sub: 21, labRow: 0, sec: 12 };
     const ops = [];
-    const PAD = 16, X0 = 18, W = MP_BASE_W - 36, IX = X0 + PAD, IW = W - PAD * 2;
+    // 桌布左右多留一點：iPhone 設桌布時常自動放大 1.1–1.2 倍，邊緣會被切掉
+    const X0 = o.fmt === 'wall' ? 30 : 18;
+    const PAD = 16, W = MP_BASE_W - X0 * 2, IX = X0 + PAD, IW = W - PAD * 2;
     let y = 22;   // 撕邊之下
     const font = (w, s, fam) => `${w} ${s}px ${fam}`;
     const colsW = S.cols[0] + S.cols[1] + S.cols[2] + 12;
@@ -1266,6 +1316,8 @@ async function mpRenderExport() {
     img.src = canvas.toDataURL('image/png');
     img.hidden = false;
     img.classList.toggle('wall', p.fmt === 'wall');
+    const expTip = mpEl('mp-exp-tip');
+    if (expTip) expTip.hidden = p.fmt !== 'wall';
     if (p.fmt === 'wall') {
         meta.textContent = fits ? `手機桌布 ${size.label} ${canvas.width}×${canvas.height}・${sel.length} 家` : '超出一個螢幕了，請少勾幾家，或改存長圖';
         meta.classList.toggle('over', !fits);
@@ -1397,8 +1449,10 @@ function mpBind() {
     // 拖曳把手上的 mousedown 會選取文字，擋掉
     page.addEventListener('mousedown', e => { if (e.target.closest('[data-mp-grip]')) e.preventDefault(); });
 
-    const search = mpEl('mp-search');
-    if (search) search.addEventListener('input', () => { MP.search = search.value.trim(); mpRender(); });
+    const search = mpEl('mp-search'), clearBtn = mpEl('mp-search-clear');
+    if (search) search.addEventListener('input', () => { MP.search = search.value.trim(); if (clearBtn) clearBtn.hidden = !search.value; mpRender(); });
+    if (clearBtn) clearBtn.addEventListener('click', () => { search.value = ''; MP.search = ''; clearBtn.hidden = true; mpRender(); search.focus(); });
+    mpEl('mp-guest-login')?.addEventListener('click', () => { if (typeof openAuthModal === 'function') openAuthModal('login'); });
 
     const input = mpEl('mp-edit-input');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); mpSaveEdit(false); } });
@@ -1433,11 +1487,7 @@ function mpBind() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mpBind();
-    // 上次是登入狀態的回訪者：不等 Firebase／Firestore（冷啟動可能要好幾秒）就先顯示切換鈕；
-    // 登入確認後 updateMappingsSwitch() 會校正（真的沒登入就藏起來）
-    try {
-        if (localStorage.getItem('pmc_known_logged_in') === '1') { const sw = mpEl('home-view-switch'); if (sw) sw.hidden = false; }
-    } catch (e) { /* ignore */ }
+
     // 直接打開 /mappings：先把頁面蓋上（資料載入後 refreshMappingsEntry 會重畫）
     if (location.pathname === '/mappings' && document.getElementById('mappings-page')) openMappingsPage({ fromHistory: true });
 });

@@ -220,7 +220,7 @@ const group = result.matchedRateGroup;
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）
 
-**程式與入口**：`js/mappings-page.js`（第 13 支模組，Grep 檔頭區塊目錄）。`#mappings-page` 放在 `<main>` 裡、切換鈕正下方（2026-09-28 站長要求不要蓋住整頁）：切過去時 `main.mp-view` 把其他區塊隱藏，改名／標題／回饋率面板與存圖對話框才是 fixed 覆蓋層（z-index 1060，卡片詳情 1100 疊在上面）；網址 `/mappings`（`_redirects` 改寫回首頁、`_headers` 設 `X-Robots-Tag: noindex`、不進 sitemap），`history.pushState`，返回手勢／上一頁會關頁。入口：首頁搜尋區上方的切換鈕 `#home-view-switch`（「查詢回饋｜我的配卡組合」，不顯示數量；只給登入者，取代舊浮動按鈕 `#my-mappings-btn`）＋頭像選單。**切換鈕不等 Firestore**：`pmc_known_logged_in` 回訪者一開頁就顯示、登入確認當下 `updateMappingsSwitch()` 再校正（原本等到資料全載完，站長實測要 10 秒）。登入／登出完成後 `refreshMappingsEntry()` 更新狀態、網址是 `/mappings` 時開頁。
+**程式與入口**：`js/mappings-page.js`（第 13 支模組，Grep 檔頭區塊目錄）。`#mappings-page` 放在 `<main>` 裡、切換鈕正下方（2026-09-28 站長要求不要蓋住整頁）：切過去時 `main.mp-view` 把其他區塊隱藏，改名／標題／回饋率面板與存圖對話框才是 fixed 覆蓋層（z-index 1060，卡片詳情 1100 疊在上面）；網址 `/mappings`（`_redirects` 改寫回首頁、`_headers` 設 `X-Robots-Tag: noindex`、不進 sitemap），`history.pushState`，返回手勢／上一頁會關頁。入口：首頁搜尋區上方的頁籤 `#home-view-switch`（「查詢回饋｜我的配卡組合」，做成主要導覽樣式：選中＝品牌藍實心；不顯示數量；**登入與否都顯示**，取代舊浮動按鈕 `#my-mappings-btn`）＋頭像選單。未登入切過去：範例小抄（`mpDemoGroups`，用真計算＋訪客預設級別，標「範例」、不能點）＋登入提示。切過去時 `html.mp-view-on` 另外藏掉 main 外面的推薦活動、推薦比較、跳推薦活動浮標。頁面順序：說明 → 工具列 → 搜尋框（含 ✕）→ 提示 → 小抄 → 存成圖片 → 刪除全部失效。登入／登出完成後 `refreshMappingsEntry()` 更新狀態、網址是 `/mappings` 時開頁。
 
 **視圖**：收據風格（上下鋸齒撕邊、`PICK MY CARD ▪ 年-月` 抬頭、`=====`、欄位標題、底部 Code 128 條碼＝`PICKMYCARD.APP`，已用 python-barcode 比對模組序列）。**以商家為單位**（同一商家不分大小寫合併；同商家多張卡時回饋率高的在前、其餘半透明），順序：商家 → 卡圖 → 回饋率 → 期限。三種排列：自訂（`order` 欄位，只有這模式有 ⋮⋮ 拖曳）／A–Z（瀏覽器內建 pinyin collation＋破音字表 `MP_POLY`）／分類（`MP_CAT_RULES` 關鍵字對原名比對；行動支付橘、其他分類藍）。預設單欄＋分類＋小字；偏好存 `mappingsPrefs_<uid>`（本機）。
 
@@ -233,7 +233,7 @@ const group = result.matchedRateGroup;
 - **失效清理**：點商家名稱的面板裡每筆都有「刪除這個（失效）活動」按鈕；收據下方「刪除全部失效活動（N）」兩段式確認（不用 `confirm()`）。
 - **小抄標題**：點「刷卡小抄」可改，上限 10 單位（中文字 1、英數 0.6，大字也不換行），存 `users/<uid>.mappingsTitle`＋本機 `mappingsTitle_<uid>`，存圖同步使用。
 - **改名**：點商家名稱開面板，只改顯示名稱，存 Firestore `users/<uid>.merchantAliases`（鍵＝原名小寫）＋本機鏡像 `merchantAliases_<uid>`；「商家名稱重設」用 `deleteField()`。搜尋、計算、分類一律用原名。移除配對也在這個面板。點卡圖開 `showCardDetail()`。
-- **存成圖片**：canvas 直接繪製（`mpLayoutReceipt` 排版一次，量高度與繪製共用），預覽就是實際輸出。桌布：手機讀 `screen × devicePixelRatio`，其餘預設 iPhone 1179×2556，可切 Android 1080×2400／16:9；上方 29%（`MP_WALL_TOP`）留給鎖定畫面日期時鐘、下方 15%（`MP_WALL_BOTTOM`）留給手電筒／相機鈕（依站長 iPhone 13 實測）；16:9 只適合 iPhone 8／SE，全螢幕 iPhone 會被裁左右（設定裡有提示）；「全選」只選放得下的前 N 家（實際排版量出來）。長圖寬 1080 不限數量。只有淺色／深色。手機走 Web Share（iPhone 會有「儲存影像」），否則下載。
+- **存成圖片**：canvas 直接繪製（`mpLayoutReceipt` 排版一次，量高度與繪製共用），預覽就是實際輸出。桌布：手機讀 `screen × devicePixelRatio`，其餘預設 iPhone 1179×2556，可切 Android 1080×2400／16:9；上方 29%（`MP_WALL_TOP`）留給鎖定畫面日期時鐘、下方 15%（`MP_WALL_BOTTOM`）留給手電筒／相機鈕、左右各留 30/390（依站長 iPhone 13 實測）。**iPhone 設桌布時系統常自動放大約 1.1–1.2 倍（自動構圖／透視縮放），網頁無法控制**，預覽下方有提示請用戶兩指縮回、關透視縮放；16:9 只適合 iPhone 8／SE，全螢幕 iPhone 會被裁左右（設定裡有提示）；「全選」只選放得下的前 N 家（實際排版量出來）。長圖寬 1080 不限數量。只有淺色／深色。手機走 Web Share（iPhone 會有「儲存影像」），否則下載。
 - **搜尋框** `#mp-search`：同時比對原名、自訂名稱、卡名；字級固定 16px 防 iOS 聚焦縮放（樣式用 `#mappings-page .mp-search` 提特異性，壓過全域 input 樣式）。搜尋中停用拖曳。
 - **class 一律 `mp-` 前綴**；頁首用 `div` 不用 `header`（見教訓）。
 
