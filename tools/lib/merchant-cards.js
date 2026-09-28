@@ -25,7 +25,7 @@ const REPO = path.resolve(__dirname, '..', '..');
 const MODULES = [
   'core-utils', 'data-loader', 'home-ui', 'search-match', 'cashback-engine',
   'results-display', 'auth-user-data', 'cards-modals', 'card-detail',
-  'spending-mappings', 'levels-payments', 'quick-options-misc'
+  'spending-mappings', 'levels-payments', 'quick-options-misc', 'mappings-page'
 ];
 
 function makeElementStub() {

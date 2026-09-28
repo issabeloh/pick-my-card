@@ -1,0 +1,4 @@
+# Cloudflare Pages 改寫規則（2026-09-28 新增）
+# 「我的配卡組合」完整頁面：/mappings 回傳首頁（網址不變，狀態 200），由 js/mappings-page.js
+# 依網址打開頁面。它是登入後的個人資料，_headers 對這個網址設了 noindex，也不放進 sitemap.xml。
+/mappings  /  200
