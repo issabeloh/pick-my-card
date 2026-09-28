@@ -95,21 +95,25 @@
     <div class="lp-progress" aria-hidden="true"><div class="lp-progress-bar" id="lp-progress-bar"></div></div>
 
     <!-- 開場提示 -->
-    <!-- 2026-09-28：開場標語＋直式介紹影片（手機框，標語在上）。
-         ⚠️ 不自動播放、preload="none"：首屏只載 poster 一張圖，按播放才開始抓影片，
-            首頁速度不受影響。預設靜音，使用者可用播放器控制列取消靜音。
-         data-src 留空＝影片還沒準備好：JS 不加 .lp-hint--video，整個手機框維持隱藏，
-         畫面退回純標語＋箭頭。放影片時填 data-src（mp4）與 data-poster（封面圖）即可。 -->
+    <!-- 2026-09-28：開場標語＋介紹影片入口。
+         版面：標語下方一顆小的「▶ 觀看 20 秒的介紹影片」按鈕，點了才開全螢幕影片層
+         （#lp-video-layer）。⚠️ preload="none"、按了才設 src：沒點就一個 byte 都不下載。
+         預設靜音，使用者用播放器控制列取消靜音。
+         data-src 留空＝影片還沒準備好：JS 不加 .lp-hint--video，按鈕維持隱藏。
+         放影片時填 data-src（mp4）與 data-poster（封面圖，可省略）即可。 -->
     <div class="lp-hint" id="lp-hint">
         <p class="lp-hint-title">信用卡回饋從此變簡單</p>
-        <div class="lp-intro-video" id="lp-intro-video"
-             data-src=""
-             data-poster="">
-            <video id="lp-intro-video-el" playsinline muted preload="none"
-                   aria-label="Pick My Card 介紹影片"></video>
-            <button type="button" class="lp-intro-play" id="lp-intro-play" aria-label="播放介紹影片"></button>
-        </div>
+        <button type="button" class="lp-intro-btn" id="lp-intro-btn"
+                data-src=""
+                data-poster=""
+                aria-haspopup="dialog"><span class="lp-intro-btn-icon" aria-hidden="true"></span>觀看 20 秒的介紹影片</button>
         <span class="lp-hint-arrow" aria-hidden="true"></span><span class="lp-hint-sub" aria-hidden="true">scroll</span>
+    </div>
+
+    <!-- 介紹影片全螢幕層（按下 #lp-intro-btn 才開） -->
+    <div class="lp-video-layer" id="lp-video-layer" role="dialog" aria-modal="true" aria-label="Pick My Card 介紹影片" hidden>
+        <video id="lp-video-el" playsinline muted preload="none" controls></video>
+        <button type="button" class="lp-video-close" id="lp-video-close" aria-label="關閉影片"></button>
     </div>
 
     <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
