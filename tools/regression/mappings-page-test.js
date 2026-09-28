@@ -179,15 +179,15 @@ const PAIRS = [
   const inline = await pg.evaluate(() => {
     const page = document.getElementById('mappings-page'), sw = document.getElementById('home-view-switch');
     const main = page.closest('main');
-    const others = main ? [...main.children].filter(el => el !== page && el !== sw) : [];
+    const others = [...document.querySelectorAll('[data-view="search"]')];
     return { inMain: !!main, notFixed: getComputedStyle(page).position !== 'fixed', below: page.getBoundingClientRect().top >= sw.getBoundingClientRect().bottom - 1,
       othersHidden: others.every(el => getComputedStyle(el).display === 'none'), swOn: document.getElementById('home-view-switch-mappings').classList.contains('on'), noBack: !document.querySelector('[data-mp-back]') };
   });
   check('配卡組合顯示在切換鈕下方（不是蓋住整頁）', inline.inMain && inline.notFixed && inline.below && inline.swOn, JSON.stringify(inline));
   check('切到配卡組合時，查詢區塊都隱藏', inline.othersHidden);
   check('沒有返回箭頭', inline.noBack);
-  const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related'].every(sel => [...document.querySelectorAll(sel)].every(el => getComputedStyle(el).display === 'none')));
-  check('切到配卡組合時，推薦活動與推薦比較也隱藏', extHidden);
+  const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related', '#scroll-to-spotlight-btn'].every(sel => { const el = document.querySelector(sel); return el && el.closest('[data-view="search"]') && getComputedStyle(el.closest('[data-view="search"]')).display === 'none'; }));
+  check('推薦活動、推薦比較屬於「查詢回饋」畫面（切到配卡組合時整個畫面隱藏）', extHidden);
   const order = await pg.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
     return { intro: !!document.querySelector('.mp-intro'), searchAboveTip: y('mp-searchbox') < y('mp-tip'), tipAboveList: y('mp-tip') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
   check('順序：說明 → 搜尋框 → 提示 → 小抄 → 存成圖片', order.intro && order.searchAboveTip && order.tipAboveList && order.saveBelow, JSON.stringify(order));
@@ -438,6 +438,8 @@ const PAIRS = [
   await pg.waitForFunction(() => document.getElementById('mappings-page').hidden, null, { timeout: 5000 });
   const backState = await pg.evaluate(() => ({ searchVisible: getComputedStyle(document.querySelector('.input-section')).display !== 'none', on: document.getElementById('home-view-switch-search').classList.contains('on') }));
   check('點「查詢回饋」：回到查詢畫面、網址回到首頁', new URL(pg.url()).pathname !== '/mappings' && backState.searchVisible && backState.on, pg.url());
+  const viewsBack = await pg.evaluate(() => ({ search: [...document.querySelectorAll('[data-view="search"]')].every(el => !el.hidden), mappings: document.getElementById('mappings-page').hidden }));
+  check('回到查詢回饋：查詢畫面兩塊都顯示、配卡組合隱藏', viewsBack.search && viewsBack.mappings, JSON.stringify(viewsBack));
   await pg.click('#home-view-switch-mappings');
   await pg.waitForSelector('#mappings-page:not([hidden])');
   await pg.goBack();

@@ -9170,12 +9170,10 @@ mark.cashback-search-hl {
     box-shadow: 0 6px 14px -6px rgba(30, 64, 175, .6);
 }
 .home-view-switch svg { width: 18px; height: 18px; flex: none; }
-/* 切到「我的配卡組合」時，main 裡除了切換鈕與配卡區以外全部隱藏（配卡區顯示在切換鈕下方） */
-main.mp-view > :not(#home-view-switch):not(#mappings-page) { display: none !important; }
-/* 推薦活動、推薦比較、跳到推薦活動的浮標都屬於「查詢回饋」，在 main 外面，另外藏 */
-html.mp-view-on .spotlight-section,
-html.mp-view-on .mc-related,
-html.mp-view-on #scroll-to-spotlight-btn { display: none !important; }
+/* 頁籤切換的「畫面」：同一個 data-view 的容器一起顯示／隱藏（setAppView，js/mappings-page.js）。
+   查詢回饋＝#view-search（main 欄內）＋#view-search-extras（推薦活動、推薦比較，放在側欄外以跨整個版面寬）；
+   我的配卡組合＝#mappings-page */
+.app-view[hidden] { display: none !important; }
 
 .mp-page {
     color: #111827;

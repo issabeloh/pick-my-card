@@ -387,9 +387,10 @@
             </nav>
 
             <!-- 我的配卡組合「刷卡小抄」（2026-09-28，js/mappings-page.js）：顯示在切換鈕下方、取代 main 裡的查詢內容
-                 （main.mp-view 時其他區塊隱藏）。網址 /mappings（_redirects 改寫回首頁、_headers 設 noindex）。
+                 （setAppView 切換 data-view 畫面，查詢回饋畫面整個隱藏）。網址 /mappings（_redirects 改寫回首頁、_headers 設 noindex）。
                  面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
-            <section id="mappings-page" class="mp-page" hidden aria-label="我的配卡組合">
+            <!-- ===== 畫面：我的配卡組合（data-view="mappings"）===== -->
+            <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的配卡組合">
                 <p class="mp-intro">在查詢結果按「釘選」的活動，都會存到這張刷卡小抄。刷卡前打開看一眼，或存成圖片放在手機裡。</p>
                 <div class="mp-layout">
                     <div class="mp-side">
@@ -464,6 +465,11 @@
                 </div>
             </section>
 
+            <!-- ===== 畫面：查詢回饋（data-view="search"）=====
+                 頁籤切換靠 setAppView()（js/mappings-page.js）：同一個 data-view 的區塊一起顯示／隱藏。
+                 這個畫面分成兩塊：這裡（main 欄內的查詢與結果）＋ app-layout 下方的 #view-search-extras
+                 （推薦活動、推薦比較——桌機要跨整個版面寬，所以放在側欄外面）。 -->
+            <div class="app-view" id="view-search" data-view="search">
             <section class="input-section" style="display: none;">
                 <div class="input-row-with-button">
                     <div class="form-group compact">
@@ -642,8 +648,13 @@
                 </div>
             </section>
 
+            </div><!-- /#view-search -->
+
         </main>
         </div><!-- /.app-layout -->
+
+        <!-- ===== 畫面：查詢回饋（續）：推薦活動、推薦比較、跳到推薦活動的浮標 ===== -->
+        <div class="app-view" id="view-search-extras" data-view="search">
 
         <section class="spotlight-section" id="spotlight-section" aria-label="推薦活動" style="display: none;">
             <div class="spotlight-header">
@@ -697,6 +708,13 @@
 <p>在蝦皮購物，除了刷卡本身的回饋，還有常被漏掉的導購加碼：先經過 <a href="https://www.shopback.com.tw/search?keyword=%E8%9D%A6%E7%9A%AE" target="_blank" rel="noopener nofollow">Shopback</a> 導購再進蝦皮下單，可以多拿一筆現金回饋，和信用卡回饋不衝突。蝦皮購物也支援<strong>街口支付</strong>結帳，比較看看是否比信用卡本身的回饋更高！</p>
 </section>
 
+
+        <!-- 精選活動快速跳轉浮標（有搜尋結果時由 JS 加 .is-visible 顯示） -->
+        <button id="scroll-to-spotlight-btn" class="scroll-to-spotlight-btn" aria-label="推薦活動">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v13M6 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="btn-text">推薦活動</span>
+        </button>
+        </div><!-- /#view-search-extras -->
 
         <!-- 廣告列（精選活動下方、警語橫條上方）
              回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
@@ -1316,11 +1334,6 @@
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 19V6M6 12l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
 
-    <!-- 精選活動快速跳轉浮標（有搜尋結果時由 JS 加 .is-visible 顯示） -->
-    <button id="scroll-to-spotlight-btn" class="scroll-to-spotlight-btn" aria-label="推薦活動">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 5v13M6 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="btn-text">推薦活動</span>
-    </button>
 
     <!-- 圖片放大檢視 lightbox -->
     <div id="image-lightbox" class="image-lightbox" style="display: none;" role="dialog" aria-label="放大圖片">

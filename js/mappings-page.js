@@ -375,14 +375,18 @@ async function mpUpdateDeadlines() {
 // ============================================
 function mpEl(id) { return document.getElementById(id); }
 
-// 切到「我的配卡組合」：顯示在切換鈕下方，main 其他區塊隱藏（main.mp-view），不是蓋住整頁的覆蓋層
+// 頁籤切換「畫面」：index.html 裡每個畫面的容器都標 data-view（search／mappings），
+// 同一個畫面可能分成好幾塊（查詢回饋＝#view-search＋#view-search-extras），一起顯示或隱藏
+function setAppView(name) {
+    document.querySelectorAll('[data-view]').forEach(el => { el.hidden = el.dataset.view !== name; });
+}
+
+// 切到「我的配卡組合」：顯示在頁籤下方，查詢回饋畫面隱藏，不是蓋住整頁的覆蓋層
 function mpSetSwitchState(onMappings) {
     const a = mpEl('home-view-switch-search'), b = mpEl('home-view-switch-mappings');
     if (a) { a.classList.toggle('on', !onMappings); a.setAttribute('aria-pressed', String(!onMappings)); }
     if (b) { b.classList.toggle('on', onMappings); b.setAttribute('aria-pressed', String(onMappings)); }
-    const main = mpEl('mappings-page') && mpEl('mappings-page').closest('main');
-    if (main) main.classList.toggle('mp-view', onMappings);
-    document.documentElement.classList.toggle('mp-view-on', onMappings);   // 推薦活動、推薦比較在 main 外面，靠這個 class 藏
+    setAppView(onMappings ? 'mappings' : 'search');
 }
 
 async function openMappingsPage(options = {}) {
