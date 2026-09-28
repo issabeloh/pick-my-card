@@ -32,8 +32,23 @@ const MP = {
     search: '',
     editKey: null,
     exp: { step: 'settings', dataUrl: null, fits: true, capacity: 0 },
+    editing: false,         // 按「編輯」才顯示排列／字級／版面等設定（預設只看乾淨的小抄＋搜尋框）
+    demo: null,             // 未登入時的範例清單（只在記憶體，不存任何地方）
     drag: null
 };
+
+// 目前這張小抄的配對清單：登入＝自己的配對；未登入＝範例（可以照樣排列、改名、存圖，只是不會保存）
+function mpList() {
+    if (currentUser) return Array.isArray(userSpendingMappings) ? userSpendingMappings : [];
+    return MP.demo || [];
+}
+function mpSetList(arr) {
+    if (currentUser) userSpendingMappings = arr; else MP.demo = arr;
+}
+async function mpPersist() {
+    if (currentUser) return saveSpendingMappings(userSpendingMappings);
+    return true;   // 範例不保存
+}
 
 function mpPrefsKey() {
     return currentUser ? `mappingsPrefs_${currentUser.uid}` : 'mappingsPrefs_guest';
@@ -102,10 +117,10 @@ function loadMerchantAliases(userData) {
 }
 
 async function mpSetAlias(key, alias) {
-    if (!currentUser) return;
     const clean = (alias || '').trim().slice(0, 20);
     const reset = !clean || clean.toLowerCase() === key;
     if (reset) delete userMerchantAliases[key]; else userMerchantAliases[key] = clean;
+    if (!currentUser) return;   // 範例：只改畫面
     try { localStorage.setItem(`merchantAliases_${currentUser.uid}`, JSON.stringify(userMerchantAliases)); } catch (e) { /* ignore */ }
     try {
         if (window.db && window.doc && window.setDoc) {
@@ -127,11 +142,11 @@ function mpKeyOf(m) {
 
 // 顯示名稱：自訂名稱優先，否則用這組第一筆的原名
 async function mpSetTitle(title) {
-    if (!currentUser) return;
     let t = String(title || '').trim();
     if (t === MP_DEFAULT_TITLE) t = '';
     if (mpTitleUnits(t) > MP_TITLE_MAX) return;
     userMappingsTitle = t;
+    if (!currentUser) return;   // 範例：只改畫面
     try { localStorage.setItem(`mappingsTitle_${currentUser.uid}`, t); } catch (e) { /* ignore */ }
     try {
         if (window.db && window.doc && window.setDoc) {
@@ -213,7 +228,7 @@ function mpDaysLeft(end) {
 
 // 配對 → 以商家分組。組序＝組內最小 order；組內依回饋率高→低。
 function mpBuildGroups() {
-    const list = Array.isArray(userSpendingMappings) ? userSpendingMappings : [];
+    const list = mpList();
     list.forEach((m, i) => { if (m.order === undefined) m.order = i; });
     const byKey = new Map();
     list.forEach(m => {
@@ -327,7 +342,7 @@ async function mpProbe(m) {
 async function mpProbeAll() {
     if (MP.probing) return MP.probing;
     MP.probing = (async () => {
-        const list = Array.isArray(userSpendingMappings) ? userSpendingMappings.slice() : [];
+        const list = mpList().slice();
         for (const m of list) {
             const prev = MP.status.get(m.id) || {};
             const r = await mpProbe(m);
@@ -344,7 +359,7 @@ async function mpUpdateDeadlines() {
     await mpProbeAll();
     let ext = 0;
     const changed = [];
-    (userSpendingMappings || []).forEach(m => {
+    mpList().forEach(m => {
         const st = MP.status.get(m.id) || {};
         const curEnd = mpISO(m.periodEnd);
         if (st.next) {
@@ -362,7 +377,7 @@ async function mpUpdateDeadlines() {
             changed.push(`${userMerchantAliases[mpKeyOf(m)] || optimizeMerchantName(m.merchant)}（${m.cardName} ${m.cashbackRate}% → ${rates}%）`);
         }
     });
-    if (ext > 0) await saveSpendingMappings(userSpendingMappings);
+    if (ext > 0) await mpPersist();
     MP.updated = { ext, changed };
     if (window.logEvent && window.firebaseAnalytics) {
         window.logEvent(window.firebaseAnalytics, 'mappings_update_deadlines', { extended: ext, changed: changed.length });
@@ -379,6 +394,7 @@ function mpEl(id) { return document.getElementById(id); }
 // 同一個畫面可能分成好幾塊（查詢回饋＝#view-search＋#view-search-extras），一起顯示或隱藏
 function setAppView(name) {
     document.querySelectorAll('[data-view]').forEach(el => { el.hidden = el.dataset.view !== name; });
+    document.body.dataset.appView = name;
 }
 
 // 切到「我的配卡組合」：顯示在頁籤下方，查詢回饋畫面隱藏，不是蓋住整頁的覆蓋層
@@ -410,8 +426,9 @@ async function openMappingsPage(options = {}) {
         await loadSpendingMappings();
     }
     MP.updated = null;
+    if (!currentUser) await mpBuildDemo();
     mpRender();
-    if (currentUser && userSpendingMappings && userSpendingMappings.length) mpProbeAll();
+    if (mpList().length) mpProbeAll();
 }
 
 function closeMappingsPage(options = {}) {
@@ -440,6 +457,7 @@ function updateMappingsSwitch() {
 
 function refreshMappingsEntry() {
     updateMappingsSwitch();
+    if (currentUser) MP.demo = null;
     MP.prefs = null;
     MP.status.clear();
     MP.probed = false;
@@ -542,11 +560,9 @@ function mpSegHtml(name, cur, opts) {
 // 未登入時的範例小抄：用站上同一支 calculateCardCashback()（訪客的預設級別）算出真實回饋率
 const MP_DEMO_PAIRS = [['taishin-richart', 'Line Pay'], ['yushan-unicard', 'Uber Eats'], ['hsbc-liveplus', '麥當勞'],
     ['taishin-richart', 'momo'], ['cathay-cube', '全聯'], ['yushan-unicard', '高鐵'], ['sinopac-dawho', '國外']];
-let mpDemoCache = null;
-async function mpDemoGroups() {
-    if (mpDemoCache) return mpDemoCache;
-    if (!cardsData || !cardsData.cards) return null;
-    const groups = [];
+async function mpBuildDemo() {
+    if (MP.demo || !cardsData || !cardsData.cards) return MP.demo;
+    const list = [];
     for (const [cardId, term] of MP_DEMO_PAIRS) {
         const card = cardsData.cards.find(c => c.id === cardId);
         if (!card) continue;
@@ -554,13 +570,12 @@ async function mpDemoGroups() {
         try { r = await calculateCardCashback(card, term, 1000); } catch (e) { r = []; }
         const x = Array.isArray(r) && r[0];
         if (!x) continue;
-        const name = String(x.matchedItem || term);
-        const end = mpISO(x.matchedRateGroup && x.matchedRateGroup.periodEnd) || null;
-        groups.push({ key: name.toLowerCase(), name, order: groups.length, cat: mpCategoryOf(name.toLowerCase()), dead: false,
-            entries: [{ m: { id: 'demo' + groups.length, cardId, cardName: card.name, merchant: name, cashbackRate: x.rate }, rate: Number(x.rate) || 0, end, days: mpDaysLeft(end), dead: null, labels: [], changed: false, ext: false }] });
+        list.push({ id: 'demo_' + list.length, cardId, cardName: card.name, merchant: String(x.matchedItem || term), cashbackRate: x.rate,
+            periodEnd: mpISO(x.matchedRateGroup && x.matchedRateGroup.periodEnd) || null,
+            periodStart: mpISO(x.matchedRateGroup && x.matchedRateGroup.periodStart) || null, order: list.length, demo: true });
     }
-    mpDemoCache = groups;
-    return groups;
+    if (!currentUser) MP.demo = list;
+    return list;
 }
 
 function mpRender() {
@@ -582,9 +597,15 @@ function mpRender() {
                 ? `<label class="mp-chk"><input type="checkbox" id="mp-labels-toggle" ${p.labels ? 'checked' : ''}>顯示等級／方案</label>`
                 : '<span class="mp-chk na">雙欄不顯示等級／方案</span>'}
             <span class="mp-grow"></span>
-            <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !(userSpendingMappings || []).length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
+            <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
 
+    // 編輯模式：設定、提示列、拖曳把手只在按「編輯」後出現；預設只看乾淨的小抄＋搜尋框
+    tools.hidden = !MP.editing;
+    const layoutEl = mpEl('mappings-page') && mpEl('mappings-page').querySelector('.mp-layout');
+    if (layoutEl) layoutEl.classList.toggle('editing', MP.editing);
+    const editBtn = mpEl('mp-edit-toggle');
+    if (editBtn) { editBtn.textContent = MP.editing ? '完成' : '編輯'; editBtn.classList.toggle('on', MP.editing); editBtn.setAttribute('aria-pressed', String(MP.editing)); }
     // 提示列的文字寫在 index.html；這裡只控制「拖曳」那句（只有自訂排列才顯示）
     if (tip) tip.querySelectorAll('.mp-tip-drag').forEach(el => { el.hidden = !(p.sort === 'custom' && !MP.search); });
 
@@ -593,7 +614,7 @@ function mpRender() {
             const u = MP.updated;
             const head = u.ext ? `已更新 ${u.ext} 筆截止日期` : '沒有需要延長的期限';
             notice.innerHTML = `<b>${escapeHtml(head)}</b>` + (u.ext ? '（回饋率不變，期限延長，日期下有點狀底線）' : '') +
-                (u.changed.length ? `<span class="bad">${u.changed.length} 筆回饋率變了，沒有自動更新：${u.changed.map(escapeHtml).join('、')}。請重新搜尋後再釘選。</span>` : '');
+                (u.changed.length ? `<span class="bad">${u.changed.length} 筆回饋率變了，沒有自動更新：${u.changed.map(escapeHtml).join('、')}。請重新搜尋後再加到我的配卡。</span>` : '');
             notice.hidden = false;
         } else notice.hidden = true;
     }
@@ -601,33 +622,24 @@ function mpRender() {
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
     const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), savebar = mpEl('mp-savebar'), deadbarEl = mpEl('mp-deadbar');
     const show = (el, on) => { if (el) el.hidden = !on; };
-    // 未登入：範例小抄＋登入提示（範例用站上同一支計算、預設級別算出來，不能點）
-    if (!currentUser) {
-        show(guest, true); show(searchbox, false); show(tip, false); show(savebar, false); show(deadbarEl, false);
-        if (notice) notice.hidden = true;
-        tools.innerHTML = '';
-        list.classList.add('mp-demo');
-        list.setAttribute('aria-label', '範例');
-        if (!list.querySelector('.mp-rc')) list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
-        mpDemoGroups().then(gs => {
-            if (!MP.open || currentUser) return;
-            list.innerHTML = gs && gs.length
-                ? '<div class="mp-demo-tag">範　例</div>' + mpReceiptHtml(mpArrange(gs, 'cat'), { layout: 'F', labels: false, big: false, drag: false, demo: true })
-                : '<div class="mp-empty"><p>登入後，在查詢結果按「釘選」，活動就會存到這裡。</p></div>';
-        });
+    // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
+    show(guest, !currentUser);
+    const demoTag = mpEl('mp-demo-tag');
+    if (demoTag) demoTag.hidden = !!currentUser;
+    if (!currentUser && !MP.demo) {
+        list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
+        mpBuildDemo().then(() => { if (MP.open && !currentUser && MP.demo) { mpRender(); mpProbeAll(); } });
+        show(searchbox, false); show(savebar, false); show(deadbarEl, false); show(tip, false);
         return;
     }
-    show(guest, false); show(tip, true);
-    list.classList.remove('mp-demo');
-    list.removeAttribute('aria-label');
     // 空狀態（讀取失敗／真的沒資料）
-    const mappings = userSpendingMappings || [];
-    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0);
+    const mappings = mpList();
+    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
         show(deadbarEl, false); show(tip, false);
         if (mappingsLoadState === 'error') { title = '配卡讀取失敗'; hint = '你的配卡還在雲端，只是這次沒讀到（網路不穩或 App 剛冷啟動）。請確認連線後重試。'; retry = true; }
-        else { title = '還沒有配卡記錄'; hint = '在搜尋結果的卡片上點釘選，就會出現在這張刷卡小抄裡'; }
+        else { title = '還沒有配卡記錄'; hint = '在查詢結果的卡片上按「加到我的配卡」，就會出現在這張刷卡小抄裡'; }
         list.innerHTML = `<div class="mp-empty"><p class="mp-empty-title">${escapeHtml(title)}</p><p>${escapeHtml(hint)}</p>` +
             (retry ? '<button type="button" class="mp-retry" id="mp-retry-btn">重新載入</button>' : '') + '</div>';
         saveBtns.forEach(b => { b.disabled = true; });
@@ -646,13 +658,14 @@ function mpRender() {
     const sections = mpArrange(groups, p.sort);
     list.innerHTML = mpReceiptHtml(sections, {
         layout: p.layout, labels: p.layout === 'F' && p.labels, big: p.size === 'large',
-        drag: p.sort === 'custom' && !MP.search
+        drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();
 
     const deadbar = mpEl('mp-deadbar');
     if (deadbar) {
-        const n = MP.search ? 0 : mpDeadIds().length;
+        // 「刪除全部失效活動」屬於整理動作，跟其他設定一樣按「編輯」後才出現
+        const n = MP.search || !MP.editing ? 0 : mpDeadIds().length;
         deadbar.hidden = n === 0;
         deadbar.innerHTML = n ? `<button type="button" class="mp-btn-danger" id="mp-delete-dead">${escapeHtml(`刪除全部失效活動（${n}）`)}</button>` : '';
     }
@@ -704,10 +717,10 @@ function mpStartDrag(e) {
         if (!moved) return;
         const keys = [...list.querySelectorAll('[data-mp-row]')].map(el => el.dataset.mpRow);
         const rank = new Map(keys.map((k, i) => [k, i]));
-        const sorted = (userSpendingMappings || []).slice().sort((a, b) =>
+        const sorted = mpList().slice().sort((a, b) =>
             ((rank.get(mpKeyOf(a)) ?? 1e9) - (rank.get(mpKeyOf(b)) ?? 1e9)) || ((a.order || 0) - (b.order || 0)));
         sorted.forEach((m, i) => { m.order = i; });
-        await saveSpendingMappings(userSpendingMappings);
+        await mpPersist();
         mpRender();
     };
     document.addEventListener('pointermove', onMove);
@@ -759,7 +772,7 @@ async function mpSaveTitle(reset) {
 
 // ---- 回饋率已變：顯示新舊回饋率，讓用戶確認更新 ----
 function mpOpenRateSheet(id) {
-    const m = (userSpendingMappings || []).find(x => x.id === id);
+    const m = mpList().find(x => x.id === id);
     const st = MP.status.get(id) || {};
     const sheet = mpEl('mp-rate-sheet');
     if (!m || !sheet || !(st.cands && st.cands.length)) return;
@@ -769,7 +782,7 @@ function mpOpenRateSheet(id) {
     const name = userMerchantAliases[mpKeyOf(m)] || optimizeMerchantName(m.merchant);
     mpEl('mp-rate-body').innerHTML =
         `<p><b>${esc(name)}</b>・${esc(mpCardName(m.cardId, m.cardName))}</p>` +
-        `<div class="mp-rate-old">原本釘選：<b>${esc(String(m.cashbackRate))}%</b>（${esc(endTxt(mpISO(m.periodEnd)))}）</div>` +
+        `<div class="mp-rate-old">原本加入時：<b>${esc(String(m.cashbackRate))}%</b>（${esc(endTxt(mpISO(m.periodEnd)))}）</div>` +
         `<p>目前資料裡的回饋率${st.cands.length > 1 ? '有幾種（依方案、條件不同）' : ''}，要更新成：</p>` +
         st.cands.map((c, i) => `<button type="button" class="mp-rate-opt" data-mp-rate-pick="${i}">更新成 ${esc(String(c.rate))}%（${esc(endTxt(c.end))}）${c.category ? `<br><small>${esc(c.category)}</small>` : ''}</button>`).join('');
     sheet.hidden = false;
@@ -777,7 +790,7 @@ function mpOpenRateSheet(id) {
 
 async function mpApplyRate(idx) {
     const id = MP.rateId;
-    const m = (userSpendingMappings || []).find(x => x.id === id);
+    const m = mpList().find(x => x.id === id);
     const st = MP.status.get(id) || {};
     const c = st.cands && st.cands[idx];
     if (!m || !c) return;
@@ -786,7 +799,7 @@ async function mpApplyRate(idx) {
     m.lastCheckedTime = Date.now();
     m.periodEnd = c.end;
     m.periodStart = c.start;
-    await saveSpendingMappings(userSpendingMappings);
+    await mpPersist();
     if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_update_rate', { card_id: m.cardId, merchant: m.merchant, rate: c.rate });
     mpCloseSheets();
     const r = await mpProbe(m);   // 重新判斷標籤與狀態
@@ -802,9 +815,9 @@ function mpDeadIds() {
 async function mpDeleteAllDead() {
     const ids = new Set(mpDeadIds());
     if (!ids.size) return;
-    userSpendingMappings = (userSpendingMappings || []).filter(m => !ids.has(m.id));
+    mpSetList(mpList().filter(m => !ids.has(m.id)));
     ids.forEach(id => MP.status.delete(id));
-    await saveSpendingMappings(userSpendingMappings);
+    await mpPersist();
     if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_delete_dead', { count: ids.size });
     if (typeof updatePinButtonsState === 'function') updatePinButtonsState();
     mpRender();
@@ -848,8 +861,9 @@ async function mpSaveEdit(reset) {
 }
 
 async function mpRemoveMapping(id) {
-    const m = (userSpendingMappings || []).find(x => x.id === id);
-    await removeMapping(id);
+    const m = mpList().find(x => x.id === id);
+    if (currentUser) await removeMapping(id);
+    else mpSetList(mpList().filter(x => x.id !== id));
     MP.status.delete(id);
     if (m && window.logEvent && window.firebaseAnalytics) {
         window.logEvent(window.firebaseAnalytics, 'remove_mapping', { card_id: m.cardId, card_name: m.cardName, merchant: m.merchant, rate: m.cashbackRate });
@@ -1457,6 +1471,7 @@ function mpBind() {
     if (search) search.addEventListener('input', () => { MP.search = search.value.trim(); if (clearBtn) clearBtn.hidden = !search.value; mpRender(); });
     if (clearBtn) clearBtn.addEventListener('click', () => { search.value = ''; MP.search = ''; clearBtn.hidden = true; mpRender(); search.focus(); });
     mpEl('mp-guest-login')?.addEventListener('click', () => { if (typeof openAuthModal === 'function') openAuthModal('login'); });
+    mpEl('mp-edit-toggle')?.addEventListener('click', () => { MP.editing = !MP.editing; mpRender(); });
 
     const input = mpEl('mp-edit-input');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); mpSaveEdit(false); } });

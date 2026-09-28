@@ -162,7 +162,7 @@ function isPinned(cardId, merchant) {
 async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
-        alert('登入後即可使用釘選功能，幫您記錄個人配卡！');
+        alert('登入後就能把「商家 × 信用卡」加到我的配卡組合，刷卡前一眼查看！');
         return;
     }
 
@@ -176,8 +176,8 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
         if (mapping) {
             await removeMapping(mapping.id);
             button.classList.remove('pinned');
-            button.title = '釘選此配對';
-            showToast('已取消釘選', button.closest('.card-result'));
+            button.title = '把這個商家×卡片加到我的配卡組合';
+            showToast('已從我的配卡組合移除', button.closest('.card-result'));
             if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
 
             // 追蹤取消釘選事件
@@ -195,7 +195,7 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
         const newMapping = await addMapping(cardId, cardName, merchant, rate, periodEnd, periodStart);
         if (newMapping) {
             button.classList.add('pinned');
-            button.title = '取消釘選';
+            button.title = '從我的配卡組合移除';
 
             // 顯示成功動畫
             showPinSuccessAnimation(button);
@@ -218,7 +218,7 @@ function showPinSuccessAnimation(button) {
     const cardElement = button.closest('.card-result');
 
     // 1. 顯示提示
-    showToast('已加入我的配卡組合✓', cardElement);
+    showToast('已加到我的配卡組合 ✓', cardElement);
 
     // 2. 顯示 +1 徽章動畫
     showPlusBadgeAnimation();
@@ -336,10 +336,10 @@ function updatePinButtonsState() {
 
         if (pinned) {
             btn.classList.add('pinned');
-            btn.title = '取消釘選';
+            btn.title = '從我的配卡組合移除';
         } else {
             btn.classList.remove('pinned');
-            btn.title = '釘選此配對';
+            btn.title = '把這個商家×卡片加到我的配卡組合';
         }
     });
 }

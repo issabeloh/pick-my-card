@@ -186,11 +186,21 @@ const PAIRS = [
   check('配卡組合顯示在切換鈕下方（不是蓋住整頁）', inline.inMain && inline.notFixed && inline.below && inline.swOn, JSON.stringify(inline));
   check('切到配卡組合時，查詢區塊都隱藏', inline.othersHidden);
   check('沒有返回箭頭', inline.noBack);
+  const tabs = await pg.evaluate(() => { const sw = document.getElementById('home-view-switch'), h = sw.closest('header');
+    return { inHeader: !!h, flush: !!h && Math.abs(sw.getBoundingClientRect().bottom - h.getBoundingClientRect().bottom) <= 1,
+      sidebarHidden: ['.sidebar', '#sidebar-toggle-btn'].every(s => { const el = document.querySelector(s); return !el || getComputedStyle(el).display === 'none'; }) }; });
+  check('分頁在藍色頁首裡、貼齊頁首底邊（文件夾分頁）', tabs.inHeader && tabs.flush, JSON.stringify(tabs));
+  check('配卡組合畫面：左側「加入比較的卡片」欄與 ☰ 都隱藏', tabs.sidebarHidden);
+  const clean = await pg.evaluate(() => ({ tools: document.getElementById('mp-tools').hidden, tip: document.getElementById('mp-tip').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle') && document.getElementById('mp-edit-toggle').textContent.trim() === '編輯', grips: document.querySelectorAll('#mp-list [data-mp-grip]').length }));
+  check('預設只顯示乾淨的小抄＋搜尋框（設定、提示都收起來）', clean.tools && clean.tip && clean.search && clean.edit && clean.grips === 0, JSON.stringify(clean));
+  await pg.click('#mp-edit-toggle');
+  const editOn = await pg.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, tip: !document.getElementById('mp-tip').hidden, label: document.getElementById('mp-edit-toggle').textContent.trim() }));
+  check('按「編輯」→ 設定與提示出現、按鈕變「完成」', editOn.tools && editOn.tip && editOn.label === '完成', JSON.stringify(editOn));
   const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related', '#scroll-to-spotlight-btn'].every(sel => { const el = document.querySelector(sel); return el && el.closest('[data-view="search"]') && getComputedStyle(el.closest('[data-view="search"]')).display === 'none'; }));
   check('推薦活動、推薦比較屬於「查詢回饋」畫面（切到配卡組合時整個畫面隱藏）', extHidden);
   const order = await pg.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
-    return { intro: !!document.querySelector('.mp-intro'), searchAboveTip: y('mp-searchbox') < y('mp-tip'), tipAboveList: y('mp-tip') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
-  check('順序：說明 → 搜尋框 → 提示 → 小抄 → 存成圖片', order.intro && order.searchAboveTip && order.tipAboveList && order.saveBelow, JSON.stringify(order));
+    return { intro: !!document.querySelector('.mp-intro'), tipAboveSearch: y('mp-tip') < y('mp-searchbox'), searchAboveList: y('mp-searchbox') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
+  check('編輯中順序：說明 → 提示 → 搜尋框 → 小抄 → 存成圖片', order.intro && order.tipAboveSearch && order.searchAboveList && order.saveBelow, JSON.stringify(order));
   await pg.fill('#mp-search', '麥當勞');
   await pg.dispatchEvent('#mp-search', 'input');
   const clr = await pg.isVisible('#mp-search-clear');
@@ -256,7 +266,7 @@ const PAIRS = [
   if (flagBtn) {
     await flagBtn.click();
     const rs = await pg.evaluate(() => ({ open: !document.getElementById('mp-rate-sheet').hidden, text: document.getElementById('mp-rate-body').textContent, opts: document.querySelectorAll('[data-mp-rate-pick]').length }));
-    check('點「回饋已變」→ 顯示原本與新的回饋率', rs.open && rs.text.includes('原本釘選') && rs.opts > 0, rs.text.slice(0, 60));
+    check('點「回饋已變」→ 顯示原本與新的回饋率', rs.open && rs.text.includes('原本加入時') && rs.opts > 0, rs.text.slice(0, 60));
     const want = await pg.evaluate(() => { const m = userSpendingMappings.find(x => (x.merchant || '').includes('中華航空')); return MP.status.get(m.id).cands[0]; });
     await pg.click('[data-mp-rate-pick="0"]');
     await pg.waitForTimeout(300);
@@ -376,6 +386,10 @@ const PAIRS = [
       if (r.eAligned !== undefined) check(`${tag}：同一排左右兩格商家名稱對齊`, r.eAligned);
       if (SHOTS) await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-${layout}-${size}.png`) });
     }
+    await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.editing = true; mpRender(); });
+    const eo = await p2.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+    check(`${vp.name} 編輯中：沒有左右捲動`, eo);
+    if (SHOTS) await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-editing.png`) });
     await p2.context().close();
   }
 
@@ -459,9 +473,20 @@ const PAIRS = [
   await gp.click('#home-view-switch-mappings');
   await gp.waitForSelector('#mappings-page:not([hidden])');
   await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
-  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !!document.querySelector('.mp-demo-tag'), noPointer: getComputedStyle(document.getElementById('mp-list')).pointerEvents === 'none', searchHidden: document.getElementById('mp-searchbox').hidden, loginBtn: !!document.getElementById('mp-guest-login') }));
-  check('未登入：顯示範例小抄（標示範例、不能點）＋登入提示', gs.guest && gs.demoRows >= 3 && gs.tag && gs.noPointer && gs.searchHidden && gs.loginBtn, JSON.stringify(gs));
+  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login') }));
+  check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
+  await gp.click('#mp-edit-toggle');
+  await gp.click('#mp-tools [data-mp-sort="az"]');
+  const gEdit = await gp.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, sort: MP.prefs.sort, ltr: document.querySelectorAll('#mp-list .mp-ltr').length }));
+  check('未登入：按「編輯」看得到全部設定、可以切換排列', gEdit.tools && gEdit.sort === 'az' && gEdit.ltr > 0, JSON.stringify(gEdit));
+  const gk = await gp.$eval('#mp-list [data-mp-row]', r => r.dataset.mpRow);
+  await gp.click(`#mp-list [data-mp-edit="${gk}"]`);
+  await gp.fill('#mp-edit-input', '範例改名');
+  await gp.click('#mp-edit-save');
+  const gRen = await gp.evaluate((k) => ({ shown: document.querySelector(`#mp-list [data-mp-edit="${k}"]`).textContent, noWrite: !(globalThis.__setDocs || []).length, noLocal: !Object.keys(localStorage).some(x => x.startsWith('merchantAliases_')) }), gk);
+  check('未登入：範例可以改名，但不寫雲端、不存本機', gRen.shown.includes('範例改名') && gRen.noWrite && gRen.noLocal, JSON.stringify(gRen));
+  if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-editing-iphone13.png'), fullPage: false });
   await gp.context().close();
 
   check('過程中沒有 JavaScript 錯誤', pageErrors === 0, `${pageErrors} 個`);

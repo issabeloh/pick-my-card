@@ -6037,7 +6037,7 @@ mark.cashback-search-hl {
     height: 12px;
 }
 .pin-btn::after {
-    content: '釘選';
+    content: '加到我的配卡';
 }
 
 .pin-btn:hover {
@@ -6052,7 +6052,7 @@ mark.cashback-search-hl {
     color: #ffffff;
 }
 .pin-btn.pinned::after {
-    content: '已釘選';
+    content: '已加到我的配卡';
 }
 
 .pin-btn.pinned:hover {
@@ -9133,13 +9133,16 @@ mark.cashback-search-hl {
    設計紀錄見 docs/project/ui-display.md 第 8 節。
    ⚠️ class 一律 mp- 前綴：曾在 mockup 裡用 .big 當大字 class，撞到既有按鈕樣式整張跑版。
    ============================================================ */
+/* 頁籤＝文件夾分頁：長在藍色頁首底邊（在 <header> 裡，負 margin 吃掉頁首內距：桌機 10px 20px、≤768px 12px 16px）。
+   選中的那張白色、跟下方頁面接成一體；沒選中的是頁首上的半透明頁籤。 */
+header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選中頁籤下方畫出一條線，破壞「接在一起」 */
 .home-view-switch {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    /* 分頁列：吃掉 main 的內距，佔滿整列、貼齊上方藍色頁首（main 內距：桌機 30px、≤768px 20px） */
-    margin: -30px -30px 20px;
-    background: #fff;
-    border-bottom: 1px solid #e2e8f0;
+    gap: 6px;
+    margin: 12px -20px -10px;
+    padding: 0 20px;
+    align-items: end;
 }
 .home-view-switch[hidden] { display: none; }
 .home-view-switch > button {
@@ -9147,37 +9150,48 @@ mark.cashback-search-hl {
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 15px 6px 13px;
+    padding: 11px 8px 10px;
     border: 0;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;   /* 選中的底線蓋住分頁列的灰色分隔線 */
-    border-radius: 0;
-    background: transparent;
+    border-radius: 14px 14px 0 0;
+    background: rgba(255, 255, 255, .16);
+    color: rgba(255, 255, 255, .92);
     font: inherit;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     letter-spacing: .04em;
-    color: #64748b;
     cursor: pointer;
-    transition: color .15s, background .15s, border-color .15s;
+    transition: background .15s, color .15s;
     position: relative;   /* 釘選時的 +1 徽章（.pin-badge）以它定位 */
 }
-.home-view-switch > button:hover { color: #1e40af; background: #f8faff; }
+.home-view-switch > button:hover { background: rgba(255, 255, 255, .26); }
 .home-view-switch > button.on {
+    background: #fff;
     color: #1e40af;
     font-weight: 900;
-    border-bottom-color: #1e40af;
-    background: #f5f8ff;
+    padding-top: 13px;   /* 選中的那張稍微高一點，像被抽出來的文件夾 */
+    box-shadow: 0 -4px 10px -6px rgba(15, 23, 42, .35);
 }
-.home-view-switch svg { width: 18px; height: 18px; flex: none; }
+/* 選中頁籤下緣兩側的小圓角，讓頁籤跟白色頁面自然接起來 */
+.home-view-switch > button.on::before,
+.home-view-switch > button.on::after {
+    content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none;
+}
+.home-view-switch > button.on::before { left: -12px; background: radial-gradient(circle at 0 0, transparent 12px, #fff 12.5px); }
+.home-view-switch > button.on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, #fff 12.5px); }
+.home-view-switch > button:first-child.on::before, .home-view-switch > button:last-child.on::after { display: none; }
+.home-view-switch svg { width: 17px; height: 17px; flex: none; }
 @media (max-width: 768px) {
-    .home-view-switch { margin: -20px -20px 16px; }
+    .home-view-switch { margin: 12px -16px -12px; padding: 0 12px; }
+    .home-view-switch > button { font-size: 14.5px; padding: 10px 6px 9px; }
+    .home-view-switch > button.on { padding-top: 12px; }
 }
 
 /* 頁籤切換的「畫面」：同一個 data-view 的容器一起顯示／隱藏（setAppView，js/mappings-page.js）。
-   查詢回饋＝#view-search（main 欄內）＋#view-search-extras（推薦活動、推薦比較，放在側欄外以跨整個版面寬）；
+   查詢回饋＝左欄 .sidebar＋☰ 鈕＋#view-search（main 欄內）＋#view-search-extras（推薦活動、推薦比較，放在側欄外以跨整個版面寬）；
    我的配卡組合＝#mappings-page */
-.app-view[hidden] { display: none !important; }
+[data-view][hidden] { display: none !important; }
+/* 左欄（加入比較的卡片等）屬於查詢回饋：切到配卡組合時整欄隱藏，主欄吃滿整個寬度 */
+.app-layout:has(> .sidebar[hidden]) { grid-template-columns: 1fr; }
 
 .mp-page {
     color: #111827;
@@ -9200,7 +9214,15 @@ mark.cashback-search-hl {
 .mp-savebtn:disabled { opacity: .4; cursor: default; }
 .mp-layout { max-width: 1120px; margin: 0 auto; }
 .mp-side { padding: 0 8px; display: flex; flex-direction: column; gap: 8px; }
-.mp-intro { margin: 0 8px 12px; font-size: 13.5px; line-height: 1.6; color: #4b5563; }
+.mp-introrow { display: flex; align-items: flex-start; gap: 12px; max-width: 760px; margin: 0 auto 12px; padding: 0 8px; }
+.mp-intro { margin: 0; flex: 1; font-size: 13.5px; line-height: 1.6; color: #4b5563; }
+.mp-edit-btn {
+    flex: none; border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 999px;
+    padding: 6px 16px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.mp-edit-btn.on { background: #1e40af; color: #fff; }
+.mp-tools[hidden] { display: none; }
+.mp-demo-tag[hidden] { display: none; }
 .mp-searchbox { position: relative; max-width: 460px; margin: 0 auto 8px; }
 .mp-search-clear {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%;
@@ -9213,7 +9235,6 @@ mark.cashback-search-hl {
 .mp-guest[hidden] { display: none; }
 .mp-guest p { margin: 0; }
 .mp-guest-title { font-size: 16px; font-weight: 900; color: #1e3a8a; }
-.mp-paper.mp-demo { pointer-events: none; user-select: none; opacity: .92; }
 .mp-demo-tag { text-align: center; font: 700 10px ui-monospace, Menlo, monospace; letter-spacing: .3em; color: #b45309; margin-bottom: 4px; }
 #mappings-page .mp-search {
     flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 40px 9px 12px;
@@ -9460,7 +9481,10 @@ mark.cashback-search-hl {
 /* ---- 平板／桌機 ---- */
 @media (min-width: 1024px) {
     .mp-page { margin: 0; }
-    .mp-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 460px); gap: 28px; align-items: start; justify-content: center; }
+    /* 平常只有一欄（乾淨的小抄置中）；按「編輯」時左邊多一欄設定 */
+    .mp-layout { display: grid; grid-template-columns: minmax(0, 460px); justify-content: center; }
+    .mp-layout.editing { grid-template-columns: minmax(260px, 300px) minmax(0, 460px); gap: 28px; align-items: start; }
+    .mp-layout:not(.editing) .mp-side { display: none; }
     .mp-side { position: sticky; top: 12px; padding: 0; }
     .mp-main { padding: 0 0 12px; }
     .mp-notice, .mp-paper, .mp-deadbar { margin-left: 0; margin-right: 0; }
