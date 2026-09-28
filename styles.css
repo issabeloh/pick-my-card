@@ -9136,40 +9136,44 @@ mark.cashback-search-hl {
 .home-view-switch {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /* 分頁列：吃掉 main 的內距，佔滿整列、貼齊上方藍色頁首（main 內距：桌機 30px、≤768px 20px） */
+    margin: -30px -30px 20px;
     background: #fff;
-    border: 1px solid #dbe3f0;
-    border-radius: 16px;
-    padding: 5px;
-    margin: 0 0 18px;
-    box-shadow: 0 6px 18px -12px rgba(30, 64, 175, .45);
+    border-bottom: 1px solid #e2e8f0;
 }
 .home-view-switch[hidden] { display: none; }
-/* 兩個頁籤是「切換整個畫面」，所以做成主要導覽：選中的那個用品牌藍實心，未選的是清楚可點的白底 */
 .home-view-switch > button {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 12px 6px;
-    border-radius: 12px;
+    padding: 15px 6px 13px;
     border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;   /* 選中的底線蓋住分頁列的灰色分隔線 */
+    border-radius: 0;
     background: transparent;
     font: inherit;
     font-size: 16px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: .04em;
-    color: #475569;
+    color: #64748b;
     cursor: pointer;
-    transition: background .15s, color .15s;
+    transition: color .15s, background .15s, border-color .15s;
     position: relative;   /* 釘選時的 +1 徽章（.pin-badge）以它定位 */
 }
-.home-view-switch > button:hover { background: #eff4ff; color: #1e40af; }
+.home-view-switch > button:hover { color: #1e40af; background: #f8faff; }
 .home-view-switch > button.on {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
-    color: #fff;
-    box-shadow: 0 6px 14px -6px rgba(30, 64, 175, .6);
+    color: #1e40af;
+    font-weight: 900;
+    border-bottom-color: #1e40af;
+    background: #f5f8ff;
 }
 .home-view-switch svg { width: 18px; height: 18px; flex: none; }
+@media (max-width: 768px) {
+    .home-view-switch { margin: -20px -20px 16px; }
+}
+
 /* 頁籤切換的「畫面」：同一個 data-view 的容器一起顯示／隱藏（setAppView，js/mappings-page.js）。
    查詢回饋＝#view-search（main 欄內）＋#view-search-extras（推薦活動、推薦比較，放在側欄外以跨整個版面寬）；
    我的配卡組合＝#mappings-page */
