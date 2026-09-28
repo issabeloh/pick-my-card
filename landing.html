@@ -95,7 +95,22 @@
     <div class="lp-progress" aria-hidden="true"><div class="lp-progress-bar" id="lp-progress-bar"></div></div>
 
     <!-- 開場提示 -->
-    <div class="lp-hint" id="lp-hint" aria-hidden="true">信用卡回饋的世界<span class="lp-hint-arrow"></span><span class="lp-hint-sub">scroll</span></div>
+    <!-- 2026-09-28：開場標語＋直式介紹影片（手機框，標語在上）。
+         ⚠️ 不自動播放、preload="none"：首屏只載 poster 一張圖，按播放才開始抓影片，
+            首頁速度不受影響。預設靜音，使用者可用播放器控制列取消靜音。
+         data-src 留空＝影片還沒準備好：JS 不加 .lp-hint--video，整個手機框維持隱藏，
+         畫面退回純標語＋箭頭。放影片時填 data-src（mp4）與 data-poster（封面圖）即可。 -->
+    <div class="lp-hint" id="lp-hint">
+        <p class="lp-hint-title">信用卡回饋從此變簡單</p>
+        <div class="lp-intro-video" id="lp-intro-video"
+             data-src=""
+             data-poster="">
+            <video id="lp-intro-video-el" playsinline muted preload="none"
+                   aria-label="Pick My Card 介紹影片"></video>
+            <button type="button" class="lp-intro-play" id="lp-intro-play" aria-label="播放介紹影片"></button>
+        </div>
+        <span class="lp-hint-arrow" aria-hidden="true"></span><span class="lp-hint-sub" aria-hidden="true">scroll</span>
+    </div>
 
     <!-- 常駐下滑提示（淺灰，可點擊跳到下一幕） -->
     <button class="lp-scrollcue" id="lp-scrollcue" type="button" aria-label="跳到下一幕"></button>
