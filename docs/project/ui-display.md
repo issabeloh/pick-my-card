@@ -231,6 +231,7 @@ const group = result.matchedRateGroup;
 - **更新期限**：重算後回饋率相同 → 改成最新活動期限（條件改了也算）；回饋率不同 → 不改、列出提醒；存回 `spendingMappings`。
 - **改名**：點商家名稱開面板，只改顯示名稱，存 Firestore `users/<uid>.merchantAliases`（鍵＝原名小寫）＋本機鏡像 `merchantAliases_<uid>`；「商家名稱重設」用 `deleteField()`。搜尋、計算、分類一律用原名。移除配對也在這個面板。點卡圖開 `showCardDetail()`。
 - **存成圖片**：canvas 直接繪製（`mpLayoutReceipt` 排版一次，量高度與繪製共用），預覽就是實際輸出。桌布：手機讀 `screen × devicePixelRatio`，其餘預設 iPhone 1179×2556，可切 Android 1080×2400／16:9；上方 24% 留給鎖定畫面時鐘、下方 7% 留給按鈕；「全選」只選放得下的前 N 家（實際排版量出來）。長圖寬 1080 不限數量。只有淺色／深色。手機走 Web Share（iPhone 會有「儲存影像」），否則下載。
+- **搜尋框** `#mp-search`：同時比對原名、自訂名稱、卡名；字級固定 16px 防 iOS 聚焦縮放（樣式用 `#mappings-page .mp-search` 提特異性，壓過全域 input 樣式）。搜尋中停用拖曳。
 - **class 一律 `mp-` 前綴**；頁首用 `div` 不用 `header`（見教訓）。
 
 ## 9. 禁用手法：卡片頂部彩色條（2026-08-15 站長裁定）
