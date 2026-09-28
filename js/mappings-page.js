@@ -61,6 +61,7 @@ function mpLoadPrefs() {
         layout: p.layout === 'E' ? 'E' : 'F',
         size: p.size === 'large' ? 'large' : 'small',
         labels: p.labels !== false,
+        caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
         fmt: p.fmt === 'long' ? 'long' : 'wall',
         ratio: ['auto', 'iphone', 'android', 'old'].includes(p.ratio) ? p.ratio : 'auto',
         theme: p.theme === 'dark' ? 'dark' : 'light',
@@ -240,7 +241,7 @@ function mpBuildGroups() {
         const days = mpDaysLeft(m.periodEnd);
         const st = MP.status.get(m.id) || {};
         const dead = days !== null && days < 0 ? 'ended' : (st.dead || null);
-        g.entries.push({ m, rate: Number(m.cashbackRate) || 0, end: mpISO(m.periodEnd), days, dead, labels: st.labels || [], changed: !!st.changed, ext: !!st.ext });
+        g.entries.push({ m, rate: Number(m.cashbackRate) || 0, end: mpISO(m.periodEnd), days, dead, labels: st.labels || [], cap: dead ? null : (st.cap || null), changed: !!st.changed, ext: !!st.ext });
     });
     const groups = [...byKey.values()];
     groups.forEach(g => {
@@ -280,11 +281,20 @@ function mpArrange(groups, sort) {
 // ============================================
 // 用站上同一支 calculateCardCashback() 重算：拿配對的卡片＋商家到最新資料裡找目前的活動。
 // 只讀不寫；級別透過 getCardLevel() 讀用戶存的值，絕不回寫（鐵則 1）。
-function mpPlanLabel(category) {
-    const c = String(category || '');
-    if (/切換「全支付」方案/.test(c)) return '全支付';
-    if (/切換「大筆刷」方案/.test(c)) return '大筆刷';
-    return null;
+// 方案標籤只給「要切換方案」的卡（CUBE、Richart），其他卡只顯示 levelSettings 的等級。
+// 活動的 category 長這樣：切換「全支付」方案、切換「慶生月」方案 - 美食、「固定回饋」方案 → 取「」裡的名稱。
+const MP_PLAN_CARDS = ['cathay-cube', 'taishin-richart'];
+function mpPlanLabel(cardId, category) {
+    if (!MP_PLAN_CARDS.includes(cardId)) return null;
+    const hit = String(category || '').match(/「([^」]+)」方案/);
+    return hit ? hit[1].trim() : null;
+}
+
+// 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
+function mpCapText(cardId, cap) {
+    const n = Number(cap);
+    if (!cap || isNaN(n) || n <= 0) return '無消費上限';
+    return `消費上限 NT$${Math.floor(n).toLocaleString()}${cardId === 'taishin-richart' ? '+' : ''}`;
 }
 
 function mpShortLevel(level) {
@@ -296,7 +306,7 @@ function mpShortLevel(level) {
 
 async function mpProbe(m) {
     const card = cardsData && cardsData.cards ? cardsData.cards.find(c => c.id === m.cardId) : null;
-    if (!card) return { dead: 'gone', labels: [], next: null, hasMatches: false };
+    if (!card) return { dead: 'gone', labels: [], next: null, hasMatches: false, cap: null };
     const term = optimizeMerchantName(m.merchant).split('、')[0].trim();
     let matches = [];
     try {
@@ -304,7 +314,7 @@ async function mpProbe(m) {
         matches = Array.isArray(r) ? r : [];
     } catch (error) {
         console.error('❌ [配卡] 重算失敗:', m.merchant, error);
-        return { dead: null, labels: [], next: null, hasMatches: true, error: true };
+        return { dead: null, labels: [], next: null, hasMatches: true, error: true, cap: null };
     }
     const labels = [];
     if (card.hasLevels && card.levelSettings && Object.keys(card.levelSettings).length) {
@@ -317,12 +327,13 @@ async function mpProbe(m) {
     const rate = Number(m.cashbackRate) || 0;
     const same = matches.filter(x => Math.abs((Number(x.rate) || 0) - rate) < 0.001);
     const endOf = x => mpISO(x.matchedRateGroup && x.matchedRateGroup.periodEnd) || null;
-    let next = null;
+    let next = null, cap = null;
     if (same.length) {
         const best = same.slice().sort((a, b) => String(endOf(b) || '9999-12-31').localeCompare(String(endOf(a) || '9999-12-31')))[0];
         next = { rate, end: endOf(best), start: mpISO(best.matchedRateGroup && best.matchedRateGroup.periodStart) || null };
-        const plan = mpPlanLabel(best.matchedCategory);
+        const plan = mpPlanLabel(card.id, best.matchedCategory);
         if (plan) labels.push(plan);
+        cap = mpCapText(card.id, best.cap);
     }
     // 回饋率已變：列出目前資料裡這張卡＋商家的活動（同回饋率只留一筆，取期限最晚），讓用戶自己確認要更新成哪一個
     const cands = [];
@@ -336,7 +347,7 @@ async function mpProbe(m) {
         });
         cands.sort((a, b) => b.rate - a.rate);
     }
-    return { dead: matches.length ? null : 'gone', labels, next, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
+    return { dead: matches.length ? null : 'gone', labels, next, cap, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
 }
 
 async function mpProbeAll() {
@@ -346,7 +357,7 @@ async function mpProbeAll() {
         for (const m of list) {
             const prev = MP.status.get(m.id) || {};
             const r = await mpProbe(m);
-            MP.status.set(m.id, { ...prev, dead: r.dead, labels: r.labels, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
+            MP.status.set(m.id, { ...prev, dead: r.dead, labels: r.labels, cap: r.cap, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
         }
         MP.probed = true;
         MP.probing = null;
@@ -469,6 +480,7 @@ function refreshMappingsEntry() {
 // 收據 HTML
 // ============================================
 const MP_ICON = {
+    chev: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg>',
     pen: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>',
     card: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>',
     grip: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>',
@@ -527,6 +539,9 @@ function mpReceiptHtml(sections, o) {
     const flag = e => e.changed ? `<button type="button" class="mp-flag" data-mp-changed="${esc(e.m.id)}" title="點一下看新的回饋率">回饋已變</button>` : '';
     const labs = e => o.labels && e.labels.length ? `<span class="mp-labs">${e.labels.map(l => `<span class="mp-lab">${esc(l)}</span>`).join('')}</span>` : '';
     const rate = e => `<span class="mp-rate">${esc(String(e.rate))}%</span>`;
+    const capOf = e => o.caps && e.cap ? `<span class="mp-cap">${esc(e.cap)}</span>` : '';
+    // 第二行：勾了「顯示活動封頂金額」→ 等級／方案標籤＋封頂金額一起放第二行
+    const row2 = e => o.caps && (capOf(e) || labs(e)) ? `<div class="mp-row2">${labs(e)}${capOf(e)}</div>` : '';
     const sec = s => s.title === null ? '' : (!o.demo && MP.prefs.sort === 'az'
         ? `<div class="mp-sec az"><span class="mp-ltr">${esc(s.title)}</span></div>`
         : `<div class="mp-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>`);
@@ -535,10 +550,10 @@ function mpReceiptHtml(sections, o) {
     if (!sections.length) {
         body = '<p class="mp-none">找不到符合的商家</p>';
     } else if (o.layout === 'E') {
-        body = `<div class="mp-e-grid">${sections.map(s => sec(s) + s.items.map(g => `<div class="mp-e-cell${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-e-name">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-e-line${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${thumb(e)}${rate(e)}${flag(e)}${due(e)}</div>`).join('')}</div>`).join('')).join('')}</div>`;
+        body = `<div class="mp-e-grid">${sections.map(s => sec(s) + s.items.map(g => `<div class="mp-e-cell${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-e-name">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-e-line${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${thumb(e)}${rate(e)}${flag(e)}${due(e)}</div>${capOf(e) ? `<div class="mp-e-cap">${capOf(e)}</div>` : ''}`).join('')}</div>`).join('')).join('')}</div>`;
     } else {
         body = '<div class="mp-colhead"><span>商家</span><span class="mp-cols"><span>卡</span><span>回饋</span><span>期限</span></span></div>' +
-            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${flag(e)}${labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div></div>`).join('')}</div>`).join('')).join('');
+            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${row2(e) ? ' has-row2' : ''}">${row2(e) ? '' : flag(e)}${o.caps ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${row2(e)}${row2(e) ? flag(e) : ''}</div>`).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
@@ -554,6 +569,9 @@ function mpReceiptHtml(sections, o) {
 // 頁面渲染
 // ============================================
 // 「顯示等級／方案」常駐；雙欄放不下標籤，改成灰色不可勾（不改用戶存的勾選值）
+function mpCapsChk(id, p) {
+    return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.caps ? 'checked' : ''}>顯示活動封頂金額</label>`;
+}
 function mpLabelsChk(id, p) {
     const two = p.layout !== 'F';
     return `<label class="mp-chk${two ? ' dis' : ''}"${two ? ' title="雙欄放不下等級／方案標籤，切回單欄才能顯示"' : ''}><input type="checkbox" id="${id}" ${p.labels && !two ? 'checked' : ''} ${two ? 'disabled' : ''}>顯示等級／方案</label>`;
@@ -600,6 +618,7 @@ function mpRender() {
         </div>
         <div class="mp-bar">
             ${mpLabelsChk('mp-labels-toggle', p)}
+            ${mpCapsChk('mp-caps-toggle', p)}
             <span class="mp-grow"></span>
             <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
@@ -661,7 +680,7 @@ function mpRender() {
     }
     const sections = mpArrange(groups, p.sort);
     list.innerHTML = mpReceiptHtml(sections, {
-        layout: p.layout, labels: p.layout === 'F' && p.labels, big: p.size === 'large',
+        layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, big: p.size === 'large',
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();
@@ -678,7 +697,7 @@ function mpRender() {
 // 單欄小字：等級標籤排在回饋率左邊時，若把商家名稱擠到換行，就把標籤移到下一行（名稱優先）
 function mpFitRows() {
     const list = mpEl('mp-list');
-    if (!list || MP.prefs.layout !== 'F' || MP.prefs.size === 'large') return;
+    if (!list || MP.prefs.layout !== 'F' || MP.prefs.size === 'large' || MP.prefs.caps) return;
     list.querySelectorAll('.mp-f-row').forEach(row => {
         if (!row.querySelector('.mp-labs')) return;
         row.classList.remove('mp-labs-below');
@@ -807,7 +826,7 @@ async function mpApplyRate(idx) {
     if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_update_rate', { card_id: m.cardId, merchant: m.merchant, rate: c.rate });
     mpCloseSheets();
     const r = await mpProbe(m);   // 重新判斷標籤與狀態
-    MP.status.set(m.id, { dead: r.dead, labels: r.labels, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
+    MP.status.set(m.id, { dead: r.dead, labels: r.labels, cap: r.cap, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
     mpRender();
 }
 
@@ -1021,7 +1040,7 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                 const nf = font(700, S.name, MP_SANS);
                 const full = mpDisplayName(g);
                 // 標籤放回饋率左邊會把名稱擠到換行 → 標籤改放下一行（同大字）
-                let labsBelow = big;
+                let labsBelow = big || !!o.caps;
                 let inlineLabW = !labsBelow && labsFirst.length ? labelsW(labsFirst) : 0;
                 if (inlineLabW && !fits(full, nf, IW - colsW - inlineLabW - 16)) { labsBelow = true; inlineLabW = 0; }
                 const lines = wrap(full, nf, IW - colsW - inlineLabW - 16);
@@ -1039,7 +1058,22 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                     const lineCy = i === 0 ? cy : y + S.sub / 2;
                     drawPickCols(e, IX + IW, lineCy, alpha);
                     const labels = o.labels ? e.labels : [];
-                    if (labels.length) {
+                    const capT = o.caps && e.cap ? e.cap : '';
+                    if (capT) {
+                        // 第二行：[標籤][封頂金額] 靠右
+                        const capF = font(500, S.due, MP_MONO);
+                        ctx.font = capF;
+                        const cw = ctx.measureText(capT).width;
+                        const r2w = cw + (labels.length ? labelsW(labels) + 6 : 0);
+                        const step = i === 0 ? S.row : S.sub;
+                        // 名稱換成兩行時，寬的第二行會撞到名稱第二行 → 改排到名稱下面
+                        const push = i === 0 && lines.length > 1 && r2w > colsW + 4 ? Math.max(0, nameBottom - (y + step)) : 0;
+                        y += step + push;
+                        const rowH = Math.max(S.labRow, S.due + 8);
+                        ops.push({ t: 'text', text: capT, x: IX + IW, y: y + rowH / 2 + S.due * 0.36 - 2, font: capF, color: 'sub', align: 'right', alpha });
+                        if (labels.length) drawLabels(labels, IX + IW - cw - 6, y + rowH / 2 - 2, alpha);
+                        y += rowH - step;
+                    } else if (labels.length) {
                         if (labsBelow) {
                             y += (i === 0 ? S.row : S.sub);
                             drawLabels(labels, IX + IW, y + S.labRow / 2 - 2, alpha);
@@ -1076,6 +1110,10 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                         ops.push({ t: 'text', text: `${e.rate}%`, x: x + S.th[0] + 6, y: mid + S.rate * 0.36, font: font(700, S.rate, MP_MONO), color: 'ink', align: 'left', alpha });
                         ops.push({ t: mpIsHot(e) ? 'hot' : 'text', text: mpDueText(e), x: x + colW, y: mid + S.due * 0.36, font: font(mpIsHot(e) ? 700 : 500, S.due, MP_MONO), color: 'sub', align: 'right', alpha });
                         cy += lh;
+                        if (o.caps && e.cap) {
+                            ops.push({ t: 'text', text: e.cap, x: x + colW, y: cy + S.due * 0.8, font: font(500, S.due, MP_MONO), color: 'sub', align: 'right', alpha });
+                            cy += S.due + 6;
+                        }
                     });
                     rowBottom = Math.max(rowBottom, cy + 4);
                 });
@@ -1236,7 +1274,7 @@ function mpExportSections(selectedKeys) {
 
 function mpExportOpts() {
     const p = MP.prefs;
-    return { layout: p.layout, labels: p.layout === 'F' && p.labels, big: p.size === 'large', sort: p.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
+    return { layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, big: p.size === 'large', sort: p.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
@@ -1265,6 +1303,7 @@ function mpOpenExport() {
     const dlg = mpEl('mp-export');
     if (!dlg) return;
     MP.exp.step = 'settings';
+    MP.exp.pickOpen = false;   // 手機：「要放進圖片的商家」每次打開都先收合，讓預覽圖不用捲就看得到
     dlg.hidden = false;
     dlg.dataset.step = 'settings';
     mpRenderExport();
@@ -1304,12 +1343,12 @@ async function mpRenderExport() {
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
             <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.size, [['small', '小字'], ['large', '大字']])}</div>
         </div>
-        ${mpLabelsChk('mp-exp-labels', p)}
-        <div class="mp-set-block">
-            <div class="mp-pick-head"><h4>要放進圖片的商家</h4><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''}</span>
+        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p)}${mpCapsChk('mp-exp-caps', p)}</div>
+        <div class="mp-set-block mp-pickwrap${MP.exp.pickOpen ? ' open' : ''}">
+            <div class="mp-pick-head"><button type="button" class="mp-pick-toggle" id="mp-pick-toggle" aria-expanded="${MP.exp.pickOpen ? 'true' : 'false'}" aria-controls="mp-picks"><h4>要放進圖片的商家</h4><span class="mp-chev" aria-hidden="true">${MP_ICON.chev}</span></button><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''}</span>
                 <button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
-            ${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint">桌布放得下前 ${lim} 家，按「全選」會選前 ${lim} 家。想全部放進去，請改選「長圖」。</p>` : ''}
-            <div class="mp-picks">${mpArrange(mpBuildGroups(), p.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
+            ${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint mp-pick-hint">桌布放得下前 ${lim} 家，按「全選」會選前 ${lim} 家。想全部放進去，請改選「長圖」。</p>` : ''}
+            <div class="mp-picks" id="mp-picks">${mpArrange(mpBuildGroups(), p.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
                 const on = sel.includes(g.key), off = g.dead;
                 return `<label class="mp-pk${off ? ' off' : ''}"><input type="checkbox" data-mp-pick="${esc(g.key)}" ${on && !off ? 'checked' : ''} ${off ? 'disabled' : ''}><span class="mp-pk-name">${esc(mpDisplayName(g))}${off ? '<small>已失效</small>' : ''}</span><img class="mp-th" src="assets/images/cards/${esc(g.entries[0].m.cardId)}.png" alt="" onerror="this.style.visibility='hidden'"></label>`;
             }).join('')).join('')}</div>
@@ -1441,6 +1480,13 @@ function mpBind() {
                 p.sel = cur.length >= Math.min(pool.length, lim) && cur.length > 0 ? [] : pool.slice(0, lim).map(g => g.key);
             }
             else if (b.id === 'mp-exp-save') { await mpSaveImage(); return; }
+            else if (b.id === 'mp-pick-toggle') {
+                MP.exp.pickOpen = !MP.exp.pickOpen;
+                const w = b.closest('.mp-pickwrap');
+                if (w) w.classList.toggle('open', MP.exp.pickOpen);
+                b.setAttribute('aria-expanded', String(MP.exp.pickOpen));
+                return;
+            }
             else return;
             mpSavePrefs();
             mpRenderExport();
@@ -1453,6 +1499,11 @@ function mpBind() {
         if (t.id === 'mp-labels-toggle' || t.id === 'mp-exp-labels') {
             MP.prefs.labels = t.checked; mpSavePrefs(); mpRender();
             if (t.id === 'mp-exp-labels') mpRenderExport();
+            return;
+        }
+        if (t.id === 'mp-caps-toggle' || t.id === 'mp-exp-caps') {
+            MP.prefs.caps = t.checked; mpSavePrefs(); mpRender();
+            if (t.id === 'mp-exp-caps') mpRenderExport();
             return;
         }
         if (t.dataset.mpPick !== undefined) {

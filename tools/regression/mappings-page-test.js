@@ -245,6 +245,30 @@ const PAIRS = [
   check('CUBE 全聯同時有「Lv3」與「全支付」', !!cubeLabs && cubeLabs.l.includes('Lv3') && cubeLabs.l.includes('全支付'), JSON.stringify(cubeLabs));
   const rich = labs.find(x => x.k.includes('新光三越'));
   check('Richart 新光三越有「大筆刷」', !!rich && rich.l.includes('大筆刷'), JSON.stringify(rich));
+  const plans = await pg.evaluate(() => [mpPlanLabel('cathay-cube', '切換「慶生月」方案 - 美食'), mpPlanLabel('cathay-cube', '切換「玩數位」方案'), mpPlanLabel('taishin-richart', '切換「天天刷」方案'), mpPlanLabel('taishin-richart', '切換「Pay著刷」方案'), mpPlanLabel('esun-unicard', '切換「任意選」方案')]);
+  check('方案標籤：CUBE／Richart 的所有「切換「X」方案」都顯示，其他卡不顯示', JSON.stringify(plans) === JSON.stringify(['慶生月', '玩數位', '天天刷', 'Pay著刷', null]), JSON.stringify(plans));
+
+  // 活動封頂金額（第二行）
+  await pg.check('#mp-caps-toggle');
+  const caps = await pg.evaluate(async () => {
+    const bad = [];
+    let shown = 0;
+    for (const g of mpBuildGroups()) for (const e of g.entries) {
+      if (e.dead || !e.cap) continue;
+      const card = cardsData.cards.find(c => c.id === e.m.cardId);
+      const r = (await calculateCardCashback(card, optimizeMerchantName(e.m.merchant).split('、')[0].trim(), 1000)).filter(x => Math.abs(x.rate - e.rate) < 0.001);
+      const want = r.length ? mpCapText(card.id, r.sort((a, b) => String(b.periodEnd || '9999').localeCompare(String(a.periodEnd || '9999')))[0].cap) : null;
+      if (want && want !== e.cap) bad.push(`${g.key}: ${e.cap} ≠ ${want}`);
+    }
+    document.querySelectorAll('#mp-list .mp-f-pick.has-row2').forEach(p => { const c = p.querySelector('.mp-cap'); if (!c) return; shown++;
+      if (c.getBoundingClientRect().top < p.querySelector('.mp-f-cols').getBoundingClientRect().bottom - 1) bad.push('封頂金額不在第二行'); if (!/^(消費上限 NT\$[\d,]+\+?|無消費上限)$/.test(c.textContent)) bad.push('格式 ' + c.textContent); });
+    return { bad, shown, saved: MP.prefs.caps };
+  });
+  check('勾「顯示活動封頂金額」→ 第二行顯示消費上限，數字＝查詢結果的回饋消費上限', caps.shown > 3 && caps.bad.length === 0 && caps.saved, caps.bad.slice(0, 3).join('；') || `${caps.shown} 筆`);
+  if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await pg.evaluate(() => document.getElementById('mp-list').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'caps-iphone13.png') });
+    await pg.evaluate(() => { MP.prefs.size = 'large'; mpRender(); }); await pg.screenshot({ path: path.join(SHOTS, 'caps-large-iphone13.png') }); await pg.evaluate(() => { MP.prefs.size = 'small'; mpRender(); }); }
+  await pg.uncheck('#mp-caps-toggle');
+  check('取消勾選 → 封頂金額消失', await pg.evaluate(() => !document.querySelector('#mp-list .mp-cap')));
   const levelCalls = await pg.evaluate(() => (globalThis.__setDocs || []).filter(d => d.path.startsWith('cardSettings/')).length);
   check('🔒 開頁、重算都沒有寫入任何級別', levelCalls === 0, `cardSettings 寫入 ${levelCalls} 次`);
 
@@ -431,6 +455,11 @@ const PAIRS = [
   });
   check('桌布：收據在時鐘下方、手電筒／相機鈕上方', band.top >= 0.27 && band.bottom <= 0.86, `上緣 ${(band.top * 100).toFixed(1)}%／下緣 ${(band.bottom * 100).toFixed(1)}%`);
   check('桌布預設勾選「放得下的前 N 家」且放得下', img.sel === Math.min(img.cap, img.pool) && img.fits, `選 ${img.sel}／上限 ${img.cap}／可選 ${img.pool}`);
+  const fold = await pg.evaluate(() => ({ collapsed: getComputedStyle(document.getElementById('mp-picks')).display === 'none', chev: getComputedStyle(document.querySelector('.mp-chev')).display !== 'none',
+    previewTop: document.getElementById('mp-exp-preview-pane').getBoundingClientRect().top, vh: innerHeight }));
+  check('手機：「要放進圖片的商家」預設收合、有箭頭；不用往下捲就看得到預覽區', fold.collapsed && fold.chev && fold.previewTop < fold.vh, JSON.stringify(fold));
+  await pg.click('#mp-pick-toggle');
+  check('點箭頭 → 展開商家選項', await pg.evaluate(() => getComputedStyle(document.getElementById('mp-picks')).display !== 'none' && document.getElementById('mp-pick-toggle').getAttribute('aria-expanded') === 'true'));
   const stack = await pg.evaluate(() => { const s = document.querySelector('.mp-exp-settings-pane'), v = document.getElementById('mp-exp-preview-pane');
     const picks = [...document.querySelectorAll('.mp-picks .mp-pk')].slice(0, 2).map(e => e.getBoundingClientRect());
     return { noNextBtn: !document.querySelector('[data-mp-exp-next]'), bothShown: getComputedStyle(s).display !== 'none' && getComputedStyle(v).display !== 'none', below: v.getBoundingClientRect().top >= s.getBoundingClientRect().bottom - 1,
@@ -462,7 +491,10 @@ const PAIRS = [
   await pg.waitForTimeout(800);
   const capLarge = await pg.evaluate(() => MP.exp.capacity);
   check('大字的桌布上限比小字少', capLarge < s1.cap, `${capLarge} < ${s1.cap}`);
-  if (SHOTS) { await pg.evaluate(() => { MP.prefs.size = 'small'; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
+  if (SHOTS) { await pg.evaluate(() => { MP.prefs.size = 'small'; MP.prefs.caps = true; MP.prefs.fmt = 'long'; MP.prefs.sel = null; MP.exp.pickOpen = false; mpRenderExport(); }); await pg.waitForTimeout(1200);
+    await pg.evaluate(() => { const a = document.createElement('a'); a.id = '__cap'; a.href = document.getElementById('mp-exp-img').src; document.body.appendChild(a); });
+    const du = await pg.$eval('#__cap', a => a.href); fs.writeFileSync(path.join(SHOTS, 'export-long-caps.png'), Buffer.from(du.split(',')[1], 'base64'));
+    await pg.evaluate(() => { MP.prefs.caps = false; MP.prefs.fmt = 'wall'; MP.prefs.sel = null; document.querySelector('.mp-exp-box').scrollTop = 0; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
     await pg.evaluate(() => document.getElementById('mp-exp-preview-pane').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'export-preview-iphone13.png') }); }
   await pg.click('.mp-exp-settings-pane [data-mp-exp-close]');
 
@@ -500,6 +532,8 @@ const PAIRS = [
   await gp.click('#mp-tools [data-mp-sort="az"]');
   const gEdit = await gp.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, sort: MP.prefs.sort, ltr: document.querySelectorAll('#mp-list .mp-ltr').length }));
   check('未登入：按「編輯」看得到全部設定、可以切換排列', gEdit.tools && gEdit.sort === 'az' && gEdit.ltr > 0, JSON.stringify(gEdit));
+  const gPos = await gp.evaluate(() => document.getElementById('mp-tools').getBoundingClientRect().top >= document.getElementById('mp-guest').getBoundingClientRect().bottom - 1);
+  check('未登入：設定出現在「登入解鎖此功能」框的下方', gPos);
   const gk = await gp.$eval('#mp-list [data-mp-row]', r => r.dataset.mpRow);
   await gp.click(`#mp-list [data-mp-edit="${gk}"]`);
   await gp.fill('#mp-edit-input', '範例改名');
