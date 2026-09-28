@@ -380,11 +380,82 @@
             <main>
 
             <!-- 首頁切換鈕（N1，2026-09-28）：取代原本的「我的配卡組合」浮動按鈕。只有登入者看得到
-                 （配卡要登入才能用），由 refreshMappingsEntry()（js/mappings-page.js）控制顯示。 -->
+                 （配卡要登入才能用）；上次是登入狀態的回訪者一開頁就先顯示（pmc_known_logged_in），
+                 登入確認後由 updateMappingsSwitch()（js/mappings-page.js）校正。 -->
             <nav class="home-view-switch" id="home-view-switch" hidden aria-label="切換畫面">
-                <span class="on" aria-current="page"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.4-1.4l-3.85-3.85ZM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z"/></svg>查詢回饋</span>
-                <button type="button" id="home-view-switch-mappings"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的配卡組合<span class="home-view-switch-count" id="home-view-switch-count" hidden></span></button>
+                <button type="button" id="home-view-switch-search" class="on" aria-pressed="true"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.4-1.4l-3.85-3.85ZM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z"/></svg>查詢回饋</button>
+                <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的配卡組合</button>
             </nav>
+
+            <!-- 我的配卡組合「刷卡小抄」（2026-09-28，js/mappings-page.js）：顯示在切換鈕下方、取代 main 裡的查詢內容
+                 （main.mp-view 時其他區塊隱藏）。網址 /mappings（_redirects 改寫回首頁、_headers 設 noindex）。
+                 面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
+            <section id="mappings-page" class="mp-page" hidden aria-label="我的配卡組合">
+                <div class="mp-layout">
+                    <div class="mp-side">
+                        <div class="mp-searchrow">
+                            <input type="search" id="mp-search" class="mp-search" placeholder="搜尋商家或信用卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="搜尋商家或信用卡">
+                            <button type="button" class="mp-savebtn" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存圖</button>
+                        </div>
+                        <div class="mp-tools" id="mp-tools"></div>
+                        <div class="mp-tip" id="mp-tip"><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>點商家名稱可改顯示名稱</span><span class="mp-dot">・</span><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>點卡圖可看信用卡詳情</span><span class="mp-dot mp-tip-drag" hidden>・</span><span class="mp-tip-drag" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>按住拖曳調整順序</span></div>
+                    </div>
+                    <div class="mp-main">
+                        <div class="mp-notice" id="mp-notice" hidden></div>
+                        <div class="mp-paper" id="mp-list"></div>
+                        <div class="mp-deadbar" id="mp-deadbar" hidden></div>
+                    </div>
+                </div>
+
+                <div class="mp-sheet-wrap" id="mp-edit-sheet" hidden>
+                    <div class="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-edit-title">
+                        <h2 id="mp-edit-title">修改顯示名稱</h2>
+                        <div class="mp-status" id="mp-edit-status" hidden></div>
+                        <label>顯示名稱<input type="text" id="mp-edit-input" maxlength="20" autocomplete="off"></label>
+                        <div class="mp-orig">名稱原為：<b id="mp-edit-orig"></b></div>
+                        <div class="mp-row2"><button type="button" class="mp-btn2" id="mp-edit-reset">商家名稱重設</button><button type="button" class="mp-btn1" id="mp-edit-save">儲存</button></div>
+                        <div class="mp-remove-list" id="mp-edit-remove"></div>
+                        <button type="button" class="mp-btn2" data-mp-sheet-close>取消</button>
+                    </div>
+                </div>
+
+                <div class="mp-sheet-wrap" id="mp-title-sheet" hidden>
+                    <div class="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-title-title">
+                        <h2 id="mp-title-title">修改小抄標題</h2>
+                        <label>標題<input type="text" id="mp-title-input" maxlength="20" autocomplete="off"></label>
+                        <div class="mp-orig">最多 10 個中文字（英數字約可放 16 個），超過會換行所以限制長度。<b class="mp-title-count" id="mp-title-count"></b></div>
+                        <div class="mp-row2"><button type="button" class="mp-btn2" id="mp-title-reset">改回「刷卡小抄」</button><button type="button" class="mp-btn1" id="mp-title-save">儲存</button></div>
+                        <button type="button" class="mp-btn2" data-mp-sheet-close>取消</button>
+                    </div>
+                </div>
+
+                <div class="mp-sheet-wrap" id="mp-rate-sheet" hidden>
+                    <div class="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-rate-title">
+                        <h2 id="mp-rate-title">回饋率已變更</h2>
+                        <div class="mp-rate-body" id="mp-rate-body"></div>
+                        <button type="button" class="mp-btn2" data-mp-sheet-close>先不要</button>
+                    </div>
+                </div>
+
+                <div class="mp-export" id="mp-export" hidden data-step="settings">
+                    <div class="mp-exp-box" role="dialog" aria-modal="true" aria-label="存成圖片">
+                        <div class="mp-exp-pane mp-exp-settings-pane">
+                            <div class="mp-exp-head"><h2>存成圖片</h2><button type="button" class="mp-iconbtn" data-mp-exp-close aria-label="關閉">×</button></div>
+                            <div class="mp-exp-body" id="mp-exp-settings"></div>
+                            <div class="mp-exp-foot mp-exp-mobile-only"><button type="button" class="mp-big" data-mp-exp-next>預覽圖片 →</button></div>
+                        </div>
+                        <div class="mp-exp-pane mp-exp-preview" id="mp-exp-preview-pane">
+                            <div class="mp-exp-head"><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-prev aria-label="返回設定">←</button><h2>預覽</h2><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-close aria-label="關閉">×</button></div>
+                            <div class="mp-exp-stage"><img id="mp-exp-img" class="mp-exp-img" alt="刷卡小抄預覽" hidden></div>
+                            <div class="mp-exp-foot">
+                                <div class="mp-exp-tools"><div class="mp-seg" id="mp-exp-theme" role="group" aria-label="顏色"><button type="button" data-mp-theme="light">淺色</button><button type="button" data-mp-theme="dark">深色</button></div></div>
+                                <button type="button" class="mp-big" id="mp-exp-save"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>儲存圖片</button>
+                                <div class="mp-exp-meta" id="mp-exp-meta"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <section class="input-section" style="display: none;">
                 <div class="input-row-with-button">
@@ -1249,61 +1320,6 @@
         <img id="image-lightbox-img" class="image-lightbox-img" src="" alt="放大圖片">
     </div>
 
-    <!-- 我的配卡組合：完整頁面「刷卡小抄」（2026-09-28 由 modal 改版，js/mappings-page.js）。
-         網址 /mappings（_redirects 改寫回首頁、_headers 設 noindex）；頁面內容全部由 JS 產生。
-         ⚠️ 它是蓋在首頁上的全螢幕層（z-index 1050），卡片詳情（1100）會疊在它上面。 -->
-    <section id="mappings-page" class="mp-page" hidden aria-label="我的配卡組合">
-        <div class="mp-top">
-            <button type="button" class="mp-iconbtn" data-mp-back aria-label="返回搜尋">←</button>
-            <h2 class="mp-top-title">我的配卡組合</h2>
-            <button type="button" class="mp-savebtn" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存圖</button>
-        </div>
-        <div class="mp-scroll" id="mp-scroll">
-            <div class="mp-layout">
-                <div class="mp-side">
-                    <input type="search" id="mp-search" class="mp-search" placeholder="搜尋商家或信用卡" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="搜尋商家或信用卡">
-                    <div class="mp-tools" id="mp-tools"></div>
-                    <div class="mp-tip" id="mp-tip"><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>點商家名稱可改顯示名稱</span><span class="mp-dot">・</span><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>點卡圖可看信用卡詳情</span><span class="mp-dot mp-tip-drag" hidden>・</span><span class="mp-tip-drag" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>按住拖曳調整順序</span></div>
-                    <button type="button" class="mp-big mp-side-save" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button>
-                </div>
-                <div class="mp-main">
-                    <div class="mp-notice" id="mp-notice" hidden></div>
-                    <div class="mp-paper" id="mp-list"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mp-sheet-wrap" id="mp-edit-sheet" hidden>
-            <div class="mp-sheet" role="dialog" aria-modal="true" aria-labelledby="mp-edit-title">
-                <h2 id="mp-edit-title">修改顯示名稱</h2>
-                <div class="mp-status" id="mp-edit-status" hidden></div>
-                <label>顯示名稱<input type="text" id="mp-edit-input" maxlength="20" autocomplete="off"></label>
-                <div class="mp-orig">名稱原為：<b id="mp-edit-orig"></b></div>
-                <div class="mp-row2"><button type="button" class="mp-btn2" id="mp-edit-reset">商家名稱重設</button><button type="button" class="mp-btn1" id="mp-edit-save">儲存</button></div>
-                <div class="mp-remove-list" id="mp-edit-remove"></div>
-                <button type="button" class="mp-btn2" data-mp-sheet-close>取消</button>
-            </div>
-        </div>
-
-        <div class="mp-export" id="mp-export" hidden data-step="settings">
-            <div class="mp-exp-box" role="dialog" aria-modal="true" aria-label="存成圖片">
-                <div class="mp-exp-pane mp-exp-settings-pane">
-                    <div class="mp-exp-head"><h2>存成圖片</h2><button type="button" class="mp-iconbtn" data-mp-exp-close aria-label="關閉">×</button></div>
-                    <div class="mp-exp-body" id="mp-exp-settings"></div>
-                    <div class="mp-exp-foot mp-exp-mobile-only"><button type="button" class="mp-big" data-mp-exp-next>預覽圖片 →</button></div>
-                </div>
-                <div class="mp-exp-pane mp-exp-preview" id="mp-exp-preview-pane">
-                    <div class="mp-exp-head"><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-prev aria-label="返回設定">←</button><h2>預覽</h2><button type="button" class="mp-iconbtn mp-exp-mobile-only" data-mp-exp-close aria-label="關閉">×</button></div>
-                    <div class="mp-exp-stage"><img id="mp-exp-img" class="mp-exp-img" alt="刷卡小抄預覽" hidden></div>
-                    <div class="mp-exp-foot">
-                        <div class="mp-exp-tools"><div class="mp-seg" id="mp-exp-theme" role="group" aria-label="顏色"><button type="button" data-mp-theme="light">淺色</button><button type="button" data-mp-theme="dark">深色</button></div></div>
-                        <button type="button" class="mp-big" id="mp-exp-save"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>儲存圖片</button>
-                        <div class="mp-exp-meta" id="mp-exp-meta"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Feedback Modal -->
     <div id="feedback-modal" class="modal" style="display: none;">

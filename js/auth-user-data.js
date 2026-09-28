@@ -139,7 +139,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
     const uidExact = uid ? [
         `cardsInComparison_${uid}`, `selectedCards_${uid}`, `myOwnedCards_${uid}`,
         `selectedPayments_${uid}`, `spendingMappings_${uid}`,
-        `merchantAliases_${uid}`, `mappingsPrefs_${uid}`
+        `merchantAliases_${uid}`, `mappingsPrefs_${uid}`, `mappingsTitle_${uid}`
     ] : [];
     const uidPrefixes = uid ? [
         `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
@@ -361,6 +361,8 @@ function ensureAuthSubscribed() {
 
             appStarted = true;
             showToolSections();
+            // 登入一確認就顯示「我的配卡組合」切換鈕，不等下面的 Firestore 讀取（冷啟動要好幾秒）
+            if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
 
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';

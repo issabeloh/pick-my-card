@@ -118,15 +118,15 @@ node tools/regression/delete-account-test.js   # 24 項，全過 → exit 0
 ## 我的配卡組合頁（獨立一支，2026-09-28 新增）
 
 ```bash
-node tools/regression/mappings-page-test.js              # 約 100 項，全過 → exit 0
+node tools/regression/mappings-page-test.js              # 約 116 項，全過 → exit 0
 node tools/regression/mappings-page-test.js --shots DIR  # 另存各尺寸截圖到 DIR（人工目視用）
 ```
 
 自帶「已登入用戶」替身，沿用凍結資料＋凍結時鐘。配對由頁面裡的 `calculateCardCashback()` 算出來（模擬釘選），
 另外刻意造「過期但可延長」「回饋率已變」「卡片已無此商家」三筆。守的機制：入口與網址、回饋率／期限＝存的值、
-分類順序與顏色、等級／方案標籤、🔒 不寫級別、失效 `*`、更新期限、改名／重設存雲端、點卡圖開詳情、A–Z、拖曳存檔、
+顯示在切換鈕下方（不蓋整頁）、分類順序與顏色、等級／方案標籤、🔒 不寫級別、失效 `*`、更新期限、回饋已變確認更新、小抄標題上限、刪除全部失效、改名／重設存雲端、點卡圖開詳情、A–Z、拖曳存檔、
 5 種尺寸（320／390／768／1024／1440）× 單雙欄 × 大小字的「無左右捲動、名稱不截斷、標籤換行、對齊」、存圖尺寸與全選上限、
-淺深色、返回與上一頁。**改 `js/mappings-page.js`、配卡相關 CSS、`spending-mappings.js` 的載存後必跑。**
+桌布留白（不蓋時鐘與底部按鈕）、淺深色、返回與上一頁。**改 `js/mappings-page.js`、配卡相關 CSS、`spending-mappings.js` 的載存後必跑。**
 Chromium 跑不到 iPhone Safari 的差異（拼音排序、分享面板、存到相簿），那部分靠實機人工驗。
 
 ## 人工備援流程（只在腳本壞掉時用）

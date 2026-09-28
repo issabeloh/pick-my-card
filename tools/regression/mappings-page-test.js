@@ -170,14 +170,22 @@ const PAIRS = [
   const seeded = await seed(pg);
   check('模擬釘選建立配對', seeded.count >= 10, `共 ${seeded.count} 筆${seeded.skipped.length ? '；跳過 ' + seeded.skipped.join('、') : ''}`);
   check('舊的浮動按鈕已移除', await pg.$('#my-mappings-btn') === null);
-  const cnt = await pg.textContent('#home-view-switch-count');
-  const expectCnt = await pg.evaluate(() => new Set(userSpendingMappings.map(mpKeyOf)).size);
-  check('切換鈕顯示商家數量', Number(cnt) === expectCnt, `${cnt} / ${expectCnt}`);
+  check('切換鈕不顯示數量', await pg.$('#home-view-switch-count') === null && !(await pg.textContent('#home-view-switch-mappings')).match(/\d/));
 
   await pg.click('#home-view-switch-mappings');
   await pg.waitForSelector('#mappings-page:not([hidden])');
   check('點切換鈕 → 網址變 /mappings', new URL(pg.url()).pathname === '/mappings', pg.url());
   await pg.waitForFunction(() => MP.probed, null, { timeout: 20000 });
+  const inline = await pg.evaluate(() => {
+    const page = document.getElementById('mappings-page'), sw = document.getElementById('home-view-switch');
+    const main = page.closest('main');
+    const others = main ? [...main.children].filter(el => el !== page && el !== sw) : [];
+    return { inMain: !!main, notFixed: getComputedStyle(page).position !== 'fixed', below: page.getBoundingClientRect().top >= sw.getBoundingClientRect().bottom - 1,
+      othersHidden: others.every(el => getComputedStyle(el).display === 'none'), swOn: document.getElementById('home-view-switch-mappings').classList.contains('on'), noBack: !document.querySelector('[data-mp-back]') };
+  });
+  check('配卡組合顯示在切換鈕下方（不是蓋住整頁）', inline.inMain && inline.notFixed && inline.below && inline.swOn, JSON.stringify(inline));
+  check('切到配卡組合時，查詢區塊都隱藏', inline.othersHidden);
+  check('沒有返回箭頭', inline.noBack);
 
   // 預設：單欄＋分類
   const defaults = await pg.evaluate(() => ({ sort: MP.prefs.sort, layout: MP.prefs.layout, size: MP.prefs.size }));
@@ -230,6 +238,49 @@ const PAIRS = [
   check('更新期限：同回饋率的過期配對被延長', upd.ext && upd.ext.periodEnd > '2026-09-11', upd.ext && upd.ext.periodEnd);
   check('更新期限：回饋率不同的不自動改、列入提醒', upd.air && upd.air.periodEnd === '2026-09-05' && upd.u.changed.some(c => c.includes('中華航空')), upd.u.changed.join('；'));
   check('按鈕文字「更新期限」→「期限已是最新」', (await pg.textContent('#mp-update-btn')).includes('期限已是最新'));
+
+  // 回饋已變 → 點了顯示新舊回饋率，確認後更新
+  const airKey = await pg.evaluate(() => mpKeyOf(userSpendingMappings.find(m => (m.merchant || '').includes('中華航空'))));
+  const flagBtn = await pg.$(`#mp-list [data-mp-row="${airKey}"] [data-mp-changed]`);
+  check('回饋率不同的活動顯示「回饋已變」按鈕', !!flagBtn);
+  if (flagBtn) {
+    await flagBtn.click();
+    const rs = await pg.evaluate(() => ({ open: !document.getElementById('mp-rate-sheet').hidden, text: document.getElementById('mp-rate-body').textContent, opts: document.querySelectorAll('[data-mp-rate-pick]').length }));
+    check('點「回饋已變」→ 顯示原本與新的回饋率', rs.open && rs.text.includes('原本釘選') && rs.opts > 0, rs.text.slice(0, 60));
+    const want = await pg.evaluate(() => { const m = userSpendingMappings.find(x => (x.merchant || '').includes('中華航空')); return MP.status.get(m.id).cands[0]; });
+    await pg.click('[data-mp-rate-pick="0"]');
+    await pg.waitForTimeout(300);
+    const after = await pg.evaluate((k) => { const m = userSpendingMappings.find(x => mpKeyOf(x) === k); return { rate: m.cashbackRate, end: m.periodEnd, flag: !!document.querySelector(`#mp-list [data-mp-row="${k}"] [data-mp-changed]`), shown: document.querySelector(`#mp-list [data-mp-row="${k}"] .mp-rate`).textContent,
+      saved: (globalThis.__setDocs || []).some(d => Array.isArray(d.data.spendingMappings) && d.data.spendingMappings.some(x => x.id === m.id && x.cashbackRate === m.cashbackRate)) }; }, airKey);
+    check('確認後更新成新回饋率與期限、存回雲端、不再顯示「回饋已變」', after.rate === want.rate && after.end === want.end && !after.flag && after.shown === `${want.rate}%` && after.saved, JSON.stringify(after));
+  }
+
+  // 小抄標題
+  await pg.click('#mp-title-btn');
+  check('點「刷卡小抄」→ 開標題面板', await pg.isVisible('#mp-title-sheet'));
+  await pg.fill('#mp-title-input', '我的超級無敵好用刷卡小抄表格');
+  await pg.dispatchEvent('#mp-title-input', 'input');
+  const tv = await pg.inputValue('#mp-title-input');
+  check('標題超過 10 個中文字會被截掉', [...tv].length === 10, tv);
+  await pg.fill('#mp-title-input', '小明的刷卡表');
+  await pg.dispatchEvent('#mp-title-input', 'input');
+  await pg.click('#mp-title-save');
+  const tt = await pg.evaluate(() => ({ shown: document.getElementById('mp-title-btn').textContent, saved: (globalThis.__setDocs || []).some(d => d.data.mappingsTitle === '小明的刷卡表'), oneLine: document.getElementById('mp-title-btn').getBoundingClientRect().height < 40 }));
+  check('標題更新、存雲端、維持一行', tt.shown === '小明的刷卡表' && tt.saved && tt.oneLine, JSON.stringify(tt));
+
+  // 刪除失效
+  await pg.click(`#mp-list [data-mp-edit="zzz不存在商家"]`);
+  const delTxt = await pg.$$eval('#mp-edit-remove button', b => b.map(x => x.textContent));
+  check('失效商家的面板有「刪除這個失效活動」按鈕', delTxt.includes('刪除這個失效活動'), delTxt.join('／'));
+  await pg.click('[data-mp-sheet-close]');
+  const deadN = await pg.evaluate(() => mpDeadIds().length);
+  check('有失效活動時顯示「刪除全部失效活動」', deadN > 0 && await pg.isVisible('#mp-delete-dead'), `${deadN} 筆`);
+  await pg.click('#mp-delete-dead');
+  check('第一次按只會變成確認', (await pg.textContent('#mp-delete-dead')).includes('確定') && await pg.evaluate(() => mpDeadIds().length) === deadN);
+  await pg.click('#mp-delete-dead');
+  await pg.waitForTimeout(300);
+  const afterDel = await pg.evaluate(() => ({ dead: mpDeadIds().length, bar: document.getElementById('mp-deadbar').hidden, gone: !userSpendingMappings.some(m => m.id === 'seed_gone') }));
+  check('再按一次 → 失效活動全部刪除、按鈕消失', afterDel.dead === 0 && afterDel.bar && afterDel.gone, JSON.stringify(afterDel));
   const savedAfterUpd = await pg.evaluate(() => (globalThis.__setDocs || []).some(d => d.path === 'users/testuid' && Array.isArray(d.data.spendingMappings) && d.data.spendingMappings.some(m => m.id === 'seed_extend' && m.periodEnd > '2026-09-11')));
   check('延長後的期限已存回雲端', savedAfterUpd);
 
@@ -291,8 +342,8 @@ const PAIRS = [
       await p2.evaluate(([l, s]) => { MP.prefs.layout = l; MP.prefs.size = s; MP.prefs.sort = 'cat'; mpRender(); }, [layout, size]);
       const r = await p2.evaluate(([l, s]) => {
         const out = {};
-        const sc = document.getElementById('mp-scroll');
-        out.hOverflow = document.documentElement.scrollWidth > innerWidth + 1 || sc.scrollWidth > sc.clientWidth + 1;
+        const pg = document.getElementById('mappings-page');
+        out.hOverflow = document.documentElement.scrollWidth > innerWidth + 1 || pg.scrollWidth > pg.clientWidth + 1 || pg.getBoundingClientRect().right > innerWidth + 1;
         const names = [...document.querySelectorAll('#mp-list .mp-nm')];
         out.cut = names.filter(n => n.scrollWidth > n.clientWidth + 1).map(n => n.textContent);
         if (l === 'F' && s === 'large') {
@@ -321,14 +372,25 @@ const PAIRS = [
   // ============ C. 存成圖片 ============
   console.log('\n【C】存成圖片');
   await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.theme = 'light'; MP.prefs.sel = null; mpRender(); });
-  await pg.click('.mp-top [data-mp-open-export]');
+  await pg.click('.mp-searchrow [data-mp-open-export]');
   await pg.waitForSelector('#mp-export:not([hidden])');
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
   let img = await pg.evaluate(() => { const i = document.getElementById('mp-exp-img'); return { w: i.naturalWidth, h: i.naturalHeight, cap: MP.exp.capacity, sel: mpExportSelection(mpExportPool()).length, pool: mpExportPool().length, fits: MP.exp.fits }; });
   check('手機桌布 iPhone：1179×2556', img.w === 1179 && img.h === 2556, `${img.w}×${img.h}`);
+  // 桌布留白：收據不能蓋到鎖定畫面的時鐘（上方約 25%）與手電筒／相機鈕（下方約 86% 起）
+  const band = await pg.evaluate(async () => {
+    const i = document.getElementById('mp-exp-img'); await i.decode();
+    const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
+    const x = c.getContext('2d'); x.drawImage(i, 0, 0);
+    const col = x.getImageData(Math.round(c.width / 2), 0, 1, c.height).data, bg = [col[0], col[1], col[2]];
+    let top = -1, bottom = -1;
+    for (let y = 0; y < c.height; y++) { const d = Math.abs(col[y * 4] - bg[0]) + Math.abs(col[y * 4 + 1] - bg[1]) + Math.abs(col[y * 4 + 2] - bg[2]); if (d > 12) { if (top < 0) top = y; bottom = y; } }
+    return { top: top / c.height, bottom: bottom / c.height };
+  });
+  check('桌布：收據在時鐘下方、手電筒／相機鈕上方', band.top >= 0.27 && band.bottom <= 0.86, `上緣 ${(band.top * 100).toFixed(1)}%／下緣 ${(band.bottom * 100).toFixed(1)}%`);
   check('桌布預設勾選「放得下的前 N 家」且放得下', img.sel === Math.min(img.cap, img.pool) && img.fits, `選 ${img.sel}／上限 ${img.cap}／可選 ${img.pool}`);
   check('按鈕是「預覽圖片 →」', (await pg.textContent('[data-mp-exp-next]')).includes('預覽圖片'));
-  check('失效商家不能勾選', await pg.$eval('[data-mp-pick="zzz不存在商家"]', e => e.disabled));
+  check('失效商家不會出現在可存的清單', await pg.evaluate(() => mpExportPool().every(g => !g.dead) && [...document.querySelectorAll('.mp-pk.off input')].every(i => i.disabled)));
   await pg.click('#mp-exp-all');
   let s1 = await pg.evaluate(() => mpExportSelection(mpExportPool()).length);
   check('按「全選」→ 變「全不選」', (await pg.textContent('#mp-exp-all')) === '全不選' || s1 === 0, `選 ${s1}`);
@@ -362,16 +424,17 @@ const PAIRS = [
 
   // ============ D. 返回、網址 ============
   console.log('\n【D】返回與網址');
-  await pg.click('[data-mp-back]');
+  await pg.click('#home-view-switch-search');
   await pg.waitForFunction(() => document.getElementById('mappings-page').hidden, null, { timeout: 5000 });
-  check('← 返回搜尋：頁面關閉、網址回到首頁', new URL(pg.url()).pathname !== '/mappings', pg.url());
+  const backState = await pg.evaluate(() => ({ searchVisible: getComputedStyle(document.querySelector('.input-section')).display !== 'none', on: document.getElementById('home-view-switch-search').classList.contains('on') }));
+  check('點「查詢回饋」：回到查詢畫面、網址回到首頁', new URL(pg.url()).pathname !== '/mappings' && backState.searchVisible && backState.on, pg.url());
   await pg.click('#home-view-switch-mappings');
   await pg.waitForSelector('#mappings-page:not([hidden])');
   await pg.goBack();
   await pg.waitForFunction(() => document.getElementById('mappings-page').hidden, null, { timeout: 5000 }).catch(() => {});
   check('瀏覽器「上一頁」也會關閉頁面', await pg.evaluate(() => document.getElementById('mappings-page').hidden));
   const lock = await pg.evaluate(() => document.body.style.overflow);
-  check('關閉後頁面可以捲動（捲動鎖已解除）', lock === '', `overflow=${lock}`);
+  check('頁面沒有被鎖住捲動', lock === '', `overflow=${lock}`);
 
   if (SHOTS) {
     await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; });

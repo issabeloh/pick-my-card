@@ -9161,41 +9161,19 @@ mark.cashback-search-hl {
     background: #fff;
     color: #1e40af;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
-    cursor: default;
 }
 .home-view-switch svg { width: 15px; height: 15px; flex: none; }
 .home-view-switch > button { position: relative; }   /* 釘選時的 +1 徽章（.pin-badge）以它定位 */
-.home-view-switch-count {
-    font: 700 11px/1.4 ui-monospace, Menlo, monospace;
-    background: #fef3c7;
-    color: #b45309;
-    border-radius: 999px;
-    padding: 0 6px;
-}
-.home-view-switch-count[hidden] { display: none; }
+/* 切到「我的配卡組合」時，main 裡除了切換鈕與配卡區以外全部隱藏（配卡區顯示在切換鈕下方） */
+main.mp-view > :not(#home-view-switch):not(#mappings-page) { display: none !important; }
 
 .mp-page {
-    position: fixed;
-    inset: 0;
-    z-index: 1050;   /* 高於一般 modal（1000），低於卡片詳情（1100，從這頁點卡圖要疊在上面） */
-    background: #dfe4ec;
     color: #111827;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
+    margin: 0 -8px;   /* 手機 main 左右留白較大，收據吃滿一點 */
 }
 .mp-page[hidden] { display: none; }
 .mp-page button { font-family: inherit; }
 .mp-page button:focus-visible, .mp-page input:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-.mp-top {
-    flex: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
-}
-.mp-top .mp-top-title { margin: 0; font-size: 19px; font-weight: 900; flex: 1; min-width: 0; white-space: nowrap; }
 .mp-iconbtn {
     flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0;
     background: rgba(17, 24, 39, .08); color: #374151; font-size: 18px;
@@ -9208,13 +9186,13 @@ mark.cashback-search-hl {
 }
 .mp-savebtn svg { width: 15px; height: 15px; }
 .mp-savebtn:disabled { opacity: .4; cursor: default; }
-.mp-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .mp-layout { max-width: 1120px; margin: 0 auto; }
-.mp-side { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
-.mp-side .mp-side-save { display: none; }
+.mp-side { padding: 0 8px; display: flex; flex-direction: column; gap: 8px; }
+.mp-searchrow { display: flex; gap: 8px; align-items: center; }
+.mp-searchrow .mp-savebtn { padding: 9px 14px; }
 #mappings-page .mp-search {
-    width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 12px;
-    border: 0; border-radius: 12px; background: #fff; color: #111827; margin: 0;
+    flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 12px;
+    border: 1.5px solid #e1e5ec; border-radius: 12px; background: #fff; color: #111827; margin: 0;
 }
 #mappings-page .mp-search::placeholder { color: #9ca3af; font-size: 14px; }
 .mp-tools { display: flex; flex-direction: column; gap: 8px; }
@@ -9232,6 +9210,10 @@ mark.cashback-search-hl {
 .mp-a-s { font-size: 11px; }
 .mp-a-l { font-size: 16px; }
 .mp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; white-space: nowrap; }
+/* 配卡區在 main 裡，全站 label 樣式會套上來；用 id 提特異性蓋回（見 ui-display.md 教訓：特異性） */
+#mappings-page label.mp-chk { font-size: 13px; font-weight: 700; margin: 0; display: inline-flex; color: #374151; }
+#mappings-page .mp-sheet label { font-size: 12px; font-weight: 500; margin: 0; color: #6b7280; display: grid; gap: 6px; }
+#mappings-page label.mp-pk { font-size: 14px; font-weight: 500; margin: 0; color: #111827; display: flex; }
 .mp-chk input { width: 16px; height: 16px; margin: 0; accent-color: #111827; }
 .mp-chk.na { color: #9ca3af; font-weight: 500; cursor: default; }
 .mp-upd {
@@ -9245,7 +9227,14 @@ mark.cashback-search-hl {
 .mp-tip { font-size: 12px; color: #6b7280; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 2px 0 4px; }
 .mp-tip svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 3px; color: #9ca3af; }
 .mp-dot { color: #c4c9d2; }
-.mp-main { padding: 6px 12px calc(28px + env(safe-area-inset-bottom, 0px)); }
+.mp-main { padding: 6px 4px 12px; }
+.mp-deadbar { max-width: 460px; margin: 12px auto 0; display: flex; justify-content: center; }
+.mp-deadbar[hidden] { display: none; }
+.mp-btn-danger {
+    border: 1.5px solid #fca5a5; background: #fff; color: #b91c1c; border-radius: 12px; padding: 9px 14px;
+    font-size: 14px; font-weight: 800; cursor: pointer; width: 100%;
+}
+.mp-btn-danger.confirm { background: #b91c1c; border-color: #b91c1c; color: #fff; }
 .mp-notice {
     max-width: 460px; margin: 0 auto 10px; background: #fff; border-radius: 12px; padding: 9px 12px;
     font-size: 12.5px; line-height: 1.55; color: #374151; display: grid; gap: 3px; box-shadow: inset 0 0 0 1.5px #bfdbfe;
@@ -9272,6 +9261,8 @@ mark.cashback-search-hl {
 .mp-store { font: 700 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .24em; color: var(--sub); }
 .mp-store i { font-style: normal; margin: 0 .5em; letter-spacing: 0; }
 .mp-title { font-size: 18px; font-weight: 900; letter-spacing: .18em; }
+.mp-title-btn { border: 0; background: none; color: inherit; font-family: inherit; padding: 0 0 0 .18em; cursor: pointer; justify-self: center; border-bottom: 1px dashed transparent; }
+.mp-title-btn:hover { border-bottom-color: var(--rule); }
 .mp-rc.lg .mp-title { font-size: 21px; }
 .mp-eq { font: 500 10px/1 ui-monospace, Menlo, monospace; color: var(--sub); white-space: nowrap; overflow: hidden; margin: 7px 0 2px; }
 .mp-colhead {
@@ -9307,7 +9298,10 @@ mark.cashback-search-hl {
 .mp-alt { opacity: .5; }
 .mp-labs { display: inline-flex; gap: 4px; }
 .mp-lab { font: 700 var(--lab)/1 ui-monospace, Menlo, monospace; color: var(--sub); border: 1px solid var(--rule); border-radius: 3px; padding: 2px 3px; white-space: nowrap; }
-.mp-flag { font-size: 9.5px; font-weight: 700; color: #b91c1c; white-space: nowrap; }
+.mp-flag {
+    font-size: 10px; font-weight: 800; color: #b91c1c; white-space: nowrap; border: 1px solid #fca5a5;
+    background: #fff5f5; border-radius: 999px; padding: 2px 6px; cursor: pointer; font-family: inherit;
+}
 .mp-grip { flex: none; color: var(--sub); padding: 4px 6px 4px 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; display: inline-grid; }
 .mp-grip svg { width: 14px; height: 14px; }
 .mp-dragging { opacity: .55; background: rgba(29, 78, 216, .06); }
@@ -9333,7 +9327,7 @@ mark.cashback-search-hl {
 .mp-rc.lg .mp-f-pick, .mp-f-row.mp-labs-below .mp-f-pick { display: grid; justify-items: end; row-gap: 5px; }
 .mp-rc.lg .mp-f-pick .mp-labs, .mp-f-row.mp-labs-below .mp-f-pick .mp-labs { order: 2; }
 .mp-rc.lg .mp-f-pick .mp-f-cols, .mp-f-row.mp-labs-below .mp-f-pick .mp-f-cols { order: 1; }
-.mp-rc.lg .mp-f-pick .mp-flag, .mp-f-row.mp-labs-below .mp-f-pick .mp-flag { order: 0; }
+.mp-rc.lg .mp-f-pick .mp-flag, .mp-f-row.mp-labs-below .mp-f-pick .mp-flag { order: 3; }   /* 回饋已變放最下面，不把回饋率推離商家名稱那一行 */
 .mp-f-row.mp-labs-below { align-items: start; }
 
 /* 雙欄 */
@@ -9368,8 +9362,13 @@ mark.cashback-search-hl {
 .mp-btn2 { flex: 1; border: 1.5px solid #e5e7eb; background: #fff; border-radius: 12px; padding: 10px; font-weight: 700; font-size: 14px; color: #374151; cursor: pointer; }
 .mp-btn2:disabled { color: #c4c8cf; cursor: default; }
 .mp-btn1 { flex: 1; border: 0; background: #111827; color: #fff; border-radius: 12px; padding: 10px; font-weight: 900; font-size: 14px; cursor: pointer; }
-.mp-rm { border: 0; background: none; color: #b91c1c; font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px; }
-.mp-remove-list { display: grid; justify-items: center; gap: 2px; }
+.mp-remove-list { display: grid; gap: 6px; }
+.mp-title-count { margin-left: 6px; color: #374151; font-family: ui-monospace, Menlo, monospace; }
+.mp-title-count.over { color: #b91c1c; }
+.mp-rate-body { display: grid; gap: 8px; font-size: 14px; line-height: 1.55; color: #374151; }
+.mp-rate-body p { margin: 0; }
+.mp-rate-old { background: #f3f4f6; border-radius: 10px; padding: 8px 10px; }
+.mp-rate-opt { border: 1.5px solid #111827; background: #111827; color: #fff; border-radius: 12px; padding: 10px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; }
 
 /* ---- 存成圖片 ---- */
 .mp-export { position: fixed; inset: 0; z-index: 1060; background: rgba(15, 20, 30, .45); display: flex; }
@@ -9431,13 +9430,11 @@ mark.cashback-search-hl {
 
 /* ---- 平板／桌機 ---- */
 @media (min-width: 1024px) {
-    .mp-top { max-width: 1120px; width: 100%; margin: 0 auto; box-sizing: border-box; padding-top: 18px; }
-    .mp-top .mp-savebtn { display: none; }
-    .mp-layout { display: grid; grid-template-columns: 320px 1fr; gap: 36px; padding: 8px 24px 32px; align-items: start; }
-    .mp-side { position: sticky; top: 0; padding: 0; }
-    .mp-side .mp-side-save { display: flex; margin-top: 6px; }
-    .mp-main { padding: 0 0 28px; }
-    .mp-notice, .mp-paper { margin-left: 0; }
+    .mp-page { margin: 0; }
+    .mp-layout { display: grid; grid-template-columns: minmax(260px, 300px) minmax(0, 460px); gap: 28px; align-items: start; justify-content: center; }
+    .mp-side { position: sticky; top: 12px; padding: 0; }
+    .mp-main { padding: 0 0 12px; }
+    .mp-notice, .mp-paper, .mp-deadbar { margin-left: 0; margin-right: 0; }
     .mp-sheet-wrap { align-items: center; }
     .mp-sheet { border-radius: 18px; }
     .mp-export { align-items: center; justify-content: center; }

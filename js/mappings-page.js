@@ -61,6 +61,15 @@ function mpSavePrefs() {
 // 商家顯示名稱（改名只改顯示；搜尋、計算、分類一律用原名）
 // ============================================
 let userMerchantAliases = {};
+let userMappingsTitle = '';          // 小抄標題（空＝預設「刷卡小抄」）；存 Firestore users/<uid>.mappingsTitle
+const MP_DEFAULT_TITLE = '刷卡小抄';
+const MP_TITLE_MAX = 10;             // 寬度單位：中文字＝1、英數字＝0.6（10 個中文字大字也不換行）
+
+function mpTitleUnits(t) {
+    return [...String(t || '')].reduce((n, ch) => n + (/[\u0000-\u00ff]/.test(ch) ? 0.6 : 1), 0);
+}
+
+function mpTitle() { return userMappingsTitle || MP_DEFAULT_TITLE; }
 
 function mpSanitizeAliases(obj) {
     const out = {};
@@ -74,7 +83,15 @@ function mpSanitizeAliases(obj) {
 
 // 登入流程呼叫（auth-user-data.js）：雲端有值 → 雲端為準並更新本機鏡像；雲端沒有 → 讀本機鏡像
 function loadMerchantAliases(userData) {
-    if (!currentUser) { userMerchantAliases = {}; return; }
+    if (!currentUser) { userMerchantAliases = {}; userMappingsTitle = ''; return; }
+    const titleKey = `mappingsTitle_${currentUser.uid}`;
+    if (userData && typeof userData.mappingsTitle === 'string') {
+        userMappingsTitle = userData.mappingsTitle.trim();
+        try { localStorage.setItem(titleKey, userMappingsTitle); } catch (e) { /* ignore */ }
+    } else {
+        try { userMappingsTitle = (localStorage.getItem(titleKey) || '').trim(); } catch (e) { userMappingsTitle = ''; }
+    }
+    if (mpTitleUnits(userMappingsTitle) > MP_TITLE_MAX) userMappingsTitle = '';
     const localKey = `merchantAliases_${currentUser.uid}`;
     if (userData && userData.merchantAliases && typeof userData.merchantAliases === 'object') {
         userMerchantAliases = mpSanitizeAliases(userData.merchantAliases);
@@ -109,6 +126,25 @@ function mpKeyOf(m) {
 }
 
 // 顯示名稱：自訂名稱優先，否則用這組第一筆的原名
+async function mpSetTitle(title) {
+    if (!currentUser) return;
+    let t = String(title || '').trim();
+    if (t === MP_DEFAULT_TITLE) t = '';
+    if (mpTitleUnits(t) > MP_TITLE_MAX) return;
+    userMappingsTitle = t;
+    try { localStorage.setItem(`mappingsTitle_${currentUser.uid}`, t); } catch (e) { /* ignore */ }
+    try {
+        if (window.db && window.doc && window.setDoc) {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                mappingsTitle: t ? t : (window.deleteField ? window.deleteField() : ''),
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+    } catch (error) {
+        console.error('❌ [配卡] 小抄標題同步失敗（本機已保存）:', error);
+    }
+}
+
 function mpDisplayName(group) {
     return userMerchantAliases[group.key] || group.name;
 }
@@ -273,7 +309,19 @@ async function mpProbe(m) {
         const plan = mpPlanLabel(best.matchedCategory);
         if (plan) labels.push(plan);
     }
-    return { dead: matches.length ? null : 'gone', labels, next, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0) };
+    // 回饋率已變：列出目前資料裡這張卡＋商家的活動（同回饋率只留一筆，取期限最晚），讓用戶自己確認要更新成哪一個
+    const cands = [];
+    if (!same.length) {
+        matches.forEach(x => {
+            const r = Number(x.rate) || 0;
+            const c = { rate: r, end: endOf(x), start: mpISO(x.matchedRateGroup && x.matchedRateGroup.periodStart) || null, category: x.matchedCategory || '' };
+            const i = cands.findIndex(y => Math.abs(y.rate - r) < 0.001);
+            if (i < 0) cands.push(c);
+            else if ((c.end || '9999-12-31') > (cands[i].end || '9999-12-31')) cands[i] = c;
+        });
+        cands.sort((a, b) => b.rate - a.rate);
+    }
+    return { dead: matches.length ? null : 'gone', labels, next, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
 }
 
 async function mpProbeAll() {
@@ -283,7 +331,7 @@ async function mpProbeAll() {
         for (const m of list) {
             const prev = MP.status.get(m.id) || {};
             const r = await mpProbe(m);
-            MP.status.set(m.id, { ...prev, dead: r.dead, labels: r.labels, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [] });
+            MP.status.set(m.id, { ...prev, dead: r.dead, labels: r.labels, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
         }
         MP.probed = true;
         MP.probing = null;
@@ -327,6 +375,15 @@ async function mpUpdateDeadlines() {
 // ============================================
 function mpEl(id) { return document.getElementById(id); }
 
+// 切到「我的配卡組合」：顯示在切換鈕下方，main 其他區塊隱藏（main.mp-view），不是蓋住整頁的覆蓋層
+function mpSetSwitchState(onMappings) {
+    const a = mpEl('home-view-switch-search'), b = mpEl('home-view-switch-mappings');
+    if (a) { a.classList.toggle('on', !onMappings); a.setAttribute('aria-pressed', String(!onMappings)); }
+    if (b) { b.classList.toggle('on', onMappings); b.setAttribute('aria-pressed', String(onMappings)); }
+    const main = mpEl('mappings-page') && mpEl('mappings-page').closest('main');
+    if (main) main.classList.toggle('mp-view', onMappings);
+}
+
 async function openMappingsPage(options = {}) {
     const page = mpEl('mappings-page');
     if (!page) return;
@@ -334,13 +391,13 @@ async function openMappingsPage(options = {}) {
     if (!MP.open) {
         MP.open = true;
         page.hidden = false;
-        document.documentElement.classList.add('mp-page-open');
-        disableBodyScroll();
+        mpSetSwitchState(true);
         if (!options.fromHistory && location.pathname !== '/mappings') {
             try { history.pushState({ mappingsPage: true }, '', '/mappings'); MP.pushed = true; } catch (e) { MP.pushed = false; }
         }
-        const scroller = mpEl('mp-scroll');
-        if (scroller) scroller.scrollTop = 0;
+        // 切換鈕捲出畫面時才捲回來（從頁面下方切過來的情況）
+        const sw = mpEl('home-view-switch');
+        if (sw && sw.getBoundingClientRect().top < 0) sw.scrollIntoView({ block: 'start' });
         if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'open_mappings_page', {});
     }
     // 登入中、雲端狀態未確認、手上是空的 → 補讀一次（沿用舊 modal 的保護）
@@ -359,8 +416,7 @@ function closeMappingsPage(options = {}) {
     page.hidden = true;
     mpCloseExport();
     mpCloseSheets();
-    document.documentElement.classList.remove('mp-page-open');
-    enableBodyScroll();
+    mpSetSwitchState(false);
     if (!options.fromHistory && location.pathname === '/mappings') {
         if (MP.pushed) history.back();
         else { try { history.replaceState(null, '', '/'); } catch (e) { /* ignore */ } }
@@ -373,12 +429,7 @@ function closeMappingsPage(options = {}) {
 function updateMappingsSwitch() {
     const sw = mpEl('home-view-switch');
     if (sw) sw.hidden = !currentUser;
-    const cnt = mpEl('home-view-switch-count');
-    if (cnt) {
-        const n = new Set((userSpendingMappings || []).map(mpKeyOf)).size;
-        cnt.textContent = n;
-        cnt.hidden = n === 0;
-    }
+    if (!currentUser && MP.open) closeMappingsPage();
 }
 
 function refreshMappingsEntry() {
@@ -447,9 +498,9 @@ function mpReceiptHtml(sections, o) {
     const star = g => g.dead ? '<span class="mp-star" aria-label="已失效">*</span>' : '';
     const name = g => `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱">${esc(mpDisplayName(g))}${star(g)}${userMerchantAliases[g.key] ? `<span class="mp-pen">${MP_ICON.pen}</span>` : ''}</button>`;
     const grip = () => o.drag ? `<span class="mp-grip" data-mp-grip title="拖曳調整順序" aria-hidden="true">${MP_ICON.grip}</span>` : '';
-    const thumb = e => `<button type="button" class="mp-cardbtn" data-mp-card="${esc(e.m.cardId)}" title="查看 ${esc(mpCardName(e.m.cardId, e.m.cardName))} 詳情"><img class="mp-th" src="assets/images/cards/${esc(e.m.cardId)}.png" alt="${esc(mpCardName(e.m.cardId, e.m.cardName))}" loading="lazy" onerror="this.style.visibility='hidden'"></button>`;
+    const thumb = e => `<button type="button" class="mp-cardbtn" data-mp-card="${esc(e.m.cardId)}" title="查看 ${esc(mpCardName(e.m.cardId, e.m.cardName))} 詳情"><img class="mp-th" src="assets/images/cards/${esc(e.m.cardId)}.png" alt="${esc(mpCardName(e.m.cardId, e.m.cardName))}" onerror="this.style.visibility='hidden'"></button>`;
     const due = e => `<span class="mp-due${mpIsHot(e) ? ' hot' : ''}${e.ext ? ' ext' : ''}">${esc(mpDueText(e))}</span>`;
-    const flag = e => e.changed ? '<span class="mp-flag">回饋已變</span>' : '';
+    const flag = e => e.changed ? `<button type="button" class="mp-flag" data-mp-changed="${esc(e.m.id)}" title="點一下看新的回饋率">回饋已變</button>` : '';
     const labs = e => o.labels && e.labels.length ? `<span class="mp-labs">${e.labels.map(l => `<span class="mp-lab">${esc(l)}</span>`).join('')}</span>` : '';
     const rate = e => `<span class="mp-rate">${esc(String(e.rate))}%</span>`;
     const sec = s => s.title === null ? '' : (MP.prefs.sort === 'az'
@@ -468,7 +519,7 @@ function mpReceiptHtml(sections, o) {
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">PICK MY CARD<i>▪</i>${esc(mpMonthLabel())}</span><span class="mp-title">刷卡小抄</span></div>
+        <div class="mp-rc-head"><span class="mp-store">PICK MY CARD<i>▪</i>${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}</button></div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         <div class="mp-foot">${mpBarcodeSvg()}<span class="mp-url">PICKMYCARD.APP</span></div>
@@ -546,6 +597,13 @@ function mpRender() {
         drag: p.sort === 'custom' && !MP.search
     });
     mpFitRows();
+
+    const deadbar = mpEl('mp-deadbar');
+    if (deadbar) {
+        const n = MP.search ? 0 : mpDeadIds().length;
+        deadbar.hidden = n === 0;
+        deadbar.innerHTML = n ? `<button type="button" class="mp-btn-danger" id="mp-delete-dead">${escapeHtml(`刪除全部失效活動（${n}）`)}</button>` : '';
+    }
 }
 
 // 單欄小字：等級標籤排在回饋率左邊時，若把商家名稱擠到換行，就把標籤移到下一行（名稱優先）
@@ -609,9 +667,95 @@ function mpStartDrag(e) {
 // 改名面板（也是移除配對的地方）
 // ============================================
 function mpCloseSheets() {
-    const sh = mpEl('mp-edit-sheet');
-    if (sh) sh.hidden = true;
+    ['mp-edit-sheet', 'mp-title-sheet', 'mp-rate-sheet'].forEach(id => { const sh = mpEl(id); if (sh) sh.hidden = true; });
     MP.editKey = null;
+    MP.rateId = null;
+}
+
+function mpAnySheetOpen() {
+    return ['mp-edit-sheet', 'mp-title-sheet', 'mp-rate-sheet'].some(id => mpEl(id) && !mpEl(id).hidden);
+}
+
+// ---- 小抄標題 ----
+function mpOpenTitleSheet() {
+    const sheet = mpEl('mp-title-sheet');
+    if (!sheet) return;
+    const input = mpEl('mp-title-input');
+    input.value = mpTitle();
+    mpTitleCount();
+    sheet.hidden = false;
+    setTimeout(() => { try { input.focus({ preventScroll: true }); input.select(); } catch (err) { /* ignore */ } }, 50);
+}
+
+function mpTitleCount() {
+    const input = mpEl('mp-title-input'), cnt = mpEl('mp-title-count'), save = mpEl('mp-title-save');
+    // 超過上限就把多的字截掉（中文字 1、英數 0.6），不讓標題換行
+    let v = input.value;
+    while (mpTitleUnits(v) > MP_TITLE_MAX) v = [...v].slice(0, -1).join('');
+    if (v !== input.value) input.value = v;
+    const u = mpTitleUnits(v);
+    cnt.textContent = `${Math.ceil(u * 10) / 10} / ${MP_TITLE_MAX}`;
+    cnt.classList.toggle('over', u >= MP_TITLE_MAX);
+    save.disabled = !v.trim();
+}
+
+async function mpSaveTitle(reset) {
+    await mpSetTitle(reset ? '' : mpEl('mp-title-input').value);
+    mpCloseSheets();
+    mpRender();
+}
+
+// ---- 回饋率已變：顯示新舊回饋率，讓用戶確認更新 ----
+function mpOpenRateSheet(id) {
+    const m = (userSpendingMappings || []).find(x => x.id === id);
+    const st = MP.status.get(id) || {};
+    const sheet = mpEl('mp-rate-sheet');
+    if (!m || !sheet || !(st.cands && st.cands.length)) return;
+    MP.rateId = id;
+    const esc = escapeHtml;
+    const endTxt = d => d ? `至 ${d.replace(/-/g, '/')}` : '無期限';
+    const name = userMerchantAliases[mpKeyOf(m)] || optimizeMerchantName(m.merchant);
+    mpEl('mp-rate-body').innerHTML =
+        `<p><b>${esc(name)}</b>・${esc(mpCardName(m.cardId, m.cardName))}</p>` +
+        `<div class="mp-rate-old">原本釘選：<b>${esc(String(m.cashbackRate))}%</b>（${esc(endTxt(mpISO(m.periodEnd)))}）</div>` +
+        `<p>目前資料裡的回饋率${st.cands.length > 1 ? '有幾種（依方案、條件不同）' : ''}，要更新成：</p>` +
+        st.cands.map((c, i) => `<button type="button" class="mp-rate-opt" data-mp-rate-pick="${i}">更新成 ${esc(String(c.rate))}%（${esc(endTxt(c.end))}）${c.category ? `<br><small>${esc(c.category)}</small>` : ''}</button>`).join('');
+    sheet.hidden = false;
+}
+
+async function mpApplyRate(idx) {
+    const id = MP.rateId;
+    const m = (userSpendingMappings || []).find(x => x.id === id);
+    const st = MP.status.get(id) || {};
+    const c = st.cands && st.cands[idx];
+    if (!m || !c) return;
+    m.cashbackRate = c.rate;
+    m.lastCheckedRate = c.rate;
+    m.lastCheckedTime = Date.now();
+    m.periodEnd = c.end;
+    m.periodStart = c.start;
+    await saveSpendingMappings(userSpendingMappings);
+    if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_update_rate', { card_id: m.cardId, merchant: m.merchant, rate: c.rate });
+    mpCloseSheets();
+    const r = await mpProbe(m);   // 重新判斷標籤與狀態
+    MP.status.set(m.id, { dead: r.dead, labels: r.labels, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
+    mpRender();
+}
+
+// ---- 刪除全部失效活動 ----
+function mpDeadIds() {
+    return mpBuildGroups().flatMap(g => g.entries.filter(e => e.dead).map(e => e.m.id));
+}
+
+async function mpDeleteAllDead() {
+    const ids = new Set(mpDeadIds());
+    if (!ids.size) return;
+    userSpendingMappings = (userSpendingMappings || []).filter(m => !ids.has(m.id));
+    ids.forEach(id => MP.status.delete(id));
+    await saveSpendingMappings(userSpendingMappings);
+    if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_delete_dead', { count: ids.size });
+    if (typeof updatePinButtonsState === 'function') updatePinButtonsState();
+    mpRender();
 }
 
 function mpOpenEditSheet(key) {
@@ -632,8 +776,12 @@ function mpOpenEditSheet(key) {
     input.value = userMerchantAliases[key] || g.name;
     mpEl('mp-edit-orig').textContent = g.name;
     mpEl('mp-edit-reset').disabled = !userMerchantAliases[key];
-    mpEl('mp-edit-remove').innerHTML = g.entries.map(e =>
-        `<button type="button" class="mp-rm" data-mp-remove="${esc(e.m.id)}">從配卡組合移除：${esc(mpCardName(e.m.cardId, e.m.cardName))} ${esc(String(e.rate))}%</button>`).join('');
+    const multi = g.entries.length > 1;
+    mpEl('mp-edit-remove').innerHTML = g.entries.map(e => {
+        const label = e.dead ? '刪除這個失效活動' : '刪除這個活動';
+        const which = multi ? `（${mpCardName(e.m.cardId, e.m.cardName)} ${e.rate}%）` : '';
+        return `<button type="button" class="mp-btn-danger" data-mp-remove="${esc(e.m.id)}">${esc(label + which)}</button>`;
+    }).join('');
     sheet.hidden = false;
     setTimeout(() => { try { input.focus({ preventScroll: true }); } catch (err) { /* ignore */ } }, 50);
 }
@@ -665,7 +813,7 @@ async function mpRemoveMapping(id) {
 const MP_RATIOS = {
     iphone: { label: 'iPhone', w: 1179, h: 2556, desc: 'iPhone X 之後' },
     android: { label: 'Android', w: 1080, h: 2400, desc: '多數 Android' },
-    old: { label: '16:9', w: 1080, h: 1920, desc: 'iPhone 8／SE 等舊機' }
+    old: { label: '16:9', w: 1080, h: 1920, desc: 'iPhone 8／SE 等舊機（全螢幕 iPhone 用它會被裁掉左右）' }
 };
 
 // 手機上讀實際螢幕：screen 寬高（CSS px，直向）× devicePixelRatio。桌機、平板或讀不到 → null
@@ -693,7 +841,10 @@ const MP_THEME = {
 };
 const MP_SANS = '"Noto Sans TC", -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif';
 const MP_MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
-const MP_BASE_W = 390;   // 設計寬度（CSS px）；輸出時整體等比放大到實際像素
+const MP_BASE_W = 390;
+// 桌布留白（依站長 iPhone 13 實測截圖 2026-09-28）：時鐘底部約在螢幕高度 25%、手電筒／相機鈕頂端約 86%
+const MP_WALL_TOP = 0.29;
+const MP_WALL_BOTTOM = 0.15;   // 設計寬度（CSS px）；輸出時整體等比放大到實際像素
 
 const mpImgCache = new Map();
 function mpLoadImg(src) {
@@ -723,7 +874,7 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
     // 抬頭
     ops.push({ t: 'spaced', text: `PICK MY CARD ▪ ${mpMonthLabel()}`, x: X0 + W / 2, y: y + 8, font: font(700, 9.5, MP_MONO), color: 'sub', spacing: 2.2 });
     y += 16;
-    ops.push({ t: 'spaced', text: '刷卡小抄', x: X0 + W / 2, y: y + 18, font: font(900, big ? 21 : 18, MP_SANS), color: 'ink', spacing: big ? 3.6 : 3.2 });
+    ops.push({ t: 'spaced', text: mpTitle(), x: X0 + W / 2, y: y + 18, font: font(900, big ? 21 : 18, MP_SANS), color: 'ink', spacing: big ? 3.6 : 3.2 });
     y += big ? 32 : 28;
     ops.push({ t: 'eq', x: IX, y: y + 6, w: IW });
     y += 14;
@@ -895,8 +1046,8 @@ async function mpRenderCanvas(sections, o) {
     if (o.fmt === 'wall') {
         outW = o.wall.w; outH = o.wall.h;
         const baseH = MP_BASE_W * outH / outW;
-        top = Math.round(baseH * 0.24);           // 鎖定畫面的日期時鐘區
-        avail = baseH - top - baseH * 0.07;         // 底部留給手電筒／相機鈕
+        top = Math.round(baseH * MP_WALL_TOP);        // 鎖定畫面的日期＋時鐘
+        avail = baseH - top - baseH * MP_WALL_BOTTOM;  // 底部留給手電筒／相機鈕
     } else {
         outW = 1080;
         top = 24;
@@ -1021,7 +1172,7 @@ function mpWallCapacity(pool) {
     const c = document.createElement('canvas').getContext('2d');
     const o = mpExportOpts();
     const baseH = MP_BASE_W * o.wall.h / o.wall.w;
-    const avail = baseH - Math.round(baseH * 0.24) - baseH * 0.07;
+    const avail = baseH - Math.round(baseH * MP_WALL_TOP) - baseH * MP_WALL_BOTTOM;
     let n = 0;
     for (let i = 1; i <= pool.length; i++) {
         const lay = mpLayoutReceipt(c, mpExportSections(pool.slice(0, i).map(g => g.key)), o);
@@ -1071,6 +1222,7 @@ async function mpRenderExport() {
             <button type="button" data-mp-fmt="wall" class="${p.fmt === 'wall' ? 'on' : ''}"><b>手機桌布</b><span>最多約 ${MP.exp.capacity} 家（依字級、版面而定）</span></button>
             <button type="button" data-mp-fmt="long" class="${p.fmt === 'long' ? 'on' : ''}"><b>長圖</b><span>不限數量，存到相簿</span></button>
         </div></div>
+        ${p.fmt === 'wall' && p.ratio === 'old' ? '<p class="mp-set-hint">16:9 是給 iPhone 8／SE 等舊機用的。iPhone X 之後的全螢幕 iPhone 用它，左右會被裁掉、時鐘也可能蓋到內容，請選「iPhone」或「本機」。</p>' : ''}
         ${p.fmt === 'wall' ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
             <button type="button" data-mp-ratio="auto" class="${p.ratio === 'auto' ? 'on' : ''}">${auto ? `本機（${auto.w}×${auto.h}）` : '自動（iPhone）'}</button>
             ${Object.entries(MP_RATIOS).map(([k, v]) => `<button type="button" data-mp-ratio="${k}" class="${p.ratio === k ? 'on' : ''}" title="${v.desc}">${v.label}</button>`).join('')}
@@ -1087,7 +1239,7 @@ async function mpRenderExport() {
             ${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint">桌布放得下前 ${lim} 家，按「全選」會選前 ${lim} 家。想全部放進去，請改選「長圖」。</p>` : ''}
             <div class="mp-picks">${mpArrange(mpBuildGroups(), p.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
                 const on = sel.includes(g.key), off = g.dead;
-                return `<label class="mp-pk${off ? ' off' : ''}"><input type="checkbox" data-mp-pick="${esc(g.key)}" ${on && !off ? 'checked' : ''} ${off ? 'disabled' : ''}><span class="mp-pk-name">${esc(mpDisplayName(g))}${off ? '<small>已失效</small>' : ''}</span><img class="mp-th" src="assets/images/cards/${esc(g.entries[0].m.cardId)}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'"></label>`;
+                return `<label class="mp-pk${off ? ' off' : ''}"><input type="checkbox" data-mp-pick="${esc(g.key)}" ${on && !off ? 'checked' : ''} ${off ? 'disabled' : ''}><span class="mp-pk-name">${esc(mpDisplayName(g))}${off ? '<small>已失效</small>' : ''}</span><img class="mp-th" src="assets/images/cards/${esc(g.entries[0].m.cardId)}.png" alt="" onerror="this.style.visibility='hidden'"></label>`;
             }).join('')).join('')}</div>
         </div>`;
 
@@ -1161,14 +1313,31 @@ function mpBind() {
     if (!page || page.dataset.bound) return;
     page.dataset.bound = '1';
 
-    const sw = mpEl('home-view-switch-mappings');
-    if (sw) sw.addEventListener('click', () => openMappingsPage());
+    mpEl('home-view-switch-mappings')?.addEventListener('click', () => openMappingsPage());
+    mpEl('home-view-switch-search')?.addEventListener('click', () => closeMappingsPage());
 
     page.addEventListener('click', async e => {
         const t = e.target;
         const b = t.closest('button');
-        if (t.closest('[data-mp-back]')) { closeMappingsPage(); return; }
         if (!b) return;
+        if (b.id === 'mp-title-btn') { mpOpenTitleSheet(); return; }
+        if (b.id === 'mp-title-save') { await mpSaveTitle(false); return; }
+        if (b.id === 'mp-title-reset') { await mpSaveTitle(true); return; }
+        if (b.dataset.mpChanged) { mpOpenRateSheet(b.dataset.mpChanged); return; }
+        if (b.dataset.mpRatePick !== undefined) { b.disabled = true; await mpApplyRate(Number(b.dataset.mpRatePick)); return; }
+        if (b.id === 'mp-delete-dead') {
+            // 兩段式確認（站內不用 confirm()）：第一下變紅色「確定刪除？」，4 秒內再按一次才刪
+            if (!b.classList.contains('confirm')) {
+                const n = mpDeadIds().length;
+                b.classList.add('confirm');
+                b.textContent = `確定刪除 ${n} 筆失效活動？再按一次`;
+                setTimeout(() => { if (b.isConnected && b.classList.contains('confirm')) { b.classList.remove('confirm'); b.textContent = `刪除全部失效活動（${n}）`; } }, 4000);
+                return;
+            }
+            b.disabled = true;
+            await mpDeleteAllDead();
+            return;
+        }
         if (b.dataset.mpSort && !b.closest('#mp-exp-settings')) { MP.prefs.sort = b.dataset.mpSort; mpSavePrefs(); mpRender(); return; }
         if (b.dataset.mpSize && !b.closest('#mp-exp-settings')) { MP.prefs.size = b.dataset.mpSize; mpSavePrefs(); mpRender(); return; }
         if (b.dataset.mpLayout && !b.closest('#mp-exp-settings')) { MP.prefs.layout = b.dataset.mpLayout; mpSavePrefs(); mpRender(); return; }
@@ -1234,15 +1403,19 @@ function mpBind() {
     const input = mpEl('mp-edit-input');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); mpSaveEdit(false); } });
 
-    mpEl('mp-edit-sheet')?.addEventListener('click', e => { if (e.target.id === 'mp-edit-sheet') mpCloseSheets(); });
+    ['mp-edit-sheet', 'mp-title-sheet', 'mp-rate-sheet'].forEach(id => mpEl(id)?.addEventListener('click', e => { if (e.target.id === id) mpCloseSheets(); }));
+    const titleInput = mpEl('mp-title-input');
+    if (titleInput) {
+        titleInput.addEventListener('input', mpTitleCount);
+        titleInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!mpEl('mp-title-save').disabled) mpSaveTitle(false); } });
+    }
     mpEl('mp-export')?.addEventListener('click', e => { if (e.target.id === 'mp-export') mpCloseExport(); });
 
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape' || !MP.open) return;
         if (document.getElementById('card-detail-modal')?.style.display === 'flex') return;   // 詳情頁自己處理
-        if (!mpEl('mp-edit-sheet').hidden) mpCloseSheets();
+        if (mpAnySheetOpen()) mpCloseSheets();
         else if (!mpEl('mp-export').hidden) mpCloseExport();
-        else closeMappingsPage();
     });
 
     let resizeTimer = null;
@@ -1260,6 +1433,11 @@ function mpBind() {
 
 document.addEventListener('DOMContentLoaded', () => {
     mpBind();
+    // 上次是登入狀態的回訪者：不等 Firebase／Firestore（冷啟動可能要好幾秒）就先顯示切換鈕；
+    // 登入確認後 updateMappingsSwitch() 會校正（真的沒登入就藏起來）
+    try {
+        if (localStorage.getItem('pmc_known_logged_in') === '1') { const sw = mpEl('home-view-switch'); if (sw) sw.hidden = false; }
+    } catch (e) { /* ignore */ }
     // 直接打開 /mappings：先把頁面蓋上（資料載入後 refreshMappingsEntry 會重畫）
     if (location.pathname === '/mappings' && document.getElementById('mappings-page')) openMappingsPage({ fromHistory: true });
 });
