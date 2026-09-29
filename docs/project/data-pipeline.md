@@ -17,7 +17,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 1. **Cards Data** —— 信用卡基本資料和回饋規則
    - 必填：`id, name, fullName, basicCashback, annualFee, feeWaiver, website, tags`
-   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N`（N=1-21，匯出迴圈上限 21）
+   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
@@ -756,4 +756,6 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
 - [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
 - [2026-09-11] `checkWatchlist` 每週寄回 Apps Script 失敗信（`Exceeded maximum execution time`，起訖剛好 6 分 00 秒），一度以為是「排程要人工重新授權」 → 不是授權問題，是 Apps Script 單次執行 6 分鐘硬上限：監控清單一長，每列一次網頁抓取（Jina 渲染 30~60 秒）＋一次 Gemini 呼叫就撞得到；超時是**直接砍掉**，逐列即時寫的快照與分頁都在，但收尾的 `sendDigest_` 整個不執行＝通知信無聲消失 → 凡是「每列都要打外部 API」的 Apps Script 迴圈，一律加「開跑前看錶」的煞車（`maxRunSeconds`，比照 `register-link-finder.gs`）＋指令碼屬性存進度游標＋一次性觸發器自動接續；游標一定要設過期時間（排程觸發器撿到舊游標會靜悄悄跳過清單前半段），清除接力觸發器**只能比對 uniqueId**（Trigger API 分辨不出一次性與週期性，掃著刪會把每週觸發器一起刪掉）
+- [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
+
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
