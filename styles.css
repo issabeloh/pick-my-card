@@ -9500,6 +9500,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-big:disabled { opacity: .4; cursor: default; }
 .mp-set-block h4 { margin: 0 0 6px; font-size: 12px; font-weight: 900; color: #6b7280; letter-spacing: .06em; }
 .mp-set-row { display: flex; gap: 10px 14px; flex-wrap: wrap; }
+.mp-set-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: #4b5563; }
 .mp-set-hint { margin: 0 0 6px; font-size: 12px; line-height: 1.5; color: #9a3412; background: #fff1e6; border-radius: 10px; padding: 7px 10px; }
 .mp-fmt { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mp-fmt button { border: 1.5px solid #d6dbe3; background: #fff; border-radius: 14px; padding: 10px; text-align: left; display: grid; gap: 3px; cursor: pointer; color: #111827; }

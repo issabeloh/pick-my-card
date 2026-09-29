@@ -64,7 +64,7 @@ function mpLoadPrefs() {
         caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
         summary: p.summary === true,    // 小抄底部「共 N 張信用卡 ▪ 額度共 NT$ x萬」；預設關（額度屬隱私，存成桌布前讓用戶自己決定）
         fmt: p.fmt === 'long' ? 'long' : 'wall',
-        ratio: ['auto', 'iphone', 'android', 'pixel'].includes(p.ratio) ? p.ratio : 'auto',   // 舊的 16:9（old）已移除 → 回到自動
+        ratio: p.ratio === 'iphone' ? 'iphone' : 'auto',   // 只剩「本機」與 iPhone（2026-09-29 拿掉 16:9／Android／Pixel，舊值回到自動）
         theme: p.theme === 'dark' ? 'dark' : 'light',
         sel: Array.isArray(p.sel) ? p.sel.filter(s => typeof s === 'string') : null
     };
@@ -338,7 +338,6 @@ function mpSummaryData() {
     return { count: ids.length, amount: known ? `NT$${Math.round(sum).toLocaleString()}` : '未填', missing: ids.length - known };
 }
 
-const MP_SUMMARY_HELP = '信用卡數量為「我的信用卡」中選取的卡片數量；額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）。';
 
 // 「?」說明氣泡；裡面的「我的信用卡」可以直接打開 modal
 function mpOpenHelp(anchor) {
@@ -348,7 +347,7 @@ function mpOpenHelp(anchor) {
     pop.id = 'mp-help-pop';
     pop.setAttribute('role', 'dialog');
     pop.setAttribute('aria-label', '顯示卡數與額度總和的說明');
-    pop.innerHTML = '<p>信用卡數量為<button type="button" class="mp-linkbtn" data-mp-open-owned>「我的信用卡」</button>中選取的卡片數量；額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）。</p>';
+    pop.innerHTML = '<p>信用卡數量為<button type="button" class="mp-linkbtn" data-mp-open-owned>「我的信用卡」</button>中選取的卡片數量；額度為各信用卡的詳情頁中，所填寫的「我的額度」。點小抄上的信用卡圖片就能打開詳情頁。</p>';
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();
     const w = Math.min(300, innerWidth - 24);
@@ -992,11 +991,9 @@ async function mpRemoveMapping(id) {
 // ============================================
 // 存成圖片：canvas 直接繪製（預覽＝實際輸出的那張圖）
 // ============================================
-const MP_RATIOS = {
-    iphone: { label: 'iPhone', w: 1179, h: 2556, desc: 'iPhone X 之後' },
-    android: { label: 'Android', w: 1080, h: 2400, desc: '多數 Android' },
-    pixel: { label: 'Pixel', w: 1080, h: 2424, desc: 'Google Pixel 9／9a（Pixel 7、8 用 Android 1080×2400 即可）' }
-};
+// 桌布尺寸只有兩種：本機（手機上讀實際螢幕）與 iPhone。iPhone 的鎖定畫面元素位置固定，留白（MP_WALL_TOP/BOTTOM）依它實測；
+// Android 各廠牌時鐘、指紋、捷徑位置都不同，沒有通用規格 → 用本機尺寸＋同一組留白（見 ui-display.md 第 8 節）
+const MP_IPHONE = { w: 1179, h: 2556 };
 
 // 手機上讀實際螢幕：screen 寬高（CSS px，直向）× devicePixelRatio。桌機、平板或讀不到 → null
 function mpDetectScreen() {
@@ -1011,10 +1008,10 @@ function mpDetectScreen() {
 
 function mpWallSize() {
     const r = MP.prefs.ratio;
-    if (r !== 'auto' && MP_RATIOS[r]) return { w: MP_RATIOS[r].w, h: MP_RATIOS[r].h, label: MP_RATIOS[r].label };
+    if (r === 'iphone') return { ...MP_IPHONE, label: 'iPhone' };
     const d = mpDetectScreen();
     if (d) return { w: d.w, h: d.h, label: '本機螢幕' };
-    return { w: MP_RATIOS.iphone.w, h: MP_RATIOS.iphone.h, label: 'iPhone' };
+    return { ...MP_IPHONE, label: 'iPhone' };
 }
 
 const MP_THEME = {
@@ -1436,10 +1433,12 @@ async function mpRenderExport() {
             <button type="button" data-mp-fmt="wall" class="${p.fmt === 'wall' ? 'on' : ''}"><b>手機桌布</b><span>最多約 ${MP.exp.capacity} 家（依字級、版面而定）</span></button>
             <button type="button" data-mp-fmt="long" class="${p.fmt === 'long' ? 'on' : ''}"><b>長圖</b><span>不限數量，存到相簿</span></button>
         </div></div>
-        ${p.fmt === 'wall' ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
-            <button type="button" data-mp-ratio="auto" class="${p.ratio === 'auto' ? 'on' : ''}">${auto ? `本機（${auto.w}×${auto.h}）` : '自動（iPhone）'}</button>
-            ${Object.entries(MP_RATIOS).map(([k, v]) => `<button type="button" data-mp-ratio="${k}" class="${p.ratio === k ? 'on' : ''}" title="${v.desc}">${v.label}</button>`).join('')}
-        </div></div>` : ''}
+        ${p.fmt === 'wall' ? (auto
+            ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
+                <button type="button" data-mp-ratio="auto" class="${p.ratio === 'auto' ? 'on' : ''}">本機（${auto.w}×${auto.h}）</button>
+                <button type="button" data-mp-ratio="iphone" class="${p.ratio === 'iphone' ? 'on' : ''}" title="留位置給 iPhone 鎖定畫面的時鐘與底部按鈕">iPhone</button>
+            </div></div>`
+            : `<div class="mp-set-block"><h4>桌布尺寸</h4><p class="mp-set-note">iPhone（${MP_IPHONE.w}×${MP_IPHONE.h}）。在手機上開啟會自動改用手機本身的尺寸。</p></div>`) : ''}
         <div class="mp-set-row">
             <div class="mp-set-block"><h4>版面</h4>${mpSegHtml('版面', p.x.layout, [['F', MP_ICON.one, '單欄'], ['E', MP_ICON.two, '雙欄']])}</div>
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.x.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>

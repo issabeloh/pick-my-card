@@ -293,7 +293,7 @@ const PAIRS = [
   await closeOwned();
   await pg.click('#mp-tools [data-mp-help]');
   const help = await pg.evaluate(() => { const p = document.getElementById('mp-help-pop'); return p ? p.textContent : ''; });
-  check('「?」說明：信用卡數量＝「我的信用卡」選取的卡；額度到詳情頁「我的額度」填寫', help === '信用卡數量為「我的信用卡」中選取的卡片數量；額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）。', help);
+  check('「?」說明文字', help === '信用卡數量為「我的信用卡」中選取的卡片數量；額度為各信用卡的詳情頁中，所填寫的「我的額度」。點小抄上的信用卡圖片就能打開詳情頁。', help);
   await pg.click('#mp-help-pop [data-mp-open-owned]');
   const viaHelp = await pg.evaluate(() => ({ modal: getComputedStyle(document.getElementById('my-owned-cards-modal')).display !== 'none', popGone: !document.getElementById('mp-help-pop') }));
   check('說明裡的「我的信用卡」可以點，打開 modal', viaHelp.modal && viaHelp.popGone, JSON.stringify(viaHelp));
@@ -502,9 +502,8 @@ const PAIRS = [
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
   let img = await pg.evaluate(() => { const i = document.getElementById('mp-exp-img'); return { w: i.naturalWidth, h: i.naturalHeight, cap: MP.exp.capacity, sel: mpExportSelection(mpExportPool()).length, pool: mpExportPool().length, fits: MP.exp.fits }; });
   check('手機桌布 iPhone：1179×2556', img.w === 1179 && img.h === 2556, `${img.w}×${img.h}`);
-  const ratios = await pg.$$eval('[data-mp-ratio]', b => b.map(x => x.textContent.trim()));
-  const pxl = await pg.evaluate(() => { const r = MP.prefs.ratio; MP.prefs.ratio = 'pixel'; const w = mpWallSize(); MP.prefs.ratio = r; return w; });
-  check('桌布尺寸：拿掉 16:9、新增 Pixel（1080×2424）', !ratios.includes('16:9') && ratios.includes('Pixel') && pxl.w === 1080 && pxl.h === 2424, ratios.join('／'));
+  const ratios = await pg.$$eval('[data-mp-ratio]', b => b.map(x => x.dataset.mpRatio));
+  check('桌布尺寸只剩「本機」與 iPhone（手機上）', JSON.stringify(ratios) === '["auto","iphone"]', ratios.join('／'));
   // 桌布留白：收據不能蓋到鎖定畫面的時鐘（上方約 25%）與手電筒／相機鈕（下方約 86% 起）
   const band = await pg.evaluate(async () => {
     const i = document.getElementById('mp-exp-img'); await i.decode();
