@@ -474,9 +474,11 @@ const PAIRS = [
     if (vp.name === 'desktop-1440') {
       await p2.evaluate(() => { MP.prefs.layout = 'E'; mpRender(); });
       if (SHOTS) await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-editing-E.png`) });
-      await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.sel = null; Object.assign(MP.prefs.x, { layout: 'F', size: 'small', sort: 'cat' }); mpRender(); });
+      await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'ios'; MP.prefs.sel = null; Object.assign(MP.prefs.x, { layout: 'F', size: 'small', sort: 'cat' }); mpRender(); });
       await p2.click('.mp-side-save');
       await p2.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
+      const dr = await p2.evaluate(() => ({ keys: [...document.querySelectorAll('[data-mp-ratio]')].map(b => b.dataset.mpRatio), on: (document.querySelector('[data-mp-ratio].on') || {}).dataset?.mpRatio, note: document.querySelector('.mp-ratio-note').textContent.trim() }));
+      check('桌機：沒有「本機」，預設「iPhone・三星」', JSON.stringify(dr.keys) === '["ios","android"]' && dr.on === 'ios' && dr.note === '已選比例 19.5:9（1440×3120）', JSON.stringify(dr));
       const hint = await p2.evaluate(() => { const h = document.querySelector('.mp-pick-hint'), b = document.getElementById('mp-exp-all'); if (!h) return null; const a = h.getBoundingClientRect(), c = b.getBoundingClientRect();
         return { text: h.textContent, oneLine: a.height < parseFloat(getComputedStyle(h).lineHeight) * 1.6 + parseFloat(getComputedStyle(h).paddingTop) + parseFloat(getComputedStyle(h).paddingBottom), sameRow: Math.abs((a.top + a.bottom) / 2 - (c.top + c.bottom) / 2) <= 4 }; });
       check('桌機：提示「已選的圖片規格只放得下 N 家…」與「全選」同一排、一行放得下', !!hint && /^已選的圖片規格只放得下 \d+ 家。若想全放，請改選「長圖」。$/.test(hint.text) && hint.oneLine && hint.sameRow, JSON.stringify(hint));
@@ -499,14 +501,20 @@ const PAIRS = [
 
   // ============ C. 存成圖片 ============
   console.log('\n【C】存成圖片');
-  await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; Object.assign(MP.prefs.x, { layout: 'F', size: 'small', sort: 'cat' }); MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.theme = 'light'; MP.prefs.sel = null; mpRender(); });
+  await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; Object.assign(MP.prefs.x, { layout: 'F', size: 'small', sort: 'cat' }); MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'ios'; MP.prefs.theme = 'light'; MP.prefs.sel = null; mpRender(); });
   await pg.click('#mp-savebar [data-mp-open-export]');
   await pg.waitForSelector('#mp-export:not([hidden])');
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
   let img = await pg.evaluate(() => { const i = document.getElementById('mp-exp-img'); return { w: i.naturalWidth, h: i.naturalHeight, cap: MP.exp.capacity, sel: mpExportSelection(mpExportPool()).length, pool: mpExportPool().length, fits: MP.exp.fits }; });
-  check('手機桌布 iPhone：1179×2556', img.w === 1179 && img.h === 2556, `${img.w}×${img.h}`);
-  const ratios = await pg.$$eval('[data-mp-ratio]', b => b.map(x => x.dataset.mpRatio));
-  check('桌布尺寸只剩「本機」與 iPhone（手機上）', JSON.stringify(ratios) === '["auto","iphone"]', ratios.join('／'));
+  check('手機桌布「iPhone・三星」：1440×3120（19.5:9）', img.w === 1440 && img.h === 3120, `${img.w}×${img.h}`);
+  const ratios = await pg.$$eval('[data-mp-ratio]', b => b.map(x => x.textContent.trim()));
+  const note1 = await pg.textContent('.mp-ratio-note');
+  await pg.click('[data-mp-ratio="android"]');
+  await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalHeight === 3200, null, { timeout: 10000 }).catch(() => {});
+  const and = await pg.evaluate(() => ({ note: document.querySelector('.mp-ratio-note').textContent, w: document.getElementById('mp-exp-img').naturalWidth, h: document.getElementById('mp-exp-img').naturalHeight, on: document.querySelector('[data-mp-ratio="android"]').classList.contains('on') }));
+  check('桌布尺寸：本機／iPhone・三星／其他 Android，備註顯示已選比例', ratios.length === 3 && ratios[0].startsWith('本機') && ratios[1] === 'iPhone・三星' && ratios[2] === '其他 Android' && note1.trim() === '已選比例 19.5:9（1440×3120）' && and.note.trim() === '已選比例 20:9（1440×3200）' && and.w === 1440 && and.h === 3200 && and.on, JSON.stringify({ ratios, note1, and }));
+  await pg.click('[data-mp-ratio="ios"]');
+  await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalHeight === 3120, null, { timeout: 10000 }).catch(() => {});
   // 桌布留白：收據不能蓋到鎖定畫面的時鐘（上方約 25%）與手電筒／相機鈕（下方約 86% 起）
   const band = await pg.evaluate(async () => {
     const i = document.getElementById('mp-exp-img'); await i.decode();

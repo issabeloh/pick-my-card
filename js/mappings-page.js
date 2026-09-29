@@ -64,7 +64,8 @@ function mpLoadPrefs() {
         caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
         summary: p.summary === true,    // 小抄底部「共 N 張信用卡 ▪ 額度共 NT$ x萬」；預設關（額度屬隱私，存成桌布前讓用戶自己決定）
         fmt: p.fmt === 'long' ? 'long' : 'wall',
-        ratio: p.ratio === 'iphone' ? 'iphone' : 'auto',   // 'auto'＝手機本機尺寸（桌機退回 iPhone）；其他舊值一律回到 auto
+        // 'auto'＝手機本機尺寸（桌機沒有本機 → 當成 ios）；舊值 'iphone' 併入 ios，其他舊值回到 auto
+        ratio: p.ratio === 'ios' || p.ratio === 'iphone' ? 'ios' : p.ratio === 'android' ? 'android' : 'auto',
         theme: p.theme === 'dark' ? 'dark' : 'light',
         sel: Array.isArray(p.sel) ? p.sel.filter(s => typeof s === 'string') : null
     };
@@ -986,9 +987,19 @@ async function mpRemoveMapping(id) {
 // ============================================
 // 存成圖片：canvas 直接繪製（預覽＝實際輸出的那張圖）
 // ============================================
-// 桌布尺寸只有兩種：本機（手機上讀實際螢幕）與 iPhone。iPhone 的鎖定畫面元素位置固定，留白（MP_WALL_TOP/BOTTOM）依它實測；
-// Android 各廠牌時鐘、指紋、捷徑位置都不同，沒有通用規格 → 用本機尺寸＋同一組留白（見 ui-display.md 第 8 節）
-const MP_IPHONE = { w: 1179, h: 2556 };
+// 桌布尺寸：本機（只在手機上，讀實際螢幕）＋兩個通用比例（2026-09-29 依台灣熱銷機型查證，見 ui-display.md 第 8 節）：
+//   ios     19.5:9 — iPhone 與三星（Galaxy A56/A36 1080×2340、S25 Ultra 1440×3120 和 iPhone 同比例）
+//   android 20:9   — vivo V50、OPPO Reno14、小米 Redmi Note 14 Pro+、Pixel 9a/10 的平均比例（2.22）
+// 都輸出 1440 寬：所有熱銷機都是「縮小顯示」，文字銳利。選錯比例左右只裁約 1.3%，左右留白吸收得掉。
+// 留白（MP_WALL_TOP/BOTTOM）兩者相同：指紋圖示在下方正中間，單欄時落在虛線引線上，不擋重點。
+const MP_WALLS = {
+    ios: { label: 'iPhone・三星', w: 1440, h: 3120 },
+    android: { label: '其他 Android', w: 1440, h: 3200, title: 'vivo、OPPO、小米、Pixel 等' }
+};
+// 比例文字：高÷寬×9，取到 0.5（2532/1170 → 19.5:9、3200/1440 → 20:9）
+function mpRatioText(w, h) {
+    return `${Math.round(h / w * 9 * 2) / 2}:9`;
+}
 
 // 手機上讀實際螢幕：screen 寬高（CSS px，直向）× devicePixelRatio。桌機、平板或讀不到 → null
 function mpDetectScreen() {
@@ -1001,12 +1012,13 @@ function mpDetectScreen() {
     } catch (e) { return null; }
 }
 
+// 實際使用的桌布規格：key 是目前選中的選項（桌機選 auto 時退回 ios）
 function mpWallSize() {
     const r = MP.prefs.ratio;
-    if (r === 'iphone') return { ...MP_IPHONE, label: 'iPhone' };
-    const d = mpDetectScreen();
-    if (d) return { w: d.w, h: d.h, label: '本機螢幕' };
-    return { ...MP_IPHONE, label: 'iPhone' };
+    const d = r === 'auto' ? mpDetectScreen() : null;
+    if (d) return { key: 'auto', w: d.w, h: d.h, label: '本機' };
+    const key = MP_WALLS[r] ? r : 'ios';
+    return { key, ...MP_WALLS[key] };
 }
 
 const MP_THEME = {
@@ -1426,12 +1438,10 @@ async function mpRenderExport() {
             <button type="button" data-mp-fmt="wall" class="${p.fmt === 'wall' ? 'on' : ''}"><b>手機桌布</b><span>最多約 ${MP.exp.capacity} 家（依字級、版面而定）</span></button>
             <button type="button" data-mp-fmt="long" class="${p.fmt === 'long' ? 'on' : ''}"><b>長圖</b><span>不限數量，存到相簿</span></button>
         </div></div>
-        ${p.fmt === 'wall' ? (auto
-            ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
-                <button type="button" data-mp-ratio="auto" class="${p.ratio === 'auto' ? 'on' : ''}">本機（${auto.w}×${auto.h}）</button>
-                <button type="button" data-mp-ratio="iphone" class="${p.ratio === 'iphone' ? 'on' : ''}" title="留位置給 iPhone 鎖定畫面的時鐘與底部按鈕">iPhone</button>
-            </div></div>`
-            : `<div class="mp-set-block"><h4>桌布尺寸</h4><p class="mp-set-note">iPhone（${MP_IPHONE.w}×${MP_IPHONE.h}）。在手機上開啟會自動改用手機本身的尺寸。</p></div>`) : ''}
+        ${p.fmt === 'wall' ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
+            ${auto ? `<button type="button" data-mp-ratio="auto" class="${size.key === 'auto' ? 'on' : ''}">本機（${auto.w}×${auto.h}）</button>` : ''}
+            ${Object.entries(MP_WALLS).map(([k, v]) => `<button type="button" data-mp-ratio="${k}" class="${size.key === k ? 'on' : ''}"${v.title ? ` title="${v.title}"` : ''}>${v.label}</button>`).join('')}
+        </div><p class="mp-set-note mp-ratio-note">已選比例 ${mpRatioText(size.w, size.h)}（${size.w}×${size.h}）</p></div>` : ''}
         <div class="mp-set-row">
             <div class="mp-set-block"><h4>版面</h4>${mpSegHtml('版面', p.x.layout, [['F', MP_ICON.one, '單欄'], ['E', MP_ICON.two, '雙欄']])}</div>
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.x.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
