@@ -223,19 +223,35 @@ async function calculateCashback() {
     const couponCount = couponResultsContainer
         ? couponResultsContainer.querySelectorAll('.coupon-item').length : 0;
 
-    // 只有領券優惠、沒有任何一般活動時：把基本回饋那 30 幾張拿掉。
-    // 留著的話領券區會被推到畫面很下面，而使用者真正要看的就是那幾張券。
-    // 即將開始的活動不受影響（它們不是 isBasic，會留下）。
+    // 沒有任何進行中活動、但下方確實有東西可看（領券優惠／即將開始的活動）時：
+    // 把基本回饋那 30 幾張拿掉。留著的話真正有料的那幾筆會被推到畫面很下面，
+    // 而使用者要看的就是它們；同一張卡還會「一般回饋」與「即將開始」各出現一次。
+    // 2026-09-29 把原本只給領券的這條待遇擴及「即將開始」（站長裁定）——
+    // findMatchingItem 不看期間，所以只存在於未開始活動裡的商家（如 CUBE 10/1 開跑的
+    // 那批槽）一定走 matchedButNoActivity，這正是最需要清場的情境。
+    // 兩者都不是 isBasic，所以同一行 filter 就留得下來。
+    const upcomingCount = uniqueUpcomingResults.length;
     const couponOnly = matchedButNoActivity && couponCount > 0;
-    if (couponOnly) {
+    const upcomingOnly = matchedButNoActivity && upcomingCount > 0;
+    if (couponOnly || upcomingOnly) {
         results = results.filter(r => !r.isBasic);
         isBasicCashback = false;
     }
 
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
-    // ⚠️ couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
+    // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
     //    若讓「有結果」那條先接手，會說出「有 0 筆活動符合你的選項」。
-    if (currentMatchedItem && couponOnly) {
+    // ⚠️ upcomingOnly 又要排在 couponOnly 之前：兩者同時成立時，該講的是「沒有進行中的活動」
+    //    這件事（領券的句子沒有這個前綴），而且那一句會把領券筆數一起講掉。
+    if (currentMatchedItem && upcomingOnly) {
+        // 匹配到的活動都還沒開始：畫面上那幾張卡全是「即將開始」，一般回饋已被收起來。
+        // ⚠️ 前綴那句「目前沒有進行中的活動」不能省——不然用戶會以為那個回饋率今天就能刷。
+        const parts = [];
+        if (couponCount > 0) parts.push(`${couponCount} 筆領券型活動`);
+        parts.push(`${upcomingCount} 檔即將開始的活動`);
+        showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
+            `目前沒有進行中的活動，有 ${parts.join('、')}符合你的選項`);
+    } else if (currentMatchedItem && couponOnly) {
         // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個）：一般活動是 0 筆，但下方
         // 確實列出了領券優惠。這種情況說「沒有活動」會與畫面矛盾——它有結果，只是型別不同。
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
