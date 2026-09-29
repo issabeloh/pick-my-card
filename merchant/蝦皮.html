@@ -116,7 +116,7 @@
         "name": "信用卡回饋大師",
         "alternateName": "PickMyCard",
         "url": "https://pickmycard.app/",
-        "description": "解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級與管理配卡組合，免費使用。",
+        "description": "解放腦力，聰明刷卡！消費前一鍵找出最高回饋信用卡。幫你記憶卡片、卡片分級，還能整理成刷卡小抄，免費使用。",
         "applicationCategory": "FinanceApplication",
         "operatingSystem": "Any",
         "offers": {
@@ -126,7 +126,7 @@
         },
         "featureList": [
             "快速查詢信用卡回饋比較",
-            "一鍵記錄配卡組合",
+            "一鍵存成刷卡小抄",
             "直觀清晰的結果呈現",
             "個人化功能：選擇信用卡與行動支付",
             "自訂快捷選項",
@@ -236,7 +236,7 @@
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-my-mappings" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v6H9.5A1.5 1.5 0 0 0 8 10.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V10.5a.5.5 0 0 1 .5-.5h3.293L9 13.793z"/></svg>
-                                    我的配卡組合
+                                    我的刷卡小抄
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-feedback" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
@@ -321,11 +321,11 @@
                     </div>
                 </div>
             </div>
-            <!-- 頁籤（2026-09-28）：「查詢回饋｜我的配卡組合」文件夾分頁，長在藍色頁首的底邊，選中的那張是白色、
+            <!-- 頁籤（2026-09-28）：「查詢回饋｜我的刷卡小抄」文件夾分頁，長在藍色頁首的底邊，選中的那張是白色、
                  跟下面的頁面接在一起。切換靠 setAppView()（js/mappings-page.js）切 data-view 畫面。登入與否都顯示。 -->
             <nav class="home-view-switch" id="home-view-switch" aria-label="切換畫面">
                 <button type="button" id="home-view-switch-search" class="on" aria-pressed="true"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.4-1.4l-3.85-3.85ZM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z"/></svg>查詢回饋</button>
-                <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的配卡組合</button>
+                <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的刷卡小抄</button>
             </nav>
         </header>
 
@@ -386,17 +386,17 @@
             <main>
 
 
-            <!-- 我的配卡組合「刷卡小抄」（2026-09-28，js/mappings-page.js）：顯示在切換鈕下方、取代 main 裡的查詢內容
+            <!-- 我的刷卡小抄「刷卡小抄」（2026-09-28，js/mappings-page.js）：顯示在切換鈕下方、取代 main 裡的查詢內容
                  （setAppView 切換 data-view 畫面，查詢回饋畫面整個隱藏）。網址 /mappings（_redirects 改寫回首頁、_headers 設 noindex）。
                  面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
-            <!-- ===== 畫面：我的配卡組合（data-view="mappings"）===== -->
-            <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的配卡組合">
+            <!-- ===== 畫面：我的刷卡小抄（data-view="mappings"）===== -->
+            <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的刷卡小抄">
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
-                <div class="mp-intro" role="note" aria-label="我的配卡組合怎麼用">
+                <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
                     <ol class="mp-steps">
-                        <li><b class="mp-step-n">1</b><span>在<strong>查詢結果</strong>按「加到我的配卡」</span></li>
-                        <li><b class="mp-step-n">2</b><span>自動整理成<strong>商家 × 信用卡</strong>的刷卡小抄</span></li>
-                        <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，刷卡前看一眼</span></li>
+                        <li><b class="mp-step-n">1</b><span>在<strong>查詢回饋</strong>的結果中按「加到我的小抄」</span></li>
+                        <li><b class="mp-step-n">2</b><span>活動<strong>自動存入</strong>以下刷卡小抄</span></li>
+                        <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，結帳前看一眼</span></li>
                     </ol>
                 </div>
                 <!-- 未登入提示放在版面最上面：按「編輯」後的設定出現在它下方 -->
@@ -466,7 +466,7 @@
                             <div class="mp-exp-body" id="mp-exp-settings"></div>
                         </div>
                         <div class="mp-exp-pane mp-exp-preview" id="mp-exp-preview-pane">
-                            <div class="mp-exp-head"><h2>預覽</h2><span class="mp-exp-sub">這就是會存下來的圖</span></div>
+                            <div class="mp-exp-head"><h2>預覽</h2></div>
                             <div class="mp-exp-stage"><img id="mp-exp-img" class="mp-exp-img" alt="刷卡小抄預覽" hidden></div>
                             <div class="mp-exp-foot">
                                 <div class="mp-exp-tools"><div class="mp-seg" id="mp-exp-theme" role="group" aria-label="顏色"><button type="button" data-mp-theme="light">淺色</button><button type="button" data-mp-theme="dark">深色</button></div></div>
@@ -1433,7 +1433,7 @@
                 <div class="da-list-title">以下資料會被永久刪除：</div>
                 <ul class="da-list">
                     <li>你的登入帳號（<span id="da-user-email" class="da-email"></span>）</li>
-                    <li>雲端的個人化設定：持有卡片、卡片級別、行動支付、配卡組合、免年費、結帳日、生日月、我的額度</li>
+                    <li>雲端的個人化設定：持有卡片、卡片級別、行動支付、刷卡小抄、免年費、結帳日、生日月、我的額度</li>
                     <li>你寫過的所有卡片筆記</li>
                     <li>這台裝置上的本機資料</li>
                 </ul>

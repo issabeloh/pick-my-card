@@ -3,7 +3,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
  *  - 釘選/取消釘選             → "togglePin" / "addMapping"
- *  - 我的配卡組合頁面           → 見 js/mappings-page.js（2026-09-28 由 modal 改成完整頁面）
+ *  - 我的刷卡小抄頁面           → 見 js/mappings-page.js（2026-09-28 由 modal 改成完整頁面）
  *  - 免年費狀態                → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
  *  - 我的額度相關功能           → "loadCreditLimit" / "setupCreditLimit"
  *  - 結帳日/繳款日             → "loadBillingDates" / "setupBillingDates"
@@ -162,7 +162,7 @@ function isPinned(cardId, merchant) {
 async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
     // 檢查是否有登入用戶
     if (!currentUser) {
-        alert('登入後就能把「商家 × 信用卡」加到我的配卡組合，刷卡前一眼查看！');
+        alert('登入後就能把「商家 × 信用卡」加到我的刷卡小抄，結帳前一眼查看！');
         return;
     }
 
@@ -176,8 +176,8 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
         if (mapping) {
             await removeMapping(mapping.id);
             button.classList.remove('pinned');
-            button.title = '把這個商家×卡片加到我的配卡組合';
-            showToast('已從我的配卡組合移除', button.closest('.card-result'));
+            button.title = '把這個商家×卡片加到我的刷卡小抄';
+            showToast('已從我的刷卡小抄移除', button.closest('.card-result'));
             if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
 
             // 追蹤取消釘選事件
@@ -195,7 +195,7 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
         const newMapping = await addMapping(cardId, cardName, merchant, rate, periodEnd, periodStart);
         if (newMapping) {
             button.classList.add('pinned');
-            button.title = '從我的配卡組合移除';
+            button.title = '從我的刷卡小抄移除';
 
             // 顯示成功動畫
             showPinSuccessAnimation(button);
@@ -218,7 +218,7 @@ function showPinSuccessAnimation(button) {
     const cardElement = button.closest('.card-result');
 
     // 1. 顯示提示
-    showToast('已加到我的配卡組合 ✓', cardElement);
+    showToast('已加到我的刷卡小抄 ✓', cardElement);
 
     // 2. 顯示 +1 徽章動畫
     showPlusBadgeAnimation();
@@ -226,7 +226,7 @@ function showPinSuccessAnimation(button) {
 
 // 顯示 +1 徽章動畫
 function showPlusBadgeAnimation() {
-    // 釘選數量顯示在首頁「我的配卡組合」切換鈕上（2026-09-28 取代浮動按鈕）
+    // 釘選數量顯示在首頁「我的刷卡小抄」切換鈕上（2026-09-28 取代浮動按鈕）
     if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
     const btn = document.getElementById('home-view-switch-mappings');
     if (!btn) return;
@@ -336,10 +336,10 @@ function updatePinButtonsState() {
 
         if (pinned) {
             btn.classList.add('pinned');
-            btn.title = '從我的配卡組合移除';
+            btn.title = '從我的刷卡小抄移除';
         } else {
             btn.classList.remove('pinned');
-            btn.title = '把這個商家×卡片加到我的配卡組合';
+            btn.title = '把這個商家×卡片加到我的刷卡小抄';
         }
     });
 }

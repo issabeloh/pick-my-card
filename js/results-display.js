@@ -1302,7 +1302,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                             data-rate="${result.rate}"
                             data-period-end="${result.periodEnd || ''}"
                             data-period-start="${result.periodStart || ''}"
-                            title="${pinned ? '從我的配卡組合移除' : '把這個商家×卡片加到我的配卡組合'}">
+                            title="${pinned ? '從我的刷卡小抄移除' : '把這個商家×卡片加到我的刷卡小抄'}">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                             <path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/>
                         </svg>

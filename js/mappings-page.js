@@ -1,6 +1,6 @@
 /* ============================================================
  * Pick My Card — js/mappings-page.js（載入順序 13/13）
- * 「我的配卡組合」完整頁面（2026-09-28 由 modal 改版：收據風格「刷卡小抄」）
+ * 「我的刷卡小抄」完整頁面（2026-09-28 由 modal 改版：收據風格「刷卡小抄」）
  * 區塊目錄（Grep 關鍵字）：
  *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"
  *  - 商家顯示名稱（改名／重設，存雲端）    → "loadMerchantAliases" / "mpSetAlias"
@@ -67,6 +67,18 @@ function mpLoadPrefs() {
         ratio: ['auto', 'iphone', 'android', 'pixel'].includes(p.ratio) ? p.ratio : 'auto',   // 舊的 16:9（old）已移除 → 回到自動
         theme: p.theme === 'dark' ? 'dark' : 'light',
         sel: Array.isArray(p.sel) ? p.sel.filter(s => typeof s === 'string') : null
+    };
+    // 存成圖片的設定（版面、排列、字級、勾選項）與小抄頁面各自獨立，不互相連動（2026-09-29 站長要求）。
+    // 第一次沒有存過時，以小抄目前的樣子當起點。
+    const x = p.x && typeof p.x === 'object' ? p.x : {};
+    const pp = MP.prefs;
+    pp.x = {
+        sort: ['custom', 'az', 'cat'].includes(x.sort) ? x.sort : pp.sort,
+        layout: x.layout === 'E' || x.layout === 'F' ? x.layout : pp.layout,
+        size: x.size === 'large' || x.size === 'small' ? x.size : pp.size,
+        labels: typeof x.labels === 'boolean' ? x.labels : pp.labels,
+        caps: typeof x.caps === 'boolean' ? x.caps : pp.caps,
+        summary: typeof x.summary === 'boolean' ? x.summary : pp.summary
     };
 }
 
@@ -291,11 +303,17 @@ function mpPlanLabel(cardId, category) {
     return hit ? hit[1].trim() : null;
 }
 
-// 小抄底部摘要：這張小抄用到幾張卡＋額度總和（額度＝各卡詳情頁「我的額度」，只讀）
+// 小抄底部摘要（單據的「合計」）：持有信用卡張數＝「我的信用卡」選取的卡（與 #owned-count-badge 同一個算法）；
+// 額度合計＝這些卡在詳情頁「我的額度」填的金額（只讀）
+function mpOwnedIds() {
+    if (!cardsData || !cardsData.cards || typeof myOwnedCards === 'undefined') return [];
+    return cardsData.cards.filter(c => myOwnedCards.has(c.id)).map(c => c.id);
+}
+
 async function mpLoadLimits() {
     const out = new Map();
-    const ids = [...new Set(mpList().map(m => m.cardId))];
-    const parse = v => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
+    const ids = mpOwnedIds();
+    const parse = v => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
     try {
         if (currentUser && window.db && window.doc && window.getDoc) {
             const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
@@ -306,44 +324,57 @@ async function mpLoadLimits() {
             ids.forEach(id => { const n = parse(localStorage.getItem(pre + id)); if (n !== null) out.set(id, n); });
         }
     } catch (error) {
-        console.error('❌ [配卡] 讀取額度失敗:', error);
+        console.error('❌ [刷卡小抄] 讀取額度失敗:', error);
     }
     MP.limits = out;
     return out;
 }
 
-function mpSummaryText(sections) {
-    const ids = new Set();
-    sections.forEach(s => s.items.forEach(g => g.entries.forEach(e => ids.add(e.m.cardId))));
-    if (!ids.size) return '';
+function mpSummaryData() {
+    const ids = mpOwnedIds();
     const lim = MP.limits || new Map();
     let sum = 0, known = 0;
     ids.forEach(id => { if (lim.has(id)) { sum += lim.get(id); known++; } });
-    const head = `共 ${ids.size} 張信用卡`;
-    if (!known) return `${head} ▪ 額度未填`;
-    const wan = sum / 10000;
-    const amt = `NT$ ${Number.isInteger(wan) ? wan : (Math.round(wan * 10) / 10)}萬`;
-    return `${head} ▪ 額度共 ${amt}${known < ids.size ? `（${ids.size - known} 張未填）` : ''}`;
+    return { count: ids.length, amount: known ? `NT$${Math.round(sum).toLocaleString()}` : '未填', missing: ids.length - known };
+}
+
+const MP_SUMMARY_HELP = '信用卡數量為「我的信用卡」中選取的卡片數量；額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）。';
+
+// 「?」說明氣泡；裡面的「我的信用卡」可以直接打開 modal
+function mpOpenHelp(anchor) {
+    mpCloseHelp();
+    const pop = document.createElement('div');
+    pop.className = 'mp-pop';
+    pop.id = 'mp-help-pop';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', '顯示卡數與額度總和的說明');
+    pop.innerHTML = '<p>信用卡數量為<button type="button" class="mp-linkbtn" data-mp-open-owned>「我的信用卡」</button>中選取的卡片數量；額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）。</p>';
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    const w = Math.min(300, innerWidth - 24);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+    const h = pop.offsetHeight;
+    pop.style.top = (r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8) + 'px';
+    anchor.setAttribute('aria-expanded', 'true');
+}
+function mpCloseHelp() {
+    const old = document.getElementById('mp-help-pop');
+    if (old) old.remove();
+    document.querySelectorAll('.mp-help[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+}
+function mpOpenOwnedCards() {
+    mpCloseHelp();
+    if (typeof openMyOwnedCardsModal === 'function') openMyOwnedCardsModal();
 }
 
 async function mpOnLimitsChanged() {
-    if (!MP.open || !MP.prefs || !MP.prefs.summary) return;
+    if (!MP.open || !MP.prefs || !(MP.prefs.summary || MP.prefs.x.summary)) return;
     await mpLoadLimits();
     mpRender();
     mpRenderExport();
 }
 
-const MP_LIMIT_HINT = '額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）';
-function mpToast(msg) {
-    const page = mpEl('mappings-page');
-    if (!page) return;
-    let t = page.querySelector('.mp-toast');
-    if (!t) { t = document.createElement('div'); t.className = 'mp-toast'; t.setAttribute('role', 'status'); page.appendChild(t); }
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(t._h);
-    t._h = setTimeout(() => t.classList.remove('show'), 3200);
-}
 
 // 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
 function mpCapText(cardId, cap) {
@@ -463,7 +494,7 @@ function setAppView(name) {
     document.body.dataset.appView = name;
 }
 
-// 切到「我的配卡組合」：顯示在頁籤下方，查詢回饋畫面隱藏，不是蓋住整頁的覆蓋層
+// 切到「我的刷卡小抄」：顯示在頁籤下方，查詢回饋畫面隱藏，不是蓋住整頁的覆蓋層
 function mpSetSwitchState(onMappings) {
     const a = mpEl('home-view-switch-search'), b = mpEl('home-view-switch-mappings');
     if (a) { a.classList.toggle('on', !onMappings); a.setAttribute('aria-pressed', String(!onMappings)); }
@@ -493,7 +524,7 @@ async function openMappingsPage(options = {}) {
     }
     MP.updated = null;
     if (!currentUser) await mpBuildDemo();
-    if (MP.prefs.summary) await mpLoadLimits();
+    if (MP.prefs.summary || MP.prefs.x.summary) await mpLoadLimits();
     mpRender();
     if (mpList().length) mpProbeAll();
 }
@@ -565,6 +596,17 @@ function mpCardName(cardId, fallback) {
     return (c && c.name) || fallback || '';
 }
 
+// 單據「合計」區：左標籤、點狀引線、右數字（點一下打開「我的信用卡」）
+function mpTotalsHtml() {
+    const d = mpSummaryData();
+    const esc = escapeHtml;
+    return `<button type="button" class="mp-totals" id="mp-sum-btn" title="打開「我的信用卡」">
+        <span class="mp-tot"><span class="mp-tot-k">持有信用卡</span><i></i><b>${esc(String(d.count))} 張</b></span>
+        <span class="mp-tot"><span class="mp-tot-k">額度合計</span><i></i><b>${esc(d.amount)}</b></span>
+        ${d.missing && d.amount !== '未填' ? `<span class="mp-tot-note">＊其中 ${esc(String(d.missing))} 張未填額度</span>` : ''}
+    </button><div class="mp-eq mp-eq-tot" aria-hidden="true">${'='.repeat(80)}</div>`;
+}
+
 function mpReceiptHtml(sections, o) {
     const esc = escapeHtml;
     const star = g => g.dead ? '<span class="mp-star" aria-label="已失效">*</span>' : '';
@@ -597,7 +639,8 @@ function mpReceiptHtml(sections, o) {
         <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}</button></div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
-        <div class="mp-foot">${o.summary && mpSummaryText(sections) ? `<button type="button" class="mp-sum" id="mp-sum-btn" title="額度在各卡詳情頁編輯">${esc(mpSummaryText(sections))}</button>` : ''}<span class="mp-url">PICKMYCARD.APP</span></div>
+        ${o.summary ? mpTotalsHtml() : ''}
+        <div class="mp-foot"><span class="mp-url">PICKMYCARD.APP</span></div>
     </div>`;
 }
 
@@ -606,7 +649,7 @@ function mpReceiptHtml(sections, o) {
 // ============================================
 // 「顯示等級／方案」常駐；雙欄放不下標籤，改成灰色不可勾（不改用戶存的勾選值）
 function mpSummaryChk(id, p) {
-    return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.summary ? 'checked' : ''}>顯示卡數與額度總和</label>`;
+    return `<span class="mp-chkwrap"><label class="mp-chk"><input type="checkbox" id="${id}" ${p.summary ? 'checked' : ''}>顯示卡數與額度總和</label><button type="button" class="mp-help" data-mp-help aria-label="卡數與額度是怎麼算的？" aria-expanded="false">?</button></span>`;
 }
 function mpCapsChk(id, p) {
     return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.caps ? 'checked' : ''}>顯示活動封頂金額</label>`;
@@ -685,7 +728,7 @@ function mpRender() {
             const u = MP.updated;
             const head = u.ext ? `已更新 ${u.ext} 筆截止日期` : '沒有需要延長的期限';
             notice.innerHTML = `<b>${escapeHtml(head)}</b>` + (u.ext ? '（回饋率不變，期限延長，日期下有點狀底線）' : '') +
-                (u.changed.length ? `<span class="bad">${u.changed.length} 筆回饋率變了，沒有自動更新：${u.changed.map(escapeHtml).join('、')}。請重新搜尋後再加到我的配卡。</span>` : '');
+                (u.changed.length ? `<span class="bad">${u.changed.length} 筆回饋率變了，沒有自動更新：${u.changed.map(escapeHtml).join('、')}。請重新搜尋後再加到我的小抄。</span>` : '');
             notice.hidden = false;
         } else notice.hidden = true;
     }
@@ -706,13 +749,13 @@ function mpRender() {
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
     const countEl = mpEl('mp-count');
-    if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `${n} 家商家` : ''; }
+    if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `已加入 ${n} 家商家` : ''; }
     show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
         show(deadbarEl, false); show(tip, false);
         if (mappingsLoadState === 'error') { title = '配卡讀取失敗'; hint = '你的配卡還在雲端，只是這次沒讀到（網路不穩或 App 剛冷啟動）。請確認連線後重試。'; retry = true; }
-        else { title = '還沒有配卡記錄'; hint = '在查詢結果的卡片上按「加到我的配卡」，就會出現在這張刷卡小抄裡'; }
+        else { title = '還沒有配卡記錄'; hint = '在查詢回饋的結果中按「加到我的小抄」，就會出現在這張刷卡小抄裡'; }
         list.innerHTML = `<div class="mp-empty"><p class="mp-empty-title">${escapeHtml(title)}</p><p>${escapeHtml(hint)}</p>` +
             (retry ? '<button type="button" class="mp-retry" id="mp-retry-btn">重新載入</button>' : '') + '</div>';
         saveBtns.forEach(b => { b.disabled = true; });
@@ -1174,14 +1217,29 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
         }
     });
 
-    // 底部：虛線、（勾選時）卡數與額度、網址
+    // 底部：虛線、（勾選時）單據合計區、網址
     y += 12;
     ops.push({ t: 'dash', x1: IX, x2: IX + IW, y, color: 'rule', dash: [4, 3], lw: 1.5 });
     y += 16;
-    const sumT = o.summary ? mpSummaryText(groupsSections) : '';
-    if (sumT) {
-        ops.push({ t: 'text', text: sumT, x: X0 + W / 2, y: y + 6, font: font(700, big ? 12.5 : 11, MP_SANS), color: 'ink', align: 'center' });
-        y += big ? 24 : 21;
+    if (o.summary) {
+        const d = mpSummaryData();
+        const kf = font(700, big ? 12.5 : 11, MP_SANS), vf = font(700, big ? 13.5 : 12, MP_MONO);
+        const row = (k, v) => {
+            ctx.font = kf; const kw = ctx.measureText(k).width;
+            ctx.font = vf; const vw = ctx.measureText(v).width;
+            ops.push({ t: 'text', text: k, x: IX, y: y + 4, font: kf, color: 'ink', align: 'left' });
+            ops.push({ t: 'text', text: v, x: IX + IW, y: y + 4, font: vf, color: 'ink', align: 'right' });
+            if (IX + IW - vw - 6 > IX + kw + 10) ops.push({ t: 'dash', x1: IX + kw + 6, x2: IX + IW - vw - 6, y: y + 2, color: 'rule', dash: [1.5, 2.5], lw: 1.5 });
+            y += big ? 22 : 19;
+        };
+        row('持有信用卡', `${d.count} 張`);
+        row('額度合計', d.amount);
+        if (d.missing && d.amount !== '未填') {
+            ops.push({ t: 'text', text: `＊其中 ${d.missing} 張未填額度`, x: IX + IW, y: y + 1, font: font(500, big ? 11 : 9.5, MP_SANS), color: 'sub', align: 'right' });
+            y += big ? 17 : 15;
+        }
+        ops.push({ t: 'eq', x: IX, y: y, w: IW });
+        y += 18;
     }
     ops.push({ t: 'spaced', text: 'PICKMYCARD.APP', x: X0 + W / 2, y: y, font: font(500, 9.5, MP_MONO), color: 'sub', spacing: 2.4 });
     y += 16;
@@ -1308,18 +1366,18 @@ async function mpRenderCanvas(sections, o) {
 // 存圖設定：可選的商家（排除失效）依目前排列的順序
 function mpExportPool() {
     const groups = mpBuildGroups().filter(g => !g.dead);
-    return mpArrange(groups, MP.prefs.sort).flatMap(s => s.items);
+    return mpArrange(groups, MP.prefs.x.sort).flatMap(s => s.items);
 }
 
 function mpExportSections(selectedKeys) {
     const sel = new Set(selectedKeys);
     const groups = mpBuildGroups().filter(g => !g.dead && sel.has(g.key)).map(g => ({ ...g, entries: g.entries.filter(e => !e.dead) }));
-    return mpArrange(groups, MP.prefs.sort);
+    return mpArrange(groups, MP.prefs.x.sort);
 }
 
 function mpExportOpts() {
-    const p = MP.prefs;
-    return { layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, summary: p.summary, big: p.size === 'large', sort: p.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
+    const p = MP.prefs, x = p.x;
+    return { layout: x.layout, labels: x.layout === 'F' && x.labels, caps: x.caps, summary: x.summary, big: x.size === 'large', sort: x.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
@@ -1383,18 +1441,17 @@ async function mpRenderExport() {
             ${Object.entries(MP_RATIOS).map(([k, v]) => `<button type="button" data-mp-ratio="${k}" class="${p.ratio === k ? 'on' : ''}" title="${v.desc}">${v.label}</button>`).join('')}
         </div></div>` : ''}
         <div class="mp-set-row">
-            <div class="mp-set-block"><h4>版面</h4>${mpSegHtml('版面', p.layout, [['F', MP_ICON.one, '單欄'], ['E', MP_ICON.two, '雙欄']])}</div>
-            <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
-            <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.size, [['small', '小字'], ['large', '大字']])}</div>
+            <div class="mp-set-block"><h4>版面</h4>${mpSegHtml('版面', p.x.layout, [['F', MP_ICON.one, '單欄'], ['E', MP_ICON.two, '雙欄']])}</div>
+            <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.x.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
+            <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.x.size, [['small', '小字'], ['large', '大字']])}</div>
         </div>
-        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p)}${mpCapsChk('mp-exp-caps', p)}${mpSummaryChk('mp-exp-summary', p)}</div>
+        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p.x)}${mpCapsChk('mp-exp-caps', p.x)}${mpSummaryChk('mp-exp-summary', p.x)}</div>
         <div class="mp-set-block mp-pickwrap${MP.exp.pickOpen ? ' open' : ''}">
             <div class="mp-pick-head">
                 <button type="button" class="mp-pick-toggle" id="mp-pick-toggle" aria-expanded="${MP.exp.pickOpen ? 'true' : 'false'}" aria-controls="mp-picks"><span class="mp-pick-title">要放進圖片的商家</span><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''} 家</span><span class="mp-chev"><span class="mp-chev-t">${MP.exp.pickOpen ? '收合' : '展開'}</span>${MP_ICON.chev}</span></button>
             </div>
-            <div class="mp-pick-bar"><button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
-            ${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint mp-pick-hint">桌布放得下前 ${lim} 家，按「全選」會選前 ${lim} 家。想全部放進去，請改選「長圖」。</p>` : ''}
-            <div class="mp-picks" id="mp-picks">${mpArrange(mpBuildGroups(), p.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
+            <div class="mp-pick-bar">${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint mp-pick-hint">已選的圖片規格只放得下 ${lim} 家。若想全放，請改選「長圖」。</p>` : ''}<button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
+            <div class="mp-picks" id="mp-picks">${mpArrange(mpBuildGroups(), p.x.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
                 const on = sel.includes(g.key), off = g.dead;
                 return `<label class="mp-pk${off ? ' off' : ''}"><input type="checkbox" data-mp-pick="${esc(g.key)}" ${on && !off ? 'checked' : ''} ${off ? 'disabled' : ''}><span class="mp-pk-name">${esc(mpDisplayName(g))}${off ? '<small>已失效</small>' : ''}</span><img class="mp-th" src="assets/images/cards/${esc(g.entries[0].m.cardId)}.png" alt="" onerror="this.style.visibility='hidden'"></label>`;
             }).join('')).join('')}</div>
@@ -1443,7 +1500,7 @@ async function mpSaveImage() {
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     if (!blob) return;
     if (window.logEvent && window.firebaseAnalytics) {
-        window.logEvent(window.firebaseAnalytics, 'mappings_save_image', { fmt: MP.prefs.fmt, layout: MP.prefs.layout, size: MP.prefs.size, theme: MP.prefs.theme });
+        window.logEvent(window.firebaseAnalytics, 'mappings_save_image', { fmt: MP.prefs.fmt, layout: MP.prefs.x.layout, size: MP.prefs.x.size, theme: MP.prefs.theme });
     }
     // 手機優先用分享面板（iPhone 會有「儲存影像」）；不支援再退回下載
     try {
@@ -1504,7 +1561,8 @@ function mpBind() {
         if (b.id === 'mp-retry-btn') { b.disabled = true; b.textContent = '讀取中…'; await loadSpendingMappings(); updateMappingsSwitch(); mpRender(); if ((userSpendingMappings || []).length) mpProbeAll(); return; }
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
-        if (b.id === 'mp-sum-btn') { mpToast(MP_LIMIT_HINT); return; }
+        if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
+        if (b.hasAttribute('data-mp-help')) { if (document.getElementById('mp-help-pop')) mpCloseHelp(); else mpOpenHelp(b); return; }
         if (b.hasAttribute('data-mp-open-export')) { mpOpenExport(); return; }
         if (b.id === 'mp-edit-save') { await mpSaveEdit(false); return; }
         if (b.id === 'mp-edit-reset') { await mpSaveEdit(true); return; }
@@ -1516,9 +1574,9 @@ function mpBind() {
             if (b.hasAttribute('data-mp-exp-close')) { mpCloseExport(); return; }
             if (b.dataset.mpFmt) { p.fmt = b.dataset.mpFmt; }
             else if (b.dataset.mpRatio) { p.ratio = b.dataset.mpRatio; }
-            else if (b.dataset.mpLayout) { p.layout = b.dataset.mpLayout; }
-            else if (b.dataset.mpSort) { p.sort = b.dataset.mpSort; }
-            else if (b.dataset.mpSize) { p.size = b.dataset.mpSize; }
+            else if (b.dataset.mpLayout) { p.x.layout = b.dataset.mpLayout; }
+            else if (b.dataset.mpSort) { p.x.sort = b.dataset.mpSort; }
+            else if (b.dataset.mpSize) { p.x.size = b.dataset.mpSize; }
             else if (b.dataset.mpTheme) { p.theme = b.dataset.mpTheme; }
             else if (b.id === 'mp-exp-all') {
                 const pool = mpExportPool();
@@ -1538,28 +1596,20 @@ function mpBind() {
             }
             else return;
             mpSavePrefs();
-            mpRenderExport();
-            mpRender();
+            mpRenderExport();   // 存圖設定不連動小抄頁面
         }
     });
 
     page.addEventListener('change', async e => {
         const t = e.target;
-        if (t.id === 'mp-labels-toggle' || t.id === 'mp-exp-labels') {
-            MP.prefs.labels = t.checked; mpSavePrefs(); mpRender();
-            if (t.id === 'mp-exp-labels') mpRenderExport();
-            return;
-        }
-        if (t.id === 'mp-summary-toggle' || t.id === 'mp-exp-summary') {
-            MP.prefs.summary = t.checked; mpSavePrefs();
-            if (t.checked) { mpToast(MP_LIMIT_HINT); await mpLoadLimits(); }
-            mpRender();
-            if (t.id === 'mp-exp-summary') mpRenderExport();
-            return;
-        }
-        if (t.id === 'mp-caps-toggle' || t.id === 'mp-exp-caps') {
-            MP.prefs.caps = t.checked; mpSavePrefs(); mpRender();
-            if (t.id === 'mp-exp-caps') mpRenderExport();
+        // 小抄頁面的勾選項 → 只影響頁面；存圖對話框的 → 只影響圖片（MP.prefs.x）
+        const pageKey = { 'mp-labels-toggle': 'labels', 'mp-caps-toggle': 'caps', 'mp-summary-toggle': 'summary' }[t.id];
+        const expKey = { 'mp-exp-labels': 'labels', 'mp-exp-caps': 'caps', 'mp-exp-summary': 'summary' }[t.id];
+        if (pageKey || expKey) {
+            if (pageKey) MP.prefs[pageKey] = t.checked; else MP.prefs.x[expKey] = t.checked;
+            mpSavePrefs();
+            if ((pageKey || expKey) === 'summary' && t.checked) await mpLoadLimits();
+            if (pageKey) mpRender(); else mpRenderExport();
             return;
         }
         if (t.dataset.mpPick !== undefined) {
@@ -1572,6 +1622,13 @@ function mpBind() {
         }
     });
 
+    // 「?」說明氣泡掛在 body 上（不在 #mappings-page 裡）：「我的信用卡」連結與點外面關閉都在這裡處理
+    document.addEventListener('click', e => {
+        const t = e.target;
+        if (t.closest && t.closest('[data-mp-open-owned]')) { mpOpenOwnedCards(); return; }
+        if (!(t.closest && (t.closest('#mp-help-pop') || t.closest('[data-mp-help]')))) mpCloseHelp();
+    });
+    window.addEventListener('resize', mpCloseHelp);
     page.addEventListener('pointerdown', mpStartDrag);
     // 拖曳把手上的 mousedown 會選取文字，擋掉
     page.addEventListener('mousedown', e => { if (e.target.closest('[data-mp-grip]')) e.preventDefault(); });

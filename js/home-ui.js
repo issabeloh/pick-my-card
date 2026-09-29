@@ -1540,7 +1540,7 @@ function setupSearchClearButtons() {
         'search-owned-cards-input',// 我的信用卡
         'search-payments-input',   // 行動支付
         'cashback-search-input'    // 卡片詳情頁：指定通路回饋
-        // 我的配卡組合頁的搜尋框是 type=search（瀏覽器自帶清除鈕），不在此列
+        // 我的刷卡小抄頁的搜尋框是 type=search（瀏覽器自帶清除鈕），不在此列
     ].forEach(id => attachInputClearButton(document.getElementById(id)));
 }
 

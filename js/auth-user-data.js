@@ -361,7 +361,7 @@ function ensureAuthSubscribed() {
 
             appStarted = true;
             showToolSections();
-            // 登入一確認就顯示「我的配卡組合」切換鈕，不等下面的 Firestore 讀取（冷啟動要好幾秒）
+            // 登入一確認就顯示「我的刷卡小抄」切換鈕，不等下面的 Firestore 讀取（冷啟動要好幾秒）
             if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
 
             // Show manage cards button
@@ -447,7 +447,7 @@ function ensureAuthSubscribed() {
             if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
         }
 
-        // 首頁「我的配卡組合」切換鈕（登入才顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）
+        // 首頁「我的刷卡小抄」切換鈕（登入才顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）
         if (typeof refreshMappingsEntry === 'function') refreshMappingsEntry();
 
         // 登入成功後預熱級別快取（見 warmCardLevelCache 定義處的說明），
@@ -755,6 +755,8 @@ async function loadMyOwnedCards(userData = null) {
 // Save my-owned-cards to localStorage (always) and Firestore (if logged in).
 async function saveMyOwnedCards() {
     const cardsArray = Array.from(myOwnedCards);
+    // 刷卡小抄底部「持有信用卡／額度合計」跟著更新（js/mappings-page.js）
+    if (typeof mpOnLimitsChanged === 'function') mpOnLimitsChanged();
 
     if (!currentUser) {
         try {
