@@ -28,6 +28,7 @@ const MP = {
     status: new Map(),      // mapping.id → { dead:'ended'|'gone'|null, labels:[], next, changed, ext }
     probed: false,
     probing: null,
+    probeGen: 0,           // 登入／登出時 +1，讓舊的重算結果作廢
     updated: null,          // 按過「更新期限」的結果 { ext, changed:[] }
     search: '',
     editKey: null,
@@ -44,6 +45,12 @@ function mpList() {
 }
 function mpSetList(arr) {
     if (currentUser) userSpendingMappings = arr; else MP.demo = arr;
+}
+// 雲端這次沒讀到（mappingsLoadState 不是 ok）時，手上可能是舊的本機快取；這時寫回會蓋掉別台裝置新增的配對 → 擋下來
+function mpCanWrite() {
+    if (!currentUser || mappingsLoadState === 'ok') return true;
+    alert('這次沒讀到雲端的刷卡小抄，為了不蓋掉你的資料，暫時不能修改。請確認網路後重新整理頁面。');
+    return false;
 }
 async function mpPersist() {
     if (currentUser) return saveSpendingMappings(userSpendingMappings);
@@ -315,17 +322,23 @@ async function mpLoadLimits() {
     const out = new Map();
     const ids = mpOwnedIds();
     const parse = v => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
+    // 本機鏡像（saveCreditLimit／loadCreditLimit 寫的）：雲端讀不到或離線時用它
+    const readLocal = () => {
+        const pre = currentUser ? `creditLimit_${currentUser.uid}_` : 'creditLimit_local_';
+        ids.forEach(id => { let v = null; try { v = localStorage.getItem(pre + id); } catch (e) { /* ignore */ } const n = parse(v); if (n !== null) out.set(id, n); });
+    };
     try {
         if (currentUser && window.db && window.doc && window.getDoc) {
             const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
-            const map = snap.exists() && snap.data().creditLimits || {};
-            ids.forEach(id => { const n = parse(map[id]); if (n !== null) out.set(id, n); });
+            const map = snap.exists() && snap.data().creditLimits;
+            if (map) ids.forEach(id => { const n = parse(map[id]); if (n !== null) out.set(id, n); });
+            else readLocal();
         } else {
-            const pre = currentUser ? `creditLimit_${currentUser.uid}_` : 'creditLimit_local_';
-            ids.forEach(id => { const n = parse(localStorage.getItem(pre + id)); if (n !== null) out.set(id, n); });
+            readLocal();
         }
     } catch (error) {
-        console.error('❌ [刷卡小抄] 讀取額度失敗:', error);
+        console.error('❌ [刷卡小抄] 讀取額度失敗，改用本機紀錄:', error);
+        readLocal();
     }
     MP.limits = out;
     return out;
@@ -390,8 +403,16 @@ async function mpProbe(m) {
     const term = optimizeMerchantName(m.merchant).split('、')[0].trim();
     let matches = [];
     try {
-        const r = await calculateCardCashback(card, term, 1000);
-        matches = Array.isArray(r) ? r : [];
+        // 除了 1000 元，也用這張卡各活動的滿額門檻各算一次：「單筆滿 N」的活動在 1000 元時不會出現，不能因此當成下架
+        const amounts = [...new Set([1000, ...(card.cashbackRates || []).map(g => Number(g.minSpend)).filter(n => n > 0)])].slice(0, 6);
+        const seen = new Set();
+        for (const amt of amounts) {
+            const r = await calculateCardCashback(card, term, amt);
+            (Array.isArray(r) ? r : []).forEach(x => {
+                const k = `${x.rate}|${x.matchedCategory || ''}|${x.matchedRateGroup && x.matchedRateGroup.periodEnd || ''}`;
+                if (!seen.has(k)) { seen.add(k); matches.push(x); }
+            });
+        }
     } catch (error) {
         console.error('❌ [配卡] 重算失敗:', m.merchant, error);
         return { dead: null, labels: [], next: null, hasMatches: true, error: true, cap: null };
@@ -427,7 +448,13 @@ async function mpProbe(m) {
         });
         cands.sort((a, b) => b.rate - a.rate);
     }
-    return { dead: matches.length ? null : 'gone', labels, next, cap, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
+    // 「已下架」只在卡片資料裡完全找不到這個商家時才判定（會被列進「刪除全部失效活動」，寧可漏判不可誤判）：
+    // 還沒開始的活動、生日月等條件暫時不適用的活動，重算會是空的，但商家還在卡片資料裡 → 不算失效
+    let listed = true;   // 判斷失敗時當成還在（安全方向）
+    try { listed = JSON.stringify(card).toLowerCase().includes(JSON.stringify(term.toLowerCase())); } catch (e) { /* 保持 true */ }
+    const upcoming = !!(m.periodStart && mpISO(m.periodStart) > getTaiwanToday());
+    const gone = !matches.length && !listed && !upcoming;
+    return { dead: gone ? 'gone' : null, labels, next, cap, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
 }
 
 // mpProbe 的結果 → MP.status 存的形狀（一處定義，避免各處各拼一次）
@@ -437,19 +464,23 @@ function mpStatusOf(r) {
 
 async function mpProbeAll() {
     if (MP.probing) return MP.probing;
-    MP.probing = (async () => {
+    const gen = MP.probeGen;
+    const run = (async () => {
         const list = mpList().slice();
         // 各配對互不相干 → 同時算（查詢回饋本身也是對每張卡並行呼叫 calculateCardCashback）
         const results = await Promise.all(list.map(m => mpProbe(m)));
+        if (gen !== MP.probeGen) return;   // 途中登入／登出了，這批結果不屬於目前的清單
         list.forEach((m, i) => MP.status.set(m.id, { ...(MP.status.get(m.id) || {}), ...mpStatusOf(results[i]) }));
         MP.probed = true;
-        MP.probing = null;
+        if (MP.probing === run) MP.probing = null;
         if (MP.open) mpRender();
     })();
-    return MP.probing;
+    MP.probing = run;
+    return run;
 }
 
 async function mpUpdateDeadlines() {
+    if (!mpCanWrite()) return;
     await mpProbeAll();
     let ext = 0;
     const changed = [];
@@ -553,6 +584,9 @@ async function mpOnDataChanged() {
 }
 
 function refreshMappingsEntry() {
+    if (!currentUser) { userMerchantAliases = {}; userMappingsTitle = ''; }   // 登出：上一位用戶的標題與改名不能留在記憶體
+    MP.probeGen++;   // 進行中的重算（例如訪客範例）作廢，不寫回新狀態
+    MP.probing = null;
     if (currentUser) MP.demo = null;
     MP.prefs = null;
     MP.status.clear();
@@ -664,8 +698,27 @@ function mpSegHtml(name, cur, opts) {
 // 未登入時的範例小抄：用站上同一支 calculateCardCashback()（訪客的預設級別）算出真實回饋率
 const MP_DEMO_PAIRS = [['taishin-richart', 'Line Pay'], ['yushan-unicard', 'Uber Eats'], ['hsbc-liveplus', '麥當勞'],
     ['taishin-richart', 'momo'], ['cathay-cube', '全聯'], ['yushan-unicard', '高鐵'], ['sinopac-dawho', '國外']];
-async function mpBuildDemo() {
-    if (MP.demo || !cardsData || !cardsData.cards) return MP.demo;
+// 直接打開 /mappings 時，卡片資料可能還在下載 → 最多等 15 秒
+function mpWaitCardsData(ms = 15000) {
+    return new Promise(resolve => {
+        const t0 = Date.now();
+        (function tick() {
+            if (typeof cardsData !== 'undefined' && cardsData && cardsData.cards) return resolve(true);
+            if (Date.now() - t0 > ms) return resolve(false);
+            setTimeout(tick, 150);
+        })();
+    });
+}
+
+// 同一時間只建一次（渲染可能連續呼叫多次）
+function mpBuildDemo() {
+    if (MP.demo) return Promise.resolve(MP.demo);
+    if (!MP.demoBuilding) MP.demoBuilding = mpBuildDemoNow().finally(() => { MP.demoBuilding = null; });
+    return MP.demoBuilding;
+}
+async function mpBuildDemoNow() {
+    if (!(await mpWaitCardsData())) return MP.demo;
+    if (MP.demo || currentUser) return MP.demo;
     const list = [];
     for (const [cardId, term] of MP_DEMO_PAIRS) {
         const card = cardsData.cards.find(c => c.id === cardId);
@@ -831,6 +884,7 @@ function mpStartDrag(e) {
         const rank = new Map(keys.map((k, i) => [k, i]));
         const sorted = mpList().slice().sort((a, b) =>
             ((rank.get(mpKeyOf(a)) ?? 1e9) - (rank.get(mpKeyOf(b)) ?? 1e9)) || ((a.order || 0) - (b.order || 0)));
+        if (!mpCanWrite()) { mpRender(); return; }   // 還原畫面上的順序
         sorted.forEach((m, i) => { m.order = i; });
         await mpPersist();
         mpRender();
@@ -901,6 +955,7 @@ function mpOpenRateSheet(id) {
 }
 
 async function mpApplyRate(idx) {
+    if (!mpCanWrite()) return;
     const id = MP.rateId;
     const m = mpList().find(x => x.id === id);
     const st = MP.status.get(id) || {};
@@ -925,6 +980,7 @@ function mpDeadIds() {
 }
 
 async function mpDeleteAllDead() {
+    if (!mpCanWrite()) return;
     const ids = new Set(mpDeadIds());
     if (!ids.size) return;
     mpSetList(mpList().filter(m => !ids.has(m.id)));
@@ -973,6 +1029,7 @@ async function mpSaveEdit(reset) {
 }
 
 async function mpRemoveMapping(id) {
+    if (!mpCanWrite()) return;
     const m = mpList().find(x => x.id === id);
     if (currentUser) await removeMapping(id);
     else mpSetList(mpList().filter(x => x.id !== id));
@@ -1267,10 +1324,12 @@ async function mpRenderCanvas(sections, o) {
         top = Math.round(baseH * MP_WALL_TOP);        // 鎖定畫面的日期＋時鐘
         avail = baseH - top - baseH * MP_WALL_BOTTOM;  // 底部留給手電筒／相機鈕
     } else {
-        outW = 1080;
         top = 24;
         avail = Infinity;
-        outH = Math.round((lay.height + top + 24) * outW / MP_BASE_W);
+        // iOS Safari 的 canvas 上限約 16.7M 像素，超過會變成空白圖 → 很長時自動降低寬度（最低 540）
+        const baseH = lay.height + top + 24;
+        outW = Math.max(540, Math.min(1080, Math.floor(Math.sqrt(16e6 * MP_BASE_W / baseH))));
+        outH = Math.round(baseH * outW / MP_BASE_W);
     }
     const fits = lay.height <= avail;
     const scale = outW / MP_BASE_W;
@@ -1471,6 +1530,9 @@ async function mpRenderExport() {
     const { canvas, fits } = await mpRenderCanvas(mpExportSections(sel), mpExportOpts());
     if (seq !== mpPreviewSeq) return;
     MP.exp.canvas = canvas;
+    MP.exp.blob = null;
+    // 先把檔案準備好：按「儲存圖片」時直接叫分享面板，不在點擊後才 await（iPhone 會把晚了的分享擋掉）
+    canvas.toBlob(b => { if (seq === mpPreviewSeq) MP.exp.blob = b; }, 'image/png');
     MP.exp.fits = fits;
     const img = mpEl('mp-exp-img');
     img.src = canvas.toDataURL('image/png');
@@ -1493,8 +1555,8 @@ async function mpSaveImage() {
     const canvas = MP.exp.canvas;
     if (!canvas) return;
     const fname = `pickmycard-${mpMonthLabel()}.png`;
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    if (!blob) return;
+    const blob = MP.exp.blob || await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) { alert('圖片產生失敗（可能太長了）。請少勾幾家，或改用小字後再試一次。'); return; }
     if (window.logEvent && window.firebaseAnalytics) {
         window.logEvent(window.firebaseAnalytics, 'mappings_save_image', { fmt: MP.prefs.fmt, layout: MP.prefs.x.layout, size: MP.prefs.x.size, theme: MP.prefs.theme });
     }
@@ -1562,7 +1624,16 @@ function mpBind() {
         if (b.hasAttribute('data-mp-open-export')) { mpOpenExport(); return; }
         if (b.id === 'mp-edit-save') { await mpSaveEdit(false); return; }
         if (b.id === 'mp-edit-reset') { await mpSaveEdit(true); return; }
-        if (b.dataset.mpRemove) { await mpRemoveMapping(b.dataset.mpRemove); return; }
+        if (b.dataset.mpRemove) {
+            // 兩段式確認（刪了無法復原）：第一次按只變成「確定刪除？」，4 秒內再按一次才刪
+            if (b.dataset.armed !== '1') {
+                b.dataset.armed = '1'; b.dataset.label = b.textContent; b.textContent = '確定刪除？再按一次';
+                setTimeout(() => { if (b.isConnected && b.dataset.armed === '1') { b.dataset.armed = ''; b.textContent = b.dataset.label; } }, 4000);
+                return;
+            }
+            await mpRemoveMapping(b.dataset.mpRemove);
+            return;
+        }
         if (b.hasAttribute('data-mp-sheet-close')) { mpCloseSheets(); return; }
         // 存圖對話框
         if (b.closest('#mp-export')) {

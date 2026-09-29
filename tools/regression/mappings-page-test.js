@@ -380,6 +380,42 @@ const PAIRS = [
   const reset = await pg.evaluate((k) => ({ shown: document.querySelector(`#mp-list [data-mp-edit="${k}"]`).textContent, del: (globalThis.__setDocs || []).some(d => d.data.merchantAliases && d.data.merchantAliases[k] === '__DELETE__') }), target);
   check('商家名稱重設 → 回到原名並刪除雲端欄位', reset.shown.toLowerCase().startsWith(target) && reset.del, reset.shown);
 
+  // 刪除要兩段式確認
+  await pg.click(`#mp-list [data-mp-edit="${target}"]`);
+  const rmBtn = await pg.$('#mp-edit-remove [data-mp-remove]');
+  const rmId = await rmBtn.getAttribute('data-mp-remove');
+  await rmBtn.click();
+  const rm1 = await pg.evaluate((id) => ({ still: userSpendingMappings.some(m => m.id === id), text: document.querySelector(`#mp-edit-remove [data-mp-remove="${id}"]`).textContent }), rmId);
+  check('刪除活動要按兩次：第一次只變成「確定刪除？」', rm1.still && rm1.text === '確定刪除？再按一次', JSON.stringify(rm1));
+  await pg.click('[data-mp-sheet-close]');
+
+  // 失效判定不能誤判（會被「刪除全部失效活動」刪掉）
+  const probes = await pg.evaluate(async () => ({
+    // 模擬用戶用 5,000 元搜尋後釘選：存的回饋率＝那次搜尋結果的 rate
+    threshold: await (async () => { const card = cardsData.cards.find(c => c.id === 'ctbc-linepay-card'); const r = (await calculateCardCashback(card, '營養師輕食', 5000))[0];
+      return mpProbe({ id: 't1', cardId: card.id, cardName: card.name, merchant: r.matchedItem, cashbackRate: r.rate, periodEnd: '2026-12-31' }); })(),
+    upcoming: await mpProbe({ id: 't2', cardId: 'hsbc-liveplus', cardName: '滙豐 Live+ 卡', merchant: 'zzz還沒開始', cashbackRate: 3, periodStart: '2026-12-01', periodEnd: '2027-01-31' }),
+    gone: await mpProbe({ id: 't3', cardId: 'hsbc-liveplus', cardName: '滙豐 Live+ 卡', merchant: 'zzz不存在商家', cashbackRate: 3, periodEnd: '2026-12-31' })
+  }));
+  check('單筆滿額（滿 5,000）的活動：不當成下架、也不當成回饋已變', probes.threshold.dead === null && probes.threshold.next && !(probes.threshold.cands || []).length, JSON.stringify({ dead: probes.threshold.dead, next: probes.threshold.next, cands: probes.threshold.cands }));
+  check('還沒開始的活動：不當成下架', probes.upcoming.dead === null, JSON.stringify(probes.upcoming.dead));
+  check('卡片資料裡真的沒有的商家：仍判定已下架', probes.gone.dead === 'gone');
+
+  // 雲端沒讀到時不能寫回（避免舊快取蓋掉雲端）
+  const guard = await pg.evaluate(async () => {
+    const before = (globalThis.__setDocs || []).length; const alerts = []; const oa = window.alert; window.alert = m => alerts.push(m);
+    mappingsLoadState = 'error';
+    await mpUpdateDeadlines(); await mpDeleteAllDead();
+    mappingsLoadState = 'ok'; window.alert = oa;
+    return { writes: (globalThis.__setDocs || []).length - before, alerted: alerts.length > 0 };
+  });
+  check('雲端沒讀到（error）時：更新期限、刪除都不寫回，並提示', guard.writes === 0 && guard.alerted, JSON.stringify(guard));
+
+  // 長圖很長時自動降寬，不超過 iOS canvas 上限
+  const longImg = await pg.evaluate(async () => { const g = mpBuildGroups().filter(x => !x.dead); const items = Array.from({ length: 300 }, (_, i) => ({ ...g[i % g.length], key: 'k' + i }));
+    const { canvas } = await mpRenderCanvas([{ key: null, title: null, items }], { ...mpExportOpts(), fmt: 'long' }); return { w: canvas.width, h: canvas.height, px: canvas.width * canvas.height }; });
+  check('長圖 300 家：自動降寬，總像素不超過 1600 萬', longImg.px <= 16e6 && longImg.w < 1080 && longImg.w >= 540, JSON.stringify(longImg));
+
   // 點卡圖 → 詳情頁疊在上面
   await pg.click('#mp-list .mp-cardbtn');
   await pg.waitForSelector('#card-detail-modal', { state: 'visible', timeout: 5000 }).catch(() => {});
@@ -615,7 +651,14 @@ const PAIRS = [
   check('未登入：範例可以改名，但不寫雲端、不存本機', gRen.shown.includes('範例改名') && gRen.noWrite && gRen.noLocal, JSON.stringify(gRen));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-editing-iphone13.png'), fullPage: false });
   await gp.context().close();
+  const gd = await newPage(VIEWPORTS[1], '/mappings?start', true);
+  const demoOk = await gd.waitForFunction(() => document.querySelectorAll('#mp-list [data-mp-row]').length >= 3, null, { timeout: 20000 }).then(() => true).catch(() => false);
+  check('未登入直接開 /mappings：範例小抄會載入（不會卡在「範例載入中…」）', demoOk);
+  await gd.context().close();
 
+  // 登出後：上一位用戶的標題／改名不能留在記憶體（共用裝置）
+  const lo = await pg.evaluate(() => { userMappingsTitle = '小明的刷卡表'; userMerchantAliases = { 'line pay': '我的LP' }; const u = currentUser; currentUser = null; refreshMappingsEntry(); const r = { title: userMappingsTitle, aliases: Object.keys(userMerchantAliases).length }; currentUser = u; return r; });
+  check('登出後清掉上一位用戶的小抄標題與自訂商家名', lo.title === '' && lo.aliases === 0, JSON.stringify(lo));
   check('過程中沒有 JavaScript 錯誤', pageErrors === 0, `${pageErrors} 個`);
 
   await browser.close();
