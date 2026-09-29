@@ -67,14 +67,27 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     displayCashbackSites(actualUserInput);
     displayReferralLink(actualUserInput);
 
-    // 結果標題：無匹配（只剩基本回饋，isBasicCashback）時沒有「指定通路回饋」，
-    // 標題退成「一般回饋」；有匹配時維持「一般回饋與指定通路回饋」。
+    // 結果標題：照這一輪「真的列出來」的東西組，不再寫死（2026-09-29 站長要求）。
+    // 舊寫法固定寫「一般回饋與指定通路回饋」，但有匹配時結果裡根本沒有一般回饋那幾張，
+    // 只有即將開始的活動時也照喊——標題與畫面對不上。
+    // ⚠️ 領券與停車折抵各有自己的 section 與 h2，不歸這條管；這裡只描述 #results-container。
     const resultsTitle = resultsSection.querySelector('h2');
     if (resultsTitle) {
-        resultsTitle.textContent = isBasicCashback ? '一般回饋' : '一般回饋與指定通路回饋';
+        const titleParts = [];
+        if (results.some(r => r.isBasic)) titleParts.push('一般回饋');
+        if (results.some(r => !r.isBasic && !r.isUpcoming)) titleParts.push('指定通路回饋');
+        if (results.some(r => r.isUpcoming)) titleParts.push('即將開始的活動');
+        resultsTitle.textContent = titleParts.length === 0
+            ? '搜尋結果'   // 一張卡都沒有、又要顯示「無符合的信用卡」那塊時的中性標題
+            : titleParts.length === 1
+                ? titleParts[0]
+                : titleParts.slice(0, -1).join('、') + '與' + titleParts[titleParts.length - 1];
     }
 
-    resultsSection.style.display = 'block';
+    // 一張卡都沒有、又不該顯示「無符合的信用卡」（只有領券的情況）：整個 section 收起來。
+    // 留著就是一個有標題的空框，標題怎麼寫都在騙人。
+    const hideEmptyResults = results.length === 0 && suppressEmptyMessage;
+    resultsSection.style.display = hideEmptyResults ? 'none' : 'block';
     // 有搜尋結果時顯示「精選活動」快速跳轉浮標（結果太長時一鍵跳到最底的精選活動區）
     if (typeof updateScrollToSpotlightBtn === 'function') updateScrollToSpotlightBtn();
     // 商家落地頁的開頁自動計算：跳過這次捲動，讓頂部標題區塊與搜尋框先入眼（一次性旗標，
@@ -99,7 +112,12 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
                 statusBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }));
         } else {
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // 結果區被收起來時（只有領券）不能捲它——scrollIntoView 對 display:none 是
+            // no-op，用戶會留在頁面頂端看不到券。改捲下一個真的有內容的區塊。
+            const couponSection = document.getElementById('coupon-results-section');
+            const scrollTarget = !hideEmptyResults ? resultsSection
+                : (couponSection && couponSection.style.display !== 'none' ? couponSection : null);
+            if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 }
