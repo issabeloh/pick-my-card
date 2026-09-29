@@ -62,8 +62,9 @@ function mpLoadPrefs() {
         size: p.size === 'large' ? 'large' : 'small',
         labels: p.labels !== false,
         caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
+        summary: p.summary === true,    // 小抄底部「共 N 張信用卡 ▪ 額度共 NT$ x萬」；預設關（額度屬隱私，存成桌布前讓用戶自己決定）
         fmt: p.fmt === 'long' ? 'long' : 'wall',
-        ratio: ['auto', 'iphone', 'android', 'old'].includes(p.ratio) ? p.ratio : 'auto',
+        ratio: ['auto', 'iphone', 'android', 'pixel'].includes(p.ratio) ? p.ratio : 'auto',   // 舊的 16:9（old）已移除 → 回到自動
         theme: p.theme === 'dark' ? 'dark' : 'light',
         sel: Array.isArray(p.sel) ? p.sel.filter(s => typeof s === 'string') : null
     };
@@ -290,6 +291,60 @@ function mpPlanLabel(cardId, category) {
     return hit ? hit[1].trim() : null;
 }
 
+// 小抄底部摘要：這張小抄用到幾張卡＋額度總和（額度＝各卡詳情頁「我的額度」，只讀）
+async function mpLoadLimits() {
+    const out = new Map();
+    const ids = [...new Set(mpList().map(m => m.cardId))];
+    const parse = v => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
+    try {
+        if (currentUser && window.db && window.doc && window.getDoc) {
+            const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
+            const map = snap.exists() && snap.data().creditLimits || {};
+            ids.forEach(id => { const n = parse(map[id]); if (n !== null) out.set(id, n); });
+        } else {
+            const pre = currentUser ? `creditLimit_${currentUser.uid}_` : 'creditLimit_local_';
+            ids.forEach(id => { const n = parse(localStorage.getItem(pre + id)); if (n !== null) out.set(id, n); });
+        }
+    } catch (error) {
+        console.error('❌ [配卡] 讀取額度失敗:', error);
+    }
+    MP.limits = out;
+    return out;
+}
+
+function mpSummaryText(sections) {
+    const ids = new Set();
+    sections.forEach(s => s.items.forEach(g => g.entries.forEach(e => ids.add(e.m.cardId))));
+    if (!ids.size) return '';
+    const lim = MP.limits || new Map();
+    let sum = 0, known = 0;
+    ids.forEach(id => { if (lim.has(id)) { sum += lim.get(id); known++; } });
+    const head = `共 ${ids.size} 張信用卡`;
+    if (!known) return `${head} ▪ 額度未填`;
+    const wan = sum / 10000;
+    const amt = `NT$ ${Number.isInteger(wan) ? wan : (Math.round(wan * 10) / 10)}萬`;
+    return `${head} ▪ 額度共 ${amt}${known < ids.size ? `（${ids.size - known} 張未填）` : ''}`;
+}
+
+async function mpOnLimitsChanged() {
+    if (!MP.open || !MP.prefs || !MP.prefs.summary) return;
+    await mpLoadLimits();
+    mpRender();
+    mpRenderExport();
+}
+
+const MP_LIMIT_HINT = '額度要到各信用卡的詳情頁，在「我的額度」填寫（點小抄上的卡圖就能打開）';
+function mpToast(msg) {
+    const page = mpEl('mappings-page');
+    if (!page) return;
+    let t = page.querySelector('.mp-toast');
+    if (!t) { t = document.createElement('div'); t.className = 'mp-toast'; t.setAttribute('role', 'status'); page.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
 // 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
 function mpCapText(cardId, cap) {
     const n = Number(cap);
@@ -438,6 +493,7 @@ async function openMappingsPage(options = {}) {
     }
     MP.updated = null;
     if (!currentUser) await mpBuildDemo();
+    if (MP.prefs.summary) await mpLoadLimits();
     mpRender();
     if (mpList().length) mpProbeAll();
 }
@@ -490,26 +546,6 @@ const MP_ICON = {
     dl: '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>'
 };
 
-// Code 128（字元集 B）。模組序列已用 python-barcode 比對一致；內容固定 PICKMYCARD.APP
-const MP_C128 = '212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232'.split(' ');
-const MP_BARCODE_TEXT = 'PICKMYCARD.APP';
-
-// 回傳 [{x, w}] 黑條（單位＝模組，前後各留 10 模組靜區）＋總寬
-function mpBarcodeBars(text) {
-    const vals = [104, ...[...text].map(ch => ch.charCodeAt(0) - 32)];
-    const chk = vals.slice(1).reduce((sum, v, i) => sum + (i + 1) * v, 104) % 103;
-    const pats = [...vals, chk].map(v => MP_C128[v]).concat('2331112');
-    const bars = [];
-    let x = 10;
-    pats.forEach(pt => [...pt].forEach((w, i) => { w = +w; if (i % 2 === 0) bars.push({ x, w }); x += w; }));
-    return { bars, width: x + 10 };
-}
-
-function mpBarcodeSvg() {
-    const { bars, width } = mpBarcodeBars(MP_BARCODE_TEXT);
-    return `<svg class="mp-barcode" viewBox="0 0 ${width} 30" preserveAspectRatio="none" fill="currentColor" role="img" aria-label="條碼：${MP_BARCODE_TEXT}">${bars.map(b => `<rect x="${b.x}" y="0" width="${b.w}" height="30"/>`).join('')}</svg>`;
-}
-
 function mpMonthLabel() {
     return getTaiwanToday().slice(0, 7);
 }
@@ -558,10 +594,10 @@ function mpReceiptHtml(sections, o) {
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">PICK MY CARD<i>▪</i>${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}</button></div>
+        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}</button></div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
-        <div class="mp-foot">${mpBarcodeSvg()}<span class="mp-url">PICKMYCARD.APP</span></div>
+        <div class="mp-foot">${o.summary && mpSummaryText(sections) ? `<button type="button" class="mp-sum" id="mp-sum-btn" title="額度在各卡詳情頁編輯">${esc(mpSummaryText(sections))}</button>` : ''}<span class="mp-url">PICKMYCARD.APP</span></div>
     </div>`;
 }
 
@@ -569,6 +605,9 @@ function mpReceiptHtml(sections, o) {
 // 頁面渲染
 // ============================================
 // 「顯示等級／方案」常駐；雙欄放不下標籤，改成灰色不可勾（不改用戶存的勾選值）
+function mpSummaryChk(id, p) {
+    return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.summary ? 'checked' : ''}>顯示卡數與額度總和</label>`;
+}
 function mpCapsChk(id, p) {
     return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.caps ? 'checked' : ''}>顯示活動封頂金額</label>`;
 }
@@ -619,6 +658,7 @@ function mpRender() {
         <div class="mp-bar">
             ${mpLabelsChk('mp-labels-toggle', p)}
             ${mpCapsChk('mp-caps-toggle', p)}
+            ${mpSummaryChk('mp-summary-toggle', p)}
             <span class="mp-grow"></span>
             <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
@@ -628,7 +668,15 @@ function mpRender() {
     const layoutEl = mpEl('mappings-page') && mpEl('mappings-page').querySelector('.mp-layout');
     if (layoutEl) layoutEl.classList.toggle('editing', MP.editing);
     const editBtn = mpEl('mp-edit-toggle');
-    if (editBtn) { editBtn.textContent = MP.editing ? '完成' : '編輯'; editBtn.classList.toggle('on', MP.editing); editBtn.setAttribute('aria-pressed', String(MP.editing)); }
+    if (editBtn) {
+        // 圖示寫在 index.html，這裡只切換顯示與文字
+        const t = editBtn.querySelector('.mp-edit-t'), pen = editBtn.querySelector('.mp-ico-pen'), ok = editBtn.querySelector('.mp-ico-ok');
+        if (t) t.textContent = MP.editing ? '完成' : '編輯'; else editBtn.textContent = MP.editing ? '完成' : '編輯';
+        // SVG 沒有 .hidden 屬性，要用 attribute
+        if (pen) pen.toggleAttribute('hidden', MP.editing);
+        if (ok) ok.toggleAttribute('hidden', !MP.editing);
+        editBtn.classList.toggle('on', MP.editing); editBtn.setAttribute('aria-pressed', String(MP.editing));
+    }
     // 提示列的文字寫在 index.html；這裡只控制「拖曳」那句（只有自訂排列才顯示）
     if (tip) tip.querySelectorAll('.mp-tip-drag').forEach(el => { el.hidden = !(p.sort === 'custom' && !MP.search); });
 
@@ -657,6 +705,8 @@ function mpRender() {
     }
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
+    const countEl = mpEl('mp-count');
+    if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `${n} 家商家` : ''; }
     show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
@@ -680,7 +730,7 @@ function mpRender() {
     }
     const sections = mpArrange(groups, p.sort);
     list.innerHTML = mpReceiptHtml(sections, {
-        layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, big: p.size === 'large',
+        layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, summary: p.summary, big: p.size === 'large',
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();
@@ -902,7 +952,7 @@ async function mpRemoveMapping(id) {
 const MP_RATIOS = {
     iphone: { label: 'iPhone', w: 1179, h: 2556, desc: 'iPhone X 之後' },
     android: { label: 'Android', w: 1080, h: 2400, desc: '多數 Android' },
-    old: { label: '16:9', w: 1080, h: 1920, desc: 'iPhone 8／SE 等舊機（全螢幕 iPhone 用它會被裁掉左右）' }
+    pixel: { label: 'Pixel', w: 1080, h: 2424, desc: 'Google Pixel 9／9a（Pixel 7、8 用 Android 1080×2400 即可）' }
 };
 
 // 手機上讀實際螢幕：screen 寬高（CSS px，直向）× devicePixelRatio。桌機、平板或讀不到 → null
@@ -963,7 +1013,7 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
     const colsW = S.cols[0] + S.cols[1] + S.cols[2] + 12;
 
     // 抬頭
-    ops.push({ t: 'spaced', text: `PICK MY CARD ▪ ${mpMonthLabel()}`, x: X0 + W / 2, y: y + 8, font: font(700, 9.5, MP_MONO), color: 'sub', spacing: 2.2 });
+    ops.push({ t: 'spaced', text: mpMonthLabel(), x: X0 + W / 2, y: y + 8, font: font(700, 9.5, MP_MONO), color: 'sub', spacing: 2.2 });
     y += 16;
     ops.push({ t: 'spaced', text: mpTitle(), x: X0 + W / 2, y: y + 18, font: font(900, big ? 21 : 18, MP_SANS), color: 'ink', spacing: big ? 3.6 : 3.2 });
     y += big ? 32 : 28;
@@ -1124,13 +1174,15 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
         }
     });
 
-    // 底部：虛線、條碼、網址
+    // 底部：虛線、（勾選時）卡數與額度、網址
     y += 12;
     ops.push({ t: 'dash', x1: IX, x2: IX + IW, y, color: 'rule', dash: [4, 3], lw: 1.5 });
-    y += 12;
-    const bcW = big ? 190 : 170, bcH = 24;
-    ops.push({ t: 'barcode', x: X0 + W / 2 - bcW / 2, y, w: bcW, h: bcH });
-    y += bcH + 12;
+    y += 16;
+    const sumT = o.summary ? mpSummaryText(groupsSections) : '';
+    if (sumT) {
+        ops.push({ t: 'text', text: sumT, x: X0 + W / 2, y: y + 6, font: font(700, big ? 12.5 : 11, MP_SANS), color: 'ink', align: 'center' });
+        y += big ? 24 : 21;
+    }
     ops.push({ t: 'spaced', text: 'PICKMYCARD.APP', x: X0 + W / 2, y: y, font: font(500, 9.5, MP_MONO), color: 'sub', spacing: 2.4 });
     y += 16;
     return { ops, height: y + 8, x: X0, w: W };
@@ -1191,7 +1243,6 @@ async function mpRenderCanvas(sections, o) {
     ctx.textBaseline = 'alphabetic';
     const imgs = {};
     await Promise.all([...new Set(lay.ops.filter(op => op.t === 'img').map(op => op.card))].map(async id => { imgs[id] = await mpLoadImg(`assets/images/cards/${id}.png`); }));
-    const { bars, width: bw } = mpBarcodeBars(MP_BARCODE_TEXT);
 
     lay.ops.forEach(op => {
         ctx.save();
@@ -1248,12 +1299,6 @@ async function mpRenderCanvas(sections, o) {
                 }
                 break;
             }
-            case 'barcode': {
-                ctx.fillStyle = C.ink;
-                const k = op.w / bw;
-                bars.forEach(b => ctx.fillRect(op.x + b.x * k, op.y, b.w * k, op.h));
-                break;
-            }
         }
         ctx.restore();
     });
@@ -1274,7 +1319,7 @@ function mpExportSections(selectedKeys) {
 
 function mpExportOpts() {
     const p = MP.prefs;
-    return { layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, big: p.size === 'large', sort: p.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
+    return { layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, summary: p.summary, big: p.size === 'large', sort: p.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
@@ -1333,7 +1378,6 @@ async function mpRenderExport() {
             <button type="button" data-mp-fmt="wall" class="${p.fmt === 'wall' ? 'on' : ''}"><b>手機桌布</b><span>最多約 ${MP.exp.capacity} 家（依字級、版面而定）</span></button>
             <button type="button" data-mp-fmt="long" class="${p.fmt === 'long' ? 'on' : ''}"><b>長圖</b><span>不限數量，存到相簿</span></button>
         </div></div>
-        ${p.fmt === 'wall' && p.ratio === 'old' ? '<p class="mp-set-hint">16:9 是給 iPhone 8／SE 等舊機用的。iPhone X 之後的全螢幕 iPhone 用它，左右會被裁掉、時鐘也可能蓋到內容，請選「iPhone」或「本機」。</p>' : ''}
         ${p.fmt === 'wall' ? `<div class="mp-set-block"><h4>桌布尺寸</h4><div class="mp-seg mp-seg-wrap" role="group" aria-label="桌布尺寸">
             <button type="button" data-mp-ratio="auto" class="${p.ratio === 'auto' ? 'on' : ''}">${auto ? `本機（${auto.w}×${auto.h}）` : '自動（iPhone）'}</button>
             ${Object.entries(MP_RATIOS).map(([k, v]) => `<button type="button" data-mp-ratio="${k}" class="${p.ratio === k ? 'on' : ''}" title="${v.desc}">${v.label}</button>`).join('')}
@@ -1343,10 +1387,12 @@ async function mpRenderExport() {
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
             <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.size, [['small', '小字'], ['large', '大字']])}</div>
         </div>
-        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p)}${mpCapsChk('mp-exp-caps', p)}</div>
+        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p)}${mpCapsChk('mp-exp-caps', p)}${mpSummaryChk('mp-exp-summary', p)}</div>
         <div class="mp-set-block mp-pickwrap${MP.exp.pickOpen ? ' open' : ''}">
-            <div class="mp-pick-head"><button type="button" class="mp-pick-toggle" id="mp-pick-toggle" aria-expanded="${MP.exp.pickOpen ? 'true' : 'false'}" aria-controls="mp-picks"><h4>要放進圖片的商家</h4><span class="mp-chev" aria-hidden="true">${MP_ICON.chev}</span></button><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''}</span>
-                <button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
+            <div class="mp-pick-head">
+                <button type="button" class="mp-pick-toggle" id="mp-pick-toggle" aria-expanded="${MP.exp.pickOpen ? 'true' : 'false'}" aria-controls="mp-picks"><span class="mp-pick-title">要放進圖片的商家</span><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''} 家</span><span class="mp-chev"><span class="mp-chev-t">${MP.exp.pickOpen ? '收合' : '展開'}</span>${MP_ICON.chev}</span></button>
+            </div>
+            <div class="mp-pick-bar"><button type="button" class="mp-all" id="mp-exp-all">${allOn ? '全不選' : '全選'}</button></div>
             ${p.fmt === 'wall' && pool.length > lim ? `<p class="mp-set-hint mp-pick-hint">桌布放得下前 ${lim} 家，按「全選」會選前 ${lim} 家。想全部放進去，請改選「長圖」。</p>` : ''}
             <div class="mp-picks" id="mp-picks">${mpArrange(mpBuildGroups(), p.sort).map(s => (s.title !== null ? `<div class="mp-pk-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>` : '') + s.items.map(g => {
                 const on = sel.includes(g.key), off = g.dead;
@@ -1458,6 +1504,7 @@ function mpBind() {
         if (b.id === 'mp-retry-btn') { b.disabled = true; b.textContent = '讀取中…'; await loadSpendingMappings(); updateMappingsSwitch(); mpRender(); if ((userSpendingMappings || []).length) mpProbeAll(); return; }
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
+        if (b.id === 'mp-sum-btn') { mpToast(MP_LIMIT_HINT); return; }
         if (b.hasAttribute('data-mp-open-export')) { mpOpenExport(); return; }
         if (b.id === 'mp-edit-save') { await mpSaveEdit(false); return; }
         if (b.id === 'mp-edit-reset') { await mpSaveEdit(true); return; }
@@ -1485,6 +1532,8 @@ function mpBind() {
                 const w = b.closest('.mp-pickwrap');
                 if (w) w.classList.toggle('open', MP.exp.pickOpen);
                 b.setAttribute('aria-expanded', String(MP.exp.pickOpen));
+                const ct = b.querySelector('.mp-chev-t');
+                if (ct) ct.textContent = MP.exp.pickOpen ? '收合' : '展開';
                 return;
             }
             else return;
@@ -1494,11 +1543,18 @@ function mpBind() {
         }
     });
 
-    page.addEventListener('change', e => {
+    page.addEventListener('change', async e => {
         const t = e.target;
         if (t.id === 'mp-labels-toggle' || t.id === 'mp-exp-labels') {
             MP.prefs.labels = t.checked; mpSavePrefs(); mpRender();
             if (t.id === 'mp-exp-labels') mpRenderExport();
+            return;
+        }
+        if (t.id === 'mp-summary-toggle' || t.id === 'mp-exp-summary') {
+            MP.prefs.summary = t.checked; mpSavePrefs();
+            if (t.checked) { mpToast(MP_LIMIT_HINT); await mpLoadLimits(); }
+            mpRender();
+            if (t.id === 'mp-exp-summary') mpRenderExport();
             return;
         }
         if (t.id === 'mp-caps-toggle' || t.id === 'mp-exp-caps') {

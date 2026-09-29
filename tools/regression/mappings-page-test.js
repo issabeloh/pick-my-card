@@ -60,6 +60,7 @@ function stub(url, guest) {
         const cardId = String(ref.id).replace(/^testuid_/, '');
         if (LEVELS[cardId]) return Promise.resolve({ exists:()=>true, data:()=>({ level: LEVELS[cardId] }) });
       }
+      if (ref.coll === 'users' && globalThis.__limits) return Promise.resolve({ exists:()=>true, data:()=>({ creditLimits: globalThis.__limits }) });
       return Promise.resolve({ exists:()=>false, data:()=>undefined });
     }
     export function setDoc(ref, data){ globalThis.__setDocs.push({ path: ref.coll + '/' + ref.id, data: JSON.parse(JSON.stringify(data, (k, v) => v && v.__deleteField ? '__DELETE__' : v)) }); return ${R}; }
@@ -192,8 +193,11 @@ const PAIRS = [
   check('分頁在藍色頁首裡、貼齊頁首底邊（文件夾分頁）', tabs.inHeader && tabs.flush, JSON.stringify(tabs));
   check('配卡組合畫面：左側「加入比較的卡片」欄與 ☰ 都隱藏', tabs.sidebarHidden);
   const clean = await pg.evaluate(() => ({ tools: document.getElementById('mp-tools').hidden, tip: document.getElementById('mp-tip').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle') && document.getElementById('mp-edit-toggle').textContent.trim() === '編輯', grips: document.querySelectorAll('#mp-list [data-mp-grip]').length }));
-  const erow = await pg.evaluate(() => { const a = document.getElementById('mp-search').getBoundingClientRect(), b = document.getElementById('mp-edit-toggle').getBoundingClientRect(); return { sameRow: Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) <= 2, right: b.left >= a.right - 1 }; });
-  check('「編輯」在搜尋框同一列的右側', erow.sameRow && erow.right, JSON.stringify(erow));
+  const erow = await pg.evaluate(() => { const r = id => document.getElementById(id).getBoundingClientRect(); const s = r('mp-search'), e = r('mp-edit-toggle'), l = r('mp-list');
+    return { belowSearch: e.top >= s.bottom - 1, aboveList: e.bottom <= l.top + 1, count: document.getElementById('mp-count').textContent }; });
+  check('手機：「編輯」在搜尋框下方、緊貼小抄上方（旁邊顯示商家數）', erow.belowSearch && erow.aboveList && /\d+ 家商家/.test(erow.count), JSON.stringify(erow));
+  const intro = await pg.evaluate(() => ({ steps: document.querySelectorAll('.mp-intro .mp-steps li').length, text: document.querySelector('.mp-intro').textContent }));
+  check('頁面說明改成三步驟說明卡', intro.steps === 3 && intro.text.includes('加到我的配卡'), JSON.stringify(intro.steps));
   check('預設只顯示乾淨的小抄＋搜尋框（設定、提示都收起來）', clean.tools && clean.tip && clean.search && clean.edit && clean.grips === 0, JSON.stringify(clean));
   await pg.click('#mp-edit-toggle');
   const editOn = await pg.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, tip: !document.getElementById('mp-tip').hidden, label: document.getElementById('mp-edit-toggle').textContent.trim() }));
@@ -201,8 +205,8 @@ const PAIRS = [
   const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related', '#scroll-to-spotlight-btn'].every(sel => { const el = document.querySelector(sel); return el && el.closest('[data-view="search"]') && getComputedStyle(el.closest('[data-view="search"]')).display === 'none'; }));
   check('推薦活動、推薦比較屬於「查詢回饋」畫面（切到配卡組合時整個畫面隱藏）', extHidden);
   const order = await pg.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
-    return { intro: !!document.querySelector('.mp-intro'), tipAboveSearch: y('mp-tip') < y('mp-searchbox'), searchAboveList: y('mp-searchbox') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
-  check('編輯中順序：說明 → 提示 → 搜尋框 → 小抄 → 存成圖片', order.intro && order.tipAboveSearch && order.searchAboveList && order.saveBelow, JSON.stringify(order));
+    return { intro: !!document.querySelector('.mp-intro'), searchFirst: y('mp-searchbox') < y('mp-edit-toggle'), editThenTip: y('mp-edit-toggle') < y('mp-tip'), tipThenTools: y('mp-tip') < y('mp-tools'), toolsAboveList: y('mp-tools') < y('mp-list'), saveBelow: y('mp-savebar') > y('mp-list') }; });
+  check('手機編輯中順序：說明 → 搜尋框 → 編輯 → 提示 → 設定 → 小抄 → 存成圖片', Object.values(order).every(Boolean), JSON.stringify(order));
   await pg.fill('#mp-search', '麥當勞');
   await pg.dispatchEvent('#mp-search', 'input');
   const clr = await pg.isVisible('#mp-search-clear');
@@ -268,6 +272,19 @@ const PAIRS = [
   if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await pg.evaluate(() => document.getElementById('mp-list').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'caps-iphone13.png') });
     await pg.evaluate(() => { MP.prefs.size = 'large'; mpRender(); }); await pg.screenshot({ path: path.join(SHOTS, 'caps-large-iphone13.png') }); await pg.evaluate(() => { MP.prefs.size = 'small'; mpRender(); }); }
   await pg.uncheck('#mp-caps-toggle');
+  const head = await pg.evaluate(() => ({ store: document.querySelector('#mp-list .mp-store').textContent.trim(), barcode: !!document.querySelector('#mp-list .mp-barcode, #mp-list svg[aria-label^="條碼"]'), url: !!document.querySelector('#mp-list .mp-url') }));
+  check('小抄最上方只留日期、底部沒有條碼（保留網址）', /^\d{4}-\d{2}$/.test(head.store) && !head.barcode && head.url, JSON.stringify(head));
+  await pg.evaluate(() => { const ids = [...new Set(userSpendingMappings.map(m => m.cardId))]; globalThis.__limits = {}; ids.slice(0, 2).forEach((id, i) => { globalThis.__limits[id] = i ? 150000 : 80000; }); });
+  await pg.check('#mp-summary-toggle');
+  await pg.waitForSelector('#mp-sum-btn', { timeout: 5000 }).catch(() => {});
+  const sum = await pg.evaluate(() => ({ text: (document.getElementById('mp-sum-btn') || {}).textContent || '', cards: new Set(mpBuildGroups().flatMap(g => g.entries.map(e => e.m.cardId))).size, toast: (document.querySelector('.mp-toast.show') || {}).textContent || '', saved: MP.prefs.summary }));
+  check('勾「顯示卡數與額度總和」→ 底部「共 N 張信用卡 ▪ 額度共 NT$ 23萬（…張未填）」', sum.text === `共 ${sum.cards} 張信用卡 ▪ 額度共 NT$ 23萬（${sum.cards - 2} 張未填）` && sum.saved, sum.text);
+  check('勾選時提示額度要到各卡片詳情頁編輯', sum.toast.includes('詳情頁') && sum.toast.includes('我的額度'), sum.toast);
+  await pg.evaluate(() => document.querySelector('.mp-toast').classList.remove('show'));
+  await pg.click('#mp-sum-btn');
+  check('點那一行也會提示到詳情頁編輯額度', await pg.evaluate(() => !!document.querySelector('.mp-toast.show')));
+  await pg.uncheck('#mp-summary-toggle');
+  check('取消勾選 → 不顯示卡數與額度', await pg.evaluate(() => !document.getElementById('mp-sum-btn')));
   check('取消勾選 → 封頂金額消失', await pg.evaluate(() => !document.querySelector('#mp-list .mp-cap')));
   const levelCalls = await pg.evaluate(() => (globalThis.__setDocs || []).filter(d => d.path.startsWith('cardSettings/')).length);
   check('🔒 開頁、重算都沒有寫入任何級別', levelCalls === 0, `cardSettings 寫入 ${levelCalls} 次`);
@@ -419,6 +436,19 @@ const PAIRS = [
       if (r.eAligned !== undefined) check(`${tag}：同一排左右兩格商家名稱對齊`, r.eAligned);
       if (SHOTS) await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-${layout}-${size}.png`) });
     }
+    if (vp.name === 'desktop-1440') {
+      await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.editing = false; mpRender(); });
+      const d0 = await p2.evaluate(() => { const r = el => el.getBoundingClientRect(); const side = document.querySelector('.mp-side'), list = document.getElementById('mp-list'), intro = document.querySelector('.mp-intro'), lay = document.querySelector('.mp-layout > .mp-side').parentElement;
+        const vis = el => el && getComputedStyle(el).display !== 'none' && r(el).width > 0;
+        const sideR = r(side), listR = r(list), introR = r(intro);
+        return { editInSide: side.contains(document.getElementById('mp-edit-toggle')) && vis(document.getElementById('mp-edit-toggle')), saveInSide: vis(document.querySelector('.mp-side-save')), bottomSaveHidden: !vis(document.querySelector('#mp-savebar .mp-big')),
+          sideLeft: sideR.right <= listR.left, introCentered: Math.abs((introR.left + introR.right) / 2 - innerWidth / 2) <= 2 && Math.abs(introR.left - sideR.left) <= 2 && Math.abs(introR.right - listR.right) <= 2, listTop: Math.round(listR.top) }; });
+      check('桌機：編輯、存成圖片在左側欄；小抄下方不再放存成圖片', d0.editInSide && d0.saveInSide && d0.bottomSaveHidden && d0.sideLeft, JSON.stringify(d0));
+      check('桌機：說明卡置中，與左欄＋小抄同寬', d0.introCentered, JSON.stringify(d0));
+      await p2.click('#mp-edit-toggle');
+      const d1 = await p2.evaluate(() => ({ listTop: Math.round(document.getElementById('mp-list').getBoundingClientRect().top), toolsInSide: document.querySelector('.mp-side').contains(document.getElementById('mp-tools')) && !document.getElementById('mp-tools').hidden }));
+      check('桌機：按「編輯」後設定出現在左側，小抄不跳位置', d1.toolsInSide && d1.listTop === d0.listTop, `${d0.listTop} → ${d1.listTop}`);
+    }
     await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.editing = true; mpRender(); });
     const eo = await p2.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
     check(`${vp.name} 編輯中：沒有左右捲動`, eo);
@@ -427,7 +457,7 @@ const PAIRS = [
       await p2.evaluate(() => { MP.prefs.layout = 'E'; mpRender(); });
       await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-editing-E.png`) });
       await p2.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.fmt = 'wall'; MP.prefs.ratio = 'iphone'; MP.prefs.sel = null; mpRender(); });
-      await p2.click('#mp-savebar [data-mp-open-export]');
+      await p2.click('.mp-side-save');
       await p2.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
       await p2.screenshot({ path: path.join(SHOTS, `${vp.name}-export.png`) });
       await p2.click('.mp-exp-settings-pane [data-mp-exp-close]');
@@ -443,6 +473,9 @@ const PAIRS = [
   await pg.waitForFunction(() => document.getElementById('mp-exp-img').naturalWidth > 0, null, { timeout: 15000 });
   let img = await pg.evaluate(() => { const i = document.getElementById('mp-exp-img'); return { w: i.naturalWidth, h: i.naturalHeight, cap: MP.exp.capacity, sel: mpExportSelection(mpExportPool()).length, pool: mpExportPool().length, fits: MP.exp.fits }; });
   check('手機桌布 iPhone：1179×2556', img.w === 1179 && img.h === 2556, `${img.w}×${img.h}`);
+  const ratios = await pg.$$eval('[data-mp-ratio]', b => b.map(x => x.textContent.trim()));
+  const pxl = await pg.evaluate(() => { const r = MP.prefs.ratio; MP.prefs.ratio = 'pixel'; const w = mpWallSize(); MP.prefs.ratio = r; return w; });
+  check('桌布尺寸：拿掉 16:9、新增 Pixel（1080×2424）', !ratios.includes('16:9') && ratios.includes('Pixel') && pxl.w === 1080 && pxl.h === 2424, ratios.join('／'));
   // 桌布留白：收據不能蓋到鎖定畫面的時鐘（上方約 25%）與手電筒／相機鈕（下方約 86% 起）
   const band = await pg.evaluate(async () => {
     const i = document.getElementById('mp-exp-img'); await i.decode();
@@ -491,10 +524,11 @@ const PAIRS = [
   await pg.waitForTimeout(800);
   const capLarge = await pg.evaluate(() => MP.exp.capacity);
   check('大字的桌布上限比小字少', capLarge < s1.cap, `${capLarge} < ${s1.cap}`);
-  if (SHOTS) { await pg.evaluate(() => { MP.prefs.size = 'small'; MP.prefs.caps = true; MP.prefs.fmt = 'long'; MP.prefs.sel = null; MP.exp.pickOpen = false; mpRenderExport(); }); await pg.waitForTimeout(1200);
+  if (SHOTS) { await pg.evaluate(() => { MP.prefs.size = 'small'; MP.prefs.caps = true; MP.prefs.summary = true; MP.prefs.fmt = 'long'; MP.prefs.sel = null; MP.exp.pickOpen = false; mpRenderExport(); }); await pg.waitForTimeout(1200);
     await pg.evaluate(() => { const a = document.createElement('a'); a.id = '__cap'; a.href = document.getElementById('mp-exp-img').src; document.body.appendChild(a); });
     const du = await pg.$eval('#__cap', a => a.href); fs.writeFileSync(path.join(SHOTS, 'export-long-caps.png'), Buffer.from(du.split(',')[1], 'base64'));
-    await pg.evaluate(() => { MP.prefs.caps = false; MP.prefs.fmt = 'wall'; MP.prefs.sel = null; document.querySelector('.mp-exp-box').scrollTop = 0; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
+    await pg.click('#mp-pick-toggle'); await pg.waitForTimeout(200); await pg.screenshot({ path: path.join(SHOTS, 'export-picks-open-iphone13.png') }); await pg.click('#mp-pick-toggle');
+    await pg.evaluate(() => { MP.prefs.caps = false; MP.prefs.summary = false; MP.prefs.fmt = 'wall'; MP.prefs.sel = null; document.querySelector('.mp-exp-box').scrollTop = 0; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
     await pg.evaluate(() => document.getElementById('mp-exp-preview-pane').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'export-preview-iphone13.png') }); }
   await pg.click('.mp-exp-settings-pane [data-mp-exp-close]');
 

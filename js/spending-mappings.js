@@ -493,8 +493,10 @@ async function loadCreditLimit(cardId) {
 async function saveCreditLimit(cardId, amount) {
     const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
     localStorage.setItem(localKey, amount === null ? '' : String(amount));
+    // 配卡組合頁底部的「額度共 NT$ x萬」跟著更新（mappings-page.js）
+    const notifyMappings = () => { if (typeof mpOnLimitsChanged === 'function') mpOnLimitsChanged(); };
 
-    if (!currentUser) return;
+    if (!currentUser) { notifyMappings(); return; }
 
     try {
         if (window.db && window.doc && window.setDoc && window.getDoc) {
@@ -519,6 +521,7 @@ async function saveCreditLimit(cardId, amount) {
     } catch (error) {
         console.error('❌ [我的額度] Firestore 保存失敗:', error);
     }
+    notifyMappings();
 }
 
 // 設置我的額度輸入（卡片詳情頁）
