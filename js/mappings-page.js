@@ -31,7 +31,7 @@ const MP = {
     updated: null,          // 按過「更新期限」的結果 { ext, changed:[] }
     search: '',
     editKey: null,
-    exp: { step: 'settings', dataUrl: null, fits: true, capacity: 0 },
+    exp: { fits: true, capacity: 0 },
     editing: false,         // 按「編輯」才顯示排列／字級／版面等設定（預設只看乾淨的小抄＋搜尋框）
     demo: null,             // 未登入時的範例清單（只在記憶體，不存任何地方）
     drag: null
@@ -64,7 +64,7 @@ function mpLoadPrefs() {
         caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
         summary: p.summary === true,    // 小抄底部「共 N 張信用卡 ▪ 額度共 NT$ x萬」；預設關（額度屬隱私，存成桌布前讓用戶自己決定）
         fmt: p.fmt === 'long' ? 'long' : 'wall',
-        ratio: p.ratio === 'iphone' ? 'iphone' : 'auto',   // 只剩「本機」與 iPhone（2026-09-29 拿掉 16:9／Android／Pixel，舊值回到自動）
+        ratio: p.ratio === 'iphone' ? 'iphone' : 'auto',   // 'auto'＝手機本機尺寸（桌機退回 iPhone）；其他舊值一律回到 auto
         theme: p.theme === 'dark' ? 'dark' : 'light',
         sel: Array.isArray(p.sel) ? p.sel.filter(s => typeof s === 'string') : null
     };
@@ -367,12 +367,6 @@ function mpOpenOwnedCards() {
     if (typeof openMyOwnedCardsModal === 'function') openMyOwnedCardsModal();
 }
 
-async function mpOnLimitsChanged() {
-    if (!MP.open || !MP.prefs || !(MP.prefs.summary || MP.prefs.x.summary)) return;
-    await mpLoadLimits();
-    mpRender();
-    mpRenderExport();
-}
 
 
 // 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
@@ -435,15 +429,18 @@ async function mpProbe(m) {
     return { dead: matches.length ? null : 'gone', labels, next, cap, hasMatches: matches.length > 0, newRates: matches.map(x => Number(x.rate) || 0), cands };
 }
 
+// mpProbe 的結果 → MP.status 存的形狀（一處定義，避免各處各拼一次）
+function mpStatusOf(r) {
+    return { dead: r.dead, labels: r.labels, cap: r.cap, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) };
+}
+
 async function mpProbeAll() {
     if (MP.probing) return MP.probing;
     MP.probing = (async () => {
         const list = mpList().slice();
-        for (const m of list) {
-            const prev = MP.status.get(m.id) || {};
-            const r = await mpProbe(m);
-            MP.status.set(m.id, { ...prev, dead: r.dead, labels: r.labels, cap: r.cap, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
-        }
+        // 各配對互不相干 → 同時算（查詢回饋本身也是對每張卡並行呼叫 calculateCardCashback）
+        const results = await Promise.all(list.map(m => mpProbe(m)));
+        list.forEach((m, i) => MP.status.set(m.id, { ...(MP.status.get(m.id) || {}), ...mpStatusOf(results[i]) }));
         MP.probed = true;
         MP.probing = null;
         if (MP.open) mpRender();
@@ -546,14 +543,15 @@ function closeMappingsPage(options = {}) {
 
 // 登入／登出完成後由 auth-user-data.js 呼叫：更新首頁切換鈕、若網址是 /mappings 就開頁
 // 切換鈕登入與否都顯示（未登入切過去看範例＋登入提示）；登入狀態改變時重畫
-function updateMappingsSwitch() {
-    const sw = mpEl('home-view-switch');
-    if (sw) sw.hidden = false;
-    if (MP.open) mpRender();
+// 其他模組改了配對／持有卡／額度 → notifyMappingsDataChanged()（core-utils.js）發事件，頁面開著才重畫
+async function mpOnDataChanged() {
+    if (!MP.open || !MP.prefs) return;
+    if (MP.prefs.summary || MP.prefs.x.summary) await mpLoadLimits();
+    mpRender();
+    mpRenderExport();
 }
 
 function refreshMappingsEntry() {
-    updateMappingsSwitch();
     if (currentUser) MP.demo = null;
     MP.prefs = null;
     MP.status.clear();
@@ -707,8 +705,6 @@ function mpRender() {
 
     // 編輯模式：設定、提示列、拖曳把手只在按「編輯」後出現；預設只看乾淨的小抄＋搜尋框
     tools.hidden = !MP.editing;
-    const layoutEl = mpEl('mappings-page') && mpEl('mappings-page').querySelector('.mp-layout');
-    if (layoutEl) layoutEl.classList.toggle('editing', MP.editing);
     const editBtn = mpEl('mp-edit-toggle');
     if (editBtn) {
         // 圖示寫在 index.html，這裡只切換顯示與文字
@@ -918,7 +914,7 @@ async function mpApplyRate(idx) {
     if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, 'mappings_update_rate', { card_id: m.cardId, merchant: m.merchant, rate: c.rate });
     mpCloseSheets();
     const r = await mpProbe(m);   // 重新判斷標籤與狀態
-    MP.status.set(m.id, { dead: r.dead, labels: r.labels, cap: r.cap, next: r.next, hasMatches: r.hasMatches, newRates: r.newRates || [], cands: r.cands || [], changed: !!(r.cands && r.cands.length) });
+    MP.status.set(m.id, mpStatusOf(r));
     mpRender();
 }
 
@@ -984,7 +980,6 @@ async function mpRemoveMapping(id) {
         window.logEvent(window.firebaseAnalytics, 'remove_mapping', { card_id: m.cardId, card_name: m.cardName, merchant: m.merchant, rate: m.cashbackRate });
     }
     mpCloseSheets();
-    updateMappingsSwitch();
     mpRender();
 }
 
@@ -1402,10 +1397,8 @@ function mpExportSelection(pool) {
 function mpOpenExport() {
     const dlg = mpEl('mp-export');
     if (!dlg) return;
-    MP.exp.step = 'settings';
     MP.exp.pickOpen = false;   // 手機：「要放進圖片的商家」每次打開都先收合，讓預覽圖不用捲就看得到
     dlg.hidden = false;
-    dlg.dataset.step = 'settings';
     mpRenderExport();
 }
 
@@ -1557,7 +1550,7 @@ function mpBind() {
         if (b.dataset.mpSize && !b.closest('#mp-exp-settings')) { MP.prefs.size = b.dataset.mpSize; mpSavePrefs(); mpRender(); return; }
         if (b.dataset.mpLayout && !b.closest('#mp-exp-settings')) { MP.prefs.layout = b.dataset.mpLayout; mpSavePrefs(); mpRender(); return; }
         if (b.id === 'mp-update-btn') { b.disabled = true; b.classList.add('busy'); await mpUpdateDeadlines(); return; }
-        if (b.id === 'mp-retry-btn') { b.disabled = true; b.textContent = '讀取中…'; await loadSpendingMappings(); updateMappingsSwitch(); mpRender(); if ((userSpendingMappings || []).length) mpProbeAll(); return; }
+        if (b.id === 'mp-retry-btn') { b.disabled = true; b.textContent = '讀取中…'; await loadSpendingMappings(); mpRender(); if ((userSpendingMappings || []).length) mpProbeAll(); return; }
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
@@ -1628,6 +1621,7 @@ function mpBind() {
         if (!(t.closest && (t.closest('#mp-help-pop') || t.closest('[data-mp-help]')))) mpCloseHelp();
     });
     window.addEventListener('resize', mpCloseHelp);
+    document.addEventListener('pmc:mappings-data-changed', mpOnDataChanged);
     page.addEventListener('pointerdown', mpStartDrag);
     // 拖曳把手上的 mousedown 會選取文字，擋掉
     page.addEventListener('mousedown', e => { if (e.target.closest('[data-mp-grip]')) e.preventDefault(); });

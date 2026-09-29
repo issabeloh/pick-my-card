@@ -286,6 +286,9 @@ const PAIRS = [
   const badgeN = (owned.badge.match(/\d+/) || [''])[0];
   check('單據合計：持有信用卡＝「我的信用卡」張數（同 owned-count-badge）、額度合計 NT$230,000、未填另註', sum.rows.length === 2 && sum.rows[0].k === '持有信用卡' && sum.rows[0].v === `${owned.n} 張` && badgeN === String(owned.n) && sum.rows[1].k === '額度合計' && sum.rows[1].v === 'NT$230,000' && sum.note === '＊其中 1 張未填額度' && sum.saved, JSON.stringify({ sum, badge: owned.badge }));
   check('合計區是單據樣式（點狀引線＋雙線），勾選時不再跳提示', sum.rows.every(r => r.leader > 10) && sum.eq && !sum.toast);
+  await pg.evaluate(() => { const id = Object.keys(globalThis.__limits)[0]; globalThis.__limits[id] = 100000; notifyMappingsDataChanged(); });
+  await pg.waitForFunction(() => /NT\$250,000/.test((document.getElementById('mp-sum-btn') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
+  check('其他頁改了額度（notifyMappingsDataChanged 事件）→ 合計即時更新', await pg.evaluate(() => /NT\$250,000/.test(document.getElementById('mp-sum-btn').textContent)));
   await pg.click('#mp-sum-btn');
   const ownedOpen = await pg.evaluate(() => getComputedStyle(document.getElementById('my-owned-cards-modal')).display !== 'none');
   check('點合計區 → 打開「我的信用卡」', ownedOpen);

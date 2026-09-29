@@ -361,8 +361,6 @@ function ensureAuthSubscribed() {
 
             appStarted = true;
             showToolSections();
-            // 登入一確認就顯示「我的刷卡小抄」切換鈕，不等下面的 Firestore 讀取（冷啟動要好幾秒）
-            if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
 
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
@@ -755,8 +753,7 @@ async function loadMyOwnedCards(userData = null) {
 // Save my-owned-cards to localStorage (always) and Firestore (if logged in).
 async function saveMyOwnedCards() {
     const cardsArray = Array.from(myOwnedCards);
-    // 刷卡小抄底部「持有信用卡／額度合計」跟著更新（js/mappings-page.js）
-    if (typeof mpOnLimitsChanged === 'function') mpOnLimitsChanged();
+    notifyMappingsDataChanged();   // 刷卡小抄底部「持有信用卡／額度合計」跟著更新
 
     if (!currentUser) {
         try {

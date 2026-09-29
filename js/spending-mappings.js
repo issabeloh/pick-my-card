@@ -178,7 +178,7 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
             button.classList.remove('pinned');
             button.title = '把這個商家×卡片加到我的刷卡小抄';
             showToast('已從我的刷卡小抄移除', button.closest('.card-result'));
-            if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
+            notifyMappingsDataChanged();
 
             // 追蹤取消釘選事件
             if (window.logEvent && window.firebaseAnalytics) {
@@ -227,7 +227,7 @@ function showPinSuccessAnimation(button) {
 // 顯示 +1 徽章動畫
 function showPlusBadgeAnimation() {
     // 釘選數量顯示在首頁「我的刷卡小抄」切換鈕上（2026-09-28 取代浮動按鈕）
-    if (typeof updateMappingsSwitch === 'function') updateMappingsSwitch();
+    notifyMappingsDataChanged();
     const btn = document.getElementById('home-view-switch-mappings');
     if (!btn) return;
 
@@ -493,10 +493,7 @@ async function loadCreditLimit(cardId) {
 async function saveCreditLimit(cardId, amount) {
     const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
     localStorage.setItem(localKey, amount === null ? '' : String(amount));
-    // 配卡組合頁底部的「額度共 NT$ x萬」跟著更新（mappings-page.js）
-    const notifyMappings = () => { if (typeof mpOnLimitsChanged === 'function') mpOnLimitsChanged(); };
-
-    if (!currentUser) { notifyMappings(); return; }
+    if (!currentUser) { notifyMappingsDataChanged(); return; }
 
     try {
         if (window.db && window.doc && window.setDoc && window.getDoc) {
@@ -521,7 +518,7 @@ async function saveCreditLimit(cardId, amount) {
     } catch (error) {
         console.error('❌ [我的額度] Firestore 保存失敗:', error);
     }
-    notifyMappings();
+    notifyMappingsDataChanged();   // 刷卡小抄底部的「額度合計」跟著更新
 }
 
 // 設置我的額度輸入（卡片詳情頁）

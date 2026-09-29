@@ -9205,14 +9205,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     background: rgba(17, 24, 39, .08); color: #374151; font-size: 18px;
     display: grid; place-items: center; cursor: pointer;
 }
-.mp-savebtn {
-    flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
-    border: 0; border-radius: 999px; padding: 8px 14px; font-size: 13.5px; font-weight: 800;
-    cursor: pointer; background: #111827; color: #fff;
-}
-.mp-savebtn svg { width: 15px; height: 15px; }
-.mp-savebtn:disabled { opacity: .4; cursor: default; }
-.mp-layout { max-width: 1120px; margin: 0 auto; }
 /* 頁面說明卡：三步驟 */
 .mp-intro { max-width: 738px; margin: 0 auto 14px; background: linear-gradient(180deg, #eff6ff, #f7faff); border: 1px solid #dbeafe; border-radius: 16px; padding: 12px 14px; box-sizing: border-box; }
 .mp-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -9220,7 +9212,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
 /* 手機／平板：單欄，依序＝搜尋 → 編輯列 → 提示 → 設定 → 小抄 → 存成圖片（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
-.mp-layout { display: flex; flex-direction: column; }
+.mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }
 .mp-side, .mp-main { display: contents; }
 .mp-searchbox { order: 1; }
 .mp-actions { order: 2; }
@@ -9477,7 +9469,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-exp-pane { display: flex; flex-direction: column; min-height: 0; }
 /* 設定區＝白底；預覽區＝深色／淺灰整塊（跟著圖片顏色），兩區一眼分得出來 */
 .mp-exp-settings-pane { background: #fff; }
-.mp-exp-sub { font-size: 12px; opacity: .65; }
 /* 手機：設定在上、預覽接在下面同一頁捲動（2026-09-28 取代「預覽圖片 →」兩步驟）。
    設定＝淺灰底白卡片；預覽＝深色／淺色整塊、上方大圓角，一眼看得出是另一區 */
 @media (max-width: 1023px) {
@@ -9558,7 +9549,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-exp-preview.lt .mp-exp-meta { color: #6b7280; }
 .mp-exp-meta.over { color: #fca5a5; font-weight: 700; }
 .mp-exp-preview.lt .mp-exp-meta.over { color: #b91c1c; }
-.mp-exp-desk-only { display: none; }
 .mp-exp-tip { margin: 0; font-size: 11.5px; line-height: 1.5; color: #9ca3af; text-align: center; }
 .mp-exp-tip[hidden] { display: none; }
 .mp-exp-preview.lt .mp-exp-tip { color: #6b7280; }
@@ -9590,8 +9580,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-export { align-items: center; justify-content: center; }
     /* grid-template-rows 一定要 minmax(0,1fr)：否則列高＝內容高，左側設定欄被框裁掉而無法捲動（2026-09-29 修正） */
     .mp-exp-box { flex: none; width: min(920px, 94vw); height: min(720px, 92vh); grid-template-columns: 1fr 380px; grid-template-rows: minmax(0, 1fr); border-radius: 18px; overflow: hidden; box-shadow: 0 30px 70px rgba(0, 0, 0, .35); }
-    .mp-exp-mobile-only { display: none !important; }
-    .mp-exp-desk-only { display: flex; }
     .mp-exp-head { padding-top: 16px; }
 }
 
