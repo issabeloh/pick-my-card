@@ -600,8 +600,8 @@ function refreshMappingsEntry() {
 }
 
 // ============================================
-// 一次性改版提示（2026-09-30）：登入後，一顆「加到我的小抄」按鈕跳進「我的刷卡小抄」頁籤，
-// 頁籤彈一下並冒出說明氣泡。每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
+// 一次性改版提示（2026-09-30）：登入後在「我的刷卡小抄」頁籤下方冒出說明氣泡（站長決定不要飛入動畫）。
+// 每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
 // ============================================
 const MP_HINT_KEY = 'mpMovedHintCount';
 const MP_HINT_TIMES = 2;
@@ -620,47 +620,22 @@ function mpShowMovedHint(attempt = 0) {
     if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
     try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
 
-    const land = () => {
-        if (MP.open || !currentUser) return;   // 飛行途中用戶已點進頁籤或登出了
-        tab.classList.add('mp-tab-bump');
-        setTimeout(() => tab.classList.remove('mp-tab-bump'), 700);
-        const bubble = document.createElement('div');
-        bubble.className = 'mp-hint-bubble';
-        bubble.setAttribute('role', 'status');
-        bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
-        document.body.appendChild(bubble);
-        const r = tab.getBoundingClientRect();
-        const w = Math.min(280, innerWidth - 24);
-        bubble.style.width = w + 'px';
-        bubble.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
-        bubble.style.top = (r.bottom + 10) + 'px';
-        bubble.style.setProperty('--arrow-x', (r.left + r.width / 2 - parseFloat(bubble.style.left)) + 'px');
-        // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
-        const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
-        bubble.querySelector('button').addEventListener('click', close);
-        document.addEventListener('pointerdown', close, true);
-        window.addEventListener('scroll', close, { once: true, passive: true });
-        setTimeout(close, 6000);
-    };
-
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || !Element.prototype.animate) { land(); return; }
-    // 起點：畫面中間偏下（查詢結果卡片上按鈕的大概位置）；終點：頁籤中心
-    const fly = document.createElement('span');
-    fly.className = 'pin-btn mp-fly';
-    fly.setAttribute('aria-hidden', 'true');
-    fly.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>';
-    document.body.appendChild(fly);
-    const fw = fly.offsetWidth, fh = fly.offsetHeight;
-    const sx = innerWidth / 2 - fw / 2, sy = Math.min(innerHeight * 0.62, tr.bottom + 260);
-    const ex = tr.left + tr.width / 2 - fw / 2, ey = tr.top + tr.height / 2 - fh / 2;
-    const mx = (sx + ex) / 2, my = Math.min(sy, ey) - 90;   // 拋物線頂點
-    fly.animate([
-        { transform: `translate(${sx}px, ${sy}px) scale(1)`, opacity: 0 },
-        { transform: `translate(${sx}px, ${sy - 8}px) scale(1.12)`, opacity: 1, offset: 0.18 },
-        { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: 0.6 },
-        { transform: `translate(${ex}px, ${ey}px) scale(.45)`, opacity: 0.2 }
-    ], { duration: 1100, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' }).onfinish = () => { fly.remove(); land(); };
+    const bubble = document.createElement('div');
+    bubble.className = 'mp-hint-bubble';
+    bubble.setAttribute('role', 'status');
+    bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
+    document.body.appendChild(bubble);
+    const w = Math.min(280, innerWidth - 24);
+    bubble.style.width = w + 'px';
+    bubble.style.left = Math.max(12, Math.min(tr.left + tr.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+    bubble.style.top = (tr.bottom + 10) + 'px';
+    bubble.style.setProperty('--arrow-x', (tr.left + tr.width / 2 - parseFloat(bubble.style.left)) + 'px');
+    // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
+    const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
+    bubble.querySelector('button').addEventListener('click', close);
+    document.addEventListener('pointerdown', close, true);
+    window.addEventListener('scroll', close, { once: true, passive: true });
+    setTimeout(close, 6000);
 }
 
 // ============================================
@@ -713,7 +688,10 @@ function mpTotalsHtml() {
 function mpReceiptHtml(sections, o) {
     const esc = escapeHtml;
     const star = g => g.dead ? '<span class="mp-star" aria-label="已失效">*</span>' : '';
-    const name = g => `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱">${esc(mpDisplayName(g))}${star(g)}${userMerchantAliases[g.key] ? `<span class="mp-pen">${MP_ICON.pen}</span>` : ''}</button>`;
+    // 商家名稱只有「編輯本頁」時可以點（改名／刪除），並顯示鉛筆；平常是純文字
+    const name = g => o.editing
+        ? `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱或刪除">${esc(mpDisplayName(g))}${star(g)}<span class="mp-pen">${MP_ICON.pen}</span></button>`
+        : `<span class="mp-nm">${esc(mpDisplayName(g))}${star(g)}</span>`;
     const grip = () => o.drag ? `<span class="mp-grip" data-mp-grip title="拖曳調整順序" aria-hidden="true">${MP_ICON.grip}</span>` : '';
     const thumb = e => `<button type="button" class="mp-cardbtn" data-mp-card="${esc(e.m.cardId)}" title="查看 ${esc(mpCardName(e.m.cardId, e.m.cardName))} 詳情"><img class="mp-th" src="assets/images/cards/${esc(e.m.cardId)}.png" alt="${esc(mpCardName(e.m.cardId, e.m.cardName))}" onerror="this.style.visibility='hidden'"></button>`;
     const due = e => `<span class="mp-due${mpIsHot(e) ? ' hot' : ''}${e.ext ? ' ext' : ''}">${esc(mpDueText(e))}</span>`;
@@ -741,9 +719,9 @@ function mpReceiptHtml(sections, o) {
             sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => { const r2 = row2(e); return `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${r2 ? ' has-row2' : ''}">${r2 ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${r2}${r2 ? flag(e) : ''}</div>`; }).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
-    const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
+    const note = anyDead ? `<div class="mp-note"><b>*</b> 活動已結束或有更動。${o.editing ? '點商家名稱可以移除' : '按「編輯本頁」後點商家名稱可以移除'}。記得回網站更新最新活動！</div>` : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}${o.editing ? `<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span>` : ''}</button></div>
+        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span>${o.editing ? `<button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span></button>` : `<span class="mp-title" id="mp-title-btn">${esc(mpTitle())}</span>`}</div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         ${o.summary ? mpTotalsHtml() : ''}
@@ -842,7 +820,7 @@ function mpRender() {
     if (editBtn) {
         // 圖示寫在 index.html，這裡只切換顯示與文字
         const t = editBtn.querySelector('.mp-edit-t'), pen = editBtn.querySelector('.mp-ico-pen'), ok = editBtn.querySelector('.mp-ico-ok');
-        if (t) t.textContent = MP.editing ? '完成' : '編輯'; else editBtn.textContent = MP.editing ? '完成' : '編輯';
+        if (t) t.textContent = MP.editing ? '完成' : '編輯本頁'; else editBtn.textContent = MP.editing ? '完成' : '編輯本頁';
         // SVG 沒有 .hidden 屬性，要用 attribute
         if (pen) pen.toggleAttribute('hidden', MP.editing);
         if (ok) ok.toggleAttribute('hidden', !MP.editing);
@@ -862,7 +840,7 @@ function mpRender() {
     }
 
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
-    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), savebar = mpEl('mp-savebar'), deadbarEl = mpEl('mp-deadbar');
+    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), deadbarEl = mpEl('mp-deadbar');
     const show = (el, on) => { if (el) el.hidden = !on; };
     // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
     show(guest, !currentUser);
@@ -871,14 +849,14 @@ function mpRender() {
     if (!currentUser && !MP.demo) {
         list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
         mpBuildDemo().then(() => { if (MP.open && !currentUser && MP.demo) { mpRender(); mpProbeAll(); } });
-        show(searchbox, false); show(savebar, false); show(deadbarEl, false); show(tip, false);
+        show(searchbox, false); show(deadbarEl, false); show(tip, false);
         return;
     }
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
     const countEl = mpEl('mp-count');
     if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `已加入 ${n} 家商家` : ''; }
-    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
+    show(searchbox, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
         show(deadbarEl, false); show(tip, false);
@@ -1731,6 +1709,11 @@ function mpBind() {
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
+        if (b.id === 'mp-intro-toggle') {
+            const steps = mpEl('mp-steps'), open = steps.hidden;
+            steps.hidden = !open; b.setAttribute('aria-expanded', String(open));
+            return;
+        }
         if (b.id === 'mp-feedback-btn') {
             // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
             if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }
