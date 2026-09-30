@@ -43,7 +43,8 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
 9. **ReferralLinks** —— merchant, url, description, active
-10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
+10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, order, active, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
+    - **2026-09-30 起只存編輯決定**：cap／deadline／category 三欄已刪，上限與期限由前端從卡片真實活動推導；`rate` 是「選哪個活動 × 哪個級別」的選擇器，`card_name` 只給人看。規則見 `ui-display.md` 第 4 節
     - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 🚧 目前匯出但前端不使用**。欄位保留著，前端也照常收到 `item.featured`，只是暫時不拿來排版。
     - 原本的用途是把勾選的活動排進「主打卡」版位（手機每頁 1 則整列大卡、桌機每頁 2 則各跨 2 欄）。**停用原因**：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打的頁」卡片形狀不同，看起來很亂（2026-09-03 站長決定）。
     - 要重新啟用：把 `js/home-ui.js` 的 `SPOTLIGHT_FEATURE_SLOTS` 改回 `true`，主打卡的分頁分支與 `.is-feature` / `.is-mini` 樣式都還留著。
