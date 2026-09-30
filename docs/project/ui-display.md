@@ -211,7 +211,7 @@ Grep `titleParts`）：
 - **期限**＝`resolveSpotlightDeadline()`（見下段），對不到活動就不顯示。
 - **卡名**＝`getSpotlightCardName()` 取 cards 資料的 `name`；sheet 的 `card_name` 只給站長在試算表上看。
 
-**期限自動匹配真實活動（2026-09-02 起；2026-09-30 sheet 的 deadline 欄刪除，不再有後備）**：卡片與 modal 顯示的期限不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **退回 sheet 的 deadline**。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
+**期限自動匹配真實活動（2026-09-02 起；2026-09-30 sheet 的 deadline 欄刪除，不再有後備）**：卡片與 modal 顯示的期限不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **不顯示期限**（2026-09-30 前是退回 sheet 的 deadline，該欄已刪）。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
 **一卡一通路命中多個活動時取「最早到期」**（實測有兩則會這樣：中信 Uniopen 夢時代 4 組、玉山熊本熊卡日本松本清 4 組）——亮點宣稱的回饋率常是多組疊加出來的（松本清 8.5% ＝ 6% 指定日本商店 ＋ 滿額加碼 1.5%），最早到期的那組一過期宣稱的數字就不成立；取最晚會讓卡片顯示一個其實已經拿不到的期限。過期活動在載入時已被 `filterExpiredRates()` 濾掉、不會進 `_itemsIndex`，所以這裡拿到的活動都還在效期內。
 ⚠️ 亮點本身**不做過期隱藏**：顯示哪幾則仍由 Sheets 的 `active` 欄控制（見下方輪播段）。
 ⚠️ **算好的期限不上卡片**（2026-09-03 起）：卡片只留「剩 N 天」徽章（0–14 天顯示），完整日期改到 ⓘ modal 的「活動期間／活動期限」。理由：卡片一排 2–4 張，日期字串又長又不影響「要不要點進去」的判斷；「剩 N 天」是急迫感提示、不是日期，所以保留。
