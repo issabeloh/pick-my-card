@@ -9344,6 +9344,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 /* 第二行：等級／方案標籤＋活動封頂金額（勾「顯示活動封頂金額」時） */
 .mp-row2 { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
 .mp-cap { font: 500 var(--ds)/1.2 ui-monospace, Menlo, monospace; color: var(--sub); white-space: nowrap; }
+.mp-cn { font-size: calc(var(--ds) + 1px); line-height: 1.2; color: var(--sub); white-space: nowrap; }
 .mp-e-cap { text-align: right; margin: -1px 0 3px; }
 .mp-sec { display: flex; align-items: center; gap: 6px; margin: 12px 0 1px; font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--cat); }
 .mp-rc.lg .mp-sec { font-size: 14px; }

@@ -303,6 +303,20 @@ const PAIRS = [
   await closeOwned();
   await pg.uncheck('#mp-summary-toggle');
   check('取消勾選 → 不顯示卡數與額度', await pg.evaluate(() => !document.getElementById('mp-sum-btn')));
+  // 顯示卡片名稱（方案 A：第二行，最前面）
+  await pg.check('#mp-cardnames-toggle');
+  const cn = await pg.evaluate(() => { const bad = []; let n = 0;
+    document.querySelectorAll('#mp-list .mp-f-pick').forEach(p => { const c = p.querySelector('.mp-cn'); const btn = p.querySelector('.mp-cardbtn'); if (!c || !btn) return; n++;
+      const want = (cardsData.cards.find(x => x.id === btn.dataset.mpCard) || {}).name; if (c.textContent !== want) bad.push(c.textContent + '≠' + want);
+      if (c.getBoundingClientRect().top < p.querySelector('.mp-f-cols').getBoundingClientRect().bottom - 1) bad.push('卡名不在第二行');
+      const row2 = c.parentElement; if (row2.firstElementChild !== c) bad.push('卡名不是第二行第一個'); });
+    return { n, bad, total: document.querySelectorAll('#mp-list .mp-f-pick').length, saved: MP.prefs.cardNames }; });
+  check('勾「顯示卡片名稱」→ 每筆第二行最前面顯示 Cards Data 的卡名', cn.n === cn.total && cn.n > 5 && !cn.bad.length && cn.saved, cn.bad.slice(0, 3).join('；') || `${cn.n} 筆`);
+  const capCn = await pg.evaluate(() => { const pool = mpExportPool(); const x = MP.prefs.x; const was = x.cardNames; x.cardNames = false; const off = mpWallCapacity(pool); x.cardNames = true; const on = mpWallCapacity(pool); x.cardNames = was; return { off, on }; });
+  check('存圖也畫卡名（勾了之後桌布放得下的家數變少）', capCn.on < capCn.off, JSON.stringify(capCn));
+  if (SHOTS) { await pg.check('#mp-caps-toggle'); await pg.evaluate(() => document.getElementById('mp-list').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'cardnames-iphone13.png') }); await pg.uncheck('#mp-caps-toggle'); }
+  await pg.uncheck('#mp-cardnames-toggle');
+  check('取消勾選 → 卡名消失', await pg.evaluate(() => !document.querySelector('#mp-list .mp-cn')));
   check('取消勾選 → 封頂金額消失', await pg.evaluate(() => !document.querySelector('#mp-list .mp-cap')));
   const levelCalls = await pg.evaluate(() => (globalThis.__setDocs || []).filter(d => d.path.startsWith('cardSettings/')).length);
   check('🔒 開頁、重算都沒有寫入任何級別', levelCalls === 0, `cardSettings 寫入 ${levelCalls} 次`);
@@ -601,11 +615,11 @@ const PAIRS = [
   await pg.waitForTimeout(800);
   const capLarge = await pg.evaluate(() => MP.exp.capacity);
   check('大字的桌布上限比小字少', capLarge < s1.cap, `${capLarge} < ${s1.cap}`);
-  if (SHOTS) { await pg.evaluate(() => { MP.prefs.x.size = 'small'; MP.prefs.x.caps = true; MP.prefs.x.summary = true; MP.prefs.fmt = 'long'; MP.prefs.sel = null; MP.exp.pickOpen = false; mpRenderExport(); }); await pg.waitForTimeout(1200);
+  if (SHOTS) { await pg.evaluate(() => { MP.prefs.x.size = 'small'; MP.prefs.x.caps = true; MP.prefs.x.cardNames = true; MP.prefs.x.summary = true; MP.prefs.fmt = 'long'; MP.prefs.sel = null; MP.exp.pickOpen = false; mpRenderExport(); }); await pg.waitForTimeout(1200);
     await pg.evaluate(() => { const a = document.createElement('a'); a.id = '__cap'; a.href = document.getElementById('mp-exp-img').src; document.body.appendChild(a); });
     const du = await pg.$eval('#__cap', a => a.href); fs.writeFileSync(path.join(SHOTS, 'export-long-caps.png'), Buffer.from(du.split(',')[1], 'base64'));
     await pg.click('#mp-pick-toggle'); await pg.waitForTimeout(200); await pg.screenshot({ path: path.join(SHOTS, 'export-picks-open-iphone13.png') }); await pg.click('#mp-pick-toggle');
-    await pg.evaluate(() => { MP.prefs.x.caps = false; MP.prefs.x.summary = false; MP.prefs.fmt = 'wall'; MP.prefs.sel = null; document.querySelector('.mp-exp-box').scrollTop = 0; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
+    await pg.evaluate(() => { MP.prefs.x.caps = false; MP.prefs.x.cardNames = false; MP.prefs.x.summary = false; MP.prefs.fmt = 'wall'; MP.prefs.sel = null; document.querySelector('.mp-exp-box').scrollTop = 0; mpRenderExport(); }); await pg.waitForTimeout(800); await pg.screenshot({ path: path.join(SHOTS, 'export-settings-iphone13.png') });
     await pg.evaluate(() => document.getElementById('mp-exp-preview-pane').scrollIntoView()); await pg.screenshot({ path: path.join(SHOTS, 'export-preview-iphone13.png') }); }
   await pg.click('.mp-exp-settings-pane [data-mp-exp-close]');
 

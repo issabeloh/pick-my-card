@@ -69,6 +69,7 @@ function mpLoadPrefs() {
         size: p.size === 'large' ? 'large' : 'small',
         labels: p.labels !== false,
         caps: p.caps === true,          // 顯示活動封頂金額（消費上限）；預設關
+        cardNames: p.cardNames === true, // 顯示卡片名稱（Cards Data 的 name）；預設關
         summary: p.summary === true,    // 小抄底部「共 N 張信用卡 ▪ 額度共 NT$ x萬」；預設關（額度屬隱私，存成桌布前讓用戶自己決定）
         fmt: p.fmt === 'long' ? 'long' : 'wall',
         // 'auto'＝手機本機尺寸（桌機沒有本機 → 用通用）；'common'＝通用比例。舊值 iphone／ios／android 都併入 common
@@ -86,6 +87,7 @@ function mpLoadPrefs() {
         size: x.size === 'large' || x.size === 'small' ? x.size : pp.size,
         labels: typeof x.labels === 'boolean' ? x.labels : pp.labels,
         caps: typeof x.caps === 'boolean' ? x.caps : pp.caps,
+        cardNames: typeof x.cardNames === 'boolean' ? x.cardNames : pp.cardNames,
         summary: typeof x.summary === 'boolean' ? x.summary : pp.summary
     };
 }
@@ -650,8 +652,12 @@ function mpReceiptHtml(sections, o) {
     const labs = e => o.labels && e.labels.length ? `<span class="mp-labs">${e.labels.map(l => `<span class="mp-lab">${esc(l)}</span>`).join('')}</span>` : '';
     const rate = e => `<span class="mp-rate">${esc(String(e.rate))}%</span>`;
     const capOf = e => o.caps && e.cap ? `<span class="mp-cap">${esc(e.cap)}</span>` : '';
-    // 第二行：勾了「顯示活動封頂金額」→ 等級／方案標籤＋封頂金額一起放第二行
-    const row2 = e => o.caps && (capOf(e) || labs(e)) ? `<div class="mp-row2">${labs(e)}${capOf(e)}</div>` : '';
+    const cnOf = e => o.cardNames ? `<span class="mp-cn">${esc(mpCardName(e.m.cardId, e.m.cardName))}</span>` : '';
+    // 第二行：勾了「顯示卡片名稱」或「顯示活動封頂金額」→ [卡名][等級／方案][封頂金額] 一起放第二行（靠右）
+    const useRow2 = o.caps || o.cardNames;
+    const row2 = e => useRow2 && (cnOf(e) || capOf(e) || labs(e)) ? `<div class="mp-row2">${cnOf(e)}${labs(e)}${capOf(e)}</div>` : '';
+    // 雙欄：欄太窄，卡名與封頂金額各自一行
+    const eExtra = e => (cnOf(e) ? `<div class="mp-e-cap mp-e-cn">${cnOf(e)}</div>` : '') + (capOf(e) ? `<div class="mp-e-cap">${capOf(e)}</div>` : '');
     const sec = s => s.title === null ? '' : (!o.demo && MP.prefs.sort === 'az'
         ? `<div class="mp-sec az"><span class="mp-ltr">${esc(s.title)}</span></div>`
         : `<div class="mp-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>`);
@@ -660,10 +666,10 @@ function mpReceiptHtml(sections, o) {
     if (!sections.length) {
         body = '<p class="mp-none">找不到符合的商家</p>';
     } else if (o.layout === 'E') {
-        body = `<div class="mp-e-grid">${sections.map(s => sec(s) + s.items.map(g => `<div class="mp-e-cell${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-e-name">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-e-line${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${thumb(e)}${rate(e)}${flag(e)}${due(e)}</div>${capOf(e) ? `<div class="mp-e-cap">${capOf(e)}</div>` : ''}`).join('')}</div>`).join('')).join('')}</div>`;
+        body = `<div class="mp-e-grid">${sections.map(s => sec(s) + s.items.map(g => `<div class="mp-e-cell${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-e-name">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-e-line${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${thumb(e)}${rate(e)}${flag(e)}${due(e)}</div>${eExtra(e)}`).join('')}</div>`).join('')).join('')}</div>`;
     } else {
         body = '<div class="mp-colhead"><span>商家</span><span class="mp-cols"><span>卡</span><span>回饋</span><span>期限</span></span></div>' +
-            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${row2(e) ? ' has-row2' : ''}">${row2(e) ? '' : flag(e)}${o.caps ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${row2(e)}${row2(e) ? flag(e) : ''}</div>`).join('')}</div>`).join('')).join('');
+            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${row2(e) ? ' has-row2' : ''}">${row2(e) ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${row2(e)}${row2(e) ? flag(e) : ''}</div>`).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
@@ -682,6 +688,9 @@ function mpReceiptHtml(sections, o) {
 // 「顯示等級／方案」常駐；雙欄放不下標籤，改成灰色不可勾（不改用戶存的勾選值）
 function mpSummaryChk(id, p) {
     return `<span class="mp-chkwrap"><label class="mp-chk"><input type="checkbox" id="${id}" ${p.summary ? 'checked' : ''}>顯示卡數與額度總和</label><button type="button" class="mp-help" data-mp-help aria-label="卡數與額度是怎麼算的？" aria-expanded="false">?</button></span>`;
+}
+function mpCardNamesChk(id, p) {
+    return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.cardNames ? 'checked' : ''}>顯示卡片名稱</label>`;
 }
 function mpCapsChk(id, p) {
     return `<label class="mp-chk"><input type="checkbox" id="${id}" ${p.caps ? 'checked' : ''}>顯示活動封頂金額</label>`;
@@ -751,6 +760,7 @@ function mpRender() {
         </div>
         <div class="mp-bar">
             ${mpLabelsChk('mp-labels-toggle', p)}
+            ${mpCardNamesChk('mp-cardnames-toggle', p)}
             ${mpCapsChk('mp-caps-toggle', p)}
             ${mpSummaryChk('mp-summary-toggle', p)}
             <span class="mp-grow"></span>
@@ -822,7 +832,7 @@ function mpRender() {
     }
     const sections = mpArrange(groups, p.sort);
     list.innerHTML = mpReceiptHtml(sections, {
-        layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, summary: p.summary, big: p.size === 'large',
+        layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, cardNames: p.cardNames, summary: p.summary, big: p.size === 'large',
         editing: MP.editing,   // 編輯中：標題旁顯示鉛筆（只在網頁上，存圖不畫）
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
@@ -840,7 +850,7 @@ function mpRender() {
 // 單欄小字：等級標籤排在回饋率左邊時，若把商家名稱擠到換行，就把標籤移到下一行（名稱優先）
 function mpFitRows() {
     const list = mpEl('mp-list');
-    if (!list || MP.prefs.layout !== 'F' || MP.prefs.size === 'large' || MP.prefs.caps) return;
+    if (!list || MP.prefs.layout !== 'F' || MP.prefs.size === 'large' || MP.prefs.caps || MP.prefs.cardNames) return;
     list.querySelectorAll('.mp-f-row').forEach(row => {
         if (!row.querySelector('.mp-labs')) return;
         row.classList.remove('mp-labs-below');
@@ -1189,7 +1199,7 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                 const nf = font(700, S.name, MP_SANS);
                 const full = mpDisplayName(g);
                 // 標籤放回饋率左邊會把名稱擠到換行 → 標籤改放下一行（同大字）
-                let labsBelow = big || !!o.caps;
+                let labsBelow = big || !!o.caps || !!o.cardNames;
                 let inlineLabW = !labsBelow && labsFirst.length ? labelsW(labsFirst) : 0;
                 if (inlineLabW && !fits(full, nf, IW - colsW - inlineLabW - 16)) { labsBelow = true; inlineLabW = 0; }
                 const lines = wrap(full, nf, IW - colsW - inlineLabW - 16);
@@ -1208,19 +1218,25 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                     drawPickCols(e, IX + IW, lineCy, alpha);
                     const labels = o.labels ? e.labels : [];
                     const capT = o.caps && e.cap ? e.cap : '';
-                    if (capT) {
-                        // 第二行：[標籤][封頂金額] 靠右
-                        const capF = font(500, S.due, MP_MONO);
+                    const cnT = o.cardNames ? mpCardName(e.m.cardId, e.m.cardName) : '';
+                    if (capT || cnT) {
+                        // 第二行：[卡名][標籤][封頂金額] 靠右（與網頁 .mp-row2 同順序）
+                        const capF = font(500, S.due, MP_MONO), cnF = font(500, S.due + 1, MP_SANS);
                         ctx.font = capF;
-                        const cw = ctx.measureText(capT).width;
-                        const r2w = cw + (labels.length ? labelsW(labels) + 6 : 0);
+                        const cw = capT ? ctx.measureText(capT).width : 0;
+                        ctx.font = cnF;
+                        const nw = cnT ? ctx.measureText(cnT).width : 0;
+                        const lw = labels.length ? labelsW(labels) : 0;
+                        const r2w = cw + (lw ? lw + 6 : 0) + (nw ? nw + 6 : 0);
                         const step = i === 0 ? S.row : S.sub;
                         // 名稱換成兩行時，寬的第二行會撞到名稱第二行 → 改排到名稱下面
                         const push = i === 0 && lines.length > 1 && r2w > colsW + 4 ? Math.max(0, nameBottom - (y + step)) : 0;
                         y += step + push;
                         const rowH = Math.max(S.labRow, S.due + 8);
-                        ops.push({ t: 'text', text: capT, x: IX + IW, y: y + rowH / 2 + S.due * 0.36 - 2, font: capF, color: 'sub', align: 'right', alpha });
-                        if (labels.length) drawLabels(labels, IX + IW - cw - 6, y + rowH / 2 - 2, alpha);
+                        let rx = IX + IW;
+                        if (capT) { ops.push({ t: 'text', text: capT, x: rx, y: y + rowH / 2 + S.due * 0.36 - 2, font: capF, color: 'sub', align: 'right', alpha }); rx -= cw + 6; }
+                        if (labels.length) { drawLabels(labels, rx, y + rowH / 2 - 2, alpha); rx -= lw + 6; }
+                        if (cnT) ops.push({ t: 'text', text: cnT, x: rx, y: y + rowH / 2 + (S.due + 1) * 0.36 - 2, font: cnF, color: 'sub', align: 'right', alpha });
                         y += rowH - step;
                     } else if (labels.length) {
                         if (labsBelow) {
@@ -1259,6 +1275,10 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                         ops.push({ t: 'text', text: `${e.rate}%`, x: x + S.th[0] + 6, y: mid + S.rate * 0.36, font: font(700, S.rate, MP_MONO), color: 'ink', align: 'left', alpha });
                         ops.push({ t: mpIsHot(e) ? 'hot' : 'text', text: mpDueText(e), x: x + colW, y: mid + S.due * 0.36, font: font(mpIsHot(e) ? 700 : 500, S.due, MP_MONO), color: 'sub', align: 'right', alpha });
                         cy += lh;
+                        if (o.cardNames) {
+                            ops.push({ t: 'text', text: mpCardName(e.m.cardId, e.m.cardName), x: x + colW, y: cy + S.due * 0.8, font: font(500, S.due + 1, MP_SANS), color: 'sub', align: 'right', alpha });
+                            cy += S.due + 6;
+                        }
                         if (o.caps && e.cap) {
                             ops.push({ t: 'text', text: e.cap, x: x + colW, y: cy + S.due * 0.8, font: font(500, S.due, MP_MONO), color: 'sub', align: 'right', alpha });
                             cy += S.due + 6;
@@ -1435,7 +1455,7 @@ function mpExportSections(selectedKeys) {
 
 function mpExportOpts() {
     const p = MP.prefs, x = p.x;
-    return { layout: x.layout, labels: x.layout === 'F' && x.labels, caps: x.caps, summary: x.summary, big: x.size === 'large', sort: x.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
+    return { layout: x.layout, labels: x.layout === 'F' && x.labels, caps: x.caps, cardNames: x.cardNames, summary: x.summary, big: x.size === 'large', sort: x.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
@@ -1501,7 +1521,7 @@ async function mpRenderExport() {
             <div class="mp-set-block"><h4>排列</h4>${mpSegHtml('排列方式', p.x.sort, [['custom', '自訂'], ['az', 'A–Z'], ['cat', '分類']])}</div>
             <div class="mp-set-block"><h4>字級</h4>${mpSegHtml('字級', p.x.size, [['small', '小字'], ['large', '大字']])}</div>
         </div>
-        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p.x)}${mpCapsChk('mp-exp-caps', p.x)}${mpSummaryChk('mp-exp-summary', p.x)}</div>
+        <div class="mp-set-row">${mpLabelsChk('mp-exp-labels', p.x)}${mpCardNamesChk('mp-exp-cardnames', p.x)}${mpCapsChk('mp-exp-caps', p.x)}${mpSummaryChk('mp-exp-summary', p.x)}</div>
         <div class="mp-set-block mp-pickwrap${MP.exp.pickOpen ? ' open' : ''}">
             <div class="mp-pick-head">
                 <button type="button" class="mp-pick-toggle" id="mp-pick-toggle" aria-expanded="${MP.exp.pickOpen ? 'true' : 'false'}" aria-controls="mp-picks"><span class="mp-pick-title">要放進圖片的商家</span><span class="mp-cnt${p.fmt === 'wall' && sel.length > lim ? ' over' : ''}">${sel.length}${p.fmt === 'wall' ? ' / ' + lim : ''} 家</span><span class="mp-chev"><span class="mp-chev-t">${MP.exp.pickOpen ? '收合' : '展開'}</span>${MP_ICON.chev}</span></button>
@@ -1671,8 +1691,8 @@ function mpBind() {
     page.addEventListener('change', async e => {
         const t = e.target;
         // 小抄頁面的勾選項 → 只影響頁面；存圖對話框的 → 只影響圖片（MP.prefs.x）
-        const pageKey = { 'mp-labels-toggle': 'labels', 'mp-caps-toggle': 'caps', 'mp-summary-toggle': 'summary' }[t.id];
-        const expKey = { 'mp-exp-labels': 'labels', 'mp-exp-caps': 'caps', 'mp-exp-summary': 'summary' }[t.id];
+        const pageKey = { 'mp-labels-toggle': 'labels', 'mp-cardnames-toggle': 'cardNames', 'mp-caps-toggle': 'caps', 'mp-summary-toggle': 'summary' }[t.id];
+        const expKey = { 'mp-exp-labels': 'labels', 'mp-exp-cardnames': 'cardNames', 'mp-exp-caps': 'caps', 'mp-exp-summary': 'summary' }[t.id];
         if (pageKey || expKey) {
             if (pageKey) MP.prefs[pageKey] = t.checked; else MP.prefs.x[expKey] = t.checked;
             mpSavePrefs();
