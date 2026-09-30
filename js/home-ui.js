@@ -530,7 +530,9 @@ function buildSpotlightModalBody(item, card) {
         // rate, so show the summed total (designated + basic + bonus) — same number the
         // search-result card shows. Non-stacking models return the parsed rate as-is.
         const rateNum = getDisplayRate(card, group, parsedRate, levelData);
-        const capNum = parseCashbackCap(group.cap, card, levelData);
+        // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）——
+        // 與搜尋結果卡、詳情頁同一套推導，Spotlight 不自成一格
+        const capNum = resolveDisplayCap(card, group, parseCashbackCap(group.cap, card, levelData), levelData);
         const capText = (capNum !== null && capNum !== undefined && !isNaN(capNum))
             ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
         const period = group.period || ((group.periodStart && group.periodEnd) ? `${group.periodStart}~${group.periodEnd}` : '');
