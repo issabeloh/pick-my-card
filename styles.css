@@ -9219,8 +9219,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     #home-view-switch-mappings { position: relative; }
     #home-view-switch-mappings .mp-beta { position: absolute; top: -9px; right: 10px; margin: 0; padding: 0 5px; font-size: 9.5px; z-index: 2; }
 }
-/* 改版告知（登入用戶）：頁面最上方一行備註 */
-.mp-moved-note { max-width: 738px; margin: 0 auto 10px; padding: 8px 12px; box-sizing: border-box; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; line-height: 1.55; }
+/* 改版告知：頁面最上方一行備註（所有人） */
+.mp-moved-note { max-width: 738px; margin: 0 auto 12px; padding: 7px 4px; box-sizing: border-box; border-top: 1px dashed #cfd4dc; border-bottom: 1px dashed #cfd4dc; font: 500 12px/1.7 ui-monospace, Menlo, monospace; letter-spacing: .02em; color: #6b7280; text-align: center; }   /* 2026-09-30 站長從 5 案選 2「收據小字」：與小抄的收據風格一致 */
 .mp-moved-note[hidden] { display: none; }
 /* 一次性提示：飛進頁籤的按鈕、頁籤彈一下、說明氣泡 */
 .mp-fly { position: fixed; left: 0; top: 0; z-index: 1300; pointer-events: none; box-shadow: 0 6px 16px rgba(180, 83, 9, .35); }
