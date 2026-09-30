@@ -1484,20 +1484,33 @@ function showCalcBreakdown(btn, cardResult) {
     const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
     if (!layers.length) return;
 
-    // 4 columns, no header: 項目 | 適用金額 | 回饋率 | 回饋金額
-    // "封頂" marks a layer whose applicable amount was clamped by its cap.
+    // 5 columns, no header: 項目 | 適用金額 | 上限 | 回饋率 | 回饋金額
+    // 「上限」逐層寫出（2026-09-30）：卡片上那格「回饋消費上限」是 min() 摘要，
+    // 一個數字表達不了「2% 無上限 ＋ 4% 限 25,000」，在這裡才看得出上限是哪一層的、
+    // 還有多少額度沒用到。上限欄緊接適用金額（它限制的就是那一格），綠色的回饋金額
+    // 維持在最右邊當視覺錨點。"封頂" marks a layer whose amount was clamped by its cap.
     // 依回饋率高→低排列（2026-07-16 站長要求；Total 列固定最後不參與排序）
     layers.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = layers.map(layer => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
         const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
-        const isCapped = layer.cap != null && layer.applicableAmount >= layer.cap;
-        const cappedTag = isCapped ? `<span class="breakdown-capped">（封頂）</span>` : '';
+        const hasCap = layer.cap != null && layer.cap > 0;
+        // 上限欄省略 NT$ 前綴（左邊「適用金額」欄已經帶著 NT$，幣別不會誤讀）——
+        // 省下的約 22px 是 5 欄能在 360px 手機上排下的關鍵，量測見 commit 說明
+        // rate=0 的層是「超過上限(不列入回饋)」那種剩餘額度桶，不是會給回饋的層——
+        // 對它寫「無上限」會讀成「這段無上限地給」，正好相反，所以留白。
+        const capLabel = hasCap ? `限 ${Math.floor(layer.cap).toLocaleString()}`
+            : (parseFloat(layer.rate) > 0 ? '無上限' : '');
+        // 封頂＝適用金額被上限夾住。原本在回饋金額後面掛紅字「（封頂）」，有了上限欄
+        // 之後那是同一件事講兩遍（適用金額會等於上限），而 5 欄在 360px 手機上寬度吃緊——
+        // 改成上限欄轉紅表示，省下約 60px。
+        const isCapped = hasCap && layer.applicableAmount >= layer.cap;
         return `<tr>
             <td class="bd-name">${escapeHtml(String(layer.name))}</td>
             <td class="bd-amt">${amtLabel}</td>
+            <td class="bd-cap${isCapped ? ' bd-cap-hit' : ''}">${capLabel}</td>
             <td class="bd-rate">${layer.rate}%</td>
-            <td class="bd-cash">${cashLabel}${cappedTag}</td>
+            <td class="bd-cash">${cashLabel}</td>
         </tr>`;
     }).join('');
 
@@ -1508,6 +1521,7 @@ function showCalcBreakdown(btn, cardResult) {
     const totalRow = `<tr class="bd-total">
         <td class="bd-name">Total</td>
         <td class="bd-amt">NT$${totalAmount.toLocaleString()}</td>
+        <td class="bd-cap"></td>
         <td class="bd-rate"></td>
         <td class="bd-cash">NT$${totalCash.toLocaleString()}</td>
     </tr>`;
