@@ -22,7 +22,10 @@ SEC6|js/cashback-engine.js|${referralUrl ? `<a href="${escapeHtml(referralUrl)}"
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
 
-# ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）──
+# ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）；
+#    headRow 是 2026-09-30 加的欄位標題，整串是程式內寫死的字面值、無任何插值。
+#    兩行：上為搜尋結果的計算明細（加了 thead），下為詳情頁「回饋組成」抽屜（維持原樣）──
+SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><thead>${headRow}</thead><tbody>${rows}${totalRow}</tbody></table>`;
 SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
 
 # ── 本站自己產生的 blob: 網址（2026-09-28）──
