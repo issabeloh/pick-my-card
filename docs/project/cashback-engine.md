@@ -167,7 +167,21 @@ if (!card.specialItems || card.specialItems.length === 0)
 - [ ] `specialItems = []`（空陣列）的卡是否走對分支？
 - [ ] 停車折抵的快捷搜尋是否還帶著 searchKeywords？
 - [ ] 跑 `docs/ops/regression.md` 的回歸清單比對前後結果
+- [ ] 動到基本回饋 fallback、搜尋詞展開（`expandSearchTerms`）或狀態列訊息 → 另跑 `tools/regression/basic-exclusions-test.js`（第 10 節）
 - [ ] 跑 `bash tools/preflight.sh`
+
+## 10. 一般消費排除項目（basicExclusions，2026-09-30）
+
+- **語義**：`card.basicExclusions`（字串陣列，Sheets 欄位見 data-pipeline.md 第 2 節）＝這張卡刷了**完全沒有回饋**的交易類型
+- **只作用在基本回饋 fallback**（`calculateCashback` 裡 `isBasicCashback` 為真的兩條路徑：沒匹配到、匹配到但比較中的卡沒活動）。
+  某卡對這個詞有指定活動時根本不會走到 fallback——**活動永遠優先**，名單不影響
+- **比對**（`isBasicExcludedForSearch`，`js/search-match.js`）：搜尋詞經 `expandSearchTerms()`（與 `findMatchingItem` 共用的 fuzzy／同義詞展開）
+  再加上匹配到的 item 名；任一詞**等於或包含**排除詞即命中。反方向不算（排除「超商代收」不影響搜「超商」）；少於 2 字的排除詞忽略
+- **顯示**：
+  - 比較中的卡**全部**命中、且沒有領券／即將開始可看 → 不顯示任何結果卡片（也不出「無符合的信用卡」框），狀態列 `showBasicExcludedMessage` 講「沒有活動＋一般消費排除項目＋不會有任何回饋（包含基本回饋）」
+  - **部分**命中 → 命中的卡從結果拿掉，其餘照常顯示基本回饋，狀態列末尾補一行「另有 N 張卡把「X」列為一般消費排除項目，刷卡無回饋」（`appendBasicExcludedNote`；文案由站長指定）
+  - 全部命中但有領券／即將開始 → 不能說「沒有回饋」，改走原本訊息＋補同一行
+- **測試**：`node tools/regression/basic-exclusions-test.js`（凍結資料沒有這個欄位，所以 run-regression.js 碰不到這條路徑；這支在頁面裡臨時塞名單驗 12 項）。改這一塊必跑
 
 ## 教訓記錄
 

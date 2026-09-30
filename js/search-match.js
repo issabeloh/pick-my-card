@@ -4,13 +4,14 @@
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
- *  - 搜尋匹配核心              → "findMatchingItem"
+ *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
+ *  - 一般消費排除項目            → "isBasicExcludedForSearch" / "showBasicExcludedMessage"
  * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
@@ -256,12 +257,10 @@ function toggleExactSearchEmptyHint(show) {
 // Find matching item in cards database
 // options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
 // 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
-function findMatchingItem(searchTerm, options = {}) {
-    if (!cardsData) return null;
-    const exactOnly = !!options.exactOnly;
-
-    let searchLower = searchTerm.toLowerCase().trim();
-    let searchTerms = [searchLower]; // Always include original search term
+// 搜尋詞展開：原詞＋fuzzy 正反向對照＋片語級同義詞。第一個元素永遠是原詞。
+// findMatchingItem 與一般消費排除判斷（isBasicExcludedForSearch）共用，兩邊才認得同一組別名。
+function expandSearchTerms(searchLower) {
+    const searchTerms = [searchLower]; // Always include original search term
 
     // Add fuzzy search mapping if exists
     if (fuzzySearchMap[searchLower]) {
@@ -282,6 +281,16 @@ function findMatchingItem(searchTerm, options = {}) {
     expandSynonymPhrases(searchLower).forEach(variant => {
         if (!searchTerms.includes(variant)) searchTerms.push(variant);
     });
+
+    return searchTerms;
+}
+
+function findMatchingItem(searchTerm, options = {}) {
+    if (!cardsData) return null;
+    const exactOnly = !!options.exactOnly;
+
+    let searchLower = searchTerm.toLowerCase().trim();
+    let searchTerms = expandSearchTerms(searchLower);
 
     console.log(`🔎 findMatchingItem 開始搜尋:`, {
         原始輸入: searchTerm,
@@ -822,3 +831,70 @@ function buildBasicCashbackResult(card, amount) {
     };
 }
 
+
+// ── 一般消費排除項目（basicExclusions，2026-09-30 新增）──
+// 問題：搜尋「繳稅」「保費」這類沒有任何活動的詞，會退回幫每張卡算基本回饋——但這些正是
+// 各銀行「一般消費定義」裡明文排除的交易，實際刷下去是 0，網站等於在誤導人。
+// 資料：Cards Data 的 basicExclusions 欄（逗號/頓號分隔），匯出成 card.basicExclusions 字串陣列。
+//       初次建立與更新走自動化檔的 basic-exclusions-extractor.gs（從監控快照抽、人工審核後寫回）。
+// 只在「退回基本回饋」的路徑使用：某卡對這個詞有指定活動時，活動優先，排除名單不影響。
+//
+// 比對規則刻意保守——誤判成「沒回饋」跟漏判一樣會誤導，而且更難被發現：
+//   ・搜尋詞（含 fuzzy/同義詞展開、匹配到的 item 名）與排除詞**全等**，或搜尋詞**包含**排除詞
+//     （「繳稅」命中「繳稅」、「國泰人壽保費」命中「保費」）
+//   ・反方向不算：排除詞「超商代收」不會讓搜尋「超商」被判排除
+//   ・少於 2 字的排除詞一律忽略（「稅」會誤殺「免稅店」）
+function getBasicExclusionSearchTerms(merchantValue, matchedItems) {
+    const terms = expandSearchTerms(String(merchantValue || '').toLowerCase().trim());
+    const list = Array.isArray(matchedItems) ? matchedItems : (matchedItems ? [matchedItems] : []);
+    list.forEach(m => {
+        const name = m && m.originalItem ? String(m.originalItem).toLowerCase().trim() : '';
+        if (name && !terms.includes(name)) terms.push(name);
+    });
+    return terms.filter(Boolean);
+}
+
+function isBasicExcludedForSearch(card, searchTerms) {
+    if (!card || !Array.isArray(card.basicExclusions) || card.basicExclusions.length === 0) return false;
+    return card.basicExclusions.some(ex => {
+        const exLower = String(ex || '').toLowerCase().trim();
+        if (exLower.length < 2) return false;
+        return searchTerms.some(t => t === exLower || t.includes(exLower));
+    });
+}
+
+// 比較中的卡**全部**都把這個詞列為排除、下方也沒有領券／即將開始可看時的狀態列。
+// 結果區不顯示任何卡片（呼叫端傳 suppressEmptyMessage，連「無符合的信用卡」框也不出）。
+async function showBasicExcludedMessage(merchantValue, excludedCount, matchedItems, cardsToCheck = [], amount = 1000) {
+    const safeName = escapeHtml(String(merchantValue || '').trim());
+    let messageHtml = matchedItems
+        ? `✓ 匹配到 <strong>${safeName}</strong>`
+        : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
+
+    let warn = `✘ 你比較的 ${excludedCount} 張卡都沒有「${safeName}」的活動，而且都把它列為一般消費排除項目，刷卡不會有任何回饋（包含基本回饋）`;
+    // 匹配得到＝別張卡可能真的有這個活動（只是沒加入比較），跟 showMatchedButNoActivityMessage 一樣提示
+    if (matchedItems) {
+        const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
+        const names = [...new Set(list.map(m => (m && m.originalItem) || '').filter(Boolean))];
+        const outsideCount = await countCardsWithActivityOutside(names, cardsToCheck, amount);
+        if (outsideCount > 0) {
+            warn += `（其他卡片中有 ${outsideCount} 張卡符合，試看看修改信用卡選項！）`;
+        }
+    }
+    messageHtml += `<br><span class="matched-item-warn">${warn}</span>`;
+
+    matchedItemDiv.innerHTML = messageHtml;
+    // 匹配得到時第一行是 ✓（維持綠色容器、紅字只在第二行）；沒匹配到整列走 no-match 樣式
+    matchedItemDiv.className = matchedItems ? 'matched-item' : 'matched-item no-match';
+    matchedItemDiv.style.display = 'block';
+    toggleExactSearchEmptyHint(false);
+}
+
+// 只有**部分**卡排除時：那幾張已從結果拿掉，在狀態列最後補一行交代去向
+function appendBasicExcludedNote(merchantValue, excludedCount) {
+    if (!matchedItemDiv || excludedCount <= 0) return;
+    const count = Number(excludedCount) || 0;
+    const note = `<br><span class="matched-item-warn">另有 ${count} 張卡把「${escapeHtml(String(merchantValue || '').trim())}」列為一般消費排除項目，刷卡無回饋</span>`;
+    matchedItemDiv.innerHTML += note;
+    matchedItemDiv.style.display = 'block';
+}

@@ -34,6 +34,11 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
        那種連結在沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 App 的 scheme 沒有公開保證、改版就失效
      - **只能在 App 內操作的活動**（「打開 App → 我的優惠 → 登錄」）→ 把步驟寫成文字放進 `conditions_N`，這一欄留空
      - 這欄不存在時匯出直接跳過（`addOptionalField`），舊表完全相容；不必 22 個槽位一次補齊，用到哪個補哪個
+   - 一般消費排除項目：`basicExclusions`（選填，2026-09-30 新增）——這張卡「一般消費定義」明文排除、**完全沒有回饋**
+     的交易（繳稅、學費、保費、儲值…），一格多項、逗號／頓號／換行分隔，匯出成 `card.basicExclusions` 字串陣列
+     （空白格不輸出）。前端只在「退回基本回饋」時使用，命中的卡不顯示基本回饋（規則見 cashback-engine.md 第 10 節）。
+     初次建立用自動化檔選單「抽一般消費排除 → 寫回」（`apps-script/basic-exclusions-extractor.gs`，操作見 `apps-script/README.md`）。
+     ⚠️ 項目要寫成**使用者會搜尋的詞**且保留限定詞：前端是「搜尋詞包含排除詞就算」，寫「超商」會誤殺所有超商搜尋，要寫「超商代收」；單一個字的項目一律被忽略
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）

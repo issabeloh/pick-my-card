@@ -194,6 +194,17 @@ async function calculateCashback() {
         }
     }
     
+    // 一般消費排除項目（basicExclusions，2026-09-30）：走到基本回饋 fallback 時，
+    // 把「這張卡明文排除這個詞」的卡拿掉——那張卡實際刷下去是 0，顯示基本回饋等於誤導。
+    // 只動 isBasic 結果；有指定活動的卡不會走到這裡（活動優先）。詳見 search-match.js 同名區塊。
+    let basicExcludedCount = 0;
+    if (isBasicCashback && merchantValue.length > 0) {
+        const exclusionTerms = getBasicExclusionSearchTerms(merchantValue, currentMatchedItem);
+        const kept = results.filter(r => !(r.isBasic && isBasicExcludedForSearch(r.card, exclusionTerms)));
+        basicExcludedCount = results.length - kept.length;
+        results = kept;
+    }
+
     // Sort active results by cashback amount (highest first)
     results.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
 
@@ -238,6 +249,11 @@ async function calculateCashback() {
         isBasicCashback = false;
     }
 
+    // 比較中的卡全被排除、而且下方沒有領券／即將開始可看 → 不顯示任何結果卡片，只講「沒有回饋」。
+    // 有領券或即將開始時不能這樣講（那些確實是回饋），改走一般訊息＋補一行排除說明。
+    const allBasicExcluded = basicExcludedCount > 0 && couponCount === 0 && upcomingCount === 0 &&
+        !results.some(r => r.isBasic);
+
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
     // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
     //    若讓「有結果」那條先接手，會說出「有 0 筆活動符合你的選項」。
@@ -259,13 +275,19 @@ async function calculateCashback() {
     } else if (currentMatchedItem && !isBasicCashback) {
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
             `有 ${results.length} 筆活動符合你的選項`);
+    } else if (allBasicExcluded) {
+        await showBasicExcludedMessage(merchantValue, basicExcludedCount, currentMatchedItem, cardsToCompare, amount);
     } else if (currentMatchedItem && matchedButNoActivity) {
         await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount);
     } else if (merchantValue.length > 0) {
         showNoMatchMessage(merchantValue, cardsToCompare);
     }
+    // 部分排除：被拿掉的卡在狀態列最後交代一行（upcomingOnly／couponOnly 已把基本回饋全收起來，不用講）
+    if (basicExcludedCount > 0 && !allBasicExcluded && !upcomingOnly && !couponOnly) {
+        appendBasicExcludedNote(merchantValue, basicExcludedCount);
+    }
 
-    displayResults(results, amount, displayedMatchItem, isBasicCashback, couponOnly);
+    displayResults(results, amount, displayedMatchItem, isBasicCashback, couponOnly || allBasicExcluded);
 
     // Display parking benefits - pass quick search keywords if available
     displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);

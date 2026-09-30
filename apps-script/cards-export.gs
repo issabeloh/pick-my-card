@@ -538,6 +538,13 @@ function exportToJSON() {
     // ⚠️ 只寫性格、不寫數字——句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率。
     addOptionalField(card, row, headers, 'cardUseCase');
 
+    // basicExclusions（選填，2026-09-30 新增）：一般消費排除項目（繳稅、保費、儲值…），
+    // 一格填多個、逗號／頓號／換行分隔。前端搜尋走到「基本回饋」fallback 時，命中的卡
+    // 不再顯示基本回饋（實際刷下去是 0）。沒填或整格空白 → 不輸出這個欄位（省 cards.data 體積）。
+    // 初次建立：自動化檔選單「抽一般消費排除 → 寫回」（basic-exclusions-extractor.gs）。
+    const basicExclusions = splitMerchantCell_(getValue(row, headers, 'basicExclusions'));
+    if (basicExclusions.length > 0) card.basicExclusions = basicExclusions;
+
     // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];
     const maxRateSlot = maxSlotIndex(headers, 'rate');

@@ -87,11 +87,17 @@ function buildAutomationMenu_() {
     // 「Cards Data-登錄連結草稿」，正式 Cards Data 完全不動
     .addItem('① 標出需登錄的活動（不用 AI）→ Cards Data 草稿', 'markRegisterSlotsInDraft')
     .addItem('② 找登錄連結：1-監控清單 → Cards Data 草稿', 'fillRegisterLinksFromSnapshots')
-    // ⚠️ ③ 是整個自動化檔裡唯一會寫入正式 Cards Data 的動作（只寫 registerLink_N 欄，
-    //    寫前跳確認視窗）——其餘所有選單項都只寫草稿或待審核表
+    // ⚠️ ③ 與下方「寫回一般消費排除」是整個自動化檔裡僅有的兩個會寫入正式 Cards Data 的動作
+    //    （③只寫 registerLink_N 欄；後者只寫 basicExclusions 欄的空白格；都會先跳確認視窗）
+    //    ——其餘所有選單項都只寫草稿或待審核表
     .addItem('③ 把打勾的登錄連結寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
     // ④ 只讀不寫：對正式表的每個 registerLink 發一次請求，回報死掉的
     .addItem('④ 檢查登錄連結是否有死網址', 'checkRegisterLinksAlive')
+    .addSeparator()
+    // 一般消費排除項目兩階段（basic-exclusions-extractor.gs，2026-09-30）：
+    // ① 只寫自動化檔的待審核表；② 只寫正式 Cards Data 的 basicExclusions 欄、而且只寫空白格
+    .addItem('抽一般消費排除：1-監控清單 → 5-待審核', 'extractBasicExclusionsFromSnapshots')
+    .addItem('寫回一般消費排除：5-待審核 → 正式 Cards Data', 'applyBasicExclusionsToCardsData')
     .addToUi();
 }
 

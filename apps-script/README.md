@@ -424,8 +424,10 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
 | ① 標出需登錄的活動（不用 AI）→ Cards Data 草稿 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
 | ② 找登錄連結：1-監控清單 → Cards Data 草稿 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
-| ③ 把打勾的登錄連結寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（全站唯一會動正式表的選單項；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
+| ③ 把打勾的登錄連結寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（會動正式表的兩個選單項之一，另一個是下方「寫回一般消費排除」；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
 | ④ 檢查登錄連結是否有死網址 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
+| 抽一般消費排除：1-監控清單 → 5-待審核 | `extractBasicExclusionsFromSnapshots` | `1-監控清單` 中 `keywords` 含「一般消費／排除／不回饋…」的列的 `last_snapshot`（**只讀不寫**） | `5-待審核（一般消費排除）`（自動建；一張卡一列） | `basic-exclusions-extractor.gs` |
+| 寫回一般消費排除：5-待審核 → 正式 Cards Data | `applyBasicExclusionsToCardsData` | `5-待審核（一般消費排除）` 「核准」欄打 V 的列 | **跨檔寫正式 `Cards Data` 的 `basicExclusions` 欄，而且只寫空白格**（寫前跳確認視窗）＋回寫 V→「已寫回 <時間>」 | `basic-exclusions-extractor.gs` |
 
 所有分頁名的唯一出處（改名時要改的就是這幾行）：
 
@@ -442,6 +444,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | `4-待審核（新卡-基本）`／`（新卡-組別）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.basicReviewSheet`／`groupReviewSheet` |
 | `4-待審核（活動更新）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.updateReviewSheet` |
 | `報告-廣告排除` | `card-benefits-parser.gs` → `AD_CHECK_CONFIG.sheet` |
+| `5-待審核（一般消費排除）` | `basic-exclusions-extractor.gs` → `BASICEX_CONFIG.reviewSheet`（`1-監控清單` 也在同一個 CONFIG 裡寫了一份） |
 
 ⚠️ **在 Google Sheets 改分頁名 ≠ 程式跟著改**：腳本一律用 `getSheetByName(CONFIG.…)` 找分頁，
 名字對不上就是「找不到分頁」（有些動作會**自動建一個空的新分頁**，看起來像資料不見了）。
@@ -1417,3 +1420,33 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 ⚠️ **貼回正式表時用「選擇性貼上 → 只貼值」**，否則黃綠底色會一起貼過去。
 
 ⚠️ 整批重跑：把草稿分頁刪掉再執行①（會重新複製一份最新的 Cards Data）。
+
+## 一般消費排除項目：`basicExclusions`（`basic-exclusions-extractor.gs`，2026-09-30 新增）
+
+**為什麼有這個**：搜尋「繳稅」「保費」這類沒有任何活動的詞時，網站原本會幫每張卡算基本回饋，
+但它們多半在銀行「一般消費定義」裡被明文排除，實際刷下去是 0。Cards Data 新增 `basicExclusions` 欄
+（逗號／頓號分隔）後，前端遇到命中的卡就不再顯示基本回饋（規則見 `docs/project/cashback-engine.md` 第 10 節）。
+
+**首次設定（只做一次）**：
+1. 資料檔 `Cards Data` 第一列找一個空欄，表頭打 `basicExclusions`（大小寫要一樣）
+2. 把新版 `cards-export.gs` 貼回資料檔的 Apps Script（多了讀 `basicExclusions` 那幾行；沒貼回的話填了也不會匯出）
+3. 自動化檔的 Apps Script：「＋ 檔案」新增指令碼、貼上 `basic-exclusions-extractor.gs` 全文；
+   再把新版 `benefits-parser.gs` 的 `buildAutomationMenu_` 貼回（多兩個選單項）。重新整理試算表
+
+**初次建立名單（兩步）**：
+1. 選單「抽一般消費排除：1-監控清單 → 5-待審核」——讀監控清單裡**一般消費／排除頁**的 `last_snapshot`
+   （判斷依據是該列 `keywords` 欄符合 `BASICEX_CONFIG.rowKeywordRe`；`keywords` 空白的列不處理），
+   交給 Gemini 抽出排除項目，一張卡一列寫進 `5-待審核（一般消費排除）`。一次最多 8 頁／240 秒，
+   沒跑完再按一次會接著跑（已經出現在待審核表的網址自動跳過；要重抽某頁就刪掉那個網址的列）
+2. 逐列檢查 `basicExclusions` 那格（可以直接改），確認後在「核准」打 V → 選單「寫回一般消費排除」。
+   同一張卡多列打 V 會合併去重。**只寫正式表的 `basicExclusions` 欄，而且只寫空白格**——已經有值的卡
+   會被略過並列出來（要重寫就先清空正式表那格）。寫完記得「🎯 卡片管理 → 匯出」
+
+**審核重點**（AI 最容易錯的地方）：
+- **限定詞被拿掉**：「超商代收」變成「超商」會讓搜尋「超商」的人被告知沒回饋——前端比對規則是
+  「搜尋詞**包含**排除詞就算命中」，排除詞越短，誤殺越廣
+- **「但…除外」的例外**：AI 被要求把例外寫進「AI想問的問題」而不是放進名單，看到這欄有字要讀
+- **只是不給加碼、仍有基本回饋**的項目不該列（這欄的語義是「完全沒有回饋」）
+- 標黃的列＝AI 有疑問，或這頁沒抽到適用這張卡的條款（快照可能只抓到選單）
+- 有些卡的一般消費反而**包含**保費等項目（例：「一般消費包含保費」）——這正是名單要每張卡各自維護的原因
+
