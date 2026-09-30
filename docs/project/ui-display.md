@@ -203,9 +203,15 @@ Grep `titleParts`）：
 
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
 
-**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, cap, deadline(YYYY/MM/DD), order(數字), active(布林), category(選填；2026-07-21 起卡片上不再顯示，欄位保留), featured(布林，2026-09-03 新增；**匯出但前端暫不使用**，見下方「主打卡」段)。
+**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**匯出但前端暫不使用**，見下方「主打卡」段)。
 
-**期限自動匹配真實活動（2026-09-02 起）**：卡片與 modal 顯示的期限不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **退回 sheet 的 deadline**。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
+**Highlights 只存「編輯決定」（2026-09-30 起）**：`cap`／`deadline`／`category` 三欄已從工作表刪除——它們與卡片真實資料重複，實測 20 則有 2 則上限、3 則期限對不上。現在：
+- **`rate` 是選擇器**：`resolveSpotlightPick(item, card)` 把「活動 × 級別」逐一試算，取回饋率等於 rate 的組合（多個相等取上限最大）。它同時表達站長選的級別（分級卡有時推中間、有時推最高）與活動（同通路多個活動時，例如夢時代 3%/7%/11%/7%）。**不能改成 level 欄**——level 表達不了「選哪個活動」。
+- **上限**＝選中組合的 `resolveDisplayCap()`，顯示「上限 NT$X」、**不帶「／月」**（卡片資料沒有上限週期；站長 2026-09-30 裁定不加）。對不到組合 → 小卡照顯示 sheet rate、不顯示上限，console.error，preflight 第 4c 節（`tools/check-spotlights.js`，直接呼叫前端 resolveSpotlightPick）發 ⚠️。
+- **期限**＝`resolveSpotlightDeadline()`（見下段），對不到活動就不顯示。
+- **卡名**＝`getSpotlightCardName()` 取 cards 資料的 `name`；sheet 的 `card_name` 只給站長在試算表上看。
+
+**期限自動匹配真實活動（2026-09-02 起；2026-09-30 sheet 的 deadline 欄刪除，不再有後備）**：卡片與 modal 顯示的期限不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **退回 sheet 的 deadline**。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
 **一卡一通路命中多個活動時取「最早到期」**（實測有兩則會這樣：中信 Uniopen 夢時代 4 組、玉山熊本熊卡日本松本清 4 組）——亮點宣稱的回饋率常是多組疊加出來的（松本清 8.5% ＝ 6% 指定日本商店 ＋ 滿額加碼 1.5%），最早到期的那組一過期宣稱的數字就不成立；取最晚會讓卡片顯示一個其實已經拿不到的期限。過期活動在載入時已被 `filterExpiredRates()` 濾掉、不會進 `_itemsIndex`，所以這裡拿到的活動都還在效期內。
 ⚠️ 亮點本身**不做過期隱藏**：顯示哪幾則仍由 Sheets 的 `active` 欄控制（見下方輪播段）。
 ⚠️ **算好的期限不上卡片**（2026-09-03 起）：卡片只留「剩 N 天」徽章（0–14 天顯示），完整日期改到 ⓘ modal 的「活動期間／活動期限」。理由：卡片一排 2–4 張，日期字串又長又不影響「要不要點進去」的判斷；「剩 N 天」是急迫感提示、不是日期，所以保留。
@@ -230,7 +236,7 @@ Grep `titleParts`）：
   - ⚠️ **`fillOnly` 以外的呼叫端維持自動計算**：商家落地頁的 `?merchant=` 深連結（`{ noScroll: true }`）走的是同一支函數，那個情境使用者從外部連結進來、本來就預期看到結果。要改自動計算行為前先確認是哪一條路徑。
   - 🔴 **自動計算的範圍屬產品決策，要復原或擴大一律先問用戶**（沿用 2026-07-12 起的產品決策：計算由用戶按「計算」觸發，快捷搜尋按鈕與 `handleQuickSearch` 只填入關鍵詞不自動計算）。2026-09-03 把推薦活動這條路徑從「自動計算」改成「只帶入」也是站長決定的，不是實作方自行判斷——這條規則沒有因為那次改動而失效。
   - **class 名稱刻意不改**（仍是 `.spotlight-compare-btn`），GA4 的 `button_click` / `button_type: spotlight_compare` 事件才能延續、比對得出改版前後的差異。
-- **ⓘ「活動詳情」**（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap＋卡片第一個級別解析。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）。
+- **ⓘ「活動詳情」**（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap 解析；**分級卡的級別（2026-09-30 起）＝`resolveSpotlightPick` 選中的級別**（所有活動都用同一個級別解析），對不到才退回第一個級別，且回饋率旁標「(級別名)」（活動 rate/cap 含 placeholder 才標）；選中的活動排第一個，與小卡數字對應。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）。
 
 **相關檔案**：index.html `#spotlight-section` `#spotlight-modal`（merchant/*.html 有同一組容器標記，卡片由 js 動態生成、不需同步改）；styles.css `.spotlight-*`；js/home-ui.js（`renderSpotlights` 一帶）。
 
@@ -334,4 +340,4 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-23] promos 點「查看卡片詳情」後，詳情彈窗背景上方浮出一整片灰色的「推薦比較」工具列（手機上 315px 高、連結還點得下去會把 iframe 導去商家頁）→ embed 模式的隱藏清單（`html.pmc-embed ...`，2026-07-16 寫的）是**黑名單**，而 `.mc-related` 是 2026-08-18 才加進 index.html 的，沒人回頭補清單；詳情 modal 自己的遮罩是半透明的，於是它就從背景透出來 → 在 index.html 的 body 層級新增區塊時，同步檢查 embed 清單；styles.css 與 index.html 兩邊都補了警告註解。判「這東西是誰畫的」時先確認自己看的是父頁還是 iframe——它會隨詳情關閉一起消失，正是因為它活在 iframe 裡
 - [2026-09-23] 手機標題列改 sticky 後，320px 螢幕上長卡名被導覽列蓋掉半行 → `--pmc-detail-header-h` 只在 `setupCardDetailNav()` 開啟當下量一次，而卡圖 `width:auto` 要等圖片 load 完才佔寬度、進而把卡名從一行擠成兩行（57→85px），變數還停在舊值 → 凡是「量某元素高度寫進 CSS 變數」的地方，只要那元素裡有圖片或會換行的文字，就用 ResizeObserver 持續同步，不要只量一次（寫入前比對舊值，避免 observer 自己觸發自己）
 - [2026-09-16] 首頁「消費金額」框在桌機 Chrome 跳出儲存的帳號/密碼下拉（站長截圖回報）→ 刪除帳號 modal 的 `#da-password` 沒有 `<form>` 擁有者，Chrome 會把全文件的無主欄位併成一個合成表單、再挑密碼欄前方最近的文字欄當帳號欄，也就是 `#amount-input`（`type="number"` 一樣會被選中，`autocomplete="off"` 擋不住密碼管理員）→ **頁面上任何 `type="password"` 欄位一律要被某個 `<form>` 擁有**，否則它會把同頁不相干的輸入框變成「帳號欄」；本專案的作法是 `<form id="da-form" style="display: contents;">`（不影響版面）＋ JS 攔 submit。新增密碼欄時照做
-
+- [2026-09-30] 推薦活動玉山 Uni 卡支付寶：卡片寫 4.5%，ⓘ 活動詳情卻顯示 3%（CUBE 全球迪士尼飯店同樣 3.3%→2%）→ `buildSpotlightModalBody()` 一律拿 `Object.keys(levelSettings)[0]` 解析 placeholder，而推薦活動是編輯挑的特定級別（UP選／Level 3），第一個級別剛好是最低的 → 分級卡的級別不能預設取第一個，要用手上已知的目標值（sheet rate）反推級別；新增任何「代替用戶選級別來顯示」的地方都照此辦理，且只顯示、絕不存回（鐵則 1）

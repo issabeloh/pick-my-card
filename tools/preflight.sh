@@ -107,6 +107,13 @@ if command -v node >/dev/null 2>&1 && [ -f tools/check-card-banks.js ]; then
   case "$out" in *"⚠️"*) warn=1;; esac
 fi
 
+# ---- 4c) 推薦活動選擇器安全網（Highlights 的 rate 要對得到卡片資料的活動／級別；只警告）----
+if command -v node >/dev/null 2>&1 && [ -f tools/check-spotlights.js ]; then
+  out=$(node tools/check-spotlights.js) || true
+  echo "$out"
+  case "$out" in *"⚠️"*) warn=1;; esac
+fi
+
 # ---- 5) 全 repo 安全掃描（規則見 docs/ops/security-monitoring.md）----
 # preflight 第 3 節只掃 diff 新增行；這裡補掃整個 repo 現狀（XSS/密鑰/firestore.rules）。
 if [ -f tools/security-scan.sh ]; then

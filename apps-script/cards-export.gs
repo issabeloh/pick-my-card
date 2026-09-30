@@ -1645,29 +1645,16 @@ function readHighlights() {
     // 簡單防呆：如果 merchant 和 card_id 都沒填，視為無效空行跳過
     if (!getValue(row, headers, 'merchant') && !getValue(row, headers, 'card_id')) continue;
 
-    // 處理日期格式 (確保輸出 YYYY/MM/DD)
-    let deadlineStr = '';
-    const rawDeadline = getValue(row, headers, 'deadline');
-    if (rawDeadline) {
-      const d = new Date(rawDeadline);
-      if (!isNaN(d.getTime())) {
-        // 強制轉換為指定格式與時區
-        deadlineStr = Utilities.formatDate(d, "Asia/Taipei", "yyyy/MM/dd");
-      } else {
-        // 若為無法解析的字串則原樣保留
-        deadlineStr = String(rawDeadline).trim();
-      }
-    }
-
+    // 2026-09-30 起 Highlights 只存「編輯決定」：cap / deadline / category 三欄已刪除，
+    // 上限與期限由前端從卡片真實活動推導（js/home-ui.js resolveSpotlightPick）。
+    // rate 是「選擇器」：決定推哪個活動、哪個級別，不是單純顯示用的數字。
+    // card_name 只給站長在試算表上看，前端顯示的卡名一律取 cards 資料的 name。
     spotlights.push({
       merchant: getStr(row, 'merchant'),
-      category: getStr(row, 'category'),
       rate: getNum(row, 'rate'),
       description: getStr(row, 'description'),
       card_name: getStr(row, 'card_name'),
       card_id: getStr(row, 'card_id'),
-      cap: getStr(row, 'cap'),
-      deadline: deadlineStr,
       order: getNum(row, 'order'),
       active: getBool(row, 'active'), // active 為 false 也照常 push
       // featured：勾選的活動會排到「主打卡」版位（手機每頁 1 則、桌機每頁 2 則）。
