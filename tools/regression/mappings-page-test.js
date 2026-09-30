@@ -346,13 +346,17 @@ const PAIRS = [
   check('過期與已下架的商家有 *', stars.some(s => s.includes('zzz不存在商家')) && stars.some(s => s.includes('麥當勞')), stars.join('、'));
   check('有失效商家時顯示註腳', (await pg.textContent('#mp-list .mp-note') || '').includes('記得回網站更新最新活動'));
 
-  // 更新期限
+  // 更新活動（不在編輯模式裡，小抄右上角常駐）
+  const updPos = await pg.evaluate(() => { const wasEditing = MP.editing; MP.editing = false; mpRender(); const b = document.getElementById('mp-update-btn'), l = document.getElementById('mp-list');
+    if (!b) return { exists: false }; const r = b.getBoundingClientRect(), lr = l.getBoundingClientRect();
+    const out = { exists: true, wasEditing, visible: r.width > 0, text: b.textContent.trim(), inList: l.contains(b), topRight: r.right > lr.right - 60 && r.top < lr.top + 90 }; MP.editing = wasEditing; mpRender(); return out; });
+  check('「更新活動」不用按編輯就在小抄右上角', updPos.exists && updPos.visible && updPos.inList && updPos.topRight && updPos.text === '更新活動', JSON.stringify(updPos));
   await pg.click('#mp-update-btn');
   await pg.waitForFunction(() => MP.updated, null, { timeout: 20000 });
   const upd = await pg.evaluate(() => ({ u: MP.updated, ext: userSpendingMappings.find(m => m.id === 'seed_extend'), air: userSpendingMappings.find(m => (m.merchant || '').includes('中華航空')) }));
-  check('更新期限：同回饋率的過期配對被延長', upd.ext && upd.ext.periodEnd > '2026-09-11', upd.ext && upd.ext.periodEnd);
-  check('更新期限：回饋率不同的不自動改、列入提醒', upd.air && upd.air.periodEnd === '2026-09-05' && upd.u.changed.some(c => c.includes('中華航空')), upd.u.changed.join('；'));
-  check('按鈕文字「更新期限」→「期限已是最新」', (await pg.textContent('#mp-update-btn')).includes('期限已是最新'));
+  check('更新活動：同回饋率的過期配對被延長', upd.ext && upd.ext.periodEnd > '2026-09-11', upd.ext && upd.ext.periodEnd);
+  check('更新活動：回饋率不同的不自動改、列入提醒', upd.air && upd.air.periodEnd === '2026-09-05' && upd.u.changed.some(c => c.includes('中華航空')), upd.u.changed.join('；'));
+  check('按鈕文字「更新活動」→「已是最新」', (await pg.textContent('#mp-update-btn')).includes('已是最新'));
 
   // 回饋已變 → 點了顯示新舊回饋率，確認後更新
   const airKey = await pg.evaluate(() => mpKeyOf(userSpendingMappings.find(m => (m.merchant || '').includes('中華航空'))));
@@ -445,7 +449,7 @@ const PAIRS = [
     mappingsLoadState = 'ok'; window.alert = oa;
     return { writes: (globalThis.__setDocs || []).length - before, alerted: alerts.length > 0 };
   });
-  check('雲端沒讀到（error）時：更新期限、刪除都不寫回，並提示', guard.writes === 0 && guard.alerted, JSON.stringify(guard));
+  check('雲端沒讀到（error）時：更新活動、刪除都不寫回，並提示', guard.writes === 0 && guard.alerted, JSON.stringify(guard));
 
   // 長圖很長時自動降寬，不超過 iOS canvas 上限
   const longImg = await pg.evaluate(async () => { const g = mpBuildGroups().filter(x => !x.dead); const items = Array.from({ length: 300 }, (_, i) => ({ ...g[i % g.length], key: 'k' + i }));
@@ -714,13 +718,14 @@ const PAIRS = [
   await gp.click('#home-view-switch-mappings');
   await gp.waitForSelector('#mappings-page:not([hidden])');
   await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
-  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login') }));
+  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login'), noUpd: !document.getElementById('mp-update-btn') }));
   const gNote = await gp.evaluate(() => ({ note: getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none', fb: getComputedStyle(document.getElementById('mp-feedback-wrap')).display !== 'none' }));
   check('未登入：也看得到改版備註與「遇到問題請回報給我們」', gNote.note && gNote.fb, JSON.stringify(gNote));
   await gp.evaluate(() => { window.__authOpened = null; window.openAuthModal = m => { window.__authOpened = m; }; });
   await gp.click('#mp-feedback-btn');
   check('未登入點「回報給我們」→ 先開登入視窗（不開回報表單）', await gp.evaluate(() => window.__authOpened === 'login' && getComputedStyle(document.getElementById('feedback-modal')).display === 'none'));
   check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
+  check('未登入的範例小抄：不顯示「更新活動」（範例不能存）', gs.noUpd, JSON.stringify(gs));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
   await gp.click('#mp-edit-toggle');
   await gp.click('#mp-tools [data-mp-sort="az"]');

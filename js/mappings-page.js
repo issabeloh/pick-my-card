@@ -5,7 +5,7 @@
  *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"
  *  - 商家顯示名稱（改名／重設，存雲端）    → "loadMerchantAliases" / "mpSetAlias"
  *  - 分組／分類／拼音字首                 → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
- *  - 失效檢查與「更新期限」              → "mpProbeAll" / "mpUpdateDeadlines"
+ *  - 失效檢查與「更新活動」              → "mpProbeAll" / "mpUpdateDeadlines"
  *  - 頁面開關與網址 /mappings            → "openMappingsPage" / "closeMappingsPage"
  *  - 收據 HTML                         → "mpReceiptHtml"
  *  - 拖曳排序（自訂）                   → "mpStartDrag"
@@ -29,7 +29,7 @@ const MP = {
     probed: false,
     probing: null,
     probeGen: 0,           // 登入／登出時 +1，讓舊的重算結果作廢
-    updated: null,          // 按過「更新期限」的結果 { ext, changed:[] }
+    updated: null,          // 按過「更新活動」的結果 { ext, changed:[] }
     search: '',
     editKey: null,
     exp: { fits: true, capacity: 0 },
@@ -300,7 +300,7 @@ function mpArrange(groups, sort) {
 }
 
 // ============================================
-// 失效檢查與「更新期限」
+// 失效檢查與「更新活動」
 // ============================================
 // 用站上同一支 calculateCardCashback() 重算：拿配對的卡片＋商家到最新資料裡找目前的活動。
 // 只讀不寫；級別透過 getCardLevel() 讀用戶存的值，絕不回寫（鐵則 1）。
@@ -721,7 +721,7 @@ function mpReceiptHtml(sections, o) {
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? `<div class="mp-note"><b>*</b> 活動已結束或有更動。${o.editing ? '點商家名稱可以移除' : '按「編輯本頁」後點商家名稱可以移除'}。記得回網站更新最新活動！</div>` : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span>${o.editing ? `<button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span></button>` : `<span class="mp-title" id="mp-title-btn">${esc(mpTitle())}</span>`}</div>
+        <div class="mp-rc-head">${o.upd ? `<button type="button" class="mp-upd" id="mp-update-btn" title="用最新活動資料重新比對：回饋率沒變的自動延長期限，回饋率變了的列出來提醒你" ${MP.updated ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '已是最新' : '更新活動'}</button>` : ''}<span class="mp-store">${esc(mpMonthLabel())}</span>${o.editing ? `<button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span></button>` : `<span class="mp-title" id="mp-title-btn">${esc(mpTitle())}</span>`}</div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         ${o.summary ? mpTotalsHtml() : ''}
@@ -810,8 +810,6 @@ function mpRender() {
             ${mpCardNamesChk('mp-cardnames-toggle', p)}
             ${mpCapsChk('mp-caps-toggle', p)}
             ${mpSummaryChk('mp-summary-toggle', p)}
-            <span class="mp-grow"></span>
-            <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
 
     // 編輯模式：設定、提示列、拖曳把手只在按「編輯」後出現；預設只看乾淨的小抄＋搜尋框
@@ -882,6 +880,7 @@ function mpRender() {
     list.innerHTML = mpReceiptHtml(sections, {
         layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, cardNames: p.cardNames, summary: p.summary, big: p.size === 'large',
         editing: MP.editing,   // 編輯中：標題旁顯示鉛筆（只在網頁上，存圖不畫）
+        upd: !!currentUser,    // 小抄右上角「更新活動」（2026-09-30 起不藏在編輯裡；範例清單不顯示，因為不能存）
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();

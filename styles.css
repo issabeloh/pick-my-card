@@ -9356,7 +9356,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 51% repeat-x, conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/12px 51% repeat-x;
 }
 .mp-rc.lg { --fs: 17px; --rs: 16px; --ds: 12px; --rowpad: 9px; --lab: 11px; --thw: 32px; --thh: 20px; --c2: 58px; --c3: 58px; }
-.mp-rc-head { text-align: center; display: grid; gap: 2px; }
+.mp-rc-head { text-align: center; display: grid; gap: 2px; position: relative; }
+/* 「更新活動」釘在小抄右上角（與月份同一行），不佔標題的置中位置 */
+.mp-rc-head .mp-upd { position: absolute; top: -4px; right: 0; padding: 3px 9px; font-size: 12px; gap: 4px; }
+.mp-rc-head .mp-upd svg { width: 12px; height: 12px; }
 .mp-store { font: 700 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .24em; color: var(--sub); }
 .mp-title { font-size: 18px; font-weight: 900; letter-spacing: .18em; }
 .mp-title-btn { border: 0; background: none; color: inherit; font-family: inherit; padding: 0 0 0 .18em; cursor: pointer; justify-self: center; border-bottom: 1px dashed transparent; }
