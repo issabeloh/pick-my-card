@@ -346,6 +346,8 @@ const PAIRS = [
   await pg.fill('#mp-title-input', '小明的刷卡表');
   await pg.dispatchEvent('#mp-title-input', 'input');
   await pg.click('#mp-title-save');
+  const pen = await pg.evaluate(() => { const on = !!document.querySelector('#mp-title-btn .mp-title-pen'); MP.editing = false; mpRender(); const off = !document.querySelector('#mp-title-btn .mp-title-pen'); MP.editing = true; mpRender(); return { on, off }; });
+  check('編輯模式時小抄標題旁有鉛筆，平常沒有', pen.on && pen.off, JSON.stringify(pen));
   const tt = await pg.evaluate(() => ({ shown: document.getElementById('mp-title-btn').textContent, saved: (globalThis.__setDocs || []).some(d => d.data.mappingsTitle === '小明的刷卡表'), oneLine: document.getElementById('mp-title-btn').getBoundingClientRect().height < 40 }));
   check('標題更新、存雲端、維持一行', tt.shown === '小明的刷卡表' && tt.saved && tt.oneLine, JSON.stringify(tt));
 

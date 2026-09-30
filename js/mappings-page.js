@@ -668,7 +668,7 @@ function mpReceiptHtml(sections, o) {
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}</button></div>
+        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}${o.editing ? `<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span>` : ''}</button></div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         ${o.summary ? mpTotalsHtml() : ''}
@@ -823,6 +823,7 @@ function mpRender() {
     const sections = mpArrange(groups, p.sort);
     list.innerHTML = mpReceiptHtml(sections, {
         layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, summary: p.summary, big: p.size === 'large',
+        editing: MP.editing,   // 編輯中：標題旁顯示鉛筆（只在網頁上，存圖不畫）
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();

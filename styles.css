@@ -9326,6 +9326,9 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-title { font-size: 18px; font-weight: 900; letter-spacing: .18em; }
 .mp-title-btn { border: 0; background: none; color: inherit; font-family: inherit; padding: 0 0 0 .18em; cursor: pointer; justify-self: center; border-bottom: 1px dashed transparent; }
 .mp-title-btn:hover { border-bottom-color: var(--rule); }
+/* 編輯模式：標題旁的鉛筆，提示可以改標題；letter-spacing 歸零避免鉛筆被推太遠 */
+.mp-title-pen { display: inline-block; margin-left: .1em; letter-spacing: 0; color: var(--sub); vertical-align: .1em; }
+.mp-title-pen svg { width: .62em; height: .62em; display: block; }
 .mp-rc.lg .mp-title { font-size: 21px; }
 .mp-eq { font: 500 10px/1 ui-monospace, Menlo, monospace; color: var(--sub); white-space: nowrap; overflow: hidden; margin: 7px 0 2px; }
 .mp-colhead {
