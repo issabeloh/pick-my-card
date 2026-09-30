@@ -524,9 +524,12 @@ function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
 // 需要解釋加總的來源（如 5% = 3%+1%+1%）；其他模型 rate 即總率，不顯示按鈕。
 // 組成資料以 JSON 存在按鈕的 data-comp，點擊由 toggleRateComposition 展開抽屜。
 const CALC_BREAKDOWN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
-function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+// 成分表（[{ name, rate, cap }]）：stacking 模型各成分的率與上限，不含金額。
+// 「回饋組成」抽屜與「消費上限」顯示（resolveDisplayCap）共用同一份推導，
+// 兩處不會各算各的。非 stacking 模型回空陣列（rate_N 本身即總率、無成分可拆）。
+function buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
-    if (!model || !model.includes('+')) return '';
+    if (!model || !model.includes('+')) return [];
     // 海外偵測含 overseasCashback（海外基準 token）——理由與三處同步規則見 getDisplayRate。
     const isOverseas = model.includes('overseasBonusRate') || model.includes('overseasCashback');
     // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出時才顯示——
@@ -544,6 +547,35 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
     resolveCrossSlotLayers(card, model, levelSettings).forEach(layer => {
         if (layer.rate > 0) rows.push({ name: layer.name, rate: layer.rate, cap: layer.cap });
     });
+    return rows;
+}
+
+// 一組「層」（成分表 rows 或計算層 layers，兩者都有 .cap）裡真的會咬到的上限：
+// 取最小的正值上限；全部無上限（或沒有層）回 null＝無上限。
+function minPositiveCap(layers) {
+    const caps = (layers || []).map(l => l && l.cap).filter(c => c != null && c > 0);
+    return caps.length > 0 ? Math.min(...caps) : null;
+}
+
+// 顯示用的「消費上限」（2026-09-30）：槽位自己的 cap 為空時，不代表真的無上限——
+// stacking 模型的加碼層有自己的上限（大戶卡 slot22 的 4% 海外加碼受該級別
+// overseasBonusCap = 25,000 限制，計算時 calculateStackedCashback Layer 2 確實有套），
+// 而骨幹槽的標準配方就是 cap 留空（cashback-engine.md 第 5 節），於是那一格一路顯示
+// 「無上限」——算對、只有顯示騙人。這裡改成從成分表取實際會咬到的上限。
+// ⚠️ 純顯示：計算完全不經過這裡（槽位 cap 仍只餵「指定通路加碼」層）。
+function resolveDisplayCap(card, rateGroup, parsedCap, levelSettings) {
+    if (parsedCap != null && parsedCap > 0) return parsedCap;
+    return minPositiveCap(buildRateCompositionRows(card, rateGroup, 0, null, levelSettings));
+}
+
+// 搜尋結果卡用的同一件事：計算層（calculateStackedCashback／calculateLayeredCashback
+// 產出的 layers）已經帶著每層實際套用的 cap，直接取最小正值即可，不必重推成分。
+function resolveDisplayCapFromLayers(layers) {
+    return minPositiveCap(layers);
+}
+
+function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+    const rows = buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap, levelSettings);
     if (rows.length < 2) return '';
 
     const total = Math.round(rows.reduce((s, r) => s + r.rate, 0) * 100) / 100;
@@ -566,16 +598,22 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
         if (status !== 'active' && status !== 'always' && status !== 'upcoming') continue;
 
         const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
-        // cap 留空＝無上限，與搜尋結果/計算引擎一致。（2026-07-17 移除 capFallbackToLevel：
-        // 舊 fallback 會把留空的槽顯示成級別 cap，需要級別 cap 的槽請明確填 {cap}）
+        // 槽位自己的 cap＝「指定通路加碼」層的上限，留空就是這一層無上限。
+        // （2026-07-17 移除 capFallbackToLevel：舊 fallback 會把留空的槽顯示成級別
+        // 的 cap 欄位——那是張冠李戴；需要級別 cap 的指定通路槽請明確填 {cap}。
+        // 2026-09-30 起顯示改走 resolveDisplayCap：不是回頭猜，而是取計算真的套到的
+        // 加碼層上限，見下一行。）
         const parsedCap = parseCashbackCap(rate.cap, card, levelData);
+        // cap 留空的 stacking 槽改顯示加碼層的實際上限（見 resolveDisplayCap）；
+        // parsedCap 本身不動——「回饋組成」按鈕要的是這個槽自己的指定通路上限。
+        const displayCap = resolveDisplayCap(card, rate, parsedCap, levelData);
         const displayRate = getDisplayRate(card, rate, parsedRate, levelData);
 
         if (status === 'upcoming') {
             if (isUpcomingWithinDays(rate.periodStart, 30)) {
                 upcoming.push({
                     parsedRate: displayRate,
-                    parsedCap,
+                    parsedCap: displayCap,
                     items: rate.items || [],
                     conditions: rate.conditions ? [{ category: rate.category || '', conditions: rate.conditions }] : [],
                     period: rate.period,
@@ -587,7 +625,7 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
             }
             continue;
         }
-        activeRates.push({ rate, parsedRate, parsedCap, displayRate });
+        activeRates.push({ rate, parsedRate, parsedCap, displayCap, displayRate });
     }
 
     // 按顯示回饋率（加總後）由高到低排序
@@ -595,7 +633,7 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
 
     let html = '';
     activeRates.forEach((entry, index) => {
-        const { rate, parsedRate, parsedCap, displayRate } = entry;
+        const { rate, parsedRate, parsedCap, displayCap, displayRate } = entry;
         html += `<div class="cashback-detail-item">`;
 
         const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
@@ -617,8 +655,8 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
             html += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
         }
 
-        if (parsedCap) {
-            html += `<div class="cashback-condition">消費上限: NT$${Math.floor(parsedCap).toLocaleString()}</div>`;
+        if (displayCap) {
+            html += `<div class="cashback-condition">消費上限: NT$${Math.floor(displayCap).toLocaleString()}</div>`;
         } else {
             html += `<div class="cashback-condition">消費上限: 無上限</div>`;
         }

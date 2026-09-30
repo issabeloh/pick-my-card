@@ -538,7 +538,8 @@ basicCashbackDiv.innerHTML = basicContent;
                 return {
                     // stacking 模型顯示加總後的回饋率（與進行中活動一致）
                     parsedRate: getDisplayRate(card, rate, parsedRate, null),
-                    parsedCap,
+                    // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
+                    parsedCap: resolveDisplayCap(card, rate, parsedCap, null),
                     items: rate.items || [],
                     conditions: rate.conditions ? [{category: rate.category || '', conditions: rate.conditions}] : [],
                     period: rate.period,
@@ -563,6 +564,9 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
+            // 顯示用上限：cap 留空的 stacking 槽改顯示加碼層的實際上限（見 resolveDisplayCap）。
+            // parsedCap 本身不動——「回饋組成」按鈕要的是這個槽自己的指定通路上限。
+            const displayCap = resolveDisplayCap(card, rate, parsedCap, null);
 
             // Display rate with category in parentheses (with black color for consistency)
             const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
@@ -585,11 +589,11 @@ basicCashbackDiv.innerHTML = basicContent;
                 specialContent += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
             }
 
-            if (parsedCap) {
+            if (displayCap) {
                 if (rate.capDescription && card.id === 'taishin-richart') {
                     specialContent += `<div class="cashback-condition">消費上限: ${rate.capDescription}</div>`;
                 } else {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
+                    specialContent += `<div class="cashback-condition">消費上限: NT$${displayCap.toLocaleString()}</div>`;
                 }
             } else {
                 specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
@@ -1256,7 +1260,8 @@ async function generateCubeSpecialContent(card) {
                 // First time seeing this rate+category+period combination
                 mergedActiveRates.set(mergeKey, {
                     parsedRate,
-                    parsedCap,
+                    // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
+                    parsedCap: resolveDisplayCap(card, rate, parsedCap, levelSettings),
                     items: rate.items ? [...rate.items] : [],
                     conditions: rate.conditions || '',
                     registerLink: rate.registerLink || '',
