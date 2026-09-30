@@ -1527,12 +1527,27 @@ function mpExportOpts() {
     return { layout: x.layout, labels: x.layout === 'F' && x.labels, caps: x.caps, cardNames: x.cardNames, summary: x.summary, big: x.size === 'large', sort: x.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
+// 桌布扣掉上方時鐘、下方手電筒／相機鈕後，收據可用的高度（與 mpRenderCanvas 同算法）
+function mpWallAvail(o) {
+    const baseH = MP_BASE_W * o.wall.h / o.wall.w;
+    return baseH - Math.round(baseH * MP_WALL_TOP) - baseH * MP_WALL_BOTTOM;
+}
+
+// 桌布放不下時：逐一試「只關掉某個有勾的選項」能不能放下，回傳能放下的做法文字（給提示用，不改任何設定）
+function mpWallFixOptions(sel) {
+    const c = document.createElement('canvas').getContext('2d');
+    const o = mpExportOpts(), avail = mpWallAvail(o), sections = mpExportSections(sel);
+    return [['summary', '取消「顯示卡數與額度總和」'], ['cardNames', '取消「顯示卡片名稱」'], ['caps', '取消「顯示活動封頂金額」'], ['labels', '取消「顯示等級／方案」'], ['big', '字級改成小字']]
+        .filter(([k]) => o[k])
+        .filter(([k]) => mpLayoutReceipt(c, sections, { ...o, [k]: false }).height <= avail)
+        .map(([, label]) => label);
+}
+
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
 function mpWallCapacity(pool) {
     const c = document.createElement('canvas').getContext('2d');
     const o = mpExportOpts();
-    const baseH = MP_BASE_W * o.wall.h / o.wall.w;
-    const avail = baseH - Math.round(baseH * MP_WALL_TOP) - baseH * MP_WALL_BOTTOM;
+    const avail = mpWallAvail(o);
     let n = 0;
     for (let i = 1; i <= pool.length; i++) {
         const lay = mpLayoutReceipt(c, mpExportSections(pool.slice(0, i).map(g => g.key)), o);
@@ -1631,7 +1646,13 @@ async function mpRenderExport() {
     const expTip = mpEl('mp-exp-tip');
     if (expTip) expTip.hidden = p.fmt !== 'wall';
     if (p.fmt === 'wall') {
-        meta.textContent = fits ? `手機桌布 ${size.label} ${canvas.width}×${canvas.height}・${sel.length} 家` : '超出一個螢幕了，請少勾幾家，或改存長圖';
+        if (fits) meta.textContent = `手機桌布 ${size.label} ${canvas.width}×${canvas.height}・${sel.length} 家`;
+        else {
+            const fix = mpWallFixOptions(sel);
+            meta.textContent = fix.length
+                ? `超出一個螢幕了：${fix.join('，或')}就放得下；也可以少勾幾家，或改存長圖`
+                : '超出一個螢幕了，請少勾幾家，或改存長圖';
+        }
         meta.classList.toggle('over', !fits);
         saveBtn.disabled = !fits;
     } else {

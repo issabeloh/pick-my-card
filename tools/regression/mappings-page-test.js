@@ -612,6 +612,18 @@ const PAIRS = [
   });
   check('桌布：收據在時鐘下方、手電筒／相機鈕上方', band.top >= 0.27 && band.bottom <= 0.86, `上緣 ${(band.top * 100).toFixed(1)}%／下緣 ${(band.bottom * 100).toFixed(1)}%`);
   check('桌布預設勾選「放得下的前 N 家」且放得下', img.sel === Math.min(img.cap, img.pool) && img.fits, `選 ${img.sel}／上限 ${img.cap}／可選 ${img.pool}`);
+  // 已勾到上限時再打開「顯示卡數與額度總和」→ 超出；提示要點名「取消哪個勾選就放得下」，不只叫人少勾商家
+  const over = await pg.evaluate(async () => {
+    const keep = { sel: MP.prefs.sel, summary: MP.prefs.x.summary, caps: MP.prefs.x.caps, cardNames: MP.prefs.x.cardNames };
+    MP.prefs.sel = mpExportSelection(mpExportPool());
+    const tryOn = async opts => { Object.assign(MP.prefs.x, opts); await mpRenderExport(); return { fits: MP.exp.fits, msg: document.getElementById('mp-exp-meta').textContent }; };
+    let r = await tryOn({ summary: true });
+    if (r.fits) r = await tryOn({ summary: true, caps: true, cardNames: true });
+    const plain = mpLayoutReceipt(document.createElement('canvas').getContext('2d'), mpExportSections(MP.prefs.sel), { ...mpExportOpts(), summary: false, caps: false, cardNames: false }).height <= mpWallAvail(mpExportOpts());
+    Object.assign(MP.prefs, { sel: keep.sel }); Object.assign(MP.prefs.x, { summary: keep.summary, caps: keep.caps, cardNames: keep.cardNames }); await mpRenderExport();
+    return { ...r, plain };
+  });
+  check('桌布超出時：提示點名取消哪個勾選就放得下', !over.fits && over.plain && /^超出一個螢幕了：取消「顯示/.test(over.msg) && /少勾幾家，或改存長圖$/.test(over.msg), JSON.stringify(over));
   const fold = await pg.evaluate(() => ({ collapsed: getComputedStyle(document.getElementById('mp-picks')).display === 'none', chev: getComputedStyle(document.querySelector('.mp-chev')).display !== 'none',
     previewTop: document.getElementById('mp-exp-preview-pane').getBoundingClientRect().top, vh: innerHeight }));
   check('手機：「要放進圖片的商家」預設收合、有箭頭；不用往下捲就看得到預覽區', fold.collapsed && fold.chev && fold.previewTop < fold.vh, JSON.stringify(fold));
