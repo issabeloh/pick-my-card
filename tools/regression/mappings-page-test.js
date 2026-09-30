@@ -660,7 +660,7 @@ const PAIRS = [
     await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; });
     await pg.screenshot({ path: path.join(SHOTS, 'home-switch-iphone13.png') });
   }
-  // 一次性改版提示：登入後按鈕飛進頁籤＋氣泡，每個瀏覽器 2 次
+  // 一次性改版提示：登入後頁籤下方冒出說明氣泡，每個瀏覽器 2 次
   const hp = await newPage(VIEWPORTS[1], '/index.html?start&hinttest');
   const seen = [];
   for (let k = 0; k < 3; k++) {
@@ -671,7 +671,8 @@ const PAIRS = [
     if (got && SHOTS && k === 0) await hp.screenshot({ path: path.join(SHOTS, 'moved-hint-iphone13.png') });
   }
   check('提示氣泡不擋點擊（點得到底下的東西）', seen[0].passThrough === true, JSON.stringify(seen[0]));
-  check('登入後一次性提示：前兩次出現（按鈕飛進頁籤＋氣泡），第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
+  check('登入後一次性提示：只有說明氣泡（沒有飛入動畫）', await hp.evaluate(() => !document.querySelector('.mp-fly')));
+  check('登入後一次性提示：前兩次出現氣泡，第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
   await hp.click('#home-view-switch-mappings');
   await hp.waitForSelector('#mappings-page:not([hidden])');
   const note = await hp.evaluate(() => { const n = document.getElementById('mp-moved-note'); return { shown: !n.hidden, text: n.textContent.trim(), top: n.getBoundingClientRect().top <= document.querySelector('.mp-intro').getBoundingClientRect().top, beta: document.querySelector('.mp-beta-note').textContent }; });

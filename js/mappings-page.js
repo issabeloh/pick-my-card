@@ -600,8 +600,8 @@ function refreshMappingsEntry() {
 }
 
 // ============================================
-// 一次性改版提示（2026-09-30）：登入後，一顆「加到我的小抄」按鈕跳進「我的刷卡小抄」頁籤，
-// 頁籤彈一下並冒出說明氣泡。每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
+// 一次性改版提示（2026-09-30）：登入後在「我的刷卡小抄」頁籤下方冒出說明氣泡（站長決定不要飛入動畫）。
+// 每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
 // ============================================
 const MP_HINT_KEY = 'mpMovedHintCount';
 const MP_HINT_TIMES = 2;
@@ -620,47 +620,22 @@ function mpShowMovedHint(attempt = 0) {
     if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
     try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
 
-    const land = () => {
-        if (MP.open || !currentUser) return;   // 飛行途中用戶已點進頁籤或登出了
-        tab.classList.add('mp-tab-bump');
-        setTimeout(() => tab.classList.remove('mp-tab-bump'), 700);
-        const bubble = document.createElement('div');
-        bubble.className = 'mp-hint-bubble';
-        bubble.setAttribute('role', 'status');
-        bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
-        document.body.appendChild(bubble);
-        const r = tab.getBoundingClientRect();
-        const w = Math.min(280, innerWidth - 24);
-        bubble.style.width = w + 'px';
-        bubble.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
-        bubble.style.top = (r.bottom + 10) + 'px';
-        bubble.style.setProperty('--arrow-x', (r.left + r.width / 2 - parseFloat(bubble.style.left)) + 'px');
-        // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
-        const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
-        bubble.querySelector('button').addEventListener('click', close);
-        document.addEventListener('pointerdown', close, true);
-        window.addEventListener('scroll', close, { once: true, passive: true });
-        setTimeout(close, 6000);
-    };
-
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || !Element.prototype.animate) { land(); return; }
-    // 起點：畫面中間偏下（查詢結果卡片上按鈕的大概位置）；終點：頁籤中心
-    const fly = document.createElement('span');
-    fly.className = 'pin-btn mp-fly';
-    fly.setAttribute('aria-hidden', 'true');
-    fly.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>';
-    document.body.appendChild(fly);
-    const fw = fly.offsetWidth, fh = fly.offsetHeight;
-    const sx = innerWidth / 2 - fw / 2, sy = Math.min(innerHeight * 0.62, tr.bottom + 260);
-    const ex = tr.left + tr.width / 2 - fw / 2, ey = tr.top + tr.height / 2 - fh / 2;
-    const mx = (sx + ex) / 2, my = Math.min(sy, ey) - 90;   // 拋物線頂點
-    fly.animate([
-        { transform: `translate(${sx}px, ${sy}px) scale(1)`, opacity: 0 },
-        { transform: `translate(${sx}px, ${sy - 8}px) scale(1.12)`, opacity: 1, offset: 0.18 },
-        { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: 0.6 },
-        { transform: `translate(${ex}px, ${ey}px) scale(.45)`, opacity: 0.2 }
-    ], { duration: 1100, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' }).onfinish = () => { fly.remove(); land(); };
+    const bubble = document.createElement('div');
+    bubble.className = 'mp-hint-bubble';
+    bubble.setAttribute('role', 'status');
+    bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
+    document.body.appendChild(bubble);
+    const w = Math.min(280, innerWidth - 24);
+    bubble.style.width = w + 'px';
+    bubble.style.left = Math.max(12, Math.min(tr.left + tr.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+    bubble.style.top = (tr.bottom + 10) + 'px';
+    bubble.style.setProperty('--arrow-x', (tr.left + tr.width / 2 - parseFloat(bubble.style.left)) + 'px');
+    // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
+    const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
+    bubble.querySelector('button').addEventListener('click', close);
+    document.addEventListener('pointerdown', close, true);
+    window.addEventListener('scroll', close, { once: true, passive: true });
+    setTimeout(close, 6000);
 }
 
 // ============================================
