@@ -118,7 +118,7 @@ const PAIRS = [
     pg.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) console.log('   CONSOLE ERROR:', m.text()); });
     await pg.addInitScript(freezeClockScript(META.frozenDate));
     // 問卷邀請彈窗會擋住點擊，測試裡當作已經看過
-    await pg.addInitScript(() => { try { localStorage.setItem('pmc_survey_invite_seen_v1', 'dismissed'); } catch (e) {} });
+    await pg.addInitScript(() => { try { localStorage.setItem('pmc_survey_invite_seen_v1', 'dismissed'); if (!location.search.includes('hinttest')) localStorage.setItem('mpMovedHintCount', '2'); } catch (e) {} });
     await pg.route('**/*', route => {
       const u = route.request().url();
       if (u.startsWith(base)) return route.continue();
@@ -648,6 +648,22 @@ const PAIRS = [
     await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; });
     await pg.screenshot({ path: path.join(SHOTS, 'home-switch-iphone13.png') });
   }
+  // 一次性改版提示：登入後按鈕飛進頁籤＋氣泡，每個瀏覽器 2 次
+  const hp = await newPage(VIEWPORTS[1], '/index.html?start&hinttest');
+  const seen = [];
+  for (let k = 0; k < 3; k++) {
+    if (k) await hp.reload();
+    const got = await hp.waitForSelector('.mp-hint-bubble', { timeout: 6000 }).then(() => true).catch(() => false);
+    seen.push({ got, count: await hp.evaluate(() => localStorage.getItem('mpMovedHintCount')), text: got ? await hp.textContent('.mp-hint-bubble span') : '' });
+    if (got && SHOTS && k === 0) await hp.screenshot({ path: path.join(SHOTS, 'moved-hint-iphone13.png') });
+  }
+  check('登入後一次性提示：前兩次出現（按鈕飛進頁籤＋氣泡），第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
+  await hp.click('#home-view-switch-mappings');
+  await hp.waitForSelector('#mappings-page:not([hidden])');
+  const note = await hp.evaluate(() => { const n = document.getElementById('mp-moved-note'); return { shown: !n.hidden, text: n.textContent.trim(), top: n.getBoundingClientRect().top <= document.querySelector('.mp-intro').getBoundingClientRect().top, beta: document.querySelector('.mp-beta-note').textContent }; });
+  check('刷卡小抄頁最上方有改版備註（登入用戶）；Beta 文字為「最後測試中」', note.shown && note.top && note.text === '原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。' && note.beta.includes('最後測試中'), JSON.stringify(note));
+  await hp.context().close();
+
   // ============ E. 未登入 ============
   console.log('\n【E】未登入');
   const gp = await newPage(VIEWPORTS[1], '/index.html?start', true);
@@ -657,6 +673,7 @@ const PAIRS = [
   await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
   const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login') }));
   check('未登入：不顯示「回報給我們」（回報表單只給登入用戶）', await gp.evaluate(() => document.getElementById('mp-feedback-wrap').hidden));
+  check('未登入：不顯示改版備註', await gp.evaluate(() => document.getElementById('mp-moved-note').hidden));
   check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
   await gp.click('#mp-edit-toggle');

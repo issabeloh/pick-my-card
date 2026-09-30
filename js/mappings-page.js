@@ -595,6 +595,64 @@ function refreshMappingsEntry() {
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
+    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
+}
+
+// ============================================
+// 一次性改版提示（2026-09-30）：登入後，一顆「加到我的小抄」按鈕跳進「我的刷卡小抄」頁籤，
+// 頁籤彈一下並冒出說明氣泡。每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
+// ============================================
+const MP_HINT_KEY = 'mpMovedHintCount';
+const MP_HINT_TIMES = 2;
+function mpShowMovedHint() {
+    if (!currentUser || MP.open || document.querySelector('.mp-hint-bubble')) return;
+    const n = Number(readLocalJSON(MP_HINT_KEY, 0)) || 0;
+    if (n >= MP_HINT_TIMES) return;
+    const tab = mpEl('home-view-switch-mappings');
+    if (!tab) return;
+    const tr = tab.getBoundingClientRect();
+    if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
+    try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
+
+    const land = () => {
+        tab.classList.add('mp-tab-bump');
+        setTimeout(() => tab.classList.remove('mp-tab-bump'), 700);
+        const bubble = document.createElement('div');
+        bubble.className = 'mp-hint-bubble';
+        bubble.setAttribute('role', 'status');
+        bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
+        document.body.appendChild(bubble);
+        const r = tab.getBoundingClientRect();
+        const w = Math.min(280, innerWidth - 24);
+        bubble.style.width = w + 'px';
+        bubble.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+        bubble.style.top = (r.bottom + 10) + 'px';
+        bubble.style.setProperty('--arrow-x', (r.left + r.width / 2 - parseFloat(bubble.style.left)) + 'px');
+        const close = () => bubble.remove();
+        bubble.querySelector('button').addEventListener('click', close);
+        tab.addEventListener('click', close, { once: true });
+        window.addEventListener('scroll', close, { once: true, passive: true });
+        setTimeout(close, 6000);
+    };
+
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !Element.prototype.animate) { land(); return; }
+    // 起點：畫面中間偏下（查詢結果卡片上按鈕的大概位置）；終點：頁籤中心
+    const fly = document.createElement('span');
+    fly.className = 'pin-btn mp-fly';
+    fly.setAttribute('aria-hidden', 'true');
+    fly.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>';
+    document.body.appendChild(fly);
+    const fw = fly.offsetWidth, fh = fly.offsetHeight;
+    const sx = innerWidth / 2 - fw / 2, sy = Math.min(innerHeight * 0.62, tr.bottom + 260);
+    const ex = tr.left + tr.width / 2 - fw / 2, ey = tr.top + tr.height / 2 - fh / 2;
+    const mx = (sx + ex) / 2, my = Math.min(sy, ey) - 90;   // 拋物線頂點
+    fly.animate([
+        { transform: `translate(${sx}px, ${sy}px) scale(1)`, opacity: 0 },
+        { transform: `translate(${sx}px, ${sy - 8}px) scale(1.12)`, opacity: 1, offset: 0.18 },
+        { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: 0.6 },
+        { transform: `translate(${ex}px, ${ey}px) scale(.45)`, opacity: 0.2 }
+    ], { duration: 1100, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' }).onfinish = () => { fly.remove(); land(); };
 }
 
 // ============================================
@@ -797,7 +855,8 @@ function mpRender() {
     const show = (el, on) => { if (el) el.hidden = !on; };
     // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
     show(guest, !currentUser);
-    show(mpEl('mp-feedback-wrap'), !!currentUser);   // 回報表單只給登入用戶（同頭像選單「回報錯誤」）
+    show(mpEl('mp-feedback-wrap'), !!currentUser);
+    show(mpEl('mp-moved-note'), !!currentUser);   // 改版告知只對登入用戶有意義（他們才有舊的釘選）   // 回報表單只給登入用戶（同頭像選單「回報錯誤」）
     const demoTag = mpEl('mp-demo-tag');
     if (demoTag) demoTag.hidden = !!currentUser;
     if (!currentUser && !MP.demo) {
