@@ -95,10 +95,7 @@ function setupAvatarDropdown() {
         'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openMyPaymentsModal(),
         'avatar-my-mappings': () => openMappingsPage(),
-        'avatar-feedback': () => {
-            const modal = document.getElementById('feedback-modal');
-            if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
-        },
+        'avatar-feedback': () => openFeedbackModal(),
         'avatar-delete-account': () => openDeleteAccountModal(),
         'avatar-sign-out': async () => {
             if (currentUser) {
@@ -751,6 +748,12 @@ async function loadMyOwnedCards(userData = null) {
 }
 
 // Save my-owned-cards to localStorage (always) and Firestore (if logged in).
+// 打開「🐛 回報問題 / 意見回饋」表單（頭像選單、刷卡小抄頁的「回報給我們」共用）
+function openFeedbackModal() {
+    const modal = document.getElementById('feedback-modal');
+    if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
+}
+
 async function saveMyOwnedCards() {
     const cardsArray = Array.from(myOwnedCards);
     notifyMappingsDataChanged();   // 刷卡小抄底部「持有信用卡／額度合計」跟著更新

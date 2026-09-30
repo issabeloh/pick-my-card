@@ -475,6 +475,18 @@ const PAIRS = [
   const orderSaved = await pg.evaluate(k => { const m = userSpendingMappings.filter(x => mpKeyOf(x) === k); const min = Math.min(...userSpendingMappings.map(x => x.order)); return m.length && m.every(x => x.order === min || x.order <= min + m.length - 1); }, before[2]);
   check('拖曳第 3 家到最上面，順序存檔', after[0] === before[2] && orderSaved, `${before.slice(0, 3).join(',')} → ${after.slice(0, 3).join(',')}`);
 
+  await pg.setViewportSize({ width: 430, height: 932 });
+  const tabs430 = await pg.evaluate(() => ({ a: document.getElementById('home-view-switch-search').getBoundingClientRect().height, b: document.getElementById('home-view-switch-mappings').getBoundingClientRect().height }));
+  // 選中的頁籤本來就比另一個高 2px（文件夾分頁）；擠成兩行時會差 20px 以上
+  check('430px（iPhone Pro Max）：Beta 不會把「我的刷卡小抄」擠成兩行', Math.abs(tabs430.a - tabs430.b) <= 4, JSON.stringify(tabs430));
+  await pg.setViewportSize({ width: 390, height: 844 });
+  const split = await pg.evaluate(() => { const g = mpBuildGroups().find(x => !x.dead); const e = { ...g.entries[0], labels: ['切換甲方案', '切換乙方案', '切換丙方案', '切換丁方案', '切換戊方案'], cap: '消費上限 NT$300,000+' };
+    const c = document.createElement('canvas').getContext('2d'); const lay = mpLayoutReceipt(c, [{ key: null, title: null, items: [{ ...g, entries: [e] }] }], { ...mpExportOpts(), layout: 'F', labels: true, caps: true, cardNames: true, fmt: 'wall', big: false });
+    const cn = lay.ops.find(o => o.t === 'text' && o.text === mpCardName(e.m.cardId, e.m.cardName)); const lab = lay.ops.find(o => o.t === 'lab');
+    const row2 = lay.ops.filter(o => o === cn || o.t === 'lab' || (o.t === 'text' && o.text === e.cap));
+    return { rows: new Set(row2.map(o => Math.round(o.t === 'lab' ? o.y + o.h / 2 : o.y))).size, minX: Math.min(...row2.map(o => o.x)), x0: lay.x }; });
+  check('存圖：卡名＋很多標籤＋封頂金額放不下一行時自動換行，不會畫出收據外', split.rows >= 2 && split.minX >= split.x0, JSON.stringify(split));
+
   // ============ B. 各尺寸 × 版面 × 字級 ============
   console.log('\n【B】版面（手機／平板／桌機 × 單欄／雙欄 × 小字／大字）');
   if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
@@ -654,9 +666,11 @@ const PAIRS = [
   for (let k = 0; k < 3; k++) {
     if (k) await hp.reload();
     const got = await hp.waitForSelector('.mp-hint-bubble', { timeout: 6000 }).then(() => true).catch(() => false);
-    seen.push({ got, count: await hp.evaluate(() => localStorage.getItem('mpMovedHintCount')), text: got ? await hp.textContent('.mp-hint-bubble span') : '' });
+    seen.push({ got, count: await hp.evaluate(() => localStorage.getItem('mpMovedHintCount')), text: got ? await hp.textContent('.mp-hint-bubble span') : '',
+      passThrough: got ? await hp.evaluate(() => { const b = document.querySelector('.mp-hint-bubble span').getBoundingClientRect(); const el = document.elementFromPoint(b.left + 10, b.top + b.height / 2); return !!el && !el.closest('.mp-hint-bubble'); }) : null });
     if (got && SHOTS && k === 0) await hp.screenshot({ path: path.join(SHOTS, 'moved-hint-iphone13.png') });
   }
+  check('提示氣泡不擋點擊（點得到底下的東西）', seen[0].passThrough === true, JSON.stringify(seen[0]));
   check('登入後一次性提示：前兩次出現（按鈕飛進頁籤＋氣泡），第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
   await hp.click('#home-view-switch-mappings');
   await hp.waitForSelector('#mappings-page:not([hidden])');

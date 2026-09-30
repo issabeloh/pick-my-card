@@ -595,7 +595,8 @@ function refreshMappingsEntry() {
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
-    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
+    if (currentUser && MP.pendingFeedback) { MP.pendingFeedback = false; setTimeout(openFeedbackModal, 300); }
+    else if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
 }
 
 // ============================================
@@ -604,10 +605,15 @@ function refreshMappingsEntry() {
 // ============================================
 const MP_HINT_KEY = 'mpMovedHintCount';
 const MP_HINT_TIMES = 2;
-function mpShowMovedHint() {
+function mpAnyModalOpen() {
+    return [...document.querySelectorAll('.modal')].some(m => getComputedStyle(m).display !== 'none');
+}
+function mpShowMovedHint(attempt = 0) {
     if (!currentUser || MP.open || document.querySelector('.mp-hint-bubble')) return;
     const n = Number(readLocalJSON(MP_HINT_KEY, 0)) || 0;
     if (n >= MP_HINT_TIMES) return;
+    // 登入後常有其他視窗（問卷邀請等）同時跳出 → 等它們關掉再播，最多等約 30 秒；沒播出來就不扣次數
+    if (mpAnyModalOpen()) { if (attempt < 20) setTimeout(() => mpShowMovedHint(attempt + 1), 1500); return; }
     const tab = mpEl('home-view-switch-mappings');
     if (!tab) return;
     const tr = tab.getBoundingClientRect();
@@ -615,6 +621,7 @@ function mpShowMovedHint() {
     try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
 
     const land = () => {
+        if (MP.open || !currentUser) return;   // 飛行途中用戶已點進頁籤或登出了
         tab.classList.add('mp-tab-bump');
         setTimeout(() => tab.classList.remove('mp-tab-bump'), 700);
         const bubble = document.createElement('div');
@@ -628,9 +635,10 @@ function mpShowMovedHint() {
         bubble.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
         bubble.style.top = (r.bottom + 10) + 'px';
         bubble.style.setProperty('--arrow-x', (r.left + r.width / 2 - parseFloat(bubble.style.left)) + 'px');
-        const close = () => bubble.remove();
+        // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
+        const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
         bubble.querySelector('button').addEventListener('click', close);
-        tab.addEventListener('click', close, { once: true });
+        document.addEventListener('pointerdown', close, true);
         window.addEventListener('scroll', close, { once: true, passive: true });
         setTimeout(close, 6000);
     };
@@ -683,9 +691,12 @@ function mpDueText(e) {
 
 function mpIsHot(e) { return !e.dead && e.days !== null && e.days >= 0 && e.days <= 7; }
 
+// 卡名查表（Cards Data 的 name）；cardsData 換新時重建
+let mpCardNameMap = null, mpCardNameSrc = null;
 function mpCardName(cardId, fallback) {
-    const c = cardsData && cardsData.cards ? cardsData.cards.find(x => x.id === cardId) : null;
-    return (c && c.name) || fallback || '';
+    const cards = cardsData && cardsData.cards;
+    if (cards && cards !== mpCardNameSrc) { mpCardNameSrc = cards; mpCardNameMap = new Map(cards.map(c => [c.id, c.name])); }
+    return (mpCardNameMap && mpCardNameMap.get(cardId)) || fallback || '';
 }
 
 // 單據「合計」區：左標籤、點狀引線、右數字（點一下打開「我的信用卡」）
@@ -727,7 +738,7 @@ function mpReceiptHtml(sections, o) {
         body = `<div class="mp-e-grid">${sections.map(s => sec(s) + s.items.map(g => `<div class="mp-e-cell${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-e-name">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-e-line${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}">${thumb(e)}${rate(e)}${flag(e)}${due(e)}</div>${eExtra(e)}`).join('')}</div>`).join('')).join('')}</div>`;
     } else {
         body = '<div class="mp-colhead"><span>商家</span><span class="mp-cols"><span>卡</span><span>回饋</span><span>期限</span></span></div>' +
-            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${row2(e) ? ' has-row2' : ''}">${row2(e) ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${row2(e)}${row2(e) ? flag(e) : ''}</div>`).join('')}</div>`).join('')).join('');
+            sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => { const r2 = row2(e); return `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${r2 ? ' has-row2' : ''}">${r2 ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${r2}${r2 ? flag(e) : ''}</div>`; }).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
     const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
@@ -1291,10 +1302,31 @@ function mpLayoutReceipt(ctx, groupsSections, o) {
                         const push = i === 0 && lines.length > 1 && r2w > colsW + 4 ? Math.max(0, nameBottom - (y + step)) : 0;
                         y += step + push;
                         const rowH = Math.max(S.labRow, S.due + 8);
-                        let rx = IX + IW;
-                        if (capT) { ops.push({ t: 'text', text: capT, x: rx, y: y + rowH / 2 + S.due * 0.36 - 2, font: capF, color: 'sub', align: 'right', alpha }); rx -= cw + 6; }
-                        if (labels.length) { drawLabels(labels, rx, y + rowH / 2 - 2, alpha); rx -= lw + 6; }
-                        if (cnT) ops.push({ t: 'text', text: cnT, x: rx, y: y + rowH / 2 + (S.due + 1) * 0.36 - 2, font: cnF, color: 'sub', align: 'right', alpha });
+                        // [卡名][標籤…][封頂金額] 依序排，放不下就換行；每行靠右（與網頁 .mp-row2 的 flex-wrap 一致，絕不畫出收據外）
+                        const labF = font(700, S.lab, MP_MONO);
+                        ctx.font = labF;
+                        const items = [];
+                        if (cnT) items.push({ k: 'cn', w: nw, text: cnT });
+                        labels.forEach(l => items.push({ k: 'lab', w: ctx.measureText(l).width + 8, text: l }));
+                        if (capT) items.push({ k: 'cap', w: cw, text: capT });
+                        const rows = [[]];
+                        let used = 0;
+                        items.forEach(it => {
+                            const cur = rows[rows.length - 1];
+                            const add = (cur.length ? 6 : 0) + it.w;
+                            if (cur.length && used + add > IW) { rows.push([it]); used = it.w; } else { cur.push(it); used += add; }
+                        });
+                        rows.forEach((row, ri) => {
+                            const tot = row.reduce((sum, it, k) => sum + it.w + (k ? 6 : 0), 0);
+                            let x = IX + IW - tot;
+                            const mid = y + rowH / 2 - 2;
+                            row.forEach(it => {
+                                if (it.k === 'lab') ops.push({ t: 'lab', text: it.text, x, y: mid - (S.lab + 6) / 2, w: it.w, h: S.lab + 6, font: labF, alpha });
+                                else ops.push({ t: 'text', text: it.text, x, y: mid + (it.k === 'cn' ? S.due + 1 : S.due) * 0.36, font: it.k === 'cn' ? cnF : capF, color: 'sub', align: 'left', alpha });
+                                x += it.w + 6;
+                            });
+                            if (ri < rows.length - 1) y += rowH;
+                        });
                         y += rowH - step;
                     } else if (labels.length) {
                         if (labsBelow) {
@@ -1700,9 +1732,9 @@ function mpBind() {
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
         if (b.id === 'mp-feedback-btn') {
-            // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗
-            if (!currentUser) { if (typeof openAuthModal === 'function') openAuthModal('login'); return; }
-            const m = document.getElementById('feedback-modal'); if (m) { m.style.display = 'flex'; disableBodyScroll(); }
+            // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
+            if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }
+            openFeedbackModal();
             return;
         }
         if (b.hasAttribute('data-mp-help')) { if (document.getElementById('mp-help-pop')) mpCloseHelp(); else mpOpenHelp(b); return; }
