@@ -688,7 +688,10 @@ function mpTotalsHtml() {
 function mpReceiptHtml(sections, o) {
     const esc = escapeHtml;
     const star = g => g.dead ? '<span class="mp-star" aria-label="已失效">*</span>' : '';
-    const name = g => `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱">${esc(mpDisplayName(g))}${star(g)}${userMerchantAliases[g.key] ? `<span class="mp-pen">${MP_ICON.pen}</span>` : ''}</button>`;
+    // 商家名稱只有「編輯本頁」時可以點（改名／刪除），並顯示鉛筆；平常是純文字
+    const name = g => o.editing
+        ? `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱或刪除">${esc(mpDisplayName(g))}${star(g)}<span class="mp-pen">${MP_ICON.pen}</span></button>`
+        : `<span class="mp-nm">${esc(mpDisplayName(g))}${star(g)}</span>`;
     const grip = () => o.drag ? `<span class="mp-grip" data-mp-grip title="拖曳調整順序" aria-hidden="true">${MP_ICON.grip}</span>` : '';
     const thumb = e => `<button type="button" class="mp-cardbtn" data-mp-card="${esc(e.m.cardId)}" title="查看 ${esc(mpCardName(e.m.cardId, e.m.cardName))} 詳情"><img class="mp-th" src="assets/images/cards/${esc(e.m.cardId)}.png" alt="${esc(mpCardName(e.m.cardId, e.m.cardName))}" onerror="this.style.visibility='hidden'"></button>`;
     const due = e => `<span class="mp-due${mpIsHot(e) ? ' hot' : ''}${e.ext ? ' ext' : ''}">${esc(mpDueText(e))}</span>`;
@@ -716,9 +719,9 @@ function mpReceiptHtml(sections, o) {
             sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => { const r2 = row2(e); return `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${r2 ? ' has-row2' : ''}">${r2 ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${r2}${r2 ? flag(e) : ''}</div>`; }).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
-    const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
+    const note = anyDead ? `<div class="mp-note"><b>*</b> 活動已結束或有更動。${o.editing ? '點商家名稱可以移除' : '按「編輯本頁」後點商家名稱可以移除'}。記得回網站更新最新活動！</div>` : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}${o.editing ? `<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span>` : ''}</button></div>
+        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span>${o.editing ? `<button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span></button>` : `<span class="mp-title" id="mp-title-btn">${esc(mpTitle())}</span>`}</div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         ${o.summary ? mpTotalsHtml() : ''}
@@ -817,7 +820,7 @@ function mpRender() {
     if (editBtn) {
         // 圖示寫在 index.html，這裡只切換顯示與文字
         const t = editBtn.querySelector('.mp-edit-t'), pen = editBtn.querySelector('.mp-ico-pen'), ok = editBtn.querySelector('.mp-ico-ok');
-        if (t) t.textContent = MP.editing ? '完成' : '編輯'; else editBtn.textContent = MP.editing ? '完成' : '編輯';
+        if (t) t.textContent = MP.editing ? '完成' : '編輯本頁'; else editBtn.textContent = MP.editing ? '完成' : '編輯本頁';
         // SVG 沒有 .hidden 屬性，要用 attribute
         if (pen) pen.toggleAttribute('hidden', MP.editing);
         if (ok) ok.toggleAttribute('hidden', !MP.editing);
@@ -837,7 +840,7 @@ function mpRender() {
     }
 
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
-    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), savebar = mpEl('mp-savebar'), deadbarEl = mpEl('mp-deadbar');
+    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), deadbarEl = mpEl('mp-deadbar');
     const show = (el, on) => { if (el) el.hidden = !on; };
     // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
     show(guest, !currentUser);
@@ -846,14 +849,14 @@ function mpRender() {
     if (!currentUser && !MP.demo) {
         list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
         mpBuildDemo().then(() => { if (MP.open && !currentUser && MP.demo) { mpRender(); mpProbeAll(); } });
-        show(searchbox, false); show(savebar, false); show(deadbarEl, false); show(tip, false);
+        show(searchbox, false); show(deadbarEl, false); show(tip, false);
         return;
     }
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
     const countEl = mpEl('mp-count');
     if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `已加入 ${n} 家商家` : ''; }
-    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
+    show(searchbox, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
         show(deadbarEl, false); show(tip, false);
@@ -1706,6 +1709,11 @@ function mpBind() {
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
+        if (b.id === 'mp-intro-toggle') {
+            const steps = mpEl('mp-steps'), open = steps.hidden;
+            steps.hidden = !open; b.setAttribute('aria-expanded', String(open));
+            return;
+        }
         if (b.id === 'mp-feedback-btn') {
             // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
             if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }

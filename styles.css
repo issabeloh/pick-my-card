@@ -9207,7 +9207,12 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 /* 頁面說明卡：三步驟 */
 .mp-intro { max-width: 738px; margin: 0 auto 14px; background: linear-gradient(180deg, #eff6ff, #f7faff); border: 1px solid #dbeafe; border-radius: 16px; padding: 12px 14px; box-sizing: border-box; }
-.mp-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mp-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.mp-steps[hidden] { display: none; }
+/* 使用教學的收合鈕（預設收合） */
+.mp-intro-toggle { display: flex; align-items: center; gap: 6px; width: 100%; border: 0; background: none; padding: 0; margin: 0; font: inherit; font-size: 13.5px; font-weight: 800; color: #1e3a8a; cursor: pointer; text-align: left; }
+.mp-intro-toggle svg { width: 14px; height: 14px; transition: transform .2s ease; }
+.mp-intro-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
 /* 「新功能 Beta」標籤（頁籤、頭像選單、說明卡）：琥珀色系＝和「加到我的小抄」按鈕同一組顏色 */
@@ -9243,19 +9248,23 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-notice { order: 5; }
 .mp-demo-tag { order: 6; }
 .mp-paper { order: 7; }
-.mp-savebar { order: 8; }
 .mp-deadbar { order: 9; }
-.mp-actions { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 460px; margin: 0 auto 8px; box-sizing: border-box; padding: 0 2px; }
-.mp-count { flex: 1; font-size: 12.5px; font-weight: 700; color: #6b7280; }
+.mp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; width: 100%; max-width: 460px; margin: 0 auto 10px; box-sizing: border-box; padding: 0 2px; }
+.mp-act { display: grid; gap: 4px; justify-items: stretch; min-width: 0; }
+.mp-act-note { font-size: 11.5px; line-height: 1.4; color: #6b7280; text-align: center; }
+.mp-act-save { display: flex; align-items: center; justify-content: center; gap: 7px; height: 40px; border: 0; border-radius: 12px; background: #111827; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; }
+.mp-act-save svg { width: 15px; height: 15px; }
+.mp-act-save:disabled { opacity: .4; cursor: default; }
+.mp-count { grid-column: 1 / -1; font-size: 12.5px; font-weight: 700; color: #6b7280; margin-top: 4px; }
+.mp-count:empty { display: none; }
 .mp-edit-btn {
-    flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; box-sizing: border-box;
-    border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 999px;
-    padding: 0 14px; font-size: 13.5px; font-weight: 800; cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; box-sizing: border-box;
+    border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 12px;
+    padding: 0 12px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
 }
 .mp-edit-btn svg { width: 13px; height: 13px; }
 .mp-edit-btn svg[hidden] { display: none; }
 .mp-edit-btn.on { background: #1e40af; color: #fff; }
-.mp-side-save { display: none; }
 .mp-tools:not([hidden]) { width: 100%; max-width: 460px; margin: 0 auto 10px; box-sizing: border-box; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 14px; padding: 10px 12px; }
 .mp-tools[hidden] { display: none; }
 .mp-demo-tag[hidden] { display: none; }
@@ -9265,16 +9274,17 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     border: 0; background: #e5e7eb; color: #4b5563; font-size: 13px; cursor: pointer; display: grid; place-items: center;
 }
 .mp-search-clear[hidden] { display: none; }
-.mp-savebar { width: 100%; max-width: 460px; margin: 14px auto 0; }
-.mp-savebar[hidden] { display: none; }
 .mp-guest { max-width: 460px; margin: 0 auto 12px; background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: inset 0 0 0 1.5px #bfdbfe; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.6; color: #374151; }
 .mp-guest[hidden] { display: none; }
 .mp-guest p { margin: 0; }
 .mp-guest-title { font-size: 16px; font-weight: 900; color: #1e3a8a; }
 .mp-demo-tag { text-align: center; font: 700 10px ui-monospace, Menlo, monospace; letter-spacing: .3em; color: #b45309; margin-bottom: 4px; }
 #mappings-page .mp-search {
-    flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 40px 9px 12px;
-    border: 1.5px solid #e1e5ec; border-radius: 12px; background: #fff; color: #111827; margin: 0;
+    flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 40px 9px 38px;
+    /* 左側放大鏡：與查詢頁 .cashback-search-input 同一個圖示 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 13px center; background-size: 15px 15px;
+    border: 1.5px solid #e1e5ec; border-radius: 12px; background-color: #fff; color: #111827; margin: 0;
 }
 #mappings-page .mp-search::placeholder { color: #9ca3af; font-size: 14px; }
 .mp-tools { display: flex; flex-direction: column; gap: 8px; }
@@ -9591,13 +9601,9 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-guest { max-width: 738px; }
     .mp-steps { grid-template-columns: repeat(3, 1fr); gap: 14px; }
     .mp-steps li { align-items: flex-start; }
-    .mp-actions { display: grid; gap: 8px; margin: 0; padding: 12px; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 16px; }
-    .mp-count { font-size: 12px; }
-    .mp-edit-btn { width: 100%; height: 42px; border-radius: 12px; font-size: 14px; }
-    .mp-side-save { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; height: 42px; border: 0; border-radius: 12px; background: #111827; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
-    .mp-side-save svg { width: 15px; height: 15px; }
-    .mp-side-save:disabled { opacity: .4; cursor: default; }
-    .mp-savebar { display: none !important; }
+    .mp-actions { grid-template-columns: 1fr; gap: 10px; margin: 0; padding: 12px; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 16px; }
+    .mp-count { order: -1; margin-top: 0; font-size: 12px; }
+    .mp-edit-btn, .mp-act-save { height: 42px; }
     .mp-tip { flex-direction: column; align-items: flex-start; gap: 4px; padding: 0 4px; margin: 0; }
     .mp-tip .mp-dot { display: none; }
     .mp-tools:not([hidden]) { margin: 0; }

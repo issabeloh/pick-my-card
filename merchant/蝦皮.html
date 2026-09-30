@@ -395,7 +395,9 @@
                 <p class="mp-moved-note" id="mp-moved-note">原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
                 <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
-                    <ol class="mp-steps">
+                    <!-- 使用教學預設收合（2026-09-30）；下面「新功能 Beta 最後測試中」那行不收合 -->
+                    <button type="button" class="mp-intro-toggle" id="mp-intro-toggle" aria-expanded="false" aria-controls="mp-steps"><span>怎麼使用刷卡小抄？</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg></button>
+                    <ol class="mp-steps" id="mp-steps" hidden>
                         <li><b class="mp-step-n">1</b><span>在<strong>查詢回饋</strong>的結果中按「加到我的小抄」</span></li>
                         <li><b class="mp-step-n">2</b><span>活動<strong>自動存入</strong>以下刷卡小抄</span></li>
                         <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，結帳前看一眼</span></li>
@@ -411,10 +413,11 @@
                 <div class="mp-layout">
                     <!-- 左欄（桌機）：小抄的動作與設定都在這裡，按「編輯」時小抄不會跳位置；手機時依 CSS order 排進單欄 -->
                     <div class="mp-side">
+                        <!-- 小抄上方的兩個動作（2026-09-30）：按鈕下方各有一行備註 -->
                         <div class="mp-actions">
+                            <div class="mp-act"><button type="button" class="mp-act-save" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button><span class="mp-act-note">進入存圖編輯器</span></div>
+                            <div class="mp-act"><button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false"><svg class="mp-ico-pen" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg><svg class="mp-ico-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M3 8.5 6.5 12 13 4.5"/></svg><span class="mp-edit-t">編輯本頁</span></button><span class="mp-act-note">只編輯本頁顯示的小抄</span></div>
                             <span class="mp-count" id="mp-count"></span>
-                            <button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false"><svg class="mp-ico-pen" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg><svg class="mp-ico-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M3 8.5 6.5 12 13 4.5"/></svg><span class="mp-edit-t">編輯</span></button>
-                            <button type="button" class="mp-side-save" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button>
                         </div>
                         <div class="mp-tip" id="mp-tip" hidden><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>點商家名稱可改顯示名稱</span><span class="mp-dot">・</span><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>點卡圖可看信用卡詳情</span><span class="mp-dot mp-tip-drag" hidden>・</span><span class="mp-tip-drag" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>按住拖曳調整順序</span></div>
                         <div class="mp-tools" id="mp-tools" hidden></div>
@@ -427,7 +430,6 @@
                         <div class="mp-notice" id="mp-notice" hidden></div>
                         <div class="mp-demo-tag" id="mp-demo-tag" hidden>範　例</div>
                         <div class="mp-paper" id="mp-list"></div>
-                        <div class="mp-savebar" id="mp-savebar"><button type="button" class="mp-big" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button></div>
                         <div class="mp-deadbar" id="mp-deadbar" hidden></div>
                     </div>
                 </div>
