@@ -94,11 +94,8 @@ function setupAvatarDropdown() {
     const menuActions = {
         'avatar-manage-cards': () => openMyOwnedCardsModal(),
         'avatar-manage-payments': () => openMyPaymentsModal(),
-        'avatar-my-mappings': () => openMyMappingsModal(),
-        'avatar-feedback': () => {
-            const modal = document.getElementById('feedback-modal');
-            if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
-        },
+        'avatar-my-mappings': () => openMappingsPage(),
+        'avatar-feedback': () => openFeedbackModal(),
         'avatar-delete-account': () => openDeleteAccountModal(),
         'avatar-sign-out': async () => {
             if (currentUser) {
@@ -138,7 +135,8 @@ function clearPersonalLocalDataOnSignOut(uid) {
 
     const uidExact = uid ? [
         `cardsInComparison_${uid}`, `selectedCards_${uid}`, `myOwnedCards_${uid}`,
-        `selectedPayments_${uid}`, `spendingMappings_${uid}`
+        `selectedPayments_${uid}`, `spendingMappings_${uid}`,
+        `merchantAliases_${uid}`, `mappingsPrefs_${uid}`, `mappingsTitle_${uid}`
     ] : [];
     const uidPrefixes = uid ? [
         `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
@@ -147,7 +145,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
     // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
     // 這裡清掉的是殘留值）
     const guestExact = [
-        'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs',
+        'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
         'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
     ];
     const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
@@ -364,12 +362,6 @@ function ensureAuthSubscribed() {
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
 
-            // Show my mappings button
-            const myMappingsBtn = document.getElementById('my-mappings-btn');
-            if (myMappingsBtn) {
-                myMappingsBtn.style.display = 'flex';
-            }
-
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();
 
@@ -394,6 +386,7 @@ function ensureAuthSubscribed() {
             await loadUserPayments(userData);
             await absorbGuestPersonalData(userData);
             await loadSpendingMappings();
+            loadMerchantAliases(userData);   // 配卡組合的自訂商家名稱（js/mappings-page.js）
 
             // Load user's quick search options (new prefs format with auto-migration)
             await initializeQuickSearchOptions(userData);
@@ -437,12 +430,6 @@ function ensureAuthSubscribed() {
             setGuestDropdownVisibility();
             showToolSections();
 
-            // Hide my mappings button
-            const myMappingsBtn = document.getElementById('my-mappings-btn');
-            if (myMappingsBtn) {
-                myMappingsBtn.style.display = 'none';
-            }
-
             // Show manage cards button even when not logged in (read-only mode)
             document.getElementById('manage-cards-btn').style.display = 'block';
 
@@ -454,6 +441,9 @@ function ensureAuthSubscribed() {
             // "survey invite" 的 isSurveyInviteAudience）。
             if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
         }
+
+        // 首頁「我的刷卡小抄」切換鈕（登入才顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）
+        if (typeof refreshMappingsEntry === 'function') refreshMappingsEntry();
 
         // 登入成功後預熱級別快取（見 warmCardLevelCache 定義處的說明），
         // fire-and-forget——不擋 onAuthStateChanged 流程。
@@ -758,8 +748,15 @@ async function loadMyOwnedCards(userData = null) {
 }
 
 // Save my-owned-cards to localStorage (always) and Firestore (if logged in).
+// 打開「🐛 回報問題 / 意見回饋」表單（頭像選單、刷卡小抄頁的「回報給我們」共用）
+function openFeedbackModal() {
+    const modal = document.getElementById('feedback-modal');
+    if (modal) { modal.style.display = 'flex'; disableBodyScroll(); }
+}
+
 async function saveMyOwnedCards() {
     const cardsArray = Array.from(myOwnedCards);
+    notifyMappingsDataChanged();   // 刷卡小抄底部「持有信用卡／額度合計」跟著更新
 
     if (!currentUser) {
         try {

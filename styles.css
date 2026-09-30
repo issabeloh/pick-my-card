@@ -83,7 +83,8 @@ html.pmc-embed .social-media-footer,
 html.pmc-embed .data-update-footer,
 html.pmc-embed #back-to-top-btn,
 html.pmc-embed #scroll-to-spotlight-btn,
-html.pmc-embed #my-mappings-btn,
+html.pmc-embed #home-view-switch,
+html.pmc-embed #mappings-page,
 html.pmc-embed #pmc-boot-loader,
 html.pmc-embed .modal:not(#card-detail-modal) {
     display: none !important;
@@ -3273,7 +3274,8 @@ input[type="number"]:focus {
 
 /* 詳情頁可以從其他 modal（我的配卡、選卡、我的信用卡）內開啟，必須疊在
    所有 z-index 1000 的 modal 之上——同層時 DOM 順序決定，而 #card-detail-modal
-   在 HTML 裡比 #my-mappings-modal 早，曾被蓋住 */
+   在 HTML 裡比 #my-mappings-modal 早，曾被蓋住。2026-09-28 起配卡組合是 z-index 1050 的
+   全螢幕頁（#mappings-page），詳情頁一樣要疊在它上面 */
 #card-detail-modal {
     z-index: 1100;
 }
@@ -4805,10 +4807,6 @@ input[type="text"].cashback-search-input {
 .input-clear-wrap > input[type="search"] {
     padding-right: 30px;
 }
-/* 配卡搜尋框的樣式帶 id（1-1-0），上面的規則壓不過，這裡補一條同樣帶 id 的（1-2-1） */
-#my-mappings-modal .input-clear-wrap > input[type="text"] {
-    padding-right: 30px;
-}
 /* 還原被移到 wrapper 上的輸入框下外距 */
 .input-clear-wrap[data-for="cashback-search-input"] {
     margin-bottom: 12px;
@@ -6000,44 +5998,6 @@ mark.cashback-search-hl {
    My Mappings (配卡表) Styles
    ============================================ */
 
-/* Floating My Mappings Button（琥珀底＋釘選 icon，與結果卡釘選態 pin-btn.pinned 同色系） */
-/* 我的配卡組合浮標：唯一「打開 modal」的捷徑鈕，用琥珀色圓角方塊，和灰色圓形的
-   捲動導覽鈕（精選活動／回到頂部）在視覺上分類。排在最下方。桌機/手機都只顯示圖示，
-   桌機 hover 時左側浮現文字標籤（.btn-text）。 */
-.my-mappings-floating-btn {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    width: 48px;
-    height: 48px;
-    background: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 6px;
-    color: #b45309;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-    transition: all 0.2s ease;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: visible;
-}
-
-.my-mappings-floating-btn svg {
-    width: 18px;
-    height: 18px;
-}
-
-.my-mappings-floating-btn:hover {
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-    transform: translateY(-2px);
-}
-
-.my-mappings-floating-btn:active {
-    transform: translateY(0) scale(0.98);
-}
-
 /* Pin Badge (+1 動畫) */
 .pin-badge {
     position: absolute;
@@ -6052,7 +6012,7 @@ mark.cashback-search-hl {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Pin Button on Card：與進場浮標 #my-mappings-btn 同一組琥珀色系
+/* Pin Button on Card：與首頁「我的刷卡小抄」切換鈕的數字徽章同一組琥珀色系
    （#fef3c7 底／#f59e0b 邊／#b45309 字），改成膠囊＋「釘選」文字，凸顯可點；
    不加陰影（不要光暈）。已釘選狀態改實心琥珀＋「已釘選」以區分開關狀態。 */
 .pin-btn {
@@ -6077,7 +6037,7 @@ mark.cashback-search-hl {
     height: 12px;
 }
 .pin-btn::after {
-    content: '釘選';
+    content: '加到我的小抄';
 }
 
 .pin-btn:hover {
@@ -6092,7 +6052,7 @@ mark.cashback-search-hl {
     color: #ffffff;
 }
 .pin-btn.pinned::after {
-    content: '已釘選';
+    content: '已加到我的小抄';
 }
 
 .pin-btn.pinned:hover {
@@ -6122,384 +6082,6 @@ mark.cashback-search-hl {
 
 .pin-toast.show {
     opacity: 1;
-}
-
-/* My Mappings Modal */
-/* 單一捲軸原則：.modal-content 預設 overflow-y:auto，加上 .mappings-list 自己的
-   max-height+overflow 會變成兩層捲軸（外層要先捲到底，才看得到內層最後幾筆）。
-   這裡把 modal 改成 flex 直欄：標題與搜尋列固定，只有配卡清單捲。 */
-#my-mappings-modal .modal-content {
-    max-width: 600px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-#my-mappings-modal .modal-header,
-#my-mappings-modal .modal-body > .form-group {
-    flex-shrink: 0;
-}
-
-#my-mappings-modal .modal-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 0; /* 沒有這行，flex 子項不會收縮，內層永遠捲不起來 */
-    overflow: hidden;
-}
-
-#my-mappings-modal .mappings-list {
-    flex: 1;
-    min-height: 0;
-    max-height: none; /* 蓋掉 .mappings-list 的 500px 上限，改由 flex 決定 */
-    overscroll-behavior: contain;
-}
-
-/* 用 #my-mappings-modal 提高特異性——全域 input[type="text"]（padding 16px、
-   2px 框）特異性 0-1-1 會蓋過純 class 的 0-1-0，之前這組樣式其實從沒生效過。
-   字級固定 16px（<16px 會觸發 iOS 聚焦自動縮放），矮身靠 padding、預覽字靠
-   ::placeholder 縮小 */
-#my-mappings-modal .mappings-search-input {
-    width: 100%;
-    padding: 7px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: border-color 0.2s;
-}
-
-#my-mappings-modal .mappings-search-input::placeholder {
-    font-size: 13px;
-    color: #9ca3af;
-}
-
-#my-mappings-modal .mappings-search-input:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.mappings-list {
-    max-height: 500px;
-    overflow-y: auto;
-    margin-top: 16px;
-}
-
-.mapping-delete-btn {
-    background: none;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 18px;
-    padding: 4px 8px;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-}
-
-.mapping-delete-btn:hover {
-    opacity: 1;
-}
-
-.mappings-empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: #9ca3af;
-}
-
-.mappings-empty svg {
-    margin: 0 auto 16px;
-    opacity: 0.5;
-}
-
-/* 配卡讀取失敗時的重試按鈕（空狀態四分流之一，見 js/spending-mappings.js
-   renderMappingsList 的空清單分支） */
-.mappings-retry-btn {
-    margin-top: 16px;
-    padding: 8px 20px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #374151;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.mappings-retry-btn:hover {
-    background: #f3f4f6;
-}
-
-.mappings-retry-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
-
-/* ============ 我的配卡：分組卡片式視圖（2026-07-16 重造） ============
-   一張信用卡＝一個群組卡片：卡名色塊（統一淺灰，不吸卡面色）＋活動列（同率同截止日
-   的商家合併成 pills）。手機不再橫向捲動；過期配對沉底收合；拖曳元素 touch-action:none */
-.mapping-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.mapping-group {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.mapping-group-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #f1eff0;
-    color: #1f2937;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-/* 不設 flex:1——讓後面的 ⓘ 貼著卡名，而不是被推到最右側；長卡名靠 shrink+wrap */
-.mapping-group-name {
-    min-width: 0;
-    font-weight: 700;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-}
-
-/* 卡名旁的卡圖小圖（仿 promos 的 promo-card-cardimg，縮小版；缺圖自動隱藏） */
-.mapping-group-cardimg {
-    flex: none;
-    width: 46px;
-    height: 29px;
-    object-fit: contain;
-    border-radius: 6px;
-    background: white;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 2px;
-}
-
-/* 我的配卡組合的「卡片詳情」鈕：與結果卡、精選活動 modal 同一顆藍膠囊
-   （HTML 直接掛 .card-detail-peek-btn），這裡只把標籤覆蓋成「卡片詳情」
-   ——做法比照 .spotlight-modal-actions .card-detail-peek-btn::after。
-   .mapping-peek-btn 本身不再帶樣式，純粹當 spending-mappings.js 綁事件的掛勾。
-   （2026-08-18 之前是一顆灰色圓形 ⓘ，與另外兩處不一致） */
-.mapping-peek-btn::after {
-    content: '卡片詳情';
-}
-
-.mapping-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-bottom: 1px solid #f3f4f6;
-    background: white;
-}
-
-.mapping-group-rows .mapping-item:last-child {
-    border-bottom: none;
-}
-
-.mapping-item-main {
-    flex: 1;
-    min-width: 0;
-}
-
-.mapping-item-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-/* 商家 pill（仿快速搜尋 .tag-item：白底淺灰框、整顆可拖）；
-   touch-action none 讓觸控拖曳不會捲動 modal */
-.mapping-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 16px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #374151;
-    cursor: grab;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    touch-action: none;
-    overflow-wrap: anywhere;
-    min-width: 0;
-}
-
-.mapping-pill.mapping-dragging {
-    opacity: 0.5;
-    cursor: grabbing;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.mapping-pill-remove {
-    flex: none;
-    background: none;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1;
-    padding: 0 0 0 2px;
-    opacity: 0.75;
-}
-
-.mapping-pill-remove:hover {
-    opacity: 1;
-}
-
-.mapping-item-merchant {
-    font-weight: 500;
-    color: #1f2937;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-}
-
-.mapping-item-date {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-top: 4px;
-    font-variant-numeric: tabular-nums;
-}
-
-.mapping-item-rate {
-    flex: none;
-    color: #10b981;
-    font-weight: 700;
-    font-size: 15px;
-    font-variant-numeric: tabular-nums;
-}
-
-/* 拖曳把手：touch-action none 讓觸控拖曳不會捲動 modal */
-.mapping-drag-handle {
-    flex: none;
-    display: flex;
-    align-items: center;
-    color: #d1d5db;
-    cursor: grab;
-    touch-action: none;
-    padding: 6px 2px;
-    margin: -6px 0;
-}
-
-.mapping-drag-handle:active {
-    cursor: grabbing;
-}
-
-.mapping-group-head .mapping-drag-handle {
-    color: #9ca3af;
-}
-
-.mapping-dragging {
-    opacity: 0.9;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-    position: relative;
-    z-index: 5;
-}
-
-.mapping-badge-soon {
-    display: inline-block;
-    background: #fffbeb;
-    color: #b45309;
-    border: 1px solid #fde68a;
-    padding: 0 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 4px;
-}
-
-.mapping-badge-expired {
-    display: inline-block;
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    padding: 0 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-left: 4px;
-}
-
-/* 過期沉底收合區 */
-.mappings-expired {
-    border: 1px dashed #d1d5db;
-    border-radius: 10px;
-    background: #fafafa;
-    overflow: hidden;
-}
-
-.mappings-expired-toggle {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: none;
-    border: none;
-    color: #6b7280;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 12px;
-    cursor: pointer;
-}
-
-.mappings-expired-chev {
-    transition: transform 0.2s;
-    font-size: 11px;
-}
-
-.mappings-expired.open .mappings-expired-chev {
-    transform: rotate(180deg);
-}
-
-.mappings-expired-body {
-    display: none;
-}
-
-.mappings-expired.open .mappings-expired-body {
-    display: block;
-}
-
-.mappings-expired .mapping-item {
-    background: transparent;
-    border-top: 1px solid #f3f4f6;
-    border-bottom: none;
-}
-
-.mappings-expired .mapping-item-merchant,
-.mappings-expired .mapping-item-rate {
-    color: #9ca3af;
-}
-
-.mapping-expired-cardname {
-    color: #9ca3af;
-    font-size: 12px;
-    font-weight: 400;
-}
-
-.mappings-clear-expired {
-    display: block;
-    margin: 10px 12px 12px;
-    padding: 6px 14px;
-    background: white;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.mappings-clear-expired:hover {
-    background: #fef2f2;
 }
 
 /* ============================================
@@ -6536,18 +6118,12 @@ mark.cashback-search-hl {
     display: flex;
 }
 
-/* 我的配卡組合（M）排在最下方；M 有顯示時把精選活動鈕往上疊一層 */
-body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-btn.is-visible {
-    bottom: 72px;
-}
-
 .scroll-to-spotlight-btn:active {
     transform: scale(0.96);
 }
 
-/* 桌機浮標（我的配卡組合／精選活動）的 hover 文字標籤：平常隱藏，
+/* 桌機浮標（精選活動）的 hover 文字標籤：平常隱藏，
    hover 時浮現在圖示鈕左側；手機無 hover，於 media query 內整個隱藏 */
-.my-mappings-floating-btn .btn-text,
 .scroll-to-spotlight-btn .btn-text {
     position: absolute;
     right: calc(100% + 8px);
@@ -6565,7 +6141,6 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     transition: opacity 0.15s ease;
 }
 
-.my-mappings-floating-btn:hover .btn-text,
 .scroll-to-spotlight-btn:hover .btn-text {
     opacity: 1;
 }
@@ -6592,7 +6167,7 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 }
 
 /* Back-to-top floating button — mobile only; top-most of the floating stack
-   (下方依序：我的配卡組合 → 精選活動 → 回到頂部，見 mobile media query 的疊放規則） */
+   (下方依序：我的刷卡小抄 → 精選活動 → 回到頂部，見 mobile media query 的疊放規則） */
 .back-to-top-btn {
     position: fixed;
     bottom: 16px;
@@ -6883,8 +6458,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     /* 浮標桌機/手機同尺寸（48×48，樣式在各自 base）；此處只處理手機專屬的疊放與
-       隱藏 hover 文字。堆疊順序（下→上）：我的配卡組合 → 精選活動 → 回到頂部。 */
-    .my-mappings-floating-btn .btn-text,
+       隱藏 hover 文字。堆疊順序（下→上）：精選活動 → 回到頂部。
+       （我的刷卡小抄浮標 2026-09-28 移除，改成首頁切換鈕） */
     .scroll-to-spotlight-btn .btn-text {
         display: none;
     }
@@ -6896,13 +6471,8 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
         right: 16px;
     }
 
-    body:has(.my-mappings-floating-btn:not([style*="none"])) .back-to-top-btn.is-visible,
     body:has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
         bottom: 72px;
-    }
-
-    body:has(.my-mappings-floating-btn:not([style*="none"])):has(.scroll-to-spotlight-btn.is-visible) .back-to-top-btn.is-visible {
-        bottom: 128px;
     }
 
     .image-preview-container {
@@ -8752,7 +8322,6 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
     .auth-modal-content,
     .announcement-modal-content,
     .survey-invite-content,
-    #my-mappings-modal .modal-content,
     #feedback-modal .modal-content {
         max-height: 75vh;
         max-height: 75dvh;
@@ -9558,3 +9127,489 @@ body:has(.my-mappings-floating-btn:not([style*="none"])) .scroll-to-spotlight-bt
 .matched-item-warn {
     color: #dc2626;
 }
+
+/* ============================================================
+   我的刷卡小抄：完整頁面「刷卡小抄」（2026-09-28，js/mappings-page.js）
+   設計紀錄見 docs/project/ui-display.md 第 8 節。
+   ⚠️ class 一律 mp- 前綴：曾在 mockup 裡用 .big 當大字 class，撞到既有按鈕樣式整張跑版。
+   ============================================================ */
+/* 頁籤＝文件夾分頁：長在藍色頁首底邊（在 <header> 裡，負 margin 吃掉頁首內距：桌機 10px 20px、≤768px 12px 16px）。
+   選中的那張白色、跟下方頁面接成一體；沒選中的是頁首上的半透明頁籤。 */
+header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選中頁籤下方畫出一條線，破壞「接在一起」 */
+.home-view-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 12px -20px -10px;
+    padding: 0 20px;
+    align-items: end;
+}
+.home-view-switch[hidden] { display: none; }
+.home-view-switch > button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 8px 10px;
+    border: 0;
+    border-radius: 14px 14px 0 0;
+    background: rgba(255, 255, 255, .16);
+    color: rgba(255, 255, 255, .92);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    position: relative;   /* 釘選時的 +1 徽章（.pin-badge）以它定位 */
+}
+.home-view-switch > button:hover { background: rgba(255, 255, 255, .26); }
+.home-view-switch > button.on {
+    background: #fff;
+    color: #1e40af;
+    font-weight: 900;
+    padding-top: 13px;   /* 選中的那張稍微高一點，像被抽出來的文件夾 */
+    box-shadow: 0 -4px 10px -6px rgba(15, 23, 42, .35);
+}
+/* 選中頁籤下緣兩側的小圓角，讓頁籤跟白色頁面自然接起來 */
+.home-view-switch > button.on::before,
+.home-view-switch > button.on::after {
+    content: ""; position: absolute; bottom: 0; width: 12px; height: 12px; pointer-events: none;
+}
+.home-view-switch > button.on::before { left: -12px; background: radial-gradient(circle at 0 0, transparent 12px, #fff 12.5px); }
+.home-view-switch > button.on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, #fff 12.5px); }
+.home-view-switch > button:first-child.on::before, .home-view-switch > button:last-child.on::after { display: none; }
+.home-view-switch svg { width: 17px; height: 17px; flex: none; }
+@media (max-width: 768px) {
+    .home-view-switch { margin: 12px -16px -12px; padding: 0 12px; }
+    .home-view-switch > button { font-size: 14.5px; padding: 10px 6px 9px; }
+    .home-view-switch > button.on { padding-top: 12px; }
+}
+
+/* 頁籤切換的「畫面」：同一個 data-view 的容器一起顯示／隱藏（setAppView，js/mappings-page.js）。
+   查詢回饋＝左欄 .sidebar＋☰ 鈕＋#view-search（main 欄內）＋#view-search-extras（推薦活動、推薦比較，放在側欄外以跨整個版面寬）；
+   我的刷卡小抄＝#mappings-page */
+[data-view][hidden] { display: none !important; }
+/* 左欄（加入比較的卡片等）屬於查詢回饋：切到配卡組合時整欄隱藏，主欄吃滿整個寬度 */
+.app-layout:has(> .sidebar[hidden]) { grid-template-columns: 1fr; }
+
+.mp-page {
+    color: #111827;
+    margin: 0 -8px;   /* 手機 main 左右留白較大，收據吃滿一點 */
+}
+.mp-page[hidden] { display: none; }
+.mp-page button { font-family: inherit; }
+.mp-page button:focus-visible, .mp-page input:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.mp-iconbtn {
+    flex: none; width: 34px; height: 34px; border-radius: 50%; border: 0;
+    background: rgba(17, 24, 39, .08); color: #374151; font-size: 18px;
+    display: grid; place-items: center; cursor: pointer;
+}
+/* 頁面說明卡：三步驟 */
+.mp-intro { max-width: 738px; margin: 0 auto 14px; background: linear-gradient(180deg, #eff6ff, #f7faff); border: 1px solid #dbeafe; border-radius: 16px; padding: 12px 14px; box-sizing: border-box; }
+.mp-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
+.mp-steps strong { color: #1e3a8a; font-weight: 800; }
+/* 「新功能 Beta」標籤（頁籤、頭像選單、說明卡）：琥珀色系＝和「加到我的小抄」按鈕同一組顏色 */
+.mp-beta { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; font-size: 10.5px; font-weight: 800; line-height: 1.4; letter-spacing: .02em; vertical-align: middle; white-space: nowrap; }
+.mp-beta-full { margin-right: .3em; }
+/* 手機：頁籤寬度不夠，Beta 改成右上角的小角標，不擠到「我的刷卡小抄」 */
+@media (max-width: 480px) {
+    .home-view-switch .mp-beta-full { display: none; }
+    #home-view-switch-mappings { position: relative; }
+    /* 放左上角：右上角是釘選時「+1」徽章的位置（.pin-badge），避免疊在一起 */
+    #home-view-switch-mappings .mp-beta { position: absolute; top: -9px; left: 10px; margin: 0; padding: 0 5px; font-size: 9.5px; z-index: 2; }
+}
+/* 改版告知：頁面最上方一行備註（所有人） */
+.mp-moved-note { max-width: 738px; margin: 0 auto 12px; padding: 7px 4px; box-sizing: border-box; border-top: 1px dashed #cfd4dc; border-bottom: 1px dashed #cfd4dc; font: 500 12px/1.7 ui-monospace, Menlo, monospace; letter-spacing: .02em; color: #6b7280; text-align: center; }   /* 2026-09-30 站長從 5 案選 2「收據小字」：與小抄的收據風格一致 */
+/* 一次性提示：飛進頁籤的按鈕、頁籤彈一下、說明氣泡 */
+.mp-fly { position: fixed; left: 0; top: 0; z-index: 1300; pointer-events: none; box-shadow: 0 6px 16px rgba(180, 83, 9, .35); }
+.mp-tab-bump { animation: mp-tab-bump .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes mp-tab-bump { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.mp-hint-bubble { position: fixed; z-index: 1300; pointer-events: none; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: 12px; background: #111827; color: #fff; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 30px rgba(0, 0, 0, .28); animation: mp-bubble-in .25s ease-out; }
+.mp-hint-bubble::before { content: ""; position: absolute; top: -6px; left: calc(var(--arrow-x, 50%) - 6px); border: 6px solid transparent; border-top: 0; border-bottom-color: #111827; }
+.mp-hint-bubble span { flex: 1; }
+.mp-hint-bubble button { pointer-events: auto; flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .15); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+@keyframes mp-bubble-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .mp-tab-bump, .mp-hint-bubble { animation: none; } }
+.mp-beta-note { margin: 10px 0 0; padding-top: 9px; border-top: 1px dashed #bfdbfe; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: #4b5563; }
+.mp-beta-note .mp-beta { margin-left: 0; }
+.mp-linkbtn2 { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
+/* 手機／平板：單欄，依序＝搜尋 → 編輯列 → 提示 → 設定 → 小抄 → 存成圖片（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
+.mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }
+.mp-side, .mp-main { display: contents; }
+.mp-searchbox { order: 1; }
+.mp-actions { order: 2; }
+.mp-tip { order: 3; }
+.mp-tools { order: 4; }
+.mp-notice { order: 5; }
+.mp-demo-tag { order: 6; }
+.mp-paper { order: 7; }
+.mp-savebar { order: 8; }
+.mp-deadbar { order: 9; }
+.mp-actions { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 460px; margin: 0 auto 8px; box-sizing: border-box; padding: 0 2px; }
+.mp-count { flex: 1; font-size: 12.5px; font-weight: 700; color: #6b7280; }
+.mp-edit-btn {
+    flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; box-sizing: border-box;
+    border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 999px;
+    padding: 0 14px; font-size: 13.5px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+.mp-edit-btn svg { width: 13px; height: 13px; }
+.mp-edit-btn svg[hidden] { display: none; }
+.mp-edit-btn.on { background: #1e40af; color: #fff; }
+.mp-side-save { display: none; }
+.mp-tools:not([hidden]) { width: 100%; max-width: 460px; margin: 0 auto 10px; box-sizing: border-box; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 14px; padding: 10px 12px; }
+.mp-tools[hidden] { display: none; }
+.mp-demo-tag[hidden] { display: none; }
+.mp-searchbox { position: relative; width: 100%; max-width: 460px; margin: 0 auto 8px; }
+.mp-search-clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%;
+    border: 0; background: #e5e7eb; color: #4b5563; font-size: 13px; cursor: pointer; display: grid; place-items: center;
+}
+.mp-search-clear[hidden] { display: none; }
+.mp-savebar { width: 100%; max-width: 460px; margin: 14px auto 0; }
+.mp-savebar[hidden] { display: none; }
+.mp-guest { max-width: 460px; margin: 0 auto 12px; background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: inset 0 0 0 1.5px #bfdbfe; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.6; color: #374151; }
+.mp-guest[hidden] { display: none; }
+.mp-guest p { margin: 0; }
+.mp-guest-title { font-size: 16px; font-weight: 900; color: #1e3a8a; }
+.mp-demo-tag { text-align: center; font: 700 10px ui-monospace, Menlo, monospace; letter-spacing: .3em; color: #b45309; margin-bottom: 4px; }
+#mappings-page .mp-search {
+    flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 40px 9px 12px;
+    border: 1.5px solid #e1e5ec; border-radius: 12px; background: #fff; color: #111827; margin: 0;
+}
+#mappings-page .mp-search::placeholder { color: #9ca3af; font-size: 14px; }
+.mp-tools { display: flex; flex-direction: column; gap: 8px; }
+.mp-tools.mp-disabled { opacity: .45; pointer-events: none; }
+.mp-bar { display: flex; align-items: center; gap: 8px; min-height: 30px; flex-wrap: wrap; }
+.mp-grow { flex: 1; }
+.mp-seg { display: inline-flex; background: rgba(17, 24, 39, .08); border-radius: 10px; padding: 2px; gap: 2px; }
+.mp-seg button {
+    border: 0; background: transparent; border-radius: 8px; padding: 5px 10px; font-size: 13px; font-weight: 700;
+    color: #4b5563; cursor: pointer; white-space: nowrap; display: inline-grid; place-items: center; min-height: 28px;
+}
+.mp-seg button.on { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+.mp-seg button svg { width: 16px; height: 16px; }
+.mp-seg-wrap { flex-wrap: wrap; }
+.mp-a-s { font-size: 11px; }
+.mp-a-l { font-size: 16px; }
+.mp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; white-space: nowrap; }
+/* 配卡區在 main 裡，全站 label 樣式會套上來；用 id 提特異性蓋回（見 ui-display.md 教訓：特異性） */
+#mappings-page label.mp-chk { font-size: 13px; font-weight: 700; margin: 0; display: inline-flex; color: #374151; }
+#mappings-page .mp-sheet label { font-size: 12px; font-weight: 500; margin: 0; color: #6b7280; display: grid; gap: 6px; }
+#mappings-page label.mp-pk { font-size: 14px; font-weight: 500; margin: 0; color: #111827; display: flex; }
+.mp-chk input { width: 16px; height: 16px; margin: 0; accent-color: #111827; }
+.mp-chk.na { color: #9ca3af; font-weight: 500; cursor: default; }
+/* 雙欄時「顯示等級／方案」仍在原位，只是變灰不可勾 */
+#mappings-page label.mp-chk.dis, .mp-chk.dis { color: #b6bcc6; cursor: not-allowed; }
+.mp-chk.dis input { accent-color: #b6bcc6; cursor: not-allowed; }
+.mp-upd {
+    display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid #c7ced9; background: #fff;
+    border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 700; color: #111827; cursor: pointer; white-space: nowrap;
+}
+.mp-upd svg { width: 13px; height: 13px; }
+.mp-upd:disabled { color: #9ca3af; cursor: default; }
+.mp-upd.busy svg { animation: mp-spin .9s linear infinite; }
+@keyframes mp-spin { to { transform: rotate(360deg); } }
+.mp-tip { font-size: 12px; color: #6b7280; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 2px 2px 8px; width: 100%; max-width: 460px; margin: 0 auto; box-sizing: border-box; }
+.mp-tip svg { width: 11px; height: 11px; vertical-align: -1px; margin-right: 3px; color: #9ca3af; }
+.mp-dot { color: #c4c9d2; }
+.mp-tip[hidden] { display: none; }
+.mp-main { padding: 6px 4px 12px; }
+.mp-deadbar { width: 100%; max-width: 460px; margin: 12px auto 0; display: flex; justify-content: center; }
+.mp-deadbar[hidden] { display: none; }
+.mp-btn-danger {
+    border: 1.5px solid #fca5a5; background: #fff; color: #b91c1c; border-radius: 12px; padding: 9px 14px;
+    font-size: 14px; font-weight: 800; cursor: pointer; width: 100%;
+}
+.mp-btn-danger.confirm { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+.mp-notice {
+    max-width: 460px; margin: 0 auto 10px; background: #fff; border-radius: 12px; padding: 9px 12px;
+    font-size: 12.5px; line-height: 1.55; color: #374151; display: grid; gap: 3px; box-shadow: inset 0 0 0 1.5px #bfdbfe;
+}
+.mp-notice[hidden] { display: none; }
+.mp-notice b { color: #111827; }
+.mp-notice .bad { color: #b91c1c; }
+.mp-paper { width: 100%; max-width: 460px; margin: 0 auto; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .16)); }
+.mp-empty { background: #fff; border-radius: 14px; padding: 28px 20px; text-align: center; color: #6b7280; font-size: 13px; line-height: 1.6; }
+.mp-empty p { margin: 0; }
+.mp-empty-title { font-size: 16px; font-weight: 800; color: #374151; margin-bottom: 6px !important; }
+.mp-retry { margin-top: 12px; border: 0; border-radius: 10px; padding: 8px 16px; background: #111827; color: #fff; font-weight: 700; cursor: pointer; }
+
+/* ---- 收據本體 ---- */
+.mp-rc {
+    --paper: #fffffd; --rink: #1a1d23; --sub: #6b7280; --rule: #cfd4dc; --pay: #ea580c; --cat: #1d4ed8; --star: #d97706;
+    --fs: 14px; --rs: 13.5px; --ds: 10.5px; --rowpad: 5px; --lab: 9.5px; --thw: 26px; --thh: 16px; --c2: 48px; --c3: 48px;
+    background: var(--paper); color: var(--rink); padding: 20px 16px 22px;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 51% repeat-x, conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/12px 51% repeat-x;
+    mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 51% repeat-x, conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/12px 51% repeat-x;
+}
+.mp-rc.lg { --fs: 17px; --rs: 16px; --ds: 12px; --rowpad: 9px; --lab: 11px; --thw: 32px; --thh: 20px; --c2: 58px; --c3: 58px; }
+.mp-rc-head { text-align: center; display: grid; gap: 2px; }
+.mp-store { font: 700 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .24em; color: var(--sub); }
+.mp-title { font-size: 18px; font-weight: 900; letter-spacing: .18em; }
+.mp-title-btn { border: 0; background: none; color: inherit; font-family: inherit; padding: 0 0 0 .18em; cursor: pointer; justify-self: center; border-bottom: 1px dashed transparent; }
+.mp-title-btn:hover { border-bottom-color: var(--rule); }
+/* 編輯模式：標題旁的鉛筆，提示可以改標題；letter-spacing 歸零避免鉛筆被推太遠 */
+.mp-title-pen { display: inline-block; margin-left: .1em; letter-spacing: 0; color: var(--sub); vertical-align: .1em; }
+.mp-title-pen svg { width: .62em; height: .62em; display: block; }
+.mp-rc.lg .mp-title { font-size: 21px; }
+.mp-eq { font: 500 10px/1 ui-monospace, Menlo, monospace; color: var(--sub); white-space: nowrap; overflow: hidden; margin: 7px 0 2px; }
+.mp-colhead {
+    display: grid; grid-template-columns: 1fr auto; align-items: end; font: 700 9px ui-monospace, Menlo, monospace;
+    color: var(--sub); letter-spacing: .1em; padding-bottom: 3px; border-bottom: 1px dashed var(--rule);
+}
+.mp-cols { display: grid; grid-template-columns: var(--thw) var(--c2) var(--c3); gap: 6px; text-align: right; }
+.mp-cols span:first-child { text-align: center; }
+.mp-rate { font: 700 var(--rs)/1 ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+.mp-due { font: 500 var(--ds)/1 ui-monospace, Menlo, monospace; color: var(--sub); justify-self: end; white-space: nowrap; }
+.mp-due.hot { background: var(--rink); color: var(--paper); font-weight: 700; padding: 2px 3px; border-radius: 2px; }
+.mp-due.ext { text-decoration: underline dotted; text-underline-offset: 2px; }
+/* 第二行：等級／方案標籤＋活動封頂金額（勾「顯示活動封頂金額」時） */
+.mp-row2 { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.mp-cap { font: 500 var(--ds)/1.2 ui-monospace, Menlo, monospace; color: var(--sub); white-space: nowrap; }
+.mp-cn { font-size: calc(var(--ds) + 1px); line-height: 1.2; color: var(--sub); white-space: nowrap; }
+.mp-e-cap { text-align: right; margin: -1px 0 3px; }
+.mp-sec { display: flex; align-items: center; gap: 6px; margin: 12px 0 1px; font-size: 12px; font-weight: 900; letter-spacing: .12em; color: var(--cat); }
+.mp-rc.lg .mp-sec { font-size: 14px; }
+.mp-sec::before { content: "■"; font-size: 7px; }
+.mp-sec::after { content: ""; flex: 1; border-bottom: 1.5px dashed currentColor; opacity: .45; }
+.mp-sec.pay { color: var(--pay); }
+.mp-sec.az::before { display: none; }
+.mp-ltr { font-size: 15px; font-weight: 800; letter-spacing: 0; }
+/* 商家名稱絕不截斷（站長要求）：太長就換行；單欄時等級標籤會先讓位到下一行（見 mpFitRows） */
+.mp-nm {
+    font-size: var(--fs); font-weight: 700; border: 0; background: none; padding: 0; color: inherit; text-align: left;
+    white-space: normal; overflow-wrap: anywhere; min-width: 0; cursor: pointer; line-height: 1.35;
+}
+.mp-pen svg { width: 10px; height: 10px; margin-left: 3px; color: var(--sub); vertical-align: 0; }
+.mp-star { color: var(--star); font: 700 12px/1 ui-monospace, Menlo, monospace; margin-left: 2px; vertical-align: 4px; }
+.mp-cardbtn { border: 0; background: none; padding: 0; margin: 0; display: inline-grid; cursor: pointer; border-radius: 3px; justify-self: center; }
+.mp-th { display: block; width: var(--thw); height: var(--thh); object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 .5px rgba(0, 0, 0, .25); }
+.mp-picks .mp-th, .mp-pk .mp-th { width: 26px; height: 16px; }
+.mp-dead .mp-nm { color: var(--sub); }
+.mp-dead .mp-rate { color: var(--sub); text-decoration: line-through; }
+.mp-dead .mp-th { filter: grayscale(1); opacity: .55; }
+.mp-alt { opacity: .5; }
+.mp-labs { display: inline-flex; gap: 4px; }
+.mp-lab { font: 700 var(--lab)/1 ui-monospace, Menlo, monospace; color: var(--sub); border: 1px solid var(--rule); border-radius: 3px; padding: 2px 3px; white-space: nowrap; }
+.mp-flag {
+    font-size: 10px; font-weight: 800; color: #b91c1c; white-space: nowrap; border: 1px solid #fca5a5;
+    background: #fff5f5; border-radius: 999px; padding: 2px 6px; cursor: pointer; font-family: inherit;
+}
+.mp-grip { flex: none; color: var(--sub); padding: 4px 6px 4px 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; display: inline-grid; }
+.mp-grip svg { width: 14px; height: 14px; }
+.mp-dragging { opacity: .55; background: rgba(29, 78, 216, .06); }
+.mp-note { margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--sub); }
+.mp-note b { color: var(--star); font-family: ui-monospace, Menlo, monospace; }
+.mp-none { text-align: center; color: var(--sub); font-size: 13px; margin: 18px 0; }
+.mp-foot { margin-top: 12px; padding-top: 12px; border-top: 1.5px dashed var(--rule); display: grid; justify-items: center; gap: 7px; }
+.mp-totals { display: grid; gap: 5px; width: 100%; margin: 12px 0 0; padding: 12px 0 0; border: 0; border-top: 1.5px dashed var(--rule); background: none; color: var(--ink); cursor: pointer; text-align: left; font: inherit; }
+.mp-tot { display: flex; align-items: baseline; gap: 6px; }
+.mp-tot-k { font-size: calc(var(--ds) + 2px); font-weight: 700; }
+.mp-tot i { flex: 1; border-bottom: 1.5px dotted var(--rule); transform: translateY(-3px); min-width: 12px; }
+.mp-tot b { font: 700 calc(var(--ds) + 3px) ui-monospace, Menlo, monospace; letter-spacing: .02em; }
+.mp-tot-note { justify-self: end; font-size: var(--ds); color: var(--sub); }
+.mp-eq-tot { margin-top: 6px; }
+.mp-totals + .mp-eq-tot + .mp-foot { border-top: 0; margin-top: 4px; padding-top: 4px; }
+/* 「顯示卡數與額度總和」後面的 ? 說明 */
+.mp-chkwrap { display: inline-flex; align-items: center; gap: 6px; }
+.mp-help { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #9ca3af; background: #fff; color: #4b5563; font-size: 12px; font-weight: 800; line-height: 1; padding: 0; cursor: pointer; display: inline-grid; place-items: center; flex: none; }
+.mp-help[aria-expanded="true"] { background: #1e40af; border-color: #1e40af; color: #fff; }
+.mp-pop { position: fixed; z-index: 1090; box-sizing: border-box; background: #111827; color: #f9fafb; border-radius: 12px; padding: 11px 13px; font-size: 13px; line-height: 1.6; box-shadow: 0 12px 30px rgba(0, 0, 0, .28); }
+.mp-pop p { margin: 0; }
+.mp-linkbtn { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #93c5fd; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+/* 「我的信用卡」可以從刷卡小抄的存圖對話框（z 1060）裡打開 → 疊在它上面；卡片詳情（1100）仍在最上面 */
+#my-owned-cards-modal, #manage-owned-cards-modal { z-index: 1070; }
+.mp-url { font: 500 9.5px ui-monospace, Menlo, monospace; letter-spacing: .24em; color: var(--sub); }
+
+/* 單欄 */
+.mp-f-row { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 6px; padding: var(--rowpad) 0; border-bottom: 1px dotted var(--rule); }
+.mp-f-row:last-child { border-bottom: 0; }
+.mp-f-lead { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.mp-f-lead::after { content: ""; flex: 1; border-bottom: 1.5px dotted var(--rule); transform: translateY(3px); min-width: 8px; }
+.mp-f-pick { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.mp-f-cols { display: grid; grid-template-columns: var(--thw) var(--c2) var(--c3); align-items: center; gap: 6px; }
+.mp-f-cols .mp-rate { text-align: right; }
+.mp-f-row .mp-f-pick + .mp-f-pick { grid-column: 2; margin-top: 4px; }
+/* 大字：標籤換到回饋率下一行、商家名與虛線靠上對齊（不上下置中） */
+.mp-rc.lg .mp-f-row { align-items: start; }
+.mp-rc.lg .mp-f-lead { min-height: var(--thh); padding-top: 1px; }
+.mp-rc.lg .mp-f-pick, .mp-f-row.mp-labs-below .mp-f-pick { display: grid; justify-items: end; row-gap: 5px; }
+.mp-rc.lg .mp-f-pick .mp-labs, .mp-f-row.mp-labs-below .mp-f-pick .mp-labs { order: 2; }
+.mp-rc.lg .mp-f-pick .mp-f-cols, .mp-f-row.mp-labs-below .mp-f-pick .mp-f-cols { order: 1; }
+.mp-rc.lg .mp-f-pick .mp-flag, .mp-f-row.mp-labs-below .mp-f-pick .mp-flag { order: 3; }   /* 回饋已變放最下面，不把回饋率推離商家名稱那一行 */
+/* ↓ 要放在大字規則之後（同特異性，後者勝） */
+/* 單欄：第二行橫跨整列（名稱下方也能用），不擠壓商家名稱；pick 用 display:contents 讓子元素直接進 .mp-f-row 的格線 */
+.mp-rc .mp-f-row .mp-f-pick.has-row2 { display: contents; }
+.mp-rc .mp-f-row .mp-f-pick.has-row2 > .mp-f-cols, .mp-rc .mp-f-row .mp-f-pick.has-row2 > .mp-flag { grid-column: 2; justify-self: end; }
+.mp-rc .mp-f-row .mp-f-pick.has-row2 > .mp-row2 { grid-column: 1 / -1; justify-self: end; margin-top: 4px; }
+.mp-rc .mp-f-row .mp-f-pick.has-row2 > .mp-flag { margin-top: 4px; }
+.mp-rc .mp-f-row .mp-f-pick.has-row2.mp-alt > * { opacity: .5; }
+/* 大字那組 order（為了把標籤排到下一行）在 display:contents 下會直接打亂格線順序 → 這個結構一律照原始順序 */
+.mp-rc .mp-f-row .mp-f-pick.has-row2 > *, .mp-rc .mp-f-row .mp-f-pick .mp-row2 > * { order: 0; }
+.mp-f-row.mp-labs-below { align-items: start; }
+
+/* 雙欄 */
+.mp-e-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+.mp-e-grid .mp-sec { grid-column: 1 / -1; }
+.mp-e-cell { padding: 7px 0 6px; border-bottom: 1px dotted var(--rule); display: grid; gap: 4px; min-width: 0; align-content: start; }
+.mp-e-name { display: flex; align-items: center; min-width: 0; }
+.mp-e-line { display: flex; align-items: center; gap: 6px; }
+.mp-e-line .mp-due { margin-left: auto; }
+/* 大字雙欄：商家名和下面的回饋率拉開，名字下加一條細線當分隔，讀起來才分得出層次 */
+.mp-rc.lg .mp-e-cell { gap: 6px; padding: 10px 0 9px; }
+.mp-rc.lg .mp-e-name { padding-bottom: 5px; border-bottom: 1px solid var(--rule); }
+
+/* ---- 改名面板 ---- */
+.mp-sheet-wrap { position: fixed; inset: 0; z-index: 1060; background: rgba(15, 20, 30, .4); display: flex; align-items: flex-end; justify-content: center; }
+.mp-sheet-wrap[hidden] { display: none; }
+.mp-sheet {
+    width: 100%; max-width: 520px; box-sizing: border-box; background: #fff; border-radius: 22px 22px 0 0;
+    padding: 16px 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 11px; box-shadow: 0 -10px 30px rgba(0, 0, 0, .18);
+}
+.mp-sheet h2 { margin: 0; font-size: 17px; font-weight: 900; }
+.mp-sheet label { font-size: 12px; color: #6b7280; display: grid; gap: 6px; }
+#mappings-page .mp-sheet input[type="text"] {
+    font-size: 16px; font-weight: 700; padding: 10px 12px; border: 1.5px solid #cbd2dc; border-radius: 12px;
+    width: 100%; box-sizing: border-box; color: #111827; background: #fff; margin: 0;
+}
+.mp-orig { font-size: 12.5px; color: #6b7280; }
+.mp-orig b { color: #374151; }
+.mp-status { font-size: 12.5px; line-height: 1.5; color: #92400e; background: #fffbeb; border-radius: 10px; padding: 7px 10px; }
+.mp-status[hidden] { display: none; }
+.mp-row2 { display: flex; gap: 8px; }
+.mp-btn2 { flex: 1; border: 1.5px solid #e5e7eb; background: #fff; border-radius: 12px; padding: 10px; font-weight: 700; font-size: 14px; color: #374151; cursor: pointer; }
+.mp-btn2:disabled { color: #c4c8cf; cursor: default; }
+.mp-btn1 { flex: 1; border: 0; background: #111827; color: #fff; border-radius: 12px; padding: 10px; font-weight: 900; font-size: 14px; cursor: pointer; }
+.mp-remove-list { display: grid; gap: 6px; }
+.mp-title-count { margin-left: 6px; color: #374151; font-family: ui-monospace, Menlo, monospace; }
+.mp-title-count.over { color: #b91c1c; }
+.mp-rate-body { display: grid; gap: 8px; font-size: 14px; line-height: 1.55; color: #374151; }
+.mp-rate-body p { margin: 0; }
+.mp-rate-old { background: #f3f4f6; border-radius: 10px; padding: 8px 10px; }
+.mp-rate-opt { border: 1.5px solid #111827; background: #111827; color: #fff; border-radius: 12px; padding: 10px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; }
+
+/* ---- 存成圖片 ---- */
+.mp-export { position: fixed; inset: 0; z-index: 1060; background: rgba(15, 20, 30, .45); display: flex; }
+.mp-export[hidden] { display: none; }
+.mp-exp-box { flex: 1; display: grid; grid-template-columns: 1fr; background: #dfe4ec; min-height: 0; }
+.mp-exp-pane { display: flex; flex-direction: column; min-height: 0; }
+/* 設定區＝白底；預覽區＝深色／淺灰整塊（跟著圖片顏色），兩區一眼分得出來 */
+.mp-exp-settings-pane { background: #fff; }
+/* 手機：設定在上、預覽接在下面同一頁捲動（2026-09-28 取代「預覽圖片 →」兩步驟）。
+   設定＝淺灰底白卡片；預覽＝深色／淺色整塊、上方大圓角，一眼看得出是另一區 */
+@media (max-width: 1023px) {
+    .mp-exp-box { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .mp-exp-settings-pane .mp-exp-head { position: sticky; top: 0; z-index: 2; background: #fff; }
+    .mp-exp-body { overflow: visible; padding-bottom: 22px; }
+    .mp-exp-preview { border-radius: 24px 24px 0 0; box-shadow: 0 -6px 18px rgba(15, 20, 30, .12); }
+    .mp-exp-preview .mp-exp-head { padding-top: 16px; }
+    .mp-exp-stage { overflow: visible; }
+    .mp-exp-img.wall { max-height: 72vh; }
+}
+.mp-exp-head { flex: none; display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; }
+.mp-exp-head h2 { margin: 0; font-size: 18px; font-weight: 900; flex: 1; }
+.mp-exp-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 16px; display: grid; gap: 14px; align-content: start; grid-auto-rows: max-content; }
+/* ↑ grid-auto-rows 一定要 max-content：「要放進圖片的商家」區塊有 overflow:hidden（為了圓角），
+   auto 列會把它壓到剩餘高度並裁掉清單，整欄變成捲不動（2026-09-29 修正） */
+.mp-exp-foot { flex: none; padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.mp-big { width: 100%; border: 0; border-radius: 14px; padding: 12px; font-size: 15px; font-weight: 900; display: flex; justify-content: center; gap: 8px; align-items: center; cursor: pointer; background: #111827; color: #fff; }
+.mp-big svg { width: 18px; height: 18px; }
+.mp-big:disabled { opacity: .4; cursor: default; }
+.mp-set-block h4 { margin: 0 0 6px; font-size: 12px; font-weight: 900; color: #6b7280; letter-spacing: .06em; }
+.mp-set-row { display: flex; gap: 10px 14px; flex-wrap: wrap; }
+.mp-set-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: #4b5563; }
+.mp-ratio-note { margin-top: 6px; font: 600 12px ui-monospace, Menlo, monospace; color: #6b7280; }
+.mp-set-hint { margin: 0 0 6px; font-size: 12px; line-height: 1.5; color: #9a3412; background: #fff1e6; border-radius: 10px; padding: 7px 10px; }
+.mp-fmt { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mp-fmt button { border: 1.5px solid #d6dbe3; background: #fff; border-radius: 14px; padding: 10px; text-align: left; display: grid; gap: 3px; cursor: pointer; color: #111827; }
+.mp-fmt button b { font-size: 14px; font-weight: 900; }
+.mp-fmt button span { font-size: 11.5px; color: #6b7280; line-height: 1.4; }
+.mp-fmt button.on { border-color: #111827; box-shadow: inset 0 0 0 1px #111827; }
+.mp-pickwrap { background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 14px; overflow: hidden; }
+.mp-pick-head { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 12px; background: #eceff4; }
+.mp-pick-toggle { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; border: 0; background: none; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: default; min-width: 0; }
+.mp-pick-title { font-size: 13px; font-weight: 900; color: #111827; }
+.mp-cnt { font: 700 11.5px ui-monospace, Menlo, monospace; color: #374151; background: #fff; border-radius: 999px; padding: 3px 8px; }
+.mp-cnt.over { color: #c2410c; }
+.mp-all { border: 1.5px solid #111827; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 900; cursor: pointer; color: #111827; min-width: 66px; }
+.mp-chev { display: none; }
+.mp-pick-hint { margin: 8px 12px 0; }
+.mp-pick-bar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 8px 12px 0; border-top: 1px solid #e3e7ee; }
+.mp-pick-bar .mp-pick-hint { flex: 1; margin: 0; }
+.mp-pick-bar .mp-all { flex: none; }
+.mp-pick-bar + .mp-pick-hint, .mp-pick-bar ~ .mp-picks { border-top: 0; }
+/* 手機：「要放進圖片的商家」預設收合；整條標題列都能點，右邊藍色「展開 ⌄」膠囊 */
+@media (max-width: 1023px) {
+    .mp-pick-toggle { cursor: pointer; }
+    .mp-chev { display: inline-flex; align-items: center; gap: 3px; margin-left: auto; padding: 4px 8px 4px 10px; border-radius: 999px; background: #1e40af; color: #fff; font-size: 12px; font-weight: 800; flex: none; }
+    .mp-chev svg { width: 13px; height: 13px; transition: transform .2s ease; }
+    .mp-pickwrap.open .mp-chev svg { transform: rotate(180deg); }
+    .mp-pickwrap:not(.open) .mp-picks, .mp-pickwrap:not(.open) .mp-pick-hint, .mp-pickwrap:not(.open) .mp-pick-bar { display: none; }
+}
+.mp-picks { border-top: 1px solid #e3e7ee; padding: 4px 12px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+.mp-pk { display: flex; align-items: center; gap: 7px; padding: 8px 0; border-bottom: 1px solid #e6e9ee; font-size: 14px; cursor: pointer; min-width: 0; }
+.mp-pk-sec { grid-column: 1 / -1; }
+.mp-pk input { width: 18px; height: 18px; margin: 0; accent-color: #111827; flex: none; }
+.mp-pk-name { flex: 1; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
+.mp-pk-name small { display: block; margin-left: 0; }
+.mp-pk-name small { color: #b45309; font-size: 11px; }
+.mp-pk.off { opacity: .45; cursor: not-allowed; }
+.mp-pk-sec { font-size: 11px; font-weight: 900; color: #1d4ed8; padding: 8px 0 2px; letter-spacing: .08em; }
+.mp-pk-sec.pay { color: #ea580c; }
+.mp-exp-preview { background: #1b1f27; color: #fff; }
+.mp-exp-preview.lt { background: #e3e8ef; color: #111827; }
+.mp-exp-preview .mp-iconbtn { background: rgba(255, 255, 255, .12); color: #fff; }
+.mp-exp-preview.lt .mp-iconbtn { background: rgba(17, 24, 39, .08); color: #374151; }
+.mp-exp-preview .mp-seg { background: rgba(255, 255, 255, .12); }
+.mp-exp-preview .mp-seg button { color: #cbd5e1; }
+.mp-exp-preview .mp-seg button.on { background: #fff; color: #111827; }
+.mp-exp-preview.lt .mp-seg { background: rgba(17, 24, 39, .08); }
+.mp-exp-preview.lt .mp-seg button { color: #4b5563; }
+.mp-exp-preview .mp-big { background: #fff; color: #111827; }
+.mp-exp-preview.lt .mp-big { background: #111827; color: #fff; }
+.mp-exp-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px; display: flex; justify-content: center; align-items: flex-start; }
+.mp-exp-img { display: block; width: 100%; max-width: 360px; height: auto; border-radius: 14px; box-shadow: 0 0 0 1px rgba(127, 127, 127, .25); }
+.mp-exp-img.wall { width: auto; max-width: 100%; max-height: 100%; }
+.mp-exp-img[hidden] { display: none; }
+.mp-exp-tools { display: flex; justify-content: center; }
+.mp-exp-meta { text-align: center; font-size: 11.5px; color: #9ca3af; }
+.mp-exp-preview.lt .mp-exp-meta { color: #6b7280; }
+.mp-exp-meta.over { color: #fca5a5; font-weight: 700; }
+.mp-exp-preview.lt .mp-exp-meta.over { color: #b91c1c; }
+.mp-exp-tip { margin: 0; font-size: 11.5px; line-height: 1.5; color: #9ca3af; text-align: center; }
+.mp-exp-tip[hidden] { display: none; }
+.mp-exp-preview.lt .mp-exp-tip { color: #6b7280; }
+
+/* ---- 平板／桌機 ---- */
+@media (min-width: 1024px) {
+    .mp-page { margin: 0; }
+    /* 左欄常駐（編輯／存成圖片＋按「編輯」後的提示與設定），右欄小抄；按編輯時小抄不會跳位置。
+       說明卡與兩欄同寬（250＋28＋460＝738）一起置中 */
+    .mp-layout { display: grid; grid-template-columns: 250px minmax(0, 460px); gap: 28px; justify-content: center; align-items: start; }
+    .mp-side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 12px; padding: 0; }
+    .mp-main { display: block; padding: 0 0 12px; }
+    .mp-guest { max-width: 738px; }
+    .mp-steps { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .mp-steps li { align-items: flex-start; }
+    .mp-actions { display: grid; gap: 8px; margin: 0; padding: 12px; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 16px; }
+    .mp-count { font-size: 12px; }
+    .mp-edit-btn { width: 100%; height: 42px; border-radius: 12px; font-size: 14px; }
+    .mp-side-save { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; height: 42px; border: 0; border-radius: 12px; background: #111827; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; }
+    .mp-side-save svg { width: 15px; height: 15px; }
+    .mp-side-save:disabled { opacity: .4; cursor: default; }
+    .mp-savebar { display: none !important; }
+    .mp-tip { flex-direction: column; align-items: flex-start; gap: 4px; padding: 0 4px; margin: 0; }
+    .mp-tip .mp-dot { display: none; }
+    .mp-tools:not([hidden]) { margin: 0; }
+    .mp-notice, .mp-paper, .mp-deadbar { margin-left: 0; margin-right: 0; }
+    .mp-sheet-wrap { align-items: center; }
+    .mp-sheet { border-radius: 18px; }
+    .mp-export { align-items: center; justify-content: center; }
+    /* grid-template-rows 一定要 minmax(0,1fr)：否則列高＝內容高，左側設定欄被框裁掉而無法捲動（2026-09-29 修正） */
+    .mp-exp-box { flex: none; width: min(920px, 94vw); height: min(720px, 92vh); grid-template-columns: 1fr 380px; grid-template-rows: minmax(0, 1fr); border-radius: 18px; overflow: hidden; box-shadow: 0 30px 70px rgba(0, 0, 0, .35); }
+    .mp-exp-head { padding-top: 16px; }
+}
+

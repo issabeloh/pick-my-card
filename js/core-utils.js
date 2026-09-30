@@ -397,6 +397,12 @@ function clearCardLevelCache() {
 // localStorage 裡的 JSON 一旦損毀（舊版程式寫入格式不符、被手動改過、擴充套件污染），
 // 直接 JSON.parse 會拋錯並中斷整個載入流程（過去曾因此造成詳情頁打不開）。
 // 所有 localStorage 的 JSON 讀取一律走這裡：壞資料回傳 fallback 並移除該 key。
+// 配卡資料（配對、持有卡、額度）變了 → 通知「我的刷卡小抄」頁（js/mappings-page.js 監聽；頁面沒開就什麼都不做）。
+// 用 DOM 事件而不是直接呼叫對方的函式：發出端不用知道誰在聽，也不用 typeof 檢查。
+function notifyMappingsDataChanged() {
+    document.dispatchEvent(new Event('pmc:mappings-data-changed'));
+}
+
 function readLocalJSON(key, fallback = null) {
     let raw = null;
     try { raw = localStorage.getItem(key); } catch (e) { return fallback; }

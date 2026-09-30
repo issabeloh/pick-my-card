@@ -43,6 +43,7 @@
 
 - `clearPersonalLocalDataOnSignOut(uid)`：清所有帶 uid 的鏡像＋非 uid 區分的個人 key
 - **只能在「用戶親自按登出」時呼叫**，不能放進 onAuthStateChanged 的登出分支（訪客每次開頁都會觸發該分支，會誤刪訪客資料）
+- 新增帶 uid 的本機 key 時要同步加進清理清單。2026-09-28 加了配卡組合頁的 `merchantAliases_<uid>`（自訂商家名稱鏡像，正本在 Firestore `users/<uid>.merchantAliases`）、`mappingsPrefs_<uid>`（排列／字級／存圖偏好，只存本機）與 `mappingsTitle_<uid>`（小抄標題鏡像，正本在 `users/<uid>.mappingsTitle`）
 
 ## 6. XSS 與連結安全
 

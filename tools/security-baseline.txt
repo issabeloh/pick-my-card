@@ -24,3 +24,8 @@ SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="
 
 # ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）──
 SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+
+# ── 本站自己產生的 blob: 網址（2026-09-28）──
+# mappings-page.js 存圖：url = URL.createObjectURL(blob)，blob 是本頁 canvas 畫出來的 PNG，
+# 不含任何外部或使用者輸入的網址；sanitizeUrl() 只放行 http/https，會把 blob: 擋掉
+SEC6|js/mappings-page.js|a.href = url; a.download = fname;
