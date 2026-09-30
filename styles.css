@@ -3716,6 +3716,12 @@ input[type="number"]:focus {
     .breakdown-table th { padding-right: 6px; }
     .breakdown-table .bd-cap { padding-right: 5px; }
     .breakdown-table .bd-cash { padding-right: 0; }
+    /* 手機把整個寬度用滿（2026-09-30 站長要求）：表格預設是 shrink-to-fit，窄螢幕上
+       右側會空一截。min-width 而非 width——排不下的那幾列仍照舊靠 overflow-x 橫捲，
+       不會被壓縮。只給搜尋結果／領券的計算明細，詳情頁「回饋組成」抽屜維持原樣
+       （3 欄拉滿只會讓上限離回饋率太遠）。桌機同理不套：欄距拉到 500px 寬反而難掃。 */
+    .card-result .breakdown-table,
+    .coupon-item .breakdown-table { min-width: 100%; }
 }
 .breakdown-table .bd-total td {
     border-top: 1px solid #d1d5db;
