@@ -197,8 +197,10 @@ const PAIRS = [
   check('配卡組合畫面：左側「加入比較的卡片」欄與 ☰ 都隱藏', tabs.sidebarHidden);
   const clean = await pg.evaluate(() => ({ tools: document.getElementById('mp-tools').hidden, tip: document.getElementById('mp-tip').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle') && document.getElementById('mp-edit-toggle').textContent.trim() === '編輯本頁', grips: document.querySelectorAll('#mp-list [data-mp-grip]').length }));
   const erow = await pg.evaluate(() => { const r = id => document.getElementById(id).getBoundingClientRect(); const s = r('mp-search'), e = r('mp-edit-toggle'), l = r('mp-list');
-    return { belowSearch: e.top >= s.bottom - 1, aboveList: e.bottom <= l.top + 1, count: document.getElementById('mp-count').textContent }; });
-  check('手機：「編輯」在搜尋框下方、緊貼小抄上方（旁邊顯示商家數）', erow.belowSearch && erow.aboveList && /^已加入 \d+ 家商家$/.test(erow.count), JSON.stringify(erow));
+    const c = document.getElementById('mp-count-m'), cr = c.getBoundingClientRect();
+    return { aboveSearch: e.bottom <= s.top + 1, searchAboveList: s.bottom <= l.top + 1, countBelowList: cr.top >= l.bottom - 1, countRight: getComputedStyle(c).textAlign === 'right',
+      sideCountHidden: getComputedStyle(document.getElementById('mp-count')).display === 'none', count: c.textContent }; });
+  check('手機：［存成圖片｜編輯本頁］→ 搜尋框 → 小抄；商家數在小抄下方右側', erow.aboveSearch && erow.searchAboveList && erow.countBelowList && erow.countRight && erow.sideCountHidden && /^已加入 \d+ 家商家$/.test(erow.count), JSON.stringify(erow));
   const intro = await pg.evaluate(() => ({ steps: document.querySelectorAll('.mp-intro .mp-steps li').length, text: document.querySelector('.mp-intro').textContent }));
   const beta = await pg.evaluate(() => ({ tab: !!document.querySelector('#home-view-switch-mappings .mp-beta'), note: !!document.querySelector('.mp-intro .mp-beta'), fb: !document.getElementById('mp-feedback-wrap').hidden }));
   check('「新功能 Beta」標籤：頁籤與說明卡都有；登入用戶看得到「回報給我們」', beta.tab && beta.note && beta.fb, JSON.stringify(beta));
@@ -215,7 +217,7 @@ const PAIRS = [
   check('搜尋框左側有放大鏡、預覽字大小不變（14px）', ro.searchIcon && ro.phSize === '14px', JSON.stringify({ icon: ro.searchIcon, ph: ro.phSize }));
   check('使用教學預設收合，「新功能 Beta 最後測試中」那行照樣顯示', ro.introCollapsed && ro.betaVisible, JSON.stringify(ro));
   await pg.click('#mp-intro-toggle');
-  check('點「怎麼使用刷卡小抄？」→ 展開三步驟', await pg.evaluate(() => !document.getElementById('mp-steps').hidden && document.getElementById('mp-intro-toggle').getAttribute('aria-expanded') === 'true'));
+  check('點「使用方法」→ 展開三步驟', await pg.evaluate(() => !document.getElementById('mp-steps').hidden && document.getElementById('mp-intro-toggle').getAttribute('aria-expanded') === 'true'));
   await pg.click('#mp-intro-toggle');
   check('預設只顯示乾淨的小抄＋搜尋框（設定、提示都收起來）', clean.tools && clean.tip && clean.search && clean.edit && clean.grips === 0, JSON.stringify(clean));
   await pg.click('#mp-edit-toggle');
@@ -226,8 +228,8 @@ const PAIRS = [
   const extHidden = await pg.evaluate(() => ['.spotlight-section', '.mc-related', '#scroll-to-spotlight-btn'].every(sel => { const el = document.querySelector(sel); return el && el.closest('[data-view="search"]') && getComputedStyle(el.closest('[data-view="search"]')).display === 'none'; }));
   check('推薦活動、推薦比較屬於「查詢回饋」畫面（切到配卡組合時整個畫面隱藏）', extHidden);
   const order = await pg.evaluate(() => { const y = id => document.getElementById(id).getBoundingClientRect().top;
-    return { intro: !!document.querySelector('.mp-intro'), searchFirst: y('mp-searchbox') < y('mp-edit-toggle'), editThenTip: y('mp-edit-toggle') < y('mp-tip'), tipThenTools: y('mp-tip') < y('mp-tools'), toolsAboveList: y('mp-tools') < y('mp-list'), saveAboveList: document.querySelector('.mp-act-save').getBoundingClientRect().top < y('mp-list') }; });
-  check('手機編輯中順序：說明 → 搜尋框 →［存成圖片｜編輯本頁］→ 提示 → 設定 → 小抄', Object.values(order).every(Boolean), JSON.stringify(order));
+    return { intro: !!document.querySelector('.mp-intro'), editThenSearch: y('mp-edit-toggle') < y('mp-searchbox'), searchThenTip: y('mp-searchbox') < y('mp-tip'), tipThenTools: y('mp-tip') < y('mp-tools'), toolsAboveList: y('mp-tools') < y('mp-list'), saveAboveList: document.querySelector('.mp-act-save').getBoundingClientRect().top < y('mp-list') }; });
+  check('手機編輯中順序：說明 →［存成圖片｜編輯本頁］→ 搜尋框 → 提示 → 設定 → 小抄', Object.values(order).every(Boolean), JSON.stringify(order));
   await pg.fill('#mp-search', '麥當勞');
   await pg.dispatchEvent('#mp-search', 'input');
   const clr = await pg.isVisible('#mp-search-clear');
@@ -542,8 +544,9 @@ const PAIRS = [
         const vis = el => el && getComputedStyle(el).display !== 'none' && r(el).width > 0;
         const sideR = r(side), listR = r(list), introR = r(intro);
         return { editInSide: side.contains(document.getElementById('mp-edit-toggle')) && vis(document.getElementById('mp-edit-toggle')), saveInSide: side.contains(document.querySelector('.mp-act-save')) && vis(document.querySelector('.mp-act-save')),
-          sideLeft: sideR.right <= listR.left, introCentered: Math.abs((introR.left + introR.right) / 2 - innerWidth / 2) <= 2 && Math.abs(introR.left - sideR.left) <= 2 && Math.abs(introR.right - listR.right) <= 2, listTop: Math.round(listR.top) }; });
-      check('桌機：存成圖片、編輯本頁在左側欄', d0.editInSide && d0.saveInSide && d0.sideLeft, JSON.stringify(d0));
+          sideLeft: sideR.right <= listR.left, countInSide: vis(document.getElementById('mp-count')) && !vis(document.getElementById('mp-count-m')),
+          searchAboveList: document.querySelector('.mp-main').contains(document.getElementById('mp-searchbox')) && r(document.getElementById('mp-searchbox')).bottom <= listR.top + 1, introCentered: Math.abs((introR.left + introR.right) / 2 - innerWidth / 2) <= 2 && Math.abs(introR.left - sideR.left) <= 2 && Math.abs(introR.right - listR.right) <= 2, listTop: Math.round(listR.top) }; });
+      check('桌機：存成圖片、編輯本頁、商家數在左側欄；搜尋框在小抄正上方', d0.editInSide && d0.saveInSide && d0.sideLeft && d0.countInSide && d0.searchAboveList, JSON.stringify(d0));
       check('桌機：說明卡置中，與左欄＋小抄同寬', d0.introCentered, JSON.stringify(d0));
       await p2.click('#mp-edit-toggle');
       const d1 = await p2.evaluate(() => ({ listTop: Math.round(document.getElementById('mp-list').getBoundingClientRect().top), toolsInSide: document.querySelector('.mp-side').contains(document.getElementById('mp-tools')) && !document.getElementById('mp-tools').hidden }));

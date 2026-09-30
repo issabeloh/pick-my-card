@@ -854,8 +854,9 @@ function mpRender() {
     }
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
-    const countEl = mpEl('mp-count');
-    if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `已加入 ${n} 家商家` : ''; }
+    // 商家數：#mp-count 在桌機左欄按鈕卡片裡、#mp-count-m 在手機小抄下方右側（CSS 各自只顯示一個）
+    const countText = mappings.length ? (n => n ? `已加入 ${n} 家商家` : '')(mpBuildGroups().length) : '';
+    ['mp-count', 'mp-count-m'].forEach(id => { const el = mpEl(id); if (el) el.textContent = countText; });
     show(searchbox, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
