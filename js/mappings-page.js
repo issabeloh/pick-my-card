@@ -797,6 +797,7 @@ function mpRender() {
     const show = (el, on) => { if (el) el.hidden = !on; };
     // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
     show(guest, !currentUser);
+    show(mpEl('mp-feedback-wrap'), !!currentUser);   // 回報表單只給登入用戶（同頭像選單「回報錯誤」）
     const demoTag = mpEl('mp-demo-tag');
     if (demoTag) demoTag.hidden = !!currentUser;
     if (!currentUser && !MP.demo) {
@@ -1641,6 +1642,7 @@ function mpBind() {
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
+        if (b.id === 'mp-feedback-btn') { const m = document.getElementById('feedback-modal'); if (m) { m.style.display = 'flex'; disableBodyScroll(); } return; }
         if (b.hasAttribute('data-mp-help')) { if (document.getElementById('mp-help-pop')) mpCloseHelp(); else mpOpenHelp(b); return; }
         if (b.hasAttribute('data-mp-open-export')) { mpOpenExport(); return; }
         if (b.id === 'mp-edit-save') { await mpSaveEdit(false); return; }

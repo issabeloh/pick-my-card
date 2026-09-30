@@ -9210,6 +9210,18 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
+/* 「新功能 Beta」標籤（頁籤、頭像選單、說明卡）：琥珀色系＝和「加到我的小抄」按鈕同一組顏色 */
+.mp-beta { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; font-size: 10.5px; font-weight: 800; line-height: 1.4; letter-spacing: .02em; vertical-align: middle; white-space: nowrap; }
+.mp-beta-full { margin-right: .3em; }
+/* 手機：頁籤寬度不夠，Beta 改成右上角的小角標，不擠到「我的刷卡小抄」 */
+@media (max-width: 420px) {
+    .home-view-switch .mp-beta-full { display: none; }
+    #home-view-switch-mappings { position: relative; }
+    #home-view-switch-mappings .mp-beta { position: absolute; top: -9px; right: 10px; margin: 0; padding: 0 5px; font-size: 9.5px; z-index: 2; }
+}
+.mp-beta-note { margin: 10px 0 0; padding-top: 9px; border-top: 1px dashed #bfdbfe; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: #4b5563; }
+.mp-beta-note .mp-beta { margin-left: 0; }
+.mp-linkbtn2 { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
 /* 手機／平板：單欄，依序＝搜尋 → 編輯列 → 提示 → 設定 → 小抄 → 存成圖片（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
 .mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }

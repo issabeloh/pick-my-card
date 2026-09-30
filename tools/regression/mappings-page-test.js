@@ -200,6 +200,11 @@ const PAIRS = [
     return { belowSearch: e.top >= s.bottom - 1, aboveList: e.bottom <= l.top + 1, count: document.getElementById('mp-count').textContent }; });
   check('手機：「編輯」在搜尋框下方、緊貼小抄上方（旁邊顯示商家數）', erow.belowSearch && erow.aboveList && /^已加入 \d+ 家商家$/.test(erow.count), JSON.stringify(erow));
   const intro = await pg.evaluate(() => ({ steps: document.querySelectorAll('.mp-intro .mp-steps li').length, text: document.querySelector('.mp-intro').textContent }));
+  const beta = await pg.evaluate(() => ({ tab: !!document.querySelector('#home-view-switch-mappings .mp-beta'), note: !!document.querySelector('.mp-intro .mp-beta'), fb: !document.getElementById('mp-feedback-wrap').hidden }));
+  check('「新功能 Beta」標籤：頁籤與說明卡都有；登入用戶看得到「回報給我們」', beta.tab && beta.note && beta.fb, JSON.stringify(beta));
+  await pg.click('#mp-feedback-btn');
+  const fbOpen = await pg.evaluate(() => { const m = document.getElementById('feedback-modal'); const o = getComputedStyle(m).display !== 'none'; m.style.display = 'none'; if (typeof enableBodyScroll === 'function') enableBodyScroll(); return o; });
+  check('點「回報給我們」→ 打開回報表單', fbOpen);
   check('頁面說明改成三步驟說明卡', intro.steps === 3 && intro.text.includes('在查詢回饋的結果中按「加到我的小抄」') && intro.text.includes('活動自動存入以下刷卡小抄') && intro.text.includes('結帳前看一眼'), JSON.stringify(intro.steps));
   check('預設只顯示乾淨的小抄＋搜尋框（設定、提示都收起來）', clean.tools && clean.tip && clean.search && clean.edit && clean.grips === 0, JSON.stringify(clean));
   await pg.click('#mp-edit-toggle');
@@ -651,6 +656,7 @@ const PAIRS = [
   await gp.waitForSelector('#mappings-page:not([hidden])');
   await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
   const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login') }));
+  check('未登入：不顯示「回報給我們」（回報表單只給登入用戶）', await gp.evaluate(() => document.getElementById('mp-feedback-wrap').hidden));
   check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
   await gp.click('#mp-edit-toggle');
