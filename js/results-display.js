@@ -1267,7 +1267,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     const isUpcoming = result.isUpcoming === true;
     cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''} ${isUpcoming ? 'upcoming-activity' : ''}`;
 
-    let capText = result.cap ? `NT$${Math.floor(result.cap).toLocaleString()}` : '無上限';
+    // 槽位自己沒填 cap 時不代表無上限：stacking 模型的加碼層可能有自己的上限
+    // （大戶卡海外 4% 加碼受該級別 overseasBonusCap 限制，計算時確實有套）。
+    // 計算層已帶著每層實際套用的 cap，取真的會咬到的那個顯示——只改顯示，金額不變。
+    const displayCap = result.cap || resolveDisplayCapFromLayers(result.calculationLayers);
+    let capText = displayCap ? `NT$${Math.floor(displayCap).toLocaleString()}` : '無上限';
     // Special handling for Taishin Richart card cap display
     if (result.card.id === 'taishin-richart' && result.cap) {
         capText = `NT$${Math.floor(result.cap).toLocaleString()}+`;
