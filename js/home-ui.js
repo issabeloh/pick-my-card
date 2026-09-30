@@ -519,17 +519,33 @@ function buildSpotlightModalBody(item, card) {
         `;
     }
 
-    let levelData = null;
-    if (card.hasLevels && card.levelSettings) {
-        levelData = card.levelSettings[Object.keys(card.levelSettings)[0]] || null;
-    }
+    // 分級卡：推薦活動是編輯挑的某個級別（如「用UP選方案刷」），不能一律拿第一個級別解析
+    // ——玉山 Uni 卡支付寶曾因此顯示簡單選的 3%，卡片上寫的卻是 UP選的 4.5%。
+    // 逐級別試算，取回饋率等於 sheet rate 的那個級別；都對不上才退回第一個級別。
+    const levelNames = (card.hasLevels && card.levelSettings) ? Object.keys(card.levelSettings) : [];
+    const sheetRate = parseFloat(item.rate);
+    const resolveSpotlightLevel = (group) => {
+        if (levelNames.length === 0) return { levelName: null, levelData: null };
+        const computeRate = (levelData) =>
+            getDisplayRate(card, group, parseCashbackRateSync(group.rate, levelData), levelData);
+        if (!isNaN(sheetRate)) {
+            const matched = levelNames.find(name =>
+                Math.abs(parseFloat(computeRate(card.levelSettings[name])) - sheetRate) < 1e-6);
+            if (matched) return { levelName: matched, levelData: card.levelSettings[matched] };
+        }
+        return { levelName: levelNames[0], levelData: card.levelSettings[levelNames[0]] || null };
+    };
 
     const blocks = activities.map(group => {
+        const { levelName, levelData } = resolveSpotlightLevel(group);
         const parsedRate = parseCashbackRateSync(group.rate, levelData);
         // For stacking models (rate+basic+…) rate_N holds only the designated-channel
         // rate, so show the summed total (designated + basic + bonus) — same number the
         // search-result card shows. Non-stacking models return the parsed rate as-is.
         const rateNum = getDisplayRate(card, group, parsedRate, levelData);
+        // 回饋率只在活動內容真的隨級別變動（含 placeholder）時才標級別名，免得固定費率的活動也掛上級別
+        const levelTag = (levelName && /\{[^}]+\}/.test(`${group.rate}${group.cap}`))
+            ? ` <span class="spotlight-rate-category">(${escapeHtml(levelName)})</span>` : '';
         // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）——
         // 與搜尋結果卡、詳情頁同一套推導，Spotlight 不自成一格
         const capNum = resolveDisplayCap(card, group, parseCashbackCap(group.cap, card, levelData), levelData);
@@ -542,7 +558,7 @@ function buildSpotlightModalBody(item, card) {
         const categoryLabel = group.category
             ? ` <span class="spotlight-rate-category">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
             : '';
-        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋` : ''}${categoryLabel}</div>`;
+        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋${levelTag}` : ''}${categoryLabel}</div>`;
         // 適用通路：標題獨立一行、內容下一行；超過 3 行預設收合、點擊展開（toggle 由 setupSpotlightActItemsToggle 開啟）
         const actItemsHtml = items.length
             ? `<div class="spotlight-act-items"><div class="spotlight-act-items-label">此活動也適用以下通路</div><div class="spotlight-act-items-values clamped">${items.map(escapeHtml).join('、')}</div><button type="button" class="spotlight-act-items-toggle" hidden>展開</button></div>`
