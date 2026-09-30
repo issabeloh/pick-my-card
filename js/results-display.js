@@ -1484,22 +1484,22 @@ function showCalcBreakdown(btn, cardResult) {
     const layers = JSON.parse(cardResult.dataset.calcLayers || '[]');
     if (!layers.length) return;
 
-    // 5 columns, no header: 項目 | 適用金額 | 上限 | 回饋率 | 回饋金額
+    // 5 columns with a header row: 項目 | 適用金額 | 上限 | 回饋率 | 回饋金額
     // 「上限」逐層寫出（2026-09-30）：卡片上那格「回饋消費上限」是 min() 摘要，
-    // 一個數字表達不了「2% 無上限 ＋ 4% 限 25,000」，在這裡才看得出上限是哪一層的、
+    // 一個數字表達不了「2% 無上限 ＋ 4% 上限 25,000」，在這裡才看得出上限是哪一層的、
     // 還有多少額度沒用到。上限欄緊接適用金額（它限制的就是那一格），綠色的回饋金額
-    // 維持在最右邊當視覺錨點。"封頂" marks a layer whose amount was clamped by its cap.
+    // 維持在最右邊當視覺錨點。欄位標題讓每一格只放值、不必重複「限」字（站長裁定）。
     // 依回饋率高→低排列（2026-07-16 站長要求；Total 列固定最後不參與排序）
     layers.sort((a, b) => (parseFloat(b.rate) || 0) - (parseFloat(a.rate) || 0));
     const rows = layers.map(layer => {
         const amtLabel = `NT$${Math.floor(layer.applicableAmount).toLocaleString()}`;
         const cashLabel = `NT$${Math.floor(layer.cashback).toLocaleString()}`;
         const hasCap = layer.cap != null && layer.cap > 0;
-        // 上限欄省略 NT$ 前綴（左邊「適用金額」欄已經帶著 NT$，幣別不會誤讀）——
-        // 省下的約 22px 是 5 欄能在 360px 手機上排下的關鍵，量測見 commit 說明
-        // rate=0 的層是「超過上限(不列入回饋)」那種剩餘額度桶，不是會給回饋的層——
-        // 對它寫「無上限」會讀成「這段無上限地給」，正好相反，所以留白。
-        const capLabel = hasCap ? `限 ${Math.floor(layer.cap).toLocaleString()}`
+        // 上限欄只放數字：欄位標題已經寫著「上限」，每列不必再重複「限」字；NT$ 也省略
+        // （左邊「適用金額」欄已經帶著幣別）。省下的寬度是 5 欄能在 360px 手機排下的關鍵。
+        // rate=0 的層是「超過上限」那種剩餘額度桶，不是會給回饋的層——對它寫「無上限」
+        // 會讀成「這段無上限地給」，正好相反，所以留白。
+        const capLabel = hasCap ? Math.floor(layer.cap).toLocaleString()
             : (parseFloat(layer.rate) > 0 ? '無上限' : '');
         // 封頂＝適用金額被上限夾住。原本在回饋金額後面掛紅字「（封頂）」，有了上限欄
         // 之後那是同一件事講兩遍（適用金額會等於上限），而 5 欄在 360px 手機上寬度吃緊——
@@ -1526,9 +1526,19 @@ function showCalcBreakdown(btn, cardResult) {
         <td class="bd-cash">NT$${totalCash.toLocaleString()}</td>
     </tr>`;
 
+    // 欄位標題（2026-09-30）：有了標題，值欄就只放值——上限欄不必每列寫「限」、
+    // 適用金額也不會被誤讀成「這層的上限」。用 <thead> 讓它天生就是標題列。
+    const headRow = `<tr>
+        <th class="bd-name">項目</th>
+        <th class="bd-amt">適用金額</th>
+        <th class="bd-cap">上限</th>
+        <th class="bd-rate">回饋率</th>
+        <th class="bd-cash">回饋金額</th>
+    </tr>`;
+
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
-    popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+    popup.innerHTML = `<table class="breakdown-table"><thead>${headRow}</thead><tbody>${rows}${totalRow}</tbody></table>`;
 
     // Append INSIDE the card/coupon box (not as a grid sibling) so it's visually
     // anchored to its own result — doesn't shift other grid items around, and

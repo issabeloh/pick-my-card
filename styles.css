@@ -3676,37 +3676,44 @@ input[type="number"]:focus {
     border-collapse: collapse;
     width: auto;
 }
-.breakdown-table td {
+.breakdown-table td,
+.breakdown-table th {
     padding: 4px 10px 4px 0;
     color: #374151;
     white-space: nowrap;
     vertical-align: middle;
 }
-.breakdown-table .bd-name { font-weight: 500; }
-.breakdown-table .bd-amt,
-.breakdown-table .bd-rate { color: #6b7280; }
+/* 欄位標題列：低調的灰字＋細分隔線，讓下面每一格只放值（上限欄因此不必寫「限」字）。
+   標題字都比同欄最寬的值短，所以不會把任何一欄撐寬。 */
+.breakdown-table th {
+    color: #9ca3af;
+    font-weight: 400;
+    font-size: 0.92em;
+    text-align: left;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.breakdown-table td.bd-name { font-weight: 500; }
+.breakdown-table td.bd-amt,
+.breakdown-table td.bd-rate { color: #6b7280; }
 /* 每層自己的上限（2026-09-30 新增第 5 欄）：灰字不搶戲，封頂時轉紅呼應（封頂）標記。
    欄距比其他欄窄——5 欄要在 360px 手機上一列排得下，見下方 @media 的緊縮設定 */
-.breakdown-table .bd-cap {
+.breakdown-table td.bd-cap {
     color: #9ca3af;
     padding-right: 8px;
 }
-.breakdown-table .bd-cap-hit { color: #dc2626; }
-.breakdown-table .bd-cash {
+.breakdown-table td.bd-cap-hit { color: #dc2626; }
+.breakdown-table td.bd-cash {
     color: #059669;
     font-weight: 500;
     padding-right: 0;
 }
-.breakdown-table .breakdown-capped {
-    color: #dc2626;
-    font-weight: 400;
-    margin-left: 2px;
-}
 /* 手機（5 欄擠一列）：縮字級與欄距，讓常見的一列在 360px 寬排得下不必橫向捲。
-   仍保留 td 的 nowrap——寧可長名稱的那幾列橫向捲，也不要一個活動被折成兩行。 */
+   仍保留 nowrap——寧可長名稱的那幾列橫向捲，也不要一個活動被折成兩行。 */
 @media (max-width: 430px) {
     .calc-breakdown-popup { font-size: 12px; }
-    .breakdown-table td { padding-right: 6px; }
+    .breakdown-table td,
+    .breakdown-table th { padding-right: 6px; }
     .breakdown-table .bd-cap { padding-right: 5px; }
     .breakdown-table .bd-cash { padding-right: 0; }
 }
