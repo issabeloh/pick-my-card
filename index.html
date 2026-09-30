@@ -220,7 +220,7 @@
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-my-mappings" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 1A1.5 1.5 0 0 0 1 2.5v11A1.5 1.5 0 0 0 2.5 15h6.086a1.5 1.5 0 0 0 1.06-.44l4.915-4.914A1.5 1.5 0 0 0 15 8.586V2.5A1.5 1.5 0 0 0 13.5 1h-11zM2 2.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 .5.5v6H9.5A1.5 1.5 0 0 0 8 10.5V14H2.5a.5.5 0 0 1-.5-.5v-11zm7 11.293V10.5a.5.5 0 0 1 .5-.5h3.293L9 13.793z"/></svg>
-                                    我的刷卡小抄 <span class="mp-beta">Beta</span>
+                                    我的刷卡小抄
                                 </a>
                                 <a href="#" class="avatar-dropdown-item" id="avatar-feedback" style="display:none">
                                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/></svg>
@@ -375,8 +375,8 @@
                  面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
             <!-- ===== 畫面：我的刷卡小抄（data-view="mappings"）===== -->
             <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的刷卡小抄">
-                <!-- 改版告知（2026-09-30）：舊「我的配卡組合」搬到這裡；只給登入用戶看（mpRender 控制） -->
-                <p class="mp-moved-note" id="mp-moved-note" hidden>原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
+                <!-- 改版告知（2026-09-30）：舊「我的配卡組合」搬到這裡；所有人都看得到 -->
+                <p class="mp-moved-note" id="mp-moved-note">原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
                 <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
                     <ol class="mp-steps">
@@ -384,7 +384,7 @@
                         <li><b class="mp-step-n">2</b><span>活動<strong>自動存入</strong>以下刷卡小抄</span></li>
                         <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，結帳前看一眼</span></li>
                     </ol>
-                    <p class="mp-beta-note"><span class="mp-beta">新功能 Beta</span><span>最後測試中<span id="mp-feedback-wrap" hidden>，遇到問題請<button type="button" class="mp-linkbtn2" id="mp-feedback-btn">回報給我們</button></span></span></p>
+                    <p class="mp-beta-note"><span class="mp-beta">新功能 Beta</span><span>最後測試中<span id="mp-feedback-wrap">，遇到問題請<button type="button" class="mp-linkbtn2" id="mp-feedback-btn">回報給我們</button></span></span></p>
                 </div>
                 <!-- 未登入提示放在版面最上面：按「編輯」後的設定出現在它下方 -->
                 <div class="mp-guest" id="mp-guest" hidden>
