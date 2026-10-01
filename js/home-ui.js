@@ -938,11 +938,12 @@ function showAnnouncementModal(index) {
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
 const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
 const SURVEY_INVITE_DELAY_MS = 1200;
-// 只在 2026 年 9 月整月彈。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
+// 只在 2026/9/1–10/11 彈（原訂 9 月整月；9/30 刷卡小抄上線當天單日收到 25 份回覆，
+// 站長 2026-10-01 決定延長到 10/11 底，讓那波新流量回訪時也問得到）。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
 // 那樣會變成「裝置本地時間」，人在國外或裝置時區設錯的用戶起訖點會整個偏掉。
 // 寫成帶時區的絕對時刻後，全世界同一瞬間開關。過期自動變 no-op，不用月底手動下架。
 const SURVEY_INVITE_START = '2026-09-01T00:00:00+08:00';
-const SURVEY_INVITE_END   = '2026-10-01T00:00:00+08:00';  // 不含這一刻
+const SURVEY_INVITE_END   = '2026-10-12T00:00:00+08:00';  // 不含這一刻＝10/11 23:59 為止
 let surveyInviteHandledThisSession = false;
 
 function isSurveyInvitePeriod() {
@@ -1001,7 +1002,7 @@ function isSurveyInviteAudience() {
 // 由 onAuthStateChanged 的登入／訪客兩個分支呼叫（auth-user-data.js）。
 function maybeShowSurveyInvite() {
     if (surveyInviteHandledThisSession) return;
-    if (!isSurveyInvitePeriod()) return;  // 只在 9 月
+    if (!isSurveyInvitePeriod()) return;  // 只在 9/1–10/11
     if (!isSurveyInviteAudience()) return;  // 登入用戶或回訪訪客，首訪不問
     // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
     // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
