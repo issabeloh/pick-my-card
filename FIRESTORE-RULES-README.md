@@ -11,7 +11,8 @@
 | `users/{uid}` | 只有本人能讀寫；**只接受網站實際會寫的欄位**（清單在規則裡） | 別人拿不到你的設定；腳本塞不進奇怪欄位 |
 | `cardSettings/{uid}_{cardId}` | 文件 ID 必須是「自己的 uid＋_＋內容裡的 cardId」、cardId 限小寫英數與連字號、只能有 level/updatedAt/cardId | 卡片級別只有本人能讀寫，不能用亂取的 ID 無限新增文件 |
 | `userNotes/{uid}_{cardId}` | 同上（欄位限 notes/updatedAt/cardId） | 筆記只有本人能讀寫 |
-| `feedback` | 需登入、只能新增、內容限 5000 字 | 回報內容不會被其他用戶讀到 |
+| `feedback` | 需登入、只能新增、內容限 5000 字；文件 ID 必須是當天的預約（`<uid>_<日期>_<第幾則>`） | 回報內容不會被其他用戶讀到；每天最多 5 則 |
+| `feedbackQuota/{uid}` | 回報額度：同一天（台灣時間）只能 +1 到 5，換日從 1 開始，不能刪 | 每帳號每天最多 5 則回報 |
 | `reviews` | **已停用**（2026-10-01；網站早已移除評分功能） | 全站不再有「不登入就能寫入」的地方 |
 | 封鎖名單 | `notBlocked()` 裡的 uid 一律不能讀寫 | 2026-10-01 腳本狂寫事件與 10/2 換帳號再來的兩個帳號（console 同時已停用，**不要刪除**） |
 | `rateLimits/{uid}` | 每帳號寫入計數；只能照規則 +1 或過期後歸 1，不能刪 | 每帳號每 10 分鐘最多 100 次寫入 |
@@ -87,7 +88,7 @@ App Check 擋得住「直接呼叫 API 的腳本」，擋不住「操控真瀏�
 問題回報的附圖上傳到 Firebase Storage，規則**另外一份**：repo 的 `storage.rules`，
 貼到 console → **Storage** → **Rules**（不是 Firestore 那頁）→ 發布。改前一樣先把 console 舊規則複製備份。
 
-- 只允許登入者上傳 `feedback/<時間戳>_<自己的uid>_<0-4>.jpg`、圖片、5MB 以下、不能覆蓋或刪除
+- 只允許登入者上傳 `feedback/<自己的uid>_<今天日期>_<1-5>_<0-2>.jpg`、JPEG、2MB 以下、不能覆蓋或刪除（每帳號每天最多 15 張）
 - 只能讀自己的附圖（上傳後 getDownloadURL 要用）；站長在 console 看圖不受影響
 - 其他路徑一律拒絕；封鎖名單與 `firestore.rules` 同步
 - 模擬器測試和 Firestore 同一支：`tools/firestore-rules-test.js`

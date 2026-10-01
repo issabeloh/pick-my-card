@@ -8,7 +8,8 @@ rules_version = '2';
 // ⚠️ firestore.rules 的封鎖名單（notBlocked）有變動時，這裡要同步。
 //
 // 網站唯一的上傳：意見回報附圖（js/quick-options-misc.js，需登入）
-//   路徑 feedback/<毫秒時間戳>_<uid>_<第幾張 0-4>.jpg，前端已壓縮到最長邊 1920px
+//   路徑 feedback/<uid>_<台灣日期 20261003>_<今天第幾則 1-5>_<第幾張 0-2>.jpg，前端壓成 JPEG、2MB 以下
+//   日期必須是今天、不能覆蓋 → 每帳號每天最多 15 張（5 則 × 3 張），與 firestore.rules 的回報額度一致
 //   上傳後呼叫 getDownloadURL（需要 read 權限）取得網址存進 feedback 文件
 // 站長在 console 看圖不受規則限制。
 
@@ -20,18 +21,25 @@ service firebase.storage {
       return !(request.auth.uid in ['GNEzbVzqwGh9UkMfvo4fPwXAmZy2', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2']);
     }
 
-    function ownFeedbackFile(fileName) {
-      return request.auth != null && notBlocked()
-          && fileName.matches('[0-9]{10,16}_' + request.auth.uid + '_[0-4][.]jpg');
+    // 台灣時間的「今天」，格式 20261003（與 firestore.rules 的 todayKey 相同）
+    function todayKey() {
+      let t = request.time + duration.value(8, 'h');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
+    function todaySlotFile(fileName) {
+      return fileName.matches(request.auth.uid + '_' + string(todayKey()) + '_[1-5]_[0-2][.]jpg');
     }
 
     match /feedback/{fileName} {
-      // 只能新增、不能覆蓋或刪除；限圖片、5MB 以下（壓縮後實際約數百 KB）
-      allow create: if ownFeedbackFile(fileName)
+      // 只能新增、不能覆蓋或刪除；限 JPEG、2MB 以下
+      allow create: if request.auth != null && notBlocked()
+                    && todaySlotFile(fileName)
                     && resource == null
-                    && request.resource.size < 5 * 1024 * 1024
-                    && request.resource.contentType.matches('image/.*');
-      allow read: if ownFeedbackFile(fileName);
+                    && request.resource.size < 2 * 1024 * 1024
+                    && request.resource.contentType == 'image/jpeg';
+      allow read: if request.auth != null && notBlocked()
+                  && fileName.matches(request.auth.uid + '_.*[.]jpg');
       allow update, delete: if false;
     }
 

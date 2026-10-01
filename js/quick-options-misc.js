@@ -614,8 +614,11 @@ function resetQuickOptionsToDefault() {
 document.addEventListener('DOMContentLoaded', () => {
     // State
     let selectedImages = [];
-    const MAX_IMAGES = 5;
-    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+    // 回報上限（2026-10-03）：每則最多 3 張圖、每個帳號每天（台灣時間）最多 5 則。
+    // 真正的限制在 firestore.rules／storage.rules（feedbackQuota），這裡只是讓畫面先擋、先提示。
+    const MAX_IMAGES = 3;
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB（storage.rules 的上傳上限）
+    const MAX_REPORTS_PER_DAY = 5;
 
     // DOM Elements
     // 回報錯誤入口只剩 avatar 下拉（#avatar-feedback，見 auth-user-data.js menuActions）；
@@ -671,16 +674,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     canvas.height = height;
 
                     const ctx = canvas.getContext('2d');
+                    // 一律輸出 JPEG（截圖原本是 PNG，常常好幾 MB）；先鋪白底，免得透明處變黑
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // canvas.toBlob with the source mime may return null when the
-                    // browser can't encode that type (e.g. image/heic). Fall back
-                    // to image/jpeg so the upload still succeeds.
-                    const tryEncode = (mime, quality) => new Promise(res => canvas.toBlob(b => res(b), mime, quality));
+                    const tryEncode = (quality) => new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', quality));
                     (async () => {
-                        let blob = await tryEncode(file.type, 0.85);
-                        if (!blob) blob = await tryEncode('image/jpeg', 0.85);
+                        // 品質逐步降低，直到小於上傳上限（2MB）
+                        let blob = null;
+                        for (const q of [0.85, 0.7, 0.55, 0.4]) {
+                            blob = await tryEncode(q);
+                            if (!blob || blob.size < MAX_IMAGE_SIZE) break;
+                        }
                         if (!blob) return reject(new Error('圖片編碼失敗（canvas.toBlob 回傳 null）'));
+                        if (blob.size >= MAX_IMAGE_SIZE) return reject(new Error('圖片壓縮後仍超過 2MB'));
                         resolve(blob);
                     })();
                 };
@@ -813,6 +821,31 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackStatus.textContent = message;
     }
     
+    // 預約一則回報額度：同一天（台灣時間）計數 +1（最多 5），換日從 1 開始。
+    // 回傳 { key: '<uid>_<日期>_<今天第幾則>' }；額度用完回傳 null；其他錯誤往外丟。
+    function taiwanDayKey() {
+        const t = new Date(Date.now() + 8 * 60 * 60 * 1000);
+        return t.getUTCFullYear() * 10000 + (t.getUTCMonth() + 1) * 100 + t.getUTCDate();
+    }
+    async function reserveFeedbackSlot() {
+        const ref = window.doc(window.db, 'feedbackQuota', currentUser.uid);
+        const snap = await window.getDoc(ref);
+        const q = snap.exists() ? snap.data() : null;
+        const day = taiwanDayKey();
+        const sameDay = !!(q && q.day === day);
+        if (sameDay && q.count >= MAX_REPORTS_PER_DAY) return null;
+        try {
+            // +1 要用 merge：不帶 merge 的整份覆寫會讓 increment 從 0 起算
+            await window.setDoc(ref, sameDay ? { day, count: window.increment(1) } : { day, count: 1 }, sameDay ? { merge: true } : undefined);
+        } catch (err) {
+            // 額度剛好被別的分頁用完、或本機時鐘剛好卡在午夜前後：視為今天無法再送
+            if (err && err.code === 'permission-denied') return null;
+            throw err;
+        }
+        const after = (await window.getDoc(ref)).data();
+        return { key: `${currentUser.uid}_${after.day}_${after.count}` };
+    }
+
     // Submit Feedback
     submitFeedbackBtn.addEventListener('click', async () => {
         const message = feedbackMessage.value.trim();
@@ -834,6 +867,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('loading', '正在上傳...');
     
         try {
+            // 先預約今天的回報額度（feedbackQuota/{uid}）：額度用完就不上傳任何東西。
+            // 預約成功後拿到 (windowStart, count)，圖片檔名與回報文件 ID 都綁這組值，規則據此擋超量。
+            const slot = await reserveFeedbackSlot();
+            if (!slot) {
+                showStatus('error', `每天最多送出 ${MAX_REPORTS_PER_DAY} 則回報，今天已達上限，請明天再試。`);
+                return;
+            }
+
             // Upload images to Firebase Storage — each one is wrapped so a single
             // failure (e.g. Storage quota exceeded) doesn't abort the whole
             // submission. Text feedback still goes through with whatever images
@@ -848,11 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         const compressedBlob = await compressImage(imgData.file);
-                        const timestamp = Date.now();
-                        const userId = currentUser?.uid || 'anonymous';
-                        const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
+                        const filename = `feedback/${slot.key}_${i}.jpg`;
                         const storageReference = window.storageRef(window.storage, filename);
-                        await window.uploadBytes(storageReference, compressedBlob);
+                        await window.uploadBytes(storageReference, compressedBlob, { contentType: 'image/jpeg' });
                         const downloadUrl = await window.getDownloadURL(storageReference);
                         imageUrls.push(downloadUrl);
                     } catch (imgError) {
@@ -880,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 feedbackData.imageUploadFirstError = (imageUploadErrors[0] && (imageUploadErrors[0].code || imageUploadErrors[0].message)) || String(imageUploadErrors[0]);
             }
 
-            await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
+            await window.setDoc(window.doc(window.db, 'feedback', slot.key), feedbackData);
 
             // Status reflects what actually happened with images
             const total = selectedImages.length;
