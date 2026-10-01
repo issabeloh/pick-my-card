@@ -18,28 +18,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── 封鎖名單（2026-10-01 事件：該帳號用腳本每秒十幾次狂寫自己的 users 文件，
+    //    單日數十萬次寫入、產生 Firestore 費用）。console 那邊同時已停用該帳號；
+    //    帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    function notBlocked() {
+      return request.auth == null
+          || request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+    }
+
     // ── 用戶個人設定：只有本人能讀寫 ─────────────────────────────
     match /users/{userId} {
       allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+                         && request.auth.uid == userId
+                         && notBlocked();
     }
 
     // ── 卡片級別：文件 ID 格式為 "<uid>_<cardId>"，只有本人能讀寫 ──
     match /cardSettings/{docId} {
       allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+                         && docId.matches(request.auth.uid + '_.*')
+                         && notBlocked();
     }
 
     // ── 卡片筆記：同上 ──────────────────────────────────────────
     match /userNotes/{docId} {
       allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+                         && docId.matches(request.auth.uid + '_.*')
+                         && notBlocked();
     }
 
     // ── 問題回報：需登入、只能新增、不能讀取/修改/刪除 ──────────────
     //    （讀取只透過 Firebase console，避免用戶回報內容外洩）
     match /feedback/{docId} {
       allow create: if request.auth != null
+                    && notBlocked()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.message is string
                     && request.resource.data.message.size() > 0
@@ -50,7 +62,8 @@ service cloud.firestore {
     // ── 星星評分：訪客也能送出（不需登入）、只能新增 ────────────────
     //    rating 限 1~5 的數字；comment 可以是字串或 null，最長 2000 字
     match /reviews/{docId} {
-      allow create: if request.resource.data.rating is number
+      allow create: if notBlocked()
+                    && request.resource.data.rating is number
                     && request.resource.data.rating >= 1
                     && request.resource.data.rating <= 5
                     && (
