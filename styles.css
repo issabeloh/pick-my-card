@@ -9298,16 +9298,17 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-beta-note .mp-beta { margin-left: 0; }
 .mp-linkbtn2 { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
-/* 手機／平板：單欄，依序＝搜尋 → 編輯列 → 提示 → 設定 → 小抄 → 存成圖片（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
+/* 手機／平板：單欄，依序＝存圖／編輯鈕 → 搜尋 → 提示 → 設定 → 小抄 → 商家數（右側）（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
 .mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }
 .mp-side, .mp-main { display: contents; }
-.mp-searchbox { order: 1; }
-.mp-actions { order: 2; }
+.mp-actions { order: 1; }
+.mp-searchbox { order: 2; }
 .mp-tip { order: 3; }
 .mp-tools { order: 4; }
 .mp-notice { order: 5; }
 .mp-demo-tag { order: 6; }
 .mp-paper { order: 7; }
+.mp-count-m { order: 8; }
 .mp-deadbar { order: 9; }
 .mp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; width: 100%; max-width: 460px; margin: 0 auto 10px; box-sizing: border-box; padding: 0 2px; }
 .mp-act { display: grid; gap: 4px; justify-items: stretch; min-width: 0; }
@@ -9317,6 +9318,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-act-save:disabled { opacity: .4; cursor: default; }
 .mp-count { grid-column: 1 / -1; font-size: 12.5px; font-weight: 700; color: #6b7280; margin-top: 4px; }
 .mp-count:empty { display: none; }
+.mp-actions .mp-count { display: none; }   /* 手機：商家數改顯示在小抄下方右側（#mp-count-m） */
+.mp-count-m { width: 100%; max-width: 460px; margin: 6px auto 0; padding: 0 4px; box-sizing: border-box; text-align: right; }
 .mp-edit-btn {
     display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; box-sizing: border-box;
     border: 1.5px solid #1e40af; background: #fff; color: #1e40af; border-radius: 12px;
@@ -9413,7 +9416,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/12px 51% repeat-x, conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top/12px 51% repeat-x;
 }
 .mp-rc.lg { --fs: 17px; --rs: 16px; --ds: 12px; --rowpad: 9px; --lab: 11px; --thw: 32px; --thh: 20px; --c2: 58px; --c3: 58px; }
-.mp-rc-head { text-align: center; display: grid; gap: 2px; }
+.mp-rc-head { text-align: center; display: grid; gap: 2px; position: relative; }
+/* 「更新活動」釘在小抄右上角（與月份同一行），不佔標題的置中位置 */
+.mp-rc-head .mp-upd { position: absolute; top: -4px; right: 0; padding: 3px 9px; font-size: 12px; gap: 4px; }
+.mp-rc-head .mp-upd svg { width: 12px; height: 12px; }
 .mp-store { font: 700 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .24em; color: var(--sub); }
 .mp-title { font-size: 18px; font-weight: 900; letter-spacing: .18em; }
 .mp-title-btn { border: 0; background: none; color: inherit; font-family: inherit; padding: 0 0 0 .18em; cursor: pointer; justify-self: center; border-bottom: 1px dashed transparent; }
@@ -9662,7 +9668,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-steps { grid-template-columns: repeat(3, 1fr); gap: 14px; }
     .mp-steps li { align-items: flex-start; }
     .mp-actions { grid-template-columns: 1fr; gap: 10px; margin: 0; padding: 12px; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 16px; }
-    .mp-count { order: -1; margin-top: 0; font-size: 12px; }
+    .mp-actions .mp-count { display: block; order: -1; margin-top: 0; font-size: 12px; }
+    .mp-actions .mp-count:empty, .mp-count-m { display: none; }
     .mp-edit-btn, .mp-act-save { height: 42px; }
     .mp-tip { flex-direction: column; align-items: flex-start; gap: 4px; padding: 0 4px; margin: 0; }
     .mp-tip .mp-dot { display: none; }
