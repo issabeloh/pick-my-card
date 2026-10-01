@@ -58,6 +58,17 @@
 3. 再把新內容貼到 console 發布
 4. 不要只改 console 不改 repo —— 那會讓 repo 的版本失去意義
 
+## App Check（2026-10-01 加入）
+
+規則只能確認「是本人」，擋不了「本人用腳本狂寫」。App Check 讓 Firestore 只接受從真網站發出的請求。
+
+- 提供者：Fraud Defense（舊名 reCAPTCHA Enterprise），site key 寫在 `index.html` 的 `ensureAppCheck`（公開值，不是密鑰）。
+  key 的網域清單在 Google Cloud console（Pick my card 專案）→ reCAPTCHA → Keys；新增網域（如新的預覽網域）要去那裡加
+- **只在登入後啟動**（訪客不碰 Firestore；省 reCAPTCHA 每月 10,000 次免費評估）；只在 `pickmycard.app` 與 `*.pages.dev` 啟動，localhost／回歸測試不會啟動
+- Token 有效期設 1 天（Firebase console → App Check → Apps）
+- **Enforce 流程**：部署後先觀察 1–2 天，Firebase console → App Check → APIs → Cloud Firestore 的「已驗證請求」比例接近 100% 再按 **Enforce**（只 enforce Firestore；Authentication、Storage 先不要）。
+  Enforce 後：擋廣告／擋 reCAPTCHA 的登入用戶無法存設定（搜尋不受影響）；本機開發登入後也存不了（正常，正式站不受影響）
+
 ## 補充：Firebase Storage
 
 問題回報功能會把用戶附的圖片上傳到 Firebase Storage（`feedback` 相關路徑）。
