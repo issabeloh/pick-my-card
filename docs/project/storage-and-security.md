@@ -60,7 +60,7 @@
 
 ## 8. Firebase 方案與用量現況（別再問用戶）
 
-- **方案：Blaze（按量計費）**，因 `functions/notifyOnFeedback` 需要。Blaze 仍保有每日免費額度，超出才計費
+- **方案：Blaze（按量計費）**，因 `functions/` 的 Cloud Function（2026-10-01 起為 dailyFeedbackDigest）需要。Blaze 仍保有每日免費額度，超出才計費
 - **用量快照（2026-09-22，用戶提供 Firebase Console 截圖）**：Firestore 讀取約 **63 次/日**（近一週峰值約 200），寫入約 **6 次/日**，Cloud Storage 佔用 **12.5MB**（用途只有意見回饋的截圖上傳，見 `js/quick-options-misc.js` 的 `uploadBytes`）
 - **對照免費額度**：讀取 50,000/日、寫入 20,000/日、Storage 5GB → 目前用掉約 **0.1%**，實際帳單趨近 $0
 - **因此：禁止以「省成本」為由提案 Firestore 讀寫優化**（例如把 `cardSettings` 的一卡一筆合併成一包）。要動那塊必須有「效能/使用者體驗」的實測理由，且受第 2 節🔒鐵則約束
@@ -73,3 +73,4 @@
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
 
 - [2026-08-23] iPhone「加到主畫面」的 App 登入後配卡是空的 → 該 webview 的 localStorage／登入狀態與 Safari 完全隔離，雲端讀不到時就只剩空的本地快取，而空清單的文案（「還沒有配卡記錄」）和「沒登入」「讀取失敗」長得一模一樣 → 個人資料的空狀態一律分流顯示（未登入／讀取失敗＋重試／真的沒資料），不可讓失敗偽裝成沒資料
+- [2026-10-01] 9/30 Threads 爆量當天出現 US$7.41 的 Firestore 寫入費（單日 36 萬次寫入、讀取不到 1 千）→ 不是網站程式：一個 9/29 用 email 註冊的帳號用 Python 腳本每秒十幾次改寫自己的 `users` 文件（欄位 `lastThread`、時間戳 `+08:00` 微秒格式都不是前端產生的）；舊規則只檢查「本人」，不限欄位與頻率 → 規則改成 `users` 欄位白名單、`cardSettings`/`userNotes` 文件 ID 必須等於 uid＋cardId 且限定欄位、關閉訪客可寫的 `reviews`、封鎖該 uid（帳號在 console 停用、不刪）；**前端新增 users 欄位必須同步改規則白名單**，規則改動一律先跑 `tools/firestore-rules-test.js`（模擬器）。第 8 節「用量不是議題」只適用正常用量，不代表可以不防濫用。查兇手的方法：Firestore Data 頁對各 collection 依 `updatedAt` 由新到舊排序，持續跳動的那筆就是

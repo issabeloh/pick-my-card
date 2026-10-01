@@ -1297,17 +1297,50 @@
       window.reauthenticateWithPopup = reauthenticateWithPopup;
       window.reauthenticateWithCredential = reauthenticateWithCredential;
       window.EmailAuthProvider = EmailAuthProvider;
+      // 讀寫失敗先交給 window.pmcOnFirestoreError（js/core-utils.js：permission-denied 時
+      // 提示用戶，例如 App Check Enforce 後被擋廣告外掛擋掉），再把錯誤原樣丟回給呼叫端的 catch。
+      const reportFsError = fn => (...args) => Promise.resolve().then(() => fn(...args)).catch(err => {
+        try { if (typeof window.pmcOnFirestoreError === 'function') window.pmcOnFirestoreError(err); } catch (e) {}
+        throw err;
+      });
       window.doc = doc;
-      window.getDoc = getDoc;
-      window.setDoc = setDoc;
+      window.getDoc = reportFsError(getDoc);
+      window.setDoc = reportFsError(setDoc);
       window.deleteField = deleteField;
-      window.deleteDoc = deleteDoc;
-      window.addDoc = addDoc;
+      window.deleteDoc = reportFsError(deleteDoc);
+      window.addDoc = reportFsError(addDoc);
       window.collection = collection;
       window.serverTimestamp = serverTimestamp;
       window.storageRef = ref;
       window.uploadBytes = uploadBytes;
       window.getDownloadURL = getDownloadURL;
+
+      // App Check（2026-10-01 腳本狂寫事件後加入）：讓 Firestore 能分辨「真的網站」與
+      // 「拿公開 config 自己寫的腳本」（Firebase console → App Check 按 Enforce 後才會擋）。
+      // 只在登入後啟動（js/auth-user-data.js 登入分支呼叫）：訪客不碰 Firestore，
+      // 不啟動可省 reCAPTCHA（Fraud Defense）每月 10,000 次的免費評估額度。
+      // 只在正式網域與 Cloudflare 預覽啟動——localhost／回歸測試不在 reCAPTCHA 網域清單內。
+      // Firestore SDK 支援晚註冊 App Check（appCheckProvider.onInit），不必在 getFirestore 前初始化。
+      let appCheckReady = null;
+      window.ensureAppCheck = () => {
+        if (appCheckReady) return appCheckReady;
+        const host = location.hostname;
+        if (!(host === 'pickmycard.app' || host.endsWith('.pickmycard.app') || host.endsWith('.pages.dev'))) {
+          return Promise.resolve(false);
+        }
+        appCheckReady = import("https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check.js")
+          .then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
+            initializeAppCheck(app, {
+              provider: new ReCaptchaEnterpriseProvider('6LcjDtktAAAAANLCR-gPyn0Dt_OV5YP7Z_y2G6n1'),
+              isTokenAutoRefreshEnabled: true
+            });
+            return true;
+          })
+          .catch(err => { console.error('App Check 啟動失敗:', err); return false; });
+        return appCheckReady;
+      };
+      // 回訪的登入用戶（auth-user-data.js 寫的 pre-paint 提示）提早啟動，不用等 onAuthStateChanged
+      try { if (localStorage.getItem('pmc_known_logged_in') === '1') window.ensureAppCheck(); } catch (e) {}
     </script>
 
     <!-- Payment Detail Modal -->

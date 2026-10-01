@@ -6,6 +6,7 @@ rules_version = '2';
 // 修改後要貼到 Firebase console 才會生效：
 //   Firebase console → Firestore Database → 規則（Rules）→ 貼上 → 發布
 // 詳細教學見 FIRESTORE-RULES-README.md
+// 改完先跑 node tools/firestore-rules-test.js（模擬器驗證，見檔頭說明）
 //
 // 資料模型（程式碼實際使用的 collections）：
 //   users/{uid}                  用戶設定總文件（卡片選擇、行動支付、配卡表、
@@ -13,33 +14,76 @@ rules_version = '2';
 //   cardSettings/{uid}_{cardId}  卡片級別（每張卡一份）
 //   userNotes/{uid}_{cardId}     卡片筆記（每張卡一份）
 //   feedback/{autoId}            問題回報（需登入，只能新增）
-//   reviews/{autoId}             星星評分（訪客也能送出，只能新增）
+//   reviews                      已停用（2026-10-01 關閉寫入；網站早已移除評分功能）
+//
+// ⚠️ 前端新增寫入 users 文件的欄位時，必須同步加進下方 USER_FIELDS 清單，
+//    否則那個欄位的儲存會被規則擋下（console 會出現 permission-denied）。
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── 用戶個人設定：只有本人能讀寫 ─────────────────────────────
+    // ── 封鎖名單（2026-10-01 事件：該帳號用腳本每秒十幾次狂寫自己的 users 文件，
+    //    單日數十萬次寫入、產生 Firestore 費用）。console 那邊同時已停用該帳號；
+    //    帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    function notBlocked() {
+      return request.auth == null
+          || request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+    }
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid && notBlocked();
+    }
+
+    // 文件 ID "<uid>_<cardId>" 必須和內容的 cardId 一致、cardId 必須長得像卡片 ID
+    // （小寫英數與連字號）。擋掉腳本用任意 ID 無限新增文件。
+    function isOwnCardDoc(docId) {
+      return request.auth != null && notBlocked()
+          && request.resource.data.cardId is string
+          && request.resource.data.cardId.matches('[a-z0-9-]{1,40}')
+          && docId == request.auth.uid + '_' + request.resource.data.cardId;
+    }
+
+    // ── 用戶個人設定：只有本人能讀寫；只接受網站實際會寫的欄位 ─────────
+    //    用 diff().affectedKeys()：只檢查「這次改到的欄位」，舊文件裡的歷史欄位
+    //    （例如 selectedCards）不受影響。quickSearchOptions、mappingsTitle 會被
+    //    deleteField() 刪除，刪除也算改到，所以要在清單裡。
     match /users/{userId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      allow read, delete: if isUser(userId);
+      allow create, update: if isUser(userId)
+          && request.resource.data.diff(resource == null ? {} : resource.data)
+               .affectedKeys().hasOnly([
+                 'cardsInComparison', 'myOwnedCards', 'selectedPayments',
+                 'spendingMappings', 'merchantAliases', 'mappingsTitle',
+                 'feeWaiverStatus', 'billingDates', 'creditLimits',
+                 'birthdayMonth', 'cubeIssuer', 'isChildrenEligible',
+                 'hiddenDefaultIds', 'customQuickOptions', 'selectedOrder',
+                 'quickSearchOptions', 'updatedAt'
+               ]);
     }
 
     // ── 卡片級別：文件 ID 格式為 "<uid>_<cardId>"，只有本人能讀寫 ──
     match /cardSettings/{docId} {
-      allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+      allow read, delete: if request.auth != null && notBlocked()
+                          && docId.matches(request.auth.uid + '_.*');
+      allow create, update: if isOwnCardDoc(docId)
+          && request.resource.data.keys().hasOnly(['level', 'updatedAt', 'cardId'])
+          && request.resource.data.level is string;
     }
 
     // ── 卡片筆記：同上 ──────────────────────────────────────────
     match /userNotes/{docId} {
-      allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+      allow read, delete: if request.auth != null && notBlocked()
+                          && docId.matches(request.auth.uid + '_.*');
+      allow create, update: if isOwnCardDoc(docId)
+          && request.resource.data.keys().hasOnly(['notes', 'updatedAt', 'cardId'])
+          && request.resource.data.notes is string;
     }
 
     // ── 問題回報：需登入、只能新增、不能讀取/修改/刪除 ──────────────
     //    （讀取只透過 Firebase console，避免用戶回報內容外洩）
     match /feedback/{docId} {
       allow create: if request.auth != null
+                    && notBlocked()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.message is string
                     && request.resource.data.message.size() > 0
@@ -47,20 +91,9 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // ── 星星評分：訪客也能送出（不需登入）、只能新增 ────────────────
-    //    rating 限 1~5 的數字；comment 可以是字串或 null，最長 2000 字
-    match /reviews/{docId} {
-      allow create: if request.resource.data.rating is number
-                    && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5
-                    && (
-                         !('comment' in request.resource.data)
-                         || request.resource.data.comment == null
-                         || (request.resource.data.comment is string
-                             && request.resource.data.comment.size() <= 2000)
-                       );
-      allow read, update, delete: if false;
-    }
+    // ── 星星評分：已停用。原本允許「未登入訪客」新增，是全站唯一不用登入就能
+    //    寫入的地方；網站已無評分功能，故關閉。既有文件仍可在 console 查看。
+    //    （由下方「其他一律拒絕」涵蓋，不需另寫規則。）
 
     // ── 其他一律拒絕（新 collection 需在此明確加規則才可用） ─────────
     match /{document=**} {

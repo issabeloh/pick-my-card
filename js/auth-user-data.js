@@ -362,6 +362,10 @@ function ensureAuthSubscribed() {
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
 
+            // App Check 要在第一個 Firestore 請求前就緒（Enforce 後沒有 token 的請求會被擋）。
+            // 非正式網域時立即回傳 false；失敗只記錄、不擋登入流程（見 index.html 的 ensureAppCheck）。
+            if (typeof window.ensureAppCheck === 'function') await window.ensureAppCheck();
+
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();
 

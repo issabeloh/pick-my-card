@@ -1296,7 +1296,10 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         // (e.g. 大戶卡「悠遊卡自動加值」) — spending beyond the cap
                         // earns nothing, shown explicitly as 0 rather than silently
                         // missing from the total.
-                        layers.push({ name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
+                        // 名稱 2026-09-30 由「超過上限(不列入回饋)」縮短：同一列的
+                        // 回饋率 0%／回饋金額 NT$0 已經把「不列入回饋」講完了，括號那段
+                        // 只是把明細表撐寬（手機上單欄就吃掉 143px）。
+                        layers.push({ name: '超過上限', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
                     } else {
                         const excessRate = getOverflowRate(card);
                         const remainingCashback = Math.floor(remainingAmount * excessRate / 100);
