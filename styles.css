@@ -6112,6 +6112,38 @@ mark.cashback-search-hl {
     opacity: 1;
 }
 
+/* 雲端同步錯誤提示（js/core-utils.js 的 pmcOnFirestoreError） */
+.pmc-cloud-error {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    width: min(560px, calc(100% - 32px));
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    z-index: 10050;
+}
+
+.pmc-cloud-error-close {
+    flex: none;
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
 /* ============================================
    Feedback System Styles
    ============================================ */
