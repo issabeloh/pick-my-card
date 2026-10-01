@@ -62,9 +62,14 @@ const snippet = html.slice(start, end + 'window.addDoc = reportFsError(limitedAd
   catch (e) { check('卡片級別（setDoc 不帶 merge）', false, e.code); }
   try { await W.setDoc(W.doc(db, 'userNotes', 'alice_cathay-cube'), { notes: 'hi', updatedAt: new Date(), cardId: 'cathay-cube' }); check('卡片筆記', true); }
   catch (e) { check('卡片筆記', false, e.code); }
-  let fbRef = null;
-  try { fbRef = await W.addDoc(fsSdk.collection(db, 'feedback'), { userId: 'alice', message: '測試', timestamp: fsSdk.serverTimestamp() }); check('意見回報 addDoc（回傳文件參照）', !!(fbRef && fbRef.id)); }
-  catch (e) { check('意見回報 addDoc（回傳文件參照）', false, e.code + ' ' + String(e.message).slice(0, 300)); }
+  // 意見回報：先預約今天的額度（feedbackQuota，不算寫入上限），再用預約 ID 寫回報
+  try {
+    const t = new Date(Date.now() + 8 * 3600e3);
+    const day = t.getUTCFullYear() * 10000 + (t.getUTCMonth() + 1) * 100 + t.getUTCDate();
+    await fsSdk.setDoc(fsSdk.doc(db, 'feedbackQuota', 'alice'), { day, count: 1 });
+    await W.setDoc(W.doc(db, 'feedback', `alice_${day}_1`), { userId: 'alice', message: '測試', timestamp: fsSdk.serverTimestamp() });
+    check('意見回報（預約額度後用預約 ID 寫入）', true);
+  } catch (e) { check('意見回報（預約額度後用預約 ID 寫入）', false, e.code + ' ' + String(e.message).slice(0, 300)); }
   try { await W.deleteDoc(W.doc(db, 'userNotes', 'alice_cathay-cube')); check('刪除筆記', true); }
   catch (e) { check('刪除筆記', false, e.code); }
   check('寫入都真的存進去了', (await readDoc('cardSettings/alice_cathay-cube'))?.level === 'Level 2' && (await readDoc('users/alice'))?.cardsInComparison?.[0] === 'cathay-cube');

@@ -13,7 +13,9 @@ rules_version = '2';
 //                                免年費、結帳日、生日月、CUBE 發卡組織…）
 //   cardSettings/{uid}_{cardId}  卡片級別（每張卡一份）
 //   userNotes/{uid}_{cardId}     卡片筆記（每張卡一份）
-//   feedback/{autoId}            問題回報（需登入，只能新增）
+//   feedback/{uid}_{日期}_{n}     問題回報（需登入，只能新增；ID 綁 feedbackQuota 預約）
+//   feedbackQuota/{uid}          回報額度（每天最多 5 則）
+//   rateLimits/{uid}             每帳號寫入計數（每 10 分鐘 100 次）
 //   reviews                      已停用（2026-10-01 關閉寫入；網站早已移除評分功能）
 //
 // ⚠️ 前端新增寫入 users 文件的欄位時，必須同步加進下方 USER_FIELDS 清單，
@@ -106,15 +108,53 @@ service cloud.firestore {
 
     // ── 問題回報：需登入、只能新增、不能讀取/修改/刪除 ──────────────
     //    （讀取只透過 Firebase console，避免用戶回報內容外洩）
+    // 台灣時間的「今天」，格式 20261003（整數）；回報額度以台灣日曆日計算，午夜歸零
+    function todayKey() {
+      let t = request.time + duration.value(8, 'h');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
+    // 回報文件 ID 必須是「目前這次預約」：<uid>_<日期>_<今天第幾則>
+    // ——每次預約只能建一則，每天最多 5 次預約（見下方 feedbackQuota）。
+    function feedbackKey() {
+      let q = get(/databases/$(database)/documents/feedbackQuota/$(request.auth.uid)).data;
+      return request.auth.uid + '_' + string(q.day) + '_' + string(q.count);
+    }
+
     match /feedback/{docId} {
       allow create: if request.auth != null
                     && notBlocked()
                     && rateLimited('feedback/' + docId)
+                    && docId == feedbackKey()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.message is string
                     && request.resource.data.message.size() > 0
                     && request.resource.data.message.size() <= 5000;
       allow read, update, delete: if false;
+    }
+
+    // ── 回報額度（2026-10-03）：每帳號每天（台灣時間）最多 5 則回報（每則最多 3 張圖，見 storage.rules）
+    //    前端送回報前先「預約」：同一天計數 +1（≤5），換日後從 1 開始。不能刪。
+    //    ⚠️ 改額度時：這裡的 5、storage.rules 的 [1-5]／[0-2]、
+    //    js/quick-options-misc.js 的 MAX_REPORTS_PER_DAY／MAX_IMAGES 要一起改。
+    match /feedbackQuota/{uid} {
+      allow read: if isUser(uid);
+      allow create: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['day', 'count'])
+          && request.resource.data.day == todayKey()
+          && request.resource.data.count == 1;
+      allow update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['day', 'count'])
+          && request.resource.data.day == todayKey()
+          && (
+               (resource.data.day == todayKey()
+                && request.resource.data.count == resource.data.count + 1
+                && request.resource.data.count <= 5)
+               ||
+               (resource.data.day != todayKey()
+                && request.resource.data.count == 1)
+             );
+      allow delete: if false;
     }
 
     // ── 每帳號寫入計數（見上方 rateLimited 說明）──────────────────────

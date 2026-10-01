@@ -52,6 +52,21 @@ const addDoc = (coll, data) => {
   return limited(ref) ? rlCommit(coll.firestore, ref, (b) => b.set(ref, data)).then(() => ref) : rawAddDoc(coll, data);
 };
 
+// 照抄 js/quick-options-misc.js 的 reserveFeedbackSlot：預約一則回報額度，回傳 key（額度用完回傳 null）
+const taiwanDayKey = (ms = Date.now()) => { const t = new Date(ms + 8 * 3600e3); return t.getUTCFullYear() * 10000 + (t.getUTCMonth() + 1) * 100 + t.getUTCDate(); };
+async function reserveFeedback(db, uid) {
+  const ref = doc(db, 'feedbackQuota', uid);
+  const snap = await getDoc(ref);
+  const q = snap.exists() ? snap.data() : null;
+  const day = taiwanDayKey();
+  const sameDay = !!(q && q.day === day);
+  if (sameDay && q.count >= 5) return null;
+  try { await (sameDay ? rawSetDoc(ref, { day, count: increment(1) }, { merge: true }) : rawSetDoc(ref, { day, count: 1 })); }
+  catch (e) { if (e && e.code === 'permission-denied') return null; throw e; }
+  const after = (await getDoc(ref)).data();
+  return `${uid}_${after.day}_${after.count}`;
+}
+
 const BLOCKED = 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
 const ME = 'aliceUid123';
 const OTHER = 'bobUid456';
@@ -120,7 +135,10 @@ const OTHER = 'bobUid456';
   await check('讀卡片級別', true, () => getDoc(doc(me, 'cardSettings', `${ME}_cathay-cube`)));
   await check('卡片筆記 saveUserNotes', true, () => setDoc(doc(me, 'userNotes', `${ME}_cathay-cube`), { notes: '記得綁定', updatedAt: new Date(), cardId: 'cathay-cube' }));
   await check('讀卡片筆記', true, () => getDoc(doc(me, 'userNotes', `${ME}_cathay-cube`)));
-  await check('意見回報 feedback', true, () => addDoc(collection(me, 'feedback'), { userId: ME, message: '有問題', timestamp: serverTimestamp(), createdAt: iso() }));
+  await check('意見回報 feedback（先預約額度、ID 綁預約）', true, async () => {
+    const key = await reserveFeedback(me, ME);
+    return setDoc(doc(me, 'feedback', key), { userId: ME, message: '有問題', timestamp: serverTimestamp(), createdAt: iso() });
+  });
   await check('刪除帳號：刪級別', true, () => deleteDoc(doc(me, 'cardSettings', `${ME}_cathay-cube`)));
   await check('刪除帳號：刪筆記', true, () => deleteDoc(doc(me, 'userNotes', `${ME}_cathay-cube`)));
   await check('刪除帳號：刪不存在的文件（他卡）', true, () => deleteDoc(doc(me, 'userNotes', `${ME}_dbs-eco`)));
@@ -176,24 +194,52 @@ const OTHER = 'bobUid456';
   await env.withSecurityRulesDisabled(async (ctx) => { c = (await getDoc(doc(ctx.firestore(), 'rateLimits', 'rlUser'))).data() || {}; });
   await check(`新視窗計數從 1 開始（實際 ${c.count}）`, c.count === 1);
 
+  console.log('— 回報額度（每天 5 則）');
+  const fq = authed('fqUser');
+  await check('沒預約就送回報（自動 ID）', false, () => addDoc(collection(fq, 'feedback'), { userId: 'fqUser', message: 'x' }));
+  const keys = [];
+  for (let i = 0; i < 5; i++) keys.push(await reserveFeedback(fq, 'fqUser'));
+  await check('同一天預約 5 次都成功', keys.every(Boolean));
+  await check('第 6 次預約被擋（前端預先擋）', (await reserveFeedback(fq, 'fqUser')) === null);
+  await check('繞過前端直接把計數加到 6', false, () => rawSetDoc(doc(fq, 'feedbackQuota', 'fqUser'), { day: taiwanDayKey(), count: increment(1) }, merge));
+  await check('用最新預約送出回報', true, () => setDoc(doc(fq, 'feedback', keys[4]), { userId: 'fqUser', message: '第五則' }));
+  await check('同一個預約送第二則（覆蓋）', false, () => setDoc(doc(fq, 'feedback', keys[4]), { userId: 'fqUser', message: '再一則' }));
+  await check('用舊的預約 ID 送回報', false, () => setDoc(doc(fq, 'feedback', keys[0]), { userId: 'fqUser', message: '舊的' }));
+  await check('自己把計數改小', false, () => rawSetDoc(doc(fq, 'feedbackQuota', 'fqUser'), { day: taiwanDayKey(), count: 1 }));
+  await check('偽造成別天來歸零', false, () => rawSetDoc(doc(fq, 'feedbackQuota', 'fqUser'), { day: taiwanDayKey() + 1, count: 1 }));
+  await check('刪除額度文件', false, () => rawDeleteDoc(doc(fq, 'feedbackQuota', 'fqUser')));
+  await check('改別人的額度', false, () => rawSetDoc(doc(me, 'feedbackQuota', 'fqUser'), { day: taiwanDayKey(), count: 1 }));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await rawSetDoc(doc(ctx.firestore(), 'feedbackQuota', 'fqUser'), { day: taiwanDayKey(Date.now() - 24 * 3600e3), count: 5 });
+  });
+  const keyAfter = await reserveFeedback(fq, 'fqUser');
+  await check('換日後又能預約（從第 1 則開始）', !!keyAfter && keyAfter.endsWith('_1'));
+
   console.log('— Storage（意見回報附圖）');
   const jpg = new Uint8Array(2048);
   const up = (ctx, p, data = jpg, contentType = 'image/jpeg') => ctx.storage().ref(p).put(data, { contentType }).then(() => {});
-  const meSt = env.authenticatedContext(ME);
-  const ts = Date.now();
-  await check('上傳自己的回報附圖', true, () => up(meSt, `feedback/${ts}_${ME}_0.jpg`));
-  await check('上傳 png 原檔（canvas 用原始格式編碼）', true, () => up(meSt, `feedback/${ts}_${ME}_1.jpg`, jpg, 'image/png'));
-  await check('上傳後取網址（getDownloadURL 需要 read）', true, () => meSt.storage().ref(`feedback/${ts}_${ME}_0.jpg`).getDownloadURL());
-  await check('覆蓋已上傳的檔案', false, () => up(meSt, `feedback/${ts}_${ME}_0.jpg`));
-  await check('刪除檔案', false, () => meSt.storage().ref(`feedback/${ts}_${ME}_0.jpg`).delete());
-  await check('未登入上傳', false, () => up(env.unauthenticatedContext(), `feedback/${ts}_anonymous_0.jpg`));
-  await check('用別人的 uid 當檔名', false, () => up(meSt, `feedback/${ts}_${OTHER}_0.jpg`));
-  await check('第 6 張以上（編號 5）', false, () => up(meSt, `feedback/${ts}_${ME}_5.jpg`));
-  await check('非圖片檔', false, () => up(meSt, `feedback/${ts}_${ME}_2.jpg`, jpg, 'application/zip'));
-  await check('超過 5MB', false, () => up(meSt, `feedback/${ts}_${ME}_3.jpg`, new Uint8Array(5 * 1024 * 1024 + 1)));
-  await check('上傳到其他路徑', false, () => up(meSt, `anything/${ME}.jpg`));
-  await check('封鎖帳號上傳', false, () => up(env.authenticatedContext(BLOCKED), `feedback/${ts}_${BLOCKED}_0.jpg`));
-  await check('讀別人的附圖', false, () => env.authenticatedContext(OTHER).storage().ref(`feedback/${ts}_${ME}_0.jpg`).getDownloadURL());
+  const stCtx = env.authenticatedContext('stUser');
+  const stDb = authed('stUser');
+  await check('檔名用昨天的日期', false, () => up(stCtx, `feedback/stUser_${taiwanDayKey(Date.now() - 24 * 3600e3)}_1_0.jpg`));
+  await check('今天第 6 則（編號 6）', false, () => up(stCtx, `feedback/stUser_${taiwanDayKey()}_6_0.jpg`));
+  const k1 = await reserveFeedback(stDb, 'stUser');
+  await check('上傳這次預約的第 1 張', true, () => up(stCtx, `feedback/${k1}_0.jpg`));
+  await check('第 2 張', true, () => up(stCtx, `feedback/${k1}_1.jpg`));
+  await check('第 3 張', true, () => up(stCtx, `feedback/${k1}_2.jpg`));
+  await check('第 4 張（超過 3 張）', false, () => up(stCtx, `feedback/${k1}_3.jpg`));
+  await check('上傳後取網址（getDownloadURL 需要 read）', true, () => stCtx.storage().ref(`feedback/${k1}_0.jpg`).getDownloadURL());
+  await check('覆蓋已上傳的檔案', false, () => up(stCtx, `feedback/${k1}_0.jpg`));
+  await check('刪除檔案', false, () => stCtx.storage().ref(`feedback/${k1}_0.jpg`).delete());
+  const k2 = await reserveFeedback(stDb, 'stUser');
+  await check('檔名格式不對', false, () => up(stCtx, `feedback/${k1}_2b.jpg`));
+  await check('新預約的第 1 張', true, () => up(stCtx, `feedback/${k2}_0.jpg`));
+  await check('非 JPEG（png）', false, () => up(stCtx, `feedback/${k2}_1.jpg`, jpg, 'image/png'));
+  await check('超過 2MB', false, () => up(stCtx, `feedback/${k2}_1.jpg`, new Uint8Array(2 * 1024 * 1024 + 1)));
+  await check('未登入上傳', false, () => up(env.unauthenticatedContext(), `feedback/${k2}_1.jpg`));
+  await check('用別人的預約檔名上傳', false, () => up(env.authenticatedContext(OTHER), `feedback/${k2}_1.jpg`));
+  await check('上傳到其他路徑', false, () => up(stCtx, `anything/stUser.jpg`));
+  await check('封鎖帳號上傳', false, () => up(env.authenticatedContext(BLOCKED), `feedback/${BLOCKED}_${taiwanDayKey()}_1_0.jpg`));
+  await check('讀別人的附圖', false, () => env.authenticatedContext(OTHER).storage().ref(`feedback/${k1}_0.jpg`).getDownloadURL());
 
   await env.cleanup();
   console.log(`\n結果：${pass} 通過，${fail} 失敗`);
