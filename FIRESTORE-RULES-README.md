@@ -69,8 +69,12 @@
 - **Enforce 流程**：部署後先觀察 1–2 天，Firebase console → App Check → APIs → Cloud Firestore 的「已驗證請求」比例接近 100% 再按 **Enforce**（只 enforce Firestore；Authentication、Storage 先不要）。
   Enforce 後：擋廣告／擋 reCAPTCHA 的登入用戶無法存設定（搜尋不受影響）；本機開發登入後也存不了（正常，正式站不受影響）
 
-## 補充：Firebase Storage
+## Firebase Storage 規則（`storage.rules`）
 
-問題回報功能會把用戶附的圖片上傳到 Firebase Storage（`feedback` 相關路徑）。
-Storage 有自己獨立的一組規則（console → Storage → Rules），本檔案不涵蓋。
-建議原則：只允許已登入用戶上傳、限制檔案大小（如 5MB）與 content-type 為圖片。
+問題回報的附圖上傳到 Firebase Storage，規則**另外一份**：repo 的 `storage.rules`，
+貼到 console → **Storage** → **Rules**（不是 Firestore 那頁）→ 發布。改前一樣先把 console 舊規則複製備份。
+
+- 只允許登入者上傳 `feedback/<時間戳>_<自己的uid>_<0-4>.jpg`、圖片、5MB 以下、不能覆蓋或刪除
+- 只能讀自己的附圖（上傳後 getDownloadURL 要用）；站長在 console 看圖不受影響
+- 其他路徑一律拒絕；封鎖名單與 `firestore.rules` 同步
+- 模擬器測試和 Firestore 同一支：`tools/firestore-rules-test.js`

@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Pick My Card — Firebase Storage 安全規則
+//
+// 這份檔案是「唯一正確版本」（版本控管在 git）。修改後要貼到 console 才會生效：
+//   Firebase console → Storage → 規則（Rules）→ 貼上 → 發布
+// 改完先跑模擬器測試 tools/firestore-rules-test.js（同一支也測 Storage，用法見檔頭）。
+// ⚠️ firestore.rules 的封鎖名單（notBlocked）有變動時，這裡要同步。
+//
+// 網站唯一的上傳：意見回報附圖（js/quick-options-misc.js，需登入）
+//   路徑 feedback/<毫秒時間戳>_<uid>_<第幾張 0-4>.jpg，前端已壓縮到最長邊 1920px
+//   上傳後呼叫 getDownloadURL（需要 read 權限）取得網址存進 feedback 文件
+// 站長在 console 看圖不受規則限制。
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 同 firestore.rules 的封鎖名單（2026-10-01 腳本狂寫事件）
+    function notBlocked() {
+      return request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+    }
+
+    function ownFeedbackFile(fileName) {
+      return request.auth != null && notBlocked()
+          && fileName.matches('[0-9]{10,16}_' + request.auth.uid + '_[0-4][.]jpg');
+    }
+
+    match /feedback/{fileName} {
+      // 只能新增、不能覆蓋或刪除；限圖片、5MB 以下（壓縮後實際約數百 KB）
+      allow create: if ownFeedbackFile(fileName)
+                    && resource == null
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow read: if ownFeedbackFile(fileName);
+      allow update, delete: if false;
+    }
+
+    // 其他一律拒絕
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
