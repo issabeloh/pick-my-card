@@ -1249,7 +1249,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
       // Your web app's Firebase configuration
@@ -1306,12 +1306,62 @@
         try { if (typeof window.pmcOnFirestoreError === 'function') window.pmcOnFirestoreError(err); } catch (e) {}
         throw err;
       });
+      // 每帳號寫入上限（firestore.rules 的 rateLimited／rateLimits，2026-10-02）：
+      // 登入者對這幾個 collection 的每一筆寫入，都和 rateLimits/{uid} 計數放進同一個批次送出。
+      // 計數有兩種寫法——「延續目前視窗（+1）」或「開新視窗（歸 1）」——前端不知道伺服器上
+      // 視窗是否過期，所以先試上次成功的寫法，被規則拒絕就換另一種再試一次；兩種都被拒＝
+      // 真的超過上限（或其他規則不允許），錯誤原樣丟給呼叫端。
+      // 全部排隊一筆一筆送：同一份計數文件同時被多筆寫入會互相搶。
+      const RL_COLLECTIONS = ['users', 'cardSettings', 'userNotes', 'feedback'];
+      let rlQueue = Promise.resolve();
+      const rlApplies = ref => !!(ref && ref.parent && RL_COLLECTIONS.includes(ref.parent.id) && auth.currentUser);
+      const rlCommit = (ref, addOp) => {
+        const run = async () => {
+          const counter = doc(db, 'rateLimits', auth.currentUser.uid);
+          const attempt = fresh => {
+            const batch = writeBatch(db);
+            addOp(batch);
+            batch.set(counter, fresh
+              ? { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: ref.path }
+              : { count: increment(1), lastAt: serverTimestamp(), lastPath: ref.path }, { merge: true });
+            return batch.commit();
+          };
+          try {
+            await attempt(false);
+          } catch (err) {
+            if (!err || err.code !== 'permission-denied') throw err;
+            try {
+              await attempt(true);
+            } catch (err2) {
+              if (!err2 || err2.code !== 'permission-denied') throw err2;
+              // 兩種計數寫法都被拒：多半是真的超過上限。最後再試一次「不帶計數」的寫法——
+              // 只為了部署過渡期（網站先上線、新規則還沒貼到 console 時，舊規則不認得 rateLimits）。
+              // 新規則下這一次一定被擋，不會變成繞過上限的後門。
+              const plain = writeBatch(db);
+              addOp(plain);
+              await plain.commit();
+            }
+          }
+        };
+        const p = rlQueue.then(run, run);
+        rlQueue = p.catch(() => {});
+        return p;
+      };
+      const limitedSetDoc = (ref, data, options) => rlApplies(ref)
+        ? rlCommit(ref, b => (options ? b.set(ref, data, options) : b.set(ref, data)))
+        : setDoc(ref, data, options);
+      const limitedDeleteDoc = ref => rlApplies(ref) ? rlCommit(ref, b => b.delete(ref)) : deleteDoc(ref);
+      const limitedAddDoc = (coll, data) => {
+        if (!(coll && RL_COLLECTIONS.includes(coll.id) && auth.currentUser)) return addDoc(coll, data);
+        const ref = doc(coll);
+        return rlCommit(ref, b => b.set(ref, data)).then(() => ref);
+      };
       window.doc = doc;
       window.getDoc = reportFsError(getDoc);
-      window.setDoc = reportFsError(setDoc);
+      window.setDoc = reportFsError(limitedSetDoc);
       window.deleteField = deleteField;
-      window.deleteDoc = reportFsError(deleteDoc);
-      window.addDoc = reportFsError(addDoc);
+      window.deleteDoc = reportFsError(limitedDeleteDoc);
+      window.addDoc = reportFsError(limitedAddDoc);
       window.collection = collection;
       window.serverTimestamp = serverTimestamp;
       window.storageRef = ref;

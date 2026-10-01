@@ -23,11 +23,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── 封鎖名單（2026-10-01 事件：該帳號用腳本每秒十幾次狂寫自己的 users 文件，
-    //    單日數十萬次寫入、產生 Firestore 費用）。console 那邊同時已停用該帳號；
-    //    帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    //    單日數十萬次寫入、產生 Firestore 費用；10/2 凌晨換新帳號再來）。console 那邊
+    //    同時已停用這些帳號；帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    //    （曾試過比對 Gmail 加點／+後綴的變體，站長決定拿掉：換個新 Gmail 就繞過了，
+    //    真正的防線是下方的每帳號寫入上限＋App Check。）
+    //    ⚠️ 改這裡要同步 storage.rules 的同名函式。
     function notBlocked() {
       return request.auth == null
-          || request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+          || !(request.auth.uid in ['GNEzbVzqwGh9UkMfvo4fPwXAmZy2', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2']);
+    }
+
+    // ── 每帳號寫入上限（2026-10-02，同一人換帳號再來之後加入）─────────────
+    //    每個帳號有一份計數文件 rateLimits/{uid}。users／cardSettings／userNotes／feedback
+    //    的每一次寫入（含刪除），都必須在「同一個批次」裡更新這份計數，且計數只記一個
+    //    文件路徑（lastPath）——所以一次計數只能換一筆寫入，不能塞一批。
+    //    上限：每 600 秒視窗 100 次（正常使用遠低於此；刪除帳號約 67 次也在內）。
+    //    前端由 index.html 的寫入包裝（rlCommit）自動處理，各處 setDoc 不用改。
+    //    ⚠️ 改上限數字時，下面 rateLimits 的兩處 600／100 要一起改。
+    function rateLimited(path) {
+      let lim = getAfter(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data;
+      return lim.lastAt == request.time && lim.lastPath == path;
     }
 
     function isUser(uid) {
@@ -48,8 +63,10 @@ service cloud.firestore {
     //    （例如 selectedCards）不受影響。quickSearchOptions、mappingsTitle 會被
     //    deleteField() 刪除，刪除也算改到，所以要在清單裡。
     match /users/{userId} {
-      allow read, delete: if isUser(userId);
+      allow read: if isUser(userId);
+      allow delete: if isUser(userId) && rateLimited('users/' + userId);
       allow create, update: if isUser(userId)
+          && rateLimited('users/' + userId)
           && request.resource.data.diff(resource == null ? {} : resource.data)
                .affectedKeys().hasOnly([
                  'cardsInComparison', 'myOwnedCards', 'selectedPayments',
@@ -63,18 +80,26 @@ service cloud.firestore {
 
     // ── 卡片級別：文件 ID 格式為 "<uid>_<cardId>"，只有本人能讀寫 ──
     match /cardSettings/{docId} {
-      allow read, delete: if request.auth != null && notBlocked()
-                          && docId.matches(request.auth.uid + '_.*');
+      allow read: if request.auth != null && notBlocked()
+                  && docId.matches(request.auth.uid + '_.*');
+      allow delete: if request.auth != null && notBlocked()
+                    && docId.matches(request.auth.uid + '_.*')
+                    && rateLimited('cardSettings/' + docId);
       allow create, update: if isOwnCardDoc(docId)
+          && rateLimited('cardSettings/' + docId)
           && request.resource.data.keys().hasOnly(['level', 'updatedAt', 'cardId'])
           && request.resource.data.level is string;
     }
 
     // ── 卡片筆記：同上 ──────────────────────────────────────────
     match /userNotes/{docId} {
-      allow read, delete: if request.auth != null && notBlocked()
-                          && docId.matches(request.auth.uid + '_.*');
+      allow read: if request.auth != null && notBlocked()
+                  && docId.matches(request.auth.uid + '_.*');
+      allow delete: if request.auth != null && notBlocked()
+                    && docId.matches(request.auth.uid + '_.*')
+                    && rateLimited('userNotes/' + docId);
       allow create, update: if isOwnCardDoc(docId)
+          && rateLimited('userNotes/' + docId)
           && request.resource.data.keys().hasOnly(['notes', 'updatedAt', 'cardId'])
           && request.resource.data.notes is string;
     }
@@ -84,11 +109,42 @@ service cloud.firestore {
     match /feedback/{docId} {
       allow create: if request.auth != null
                     && notBlocked()
+                    && rateLimited('feedback/' + docId)
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.message is string
                     && request.resource.data.message.size() > 0
                     && request.resource.data.message.size() <= 5000;
       allow read, update, delete: if false;
+    }
+
+    // ── 每帳號寫入計數（見上方 rateLimited 說明）──────────────────────
+    //    建立：視窗從現在開始、計數 1。
+    //    更新：(a) 視窗內：計數剛好 +1 且不超過 100；或 (b) 視窗已過：重新開始、計數 1。
+    //    lastAt 一定要等於這次寫入時間、lastPath 記這次寫的是哪份文件。
+    //    不能刪除（刪了就能歸零重來）；刪除帳號後留下這份小文件，只有計數、沒有個資。
+    match /rateLimits/{uid} {
+      allow read: if isUser(uid);
+      allow create: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['windowStart', 'count', 'lastAt', 'lastPath'])
+          && request.resource.data.windowStart == request.time
+          && request.resource.data.count == 1
+          && request.resource.data.lastAt == request.time
+          && request.resource.data.lastPath is string;
+      allow update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['windowStart', 'count', 'lastAt', 'lastPath'])
+          && request.resource.data.lastAt == request.time
+          && request.resource.data.lastPath is string
+          && (
+               (request.resource.data.windowStart == resource.data.windowStart
+                && request.time < resource.data.windowStart + duration.value(600, 's')
+                && request.resource.data.count == resource.data.count + 1
+                && request.resource.data.count <= 100)
+               ||
+               (request.time >= resource.data.windowStart + duration.value(600, 's')
+                && request.resource.data.windowStart == request.time
+                && request.resource.data.count == 1)
+             );
+      allow delete: if false;
     }
 
     // ── 星星評分：已停用。原本允許「未登入訪客」新增，是全站唯一不用登入就能

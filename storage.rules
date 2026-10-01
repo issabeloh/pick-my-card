@@ -17,7 +17,7 @@ service firebase.storage {
 
     // 同 firestore.rules 的封鎖名單（2026-10-01 腳本狂寫事件）
     function notBlocked() {
-      return request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+      return !(request.auth.uid in ['GNEzbVzqwGh9UkMfvo4fPwXAmZy2', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2']);
     }
 
     function ownFeedbackFile(fileName) {
