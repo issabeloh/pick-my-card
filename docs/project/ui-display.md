@@ -327,7 +327,7 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
   **Firebase 逾時 fallback 也補呼叫一次**（廣告阻擋器擋掉 Firebase 時 `onAuthStateChanged` 永遠不觸發，
   這些人否則永遠問不到）。三處都靠 `surveyInviteHandledThisSession` 收斂成一次。延遲
   `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
-- **有期限：只在 2026/9 整月**（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
+- **有期限：2026/9/1–10/11**（原訂 9 月整月；9/30 刷卡小抄上線當天單日 25 份回覆、前面每天 1–2 份，2026-10-01 站長決定延長到 10/11 底，`END`＝`2026-10-12T00:00:00+08:00`；10/11 後整套下架清理）（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
   `+08:00`（台灣時間）**——省略時區後綴會退化成「裝置本地時間」，人在國外或時區設錯的用戶起訖點會整個偏掉。
   過期自動變 no-op，不用趕在月底手動下架
 - **只在主站首頁彈**：用 `getAnalyticsSurface() !== 'site'` 一次擋掉 `/promos` 的 iframe（promos_embed）與
