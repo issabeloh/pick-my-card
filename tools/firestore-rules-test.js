@@ -100,6 +100,15 @@ const OTHER = 'bobUid456';
   await check('未登入送 feedback', false, () => addDoc(collection(guest, 'feedback'), { userId: 'x', message: 'hi' }));
   await check('寫入未定義的 collection', false, () => setDoc(doc(me, 'anything', 'x'), { a: 1 }));
 
+  console.log('— 封鎖：第二個帳號與 Gmail 變體');
+  const viaEmail = (uid, email) => env.authenticatedContext(uid, { email }).firestore();
+  await check('第二個封鎖 uid 寫 users', false, () => setDoc(doc(env.authenticatedContext('bQzrQFDmyCQrZ3AapnG10Ff8avh2').firestore(), 'users', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2'), { selectedPayments: [] }, merge));
+  for (const em of ['paul7322000@gmail.com', 'paul732200.0@gmail.com', 'P.a.u.l7322000+x@GMAIL.com', 'paul7322000@googlemail.com']) {
+    await check(`新帳號 ${em} 寫 users`, false, () => setDoc(doc(viaEmail('newUid1', em), 'users', 'newUid1'), { selectedPayments: [] }, merge));
+  }
+  await check('其他人的 gmail 照常可寫', true, () => setDoc(doc(viaEmail('newUid2', 'paul7322001@gmail.com'), 'users', 'newUid2'), { selectedPayments: [] }, merge));
+  await check('沒有 email 的帳號照常可寫', true, () => setDoc(doc(env.authenticatedContext('newUid3').firestore(), 'users', 'newUid3'), { selectedPayments: [] }, merge));
+
   console.log('— Storage（意見回報附圖）');
   const jpg = new Uint8Array(2048);
   const up = (ctx, p, data = jpg, contentType = 'image/jpeg') => ctx.storage().ref(p).put(data, { contentType }).then(() => {});
@@ -117,6 +126,8 @@ const OTHER = 'bobUid456';
   await check('超過 5MB', false, () => up(meSt, `feedback/${ts}_${ME}_3.jpg`, new Uint8Array(5 * 1024 * 1024 + 1)));
   await check('上傳到其他路徑', false, () => up(meSt, `anything/${ME}.jpg`));
   await check('封鎖帳號上傳', false, () => up(env.authenticatedContext(BLOCKED), `feedback/${ts}_${BLOCKED}_0.jpg`));
+  await check('Gmail 變體帳號上傳', false, () => up(env.authenticatedContext('newUid4', { email: 'paul.7322000@gmail.com' }), `feedback/${ts}_newUid4_0.jpg`));
+  await check('一般帳號（有 email）上傳', true, () => up(env.authenticatedContext('newUid5', { email: 'someone@gmail.com' }), `feedback/${ts}_newUid5_0.jpg`));
   await check('讀別人的附圖', false, () => env.authenticatedContext(OTHER).storage().ref(`feedback/${ts}_${ME}_0.jpg`).getDownloadURL());
 
   await env.cleanup();

@@ -23,11 +23,23 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── 封鎖名單（2026-10-01 事件：該帳號用腳本每秒十幾次狂寫自己的 users 文件，
-    //    單日數十萬次寫入、產生 Firestore 費用）。console 那邊同時已停用該帳號；
-    //    帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    //    單日數十萬次寫入、產生 Firestore 費用；10/2 凌晨換新帳號再來）。console 那邊
+    //    同時已停用這些帳號；帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    //    ⚠️ 改這裡要同步 storage.rules 的同名函式。
     function notBlocked() {
-      return request.auth == null
-          || request.auth.uid != 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
+      return request.auth == null || (
+        !(request.auth.uid in ['GNEzbVzqwGh9UkMfvo4fPwXAmZy2', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2'])
+        && !blockedEmail()
+      );
+    }
+
+    // 同一個 Gmail 信箱可以用「加點」「加 +後綴」無限註冊新帳號（Gmail 忽略這些差異，
+    // Firebase 卻當成不同 email；10/2 對方就用 paul732200.0@gmail.com 再來一次）。
+    // 這裡把 email 去掉 +後綴與所有點再比對，整個信箱的變體一次封鎖。
+    function blockedEmail() {
+      return request.auth.token.get('email', null) is string
+          && request.auth.token.get('email', '').lower().replace('[+][^@]*@', '@').replace('[.]', '')
+             in ['paul7322000@gmailcom', 'paul7322000@googlemailcom'];
     }
 
     function isUser(uid) {
