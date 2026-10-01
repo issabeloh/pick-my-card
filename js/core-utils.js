@@ -708,8 +708,8 @@ function collectCardItems(card) {
 // ========== 雲端同步錯誤提示（pmcOnFirestoreError） ==========
 // index.html 把 window.getDoc/setDoc/addDoc/deleteDoc 包了一層，任何 Firestore 請求失敗都會
 // 先呼叫這裡，再把錯誤原樣丟回給原本的 catch（各處既有的錯誤處理不變）。
-// 只處理 permission-denied：App Check 開始 Enforce 後，瀏覽器的擋廣告／隱私外掛擋掉
-// reCAPTCHA 時，請求就會以這個錯誤被拒（規則擋下也是同一個錯誤）。原本各處 catch 只寫
+// 只處理 permission-denied：App Check Enforce 後擋廣告／隱私外掛擋掉 reCAPTCHA、
+// 超過每帳號寫入上限（firestore.rules 的 rateLimits），都會以這個錯誤被拒（規則擋下也是）。原本各處 catch 只寫
 // console，用戶只看到「存了沒反應」，所以這裡補一則看得到的說明；每次開頁只提示一次。
 let pmcCloudErrorShown = false;
 window.pmcOnFirestoreError = function (err) {
@@ -723,8 +723,8 @@ window.pmcOnFirestoreError = function (err) {
     bar.className = 'pmc-cloud-error';
     bar.setAttribute('role', 'alert');
     const text = document.createElement('span');
-    text.textContent = '雲端同步失敗：驗證沒有通過，你的設定可能沒有存到雲端。如果有開擋廣告或隱私保護外掛，'
-        + '請把 pickmycard.app 加入白名單後重新整理；仍然不行請從頭像選單「回報問題」告訴我們。';
+    text.textContent = '雲端同步失敗：你的設定可能沒有存到雲端。如果剛剛短時間內改了很多次，請等 10 分鐘再試；'
+        + '如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單後重新整理；仍然不行請從頭像選單「回報問題」告訴我們。';
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'pmc-cloud-error-close';

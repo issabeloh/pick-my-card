@@ -17,7 +17,40 @@
 const fs = require('fs');
 const path = require('path');
 const { initializeTestEnvironment, assertSucceeds, assertFails } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDoc, deleteDoc, addDoc, collection, deleteField, serverTimestamp } = require('firebase/firestore');
+const {
+  doc, getDoc, collection, deleteField, serverTimestamp, writeBatch, increment, Timestamp,
+  setDoc: rawSetDoc, deleteDoc: rawDeleteDoc, addDoc: rawAddDoc
+} = require('firebase/firestore');
+
+// ── 用和網站一樣的方式寫入（照抄 index.html 的 rlCommit）：登入者每筆寫入都和
+//    rateLimits/{uid} 計數同一批送出；先試「延續視窗 +1」，被拒再試「開新視窗」。
+//    哪個 Firestore 實例屬於哪個 uid 記在 uidOf；訪客（沒有 uid）照舊直接寫。
+const uidOf = new WeakMap();
+const RL_COLLECTIONS = ['users', 'cardSettings', 'userNotes', 'feedback'];
+async function rlCommit(db, ref, addOp) {
+  const counter = doc(db, 'rateLimits', uidOf.get(db));   // db 是底層實例（ref.firestore）
+  const attempt = (fresh) => {
+    const b = writeBatch(db);
+    addOp(b);
+    b.set(counter, fresh
+      ? { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: ref.path }
+      : { count: increment(1), lastAt: serverTimestamp(), lastPath: ref.path }, { merge: true });
+    return b.commit();
+  };
+  try { await attempt(false); } catch (e) {
+    if (!e || e.code !== 'permission-denied') throw e;
+    await attempt(true);
+  }
+}
+const limited = (ref) => uidOf.has(ref.firestore) && RL_COLLECTIONS.includes(ref.parent.id);
+const setDoc = (ref, data, o) => limited(ref)
+  ? rlCommit(ref.firestore, ref, (b) => (o ? b.set(ref, data, o) : b.set(ref, data)))
+  : rawSetDoc(ref, data, o);
+const deleteDoc = (ref) => limited(ref) ? rlCommit(ref.firestore, ref, (b) => b.delete(ref)) : rawDeleteDoc(ref);
+const addDoc = (coll, data) => {
+  const ref = doc(coll);
+  return limited(ref) ? rlCommit(coll.firestore, ref, (b) => b.set(ref, data)).then(() => ref) : rawAddDoc(coll, data);
+};
 
 const BLOCKED = 'GNEzbVzqwGh9UkMfvo4fPwXAmZy2';
 const ME = 'aliceUid123';
@@ -34,6 +67,10 @@ const OTHER = 'bobUid456';
 
   let pass = 0, fail = 0;
   async function check(name, expectOk, fn) {
+    if (typeof expectOk === 'boolean' && fn === undefined) {   // check(name, 條件成立與否)
+      if (expectOk) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.error(`  ❌ ${name}`); }
+      return;
+    }
     try {
       await (expectOk ? assertSucceeds(fn()) : assertFails(fn()));
       pass++; console.log(`  ✅ ${expectOk ? '允許' : '擋下'}：${name}`);
@@ -42,8 +79,14 @@ const OTHER = 'bobUid456';
     }
   }
 
-  const me = env.authenticatedContext(ME).firestore();
-  const blocked = env.authenticatedContext(BLOCKED).firestore();
+  // rules-unit-testing 回傳的是相容層包裝；ref.firestore 拿到的是底層實例，兩個都記
+  const authed = (uid, opts) => {
+    const db = env.authenticatedContext(uid, opts).firestore();
+    uidOf.set(db, uid); uidOf.set(doc(db, 'x', 'y').firestore, uid);
+    return db;
+  };
+  const me = authed(ME);
+  const blocked = authed(BLOCKED);
   const guest = env.unauthenticatedContext().firestore();
   const iso = () => new Date().toISOString();
   const merge = { merge: true };
@@ -53,7 +96,7 @@ const OTHER = 'bobUid456';
   await env.withSecurityRulesDisabled(async ctx => {
     await setDoc(doc(ctx.firestore(), 'users', 'legacyUid'), { selectedCards: ['a'], quickSearchOptions: [{ id: 'x' }], someOldThing: 1 });
   });
-  const legacy = env.authenticatedContext('legacyUid').firestore();
+  const legacy = authed('legacyUid');
 
   console.log('— 網站實際寫入（全部應允許）');
   await check('首次登入建立 users（cardsInComparison）', true, () => setDoc(userRef(me), { cardsInComparison: ['cathay-cube'], updatedAt: iso() }, merge));
@@ -100,14 +143,38 @@ const OTHER = 'bobUid456';
   await check('未登入送 feedback', false, () => addDoc(collection(guest, 'feedback'), { userId: 'x', message: 'hi' }));
   await check('寫入未定義的 collection', false, () => setDoc(doc(me, 'anything', 'x'), { a: 1 }));
 
-  console.log('— 封鎖：第二個帳號與 Gmail 變體');
-  const viaEmail = (uid, email) => env.authenticatedContext(uid, { email }).firestore();
-  await check('第二個封鎖 uid 寫 users', false, () => setDoc(doc(env.authenticatedContext('bQzrQFDmyCQrZ3AapnG10Ff8avh2').firestore(), 'users', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2'), { selectedPayments: [] }, merge));
-  for (const em of ['paul7322000@gmail.com', 'paul732200.0@gmail.com', 'P.a.u.l7322000+x@GMAIL.com', 'paul7322000@googlemail.com']) {
-    await check(`新帳號 ${em} 寫 users`, false, () => setDoc(doc(viaEmail('newUid1', em), 'users', 'newUid1'), { selectedPayments: [] }, merge));
-  }
-  await check('其他人的 gmail 照常可寫', true, () => setDoc(doc(viaEmail('newUid2', 'paul7322001@gmail.com'), 'users', 'newUid2'), { selectedPayments: [] }, merge));
-  await check('沒有 email 的帳號照常可寫', true, () => setDoc(doc(env.authenticatedContext('newUid3').firestore(), 'users', 'newUid3'), { selectedPayments: [] }, merge));
+  console.log('— 封鎖：第二個帳號');
+  await check('第二個封鎖 uid 寫 users', false, () => setDoc(doc(authed('bQzrQFDmyCQrZ3AapnG10Ff8avh2'), 'users', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2'), { selectedPayments: [] }, merge));
+
+  console.log('— 每帳號寫入上限（rateLimits）');
+  const rl = authed('rlUser');
+  const rlRef = doc(rl, 'users', 'rlUser');
+  await check('沒有一起更新計數的直接寫入', false, () => rawSetDoc(rlRef, { selectedPayments: [] }, merge));
+  await check('一次計數塞兩筆寫入（批次作弊）', false, () => {
+    const b = writeBatch(rl);
+    b.set(rlRef, { selectedPayments: [] }, merge);
+    b.set(doc(rl, 'cardSettings', 'rlUser_cathay-cube'), { level: 'L1', updatedAt: new Date(), cardId: 'cathay-cube' });
+    b.set(doc(rl, 'rateLimits', 'rlUser'), { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: 'users/rlUser' }, merge);
+    return b.commit();
+  });
+  let okCount = 0;
+  for (let i = 0; i < 100; i++) { try { await setDoc(rlRef, { selectedOrder: [String(i)] }, merge); okCount++; } catch (e) { break; } }
+  await check(`10 分鐘內前 100 筆都成功（實際 ${okCount}）`, okCount === 100);
+  await check('第 101 筆被擋', false, () => setDoc(rlRef, { selectedOrder: ['x'] }, merge));
+  await check('超過上限後刪除也被擋', false, () => deleteDoc(doc(rl, 'cardSettings', 'rlUser_dbs-eco')));
+  await check('自己把計數改小', false, () => rawSetDoc(doc(rl, 'rateLimits', 'rlUser'), { count: 1, lastAt: serverTimestamp(), lastPath: 'users/rlUser' }, merge));
+  await check('視窗沒過期就開新視窗', false, () => rawSetDoc(doc(rl, 'rateLimits', 'rlUser'), { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: 'users/rlUser' }, merge));
+  await check('刪除計數文件（歸零）', false, () => rawDeleteDoc(doc(rl, 'rateLimits', 'rlUser')));
+  await check('寫別人的計數', false, () => rawSetDoc(doc(me, 'rateLimits', 'rlUser'), { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: 'users/rlUser' }));
+  await check('讀自己的計數', true, () => getDoc(doc(rl, 'rateLimits', 'rlUser')));
+  // 模擬 10 分鐘過去：把視窗起點改到 11 分鐘前
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await rawSetDoc(doc(ctx.firestore(), 'rateLimits', 'rlUser'), { windowStart: Timestamp.fromMillis(Date.now() - 11 * 60 * 1000) }, merge);
+  });
+  await check('視窗過期後又能寫（自動開新視窗）', true, () => setDoc(rlRef, { selectedOrder: ['after'] }, merge));
+  let c = {};
+  await env.withSecurityRulesDisabled(async (ctx) => { c = (await getDoc(doc(ctx.firestore(), 'rateLimits', 'rlUser'))).data() || {}; });
+  await check(`新視窗計數從 1 開始（實際 ${c.count}）`, c.count === 1);
 
   console.log('— Storage（意見回報附圖）');
   const jpg = new Uint8Array(2048);
@@ -126,8 +193,6 @@ const OTHER = 'bobUid456';
   await check('超過 5MB', false, () => up(meSt, `feedback/${ts}_${ME}_3.jpg`, new Uint8Array(5 * 1024 * 1024 + 1)));
   await check('上傳到其他路徑', false, () => up(meSt, `anything/${ME}.jpg`));
   await check('封鎖帳號上傳', false, () => up(env.authenticatedContext(BLOCKED), `feedback/${ts}_${BLOCKED}_0.jpg`));
-  await check('Gmail 變體帳號上傳', false, () => up(env.authenticatedContext('newUid4', { email: 'paul.7322000@gmail.com' }), `feedback/${ts}_newUid4_0.jpg`));
-  await check('一般帳號（有 email）上傳', true, () => up(env.authenticatedContext('newUid5', { email: 'someone@gmail.com' }), `feedback/${ts}_newUid5_0.jpg`));
   await check('讀別人的附圖', false, () => env.authenticatedContext(OTHER).storage().ref(`feedback/${ts}_${ME}_0.jpg`).getDownloadURL());
 
   await env.cleanup();

@@ -122,7 +122,9 @@ function firebaseStub(url) {
     export function collection(){return {};}
     export function serverTimestamp(){return 0;}
     export function deleteField(){return 0;}
-    export function deleteDoc(){return ${resolveP};}`;
+    export function deleteDoc(){return ${resolveP};}
+    export function writeBatch(){ return { set(){}, delete(){}, commit(){ return Promise.resolve(); } }; }
+    export function increment(n){ return n; }`;
   if (url.includes('firebase-storage')) return `
     export function getStorage(){return {};}
     export function ref(){return {};}
