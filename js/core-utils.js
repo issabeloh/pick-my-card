@@ -723,8 +723,8 @@ window.pmcOnFirestoreError = function (err) {
     bar.className = 'pmc-cloud-error';
     bar.setAttribute('role', 'alert');
     const text = document.createElement('span');
-    text.textContent = '雲端同步失敗：你的設定可能沒有存到雲端。如果剛剛短時間內改了很多次，請等 10 分鐘再試；'
-        + '如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單後重新整理；仍然不行請從頭像選單「回報問題」告訴我們。';
+    text.textContent = '雲端同步失敗：你的設定可能沒有存到雲端。請先重新整理頁面再試一次。'
+        + '如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單；仍然不行請從頭像選單「回報問題」告訴我們。';
     const close = document.createElement('button');
     close.type = 'button';
     close.className = 'pmc-cloud-error-close';
