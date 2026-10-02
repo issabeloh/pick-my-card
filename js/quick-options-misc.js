@@ -963,8 +963,10 @@ const LOGIN_MAIL_FROM = 'noreply@pickmycard.app';
 const LOGIN_MAIL_SUBJECT = '登入 Pick My Card';
 
 function openAuthModal(mode = 'login') {
-    // 2026-10-03 起不再開放「email／密碼註冊」：新用戶一律用 Email 連結或 Google（見 functions/signup-guard.js）
-    if (mode === 'register') mode = 'emailLink';
+    // 2026-10-03 起只剩「Google 登入」與「Email 登入連結」：密碼登入／註冊／忘記密碼都從畫面拿掉，
+    // 任何模式一律開成 Email 連結。（Firebase 的 Email/Password 開關不能關——Email 連結登入掛在它底下；
+    // 新的密碼註冊由 functions/signup-guard.js 在伺服器端擋。既有密碼帳號輸入同一個 Email 就能用連結登入原帳號。）
+    mode = 'emailLink';
     authMode = mode;
     const modal = document.getElementById('auth-modal');
     const modalTitle = document.getElementById('auth-modal-title');
@@ -983,26 +985,26 @@ function openAuthModal(mode = 'login') {
     authError.style.background = '';
     authError.style.color = '';
     if (mode === 'emailLink') {
-        modalTitle.textContent = '用 Email 連結登入／註冊';
+        modalTitle.textContent = '登入／註冊';
         submitBtn.textContent = '寄送登入連結';
-        switchText.innerHTML = '有設定密碼？<a href="#" id="auth-switch-link">用密碼登入</a>';
+        switchText.textContent = '';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'none';
-        forgotPasswordLink.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else if (mode === 'forgotPassword') {
         modalTitle.textContent = '忘記密碼';
         submitBtn.textContent = '發送重設密碼郵件';
         switchText.innerHTML = '<a href="#" id="auth-switch-link">返回登入</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'none';
-        forgotPasswordLink.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else {
         modalTitle.textContent = '登入';
         submitBtn.textContent = '登入';
         switchText.innerHTML = '沒有帳號或不想用密碼？<a href="#" id="auth-switch-link">用 Email 連結登入／註冊</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'block';
-        forgotPasswordLink.style.display = 'inline-block';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'inline-block';
     }
 
     // 「改用 Email 登入連結」說明：登入與 Email 連結模式都顯示，忘記密碼模式不顯示
@@ -1015,8 +1017,9 @@ function openAuthModal(mode = 'login') {
     modal.style.display = 'flex';
     disableBodyScroll();
 
-    // Re-attach event listener for switch link
-    document.getElementById('auth-switch-link').addEventListener('click', (e) => {
+    // Re-attach event listener for switch link（目前只剩 Email 連結模式，沒有切換連結）
+    const switchLink = document.getElementById('auth-switch-link');
+    if (switchLink) switchLink.addEventListener('click', (e) => {
         e.preventDefault();
         openAuthModal(authMode === 'login' ? 'emailLink' : 'login');
     });
