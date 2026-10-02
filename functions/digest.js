@@ -41,6 +41,22 @@ const NOTIFY_EMAIL_TO = defineString('NOTIFY_EMAIL_TO', { default: '' });
 const SMTP_HOST = defineString('SMTP_HOST', { default: 'smtp.gmail.com' });
 const SMTP_PORT = defineString('SMTP_PORT', { default: '465' });
 const SMTP_USER = defineString('SMTP_USER', { default: '' });
+// 寄件地址（例：noreply@pickmycard.app）。留空＝用 SMTP_USER。用寄信服務（Brevo、Resend…）時
+// SMTP_USER 常常不是信箱地址，一定要填這個。每日摘要與登入連結信（login-link.js）共用。
+const MAIL_FROM = defineString('MAIL_FROM', { default: '' });
+
+// 共用的 SMTP 連線（每日摘要、登入連結信）
+function smtpTransport(pass) {
+  // defineString 的 default 只用來預填部署時的提問，執行期 .value() 讀不到它
+  const port = Number(SMTP_PORT.value()) || 465;
+  return nodemailer.createTransport({
+    host: SMTP_HOST.value() || 'smtp.gmail.com',
+    port,
+    secure: port === 465,
+    auth: { user: SMTP_USER.value(), pass }
+  });
+}
+const mailFromAddress = () => MAIL_FROM.value() || SMTP_USER.value();
 
 // ── 密鑰（Secret Manager）──
 // 只想用其中一個管道時，另一個也要建立（隨便填一個字元即可），
@@ -157,7 +173,7 @@ async function sendEmail(items, total) {
   // 只有一則時保留「直接回覆＝回給使用者」；多則時信裡每則都有 mailto 連結
   const only = items.length === 1 && total === 1 ? items[0].data : null;
   await transporter.sendMail({
-    from: `Pick My Card 回饋通知 <${user}>`,
+    from: `Pick My Card 回饋通知 <${mailFromAddress()}>`,
     to,
     replyTo: (only && only.userEmail) || undefined,
     subject: `[PickMyCard 回饋] ${total} 則新回饋`,
@@ -234,4 +250,4 @@ async function runDigest(now) {
   return { total, delivered };
 }
 
-module.exports = { runDigest, REGION, SMTP_PASSWORD, NOTIFY_WEBHOOK_URL };
+module.exports = { runDigest, REGION, SMTP_PASSWORD, NOTIFY_WEBHOOK_URL, SMTP_USER, smtpTransport, mailFromAddress };

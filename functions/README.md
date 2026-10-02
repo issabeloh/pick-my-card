@@ -99,18 +99,37 @@ log 會寫出每個管道是「送出成功」「因未設定而略過」還是�
 - **Gmail 每日寄信上限**：一般帳號約 500 封/日，對回饋量而言不會碰到。
 - **想改寄送時間**：改 `functions/index.js` 的 `schedule`（cron 格式，台北時區），再部署一次。
 
-## 註冊把關（guardSignup，2026-10-02 加入）
+## 帳號與 Email 把關（guardSignup／guardEmails，2026-10-02 加入、10-03 改版）
 
-每次有人註冊新帳號，Firebase 會先問這個函式（阻擋函式 `beforeUserCreated`），實作在 `signup-guard.js`：
-- Email／密碼註冊：同一個 IP 每天（台灣時間）最多 10 個；拋棄式信箱網域一律拒絕
-- 「用 Google 登入」的新用戶不限
-- IP 只存雜湊（`signupLimits/{雜湊}_{日期}`），不存原始 IP；出錯一律放行
-- 前端（`js/quick-options-misc.js`）看到 `PMC_SIGNUP_LIMIT`／`PMC_SIGNUP_DISPOSABLE` 會顯示對應中文提示
-- 測試：`tools/signup-guard-test.js`
+實作在 `signup-guard.js`，測試 `tools/signup-guard-test.js`：
+- `guardSignup`（註冊前）：拒絕新的 email／密碼註冊（新用戶改用 Email 連結或 Google）、拒絕拋棄式信箱、
+  **同一個實體信箱只能有一個新帳號**（Gmail 忽略「.」與「+後綴」，正規化後雜湊存 `signupInboxes/`）
+- `guardEmails`（Firebase 寄信前）：Firebase 內建的登入連結信一律擋（改由下面的 sendLoginLink 寄）；
+  重設密碼信同一個信箱每天最多 3 封
+- 不存原始 email／IP，只存雜湊；任何非預期錯誤一律放行
+- 需要專案升級到 **Firebase Authentication with Identity Platform**（已於 2026-10-02 升級）。
+  部署後到 Firebase console → Authentication → Settings → **Blocking functions** 確認
+  「Before account creation」是 `guardSignup`（有「寄信前」選項的話選 `guardEmails`）
 
-**部署前一次性設定**：Firebase console → Authentication → Settings → 升級到
-**Firebase Authentication with Identity Platform**（阻擋函式的前提；每月 50,000 個活躍用戶內免費；
-升級後無法降回）。之後照常 `firebase deploy --only functions`。
+## Email 連結登入（sendLoginLink，2026-10-03）
 
-**確認有生效**：Firebase console → Authentication → Settings → **Blocking functions**，
-「Before account creation (beforeCreate)」那格應該選著 `guardSignup`；沒選就手動選並儲存。
+網站「用 Email 連結登入／註冊」按鈕呼叫的函式，實作在 `login-link.js`，測試 `tools/login-link-test.js`：
+- 強制 App Check（只有真網站能叫）；同一信箱每小時 3 封、每天 5 封，同一 IP 每小時 30 封
+- 用 Admin SDK 產生登入連結，改成 `https://pickmycard.app/?start=1&mode=signIn&oobCode=…`，寄**中文信**
+  （寄件者＝`MAIL_FROM` 參數，主旨「登入 Pick My Card」）；前端 `index.html` 完成登入
+- 寄信用和每日摘要同一組 SMTP 參數
+
+### 用 Resend 從自己的網域寄信（一次性設定）
+1. Resend → Domains → Add domain：`pickmycard.app` → 照畫面把 DNS 紀錄加到 Cloudflare（Resend 有自動設定）→ 等 Verified
+2. Resend → API Keys → 建立一把（權限 Sending access）並複製
+3. Cloud Shell：
+   ```bash
+   cd ~/pick-my-card/functions
+   npx firebase-tools functions:secrets:set SMTP_PASSWORD --project pick-my-card-28f2a   # 貼上 Resend API key
+   grep NOTIFY_EMAIL_TO .env.pick-my-card-28f2a > /tmp/pmc-env
+   printf 'SMTP_HOST=smtp.resend.com\nSMTP_PORT=465\nSMTP_USER=resend\nMAIL_FROM=noreply@pickmycard.app\n' >> /tmp/pmc-env
+   mv /tmp/pmc-env .env.pick-my-card-28f2a && cat .env.pick-my-card-28f2a
+   ```
+4. `npx firebase-tools deploy --only functions --project pick-my-card-28f2a`
+- Resend 免費方案約每天 100 封、每月 3,000 封（登入信＋每日摘要共用）
+- 換寄件地址時，`js/quick-options-misc.js` 的 `LOGIN_MAIL_FROM` 要一起改（寄出後的提示會顯示它）

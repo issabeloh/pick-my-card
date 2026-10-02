@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * 註冊把關（functions/signup-guard.js）測試——Firestore 模擬器，不碰正式資料。
+ * 帳號與 Email 把關（functions/signup-guard.js）測試——Firestore 模擬器，不碰正式資料。
  * 用法（NODE_PATH 指向裝好 functions 相依套件的資料夾，同 tools/feedback-digest-test.js）：
  *   NODE_PATH=/tmp/fn/node_modules /tmp/rt/node_modules/.bin/firebase emulators:exec \
  *     --only firestore --project demo-pmc "node tools/signup-guard-test.js"
@@ -8,33 +8,49 @@
 const path = require('path');
 process.env.GCLOUD_PROJECT = process.env.GCLOUD_PROJECT || 'demo-pmc';
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, Firestore } = require('firebase-admin/firestore');
 initializeApp({ projectId: process.env.GCLOUD_PROJECT });
 const g = require(path.join(__dirname, '..', 'functions', 'signup-guard.js'));
 
 let pass = 0, fail = 0;
 const check = (name, ok, detail) => { if (ok) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.error(`  ❌ ${name}${detail ? ' — ' + detail : ''}`); } };
-const attempt = (args, now) => g.checkSignup(args, now).then(r => ({ ok: true, r }), e => ({ ok: false, code: e.code, blocked: e instanceof g.SignupBlocked }));
+const run = (p) => p.then(r => ({ ok: true, r }), e => ({ ok: false, code: e.code }));
 
 (async () => {
-  const now = Date.parse('2026-10-02T04:00:00Z');   // 台灣 10/2 中午
-  const results = [];
-  for (let i = 0; i < 12; i++) results.push(await attempt({ ip: '1.2.3.4', email: `u${i}@gmail.com`, providerId: 'password' }, now));
-  check(`同一 IP 前 ${g.MAX_EMAIL_SIGNUPS_PER_IP} 個 email 註冊放行`, results.slice(0, 10).every(r => r.ok));
-  check('第 11、12 個被擋（PMC_SIGNUP_LIMIT）', results.slice(10).every(r => !r.ok && r.code === 'PMC_SIGNUP_LIMIT'));
-  check('別的 IP 不受影響', (await attempt({ ip: '5.6.7.8', email: 'x@gmail.com', providerId: 'password' }, now)).ok);
-  check('同一 IP 用 Google 登入的新用戶不限', (await attempt({ ip: '1.2.3.4', email: 'g@gmail.com', providerId: 'google.com' }, now)).ok);
-  check('同一 IP 隔天又能註冊', (await attempt({ ip: '1.2.3.4', email: 'next@gmail.com', providerId: 'password' }, now + 24 * 3600e3)).ok);
-  const disp = await attempt({ ip: '9.9.9.9', email: 'bot@Mailinator.com', providerId: 'password' }, now);
-  check('拋棄式信箱被擋（PMC_SIGNUP_DISPOSABLE，大小寫不影響）', !disp.ok && disp.code === 'PMC_SIGNUP_DISPOSABLE');
-  check('沒有 IP 時放行', (await attempt({ email: 'a@gmail.com', providerId: 'password' }, now)).ok);
-  // 不存原始 IP
-  const docs = await getFirestore().collection('signupLimits').get();
-  check('計數文件不含原始 IP', docs.size > 0 && docs.docs.every(d => !d.id.includes('1.2.3.4') && !JSON.stringify(d.data()).includes('1.2.3.4')));
-  // Firestore 掛掉時放行（fail open）
-  require('firebase-admin/firestore').Firestore.prototype.runTransaction = () => Promise.reject(new Error('boom'));
-  const failOpen = await attempt({ ip: '7.7.7.7', email: 'y@gmail.com', providerId: 'password' }, now);
-  check('計數出錯時放行（不讓真人卡在註冊）', failOpen.ok && failOpen.r.reason === 'counter-error');
+  console.log('— 信箱正規化');
+  check('Gmail 加點／+後綴／大小寫都算同一個', ['p.aul7322000@gmail.com', 'paul7322000+abc@GMAIL.com', 'paul.7322000@googlemail.com'].every(e => g.normalizeInbox(e) === 'paul7322000@gmail.com'));
+  check('非 Gmail 只拿掉 +後綴、保留點', g.normalizeInbox('a.b+x@yahoo.com.tw') === 'a.b@yahoo.com.tw');
+
+  console.log('— 註冊（beforeUserCreated）');
+  let r = await run(g.checkSignup({ email: 'someone@gmail.com', signInMethod: 'password' }));
+  check('新的 email／密碼註冊被擋（PMC_SIGNUP_PASSWORD）', !r.ok && r.code === 'PMC_SIGNUP_PASSWORD');
+  r = await run(g.checkSignup({ email: 'bot@yopmail.com', signInMethod: 'emailLink' }));
+  check('拋棄式信箱被擋', !r.ok && r.code === 'PMC_SIGNUP_DISPOSABLE');
+  check('Email 連結註冊放行', (await run(g.checkSignup({ email: 'paul7322000@gmail.com', signInMethod: 'emailLink' }))).ok);
+  r = await run(g.checkSignup({ email: 'p.a.u.l7322000+2@gmail.com', signInMethod: 'emailLink' }));
+  check('同一個 Gmail 信箱的變體再註冊被擋（PMC_SIGNUP_INBOX）', !r.ok && r.code === 'PMC_SIGNUP_INBOX');
+  r = await run(g.checkSignup({ email: 'paul.7322000@gmail.com', signInMethod: 'google.com' }));
+  check('同一信箱改用 Google 註冊也被擋', !r.ok && r.code === 'PMC_SIGNUP_INBOX');
+  check('不同信箱的 Google 註冊放行', (await run(g.checkSignup({ email: 'other.person@gmail.com', signInMethod: 'google.com' }))).ok);
+  check('inboxTaken 查得到已登記信箱', await g.inboxTaken('paul7322000+zzz@gmail.com'));
+  const ids = (await getFirestore().collection('signupInboxes').get()).docs.map(d => d.id).join(',');
+  check('登記文件不含原始 email', !/paul|gmail|other/.test(ids));
+
+  console.log('— 寄信（beforeEmailSent）');
+  r = await run(g.checkEmailSend({ emailType: 'EMAIL_SIGN_IN', email: 'x@gmail.com' }));
+  check('Firebase 內建的登入連結信一律擋', !r.ok && r.code === 'PMC_EMAIL_LINK_DISABLED');
+  const now = Date.parse('2026-10-03T04:00:00Z');
+  const resets = [];
+  for (let i = 0; i < 4; i++) resets.push(await run(g.checkEmailSend({ emailType: 'PASSWORD_RESET', email: i % 2 ? 'v.ictim@gmail.com' : 'victim@gmail.com' }, now)));
+  check(`同一信箱重設密碼信前 ${g.MAX_RESET_EMAILS_PER_DAY} 封放行、第 4 封擋（含 Gmail 變體）`, resets.slice(0, 3).every(x => x.ok) && !resets[3].ok && resets[3].code === 'PMC_EMAIL_LIMIT');
+  check('隔天又能寄', (await run(g.checkEmailSend({ emailType: 'PASSWORD_RESET', email: 'victim@gmail.com' }, now + 86400e3))).ok);
+  check('其他種類的信（驗證信等）不限', (await run(g.checkEmailSend({ emailType: 'VERIFY_EMAIL', email: 'victim@gmail.com' }, now))).ok);
+
+  console.log('— 出錯時放行');
+  Firestore.prototype.runTransaction = () => Promise.reject(new Error('boom'));
+  check('登記失敗時註冊放行', (await run(g.checkSignup({ email: 'brand.new@gmail.com', signInMethod: 'emailLink' }))).ok);
+  check('計數失敗時重設信放行', (await run(g.checkEmailSend({ emailType: 'PASSWORD_RESET', email: 'z@gmail.com' }, now))).ok);
+
   console.log(`\n結果：${pass} 通過，${fail} 失敗`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

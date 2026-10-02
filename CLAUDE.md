@@ -21,7 +21,7 @@
 | `_headers` | Cloudflare Pages 讀的回應標頭設定（安全標頭）。⚠️ CSP 在 `-Report-Only` 觀察模式（轉正條件見檔內註解）；HSTS 已上到一年，**日後新增任何用瀏覽器開的子網域前必讀該條註解**（沒有 HTTPS 會直接連不上且無回報） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
-| `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest`：每天 09:00 把新的意見回饋整理成一封 email／webhook 摘要，沒有就不寄）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
+| `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest` 每日回饋摘要；`sendLoginLink` 寄 Email 連結登入信；`guardSignup`／`guardEmails` 註冊與寄信把關）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
 | `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。中間三支由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify` |
