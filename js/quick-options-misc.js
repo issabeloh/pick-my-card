@@ -990,21 +990,21 @@ function openAuthModal(mode = 'login') {
         switchText.textContent = '';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'none';
-        forgotPasswordLink.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else if (mode === 'forgotPassword') {
         modalTitle.textContent = '忘記密碼';
         submitBtn.textContent = '發送重設密碼郵件';
         switchText.innerHTML = '<a href="#" id="auth-switch-link">返回登入</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'none';
-        forgotPasswordLink.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else {
         modalTitle.textContent = '登入';
         submitBtn.textContent = '登入';
         switchText.innerHTML = '沒有帳號或不想用密碼？<a href="#" id="auth-switch-link">用 Email 連結登入／註冊</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'block';
-        forgotPasswordLink.style.display = 'inline-block';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'inline-block';
     }
 
     // 「改用 Email 登入連結」說明：登入與 Email 連結模式都顯示，忘記密碼模式不顯示
