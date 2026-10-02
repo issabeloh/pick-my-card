@@ -956,9 +956,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auth Modal System (Login/Register with Email)
 // ============================================
 
-let authMode = 'login'; // 'login', 'register', or 'forgotPassword'
+let authMode = 'login'; // 'login', 'emailLink', or 'forgotPassword'
+
+// 登入連結信的寄件者（必須和 functions 的 MAIL_FROM 參數一致）與主旨（functions/login-link.js 的 SUBJECT）
+const LOGIN_MAIL_FROM = 'noreply@pickmycard.app';
+const LOGIN_MAIL_SUBJECT = '登入 Pick My Card';
 
 function openAuthModal(mode = 'login') {
+    // 2026-10-03 起不再開放「email／密碼註冊」：新用戶一律用 Email 連結或 Google（見 functions/signup-guard.js）
+    if (mode === 'register') mode = 'emailLink';
     authMode = mode;
     const modal = document.getElementById('auth-modal');
     const modalTitle = document.getElementById('auth-modal-title');
@@ -973,12 +979,15 @@ function openAuthModal(mode = 'login') {
     document.getElementById('auth-form').reset();
     authError.style.display = 'none';
 
-    if (mode === 'register') {
-        modalTitle.textContent = '註冊';
-        submitBtn.textContent = '註冊';
-        switchText.innerHTML = '已經有帳號？<a href="#" id="auth-switch-link">立即登入</a>';
-        confirmPasswordGroup.style.display = 'block';
-        passwordGroup.style.display = 'block';
+    const passwordInput = document.getElementById('auth-password');
+    authError.style.background = '';
+    authError.style.color = '';
+    if (mode === 'emailLink') {
+        modalTitle.textContent = '用 Email 連結登入／註冊';
+        submitBtn.textContent = '寄送登入連結';
+        switchText.innerHTML = '有設定密碼？<a href="#" id="auth-switch-link">用密碼登入</a>';
+        confirmPasswordGroup.style.display = 'none';
+        passwordGroup.style.display = 'none';
         forgotPasswordLink.style.display = 'none';
     } else if (mode === 'forgotPassword') {
         modalTitle.textContent = '忘記密碼';
@@ -990,11 +999,14 @@ function openAuthModal(mode = 'login') {
     } else {
         modalTitle.textContent = '登入';
         submitBtn.textContent = '登入';
-        switchText.innerHTML = '還沒有帳號？<a href="#" id="auth-switch-link">立即註冊</a>';
+        switchText.innerHTML = '沒有帳號或不想用密碼？<a href="#" id="auth-switch-link">用 Email 連結登入／註冊</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'block';
         forgotPasswordLink.style.display = 'inline-block';
     }
+
+    // 只有密碼登入要填密碼；其他模式密碼欄隱藏，也不能留著 required（否則表單送不出去）
+    if (passwordInput) passwordInput.required = (mode === 'login');
 
     modal.style.display = 'flex';
     disableBodyScroll();
@@ -1002,11 +1014,7 @@ function openAuthModal(mode = 'login') {
     // Re-attach event listener for switch link
     document.getElementById('auth-switch-link').addEventListener('click', (e) => {
         e.preventDefault();
-        if (authMode === 'forgotPassword') {
-            openAuthModal('login');
-        } else {
-            openAuthModal(authMode === 'login' ? 'register' : 'login');
-        }
+        openAuthModal(authMode === 'login' ? 'emailLink' : 'login');
     });
 }
 
@@ -1083,8 +1091,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
-            const confirmPassword = document.getElementById('auth-confirm-password').value;
             const submitBtn = document.getElementById('auth-submit-btn');
+
+            // Email 連結登入／註冊：請 functions 寄一封登入連結信（index.html 的 pmcSendLoginLink）
+            if (authMode === 'emailLink') {
+                if (!email) {
+                    showAuthError('請輸入您的 Email');
+                    return;
+                }
+                submitBtn.disabled = true;
+                submitBtn.textContent = '寄送中...';
+                const authError = document.getElementById('auth-error');
+                try {
+                    await window.pmcSendLoginLink(email);
+                    // 換裝置開信時會再問一次 Email；同一台裝置就直接登入
+                    try { localStorage.setItem('pmcEmailForSignIn', email); } catch (e) { /* ignore */ }
+                    authError.textContent = `✅ 登入連結已寄到 ${email}。請到信箱點信裡的連結`
+                        + `（寄件者 ${LOGIN_MAIL_FROM}，主旨「${LOGIN_MAIL_SUBJECT}」）；沒看到請檢查垃圾郵件。`;
+                    authError.style.display = 'block';
+                    authError.style.background = '#d4edda';
+                    authError.style.color = '#155724';
+                } catch (error) {
+                    console.error('Send login link error:', error);
+                    const raw = String((error && error.message) || '');
+                    let msg = '寄送失敗，請稍後再試';
+                    if (raw.includes('PMC_LINK_TOO_MANY') || (error && error.code === 'functions/resource-exhausted')) msg = '寄太多次了，請稍後再試（同一個信箱每小時最多 3 封）';
+                    else if (raw.includes('PMC_LINK_INVALID')) msg = 'Email 格式不正確';
+                    else if (raw.includes('PMC_SIGNUP_DISPOSABLE')) msg = '請使用常用的 Email（不接受拋棄式信箱），或改用「Google 登入」';
+                    else if (raw.includes('PMC_SIGNUP_INBOX')) msg = '這個信箱已經有帳號了（Gmail 會忽略英文句點和 + 後面的字），請用原本註冊的 Email 登入';
+                    else if (error && error.code === 'functions/unauthenticated') msg = '驗證沒有通過，請重新整理頁面再試；如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單';
+                    authError.textContent = msg;
+                    authError.style.display = 'block';
+                    authError.style.background = '#fce8e6';
+                    authError.style.color = '#c5221f';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '寄送登入連結';
+                }
+                return;
+            }
 
             // Handle forgot password mode
             if (authMode === 'forgotPassword') {
@@ -1111,6 +1156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         errorMessage = '找不到此 Email 帳號';
                     } else if (error.code === 'auth/invalid-email') {
                         errorMessage = 'Email 格式不正確';
+                    } else if (String(error.message || '').includes('PMC_EMAIL_LIMIT')) {
+                        errorMessage = '這個 Email 今天已經寄過太多封重設信，請明天再試，或改用「Email 連結登入」';
                     }
 
                     const authError = document.getElementById('auth-error');
@@ -1125,38 +1172,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Validation for login/register
+            // 密碼登入（只剩既有密碼帳號會用；新的密碼註冊已停用）
             if (!email || !password) {
                 showAuthError('請填寫所有欄位');
                 return;
             }
 
-            if (password.length < 6) {
-                showAuthError('密碼至少需要 6 個字元');
-                return;
-            }
-
-            if (authMode === 'register' && password !== confirmPassword) {
-                showAuthError('密碼不一致，請重新輸入');
-                return;
-            }
-
-            // Disable submit button
             submitBtn.disabled = true;
-            submitBtn.textContent = authMode === 'login' ? '登入中...' : '註冊中...';
+            submitBtn.textContent = '登入中...';
 
             try {
-                if (authMode === 'register') {
-                    // Register
-                    const result = await window.createUserWithEmailAndPassword(auth, email, password);
-                    console.log('Registration successful:', result.user);
-                    closeAuthModal();
-                } else {
-                    // Login
-                    const result = await window.signInWithEmailAndPassword(auth, email, password);
-                    console.log('Login successful:', result.user);
-                    closeAuthModal();
-                }
+                const result = await window.signInWithEmailAndPassword(auth, email, password);
+                console.log('Login successful:', result.user);
+                closeAuthModal();
             } catch (error) {
                 console.error('Auth error:', error);
                 let errorMessage = '操作失敗，請稍後再試';
@@ -1185,18 +1213,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         errorMessage = 'Email 或密碼錯誤';
                         break;
                 }
-                // 註冊把關（functions/signup-guard.js）擋下時，錯誤訊息裡會帶這兩個代號
-                const rawMsg = String((error && error.message) || '');
-                if (rawMsg.includes('PMC_SIGNUP_LIMIT')) {
-                    errorMessage = '這個網路今天註冊的帳號太多了，請明天再試，或改用「Google 登入」';
-                } else if (rawMsg.includes('PMC_SIGNUP_DISPOSABLE')) {
-                    errorMessage = '請使用常用的 Email 註冊（不接受拋棄式信箱），或改用「Google 登入」';
-                }
 
                 showAuthError(errorMessage);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = authMode === 'login' ? '登入' : '註冊';
+                submitBtn.textContent = '登入';
             }
         });
     }

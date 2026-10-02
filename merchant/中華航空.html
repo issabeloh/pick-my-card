@@ -1390,6 +1390,46 @@
           .catch(err => { console.error('App Check 啟動失敗:', err); return false; });
         return appCheckReady;
       };
+      // ── Email 連結登入（2026-10-03）──────────────────────────────────────
+      // 寄信：呼叫 functions 的 sendLoginLink（強制 App Check，所以先啟動 App Check；訪客只有按「寄送」
+      // 時才會啟動，平常不用 reCAPTCHA 額度）。functions SDK 用動態載入，回歸測試的替身模組不受影響。
+      window.pmcSendLoginLink = async (email) => {
+        await window.ensureAppCheck();
+        const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-functions.js");
+        return httpsCallable(getFunctions(app, 'asia-east1'), 'sendLoginLink')({ email });
+      };
+      // 收信：網址帶 mode=signIn&oobCode=… 就是點了登入連結 → 完成登入、把網址上的參數清掉
+      (async () => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('mode') !== 'signIn' || !params.get('oobCode')) return;
+        const cleanUrl = () => {
+          ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl'].forEach(k => params.delete(k));
+          const q = params.toString();
+          history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
+        };
+        try {
+          const authMod = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js");
+          if (!authMod.isSignInWithEmailLink(auth, location.href)) return;
+          let email = null;
+          try { email = localStorage.getItem('pmcEmailForSignIn'); } catch (e) {}
+          if (!email) email = window.prompt('請輸入你索取登入連結時填的 Email（在不同裝置開信時，需要再確認一次）');
+          if (!email) { cleanUrl(); return; }
+          await authMod.signInWithEmailLink(auth, email.trim(), location.href);
+          try { localStorage.removeItem('pmcEmailForSignIn'); } catch (e) {}
+          cleanUrl();
+        } catch (err) {
+          console.error('Email 連結登入失敗:', err);
+          cleanUrl();
+          const raw = String((err && err.message) || '');
+          let msg = '登入失敗，請回到網站重新索取登入連結。';
+          if (err && (err.code === 'auth/invalid-action-code' || err.code === 'auth/expired-action-code')) msg = '這個登入連結已失效或已經用過了，請回到網站重新索取。';
+          else if (err && err.code === 'auth/invalid-email') msg = '輸入的 Email 和索取連結時的不一樣，請重新索取登入連結。';
+          else if (raw.includes('PMC_SIGNUP_INBOX')) msg = '這個信箱已經有帳號了（Gmail 會忽略英文句點和 + 後面的字），請用原本註冊的 Email 登入。';
+          else if (raw.includes('PMC_SIGNUP_DISPOSABLE')) msg = '不接受拋棄式信箱，請改用常用的 Email 或「Google 登入」。';
+          alert(msg);
+        }
+      })();
+
       // 回訪的登入用戶（auth-user-data.js 寫的 pre-paint 提示）提早啟動，不用等 onAuthStateChanged
       try { if (localStorage.getItem('pmc_known_logged_in') === '1') window.ensureAppCheck(); } catch (e) {}
     </script>
