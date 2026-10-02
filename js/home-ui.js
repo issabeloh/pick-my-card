@@ -199,8 +199,9 @@ function buildSpotlightCard(item, index) {
     const daysLeft = getSpotlightDaysLeft(deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
-    // 卡片上只放短格式「至 MM/DD」（deadline 是 YYYY/MM/DD）；完整日期在活動詳情 modal
-    const endShort = /^\d{4}\/\d{2}\/\d{2}$/.test(deadline)
+    // 卡片上只放短格式「至 M/D」（deadline 是 YYYY/MM/DD，不補零：10/31、2/28）。
+    // 「剩 N 天」出現時取代它——講的是同一件事，紅徽章更醒目，資訊列也才放得下
+    const endShort = (!daysBadge && /^\d{4}\/\d{2}\/\d{2}$/.test(deadline))
         ? deadline.slice(5).replace(/^0/, '').replace(/\/0/, '/') : '';
 
     const hype = parseSpotlightHype(item.description);
@@ -211,7 +212,7 @@ function buildSpotlightCard(item, index) {
     // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
     // 到期日以短格式「至 M/D」放在上限旁（2026-10-02 起；之前只在 modal），
     // 完整「活動期間／活動期限」仍在活動詳情 modal（buildSpotlightModalBody）。
-    // 「剩 N 天」照舊，0–14 天才出現。資訊列不換行（換行會讓同排卡片高度不一）。
+    // 剩 0–14 天時改顯示「剩 N 天」紅徽章、取代「至 M/D」。資訊列不換行（換行會讓同排卡片高度不一）。
     card.innerHTML = `
         <div class="spotlight-ccwrap">
             <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(cardName)}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
