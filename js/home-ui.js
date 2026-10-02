@@ -236,6 +236,9 @@ function buildSpotlightCard(item, index) {
     const daysLeft = getSpotlightDaysLeft(deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+    // 卡片上只放短格式「至 MM/DD」（deadline 是 YYYY/MM/DD）；完整日期在活動詳情 modal
+    const endShort = /^\d{4}\/\d{2}\/\d{2}$/.test(deadline)
+        ? deadline.slice(5).replace(/^0/, '').replace(/\/0/, '/') : '';
 
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
@@ -247,9 +250,9 @@ function buildSpotlightCard(item, index) {
     // display:contents（等於不存在），主打卡與小格才變成卡片的右半欄。
     // .spotlight-cardname-line 只有桌機小格顯示（在商家名下方）——小格的卡圖
     // 換成純圖、不壓卡名膠囊，卡名改用這行文字。
-    // 到期日「至 X」不再上卡片，只留在
-    // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
-    // 「剩 N 天」保留，那是急迫感提示、不是日期。
+    // 到期日以短格式「至 M/D」放在上限旁（2026-10-02 起；之前只在 modal），
+    // 完整「活動期間／活動期限」仍在活動詳情 modal（buildSpotlightModalBody）。
+    // 「剩 N 天」照舊，0–14 天才出現。資訊列不換行（換行會讓同排卡片高度不一）。
     card.innerHTML = `
         <div class="spotlight-ccwrap">
             <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(cardName)}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
@@ -264,6 +267,7 @@ function buildSpotlightCard(item, index) {
             <div class="spotlight-cardname-line">${escapeHtml(cardName)}</div>
             <div class="spotlight-info-row">
                 ${capText ? `<span class="spotlight-cap">上限 <b>${escapeHtml(capText)}</b></span>` : ''}
+                ${endShort ? `<span class="spotlight-end">至 <b>${escapeHtml(endShort)}</b></span>` : ''}
                 ${daysBadge}
             </div>
         </div>

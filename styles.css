@@ -8677,7 +8677,7 @@ mark.cashback-search-hl {
 
 /* 版式 C（2026-09-03 重設計，參考 LINE 購物的商品卡）：卡圖方塊在上、
    大回饋率當「價格」、商家＋卡名兩行、上限一行小字、底部兩顆按鈕。
-   到期日不上卡片（只在活動詳情 modal），「剩 N 天」保留當急迫感提示。 */
+   到期日以短格式「至 M/D」放在上限旁（2026-10-02 起），完整期間在活動詳情 modal。 */
 .spotlight-card {
     display: flex;
     flex-direction: column;
@@ -8787,10 +8787,12 @@ mark.cashback-search-hl {
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
+/* 「上限／至 M/D／剩 N 天」一律單行：換行會讓同排卡片高度不一 */
 .spotlight-info-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    white-space: nowrap;
     gap: 6px;
     font-size: 0.72rem;
     color: #9ca3af;
