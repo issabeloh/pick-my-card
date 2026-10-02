@@ -1185,6 +1185,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         errorMessage = 'Email 或密碼錯誤';
                         break;
                 }
+                // 註冊把關（functions/signup-guard.js）擋下時，錯誤訊息裡會帶這兩個代號
+                const rawMsg = String((error && error.message) || '');
+                if (rawMsg.includes('PMC_SIGNUP_LIMIT')) {
+                    errorMessage = '這個網路今天註冊的帳號太多了，請明天再試，或改用「Google 登入」';
+                } else if (rawMsg.includes('PMC_SIGNUP_DISPOSABLE')) {
+                    errorMessage = '請使用常用的 Email 註冊（不接受拋棄式信箱），或改用「Google 登入」';
+                }
 
                 showAuthError(errorMessage);
             } finally {

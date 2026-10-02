@@ -1,4 +1,9 @@
-# Cloud Functions — feedback 每日摘要
+# Cloud Functions — feedback 每日摘要＋註冊把關
+
+本資料夾有兩個函式：
+- `dailyFeedbackDigest`：意見回饋每日摘要（下面大部分章節在講它）
+- `guardSignup`：註冊把關（見最後一節「註冊把關」）
+
 
 使用者送出「回報問題 / 意見回饋」後，回饋只會靜靜出現在 Firestore 的 `feedback` collection。
 這個函式**每天台北時間 09:00** 把上次寄出之後的新回饋整理成**一封**摘要推給站長；
@@ -93,3 +98,19 @@ log 會寫出每個管道是「送出成功」「因未設定而略過」還是�
 - **email 進垃圾信件匣**：把寄件地址加入聯絡人，或改用自有網域的 SMTP。
 - **Gmail 每日寄信上限**：一般帳號約 500 封/日，對回饋量而言不會碰到。
 - **想改寄送時間**：改 `functions/index.js` 的 `schedule`（cron 格式，台北時區），再部署一次。
+
+## 註冊把關（guardSignup，2026-10-02 加入）
+
+每次有人註冊新帳號，Firebase 會先問這個函式（阻擋函式 `beforeUserCreated`），實作在 `signup-guard.js`：
+- Email／密碼註冊：同一個 IP 每天（台灣時間）最多 10 個；拋棄式信箱網域一律拒絕
+- 「用 Google 登入」的新用戶不限
+- IP 只存雜湊（`signupLimits/{雜湊}_{日期}`），不存原始 IP；出錯一律放行
+- 前端（`js/quick-options-misc.js`）看到 `PMC_SIGNUP_LIMIT`／`PMC_SIGNUP_DISPOSABLE` 會顯示對應中文提示
+- 測試：`tools/signup-guard-test.js`
+
+**部署前一次性設定**：Firebase console → Authentication → Settings → 升級到
+**Firebase Authentication with Identity Platform**（阻擋函式的前提；每月 50,000 個活躍用戶內免費；
+升級後無法降回）。之後照常 `firebase deploy --only functions`。
+
+**確認有生效**：Firebase console → Authentication → Settings → **Blocking functions**，
+「Before account creation (beforeCreate)」那格應該選著 `guardSignup`；沒選就手動選並儲存。
