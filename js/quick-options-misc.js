@@ -1005,6 +1005,10 @@ function openAuthModal(mode = 'login') {
         forgotPasswordLink.style.display = 'inline-block';
     }
 
+    // 「改用 Email 登入連結」說明：登入與 Email 連結模式都顯示，忘記密碼模式不顯示
+    const linkNote = document.getElementById('auth-link-note');
+    if (linkNote) linkNote.style.display = (mode === 'forgotPassword') ? 'none' : 'block';
+
     // 只有密碼登入要填密碼；其他模式密碼欄隱藏，也不能留著 required（否則表單送不出去）
     if (passwordInput) passwordInput.required = (mode === 'login');
 
