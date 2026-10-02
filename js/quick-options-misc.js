@@ -1144,7 +1144,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await window.sendPasswordResetEmail(auth, email);
                     const authError = document.getElementById('auth-error');
-                    authError.textContent = '✅ 密碼重設信已寄出，請檢查您的 Email';
+                    // 重設密碼信是 Firebase 內建範本（這個專案改不了，只能是英文）
+                    authError.textContent = '✅ 密碼重設信已寄出，請到信箱收件。標題與內容會是英文的'
+                        + '（標題「Reset your password for Pick My Card」，寄件者 noreply@pick-my-card-28f2a.firebaseapp.com）。'
+                        + '如果收件匣沒有收到，請查看垃圾信件。';
                     authError.style.display = 'block';
                     authError.style.background = '#d4edda';
                     authError.style.color = '#155724';

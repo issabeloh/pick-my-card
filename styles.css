@@ -6584,6 +6584,17 @@ mark.cashback-search-hl {
     background: #f1f3f4;
 }
 
+/* Google 登入旁的「推薦」標籤（2026-10-03） */
+.auth-recommend-badge {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    color: #ffffff;
+    background: #1e8e3e;
+    border-radius: 999px;
+    padding: 4px 8px;
+}
+
 /* Divider */
 .auth-divider {
     display: flex;
