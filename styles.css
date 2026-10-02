@@ -8647,8 +8647,8 @@ mark.cashback-search-hl {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 /* 「上限／至 M/D（或剩 N 天）」一律單行：換行會讓同排卡片高度不一。
-   真的放不下時（≤340px 小手機、或真機字型較寬）只截「上限」那段，
-   日期與徽章永遠完整。手機字級另見下方 max-width:400px。 */
+   360px 以上真的放不下時（真機字型較寬）只截「上限」那段，日期與徽章永遠完整；
+   <360px 改為換行。手機字級與換行見下方 max-width:400px／359px。 */
 .spotlight-info-row {
     display: flex;
     align-items: center;
@@ -8792,6 +8792,12 @@ mark.cashback-search-hl {
 @media (max-width: 400px) {
     .spotlight-info-row { font-size: 0.66rem; gap: 4px; }
     .spotlight-days-badge { padding: 1px 5px; }
+}
+/* 極窄手機（<360px）單行放不下：改成換行、不截「上限」（站長 2026-10-02 決定），
+   每一段本身仍不斷字。同排兩張卡由 grid 拉成等高，按鈕靠 margin-top:auto 對齊底部 */
+@media (max-width: 359px) {
+    .spotlight-info-row { flex-wrap: wrap; row-gap: 3px; }
+    .spotlight-cap { overflow: visible; }
 }
 
 /* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
