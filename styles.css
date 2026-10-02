@@ -8793,10 +8793,10 @@ mark.cashback-search-hl {
     .spotlight-info-row { font-size: 0.66rem; gap: 4px; }
     .spotlight-days-badge { padding: 1px 5px; }
 }
-/* 極窄手機（<360px）單行放不下：改成換行、不截「上限」（站長 2026-10-02 決定），
-   每一段本身仍不斷字。同排兩張卡由 grid 拉成等高，按鈕靠 margin-top:auto 對齊底部 */
+/* 極窄手機（<360px）單行放不下：一律分兩行（上限／至 M/D 或剩 N 天），
+   不截「上限」、也不看寬度個別換行——每張卡都一樣（站長 2026-10-02 決定） */
 @media (max-width: 359px) {
-    .spotlight-info-row { flex-wrap: wrap; row-gap: 3px; }
+    .spotlight-info-row { flex-direction: column; align-items: flex-start; gap: 3px; }
     .spotlight-cap { overflow: visible; }
 }
 
