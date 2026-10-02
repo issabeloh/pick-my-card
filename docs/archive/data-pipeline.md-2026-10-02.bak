@@ -45,7 +45,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 9. **ReferralLinks** —— merchant, url, description, active
 10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, order, active, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
     - **2026-09-30 起只存編輯決定**：cap／deadline／category 三欄已刪，上限與期限由前端從卡片真實活動推導；`rate` 是「選哪個活動 × 哪個級別」的選擇器，`card_name` 只給人看。規則見 `ui-display.md` 第 4 節
-    - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 前端已不讀**。原本把勾選的活動排進「主打卡」版位；主打卡 2026-09-03 停用、2026-10-02 前端程式全部移除（見 `ui-display.md` 第 4 節）。Apps Script 仍照常匯出這欄、無害；要清掉得同時改 Sheets 上的執行版與 `apps-script/cards-export.gs` 備份。
+    - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 🚧 目前匯出但前端不使用**。欄位保留著，前端也照常收到 `item.featured`，只是暫時不拿來排版。
+    - 原本的用途是把勾選的活動排進「主打卡」版位（手機每頁 1 則整列大卡、桌機每頁 2 則各跨 2 欄）。**停用原因**：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打的頁」卡片形狀不同，看起來很亂（2026-09-03 站長決定）。
+    - 要重新啟用：把 `js/home-ui.js` 的 `SPOTLIGHT_FEATURE_SLOTS` 改回 `true`，主打卡的分頁分支與 `.is-feature` / `.is-mini` 樣式都還留著。
     - 目前每頁張數：手機 4（2 欄 x 2 列）、平板 3、桌機 4（4 欄 x 1 列）。版位配置寫在 `spotlightLayout()`，欄數在 `styles.css` 的 `.spotlight-track`，**兩邊的斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
     - **2026-09-17 起這張表同時餵 /promos 的「卡片特色」**：命中的通路保證入列並帶
       hype 字眼（見第 9a 節）。因此往 Highlights 加一列會同時改善首頁推薦活動與新戶活動頁。

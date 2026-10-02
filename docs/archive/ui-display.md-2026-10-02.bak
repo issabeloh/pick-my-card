@@ -203,7 +203,7 @@ Grep `titleParts`）：
 
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
 
-**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
+**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**匯出但前端暫不使用**，見下方「主打卡」段)。
 
 **Highlights 只存「編輯決定」（2026-09-30 起）**：`cap`／`deadline`／`category` 三欄已從工作表刪除——它們與卡片真實資料重複，實測 20 則有 2 則上限、3 則期限對不上。現在：
 - **`rate` 是選擇器**：`resolveSpotlightPick(item, card)` 把「活動 × 級別」逐一試算，取回饋率等於 rate 的組合（多個相等取上限最大）。它同時表達站長選的級別（分級卡有時推中間、有時推最高）與活動（同通路多個活動時，例如夢時代 3%/7%/11%/7%）。**不能改成 level 欄**——level 表達不了「選哪個活動」。
@@ -214,10 +214,9 @@ Grep `titleParts`）：
 **期限自動匹配真實活動（2026-09-02 起；2026-09-30 sheet 的 deadline 欄刪除，不再有後備）**：卡片與 modal 顯示的期限不再直接讀 sheet 的 `deadline`，改由 `resolveSpotlightDeadline(item)` 用 `findSpotlightCardActivities()`（同 ⓘ modal 那支）找出這張卡涵蓋該通路的活動、取其 `periodEnd`；`renderSpotlights()` 建清單時一次算好存進 `item._resolvedDeadline`。對不到活動、或活動沒寫 `periodEnd` → **不顯示期限**（2026-09-30 前是退回 sheet 的 deadline，該欄已刪）。改的理由：sheet 的 deadline 是人工填的、會與活動脫節——2026-09-02 實測 20 則有 6 則對不上，其中 3 則顯示的是「已經過去」的日期（中信 Uniopen 國外實體消費／夢時代寫 2026/8/31，玉山 Ubear Gemini 寫 2026/8/31 但活動其實展延到 2027/2/28），陽信 JCB 晶緻卡日本 7-ELEVEN 則寫成 2026/12/31、比真實的 2026/9/30 多三個月。
 **一卡一通路命中多個活動時取「最早到期」**（實測有兩則會這樣：中信 Uniopen 夢時代 4 組、玉山熊本熊卡日本松本清 4 組）——亮點宣稱的回饋率常是多組疊加出來的（松本清 8.5% ＝ 6% 指定日本商店 ＋ 滿額加碼 1.5%），最早到期的那組一過期宣稱的數字就不成立；取最晚會讓卡片顯示一個其實已經拿不到的期限。過期活動在載入時已被 `filterExpiredRates()` 濾掉、不會進 `_itemsIndex`，所以這裡拿到的活動都還在效期內。
 ⚠️ 亮點本身**不做過期隱藏**：顯示哪幾則仍由 Sheets 的 `active` 欄控制（見下方輪播段）。
-**卡片上的期限（2026-10-02 起，站長決定；推翻 2026-09-03「期限不上卡片」）**：資訊列＝「上限 NT$X」＋短格式「至 M/D」（不補零，如 `至 2/28`）；剩 0–14 天時改顯示紅色「剩 N 天」徽章、**取代**「至 M/D」（同一件事，徽章較醒目，也才放得下）。完整日期仍在 ⓘ modal 的「活動期間／活動期限」。
-⚠️ **資訊列單行（站長裁定：換行會讓同排卡片高度不一；<360px 例外）**：`.spotlight-info-row` 是 `nowrap`，所以 `.spotlight-card` 必須有 `min-width: 0`——少了它 grid 欄會被 nowrap 內容撐寬、兩欄不等寬（320px 實測 155/161px）。≤400px 時字級 0.66rem、間距 4px、徽章內距 5px：最寬的「上限 NT$400,000 至 12/31／剩 12 天」在 360px 剛好放得下；**<360px 一律分兩行**（上限／至 M/D 或剩 N 天；`flex-direction: column`，不看寬度個別換行，每張卡一致。站長 2026-10-02 決定：極窄手機寧可兩行也不截上限金額）；360px 以上若真機字型較寬仍放不下，只有 `.spotlight-cap` 以「…」截斷，日期與徽章 `flex-shrink: 0`。上限位數變多或改文案前，在 360px 量一次。
+⚠️ **算好的期限不上卡片**（2026-09-03 起）：卡片只留「剩 N 天」徽章（0–14 天顯示），完整日期改到 ⓘ modal 的「活動期間／活動期限」。理由：卡片一排 2–4 張，日期字串又長又不影響「要不要點進去」的判斷；「剩 N 天」是急迫感提示、不是日期，所以保留。
 
-**卡片版式（2026-09-03 重設計，參考 LINE 購物商品卡）**：由上而下——卡圖方塊 → 大回饋率＋活動類型標籤 → 通路名 → 上限＋「至 M/D」或「剩 N 天」→ 底部兩顆按鈕。取代 2026-07-21 的 F-2 版式（左側傾斜卡圖＋淺綠回饋率貼紙＋右側說明兩行）。
+**卡片版式（2026-09-03 重設計，參考 LINE 購物商品卡）**：由上而下——卡圖方塊 → 大回饋率＋活動類型標籤 → 通路名 → 上限＋「剩 N 天」→ 底部兩顆按鈕。取代 2026-07-21 的 F-2 版式（左側傾斜卡圖＋淺綠回饋率貼紙＋右側說明兩行）。
 
 - **卡圖方塊 `.spotlight-ccwrap`**：`aspect-ratio: 8/5` ＝橫式卡圖規範（800×500）的比例，橫式卡圖剛好填滿、卡片高度因此固定；少數直式卡圖靠 `object-fit: contain` 縮到框內（變小但不撐高卡片）。底色**用白＋淺灰細框、不用灰底**——卡圖 PNG 本身是白底，灰底會在卡圖外圍多出一圈白方框，變成「框中框」。`onerror` 隱藏 img 並在 wrap 加 `noimg` class。
 - **卡名 `.spotlight-cardname`**：壓在卡圖左下角的半透明白膠囊（`width: fit-content`，只包住文字），省掉正文的一整行高度。深色卡面（星展 eco 綠、遠東快樂卡紅）上靠 `backdrop-filter: blur(3px)` 保持可讀。
@@ -227,8 +226,8 @@ Grep `titleParts`）：
 **版位與分頁**（`spotlightLayout()` / `buildSpotlightPages()` / `renderSpotlightPage()`）：
 
 - 欄數與每頁張數：**手機（≤768px）2 欄 4 則、平板（769–1024px）3 欄 3 則、桌機（≥1025px）4 欄 4 則**。⚠️ `js/home-ui.js` 的 `spotlightLayout()` 與 `styles.css` 的 `.spotlight-track` **斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
-- 分頁不是用 index 除法算的：`buildSpotlightPages()` 先建出 `spotlightPages`（每頁一個 `spotlightItems` 切片），`renderSpotlightPage()` 只負責畫。跨斷點 resize 時 `setupSpotlightResizeReflow()` 會重建分頁並重畫圓點與箭頭。
-- **主打卡（`.is-feature` 大卡／`.is-mini` 小格）已移除**：2026-09-03 停用（主打卡用完之後的頁面沒有主打位，翻頁時卡片形狀不同、看起來很亂），2026-10-02 站長確認不再使用，程式與樣式全部刪除；每頁一律是同樣的直式卡。要考古看 commit「完全移除停用中的主打卡版位程式」。
+- 分頁不是用 index 除法算的：`buildSpotlightPages()` 先建出 `spotlightPages`（`{feature, normal}` 陣列），`renderSpotlightPage()` 只負責畫。跨斷點 resize 時 `setupSpotlightResizeReflow()` 會重建分頁並重畫圓點與箭頭。
+- **主打卡（`.is-feature` 大卡）目前停用**：`SPOTLIGHT_FEATURE_SLOTS = false`。原設計是讓 `featured=TRUE` 的活動佔用「主打卡」版位（手機每頁 1 則整列大卡、桌機每頁 2 則各跨 2 欄）。停用原因：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打的頁」卡片形狀不同，看起來很亂（站長 2026-09-03 裁定）。**分頁分支與 `.is-feature` / `.is-mini` 樣式全部保留**，改回 `true` 就復活。
 - **純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播；依 order 升冪，**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12`；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；單頁時自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
 **兩個動作**：

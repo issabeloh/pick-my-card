@@ -8465,50 +8465,6 @@ mark.cashback-search-hl {
     cursor: pointer;
 }
 
-/* ===== 主打卡 .is-feature：卡圖在左、內容在右，橫向利用整列寬度 =====
-   桌機跨 2 欄（約 562px），平板與手機整列。一般卡（沒有 .is-feature／.is-mini）
-   維持原本的直式堆疊，所以 .spotlight-body 在那裡是 display:contents。 */
-.spotlight-card.is-feature {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 136px 1fr;
-    grid-template-rows: auto auto;
-    gap: 10px 12px;
-    align-content: start;
-}
-.spotlight-card.is-feature .spotlight-ccwrap {
-    grid-column: 1;
-    grid-row: 1;
-    width: 100%;
-    margin-bottom: 0;
-    align-self: start;
-}
-.spotlight-card.is-feature .spotlight-body {
-    grid-column: 2;
-    grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-.spotlight-card.is-feature .spotlight-cardname-line { display: none; }
-.spotlight-card.is-feature .spotlight-card-actions {
-    grid-column: 1 / -1;
-    grid-row: 2;
-}
-.spotlight-card.is-feature .spotlight-rate-num { font-size: 1.7rem; }
-.spotlight-card.is-feature .spotlight-merchant { font-size: 1rem; margin-top: 6px; }
-/* 主打卡的 ⓘ 補上文字（小格與一般卡維持純圖示） */
-.spotlight-card.is-feature .spotlight-info-btn {
-    width: auto;
-    gap: 5px;
-    padding: 0 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-.spotlight-card.is-feature .spotlight-info-btn::after { content: '活動詳情'; }
-/* 主打卡有整列寬度，標籤靠 margin-left:auto 推到最右會離回饋率太遠 */
-.spotlight-card.is-feature .spotlight-hype-tag { margin-left: 0; }
-
 /* 「帶入查詢」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
    （見 js/home-ui.js 的 compareSpotlightMerchant fillOnly 分支） */
 .calculate-btn.calc-nudge {
@@ -8571,8 +8527,7 @@ mark.cashback-search-hl {
     border-color: #c7d2fe;
 }
 
-/* 欄數：桌機 4 / 平板 3 / 手機 2。主打卡（.is-feature）在桌機跨 2 欄、
-   在平板與手機整列。每頁筆數由 js 的 spotlightLayout() 對齊，兩邊的斷點
+/* 欄數：桌機 4 / 平板 3 / 手機 2。每頁筆數由 js 的 spotlightLayout() 對齊，兩邊的斷點
    （768 / 1024）必須一致，否則會出現填不滿的半排。 */
 .spotlight-track {
     display: grid;
@@ -8583,92 +8538,6 @@ mark.cashback-search-hl {
     .spotlight-track { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* ===== 桌機（>=1025px）版式 E =====
-   主打卡跨 2 欄（562px）、卡圖放大到 196px；一般卡收成 .is-mini 橫式小格
-   （273px）：卡圖 76px 在左，卡名獨立成整列放在下方——右半欄只有約 180px，
-   長卡名（如「台新街口卡(豬富卡)」）擠在那裡一定被省略號吃掉。 */
-@media (min-width: 1025px) {
-    .spotlight-card.is-feature {
-        grid-column: span 2;
-        grid-template-columns: 196px 1fr;
-        padding: 16px;
-    }
-    /* 卡圖跨兩列：拿掉說明句後右欄內容變短，卡圖只佔第 1 列的話，
-       按鈕與「上限」之間會空出一大塊 */
-    .spotlight-card.is-feature .spotlight-ccwrap { padding: 7px; grid-row: 1 / -1; }
-    .spotlight-card.is-feature .spotlight-rate-num { font-size: 2rem; }
-    .spotlight-card.is-feature .spotlight-merchant { font-size: 1.06rem; margin-top: 7px; }
-    .spotlight-card.is-feature .spotlight-info-row { margin: 6px 0 10px; }
-    /* 桌機主打卡的按鈕收在右欄，左欄整條留給卡圖 */
-    .spotlight-card.is-feature .spotlight-card-actions {
-        grid-column: 2;
-        grid-row: 2;
-    }
-
-    .spotlight-card.is-mini {
-        display: grid;
-        grid-template-columns: 104px 1fr;
-        grid-template-rows: auto auto;
-        gap: 8px 10px;
-        padding: 11px;
-        align-content: start;
-    }
-    /* 卡圖 76 → 104px：按鈕列改成整列之後，上半部有空間把卡圖放大 */
-    .spotlight-card.is-mini .spotlight-ccwrap {
-        grid-column: 1;
-        grid-row: 1;
-        width: 104px;
-        padding: 4px;
-        border-radius: 8px;
-        margin-bottom: 0;
-    }
-    .spotlight-card.is-mini .spotlight-ccimg { border-radius: 5px; }
-    /* 卡名回到商家名下方（右欄），卡圖上的膠囊就不重複顯示 */
-    .spotlight-card.is-mini .spotlight-cardname { display: none; }
-    .spotlight-card.is-mini .spotlight-body {
-        grid-column: 2;
-        grid-row: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-    /* 卡名在右欄、商家名正下方。右欄約 137px，長卡名會用省略號收尾 */
-    .spotlight-card.is-mini .spotlight-cardname-line {
-        display: block;
-        font-size: 0.72rem;
-        color: #6b7280;
-        line-height: 1.35;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .spotlight-card.is-mini .spotlight-card-actions {
-        grid-column: 1 / -1;
-        grid-row: 2;
-    }
-    .spotlight-card.is-mini .spotlight-rate-row { min-height: 0; gap: 6px; }
-    .spotlight-card.is-mini .spotlight-rate-num { font-size: 1.3rem; }
-    .spotlight-card.is-mini .spotlight-hype-tag { font-size: 0.62rem; padding: 1px 6px; }
-    .spotlight-card.is-mini .spotlight-merchant { font-size: 0.88rem; margin-top: 4px; }
-    /* 小格放不下「上限」，但「剩 N 天」要留著——那是急迫感提示 */
-    .spotlight-card.is-mini .spotlight-cap { display: none; }
-    .spotlight-card.is-mini .spotlight-info-row { margin: 3px 0 0; min-height: 0; }
-    .spotlight-card.is-mini .spotlight-compare-btn {
-        height: 32px;
-        font-size: 0.78rem;
-        padding: 0 8px;
-    }
-    /* 按鈕列橫跨整張卡（251px），放得下「活動詳情」四個字 */
-    .spotlight-card.is-mini .spotlight-info-btn {
-        width: auto;
-        height: 32px;
-        gap: 5px;
-        padding: 0 10px;
-        font-size: 0.78rem;
-        font-weight: 600;
-    }
-    .spotlight-card.is-mini .spotlight-info-btn::after { content: '活動詳情'; }
-}
 .spotlight-fade-in { animation: spotlightFade .4s ease; }
 @keyframes spotlightFade {
     from { opacity: 0; transform: translateY(6px); }
@@ -8677,10 +8546,12 @@ mark.cashback-search-hl {
 
 /* 版式 C（2026-09-03 重設計，參考 LINE 購物的商品卡）：卡圖方塊在上、
    大回饋率當「價格」、商家＋卡名兩行、上限一行小字、底部兩顆按鈕。
-   到期日不上卡片（只在活動詳情 modal），「剩 N 天」保留當急迫感提示。 */
+   到期日以短格式「至 M/D」放在上限旁（2026-10-02 起），完整期間在活動詳情 modal。 */
 .spotlight-card {
     display: flex;
     flex-direction: column;
+    /* grid 項目預設 min-width:auto，資訊列 nowrap 時會把欄位撐寬、兩欄變得不等寬 */
+    min-width: 0;
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 14px;
@@ -8714,18 +8585,6 @@ mark.cashback-search-hl {
     border-radius: 6px;   /* 卡片圖一律圓角 */
     display: block;
 }
-/* 手機／平板：.spotlight-body 等於不存在（display:contents），裡面的元素直接
-   當 .spotlight-card 這個 flex column 的子項——版面與拆分前完全一樣。
-   桌機（版式 E）才把它變成卡片右半欄，見 min-width:1025px 的區塊。 */
-.spotlight-body {
-    display: contents;
-}
-/* 卡名文字行只在桌機小格顯示（小格的卡圖只有 76px 寬，壓在圖上的卡名膠囊
-   放不下）；其餘版位一律用卡圖上的膠囊。 */
-.spotlight-cardname-line {
-    display: none;
-}
-
 .spotlight-rate-row {
     display: flex;
     align-items: center;
@@ -8787,16 +8646,27 @@ mark.cashback-search-hl {
     white-space: nowrap;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
+/* 「上限／至 M/D（或剩 N 天）」一律單行：換行會讓同排卡片高度不一。
+   360px 以上真的放不下時（真機字型較寬）只截「上限」那段，日期與徽章永遠完整；
+   <360px 改為換行。手機字級與換行見下方 max-width:400px／359px。 */
 .spotlight-info-row {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    white-space: nowrap;
     gap: 6px;
     font-size: 0.72rem;
     color: #9ca3af;
     margin: 7px 0 10px;
     min-height: 18px;
 }
+.spotlight-cap {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.spotlight-end,
+.spotlight-days-badge { flex-shrink: 0; }
 .spotlight-info-row b {
     color: #6b7280;
     font-weight: 600;
@@ -8909,15 +8779,25 @@ mark.cashback-search-hl {
     width: 64px;
 }
 @media (max-width: 768px) {
-    /* 一排 2 張；主打卡靠 .is-feature 的 grid-column:1/-1 佔滿整列
-       （見 js/home-ui.js spotlightLayout） */
+    /* 一排 2 張（見 js/home-ui.js spotlightLayout） */
     .spotlight-track { grid-template-columns: 1fr 1fr; gap: 12px; }
-    .spotlight-card.is-feature { grid-template-columns: 132px 1fr; padding: 12px; }
     .spotlight-title { font-size: 1.1rem; }
     .spotlight-section { padding: 20px 16px 24px; }
     .spotlight-card { padding: 10px; }
     .spotlight-rate-num { font-size: 1.45rem; }
     .spotlight-merchant { font-size: 0.9rem; }
+}
+/* 手機資訊列：最寬的「上限 NT$400,000 至 12/31」／「上限 NT$400,000 剩 12 天」
+   在 360px 剛好放得下（2026-10-02 實測）；更窄的由 .spotlight-cap 截斷收尾 */
+@media (max-width: 400px) {
+    .spotlight-info-row { font-size: 0.66rem; gap: 4px; }
+    .spotlight-days-badge { padding: 1px 5px; }
+}
+/* 極窄手機（<360px）單行放不下：一律分兩行（上限／至 M/D 或剩 N 天），
+   不截「上限」、也不看寬度個別換行——每張卡都一樣（站長 2026-10-02 決定） */
+@media (max-width: 359px) {
+    .spotlight-info-row { flex-direction: column; align-items: flex-start; gap: 3px; }
+    .spotlight-cap { overflow: visible; }
 }
 
 /* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
