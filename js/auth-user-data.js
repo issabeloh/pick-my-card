@@ -268,6 +268,8 @@ function ensureGuestUIBound() {
 
     function showToolSections() {
         const t = toolElements;
+        // 工具區出來了，boot loader 就該收掉（它現在是頁籤下方的一般區塊，不收會把工具區往下推）
+        document.documentElement.classList.remove('pmc-returning-user');
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
         renderSpotlights();

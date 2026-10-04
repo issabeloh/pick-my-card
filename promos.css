@@ -3369,3 +3369,13 @@ a {
   .pmc-flash { animation: none; }
   .pmc-toast { transition: none; }
 }
+
+/* 搜尋命中字詞（promos.js syncSearchHighlights，2026-10-04）：
+   與主站卡片詳情頁的 mark.cashback-search-hl 同一款琥珀底＋深色字 */
+mark.promos-search-hl {
+  background: #fef08a;
+  color: #78350f;
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 3px;
+}

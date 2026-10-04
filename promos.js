@@ -384,12 +384,99 @@
   // 正好就是需要被通路搜到的那些；沒有的卡回傳空字串、永遠比不中。
   // 每張卡只讀一次就快取在元素上——每按一個鍵都會重算全部卡片，不快取等於每次
   // 都對整份 DOM 取一次 textContent。
+  // 一張卡可能有好幾檔回饋加碼，每檔各自一份 .promo-merchants-value——全部串起來
+  // （2026-10-04 前只讀第一檔，第 2 檔以後的通路搜不到）。
   function promoMerchantsText(card) {
     if (card.__pmcMerchantsText === undefined) {
-      var el = card.querySelector('.promo-merchants-value');
-      card.__pmcMerchantsText = el ? (el.textContent || '').toLowerCase() : '';
+      card.__pmcMerchantsText = Array.prototype.map.call(
+        card.querySelectorAll('.promo-merchants-value'),
+        function (el) { return (el.textContent || '').toLowerCase(); }).join('\n');
     }
     return card.__pmcMerchantsText;
+  }
+
+  // ---- 搜尋命中字詞 highlight（站長 2026-10-04，比照主站卡片詳情頁的搜尋標記）----
+  // 標卡名與「適用通路」。適用通路收在活動詳情裡（預設收合），命中了用戶卻看不到，
+  // 所以會代為展開命中的那一檔（以及被收成 3 行的通路清單），並記住是搜尋展開的：
+  // 換字或清空搜尋時收回；用戶自己點開的不動。全程 DOM API，不碰 innerHTML。
+  var searchOpenedRows = [];
+  var searchOpenedClamps = [];
+
+  function clearSearchMarks() {
+    document.querySelectorAll('mark.promos-search-hl').forEach(function (m) {
+      var parent = m.parentNode;
+      parent.replaceChild(document.createTextNode(m.textContent), m);
+      parent.normalize();   // 合併相鄰文字節點，下一次比對才不會被切斷
+    });
+  }
+
+  function markSearchTerm(root, term) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var targets = [];
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue && node.nodeValue.toLowerCase().indexOf(term) !== -1) targets.push(node);
+    }
+    targets.forEach(function (textNode) {
+      var text = textNode.nodeValue;
+      var lower = text.toLowerCase();
+      var frag = document.createDocumentFragment();
+      var from = 0;
+      var idx = lower.indexOf(term);
+      while (idx !== -1) {
+        if (idx > from) frag.appendChild(document.createTextNode(text.slice(from, idx)));
+        var mark = document.createElement('mark');
+        mark.className = 'promos-search-hl';
+        mark.textContent = text.slice(idx, idx + term.length);   // 保留原始大小寫
+        frag.appendChild(mark);
+        from = idx + term.length;
+        idx = lower.indexOf(term, from);
+      }
+      if (from < text.length) frag.appendChild(document.createTextNode(text.slice(from)));
+      textNode.parentNode.replaceChild(frag, textNode);
+    });
+  }
+
+  function syncSearchHighlights(term) {
+    clearSearchMarks();
+    searchOpenedClamps.forEach(function (btn) {
+      if (btn.getAttribute('aria-expanded') === 'true') btn.click();
+    });
+    searchOpenedClamps = [];
+    searchOpenedRows.forEach(function (row) {
+      if (row.__pmcSearchOpened && row.getAttribute('aria-expanded') === 'true') row.click();
+      row.__pmcSearchOpened = false;
+    });
+    searchOpenedRows = [];
+    if (!term) return;
+
+    document.querySelectorAll('.promo-card:not([hidden])').forEach(function (card) {
+      var name = card.querySelector('.promo-card-name');
+      if (name) markSearchTerm(name, term);
+      var hits = Array.prototype.filter.call(card.querySelectorAll('.promo-merchants-value'), function (v) {
+        var act = v.closest('.promo-act');
+        return (!act || !act.hidden) && (v.textContent || '').toLowerCase().indexOf(term) !== -1;
+      });
+      if (!hits.length) return;
+      // 用戶自己已經展開某一檔時不搶（一張卡同時只開一檔）
+      if (!card.querySelector('.promo-act-row[aria-expanded="true"]')) {
+        var row = hits[0].closest('.promo-act') && hits[0].closest('.promo-act').querySelector('.promo-act-row');
+        if (row) {
+          row.click();                    // 走 setupActToggle 原本的展開流程（含 3 行收合的量測）
+          row.__pmcSearchOpened = true;
+          searchOpenedRows.push(row);
+        }
+      }
+      hits.forEach(function (v) {
+        markSearchTerm(v, term);
+        // 命中處可能在 3 行收合以下：代按「展開」
+        var toggle = v.nextElementSibling;
+        if (v.classList.contains('is-clamped') && toggle && toggle.classList.contains('promo-notes-toggle')) {
+          toggle.click();
+          searchOpenedClamps.push(toggle);
+        }
+      });
+    });
   }
 
   function refreshVisibility() {
@@ -428,6 +515,8 @@
     });
     var emptyState = document.getElementById('promos-empty-state');
     if (emptyState) emptyState.hidden = anyVisible;
+    // 篩選／搜尋任何一個變了，可見的卡就變了——標記與代為展開都跟著重算
+    syncSearchHighlights(filterState.searchQuery);
   }
 
   // 安全解析 localStorage 的 myOwnedCards_*（訪客 key「myOwnedCards_guest」＋
@@ -543,6 +632,8 @@
       if (!row) return;
       var card = row.closest('.promo-card');
       if (!card) return;
+      // 用戶親手點的列，之後換搜尋字也不要替他收回
+      if (e.isTrusted) row.__pmcSearchOpened = false;
       var wasOpen = row.getAttribute('aria-expanded') === 'true';
       closeActsIn(card);
       setFeatOpen(card, false);
