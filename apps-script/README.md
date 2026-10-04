@@ -408,24 +408,29 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 
 ## 「🤖 權益自動化」選單 ↔ 分頁對照表（2026-08-05 建立，自動化檔用）
 
+**2026-10-04 選單改版**（站長：「每次按選單都要動用大量腦力」）：標籤改寫成「你想做什麼」，不寫「來源分頁 → 產出分頁」；
+不常用的收進「其他工具」子選單；新增「📖 使用說明」。函數名一個都沒改（觸發器不受影響）。
+給人看的流程圖：https://claude.ai/artifact/Ak6AfxZfsK1jAHN8vhDw7L（欄位速查那段由 `sheet-guide.gs` 的 `GUIDE_NOTES` 產生，兩邊同一份內容）。
+
 分頁改成 `1~4` 編號制後，選單標籤還在用舊名（「解析輸入」「收件匣」），對不上哪個動作吃哪個分頁。
 現在標籤一律是**「動作：來源分頁 → 產出分頁」**，分頁只寫編號＋簡稱（動作名已經指明新戶活動／新卡，
 分頁全名的括號後綴是多餘的、也會讓選單過寬）。標籤寫在 `benefits-parser.gs` 的 `buildAutomationMenu_`。
 
 | 選單動作（打開試算表看到的字） | 函數 | 讀哪個分頁 | 寫哪個分頁 | 程式檔 |
 |---|---|---|---|---|
-| 執行監控：1-監控清單 → 2-變動通知 | `checkWatchlist` | `1-監控清單`（`active=TRUE` 的列） | `2-變動通知`（沒有會自動建）＋寄 Email；回寫 `last_snapshot`／`last_checked` | `watchlist-monitor.gs` |
-| 體檢填法：1-監控清單 | `checkWatchlistConfig` | `1-監控清單` | 不寫任何分頁，結果跳視窗 | `watchlist-monitor.gs` |
-| 處理變動通知：公開／封存／刪除 | `processInboxRows` | `2-變動通知` 的「公開／封存／刪除」欄（照打的字分派三種動作） | 公開→**跨檔**寫資料檔的 `變動紀錄`＋回填「已發布」；封存→`2-封存（變動通知）`；刪除→整列刪掉 | `benefits-parser.gs`（搬/刪的執行在 `watchlist-monitor.gs`） |
-| 解析新戶活動：2-變動通知 → 4-待審核 | `parseInboxNewPromos` | `2-變動通知`（狀態＝`待解析` 的列） | `4-待審核（新戶活動）`；回寫狀態＝`已解析`／`已解析-無新戶活動` | `benefits-parser.gs` |
-| 解析新戶活動：3-貼上原文 → 4-待審核 | `parsePastedText` | `3-貼上原文（新戶活動）` **第 2 列起每一列＝一段原文**（A 原文／B 卡片提示／C 網址） | `4-待審核（新戶活動）`；回寫 D 欄狀態 | `benefits-parser.gs` |
-| 解析新卡：3-貼上原文 → 4-待審核（基本＋組別） | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
-| 解析活動更新：2-變動通知 → 4-待審核（活動更新） | `parseInboxCardGroups` | `2-變動通知`（「組別解析」欄空白、實質變動≠否、60 天內、card_id 剛好一張既有卡）的「新文字」欄 | `4-待審核（活動更新）`（自動建）；回寫「組別解析」欄狀態 | `card-benefits-parser.gs` |
-| 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
-| ① 標出需登錄的活動（不用 AI）→ Cards Data 草稿 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
-| ② 找登錄連結：1-監控清單 → Cards Data 草稿 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
-| ③ 把打勾的登錄連結寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（全站唯一會動正式表的選單項；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
-| ④ 檢查登錄連結是否有死網址 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
+| ① 查官網變動 | `checkWatchlist` | `1-監控清單`（`active=TRUE` 的列） | `2-變動通知`（沒有會自動建）＋寄 Email；回寫 `last_snapshot`／`last_checked` | `watchlist-monitor.gs` |
+| 其他工具 ▸ 檢查監控清單有沒有填錯 | `checkWatchlistConfig` | `1-監控清單` | 不寫任何分頁，結果跳視窗 | `watchlist-monitor.gs` |
+| ② 處理變動通知（公開／封存／刪除） | `processInboxRows` | `2-變動通知` 的「公開／封存／刪除」欄（照打的字分派三種動作） | 公開→**跨檔**寫資料檔的 `變動紀錄`＋回填「已發布」；封存→`2-封存（變動通知）`；刪除→整列刪掉 | `benefits-parser.gs`（搬/刪的執行在 `watchlist-monitor.gs`） |
+| AI 拆新戶活動：變動通知裡的 | `parseInboxNewPromos` | `2-變動通知`（狀態＝`待解析` 的列） | `4-待審核（新戶活動）`；回寫狀態＝`已解析`／`已解析-無新戶活動` | `benefits-parser.gs` |
+| AI 拆新戶活動：我貼的 | `parsePastedText` | `3-貼上原文（新戶活動）` **第 2 列起每一列＝一段原文**（A 原文／B 卡片提示／C 網址） | `4-待審核（新戶活動）`；回寫 D 欄狀態 | `benefits-parser.gs` |
+| AI 拆新卡：我貼的 | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
+| AI 拆卡片活動：打 V 的＋我貼的 | `parseCardActivities` | ①`2-變動通知`「寫入活動」欄打 V 的列（用所屬活動＋變動段落＋新文字）②`3-貼上原文（卡片活動）`第 2 列起手貼的列（A 原文／B card_id 必填／C 網址） | `4-待審核（活動更新）`（自動建）；回寫「寫入活動」格或 D 欄狀態 | `card-benefits-parser.gs` |
+| 其他工具 ▸ 檢查廣告排除（每月一次） | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+| 其他工具 ▸ 登錄連結 1：標出要登錄的活動 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 2：找連結 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 3：打勾的寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（全站唯一會動正式表的選單項；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 4：檢查死連結 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
+| 📖 使用說明 | `openSheetGuide` | — | 建立／更新 `0-使用說明` 分頁（放最前面）＋各分頁表頭備註（只寫這兩樣，其他格子不動） | `sheet-guide.gs` |
 
 所有分頁名的唯一出處（改名時要改的就是這幾行）：
 
@@ -440,6 +445,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | `變動紀錄`（在資料檔） | `benefits-parser.gs` → `PARSER_CONFIG.changelogSheet` |
 | `3-貼上原文（新卡）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.inputSheet` |
 | `4-待審核（新卡-基本）`／`（新卡-組別）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.basicReviewSheet`／`groupReviewSheet` |
+| `3-貼上原文（卡片活動）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.activityInputSheet` |
 | `4-待審核（活動更新）` | `card-benefits-parser.gs` → `CARD_PARSER_CONFIG.updateReviewSheet` |
 | `報告-廣告排除` | `card-benefits-parser.gs` → `AD_CHECK_CONFIG.sheet` |
 
@@ -775,6 +781,50 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
   若仍整頁比對，代表該頁每次渲染順序都不同，改監控更穩定的來源頁
 - 腳本執行失敗會依觸發器的 Failure notification 設定寄信通知
 
+## 自動部署：GitHub → 「PMC 資料自動化」的 Apps Script（2026-10-04 新增）
+
+**做什麼**：main 上的 `apps-script/*.gs` 一有變，GitHub Actions 就把新版推到「PMC 資料自動化」的 Apps Script 專案，
+不用再手動複製貼上。設定檔 `apps-script/deploy.json`、程式 `tools/apps-script-deploy/deploy.js`、
+流程 `.github/workflows/apps-script-deploy.yml`。
+
+**只部署自動化檔**：`watchlist-monitor` / `benefits-parser` / `card-benefits-parser` / `register-link-finder` / `sheet-guide`。
+**「PMC 管理系統」（`cards-export.gs` 等）刻意不自動部署**：它產生上線資料，而且看預覽時要在線上暫時改
+`GITHUB_BRANCH`，自動部署會把那個暫時改動蓋掉。維持手動貼。
+
+### 三道保護（任何一道沒過就整批不推，一支都不改）
+
+1. **檔名對照**：線上檔名＝repo 檔名，或以「-檔名」結尾（`權益解析-新戶-benefits-parser` → `benefits-parser.gs`）。
+   對不到、對到兩個 → 停。**絕不自動新建檔案**（新建＝同一個函數定義兩次，整個專案會壞）。
+   同時對得上兩個 repo 檔名時歸給較長的那個（`…-card-benefits-parser` 不會被 `benefits-parser` 認走）。
+2. **不蓋掉線上手改**：線上現在的內容必須是 repo 歷史裡出現過的某一版（忽略行尾空白與換行格式）。
+   不是 → 代表有人直接在網頁編輯器改過 → 停。確定不要那些手改，手動執行流程並勾 `force`。
+3. **只動清單裡的檔**：線上其他檔案、`appsscript.json` 原封不動。
+
+⚠️ **新規則**：自動化檔的程式**不要再直接在網頁編輯器改**，要改就在 repo 改（叫 Claude）。真的在網頁改了，保護 2 會擋下下一次部署，不會默默蓋掉。
+
+### 一次性設定（站長做）
+
+1. **打開 Apps Script API**：<https://script.google.com/home/usersettings> →「Google Apps Script API」切到開啟
+2. **線上檔名照規則改**（Apps Script 編輯器左側檔案 → ⋮ → 重新命名）：
+   `使用說明` → `使用說明-sheet-guide`；監控那支 → `權益監控-watchlist-monitor`；
+   登錄連結那支 → `登錄連結-register-link-finder`（前綴隨你取，結尾要對）
+3. **拿授權**（用 Google Cloud Shell，瀏覽器裡就能跑，不用裝東西）：
+   1. 打開 <https://shell.cloud.google.com>，用同一個 Google 帳號
+   2. 貼上執行：`npx @google/clasp@3.4.1 login --no-localhost`
+   3. 開它給的網址 → 允許 → 照畫面指示把授權碼（或跳轉失敗頁面的整個網址）貼回 Cloud Shell
+   4. 執行 `cat ~/.clasprc.json`，把印出來的**整段**複製起來
+4. **存進 GitHub**：repo → Settings → Secrets and variables → Actions → New repository secret，
+   名稱 `CLASPRC_JSON`，值貼上一步的整段
+5. **試跑**：repo → Actions → `apps-script-deploy` → Run workflow（`dry_run` 保持勾選）→ 看結果頁的表格。
+   沒有 ❌ 就再跑一次、把 `dry_run` 取消勾選，就是第一次真的部署
+
+這份授權能管理你帳號底下的 Apps Script 專案。不想用了：到 <https://myaccount.google.com/permissions> 移除 clasp，再刪掉 GitHub 的 Secret。
+
+### 結果怎麼看
+
+GitHub → Actions → 該次執行 → Summary 有一張表：每支是「更新／沒變，略過／⛔ 線上被手改過」。
+失敗時第一行就寫原因與怎麼修（API 沒開、授權過期、檔名對不到…）。沒設定 Secret 時只會提醒、不會報錯。
+
 ## ⚠️ 兩檔架構（2026-07-17 分檔）
 
 自動化的工作台從「PMC 管理系統」試算表**搬到獨立的「PMC 資料自動化」試算表**，兩本各司其職：
@@ -929,7 +979,7 @@ GitHub，所以 Jina／Gemini／寄信／Cloudflare build 一格都不動（Clou
 2. 自動化檔 → 擴充功能 → Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（**絕不寫進程式碼**）：
    - `GEMINI_API_KEY` = 你的 Gemini 金鑰
    - `CARDS_SPREADSHEET_ID` = 資料檔「PMC 管理系統」網址 `/spreadsheets/d/【這段】/edit` 的 ID
-3. 把 `benefits-parser.gs` 貼進新檔案「權益解析-新戶」、`watchlist-monitor.gs` 貼進「權益監控」
+3. 把 `benefits-parser.gs` 貼進新檔案「權益解析-新戶-benefits-parser」（2026-10-04 站長改名；檔名只是給人看的，改了不影響執行）、`watchlist-monitor.gs` 貼進「權益監控」
 4. 重新整理自動化檔 → 工具列出現「🤖 權益自動化」選單（本檔自帶 onOpen，此處無匯出選單可撞）
 
 ### 分頁搬遷步驟（一次性）
@@ -1215,53 +1265,68 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 - **關鍵字對應表**：`設定-關鍵字對應` 分頁，站長持續補「看到 X 字樣＝Y 欄位高可信」的錨點
 
 
-## 舊卡活動更新：2-變動通知 → 4-待審核（活動更新）（2026-08-16 新增）
+## 既有卡片的活動：3-貼上原文（卡片活動）→ 4-待審核（活動更新）（2026-10-04 改版）
 
-為年中／年底的大批活動更新做的。全站 31 張卡、266 個回饋槽位（其中 228 個帶期限），
-靠人一頁一頁讀官網再自己拆槽位不可行。
+為年中／年底的大批活動更新做的。新戶、新卡都有解析器，這支補上「已上線卡片的一般活動」。
 
-**一句話**：把「你讀官網、自己拆成槽位」換成「程式先拆好、標上疑似對應的槽位，你只做確認」。
+**一句話**：你挑好要寫的活動、貼原文＋card_id，程式拆成 rate_N 並告訴你該放哪個槽。
 
-### 它做什麼
+### 三個 3-貼上原文分頁怎麼選
 
-1. 掃 `2-變動通知`，挑出要處理的列（條件見下）
-2. 把該列的「新文字」（監控存的整頁新版全文）丟給 **同一支 `extractCard_`**，只取 `groups`、丟掉 `basic`
-3. 跨檔**唯讀** Cards Data 讀這張卡現有的槽位，跟解析結果比對
-4. 全部寫進 `4-待審核（活動更新）`，最後一欄「疑似對應槽位」給提示
+| 你手上的東西 | 貼哪 | 產出 |
+|---|---|---|
+| 新戶／首刷活動 | `3-貼上原文（新戶活動）` | `4-待審核（新戶活動）`（新戶活動表的列） |
+| 一張**還沒上線**的卡的整頁權益 | `3-貼上原文（新卡）` | `4-待審核（新卡-基本）`＋`（新卡-組別）` |
+| **已上線**卡片的一般活動（新增、改率、延期） | `3-貼上原文（卡片活動）` | `4-待審核（活動更新）` |
 
-⚠️ **只讀不寫 Cards Data**。正式表還是你自己貼。（一鍵寫回是規劃書 §3.3／§3.4 的下一階段，
-要等這支跑過一輪真實更新、累積夠多配對案例才有依據設計。）
+刻意分三張、不合成一張：三者要填的欄位不同（新卡要整頁＋一般消費頁、卡片活動必填 card_id），
+產出的表也不同。合成一張要多一欄「類型」，填錯就跑錯流程，錯誤更難發現。
 
-### 挑哪些列
+### 閉環
 
-| 條件 | 為什麼 |
-|---|---|
-| `組別解析` 欄是空的 | 本流程專屬的狀態欄（程式自動補在最右邊）。**刻意不共用既有的「狀態」欄**——那是新戶活動解析在用的，兩條流程搶同一格會互相把對方的列標成已處理。清空該格可重跑 |
-| `實質變動` ≠ `否` | 純版面/文案的變動不值得花一次 4 萬字的 AI 呼叫 |
-| 日期在 60 天內 | 第一次啟用時分頁裡可能躺著幾百列歷史，避免一按下去就重跑整部歷史（`updateMaxAgeDays`） |
-| `card_id` 剛好是**一張**既有卡 | 多卡頁（銀行公告頁）一次涵蓋好幾張卡，解析器分不出哪段屬於哪張，硬跑會全掛到第一張上——這種請走「3-貼上原文（新卡）」手動處理 |
+1. `2-變動通知` 讀摘要，決定哪幾列值得寫 → 那一列的 **「寫入活動」欄打 V**
+   （欄是第一次按選單時自動補在最右邊的）
+2. 選單「解析卡片活動」→ 程式用該列的「所屬活動」「變動段落」鎖定是哪一檔，「新文字」查完整條件；
+   「寫入活動」那格回填 `已解析｜對應既有 N、新增 N、基本欄位 N` 或 `失敗：原因`
+3. 到 `4-待審核（活動更新）` 確認，把 rate → hideInDisplay 整段貼進 Cards Data 的建議槽位，**核准欄打 V＝已貼完**
+4. 回 `2-變動通知` 用「公開／封存／刪除」收尾（要讓用戶看到異動就打「公開」）
 
-一次最多 3 列（`updateMaxRowsPerRun`；一列＝一次 4 萬字的 AI 呼叫，比新卡更重），沒跑完會叫你再按一次。
+**什麼時候改用手動貼上（`3-貼上原文（卡片活動）`）**：原文不在監控頁上（如 PDF、App 公告），
+或那一列的變動包含好幾檔、你只要其中一檔。A 欄貼原文、B 欄填 card_id，按同一個選單。
 
-### 「疑似對應槽位」怎麼算的
+**卡片怎麼認**：先看「公開卡片」，不是剛好一張既有卡再看「card_id」。多卡頁（銀行公告頁）
+會失敗並提示——把「公開卡片」改成要寫的那一張 id 再打 V 即可。
 
-拿解析出的組別跟既有槽位比 **通路名重疊度**（`matchExistingSlot_`），分類相同再加一分當平手決勝：
+⚠️ **只讀不寫 Cards Data**。正式表還是你自己貼。
 
-| 提示 | 意思 |
-|---|---|
-| `疑似對應 rate_7（通路重疊 3/3、分類也相同）　⚠️ 率變了：6% → 5%` | 對上了，而且回饋率變了（黃底） |
-| `疑似對應 rate_2（…）　率相同` | 對上了，率沒變 |
-| `疑似新增（既有槽位裡找不到對得上的）` | 新活動 |
-| `疑似消失（既有 rate_5）` | **既有槽位在新頁面找不到**（紅底） |
+### 審核表每一列是什麼
 
-- 比對前會 `normalizeItemForMatch_`：去空白、轉小寫、拿掉國家前綴與「官方網站/官方APP」等贅詞，
-  讓 2026-08-15 才加的「日本UNIQLO」對得上既有的「UNIQLO」（新舊寫法會並存一段時間）
-- **一個既有槽位只配一次**，避免多組搶同一槽
-- 固定槽位 14/21/22 是程式生成的模板（廣告/國內/國外），本來就不會出現在官網文字裡，**不算消失**
-- 讀不到 Cards Data 時**降級**：照樣寫出解析結果，提示欄註明「讀不到既有槽位，無法比對」
+| 「疑似對應槽位」寫的 | 意思 | 你要做的 |
+|---|---|---|
+| `對應既有 rate_7（通路重疊 3/3…）⚠️ 率變了：6% → 5%——覆蓋該槽` | 舊活動改了（黃底） | 覆蓋 rate_7 |
+| `對應既有 rate_2（…）率相同——覆蓋該槽` | 通常是延期或條件小改 | 覆蓋 rate_2（主要是期間） |
+| `新增——建議放 rate_9（這張卡第一個空著的槽）` | 新活動 | 貼到 rate_9 |
+| `基本欄位`（藍底）`⚠️ 現值：X → 新值：Y` | 不限通路的國內/國外加碼改了 | 改 Cards Data 的那一欄（不是槽位，別整段複製） |
+| `基本欄位`（灰底）`同現值，不用改` | 原文有寫，但沒變 | 不用動 |
 
-⚠️ **「疑似消失」先別急著刪**。監控的 prompt 早就警告過「－(消失)的段落常常只是改寫、搬移」——
-官網改版就會造成這種結果，不一定是活動真的下架。那幾列標紅、`needs_review=TRUE`，是要你回官網確認的清單，不是判決。
+- 對應方式：通路名重疊度（`matchExistingSlot_`），分類相同加一分決勝；比對前去掉國家前綴與「官方網站/APP」等贅詞
+- **一個既有槽位只配一次**；新增組的建議槽位跳過已佔用的槽與保留槽 14/21/22，同一批不會撞號
+- 讀不到 Cards Data 時降級：照樣寫出解析結果，建議槽位留空
+- 審核表表頭跟程式不一致時直接停（照位置寫入，硬寫會整列錯位）→ 刪掉分頁讓它重建
+
+### 跟新卡解析的差別
+
+共用同一支 `extractCard_`（新卡 prompt 每修一次，這邊同時受惠），加 `{ activityOnly: true }`：
+
+- prompt 拿掉 basic 兩段（基本資料、annualFee／feeWaiver），最前面加「只抽貼進來的活動，不要補官網其他活動」
+- schema 不要 basic，改要 `bonus_updates`：一般國內/國外加碼的率、上限、條件、期間——這類活動改的是基本欄位、不佔 rate_N
+- 不列「疑似消失」：輸入是你挑過的片段，沒貼到的槽位本來就不會出現
+
+### 2026-10-04 前的舊版（已移除）
+
+原本是「解析活動更新：2-變動通知 → 4-待審核」（`parseInboxCardGroups`），直接吃監控存的**整頁新文字**。
+移除原因：站長會自己挑活動，整頁解析會把不打算寫的活動全列出來；而且整頁跟既有槽位比，
+沒寫到的槽全被標「疑似消失」，誤報一堆。現在改成「打 V 的列才解析，而且只抽所屬活動那一檔」。
 
 ## 找登錄連結：`registerLink_N` 兩階段（`register-link-finder.gs`，2026-09-08 新增）
 

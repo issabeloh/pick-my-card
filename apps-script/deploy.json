@@ -1,0 +1,17 @@
+{
+  "_說明": "GitHub 自動部署 Apps Script 的對照表（tools/apps-script-deploy/deploy.js 讀）。只列在 files 裡的檔案會被更新；線上其他檔案一律不碰。線上檔名＝repo 檔名，或以「-檔名」結尾（例：權益解析-新戶-benefits-parser 對到 benefits-parser.gs）。",
+  "projects": [
+    {
+      "name": "PMC 資料自動化",
+      "scriptId": "1uOylUGeYBdP5KCFvkK_mkIJN9fVorR67BT6nnmU8_aBh1jIYyhurc6zp",
+      "files": [
+        "watchlist-monitor.gs",
+        "benefits-parser.gs",
+        "card-benefits-parser.gs",
+        "register-link-finder.gs",
+        "sheet-guide.gs"
+      ]
+    }
+  ],
+  "_刻意不列": "PMC 管理系統（cards-export.gs 等）：它產生上線資料，而且站長會在線上暫時改 GITHUB_BRANCH 看預覽——自動部署會把那個暫時的改動蓋掉。維持手動貼。"
+}
