@@ -531,6 +531,12 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 
 **2026-10-04**：推薦卡片在申辦鈕上方加一列「活動詳情 ↓」（同行李箱專區的 `.pmc-lg-jump`，跳到清單裡那一檔並展開）＋「卡片特色」（`data-feat-card`，原地開 modal）；刻意不做「幫用戶填搜尋框」（會篩掉其他卡、要自己清掉才回得去）。推薦有一檔過期被藏時，promos.js 把標題改成實際張數（Top 4…），下次匯出才會從未過期的活動補滿。同日：附屬列的「活動詳情 ▾」改到摘要下一行（獎品圖仍在右側），摘要用 `pmcNoOrphanHtml_()` 把最後 3 字包成不換行，最後一行不會只剩 1 個字；`bonus_merchants` 的 `*all_items`（＝所有消費）在本頁一律顯示「一般消費皆適用」（`pmcIsAllItems_`），不再把標記原樣印出。
 
+**`bonus_merchants` 填法**（2026-10-04 站長確認）：匯出只用**半形逗號 `,`** 切（`cards-export.gs` 的 `pmcRowToPromo_` 附近），全形「，」「、」不會切開。
+- 一般消費都算（只排除繳稅、預借現金這類一般排除項）→ 整格只填 `*all_items`，不要跟其他通路混填；排除項寫在 `promo_condition`／備註。新戶活動頁顯示「一般消費皆適用」
+- 指定通路 → 逐一列名稱、用 `,` 隔開，名稱盡量跟該卡 cashbackRates 的 items 寫法一致（主站搜尋靠子字串比對）
+- 「只加碼在本卡原本的回饋通路上」→ 沒有專用標記，請把那些通路列出來，**不要**填 `*all_items`
+- ⚠️ 主站目前仍把 `*all_items` 展開成「該卡 cashbackRates 的通路」來比對搜尋，詳情頁也顯示「本卡所有指定通路」，跟上面的定義不一致（待站長決定是否改）
+
 **`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
 寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
 寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
