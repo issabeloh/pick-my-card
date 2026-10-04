@@ -214,10 +214,10 @@ function parsePastedText() {
 
       sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue(
         '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') +
-        '｜' + promos.length + ' 個活動');
+        '｜' + promos.length + ' 個活動' + (!promos.length && promos.noPromoReason ? '：' + promos.noPromoReason : ''));
       results.push('列' + rowNum + '：解析出 ' + promos.length + ' 個活動' +
         (flagged ? '、其中 ' + flagged + ' 個 AI 沒把握' : '') +
-        (promos.length ? '' : '（AI 判斷這段沒有新戶活動）'));
+        (promos.length ? '' : '（AI：' + (promos.noPromoReason || '這段沒有新戶活動') + '）'));
       doneCount++;
     } catch (e) {
       sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：' + e.message);
@@ -587,7 +587,7 @@ function extractNewPromos_(rawText, cardHint) {
     '8a. notes「不要」收錄這類通用罰則／免責樣板（幾乎每張卡都一樣、對用戶無資訊量）：未完成任務即喪失資格、取消交易/退貨致不符資格、卡片非有效狀態、延滯繳款、違反約定條款、於贈禮前取消自動扣繳將喪失資格、銀行保留修改/終止活動權利等。這些一律略過，不要寫進任何欄位。',
     '9. evidence：逐字引用支撐回饋率/上限/期間的官網原文句子。',
     '10. 任何不確定之處（官網未列排除清單、文字看起來不完整、卡片對應不確定）→ needs_review 填 true，並把你想問的問題寫進 review_question。',
-    '11. 文字中若沒有新戶活動，promos 回傳空陣列。',
+    '11. 文字中若沒有新戶活動，promos 回傳空陣列，並在 no_promo_reason 用一句話說明為什麼（例：「這段是一般回饋活動，不限新戶」「文字只有標題，沒有活動內容」）。',
     '',
     '【完整示範】原文：富邦 J 卡，活動期間 2026/7/1～2026/9/30，新戶核卡後30天內完成「新增3筆一般消費且每筆滿NT$1,000、設定本行帳戶自動扣繳或申請電子帳單並取消紙本、完成登錄」即贈 TRAVEL FOX 25吋上掀式行李箱；限2026/10/15前核卡；新戶定義為申辦日前6個月未持有任何富邦信用卡正卡；不可與本行其他新戶刷卡禮或其他通路辦卡平台活動並行。應輸出：',
     '  promo_types=["首刷禮"]',
@@ -635,9 +635,14 @@ function extractNewPromos_(rawText, cardHint) {
     },
     required: ['promos']
   };
+  // 0 個活動時站長只看到「已解析｜0 個活動」，不知道是 AI 判斷沒有、還是讀錯了（2026-10-04 回報）
+  schema.properties.no_promo_reason = { type: 'STRING',
+    description: 'promos 是空陣列時必填：一句話說明為什麼（如「這段是一般回饋活動，不限新戶」「只有活動標題，沒有條件內容」）' };
 
   const result = callGemini_(systemPrompt, '以下是信用卡官網文字：\n\n' + rawText, schema);
-  return (result && result.promos) || [];
+  const promos = (result && result.promos) || [];
+  promos.noPromoReason = (result && result.no_promo_reason) || '';   // 陣列上掛一個屬性，呼叫端不用改型別
+  return promos;
 }
 
 /************** 呼叫 Gemini API（結構化輸出） **************/
