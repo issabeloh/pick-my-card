@@ -16,7 +16,7 @@
  *   - 固定槽位 14/21/22（廣告/國內/國外）：程式依卡片基本欄位「自動生成固定模板」
  *
  * 使用方式：
- *   1. 選單「🤖 權益自動化 → 解析新卡：3-貼上原文 → 4-待審核（基本＋組別）」，
+ *   1. 選單「🤖 權益自動化 → AI 拆新卡：我貼的」，
  *      第一次執行會自動建「3-貼上原文（新卡）」分頁
  *   2. 官網權益頁文字貼 A 欄；id 提示貼 B 欄（選填）；網址貼 C 欄（選填）；
  *      一般消費/排除說明頁文字貼 D 欄（選填，但沒貼時廣告排除只能靠權益頁本身判斷）
@@ -985,7 +985,7 @@ function parseAdVerdict_(text) {
 //         鎖定是哪一檔，「新文字」當完整條件的參考
 //      B. 手動：把原文貼進 3-貼上原文（卡片活動）A 欄、card_id 填 B 欄（官網以外的來源、
 //         或一列裡有好幾檔活動但你只要其中一檔時用）
-//   ② 選單「解析卡片活動」→ 4-待審核（活動更新）：每組標好「對應既有 rate_N」或「新增→建議 rate_N」
+//   ② 選單「AI 拆卡片活動：打 V 的＋我貼的」→ 4-待審核（活動更新）：每組標好「對應既有 rate_N」或「新增→建議 rate_N」
 //   ③ 你確認後把 rate → hideInDisplay 整段貼進 Cards Data 對應槽位，核准欄打 V（＝已貼完）
 //   ④ 回 2-變動通知 照舊用「公開／封存／刪除」收尾
 //
@@ -1005,7 +1005,7 @@ function parseCardActivities() {
   try {
     knownIds = getCardIds_();
   } catch (e) {
-    ui.alert('解析卡片活動', '讀不到資料檔的卡片 id：\n' + e.message, ui.ButtonSet.OK);
+    ui.alert('AI 拆卡片活動', '讀不到資料檔的卡片 id：\n' + e.message, ui.ButtonSet.OK);
     return;
   }
 
@@ -1016,7 +1016,7 @@ function parseCardActivities() {
   const failures = fromInbox.failures.concat(fromPaste.failures);   // 還沒呼叫 AI 就擋下的（缺 id 等）
 
   if (!jobs.length && !failures.length) {
-    ui.alert('解析卡片活動',
+    ui.alert('AI 拆卡片活動',
       '沒有要解析的活動。兩種方式擇一：\n\n' +
       '・自動：在「' + PARSER_CONFIG.inboxSheet + '」要寫的那一列，「' + C.inboxWriteHeader + '」欄打 V\n' +
       '・手動：把活動原文貼進「' + C.activityInputSheet + '」A 欄、card_id 填 B 欄\n\n' +
@@ -1156,7 +1156,7 @@ function collectPastedActivityJobs_(ss, knownIds) {
     // card_id 必填：這條流程的價值就在「拿去跟這張卡現有的槽位比對」，沒有它就只是新卡解析
     let problem = '';
     if (!cardId) problem = 'B 欄沒填 card_id';
-    else if (knownIds.indexOf(cardId) < 0) problem = 'card_id「' + cardId + '」不在 Cards Data（打錯字？新卡請改用「解析新卡」）';
+    else if (knownIds.indexOf(cardId) < 0) problem = 'card_id「' + cardId + '」不在 Cards Data（打錯字？新卡請改用「AI 拆新卡：我貼的」）';
     if (problem) { setStatus('失敗：' + problem); out.failures.push(label + '：' + problem); continue; }
     out.jobs.push({ label: label, cardId: cardId, text: text, url: String(rows[i][2] || '').trim(), focus: null, setStatus: setStatus });
   }

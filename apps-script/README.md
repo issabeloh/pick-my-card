@@ -408,24 +408,29 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 
 ## 「🤖 權益自動化」選單 ↔ 分頁對照表（2026-08-05 建立，自動化檔用）
 
+**2026-10-04 選單改版**（站長：「每次按選單都要動用大量腦力」）：標籤改寫成「你想做什麼」，不寫「來源分頁 → 產出分頁」；
+不常用的收進「其他工具」子選單；新增「📖 使用說明」。函數名一個都沒改（觸發器不受影響）。
+給人看的流程圖：https://claude.ai/artifact/Ak6AfxZfsK1jAHN8vhDw7L（欄位速查那段由 `sheet-guide.gs` 的 `GUIDE_NOTES` 產生，兩邊同一份內容）。
+
 分頁改成 `1~4` 編號制後，選單標籤還在用舊名（「解析輸入」「收件匣」），對不上哪個動作吃哪個分頁。
 現在標籤一律是**「動作：來源分頁 → 產出分頁」**，分頁只寫編號＋簡稱（動作名已經指明新戶活動／新卡，
 分頁全名的括號後綴是多餘的、也會讓選單過寬）。標籤寫在 `benefits-parser.gs` 的 `buildAutomationMenu_`。
 
 | 選單動作（打開試算表看到的字） | 函數 | 讀哪個分頁 | 寫哪個分頁 | 程式檔 |
 |---|---|---|---|---|
-| 執行監控：1-監控清單 → 2-變動通知 | `checkWatchlist` | `1-監控清單`（`active=TRUE` 的列） | `2-變動通知`（沒有會自動建）＋寄 Email；回寫 `last_snapshot`／`last_checked` | `watchlist-monitor.gs` |
-| 體檢填法：1-監控清單 | `checkWatchlistConfig` | `1-監控清單` | 不寫任何分頁，結果跳視窗 | `watchlist-monitor.gs` |
-| 處理變動通知：公開／封存／刪除 | `processInboxRows` | `2-變動通知` 的「公開／封存／刪除」欄（照打的字分派三種動作） | 公開→**跨檔**寫資料檔的 `變動紀錄`＋回填「已發布」；封存→`2-封存（變動通知）`；刪除→整列刪掉 | `benefits-parser.gs`（搬/刪的執行在 `watchlist-monitor.gs`） |
-| 解析新戶活動：2-變動通知 → 4-待審核 | `parseInboxNewPromos` | `2-變動通知`（狀態＝`待解析` 的列） | `4-待審核（新戶活動）`；回寫狀態＝`已解析`／`已解析-無新戶活動` | `benefits-parser.gs` |
-| 解析新戶活動：3-貼上原文 → 4-待審核 | `parsePastedText` | `3-貼上原文（新戶活動）` **第 2 列起每一列＝一段原文**（A 原文／B 卡片提示／C 網址） | `4-待審核（新戶活動）`；回寫 D 欄狀態 | `benefits-parser.gs` |
-| 解析新卡：3-貼上原文 → 4-待審核（基本＋組別） | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
-| 解析卡片活動：2-變動通知／3-貼上原文 → 4-待審核（活動更新） | `parseCardActivities` | ①`2-變動通知`「寫入活動」欄打 V 的列（用所屬活動＋變動段落＋新文字）②`3-貼上原文（卡片活動）`第 2 列起手貼的列（A 原文／B card_id 必填／C 網址） | `4-待審核（活動更新）`（自動建）；回寫「寫入活動」格或 D 欄狀態 | `card-benefits-parser.gs` |
-| 檢查廣告排除（全卡·每月）→ 報告-廣告排除 | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
-| ① 標出需登錄的活動（不用 AI）→ Cards Data 草稿 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
-| ② 找登錄連結：1-監控清單 → Cards Data 草稿 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
-| ③ 把打勾的登錄連結寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（全站唯一會動正式表的選單項；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
-| ④ 檢查登錄連結是否有死網址 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
+| ① 查官網變動 | `checkWatchlist` | `1-監控清單`（`active=TRUE` 的列） | `2-變動通知`（沒有會自動建）＋寄 Email；回寫 `last_snapshot`／`last_checked` | `watchlist-monitor.gs` |
+| 其他工具 ▸ 檢查監控清單有沒有填錯 | `checkWatchlistConfig` | `1-監控清單` | 不寫任何分頁，結果跳視窗 | `watchlist-monitor.gs` |
+| ② 處理變動通知（公開／封存／刪除） | `processInboxRows` | `2-變動通知` 的「公開／封存／刪除」欄（照打的字分派三種動作） | 公開→**跨檔**寫資料檔的 `變動紀錄`＋回填「已發布」；封存→`2-封存（變動通知）`；刪除→整列刪掉 | `benefits-parser.gs`（搬/刪的執行在 `watchlist-monitor.gs`） |
+| AI 拆新戶活動：變動通知裡的 | `parseInboxNewPromos` | `2-變動通知`（狀態＝`待解析` 的列） | `4-待審核（新戶活動）`；回寫狀態＝`已解析`／`已解析-無新戶活動` | `benefits-parser.gs` |
+| AI 拆新戶活動：我貼的 | `parsePastedText` | `3-貼上原文（新戶活動）` **第 2 列起每一列＝一段原文**（A 原文／B 卡片提示／C 網址） | `4-待審核（新戶活動）`；回寫 D 欄狀態 | `benefits-parser.gs` |
+| AI 拆新卡：我貼的 | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
+| AI 拆卡片活動：打 V 的＋我貼的 | `parseCardActivities` | ①`2-變動通知`「寫入活動」欄打 V 的列（用所屬活動＋變動段落＋新文字）②`3-貼上原文（卡片活動）`第 2 列起手貼的列（A 原文／B card_id 必填／C 網址） | `4-待審核（活動更新）`（自動建）；回寫「寫入活動」格或 D 欄狀態 | `card-benefits-parser.gs` |
+| 其他工具 ▸ 檢查廣告排除（每月一次） | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+| 其他工具 ▸ 登錄連結 1：標出要登錄的活動 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 2：找連結 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 3：打勾的寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（全站唯一會動正式表的選單項；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
+| 其他工具 ▸ 登錄連結 4：檢查死連結 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
+| 📖 使用說明 | `openSheetGuide` | — | 建立／更新 `0-使用說明` 分頁（放最前面）＋各分頁表頭備註（只寫這兩樣，其他格子不動） | `sheet-guide.gs` |
 
 所有分頁名的唯一出處（改名時要改的就是這幾行）：
 

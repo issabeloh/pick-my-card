@@ -30,8 +30,8 @@
  *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知 → 4-待審核」
  *      會處理「2-變動通知」中狀態=待解析 的每一列
  *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A 欄（卡片提示貼 B 欄、
- *      來源網址貼 C 欄），**一列＝一段原文，可一次貼多列**，選單 →「解析新戶活動：3-貼上原文
- *      → 4-待審核」——取代原本貼給 GEM 的流程。D 欄「狀態」由程式回填，清空該格可重跑該列
+ *      來源網址貼 C 欄），**一列＝一段原文，可一次貼多列**，選單 →「AI 拆新戶活動：我貼的」（舊名「解析新戶活動：3-貼上原文
+ *      → 4-待審核」）——取代原本貼給 GEM 的流程。D 欄「狀態」由程式回填，清空該格可重跑該列
  *
  * 審核流程：
  *   到「4-待審核（新戶活動）」分頁逐列檢查（AI 沒把握的列 needs_review=TRUE、附上它想問的問題），
@@ -61,38 +61,36 @@ function onOpen() {
   buildAutomationMenu_();
 }
 
-// 選單標籤＝「動作：來源分頁 → 產出分頁」，分頁只寫編號＋簡稱（動作名已經指明新戶活動/新卡，
-// 分頁全名裡的括號後綴是多餘的）。原本的標籤用的是改名前的舊分頁名（「解析輸入」「收件匣」），
-// 對不上現在的 1~4 編號分頁，2026-08-05 改成現在這樣。
-// ⚠️ 分頁的實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG），
-//    這裡只是給人看的簡稱；真的改了分頁名，記得回來對一下這幾行字。
+// 選單（2026-10-04 站長要求重寫：「每次按選單都要動用大量腦力」）
+// 原則：
+//   ・標籤寫「你想做什麼」，不寫「來源分頁 → 產出分頁」——產出一律是 4-待審核，寫在使用說明裡就好
+//   ・日常用的放第一層、照做事順序排；一個月按不到一次的收進「其他工具」
+//   ・AI 拆解的四個按鈕統一句型「AI 拆〈什麼〉：〈從哪來〉」，掃一眼就分得出來
+// ⚠️ 只改標籤不改函數名——觸發器、舊筆記都還指著那些函數名。
+//    分頁實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG）。
 function buildAutomationMenu_() {
-  SpreadsheetApp.getUi()
-    .createMenu('🤖 權益自動化')
-    .addItem('執行監控：1-監控清單 → 2-變動通知', 'checkWatchlist')
-    .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🤖 權益自動化')
+    .addItem('① 查官網變動', 'checkWatchlist')                                  // watchlist-monitor.gs
+    .addItem('② 處理變動通知（公開／封存／刪除）', 'processInboxRows')
     .addSeparator()
-    // 一個按鈕跑完一輪：照「公開／封存／刪除」欄打的字分派動作（processInboxRows）
-    .addItem('處理變動通知：公開／封存／刪除', 'processInboxRows')
+    .addItem('AI 拆卡片活動：打 V 的＋我貼的', 'parseCardActivities')            // card-benefits-parser.gs
+    .addItem('AI 拆新戶活動：變動通知裡的', 'parseInboxNewPromos')
+    .addItem('AI 拆新戶活動：我貼的', 'parsePastedText')
+    .addItem('AI 拆新卡：我貼的', 'parseNewCard')                                // card-benefits-parser.gs
     .addSeparator()
-    .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
-    .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
+    .addSubMenu(ui.createMenu('其他工具')
+      .addItem('檢查監控清單有沒有填錯', 'checkWatchlistConfig')                // watchlist-monitor.gs，只讀不寫
+      .addItem('檢查廣告排除（每月一次）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
+      .addSeparator()
+      // 登錄連結四步（register-link-finder.gs）；③ 是整個自動化檔裡唯一會寫入正式
+      // Cards Data 的動作（只寫 registerLink_N 欄，寫前跳確認視窗）
+      .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
+      .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
+      .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
+      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive'))
     .addSeparator()
-    .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
-    // 既有卡片的活動（年中/年底大批更新用）：2-變動通知「寫入活動」打 V 的列＋3-貼上原文 手貼的列，
-    // 一次處理兩邊，比對現有槽位
-    .addItem('解析卡片活動：2-變動通知／3-貼上原文 → 4-待審核（活動更新）', 'parseCardActivities') // card-benefits-parser.gs
-    .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
-    .addSeparator()
-    // 登錄連結兩階段（register-link-finder.gs）；兩者都只寫資料檔的
-    // 「Cards Data-登錄連結草稿」，正式 Cards Data 完全不動
-    .addItem('① 標出需登錄的活動（不用 AI）→ Cards Data 草稿', 'markRegisterSlotsInDraft')
-    .addItem('② 找登錄連結：1-監控清單 → Cards Data 草稿', 'fillRegisterLinksFromSnapshots')
-    // ⚠️ ③ 是整個自動化檔裡唯一會寫入正式 Cards Data 的動作（只寫 registerLink_N 欄，
-    //    寫前跳確認視窗）——其餘所有選單項都只寫草稿或待審核表
-    .addItem('③ 把打勾的登錄連結寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
-    // ④ 只讀不寫：對正式表的每個 registerLink 發一次請求，回報死掉的
-    .addItem('④ 檢查登錄連結是否有死網址', 'checkRegisterLinksAlive')
+    .addItem('📖 使用說明', 'openSheetGuide')                                    // sheet-guide.gs
     .addToUi();
 }
 
