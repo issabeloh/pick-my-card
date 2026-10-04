@@ -1161,6 +1161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!dataLoaded) {
         // If data loading fails, disable the app
         console.error('❌ 資料載入失敗，停用應用程式');
+        // 錯誤訊息已顯示在頁首；收掉「正在載入」，不然它會永遠轉下去
+        document.documentElement.classList.remove('pmc-returning-user');
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
@@ -1206,6 +1208,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
         // 讓頂部標題與搜尋框先入眼）。
         appStarted = true;
+        // 工具區要直接顯示，boot loader 一起收掉（它佔在頁籤下方，不收會把搜尋框往下推）
+        document.documentElement.classList.remove('pmc-returning-user');
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
         const supportedCards = document.querySelector('.supported-cards');

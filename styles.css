@@ -22,8 +22,11 @@ body {
     outline-offset: 2px;
 }
 
-/* Boot loader (small spinner + label) — only visible during the gate,
-   auto-hides when the hint class is removed by the auth callback. */
+/* Boot loader（spinner＋文字）：只在 html.pmc-returning-user 期間顯示，工具區出現
+   （showToolSections）或 auth 判定完成時收掉。
+   2026-10-04 起是頁籤正下方的一般區塊，佔住工具區的高度——原本 fixed 在視窗正中央，
+   疊在「推薦比較」連結上，用戶只看到頁籤下方一片空白＋一團重疊的字。
+   min-height 讓頁尾不會在載入期間被拉上來。 */
 #pmc-boot-loader {
     display: none;
 }
@@ -31,19 +34,16 @@ html.pmc-returning-user #pmc-boot-loader {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10001;
-    color: #6b7280;
-    font-size: 0.875rem;
-    pointer-events: none;
+    justify-content: center;
+    gap: 14px;
+    min-height: 45vh;
+    padding: 48px 16px;
+    color: #4b5563;
+    font-size: 0.95rem;
 }
 .pmc-boot-spinner {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border: 3px solid #dbeafe;
     border-top-color: #1e40af;
     border-radius: 50%;

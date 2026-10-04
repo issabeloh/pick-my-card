@@ -168,13 +168,6 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"遠大售票系統 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Ubear 卡"}]}</script>
 </head>
 <body>
-    <!-- Boot loader for returning logged-in users — visible only while
-         html.pmc-returning-user is set (CSS-controlled), auto-hidden when
-         the auth callback clears that class. -->
-    <div id="pmc-boot-loader" aria-hidden="true">
-        <div class="pmc-boot-spinner"></div>
-        <div class="pmc-boot-text">載入中…</div>
-    </div>
     <div class="container">
         <header>
             <div class="header-top">
@@ -325,6 +318,14 @@
                 <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的刷卡小抄<span class="mp-beta" title="新功能，還在調整中"><span class="mp-beta-full">新功能 </span>Beta</span></button>
             </nav>
         </header>
+
+        <!-- Boot loader：html.pmc-returning-user 存在時顯示（CSS 控制），工具區出現或 auth 判定完成時收掉。
+             2026-10-04 起放在頁籤正下方、佔住工具區的位置（原本 fixed 在視窗正中央，
+             疊在「推薦比較」連結上看起來像文字重疊，站長回報「頁籤下方一片空白」）。 -->
+        <div id="pmc-boot-loader" role="status" aria-live="polite">
+            <div class="pmc-boot-spinner" aria-hidden="true"></div>
+            <div class="pmc-boot-text">正在載入卡片資料…</div>
+        </div>
 
         <!-- Sidebar overlay for mobile drawer -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>

@@ -717,7 +717,11 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
                     return expandedTerms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
                 });
 
-            const el = createCardholderPromoElement(card, promo, rows, matchedMerchants, { amount });
+            const el = createCardholderPromoElement(card, promo, rows, matchedMerchants, {
+                amount,
+                // 「一般消費皆適用」不是比對出來的通路，不標
+                highlightTerms: isGeneralSpendingMarker(promo.bonus_merchants) ? null : expandedTerms
+            });
             fragment.appendChild(el);
             renderedCount++;
         });
@@ -730,6 +734,25 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
 
     container.appendChild(fragment);
     section.style.display = 'block';
+}
+
+// 新戶活動「匹配項目」的命中字詞 highlight（站長 2026-10-04：比照卡片詳情頁的搜尋標記，
+// 同一個 mark.cashback-search-hl 樣式）。terms 是已展開模糊別名的小寫搜尋詞：
+// 通路名稱裡直接找得到某個詞 → 只標那一段（取最長的詞，「line pay」優先於「line」）；
+// 找不到（靠別名配對到的，例如搜 shopee 配到「蝦皮購物」）→ 整個通路名稱標起來。
+// 回傳的是 HTML：每一段都先 escapeHtml 再拼（鐵則 3）。
+function highlightMatchedMerchantHtml(merchant, terms) {
+    const text = String(merchant);
+    const lower = text.toLowerCase();
+    const hit = (terms || [])
+        .map(t => String(t || '').toLowerCase())
+        .filter(t => t && lower.includes(t))
+        .sort((a, b) => b.length - a.length)[0];
+    const mark = (s) => `<mark class="cashback-search-hl">${escapeHtml(s)}</mark>`;
+    if (!hit) return mark(text);
+    const idx = lower.indexOf(hit);
+    return escapeHtml(text.slice(0, idx)) + mark(text.slice(idx, idx + hit.length)) +
+        escapeHtml(text.slice(idx + hit.length));
 }
 
 // Build the DOM element for a single cardholder promo result.
@@ -790,6 +813,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
         ? matchedMerchants.join('、')
         : '不限通路';
+    const merchantsHtml = (opts.highlightTerms && matchedMerchants && matchedMerchants.length > 0)
+        ? matchedMerchants.map(m => highlightMatchedMerchantHtml(m, opts.highlightTerms)).join('、')
+        : escapeHtml(merchantsText);
 
     const renderRow = (r) => `
         <div class="detail-item">
@@ -889,7 +915,7 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             ${capRowHtml}
         </div>
         ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件:</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
-        <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
+        <div class="matched-merchant">匹配項目: <strong>${merchantsHtml}</strong></div>
         <div class="matched-merchant">活動期間: ${escapeHtml(period)}${promoBadgeHtml}</div>
         ${notesHtml}
     `;
