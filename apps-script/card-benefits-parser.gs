@@ -1132,12 +1132,8 @@ function collectPastedActivityJobs_(ss, knownIds) {
   let input = ss.getSheetByName(C.activityInputSheet);
   if (!input) {
     input = ss.insertSheet(C.activityInputSheet);
-    input.getRange(1, 1, 1, 4).setValues([[
-      '活動原文（只貼你要寫的那幾檔；一列＝一張卡）',
-      'card_id（必填，要是 Cards Data 已有的卡）',
-      '來源網址（選填）',
-      '狀態（程式回填，清空該格可重跑該列）'
-    ]]);
+    // 短欄名，跟站長改過的 3-貼上原文（新戶活動）一致；怎麼填寫在表頭備註（📖 使用說明）
+    input.getRange(1, 1, 1, 4).setValues([['活動原文', 'card_id', '來源網址', '狀態']]);
     input.setFrozenRows(1);
     out.note = '（已建立「' + C.activityInputSheet + '」分頁，需要手動貼原文時用。）';
     return out;

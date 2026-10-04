@@ -155,10 +155,8 @@ function parsePastedText() {
   let sheet = ss.getSheetByName(PARSER_CONFIG.inputSheet);
   if (!sheet) {
     sheet = ss.insertSheet(PARSER_CONFIG.inputSheet);
-    sheet.getRange('A1').setValue('活動原文（貼在 A 欄，整段貼一格；一列＝一段原文，可一次貼多列）');
-    sheet.getRange('B1').setValue('卡片提示（選填，貼同列 B 欄；單卡填正式 id 如 yushan-unicard，多卡頁用逗號分隔如 febank-jaccard,febank-giftcard）');
-    sheet.getRange('C1').setValue('來源網址（選填，貼同列 C 欄）');
-    sheet.getRange(1, PARSER_CONFIG.statusCol).setValue(PASTED_STATUS_HEADER);
+    // 表頭只放短欄名（2026-10-04 站長改的）；怎麼填寫在表頭備註（📖 使用說明）。程式照欄位位置讀，欄名改了不影響
+    sheet.getRange(1, 1, 1, 4).setValues([['活動原文', 'card_id', '來源網址', '狀態']]);
     sheet.setFrozenRows(1);
     ui.alert('已建立「' + PARSER_CONFIG.inputSheet + '」分頁。把活動文字貼進 A2（多段就一列一段）後再執行一次。');
     return;
@@ -188,6 +186,24 @@ function parsePastedText() {
 
     const cardHint = String(rows[i][1] || '').trim();
     const link = String(rows[i][2] || '').trim();
+
+    // B 欄 2026-10-04 起只放 card_id（站長定案，原本可填卡名/銀行標記）。打錯字的 id 以前會被
+    // buildCardHintLine_ 當成「銀行層級提示」默默吞掉，現在直接擋下來講清楚。
+    // 多卡頁仍可填多個 id（逗號分隔），但每一個都要是真的 id。
+    if (cardHint) {
+      const bad = unknownCardIds_(cardHint);
+      if (bad === null) {
+        failures.push('列' + rowNum + '：讀不到資料檔的卡片 id，無法檢查 B 欄');
+        sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：讀不到資料檔的卡片 id');
+        continue;
+      }
+      if (bad.length) {
+        const m = 'B 欄的 card_id 不存在：' + bad.join('、') + '（打錯字？B 欄留空也可以，AI 會自己判斷）';
+        sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：' + m);
+        failures.push('列' + rowNum + '：' + m);
+        continue;
+      }
+    }
 
     try {
       const promos = extractNewPromos_(text, cardHint);
@@ -219,7 +235,7 @@ function parsePastedText() {
     (reviewCount ? '（其中 ' + reviewCount + ' 個 AI 沒把握，標了 needs_review）' : '') + '\n\n' +
     (results.length ? results.join('\n') + '\n\n' : '');
   if (doneCount && !promoCount) {
-    msg += 'AI 判斷這些文字裡沒有新戶活動（若不對，補上同列 B 欄的卡片提示再試一次）\n';
+    msg += 'AI 判斷這些文字裡沒有新戶活動（若不對，在同列 B 欄填 card_id 再試一次）\n';
   }
   if (skipped) msg += '↷ 跳過 ' + skipped + ' 列：D 欄狀態已是「已解析」。要重跑那幾列，把 D 欄清空再按一次選單。\n';
   if (remaining) msg += '⏳ 還有 ' + remaining + ' 列沒跑（單次上限 ' + PARSER_CONFIG.maxRowsPerRun +
@@ -490,6 +506,15 @@ function getChangelogSheet_() {
     sheet.setFrozenRows(1);
   }
   return sheet;
+}
+
+// 回傳 B 欄裡「不是正式 card_id」的那些；讀不到資料檔時回 null（呼叫端決定怎麼處理）
+function unknownCardIds_(raw) {
+  let ids;
+  try { ids = getCardIds_(); } catch (e) { return null; }
+  return String(raw).split(/[,，、]/)
+    .map(function (x) { return x.trim(); })
+    .filter(function (x) { return x && ids.indexOf(x) < 0; });
 }
 
 /************** 卡片提示：單卡／多卡／打錯字，要給 AI 三種不同指示 **************/
