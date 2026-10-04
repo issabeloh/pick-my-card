@@ -72,6 +72,42 @@ function historicalVersions(repoRelPath) {
   return out;
 }
 
+// 線上被手改過（drift）時，挑 repo 歷史裡最接近的一版，印出差在哪幾行——站長才知道
+// 那些手改是什麼、要不要留（2026-10-04 第一次試跑 watchlist-monitor 就被擋，卻看不到原因）
+function closestVersion(onlineSrc, versions) {
+  const cur = normalize(onlineSrc).split('\n');
+  const curSet = new Set(cur);
+  let best = null, bestScore = Infinity;
+  versions.forEach(function (v) {
+    const lines = v.split('\n');
+    const set = new Set(lines);
+    let score = 0;
+    cur.forEach(function (l) { if (!set.has(l)) score++; });
+    lines.forEach(function (l) { if (!curSet.has(l)) score++; });
+    if (score < bestScore) { bestScore = score; best = v; }
+  });
+  return best;
+}
+
+function diffText(oldSrc, newSrc, maxLines) {
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gsdiff-'));
+  const a = path.join(dir, 'repo最接近的一版'), b = path.join(dir, '線上現在');
+  fs.writeFileSync(a, oldSrc + '\n'); fs.writeFileSync(b, normalize(newSrc) + '\n');
+  let out = '';
+  try {
+    out = execFileSync('git', ['diff', '--no-index', '--no-color', '-U1', a, b], { encoding: 'utf8' });
+  } catch (e) { out = String(e.stdout || ''); }   // 有差異時 git diff 回 exit 1，內容在 stdout
+  const lines = out.split('\n').filter(function (l) { return !/^(diff --git|index |--- |\+\+\+ )/.test(l); });
+  // Actions 頁面在公開 repo 誰都看得到：線上手改常是填 email 或金鑰，先遮掉再印
+  const mask = function (l) {
+    return l.replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '***@***')
+      .replace(/\b(AIza[\w-]{20,}|gh[pousr]_\w{20,}|github_pat_\w{20,}|sk-[\w-]{20,}|jina_\w{20,})/g, '***金鑰已遮***')
+      .replace(/(['"])[A-Za-z0-9_\-]{32,}\1/g, '$1***長字串已遮***$1');
+  };
+  return lines.slice(0, maxLines).map(mask).join('\n') + (lines.length > maxLines ? '\n…（還有 ' + (lines.length - maxLines) + ' 行）' : '');
+}
+
 // 純函數：算出要做什麼。readRepo(file) → 內容；versionsOf(file) → Set
 function buildPlan(onlineFiles, repoFiles, readRepo, versionsOf) {
   const items = [], errors = [];
@@ -99,7 +135,7 @@ function buildPlan(onlineFiles, repoFiles, readRepo, versionsOf) {
     if (cur === normalize(repoSrc)) status = 'same';
     else if (versionsOf(file).has(cur)) status = 'update';
     else status = 'drift';   // 線上內容不是 repo 任何一版 → 有人在網頁上直接改過
-    items.push({ file: file, online: online.name, status: status, newSource: repoSrc });
+    items.push({ file: file, online: online.name, status: status, newSource: repoSrc, onlineSource: online.source });
   });
   return { items: items, errors: errors };
 }
@@ -114,9 +150,36 @@ function applyPlan(onlineFiles, plan) {
   });
 }
 
+// 從終端機複製常會出問題（2026-10-04 第一次部署就踩到）：長行被折成好幾行、
+// 多複製到提示字元、少複製到頭尾的大括號。依序試幾種讀法；都不行才報錯。
+// 也收 base64（`base64 -w0 ~/.clasprc.json` 的輸出）——一整串英數字，怎麼折行都不會壞。
+function parseSecret_(raw) {
+  const s = String(raw || '').trim();
+  const tries = [
+    function () { return JSON.parse(s); },
+    function () { return JSON.parse(s.replace(/[\r\n]+/g, '')); },                 // 折行塞進字串中間
+    function () {                                                                   // 前後多了雜字
+      const a = s.indexOf('{'), b = s.lastIndexOf('}');
+      if (a < 0 || b <= a) throw new Error('no braces');
+      return JSON.parse(s.slice(a, b + 1).replace(/[\r\n]+/g, ''));
+    },
+    function () {                                                                   // base64
+      const b64 = s.replace(/\s+/g, '');
+      if (!/^[A-Za-z0-9+/=]+$/.test(b64)) throw new Error('not base64');
+      return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+    }
+  ];
+  for (let i = 0; i < tries.length; i++) {
+    try { return tries[i](); } catch (e) { /* 試下一種 */ }
+  }
+  // 不把內容印出來（那是授權），只給判斷得出問題的線索
+  throw new Error('CLASPRC_JSON 讀不懂（收到 ' + s.length + ' 個字，開頭' +
+    (s.charAt(0) === '{' ? '是' : '不是') + '「{」、結尾' + (s.slice(-1) === '}' ? '是' : '不是') + '「}」）。' +
+    '最穩的做法：在 Cloud Shell 執行 base64 -w0 ~/.clasprc.json，把那一整串貼進 Secret。');
+}
+
 function readCredentials(raw) {
-  let j;
-  try { j = JSON.parse(raw); } catch (e) { throw new Error('CLASPRC_JSON 不是合法的 JSON（貼 ~/.clasprc.json 的完整內容）'); }
+  const j = parseSecret_(raw);
   const t = (j.tokens && (j.tokens.default || j.tokens[Object.keys(j.tokens)[0]])) || null;   // clasp 3
   if (t && t.refresh_token) return { clientId: t.client_id, clientSecret: t.client_secret, refreshToken: t.refresh_token };
   if (j.token && j.token.refresh_token && j.oauth2ClientSettings) {                              // clasp 2
@@ -188,6 +251,12 @@ async function main() {
     out(summarize(project, plan));
 
     const drift = plan.items.filter(function (it) { return it.status === 'drift'; });
+    drift.forEach(function (d) {
+      const near = closestVersion(d.onlineSource, historicalVersions('apps-script/' + d.file));
+      if (!near) return;
+      out('\n#### ' + d.online + '：線上跟 repo 最接近的一版差在這裡（－ repo／＋ 線上）\n\n```diff\n' +
+        diffText(near, d.onlineSource, 120) + '\n```');
+    });
     const changes = plan.items.filter(function (it) { return it.status !== 'same'; });
     if (plan.errors.length) { failed = true; out('\n整批不推（上面的 ❌ 處理好再跑一次）。'); continue; }
     if (drift.length && !force) {
@@ -214,4 +283,4 @@ if (require.main === module) {
   main().catch(function (e) { console.error('❌ ' + e.message); flushSummary(['❌ ' + e.message]); process.exit(1); });
 }
 
-module.exports = { normalize, matchOnline, buildPlan, applyPlan, readCredentials, historicalVersions };
+module.exports = { normalize, matchOnline, buildPlan, applyPlan, readCredentials, historicalVersions, closestVersion, diffText };
