@@ -79,8 +79,9 @@ function buildAutomationMenu_() {
     .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
     .addSeparator()
     .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
-    // 既有卡片的活動（年中/年底大批更新用）：貼你挑好的活動原文＋card_id，比對現有槽位
-    .addItem('解析卡片活動：3-貼上原文 → 4-待審核（活動更新）', 'parseCardActivities') // card-benefits-parser.gs
+    // 既有卡片的活動（年中/年底大批更新用）：2-變動通知「寫入活動」打 V 的列＋3-貼上原文 手貼的列，
+    // 一次處理兩邊，比對現有槽位
+    .addItem('解析卡片活動：2-變動通知／3-貼上原文 → 4-待審核（活動更新）', 'parseCardActivities') // card-benefits-parser.gs
     .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
     .addSeparator()
     // 登錄連結兩階段（register-link-finder.gs）；兩者都只寫資料檔的

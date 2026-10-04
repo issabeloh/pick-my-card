@@ -42,6 +42,9 @@ const CARD_PARSER_CONFIG = {
   // 一列＝一張既有卡的一檔（或幾檔）活動原文。整頁解析的舊入口已移除，見 README。
   activityInputSheet: '3-貼上原文（卡片活動）',
   activityStatusCol: 4,     // D 欄「狀態」（程式回填，清空該格可重跑）
+  // 2-變動通知 上的「打勾就解析」欄（2026-10-04）：在要寫的列打 V，按同一個選單就自動解析，
+  // 不用再手動複製原文。欄不存在時第一次按選單會自動補在最右邊。
+  inboxWriteHeader: '寫入活動',
   updateReviewSheet: '4-待審核（活動更新）'
 };
 
@@ -420,9 +423,20 @@ function extractCard_(rawText, idHint, generalText, opts) {
   };
 
   if (activityOnly) {
-    const result = callGemini_(systemPrompt,
-      '以下是卡片「' + (idHint || '') + '」的活動原文（站長挑出來要更新的部分）：\n\n' + rawText,
-      activitySchema_(groupItem));
+    const focus = opts.focus;
+    let userText;
+    if (focus && (focus.scope || focus.diff)) {
+      // 來自 2-變動通知：新文字是整頁，要靠「所屬活動」「變動段落」鎖定站長要的那一檔，
+      // 否則會把整頁每一檔活動都抽出來（那正是 2026-10-04 拿掉整頁解析的原因）
+      userText = '卡片「' + (idHint || '') + '」的官網這次有變動。**只抽下面「要抽的活動」那一檔**' +
+        '（以及變動段落直接提到的活動）；頁面上其他活動一律不要輸出。\n\n' +
+        '【要抽的活動】' + (focus.scope || '（未標明，請依變動段落判斷）') + '\n\n' +
+        '【這次變動的段落】（＋新增／－消失）\n' + (focus.diff || '（無）') + '\n\n' +
+        '【新版全文】（只用來查這一檔活動的完整條件、上限、期間）\n' + rawText;
+    } else {
+      userText = '以下是卡片「' + (idHint || '') + '」的活動原文（站長挑出來要更新的部分）：\n\n' + rawText;
+    }
+    const result = callGemini_(systemPrompt, userText, activitySchema_(groupItem));
     return result || { groups: [] };
   }
 
@@ -447,8 +461,10 @@ function toActivityPrompt_(lines) {
   out = cut(out, '【三個最常寫錯的欄位：basicConditions／annualFee／feeWaiver】', '【groups 每組欄位】');
   return [
     '【這次的任務：既有卡片的活動更新——優先於下面所有規則】',
-    '・這段文字是站長從一張【已上線卡片】的官網**親手挑出來**的一檔或幾檔活動，不是整張卡的權益頁。',
-    '  只抽這段文字裡寫到的活動；官網上其他活動不要補、不要猜。basic 基本資料這次不用抽。',
+    '・這張卡【已經上線】，站長只要更新其中一檔或幾檔活動。輸入有兩種：',
+    '  (a) 站長親手挑出來的活動原文 → 只抽這段文字裡寫到的活動；',
+    '  (b) 整頁新版全文＋「要抽的活動」標題＋變動段落 → 只抽指定的那一檔，頁面上其他活動一律不要輸出。',
+    '  官網上沒給你的活動不要補、不要猜。basic 基本資料這次不用抽。',
     '・特定通路/特定分類的加碼 → 照下面規則放進 groups。',
     '・「不限通路」的一般國內消費加碼、一般國外消費加碼（含它們的率、回饋上限、條件、期間）',
     '  → 【不要】放進 groups，改填 bonus_updates 對應欄位（程式會拿去跟 Cards Data 現值比對）。',
@@ -964,8 +980,11 @@ function parseAdVerdict_(text) {
 // 「已上線卡片的一般活動」要自己讀官網、自己拆成 rate_N。
 //
 // 流程（閉環）：
-//   ① 2-變動通知 看到值得寫的活動 → 把**那一檔活動的原文**貼進 3-貼上原文（卡片活動）A 欄、
-//      card_id 填 B 欄（只挑你要的，不必整頁）
+//   ① 告訴程式要解析哪些活動，兩種方式擇一（同一個選單會兩邊都處理）：
+//      A. 自動：2-變動通知 該列的「寫入活動」欄打 V——程式拿該列的「所屬活動」「變動段落」
+//         鎖定是哪一檔，「新文字」當完整條件的參考
+//      B. 手動：把原文貼進 3-貼上原文（卡片活動）A 欄、card_id 填 B 欄（官網以外的來源、
+//         或一列裡有好幾檔活動但你只要其中一檔時用）
 //   ② 選單「解析卡片活動」→ 4-待審核（活動更新）：每組標好「對應既有 rate_N」或「新增→建議 rate_N」
 //   ③ 你確認後把 rate → hideInDisplay 整段貼進 Cards Data 對應槽位，核准欄打 V（＝已貼完）
 //   ④ 回 2-變動通知 照舊用「公開／封存／刪除」收尾
@@ -981,6 +1000,135 @@ function parseCardActivities() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
   const C = CARD_PARSER_CONFIG;
+
+  let knownIds;
+  try {
+    knownIds = getCardIds_();
+  } catch (e) {
+    ui.alert('解析卡片活動', '讀不到資料檔的卡片 id：\n' + e.message, ui.ButtonSet.OK);
+    return;
+  }
+
+  // 兩個來源各自收集「要做的列」，之後一起跑（單次上限 maxRowsPerRun 是兩邊合計）
+  const fromInbox = collectInboxActivityJobs_(ss, knownIds);   // A. 2-變動通知 打 V 的列
+  const fromPaste = collectPastedActivityJobs_(ss, knownIds);  // B. 3-貼上原文（卡片活動）
+  const jobs = fromInbox.jobs.concat(fromPaste.jobs);
+  const failures = fromInbox.failures.concat(fromPaste.failures);   // 還沒呼叫 AI 就擋下的（缺 id 等）
+
+  if (!jobs.length && !failures.length) {
+    ui.alert('解析卡片活動',
+      '沒有要解析的活動。兩種方式擇一：\n\n' +
+      '・自動：在「' + PARSER_CONFIG.inboxSheet + '」要寫的那一列，「' + C.inboxWriteHeader + '」欄打 V\n' +
+      '・手動：把活動原文貼進「' + C.activityInputSheet + '」A 欄、card_id 填 B 欄\n\n' +
+      '再按一次這個選單。' + (fromInbox.note ? '\n\n' + fromInbox.note : '') +
+      (fromPaste.note ? '\n\n' + fromPaste.note : ''),
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  const results = [];
+  let done = 0;
+  jobs.forEach(function (job) {
+    if (done >= C.maxRowsPerRun) return;
+    try {
+      const parsed = extractCard_(job.text, job.cardId, '', { activityOnly: true, focus: job.focus });
+      const all = parsed.groups || [];
+      const groups = all.filter(function (g) { return num_(g.rate) > 0; });
+      const out = writeGroupUpdateReview_(job.cardId, groups, job.url, parsed.bonus_updates);
+      const parts = [];
+      if (out.matched) parts.push('對應既有 ' + out.matched);
+      if (out.added) parts.push('新增 ' + out.added);
+      if (out.bonus) parts.push('基本欄位 ' + out.bonus);
+      const summary = parts.length ? parts.join('、') : ('0 組' + (parsed.note ? '：' + parsed.note : ''));
+      job.setStatus('已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + summary);
+      results.push(job.label + '　' + job.cardId + '：' + summary +
+        (all.length > groups.length ? '（略過 ' + (all.length - groups.length) + ' 組非百分比回饋）' : ''));
+    } catch (e) {
+      job.setStatus('失敗：' + e.message);
+      failures.push(job.label + '：' + e.message);
+    }
+    done++;
+  });
+
+  const remaining = jobs.length - done;
+  let msg = '解析了 ' + done + ' 筆 → 「' + C.updateReviewSheet + '」\n\n' +
+    (results.length ? results.join('\n') + '\n\n' : '');
+  if (remaining) msg += '⏳ 還有 ' + remaining + ' 筆，再按一次選單接著跑\n';
+  if (failures.length) msg += '\n❌ 失敗（狀態格已記錄，改好再按一次）：\n' + failures.join('\n') + '\n';
+  msg += '\n下一步：確認後把 rate → hideInDisplay 貼進 Cards Data，核准欄打 V。';
+  ss.toast('解析 ' + done + ' 筆', '卡片活動解析完成', 8);
+  ui.alert(msg);
+}
+
+// 「寫入活動」欄算不算打勾：V / ✓ / 核取方塊 true 都算；已解析、失敗等程式回填的字不算
+function isWriteActivityMark_(v) {
+  if (v === true) return true;
+  const s = String(v == null ? '' : v).trim().toUpperCase().replace(/Ｖ/g, 'V');
+  return s === 'V' || s === '✓' || s === '✔' || s === 'TRUE';
+}
+
+// A. 2-變動通知：「寫入活動」打 V 的列。
+// 欄不存在就補在最右邊（照欄名找欄——2-變動通知 的寫入端 appendToInbox_ 也是照欄名對位，加欄安全）
+function collectInboxActivityJobs_(ss, knownIds) {
+  const C = CARD_PARSER_CONFIG;
+  const out = { jobs: [], failures: [], note: '' };
+  const inbox = ss.getSheetByName(PARSER_CONFIG.inboxSheet);
+  if (!inbox || inbox.getLastRow() < 1) return out;
+
+  let headers = readInboxHeaders_(inbox);               // watchlist-monitor.gs
+  let cMark = headers.indexOf(C.inboxWriteHeader);
+  if (cMark < 0) {
+    let end = 0;
+    headers.forEach(function (h, i) { if (h) end = i + 1; });
+    if (inbox.getMaxColumns() < end + 1) inbox.insertColumnsAfter(inbox.getMaxColumns(), 1);
+    inbox.getRange(1, end + 1).setValue(C.inboxWriteHeader);
+    out.note = '（已在「' + PARSER_CONFIG.inboxSheet + '」最右邊加上「' + C.inboxWriteHeader + '」欄。）';
+    return out;   // 剛建的欄一定是空的
+  }
+  const col = function (name) { return headers.indexOf(name); };
+  const n = Math.max(inbox.getLastRow() - 1, 0);
+  if (!n) return out;
+
+  // ⚠️ 逐欄讀、只讀打勾那幾列的大欄位（新文字一格上限 4 萬字，整張讀進來會很慢）
+  const marks = inbox.getRange(2, cMark + 1, n, 1).getValues();
+  const cell = function (row, name) {
+    const c = col(name);
+    return c < 0 ? '' : inbox.getRange(row, c + 1).getValue();
+  };
+  for (let i = 0; i < n; i++) {
+    if (!isWriteActivityMark_(marks[i][0])) continue;
+    const row = i + 2;
+    const label = '變動通知 列' + row;
+    const setStatus = function (v) { inbox.getRange(row, cMark + 1).setValue(v); };
+
+    // card_id：先看「公開卡片」（站長可能改過），沒有或不只一張再看「card_id」
+    const pickOne = function (raw) {
+      const ids = splitList_(raw).filter(function (id) { return knownIds.indexOf(id) >= 0; });
+      return ids.length === 1 ? ids[0] : '';
+    };
+    const cardId = pickOne(cell(row, '公開卡片')) || pickOne(cell(row, 'card_id'));
+    if (!cardId) {
+      const m = '找不到「剛好一張」既有卡——多卡頁請把「公開卡片」改成要寫的那一張 id 再打 V';
+      setStatus('失敗：' + m); out.failures.push(label + '：' + m); continue;
+    }
+    const text = String(cell(row, '新文字') || '').slice(0, C.maxTextChars);
+    if (!text.trim()) {
+      const m = '這列的「新文字」是空的';
+      setStatus('失敗：' + m); out.failures.push(label + '：' + m); continue;
+    }
+    out.jobs.push({
+      label: label, cardId: cardId, text: text, url: String(cell(row, '網址') || ''),
+      focus: { scope: String(cell(row, '所屬活動') || '').trim(), diff: String(cell(row, '變動段落') || '').trim() },
+      setStatus: setStatus
+    });
+  }
+  return out;
+}
+
+// B. 3-貼上原文（卡片活動）：A 原文／B card_id／C 網址／D 狀態
+function collectPastedActivityJobs_(ss, knownIds) {
+  const C = CARD_PARSER_CONFIG;
+  const out = { jobs: [], failures: [], note: '' };
   let input = ss.getSheetByName(C.activityInputSheet);
   if (!input) {
     input = ss.insertSheet(C.activityInputSheet);
@@ -991,79 +1139,28 @@ function parseCardActivities() {
       '狀態（程式回填，清空該格可重跑該列）'
     ]]);
     input.setFrozenRows(1);
-    ui.alert('已建立「' + C.activityInputSheet + '」分頁。\n\n' +
-      'A 欄貼活動原文、B 欄填 card_id，再按一次選單。');
-    return;
+    out.note = '（已建立「' + C.activityInputSheet + '」分頁，需要手動貼原文時用。）';
+    return out;
   }
-
   const lastRow = input.getLastRow();
-  const rows = lastRow < 2 ? [] : input.getRange(2, 1, lastRow - 1, C.activityStatusCol).getValues();
-
-  let knownIds;
-  try {
-    knownIds = getCardIds_();
-  } catch (e) {
-    ui.alert('解析卡片活動', '讀不到資料檔的卡片 id：\n' + e.message, ui.ButtonSet.OK);
-    return;
-  }
-
-  let done = 0, skipped = 0, remaining = 0, textRows = 0;
-  const results = [], failures = [];
-  const setStatus = function (rowNum, v) { input.getRange(rowNum, C.activityStatusCol).setValue(v); };
-
+  if (lastRow < 2) return out;
+  const rows = input.getRange(2, 1, lastRow - 1, C.activityStatusCol).getValues();
   for (let i = 0; i < rows.length; i++) {
-    const rowNum = i + 2;
+    const row = i + 2;
     const text = String(rows[i][0] || '').slice(0, C.maxTextChars);
     if (!text.trim()) continue;
-    textRows++;
-    if (String(rows[i][C.activityStatusCol - 1] || '').trim().indexOf('已解析') === 0) { skipped++; continue; }
-    if (done >= C.maxRowsPerRun) { remaining++; continue; }
-
+    if (String(rows[i][C.activityStatusCol - 1] || '').trim().indexOf('已解析') === 0) continue;
+    const label = '貼上原文 列' + row;
+    const setStatus = function (v) { input.getRange(row, C.activityStatusCol).setValue(v); };
     const cardId = String(rows[i][1] || '').trim();
-    const url = String(rows[i][2] || '').trim();
-    // card_id 是必填：這條流程的價值就在「拿去跟這張卡現有的槽位比對」，沒有它就只是新卡解析
-    if (!cardId) {
-      setStatus(rowNum, '失敗：B 欄沒填 card_id');
-      failures.push('列' + rowNum + '：B 欄沒填 card_id'); continue;
-    }
-    if (knownIds.indexOf(cardId) < 0) {
-      const msg = 'card_id「' + cardId + '」不在 Cards Data（打錯字？新卡請改用「解析新卡」）';
-      setStatus(rowNum, '失敗：' + msg);
-      failures.push('列' + rowNum + '：' + msg); continue;
-    }
-
-    try {
-      const parsed = extractCard_(text, cardId, '', { activityOnly: true });
-      const all = parsed.groups || [];
-      const groups = all.filter(function (g) { return num_(g.rate) > 0; });
-      const out = writeGroupUpdateReview_(cardId, groups, url, parsed.bonus_updates);
-      const parts = [];
-      if (out.matched) parts.push('對應既有 ' + out.matched);
-      if (out.added) parts.push('新增 ' + out.added);
-      if (out.bonus) parts.push('基本欄位 ' + out.bonus);
-      const summary = parts.length ? parts.join('、') : ('0 組' + (parsed.note ? '：' + parsed.note : ''));
-      setStatus(rowNum, '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + summary);
-      results.push('列' + rowNum + '　' + cardId + '：' + summary +
-        (all.length > groups.length ? '（略過 ' + (all.length - groups.length) + ' 組非百分比回饋）' : ''));
-      done++;
-    } catch (e) {
-      setStatus(rowNum, '失敗：' + e.message);
-      failures.push('列' + rowNum + '：' + e.message);
-    }
+    // card_id 必填：這條流程的價值就在「拿去跟這張卡現有的槽位比對」，沒有它就只是新卡解析
+    let problem = '';
+    if (!cardId) problem = 'B 欄沒填 card_id';
+    else if (knownIds.indexOf(cardId) < 0) problem = 'card_id「' + cardId + '」不在 Cards Data（打錯字？新卡請改用「解析新卡」）';
+    if (problem) { setStatus('失敗：' + problem); out.failures.push(label + '：' + problem); continue; }
+    out.jobs.push({ label: label, cardId: cardId, text: text, url: String(rows[i][2] || '').trim(), focus: null, setStatus: setStatus });
   }
-
-  if (!textRows) {
-    ui.alert('解析卡片活動', '「' + C.activityInputSheet + '」A 欄沒有文字——把活動原文貼進 A2、card_id 填 B2。', ui.ButtonSet.OK);
-    return;
-  }
-  let msg = '解析了 ' + done + ' 列 → 「' + C.updateReviewSheet + '」\n\n' +
-    (results.length ? results.join('\n') + '\n\n' : '');
-  if (skipped) msg += '↷ 跳過 ' + skipped + ' 列已解析過的（要重跑就清空 D 欄）\n';
-  if (remaining) msg += '⏳ 還有 ' + remaining + ' 列，再按一次選單接著跑\n';
-  if (failures.length) msg += '\n❌ 失敗（D 欄已記錄，改好再按一次）：\n' + failures.join('\n') + '\n';
-  msg += '\n下一步：確認後把 rate → hideInDisplay 貼進 Cards Data，核准欄打 V。';
-  ss.toast('解析 ' + done + ' 列', '卡片活動解析完成', 8);
-  ui.alert(msg);
+  return out;
 }
 
 // 讀某張卡在 Cards Data 的現況（唯讀）。
