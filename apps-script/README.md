@@ -935,7 +935,7 @@ GitHub，所以 Jina／Gemini／寄信／Cloudflare build 一格都不動（Clou
 2. 自動化檔 → 擴充功能 → Apps Script → 齒輪「專案設定」→ 指令碼屬性 → 新增兩筆（**絕不寫進程式碼**）：
    - `GEMINI_API_KEY` = 你的 Gemini 金鑰
    - `CARDS_SPREADSHEET_ID` = 資料檔「PMC 管理系統」網址 `/spreadsheets/d/【這段】/edit` 的 ID
-3. 把 `benefits-parser.gs` 貼進新檔案「權益解析-新戶」、`watchlist-monitor.gs` 貼進「權益監控」
+3. 把 `benefits-parser.gs` 貼進新檔案「權益解析-新戶-benefits-parser」（2026-10-04 站長改名；檔名只是給人看的，改了不影響執行）、`watchlist-monitor.gs` 貼進「權益監控」
 4. 重新整理自動化檔 → 工具列出現「🤖 權益自動化」選單（本檔自帶 onOpen，此處無匯出選單可撞）
 
 ### 分頁搬遷步驟（一次性）

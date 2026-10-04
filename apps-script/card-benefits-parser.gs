@@ -2,7 +2,7 @@
  * 主要信用卡活動解析（BENEFITS-AUTOMATION-PLAN.md 第二階段，新卡權益）
  *
  * 這是備份副本——實際執行版貼在「PMC 資料自動化」試算表的 Apps Script 專案裡
- * （新增檔案「權益解析-新卡」）。與 benefits-parser.gs 同一個專案，共用它的
+ * （新增檔案「權益解析-新卡-card-benefits-parser」）。與 benefits-parser.gs 同一個專案，共用它的
  * callGemini_() / getCardsSheet_() / getCardIds_()，本檔不重複定義那些。
  *
  * 用途：解析一張「全新卡片」的官網權益頁 → 產出可貼進 Cards Data 的資料。
