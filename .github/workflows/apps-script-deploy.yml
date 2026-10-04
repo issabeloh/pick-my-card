@@ -1,0 +1,50 @@
+# Apps Script 自動部署：main 上的 apps-script/*.gs 有變 → 推到「PMC 資料自動化」的 Apps Script 專案。
+# 部署哪些檔、推到哪個專案：apps-script/deploy.json。三道保護與設定步驟：apps-script/README.md「自動部署」。
+# ⚠️「PMC 管理系統」（cards-export.gs）刻意不在這裡——它產生上線資料，維持手動貼。
+name: apps-script-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/*.gs'
+      - 'apps-script/deploy.json'
+      - 'tools/apps-script-deploy/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '試跑：只列出會做什麼，不真的推'
+        type: boolean
+        default: true
+      force:
+        description: '線上被手改過也照樣蓋掉（確定那些手改不要了才勾）'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 要完整歷史：判斷「線上內容是不是 repo 某一版」
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Deploy
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            [ "${{ inputs.dry_run }}" = "true" ] && ARGS="$ARGS --dry-run"
+            [ "${{ inputs.force }}" = "true" ] && ARGS="$ARGS --force"
+          fi
+          node tools/apps-script-deploy/deploy.js $ARGS

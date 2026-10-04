@@ -781,6 +781,50 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
   若仍整頁比對，代表該頁每次渲染順序都不同，改監控更穩定的來源頁
 - 腳本執行失敗會依觸發器的 Failure notification 設定寄信通知
 
+## 自動部署：GitHub → 「PMC 資料自動化」的 Apps Script（2026-10-04 新增）
+
+**做什麼**：main 上的 `apps-script/*.gs` 一有變，GitHub Actions 就把新版推到「PMC 資料自動化」的 Apps Script 專案，
+不用再手動複製貼上。設定檔 `apps-script/deploy.json`、程式 `tools/apps-script-deploy/deploy.js`、
+流程 `.github/workflows/apps-script-deploy.yml`。
+
+**只部署自動化檔**：`watchlist-monitor` / `benefits-parser` / `card-benefits-parser` / `register-link-finder` / `sheet-guide`。
+**「PMC 管理系統」（`cards-export.gs` 等）刻意不自動部署**：它產生上線資料，而且看預覽時要在線上暫時改
+`GITHUB_BRANCH`，自動部署會把那個暫時改動蓋掉。維持手動貼。
+
+### 三道保護（任何一道沒過就整批不推，一支都不改）
+
+1. **檔名對照**：線上檔名＝repo 檔名，或以「-檔名」結尾（`權益解析-新戶-benefits-parser` → `benefits-parser.gs`）。
+   對不到、對到兩個 → 停。**絕不自動新建檔案**（新建＝同一個函數定義兩次，整個專案會壞）。
+   同時對得上兩個 repo 檔名時歸給較長的那個（`…-card-benefits-parser` 不會被 `benefits-parser` 認走）。
+2. **不蓋掉線上手改**：線上現在的內容必須是 repo 歷史裡出現過的某一版（忽略行尾空白與換行格式）。
+   不是 → 代表有人直接在網頁編輯器改過 → 停。確定不要那些手改，手動執行流程並勾 `force`。
+3. **只動清單裡的檔**：線上其他檔案、`appsscript.json` 原封不動。
+
+⚠️ **新規則**：自動化檔的程式**不要再直接在網頁編輯器改**，要改就在 repo 改（叫 Claude）。真的在網頁改了，保護 2 會擋下下一次部署，不會默默蓋掉。
+
+### 一次性設定（站長做）
+
+1. **打開 Apps Script API**：<https://script.google.com/home/usersettings> →「Google Apps Script API」切到開啟
+2. **線上檔名照規則改**（Apps Script 編輯器左側檔案 → ⋮ → 重新命名）：
+   `使用說明` → `使用說明-sheet-guide`；監控那支 → `權益監控-watchlist-monitor`；
+   登錄連結那支 → `登錄連結-register-link-finder`（前綴隨你取，結尾要對）
+3. **拿授權**（用 Google Cloud Shell，瀏覽器裡就能跑，不用裝東西）：
+   1. 打開 <https://shell.cloud.google.com>，用同一個 Google 帳號
+   2. 貼上執行：`npx @google/clasp@3.4.1 login --no-localhost`
+   3. 開它給的網址 → 允許 → 照畫面指示把授權碼（或跳轉失敗頁面的整個網址）貼回 Cloud Shell
+   4. 執行 `cat ~/.clasprc.json`，把印出來的**整段**複製起來
+4. **存進 GitHub**：repo → Settings → Secrets and variables → Actions → New repository secret，
+   名稱 `CLASPRC_JSON`，值貼上一步的整段
+5. **試跑**：repo → Actions → `apps-script-deploy` → Run workflow（`dry_run` 保持勾選）→ 看結果頁的表格。
+   沒有 ❌ 就再跑一次、把 `dry_run` 取消勾選，就是第一次真的部署
+
+這份授權能管理你帳號底下的 Apps Script 專案。不想用了：到 <https://myaccount.google.com/permissions> 移除 clasp，再刪掉 GitHub 的 Secret。
+
+### 結果怎麼看
+
+GitHub → Actions → 該次執行 → Summary 有一張表：每支是「更新／沒變，略過／⛔ 線上被手改過」。
+失敗時第一行就寫原因與怎麼修（API 沒開、授權過期、檔名對不到…）。沒設定 Secret 時只會提醒、不會報錯。
+
 ## ⚠️ 兩檔架構（2026-07-17 分檔）
 
 自動化的工作台從「PMC 管理系統」試算表**搬到獨立的「PMC 資料自動化」試算表**，兩本各司其職：
