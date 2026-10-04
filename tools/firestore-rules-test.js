@@ -239,6 +239,10 @@ const OTHER = 'bobUid456';
   await check('用別人的預約檔名上傳', false, () => up(env.authenticatedContext(OTHER), `feedback/${k2}_1.jpg`));
   await check('上傳到其他路徑', false, () => up(stCtx, `anything/stUser.jpg`));
   await check('封鎖帳號上傳', false, () => up(env.authenticatedContext(BLOCKED), `feedback/${BLOCKED}_${taiwanDayKey()}_1_0.jpg`));
+  // 新戶活動圖：公開讀取（模擬器沒有這個檔案時讀取會回「找不到」而不是「沒權限」，所以先放一個）
+  await env.withSecurityRulesDisabled(async (ctx) => { await ctx.storage().ref('promo-images/test.png').put(new Uint8Array(10), { contentType: 'image/png' }); });
+  await check('未登入讀新戶活動圖（promo-images）', true, () => env.unauthenticatedContext().storage().ref('promo-images/test.png').getDownloadURL());
+  await check('網站寫入新戶活動圖', false, () => up(stCtx, 'promo-images/evil.jpg'));
   await check('讀別人的附圖', false, () => env.authenticatedContext(OTHER).storage().ref(`feedback/${k1}_0.jpg`).getDownloadURL());
 
   await env.cleanup();
