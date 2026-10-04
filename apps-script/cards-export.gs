@@ -2035,14 +2035,24 @@ function pmcNoOrphanHtml_(s) {
     '<span class="pmc-nobr">' + pmcEscapeHtml_(chars.slice(cut).join('')) + '</span>';
 }
 
-// bonus_merchants 的 *all_items＝「所有消費都算」（benefits-parser.gs 的填表說明就是這樣定義）。
-// 主站搜尋會把它展開成卡片的 cashbackRates 通路來比對，但那是搜尋用的近似；新戶活動頁要給
-// 人看，直接把萬用標記印出來（2026-10-04 玉山 Ubear 出現「*all_items」）或展開成上百個
-// 通路都不對，一律顯示 PMC_ALL_ITEMS_LABEL。
-const PMC_ALL_ITEMS_LABEL = '一般消費皆適用';
-function pmcIsAllItems_(merchants) {
+// bonus_merchants 的兩個萬用標記（站長 2026-10-04 定義，主站 js/core-utils.js 同一套）：
+//   *all_items ＝ 只加碼在這張卡原本的回饋通路上（主站搜尋會展開成該卡 cashbackRates 的通路）
+//   *general   ＝ 一般消費都算
+// 新戶活動頁要給人看，不能把標記原樣印出來（2026-10-04 玉山 Ubear 出現「*all_items」）；
+// *all_items 展開會是上百個通路，所以只寫一句、請用戶看卡片特色（那裡列了該卡的回饋通路）。
+const PMC_GENERAL_LABEL = '一般消費皆適用';
+const PMC_ALL_ITEMS_LABEL = '本卡所有指定通路（見卡片特色）';
+function pmcHasMarker_(merchants, marker) {
   const list = Array.isArray(merchants) ? merchants : (merchants == null ? [] : [merchants]);
-  return list.some(function (m) { return String(m).trim().toLowerCase() === '*all_items'; });
+  return list.some(function (m) { return String(m).trim().toLowerCase() === marker; });
+}
+function pmcIsGeneral_(merchants) { return pmcHasMarker_(merchants, '*general'); }
+function pmcIsAllItems_(merchants) { return pmcHasMarker_(merchants, '*all_items'); }
+// 給人看的通路清單（陣列）：萬用標記換成說明文字
+function pmcMerchantsDisplay_(merchants) {
+  if (pmcIsGeneral_(merchants)) return [PMC_GENERAL_LABEL];
+  if (pmcIsAllItems_(merchants)) return [PMC_ALL_ITEMS_LABEL];
+  return Array.isArray(merchants) ? merchants : [];
 }
 
 function pmcEscapeHtmlMultiline_(s) {
@@ -2260,14 +2270,15 @@ function pmcBuildPickCandidate_(p) {
   if (pmcIsBonus_(promo)) {
     const r = pmcRateNumber_(promo);
     if (r === null || r <= 0) return null;
+    const general = pmcIsGeneral_(promo.bonus_merchants);
     const allItems = pmcIsAllItems_(promo.bonus_merchants);
-    const merchants = allItems ? [] : (promo.bonus_merchants || []);
+    const merchants = (general || allItems) ? [] : (promo.bonus_merchants || []);
     const hot = pmcIsHotPay_(merchants);
     const v = pmcPromoValue_(promo);
     base.kind = 'bonus';
     base.score = r * (hot ? 1.2 : 1);
     base.headline = pmcRateDisplay_(promo) + ' 回饋';
-    base.sub = allItems ? '一般消費' :
+    base.sub = general ? '一般消費' : allItems ? '本卡指定通路' :
       merchants.length ? merchants.slice(0, 3).join('、') + (merchants.length > 3 ? ' 等' : '') : '';
     base.thr = typeof promo.bonus_cap === 'number' ? '上限消費 ' + pmcMoney_(promo.bonus_cap) : '門檻：' + pmcThresholdText_(promo);
     base.rateText = '';
@@ -2319,7 +2330,8 @@ function pmcAutoQuestion_(c) {
   if (c.hot) return '天天用手機付款？';
   if (/國外|海外|外幣/.test(text)) return '常出國刷卡？';
   if (/保費/.test(text)) return '最近要繳保費？';
-  if (pmcIsAllItems_(c.promo.bonus_merchants)) return '平常刷卡就想多拿回饋？';
+  if (pmcIsGeneral_(c.promo.bonus_merchants)) return '平常刷卡就想多拿回饋？';
+  if (pmcIsAllItems_(c.promo.bonus_merchants)) return '常用這張卡的回饋通路？';
   const m = (c.promo.bonus_merchants || [])[0];
   return m ? '常在' + m + '消費？' : '想多拿一點回饋？';
 }
@@ -2551,7 +2563,7 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
   const rows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
     rows.push('<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">' +
-      pmcEscapeHtml_(pmcIsAllItems_(promo.bonus_merchants) ? PMC_ALL_ITEMS_LABEL : promo.bonus_merchants.join('、')) +
+      pmcEscapeHtml_(pmcMerchantsDisplay_(promo.bonus_merchants).join('、')) +
       '</span></dd></div>');
   }
   if (promo.promo_condition) {
