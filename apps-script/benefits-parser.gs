@@ -593,7 +593,7 @@ function extractNewPromos_(rawText, cardHint) {
             period_end: { type: 'STRING', description: 'YYYY/M/D' },
             gift_content: { type: 'STRING', description: '僅 promo_types 含首刷禮時填，寫官網實際品名' },
             bonus_rate_percent: { type: 'NUMBER', description: '加碼回饋率的原始數字，如 5' },
-            bonus_merchants: { type: 'ARRAY', items: { type: 'STRING' }, description: '加碼適用通路；所有消費填 *all_items' },
+            bonus_merchants: { type: 'ARRAY', items: { type: 'STRING' }, description: '加碼適用通路；一般消費都算（不限通路）填 *general；只加碼在本卡原本的回饋通路上填 *all_items；其餘逐一列通路名稱' },
             bonus_cap_amount: { type: 'NUMBER', description: '加碼「回饋金額」上限的原始數字，如 200。不要換算' },
             voucher_amount: { type: 'NUMBER', description: '定額點數數量，如 500' },
             voucher_usage: { type: 'STRING', description: '點數名稱，如 玉山e point' },

@@ -2106,11 +2106,16 @@ a {
 .promo-act-row.promo-sub-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  /* 2026-10-04 站長：「活動詳情 ▾」一律放在摘要下一行（跟主活動一樣），不放右側。
+     右欄只剩獎品圖（有圖才有），跨三排垂直置中。 */
   grid-template-areas:
-    "val  meta"
-    "sum  meta";
+    "val  thumb"
+    "sum  thumb"
+    "meta thumb";
   align-items: start;
-  column-gap: 12px;
+  /* 欄距由 .promo-sub-thumb 的 margin-left 給：沒圖的列右欄寬度是 0，
+     用 column-gap 的話會在右邊白白留一條 12px */
+  column-gap: 0;
   /* 上下兩排之間的呼吸：2px 太擠，獎品名（17px）與摘要（12.5px）會黏成一團
      （站長 2026-09-22）。6px 之後兩排各自成段，但仍明顯比列與列之間的分隔近，
      讀得出「這兩排是同一檔」。 */
@@ -2191,10 +2196,13 @@ a {
   -webkit-line-clamp: none;
   overflow: visible;
 }
-/* 獎品圖：掛在右側、「詳情」的左邊，高度＝上下兩排文字的高度（站長 2026-09-21 指定）。
+/* 獎品圖：掛在整列右側、跨三排垂直置中（站長 2026-09-21 指定掛右側）。
    點它放大看原圖（promos.js 的 setupGiftLightbox 會 stopPropagation，不會連帶展開詳情）。
-   同一組只要有一列有圖，沒圖的列就補 .is-empty 等寬空位，「詳情」才對得齊。 */
+   2026-10-04「活動詳情」移到摘要下一行後，右側沒有要對齊的東西，沒圖的列不再補空位。 */
 .promo-sub-thumb {
+  grid-area: thumb;
+  align-self: center;
+  margin-left: 12px;
   flex: none;
   width: 42px;
   height: 42px;
@@ -2205,46 +2213,38 @@ a {
   display: block;
 }
 .promo-sub-thumb--gift { cursor: zoom-in; }
-.promo-sub-thumb.is-empty { border-color: transparent; background: none; }
 .promo-sub-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-/* meta 跨兩排、垂直置中：獎品圖與「詳情」的位置因此完全不受文字行數影響
-   ——展開收合都不動（2026-09-21 的「點開會跑位」就是為了根治這件事）。 */
+/* 「活動詳情 ▾」：摘要下一行、靠左，字級／顏色／箭頭跟主活動的 .promo-act-more 同一款
+   （2026-10-04 起；之前在右側、縮成「詳情」兩個字）。meta 文字（回饋加碼的「最多可拿…」、
+   定額回饋的「回饋類型」）只出現在展開後的詳情裡。 */
 .promo-sub-meta {
   grid-area: meta;
-  align-self: center;
+  justify-self: start;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--pmc-muted);
+  gap: 4px;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pmc-blue-deep);
   white-space: nowrap;
 }
-/* 附屬列的倒數徽章要壓小：它沿用主活動那顆 0.8rem 的樣式時，光徽章就佔掉
-   meta 的一半以上（2026-09-21 實測）。 */
-.promo-sub-meta .promo-ending-badge {
+/* 附屬列的倒數徽章（在上排值的後面）要壓小：沿用主活動那顆 0.8rem 的樣式會比
+   17px 的值還搶眼（2026-09-21 實測）。align-self 置中：上排是 baseline 對齊，
+   徽章的 pill 對 baseline 會往上飄。 */
+.promo-sub-head .promo-ending-badge {
   flex: none;
+  align-self: center;
   margin: 0;
   font-size: 10px;
   padding: 0 6px;
   letter-spacing: 0;
 }
-/* 收合那行的右側固定是「詳情 ▾」（兩個寬度都是；主活動那顆維持全稱「活動詳情 ▾」，
-   附屬列的位置窄、縮成兩個字）。meta 文字（回饋加碼的「最多可拿…」、定額回饋的
-   「回饋類型」）只出現在展開後的詳情裡。 */
-.promo-sub-more { color: var(--pmc-blue-deep); font-weight: 700; }
 .promo-sub-summary {
   margin: 0 0 10px;
   font-size: 13px;
   line-height: 1.6;
   color: var(--pmc-ink);
-}
-/* 收合箭頭比內文的大一階（站長 2026-09-21：箭頭加大一些） */
-.promo-sub-meta .promo-chevron {
-  flex: none;
-  border-left-width: 5px;
-  border-right-width: 5px;
-  border-top-width: 7px;
-  color: #94a3b8;
 }
 /* 展開只換底色，**不換排版**。
    ⚠️ 這裡曾經有一條 [aria-expanded="true"] { align-items: flex-start } 外加給金額欄／
@@ -2272,7 +2272,6 @@ a {
         手機寬度本來就吃緊，站長選擇把空間讓給文字。
         （這裡原本還有一條 column-gap: 10px 覆寫 base 的 12px，2026-09-21 實測
          390px 下列高／摘要行數／溢出數全部相同，等於沒作用，已移除。） */
-  .promo-sub-thumb.is-empty { display: none; }
 
   /* 2. 主活動的摘要未展開多顯示一行、展開後整段攤開。
         ⚠️ 附屬列的 .promo-sub-title 不在這裡——改成一列兩排（方案 B）之後，它的
@@ -2518,7 +2517,8 @@ a {
   .promo-feat-cond { font-size: 11px; }
 
   /* 桌機有滑鼠：整列可點就要有 hover 回饋（手機沒有 hover，不套） */
-  .promo-act-row:hover .promo-act-more { text-decoration: underline; }
+  .promo-act-row:hover .promo-act-more,
+  .promo-act-row:hover .promo-sub-more { text-decoration: underline; }
   .promo-card-stack .promo-act:hover { background: #fcfdff; }
 }
 
@@ -2972,8 +2972,27 @@ a {
 
 .pmc-pick-cta {
   align-self: stretch;
-  margin-top: auto;   /* 推到卡片底部：各卡內容長短不一，按鈕仍對齊同一條線 */
 }
+
+/* 次要動作列（站長 2026-10-04）：「活動詳情 ↓」＋「卡片特色」，排在申辦鈕正上方。
+   margin-top: auto 推到卡片底部：各卡內容長短不一，這一列和申辦鈕仍對齊同一條線。
+   長相沿用行李箱專區那組（文字連結＋小顆按鈕），層級低於「立即申辦」。 */
+.pmc-pick-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #f0f1f4;
+}
+.pmc-pick .pmc-pick-feat {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  border-radius: 10px;
+}
+
+/* 摘要最後 3 個字不拆行（生成器 pmcNoOrphanHtml_），最後一行不會只剩一個字 */
+.pmc-nobr { white-space: nowrap; }
 
 /* ---- 行李箱專區（站長 2026-09-23 第三輪）----
    整區是一個淡藍灰底的獨立區塊，裡面一檔一張白卡（桌機兩欄、手機一欄）。
@@ -3349,4 +3368,14 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .pmc-flash { animation: none; }
   .pmc-toast { transition: none; }
+}
+
+/* 搜尋命中字詞（promos.js syncSearchHighlights，2026-10-04）：
+   與主站卡片詳情頁的 mark.cashback-search-hl 同一款琥珀底＋深色字 */
+mark.promos-search-hl {
+  background: #fef08a;
+  color: #78350f;
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 3px;
 }

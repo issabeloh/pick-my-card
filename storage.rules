@@ -7,6 +7,7 @@ rules_version = '2';
 // 改完先跑模擬器測試 tools/firestore-rules-test.js（同一支也測 Storage，用法見檔頭）。
 // ⚠️ firestore.rules 的封鎖名單（notBlocked）有變動時，這裡要同步。
 //
+// 網站讀取：promo-images/（新戶活動圖，公開讀取，見下方）
 // 網站唯一的上傳：意見回報附圖（js/quick-options-misc.js，需登入）
 //   路徑 feedback/<uid>_<台灣日期 20261003>_<今天第幾則 1-5>_<第幾張 0-2>.jpg，前端壓成 JPEG、2MB 以下
 //   日期必須是今天、不能覆蓋 → 每帳號每天最多 15 張（5 則 × 3 張），與 firestore.rules 的回報額度一致
@@ -41,6 +42,15 @@ service firebase.storage {
       allow read: if request.auth != null && notBlocked()
                   && fileName.matches(request.auth.uid + '_.*[.]jpg');
       allow update, delete: if false;
+    }
+
+    // 新戶活動圖（promos.html、首頁卡片等用公開網址 ...?alt=media 直接載入，不登入、不帶 token）
+    // → 任何人都能讀；網站不能寫（上傳由站長在 console／Apps Script 以管理員權限進行，不受規則限制）。
+    // ⚠️ 2026-10-04 教訓：新增或改寫 Storage 規則前，先查網站會讀哪些 Storage 資料夾
+    //    （cards.data、HTML 裡的 firebasestorage 網址），漏掉的資料夾會被下面的「一律拒絕」擋掉。
+    match /promo-images/{fileName} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // 其他一律拒絕

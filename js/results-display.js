@@ -555,6 +555,7 @@ function expandSearchTerm(term) {
 // Returns true for *all_items if the card has any cashbackRate item matching the search.
 function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     if (!promo.bonus_merchants) return false;
+    const isGeneral = isGeneralSpendingMarker(promo.bonus_merchants);
 
     // Build the list of search terms (lowercased + fuzzy variants)
     const rawTerms = [];
@@ -566,6 +567,8 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     if (rawTerms.length === 0) return false;
     const terms = rawTerms.flatMap(expandSearchTerm);
     if (terms.length === 0) return false;
+    // *general：一般消費都算，有搜尋就符合
+    if (isGeneral) return true;
 
     // Resolve actual merchants list (handles *all_items)
     const merchants = expandPromoMerchants(promo, card);
@@ -706,11 +709,13 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
                 ? quickKeywords
                 : [merchantValue || ''];
             const expandedTerms = rawTerms.flatMap(expandSearchTerm);
-            const matchedMerchants = expandPromoMerchants(promo, card).filter(m => {
-                const ml = String(m).toLowerCase();
-                const mlVariants = expandSearchTerm(ml);
-                return expandedTerms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
-            });
+            const matchedMerchants = isGeneralSpendingMarker(promo.bonus_merchants)
+                ? [GENERAL_SPENDING_LABEL]
+                : expandPromoMerchants(promo, card).filter(m => {
+                    const ml = String(m).toLowerCase();
+                    const mlVariants = expandSearchTerm(ml);
+                    return expandedTerms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
+                });
 
             const el = createCardholderPromoElement(card, promo, rows, matchedMerchants, { amount });
             fragment.appendChild(el);
@@ -1135,10 +1140,12 @@ function renderCardDetailPromos(card) {
         const rows = buildPromoDetailRows(promo, card, amount, bonusApplies);
         if (rows.length === 0) return;
 
-        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items)
+        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items, "一般消費皆適用" for *general)
         let merchantList = [];
         if (promo.bonus_merchants) {
-            if (isAllItemsMarker(promo.bonus_merchants)) {
+            if (isGeneralSpendingMarker(promo.bonus_merchants)) {
+                merchantList = [GENERAL_SPENDING_LABEL];
+            } else if (isAllItemsMarker(promo.bonus_merchants)) {
                 merchantList = ['本卡所有指定通路'];
             } else {
                 merchantList = expandPromoMerchants(promo, card);
