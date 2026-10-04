@@ -6,6 +6,7 @@
  * callGemini_() / getCardsSheet_() / getCardIds_()，本檔不重複定義那些。
  *
  * 用途：解析一張「全新卡片」的官網權益頁 → 產出可貼進 Cards Data 的資料。
+ *   另一個入口 parseCardActivities：既有卡片的活動（站長挑好貼上）→ 比對現有槽位，見檔案後段。
  *   AI 只抽事實欄位＋語意旗標；程式算 cap、產出安全 cashbackModel、生成固定槽位、鋪版面。
  *
  * ⚠️ cashbackModel 的分界：
@@ -36,16 +37,12 @@ const CARD_PARSER_CONFIG = {
   maxRowsPerRun: 5,      // 一次最多解析幾列（Apps Script 單次執行 6 分鐘上限；剩下的再按一次選單接著跑）
   statusCol: 5,          // 輸入分頁的「狀態」欄＝E 欄（程式回填「已解析…」／「失敗：…」）
 
-  // ── 舊卡活動更新（2026-08-16 新增，為年中/年底大批活動更新做的）──────────────
-  updateReviewSheet: '4-待審核（活動更新）',
-  // 「2-變動通知」上的專屬狀態欄。**刻意不共用既有的「狀態」欄**——那一欄是新戶活動解析
-  // 在用的，兩條流程搶同一格會互相把對方的列標成已處理。欄名對位（同 2-變動通知 的其他欄），
-  // 位置隨便擺。
-  updateStatusHeader: '組別解析',
-  updateMaxRowsPerRun: 3,   // 一列＝一次 4 萬字的 AI 呼叫，比新卡更重，一次少跑幾列
-  // 第一次啟用時，分頁裡可能already 躺著幾百列歷史。只撿最近這麼多天的，避免第一次按下去
-  // 就把整部歷史重跑一遍（想處理更舊的列，把該列的「組別解析」清空並自行調大這個值）
-  updateMaxAgeDays: 60
+  // ── 既有卡片的活動（2026-10-04 改版：手動貼上取代「2-變動通知整頁解析」）──────────
+  // 站長監控後會自己挑「哪幾檔活動值得寫」，不是整頁都要。所以輸入改成手動貼上：
+  // 一列＝一張既有卡的一檔（或幾檔）活動原文。整頁解析的舊入口已移除，見 README。
+  activityInputSheet: '3-貼上原文（卡片活動）',
+  activityStatusCol: 4,     // D 欄「狀態」（程式回填，清空該格可重跑）
+  updateReviewSheet: '4-待審核（活動更新）'
 };
 
 const RESERVED_SLOTS = [14, 21, 22];  // 廣告/國內/國外固定槽位，一般組別編號要跳過
@@ -207,8 +204,13 @@ function ensureCardInputStatusHeader_(input) {
 }
 
 /************** 核心：呼叫 Gemini 抽取新卡資料 **************/
-function extractCard_(rawText, idHint, generalText) {
-  const systemPrompt = [
+// opts.activityOnly＝「既有卡片的活動」模式（parseCardActivities 用）：
+//   輸入只是站長挑出來的一兩檔活動，不是整張卡的權益頁 → 不抽 basic，改抽 bonus_updates
+//   （一般國內/國外加碼這類「改基本欄位、不佔槽位」的活動）。groups 的規則完全共用，
+//   所以新卡那邊每修一次 prompt，這邊同時受惠。
+function extractCard_(rawText, idHint, generalText, opts) {
+  const activityOnly = !!(opts && opts.activityOnly);
+  let promptLines = [
     '你是台灣信用卡權益的資料分析師。從官網「卡片權益頁」文字中，抽取這張卡的基本資料與所有「一般回饋組別」，輸出結構化 JSON。',
     '',
     '【總則】',
@@ -335,7 +337,9 @@ function extractCard_(rawText, idHint, generalText) {
     readKeywordAnchors_(),   // 【關鍵字對應】——從「設定-關鍵字對應」分頁動態載入，站長可自行維護
     '',
     '【每個物件都要】evidence（見總則 D）；needs_review：不確定就 true 並把問題寫進 review_question。'
-  ].join('\n');
+  ];
+  if (activityOnly) promptLines = toActivityPrompt_(promptLines);
+  const systemPrompt = promptLines.join('\n');
 
   const groupItem = {
     type: 'OBJECT',
@@ -415,6 +419,13 @@ function extractCard_(rawText, idHint, generalText) {
     required: ['basic', 'groups']
   };
 
+  if (activityOnly) {
+    const result = callGemini_(systemPrompt,
+      '以下是卡片「' + (idHint || '') + '」的活動原文（站長挑出來要更新的部分）：\n\n' + rawText,
+      activitySchema_(groupItem));
+    return result || { groups: [] };
+  }
+
   let userText = '以下是信用卡權益頁文字：\n\n' + rawText;
   if (generalText && generalText.trim()) {
     userText += '\n\n【一般消費/排除說明頁補充（判斷 general_excludes_ads 用）】\n' + generalText;
@@ -422,6 +433,58 @@ function extractCard_(rawText, idHint, generalText) {
   // callGemini_ 定義在 benefits-parser.gs（同專案）
   const result = callGemini_(systemPrompt, userText, schema);
   return result || { basic: {}, groups: [] };
+}
+
+// 活動模式的 prompt：拿掉兩段只跟 basic 有關的規則（留著只會誘導 AI 去填不存在的欄位），
+// 在最前面加上這次任務的說明。用段落標題切，不用行號——新卡 prompt 改了也不會切歪。
+function toActivityPrompt_(lines) {
+  const cut = function (arr, fromTitle, toTitle) {
+    const a = arr.indexOf(fromTitle), b = arr.indexOf(toTitle);
+    if (a < 0 || b < 0 || b <= a) return arr;   // 找不到段落標題就不切（寧可多給，不要切壞）
+    return arr.slice(0, a).concat(arr.slice(b));
+  };
+  let out = cut(lines, '【basic 基本資料】', '【items 只放實際商家名，不放分類標題】');
+  out = cut(out, '【三個最常寫錯的欄位：basicConditions／annualFee／feeWaiver】', '【groups 每組欄位】');
+  return [
+    '【這次的任務：既有卡片的活動更新——優先於下面所有規則】',
+    '・這段文字是站長從一張【已上線卡片】的官網**親手挑出來**的一檔或幾檔活動，不是整張卡的權益頁。',
+    '  只抽這段文字裡寫到的活動；官網上其他活動不要補、不要猜。basic 基本資料這次不用抽。',
+    '・特定通路/特定分類的加碼 → 照下面規則放進 groups。',
+    '・「不限通路」的一般國內消費加碼、一般國外消費加碼（含它們的率、回饋上限、條件、期間）',
+    '  → 【不要】放進 groups，改填 bonus_updates 對應欄位（程式會拿去跟 Cards Data 現值比對）。',
+    '・新戶限定（規則 H）與非百分比回饋（規則 I）照樣不放。整段都屬於這兩種時，groups 回空陣列，',
+    '  並在 note 用一句話說明原因（例：「整段是新戶活動，請改用新戶活動解析」）。',
+    ''
+  ].concat(out);
+}
+
+function activitySchema_(groupItem) {
+  return {
+    type: 'OBJECT',
+    properties: {
+      groups: { type: 'ARRAY', items: groupItem },
+      bonus_updates: {
+        type: 'OBJECT',
+        description: '只在活動改的是「不限通路」的一般國內/國外加碼時才填；沒有就整個省略',
+        properties: {
+          overseasCashback: { type: 'NUMBER', description: '基本海外回饋率，百分比數字' },
+          overseasBonusRate: { type: 'NUMBER', description: '海外加碼率，百分比數字' },
+          overseasBonusCap_reward: { type: 'NUMBER', description: '海外加碼的回饋金額上限' },
+          overseasBonusConditions: { type: 'STRING' },
+          overseasBonusPeriod_start: { type: 'STRING', description: 'YYYY/M/D' },
+          overseasBonusPeriod_end: { type: 'STRING', description: 'YYYY/M/D' },
+          domesticBonusRate: { type: 'NUMBER', description: '國內加碼率，百分比數字' },
+          domesticBonusCap_reward: { type: 'NUMBER', description: '國內加碼的回饋金額上限' },
+          domesticBonusConditions: { type: 'STRING' },
+          domesticBonusPeriod_start: { type: 'STRING', description: 'YYYY/M/D' },
+          domesticBonusPeriod_end: { type: 'STRING', description: 'YYYY/M/D' },
+          evidence: { type: 'STRING' }
+        }
+      },
+      note: { type: 'STRING', description: 'groups 是空的時候，一句話說明為什麼' }
+    },
+    required: ['groups']
+  };
 }
 
 /************** 小工具 **************/
@@ -896,157 +959,120 @@ function parseAdVerdict_(text) {
   return { verdict: verdict, basis: basis };
 }
 
-/************** 舊卡活動更新：2-變動通知 → 4-待審核（活動更新）（2026-08-16 新增） **************/
-// 為什麼要有：年中／年底銀行會大批更新既有卡片的活動。全站 31 張卡、266 個回饋槽位，
-// 靠人一頁一頁讀官網再自己拆槽位不可行。
+/************** 既有卡片的活動：3-貼上原文（卡片活動）→ 4-待審核（活動更新） **************/
+// 為什麼要有：年中／年底銀行會大批更新既有卡片的活動，新戶和新卡都有解析器，唯獨
+// 「已上線卡片的一般活動」要自己讀官網、自己拆成 rate_N。
 //
-// 這支做的事，一句話：**把「你讀官網、自己拆成槽位」換成「程式先拆好、標上疑似對應的槽位，
-// 你只做確認」**。
+// 流程（閉環）：
+//   ① 2-變動通知 看到值得寫的活動 → 把**那一檔活動的原文**貼進 3-貼上原文（卡片活動）A 欄、
+//      card_id 填 B 欄（只挑你要的，不必整頁）
+//   ② 選單「解析卡片活動」→ 4-待審核（活動更新）：每組標好「對應既有 rate_N」或「新增→建議 rate_N」
+//   ③ 你確認後把 rate → hideInDisplay 整段貼進 Cards Data 對應槽位，核准欄打 V（＝已貼完）
+//   ④ 回 2-變動通知 照舊用「公開／封存／刪除」收尾
 //
-// ⚠️ 它**只讀不寫** Cards Data。產出全部進「4-待審核（活動更新）」，正式表還是你自己貼。
-//    （一鍵寫回是規劃書 §3.3／§3.4 的下一階段，要等這支跑過一輪真實更新、累積夠多配對案例
-//     才有依據設計；現在憑空做比對規則一定猜錯。）
+// ⚠️ 2026-10-04 前的版本是「直接吃 2-變動通知 的整頁新文字」（parseInboxCardGroups）。
+//    已移除：站長會自己挑活動，整頁解析會把不打算寫的活動全列出來，還會把「這次沒貼到的
+//    既有槽位」誤報成疑似消失。改成貼上之後，貼什麼就只解析什麼。
 //
-// 跟「解析新卡」的差別只有兩點：
-//   1. 輸入來自 2-變動通知 的「新文字」欄（監控存的整頁新版全文），不是手動貼上分頁
-//   2. 多一個「疑似對應槽位」欄——拿解析出的組別去比對這張卡在 Cards Data 現有的槽位
-// 抽取邏輯完全共用 extractCard_，所以新卡那邊每修一次 prompt，這邊同時受惠。
+// ⚠️ 它**只讀不寫** Cards Data。產出全部進 4-待審核（活動更新），正式表還是你自己貼。
 const GROUP_UPDATE_HEADER = GROUP_REVIEW_HEADER.concat(['疑似對應槽位']);
 
-function parseInboxCardGroups() {
+function parseCardActivities() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const ui = SpreadsheetApp.getUi();
-  const inbox = ss.getSheetByName(PARSER_CONFIG.inboxSheet);
-  if (!inbox) {
-    ui.alert('解析活動更新', '找不到「' + PARSER_CONFIG.inboxSheet + '」——先讓監控跑出結果。', ui.ButtonSet.OK);
+  const C = CARD_PARSER_CONFIG;
+  let input = ss.getSheetByName(C.activityInputSheet);
+  if (!input) {
+    input = ss.insertSheet(C.activityInputSheet);
+    input.getRange(1, 1, 1, 4).setValues([[
+      '活動原文（只貼你要寫的那幾檔；一列＝一張卡）',
+      'card_id（必填，要是 Cards Data 已有的卡）',
+      '來源網址（選填）',
+      '狀態（程式回填，清空該格可重跑該列）'
+    ]]);
+    input.setFrozenRows(1);
+    ui.alert('已建立「' + C.activityInputSheet + '」分頁。\n\n' +
+      'A 欄貼活動原文、B 欄填 card_id，再按一次選單。');
     return;
   }
 
-  const cStatus = ensureInboxUpdateColumn_(inbox);
-  const headers = readInboxHeaders_(inbox);       // watchlist-monitor.gs
-  const cTime = headers.indexOf('日期時間');
-  const cCard = headers.indexOf('card_id');
-  const cUrl = headers.indexOf('網址');
-  const cNew = headers.indexOf('新文字');
-  const cMaterial = headers.indexOf('實質變動');
-  if (cNew < 0 || cCard < 0) {
-    ui.alert('解析活動更新', '「' + PARSER_CONFIG.inboxSheet + '」缺少「新文字」或「card_id」欄。', ui.ButtonSet.OK);
-    return;
-  }
+  const lastRow = input.getLastRow();
+  const rows = lastRow < 2 ? [] : input.getRange(2, 1, lastRow - 1, C.activityStatusCol).getValues();
 
   let knownIds;
   try {
     knownIds = getCardIds_();
   } catch (e) {
-    ui.alert('解析活動更新', '讀不到資料檔的卡片 id，無法判斷哪些列是既有卡：\n' + e.message, ui.ButtonSet.OK);
+    ui.alert('解析卡片活動', '讀不到資料檔的卡片 id：\n' + e.message, ui.ButtonSet.OK);
     return;
   }
 
-  // ⚠️ 逐欄讀，不用 getDataRange()：這張表的「舊文字／新文字」各上限 4 萬字（同 publishChangelog 的理由）
-  const n = Math.max(inbox.getLastRow() - 1, 0);
-  if (!n) { ui.alert('解析活動更新', '「' + PARSER_CONFIG.inboxSheet + '」還沒有資料列。', ui.ButtonSet.OK); return; }
-  const readCol = function (idx) { return idx < 0 ? null : inbox.getRange(2, idx + 1, n, 1).getValues(); };
-  const colStatus = readCol(cStatus);
-  const colCard = readCol(cCard);
-  const colTime = readCol(cTime);
-  const colMaterial = readCol(cMaterial);
-
-  const cutoff = new Date().getTime() - CARD_PARSER_CONFIG.updateMaxAgeDays * 86400000;
-  const todo = [];
-  let tooOld = 0, notMaterial = 0, multiCard = 0, notOurCard = 0;
-
-  for (let i = 0; i < n; i++) {
-    if (String(colStatus[i][0] || '').trim()) continue;          // 已處理過（清空該格可重跑）
-    // 非實質變動的列不值得花一次 4 萬字的 AI 呼叫（純版面/文案本來就不該動槽位）
-    if (colMaterial && String(colMaterial[i][0]).trim() === '否') { notMaterial++; continue; }
-    if (colTime) {
-      const t = colTime[i][0] instanceof Date ? colTime[i][0] : new Date(colTime[i][0]);
-      if (t && !isNaN(t.getTime()) && t.getTime() < cutoff) { tooOld++; continue; }
-    }
-    const ids = splitList_(colCard[i][0]).filter(function (id) { return knownIds.indexOf(id) >= 0; });
-    if (!ids.length) { notOurCard++; continue; }
-    // 多卡頁（銀行公告頁）一次涵蓋好幾張卡，解析器沒辦法判斷哪一段屬於哪張卡——
-    // 硬跑會把整頁活動全掛到第一張卡上。這種列請走「3-貼上原文（新卡）」手動處理。
-    if (ids.length > 1) { multiCard++; continue; }
-    todo.push({ row: i + 2, cardId: ids[0] });
-  }
-
-  if (!todo.length) {
-    ui.alert('解析活動更新',
-      '沒有可解析的列。篩選條件：「' + CARD_PARSER_CONFIG.updateStatusHeader + '」欄是空的、' +
-      '「實質變動」不是「否」、日期在 ' + CARD_PARSER_CONFIG.updateMaxAgeDays + ' 天內、' +
-      'card_id 剛好是一張既有卡。\n\n' +
-      '這次略過：' + notMaterial + ' 列非實質變動、' + tooOld + ' 列太舊、' +
-      multiCard + ' 列是多卡頁（請走「3-貼上原文（新卡）」）、' + notOurCard + ' 列對不到既有卡。',
-      ui.ButtonSet.OK);
-    return;
-  }
-
-  const batch = todo.slice(0, CARD_PARSER_CONFIG.updateMaxRowsPerRun);
+  let done = 0, skipped = 0, remaining = 0, textRows = 0;
   const results = [], failures = [];
-  let missingTotal = 0;
+  const setStatus = function (rowNum, v) { input.getRange(rowNum, C.activityStatusCol).setValue(v); };
 
-  batch.forEach(function (job) {
-    const text = String(inbox.getRange(job.row, cNew + 1).getValue() || '')
-      .slice(0, CARD_PARSER_CONFIG.maxTextChars);
-    const url = cUrl >= 0 ? String(inbox.getRange(job.row, cUrl + 1).getValue() || '') : '';
-    if (!text.trim()) {
-      inbox.getRange(job.row, cStatus + 1).setValue('略過：新文字是空的');
-      return;
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = i + 2;
+    const text = String(rows[i][0] || '').slice(0, C.maxTextChars);
+    if (!text.trim()) continue;
+    textRows++;
+    if (String(rows[i][C.activityStatusCol - 1] || '').trim().indexOf('已解析') === 0) { skipped++; continue; }
+    if (done >= C.maxRowsPerRun) { remaining++; continue; }
+
+    const cardId = String(rows[i][1] || '').trim();
+    const url = String(rows[i][2] || '').trim();
+    // card_id 是必填：這條流程的價值就在「拿去跟這張卡現有的槽位比對」，沒有它就只是新卡解析
+    if (!cardId) {
+      setStatus(rowNum, '失敗：B 欄沒填 card_id');
+      failures.push('列' + rowNum + '：B 欄沒填 card_id'); continue;
     }
+    if (knownIds.indexOf(cardId) < 0) {
+      const msg = 'card_id「' + cardId + '」不在 Cards Data（打錯字？新卡請改用「解析新卡」）';
+      setStatus(rowNum, '失敗：' + msg);
+      failures.push('列' + rowNum + '：' + msg); continue;
+    }
+
     try {
-      const parsed = extractCard_(text, job.cardId, '');
-      const groups = (parsed.groups || []).filter(function (g) { return num_(g.rate) > 0; });
-      const outcome = writeGroupUpdateReview_(job.cardId, groups, url);
-      missingTotal += outcome.missing;
-      inbox.getRange(job.row, cStatus + 1).setValue(
-        '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') +
-        '｜' + outcome.written + ' 組');
-      results.push('列' + job.row + '　' + job.cardId + '：解析 ' + outcome.written + ' 組（' +
-        outcome.matched + ' 組疑似對應既有槽位、' + (outcome.written - outcome.matched) + ' 組疑似新增）' +
-        (outcome.missing ? '、⚠️ ' + outcome.missing + ' 個既有槽位在新頁面找不到' : ''));
+      const parsed = extractCard_(text, cardId, '', { activityOnly: true });
+      const all = parsed.groups || [];
+      const groups = all.filter(function (g) { return num_(g.rate) > 0; });
+      const out = writeGroupUpdateReview_(cardId, groups, url, parsed.bonus_updates);
+      const parts = [];
+      if (out.matched) parts.push('對應既有 ' + out.matched);
+      if (out.added) parts.push('新增 ' + out.added);
+      if (out.bonus) parts.push('基本欄位 ' + out.bonus);
+      const summary = parts.length ? parts.join('、') : ('0 組' + (parsed.note ? '：' + parsed.note : ''));
+      setStatus(rowNum, '已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + summary);
+      results.push('列' + rowNum + '　' + cardId + '：' + summary +
+        (all.length > groups.length ? '（略過 ' + (all.length - groups.length) + ' 組非百分比回饋）' : ''));
+      done++;
     } catch (e) {
-      inbox.getRange(job.row, cStatus + 1).setValue('失敗：' + e.message);
-      failures.push('列' + job.row + '：' + e.message);
+      setStatus(rowNum, '失敗：' + e.message);
+      failures.push('列' + rowNum + '：' + e.message);
     }
-  });
-
-  const rest = todo.length - batch.length;
-  let msg = '解析了 ' + batch.length + ' 列，結果寫進「' + CARD_PARSER_CONFIG.updateReviewSheet + '」\n\n' +
-    (results.length ? results.join('\n') + '\n\n' : '');
-  if (missingTotal) {
-    msg += '⚠️ 有 ' + missingTotal + ' 個既有槽位在新頁面找不到（表裡標「疑似消失」）。\n' +
-      '   **先別急著刪**——官網改寫、搬移段落都會造成這種結果，不一定是活動真的下架。\n\n';
   }
-  if (rest) msg += '⏳ 還有 ' + rest + ' 列符合條件沒跑（單次上限 ' + CARD_PARSER_CONFIG.updateMaxRowsPerRun +
-    ' 列），再按一次選單接著跑。\n';
-  if (failures.length) msg += '\n❌ 失敗（狀態欄已記錄，清空該格可重試）：\n' + failures.join('\n') + '\n';
-  msg += '\n這支不會碰 Cards Data，確認後照舊由你複製貼上。';
 
-  ss.toast('解析 ' + batch.length + ' 列' + (rest ? '，還剩 ' + rest + ' 列' : ''), '活動更新解析完成', 8);
+  if (!textRows) {
+    ui.alert('解析卡片活動', '「' + C.activityInputSheet + '」A 欄沒有文字——把活動原文貼進 A2、card_id 填 B2。', ui.ButtonSet.OK);
+    return;
+  }
+  let msg = '解析了 ' + done + ' 列 → 「' + C.updateReviewSheet + '」\n\n' +
+    (results.length ? results.join('\n') + '\n\n' : '');
+  if (skipped) msg += '↷ 跳過 ' + skipped + ' 列已解析過的（要重跑就清空 D 欄）\n';
+  if (remaining) msg += '⏳ 還有 ' + remaining + ' 列，再按一次選單接著跑\n';
+  if (failures.length) msg += '\n❌ 失敗（D 欄已記錄，改好再按一次）：\n' + failures.join('\n') + '\n';
+  msg += '\n下一步：確認後把 rate → hideInDisplay 貼進 Cards Data，核准欄打 V。';
+  ss.toast('解析 ' + done + ' 列', '卡片活動解析完成', 8);
   ui.alert(msg);
-}
-
-// 「2-變動通知」補上本流程專屬的狀態欄，回傳它的欄索引（0-based）。
-// 補在最右邊、照欄名找欄——2-變動通知 的寫入端（appendToInbox_）也是照欄名對位，加欄安全。
-function ensureInboxUpdateColumn_(inbox) {
-  const name = CARD_PARSER_CONFIG.updateStatusHeader;
-  let headers = readInboxHeaders_(inbox);
-  const at = headers.indexOf(name);
-  if (at >= 0) return at;
-  let end = 0;
-  headers.forEach(function (h, i) { if (h) end = i + 1; });
-  if (inbox.getMaxColumns() < end + 1) inbox.insertColumnsAfter(inbox.getMaxColumns(), 1);
-  inbox.getRange(1, end + 1).setValue(name);
-  return end;
 }
 
 // 讀某張卡在 Cards Data 的現況（唯讀）。
 // Cards Data 是「一列一張卡、欄位橫向展開」：rate_1/items_1/cap_1/... rate_22/...
-// 回傳 { slots: [{ n, rate, cap, items:[], category, period }], basic: {海外/國內加碼欄位} }
+// 回傳 { slots: [{ n, rate, cap, items:[], category, period }], basic: {BONUS_FIELDS 的現值} }
 //   ・slots 只收 rate_N 或 items_N 有值的槽
-//   ・basic 是拿來餵 deriveGroupModel_ 的——沒有它，cashbackModel 的候選提示會對著一張
-//     「假設沒有海外設定」的卡亂講（舊卡明明有 overseasCashback 卻被說成「通常就是 rate」）
+//   ・basic 兩個用途：餵 deriveGroupModel_，以及 bonus_updates 的「現值 → 新值」比對。
+//     （餵 deriveGroupModel_ 的理由：沒有它，cashbackModel 的候選提示會對著一張
+//     「假設沒有海外設定」的卡亂講——舊卡明明有 overseasCashback 卻被說成「通常就是 rate」）
 function readCardSlots_(cardId) {
   const sheet = getCardsSheet_();
   const data = sheet.getDataRange().getValues();
@@ -1077,14 +1103,9 @@ function readCardSlots_(cardId) {
       period: String(get('period_' + k) || '').trim()
     });
   }
-  return {
-    slots: slots,
-    basic: {
-      overseasCashback: get('overseasCashback'),
-      overseasBonusRate: get('overseasBonusRate'),
-      domesticBonusRate: get('domesticBonusRate')
-    }
-  };
+  const basic = {};
+  BONUS_FIELDS.forEach(function (f) { basic[f] = get(f); });
+  return { slots: slots, basic: basic };
 }
 
 // 通路名正規化：比對用，不改寫任何資料。去空白、轉小寫、拿掉國家前綴與常見贅詞，
@@ -1129,42 +1150,78 @@ function matchExistingSlot_(group, slots, usedSlots) {
   return { slot: best.slot, why: why };
 }
 
-// 寫「4-待審核（活動更新）」。回傳 { written, matched, missing }
-function writeGroupUpdateReview_(cardId, groups, url) {
+// 一般國內/國外加碼活動改的是 Cards Data 的這幾個「基本欄位」，不是 rate_N 槽位
+const BONUS_FIELDS = [
+  'overseasCashback', 'overseasBonusRate', 'overseasBonusCap', 'overseasBonusConditions', 'overseasBonusPeriod',
+  'domesticBonusRate', 'domesticBonusCap', 'domesticBonusConditions', 'domesticBonusPeriod'
+];
+
+// 寫「4-待審核（活動更新）」。回傳 { written, matched, added, bonus }
+//   ・對得上既有槽位 → 建議槽位N＝那個槽，提示欄寫率有沒有變
+//   ・對不上 → 新增，建議槽位N＝這張卡**第一個空著的槽**（跳過 14/21/22 與這次已分配的）
+//   ・bonus_updates → 每個有值的欄位一列，提示欄寫「現值 → 新值」
+// ⚠️ 不再列「疑似消失」：輸入是站長挑過的片段，沒貼到的槽位本來就不會出現，列出來全是誤報。
+function writeGroupUpdateReview_(cardId, groups, url, bonus) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(CARD_PARSER_CONFIG.updateReviewSheet);
   if (!sheet) {
     sheet = ss.insertSheet(CARD_PARSER_CONFIG.updateReviewSheet);
     sheet.appendRow(GROUP_UPDATE_HEADER);
     sheet.setFrozenRows(1);
+  } else {
+    // 照位置 appendRow 的表：表頭跟程式不一致就停（同 writeGroupReview_ 的理由——錯位的資料
+    // 看起來完全正常，貼進 Cards Data 才會發現）
+    const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
+      .map(function (h) { return String(h).trim(); })
+      .slice(0, GROUP_UPDATE_HEADER.length);
+    if (cur.join('|') !== GROUP_UPDATE_HEADER.join('|')) {
+      throw new Error('「' + CARD_PARSER_CONFIG.updateReviewSheet + '」的表頭是舊版，硬寫會整列錯位。' +
+        '把該分頁整個刪掉（暫存審核表，不影響正式資料）再跑一次，會自動重建。');
+    }
   }
 
-  let slots = [], cardBasic = {};
+  let slots = [], cardBasic = {}, slotsReadable = true;
   try {
     const cur = readCardSlots_(cardId);
     slots = cur.slots;
     cardBasic = cur.basic;
   } catch (e) {
     // 讀不到既有資料就退化成「只列解析結果、不給對應提示」——不該因此整張表不產出
-    slots = []; cardBasic = {};
+    slotsReadable = false;
   }
 
   fillTierMaxSpend_(groups);
   const now = new Date();
   const usedSlots = {};
-  let matched = 0;
+  const taken = {};   // 已經有東西的槽＋這次已分配給新增組的槽
+  slots.forEach(function (s) { taken[s.n] = true; });
+  const nextFreeSlot = function () {
+    let n = 1;
+    while (taken[n] || RESERVED_SLOTS.indexOf(n) >= 0) n++;
+    taken[n] = true;
+    return n;
+  };
+  let matched = 0, added = 0;
 
   groups.forEach(function (g) {
     const m = matchExistingSlot_(g, slots, usedSlots);
-    let hint;
+    let hint, slotN;
     if (m) {
       usedSlots[m.slot.n] = true;
       matched++;
+      slotN = m.slot.n;
       const rateChanged = (m.slot.rate != null && num_(g.rate) !== m.slot.rate);
-      hint = '疑似對應 rate_' + m.slot.n + '（' + m.why + '）' +
-        (rateChanged ? '　⚠️ 率變了：' + m.slot.rate + '% → ' + num_(g.rate) + '%' : '　率相同');
+      hint = '對應既有 rate_' + slotN + '（' + m.why + '）' +
+        (rateChanged ? '　⚠️ 率變了：' + m.slot.rate + '% → ' + num_(g.rate) + '%' : '　率相同') +
+        '——覆蓋該槽';
+    } else if (slotsReadable) {
+      added++;
+      slotN = nextFreeSlot();
+      hint = '新增——建議放 rate_' + slotN + '（這張卡第一個空著的槽）';
     } else {
-      hint = slots.length ? '疑似新增（既有槽位裡找不到對得上的）' : '（讀不到既有槽位，無法比對）';
+      added++;
+      slotN = '';
+      hint = '（讀不到 Cards Data 既有槽位，無法比對；槽位請自己挑）';
     }
 
     let cap = (g.cap_spend != null && g.cap_spend !== '') ? Math.round(num_(g.cap_spend))
@@ -1175,7 +1232,7 @@ function writeGroupUpdateReview_(cardId, groups, url) {
       cap = (cap === '' || cap == null) ? ceiling : Math.min(num_(cap), ceiling);
     }
     const d = deriveGroupModel_(g, cardBasic);   // 用這張卡的實際欄位給 model 候選，不要憑空猜
-    appendGroupUpdateRow_(sheet, now, cardId, (m ? m.slot.n : ''), g.group_kind || '', {
+    appendGroupUpdateRow_(sheet, now, cardId, slotN, g.group_kind || '', {
       structure: g.structure_note || '',
       rate: (g.rate != null ? g.rate : ''), model: d.model, modelNeedsHuman: d.modelNeedsHuman,
       cap: cap, minSpend: (g.min_spend != null ? g.min_spend : ''), maxSpend: (g.max_spend != null ? g.max_spend : ''),
@@ -1187,25 +1244,47 @@ function writeGroupUpdateReview_(cardId, groups, url) {
     }, hint);
   });
 
-  // 既有槽位沒被任何一組對上 → 可能下架，也可能只是官網改寫。獨立列出來讓人自己判斷。
-  // ⚠️ 固定槽位 14/21/22 是程式生成的模板（廣告/國內/國外），本來就不會出現在官網文字裡，
-  //    不算「消失」。
-  let missing = 0;
-  slots.forEach(function (s) {
-    if (usedSlots[s.n] || RESERVED_SLOTS.indexOf(s.n) >= 0) return;
-    missing++;
-    appendGroupUpdateRow_(sheet, now, cardId, s.n, '（既有槽位）', {
-      structure: '⚠️ 新頁面找不到這一組——可能下架，也可能只是官網改寫/搬移段落。**先別急著刪**，' +
-        '到官網搜一次這些通路名再決定',
-      rate: (s.rate != null ? s.rate : ''), model: '', modelNeedsHuman: false,
-      cap: s.cap, minSpend: '', maxSpend: '', items: s.items.join(','), category: s.category,
-      conditions: '', ps: '', pe: '', hide: '',
-      note: '程式列出的既有槽位，不是解析結果', needsReview: true,
-      reviewQ: '這一組還在嗎？', evidence: '（來自 Cards Data 現況）'
-    }, '疑似消失（既有 rate_' + s.n + '）');
-  });
+  const bonusCount = appendBonusUpdateRows_(sheet, now, cardId, bonus, cardBasic, slotsReadable);
+  return { written: groups.length, matched: matched, added: added, bonus: bonusCount };
+}
 
-  return { written: groups.length, matched: matched, missing: missing };
+// bonus_updates → 「改基本欄位」的列。這種列**不是槽位**：rate…hideInDisplay 留空，
+// 新值與現值寫在「回饋組成原文」「疑似對應槽位」，藍底跟槽位列區分，免得被整段複製過去。
+function appendBonusUpdateRows_(sheet, now, cardId, b, cur, curReadable) {
+  if (!b) return 0;
+  const pick = function (v) { return (v == null) ? '' : String(v).trim(); };
+  // cap 欄存的是「消費上限」：AI 只給回饋金額上限，程式換算（率沒在這次更新裡就用 Cards Data 現值）
+  const capFrom = function (reward, rate, curRate) {
+    if (b[reward] == null || b[reward] === '') return '';
+    return String(spendCapFromReward_(b[reward], (b[rate] != null && b[rate] !== '') ? b[rate] : curRate));
+  };
+  const values = {
+    overseasCashback: pick(b.overseasCashback),
+    overseasBonusRate: pick(b.overseasBonusRate),
+    overseasBonusCap: capFrom('overseasBonusCap_reward', 'overseasBonusRate', cur.overseasBonusRate),
+    overseasBonusConditions: normalizeConditions_(b.overseasBonusConditions),
+    overseasBonusPeriod: joinPeriod_(b.overseasBonusPeriod_start, b.overseasBonusPeriod_end),
+    domesticBonusRate: pick(b.domesticBonusRate),
+    domesticBonusCap: capFrom('domesticBonusCap_reward', 'domesticBonusRate', cur.domesticBonusRate),
+    domesticBonusConditions: normalizeConditions_(b.domesticBonusConditions),
+    domesticBonusPeriod: joinPeriod_(b.domesticBonusPeriod_start, b.domesticBonusPeriod_end)
+  };
+  let count = 0;
+  BONUS_FIELDS.forEach(function (f) {
+    const v = values[f];
+    if (v === '') return;
+    count++;
+    const old = curReadable ? pick(cur[f]) : null;
+    const hint = old === null ? '（讀不到現值）'
+      : old === v ? '同現值，不用改'
+      : '⚠️ 現值：' + (old || '（空）') + ' → 新值：' + v;
+    const row = ['', now, cardId, '', '基本欄位', f + ' = ' + v,
+      '', '', '', '', '', '', '', '', '', '', '', '',
+      '這列不是槽位：改 Cards Data 的「' + f + '」欄', '', '', b.evidence || '', hint];
+    sheet.appendRow(row);
+    sheet.getRange(sheet.getLastRow(), 1, 1, row.length).setBackground(old === v ? '#eeeeee' : '#dbeafe');
+  });
+  return count;
 }
 
 // 同 appendGroupRow_，多最後一欄「疑似對應槽位」
@@ -1217,8 +1296,7 @@ function appendGroupUpdateRow_(sheet, now, cardId, slotN, kind, f, hint) {
     f.items, f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || '', hint || ''];
   sheet.appendRow(row);
-  // 標色：疑似消失＝紅底（要人判斷是不是真的下架）；率變了或需手填＝黃底
-  const bg = /疑似消失/.test(hint || '') ? '#f8d7da'
-    : (/率變了/.test(hint || '') || f.needsReview || f.modelNeedsHuman) ? '#fff3cd' : null;
+  // 標色：率變了、AI 沒把握、cashbackModel 需手填 → 黃底
+  const bg = (/率變了/.test(hint || '') || f.needsReview || f.modelNeedsHuman) ? '#fff3cd' : null;
   if (bg) sheet.getRange(sheet.getLastRow(), 1, 1, row.length).setBackground(bg);
 }
