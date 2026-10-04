@@ -2022,6 +2022,29 @@ function pmcEscapeHtml_(s) {
     .replace(/'/g, '&#039;');
 }
 
+// 摘要的最後一行不要只剩一個字（站長 2026-10-04：「下一行只有 1 個字」不好看）。
+// 把最後 3 個字包成不換行的一段，瀏覽器要換行時就會連同前面的字一起帶下去，
+// 最後一行至少 3 個字。做在生成端而不是 promos.js：不必等 JS 跑完才重排，也不分瀏覽器
+// （CSS 的 text-wrap: pretty 只有部分瀏覽器支援）。太短的句子本來就排得下一行，不包。
+const PMC_NO_ORPHAN_TAIL = 3;
+function pmcNoOrphanHtml_(s) {
+  const chars = Array.from(String(s == null ? '' : s).trim());
+  if (chars.length <= PMC_NO_ORPHAN_TAIL * 2) return pmcEscapeHtml_(chars.join(''));
+  const cut = chars.length - PMC_NO_ORPHAN_TAIL;
+  return pmcEscapeHtml_(chars.slice(0, cut).join('')) +
+    '<span class="pmc-nobr">' + pmcEscapeHtml_(chars.slice(cut).join('')) + '</span>';
+}
+
+// bonus_merchants 的 *all_items＝「所有消費都算」（benefits-parser.gs 的填表說明就是這樣定義）。
+// 主站搜尋會把它展開成卡片的 cashbackRates 通路來比對，但那是搜尋用的近似；新戶活動頁要給
+// 人看，直接把萬用標記印出來（2026-10-04 玉山 Ubear 出現「*all_items」）或展開成上百個
+// 通路都不對，一律顯示 PMC_ALL_ITEMS_LABEL。
+const PMC_ALL_ITEMS_LABEL = '一般消費皆適用';
+function pmcIsAllItems_(merchants) {
+  const list = Array.isArray(merchants) ? merchants : (merchants == null ? [] : [merchants]);
+  return list.some(function (m) { return String(m).trim().toLowerCase() === '*all_items'; });
+}
+
 function pmcEscapeHtmlMultiline_(s) {
   return pmcEscapeHtml_(s).replace(/\r\n|\r|\n/g, '<br>');
 }
@@ -2237,17 +2260,19 @@ function pmcBuildPickCandidate_(p) {
   if (pmcIsBonus_(promo)) {
     const r = pmcRateNumber_(promo);
     if (r === null || r <= 0) return null;
-    const merchants = promo.bonus_merchants || [];
+    const allItems = pmcIsAllItems_(promo.bonus_merchants);
+    const merchants = allItems ? [] : (promo.bonus_merchants || []);
     const hot = pmcIsHotPay_(merchants);
     const v = pmcPromoValue_(promo);
     base.kind = 'bonus';
     base.score = r * (hot ? 1.2 : 1);
     base.headline = pmcRateDisplay_(promo) + ' 回饋';
-    base.sub = merchants.length ? merchants.slice(0, 3).join('、') + (merchants.length > 3 ? ' 等' : '') : '';
+    base.sub = allItems ? '一般消費' :
+      merchants.length ? merchants.slice(0, 3).join('、') + (merchants.length > 3 ? ' 等' : '') : '';
     base.thr = typeof promo.bonus_cap === 'number' ? '上限消費 ' + pmcMoney_(promo.bonus_cap) : '門檻：' + pmcThresholdText_(promo);
     base.rateText = '';
     base.hot = hot;
-    base.autoReason = (merchants.length ? base.sub + '都算，' : '') + '享 ' + pmcRateDisplay_(promo) + ' 回饋' +
+    base.autoReason = (base.sub ? base.sub + '都算，' : '') + '享 ' + pmcRateDisplay_(promo) + ' 回饋' +
       (v !== null ? '，最多可拿 ' + pmcMoney_(v) : '') + '。';
     return base;
   }
@@ -2294,6 +2319,7 @@ function pmcAutoQuestion_(c) {
   if (c.hot) return '天天用手機付款？';
   if (/國外|海外|外幣/.test(text)) return '常出國刷卡？';
   if (/保費/.test(text)) return '最近要繳保費？';
+  if (pmcIsAllItems_(c.promo.bonus_merchants)) return '平常刷卡就想多拿回饋？';
   const m = (c.promo.bonus_merchants || [])[0];
   return m ? '常在' + m + '消費？' : '想多拿一點回饋？';
 }
@@ -2414,6 +2440,14 @@ function pmcRenderPicks_(picks, monthLabel) {
         'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' +
         pmcEscapeHtml_(c.reason) + '</span></p>\n' : '') +
       (c.luggageNote ? '      <p class="pmc-pick-note">' + pmcEscapeHtml_(c.luggageNote) + '</p>\n' : '') +
+      // 次要動作（站長 2026-10-04）：跟行李箱專區同一組——「活動詳情 ↓」跳到下方清單的這一檔
+      // 並展開（promos.js setupLuggageJump，認 .pmc-lg-jump）、「卡片特色」原地開 modal
+      // （data-feat-card 借清單那張卡的內容）。不做「幫用戶在搜尋框輸入卡名」：那會篩掉其他卡、
+      // 用戶得自己清掉搜尋才回得去，比跳過去再亮框多一步。
+      '      <div class="pmc-pick-links"><a class="pmc-lg-jump pmc-pick-jump" href="#' +
+        pmcEscapeHtml_(String(p.anchorId).replace(/-a\d+$/, '')) + '" data-jump-act="' + pmcEscapeHtml_(p.anchorId) +
+        '">活動詳情</a><button type="button" class="promo-feat-btn pmc-pick-feat" aria-expanded="false" data-feat-card="' +
+        pmcEscapeHtml_(p.promo.id) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button></div>\n' +
       '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
       '    </article>';
   }).join('\n');
@@ -2517,7 +2551,8 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
   const rows = [];
   if (Array.isArray(promo.bonus_merchants) && promo.bonus_merchants.length) {
     rows.push('<div class="promo-meta-row"><dt>適用通路</dt><dd><span class="promo-merchants-value">' +
-      pmcEscapeHtml_(promo.bonus_merchants.join('、')) + '</span></dd></div>');
+      pmcEscapeHtml_(pmcIsAllItems_(promo.bonus_merchants) ? PMC_ALL_ITEMS_LABEL : promo.bonus_merchants.join('、')) +
+      '</span></dd></div>');
   }
   if (promo.promo_condition) {
     rows.push('<div class="promo-meta-row"><dt>達成條件</dt><dd>' +
@@ -2591,7 +2626,7 @@ function pmcRenderPromoAct_(p, actId) {
       // 小字可能是空的（首刷禮）——空的時候整個 <small> 不輸出，留一個空標籤會讓
       // .promo-act-reward small 的 margin-top 撐出一條沒有東西的空白
       (rewardSub ? '<small>' + pmcEscapeHtml_(rewardSub) + '</small>' : '') + '</span>\n' +
-    (summary ? '      <span class="promo-act-summary">' + pmcEscapeHtml_(summary) + '</span>\n' : '') +
+    (summary ? '      <span class="promo-act-summary">' + pmcNoOrphanHtml_(summary) + '</span>\n' : '') +
     '      <span class="promo-act-more">活動詳情<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '    </span>\n' +
     '  </button>\n' +
@@ -2645,10 +2680,7 @@ function pmcRailCount_(acts) {
 // class 刻意沿用 `promo-act-row`：promos.js 的 setupActToggle 靠它做展開收合，
 // 這樣附屬列不必另外寫一套互動（樣式用 `.promo-act-row.promo-sub-row` 雙 class 覆蓋，
 // 單 class 的 `.promo-sub-row` 會輸給 `.promo-act-row` 的 padding:0）。
-//
-// anyImg：這一組裡有沒有任何一檔有獎品圖。有的話，沒圖的那幾列也要補一個等寬空位，
-// 否則右側的「詳情」會一列一個位置、看起來像沒對齊。
-function pmcRenderPromoSubRow_(p, actId, anyImg) {
+function pmcRenderPromoSubRow_(p, actId) {
   const promo = p.promo;
   const detailId = actId + '-detail';
   const value = pmcPromoValue_(promo);
@@ -2677,13 +2709,13 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   // 再放一次會變成同一句話出現兩遍。
   const lead = isGift ? '' : String(pmcRewardSub_(promo));
 
+  // 獎品圖：掛在整列右側。2026-10-04 起「活動詳情 ▾」移到摘要下一行（站長：跟主活動一樣
+  // 放下面、不要放右側），右側不再有需要對齊的東西，所以沒圖的列不再補 .is-empty 空位。
   let thumb = '';
   if (giftImgUrl) {
-    thumb = '<span class="promo-sub-thumb promo-sub-thumb--gift"><img src="' +
+    thumb = '    <span class="promo-sub-thumb promo-sub-thumb--gift"><img src="' +
       pmcEscapeHtml_(giftImgUrl) + '" alt="' + pmcEscapeHtml_(p.cardName + ' 活動宣傳圖') +
-      '" loading="lazy" onerror="this.closest(\'.promo-sub-thumb\').style.visibility=\'hidden\'"></span>';
-  } else if (anyImg) {
-    thumb = '<span class="promo-sub-thumb is-empty" aria-hidden="true"></span>';
+      '" loading="lazy" onerror="this.closest(\'.promo-sub-thumb\').style.visibility=\'hidden\'"></span>\n';
   }
 
   // is-gift 掛在整列上，CSS 靠它處理「獎品名不是數字，字重輕一階且可換行」。
@@ -2691,11 +2723,12 @@ function pmcRenderPromoSubRow_(p, actId, anyImg) {
   return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
       '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
+    // 倒數徽章跟著上排（類型 chip、值）走，跟主活動「chip 旁邊掛徽章」同一個位置
     '    <span class="promo-sub-head">' + typeHtml +
-      '<span class="promo-sub-amt">' + amt + '</span></span>\n' +
-    '    <span class="promo-sub-title">' + pmcEscapeHtml_(summary) + '</span>\n' +
-    '    <span class="promo-sub-meta"><span class="promo-ending-badge" hidden></span>' + thumb +
-      '<span class="promo-sub-more">詳情</span>' +
+      '<span class="promo-sub-amt">' + amt + '</span><span class="promo-ending-badge" hidden></span></span>\n' +
+    '    <span class="promo-sub-title">' + pmcNoOrphanHtml_(summary) + '</span>\n' +
+    thumb +
+    '    <span class="promo-sub-meta"><span class="promo-sub-more">活動詳情</span>' +
       '<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
     '  </button>\n' +
     // 定額回饋的補充是「OPENPOINT」「刷卡金」這種單一名詞，單獨一段看不懂在講什麼，
@@ -2714,12 +2747,8 @@ function pmcRenderCardGroup_(group) {
   const anchorId = group.anchorId;
 
   const mainHtml = pmcRenderPromoAct_(main, anchorId + '-a1');
-  // 這一組裡有沒有任何一檔有獎品圖（決定沒圖的列要不要補等寬空位）
-  const anyImg = acts.slice(1).some(function (p) {
-    return pmcPromoValue_(p.promo) === null && !!pmcSanitizeUrl_(p.promo.gift_image_url);
-  });
   const stackHtml = acts.slice(1).map(function (p, i) {
-    return pmcRenderPromoSubRow_(p, anchorId + '-a' + (i + 2), anyImg);
+    return pmcRenderPromoSubRow_(p, anchorId + '-a' + (i + 2));
   }).join('\n');
 
   // CTA：cardApplyCtas 有分潤連結時當主按鈕「立即申辦」；沒有就退用主活動的

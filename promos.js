@@ -114,6 +114,10 @@
         else { badge.hidden = true; }
       });
       section.hidden = alive < def[2];
+      // 標題的「Top N」是生成當下的張數；之後有一檔過期被藏起來，標題要跟著改成實際張數
+      // （站長 2026-10-04：寫 Top 5 卻只看到 4 張）。下次匯出時生成器會從未過期的活動重新選滿。
+      var title = section.querySelector('#pmc-picks-title');
+      if (title) title.textContent = '站長推薦 Top ' + alive;
       // 索引列的對應連結跟著整區顯示／隱藏
       var jump = document.querySelector('.pmc-jump a[data-jump="' + section.id + '"]');
       if (jump) jump.hidden = section.hidden;
@@ -213,6 +217,7 @@
     })();
   }
 
+  // 行李箱專區與站長推薦（2026-10-04 起）共用：兩區的「活動詳情 ↓」都是 .pmc-lg-jump
   function setupLuggageJump() {
     document.addEventListener('click', function (e) {
       var link = e.target.closest('.pmc-lg-jump');

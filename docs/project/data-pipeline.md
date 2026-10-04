@@ -529,6 +529,8 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 
 **2026-09-23 第二輪**：hero 下方加頁內索引列（`pmcJumpNav_`：站長推薦／行李箱專區／新戶活動，後者錨點是清單上方新增的「新戶活動」標題 `#all-promos`）；推薦區手機橫滑有分頁點（promos.js `setupPicksDots`）；行李箱專區附贈品圖（`gift_image_url`，點擊走同一個 lightbox）與「卡片特色」鈕（`data-feat-card` 指向清單同一張卡的 `.promo-card-feat`，開同一個 modal）；手機的「立即申辦」縮成「申辦」。**第三輪**：行李箱專區改成淡底獨立區塊、一檔一張白卡（桌機兩欄），贈品圖佔右欄，倒數徽章移到參考價／門檻那行尾，卡片特色＋申辦在卡片底部一列；`luggage_open` 欄位整個移除（站長評估開法不必獨立顯示）。
 
+**2026-10-04**：推薦卡片在申辦鈕上方加一列「活動詳情 ↓」（同行李箱專區的 `.pmc-lg-jump`，跳到清單裡那一檔並展開）＋「卡片特色」（`data-feat-card`，原地開 modal）；刻意不做「幫用戶填搜尋框」（會篩掉其他卡、要自己清掉才回得去）。推薦有一檔過期被藏時，promos.js 把標題改成實際張數（Top 4…），下次匯出才會從未過期的活動補滿。同日：附屬列的「活動詳情 ▾」改到摘要下一行（獎品圖仍在右側），摘要用 `pmcNoOrphanHtml_()` 把最後 3 字包成不換行，最後一行不會只剩 1 個字；`bonus_merchants` 的 `*all_items`（＝所有消費）在本頁一律顯示「一般消費皆適用」（`pmcIsAllItems_`），不再把標記原樣印出。
+
 **`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
 寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
 寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
