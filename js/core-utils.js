@@ -674,7 +674,19 @@ function isAllItemsMarker(raw) {
     return false;
 }
 
+// 新戶活動 bonus_merchants 的兩個萬用標記（站長 2026-10-04 定義）：
+//   *all_items ＝ 只加碼在這張卡原本的回饋通路上 → 展開成該卡 cashbackRates 的 items
+//   *general   ＝ 一般消費都算（不限通路）→ 任何搜尋都符合，顯示 GENERAL_SPENDING_LABEL
+const GENERAL_SPENDING_LABEL = '一般消費皆適用';
+function isGeneralSpendingMarker(raw) {
+    const norm = (s) => String(s).trim().toLowerCase();
+    if (typeof raw === 'string') return norm(raw) === '*general';
+    if (Array.isArray(raw)) return raw.some(item => norm(item) === '*general');
+    return false;
+}
+
 // Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items.
+// *general 沒有可展開的通路，回傳空陣列；呼叫端要先用 isGeneralSpendingMarker() 判斷。
 function expandPromoMerchants(promo, card) {
     if (!promo.bonus_merchants) return [];
     if (isAllItemsMarker(promo.bonus_merchants)) {
