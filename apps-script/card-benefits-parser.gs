@@ -155,8 +155,7 @@ function parseNewCard() {
     try {
       const parsed = extractCard_(text, idHint, generalText);
       const basic = parsed.basic || {};
-      const newCustGroups = (parsed.groups || []).filter(function (g) { return g.new_customer_only; });
-      const groups = (parsed.groups || []).filter(function (g) { return !g.new_customer_only; });
+      const groups = parsed.groups || [];
 
       let idCollision = false;
       try {
@@ -174,7 +173,6 @@ function parseNewCard() {
       results.push('列' + rowNum + '　' + cardId + '：組別 ' + (groups.length - droppedZeroRate) + ' 組、固定槽位 ' + specialCount + ' 組' +
         (droppedZeroRate ? '、略過 ' + droppedZeroRate + ' 組非百分比回饋（定額/折扣/折價券）' : '') +
         (flagged ? '、' + flagged + ' 組 AI 沒把握' : '') +
-        (newCustGroups.length ? '、濾掉 ' + newCustGroups.length + ' 組新戶活動' : '') +
         (idCollision ? '　⚠️ id 已存在於 Cards Data，若是新卡請改 id' : ''));
       doneCount++;
     } catch (e) {
@@ -229,8 +227,6 @@ function extractCard_(rawText, idHint, generalText, opts) {
     'F. 「一般國內消費」「一般國外消費」「廣告平台(Meta/Google)」這三種【不要】放進 groups——它們由程式從基本欄位生成固定槽位。',
     'G. 【排除領券型】需到 App/官網「領取優惠券、領券」才享的活動，不是回饋組別，不要放進 groups（注意：只需「登錄」的活動仍算，要放）。',
     'H. 【排除新戶型】僅新戶/核卡限定的活動不要放進 groups（那是新戶活動，另有解析器）。',
-    '   判準：要「新申辦／新戶／首次核卡／核卡後 N 天內」才享 → 新戶型。拿不準的照樣輸出，但 new_customer_only 填 true，',
-    '   程式會把它濾掉並告訴站長（寧可被程式濾掉，也不要混進一般活動）。',
     'I. 【排除非百分比回饋】以下三種一律【不要】放進 groups——本站的計算模型是「率×金額」，表達不了它們：',
     '   ① 定額型：消費滿 X 元送固定 Y 元/Y 點（如「滿3萬送500點」「滿1,500送50點」）；',
     '   ② 折扣型：打折、現折、OFF（如「享10%OFF」「單筆現折200元」「95折」）；',
@@ -367,10 +363,9 @@ function extractCard_(rawText, idHint, generalText, opts) {
       cap_reward: { type: 'NUMBER' },
       evidence: { type: 'STRING' },
       needs_review: { type: 'BOOLEAN' },
-      review_question: { type: 'STRING' },
-      new_customer_only: { type: 'BOOLEAN', description: '只有新戶/新申辦/核卡後限定才享的活動填 true（程式會濾掉，那走新戶活動解析）' }
+      review_question: { type: 'STRING' }
     },
-    required: ['rate', 'group_kind', 'structure_note', 'evidence', 'needs_review', 'new_customer_only']
+    required: ['rate', 'group_kind', 'structure_note', 'evidence', 'needs_review']
   };
 
   const schema = {
@@ -1045,24 +1040,16 @@ function parseCardActivities() {
     try {
       const parsed = extractCard_(job.text, job.cardId, '', { activityOnly: true, focus: job.focus });
       const all = parsed.groups || [];
-      // 新戶限定的組：prompt 已叫 AI 別放，但只靠 prompt 會漏（站長回報貼上的原文常摻新戶活動）。
-      // AI 另外逐組標 new_customer_only，程式在這裡擋第二道，並把被濾掉的回報出來
-      const newCust = all.filter(function (g) { return g.new_customer_only; });
-      const groups = all.filter(function (g) { return !g.new_customer_only && num_(g.rate) > 0; });
+      const groups = all.filter(function (g) { return num_(g.rate) > 0; });
       const out = writeGroupUpdateReview_(job.cardId, groups, job.url, parsed.bonus_updates);
       const parts = [];
       if (out.matched) parts.push('對應既有 ' + out.matched);
       if (out.added) parts.push('新增 ' + out.added);
       if (out.bonus) parts.push('基本欄位 ' + out.bonus);
-      if (newCust.length) parts.push('濾掉新戶 ' + newCust.length);
       const summary = parts.length ? parts.join('、') : ('0 組' + (parsed.note ? '：' + parsed.note : ''));
       job.setStatus('已解析 ' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd HH:mm') + '｜' + summary);
-      const nonPct = all.length - groups.length - newCust.length;
       results.push(job.label + '　' + job.cardId + '：' + summary +
-        (nonPct > 0 ? '（略過 ' + nonPct + ' 組非百分比回饋）' : '') +
-        (newCust.length ? '\n　　濾掉的新戶活動：' + newCust.map(function (g) {
-          return (g.category || (g.items || []).slice(0, 3).join('、') || '未命名') + ' ' + g.rate + '%';
-        }).join('；') + '（要寫的話改用「AI 拆新戶活動」）' : ''));
+        (all.length > groups.length ? '（略過 ' + (all.length - groups.length) + ' 組非百分比回饋）' : ''));
     } catch (e) {
       job.setStatus('失敗：' + e.message);
       failures.push(job.label + '：' + e.message);
