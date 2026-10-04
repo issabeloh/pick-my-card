@@ -812,7 +812,8 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
    1. 打開 <https://shell.cloud.google.com>，用同一個 Google 帳號
    2. 貼上執行：`npx @google/clasp@3.4.1 login --no-localhost`
    3. 開它給的網址 → 允許 → 照畫面指示把授權碼（或跳轉失敗頁面的整個網址）貼回 Cloud Shell
-   4. 執行 `cat ~/.clasprc.json`，把印出來的**整段**複製起來
+   4. 執行 `base64 -w0 ~/.clasprc.json`，把印出來的**那一整串英數字**複製起來
+      （不要用 `cat` 複製 JSON：終端機會把長行折斷，2026-10-04 第一次部署就因此失敗。程式兩種都收，但 base64 怎麼折都不會壞）
 4. **存進 GitHub**：repo → Settings → Secrets and variables → Actions → New repository secret，
    名稱 `CLASPRC_JSON`，值貼上一步的整段
 5. **試跑**：repo → Actions → `apps-script-deploy` → Run workflow（`dry_run` 保持勾選）→ 看結果頁的表格。

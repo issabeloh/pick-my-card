@@ -114,9 +114,36 @@ function applyPlan(onlineFiles, plan) {
   });
 }
 
+// 從終端機複製常會出問題（2026-10-04 第一次部署就踩到）：長行被折成好幾行、
+// 多複製到提示字元、少複製到頭尾的大括號。依序試幾種讀法；都不行才報錯。
+// 也收 base64（`base64 -w0 ~/.clasprc.json` 的輸出）——一整串英數字，怎麼折行都不會壞。
+function parseSecret_(raw) {
+  const s = String(raw || '').trim();
+  const tries = [
+    function () { return JSON.parse(s); },
+    function () { return JSON.parse(s.replace(/[\r\n]+/g, '')); },                 // 折行塞進字串中間
+    function () {                                                                   // 前後多了雜字
+      const a = s.indexOf('{'), b = s.lastIndexOf('}');
+      if (a < 0 || b <= a) throw new Error('no braces');
+      return JSON.parse(s.slice(a, b + 1).replace(/[\r\n]+/g, ''));
+    },
+    function () {                                                                   // base64
+      const b64 = s.replace(/\s+/g, '');
+      if (!/^[A-Za-z0-9+/=]+$/.test(b64)) throw new Error('not base64');
+      return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+    }
+  ];
+  for (let i = 0; i < tries.length; i++) {
+    try { return tries[i](); } catch (e) { /* 試下一種 */ }
+  }
+  // 不把內容印出來（那是授權），只給判斷得出問題的線索
+  throw new Error('CLASPRC_JSON 讀不懂（收到 ' + s.length + ' 個字，開頭' +
+    (s.charAt(0) === '{' ? '是' : '不是') + '「{」、結尾' + (s.slice(-1) === '}' ? '是' : '不是') + '「}」）。' +
+    '最穩的做法：在 Cloud Shell 執行 base64 -w0 ~/.clasprc.json，把那一整串貼進 Secret。');
+}
+
 function readCredentials(raw) {
-  let j;
-  try { j = JSON.parse(raw); } catch (e) { throw new Error('CLASPRC_JSON 不是合法的 JSON（貼 ~/.clasprc.json 的完整內容）'); }
+  const j = parseSecret_(raw);
   const t = (j.tokens && (j.tokens.default || j.tokens[Object.keys(j.tokens)[0]])) || null;   // clasp 3
   if (t && t.refresh_token) return { clientId: t.client_id, clientSecret: t.client_secret, refreshToken: t.refresh_token };
   if (j.token && j.token.refresh_token && j.oauth2ClientSettings) {                              // clasp 2

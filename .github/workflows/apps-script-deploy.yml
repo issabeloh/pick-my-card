@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 0   # 要完整歷史：判斷「線上內容是不是 repo 某一版」
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Deploy
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
