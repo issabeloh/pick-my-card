@@ -10541,3 +10541,99 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 3 類：控制項高度（≥1025px，2026-10-05）
+
+   第 1、2 類之後，剩下一批用固定 px 寫死高度的控制項還是原尺寸，跟旁邊縮過的
+   東西不成比例。這一輪縮到約 0.87×。
+
+   規則：
+   - **width 與 height 成對的圓形／方形按鈕一定一起改**，只改一邊會從圓變橢圓
+   - **18px 以下的圖示與核取方塊一律不動**：再縮就從「小」變成「看不清也點不到」，
+     而且它們佔的版面本來就微不足道
+   - .calculate-btn.compact 的 height:53.5px **不用改**——桌機被更具體的
+     `.app-layout main .calculate-btn.compact { height: auto }` 蓋掉，實際高度由
+     第 2 類縮過的 padding 決定（實測 35px）
+
+   .matched-item-row 是特例：原本 46px 並註明「與計算按鈕同高，讓文字垂直置中對齊
+   按鈕」。按鈕在第 2 類之後實測 35px，所以填 35px——照乘 0.87× 會得到 40px，
+   反而讓那句註解描述的對齊關係失效。
+   ============================================ */
+@media (min-width: 1025px) {
+    .header-logo {
+        height: 35px;   /* 原 40px（width:auto，不用動） */
+    }
+
+    .auth-section {
+        min-height: 38px;   /* 原 44px */
+    }
+
+    .guest-avatar-icon {
+        width: 24px;    /* 原 28px */
+        height: 24px;   /* 原 28px */
+    }
+
+    /* 原 46px＝「與計算按鈕同高」；按鈕在第 2 類之後實測 35px，跟著對齊 */
+    .matched-item-row {
+        min-height: 35px;
+    }
+
+    .merchant-clear-btn {
+        width: 31px;    /* 原 36px */
+        height: 31px;   /* 原 36px */
+    }
+
+    .pin-btn,
+    .card-detail-peek-btn {
+        height: 19px;   /* 原 22px */
+    }
+
+    .scroll-to-spotlight-btn {
+        width: 42px;    /* 原 48px */
+        height: 42px;   /* 原 48px */
+    }
+
+    .spotlight-nav-btn,
+    .spotlight-info-btn {
+        width: 30px;    /* 原 34px */
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-compare-btn {
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-rate-row {
+        min-height: 23px;   /* 原 26px */
+    }
+
+    .card-detail-image {
+        height: 48px;   /* 原 56px（width:auto，不用動） */
+    }
+
+    .close-modal {
+        width: 26px;    /* 原 30px */
+        height: 26px;   /* 原 30px */
+    }
+
+    .credit-limit-field {
+        height: 33px;   /* 原 38px */
+    }
+
+    .user-notes-textarea {
+        height: 52px;        /* 原 60px */
+        min-height: 52px;    /* 原 60px */
+        max-height: 174px;   /* 原 200px */
+    }
+
+    .notes-status {
+        min-height: 17px;   /* 原 20px */
+    }
+
+    .social-media-footer,
+    .ad-row {
+        min-height: 85px;   /* 原 100px */
+    }
+}
