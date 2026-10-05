@@ -2405,6 +2405,8 @@ a {
   .promo-act-detail { margin-inline: -14px; padding-inline: 14px; }
   .promo-act-thumb { width: 72px; }
   .promo-act-reward { font-size: 24px; }
+  /* 禮物名稱手機再降一階（站長 2026-10-05：20px → 17px） */
+  .promo-act-reward.is-gift { font-size: 17px; }
   .promo-card-feat { padding: 13px 14px; }
   .promo-act-row.promo-sub-row { padding-inline: 14px; }
 }
@@ -2601,6 +2603,12 @@ a {
   /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
   .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
     font-size: 26px;
+  }
+  /* 但禮物名稱不跟著放大：上面那條（以及 ≥1400px 的 24px）specificity 比
+     .promo-act-reward.is-gift 高，會把禮物名稱撐到 26/24px（站長 2026-10-05 指定回到 20px）。
+     這條寫在這裡就同時蓋過 ≥1400px 那條——它多一個 .is-gift，specificity 較高。 */
+  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward.is-gift {
+    font-size: 20px;
   }
 }
 
