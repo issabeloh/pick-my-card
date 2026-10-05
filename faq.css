@@ -618,3 +618,50 @@ main {
         font-size: 0.72rem;
     }
 }
+
+
+/* ============================================
+   桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-10-05）
+   規則見 styles.css 同名區塊。
+   ============================================ */
+@media (min-width: 1025px) {
+    .back-home-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .faq-breadcrumb {
+        padding: 12px 3px 0px;   /* 原 14px 4px 0px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .faq-hero {
+        padding: 17px 3px 7px;   /* 原 20px 4px 8px */
+    }
+
+    main {
+        padding: 27px 20px;   /* 原 32px 24px */
+    }
+
+    .category-filter {
+        padding-bottom: 17px;   /* 原 20px */
+        margin-bottom: 20px;   /* 原 24px */
+        gap: 9px;   /* 原 10px */
+    }
+
+    .category-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+    }
+
+    .faq-list {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .faq-question {
+        padding: 15px 17px;   /* 原 18px 20px */
+    }
+
+    .question-text {
+        padding-right: 14px;   /* 原 16px */
+    }
+}
