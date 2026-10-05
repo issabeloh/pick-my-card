@@ -26,6 +26,16 @@
      分開放：那個是「跟主站回饋率同色」的語意，這個是本頁自己的視覺決定，
      日後只想動其中一個時不會互相牽連。 */
   --pmc-hero-green: #10b981;
+  /* 主活動獎勵大字的字級——**只在這裡改**，各處規則只讀變數。
+     金額 24px、禮物名稱 17px，全寬度一致（站長 2026-10-05：桌機的禮物名稱 20px 仍太大，
+     降到跟手機、附屬列 .promo-sub-amt 同為 17px；金額型與回饋率型維持 24px）。
+     金額一律大於禮物名稱。
+     日後要分寬度，在對應的 @media 裡覆寫 :root 的變數就好，不要另寫 font-size 規則。
+     改用變數的原因：以前每個斷點各寫一條 font-size，多檔卡桌機那條
+     （.promo-card[...] .promo-card-main .promo-act-reward）specificity 比 .is-gift 高，
+     把禮物名稱也撐到 26/24px。現在斷點只換變數值，誰也蓋不到誰。 */
+  --promo-reward-size: 24px;       /* 金額（如「$500」） */
+  --promo-reward-gift-size: 17px;  /* 禮物名稱（.is-gift） */
   --pmc-white: #ffffff;
   --pmc-page-bg-1: #e4e5e8;
   --pmc-page-bg-2: #b0b2b8;
@@ -1967,7 +1977,7 @@ a {
 /* 獎勵大字：整個改版的重點，它上面不放任何東西 */
 .promo-act-reward {
   display: block;
-  font-size: 27px;
+  font-size: var(--promo-reward-size);
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.02em;
@@ -1977,13 +1987,12 @@ a {
 }
 /* 獎品沒有金額，大字改放贈品全名（不截斷）——字級比金額小一階才排得下。
    **顏色**要跟附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-amt）一致：
-   同一張卡上一橘一綠就是壞掉的。**字級**則刻意分兩階——主活動 20px、附屬列 17px
-   （站長 2026-09-21 晚上指定），對齊「主活動大、附屬列小」的既有層級，也跟附屬列
-   金額欄 .promo-sub-amt 的 17px 同高。
+   同一張卡上一橘一綠就是壞掉的。**字級**看 :root 的 --promo-reward-gift-size
+   （目前全寬度 17px，站長 2026-10-05），與附屬列 .promo-sub-amt 的 17px 同大。
    ⚠️ 配色沿革：#8a5c00 深金褐 → #c2410c 燒橘（2026-09-21 早上）→ #10b981
    （2026-09-21 晚上，站長指定 --pmc-hero-green，與獎勵數字同色）。 */
 .promo-act-reward.is-gift {
-  font-size: 20px;
+  font-size: var(--promo-reward-gift-size);
   line-height: 1.45;
   letter-spacing: 0;
   color: var(--pmc-hero-green);
@@ -2404,7 +2413,6 @@ a {
   .promo-card-main { padding: 13px 14px 14px; }
   .promo-act-detail { margin-inline: -14px; padding-inline: 14px; }
   .promo-act-thumb { width: 72px; }
-  .promo-act-reward { font-size: 24px; }
   .promo-card-feat { padding: 13px 14px; }
   .promo-act-row.promo-sub-row { padding-inline: 14px; }
 }
@@ -2482,10 +2490,7 @@ a {
   .promo-act-thumb { width: 84px; }
   .promo-act-thumb--gift { width: 70px; }
 
-  .promo-act-reward { font-size: 24px; }
-  /* .promo-act-reward.is-gift 不在這裡降級：禮物名稱的規格（20px／hero-green）
-     兩個寬度一致，顏色要跟附屬列的 .promo-sub-amt 一致（2026-09-21）。
-     先前這裡寫 12.5px，結果桌機的主活動禮物名比附屬列的還小一半。 */
+  /* 獎勵大字的字級不在這裡設——統一看 :root 的 --promo-reward-size／-gift-size。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
   .promo-act-summary { font-size: 12px; line-height: 1.6; margin-top: 8px; }
   .promo-act-more { font-size: 11.5px; margin-top: 8px; }
@@ -2597,11 +2602,6 @@ a {
      直排的按鈕要置中（站長 2026-09-21）。 */
   .promo-card-rail--side .promo-feat-btn { justify-content: center; }
 
-
-  /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
-    font-size: 26px;
-  }
 }
 
 /* 寬螢幕（≥1400px）：一列放得下 4 張活動卡（站長 2026-09-21）。
@@ -2627,9 +2627,6 @@ a {
      兩邊都選不中（2026-09-22 實測 1280/1440/1500 三個寬度，side 恆 140、solo 恆 84）。
      真要縮就得寫成 `.promo-card-rail--side .promo-rail-thumb`；但 rail 從 236px 縮到
      208px 之後，扣掉 32px 內距還有 176px，140px 的卡圖放得下，所以直接刪掉不補。 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
-    font-size: 24px;
-  }
 }
 
 /* ⚠️ [hidden] 安全網（2026-09-18 立）
