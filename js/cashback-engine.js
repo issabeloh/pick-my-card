@@ -634,62 +634,22 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
     let html = '';
     activeRates.forEach((entry, index) => {
         const { rate, parsedRate, parsedCap, displayCap, displayRate } = entry;
-        html += `<div class="cashback-detail-item">`;
-
-        const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
-        const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
-
-        let endingSoonBadge = '';
-        if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
-            const daysUntil = getDaysUntilEnd(rate.periodEnd);
-            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-            endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-        }
-
-        const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData);
-        html += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
-
-        // 滿額門檻是重要條件：黑色、置於消費上限上方；maxSpend（未滿門檻）
-        // 只影響匹配、不顯示標註（2026-07-17 用戶定案）
-        if (rate.minSpend) {
-            html += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
-        }
-
-        if (displayCap) {
-            html += `<div class="cashback-condition">消費上限: NT$${Math.floor(displayCap).toLocaleString()}</div>`;
-        } else {
-            html += `<div class="cashback-condition">消費上限: 無上限</div>`;
-        }
-
-        if (rate.conditions) {
-            html += renderConditionLine(rate.conditions);
-        }
-
-        // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
-        html += renderRegisterLinkLine(rate.registerLink);
-
-        if (rate.period) {
-            html += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
-        }
-
-        if (rate.items && rate.items.length > 0) {
-            const uniqueItems = [...new Set(rate.items)];
-            const merchantsId = `merchants-${card.id}-${idPrefix}-${index}`;
-            const showAllId = `show-all-${card.id}-${idPrefix}-${index}`;
-
-            if (uniqueItems.length <= 5) {
-                html += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${uniqueItems.join('、')}</div>`;
-            } else {
-                const initialList = uniqueItems.slice(0, 5).join('、');
-                const fullList = uniqueItems.join('、');
-                html += `<div class="cashback-merchants">`;
-                html += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                html += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
-                html += `</div>`;
-            }
-        }
-
-        html += `</div>`;
+        // 版面比照搜尋結果卡片，見 renderRateCard（js/cards-modals.js）
+        html += renderRateCard({
+            rate: displayRate,
+            // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
+            rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData),
+            capText: formatRateCardCap(displayCap),
+            title: rate.category,
+            endingSoonEnd: rate.periodEnd,
+            // 滿額門檻；maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+            minSpend: rate.minSpend,
+            merchants: { items: rate.items, id: `${card.id}-${idPrefix}-${index}` },
+            period: rate.period,
+            conditions: rate.conditions,
+            // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+            registerLink: rate.registerLink
+        });
     });
 
     return { html, upcoming };

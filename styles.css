@@ -3066,7 +3066,8 @@ input[type="number"]:focus {
 }
 
 .cardholder-promo-item .ending-soon-badge,
-.card-result .matched-merchant .ending-soon-badge {
+.card-result .matched-merchant .ending-soon-badge,
+.rate-card .rate-card-info .ending-soon-badge {
     background: #ffffff;
     color: #dc2626;
     border: 1px solid #dc2626;
@@ -4921,15 +4922,6 @@ mark.cashback-search-hl {
     margin-bottom: 0;
 }
 
-/* Force ending-soon / upcoming badges onto a new line within the rate row */
-#card-special-cashback .ending-soon-badge,
-#card-special-cashback .upcoming-badge,
-#card-coupon-cashback .ending-soon-badge,
-#card-coupon-cashback .upcoming-badge {
-    display: block;
-    width: fit-content;
-    margin-top: 4px;
-}
 
 @media (max-width: 540px) {
     #card-basic-cashback,
@@ -5103,6 +5095,73 @@ mark.cashback-search-hl {
 .show-more-btn:focus {
     outline: none;
     color: #1d4ed8;
+}
+
+/* ============================================
+   詳情頁回饋卡 .rate-card（2026-10-05，renderRateCard 產生）
+   排版比照搜尋結果卡片 .card-result：直接沿用 .card-details / .detail-item /
+   .detail-label / .detail-value / .spend-threshold-note / .matched-merchant，
+   這裡只補「詳情頁才有的差異」——欄數（少回饋金額，2 欄）、標題列、回饋率的強調色，
+   以及把 .cashback-condition（條件列／登錄連結）調成 .matched-merchant 的字樣。
+   ⚠️ 必須在檔尾「桌機密度調整」區塊之前（同特異性靠源碼順序）。
+   ============================================ */
+.rate-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.rate-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+/* 活動類別＝這張回饋卡的「名字」，地位相當於搜尋結果的卡名；
+   字比卡名小一階（這裡是 modal 內的子卡片，類別常是一整句話，要能換行） */
+.rate-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+.rate-card-details {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* 搜尋結果的主角是綠色的「回饋金額」；詳情頁沒有這欄，改由回饋率接手同一個強調樣式 */
+.rate-card .rate-card-rate {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #10b981;
+    font-size: 16px;
+}
+
+.rate-card-info .rate-card-line + .rate-card-line,
+.rate-card-info > * + * {
+    margin-top: 2px;
+}
+
+.rate-card-info .show-more-btn {
+    font-size: inherit;
+}
+
+/* 條件列／登錄連結（renderConditionLine / renderRegisterLinkLine）在別處是斜體灰小字；
+   在回饋卡裡改成與「活動期間」同一套字樣，跟搜尋結果一樣整塊讀起來是同一段 */
+.rate-card .cashback-condition {
+    font-size: inherit;
+    font-style: normal;
+    color: inherit;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.rate-card .cond-toggle {
+    font-size: inherit;
 }
 
 /* User Notes Styles */
