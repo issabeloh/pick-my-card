@@ -33,7 +33,7 @@
 1. `?v=` 一律是 `dev` 佔位、**任何情況都不要手動 bump**（2026-07-21 起版本號由 Cloudflare Pages 部署時執行 `tools/deploy-version.sh` 注入 commit hash；repo 內出現時間戳＝違規，preflight 會擋）
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 

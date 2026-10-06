@@ -10,6 +10,7 @@
  *  - HTML 轉義與連結防護（鐵則 3）→ "escapeHtml" / "sanitizeUrl"
  *  - 詳情頁導覽                → "setupCardDetailNav" / "renderCardDetailPromos"
  *  - 結果卡片元素              → "createCardResultElement" / "createCouponResultElement"
+ *  - 回饋卡共用片段（搜尋結果＋詳情頁）→ "renderActivityInfo" / "renderUpcomingBadge" / "renderEndingSoonBadge" / "renderSpendThresholdNote"
  *  - 計算明細 popover           → "showCalcBreakdown"
  *  - 率組成展開                → "toggleRateComposition"
  * ============================================================ */
@@ -1269,6 +1270,61 @@ function createCouponResultElement(coupon, amount) {
 }
 
 // Create card result element
+// ===== 回饋卡共用片段（2026-10-06）=====
+// 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（renderRateCard，js/card-detail.js）
+// 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。兩邊共同的部分——徽章文字、
+// 滿額門檻句、下方資訊區的行序——只寫在這裡，改一次兩邊一起變；不要在任一邊另外拼。
+
+// 「即將開始 (N天後)」徽章（放在卡片右上 .badges-container）；沒有 periodStart 回空字串
+function renderUpcomingBadge(periodStart) {
+    if (!periodStart) return '';
+    const daysUntil = getDaysUntilStart(periodStart);
+    const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
+    return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
+}
+
+// 「即將結束 (N天後)」徽章（接在活動期間後面，開頭帶一個空格）；不到 10 天內結束回空字串
+function renderEndingSoonBadge(periodEnd) {
+    if (!periodEnd || !isEndingSoon(periodEnd, 10)) return '';
+    const daysUntil = getDaysUntilEnd(periodEnd);
+    if (daysUntil == null) return '';
+    const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
+    return ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+}
+
+// 滿額門檻「✔ 單筆滿 NT$X」：重要條件，獨立一行、緊貼回饋數字下方。
+// maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+function renderSpendThresholdNote(minSpend) {
+    if (!minSpend) return '';
+    return `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())}</div>`;
+}
+
+// 卡片下方的資訊區 .matched-merchant。行序固定：
+//   通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
+//   → 條件 → 銀行官方登錄連結
+// conditions 可以是字串或字串陣列。collapsibleConditions＝true 時條件用可收合的
+// renderConditionLine（詳情頁卡片多、條件長）；搜尋結果維持整段顯示。
+// ⚠️ 條件文字照舊原樣輸出、不 escape——兩條路徑一向如此，改了可能動到 Sheets 裡刻意的格式，
+//    要改請兩邊一起評估。matchHtml 由呼叫端負責 escape。
+function renderActivityInfo({ matchHtml = '', period = '', endingSoonBadge = '', conditions = null,
+                              collapsibleConditions = false, registerLink = '', extraClass = '' } = {}) {
+    const lines = [];
+    if (matchHtml) lines.push(`<div class="activity-info-line">${matchHtml}</div>`);
+    if (period) {
+        lines.push(`<div class="activity-info-line">活動期間: ${escapeHtml(period)}${endingSoonBadge}</div>`);
+    } else if (endingSoonBadge) {
+        lines.push(`<div class="activity-info-line">${endingSoonBadge.trim()}</div>`);
+    }
+    const conditionList = (Array.isArray(conditions) ? conditions : [conditions]).filter(Boolean);
+    for (const c of conditionList) {
+        lines.push(collapsibleConditions ? renderConditionLine(c) : `<div class="activity-info-line">條件: ${c}</div>`);
+    }
+    // 銀行官方登錄連結（renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結回空字串）
+    lines.push(renderRegisterLinkLine(registerLink));
+    const body = lines.join('');
+    return body ? `<div class="matched-merchant${extraClass ? ' ' + extraClass : ''}">${body}</div>` : '';
+}
+
 function createCardResultElement(result, originalAmount, searchedItem, isBest, isBasicCashback = false) {
     const cardDiv = document.createElement('div');
     const isUpcoming = result.isUpcoming === true;
@@ -1297,14 +1353,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     }
 
     // Ending-soon badge (inline, next to period text)
-    let endingSoonInlineBadge = '';
-    if (!isUpcoming && result.periodEnd && isEndingSoon(result.periodEnd, 10)) {
-        const daysUntil = getDaysUntilEnd(result.periodEnd);
-        if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-            endingSoonInlineBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-        }
-    }
+    const endingSoonInlineBadge = isUpcoming ? '' : renderEndingSoonBadge(result.periodEnd);
 
     // 檢查是否已釘選（使用 matchedItem）
     const merchantForPin = result.matchedItems && result.matchedItems.length > 0
@@ -1340,11 +1389,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
             <div class="badges-container">
                 ${isBest ? '<div class="best-badge">最優回饋</div>' : ''}
-                ${isUpcoming && result.periodStart ? (() => {
-                    const daysUntil = getDaysUntilStart(result.periodStart);
-                    const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-                    return `<div class="upcoming-badge">即將開始 (${daysText})</div>`;
-                })() : ''}
+                ${isUpcoming ? renderUpcomingBadge(result.periodStart) : ''}
             </div>
         </div>
         <div class="card-details">
@@ -1374,23 +1419,13 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             </div>
         </div>
         ${(() => {
+            // 下方資訊區走共用的 renderActivityInfo（行序與詳情頁回饋卡相同，見該函式）
             if (isBasicCashback && !isUpcoming) {
-                let conditionsText = '';
-                // Check if card has domesticBonusConditions
-                if (result.card.domesticBonusConditions) {
-                    conditionsText = `<br><small>條件: ${result.card.domesticBonusConditions}</small>`;
-                }
-                return `
-                    <div class="matched-merchant">
-                        一般消費回饋率${conditionsText}
-                    </div>
-                `;
+                return renderActivityInfo({
+                    matchHtml: '一般消費回饋率',
+                    conditions: result.card.domesticBonusConditions
+                });
             } else if (result.matchedItem) {
-                let additionalInfo = '';
-                // 滿額/未滿門檻是重要條件：獨立一行、黑色粗體、置於匹配項目上方
-                // （緊貼回饋數字；2026-07-17 用戶定案，字級與匹配項目一致、不加特別色）
-                let thresholdLine = '';
-
                 // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。
                 //
                 // ⚠️ 2026-09-08 之前這裡是三個分支（isUpcoming ／ matchedRateGroup ／
@@ -1415,48 +1450,34 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         ? `${formatISODateForDisplay(periodStart)}~${formatISODateForDisplay(periodEnd)}`
                         : `~${formatISODateForDisplay(periodEnd)}`;
                 }
-                if (periodText) additionalInfo += `<br><small>活動期間: ${periodText}${endingSoonInlineBadge}</small>`;
-
-                if (group && group.conditions) additionalInfo += `<br><small>條件: ${group.conditions}</small>`;
-
-                // 銀行官方登錄連結（renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結回空字串）
-                if (group) additionalInfo += renderRegisterLinkLine(group.registerLink);
-
-                // 滿額/未滿門檻標註（見 docs/project/cross-slot-ref-and-minspend-spec.md）：
-                // 搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
-                // 否則使用者在搜尋結果看不出這個活動有消費金額限制。
-                // maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
-                if (group && group.minSpend) {
-                    thresholdLine += `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(group.minSpend).toLocaleString())}</div>`;
-                }
 
                 const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
-                
+
                 // Special handling for Yushan Uni card exclusions in search results
                 let exclusionNote = '';
-                if (result.card.id === 'yushan-unicard' && 
+                if (result.card.id === 'yushan-unicard' &&
                     (result.matchedItem === '街口' || result.matchedItem === '全支付')) {
                     exclusionNote = ' <small style="color: #f59e0b; font-weight: 500;">(排除超商)</small>';
                 }
-                
+
                 // If multiple items matched (e.g., multiple travel agencies), show all
                 let matchedItemsText = result.matchedItem;
                 if (result.matchedItems && result.matchedItems.length > 1) {
                     matchedItemsText = result.matchedItems.join('、');
                 }
 
-                return `
-                    ${thresholdLine}
-                    <div class="matched-merchant">
-                        匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}${categoryInfo}${additionalInfo}
-                    </div>
-                `;
+                // 滿額門檻：搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
+                // 否則使用者在搜尋結果看不出這個活動有消費金額限制
+                // （見 docs/project/cross-slot-ref-and-minspend-spec.md）
+                return renderSpendThresholdNote(group && group.minSpend) + renderActivityInfo({
+                    matchHtml: `匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}${categoryInfo}`,
+                    period: periodText,
+                    endingSoonBadge: endingSoonInlineBadge,
+                    conditions: group && group.conditions,
+                    registerLink: group && group.registerLink
+                });
             } else {
-                return `
-                    <div class="matched-merchant">
-                        此卡無此項目回饋
-                    </div>
-                `;
+                return renderActivityInfo({ matchHtml: '此卡無此項目回饋' });
             }
         })()}
     `;
