@@ -5,7 +5,8 @@
  *  - 近期異動（changelog）      → "renderCardDetailChangelog"
  *  - CUBE 卡專屬內容            → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
  *  - onclick 轉義               → "escapeForOnclick"
- *  - 商家/條件展開收合（含 window 賦值）→ "toggleMerchants" / "toggleConditions"
+ *  - 詳情頁回饋卡（版面比照搜尋結果）→ "renderRateCard" / "formatRateCardCap"
+ *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
  *  - 詳情頁項目過濾            → "filterCashbackItems"
  *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
@@ -1069,6 +1070,88 @@ async function updateCubeSpecialCashback(card) {
     initConditionClamps(specialCashbackDiv);
 }
 
+// 詳情頁回饋卡（.cashback-detail-item.rate-card，2026-10-05）：排版比照搜尋結果卡片
+// createCardResultElement（js/results-display.js），只少「回饋金額」一欄——用戶在搜尋結果
+// 與詳情頁讀到的是同一套結構，不必每次重新找「上限在哪、條件在哪」。對應關係：
+//   搜尋結果                         詳情頁
+//   卡名 ＋ 右上徽章                 活動類別（category）＋ 右上「即將開始」徽章
+//   回饋率｜回饋金額｜回饋消費上限   回饋率｜回饋消費上限
+//   ✔ 單筆滿 NT$X                   同
+//   匹配項目 / 活動期間 / 條件 / 登錄連結   適用通路 / 活動期間 / 條件 / 登錄連結（順序相同）
+// 兩邊共同的片段（徽章、門檻句、資訊區行序）在 results-display.js 的「回饋卡共用片段」，
+// 這裡只組詳情頁特有的部分（標題列、兩欄、可展開的通路清單）。
+// ⚠️ 詳情頁所有回饋卡（基本、指定通路、即將開始、領券、CUBE 專屬）都走這一支；
+//    要加欄位改這裡，不要在個別呼叫端拼 HTML——拼回去就又是七種長相。
+//    改完跑 node tools/regression/card-detail-test.js。
+//
+// 參數：rate（數字或字串，不含 %）、ratePrefix（加碼用 '+'）、rateNote（回饋率下方小字）、
+// rateBtnHtml（回饋組成按鈕）、capText（已格式化，如 'NT$7,500'／'無上限'）、
+// title（category 原文，內部轉顯示名稱並 escape）、titleIsDisplay（title 已是顯示名稱）、
+// upcomingStart（即將開始的 periodStart）、endingSoonEnd（進行中活動的 periodEnd）、
+// minSpend、merchants（{ items, id, initialCount }：id 用來產生展開鈕的 DOM id，
+// initialCount＝收合時顯示幾個，預設 5）、merchantsLabel、period、
+// conditions（字串或字串陣列）、registerLink、extraClass
+function renderRateCard(o) {
+    const title = o.title ? (o.titleIsDisplay ? o.title : getCategoryDisplayName(o.title)) : '';
+    const upcomingBadge = renderUpcomingBadge(o.upcomingStart);
+
+    let html = `<div class="cashback-detail-item rate-card${o.extraClass ? ' ' + o.extraClass : ''}">`;
+
+    if (title || upcomingBadge) {
+        html += `<div class="rate-card-header">` +
+            `<div class="rate-card-title">${escapeHtml(title)}</div>` +
+            (upcomingBadge ? `<div class="badges-container">${upcomingBadge}</div>` : '') +
+            `</div>`;
+    }
+
+    html += `<div class="card-details rate-card-details">` +
+        `<div class="detail-item"><div class="detail-label">回饋率</div>` +
+        `<div class="detail-value rate-card-rate">${o.ratePrefix || ''}${escapeHtml(String(o.rate))}%${o.rateBtnHtml || ''}</div>` +
+        (o.rateNote ? `<div class="cashback-type-label">${escapeHtml(o.rateNote)}</div>` : '') +
+        `</div>` +
+        `<div class="detail-item"><div class="detail-label">回饋消費上限</div>` +
+        `<div class="detail-value">${escapeHtml(o.capText || '無上限')}</div></div>` +
+        `</div>`;
+
+    html += renderSpendThresholdNote(o.minSpend);
+
+    // 適用通路：超過 initialCount 個先收合，展開鈕沿用 toggleMerchants（textContent 換字），
+    // 詳情頁「搜尋通路」會自動點開它（syncMerchantListsForSearch）
+    let matchHtml = '';
+    const items = o.merchants && o.merchants.items ? [...new Set(o.merchants.items)] : [];
+    if (items.length > 0) {
+        const label = o.merchantsLabel || '適用通路';
+        const fullList = items.join('、');
+        const limit = o.merchants.initialCount || 5;
+        if (items.length <= limit) {
+            matchHtml = `${label}: <strong>${escapeHtml(fullList)}</strong>`;
+        } else {
+            const initialList = items.slice(0, limit).join('、');
+            const merchantsId = `${o.merchants.id}-merchants`;
+            const showAllId = `${o.merchants.id}-show-all`;
+            matchHtml = `${label}: <strong id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
+                `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeHtml(escapeForOnclick(initialList))}', '${escapeHtml(escapeForOnclick(fullList))}')">… 顯示全部${items.length}個</button>`;
+        }
+    }
+
+    html += renderActivityInfo({
+        matchHtml,
+        period: o.period,
+        endingSoonBadge: renderEndingSoonBadge(o.endingSoonEnd),
+        conditions: o.conditions,
+        collapsibleConditions: true,
+        registerLink: o.registerLink,
+        extraClass: 'rate-card-info'
+    });
+    html += `</div>`;
+    return html;
+}
+
+// 「NT$7,500」／「無上限」：詳情頁回饋卡的上限欄（cap 是 null/0/'' 都算無上限）
+function formatRateCardCap(cap) {
+    return cap ? `NT$${Math.floor(cap).toLocaleString()}` : '無上限';
+}
+
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
 // Apostrophes (e.g. "Tomod's") would otherwise close the single-quoted string early.
 // 級別說明「i」按鈕：點一下開浮動窗（各級別回饋率 ＋ 該級別的達成條件備註）。
@@ -1325,29 +1408,10 @@ function filterCashbackItems(searchTerm) {
     }
 }
 
-// 切換條件顯示/隱藏
-function toggleConditions(conditionsId, buttonId) {
-    const conditionsElement = document.getElementById(conditionsId);
-    const buttonElement = document.getElementById(buttonId);
-
-    if (!conditionsElement || !buttonElement) return;
-
-    const isHidden = conditionsElement.style.display === 'none';
-
-    if (isHidden) {
-        // 展開
-        conditionsElement.style.display = 'block';
-        buttonElement.textContent = '▲ 收起條件';
-    } else {
-        // 收起
-        conditionsElement.style.display = 'none';
-        buttonElement.textContent = '▼ 查看各通路詳細條件';
-    }
-}
-
-// 將toggleMerchants和toggleConditions暴露到全局作用域，確保onclick可以訪問
+// 將 toggleMerchants 暴露到全局作用域，確保 renderRateCard 產生的 onclick 可以訪問
+// （toggleConditions 已於 2026-10-06 移除：唯一呼叫端「玉山 Uni Card 即將開始的條件收合鈕」
+//   在詳情頁回饋卡統一版面時改由條件列自己的「...展開」處理）
 window.toggleMerchants = toggleMerchants;
-window.toggleConditions = toggleConditions;
 
 // 用戶筆記相關功能
 let currentNotesCardId = null;

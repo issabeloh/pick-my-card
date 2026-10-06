@@ -4784,10 +4784,6 @@ label.personal-field-check input[type="checkbox"] {
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
-.cashback-detail-item:last-child {
-    margin-bottom: 0;
-}
-
 /* Real-time search input above special cashback */
 .cashback-search-input {
     width: 100%;
@@ -4979,11 +4975,6 @@ mark.cashback-search-hl {
     opacity: 0.85;
 }
 
-/* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
-.cashback-condition.spend-threshold {
-    color: #111827;
-}
-
 /* 近期異動（#card-changelog-section）。「連續清單」樣式：整區一塊淺灰底，
    條與條之間用髮絲線分隔——讀這區的動作是「快速掃過去看最近有沒有變動」，
    連續的底色比一條一條的獨立卡片更好掃，垂直空間也最省。
@@ -5061,20 +5052,6 @@ mark.cashback-search-hl {
     text-decoration: underline;
 }
 
-.cashback-merchants {
-    font-size: 12px; /* 縮小字體 */
-    color: #3b82f6; /* 適用通路內容：藍色粗體，比照 .matched-merchant strong（2026-07-19 用戶定案，字級不需與 matched-merchant 一致） */
-    font-weight: bold;
-    line-height: 1.6; /* 增加行高改善易讀性 */
-    margin-top: 6px;
-}
-
-/* 適用通路標籤粗體 */
-.cashback-merchants-label {
-    font-weight: 600;
-    color: #374151;
-}
-
 .show-more-btn {
     background: none;
     border: none;
@@ -5141,7 +5118,6 @@ mark.cashback-search-hl {
     font-size: 16px;
 }
 
-.rate-card-info .rate-card-line + .rate-card-line,
 .rate-card-info > * + * {
     margin-top: 2px;
 }
@@ -9881,7 +9857,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .level-help-btn,
     .cashback-search-input,
     .card-changelog-date,
-    .cashback-merchants,
     .show-more-btn,
     .info-value-small {
         font-size: 11px;
@@ -10541,10 +10516,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .card-changelog-item {
         padding: 8px 0px;   /* 原 9px 0px */
         gap: 9px;   /* 原 10px */
-    }
-
-    .cashback-merchants {
-        margin-top: 5px;   /* 原 6px */
     }
 
     .show-more-btn {

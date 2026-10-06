@@ -1,0 +1,7623 @@
+{
+ "meta": {
+  "fixtureVersion": "20260910-175104",
+  "dates": [
+   "2026-09-11T12:00:00+08:00",
+   "2026-08-25T12:00:00+08:00"
+  ],
+  "generatedAt": "2026-10-06T03:38:09.320Z"
+ },
+ "runs": {
+  "2026-09-11T12:00:00+08:00": {
+   "yushan-unicard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦帳單e化及玉山臺幣帳戶自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "加油交通",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 台灣中油直營店、55688台灣大車隊、台鐵、高鐵、uber… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「中油加油站」限台灣中油網站公告之直營站(含綁定中油Pay支付)；「臺鐵/高鐵」限於官網訂票系統、官方APP、全線各站售票窗口臨櫃購票(含定期票)、自動售票機購票，不含高鐵假期、旅行社代購車票、超商付款票券、車內餐飲費用、持卡感應進站搭乘或閘門電子票證自動加值(如悠遊卡自動加值)、飯店聯票、航空聯票、觀光巴士聯票等通路購票；「Uber」限國內搭乘且交易幣別為新臺幣",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 玉山wallet、Line Pay、全支付、街口支付、悠遊付… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除於超商、全聯、大全聯交易、全聯全電商平台付款、繳納各項稅費等非一般消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "ESG消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 玉山wallet愛心捐款單筆、玉山wallet愛心捐款定期定額、特斯拉",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外實體",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費、越南實體消費、新加坡實體消費… 顯示全部18個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 交易地點需為指定國別之實體線下交易，且交易幣別非新臺幣"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "電商平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: momo購物網、蝦皮購物、淘寶、Coupang酷澎",
+       "活動期間: 2025/10/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "百貨",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 新光三越百貨、台北信義新天地、DIAMOND TOWERS、skm online、skm pay… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 以簽單之商店名稱判斷是否為百貨交易，部分百貨之櫃位為獨立店，舉例：遠百信義A13之Apple門市為獨立店，其刷卡簽單上顯示之商店名稱為Apple，即不符合遠東百貨消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "餐飲美食",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: uber eats、foodpanda、王品瘋pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 僅適用國內特店及交易幣別為新臺幣；王品瘋Pay限使用APP功能之瘋Pay綁定玉山Unicard支付餐點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "航空旅遊",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 中華航空、長榮航空、日本航空、台灣虎航、樂桃航空… 顯示全部21個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「旅遊平台」若選到店付款則不列入回饋；「航空公司」限於該航空公司臨櫃、官網及APP購票，以及包含機上免稅商品、機場商店或貴賓室等非購買機票之消費，但不含旅行社、線上旅遊平台購票；Klook限國內消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活採買",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: uniqlo(實體門市及官網)、net(實體門市及官網)",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 僅適用國內特店，包含實體門市、官方網站、APP；限街邊獨立店適用，若特店設立於百貨、商場等則不列入回饋計算，舉例：林口三井OUTLET館內的UNIQLO"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活採買",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 家樂福、屈臣氏、康是美、特力屋、hola… 顯示全部8個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 實體門市及官網都適用；僅適用國內特店"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "精選商家",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: Apple直營、Apple Store 在線商城、小米台灣官網、小米之家(實體通路)、小米專賣店(實體通路)… 顯示全部12個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 壽險",
+       "條件: 需登錄；排除分期繳費、躉繳保費及三商美邦投資型保單、申辦帳單e化及玉山銀行臺幣帳戶自動扣繳",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Gogoro電池資費、Evoasis、U-POWER、特爾電力、AmpGO… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需領券；當月消費滿3筆享加碼3%；限使用實體卡貨Apple Pay、Google Pay、Samsung Pay支付"
+      ]
+     }
+    ]
+   },
+   "yushan-ubear": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 綁定電子帳單 且 設定玉山帳戶自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定數位訂閱平台",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: nintendo、playstation、netflix、gemini、steam… 顯示全部6個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 限原平台付款，經Google、PayPal等代扣不適用。不與一般/網路消費回饋併計，達上限即停止回饋；Gemini需直接綁卡於Google消費，若透過Google Play則被歸類為網購。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁中油Pay加油享滿額加碼",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,333",
+       "✔ 單筆滿 NT$3,000",
+       "適用通路: 中油Pay",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需至玉山官網連結頁或玉山Wallet APP登錄(9/23 12:00起)，限量；此活動可與\"中油Pay\"原有的網購回饋疊加，則3%+3%=6%",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 行動支付",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: line pay、街口支付、悠遊付、open錢包、icash pay… 顯示全部15個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除繳費、非消費性款項、政府服務、學校服務、便利商店、全聯、 APP繳費、分期"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 線上購物平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: pchome、momo購物網、蝦皮、coupang酷澎、yahoo購物中心… 顯示全部62個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除AMAZON、日本露天、Apple官網分期、東森購物與森森購物；「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準；售票系統限線上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 交通/訂房",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 55688 app、uber、呼叫小黃、台灣高鐵t-ex行動購票、台鐵線上購票… 顯示全部16個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除車麻吉月租停車費不適用，Agoda、Booking.com等訂房網延後扣款；「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 外送平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: uber eats、foodpanda、foodomo、lalamove、你訂",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 線上娛樂",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: kkbox、itunes、google play、funnow、spotify",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除線上娛樂定期定額扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 網購",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準；排除保費、ETC儲值、ETORO、小額支付平台之線上交易 (含麥當勞、肯德基與必勝客等)、有線電視與電信費用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "網購 - 數位平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: iCloud、Notion、Microsoft 365、Canva、Adobe Creative Cloud… 顯示全部14個",
+       "活動期間: 2026/9/1~2027/2/28"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$200,000",
+       "✔ 單筆滿 NT$160,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$533,333",
+       "✔ 單筆滿 NT$400,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$375,000",
+       "✔ 單筆滿 NT$80,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$1,000,000",
+       "✔ 單筆滿 NT$100,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$600,000",
+       "✔ 單筆滿 NT$40,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$1,600,000",
+       "✔ 單筆滿 NT$50,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "yushan-kumamon": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 綁定帳單e化與申請玉山帳戶自動扣繳卡費"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$200,000",
+       "✔ 單筆滿 NT$160,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$500",
+       "✔ 單筆滿 NT$500",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需使用玉山熊本熊卡(很友好具悠遊卡功能)於活動網頁登錄成功，並於當月使用同一張卡自動加值新臺幣500元或其倍數；每卡每月須完成登錄以取得當月活動參加資格；每月限量；每卡每月限參加登錄1次，活動期間每卡限參加登錄3次",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "日本名古屋指定實體商店",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: BicCamera、JR名古屋高島屋、名古屋PARCO、松坂屋名古屋店、SUGI藥局… 顯示全部6個",
+       "條件: 累積金額需達NT10,000(含)以上；需登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "9.3%",
+       "回饋消費上限",
+       "NT$159,999",
+       "✔ 單筆滿 NT$80,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "9%",
+       "回饋消費上限",
+       "NT$79,999",
+       "✔ 單筆滿 NT$40,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定日本商店",
+       "回饋率",
+       "8.5%",
+       "回饋消費上限",
+       "NT$8,333",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需登錄且活動期間內僅需登錄1次；帳單顯示名稱需包含該指定日本商店名稱始享回饋；排除設立於百貨公司、飯店、酒店、旅館、賣場、商場、車站及美食街等無法判別為該商店之交易；樂天訂房官網請使用日文版網頁訂房",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "玉山Wallet刷日本PayPay",
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: 日本PayPay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定玉山Wallet電子支付於日本PayPay消費；「免」收1.5%國外交易服務費；本服務為新臺幣扣款，使用日圓雙幣卡亦同"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$3,333",
+       "✔ 單筆滿 NT$3,000",
+       "適用通路: 台灣中油直營站",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 當月消費累積滿NT3,000(含)以上，需登錄活動；限量24,000名；8月活動登錄時間：2026/8/23 12:00起至2026/8/31 23:59止；9月活動登錄時間：2026/9/23 12:00起至2026/9/30 23:59止",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本一般消費",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 於日本地區 (含商店收單行為日本地區之商店) 刷卡之消費始符合回饋資格；需收取1.5%國外交易服務費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "yushan-pi-card": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 需申請帳單e化"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "單筆滿額綁 Pi 拍錢包消費",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "✔ 單筆滿 NT$499",
+       "適用通路: POYA 寶雅、PChome24h購物、欣葉SHABU SHABU、欣葉日本料理、欣葉小聚… 顯示全部197個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄；此活動適用所有 Pi 拍錢包通路，通路清單以 Pi 拍錢包官網為準",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$150,000",
+       "✔ 單筆滿 NT$30,000",
+       "適用通路: 國內消費、國外消費",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄，每月限領1次，2026/2/28~2026/8/31已登錄者，無須再次登錄；金額以每月累積計算",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "無上限",
+       "✔ 單筆滿 NT$10,000",
+       "適用通路: 國內消費、國外消費",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄，每月限領1次，2026/2/28~2026/8/31已登錄者，無須再次登錄；金額以每月累積計算",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/3/1~2026/12/31",
+       "條件: 限一次付清；限國內以新臺幣計價之首續期保費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "cathay-cube": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩數位」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「樂饗購」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「趣旅行」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 美食",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 火火燒肉販賣所、澄居烤物燒肉、鳥苑 Torien Yakitori、豐生茶館梅川東店、做茶菜… 顯示全部55個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 不適用設立於百貨、飯店及商場內等實體門市。不適用透過 inline 刷卡消費支付。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 娛樂",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 錢櫃KTV、好樂迪KTV、星聚點KTV、享溫馨KTV、PlayStation… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 遊樂園",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 東京迪士尼樂園、大阪環球影城(USJ)",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 僅限遊樂園內商店實體刷卡消費，不含門票、Tokyo Disney Resort App內消費及遊樂園外之市區街邊店(如迪士尼樂園外之DISNEY STORE等)；消費幣別需為日圓或消費國別為日本，並依據特約商店與收單機構登錄之特店名稱為「Tokyo Disney Resort」判斷；特店名稱為Tokyo Disney Resort (WEB) 則不適用；不含遊樂園附設飯店",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "週四外出用餐任務",
+       "回饋率",
+       "4.7%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: 國內餐廳",
+       "活動期間: 2026/6/1~2026/12/31",
+       "條件: 限於週四國內餐廳單筆消費滿NT$2,000可獲得5%優惠券（最多100點），優惠券將於大約消費日後的14天匯入，匯入後需於30日內使用於國內餐廳；可與「樂饗購」權益疊加"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 購物/體驗",
+       "回饋率",
+       "3.2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 新光三越(不含SKM Park Outlets 高雄草衙)、Uber Eats、Klook、FunNow",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "「固定回饋」方案",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/8/3~2026/12/31",
+       "條件: 切換到此方案後，活動期間不可再變更方案；可使用實體卡或綁Apple Pay、Samsung Pay、Google Pay、Garmin Pay消費；包含國外餐飲(MCC code為5811、5812、5814)；排除醫療事業、博奕類交易、飛機/郵輪上之消費、境外投資交易平台等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩數位」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「樂饗購」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元 以分類代碼(MCC code為5811、5812、5814、5462)為判斷依據，包含小額支付之餐飲，如飲料店、早餐店、連鎖速食店；排除餐券、飯店/酒店/旅館/KTV/酒吧/俱樂部/商場(如家樂福、車站商場、機場美食街、國道服務區美食街)所設立之餐飲、夜總會、菸酒販賣商；刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「趣旅行」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「全支付」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 全聯福利中心、大全聯、全支付國內合作通路",
+       "活動期間: 2026/4/22~2026/12/31",
+       "條件: 綁定全支付消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「集精選」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: U-POWER、EVOASIS、EVALUE、TAIL、iCharging… 顯示全部14個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「台塑家」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 台塑石油加油站、台亞加油站、福懋加油站、統一速邁樂(限本島)加油站、台塑生醫實體門市… 顯示全部11個",
+       "活動期間: 2026/6/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "「固定回饋」方案",
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 國內消費、國外線上消費",
+       "活動期間: 2026/8/3~2026/12/31",
+       "條件: 切換到此方案後，活動期間不可再變更方案；排除保費、全聯、大全聯等消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "0%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Hotels.com",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需經由【Hotels.com x CUBE 信用卡指定專屬網頁】預訂且即時支付房費；排除直接經由官網或 APP 之交易；需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Expedia",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需至 CUBE App 領券，需經由【Expedia x CUBE 信用卡指定專屬網頁】預訂且即時支付房費。排除直接經由官網或 APP 之交易。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "8.7%",
+       "回饋消費上限",
+       "NT$11,494",
+       "適用通路: 台北慕軒飯店",
+       "活動期間: 2026/5/1~2026/9/30",
+       "條件: 可用於飯店訂房住宿或館內餐飲消費；可與「趣旅行」權益疊加；需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "4.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本大丸百貨 (福岡天神店)",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 全球通派車",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限於 APP 授權綁定 CUBE 卡支付叫車服務費；需至 CUBE App 領券。"
+      ]
+     }
+    ]
+   },
+   "sinopac-sport": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "NT$5,000",
+       "條件: 認列為國內通路；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳；先前規定使用的汗水不白流 APP將於2025/12/31 終止服務"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、Samsung Pay、Garmin Pay、World Gym… 顯示全部29個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 消費 NT$ 5,000 ~ NT$ 10,000 間還是有 3%；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-green": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 星巴克、路易莎咖啡、藏壽司、摩斯漢堡、築間幸福鍋物… 顯示全部123個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定電子或行動帳單，且設定永豐/京城帳戶自動扣繳永豐信用卡帳款"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除富邦人壽（含原ING安泰人壽）及三商美邦人壽"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-daway": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "Visa 卡綁 Line Pay 刷指定韓國吃喝補給店家",
+       "回饋率",
+       "26.5%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: 韓國超商、韓國餐飲",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 指定店家清單 https://web-tw-pay.line.me/svc/merchant-info/event?hashtagId=2196；若非Visa卡則-10%；其中的22.5%為限量活動；活動以韓國時間為準；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "18%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: LINE Pay 找體驗 APP",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 若於週六日消費再+6%；其中16%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "Visa 卡綁 Line Pay 刷指定韓國旅遊購物店家",
+       "回饋率",
+       "9.5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 韓國百貨、韓國免稅、韓國服飾、韓國美妝、韓國景點… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 指定店家清單 https://web-tw-pay.line.me/svc/merchant-info/event?hashtagId=2197；若非Visa卡則-10%；其中的5.5%為限量活動；活動以韓國時間為準；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁 Line Pay 刷路易莎",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: 路易莎咖啡",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 其中5%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁 Line Pay 於週三刷酷澎",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$1,500",
+       "適用通路: Coupang",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限週三消費；「火箭跨境」商品及「WOW會員訂閱」不適用；其中5%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外刷 Line Pay",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有0.5%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內刷 Line Pay",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "sinopac-dawho": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+4%",
+       "回饋消費上限",
+       "NT$25,000",
+       "條件: 綁定DAWHO數位帳戶自動扣繳，且使用電子或行動帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+4%",
+       "回饋消費上限",
+       "NT$25,000",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如認列為國內則-1%；綁定DAWHO數位帳戶自動扣繳，且使用電子或行動帳單"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定DAWHO數位帳戶自動扣繳；且使用電子或行動帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-coin": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定通路",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外實體消費、日本三大交通卡(SUICA、PASMO、ICOCA)儲值、大國藥妝、Sugi藥妝、Rakuten… 顯示全部25個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 國外消費為刷外幣，如消費被認列為國內則-1%；綁定電子/行動帳單且設定永豐自動扣款；當月為DAWHO大戶/大戶Plus等級 (或) 前月資產月均餘額達NT$10萬(含)以上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內指定通路",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國內航空公司、國內旅行社、歐特儀松山機場停車消費、中華航空、長榮航空… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 綁定電子/行動帳單且設定永豐自動扣款；當月為DAWHO大戶/大戶Plus等級 (或) 前月資產月均餘額達NT$10萬(含)以上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "保費",
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 以MCC code為6300為判斷依據；三商美邦限傳統壽險適用；不含特定行銷專案保費(例如：法國巴黎/安聯)；排除分期交易"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "febank-lejia": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$4,210",
+       "適用通路: 寵物公園、東森寵物、魚中魚寵物水族、大樹寵物、凱朵寵物… 顯示全部20個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 於實體門市及官方購物網站/App刷卡"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "大小安心刷",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 大樹連鎖藥局、杏一醫療用品、維康醫療用品、躍獅連鎖藥局、媽咪樂居家服務… 顯示全部37個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活禮遇",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 愛買、家樂福、美廉社、小北百貨、大買家… 顯示全部42個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "大小安心刷",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 國內餐飲",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 餐飲認定以特約商店向信用卡收單機構登錄資料為準；須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有0.5%無上限"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "febank-happy": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 每滿100元給予一點快樂購卡點數"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: SOGO百貨、遠東百貨、遠企購物中心、愛買量販、city’super… 顯示全部16個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄且每月限量10,000名；不含momo mo店+及SHOPLINE、百貨型門市、賣場型門市",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: LINE Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄且每月限量10,000名；不含LINE PAY[生活繳費]之消費(例如：電信/水/電/瓦斯費等，以LINE PAY公告項目為準)",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄活動；與C'est Moi旅遊悠遊卡自動加值金額合併計算；每次自動加值金額皆以500元或其倍數為單位",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "tbb-chaotian": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,638",
+       "適用通路: Uber Eats、foodpanda、屈臣氏、康是美、POYA寶雅… 顯示全部26個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 當期帳單新增一般消費(不含指定加碼通路消費)滿3,000元以上；需使用電子帳單並登錄活動一次；綁台灣Pay再加1.5%",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣pay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定台灣Pay行動支付消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "tbb-artfun": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國外通路加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 國外航空公司、agoda、Hotels.com、Booking.com",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需當月一般消費滿6000元且登錄活動；認列為國外消費",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國內通路加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: OPENTIX兩廳院文化生活、tixCraft拓元售票系統、寬宏售票、udn售票網、ibon售票系統… 顯示全部36個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需當月一般消費滿6000元且登錄活動；認列為國内消費",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 透過企銀行動銀行APP或台灣Pay APP掃碼交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 全球迪士尼樂園、全球環球影城",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 含遊樂園內實體消費及門票預訂(限官網或官方App購票)，MCC code 須為 7832、7996、7998為判斷依據"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-liveplus": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.88%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "NT$20,000",
+       "條件: 認列為國內通路；設定自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家餐飲",
+       "回饋率",
+       "5.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 日本實體餐飲、新加坡實體餐飲、馬來西亞實體餐飲、越南實體餐飲、菲律賓實體餐飲… 顯示全部7個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之 MCC code 為 5441、5499、5812、5813、5814；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "餐飲",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國內餐飲、國外餐飲、麥當勞、星巴克、王品集團… 顯示全部67個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之餐飲 MCC code 為 5441、5499、5812、5813、5814；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "娛樂",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國外娛樂、國內娛樂、新光影城、威秀影城、國賓影城… 顯示全部44個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之娛樂 MCC code 為 7832、7996、7998；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "購物",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國內購物、國外購物、momo、蝦皮購物、pchome 24h購物… 顯示全部59個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之購物 MCC code 為 5311、5944、5948；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 其中的 0.88% 回饋無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2025/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-titanium": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$66,666",
+       "適用通路: 街口支付、PAYPAL、momo購物網、Uber Eats、Amazon.com… 顯示全部21個",
+       "活動期間: 2025/7/1~2027/6/30",
+       "條件: 回饋點數累積滿 5,000 點，且在一個月前的滙豐帳戶資產滿 NT$30 萬，即可申請兌換成 NT$10,000 元刷卡金"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 單筆刷保費最低門檻新台幣一千元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2025/7/1~2026/9/30",
+       "條件: 累積滿5000點現金積點（光靠刷廣告的話即為消費50萬）可換成10,000元刷卡金，可理解為得到消費回饋2%"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-cashback-signature": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1.22%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.22%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.22%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Google廣告、Meta廣告、Facebook廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.22%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "taishin-richart": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 詹記麻辣火鍋、萬客什鍋、海底撈、屋馬燒肉、茶六燒肉堂… 顯示全部34個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 饗饗 INPARADISE、NAGOMI、WEVERSE、K-MONSTAR、微樂客… 顯示全部38個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 台新Pay、台灣Pay、台新Pay+",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 韓國 Hana pay、日本 PayPay",
+       "活動期間: 2025/12/1~2027/3/31",
+       "條件: 使用台新Pay+付款；同享免1.5%國外交易手續費；；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 7-11(限綁台新Pay)、全家(限綁台新Pay)",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「數趣刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 蝦皮、momo、酷澎(coupang)、pchome、淘寶… 顯示全部31個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「好饗刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 國內餐飲",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 認列之餐飲 MCC code 為 5811、5812、5813、5814；排除餐券；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: skm pay、遠東百貨、遠東sogo、漢神巨蛋、漢神百貨… 顯示全部31個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「天天刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 7-11(限綁台新Pay)、全家(限綁台新Pay)、家樂福、大買家、唐吉軻德 DON DON DONKI… 顯示全部29個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「好饗刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 王品瘋pay、uber eats、foodpanda、拓元售票、kktix… 顯示全部25個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩旅刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: uber、grab、suica、icoca、pasmo… 顯示全部42個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: Apple 直營、Apple 官網、Studio A、DJI、Insta360… 顯示全部10個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 新光三越",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 排除新光三越台北車站；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 微風",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 僅微風廣場、微風南京、微風松高、微風信義、微風南山之消費享加碼回饋。微風台大醫院、TRINE & ZEN(微風中研院店)、微風東岸(EAST COAST BY BREEZE)不予加碼回饋；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 國外",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 切換「玩旅刷」方案 (含海外實體,海外線上,歐洲國家)；限使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "2.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: Line Pay、全盈+Pay",
+       "活動期間: 2025/12/15~2027/3/31",
+       "條件: 排除不回饋項目（如四大超商、繳稅費等）；需設定台新帳戶扣繳卡費，次期帳單結帳後生效；「回饋消費上限」算法為持卡人的永久信用額度加上NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「假日刷」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 假日",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 需於國內節假日消費，不限通路(含保費)；限使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包、Samsung Pay支付、LINE Pay；需設定台新帳戶扣繳卡費，次期帳單結帳後生效；「消費上限」算法為以持卡人之永久信用額度加計NT$30萬；排除不回饋項目，如四大超商、繳稅費等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 免切方案；若於假日刷並切「假日刷」方案可享2%，輸入\"假日\"查看更多重要條件；排除國外保險交易、躉繳保費、投資型保費、三商美邦保費、彈性繳保費、單筆消費分期0利率；「消費上限」算法為以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 可與「Pay著刷 2.3%」權益疊加；需至Richart Life App 領券"
+      ]
+     }
+    ]
+   },
+   "taishin-jiekou": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 4大超商及Apple媒體服務通路：限於街口支付綁定消費始享1%"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$400,000",
+       "適用通路: 新光三越、遠東百貨、遠東巨城、LaLaport、三井(MITSUIOUTLETPARK)",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 含國內實體門市及百貨線上購物，不含店中櫃(例:無印良品/UNIQLO/Apple直營店/美食街等)；百貨排除SKM Park Outlets 高雄草衙、新光三越台北車站；可使用實體卡(含線上輸入卡號)、綁定街口支付/LINE Pay/Apple pay付款等皆適用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$400,000",
+       "適用通路: 韓國、Klook、KKday、易遊網、Agoda… 顯示全部49個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 可使用實體卡(含線上輸入卡號)、綁定街口支付/LINE Pay/Apple pay付款等皆適用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$1,000,000",
+       "適用通路: 日本PayPay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用街口支付；同享免海外手續費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "fubon-jcard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 排除所有全聯實業旗下品牌通路；申辦時可選擇J Cash(現金回饋)或J Points(LINE POINTS回饋)，核卡後無法調整；選擇LINE POINTS者須綁定LINE Pay後生效"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,857",
+       "✔ 單筆滿 NT$2,000",
+       "適用通路: 日本Suica、日本PASMO、日本ICOCA",
+       "活動期間: 2026/4/1~2026/9/30",
+       "條件: Apple Pay綁定J卡儲值；需登錄且限量，每季需登錄一次，開放登錄時間為每月20號16:00。登錄辦法：到【Fubon+台北富邦行動銀行】APP，註冊/登錄會員後，點選【優惠】>>【活動登錄】勾選活動。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家單筆滿千實體消費",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$33,333",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費",
+       "活動期間: 2026/4/1~2026/12/31",
+       "條件: 回饋消費上限以每季計算；該筆刷卡交易請款時商店登記之國別碼為日本或韓國；需登錄且限量，到【Fubon+台北富邦行動銀行】APP，註冊/登錄會員後，點選【優惠】>>【活動登錄】勾選活動。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家基本回饋",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本網購、韓國網購、泰國網購、日本實體消費、韓國實體消費… 顯示全部6個",
+       "活動期間: 2026/4/1~2026/12/31",
+       "條件: 扣款幣別須為該國幣別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 國內保費、國內保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 可選現金回饋或Line Points"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ctbc-uniopen": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 國外實體消費加碼；限實體卡、Apple Pay、Google Pay、Samsung Pay於實體商店支付"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "icashPay + 統一集團踩點任務",
+       "回饋率",
+       "11%",
+       "回饋消費上限",
+       "NT$3,750",
+       "✔ 單筆滿 NT$199",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限量活動；「踩點任務」需消費5家不同統一集團品牌（少1家減1%）；限一般商品交易、icashPay 需連結 uniopen 會員"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外實體消費加碼",
+       "回饋率",
+       "11%",
+       "回饋消費上限",
+       "NT$6,250",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限實體卡、Apple Pay、Google Pay、Samsung Pay於實體商店支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "統一集團踩點任務",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$12,500",
+       "✔ 單筆滿 NT$199",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 單筆消費需滿199元(含)、需消費5家不同統一集團品牌（少1家減1%）"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "icashPay + 統一集團",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$3,750",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限一般商品交易、icashPay 需連結 uniopen 會員"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "首次綁定搭北捷",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$833",
+       "適用通路: 台北捷運",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需領券；限首次綁定Apple Pay、Samsung Pay、Google Pay後感應刷卡支付台北捷運「閘門」的車資消費；每季需領券一次，活動券數不限量；回饋上限以每「季」計算"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "統一集團消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ctbc-linepay-card": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 需綁定LINE Pay且限臺灣LINE帳號"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1.8%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 國外實體消費加碼"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,222",
+       "適用通路: LOPIA、壽司郎 Sushiro、Komeda's Coffee 客美多咖啡、Mos Burger 摩斯漢堡、藏壽司",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量；限JCB卡別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,222",
+       "適用通路: Uniqlo、GU",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量；限JCB卡別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$3,333",
+       "適用通路: 撥撥貓砂官網",
+       "活動期間: 2026/4/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "8%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: KAFEN",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量400,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 資生堂國際櫃官網、SABON官網、蘭芝 (Laneige) 官網",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$8,000",
+       "適用通路: 肌膚之鑰",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: NARS、Watashi+、ISPA",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 雪花秀 Sulwhasoo",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: Sabon",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量400,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: sisley",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 透過LINE Pay支付功能於Sisley官方網站消費；限量活動"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,750",
+       "適用通路: 倩碧 Clinique、Bobbi Brown、M‧A‧C、品木宣言、JO MALONE",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: LA MER",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$2,500",
+       "適用通路: 淘寶、蝦皮購物",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限Visa卡別；每季需登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,454",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於每週二登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$2,500",
+       "適用通路: Uber Eats、星巴克",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "✔ 單筆滿 NT$5,000",
+       "適用通路: 營養師輕食",
+       "活動期間: 2026/7/13~2026/12/31",
+       "條件: 限透過LINE Pay支付於營養師輕食官方網站消費；活動限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "寶雅門市每週三滿額",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$700",
+       "✔ 單筆滿 NT$650",
+       "適用通路: 寶雅實體獨立門市",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限量活動；限透過Line Pay支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 雅詩蘭黛 Estee Lauder",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.8%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 捷運輕軌、台鐵、公車客運、公共自行車、渡輪",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定一卡通支付；計算單位採「每滿 100 元」回饋 1 點 LINE POINT"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "dbs-eco": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: 鮮乳坊、茶籽堂、nextdoorfresh、直接跟農夫買、玩轉學校… 顯示全部16個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: Tesla充電資費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: Tesla充電需綁卡於APP全額繳費；需帳單明細顯示指定交易名稱；排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: Gogoro電池資費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需於APP中全額繳費；含PBGN車主電池資費；需帳單明細顯示指定交易名稱；排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定海外國家實體消費",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$15,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費、新加坡實體消費、美洲實體消費… 顯示全部67個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 以實體卡片或Apple Pay／Samsung Pay於當地實體門市消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 適用於國內及國外一般保費代扣繳；排除分期交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "NT$12,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 三個條件皆需達成：需為星禧數位帳戶存戶，且資產 30 萬連 4 個月；且設定星禧數位帳戶自動扣繳卡費；且綁定使用LINE Pay／街口支付／Apple Pay／Samsung Pay消費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "dbs-aov": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 以指定星展帳戶設定信用卡自動轉帳付款，完成設定次月起享升級回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活玩家精選通路",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$3,333",
+       "適用通路: 蝦皮、Uber Eats、foodpanda、麥當勞、肯德基… 顯示全部40個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定星展賬戶自動扣繳卡費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定地區",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$12,500",
+       "適用通路: 美國、韓國、日本、歐洲、泰國… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限實體消費；設定星展賬戶自動扣繳卡費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費指交易商店之國別非台灣地區(或)非以新台幣為交易幣別；以指定星展帳戶設定信用卡自動轉帳付款，完成設定次月起享升級回饋"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-linebank": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "現折活動",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富門市",
+       "活動期間: 2026/5/1~2026/12/31",
+       "條件: 限綁iPASS MONEY APP支付；活動排除品項(實際依萊爾富系統設定及公告為準)：折扣商品、菸品、櫃台酒、E購卡、代收代售、服務費、手續費、服務性商品、外送平台、EC取貨付款、APP點數預購兌換、商品禮券金額、行動折抵金、現金折價券、網購(含整買零取、萊購物、簡訊團購)等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定通路加碼",
+       "回饋率",
+       "5.5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Netflix、Disney+、Spotify、LINE TV、Steam… 顯示全部8個",
+       "活動期間: 2026/8/1~2027/7/31",
+       "條件: 若被認列為國內消費則-1.5%；影音/遊戲類通路可能出現在APP內消費屬國外消費、在官網消費屬國內消費的情況"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "現折活動",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富門市",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 僅適用聯邦銀行信用卡/金融卡(含綁定HiPay及行動支付：Apple Pay/Samsung Pay/Google Pay…等) 及 iPASS MONEY APP"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內指定通路加碼",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: CatchPlay、LINE TV 官網訂閱、KKTV、KKBOX、MOMO購物網… 顯示全部13個",
+       "活動期間: 2026/8/1~2027/7/31",
+       "條件: 若被認列為國外消費則+1.5%；影音/遊戲類通路可能出現在APP內消費屬國外消費、在官網消費屬國內消費的情況"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: Uber Eats、foodpanda",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限量6,000名，每月需登錄(每月10日下午3點開放登錄至當月月底)；不包含Uber One訂閱方案、Uber App及Uber Eats App中的Uber服務交易",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2025/8/1~2027/7/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-mcard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 國內航空、國外航空、國內飯店、Booking.com、Agoda… 顯示全部34個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 認列為國內或國外通路皆可；需申辦電子帳單；超過回饋上限則享 1%"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,000",
+       "✔ 單筆滿 NT$300",
+       "適用通路: 美廉社、心樸市集、小北百貨",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需登錄；限於實體門市消費；可用實體信用卡，或綁Apple Pay、Samsung Pay、Google Pay、Line Pay、街口支付等；此活動適用聯邦銀行信用卡全卡種",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 申辦電子帳單；非實體享 1.5%"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "NT$833,333",
+       "適用通路: 保費、保險",
+       "活動期間: 2025/1/1~2026/12/31",
+       "條件: 申辦電子帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-linepoint": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "偶數日Line Pay刷指定通路",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 王品集團、三商集團、輕井澤集團、海底撈、築間… 顯示全部39個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 單筆消費滿NT$100，且限綁Line Pay於國內消費；活動總回饋上限100萬點；偶數日係指每月2日、4日、6日、8日、10日…以此類推"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$4,000",
+       "適用通路: CHIIKAWA SHOP inTAIPEI台北常設店、CHIIKAWA DAYS台北特展商店、OPENTIX兩廳院、tixCraft拓元、寬宏售票… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "門市現折5%",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 可刷實體信用卡或綁定於Apple Pay、Samsung Pay、Google Pay、HiPay及iPass Money APP"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限國內消費單筆消費滿100元"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-green": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子化帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綠色消費",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: 仙桃素、鈺善閣．素．養生懷石、祥和蔬食料理、曙光居、毛蔬亞洲蔬食… 顯示全部44個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子化帳單；蔬食餐廳排除百貨店、店中店；生機選品排除百貨店、店中店"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "外送平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: Uber Eats、Foodpanda",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄，每月限量登錄6,000名；排除Uber One訂閱方案、Uber App及Uber Eats App中的Uber服務交易",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活代扣繳",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: 水費、電費、瓦斯費、電信費、路邊停車費… 顯示全部10個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子化帳單及自動扣繳；路邊停車費限台北市、新北市、桃園市、新竹縣市、台中市、台南市及高雄市等可辦理自動扣繳之公有路邊停車費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "mega-bt21": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "台灣Pay多條件加碼活動",
+       "回饋率",
+       "5.5%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2025/1/1~2026/12/31",
+       "條件: 限透過「兆豐行動銀行」APP或「台灣行動支付」APP的台灣Pay付款；需登錄，限量且須登錄8,000名，將於每月第一個銀行營業日上午11點開放登錄；需申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "優惠自由選(國外)",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Agoda、Trip.com、Booking.com、Hotels.com、Klook… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 當月新增一般消費達3筆；使用電子帳單(不含行動帳單且取消紙本帳單)並設定帳戶自動扣繳；限使用指定行動支付消費否則 -2%；需登錄且名額有限，每月限擇一通路登錄，115/9/3 10:00 開放登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "優惠自由選(國內)",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 易遊網、雄獅旅遊、東南旅遊、Foodpanda、Uber Eats… 顯示全部14個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限使用指定行動支付消費否則 -2%；當月新增一般消費達3筆；使用電子帳單(不含行動帳單且取消紙本帳單)並設定帳戶自動扣繳；需登錄且名額有限，每月限擇一通路登錄，115/9/3 10:00 開放登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定行動支付國外消費",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、LINE Pay、街口支付、Samsung Pay… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定行動支付國內消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、LINE Pay、街口支付、Samsung Pay… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 使用Apple Pay、Google Pay、台灣Pay、LINE Pay、街口支付或Samsung Pay付款；申辦電子賬單；設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋；不包含歐洲經濟區(EEA)及英國地區之消費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "kgi-eslite": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "條件: 設定自動扣繳；排除保費"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$89,362",
+       "適用通路: 誠品通路、誠品台大店、誠品生活西門、誠品台北車站捷運店、誠品生活板橋… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除分期交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "2.3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sunny-jcb-crystal": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: 日本7-ELEVEN門市、日本全家門市、日本LAWSON門市",
+       "活動期間: 2026/4/1~2026/9/30",
+       "條件: 回饋上限以每季計算，第二波段活動 (7~9月) 僅須登錄乙次無須每月重複登錄，登錄名額不限量",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: LINE Pay、街口支付、台灣Pay、悠遊付、foodpanda… 顯示全部6個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本實體消費、日本網購、韓國實體消費、韓國網購、泰國實體消費… 顯示全部6個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "firstbank-ileo": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1.5%",
+       "回饋消費上限",
+       "NT$33,333",
+       "條件: 需設定數位帳戶扣繳與電子帳單；排除部分歐洲實體商店"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付滿千加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: LINE Pay、街口支付",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦本行帳戶扣繳與電子帳單；排除部分歐洲地區"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "滿千加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$33,333",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 蝦皮購物、momo、Coupang",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限量；需登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: LINE Pay、街口支付",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 單筆滿NT$1,000再加碼1%(消費NT$2,0000封頂)；申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "電信/影音/串流",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 中華電信、台灣大哥大、遠傳電信、神腦國際、iTunes… 顯示全部13個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內外指定網購",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 博客來、VIVA美好生活、GOMAJI、FriDay購物、生活市集… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需於指定登錄時間登錄，限量2,000名",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "購物",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: momo網站、蝦皮購物(台灣)、YAHOO、PCHOME、東森購物… 顯示全部12個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "饗樂",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 國內旅行社、航空公司、昇恆昌免稅店、kkday、Klook… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定支付滿千加碼1%",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 透過第一銀行APP(第e行動及iLEO APP)之台灣Pay或「台灣行動支付」APP綁卡掃碼支付；單筆滿NT$1,000再加碼1%(消費NT$2,0000封頂)；消費 NT$6,667 ~ NT$20,000 間仍享共 1.5% 回饋；申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「愛購物」"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 其中的1%按消費門檻回饋固定金額；需登錄，限量8,000名；滿NT$50,000起適用回饋；排除分期交易；回饋不累贈；活動期間每戶上限NT$90,000",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付單筆滿千",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: Apple Pay、Google Pay、Samsung Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦本行帳戶扣繳與電子帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$4,000",
+       "適用通路: Netflix、YouTube Premium、Disney+、ChatGPT、Gemini… 顯示全部11個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 當月iLEO信用卡刷3次單筆滿千元一般消費，且申辦本行帳戶扣繳與電子帳單；限量3,000名；須於6/15上午10點登錄；須申辦本行帳戶扣繳與電子帳單"
+      ]
+     }
+    ]
+   },
+   "chb-mylove": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除歐盟地區國家實體交易、etoro、viagogo；實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外超市、國外量販店",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限行業代碼5411超市、量販店業，實體及網絡都認列；排除全聯及大全聯；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外餐廳",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限行業代碼5811、5812、5814餐廳業，實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定百貨",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 新光三越、SOGO、遠東、太平洋、統一時代… 顯示全部26個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定電信",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 中華電信、台灣大哥大、遠傳電信、台灣之星、亞太電信",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限約定扣繳電信資費；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   }
+  },
+  "2026-08-25T12:00:00+08:00": {
+   "yushan-unicard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦帳單e化及玉山臺幣帳戶自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "加油交通",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 台灣中油直營店、55688台灣大車隊、台鐵、高鐵、uber… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「中油加油站」限台灣中油網站公告之直營站(含綁定中油Pay支付)；「臺鐵/高鐵」限於官網訂票系統、官方APP、全線各站售票窗口臨櫃購票(含定期票)、自動售票機購票，不含高鐵假期、旅行社代購車票、超商付款票券、車內餐飲費用、持卡感應進站搭乘或閘門電子票證自動加值(如悠遊卡自動加值)、飯店聯票、航空聯票、觀光巴士聯票等通路購票；「Uber」限國內搭乘且交易幣別為新臺幣",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 玉山wallet、Line Pay、全支付、街口支付、悠遊付… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除於超商、全聯、大全聯交易、全聯全電商平台付款、繳納各項稅費等非一般消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "ESG消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 玉山wallet愛心捐款單筆、玉山wallet愛心捐款定期定額、特斯拉",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外實體",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費、越南實體消費、新加坡實體消費… 顯示全部18個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 交易地點需為指定國別之實體線下交易，且交易幣別非新臺幣"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "電商平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: momo購物網、蝦皮購物、淘寶、Coupang酷澎",
+       "活動期間: 2025/10/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "百貨",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 新光三越百貨、台北信義新天地、DIAMOND TOWERS、skm online、skm pay… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 以簽單之商店名稱判斷是否為百貨交易，部分百貨之櫃位為獨立店，舉例：遠百信義A13之Apple門市為獨立店，其刷卡簽單上顯示之商店名稱為Apple，即不符合遠東百貨消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "餐飲美食",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: uber eats、foodpanda、王品瘋pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 僅適用國內特店及交易幣別為新臺幣；王品瘋Pay限使用APP功能之瘋Pay綁定玉山Unicard支付餐點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "航空旅遊",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 中華航空、長榮航空、日本航空、台灣虎航、樂桃航空… 顯示全部21個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「旅遊平台」若選到店付款則不列入回饋；「航空公司」限於該航空公司臨櫃、官網及APP購票，以及包含機上免稅商品、機場商店或貴賓室等非購買機票之消費，但不含旅行社、線上旅遊平台購票；Klook限國內消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活採買",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: uniqlo(實體門市及官網)、net(實體門市及官網)",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 僅適用國內特店，包含實體門市、官方網站、APP；限街邊獨立店適用，若特店設立於百貨、商場等則不列入回饋計算，舉例：林口三井OUTLET館內的UNIQLO"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活採買",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 家樂福、屈臣氏、康是美、特力屋、hola… 顯示全部8個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 實體門市及官網都適用；僅適用國內特店"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "精選商家",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: Apple直營、Apple Store 在線商城、小米台灣官網、小米之家(實體通路)、小米專賣店(實體通路)… 顯示全部12個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 壽險",
+       "條件: 需登錄；排除分期繳費、躉繳保費及三商美邦投資型保單、申辦帳單e化及玉山銀行臺幣帳戶自動扣繳",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Gogoro電池資費、Evoasis、U-POWER、特爾電力、AmpGO… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需領券；當月消費滿3筆享加碼3%；限使用實體卡貨Apple Pay、Google Pay、Samsung Pay支付"
+      ]
+     }
+    ]
+   },
+   "yushan-ubear": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 綁定電子帳單 且 設定玉山帳戶自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁中油Pay加油享滿額加碼",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,333",
+       "✔ 單筆滿 NT$3,000",
+       "適用通路: 中油Pay",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需至玉山官網連結頁或玉山Wallet APP登錄(9/23 12:00起)，限量；此活動可與\"中油Pay\"原有的網購回饋疊加，則3%+3%=6%",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$200,000",
+       "✔ 單筆滿 NT$160,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$533,333",
+       "✔ 單筆滿 NT$400,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$375,000",
+       "✔ 單筆滿 NT$80,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$1,000,000",
+       "✔ 單筆滿 NT$100,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$600,000",
+       "✔ 單筆滿 NT$40,000",
+       "適用通路: 日本實體消費、韓國實體消費",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家實體商店加碼",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$1,600,000",
+       "✔ 單筆滿 NT$50,000",
+       "適用通路: 歐盟實體消費、美國實體消費、澳洲實體消費、加拿大實體消費、紐西蘭實體消費… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "指定數位訂閱平台",
+       "即將開始 (7天後)",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: nintendo、playstation、netflix、gemini、steam… 顯示全部6個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 限原平台付款，經Google、PayPal等代扣不適用。不與一般/網路消費回饋併計，達上限即停止回饋；Gemini需直接綁卡於Google消費，若透過Google Play則被歸類為網購。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 行動支付",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: line pay、街口支付、悠遊付、open錢包、icash pay… 顯示全部15個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除繳費、非消費性款項、政府服務、學校服務、便利商店、全聯、 APP繳費、分期"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 線上購物平台",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: pchome、momo購物網、蝦皮、coupang酷澎、yahoo購物中心… 顯示全部62個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除AMAZON、日本露天、Apple官網分期、東森購物與森森購物；「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準；售票系統限線上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 交通/訂房",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 55688 app、uber、呼叫小黃、台灣高鐵t-ex行動購票、台鐵線上購票… 顯示全部16個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除車麻吉月租停車費不適用，Agoda、Booking.com等訂房網延後扣款；「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 外送平台",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: uber eats、foodpanda、foodomo、lalamove、你訂",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 線上娛樂",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: kkbox、itunes、google play、funnow、spotify",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 排除線上娛樂定期定額扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 網購",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 「網購」的判定依據是刷卡授權時提供的交易型態資訊為網購(EC)交易為準；排除保費、ETC儲值、ETORO、小額支付平台之線上交易 (含麥當勞、肯德基與必勝客等)、有線電視與電信費用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "網購 - 數位平台",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: iCloud、Notion、Microsoft 365、Canva、Adobe Creative Cloud… 顯示全部14個",
+       "活動期間: 2026/9/1~2027/2/28"
+      ]
+     }
+    ],
+    "card-coupon-cashback": []
+   },
+   "yushan-kumamon": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 綁定帳單e化與申請玉山帳戶自動扣繳卡費"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$200,000",
+       "✔ 單筆滿 NT$160,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$500",
+       "✔ 單筆滿 NT$500",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需使用玉山熊本熊卡(很友好具悠遊卡功能)於活動網頁登錄成功，並於當月使用同一張卡自動加值新臺幣500元或其倍數；每卡每月須完成登錄以取得當月活動參加資格；每月限量；每卡每月限參加登錄1次，活動期間每卡限參加登錄3次",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "日本名古屋指定實體商店",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: BicCamera、JR名古屋高島屋、名古屋PARCO、松坂屋名古屋店、SUGI藥局… 顯示全部6個",
+       "條件: 累積金額需達NT10,000(含)以上；需登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "9.3%",
+       "回饋消費上限",
+       "NT$159,999",
+       "✔ 單筆滿 NT$80,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定實體商家滿額加碼",
+       "回饋率",
+       "9%",
+       "回饋消費上限",
+       "NT$79,999",
+       "✔ 單筆滿 NT$40,000",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於活動期間登錄；每滿萬元再享RIMOWA抽獎機會，使用玉山銀行帳戶自動扣繳信用卡費者，可獲得2倍抽獎機會",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定日本商店",
+       "回饋率",
+       "8.5%",
+       "回饋消費上限",
+       "NT$8,333",
+       "適用通路: SUICA、PASMO、ICOCA、日本TOYOTA Rent a Car、日本Times Car Rental… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需登錄且活動期間內僅需登錄1次；帳單顯示名稱需包含該指定日本商店名稱始享回饋；排除設立於百貨公司、飯店、酒店、旅館、賣場、商場、車站及美食街等無法判別為該商店之交易；樂天訂房官網請使用日文版網頁訂房",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "玉山Wallet刷日本PayPay",
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: 日本PayPay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定玉山Wallet電子支付於日本PayPay消費；「免」收1.5%國外交易服務費；本服務為新臺幣扣款，使用日圓雙幣卡亦同"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$3,333",
+       "✔ 單筆滿 NT$3,000",
+       "適用通路: 台灣中油直營站",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 當月消費累積滿NT3,000(含)以上，需登錄活動；限量24,000名；8月活動登錄時間：2026/8/23 12:00起至2026/8/31 23:59止；9月活動登錄時間：2026/9/23 12:00起至2026/9/30 23:59止",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本一般消費",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 於日本地區 (含商店收單行為日本地區之商店) 刷卡之消費始符合回饋資格；需收取1.5%國外交易服務費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "yushan-pi-card": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 需申請帳單e化"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/3/1~2026/12/31",
+       "條件: 限一次付清；限國內以新臺幣計價之首續期保費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "即將開始 (7天後)",
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 國內消費、國外消費",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄，每月限領1次，2026/2/28~2026/8/31已登錄者，無須再次登錄；金額以每月累積計算"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$150,000",
+       "適用通路: 國內消費、國外消費",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄，每月限領1次，2026/2/28~2026/8/31已登錄者，無須再次登錄；金額以每月累積計算"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "單筆滿額綁 Pi 拍錢包消費",
+       "即將開始 (7天後)",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: POYA 寶雅、PChome24h購物、欣葉SHABU SHABU、欣葉日本料理、欣葉小聚… 顯示全部197個",
+       "活動期間: 2026/9/1~2027/2/28",
+       "條件: 需登錄；此活動適用所有 Pi 拍錢包通路，通路清單以 Pi 拍錢包官網為準"
+      ]
+     }
+    ],
+    "card-coupon-cashback": []
+   },
+   "cathay-cube": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩數位」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「樂饗購」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「趣旅行」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 美食",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 火火燒肉販賣所、澄居烤物燒肉、鳥苑 Torien Yakitori、豐生茶館梅川東店、做茶菜… 顯示全部55個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 不適用設立於百貨、飯店及商場內等實體門市。不適用透過 inline 刷卡消費支付。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 娛樂",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 錢櫃KTV、好樂迪KTV、星聚點KTV、享溫馨KTV、PlayStation… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 遊樂園",
+       "回饋率",
+       "9.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 東京迪士尼樂園、大阪環球影城(USJ)",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 僅限遊樂園內商店實體刷卡消費，不含門票、Tokyo Disney Resort App內消費及遊樂園外之市區街邊店(如迪士尼樂園外之DISNEY STORE等)；消費幣別需為日圓或消費國別為日本，並依據特約商店與收單機構登錄之特店名稱為「Tokyo Disney Resort」判斷；特店名稱為Tokyo Disney Resort (WEB) 則不適用；不含遊樂園附設飯店",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "週四外出用餐任務",
+       "回饋率",
+       "4.7%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: 國內餐廳",
+       "活動期間: 2026/6/1~2026/12/31",
+       "條件: 限於週四國內餐廳單筆消費滿NT$2,000可獲得5%優惠券（最多100點），優惠券將於大約消費日後的14天匯入，匯入後需於30日內使用於國內餐廳；可與「樂饗購」權益疊加"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「慶生月」方案 - 購物/體驗",
+       "回饋率",
+       "3.2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 新光三越(不含SKM Park Outlets 高雄草衙)、Uber Eats、Klook、FunNow",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "「固定回饋」方案",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/8/3~2026/12/31",
+       "條件: 切換到此方案後，活動期間不可再變更方案；可使用實體卡或綁Apple Pay、Samsung Pay、Google Pay、Garmin Pay消費；包含國外餐飲(MCC code為5811、5812、5814)；排除醫療事業、博奕類交易、飛機/郵輪上之消費、境外投資交易平台等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩數位」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「樂饗購」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元 以分類代碼(MCC code為5811、5812、5814、5462)為判斷依據，包含小額支付之餐飲，如飲料店、早餐店、連鎖速食店；排除餐券、飯店/酒店/旅館/KTV/酒吧/俱樂部/商場(如家樂福、車站商場、機場美食街、國道服務區美食街)所設立之餐飲、夜總會、菸酒販賣商；刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「趣旅行」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「全支付」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 全聯福利中心、大全聯、全支付國內合作通路",
+       "活動期間: 2026/4/22~2026/12/31",
+       "條件: 綁定全支付消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「集精選」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: U-POWER、EVOASIS、EVALUE、TAIL、iCharging… 顯示全部14個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 刷卡方式接受實體卡及感應支付（如：Apple Pay、Google Pay）；「回饋消費上限」算法為原核予每月信用額度加計新臺幣50萬元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「台塑家」方案",
+       "回饋率",
+       "1.7%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 台塑石油加油站、台亞加油站、福懋加油站、統一速邁樂(限本島)加油站、台塑生醫實體門市… 顯示全部11個",
+       "活動期間: 2026/6/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "「固定回饋」方案",
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "NT$500,000",
+       "適用通路: 國內消費、國外線上消費",
+       "活動期間: 2026/8/3~2026/12/31",
+       "條件: 切換到此方案後，活動期間不可再變更方案；排除保費、全聯、大全聯等消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "0%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Hotels.com",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需經由【Hotels.com x CUBE 信用卡指定專屬網頁】預訂且即時支付房費；排除直接經由官網或 APP 之交易；需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Expedia",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需至 CUBE App 領券，需經由【Expedia x CUBE 信用卡指定專屬網頁】預訂且即時支付房費。排除直接經由官網或 APP 之交易。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "8.7%",
+       "回饋消費上限",
+       "NT$11,494",
+       "適用通路: 台北慕軒飯店",
+       "活動期間: 2026/5/1~2026/9/30",
+       "條件: 可用於飯店訂房住宿或館內餐飲消費；可與「趣旅行」權益疊加；需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "4.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本大丸百貨 (福岡天神店)",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需至 CUBE App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 全球通派車",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限於 APP 授權綁定 CUBE 卡支付叫車服務費；需至 CUBE App 領券。"
+      ]
+     }
+    ]
+   },
+   "sinopac-sport": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "NT$5,000",
+       "條件: 認列為國內通路；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳；先前規定使用的汗水不白流 APP將於2025/12/31 終止服務"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、Samsung Pay、Garmin Pay、World Gym… 顯示全部29個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 消費 NT$ 5,000 ~ NT$ 10,000 間還是有 3%；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-green": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: 星巴克、路易莎咖啡、藏壽司、摩斯漢堡、築間幸福鍋物… 顯示全部123個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定電子或行動帳單，且設定永豐/京城帳戶自動扣繳永豐信用卡帳款"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除富邦人壽（含原ING安泰人壽）及三商美邦人壽"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-daway": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "Visa 卡綁 Line Pay 刷指定韓國吃喝補給店家",
+       "回饋率",
+       "26.5%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: 韓國超商、韓國餐飲",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 指定店家清單 https://web-tw-pay.line.me/svc/merchant-info/event?hashtagId=2196；若非Visa卡則-10%；其中的22.5%為限量活動；活動以韓國時間為準；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "18%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: LINE Pay 找體驗 APP",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 若於週六日消費再+6%；其中16%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "Visa 卡綁 Line Pay 刷指定韓國旅遊購物店家",
+       "回饋率",
+       "9.5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 韓國百貨、韓國免稅、韓國服飾、韓國美妝、韓國景點… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 指定店家清單 https://web-tw-pay.line.me/svc/merchant-info/event?hashtagId=2197；若非Visa卡則-10%；其中的5.5%為限量活動；活動以韓國時間為準；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁 Line Pay 刷路易莎",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: 路易莎咖啡",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 其中5%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綁 Line Pay 於週三刷酷澎",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$1,500",
+       "適用通路: Coupang",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限週三消費；「火箭跨境」商品及「WOW會員訂閱」不適用；其中5%為限量活動；設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外刷 Line Pay",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有0.5%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內刷 Line Pay",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定永豐/京城賬戶自動扣繳；設定電子或行動賬單；成為永豐網路銀行會員並完成投資屬性問卷"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "sinopac-dawho": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+4%",
+       "回饋消費上限",
+       "NT$25,000",
+       "條件: 綁定DAWHO數位帳戶自動扣繳，且使用電子或行動帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+4%",
+       "回饋消費上限",
+       "NT$25,000",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如認列為國內則-1%；綁定DAWHO數位帳戶自動扣繳，且使用電子或行動帳單"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定DAWHO數位帳戶自動扣繳；且使用電子或行動帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sinopac-coin": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定通路",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外實體消費、日本三大交通卡(SUICA、PASMO、ICOCA)儲值、大國藥妝、Sugi藥妝、Rakuten… 顯示全部25個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 國外消費為刷外幣，如消費被認列為國內則-1%；綁定電子/行動帳單且設定永豐自動扣款；當月為DAWHO大戶/大戶Plus等級 (或) 前月資產月均餘額達NT$10萬(含)以上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內指定通路",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國內航空公司、國內旅行社、歐特儀松山機場停車消費、中華航空、長榮航空… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 綁定電子/行動帳單且設定永豐自動扣款；當月為DAWHO大戶/大戶Plus等級 (或) 前月資產月均餘額達NT$10萬(含)以上"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有1%無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "保費",
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 以MCC code為6300為判斷依據；三商美邦限傳統壽險適用；不含特定行銷專案保費(例如：法國巴黎/安聯)；排除分期交易"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "febank-lejia": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$4,210",
+       "適用通路: 寵物公園、東森寵物、魚中魚寵物水族、大樹寵物、凱朵寵物… 顯示全部20個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 於實體門市及官方購物網站/App刷卡"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "大小安心刷",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 大樹連鎖藥局、杏一醫療用品、維康醫療用品、躍獅連鎖藥局、媽咪樂居家服務… 顯示全部37個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活禮遇",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 愛買、家樂福、美廉社、小北百貨、大買家… 顯示全部42個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "大小安心刷",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$5,714",
+       "適用通路: 國內餐飲",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 餐飲認定以特約商店向信用卡收單機構登錄資料為準；須本期以遠東賬戶自動扣款成功，且於次期帳單新增一般消費滿NT$3,000"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費為非台灣地區且非新台幣交易，如廣告後台選擇台幣付款則認列為國內消費，僅享有0.5%無上限"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "febank-happy": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 每滿100元給予一點快樂購卡點數"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: SOGO百貨、遠東百貨、遠企購物中心、愛買量販、city’super… 顯示全部16個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄且每月限量10,000名；不含momo mo店+及SHOPLINE、百貨型門市、賣場型門市",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: LINE Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄且每月限量10,000名；不含LINE PAY[生活繳費]之消費(例如：電信/水/電/瓦斯費等，以LINE PAY公告項目為準)",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$1,000",
+       "適用通路: 悠遊卡自動加值",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄活動；與C'est Moi旅遊悠遊卡自動加值金額合併計算；每次自動加值金額皆以500元或其倍數為單位",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "tbb-chaotian": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$10,638",
+       "適用通路: Uber Eats、foodpanda、屈臣氏、康是美、POYA寶雅… 顯示全部26個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 當期帳單新增一般消費(不含指定加碼通路消費)滿3,000元以上；需使用電子帳單並登錄活動一次；綁台灣Pay再加1.5%",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.8%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣pay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定台灣Pay行動支付消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "tbb-artfun": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國外通路加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 國外航空公司、agoda、Hotels.com、Booking.com",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需當月一般消費滿6000元且登錄活動；認列為國外消費",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國內通路加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: OPENTIX兩廳院文化生活、tixCraft拓元售票系統、寬宏售票、udn售票網、ibon售票系統… 顯示全部36個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需當月一般消費滿6000元且登錄活動；認列為國内消費",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 透過企銀行動銀行APP或台灣Pay APP掃碼交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: 全球迪士尼樂園、全球環球影城",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 含遊樂園內實體消費及門票預訂(限官網或官方App購票)，MCC code 須為 7832、7996、7998為判斷依據"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-liveplus": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.88%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "NT$20,000",
+       "條件: 認列為國內通路；設定自動扣繳"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家餐飲",
+       "回饋率",
+       "5.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 日本實體餐飲、新加坡實體餐飲、馬來西亞實體餐飲、越南實體餐飲、菲律賓實體餐飲… 顯示全部7個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之 MCC code 為 5441、5499、5812、5813、5814；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "餐飲",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國內餐飲、國外餐飲、麥當勞、星巴克、王品集團… 顯示全部67個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之餐飲 MCC code 為 5441、5499、5812、5813、5814；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "娛樂",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國外娛樂、國內娛樂、新光影城、威秀影城、國賓影城… 顯示全部44個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之娛樂 MCC code 為 7832、7996、7998；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "購物",
+       "回饋率",
+       "4.88%",
+       "回饋消費上限",
+       "NT$29,600",
+       "適用通路: 國內購物、國外購物、momo、蝦皮購物、pchome 24h購物… 顯示全部59個",
+       "活動期間: 2025/7/1~2026/12/31",
+       "條件: 認列之購物 MCC code 為 5311、5944、5948；其中1%回饋需設定自動扣繳"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 其中的 0.88% 回饋無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1.88%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2025/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-titanium": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$66,666",
+       "適用通路: 街口支付、PAYPAL、momo購物網、Uber Eats、Amazon.com… 顯示全部21個",
+       "活動期間: 2025/7/1~2027/6/30",
+       "條件: 回饋點數累積滿 5,000 點，且在一個月前的滙豐帳戶資產滿 NT$30 萬，即可申請兌換成 NT$10,000 元刷卡金"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 單筆刷保費最低門檻新台幣一千元"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2025/7/1~2026/9/30",
+       "條件: 累積滿5000點現金積點（光靠刷廣告的話即為消費50萬）可換成10,000元刷卡金，可理解為得到消費回饋2%"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "hsbc-cashback-signature": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1.22%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.22%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.22%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: Google廣告、Meta廣告、Facebook廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.22%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "taishin-richart": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 詹記麻辣火鍋、萬客什鍋、海底撈、屋馬燒肉、茶六燒肉堂… 顯示全部34個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 饗饗 INPARADISE、NAGOMI、WEVERSE、K-MONSTAR、微樂客… 顯示全部38個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 台新Pay、台灣Pay、台新Pay+",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 韓國 Hana pay、日本 PayPay",
+       "活動期間: 2025/12/1~2027/3/31",
+       "條件: 使用台新Pay+付款；同享免1.5%國外交易手續費；；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "3.8%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 7-11(限綁台新Pay)、全家(限綁台新Pay)",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「數趣刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 蝦皮、momo、酷澎(coupang)、pchome、淘寶… 顯示全部31個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「好饗刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 國內餐飲",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 認列之餐飲 MCC code 為 5811、5812、5813、5814；排除餐券；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: skm pay、遠東百貨、遠東sogo、漢神巨蛋、漢神百貨… 顯示全部31個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「天天刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 7-11(限綁台新Pay)、全家(限綁台新Pay)、家樂福、大買家、唐吉軻德 DON DON DONKI… 顯示全部29個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「好饗刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 王品瘋pay、uber eats、foodpanda、拓元售票、kktix… 顯示全部25個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「玩旅刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: uber、grab、suica、icoca、pasmo… 顯示全部42個",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Chill刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: Apple 直營、Apple 官網、Studio A、DJI、Insta360… 顯示全部10個",
+       "活動期間: 2026/7/8~2026/9/30",
+       "條件: 限使用實體卡、LINE Pay、台新Pay、Apple Pay、Google 錢包或Samsung Pay綁定消費；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 新光三越",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 排除新光三越台北車站；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「大筆刷」方案",
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 微風",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 僅微風廣場、微風南京、微風松高、微風信義、微風南山之消費享加碼回饋。微風台大醫院、TRINE & ZEN(微風中研院店)、微風東岸(EAST COAST BY BREEZE)不予加碼回饋；可使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付；需設定台新帳戶扣繳信用卡帳款，次期帳單結帳後生效；消費上限以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 國外",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 切換「玩旅刷」方案 (含海外實體,海外線上,歐洲國家)；限使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包或Samsung Pay支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「Pay著刷」方案",
+       "回饋率",
+       "2.3%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: Line Pay、全盈+Pay",
+       "活動期間: 2025/12/15~2027/3/31",
+       "條件: 排除不回饋項目（如四大超商、繳稅費等）；需設定台新帳戶扣繳卡費，次期帳單結帳後生效；「回饋消費上限」算法為持卡人的永久信用額度加上NT$30萬"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "切換「假日刷」方案",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$300,000",
+       "適用通路: 假日",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 需於國內節假日消費，不限通路(含保費)；限使用實體信用卡(含線上輸入卡號)、台新Pay、Apple Pay、Google 錢包、Samsung Pay支付、LINE Pay；需設定台新帳戶扣繳卡費，次期帳單結帳後生效；「消費上限」算法為以持卡人之永久信用額度加計NT$30萬；排除不回饋項目，如四大超商、繳稅費等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2027/3/31",
+       "條件: 免切方案；若於假日刷並切「假日刷」方案可享2%，輸入\"假日\"查看更多重要條件；排除國外保險交易、躉繳保費、投資型保費、三商美邦保費、彈性繳保費、單筆消費分期0利率；「消費上限」算法為以持卡人之永久信用額度加計NT$30萬",
+       "...展開"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 可與「Pay著刷 2.3%」權益疊加；需至Richart Life App 領券"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "4.7%",
+       "回饋消費上限",
+       "NT$10,638",
+       "適用通路: 易遊網、雄獅旅遊、東南旅遊、KKday、Klook… 顯示全部58個",
+       "活動期間: 2026/7/1~2026/8/31 即將結束 (6天後)",
+       "條件: 滿NT$ 6,000，加碼4.7%，最高回饋 500點；滿NT$ 12,000，加碼7.4%，最高回饋1,000點；可與原卡片權益疊加，最高再享 3.3%"
+      ]
+     }
+    ]
+   },
+   "taishin-jiekou": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 4大超商及Apple媒體服務通路：限於街口支付綁定消費始享1%"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$400,000",
+       "適用通路: 新光三越、遠東百貨、遠東巨城、LaLaport、三井(MITSUIOUTLETPARK)",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 含國內實體門市及百貨線上購物，不含店中櫃(例:無印良品/UNIQLO/Apple直營店/美食街等)；百貨排除SKM Park Outlets 高雄草衙、新光三越台北車站；可使用實體卡(含線上輸入卡號)、綁定街口支付/LINE Pay/Apple pay付款等皆適用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$400,000",
+       "適用通路: 韓國、Klook、KKday、易遊網、Agoda… 顯示全部49個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 可使用實體卡(含線上輸入卡號)、綁定街口支付/LINE Pay/Apple pay付款等皆適用"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$1,000,000",
+       "適用通路: 日本PayPay",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用街口支付；同享免海外手續費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "fubon-jcard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 排除所有全聯實業旗下品牌通路；申辦時可選擇J Cash(現金回饋)或J Points(LINE POINTS回饋)，核卡後無法調整；選擇LINE POINTS者須綁定LINE Pay後生效"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,857",
+       "✔ 單筆滿 NT$2,000",
+       "適用通路: 日本Suica、日本PASMO、日本ICOCA",
+       "活動期間: 2026/4/1~2026/9/30",
+       "條件: Apple Pay綁定J卡儲值；需登錄且限量，每季需登錄一次，開放登錄時間為每月20號16:00。登錄辦法：到【Fubon+台北富邦行動銀行】APP，註冊/登錄會員後，點選【優惠】>>【活動登錄】勾選活動。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家單筆滿千實體消費",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$33,333",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費",
+       "活動期間: 2026/4/1~2026/12/31",
+       "條件: 回饋消費上限以每季計算；該筆刷卡交易請款時商店登記之國別碼為日本或韓國；需登錄且限量，到【Fubon+台北富邦行動銀行】APP，註冊/登錄會員後，點選【優惠】>>【活動登錄】勾選活動。"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定國家基本回饋",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本網購、韓國網購、泰國網購、日本實體消費、韓國實體消費… 顯示全部6個",
+       "活動期間: 2026/4/1~2026/12/31",
+       "條件: 扣款幣別須為該國幣別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 國內保費、國內保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 可選現金回饋或Line Points"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ctbc-uniopen": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 國外實體消費加碼；限實體卡、Apple Pay、Google Pay、Samsung Pay於實體商店支付"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "首次綁定搭北捷",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$833",
+       "適用通路: 台北捷運",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需領券；限首次綁定Apple Pay、Samsung Pay、Google Pay後感應刷卡支付台北捷運「閘門」的車資消費；每季需領券一次，活動券數不限量；回饋上限以每「季」計算"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "統一集團消費",
+       "即將開始 (7天後)",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "統一集團踩點任務",
+       "即將開始 (7天後)",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$12,500",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 單筆消費需滿199元(含)、需消費5家不同統一集團品牌（少1家減1%）"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "icashPay + 統一集團踩點任務",
+       "即將開始 (7天後)",
+       "回饋率",
+       "11%",
+       "回饋消費上限",
+       "NT$3,750",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限量活動；「踩點任務」需消費5家不同統一集團品牌（少1家減1%）；限一般商品交易、icashPay 需連結 uniopen 會員"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "icashPay + 統一集團",
+       "即將開始 (7天後)",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$3,750",
+       "適用通路: 統一超商、康是美(含網購eShop)、夢時代購物中心、統一時代百貨台北店、統一時代百貨高雄店… 顯示全部38個",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限一般商品交易、icashPay 需連結 uniopen 會員"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card upcoming-activity",
+      "lines": [
+       "國外實體消費加碼",
+       "即將開始 (7天後)",
+       "回饋率",
+       "11%",
+       "回饋消費上限",
+       "NT$6,250",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/9/1~2026/12/31",
+       "條件: 限實體卡、Apple Pay、Google Pay、Samsung Pay於實體商店支付"
+      ]
+     }
+    ],
+    "card-coupon-cashback": []
+   },
+   "ctbc-linepay-card": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 需綁定LINE Pay且限臺灣LINE帳號"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1.8%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 國外實體消費加碼"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,222",
+       "適用通路: LOPIA、壽司郎 Sushiro、Komeda's Coffee 客美多咖啡、Mos Burger 摩斯漢堡、藏壽司",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量；限JCB卡別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,222",
+       "適用通路: Uniqlo、GU",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量；限JCB卡別"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$3,333",
+       "適用通路: 撥撥貓砂官網",
+       "活動期間: 2026/4/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "8%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: KAFEN",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量400,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 資生堂國際櫃官網、SABON官網、蘭芝 (Laneige) 官網",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$8,000",
+       "適用通路: 肌膚之鑰",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$2,000",
+       "適用通路: NARS、Watashi+、ISPA",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 雪花秀 Sulwhasoo",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量2,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: Sabon",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量400,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$25,000",
+       "適用通路: sisley",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 透過LINE Pay支付功能於Sisley官方網站消費；限量活動"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,750",
+       "適用通路: 倩碧 Clinique、Bobbi Brown、M‧A‧C、品木宣言、JO MALONE",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: LA MER",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$2,500",
+       "適用通路: 淘寶、蝦皮購物",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限Visa卡別；每季需登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,454",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 需於每週二登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$2,500",
+       "適用通路: Uber Eats、星巴克",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 每季需登錄，名額限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "✔ 單筆滿 NT$5,000",
+       "適用通路: 營養師輕食",
+       "活動期間: 2026/7/13~2026/12/31",
+       "條件: 限透過LINE Pay支付於營養師輕食官方網站消費；活動限量"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "寶雅門市每週三滿額",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$700",
+       "✔ 單筆滿 NT$650",
+       "適用通路: 寶雅實體獨立門市",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限量活動；限透過Line Pay支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 雅詩蘭黛 Estee Lauder",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 限使用LINE PAY於品牌官網消費；回饋消費上限為「單筆」為單位；活動限量3,000,000點"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "2.8%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 捷運輕軌、台鐵、公車客運、公共自行車、渡輪",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 綁定一卡通支付；計算單位採「每滿 100 元」回饋 1 點 LINE POINT"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "dbs-eco": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: 鮮乳坊、茶籽堂、nextdoorfresh、直接跟農夫買、玩轉學校… 顯示全部16個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: Tesla充電資費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: Tesla充電需綁卡於APP全額繳費；需帳單明細顯示指定交易名稱；排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$5,555",
+       "適用通路: Gogoro電池資費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 需於APP中全額繳費；含PBGN車主電池資費；需帳單明細顯示指定交易名稱；排除分期、轉帳匯款、電子票證、第三方支付"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定海外國家實體消費",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$15,000",
+       "適用通路: 日本實體消費、韓國實體消費、泰國實體消費、新加坡實體消費、美洲實體消費… 顯示全部67個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 以實體卡片或Apple Pay／Samsung Pay於當地實體門市消費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 適用於國內及國外一般保費代扣繳；排除分期交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "NT$12,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 三個條件皆需達成：需為星禧數位帳戶存戶，且資產 30 萬連 4 個月；且設定星禧數位帳戶自動扣繳卡費；且綁定使用LINE Pay／街口支付／Apple Pay／Samsung Pay消費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "dbs-aov": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 以指定星展帳戶設定信用卡自動轉帳付款，完成設定次月起享升級回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活玩家精選通路",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$3,333",
+       "適用通路: 蝦皮、Uber Eats、foodpanda、麥當勞、肯德基… 顯示全部40個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 設定星展賬戶自動扣繳卡費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定地區",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$12,500",
+       "適用通路: 美國、韓國、日本、歐洲、泰國… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限實體消費；設定星展賬戶自動扣繳卡費"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外消費特列項目",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 國外消費指交易商店之國別非台灣地區(或)非以新台幣為交易幣別；以指定星展帳戶設定信用卡自動轉帳付款，完成設定次月起享升級回饋"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-linebank": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "現折活動",
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富門市",
+       "活動期間: 2026/5/1~2026/12/31",
+       "條件: 限綁iPASS MONEY APP支付；活動排除品項(實際依萊爾富系統設定及公告為準)：折扣商品、菸品、櫃台酒、E購卡、代收代售、服務費、手續費、服務性商品、外送平台、EC取貨付款、APP點數預購兌換、商品禮券金額、行動折抵金、現金折價券、網購(含整買零取、萊購物、簡訊團購)等",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國外指定通路加碼",
+       "回饋率",
+       "5.5%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Netflix、Disney+、Spotify、LINE TV、Steam… 顯示全部8個",
+       "活動期間: 2026/8/1~2027/7/31",
+       "條件: 若被認列為國內消費則-1.5%；影音/遊戲類通路可能出現在APP內消費屬國外消費、在官網消費屬國內消費的情況"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "現折活動",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富門市",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 僅適用聯邦銀行信用卡/金融卡(含綁定HiPay及行動支付：Apple Pay/Samsung Pay/Google Pay…等) 及 iPASS MONEY APP"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內指定通路加碼",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: CatchPlay、LINE TV 官網訂閱、KKTV、KKBOX、MOMO購物網… 顯示全部13個",
+       "活動期間: 2026/8/1~2027/7/31",
+       "條件: 若被認列為國外消費則+1.5%；影音/遊戲類通路可能出現在APP內消費屬國外消費、在官網消費屬國內消費的情況"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: Uber Eats、foodpanda",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限量6,000名，每月需登錄(每月10日下午3點開放登錄至當月月底)；不包含Uber One訂閱方案、Uber App及Uber Eats App中的Uber服務交易",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2025/8/1~2027/7/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-mcard": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$5,000",
+       "適用通路: 國內航空、國外航空、國內飯店、Booking.com、Agoda… 顯示全部34個",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 認列為國內或國外通路皆可；需申辦電子帳單；超過回饋上限則享 1%"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$3,000",
+       "✔ 單筆滿 NT$300",
+       "適用通路: 美廉社、心樸市集、小北百貨",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需登錄；限於實體門市消費；可用實體信用卡，或綁Apple Pay、Samsung Pay、Google Pay、Line Pay、街口支付等；此活動適用聯邦銀行信用卡全卡種",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 申辦電子帳單；非實體享 1.5%"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.2%",
+       "回饋消費上限",
+       "NT$833,333",
+       "適用通路: 保費、保險",
+       "活動期間: 2025/1/1~2026/12/31",
+       "條件: 申辦電子帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-linepoint": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "偶數日Line Pay刷指定通路",
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$3,000",
+       "適用通路: 王品集團、三商集團、輕井澤集團、海底撈、築間… 顯示全部39個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 單筆消費滿NT$100，且限綁Line Pay於國內消費；活動總回饋上限100萬點；偶數日係指每月2日、4日、6日、8日、10日…以此類推"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$4,000",
+       "適用通路: CHIIKAWA SHOP inTAIPEI台北常設店、CHIIKAWA DAYS台北特展商店、OPENTIX兩廳院、tixCraft拓元、寬宏售票… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/9/30"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "門市現折5%",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 萊爾富",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 可刷實體信用卡或綁定於Apple Pay、Samsung Pay、Google Pay、HiPay及iPass Money APP"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Line Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限國內消費單筆消費滿100元"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "ubot-green": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子化帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "綠色消費",
+       "回饋率",
+       "6%",
+       "回饋消費上限",
+       "NT$6,000",
+       "適用通路: 仙桃素、鈺善閣．素．養生懷石、祥和蔬食料理、曙光居、毛蔬亞洲蔬食… 顯示全部44個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子化帳單；蔬食餐廳排除百貨店、店中店；生機選品排除百貨店、店中店"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "外送平台",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: Uber Eats、Foodpanda",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須當月登錄，每月限量登錄6,000名；排除Uber One訂閱方案、Uber App及Uber Eats App中的Uber服務交易",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "生活代扣繳",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: 水費、電費、瓦斯費、電信費、路邊停車費… 顯示全部10個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子化帳單及自動扣繳；路邊停車費限台北市、新北市、桃園市、新竹縣市、台中市、台南市及高雄市等可辦理自動扣繳之公有路邊停車費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "mega-bt21": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "條件: 申辦電子賬單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "台灣Pay多條件加碼活動",
+       "回饋率",
+       "5.5%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2025/1/1~2026/12/31",
+       "條件: 限透過「兆豐行動銀行」APP或「台灣行動支付」APP的台灣Pay付款；需登錄，限量且須登錄8,000名，將於每月第一個銀行營業日上午11點開放登錄；需申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "優惠自由選(國外)",
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: Agoda、Trip.com、Booking.com、Hotels.com、Klook… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 當月新增一般消費達3筆；使用電子帳單(不含行動帳單且取消紙本帳單)並設定帳戶自動扣繳；限使用指定行動支付消費否則 -2%；需登錄且名額有限，每月限擇一通路登錄，115/9/3 10:00 開放登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "優惠自由選(國內)",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 易遊網、雄獅旅遊、東南旅遊、Foodpanda、Uber Eats… 顯示全部14個",
+       "活動期間: 2026/7/1~2026/9/30",
+       "條件: 限使用指定行動支付消費否則 -2%；當月新增一般消費達3筆；使用電子帳單(不含行動帳單且取消紙本帳單)並設定帳戶自動扣繳；需登錄且名額有限，每月限擇一通路登錄，115/9/3 10:00 開放登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定行動支付國外消費",
+       "回饋率",
+       "4%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、LINE Pay、街口支付、Samsung Pay… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定行動支付國內消費",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$10,000",
+       "適用通路: Apple Pay、Google Pay、LINE Pay、街口支付、Samsung Pay… 顯示全部6個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦電子賬單、設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "條件: 使用Apple Pay、Google Pay、台灣Pay、LINE Pay、街口支付或Samsung Pay付款；申辦電子賬單；設定兆豐賬戶自動扣款；完成任務次期起開始享加碼回饋；不包含歐洲經濟區(EEA)及英國地區之消費"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "kgi-eslite": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內加碼",
+       "回饋率",
+       "+2%",
+       "回饋消費上限",
+       "NT$20,000",
+       "條件: 設定自動扣繳；排除保費"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "7%",
+       "回饋消費上限",
+       "NT$89,362",
+       "適用通路: 誠品通路、誠品台大店、誠品生活西門、誠品台北車站捷運店、誠品生活板橋… 顯示全部49個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除分期交易"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "一般回饋特列項目",
+       "回饋率",
+       "2.3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "0.3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費、保險",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   },
+   "sunny-jcb-crystal": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "10%",
+       "回饋消費上限",
+       "NT$2,857",
+       "適用通路: 日本7-ELEVEN門市、日本全家門市、日本LAWSON門市",
+       "活動期間: 2026/4/1~2026/9/30",
+       "條件: 回饋上限以每季計算，第二波段活動 (7~9月) 僅須登錄乙次無須每月重複登錄，登錄名額不限量",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$7,500",
+       "適用通路: LINE Pay、街口支付、台灣Pay、悠遊付、foodpanda… 顯示全部6個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 日本實體消費、日本網購、韓國實體消費、韓國網購、泰國實體消費… 顯示全部6個",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [],
+    "consoleErrors": [
+     "console.error: Failed to load resource: net::ERR_FAILED"
+    ]
+   },
+   "firstbank-ileo": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外加碼",
+       "回饋率",
+       "+1.5%",
+       "回饋消費上限",
+       "NT$33,333",
+       "條件: 需設定數位帳戶扣繳與電子帳單；排除部分歐洲實體商店"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付滿千加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: LINE Pay、街口支付",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 須申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 國外實體消費",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦本行帳戶扣繳與電子帳單；排除部分歐洲地區"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "滿千加碼",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$33,333",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 蝦皮購物、momo、Coupang",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限量；需登錄",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: LINE Pay、街口支付",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 單筆滿NT$1,000再加碼1%(消費NT$2,0000封頂)；申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "電信/影音/串流",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 中華電信、台灣大哥大、遠傳電信、神腦國際、iTunes… 顯示全部13個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內外指定網購",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$50,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: 博客來、VIVA美好生活、GOMAJI、FriDay購物、生活市集… 顯示全部9個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 需於指定登錄時間登錄，限量2,000名",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "購物",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: momo網站、蝦皮購物(台灣)、YAHOO、PCHOME、東森購物… 顯示全部12個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "饗樂",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: 國內旅行社、航空公司、昇恆昌免稅店、kkday、Klook… 顯示全部7個",
+       "活動期間: 2026/7/1~2026/12/31"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定支付滿千加碼1%",
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$6,666",
+       "適用通路: 台灣Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 透過第一銀行APP(第e行動及iLEO APP)之台灣Pay或「台灣行動支付」APP綁卡掃碼支付；單筆滿NT$1,000再加碼1%(消費NT$2,0000封頂)；消費 NT$6,667 ~ NT$20,000 間仍享共 1.5% 回饋；申辦本行帳戶扣繳與電子帳單"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "2%",
+       "回饋消費上限",
+       "NT$33,333",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 「愛購物」"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: 保費",
+       "活動期間: 2026/1/1~2026/12/31",
+       "條件: 其中的1%按消費門檻回饋固定金額；需登錄，限量8,000名；滿NT$50,000起適用回饋；排除分期交易；回饋不累贈；活動期間每戶上限NT$90,000",
+       "銀行官方登錄連結"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "行動支付單筆滿千",
+       "回饋率",
+       "1.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "✔ 單筆滿 NT$1,000",
+       "適用通路: Apple Pay、Google Pay、Samsung Pay",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 申辦本行帳戶扣繳與電子帳單"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "5%",
+       "回饋消費上限",
+       "NT$4,000",
+       "適用通路: Netflix、YouTube Premium、Disney+、ChatGPT、Gemini… 顯示全部11個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 當月iLEO信用卡刷3次單筆滿千元一般消費，且申辦本行帳戶扣繳與電子帳單；限量3,000名；須於6/15上午10點登錄；須申辦本行帳戶扣繳與電子帳單"
+      ]
+     }
+    ]
+   },
+   "chb-mylove": {
+    "card-basic-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "國內一般消費",
+       "回饋率",
+       "0.5%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "海外一般消費",
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限"
+      ]
+     }
+    ],
+    "card-special-cashback": [
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 排除歐盟地區國家實體交易、etoro、viagogo；實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外超市、國外量販店",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限行業代碼5411超市、量販店業，實體及網絡都認列；排除全聯及大全聯；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "3.5%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 國外餐廳",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限行業代碼5811、5812、5814餐廳業，實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)",
+       "...展開"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定百貨",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 新光三越、SOGO、遠東、太平洋、統一時代… 顯示全部26個",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 實體及網絡都認列；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "指定電信",
+       "回饋率",
+       "3%",
+       "回饋消費上限",
+       "NT$20,000",
+       "適用通路: 中華電信、台灣大哥大、遠傳電信、台灣之星、亞太電信",
+       "活動期間: 2026/7/1~2026/12/31",
+       "條件: 限約定扣繳電信資費；申辦電子賬單並設定自動扣款(若不符合則-1.5%)；綁定「台灣Pay」、「Google Pay」行動支付消費(若不符合則-0.5%)；帳戶當月之臺/外幣活期存款月平均餘額達新臺幣 20,000元(含)以上(若不符合則-0.5%)"
+      ]
+     },
+     {
+      "classes": "cashback-detail-item rate-card",
+      "lines": [
+       "回饋率",
+       "1%",
+       "回饋消費上限",
+       "無上限",
+       "適用通路: meta廣告、google廣告",
+       "活動期間: 2026/1/1~2026/12/31"
+      ]
+     }
+    ],
+    "card-upcoming-cashback": [],
+    "card-coupon-cashback": []
+   }
+  }
+ }
+}
