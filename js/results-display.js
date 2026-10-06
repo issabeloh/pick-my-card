@@ -1612,7 +1612,9 @@ function toggleRateComposition(btn) {
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
-    item.appendChild(popup);
+    // 詳情頁回饋卡要放進 .rate-card-body：卡片本身是「標題列｜其餘」兩列的 subgrid，
+    // 直接掛在卡片底下會變成第三個格子、把版面擠亂
+    (item.querySelector('.rate-card-body') || item).appendChild(popup);
     btn.classList.add('active');
 }
 

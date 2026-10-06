@@ -230,6 +230,7 @@ Grep `titleParts`）：
 - **連帶改變**：加碼沒填 cap 時以前整行不顯示，現在固定顯示「無上限」（與 `resolveBonusComponent` 計算一致）；上限一律取整（iLEO 海外加碼由 NT$33,333.333 變 NT$33,333，同搜尋結果）；條件一律用 `renderConditionLine()` 可收合列，基本回饋與即將開始區也補呼叫 `initConditionClamps()`；類別、通路、期間改經 `escapeHtml()`（鐵則 3；通路展開走 textContent，不影響顯示）
 - **驗證方式**：33 張卡詳情頁每一筆的文字，前後去掉標籤後逐字比對，只有上述兩項預期差異；時鐘設 2026-08-25 實測「即將開始」「即將結束」徽章位置
 - **與搜尋結果共用的片段**（2026-10-06）：徽章文字 `renderUpcomingBadge()`／`renderEndingSoonBadge()`、門檻句 `renderSpendThresholdNote()`、下方資訊區 `renderActivityInfo()`（行序固定：通路 → 活動期間＋即將結束 → 條件 → 登錄連結），都在 `js/results-display.js` 的「回饋卡共用片段」，`createCardResultElement()` 與 `renderRateCard()` 都呼叫它們。**兩種卡片的「一致」由這幾支函式保證，不是靠兩份模板手動同步**——改行序、改徽章字樣只改這裡。兩邊刻意不同的只有：條件在詳情頁可收合（`collapsibleConditions`）、詳情頁通路清單可展開
+- **同排對齊（2026-10-06，站長要求）**：兩欄（≥541px）時，同一排只要有一張卡有標題（活動類別），另一張就在同位置留同高的空白，讓「回饋率｜回饋消費上限」對齊；同一排都沒標題就跟以前一樣。做法是 CSS subgrid（Grep「同排對齊」）：每張卡跨兩列「`.rate-card-header`｜`.rate-card-body`」，列高同排共用；`renderRateCard` 因此**一律輸出標題列**（空的單欄時 `display:none`）、其餘內容包在 `.rate-card-body`。⚠️ 卡片底下只能有這兩個子元素——回饋組成彈出表由 `toggleRateComposition` 掛在 body 裡。⚠️ 外層容器 row-gap 必須是 0（外層 gap 會落在卡片兩列之間），排距改由卡片 margin-bottom（`--rate-row-gap`：12px，≥1025px 跟著密度區塊 10px）提供；選擇器多掛 `#card-detail-modal` 是為了壓過檔尾密度區塊的 `gap: 10px`。CUBE 慶生月提示的下方間距因此從 inline 移到 `.cube-birthday-note`。驗證：手機版 143 張截圖逐像素不變；桌機只有混排的排改變
 - **自動化回歸**：`node tools/regression/card-detail-test.js`（見 `docs/ops/regression.md`「卡片詳情頁」節）。改 `renderRateCard`、上述共用片段、或詳情頁任何一條 render 路徑後必跑
 - **不受影響**：行動支付比較 modal（`js/levels-payments.js`）也用 `.cashback-detail-item`，但沒有 `.rate-card`，樣式不變；停車折抵區塊維持原樣（不是回饋率）
 
