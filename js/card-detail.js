@@ -874,7 +874,7 @@ async function generateCubeSpecialContent(card) {
         birthdayNoteColor = '#9ca3af';
     }
     content += `
-        <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-bottom: 16px;">
+        <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px;">
             <div style="color: ${birthdayNoteColor}; font-size: 11px; line-height: 1.5; font-style: italic;">
                 ${birthdayNoteText}
             </div>
@@ -1097,13 +1097,18 @@ function renderRateCard(o) {
 
     let html = `<div class="cashback-detail-item rate-card${o.extraClass ? ' ' + o.extraClass : ''}">`;
 
-    if (title || upcomingBadge) {
-        html += `<div class="rate-card-header">` +
-            `<div class="rate-card-title">${escapeHtml(title)}</div>` +
-            (upcomingBadge ? `<div class="badges-container">${upcomingBadge}</div>` : '') +
-            `</div>`;
-    }
+    // 標題列一律輸出（沒有標題也沒有徽章時是空的 div）：桌機兩欄時，同一排只要有一張卡
+    // 有標題，另一張就留同高的空白，讓下面的回饋率對齊（CSS subgrid，見 styles.css
+    // 「同排對齊」）。單欄（手機）時空的標題列不佔位，跟以前一樣。
+    // 標題列以外的內容全部包在 .rate-card-body——subgrid 只分「標題列｜其餘」兩列。
+    html += `<div class="rate-card-header">` +
+        (title || upcomingBadge
+            ? `<div class="rate-card-title">${escapeHtml(title)}</div>` +
+              (upcomingBadge ? `<div class="badges-container">${upcomingBadge}</div>` : '')
+            : '') +
+        `</div>`;
 
+    html += `<div class="rate-card-body">`;
     html += `<div class="card-details rate-card-details">` +
         `<div class="detail-item"><div class="detail-label">回饋率</div>` +
         `<div class="detail-value rate-card-rate">${o.ratePrefix || ''}${escapeHtml(String(o.rate))}%${o.rateBtnHtml || ''}</div>` +
@@ -1143,7 +1148,7 @@ function renderRateCard(o) {
         registerLink: o.registerLink,
         extraClass: 'rate-card-info'
     });
-    html += `</div>`;
+    html += `</div></div>`; // .rate-card-body、.rate-card
     return html;
 }
 

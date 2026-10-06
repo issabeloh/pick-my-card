@@ -5087,6 +5087,85 @@ mark.cashback-search-hl {
     flex-direction: column;
 }
 
+/* 標題列以外的內容。維持 flex column：block 版面會讓上下 margin 合併，間距會變 */
+.rate-card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* CUBE「慶生月」提示（generateCubeSpecialContent）：下方間距寫在這裡而不是 inline，
+   兩欄對齊模式要改它（見下方「同排對齊」） */
+.cube-birthday-note {
+    margin-bottom: 16px;
+}
+
+/* 沒有標題也沒有徽章：單欄時不佔位（與 2026-10-05 版面相同） */
+.rate-card-header:empty {
+    display: none;
+}
+
+/* 同排對齊（2026-10-06，站長要求）：兩欄時，同一排只要有一張卡有標題（活動類別），
+   另一張就在同樣位置留白，下面的「回饋率｜回饋消費上限」才會對齊；同一排都沒有標題
+   就跟以前一樣。做法是 subgrid：每張卡跨兩列（標題列｜其餘），列高由同一排的卡共用，
+   空的標題列高度 0，同排都空時整列就是 0。
+   - 外層的 row-gap 必須是 0：外層的 gap 會落在每張卡「標題列｜其餘」兩列之間（卡片自己設
+     row-gap: 0 也只是把那 12px 平分到兩邊，實測無標題的排會往下掉約 3–6px）。排與排之間的
+     間距改由每張卡的 margin-bottom（--rate-row-gap：12px，桌機密度區間 10px）提供，容器再用
+     負的同值抵掉最後一排；慶生月提示原本吃外層 gap，這裡補成 16px＋同值
+   - 只在兩欄（≥541px）且瀏覽器支援 subgrid 時啟用；不支援就是原本的版面
+   - 卡片底下只能有 .rate-card-header 與 .rate-card-body 兩個子元素（回饋組成的彈出表
+     由 toggleRateComposition 掛在 body 裡），多一個就會多佔一列 */
+@media (min-width: 541px) {
+    @supports (grid-template-rows: subgrid) {
+        /* 選擇器多掛 #card-detail-modal：檔尾「桌機密度調整」第 2 類把這三個容器的 gap
+           改成 10px（同特異性、源碼在後），不提高特異性 row-gap: 0 會被它蓋回去 */
+        #card-detail-modal #card-basic-cashback,
+        #card-detail-modal #card-special-cashback,
+        #card-detail-modal #card-coupon-cashback {
+            --rate-row-gap: 12px;
+            row-gap: 0;
+            margin-bottom: calc(-1 * var(--rate-row-gap));
+        }
+
+        #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+        #card-detail-modal #card-special-cashback > .cashback-detail-item,
+        #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
+            margin-bottom: var(--rate-row-gap);
+        }
+
+        #card-detail-modal #card-special-cashback > .cube-birthday-note {
+            margin-bottom: calc(16px + var(--rate-row-gap));
+        }
+
+        #card-basic-cashback .rate-card,
+        #card-special-cashback .rate-card,
+        #card-coupon-cashback .rate-card {
+            display: grid;
+            grid-row: span 2;
+            grid-template-rows: subgrid;
+            row-gap: 0;
+        }
+
+        #card-basic-cashback .rate-card-header:empty,
+        #card-special-cashback .rate-card-header:empty,
+        #card-coupon-cashback .rate-card-header:empty {
+            display: block;
+            margin-bottom: 0;
+        }
+    }
+}
+
+/* 桌機密度調整把這三個容器的 gap 縮成 10px（12 × 0.85），排距跟著縮 */
+@media (min-width: 1025px) {
+    @supports (grid-template-rows: subgrid) {
+        #card-detail-modal #card-basic-cashback,
+        #card-detail-modal #card-special-cashback,
+        #card-detail-modal #card-coupon-cashback {
+            --rate-row-gap: 10px;
+        }
+    }
+}
+
 .rate-card-header {
     display: flex;
     justify-content: space-between;
