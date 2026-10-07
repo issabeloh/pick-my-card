@@ -246,8 +246,9 @@ Grep `titleParts`）：
 
 - **唯一來源**：`tools/build-logo-assets.js` 的幾何／色彩常數。所有標誌檔都由它生成，**不手改輸出檔**；要改標誌改常數後重跑（需 `npm install playwright opentype.js --no-save`；字標與分享圖要網路抓字型，離線用 `--marks-only`）
 - 幾何（規範單位，原點＝前卡中心）：前卡 52、圓角 7、傾 31°；晶片 13×10、圓角 2.5、距卡邊 7；後方兩卡 45°、邊長 50、圓角 7，中心 (9,12)／(13,17)；間隙 2.6 是真的鏤空（mask），任何底色都透得出來
-- 色彩版本（`assets/brand/pmc-mark*.svg`）：主要（漸層前卡＋`#60A5FA`/`#BFDBFE`，淺底用）、單色藍、墨色單色（後兩卡同色 50%/22%）、反白（白卡＋`#2563EB` 晶片，**藍底一律用它**）、反白深色底
-- **32px 以下用小尺寸版**（`pmc-mark-small*.svg`：去底層、間隙 5、晶片放大）。header 各斷點最小 32px 所以用完整版；landing 22px 的小 logo、分頁 favicon 用小尺寸版
+- 色彩版本（`assets/brand/pmc-mark*.svg`）：主要（漸層前卡＋`#60A5FA`/`#BFDBFE`，淺底用）、單色藍、墨色單色（後兩卡同色 50%/22%）、反白（**藍底一律用它**）、反白深色底（晶片填 `#3B82F6`）
+- 晶片孔（規範「03 晶片孔」）：13×10、圓角 2.5、距前卡上緣與左緣各 7，**尺寸、位置、色彩皆固定，小尺寸版也不放大**。反白・藍底的晶片是挖空透出背景——背景跟標誌同一個檔（App 圖示、社群頭像）就真的挖空（`cutout: true`）；透明底檔（header、`pmc-mark-reverse.svg`、反白字標組合）看不到背景，填 `#2563EB`
+- **32px 以下用小尺寸版**（`pmc-mark-small*.svg`：去底層、間隙 5；晶片不變）。header 各斷點最小 32px 所以用完整版；landing 22px 的小 logo、分頁 favicon 用小尺寸版
 - 網站引用：header＝`assets/images/logo-header.svg`（緊貼外框，CSS 只設高度）；`logo-header.png` 只留給舊版 Apps Script 匯出的 promos.html；favicon＝根目錄 `favicon.ico`（16/24 小尺寸、32/48 完整）＋`assets/images/favicon.svg`；apple-touch／manifest maskable＝`icon-pickmycard-ios.png`（漸層滿版，標誌落在中央 80% 安全圓內）；manifest any＝`icon-192/512.png`（圓角方塊）
 - 圖片引用的 `?v=` 不歸 deploy-version.sh 管：換圖時手動改日期（og:image、favicon.svg、apple-touch、logo-header 一起改；Apps Script `cards-export.gs` 的 `PMC_OG_IMAGE` 也要同步）
 - 禁止：改傾角、拿掉間隙、換色、拉伸、加陰影、放在低對比底上（規範第 08 節）
@@ -434,3 +435,4 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-30] 推薦活動玉山 Uni 卡支付寶：卡片寫 4.5%，ⓘ 活動詳情卻顯示 3%（CUBE 全球迪士尼飯店同樣 3.3%→2%）→ `buildSpotlightModalBody()` 一律拿 `Object.keys(levelSettings)[0]` 解析 placeholder，而推薦活動是編輯挑的特定級別（UP選／Level 3），第一個級別剛好是最低的 → 分級卡的級別不能預設取第一個，要用手上已知的目標值（sheet rate）反推級別；新增任何「代替用戶選級別來顯示」的地方都照此辦理，且只顯示、絕不存回（鐵則 1）
 - [2026-10-04] 站長回報進首頁時「頁籤以下一片空白」→ boot loader `#pmc-boot-loader` 是 `position:fixed` 置中的小灰 spinner，疊在「推薦比較」連結上看起來像文字重疊，工具區位置則是空的 → loader 改成頁籤正下方的一般區塊（`min-height:45vh`，文字「正在載入卡片資料…」），`showToolSections()`、商家落地頁深連結、資料載入失敗三處都會收掉 `pmc-returning-user`。⚠️ 它現在會佔版面：任何「工具區先顯示、auth 還沒判定」的新路徑都要自己移除這個 class，不然 loader 會把搜尋框往下推
 - [2026-10-05] 密度調整把 `.app-layout main` 的字級從 0.9rem 縮成 0.79rem 後，刷卡小抄裡沒寫死字級的元素全跟著變小（它沒有根字級，一路繼承 main）→ 「排除某區塊」不能只靠「選擇器不含它」，繼承下來的值一樣會流進去 → 排除一個區塊時，在它的根節點把被改到的可繼承屬性（font-size、line-height、color…）釘回原值，並用計算樣式逐元素比對前後，不要只看截圖
+- [2026-10-07] favicon 晶片孔看起來太大 → 小尺寸版照「32px 以下放大晶片」做成 20×16，但新版規範「03 晶片孔」規定晶片尺寸固定 → 晶片一律 13×10、距邊 7，小尺寸版只去底層＋加寬間隙

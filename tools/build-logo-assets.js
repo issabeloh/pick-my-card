@@ -29,14 +29,15 @@ const MARKS_ONLY = process.argv.includes('--marks-only');
 
 // ---- 幾何（規範第 02 節）----
 const FRONT = { cx: 0, cy: 0, w: 52, h: 52, r: 7, rot: 31 };           // 前卡：邊長 52、圓角 7、傾角 31°
-const CHIP = { cx: -12.5, cy: -14, w: 13, h: 10, r: 2.5 };              // 晶片：13×10、圓角 2.5、距前卡邊 7（前卡座標系）
+// 晶片孔（規範「03 晶片孔」）：13×10、圓角 2.5、距前卡上緣與左緣各 7（前卡座標系）。
+// 尺寸、位置、色彩皆固定——小尺寸版也不放大（2026-10-07 站長確認：放大後 favicon 的孔太大）
+const CHIP = { cx: -12.5, cy: -14, w: 13, h: 10, r: 2.5 };
 const MID = { cx: 9, cy: 12, w: 50, h: 50, r: 7, rot: 45 };             // 中層卡：45°、邊長 50
 const BOTTOM = { cx: 13, cy: 17, w: 50, h: 50, r: 7, rot: 45 };         // 底層卡：再往右下錯位 (4, 5)
 const GAP = 2.6;                                                        // 前卡與後方兩層的間隙
 
-// 小尺寸版（規範第 04 節：32px 以下用）——移除底層、加寬間隙、放大晶片
+// 小尺寸版（規範第 04 節：32px 以下用）——移除底層、加寬間隙；晶片同標準版（見 CHIP）
 const SMALL = {
-  chip: { cx: -10, cy: -12, w: 20, h: 16, r: 4 },   // 距前卡邊 6（原 7），面積約原本 2.5 倍
   back: { cx: 10, cy: 13, w: 50, h: 50, r: 7, rot: 45 },
   gap: 5,
 };
@@ -52,7 +53,7 @@ const VARIANTS = {
   // 單色藍／墨色單色：後方兩卡以同色 50%、22% 呈現
   'mono-blue': { front: C.deep, chip: '#FFFFFF', mid: [C.deep, 0.5], bottom: [C.deep, 0.22] },
   'mono-ink': { front: C.ink, chip: C.paper, mid: [C.ink, 0.5], bottom: [C.ink, 0.22] },
-  // 反白・品牌藍底（漸層或純色底）：白卡＋藍晶片
+  // 反白・藍底：晶片孔是挖空、透出背景（cutout 選項）；透明底的檔案看不到背景，晶片填 #2563EB
   reverse: { front: '#FFFFFF', chip: C.chipBlue, mid: ['#FFFFFF', 0.6], bottom: ['#FFFFFF', 0.3] },
   // 反白・深色底（深色模式）
   'reverse-dark': { front: C.paper, chip: C.brand, mid: [C.paper, 0.55], bottom: [C.paper, 0.25] },
@@ -92,11 +93,11 @@ function paint([color, alpha]) {
  * 標誌本體的 SVG 片段（不含 <svg> 外框），座標原點＝前卡中心。
  * idp：id 前綴，同一份文件內放多個標誌時避免 id 撞名。
  */
-function markBody(variant, { small = false, idp = 'pmc' } = {}) {
+function markBody(variant, { small = false, idp = 'pmc', cutout = false } = {}) {
   const v = VARIANTS[variant];
   const backs = small ? [SMALL.back] : [MID, BOTTOM];
   const gap = small ? SMALL.gap : GAP;
-  const chip = small ? SMALL.chip : CHIP;
+  const chip = CHIP;
   const bb = bboxOf([FRONT, ...backs]);
   const pad = 2;
   const area = `x="${n(bb.x - pad)}" y="${n(bb.y - pad)}" width="${n(bb.w + pad * 2)}" height="${n(bb.h + pad * 2)}"`;
@@ -118,7 +119,14 @@ function markBody(variant, { small = false, idp = 'pmc' } = {}) {
   });
   const frontFill = v.front === 'gradient' ? `fill="url(#${idp}-g)"` : `fill="${v.front}"`;
   const f = { ...FRONT, rot: 0 };
-  layers.push(`<g transform="rotate(${FRONT.rot})">${rect(f, frontFill)}${rect(chip, `fill="${v.chip}"`)}</g>`);
+  if (cutout) {
+    // 晶片孔挖空：遮罩掛在未旋轉的外層 g，遮罩內容自己旋轉，避免各瀏覽器對 mask 座標系的解讀差異
+    defs.push(`<mask id="${idp}-c" maskUnits="userSpaceOnUse" ${area}><rect ${area} fill="#fff"/>` +
+      `<g transform="rotate(${FRONT.rot})">${rect(chip, 'fill="#000"')}</g></mask>`);
+    layers.push(`<g mask="url(#${idp}-c)"><g transform="rotate(${FRONT.rot})">${rect(f, frontFill)}</g></g>`);
+  } else {
+    layers.push(`<g transform="rotate(${FRONT.rot})">${rect(f, frontFill)}${rect(chip, `fill="${v.chip}"`)}</g>`);
+  }
   return { svg: `<defs>${defs.join('')}</defs>${layers.join('')}`, bbox: bb };
 }
 
@@ -144,7 +152,8 @@ function markSVG(variant, { small = false, pad = 0, square = false, bg = null, i
  * radius：圓角（佔邊長比例），0＝滿版方形（iOS／maskable 由系統裁圓角）。
  */
 function appIconSVG({ radius = 0 } = {}) {
-  const { svg, bbox } = markBody('reverse', { idp: 'app' });
+  // 背景跟標誌在同一個檔裡 → 晶片孔照規範挖空、透出漸層底
+  const { svg, bbox } = markBody('reverse', { idp: 'app', cutout: true });
   const halfDiag = Math.hypot(bbox.w, bbox.h) / 2;
   const S = halfDiag / 0.39;  // 安全圓半徑 0.4S，留一點餘裕
   const cx = bbox.x + bbox.w / 2, cy = bbox.y + bbox.h / 2;
