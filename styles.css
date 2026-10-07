@@ -7833,7 +7833,9 @@ mark.cashback-search-hl {
 }
 
 .sidebar-changelog-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 100%;
     padding: 8px 10px;
     background: none;
@@ -7849,13 +7851,36 @@ mark.cashback-search-hl {
     background: #f1f3f5;
 }
 
-/* 卡名也可能很長（「台新街口卡(豬富卡)」等），同樣單行截斷不換行 */
-.sidebar-changelog-card,
-.sidebar-changelog-summary {
+/* 最左側卡片圖（2026-09-28）：橫式 8:5，直式卡 contain 自動 letterbox；缺圖時 JS 移除 img */
+.sidebar-changelog-img {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 30px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.sidebar-changelog-text {
+    flex: 1 1 auto;
+    min-width: 0; /* 讓子元素的截斷在 flex 裡生效 */
+}
+
+/* 卡名也可能很長（「台新街口卡(豬富卡)」等），單行截斷不換行 */
+.sidebar-changelog-card {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 摘要最多兩行，超過以 … 截斷（2026-09-28 由單行改兩行） */
+.sidebar-changelog-summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .sidebar-changelog-card {
