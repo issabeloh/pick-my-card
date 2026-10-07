@@ -323,13 +323,20 @@ async function main() {
     write(path.join(BRAND_DIR, 'pmc-lockup-horizontal-reverse.svg'), lockupSVG(fonts, { layout: 'horizontal', variant: 'reverse' }));
     write(path.join(BRAND_DIR, 'pmc-lockup-vertical.svg'), lockupSVG(fonts, { layout: 'vertical' }));
 
-    // 社群分享圖 1200×630：淺底＋橫式主要組合，網址用外框字避免依賴系統字型
+    // 社群分享圖 1200×630：淺底＋橫式主要組合；網址放進瀏覽器網址列造型（鎖頭＋網址＋前往鈕），
+    // 讓人一眼知道「這是一個網站、打這串就到」。網址用外框字避免依賴系統字型
     const url = textPath(fonts.latin, 'pickmycard.app', 30, 0.01);
-    const urlSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${n(url.top - 1)} ${n(url.width)} ${n(url.bottom - url.top + 2)}"><path fill="${C.deep}" d="${url.d}"/></svg>`;
+    const urlSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${n(url.top - 1)} ${n(url.width)} ${n(url.bottom - url.top + 2)}"><path fill="${C.ink}" d="${url.d}"/></svg>`;
     const b64 = (s) => 'data:image/svg+xml;base64,' + Buffer.from(s).toString('base64');
-    const og = `<html><body style="margin:0;width:1200px;height:630px;background:#FAFAF7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:44px">` +
+    const lock = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#6B7280" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`;
+    const arrow = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+    const og = `<html><body style="margin:0;width:1200px;height:630px;background:#FAFAF7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:52px">` +
       `<img src="${b64(lh)}" style="height:200px">` +
-      `<img src="${b64(urlSVG)}" style="height:${n(url.bottom - url.top + 2)}px">` +
+      `<div style="display:flex;align-items:center;gap:16px;background:#fff;border:1.5px solid #E4E2DC;border-radius:999px;padding:10px 10px 10px 26px;box-shadow:0 6px 20px rgba(30,64,175,0.08)">` +
+      `<img src="${b64(lock)}" style="height:24px">` +
+      `<img src="${b64(urlSVG)}" style="height:${n(url.bottom - url.top + 2)}px;margin-right:56px">` +
+      `<div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,${C.deep},${C.brand});display:flex;align-items:center;justify-content:center"><img src="${b64(arrow)}" style="height:22px"></div>` +
+      `</div>` +
       `<div style="position:absolute;left:0;right:0;bottom:0;height:10px;background:linear-gradient(135deg,${C.deep},${C.brand})"></div>` +
       `</body></html>`;
     write(path.join(IMG_DIR, 'pickmycard-social-share.png'), await renderHTML(page, og, 1200, 630));

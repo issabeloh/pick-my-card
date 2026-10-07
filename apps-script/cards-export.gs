@@ -1755,7 +1755,7 @@ function generateSearchTerms(id, name) {
 // 詳見 docs/project/data-pipeline.md「promos.html 靜態生成」一節。
 
 const PMC_SITE_URL = 'https://pickmycard.app';
-const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007';
+const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2';
 
 const PMC_CHIP_DEFS = [
   { key: 'gift', label: '首刷禮' },
