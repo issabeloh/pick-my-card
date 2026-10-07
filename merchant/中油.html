@@ -49,7 +49,11 @@
     <meta property="og:url" content="https://pickmycard.app/merchant/%E4%B8%AD%E6%B2%B9">
     <meta property="og:title" content="中油加油刷哪張信用卡回饋最高？2026 比較 - Pick My Card">
     <meta property="og:description" content="中油直營站加油、綁中油 Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在中油消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。">
-    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
+    <meta property="og:site_name" content="信用卡回饋大師">
     <meta property="og:locale" content="zh_TW">
 
     <!-- Twitter Card -->
@@ -57,7 +61,8 @@
     <meta name="twitter:url" content="https://pickmycard.app/merchant/%E4%B8%AD%E6%B2%B9">
     <meta name="twitter:title" content="中油加油刷哪張信用卡回饋最高？2026 比較 - Pick My Card">
     <meta name="twitter:description" content="中油直營站加油、綁中油 Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在中油消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。">
-    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
 
     <!-- Google Fonts Preconnect for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,11 +93,12 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <!-- iOS Home Screen Icons -->
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
+    <!-- Favicon／主畫面圖示（2026-10 品牌標誌 v1.0；由 tools/build-logo-assets.js 生成）：
+         .ico 給 Safari 與 /favicon.ico 直連，SVG 給新版瀏覽器（分頁 16px 用小尺寸版），
+         apple-touch 是品牌藍漸層底＋反白標誌的 App 圖示（iOS 自己裁圓角） -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="assets/images/favicon.svg?v=20261007-2" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=20261007-2">
     
     <!-- iOS Web App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -100,10 +106,41 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="信用卡回饋大師">
 
-    <!-- Favicon for other devices -->
     <!-- PWA manifest + theme -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e40af">
+
+    <!-- 網站名稱＋品牌標誌（2026-10 品牌標誌 v1.0）：WebSite 讓 Google 搜尋結果顯示站名，
+         Organization.logo 讓 Google 取用品牌標誌（≥112px、白底好看、可被爬取）。商家頁會整份複製首頁 head，一起帶過去無妨 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://pickmycard.app/#website",
+                "name": "信用卡回饋大師",
+                "alternateName": ["Pick My Card", "PickMyCard"],
+                "url": "https://pickmycard.app/",
+                "inLanguage": "zh-TW",
+                "publisher": { "@id": "https://pickmycard.app/#organization" }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://pickmycard.app/#organization",
+                "name": "Pick My Card",
+                "alternateName": ["信用卡回饋大師", "PickMyCard"],
+                "url": "https://pickmycard.app/",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://pickmycard.app/assets/images/icon-pickmycard.png",
+                    "width": 512,
+                    "height": 512
+                }
+            }
+        ]
+    }
+    </script>
 
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
@@ -187,7 +224,7 @@
                      Pages 的 preview 部署與本機伺服器上不會把人踢回正式站。faq/privacy/terms
                      三頁的 header 本來就是這個寫法，這裡是補上主站。 -->
                 <a href="/" class="header-content">
-                    <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
+                    <img src="assets/images/logo-header.svg?v=20261007" alt="" class="header-logo" width="79" height="83">
                     <h1>信用卡回饋大師</h1>
                 </a>
                 <!-- 桌機 header 導覽（≥769px）：原本在側選單的兩個站內頁面入口搬來這裡——
@@ -707,7 +744,7 @@
         <nav class="mc-related" aria-label="推薦比較">
   <span class="mc-related-label">推薦比較</span>
   <ul class="mc-related-list">
-    <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 19%（永豐 DAWAY 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/momo"><span class="mc-related-name">momo</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E8%8F%AF%E8%88%AA%E7%A9%BA"><span class="mc-related-name">中華航空</span><span class="mc-related-meta">最高 5%（永豐幣倍卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E8%9D%A6%E7%9A%AE"><span class="mc-related-name">蝦皮</span><span class="mc-related-meta">最高 10%（星展傳說對決聯名卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
