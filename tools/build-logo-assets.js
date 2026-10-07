@@ -157,6 +157,8 @@ function appIconSVG({ radius = 0 } = {}) {
 }
 
 // ---- 字標（規範第 03 節）：Manrope ExtraBold 字距 −2%；中文 Noto Sans TC Medium 字距 +12% ----
+// 標誌與字標間距（標誌寬度的倍數）。規範文字寫 1/4（＝安全空間 x）；規範 PDF 的示意圖實際量起來約 1/2
+const LOCKUP_GAP = 0.25;
 const WORDMARK = 'Pick My Card';
 const TAGLINE = '信用卡回饋大師';
 
@@ -183,12 +185,12 @@ function textPath(font, text, size, tracking) {
   return { d, width, top: bb.y1, bottom: bb.y2 };
 }
 
-function lockupSVG(fonts, { layout, variant = 'primary', idp = 'lk' }) {
+function lockupSVG(fonts, { layout, variant = 'primary', idp = 'lk', gap = LOCKUP_GAP }) {
   const { svg, bbox } = markBody(variant, { idp });
   const reverse = variant === 'reverse';
   const ink = reverse ? '#FFFFFF' : C.ink;
   const sub = reverse ? 'rgba(255,255,255,0.85)' : C.sub;
-  const space = bbox.w / 4;  // 標誌與字標間距＝標誌寬度 1/4（同時也是安全空間 x）
+  const space = bbox.w * gap;
   const cap = fonts.latin.charToGlyph('P').getBoundingBox().y2 / fonts.latin.unitsPerEm;
   let body, W, H;
   if (layout === 'horizontal') {
@@ -330,4 +332,4 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }
-module.exports = { markSVG, markBody, appIconSVG, VARIANTS };
+module.exports = { markSVG, markBody, appIconSVG, lockupSVG, fetchFont, textPath, VARIANTS, WORDMARK, TAGLINE };
