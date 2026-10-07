@@ -62,7 +62,12 @@ async function captureAtDate(browser, base, frozenDate) {
         const shown = el && el.closest('.card-info-section')?.style.display !== 'none';
         out[sec] = !shown ? [] : [...el.querySelectorAll('.cashback-detail-item')].map(item => ({
           classes: [...item.classList].sort().join(' '),
-          lines: item.innerText.split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean),
+          // 「...展開」鈕不列入：它出不出現取決於條件文字排版後是否超過兩行，而那由「機器上
+          // 有哪套中文字型」決定（測試擋掉外部 Google Fonts，退回系統字型）——同一份程式在
+          // 不同容器會差一行（2026-10-07 firstbank-ileo 只在換了環境後多出這行）。條件全文
+          // 仍在 innerText 裡（line-clamp 不會刪字），內容差異照樣抓得到。
+          lines: item.innerText.split('\n').map(s => s.replace(/\s+/g, ' ').trim())
+            .filter(s => s && s !== '...展開' && s !== '收起'),
         }));
       }
       return out;
