@@ -130,8 +130,11 @@ header {
     color: inherit;
 }
 
+/* 2026-10 品牌標誌 v1.0：logo-header.svg 是緊貼外框的反白標誌（舊 PNG 四周留白約 10%），
+   所以高度比舊版小一號、看起來一樣大。規範第 04 節：32px 以下要換小尺寸版——
+   這裡各斷點最小就是 32px，別再往下調。 */
 .header-logo {
-    height: 40px;
+    height: 34px;
     width: auto;
     display: block;
     flex-shrink: 0;
@@ -10672,7 +10675,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
    ============================================ */
 @media (min-width: 1025px) {
     .header-logo {
-        height: 35px;   /* 原 40px（width:auto，不用動） */
+        height: 32px;   /* 原 35px（舊 PNG 40px×0.87）；新標誌最小 32px，見 .header-logo 註解 */
     }
 
     .auth-section {

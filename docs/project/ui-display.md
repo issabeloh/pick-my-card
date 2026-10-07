@@ -242,6 +242,16 @@ Grep `titleParts`）：
 - 直/橫卡都支援（object-fit: contain 自動 letterbox）
 - **解析度規範**：橫式 800×500（直式 500×800）PNG，壓在 ~150KB 內。舊 320×200 在 Retina 會糊
 
+## 2b. 品牌標誌資產（2026-10-07，《Pick My Card 品牌標誌規範 v1.0》）
+
+- **唯一來源**：`tools/build-logo-assets.js` 的幾何／色彩常數。所有標誌檔都由它生成，**不手改輸出檔**；要改標誌改常數後重跑（需 `npm install playwright opentype.js --no-save`；字標與分享圖要網路抓字型，離線用 `--marks-only`）
+- 幾何（規範單位，原點＝前卡中心）：前卡 52、圓角 7、傾 31°；晶片 13×10、圓角 2.5、距卡邊 7；後方兩卡 45°、邊長 50、圓角 7，中心 (9,12)／(13,17)；間隙 2.6 是真的鏤空（mask），任何底色都透得出來
+- 色彩版本（`assets/brand/pmc-mark*.svg`）：主要（漸層前卡＋`#60A5FA`/`#BFDBFE`，淺底用）、單色藍、墨色單色（後兩卡同色 50%/22%）、反白（白卡＋`#2563EB` 晶片，**藍底一律用它**）、反白深色底
+- **32px 以下用小尺寸版**（`pmc-mark-small*.svg`：去底層、間隙 5、晶片放大）。header 各斷點最小 32px 所以用完整版；landing 22px 的小 logo、分頁 favicon 用小尺寸版
+- 網站引用：header＝`assets/images/logo-header.svg`（緊貼外框，CSS 只設高度）；`logo-header.png` 只留給舊版 Apps Script 匯出的 promos.html；favicon＝根目錄 `favicon.ico`（16/24 小尺寸、32/48 完整）＋`assets/images/favicon.svg`；apple-touch／manifest maskable＝`icon-pickmycard-ios.png`（漸層滿版，標誌落在中央 80% 安全圓內）；manifest any＝`icon-192/512.png`（圓角方塊）
+- 圖片引用的 `?v=` 不歸 deploy-version.sh 管：換圖時手動改日期（og:image、favicon.svg、apple-touch、logo-header 一起改；Apps Script `cards-export.gs` 的 `PMC_OG_IMAGE` 也要同步）
+- 禁止：改傾角、拿掉間隙、換色、拉伸、加陰影、放在低對比底上（規範第 08 節）
+
 ## 3. 選卡 modals（我的信用卡／管理加入比較的卡片）
 
 - 共用渲染 `_renderCardSelectionModal(config)`——一份程式碼餵兩個 modal（不同 selectionId、tagFilterChipsId）
