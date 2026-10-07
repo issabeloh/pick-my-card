@@ -816,9 +816,10 @@ async function generateCubeSpecialContent(card) {
     // Store upcoming rates for display in separate section
     if (upcomingRates.length > 0) {
         const upcomingGroups = upcomingRates.map(rate => {
-            const parsedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
+            const designatedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
             return {
-                parsedRate,
+                // stacking 模型（如 rate+basic）顯示加總後的率，與搜尋結果同一個數字
+                parsedRate: getDisplayRate(card, rate, designatedRate, levelSettings),
                 parsedCap: null,
                 items: rate.items || [],
                 conditions: rate.conditions && rate.category ? [{category: rate.category, conditions: rate.conditions}] : [],
@@ -883,39 +884,8 @@ async function generateCubeSpecialContent(card) {
 
     // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
 
-    // 1. 童樂匯 10% 回饋 (固定最高) - 只顯示進行中的
-    const childrenRate10 = card.cashbackRates?.find(rate => {
-        const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 10.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
-    });
-    if (childrenRate10) {
-        content += renderRateCard({
-            rate: 10,
-            capText: '無上限',
-            title: '童樂匯',
-            endingSoonEnd: childrenRate10.periodEnd,
-            merchants: { items: childrenRate10.items || [], id: 'cube-children10' },
-            period: childrenRate10.period,
-            conditions: childrenRate10.conditions
-        });
-    }
-
-    // 2. 童樂匯 5% 回饋 - 只顯示進行中的
-    const childrenRate5 = card.cashbackRates?.find(rate => {
-        const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 5.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
-    });
-    if (childrenRate5) {
-        content += renderRateCard({
-            rate: 5,
-            capText: '無上限',
-            title: '童樂匯',
-            endingSoonEnd: childrenRate5.periodEnd,
-            merchants: { items: childrenRate5.items || [], id: 'cube-children5' },
-            period: childrenRate5.period,
-            conditions: childrenRate5.conditions
-        });
-    }
+    // 童樂匯方案不再寫死 10%/5% 兩張卡：資料改成 rate+basic（9.7%+0.3%）後寫死的
+    // 數字比對永遠對不到、整組消失。現在跟其他活動一起走第 5 段，依加總後的回饋率排序。
 
     // 3. Level變動的特殊通路 - 從 cashbackRates 中讀取並按類別分組顯示
     if (card.cashbackRates && card.cashbackRates.length > 0) {
@@ -980,25 +950,22 @@ async function generateCubeSpecialContent(card) {
             .filter(rate => {
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
                 return !rate.hideInDisplay &&
-                    rate.category !== '切換「童樂匯」方案' &&
                     (status === 'active' || status === 'always');  // 只顯示進行中的
             })
             .sort((a, b) => {
-                // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
-                // 註：這裡刻意不經 getDisplayRate 加總（不像 7906/7940 等呼叫點）——
-                // 本區塊下面的顯示（mergedRate.parsedRate）本來就是顯示原始 rate、不含
-                // stacking 加總，排序理應跟著同一個數字走，否則才會「排序與顯示不一致」。
-                // CUBE 卡既有 rate+basic 資料（如「切換全支付方案」）依賴這個既有順序，
-                // 跨槽引用 rate_N 目前也沒有卡片用在這個 CUBE 專屬路徑，此處不動。
-                const aRate = parseCashbackRateSync(a.rate, levelSettings);
-                const bRate = parseCashbackRateSync(b.rate, levelSettings);
+                // 排序與顯示用同一個數字：getDisplayRate 加總值（stacking 模型＝指定+基本+加碼）。
+                // 2026-10-07 前這裡刻意顯示原始 rate，結果 rate+basic 的槽（週四外出用餐
+                // 4.7%+0.3%）詳情頁顯示 4.7%、搜尋結果顯示 5%，兩邊對不上。
+                const aRate = getDisplayRate(card, a, parseCashbackRateSync(a.rate, levelSettings), levelSettings);
+                const bRate = getDisplayRate(card, b, parseCashbackRateSync(b.rate, levelSettings), levelSettings);
                 return bRate - aRate;
             });
 
         // Merge active rates with same parsedRate, category, and period (CUBE card only)
         const mergedActiveRates = new Map();
         for (const rate of otherRates) {
-            const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
+            const designatedRate = await parseCashbackRate(rate.rate, card, levelSettings);
+            const parsedRate = getDisplayRate(card, rate, designatedRate, levelSettings);
             const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
 
             // Create merge key: rate + category + period
@@ -1026,6 +993,8 @@ async function generateCubeSpecialContent(card) {
                 // First time seeing this rate+category+period combination
                 mergedActiveRates.set(mergeKey, {
                     parsedRate,
+                    // stacking 模型的「回饋組成」按鈕（合併後以第一個槽為代表，同 key＝同率同活動）
+                    rateBtnHtml: rateCompositionButtonHtml(card, rate, designatedRate, parsedCap, levelSettings),
                     // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
                     parsedCap: resolveDisplayCap(card, rate, parsedCap, levelSettings),
                     items: rate.items ? [...rate.items] : [],
@@ -1046,6 +1015,7 @@ async function generateCubeSpecialContent(card) {
             // 真的出現時以先遇到的為準，其餘在 Cards Data 裡就該修掉）。
             content += renderRateCard({
                 rate: mergedRate.parsedRate,
+                rateBtnHtml: mergedRate.rateBtnHtml,
                 capText: formatRateCardCap(mergedRate.parsedCap),
                 title: mergedRate.category,
                 endingSoonEnd: mergedRate.periodEnd,
