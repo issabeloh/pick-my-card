@@ -594,6 +594,7 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
 
     for (const rate of card.cashbackRates) {
         if (rate.hideInDisplay) continue;
+        if (!isRateGroupInLevel(card, rate, levelData)) continue; // 級別專屬槽位（onlySlots）
         const status = getRateStatus(rate.periodStart, rate.periodEnd);
         if (status !== 'active' && status !== 'always' && status !== 'upcoming') continue;
 
@@ -820,6 +821,24 @@ function shouldSkipBirthdayPlan(category) {
     return !isBirthdayMonth;
 }
 
+// 級別專屬槽位（levelSettings 的 onlySlots／keepSlots，2026-10-07 為國泰 CUBE「固定回饋」方案新增）：
+//   "固定回饋": { "onlySlots": [17, 18], "keepSlots": [14] }
+// - onlySlots＝這個級別的專屬槽：選這個級別時只有 onlySlots＋keepSlots 適用；
+//   專屬槽被認領後，其他（沒寫 onlySlots 的）級別就不適用它們。
+// - keepSlots＝跟一般級別共用、在這個級別也照樣適用的槽（如一般回饋特列項目）；不被認領。
+// 以後新增的槽沒被任何級別認領 → 自動歸一般級別，資料端不用逐槽標記。
+// 搜尋配對、即將開始、詳情頁、promos 卡片特色都走這支，判斷一致才不會「詳情頁有、搜尋沒有」。
+// levelData 是用戶目前級別的設定物件（null＝當成一般級別）。槽號用 .slot（Sheet 真實槽號）。
+function isRateGroupInLevel(card, rateGroup, levelData) {
+    if (!card || !card.hasLevels || !card.levelSettings || !rateGroup) return true;
+    const slot = Number(rateGroup.slot);
+    const has = list => Array.isArray(list) && list.map(Number).includes(slot);
+    if (levelData && Array.isArray(levelData.onlySlots)) {
+        return has(levelData.onlySlots) || has(levelData.keepSlots);
+    }
+    return !Object.values(card.levelSettings).some(lv => lv && has(lv.onlySlots));
+}
+
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
     let allMatches = []; // Collect ALL matching activities
@@ -894,6 +913,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                        continue;
+                    }
+
+                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
+                    if (!isRateGroupInLevel(card, rateGroup, levelSettings)) {
                         continue;
                     }
 
@@ -1060,6 +1084,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                        continue;
+                    }
+
+                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
+                    if (!isRateGroupInLevel(card, rateGroup, levelData)) {
                         continue;
                     }
 
@@ -1326,6 +1355,11 @@ async function findUpcomingActivity(card, searchTerm, amount) {
 
             // Check if it's within 30 days
             if (!isUpcomingWithinDays(rateGroup.periodStart, 30)) {
+                continue;
+            }
+
+            // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不列入即將開始
+            if (!isRateGroupInLevel(card, rateGroup, levelData)) {
                 continue;
             }
 

@@ -45,6 +45,13 @@ if (!card.specialItems)
 if (!card.specialItems || card.specialItems.length === 0)
 ```
 
+**級別專屬槽位 `onlySlots` / `keepSlots`**（2026-10-07，國泰 CUBE「固定回饋」方案）：levelSettings 的某級別可寫
+`"onlySlots": [17, 18], "keepSlots": [14]`——選這個級別時只有 onlySlots＋keepSlots 的槽適用（其他槽在搜尋、
+即將開始、詳情頁全部不出現）；onlySlots 的槽被「認領」，其他沒寫 onlySlots 的級別就不適用它們；keepSlots
+是共用槽、不被認領。沒被任何級別認領的槽自動歸一般級別（新增槽不用標記）。判斷集中在
+`isRateGroupInLevel()`（js/cashback-engine.js），新增任何「逐槽列出活動」的路徑都要走它，否則會出現
+「詳情頁有、搜尋沒有」。槽號用 `.slot`（Sheet 真實槽號）。
+
 ## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
 
 1. **有 specialItems 的 hasLevels 卡**：先查 cashbackRates（支援 placeholder）→ 無匹配再查 specialItems。CUBE 卡特殊處理：用 specialRate 和 generalItems

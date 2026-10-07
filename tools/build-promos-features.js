@@ -67,9 +67,10 @@ function makeCalc(engine) {
   };
 }
 
-function displayableSlots(engine, card) {
+function displayableSlots(engine, card, lvS) {
   return (card.cashbackRates || []).filter(rg => {
     if (rg.hideInDisplay) return false;
+    if (!engine.isRateGroupInLevel(card, rg, lvS)) return false;   // 級別專屬槽位（onlySlots）
     const st = engine.getRateStatus(rg.periodStart, rg.periodEnd);
     if (st !== 'active' && st !== 'always') return false;
     return BACKBONE_SLOTS.indexOf(rg.slot) === -1;
@@ -83,10 +84,10 @@ function displayableSlots(engine, card) {
 // 取「最高回饋率」最大的那個。
 function highestLevel(engine, calcSlot, card) {
   if (!card.hasLevels || !card.levelSettings) return null;
-  const slots = displayableSlots(engine, card);
   let best = null;
   Object.keys(card.levelSettings).forEach(name => {
     const s = card.levelSettings[name];
+    const slots = displayableSlots(engine, card, s);
     const top = slots.reduce((m, rg) => Math.max(m, calcSlot(card, rg, s).rate || 0), 0);
     if (!best || top > best.top) best = { name, settings: s, top };
   });
@@ -145,7 +146,7 @@ function featuresFor(engine, cardsData, spotByCard, card) {
   const lv = highestLevel(engine, calcSlot, card);
   const lvS = lv ? lv.settings : null;
 
-  const slots = displayableSlots(engine, card).map(rg => {
+  const slots = displayableSlots(engine, card, lvS).map(rg => {
     const v = calcSlot(card, rg, lvS);
     const L = labelOf(rg);
     return { slot: rg.slot, rate: v.rate, cap: v.cap, label: L.label, cond: L.cond, items: rg.items || [] };
