@@ -2947,6 +2947,9 @@ function pmcPageTemplate_(o) {
 '<meta property="og:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta property="og:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
 '<meta property="og:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta property="og:image:width" content="1200">\n' +
+'<meta property="og:image:height" content="630">\n' +
+'<meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
 '<meta property="og:locale" content="zh_TW">\n' +
 '<meta property="og:site_name" content="信用卡回饋大師">\n' +
 '\n' +
@@ -2955,6 +2958,7 @@ function pmcPageTemplate_(o) {
 '<meta name="twitter:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta name="twitter:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
 '<meta name="twitter:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
 '\n' +
 '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
@@ -2965,6 +2969,7 @@ function pmcPageTemplate_(o) {
 '<link rel="icon" href="/favicon.ico" sizes="32x32">\n' +
 '<link rel="icon" href="assets/images/favicon.svg?v=' + o.versionTag + '" type="image/svg+xml">\n' +
 '<link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=' + o.versionTag + '">\n' +
+'<meta name="theme-color" content="#1e40af">\n' +
 '\n' +
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
@@ -2988,7 +2993,7 @@ function pmcPageTemplate_(o) {
 '      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>\n' +
 '    </button>\n' +
 '    <a href="/" class="promos-header-content">\n' +
-'      <img src="assets/images/logo-header.svg?v=' + o.versionTag + '" alt="" class="promos-header-logo">\n' +
+'      <img src="assets/images/logo-header.svg?v=' + o.versionTag + '" alt="" class="promos-header-logo" width="79" height="83">\n' +
 '      <span class="promos-header-title">信用卡回饋大師</span>\n' +
 '    </a>\n' +
 '    <nav class="promos-header-links" aria-label="站內頁面">\n' +

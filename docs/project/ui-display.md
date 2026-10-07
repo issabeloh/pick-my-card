@@ -251,6 +251,7 @@ Grep `titleParts`）：
 - **32px 以下用小尺寸版**（`pmc-mark-small*.svg`：去底層、間隙 5；晶片不變）。header 各斷點最小 32px 所以用完整版；landing 22px 的小 logo、分頁 favicon 用小尺寸版
 - 網站引用：header＝`assets/images/logo-header.svg`（緊貼外框，CSS 只設高度）；`logo-header.png` 只留給舊版 Apps Script 匯出的 promos.html；favicon＝根目錄 `favicon.ico`（16/24 小尺寸、32/48 完整）＋`assets/images/favicon.svg`；apple-touch／manifest maskable＝`icon-pickmycard-ios.png`（漸層滿版，標誌落在中央 80% 安全圓內）；manifest any＝`icon-192/512.png`（圓角方塊）
 - 圖片引用的 `?v=` 不歸 deploy-version.sh 管：換圖時手動改日期（og:image、favicon.svg、apple-touch、logo-header 一起改；Apps Script `cards-export.gs` 的 `PMC_OG_IMAGE` 也要同步）
+- SEO：首頁 JSON-LD 有 `WebSite`（站名「信用卡回饋大師」）＋`Organization.logo`＝`assets/images/icon-pickmycard.png`（512 透明底主要版本），faq 的 publisher 同一張——**這個檔名／網址別改**，Google 是照網址抓品牌標誌；所有頁的 og:image 帶 `og:image:width/height/alt`；header／landing 的標誌 `<img>` 帶 width/height 屬性（只為寬高比，防版面跳動，實際大小仍由 CSS 高度決定）
 - 禁止：改傾角、拿掉間隙、換色、拉伸、加陰影、放在低對比底上（規範第 08 節）
 
 ## 3. 選卡 modals（我的信用卡／管理加入比較的卡片）
