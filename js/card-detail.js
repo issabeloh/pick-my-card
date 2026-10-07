@@ -888,70 +888,13 @@ async function generateCubeSpecialContent(card) {
         </div>
     `;
 
-    // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
+    // 全部活動（含隨級別變動的玩數位／樂饗購／趣旅行）都在下面同一段依加總後回饋率排序。
+    // {specialRate} 由 parseCashbackRate 依目前級別解析；切換級別時 updateCubeSpecialCashback
+    // 會重畫整區，所以數字照樣跟著級別走。2026-10-07 前另有一段把這三個方案合併後排最前面，
+    // 但下面這段沒排除它們，三個方案各出現兩次（且合併版沒有條件/登錄連結），故移除。
+    // 童樂匯也一樣走下面（原本寫死比對 rate === 10/5，資料改成 9.7%+0.3% 後整組消失）。
 
-    // 童樂匯方案不再寫死 10%/5% 兩張卡：資料改成 rate+basic（9.7%+0.3%）後寫死的
-    // 數字比對永遠對不到、整組消失。現在跟其他活動一起走第 5 段，依加總後的回饋率排序。
-
-    // 3. Level變動的特殊通路 - 從 cashbackRates 中讀取並按類別分組顯示
-    if (card.cashbackRates && card.cashbackRates.length > 0) {
-        const categories = ['玩數位', '樂饗購', '趣旅行'];
-        const categoryRates = new Map();
-
-        // 從 cashbackRates 中收集各類別的項目（只包含進行中的活動）
-        card.cashbackRates.forEach(rate => {
-            const status = getRateStatus(rate.periodStart, rate.periodEnd);
-            const isActive = (status === 'active' || status === 'always') &&
-                isRateGroupInLevel(card, rate, levelSettings);   // 級別專屬槽位（onlySlots）
-
-            if (rate.category && categories.some(cat => rate.category.includes(cat)) && isActive) {
-                // 找出是哪個類別
-                const matchedCategory = categories.find(cat => rate.category.includes(cat));
-                if (!categoryRates.has(matchedCategory)) {
-                    categoryRates.set(matchedCategory, {
-                        items: [],
-                        rate: rate.rate,
-                        cap: rate.cap,
-                        period: rate.period
-                    });
-                }
-                const categoryData = categoryRates.get(matchedCategory);
-                if (rate.items) {
-                    categoryData.items.push(...rate.items);
-                }
-            }
-        });
-
-        // 按類別順序顯示
-        categories.forEach(category => {
-            if (categoryRates.has(category)) {
-                const categoryData = categoryRates.get(category);
-                const items = [...new Set(categoryData.items)]; // 去重
-
-                if (items.length > 0) {
-                    // 解析 rate（支援 {specialRate} placeholder）
-                    let displayRate = categoryData.rate;
-                    if (categoryData.rate === '{specialRate}') {
-                        displayRate = specialRate;
-                    } else if (typeof categoryData.rate === 'string' && categoryData.rate.startsWith('{')) {
-                        // 其他 placeholder，從 levelSettings 解析
-                        const fieldName = categoryData.rate.slice(1, -1);
-                        displayRate = levelSettings[fieldName] || categoryData.rate;
-                    }
-
-                    content += renderRateCard({
-                        rate: displayRate,
-                        capText: formatRateCardCap(categoryData.cap),
-                        title: category,
-                        merchants: { items, id: `cube-${category}-${savedLevel}` },
-                        period: categoryData.period
-                    });
-                }
-            }
-        });
-    }
-
-    // 5. 其他 cashbackRates（如 LINE PAY 2%）- 放在最後，只顯示進行中的
+    // 所有 cashbackRates，只顯示進行中的
     if (card.cashbackRates && card.cashbackRates.length > 0) {
         const otherRates = card.cashbackRates
             .filter(rate => {

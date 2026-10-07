@@ -5,7 +5,7 @@
    "2026-09-11T12:00:00+08:00",
    "2026-08-25T12:00:00+08:00"
   ],
-  "generatedAt": "2026-10-07T02:56:04.066Z"
+  "generatedAt": "2026-10-07T03:05:30.041Z"
  },
  "runs": {
   "2026-09-11T12:00:00+08:00": {
@@ -674,42 +674,6 @@
      }
     ],
     "card-special-cashback": [
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「玩數位」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「樂饗購」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「趣旅行」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
      {
       "classes": "cashback-detail-item rate-card",
       "lines": [
@@ -4497,42 +4461,6 @@
      }
     ],
     "card-special-cashback": [
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「玩數位」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: ChatGPT、Canva、Claude、Cursor、Duolingo… 顯示全部23個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「樂饗購」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: 遠東SOGO百貨、遠東Garden City、新光三越、遠東百貨、台北101… 顯示全部40個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
-     {
-      "classes": "cashback-detail-item rate-card",
-      "lines": [
-       "切換「趣旅行」方案",
-       "回饋率",
-       "2%",
-       "回饋消費上限",
-       "NT$500,000",
-       "適用通路: 海外實體消費、東京迪士尼樂園、東京華納兄弟哈利波特影城、大阪環球影城、Apple錢包指定交通卡 (SUICA 、PASMO、ICOCA)… 顯示全部56個",
-       "活動期間: 2026/1/1~2026/12/31"
-      ]
-     },
      {
       "classes": "cashback-detail-item rate-card",
       "lines": [
