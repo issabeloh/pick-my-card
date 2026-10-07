@@ -614,8 +614,11 @@ function resetQuickOptionsToDefault() {
 document.addEventListener('DOMContentLoaded', () => {
     // State
     let selectedImages = [];
-    const MAX_IMAGES = 5;
-    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+    // 回報上限（2026-10-03）：每則最多 3 張圖、每個帳號每天（台灣時間）最多 5 則。
+    // 真正的限制在 firestore.rules／storage.rules（feedbackQuota），這裡只是讓畫面先擋、先提示。
+    const MAX_IMAGES = 3;
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB（storage.rules 的上傳上限）
+    const MAX_REPORTS_PER_DAY = 5;
 
     // DOM Elements
     // 回報錯誤入口只剩 avatar 下拉（#avatar-feedback，見 auth-user-data.js menuActions）；
@@ -671,16 +674,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     canvas.height = height;
 
                     const ctx = canvas.getContext('2d');
+                    // 一律輸出 JPEG（截圖原本是 PNG，常常好幾 MB）；先鋪白底，免得透明處變黑
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // canvas.toBlob with the source mime may return null when the
-                    // browser can't encode that type (e.g. image/heic). Fall back
-                    // to image/jpeg so the upload still succeeds.
-                    const tryEncode = (mime, quality) => new Promise(res => canvas.toBlob(b => res(b), mime, quality));
+                    const tryEncode = (quality) => new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', quality));
                     (async () => {
-                        let blob = await tryEncode(file.type, 0.85);
-                        if (!blob) blob = await tryEncode('image/jpeg', 0.85);
+                        // 品質逐步降低，直到小於上傳上限（2MB）
+                        let blob = null;
+                        for (const q of [0.85, 0.7, 0.55, 0.4]) {
+                            blob = await tryEncode(q);
+                            if (!blob || blob.size < MAX_IMAGE_SIZE) break;
+                        }
                         if (!blob) return reject(new Error('圖片編碼失敗（canvas.toBlob 回傳 null）'));
+                        if (blob.size >= MAX_IMAGE_SIZE) return reject(new Error('圖片壓縮後仍超過 2MB'));
                         resolve(blob);
                     })();
                 };
@@ -813,6 +821,31 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackStatus.textContent = message;
     }
     
+    // 預約一則回報額度：同一天（台灣時間）計數 +1（最多 5），換日從 1 開始。
+    // 回傳 { key: '<uid>_<日期>_<今天第幾則>' }；額度用完回傳 null；其他錯誤往外丟。
+    function taiwanDayKey() {
+        const t = new Date(Date.now() + 8 * 60 * 60 * 1000);
+        return t.getUTCFullYear() * 10000 + (t.getUTCMonth() + 1) * 100 + t.getUTCDate();
+    }
+    async function reserveFeedbackSlot() {
+        const ref = window.doc(window.db, 'feedbackQuota', currentUser.uid);
+        const snap = await window.getDoc(ref);
+        const q = snap.exists() ? snap.data() : null;
+        const day = taiwanDayKey();
+        const sameDay = !!(q && q.day === day);
+        if (sameDay && q.count >= MAX_REPORTS_PER_DAY) return null;
+        try {
+            // +1 要用 merge：不帶 merge 的整份覆寫會讓 increment 從 0 起算
+            await window.setDoc(ref, sameDay ? { day, count: window.increment(1) } : { day, count: 1 }, sameDay ? { merge: true } : undefined);
+        } catch (err) {
+            // 額度剛好被別的分頁用完、或本機時鐘剛好卡在午夜前後：視為今天無法再送
+            if (err && err.code === 'permission-denied') return null;
+            throw err;
+        }
+        const after = (await window.getDoc(ref)).data();
+        return { key: `${currentUser.uid}_${after.day}_${after.count}` };
+    }
+
     // Submit Feedback
     submitFeedbackBtn.addEventListener('click', async () => {
         const message = feedbackMessage.value.trim();
@@ -834,6 +867,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('loading', '正在上傳...');
     
         try {
+            // 先預約今天的回報額度（feedbackQuota/{uid}）：額度用完就不上傳任何東西。
+            // 預約成功後拿到 (windowStart, count)，圖片檔名與回報文件 ID 都綁這組值，規則據此擋超量。
+            const slot = await reserveFeedbackSlot();
+            if (!slot) {
+                showStatus('error', `每天最多送出 ${MAX_REPORTS_PER_DAY} 則回報，今天已達上限，請明天再試。`);
+                return;
+            }
+
             // Upload images to Firebase Storage — each one is wrapped so a single
             // failure (e.g. Storage quota exceeded) doesn't abort the whole
             // submission. Text feedback still goes through with whatever images
@@ -848,11 +889,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     try {
                         const compressedBlob = await compressImage(imgData.file);
-                        const timestamp = Date.now();
-                        const userId = currentUser?.uid || 'anonymous';
-                        const filename = `feedback/${timestamp}_${userId}_${i}.jpg`;
+                        const filename = `feedback/${slot.key}_${i}.jpg`;
                         const storageReference = window.storageRef(window.storage, filename);
-                        await window.uploadBytes(storageReference, compressedBlob);
+                        await window.uploadBytes(storageReference, compressedBlob, { contentType: 'image/jpeg' });
                         const downloadUrl = await window.getDownloadURL(storageReference);
                         imageUrls.push(downloadUrl);
                     } catch (imgError) {
@@ -880,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 feedbackData.imageUploadFirstError = (imageUploadErrors[0] && (imageUploadErrors[0].code || imageUploadErrors[0].message)) || String(imageUploadErrors[0]);
             }
 
-            await window.addDoc(window.collection(window.db, 'feedback'), feedbackData);
+            await window.setDoc(window.doc(window.db, 'feedback', slot.key), feedbackData);
 
             // Status reflects what actually happened with images
             const total = selectedImages.length;
@@ -917,9 +956,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auth Modal System (Login/Register with Email)
 // ============================================
 
-let authMode = 'login'; // 'login', 'register', or 'forgotPassword'
+let authMode = 'login'; // 'login', 'emailLink', or 'forgotPassword'
+
+// 登入連結信的寄件者（必須和 functions 的 MAIL_FROM 參數一致）與主旨（functions/login-link.js 的 SUBJECT）
+const LOGIN_MAIL_FROM = 'noreply@pickmycard.app';
+const LOGIN_MAIL_SUBJECT = '登入 Pick My Card';
 
 function openAuthModal(mode = 'login') {
+    // 2026-10-03 起只剩「Google 登入」與「Email 登入連結」：密碼登入／註冊／忘記密碼都從畫面拿掉，
+    // 任何模式一律開成 Email 連結。（Firebase 的 Email/Password 開關不能關——Email 連結登入掛在它底下；
+    // 新的密碼註冊由 functions/signup-guard.js 在伺服器端擋。既有密碼帳號輸入同一個 Email 就能用連結登入原帳號。）
+    mode = 'emailLink';
     authMode = mode;
     const modal = document.getElementById('auth-modal');
     const modalTitle = document.getElementById('auth-modal-title');
@@ -934,40 +981,47 @@ function openAuthModal(mode = 'login') {
     document.getElementById('auth-form').reset();
     authError.style.display = 'none';
 
-    if (mode === 'register') {
-        modalTitle.textContent = '註冊';
-        submitBtn.textContent = '註冊';
-        switchText.innerHTML = '已經有帳號？<a href="#" id="auth-switch-link">立即登入</a>';
-        confirmPasswordGroup.style.display = 'block';
-        passwordGroup.style.display = 'block';
-        forgotPasswordLink.style.display = 'none';
+    const passwordInput = document.getElementById('auth-password');
+    authError.style.background = '';
+    authError.style.color = '';
+    if (mode === 'emailLink') {
+        modalTitle.textContent = '登入／註冊';
+        submitBtn.textContent = '寄送登入連結';
+        switchText.textContent = '';
+        confirmPasswordGroup.style.display = 'none';
+        passwordGroup.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else if (mode === 'forgotPassword') {
         modalTitle.textContent = '忘記密碼';
         submitBtn.textContent = '發送重設密碼郵件';
         switchText.innerHTML = '<a href="#" id="auth-switch-link">返回登入</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'none';
-        forgotPasswordLink.style.display = 'none';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'none';
     } else {
         modalTitle.textContent = '登入';
         submitBtn.textContent = '登入';
-        switchText.innerHTML = '還沒有帳號？<a href="#" id="auth-switch-link">立即註冊</a>';
+        switchText.innerHTML = '沒有帳號或不想用密碼？<a href="#" id="auth-switch-link">用 Email 連結登入／註冊</a>';
         confirmPasswordGroup.style.display = 'none';
         passwordGroup.style.display = 'block';
-        forgotPasswordLink.style.display = 'inline-block';
+        if (forgotPasswordLink) forgotPasswordLink.style.display = 'inline-block';
     }
+
+    // 「改用 Email 登入連結」說明：登入與 Email 連結模式都顯示，忘記密碼模式不顯示
+    const linkNote = document.getElementById('auth-link-note');
+    if (linkNote) linkNote.style.display = (mode === 'forgotPassword') ? 'none' : 'block';
+
+    // 只有密碼登入要填密碼；其他模式密碼欄隱藏，也不能留著 required（否則表單送不出去）
+    if (passwordInput) passwordInput.required = (mode === 'login');
 
     modal.style.display = 'flex';
     disableBodyScroll();
 
-    // Re-attach event listener for switch link
-    document.getElementById('auth-switch-link').addEventListener('click', (e) => {
+    // Re-attach event listener for switch link（目前只剩 Email 連結模式，沒有切換連結）
+    const switchLink = document.getElementById('auth-switch-link');
+    if (switchLink) switchLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (authMode === 'forgotPassword') {
-            openAuthModal('login');
-        } else {
-            openAuthModal(authMode === 'login' ? 'register' : 'login');
-        }
+        openAuthModal(authMode === 'login' ? 'emailLink' : 'login');
     });
 }
 
@@ -1044,8 +1098,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
-            const confirmPassword = document.getElementById('auth-confirm-password').value;
             const submitBtn = document.getElementById('auth-submit-btn');
+
+            // Email 連結登入／註冊：請 functions 寄一封登入連結信（index.html 的 pmcSendLoginLink）
+            if (authMode === 'emailLink') {
+                if (!email) {
+                    showAuthError('請輸入您的 Email');
+                    return;
+                }
+                submitBtn.disabled = true;
+                submitBtn.textContent = '寄送中...';
+                const authError = document.getElementById('auth-error');
+                try {
+                    await window.pmcSendLoginLink(email);
+                    // 換裝置開信時會再問一次 Email；同一台裝置就直接登入
+                    try { localStorage.setItem('pmcEmailForSignIn', email); } catch (e) { /* ignore */ }
+                    authError.textContent = `✅ 登入連結已寄到 ${email}。請到信箱點信裡的連結`
+                        + `（寄件者 ${LOGIN_MAIL_FROM}，主旨「${LOGIN_MAIL_SUBJECT}」）；沒看到請檢查垃圾郵件。`;
+                    authError.style.display = 'block';
+                    authError.style.background = '#d4edda';
+                    authError.style.color = '#155724';
+                } catch (error) {
+                    console.error('Send login link error:', error);
+                    const raw = String((error && error.message) || '');
+                    let msg = '寄送失敗，請稍後再試';
+                    if (raw.includes('PMC_LINK_TOO_MANY') || (error && error.code === 'functions/resource-exhausted')) msg = '寄太多次了，請稍後再試（同一個信箱每小時最多 3 封）';
+                    else if (raw.includes('PMC_LINK_INVALID')) msg = 'Email 格式不正確';
+                    else if (raw.includes('PMC_SIGNUP_DISPOSABLE')) msg = '請使用常用的 Email（不接受拋棄式信箱），或改用「Google 登入」';
+                    else if (raw.includes('PMC_SIGNUP_INBOX')) msg = '這個信箱已經有帳號了（Gmail 會忽略英文句點和 + 後面的字），請用原本註冊的 Email 登入';
+                    else if (error && error.code === 'functions/unauthenticated') msg = '驗證沒有通過，請重新整理頁面再試；如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單';
+                    authError.textContent = msg;
+                    authError.style.display = 'block';
+                    authError.style.background = '#fce8e6';
+                    authError.style.color = '#c5221f';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '寄送登入連結';
+                }
+                return;
+            }
 
             // Handle forgot password mode
             if (authMode === 'forgotPassword') {
@@ -1060,7 +1151,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     await window.sendPasswordResetEmail(auth, email);
                     const authError = document.getElementById('auth-error');
-                    authError.textContent = '✅ 密碼重設信已寄出，請檢查您的 Email';
+                    // 重設密碼信是 Firebase 內建範本（這個專案改不了，只能是英文）
+                    authError.textContent = '✅ 密碼重設信已寄出，請到信箱收件。標題與內容會是英文的'
+                        + '（標題「Reset your password for Pick My Card」，寄件者 noreply@pick-my-card-28f2a.firebaseapp.com）。'
+                        + '如果收件匣沒有收到，請查看垃圾信件。';
                     authError.style.display = 'block';
                     authError.style.background = '#d4edda';
                     authError.style.color = '#155724';
@@ -1072,6 +1166,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         errorMessage = '找不到此 Email 帳號';
                     } else if (error.code === 'auth/invalid-email') {
                         errorMessage = 'Email 格式不正確';
+                    } else if (String(error.message || '').includes('PMC_EMAIL_LIMIT')) {
+                        errorMessage = '這個 Email 今天已經寄過太多封重設信，請明天再試，或改用「Email 連結登入」';
                     }
 
                     const authError = document.getElementById('auth-error');
@@ -1086,38 +1182,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Validation for login/register
+            // 密碼登入（只剩既有密碼帳號會用；新的密碼註冊已停用）
             if (!email || !password) {
                 showAuthError('請填寫所有欄位');
                 return;
             }
 
-            if (password.length < 6) {
-                showAuthError('密碼至少需要 6 個字元');
-                return;
-            }
-
-            if (authMode === 'register' && password !== confirmPassword) {
-                showAuthError('密碼不一致，請重新輸入');
-                return;
-            }
-
-            // Disable submit button
             submitBtn.disabled = true;
-            submitBtn.textContent = authMode === 'login' ? '登入中...' : '註冊中...';
+            submitBtn.textContent = '登入中...';
 
             try {
-                if (authMode === 'register') {
-                    // Register
-                    const result = await window.createUserWithEmailAndPassword(auth, email, password);
-                    console.log('Registration successful:', result.user);
-                    closeAuthModal();
-                } else {
-                    // Login
-                    const result = await window.signInWithEmailAndPassword(auth, email, password);
-                    console.log('Login successful:', result.user);
-                    closeAuthModal();
-                }
+                const result = await window.signInWithEmailAndPassword(auth, email, password);
+                console.log('Login successful:', result.user);
+                closeAuthModal();
             } catch (error) {
                 console.error('Auth error:', error);
                 let errorMessage = '操作失敗，請稍後再試';
@@ -1150,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAuthError(errorMessage);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = authMode === 'login' ? '登入' : '註冊';
+                submitBtn.textContent = '登入';
             }
         });
     }

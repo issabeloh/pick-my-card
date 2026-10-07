@@ -17,7 +17,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 1. **Cards Data** —— 信用卡基本資料和回饋規則
    - 必填：`id, name, fullName, basicCashback, annualFee, feeWaiver, website, tags`
-   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N`（N=1-21，匯出迴圈上限 21）
+   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
@@ -43,10 +43,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
 9. **ReferralLinks** —— merchant, url, description, active
-10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, cap, deadline, order, active, category 選填, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
-    - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 🚧 目前匯出但前端不使用**。欄位保留著，前端也照常收到 `item.featured`，只是暫時不拿來排版。
-    - 原本的用途是把勾選的活動排進「主打卡」版位（手機每頁 1 則整列大卡、桌機每頁 2 則各跨 2 欄）。**停用原因**：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打的頁」卡片形狀不同，看起來很亂（2026-09-03 站長決定）。
-    - 要重新啟用：把 `js/home-ui.js` 的 `SPOTLIGHT_FEATURE_SLOTS` 改回 `true`，主打卡的分頁分支與 `.is-feature` / `.is-mini` 樣式都還留著。
+10. **Highlights** —— 推薦活動（merchant, rate, description, card_name, card_id, order, active, **featured 選填**）。匯出 JSON key 是 `spotlights`；merchant 必須是單一搜尋詞（一個商家，或剛好等於某快捷搜尋 displayName）
+    - **2026-09-30 起只存編輯決定**：cap／deadline／category 三欄已刪，上限與期限由前端從卡片真實活動推導；`rate` 是「選哪個活動 × 哪個級別」的選擇器，`card_name` 只給人看。規則見 `ui-display.md` 第 4 節
+    - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 前端已不讀**。原本把勾選的活動排進「主打卡」版位；主打卡 2026-09-03 停用、2026-10-02 前端程式全部移除（見 `ui-display.md` 第 4 節）。Apps Script 仍照常匯出這欄、無害；要清掉得同時改 Sheets 上的執行版與 `apps-script/cards-export.gs` 備份。
     - 目前每頁張數：手機 4（2 欄 x 2 列）、平板 3、桌機 4（4 欄 x 1 列）。版位配置寫在 `spotlightLayout()`，欄數在 `styles.css` 的 `.spotlight-track`，**兩邊的斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
     - **2026-09-17 起這張表同時餵 /promos 的「卡片特色」**：命中的通路保證入列並帶
       hype 字眼（見第 9a 節）。因此往 Highlights 加一列會同時改善首頁推薦活動與新戶活動頁。
@@ -530,6 +529,14 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 
 **2026-09-23 第二輪**：hero 下方加頁內索引列（`pmcJumpNav_`：站長推薦／行李箱專區／新戶活動，後者錨點是清單上方新增的「新戶活動」標題 `#all-promos`）；推薦區手機橫滑有分頁點（promos.js `setupPicksDots`）；行李箱專區附贈品圖（`gift_image_url`，點擊走同一個 lightbox）與「卡片特色」鈕（`data-feat-card` 指向清單同一張卡的 `.promo-card-feat`，開同一個 modal）；手機的「立即申辦」縮成「申辦」。**第三輪**：行李箱專區改成淡底獨立區塊、一檔一張白卡（桌機兩欄），贈品圖佔右欄，倒數徽章移到參考價／門檻那行尾，卡片特色＋申辦在卡片底部一列；`luggage_open` 欄位整個移除（站長評估開法不必獨立顯示）。
 
+**2026-10-04**：推薦卡片在申辦鈕上方加一列「活動詳情 ↓」（同行李箱專區的 `.pmc-lg-jump`，跳到清單裡那一檔並展開）＋「卡片特色」（`data-feat-card`，原地開 modal）；刻意不做「幫用戶填搜尋框」（會篩掉其他卡、要自己清掉才回得去）。推薦有一檔過期被藏時，promos.js 把標題改成實際張數（Top 4…），下次匯出才會從未過期的活動補滿。同日：附屬列的「活動詳情 ▾」改到摘要下一行（獎品圖仍在右側），摘要用 `pmcNoOrphanHtml_()` 把最後 3 字包成不換行，最後一行不會只剩 1 個字；`bonus_merchants` 的萬用標記不再原樣印出（見下方填法）。
+
+**`bonus_merchants` 填法**（2026-10-04 站長定義）：匯出只用**半形逗號 `,`** 切（`pmcRowToPromo_` 附近），全形「，」「、」不會切開。萬用標記要整格只填它一個，不跟通路名稱混填。
+- **`*general`**＝一般消費都算（不限通路；繳稅、預借現金等排除項寫在 `promo_condition`／備註）。主站：任何搜尋都會列出這檔，「匹配項目」顯示「一般消費皆適用」；新戶活動頁顯示「一般消費皆適用」
+- **`*all_items`**＝只加碼在這張卡原本的回饋通路上（省得手動列通路）。主站：展開成該卡 cashbackRates 的 items 來比對搜尋，詳情頁顯示「本卡所有指定通路」；新戶活動頁顯示「本卡所有指定通路（見卡片特色）」
+- 指定通路 → 逐一列名稱、用 `,` 隔開，名稱盡量跟該卡 cashbackRates 的 items 寫法一致（主站搜尋靠子字串比對）
+- 程式位置：主站 `isGeneralSpendingMarker()`／`isAllItemsMarker()`（core-utils）；生成器 `pmcIsGeneral_`／`pmcIsAllItems_`／`pmcMerchantsDisplay_`；AI 填表說明在 `benefits-parser.gs` 的 bonus_merchants description
+
 **`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
 寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
 寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
@@ -756,4 +763,6 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
 - [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
 - [2026-09-11] `checkWatchlist` 每週寄回 Apps Script 失敗信（`Exceeded maximum execution time`，起訖剛好 6 分 00 秒），一度以為是「排程要人工重新授權」 → 不是授權問題，是 Apps Script 單次執行 6 分鐘硬上限：監控清單一長，每列一次網頁抓取（Jina 渲染 30~60 秒）＋一次 Gemini 呼叫就撞得到；超時是**直接砍掉**，逐列即時寫的快照與分頁都在，但收尾的 `sendDigest_` 整個不執行＝通知信無聲消失 → 凡是「每列都要打外部 API」的 Apps Script 迴圈，一律加「開跑前看錶」的煞車（`maxRunSeconds`，比照 `register-link-finder.gs`）＋指令碼屬性存進度游標＋一次性觸發器自動接續；游標一定要設過期時間（排程觸發器撿到舊游標會靜悄悄跳過清單前半段），清除接力觸發器**只能比對 uniqueId**（Trigger API 分辨不出一次性與週期性，掃著刪會把每週觸發器一起刪掉）
+- [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
+
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）

@@ -18,6 +18,7 @@
  *  - 比較卡集合                → "getCardsForComparison"
  *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
  *  - 卡片項目彙整              → "collectCardItems"
+ *  - 雲端同步錯誤提示           → "pmcOnFirestoreError"
  * ============================================================ */
 
 // ========== Debug 日誌閘門 ==========
@@ -397,6 +398,12 @@ function clearCardLevelCache() {
 // localStorage 裡的 JSON 一旦損毀（舊版程式寫入格式不符、被手動改過、擴充套件污染），
 // 直接 JSON.parse 會拋錯並中斷整個載入流程（過去曾因此造成詳情頁打不開）。
 // 所有 localStorage 的 JSON 讀取一律走這裡：壞資料回傳 fallback 並移除該 key。
+// 配卡資料（配對、持有卡、額度）變了 → 通知「我的刷卡小抄」頁（js/mappings-page.js 監聽；頁面沒開就什麼都不做）。
+// 用 DOM 事件而不是直接呼叫對方的函式：發出端不用知道誰在聽，也不用 typeof 檢查。
+function notifyMappingsDataChanged() {
+    document.dispatchEvent(new Event('pmc:mappings-data-changed'));
+}
+
 function readLocalJSON(key, fallback = null) {
     let raw = null;
     try { raw = localStorage.getItem(key); } catch (e) { return fallback; }
@@ -667,7 +674,19 @@ function isAllItemsMarker(raw) {
     return false;
 }
 
+// 新戶活動 bonus_merchants 的兩個萬用標記（站長 2026-10-04 定義）：
+//   *all_items ＝ 只加碼在這張卡原本的回饋通路上 → 展開成該卡 cashbackRates 的 items
+//   *general   ＝ 一般消費都算（不限通路）→ 任何搜尋都符合，顯示 GENERAL_SPENDING_LABEL
+const GENERAL_SPENDING_LABEL = '一般消費皆適用';
+function isGeneralSpendingMarker(raw) {
+    const norm = (s) => String(s).trim().toLowerCase();
+    if (typeof raw === 'string') return norm(raw) === '*general';
+    if (Array.isArray(raw)) return raw.some(item => norm(item) === '*general');
+    return false;
+}
+
 // Expand bonus_merchants - if it's "*all_items", return the card's actual cashbackRates items.
+// *general 沒有可展開的通路，回傳空陣列；呼叫端要先用 isGeneralSpendingMarker() 判斷。
 function expandPromoMerchants(promo, card) {
     if (!promo.bonus_merchants) return [];
     if (isAllItemsMarker(promo.bonus_merchants)) {
@@ -697,3 +716,33 @@ function collectCardItems(card) {
 }
 
 // Build items index for fast lookup (performance optimization)
+
+// ========== 雲端同步錯誤提示（pmcOnFirestoreError） ==========
+// index.html 把 window.getDoc/setDoc/addDoc/deleteDoc 包了一層，任何 Firestore 請求失敗都會
+// 先呼叫這裡，再把錯誤原樣丟回給原本的 catch（各處既有的錯誤處理不變）。
+// 只處理 permission-denied：App Check Enforce 後擋廣告／隱私外掛擋掉 reCAPTCHA、
+// 超過每帳號寫入上限（firestore.rules 的 rateLimits），都會以這個錯誤被拒（規則擋下也是）。原本各處 catch 只寫
+// console，用戶只看到「存了沒反應」，所以這裡補一則看得到的說明；每次開頁只提示一次。
+let pmcCloudErrorShown = false;
+window.pmcOnFirestoreError = function (err) {
+    if (!err || err.code !== 'permission-denied') return;
+    if (typeof currentUser === 'undefined' || !currentUser) return; // 訪客不碰 Firestore；登出途中的殘留請求不提示
+    console.error('☁️ 雲端存取被拒（permission-denied）:', err);
+    if (pmcCloudErrorShown) return;
+    pmcCloudErrorShown = true;
+
+    const bar = document.createElement('div');
+    bar.className = 'pmc-cloud-error';
+    bar.setAttribute('role', 'alert');
+    const text = document.createElement('span');
+    text.textContent = '雲端同步失敗：你的設定可能沒有存到雲端。請先重新整理頁面再試一次。'
+        + '如果有開擋廣告或隱私保護外掛，請把 pickmycard.app 加入白名單；仍然不行請從頭像選單「回報問題」告訴我們。';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'pmc-cloud-error-close';
+    close.setAttribute('aria-label', '關閉');
+    close.textContent = '×';
+    close.addEventListener('click', () => bar.remove());
+    bar.append(text, close);
+    document.body.appendChild(bar);
+};

@@ -6,40 +6,126 @@ rules_version = '2';
 // 修改後要貼到 Firebase console 才會生效：
 //   Firebase console → Firestore Database → 規則（Rules）→ 貼上 → 發布
 // 詳細教學見 FIRESTORE-RULES-README.md
+// 改完先跑 node tools/firestore-rules-test.js（模擬器驗證，見檔頭說明）
 //
 // 資料模型（程式碼實際使用的 collections）：
 //   users/{uid}                  用戶設定總文件（卡片選擇、行動支付、配卡表、
 //                                免年費、結帳日、生日月、CUBE 發卡組織…）
 //   cardSettings/{uid}_{cardId}  卡片級別（每張卡一份）
 //   userNotes/{uid}_{cardId}     卡片筆記（每張卡一份）
-//   feedback/{autoId}            問題回報（需登入，只能新增）
-//   reviews/{autoId}             星星評分（訪客也能送出，只能新增）
+//   feedback/{uid}_{日期}_{n}     問題回報（需登入，只能新增；ID 綁 feedbackQuota 預約）
+//   feedbackQuota/{uid}          回報額度（每天最多 5 則）
+//   rateLimits/{uid}             每帳號寫入計數（每 10 分鐘 100 次）
+//   reviews                      已停用（2026-10-01 關閉寫入；網站早已移除評分功能）
+//
+// ⚠️ 前端新增寫入 users 文件的欄位時，必須同步加進下方 USER_FIELDS 清單，
+//    否則那個欄位的儲存會被規則擋下（console 會出現 permission-denied）。
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── 用戶個人設定：只有本人能讀寫 ─────────────────────────────
+    // ── 封鎖名單（2026-10-01 事件：該帳號用腳本每秒十幾次狂寫自己的 users 文件，
+    //    單日數十萬次寫入、產生 Firestore 費用；10/2 凌晨換新帳號再來）。console 那邊
+    //    同時已停用這些帳號；帳號保持「停用」不要刪除，刪了那個 email 就能重新註冊。
+    //    （曾試過比對 Gmail 加點／+後綴的變體，站長決定拿掉：換個新 Gmail 就繞過了，
+    //    真正的防線是下方的每帳號寫入上限＋App Check。）
+    //    ⚠️ 改這裡要同步 storage.rules 的同名函式。
+    function notBlocked() {
+      return request.auth == null
+          || !(request.auth.uid in ['GNEzbVzqwGh9UkMfvo4fPwXAmZy2', 'bQzrQFDmyCQrZ3AapnG10Ff8avh2']);
+    }
+
+    // ── 每帳號寫入上限（2026-10-02，同一人換帳號再來之後加入）─────────────
+    //    每個帳號有一份計數文件 rateLimits/{uid}。users／cardSettings／userNotes／feedback
+    //    的每一次寫入（含刪除），都必須在「同一個批次」裡更新這份計數，且計數只記一個
+    //    文件路徑（lastPath）——所以一次計數只能換一筆寫入，不能塞一批。
+    //    上限：每 600 秒視窗 100 次（正常使用遠低於此；刪除帳號約 67 次也在內）。
+    //    前端由 index.html 的寫入包裝（rlCommit）自動處理，各處 setDoc 不用改。
+    //    ⚠️ 改上限數字時，下面 rateLimits 的兩處 600／100 要一起改。
+    function rateLimited(path) {
+      let lim = getAfter(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data;
+      return lim.lastAt == request.time && lim.lastPath == path;
+    }
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid && notBlocked();
+    }
+
+    // 文件 ID "<uid>_<cardId>" 必須和內容的 cardId 一致、cardId 必須長得像卡片 ID
+    // （小寫英數與連字號）。擋掉腳本用任意 ID 無限新增文件。
+    function isOwnCardDoc(docId) {
+      return request.auth != null && notBlocked()
+          && request.resource.data.cardId is string
+          && request.resource.data.cardId.matches('[a-z0-9-]{1,40}')
+          && docId == request.auth.uid + '_' + request.resource.data.cardId;
+    }
+
+    // ── 用戶個人設定：只有本人能讀寫；只接受網站實際會寫的欄位 ─────────
+    //    用 diff().affectedKeys()：只檢查「這次改到的欄位」，舊文件裡的歷史欄位
+    //    （例如 selectedCards）不受影響。quickSearchOptions、mappingsTitle 會被
+    //    deleteField() 刪除，刪除也算改到，所以要在清單裡。
     match /users/{userId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+      allow read: if isUser(userId);
+      allow delete: if isUser(userId) && rateLimited('users/' + userId);
+      allow create, update: if isUser(userId)
+          && rateLimited('users/' + userId)
+          && request.resource.data.diff(resource == null ? {} : resource.data)
+               .affectedKeys().hasOnly([
+                 'cardsInComparison', 'myOwnedCards', 'selectedPayments',
+                 'spendingMappings', 'merchantAliases', 'mappingsTitle',
+                 'feeWaiverStatus', 'billingDates', 'creditLimits',
+                 'birthdayMonth', 'cubeIssuer', 'isChildrenEligible',
+                 'hiddenDefaultIds', 'customQuickOptions', 'selectedOrder',
+                 'quickSearchOptions', 'updatedAt'
+               ]);
     }
 
     // ── 卡片級別：文件 ID 格式為 "<uid>_<cardId>"，只有本人能讀寫 ──
     match /cardSettings/{docId} {
-      allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+      allow read: if request.auth != null && notBlocked()
+                  && docId.matches(request.auth.uid + '_.*');
+      allow delete: if request.auth != null && notBlocked()
+                    && docId.matches(request.auth.uid + '_.*')
+                    && rateLimited('cardSettings/' + docId);
+      allow create, update: if isOwnCardDoc(docId)
+          && rateLimited('cardSettings/' + docId)
+          && request.resource.data.keys().hasOnly(['level', 'updatedAt', 'cardId'])
+          && request.resource.data.level is string;
     }
 
     // ── 卡片筆記：同上 ──────────────────────────────────────────
     match /userNotes/{docId} {
-      allow read, write: if request.auth != null
-                         && docId.matches(request.auth.uid + '_.*');
+      allow read: if request.auth != null && notBlocked()
+                  && docId.matches(request.auth.uid + '_.*');
+      allow delete: if request.auth != null && notBlocked()
+                    && docId.matches(request.auth.uid + '_.*')
+                    && rateLimited('userNotes/' + docId);
+      allow create, update: if isOwnCardDoc(docId)
+          && rateLimited('userNotes/' + docId)
+          && request.resource.data.keys().hasOnly(['notes', 'updatedAt', 'cardId'])
+          && request.resource.data.notes is string;
     }
 
     // ── 問題回報：需登入、只能新增、不能讀取/修改/刪除 ──────────────
     //    （讀取只透過 Firebase console，避免用戶回報內容外洩）
+    // 台灣時間的「今天」，格式 20261003（整數）；回報額度以台灣日曆日計算，午夜歸零
+    function todayKey() {
+      let t = request.time + duration.value(8, 'h');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
+    // 回報文件 ID 必須是「目前這次預約」：<uid>_<日期>_<今天第幾則>
+    // ——每次預約只能建一則，每天最多 5 次預約（見下方 feedbackQuota）。
+    function feedbackKey() {
+      let q = get(/databases/$(database)/documents/feedbackQuota/$(request.auth.uid)).data;
+      return request.auth.uid + '_' + string(q.day) + '_' + string(q.count);
+    }
+
     match /feedback/{docId} {
       allow create: if request.auth != null
+                    && notBlocked()
+                    && rateLimited('feedback/' + docId)
+                    && docId == feedbackKey()
                     && request.resource.data.userId == request.auth.uid
                     && request.resource.data.message is string
                     && request.resource.data.message.size() > 0
@@ -47,20 +133,63 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // ── 星星評分：訪客也能送出（不需登入）、只能新增 ────────────────
-    //    rating 限 1~5 的數字；comment 可以是字串或 null，最長 2000 字
-    match /reviews/{docId} {
-      allow create: if request.resource.data.rating is number
-                    && request.resource.data.rating >= 1
-                    && request.resource.data.rating <= 5
-                    && (
-                         !('comment' in request.resource.data)
-                         || request.resource.data.comment == null
-                         || (request.resource.data.comment is string
-                             && request.resource.data.comment.size() <= 2000)
-                       );
-      allow read, update, delete: if false;
+    // ── 回報額度（2026-10-03）：每帳號每天（台灣時間）最多 5 則回報（每則最多 3 張圖，見 storage.rules）
+    //    前端送回報前先「預約」：同一天計數 +1（≤5），換日後從 1 開始。不能刪。
+    //    ⚠️ 改額度時：這裡的 5、storage.rules 的 [1-5]／[0-2]、
+    //    js/quick-options-misc.js 的 MAX_REPORTS_PER_DAY／MAX_IMAGES 要一起改。
+    match /feedbackQuota/{uid} {
+      allow read: if isUser(uid);
+      allow create: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['day', 'count'])
+          && request.resource.data.day == todayKey()
+          && request.resource.data.count == 1;
+      allow update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['day', 'count'])
+          && request.resource.data.day == todayKey()
+          && (
+               (resource.data.day == todayKey()
+                && request.resource.data.count == resource.data.count + 1
+                && request.resource.data.count <= 5)
+               ||
+               (resource.data.day != todayKey()
+                && request.resource.data.count == 1)
+             );
+      allow delete: if false;
     }
+
+    // ── 每帳號寫入計數（見上方 rateLimited 說明）──────────────────────
+    //    建立：視窗從現在開始、計數 1。
+    //    更新：(a) 視窗內：計數剛好 +1 且不超過 100；或 (b) 視窗已過：重新開始、計數 1。
+    //    lastAt 一定要等於這次寫入時間、lastPath 記這次寫的是哪份文件。
+    //    不能刪除（刪了就能歸零重來）；刪除帳號後留下這份小文件，只有計數、沒有個資。
+    match /rateLimits/{uid} {
+      allow read: if isUser(uid);
+      allow create: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['windowStart', 'count', 'lastAt', 'lastPath'])
+          && request.resource.data.windowStart == request.time
+          && request.resource.data.count == 1
+          && request.resource.data.lastAt == request.time
+          && request.resource.data.lastPath is string;
+      allow update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['windowStart', 'count', 'lastAt', 'lastPath'])
+          && request.resource.data.lastAt == request.time
+          && request.resource.data.lastPath is string
+          && (
+               (request.resource.data.windowStart == resource.data.windowStart
+                && request.time < resource.data.windowStart + duration.value(600, 's')
+                && request.resource.data.count == resource.data.count + 1
+                && request.resource.data.count <= 100)
+               ||
+               (request.time >= resource.data.windowStart + duration.value(600, 's')
+                && request.resource.data.windowStart == request.time
+                && request.resource.data.count == 1)
+             );
+      allow delete: if false;
+    }
+
+    // ── 星星評分：已停用。原本允許「未登入訪客」新增，是全站唯一不用登入就能
+    //    寫入的地方；網站已無評分功能，故關閉。既有文件仍可在 console 查看。
+    //    （由下方「其他一律拒絕」涵蓋，不需另寫規則。）
 
     // ── 其他一律拒絕（新 collection 需在此明確加規則才可用） ─────────
     match /{document=**} {

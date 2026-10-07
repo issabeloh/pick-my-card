@@ -43,6 +43,7 @@
 
 - `clearPersonalLocalDataOnSignOut(uid)`：清所有帶 uid 的鏡像＋非 uid 區分的個人 key
 - **只能在「用戶親自按登出」時呼叫**，不能放進 onAuthStateChanged 的登出分支（訪客每次開頁都會觸發該分支，會誤刪訪客資料）
+- 新增帶 uid 的本機 key 時要同步加進清理清單。2026-09-28 加了配卡組合頁的 `merchantAliases_<uid>`（自訂商家名稱鏡像，正本在 Firestore `users/<uid>.merchantAliases`）、`mappingsPrefs_<uid>`（排列／字級／存圖偏好，只存本機）與 `mappingsTitle_<uid>`（小抄標題鏡像，正本在 `users/<uid>.mappingsTitle`）
 
 ## 6. XSS 與連結安全
 
@@ -59,7 +60,7 @@
 
 ## 8. Firebase 方案與用量現況（別再問用戶）
 
-- **方案：Blaze（按量計費）**，因 `functions/notifyOnFeedback` 需要。Blaze 仍保有每日免費額度，超出才計費
+- **方案：Blaze（按量計費）**，因 `functions/` 的 Cloud Function（2026-10-01 起為 dailyFeedbackDigest）需要。Blaze 仍保有每日免費額度，超出才計費
 - **用量快照（2026-09-22，用戶提供 Firebase Console 截圖）**：Firestore 讀取約 **63 次/日**（近一週峰值約 200），寫入約 **6 次/日**，Cloud Storage 佔用 **12.5MB**（用途只有意見回饋的截圖上傳，見 `js/quick-options-misc.js` 的 `uploadBytes`）
 - **對照免費額度**：讀取 50,000/日、寫入 20,000/日、Storage 5GB → 目前用掉約 **0.1%**，實際帳單趨近 $0
 - **因此：禁止以「省成本」為由提案 Firestore 讀寫優化**（例如把 `cardSettings` 的一卡一筆合併成一包）。要動那塊必須有「效能/使用者體驗」的實測理由，且受第 2 節🔒鐵則約束
@@ -72,3 +73,10 @@
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
 
 - [2026-08-23] iPhone「加到主畫面」的 App 登入後配卡是空的 → 該 webview 的 localStorage／登入狀態與 Safari 完全隔離，雲端讀不到時就只剩空的本地快取，而空清單的文案（「還沒有配卡記錄」）和「沒登入」「讀取失敗」長得一模一樣 → 個人資料的空狀態一律分流顯示（未登入／讀取失敗＋重試／真的沒資料），不可讓失敗偽裝成沒資料
+- [2026-10-01] 9/30 Threads 爆量當天出現 US$7.41 的 Firestore 寫入費（單日 36 萬次寫入、讀取不到 1 千）→ 不是網站程式：一個 9/29 用 email 註冊的帳號用 Python 腳本每秒十幾次改寫自己的 `users` 文件（欄位 `lastThread`、時間戳 `+08:00` 微秒格式都不是前端產生的）；舊規則只檢查「本人」，不限欄位與頻率 → 規則改成 `users` 欄位白名單、`cardSettings`/`userNotes` 文件 ID 必須等於 uid＋cardId 且限定欄位、關閉訪客可寫的 `reviews`、封鎖該 uid（帳號在 console 停用、不刪）；**前端新增 users 欄位必須同步改規則白名單**，規則改動一律先跑 `tools/firestore-rules-test.js`（模擬器）。第 8 節「用量不是議題」只適用正常用量，不代表可以不防濫用。查兇手的方法：Firestore Data 頁對各 collection 依 `updatedAt` 由新到舊排序，持續跳動的那筆就是
+- [2026-10-02] 同一人用 Gmail 加點的新帳號（paul732200.0@gmail.com）再跑同一支腳本，這次只寫允許的欄位（欄位白名單擋不到頻率），凌晨被新設的「每小時寫入 > 5000」警報抓到 → 規則只管「誰、寫什麼」，不管「多常寫」；App Check 當時還沒 Enforce → 每帳號寫入上限（`rateLimits`，每 10 分鐘 100 次，前端 `index.html` 的 `rlCommit` 自動帶計數）＋ App Check Enforce。比對 Gmail 變體的封鎖試過後拿掉（換新 Gmail 就繞過）。**改到這套機制：先上線網站程式、再貼規則**（前端有過渡用的不帶計數最後一試）
+- [2026-10-03] 回報功能加每日額度（每帳號每天 5 則、每則 3 張、圖一律壓成 JPEG ≤2MB）：`feedbackQuota/{uid}` 預約制，回報文件 ID 與圖檔名都帶「台灣日期＋第幾則」，規則只認今天 → 不需要 Storage 跨服務讀 Firestore（`firestore.get` 在本機模擬器測不到，所以刻意不用）。踩到的坑：`setDoc` 不帶 merge 時 `increment()` 從 0 起算，計數 +1 一定要 merge
+- [2026-10-02] 註冊把關：攻擊者用 email/密碼表單註冊（隨便填 Gmail 地址、不驗證），帳號免費無限開＝每個新帳號多一份寫入額度 → `functions/guardSignup`（beforeUserCreated 阻擋函式）：email 註冊同 IP 每天 10 個、拒拋棄式信箱、Google 登入不限、出錯放行。需 Identity Platform 升級。沒選用「只准驗證過 email 才能存雲端」：站上從沒寄驗證信，大量既有 email 用戶會失去雲端同步
+- [2026-10-03] 改成「Email 連結登入」：新用戶不能再用 email／密碼註冊（`guardSignup` 擋 `signInMethod === 'password'`），既有密碼帳號照常登入、也可直接用連結登入同一個帳號。登入信由 `functions/sendLoginLink` 自己寄（強制 App Check＋每信箱／每 IP 限量），Firebase 內建登入連結信由 `guardEmails` 一律擋——否則任何人都能拿公開 API 對陌生人信箱狂寄。同一個實體信箱（Gmail 正規化）只能開一個新帳號（`signupInboxes/`）。前端 sendLoginLink 用動態 import 載入 functions SDK（回歸測試的替身模組才不會壞）
+- [2026-10-03] 密碼登入從畫面拿掉（登入視窗只剩 Google＋Email 登入連結；`openAuthModal()` 任何模式都開成 emailLink）。**不能在 Firebase console 關掉 Email/Password**：Email 連結登入掛在同一個開關底下，關了連結登入也一起停。安全性不受影響：新的密碼註冊由 guardSignup 在伺服器端擋；既有密碼帳號理論上仍可用密碼打 API 登入，但只有知道密碼的本人做得到
+- [2026-10-04] 新戶活動圖全部不顯示 → 10/1 改寫 storage.rules 時只開了 feedback/、其餘「一律拒絕」，漏了公開讀取的 `promo-images/`（站上用 `...?alt=media` 不帶 token 直接載入）；App Check 圖表上的大量「unknown origin」其實就是訪客載入新戶活動圖被拒 → 補上 promo-images 公開讀、禁止寫。**改 Storage／Firestore 規則前，先列出網站實際讀寫的所有路徑**（grep HTML／js／cards.data 裡的 firebasestorage 網址）再寫規則，且要求站長貼規則前先把 console 舊規則貼給我比對

@@ -115,6 +115,34 @@ node tools/regression/delete-account-test.js   # 24 項，全過 → exit 0
 最重要的一組是「身分驗證失敗時一筆資料都不能刪」——刪除順序寫錯會留下沒有任何人刪得掉的
 孤兒文件（Firestore 規則按 `<uid>_<cardId>` 授權，帳號一沒了就再也碰不到那些文件）。
 
+## 我的配卡組合頁（獨立一支，2026-09-28 新增）
+
+```bash
+node tools/regression/mappings-page-test.js              # 約 116 項，全過 → exit 0
+node tools/regression/mappings-page-test.js --shots DIR  # 另存各尺寸截圖到 DIR（人工目視用）
+```
+
+自帶「已登入用戶」替身，沿用凍結資料＋凍結時鐘。配對由頁面裡的 `calculateCardCashback()` 算出來（模擬釘選），
+另外刻意造「過期但可延長」「回饋率已變」「卡片已無此商家」三筆。守的機制：入口與網址、回饋率／期限＝存的值、
+顯示在切換鈕下方（不蓋整頁）、分類順序與顏色、等級／方案標籤、🔒 不寫級別、失效 `*`、更新期限、回饋已變確認更新、小抄標題上限、刪除全部失效、改名／重設存雲端、點卡圖開詳情、A–Z、拖曳存檔、
+5 種尺寸（320／390／768／1024／1440）× 單雙欄 × 大小字的「無左右捲動、名稱不截斷、標籤換行、對齊」、存圖尺寸與全選上限、
+桌布留白（不蓋時鐘與底部按鈕）、淺深色、返回與上一頁。**改 `js/mappings-page.js`、配卡相關 CSS、`spending-mappings.js` 的載存後必跑。**
+Chromium 跑不到 iPhone Safari 的差異（拼音排序、分享面板、存到相簿），那部分靠實機人工驗。
+
+## 卡片詳情頁（獨立一支，2026-10-06 新增）
+
+```bash
+node tools/regression/card-detail-test.js                   # 2 個日期 × 全部卡片，差異 → exit 1
+node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只在「改動前」版本跑！）
+```
+
+每張卡打開詳情頁，抓「一般回饋／指定通路回饋／即將開始／領券」四區每一張回饋卡的畫面文字（逐行 innerText）＋ class，
+與 `card-detail-baseline.json` 比對。沿用 run-regression.js 的凍結資料、訪客替身、凍結時鐘（三者由該檔 `module.exports` 提供）。
+**跑兩個日期**：fixture 的 frozenDate，加上 2026-08-25——凍結日期那天沒有 30 天內即將開始、也沒有 10 天內即將結束的活動，
+不加第二個日期，「即將開始」區與兩種徽章完全測不到。抓文字不抓 HTML，所以標記重構只要畫面內容與順序不變就是綠燈。
+**改 `renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」、或詳情頁任何一條回饋 render 路徑（含 CUBE）後必跑。**
+重拍 fixture 之後，這份基準也要跟著重拍。
+
 ## 人工備援流程（只在腳本壞掉時用）
 
 ```bash

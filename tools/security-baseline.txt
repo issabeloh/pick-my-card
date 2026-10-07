@@ -11,7 +11,7 @@ SEC6|js/card-detail.js|headerApplyBtn.href = applyLink;
 # home-ui.js modalLink：safeLink = sanitizeUrl(announcement.link)
 SEC6|js/home-ui.js|modalLink.href = safeLink;
 # home-ui.js Spotlight／results-display 申辦按鈕：applyLink = sanitizeUrl(applyCta.link)（緊鄰上一行）
-SEC6|js/home-ui.js|? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+SEC6|js/home-ui.js|? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(getSpotlightCardName(item))}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
 SEC6|js/results-display.js|applyCtaBtnHtml = `<a class="promo-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(card.id)}" data-card-name="${escapeHtml(card.name)}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`;
 # results-display.js 卡片詳情 CTA：ctaLink = sanitizeUrl(applyCta.link)（緊鄰上一行）
 SEC6|js/results-display.js|btn.href = ctaLink;
@@ -22,5 +22,13 @@ SEC6|js/cashback-engine.js|${referralUrl ? `<a href="${escapeHtml(referralUrl)}"
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(linebuyUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">LINE 購物 →</a></div>`;
 SEC6|js/cashback-engine.js|html += `<div class="merchant-payment-item"><a href="${escapeHtml(shopbackUrl)}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">Shopback →</a></div>`;
 
-# ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）──
+# ── rows/totalRow 於上游 map 內逐欄 escapeHtml（layer.name 已轉義、其餘為數值格式化）；
+#    headRow 是 2026-09-30 加的欄位標題，整串是程式內寫死的字面值、無任何插值。
+#    兩行：上為搜尋結果的計算明細（加了 thead），下為詳情頁「回饋組成」抽屜（維持原樣）──
+SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><thead>${headRow}</thead><tbody>${rows}${totalRow}</tbody></table>`;
 SEC5|js/results-display.js|popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
+
+# ── 本站自己產生的 blob: 網址（2026-09-28）──
+# mappings-page.js 存圖：url = URL.createObjectURL(blob)，blob 是本頁 canvas 畫出來的 PNG，
+# 不含任何外部或使用者輸入的網址；sanitizeUrl() 只放行 http/https，會把 blob: 擋掉
+SEC6|js/mappings-page.js|a.href = url; a.download = fname;

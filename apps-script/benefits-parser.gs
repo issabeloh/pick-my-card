@@ -2,7 +2,7 @@
  * 權益解析腳本（BENEFITS-AUTOMATION-PLAN.md 第二階段，MVP：新戶活動）
  *
  * 這是備份副本——實際執行的版本貼在「PMC 資料自動化」試算表的 Apps Script 專案裡
- * （擴充功能 → Apps Script → 指令碼檔案「權益解析-新戶」）。兩邊改動時請記得同步。
+ * （擴充功能 → Apps Script → 指令碼檔案「權益解析-新戶-benefits-parser」）。兩邊改動時請記得同步。
  *
  * ⚠️ 架構（2026-07 分檔後）：本腳本住在「PMC 資料自動化」試算表（＝自動化檔），
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
@@ -30,8 +30,8 @@
  *   A. 監控偵測到變動後 → 選單「解析新戶活動：2-變動通知 → 4-待審核」
  *      會處理「2-變動通知」中狀態=待解析 的每一列
  *   B. 手動貼文字：把官網活動文字貼進「3-貼上原文（新戶活動）」分頁 A 欄（卡片提示貼 B 欄、
- *      來源網址貼 C 欄），**一列＝一段原文，可一次貼多列**，選單 →「解析新戶活動：3-貼上原文
- *      → 4-待審核」——取代原本貼給 GEM 的流程。D 欄「狀態」由程式回填，清空該格可重跑該列
+ *      來源網址貼 C 欄），**一列＝一段原文，可一次貼多列**，選單 →「AI 拆新戶活動：我貼的」（舊名「解析新戶活動：3-貼上原文
+ *      → 4-待審核」）——取代原本貼給 GEM 的流程。D 欄「狀態」由程式回填，清空該格可重跑該列
  *
  * 審核流程：
  *   到「4-待審核（新戶活動）」分頁逐列檢查（AI 沒把握的列 needs_review=TRUE、附上它想問的問題），
@@ -61,37 +61,36 @@ function onOpen() {
   buildAutomationMenu_();
 }
 
-// 選單標籤＝「動作：來源分頁 → 產出分頁」，分頁只寫編號＋簡稱（動作名已經指明新戶活動/新卡，
-// 分頁全名裡的括號後綴是多餘的）。原本的標籤用的是改名前的舊分頁名（「解析輸入」「收件匣」），
-// 對不上現在的 1~4 編號分頁，2026-08-05 改成現在這樣。
-// ⚠️ 分頁的實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG），
-//    這裡只是給人看的簡稱；真的改了分頁名，記得回來對一下這幾行字。
+// 選單（2026-10-04 站長要求重寫：「每次按選單都要動用大量腦力」）
+// 原則：
+//   ・標籤寫「你想做什麼」，不寫「來源分頁 → 產出分頁」——產出一律是 4-待審核，寫在使用說明裡就好
+//   ・日常用的放第一層、照做事順序排；一個月按不到一次的收進「其他工具」
+//   ・AI 拆解的四個按鈕統一句型「AI 拆〈什麼〉：〈從哪來〉」，掃一眼就分得出來
+// ⚠️ 只改標籤不改函數名——觸發器、舊筆記都還指著那些函數名。
+//    分頁實際名稱在各檔設定區（MONITOR_CONFIG／PARSER_CONFIG／CARD_PARSER_CONFIG）。
 function buildAutomationMenu_() {
-  SpreadsheetApp.getUi()
-    .createMenu('🤖 權益自動化')
-    .addItem('執行監控：1-監控清單 → 2-變動通知', 'checkWatchlist')
-    .addItem('體檢填法：1-監控清單', 'checkWatchlistConfig')   // watchlist-monitor.gs，只讀不寫
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('🤖 權益自動化')
+    .addItem('① 查官網變動', 'checkWatchlist')                                  // watchlist-monitor.gs
+    .addItem('② 處理變動通知（公開／封存／刪除）', 'processInboxRows')
     .addSeparator()
-    // 一個按鈕跑完一輪：照「公開／封存／刪除」欄打的字分派動作（processInboxRows）
-    .addItem('處理變動通知：公開／封存／刪除', 'processInboxRows')
+    .addItem('AI 拆卡片活動：打 V 的＋我貼的', 'parseCardActivities')            // card-benefits-parser.gs
+    .addItem('AI 拆新戶活動：變動通知裡的', 'parseInboxNewPromos')
+    .addItem('AI 拆新戶活動：我貼的', 'parsePastedText')
+    .addItem('AI 拆新卡：我貼的', 'parseNewCard')                                // card-benefits-parser.gs
     .addSeparator()
-    .addItem('解析新戶活動：2-變動通知 → 4-待審核', 'parseInboxNewPromos')
-    .addItem('解析新戶活動：3-貼上原文 → 4-待審核', 'parsePastedText')
+    .addSubMenu(ui.createMenu('其他工具')
+      .addItem('檢查監控清單有沒有填錯', 'checkWatchlistConfig')                // watchlist-monitor.gs，只讀不寫
+      .addItem('檢查廣告排除（每月一次）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
+      .addSeparator()
+      // 登錄連結四步（register-link-finder.gs）；③ 是整個自動化檔裡唯一會寫入正式
+      // Cards Data 的動作（只寫 registerLink_N 欄，寫前跳確認視窗）
+      .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
+      .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
+      .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
+      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive'))
     .addSeparator()
-    .addItem('解析新卡：3-貼上原文 → 4-待審核（基本＋組別）', 'parseNewCard')      // card-benefits-parser.gs
-    // 舊卡的活動更新（年中/年底大批更新用）：同一支解析器，輸入換成監控存的整頁新文字
-    .addItem('解析活動更新：2-變動通知 → 4-待審核（活動更新）', 'parseInboxCardGroups') // card-benefits-parser.gs
-    .addItem('檢查廣告排除（全卡·每月）→ 報告-廣告排除', 'checkAdExclusionsForAllCards') // card-benefits-parser.gs
-    .addSeparator()
-    // 登錄連結兩階段（register-link-finder.gs）；兩者都只寫資料檔的
-    // 「Cards Data-登錄連結草稿」，正式 Cards Data 完全不動
-    .addItem('① 標出需登錄的活動（不用 AI）→ Cards Data 草稿', 'markRegisterSlotsInDraft')
-    .addItem('② 找登錄連結：1-監控清單 → Cards Data 草稿', 'fillRegisterLinksFromSnapshots')
-    // ⚠️ ③ 是整個自動化檔裡唯一會寫入正式 Cards Data 的動作（只寫 registerLink_N 欄，
-    //    寫前跳確認視窗）——其餘所有選單項都只寫草稿或待審核表
-    .addItem('③ 把打勾的登錄連結寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
-    // ④ 只讀不寫：對正式表的每個 registerLink 發一次請求，回報死掉的
-    .addItem('④ 檢查登錄連結是否有死網址', 'checkRegisterLinksAlive')
+    .addItem('📖 使用說明', 'openSheetGuide')                                    // sheet-guide.gs
     .addToUi();
 }
 
@@ -156,10 +155,8 @@ function parsePastedText() {
   let sheet = ss.getSheetByName(PARSER_CONFIG.inputSheet);
   if (!sheet) {
     sheet = ss.insertSheet(PARSER_CONFIG.inputSheet);
-    sheet.getRange('A1').setValue('活動原文（貼在 A 欄，整段貼一格；一列＝一段原文，可一次貼多列）');
-    sheet.getRange('B1').setValue('卡片提示（選填，貼同列 B 欄；單卡填正式 id 如 yushan-unicard，多卡頁用逗號分隔如 febank-jaccard,febank-giftcard）');
-    sheet.getRange('C1').setValue('來源網址（選填，貼同列 C 欄）');
-    sheet.getRange(1, PARSER_CONFIG.statusCol).setValue(PASTED_STATUS_HEADER);
+    // 表頭只放短欄名（2026-10-04 站長改的）；怎麼填寫在表頭備註（📖 使用說明）。程式照欄位位置讀，欄名改了不影響
+    sheet.getRange(1, 1, 1, 4).setValues([['活動原文', 'card_id', '來源網址', '狀態']]);
     sheet.setFrozenRows(1);
     ui.alert('已建立「' + PARSER_CONFIG.inputSheet + '」分頁。把活動文字貼進 A2（多段就一列一段）後再執行一次。');
     return;
@@ -189,6 +186,24 @@ function parsePastedText() {
 
     const cardHint = String(rows[i][1] || '').trim();
     const link = String(rows[i][2] || '').trim();
+
+    // B 欄 2026-10-04 起只放 card_id（站長定案，原本可填卡名/銀行標記）。打錯字的 id 以前會被
+    // buildCardHintLine_ 當成「銀行層級提示」默默吞掉，現在直接擋下來講清楚。
+    // 多卡頁仍可填多個 id（逗號分隔），但每一個都要是真的 id。
+    if (cardHint) {
+      const bad = unknownCardIds_(cardHint);
+      if (bad === null) {
+        failures.push('列' + rowNum + '：讀不到資料檔的卡片 id，無法檢查 B 欄');
+        sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：讀不到資料檔的卡片 id');
+        continue;
+      }
+      if (bad.length) {
+        const m = 'B 欄的 card_id 不存在：' + bad.join('、') + '（打錯字？B 欄留空也可以，AI 會自己判斷）';
+        sheet.getRange(rowNum, PARSER_CONFIG.statusCol).setValue('失敗：' + m);
+        failures.push('列' + rowNum + '：' + m);
+        continue;
+      }
+    }
 
     try {
       const promos = extractNewPromos_(text, cardHint);
@@ -220,7 +235,7 @@ function parsePastedText() {
     (reviewCount ? '（其中 ' + reviewCount + ' 個 AI 沒把握，標了 needs_review）' : '') + '\n\n' +
     (results.length ? results.join('\n') + '\n\n' : '');
   if (doneCount && !promoCount) {
-    msg += 'AI 判斷這些文字裡沒有新戶活動（若不對，補上同列 B 欄的卡片提示再試一次）\n';
+    msg += 'AI 判斷這些文字裡沒有新戶活動（若不對，在同列 B 欄填 card_id 再試一次）\n';
   }
   if (skipped) msg += '↷ 跳過 ' + skipped + ' 列：D 欄狀態已是「已解析」。要重跑那幾列，把 D 欄清空再按一次選單。\n';
   if (remaining) msg += '⏳ 還有 ' + remaining + ' 列沒跑（單次上限 ' + PARSER_CONFIG.maxRowsPerRun +
@@ -493,6 +508,15 @@ function getChangelogSheet_() {
   return sheet;
 }
 
+// 回傳 B 欄裡「不是正式 card_id」的那些；讀不到資料檔時回 null（呼叫端決定怎麼處理）
+function unknownCardIds_(raw) {
+  let ids;
+  try { ids = getCardIds_(); } catch (e) { return null; }
+  return String(raw).split(/[,，、]/)
+    .map(function (x) { return x.trim(); })
+    .filter(function (x) { return x && ids.indexOf(x) < 0; });
+}
+
 /************** 卡片提示：單卡／多卡／打錯字，要給 AI 三種不同指示 **************/
 // cardHint 來自「2-變動通知」的 card_id 欄（監控寫的）或手動貼上分頁的 B2，可能是：
 //   ① 單一正式卡片 ID（單卡權益頁）        → 直接說「這段文字屬於這張卡」
@@ -594,7 +618,7 @@ function extractNewPromos_(rawText, cardHint) {
             period_end: { type: 'STRING', description: 'YYYY/M/D' },
             gift_content: { type: 'STRING', description: '僅 promo_types 含首刷禮時填，寫官網實際品名' },
             bonus_rate_percent: { type: 'NUMBER', description: '加碼回饋率的原始數字，如 5' },
-            bonus_merchants: { type: 'ARRAY', items: { type: 'STRING' }, description: '加碼適用通路；所有消費填 *all_items' },
+            bonus_merchants: { type: 'ARRAY', items: { type: 'STRING' }, description: '加碼適用通路；一般消費都算（不限通路）填 *general；只加碼在本卡原本的回饋通路上填 *all_items；其餘逐一列通路名稱' },
             bonus_cap_amount: { type: 'NUMBER', description: '加碼「回饋金額」上限的原始數字，如 200。不要換算' },
             voucher_amount: { type: 'NUMBER', description: '定額點數數量，如 500' },
             voucher_usage: { type: 'STRING', description: '點數名稱，如 玉山e point' },

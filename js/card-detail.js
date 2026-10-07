@@ -5,7 +5,8 @@
  *  - 近期異動（changelog）      → "renderCardDetailChangelog"
  *  - CUBE 卡專屬內容            → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
  *  - onclick 轉義               → "escapeForOnclick"
- *  - 商家/條件展開收合（含 window 賦值）→ "toggleMerchants" / "toggleConditions"
+ *  - 詳情頁回饋卡（版面比照搜尋結果）→ "renderRateCard" / "formatRateCardCap"
+ *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
  *  - 詳情頁項目過濾            → "filterCashbackItems"
  *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
@@ -130,19 +131,23 @@ document.getElementById('card-fee-waiver').style.display = 'none';
 
     // Update basic cashback
 const basicCashbackDiv = document.getElementById('card-basic-cashback');
-let basicContent = `<div class="cashback-detail-item">`;
-basicContent += `<div class="cashback-rate">國內: <span class="cashback-rate-num">${card.basicCashback}%</span></div>`;
-if (card.basicConditions) {
-    basicContent += `<div class="cashback-condition">條件: ${card.basicConditions}</div>`;
-}
-basicContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-basicContent += `</div>`; // ← 這裡關閉第一個區塊
+// 四種一般回饋（國內／海外／國內加碼／海外加碼）都用 renderRateCard，版面比照搜尋結果卡片；
+// 標題列放「國內」「海外加碼」這類名稱，相當於指定通路卡的活動類別
+let basicContent = renderRateCard({
+    rate: card.basicCashback,
+    capText: '無上限',
+    title: '國內一般消費',
+    titleIsDisplay: true,
+    conditions: card.basicConditions
+});
 
 if (card.overseasCashback) {
-    basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外: <span class="cashback-rate-num">${card.overseasCashback}%</span></div>`;
-    basicContent += `<div class="cashback-condition">海外消費上限: 無上限</div>`;
-    basicContent += `</div>`;
+    basicContent += renderRateCard({
+        rate: card.overseasCashback,
+        capText: '無上限',
+        title: '海外一般消費',
+        titleIsDisplay: true
+    });
 }
 
 // Check for domesticBonusRate and overseasBonusRate in card level or levelSettings
@@ -171,28 +176,29 @@ if (card.hasLevels) {
     }
 }
 
+// 加碼的上限欄：舊版沒填 cap 時整行不顯示（沒說無上限也沒說有上限），
+// 改成固定欄位後沿用 formatRateCardCap，沒填一律顯示「無上限」——與計算一致
+// （resolveBonusComponent 的 bonusCap 為 null 時套用整筆金額）
 if (domesticBonusRate) {
-    basicContent += `<div class="cashback-detail-item">`; // ← 新的區塊
-    basicContent += `<div class="cashback-rate">國內加碼: <span class="cashback-rate-num">+${domesticBonusRate}%</span></div>`;
-    if (domesticConditions) {
-        basicContent += `<div class="cashback-condition">條件: ${domesticConditions}</div>`;
-    }
-    if (domesticBonusCap) {
-        basicContent += `<div class="cashback-condition">消費上限: NT$${domesticBonusCap.toLocaleString()}</div>`;
-    }
-    basicContent += `</div>`; // ← 關閉國內加碼區塊
+    basicContent += renderRateCard({
+        rate: domesticBonusRate,
+        ratePrefix: '+',
+        capText: formatRateCardCap(domesticBonusCap),
+        title: '國內加碼',
+        titleIsDisplay: true,
+        conditions: domesticConditions
+    });
 }
 
 if (overseasBonusRate) {
-    basicContent += `<div class="cashback-detail-item">`;
-    basicContent += `<div class="cashback-rate">海外加碼: <span class="cashback-rate-num">+${overseasBonusRate}%</span></div>`;
-    if (overseasConditions) {
-        basicContent += `<div class="cashback-condition">條件: ${overseasConditions}</div>`;
-    }
-    if (overseasBonusCap) {
-        basicContent += `<div class="cashback-condition">消費上限: NT$${overseasBonusCap.toLocaleString()}</div>`;
-    }
-    basicContent += `</div>`;
+    basicContent += renderRateCard({
+        rate: overseasBonusRate,
+        ratePrefix: '+',
+        capText: formatRateCardCap(overseasBonusCap),
+        title: '海外加碼',
+        titleIsDisplay: true,
+        conditions: overseasConditions
+    });
 }
 
 basicCashbackDiv.innerHTML = basicContent;
@@ -224,6 +230,11 @@ basicCashbackDiv.innerHTML = basicContent;
             if (card.id === 'cathay-cube') {
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
+                    // 「固定回饋」這種 onlySlots 級別沒有 specialRate，回饋率寫在它認領的槽裡
+                    if (Array.isArray(data.onlySlots)) {
+                        levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: 固定回饋率，不適用其他切換方案</div>`;
+                        return;
+                    }
                     const displayRate = data.specialRate || data.rate || 0;
                     levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${displayRate}%</div>`;
                 });
@@ -444,35 +455,13 @@ basicCashbackDiv.innerHTML = basicContent;
         }
 
         // Then display the level-based cashback with specialItems
-        specialContent += `<div class="cashback-detail-item">`;
-        specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋</div>`;
-        if (levelData.cap) {
-            specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
-        } else {
-            specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-        }
-
-        if (levelData.condition) {
-            specialContent += renderConditionLine(levelData.condition);
-        }
-
-        // Show applicable merchants
-        if (card.specialItems.length <= 30) {
-            const merchantsList = card.specialItems.join('、');
-            specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-        } else {
-            const initialList = card.specialItems.slice(0, 30).join('、');
-            const fullList = card.specialItems.join('、');
-            const merchantsId = `uni-merchants-${card.id}`;
-            const showAllId = `uni-show-all-${card.id}`;
-
-            specialContent += `<div class="cashback-merchants">`;
-            specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-            specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">... 顯示全部${card.specialItems.length}個</button>`;
-            specialContent += `</div>`;
-        }
-
-        specialContent += `</div>`;
+        // （通路多，先顯示 30 個，其餘收在「顯示全部」）
+        specialContent += renderRateCard({
+            rate: levelData.rate,
+            capText: formatRateCardCap(levelData.cap),
+            merchants: { items: card.specialItems, id: `uni-${card.id}`, initialCount: 30 },
+            conditions: levelData.condition
+        });
     } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
         // Handle level-based cards without specialItems (or with empty specialItems array)
         const levelNames = Object.keys(card.levelSettings);
@@ -494,17 +483,12 @@ basicCashbackDiv.innerHTML = basicContent;
             // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
         } else {
             // Original logic for cards without cashbackRates
-            specialContent += `<div class="cashback-detail-item">`;
-            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${levelData.rate}%</span> 回饋 (${savedLevel})</div>`;
-            if (levelData.cap) {
-                specialContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(levelData.cap).toLocaleString()}</div>`;
-            } else {
-                specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-
             // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
-
-            specialContent += `</div>`;
+            specialContent += renderRateCard({
+                rate: levelData.rate,
+                rateNote: savedLevel,
+                capText: formatRateCardCap(levelData.cap)
+            });
         }
     } else if (card.cashbackRates && card.cashbackRates.length > 0) {
         // Separate active and upcoming rates for non-hasLevels cards
@@ -538,7 +522,8 @@ basicCashbackDiv.innerHTML = basicContent;
                 return {
                     // stacking 模型顯示加總後的回饋率（與進行中活動一致）
                     parsedRate: getDisplayRate(card, rate, parsedRate, null),
-                    parsedCap,
+                    // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
+                    parsedCap: resolveDisplayCap(card, rate, parsedCap, null),
                     items: rate.items || [],
                     conditions: rate.conditions ? [{category: rate.category || '', conditions: rate.conditions}] : [],
                     period: rate.period,
@@ -553,7 +538,6 @@ basicCashbackDiv.innerHTML = basicContent;
 
         for (let index = 0; index < sortedRates.length; index++) {
             const rate = sortedRates[index];
-            specialContent += `<div class="cashback-detail-item">`;
 
             // 解析 rate 值（支援 {specialRate} 和 {rate}，雖然 hasLevels=false 的卡片通常只有數字）
             const parsedRate = await parseCashbackRate(rate.rate, card, null);
@@ -563,81 +547,36 @@ basicCashbackDiv.innerHTML = basicContent;
 
             // 解析 cap 值（支援 {cap}，hasLevels=false 的卡片通常只有數字）
             const parsedCap = parseCashbackCap(rate.cap, card, null);
-
-            // Display rate with category in parentheses (with black color for consistency)
-            const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
-            const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
-
-            // Add ending soon badge if applicable
-            let endingSoonBadge = '';
-            if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
-                const daysUntil = getDaysUntilEnd(rate.periodEnd);
-                const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-                endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
+            // 顯示用上限：cap 留空的 stacking 槽改顯示加碼層的實際上限（見 resolveDisplayCap）。
+            // parsedCap 本身不動——「回饋組成」按鈕要的是這個槽自己的指定通路上限。
+            const displayCap = resolveDisplayCap(card, rate, parsedCap, null);
+            let capText = formatRateCardCap(displayCap);
+            if (displayCap && rate.capDescription && card.id === 'taishin-richart') {
+                capText = rate.capDescription;
             }
 
-            // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
-            const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, null);
-            specialContent += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
-            // 滿額門檻是重要條件：黑色、置於消費上限上方；maxSpend（未滿門檻）
-            // 只影響匹配、不顯示標註（2026-07-17 用戶定案）
-            if (rate.minSpend) {
-                specialContent += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
+            // Special handling for Yushan Uni card exclusions
+            let items = rate.items || [];
+            if (card.id === 'yushan-unicard') {
+                items = items.map(item => (item === '街口' || item === '全支付') ? item + '(排除超商)' : item);
             }
 
-            if (parsedCap) {
-                if (rate.capDescription && card.id === 'taishin-richart') {
-                    specialContent += `<div class="cashback-condition">消費上限: ${rate.capDescription}</div>`;
-                } else {
-                    specialContent += `<div class="cashback-condition">消費上限: NT$${parsedCap.toLocaleString()}</div>`;
-                }
-            } else {
-                specialContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-
-            if (rate.conditions) {
-                specialContent += renderConditionLine(rate.conditions);
-            }
-
-            // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
-            specialContent += renderRegisterLinkLine(rate.registerLink);
-
-            if (rate.period) {
-                specialContent += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
-            }
-            
-            if (rate.items && rate.items.length > 0) {
-                const merchantsId = `merchants-${card.id}-${index}`;
-                const showAllId = `show-all-${card.id}-${index}`;
-                
-                // Special handling for Yushan Uni card exclusions
-                let processedItems = [...rate.items];
-                if (card.id === 'yushan-unicard') {
-                    processedItems = rate.items.map(item => {
-                        if (item === '街口' || item === '全支付') {
-                            return item + '(排除超商)';
-                        }
-                        return item;
-                    });
-                }
-                
-                if (rate.items.length <= 5) {
-                    // 少於20個直接顯示全部
-                    const merchantsList = processedItems.join('、');
-                    specialContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                } else {
-                    // 超過20個顯示可展開的列表
-                    const initialList = processedItems.slice(0, 5).join('、');
-                    const fullList = processedItems.join('、');
-                    
-                    specialContent += `<div class="cashback-merchants">`;
-                    specialContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    specialContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${rate.items.length}個</button>`;
-                    specialContent += `</div>`;
-                }
-            }
-
-            specialContent += `</div>`;
+            // 版面比照搜尋結果卡片，見 renderRateCard（js/cards-modals.js）
+            specialContent += renderRateCard({
+                rate: displayRate,
+                // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
+                rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, null),
+                capText,
+                title: rate.category,
+                endingSoonEnd: rate.periodEnd,
+                // 滿額門檻；maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+                minSpend: rate.minSpend,
+                merchants: { items, id: `${card.id}-${index}` },
+                period: rate.period,
+                conditions: rate.conditions,
+                // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+                registerLink: rate.registerLink
+            });
         }
     } else {
         specialContent = '<div class="cashback-detail-item">無指定通路回饋</div>';
@@ -660,75 +599,19 @@ basicCashbackDiv.innerHTML = basicContent;
         const groupsToDisplay = upcomingGroups.map((g, i) => Array.isArray(g) ? g : [i, g]);
 
         for (const [groupKey, group] of groupsToDisplay) {
-            upcomingContent += `<div class="cashback-detail-item upcoming-activity">`;
-
-            // 顯示回饋率和即將開始標籤（包含 category 如果有的話）
-            const daysUntil = getDaysUntilStart(group.periodStart);
-            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-            const categoryStyle = group.category ? getCategoryStyle(group.category) : '';
-            const categoryText = group.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(group.category)}</span>` : '';
-            upcomingContent += `<div class="cashback-rate"><span class="cashback-rate-num">${group.parsedRate}%</span> 回饋${categoryText} <span class="upcoming-badge">即將開始 (${daysText})</span></div>`;
-
-            if (group.parsedCap) {
-                upcomingContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(group.parsedCap).toLocaleString()}</div>`;
-            } else {
-                upcomingContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-
-            if (group.period) {
-                upcomingContent += `<div class="cashback-condition">活動期間: ${group.period}</div>`;
-            }
-
-            // 顯示所有通路
-            if (group.items.length > 0) {
-                const uniqueItems = [...new Set(group.items)];
-                const merchantsId = `upcoming-merchants-${upcomingCard.id}-group-${groupKey}`;
-                const showAllId = `upcoming-show-all-${upcomingCard.id}-group-${groupKey}`;
-
-                if (uniqueItems.length <= 5) {
-                    const merchantsList = uniqueItems.join('、');
-                    upcomingContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                } else {
-                    const initialList = uniqueItems.slice(0, 5).join('、');
-                    const fullList = uniqueItems.join('、');
-
-                    upcomingContent += `<div class="cashback-merchants">`;
-                    upcomingContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    upcomingContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
-                    upcomingContent += `</div>`;
-                }
-            }
-
-            // 按 category 顯示各通路條件
-            if (group.conditions.length > 0) {
-                if (upcomingCard.id === 'yushan-unicard') {
-                    const conditionsId = `upcoming-conditions-${upcomingCard.id}-group-${groupKey}`;
-                    const showConditionsId = `upcoming-show-conditions-${upcomingCard.id}-group-${groupKey}`;
-
-                    let conditionsContent = '';
-                    for (const cond of group.conditions) {
-                        conditionsContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
-                    }
-
-                    upcomingContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                    upcomingContent += `<button class="show-more-btn" id="${showConditionsId}" onclick="toggleConditions('${conditionsId}', '${showConditionsId}')" style="padding: 4px 12px; font-size: 13px;">▼ 查看各通路詳細條件</button>`;
-                    upcomingContent += `<div id="${conditionsId}" style="display: none; margin-top: 8px;">`;
-                    upcomingContent += conditionsContent;
-                    upcomingContent += `</div>`;
-                    upcomingContent += `</div>`;
-                } else {
-                    upcomingContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                    upcomingContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
-
-                    for (const cond of group.conditions) {
-                        upcomingContent += `<div style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;">• ${cond.conditions}</div>`;
-                    }
-
-                    upcomingContent += `</div>`;
-                }
-            }
-
-            upcomingContent += `</div>`;
+            // 版面比照搜尋結果卡片（即將開始的搜尋結果同樣只差一個右上徽章，見 ui-display.md 1d 節）。
+            // 條件逐條用可收合的條件列（CUBE 合併後可能有好幾條）；玉山 Uni Card 原本另有
+            // 「▼ 查看各通路詳細條件」收合鈕，2026-10-05 統一改由條件列自己的「...展開」處理過長內容
+            upcomingContent += renderRateCard({
+                rate: group.parsedRate,
+                capText: formatRateCardCap(group.parsedCap),
+                title: group.category,
+                upcomingStart: group.periodStart,
+                merchants: { items: group.items || [], id: `upcoming-${upcomingCard.id}-group-${groupKey}` },
+                period: group.period,
+                conditions: (group.conditions || []).map(c => c.conditions),
+                extraClass: 'upcoming-activity'
+            });
         }
 
         upcomingCashbackDiv.innerHTML = upcomingContent;
@@ -759,66 +642,21 @@ basicCashbackDiv.innerHTML = basicContent;
             const actualRate = await calculateCouponRate(coupon, card);
             const couponStatus = getRateStatus(coupon.periodStart, coupon.periodEnd);
 
-            couponContent += `<div class="cashback-detail-item">`;
+            // 適用通路（逗號分隔字串）
+            const merchantItems = coupon.merchant
+                ? coupon.merchant.split(',').map(m => m.trim()).filter(m => m)
+                : [];
 
-            // 顯示回饋率和標籤
-            let badges = '';
-
-            // 即將開始標籤
-            if (couponStatus === 'upcoming' && coupon.periodStart) {
-                const daysUntil = getDaysUntilStart(coupon.periodStart);
-                const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-                badges += ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
-            }
-
-            // 即將結束標籤
-            if ((couponStatus === 'active' || couponStatus === 'always') && coupon.periodEnd && isEndingSoon(coupon.periodEnd, 10)) {
-                const daysUntil = getDaysUntilEnd(coupon.periodEnd);
-                const daysText = daysUntil === 0 ? '今天' : daysUntil === 1 ? '明天' : `${daysUntil}天後`;
-                badges += ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-            }
-
-            couponContent += `<div class="cashback-rate"><span class="cashback-rate-num">${actualRate}%</span> 回饋${badges}</div>`;
-
-            // 消費上限（如果有）
-            if (coupon.cap) {
-                couponContent += `<div class="cashback-condition">消費上限: NT$${Math.floor(coupon.cap).toLocaleString()}</div>`;
-            } else {
-                couponContent += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-
-            // 活動期間
-            if (coupon.period) {
-                couponContent += `<div class="cashback-condition">活動期間: ${coupon.period}</div>`;
-            }
-
-            // 適用通路（超過 5 個時收起顯示）
-            if (coupon.merchant) {
-                const merchantItems = coupon.merchant.split(',').map(m => m.trim()).filter(m => m);
-                if (merchantItems.length <= 5) {
-                    const merchantsList = merchantItems.join('、');
-                    couponContent += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                } else {
-                    const merchantsId = `coupon-merchants-${card.id}-${couponIndex}`;
-                    const showAllId = `coupon-show-all-${card.id}-${couponIndex}`;
-                    const initialList = merchantItems.slice(0, 5).join('、');
-                    const fullList = merchantItems.join('、');
-                    couponContent += `<div class="cashback-merchants">`;
-                    couponContent += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    couponContent += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${merchantItems.length}個</button>`;
-                    couponContent += `</div>`;
-                }
-            }
-
-            // 條件顯示（統一格式；內容過長時可收起）
-            if (coupon.conditions) {
-                couponContent += `<div class="cashback-condition" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">`;
-                couponContent += `<div style="font-weight: 600; margin-bottom: 4px;">📝 條件：</div>`;
-                couponContent += `<div class="cond-collapsible" style="font-size: 12px; color: #6b7280; margin-left: 12px; margin-top: 4px;"><span class="cond-text">• ${coupon.conditions}</span><button type="button" class="cond-toggle" style="display:none;">...展開</button></div>`;
-                couponContent += `</div>`;
-            }
-
-            couponContent += `</div>`;
+            // 版面比照搜尋結果卡片，見 renderRateCard（js/cards-modals.js）
+            couponContent += renderRateCard({
+                rate: actualRate,
+                capText: formatRateCardCap(coupon.cap),
+                upcomingStart: (couponStatus === 'upcoming' && coupon.periodStart) ? coupon.periodStart : null,
+                endingSoonEnd: (couponStatus === 'active' || couponStatus === 'always') ? coupon.periodEnd : null,
+                merchants: { items: merchantItems, id: `coupon-${card.id}-${couponIndex}` },
+                period: coupon.period,
+                conditions: coupon.conditions
+            });
             couponIndex++;
         }
 
@@ -928,7 +766,9 @@ basicCashbackDiv.innerHTML = basicContent;
 
     // Reveal 展開 toggles only on conditions that actually overflow — must run
     // now that the modal is displayed (measurements need layout).
+    initConditionClamps(document.getElementById('card-basic-cashback'));
     initConditionClamps(document.getElementById('card-special-cashback'));
+    initConditionClamps(document.getElementById('card-upcoming-cashback'));
     initConditionClamps(document.getElementById('card-coupon-cashback'));
 
     // Wire the sticky section nav after sections are rendered.
@@ -972,7 +812,8 @@ async function generateCubeSpecialContent(card) {
     if (card.cashbackRates) {
         card.cashbackRates.forEach(rate => {
             const status = getRateStatus(rate.periodStart, rate.periodEnd);
-            if (status === 'upcoming' && isUpcomingWithinDays(rate.periodStart, 30)) {
+            if (status === 'upcoming' && isUpcomingWithinDays(rate.periodStart, 30) &&
+                isRateGroupInLevel(card, rate, levelSettings)) {   // 級別專屬槽位（onlySlots）
                 upcomingRates.push(rate);
             }
         });
@@ -981,9 +822,10 @@ async function generateCubeSpecialContent(card) {
     // Store upcoming rates for display in separate section
     if (upcomingRates.length > 0) {
         const upcomingGroups = upcomingRates.map(rate => {
-            const parsedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
+            const designatedRate = rate.rate === '{specialRate}' ? specialRate : rate.rate;
             return {
-                parsedRate,
+                // stacking 模型（如 rate+basic）顯示加總後的率，與搜尋結果同一個數字
+                parsedRate: getDisplayRate(card, rate, designatedRate, levelSettings),
                 parsedCap: null,
                 items: rate.items || [],
                 conditions: rate.conditions && rate.category ? [{category: rate.category, conditions: rate.conditions}] : [],
@@ -1039,196 +881,42 @@ async function generateCubeSpecialContent(card) {
         birthdayNoteColor = '#9ca3af';
     }
     content += `
-        <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px; margin-bottom: 16px;">
+        <div class="cube-birthday-note" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px 10px;">
             <div style="color: ${birthdayNoteColor}; font-size: 11px; line-height: 1.5; font-style: italic;">
                 ${birthdayNoteText}
             </div>
         </div>
     `;
 
-    // 依照回饋率高低順序顯示，變動的玩數位樂饗購趣旅行放在最後
+    // 全部活動（含隨級別變動的玩數位／樂饗購／趣旅行）都在下面同一段依加總後回饋率排序。
+    // {specialRate} 由 parseCashbackRate 依目前級別解析；切換級別時 updateCubeSpecialCashback
+    // 會重畫整區，所以數字照樣跟著級別走。2026-10-07 前另有一段把這三個方案合併後排最前面，
+    // 但下面這段沒排除它們，三個方案各出現兩次（且合併版沒有條件/登錄連結），故移除。
+    // 童樂匯也一樣走下面（原本寫死比對 rate === 10/5，資料改成 9.7%+0.3% 後整組消失）。
 
-    // 1. 童樂匯 10% 回饋 (固定最高) - 只顯示進行中的
-    const childrenRate10 = card.cashbackRates?.find(rate => {
-        const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 10.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
-    });
-    if (childrenRate10) {
-        content += `<div class="cashback-detail-item">`;
-
-        // Add ending soon badge if applicable
-        let endingSoonBadge10 = '';
-        if (childrenRate10.periodEnd && isEndingSoon(childrenRate10.periodEnd, 10)) {
-            const daysUntil = getDaysUntilEnd(childrenRate10.periodEnd);
-            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-            endingSoonBadge10 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-        }
-
-        const categoryStyle10 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate"><span class="cashback-rate-num">10%</span> 回饋 <span style="${categoryStyle10}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge10}</div>`;
-        content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-        if (childrenRate10.conditions) {
-            content += renderConditionLine(childrenRate10.conditions);
-        }
-        if (childrenRate10.period) {
-            content += `<div class="cashback-condition">活動期間: ${childrenRate10.period}</div>`;
-        }
-        const items10 = childrenRate10.items;
-        const merchantsList10 = items10.join('、');
-        if (items10.length <= 5) {
-            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList10}</div>`;
-        } else {
-            const initialList10 = items10.slice(0, 5).join('、');
-            const merchantsId10 = 'cube-children10-merchants';
-            const showAllId10 = 'cube-children10-show-all';
-            content += `<div class="cashback-merchants">`;
-            content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId10}">${initialList10}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId10}" onclick="toggleMerchants('${merchantsId10}', '${showAllId10}', '${escapeForOnclick(initialList10)}', '${escapeForOnclick(merchantsList10)}')">... 顯示全部${items10.length}個</button>`;
-            content += `</div>`;
-        }
-        content += `</div>`;
-    }
-
-    // 2. 童樂匯 5% 回饋 - 只顯示進行中的
-    const childrenRate5 = card.cashbackRates?.find(rate => {
-        const status = getRateStatus(rate.periodStart, rate.periodEnd);
-        return rate.rate === 5.0 && rate.category === '切換「童樂匯」方案' && (status === 'active' || status === 'always');
-    });
-    if (childrenRate5) {
-        content += `<div class="cashback-detail-item">`;
-
-        // Add ending soon badge if applicable
-        let endingSoonBadge5 = '';
-        if (childrenRate5.periodEnd && isEndingSoon(childrenRate5.periodEnd, 10)) {
-            const daysUntil = getDaysUntilEnd(childrenRate5.periodEnd);
-            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-            endingSoonBadge5 = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-        }
-
-        const categoryStyle5 = getCategoryStyle('童樂匯');
-        content += `<div class="cashback-rate"><span class="cashback-rate-num">5%</span> 回饋 <span style="${categoryStyle5}">${getCategoryDisplayName('童樂匯')}</span>${endingSoonBadge5}</div>`;
-        content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-        if (childrenRate5.conditions) {
-            content += renderConditionLine(childrenRate5.conditions);
-        }
-        if (childrenRate5.period) {
-            content += `<div class="cashback-condition">活動期間: ${childrenRate5.period}</div>`;
-        }
-        const items5 = childrenRate5.items;
-        const merchantsList5 = items5.join('、');
-        if (items5.length <= 5) {
-            content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList5}</div>`;
-        } else {
-            const initialList5 = items5.slice(0, 5).join('、');
-            const merchantsId5 = 'cube-children5-merchants';
-            const showAllId5 = 'cube-children5-show-all';
-            content += `<div class="cashback-merchants">`;
-            content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId5}">${initialList5}</span>`;
-            content += `<button class="show-more-btn" id="${showAllId5}" onclick="toggleMerchants('${merchantsId5}', '${showAllId5}', '${escapeForOnclick(initialList5)}', '${escapeForOnclick(merchantsList5)}')">... 顯示全部${items5.length}個</button>`;
-            content += `</div>`;
-        }
-        content += `</div>`;
-    }
-
-    // 3. Level變動的特殊通路 - 從 cashbackRates 中讀取並按類別分組顯示
-    if (card.cashbackRates && card.cashbackRates.length > 0) {
-        const categories = ['玩數位', '樂饗購', '趣旅行'];
-        const categoryRates = new Map();
-
-        // 從 cashbackRates 中收集各類別的項目（只包含進行中的活動）
-        card.cashbackRates.forEach(rate => {
-            const status = getRateStatus(rate.periodStart, rate.periodEnd);
-            const isActive = (status === 'active' || status === 'always');
-
-            if (rate.category && categories.some(cat => rate.category.includes(cat)) && isActive) {
-                // 找出是哪個類別
-                const matchedCategory = categories.find(cat => rate.category.includes(cat));
-                if (!categoryRates.has(matchedCategory)) {
-                    categoryRates.set(matchedCategory, {
-                        items: [],
-                        rate: rate.rate,
-                        cap: rate.cap,
-                        period: rate.period
-                    });
-                }
-                const categoryData = categoryRates.get(matchedCategory);
-                if (rate.items) {
-                    categoryData.items.push(...rate.items);
-                }
-            }
-        });
-
-        // 按類別順序顯示
-        categories.forEach(category => {
-            if (categoryRates.has(category)) {
-                const categoryData = categoryRates.get(category);
-                const items = [...new Set(categoryData.items)]; // 去重
-
-                if (items.length > 0) {
-                    content += `<div class="cashback-detail-item">`;
-                    const categoryStyle = getCategoryStyle(category);
-
-                    // 解析 rate（支援 {specialRate} placeholder）
-                    let displayRate = categoryData.rate;
-                    if (categoryData.rate === '{specialRate}') {
-                        displayRate = specialRate;
-                    } else if (typeof categoryData.rate === 'string' && categoryData.rate.startsWith('{')) {
-                        // 其他 placeholder，從 levelSettings 解析
-                        const fieldName = categoryData.rate.slice(1, -1);
-                        displayRate = levelSettings[fieldName] || categoryData.rate;
-                    }
-
-                    content += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋 <span style="${categoryStyle}">${getCategoryDisplayName(category)}</span></div>`;
-                    content += `<div class="cashback-condition">消費上限: ${categoryData.cap ? `NT$${Math.floor(categoryData.cap).toLocaleString()}` : '無上限'}</div>`;
-
-                    if (categoryData.period) {
-                        content += `<div class="cashback-condition">活動期間: ${categoryData.period}</div>`;
-                    }
-
-                    const merchantsList = items.join('、');
-                    if (items.length <= 5) {
-                        content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                    } else {
-                        const initialList = items.slice(0, 5).join('、');
-                        const merchantsId = `cube-merchants-${category}-${savedLevel}`;
-                        const showAllId = `cube-show-all-${category}-${savedLevel}`;
-
-                        content += `<div class="cashback-merchants">`;
-                        content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                        content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(merchantsList)}')">... 顯示全部${items.length}個</button>`;
-                        content += `</div>`;
-                    }
-                    content += `</div>`;
-                }
-            }
-        });
-    }
-
-    // 5. 其他 cashbackRates（如 LINE PAY 2%）- 放在最後，只顯示進行中的
+    // 所有 cashbackRates，只顯示進行中的
     if (card.cashbackRates && card.cashbackRates.length > 0) {
         const otherRates = card.cashbackRates
             .filter(rate => {
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
                 return !rate.hideInDisplay &&
-                    rate.category !== '切換「童樂匯」方案' &&
+                    isRateGroupInLevel(card, rate, levelSettings) &&  // 級別專屬槽位（onlySlots）
                     (status === 'active' || status === 'always');  // 只顯示進行中的
             })
             .sort((a, b) => {
-                // 先解析 rate 以支援 {specialRate} 和 {rate} 的排序
-                // 註：這裡刻意不經 getDisplayRate 加總（不像 7906/7940 等呼叫點）——
-                // 本區塊下面的顯示（mergedRate.parsedRate）本來就是顯示原始 rate、不含
-                // stacking 加總，排序理應跟著同一個數字走，否則才會「排序與顯示不一致」。
-                // CUBE 卡既有 rate+basic 資料（如「切換全支付方案」）依賴這個既有順序，
-                // 跨槽引用 rate_N 目前也沒有卡片用在這個 CUBE 專屬路徑，此處不動。
-                const aRate = parseCashbackRateSync(a.rate, levelSettings);
-                const bRate = parseCashbackRateSync(b.rate, levelSettings);
+                // 排序與顯示用同一個數字：getDisplayRate 加總值（stacking 模型＝指定+基本+加碼）。
+                // 2026-10-07 前這裡刻意顯示原始 rate，結果 rate+basic 的槽（週四外出用餐
+                // 4.7%+0.3%）詳情頁顯示 4.7%、搜尋結果顯示 5%，兩邊對不上。
+                const aRate = getDisplayRate(card, a, parseCashbackRateSync(a.rate, levelSettings), levelSettings);
+                const bRate = getDisplayRate(card, b, parseCashbackRateSync(b.rate, levelSettings), levelSettings);
                 return bRate - aRate;
             });
 
         // Merge active rates with same parsedRate, category, and period (CUBE card only)
         const mergedActiveRates = new Map();
         for (const rate of otherRates) {
-            const parsedRate = await parseCashbackRate(rate.rate, card, levelSettings);
+            const designatedRate = await parseCashbackRate(rate.rate, card, levelSettings);
+            const parsedRate = getDisplayRate(card, rate, designatedRate, levelSettings);
             const parsedCap = parseCashbackCap(rate.cap, card, levelSettings);
 
             // Create merge key: rate + category + period
@@ -1256,7 +944,10 @@ async function generateCubeSpecialContent(card) {
                 // First time seeing this rate+category+period combination
                 mergedActiveRates.set(mergeKey, {
                     parsedRate,
-                    parsedCap,
+                    // stacking 模型的「回饋組成」按鈕（合併後以第一個槽為代表，同 key＝同率同活動）
+                    rateBtnHtml: rateCompositionButtonHtml(card, rate, designatedRate, parsedCap, levelSettings),
+                    // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
+                    parsedCap: resolveDisplayCap(card, rate, parsedCap, levelSettings),
                     items: rate.items ? [...rate.items] : [],
                     conditions: rate.conditions || '',
                     registerLink: rate.registerLink || '',
@@ -1270,64 +961,20 @@ async function generateCubeSpecialContent(card) {
         // Display merged rates
         let index = 0;
         for (const [mergeKey, mergedRate] of mergedActiveRates) {
-            content += `<div class="cashback-detail-item">`;
-
-            // 显示回饋率，如果有 category 则显示在括号中（使用動態樣式）
-            const categoryStyleOther = mergedRate.category ? getCategoryStyle(mergedRate.category) : '';
-            const categoryLabel = mergedRate.category ? ` <span style="${categoryStyleOther}">${getCategoryDisplayName(mergedRate.category)}</span>` : '';
-
-            // Add ending soon badge if applicable
-            let endingSoonBadgeOther = '';
-            if (mergedRate.periodEnd && isEndingSoon(mergedRate.periodEnd, 10)) {
-                const daysUntil = getDaysUntilEnd(mergedRate.periodEnd);
-                const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-                endingSoonBadgeOther = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-            }
-
-            content += `<div class="cashback-rate"><span class="cashback-rate-num">${mergedRate.parsedRate}%</span> 回饋${categoryLabel}${endingSoonBadgeOther}</div>`;
-
-            // 显示消費上限
-            if (mergedRate.parsedCap) {
-                content += `<div class="cashback-condition">消費上限: NT$${mergedRate.parsedCap.toLocaleString()}</div>`;
-            } else {
-                content += `<div class="cashback-condition">消費上限: 無上限</div>`;
-            }
-
-            // 显示條件
-            if (mergedRate.conditions) {
-                content += renderConditionLine(mergedRate.conditions);
-            }
-
-            // 銀行官方登錄連結。⚠️ 這條路徑會把 rate+category+period 相同的組別合併成
+            // 銀行官方登錄連結：這條路徑會把 rate+category+period 相同的組別合併成
             // 一列，合併後只留第一個有登錄連結的（同一個活動的不同槽位不該有兩個登錄頁；
             // 真的出現時以先遇到的為準，其餘在 Cards Data 裡就該修掉）。
-            content += renderRegisterLinkLine(mergedRate.registerLink);
-
-            // 显示活動期間
-            if (mergedRate.period) {
-                content += `<div class="cashback-condition">活動期間: ${mergedRate.period}</div>`;
-            }
-
-            // 显示適用通路
-            if (mergedRate.items && mergedRate.items.length > 0) {
-                const merchantsId = `cube-other-merchants-${index}`;
-                const showAllId = `cube-other-show-all-${index}`;
-
-                if (mergedRate.items.length <= 5) {
-                    const merchantsList = mergedRate.items.join('、');
-                    content += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${merchantsList}</div>`;
-                } else {
-                    const initialList = mergedRate.items.slice(0, 5).join('、');
-                    const fullList = mergedRate.items.join('、');
-
-                    content += `<div class="cashback-merchants">`;
-                    content += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                    content += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${mergedRate.items.length}個</button>`;
-                    content += `</div>`;
-                }
-            }
-
-            content += `</div>`;
+            content += renderRateCard({
+                rate: mergedRate.parsedRate,
+                rateBtnHtml: mergedRate.rateBtnHtml,
+                capText: formatRateCardCap(mergedRate.parsedCap),
+                title: mergedRate.category,
+                endingSoonEnd: mergedRate.periodEnd,
+                merchants: { items: mergedRate.items || [], id: `cube-other-${index}` },
+                period: mergedRate.period,
+                conditions: mergedRate.conditions,
+                registerLink: mergedRate.registerLink
+            });
             index++;
         }
     }
@@ -1342,6 +989,93 @@ async function updateCubeSpecialCashback(card) {
     specialCashbackDiv.innerHTML = newContent;
     // Re-evaluate condition clamps for the freshly rendered content
     initConditionClamps(specialCashbackDiv);
+}
+
+// 詳情頁回饋卡（.cashback-detail-item.rate-card，2026-10-05）：排版比照搜尋結果卡片
+// createCardResultElement（js/results-display.js），只少「回饋金額」一欄——用戶在搜尋結果
+// 與詳情頁讀到的是同一套結構，不必每次重新找「上限在哪、條件在哪」。對應關係：
+//   搜尋結果                         詳情頁
+//   卡名 ＋ 右上徽章                 活動類別（category）＋ 右上「即將開始」徽章
+//   回饋率｜回饋金額｜回饋消費上限   回饋率｜回饋消費上限
+//   ✔ 單筆滿 NT$X                   同
+//   匹配項目 / 活動期間 / 條件 / 登錄連結   適用通路 / 活動期間 / 條件 / 登錄連結（順序相同）
+// 兩邊共同的片段（徽章、門檻句、資訊區行序）在 results-display.js 的「回饋卡共用片段」，
+// 這裡只組詳情頁特有的部分（標題列、兩欄、可展開的通路清單）。
+// ⚠️ 詳情頁所有回饋卡（基本、指定通路、即將開始、領券、CUBE 專屬）都走這一支；
+//    要加欄位改這裡，不要在個別呼叫端拼 HTML——拼回去就又是七種長相。
+//    改完跑 node tools/regression/card-detail-test.js。
+//
+// 參數：rate（數字或字串，不含 %）、ratePrefix（加碼用 '+'）、rateNote（回饋率下方小字）、
+// rateBtnHtml（回饋組成按鈕）、capText（已格式化，如 'NT$7,500'／'無上限'）、
+// title（category 原文，內部轉顯示名稱並 escape）、titleIsDisplay（title 已是顯示名稱）、
+// upcomingStart（即將開始的 periodStart）、endingSoonEnd（進行中活動的 periodEnd）、
+// minSpend、merchants（{ items, id, initialCount }：id 用來產生展開鈕的 DOM id，
+// initialCount＝收合時顯示幾個，預設 5）、merchantsLabel、period、
+// conditions（字串或字串陣列）、registerLink、extraClass
+function renderRateCard(o) {
+    const title = o.title ? (o.titleIsDisplay ? o.title : getCategoryDisplayName(o.title)) : '';
+    const upcomingBadge = renderUpcomingBadge(o.upcomingStart);
+
+    let html = `<div class="cashback-detail-item rate-card${o.extraClass ? ' ' + o.extraClass : ''}">`;
+
+    // 標題列一律輸出（沒有標題也沒有徽章時是空的 div）：桌機兩欄時，同一排只要有一張卡
+    // 有標題，另一張就留同高的空白，讓下面的回饋率對齊（CSS subgrid，見 styles.css
+    // 「同排對齊」）。單欄（手機）時空的標題列不佔位，跟以前一樣。
+    // 標題列以外的內容全部包在 .rate-card-body——subgrid 只分「標題列｜其餘」兩列。
+    html += `<div class="rate-card-header">` +
+        (title || upcomingBadge
+            ? `<div class="rate-card-title">${escapeHtml(title)}</div>` +
+              (upcomingBadge ? `<div class="badges-container">${upcomingBadge}</div>` : '')
+            : '') +
+        `</div>`;
+
+    html += `<div class="rate-card-body">`;
+    html += `<div class="card-details rate-card-details">` +
+        `<div class="detail-item"><div class="detail-label">回饋率</div>` +
+        `<div class="detail-value rate-card-rate">${o.ratePrefix || ''}${escapeHtml(String(o.rate))}%${o.rateBtnHtml || ''}</div>` +
+        (o.rateNote ? `<div class="cashback-type-label">${escapeHtml(o.rateNote)}</div>` : '') +
+        `</div>` +
+        `<div class="detail-item"><div class="detail-label">回饋消費上限</div>` +
+        `<div class="detail-value">${escapeHtml(o.capText || '無上限')}</div></div>` +
+        `</div>`;
+
+    html += renderSpendThresholdNote(o.minSpend);
+
+    // 適用通路：超過 initialCount 個先收合，展開鈕沿用 toggleMerchants（textContent 換字），
+    // 詳情頁「搜尋通路」會自動點開它（syncMerchantListsForSearch）
+    let matchHtml = '';
+    const items = o.merchants && o.merchants.items ? [...new Set(o.merchants.items)] : [];
+    if (items.length > 0) {
+        const label = o.merchantsLabel || '適用通路';
+        const fullList = items.join('、');
+        const limit = o.merchants.initialCount || 5;
+        if (items.length <= limit) {
+            matchHtml = `${label}: <strong>${escapeHtml(fullList)}</strong>`;
+        } else {
+            const initialList = items.slice(0, limit).join('、');
+            const merchantsId = `${o.merchants.id}-merchants`;
+            const showAllId = `${o.merchants.id}-show-all`;
+            matchHtml = `${label}: <strong id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
+                `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeHtml(escapeForOnclick(initialList))}', '${escapeHtml(escapeForOnclick(fullList))}')">… 顯示全部${items.length}個</button>`;
+        }
+    }
+
+    html += renderActivityInfo({
+        matchHtml,
+        period: o.period,
+        endingSoonBadge: renderEndingSoonBadge(o.endingSoonEnd),
+        conditions: o.conditions,
+        collapsibleConditions: true,
+        registerLink: o.registerLink,
+        extraClass: 'rate-card-info'
+    });
+    html += `</div></div>`; // .rate-card-body、.rate-card
+    return html;
+}
+
+// 「NT$7,500」／「無上限」：詳情頁回饋卡的上限欄（cap 是 null/0/'' 都算無上限）
+function formatRateCardCap(cap) {
+    return cap ? `NT$${Math.floor(cap).toLocaleString()}` : '無上限';
 }
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.
@@ -1600,29 +1334,10 @@ function filterCashbackItems(searchTerm) {
     }
 }
 
-// 切換條件顯示/隱藏
-function toggleConditions(conditionsId, buttonId) {
-    const conditionsElement = document.getElementById(conditionsId);
-    const buttonElement = document.getElementById(buttonId);
-
-    if (!conditionsElement || !buttonElement) return;
-
-    const isHidden = conditionsElement.style.display === 'none';
-
-    if (isHidden) {
-        // 展開
-        conditionsElement.style.display = 'block';
-        buttonElement.textContent = '▲ 收起條件';
-    } else {
-        // 收起
-        conditionsElement.style.display = 'none';
-        buttonElement.textContent = '▼ 查看各通路詳細條件';
-    }
-}
-
-// 將toggleMerchants和toggleConditions暴露到全局作用域，確保onclick可以訪問
+// 將 toggleMerchants 暴露到全局作用域，確保 renderRateCard 產生的 onclick 可以訪問
+// （toggleConditions 已於 2026-10-06 移除：唯一呼叫端「玉山 Uni Card 即將開始的條件收合鈕」
+//   在詳情頁回饋卡統一版面時改由條件列自己的「...展開」處理）
 window.toggleMerchants = toggleMerchants;
-window.toggleConditions = toggleConditions;
 
 // 用戶筆記相關功能
 let currentNotesCardId = null;

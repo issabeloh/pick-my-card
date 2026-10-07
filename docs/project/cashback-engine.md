@@ -45,6 +45,13 @@ if (!card.specialItems)
 if (!card.specialItems || card.specialItems.length === 0)
 ```
 
+**級別專屬槽位 `onlySlots` / `keepSlots`**（2026-10-07，國泰 CUBE「固定回饋」方案）：levelSettings 的某級別可寫
+`"onlySlots": [17, 18], "keepSlots": [14]`——選這個級別時只有 onlySlots＋keepSlots 的槽適用（其他槽在搜尋、
+即將開始、詳情頁全部不出現）；onlySlots 的槽被「認領」，其他沒寫 onlySlots 的級別就不適用它們；keepSlots
+是共用槽、不被認領。沒被任何級別認領的槽自動歸一般級別（新增槽不用標記）。判斷集中在
+`isRateGroupInLevel()`（js/cashback-engine.js），新增任何「逐槽列出活動」的路徑都要走它，否則會出現
+「詳情頁有、搜尋沒有」。槽號用 `.slot`（Sheet 真實槽號）。
+
 ## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
 
 1. **有 specialItems 的 hasLevels 卡**：先查 cashbackRates（支援 placeholder）→ 無匹配再查 specialItems。CUBE 卡特殊處理：用 specialRate 和 generalItems
@@ -176,4 +183,5 @@ if (!card.specialItems || card.specialItems.length === 0)
 - [2026-07-13] 差點把 37 個合法 `rate+basic` stacking 槽通報為「需清理的殘留別名」 → 第 6 節舊敘述「資料裡若還有，改成純 rate」把所有 `rate+basic` 當成 2026-07-01 前的排除型別名殘留 → `rate+basic` 是合法 stacking 寫法；別名警告只適用「當初以排除型意圖填寫」的舊資料，意圖判定屬資料擁有者，session 不得自行改資料（正文已改寫）
 - [2026-07-30] CUBE 慶生月方案不論月份都出現在搜尋結果（篩選完全失效） → 篩選用 `category === '切換「慶生月」方案'` 全等比對，但資料早已改成帶子類別後綴（`切換「慶生月」方案 - 購物/體驗`／`- 美食`／`- 娛樂`／`- 遊樂園`），全等永不成立 → 方案類別判斷一律用前綴/`includes` 比對（`isBirthdayPlanCategory()`）；同時改成「用戶有設定生日月份才篩選（只在該月顯示），未設定＝不篩選一律顯示」（舊行為是未設定就全部隱藏，對訪客反而少給資訊）。同款全等比對還剩 `切換「童樂匯」方案`（`切換「JCB日本賞」方案` 的發卡組織篩選已於同日移除——活動下架、國泰目前無發卡組織限定活動；`cubeIssuer` 只留作用戶資料），資料若也加後綴會同樣失效——改資料類別名前先 Grep 前端的全等比對
 - [2026-08-16] 本檔與 `cross-slot-ref-and-minspend-spec.md` 都寫著 Fix B「線上 0 張卡受影響」，但 pmc-vault 補填專案 README 記錄實際影響 9 槽（uniopen 5＋dbs-eco 4，含 eco 品牌 12.5→10%） → 當初的影響掃描用舊 `cards.data`（20260713）跑，main 已到 20260716、dbs-eco 的 model 不同，回歸測試（對最新資料）才抓出來 → **任何「零影響」結論都必須標註掃描時的 `cards.version`，並在上線前用當下最新 `cards.data` 重掃**；同批更正還發現該 spec 寫「Layer 1 不 gate」但實作有 gate（`applyBase`）——**設計文件寫的是提案，行為正本永遠是程式碼與本檔第 6 節**
+- [2026-09-30] 大戶卡搜「國外」顯示「回饋消費上限: 無上限」，但海外加碼 4% 實際受級別 `overseasBonusCap`=25,000 限制（金額算對、只有那一格騙人；同症狀還有 kgi-eslite、hsbc-liveplus 共 3 卡 6 槽） → 「消費上限」一路只讀槽位自己的 `cap` 欄，而骨幹槽的標準配方就是 cap 留空（第 5 節），加碼層的上限住在 `resolveBonusComponent()` 取的卡片級/級別欄位，兩者從來沒接起來（一般回饋卡那條路早就顯示加碼 cap，只有活動槽沒有，同一張卡兩處數字打架） → **顯示上限一律走 `resolveDisplayCap()`（詳情頁/Spotlight，用成分表）或 `resolveDisplayCapFromLayers()`（搜尋結果卡，用計算層）**：槽位 cap 有值照舊，留空時取「計算真的會咬到的最小正值上限」，沒有任何層有上限才是「無上限」。不要改資料去填 `{overseasBonusCap}` 補顯示——那會在該槽日後 rate>0 時變成「指定通路加碼」層的上限進入計算
 - [2026-09-02] 遠東樂家+卡、中信 Uniopen 已於 2026/6/30 到期的停車折抵，搜尋結果與詳情頁都還照常顯示 → `cardsData.benefits` 是全站唯一沒做期限判斷的活動類資料（cashbackRates／couponCashbacks／新戶活動都有），四個消費端各自只檢查 `active` → 新增的活動類 top-level 陣列一律在 `filterExpiredRates()` 裡加一段期限過濾，不要讓各消費端自己判斷；期限欄位是自由文字時（無日期）一律當「不設限」，不可以當成過期

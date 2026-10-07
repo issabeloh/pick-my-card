@@ -78,10 +78,27 @@ const REGLINK_CONFIG = {
   maxSnapshotChars: 30000,  // 單張卡送給 AI 的官網文字上限（要留位置給候選連結清單）
   maxCandidateLinks: 40,    // 單張卡送給 AI 的候選超連結上限
   maxAnchorContext: 80,     // 每個超連結取前後多少字當上下文（判斷是不是登錄入口）
-  maxSlots: 22,             // Cards Data 的槽位上限（與 cards-export.gs 的迴圈一致）
+  // ⚠️ 這裡刻意**沒有** maxSlots——槽位上限改由 regLinkMaxSlot_() 依表頭自動偵測。
+  //    寫死的話，站長在 Cards Data 加了 rate_23…（2026-09-29 加到 26）之後，新槽位裡
+  //    「需登錄」的活動會被靜默略過：不標黃、不抓連結、不查死連結，而且完全沒有錯誤訊息。
+  //    cards-export.gs 的 maxSlotIndex() 是同一個做法（它當年就是被寫死的 21 咬過）。
   colorNeedLink: '#fff3cd', // 黃：要登錄、還沒有連結
   colorHasLink: '#d4edda'   // 綠：要登錄、連結已經有了
 };
+
+// ⭐ 依表頭自動偵測槽位上限。本檔會看 conditions_N / registerLink_N / rate_N 三個前綴，
+//    取最大的那個編號——三者在 Cards Data 是成套建立的，但欄位有時會分批補，
+//    取最大值才不會因為某一套少建幾欄就把後面的槽位整段漏掉。
+//    ⚠️ 本檔住在「PMC 資料自動化」專案，讀不到資料檔那邊 cards-export.gs 的 maxSlotIndex()，
+//       所以在這裡自己實作一份（邏輯相同）。
+function regLinkMaxSlot_(headers) {
+  let max = 0;
+  (headers || []).forEach(function (h) {
+    const m = String(h).trim().match(/^(?:conditions|registerLink|rate)_(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return max;
+}
 
 // 「這個槽位要登錄」的判斷：conditions 裡有「登錄」兩個字。
 // ⚠️ 反向詞要先排除——「免登錄」「無需登錄」是「不用登錄」的意思，剛好相反。
@@ -109,6 +126,7 @@ function markRegisterSlotsInDraft() {
   const backgrounds = draft.getRange(1, 1, data.length, headers.length).getBackgrounds();
   const notes = [];
   let cardsWithNeed = 0, needSlots = 0, extracted = 0, greenSlots = 0;
+  const maxSlot = regLinkMaxSlot_(headers);
 
   for (let i = 1; i < data.length; i++) {
     if (!String(data[i][idCol] || '').trim()) { notes.push([data[i][noteCol]]); continue; }
@@ -116,7 +134,7 @@ function markRegisterSlotsInDraft() {
     const lines = [];
     let rowNeed = 0;
 
-    for (let n = 1; n <= REGLINK_CONFIG.maxSlots; n++) {
+    for (let n = 1; n <= maxSlot; n++) {
       const condCol = headers.indexOf('conditions_' + n);
       const linkCol = headers.indexOf('registerLink_' + n);
       if (condCol < 0) continue;
@@ -399,7 +417,8 @@ function fillRegisterLinksFromSnapshots() {
 // 這一列還缺連結的登錄槽位編號
 function regLinkPendingSlots_(headers, row) {
   const pending = [];
-  for (let n = 1; n <= REGLINK_CONFIG.maxSlots; n++) {
+  const maxSlot = regLinkMaxSlot_(headers);
+  for (let n = 1; n <= maxSlot; n++) {
     const condCol = headers.indexOf('conditions_' + n);
     if (condCol < 0) continue;
     if (!regLinkNeedsRegister_(String(row[condCol] || ''))) continue;
@@ -654,6 +673,7 @@ function applyRegisterLinksToCardsData() {
   const plan = [];        // [{ draftRow, cardId, cardRow, cells: [{col, slot, link}] }]
   const problems = [];
   const conflicts = [];
+  const maxSlot = regLinkMaxSlot_(dHead);
 
   for (let i = 1; i < dData.length; i++) {
     if (!regLinkIsChecked_(dData[i][dApply])) continue;
@@ -669,7 +689,7 @@ function applyRegisterLinksToCardsData() {
 
     const cells = [];
     let cardBroken = false;
-    for (let n = 1; n <= REGLINK_CONFIG.maxSlots && !cardBroken; n++) {
+    for (let n = 1; n <= maxSlot && !cardBroken; n++) {
       const name = 'registerLink_' + n;
       const dCol = dHead.indexOf(name);
       if (dCol < 0) continue;
@@ -794,9 +814,10 @@ function checkRegisterLinksAlive() {
 
   // 同一個網址常被多個槽位共用（例如玉山那個 esun.co 短網址），去重後只發一次請求
   const byUrl = {};   // url -> ['卡名 槽3', ...]
+  const maxSlot = regLinkMaxSlot_(headers);
   for (let i = 1; i < data.length; i++) {
     const cardName = nameCol >= 0 ? String(data[i][nameCol] || '').trim() : String(data[i][idCol] || '');
-    for (let n = 1; n <= REGLINK_CONFIG.maxSlots; n++) {
+    for (let n = 1; n <= maxSlot; n++) {
       const col = headers.indexOf('registerLink_' + n);
       if (col < 0) continue;
       const url = normalizeRegisterLink_(data[i][col]);

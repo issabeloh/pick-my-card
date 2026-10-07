@@ -223,19 +223,35 @@ async function calculateCashback() {
     const couponCount = couponResultsContainer
         ? couponResultsContainer.querySelectorAll('.coupon-item').length : 0;
 
-    // 只有領券優惠、沒有任何一般活動時：把基本回饋那 30 幾張拿掉。
-    // 留著的話領券區會被推到畫面很下面，而使用者真正要看的就是那幾張券。
-    // 即將開始的活動不受影響（它們不是 isBasic，會留下）。
+    // 沒有任何進行中活動、但下方確實有東西可看（領券優惠／即將開始的活動）時：
+    // 把基本回饋那 30 幾張拿掉。留著的話真正有料的那幾筆會被推到畫面很下面，
+    // 而使用者要看的就是它們；同一張卡還會「一般回饋」與「即將開始」各出現一次。
+    // 2026-09-29 把原本只給領券的這條待遇擴及「即將開始」（站長裁定）——
+    // findMatchingItem 不看期間，所以只存在於未開始活動裡的商家（如 CUBE 10/1 開跑的
+    // 那批槽）一定走 matchedButNoActivity，這正是最需要清場的情境。
+    // 兩者都不是 isBasic，所以同一行 filter 就留得下來。
+    const upcomingCount = uniqueUpcomingResults.length;
     const couponOnly = matchedButNoActivity && couponCount > 0;
-    if (couponOnly) {
+    const upcomingOnly = matchedButNoActivity && upcomingCount > 0;
+    if (couponOnly || upcomingOnly) {
         results = results.filter(r => !r.isBasic);
         isBasicCashback = false;
     }
 
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
-    // ⚠️ couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
+    // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
     //    若讓「有結果」那條先接手，會說出「有 0 筆活動符合你的選項」。
-    if (currentMatchedItem && couponOnly) {
+    // ⚠️ upcomingOnly 又要排在 couponOnly 之前：兩者同時成立時，該講的是「沒有進行中的活動」
+    //    這件事（領券的句子沒有這個前綴），而且那一句會把領券筆數一起講掉。
+    if (currentMatchedItem && upcomingOnly) {
+        // 匹配到的活動都還沒開始：畫面上那幾張卡全是「即將開始」，一般回饋已被收起來。
+        // ⚠️ 前綴那句「目前沒有進行中的活動」不能省——不然用戶會以為那個回饋率今天就能刷。
+        const parts = [];
+        if (couponCount > 0) parts.push(`${couponCount} 筆領券型活動`);
+        parts.push(`${upcomingCount} 檔即將開始的活動`);
+        showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
+            `目前沒有進行中的活動，有 ${parts.join('、')}符合你的選項`);
+    } else if (currentMatchedItem && couponOnly) {
         // 只靠 couponCashbacks 匹配到的商家（資料裡有 49 個）：一般活動是 0 筆，但下方
         // 確實列出了領券優惠。這種情況說「沒有活動」會與畫面矛盾——它有結果，只是型別不同。
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
@@ -508,9 +524,12 @@ function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
 // 需要解釋加總的來源（如 5% = 3%+1%+1%）；其他模型 rate 即總率，不顯示按鈕。
 // 組成資料以 JSON 存在按鈕的 data-comp，點擊由 toggleRateComposition 展開抽屜。
 const CALC_BREAKDOWN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
-function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+// 成分表（[{ name, rate, cap }]）：stacking 模型各成分的率與上限，不含金額。
+// 「回饋組成」抽屜與「消費上限」顯示（resolveDisplayCap）共用同一份推導，
+// 兩處不會各算各的。非 stacking 模型回空陣列（rate_N 本身即總率、無成分可拆）。
+function buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap, levelSettings) {
     const model = rateGroup && rateGroup.cashbackModel;
-    if (!model || !model.includes('+')) return '';
+    if (!model || !model.includes('+')) return [];
     // 海外偵測含 overseasCashback（海外基準 token）——理由與三處同步規則見 getDisplayRate。
     const isOverseas = model.includes('overseasBonusRate') || model.includes('overseasCashback');
     // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出時才顯示——
@@ -528,6 +547,35 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
     resolveCrossSlotLayers(card, model, levelSettings).forEach(layer => {
         if (layer.rate > 0) rows.push({ name: layer.name, rate: layer.rate, cap: layer.cap });
     });
+    return rows;
+}
+
+// 一組「層」（成分表 rows 或計算層 layers，兩者都有 .cap）裡真的會咬到的上限：
+// 取最小的正值上限；全部無上限（或沒有層）回 null＝無上限。
+function minPositiveCap(layers) {
+    const caps = (layers || []).map(l => l && l.cap).filter(c => c != null && c > 0);
+    return caps.length > 0 ? Math.min(...caps) : null;
+}
+
+// 顯示用的「消費上限」（2026-09-30）：槽位自己的 cap 為空時，不代表真的無上限——
+// stacking 模型的加碼層有自己的上限（大戶卡 slot22 的 4% 海外加碼受該級別
+// overseasBonusCap = 25,000 限制，計算時 calculateStackedCashback Layer 2 確實有套），
+// 而骨幹槽的標準配方就是 cap 留空（cashback-engine.md 第 5 節），於是那一格一路顯示
+// 「無上限」——算對、只有顯示騙人。這裡改成從成分表取實際會咬到的上限。
+// ⚠️ 純顯示：計算完全不經過這裡（槽位 cap 仍只餵「指定通路加碼」層）。
+function resolveDisplayCap(card, rateGroup, parsedCap, levelSettings) {
+    if (parsedCap != null && parsedCap > 0) return parsedCap;
+    return minPositiveCap(buildRateCompositionRows(card, rateGroup, 0, null, levelSettings));
+}
+
+// 搜尋結果卡用的同一件事：計算層（calculateStackedCashback／calculateLayeredCashback
+// 產出的 layers）已經帶著每層實際套用的 cap，直接取最小正值即可，不必重推成分。
+function resolveDisplayCapFromLayers(layers) {
+    return minPositiveCap(layers);
+}
+
+function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+    const rows = buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap, levelSettings);
     if (rows.length < 2) return '';
 
     const total = Math.round(rows.reduce((s, r) => s + r.rate, 0) * 100) / 100;
@@ -546,20 +594,27 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
 
     for (const rate of card.cashbackRates) {
         if (rate.hideInDisplay) continue;
+        if (!isRateGroupInLevel(card, rate, levelData)) continue; // 級別專屬槽位（onlySlots）
         const status = getRateStatus(rate.periodStart, rate.periodEnd);
         if (status !== 'active' && status !== 'always' && status !== 'upcoming') continue;
 
         const parsedRate = await parseCashbackRate(rate.rate, card, levelData);
-        // cap 留空＝無上限，與搜尋結果/計算引擎一致。（2026-07-17 移除 capFallbackToLevel：
-        // 舊 fallback 會把留空的槽顯示成級別 cap，需要級別 cap 的槽請明確填 {cap}）
+        // 槽位自己的 cap＝「指定通路加碼」層的上限，留空就是這一層無上限。
+        // （2026-07-17 移除 capFallbackToLevel：舊 fallback 會把留空的槽顯示成級別
+        // 的 cap 欄位——那是張冠李戴；需要級別 cap 的指定通路槽請明確填 {cap}。
+        // 2026-09-30 起顯示改走 resolveDisplayCap：不是回頭猜，而是取計算真的套到的
+        // 加碼層上限，見下一行。）
         const parsedCap = parseCashbackCap(rate.cap, card, levelData);
+        // cap 留空的 stacking 槽改顯示加碼層的實際上限（見 resolveDisplayCap）；
+        // parsedCap 本身不動——「回饋組成」按鈕要的是這個槽自己的指定通路上限。
+        const displayCap = resolveDisplayCap(card, rate, parsedCap, levelData);
         const displayRate = getDisplayRate(card, rate, parsedRate, levelData);
 
         if (status === 'upcoming') {
             if (isUpcomingWithinDays(rate.periodStart, 30)) {
                 upcoming.push({
                     parsedRate: displayRate,
-                    parsedCap,
+                    parsedCap: displayCap,
                     items: rate.items || [],
                     conditions: rate.conditions ? [{ category: rate.category || '', conditions: rate.conditions }] : [],
                     period: rate.period,
@@ -571,7 +626,7 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
             }
             continue;
         }
-        activeRates.push({ rate, parsedRate, parsedCap, displayRate });
+        activeRates.push({ rate, parsedRate, parsedCap, displayCap, displayRate });
     }
 
     // 按顯示回饋率（加總後）由高到低排序
@@ -579,63 +634,23 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
 
     let html = '';
     activeRates.forEach((entry, index) => {
-        const { rate, parsedRate, parsedCap, displayRate } = entry;
-        html += `<div class="cashback-detail-item">`;
-
-        const categoryStyle = rate.category ? getCategoryStyle(rate.category) : '';
-        const categoryLabel = rate.category ? ` <span style="${categoryStyle}">${getCategoryDisplayName(rate.category)}</span>` : '';
-
-        let endingSoonBadge = '';
-        if (rate.periodEnd && isEndingSoon(rate.periodEnd, 10)) {
-            const daysUntil = getDaysUntilEnd(rate.periodEnd);
-            const daysText = daysUntil === 0 ? '今天結束' : daysUntil === 1 ? '明天結束' : `${daysUntil}天後結束`;
-            endingSoonBadge = ` <span class="ending-soon-badge">即將結束 (${daysText})</span>`;
-        }
-
-        const compBtn = rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData);
-        html += `<div class="cashback-rate"><span class="cashback-rate-num">${displayRate}%</span> 回饋${categoryLabel}${compBtn}${endingSoonBadge}</div>`;
-
-        // 滿額門檻是重要條件：黑色、置於消費上限上方；maxSpend（未滿門檻）
-        // 只影響匹配、不顯示標註（2026-07-17 用戶定案）
-        if (rate.minSpend) {
-            html += `<div class="cashback-condition spend-threshold">單筆滿 NT$${Math.floor(rate.minSpend).toLocaleString()} 起</div>`;
-        }
-
-        if (parsedCap) {
-            html += `<div class="cashback-condition">消費上限: NT$${Math.floor(parsedCap).toLocaleString()}</div>`;
-        } else {
-            html += `<div class="cashback-condition">消費上限: 無上限</div>`;
-        }
-
-        if (rate.conditions) {
-            html += renderConditionLine(rate.conditions);
-        }
-
-        // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
-        html += renderRegisterLinkLine(rate.registerLink);
-
-        if (rate.period) {
-            html += `<div class="cashback-condition">活動期間: ${rate.period}</div>`;
-        }
-
-        if (rate.items && rate.items.length > 0) {
-            const uniqueItems = [...new Set(rate.items)];
-            const merchantsId = `merchants-${card.id}-${idPrefix}-${index}`;
-            const showAllId = `show-all-${card.id}-${idPrefix}-${index}`;
-
-            if (uniqueItems.length <= 5) {
-                html += `<div class="cashback-merchants"><span class="cashback-merchants-label">適用通路：</span>${uniqueItems.join('、')}</div>`;
-            } else {
-                const initialList = uniqueItems.slice(0, 5).join('、');
-                const fullList = uniqueItems.join('、');
-                html += `<div class="cashback-merchants">`;
-                html += `<span class="cashback-merchants-label">適用通路：</span><span id="${merchantsId}">${initialList}</span>`;
-                html += `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeForOnclick(initialList)}', '${escapeForOnclick(fullList)}')">… 顯示全部${uniqueItems.length}個</button>`;
-                html += `</div>`;
-            }
-        }
-
-        html += `</div>`;
+        const { rate, parsedRate, parsedCap, displayCap, displayRate } = entry;
+        // 版面比照搜尋結果卡片，見 renderRateCard（js/cards-modals.js）
+        html += renderRateCard({
+            rate: displayRate,
+            // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
+            rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData),
+            capText: formatRateCardCap(displayCap),
+            title: rate.category,
+            endingSoonEnd: rate.periodEnd,
+            // 滿額門檻；maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+            minSpend: rate.minSpend,
+            merchants: { items: rate.items, id: `${card.id}-${idPrefix}-${index}` },
+            period: rate.period,
+            conditions: rate.conditions,
+            // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+            registerLink: rate.registerLink
+        });
     });
 
     return { html, upcoming };
@@ -806,6 +821,24 @@ function shouldSkipBirthdayPlan(category) {
     return !isBirthdayMonth;
 }
 
+// 級別專屬槽位（levelSettings 的 onlySlots／keepSlots，2026-10-07 為國泰 CUBE「固定回饋」方案新增）：
+//   "固定回饋": { "onlySlots": [17, 18], "keepSlots": [14] }
+// - onlySlots＝這個級別的專屬槽：選這個級別時只有 onlySlots＋keepSlots 適用；
+//   專屬槽被認領後，其他（沒寫 onlySlots 的）級別就不適用它們。
+// - keepSlots＝跟一般級別共用、在這個級別也照樣適用的槽（如一般回饋特列項目）；不被認領。
+// 以後新增的槽沒被任何級別認領 → 自動歸一般級別，資料端不用逐槽標記。
+// 搜尋配對、即將開始、詳情頁、promos 卡片特色都走這支，判斷一致才不會「詳情頁有、搜尋沒有」。
+// levelData 是用戶目前級別的設定物件（null＝當成一般級別）。槽號用 .slot（Sheet 真實槽號）。
+function isRateGroupInLevel(card, rateGroup, levelData) {
+    if (!card || !card.hasLevels || !card.levelSettings || !rateGroup) return true;
+    const slot = Number(rateGroup.slot);
+    const has = list => Array.isArray(list) && list.map(Number).includes(slot);
+    if (levelData && Array.isArray(levelData.onlySlots)) {
+        return has(levelData.onlySlots) || has(levelData.keepSlots);
+    }
+    return !Object.values(card.levelSettings).some(lv => lv && has(lv.onlySlots));
+}
+
 // Calculate cashback for a specific card
 async function calculateCardCashback(card, searchTerm, amount) {
     let allMatches = []; // Collect ALL matching activities
@@ -880,6 +913,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                        continue;
+                    }
+
+                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
+                    if (!isRateGroupInLevel(card, rateGroup, levelSettings)) {
                         continue;
                     }
 
@@ -1046,6 +1084,11 @@ async function calculateCardCashback(card, searchTerm, amount) {
 
                     // 童樂匯方案只對符合資格的用戶配對
                     if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                        continue;
+                    }
+
+                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
+                    if (!isRateGroupInLevel(card, rateGroup, levelData)) {
                         continue;
                     }
 
@@ -1242,7 +1285,10 @@ async function calculateCardCashback(card, searchTerm, amount) {
                         // (e.g. 大戶卡「悠遊卡自動加值」) — spending beyond the cap
                         // earns nothing, shown explicitly as 0 rather than silently
                         // missing from the total.
-                        layers.push({ name: '超過上限(不列入回饋)', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
+                        // 名稱 2026-09-30 由「超過上限(不列入回饋)」縮短：同一列的
+                        // 回饋率 0%／回饋金額 NT$0 已經把「不列入回饋」講完了，括號那段
+                        // 只是把明細表撐寬（手機上單欄就吃掉 143px）。
+                        layers.push({ name: '超過上限', rate: 0, applicableAmount: remainingAmount, cashback: 0, cap: null });
                     } else {
                         const excessRate = getOverflowRate(card);
                         const remainingCashback = Math.floor(remainingAmount * excessRate / 100);
@@ -1309,6 +1355,11 @@ async function findUpcomingActivity(card, searchTerm, amount) {
 
             // Check if it's within 30 days
             if (!isUpcomingWithinDays(rateGroup.periodStart, 30)) {
+                continue;
+            }
+
+            // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不列入即將開始
+            if (!isRateGroupInLevel(card, rateGroup, levelData)) {
                 continue;
             }
 

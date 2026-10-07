@@ -22,53 +22,27 @@
 let spotlightItems = [];
 let spotlightPage = 0;
 // ============ 版位配置與分頁 ============
-// 🚧 主打卡版位（.is-feature 大卡）2026-09-03 暫時停用。
-// 停用原因：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打
-// 的頁」卡片形狀不同，看起來很亂。Highlights 工作表的 featured 欄照常匯出、
-// 前端照常收到（item.featured），只是暫時不拿來排版。
-// 要重新啟用：把 SPOTLIGHT_FEATURE_SLOTS 改回 true 即可，主打卡的
-// buildSpotlightPages 分支與 .is-feature / .is-mini 樣式都還在。
-const SPOTLIGHT_FEATURE_SLOTS = false;
-
+// 主打卡版位（.is-feature 大卡／.is-mini 小格）2026-09-03 停用、2026-10-02 程式全部移除，
+// 每頁一律是同樣直式卡。Highlights 工作表的 featured 欄若還在，前端不讀。
+//
 // 每頁筆數＝欄數 x 列數，一定填滿、不留落單的半排。
 // 斷點（768 / 1024）必須與 styles.css 的 .spotlight-track 一致。
-//   feat  ＝ 每頁的主打卡數（停用時不使用）
-//   grid  ＝ 有主打卡那一頁的一般卡數（停用時不使用）
-//   plain ＝ 沒有主打卡那一頁的一般卡數（＝目前每頁的實際張數）
 function spotlightLayout() {
     const w = window.innerWidth;
-    if (w <= 768)  return { key: 'mobile',  feat: 1, grid: 4, plain: 4 };  // 2 欄 x 2 列
-    if (w <= 1024) return { key: 'tablet',  feat: 1, grid: 3, plain: 3 };  // 3 欄 x 1 列
-    return                { key: 'desktop', feat: 2, grid: 4, plain: 4 };  // 4 欄 x 1 列
+    if (w <= 768)  return { key: 'mobile',  perPage: 4 };  // 2 欄 x 2 列
+    if (w <= 1024) return { key: 'tablet',  perPage: 3 };  // 3 欄 x 1 列
+    return                { key: 'desktop', perPage: 4 };  // 4 欄 x 1 列
 }
 
-// 每頁的內容：{ feature: [...], normal: [...] }
+// 每頁的內容：spotlightItems 的切片
 let spotlightPages = [];
 let spotlightLastLayout = spotlightLayout().key;
 
 function buildSpotlightPages() {
-    const cfg = spotlightLayout();
-    const featured = SPOTLIGHT_FEATURE_SLOTS ? spotlightItems.filter(it => it.featured) : [];
+    const { perPage } = spotlightLayout();
     const pages = [];
-
-    // 主打卡停用（或沒有人標 featured）→ 每頁等分成 cfg.plain 張一般卡
-    if (featured.length === 0) {
-        for (let i = 0; i < spotlightItems.length; i += cfg.plain) {
-            pages.push({ feature: [], normal: spotlightItems.slice(i, i + cfg.plain) });
-        }
-        return pages;
-    }
-
-    // 有標記 → 主打卡每頁最多 cfg.feat 則，用完之後的頁面就沒有主打位
-    const normal = spotlightItems.filter(it => !it.featured);
-    let fi = 0, ni = 0;
-    while (fi < featured.length || ni < normal.length) {
-        const page = { feature: [], normal: [] };
-        for (let k = 0; k < cfg.feat && fi < featured.length; k++) page.feature.push(featured[fi++]);
-        const quota = page.feature.length > 0 ? cfg.grid : cfg.plain;
-        for (let k = 0; k < quota && ni < normal.length; k++) page.normal.push(normal[ni++]);
-        if (page.feature.length === 0 && page.normal.length === 0) break;
-        pages.push(page);
+    for (let i = 0; i < spotlightItems.length; i += perPage) {
+        pages.push(spotlightItems.slice(i, i + perPage));
     }
     return pages;
 }
@@ -85,8 +59,8 @@ function getSpotlightDaysLeft(deadline) {
     return Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
 }
 
-// 亮點卡的期限：優先用「這張卡在這個通路的真實活動期限」，Highlights 工作表的
-// deadline 只當後備。理由：sheet 的 deadline 是人工填的、會跟活動脫節——2026-09-02
+// 亮點卡的期限：一律用「這張卡在這個通路的真實活動期限」（Highlights 工作表的
+// deadline 欄 2026-09-30 已刪除，對不到活動就不顯示期限）。當初改掉的理由：sheet 的 deadline 是人工填的、會跟活動脫節——2026-09-02
 // 實測 20 則裡有 4 則對不上（陽信 JCB 晶緻卡日本 7-ELEVEN sheet 寫 2026/12/31、
 // 真實活動 2026/9/30 就結束；玉山 Ubear Gemini sheet 寫 2026/8/31 但活動其實已
 // 展延到 2027/2/28，卡片上顯示一個過去的日期）。
@@ -100,7 +74,7 @@ function getSpotlightDaysLeft(deadline) {
 // 過期活動在載入時就被 filterExpiredRates 濾掉、不會進 _itemsIndex，
 // 所以這裡拿到的活動都還在有效期內。
 function resolveSpotlightDeadline(item) {
-    const fallback = (item && item.deadline) || '';
+    const fallback = '';
     if (!item || !item.card_id || !item.merchant) return fallback;
 
     const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
@@ -112,7 +86,7 @@ function resolveSpotlightDeadline(item) {
         // periodEnd 可能是 ISO 或台式斜線，統一轉 ISO 後字典序 = 日期序
         .map(end => (end.includes('-') ? end : slashDateToISO(end)))
         .filter(Boolean);
-    if (ends.length === 0) return fallback; // 沒對到活動、或活動沒寫結束日 → 用 sheet 的
+    if (ends.length === 0) return fallback; // 沒對到活動、或活動沒寫結束日 → 不顯示期限
 
     // 顯示格式沿用 sheet 的 YYYY/MM/DD
     return ends.sort()[0].replace(/-/g, '/');
@@ -128,8 +102,17 @@ function renderSpotlights() {
         .filter(s => s && s.active !== false && s.active !== 'FALSE')
         .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
 
-    // 期限在建清單時算一次就好（卡片版式與 modal 後備路徑共用，翻頁重繪不必重算）
-    spotlightItems.forEach(item => { item._resolvedDeadline = resolveSpotlightDeadline(item); });
+    // 期限、選中的活動在建清單時算一次就好（卡片版式與 modal 共用，翻頁重繪不必重算）
+    spotlightItems.forEach(item => {
+        item._resolvedDeadline = resolveSpotlightDeadline(item);
+        const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
+        item._pick = resolveSpotlightPick(item, card);
+        if (card && !item._pick) {
+            // sheet 的 rate 對不到任何「活動 × 級別」：多半是銀行改了回饋率、卡片資料已更新，
+            // 推薦活動卻沒跟著改。卡片照樣顯示 sheet rate（不顯示上限）；preflight 也會警告
+            console.error(`推薦活動「${item.merchant}」(${item.card_id}) 的 rate ${item.rate}% 對不到卡片資料裡的任何活動／級別`);
+        }
+    });
 
     if (spotlightItems.length === 0) {
         section.style.display = 'none';
@@ -156,20 +139,9 @@ function renderSpotlightPage() {
     const page = spotlightPages[spotlightPage];
     if (!page) return;
 
-    // 主打卡在版面上是「整列（手機／平板）／跨兩欄（桌機）」，靠 .is-feature 掛樣式；
-    // 同頁其餘卡片掛 .is-mini（桌機才會縮成橫式小格）。index 要用原始
-    // spotlightItems 的位置，活動詳情 modal 才對得上。
+    // index 要用原始 spotlightItems 的位置，活動詳情 modal 才對得上
     const frag = document.createDocumentFragment();
-    page.feature.forEach(item => {
-        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
-        el.classList.add('is-feature');
-        frag.appendChild(el);
-    });
-    page.normal.forEach(item => {
-        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
-        if (page.feature.length > 0) el.classList.add('is-mini');
-        frag.appendChild(el);
-    });
+    page.forEach(item => frag.appendChild(buildSpotlightCard(item, spotlightItems.indexOf(item))));
 
     track.classList.remove('spotlight-fade-in');
     track.innerHTML = '';
@@ -218,11 +190,19 @@ function buildSpotlightCard(item, index) {
     card.className = 'spotlight-card';
 
     const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
+    const cardName = getSpotlightCardName(item);
+    // 上限由選中的活動推導（resolveSpotlightPick）；對不到活動就不顯示。不標「／月」：
+    // 卡片資料只存金額、沒有上限週期（站長 2026-09-30 決定不加單位）
+    const capText = item._pick ? formatSpotlightCap(item._pick.cap) : '';
     // 期限以真實活動為準（resolveSpotlightDeadline），renderSpotlights 已先算好
-    const deadline = item._resolvedDeadline || item.deadline || '';
+    const deadline = item._resolvedDeadline || '';
     const daysLeft = getSpotlightDaysLeft(deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+    // 卡片上只放短格式「至 M/D」（deadline 是 YYYY/MM/DD，不補零：10/31、2/28）。
+    // 「剩 N 天」出現時取代它——講的是同一件事，紅徽章更醒目，資訊列也才放得下
+    const endShort = (!daysBadge && /^\d{4}\/\d{2}\/\d{2}$/.test(deadline))
+        ? deadline.slice(5).replace(/^0/, '').replace(/\/0/, '/') : '';
 
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
@@ -230,33 +210,27 @@ function buildSpotlightCard(item, index) {
 
     // 手機／平板（版式 C，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
     // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
-    // 主打卡（.is-feature）：同一份 DOM 換 CSS——.spotlight-body 在一般卡是
-    // display:contents（等於不存在），主打卡與小格才變成卡片的右半欄。
-    // .spotlight-cardname-line 只有桌機小格顯示（在商家名下方）——小格的卡圖
-    // 換成純圖、不壓卡名膠囊，卡名改用這行文字。
-    // 到期日「至 X」不再上卡片，只留在
-    // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
-    // 「剩 N 天」保留，那是急迫感提示、不是日期。
+    // 到期日以短格式「至 M/D」放在上限旁（2026-10-02 起；之前只在 modal），
+    // 完整「活動期間／活動期限」仍在活動詳情 modal（buildSpotlightModalBody）。
+    // 剩 0–14 天時改顯示「剩 N 天」紅徽章、取代「至 M/D」。資訊列不換行（換行會讓同排卡片高度不一）。
     card.innerHTML = `
         <div class="spotlight-ccwrap">
-            <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(item.card_name || '')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
-            ${item.card_name ? `<span class="spotlight-cardname">${escapeHtml(item.card_name)}</span>` : ''}
+            <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(cardName)}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
+            ${cardName ? `<span class="spotlight-cardname">${escapeHtml(cardName)}</span>` : ''}
         </div>
-        <div class="spotlight-body">
-            <div class="spotlight-rate-row">
-                ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
-                ${hypeTag}
-            </div>
-            <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-            <div class="spotlight-cardname-line">${escapeHtml(item.card_name || '')}</div>
-            <div class="spotlight-info-row">
-                ${item.cap ? `<span class="spotlight-cap">上限 <b>${escapeHtml(item.cap)}</b></span>` : ''}
-                ${daysBadge}
-            </div>
+        <div class="spotlight-rate-row">
+            ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
+            ${hypeTag}
+        </div>
+        <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+        <div class="spotlight-info-row">
+            ${capText ? `<span class="spotlight-cap">上限 <b>${escapeHtml(capText)}</b></span>` : ''}
+            ${endShort ? `<span class="spotlight-end">至 <b>${escapeHtml(endShort)}</b></span>` : ''}
+            ${daysBadge}
         </div>
         <div class="spotlight-card-actions">
-            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
-            <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
+            <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(cardName)}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
+            <button type="button" class="spotlight-info-btn" aria-label="活動詳情" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(cardName)}" data-merchant="${escapeHtml(item.merchant || '')}">ⓘ</button>
         </div>
     `;
 
@@ -480,6 +454,44 @@ function findSpotlightCardActivities(card, merchant) {
     return groups;
 }
 
+// 推薦活動的「選擇器」（2026-09-30）：Highlights 的 rate 是站長的編輯選擇，同時決定
+// 「推哪個活動」與「推哪個級別」——分級卡有時推中間級別、有時推最高級別（玉山 Uni
+// 支付寶 4.5% ＝ UP選；CUBE 迪士尼飯店 3.3% ＝ Level 3），同一通路也可能有多個活動
+// （中信 uniopen 夢時代 3%/7%/11%/7%）。所以不能預設取第一個級別或最高回饋，
+// 而是把「活動 × 級別」逐一試算，取回饋率等於 sheet rate 的組合；多個組合都相等時
+// 取上限最大的（夢時代兩個 7% 取 NT$12,500 那組，與站長原本 sheet 填的一致）。
+// 上限（cap）由選中的組合推導——Highlights 的 cap/deadline 欄已刪除，不再手填。
+// 回傳 { group, levelName, levelData, rate, cap }（cap: null＝無上限），對不到回傳 null。
+// ⚠️ tools/check-spotlights.js 也呼叫這支（preflight 警告），改規則兩邊自動一致。
+function resolveSpotlightPick(item, card, activities) {
+    const target = parseFloat(item && item.rate);
+    if (!card || isNaN(target)) return null;
+    const acts = activities || findSpotlightCardActivities(card, item.merchant);
+    const levelNames = (card.hasLevels && card.levelSettings) ? Object.keys(card.levelSettings) : [null];
+    let best = null;
+    acts.forEach(group => levelNames.forEach(levelName => {
+        const levelData = levelName ? (card.levelSettings[levelName] || null) : null;
+        const rate = parseFloat(getDisplayRate(card, group, parseCashbackRateSync(group.rate, levelData), levelData));
+        if (isNaN(rate) || Math.abs(rate - target) > 1e-6) return;
+        const cap = resolveDisplayCap(card, group, parseCashbackCap(group.cap, card, levelData), levelData);
+        const capRank = (cap === null || cap === undefined || isNaN(cap)) ? Infinity : cap;
+        if (!best || capRank > best.capRank) {
+            best = { group, levelName, levelData, rate, cap: capRank === Infinity ? null : cap, capRank };
+        }
+    }));
+    return best;
+}
+
+// 卡名一律取卡片資料（Highlights 的 card_name 欄只給站長自己看，前端不依賴它）
+function getSpotlightCardName(item) {
+    const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
+    return (card && card.name) || item.card_name || '';
+}
+
+function formatSpotlightCap(cap) {
+    return (cap === null || cap === undefined || isNaN(cap)) ? '無上限' : `NT$${Math.floor(cap).toLocaleString()}`;
+}
+
 // 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal
 // 動態插入 header），卡名只在 header 標題顯示、body 不重複。
 function buildSpotlightModalActions(item, card) {
@@ -487,7 +499,7 @@ function buildSpotlightModalActions(item, card) {
     // 鐵則 3：動態 href 先 sanitizeUrl（escapeHtml 擋不住 javascript: scheme）
     const applyLink = applyCta ? sanitizeUrl(applyCta.link) : '';
     const applyCtaHtml = applyLink
-        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(item.card_name || '')}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
+        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(getSpotlightCardName(item))}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
         : '';
     const cardDetailBtn = card
         ? `<button type="button" class="card-detail-peek-btn spotlight-carddetail-btn" data-card-id="${escapeHtml(card.id)}" aria-label="卡片詳情" title="卡片詳情">ⓘ</button>`
@@ -504,8 +516,8 @@ function buildSpotlightModalBody(item, card) {
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
         const rate = (item.rate !== undefined && item.rate !== '') ? `${item.rate}%` : '';
-        // 走到這裡代表沒對到真實活動，_resolvedDeadline 必然已退回 sheet 的 deadline
-        const deadline = item._resolvedDeadline || item.deadline || '';
+        // 走到這裡代表沒對到真實活動，期限也就無從得知（_resolvedDeadline 為空）
+        const deadline = item._resolvedDeadline || '';
         const daysLeft = getSpotlightDaysLeft(deadline);
         const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
             ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
@@ -513,26 +525,34 @@ function buildSpotlightModalBody(item, card) {
             ${descHtml}
             ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
             <div class="spotlight-modal-info">
-                ${item.cap ? `<div><span class="spotlight-modal-label">消費上限</span><span>${escapeHtml(item.cap)}</span></div>` : ''}
                 ${deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(deadline)} ${daysBadge}</span></div>` : ''}
             </div>
         `;
     }
 
-    let levelData = null;
-    if (card.hasLevels && card.levelSettings) {
-        levelData = card.levelSettings[Object.keys(card.levelSettings)[0]] || null;
-    }
+    // 分級卡：推薦活動是編輯挑的某個級別（如「用UP選方案刷」），不能一律拿第一個級別解析
+    // ——玉山 Uni 卡支付寶曾因此顯示簡單選的 3%，卡片上寫的卻是 UP選的 4.5%。
+    // 用 resolveSpotlightPick 選出的級別解析「所有」活動（同一張卡的其他活動也照同一個
+    // 級別顯示才一致）；對不到才退回第一個級別。選中的活動排第一個，與小卡的數字對應。
+    const pick = resolveSpotlightPick(item, card, activities);
+    const levelNames = (card.hasLevels && card.levelSettings) ? Object.keys(card.levelSettings) : [];
+    const levelName = pick ? pick.levelName : (levelNames[0] || null);
+    const levelData = levelName ? (card.levelSettings[levelName] || null) : null;
+    const ordered = pick ? [pick.group, ...activities.filter(g => g !== pick.group)] : activities;
 
-    const blocks = activities.map(group => {
+    const blocks = ordered.map(group => {
         const parsedRate = parseCashbackRateSync(group.rate, levelData);
         // For stacking models (rate+basic+…) rate_N holds only the designated-channel
         // rate, so show the summed total (designated + basic + bonus) — same number the
         // search-result card shows. Non-stacking models return the parsed rate as-is.
         const rateNum = getDisplayRate(card, group, parsedRate, levelData);
-        const capNum = parseCashbackCap(group.cap, card, levelData);
-        const capText = (capNum !== null && capNum !== undefined && !isNaN(capNum))
-            ? `NT$${Math.floor(capNum).toLocaleString()}` : '無上限';
+        // 回饋率只在活動內容真的隨級別變動（含 placeholder）時才標級別名，免得固定費率的活動也掛上級別
+        const levelTag = (levelName && /\{[^}]+\}/.test(`${group.rate}${group.cap}`))
+            ? ` <span class="spotlight-rate-category">(${escapeHtml(levelName)})</span>` : '';
+        // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）——
+        // 與搜尋結果卡、詳情頁同一套推導，Spotlight 不自成一格
+        const capNum = resolveDisplayCap(card, group, parseCashbackCap(group.cap, card, levelData), levelData);
+        const capText = formatSpotlightCap(capNum);
         const period = group.period || ((group.periodStart && group.periodEnd) ? `${group.periodStart}~${group.periodEnd}` : '');
         const items = Array.isArray(group.items) ? group.items : [];
         // 回饋率列：比照卡片詳情頁 .cashback-rate（綠色回饋率＋黑字「回饋」）；
@@ -540,7 +560,7 @@ function buildSpotlightModalBody(item, card) {
         const categoryLabel = group.category
             ? ` <span class="spotlight-rate-category">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
             : '';
-        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋` : ''}${categoryLabel}</div>`;
+        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋${levelTag}` : ''}${categoryLabel}</div>`;
         // 適用通路：標題獨立一行、內容下一行；超過 3 行預設收合、點擊展開（toggle 由 setupSpotlightActItemsToggle 開啟）
         const actItemsHtml = items.length
             ? `<div class="spotlight-act-items"><div class="spotlight-act-items-label">此活動也適用以下通路</div><div class="spotlight-act-items-values clamped">${items.map(escapeHtml).join('、')}</div><button type="button" class="spotlight-act-items-toggle" hidden>展開</button></div>`
@@ -591,7 +611,7 @@ function openSpotlightModal(index) {
     const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
 
     // Modal 標題改為卡片名稱（原為通路名稱）
-    if (titleEl) titleEl.textContent = item.card_name || item.merchant || '活動詳情';
+    if (titleEl) titleEl.textContent = getSpotlightCardName(item) || item.merchant || '活動詳情';
 
     // 卡片詳情/立即申辦按鈕：放在 header 卡名下方（動態插入 .modal-header，第一次開啟時建立）
     let actionsEl = document.getElementById('spotlight-modal-actions');
@@ -879,11 +899,12 @@ function showAnnouncementModal(index) {
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
 const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
 const SURVEY_INVITE_DELAY_MS = 1200;
-// 只在 2026 年 9 月整月彈。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
+// 只在 2026/9/1–10/11 彈（原訂 9 月整月；9/30 刷卡小抄上線當天單日收到 25 份回覆，
+// 站長 2026-10-01 決定延長到 10/11 底，讓那波新流量回訪時也問得到）。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
 // 那樣會變成「裝置本地時間」，人在國外或裝置時區設錯的用戶起訖點會整個偏掉。
 // 寫成帶時區的絕對時刻後，全世界同一瞬間開關。過期自動變 no-op，不用月底手動下架。
 const SURVEY_INVITE_START = '2026-09-01T00:00:00+08:00';
-const SURVEY_INVITE_END   = '2026-10-01T00:00:00+08:00';  // 不含這一刻
+const SURVEY_INVITE_END   = '2026-10-12T00:00:00+08:00';  // 不含這一刻＝10/11 23:59 為止
 let surveyInviteHandledThisSession = false;
 
 function isSurveyInvitePeriod() {
@@ -942,7 +963,7 @@ function isSurveyInviteAudience() {
 // 由 onAuthStateChanged 的登入／訪客兩個分支呼叫（auth-user-data.js）。
 function maybeShowSurveyInvite() {
     if (surveyInviteHandledThisSession) return;
-    if (!isSurveyInvitePeriod()) return;  // 只在 9 月
+    if (!isSurveyInvitePeriod()) return;  // 只在 9/1–10/11
     if (!isSurveyInviteAudience()) return;  // 登入用戶或回訪訪客，首訪不問
     // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
     // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
@@ -1140,6 +1161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!dataLoaded) {
         // If data loading fails, disable the app
         console.error('❌ 資料載入失敗，停用應用程式');
+        // 錯誤訊息已顯示在頁首；收掉「正在載入」，不然它會永遠轉下去
+        document.documentElement.classList.remove('pmc-returning-user');
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
@@ -1185,6 +1208,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
         // 讓頂部標題與搜尋框先入眼）。
         appStarted = true;
+        // 工具區要直接顯示，boot loader 一起收掉（它佔在頁籤下方，不收會把搜尋框往下推）
+        document.documentElement.classList.remove('pmc-returning-user');
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
         const supportedCards = document.querySelector('.supported-cards');
@@ -1539,8 +1564,8 @@ function setupSearchClearButtons() {
         'search-cards-input',      // 管理卡片
         'search-owned-cards-input',// 我的信用卡
         'search-payments-input',   // 行動支付
-        'cashback-search-input',   // 卡片詳情頁：指定通路回饋
-        'mappings-search'          // 我的配卡組合
+        'cashback-search-input'    // 卡片詳情頁：指定通路回饋
+        // 我的刷卡小抄頁的搜尋框是 type=search（瀏覽器自帶清除鈕），不在此列
     ].forEach(id => attachInputClearButton(document.getElementById(id)));
 }
 
@@ -1743,14 +1768,6 @@ function setupEventListeners() {
                 e.stopPropagation();
                 showCardDetail(peekBtn.dataset.cardId);
             }
-        });
-    }
-
-    // 我的配卡按鈕
-    const myMappingsBtn = document.getElementById('my-mappings-btn');
-    if (myMappingsBtn) {
-        myMappingsBtn.addEventListener('click', () => {
-            openMyMappingsModal();
         });
     }
 }
