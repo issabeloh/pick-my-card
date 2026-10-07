@@ -230,6 +230,11 @@ basicCashbackDiv.innerHTML = basicContent;
             if (card.id === 'cathay-cube') {
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
+                    // 「固定回饋」這種 onlySlots 級別沒有 specialRate，回饋率寫在它認領的槽裡
+                    if (Array.isArray(data.onlySlots)) {
+                        levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: 固定回饋率，不適用其他切換方案</div>`;
+                        return;
+                    }
                     const displayRate = data.specialRate || data.rate || 0;
                     levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${displayRate}%</div>`;
                 });
@@ -807,7 +812,8 @@ async function generateCubeSpecialContent(card) {
     if (card.cashbackRates) {
         card.cashbackRates.forEach(rate => {
             const status = getRateStatus(rate.periodStart, rate.periodEnd);
-            if (status === 'upcoming' && isUpcomingWithinDays(rate.periodStart, 30)) {
+            if (status === 'upcoming' && isUpcomingWithinDays(rate.periodStart, 30) &&
+                isRateGroupInLevel(card, rate, levelSettings)) {   // 級別專屬槽位（onlySlots）
                 upcomingRates.push(rate);
             }
         });
@@ -895,7 +901,8 @@ async function generateCubeSpecialContent(card) {
         // 從 cashbackRates 中收集各類別的項目（只包含進行中的活動）
         card.cashbackRates.forEach(rate => {
             const status = getRateStatus(rate.periodStart, rate.periodEnd);
-            const isActive = (status === 'active' || status === 'always');
+            const isActive = (status === 'active' || status === 'always') &&
+                isRateGroupInLevel(card, rate, levelSettings);   // 級別專屬槽位（onlySlots）
 
             if (rate.category && categories.some(cat => rate.category.includes(cat)) && isActive) {
                 // 找出是哪個類別
@@ -950,6 +957,7 @@ async function generateCubeSpecialContent(card) {
             .filter(rate => {
                 const status = getRateStatus(rate.periodStart, rate.periodEnd);
                 return !rate.hideInDisplay &&
+                    isRateGroupInLevel(card, rate, levelSettings) &&  // 級別專屬槽位（onlySlots）
                     (status === 'active' || status === 'always');  // 只顯示進行中的
             })
             .sort((a, b) => {
