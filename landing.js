@@ -42,10 +42,11 @@
     }
     if (introBtn && videoLayer && introVideo && videoClose && introSrc) {
         var introPoster = (introBtn.getAttribute('data-poster') || '').trim();
-        if (introPoster) introVideo.setAttribute('poster', introPoster);
         document.getElementById('lp-hint').classList.add('lp-hint--video');
 
         introBtn.addEventListener('click', function () {
+            // poster 也等按了才設：隱藏的 <video> 有 poster 屬性一樣會被下載
+            if (introPoster && !introVideo.getAttribute('poster')) introVideo.setAttribute('poster', introPoster);
             if (!introVideo.getAttribute('src')) introVideo.setAttribute('src', introSrc);
             videoOpen = true;
             videoLayer.hidden = false;
