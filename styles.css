@@ -2153,7 +2153,9 @@ input[type="number"]:focus {
 
 .coupon-results-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 
@@ -2236,7 +2238,9 @@ input[type="number"]:focus {
 
 .parking-benefits-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 

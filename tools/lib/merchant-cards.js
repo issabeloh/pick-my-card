@@ -97,16 +97,18 @@ function createEngine(cardsData) {
   return ctx;
 }
 
-// 商家字串 → 匹配項清單。照抄 compareSpotlightMerchant(…, { asTyped: true }) 的分支：
-// 商家名自己搜得到東西 → 當一般單一商家搜尋（跟首頁打字一樣，含 LinePay 這種剛好也是
-// 快捷搜尋名稱的頁，2026-10-08 起）；自己搜不到、但等於某個快捷搜尋的 displayName
-// （如「所有計程車」）→ 走 handleQuickSearch 的多關鍵詞路徑。少了這個分支，匹配項會跟畫面不一樣。
+// 商家字串 → 匹配項清單。照抄 compareSpotlightMerchant() 的分支：商家名剛好等於某個
+// 「一次比多家」型快捷搜尋的 displayName（如 所有計程車、廣告費）就走 handleQuickSearch 的
+// 多關鍵詞路徑；「協助輸入」型（只有一個關鍵詞，如 LinePay）在頁面上等同用戶打字，
+// 這裡也當一般單一商家搜尋。兩型的分界由前端的 isTypingHelperQuickOption() 決定（直接呼叫，不另寫）。
+// 少了這個分支，LinePay／所有計程車這種頁的匹配項會跟畫面不一樣。
 function resolveMatchedItems(engine, merchant) {
   const options = engine.__cardsData.quickSearchOptions || [];
   const normalized = String(merchant).trim().toLowerCase();
-  const direct = engine.findMatchingItem(String(merchant), { exactOnly: false });
   const option = options.find(o => o.displayName && String(o.displayName).trim().toLowerCase() === normalized);
-  if (!option || (direct && direct.length > 0)) return direct;
+  if (!option || engine.isTypingHelperQuickOption(option)) {
+    return engine.findMatchingItem(String(merchant), { exactOnly: false });
+  }
 
   // handleQuickSearch：逐個關鍵詞查，依 originalItem 去重，保留先到先得的順序
   const seen = new Set();

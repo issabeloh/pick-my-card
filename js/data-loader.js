@@ -510,9 +510,30 @@ function closeQuickSearchDropdown() {
 }
 
 // Handle quick search button click
+// 快捷搜尋按鈕分兩種（2026-10-08 站長定義）：
+// - 「一次比多家」：merchants 有多個關鍵詞（所有計程車、三大電商平台…），把各關鍵詞的匹配聯集起來比較。
+//   這種刻意不受精準搜尋影響、也不跳 Search Hints：關鍵詞清單是編輯挑好的，靠模糊比對把同一家的
+//   各種寫法一起收進來（「台灣大車隊」→「55688台灣大車隊」），套精準搜尋會把這些變體砍掉、
+//   結果變少；輸入框顯示的又是類別名（所有計程車），拿它查提示或做精準比對都沒有意義。
+// - 「協助輸入」：merchants 只有一個關鍵詞（LinePay、街口支付、ApplePay…），沒有一次比多家的功能，
+//   按鈕只是替用戶把名稱打進搜尋框——之後的一切（精準搜尋、Search Hints、送出時重新匹配）
+//   都要跟用戶自己打字完全一樣。用戶自訂的快捷選項同樣適用這條規則。
+// ⚠️ tools/lib/merchant-cards.js（商家頁卡片清單）直接呼叫這支判斷，規則只寫在這裡
+function isTypingHelperQuickOption(option) {
+    return !!(option && Array.isArray(option.merchants) && option.merchants.length === 1);
+}
+
 function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
     if (!merchantInput || !cardsData) return;
+
+    // 協助輸入型：等同用戶在搜尋框打了這個名稱（handleMerchantInput 會清掉 currentQuickSearchOption、
+    // 套用精準搜尋、顯示 Search Hints、更新清除鈕與計算鈕），不走下面的多關鍵詞聯集
+    if (isTypingHelperQuickOption(option)) {
+        merchantInput.value = option.displayName;
+        handleMerchantInput();
+        return;
+    }
 
     console.log(`\n🔍 快捷搜索: ${option.displayName}`);
     console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
