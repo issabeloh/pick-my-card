@@ -1300,7 +1300,8 @@ function renderSpendThresholdNote(minSpend) {
 }
 
 // 卡片下方的資訊區 .matched-merchant。行序固定：
-//   活動（activityName，只有搜尋結果傳；詳情頁回饋卡的類別已經是卡片標題，不重複）
+//   活動（activityName：搜尋結果、行動支付卡片 renderPaymentCardResult 會傳；
+//         詳情頁回饋卡的類別已經是卡片標題，不重複）
 //   → 通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
 //   → 條件 → 銀行官方登錄連結
 // activityName 是純文字，這裡負責 escape。

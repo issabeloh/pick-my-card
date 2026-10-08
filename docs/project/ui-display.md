@@ -233,8 +233,13 @@ Grep `titleParts`）：
 - **同排對齊（2026-10-06，站長要求）**：兩欄（≥541px）時，同一排只要有一張卡有標題（活動類別），另一張就在同位置留同高的空白，讓「回饋率｜回饋消費上限」對齊；同一排都沒標題就跟以前一樣。做法是 CSS subgrid（Grep「同排對齊」）：每張卡跨兩列「`.rate-card-header`｜`.rate-card-body`」，列高同排共用；`renderRateCard` 因此**一律輸出標題列**（空的單欄時 `display:none`）、其餘內容包在 `.rate-card-body`。⚠️ 卡片底下只能有這兩個子元素——回饋組成彈出表由 `toggleRateComposition` 掛在 body 裡。⚠️ 外層容器 row-gap 必須是 0（外層 gap 會落在卡片兩列之間），排距改由卡片 margin-bottom（`--rate-row-gap`：12px，≥1025px 跟著密度區塊 10px）提供；選擇器多掛 `#card-detail-modal` 是為了壓過檔尾密度區塊的 `gap: 10px`。CUBE 慶生月提示的下方間距因此從 inline 移到 `.cube-birthday-note`。驗證：手機版 143 張截圖逐像素不變；桌機只有混排的排改變
 - **搜尋結果的「活動:」行（2026-10-08，站長從 4 個 mockup 選 C）**：活動類別原本是「匹配項目: X (類別: Y)」的尾巴灰字，太不顯眼；改由 `renderActivityInfo({ activityName })` 輸出成資訊區**第一行**「活動: **Y**」（`.activity-name` 黑色粗體），行序變成 活動 → 通路 → 期間 → 條件 → 登錄連結。只有搜尋結果傳 `activityName`——詳情頁回饋卡的類別已經是卡片標題，不重複。同一張卡出現兩次（如 Richart 數趣刷／Chill刷）時就靠這行分辨。同日：回饋率下的「(分級: Level 1)」以 `{level}` 為界切成兩段 `.level-label-seg`（各自 nowrap），手機回饋率欄只有約 59px，以前會折成「(分級: Level」＋孤零零的「1)」；現在只會在「分級:」後整齊斷開，「固定回饋方案」這類長級別名由 grid 自動把欄位撐寬（320/360px 實測金額與上限欄仍維持一行）
 - **自動化回歸**：`node tools/regression/card-detail-test.js`（見 `docs/ops/regression.md`「卡片詳情頁」節）。改 `renderRateCard`、上述共用片段、或詳情頁任何一條 render 路徑後必跑
-- **不受影響**：行動支付比較 modal（`js/levels-payments.js`）也用 `.cashback-detail-item`，但沒有 `.rate-card`，樣式不變；停車折抵區塊維持原樣（不是回饋率）
-- **「比較所有行動支付回饋」modal（2026-10-08 站長要求，同日改版兩次）**：支付底下每張卡＝**搜尋結果卡片的縮小版**，由 `renderPaymentCardResult(mc, isBest)`（`js/levels-payments.js`）產生，單一支付詳情 `#payment-detail-modal` 也走同一支（同日要求），直接沿用 `.card-result`／`.card-header`／`.card-details.rate-card-details`（兩欄：回饋率｜回饋消費上限，沒有消費金額所以沒有回饋金額欄，回饋率接手綠色）／`renderActivityInfo({ activityName })` 的「活動: ○○」行，「最優回饋」角標也是 `.card-result .best-badge` 原樣；差異只補在 `.payment-card-result`（白底、卡名 1rem；比較 modal 另加卡與卡的 margin，單一支付詳情是 grid 用 gap）。⚠️ 因此 `.card-result` 不再只存在於搜尋結果區——全域用 `.card-result` 找元素的程式（如 `closest('.card-result')`）都是從按鈕往上找，不受影響；新增「全頁掃 `.card-result`」的程式要限定在 `#results-container`。前三名支付在名稱前加獎牌 `renderPaymentRankMedal(rank)`（SVG：藍彩帶＋金／銀／銅牌面＋數字）。名次用**並列名次（標準競賽排名 1、2、2、2、5）**：依序比最優卡回饋率 → 最優卡消費上限（無上限最高）→ 第二張卡回饋率，三者全同才並列；並列第 2 之後就沒有第 3（2026-10-08 實測 Apple／Google／Samsung Pay 並列第 2，沒有銅牌）。
+- **不受影響**：停車折抵區塊維持原樣（不是回饋率）。（行動支付的兩個 modal 原本也用 `.cashback-detail-item`，2026-10-08 起改成搜尋結果卡片樣式，見 1i 節）
+
+## 1i. 行動支付卡片（單一支付詳情／比較所有行動支付回饋，2026-10-08）
+
+- 兩個 modal 的每張卡都由 `renderPaymentCardResult(mc, isBest)`（`js/levels-payments.js`）產生＝**搜尋結果卡片的縮小版**：直接沿用 `.card-result`／`.card-header`／`.card-details.rate-card-details`（兩欄：回饋率｜回饋消費上限；沒有消費金額所以沒有回饋金額欄，回饋率接手綠色）／`renderActivityInfo({ activityName })` 的「活動: ○○」行，「最優回饋」角標也是 `.card-result .best-badge` 原樣；上限字樣用詳情頁的 `formatRateCardCap()`。差異只補在 `.payment-card-result`（白底、卡名 1rem；比較 modal 另加卡與卡的 margin，單一支付詳情是 grid 用 gap）。**要改卡片長相改這支，不要在兩個 modal 各自拼**
+- ⚠️ `.card-result` 因此不只存在於搜尋結果區：現有用 `.card-result` 找元素的程式（`closest('.card-result')`）都是從按鈕往上找，不受影響；新增「全頁掃 `.card-result`」的程式要限定在 `#results-container`
+- 比較 modal 前三名支付在名稱前加獎牌 `renderPaymentRankMedal(rank)`（SVG：藍彩帶＋金／銀／銅牌面＋數字，顏色在 `.payment-rank-medal-N`）。名次用**並列名次（標準競賽排名 1、2、2、2、5）**：依序比最優卡回饋率 → 最優卡消費上限（無上限最高）→ 第二張卡回饋率，三者全同才並列；並列第 2 之後就沒有第 3（2026-10-08 實測 Apple／Google／Samsung Pay 並列第 2，當天沒有銅牌）
 
 ## 2. 卡片圖片資產
 
@@ -299,7 +304,7 @@ Grep `titleParts`）：
 - **純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播；依 order 升冪，**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12`；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；單頁時自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
 **兩個動作**：
-- **「帶入查詢」**（`compareSpotlightMerchant(merchant, { fillOnly: true })`）：**只把商家帶進搜尋框、補上預設金額、捲回搜尋框，不自動計算**（2026-09-03 改；原本叫「比較這個通路 →」且點了就算完並捲到結果，站長依 GA4 使用情況判斷「直接跳到結果很不直觀，會迷失」）。merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。
+- **「帶入查詢」**（`compareSpotlightMerchant(merchant, { fillOnly: true })`）：**只把商家帶進搜尋框、補上預設金額、捲回搜尋框，不自動計算**（2026-09-03 改；原本叫「比較這個通路 →」且點了就算完並捲到結果，站長依 GA4 使用情況判斷「直接跳到結果很不直觀，會迷失」）。merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞；協助輸入型如 LinePay 在裡面會轉成打字，見第 7 節）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。
   - 不 focus 輸入框——手機上會彈出鍵盤蓋住「計算回饋」；改成讓計算鈕閃兩下藍光暈（`.calc-nudge`，尊重 `prefers-reduced-motion`）指出下一步。
   - ⚠️ **`fillOnly` 以外的呼叫端維持自動計算**：商家落地頁的 `?merchant=` 深連結（`{ noScroll: true }`）走的是同一支函數，那個情境使用者從外部連結進來、本來就預期看到結果。要改自動計算行為前先確認是哪一條路徑。
   - 🔴 **自動計算的範圍屬產品決策，要復原或擴大一律先問用戶**（沿用 2026-07-12 起的產品決策：計算由用戶按「計算」觸發，快捷搜尋按鈕與 `handleQuickSearch` 只填入關鍵詞不自動計算）。2026-09-03 把推薦活動這條路徑從「自動計算」改成「只帶入」也是站長決定的，不是實作方自行判斷——這條規則沒有因為那次改動而失效。
@@ -331,7 +336,11 @@ Grep `titleParts`）：
 - **狀態列與浮層鐵則**（2026-07-13）：匹配狀態列（`.matched-item-row`，含 `#matched-item` 與 `#exact-search-empty-hint`）一次只顯示一行——✘/部分匹配訊息出現時 JS 會收起橙色提示；桌機 search hint（`#search-hints-container`）與「?」說明（`.promo-help-text`）都是**浮層**（absolute，不參與版面），出現時按鈕/勾選不得跑位；「?」說明一次只開一個、點外部收合（`closeAllInlineHelp`）
 - 版面順序（桌機 grid `2fr 1fr`，2026-07-12 定稿 2:1 版）：左欄合併框跨 3 列；右欄由上而下「金額(1,2)→toggles(2,2 橫排兩框)→計算按鈕(3,2 整欄寬、align-self:end)」——按鈕在表單動線收尾。手機（`1fr auto`）：合併框整列→toggles 整列（左右各半）→金額＋按鈕同列。改排版時注意 toggles 與 button-group 的 grid 定位規則（styles.css 搜 "show-promos-toggle"）；`#search-hints-container:empty` margin 歸零是桌機對位的前提
 - 語義：勾選時 `handleMerchantInput` 以 `findMatchingItem(input, { exactOnly: true })` 過濾，只留 `isExactMatch`（**fuzzy 同義詞展開後全等也算**，如搜「國外」時 item「海外」視為一致）
-- **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
+- **快捷搜尋分兩型**（2026-10-08 站長定義，判斷集中在 `isTypingHelperQuickOption()`，`js/data-loader.js`）：
+  - **一次比多家**（`merchants` 多個關鍵詞，如所有計程車）：不受精準搜尋影響（`handleQuickSearch` 不傳 exactOnly；`currentQuickSearchOption` 非 null 時切換核取方塊不重跑匹配），也不跳 Search Hints。理由：關鍵詞清單靠模糊比對把同一家的各種寫法收進來（「台灣大車隊」→「55688台灣大車隊」），套精準會砍掉變體；輸入框顯示的是類別名，拿它查提示或精準比對沒有意義
+  - **協助輸入**（只有一個關鍵詞，如 LinePay、街口支付、ApplePay、悠遊卡、日本網購）：按下＝把 displayName 打進搜尋框再走 `handleMerchantInput()`，精準搜尋、Search Hints 全照打字規則。（導入時驗過這 5 個：打 displayName 與查關鍵詞的匹配完全相同，所以不精準時結果不變；勾精準時「悠遊卡」會變成零結果，因為資料裡的 item 是「悠遊卡自動加值」——跟自己打字一樣）。用戶自訂快捷同樣適用
+  - 勾／取消精準搜尋只更新匹配狀態列，**不自動重算**結果卡片，要用戶再按「計算」（2026-10-08 站長確認，自動重算的做法被否決）
+- **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有建議詞就顯示文案＋按鈕；**沒有建議詞也顯示 display_message**（2026-10-08；`.search-hint-message-only`）。例外：display_message 留空時 Apps Script 會補預設句「💡 建議也搜尋：」，沒有建議詞時這句無意義，前端不顯示（前端常數 `DEFAULT_HINT_MESSAGE` 必須與 `cards-export.gs` 的預設句一致）。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）

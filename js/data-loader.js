@@ -7,7 +7,7 @@
  *  - 快捷選項初始化/偏好載存    → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
  *  - 舊版偏好遷移              → "migrateLegacyQuickSearchOptions"
  *  - 快捷按鈕渲染/下拉         → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
- *  - 快捷搜尋觸發              → "handleQuickSearch"
+ *  - 快捷搜尋觸發／兩型判斷     → "handleQuickSearch" / "isTypingHelperQuickOption"
  * ============================================================ */
 function buildCardItemsIndex(card) {
     const itemsMap = new Map();
