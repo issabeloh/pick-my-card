@@ -6140,77 +6140,42 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 8px;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: #111827;
     margin-bottom: 8px;
 }
 
-/* 前三名支付的名次徽章（2026-10-08）：金／銀／銅實心圓＋白字 */
-.compare-payment-rank {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
+/* 前三名支付的名次獎牌（2026-10-08，renderPaymentRankMedal）：藍色彩帶＋金／銀／銅牌面 */
+.payment-rank-medal {
+    width: 30px;
+    height: 36px;
     flex-shrink: 0;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1;
+    margin-top: -6px; /* 彩帶往上凸，牌面對齊支付名稱 */
 }
-.compare-payment-rank-1 { background: #f59e0b; }
-.compare-payment-rank-2 { background: #94a3b8; }
-.compare-payment-rank-3 { background: #c2773a; }
+.payment-rank-medal .prm-ribbon-l { fill: #3b82f6; }
+.payment-rank-medal .prm-ribbon-r { fill: #1d4ed8; }
+.payment-rank-medal .prm-face { stroke-width: 2; }
+.payment-rank-medal .prm-ring { fill: none; stroke-width: 1; opacity: .55; }
+.payment-rank-medal .prm-num { font-size: 12px; font-weight: 800; font-family: inherit; }
+.payment-rank-medal-1 .prm-face { fill: #fcd34d; stroke: #d97706; }
+.payment-rank-medal-1 .prm-ring { stroke: #b45309; }
+.payment-rank-medal-1 .prm-num  { fill: #92400e; }
+.payment-rank-medal-2 .prm-face { fill: #e2e8f0; stroke: #94a3b8; }
+.payment-rank-medal-2 .prm-ring { stroke: #64748b; }
+.payment-rank-medal-2 .prm-num  { fill: #334155; }
+.payment-rank-medal-3 .prm-face { fill: #f0b183; stroke: #b45309; }
+.payment-rank-medal-3 .prm-ring { stroke: #9a3412; }
+.payment-rank-medal-3 .prm-num  { fill: #7c2d12; }
 
-/* 支付底下的每張卡（.cashback-detail-item）：卡名｜回饋率 一列 */
-#compare-payments-modal .cashback-detail-item {
-    position: relative;
+/* 支付底下的每張卡：沿用搜尋結果卡片 .card-result 的整套樣式（含「最優回饋」角標），
+   這裡只補差異——白底（外層支付卡是灰底）、卡與卡的間距、卡名比支付名稱小一階 */
+.compare-payment-result {
+    background: #ffffff;
+    margin-top: 8px;
 }
-.compare-payment-item-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
+.compare-payment-result .card-name {
+    font-size: 1rem;
 }
-.compare-payment-item-card {
-    color: #1f2937;
-    font-weight: 600;
-    font-size: 15px;
-    min-width: 0;
-}
-.compare-payment-item-rate {
-    color: #059669;
-    font-weight: 700;
-    font-size: 1.15rem;
-    flex-shrink: 0;
-}
-/* 「活動: ○○」：內容黑色粗體，同搜尋結果 .matched-merchant .activity-name */
-#compare-payments-modal .activity-name {
-    color: #111827;
-    font-weight: 700;
-    font-style: normal;
-}
-
-/* 「最優回饋」比照搜尋結果卡片 .card-result .best-badge：貼合右上框邊的角標。
-   卡名列往下讓出角標高度（回饋率靠右會被角標蓋住；改用右側留白的話，
-   最優那張的回饋率會和下面那張對不齊） */
-#compare-payments-modal .cashback-detail-item .best-badge {
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    z-index: 2;
-    padding: 5px 12px 6px;
-    border-radius: 0 8px 0 10px;
-    letter-spacing: .03em;
-    font-weight: 700;
-    text-transform: none;
-}
-#compare-payments-modal .cashback-detail-item.best-cashback .compare-payment-item-head {
-    margin-top: 14px;
-}
-
 /* Mobile responsiveness for compare payments */
 @media (max-width: 640px) {
     .compare-payments-grid {
@@ -7696,6 +7661,11 @@ mark.cashback-search-hl {
     color: #1976d2;
     font-weight: 600;
     margin-bottom: 8px;
+}
+
+/* 只有文案、沒有建議詞的提示（Search Hints 的 suggestions 留空）：文案下方不留按鈕列的間距 */
+.search-hint-message-only .hint-message {
+    margin-bottom: 0;
 }
 
 /* 建議按鈕容器 */

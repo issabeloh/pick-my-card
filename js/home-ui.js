@@ -1796,19 +1796,27 @@ function checkAndShowSearchHint(searchTerm) {
     }
 
     const hint = cardsData.searchHints?.[key];
+    const suggestions = (hint && Array.isArray(hint.suggestions)) ? hint.suggestions.filter(Boolean) : [];
+    // 沒填 suggestions 也要顯示 display_message（2026-10-08 站長要求：有些提示只是要講一句話）。
+    // 但 Apps Script 在 display_message 留空時會補預設句「💡 建議也搜尋：」——
+    // 沒有建議詞時這句話沒有意義，此時不顯示
+    const DEFAULT_HINT_MESSAGE = '💡 建議也搜尋：';
+    const message = hint && hint.message ? String(hint.message) : '';
+    const hasMessage = message && (suggestions.length > 0 || message.trim() !== DEFAULT_HINT_MESSAGE.trim());
 
-    if (hint && hint.suggestions.length > 0) {
+    if (hint && (suggestions.length > 0 || hasMessage)) {
         const hintDiv = document.createElement('div');
-        hintDiv.className = 'search-hint';
+        hintDiv.className = 'search-hint' + (suggestions.length === 0 ? ' search-hint-message-only' : '');
         // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
+        // 鐵則 3：文案與建議詞都 escape；建議詞走 data 屬性，含單引號（如 Tomod's）也不會弄壞 onclick
         hintDiv.innerHTML = `
             <button type="button" class="search-hint-close" aria-label="關閉提示" onclick="dismissSearchHint()">✕</button>
-            <span class="hint-message">${hint.message}</span>
-            <div class="hint-suggestions">
-                ${hint.suggestions.map(s =>
-                    `<button class="hint-button" onclick="searchFromHint('${s}')">${s}</button>`
+            <span class="hint-message">${escapeHtml(message)}</span>
+            ${suggestions.length > 0 ? `<div class="hint-suggestions">
+                ${suggestions.map(s =>
+                    `<button class="hint-button" data-suggestion="${escapeHtml(s)}" onclick="searchFromHint(this.dataset.suggestion)">${escapeHtml(s)}</button>`
                 ).join('')}
-            </div>
+            </div>` : ''}
         `;
         searchHintsContainer.appendChild(hintDiv);
     }
