@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-10-08T01:52:05.695Z",
+    "generatedAt": "2026-10-08T02:55:21.958Z",
     "fixtureVersion": "20260910-175104",
     "frozenDate": "2026-09-11T12:00:00+08:00",
     "liveCardsVersion": "20261007-164042",
@@ -244,7 +244,7 @@
             "回饋金額": "NT$1,350",
             "回饋消費上限": "無上限"
           },
-          "matched": "條件: 需至 CUBE App 領券 匹配項目: 日本大丸百貨 (福岡天神店) 活動期間: 2026/1/1~2026/12/31"
+          "matched": "匹配項目: 日本大丸百貨 (福岡天神店) 活動期間: 2026/1/1~2026/12/31 條件: 需至 CUBE App 領券"
         }
       ],
       "consoleErrors": []
@@ -1038,7 +1038,7 @@
             "回饋金額": "NT$450",
             "回饋消費上限": "NT$33,333"
           },
-          "matched": "條件: 可與「Pay著刷 2.3%」權益疊加；需至Richart Life App 領券 匹配項目: Line Pay 活動期間: 2026/7/1~2026/9/30"
+          "matched": "匹配項目: Line Pay 活動期間: 2026/7/1~2026/9/30 條件: 可與「Pay著刷 2.3%」權益疊加；需至Richart Life App 領券"
         }
       ],
       "consoleErrors": []
@@ -1171,7 +1171,7 @@
             "回饋金額": "NT$1,500",
             "回饋消費上限": "無上限"
           },
-          "matched": "條件: 需經由【Hotels.com x CUBE 信用卡指定專屬網頁】預訂且即時支付房費；排除直接經由官網或 APP 之交易；需至 CUBE App 領券 匹配項目: Hotels.com 活動期間: 2026/1/1~2026/12/31"
+          "matched": "匹配項目: Hotels.com 活動期間: 2026/1/1~2026/12/31 條件: 需經由【Hotels.com x CUBE 信用卡指定專屬網頁】預訂且即時支付房費；排除直接經由官網或 APP 之交易；需至 CUBE App 領券"
         }
       ],
       "consoleErrors": []
@@ -1634,7 +1634,7 @@
             "回饋金額": "NT$600",
             "回饋消費上限": "NT$10,000"
           },
-          "matched": "條件: 需領券；當月消費滿3筆享加碼3%；限使用實體卡貨Apple Pay、Google Pay、Samsung Pay支付 匹配項目: Youbike 2.0 活動期間: 2026/7/1~2026/9/30"
+          "matched": "匹配項目: Youbike 2.0 活動期間: 2026/7/1~2026/9/30 條件: 需領券；當月消費滿3筆享加碼3%；限使用實體卡貨Apple Pay、Google Pay、Samsung Pay支付"
         }
       ],
       "consoleErrors": []
