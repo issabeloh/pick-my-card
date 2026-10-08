@@ -234,6 +234,7 @@ Grep `titleParts`）：
 - **搜尋結果的「活動:」行（2026-10-08，站長從 4 個 mockup 選 C）**：活動類別原本是「匹配項目: X (類別: Y)」的尾巴灰字，太不顯眼；改由 `renderActivityInfo({ activityName })` 輸出成資訊區**第一行**「活動: **Y**」（`.activity-name` 黑色粗體），行序變成 活動 → 通路 → 期間 → 條件 → 登錄連結。只有搜尋結果傳 `activityName`——詳情頁回饋卡的類別已經是卡片標題，不重複。同一張卡出現兩次（如 Richart 數趣刷／Chill刷）時就靠這行分辨。同日：回饋率下的「(分級: Level 1)」以 `{level}` 為界切成兩段 `.level-label-seg`（各自 nowrap），手機回饋率欄只有約 59px，以前會折成「(分級: Level」＋孤零零的「1)」；現在只會在「分級:」後整齊斷開，「固定回饋方案」這類長級別名由 grid 自動把欄位撐寬（320/360px 實測金額與上限欄仍維持一行）
 - **自動化回歸**：`node tools/regression/card-detail-test.js`（見 `docs/ops/regression.md`「卡片詳情頁」節）。改 `renderRateCard`、上述共用片段、或詳情頁任何一條 render 路徑後必跑
 - **不受影響**：行動支付比較 modal（`js/levels-payments.js`）也用 `.cashback-detail-item`，但沒有 `.rate-card`，樣式不變；停車折抵區塊維持原樣（不是回饋率）
+- **「比較所有行動支付回饋」modal（2026-10-08 站長要求）**：每張卡加「活動: ○○」行（同搜尋結果，`matchedCategory` 經 `getCategoryDisplayName`＋`escapeHtml`）；「最優回饋」改成搜尋結果那種貼右上框邊的角標，最優那張的卡名列 `margin-top` 讓出角標高度（用右側留白的話回饋率會和下面那張對不齊）；前三名支付在名稱前加金／銀／銅名次圓章 `.compare-payment-rank-N`。名次＝排序位置，同回饋率依序再比最優卡的消費上限（無上限最高）→ 第二張卡的回饋率；三者全同時仍照原始清單順序（2026-10-08 實測 Apple／Google／Samsung Pay 三者完全並列，分到 2、3 名與無名次）。樣式全部掛在 `#compare-payments-modal` 底下，單一支付的 `#payment-detail-modal` 與詳情頁 CUBE 的行內 `.best-badge` 不受影響
 
 ## 2. 卡片圖片資產
 

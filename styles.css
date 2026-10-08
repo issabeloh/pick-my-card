@@ -6136,10 +6136,79 @@ mark.cashback-search-hl {
 }
 
 .compare-payment-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 700;
     font-size: 1rem;
     color: #111827;
     margin-bottom: 8px;
+}
+
+/* 前三名支付的名次徽章（2026-10-08）：金／銀／銅實心圓＋白字 */
+.compare-payment-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+}
+.compare-payment-rank-1 { background: #f59e0b; }
+.compare-payment-rank-2 { background: #94a3b8; }
+.compare-payment-rank-3 { background: #c2773a; }
+
+/* 支付底下的每張卡（.cashback-detail-item）：卡名｜回饋率 一列 */
+#compare-payments-modal .cashback-detail-item {
+    position: relative;
+}
+.compare-payment-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.compare-payment-item-card {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 0;
+}
+.compare-payment-item-rate {
+    color: #059669;
+    font-weight: 700;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+/* 「活動: ○○」：內容黑色粗體，同搜尋結果 .matched-merchant .activity-name */
+#compare-payments-modal .activity-name {
+    color: #111827;
+    font-weight: 700;
+    font-style: normal;
+}
+
+/* 「最優回饋」比照搜尋結果卡片 .card-result .best-badge：貼合右上框邊的角標。
+   卡名列往下讓出角標高度（回饋率靠右會被角標蓋住；改用右側留白的話，
+   最優那張的回饋率會和下面那張對不齊） */
+#compare-payments-modal .cashback-detail-item .best-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    z-index: 2;
+    padding: 5px 12px 6px;
+    border-radius: 0 8px 0 10px;
+    letter-spacing: .03em;
+    font-weight: 700;
+    text-transform: none;
+}
+#compare-payments-modal .cashback-detail-item.best-cashback .compare-payment-item-head {
+    margin-top: 14px;
 }
 
 /* Mobile responsiveness for compare payments */

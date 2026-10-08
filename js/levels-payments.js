@@ -517,6 +517,7 @@ async function showComparePaymentsModal() {
                                     card: card,
                                     rate: result.rate,
                                     cap: result.cap,
+                                    category: result.matchedCategory || null,
                                     rateGroup: null
                                 });
                             }
@@ -549,7 +550,14 @@ async function showComparePaymentsModal() {
         }
 
         // Sort payments by highest rate
-        paymentsWithCards.sort((a, b) => b.cards[0].rate - a.cards[0].rate);
+        // 前三名要標名次徽章（2026-10-08），同回饋率的支付很多（實測 7 個並列 5%），
+        // 只比回饋率的話名次等於原始清單順序。同分依序再比：最優那張的消費上限（高者勝，無上限最高）
+        // → 第二名卡片的回饋率——都是「這個支付實際上能拿多少」，名次才講得出道理
+        const capOf = mc => (mc.cap ? mc.cap : Infinity);
+        paymentsWithCards.sort((a, b) =>
+            (b.cards[0].rate - a.cards[0].rate) ||
+            (capOf(b.cards[0]) === capOf(a.cards[0]) ? 0 : (capOf(b.cards[0]) > capOf(a.cards[0]) ? 1 : -1)) ||
+            ((b.cards[1] ? b.cards[1].rate : 0) - (a.cards[1] ? a.cards[1].rate : 0)));
 
         // Display compact comparison with 2-column grid
         contentContainer.innerHTML = '';
@@ -561,7 +569,7 @@ async function showComparePaymentsModal() {
             const gridContainer = document.createElement('div');
             gridContainer.className = 'compare-payments-grid';
 
-            paymentsWithCards.forEach(pwc => {
+            paymentsWithCards.forEach((pwc, paymentIndex) => {
                 const paymentCard = document.createElement('div');
                 paymentCard.className = 'compare-payment-card';
 
@@ -569,25 +577,35 @@ async function showComparePaymentsModal() {
                 pwc.cards.forEach((mc, index) => {
                     const isBest = index === 0;
                     let capText = mc.cap ? `NT$${Math.floor(mc.cap).toLocaleString()}` : '無上限';
+                    // 「最優回饋」比照搜尋結果卡片：貼右上框邊的角標（樣式見 styles.css「Compare Payments Modal」）
                     let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
+                    // 活動類別：比照搜尋結果資訊區的「活動: ○○」行
+                    const categoryLine = mc.category
+                        ? `<div class="cashback-condition">活動: <span class="activity-name">${escapeHtml(getCategoryDisplayName(mc.category))}</span></div>`
+                        : '';
 
                     cardsHTML += `
                         <div class="cashback-detail-item ${isBest ? 'best-cashback' : ''}" style="margin-top: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
-                                    ${bestBadge}
-                                </div>
-                                <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
+                            ${bestBadge}
+                            <div class="compare-payment-item-head">
+                                <span class="compare-payment-item-card">${escapeHtml(mc.card.name)}</span>
+                                <span class="compare-payment-item-rate">${mc.rate}%</span>
                             </div>
+                            ${categoryLine}
                             <div class="cashback-condition">消費上限: ${capText}</div>
                         </div>
                     `;
                 });
 
+                // 前三名支付標名次徽章 1／2／3（排序規則見上方 sort）
+                const rank = paymentIndex + 1;
+                const rankBadge = rank <= 3
+                    ? `<span class="compare-payment-rank compare-payment-rank-${rank}" aria-label="第 ${rank} 名">${rank}</span>`
+                    : '';
+
                 paymentCard.innerHTML = `
                     <div class="compare-payment-name">
-                        ${pwc.payment.name}
+                        ${rankBadge}<span>${escapeHtml(pwc.payment.name)}</span>
                     </div>
                     ${cardsHTML}
                 `;
