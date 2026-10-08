@@ -1866,6 +1866,12 @@ function checkAndShowSearchHint(searchTerm) {
 function dismissSearchHint() {
     const merchantInput = document.getElementById('merchant-input');
     dismissedHintTerm = merchantInput ? (merchantInput.value || '').trim().toLowerCase() : null;
+    clearSearchHints();
+}
+
+// 收掉畫面上的搜尋提示（不記住關鍵詞）。「一次比多家」型快捷搜尋換掉輸入框內容時用：
+// 那條路不走 handleMerchantInput，舊詞的提示不收會留著誤導（2026-10-08 站長回報）
+function clearSearchHints() {
     const searchHintsContainer = document.getElementById('search-hints-container');
     if (searchHintsContainer) {
         searchHintsContainer.innerHTML = '';
