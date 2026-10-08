@@ -209,7 +209,7 @@ const PAIRS = [
   await pg.click('#mp-feedback-btn');
   const fbOpen = await pg.evaluate(() => { const m = document.getElementById('feedback-modal'); const o = getComputedStyle(m).display !== 'none'; m.style.display = 'none'; if (typeof enableBodyScroll === 'function') enableBodyScroll(); return o; });
   check('點「回報給我們」→ 打開回報表單', fbOpen);
-  check('頁面說明改成三步驟說明卡', intro.steps === 3 && intro.text.includes('在查詢回饋的結果中按「加到我的小抄」') && intro.text.includes('活動自動存入以下刷卡小抄') && intro.text.includes('結帳前看一眼'), JSON.stringify(intro.steps));
+  check('頁面說明改成三步驟說明卡', intro.steps === 3 && intro.text.includes('在查詢回饋的結果中按「加到小抄」') && intro.text.includes('活動自動存入以下刷卡小抄') && intro.text.includes('結帳前看一眼'), JSON.stringify(intro.steps));
   const ro = await pg.evaluate(() => ({ nameBtns: document.querySelectorAll('#mp-list [data-mp-edit]').length, pens: document.querySelectorAll('#mp-list .mp-pen, #mp-list .mp-title-pen').length, titleTag: document.getElementById('mp-title-btn').tagName,
     acts: [...document.querySelectorAll('.mp-actions .mp-act')].map(a => [a.querySelector('button').textContent.trim(), a.querySelector('.mp-act-note').textContent.trim()]),
     searchIcon: getComputedStyle(document.getElementById('mp-search')).backgroundImage.includes('svg'), phSize: getComputedStyle(document.getElementById('mp-search'), '::placeholder').fontSize,
