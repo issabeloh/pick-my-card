@@ -3030,6 +3030,17 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* 資訊區第一行「活動: ○○」的內容：黑色粗體，比照 .spend-threshold-note 的強調（2026-10-08） */
+.matched-merchant .activity-name {
+    color: #111827;
+    font-weight: 700;
+}
+
+/* 回饋率下方的「(分級: Level 1)」：兩段各自不折行，避免只剩「1)」掉到下一行 */
+.level-label-seg {
+    white-space: nowrap;
+}
+
 /* 「活動期間 / 條件」在 results-display.js 是用 <small> 包的，瀏覽器預設 0.83em 讓它
    縮到約 10px 讀不清。2026-08-16 用戶定案：與同一區塊的「匹配項目」同字級。 */
 .matched-merchant small {
