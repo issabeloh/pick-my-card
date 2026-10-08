@@ -662,7 +662,17 @@ function compareSpotlightMerchant(merchant, opts) {
 
     const options = (cardsData && cardsData.quickSearchOptions) ? cardsData.quickSearchOptions : [];
     const normalized = merchant.trim().toLowerCase();
-    const matchedOption = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
+    let matchedOption = options.find(o => o.displayName && o.displayName.trim().toLowerCase() === normalized);
+
+    // asTyped（商家落地頁／?merchant= 深連結，2026-10-08）：要跟「用戶在首頁搜尋框自己打這個詞」
+    // 完全一樣。商家名剛好也是快捷搜尋名稱時（如 LinePay），以前一律走快捷搜尋路徑，而那條路
+    // 刻意不受「精準搜尋」影響、也不顯示 Search Hints——於是商家頁勾精準搜尋沒反應、沒有提示，
+    // 跟首頁打字搜尋不一致（站長回報）。現在只要這個詞自己就搜得到東西，就走打字路徑；
+    // 只有自己搜不到（「所有計程車」這種類別名，首頁打字也搜不到）才退回快捷搜尋。
+    // ⚠️ tools/lib/merchant-cards.js 的 resolveMatchedItems() 照抄這條規則，改這裡要一起改
+    if (matchedOption && opts.asTyped && (findMatchingItem(merchant) || []).length > 0) {
+        matchedOption = null;
+    }
 
     if (matchedOption) {
         // handleQuickSearch 只填入關鍵詞（不自動計算）；其結尾的 validateInputs()
@@ -1218,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             _authUIRefs.showToolSections();
         }
         window.__pmcSuppressNextScroll = true; // 開頁自動計算不捲動（displayResults 讀取後清除）
-        compareSpotlightMerchant(String(deepLinkMerchant), { noScroll: true });
+        compareSpotlightMerchant(String(deepLinkMerchant), { noScroll: true, asTyped: true });
     }
 
     // Embed 模式（新戶活動頁 iframe，2026-07-16）：告知父頁（promos.js）已就緒可以開卡，
@@ -1612,6 +1622,14 @@ function setupEventListeners() {
         if (currentQuickSearchOption) return;
         if (merchantInput.value.trim()) {
             handleMerchantInput();
+            // 畫面上已經有結果時直接重算（2026-10-08）：以前只更新「匹配到:」那行，結果卡片要等
+            // 用戶再按一次「計算」才會變，兩者對不上。商家落地頁開頁就有結果，最容易踩到
+            // （站長回報「商家頁勾精準搜尋沒用」）。重算不捲動，用戶留在勾選框旁邊
+            if (resultsSection && resultsSection.style.display !== 'none' && !calculateBtn.disabled) {
+                window.__pmcSuppressNextScroll = true;
+                // calculateCashback 若中途 return 沒走到 displayResults，旗標會留著吃掉用戶下一次搜尋的捲動
+                Promise.resolve(calculateCashback()).finally(() => { window.__pmcSuppressNextScroll = false; });
+            }
         } else {
             toggleExactSearchEmptyHint(false);
         }

@@ -667,7 +667,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 1. `filterExpiredRates` —— 濾過期活動
 2. `mergeDataSearchExclusions` —— 併入 SearchExclusions 排除規則
 3. `buildCardItemsIndex` —— 建搜尋索引
-4. 商家名若等於某快捷搜尋的 `displayName` → 走 `handleQuickSearch` 的多關鍵詞路徑
+4. 商家名**自己搜不到任何東西**、且等於某快捷搜尋的 `displayName`（如「所有計程車」）→ 走 `handleQuickSearch` 的多關鍵詞路徑；自己搜得到（含 LinePay 這種剛好也是快捷名稱的）→ 當一般打字搜尋。2026-10-08 起與頁面的 `compareSpotlightMerchant(…, { asTyped: true })` 同一條規則：以前只要等於快捷名稱就走快捷路徑，而快捷路徑刻意不受精準搜尋影響、也不顯示 Search Hints，商家頁因此跟首頁打字搜尋不一致（站長回報）
 
 **踩過的坑（都會讓清單與畫面對不上，且不會報錯）**：
 
