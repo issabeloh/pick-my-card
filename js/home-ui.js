@@ -654,6 +654,53 @@ function closeSpotlightModal() {
 // Auto-fill the merchant search and run the comparison. If the merchant matches
 // a quick-search option's displayName (e.g. 所有加油站), trigger that multi-keyword
 // search; otherwise do a plain single-merchant search.
+// ===== 計算鈕提醒（calc-nudge）=====
+// 讓「計算回饋」閃一下，指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
+// 用在兩個地方：推薦活動「帶入查詢」之後；以及「條件已變更」——算過一次之後，商家、金額、
+// 精準搜尋、新戶活動、快捷搜尋任一改了，畫面上的結果就是舊條件算的（站長 2026-10-08 定案：
+// 一律按「計算」才更新、不自動重算，所以用閃一下提醒）。
+function nudgeCalculateBtn() {
+    const calcBtn = document.getElementById('calculate-btn');
+    if (!calcBtn || calcBtn.disabled) return;
+    calcBtn.classList.remove('calc-nudge');
+    void calcBtn.offsetWidth; // 重新觸發動畫（連續修改時從頭再閃）
+    calcBtn.classList.add('calc-nudge');
+    clearTimeout(nudgeCalculateBtn._timer);
+    nudgeCalculateBtn._timer = setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
+}
+
+// 上一次計算時的條件快照；null＝還沒算過（還沒有結果，不需要提醒）。
+// 精準搜尋只在非快捷搜尋時影響結果（見 isTypingHelperQuickOption 的說明），快捷搜尋時不列入；
+// 金額空白＝預設 1000，兩者視為相同
+let lastCalcConditions = null;
+function currentCalcConditions() {
+    const merchantEl = document.getElementById('merchant-input');
+    const amountEl = document.getElementById('amount-input');
+    return JSON.stringify([
+        merchantEl ? merchantEl.value.trim().toLowerCase() : '',
+        amountEl ? (amountEl.value.trim() || '1000') : '1000',
+        currentQuickSearchOption ? null : isExactSearchEnabled(),
+        typeof showCardholderPromos !== 'undefined' ? showCardholderPromos : false
+    ]);
+}
+// calculateCashback() 開頭呼叫：記下這次用的條件，並停掉進行中的提醒（已經在算了）
+function rememberCalcConditions() {
+    lastCalcConditions = currentCalcConditions();
+    const calcBtn = document.getElementById('calculate-btn');
+    if (calcBtn) calcBtn.classList.remove('calc-nudge');
+}
+// 各條件的變更處呼叫：算過、而且條件跟上次不同才閃；改回跟上次一樣就停（逐字打回原商家時，
+// 打到一半的字會先觸發閃動，打完那一下要收掉）
+function nudgeIfCalcConditionsChanged() {
+    if (lastCalcConditions === null) return;
+    if (currentCalcConditions() === lastCalcConditions) {
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn) calcBtn.classList.remove('calc-nudge');
+        return;
+    }
+    nudgeCalculateBtn();
+}
+
 function compareSpotlightMerchant(merchant, opts) {
     if (!merchant) return;
     opts = opts || {};
@@ -682,13 +729,7 @@ function compareSpotlightMerchant(merchant, opts) {
         if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // 不 focus 輸入框：手機上會彈出鍵盤蓋住「計算回饋」。改成讓計算鈕閃一下，
         // 指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
-        const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn) {
-            calcBtn.classList.remove('calc-nudge');
-            void calcBtn.offsetWidth;
-            calcBtn.classList.add('calc-nudge');
-            setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
-        }
+        nudgeCalculateBtn();
         return;
     }
 
@@ -1611,7 +1652,7 @@ function setupEventListeners() {
         });
         if (currentQuickSearchOption) return;
         if (merchantInput.value.trim()) {
-            handleMerchantInput();
+            handleMerchantInput(); // 結尾會判斷要不要提醒按計算
         } else {
             toggleExactSearchEmptyHint(false);
         }
@@ -1646,6 +1687,7 @@ function setupEventListeners() {
     amountInput.addEventListener('input', () => {
         amountInput.dataset.userModified = 'true';
         validateInputs();
+        nudgeIfCalcConditionsChanged();
     });
 
     // Calculate button
@@ -1798,13 +1840,11 @@ function checkAndShowSearchHint(searchTerm) {
     const hint = cardsData.searchHints?.[key];
     const suggestions = (hint && Array.isArray(hint.suggestions)) ? hint.suggestions.filter(Boolean) : [];
     // 沒填 suggestions 也要顯示 display_message（2026-10-08 站長要求：有些提示只是要講一句話）。
-    // 但 Apps Script 在 display_message 留空時會補預設句「💡 建議也搜尋：」——
-    // 沒有建議詞時這句話沒有意義，此時不顯示
-    const DEFAULT_HINT_MESSAGE = '💡 建議也搜尋：';
-    const message = hint && hint.message ? String(hint.message) : '';
-    const hasMessage = message && (suggestions.length > 0 || message.trim() !== DEFAULT_HINT_MESSAGE.trim());
+    // 文案一定是編輯寫的：Apps Script 對啟用的列要求 display_message 必填，空白的列根本不匯出
+    // （以前會補預設句「💡 建議也搜尋：」，前端得猜那句是不是系統補的，已拿掉）
+    const message = hint && hint.message ? String(hint.message).trim() : '';
 
-    if (hint && (suggestions.length > 0 || hasMessage)) {
+    if (message || suggestions.length > 0) {
         const hintDiv = document.createElement('div');
         hintDiv.className = 'search-hint' + (suggestions.length === 0 ? ' search-hint-message-only' : '');
         // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
@@ -1896,5 +1936,6 @@ function handleMerchantInput() {
     }
 
     validateInputs();
+    nudgeIfCalcConditionsChanged();
 }
 

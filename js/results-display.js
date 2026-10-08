@@ -444,7 +444,8 @@ function setupCardholderPromoToggle() {
             if (cb && cb !== e.target) cb.checked = showCardholderPromos;
         });
         // Don't auto-recompute — toggle is part of setup, user clicks
-        // "計算回饋" to apply.
+        // "計算回饋" to apply. 已經算過時讓計算鈕閃一下提醒（js/home-ui.js「計算鈕提醒」）
+        if (typeof nudgeIfCalcConditionsChanged === 'function') nudgeIfCalcConditionsChanged();
     };
     ids.forEach(id => {
         const cb = document.getElementById(id);

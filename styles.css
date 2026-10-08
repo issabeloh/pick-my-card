@@ -8666,8 +8666,8 @@ mark.cashback-search-hl {
     cursor: pointer;
 }
 
-/* 「帶入查詢」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
-   （見 js/home-ui.js 的 compareSpotlightMerchant fillOnly 分支） */
+/* 讓「計算回饋」閃一下指出下一步在哪：推薦活動「帶入查詢」之後、以及算過之後條件又被改了
+   （見 js/home-ui.js「計算鈕提醒」nudgeCalculateBtn） */
 .calculate-btn.calc-nudge {
     animation: calcNudgePulse 0.8s ease-out 2;
 }

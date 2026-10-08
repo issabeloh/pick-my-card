@@ -38,7 +38,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
 4. **Merchant Payments** —— 商家付款方式（merchant, online_payment, offline_payment, source_url, last_updated）
-5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）
+5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）。**active 為 TRUE 的列 keywords、display_message 必填**，缺一整列不匯出、`runQACheck()` 檢查 11 列出來（⚠️ 不擋匯出）；suggestions 選填，留空時前端只顯示文案。2026-10-08 以前 display_message 留空會補預設句「💡 建議也搜尋：」，已拿掉（前端分不出那句是不是系統補的）
 6. **FAQ** —— id, category, question, answer, order, isActive（依 order 排序）
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的

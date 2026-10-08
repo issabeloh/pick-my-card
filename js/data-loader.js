@@ -593,6 +593,8 @@ function handleQuickSearch(option) {
         currentQuickSearchOption = null;
         console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
+    // 已經算過時提醒按「計算」（協助輸入型走 handleMerchantInput，那邊自己會判斷）
+    if (typeof nudgeIfCalcConditionsChanged === 'function') nudgeIfCalcConditionsChanged();
 
     merchantInput.focus();
     validateInputs();

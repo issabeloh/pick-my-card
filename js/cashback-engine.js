@@ -29,6 +29,9 @@ async function calculateCashback() {
         return;
     }
 
+    // 記下這次計算用的條件，之後條件變了才提醒用戶按「計算」（js/home-ui.js「計算鈕提醒」）
+    if (typeof rememberCalcConditions === 'function') rememberCalcConditions();
+
     // Loading overlay 延遲顯示：多數計算（包含訪客的全部案例）在 80-155ms 內完成，
     // 立刻顯示 overlay 對快搜尋只會造成閃爍、沒有實際回饋感。改成「超過 150ms 才顯示」
     // ——只有真的慢（主要是登入用戶第一次計算要序列等 Firestore getDoc）才會看到。

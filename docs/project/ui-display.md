@@ -339,8 +339,9 @@ Grep `titleParts`）：
 - **快捷搜尋分兩型**（2026-10-08 站長定義，判斷集中在 `isTypingHelperQuickOption()`，`js/data-loader.js`）：
   - **一次比多家**（`merchants` 多個關鍵詞，如所有計程車）：不受精準搜尋影響（`handleQuickSearch` 不傳 exactOnly；`currentQuickSearchOption` 非 null 時切換核取方塊不重跑匹配），也不跳 Search Hints。理由：關鍵詞清單靠模糊比對把同一家的各種寫法收進來（「台灣大車隊」→「55688台灣大車隊」），套精準會砍掉變體；輸入框顯示的是類別名，拿它查提示或精準比對沒有意義
   - **協助輸入**（只有一個關鍵詞，如 LinePay、街口支付、ApplePay、悠遊卡、日本網購）：按下＝把 displayName 打進搜尋框再走 `handleMerchantInput()`，精準搜尋、Search Hints 全照打字規則。（導入時驗過這 5 個：打 displayName 與查關鍵詞的匹配完全相同，所以不精準時結果不變；勾精準時「悠遊卡」會變成零結果，因為資料裡的 item 是「悠遊卡自動加值」——跟自己打字一樣）。用戶自訂快捷同樣適用
-  - 勾／取消精準搜尋只更新匹配狀態列，**不自動重算**結果卡片，要用戶再按「計算」（2026-10-08 站長確認，自動重算的做法被否決）
-- **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有建議詞就顯示文案＋按鈕；**沒有建議詞也顯示 display_message**（2026-10-08；`.search-hint-message-only`）。例外：display_message 留空時 Apps Script 會補預設句「💡 建議也搜尋：」，沒有建議詞時這句無意義，前端不顯示（前端常數 `DEFAULT_HINT_MESSAGE` 必須與 `cards-export.gs` 的預設句一致）。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
+  - 勾／取消精準搜尋只更新匹配狀態列，**不自動重算**結果卡片，要用戶再按「計算」（2026-10-08 站長確認，自動重算的做法被否決；理由：精準搜尋跟商家、金額、快捷搜尋同屬送出前的查詢條件，同一組條件一律按「計算」才生效）
+- **條件已變更提醒**（2026-10-08，`js/home-ui.js`「計算鈕提醒」）：算過一次之後，商家、金額、精準搜尋（快捷搜尋時不算）、新戶活動、快捷搜尋任一改了，「計算回饋」鈕閃一下（`.calc-nudge`，同推薦活動「帶入查詢」那個動畫）；改回跟上次計算一樣就停。條件快照在 `calculateCashback()` 開頭由 `rememberCalcConditions()` 記下。**新增會影響結果的查詢條件時，要加進 `currentCalcConditions()`，並在它的變更處呼叫 `nudgeIfCalcConditionsChanged()`**
+- **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有文案就顯示，建議詞選填（沒有建議詞時只顯示文案，`.search-hint-message-only`，2026-10-08）。文案必填由 Apps Script 保證（見 data-pipeline.md 第 2 節 Search Hints），前端不做預設句。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）
