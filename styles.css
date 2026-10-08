@@ -6182,7 +6182,7 @@ mark.cashback-search-hl {
     height: 12px;
 }
 .pin-btn::after {
-    content: '加到我的小抄';
+    content: '加到小抄';
 }
 
 .pin-btn:hover {
@@ -6197,7 +6197,7 @@ mark.cashback-search-hl {
     color: #ffffff;
 }
 .pin-btn.pinned::after {
-    content: '已加到我的小抄';
+    content: '已加到小抄';
 }
 
 .pin-btn.pinned:hover {
