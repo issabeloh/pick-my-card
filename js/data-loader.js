@@ -575,8 +575,10 @@ function handleQuickSearch(option) {
     merchantInput.value = option.displayName;
     // 快捷搜尋不走 handleMerchantInput，清除 ✕ 的顯示要自己更新
     if (typeof updateMerchantClearBtn === 'function') updateMerchantClearBtn();
-    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示；
+    // 也不跳 Search Hints，上一個詞的提示一起收掉（協助輸入型走 handleMerchantInput，會自己換成新詞的提示）
     toggleExactSearchEmptyHint(false);
+    if (typeof clearSearchHints === 'function') clearSearchHints();
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
