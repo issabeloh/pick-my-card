@@ -1300,15 +1300,20 @@ function renderSpendThresholdNote(minSpend) {
 }
 
 // 卡片下方的資訊區 .matched-merchant。行序固定：
-//   通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
+//   活動（activityName，只有搜尋結果傳；詳情頁回饋卡的類別已經是卡片標題，不重複）
+//   → 通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
 //   → 條件 → 銀行官方登錄連結
+// activityName 是純文字，這裡負責 escape。
 // conditions 可以是字串或字串陣列。collapsibleConditions＝true 時條件用可收合的
 // renderConditionLine（詳情頁卡片多、條件長）；搜尋結果維持整段顯示。
 // ⚠️ 條件文字照舊原樣輸出、不 escape——兩條路徑一向如此，改了可能動到 Sheets 裡刻意的格式，
 //    要改請兩邊一起評估。matchHtml 由呼叫端負責 escape。
-function renderActivityInfo({ matchHtml = '', period = '', endingSoonBadge = '', conditions = null,
+function renderActivityInfo({ activityName = '', matchHtml = '', period = '', endingSoonBadge = '', conditions = null,
                               collapsibleConditions = false, registerLink = '', extraClass = '' } = {}) {
     const lines = [];
+    // 活動類別（2026-10-08 站長選定）：原本塞在匹配項目尾巴的「(類別: …)」太不顯眼，
+    // 抽成資訊區第一行、內容黑色粗體——同一張卡有兩個方案（如 Richart 數趣刷／Chill刷）時靠它分辨
+    if (activityName) lines.push(`<div class="activity-info-line">活動: <span class="activity-name">${escapeHtml(activityName)}</span></div>`);
     if (matchHtml) lines.push(`<div class="activity-info-line">${matchHtml}</div>`);
     if (period) {
         lines.push(`<div class="activity-info-line">活動期間: ${escapeHtml(period)}${endingSoonBadge}</div>`);
@@ -1347,9 +1352,18 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     let rateDisplay = result.rate > 0 ? `${result.rate}%` : '0%';
 
     // Generate level label if card has levels and levelLabelFormat
+    // 回饋率那欄在手機只有約 100px，整句自由折行會折成「(分級: Level」＋孤零零的「1)」。
+    // 以 {level} 為界切成兩段、各自不折行：放得下就一行，放不下只會在「分級:」後面整齊斷開
     let levelLabel = '';
     if (result.card.hasLevels && result.card.levelLabelFormat && result.selectedLevel) {
-        levelLabel = result.card.levelLabelFormat.replace('{level}', result.selectedLevel);
+        const fmt = result.card.levelLabelFormat;
+        const at = fmt.indexOf('{level}');
+        const head = at >= 0 ? fmt.slice(0, at) : fmt;
+        const tail = at >= 0 ? fmt.slice(at + '{level}'.length) : '';
+        const levelPart = at >= 0 ? result.selectedLevel + tail : '';
+        levelLabel = [`(${head.trimEnd()}`, `${levelPart})`]
+            .map(seg => `<span class="level-label-seg">${escapeHtml(seg)}</span>`)
+            .join(head.endsWith(' ') ? ' ' : '');
     }
 
     // Ending-soon badge (inline, next to period text)
@@ -1395,7 +1409,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">(${levelLabel})</small>` : ''}</div>
+                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">${levelLabel}</small>` : ''}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
@@ -1451,7 +1465,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                         : `~${formatISODateForDisplay(periodEnd)}`;
                 }
 
-                const categoryInfo = result.matchedCategory ? ` (類別: ${getCategoryDisplayName(result.matchedCategory)})` : '';
 
                 // Special handling for Yushan Uni card exclusions in search results
                 let exclusionNote = '';
@@ -1470,7 +1483,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 // 否則使用者在搜尋結果看不出這個活動有消費金額限制
                 // （見 docs/project/cross-slot-ref-and-minspend-spec.md）
                 return renderSpendThresholdNote(group && group.minSpend) + renderActivityInfo({
-                    matchHtml: `匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}${categoryInfo}`,
+                    activityName: result.matchedCategory ? getCategoryDisplayName(result.matchedCategory) : '',
+                    matchHtml: `匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}`,
                     period: periodText,
                     endingSoonBadge: endingSoonInlineBadge,
                     conditions: group && group.conditions,
