@@ -2153,7 +2153,9 @@ input[type="number"]:focus {
 
 .coupon-results-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 
@@ -2236,7 +2238,9 @@ input[type="number"]:focus {
 
 .parking-benefits-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 
@@ -6167,15 +6171,20 @@ mark.cashback-search-hl {
 .payment-rank-medal-3 .prm-ring { stroke: #9a3412; }
 .payment-rank-medal-3 .prm-num  { fill: #7c2d12; }
 
-/* 支付底下的每張卡：沿用搜尋結果卡片 .card-result 的整套樣式（含「最優回饋」角標），
-   這裡只補差異——白底（外層支付卡是灰底）、卡與卡的間距、卡名比支付名稱小一階 */
-.compare-payment-result {
+/* 行動支付的一張卡（renderPaymentCardResult；單一支付詳情與比較 modal 共用）：
+   沿用搜尋結果卡片 .card-result 的整套樣式（含「最優回饋」角標），這裡只補差異——
+   白底（比較 modal 外層支付卡是灰底）、卡名比支付名稱小一階 */
+.payment-card-result {
     background: #ffffff;
-    margin-top: 8px;
 }
-.compare-payment-result .card-name {
+.payment-card-result .card-name {
     font-size: 1rem;
 }
+/* 比較 modal：同一個支付底下兩張卡上下排，靠 margin 隔開（單一支付詳情是 grid，用 gap） */
+.compare-payment-card .payment-card-result {
+    margin-top: 8px;
+}
+
 /* Mobile responsiveness for compare payments */
 @media (max-width: 640px) {
     .compare-payments-grid {
@@ -8657,8 +8666,8 @@ mark.cashback-search-hl {
     cursor: pointer;
 }
 
-/* 「帶入查詢」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
-   （見 js/home-ui.js 的 compareSpotlightMerchant fillOnly 分支） */
+/* 讓「計算回饋」閃一下指出下一步在哪：推薦活動「帶入查詢」之後、以及算過之後條件又被改了
+   （見 js/home-ui.js「計算鈕提醒」nudgeCalculateBtn） */
 .calculate-btn.calc-nudge {
     animation: calcNudgePulse 0.8s ease-out 2;
 }

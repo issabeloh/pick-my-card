@@ -42,6 +42,11 @@ function onOpen() {
 // QA 檢查功能（保持不變）
 // ==========================================
 
+// Search Hints 的 active 欄：勾選框（true）或文字 TRUE/true 都算啟用（匯出與 QA 檢查 11 共用）
+function isSearchHintActive(active) {
+  return active === true || active === 'TRUE' || active === 'true';
+}
+
 function runQACheck() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dataSheet = ss.getSheetByName('Cards Data');
@@ -212,6 +217,24 @@ function runQACheck() {
           issues.push(['(變動紀錄)', '', 'id 對不到卡片', 'id',
             `「變動紀錄」的 id「${cid}」不在 Cards Data（列 ${badRows[cid].join('、')}），該筆異動不會出現在任何卡片`, '⚠️']);
         });
+      }
+    }
+  }
+
+  // 檢查 11: Search Hints 啟用的列必填 keywords 與 display_message（2026-10-08 新增）
+  // 匯出端會直接跳過這種列（見「匯出 Search Hints 資料」），這裡讓編輯知道哪幾列沒上線。
+  // 一律 ⚠️ 不擋匯出：少一則提示不該卡住整次發布。
+  const hintsQaSheet = ss.getSheetByName('Search Hints');
+  if (hintsQaSheet) {
+    const hData = hintsQaSheet.getDataRange().getValues();
+    const hHeaders = hData[0];
+    for (let i = 1; i < hData.length; i++) {
+      if (!isSearchHintActive(getValue(hData[i], hHeaders, 'active'))) continue;
+      const missing = ['keywords', 'display_message']
+        .filter(col => !String(getValue(hData[i], hHeaders, col) || '').trim());
+      if (missing.length > 0) {
+        issues.push(['(Search Hints)', '', '缺少必填欄位', missing.join('、'),
+          `Search Hints 第 ${i + 1} 列 active 為 TRUE，但 ${missing.join('、')} 空白——這列不會匯出`, '⚠️']);
       }
     }
   }
@@ -744,24 +767,29 @@ if (searchHintsSheet) {
 
   for (let i = 1; i < hintsData.length; i++) {
     const row = hintsData[i];
-    const keywordsStr = getValue(row, hintsHeaders, 'keywords');  // ← 改成 keywords
-    const active = getValue(row, hintsHeaders, 'active');
+    const keywordsStr = String(getValue(row, hintsHeaders, 'keywords') || '').trim();
+    const displayMessage = String(getValue(row, hintsHeaders, 'display_message') || '').trim();
 
     // 只匯出啟用的提示
-    if (!keywordsStr || (active !== true && active !== 'TRUE' && active !== 'true')) {
+    if (!isSearchHintActive(getValue(row, hintsHeaders, 'active'))) continue;
+
+    // 啟用的列 keywords、display_message 必填（2026-10-08）：缺一就不匯出，runQACheck 檢查 11 會列出來。
+    // 以前 display_message 留空會補預設句「💡 建議也搜尋：」，但前端分不出那是編輯寫的還是系統補的；
+    // 改成必填之後文案永遠是編輯自己寫的，前端有文案就顯示、不用再猜
+    if (!keywordsStr || !displayMessage) {
+      Logger.log('⚠️ Search Hints 第 ' + (i + 1) + ' 列已啟用但 keywords 或 display_message 空白，未匯出');
       continue;
     }
 
     const suggestions = getValue(row, hintsHeaders, 'suggestions');
-    const displayMessage = getValue(row, hintsHeaders, 'display_message');
 
     // 🔥 新增：將 keywords 字串分割成陣列
     const keywordsList = keywordsStr.split(',').map(k => k.trim().toLowerCase());
 
-    // 為每個 keyword 建立相同的提示
+    // 為每個 keyword 建立相同的提示（suggestions 選填：留空時前端只顯示文案）
     const hintObj = {
-      suggestions: suggestions ? suggestions.split(',').map(s => s.trim()) : [],
-      message: displayMessage || '💡 建議也搜尋：'
+      suggestions: suggestions ? String(suggestions).split(',').map(s => s.trim()).filter(Boolean) : [],
+      message: displayMessage
     };
 
     // 將每個 keyword 都對應到相同的提示

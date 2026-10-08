@@ -444,7 +444,8 @@ function setupCardholderPromoToggle() {
             if (cb && cb !== e.target) cb.checked = showCardholderPromos;
         });
         // Don't auto-recompute — toggle is part of setup, user clicks
-        // "計算回饋" to apply.
+        // "計算回饋" to apply. 已經算過時讓計算鈕閃一下提醒（js/home-ui.js「計算鈕提醒」）
+        if (typeof nudgeIfCalcConditionsChanged === 'function') nudgeIfCalcConditionsChanged();
     };
     ids.forEach(id => {
         const cb = document.getElementById(id);
@@ -1238,7 +1239,7 @@ function createCouponResultElement(coupon, amount) {
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="card-name-with-pin">
-                <div class="coupon-merchant">${coupon.cardName}</div>
+                <div class="coupon-merchant">${escapeHtml(coupon.cardName)}</div>
                 <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(coupon.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
             </div>
         </div>
@@ -1261,9 +1262,14 @@ function createCouponResultElement(coupon, amount) {
                 <div class="detail-value">${capText}</div>
             </div>
         </div>
-        <div class="matched-merchant">
-            條件: ${coupon.conditions}<br>匹配項目: <strong>${coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant}</strong>${coupon.period ? `<br>活動期間: ${coupon.period}` : ''}
-        </div>
+        ${renderActivityInfo({
+            // 下方資訊區走共用的 renderActivityInfo，行序與搜尋結果卡片相同（2026-10-08 站長要求統一；
+            // 以前是自己拼的「條件 → 匹配項目 → 活動期間」）。「即將結束」徽章也一併比照
+            matchHtml: `匹配項目: <strong>${escapeHtml(coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant)}</strong>`,
+            period: coupon.period || '',
+            endingSoonBadge: renderEndingSoonBadge(coupon.periodEnd),
+            conditions: coupon.conditions
+        })}
     `;
 
     return couponDiv;
@@ -1272,7 +1278,8 @@ function createCouponResultElement(coupon, amount) {
 // Create card result element
 // ===== 回饋卡共用片段（2026-10-06）=====
 // 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（renderRateCard，js/card-detail.js）
-// 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。兩邊共同的部分——徽章文字、
+// 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。領券型卡片（createCouponResultElement）、
+// 行動支付卡片（renderPaymentCardResult，js/levels-payments.js）的下方資訊區也走這裡的 renderActivityInfo。兩邊共同的部分——徽章文字、
 // 滿額門檻句、下方資訊區的行序——只寫在這裡，改一次兩邊一起變；不要在任一邊另外拼。
 
 // 「即將開始 (N天後)」徽章（放在卡片右上 .badges-container）；沒有 periodStart 回空字串
@@ -1300,7 +1307,8 @@ function renderSpendThresholdNote(minSpend) {
 }
 
 // 卡片下方的資訊區 .matched-merchant。行序固定：
-//   活動（activityName，只有搜尋結果傳；詳情頁回饋卡的類別已經是卡片標題，不重複）
+//   活動（activityName：搜尋結果、行動支付卡片 renderPaymentCardResult 會傳；
+//         詳情頁回饋卡的類別已經是卡片標題，不重複）
 //   → 通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
 //   → 條件 → 銀行官方登錄連結
 // activityName 是純文字，這裡負責 escape。

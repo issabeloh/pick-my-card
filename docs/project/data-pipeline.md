@@ -38,7 +38,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
 4. **Merchant Payments** —— 商家付款方式（merchant, online_payment, offline_payment, source_url, last_updated）
-5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）
+5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）。**active 為 TRUE 的列 keywords、display_message 必填**，缺一整列不匯出、`runQACheck()` 檢查 11 列出來（⚠️ 不擋匯出）；suggestions 選填，留空時前端只顯示文案。2026-10-08 以前 display_message 留空會補預設句「💡 建議也搜尋：」，已拿掉（前端分不出那句是不是系統補的）
 6. **FAQ** —— id, category, question, answer, order, isActive（依 order 排序）
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
@@ -667,7 +667,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 1. `filterExpiredRates` —— 濾過期活動
 2. `mergeDataSearchExclusions` —— 併入 SearchExclusions 排除規則
 3. `buildCardItemsIndex` —— 建搜尋索引
-4. 商家名若等於某快捷搜尋的 `displayName` → 走 `handleQuickSearch` 的多關鍵詞路徑
+4. 商家名若等於某個「一次比多家」型快捷搜尋的 `displayName`（如「所有計程車」）→ 走 `handleQuickSearch` 的多關鍵詞路徑；「協助輸入」型（`merchants` 只有一個關鍵詞，如 LinePay）在頁面上等同用戶打字，這裡也當一般搜尋。分界由前端 `isTypingHelperQuickOption()`（`js/data-loader.js`）決定，這支工具直接呼叫它、不另寫一份（2026-10-08；之前 LinePay 頁走快捷路徑，因而不受精準搜尋影響、也不顯示 Search Hints，跟首頁打字不一致）
 
 **踩過的坑（都會讓清單與畫面對不上，且不會報錯）**：
 
