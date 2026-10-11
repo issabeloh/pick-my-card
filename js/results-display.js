@@ -1345,7 +1345,8 @@ function renderActivityInfo({ activityName = '', matchHtml = '', period = '', en
 // 卡名與項目都來自 Sheets，一律 escapeHtml（鐵則 3）。ⓘ 詳情鈕沿用全站委派（data-card-id）
 function createExcludedCardResultElement(result) {
     const cardDiv = document.createElement('div');
-    // 「可能排除」（搜尋詞只是名單項目的一部分）同樣是灰卡，只有徽章、標籤、說明換字（2026-10-11 站長要求）
+    // 「可能排除」（搜尋詞只是名單項目的一部分）同樣是灰卡，只有標籤換成「可能屬於排除項目」（2026-10-11 站長要求；
+    //  徽章與說明刻意維持原字）
     const isMaybe = result.isMaybeExcluded === true;
     cardDiv.className = 'card-result fade-in excluded-card' + (isMaybe ? ' maybe-excluded-card' : '');
     const items = (result.excludedItems || []).map(escapeHtml).join('、');
@@ -1355,11 +1356,11 @@ function createExcludedCardResultElement(result) {
                 <div class="card-name">${escapeHtml(result.card.name)}</div>
                 <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(result.card.id)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
             </div>
-            <div class="badges-container"><div class="excluded-badge">${isMaybe ? '可能排除' : '一般消費排除'}</div></div>
+            <div class="badges-container"><div class="excluded-badge">一般消費排除</div></div>
         </div>
         <div class="excluded-card-body">
             <div class="excluded-card-match">${isMaybe ? '可能屬於排除項目' : '排除項目'}: <strong>${items}</strong></div>
-            <div class="excluded-card-note">${isMaybe ? '此卡一般消費不含上述項目，請確認你的消費是否屬於它' : '此卡的一般消費不含這個項目，刷卡無回饋'}</div>
+            <div class="excluded-card-note">此卡的一般消費不含這個項目，刷卡無回饋</div>
         </div>
     `;
     return cardDiv;

@@ -287,6 +287,9 @@ async function calculateCashback() {
     // 「可能排除」的卡不算——它們不一定沒回饋，不能一起說「都列為排除項目」
     const allBasicExcluded = basicExcludedCount > 0 && maybeExcludedCount === 0 && couponCount === 0 && upcomingCount === 0 &&
         !results.some(r => !r.isExcluded);   // 結果全是灰卡（有指定通路結果時不算）
+    // 結果全是灰卡、其中有可能排除 → 專用狀態列（showMaybeExcludedMessage）
+    const allGreyWithMaybe = maybeExcludedCount > 0 && couponCount === 0 && upcomingCount === 0 &&
+        results.length > 0 && !results.some(r => !r.isExcluded);
 
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
     // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
@@ -309,6 +312,8 @@ async function calculateCashback() {
     } else if (currentMatchedItem && !isBasicCashback) {
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
             `有 ${results.filter(r => !r.isExcluded).length} 筆活動符合你的選項`);
+    } else if (allGreyWithMaybe) {
+        showMaybeExcludedMessage(merchantValue, basicExcludedCount, maybeExcludedCount, currentMatchedItem);
     } else if (allBasicExcluded) {
         await showBasicExcludedMessage(merchantValue, basicExcludedCount, currentMatchedItem, cardsToCompare, amount);
     } else if (currentMatchedItem && matchedButNoActivity) {
@@ -317,10 +322,10 @@ async function calculateCashback() {
         showNoMatchMessage(merchantValue, cardsToCompare);
     }
     // 有灰色排除卡、但不是「全部排除」時：狀態列最後交代一行（有指定通路結果、只有即將開始／領券時也一樣）
-    if (basicExcludedCount > 0 && !allBasicExcluded) {
+    if (basicExcludedCount > 0 && !allBasicExcluded && !allGreyWithMaybe) {
         appendBasicExcludedNote(merchantValue, basicExcludedCount);
     }
-    if (maybeExcludedCount > 0) {
+    if (maybeExcludedCount > 0 && !allGreyWithMaybe) {
         appendBasicExcludedNote(merchantValue, maybeExcludedCount, true);
     }
 

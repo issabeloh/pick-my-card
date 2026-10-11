@@ -167,13 +167,14 @@ const META = readFixtureMeta();
   r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
   check('可能排除：那 2 張變灰卡，其餘照常', r.cards.length === total - 2 && r.excluded.length === 2 &&
     r.excluded.every(e => e.maybe && r.firstNames.slice(0, 2).includes(e.name)), JSON.stringify(r.excluded));
-  check('可能排除：標籤「可能屬於排除項目」、徽章「可能排除」、寫出完整項目、不出回饋欄位',
-    r.excluded.every(e => e.label === '可能屬於排除項目' && e.badge === '可能排除' && e.items === '臺北醫學大學附設zzz醫院費用' && !e.hasRateFields),
+  check('可能排除：標籤「可能屬於排除項目」、徽章維持「一般消費排除」、寫出完整項目、不出回饋欄位',
+    r.excluded.every(e => e.label === '可能屬於排除項目' && e.badge === '一般消費排除' && e.items === '臺北醫學大學附設zzz醫院費用' && !e.hasRateFields),
     JSON.stringify(r.excluded[0]));
-  check('可能排除：狀態列講「可能把…列為」', r.status.includes('另有 2 張卡可能把「zzz醫院費用」列為一般消費排除項目（見下方灰色卡片）'), r.status);
+  check('可能排除：狀態列補「另有 2 張卡可能排除…」', r.status.includes('另有 2 張卡可能排除「zzz醫院費用」（見下方灰色卡片）'), r.status);
   r = await search('zzz醫院費用', { all: ['臺北醫學大學附設zzz醫院費用'] });
-  check('可能排除：全部都是可能排除時，不說「都列為排除項目」', !/都沒有「zzz醫院費用」的活動，而且都把它列為/.test(r.status) &&
-    r.excluded.length === total, r.status);
+  check('可能排除：全部都是灰卡時用專用狀態列（不說「都列為排除」、也不說「以下顯示基本回饋」）',
+    r.excluded.length === total && r.status.includes(`有 ${total} 張卡可能排除「zzz醫院費用」，請看下方灰色卡片確認`) &&
+    !/都把它列為/.test(r.status) && !/以下結果顯示基本回饋/.test(r.status), r.status);
   r = await search('zzz費用', { first: 1, items: ['zzz費用'], });
   check('確定命中優先於可能命中', r.excluded.length === 1 && !r.excluded[0].maybe, JSON.stringify(r.excluded));
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
