@@ -914,11 +914,32 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
     toggleExactSearchEmptyHint(false);
 }
 
+// 結果全是灰卡、但其中有「可能排除」時的狀態列（2026-10-11 站長要求另寫）。
+// 不能用 showBasicExcludedMessage（那句說「都把它列為排除項目」，可能排除不一定），
+// 也不能用 showNoMatchMessage（那句說「以下結果顯示基本回饋」，下面其實全是灰卡）
+function showMaybeExcludedMessage(merchantValue, definiteCount, maybeCount, matchedItems) {
+    const safeName = escapeHtml(String(merchantValue || '').trim());
+    let messageHtml = matchedItems
+        ? `✓ 匹配到 <strong>${safeName}</strong>`
+        : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
+    if (definiteCount > 0) {
+        messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為一般消費排除項目，刷卡無回饋</span>`;
+    }
+    messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認</span>`;
+    matchedItemDiv.innerHTML = messageHtml;
+    matchedItemDiv.className = matchedItems ? 'matched-item' : 'matched-item no-match';
+    matchedItemDiv.style.display = 'block';
+    toggleExactSearchEmptyHint(false);
+}
+
 // 只有**部分**卡排除時：在狀態列最後補一行（那幾張以灰色「一般消費排除」卡片列在結果最下方）
-function appendBasicExcludedNote(merchantValue, excludedCount) {
+function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) {
     if (!matchedItemDiv || excludedCount <= 0) return;
     const count = Number(excludedCount) || 0;
-    const note = `<br><span class="matched-item-warn">另有 ${count} 張卡把「${escapeHtml(String(merchantValue || '').trim())}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
+    const name = escapeHtml(String(merchantValue || '').trim());
+    const note = isMaybe
+        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（見下方灰色卡片）</span>`
+        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }

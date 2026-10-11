@@ -1345,7 +1345,10 @@ function renderActivityInfo({ activityName = '', matchHtml = '', period = '', en
 // 卡名與項目都來自 Sheets，一律 escapeHtml（鐵則 3）。ⓘ 詳情鈕沿用全站委派（data-card-id）
 function createExcludedCardResultElement(result) {
     const cardDiv = document.createElement('div');
-    cardDiv.className = 'card-result fade-in excluded-card';
+    // 「可能排除」（搜尋詞只是名單項目的一部分）同樣是灰卡，只有標籤換成「可能屬於排除項目」（2026-10-11 站長要求；
+    //  徽章與說明刻意維持原字）
+    const isMaybe = result.isMaybeExcluded === true;
+    cardDiv.className = 'card-result fade-in excluded-card' + (isMaybe ? ' maybe-excluded-card' : '');
     const items = (result.excludedItems || []).map(escapeHtml).join('、');
     cardDiv.innerHTML = `
         <div class="card-header">
@@ -1356,7 +1359,7 @@ function createExcludedCardResultElement(result) {
             <div class="badges-container"><div class="excluded-badge">一般消費排除</div></div>
         </div>
         <div class="excluded-card-body">
-            <div class="excluded-card-match">排除項目: <strong>${items}</strong></div>
+            <div class="excluded-card-match">${isMaybe ? '可能屬於排除項目' : '排除項目'}: <strong>${items}</strong></div>
             <div class="excluded-card-note">此卡的一般消費不含這個項目，刷卡無回饋</div>
         </div>
     `;
@@ -1469,15 +1472,10 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         ${(() => {
             // 下方資訊區走共用的 renderActivityInfo（行序與詳情頁回饋卡相同，見該函式）
             if (isBasicCashback && !isUpcoming) {
-                // 「可能排除」：搜尋詞只是名單項目的一部分（搜「醫院費用」← 「臺北醫學大學附設醫院費用」），
-                // 照常顯示基本回饋，加一行灰字讓用戶自己判斷（站長選 B）。項目來自 Sheets，escapeHtml
-                const maybe = result.maybeExcludedItems && result.maybeExcludedItems.length
-                    ? `<div class="maybe-excluded-note">可能屬於一般消費排除項目：<strong>${result.maybeExcludedItems.map(escapeHtml).join('、')}</strong></div>`
-                    : '';
                 return renderActivityInfo({
                     matchHtml: '一般消費回饋率',
                     conditions: result.card.domesticBonusConditions
-                }) + maybe;
+                });
             } else if (result.matchedItem) {
                 // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。
                 //

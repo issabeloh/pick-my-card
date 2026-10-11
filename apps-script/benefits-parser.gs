@@ -85,14 +85,14 @@ function buildAutomationMenu_() {
       .addSeparator()
       // 登錄連結四步（register-link-finder.gs）；3 與下方「一般消費排除 2」是整個自動化檔裡
       // 僅有的兩個會寫入正式 Cards Data 的動作（各自只寫 registerLink_N／basicExclusions 欄，
-      // 後者只寫空白格；都會先跳確認視窗）
+      // 後者打 V 只寫空白格、打「覆蓋」才換掉已有名單；都會先跳確認視窗）
       .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
       .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
       .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
       .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive')
       .addSeparator()
       // 一般消費排除兩步（basic-exclusions-extractor.gs，2026-09-30）：
-      // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄、而且只寫空白格
+      // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄（V＝只寫空白格、覆蓋＝整格換掉）
       .addItem('一般消費排除 1：AI 從監控快照抽', 'extractBasicExclusionsFromSnapshots')
       .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData'))
     .addSeparator()
