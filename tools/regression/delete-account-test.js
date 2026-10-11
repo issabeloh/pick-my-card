@@ -56,7 +56,9 @@ function stub(url, provider){
     export function collection(){return {};}
     export function serverTimestamp(){return 0;}
     export function deleteField(){return 0;}
-    export function deleteDoc(ref){ globalThis.__deleted.push(ref.__coll+'/'+ref.__id); return ${R}; }`;
+    export function deleteDoc(ref){ globalThis.__deleted.push(ref.__coll+'/'+ref.__id); return ${R}; }
+    export function writeBatch(){ return { set(){}, delete(){}, commit(){ return Promise.resolve(); } }; }
+    export function increment(n){ return n; }`;
   if(url.includes('firebase-storage'))return `
     export function getStorage(){return {};} export function ref(){return {};}
     export function uploadBytes(){return ${R};} export function getDownloadURL(){return Promise.resolve('');}`;

@@ -21,7 +21,7 @@
 | `_headers` | Cloudflare Pages 讀的回應標頭設定（安全標頭）。⚠️ CSP 在 `-Report-Only` 觀察模式（轉正條件見檔內註解）；HSTS 已上到一年，**日後新增任何用瀏覽器開的子網域前必讀該條註解**（沒有 HTTPS 會直接連不上且無回報） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
 | `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
-| `functions/` | Firebase Cloud Functions（`notifyOnFeedback`：使用者送出意見回饋時即時 email／webhook 通知站長）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
+| `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest` 每日回饋摘要；`sendLoginLink` 寄 Email 連結登入信；`guardSignup`／`guardEmails` 註冊與寄信把關）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
 | `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。中間三支由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify` |
@@ -33,7 +33,7 @@
 1. `?v=` 一律是 `dev` 佔位、**任何情況都不要手動 bump**（2026-07-21 起版本號由 Cloudflare Pages 部署時執行 `tools/deploy-version.sh` 注入 commit hash；repo 內出現時間戳＝違規，preflight 會擋）
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 

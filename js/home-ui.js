@@ -22,53 +22,27 @@
 let spotlightItems = [];
 let spotlightPage = 0;
 // ============ 版位配置與分頁 ============
-// 🚧 主打卡版位（.is-feature 大卡）2026-09-03 暫時停用。
-// 停用原因：主打卡用完之後的頁面沒有主打位，翻頁時「有主打的頁」與「沒主打
-// 的頁」卡片形狀不同，看起來很亂。Highlights 工作表的 featured 欄照常匯出、
-// 前端照常收到（item.featured），只是暫時不拿來排版。
-// 要重新啟用：把 SPOTLIGHT_FEATURE_SLOTS 改回 true 即可，主打卡的
-// buildSpotlightPages 分支與 .is-feature / .is-mini 樣式都還在。
-const SPOTLIGHT_FEATURE_SLOTS = false;
-
+// 主打卡版位（.is-feature 大卡／.is-mini 小格）2026-09-03 停用、2026-10-02 程式全部移除，
+// 每頁一律是同樣直式卡。Highlights 工作表的 featured 欄若還在，前端不讀。
+//
 // 每頁筆數＝欄數 x 列數，一定填滿、不留落單的半排。
 // 斷點（768 / 1024）必須與 styles.css 的 .spotlight-track 一致。
-//   feat  ＝ 每頁的主打卡數（停用時不使用）
-//   grid  ＝ 有主打卡那一頁的一般卡數（停用時不使用）
-//   plain ＝ 沒有主打卡那一頁的一般卡數（＝目前每頁的實際張數）
 function spotlightLayout() {
     const w = window.innerWidth;
-    if (w <= 768)  return { key: 'mobile',  feat: 1, grid: 4, plain: 4 };  // 2 欄 x 2 列
-    if (w <= 1024) return { key: 'tablet',  feat: 1, grid: 3, plain: 3 };  // 3 欄 x 1 列
-    return                { key: 'desktop', feat: 2, grid: 4, plain: 4 };  // 4 欄 x 1 列
+    if (w <= 768)  return { key: 'mobile',  perPage: 4 };  // 2 欄 x 2 列
+    if (w <= 1024) return { key: 'tablet',  perPage: 3 };  // 3 欄 x 1 列
+    return                { key: 'desktop', perPage: 4 };  // 4 欄 x 1 列
 }
 
-// 每頁的內容：{ feature: [...], normal: [...] }
+// 每頁的內容：spotlightItems 的切片
 let spotlightPages = [];
 let spotlightLastLayout = spotlightLayout().key;
 
 function buildSpotlightPages() {
-    const cfg = spotlightLayout();
-    const featured = SPOTLIGHT_FEATURE_SLOTS ? spotlightItems.filter(it => it.featured) : [];
+    const { perPage } = spotlightLayout();
     const pages = [];
-
-    // 主打卡停用（或沒有人標 featured）→ 每頁等分成 cfg.plain 張一般卡
-    if (featured.length === 0) {
-        for (let i = 0; i < spotlightItems.length; i += cfg.plain) {
-            pages.push({ feature: [], normal: spotlightItems.slice(i, i + cfg.plain) });
-        }
-        return pages;
-    }
-
-    // 有標記 → 主打卡每頁最多 cfg.feat 則，用完之後的頁面就沒有主打位
-    const normal = spotlightItems.filter(it => !it.featured);
-    let fi = 0, ni = 0;
-    while (fi < featured.length || ni < normal.length) {
-        const page = { feature: [], normal: [] };
-        for (let k = 0; k < cfg.feat && fi < featured.length; k++) page.feature.push(featured[fi++]);
-        const quota = page.feature.length > 0 ? cfg.grid : cfg.plain;
-        for (let k = 0; k < quota && ni < normal.length; k++) page.normal.push(normal[ni++]);
-        if (page.feature.length === 0 && page.normal.length === 0) break;
-        pages.push(page);
+    for (let i = 0; i < spotlightItems.length; i += perPage) {
+        pages.push(spotlightItems.slice(i, i + perPage));
     }
     return pages;
 }
@@ -165,20 +139,9 @@ function renderSpotlightPage() {
     const page = spotlightPages[spotlightPage];
     if (!page) return;
 
-    // 主打卡在版面上是「整列（手機／平板）／跨兩欄（桌機）」，靠 .is-feature 掛樣式；
-    // 同頁其餘卡片掛 .is-mini（桌機才會縮成橫式小格）。index 要用原始
-    // spotlightItems 的位置，活動詳情 modal 才對得上。
+    // index 要用原始 spotlightItems 的位置，活動詳情 modal 才對得上
     const frag = document.createDocumentFragment();
-    page.feature.forEach(item => {
-        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
-        el.classList.add('is-feature');
-        frag.appendChild(el);
-    });
-    page.normal.forEach(item => {
-        const el = buildSpotlightCard(item, spotlightItems.indexOf(item));
-        if (page.feature.length > 0) el.classList.add('is-mini');
-        frag.appendChild(el);
-    });
+    page.forEach(item => frag.appendChild(buildSpotlightCard(item, spotlightItems.indexOf(item))));
 
     track.classList.remove('spotlight-fade-in');
     track.innerHTML = '';
@@ -236,6 +199,10 @@ function buildSpotlightCard(item, index) {
     const daysLeft = getSpotlightDaysLeft(deadline);
     const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
         ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
+    // 卡片上只放短格式「至 M/D」（deadline 是 YYYY/MM/DD，不補零：10/31、2/28）。
+    // 「剩 N 天」出現時取代它——講的是同一件事，紅徽章更醒目，資訊列也才放得下
+    const endShort = (!daysBadge && /^\d{4}\/\d{2}\/\d{2}$/.test(deadline))
+        ? deadline.slice(5).replace(/^0/, '').replace(/\/0/, '/') : '';
 
     const hype = parseSpotlightHype(item.description);
     const hypeTag = hype
@@ -243,29 +210,23 @@ function buildSpotlightCard(item, index) {
 
     // 手機／平板（版式 C，參考 LINE 購物商品卡）：卡圖方塊在上（卡名壓在圖片左下角，
     // 省掉一整行高度）→ 大回饋率 → 商家 → 上限一行 → 底部兩顆按鈕。
-    // 主打卡（.is-feature）：同一份 DOM 換 CSS——.spotlight-body 在一般卡是
-    // display:contents（等於不存在），主打卡與小格才變成卡片的右半欄。
-    // .spotlight-cardname-line 只有桌機小格顯示（在商家名下方）——小格的卡圖
-    // 換成純圖、不壓卡名膠囊，卡名改用這行文字。
-    // 到期日「至 X」不再上卡片，只留在
-    // 活動詳情 modal（buildSpotlightModalBody 的「活動期間／活動期限」）；
-    // 「剩 N 天」保留，那是急迫感提示、不是日期。
+    // 到期日以短格式「至 M/D」放在上限旁（2026-10-02 起；之前只在 modal），
+    // 完整「活動期間／活動期限」仍在活動詳情 modal（buildSpotlightModalBody）。
+    // 剩 0–14 天時改顯示「剩 N 天」紅徽章、取代「至 M/D」。資訊列不換行（換行會讓同排卡片高度不一）。
     card.innerHTML = `
         <div class="spotlight-ccwrap">
             <img class="spotlight-ccimg" src="assets/images/cards/${escapeHtml(item.card_id || '')}.png" alt="${escapeHtml(cardName)}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('noimg')">
             ${cardName ? `<span class="spotlight-cardname">${escapeHtml(cardName)}</span>` : ''}
         </div>
-        <div class="spotlight-body">
-            <div class="spotlight-rate-row">
-                ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
-                ${hypeTag}
-            </div>
-            <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
-            <div class="spotlight-cardname-line">${escapeHtml(cardName)}</div>
-            <div class="spotlight-info-row">
-                ${capText ? `<span class="spotlight-cap">上限 <b>${escapeHtml(capText)}</b></span>` : ''}
-                ${daysBadge}
-            </div>
+        <div class="spotlight-rate-row">
+            ${rate ? `<span class="spotlight-rate-num">${escapeHtml(rate)}</span>` : ''}
+            ${hypeTag}
+        </div>
+        <div class="spotlight-merchant">${escapeHtml(item.merchant || '')}</div>
+        <div class="spotlight-info-row">
+            ${capText ? `<span class="spotlight-cap">上限 <b>${escapeHtml(capText)}</b></span>` : ''}
+            ${endShort ? `<span class="spotlight-end">至 <b>${escapeHtml(endShort)}</b></span>` : ''}
+            ${daysBadge}
         </div>
         <div class="spotlight-card-actions">
             <button type="button" class="spotlight-compare-btn" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(cardName)}" data-merchant="${escapeHtml(item.merchant || '')}">帶入查詢</button>
@@ -693,6 +654,53 @@ function closeSpotlightModal() {
 // Auto-fill the merchant search and run the comparison. If the merchant matches
 // a quick-search option's displayName (e.g. 所有加油站), trigger that multi-keyword
 // search; otherwise do a plain single-merchant search.
+// ===== 計算鈕提醒（calc-nudge）=====
+// 讓「計算回饋」閃一下，指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
+// 用在兩個地方：推薦活動「帶入查詢」之後；以及「條件已變更」——算過一次之後，商家、金額、
+// 精準搜尋、新戶活動、快捷搜尋任一改了，畫面上的結果就是舊條件算的（站長 2026-10-08 定案：
+// 一律按「計算」才更新、不自動重算，所以用閃一下提醒）。
+function nudgeCalculateBtn() {
+    const calcBtn = document.getElementById('calculate-btn');
+    if (!calcBtn || calcBtn.disabled) return;
+    calcBtn.classList.remove('calc-nudge');
+    void calcBtn.offsetWidth; // 重新觸發動畫（連續修改時從頭再閃）
+    calcBtn.classList.add('calc-nudge');
+    clearTimeout(nudgeCalculateBtn._timer);
+    nudgeCalculateBtn._timer = setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
+}
+
+// 上一次計算時的條件快照；null＝還沒算過（還沒有結果，不需要提醒）。
+// 精準搜尋只在非快捷搜尋時影響結果（見 isTypingHelperQuickOption 的說明），快捷搜尋時不列入；
+// 金額空白＝預設 1000，兩者視為相同
+let lastCalcConditions = null;
+function currentCalcConditions() {
+    const merchantEl = document.getElementById('merchant-input');
+    const amountEl = document.getElementById('amount-input');
+    return JSON.stringify([
+        merchantEl ? merchantEl.value.trim().toLowerCase() : '',
+        amountEl ? (amountEl.value.trim() || '1000') : '1000',
+        currentQuickSearchOption ? null : isExactSearchEnabled(),
+        typeof showCardholderPromos !== 'undefined' ? showCardholderPromos : false
+    ]);
+}
+// calculateCashback() 開頭呼叫：記下這次用的條件，並停掉進行中的提醒（已經在算了）
+function rememberCalcConditions() {
+    lastCalcConditions = currentCalcConditions();
+    const calcBtn = document.getElementById('calculate-btn');
+    if (calcBtn) calcBtn.classList.remove('calc-nudge');
+}
+// 各條件的變更處呼叫：算過、而且條件跟上次不同才閃；改回跟上次一樣就停（逐字打回原商家時，
+// 打到一半的字會先觸發閃動，打完那一下要收掉）
+function nudgeIfCalcConditionsChanged() {
+    if (lastCalcConditions === null) return;
+    if (currentCalcConditions() === lastCalcConditions) {
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn) calcBtn.classList.remove('calc-nudge');
+        return;
+    }
+    nudgeCalculateBtn();
+}
+
 function compareSpotlightMerchant(merchant, opts) {
     if (!merchant) return;
     opts = opts || {};
@@ -721,13 +729,7 @@ function compareSpotlightMerchant(merchant, opts) {
         if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // 不 focus 輸入框：手機上會彈出鍵盤蓋住「計算回饋」。改成讓計算鈕閃一下，
         // 指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
-        const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn) {
-            calcBtn.classList.remove('calc-nudge');
-            void calcBtn.offsetWidth;
-            calcBtn.classList.add('calc-nudge');
-            setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
-        }
+        nudgeCalculateBtn();
         return;
     }
 
@@ -938,11 +940,12 @@ function showAnnouncementModal(index) {
 const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
 const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
 const SURVEY_INVITE_DELAY_MS = 1200;
-// 只在 2026 年 9 月整月彈。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
+// 只在 2026/9/1–10/11 彈（原訂 9 月整月；9/30 刷卡小抄上線當天單日收到 25 份回覆，
+// 站長 2026-10-01 決定延長到 10/11 底，讓那波新流量回訪時也問得到）。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
 // 那樣會變成「裝置本地時間」，人在國外或裝置時區設錯的用戶起訖點會整個偏掉。
 // 寫成帶時區的絕對時刻後，全世界同一瞬間開關。過期自動變 no-op，不用月底手動下架。
 const SURVEY_INVITE_START = '2026-09-01T00:00:00+08:00';
-const SURVEY_INVITE_END   = '2026-10-01T00:00:00+08:00';  // 不含這一刻
+const SURVEY_INVITE_END   = '2026-10-12T00:00:00+08:00';  // 不含這一刻＝10/11 23:59 為止
 let surveyInviteHandledThisSession = false;
 
 function isSurveyInvitePeriod() {
@@ -1001,7 +1004,7 @@ function isSurveyInviteAudience() {
 // 由 onAuthStateChanged 的登入／訪客兩個分支呼叫（auth-user-data.js）。
 function maybeShowSurveyInvite() {
     if (surveyInviteHandledThisSession) return;
-    if (!isSurveyInvitePeriod()) return;  // 只在 9 月
+    if (!isSurveyInvitePeriod()) return;  // 只在 9/1–10/11
     if (!isSurveyInviteAudience()) return;  // 登入用戶或回訪訪客，首訪不問
     // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
     // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
@@ -1199,6 +1202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!dataLoaded) {
         // If data loading fails, disable the app
         console.error('❌ 資料載入失敗，停用應用程式');
+        // 錯誤訊息已顯示在頁首；收掉「正在載入」，不然它會永遠轉下去
+        document.documentElement.classList.remove('pmc-returning-user');
         if (calculateBtn) calculateBtn.disabled = true;
         return;
     }
@@ -1244,6 +1249,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 落地用戶要能改搜其他商家、非唯讀。再自動搜尋本頁商家並即時計算（不自動捲動，
         // 讓頂部標題與搜尋框先入眼）。
         appStarted = true;
+        // 工具區要直接顯示，boot loader 一起收掉（它佔在頁籤下方，不收會把搜尋框往下推）
+        document.documentElement.classList.remove('pmc-returning-user');
         const inputSection = document.querySelector('.input-section');
         if (inputSection) inputSection.style.display = 'block';
         const supportedCards = document.querySelector('.supported-cards');
@@ -1645,7 +1652,7 @@ function setupEventListeners() {
         });
         if (currentQuickSearchOption) return;
         if (merchantInput.value.trim()) {
-            handleMerchantInput();
+            handleMerchantInput(); // 結尾會判斷要不要提醒按計算
         } else {
             toggleExactSearchEmptyHint(false);
         }
@@ -1680,6 +1687,7 @@ function setupEventListeners() {
     amountInput.addEventListener('input', () => {
         amountInput.dataset.userModified = 'true';
         validateInputs();
+        nudgeIfCalcConditionsChanged();
     });
 
     // Calculate button
@@ -1830,19 +1838,25 @@ function checkAndShowSearchHint(searchTerm) {
     }
 
     const hint = cardsData.searchHints?.[key];
+    const suggestions = (hint && Array.isArray(hint.suggestions)) ? hint.suggestions.filter(Boolean) : [];
+    // 沒填 suggestions 也要顯示 display_message（2026-10-08 站長要求：有些提示只是要講一句話）。
+    // 文案一定是編輯寫的：Apps Script 對啟用的列要求 display_message 必填，空白的列根本不匯出
+    // （以前會補預設句「💡 建議也搜尋：」，前端得猜那句是不是系統補的，已拿掉）
+    const message = hint && hint.message ? String(hint.message).trim() : '';
 
-    if (hint && hint.suggestions.length > 0) {
+    if (message || suggestions.length > 0) {
         const hintDiv = document.createElement('div');
-        hintDiv.className = 'search-hint';
+        hintDiv.className = 'search-hint' + (suggestions.length === 0 ? ' search-hint-message-only' : '');
         // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
+        // 鐵則 3：文案與建議詞都 escape；建議詞走 data 屬性，含單引號（如 Tomod's）也不會弄壞 onclick
         hintDiv.innerHTML = `
             <button type="button" class="search-hint-close" aria-label="關閉提示" onclick="dismissSearchHint()">✕</button>
-            <span class="hint-message">${hint.message}</span>
-            <div class="hint-suggestions">
-                ${hint.suggestions.map(s =>
-                    `<button class="hint-button" onclick="searchFromHint('${s}')">${s}</button>`
+            <span class="hint-message">${escapeHtml(message)}</span>
+            ${suggestions.length > 0 ? `<div class="hint-suggestions">
+                ${suggestions.map(s =>
+                    `<button class="hint-button" data-suggestion="${escapeHtml(s)}" onclick="searchFromHint(this.dataset.suggestion)">${escapeHtml(s)}</button>`
                 ).join('')}
-            </div>
+            </div>` : ''}
         `;
         searchHintsContainer.appendChild(hintDiv);
     }
@@ -1852,6 +1866,12 @@ function checkAndShowSearchHint(searchTerm) {
 function dismissSearchHint() {
     const merchantInput = document.getElementById('merchant-input');
     dismissedHintTerm = merchantInput ? (merchantInput.value || '').trim().toLowerCase() : null;
+    clearSearchHints();
+}
+
+// 收掉畫面上的搜尋提示（不記住關鍵詞）。「一次比多家」型快捷搜尋換掉輸入框內容時用：
+// 那條路不走 handleMerchantInput，舊詞的提示不收會留著誤導（2026-10-08 站長回報）
+function clearSearchHints() {
     const searchHintsContainer = document.getElementById('search-hints-container');
     if (searchHintsContainer) {
         searchHintsContainer.innerHTML = '';
@@ -1922,5 +1942,6 @@ function handleMerchantInput() {
     }
 
     validateInputs();
+    nudgeIfCalcConditionsChanged();
 }
 

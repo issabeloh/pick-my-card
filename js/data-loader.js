@@ -7,7 +7,7 @@
  *  - 快捷選項初始化/偏好載存    → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
  *  - 舊版偏好遷移              → "migrateLegacyQuickSearchOptions"
  *  - 快捷按鈕渲染/下拉         → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
- *  - 快捷搜尋觸發              → "handleQuickSearch"
+ *  - 快捷搜尋觸發／兩型判斷     → "handleQuickSearch" / "isTypingHelperQuickOption"
  * ============================================================ */
 function buildCardItemsIndex(card) {
     const itemsMap = new Map();
@@ -510,9 +510,30 @@ function closeQuickSearchDropdown() {
 }
 
 // Handle quick search button click
+// 快捷搜尋按鈕分兩種（2026-10-08 站長定義）：
+// - 「一次比多家」：merchants 有多個關鍵詞（所有計程車、三大電商平台…），把各關鍵詞的匹配聯集起來比較。
+//   這種刻意不受精準搜尋影響、也不跳 Search Hints：關鍵詞清單是編輯挑好的，靠模糊比對把同一家的
+//   各種寫法一起收進來（「台灣大車隊」→「55688台灣大車隊」），套精準搜尋會把這些變體砍掉、
+//   結果變少；輸入框顯示的又是類別名（所有計程車），拿它查提示或做精準比對都沒有意義。
+// - 「協助輸入」：merchants 只有一個關鍵詞（LinePay、街口支付、ApplePay…），沒有一次比多家的功能，
+//   按鈕只是替用戶把名稱打進搜尋框——之後的一切（精準搜尋、Search Hints、送出時重新匹配）
+//   都要跟用戶自己打字完全一樣。用戶自訂的快捷選項同樣適用這條規則。
+// ⚠️ tools/lib/merchant-cards.js（商家頁卡片清單）直接呼叫這支判斷，規則只寫在這裡
+function isTypingHelperQuickOption(option) {
+    return !!(option && Array.isArray(option.merchants) && option.merchants.length === 1);
+}
+
 function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
     if (!merchantInput || !cardsData) return;
+
+    // 協助輸入型：等同用戶在搜尋框打了這個名稱（handleMerchantInput 會清掉 currentQuickSearchOption、
+    // 套用精準搜尋、顯示 Search Hints、更新清除鈕與計算鈕），不走下面的多關鍵詞聯集
+    if (isTypingHelperQuickOption(option)) {
+        merchantInput.value = option.displayName;
+        handleMerchantInput();
+        return;
+    }
 
     console.log(`\n🔍 快捷搜索: ${option.displayName}`);
     console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
@@ -554,8 +575,10 @@ function handleQuickSearch(option) {
     merchantInput.value = option.displayName;
     // 快捷搜尋不走 handleMerchantInput，清除 ✕ 的顯示要自己更新
     if (typeof updateMerchantClearBtn === 'function') updateMerchantClearBtn();
-    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示；
+    // 也不跳 Search Hints，上一個詞的提示一起收掉（協助輸入型走 handleMerchantInput，會自己換成新詞的提示）
     toggleExactSearchEmptyHint(false);
+    if (typeof clearSearchHints === 'function') clearSearchHints();
 
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
@@ -572,6 +595,8 @@ function handleQuickSearch(option) {
         currentQuickSearchOption = null;
         console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
+    // 已經算過時提醒按「計算」（協助輸入型走 handleMerchantInput，那邊自己會判斷）
+    if (typeof nudgeIfCalcConditionsChanged === 'function') nudgeIfCalcConditionsChanged();
 
     merchantInput.focus();
     validateInputs();

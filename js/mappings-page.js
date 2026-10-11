@@ -5,7 +5,7 @@
  *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"
  *  - 商家顯示名稱（改名／重設，存雲端）    → "loadMerchantAliases" / "mpSetAlias"
  *  - 分組／分類／拼音字首                 → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
- *  - 失效檢查與「更新期限」              → "mpProbeAll" / "mpUpdateDeadlines"
+ *  - 失效檢查與「更新活動」              → "mpProbeAll" / "mpUpdateDeadlines"
  *  - 頁面開關與網址 /mappings            → "openMappingsPage" / "closeMappingsPage"
  *  - 收據 HTML                         → "mpReceiptHtml"
  *  - 拖曳排序（自訂）                   → "mpStartDrag"
@@ -29,7 +29,7 @@ const MP = {
     probed: false,
     probing: null,
     probeGen: 0,           // 登入／登出時 +1，讓舊的重算結果作廢
-    updated: null,          // 按過「更新期限」的結果 { ext, changed:[] }
+    updated: null,          // 按過「更新活動」的結果 { ext, changed:[] }
     search: '',
     editKey: null,
     exp: { fits: true, capacity: 0 },
@@ -300,7 +300,7 @@ function mpArrange(groups, sort) {
 }
 
 // ============================================
-// 失效檢查與「更新期限」
+// 失效檢查與「更新活動」
 // ============================================
 // 用站上同一支 calculateCardCashback() 重算：拿配對的卡片＋商家到最新資料裡找目前的活動。
 // 只讀不寫；級別透過 getCardLevel() 讀用戶存的值，絕不回寫（鐵則 1）。
@@ -600,8 +600,8 @@ function refreshMappingsEntry() {
 }
 
 // ============================================
-// 一次性改版提示（2026-09-30）：登入後，一顆「加到我的小抄」按鈕跳進「我的刷卡小抄」頁籤，
-// 頁籤彈一下並冒出說明氣泡。每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
+// 一次性改版提示（2026-09-30）：登入後在「我的刷卡小抄」頁籤下方冒出說明氣泡（站長決定不要飛入動畫）。
+// 每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
 // ============================================
 const MP_HINT_KEY = 'mpMovedHintCount';
 const MP_HINT_TIMES = 2;
@@ -620,47 +620,22 @@ function mpShowMovedHint(attempt = 0) {
     if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
     try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
 
-    const land = () => {
-        if (MP.open || !currentUser) return;   // 飛行途中用戶已點進頁籤或登出了
-        tab.classList.add('mp-tab-bump');
-        setTimeout(() => tab.classList.remove('mp-tab-bump'), 700);
-        const bubble = document.createElement('div');
-        bubble.className = 'mp-hint-bubble';
-        bubble.setAttribute('role', 'status');
-        bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
-        document.body.appendChild(bubble);
-        const r = tab.getBoundingClientRect();
-        const w = Math.min(280, innerWidth - 24);
-        bubble.style.width = w + 'px';
-        bubble.style.left = Math.max(12, Math.min(r.left + r.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
-        bubble.style.top = (r.bottom + 10) + 'px';
-        bubble.style.setProperty('--arrow-x', (r.left + r.width / 2 - parseFloat(bubble.style.left)) + 'px');
-        // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
-        const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
-        bubble.querySelector('button').addEventListener('click', close);
-        document.addEventListener('pointerdown', close, true);
-        window.addEventListener('scroll', close, { once: true, passive: true });
-        setTimeout(close, 6000);
-    };
-
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || !Element.prototype.animate) { land(); return; }
-    // 起點：畫面中間偏下（查詢結果卡片上按鈕的大概位置）；終點：頁籤中心
-    const fly = document.createElement('span');
-    fly.className = 'pin-btn mp-fly';
-    fly.setAttribute('aria-hidden', 'true');
-    fly.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>';
-    document.body.appendChild(fly);
-    const fw = fly.offsetWidth, fh = fly.offsetHeight;
-    const sx = innerWidth / 2 - fw / 2, sy = Math.min(innerHeight * 0.62, tr.bottom + 260);
-    const ex = tr.left + tr.width / 2 - fw / 2, ey = tr.top + tr.height / 2 - fh / 2;
-    const mx = (sx + ex) / 2, my = Math.min(sy, ey) - 90;   // 拋物線頂點
-    fly.animate([
-        { transform: `translate(${sx}px, ${sy}px) scale(1)`, opacity: 0 },
-        { transform: `translate(${sx}px, ${sy - 8}px) scale(1.12)`, opacity: 1, offset: 0.18 },
-        { transform: `translate(${mx}px, ${my}px) scale(1)`, opacity: 1, offset: 0.6 },
-        { transform: `translate(${ex}px, ${ey}px) scale(.45)`, opacity: 0.2 }
-    ], { duration: 1100, easing: 'cubic-bezier(.35,.1,.3,1)', fill: 'forwards' }).onfinish = () => { fly.remove(); land(); };
+    const bubble = document.createElement('div');
+    bubble.className = 'mp-hint-bubble';
+    bubble.setAttribute('role', 'status');
+    bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
+    document.body.appendChild(bubble);
+    const w = Math.min(280, innerWidth - 24);
+    bubble.style.width = w + 'px';
+    bubble.style.left = Math.max(12, Math.min(tr.left + tr.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
+    bubble.style.top = (tr.bottom + 10) + 'px';
+    bubble.style.setProperty('--arrow-x', (tr.left + tr.width / 2 - parseFloat(bubble.style.left)) + 'px');
+    // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
+    const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
+    bubble.querySelector('button').addEventListener('click', close);
+    document.addEventListener('pointerdown', close, true);
+    window.addEventListener('scroll', close, { once: true, passive: true });
+    setTimeout(close, 6000);
 }
 
 // ============================================
@@ -713,7 +688,10 @@ function mpTotalsHtml() {
 function mpReceiptHtml(sections, o) {
     const esc = escapeHtml;
     const star = g => g.dead ? '<span class="mp-star" aria-label="已失效">*</span>' : '';
-    const name = g => `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱">${esc(mpDisplayName(g))}${star(g)}${userMerchantAliases[g.key] ? `<span class="mp-pen">${MP_ICON.pen}</span>` : ''}</button>`;
+    // 商家名稱只有「編輯本頁」時可以點（改名／刪除），並顯示鉛筆；平常是純文字
+    const name = g => o.editing
+        ? `<button type="button" class="mp-nm" data-mp-edit="${esc(g.key)}" title="點一下改顯示名稱或刪除">${esc(mpDisplayName(g))}${star(g)}<span class="mp-pen">${MP_ICON.pen}</span></button>`
+        : `<span class="mp-nm">${esc(mpDisplayName(g))}${star(g)}</span>`;
     const grip = () => o.drag ? `<span class="mp-grip" data-mp-grip title="拖曳調整順序" aria-hidden="true">${MP_ICON.grip}</span>` : '';
     const thumb = e => `<button type="button" class="mp-cardbtn" data-mp-card="${esc(e.m.cardId)}" title="查看 ${esc(mpCardName(e.m.cardId, e.m.cardName))} 詳情"><img class="mp-th" src="assets/images/cards/${esc(e.m.cardId)}.png" alt="${esc(mpCardName(e.m.cardId, e.m.cardName))}" onerror="this.style.visibility='hidden'"></button>`;
     const due = e => `<span class="mp-due${mpIsHot(e) ? ' hot' : ''}${e.ext ? ' ext' : ''}">${esc(mpDueText(e))}</span>`;
@@ -741,9 +719,9 @@ function mpReceiptHtml(sections, o) {
             sections.map(s => sec(s) + s.items.map(g => `<div class="mp-f-row${g.dead ? ' mp-dead' : ''}" data-mp-row="${esc(g.key)}"><div class="mp-f-lead">${grip()}${name(g)}</div>${g.entries.map((e, i) => { const r2 = row2(e); return `<div class="mp-f-pick${i ? ' mp-alt' : ''}${e.dead ? ' mp-dead' : ''}${r2 ? ' has-row2' : ''}">${r2 ? '' : flag(e)}${useRow2 ? '' : labs(e)}<div class="mp-f-cols">${thumb(e)}${rate(e)}${due(e)}</div>${r2}${r2 ? flag(e) : ''}</div>`; }).join('')}</div>`).join('')).join('');
     }
     const anyDead = sections.some(s => s.items.some(g => g.dead || g.entries.some(e => e.dead)));
-    const note = anyDead ? '<div class="mp-note"><b>*</b> 活動已結束或有更動。點商家名稱可以移除。記得回網站更新最新活動！</div>' : '';
+    const note = anyDead ? `<div class="mp-note"><b>*</b> 活動已結束或有更動。${o.editing ? '點商家名稱可以移除' : '按「編輯本頁」後點商家名稱可以移除'}。記得回網站更新最新活動！</div>` : '';
     return `<div class="mp-rc${o.big ? ' lg' : ''}">
-        <div class="mp-rc-head"><span class="mp-store">${esc(mpMonthLabel())}</span><button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}${o.editing ? `<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span>` : ''}</button></div>
+        <div class="mp-rc-head">${o.upd ? `<button type="button" class="mp-upd" id="mp-update-btn" title="用最新活動資料重新比對：回饋率沒變的自動延長期限，回饋率變了的列出來提醒你" ${MP.updated ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '已是最新' : '更新活動'}</button>` : ''}<span class="mp-store">${esc(mpMonthLabel())}</span>${o.editing ? `<button type="button" class="mp-title mp-title-btn" id="mp-title-btn" title="點一下修改標題">${esc(mpTitle())}<span class="mp-title-pen" aria-hidden="true">${MP_ICON.pen}</span></button>` : `<span class="mp-title" id="mp-title-btn">${esc(mpTitle())}</span>`}</div>
         <div class="mp-eq" aria-hidden="true">${'='.repeat(80)}</div>
         ${body}${note}
         ${o.summary ? mpTotalsHtml() : ''}
@@ -832,8 +810,6 @@ function mpRender() {
             ${mpCardNamesChk('mp-cardnames-toggle', p)}
             ${mpCapsChk('mp-caps-toggle', p)}
             ${mpSummaryChk('mp-summary-toggle', p)}
-            <span class="mp-grow"></span>
-            <button type="button" class="mp-upd" id="mp-update-btn" ${MP.updated || !mpList().length ? 'disabled' : ''}>${MP_ICON.upd}${MP.updated ? '期限已是最新' : '更新期限'}</button>
         </div>`;
 
     // 編輯模式：設定、提示列、拖曳把手只在按「編輯」後出現；預設只看乾淨的小抄＋搜尋框
@@ -842,7 +818,7 @@ function mpRender() {
     if (editBtn) {
         // 圖示寫在 index.html，這裡只切換顯示與文字
         const t = editBtn.querySelector('.mp-edit-t'), pen = editBtn.querySelector('.mp-ico-pen'), ok = editBtn.querySelector('.mp-ico-ok');
-        if (t) t.textContent = MP.editing ? '完成' : '編輯'; else editBtn.textContent = MP.editing ? '完成' : '編輯';
+        if (t) t.textContent = MP.editing ? '完成' : '編輯本頁'; else editBtn.textContent = MP.editing ? '完成' : '編輯本頁';
         // SVG 沒有 .hidden 屬性，要用 attribute
         if (pen) pen.toggleAttribute('hidden', MP.editing);
         if (ok) ok.toggleAttribute('hidden', !MP.editing);
@@ -862,7 +838,7 @@ function mpRender() {
     }
 
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
-    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), savebar = mpEl('mp-savebar'), deadbarEl = mpEl('mp-deadbar');
+    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), deadbarEl = mpEl('mp-deadbar');
     const show = (el, on) => { if (el) el.hidden = !on; };
     // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
     show(guest, !currentUser);
@@ -871,14 +847,15 @@ function mpRender() {
     if (!currentUser && !MP.demo) {
         list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
         mpBuildDemo().then(() => { if (MP.open && !currentUser && MP.demo) { mpRender(); mpProbeAll(); } });
-        show(searchbox, false); show(savebar, false); show(deadbarEl, false); show(tip, false);
+        show(searchbox, false); show(deadbarEl, false); show(tip, false);
         return;
     }
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
-    const countEl = mpEl('mp-count');
-    if (countEl) { const n = mappings.length ? mpBuildGroups().length : 0; countEl.textContent = n ? `已加入 ${n} 家商家` : ''; }
-    show(searchbox, mappings.length > 0); show(savebar, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
+    // 商家數：#mp-count 在桌機左欄按鈕卡片裡、#mp-count-m 在手機小抄下方右側（CSS 各自只顯示一個）
+    const countText = mappings.length ? (n => n ? `已加入 ${n} 家商家` : '')(mpBuildGroups().length) : '';
+    ['mp-count', 'mp-count-m'].forEach(id => { const el = mpEl(id); if (el) el.textContent = countText; });
+    show(searchbox, mappings.length > 0); show(tip, MP.editing && mappings.length > 0);
     if (!mappings.length) {
         let title, hint, retry = false;
         show(deadbarEl, false); show(tip, false);
@@ -903,6 +880,7 @@ function mpRender() {
     list.innerHTML = mpReceiptHtml(sections, {
         layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, cardNames: p.cardNames, summary: p.summary, big: p.size === 'large',
         editing: MP.editing,   // 編輯中：標題旁顯示鉛筆（只在網頁上，存圖不畫）
+        upd: !!currentUser,    // 小抄右上角「更新活動」（2026-09-30 起不藏在編輯裡；範例清單不顯示，因為不能存）
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();
@@ -1548,12 +1526,27 @@ function mpExportOpts() {
     return { layout: x.layout, labels: x.layout === 'F' && x.labels, caps: x.caps, cardNames: x.cardNames, summary: x.summary, big: x.size === 'large', sort: x.sort, theme: p.theme, fmt: p.fmt, wall: mpWallSize() };
 }
 
+// 桌布扣掉上方時鐘、下方手電筒／相機鈕後，收據可用的高度（與 mpRenderCanvas 同算法）
+function mpWallAvail(o) {
+    const baseH = MP_BASE_W * o.wall.h / o.wall.w;
+    return baseH - Math.round(baseH * MP_WALL_TOP) - baseH * MP_WALL_BOTTOM;
+}
+
+// 桌布放不下時：逐一試「只關掉某個有勾的選項」能不能放下，回傳能放下的做法文字（給提示用，不改任何設定）
+function mpWallFixOptions(sel) {
+    const c = document.createElement('canvas').getContext('2d');
+    const o = mpExportOpts(), avail = mpWallAvail(o), sections = mpExportSections(sel);
+    return [['summary', '取消「顯示卡數與額度總和」'], ['cardNames', '取消「顯示卡片名稱」'], ['caps', '取消「顯示活動封頂金額」'], ['labels', '取消「顯示等級／方案」'], ['big', '字級改成小字']]
+        .filter(([k]) => o[k])
+        .filter(([k]) => mpLayoutReceipt(c, sections, { ...o, [k]: false }).height <= avail)
+        .map(([, label]) => label);
+}
+
 // 桌布最多放得下前幾家（依目前順序逐一加，實際排版量高度）
 function mpWallCapacity(pool) {
     const c = document.createElement('canvas').getContext('2d');
     const o = mpExportOpts();
-    const baseH = MP_BASE_W * o.wall.h / o.wall.w;
-    const avail = baseH - Math.round(baseH * MP_WALL_TOP) - baseH * MP_WALL_BOTTOM;
+    const avail = mpWallAvail(o);
     let n = 0;
     for (let i = 1; i <= pool.length; i++) {
         const lay = mpLayoutReceipt(c, mpExportSections(pool.slice(0, i).map(g => g.key)), o);
@@ -1652,7 +1645,13 @@ async function mpRenderExport() {
     const expTip = mpEl('mp-exp-tip');
     if (expTip) expTip.hidden = p.fmt !== 'wall';
     if (p.fmt === 'wall') {
-        meta.textContent = fits ? `手機桌布 ${size.label} ${canvas.width}×${canvas.height}・${sel.length} 家` : '超出一個螢幕了，請少勾幾家，或改存長圖';
+        if (fits) meta.textContent = `手機桌布 ${size.label} ${canvas.width}×${canvas.height}・${sel.length} 家`;
+        else {
+            const fix = mpWallFixOptions(sel);
+            meta.textContent = fix.length
+                ? `超出一個螢幕了：${fix.join('，或')}就放得下；也可以少勾幾家，或改存長圖`
+                : '超出一個螢幕了，請少勾幾家，或改存長圖';
+        }
         meta.classList.toggle('over', !fits);
         saveBtn.disabled = !fits;
     } else {
@@ -1731,6 +1730,11 @@ function mpBind() {
         if (b.dataset.mpEdit) { mpOpenEditSheet(b.dataset.mpEdit); return; }
         if (b.dataset.mpCard) { showCardDetail(b.dataset.mpCard); return; }
         if (b.id === 'mp-sum-btn') { mpOpenOwnedCards(); return; }
+        if (b.id === 'mp-intro-toggle') {
+            const steps = mpEl('mp-steps'), open = steps.hidden;
+            steps.hidden = !open; b.setAttribute('aria-expanded', String(open));
+            return;
+        }
         if (b.id === 'mp-feedback-btn') {
             // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
             if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }

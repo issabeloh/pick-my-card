@@ -51,7 +51,11 @@
     <meta property="og:title" content="蝦皮 信用卡回饋推薦 2026｜最高回饋一鍵比較 - Pick My Card">
     <meta property="og:description" content="蝦皮購物刷星展傳說對決聯名卡享10%，高回饋但低上限，NT3,333即封頂；高上限的最高回饋信用卡首推滙豐 Live+ 卡刷蝦皮享4.88%，還有玉山 Uni 卡刷蝦皮享4.5%！
 刷蝦皮哪張信用卡回饋最高？Pick My Card 幫你即時試算你指定的多張信用卡！">
-    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
+    <meta property="og:site_name" content="信用卡回饋大師">
     <meta property="og:locale" content="zh_TW">
 
     <!-- Twitter Card -->
@@ -60,7 +64,8 @@
     <meta name="twitter:title" content="蝦皮 信用卡回饋推薦 2026｜最高回饋一鍵比較 - Pick My Card">
     <meta name="twitter:description" content="蝦皮購物刷星展傳說對決聯名卡享10%，高回饋但低上限，NT3,333即封頂；高上限的最高回饋信用卡首推滙豐 Live+ 卡刷蝦皮享4.88%，還有玉山 Uni 卡刷蝦皮享4.5%！
 刷蝦皮哪張信用卡回饋最高？Pick My Card 幫你即時試算你指定的多張信用卡！">
-    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
 
     <!-- Google Fonts Preconnect for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -91,11 +96,12 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <!-- iOS Home Screen Icons -->
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard-ios.png?v=20260519">
-    <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png?v=20260519">
+    <!-- Favicon／主畫面圖示（2026-10 品牌標誌 v1.0；由 tools/build-logo-assets.js 生成）：
+         .ico 給 Safari 與 /favicon.ico 直連，SVG 給新版瀏覽器（分頁 16px 用小尺寸版），
+         apple-touch 是品牌藍漸層底＋反白標誌的 App 圖示（iOS 自己裁圓角） -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="assets/images/favicon.svg?v=20261007-2" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=20261007-2">
     
     <!-- iOS Web App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -103,10 +109,41 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="信用卡回饋大師">
 
-    <!-- Favicon for other devices -->
     <!-- PWA manifest + theme -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e40af">
+
+    <!-- 網站名稱＋品牌標誌（2026-10 品牌標誌 v1.0）：WebSite 讓 Google 搜尋結果顯示站名，
+         Organization.logo 讓 Google 取用品牌標誌（≥112px、白底好看、可被爬取）。商家頁會整份複製首頁 head，一起帶過去無妨 -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebSite",
+                "@id": "https://pickmycard.app/#website",
+                "name": "信用卡回饋大師",
+                "alternateName": ["Pick My Card", "PickMyCard"],
+                "url": "https://pickmycard.app/",
+                "inLanguage": "zh-TW",
+                "publisher": { "@id": "https://pickmycard.app/#organization" }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://pickmycard.app/#organization",
+                "name": "Pick My Card",
+                "alternateName": ["信用卡回饋大師", "PickMyCard"],
+                "url": "https://pickmycard.app/",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://pickmycard.app/assets/images/icon-pickmycard.png",
+                    "width": 512,
+                    "height": 512
+                }
+            }
+        ]
+    }
+    </script>
 
     <!-- Structured Data (JSON-LD) for SEO -->
     <script type="application/ld+json">
@@ -168,16 +205,9 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"蝦皮 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"星展傳說對決聯名卡"},{"@type":"ListItem","position":2,"name":"遠東快樂卡"},{"@type":"ListItem","position":3,"name":"中信 LINE Pay 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":6,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":7,"name":"台新 Richart 卡"},{"@type":"ListItem","position":8,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":9,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":10,"name":"iLEO 信用卡"},{"@type":"ListItem","position":11,"name":"國泰 CUBE 卡"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","name":"蝦皮 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"星展傳說對決聯名卡"},{"@type":"ListItem","position":2,"name":"遠東快樂卡"},{"@type":"ListItem","position":3,"name":"中信 LINE Pay 卡"},{"@type":"ListItem","position":4,"name":"滙豐 Live+ 卡"},{"@type":"ListItem","position":5,"name":"聯邦 LINE Bank 卡"},{"@type":"ListItem","position":6,"name":"台新 Richart 卡"},{"@type":"ListItem","position":7,"name":"玉山 Uni 卡"},{"@type":"ListItem","position":8,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":9,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":10,"name":"iLEO 信用卡"},{"@type":"ListItem","position":11,"name":"國泰 CUBE 卡"}]}</script>
 </head>
 <body>
-    <!-- Boot loader for returning logged-in users — visible only while
-         html.pmc-returning-user is set (CSS-controlled), auto-hidden when
-         the auth callback clears that class. -->
-    <div id="pmc-boot-loader" aria-hidden="true">
-        <div class="pmc-boot-spinner"></div>
-        <div class="pmc-boot-text">載入中…</div>
-    </div>
     <div class="container">
         <header>
             <div class="header-top">
@@ -197,7 +227,7 @@
                      Pages 的 preview 部署與本機伺服器上不會把人踢回正式站。faq/privacy/terms
                      三頁的 header 本來就是這個寫法，這裡是補上主站。 -->
                 <a href="/" class="header-content">
-                    <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
+                    <img src="assets/images/logo-header.svg?v=20261007" alt="" class="header-logo" width="79" height="83">
                     <h1>信用卡回饋大師</h1>
                 </a>
                 <!-- 桌機 header 導覽（≥769px）：原本在側選單的兩個站內頁面入口搬來這裡——
@@ -329,6 +359,14 @@
             </nav>
         </header>
 
+        <!-- Boot loader：html.pmc-returning-user 存在時顯示（CSS 控制），工具區出現或 auth 判定完成時收掉。
+             2026-10-04 起放在頁籤正下方、佔住工具區的位置（原本 fixed 在視窗正中央，
+             疊在「推薦比較」連結上看起來像文字重疊，站長回報「頁籤下方一片空白」）。 -->
+        <div id="pmc-boot-loader" role="status" aria-live="polite">
+            <div class="pmc-boot-spinner" aria-hidden="true"></div>
+            <div class="pmc-boot-text">正在載入卡片資料…</div>
+        </div>
+
         <!-- Sidebar overlay for mobile drawer -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
@@ -395,8 +433,10 @@
                 <p class="mp-moved-note" id="mp-moved-note">原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
                 <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
-                    <ol class="mp-steps">
-                        <li><b class="mp-step-n">1</b><span>在<strong>查詢回饋</strong>的結果中按「加到我的小抄」</span></li>
+                    <!-- 使用教學預設收合（2026-09-30）；下面「新功能 Beta 最後測試中」那行不收合 -->
+                    <button type="button" class="mp-intro-toggle" id="mp-intro-toggle" aria-expanded="false" aria-controls="mp-steps"><span>使用方法</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg></button>
+                    <ol class="mp-steps" id="mp-steps" hidden>
+                        <li><b class="mp-step-n">1</b><span>在<strong>查詢回饋</strong>的結果中按「加到小抄」</span></li>
                         <li><b class="mp-step-n">2</b><span>活動<strong>自動存入</strong>以下刷卡小抄</span></li>
                         <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，結帳前看一眼</span></li>
                     </ol>
@@ -411,10 +451,11 @@
                 <div class="mp-layout">
                     <!-- 左欄（桌機）：小抄的動作與設定都在這裡，按「編輯」時小抄不會跳位置；手機時依 CSS order 排進單欄 -->
                     <div class="mp-side">
+                        <!-- 小抄上方的兩個動作（2026-09-30）：按鈕下方各有一行備註 -->
                         <div class="mp-actions">
+                            <div class="mp-act"><button type="button" class="mp-act-save" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button><span class="mp-act-note">進入存圖編輯器</span></div>
+                            <div class="mp-act"><button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false"><svg class="mp-ico-pen" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg><svg class="mp-ico-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M3 8.5 6.5 12 13 4.5"/></svg><span class="mp-edit-t">編輯本頁</span></button><span class="mp-act-note">只編輯本頁顯示的小抄</span></div>
                             <span class="mp-count" id="mp-count"></span>
-                            <button type="button" class="mp-edit-btn" id="mp-edit-toggle" aria-pressed="false"><svg class="mp-ico-pen" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg><svg class="mp-ico-ok" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M3 8.5 6.5 12 13 4.5"/></svg><span class="mp-edit-t">編輯</span></button>
-                            <button type="button" class="mp-side-save" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button>
                         </div>
                         <div class="mp-tip" id="mp-tip" hidden><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.15.85a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L5.6 13.4l-3.9.95.95-3.9L12.15.85Z"/></svg>點商家名稱可改顯示名稱</span><span class="mp-dot">・</span><span><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 4.5A1.5 1.5 0 0 1 2.5 3h11A1.5 1.5 0 0 1 15 4.5V5H1v-.5ZM1 7h14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5V7Zm2 3v1h3v-1H3Z"/></svg>點卡圖可看信用卡詳情</span><span class="mp-dot mp-tip-drag" hidden>・</span><span class="mp-tip-drag" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="6" cy="3" r="1.3"/><circle cx="10" cy="3" r="1.3"/><circle cx="6" cy="8" r="1.3"/><circle cx="10" cy="8" r="1.3"/><circle cx="6" cy="13" r="1.3"/><circle cx="10" cy="13" r="1.3"/></svg>按住拖曳調整順序</span></div>
                         <div class="mp-tools" id="mp-tools" hidden></div>
@@ -427,7 +468,7 @@
                         <div class="mp-notice" id="mp-notice" hidden></div>
                         <div class="mp-demo-tag" id="mp-demo-tag" hidden>範　例</div>
                         <div class="mp-paper" id="mp-list"></div>
-                        <div class="mp-savebar" id="mp-savebar"><button type="button" class="mp-big" data-mp-open-export><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v6.69l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 0 1 1.06-1.06l2.22 2.22V1.75A.75.75 0 0 1 8 1ZM2.75 12a.75.75 0 0 1 .75.75v.75h9v-.75a.75.75 0 0 1 1.5 0v1.5a.75.75 0 0 1-.75.75H2.75a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1 .75-.75Z"/></svg>存成圖片</button></div>
+                        <p class="mp-count mp-count-m" id="mp-count-m"></p>
                         <div class="mp-deadbar" id="mp-deadbar" hidden></div>
                     </div>
                 </div>
@@ -706,7 +747,7 @@
         <nav class="mc-related" aria-label="推薦比較">
   <span class="mc-related-label">推薦比較</span>
   <ul class="mc-related-list">
-    <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
+    <li><a class="mc-related-link" href="/merchant/linepay"><span class="mc-related-name">LINE Pay</span><span class="mc-related-meta">最高 19%（永豐 DAWAY 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/momo"><span class="mc-related-name">momo</span><span class="mc-related-meta">最高 5%（遠東快樂卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E6%B2%B9"><span class="mc-related-name">中油</span><span class="mc-related-meta">最高 5%（玉山 Pi 卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
     <li><a class="mc-related-link" href="/merchant/%E4%B8%AD%E8%8F%AF%E8%88%AA%E7%A9%BA"><span class="mc-related-name">中華航空</span><span class="mc-related-meta">最高 5%（永豐幣倍卡）</span><span class="mc-related-go" aria-hidden="true">&rarr;</span></a></li>
@@ -719,7 +760,7 @@
 
         <section class="mc-seo-footer" aria-label="蝦皮 信用卡回饋說明">
   <h1>蝦皮 信用卡回饋比較</h1>
-  <p>想知道刷 蝦皮 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 蝦皮 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 星展傳說對決聯名卡、遠東快樂卡、中信 LINE Pay 卡、滙豐 Live+ 卡、聯邦 LINE Bank 卡、兆豐 BT21 卡、台新 Richart 卡、玉山 Uni 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
+  <p>想知道刷 蝦皮 哪張信用卡回饋最高？本頁已用回饋大師為你即時試算上方各張信用卡在 蝦皮 的回饋率、消費上限、達成條件與活動期間，資料持續更新。涵蓋 星展傳說對決聯名卡、遠東快樂卡、中信 LINE Pay 卡、滙豐 Live+ 卡、聯邦 LINE Bank 卡、台新 Richart 卡、玉山 Uni 卡、玉山 Ubear 卡 等信用卡。你也可以用上方搜尋框改查其他商家。</p>
 </section>
         <section class="mc-body" aria-label="蝦皮 補充說明">
 <p>在蝦皮購物，除了刷卡本身的回饋，還有常被漏掉的導購加碼：先經過 <a href="https://www.shopback.com.tw/search?keyword=%E8%9D%A6%E7%9A%AE" target="_blank" rel="noopener nofollow">Shopback</a> 導購再進蝦皮下單，可以多拿一筆現金回饋，和信用卡回饋不衝突。蝦皮購物也支援<strong>街口支付</strong>結帳，比較看看是否比信用卡本身的回饋更高！</p>
@@ -1246,7 +1287,7 @@
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
       import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+      import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
 
       // Your web app's Firebase configuration
@@ -1297,17 +1338,141 @@
       window.reauthenticateWithPopup = reauthenticateWithPopup;
       window.reauthenticateWithCredential = reauthenticateWithCredential;
       window.EmailAuthProvider = EmailAuthProvider;
+      // 讀寫失敗先交給 window.pmcOnFirestoreError（js/core-utils.js：permission-denied 時
+      // 提示用戶，例如 App Check Enforce 後被擋廣告外掛擋掉），再把錯誤原樣丟回給呼叫端的 catch。
+      const reportFsError = fn => (...args) => Promise.resolve().then(() => fn(...args)).catch(err => {
+        try { if (typeof window.pmcOnFirestoreError === 'function') window.pmcOnFirestoreError(err); } catch (e) {}
+        throw err;
+      });
+      // 每帳號寫入上限（firestore.rules 的 rateLimited／rateLimits，2026-10-02）：
+      // 登入者對這幾個 collection 的每一筆寫入，都和 rateLimits/{uid} 計數放進同一個批次送出。
+      // 計數有兩種寫法——「延續目前視窗（+1）」或「開新視窗（歸 1）」——前端不知道伺服器上
+      // 視窗是否過期，所以先試上次成功的寫法，被規則拒絕就換另一種再試一次；兩種都被拒＝
+      // 真的超過上限（或其他規則不允許），錯誤原樣丟給呼叫端。
+      // 全部排隊一筆一筆送：同一份計數文件同時被多筆寫入會互相搶。
+      const RL_COLLECTIONS = ['users', 'cardSettings', 'userNotes', 'feedback'];
+      let rlQueue = Promise.resolve();
+      const rlApplies = ref => !!(ref && ref.parent && RL_COLLECTIONS.includes(ref.parent.id) && auth.currentUser);
+      const rlCommit = (ref, addOp) => {
+        const run = async () => {
+          const counter = doc(db, 'rateLimits', auth.currentUser.uid);
+          const attempt = fresh => {
+            const batch = writeBatch(db);
+            addOp(batch);
+            batch.set(counter, fresh
+              ? { windowStart: serverTimestamp(), count: 1, lastAt: serverTimestamp(), lastPath: ref.path }
+              : { count: increment(1), lastAt: serverTimestamp(), lastPath: ref.path }, { merge: true });
+            return batch.commit();
+          };
+          try {
+            await attempt(false);
+          } catch (err) {
+            if (!err || err.code !== 'permission-denied') throw err;
+            try {
+              await attempt(true);
+            } catch (err2) {
+              if (!err2 || err2.code !== 'permission-denied') throw err2;
+              // 兩種計數寫法都被拒：多半是真的超過上限。最後再試一次「不帶計數」的寫法——
+              // 只為了部署過渡期（網站先上線、新規則還沒貼到 console 時，舊規則不認得 rateLimits）。
+              // 新規則下這一次一定被擋，不會變成繞過上限的後門。
+              const plain = writeBatch(db);
+              addOp(plain);
+              await plain.commit();
+            }
+          }
+        };
+        const p = rlQueue.then(run, run);
+        rlQueue = p.catch(() => {});
+        return p;
+      };
+      const limitedSetDoc = (ref, data, options) => rlApplies(ref)
+        ? rlCommit(ref, b => (options ? b.set(ref, data, options) : b.set(ref, data)))
+        : setDoc(ref, data, options);
+      const limitedDeleteDoc = ref => rlApplies(ref) ? rlCommit(ref, b => b.delete(ref)) : deleteDoc(ref);
+      const limitedAddDoc = (coll, data) => {
+        if (!(coll && RL_COLLECTIONS.includes(coll.id) && auth.currentUser)) return addDoc(coll, data);
+        const ref = doc(coll);
+        return rlCommit(ref, b => b.set(ref, data)).then(() => ref);
+      };
       window.doc = doc;
-      window.getDoc = getDoc;
-      window.setDoc = setDoc;
+      window.getDoc = reportFsError(getDoc);
+      window.setDoc = reportFsError(limitedSetDoc);
       window.deleteField = deleteField;
-      window.deleteDoc = deleteDoc;
-      window.addDoc = addDoc;
+      window.deleteDoc = reportFsError(limitedDeleteDoc);
+      window.addDoc = reportFsError(limitedAddDoc);
       window.collection = collection;
       window.serverTimestamp = serverTimestamp;
+      window.increment = increment;
       window.storageRef = ref;
       window.uploadBytes = uploadBytes;
       window.getDownloadURL = getDownloadURL;
+
+      // App Check（2026-10-01 腳本狂寫事件後加入）：讓 Firestore 能分辨「真的網站」與
+      // 「拿公開 config 自己寫的腳本」（Firebase console → App Check 按 Enforce 後才會擋）。
+      // 只在登入後啟動（js/auth-user-data.js 登入分支呼叫）：訪客不碰 Firestore，
+      // 不啟動可省 reCAPTCHA（Fraud Defense）每月 10,000 次的免費評估額度。
+      // 只在正式網域與 Cloudflare 預覽啟動——localhost／回歸測試不在 reCAPTCHA 網域清單內。
+      // Firestore SDK 支援晚註冊 App Check（appCheckProvider.onInit），不必在 getFirestore 前初始化。
+      let appCheckReady = null;
+      window.ensureAppCheck = () => {
+        if (appCheckReady) return appCheckReady;
+        const host = location.hostname;
+        if (!(host === 'pickmycard.app' || host.endsWith('.pickmycard.app') || host.endsWith('.pages.dev'))) {
+          return Promise.resolve(false);
+        }
+        appCheckReady = import("https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check.js")
+          .then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
+            initializeAppCheck(app, {
+              provider: new ReCaptchaEnterpriseProvider('6LcjDtktAAAAANLCR-gPyn0Dt_OV5YP7Z_y2G6n1'),
+              isTokenAutoRefreshEnabled: true
+            });
+            return true;
+          })
+          .catch(err => { console.error('App Check 啟動失敗:', err); return false; });
+        return appCheckReady;
+      };
+      // ── Email 連結登入（2026-10-03）──────────────────────────────────────
+      // 寄信：呼叫 functions 的 sendLoginLink（強制 App Check，所以先啟動 App Check；訪客只有按「寄送」
+      // 時才會啟動，平常不用 reCAPTCHA 額度）。functions SDK 用動態載入，回歸測試的替身模組不受影響。
+      window.pmcSendLoginLink = async (email) => {
+        await window.ensureAppCheck();
+        const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-functions.js");
+        return httpsCallable(getFunctions(app, 'asia-east1'), 'sendLoginLink')({ email });
+      };
+      // 收信：網址帶 mode=signIn&oobCode=… 就是點了登入連結 → 完成登入、把網址上的參數清掉
+      (async () => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('mode') !== 'signIn' || !params.get('oobCode')) return;
+        const cleanUrl = () => {
+          ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl'].forEach(k => params.delete(k));
+          const q = params.toString();
+          history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);
+        };
+        try {
+          const authMod = await import("https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js");
+          if (!authMod.isSignInWithEmailLink(auth, location.href)) return;
+          let email = null;
+          try { email = localStorage.getItem('pmcEmailForSignIn'); } catch (e) {}
+          if (!email) email = window.prompt('請輸入你索取登入連結時填的 Email（在不同裝置開信時，需要再確認一次）');
+          if (!email) { cleanUrl(); return; }
+          await authMod.signInWithEmailLink(auth, email.trim(), location.href);
+          try { localStorage.removeItem('pmcEmailForSignIn'); } catch (e) {}
+          cleanUrl();
+        } catch (err) {
+          console.error('Email 連結登入失敗:', err);
+          cleanUrl();
+          const raw = String((err && err.message) || '');
+          let msg = '登入失敗，請回到網站重新索取登入連結。';
+          if (err && (err.code === 'auth/invalid-action-code' || err.code === 'auth/expired-action-code')) msg = '這個登入連結已失效或已經用過了，請回到網站重新索取。';
+          else if (err && err.code === 'auth/invalid-email') msg = '輸入的 Email 和索取連結時的不一樣，請重新索取登入連結。';
+          else if (raw.includes('PMC_SIGNUP_INBOX')) msg = '這個信箱已經有帳號了（Gmail 會忽略英文句點和 + 後面的字），請用原本註冊的 Email 登入。';
+          else if (raw.includes('PMC_SIGNUP_DISPOSABLE')) msg = '不接受拋棄式信箱，請改用常用的 Email 或「Google 登入」。';
+          alert(msg);
+        }
+      })();
+
+      // 回訪的登入用戶（auth-user-data.js 寫的 pre-paint 提示）提早啟動，不用等 onAuthStateChanged
+      try { if (localStorage.getItem('pmc_known_logged_in') === '1') window.ensureAppCheck(); } catch (e) {}
     </script>
 
     <!-- Payment Detail Modal -->
@@ -1387,7 +1552,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="feedback-images">上傳截圖（選填，最多5張）</label>
+                        <label for="feedback-images">上傳截圖（選填，最多3張）</label>
                         <div class="image-upload-area" id="image-upload-area">
                             <input
                                 type="file"
@@ -1494,6 +1659,7 @@
                         <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
                     </svg>
                     使用 Google 帳號登入
+                    <span class="auth-recommend-badge">推薦</span>
                 </button>
 
                 <div class="auth-divider">
@@ -1514,12 +1680,12 @@
                         <label for="auth-confirm-password">確認密碼</label>
                         <input type="password" id="auth-confirm-password" class="auth-input" placeholder="再次輸入密碼">
                     </div>
+                    <p id="auth-link-note" class="auth-link-note">為了帳號安全，「密碼註冊／登入」已改為使用「Email 登入連結」，不用再記密碼了！原本用密碼註冊的帳號：輸入同一個 Email，點擊信件裡的登入連結，就會登入到原帳號。</p>
                     <div id="auth-error" class="auth-error" style="display: none;"></div>
-                    <button type="submit" id="auth-submit-btn" class="auth-btn primary full-width">登入</button>
+                    <button type="submit" id="auth-submit-btn" class="auth-btn primary full-width">寄送登入連結</button>
                 </form>
 
                 <div class="auth-footer">
-                    <a href="#" id="forgot-password-link" style="display: none;">忘記密碼？</a>
                     <p id="auth-switch-text">
                         還沒有帳號？<a href="#" id="auth-switch-link">立即註冊</a>
                     </p>

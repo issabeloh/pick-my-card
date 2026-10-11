@@ -11,69 +11,19 @@
  *
  * 規則的正本在 js/search-match.js「一般消費排除項目」區塊。
  */
-const http = require('http'), fs = require('fs'), path = require('path');
-const REPO = path.resolve(__dirname, '..', '..');
+const fs = require('fs'), path = require('path');
+// 凍結資料伺服器、Firebase 訪客替身、凍結時鐘一律沿用 run-regression.js（index.html 的 Firebase import 增修時只改那一份）
+const { REPO, startServer, firebaseStub, freezeClockScript, readFixtureMeta } = require('./run-regression.js');
 const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.json': 'application/json', '.svg': 'image/svg+xml', '.txt': 'text/plain' };
-const META = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture.json'), 'utf8'));
-
-function startServer() {
-  return new Promise(resolve => {
-    const srv = http.createServer((req, res) => {
-      const urlPath = decodeURIComponent(req.url.split('?')[0]);
-      if (urlPath === '/cards.data' || urlPath === '/cards.version') {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end(urlPath === '/cards.data' ? fs.readFileSync(path.join(__dirname, 'fixture.data')) : META.cardsVersion);
-        return;
-      }
-      const file = path.join(REPO, urlPath === '/' ? 'index.html' : urlPath);
-      if (!file.startsWith(REPO) || !fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); res.end(); return; }
-      res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
-      fs.createReadStream(file).pipe(res);
-    });
-    srv.listen(0, '127.0.0.1', () => resolve(srv));
-  });
-}
-
-// 訪客模式的 Firebase 替身（同 run-regression.js）
-function stub(url) {
-  const R = 'Promise.resolve()';
-  if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
-  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
-  if (url.includes('firebase-auth')) return `
-    export function getAuth(){return {};}
-    export function onAuthStateChanged(a, cb){ setTimeout(() => cb(null), 0); }
-    export class GoogleAuthProvider { setCustomParameters(){} }
-    export function signInWithPopup(){return ${R};} export function signOut(){return ${R};}
-    export function createUserWithEmailAndPassword(){return ${R};} export function signInWithEmailAndPassword(){return ${R};}
-    export function sendPasswordResetEmail(){return ${R};} export function deleteUser(){return ${R};}
-    export function reauthenticateWithPopup(){return ${R};} export function reauthenticateWithCredential(){return ${R};}
-    export class EmailAuthProvider { static credential(){return {};} }`;
-  if (url.includes('firebase-firestore')) return `
-    export function getFirestore(){return {};} export function doc(){return {};}
-    export function getDoc(){return Promise.resolve({ exists: () => false, data: () => undefined });}
-    export function setDoc(){return ${R};} export function addDoc(){return ${R};} export function collection(){return {};}
-    export function serverTimestamp(){return 0;} export function deleteField(){return 0;} export function deleteDoc(){return ${R};}`;
-  if (url.includes('firebase-storage')) return `
-    export function getStorage(){return {};} export function ref(){return {};}
-    export function uploadBytes(){return ${R};} export function getDownloadURL(){return Promise.resolve('');}`;
-  return 'export default {};';
-}
-
-function freezeClock(iso) {
-  return `(() => { const R = Date, ms = new R(${JSON.stringify(iso)}).getTime();
-    function F(...a){ if (!(this instanceof F)) return new R(ms).toString(); return a.length ? new R(...a) : new R(ms); }
-    F.prototype = R.prototype; F.now = () => ms; F.parse = R.parse; F.UTC = R.UTC;
-    Object.setPrototypeOf(F, R); window.Date = F; })();`;
-}
+const META = readFixtureMeta();
 
 (async () => {
-  const srv = await startServer();
+  const srv = await startServer(false);
   const base = `http://127.0.0.1:${srv.address().port}`;
   const execPath = fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
   const browser = await chromium.launch(execPath ? { executablePath: execPath } : {});
   const page = await browser.newPage();
-  await page.addInitScript(freezeClock(META.frozenDate));
+  await page.addInitScript(freezeClockScript(META.frozenDate));
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   // 外部資源（廣告/字型）被 route.abort() 擋掉會噴 Failed to load resource，那是測試環境刻意的，不算
@@ -83,7 +33,7 @@ function freezeClock(iso) {
   await page.route('**/*', route => {
     const url = route.request().url();
     if (url.startsWith(base)) return route.continue();
-    if (url.includes('gstatic.com/firebasejs')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: stub(url) });
+    if (url.includes('gstatic.com/firebasejs')) return route.fulfill({ status: 200, contentType: 'text/javascript', body: firebaseStub(url) });
     return route.abort();
   });
   await page.goto(`${base}/index.html?start&debug=1`, { waitUntil: 'domcontentloaded' });

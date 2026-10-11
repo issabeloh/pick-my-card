@@ -1,6 +1,6 @@
 {
   "name": "pick-my-card-functions",
-  "description": "Cloud Functions for Pick My Card — feedback 即時通知",
+  "description": "Cloud Functions for Pick My Card — feedback 每日摘要",
   "private": true,
   "engines": {
     "node": "22"
@@ -9,7 +9,7 @@
   "type": "commonjs",
   "scripts": {
     "serve": "firebase emulators:start --only functions",
-    "logs": "firebase functions:log --only notifyOnFeedback",
+    "logs": "firebase functions:log --only dailyFeedbackDigest",
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {

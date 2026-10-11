@@ -268,6 +268,8 @@ function ensureGuestUIBound() {
 
     function showToolSections() {
         const t = toolElements;
+        // 工具區出來了，boot loader 就該收掉（它現在是頁籤下方的一般區塊，不收會把工具區往下推）
+        document.documentElement.classList.remove('pmc-returning-user');
         if (t.inputSection) t.inputSection.style.display = 'block';
         if (t.supportedCards) t.supportedCards.style.display = 'block';
         renderSpotlights();
@@ -361,6 +363,10 @@ function ensureAuthSubscribed() {
 
             // Show manage cards button
             document.getElementById('manage-cards-btn').style.display = 'block';
+
+            // App Check 要在第一個 Firestore 請求前就緒（Enforce 後沒有 token 的請求會被擋）。
+            // 非正式網域時立即回傳 false；失敗只記錄、不擋登入流程（見 index.html 的 ensureAppCheck）。
+            if (typeof window.ensureAppCheck === 'function') await window.ensureAppCheck();
 
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();

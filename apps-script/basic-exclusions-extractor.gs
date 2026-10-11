@@ -184,7 +184,7 @@ function extractBasicExclusionsFromSnapshots() {
     errors.length ? '\n失敗（這幾頁沒寫入，下次會重試）：\n・' + errors.join('\n・') : '',
     skipped.length ? '\n略過：\n・' + skipped.join('\n・') : '',
     '\n👉 下一步：到待審核表逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V，',
-    '   再按選單「② 寫回」。標黃的列是 AI 有疑問的，看「AI想問的問題」欄。'
+    '   再按選單「其他工具 ▸ 一般消費排除 2」。標黃的列是 AI 有疑問的，看「AI想問的問題」欄。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 

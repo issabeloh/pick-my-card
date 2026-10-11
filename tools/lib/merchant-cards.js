@@ -98,13 +98,17 @@ function createEngine(cardsData) {
 }
 
 // 商家字串 → 匹配項清單。照抄 compareSpotlightMerchant() 的分支：商家名剛好等於某個
-// 快捷搜尋的 displayName（如 LinePay、廣告費）就走 handleQuickSearch 的多關鍵詞路徑，
-// 否則當一般單一商家搜尋。少了這個分支，LinePay 這種頁的匹配項會跟畫面不一樣。
+// 「一次比多家」型快捷搜尋的 displayName（如 所有計程車、廣告費）就走 handleQuickSearch 的
+// 多關鍵詞路徑；「協助輸入」型（只有一個關鍵詞，如 LinePay）在頁面上等同用戶打字，
+// 這裡也當一般單一商家搜尋。兩型的分界由前端的 isTypingHelperQuickOption() 決定（直接呼叫，不另寫）。
+// 少了這個分支，LinePay／所有計程車這種頁的匹配項會跟畫面不一樣。
 function resolveMatchedItems(engine, merchant) {
   const options = engine.__cardsData.quickSearchOptions || [];
   const normalized = String(merchant).trim().toLowerCase();
   const option = options.find(o => o.displayName && String(o.displayName).trim().toLowerCase() === normalized);
-  if (!option) return engine.findMatchingItem(String(merchant), { exactOnly: false });
+  if (!option || engine.isTypingHelperQuickOption(option)) {
+    return engine.findMatchingItem(String(merchant), { exactOnly: false });
+  }
 
   // handleQuickSearch：逐個關鍵詞查，依 originalItem 去重，保留先到先得的順序
   const seen = new Set();
