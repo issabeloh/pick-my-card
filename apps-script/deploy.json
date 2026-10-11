@@ -9,7 +9,8 @@
         "benefits-parser.gs",
         "card-benefits-parser.gs",
         "register-link-finder.gs",
-        "sheet-guide.gs"
+        "sheet-guide.gs",
+        "basic-exclusions-extractor.gs"
       ]
     }
   ],

@@ -83,12 +83,18 @@ function buildAutomationMenu_() {
       .addItem('檢查監控清單有沒有填錯', 'checkWatchlistConfig')                // watchlist-monitor.gs，只讀不寫
       .addItem('檢查廣告排除（每月一次）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
       .addSeparator()
-      // 登錄連結四步（register-link-finder.gs）；③ 是整個自動化檔裡唯一會寫入正式
-      // Cards Data 的動作（只寫 registerLink_N 欄，寫前跳確認視窗）
+      // 登錄連結四步（register-link-finder.gs）；3 與下方「一般消費排除 2」是整個自動化檔裡
+      // 僅有的兩個會寫入正式 Cards Data 的動作（各自只寫 registerLink_N／basicExclusions 欄，
+      // 後者只寫空白格；都會先跳確認視窗）
       .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
       .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
       .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
-      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive'))
+      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive')
+      .addSeparator()
+      // 一般消費排除兩步（basic-exclusions-extractor.gs，2026-09-30）：
+      // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄、而且只寫空白格
+      .addItem('一般消費排除 1：AI 從監控快照抽', 'extractBasicExclusionsFromSnapshots')
+      .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData'))
     .addSeparator()
     .addItem('📖 使用說明', 'openSheetGuide')                                    // sheet-guide.gs
     .addToUi();
