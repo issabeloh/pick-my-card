@@ -188,7 +188,7 @@ function extractBasicExclusionsFromSnapshots() {
 
   const validIds = getCardIds_();   // 正式 Cards Data 的合法 id（跨檔唯讀）
   const review = basicExEnsureReviewSheet_(ss);
-  const doneAt = basicExReviewedUrls_(review);            // 網址 → 最近一次抽取時間
+  const doneAt = basicExReviewedUrls_(review);            // 網址 → { last: 最近一次抽取時間, cards: {card_id: true} }
   const changedAt = basicExMonitorChangedUrls_(ss);       // 網址 → 監控最近一次記錄變動的時間
   const filled = basicExReadFilledCards_();               // 正式表已經有名單的卡 → 不重抽
   const vocab = basicExBuildVocabulary_(filled, review);  // 命名一致用的既有名稱表
@@ -205,13 +205,12 @@ function extractBasicExclusionsFromSnapshots() {
     if (!url || !BASICEX_CONFIG.rowKeywordRe.test(kw)) continue;
     if (cActive >= 0 && String(row[cActive]).trim().toUpperCase() === 'FALSE') continue;
 
-    // 抽過的頁：除非「超過 refreshAfterDays 天」且「監控在上次抽取後記錄過變動」，否則跳過
+    // 抽過的頁：除非「超過 refreshAfterDays 天」且「監控在上次抽取後記錄過變動」，否則只補抽
+    // 待審核表裡**還沒有列**的卡（2026-10-11 改成「網址＋卡片」判斷：站長刪掉 yushan-ubear 那一列後，
+    // 同一頁其他卡的列還在，舊寫法以網址判斷就整頁跳過、永遠補不回來）
     let refresh = false;
-    if (doneAt[url]) {
-      const last = doneAt[url];
-      if (now - last >= refreshMs && changedAt[url] && changedAt[url] > last) refresh = true;
-      else { alreadyDone++; continue; }
-    }
+    const done = doneAt[url];
+    if (done && now - done.last >= refreshMs && changedAt[url] && changedAt[url] > done.last) refresh = true;
 
     const bank = cBank >= 0 ? String(row[cBank] || '').trim() : '';
     const label = (bank || '第 ' + (i + 1) + ' 列');
@@ -228,8 +227,10 @@ function extractBasicExclusionsFromSnapshots() {
 
     // 首次抽取：正式表已有名單的卡不抽（站長手填的就是答案）。
     // 官網更新後重抽：全部候選卡都抽，已有名單的那幾列會註明「比對後要換就打『覆蓋』」
-    const open = refresh ? candidates : candidates.filter(function (x) { return !filled.ids[x]; });
-    const already = candidates.filter(function (x) { return filled.ids[x]; });
+    const notReviewed = refresh || !done ? candidates : candidates.filter(function (x) { return !done.cards[x]; });
+    if (notReviewed.length === 0) { alreadyDone++; continue; }
+    const open = refresh ? notReviewed : notReviewed.filter(function (x) { return !filled.ids[x]; });
+    const already = notReviewed.filter(function (x) { return filled.ids[x]; });
     if (!refresh && already.length) skipped.push(label + '：正式表已有名單、不重抽：' + already.join(','));
     if (open.length === 0) continue;
 
@@ -257,7 +258,7 @@ function extractBasicExclusionsFromSnapshots() {
     errors.length || totals.errors.length ? '\n失敗（沒寫入，下次會重試）：\n・' + totals.errors.join('\n・') : '',
     skipped.length ? '\n略過：\n・' + skipped.join('\n・') : '',
     alreadyDone ? '\n已經抽過、跳過 ' + alreadyDone + ' 頁（超過 ' + BASICEX_CONFIG.refreshAfterDays +
-      ' 天且監控記錄過變動的頁才會重抽；要立刻重抽某頁，把待審核表裡那個網址的列刪掉）' : '',
+      ' 天且監控記錄過變動的頁才會重抽；要重抽某張卡，把待審核表裡那張卡的列刪掉，下次只補抽那張）' : '',
     '\n👉 下一步：到「' + BASICEX_CONFIG.reviewSheet + '」逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V，',
     '   再按選單「其他工具 ▸ 一般消費排除 2」。標黃的列是 AI 有疑問的，看「AI想問的問題」欄。'
   ];
@@ -498,28 +499,41 @@ function basicExEnsureReviewSheet_(ss) {
     sheet.setFrozenRows(1);
     return sheet;
   }
-  const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
-    .map(function (x) { return String(x).trim(); });
-  if (cur.join('|') !== BASICEX_REVIEW_HEADERS.join('|')) {
-    throw new Error('「' + BASICEX_CONFIG.reviewSheet + '」的表頭跟程式預期不同（欄位是依位置寫入的）。' +
-      '請不要增刪或搬動欄位；要重建就把整個分頁刪掉再按一次。');
+  // 只檢查程式會寫的前 N 欄（A～H）。2026-10-11 修：原本拿整個第一列比對，而 getLastColumn() 是
+  // 「整張分頁」最右邊有內容的欄——只要任何一列在 H 欄右邊有東西（站長筆記、殘留的格子），第一列就會
+  // 多出空白欄、整串比對失敗，明明 A～H 表頭完全正確也擋下來。右邊多的欄位程式不碰，不必擋
+  const n = BASICEX_REVIEW_HEADERS.length;
+  const cur = sheet.getRange(1, 1, 1, n).getValues()[0].map(function (x) { return String(x).trim(); });
+  const bad = [];
+  for (let k = 0; k < n; k++) {
+    if (cur[k] !== BASICEX_REVIEW_HEADERS[k]) {
+      bad.push(String.fromCharCode(65 + k) + ' 欄應為「' + BASICEX_REVIEW_HEADERS[k] + '」，現在是「' + cur[k] + '」');
+    }
+  }
+  if (bad.length) {
+    throw new Error('「' + BASICEX_CONFIG.reviewSheet + '」的表頭跟程式預期不同（欄位是依位置寫入的）：' + bad.join('；') +
+      '。請把表頭改回來（A～H 不要增刪或搬動；H 欄右邊可以自由加欄），或把整個分頁刪掉讓它重建。');
   }
   return sheet;
 }
 
-// 網址 → 最近一次抽取時間（「解析時間」欄；讀不到日期的列當成很久以前）
+// 網址 → { last: 最近一次抽取時間（「解析時間」欄；讀不到日期的列當成很久以前）, cards: 待審核表裡已有列的 card_id }
 function basicExReviewedUrls_(sheet) {
   const map = {};
   const last = sheet.getLastRow();
   if (last < 2) return map;
   const iTime = BASICEX_REVIEW_HEADERS.indexOf('解析時間');
   const iUrl = BASICEX_REVIEW_HEADERS.indexOf('來源網址');
+  const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id');
   sheet.getRange(2, 1, last - 1, BASICEX_REVIEW_HEADERS.length).getValues().forEach(function (r) {
     const u = String(r[iUrl] || '').trim();
     if (!u) return;
     let t = r[iTime] instanceof Date ? r[iTime] : new Date(r[iTime]);
     if (isNaN(t.getTime())) t = new Date(0);
-    if (!map[u] || t > map[u]) map[u] = t;
+    if (!map[u]) map[u] = { last: t, cards: {} };
+    if (t > map[u].last) map[u].last = t;
+    const id = String(r[iId] || '').trim();
+    if (id) map[u].cards[id] = true;
   });
   return map;
 }
