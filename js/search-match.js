@@ -11,7 +11,7 @@
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 一般消費排除項目            → "getBasicExclusionHits" / "showBasicExcludedMessage"
+ *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage"
  * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
@@ -843,7 +843,8 @@ function buildBasicCashbackResult(card, amount) {
 // 比對規則（2026-10-11 站長逐條確認）：
 //   ・搜尋詞＝用戶輸入＋fuzzy/同義詞展開，**不含**findMatchingItem 匹配到的 item 名——
 //     商家匹配會幫用戶「補完」（搜「停車」配到「路邊停車費」），拿它比名單等於繞過下一條
-//   ・反方向不算：排除詞「路邊停車費」不會讓搜尋「停車費」被判排除（「停車費」可能是停車場、有回饋）
+//   ・反方向不判排除：排除詞「路邊停車費」不會讓搜尋「停車費」被判排除（「停車費」可能是停車場、有回饋）；
+//     2026-10-11 起改成「可能排除」提示（getBasicExclusionMaybeHits），卡片照常顯示
 //   ・搜尋詞與排除詞**全等**，或搜尋詞**包含**排除詞即命中（「台電電費」命中「電費」）
 //   ・勾了「精準搜尋」（exactOnly）時只認**全等**——跟活動匹配同一個開關、同一種嚴格度
 //   ・少於 2 字的排除詞一律忽略（「稅」會誤殺「免稅店」）
@@ -861,6 +862,23 @@ function getBasicExclusionHits(card, searchTerms, exactOnly = false) {
         const exLower = raw.toLowerCase();
         if (exLower.length < 2 || hits.includes(raw)) return;
         if (searchTerms.some(t => t === exLower || (!exactOnly && t.includes(exLower)))) hits.push(raw);
+    });
+    return hits;
+}
+
+// 「可能排除」（2026-10-11 站長選 B）：搜尋詞比排除項目**短**、被它包含時
+// （搜「醫院費用」← 名單「臺北醫學大學附設醫院費用」、搜「所得稅」← 「個人綜合所得稅」）。
+// 不判成排除——「停車費」可能是停車場、有回饋——卡片照常顯示基本回饋，只加一行灰字提示，讓用戶自己判斷。
+// 已經完全命中（getBasicExclusionHits）的卡不會再算這個；勾精準搜尋時不提示；少於 2 字的搜尋詞不算
+function getBasicExclusionMaybeHits(card, searchTerms, exactOnly = false) {
+    if (exactOnly || !card || !Array.isArray(card.basicExclusions) || card.basicExclusions.length === 0) return [];
+    const terms = searchTerms.filter(t => t && t.length >= 2);
+    const hits = [];
+    card.basicExclusions.forEach(ex => {
+        const raw = String(ex || '').trim();
+        const exLower = raw.toLowerCase();
+        if (exLower.length < 2 || hits.includes(raw)) return;
+        if (terms.some(t => t !== exLower && exLower.includes(t))) hits.push(raw);
     });
     return hits;
 }

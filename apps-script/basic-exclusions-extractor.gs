@@ -46,8 +46,16 @@ const BASICEX_CONFIG = {
   // 「一般消費項目排除」…）。keywords 空白的列（單卡權益頁、公告頁）不處理。
   rowKeywordRe: /一般消費|排除|不回饋|不計入|不適用回饋/,
   maxSnapshotChars: 30000,                 // 單頁送給 AI 的快照上限
-  maxRowsPerRun: 8,                        // 一次最多處理幾個監控列（真正的煞車是下一行）
-  maxRunSeconds: 240,                      // Apps Script 單次硬上限 6 分鐘，超過這個秒數就不開新的一列
+  // ⚠️ Apps Script 單次硬上限 6 分鐘，超時是直接砍掉。一頁＝一次 Gemini 呼叫，長快照＋範例 prompt
+  //    實測可以跑到 1～2 分鐘，所以看錶煞車要留足餘裕：過了這個秒數就不開新的一頁。
+  //    2026-10-11 第一次實跑撞到「Exceeded maximum execution time」（原本設 240 秒）
+  maxRunSeconds: 150,
+  // 沒跑完 → 幾分鐘後由時間觸發器自動接著跑（同監控的分段接力）；0＝關閉，改成人工再按一次
+  resumeAfterMinutes: 1,
+  maxResumeChunks: 10,                     // 防無限接力：連續這麼多段還沒跑完就停手、寄信說明
+  // 已經抽過的頁面一律跳過，除非「上次抽取超過這麼多天」**而且**監控在那之後記錄過這個網址有變動
+  // （2-變動通知或其封存分頁裡有同網址、日期在上次抽取之後的列）
+  refreshAfterDays: 30,
   colorReview: '#fff3cd'                   // AI 有疑問的列標黃
 };
 
@@ -103,11 +111,16 @@ const BASICEX_EXAMPLE = {
 };
 
 /************** ① 抽取：1-監控清單 last_snapshot → 5-待審核 **************/
+// 選單手動按，或由上一段排的時間觸發器自動接著跑（觸發器執行時沒有 UI，結果改寄信）
 function extractBasicExclusionsFromSnapshots() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = basicExUi_();
+  const props = PropertiesService.getScriptProperties();
+  basicExClearResumeTrigger_();
+  if (ui) basicExResetResume_(props);   // 人工按＝新的一輪，接力計數與累計歸零
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const watch = ss.getSheetByName(BASICEX_CONFIG.watchlistSheet);
-  if (!watch) { ui.alert('找不到「' + BASICEX_CONFIG.watchlistSheet + '」。'); return; }
+  if (!watch) { basicExReport_(ui, '找不到分頁', ['找不到「' + BASICEX_CONFIG.watchlistSheet + '」。']); return; }
 
   const data = watch.getDataRange().getValues();
   const h = data[0].map(function (x) { return String(x).trim(); });
@@ -115,25 +128,36 @@ function extractBasicExclusionsFromSnapshots() {
   const cUrl = c('url'), cSnap = c('last_snapshot'), cId = c('card_id'), cCards = c('cards');
   const cBank = c('bank'), cKw = c('keywords'), cActive = c('active');
   if (cUrl < 0 || cSnap < 0 || cKw < 0) {
-    ui.alert('「' + BASICEX_CONFIG.watchlistSheet + '」第一列要有 url、last_snapshot、keywords 表頭。');
+    basicExReport_(ui, '表頭不對', ['「' + BASICEX_CONFIG.watchlistSheet + '」第一列要有 url、last_snapshot、keywords 表頭。']);
     return;
   }
 
   const validIds = getCardIds_();   // 正式 Cards Data 的合法 id（跨檔唯讀）
   const review = basicExEnsureReviewSheet_(ss);
-  const doneUrls = basicExReviewedUrls_(review);
-  const filled = basicExReadFilledCards_();              // 正式表已經有名單的卡 → 不重抽
+  const doneAt = basicExReviewedUrls_(review);            // 網址 → 最近一次抽取時間
+  const changedAt = basicExMonitorChangedUrls_(ss);       // 網址 → 監控最近一次記錄變動的時間
+  const filled = basicExReadFilledCards_();               // 正式表已經有名單的卡 → 不重抽
   const vocab = basicExBuildVocabulary_(filled, review);  // 命名一致用的既有名稱表
+  const now = new Date();
+  const refreshMs = BASICEX_CONFIG.refreshAfterDays * 24 * 60 * 60 * 1000;
 
   const todo = [];
   const skipped = [];
+  let alreadyDone = 0;
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     const url = String(row[cUrl] || '').trim();
     const kw = String(row[cKw] || '').trim();
     if (!url || !BASICEX_CONFIG.rowKeywordRe.test(kw)) continue;
     if (cActive >= 0 && String(row[cActive]).trim().toUpperCase() === 'FALSE') continue;
-    if (doneUrls[url]) continue;
+
+    // 抽過的頁：除非「超過 refreshAfterDays 天」且「監控在上次抽取後記錄過變動」，否則跳過
+    let refresh = false;
+    if (doneAt[url]) {
+      const last = doneAt[url];
+      if (now - last >= refreshMs && changedAt[url] && changedAt[url] > last) refresh = true;
+      else { alreadyDone++; continue; }
+    }
 
     const bank = cBank >= 0 ? String(row[cBank] || '').trim() : '';
     const label = (bank || '第 ' + (i + 1) + ' 列');
@@ -147,45 +171,141 @@ function extractBasicExclusionsFromSnapshots() {
     const unknown = ids.filter(function (x) { return validIds.indexOf(x) < 0; });
     if (unknown.length) skipped.push(label + '：這些 id 在 Cards Data 找不到，已忽略：' + unknown.join('、'));
     if (candidates.length === 0) { skipped.push(label + '：card_id／cards 欄沒有合法的卡片 id'); continue; }
+
+    // 首次抽取：正式表已有名單的卡不抽（站長手填的就是答案）。
+    // 官網更新後重抽：全部候選卡都抽，已有名單的那幾列會註明「寫回不會覆蓋、請比對後手改」
+    const open = refresh ? candidates : candidates.filter(function (x) { return !filled.ids[x]; });
     const already = candidates.filter(function (x) { return filled.ids[x]; });
-    const open = candidates.filter(function (x) { return !filled.ids[x]; });
-    if (already.length) skipped.push(label + '：正式表已有名單、不重抽：' + already.join(','));
+    if (!refresh && already.length) skipped.push(label + '：正式表已有名單、不重抽：' + already.join(','));
     if (open.length === 0) continue;
 
-    todo.push({ url: url, bank: bank, label: label, text: snap, candidates: open });
-  }
-
-  if (todo.length === 0) {
-    ui.alert(['沒有要處理的監控列（符合條件的網址都已在「' + BASICEX_CONFIG.reviewSheet + '」出現過）。',
-      '要重抽某一頁：把待審核表裡那個網址的列刪掉再按一次。',
-      skipped.length ? '\n略過：\n・' + skipped.join('\n・') : ''].join('\n'));
-    return;
+    todo.push({ url: url, bank: bank, label: label, text: snap, candidates: open, refresh: refresh, filledIds: filled.ids });
   }
 
   const started = Date.now();
   let pagesDone = 0, rowsWritten = 0;
   const errors = [];
-  for (let k = 0; k < todo.length && pagesDone < BASICEX_CONFIG.maxRowsPerRun; k++) {
+  for (let k = 0; k < todo.length; k++) {
     if ((Date.now() - started) / 1000 > BASICEX_CONFIG.maxRunSeconds) break;
     const t = todo[k];
     try {
       const groups = basicExAskGemini_(t.bank, t.text.slice(0, BASICEX_CONFIG.maxSnapshotChars), t.candidates, vocab);
-      rowsWritten += basicExWriteReview_(review, t, groups);
+      rowsWritten += basicExWriteReview_(review, t, groups);   // 每頁寫完立刻落地：被砍也不會丟已完成的頁
     } catch (e) {
       errors.push(t.label + '：' + e.message);
     }
     pagesDone++;
   }
 
+  const totals = basicExAddTotals_(props, pagesDone, rowsWritten, errors);
   const remaining = todo.length - pagesDone;
-  ui.alert([
-    '完成：處理 ' + pagesDone + ' 個頁面，寫入 ' + rowsWritten + ' 列到「' + BASICEX_CONFIG.reviewSheet + '」。',
-    remaining > 0 ? '還剩 ' + remaining + ' 個頁面沒處理——再按一次選單會接著跑。' : '',
-    errors.length ? '\n失敗（這幾頁沒寫入，下次會重試）：\n・' + errors.join('\n・') : '',
+  const tail = [
+    errors.length || totals.errors.length ? '\n失敗（沒寫入，下次會重試）：\n・' + totals.errors.join('\n・') : '',
     skipped.length ? '\n略過：\n・' + skipped.join('\n・') : '',
-    '\n👉 下一步：到待審核表逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V，',
+    alreadyDone ? '\n已經抽過、跳過 ' + alreadyDone + ' 頁（超過 ' + BASICEX_CONFIG.refreshAfterDays +
+      ' 天且監控記錄過變動的頁才會重抽；要立刻重抽某頁，把待審核表裡那個網址的列刪掉）' : '',
+    '\n👉 下一步：到「' + BASICEX_CONFIG.reviewSheet + '」逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V，',
     '   再按選單「其他工具 ▸ 一般消費排除 2」。標黃的列是 AI 有疑問的，看「AI想問的問題」欄。'
-  ].filter(function (x) { return x; }).join('\n'));
+  ];
+
+  if (remaining > 0) {
+    const sched = basicExScheduleResume_(props);
+    if (sched.ok) {
+      // 還沒跑完：人工按的跳視窗交代；觸發器跑的不寄信（等全部跑完才寄一封總結）
+      if (ui) basicExReport_(ui, '分段執行中', ['這一段處理 ' + pagesDone + ' 頁、寫入 ' + rowsWritten + ' 列。',
+        '還剩 ' + remaining + ' 頁，' + BASICEX_CONFIG.resumeAfterMinutes + ' 分鐘後會自動接著跑，全部跑完會寄信給你。',
+        '（不用一直開著試算表；也可以直接再按一次選單，效果一樣）'].concat(tail));
+      return;
+    }
+    basicExResetResume_(props);
+    basicExReport_(ui, '沒有跑完', ['累計處理 ' + totals.pages + ' 頁、寫入 ' + totals.rows + ' 列，還剩 ' + remaining + ' 頁。',
+      sched.reason, '要繼續就再按一次選單。'].concat(tail));
+    return;
+  }
+
+  basicExResetResume_(props);
+  basicExReport_(ui, '全部跑完', [
+    totals.pages ? '完成：共處理 ' + totals.pages + ' 頁，寫入 ' + totals.rows + ' 列到「' + BASICEX_CONFIG.reviewSheet + '」。'
+      : '沒有要處理的頁面。'
+  ].concat(tail));
+}
+
+/************** 分段接力（仿 watchlist-monitor 的 scheduleWatchlistResume_） **************/
+const BASICEX_CHUNK_KEY = 'BASICEX_RESUME_CHUNK';     // 這一輪已經接力幾段
+const BASICEX_TOTALS_KEY = 'BASICEX_RESUME_TOTALS';   // 這一輪累計（JSON：pages、rows、errors）
+const BASICEX_HANDLER = 'extractBasicExclusionsFromSnapshots';
+
+function basicExScheduleResume_(props) {
+  if (!BASICEX_CONFIG.resumeAfterMinutes) return { ok: false, reason: '自動接續已關閉（resumeAfterMinutes = 0）。' };
+  const chunks = (Number(props.getProperty(BASICEX_CHUNK_KEY)) || 0) + 1;
+  props.setProperty(BASICEX_CHUNK_KEY, String(chunks));
+  if (chunks >= BASICEX_CONFIG.maxResumeChunks) {
+    return { ok: false, reason: '已連續接力 ' + BASICEX_CONFIG.maxResumeChunks + ' 段還沒跑完，先停手——' +
+      '通常是某一頁每次都失敗或特別慢，看下面的失敗清單。' };
+  }
+  ScriptApp.newTrigger(BASICEX_HANDLER).timeBased().after(BASICEX_CONFIG.resumeAfterMinutes * 60 * 1000).create();
+  return { ok: true };
+}
+
+// 刪掉之前排的接力觸發器（一次性觸發器跑完不會自己消失，留著會累積到 20 個上限）
+function basicExClearResumeTrigger_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === BASICEX_HANDLER && t.getEventType() === ScriptApp.EventType.CLOCK) {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+}
+
+function basicExResetResume_(props) {
+  props.deleteProperty(BASICEX_CHUNK_KEY);
+  props.deleteProperty(BASICEX_TOTALS_KEY);
+}
+
+function basicExAddTotals_(props, pages, rows, errors) {
+  let t;
+  try { t = JSON.parse(props.getProperty(BASICEX_TOTALS_KEY) || ''); } catch (e) { t = null; }
+  t = t || { pages: 0, rows: 0, errors: [] };
+  t.pages += pages;
+  t.rows += rows;
+  t.errors = t.errors.concat(errors).slice(-30);   // Properties 單值有大小上限，只留最近 30 筆
+  props.setProperty(BASICEX_TOTALS_KEY, JSON.stringify(t));
+  return t;
+}
+
+// 選單按的有 UI；觸發器跑的沒有（getUi 會丟例外）
+function basicExUi_() {
+  try { return SpreadsheetApp.getUi(); } catch (e) { return null; }
+}
+
+// 有 UI 跳視窗，沒有就寄信給自己
+function basicExReport_(ui, title, lines) {
+  const text = lines.filter(function (x) { return x; }).join('\n');
+  if (ui) { ui.alert('一般消費排除：' + title, text, ui.ButtonSet.OK); return; }
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), '【一般消費排除】' + title, text);
+}
+
+// 監控記錄的變動：2-變動通知 與其封存分頁裡，每個網址最近一次的「日期時間」
+function basicExMonitorChangedUrls_(ss) {
+  const map = {};
+  const names = [
+    (typeof MONITOR_CONFIG !== 'undefined' && MONITOR_CONFIG.inboxSheet) || '2-變動通知',
+    (typeof INBOX_ARCHIVE_SHEET !== 'undefined' && INBOX_ARCHIVE_SHEET) || '2-封存（變動通知）'
+  ];
+  names.forEach(function (name) {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) return;
+    const data = sheet.getDataRange().getValues();
+    const head = data[0].map(function (x) { return String(x).trim(); });
+    const cUrl = head.indexOf('網址'), cTime = head.indexOf('日期時間');
+    if (cUrl < 0 || cTime < 0) return;
+    for (let i = 1; i < data.length; i++) {
+      const url = String(data[i][cUrl] || '').trim();
+      const t = data[i][cTime] instanceof Date ? data[i][cTime] : new Date(data[i][cTime]);
+      if (!url || isNaN(t.getTime())) continue;
+      if (!map[url] || t > map[url]) map[url] = t;
+    }
+  });
+  return map;
 }
 
 /************** 問 Gemini：這頁的一般消費排除項目 **************/
@@ -275,12 +395,18 @@ function basicExWriteReview_(sheet, page, groups) {
   const rows = [];
   const flags = [];
   const covered = {};
+  // 官網更新後重抽、而且正式表已有名單的卡：寫回只寫空白格、不會覆蓋，要站長比對後手改
+  const refreshNote = function (id) {
+    return page.refresh && page.filledIds && page.filledIds[id]
+      ? '【官網更新後重抽】正式表已有名單，「寫回」不會覆蓋——請跟正式表比對，有差異就手動改正式表。' : '';
+  };
   groups.forEach(function (g) {
     g.card_ids.forEach(function (id) {
       covered[id] = true;
+      const note = refreshNote(id);
       rows.push(['', now, id, page.bank, page.url, g.items.join(','),
-        g.review_question, String(g.evidence).slice(0, 500)]);
-      flags.push(g.needs_review || g.items.length === 0);
+        [note, g.review_question].filter(function (x) { return x; }).join('\n'), String(g.evidence).slice(0, 500)]);
+      flags.push(g.needs_review || g.items.length === 0 || !!note);
     });
   });
   // 候選卡 AI 一張都沒分到（或整頁找不到排除條款）→ 仍寫一列標黃，讓這個網址算「處理過」，
@@ -318,14 +444,19 @@ function basicExEnsureReviewSheet_(ss) {
   return sheet;
 }
 
+// 網址 → 最近一次抽取時間（「解析時間」欄；讀不到日期的列當成很久以前）
 function basicExReviewedUrls_(sheet) {
   const map = {};
   const last = sheet.getLastRow();
   if (last < 2) return map;
-  const col = BASICEX_REVIEW_HEADERS.indexOf('來源網址') + 1;
-  sheet.getRange(2, col, last - 1, 1).getValues().forEach(function (r) {
-    const u = String(r[0] || '').trim();
-    if (u) map[u] = true;
+  const iTime = BASICEX_REVIEW_HEADERS.indexOf('解析時間');
+  const iUrl = BASICEX_REVIEW_HEADERS.indexOf('來源網址');
+  sheet.getRange(2, 1, last - 1, BASICEX_REVIEW_HEADERS.length).getValues().forEach(function (r) {
+    const u = String(r[iUrl] || '').trim();
+    if (!u) return;
+    let t = r[iTime] instanceof Date ? r[iTime] : new Date(r[iTime]);
+    if (isNaN(t.getTime())) t = new Date(0);
+    if (!map[u] || t > map[u]) map[u] = t;
   });
   return map;
 }

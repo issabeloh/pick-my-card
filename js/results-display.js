@@ -1469,10 +1469,15 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         ${(() => {
             // 下方資訊區走共用的 renderActivityInfo（行序與詳情頁回饋卡相同，見該函式）
             if (isBasicCashback && !isUpcoming) {
+                // 「可能排除」：搜尋詞只是名單項目的一部分（搜「醫院費用」← 「臺北醫學大學附設醫院費用」），
+                // 照常顯示基本回饋，加一行灰字讓用戶自己判斷（站長選 B）。項目來自 Sheets，escapeHtml
+                const maybe = result.maybeExcludedItems && result.maybeExcludedItems.length
+                    ? `<div class="maybe-excluded-note">可能屬於一般消費排除項目：<strong>${result.maybeExcludedItems.map(escapeHtml).join('、')}</strong></div>`
+                    : '';
                 return renderActivityInfo({
                     matchHtml: '一般消費回饋率',
                     conditions: result.card.domesticBonusConditions
-                });
+                }) + maybe;
             } else if (result.matchedItem) {
                 // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。
                 //

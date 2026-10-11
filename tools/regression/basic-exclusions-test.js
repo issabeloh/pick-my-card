@@ -72,6 +72,8 @@ const META = readFixtureMeta();
         const firstEx = all.findIndex(el => el.classList.contains('excluded-card'));
         return firstEx < 0 || all.slice(firstEx).every(el => el.classList.contains('excluded-card')); })(),
       title: document.querySelector('#results-section h2')?.innerText.trim(),
+      maybe: [...document.querySelectorAll('#results-container .card-result:not(.excluded-card) .maybe-excluded-note')].map(el => ({
+        name: el.closest('.card-result').querySelector('.card-name')?.innerText.trim(), text: el.innerText.trim() })),
       status: document.getElementById('matched-item').innerText.replace(/\s+/g, ' ').trim(),
       noResultsBox: !!document.querySelector('#results-container .no-results'),
       firstNames: cardsData.cards.slice(0, 5).map(c => c.name),
@@ -128,12 +130,21 @@ const META = readFixtureMeta();
   r = await search('zzz免稅', { all: ['稅'] });
   check('單字排除詞忽略', r.cards.length === total, `cards=${r.cards.length}`);
 
-  // 6. 有指定活動的卡：活動優先，名單不影響
+  // 6. 有指定活動的卡：活動優先、照常顯示；沒有活動、但名單命中的卡補成灰卡墊底（2026-10-11 起）
   const baseline = await search('家樂福');
   r = await search('家樂福', { all: ['家樂福'] });
-  check('活動優先：有活動的卡照常顯示、不出排除字樣',
-    baseline.cards.length > 0 && JSON.stringify(r.cards) === JSON.stringify(baseline.cards) && !/排除項目/.test(r.status),
-    `baseline=${baseline.cards.length} now=${r.cards.length} status=${r.status}`);
+  const activityCards = new Set(baseline.cards).size;
+  check('活動優先：有活動的卡照常顯示（與沒名單時完全相同）',
+    baseline.cards.length > 0 && JSON.stringify(r.cards) === JSON.stringify(baseline.cards),
+    `baseline=${baseline.cards.length} now=${r.cards.length}`);
+  check('有指定通路結果時：其餘命中名單的卡補成灰卡墊底', r.excluded.length === total - activityCards && r.lastIsExcluded,
+    `excluded=${r.excluded.length} 預期 ${total - activityCards}`);
+  check('有指定通路結果時：活動筆數不含灰卡、補一行排除說明',
+    r.status.includes(`有 ${baseline.cards.length} 筆活動符合你的選項`) &&
+    r.status.includes(`另有 ${total - activityCards} 張卡把「家樂福」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）`), r.status);
+  check('有指定通路結果時：標題是「指定通路回饋與一般消費排除項目」', r.title === '指定通路回饋與一般消費排除項目', r.title);
+  r = await search('家樂福');
+  check('沒名單時：有指定通路結果也不出灰卡', r.excluded.length === 0 && !/排除項目/.test(r.status), r.status);
 
   // 7. 勾「精準搜尋」時只認全等（2026-10-11 站長決定）
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
@@ -148,6 +159,17 @@ const META = readFixtureMeta();
   const terms = await page.evaluate(() => ({ quan: getBasicExclusionSearchTerms('全聯'), park: getBasicExclusionSearchTerms('停車') }));
   check('搜尋詞：fuzzy 別名照算（全聯 → 全聯福利中心）', terms.quan.includes('全聯福利中心'), terms.quan.join('|'));
   check('搜尋詞：不含匹配到的商家名（停車 只有自己）', terms.park.length === 1 && terms.park[0] === '停車', terms.park.join('|'));
+
+  // 8b. 「可能排除」（站長選 B）：搜尋詞比名單項目短 → 照常顯示基本回饋＋灰字提示，不變灰卡
+  r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
+  check('可能排除：卡片照常顯示、不變灰卡', r.cards.length === total && r.excluded.length === 0, `cards=${r.cards.length} excluded=${r.excluded.length}`);
+  check('可能排除：那 2 張加灰字提示、寫出完整項目', r.maybe.length === 2 &&
+    r.maybe.every(m => r.firstNames.slice(0, 2).includes(m.name) && m.text.includes('臺北醫學大學附設zzz醫院費用')), JSON.stringify(r.maybe));
+  check('可能排除：狀態列不講「另有 N 張卡」', !/另有/.test(r.status), r.status);
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
+  r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
+  check('可能排除：勾精準搜尋時不提示', r.maybe.length === 0, JSON.stringify(r.maybe));
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
 
   // 9. 詳情頁「一般回饋」區最後一張是灰色「一般消費排除項目」卡；項目多時先收合
   const detail = await page.evaluate(async () => {
