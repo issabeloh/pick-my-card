@@ -91,8 +91,8 @@ const META = readFixtureMeta();
   r = await search('繳稅', { first: 5, items: ['繳稅'] });
   check('部分排除：剩下的卡照常顯示', r.cards.length === total - 5, `cards=${r.cards.length}，預期 ${total - 5}`);
   check('部分排除：被排除的卡不在結果裡', r.firstNames.every(n => !r.cards.includes(n)), `cards=${r.cards.join('、')}`);
-  check('部分排除：狀態列補「另有 5 張卡…刷卡無回饋」',
-    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋'), r.status);
+  check('部分排除：狀態列補「另有 5 張卡…已在以下結果中排除」',
+    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，已在以下結果中排除'), r.status);
 
   // 3. 搜尋詞「包含」排除詞也算（用造的詞：真實詞如「人壽保費」會先匹配到保費活動，走活動路徑）
   r = await search('zzz國泰qq代繳費', { all: ['qq代繳'] });

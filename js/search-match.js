@@ -894,7 +894,7 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
 function appendBasicExcludedNote(merchantValue, excludedCount) {
     if (!matchedItemDiv || excludedCount <= 0) return;
     const count = Number(excludedCount) || 0;
-    const note = `<br><span class="matched-item-warn">另有 ${count} 張卡把「${escapeHtml(String(merchantValue || '').trim())}」列為一般消費排除項目，刷卡無回饋</span>`;
+    const note = `<br><span class="matched-item-warn">另有 ${count} 張卡把「${escapeHtml(String(merchantValue || '').trim())}」列為一般消費排除項目，已在以下結果中排除</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }
