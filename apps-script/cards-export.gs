@@ -310,6 +310,34 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
   return problems;
 }
 
+// 精選活動 order 檢查（2026-10-11）。只回傳「警告」字串陣列，呼叫端絕不可擋匯出：
+// 前端依 order 排序（js/home-ui.js renderSpotlights），重複時同號維持試算表列順序、
+// 0／空白會被當 999 排到最後——不會壞，只是順序不再由編輯者掌控，所以只提醒。
+// 只看 active 的列（inactive 前端不顯示，order 填 0 很正常）。純函數，空陣列＝沒問題。
+function validateSpotlightOrder_(spotlights) {
+  const warnings = [];
+  const byOrder = {};
+
+  (spotlights || []).forEach(function(s, i) {
+    if (!s || s.active === false) return;
+    const who = s.merchant || s.card_name || ('第 ' + (i + 1) + ' 列');
+    const n = Number(s.order);
+    if (!(n > 0) || Math.floor(n) !== n) {
+      warnings.push('精選活動（Highlights）「' + who + '」的 order「' + s.order + '」（0 或空白視同未填）不是正整數，會被排到最後');
+      return;
+    }
+    (byOrder[n] = byOrder[n] || []).push(who);
+  });
+
+  Object.keys(byOrder).forEach(function(n) {
+    if (byOrder[n].length > 1) {
+      warnings.push('精選活動（Highlights）order ' + n + ' 重複：' + byOrder[n].join('、') + '（同號會依試算表列順序排）');
+    }
+  });
+
+  return warnings;
+}
+
 // 手動版：不做完整匯出，只跑參照完整性檢查並用對話框回報（給選單用）。
 // 重用既有 reader，所以欄位版面改了也不會失準。
 function runReferentialIntegrityCheck() {
@@ -321,7 +349,12 @@ function runReferentialIntegrityCheck() {
     const problems = validateReferentialIntegrity_(
       cards, spotlights, promoData.newCardholderPromos, promoData.cardApplyCtas
     );
-    if (problems.length === 0) {
+    const orderWarnings = validateSpotlightOrder_(spotlights);
+    if (problems.length === 0 && orderWarnings.length > 0) {
+      ui.alert('✅ 參照完整性檢查通過（但有 order 提醒）',
+        '所有 card_id 都對得到卡片。\n\n⚠️ 精選活動排序提醒（不影響匯出）：\n' + orderWarnings.join('\n'),
+        ui.ButtonSet.OK);
+    } else if (problems.length === 0) {
       ui.alert('✅ 參照完整性檢查通過', '所有 card_id 都對得到卡片。', ui.ButtonSet.OK);
     } else {
       ui.alert('⚠️ 發現 ' + problems.length + ' 個參照問題',
@@ -923,6 +956,17 @@ if (faqSheet) {
       ui.alert('已取消匯出。請修正上述 card_id 後再匯出一次。');
       return;
     }
+  }
+
+  // 精選活動 order 重複／非正整數：只提醒、不擋匯出（OK 按鈕，按完照常往下匯出）
+  const orderWarnings = validateSpotlightOrder_(spotlights);
+  if (orderWarnings.length > 0) {
+    ui.alert(
+      '⚠️ 精選活動排序提醒（不影響匯出）',
+      orderWarnings.slice(0, 10).join('\n') +
+        (orderWarnings.length > 10 ? '\n…（其餘 ' + (orderWarnings.length - 10) + ' 個略）' : ''),
+      ui.ButtonSet.OK
+    );
   }
 
   // 新戶活動「更新日期」：只有 newCardholderPromos 內容真的變動時才蓋今天，否則沿用上次那天。

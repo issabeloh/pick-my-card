@@ -277,6 +277,8 @@ Grep `titleParts`）：
 
 **資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
 
+**order 防呆（2026-10-11，只警告不擋）**：前端依 `order` 排序（`js/home-ui.js renderSpotlights`），重複時同號依試算表列順序、0／空白被當 999 排最後。匯出前（`validateSpotlightOrder_`，`cards-export.gs`）與 `tools/check-spotlights.js`（preflight 4c）都只對 active 的列提醒，規則兩邊一致；前端不改排序。
+
 **Highlights 只存「編輯決定」（2026-09-30 起）**：`cap`／`deadline`／`category` 三欄已從工作表刪除——它們與卡片真實資料重複，實測 20 則有 2 則上限、3 則期限對不上。現在：
 - **`rate` 是選擇器**：`resolveSpotlightPick(item, card)` 把「活動 × 級別」逐一試算，取回饋率等於 rate 的組合（多個相等取上限最大）。它同時表達站長選的級別（分級卡有時推中間、有時推最高）與活動（同通路多個活動時，例如夢時代 3%/7%/11%/7%）。**不能改成 level 欄**——level 表達不了「選哪個活動」。
 - **上限**＝選中組合的 `resolveDisplayCap()`，顯示「上限 NT$X」、**不帶「／月」**（卡片資料沒有上限週期；站長 2026-09-30 裁定不加）。對不到組合 → 小卡照顯示 sheet rate、不顯示上限，console.error，preflight 第 4c 節（`tools/check-spotlights.js`，直接呼叫前端 resolveSpotlightPick）發 ⚠️。
