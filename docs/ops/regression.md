@@ -146,7 +146,7 @@ node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只
 ## 一般消費排除項目（獨立一支，2026-09-30 新增）
 
 ```bash
-node tools/regression/basic-exclusions-test.js   # 12 項，全過 → exit 0
+node tools/regression/basic-exclusions-test.js   # 16 項，全過 → exit 0
 ```
 
 凍結的 `fixture.data` 拍攝時還沒有 `basicExclusions` 欄，所以 run-regression.js 完全碰不到這條路徑（也應該如此：沒填名單時行為必須逐字不變）。

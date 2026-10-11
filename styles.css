@@ -2913,6 +2913,60 @@ input[type="number"]:focus {
     background: #f9fafb;
 }
 
+/* 一般消費排除卡（2026-10-11 站長要求）：整張灰色調、只有卡名＋排除項目。
+   不用 opacity（no-cashback 那招）——ⓘ 詳情鈕要維持可點、項目文字要讀得清楚 */
+.card-result.excluded-card {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+
+.card-result.excluded-card .card-name {
+    color: #6b7280;
+}
+
+.excluded-badge {
+    background: #9ca3af;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.excluded-card-body {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* 排除項目是這張卡的重點：深灰粗體（不用一般匹配項目的藍色，藍色是「有得刷」的語氣） */
+.excluded-card-body strong,
+.rate-card-excluded .matched-merchant strong {
+    color: #374151;
+    font-weight: 700;
+}
+
+.excluded-card-note {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* 詳情頁「一般回饋」區的排除項目卡 */
+.cashback-detail-item.rate-card-excluded {
+    background: #f3f4f6;
+}
+
+.rate-card-excluded .rate-card-title {
+    color: #6b7280;
+}
+
+.excluded-detail-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;

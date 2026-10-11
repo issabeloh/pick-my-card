@@ -201,6 +201,9 @@ if (overseasBonusRate) {
     });
 }
 
+// 一般消費排除項目（2026-10-11 站長要求）：放在一般回饋區最後一張，灰色，只列項目
+basicContent += renderBasicExclusionsCard(card);
+
 basicCashbackDiv.innerHTML = basicContent;
     
     // Handle level selection for all cards with levels
@@ -1071,6 +1074,34 @@ function renderRateCard(o) {
     });
     html += `</div></div>`; // .rate-card-body、.rate-card
     return html;
+}
+
+// 詳情頁「一般回饋」區的灰色「一般消費排除項目」卡（2026-10-11 站長要求）。
+// 刻意不走 renderRateCard：那支一律輸出「回饋率｜回饋消費上限」兩欄，而這張卡的重點只有項目本身。
+// 外框沿用 .rate-card 的「標題列｜body」兩段結構，桌機兩欄時才能跟旁邊的卡同排對齊（subgrid）。
+// 項目多（台新 60 項）→ 先列 initialCount 個，展開鈕沿用 toggleMerchants（與適用通路同一套，
+// 詳情頁「搜尋通路」也會自動點開它）。沒有名單回空字串。
+function renderBasicExclusionsCard(card, initialCount = 10) {
+    const items = Array.isArray(card && card.basicExclusions)
+        ? [...new Set(card.basicExclusions.map(s => String(s || '').trim()).filter(Boolean))] : [];
+    if (items.length === 0) return '';
+    const fullList = items.join('、');
+    let listHtml;
+    if (items.length <= initialCount) {
+        listHtml = `<strong>${escapeHtml(fullList)}</strong>`;
+    } else {
+        const initialList = items.slice(0, initialCount).join('、');
+        const merchantsId = `basic-exclusions-${escapeHtml(card.id)}-merchants`;
+        const showAllId = `basic-exclusions-${escapeHtml(card.id)}-show-all`;
+        listHtml = `<strong id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
+            `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeHtml(escapeForOnclick(initialList))}', '${escapeHtml(escapeForOnclick(fullList))}')">… 顯示全部${items.length}個</button>`;
+    }
+    return `<div class="cashback-detail-item rate-card rate-card-excluded">` +
+        `<div class="rate-card-header"><div class="rate-card-title">一般消費排除項目</div></div>` +
+        `<div class="rate-card-body">` +
+        `<div class="excluded-detail-note">刷以下項目沒有任何回饋（包含基本回饋）；有指定活動的項目以活動為準</div>` +
+        `<div class="matched-merchant rate-card-info"><div class="activity-info-line">排除項目: ${listHtml}</div></div>` +
+        `</div></div>`;
 }
 
 // 「NT$7,500」／「無上限」：詳情頁回饋卡的上限欄（cap 是 null/0/'' 都算無上限）
