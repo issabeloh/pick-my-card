@@ -840,26 +840,23 @@ function buildBasicCashbackResult(card, amount) {
 // 只在「退回基本回饋」的路徑使用：某卡對這個詞有指定活動時，活動優先，排除名單不影響。
 //
 // 比對規則刻意保守——誤判成「沒回饋」跟漏判一樣會誤導，而且更難被發現：
-//   ・搜尋詞（含 fuzzy/同義詞展開、匹配到的 item 名）與排除詞**全等**，或搜尋詞**包含**排除詞
-//     （「繳稅」命中「繳稅」、「國泰人壽保費」命中「保費」）
-//   ・反方向不算：排除詞「超商代收」不會讓搜尋「超商」被判排除
+// 比對規則（2026-10-11 站長逐條確認）：
+//   ・搜尋詞＝用戶輸入＋fuzzy/同義詞展開，**不含**findMatchingItem 匹配到的 item 名——
+//     商家匹配會幫用戶「補完」（搜「停車」配到「路邊停車費」），拿它比名單等於繞過下一條
+//   ・反方向不算：排除詞「路邊停車費」不會讓搜尋「停車費」被判排除（「停車費」可能是停車場、有回饋）
+//   ・搜尋詞與排除詞**全等**，或搜尋詞**包含**排除詞即命中（「台電電費」命中「電費」）
+//   ・勾了「精準搜尋」（exactOnly）時只認**全等**——跟活動匹配同一個開關、同一種嚴格度
 //   ・少於 2 字的排除詞一律忽略（「稅」會誤殺「免稅店」）
-function getBasicExclusionSearchTerms(merchantValue, matchedItems) {
-    const terms = expandSearchTerms(String(merchantValue || '').toLowerCase().trim());
-    const list = Array.isArray(matchedItems) ? matchedItems : (matchedItems ? [matchedItems] : []);
-    list.forEach(m => {
-        const name = m && m.originalItem ? String(m.originalItem).toLowerCase().trim() : '';
-        if (name && !terms.includes(name)) terms.push(name);
-    });
-    return terms.filter(Boolean);
+function getBasicExclusionSearchTerms(merchantValue) {
+    return expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
 }
 
-function isBasicExcludedForSearch(card, searchTerms) {
+function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
     if (!card || !Array.isArray(card.basicExclusions) || card.basicExclusions.length === 0) return false;
     return card.basicExclusions.some(ex => {
         const exLower = String(ex || '').toLowerCase().trim();
         if (exLower.length < 2) return false;
-        return searchTerms.some(t => t === exLower || t.includes(exLower));
+        return searchTerms.some(t => t === exLower || (!exactOnly && t.includes(exLower)));
     });
 }
 

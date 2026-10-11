@@ -115,6 +115,20 @@ const META = readFixtureMeta();
     baseline.cards.length > 0 && JSON.stringify(r.cards) === JSON.stringify(baseline.cards) && !/排除項目/.test(r.status),
     `baseline=${baseline.cards.length} now=${r.cards.length} status=${r.status}`);
 
+  // 7. 勾「精準搜尋」時只認全等（2026-10-11 站長決定）
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
+  r = await search('zzz台電電費', { all: ['電費'] });
+  check('精準搜尋：搜尋詞只是「包含」排除詞 → 不排除', r.cards.length === total && !/排除項目/.test(r.status),
+    `cards=${r.cards.length} status=${r.status}`);
+  r = await search('zzz電費', { all: ['zzz電費'] });
+  check('精準搜尋：全等 → 照樣排除', r.cards.length === 0, `cards=${r.cards.length}`);
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
+
+  // 8. 搜尋詞只有輸入＋fuzzy 別名，不含 findMatchingItem 匹配到的 item 名（站長決定）
+  const terms = await page.evaluate(() => ({ quan: getBasicExclusionSearchTerms('全聯'), park: getBasicExclusionSearchTerms('停車') }));
+  check('搜尋詞：fuzzy 別名照算（全聯 → 全聯福利中心）', terms.quan.includes('全聯福利中心'), terms.quan.join('|'));
+  check('搜尋詞：不含匹配到的商家名（停車 只有自己）', terms.park.length === 1 && terms.park[0] === '停車', terms.park.join('|'));
+
   check('沒有 console error', errors.length === 0, errors.join(' | '));
 
   await browser.close();

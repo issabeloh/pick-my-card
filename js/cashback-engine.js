@@ -202,8 +202,9 @@ async function calculateCashback() {
     // 只動 isBasic 結果；有指定活動的卡不會走到這裡（活動優先）。詳見 search-match.js 同名區塊。
     let basicExcludedCount = 0;
     if (isBasicCashback && merchantValue.length > 0) {
-        const exclusionTerms = getBasicExclusionSearchTerms(merchantValue, currentMatchedItem);
-        const kept = results.filter(r => !(r.isBasic && isBasicExcludedForSearch(r.card, exclusionTerms)));
+        const exclusionTerms = getBasicExclusionSearchTerms(merchantValue);
+        const exactOnly = isExactSearchEnabled();
+        const kept = results.filter(r => !(r.isBasic && isBasicExcludedForSearch(r.card, exclusionTerms, exactOnly)));
         basicExcludedCount = results.length - kept.length;
         results = kept;
     }
