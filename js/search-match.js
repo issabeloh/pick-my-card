@@ -11,7 +11,7 @@
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 一般消費排除項目            → "isBasicExcludedForSearch" / "showBasicExcludedMessage"
+ *  - 一般消費排除項目            → "getBasicExclusionHits" / "showBasicExcludedMessage"
  * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
@@ -851,13 +851,22 @@ function getBasicExclusionSearchTerms(merchantValue) {
     return expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
 }
 
-function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
-    if (!card || !Array.isArray(card.basicExclusions) || card.basicExclusions.length === 0) return false;
-    return card.basicExclusions.some(ex => {
-        const exLower = String(ex || '').toLowerCase().trim();
-        if (exLower.length < 2) return false;
-        return searchTerms.some(t => t === exLower || (!exactOnly && t.includes(exLower)));
+// 回傳這張卡命中的排除項目（原寫法，去重）；沒命中回空陣列。
+// 搜尋結果的灰色「一般消費排除」卡片要顯示「匹配到什麼而排除」，所以要的是項目本身、不只是真假
+function getBasicExclusionHits(card, searchTerms, exactOnly = false) {
+    if (!card || !Array.isArray(card.basicExclusions) || card.basicExclusions.length === 0) return [];
+    const hits = [];
+    card.basicExclusions.forEach(ex => {
+        const raw = String(ex || '').trim();
+        const exLower = raw.toLowerCase();
+        if (exLower.length < 2 || hits.includes(raw)) return;
+        if (searchTerms.some(t => t === exLower || (!exactOnly && t.includes(exLower)))) hits.push(raw);
     });
+    return hits;
+}
+
+function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
+    return getBasicExclusionHits(card, searchTerms, exactOnly).length > 0;
 }
 
 // 比較中的卡**全部**都把這個詞列為排除、下方也沒有領券／即將開始可看時的狀態列。
@@ -887,7 +896,7 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
     toggleExactSearchEmptyHint(false);
 }
 
-// 只有**部分**卡排除時：那幾張已從結果拿掉，在狀態列最後補一行交代去向
+// 只有**部分**卡排除時：在狀態列最後補一行（那幾張以灰色「一般消費排除」卡片列在結果最下方）
 function appendBasicExcludedNote(merchantValue, excludedCount) {
     if (!matchedItemDiv || excludedCount <= 0) return;
     const count = Number(excludedCount) || 0;

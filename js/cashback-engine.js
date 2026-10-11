@@ -198,19 +198,25 @@ async function calculateCashback() {
     }
     
     // 一般消費排除項目（basicExclusions，2026-09-30）：走到基本回饋 fallback 時，
-    // 把「這張卡明文排除這個詞」的卡拿掉——那張卡實際刷下去是 0，顯示基本回饋等於誤導。
+    // 「這張卡明文排除這個詞」的卡實際刷下去是 0，顯示基本回饋等於誤導。
+    // 2026-10-11 起（站長要求）不再拿掉，改成標記 isExcluded：顯示成灰色卡片、只寫「匹配到哪個排除項目」，
+    // 讓用戶看得到是什麼原因被排除、自己也能判斷。回饋金額歸 0、計算層清掉（不給計算明細鈕）。
     // 只動 isBasic 結果；有指定活動的卡不會走到這裡（活動優先）。詳見 search-match.js 同名區塊。
     let basicExcludedCount = 0;
     if (isBasicCashback && merchantValue.length > 0) {
         const exclusionTerms = getBasicExclusionSearchTerms(merchantValue);
         const exactOnly = isExactSearchEnabled();
-        const kept = results.filter(r => !(r.isBasic && isBasicExcludedForSearch(r.card, exclusionTerms, exactOnly)));
-        basicExcludedCount = results.length - kept.length;
-        results = kept;
+        results = results.map(r => {
+            if (!r.isBasic) return r;
+            const hits = getBasicExclusionHits(r.card, exclusionTerms, exactOnly);
+            if (hits.length === 0) return r;
+            basicExcludedCount++;
+            return { ...r, isExcluded: true, excludedItems: hits, cashbackAmount: 0, rate: 0, calculationLayers: null };
+        });
     }
 
-    // Sort active results by cashback amount (highest first)
-    results.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
+    // Sort active results by cashback amount (highest first)；排除卡一律墊底（基本回饋 0% 的卡也排在它們前面）
+    results.sort((a, b) => (a.isExcluded === true) - (b.isExcluded === true) || b.cashbackAmount - a.cashbackAmount);
 
     // Append upcoming results after active results (if they exist)
     if (typeof uniqueUpcomingResults !== 'undefined' && uniqueUpcomingResults.length > 0) {
@@ -253,10 +259,10 @@ async function calculateCashback() {
         isBasicCashback = false;
     }
 
-    // 比較中的卡全被排除、而且下方沒有領券／即將開始可看 → 不顯示任何結果卡片，只講「沒有回饋」。
+    // 比較中的卡全被排除、而且下方沒有領券／即將開始可看 → 結果只剩灰色排除卡，狀態列講「沒有回饋」。
     // 有領券或即將開始時不能這樣講（那些確實是回饋），改走一般訊息＋補一行排除說明。
     const allBasicExcluded = basicExcludedCount > 0 && couponCount === 0 && upcomingCount === 0 &&
-        !results.some(r => r.isBasic);
+        !results.some(r => r.isBasic && !r.isExcluded);
 
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
     // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，

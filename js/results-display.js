@@ -75,9 +75,10 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     const resultsTitle = resultsSection.querySelector('h2');
     if (resultsTitle) {
         const titleParts = [];
-        if (results.some(r => r.isBasic)) titleParts.push('一般回饋');
+        if (results.some(r => r.isBasic && !r.isExcluded)) titleParts.push('一般回饋');
         if (results.some(r => !r.isBasic && !r.isUpcoming)) titleParts.push('指定通路回饋');
         if (results.some(r => r.isUpcoming)) titleParts.push('即將開始的活動');
+        if (results.some(r => r.isExcluded)) titleParts.push('一般消費排除項目');
         resultsTitle.textContent = titleParts.length === 0
             ? '搜尋結果'   // 一張卡都沒有、又要顯示「無符合的信用卡」那塊時的中性標題
             : titleParts.length === 1
@@ -1338,7 +1339,32 @@ function renderActivityInfo({ activityName = '', matchHtml = '', period = '', en
     return body ? `<div class="matched-merchant${extraClass ? ' ' + extraClass : ''}">${body}</div>` : '';
 }
 
+// 一般消費排除卡（2026-10-11 站長要求）：灰色、只寫「匹配到哪個排除項目」，
+// 回饋率／回饋金額／上限／活動期間一律不出——這張卡刷這個項目就是 0，那些欄位只會讓人以為有得算。
+// 用戶靠它自己確認「是因為什麼被排除」（例：搜「台電電費」→ 排除項目「電費」）。
+// 卡名與項目都來自 Sheets，一律 escapeHtml（鐵則 3）。ⓘ 詳情鈕沿用全站委派（data-card-id）
+function createExcludedCardResultElement(result) {
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'card-result fade-in excluded-card';
+    const items = (result.excludedItems || []).map(escapeHtml).join('、');
+    cardDiv.innerHTML = `
+        <div class="card-header">
+            <div class="card-name-with-pin">
+                <div class="card-name">${escapeHtml(result.card.name)}</div>
+                <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(result.card.id)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
+            </div>
+            <div class="badges-container"><div class="excluded-badge">一般消費排除</div></div>
+        </div>
+        <div class="excluded-card-body">
+            <div class="excluded-card-match">排除項目: <strong>${items}</strong></div>
+            <div class="excluded-card-note">此卡的一般消費不含這個項目，刷卡無回饋</div>
+        </div>
+    `;
+    return cardDiv;
+}
+
 function createCardResultElement(result, originalAmount, searchedItem, isBest, isBasicCashback = false) {
+    if (result.isExcluded) return createExcludedCardResultElement(result);
     const cardDiv = document.createElement('div');
     const isUpcoming = result.isUpcoming === true;
     cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''} ${isUpcoming ? 'upcoming-activity' : ''}`;

@@ -241,6 +241,14 @@ Grep `titleParts`）：
 - ⚠️ `.card-result` 因此不只存在於搜尋結果區：現有用 `.card-result` 找元素的程式（`closest('.card-result')`）都是從按鈕往上找，不受影響；新增「全頁掃 `.card-result`」的程式要限定在 `#results-container`
 - 比較 modal 前三名支付在名稱前加獎牌 `renderPaymentRankMedal(rank)`（SVG：藍彩帶＋金／銀／銅牌面＋數字，顏色在 `.payment-rank-medal-N`）。名次用**並列名次（標準競賽排名 1、2、2、2、5）**：依序比最優卡回饋率 → 最優卡消費上限（無上限最高）→ 第二張卡回饋率，三者全同才並列；並列第 2 之後就沒有第 3（2026-10-08 實測 Apple／Google／Samsung Pay 並列第 2，當天沒有銅牌）
 
+## 1j. 一般消費排除卡（灰色，2026-10-11 站長要求）
+
+規則與比對見 `docs/project/cashback-engine.md` 第 10 節。目的：用戶自己也能判斷——看得到「匹配到哪個排除項目」才排除，又不用讀一堆數字。
+- **搜尋結果**：`createExcludedCardResultElement()`（`js/results-display.js`）。只有卡名＋ⓘ詳情＋右上灰色徽章「一般消費排除」＋「排除項目: **命中的項目**」＋一行小字；**不出**回饋率／回饋金額／上限／活動期間／計算明細／釘選。墊在進行中結果最後（即將開始之前）。結果標題多一段「一般消費排除項目」（1f 節的 `titleParts`）
+- **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
+- **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
+- 測試：`tools/regression/basic-exclusions-test.js`
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**
