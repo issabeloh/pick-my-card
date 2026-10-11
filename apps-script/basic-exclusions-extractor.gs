@@ -30,8 +30,8 @@
  *   合併去重後，寫進正式 Cards Data 的 basicExclusions 欄。
  *   ⚠️ 安全底線：
  *     - **只寫 basicExclusions 這一欄**，每一格寫入前過 basicExAssertCol_() 驗欄名
- *     - **只寫空白格**：正式表那格已經有值就跳過、列在結果裡（這支的用途是「初次建立」；
- *       之後要更新某張卡，把正式表那格清空再寫回，或直接手改——不會蓋掉你手改過的名單）
+ *     - **打 V 只寫空白格**：正式表那格已經有值就跳過、列在結果裡（不會蓋掉你手改過的名單）
+ *     - **核准欄打「覆蓋」才會整格換掉已有的名單**（2026-10-11；官網改版要更新時用），確認視窗會逐卡列出新增／移除的項目
  *     - 寫之前跳確認視窗；寫成功才在待審核表蓋「已寫回」章，再按一次不會重複寫
  *
  * 寫完之後：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。
@@ -47,6 +47,9 @@ const BASICEX_CONFIG = {
   // 「一般消費項目排除」…）。keywords 空白的列（單卡權益頁、公告頁）不處理。
   rowKeywordRe: /一般消費|排除|不回饋|不計入|不適用回饋/,
   maxSnapshotChars: 30000,                 // 單頁送給 AI 的快照上限
+  // 「原文引用」欄上限。2026-10-11 前是 prompt 要求 200 字＋程式截 500 字，站長回報玉山那格只有前兩列、
+  // 看起來像快照不完整（其實快照是完整的）——站長要逐項核對，原文必須整段。Sheets 一格上限 5 萬字，留餘裕
+  maxEvidenceChars: 20000,
   // ⚠️ Apps Script 單次硬上限 6 分鐘，超時是直接砍掉。一頁＝一次 Gemini 呼叫，長快照＋範例 prompt
   //    實測可以跑到 1～2 分鐘，所以看錶煞車要留足餘裕：過了這個秒數就不開新的一頁。
   //    2026-10-11 第一次實跑撞到「Exceeded maximum execution time」（原本設 240 秒）
@@ -148,7 +151,7 @@ const BASICEX_EXAMPLE_ESUN = {
     '特定卡片 (玉山世界卡、…ＵBear卡、Only卡、…) 於歐洲地區實體特店刷卡仍享消費回饋。 ' +
     '…公務人員國民旅遊卡，於特約商店分期付款消費交易，以及歐洲地區國家實體商店刷卡消費，列為非一般消費項目…',
   answer: BASICEX_EUROPE.map(function (c) { return c + '實體消費'; }).concat([
-    '基金扣繳', '證券代銷', '境外投資平台交易', 'eToro', 'MCO', '匯兌平台交易', 'wise', '旅行支票', '賭博籌碼', '數位 (虛擬) 貨幣',
+    '基金扣繳', '證券代銷', '境外投資平台交易', 'eToro', 'MCO投資平台', '匯兌平台交易', 'wise', '旅行支票', '賭博籌碼', '數位 (虛擬) 貨幣',
     '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款', '學費', 'i繳費平台',
     '學費通繳費平臺', '醫療費用', '政府規費', '全聯福利中心 (含PX Pay及全支付)', '大全聯 (含PX Pay及全支付)', 'PXGo!全聯線上購',
     '便利商店', '7-11', '全家', '萊爾富', 'OK超商', '小額支付特約商店 (如停車場、餐飲店、連鎖速食店、販賣機等)',
@@ -224,7 +227,7 @@ function extractBasicExclusionsFromSnapshots() {
     if (candidates.length === 0) { skipped.push(label + '：card_id／cards 欄沒有合法的卡片 id'); continue; }
 
     // 首次抽取：正式表已有名單的卡不抽（站長手填的就是答案）。
-    // 官網更新後重抽：全部候選卡都抽，已有名單的那幾列會註明「寫回不會覆蓋、請比對後手改」
+    // 官網更新後重抽：全部候選卡都抽，已有名單的那幾列會註明「比對後要換就打『覆蓋』」
     const open = refresh ? candidates : candidates.filter(function (x) { return !filled.ids[x]; });
     const already = candidates.filter(function (x) { return filled.ids[x]; });
     if (!refresh && already.length) skipped.push(label + '：正式表已有名單、不重抽：' + already.join(','));
@@ -394,7 +397,8 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '10. 頁面分卡別列不同名單就分成多個 group，每組 card_ids 只放適用的卡；同一份名單適用全部候選卡就一組。',
     '    card_ids 只能從候選清單挑。頁面找不到任何排除條款（快照只抓到選單、內容是別的活動）→ groups 回空陣列。',
     '    快照明顯不完整（表格只有前幾列就斷掉）時，抽得到的照抽，但 needs_review=true，review_question 寫「快照可能不完整」。',
-    '11. evidence 貼原文中排除條款的那一段（原樣摘錄，200 字內）。沒把握就 needs_review=true 並寫出問題。',
+    '11. evidence 原樣摘錄原文中**完整的**排除條款段落（整張不回饋表格＋例外／補充說明，不要刪節、不要只摘前幾列），',
+    '    站長要拿它逐項核對你的 items。沒把握就 needs_review=true 並寫出問題。',
     ''
   ].concat(BASICEX_EXAMPLES.map(function (ex, n) {
     return '【範例 ' + (n + 1) + '】卡片：' + ex.card + '\n原文：' + ex.source + '\n答案 items：' + ex.answer.join(',');
@@ -454,17 +458,17 @@ function basicExWriteReview_(sheet, page, groups) {
   const rows = [];
   const flags = [];
   const covered = {};
-  // 官網更新後重抽、而且正式表已有名單的卡：寫回只寫空白格、不會覆蓋，要站長比對後手改
+  // 官網更新後重抽、而且正式表已有名單的卡：打 V 不會蓋掉，要換就在核准欄打「覆蓋」
   const refreshNote = function (id) {
     return page.refresh && page.filledIds && page.filledIds[id]
-      ? '【官網更新後重抽】正式表已有名單，「寫回」不會覆蓋——請跟正式表比對，有差異就手動改正式表。' : '';
+      ? '【官網更新後重抽】正式表已有名單。跟正式表比對後，要換成這次的內容就在核准欄打「覆蓋」（打 V 不會蓋掉）。' : '';
   };
   groups.forEach(function (g) {
     g.card_ids.forEach(function (id) {
       covered[id] = true;
       const note = refreshNote(id);
       rows.push(['', now, id, page.bank, page.url, g.items.join(','),
-        [note, g.review_question].filter(function (x) { return x; }).join('\n'), String(g.evidence).slice(0, 500)]);
+        [note, g.review_question].filter(function (x) { return x; }).join('\n'), String(g.evidence).slice(0, BASICEX_CONFIG.maxEvidenceChars)]);
       flags.push(g.needs_review || g.items.length === 0 || !!note);
     });
   });
@@ -533,13 +537,17 @@ function applyBasicExclusionsToCardsData() {
   const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id');
   const iItems = BASICEX_REVIEW_HEADERS.indexOf('basicExclusions');
 
-  // 同一張卡可能有多列打 V（例如兩個頁面都列了它）→ 合併去重
-  const byCard = {};      // id → { items: [], reviewRows: [] }
+  // 同一張卡可能有多列打 V（例如兩個頁面都列了它）→ 合併去重。
+  // 「覆蓋」（2026-10-11）：核准欄打「覆蓋」＝這張卡正式表已有名單、要整格換成這次的內容（官網改版時用）。
+  // 同一張卡只要有一列打「覆蓋」，整張卡就走覆蓋。
+  const byCard = {};      // id → { items: [], reviewRows: [], overwrite }
   for (let i = 1; i < rData.length; i++) {
-    if (!basicExIsChecked_(rData[i][iApprove])) continue;
+    const overwrite = basicExIsOverwrite_(rData[i][iApprove]);
+    if (!overwrite && !basicExIsChecked_(rData[i][iApprove])) continue;
     const id = String(rData[i][iId] || '').trim();
     if (!id) continue;
-    if (!byCard[id]) byCard[id] = { items: [], reviewRows: [] };
+    if (!byCard[id]) byCard[id] = { items: [], reviewRows: [], overwrite: false };
+    if (overwrite) byCard[id].overwrite = true;
     byCard[id].reviewRows.push(i + 1);
     basicExSplit_(rData[i][iItems]).forEach(function (t) {
       if (t.length >= 2 && byCard[id].items.indexOf(t) < 0) byCard[id].items.push(t);
@@ -572,27 +580,43 @@ function applyBasicExclusionsToCardsData() {
     const r = rowById[id];
     if (r === undefined) { problems.push(id + '：正式 Cards Data 找不到這個 id，跳過'); return; }
     const existing = String(cData[r][cTarget] == null ? '' : cData[r][cTarget]).trim();
-    if (existing) { alreadyFilled.push(id); return; }   // 只寫空白格：不蓋掉已有（可能手改過）的名單
-    plan.push({ id: id, cardRow: r + 1, value: entry.items.join(','), count: entry.items.length,
-      reviewRows: entry.reviewRows });
+    // 打 V：只寫空白格，不蓋掉已有（可能手改過）的名單。打「覆蓋」：整格換掉，確認視窗會列出增減
+    if (existing && !entry.overwrite) { alreadyFilled.push(id); return; }
+    const value = entry.items.join(',');
+    if (existing === value) { problems.push(id + '：正式表內容已經一樣，不用寫'); return; }
+    let diff = '';
+    if (existing) {
+      const oldItems = basicExSplit_(existing);
+      const added = entry.items.filter(function (t) { return oldItems.indexOf(t) < 0; });
+      const removed = oldItems.filter(function (t) { return entry.items.indexOf(t) < 0; });
+      diff = '覆蓋：+' + added.length + ' 項、−' + removed.length + ' 項' +
+        (added.length ? '\n      新增：' + added.slice(0, 8).join('、') + (added.length > 8 ? '…' : '') : '') +
+        (removed.length ? '\n      移除：' + removed.slice(0, 8).join('、') + (removed.length > 8 ? '…' : '') : '');
+    }
+    plan.push({ id: id, cardRow: r + 1, value: value, count: entry.items.length,
+      reviewRows: entry.reviewRows, diff: diff });
   });
 
   if (plan.length === 0) {
     ui.alert([
       '沒有可以寫回的資料。',
       '請在「' + BASICEX_CONFIG.reviewSheet + '」的「核准」欄對確認過的列打 V。',
-      alreadyFilled.length ? '\n正式表已經有值、刻意不覆蓋的卡（要重寫就先把正式表那格清空）：\n・' +
+      alreadyFilled.length ? '\n正式表已經有值、刻意不覆蓋的卡（要換成這次的內容，把核准欄改打「覆蓋」）：\n・' +
         alreadyFilled.join('、') : '',
       problems.length ? '\n問題：\n・' + problems.join('\n・') : ''
     ].filter(function (x) { return x; }).join('\n'));
     return;
   }
 
-  const preview = plan.slice(0, 12).map(function (p) { return '・' + p.id + '（' + p.count + ' 項）'; }).join('\n');
+  const overwriteCount = plan.filter(function (p) { return p.diff; }).length;
+  const preview = plan.slice(0, 12).map(function (p) {
+    return '・' + p.id + '（' + p.count + ' 項）' + (p.diff ? '\n   ' + p.diff : '');
+  }).join('\n');
   const answer = ui.alert('要寫回正式 Cards Data 嗎？',
     '將把 ' + plan.length + ' 張卡的一般消費排除項目寫進正式的「' + cardsSheet.getName() + '」。\n\n' +
     preview + (plan.length > 12 ? '\n…（其餘 ' + (plan.length - 12) + ' 張）' : '') +
-    '\n\n只會寫 ' + BASICEX_CONFIG.targetHeader + ' 這一欄、而且只寫空白格，其他欄位一格都不會動。',
+    '\n\n只會寫 ' + BASICEX_CONFIG.targetHeader + ' 這一欄，其他欄位一格都不會動。' +
+    (overwriteCount ? '\n⚠️ 其中 ' + overwriteCount + ' 張是「覆蓋」：正式表原本的名單會整格被換掉（版本紀錄可以救回）。' : ''),
     ui.ButtonSet.OK_CANCEL);
   if (answer !== ui.Button.OK) { ui.alert('已取消，正式表沒有任何變動。'); return; }
 
@@ -686,6 +710,11 @@ function basicExIsChecked_(v) {
   const s = String(v == null ? '' : v).trim();
   if (!s || s.indexOf(BASICEX_CONFIG.appliedMark) === 0) return false;
   return ['V', 'v', '✓', '✔', 'TRUE', 'true', '1', 'ｖ', 'Ｖ'].indexOf(s) >= 0;
+}
+
+// 核准欄打「覆蓋」＝要整格換掉正式表已有的名單
+function basicExIsOverwrite_(v) {
+  return String(v == null ? '' : v).trim() === '覆蓋';
 }
 
 // 寫入正式表前的最後一道鎖：目標欄名必須正好是 basicExclusions

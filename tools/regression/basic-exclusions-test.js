@@ -171,11 +171,6 @@ const META = readFixtureMeta();
   check('可能排除：勾精準搜尋時不提示', r.maybe.length === 0, JSON.stringify(r.maybe));
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
 
-  // 8c. 比對時忽略括號內容，灰卡顯示完整原文（2026-10-11 站長決定）
-  r = await search('zzz全聯', { all: ['zzz全聯 (含PX Pay及全支付)'] });
-  check('括號：比對忽略括號內容 → 判排除', r.cards.length === 0 && r.excluded.length === total, `cards=${r.cards.length} excluded=${r.excluded.length}`);
-  check('括號：灰卡顯示完整原文', r.excluded[0] && r.excluded[0].items === 'zzz全聯 (含PX Pay及全支付)', JSON.stringify(r.excluded[0]));
-
   // 9. 詳情頁「一般回饋」區最後一張是灰色「一般消費排除項目」卡；項目多時先收合
   const detail = await page.evaluate(async () => {
     const card = cardsData.cards[0];

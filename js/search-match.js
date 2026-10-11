@@ -852,13 +852,6 @@ function getBasicExclusionSearchTerms(merchantValue) {
     return expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
 }
 
-// 比對用的排除詞：去掉括號裡的補充說明（2026-10-11 站長決定）。名單照抄官網原文時常帶括號，
-// 「全聯福利中心 (含PX Pay及全支付)」整串拿去比，用戶搜「全聯福利中心」就只剩「可能排除」。
-// 比對用「全聯福利中心」、灰卡上照樣顯示完整原文。半形／全形括號都去
-function basicExclusionMatchKey(raw) {
-    return String(raw || '').replace(/\s*[（(][^）)]*[）)]\s*/g, '').trim().toLowerCase();
-}
-
 // 回傳這張卡命中的排除項目（原寫法，去重）；沒命中回空陣列。
 // 搜尋結果的灰色「一般消費排除」卡片要顯示「匹配到什麼而排除」，所以要的是項目本身、不只是真假
 function getBasicExclusionHits(card, searchTerms, exactOnly = false) {
@@ -866,7 +859,7 @@ function getBasicExclusionHits(card, searchTerms, exactOnly = false) {
     const hits = [];
     card.basicExclusions.forEach(ex => {
         const raw = String(ex || '').trim();
-        const exLower = basicExclusionMatchKey(raw);
+        const exLower = raw.toLowerCase();
         if (exLower.length < 2 || hits.includes(raw)) return;
         if (searchTerms.some(t => t === exLower || (!exactOnly && t.includes(exLower)))) hits.push(raw);
     });
@@ -883,7 +876,7 @@ function getBasicExclusionMaybeHits(card, searchTerms, exactOnly = false) {
     const hits = [];
     card.basicExclusions.forEach(ex => {
         const raw = String(ex || '').trim();
-        const exLower = basicExclusionMatchKey(raw);
+        const exLower = raw.toLowerCase();
         if (exLower.length < 2 || hits.includes(raw)) return;
         if (terms.some(t => t !== exLower && exLower.includes(t))) hits.push(raw);
     });
