@@ -245,7 +245,7 @@ Grep `titleParts`）：
 
 規則與比對見 `docs/project/cashback-engine.md` 第 10 節。目的：用戶自己也能判斷——看得到「匹配到哪個排除項目」才排除，又不用讀一堆數字。
 - **搜尋結果**：`createExcludedCardResultElement()`（`js/results-display.js`）。只有卡名＋ⓘ詳情＋右上灰色徽章「一般消費排除」＋「排除項目: **命中的項目**」＋一行小字；**不出**回饋率／回饋金額／上限／活動期間／計算明細／釘選。墊在進行中結果最後（即將開始之前）。**有指定通路結果時也會出現**（沒活動、名單命中的比較卡）；1e 節清場只收基本回饋、不收灰卡。結果標題多一段「一般消費排除項目」（1f 節的 `titleParts`）
-- **可能排除提示**：基本回饋卡下方 `.maybe-excluded-note` 灰底一行「可能屬於一般消費排除項目：**完整項目**」（搜尋詞只是名單項目的一部分時；卡片其餘照常）
+- **可能排除**（搜尋詞只是名單項目的一部分）：同一個灰卡產生器，多 `.maybe-excluded-card`；徽章「可能排除」、標籤「可能屬於排除項目: **完整項目**」、說明「此卡一般消費不含上述項目，請確認你的消費是否屬於它」
 - **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
 - **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
 - 測試：`tools/regression/basic-exclusions-test.js`

@@ -915,10 +915,13 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
 }
 
 // 只有**部分**卡排除時：在狀態列最後補一行（那幾張以灰色「一般消費排除」卡片列在結果最下方）
-function appendBasicExcludedNote(merchantValue, excludedCount) {
+function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) {
     if (!matchedItemDiv || excludedCount <= 0) return;
     const count = Number(excludedCount) || 0;
-    const note = `<br><span class="matched-item-warn">另有 ${count} 張卡把「${escapeHtml(String(merchantValue || '').trim())}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
+    const name = escapeHtml(String(merchantValue || '').trim());
+    const note = isMaybe
+        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能把「${name}」列為一般消費排除項目（見下方灰色卡片）</span>`
+        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }

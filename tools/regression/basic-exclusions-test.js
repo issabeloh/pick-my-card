@@ -66,6 +66,9 @@ const META = readFixtureMeta();
       excluded: [...document.querySelectorAll('#results-container .card-result.excluded-card')].map(el => ({
         name: el.querySelector('.card-name')?.innerText.trim(),
         items: el.querySelector('.excluded-card-match strong')?.innerText.trim(),
+        label: el.querySelector('.excluded-card-match')?.innerText.split(':')[0].trim(),
+        badge: el.querySelector('.excluded-badge')?.innerText.trim(),
+        maybe: el.classList.contains('maybe-excluded-card'),
         hasRateFields: !!el.querySelector('.detail-label, .cashback-amount, .calc-breakdown-btn'),
       })),
       lastIsExcluded: (() => { const all = [...document.querySelectorAll('#results-container .card-result')];
@@ -121,10 +124,10 @@ const META = readFixtureMeta();
   check('包含規則：灰卡顯示的是命中的排除項目（不是搜尋詞）', r.excluded.length > 0 && r.excluded[0].items === 'qq代繳',
     JSON.stringify(r.excluded[0]));
 
-  // 4. 反方向不算：排除詞含搜尋詞 → 不排除
+  // 4. 反方向不判「確定排除」：排除詞含搜尋詞 → 只當「可能排除」灰卡（2026-10-11 起，原本照常顯示基本回饋）
   r = await search('zzz代', { all: ['zzz代收'] });
-  check('反方向不算：排除詞「zzz代收」不影響搜尋「zzz代」', r.cards.length === total && !/排除項目/.test(r.status),
-    `cards=${r.cards.length} status=${r.status}`);
+  check('反方向：排除詞「zzz代收」對搜尋「zzz代」只算可能排除', r.excluded.length === total && r.excluded.every(e => e.maybe),
+    `excluded=${r.excluded.length} status=${r.status}`);
 
   // 5. 單字排除詞一律忽略（「稅」會誤殺「免稅店」）
   r = await search('zzz免稅', { all: ['稅'] });
@@ -160,15 +163,22 @@ const META = readFixtureMeta();
   check('搜尋詞：fuzzy 別名照算（全聯 → 全聯福利中心）', terms.quan.includes('全聯福利中心'), terms.quan.join('|'));
   check('搜尋詞：不含匹配到的商家名（停車 只有自己）', terms.park.length === 1 && terms.park[0] === '停車', terms.park.join('|'));
 
-  // 8b. 「可能排除」（站長選 B）：搜尋詞比名單項目短 → 照常顯示基本回饋＋灰字提示，不變灰卡
+  // 8b. 「可能排除」：搜尋詞比名單項目短 → 同樣是灰卡，標籤「可能屬於排除項目」（2026-10-11 站長改）
   r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
-  check('可能排除：卡片照常顯示、不變灰卡', r.cards.length === total && r.excluded.length === 0, `cards=${r.cards.length} excluded=${r.excluded.length}`);
-  check('可能排除：那 2 張加灰字提示、寫出完整項目', r.maybe.length === 2 &&
-    r.maybe.every(m => r.firstNames.slice(0, 2).includes(m.name) && m.text.includes('臺北醫學大學附設zzz醫院費用')), JSON.stringify(r.maybe));
-  check('可能排除：狀態列不講「另有 N 張卡」', !/另有/.test(r.status), r.status);
+  check('可能排除：那 2 張變灰卡，其餘照常', r.cards.length === total - 2 && r.excluded.length === 2 &&
+    r.excluded.every(e => e.maybe && r.firstNames.slice(0, 2).includes(e.name)), JSON.stringify(r.excluded));
+  check('可能排除：標籤「可能屬於排除項目」、徽章「可能排除」、寫出完整項目、不出回饋欄位',
+    r.excluded.every(e => e.label === '可能屬於排除項目' && e.badge === '可能排除' && e.items === '臺北醫學大學附設zzz醫院費用' && !e.hasRateFields),
+    JSON.stringify(r.excluded[0]));
+  check('可能排除：狀態列講「可能把…列為」', r.status.includes('另有 2 張卡可能把「zzz醫院費用」列為一般消費排除項目（見下方灰色卡片）'), r.status);
+  r = await search('zzz醫院費用', { all: ['臺北醫學大學附設zzz醫院費用'] });
+  check('可能排除：全部都是可能排除時，不說「都列為排除項目」', !/都沒有「zzz醫院費用」的活動，而且都把它列為/.test(r.status) &&
+    r.excluded.length === total, r.status);
+  r = await search('zzz費用', { first: 1, items: ['zzz費用'], });
+  check('確定命中優先於可能命中', r.excluded.length === 1 && !r.excluded[0].maybe, JSON.stringify(r.excluded));
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
   r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
-  check('可能排除：勾精準搜尋時不提示', r.maybe.length === 0, JSON.stringify(r.maybe));
+  check('可能排除：勾精準搜尋時不出', r.excluded.length === 0, JSON.stringify(r.excluded));
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
 
   // 9. 詳情頁「一般回饋」區最後一張是灰色「一般消費排除項目」卡；項目多時先收合
