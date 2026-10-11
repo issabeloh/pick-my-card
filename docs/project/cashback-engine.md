@@ -189,7 +189,7 @@ if (!card.specialItems || card.specialItems.length === 0)
   - 少於 2 字的排除詞忽略
 - **顯示**（2026-10-11 起命中的卡**不拿掉**，改標 `isExcluded`／`excludedItems`、回饋金額歸 0、墊在進行中結果最後；畫面見 ui-display.md 1j 節）：
   - 比較中的卡**全部**命中、且沒有領券／即將開始可看 → 結果只剩灰色排除卡，狀態列 `showBasicExcludedMessage` 講「沒有活動＋一般消費排除項目＋不會有任何回饋（包含基本回饋）」
-  - **部分**命中 → 其餘照常顯示基本回饋、灰卡墊底，狀態列末尾補「另有 N 張卡把「X」列為一般消費排除項目，已在以下結果中排除」（`appendBasicExcludedNote`；文案由站長指定）
+  - **部分**命中 → 其餘照常顯示基本回饋、灰卡墊底，狀態列末尾補「另有 N 張卡把「X」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）」（`appendBasicExcludedNote`；文案由站長指定）
   - 全部命中但有領券／即將開始 → 走 1e 節清場規則（基本回饋含灰卡整批收起），改走原本訊息
 - **測試**：`node tools/regression/basic-exclusions-test.js`（凍結資料沒有這個欄位，所以 run-regression.js 碰不到這條路徑；這支在頁面裡臨時塞名單驗 16 項）。改這一塊必跑
 

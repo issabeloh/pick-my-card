@@ -109,8 +109,8 @@ const META = readFixtureMeta();
     `excluded=${r.excluded.map(e => e.name).join('、')}`);
   check('部分排除：灰卡墊底', r.lastIsExcluded, '灰卡後面還有一般卡');
   check('部分排除：標題兩種都講', r.title === '一般回饋與一般消費排除項目', r.title);
-  check('部分排除：狀態列補「另有 5 張卡…已在以下結果中排除」',
-    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，已在以下結果中排除'), r.status);
+  check('部分排除：狀態列補「另有 5 張卡…見下方灰色卡片」',
+    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）'), r.status);
 
   // 3. 搜尋詞「包含」排除詞也算（用造的詞：真實詞如「人壽保費」會先匹配到保費活動，走活動路徑）
   r = await search('zzz國泰qq代繳費', { all: ['qq代繳'] });
