@@ -213,7 +213,11 @@ async function calculateCashback() {
             results = results.map(r => {
                 if (!r.isBasic) return r;
                 const hits = getBasicExclusionHits(r.card, exclusionTerms, exactOnly);
-                if (hits.length === 0) return r;
+                if (hits.length === 0) {
+                    // 搜尋詞只是名單項目的一部分：照常顯示，加「可能屬於排除項目」提示（站長選 B）
+                    const maybe = getBasicExclusionMaybeHits(r.card, exclusionTerms, exactOnly);
+                    return maybe.length ? { ...r, maybeExcludedItems: maybe } : r;
+                }
                 basicExcludedCount++;
                 return toExcluded(r, hits);
             });

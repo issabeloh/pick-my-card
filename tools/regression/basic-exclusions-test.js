@@ -72,6 +72,8 @@ const META = readFixtureMeta();
         const firstEx = all.findIndex(el => el.classList.contains('excluded-card'));
         return firstEx < 0 || all.slice(firstEx).every(el => el.classList.contains('excluded-card')); })(),
       title: document.querySelector('#results-section h2')?.innerText.trim(),
+      maybe: [...document.querySelectorAll('#results-container .card-result:not(.excluded-card) .maybe-excluded-note')].map(el => ({
+        name: el.closest('.card-result').querySelector('.card-name')?.innerText.trim(), text: el.innerText.trim() })),
       status: document.getElementById('matched-item').innerText.replace(/\s+/g, ' ').trim(),
       noResultsBox: !!document.querySelector('#results-container .no-results'),
       firstNames: cardsData.cards.slice(0, 5).map(c => c.name),
@@ -157,6 +159,17 @@ const META = readFixtureMeta();
   const terms = await page.evaluate(() => ({ quan: getBasicExclusionSearchTerms('全聯'), park: getBasicExclusionSearchTerms('停車') }));
   check('搜尋詞：fuzzy 別名照算（全聯 → 全聯福利中心）', terms.quan.includes('全聯福利中心'), terms.quan.join('|'));
   check('搜尋詞：不含匹配到的商家名（停車 只有自己）', terms.park.length === 1 && terms.park[0] === '停車', terms.park.join('|'));
+
+  // 8b. 「可能排除」（站長選 B）：搜尋詞比名單項目短 → 照常顯示基本回饋＋灰字提示，不變灰卡
+  r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
+  check('可能排除：卡片照常顯示、不變灰卡', r.cards.length === total && r.excluded.length === 0, `cards=${r.cards.length} excluded=${r.excluded.length}`);
+  check('可能排除：那 2 張加灰字提示、寫出完整項目', r.maybe.length === 2 &&
+    r.maybe.every(m => r.firstNames.slice(0, 2).includes(m.name) && m.text.includes('臺北醫學大學附設zzz醫院費用')), JSON.stringify(r.maybe));
+  check('可能排除：狀態列不講「另有 N 張卡」', !/另有/.test(r.status), r.status);
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
+  r = await search('zzz醫院費用', { first: 2, items: ['臺北醫學大學附設zzz醫院費用'] });
+  check('可能排除：勾精準搜尋時不提示', r.maybe.length === 0, JSON.stringify(r.maybe));
+  await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
 
   // 9. 詳情頁「一般回饋」區最後一張是灰色「一般消費排除項目」卡；項目多時先收合
   const detail = await page.evaluate(async () => {
