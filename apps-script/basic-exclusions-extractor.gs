@@ -498,11 +498,20 @@ function basicExEnsureReviewSheet_(ss) {
     sheet.setFrozenRows(1);
     return sheet;
   }
-  const cur = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0]
-    .map(function (x) { return String(x).trim(); });
-  if (cur.join('|') !== BASICEX_REVIEW_HEADERS.join('|')) {
-    throw new Error('「' + BASICEX_CONFIG.reviewSheet + '」的表頭跟程式預期不同（欄位是依位置寫入的）。' +
-      '請不要增刪或搬動欄位；要重建就把整個分頁刪掉再按一次。');
+  // 只檢查程式會寫的前 N 欄（A～H）。2026-10-11 修：原本拿整個第一列比對，而 getLastColumn() 是
+  // 「整張分頁」最右邊有內容的欄——只要任何一列在 H 欄右邊有東西（站長筆記、殘留的格子），第一列就會
+  // 多出空白欄、整串比對失敗，明明 A～H 表頭完全正確也擋下來。右邊多的欄位程式不碰，不必擋
+  const n = BASICEX_REVIEW_HEADERS.length;
+  const cur = sheet.getRange(1, 1, 1, n).getValues()[0].map(function (x) { return String(x).trim(); });
+  const bad = [];
+  for (let k = 0; k < n; k++) {
+    if (cur[k] !== BASICEX_REVIEW_HEADERS[k]) {
+      bad.push(String.fromCharCode(65 + k) + ' 欄應為「' + BASICEX_REVIEW_HEADERS[k] + '」，現在是「' + cur[k] + '」');
+    }
+  }
+  if (bad.length) {
+    throw new Error('「' + BASICEX_CONFIG.reviewSheet + '」的表頭跟程式預期不同（欄位是依位置寫入的）：' + bad.join('；') +
+      '。請把表頭改回來（A～H 不要增刪或搬動；H 欄右邊可以自由加欄），或把整個分頁刪掉讓它重建。');
   }
   return sheet;
 }
