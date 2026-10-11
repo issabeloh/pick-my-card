@@ -201,18 +201,32 @@ async function calculateCashback() {
     // 「這張卡明文排除這個詞」的卡實際刷下去是 0，顯示基本回饋等於誤導。
     // 2026-10-11 起（站長要求）不再拿掉，改成標記 isExcluded：顯示成灰色卡片、只寫「匹配到哪個排除項目」，
     // 讓用戶看得到是什麼原因被排除、自己也能判斷。回饋金額歸 0、計算層清掉（不給計算明細鈕）。
-    // 只動 isBasic 結果；有指定活動的卡不會走到這裡（活動優先）。詳見 search-match.js 同名區塊。
+    // 有指定通路結果時也要列（2026-10-11 站長要求）：沒有進行中活動的比較卡，命中名單就補一張灰卡。
+    // 有指定活動的卡永遠不會變灰卡（活動優先）。詳見 search-match.js 同名區塊。
     let basicExcludedCount = 0;
-    if (isBasicCashback && merchantValue.length > 0) {
+    if (merchantValue.length > 0) {
         const exclusionTerms = getBasicExclusionSearchTerms(merchantValue);
         const exactOnly = isExactSearchEnabled();
-        results = results.map(r => {
-            if (!r.isBasic) return r;
-            const hits = getBasicExclusionHits(r.card, exclusionTerms, exactOnly);
-            if (hits.length === 0) return r;
-            basicExcludedCount++;
-            return { ...r, isExcluded: true, excludedItems: hits, cashbackAmount: 0, rate: 0, calculationLayers: null };
-        });
+        const toExcluded = (base, hits) => ({ ...base, isBasic: true, isExcluded: true, excludedItems: hits,
+            cashbackAmount: 0, rate: 0, calculationLayers: null });
+        if (isBasicCashback) {
+            results = results.map(r => {
+                if (!r.isBasic) return r;
+                const hits = getBasicExclusionHits(r.card, exclusionTerms, exactOnly);
+                if (hits.length === 0) return r;
+                basicExcludedCount++;
+                return toExcluded(r, hits);
+            });
+        } else {
+            const withActivity = new Set(results.map(r => r.card.id));
+            cardsToCompare.forEach(card => {
+                if (withActivity.has(card.id)) return;
+                const hits = getBasicExclusionHits(card, exclusionTerms, exactOnly);
+                if (hits.length === 0) return;
+                basicExcludedCount++;
+                results.push(toExcluded({ card, matchedItem: null }, hits));
+            });
+        }
     }
 
     // Sort active results by cashback amount (highest first)；排除卡一律墊底（基本回饋 0% 的卡也排在它們前面）
@@ -255,14 +269,14 @@ async function calculateCashback() {
     const couponOnly = matchedButNoActivity && couponCount > 0;
     const upcomingOnly = matchedButNoActivity && upcomingCount > 0;
     if (couponOnly || upcomingOnly) {
-        results = results.filter(r => !r.isBasic);
+        results = results.filter(r => !r.isBasic || r.isExcluded);   // 清掉基本回饋，灰色排除卡留著
         isBasicCashback = false;
     }
 
     // 比較中的卡全被排除、而且下方沒有領券／即將開始可看 → 結果只剩灰色排除卡，狀態列講「沒有回饋」。
     // 有領券或即將開始時不能這樣講（那些確實是回饋），改走一般訊息＋補一行排除說明。
     const allBasicExcluded = basicExcludedCount > 0 && couponCount === 0 && upcomingCount === 0 &&
-        !results.some(r => r.isBasic && !r.isExcluded);
+        !results.some(r => !r.isExcluded);   // 結果全是灰卡（有指定通路結果時不算）
 
     // 匹配狀態列統一在這裡寫：幾種狀態互斥，集中一處才不會互相覆蓋。
     // ⚠️ upcomingOnly／couponOnly 要排在最前面判斷——上面剛把 isBasicCashback 設成 false，
@@ -284,7 +298,7 @@ async function calculateCashback() {
             `有 ${couponCount} 筆領券型活動符合你的選項`);
     } else if (currentMatchedItem && !isBasicCashback) {
         showMatchedItem(currentMatchedItem, merchantValue, cardsToCompare,
-            `有 ${results.length} 筆活動符合你的選項`);
+            `有 ${results.filter(r => !r.isExcluded).length} 筆活動符合你的選項`);
     } else if (allBasicExcluded) {
         await showBasicExcludedMessage(merchantValue, basicExcludedCount, currentMatchedItem, cardsToCompare, amount);
     } else if (currentMatchedItem && matchedButNoActivity) {
@@ -292,8 +306,8 @@ async function calculateCashback() {
     } else if (merchantValue.length > 0) {
         showNoMatchMessage(merchantValue, cardsToCompare);
     }
-    // 部分排除：被拿掉的卡在狀態列最後交代一行（upcomingOnly／couponOnly 已把基本回饋全收起來，不用講）
-    if (basicExcludedCount > 0 && !allBasicExcluded && !upcomingOnly && !couponOnly) {
+    // 有灰色排除卡、但不是「全部排除」時：狀態列最後交代一行（有指定通路結果、只有即將開始／領券時也一樣）
+    if (basicExcludedCount > 0 && !allBasicExcluded) {
         appendBasicExcludedNote(merchantValue, basicExcludedCount);
     }
 

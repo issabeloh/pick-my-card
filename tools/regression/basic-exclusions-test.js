@@ -128,12 +128,21 @@ const META = readFixtureMeta();
   r = await search('zzz免稅', { all: ['稅'] });
   check('單字排除詞忽略', r.cards.length === total, `cards=${r.cards.length}`);
 
-  // 6. 有指定活動的卡：活動優先，名單不影響
+  // 6. 有指定活動的卡：活動優先、照常顯示；沒有活動、但名單命中的卡補成灰卡墊底（2026-10-11 起）
   const baseline = await search('家樂福');
   r = await search('家樂福', { all: ['家樂福'] });
-  check('活動優先：有活動的卡照常顯示、不出排除字樣',
-    baseline.cards.length > 0 && JSON.stringify(r.cards) === JSON.stringify(baseline.cards) && !/排除項目/.test(r.status),
-    `baseline=${baseline.cards.length} now=${r.cards.length} status=${r.status}`);
+  const activityCards = new Set(baseline.cards).size;
+  check('活動優先：有活動的卡照常顯示（與沒名單時完全相同）',
+    baseline.cards.length > 0 && JSON.stringify(r.cards) === JSON.stringify(baseline.cards),
+    `baseline=${baseline.cards.length} now=${r.cards.length}`);
+  check('有指定通路結果時：其餘命中名單的卡補成灰卡墊底', r.excluded.length === total - activityCards && r.lastIsExcluded,
+    `excluded=${r.excluded.length} 預期 ${total - activityCards}`);
+  check('有指定通路結果時：活動筆數不含灰卡、補一行排除說明',
+    r.status.includes(`有 ${baseline.cards.length} 筆活動符合你的選項`) &&
+    r.status.includes(`另有 ${total - activityCards} 張卡把「家樂福」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）`), r.status);
+  check('有指定通路結果時：標題是「指定通路回饋與一般消費排除項目」', r.title === '指定通路回饋與一般消費排除項目', r.title);
+  r = await search('家樂福');
+  check('沒名單時：有指定通路結果也不出灰卡', r.excluded.length === 0 && !/排除項目/.test(r.status), r.status);
 
   // 7. 勾「精準搜尋」時只認全等（2026-10-11 站長決定）
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && !cb.checked) cb.click(); });
