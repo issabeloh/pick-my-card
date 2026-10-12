@@ -49,10 +49,6 @@ function setupAuthentication() {
             _authUIRefs.showToolSections();
         }
         setGuestDropdownVisibility();
-        // Firebase 被擋掉（廣告阻擋器很常擋）時 onAuthStateChanged 永遠不會觸發，
-        // 問卷邀請也就永遠問不到這些人。工具本身照常可用，所以這裡補問一次；
-        // Firebase 之後才到位的話，onAuthStateChanged 有 session flag 擋著不會問第二次。
-        if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
     }, FIREBASE_FALLBACK_MS);
 }
 
@@ -402,10 +398,6 @@ function ensureAuthSubscribed() {
             populateCardChips();
             populatePaymentChips();
 
-            // 問卷邀請（每台裝置一次；受眾與停用條件見 home-ui.js "survey invite"）。
-            // 放在所有資料載入之後：畫面安定了再問，也才不會蓋住載入中的內容。
-            if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
-
         } else {
             // User is signed out — guest mode
             console.log('User signed out');
@@ -442,10 +434,6 @@ function ensureAuthSubscribed() {
             // Show all cards and payments when signed out
             populateCardChips();
             populatePaymentChips();
-
-            // 問卷邀請：訪客也問，但只問回訪的（首訪不問；判準見 home-ui.js
-            // "survey invite" 的 isSurveyInviteAudience）。
-            if (typeof maybeShowSurveyInvite === 'function') maybeShowSurveyInvite();
         }
 
         // 首頁「我的刷卡小抄」切換鈕（登入才顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）

@@ -361,7 +361,7 @@ Grep `titleParts`）：
 **版面（2026-09-29 第三版）**：頁面說明＝三步驟說明卡 `.mp-intro .mp-steps`。桌機＝左欄 250px 常駐（`.mp-actions`：商家數、「編輯」、「存成圖片」；按編輯後提示與設定也出現在左欄）＋右欄 460px（搜尋、小抄），說明卡與兩欄同寬 738px 一起置中；按編輯時小抄不跳位置；小抄下方不放存成圖片。手機＝`.mp-side/.mp-main` 用 `display: contents` 攤平，用 CSS `order` 排成：按鈕列 → 搜尋 → 提示 → 設定（灰底卡片）→ 小抄 → 商家數（靠右，`#mp-count-m`）。商家數有兩個元素：`#mp-count` 在按鈕卡片裡只給桌機左欄顯示、`#mp-count-m` 在小抄下方只給手機顯示，JS 同時寫兩個（2026-09-30）。
 
 **2026-09-30 調整**（站長要求）：①小抄上方兩顆鈕 `.mp-actions`＝「存成圖片」（`.mp-act-save`，下方小字「進入存圖編輯器」）＋「編輯本頁」（下方小字「只編輯本頁顯示的小抄」），小字放在按鈕下方（`.mp-act-note`）；小抄下方的存成圖片鈕（原 `#mp-savebar`）已移除。②**商家名稱與標題只有編輯模式才能點**：非編輯時是 `<span>`、沒有鉛筆；編輯中才是 `<button>`＋鉛筆。③搜尋框 `.mp-search` 左側放大鏡＝與 `.cashback-search-input` 同一個 SVG（用 `background-image`；同一條規則的底色**必須寫 `background-color`**，寫 `background:` 簡寫會把圖示蓋掉）。④說明卡的三步驟 `#mp-steps` 預設收合，由 `#mp-intro-toggle`「使用方法」展開；「新功能 Beta 最後測試中」那行在 ol 外面，不跟著收合。
-**上線告知（2026-09-30，舊「我的配卡組合」下架）**：①頁面最上方 `#mp-moved-note` 一行備註（所有人都看得到；收據小字風格：上下虛線、置中等寬字）；②一次性提示 `mpShowMovedHint()`：登入後 1.2 秒在頁籤下方冒出黑色氣泡「原『我的配卡組合』搬到這裡了」（6 秒、捲動、點畫面任何地方或 × 就關）；每個瀏覽器 2 次（`localStorage.mpMovedHintCount`，不含 uid、登出不清）。曾做過「按鈕飛進頁籤」動畫，站長 2026-09-30 決定拿掉，只留氣泡。③「新功能 Beta」標籤：頁籤（≤480px 是左上角角標，右上角留給釘選的 +1 徽章）、說明卡底部「最後測試中，遇到問題請回報給我們」（`openFeedbackModal()`，與頭像選單共用；訪客先開登入，登入後自動打開表單）。頭像選單不加 Beta。提示氣泡會等其他 modal（問卷邀請等）關掉才出現，氣泡不擋點擊（pointer-events: none，只有 × 可按）。Beta 結束時刪 `.mp-beta`／`.mp-beta-note`；改版告知可在幾週後移除。回歸測試用 `?hinttest` 以外的網址都預設計數＝2，避免氣泡擋點擊。
+**上線告知（2026-09-30，舊「我的配卡組合」下架）**：①頁面最上方 `#mp-moved-note` 一行備註（所有人都看得到；收據小字風格：上下虛線、置中等寬字）；②一次性提示 `mpShowMovedHint()`：登入後 1.2 秒在頁籤下方冒出黑色氣泡「原『我的配卡組合』搬到這裡了」（6 秒、捲動、點畫面任何地方或 × 就關）；每個瀏覽器 2 次（`localStorage.mpMovedHintCount`，不含 uid、登出不清）。曾做過「按鈕飛進頁籤」動畫，站長 2026-09-30 決定拿掉，只留氣泡。③「新功能 Beta」標籤：頁籤（≤480px 是左上角角標，右上角留給釘選的 +1 徽章）、說明卡底部「最後測試中，遇到問題請回報給我們」（`openFeedbackModal()`，與頭像選單共用；訪客先開登入，登入後自動打開表單）。頭像選單不加 Beta。提示氣泡會等其他 modal 關掉才出現，氣泡不擋點擊（pointer-events: none，只有 × 可按）。Beta 結束時刪 `.mp-beta`／`.mp-beta-note`；改版告知可在幾週後移除。回歸測試用 `?hinttest` 以外的網址都預設計數＝2，避免氣泡擋點擊。
 **編輯模式**（`MP.editing`，2026-09-28 站長要求）：預設只顯示說明 → 搜尋框（含 ✕）＋右側「編輯」鈕（同一列 `.mp-searchrow`）→ 乾淨的小抄 → 存成圖片。「顯示等級／方案」勾選常駐在設定裡（`mpLabelsChk()`），雙欄時變灰不可勾（不改存的值）。按「編輯」（變「完成」）才出現：提示列（點商家名稱改名・點卡圖看詳情・自訂時拖曳）、工具列（排列／字級／版面／顯示等級；「更新活動」2026-09-30 起移到小抄右上角常駐）、⋮⋮ 拖曳把手、「刪除全部失效活動」。桌機：平常小抄單欄 460px 置中；編輯中左邊多一欄 300px 設定（`.mp-layout.editing`）。點卡圖在非編輯時也能用；點商家名稱改名、點標題改標題只在編輯中（2026-09-30 起）。
 **未登入**：「登入解鎖此功能」框在版面最上方（`.mp-layout` 之前），所以按「編輯」後的設定出現在它下方。一樣有「編輯」鈕與全部設定，範例小抄（`mpBuildDemo()` 用真計算＋訪客預設級別產生**記憶體內**的配對，`mpList()`/`mpSetList()`/`mpPersist()` 讓範例與真資料走同一套程式）可以排列、改名、改標題、存圖，只是不寫雲端、不存本機；鎖起來的只有搜尋結果上的「加到我的配卡」。上方有「登入解鎖此功能／以下顯示範例清單」提示、小抄標「範例」。
 **搜尋結果的按鈕**（`.pin-btn`，程式名稱沿用 pin）：文字「加到我的配卡」／已加入「已加到我的配卡」（CSS `::after`），琥珀配色不變，圖示＝分頁上同一個收據圖示；提示「已加到我的配卡組合 ✓」／「已從我的配卡組合移除」；未登入點擊 alert 請登入。登入／登出完成後 `refreshMappingsEntry()` 更新狀態、網址是 `/mappings` 時開頁。
@@ -400,35 +400,15 @@ Grep `titleParts`）：
   改 `cards-export.gs` 後要把整份貼回 Google Sheets，否則下次匯出又會長回來
 - 驗證方式（同一份資料跑新舊兩版生成器比對輸出差異）記在下方教訓記錄
 
-## 10. 問卷邀請 Modal（#survey-invite-modal，2026-09-03）
+## 10. 問卷邀請 Modal（已下架，2026-10-12 整套移除；原設計全文見 `docs/archive/ui-display.md-2026-10-12.bak`）
 
-> 標題列：公告 modal 與這個 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，
-> 2026-09-03 站長指定）。特異性掛在 `.announcement-modal-content` / `.survey-invite-content` 上，沒動全站 `.modal-header`。
+- 期間 2026/9/1–10/11（台灣時間）。登入後／進站時一次性彈出，「沒問題！」直接開問卷那則公告的 modal
+- 受眾＝登入用戶＋回訪訪客（沒帶 `?start` 且 localStorage 有本站痕跡）；首訪不問。原本只問登入用戶，兩天只收 1 份，9/6 擴大
+- 原訂 9 月整月；9/30 刷卡小抄上線當天單日 25 份回覆，10/1 站長決定延長到 10/11 底
+- 結果：共 43 份回覆、7 位願意 coffee chat。用戶瀏覽器殘留的 `pmc_survey_invite_seen_v1` 無害，刻意不清
 
-「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
-modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.js` 的 `maybeShowSurveyInvite` / `survey invite`。
-
-- **受眾＝登入用戶 ＋ 回訪訪客**（`isSurveyInviteAudience()`，2026-09-06 由「只問登入用戶」擴大——原本兩天只收到
-  1 份回覆）。訪客的「回訪」判準：**這次沒帶 `?start`** ＋ **localStorage 有本站痕跡**。首訪動線一定是
-  「進 index → 被首屏路由導去 landing → 帶 `?start` 回來」（見 `index.html` 開頭的 pre-paint script），所以帶
-  `start` 的那一輪就是首訪，不問——沒用過工具的人沒有體驗可以分享
-- **觸發點在 `onAuthStateChanged` 的登入分支與訪客分支尾端**（`js/auth-user-data.js`，所有資料載完之後），另外
-  **Firebase 逾時 fallback 也補呼叫一次**（廣告阻擋器擋掉 Firebase 時 `onAuthStateChanged` 永遠不觸發，
-  這些人否則永遠問不到）。三處都靠 `surveyInviteHandledThisSession` 收斂成一次。延遲
-  `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
-- **有期限：2026/9/1–10/11**（原訂 9 月整月；9/30 刷卡小抄上線當天單日 25 份回覆、前面每天 1–2 份，2026-10-01 站長決定延長到 10/11 底，`END`＝`2026-10-12T00:00:00+08:00`；10/11 後整套下架清理）（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
-  `+08:00`（台灣時間）**——省略時區後綴會退化成「裝置本地時間」，人在國外或時區設錯的用戶起訖點會整個偏掉。
-  過期自動變 no-op，不用趕在月底手動下架
-- **只在主站首頁彈**：用 `getAnalyticsSurface() !== 'site'` 一次擋掉 `/promos` 的 iframe（promos_embed）與
-  `/merchant/xxx` 落地頁、`?merchant=` 深連結（merchant_page）——那些頁面的用戶帶著任務進來，不擋路
-- **問卷連結不在程式裡**：按鈕只負責開公告 modal，問卷網址／iframe 都寫在該則公告的 `fullText`（Sheets 公告工作表）
-- **公告用關鍵字找、不寫死 index 0**：`findSurveyAnnouncementIndex()` 比對 `text` 含「問卷」。找不到就整個不彈——
-  Sheets 把那則公告下架後邀請自動失效，不用回頭改程式
-- **只記 localStorage `pmc_survey_invite_seen_v1`**（值 `shown`/`accepted`/`dismissed`），不寫 Firestore：短期活動不值得
-  在 users 文件加永久欄位，換裝置多問一次可接受。**顯示的當下就記帳**，用戶關分頁沒回答也不再問第二次
-- 開啟時 `disableBodyScroll()`、關閉時 `enableBodyScroll()` 成對呼叫（背景頁不會跟著捲）；公告 modal 本來就不上鎖，
-  維持原樣
-- 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）、`user_state`（logged_in/guest）與 `surface`
+> 仍有效：公告 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，2026-09-03 站長指定），
+> 特異性掛在 `.announcement-modal-content` 上，沒動全站 `.modal-header`。
 
 ## 教訓記錄
 
