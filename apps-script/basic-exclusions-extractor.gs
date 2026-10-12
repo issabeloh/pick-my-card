@@ -16,7 +16,8 @@
  *   ・候選卡片＝該列的 card_id ＋ cards 欄；AI 只能從候選裡挑（JSON Schema enum 鎖死）
  *   ・已經在待審核表出現過的網址自動跳過（一次跑不完就再按一次接著跑；要重抽某頁就把
  *     待審核表裡那個網址的列刪掉）
- *   ・正式 Cards Data 的 basicExclusions **已經有值的卡直接跳過**（站長手填的就是答案，不重抽）
+ *   ・正式 Cards Data 已有名單的卡**照樣抽**（2026-10-12 站長要求移除「已有名單就跳過」；原本是為了不重抽手填的台新兩張），
+ *     抽出來的列標黃並註明「要換就在核准欄打『覆蓋』」——打 V 只寫空白格，不會蓋掉
  *   ・命名一致（2026-09-30 站長要求：同一個東西不同銀行要寫成同一個字）：
  *     「既有名稱表」＝正式表已填的名單＋待審核表已核准的列＋站長手寫的範例答案，送給 AI 要求同義逐字沿用，
  *     AI 回來後再用 basicExNormKey_() 機械對一次（大小寫／全半形／空白／括號不同的寫法收斂成既有寫法）
@@ -211,7 +212,7 @@ function extractBasicExclusionsFromSnapshots() {
   const review = basicExEnsureReviewSheet_(ss);
   const doneAt = basicExReviewedUrls_(review);            // 網址 → { last: 最近一次抽取時間, cards: {card_id: true} }
   const changedAt = basicExMonitorChangedUrls_(ss);       // 網址 → 監控最近一次記錄變動的時間
-  const filled = basicExReadFilledCards_();               // 正式表已經有名單的卡 → 不重抽
+  const filled = basicExReadFilledCards_();               // 正式表已經有名單的卡（照樣抽，只在待審核列上註明）
   const vocab = basicExBuildVocabulary_(filled, review);  // 命名一致用的既有名稱表
   const now = new Date();
   const refreshMs = BASICEX_CONFIG.refreshAfterDays * 24 * 60 * 60 * 1000;
@@ -246,14 +247,10 @@ function extractBasicExclusionsFromSnapshots() {
     if (unknown.length) skipped.push(label + '：這些 id 在 Cards Data 找不到，已忽略：' + unknown.join('、'));
     if (candidates.length === 0) { skipped.push(label + '：card_id／cards 欄沒有合法的卡片 id'); continue; }
 
-    // 首次抽取：正式表已有名單的卡不抽（站長手填的就是答案）。
-    // 官網更新後重抽：全部候選卡都抽，已有名單的那幾列會註明「比對後要換就打『覆蓋』」
-    const notReviewed = refresh || !done ? candidates : candidates.filter(function (x) { return !done.cards[x]; });
-    if (notReviewed.length === 0) { alreadyDone++; continue; }
-    const open = refresh ? notReviewed : notReviewed.filter(function (x) { return !filled.ids[x]; });
-    const already = notReviewed.filter(function (x) { return filled.ids[x]; });
-    if (!refresh && already.length) skipped.push(label + '：正式表已有名單、不重抽：' + already.join(','));
-    if (open.length === 0) continue;
+    // 要抽的卡＝待審核表裡還沒有這張卡＋這個網址的列（官網更新後重抽則全部候選卡）。
+    // 正式表已有名單的卡照樣抽（2026-10-12 站長移除「已有名單就跳過」），列上會註明要換就打「覆蓋」
+    const open = refresh || !done ? candidates : candidates.filter(function (x) { return !done.cards[x]; });
+    if (open.length === 0) { alreadyDone++; continue; }
 
     todo.push({ url: url, bank: bank, label: label, text: snap, candidates: open, refresh: refresh, filledIds: filled.ids });
   }
@@ -422,8 +419,11 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '8c. 集團／旗下品牌要展開成各品牌：「全聯實業旗下品牌通路」→ 全聯福利中心、大全聯、全聯線上購物、全聯全電商、全聯小時達、PX Pay。',
     '    原文只點名某幾家時就只列那幾家，不要自行擴大。',
     '    全聯品牌一律帶「全聯」前綴：寫「全聯全電商」「全聯小時達」，不可寫成「全電商」「小時達」（2026-10-12 站長統一）。',
+    '    原文排除「全聯福利中心」「PX Pay」「PXGo!全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
+    '    兩者都是全聯線上購／PX Pay App 裡的服務，帳單特店名稱顯示為全聯福利中心、全聯線上購或 PXPay，銀行同樣判為排除。',
     '8d. 便利商店一律列「便利商店」加四大超商「7-11、全家、萊爾富、OK超商」（原文沒逐一點名也要列）。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
+    '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
     '    連鎖速食店→速食店；退貨→退款；括號一律半形加空格「數位 (虛擬) 貨幣」。',
     '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開，例：「小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)」。',
     '9. 不要輸出單一個字（如「稅」）、不要以「等」結尾、不要輸出「經本行認定之其他交易」這類對不到具體項目的概括條款。',
@@ -491,10 +491,11 @@ function basicExWriteReview_(sheet, page, groups) {
   const rows = [];
   const flags = [];
   const covered = {};
-  // 官網更新後重抽、而且正式表已有名單的卡：打 V 不會蓋掉，要換就在核准欄打「覆蓋」
+  // 正式表已有名單的卡：打 V 不會蓋掉，要換就在核准欄打「覆蓋」
   const refreshNote = function (id) {
-    return page.refresh && page.filledIds && page.filledIds[id]
-      ? '【官網更新後重抽】正式表已有名單。跟正式表比對後，要換成這次的內容就在核准欄打「覆蓋」（打 V 不會蓋掉）。' : '';
+    if (!page.filledIds || !page.filledIds[id]) return '';
+    return (page.refresh ? '【官網更新後重抽】' : '') +
+      '正式表已有名單。跟正式表比對後，要換成這次的內容就在核准欄打「覆蓋」（打 V 不會蓋掉）。';
   };
   groups.forEach(function (g) {
     g.card_ids.forEach(function (id) {
