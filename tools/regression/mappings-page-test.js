@@ -119,8 +119,8 @@ const PAIRS = [
     pg.on('pageerror', e => { pageErrors++; console.log('   PAGE ERROR:', e.message); });
     pg.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) console.log('   CONSOLE ERROR:', m.text()); });
     await pg.addInitScript(freezeClockScript(META.frozenDate));
-    // 問卷邀請彈窗會擋住點擊，測試裡當作已經看過
-    await pg.addInitScript(() => { try { localStorage.setItem('pmc_survey_invite_seen_v1', 'dismissed'); if (!location.search.includes('hinttest')) localStorage.setItem('mpMovedHintCount', '2'); } catch (e) {} });
+    // 「刷卡小抄」提示泡泡會擋住點擊，除了專測它的 hinttest 以外都當作已經播完
+    await pg.addInitScript(() => { try { if (!location.search.includes('hinttest')) localStorage.setItem('mpMovedHintCount', '2'); } catch (e) {} });
     await pg.route('**/*', route => {
       const u = route.request().url();
       if (u.startsWith(base)) return route.continue();

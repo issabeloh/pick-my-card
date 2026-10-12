@@ -612,7 +612,7 @@ function mpShowMovedHint(attempt = 0) {
     if (!currentUser || MP.open || document.querySelector('.mp-hint-bubble')) return;
     const n = Number(readLocalJSON(MP_HINT_KEY, 0)) || 0;
     if (n >= MP_HINT_TIMES) return;
-    // 登入後常有其他視窗（問卷邀請等）同時跳出 → 等它們關掉再播，最多等約 30 秒；沒播出來就不扣次數
+    // 登入後可能有其他 modal 同時開著 → 等它們關掉再播，最多等約 30 秒；沒播出來就不扣次數
     if (mpAnyModalOpen()) { if (attempt < 20) setTimeout(() => mpShowMovedHint(attempt + 1), 1500); return; }
     const tab = mpEl('home-view-switch-mappings');
     if (!tab) return;
