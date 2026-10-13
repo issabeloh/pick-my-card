@@ -1675,6 +1675,45 @@ function setupEventListeners() {
 // 浮層、蓋在下方勾選/按鈕上，給關閉鈕才不會擋到操作）。清空輸入時歸零。
 let dismissedHintTerm = null;
 
+// 搜尋提示文案（display_message）的顯示（2026-10-13 站長要求兼容 HTML）：
+// 沒有任何 HTML 標籤 → 跟以前一樣當純文字 escape；有標籤 → 走白名單淨化後才放進 innerHTML。
+// 跟公告 fullText 不同，這裡**不是**原樣放行：只留下列格式標籤，其他標籤拆掉留文字、所有屬性都丟掉，
+// <a> 只保留過 sanitizeUrl() 的 href（只准 http/https）並強制開新分頁。所以就算表格被貼進 <script>、
+// onclick、javascript: 也不會執行（鐵則 3 精神：動態內容不可未經處理進 innerHTML）
+const HINT_ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'A', 'SPAN', 'SMALL', 'MARK', 'CODE']);
+function renderHintMessage(message) {
+    // 判斷「有 HTML」要看到結尾標籤 </x> 或 <br>：只看 <字母…> 會把「a<b 與 5>3」這種純文字誤判成標籤
+    if (!/<\/[a-z][a-z0-9]*\s*>|<br\s*\/?>/i.test(message)) return escapeHtml(message);
+    const tpl = document.createElement('template');
+    tpl.innerHTML = message;   // template 內容是惰性的：不載圖、不跑 script、不觸發事件
+    const clean = (node) => {
+        const out = document.createDocumentFragment();
+        node.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) {
+                out.appendChild(document.createTextNode(child.textContent));
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                const tag = child.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE') return;   // 連內容一起丟
+                if (!HINT_ALLOWED_TAGS.has(tag)) { out.appendChild(clean(child)); return; }   // 拆標籤留文字
+                const el = document.createElement(tag.toLowerCase());
+                if (tag === 'A') {
+                    const href = sanitizeUrl(child.getAttribute('href') || '');
+                    if (!href) { out.appendChild(clean(child)); return; }
+                    el.setAttribute('href', href);
+                    el.setAttribute('target', '_blank');
+                    el.setAttribute('rel', 'noopener noreferrer');
+                }
+                el.appendChild(clean(child));
+                out.appendChild(el);
+            }
+        });
+        return out;
+    };
+    const wrap = document.createElement('div');
+    wrap.appendChild(clean(tpl.content));
+    return wrap.innerHTML;
+}
+
 // Check and show search hints
 function checkAndShowSearchHint(searchTerm) {
     const searchHintsContainer = document.getElementById('search-hints-container');
@@ -1705,10 +1744,11 @@ function checkAndShowSearchHint(searchTerm) {
         const hintDiv = document.createElement('div');
         hintDiv.className = 'search-hint' + (suggestions.length === 0 ? ' search-hint-message-only' : '');
         // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
-        // 鐵則 3：文案與建議詞都 escape；建議詞走 data 屬性，含單引號（如 Tomod's）也不會弄壞 onclick
+        // 鐵則 3：文案走 renderHintMessage（純文字 escape／有標籤走白名單淨化）、建議詞 escape；
+        // 建議詞走 data 屬性，含單引號（如 Tomod's）也不會弄壞 onclick
         hintDiv.innerHTML = `
             <button type="button" class="search-hint-close" aria-label="關閉提示" onclick="dismissSearchHint()">✕</button>
-            <span class="hint-message">${escapeHtml(message)}</span>
+            <span class="hint-message">${renderHintMessage(message)}</span>
             ${suggestions.length > 0 ? `<div class="hint-suggestions">
                 ${suggestions.map(s =>
                     `<button class="hint-button" data-suggestion="${escapeHtml(s)}" onclick="searchFromHint(this.dataset.suggestion)">${escapeHtml(s)}</button>`
