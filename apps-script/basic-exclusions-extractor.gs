@@ -445,7 +445,7 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '    原文寫「自動加值」時只列「X自動加值」。eTag 同理：原文「eTag儲值」列「eTag儲值」「eTag自動儲值」，原文「eTag自動儲值」只列後者。',
     '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
     '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
-    '    原文同時寫短的和長的（「基金交易、基金交易及其手續費」）只列長的那個（例：星展只列「基金交易及其手續費」）。',
+    '    原文結構是「A、A及其手續費」時只寫「A及其手續費」（例：星展「基金交易、基金交易及其手續費」→ 只列「基金交易及其手續費」）。',
     '8j. 小額支付特約商店（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
     '    一律寫「小額支付特約商店」（不寫「小額支付平台」），**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
     '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
@@ -716,6 +716,7 @@ function applyBasicExclusionsToCardsData() {
 }
 
 /************** 一次性修正：2026-10-13 站長核定的逐項修改 **************/
+// 改的是「5-待審核」的 basicExclusions 欄（不碰正式表），改到的列核准欄寫「覆蓋」。
 // 只動下表列出的「單一項目」：找到完全相同的項目才換掉／刪掉，其他項目、順序、逗號一個字都不碰。
 // 找不到的項目（可能站長已手改過）就跳過並列在報告裡。可以重複按：已經改好的卡會顯示「不用改」。
 const BASICEX_LONG_SMALLPAY = '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)';
@@ -781,59 +782,63 @@ function basicExApplyFixToCell_(raw, fix) {
 }
 
 function applyBasicExclusionsFix20261013() {
+  // 2026-10-13 站長決定：只改「5-待審核」，不碰正式 Cards Data。有改到的列在核准欄寫「覆蓋」，
+  // 站長在待審核表確認完，再用「一般消費排除 2：打勾的寫回正式 Cards Data」寫進正式表
   const ui = SpreadsheetApp.getUi();
-  const cardsSheet = getCardsSheet_();
-  const cData = cardsSheet.getDataRange().getValues();
-  const cHead = cData[0].map(function (x) { return String(x).trim(); });
-  const cId = cHead.indexOf('id');
-  const cTarget = cHead.indexOf(BASICEX_CONFIG.targetHeader);
-  if (cId < 0 || cTarget < 0) { ui.alert('正式 Cards Data 找不到 id 或 ' + BASICEX_CONFIG.targetHeader + ' 欄，中止。'); return; }
-  const rowById = {};
-  for (let i = 1; i < cData.length; i++) {
-    const id = String(cData[i][cId] || '').trim();
-    if (id && rowById[id] === undefined) rowById[id] = i;
-  }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const review = ss.getSheetByName(BASICEX_CONFIG.reviewSheet);
+  if (!review) { ui.alert('找不到「' + BASICEX_CONFIG.reviewSheet + '」，中止。'); return; }
+  basicExEnsureReviewSheet_(ss);   // 表頭驗證
+  const rData = review.getDataRange().getValues();
+  const iApprove = BASICEX_REVIEW_HEADERS.indexOf('核准');
+  const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id');
+  const iItems = BASICEX_REVIEW_HEADERS.indexOf('basicExclusions');
 
+  const fixById = {};
+  BASICEX_FIX_20261013.forEach(function (fix) { fixById[fix.id] = fix; });
+  const seen = {};
   const plan = [];
   const notes = [];
-  const fixById = {};
-  BASICEX_FIX_20261013.forEach(function (fix) {
-    if (rowById[fix.id] === undefined) notes.push(fix.id + '：正式表找不到這張卡，跳過');
-    else fixById[fix.id] = fix;
-  });
-  Object.keys(rowById).forEach(function (id) {
-    const r = rowById[id];
-    const before = String(cData[r][cTarget] == null ? '' : cData[r][cTarget]);
-    if (!before.trim()) return;
+  for (let i = 1; i < rData.length; i++) {
+    const id = String(rData[i][iId] || '').trim();
+    const before = String(rData[i][iItems] == null ? '' : rData[i][iItems]);
+    if (!id || !before.trim()) continue;
+    seen[id] = true;
     let value = before;
     let changes = [];
     if (fixById[id]) {
       const res = basicExApplyFixToCell_(value, fixById[id]);
-      if (res.missing.length) notes.push(id + '：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
+      if (res.missing.length) notes.push(id + '（第 ' + (i + 1) + ' 列）：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
       value = res.value; changes = changes.concat(res.changes);
     }
-    // 全部的卡都套：只有這張卡真的有該項目才會改，沒有就不動、也不列進「找不到」
+    // 全部的列都套：只有真的有該項目才會改，沒有就不動、也不列進「找不到」
     const all = basicExApplyFixToCell_(value, BASICEX_FIX_ALL_20261013);
     value = all.value; changes = changes.concat(all.changes);
-    if (changes.length && value !== before) plan.push({ id: id, row: r + 1, value: value, changes: changes });
+    if (changes.length && value !== before) plan.push({ id: id, row: i + 1, value: value, changes: changes });
+  }
+  Object.keys(fixById).forEach(function (id) {
+    if (!seen[id]) notes.push(id + '：待審核表沒有這張卡的列，跳過');
   });
 
   if (plan.length === 0) {
-    ui.alert('沒有需要改的卡（可能都已經改好了）。' + (notes.length ? '\n\n・' + notes.join('\n・') : ''));
+    ui.alert('沒有需要改的列（可能都已經改好了）。' + (notes.length ? '\n\n・' + notes.join('\n・') : ''));
     return;
   }
-  const preview = plan.map(function (p) { return '・' + p.id + '：' + p.changes.join('、'); }).join('\n');
+  const preview = plan.map(function (p) { return '・第 ' + p.row + ' 列 ' + p.id + '：' + p.changes.join('、'); }).join('\n');
   const answer = ui.alert('要套用 2026-10-13 的逐項修正嗎？',
-    '將修改 ' + plan.length + ' 張卡的 ' + BASICEX_CONFIG.targetHeader + '（只動下面列出的項目，其他項目原樣保留）：\n\n' +
+    '將修改「' + BASICEX_CONFIG.reviewSheet + '」' + plan.length + ' 列的 basicExclusions，並在核准欄寫「覆蓋」。\n' +
+    '只動下面列出的項目，其他項目原樣保留；正式 Cards Data 不會被改。\n\n' +
     preview + (notes.length ? '\n\n注意：\n・' + notes.join('\n・') : ''),
     ui.ButtonSet.OK_CANCEL);
-  if (answer !== ui.Button.OK) { ui.alert('已取消，正式表沒有任何變動。'); return; }
+  if (answer !== ui.Button.OK) { ui.alert('已取消，沒有任何變動。'); return; }
 
   plan.forEach(function (p) {
-    basicExAssertCol_(cHead[cTarget]);
-    cardsSheet.getRange(p.row, cTarget + 1).setValue(p.value);
+    review.getRange(p.row, iItems + 1).setValue(p.value);
+    review.getRange(p.row, iApprove + 1).setValue('覆蓋');
   });
-  ui.alert('完成：' + plan.length + ' 張卡已修正。\n\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。');
+  ui.alert('完成：待審核表 ' + plan.length + ' 列已修正，核准欄已寫「覆蓋」。\n\n' +
+    '👉 下一步：逐列確認後，按「一般消費排除 2：打勾的寫回正式 Cards Data」（確認視窗會列出每張卡的增減），再匯出。\n' +
+    '⚠️ 覆蓋＝整格換成待審核表的內容。你若曾在正式表手改過、待審核表沒同步，寫回前請看確認視窗的「移除」清單。');
 }
 
 /************** 正式表已有名單的卡＋命名一致用的既有名稱表 **************/
