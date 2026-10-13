@@ -811,21 +811,27 @@ function appendSpecialSlots_(sheet, now, cardId, basic) {
   //    國內消費，model 硬填海外模型是錯的。現在 model／category／cap／期間四者**一起**切換：
   //      有海外設定 → overseasCashback+overseasBonusRate ＋「國外消費特列項目」＋海外 cap/期間
   //      沒有       → basic+domesticBonusRate         ＋「一般回饋特列項目」＋國內 cap、期間留空
-  if (basic.general_excludes_ads !== '是') {
-    const unknown = (basic.general_excludes_ads !== '否');  // 未提及或空 → 需你確認
+  // 2026-10-13：正式表已有這張卡的一般消費排除名單時以名單為準（站長決定），沒有才用 AI 的 general_excludes_ads。
+  //   兩種都排除 → 不建；只排除其中一種 → 只放沒被排除的那個；都沒排除 → 兩個都放
+  const adEx = adExclusionForCard_(cardId);
+  const adItems = adEx ? ['meta廣告', 'google廣告'].filter(function (t) { return t === 'meta廣告' ? !adEx.meta : !adEx.google; }) : null;
+  const buildAd = adEx ? adItems.length > 0 : basic.general_excludes_ads !== '是';
+  if (buildAd) {
+    const unknown = !adEx && (basic.general_excludes_ads !== '否');  // 沒名單、AI 也沒判定 → 需你確認
     appendGroupRow_(sheet, now, cardId, 14, '（固定模板·廣告）', {
       rate: 0,
       model: hasOverseas ? 'overseasCashback+overseasBonusRate' : 'basic+domesticBonusRate',
       modelNeedsHuman: false,
-      cap: hasOverseas ? overseasCap : domesticCap, minSpend: '', maxSpend: '', items: 'meta廣告,google廣告',
+      cap: hasOverseas ? overseasCap : domesticCap, minSpend: '', maxSpend: '', items: (adItems || ['meta廣告', 'google廣告']).join(','),
       category: hasOverseas ? '國外消費特列項目' : '一般回饋特列項目',
       conditions: '',
       ps: hasOverseas ? (basic.overseasBonusPeriod_start || '') : '',
       pe: hasOverseas ? (basic.overseasBonusPeriod_end || '') : '', hide: '',
       note: '程式生成固定模板（' + (hasOverseas ? '卡片有海外回饋設定→用海外模型' : '卡片無海外回饋設定→當一般國內消費') + '）；' +
-        (unknown ? '⚠️ 無法確認一般消費是否排除廣告——請補一般消費頁(D2)或自行確認；若有排除請刪掉本列(slot 14 留空)' : '一般消費未排除廣告，保留本列'),
+        (adEx ? '依正式表一般消費排除名單：' + (adEx.hits.length ? '排除了 ' + adEx.hits.join('、') + '，只放沒被排除的' : '沒排除廣告') :
+          unknown ? '⚠️ 無法確認一般消費是否排除廣告——請補一般消費頁(D2)或自行確認；若有排除請刪掉本列(slot 14 留空)' : '一般消費未排除廣告，保留本列'),
       needsReview: unknown, reviewQ: unknown ? '一般消費是否排除 Facebook/Google/廣告費？' : '',
-      evidence: '（程式依基本欄位與 general_excludes_ads 生成）'
+      evidence: adEx ? '（程式依基本欄位與正式表 basicExclusions 生成）' : '（程式依基本欄位與 general_excludes_ads 生成）'
     });
     count++;
   }
@@ -870,109 +876,96 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
   }
 }
 
-/************** Q1：每月批次查「一般消費是否排除廣告」（Gemini + Google 搜尋 grounding） **************/
-// grounding 開了就不能同時用結構化輸出，故回純文字自行解析；結果一律 needs_review（附來源，你複核）
-// 一次處理有上限（避免 Apps Script 6 分鐘上限），已查過的卡會跳過，再跑一次會接續剩下的
-const AD_CHECK_CONFIG = { sheet: '報告-廣告排除', perRun: 12 };
+/************** 廣告排除：依「一般消費排除名單」判斷（2026-10-13 改版） **************/
+// 以前：每月用 Gemini＋Google 搜尋查每家銀行「一般消費是否排除廣告」。
+// 現在（站長決定）：以正式 Cards Data 的 basicExclusions 為準——名單裡有下列任一項就算排除：
+//   Google 產品或服務、廣告費、Facebook、Meta、MCC 7311（廣告服務）、Meta Ads、Facebook Ads、Meta廣告、Google廣告。
+// AI 抽一般消費排除時會把這些寫成「Meta廣告」「Google廣告」（basic-exclusions-extractor.gs 規則 8k），
+// 前端搜廣告時直接出灰卡。rate_14 廣告槽只留給「沒排除廣告」的卡，用來算海外回饋率。
+const AD_CHECK_CONFIG = { sheet: '報告-廣告排除' };
+const AD_META_RE = /meta|facebook|廣告費|7311/i;          // 排除 Meta 廣告
+const AD_GOOGLE_RE = /google\s*(廣告|產品)|廣告費|7311/i;  // 排除 Google 廣告（Google Play 這類不算）
 
-// 廣告排除是「銀行層級」政策，以銀行為單位查（不是每張卡），銀行＝卡片 id 的連字號前綴
+// 一格 basicExclusions → { known, meta, google, hits }。known=false＝這張卡還沒有名單，無法判斷
+function adExclusionFromList_(raw) {
+  const items = String(raw == null ? '' : raw).split(/[,，、\n]/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+  const hits = items.filter(function (t) { return AD_META_RE.test(t) || AD_GOOGLE_RE.test(t); });
+  return {
+    known: items.length > 0,
+    meta: items.some(function (t) { return AD_META_RE.test(t); }),
+    google: items.some(function (t) { return AD_GOOGLE_RE.test(t); }),
+    hits: hits
+  };
+}
+
+// 新卡解析建 rate_14 時用：正式表有這張卡的名單就以名單為準，沒有回 null（退回 AI 的 general_excludes_ads）
+function adExclusionForCard_(cardId) {
+  if (!cardId) return null;
+  try {
+    const data = getCardsSheet_().getDataRange().getValues();
+    const h = data[0].map(function (x) { return String(x).trim(); });
+    const idc = h.indexOf('id'), exc = h.indexOf('basicExclusions');
+    if (idc < 0 || exc < 0) return null;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idc]).trim() !== cardId) continue;
+      const r = adExclusionFromList_(data[i][exc]);
+      return r.known ? r : null;
+    }
+  } catch (e) { /* 讀不到資料檔就退回 AI 判斷，不擋解析 */ }
+  return null;
+}
+
+// 選單「檢查廣告排除（比對正式表）」：不上網、不用 AI，只比對 basicExclusions 跟 rate_N 廣告槽有沒有矛盾。
+// 每次執行整張報告重寫
 function checkAdExclusionsForAllCards() {
-  const cardsSheet = getCardsSheet_();  // 資料檔 Cards Data
-  const data = cardsSheet.getDataRange().getValues();
+  const data = getCardsSheet_().getDataRange().getValues();
   const h = data[0].map(function (x) { return String(x).trim(); });
-  const idc = h.indexOf('id'), fullc = h.indexOf('fullName'), webc = h.indexOf('website');
+  const idc = h.indexOf('id'), namec = h.indexOf('name'), exc = h.indexOf('basicExclusions');
   if (idc < 0) { SpreadsheetApp.getUi().alert('資料檔 Cards Data 找不到 id 欄'); return; }
+  const itemCols = [];
+  h.forEach(function (name, c) { const m = name.match(/^items_(\d+)$/); if (m) itemCols.push({ n: m[1], c: c }); });
 
-  // 依 id 前綴分組成銀行，保留首次出現順序，記一張代表卡供查詢用
-  const bankOrder = [];
-  const bankInfo = {};  // bankKey -> { fullName, website }
+  const now = new Date();
+  const rows = [];
+  let problems = 0;
   for (let i = 1; i < data.length; i++) {
     const id = String(data[i][idc] || '').trim();
     if (!id) continue;
-    const bank = id.split('-')[0];
-    if (!bankInfo[bank]) {
-      bankInfo[bank] = {
-        fullName: fullc >= 0 ? String(data[i][fullc] || '') : id,
-        website: webc >= 0 ? String(data[i][webc] || '') : ''
-      };
-      bankOrder.push(bank);
+    const ex = adExclusionFromList_(exc >= 0 ? data[i][exc] : '');
+    // 廣告槽＝items 含 meta廣告／google廣告 的 rate_N
+    const slots = [];
+    itemCols.forEach(function (ic) {
+      const items = String(data[i][ic.c] || '');
+      if (/meta\s*廣告|google\s*廣告/i.test(items)) slots.push({ n: ic.n, items: items });
+    });
+    let verdict;
+    if (!ex.known) verdict = '⚠ 還沒有一般消費排除名單，無法判斷';
+    else if (ex.meta && ex.google) {
+      verdict = slots.length ? '❌ 名單排除廣告，卻有廣告槽 → 刪掉 rate_' + slots.map(function (s) { return s.n; }).join('、rate_') : '✅ 排除廣告，沒有廣告槽';
+    } else if (ex.meta || ex.google) {
+      const gone = ex.meta ? 'meta廣告' : 'google廣告';
+      const bad = slots.filter(function (s) { return s.items.toLowerCase().indexOf(gone) >= 0; });
+      verdict = bad.length ? '❌ 名單只排除 ' + gone + '，rate_' + bad[0].n + ' 的 items 要拿掉它' :
+        (slots.length ? '✅ 只排除 ' + gone + '，廣告槽已只剩另一個' : '⚠ 只排除 ' + gone + '，另一個沒有廣告槽');
+    } else {
+      verdict = slots.length ? '✅ 沒排除廣告，有廣告槽' : '⚠ 沒排除廣告，也沒有廣告槽（搜廣告只會顯示國內基本回饋）';
     }
+    if (/^[❌]/.test(verdict)) problems++;
+    rows.push([now, id, namec >= 0 ? data[i][namec] : '', ex.hits.join(','), slots.map(function (s) { return 'rate_' + s.n; }).join(','), verdict]);
   }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let out = ss.getSheetByName(AD_CHECK_CONFIG.sheet);
-  if (!out) {
-    out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
-    out.appendRow(['檢查時間', '銀行(id前綴)', '代表卡', '是否排除廣告', '依據', 'needs_review']);
-    out.setFrozenRows(1);
-  }
-  const doneBanks = {};
-  const outData = out.getDataRange().getValues();
-  for (let i = 1; i < outData.length; i++) doneBanks[String(outData[i][1])] = true;
-
-  const now = new Date();
-  let processed = 0, remaining = 0;
-  for (let b = 0; b < bankOrder.length; b++) {
-    const bank = bankOrder[b];
-    if (doneBanks[bank]) continue;
-    if (processed >= AD_CHECK_CONFIG.perRun) { remaining++; continue; }
-
-    const info = bankInfo[bank];
-    let verdict = '未知', basis = '';
-    try {
-      const prompt = '用 Google 搜尋查台灣發行「' + info.fullName + '」的這家銀行，其信用卡「一般消費」回饋是否明確排除 Facebook/Meta、Google、廣告費 這幾類（這是銀行層級的政策，非單張卡的活動）。' +
-        (info.website ? '官網參考：' + info.website + '。' : '') +
-        '依據優先序：①該行官網/公告的原文最優先；②官網查不到時，可採信可靠大站（如卡優新聞、Mobile01、財經媒體、知名部落客彙整）明確寫出的資訊，如「XX銀行刷廣告費沒回饋」。都查不到再回未知。' +
-        '嚴格用兩行回答：\n排除:是 或 否 或 未知\n依據:<引用你找到的關鍵句，並註明來自官網或哪個大站>\n';
-      const r = callGeminiGrounded_(prompt);
-      const parsed = parseAdVerdict_(r.text);
-      verdict = parsed.verdict; basis = parsed.basis;
-    } catch (e) {
-      basis = '查詢失敗：' + e.message;
-    }
-    out.appendRow([now, bank, info.fullName, verdict, basis, 'TRUE']);
-    if (verdict !== '否') out.getRange(out.getLastRow(), 4).setBackground('#fff3cd'); // 排除=是/未知 標黃提醒
-    processed++;
-    Utilities.sleep(800);
-  }
-
-  SpreadsheetApp.getUi().alert('本次查了 ' + processed + ' 家銀行，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
-    (remaining ? '\n還有 ' + remaining + ' 家未查——再執行一次即可接續。' : '\n全部查完了。') +
-    '\n\n判讀（該行所有卡共用）：排除=是→該行的卡 rate_14 留空；否→建 rate_14 固定模板；未知→標黃自行確認。');
-}
-
-// 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
-function callGeminiGrounded_(prompt) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('尚未設定 GEMINI_API_KEY');
-  const payload = { contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ google_search: {} }] };
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
-  const res = UrlFetchApp.fetch(url, {
-    method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true
-  });
-  if (res.getResponseCode() !== 200) {
-    throw new Error('Gemini(grounded) HTTP ' + res.getResponseCode() + '：' + res.getContentText().slice(0, 200));
-  }
-  const body = JSON.parse(res.getContentText());
-  const cand = body.candidates && body.candidates[0];
-  const parts = (cand && cand.content && cand.content.parts) || [];
-  const text = parts.map(function (p) { return p.text || ''; }).join('').trim();
-  const sources = [];
-  const gm = cand && cand.groundingMetadata;
-  if (gm && gm.groundingChunks) {
-    gm.groundingChunks.forEach(function (c) { if (c.web && c.web.uri) sources.push(c.web.uri); });
-  }
-  return { text: text, sources: sources };
-}
-
-// 從「排除:… 依據:…」文字解析
-function parseAdVerdict_(text) {
-  let verdict = '未知', basis = text || '';
-  const mV = String(text).match(/排除\s*[:：]\s*(是|否|未知)/);
-  if (mV) verdict = mV[1];
-  const mB = String(text).match(/依據\s*[:：]\s*([\s\S]*)/);
-  if (mB) basis = mB[1].trim().slice(0, 500);
-  return { verdict: verdict, basis: basis };
+  if (!out) out = ss.insertSheet(AD_CHECK_CONFIG.sheet);
+  out.clearContents();
+  const head = ['檢查時間', 'card_id', '卡名', '一般消費排除中的廣告項目', '廣告槽', '判讀'];
+  out.getRange(1, 1, 1, head.length).setValues([head]);
+  if (rows.length) out.getRange(2, 1, rows.length, head.length).setValues(rows);
+  out.setFrozenRows(1);
+  SpreadsheetApp.getUi().alert('比對了 ' + rows.length + ' 張卡，寫進「' + AD_CHECK_CONFIG.sheet + '」。' +
+    (problems ? '\n有 ' + problems + ' 張卡兩邊矛盾（❌），照「判讀」欄改 Cards Data。' : '\n沒有矛盾。') +
+    '\n\n規則：basicExclusions 有 Google產品或服務／廣告費／Facebook／Meta／MCC 7311／Meta Ads／Facebook Ads／Meta廣告／Google廣告 就算排除；' +
+    '排除的卡不該有 rate_N 廣告槽（前端會顯示灰卡），沒排除的卡才用廣告槽算海外回饋率。');
 }
 
 /************** 既有卡片的活動：3-貼上原文（卡片活動）→ 4-待審核（活動更新） **************/

@@ -425,12 +425,14 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | AI 拆新戶活動：我貼的 | `parsePastedText` | `3-貼上原文（新戶活動）` **第 2 列起每一列＝一段原文**（A 原文／B 卡片提示／C 網址） | `4-待審核（新戶活動）`；回寫 D 欄狀態 | `benefits-parser.gs` |
 | AI 拆新卡：我貼的 | `parseNewCard` | `3-貼上原文（新卡）` **第 2 列起每一列＝一張卡**（A 原文／B id 提示／C 網址／D 一般消費說明） | `4-待審核（新卡-基本）`＋`4-待審核（新卡-組別）`；回寫 E 欄狀態 | `card-benefits-parser.gs` |
 | AI 拆卡片活動：打 V 的＋我貼的 | `parseCardActivities` | ①`2-變動通知`「寫入活動」欄打 V 的列（用所屬活動＋變動段落＋新文字）②`3-貼上原文（卡片活動）`第 2 列起手貼的列（A 原文／B card_id 必填／C 網址） | `4-待審核（活動更新）`（自動建）；回寫「寫入活動」格或 D 欄狀態 | `card-benefits-parser.gs` |
-| 其他工具 ▸ 檢查廣告排除（每月一次） | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data` | `報告-廣告排除` | `card-benefits-parser.gs` |
+| 其他工具 ▸ 檢查廣告排除（比對正式表） | `checkAdExclusionsForAllCards` | **跨檔唯讀**資料檔 `Cards Data`（basicExclusions 與 items_N） | `報告-廣告排除`（整張重寫） | `card-benefits-parser.gs` |
 | 其他工具 ▸ 登錄連結 1：標出要登錄的活動 | `markRegisterSlotsInDraft` | **跨檔唯讀**資料檔 `Cards Data` 的 `conditions_N` | **跨檔**寫資料檔的 `Cards Data-登錄連結草稿`（標色＋撈 conditions 內的網址；正式表完全不動） | `register-link-finder.gs` |
 | 其他工具 ▸ 登錄連結 2：找連結 | `fillRegisterLinksFromSnapshots` | `1-監控清單` 的 `last_snapshot`（**只讀不寫**）＋草稿分頁裡①標黃的槽位 | 同上草稿分頁（正式 `Cards Data` 完全不動） | `register-link-finder.gs` |
 | 其他工具 ▸ 登錄連結 3：打勾的寫回正式 Cards Data | `applyRegisterLinksToCardsData` | 草稿分頁「貼回正式表」欄打 V 的那幾列 | **跨檔寫正式 `Cards Data` 的 `registerLink_N` 欄**（會動正式表的兩個選單項之一，另一個是「一般消費排除 2」；寫前跳確認視窗）＋回寫草稿的 V→「已貼上 <時間>」 | `register-link-finder.gs` |
 | 其他工具 ▸ 登錄連結 4：檢查死連結 | `checkRegisterLinksAlive` | **跨檔唯讀**正式 `Cards Data` 的 `registerLink_N` | 不寫任何分頁，結果跳視窗 | `register-link-finder.gs` |
 | 其他工具 ▸ 一般消費排除 1：AI 從監控快照抽 | `extractBasicExclusionsFromSnapshots` | `1-監控清單` 中 `keywords` 含「一般消費／排除／不回饋…」的列的 `last_snapshot`（**只讀不寫**）；正式表已有名單的卡照樣抽、標黃提示用「覆蓋」 | `5-待審核（一般消費排除）`（自動建；一張卡一列） | `basic-exclusions-extractor.gs` |
+| 其他工具 ▸ 一般消費排除：套用修改到待審核 | `applyBasicExclusionChanges` | `2-變動通知` 「一般消費排除確認」欄填 V 的列的「一般消費排除修改」欄＋正式 `Cards Data` 的現有名單（唯讀） | `5-待審核（一般消費排除）`：以正式表名單為底只做留下來的行，核准欄標「覆蓋」；變動通知那格 V→「已套用 <時間>」。全部能照做不跳視窗，有找不到／看不懂的行才跳 | `basic-exclusions-extractor.gs` |
+| 其他工具 ▸ 一般消費排除：補分析變動 | `analyzePendingBasicExclusionChanges` | `2-變動通知` 「一般消費排除修改」欄是「⏳ 待分析」的列 | 同一格換成 AI 分析結果（監控每段結尾也會自動補） | `basic-exclusions-extractor.gs` |
 | 其他工具 ▸ 一般消費排除 2：打勾的寫回正式 Cards Data | `applyBasicExclusionsToCardsData` | `5-待審核（一般消費排除）` 「核准」欄打 V 的列 | **跨檔寫正式 `Cards Data` 的 `basicExclusions` 欄**：打 V 只寫空白格、打「覆蓋」才換掉已有名單（寫前跳確認視窗，覆蓋會列出增減）＋回寫 V→「已寫回 <時間>」 | `basic-exclusions-extractor.gs` |
 | 📖 使用說明 | `openSheetGuide` | — | 建立／更新 `0-使用說明` 分頁（放最前面）＋各分頁表頭備註（只寫這兩樣，其他格子不動） | `sheet-guide.gs` |
 
@@ -849,7 +851,7 @@ GitHub → Actions → 該次執行 → Summary 有一張表：每支是「更�
 | 項目 | 內容 |
 |---|---|
 | 程式檔案 | **自動化檔**的 Apps Script 內 `權益解析-新戶.gs`（備份：`benefits-parser.gs`） |
-| AI | Gemini API（`gemini-2.5-flash`，免費額度），**結構化輸出**鎖死欄位格式 |
+| AI | Gemini API（免費額度），**結構化輸出**鎖死欄位格式。**多模型備援**（2026-10-13）：`callGemini_` 依 `PARSER_CONFIG.models`（或指令碼屬性 `GEMINI_MODELS`，逗號分隔）的順序呼叫，429／404／5xx 自動換下一個——免費額度每個模型分開算（3.x／2.5 Flash 各每天 20 次、3.5／3.1 Flash Lite 各 500 次）。選單「其他工具 ▸ 測試 AI 模型」可看哪些名稱可用；監控通知信最後一行列出這次用了哪些模型。廣告排除檢查已改成比對正式表，不再用 Google 搜尋 grounding |
 | 讀取來源 | ① `2-變動通知` 中狀態=`待解析` 的列（監控的產出）② `3-貼上原文（新戶活動）` 分頁手動貼文字（**第 2 列起每一列＝一段原文，可一次貼多列**） |
 | 卡片 ID 來源 | 跨檔 `openById` 讀資料檔的 `Cards Data`（唯讀） |
 | 產出 | `4-待審核（新戶活動）` 分頁（自動建立）——**絕不直接寫正式表** |
@@ -1237,17 +1239,17 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
 欄位：`欄位 | 看到這種字樣 | 備註`。站長直接在分頁加列，下次解析就生效——不用改程式。
 種子：`basicCashback ← 基本回饋 n%`、`domesticBonusRate ← 國內加碼 n%`。
 
-### 每月批次查廣告排除（Google 搜尋 grounding）
+### 廣告排除：比對一般消費排除名單（2026-10-13 改版）
 
-選單「🤖 權益自動化 → 檢查廣告排除（全卡·每月）」：對 Cards Data 每張卡，用 Gemini + Google 搜尋
-即時查「一般消費是否排除 Facebook/Meta/Google/廣告費」，結果寫進 `報告-廣告排除` 分頁（附來源連結）。
+以前每月用 Gemini＋Google 搜尋查各銀行「一般消費是否排除廣告」；現在**以正式 Cards Data 的 `basicExclusions` 為準**（站長決定），不上網、不用 AI。
 
-- 依據優先序：①該行官網/公告原文最優先；②官網查不到時採信可靠大站（卡優、Mobile01、財經媒體、知名部落客彙整）明確資訊；都無則回未知
-- 結果**一律 needs_review**（命中率中等，`依據`欄會註明來自官網或哪個大站，供你判斷）
-- **以「銀行」為單位查**（廣告排除是銀行層級政策，非單卡）：銀行＝卡片 id 的連字號前綴（`fubon-jcard`→fubon），同行只查一次
-- 每次最多查 12 家銀行（避開 Apps Script 6 分鐘上限），已查過的銀行跳過，**再執行一次接續剩下的**
-- 判讀（該行所有卡共用）：`排除=是`→該行的卡 rate_14 留空；`否`→建 rate_14 固定模板；`未知`→標黃，自行確認
-- **全行月報**；可設每月觸發器（函數 `checkAdExclusionsForAllCards`）自動跑
+- 名單有 Google產品或服務／廣告費／Facebook／Meta／MCC 7311／Meta Ads／Facebook Ads／Meta廣告／Google廣告 任一項就算排除
+  （`adExclusionFromList_`：Facebook／Meta 類＝排除 Meta 廣告、Google產品或服務＝排除 Google 廣告、廣告費／7311＝兩個都排除；Google Play 這類不算）
+- AI 抽一般消費排除時照規則 8k 補「Meta廣告」「Google廣告」（原文「廣告費」再加列「廣告費」），前端搜廣告直接出灰卡
+- 選單「其他工具 ▸ 檢查廣告排除（比對正式表）」：逐卡比對名單與 rate_N 廣告槽（items 含 meta廣告／google廣告），整張重寫 `報告-廣告排除`：
+  排除了卻有廣告槽 → ❌ 要刪槽；只排除其中一種 → 槽的 items 只能留另一個；沒排除也沒槽 → ⚠ 搜廣告只會顯示國內基本回饋
+- 新卡解析建 rate_14 時：正式表有這張卡的名單就照名單（兩種都排除不建、排除一種只放另一個），沒有名單才用 AI 的 `general_excludes_ads`
+- rate_14 只留給沒排除廣告的卡：Meta／Google 廣告多半是國外交易，要用廣告槽算海外回饋率
 
 ### 審核與套用
 
@@ -1500,6 +1502,28 @@ AI 也不自己把「定額回饋金額÷消費額」算成率——**定額回�
    貼上 `basic-exclusions-extractor.gs` 全文、存檔。⚠️ 順序不能反：自動部署**絕不新建檔案**，`deploy.json` 列了它、
    線上卻找不到對應檔名時，**整批部署都會停**（連其他檔都不更新）。新增選單項的 `benefits-parser.gs` 由合併後的自動部署更新，不用手貼。
    部署完重新整理試算表
+
+**官網變動後的更新流程（2026-10-13，日常用這條）**：流程圖見 claude.ai 上的「一般消費排除更新流程」。
+1. 每週監控（`watchlist-monitor.gs`）抓到一般消費／排除頁（判斷同下面「① 抽取」：該列 `keywords` 符合 `rowKeywordRe`）有變動時，
+   **當場**呼叫 `basicExAnalyzeChange_`：把變動段落＋正式表現有名單交給 Gemini，只回「改哪幾項」，寫進 `2-變動通知`
+   同一列的「一般消費排除修改」欄（欄位會自動補），通知信也附一份。格式一行一個動作，「｜」後面只是原文依據：
+   ```
+   ▸ ubot-green, ubot-jiho
+   ＋ 新增：手搖飲料店｜原文：…
+   － 刪除：E政府服務平台
+   ✎ 改寫：學費 → 學費、學雜費
+   ```
+   - 這種頁改用**逐詞比對**（`exclusionTermDiff_`）判斷有沒有變動，不看關鍵字、也不看 30 字門檻：新舊全文沿頓號、逗號、括號、空白切成詞，
+     任何一個詞新增或消失就分析（純數字／日期不算）。原因：排除項目常只有 2～6 字；而且清單超過 160 字時 `diffSegments_` 會切成小段、
+     不到 8 字的片段直接丟掉，實測在長清單裡加「停車場」舊做法完全抓不到。逐詞結果會附在變動段落後面（【逐詞比對】）一起給 AI
+   - AI 判「無影響」且監控判純文案 → 照舊不寫分頁；有要改的項目時一定寫進分頁
+   - 監控那一段時間不夠時先寫「⏳ 待分析」，該段結尾或下次監控有空檔時補，也可按選單「一般消費排除：補分析變動」
+   - **沒有 30 天門檻**：只在官網真的變動時分析，而且只提修改、不動任何名單
+2. 站長在那一格刪掉不要的行、改用詞，「一般消費排除確認」欄填 V
+3. 選單「一般消費排除：套用修改到待審核」：以**正式表現有名單**為底，只做留下來的行（逐項比對，其他項目、順序、逗號一字不動），
+   寫進 `5-待審核` 那張卡的列（同網址優先，沒有就新增一列）、核准欄標「覆蓋」、「AI想問的問題」欄記下套用了哪幾行
+4. 選單「一般消費排除 2」寫回正式表：確認視窗把改寫合併顯示成「A → B」（靠第 3 步記下的「✎ 改寫」行）
+- 測試：`node tools/test-basic-exclusions-changes.js`
 
 **初次建立名單（兩步）**：
 1. 選單「其他工具 ▸ 一般消費排除 1：AI 從監控快照抽」——讀監控清單裡**一般消費／排除頁**的 `last_snapshot`
