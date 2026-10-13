@@ -231,15 +231,15 @@ const cardsSheet = () => makeSheet('Cards Data', [
       getContentText: () => code === 200 ? JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":"' + m + '"}' }] } }] }) : '{"error":"x"}' };
   } };
   const G = load(e);
-  behavior = { 'gemini-3.8-flash': 404, 'gemini-3.7-flash': 429 };
+  behavior = { 'gemini-3.8-flash': 404, 'gemini-3.6-flash': 429 };
   let r = G.run('callGemini_', 'sys', 'u', {});
-  ok(r.ok === 'gemini-3.6-flash', '404、429 自動換到第三個：' + r.ok);
+  ok(r.ok === 'gemini-2.5-flash', '404、429 自動換到第三個：' + r.ok);
   calls.length = 0;
   r = G.run('callGemini_', 'sys', 'u', {});
-  ok(r.ok === 'gemini-3.6-flash' && calls.join() === 'gemini-3.6-flash', '同一次執行不再試已知不存在／冷卻中的模型：' + calls.join());
-  ok(/gemini-3\.6-flash ×2/.test(G.run('geminiUsageSummary_')) && /3\.8-flash 不存在/.test(G.run('geminiUsageSummary_')), '用量摘要：' + G.run('geminiUsageSummary_'));
+  ok(r.ok === 'gemini-2.5-flash' && calls.join() === 'gemini-2.5-flash', '同一次執行不再試已知不存在／冷卻中的模型：' + calls.join());
+  ok(/gemini-2\.5-flash ×2/.test(G.run('geminiUsageSummary_')) && /3\.8-flash 不存在/.test(G.run('geminiUsageSummary_')), '用量摘要：' + G.run('geminiUsageSummary_'));
   const G2 = load(e);
-  behavior = Object.fromEntries(['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'].map(m => [m, 429]));
+  behavior = Object.fromEntries(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'].map(m => [m, 429]));
   let err = '';
   try { G2.run('callGemini_', 'sys', 'u', {}); } catch (x) { err = x.message; }
   ok(/所有 AI 模型都暫時不能用/.test(err), '全部用完時報錯：' + err.slice(0, 40));

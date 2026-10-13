@@ -53,10 +53,12 @@ const PARSER_CONFIG = {
   // 伺服器忙（5xx）就自動換下一個。新的 Flash 放前面（比較聰明），Flash Lite 放最後當保底（次數多但較不精準）。
   // 要換順序或模型：「專案設定 → 指令碼屬性」新增 GEMINI_MODELS，填模型 id、逗號分隔，會蓋過這裡（不用改程式）。
   // Gemma 4 不能放：每分鐘 token 上限只有 1.6 萬，我們一次 prompt 就 1～4 萬
-  // 2026-10-13 站長實測：3.8／3.7／3.6 Flash 回 503（名稱對、免費層太多人用，暫時性）；
-  // gemini-3-flash 回 404（id 不是這個，正確 id 看選單「測試 AI 模型」列出的清單）→ 先拿掉
-  models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-2.5-flash',
-    'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
+  // 2026-10-13 站長查官方停用頁確認：
+  //   ・gemini-3-flash 不存在；gemini-3.7-flash／3.5-flash 已不能選，API 會自動轉到 3.8／3.6——放了也只是重複，拿掉
+  //   ・gemini-3.1-flash-lite 2027/5/7 停用（官方建議改 3.5-flash-lite），到時從清單拿掉即可
+  //   ・2.5 系列只開放給用過的專案（本專案有用過），沒有停用日
+  //   新模型在免費層常回 503（太忙），程式會自動換下一個
+  models: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
   maxTextChars: 30000,               // 送給 AI 的原文長度上限
   maxRowsPerRun: 5,                  // 入口 B 一次最多解析幾列（Apps Script 單次 6 分鐘上限；剩下的再按一次選單接著跑）
   statusCol: 4                       // 入口 B 輸入分頁的「狀態」欄＝D 欄（程式回填「已解析…」／「失敗：…」）
