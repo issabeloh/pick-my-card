@@ -65,6 +65,12 @@ const BASICEX_CONFIG = {
   colorReview: '#fff3cd'                   // AI 有疑問的列標黃
 };
 
+// 不進「既有名稱表」的詞（2026-10-13）：這些詞的範圍各家不同，放進名稱表會讓 AI 依「跨行統一」把別家範圍較窄的
+// 原文套成它們——凱基原文「交通罰款」就這樣被改寫成台新的「違規罰鍰」（範圍被放大）。AI 照樣可以依原文輸出它們。
+// 基金類（2026-10-13）各家用詞範圍不同（基金扣繳／基金申購／代扣基金…），站長決定照各自原文，也不進名稱表
+const BASICEX_NO_UNIFY_ITEMS = ['違規罰鍰', '電信費', '悠遊卡自動加值', '一卡通自動加值', 'icash卡自動加值', 'eTag自動儲值',
+  '基金交易', '基金交易及其手續費', '基金扣繳'];
+
 const BASICEX_REVIEW_HEADERS = [
   '核准', '解析時間', 'card_id', 'bank', '來源網址',
   'basicExclusions', 'AI想問的問題', '原文引用'
@@ -109,7 +115,7 @@ const BASICEX_EXAMPLE = {
     '臺北醫學大學附設醫院費用', '路邊停車費',
     'e-Bill全國繳費', 'i繳費', '醫指付', '電子化繳費稅處理平台', '醫療院所費用', '社區管理費',
     '公務機關暨醫療院所信用卡繳費平臺', '台新繳費中心網頁繳費', 'Richart Life APP繳費', 'Richart APP繳費', '行動銀行繳費',
-    '小額支付平台', '麥當勞', '政府規費', '違規罰鍰',
+    '小額支付平台', '政府規費', '違規罰鍰', '交通罰款', '交通罰單', '停車罰單', '交通罰鍰',
     '預借現金及其手續費', '預借現金分期金及其手續費', '代償他行信用卡/現金卡/小額信貸',
     '個人綜合所得稅', '所得稅分期付款期金及其手續費', '房屋稅', '地價稅', '牌照稅', '公路養管費(原燃料費)',
     '違約金', '循環利息', '基金交易及其手續費', '信用卡年費', '一般信用卡相關手續費'
@@ -163,7 +169,7 @@ const BASICEX_EXAMPLE_ESUN = {
     '賭博籌碼', '數位 (虛擬) 貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
     '學費', 'i繳費平台', '學費通繳費平臺', '醫療費用', '政府規費', '全聯福利中心',
     '大全聯', 'PXGo!全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
-    '萊爾富', 'OK超商', '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)', '特約商店分期付款消費交易', '台灣電力公司', '電費',
+    '萊爾富', 'OK超商', '小額支付平台', '特約商店分期付款消費交易', '台灣電力公司', '電費',
     '台灣自來水公司', '台北自來水事業處', '水費', '瓦斯費', '各縣市路邊停車費', '路邊停車費',
     '中華電信及民營電信', '電信費', '合康領袖廳管理費', '醫指付APP', '電子化繳費稅處理平台', '公務機關信用卡繳費平台',
     'E政府服務平台', '儲值卡 (原電子票證) 儲值金 (含自動儲值)', '電子支付儲值金 (含自動儲值)', 'eTag自動儲值', 'eTag智慧停車費用', '各類預借現金',
@@ -414,6 +420,8 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '   不算相同，照第 3 條保留原文。',
     '8b. 支付工具（2026-10-12 站長規則，見富邦 J 卡範例）：原文說「在被排除的商家用 icash Pay、全盈+Pay、LINE PAY 付款也不算」時，',
     '    排除的是那個商家，不是支付工具——**不要列支付工具**（列了會讓整個支付工具被誤判成沒回饋）。',
+    '    但商家本身**沒有**整個被排除、只有「在該商家用某支付工具」才排除時（2026-10-13 站長規則），寫成「<商家>綁<工具>」，',
+    '    每個工具一項。例：匯豐「便利商店自有支付如 iCash pay、FAMI PAY 綁本行卡於便利商店消費不回饋」→ 便利商店綁iCash pay、便利商店綁FAMI PAY。',
     '    只有兩種才列：①只能在被排除商家內使用的工具（PX Pay 只能在全聯體系用 → 列；全支付在別處也能用 → 不列）；',
     '    ②銀行明文把整個支付工具排除（例：「全支付交易」整個不回饋 → 列「全支付」）。列的時候去掉「交易」「儲值」尾綴。',
     '8c. 集團／旗下品牌要展開成各品牌：「全聯實業旗下品牌通路」→ 全聯福利中心、大全聯、全聯線上購物、全聯全電商、全聯小時達、PX Pay。',
@@ -422,10 +430,29 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '    原文排除「全聯福利中心」「PX Pay」「PXGo!全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
     '    兩者都是全聯線上購／PX Pay App 裡的服務，帳單特店名稱顯示為全聯福利中心、全聯線上購或 PXPay，銀行同樣判為排除。',
     '8d. 便利商店一律列「便利商店」加四大超商「7-11、全家、萊爾富、OK超商」（原文沒逐一點名也要列）。',
+    '8f. 罰款類（2026-10-13 站長規則）：範圍各家不同，不可套用別家銀行的寫法。所有罰款類一律列這四個交通詞：',
+    '    「交通罰款」「交通罰單」「停車罰單」「交通罰鍰」，再依原文加：',
+    '    ①原文**只限交通**（交通罰款、交通違規罰鍰、交通罰鍰…）：只列上面四個，**不可寫「違規罰鍰」**（會把範圍放大成所有罰款），',
+    '      原文本身也不另列（例：匯豐「交通違規罰鍰」→ 交通罰款、交通罰單、停車罰單、交通罰鍰，不列「交通違規罰鍰」）。',
+    '    ②原文是**不限交通的泛稱**（違規罰鍰、罰款、罰鍰…）：再加「違規罰鍰」；原文同時有規費時再加「政府規費」。',
+    '      例：台新「規費、罰鍰：政府規費、違規罰鍰」→ 政府規費、違規罰鍰、交通罰款、交通罰單、停車罰單、交通罰鍰。',
+    '    ③原文寫「政府機關（之違規）罰款」：再加「政府罰款」。',
+    '    ④原文有上面沒涵蓋的特殊寫法（例：「裁決所違規罰款」）：照原文再列一項。',
+    '8g. 電信費（2026-10-13 站長規則）：原文只寫中華電信（中華電信費用、中華電信資費、中華電信話費）時寫「中華電信電信費」，',
+    '    **不可寫成「電信費」**（民營電信不在內）。只有原文泛指所有電信（電信費、各項電信資費、中華電信及民營電信）才列「電信費」。',
+    '8h. 加值／儲值（2026-10-13）：原文**沒寫「自動」**（悠遊卡加值、一卡通加值金、儲值卡儲值金…）表示所有加值都排除，',
+    '    要同時列「悠遊卡加值」「悠遊卡自動加值」兩種寫法（一卡通、icash卡同理），因為搜尋時兩者互不包含；',
+    '    原文寫「自動加值」時只列「X自動加值」。eTag 同理：原文「eTag儲值」列「eTag儲值」「eTag自動儲值」，原文「eTag自動儲值」只列後者。',
+    '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
+    '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
+    '    原文同時寫短的和長的（「基金交易、基金交易及其手續費」）只列長的那個（例：星展只列「基金交易及其手續費」）。',
+    '8j. 小額支付平台（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
+    '    只列「小額支付平台」，**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
+    '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
     '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
     '    連鎖速食店→速食店；退貨→退款；括號一律半形加空格「數位 (虛擬) 貨幣」。',
-    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開，例：「小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)」。',
+    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開，例：「數位 (虛擬) 貨幣」。',
     '9. 不要輸出單一個字（如「稅」）、不要以「等」結尾、不要輸出「經本行認定之其他交易」這類對不到具體項目的概括條款。',
     '10. 頁面分卡別列不同名單就分成多個 group，每組 card_ids 只放適用的卡；同一份名單適用全部候選卡就一組。',
     '    card_ids 只能從候選清單挑。頁面找不到任何排除條款（快照只抓到選單、內容是別的活動）→ groups 回空陣列。',
@@ -688,6 +715,111 @@ function applyBasicExclusionsToCardsData() {
   ].filter(function (x) { return x; }).join('\n'));
 }
 
+/************** 一次性修正：2026-10-13 站長核定的逐項修改 **************/
+// 只動下表列出的「單一項目」：找到完全相同的項目才換掉／刪掉，其他項目、順序、逗號一個字都不碰。
+// 找不到的項目（可能站長已手改過）就跳過並列在報告裡。可以重複按：已經改好的卡會顯示「不用改」。
+const BASICEX_LONG_SMALLPAY = '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)';
+const BASICEX_FIX_20261013 = [
+  // 小額支付平台：只留平台名，括號裡的例子不列
+  { id: 'yushan-unicard', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-ubear', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-kumamon', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-pi-card', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'taishin-richart', remove: ['麥當勞'] },
+  { id: 'taishin-jiekou', remove: ['麥當勞'] },
+  { id: 'cathay-cube', remove: ['連鎖速食店'], replace: [['基金交易', '代扣基金']] },
+  { id: 'dbs-eco', remove: ['連鎖速食店'] },
+  { id: 'dbs-aov', remove: ['連鎖速食店', '基金交易'] },          // 留「基金交易及其手續費」
+  { id: 'mega-bt21', remove: ['連鎖速食店'] },
+  { id: 'febank-lejia', remove: ['速食店'] },
+  { id: 'kgi-eslite', remove: ['速食店'], replace: [['基金扣繳', '基金代扣']] },
+  { id: 'firstbank-ileo', remove: ['速食店'], replace: [['基金交易', '基金']] },
+  { id: 'sunny-jcb-crystal', remove: [BASICEX_LONG_SMALLPAY, '停車場', '麥當勞', '連鎖速食店'] },
+  { id: 'chb-mylove', remove: [BASICEX_LONG_SMALLPAY, '速食店', '基金交易'], replace: [['基金申購', '申購基金']] },
+  { id: 'ubot-linebank', remove: ['速食店', '停車場'] },
+  { id: 'ubot-mcard', remove: ['速食店', '停車場'] },
+  { id: 'ubot-linepoint', remove: ['速食店', '停車場'] },
+  { id: 'ubot-green', remove: ['速食店', '停車場'] },
+  { id: 'ubot-jiho', remove: ['速食店', '停車場'] },
+  // 基金：照各家原文
+  { id: 'tbb-chaotian', replace: [['基金交易', '信用卡申購基金']] },
+  { id: 'tbb-artfun', replace: [['基金交易', '信用卡申購基金']] },
+  { id: 'ctbc-uniopen', replace: [['基金交易', '基金']] },
+  { id: 'ctbc-linepay-card', replace: [['基金交易', '基金']] },
+  { id: 'hsbc-titanium', replace: [['基金扣繳', '基金扣款']] },
+  { id: 'hsbc-cashback-signature', replace: [['基金扣繳', '基金扣款']] },
+  { id: 'hsbc-liveplus', replace: [['基金交易', '基金扣款']] }
+];
+
+// 對一格套用逐項修改。以半形逗號切開、保留每段原樣（含空白與結尾逗號），只換掉／刪掉完全相符的那一段。
+// 回傳 { value, changes:[], missing:[] }
+function basicExApplyFixToCell_(raw, fix) {
+  const parts = String(raw == null ? '' : raw).split(',');
+  const changes = [];
+  const missing = [];
+  const find = function (item) {
+    for (let i = 0; i < parts.length; i++) if (parts[i] !== null && parts[i].trim() === item) return i;
+    return -1;
+  };
+  (fix.replace || []).forEach(function (pair) {
+    const i = find(pair[0]);
+    if (i < 0) { missing.push(pair[0]); return; }
+    if (find(pair[1]) >= 0) { parts[i] = null; changes.push('刪「' + pair[0] + '」（已有「' + pair[1] + '」）'); return; }
+    parts[i] = parts[i].replace(pair[0], pair[1]);
+    changes.push('「' + pair[0] + '」→「' + pair[1] + '」');
+  });
+  (fix.remove || []).forEach(function (item) {
+    const i = find(item);
+    if (i < 0) { missing.push(item); return; }
+    parts[i] = null;
+    changes.push('刪「' + item + '」');
+  });
+  return { value: parts.filter(function (x) { return x !== null; }).join(','), changes: changes, missing: missing };
+}
+
+function applyBasicExclusionsFix20261013() {
+  const ui = SpreadsheetApp.getUi();
+  const cardsSheet = getCardsSheet_();
+  const cData = cardsSheet.getDataRange().getValues();
+  const cHead = cData[0].map(function (x) { return String(x).trim(); });
+  const cId = cHead.indexOf('id');
+  const cTarget = cHead.indexOf(BASICEX_CONFIG.targetHeader);
+  if (cId < 0 || cTarget < 0) { ui.alert('正式 Cards Data 找不到 id 或 ' + BASICEX_CONFIG.targetHeader + ' 欄，中止。'); return; }
+  const rowById = {};
+  for (let i = 1; i < cData.length; i++) {
+    const id = String(cData[i][cId] || '').trim();
+    if (id && rowById[id] === undefined) rowById[id] = i;
+  }
+
+  const plan = [];
+  const notes = [];
+  BASICEX_FIX_20261013.forEach(function (fix) {
+    const r = rowById[fix.id];
+    if (r === undefined) { notes.push(fix.id + '：正式表找不到這張卡，跳過'); return; }
+    const before = String(cData[r][cTarget] == null ? '' : cData[r][cTarget]);
+    const res = basicExApplyFixToCell_(before, fix);
+    if (res.missing.length) notes.push(fix.id + '：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
+    if (res.changes.length && res.value !== before) plan.push({ id: fix.id, row: r + 1, value: res.value, changes: res.changes });
+  });
+
+  if (plan.length === 0) {
+    ui.alert('沒有需要改的卡（可能都已經改好了）。' + (notes.length ? '\n\n・' + notes.join('\n・') : ''));
+    return;
+  }
+  const preview = plan.map(function (p) { return '・' + p.id + '：' + p.changes.join('、'); }).join('\n');
+  const answer = ui.alert('要套用 2026-10-13 的逐項修正嗎？',
+    '將修改 ' + plan.length + ' 張卡的 ' + BASICEX_CONFIG.targetHeader + '（只動下面列出的項目，其他項目原樣保留）：\n\n' +
+    preview + (notes.length ? '\n\n注意：\n・' + notes.join('\n・') : ''),
+    ui.ButtonSet.OK_CANCEL);
+  if (answer !== ui.Button.OK) { ui.alert('已取消，正式表沒有任何變動。'); return; }
+
+  plan.forEach(function (p) {
+    basicExAssertCol_(cHead[cTarget]);
+    cardsSheet.getRange(p.row, cTarget + 1).setValue(p.value);
+  });
+  ui.alert('完成：' + plan.length + ' 張卡已修正。\n\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。');
+}
+
 /************** 正式表已有名單的卡＋命名一致用的既有名稱表 **************/
 // 跨檔唯讀正式 Cards Data 的 basicExclusions 欄。欄不存在就當作全部沒填（抽取照跑，寫回時才會要求建欄）
 function basicExReadFilledCards_() {
@@ -715,7 +847,7 @@ function basicExBuildVocabulary_(filled, review) {
   const add = function (t) {
     const name = String(t || '').trim();
     const key = basicExNormKey_(name);
-    if (name.length < 2 || !key || vocab.byKey[key]) return;
+    if (name.length < 2 || !key || vocab.byKey[key] || BASICEX_NO_UNIFY_ITEMS.indexOf(name) >= 0) return;
     vocab.byKey[key] = name;
     vocab.names.push(name);
   };
