@@ -115,7 +115,7 @@ const BASICEX_EXAMPLE = {
     '臺北醫學大學附設醫院費用', '路邊停車費',
     'e-Bill全國繳費', 'i繳費', '醫指付', '電子化繳費稅處理平台', '醫療院所費用', '社區管理費',
     '公務機關暨醫療院所信用卡繳費平臺', '台新繳費中心網頁繳費', 'Richart Life APP繳費', 'Richart APP繳費', '行動銀行繳費',
-    '小額支付平台', '政府規費', '違規罰鍰', '交通罰款', '交通罰單', '停車罰單', '交通罰鍰',
+    '小額支付特約商店', '政府規費', '違規罰鍰', '交通罰款', '交通罰單', '停車罰單', '交通罰鍰',
     '預借現金及其手續費', '預借現金分期金及其手續費', '代償他行信用卡/現金卡/小額信貸',
     '個人綜合所得稅', '所得稅分期付款期金及其手續費', '房屋稅', '地價稅', '牌照稅', '公路養管費(原燃料費)',
     '違約金', '循環利息', '基金交易及其手續費', '信用卡年費', '一般信用卡相關手續費'
@@ -169,7 +169,7 @@ const BASICEX_EXAMPLE_ESUN = {
     '賭博籌碼', '數位 (虛擬) 貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
     '學費', 'i繳費平台', '學費通繳費平臺', '醫療費用', '政府規費', '全聯福利中心',
     '大全聯', 'PXGo!全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
-    '萊爾富', 'OK超商', '小額支付平台', '特約商店分期付款消費交易', '台灣電力公司', '電費',
+    '萊爾富', 'OK超商', '小額支付特約商店', '特約商店分期付款消費交易', '台灣電力公司', '電費',
     '台灣自來水公司', '台北自來水事業處', '水費', '瓦斯費', '各縣市路邊停車費', '路邊停車費',
     '中華電信及民營電信', '電信費', '合康領袖廳管理費', '醫指付APP', '電子化繳費稅處理平台', '公務機關信用卡繳費平台',
     'E政府服務平台', '儲值卡 (原電子票證) 儲值金 (含自動儲值)', '電子支付儲值金 (含自動儲值)', 'eTag自動儲值', 'eTag智慧停車費用', '各類預借現金',
@@ -446,8 +446,8 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
     '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
     '    原文同時寫短的和長的（「基金交易、基金交易及其手續費」）只列長的那個（例：星展只列「基金交易及其手續費」）。',
-    '8j. 小額支付平台（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
-    '    只列「小額支付平台」，**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
+    '8j. 小額支付特約商店（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
+    '    一律寫「小額支付特約商店」（不寫「小額支付平台」），**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
     '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
     '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
@@ -720,11 +720,11 @@ function applyBasicExclusionsToCardsData() {
 // 找不到的項目（可能站長已手改過）就跳過並列在報告裡。可以重複按：已經改好的卡會顯示「不用改」。
 const BASICEX_LONG_SMALLPAY = '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)';
 const BASICEX_FIX_20261013 = [
-  // 小額支付平台：只留平台名，括號裡的例子不列
-  { id: 'yushan-unicard', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
-  { id: 'yushan-ubear', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
-  { id: 'yushan-kumamon', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
-  { id: 'yushan-pi-card', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  // 小額支付特約商店：只留這個名稱，括號裡的例子不列
+  { id: 'yushan-unicard', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
+  { id: 'yushan-ubear', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
+  { id: 'yushan-kumamon', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
+  { id: 'yushan-pi-card', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
   { id: 'taishin-richart', remove: ['麥當勞'] },
   { id: 'taishin-jiekou', remove: ['麥當勞'] },
   { id: 'cathay-cube', remove: ['連鎖速食店'], replace: [['基金交易', '代扣基金']] },
@@ -750,6 +750,9 @@ const BASICEX_FIX_20261013 = [
   { id: 'hsbc-cashback-signature', replace: [['基金扣繳', '基金扣款']] },
   { id: 'hsbc-liveplus', replace: [['基金交易', '基金扣款']] }
 ];
+
+// 所有卡都套的修改（站長 2026-10-13 第二次決定：統一寫「小額支付特約商店」，不寫「小額支付平台」）
+const BASICEX_FIX_ALL_20261013 = { replace: [['小額支付平台', '小額支付特約商店']] };
 
 // 對一格套用逐項修改。以半形逗號切開、保留每段原樣（含空白與結尾逗號），只換掉／刪掉完全相符的那一段。
 // 回傳 { value, changes:[], missing:[] }
@@ -793,13 +796,26 @@ function applyBasicExclusionsFix20261013() {
 
   const plan = [];
   const notes = [];
+  const fixById = {};
   BASICEX_FIX_20261013.forEach(function (fix) {
-    const r = rowById[fix.id];
-    if (r === undefined) { notes.push(fix.id + '：正式表找不到這張卡，跳過'); return; }
+    if (rowById[fix.id] === undefined) notes.push(fix.id + '：正式表找不到這張卡，跳過');
+    else fixById[fix.id] = fix;
+  });
+  Object.keys(rowById).forEach(function (id) {
+    const r = rowById[id];
     const before = String(cData[r][cTarget] == null ? '' : cData[r][cTarget]);
-    const res = basicExApplyFixToCell_(before, fix);
-    if (res.missing.length) notes.push(fix.id + '：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
-    if (res.changes.length && res.value !== before) plan.push({ id: fix.id, row: r + 1, value: res.value, changes: res.changes });
+    if (!before.trim()) return;
+    let value = before;
+    let changes = [];
+    if (fixById[id]) {
+      const res = basicExApplyFixToCell_(value, fixById[id]);
+      if (res.missing.length) notes.push(id + '：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
+      value = res.value; changes = changes.concat(res.changes);
+    }
+    // 全部的卡都套：只有這張卡真的有該項目才會改，沒有就不動、也不列進「找不到」
+    const all = basicExApplyFixToCell_(value, BASICEX_FIX_ALL_20261013);
+    value = all.value; changes = changes.concat(all.changes);
+    if (changes.length && value !== before) plan.push({ id: id, row: r + 1, value: value, changes: changes });
   });
 
   if (plan.length === 0) {
