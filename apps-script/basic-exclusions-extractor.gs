@@ -445,6 +445,7 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '    原文寫「自動加值」時只列「X自動加值」。eTag 同理：原文「eTag儲值」列「eTag儲值」「eTag自動儲值」，原文「eTag自動儲值」只列後者。',
     '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
     '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
+    '    原文同時寫短的和長的（「基金交易、基金交易及其手續費」）只列長的那個（例：星展只列「基金交易及其手續費」）。',
     '8j. 小額支付平台（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
     '    只列「小額支付平台」，**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
     '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
@@ -712,6 +713,111 @@ function applyBasicExclusionsToCardsData() {
     '\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。',
     '   匯出後到網站搜「繳稅」之類的詞，確認排除的卡不再顯示基本回饋。'
   ].filter(function (x) { return x; }).join('\n'));
+}
+
+/************** 一次性修正：2026-10-13 站長核定的逐項修改 **************/
+// 只動下表列出的「單一項目」：找到完全相同的項目才換掉／刪掉，其他項目、順序、逗號一個字都不碰。
+// 找不到的項目（可能站長已手改過）就跳過並列在報告裡。可以重複按：已經改好的卡會顯示「不用改」。
+const BASICEX_LONG_SMALLPAY = '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)';
+const BASICEX_FIX_20261013 = [
+  // 小額支付平台：只留平台名，括號裡的例子不列
+  { id: 'yushan-unicard', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-ubear', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-kumamon', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'yushan-pi-card', replace: [[BASICEX_LONG_SMALLPAY, '小額支付平台']] },
+  { id: 'taishin-richart', remove: ['麥當勞'] },
+  { id: 'taishin-jiekou', remove: ['麥當勞'] },
+  { id: 'cathay-cube', remove: ['連鎖速食店'], replace: [['基金交易', '代扣基金']] },
+  { id: 'dbs-eco', remove: ['連鎖速食店'] },
+  { id: 'dbs-aov', remove: ['連鎖速食店', '基金交易'] },          // 留「基金交易及其手續費」
+  { id: 'mega-bt21', remove: ['連鎖速食店'] },
+  { id: 'febank-lejia', remove: ['速食店'] },
+  { id: 'kgi-eslite', remove: ['速食店'], replace: [['基金扣繳', '基金代扣']] },
+  { id: 'firstbank-ileo', remove: ['速食店'], replace: [['基金交易', '基金']] },
+  { id: 'sunny-jcb-crystal', remove: [BASICEX_LONG_SMALLPAY, '停車場', '麥當勞', '連鎖速食店'] },
+  { id: 'chb-mylove', remove: [BASICEX_LONG_SMALLPAY, '速食店', '基金交易'], replace: [['基金申購', '申購基金']] },
+  { id: 'ubot-linebank', remove: ['速食店', '停車場'] },
+  { id: 'ubot-mcard', remove: ['速食店', '停車場'] },
+  { id: 'ubot-linepoint', remove: ['速食店', '停車場'] },
+  { id: 'ubot-green', remove: ['速食店', '停車場'] },
+  { id: 'ubot-jiho', remove: ['速食店', '停車場'] },
+  // 基金：照各家原文
+  { id: 'tbb-chaotian', replace: [['基金交易', '信用卡申購基金']] },
+  { id: 'tbb-artfun', replace: [['基金交易', '信用卡申購基金']] },
+  { id: 'ctbc-uniopen', replace: [['基金交易', '基金']] },
+  { id: 'ctbc-linepay-card', replace: [['基金交易', '基金']] },
+  { id: 'hsbc-titanium', replace: [['基金扣繳', '基金扣款']] },
+  { id: 'hsbc-cashback-signature', replace: [['基金扣繳', '基金扣款']] },
+  { id: 'hsbc-liveplus', replace: [['基金交易', '基金扣款']] }
+];
+
+// 對一格套用逐項修改。以半形逗號切開、保留每段原樣（含空白與結尾逗號），只換掉／刪掉完全相符的那一段。
+// 回傳 { value, changes:[], missing:[] }
+function basicExApplyFixToCell_(raw, fix) {
+  const parts = String(raw == null ? '' : raw).split(',');
+  const changes = [];
+  const missing = [];
+  const find = function (item) {
+    for (let i = 0; i < parts.length; i++) if (parts[i] !== null && parts[i].trim() === item) return i;
+    return -1;
+  };
+  (fix.replace || []).forEach(function (pair) {
+    const i = find(pair[0]);
+    if (i < 0) { missing.push(pair[0]); return; }
+    if (find(pair[1]) >= 0) { parts[i] = null; changes.push('刪「' + pair[0] + '」（已有「' + pair[1] + '」）'); return; }
+    parts[i] = parts[i].replace(pair[0], pair[1]);
+    changes.push('「' + pair[0] + '」→「' + pair[1] + '」');
+  });
+  (fix.remove || []).forEach(function (item) {
+    const i = find(item);
+    if (i < 0) { missing.push(item); return; }
+    parts[i] = null;
+    changes.push('刪「' + item + '」');
+  });
+  return { value: parts.filter(function (x) { return x !== null; }).join(','), changes: changes, missing: missing };
+}
+
+function applyBasicExclusionsFix20261013() {
+  const ui = SpreadsheetApp.getUi();
+  const cardsSheet = getCardsSheet_();
+  const cData = cardsSheet.getDataRange().getValues();
+  const cHead = cData[0].map(function (x) { return String(x).trim(); });
+  const cId = cHead.indexOf('id');
+  const cTarget = cHead.indexOf(BASICEX_CONFIG.targetHeader);
+  if (cId < 0 || cTarget < 0) { ui.alert('正式 Cards Data 找不到 id 或 ' + BASICEX_CONFIG.targetHeader + ' 欄，中止。'); return; }
+  const rowById = {};
+  for (let i = 1; i < cData.length; i++) {
+    const id = String(cData[i][cId] || '').trim();
+    if (id && rowById[id] === undefined) rowById[id] = i;
+  }
+
+  const plan = [];
+  const notes = [];
+  BASICEX_FIX_20261013.forEach(function (fix) {
+    const r = rowById[fix.id];
+    if (r === undefined) { notes.push(fix.id + '：正式表找不到這張卡，跳過'); return; }
+    const before = String(cData[r][cTarget] == null ? '' : cData[r][cTarget]);
+    const res = basicExApplyFixToCell_(before, fix);
+    if (res.missing.length) notes.push(fix.id + '：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
+    if (res.changes.length && res.value !== before) plan.push({ id: fix.id, row: r + 1, value: res.value, changes: res.changes });
+  });
+
+  if (plan.length === 0) {
+    ui.alert('沒有需要改的卡（可能都已經改好了）。' + (notes.length ? '\n\n・' + notes.join('\n・') : ''));
+    return;
+  }
+  const preview = plan.map(function (p) { return '・' + p.id + '：' + p.changes.join('、'); }).join('\n');
+  const answer = ui.alert('要套用 2026-10-13 的逐項修正嗎？',
+    '將修改 ' + plan.length + ' 張卡的 ' + BASICEX_CONFIG.targetHeader + '（只動下面列出的項目，其他項目原樣保留）：\n\n' +
+    preview + (notes.length ? '\n\n注意：\n・' + notes.join('\n・') : ''),
+    ui.ButtonSet.OK_CANCEL);
+  if (answer !== ui.Button.OK) { ui.alert('已取消，正式表沒有任何變動。'); return; }
+
+  plan.forEach(function (p) {
+    basicExAssertCol_(cHead[cTarget]);
+    cardsSheet.getRange(p.row, cTarget + 1).setValue(p.value);
+  });
+  ui.alert('完成：' + plan.length + ' 張卡已修正。\n\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。');
 }
 
 /************** 正式表已有名單的卡＋命名一致用的既有名稱表 **************/
