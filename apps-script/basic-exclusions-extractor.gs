@@ -65,9 +65,9 @@ const BASICEX_CONFIG = {
   colorReview: '#fff3cd'                   // AI 有疑問的列標黃
 };
 
-// 禁止出現的寫法（2026-10-13 站長規定）：「違規罰鍰」是台新原文，進了既有名稱表後，AI 依「跨行統一」把凱基的
-// 「交通罰款」也套成它，範圍從「交通」被放大成所有違規罰鍰。這裡的詞不進名稱表；AI 回傳了也會被拿掉並標黃
-const BASICEX_BANNED_ITEMS = ['違規罰鍰'];
+// 不進「既有名稱表」的詞（2026-10-13）：這些詞的範圍各家不同，放進名稱表會讓 AI 依「跨行統一」把別家範圍較窄的
+// 原文套成它們——凱基原文「交通罰款」就這樣被改寫成台新的「違規罰鍰」（範圍被放大）。AI 照樣可以依原文輸出它們
+const BASICEX_NO_UNIFY_ITEMS = ['違規罰鍰', '電信費', '悠遊卡自動加值', '一卡通自動加值', 'icash卡自動加值', 'eTag自動儲值'];
 
 const BASICEX_REVIEW_HEADERS = [
   '核准', '解析時間', 'card_id', 'bank', '來源網址',
@@ -113,7 +113,7 @@ const BASICEX_EXAMPLE = {
     '臺北醫學大學附設醫院費用', '路邊停車費',
     'e-Bill全國繳費', 'i繳費', '醫指付', '電子化繳費稅處理平台', '醫療院所費用', '社區管理費',
     '公務機關暨醫療院所信用卡繳費平臺', '台新繳費中心網頁繳費', 'Richart Life APP繳費', 'Richart APP繳費', '行動銀行繳費',
-    '小額支付平台', '麥當勞', '政府規費',
+    '小額支付平台', '麥當勞', '政府規費', '違規罰鍰', '交通罰款', '交通罰單',
     '預借現金及其手續費', '預借現金分期金及其手續費', '代償他行信用卡/現金卡/小額信貸',
     '個人綜合所得稅', '所得稅分期付款期金及其手續費', '房屋稅', '地價稅', '牌照稅', '公路養管費(原燃料費)',
     '違約金', '循環利息', '基金交易及其手續費', '信用卡年費', '一般信用卡相關手續費'
@@ -426,10 +426,16 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '    原文排除「全聯福利中心」「PX Pay」「PXGo!全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
     '    兩者都是全聯線上購／PX Pay App 裡的服務，帳單特店名稱顯示為全聯福利中心、全聯線上購或 PXPay，銀行同樣判為排除。',
     '8d. 便利商店一律列「便利商店」加四大超商「7-11、全家、萊爾富、OK超商」（原文沒逐一點名也要列）。',
-    '8f. 罰款類（2026-10-13 站長規則）：照原文用字，**絕不可寫「違規罰鍰」**，也不可套用別家銀行的罰款寫法——',
-    '    罰款的範圍各家不同（有的只排除交通罰款），統一寫法會把範圍放大。原文是交通類（交通罰款、交通違規罰鍰…）時，',
-    '    原文照列，再補「交通罰單」「停車罰單」「交通罰鍰」。原文是不限交通的泛稱（如「違規罰鍰」「罰鍰」）時，',
-    '    items 不列，needs_review=true，review_question 寫「原文罰款類寫法：<原文>，請站長決定」。',
+    '8f. 罰款類（2026-10-13 站長規則）：範圍各家不同，不可套用別家銀行的寫法。',
+    '    ①原文**只限交通**（交通罰款、交通違規罰鍰、交通罰鍰、裁決所違規罰款…）：原文照列，再補「交通罰單」「停車罰單」「交通罰鍰」，',
+    '      **不可寫「違規罰鍰」**（會把範圍放大成所有罰款）。例：凱基「交通罰款」→ 交通罰款、交通罰單、停車罰單、交通罰鍰。',
+    '    ②原文是**不限交通的泛稱**（違規罰鍰、罰款、罰鍰、政府機關之違規罰款…）：列「違規罰鍰」「交通罰款」「交通罰單」。',
+    '      原文同時有規費時再列「政府規費」。例：台新「規費、罰鍰：政府規費、違規罰鍰」→ 政府規費、違規罰鍰、交通罰款、交通罰單。',
+    '8g. 電信費（2026-10-13 站長規則）：原文只寫中華電信（中華電信費用、中華電信資費、中華電信話費）時寫「中華電信電信費」，',
+    '    **不可寫成「電信費」**（民營電信不在內）。只有原文泛指所有電信（電信費、各項電信資費、中華電信及民營電信）才列「電信費」。',
+    '8h. 加值／儲值（2026-10-13）：原文**沒寫「自動」**（悠遊卡加值、一卡通加值金、儲值卡儲值金…）表示所有加值都排除，',
+    '    要同時列「悠遊卡加值」「悠遊卡自動加值」兩種寫法（一卡通、icash卡同理），因為搜尋時兩者互不包含；',
+    '    原文寫「自動加值」時只列「X自動加值」。eTag 同理：原文「eTag儲值」列「eTag儲值」「eTag自動儲值」，原文「eTag自動儲值」只列後者。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
     '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
     '    連鎖速食店→速食店；退貨→退款；括號一律半形加空格「數位 (虛擬) 貨幣」。',
@@ -479,21 +485,17 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     const ids = (g.card_ids || []).filter(function (x) { return candidates.indexOf(x) >= 0; });
     const seen = {};
     const items = [];
-    const banned = [];
     (g.items || []).forEach(function (s) {
       let t = String(s || '').trim().replace(/[,，、]/g, ' ').trim();
       if (t.length > 2) t = t.replace(/等$/, '');
       const key = basicExNormKey_(t);
       if (vocab.byKey[key]) t = vocab.byKey[key];
-      if (BASICEX_BANNED_ITEMS.indexOf(t) >= 0) { banned.push(t); return; }
       if (t.length < 2 || seen[key]) return;
       seen[key] = true;
       items.push(t);
     });
-    const bannedNote = banned.length ? 'AI 寫了禁用的「' + banned.join('、') + '」，已拿掉——請對照原文補上正確寫法。' : '';
     return { card_ids: ids, items: items, evidence: g.evidence || '',
-      needs_review: !!g.needs_review || banned.length > 0,
-      review_question: [g.review_question || '', bannedNote].filter(function (x) { return x; }).join('\n') };
+      needs_review: !!g.needs_review, review_question: g.review_question || '' };
   }).filter(function (g) { return g.card_ids.length > 0; });
 }
 
@@ -727,7 +729,7 @@ function basicExBuildVocabulary_(filled, review) {
   const add = function (t) {
     const name = String(t || '').trim();
     const key = basicExNormKey_(name);
-    if (name.length < 2 || !key || vocab.byKey[key] || BASICEX_BANNED_ITEMS.indexOf(name) >= 0) return;
+    if (name.length < 2 || !key || vocab.byKey[key] || BASICEX_NO_UNIFY_ITEMS.indexOf(name) >= 0) return;
     vocab.byKey[key] = name;
     vocab.names.push(name);
   };
