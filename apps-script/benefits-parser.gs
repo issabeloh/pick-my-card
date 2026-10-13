@@ -53,8 +53,12 @@ const PARSER_CONFIG = {
   // 伺服器忙（5xx）就自動換下一個。新的 Flash 放前面（比較聰明），Flash Lite 放最後當保底（次數多但較不精準）。
   // 要換順序或模型：「專案設定 → 指令碼屬性」新增 GEMINI_MODELS，填模型 id、逗號分隔，會蓋過這裡（不用改程式）。
   // Gemma 4 不能放：每分鐘 token 上限只有 1.6 萬，我們一次 prompt 就 1～4 萬
-  models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3-flash', 'gemini-2.5-flash',
-    'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
+  // 2026-10-13 站長查官方停用頁確認：
+  //   ・gemini-3-flash 不存在；gemini-3.7-flash／3.5-flash 已不能選，API 會自動轉到 3.8／3.6——放了也只是重複，拿掉
+  //   ・gemini-3.1-flash-lite 2027/5/7 停用（官方建議改 3.5-flash-lite），到時從清單拿掉即可
+  //   ・2.5 系列只開放給用過的專案（本專案有用過），沒有停用日
+  //   新模型在免費層常回 503（太忙），程式會自動換下一個
+  models: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
   maxTextChars: 30000,               // 送給 AI 的原文長度上限
   maxRowsPerRun: 5,                  // 入口 B 一次最多解析幾列（Apps Script 單次 6 分鐘上限；剩下的再按一次選單接著跑）
   statusCol: 4                       // 入口 B 輸入分頁的「狀態」欄＝D 欄（程式回填「已解析…」／「失敗：…」）
@@ -735,6 +739,9 @@ function callGemini_(systemPrompt, userText, responseSchema) {
       GEMINI_DEAD_[model] = true;
       GEMINI_FALLBACKS_.push(model + ' 不存在');
     } else if (code >= 500) {
+      // 新模型在免費層常回 503（太多人用）。重試過還是忙就同樣冷卻 60 秒，
+      // 不然這次執行的每一次呼叫都要先在它身上白等一輪
+      GEMINI_COOLDOWN_[model] = Date.now();
       GEMINI_FALLBACKS_.push(model + ' 伺服器忙');
     } else {
       // 其他 4xx（金鑰錯、內容格式錯）換模型也沒用，直接報錯
@@ -746,23 +753,51 @@ function callGemini_(systemPrompt, userText, responseSchema) {
     '）。多半是今天的免費額度用完了，明天會自動恢復；要調整模型清單到指令碼屬性 GEMINI_MODELS');
 }
 
-// 選單「測試 AI 模型」：每個模型各打一次極短的請求，看哪些名稱可用。每個模型會用掉 1 次當天額度
+// 選單「測試 AI 模型」：
+//   ① 先問 Google 這把金鑰「現在有哪些 Flash 文字模型」（ListModels，不花額度）——模型 id 以這份為準，不用猜名稱
+//   ② 再對目前清單的每個模型各送一次極短請求（每個用掉 1 次當天額度），看實際能不能用
 function testGeminiModels() {
   const ui = SpreadsheetApp.getUi();
-  const models = geminiModels_();
-  const ans = ui.alert('測試 AI 模型', '會對 ' + models.length + ' 個模型各送一次極短的請求（每個用掉 1 次當天額度）：\n' +
-    models.join('\n') + '\n\n要繼續嗎？', ui.ButtonSet.OK_CANCEL);
-  if (ans !== ui.Button.OK) return;
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const models = geminiModels_();
+
+  let available = [];
+  try {
+    let token = '';
+    for (let page = 0; page < 5; page++) {
+      const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + apiKey +
+        (token ? '&pageToken=' + encodeURIComponent(token) : ''), { muteHttpExceptions: true });
+      if (res.getResponseCode() !== 200) break;
+      const body = JSON.parse(res.getContentText());
+      (body.models || []).forEach(function (m) {
+        const id = String(m.name || '').replace(/^models\//, '');
+        const canGen = (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0;
+        // 只列 Flash／Flash Lite 的文字模型（排除 TTS、圖片、Live、embedding）
+        if (canGen && /flash/i.test(id) && !/tts|image|live|audio|embed|transcribe/i.test(id)) available.push(id);
+      });
+      token = body.nextPageToken;
+      if (!token) break;
+    }
+  } catch (e) { available = []; }
+
+  const ans = ui.alert('測試 AI 模型',
+    (available.length ? '這把金鑰目前可用的 Flash 模型 id（Google 回報，不花額度）：\n' + available.join('\n') + '\n\n' : '') +
+    '接著會對目前清單的 ' + models.length + ' 個模型各送一次極短的請求（每個用掉 1 次當天額度）：\n' +
+    models.join('\n') + '\n\n要繼續嗎？（按取消只看上面的清單）', ui.ButtonSet.OK_CANCEL);
+  if (ans !== ui.Button.OK) return;
+
   const lines = models.map(function (m) {
     const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + apiKey, {
       method: 'post', contentType: 'application/json', muteHttpExceptions: true,
       payload: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '回答 OK' }] }] })
     });
     const code = res.getResponseCode();
-    return (code === 200 ? '✅ ' : code === 429 ? '⏳ ' : '❌ ') + m + (code === 200 ? '' : '（HTTP ' + code + (code === 429 ? '，今天額度用完或太頻繁' : code === 404 ? '，名稱不存在' : '') + '）');
+    const why = code === 429 ? '，今天額度用完或太頻繁' : code === 404 ? '，名稱不存在' : code >= 500 ? '，伺服器忙，通常過一陣子就好，可以保留' : '';
+    return (code === 200 ? '✅ ' : code >= 500 || code === 429 ? '⏳ ' : '❌ ') + m + (code === 200 ? '' : '（HTTP ' + code + why + '）');
   });
-  ui.alert('測試 AI 模型', lines.join('\n') + '\n\n❌ 的模型從指令碼屬性 GEMINI_MODELS 拿掉或改名（沒設這個屬性時用程式內建的清單）。', ui.ButtonSet.OK);
+  ui.alert('測試 AI 模型', lines.join('\n') +
+    '\n\n❌ 名稱不存在的模型要從指令碼屬性 GEMINI_MODELS 拿掉或改成上面清單裡的正確 id；⏳ 是暫時的，程式遇到會自動換下一個。' +
+    '（沒設 GEMINI_MODELS 時用程式內建的清單）', ui.ButtonSet.OK);
 }
 
 /************** 程式負責的部分：公式、格式，然後寫進待審核表 **************/
