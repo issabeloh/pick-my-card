@@ -2967,6 +2967,27 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
+/* 結果卡（各寬度一致，2026-10-13 站長選定）：卡名獨佔上方、可換行、不截斷，
+   詳情鈕／小抄鈕整組落到下一行。原本只有手機這樣排，桌機卡名會被兩顆鈕擠成「玉山 P…」。
+   卡名 flex-basis:100% 把後面的鈕擠到次行。兩顆鈕同時放大（22→26px），在次行比較好按；
+   桌機密度區塊另有對應的縮小值（Grep「結果卡次行按鈕」）。 */
+.card-name-with-pin {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+.card-name-with-pin .card-name {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+.card-name-with-pin .card-detail-peek-btn,
+.card-name-with-pin .pin-btn {
+    height: 26px;
+    padding: 0 11px 0 9px;
+    font-size: 13px;
+}
+
 .badges-container {
     display: flex;
     flex-direction: column; 
@@ -3280,17 +3301,6 @@ input[type="number"]:focus {
         white-space: normal;
         overflow: visible;
         text-overflow: clip;
-    }
-
-    /* 手機版：卡名獨佔上方（可換行），詳情鈕／釘選鈕整組落到下一行，
-       避免單行塞太多元素太擁擠。卡名 flex-basis:100% 把後面的鈕擠到次行。 */
-    .card-name-with-pin {
-        flex-wrap: wrap;
-        align-items: center;
-        row-gap: 8px;
-    }
-    .card-name-with-pin .card-name {
-        flex: 1 1 100%;
     }
 
     .cards-selection {
@@ -10857,5 +10867,17 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .social-media-footer,
     .ad-row {
         min-height: 85px;   /* 原 100px */
+    }
+}
+
+/* 結果卡次行按鈕（桌機密度）：上方 .card-name-with-pin 的放大值特異性較高，
+   第 1／3 類的 .pin-btn／.card-detail-peek-btn 縮小值蓋不到，在這裡照比例另給
+   （26→23px、13→11.5px、內距 0.85×）。必須留在檔案最後。 */
+@media (min-width: 1025px) {
+    .card-name-with-pin .card-detail-peek-btn,
+    .card-name-with-pin .pin-btn {
+        height: 23px;
+        padding: 0 9px 0 8px;
+        font-size: 11.5px;
     }
 }
