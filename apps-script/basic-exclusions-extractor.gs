@@ -131,10 +131,12 @@ const BASICEX_EXAMPLE_FEBANK = {
     '學雜費（含國外學校）、預借現金、代償本金及利息、貸放本金及利息、各類稅款、各項手續費(包含但不限掛失、調閱簽單、分期付款、預借現金手續費等)、' +
     '違約金及循環息、爭議款、各類繳稅費平台【包含但不限公務機關繳費平台(包含但不限學雜費、各類費用稅款、醫療費等)、醫指付APP、便利商店等、' +
     'E政府平台等】及eToro及其他相關類似境外投資交易平臺之交易款項。',
-  answer: ['悠遊卡加值', 'eTag儲值', '代繳eTag智慧停車費', '信用卡年費', '公共事業費用', '水費', '電費', '瓦斯費', '中華電信電信費',
-    '各項稅金代繳', '學費', '學雜費', '預借現金', '預借現金及其手續費', '代償他行信用卡/現金卡/小額信貸', '貸放本金及利息', '各類稅款',
-    '信用卡掛失手續費', '調閱簽單手續費', '分期付款手續費', '違約金', '循環利息', '爭議款', '各類繳稅費平台', '公務機關繳費平台',
-    '醫療費用', '醫指付APP', '便利商店', '7-11', '全家', '萊爾富', 'OK超商', 'E政府平台', 'eToro', '境外投資交易平臺']
+  // 2026-10-13 站長手寫版：便利商店、E政府在原文是「各類繳稅費平台【…】」的列舉 → 只排除在那裡繳費繳稅，
+  // 不是整個便利商店消費（不列四大超商）；代償、預借現金手續費照原文；加值沒寫「自動」→ 兩種都列
+  answer: ['悠遊卡加值', '悠遊卡自動加值', 'eTag儲值', '代繳eTag智慧停車費', '信用卡年費', '公共事業費用', '水費', '電費', '瓦斯費',
+    '中華電信電信費', '各項稅金代繳', '學費', '學雜費', '海外學校學雜費', '海外學校學費', '預借現金', '貸放本金及利息', '代償本金及利息',
+    '各類稅款', '各項手續費', '信用卡掛失手續費', '調閱簽單手續費', '分期付款手續費', '預借現金手續費', '違約金', '循環利息', '爭議款',
+    '各類繳稅費平台', '公務機關繳費平台', '醫療費用', '醫指付APP', '便利商店繳費繳稅', 'E政府平台繳費繳稅', 'eToro', '境外投資交易平臺']
 };
 
 const BASICEX_EUROPE = ['英國', '奧地利', '比利時', '保加利亞', '克羅埃西亞', '賽普勒斯', '捷克', '丹麥', '愛沙尼亞', '芬蘭', '法國',
@@ -166,9 +168,9 @@ const BASICEX_EXAMPLE_ESUN = {
     '盧森堡實體消費', '馬爾他實體消費', '荷蘭實體消費', '波蘭實體消費', '葡萄牙實體消費', '羅馬尼亞實體消費',
     '斯洛伐克實體消費', '斯洛維尼亞實體消費', '西班牙實體消費', '瑞典實體消費', '基金扣繳', '證券代銷',
     '境外投資平台交易', 'eToro', 'MCO投資平台', '匯兌平台交易', 'wise', '旅行支票',
-    '賭博籌碼', '數位 (虛擬) 貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
+    '賭博籌碼', '數位貨幣', '虛擬貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
     '學費', 'i繳費平台', '學費通繳費平臺', '醫療費用', '政府規費', '全聯福利中心',
-    '大全聯', 'PXGo!全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
+    '大全聯', 'PXGo! 全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
     '萊爾富', 'OK超商', '小額支付特約商店', '特約商店分期付款消費交易', '台灣電力公司', '電費',
     '台灣自來水公司', '台北自來水事業處', '水費', '瓦斯費', '各縣市路邊停車費', '路邊停車費',
     '中華電信及民營電信', '電信費', '合康領袖廳管理費', '醫指付APP', '電子化繳費稅處理平台', '公務機關信用卡繳費平台',
@@ -427,9 +429,12 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '8c. 集團／旗下品牌要展開成各品牌：「全聯實業旗下品牌通路」→ 全聯福利中心、大全聯、全聯線上購物、全聯全電商、全聯小時達、PX Pay。',
     '    原文只點名某幾家時就只列那幾家，不要自行擴大。',
     '    全聯品牌一律帶「全聯」前綴：寫「全聯全電商」「全聯小時達」，不可寫成「全電商」「小時達」（2026-10-12 站長統一）。',
-    '    原文排除「全聯福利中心」「PX Pay」「PXGo!全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
+    '    原文排除「全聯福利中心」「PX Pay」「PXGo! 全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
     '    兩者都是全聯線上購／PX Pay App 裡的服務，帳單特店名稱顯示為全聯福利中心、全聯線上購或 PXPay，銀行同樣判為排除。',
     '8d. 便利商店一律列「便利商店」加四大超商「7-11、全家、萊爾富、OK超商」（原文沒逐一點名也要列）。',
+    '    例外（2026-10-13 站長規則，見遠東範例）：「便利商店」只出現在繳費／繳稅平台的列舉裡（例：「各類繳稅費平台【…醫指付APP、便利商店等…】」），',
+    '    表示只有在便利商店**繳費繳稅**才排除，寫「便利商店繳費繳稅」，**不要**列「便利商店」和四大超商（在便利商店買東西仍有回饋）。',
+    '    同理列舉裡的其他通路也加「繳費繳稅」（例：E政府平台繳費繳稅）。',
     '8f. 罰款類（2026-10-13 站長規則）：範圍各家不同，不可套用別家銀行的寫法。所有罰款類一律列這四個交通詞：',
     '    「交通罰款」「交通罰單」「停車罰單」「交通罰鍰」，再依原文加：',
     '    ①原文**只限交通**（交通罰款、交通違規罰鍰、交通罰鍰…）：只列上面四個，**不可寫「違規罰鍰」**（會把範圍放大成所有罰款），',
@@ -451,8 +456,12 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
     '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
-    '    連鎖速食店→速食店；退貨→退款；括號一律半形加空格「數位 (虛擬) 貨幣」。',
-    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開，例：「數位 (虛擬) 貨幣」。',
+    '    連鎖速食店→速食店；退貨→退款；PXGo!全聯線上購一律寫「PXGo! 全聯線上購」（驚嘆號後加一個空格）。',
+    '    原文是「數位（虛擬）貨幣」時拆成「數位貨幣」「虛擬貨幣」兩項（用戶只會打其中一種，括號寫法兩種都搜不到）。',
+    '    其他括號一律半形加空格（例：查核 (定) 稅款）。',
+    '    公路養管費一律寫「公路養管費(原燃料費)」一項（2026-10-13 站長統一）：原文寫公路養管費、燃料費、汽燃費、汽車燃料使用費、',
+    '    公路使用養護安全管理費、汽機車燃料費時都寫這個，不另列「公路養管費」「燃料費」。',
+    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開。',
     '9. 不要輸出單一個字（如「稅」）、不要以「等」結尾、不要輸出「經本行認定之其他交易」這類對不到具體項目的概括條款。',
     '10. 頁面分卡別列不同名單就分成多個 group，每組 card_ids 只放適用的卡；同一份名單適用全部候選卡就一組。',
     '    card_ids 只能從候選清單挑。頁面找不到任何排除條款（快照只抓到選單、內容是別的活動）→ groups 回空陣列。',
@@ -713,132 +722,6 @@ function applyBasicExclusionsToCardsData() {
     '\n👉 下一步：資料檔選單「🎯 卡片管理 → 匯出」，網站才會吃到新名單。',
     '   匯出後到網站搜「繳稅」之類的詞，確認排除的卡不再顯示基本回饋。'
   ].filter(function (x) { return x; }).join('\n'));
-}
-
-/************** 一次性修正：2026-10-13 站長核定的逐項修改 **************/
-// 改的是「5-待審核」的 basicExclusions 欄（不碰正式表），改到的列核准欄寫「覆蓋」。
-// 只動下表列出的「單一項目」：找到完全相同的項目才換掉／刪掉，其他項目、順序、逗號一個字都不碰。
-// 找不到的項目（可能站長已手改過）就跳過並列在報告裡。可以重複按：已經改好的卡會顯示「不用改」。
-const BASICEX_LONG_SMALLPAY = '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)';
-const BASICEX_FIX_20261013 = [
-  // 小額支付特約商店：只留這個名稱，括號裡的例子不列
-  { id: 'yushan-unicard', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
-  { id: 'yushan-ubear', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
-  { id: 'yushan-kumamon', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
-  { id: 'yushan-pi-card', replace: [[BASICEX_LONG_SMALLPAY, '小額支付特約商店']] },
-  { id: 'taishin-richart', remove: ['麥當勞'] },
-  { id: 'taishin-jiekou', remove: ['麥當勞'] },
-  { id: 'cathay-cube', remove: ['連鎖速食店'], replace: [['基金交易', '代扣基金']] },
-  { id: 'dbs-eco', remove: ['連鎖速食店'] },
-  { id: 'dbs-aov', remove: ['連鎖速食店', '基金交易'] },          // 留「基金交易及其手續費」
-  { id: 'mega-bt21', remove: ['連鎖速食店'] },
-  { id: 'febank-lejia', remove: ['速食店'] },
-  { id: 'kgi-eslite', remove: ['速食店'], replace: [['基金扣繳', '基金代扣']] },
-  { id: 'firstbank-ileo', remove: ['速食店'], replace: [['基金交易', '基金']] },
-  { id: 'sunny-jcb-crystal', remove: [BASICEX_LONG_SMALLPAY, '停車場', '麥當勞', '連鎖速食店'] },
-  { id: 'chb-mylove', remove: [BASICEX_LONG_SMALLPAY, '速食店', '基金交易'], replace: [['基金申購', '申購基金']] },
-  { id: 'ubot-linebank', remove: ['速食店', '停車場'] },
-  { id: 'ubot-mcard', remove: ['速食店', '停車場'] },
-  { id: 'ubot-linepoint', remove: ['速食店', '停車場'] },
-  { id: 'ubot-green', remove: ['速食店', '停車場'] },
-  { id: 'ubot-jiho', remove: ['速食店', '停車場'] },
-  // 基金：照各家原文
-  { id: 'tbb-chaotian', replace: [['基金交易', '信用卡申購基金']] },
-  { id: 'tbb-artfun', replace: [['基金交易', '信用卡申購基金']] },
-  { id: 'ctbc-uniopen', replace: [['基金交易', '基金']] },
-  { id: 'ctbc-linepay-card', replace: [['基金交易', '基金']] },
-  { id: 'hsbc-titanium', replace: [['基金扣繳', '基金扣款']] },
-  { id: 'hsbc-cashback-signature', replace: [['基金扣繳', '基金扣款']] },
-  { id: 'hsbc-liveplus', replace: [['基金交易', '基金扣款']] }
-];
-
-// 所有卡都套的修改（站長 2026-10-13 第二次決定：統一寫「小額支付特約商店」，不寫「小額支付平台」）
-const BASICEX_FIX_ALL_20261013 = { replace: [['小額支付平台', '小額支付特約商店']] };
-
-// 對一格套用逐項修改。以半形逗號切開、保留每段原樣（含空白與結尾逗號），只換掉／刪掉完全相符的那一段。
-// 回傳 { value, changes:[], missing:[] }
-function basicExApplyFixToCell_(raw, fix) {
-  const parts = String(raw == null ? '' : raw).split(',');
-  const changes = [];
-  const missing = [];
-  const find = function (item) {
-    for (let i = 0; i < parts.length; i++) if (parts[i] !== null && parts[i].trim() === item) return i;
-    return -1;
-  };
-  (fix.replace || []).forEach(function (pair) {
-    const i = find(pair[0]);
-    if (i < 0) { missing.push(pair[0]); return; }
-    if (find(pair[1]) >= 0) { parts[i] = null; changes.push('刪「' + pair[0] + '」（已有「' + pair[1] + '」）'); return; }
-    parts[i] = parts[i].replace(pair[0], pair[1]);
-    changes.push('「' + pair[0] + '」→「' + pair[1] + '」');
-  });
-  (fix.remove || []).forEach(function (item) {
-    const i = find(item);
-    if (i < 0) { missing.push(item); return; }
-    parts[i] = null;
-    changes.push('刪「' + item + '」');
-  });
-  return { value: parts.filter(function (x) { return x !== null; }).join(','), changes: changes, missing: missing };
-}
-
-function applyBasicExclusionsFix20261013() {
-  // 2026-10-13 站長決定：只改「5-待審核」，不碰正式 Cards Data。有改到的列在核准欄寫「覆蓋」，
-  // 站長在待審核表確認完，再用「一般消費排除 2：打勾的寫回正式 Cards Data」寫進正式表
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const review = ss.getSheetByName(BASICEX_CONFIG.reviewSheet);
-  if (!review) { ui.alert('找不到「' + BASICEX_CONFIG.reviewSheet + '」，中止。'); return; }
-  basicExEnsureReviewSheet_(ss);   // 表頭驗證
-  const rData = review.getDataRange().getValues();
-  const iApprove = BASICEX_REVIEW_HEADERS.indexOf('核准');
-  const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id');
-  const iItems = BASICEX_REVIEW_HEADERS.indexOf('basicExclusions');
-
-  const fixById = {};
-  BASICEX_FIX_20261013.forEach(function (fix) { fixById[fix.id] = fix; });
-  const seen = {};
-  const plan = [];
-  const notes = [];
-  for (let i = 1; i < rData.length; i++) {
-    const id = String(rData[i][iId] || '').trim();
-    const before = String(rData[i][iItems] == null ? '' : rData[i][iItems]);
-    if (!id || !before.trim()) continue;
-    seen[id] = true;
-    let value = before;
-    let changes = [];
-    if (fixById[id]) {
-      const res = basicExApplyFixToCell_(value, fixById[id]);
-      if (res.missing.length) notes.push(id + '（第 ' + (i + 1) + ' 列）：找不到「' + res.missing.join('」「') + '」（可能已改過），這幾項沒動');
-      value = res.value; changes = changes.concat(res.changes);
-    }
-    // 全部的列都套：只有真的有該項目才會改，沒有就不動、也不列進「找不到」
-    const all = basicExApplyFixToCell_(value, BASICEX_FIX_ALL_20261013);
-    value = all.value; changes = changes.concat(all.changes);
-    if (changes.length && value !== before) plan.push({ id: id, row: i + 1, value: value, changes: changes });
-  }
-  Object.keys(fixById).forEach(function (id) {
-    if (!seen[id]) notes.push(id + '：待審核表沒有這張卡的列，跳過');
-  });
-
-  if (plan.length === 0) {
-    ui.alert('沒有需要改的列（可能都已經改好了）。' + (notes.length ? '\n\n・' + notes.join('\n・') : ''));
-    return;
-  }
-  const preview = plan.map(function (p) { return '・第 ' + p.row + ' 列 ' + p.id + '：' + p.changes.join('、'); }).join('\n');
-  const answer = ui.alert('要套用 2026-10-13 的逐項修正嗎？',
-    '將修改「' + BASICEX_CONFIG.reviewSheet + '」' + plan.length + ' 列的 basicExclusions，並在核准欄寫「覆蓋」。\n' +
-    '只動下面列出的項目，其他項目原樣保留；正式 Cards Data 不會被改。\n\n' +
-    preview + (notes.length ? '\n\n注意：\n・' + notes.join('\n・') : ''),
-    ui.ButtonSet.OK_CANCEL);
-  if (answer !== ui.Button.OK) { ui.alert('已取消，沒有任何變動。'); return; }
-
-  plan.forEach(function (p) {
-    review.getRange(p.row, iItems + 1).setValue(p.value);
-    review.getRange(p.row, iApprove + 1).setValue('覆蓋');
-  });
-  ui.alert('完成：待審核表 ' + plan.length + ' 列已修正，核准欄已寫「覆蓋」。\n\n' +
-    '👉 下一步：逐列確認後，按「一般消費排除 2：打勾的寫回正式 Cards Data」（確認視窗會列出每張卡的增減），再匯出。\n' +
-    '⚠️ 覆蓋＝整格換成待審核表的內容。你若曾在正式表手改過、待審核表沒同步，寫回前請看確認視窗的「移除」清單。');
 }
 
 /************** 正式表已有名單的卡＋命名一致用的既有名稱表 **************/
