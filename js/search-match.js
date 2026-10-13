@@ -173,7 +173,15 @@ const fuzzySearchMap = {
     'tomods': 'Tomod\'s',
     'sogo': '遠東 SOGO',
     '台北捷運': '臺北捷運',
-    '臺北捷運': '台北捷運'
+    '臺北捷運': '台北捷運',
+    // 公路養管費的各種說法 → 一般消費排除名單的統一寫法（2026-10-13 站長統一寫「公路養管費(原燃料費)」）。
+    // 對到同一個值才會讓搜尋任一說法都「確定排除」（只對到「公路養管費」會因為被括號版包含而只算「可能排除」）
+    '公路使用養護安全管理費': '公路養管費(原燃料費)',
+    '汽車燃料使用費': '公路養管費(原燃料費)',
+    '公路養管費': '公路養管費(原燃料費)',
+    '燃料費': '公路養管費(原燃料費)',
+    '汽燃費': '公路養管費(原燃料費)',
+    '小額支付特約商家': '小額支付特約商店'
 };
 
 // 詞素級同義詞（片語展開用）。
@@ -792,32 +800,16 @@ function mergeResultsByActivity(resultList) {
     return Array.from(merged.values());
 }
 
-// 無匹配活動時的「基本回饋」結果（含國內加碼卡如永豐幣倍的兩層計算）。
+// 無匹配活動時的「基本回饋」結果：只算 basicCashback。
+// 2026-10-13 站長決定：沒匹配到活動時不加 domesticBonusRate（國內加碼只在 cashbackModel 明確列出的槽才算）。
 // （原本在「有搜尋詞但無結果」與「無搜尋詞」兩處各複製一份）
 function buildBasicCashbackResult(card, amount) {
-    let basicCashbackAmount = 0;
-    let effectiveRate = card.basicCashback;
-    let displayCap = null;
-    let layers;
-
-    if (card.domesticBonusRate && card.domesticBonusCap) {
-        // Handle complex cards like 永豐幣倍 with domestic bonus
-        const bonusAmount = Math.min(amount, card.domesticBonusCap);
-        const bonusCashback = Math.floor(bonusAmount * card.domesticBonusRate / 100);
-        const basicCashback = Math.floor(amount * card.basicCashback / 100);
-        basicCashbackAmount = bonusCashback + basicCashback;
-        effectiveRate = card.basicCashback + card.domesticBonusRate;
-        displayCap = card.domesticBonusCap;
-        layers = [
-            { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashback, cap: null },
-            { name: '國內消費加碼', rate: card.domesticBonusRate, applicableAmount: bonusAmount, cashback: bonusCashback, cap: card.domesticBonusCap }
-        ];
-    } else {
-        basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
-        layers = [
-            { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashbackAmount, cap: null }
-        ];
-    }
+    const basicCashbackAmount = Math.floor(amount * card.basicCashback / 100);
+    const effectiveRate = card.basicCashback;
+    const displayCap = null;
+    const layers = [
+        { name: '基本回饋', rate: card.basicCashback, applicableAmount: amount, cashback: basicCashbackAmount, cap: null }
+    ];
 
     return {
         rate: effectiveRate,

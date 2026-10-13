@@ -65,6 +65,12 @@ const BASICEX_CONFIG = {
   colorReview: '#fff3cd'                   // AI 有疑問的列標黃
 };
 
+// 不進「既有名稱表」的詞（2026-10-13）：這些詞的範圍各家不同，放進名稱表會讓 AI 依「跨行統一」把別家範圍較窄的
+// 原文套成它們——凱基原文「交通罰款」就這樣被改寫成台新的「違規罰鍰」（範圍被放大）。AI 照樣可以依原文輸出它們。
+// 基金類（2026-10-13）各家用詞範圍不同（基金扣繳／基金申購／代扣基金…），站長決定照各自原文，也不進名稱表
+const BASICEX_NO_UNIFY_ITEMS = ['違規罰鍰', '電信費', '悠遊卡自動加值', '一卡通自動加值', 'icash卡自動加值', 'eTag自動儲值',
+  '基金交易', '基金交易及其手續費', '基金扣繳'];
+
 const BASICEX_REVIEW_HEADERS = [
   '核准', '解析時間', 'card_id', 'bank', '來源網址',
   'basicExclusions', 'AI想問的問題', '原文引用'
@@ -109,7 +115,7 @@ const BASICEX_EXAMPLE = {
     '臺北醫學大學附設醫院費用', '路邊停車費',
     'e-Bill全國繳費', 'i繳費', '醫指付', '電子化繳費稅處理平台', '醫療院所費用', '社區管理費',
     '公務機關暨醫療院所信用卡繳費平臺', '台新繳費中心網頁繳費', 'Richart Life APP繳費', 'Richart APP繳費', '行動銀行繳費',
-    '小額支付平台', '麥當勞', '政府規費', '違規罰鍰',
+    '小額支付特約商店', '政府規費', '違規罰鍰', '交通罰款', '交通罰單', '停車罰單', '交通罰鍰',
     '預借現金及其手續費', '預借現金分期金及其手續費', '代償他行信用卡/現金卡/小額信貸',
     '個人綜合所得稅', '所得稅分期付款期金及其手續費', '房屋稅', '地價稅', '牌照稅', '公路養管費(原燃料費)',
     '違約金', '循環利息', '基金交易及其手續費', '信用卡年費', '一般信用卡相關手續費'
@@ -125,10 +131,12 @@ const BASICEX_EXAMPLE_FEBANK = {
     '學雜費（含國外學校）、預借現金、代償本金及利息、貸放本金及利息、各類稅款、各項手續費(包含但不限掛失、調閱簽單、分期付款、預借現金手續費等)、' +
     '違約金及循環息、爭議款、各類繳稅費平台【包含但不限公務機關繳費平台(包含但不限學雜費、各類費用稅款、醫療費等)、醫指付APP、便利商店等、' +
     'E政府平台等】及eToro及其他相關類似境外投資交易平臺之交易款項。',
-  answer: ['悠遊卡加值', 'eTag儲值', '代繳eTag智慧停車費', '信用卡年費', '公共事業費用', '水費', '電費', '瓦斯費', '中華電信電信費',
-    '各項稅金代繳', '學費', '學雜費', '預借現金', '預借現金及其手續費', '代償他行信用卡/現金卡/小額信貸', '貸放本金及利息', '各類稅款',
-    '信用卡掛失手續費', '調閱簽單手續費', '分期付款手續費', '違約金', '循環利息', '爭議款', '各類繳稅費平台', '公務機關繳費平台',
-    '醫療費用', '醫指付APP', '便利商店', '7-11', '全家', '萊爾富', 'OK超商', 'E政府平台', 'eToro', '境外投資交易平臺']
+  // 2026-10-13 站長手寫版：便利商店、E政府在原文是「各類繳稅費平台【…】」的列舉 → 只排除在那裡繳費繳稅，
+  // 不是整個便利商店消費（不列四大超商）；代償、預借現金手續費照原文；加值沒寫「自動」→ 兩種都列
+  answer: ['悠遊卡加值', '悠遊卡自動加值', 'eTag儲值', '代繳eTag智慧停車費', '信用卡年費', '公共事業費用', '水費', '電費', '瓦斯費',
+    '中華電信電信費', '各項稅金代繳', '學費', '學雜費', '海外學校學雜費', '海外學校學費', '預借現金', '貸放本金及利息', '代償本金及利息',
+    '各類稅款', '各項手續費', '信用卡掛失手續費', '調閱簽單手續費', '分期付款手續費', '預借現金手續費', '違約金', '循環利息', '爭議款',
+    '各類繳稅費平台', '公務機關繳費平台', '醫療費用', '醫指付APP', '便利商店繳費繳稅', 'E政府平台繳費繳稅', 'eToro', '境外投資交易平臺']
 };
 
 const BASICEX_EUROPE = ['英國', '奧地利', '比利時', '保加利亞', '克羅埃西亞', '賽普勒斯', '捷克', '丹麥', '愛沙尼亞', '芬蘭', '法國',
@@ -160,10 +168,10 @@ const BASICEX_EXAMPLE_ESUN = {
     '盧森堡實體消費', '馬爾他實體消費', '荷蘭實體消費', '波蘭實體消費', '葡萄牙實體消費', '羅馬尼亞實體消費',
     '斯洛伐克實體消費', '斯洛維尼亞實體消費', '西班牙實體消費', '瑞典實體消費', '基金扣繳', '證券代銷',
     '境外投資平台交易', 'eToro', 'MCO投資平台', '匯兌平台交易', 'wise', '旅行支票',
-    '賭博籌碼', '數位 (虛擬) 貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
+    '賭博籌碼', '數位貨幣', '虛擬貨幣', '玉山銀行分行通路之躉繳保費', '南山人壽躉繳保費', '三商美邦人壽投資型及躉繳型保單', '查核 (定) 稅款',
     '學費', 'i繳費平台', '學費通繳費平臺', '醫療費用', '政府規費', '全聯福利中心',
-    '大全聯', 'PXGo!全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
-    '萊爾富', 'OK超商', '小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)', '特約商店分期付款消費交易', '台灣電力公司', '電費',
+    '大全聯', 'PXGo! 全聯線上購', 'PX Pay', '便利商店', '7-11', '全家',
+    '萊爾富', 'OK超商', '小額支付特約商店', '特約商店分期付款消費交易', '台灣電力公司', '電費',
     '台灣自來水公司', '台北自來水事業處', '水費', '瓦斯費', '各縣市路邊停車費', '路邊停車費',
     '中華電信及民營電信', '電信費', '合康領袖廳管理費', '醫指付APP', '電子化繳費稅處理平台', '公務機關信用卡繳費平台',
     'E政府服務平台', '儲值卡 (原電子票證) 儲值金 (含自動儲值)', '電子支付儲值金 (含自動儲值)', 'eTag自動儲值', 'eTag智慧停車費用', '各類預借現金',
@@ -382,12 +390,9 @@ function basicExMonitorChangedUrls_(ss) {
 }
 
 /************** 問 Gemini：這頁的一般消費排除項目 **************/
-function basicExAskGemini_(bank, text, candidates, vocab) {
-  const systemPrompt = [
-    '你是台灣信用卡條款的閱讀助理。輸入是某銀行信用卡官網頁面的純文字（可能含選單等雜訊）。',
-    '任務：找出「不列入一般消費／不給任何刷卡回饋」的項目（常見標題：一般消費定義、不回饋消費項目、',
-    '一般消費不包含、排除項目），整理成比價網站用的名單：使用者在搜尋框輸入名單上的字時，網站會告訴他「刷這張卡沒有回饋」。',
-    '',
+// 寫法規則＋站長範例（抽取與「官網變動分析」共用，2026-10-13 抽出來：兩邊用同一套規則，名單寫法才不會分岔）
+function basicExRulesText_() {
+  return [
     '寫法規則（2026-10-11／10-12 依站長修正的名單更新；最後有四份站長親手寫的範例，寫法以範例為準）：',
     '1. 以「使用者會在搜尋框輸入的字」來寫：商家名、服務名、繳費項目名。使用者會直接打 iTunes，不會打「Apple媒體服務」。',
     '2. 原文有舉例（如…／例如…／含…／包含但不限…／括號列舉）時，類別名保留一項，每個例子再各自獨立成一項。',
@@ -414,18 +419,54 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
     '   不算相同，照第 3 條保留原文。',
     '8b. 支付工具（2026-10-12 站長規則，見富邦 J 卡範例）：原文說「在被排除的商家用 icash Pay、全盈+Pay、LINE PAY 付款也不算」時，',
     '    排除的是那個商家，不是支付工具——**不要列支付工具**（列了會讓整個支付工具被誤判成沒回饋）。',
+    '    但商家本身**沒有**整個被排除、只有「在該商家用某支付工具」才排除時（2026-10-13 站長規則），寫成「<商家>綁<工具>」，',
+    '    每個工具一項。例：匯豐「便利商店自有支付如 iCash pay、FAMI PAY 綁本行卡於便利商店消費不回饋」→ 便利商店綁iCash pay、便利商店綁FAMI PAY。',
     '    只有兩種才列：①只能在被排除商家內使用的工具（PX Pay 只能在全聯體系用 → 列；全支付在別處也能用 → 不列）；',
     '    ②銀行明文把整個支付工具排除（例：「全支付交易」整個不回饋 → 列「全支付」）。列的時候去掉「交易」「儲值」尾綴。',
     '8c. 集團／旗下品牌要展開成各品牌：「全聯實業旗下品牌通路」→ 全聯福利中心、大全聯、全聯線上購物、全聯全電商、全聯小時達、PX Pay。',
     '    原文只點名某幾家時就只列那幾家，不要自行擴大。',
     '    全聯品牌一律帶「全聯」前綴：寫「全聯全電商」「全聯小時達」，不可寫成「全電商」「小時達」（2026-10-12 站長統一）。',
-    '    原文排除「全聯福利中心」「PX Pay」「PXGo!全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
+    '    原文排除「全聯福利中心」「PX Pay」「PXGo! 全聯線上購」任一項時，**一律再補「全聯小時達」「全聯全電商」**（2026-10-12 站長規則）：',
     '    兩者都是全聯線上購／PX Pay App 裡的服務，帳單特店名稱顯示為全聯福利中心、全聯線上購或 PXPay，銀行同樣判為排除。',
     '8d. 便利商店一律列「便利商店」加四大超商「7-11、全家、萊爾富、OK超商」（原文沒逐一點名也要列）。',
+    '    例外（2026-10-13 站長規則，見遠東範例）：「便利商店」只出現在繳費／繳稅平台的列舉裡（例：「各類繳稅費平台【…醫指付APP、便利商店等…】」），',
+    '    表示只有在便利商店**繳費繳稅**才排除，寫「便利商店繳費繳稅」，**不要**列「便利商店」和四大超商（在便利商店買東西仍有回饋）。',
+    '    同理列舉裡的其他通路也加「繳費繳稅」（例：E政府平台繳費繳稅）。',
+    '8f. 罰款類（2026-10-13 站長規則）：範圍各家不同，不可套用別家銀行的寫法。所有罰款類一律列這四個交通詞：',
+    '    「交通罰款」「交通罰單」「停車罰單」「交通罰鍰」，再依原文加：',
+    '    ①原文**只限交通**（交通罰款、交通違規罰鍰、交通罰鍰…）：只列上面四個，**不可寫「違規罰鍰」**（會把範圍放大成所有罰款），',
+    '      原文本身也不另列（例：匯豐「交通違規罰鍰」→ 交通罰款、交通罰單、停車罰單、交通罰鍰，不列「交通違規罰鍰」）。',
+    '    ②原文是**不限交通的泛稱**（違規罰鍰、罰款、罰鍰…）：再加「違規罰鍰」；原文同時有規費時再加「政府規費」。',
+    '      例：台新「規費、罰鍰：政府規費、違規罰鍰」→ 政府規費、違規罰鍰、交通罰款、交通罰單、停車罰單、交通罰鍰。',
+    '    ③原文寫「政府機關（之違規）罰款」：再加「政府罰款」。',
+    '    ④原文有上面沒涵蓋的特殊寫法（例：「裁決所違規罰款」）：照原文再列一項。',
+    '8g. 電信費（2026-10-13 站長規則）：原文只寫中華電信（中華電信費用、中華電信資費、中華電信話費）時寫「中華電信電信費」，',
+    '    **不可寫成「電信費」**（民營電信不在內）。只有原文泛指所有電信（電信費、各項電信資費、中華電信及民營電信）才列「電信費」。',
+    '8h. 加值／儲值（2026-10-13）：原文**沒寫「自動」**（悠遊卡加值、一卡通加值金、儲值卡儲值金…）表示所有加值都排除，',
+    '    要同時列「悠遊卡加值」「悠遊卡自動加值」兩種寫法（一卡通、icash卡同理），因為搜尋時兩者互不包含；',
+    '    原文寫「自動加值」時只列「X自動加值」。eTag 同理：原文「eTag儲值」列「eTag儲值」「eTag自動儲值」，原文「eTag自動儲值」只列後者。',
+    '8k. 廣告（2026-10-13 站長規則）：照原文列之外，再補「Meta廣告」「Google廣告」：',
+    '    原文有 Facebook、Meta、Meta Ads、Facebook Ads → 補「Meta廣告」；原文有 Google產品或服務 → 補「Google廣告」（同 8e）；',
+    '    原文有「廣告費」→ 列「廣告費」「Meta廣告」「Google廣告」三項；原文有「MCC 7311（廣告服務）」→ 「Meta廣告」「Google廣告」兩項都補。',
+    '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
+    '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
+    '    原文結構是「A、A及其手續費」時只寫「A及其手續費」（例：星展「基金交易、基金交易及其手續費」→ 只列「基金交易及其手續費」）。',
+    '8j. 小額支付特約商店（2026-10-13 站長規則）：「透過聯合信用卡處理中心小額支付平台之特約商店（如停車場、速食店…）」',
+    '    一律寫「小額支付特約商店」（不寫「小額支付平台」），**括號裡的例子不列**——只有經過該平台的交易才排除，同一商家走一般收單仍有回饋，',
+    '    列了會讓搜尋停車場、麥當勞直接變灰卡。原文明說「不論付款方式，該類商家一律排除」時才照原文列商家。',
     '8e. 固定寫法（跨行統一）：Google產品或服務、Apple媒體服務（中英文之間不加空格）；Google 類再補「Google廣告」；',
     '    原文寫「學雜費」時列「學費、學雜費」兩項（用戶多半只打「學費」）；',
-    '    連鎖速食店→速食店；退貨→退款；括號一律半形加空格「數位 (虛擬) 貨幣」。',
-    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開，例：「小額支付特約商店 (如停車場 餐飲店 連鎖速食店 販賣機等)」。',
+    '    連鎖速食店→速食店；退貨→退款；PXGo!全聯線上購一律寫「PXGo! 全聯線上購」（驚嘆號後加一個空格）。',
+    '    原文是「數位（虛擬）貨幣」時拆成「數位貨幣」「虛擬貨幣」兩項（用戶只會打其中一種，括號寫法兩種都搜不到）。',
+    '    其他括號一律半形加空格（例：查核 (定) 稅款）。',
+    '    公路養管費一律寫「公路養管費(原燃料費)」一項（2026-10-13 站長統一）：原文寫公路養管費、燃料費、汽燃費、汽車燃料使用費、',
+    '    公路使用養護安全管理費、汽機車燃料費時都寫這個，不另列「公路養管費」「燃料費」。',
+    '    公路養管費屬於政府規費、公務機關費用、監理資費（2026-10-13 站長規則）：原文排除「政府規費／各項規費」、',
+    '    「公務機關各項費用／公務機關費用／公務機關之相關費用」或「監理資費／監理規費資費／公路監理資費」時，',
+    '    **一律再補「公路養管費(原燃料費)」**（原文沒點名也要補）。',
+    '    「公務機關各項費用」「公務機關費用」照原文列，**不要**改寫成「公務機關繳費」（例：國泰原文「公務機關各項費用」）。',
+    '    只是繳費管道的（公務機關信用卡繳費平台、E政府服務平台）不算，不要因此補。',
+    '    項目內不可出現「、」「，」「,」（會被當成分隔符拆開），原文括號裡的列舉改用空格隔開。',
     '9. 不要輸出單一個字（如「稅」）、不要以「等」結尾、不要輸出「經本行認定之其他交易」這類對不到具體項目的概括條款。',
     '10. 頁面分卡別列不同名單就分成多個 group，每組 card_ids 只放適用的卡；同一份名單適用全部候選卡就一組。',
     '    card_ids 只能從候選清單挑。頁面找不到任何排除條款（快照只抓到選單、內容是別的活動）→ groups 回空陣列。',
@@ -436,7 +477,15 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
   ].concat(BASICEX_EXAMPLES.map(function (ex, n) {
     return '【範例 ' + (n + 1) + '】卡片：' + ex.card + '\n原文：' + ex.source + '\n答案 items：' + ex.answer.join(',');
   })).join('\n');
+}
 
+function basicExAskGemini_(bank, text, candidates, vocab) {
+  const systemPrompt = [
+    '你是台灣信用卡條款的閱讀助理。輸入是某銀行信用卡官網頁面的純文字（可能含選單等雜訊）。',
+    '任務：找出「不列入一般消費／不給任何刷卡回饋」的項目（常見標題：一般消費定義、不回饋消費項目、',
+    '一般消費不包含、排除項目），整理成比價網站用的名單：使用者在搜尋框輸入名單上的字時，網站會告訴他「刷這張卡沒有回饋」。',
+    '',
+  ].join('\n') + '\n' + basicExRulesText_();
 
   const schema = {
     type: 'OBJECT',
@@ -583,6 +632,7 @@ function applyBasicExclusionsToCardsData() {
   const iApprove = BASICEX_REVIEW_HEADERS.indexOf('核准');
   const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id');
   const iItems = BASICEX_REVIEW_HEADERS.indexOf('basicExclusions');
+  const iQuestion = BASICEX_REVIEW_HEADERS.indexOf('AI想問的問題');
 
   // 同一張卡可能有多列打 V（例如兩個頁面都列了它）→ 合併去重。
   // 「覆蓋」（2026-10-11）：核准欄打「覆蓋」＝這張卡正式表已有名單、要整格換成這次的內容（官網改版時用）。
@@ -593,9 +643,13 @@ function applyBasicExclusionsToCardsData() {
     if (!overwrite && !basicExIsChecked_(rData[i][iApprove])) continue;
     const id = String(rData[i][iId] || '').trim();
     if (!id) continue;
-    if (!byCard[id]) byCard[id] = { items: [], reviewRows: [], overwrite: false };
+    if (!byCard[id]) byCard[id] = { items: [], reviewRows: [], overwrite: false, renames: [] };
     if (overwrite) byCard[id].overwrite = true;
     byCard[id].reviewRows.push(i + 1);
+    String(rData[i][iQuestion] || '').split('\n').forEach(function (line) {
+      const m = line.trim().match(/^✎\s*改寫\s*[:：]\s*(.+?)\s*(?:→|->)\s*(.+)$/);
+      if (m) byCard[id].renames.push({ from: m[1].trim(), to: m[2].split(/[、,，]/).map(function (x) { return x.trim(); }).filter(function (x) { return x; }) });
+    });
     basicExSplit_(rData[i][iItems]).forEach(function (t) {
       if (t.length >= 2 && byCard[id].items.indexOf(t) < 0) byCard[id].items.push(t);
     });
@@ -634,11 +688,23 @@ function applyBasicExclusionsToCardsData() {
     let diff = '';
     if (existing) {
       const oldItems = basicExSplit_(existing);
-      const added = entry.items.filter(function (t) { return oldItems.indexOf(t) < 0; });
-      const removed = oldItems.filter(function (t) { return entry.items.indexOf(t) < 0; });
-      diff = '覆蓋：+' + added.length + ' 項、−' + removed.length + ' 項' +
+      let added = entry.items.filter(function (t) { return oldItems.indexOf(t) < 0; });
+      let removed = oldItems.filter(function (t) { return entry.items.indexOf(t) < 0; });
+      // 改寫（2026-10-13）：「套用修改到待審核」會在 AI想問的問題 欄記下「✎ 改寫：A → B」，
+      // 這裡把對得上的一增一減合併成「A → B」，站長才看得出是改寫不是刪一項又加一項
+      const renamed = [];
+      entry.renames.forEach(function (rn) {
+        if (removed.indexOf(rn.from) < 0) return;
+        const to = rn.to.filter(function (t) { return added.indexOf(t) >= 0; });
+        if (!to.length) return;
+        renamed.push(rn.from + ' → ' + to.join('、'));
+        removed = removed.filter(function (t) { return t !== rn.from; });
+        added = added.filter(function (t) { return to.indexOf(t) < 0; });
+      });
+      diff = '覆蓋：+' + added.length + ' 項、−' + removed.length + ' 項' + (renamed.length ? '、改 ' + renamed.length + ' 項' : '') +
         (added.length ? '\n      新增：' + added.slice(0, 8).join('、') + (added.length > 8 ? '…' : '') : '') +
-        (removed.length ? '\n      移除：' + removed.slice(0, 8).join('、') + (removed.length > 8 ? '…' : '') : '');
+        (removed.length ? '\n      移除：' + removed.slice(0, 8).join('、') + (removed.length > 8 ? '…' : '') : '') +
+        (renamed.length ? '\n      改：' + renamed.slice(0, 8).join('；') + (renamed.length > 8 ? '…' : '') : '');
     }
     plan.push({ id: id, cardRow: r + 1, value: value, count: entry.items.length,
       reviewRows: entry.reviewRows, diff: diff });
@@ -688,6 +754,358 @@ function applyBasicExclusionsToCardsData() {
   ].filter(function (x) { return x; }).join('\n'));
 }
 
+/************** ③ 官網變動 → 逐項修改（2026-10-13 站長流程） **************/
+// 流程（站長定版的流程圖「一般消費排除：官網變動 → 網站上線」）：
+//   1 每週監控（watchlist-monitor.gs）抓到「一般消費／排除頁」有變動
+//     → 當場呼叫 basicExAnalyzeChange_，結果寫進「2-變動通知」同一列的「一般消費排除修改」欄、信裡也附一份
+//   2 站長看信判斷要不要更新
+//   3 在 2-變動通知 刪掉不要的行、改用詞，「一般消費排除確認」欄填 V
+//   4 選單「一般消費排除：套用修改到待審核」（applyBasicExclusionChanges）
+//     → 以**正式表現有名單**為底，只做留下來的那幾行，寫進 5-待審核 的 basicExclusions、核准欄標「覆蓋」
+//   5 選單「一般消費排除 2」寫回正式表（確認視窗會把改寫列成 A → B）
+// 為什麼不整份重抽：重抽是照規則從頭寫，會把站長手改過的地方洗掉。這條路只改官網真的動到的那幾項。
+// 沒有 30 天門檻（站長 2026-10-13 決定）：只在官網真的有變動時才分析，而且只提修改、不動任何名單。
+// 「① 抽取」的整份重抽與 30 天規則保留，給新卡、新頁面、大改版用。
+
+const BASICEX_CHANGE_COL = '一般消費排除修改';
+const BASICEX_CHANGE_OK_COL = '一般消費排除確認';
+const BASICEX_CHANGE_PENDING = '⏳ 待分析';      // 監控那一段時間不夠時先寫這個，之後補分析
+const BASICEX_CHANGE_APPLIED = '已套用';
+const BASICEX_INBOX_SHEET = '2-變動通知';
+
+// 這一列監控是不是一般消費／排除頁（跟「① 抽取」挑頁的規則一樣，看 keywords 欄）
+function basicExIsExclusionRow_(keywords) {
+  return BASICEX_CONFIG.rowKeywordRe.test(String(keywords == null ? '' : keywords));
+}
+
+// 正式 Cards Data 目前的名單：id → 那一格的原文（沒有欄或沒有這張卡就沒有 key）
+function basicExReadCardLists_(ids) {
+  const out = {};
+  const sheet = getCardsSheet_();
+  const data = sheet.getDataRange().getValues();
+  const head = data[0].map(function (x) { return String(x).trim(); });
+  const cId = head.indexOf('id');
+  const cT = head.indexOf(BASICEX_CONFIG.targetHeader);
+  if (cId < 0 || cT < 0) return out;
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][cId] || '').trim();
+    if (!id || (ids && ids.indexOf(id) < 0) || Object.prototype.hasOwnProperty.call(out, id)) continue;
+    out[id] = String(data[i][cT] == null ? '' : data[i][cT]);
+  }
+  return out;
+}
+
+// 問 Gemini：這次變動會讓每張卡的名單改哪幾項。回傳要寫進「一般消費排除修改」欄的文字。
+// diffText＝監控的變動段落（＋ 開頭＝新版多的句子，－ 開頭＝新版沒了的句子）
+function basicExAnalyzeChange_(bank, cardIdsRaw, diffText) {
+  const wanted = basicExSplit_(cardIdsRaw);
+  const lists = basicExReadCardLists_(wanted);
+  const ids = wanted.filter(function (x) { return Object.prototype.hasOwnProperty.call(lists, x); });
+  if (!ids.length) return '⚠ 這列的 card_id 在正式表找不到，無法分析（到「1-監控清單」檢查 cards 欄）';
+
+  const systemPrompt = [
+    '你是台灣信用卡條款的閱讀助理。某銀行官網的「一般消費排除／不回饋項目」頁面有變動。',
+    '輸入：① 這次變動的原文段落（「＋」開頭＝新版多出來的句子，「－」開頭＝舊版有、新版沒了的句子）；',
+    '② 每張候選卡**目前的正式名單**（逗號分隔，站長已審核過）。',
+    '任務：判斷這次變動會讓名單**改哪幾項**。不要重寫整份名單，沒被這次變動影響的項目一律不提。',
+    '・add＝新增項目；remove＝刪除項目；rename＝把名單裡某一項換成新寫法（to 可以有一或多項）。',
+    '・remove 與 rename 的 item 必須**逐字照抄名單裡現有的寫法**（程式靠它找到那一項，抄錯就找不到）。',
+    '・新增或改寫後的寫法，照下面的寫法規則（拆例子、補常用說法、跨行統一、罰款／電信費／加值等固定寫法）。',
+    '・只是文字潤飾、段落搬移、或變動跟排除項目無關（活動、選單、注意事項）→ no_effect=true、groups 回空陣列。',
+    '・整頁改版、牽涉超過名單一半的項目 → major=true（站長會改用整份重抽），groups 可以回空陣列。',
+    '・不同卡受影響的方式不同就分成多個 group，card_ids 只能從候選清單挑。',
+    '・每一項附 evidence：原文依據的摘錄（30 字以內）。',
+    ''
+  ].join('\n') + '\n' + basicExRulesText_();
+
+  const schema = {
+    type: 'OBJECT',
+    properties: {
+      no_effect: { type: 'BOOLEAN' },
+      major: { type: 'BOOLEAN' },
+      groups: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            card_ids: { type: 'ARRAY', items: { type: 'STRING', enum: ids } },
+            ops: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  op: { type: 'STRING', enum: ['add', 'remove', 'rename'] },
+                  item: { type: 'STRING' },
+                  to: { type: 'ARRAY', items: { type: 'STRING' } },
+                  evidence: { type: 'STRING' }
+                },
+                required: ['op', 'item']
+              }
+            }
+          },
+          required: ['card_ids', 'ops']
+        }
+      },
+      note: { type: 'STRING' }
+    },
+    required: ['no_effect', 'major', 'groups']
+  };
+
+  const userText = '銀行：' + (bank || '（未填）') + '\n\n各卡目前的正式名單：\n' +
+    ids.map(function (id) { return id + '：' + (lists[id] || '（空白）'); }).join('\n') +
+    '\n\n這次變動的原文段落：\n' + String(diffText || '').slice(0, 8000);
+  const result = callGemini_(systemPrompt, userText, schema) || {};
+  return basicExRenderChange_(result, ids, lists);
+}
+
+// AI 結果 → 儲存格文字。格式也是站長要編輯的介面（刪行、改詞），所以一行一個動作：
+//   ▸ card-a, card-b
+//   ＋ 新增：X｜原文：…
+//   － 刪除：Y｜原文：…
+//   ✎ 改寫：A → B、C｜原文：…
+// 「｜」後面只是給人看的依據，套用時會被忽略
+function basicExRenderChange_(result, ids, lists) {
+  const clean = function (t) { return String(t || '').trim().replace(/[,，｜\n]/g, ' ').trim(); };
+  const lines = [];
+  const groups = (result.groups || []).filter(function (g) { return g && g.ops && g.ops.length; });
+  if (result.major) lines.push('⚠ 大改版，建議整份重抽：選單「一般消費排除 1」');
+  groups.forEach(function (g) {
+    const gIds = (g.card_ids || []).filter(function (x) { return ids.indexOf(x) >= 0; });
+    if (!gIds.length) return;
+    lines.push('▸ ' + gIds.join(', '));
+    g.ops.forEach(function (o) {
+      const item = clean(o.item);
+      if (!item) return;
+      const ev = o.evidence ? '｜原文：' + clean(o.evidence).slice(0, 60) : '';
+      // remove／rename 的舊項目在名單裡找不到 → 先標出來，站長改字或刪行（套用時也會再擋一次）
+      const missing = (o.op === 'remove' || o.op === 'rename') && gIds.some(function (id) {
+        return basicExSplit_(lists[id]).indexOf(item) < 0;
+      }) ? '｜⚠ 名單裡找不到這項' : '';
+      if (o.op === 'add') lines.push('＋ 新增：' + item + ev);
+      else if (o.op === 'remove') lines.push('－ 刪除：' + item + ev + missing);
+      else if (o.op === 'rename') {
+        const to = (o.to || []).map(clean).filter(function (x) { return x; });
+        if (to.length) lines.push('✎ 改寫：' + item + ' → ' + to.join('、') + ev + missing);
+      }
+    });
+  });
+  if (!lines.length) return '無影響（只是文字潤飾，或跟排除項目無關）';
+  if (result.note) lines.push('（AI 備註：' + clean(result.note).slice(0, 200) + '）');
+  return lines.join('\n');
+}
+
+// 監控呼叫用：失敗不擋監控，改寫成「待分析」讓之後補
+function basicExAnalyzeChangeSafe_(bank, cardIdsRaw, diffText) {
+  try {
+    return basicExAnalyzeChange_(bank, cardIdsRaw, diffText);
+  } catch (e) {
+    return BASICEX_CHANGE_PENDING + '（上次失敗：' + String(e.message || e).slice(0, 120) + '）';
+  }
+}
+
+// 補分析「2-變動通知」裡標「⏳ 待分析」的列。監控每一段結尾有剩時間就會叫它；也可以從選單手動按。
+// 回傳 { done, left }
+function basicExAnalyzePendingChanges_(ss, startedAt, limitSeconds) {
+  const sheet = ss.getSheetByName(BASICEX_INBOX_SHEET);
+  if (!sheet || sheet.getLastRow() < 2) return { done: 0, left: 0 };
+  const head = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(function (x) { return String(x).trim(); });
+  const cChange = head.indexOf(BASICEX_CHANGE_COL), cCard = head.indexOf('card_id');
+  const cBank = head.indexOf('銀行'), cDiff = head.indexOf('變動段落');
+  if (cChange < 0 || cCard < 0 || cDiff < 0) return { done: 0, left: 0 };
+  const n = sheet.getLastRow() - 1;
+  const col = function (c) { return c < 0 ? null : sheet.getRange(2, c + 1, n, 1).getValues(); };
+  const changes = col(cChange);
+  const todo = [];
+  changes.forEach(function (r, i) { if (String(r[0]).indexOf(BASICEX_CHANGE_PENDING) === 0) todo.push(i); });
+  if (!todo.length) return { done: 0, left: 0 };
+  const cards = col(cCard), banks = col(cBank), diffs = col(cDiff);
+  let done = 0;
+  for (let k = 0; k < todo.length; k++) {
+    if ((Date.now() - startedAt) / 1000 > limitSeconds) break;
+    const i = todo[k];
+    const text = basicExAnalyzeChangeSafe_(banks ? banks[i][0] : '', cards[i][0], diffs[i][0]);
+    sheet.getRange(i + 2, cChange + 1).setValue(text);
+    done++;
+  }
+  return { done: done, left: todo.length - done };
+}
+
+// 選單：手動補分析
+function analyzePendingBasicExclusionChanges() {
+  const ui = SpreadsheetApp.getUi();
+  const res = basicExAnalyzePendingChanges_(SpreadsheetApp.getActiveSpreadsheet(), Date.now(), BASICEX_CONFIG.maxRunSeconds);
+  ui.alert(res.done || res.left
+    ? '補分析完成 ' + res.done + ' 列' + (res.left ? '，還剩 ' + res.left + ' 列（時間不夠，再按一次）' : '') + '。'
+    : '「' + BASICEX_INBOX_SHEET + '」沒有待分析的列。');
+}
+
+// 一格「一般消費排除修改」→ [{ ids, kind, item, to, line }]；看不懂的行放 bad
+function basicExParseChangeCell_(text) {
+  const ops = [], bad = [];
+  let cur = [];
+  String(text == null ? '' : text).split('\n').forEach(function (raw) {
+    const line = raw.trim();
+    if (!line) return;
+    if (/^[▸>]/.test(line)) { cur = basicExSplit_(line.replace(/^[▸>]\s*/, '')); return; }
+    // 說明行：大改版提醒、無影響、AI 備註
+    if (/^(⚠|無影響|（AI 備註|\(AI 備註|⏳)/.test(line)) return;
+    const body = line.split('｜')[0].trim();
+    const m = body.match(/^([＋+－\-✎])\s*(?:新增|刪除|改寫)?\s*[:：]?\s*(.+)$/);
+    if (!m || !cur.length) { bad.push(line); return; }
+    const sym = m[1], rest = m[2].trim();
+    if (sym === '✎') {
+      const parts = rest.split(/\s*(?:→|->)\s*/);
+      const to = parts.length === 2 ? parts[1].split(/[、,，]/).map(function (x) { return x.trim(); }).filter(function (x) { return x; }) : [];
+      if (parts.length !== 2 || !parts[0] || !to.length) { bad.push(line); return; }
+      ops.push({ ids: cur.slice(), kind: 'rename', item: parts[0].trim(), to: to, line: body });
+    } else {
+      if (/[,，、]/.test(rest)) { bad.push(line); return; }   // 一行只能一項（逗號會被當成分隔符）
+      ops.push({ ids: cur.slice(), kind: (sym === '＋' || sym === '+') ? 'add' : 'remove', item: rest, line: body });
+    }
+  });
+  return { ops: ops, bad: bad };
+}
+
+// 在一格名單上做一個動作。以半形逗號切開、每段原樣保留（含空白與結尾逗號），只動對到的那一段。
+// 回傳 { value, ok, note }
+function basicExApplyOp_(raw, op) {
+  const parts = String(raw == null ? '' : raw).split(',');
+  const find = function (item) {
+    for (let i = 0; i < parts.length; i++) if (parts[i].trim() === item) return i;
+    return -1;
+  };
+  // 新項目接在最後一個非空段後面（保留原本的結尾逗號）
+  const insertAt = function () {
+    let i = parts.length;
+    while (i > 0 && !parts[i - 1].trim()) i--;
+    return i;
+  };
+  if (op.kind === 'add') {
+    if (find(op.item) >= 0) return { value: raw, ok: true, note: '已經有「' + op.item + '」' };
+    if (parts.length === 1 && !parts[0].trim()) return { value: op.item, ok: true };
+    parts.splice(insertAt(), 0, op.item);
+    return { value: parts.join(','), ok: true };
+  }
+  const i = find(op.item);
+  if (i < 0) return { value: raw, ok: false, note: '名單裡找不到「' + op.item + '」' };
+  if (op.kind === 'remove') {
+    parts.splice(i, 1);
+    return { value: parts.join(','), ok: true };
+  }
+  const fresh = op.to.filter(function (t) { return t === op.item || find(t) < 0; });
+  if (!fresh.length) { parts.splice(i, 1); return { value: parts.join(','), ok: true }; }
+  parts[i] = parts[i].replace(op.item, fresh[0]);
+  fresh.slice(1).forEach(function (t, k) { parts.splice(i + 1 + k, 0, t); });
+  return { value: parts.join(','), ok: true };
+}
+
+// 選單「一般消費排除：套用修改到待審核」
+function applyBasicExclusionChanges() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const inbox = ss.getSheetByName(BASICEX_INBOX_SHEET);
+  if (!inbox || inbox.getLastRow() < 2) { ui.alert('找不到「' + BASICEX_INBOX_SHEET + '」或裡面沒有資料。'); return; }
+  const head = inbox.getRange(1, 1, 1, inbox.getLastColumn()).getValues()[0].map(function (x) { return String(x).trim(); });
+  const cChange = head.indexOf(BASICEX_CHANGE_COL), cOk = head.indexOf(BASICEX_CHANGE_OK_COL);
+  const cUrl = head.indexOf('網址'), cBank = head.indexOf('銀行');
+  if (cChange < 0 || cOk < 0) {
+    ui.alert('「' + BASICEX_INBOX_SHEET + '」還沒有「' + BASICEX_CHANGE_COL + '」「' + BASICEX_CHANGE_OK_COL + '」欄。\n' +
+      '下次監控偵測到一般消費頁變動時會自動補上。');
+    return;
+  }
+  // 只讀要用的欄（這張表有「舊文字／新文字」兩根 4 萬字的欄，整張讀很慢）
+  const n = inbox.getLastRow() - 1;
+  const col = function (c) { return c < 0 ? null : inbox.getRange(2, c + 1, n, 1).getValues(); };
+  const oks = col(cOk), changes = col(cChange), urls = col(cUrl), banks = col(cBank);
+
+  const picked = [];
+  for (let i = 0; i < n; i++) if (basicExIsChecked_(oks[i][0])) picked.push(i);
+  if (!picked.length) {
+    ui.alert('「' + BASICEX_INBOX_SHEET + '」沒有在「' + BASICEX_CHANGE_OK_COL + '」欄填 V 的列。');
+    return;
+  }
+
+  // 以正式表現有名單為底，依列序把每一行套上去
+  const allIds = [];
+  const parsed = picked.map(function (i) {
+    const p = basicExParseChangeCell_(changes[i][0]);
+    p.ops.forEach(function (o) { o.ids.forEach(function (id) { if (allIds.indexOf(id) < 0) allIds.push(id); }); });
+    return { i: i, p: p };
+  });
+  const lists = basicExReadCardLists_(allIds);
+  const value = {}, applied = {}, meta = {};
+  const problems = [];
+  parsed.forEach(function (x) {
+    const rowNo = x.i + 2;
+    x.p.bad.forEach(function (l) { problems.push('第 ' + rowNo + ' 列看不懂：' + l); });
+    x.p.ops.forEach(function (o) {
+      o.ids.forEach(function (id) {
+        if (!Object.prototype.hasOwnProperty.call(lists, id)) { problems.push('第 ' + rowNo + ' 列：正式表找不到卡片 ' + id); return; }
+        if (!Object.prototype.hasOwnProperty.call(value, id)) { value[id] = lists[id]; applied[id] = []; }
+        const r = basicExApplyOp_(value[id], o);
+        if (!r.ok) { problems.push('第 ' + rowNo + ' 列 ' + id + '：' + r.note + '（' + o.line + '）'); return; }
+        value[id] = r.value;
+        applied[id].push(o.line);
+        meta[id] = { url: urls ? String(urls[x.i][0] || '') : '', bank: banks ? String(banks[x.i][0] || '') : '' };
+      });
+    });
+  });
+
+  const changedIds = Object.keys(value).filter(function (id) { return value[id] !== lists[id]; });
+  if (problems.length) {
+    const ans = ui.alert('有 ' + problems.length + ' 行沒辦法照做',
+      '・' + problems.slice(0, 25).join('\n・') + (problems.length > 25 ? '\n…（其餘 ' + (problems.length - 25) + ' 行）' : '') +
+      '\n\n' + (changedIds.length
+        ? '其他能照做的修改（' + changedIds.length + ' 張卡）要先寫進「' + BASICEX_CONFIG.reviewSheet + '」嗎？\n按取消＝全部不動，改好再按一次。'
+        : '沒有其他可以照做的修改。'),
+      changedIds.length ? ui.ButtonSet.OK_CANCEL : ui.ButtonSet.OK);
+    if (!changedIds.length || ans !== ui.Button.OK) return;
+  }
+
+  // 寫進 5-待審核：同一張卡優先寫回同網址那一列，沒有就寫第一列，都沒有就新增一列
+  const review = basicExEnsureReviewSheet_(ss);
+  const rData = review.getDataRange().getValues();
+  const iApprove = BASICEX_REVIEW_HEADERS.indexOf('核准'), iTime = BASICEX_REVIEW_HEADERS.indexOf('解析時間');
+  const iId = BASICEX_REVIEW_HEADERS.indexOf('card_id'), iUrl = BASICEX_REVIEW_HEADERS.indexOf('來源網址');
+  const iItems = BASICEX_REVIEW_HEADERS.indexOf('basicExclusions'), iQ = BASICEX_REVIEW_HEADERS.indexOf('AI想問的問題');
+  const now = new Date();
+  const stamp = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy/MM/dd HH:mm');
+  changedIds.forEach(function (id) {
+    const note = '【官網變動套用 ' + stamp + '】\n' + applied[id].join('\n');
+    let r = -1;
+    for (let i = 1; i < rData.length; i++) {
+      if (String(rData[i][iId]).trim() !== id) continue;
+      if (r < 0) r = i;
+      if (String(rData[i][iUrl]).trim() === meta[id].url) { r = i; break; }
+    }
+    if (r < 0) {
+      const row = BASICEX_REVIEW_HEADERS.map(function () { return ''; });
+      row[iApprove] = '覆蓋'; row[iTime] = now; row[iId] = id; row[BASICEX_REVIEW_HEADERS.indexOf('bank')] = meta[id].bank;
+      row[iUrl] = meta[id].url; row[iItems] = value[id]; row[iQ] = note;
+      review.appendRow(row);
+      return;
+    }
+    const sheetRow = r + 1;
+    review.getRange(sheetRow, iItems + 1).setValue(value[id]);
+    review.getRange(sheetRow, iQ + 1).setValue(note);
+    review.getRange(sheetRow, iTime + 1).setValue(now);
+    review.getRange(sheetRow, iApprove + 1).setValue('覆蓋');
+  });
+
+  // 變動通知那邊標「已套用」，下次不會重複套
+  const skippedRows = {};
+  problems.forEach(function (p) { const m = p.match(/^第 (\d+) 列/); if (m) skippedRows[m[1]] = (skippedRows[m[1]] || 0) + 1; });
+  picked.forEach(function (i) {
+    const k = skippedRows[String(i + 2)];
+    inbox.getRange(i + 2, cOk + 1).setValue(BASICEX_CHANGE_APPLIED + ' ' + stamp + (k ? '（跳過 ' + k + ' 行）' : ''));
+  });
+
+  // 全部照做時不跳視窗（站長要求），右下角小提示就好
+  ss.toast(changedIds.length
+    ? '已寫進「' + BASICEX_CONFIG.reviewSheet + '」' + changedIds.length + ' 張卡，核准欄標「覆蓋」。下一步：「一般消費排除 2」寫回正式表。'
+    : '打 V 的修改都不用改（名單已經是這樣了）。', '一般消費排除', 8);
+}
+
 /************** 正式表已有名單的卡＋命名一致用的既有名稱表 **************/
 // 跨檔唯讀正式 Cards Data 的 basicExclusions 欄。欄不存在就當作全部沒填（抽取照跑，寫回時才會要求建欄）
 function basicExReadFilledCards_() {
@@ -715,7 +1133,7 @@ function basicExBuildVocabulary_(filled, review) {
   const add = function (t) {
     const name = String(t || '').trim();
     const key = basicExNormKey_(name);
-    if (name.length < 2 || !key || vocab.byKey[key]) return;
+    if (name.length < 2 || !key || vocab.byKey[key] || BASICEX_NO_UNIFY_ITEMS.indexOf(name) >= 0) return;
     vocab.byKey[key] = name;
     vocab.names.push(name);
   };

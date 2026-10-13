@@ -49,6 +49,7 @@
 
 - **所有動態 innerHTML 內容一律 `escapeHtml()`**；多行文字用 `escapeHtmlMultiline()`
 - **例外（刻意允許 HTML）僅兩處**：公告 modal 的 `fullText`、FAQ 的 `answer`——都是管理者控制的 Google Sheets 內容，程式內有註解標明；**絕不**把用戶輸入餵進這兩個欄位
+- **搜尋提示 `display_message`（2026-10-13）可含 HTML，但不是原樣放行**：`renderHintMessage()`（js/home-ui.js）沒標籤就 escape；有標籤走白名單（b/strong/i/em/u/br/a/span/small/mark/code）、屬性全丟、`<a>` 的 href 過 `sanitizeUrl()` 並強制新分頁。要開放新標籤改 `HINT_ALLOWED_TAGS`，**不要**改成直接 innerHTML
 - **動態 href 一律先過 `sanitizeUrl()`**（只允許 http/https，擋 `javascript:`）
 - **Firestore 安全規則唯一正確版本在 repo 的 `firestore.rules`**；改規則先改 repo 再貼 console（教學見 `FIRESTORE-RULES-README.md`）
 

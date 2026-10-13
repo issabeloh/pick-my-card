@@ -37,13 +37,13 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
    - 一般消費排除項目：`basicExclusions`（選填，2026-09-30 新增）——這張卡「一般消費定義」明文排除、**完全沒有回饋**
      的交易（繳稅、學費、保費、儲值…），一格多項、**半形逗號分隔**（頓號／全形逗號／換行也吃，但請統一用 `,`），同一個東西各銀行要寫成同一個字，匯出成 `card.basicExclusions` 字串陣列
      （空白格不輸出）。前端只在「退回基本回饋」時使用，命中的卡不顯示基本回饋（規則見 cashback-engine.md 第 10 節）。
-     初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」（`apps-script/basic-exclusions-extractor.gs`，操作見 `apps-script/README.md`）。
+     初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」；官網變動後由監控自動分析、站長在 `2-變動通知` 刪行填 V 再「套用修改到待審核」（2026-10-13，`apps-script/basic-exclusions-extractor.gs` 第 ③ 段，操作見 `apps-script/README.md`）。
      ⚠️ 項目要寫成**使用者會搜尋的詞**且保留限定詞：前端是「搜尋詞包含排除詞就算」，寫「超商」會誤殺所有超商搜尋，要寫「超商代收」；單一個字的項目一律被忽略
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
 4. **Merchant Payments** —— 商家付款方式（merchant, online_payment, offline_payment, source_url, last_updated）
-5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）。**active 為 TRUE 的列 keywords、display_message 必填**，缺一整列不匯出、`runQACheck()` 檢查 11 列出來（⚠️ 不擋匯出）；suggestions 選填，留空時前端只顯示文案。2026-10-08 以前 display_message 留空會補預設句「💡 建議也搜尋：」，已拿掉（前端分不出那句是不是系統補的）
+5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）。**active 為 TRUE 的列 keywords、display_message 必填**，缺一整列不匯出、`runQACheck()` 檢查 11 列出來（⚠️ 不擋匯出）；suggestions 選填，留空時前端只顯示文案。2026-10-08 以前 display_message 留空會補預設句「💡 建議也搜尋：」，已拿掉（前端分不出那句是不是系統補的）。display_message 可寫簡單 HTML（2026-10-13）：粗體 `<b>`、換行 `<br>`、連結 `<a href="https://…">`（只收 http/https、自動開新分頁）等，沒寫標籤就當純文字；其他標籤會被拆掉只留文字（見 storage-and-security.md 第 6 節）
 6. **FAQ** —— id, category, question, answer, order, isActive（依 order 排序）
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的

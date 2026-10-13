@@ -361,24 +361,51 @@ function checkWatchlist() {
     const hasKeyword = rowKeywords.some(function (k) {
       return changedText.indexOf(k) !== -1;
     });
+    // 一般消費／排除頁（2026-10-13）改用「逐詞比對」判斷有沒有變動，不看關鍵字也不看 30 字門檻：
+    //   ・排除項目常常只有 2～6 個字（停車場、手搖飲料店），30 字門檻擋得掉
+    //   ・名單是一長串頓號列舉，diffSegments_ 會把它切成一小段一小段，不到 8 字的片段直接丟掉
+    //     ——在長清單裡加一項「手搖飲料店、」根本不會出現在變動段落裡
+    //   ・新增那一項的句子通常不含「一般消費」「不回饋」這種列關鍵字
+    // 所以把新舊全文都切成詞，任何一個詞「新增或消失」就算變動，交給一般消費排除分析判斷有沒有影響。
+    // 判斷是不是這種頁的規則在 basic-exclusions-extractor.gs（看 keywords 欄）
+    const isExclusionRow = typeof basicExIsExclusionRow_ === 'function' && cKeywords >= 0 &&
+      basicExIsExclusionRow_(row[cKeywords]);
+    const termDiff = isExclusionRow ? exclusionTermDiff_(oldText, text) : null;
+    const exclusionChanged = !!(termDiff && termDiff.lines.length);
+    // 給 AI 與寫進分頁的變動段落：一般消費頁多附一段逐詞比對，短項目才看得到
+    const diffForRow = exclusionChanged
+      ? (changedText ? changedText + '\n' : '') + '【逐詞比對】\n' + termDiff.lines.join('\n')
+      : changedText;
 
-    if (changedText.length >= rowMinDiff && hasKeyword) {
+    if ((changedText.length >= rowMinDiff && hasKeyword) || exclusionChanged) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
       //    連同「真正的新詞/消失詞」一起給——那是程式用字串比對算出來的事實，
       //    比讓 AI 自己從一堆切片裡猜可靠得多（見 refineDiff_）
-      const cls = classifyDiff_(changedText, text, inboxCardId, bank, oldText, refined);
-      // ② 純版面/文案的列不進分頁（分頁只留站長真的要處理的東西），但信裡照樣列一行
-      const cosmetic = MONITOR_CONFIG.skipCosmeticRows && isCosmeticChange_(cls);
+      const cls = classifyDiff_(diffForRow, text, inboxCardId, bank, oldText, refined);
+      // ①b 一般消費排除頁：當場分析這次變動要改名單的哪幾項，寫進同一列「一般消費排除修改」欄。
+      //     時間不夠（快撞 6 分鐘上限）就先標「待分析」，這一段結尾或下次監控有空檔時補
+      //     （basicExAnalyzePendingChanges_；選單也能手動補）
+      let exclusion = '';
+      if (isExclusionRow && typeof basicExAnalyzeChangeSafe_ === 'function') {
+        exclusion = (Date.now() - startedAt) / 1000 < MONITOR_CONFIG.maxRunSeconds + 60
+          ? basicExAnalyzeChangeSafe_(bank, inboxCardId, diffForRow)
+          : BASICEX_CHANGE_PENDING;
+      }
+      const exclusionMatters = exclusion && exclusion.indexOf('無影響') !== 0;
+      // ② 純版面/文案的列不進分頁（分頁只留站長真的要處理的東西），但信裡照樣列一行。
+      //    一般消費排除有要改的項目時一定寫進分頁——站長要在那一列刪行、填 V
+      const cosmetic = MONITOR_CONFIG.skipCosmeticRows && isCosmeticChange_(cls) && !exclusionMatters;
       if (!cosmetic) {
         appendToInbox_(ss, {
           time: now,
           cardId: inboxCardId,   // 單卡＝card_id；多卡頁＝cards 清單，下游解析靠這一欄當卡片線索
           bank: bank,
           url: url,
-          diffText: changedText,
+          diffText: diffForRow,
           oldText: oldText,
           newText: text,
-          cls: cls
+          cls: cls,
+          exclusion: exclusion
         });
         inboxWrites++;
       }
@@ -387,8 +414,9 @@ function checkWatchlist() {
         label: label,
         bank: (!isBankPage && cardId) ? bank : '',   // 多卡頁的 label 已含銀行名，不再重複掛括號
         url: url,
-        diffText: changedText.slice(0, 300),
+        diffText: diffForRow.slice(0, 300),
         cls: cls,
+        exclusion: exclusion,
         cosmetic: cosmetic   // true＝只在信裡出現，沒寫進「2-變動通知」
       });
     }
@@ -396,6 +424,12 @@ function checkWatchlist() {
     // 不論是不是事件，都把快照更新成最新版
     sheet.getRange(i + 1, cSnap + 1).setValue(text);
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+  }
+
+  // 這一段還有空檔就補分析之前標「待分析」的一般消費排除列（時間不夠時寫的，見上面 ①b）
+  if (typeof basicExAnalyzePendingChanges_ === 'function') {
+    try { basicExAnalyzePendingChanges_(ss, startedAt, MONITOR_CONFIG.maxRunSeconds); }
+    catch (e) { errors.push('一般消費排除補分析失敗：' + e.message); }
   }
 
   // 分隔線代表「一輪監控到此結束」，所以要等整份清單真的跑完才畫，不能每一段各畫一條。
@@ -718,6 +752,29 @@ function diffSegments_(oldText, newText) {
   return { added: added, removed: removed };
 }
 
+/************** 一般消費／排除頁專用：逐詞比對（2026-10-13） **************/
+// 把新舊全文沿頓號、逗號、括號、句號、空白切成詞，回傳「新增的詞／消失的詞」。
+// 跟 diffSegments_ 不同：不管順序與分段，只要名單上多一項或少一項（哪怕只有 2 個字）就抓得到；
+// 純粹搬移、重排不會產生差異。純數字／日期（更新時間、瀏覽次數）不算，避免每週假警報。
+function exclusionTermDiff_(oldText, newText) {
+  const SPLIT = /[●·・、，,；;：:／/｜|。！？!?\n\r（）()「」『』【】\[\]<>《》"“”']|\s+/;
+  const NOISE = /^[\d０-９\s\/\-:.．年月日時分秒%％~～]+$/;
+  const units = function (t) {
+    const set = {};
+    String(t || '').split(SPLIT).forEach(function (u) {
+      u = u.trim();
+      if (u.length >= 2 && u.length <= 40 && !NOISE.test(u)) set[u] = true;
+    });
+    return set;
+  };
+  const a = units(oldText), b = units(newText);
+  const added = Object.keys(b).filter(function (u) { return !a[u]; });
+  const removed = Object.keys(a).filter(function (u) { return !b[u]; });
+  const lines = added.slice(0, 60).map(function (u) { return '＋ 詞：' + u; })
+    .concat(removed.slice(0, 60).map(function (u) { return '－ 詞：' + u; }));
+  return { added: added, removed: removed, lines: lines };
+}
+
 /************** 濾掉「只是搬移／重新分段」的假差異（2026-08-16 血淚修正） **************/
 // 【為什麼要有這一層】2026-08-16 站長抽查遠東樂家+卡，發現摘要寫的三件事全部不屬實：
 // 「新增多個指定通路」（通路一個都沒變）、「新戶LINE Pay 5%下架」（活動還在）、
@@ -906,6 +963,11 @@ function appendToInbox_(ss, info) {
     [INBOX_ACTION_HEADER]: '',
     '公開': ''
   };
+  // 一般消費排除頁的逐項修改（2026-10-13）。欄名定義在 basic-exclusions-extractor.gs
+  if (typeof BASICEX_CHANGE_COL !== 'undefined') {
+    byHeader[BASICEX_CHANGE_COL] = info.exclusion || '';
+    byHeader[BASICEX_CHANGE_OK_COL] = '';
+  }
 
   const headers = readInboxHeaders_(sheet);
   const row = headers.map(function (h) {
@@ -955,6 +1017,8 @@ function ensureInboxPublishColumns_(sheet) {
   // 「所屬活動」是 2026-08-20 加的（AI 標出這段變動屬於哪一檔活動），跟三個發布欄同一條
   // 補欄路徑：缺了就接在最右邊，舊列留空（那是加欄前的紀錄，AI 沒回過這個值，補不出來）。
   const wanted = ['所屬活動', '公開摘要', '公開卡片', INBOX_ACTION_HEADER];
+  // 2026-10-13：一般消費排除的「修改／確認」兩欄，同一條補欄路徑（舊列留空）
+  if (typeof BASICEX_CHANGE_COL !== 'undefined') wanted.push(BASICEX_CHANGE_COL, BASICEX_CHANGE_OK_COL);
   const missing = wanted.filter(function (h) { return headers.indexOf(h) < 0; });
   if (!missing.length) return renamed;
 
@@ -966,7 +1030,10 @@ function ensureInboxPublishColumns_(sheet) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), need - sheet.getMaxColumns());
   }
   sheet.getRange(1, end + 1, 1, missing.length).setValues([missing]);
-  return true;
+  // 只補了一般消費排除那兩欄時不算「動了發布欄」：呼叫端會據此回填舊列的公開摘要，
+  // 不該因為加了無關的欄就把站長刻意清空的公開摘要又填回去
+  const publishCols = ['所屬活動', '公開摘要', '公開卡片', INBOX_ACTION_HEADER];
+  return renamed || missing.some(function (h) { return publishCols.indexOf(h) >= 0; });
 }
 
 // 補表頭之前就寫進去的舊列，「公開摘要／公開卡片」是空的（那時候還沒這三欄）。
@@ -1208,6 +1275,13 @@ function sendDigest_(alerts, errors, rebaselined, skipped, resume) {
       } else {
         s += '\n   （AI 未分類，原始變動段落）\n   ' + (a.diffText || '') + '\n';
       }
+      // 一般消費排除頁：附上 AI 分析的逐項修改，站長看信就能判斷要不要更新
+      if (a.exclusion) {
+        const ex = String(a.exclusion).split('\n');
+        s += '   【一般消費排除修改】\n' + ex.slice(0, 15).map(function (line) { return '     ' + line; }).join('\n') + '\n' +
+             (ex.length > 15 ? '     …（其餘 ' + (ex.length - 15) + ' 行看試算表）\n' : '') +
+             (a.exclusion.indexOf('無影響') === 0 ? '' : '     → 要更新：到「' + MONITOR_CONFIG.inboxSheet + '」那一列刪掉不要的行、「一般消費排除確認」欄填 V\n');
+      }
       s += '   ' + a.url + '\n\n';
       return s;
     };
@@ -1250,6 +1324,12 @@ function sendDigest_(alerts, errors, rebaselined, skipped, resume) {
   if (skipped) {
     body += '（本次有 ' + skipped + ' 列未到 check_days 設定的間隔天數，略過未抓——這是刻意的，' +
             '用來省 Jina 額度。想改回每次都抓就把該列 check_days 清空。）\n';
+  }
+
+  // 這次用了哪些 AI 模型、有沒有因為額度換過（2026-10-13 多模型備援；定義在 benefits-parser.gs）
+  if (typeof geminiUsageSummary_ === 'function') {
+    const usage = geminiUsageSummary_();
+    if (usage) body += '\n' + usage + '\n';
   }
 
   const materialCount = alerts.filter(function (a) { return a.cls && a.cls.material; }).length;

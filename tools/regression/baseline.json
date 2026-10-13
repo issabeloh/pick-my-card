@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generatedAt": "2026-10-08T02:55:21.958Z",
+    "generatedAt": "2026-10-13T02:52:34.746Z",
     "fixtureVersion": "20260910-175104",
     "frozenDate": "2026-09-11T12:00:00+08:00",
-    "liveCardsVersion": "20261007-164042",
+    "liveCardsVersion": "20261013-095604",
     "note": "基準綁定「凍結資料版本 ＋ 凍結日期」（tools/regression/fixture.json），不是線上 cards.version。資料與時鐘都凍住，所以差異＝程式行為真的變了；重拍凍結資料的時機見 docs/ops/regression.md"
   },
   "checks": [
@@ -1251,47 +1251,14 @@
       "amount": "30000",
       "results": [
         {
-          "card": "凱基誠品聯名卡",
-          "best": true,
-          "fields": {
-            "回饋率": "2.3%",
-            "回饋金額": "NT$490",
-            "回饋消費上限": "NT$20,000"
-          },
-          "matched": "一般消費回饋率 條件: 設定自動扣繳；排除保費",
-          "threshold": null
-        },
-        {
-          "card": "滙豐 Live+ 卡",
-          "best": false,
-          "fields": {
-            "回饋率": "1.88%",
-            "回饋金額": "NT$464",
-            "回饋消費上限": "NT$20,000"
-          },
-          "matched": "一般消費回饋率 條件: 認列為國內通路；設定自動扣繳",
-          "threshold": null
-        },
-        {
           "card": "滙豐現金回饋御璽卡",
-          "best": false,
+          "best": true,
           "fields": {
             "回饋率": "1.22%",
             "回饋金額": "NT$366",
             "回饋消費上限": "無上限"
           },
           "matched": "一般消費回饋率",
-          "threshold": null
-        },
-        {
-          "card": "永豐 Sport 卡",
-          "best": false,
-          "fields": {
-            "回饋率": "2%",
-            "回饋金額": "NT$350",
-            "回饋消費上限": "NT$5,000"
-          },
-          "matched": "一般消費回饋率 條件: 認列為國內通路；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳；先前規定使用的汗水不白流 APP將於2025/12/31 終止服務",
           "threshold": null
         },
         {
@@ -1325,6 +1292,17 @@
             "回饋消費上限": "無上限"
           },
           "matched": "一般消費回饋率",
+          "threshold": null
+        },
+        {
+          "card": "永豐 Sport 卡",
+          "best": false,
+          "fields": {
+            "回饋率": "1%",
+            "回饋金額": "NT$300",
+            "回饋消費上限": "無上限"
+          },
+          "matched": "一般消費回饋率 條件: 認列為國內通路；當月《大咖 DACARD App》數據達10,000大卡或Apple Watch圓滿劃圈10次，且每 10 天至少需開啟 App 乙次，並設定永豐帳戶自動扣繳；先前規定使用的汗水不白流 APP將於2025/12/31 終止服務",
           "threshold": null
         },
         {
@@ -1515,6 +1493,17 @@
           "threshold": null
         },
         {
+          "card": "滙豐 Live+ 卡",
+          "best": false,
+          "fields": {
+            "回饋率": "0.88%",
+            "回饋金額": "NT$264",
+            "回饋消費上限": "無上限"
+          },
+          "matched": "一般消費回饋率 條件: 認列為國內通路；設定自動扣繳",
+          "threshold": null
+        },
+        {
           "card": "玉山熊本熊卡",
           "best": false,
           "fields": {
@@ -1611,6 +1600,17 @@
             "回饋消費上限": "無上限"
           },
           "matched": "一般消費回饋率",
+          "threshold": null
+        },
+        {
+          "card": "凱基誠品聯名卡",
+          "best": false,
+          "fields": {
+            "回饋率": "0.3%",
+            "回饋金額": "NT$90",
+            "回饋消費上限": "無上限"
+          },
+          "matched": "一般消費回饋率 條件: 設定自動扣繳；排除保費",
           "threshold": null
         }
       ],
