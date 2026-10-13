@@ -1326,6 +1326,12 @@ function sendDigest_(alerts, errors, rebaselined, skipped, resume) {
             '用來省 Jina 額度。想改回每次都抓就把該列 check_days 清空。）\n';
   }
 
+  // 這次用了哪些 AI 模型、有沒有因為額度換過（2026-10-13 多模型備援；定義在 benefits-parser.gs）
+  if (typeof geminiUsageSummary_ === 'function') {
+    const usage = geminiUsageSummary_();
+    if (usage) body += '\n' + usage + '\n';
+  }
+
   const materialCount = alerts.filter(function (a) { return a.cls && a.cls.material; }).length;
   let subject = '【信用卡權益監控】';
   if (alerts.length) {

@@ -851,7 +851,7 @@ GitHub → Actions → 該次執行 → Summary 有一張表：每支是「更�
 | 項目 | 內容 |
 |---|---|
 | 程式檔案 | **自動化檔**的 Apps Script 內 `權益解析-新戶.gs`（備份：`benefits-parser.gs`） |
-| AI | Gemini API（`gemini-2.5-flash`，免費額度），**結構化輸出**鎖死欄位格式 |
+| AI | Gemini API（免費額度），**結構化輸出**鎖死欄位格式。**多模型備援**（2026-10-13）：`callGemini_` 依 `PARSER_CONFIG.models`（或指令碼屬性 `GEMINI_MODELS`，逗號分隔）的順序呼叫，429／404／5xx 自動換下一個——免費額度每個模型分開算（3.x／2.5 Flash 各每天 20 次、3.5／3.1 Flash Lite 各 500 次）。選單「其他工具 ▸ 測試 AI 模型」可看哪些名稱可用；監控通知信最後一行列出這次用了哪些模型。Google 搜尋 grounding（`callGeminiGrounded_`）固定用 2.5 Flash（Gemini 3 沒有免費 grounding） |
 | 讀取來源 | ① `2-變動通知` 中狀態=`待解析` 的列（監控的產出）② `3-貼上原文（新戶活動）` 分頁手動貼文字（**第 2 列起每一列＝一段原文，可一次貼多列**） |
 | 卡片 ID 來源 | 跨檔 `openById` 讀資料檔的 `Cards Data`（唯讀） |
 | 產出 | `4-待審核（新戶活動）` 分頁（自動建立）——**絕不直接寫正式表** |

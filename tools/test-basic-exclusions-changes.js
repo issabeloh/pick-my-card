@@ -219,5 +219,43 @@ const cardsSheet = () => makeSheet('Cards Data', [
   ok(t2.removed.join() === '停車場', '刪掉 3 字項目抓得到');
 }
 
+// ── 10. 多模型備援（callGemini_，benefits-parser.gs）
+{
+  const e = env({ sheets: {}, cards: cardsSheet() });
+  const calls = [];
+  let behavior = {};
+  e.UrlFetchApp = { fetch: (url) => {
+    const m = url.match(/models\/([^:]+):/)[1]; calls.push(m);
+    const code = behavior[m] || 200;
+    return { getResponseCode: () => code,
+      getContentText: () => code === 200 ? JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"ok":"' + m + '"}' }] } }] }) : '{"error":"x"}' };
+  } };
+  const G = load(e);
+  behavior = { 'gemini-3.8-flash': 404, 'gemini-3.7-flash': 429 };
+  let r = G.run('callGemini_', 'sys', 'u', {});
+  ok(r.ok === 'gemini-3.6-flash', '404、429 自動換到第三個：' + r.ok);
+  calls.length = 0;
+  r = G.run('callGemini_', 'sys', 'u', {});
+  ok(r.ok === 'gemini-3.6-flash' && calls.join() === 'gemini-3.6-flash', '同一次執行不再試已知不存在／冷卻中的模型：' + calls.join());
+  ok(/gemini-3\.6-flash ×2/.test(G.run('geminiUsageSummary_')) && /3\.8-flash 不存在/.test(G.run('geminiUsageSummary_')), '用量摘要：' + G.run('geminiUsageSummary_'));
+  const G2 = load(e);
+  behavior = Object.fromEntries(['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'].map(m => [m, 429]));
+  let err = '';
+  try { G2.run('callGemini_', 'sys', 'u', {}); } catch (x) { err = x.message; }
+  ok(/所有 AI 模型都暫時不能用/.test(err), '全部用完時報錯：' + err.slice(0, 40));
+  const G3 = load(e);
+  behavior = { 'gemini-3.8-flash': 403 };
+  err = '';
+  try { G3.run('callGemini_', 'sys', 'u', {}); } catch (x) { err = x.message; }
+  ok(/HTTP 403/.test(err), '金鑰錯這類錯誤不換模型、直接報錯');
+  // 指令碼屬性 GEMINI_MODELS 蓋過內建清單
+  const e4 = env({ sheets: {}, cards: cardsSheet() });
+  e4.PropertiesService = { getScriptProperties: () => ({ getProperty: k => ({ GEMINI_API_KEY: 'x', GEMINI_MODELS: 'my-model, other-model' })[k] || null }) };
+  e4.UrlFetchApp = e.UrlFetchApp; behavior = {};
+  const G4 = load(e4); calls.length = 0;
+  r = G4.run('callGemini_', 'sys', 'u', {});
+  ok(r.ok === 'my-model', '指令碼屬性的模型清單優先');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 一般消費排除變動流程：${pass} 通過、${fail} 失敗`);
 process.exit(fail ? 1 : 0);

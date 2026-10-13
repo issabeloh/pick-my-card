@@ -942,6 +942,8 @@ function checkAdExclusionsForAllCards() {
 }
 
 // 呼叫 Gemini（開 Google 搜尋 grounding，回純文字 + 來源）
+// ⚠️ 刻意固定 gemini-2.5-flash、不走 callGemini_ 的多模型備援（2026-10-13）：免費的「Google 搜尋 grounding」額度
+//    只有 Gemini 2／2.5 有（每天 1.5K），Gemini 3 系列是 0，換過去會直接失敗
 function callGeminiGrounded_(prompt) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error('尚未設定 GEMINI_API_KEY');
