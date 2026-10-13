@@ -87,7 +87,7 @@ function buildAutomationMenu_() {
     .addSeparator()
     .addSubMenu(ui.createMenu('其他工具')
       .addItem('檢查監控清單有沒有填錯', 'checkWatchlistConfig')                // watchlist-monitor.gs，只讀不寫
-      .addItem('檢查廣告排除（每月一次）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
+      .addItem('檢查廣告排除（比對正式表）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
       .addSeparator()
       // 登錄連結四步（register-link-finder.gs）；3 與下方「一般消費排除 2」是整個自動化檔裡
       // 僅有的兩個會寫入正式 Cards Data 的動作（各自只寫 registerLink_N／basicExclusions 欄，

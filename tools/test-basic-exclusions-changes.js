@@ -257,5 +257,23 @@ const cardsSheet = () => makeSheet('Cards Data', [
   ok(r.ok === 'my-model', '指令碼屬性的模型清單優先');
 }
 
+// ── 11. 廣告排除改依 basicExclusions 判斷（card-benefits-parser.gs）
+{
+  const src = fs.readFileSync(R + 'card-benefits-parser.gs', 'utf8');
+  const f = new Function(src + ';return adExclusionFromList_;')();
+  let r = f('信用卡年費,Google產品或服務,Google Play');
+  ok(r.known && r.google && !r.meta, 'Google產品或服務＝只排除 Google 廣告');
+  r = f('學費,Facebook Ads');
+  ok(r.meta && !r.google, 'Facebook Ads＝排除 Meta 廣告');
+  r = f('學費,廣告費');
+  ok(r.meta && r.google, '廣告費＝兩個都排除');
+  r = f('學費,MCC 7311廣告服務');
+  ok(r.meta && r.google, 'MCC 7311＝兩個都排除');
+  r = f('學費,Google Play');
+  ok(!r.meta && !r.google, 'Google Play 不算排除廣告');
+  r = f('');
+  ok(!r.known, '沒有名單＝無法判斷');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 一般消費排除變動流程：${pass} 通過、${fail} 失敗`);
 process.exit(fail ? 1 : 0);
