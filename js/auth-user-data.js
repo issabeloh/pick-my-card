@@ -40,16 +40,22 @@ function setupAuthentication() {
     setTimeout(() => {
         if (firebaseReadyHandled) return;
         console.error('⏱️ Firebase 載入逾時（' + FIREBASE_FALLBACK_MS + 'ms），以訪客模式初始化 UI，持續等待 SDK...');
-        ensureGuestUIBound();
-        // hero 已移除（2026-07-20）：逾時 fallback 必須自己顯示工具區，否則
-        // onAuthStateChanged 永遠不觸發時，頁面會停在 boot loader 清掉後的空白。
-        appStarted = true;
-        if (_authUIRefs) {
-            _authUIRefs.setGuestAvatarState();
-            _authUIRefs.showToolSections();
-        }
-        setGuestDropdownVisibility();
+        startGuestFallbackUI();
     }, FIREBASE_FALLBACK_MS);
+}
+
+// 逾時 fallback 共用：先以訪客模式顯示工具區（showToolSections 會一併清掉 boot loader），
+// 之後 onAuthStateChanged 真的觸發時照常切成登入／訪客狀態。
+// hero 已移除（2026-07-20）：逾時 fallback 必須自己顯示工具區，否則
+// onAuthStateChanged 永遠不觸發時，頁面會停在 boot loader。
+function startGuestFallbackUI() {
+    ensureGuestUIBound();
+    appStarted = true;
+    if (_authUIRefs) {
+        _authUIRefs.setGuestAvatarState();
+        _authUIRefs.showToolSections();
+    }
+    setGuestDropdownVisibility();
 }
 
 // Setup avatar dropdown menu (toggle, close on outside click, menu actions)
@@ -167,6 +173,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
 // 事件監聽器（重複綁定會讓按鈕點擊、document click 等監聽器疊加觸發）。
 let _guestUIBound = false;
 let _authStateSubscribed = false;
+let _authStateResolved = false; // onAuthStateChanged 是否已至少觸發一次（auth 判定逾時 fallback 用）
 // ensureGuestUIBound() 內定義的 closures，ensureAuthSubscribed() 的 onAuthStateChanged
 // callback 需要用到同一份（避免兩份 showToolSections/setGuestAvatarState 各自為政）。
 let _authUIRefs = null;
@@ -177,10 +184,11 @@ function ensureGuestUIBound() {
     if (_guestUIBound) return;
     _guestUIBound = true;
 
-    // Firebase 逾時 fallback 時，這裡是唯一會清除 boot loader 的地方
-    // （原本綁在 onAuthStateChanged 裡，Firebase 若永遠載不到就永遠不會清）。
+    // 這裡刻意「不」清 boot loader（2026-10-13）：Firebase 正常就緒時也會先跑到這裡，
+    // 但 onAuthStateChanged 還要等 Firebase 線上驗證帳號（可能好幾秒），在這裡就清掉
+    // 會讓 loader 消失、工具區還沒出來，用戶看到一片空白。boot loader 一律由
+    // showToolSections()（含兩條逾時 fallback）或 onAuthStateChanged 清除。
     // 見 index.html #pmc-boot-loader / html.pmc-returning-user 的說明。
-    document.documentElement.classList.remove('pmc-returning-user');
 
     const signInBtn = document.getElementById('sign-in-btn');
     const userPhoto = document.getElementById('user-photo');
@@ -334,6 +342,7 @@ function ensureAuthSubscribed() {
 
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
+        _authStateResolved = true;
         // Card levels are user-scoped; drop cached values when the user changes.
         clearCardLevelCache();
 
@@ -452,6 +461,16 @@ function ensureAuthSubscribed() {
 function initializeAuthListeners() {
     ensureGuestUIBound();
     ensureAuthSubscribed();
+
+    // auth 判定逾時 fallback（2026-10-13）：boot loader 現在留到 auth 判定完成才收，
+    // 萬一 SDK 到了、onAuthStateChanged 卻遲遲不觸發（網路很差），最多等
+    // FIREBASE_FALLBACK_MS 就先以訪客模式顯示工具區，不讓 loader 永遠轉。
+    // 刻意不依「上次是登入的」提示先當登入用戶顯示（站長裁定）。
+    setTimeout(() => {
+        if (_authStateResolved || appStarted) return;
+        console.error('⏱️ 登入狀態判定逾時（' + FIREBASE_FALLBACK_MS + 'ms），先以訪客模式顯示工具區，持續等待...');
+        startGuestFallbackUI();
+    }, FIREBASE_FALLBACK_MS);
 }
 
 // ✨ Unified user data loader - loads ALL user data in ONE Firestore call
