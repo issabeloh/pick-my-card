@@ -94,7 +94,10 @@ function buildAutomationMenu_() {
       // 一般消費排除兩步（basic-exclusions-extractor.gs，2026-09-30）：
       // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄（V＝只寫空白格、覆蓋＝整格換掉）
       .addItem('一般消費排除 1：AI 從監控快照抽', 'extractBasicExclusionsFromSnapshots')
-      .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData'))
+      // 官網變動流程（2026-10-13）：監控把逐項修改寫進 2-變動通知 → 站長刪行、填 V → 套用到待審核 → 2 寫回
+      .addItem('一般消費排除：套用修改到待審核', 'applyBasicExclusionChanges')
+      .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData')
+      .addItem('一般消費排除：補分析變動', 'analyzePendingBasicExclusionChanges'))
     .addSeparator()
     .addItem('📖 使用說明', 'openSheetGuide')                                    // sheet-guide.gs
     .addToUi();
