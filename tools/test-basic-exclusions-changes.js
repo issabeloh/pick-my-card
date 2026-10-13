@@ -195,5 +195,29 @@ const cardsSheet = () => makeSheet('Cards Data', [
   ok(inbox.rows[2][3] === '＋ 新增：A', '其他列不動');
 }
 
+// ── 9. 監控：長清單裡只加一個 5 字的項目也抓得到（舊做法：<8 字片段被丟、30 字門檻擋掉）
+{
+  const list = ['信用卡年費', '學費', '小額支付特約商店', 'E政府服務平台', '醫療費用', '各類稅款', '政府規費', '交通罰款', '停車費', '路邊停車費',
+    '公用事業費用', '水費', '電費', '瓦斯費', '電信費', '預借現金', '餘額代償', '循環利息', '違約金', '各項手續費', '保費', '基金申購', '證券代銷', '虛擬資產'];
+  const oldText = '本行一般消費定義排除項目如下：' + list.join('、') + '。其他說明。';
+  const newText = '本行一般消費定義排除項目如下：' + list.slice(0, 12).concat(['手搖飲料店']).concat(list.slice(12)).join('、') + '。其他說明。';
+  const watch = makeSheet('1-監控清單', [['bank', 'url', 'cards', 'last_snapshot', 'active', 'keywords'], ['聯邦', 'https://ubot', 'ubot-green', oldText, 'TRUE', '不回饋消費項目']]);
+  const inbox = makeSheet('2-變動通知', [['日期時間', 'card_id', '銀行', '實質變動', '狀態', '網址', '變動段落', '舊文字', '新文字']]);
+  const e = env({ sheets: { '1-監控清單': watch, '2-變動通知': inbox }, cards: cardsSheet() }); const G = load(e);
+  let sent = '';
+  G.set('fetchPageText_', () => newText);
+  G.set('callGemini_', (sys, user, schema) => {
+    if (schema.properties.no_effect) { sent = user; return { no_effect: false, major: false, groups: [{ card_ids: ['ubot-green'], ops: [{ op: 'add', item: '手搖飲料店' }] }] }; }
+    return { material: true, confidence: '高', change_types: ['新增'], summary: 'x', scope: '' };
+  });
+  G.run('checkWatchlist');
+  ok(/＋ 詞：手搖飲料店/.test(sent), '逐詞比對抓到 5 字的新項目並交給 AI');
+  ok(inbox.rows.length === 2, '寫進變動通知');
+  const t = G.run('exclusionTermDiff_', '更新日期：2026/10/06、瀏覽 1234 次。排除：學費、水費', '更新日期：2026/10/13、瀏覽 1301 次。排除：水費、學費');
+  ok(t.lines.length === 0, '日期／數字變動、項目換順序都不算：' + t.lines.join(' '));
+  const t2 = G.run('exclusionTermDiff_', '排除：學費、水費、停車場', '排除：學費、水費');
+  ok(t2.removed.join() === '停車場', '刪掉 3 字項目抓得到');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 一般消費排除變動流程：${pass} 通過、${fail} 失敗`);
 process.exit(fail ? 1 : 0);

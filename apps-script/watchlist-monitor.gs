@@ -361,24 +361,34 @@ function checkWatchlist() {
     const hasKeyword = rowKeywords.some(function (k) {
       return changedText.indexOf(k) !== -1;
     });
-    // 一般消費／排除頁（2026-10-13）：名單上新增一項（例：「手搖飲料店」）的那一句，通常不會剛好含
-    // 「一般消費」「不回饋」這種列關鍵字，照關鍵字閘門會整個漏掉。這種頁只要過雜訊門檻就算變動，
-    // 交給下面的一般消費排除分析判斷有沒有影響。判斷規則在 basic-exclusions-extractor.gs
+    // 一般消費／排除頁（2026-10-13）改用「逐詞比對」判斷有沒有變動，不看關鍵字也不看 30 字門檻：
+    //   ・排除項目常常只有 2～6 個字（停車場、手搖飲料店），30 字門檻擋得掉
+    //   ・名單是一長串頓號列舉，diffSegments_ 會把它切成一小段一小段，不到 8 字的片段直接丟掉
+    //     ——在長清單裡加一項「手搖飲料店、」根本不會出現在變動段落裡
+    //   ・新增那一項的句子通常不含「一般消費」「不回饋」這種列關鍵字
+    // 所以把新舊全文都切成詞，任何一個詞「新增或消失」就算變動，交給一般消費排除分析判斷有沒有影響。
+    // 判斷是不是這種頁的規則在 basic-exclusions-extractor.gs（看 keywords 欄）
     const isExclusionRow = typeof basicExIsExclusionRow_ === 'function' && cKeywords >= 0 &&
       basicExIsExclusionRow_(row[cKeywords]);
+    const termDiff = isExclusionRow ? exclusionTermDiff_(oldText, text) : null;
+    const exclusionChanged = !!(termDiff && termDiff.lines.length);
+    // 給 AI 與寫進分頁的變動段落：一般消費頁多附一段逐詞比對，短項目才看得到
+    const diffForRow = exclusionChanged
+      ? (changedText ? changedText + '\n' : '') + '【逐詞比對】\n' + termDiff.lines.join('\n')
+      : changedText;
 
-    if (changedText.length >= rowMinDiff && (hasKeyword || isExclusionRow)) {
+    if ((changedText.length >= rowMinDiff && hasKeyword) || exclusionChanged) {
       // ① AI 判斷是否實質回饋變動 + 產一句人話摘要（失敗回 null，不擋監控）
       //    連同「真正的新詞/消失詞」一起給——那是程式用字串比對算出來的事實，
       //    比讓 AI 自己從一堆切片裡猜可靠得多（見 refineDiff_）
-      const cls = classifyDiff_(changedText, text, inboxCardId, bank, oldText, refined);
+      const cls = classifyDiff_(diffForRow, text, inboxCardId, bank, oldText, refined);
       // ①b 一般消費排除頁：當場分析這次變動要改名單的哪幾項，寫進同一列「一般消費排除修改」欄。
       //     時間不夠（快撞 6 分鐘上限）就先標「待分析」，這一段結尾或下次監控有空檔時補
       //     （basicExAnalyzePendingChanges_；選單也能手動補）
       let exclusion = '';
       if (isExclusionRow && typeof basicExAnalyzeChangeSafe_ === 'function') {
         exclusion = (Date.now() - startedAt) / 1000 < MONITOR_CONFIG.maxRunSeconds + 60
-          ? basicExAnalyzeChangeSafe_(bank, inboxCardId, changedText)
+          ? basicExAnalyzeChangeSafe_(bank, inboxCardId, diffForRow)
           : BASICEX_CHANGE_PENDING;
       }
       const exclusionMatters = exclusion && exclusion.indexOf('無影響') !== 0;
@@ -391,7 +401,7 @@ function checkWatchlist() {
           cardId: inboxCardId,   // 單卡＝card_id；多卡頁＝cards 清單，下游解析靠這一欄當卡片線索
           bank: bank,
           url: url,
-          diffText: changedText,
+          diffText: diffForRow,
           oldText: oldText,
           newText: text,
           cls: cls,
@@ -404,7 +414,7 @@ function checkWatchlist() {
         label: label,
         bank: (!isBankPage && cardId) ? bank : '',   // 多卡頁的 label 已含銀行名，不再重複掛括號
         url: url,
-        diffText: changedText.slice(0, 300),
+        diffText: diffForRow.slice(0, 300),
         cls: cls,
         exclusion: exclusion,
         cosmetic: cosmetic   // true＝只在信裡出現，沒寫進「2-變動通知」
@@ -740,6 +750,29 @@ function diffSegments_(oldText, newText) {
   oldMap.forEach(function (s, k) { if (!newMap.has(k)) removed.push('－ ' + s); });
 
   return { added: added, removed: removed };
+}
+
+/************** 一般消費／排除頁專用：逐詞比對（2026-10-13） **************/
+// 把新舊全文沿頓號、逗號、括號、句號、空白切成詞，回傳「新增的詞／消失的詞」。
+// 跟 diffSegments_ 不同：不管順序與分段，只要名單上多一項或少一項（哪怕只有 2 個字）就抓得到；
+// 純粹搬移、重排不會產生差異。純數字／日期（更新時間、瀏覽次數）不算，避免每週假警報。
+function exclusionTermDiff_(oldText, newText) {
+  const SPLIT = /[●·・、，,；;：:／/｜|。！？!?\n\r（）()「」『』【】\[\]<>《》"“”']|\s+/;
+  const NOISE = /^[\d０-９\s\/\-:.．年月日時分秒%％~～]+$/;
+  const units = function (t) {
+    const set = {};
+    String(t || '').split(SPLIT).forEach(function (u) {
+      u = u.trim();
+      if (u.length >= 2 && u.length <= 40 && !NOISE.test(u)) set[u] = true;
+    });
+    return set;
+  };
+  const a = units(oldText), b = units(newText);
+  const added = Object.keys(b).filter(function (u) { return !a[u]; });
+  const removed = Object.keys(a).filter(function (u) { return !b[u]; });
+  const lines = added.slice(0, 60).map(function (u) { return '＋ 詞：' + u; })
+    .concat(removed.slice(0, 60).map(function (u) { return '－ 詞：' + u; }));
+  return { added: added, removed: removed, lines: lines };
 }
 
 /************** 濾掉「只是搬移／重新分段」的假差異（2026-08-16 血淚修正） **************/
