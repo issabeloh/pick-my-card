@@ -81,6 +81,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
       回饋率會跟著 `cards.data` 走，這句話不會
     - 用途是講自動規則講不出來的事，例如台新 Richart 卡的「每月選一個方案綁生活場景」
       （那五行都掛著〔切換○○刷方案〕，但「只能選一個」這件事沒有任何一行講得出來）
+12b. **ExclusionGroups** —— 一般消費排除項目的同義詞群組（2026-10-14；name, variants 逗號或換行分隔, type＝分類／同義詞（空白＝分類）, active）。
+    **分類**（如「醫療費用」⊃ 醫指付、長庚醫療體系…）：打 name 才展開成整組；**同義詞**（如交通罰單＝罰款＝罰鍰）：打 name 或任一寫法都展開。
+    只影響排除判斷、詳情頁搜尋、下拉選單（只列 name），不進活動匹配。前端 `expandExclusionGroupTerms()`（`js/search-match.js`）；規則見 cashback-engine.md 第 10 節
 13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
     2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）

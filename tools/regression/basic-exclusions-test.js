@@ -251,6 +251,50 @@ const META = readFixtureMeta();
   await page.evaluate(() => { cardsData.cards.forEach(c => delete c.basicExclusions); currentQuickSearchOption = null; });
   await page.fill('#merchant-input', '');
 
+  // 排除項目同義詞群組（ExclusionGroups，2026-10-14）：打代表名稱 → 整組銀行寫法一起比；打單一寫法不擴大
+  await page.evaluate(() => {
+    cardsData.exclusionGroups = [{ name: 'zzz醫療', variants: ['zzz醫指付', 'zzz長庚醫療體系'] }];
+  });
+  r = await search('zzz醫療', { first: 4, items: ['zzz醫指付'] });
+  const r2 = await search('zzz醫療', { all: ['zzz長庚醫療體系'] });
+  check('同義詞群組：打代表名稱 → 名單只寫銀行寫法的卡也排除（灰卡寫銀行原文）',
+    r.excluded.length === 4 && r.excluded.every(e => e.items === 'zzz醫指付' && !e.maybe) && r2.excluded.length === total,
+    JSON.stringify({ a: r.excluded.slice(0, 2), b: r2.excluded.length }));
+  r = await search('zzz醫指付', { all: ['zzz長庚醫療體系'] });
+  check('分類群組：打其中一個銀行寫法 → 不擴大成整組', r.excluded.length === 0, JSON.stringify(r.excluded.slice(0, 2)));
+  await page.evaluate(() => { cardsData.exclusionGroups.push({ name: 'zzz交通罰單', type: '同義詞', variants: ['zzz交通罰款', 'zzz交通罰鍰'] }); });
+  r = await search('zzz交通罰鍰', { all: ['zzz交通罰單'] });
+  check('同義詞群組：打任一寫法 → 名單寫另一種的卡也排除', r.excluded.length === total && r.excluded[0].items === 'zzz交通罰單',
+    JSON.stringify(r.excluded.slice(0, 1)));
+  pv = await typePreview('zzz醫療', ['zzz醫指付']);
+  check('同義詞群組：輸入預覽列出命中的銀行寫法', pv.text === '✓ 匹配到一般消費排除項目: zzz醫指付', JSON.stringify(pv));
+  const sug = await page.evaluate(() => {
+    cardsData.cards.forEach(c => { c.basicExclusions = ['zzz醫指付', 'zzz長庚醫療體系', 'zzz其他']; });
+    cardsData = Object.assign({}, cardsData);
+    return { a: getMerchantSuggestions('zzz').map(e => e.name), b: getMerchantSuggestions('長庚').map(e => e.name) };
+  });
+  check('同義詞群組：下拉選單只列代表名稱、銀行寫法不單獨列', sug.a.includes('zzz醫療') && sug.a.includes('zzz其他') &&
+    !sug.a.includes('zzz醫指付') && !sug.a.includes('zzz長庚醫療體系'), JSON.stringify(sug.a));
+  check('同義詞群組：打銀行寫法的一部分也找得到代表名稱', sug.b.includes('zzz醫療'), JSON.stringify(sug.b));
+  const dgroup = await page.evaluate(async () => {
+    const card = cardsData.cards[0];
+    await showCardDetail(card.id);
+    await new Promise(res => setTimeout(res, 300));
+    const input = document.getElementById('cashback-search-input');
+    input.value = 'zzz醫療'; filterCashbackItems('zzz醫療');
+    const box = document.querySelector('#card-basic-cashback .rate-card-excluded');
+    const out = { shown: box && box.style.display !== 'none', list: box && box.querySelector('strong.merchant-list').textContent,
+      marks: box ? [...box.querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent) : [] };
+    input.value = ''; filterCashbackItems('');
+    return out;
+  });
+  check('同義詞群組：詳情頁搜尋代表名稱 → 找到各銀行寫法並標記',
+    dgroup.shown && dgroup.list === 'zzz醫指付、zzz長庚醫療體系、…' && dgroup.marks.length === 2, JSON.stringify(dgroup));
+  await page.evaluate(() => {
+    document.getElementById('card-detail-modal').style.display = 'none'; document.body.style.overflow = '';
+    delete cardsData.exclusionGroups; cardsData.cards.forEach(c => delete c.basicExclusions); cardsData = Object.assign({}, cardsData);
+  });
+
   // 詳情頁搜尋框也查一般回饋區（2026-10-14）：第 11 項以後的名單要能搜到（收合時不在 DOM 裡）；
   // 沒命中的國內／海外一般消費卡要藏起來；命中項目前後沒命中的縮成「…」
   const dsearch = await page.evaluate(async () => {

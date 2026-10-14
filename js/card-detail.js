@@ -1281,6 +1281,8 @@ function highlightCashbackTerm(root, term) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
             if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            // 多個搜尋詞（同義詞群組）依序標記：已標過的字不再包一層
+            if (node.parentNode && node.parentNode.closest && node.parentNode.closest('mark.cashback-search-hl')) return NodeFilter.FILTER_REJECT;
             return node.nodeValue.toLowerCase().includes(term)
                 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
@@ -1344,6 +1346,8 @@ const DETAIL_SEARCH_SECTIONS = [
 ];
 function filterCashbackItems(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
+    // 打的是排除項目同義詞群組的代表名稱（如「醫療費用」）→ 各銀行寫法一起找（js/search-match.js）
+    const terms = term ? expandExclusionGroupTerms([term]) : [];
     const emptyMsg = document.getElementById('cashback-search-empty');
     let total = 0;
 
@@ -1354,7 +1358,7 @@ function filterCashbackItems(searchTerm) {
         // 先還原上一次搜尋收起的區，才分得出「本來就沒顯示」的區
         if (section._searchHidden) { section.style.display = ''; section._searchHidden = false; }
         if (section.style.display === 'none') return;
-        const visible = filterDetailCards(container, term);
+        const visible = filterDetailCards(container, terms);
         total += visible;
         if (term && visible === 0) { section.style.display = 'none'; section._searchHidden = true; }
     });
@@ -1364,8 +1368,9 @@ function filterCashbackItems(searchTerm) {
     }
 }
 
-// 過濾一個容器裡的 .cashback-detail-item，回傳顯示中的張數
-function filterDetailCards(container, term) {
+// 過濾一個容器裡的 .cashback-detail-item（命中任一搜尋詞就留），回傳顯示中的張數
+function filterDetailCards(container, terms) {
+    const term = terms.length > 0;
     // 必須先還原，textContent 才是乾淨原文（也讓每次輸入都從無標記狀態重算）
     clearCashbackHighlights(container);
     restoreCondensedMerchantLists(container);
@@ -1380,11 +1385,12 @@ function filterDetailCards(container, term) {
             return;
         }
         // 比對整個卡片的 textContent，包含通路名稱、category 標籤、條件等
-        if (item.textContent.toLowerCase().includes(term)) {
+        const text = item.textContent.toLowerCase();
+        if (terms.some(t => text.includes(t))) {
             item.style.display = '';
             visibleCount++;
-            item.querySelectorAll('strong.merchant-list').forEach(el => condenseMerchantList(el, term));
-            highlightCashbackTerm(item, term); // 只標記顯示中的項目
+            item.querySelectorAll('strong.merchant-list').forEach(el => condenseMerchantList(el, terms));
+            terms.forEach(t => highlightCashbackTerm(item, t)); // 只標記顯示中的項目
         } else {
             item.style.display = 'none';
         }
@@ -1409,13 +1415,14 @@ function splitMerchantList(text) {
 // 搜尋時清單只留命中的通路，中間沒命中的一段段縮成「…」（2026-10-14 站長要求：命中項目在長清單
 // 後段時一眼就看到）。清單裡一個都沒命中（命中的是卡名、條件等）就不動。原文記在 JS 屬性，
 // restoreCondensedMerchantLists 還原；只動 textContent，不碰 innerHTML（鐵則 3）
-function condenseMerchantList(el, term) {
+function condenseMerchantList(el, terms) {
     const full = el.textContent;
     const parts = splitMerchantList(full);
-    if (!parts.some(p => p.toLowerCase().includes(term))) return;
+    const hit = p => { const lower = p.toLowerCase(); return terms.some(t => lower.includes(t)); };
+    if (!parts.some(hit)) return;
     const out = [];
     parts.forEach(p => {
-        if (p.toLowerCase().includes(term)) out.push(p);
+        if (hit(p)) out.push(p);
         else if (out[out.length - 1] !== '…') out.push('…');
     });
     const condensed = out.join('、');

@@ -196,6 +196,7 @@ if (!card.specialItems || card.specialItems.length === 0)
   - `allBasicExcluded`＝結果**全是**灰卡（有指定通路結果時不算）
 - **輸入時的匹配提示**（2026-10-14 站長要求，`showBasicExclusionPreview`）：打字當下除了「✓ 匹配到: 商家」，比較中的卡命中排除名單（確定＋可能，合併去重，最多列 5 個＋「等 N 項」）時再補一行「✓ 匹配到一般消費排除項目: …」；沒有商家匹配時單獨顯示這行（同綠色 matched-item）。按「計算」之後狀態列照上面原規則重寫
 - **快捷搜尋（多關鍵詞）**（2026-10-14）：`getBasicExclusionSearchTerms(merchantValue, quickOption)` 用全部關鍵詞各自展開的聯集比名單、不受精準搜尋影響。關鍵詞全是排除項目（例「醫療費用」：公部門醫療服務費用、醫指付…）時沒有活動可匹配，`handleQuickSearch` 仍**保留** `currentQuickSearchOption`（以前會清掉，計算時就只剩顯示名去比名單）
+- **同義詞群組**（2026-10-14，ExclusionGroups 工作表 → `cardsData.exclusionGroups`，`expandExclusionGroupTerms`）：`getBasicExclusionSearchTerms` 最後一步展開。分類型只認 name 全等；同義詞型 name 或任一寫法全等都展開成整組。不進 `findMatchingItem`。下拉選單只列 name、只出現在排除名單的寫法不單獨列；詳情頁搜尋同樣展開
 - **測試**：`node tools/regression/basic-exclusions-test.js`（凍結資料沒有這個欄位，所以 run-regression.js 碰不到這條路徑；這支在頁面裡臨時塞名單驗 16 項）。改這一塊必跑
 
 ## 教訓記錄

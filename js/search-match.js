@@ -12,6 +12,7 @@
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
  *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
+ *  - 排除項目同義詞群組          → "expandExclusionGroupTerms"
  *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
  * ============================================================ */
 // Fuzzy search mapping for common terms
@@ -854,7 +855,32 @@ function getBasicExclusionSearchTerms(merchantValue, quickOption = null) {
             });
         });
     }
-    return terms;
+    return expandExclusionGroupTerms(terms);
+}
+
+// 排除項目同義詞群組（ExclusionGroups 工作表 → cardsData.exclusionGroups，2026-10-14 站長要求）：
+// 各銀行對同一件事的寫法不同（醫指付／公部門醫療服務費用／長庚醫療體系…），用戶不知道。
+// 群組＝一個代表名稱＋銀行寫法清單，兩種 type：
+//   ・分類（預設）：代表名稱涵蓋幾種**不同**項目（醫療費用 ⊃ 醫指付、長庚醫療體系…）。搜尋詞**等於**代表名稱
+//     才展開；打其中一個寫法（「醫指付」）不展開——那是用戶指定的那一個，不能擴大成整組
+//   ・同義詞：每個寫法都是**同一件事**（交通罰單＝交通罰款＝交通罰鍰）。搜尋詞等於代表名稱或任一寫法都展開成整組，
+//     各卡名單只要寫其中一種，用戶打哪一種都找得到
+// 只用在排除判斷與詳情頁搜尋，**不進 findMatchingItem**（不會因為「醫療」拉進寵物醫院的活動）。
+// 灰卡照樣寫各卡自己的銀行原文，用戶看得到實際排除的是哪一項。
+function getExclusionGroups() {
+    return (cardsData && Array.isArray(cardsData.exclusionGroups)) ? cardsData.exclusionGroups : [];
+}
+function expandExclusionGroupTerms(terms) {
+    const out = terms.slice();
+    getExclusionGroups().forEach(g => {
+        const name = String((g && g.name) || '').trim().toLowerCase();
+        if (!name) return;
+        const variants = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
+        const triggered = terms.includes(name) || (g.type === '同義詞' && variants.some(v => terms.includes(v)));
+        if (!triggered) return;
+        [name, ...variants].forEach(t => { if (!out.includes(t)) out.push(t); });
+    });
+    return out;
 }
 
 // 輸入時的匹配提示也要講排除名單（2026-10-14 站長要求：匹配到指定通路商家會出「✓ 匹配到」，
@@ -1008,13 +1034,28 @@ function buildMerchantSuggestIndex() {
     // 快捷選項先加：同名時點下去走快捷搜尋（多關鍵詞聯集），比單一名稱完整
     const options = (typeof quickSearchOptions !== 'undefined' && Array.isArray(quickSearchOptions)) ? quickSearchOptions : [];
     options.forEach(o => { if (o && o.displayName) add(o.displayName, o); });
-    (cardsData && cardsData.cards || []).forEach(card => {
+    // 排除項目同義詞群組：只列代表名稱（aliases 讓打銀行寫法的一部分也找得到它），
+    // 群組裡的銀行寫法如果**只**出現在排除名單，就不再單獨列——不然打「醫」會並列二十幾種寫法
+    const cards = (cardsData && cardsData.cards) || [];
+    const groupedVariants = new Set();
+    getExclusionGroups().forEach(g => {
+        const aliases = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
+        aliases.forEach(a => groupedVariants.add(a));
+        const name = String((g && g.name) || '').trim();
+        if (name && !seen.has(name.toLowerCase())) {
+            seen.add(name.toLowerCase());
+            index.push({ name, lower: name.toLowerCase(), aliases });
+        }
+    });
+    cards.forEach(card => {
         (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
         (card.specialItems || []).forEach(i => add(i));
         if (card.generalItems) Object.values(card.generalItems).forEach(items => (items || []).forEach(i => add(i)));
         (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
-        (card.basicExclusions || []).forEach(i => add(i));
     });
+    cards.forEach(card => (card.basicExclusions || []).forEach(i => {
+        if (!groupedVariants.has(String(i || '').trim().toLowerCase())) add(i);
+    }));
     return index;
 }
 
@@ -1031,8 +1072,9 @@ function getMerchantSuggestions(query) {
     const hits = [];
     merchantSuggestIndex.forEach((entry, order) => {
         const pos = entry.lower.indexOf(q);
-        if (pos === -1) return;
-        hits.push({ entry, rank: pos === 0 ? 0 : 1, order });
+        if (pos !== -1) { hits.push({ entry, rank: pos === 0 ? 0 : 1, order }); return; }
+        // 同義詞群組：打的是某個銀行寫法的一部分（「醫指」）→ 列出代表名稱，排在名稱本身命中的後面
+        if (entry.aliases && entry.aliases.some(a => a.includes(q))) hits.push({ entry, rank: 2, order });
     });
     hits.sort((a, b) => a.rank - b.rank || a.entry.name.length - b.entry.name.length || a.order - b.order);
     const list = hits.slice(0, MERCHANT_SUGGEST_LIMIT).map(h => h.entry);
@@ -1067,11 +1109,15 @@ function renderMerchantSuggest(input) {
         li.setAttribute('role', 'option');
         // 命中的字加粗（跟 Google／購物網站的建議清單一樣，看得出是對到哪裡）
         const pos = entry.lower.indexOf(q);
-        if (pos > 0) li.appendChild(document.createTextNode(entry.name.slice(0, pos)));
-        const mark = document.createElement('mark');
-        mark.textContent = entry.name.slice(pos, pos + q.length);
-        li.appendChild(mark);
-        if (pos + q.length < entry.name.length) li.appendChild(document.createTextNode(entry.name.slice(pos + q.length)));
+        if (pos === -1) {
+            li.textContent = entry.name; // 同義詞群組靠銀行寫法命中：名稱本身沒有這幾個字
+        } else {
+            if (pos > 0) li.appendChild(document.createTextNode(entry.name.slice(0, pos)));
+            const mark = document.createElement('mark');
+            mark.textContent = entry.name.slice(pos, pos + q.length);
+            li.appendChild(mark);
+            if (pos + q.length < entry.name.length) li.appendChild(document.createTextNode(entry.name.slice(pos + q.length)));
+        }
         // mousedown 先擋掉，輸入框才不會在 click 之前 blur 把選單收掉
         li.addEventListener('mousedown', e => e.preventDefault());
         li.addEventListener('click', () => pickMerchantSuggestion(i));
