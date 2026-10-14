@@ -11,6 +11,7 @@
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
+ *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
  *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
  * ============================================================ */
 // Fuzzy search mapping for common terms
@@ -975,4 +976,170 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
         : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
+}
+
+// ============================================================
+// 輸入建議下拉選單（2026-10-14 站長要求）
+// 用戶不知道銀行怎麼命名（打「罰」想找「交通罰單」），邊打邊列出資料裡**真的存在**的名稱讓用戶挑：
+// 指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目、快捷選項名稱。
+// 只列名稱、不標類別（站長決定）。點選＝替用戶打好這個字（走 handleMerchantInput），不自動計算——
+// 跟快捷搜尋「只填入、不自動計算」同一個產品決策；快捷選項走 handleQuickSearch。
+// 效能：名稱表（約 2 千筆）只在 cardsData 換了才重建；每次輸入只做子字串掃描（< 1ms）。
+// 中文輸入法選字中（isComposing）不更新，避免打注音時亂跳。
+// 名稱全來自 Sheets／用戶自訂，全程 DOM API（textContent），不碰 innerHTML（鐵則 3）
+// ============================================================
+const MERCHANT_SUGGEST_LIMIT = 8;
+let merchantSuggestIndex = null;      // [{ name, lower, option? }]
+let merchantSuggestIndexSource = null; // 建表時的 cardsData（換了就重建）
+let merchantSuggestOptionsSource = null; // 建表時的 quickSearchOptions（用戶改快捷選項會整個換新陣列）
+let merchantSuggestActive = -1;
+let merchantSuggestItems = [];
+
+function buildMerchantSuggestIndex() {
+    const seen = new Set();
+    const index = [];
+    const add = (raw, option) => {
+        const name = String(raw == null ? '' : raw).trim();
+        const lower = name.toLowerCase();
+        if (!name || seen.has(lower)) return;
+        seen.add(lower);
+        index.push(option ? { name, lower, option } : { name, lower });
+    };
+    // 快捷選項先加：同名時點下去走快捷搜尋（多關鍵詞聯集），比單一名稱完整
+    const options = (typeof quickSearchOptions !== 'undefined' && Array.isArray(quickSearchOptions)) ? quickSearchOptions : [];
+    options.forEach(o => { if (o && o.displayName) add(o.displayName, o); });
+    (cardsData && cardsData.cards || []).forEach(card => {
+        (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
+        (card.specialItems || []).forEach(i => add(i));
+        if (card.generalItems) Object.values(card.generalItems).forEach(items => (items || []).forEach(i => add(i)));
+        (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
+        (card.basicExclusions || []).forEach(i => add(i));
+    });
+    return index;
+}
+
+// 開頭相符 > 包含；同級短的在前（越短越像用戶要的那個詞）；再同就照建表順序（快捷選項在前）
+function getMerchantSuggestions(query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q || !cardsData) return [];
+    const options = typeof quickSearchOptions !== 'undefined' ? quickSearchOptions : null;
+    if (!merchantSuggestIndex || merchantSuggestIndexSource !== cardsData || merchantSuggestOptionsSource !== options) {
+        merchantSuggestIndex = buildMerchantSuggestIndex();
+        merchantSuggestIndexSource = cardsData;
+        merchantSuggestOptionsSource = options;
+    }
+    const hits = [];
+    merchantSuggestIndex.forEach((entry, order) => {
+        const pos = entry.lower.indexOf(q);
+        if (pos === -1) return;
+        hits.push({ entry, rank: pos === 0 ? 0 : 1, order });
+    });
+    hits.sort((a, b) => a.rank - b.rank || a.entry.name.length - b.entry.name.length || a.order - b.order);
+    const list = hits.slice(0, MERCHANT_SUGGEST_LIMIT).map(h => h.entry);
+    // 已經打完整、而且只剩它自己 → 不用再提示
+    if (list.length === 1 && list[0].lower === q) return [];
+    return list;
+}
+
+function closeMerchantSuggest() {
+    const box = document.getElementById('merchant-suggest');
+    if (box) { box.hidden = true; box.textContent = ''; }
+    merchantSuggestItems = [];
+    merchantSuggestActive = -1;
+    const input = document.getElementById('merchant-input');
+    if (input) { input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+}
+
+function renderMerchantSuggest(input) {
+    const box = document.getElementById('merchant-suggest');
+    if (!box) return;
+    const query = input.value.trim();
+    merchantSuggestItems = getMerchantSuggestions(query);
+    merchantSuggestActive = -1;
+    if (merchantSuggestItems.length === 0) { closeMerchantSuggest(); return; }
+
+    const q = query.toLowerCase();
+    box.textContent = '';
+    merchantSuggestItems.forEach((entry, i) => {
+        const li = document.createElement('li');
+        li.id = `merchant-suggest-${i}`;
+        li.className = 'merchant-suggest-item';
+        li.setAttribute('role', 'option');
+        // 命中的字加粗（跟 Google／購物網站的建議清單一樣，看得出是對到哪裡）
+        const pos = entry.lower.indexOf(q);
+        if (pos > 0) li.appendChild(document.createTextNode(entry.name.slice(0, pos)));
+        const mark = document.createElement('mark');
+        mark.textContent = entry.name.slice(pos, pos + q.length);
+        li.appendChild(mark);
+        if (pos + q.length < entry.name.length) li.appendChild(document.createTextNode(entry.name.slice(pos + q.length)));
+        // mousedown 先擋掉，輸入框才不會在 click 之前 blur 把選單收掉
+        li.addEventListener('mousedown', e => e.preventDefault());
+        li.addEventListener('click', () => pickMerchantSuggestion(i));
+        box.appendChild(li);
+    });
+    box.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+}
+
+function setMerchantSuggestActive(i) {
+    const box = document.getElementById('merchant-suggest');
+    const input = document.getElementById('merchant-input');
+    if (!box || !input || merchantSuggestItems.length === 0) return;
+    const n = merchantSuggestItems.length;
+    merchantSuggestActive = ((i % n) + n) % n;
+    box.querySelectorAll('.merchant-suggest-item').forEach((li, idx) => {
+        const on = idx === merchantSuggestActive;
+        li.classList.toggle('active', on);
+        li.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on) li.scrollIntoView({ block: 'nearest' });
+    });
+    input.setAttribute('aria-activedescendant', `merchant-suggest-${merchantSuggestActive}`);
+}
+
+function pickMerchantSuggestion(i) {
+    const entry = merchantSuggestItems[i];
+    const input = document.getElementById('merchant-input');
+    closeMerchantSuggest();
+    if (!entry || !input) return;
+    if (entry.option && typeof handleQuickSearch === 'function') {
+        handleQuickSearch(entry.option);
+    } else {
+        input.value = entry.name;
+        handleMerchantInput();
+    }
+    // 收起手機鍵盤，讓用戶看到匹配狀態列、直接按「計算」
+    input.blur();
+}
+
+function setupMerchantSuggest(input) {
+    if (!input || document.getElementById('merchant-suggest')) return;
+    const wrap = input.closest('.merchant-input-wrap') || input.parentNode;
+    const box = document.createElement('ul');
+    box.id = 'merchant-suggest';
+    box.className = 'merchant-suggest';
+    box.setAttribute('role', 'listbox');
+    box.hidden = true;
+    wrap.appendChild(box);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', 'merchant-suggest');
+    input.setAttribute('aria-expanded', 'false');
+
+    input.addEventListener('input', e => { if (!e.isComposing) renderMerchantSuggest(input); });
+    input.addEventListener('compositionend', () => renderMerchantSuggest(input));
+    input.addEventListener('focus', () => { if (input.value.trim()) renderMerchantSuggest(input); });
+    input.addEventListener('blur', closeMerchantSuggest);
+    input.addEventListener('keydown', e => {
+        if (e.isComposing || box.hidden) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); setMerchantSuggestActive(merchantSuggestActive + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setMerchantSuggestActive(merchantSuggestActive - 1); }
+        else if (e.key === 'Escape') { e.preventDefault(); closeMerchantSuggest(); }
+        else if (e.key === 'Enter' && merchantSuggestActive >= 0) {
+            // 擋掉 keydown 預設，全站 keypress 的「Enter＝計算」才不會同時觸發
+            e.preventDefault();
+            pickMerchantSuggestion(merchantSuggestActive);
+        } else if (e.key === 'Enter') {
+            closeMerchantSuggest(); // 沒選建議直接按 Enter＝照原本計算，選單收掉
+        }
+    });
 }

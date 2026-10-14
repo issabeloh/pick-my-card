@@ -9207,6 +9207,43 @@ mark.cashback-search-hl {
     position: relative;
 }
 
+/* 輸入建議下拉選單（setupMerchantSuggest，2026-10-14）：貼在輸入框正下方、蓋在快捷選項上 */
+.merchant-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 4px 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #dbe1ea;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 60;
+}
+.merchant-suggest[hidden] {
+    display: none;
+}
+.merchant-suggest-item {
+    padding: 10px 14px;
+    font-size: 15px;
+    color: #4b5563;
+    cursor: pointer;
+    line-height: 1.4;
+}
+.merchant-suggest-item:hover,
+.merchant-suggest-item.active {
+    background: #f1f5f9;
+}
+.merchant-suggest-item mark {
+    background: none;
+    color: #111827;
+    font-weight: 700;
+}
+
 .merchant-input-wrap #merchant-input {
     padding-right: 44px; /* 讓長輸入不會壓在 ✕ 底下 */
 }

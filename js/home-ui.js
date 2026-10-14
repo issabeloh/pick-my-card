@@ -1488,6 +1488,8 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
+    // 邊打邊列出資料裡有的名稱（search-match.js「輸入建議下拉選單」）
+    setupMerchantSuggest(merchantInput);
 
     // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
     const merchantClearBtn = document.getElementById('merchant-clear-btn');
