@@ -4840,6 +4840,31 @@ label.personal-field-check input[type="checkbox"] {
 }
 
 /* Real-time search input above special cashback */
+/* 詳情頁搜尋框區塊（2026-10-14）：放在所有回饋區上方、自成一塊——淺藍底＋標籤，
+   跟上方「近期異動」的淺灰清單分得開（站長回報兩塊看起來像同一區）。
+   「指定通路回饋」導覽鈕捲到這裡（data-anchor） */
+.cashback-search-bar {
+    margin: 8px 0 24px;
+    padding: 12px 14px;
+    background: #f5f9ff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+}
+.cashback-search-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+.cashback-search-bar .cashback-search-input {
+    margin-bottom: 0;
+    background-color: #fff;
+}
+.cashback-search-bar .cashback-search-empty {
+    margin: 10px 0 0;
+}
+
 .cashback-search-input {
     width: 100%;
     padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
@@ -9205,6 +9230,43 @@ mark.cashback-search-hl {
 /* 一鍵清除輸入的 ✕（原生 search cancel 已在上面關掉，改用跨瀏覽器一致的自製鈕） */
 .merchant-input-wrap {
     position: relative;
+}
+
+/* 輸入建議下拉選單（setupMerchantSuggest，2026-10-14）：貼在輸入框正下方、蓋在快捷選項上 */
+.merchant-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 4px 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #dbe1ea;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 60;
+}
+.merchant-suggest[hidden] {
+    display: none;
+}
+.merchant-suggest-item {
+    padding: 10px 14px;
+    font-size: 15px;
+    color: #4b5563;
+    cursor: pointer;
+    line-height: 1.4;
+}
+.merchant-suggest-item:hover,
+.merchant-suggest-item.active {
+    background: #f1f5f9;
+}
+.merchant-suggest-item mark {
+    background: none;
+    color: #111827;
+    font-weight: 700;
 }
 
 .merchant-input-wrap #merchant-input {

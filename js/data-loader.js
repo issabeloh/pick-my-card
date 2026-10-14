@@ -580,15 +580,23 @@ function handleQuickSearch(option) {
     toggleExactSearchEmptyHint(false);
     if (typeof clearSearchHints === 'function') clearSearchHints();
 
+    // 排除名單用全部關鍵詞的聯集比（快捷搜尋不受精準搜尋影響 → exactOnly=false）
+    const exclusionTerms = getBasicExclusionSearchTerms(option.displayName, option);
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = getCardsForComparison();
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
         currentQuickSearchOption = option; // Store quick search option for parking benefits
+        showBasicExclusionPreview(exclusionTerms, false, true);
 
         // 快捷搜尋只填入、不自動計算（2026-07-12 產品決策）：計算一律由用戶按「計算」觸發。
         // 需要點了就出結果的入口（Spotlight 的比較按鈕）由呼叫端自行觸發計算。
+    } else if (showBasicExclusionPreview(exclusionTerms, false, false)) {
+        // 關鍵詞全是排除項目（如「醫療費用」）：沒有活動可匹配，但選項要留著，
+        // 計算時排除判斷才會用全部關鍵詞（calculateCashback 讀 currentQuickSearchOption）
+        currentMatchedItem = null;
+        currentQuickSearchOption = option;
     } else {
         hideMatchedItem();
         currentMatchedItem = null;

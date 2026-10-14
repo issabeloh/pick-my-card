@@ -879,6 +879,33 @@ if (searchExclusionsSheet) {
   Logger.log('搜尋排除規則載入成功：' + searchExclusions.length + ' 條');
 }
 
+// ========== 匯出排除項目同義詞群組（ExclusionGroups 工作表，2026-10-14） ==========
+// 各銀行對同一件排除項目的寫法不同（醫指付／公部門醫療服務費用／長庚醫療體系…）。
+// 一列一組：name＝代表名稱（用戶會打的詞，如「醫療費用」），variants＝銀行寫法（逗號或換行分隔），
+// type＝「分類」（預設；打 name 才展開）或「同義詞」（打 name 或任一寫法都展開），active 勾選才匯出。
+// 前端：展開時排除判斷與詳情頁搜尋把整組寫法一起比；下拉選單只列 name（js/search-match.js expandExclusionGroupTerms）。
+// 寫法要跟 Cards Data 的 basicExclusions 一字不差（大小寫不拘）。
+const exclusionGroups = [];
+const exclusionGroupsSheet = ss.getSheetByName('ExclusionGroups');
+if (exclusionGroupsSheet) {
+  const groupData = exclusionGroupsSheet.getDataRange().getValues();
+  const groupHeaders = groupData[0];
+  for (let i = 1; i < groupData.length; i++) {
+    const row = groupData[i];
+    if (!isSearchHintActive(getValue(row, groupHeaders, 'active'))) continue;
+    const name = String(getValue(row, groupHeaders, 'name') || '').trim();
+    const variants = String(getValue(row, groupHeaders, 'variants') || '')
+      .split(/[,，\n]/).map(v => v.trim()).filter(Boolean);
+    if (!name || variants.length === 0) {
+      Logger.log('⚠️ ExclusionGroups 第 ' + (i + 1) + ' 列已啟用但 name 或 variants 空白，未匯出');
+      continue;
+    }
+    const type = String(getValue(row, groupHeaders, 'type') || '').trim() === '同義詞' ? '同義詞' : '分類';
+    exclusionGroups.push({ name: name, type: type, variants: variants });
+  }
+  Logger.log('排除項目同義詞群組載入成功：' + exclusionGroups.length + ' 組');
+}
+
 // ========== 新增讀取FAQ資料 ==========
 const faqSheet = ss.getSheetByName('FAQ');
 let faqList = [];
@@ -1006,6 +1033,7 @@ if (faqSheet) {
     announcements: announcements,
     searchHints: searchHints,
     searchExclusions: searchExclusions,
+    exclusionGroups: exclusionGroups,
     benefits: benefits,
     referralLinks: referralLinks,
     cashbackSites: cashbackSites,
@@ -1037,6 +1065,7 @@ if (faqSheet) {
   announcements: announcements,
   searchHints: searchHints,
   searchExclusions: searchExclusions,
+  exclusionGroups: exclusionGroups,
   benefits: benefits,
   referralLinks: referralLinks,
   cashbackSites: cashbackSites,

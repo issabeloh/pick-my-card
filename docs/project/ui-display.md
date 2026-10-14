@@ -248,6 +248,7 @@ Grep `titleParts`）：
 - **可能排除**（搜尋詞只是名單項目的一部分）：同一個灰卡產生器，多 `.maybe-excluded-card`；只有標籤換成「可能屬於排除項目: **完整項目**」，徽章「一般消費排除」與說明維持原字（站長要求）
 - **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
 - **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
+- **詳情頁搜尋框**（外觀：淺藍底區塊＋「搜尋這張卡的所有回饋」標籤，跟上方近期異動的灰色清單分開；導覽列「指定通路回饋」靠 `data-anchor="cashback-search-bar"` 捲到搜尋框，`setupCardDetailNav` 的點擊與高亮都認 anchor）（2026-10-14 站長要求改版，`filterCashbackItems()`→`filterDetailCards()`）：搜尋框 `#cashback-search-bar` 放在**所有回饋區上方**（原本在「指定通路回饋」標題下，但它也搜得到下面的區，位置會誤導），一次過濾指定通路／即將開始／一般回饋／領券四區（`DETAIL_SEARCH_SECTIONS`）；國內／海外一般消費卡、排除灰卡跟活動卡一樣照字過濾。沒命中的區整區（含標題）收起（`section._searchHidden`，本來就沒顯示的區不動），四區都沒命中才出「找不到符合的通路或項目」；換卡時 `showCardDetail` 還原。命中卡片裡的通路／排除清單（`strong.merchant-list`）只留命中項目、沒命中的段落縮成「…」（`condenseMerchantList()`；括號裡的頓號不切，見 `splitMerchantList()`），清空搜尋還原。曾試過在搜尋框下方加提示句，站長看過後拿掉
 - 測試：`tools/regression/basic-exclusions-test.js`
 
 ## 2. 卡片圖片資產
@@ -354,6 +355,8 @@ Grep `titleParts`）：
 - **條件已變更提醒**（2026-10-08，`js/home-ui.js`「計算鈕提醒」）：算過一次之後，商家、金額、精準搜尋（快捷搜尋時不算）、新戶活動、快捷搜尋任一改了，「計算回饋」鈕閃一下（`.calc-nudge`，同推薦活動「帶入查詢」那個動畫）；改回跟上次計算一樣就停。條件快照在 `calculateCashback()` 開頭由 `rememberCalcConditions()` 記下。**新增會影響結果的查詢條件時，要加進 `currentCalcConditions()`，並在它的變更處呼叫 `nudgeIfCalcConditionsChanged()`**
 - **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有文案就顯示，建議詞選填（沒有建議詞時只顯示文案，`.search-hint-message-only`，2026-10-08）。文案必填由 Apps Script 保證（見 data-pipeline.md 第 2 節 Search Hints），前端不做預設句。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
+
+- **輸入建議下拉選單**（2026-10-14 站長要求，`setupMerchantSuggest()`／`getMerchantSuggestions()`，`js/search-match.js`）：打第 1 個字就列出資料裡**真的存在**的名稱——快捷選項名稱、指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目。目的：用戶不知道銀行怎麼命名（打「罰」→ 交通罰單、違規罰鍰…）。規則：子字串命中、開頭相符排前、同級短的在前、最多 8 筆；**不標類別**（站長決定）；命中字加粗。點選＝替用戶打好（走 `handleMerchantInput`），快捷選項走 `handleQuickSearch`，**不自動計算**（同快捷搜尋產品決策）。鍵盤 ↑↓／Enter／Esc；沒選建議直接 Enter 照常計算。中文輸入法選字中不更新。名稱表在 cardsData 或 quickSearchOptions 換了才重建。測試：`node tools/regression/merchant-suggest-test.js`
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）
 

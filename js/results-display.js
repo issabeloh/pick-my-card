@@ -993,7 +993,10 @@ function setupCardDetailNav(modalContent) {
         const hasContent = section && section.offsetParent !== null && section.textContent.trim().length > 0;
         btn.hidden = !hasContent;
         btn.classList.remove('active');
-        if (hasContent) visibleSections.push({ btn, section });
+        // data-anchor：點按鈕要捲到的位置不是區塊本身時用（「指定通路回饋」→ 它上方的搜尋框，
+        // 2026-10-14 站長要求）。高亮判定也用同一個位置，捲到搜尋框時就點亮那顆
+        const anchor = (btn.dataset.anchor && document.getElementById(btn.dataset.anchor)) || section;
+        if (hasContent) visibleSections.push({ btn, section, anchor });
     });
 
     if (visibleSections.length === 0) return;
@@ -1014,7 +1017,8 @@ function setupCardDetailNav(modalContent) {
     // Click → smooth-scroll the modal-content so section sits just under the sticky nav
     buttons.forEach(btn => {
         btn.onclick = () => {
-            const section = document.getElementById(btn.dataset.section);
+            const section = (btn.dataset.anchor && document.getElementById(btn.dataset.anchor))
+                || document.getElementById(btn.dataset.section);
             if (!section) return;
             buttons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -1042,7 +1046,7 @@ function setupCardDetailNav(modalContent) {
         const containerTop = modalContent.getBoundingClientRect().top;
         let current = visibleSections[0];
         for (const s of visibleSections) {
-            const top = s.section.getBoundingClientRect().top - containerTop - navHeight - 12;
+            const top = s.anchor.getBoundingClientRect().top - containerTop - navHeight - 12;
             if (top <= 0) current = s;
             else break;
         }

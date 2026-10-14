@@ -11,7 +11,9 @@
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage"
+ *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
+ *  - 排除項目同義詞群組          → "expandExclusionGroupTerms"
+ *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
  * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
@@ -749,11 +751,13 @@ function syncMatchedItemToInput() {
         showMatchedItem(matchedItems, input, getCardsForComparison());
         toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems;
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, true);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
         // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
         toggleExactSearchEmptyHint(exactOnly && (findMatchingItem(input) || []).length > 0);
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, false);
     }
 }
 
@@ -840,8 +844,72 @@ function buildBasicCashbackResult(card, amount) {
 //   ・搜尋詞與排除詞**全等**，或搜尋詞**包含**排除詞即命中（「台電電費」命中「電費」）
 //   ・勾了「精準搜尋」（exactOnly）時只認**全等**——跟活動匹配同一個開關、同一種嚴格度
 //   ・少於 2 字的排除詞一律忽略（「稅」會誤殺「免稅店」）
-function getBasicExclusionSearchTerms(merchantValue) {
-    return expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
+//   ・快捷搜尋（多關鍵詞，如「醫療費用」）：每個關鍵詞各自展開後取聯集，再加上顯示名本身——
+//     跟 handleQuickSearch 對活動做的多關鍵詞聯集同一個意思（2026-10-14）
+function getBasicExclusionSearchTerms(merchantValue, quickOption = null) {
+    const terms = expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
+    if (quickOption && Array.isArray(quickOption.merchants)) {
+        quickOption.merchants.forEach(m => {
+            expandSearchTerms(String(m || '').toLowerCase().trim()).forEach(t => {
+                if (t && !terms.includes(t)) terms.push(t);
+            });
+        });
+    }
+    return expandExclusionGroupTerms(terms);
+}
+
+// 排除項目同義詞群組（ExclusionGroups 工作表 → cardsData.exclusionGroups，2026-10-14 站長要求）：
+// 各銀行對同一件事的寫法不同（醫指付／公部門醫療服務費用／長庚醫療體系…），用戶不知道。
+// 群組＝一個代表名稱＋銀行寫法清單，兩種 type：
+//   ・分類（預設）：代表名稱涵蓋幾種**不同**項目（醫療費用 ⊃ 醫指付、長庚醫療體系…）。搜尋詞**等於**代表名稱
+//     才展開；打其中一個寫法（「醫指付」）不展開——那是用戶指定的那一個，不能擴大成整組
+//   ・同義詞：每個寫法都是**同一件事**（交通罰單＝交通罰款＝交通罰鍰）。搜尋詞等於代表名稱或任一寫法都展開成整組，
+//     各卡名單只要寫其中一種，用戶打哪一種都找得到
+// 只用在排除判斷與詳情頁搜尋，**不進 findMatchingItem**（不會因為「醫療」拉進寵物醫院的活動）。
+// 灰卡照樣寫各卡自己的銀行原文，用戶看得到實際排除的是哪一項。
+function getExclusionGroups() {
+    return (cardsData && Array.isArray(cardsData.exclusionGroups)) ? cardsData.exclusionGroups : [];
+}
+function expandExclusionGroupTerms(terms) {
+    const out = terms.slice();
+    getExclusionGroups().forEach(g => {
+        const name = String((g && g.name) || '').trim().toLowerCase();
+        if (!name) return;
+        const variants = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
+        const triggered = terms.includes(name) || (g.type === '同義詞' && variants.some(v => terms.includes(v)));
+        if (!triggered) return;
+        [name, ...variants].forEach(t => { if (!out.includes(t)) out.push(t); });
+    });
+    return out;
+}
+
+// 輸入時的匹配提示也要講排除名單（2026-10-14 站長要求：匹配到指定通路商家會出「✓ 匹配到」，
+// 匹配到排除項目卻什麼都不講）。比較中的卡命中的排除項目（確定＋可能）合併去重，最多列 5 個。
+// 有商家匹配時接在下一行，沒有時單獨顯示；有顯示回 true
+const BASIC_EXCLUSION_PREVIEW_LIMIT = 5;
+function showBasicExclusionPreview(searchTerms, exactOnly, hasItemMatch) {
+    if (!matchedItemDiv) return false;
+    const items = [];
+    getCardsForComparison().forEach(card => {
+        [...getBasicExclusionHits(card, searchTerms, exactOnly), ...getBasicExclusionMaybeHits(card, searchTerms, exactOnly)]
+            .forEach(item => { if (!items.includes(item)) items.push(item); });
+    });
+    if (items.length === 0) return false;
+    let list = items.slice(0, BASIC_EXCLUSION_PREVIEW_LIMIT).join('、');
+    if (items.length > BASIC_EXCLUSION_PREVIEW_LIMIT) list += ` 等 ${items.length} 項`;
+    // 全程 DOM API（textContent），不碰 innerHTML（鐵則 3）
+    if (hasItemMatch) {
+        matchedItemDiv.appendChild(document.createElement('br'));
+    } else {
+        matchedItemDiv.textContent = '';
+        matchedItemDiv.className = 'matched-item';
+    }
+    matchedItemDiv.appendChild(document.createTextNode('✓ 匹配到一般消費排除項目: '));
+    const strong = document.createElement('strong');
+    strong.textContent = list;
+    matchedItemDiv.appendChild(strong);
+    matchedItemDiv.style.display = 'block';
+    return true;
 }
 
 // 回傳這張卡命中的排除項目（原寫法，去重）；沒命中回空陣列。
@@ -934,4 +1002,194 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
         : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
+}
+
+// ============================================================
+// 輸入建議下拉選單（2026-10-14 站長要求）
+// 用戶不知道銀行怎麼命名（打「罰」想找「交通罰單」），邊打邊列出資料裡**真的存在**的名稱讓用戶挑：
+// 指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目、快捷選項名稱。
+// 只列名稱、不標類別（站長決定）。點選＝替用戶打好這個字（走 handleMerchantInput），不自動計算——
+// 跟快捷搜尋「只填入、不自動計算」同一個產品決策；快捷選項走 handleQuickSearch。
+// 效能：名稱表（約 2 千筆）只在 cardsData 換了才重建；每次輸入只做子字串掃描（< 1ms）。
+// 中文輸入法選字中（isComposing）不更新，避免打注音時亂跳。
+// 名稱全來自 Sheets／用戶自訂，全程 DOM API（textContent），不碰 innerHTML（鐵則 3）
+// ============================================================
+const MERCHANT_SUGGEST_LIMIT = 8;
+let merchantSuggestIndex = null;      // [{ name, lower, option? }]
+let merchantSuggestIndexSource = null; // 建表時的 cardsData（換了就重建）
+let merchantSuggestOptionsSource = null; // 建表時的 quickSearchOptions（用戶改快捷選項會整個換新陣列）
+let merchantSuggestActive = -1;
+let merchantSuggestItems = [];
+
+function buildMerchantSuggestIndex() {
+    const seen = new Set();
+    const index = [];
+    const add = (raw, option) => {
+        const name = String(raw == null ? '' : raw).trim();
+        const lower = name.toLowerCase();
+        if (!name || seen.has(lower)) return;
+        seen.add(lower);
+        index.push(option ? { name, lower, option } : { name, lower });
+    };
+    // 快捷選項先加：同名時點下去走快捷搜尋（多關鍵詞聯集），比單一名稱完整
+    const options = (typeof quickSearchOptions !== 'undefined' && Array.isArray(quickSearchOptions)) ? quickSearchOptions : [];
+    options.forEach(o => { if (o && o.displayName) add(o.displayName, o); });
+    // 排除項目同義詞群組：只列代表名稱（aliases 讓打銀行寫法的一部分也找得到它），
+    // 群組裡的銀行寫法如果**只**出現在排除名單，就不再單獨列——不然打「醫」會並列二十幾種寫法
+    const cards = (cardsData && cardsData.cards) || [];
+    const groupedVariants = new Set();
+    getExclusionGroups().forEach(g => {
+        const aliases = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
+        aliases.forEach(a => groupedVariants.add(a));
+        const name = String((g && g.name) || '').trim();
+        if (!name) return;
+        const lower = name.toLowerCase();
+        // 同名的快捷選項已經在表裡（例：快捷選項也叫「醫療費用」）→ 把銀行寫法掛到它身上，
+        // 打「醫指」才找得到它；點下去照樣走快捷搜尋
+        const existing = index.find(e => e.lower === lower);
+        if (existing) { existing.aliases = (existing.aliases || []).concat(aliases); return; }
+        seen.add(lower);
+        index.push({ name, lower, aliases });
+    });
+    cards.forEach(card => {
+        (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
+        (card.specialItems || []).forEach(i => add(i));
+        if (card.generalItems) Object.values(card.generalItems).forEach(items => (items || []).forEach(i => add(i)));
+        (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
+    });
+    cards.forEach(card => (card.basicExclusions || []).forEach(i => {
+        if (!groupedVariants.has(String(i || '').trim().toLowerCase())) add(i);
+    }));
+    return index;
+}
+
+// 開頭相符 > 包含；同級短的在前（越短越像用戶要的那個詞）；再同就照建表順序（快捷選項在前）
+function getMerchantSuggestions(query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q || !cardsData) return [];
+    const options = typeof quickSearchOptions !== 'undefined' ? quickSearchOptions : null;
+    if (!merchantSuggestIndex || merchantSuggestIndexSource !== cardsData || merchantSuggestOptionsSource !== options) {
+        merchantSuggestIndex = buildMerchantSuggestIndex();
+        merchantSuggestIndexSource = cardsData;
+        merchantSuggestOptionsSource = options;
+    }
+    const hits = [];
+    merchantSuggestIndex.forEach((entry, order) => {
+        const pos = entry.lower.indexOf(q);
+        if (pos !== -1) { hits.push({ entry, rank: pos === 0 ? 0 : 1, order }); return; }
+        // 同義詞群組：打的是某個銀行寫法的一部分（「醫指」）→ 列出代表名稱，排在名稱本身命中的後面
+        if (entry.aliases && entry.aliases.some(a => a.includes(q))) hits.push({ entry, rank: 2, order });
+    });
+    hits.sort((a, b) => a.rank - b.rank || a.entry.name.length - b.entry.name.length || a.order - b.order);
+    const list = hits.slice(0, MERCHANT_SUGGEST_LIMIT).map(h => h.entry);
+    // 已經打完整、而且只剩它自己 → 不用再提示
+    if (list.length === 1 && list[0].lower === q) return [];
+    return list;
+}
+
+function closeMerchantSuggest() {
+    const box = document.getElementById('merchant-suggest');
+    if (box) { box.hidden = true; box.textContent = ''; }
+    merchantSuggestItems = [];
+    merchantSuggestActive = -1;
+    const input = document.getElementById('merchant-input');
+    if (input) { input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+}
+
+function renderMerchantSuggest(input) {
+    const box = document.getElementById('merchant-suggest');
+    if (!box) return;
+    const query = input.value.trim();
+    merchantSuggestItems = getMerchantSuggestions(query);
+    merchantSuggestActive = -1;
+    if (merchantSuggestItems.length === 0) { closeMerchantSuggest(); return; }
+
+    const q = query.toLowerCase();
+    box.textContent = '';
+    merchantSuggestItems.forEach((entry, i) => {
+        const li = document.createElement('li');
+        li.id = `merchant-suggest-${i}`;
+        li.className = 'merchant-suggest-item';
+        li.setAttribute('role', 'option');
+        // 命中的字加粗（跟 Google／購物網站的建議清單一樣，看得出是對到哪裡）
+        const pos = entry.lower.indexOf(q);
+        if (pos === -1) {
+            li.textContent = entry.name; // 同義詞群組靠銀行寫法命中：名稱本身沒有這幾個字
+        } else {
+            if (pos > 0) li.appendChild(document.createTextNode(entry.name.slice(0, pos)));
+            const mark = document.createElement('mark');
+            mark.textContent = entry.name.slice(pos, pos + q.length);
+            li.appendChild(mark);
+            if (pos + q.length < entry.name.length) li.appendChild(document.createTextNode(entry.name.slice(pos + q.length)));
+        }
+        // mousedown 先擋掉，輸入框才不會在 click 之前 blur 把選單收掉
+        li.addEventListener('mousedown', e => e.preventDefault());
+        li.addEventListener('click', () => pickMerchantSuggestion(i));
+        box.appendChild(li);
+    });
+    box.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+}
+
+function setMerchantSuggestActive(i) {
+    const box = document.getElementById('merchant-suggest');
+    const input = document.getElementById('merchant-input');
+    if (!box || !input || merchantSuggestItems.length === 0) return;
+    const n = merchantSuggestItems.length;
+    merchantSuggestActive = ((i % n) + n) % n;
+    box.querySelectorAll('.merchant-suggest-item').forEach((li, idx) => {
+        const on = idx === merchantSuggestActive;
+        li.classList.toggle('active', on);
+        li.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on) li.scrollIntoView({ block: 'nearest' });
+    });
+    input.setAttribute('aria-activedescendant', `merchant-suggest-${merchantSuggestActive}`);
+}
+
+function pickMerchantSuggestion(i) {
+    const entry = merchantSuggestItems[i];
+    const input = document.getElementById('merchant-input');
+    closeMerchantSuggest();
+    if (!entry || !input) return;
+    if (entry.option && typeof handleQuickSearch === 'function') {
+        handleQuickSearch(entry.option);
+    } else {
+        input.value = entry.name;
+        handleMerchantInput();
+    }
+    // 收起手機鍵盤，讓用戶看到匹配狀態列、直接按「計算」
+    input.blur();
+}
+
+function setupMerchantSuggest(input) {
+    if (!input || document.getElementById('merchant-suggest')) return;
+    const wrap = input.closest('.merchant-input-wrap') || input.parentNode;
+    const box = document.createElement('ul');
+    box.id = 'merchant-suggest';
+    box.className = 'merchant-suggest';
+    box.setAttribute('role', 'listbox');
+    box.hidden = true;
+    wrap.appendChild(box);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-controls', 'merchant-suggest');
+    input.setAttribute('aria-expanded', 'false');
+
+    input.addEventListener('input', e => { if (!e.isComposing) renderMerchantSuggest(input); });
+    input.addEventListener('compositionend', () => renderMerchantSuggest(input));
+    input.addEventListener('focus', () => { if (input.value.trim()) renderMerchantSuggest(input); });
+    input.addEventListener('blur', closeMerchantSuggest);
+    input.addEventListener('keydown', e => {
+        if (e.isComposing || box.hidden) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); setMerchantSuggestActive(merchantSuggestActive + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setMerchantSuggestActive(merchantSuggestActive - 1); }
+        else if (e.key === 'Escape') { e.preventDefault(); closeMerchantSuggest(); }
+        else if (e.key === 'Enter' && merchantSuggestActive >= 0) {
+            // 擋掉 keydown 預設，全站 keypress 的「Enter＝計算」才不會同時觸發
+            e.preventDefault();
+            pickMerchantSuggestion(merchantSuggestActive);
+        } else if (e.key === 'Enter') {
+            closeMerchantSuggest(); // 沒選建議直接按 Enter＝照原本計算，選單收掉
+        }
+    });
 }

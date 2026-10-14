@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/">
-    <script>window.__PMC_MERCHANT__="LinePay";</script>
+    <script>window.__PMC_MERCHANT__="Line Pay";</script>
     <title>LINE Pay 信用卡回饋比較 2026｜哪張卡綁 LINE Pay 最高回饋 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
@@ -1014,7 +1014,7 @@
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-personal-section">個人設定</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-special-section">指定通路回饋</button>
+                    <button type="button" class="card-detail-nav-btn" data-section="card-special-section" data-anchor="cashback-search-bar">指定通路回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
                     <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
@@ -1118,14 +1118,20 @@
                         <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
 
-                    <div class="card-info-section" id="card-special-section">
-                        <h4>指定通路回饋</h4>
+                    <!-- 詳情頁搜尋（2026-10-14 移到所有回饋區上方）：一次過濾指定通路／即將開始／一般回饋／領券四區，
+                         沒命中的區整區收起（filterCashbackItems） -->
+                    <div class="cashback-search-bar" id="cashback-search-bar">
+                        <label class="cashback-search-label" for="cashback-search-input">搜尋這張卡的所有回饋</label>
                         <input type="text" id="cashback-search-input" class="cashback-search-input"
-                               placeholder="搜尋通路或方案（如：全聯、童樂匯）"
+                               placeholder="搜尋通路或排除項目（如：全聯、罰單）"
                                oninput="filterCashbackItems(this.value)">
                         <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
-                            找不到符合的活動
+                            找不到符合的通路或項目
                         </div>
+                    </div>
+
+                    <div class="card-info-section" id="card-special-section">
+                        <h4>指定通路回饋</h4>
                         <div id="card-special-cashback"></div>
                     </div>
 

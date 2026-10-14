@@ -1462,7 +1462,7 @@ function setupSearchClearButtons() {
         'search-cards-input',      // 管理卡片
         'search-owned-cards-input',// 我的信用卡
         'search-payments-input',   // 行動支付
-        'cashback-search-input'    // 卡片詳情頁：指定通路回饋
+        'cashback-search-input'    // 卡片詳情頁：所有回饋區上方的搜尋框
         // 我的刷卡小抄頁的搜尋框是 type=search（瀏覽器自帶清除鈕），不在此列
     ].forEach(id => attachInputClearButton(document.getElementById(id)));
 }
@@ -1488,6 +1488,8 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
+    // 邊打邊列出資料裡有的名稱（search-match.js「輸入建議下拉選單」）
+    setupMerchantSuggest(merchantInput);
 
     // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
     const merchantClearBtn = document.getElementById('merchant-clear-btn');
@@ -1828,6 +1830,7 @@ function handleMerchantInput() {
         toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, true);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -1836,6 +1839,8 @@ function handleMerchantInput() {
             (findMatchingItem(input) || []).length > 0;
         toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
+        // 沒有指定通路商家，但命中排除名單：一樣出「✓ 匹配到」（2026-10-14）
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, false);
     }
 
     validateInputs();

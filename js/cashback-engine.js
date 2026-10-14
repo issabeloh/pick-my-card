@@ -213,8 +213,9 @@ async function calculateCashback() {
     let basicExcludedCount = 0;
     let maybeExcludedCount = 0;
     if (merchantValue.length > 0) {
-        const exclusionTerms = getBasicExclusionSearchTerms(merchantValue);
-        const exactOnly = isExactSearchEnabled();
+        // 快捷搜尋：全部關鍵詞的聯集、不受精準搜尋影響（同 handleQuickSearch）
+        const exclusionTerms = getBasicExclusionSearchTerms(merchantValue, currentQuickSearchOption);
+        const exactOnly = currentQuickSearchOption ? false : isExactSearchEnabled();
         const toExcluded = (base, hits, isMaybe) => ({ ...base, isBasic: true, isExcluded: true, isMaybeExcluded: isMaybe,
             excludedItems: hits, cashbackAmount: 0, rate: 0, calculationLayers: null });
         // 確定命中優先；沒有才看可能命中。都沒有回 null
