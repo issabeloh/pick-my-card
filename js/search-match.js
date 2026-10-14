@@ -1034,22 +1034,26 @@ function buildMerchantSuggestIndex() {
     // 快捷選項先加：同名時點下去走快捷搜尋（多關鍵詞聯集），比單一名稱完整
     const options = (typeof quickSearchOptions !== 'undefined' && Array.isArray(quickSearchOptions)) ? quickSearchOptions : [];
     options.forEach(o => { if (o && o.displayName) add(o.displayName, o); });
-    // 排除項目同義詞群組：只列代表名稱（aliases 讓打銀行寫法的一部分也找得到它），
-    // 群組裡的銀行寫法如果**只**出現在排除名單，就不再單獨列——不然打「醫」會並列二十幾種寫法
+    // 排除項目同義詞群組（2026-10-14）：
+    //   ・打的字命中**代表名稱**（「醫」「醫療」）→ 只列代表名稱，組裡的銀行寫法不並列（不然打「醫」會跳二十幾種）
+    //   ・只命中**銀行寫法**（「掛號費」）→ 直接列那幾個寫法（用戶打的就是它，只給「醫療費用」會看不懂）；
+    //     分類型群組另外把代表名稱排在後面、加灰字「一起查全部 N 種寫法」，當成擴大搜尋的選項。
+    //     同義詞型不另列代表名稱：打哪一種寫法都會展開成整組，列了只是重複
+    // 只出現在排除名單的銀行寫法標 groupOnly（受上面規則管）；也是活動商家名的照常列
     const cards = (cardsData && cardsData.cards) || [];
-    const groupedVariants = new Set();
+    const groupOf = new Map(); // 銀行寫法 lower → 群組 entry
     getExclusionGroups().forEach(g => {
         const aliases = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
-        aliases.forEach(a => groupedVariants.add(a));
         const name = String((g && g.name) || '').trim();
         if (!name) return;
         const lower = name.toLowerCase();
-        // 同名的快捷選項已經在表裡（例：快捷選項也叫「醫療費用」）→ 把銀行寫法掛到它身上，
-        // 打「醫指」才找得到它；點下去照樣走快捷搜尋
-        const existing = index.find(e => e.lower === lower);
-        if (existing) { existing.aliases = (existing.aliases || []).concat(aliases); return; }
-        seen.add(lower);
-        index.push({ name, lower, aliases });
+        const isSynonym = g.type === '同義詞';
+        // 同名的快捷選項已經在表裡 → 把群組資訊掛到它身上；點下去照樣走快捷搜尋
+        let entry = index.find(e => e.lower === lower);
+        if (!entry) { seen.add(lower); entry = { name, lower }; index.push(entry); }
+        entry.aliases = (entry.aliases || []).concat(aliases);
+        entry.isSynonym = isSynonym;
+        aliases.forEach(a => { if (a !== lower) groupOf.set(a, entry); });
     });
     cards.forEach(card => {
         (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
@@ -1058,7 +1062,10 @@ function buildMerchantSuggestIndex() {
         (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
     });
     cards.forEach(card => (card.basicExclusions || []).forEach(i => {
-        if (!groupedVariants.has(String(i || '').trim().toLowerCase())) add(i);
+        const lower = String(i || '').trim().toLowerCase();
+        const before = index.length;
+        add(i);
+        if (index.length > before && groupOf.has(lower)) index[index.length - 1].group = groupOf.get(lower);
     }));
     return index;
 }
@@ -1076,12 +1083,19 @@ function getMerchantSuggestions(query) {
     const hits = [];
     merchantSuggestIndex.forEach((entry, order) => {
         const pos = entry.lower.indexOf(q);
-        if (pos !== -1) { hits.push({ entry, rank: pos === 0 ? 0 : 1, order }); return; }
-        // 同義詞群組：打的是某個銀行寫法的一部分（「醫指」）→ 列出代表名稱，排在名稱本身命中的後面
-        if (entry.aliases && entry.aliases.some(a => a.includes(q))) hits.push({ entry, rank: 2, order });
+        if (pos !== -1) {
+            // 群組裡的銀行寫法：代表名稱本身也命中時就讓代表名稱出面，寫法不並列
+            if (entry.group && entry.group.lower.includes(q)) return;
+            hits.push({ entry, rank: pos === 0 ? 0 : 1, order });
+            return;
+        }
+        // 只靠銀行寫法命中的分類型群組：排在最後，當「一起查」的選項（同義詞型不列，見建表處）
+        if (entry.aliases && !entry.isSynonym && entry.aliases.some(a => a.includes(q))) {
+            hits.push({ entry, rank: 2, order, note: `一起查全部 ${entry.aliases.length} 種寫法` });
+        }
     });
     hits.sort((a, b) => a.rank - b.rank || a.entry.name.length - b.entry.name.length || a.order - b.order);
-    const list = hits.slice(0, MERCHANT_SUGGEST_LIMIT).map(h => h.entry);
+    const list = hits.slice(0, MERCHANT_SUGGEST_LIMIT).map(h => (h.note ? Object.assign({}, h.entry, { note: h.note }) : h.entry));
     // 已經打完整、而且只剩它自己 → 不用再提示
     if (list.length === 1 && list[0].lower === q) return [];
     return list;
@@ -1121,6 +1135,12 @@ function renderMerchantSuggest(input) {
             mark.textContent = entry.name.slice(pos, pos + q.length);
             li.appendChild(mark);
             if (pos + q.length < entry.name.length) li.appendChild(document.createTextNode(entry.name.slice(pos + q.length)));
+        }
+        if (entry.note) {
+            const note = document.createElement('span');
+            note.className = 'merchant-suggest-note';
+            note.textContent = ` · ${entry.note}`;
+            li.appendChild(note);
         }
         // mousedown 先擋掉，輸入框才不會在 click 之前 blur 把選單收掉
         li.addEventListener('mousedown', e => e.preventDefault());

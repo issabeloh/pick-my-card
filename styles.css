@@ -9263,6 +9263,10 @@ mark.cashback-search-hl {
 .merchant-suggest-item.active {
     background: #f1f5f9;
 }
+.merchant-suggest-note {
+    font-size: 12px;
+    color: #9ca3af;
+}
 .merchant-suggest-item mark {
     background: none;
     color: #111827;

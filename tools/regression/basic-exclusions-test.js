@@ -269,13 +269,18 @@ const META = readFixtureMeta();
   pv = await typePreview('zzz醫療', ['zzz醫指付']);
   check('同義詞群組：輸入預覽列出命中的銀行寫法', pv.text === '✓ 匹配到一般消費排除項目: zzz醫指付', JSON.stringify(pv));
   const sug = await page.evaluate(() => {
-    cardsData.cards.forEach(c => { c.basicExclusions = ['zzz醫指付', 'zzz長庚醫療體系', 'zzz其他']; });
+    cardsData.cards.forEach(c => { c.basicExclusions = ['zzz醫指付', 'zzz長庚醫療體系', 'zzz其他', 'zzz交通罰鍰']; });
     cardsData = Object.assign({}, cardsData);
-    return { a: getMerchantSuggestions('zzz').map(e => e.name), b: getMerchantSuggestions('長庚').map(e => e.name) };
+    const fmt = l => l.map(e => e.name + (e.note ? '｜' + e.note : ''));
+    return { a: getMerchantSuggestions('zzz').map(e => e.name), b: fmt(getMerchantSuggestions('zzz長庚')),
+      c: fmt(getMerchantSuggestions('罰鍰')).filter(n => n.startsWith('zzz')) };
   });
-  check('同義詞群組：下拉選單只列代表名稱、銀行寫法不單獨列', sug.a.includes('zzz醫療') && sug.a.includes('zzz其他') &&
+  check('群組：打的字命中代表名稱 → 只列代表名稱、銀行寫法不並列', sug.a.includes('zzz醫療') && sug.a.includes('zzz其他') &&
     !sug.a.includes('zzz醫指付') && !sug.a.includes('zzz長庚醫療體系'), JSON.stringify(sug.a));
-  check('同義詞群組：打銀行寫法的一部分也找得到代表名稱', sug.b.includes('zzz醫療'), JSON.stringify(sug.b));
+  check('分類群組：只命中銀行寫法 → 列出那個寫法，代表名稱排後面並加「一起查」灰字',
+    JSON.stringify(sug.b) === JSON.stringify(['zzz長庚醫療體系', 'zzz醫療｜一起查全部 2 種寫法']), JSON.stringify(sug.b));
+  check('同義詞群組：只命中銀行寫法 → 只列那個寫法、不另列代表名稱',
+    JSON.stringify(sug.c) === JSON.stringify(['zzz交通罰鍰']), JSON.stringify(sug.c));
   const sugQ = await page.evaluate(() => {
     quickSearchOptions.push({ id: 'zzz-same', displayName: 'zzz醫療', merchants: ['zzz醫指付'] });
     cardsData = Object.assign({}, cardsData);
@@ -283,7 +288,7 @@ const META = readFixtureMeta();
     quickSearchOptions.pop();
     return list.map(e => ({ name: e.name, quick: !!e.option }));
   });
-  check('同義詞群組：跟快捷選項同名時，打銀行寫法仍找得到那一項', sugQ.length === 1 && sugQ[0].name === 'zzz醫療' && sugQ[0].quick,
+  check('分類群組：跟快捷選項同名時，「一起查」那一項走快捷選項', sugQ.length === 2 && sugQ[1].name === 'zzz醫療' && sugQ[1].quick,
     JSON.stringify(sugQ));
   const dgroup = await page.evaluate(async () => {
     const card = cardsData.cards[0];
