@@ -34,17 +34,15 @@ const MP = {
     editKey: null,
     exp: { fits: true, capacity: 0 },
     editing: false,         // 按「編輯」才顯示排列／字級／版面等設定（預設只看乾淨的小抄＋搜尋框）
-    demo: null,             // 未登入時的範例清單（只在記憶體，不存任何地方）
     drag: null
 };
 
-// 目前這張小抄的配對清單：登入＝自己的配對；未登入＝範例（可以照樣排列、改名、存圖，只是不會保存）
+// 目前這張小抄的配對清單：登入＝雲端（本機鏡像）；未登入＝本機 spendingMappings（2026-10-14 起訪客也能加、能存，登入時併入帳號）
 function mpList() {
-    if (currentUser) return Array.isArray(userSpendingMappings) ? userSpendingMappings : [];
-    return MP.demo || [];
+    return Array.isArray(userSpendingMappings) ? userSpendingMappings : [];
 }
 function mpSetList(arr) {
-    if (currentUser) userSpendingMappings = arr; else MP.demo = arr;
+    userSpendingMappings = arr;
 }
 // 雲端這次沒讀到（mappingsLoadState 不是 ok）時，手上可能是舊的本機快取；這時寫回會蓋掉別台裝置新增的配對 → 擋下來
 function mpCanWrite() {
@@ -53,8 +51,7 @@ function mpCanWrite() {
     return false;
 }
 async function mpPersist() {
-    if (currentUser) return saveSpendingMappings(userSpendingMappings);
-    return true;   // 範例不保存
+    return saveSpendingMappings(userSpendingMappings);   // 未登入時只存本機（saveSpendingMappings 內判斷）
 }
 
 function mpPrefsKey() {
@@ -120,10 +117,14 @@ function mpSanitizeAliases(obj) {
     return out;
 }
 
+// 自訂名稱／標題的本機 key：登入＝uid 鏡像；未登入＝訪客 key（登入時由 absorbGuestPersonalData 併入帳號）
+function mpAliasesKey() { return currentUser ? `merchantAliases_${currentUser.uid}` : 'merchantAliases_guest'; }
+function mpTitleKey() { return currentUser ? `mappingsTitle_${currentUser.uid}` : 'mappingsTitle_guest'; }
+
 // 登入流程呼叫（auth-user-data.js）：雲端有值 → 雲端為準並更新本機鏡像；雲端沒有 → 讀本機鏡像
+// 未登入（refreshMappingsEntry 呼叫）：讀訪客 key
 function loadMerchantAliases(userData) {
-    if (!currentUser) { userMerchantAliases = {}; userMappingsTitle = ''; return; }
-    const titleKey = `mappingsTitle_${currentUser.uid}`;
+    const titleKey = mpTitleKey();
     if (userData && typeof userData.mappingsTitle === 'string') {
         userMappingsTitle = userData.mappingsTitle.trim();
         try { localStorage.setItem(titleKey, userMappingsTitle); } catch (e) { /* ignore */ }
@@ -131,7 +132,7 @@ function loadMerchantAliases(userData) {
         try { userMappingsTitle = (localStorage.getItem(titleKey) || '').trim(); } catch (e) { userMappingsTitle = ''; }
     }
     if (mpTitleUnits(userMappingsTitle) > MP_TITLE_MAX) userMappingsTitle = '';
-    const localKey = `merchantAliases_${currentUser.uid}`;
+    const localKey = mpAliasesKey();
     if (userData && userData.merchantAliases && typeof userData.merchantAliases === 'object') {
         userMerchantAliases = mpSanitizeAliases(userData.merchantAliases);
         try { localStorage.setItem(localKey, JSON.stringify(userMerchantAliases)); } catch (e) { /* ignore */ }
@@ -144,8 +145,8 @@ async function mpSetAlias(key, alias) {
     const clean = (alias || '').trim().slice(0, 20);
     const reset = !clean || clean.toLowerCase() === key;
     if (reset) delete userMerchantAliases[key]; else userMerchantAliases[key] = clean;
-    if (!currentUser) return;   // 範例：只改畫面
-    try { localStorage.setItem(`merchantAliases_${currentUser.uid}`, JSON.stringify(userMerchantAliases)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(mpAliasesKey(), JSON.stringify(userMerchantAliases)); } catch (e) { /* ignore */ }
+    if (!currentUser) return;   // 未登入：只存本機
     try {
         if (window.db && window.doc && window.setDoc) {
             const value = reset ? (window.deleteField ? window.deleteField() : null) : clean;
@@ -170,8 +171,8 @@ async function mpSetTitle(title) {
     if (t === MP_DEFAULT_TITLE) t = '';
     if (mpTitleUnits(t) > MP_TITLE_MAX) return;
     userMappingsTitle = t;
-    if (!currentUser) return;   // 範例：只改畫面
-    try { localStorage.setItem(`mappingsTitle_${currentUser.uid}`, t); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(mpTitleKey(), t); } catch (e) { /* ignore */ }
+    if (!currentUser) return;   // 未登入：只存本機
     try {
         if (window.db && window.doc && window.setDoc) {
             await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
@@ -553,7 +554,6 @@ async function openMappingsPage(options = {}) {
         await loadSpendingMappings();
     }
     MP.updated = null;
-    if (!currentUser) await mpBuildDemo();
     if (MP.prefs.summary || MP.prefs.x.summary) await mpLoadLimits();
     mpRender();
     if (mpList().length) mpProbeAll();
@@ -576,7 +576,7 @@ function closeMappingsPage(options = {}) {
 }
 
 // 登入／登出完成後由 auth-user-data.js 呼叫：更新首頁切換鈕、若網址是 /mappings 就開頁
-// 切換鈕登入與否都顯示（未登入切過去看範例＋登入提示）；登入狀態改變時重畫
+// 切換鈕登入與否都顯示（未登入也能用，存本機＋一句登入提示）；登入狀態改變時重畫
 // 其他模組改了配對／持有卡／額度 → notifyMappingsDataChanged()（core-utils.js）發事件，頁面開著才重畫
 async function mpOnDataChanged() {
     if (!MP.open || !MP.prefs) return;
@@ -586,17 +586,15 @@ async function mpOnDataChanged() {
 }
 
 function refreshMappingsEntry() {
-    if (!currentUser) { userMerchantAliases = {}; userMappingsTitle = ''; }   // 登出：上一位用戶的標題與改名不能留在記憶體
-    MP.probeGen++;   // 進行中的重算（例如訪客範例）作廢，不寫回新狀態
+    if (!currentUser) loadMerchantAliases(null);   // 登出／訪客：換成訪客 key 的標題與改名（上一位用戶的不能留在記憶體）
+    MP.probeGen++;   // 進行中的重算作廢，不寫回新狀態
     MP.probing = null;
-    if (currentUser) MP.demo = null;
     MP.prefs = null;
     MP.status.clear();
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
-    if (currentUser && MP.pendingFeedback) { MP.pendingFeedback = false; setTimeout(openFeedbackModal, 300); }
-    else if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
+    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
 }
 
 // ============================================
@@ -705,7 +703,7 @@ function mpReceiptHtml(sections, o) {
     const row2 = e => useRow2 && (cnOf(e) || capOf(e) || labs(e)) ? `<div class="mp-row2">${cnOf(e)}${labs(e)}${capOf(e)}</div>` : '';
     // 雙欄：欄太窄，卡名與封頂金額各自一行
     const eExtra = e => (cnOf(e) ? `<div class="mp-e-cap mp-e-cn">${cnOf(e)}</div>` : '') + (capOf(e) ? `<div class="mp-e-cap">${capOf(e)}</div>` : '');
-    const sec = s => s.title === null ? '' : (!o.demo && MP.prefs.sort === 'az'
+    const sec = s => s.title === null ? '' : (MP.prefs.sort === 'az'
         ? `<div class="mp-sec az"><span class="mp-ltr">${esc(s.title)}</span></div>`
         : `<div class="mp-sec${s.key === '行動支付' ? ' pay' : ''}">${esc(s.title)}</div>`);
 
@@ -749,46 +747,6 @@ function mpLabelsChk(id, p) {
 
 function mpSegHtml(name, cur, opts) {
     return `<div class="mp-seg" role="group" aria-label="${escapeHtml(name)}">${opts.map(([v, label, aria]) => `<button type="button" data-mp-${name === '排列方式' ? 'sort' : name === '版面' ? 'layout' : name === '字級' ? 'size' : 'x'}="${v}" class="${cur === v ? 'on' : ''}"${aria ? ` aria-label="${aria}" title="${aria}"` : ''}>${label}</button>`).join('')}</div>`;
-}
-
-// 未登入時的範例小抄：用站上同一支 calculateCardCashback()（訪客的預設級別）算出真實回饋率
-const MP_DEMO_PAIRS = [['taishin-richart', 'Line Pay'], ['yushan-unicard', 'Uber Eats'], ['hsbc-liveplus', '麥當勞'],
-    ['taishin-richart', 'momo'], ['cathay-cube', '全聯'], ['yushan-unicard', '高鐵'], ['sinopac-dawho', '國外']];
-// 直接打開 /mappings 時，卡片資料可能還在下載 → 最多等 15 秒
-function mpWaitCardsData(ms = 15000) {
-    return new Promise(resolve => {
-        const t0 = Date.now();
-        (function tick() {
-            if (typeof cardsData !== 'undefined' && cardsData && cardsData.cards) return resolve(true);
-            if (Date.now() - t0 > ms) return resolve(false);
-            setTimeout(tick, 150);
-        })();
-    });
-}
-
-// 同一時間只建一次（渲染可能連續呼叫多次）
-function mpBuildDemo() {
-    if (MP.demo) return Promise.resolve(MP.demo);
-    if (!MP.demoBuilding) MP.demoBuilding = mpBuildDemoNow().finally(() => { MP.demoBuilding = null; });
-    return MP.demoBuilding;
-}
-async function mpBuildDemoNow() {
-    if (!(await mpWaitCardsData())) return MP.demo;
-    if (MP.demo || currentUser) return MP.demo;
-    const list = [];
-    for (const [cardId, term] of MP_DEMO_PAIRS) {
-        const card = cardsData.cards.find(c => c.id === cardId);
-        if (!card) continue;
-        let r = [];
-        try { r = await calculateCardCashback(card, term, 1000); } catch (e) { r = []; }
-        const x = Array.isArray(r) && r[0];
-        if (!x) continue;
-        list.push({ id: 'demo_' + list.length, cardId, cardName: card.name, merchant: String(x.matchedItem || term), cashbackRate: x.rate,
-            periodEnd: mpISO(x.matchedRateGroup && x.matchedRateGroup.periodEnd) || null,
-            periodStart: mpISO(x.matchedRateGroup && x.matchedRateGroup.periodStart) || null, order: list.length, demo: true });
-    }
-    if (!currentUser) MP.demo = list;
-    return list;
 }
 
 function mpRender() {
@@ -838,18 +796,10 @@ function mpRender() {
     }
 
     const saveBtns = document.querySelectorAll('[data-mp-open-export]');
-    const guest = mpEl('mp-guest'), searchbox = mpEl('mp-searchbox'), deadbarEl = mpEl('mp-deadbar');
+    const searchbox = mpEl('mp-searchbox'), deadbarEl = mpEl('mp-deadbar');
     const show = (el, on) => { if (el) el.hidden = !on; };
-    // 未登入：範例清單（可以照樣排列、改名、存圖，只是不保存）＋登入提示；鎖起來的只有「加到我的配卡」
-    show(guest, !currentUser);
-    const demoTag = mpEl('mp-demo-tag');
-    if (demoTag) demoTag.hidden = !!currentUser;
-    if (!currentUser && !MP.demo) {
-        list.innerHTML = '<div class="mp-empty"><p>範例載入中…</p></div>';
-        mpBuildDemo().then(() => { if (MP.open && !currentUser && MP.demo) { mpRender(); mpProbeAll(); } });
-        show(searchbox, false); show(deadbarEl, false); show(tip, false);
-        return;
-    }
+    // 未登入：功能照常（存本機），只多一句登入提示
+    show(mpEl('mp-guest-note'), !currentUser);
     // 空狀態（讀取失敗／真的沒資料）
     const mappings = mpList();
     // 商家數：#mp-count 在桌機左欄按鈕卡片裡、#mp-count-m 在手機小抄下方右側（CSS 各自只顯示一個）
@@ -880,7 +830,7 @@ function mpRender() {
     list.innerHTML = mpReceiptHtml(sections, {
         layout: p.layout, labels: p.layout === 'F' && p.labels, caps: p.caps, cardNames: p.cardNames, summary: p.summary, big: p.size === 'large',
         editing: MP.editing,   // 編輯中：標題旁顯示鉛筆（只在網頁上，存圖不畫）
-        upd: !!currentUser,    // 小抄右上角「更新活動」（2026-09-30 起不藏在編輯裡；範例清單不顯示，因為不能存）
+        upd: !!currentUser,    // 小抄右上角「更新活動」（2026-09-30 起不藏在編輯裡）；登入才有，未登入看提示句
         drag: MP.editing && p.sort === 'custom' && !MP.search
     });
     mpFitRows();
@@ -1089,8 +1039,7 @@ async function mpSaveEdit(reset) {
 async function mpRemoveMapping(id) {
     if (!mpCanWrite()) return;
     const m = mpList().find(x => x.id === id);
-    if (currentUser) await removeMapping(id);
-    else mpSetList(mpList().filter(x => x.id !== id));
+    await removeMapping(id);
     MP.status.delete(id);
     if (m && window.logEvent && window.firebaseAnalytics) {
         window.logEvent(window.firebaseAnalytics, 'remove_mapping', { card_id: m.cardId, card_name: m.cardName, merchant: m.merchant, rate: m.cashbackRate });
@@ -1733,12 +1682,6 @@ function mpBind() {
         if (b.id === 'mp-intro-toggle') {
             const steps = mpEl('mp-steps'), open = steps.hidden;
             steps.hidden = !open; b.setAttribute('aria-expanded', String(open));
-            return;
-        }
-        if (b.id === 'mp-feedback-btn') {
-            // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
-            if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }
-            openFeedbackModal();
             return;
         }
         if (b.hasAttribute('data-mp-help')) { if (document.getElementById('mp-help-pop')) mpCloseHelp(); else mpOpenHelp(b); return; }

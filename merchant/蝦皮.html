@@ -348,7 +348,7 @@
                  跟下面的頁面接在一起。切換靠 setAppView()（js/mappings-page.js）切 data-view 畫面。登入與否都顯示。 -->
             <nav class="home-view-switch" id="home-view-switch" aria-label="切換畫面">
                 <button type="button" id="home-view-switch-search" class="on" aria-pressed="true"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.74 10.34a6.5 6.5 0 1 0-1.4 1.4l3.85 3.85a1 1 0 0 0 1.4-1.4l-3.85-3.85ZM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0Z"/></svg>查詢回饋</button>
-                <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的刷卡小抄<span class="mp-beta" title="新功能，還在調整中"><span class="mp-beta-full">新功能 </span>Beta</span></button>
+                <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的刷卡小抄</button>
             </nav>
         </header>
 
@@ -426,21 +426,16 @@
                 <p class="mp-moved-note" id="mp-moved-note">原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
                 <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
-                    <!-- 使用教學預設收合（2026-09-30）；下面「新功能 Beta 最後測試中」那行不收合 -->
+                    <!-- 使用教學預設收合（2026-09-30） -->
                     <button type="button" class="mp-intro-toggle" id="mp-intro-toggle" aria-expanded="false" aria-controls="mp-steps"><span>使用方法</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6"/></svg></button>
                     <ol class="mp-steps" id="mp-steps" hidden>
                         <li><b class="mp-step-n">1</b><span>在<strong>查詢回饋</strong>的結果中按「加到小抄」</span></li>
                         <li><b class="mp-step-n">2</b><span>活動<strong>自動存入</strong>以下刷卡小抄</span></li>
                         <li><b class="mp-step-n">3</b><span><strong>存成圖片</strong>放手機，結帳前看一眼</span></li>
                     </ol>
-                    <p class="mp-beta-note"><span class="mp-beta">新功能 Beta</span><span>最後測試中<span id="mp-feedback-wrap">，遇到問題請<button type="button" class="mp-linkbtn2" id="mp-feedback-btn">回報給我們</button></span></span></p>
                 </div>
-                <!-- 未登入提示放在版面最上面：按「編輯」後的設定出現在它下方 -->
-                <div class="mp-guest" id="mp-guest" hidden>
-                    <p class="mp-guest-title">登入解鎖此功能</p>
-                    <p>以下顯示範例清單</p>
-                    <button type="button" class="mp-big" id="mp-guest-login">登入 / 註冊</button>
-                </div>
+                <!-- 未登入：小抄照常可用（存在這台裝置），只多這一句登入提示（2026-10-14） -->
+                <p class="mp-guest-note" id="mp-guest-note" hidden><button type="button" class="mp-guest-login" id="mp-guest-login">登入</button>後，小抄內容會儲存到帳號，下次回來就可以一鍵更新小抄裡的活動！</p>
                 <div class="mp-layout">
                     <!-- 左欄（桌機）：小抄的動作與設定都在這裡，按「編輯」時小抄不會跳位置；手機時依 CSS order 排進單欄 -->
                     <div class="mp-side">
@@ -459,7 +454,6 @@
                             <button type="button" class="mp-search-clear" id="mp-search-clear" aria-label="清除搜尋" hidden>✕</button>
                         </div>
                         <div class="mp-notice" id="mp-notice" hidden></div>
-                        <div class="mp-demo-tag" id="mp-demo-tag" hidden>範　例</div>
                         <div class="mp-paper" id="mp-list"></div>
                         <p class="mp-count mp-count-m" id="mp-count-m"></p>
                         <div class="mp-deadbar" id="mp-deadbar" hidden></div>

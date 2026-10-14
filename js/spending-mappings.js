@@ -108,12 +108,7 @@ async function saveSpendingMappings(mappings) {
 
 // 添加配對
 async function addMapping(cardId, cardName, merchant, cashbackRate, periodEnd = null, periodStart = null) {
-    // 檢查是否有登入用戶
-    if (!currentUser) {
-        alert('請先登入才能使用此功能');
-        return null;
-    }
-
+    // 未登入也可以加（2026-10-14）：saveSpendingMappings 會只存本機，登入時由 absorbGuestPersonalData 併入帳號
     const now = Date.now();
     const newMapping = {
         id: generateMappingId(),
@@ -160,12 +155,6 @@ function isPinned(cardId, merchant) {
 
 // 切換釘選狀態
 async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = null, periodStart = null) {
-    // 檢查是否有登入用戶
-    if (!currentUser) {
-        alert('登入後就能把「商家 × 信用卡」加到我的刷卡小抄，結帳前一眼查看！');
-        return;
-    }
-
     const alreadyPinned = isPinned(cardId, merchant);
 
     if (alreadyPinned) {
