@@ -18,6 +18,7 @@ function setupAuthentication() {
     const onFirebaseReady = () => {
         if (firebaseReadyHandled) return;
         firebaseReadyHandled = true;
+        if (window.pmcDiag) window.pmcDiag.add('Firebase 就緒', null);
         auth = window.firebaseAuth;
         db = window.db;
         initializeAuthListeners();
@@ -343,6 +344,7 @@ function ensureAuthSubscribed() {
 
     // Listen for authentication state changes
     window.onAuthStateChanged(auth, async (user) => {
+        if (window.pmcDiag) window.pmcDiag.add('登入狀態判定', null, user ? '已登入' : '訪客');
         _authStateResolved = true;
         // Card levels are user-scoped; drop cached values when the user changes.
         clearCardLevelCache();

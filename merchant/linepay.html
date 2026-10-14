@@ -18,6 +18,17 @@
          class，styles.css 據此只留 #card-detail-modal、隱藏其餘全站 UI——必須在這裡
          （首屏前）加 class，晚了會先閃一下完整工具介面才被 CSS 蓋掉。 -->
     <script>
+        // 計算耗時診斷（2026-10-14，追查「久沒開後第一次計算卡 20 多秒」）：只記錄、不改任何行為。
+        // 各處用 pmcDiag.add(名稱, 耗時ms, 備註) 記事件；calculateCashback 結束時把最近一輪存進
+        // localStorage（pmc_diag_last），手機版連點「正在比較 N 張信用卡」5 次可看（js/quick-options-misc.js）。
+        window.pmcDiag = {
+            events: [],
+            add: function (name, ms, note) {
+                if (this.events.length >= 80) return;
+                this.events.push({ at: Math.round(performance.now()), name: String(name),
+                    ms: ms == null ? null : Math.round(ms), note: note ? String(note).slice(0, 80) : '' });
+            }
+        };
         try {
             if (new URLSearchParams(location.search).get('embed') === '1') {
                 document.documentElement.classList.add('pmc-embed');
@@ -1365,7 +1376,13 @@
         return rlCommit(ref, b => b.set(ref, data)).then(() => ref);
       };
       window.doc = doc;
-      window.getDoc = reportFsError(getDoc);
+      // 計時包一層（pmcDiag，見 <head>）：路徑＋耗時＋成敗，不改回傳值與錯誤
+      window.getDoc = reportFsError(ref => {
+        const t = performance.now(), name = 'getDoc ' + String((ref && ref.path) || '').split('/')[0];
+        return getDoc(ref).then(
+          snap => { window.pmcDiag.add(name, performance.now() - t); return snap; },
+          err => { window.pmcDiag.add(name, performance.now() - t, '失敗 ' + ((err && err.code) || err)); throw err; });
+      });
       window.setDoc = reportFsError(limitedSetDoc);
       window.deleteField = deleteField;
       window.deleteDoc = reportFsError(limitedDeleteDoc);
@@ -1390,8 +1407,10 @@
         if (!(host === 'pickmycard.app' || host.endsWith('.pickmycard.app') || host.endsWith('.pages.dev'))) {
           return Promise.resolve(false);
         }
+        const acStart = performance.now();
         appCheckReady = import("https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check.js")
           .then(({ initializeAppCheck, ReCaptchaEnterpriseProvider, getToken }) => {
+            window.pmcDiag.add('AppCheck 模組載入', performance.now() - acStart);
             const appCheck = initializeAppCheck(app, {
               provider: new ReCaptchaEnterpriseProvider('6LcjDtktAAAAANLCR-gPyn0Dt_OV5YP7Z_y2G6n1'),
               isTokenAutoRefreshEnabled: true
@@ -1400,7 +1419,10 @@
             // 才開始載 reCAPTCHA＋換票——主畫面網頁 App 第一次開（獨立儲存、沒有快取票）時，
             // 用戶第一次按計算曾卡 20 多秒。這裡一啟動就在背景取票；SDK 會讓之後的 Firestore
             // 請求共用同一個進行中的取票，不會重複換票。不 await：取票慢不該擋登入流程。
-            getToken(appCheck).catch(err => console.error('App Check 提早取票失敗:', err));
+            const tokStart = performance.now();
+            getToken(appCheck).then(
+              () => window.pmcDiag.add('AppCheck 取票', performance.now() - tokStart),
+              err => { window.pmcDiag.add('AppCheck 取票', performance.now() - tokStart, '失敗 ' + ((err && err.code) || err)); console.error('App Check 提早取票失敗:', err); });
             return true;
           })
           .catch(err => { console.error('App Check 啟動失敗:', err); return false; });
