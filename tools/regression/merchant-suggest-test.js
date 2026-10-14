@@ -105,6 +105,14 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
   check('名稱照字面顯示、不當 HTML（鐵則 3）', xss && await page.evaluate(() =>
     !document.querySelector('#merchant-suggest img') && !window.__x), 'img 被解析了');
 
+  // 統一詞的搜尋別名（termAliases → 模糊搜尋，2026-10-14）
+  const alias = await page.evaluate(() => {
+    mergeDataTermAliases({ termAliases: [{ term: 'zzz動物醫院', aliases: ['zzz寵物醫院', 'zzzUberEats'] }] });
+    return { a: expandSearchTerms('zzz寵物醫院'), b: expandSearchTerms('zzz動物醫院') };
+  });
+  check('統一詞別名：搜別名帶出統一詞、搜統一詞帶出別名', alias.a.includes('zzz動物醫院') &&
+    alias.b.includes('zzz寵物醫院') && alias.b.includes('zzzubereats'), JSON.stringify(alias));
+
   check('沒有 page error', errors.length === 0, errors.join(' | '));
   await browser.close();
   srv.close();

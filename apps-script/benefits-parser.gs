@@ -862,7 +862,7 @@ function writePromosToReview_(promos, source, link) {
       p.gift_content || '',                      // gift_content
       '',                                        // gift_image_url（你手動貼圖片網址）
       bonusRate,                                 // bonus_rate
-      (p.bonus_merchants || []).join(','),       // bonus_merchants
+      pmcUnifyList_((p.bonus_merchants || []).join(',')), // bonus_merchants（統一詞）
       bonusCap,                                  // bonus_cap
       p.voucher_amount || '',                    // voucher_amount
       p.voucher_usage || '',                     // voucher_usage
@@ -889,6 +889,70 @@ function buildCapFormula_(capAmount, ratePercent) {
 }
 
 /************** 跨檔開啟「資料檔」試算表（唯讀讀 Cards Data 用） **************/
+// ==========================================
+// 統一商家名（2026-10-14 站長要求）
+// ==========================================
+// AI 解析出來的商家清單寫進 4-／5-待審核 之前，照資料檔「統一詞」工作表換成統一寫法，
+// 站長審核時看到的就已經是統一的（不然核准後會把各銀行的大小寫、空格又帶回 Cards Data）。
+// 規則跟資料檔 term-unify.gs 的 termUnifyCell_ 相同（兩個專案不能共用程式，只好各放一份，改一邊要同步）：
+//   ・, ， 、 換行 切成一項一項（括號裡的「、」不切），**整項**對到才換
+//   ・忽略大小寫、空白、全半形、臺/台比對；「其他寫法」欄列的寫法也換
+// 讀不到表（沒設 CARDS_SPREADSHEET_ID、還沒建「統一詞」）→ 照原樣寫，不擋解析流程
+// 呼叫端：benefits-parser（新戶 bonus_merchants）、card-benefits-parser（新卡／活動更新 items）、
+//        basic-exclusions-extractor（一般消費排除 basicExclusions）
+let pmcTermMapCache_ = null;
+function pmcTermKey_(s) {
+  return String(s)
+    .replace(/[！-～]/g, function (ch) { return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
+    .replace(/臺/g, '台')
+    .replace(/[\s　]/g, '')
+    .toLowerCase();
+}
+function pmcTermMap_() {
+  if (pmcTermMapCache_) return pmcTermMapCache_;
+  pmcTermMapCache_ = {};
+  try {
+    const sheet = getCardsSheet_().getParent().getSheetByName('統一詞');
+    if (!sheet) return pmcTermMapCache_;
+    const data = sheet.getDataRange().getValues();
+    const h = data[0].map(function (x) { return String(x).trim(); });
+    const iT = h.indexOf('統一詞'), iV = h.indexOf('其他寫法');
+    if (iT < 0) return pmcTermMapCache_;
+    for (let r = 1; r < data.length; r++) {
+      const term = String(data[r][iT] || '').trim();
+      if (!term) continue;
+      pmcTermMapCache_[pmcTermKey_(term)] = term;
+      if (iV >= 0) String(data[r][iV] || '').split(/[,，\n]/).forEach(function (v) {
+        if (v.trim()) pmcTermMapCache_[pmcTermKey_(v.trim())] = term;
+      });
+    }
+  } catch (e) {
+    Logger.log('讀「統一詞」失敗，商家名照原樣寫：' + e.message);
+  }
+  return pmcTermMapCache_;
+}
+function pmcUnifyList_(value) {
+  if (value === null || value === undefined || value === '') return value;
+  const text = String(value);
+  const map = pmcTermMap_();
+  const parts = [];
+  let depth = 0, cur = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(' || ch === '（') depth++;
+    else if ((ch === ')' || ch === '）') && depth > 0) depth--;
+    if (depth === 0 && (ch === ',' || ch === '，' || ch === '、' || ch === '\n')) { parts.push({ raw: cur, sep: ch }); cur = ''; }
+    else cur += ch;
+  }
+  parts.push({ raw: cur, sep: '' });
+  return parts.map(function (p) {
+    const core = p.raw.trim();
+    const term = core ? map[pmcTermKey_(core)] : null;
+    if (!term || term === core) return p.raw + p.sep;
+    return p.raw.match(/^\s*/)[0] + term + p.raw.match(/\s*$/)[0] + p.sep;
+  }).join('');
+}
+
 function getCardsSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('CARDS_SPREADSHEET_ID');
   if (!id) {

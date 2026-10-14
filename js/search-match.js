@@ -3,6 +3,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
+ *  - 統一詞的搜尋別名          → "mergeDataTermAliases"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
@@ -248,6 +249,27 @@ function mergeDataSearchExclusions(data) {
     });
     if (mergedCount > 0) {
         console.log(`🚫 已從 cards.data 併入 ${mergedCount} 條搜尋排除規則`);
+    }
+}
+
+// 將 cards.data 匯出的 termAliases（「統一詞」工作表，2026-10-14）併入模糊搜尋表。
+// 格式：[{ term: 統一詞, aliases: [其他寫法…, 搜尋別名…] }]。別名 → 統一詞，
+// expandSearchTerms 的反向查表會讓搜統一詞也帶出別名，兩個方向都通。資料蓋過程式內建的同名別名
+function mergeDataTermAliases(data) {
+    if (!data || !Array.isArray(data.termAliases)) return;
+    let mergedCount = 0;
+    data.termAliases.forEach(entry => {
+        const term = String(entry && entry.term || '').toLowerCase().trim();
+        if (!term) return;
+        (Array.isArray(entry.aliases) ? entry.aliases : []).forEach(a => {
+            const alias = String(a || '').toLowerCase().trim();
+            if (!alias || alias === term) return;
+            fuzzySearchMap[alias] = term;
+            mergedCount++;
+        });
+    });
+    if (mergedCount > 0) {
+        console.log(`🔤 已從 cards.data 併入 ${mergedCount} 個搜尋別名`);
     }
 }
 
@@ -958,7 +980,7 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
         ? `✓ 匹配到 <strong>${safeName}</strong>`
         : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
 
-    let warn = `✘ 你比較的 ${excludedCount} 張卡都沒有「${safeName}」的活動，而且都把它列為一般消費排除項目，刷卡不會有任何回饋（包含基本回饋）`;
+    let warn = `✘ 你比較的 ${excludedCount} 張卡都沒有「${safeName}」的活動，而且都把它列為<strong>一般消費排除項目</strong>，刷卡不會有任何回饋（包含基本回饋）`;
     // 匹配得到＝別張卡可能真的有這個活動（只是沒加入比較），跟 showMatchedButNoActivityMessage 一樣提示
     if (matchedItems) {
         const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
@@ -986,7 +1008,7 @@ function showMaybeExcludedMessage(merchantValue, definiteCount, maybeCount, matc
         ? `✓ 匹配到 <strong>${safeName}</strong>`
         : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
     if (definiteCount > 0) {
-        messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為一般消費排除項目，刷卡無回饋</span>`;
+        messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為<strong>一般消費排除項目</strong>，刷卡無回饋</span>`;
     }
     messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認</span>`;
     matchedItemDiv.innerHTML = messageHtml;
@@ -1002,7 +1024,7 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
     const name = escapeHtml(String(merchantValue || '').trim());
     const note = isMaybe
         ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（見下方灰色卡片）</span>`
-        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
+        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為<strong>一般消費排除項目</strong>，刷卡無回饋（見下方灰色卡片）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }

@@ -1,22 +1,30 @@
 // ==========================================
-// 用詞統一（一次性工具，2026-10-14）
+// 用詞統一（「統一詞」工作表，2026-10-14）
 // ==========================================
-// 站長決定的統一寫法（品牌原本的大小寫、中英不空格、臺→台）套回試算表本身，
-// 不是只改站上——之後匯出就是乾淨的。
+// 站長維護一份「統一詞」：每列一個統一寫法＋它的其他寫法＋搜尋別名。這支把它套回試算表本身。
+//   統一詞    ：品牌原本的大小寫、中英不空格、臺→台（例：Uber Eats）
+//   其他寫法  ：會被**改寫**成統一詞的寫法。只差大小寫／空白／全半形／臺台的不用列，程式自己認得；
+//              要列的是真的不一樣的（ezTravel → ezTravel易遊網）
+//   搜尋別名  ：**不改資料**，只讓用戶搜得到（寵物醫院 → 動物醫院）。匯出時跟其他寫法一起變成網站的模糊搜尋
+//
+// 同一份表還有兩個地方在用：
+//   ・cards-export.gs 匯出 termAliases（其他寫法＋搜尋別名 → 網站模糊搜尋）
+//   ・自動化檔（benefits-parser.gs 的 pmcUnifyList_）：AI 解析寫進 4-/5-待審核 前先統一商家名
 //
 // 用法（Apps Script 編輯器上方函數下拉選單 → 執行）：
+//   0. seedTermDictionary：第一次用，建「統一詞」工作表並填入 2026-10-14 定案的寫法（已存在就不動）
 //   1. previewTermUnify：只看不改。把「會改哪些格、改前改後」寫進「用詞統一預覽」工作表
-//   2. 看過沒問題 → applyTermUnify：真的改（同一套規則重算一次再寫入），改完預覽表標「已套用」
+//   2. 看過沒問題 → applyTermUnify：真的改，改完預覽表標「已套用」
 //   3. 跑一次 exportToJSON
 //
 // 比對規則（刻意保守）：
-//   ・一格裡用 , ， 、 換行 切成一項一項（括號裡的「、」不切：MITSUI OUTLET PARK(林口、台中港、台南) 是一項），
-//     **整項**等於某個統一詞的變體才換——句子裡夾著品牌名不會被動到
-//   ・「等於」＝忽略大小寫、空白、全半形、臺/台之後相同（uber eats／UberEats → Uber Eats）
-//   ・另外幾個不是只差大小寫的（ezTravel → ezTravel易遊網 等）寫在 TERM_UNIFY_EXTRA
-//   ・公式格、第 1 列表頭不動
-//   ・只掃 TERM_UNIFY_SHEETS 列的工作表。MerchantPages 刻意不掃：那邊的商家名牽涉商家頁網址
-const TERM_UNIFY_CANONICAL = [
+//   ・一格裡用 , ， 、 換行 切成一項一項（括號裡的「、」不切），**整項**等於某個寫法才換——句子裡夾著品牌名不會被動到
+//   ・「等於」＝忽略大小寫、空白、全半形、臺/台之後相同
+//   ・公式格、第 1 列表頭不動；只掃 TERM_UNIFY_SHEETS（MerchantPages 刻意不掃：牽涉商家頁網址）
+const TERM_DICT_SHEET = '統一詞';
+const TERM_DICT_HEADERS = ['統一詞', '其他寫法', '搜尋別名', '備註'];
+// seedTermDictionary 用的初始內容（2026-10-14 站長定案）。之後一律改工作表，不改這裡
+const TERM_UNIFY_SEED = [
   'Uber Eats', 'KKday', 'Apple直營', 'Line Pay', 'PlayStation', 'PChome', 'FunNow', 'Uniqlo', 'WeMo Scooter',
   '台灣Pay', 'LaLaport', '統一時代百貨台北店', 'Foodpanda', 'EZTABLE', 'Trip.com', 'Booking.com', 'Hotels.com',
   'AsiaYo', 'Expedia', 'Agoda', 'Klook', '台鐵', 'Uber', 'Yoxi', '全盈+Pay', 'iPASS MONEY', 'MOMO購物網',
@@ -32,8 +40,8 @@ const TERM_UNIFY_CANONICAL = [
   'OPENTIX兩廳院文化生活', 'Farfetch', 'LOPIA', 'USPACE', 'CatchPlay', 'tixCraft拓元',
   'friDay購物', 'PChome 24h購物', 'MiaCucina', 'STUDIO A', 'Line GO', '樂子the Diner'
 ];
-// 變體 → 統一詞（不是只差大小寫／空白／臺台的）
-const TERM_UNIFY_EXTRA = {
+// 其他寫法（不是只差大小寫／空白／臺台的）→ 統一詞
+const TERM_UNIFY_SEED_EXTRA = {
   'ezTravel': 'ezTravel易遊網',
   'SKM Park': 'SKM Park Outlet',
   '酷澎(Coupang)': 'Coupang酷澎',
@@ -51,11 +59,65 @@ function termUnifyKey_(s) {
     .toLowerCase();
 }
 
+// 搜尋別名初始內容（統一詞 → 別名）
+const TERM_UNIFY_SEED_ALIASES = { '動物醫院': ['寵物醫院'] };
+
+// 讀「統一詞」工作表 → [{ term, variants: [], aliases: [] }]。cards-export.gs 匯出也用這支
+function readTermDictionary_(ss) {
+  const sheet = (ss || SpreadsheetApp.getActiveSpreadsheet()).getSheetByName(TERM_DICT_SHEET);
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const h = data[0].map(function(x) { return String(x).trim(); });
+  const iT = h.indexOf('統一詞'), iV = h.indexOf('其他寫法'), iA = h.indexOf('搜尋別名');
+  if (iT < 0) return [];
+  const split = function(v) { return String(v || '').split(/[,，\n]/).map(function(x) { return x.trim(); }).filter(Boolean); };
+  const out = [];
+  for (let r = 1; r < data.length; r++) {
+    const term = String(data[r][iT] || '').trim();
+    if (!term) continue;
+    out.push({ term: term, variants: iV >= 0 ? split(data[r][iV]) : [], aliases: iA >= 0 ? split(data[r][iA]) : [] });
+  }
+  return out;
+}
+
 function termUnifyMap_() {
+  const dict = readTermDictionary_();
+  if (dict.length === 0) throw new Error('找不到「' + TERM_DICT_SHEET + '」工作表或裡面沒有資料——先執行 seedTermDictionary');
   const map = {};
-  TERM_UNIFY_CANONICAL.forEach(function(c) { map[termUnifyKey_(c)] = c; });
-  Object.keys(TERM_UNIFY_EXTRA).forEach(function(v) { map[termUnifyKey_(v)] = TERM_UNIFY_EXTRA[v]; });
+  dict.forEach(function(d) {
+    map[termUnifyKey_(d.term)] = d.term;
+    d.variants.forEach(function(v) { map[termUnifyKey_(v)] = d.term; });
+  });
   return map;
+}
+
+function seedTermDictionary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getSheetByName(TERM_DICT_SHEET)) {
+    Logger.log('「' + TERM_DICT_SHEET + '」已存在，沒有動它');
+    return;
+  }
+  const sheet = ss.insertSheet(TERM_DICT_SHEET);
+  const extraByTerm = {};
+  Object.keys(TERM_UNIFY_SEED_EXTRA).forEach(function(v) {
+    const t = TERM_UNIFY_SEED_EXTRA[v];
+    (extraByTerm[t] = extraByTerm[t] || []).push(v);
+  });
+  const rows = [TERM_DICT_HEADERS];
+  TERM_UNIFY_SEED.forEach(function(t) {
+    rows.push([t, (extraByTerm[t] || []).join(', '), (TERM_UNIFY_SEED_ALIASES[t] || []).join(', '), '']);
+  });
+  Object.keys(TERM_UNIFY_SEED_ALIASES).forEach(function(t) {
+    if (TERM_UNIFY_SEED.indexOf(t) < 0) rows.push([t, '', TERM_UNIFY_SEED_ALIASES[t].join(', '), '']);
+  });
+  sheet.getRange(1, 1, rows.length, TERM_DICT_HEADERS.length).setValues(rows);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, TERM_DICT_HEADERS.length).setFontWeight('bold');
+  sheet.setColumnWidth(1, 220); sheet.setColumnWidth(2, 260); sheet.setColumnWidth(3, 200); sheet.setColumnWidth(4, 200);
+  sheet.getRange(1, 2).setNote('會被改寫成統一詞的寫法（逗號分隔）。只差大小寫／空白／全半形／臺台的不用列');
+  sheet.getRange(1, 3).setNote('不改資料，只讓網站搜得到（逗號分隔）。例：寵物醫院 → 動物醫院');
+  ss.setActiveSheet(sheet);
+  Logger.log('已建立「' + TERM_DICT_SHEET + '」：' + (rows.length - 1) + ' 列');
 }
 
 // 一格文字 → 換好的文字（沒變回 null）。分隔符與前後空白原樣保留

@@ -84,7 +84,11 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 12c. **ExclusionGroups** —— 一般消費排除項目的同義詞群組（2026-10-14；name, variants 逗號或換行分隔, type＝分類／同義詞（空白＝分類）, active）。
     **分類**（如「醫療費用」⊃ 醫指付、長庚醫療體系…）：打 name 才展開成整組；**同義詞**（如交通罰單＝罰款＝罰鍰）：打 name 或任一寫法都展開。
     只影響排除判斷、詳情頁搜尋、下拉選單（只列 name），不進活動匹配。前端 `expandExclusionGroupTerms()`（`js/search-match.js`）；規則見 cashback-engine.md 第 10 節
-12d. **用詞統一（一次性工具，2026-10-14）** —— `apps-script/term-unify.gs`：站長定的統一寫法（品牌原大小寫、中英不空格、臺→台）套回試算表。`previewTermUnify` 只寫「用詞統一預覽」表、`applyTermUnify` 才改格子。只換**整項**（, ， 、 換行切開、括號內不切），忽略大小寫／空白／臺台比對；不掃 MerchantPages（牽涉商家頁網址）。新的統一詞加進檔內 `TERM_UNIFY_CANONICAL` 再跑一次即可
+12d. **統一詞**（2026-10-14，資料檔「PMC 管理系統」）—— 統一詞, 其他寫法, 搜尋別名, 備註。站長維護的商家統一寫法（品牌原大小寫、中英不空格、臺→台）。三個地方讀它：
+    ①`apps-script/term-unify.gs`：`seedTermDictionary` 建表（只第一次）、`previewTermUnify`／`applyTermUnify` 把試算表既有資料改成統一寫法（只換整項；忽略大小寫／空白／臺台比對；不掃 MerchantPages）；
+    ②`cards-export.gs` 匯出 `termAliases`（其他寫法＋搜尋別名）→ 前端 `mergeDataTermAliases` 併入模糊搜尋；
+    ③自動化檔 `benefits-parser.gs` 的 `pmcUnifyList_`：新戶 bonus_merchants、新卡／活動更新 items、一般消費排除 basicExclusions 寫進待審核前先統一（跟 term-unify 的 `termUnifyCell_` 同規則，兩專案各一份，改一邊要同步）。
+    「其他寫法」＝會被改寫的；「搜尋別名」＝不改資料、只讓用戶搜得到（寵物醫院 → 動物醫院）
 13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
     2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）

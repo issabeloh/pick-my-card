@@ -906,6 +906,18 @@ if (exclusionGroupsSheet) {
   Logger.log('排除項目同義詞群組載入成功：' + exclusionGroups.length + ' 組');
 }
 
+// ========== 匯出統一詞的搜尋別名（「統一詞」工作表，2026-10-14） ==========
+// 其他寫法＋搜尋別名 → 網站模糊搜尋（前端 mergeDataTermAliases）。讀表的函數在 term-unify.gs；
+// 那支還沒貼進來時跳過，不擋匯出
+const termAliases = [];
+if (typeof readTermDictionary_ === 'function') {
+  readTermDictionary_(ss).forEach(function(d) {
+    const aliases = d.variants.concat(d.aliases);
+    if (aliases.length > 0) termAliases.push({ term: d.term, aliases: aliases });
+  });
+  Logger.log('統一詞搜尋別名載入成功：' + termAliases.length + ' 組');
+}
+
 // ========== 新增讀取FAQ資料 ==========
 const faqSheet = ss.getSheetByName('FAQ');
 let faqList = [];
@@ -1034,6 +1046,7 @@ if (faqSheet) {
     searchHints: searchHints,
     searchExclusions: searchExclusions,
     exclusionGroups: exclusionGroups,
+    termAliases: termAliases,
     benefits: benefits,
     referralLinks: referralLinks,
     cashbackSites: cashbackSites,
@@ -1066,6 +1079,7 @@ if (faqSheet) {
   searchHints: searchHints,
   searchExclusions: searchExclusions,
   exclusionGroups: exclusionGroups,
+  termAliases: termAliases,
   benefits: benefits,
   referralLinks: referralLinks,
   cashbackSites: cashbackSites,

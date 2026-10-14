@@ -868,7 +868,7 @@ function appendGroupRow_(sheet, now, cardId, slotN, kind, f) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
+    pmcUnifyList_(f.items), f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || ''];
   sheet.appendRow(row);
   if (f.needsReview || f.modelNeedsHuman) {
@@ -1379,7 +1379,7 @@ function appendGroupUpdateRow_(sheet, now, cardId, slotN, kind, f, hint) {
     .filter(function (s) { return s; }).join('；');
   const row = ['', now, cardId, slotN, kind, f.structure || '',
     f.rate, f.model, f.cap, f.minSpend, f.maxSpend,
-    f.items, f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
+    pmcUnifyList_(f.items), f.category, f.conditions, f.registerLink || '', f.ps, f.pe, f.hide,
     note, f.needsReview ? 'TRUE' : '', f.reviewQ || '', f.evidence || '', hint || ''];
   sheet.appendRow(row);
   // 標色：率變了、AI 沒把握、cashbackModel 需手填 → 黃底
