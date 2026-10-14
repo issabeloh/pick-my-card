@@ -276,6 +276,15 @@ const META = readFixtureMeta();
   check('同義詞群組：下拉選單只列代表名稱、銀行寫法不單獨列', sug.a.includes('zzz醫療') && sug.a.includes('zzz其他') &&
     !sug.a.includes('zzz醫指付') && !sug.a.includes('zzz長庚醫療體系'), JSON.stringify(sug.a));
   check('同義詞群組：打銀行寫法的一部分也找得到代表名稱', sug.b.includes('zzz醫療'), JSON.stringify(sug.b));
+  const sugQ = await page.evaluate(() => {
+    quickSearchOptions.push({ id: 'zzz-same', displayName: 'zzz醫療', merchants: ['zzz醫指付'] });
+    cardsData = Object.assign({}, cardsData);
+    const list = getMerchantSuggestions('zzz長庚');
+    quickSearchOptions.pop();
+    return list.map(e => ({ name: e.name, quick: !!e.option }));
+  });
+  check('同義詞群組：跟快捷選項同名時，打銀行寫法仍找得到那一項', sugQ.length === 1 && sugQ[0].name === 'zzz醫療' && sugQ[0].quick,
+    JSON.stringify(sugQ));
   const dgroup = await page.evaluate(async () => {
     const card = cardsData.cards[0];
     await showCardDetail(card.id);

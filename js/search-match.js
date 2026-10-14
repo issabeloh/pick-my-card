@@ -1042,10 +1042,14 @@ function buildMerchantSuggestIndex() {
         const aliases = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
         aliases.forEach(a => groupedVariants.add(a));
         const name = String((g && g.name) || '').trim();
-        if (name && !seen.has(name.toLowerCase())) {
-            seen.add(name.toLowerCase());
-            index.push({ name, lower: name.toLowerCase(), aliases });
-        }
+        if (!name) return;
+        const lower = name.toLowerCase();
+        // 同名的快捷選項已經在表裡（例：快捷選項也叫「醫療費用」）→ 把銀行寫法掛到它身上，
+        // 打「醫指」才找得到它；點下去照樣走快捷搜尋
+        const existing = index.find(e => e.lower === lower);
+        if (existing) { existing.aliases = (existing.aliases || []).concat(aliases); return; }
+        seen.add(lower);
+        index.push({ name, lower, aliases });
     });
     cards.forEach(card => {
         (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
