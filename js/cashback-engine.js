@@ -20,6 +20,9 @@ async function calculateCashback() {
     console.log('cardsData:', cardsData ? `已載入 (${cardsData.cards.length} 張卡)` : '未載入');
 
     const startTime = performance.now();
+    // 計算耗時診斷（pmcDiag，見 index.html <head>）：只記錄、不改行為
+    const diagStage = (name) => { if (window.pmcDiag) window.pmcDiag.add('計算：' + name, performance.now() - startTime); };
+    if (window.pmcDiag) window.pmcDiag.add('計算開始', null);
 
     // Clear rate status cache at the start of each calculation
     rateStatusCache.clear();
@@ -133,6 +136,7 @@ async function calculateCashback() {
         
         results = allResults;
 
+        diagStage('主要結果完成');
         // Also find upcoming activities (within 30 days)
         const upcomingResults = [];
         if (currentMatchedItem) {
@@ -263,7 +267,9 @@ async function calculateCashback() {
 
     // 領券結果先算：只靠 couponCashbacks 匹配到的商家（資料裡有 49 個），
     // 訊息要講得出「下方有幾筆領券優惠」，不先算就只能說「沒有活動」而與畫面矛盾
+    diagStage('領券前');
     await displayCouponCashbacks(amount, merchantValue);
+    diagStage('領券完成');
     const couponCount = couponResultsContainer
         ? couponResultsContainer.querySelectorAll('.coupon-item').length : 0;
 
@@ -338,6 +344,8 @@ async function calculateCashback() {
     displayCardholderPromos(merchantValue, amount, currentQuickSearchOption?.merchants);
 
     const duration = performance.now() - startTime;
+    diagStage('全部完成');
+    if (typeof saveCalcDiagReport === 'function') saveCalcDiagReport(duration, merchantValue);
     console.log(`⏱️ calculateCashback 完成 - 耗時: ${duration.toFixed(2)}ms (${(duration / 1000).toFixed(2)}s)`);
     console.log(`📊 比較了 ${cardsToCompare.length} 張卡片，找到 ${results.length} 個結果`);
 

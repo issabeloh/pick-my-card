@@ -9,6 +9,7 @@
  *  - Auth modal（登入/註冊/忘記密碼）→ "Auth Modal System" / "openAuthModal"
  *  - WebView 警告事件綁定       → "WebView Warning Modal Event Listeners"
  *  - GA4 點擊追蹤               → "GA4 Button Click Tracking"
+ *  - 計算耗時診斷面板           → "saveCalcDiagReport" / "showCalcDiagPanel"
  * ============================================================ */
 // ============================================
 // Quick Search Options Management
@@ -1319,10 +1320,87 @@ document.addEventListener('click', function(e) {
 });
 
 
+// ============================================
+// 計算耗時診斷面板（2026-10-14）
+// ============================================
+// 追查「久沒開後第一次計算卡 20 多秒」：iPhone 看不到主控台，所以把每輪計算的耗時
+// 存進 localStorage（最近 3 輪），手機版連點「正在比較 N 張信用卡」5 次跳出面板。
+// 只讀不寫用戶資料、不改計算行為；事件由 window.pmcDiag 收集（index.html <head>）。
+const CALC_DIAG_KEY = 'pmc_diag_last';
 
+function saveCalcDiagReport(totalMs, merchant) {
+    if (!window.pmcDiag) return;
+    const events = window.pmcDiag.events;
+    // cardSettings（逐卡級別）讀取合併成一行，其餘照時間順序列出
+    const lines = [];
+    const levelReads = events.filter(e => e.name === 'getDoc cardSettings');
+    for (const e of events) {
+        if (e.name === 'getDoc cardSettings') continue;
+        lines.push(`${(e.at / 1000).toFixed(1)}s ${e.name}` +
+            (e.ms != null ? `（${(e.ms / 1000).toFixed(1)}s）` : '') + (e.note ? ` ${e.note}` : ''));
+    }
+    if (levelReads.length > 0) {
+        const slowest = Math.max(...levelReads.map(e => e.ms || 0));
+        const firstAt = Math.min(...levelReads.map(e => e.at - (e.ms || 0)));
+        const lastAt = Math.max(...levelReads.map(e => e.at));
+        const failed = levelReads.filter(e => e.note.startsWith('失敗')).length;
+        lines.push(`級別讀取 ${levelReads.length} 張：${(firstAt / 1000).toFixed(1)}s 起～${(lastAt / 1000).toFixed(1)}s 止，` +
+            `最慢 ${(slowest / 1000).toFixed(1)}s，失敗 ${failed}`);
+    }
+    const report = {
+        when: new Date().toLocaleString('zh-TW', { hour12: false }),
+        mode: (window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)) ? '主畫面 App' : '瀏覽器',
+        online: navigator.onLine ? '在線' : '離線',
+        merchant: String(merchant || '').slice(0, 30),
+        total: (totalMs / 1000).toFixed(1),
+        lines: lines.slice(0, 40)
+    };
+    const reports = readLocalJSONArray(CALC_DIAG_KEY);
+    reports.unshift(report);
+    try { localStorage.setItem(CALC_DIAG_KEY, JSON.stringify(reports.slice(0, 3))); } catch (e) { /* 容量滿就算了 */ }
+    // 下一輪只記新事件（時間仍以頁面開啟起算，看得出「開頁多久後」）
+    window.pmcDiag.events = [];
+}
 
+function showCalcDiagPanel() {
+    const old = document.getElementById('pmc-diag-panel');
+    if (old) old.remove();
+    const reports = readLocalJSONArray(CALC_DIAG_KEY);
+    const panel = document.createElement('div');
+    panel.id = 'pmc-diag-panel';
+    panel.style.cssText = 'position:fixed;inset:12px;z-index:100000;background:#fff;color:#111;border-radius:12px;' +
+        'box-shadow:0 8px 30px rgba(0,0,0,.35);padding:14px;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = '關閉';
+    close.style.cssText = 'float:right;font-size:14px;padding:4px 12px;';
+    close.addEventListener('click', () => panel.remove());
+    const body = document.createElement('div');
+    // 全部用 textContent，不經 innerHTML（商家名稱是用戶輸入）
+    body.textContent = reports.length === 0 ? '還沒有計算記錄。按一次「計算」後再開這裡。' :
+        reports.map((r, i) => [
+            `#${i + 1}  ${r.when}  ${r.mode}  ${r.online}`,
+            `商家：${r.merchant}　計算總耗時：${r.total}s`,
+            '（時間＝開頁後幾秒；括號＝該步驟耗時）',
+            ...(Array.isArray(r.lines) ? r.lines : [])
+        ].join('\n')).join('\n\n──────────\n\n');
+    panel.appendChild(close);
+    panel.appendChild(body);
+    document.body.appendChild(panel);
+}
 
-
-
-
-
+// 入口：手機版連點「正在比較 N 張信用卡」5 次（3 秒內）
+(function bindCalcDiagTrigger() {
+    const hint = document.getElementById('mobile-comparison-hint');
+    if (!hint) return;
+    let taps = [];
+    hint.addEventListener('click', () => {
+        const now = Date.now();
+        taps = taps.filter(t => now - t < 3000);
+        taps.push(now);
+        if (taps.length >= 5) {
+            taps = [];
+            showCalcDiagPanel();
+        }
+    });
+})();
