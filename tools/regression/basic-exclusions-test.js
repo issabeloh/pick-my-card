@@ -210,35 +210,43 @@ const META = readFixtureMeta();
     detail.out.shown.split('、').length === 10, JSON.stringify(detail.out));
   check('詳情頁：沒有名單就不出現', detail.gone, '沒名單仍出現排除卡');
 
-  // 詳情頁搜尋框也查排除項目（2026-10-14）：第 11 項以後的名單要能搜到（收合時不在 DOM 裡）
+  // 詳情頁搜尋框也查一般回饋區（2026-10-14）：第 11 項以後的名單要能搜到（收合時不在 DOM 裡）；
+  // 沒命中的國內／海外一般消費卡要藏起來；命中項目前後沒命中的縮成「…」
   const dsearch = await page.evaluate(async () => {
     const card = cardsData.cards[0];
-    card.basicExclusions = [...Array.from({ length: 10 }, (_, i) => 'zzz項目' + (i + 1)), '交通罰單', '停車罰單'];
+    card.basicExclusions = [...Array.from({ length: 10 }, (_, i) => 'zzz項目' + (i + 1)), '交通罰單', 'zzz項目11', '停車罰單', 'zzz項目12'];
     await showCardDetail(card.id);
     await new Promise(res => setTimeout(res, 300));
     const input = document.getElementById('cashback-search-input');
     const run = v => { input.value = v; filterCashbackItems(v); };
-    const note = () => document.getElementById('cashback-search-excluded');
-    const box = () => document.querySelector('#card-basic-cashback .rate-card-excluded');
+    const basic = document.getElementById('card-basic-cashback');
+    const box = () => basic.querySelector('.rate-card-excluded');
+    const visible = () => [...basic.querySelectorAll('.cashback-detail-item')].filter(el => el.style.display !== 'none').length;
+    const totalBasic = basic.querySelectorAll('.cashback-detail-item').length;
     run('罰');
-    const hit = { shown: note().style.display, text: note().innerText.trim(),
-      marks: [...box().querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent),
-      expanded: box().querySelector('.show-more-btn')?.innerText.trim() };
+    const hit = { visible: visible(), list: box().querySelector('strong.merchant-list').textContent,
+      marks: [...box().querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent) };
     run('zzzz不存在');
-    const miss = { shown: note().style.display, boxVisible: box().style.display !== 'none' };
+    const miss = { sectionShown: document.getElementById('card-basic-cashback-section').style.display };
     run('');
-    const cleared = { shown: note().style.display, marks: box().querySelectorAll('mark').length,
+    const cleared = { visible: visible(), sectionShown: document.getElementById('card-basic-cashback-section').style.display,
+      marks: basic.querySelectorAll('mark').length, list: box().querySelector('strong.merchant-list').textContent,
       btn: box().querySelector('.show-more-btn')?.innerText.trim() };
     delete card.basicExclusions;
     document.querySelector('#card-detail-modal .close, #card-detail-modal [data-close]')?.click();
-    return { hit, miss, cleared };
+    return { hit, miss, cleared, totalBasic };
   });
-  check('詳情頁搜尋：「罰」命中排除項目 → 搜尋框下方提示、列出命中的項目',
-    dsearch.hit.shown === 'block' && dsearch.hit.text.includes('交通罰單、停車罰單') && !dsearch.hit.text.includes('zzz'), JSON.stringify(dsearch.hit));
-  check('詳情頁搜尋：排除灰卡自動展開並標記命中字', dsearch.hit.expanded === '收起' && dsearch.hit.marks.length === 2, JSON.stringify(dsearch.hit));
-  check('詳情頁搜尋：沒命中 → 不出提示、灰卡不隱藏', dsearch.miss.shown === 'none' && dsearch.miss.boxVisible, JSON.stringify(dsearch.miss));
-  check('詳情頁搜尋：清空 → 提示收掉、標記清掉、灰卡收回', dsearch.cleared.shown === 'none' && dsearch.cleared.marks === 0 &&
-    /顯示全部/.test(dsearch.cleared.btn || ''), JSON.stringify(dsearch.cleared));
+  check('詳情頁搜尋：「罰」→ 一般回饋區只留排除灰卡（國內／海外一般消費藏起來）',
+    dsearch.totalBasic > 1 && dsearch.hit.visible === 1, JSON.stringify(dsearch));
+  check('詳情頁搜尋：清單只留命中項目，沒命中的段落縮成「…」',
+    dsearch.hit.list === '…、交通罰單、…、停車罰單、…', dsearch.hit.list);
+  check('詳情頁搜尋：命中字標記', dsearch.hit.marks.length === 2, JSON.stringify(dsearch.hit.marks));
+  check('詳情頁搜尋：一般回饋區一張不剩 → 整區收起', dsearch.miss.sectionShown === 'none', JSON.stringify(dsearch.miss));
+  check('詳情頁搜尋：清空 → 全部回來、清單還原收合、標記清掉',
+    dsearch.cleared.visible === dsearch.totalBasic && dsearch.cleared.sectionShown === '' && dsearch.cleared.marks === 0 &&
+    dsearch.cleared.list.split('、').length === 10 && /顯示全部/.test(dsearch.cleared.btn || ''), JSON.stringify(dsearch.cleared));
+  const split = await page.evaluate(() => splitMerchantList('新光三越(桃園、林口)、全聯（台北、新北）、7-11'));
+  check('通路清單切分：括號裡的頓號不切', split.length === 3 && split[0] === '新光三越(桃園、林口)', JSON.stringify(split));
 
   check('沒有 console error', errors.length === 0, errors.join(' | '));
 

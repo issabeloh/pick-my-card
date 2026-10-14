@@ -248,7 +248,7 @@ Grep `titleParts`）：
 - **可能排除**（搜尋詞只是名單項目的一部分）：同一個灰卡產生器，多 `.maybe-excluded-card`；只有標籤換成「可能屬於排除項目: **完整項目**」，徽章「一般消費排除」與說明維持原字（站長要求）
 - **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
 - **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
-- **詳情頁搜尋框也查排除項目**（2026-10-14 站長要求，`filterBasicExclusionsForSearch()`）：灰卡在「一般回饋」區、不在活動清單裡，所以另外處理——灰卡**不隱藏**（它是名單不是活動），只自動展開＋標記命中字；搜尋框下方 `#cashback-search-excluded` 補一行灰色提示（列出命中的項目＋「看排除項目」捲過去），因為灰卡常在畫面外。「找不到符合的活動」照原規則另外顯示，兩者不互斥
+- **詳情頁搜尋框也過濾「一般回饋」區**（2026-10-14 站長要求，`filterCashbackItems()`→`filterDetailCards()`）：國內／海外一般消費卡、排除灰卡跟指定通路卡一樣照字過濾，一般回饋區一張不剩時整區收起。命中卡片裡的通路／排除清單（`strong.merchant-list`）只留命中項目、沒命中的段落縮成「…」（`condenseMerchantList()`；括號裡的頓號不切，見 `splitMerchantList()`），清空搜尋還原。曾試過在搜尋框下方加提示句，站長看過後拿掉
 - 測試：`tools/regression/basic-exclusions-test.js`
 
 ## 2. 卡片圖片資產

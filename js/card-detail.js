@@ -7,7 +7,7 @@
  *  - onclick 轉義               → "escapeForOnclick"
  *  - 詳情頁回饋卡（版面比照搜尋結果）→ "renderRateCard" / "formatRateCardCap"
  *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
- *  - 詳情頁項目過濾            → "filterCashbackItems" / "filterBasicExclusionsForSearch"
+ *  - 詳情頁項目過濾            → "filterCashbackItems" / "condenseMerchantList"
  *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
 async function showCardDetail(cardId) {
@@ -28,8 +28,6 @@ async function showCardDetail(cardId) {
     if (cashbackSearchInput) cashbackSearchInput.value = '';
     const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
     if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
-    const cashbackSearchExcluded = document.getElementById('cashback-search-excluded');
-    if (cashbackSearchExcluded) { cashbackSearchExcluded.textContent = ''; cashbackSearchExcluded.style.display = 'none'; }
 
     const modal = document.getElementById('card-detail-modal');
 
@@ -1055,12 +1053,12 @@ function renderRateCard(o) {
         const fullList = items.join('、');
         const limit = o.merchants.initialCount || 5;
         if (items.length <= limit) {
-            matchHtml = `${label}: <strong>${escapeHtml(fullList)}</strong>`;
+            matchHtml = `${label}: <strong class="merchant-list">${escapeHtml(fullList)}</strong>`;
         } else {
             const initialList = items.slice(0, limit).join('、');
             const merchantsId = `${o.merchants.id}-merchants`;
             const showAllId = `${o.merchants.id}-show-all`;
-            matchHtml = `${label}: <strong id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
+            matchHtml = `${label}: <strong class="merchant-list" id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
                 `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeHtml(escapeForOnclick(initialList))}', '${escapeHtml(escapeForOnclick(fullList))}')">… 顯示全部${items.length}個</button>`;
         }
     }
@@ -1090,12 +1088,12 @@ function renderBasicExclusionsCard(card, initialCount = 10) {
     const fullList = items.join('、');
     let listHtml;
     if (items.length <= initialCount) {
-        listHtml = `<strong>${escapeHtml(fullList)}</strong>`;
+        listHtml = `<strong class="merchant-list">${escapeHtml(fullList)}</strong>`;
     } else {
         const initialList = items.slice(0, initialCount).join('、');
         const merchantsId = `basic-exclusions-${escapeHtml(card.id)}-merchants`;
         const showAllId = `basic-exclusions-${escapeHtml(card.id)}-show-all`;
-        listHtml = `<strong id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
+        listHtml = `<strong class="merchant-list" id="${merchantsId}">${escapeHtml(initialList)}</strong>` +
             `<button class="show-more-btn" id="${showAllId}" onclick="toggleMerchants('${merchantsId}', '${showAllId}', '${escapeHtml(escapeForOnclick(initialList))}', '${escapeHtml(escapeForOnclick(fullList))}')">… 顯示全部${items.length}個</button>`;
     }
     return `<div class="cashback-detail-item rate-card rate-card-excluded">` +
@@ -1328,8 +1326,9 @@ function syncMerchantListsForSearch(container, hasTerm) {
     });
 }
 
-// 即時過濾「指定通路回饋」中的活動卡片，並把命中的字詞即時 highlight
-// （不然使用者看不出是配對到哪個通路／條件）
+// 詳情頁搜尋：即時過濾「指定通路回饋」與「一般回饋」兩區的回饋卡，並把命中的字詞即時 highlight
+// （不然使用者看不出是配對到哪個通路／條件）。一般回饋區（2026-10-14 站長要求）：國內／海外一般消費、
+// 一般消費排除項目灰卡一樣照字過濾——搜「罰」只留下排除灰卡；一張都不剩時整區（含標題）收起。
 // 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
 function filterCashbackItems(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
@@ -1337,72 +1336,88 @@ function filterCashbackItems(searchTerm) {
     const emptyMsg = document.getElementById('cashback-search-empty');
     if (!container) return;
 
+    const visibleCount = filterDetailCards(container, term);
+    if (emptyMsg) {
+        emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
+    }
+
+    const basic = document.getElementById('card-basic-cashback');
+    if (basic) {
+        const basicVisible = filterDetailCards(basic, term);
+        const section = document.getElementById('card-basic-cashback-section');
+        if (section) section.style.display = (term && basicVisible === 0) ? 'none' : '';
+    }
+}
+
+// 過濾一個容器裡的 .cashback-detail-item，回傳顯示中的張數
+function filterDetailCards(container, term) {
     // 必須先還原，textContent 才是乾淨原文（也讓每次輸入都從無標記狀態重算）
     clearCashbackHighlights(container);
+    restoreCondensedMerchantLists(container);
     // 再展開被截斷的通路清單，比對與標記才看得到完整內容
     syncMerchantListsForSearch(container, !!term);
 
-    const items = container.querySelectorAll('.cashback-detail-item');
     let visibleCount = 0;
-
-    items.forEach(item => {
+    container.querySelectorAll('.cashback-detail-item').forEach(item => {
         if (!term) {
             item.style.display = '';
             visibleCount++;
             return;
         }
         // 比對整個卡片的 textContent，包含通路名稱、category 標籤、條件等
-        const text = item.textContent.toLowerCase();
-        if (text.includes(term)) {
+        if (item.textContent.toLowerCase().includes(term)) {
             item.style.display = '';
             visibleCount++;
+            item.querySelectorAll('strong.merchant-list').forEach(el => condenseMerchantList(el, term));
             highlightCashbackTerm(item, term); // 只標記顯示中的項目
         } else {
             item.style.display = 'none';
         }
     });
-
-    if (emptyMsg) {
-        emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
-    }
-
-    filterBasicExclusionsForSearch(term);
+    return visibleCount;
 }
 
-// 詳情頁搜尋也查「一般消費排除項目」（2026-10-14 站長要求）：那張灰卡在「一般回饋」區，
-// 不在上面的活動清單裡，所以另外處理——灰卡本身不隱藏（它是名單不是活動），只展開＋標記命中處，
-// 並在搜尋框下方補一行提示（灰卡常在畫面外，不講用戶不會知道）。
-// term 已是小寫去空白；提示全程 DOM API 組，不碰 innerHTML（鐵則 3）
-function filterBasicExclusionsForSearch(term) {
-    const note = document.getElementById('cashback-search-excluded');
-    const basic = document.getElementById('card-basic-cashback');
-    const exclCard = basic ? basic.querySelector('.rate-card-excluded') : null;
-    if (note) { note.textContent = ''; note.style.display = 'none'; }
-    if (!exclCard) return;
+// 通路清單以「、」分隔，但通路名本身可能含「、」（如「新光三越(桃園、林口、台中港、台南)」），
+// 括號裡的頓號不切
+function splitMerchantList(text) {
+    const parts = [];
+    let depth = 0, cur = '';
+    for (const ch of text) {
+        if (ch === '(' || ch === '（') depth++;
+        else if ((ch === ')' || ch === '）') && depth > 0) depth--;
+        if (ch === '、' && depth === 0) { parts.push(cur); cur = ''; } else cur += ch;
+    }
+    parts.push(cur);
+    return parts.map(p => p.trim()).filter(Boolean);
+}
 
-    clearCashbackHighlights(exclCard);
-    syncMerchantListsForSearch(exclCard, !!term);
-    if (!term) return;
+// 搜尋時清單只留命中的通路，中間沒命中的一段段縮成「…」（2026-10-14 站長要求：命中項目在長清單
+// 後段時一眼就看到）。清單裡一個都沒命中（命中的是卡名、條件等）就不動。原文記在 JS 屬性，
+// restoreCondensedMerchantLists 還原；只動 textContent，不碰 innerHTML（鐵則 3）
+function condenseMerchantList(el, term) {
+    const full = el.textContent;
+    const parts = splitMerchantList(full);
+    if (!parts.some(p => p.toLowerCase().includes(term))) return;
+    const out = [];
+    parts.forEach(p => {
+        if (p.toLowerCase().includes(term)) out.push(p);
+        else if (out[out.length - 1] !== '…') out.push('…');
+    });
+    const condensed = out.join('、');
+    if (condensed === full) return;
+    el._fullText = full;
+    el._condensedText = condensed;
+    el.textContent = condensed;
+}
 
-    const listEl = exclCard.querySelector('.activity-info-line strong');
-    const hits = (listEl ? listEl.textContent.split('、') : [])
-        .map(s => s.trim()).filter(s => s && s.toLowerCase().includes(term));
-    if (hits.length === 0) return;
-    highlightCashbackTerm(listEl, term);
-
-    if (!note) return;
-    note.appendChild(document.createTextNode('本卡的一般消費排除項目有：'));
-    const strong = document.createElement('strong');
-    strong.textContent = hits.join('、');
-    note.appendChild(strong);
-    note.appendChild(document.createTextNode('，刷卡沒有任何回饋（包含基本回饋；有指定活動的項目以活動為準）'));
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'cashback-search-excluded-link';
-    link.textContent = '看排除項目';
-    link.onclick = () => exclCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    note.appendChild(link);
-    note.style.display = 'block';
+function restoreCondensedMerchantLists(container) {
+    container.querySelectorAll('strong.merchant-list').forEach(el => {
+        if (el._fullText === undefined) return;
+        // 用戶搜尋中自己按了「收起」→ toggleMerchants 已換成短清單，不能再蓋回全文
+        if (el.textContent === el._condensedText) el.textContent = el._fullText;
+        delete el._fullText;
+        delete el._condensedText;
+    });
 }
 
 // 將 toggleMerchants 暴露到全局作用域，確保 renderRateCard 產生的 onclick 可以訪問
