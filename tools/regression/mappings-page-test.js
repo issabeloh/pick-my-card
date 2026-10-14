@@ -719,7 +719,7 @@ const PAIRS = [
   const gStart = await gp.evaluate(() => ({ note: !document.getElementById('mp-guest-note').hidden, noteText: document.getElementById('mp-guest-note').textContent.trim(),
     oldBox: !!document.getElementById('mp-guest') || !!document.getElementById('mp-demo-tag'), rows: document.querySelectorAll('#mp-list [data-mp-row]').length, empty: !!document.querySelector('#mp-list .mp-empty'),
     moved: getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none' }));
-  check('未登入：一句登入提示（儲存到帳號、一鍵更新活動）', gStart.note && gStart.noteText === '登入後才能把小抄儲存到帳號，下次回來可一鍵更新小抄裡的活動（期限、變動），方便管理。', JSON.stringify(gStart));
+  check('未登入：一句登入提示（儲存到帳號、一鍵更新活動）', gStart.note && gStart.noteText === '登入後，小抄內容會儲存到帳號，下次回來就可以一鍵更新小抄裡的活動！', JSON.stringify(gStart));
   check('未登入：沒有範例清單、沒有「登入解鎖此功能」框，是空的小抄', !gStart.oldBox && gStart.rows === 0 && gStart.empty && gStart.moved, JSON.stringify(gStart));
   await gp.evaluate(() => { window.__authOpened = null; window.openAuthModal = m => { window.__authOpened = m; }; });
   await gp.click('#mp-guest-login');
