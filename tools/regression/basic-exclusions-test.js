@@ -210,6 +210,47 @@ const META = readFixtureMeta();
     detail.out.shown.split('、').length === 10, JSON.stringify(detail.out));
   check('詳情頁：沒有名單就不出現', detail.gone, '沒名單仍出現排除卡');
 
+  // 輸入時的匹配提示也講排除名單（2026-10-14）
+  // 上面詳情頁的測試會留著 modal（它的關閉鈕選擇器對不到），蓋住計算鈕
+  await page.evaluate(() => { const m = document.getElementById('card-detail-modal'); if (m) m.style.display = 'none'; document.body.style.overflow = ''; });
+  async function typePreview(query, items) {
+    await page.evaluate(list => cardsData.cards.forEach(c => { c.basicExclusions = list.slice(); }), items);
+    await page.fill('#merchant-input', '');
+    await page.fill('#merchant-input', query);
+    await page.waitForTimeout(150);
+    return page.evaluate(() => { const m = document.getElementById('matched-item');
+      return { shown: m.style.display !== 'none', text: m.innerText.replace(/\s+/g, ' ').trim(), cls: m.className }; });
+  }
+  let pv = await typePreview('罰單', ['交通罰單', '停車罰單']);
+  check('輸入預覽：沒有商家匹配、命中排除名單 → 出「✓ 匹配到一般消費排除項目」',
+    pv.shown && pv.text === '✓ 匹配到一般消費排除項目: 交通罰單、停車罰單' && pv.cls === 'matched-item', JSON.stringify(pv));
+  pv = await typePreview('全聯', ['全聯福利中心']);
+  check('輸入預覽：有商家匹配又命中排除名單 → 兩行都出',
+    /^✓ 匹配到: /.test(pv.text) && pv.text.includes('✓ 匹配到一般消費排除項目: 全聯福利中心'), JSON.stringify(pv));
+  pv = await typePreview('罰單', []);
+  check('輸入預覽：沒名單時不出排除那行（沒商家匹配 → 整列收起）', !pv.shown, JSON.stringify(pv));
+  pv = await typePreview('費用', Array.from({ length: 7 }, (_, i) => 'zzz費用' + i));
+  check('輸入預覽：最多列 5 個，其餘寫「等 N 項」', pv.text.includes('zzz費用4 等 7 項') && !pv.text.includes('zzz費用5'), JSON.stringify(pv));
+
+  // 快捷搜尋的關鍵詞全是排除項目（如「醫療費用」）：預覽要出、計算時用全部關鍵詞比名單
+  const quick = await page.evaluate(() => {
+    cardsData.cards.forEach(c => { c.basicExclusions = ['醫指付APP', 'zzz公部門醫療服務費用'] ; });
+    handleQuickSearch({ displayName: 'zzz醫療費用', merchants: ['zzz公部門醫療服務費用', '醫指付'] });
+    const m = document.getElementById('matched-item');
+    return { text: m.innerText.replace(/\s+/g, ' ').trim(), kept: !!currentQuickSearchOption };
+  });
+  check('快捷搜尋：關鍵詞全是排除項目 → 預覽列出命中項目、選項保留',
+    quick.kept && quick.text.startsWith('✓ 匹配到一般消費排除項目: ') && quick.text.includes('醫指付APP'), JSON.stringify(quick));
+  await page.fill('#amount-input', '1000');
+  await page.click('#calculate-btn');
+  await page.waitForTimeout(600);
+  const quickRes = await page.evaluate(() => ({
+    excluded: document.querySelectorAll('#results-container .card-result.excluded-card').length,
+    normal: document.querySelectorAll('#results-container .card-result:not(.excluded-card)').length }));
+  check('快捷搜尋：計算時用全部關鍵詞比名單 → 全部卡變灰卡', quickRes.normal === 0 && quickRes.excluded === total, JSON.stringify(quickRes));
+  await page.evaluate(() => { cardsData.cards.forEach(c => delete c.basicExclusions); currentQuickSearchOption = null; });
+  await page.fill('#merchant-input', '');
+
   // 詳情頁搜尋框也查一般回饋區（2026-10-14）：第 11 項以後的名單要能搜到（收合時不在 DOM 裡）；
   // 沒命中的國內／海外一般消費卡要藏起來；命中項目前後沒命中的縮成「…」
   const dsearch = await page.evaluate(async () => {

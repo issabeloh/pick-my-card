@@ -1828,6 +1828,7 @@ function handleMerchantInput() {
         toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, true);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -1836,6 +1837,8 @@ function handleMerchantInput() {
             (findMatchingItem(input) || []).length > 0;
         toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
+        // 沒有指定通路商家，但命中排除名單：一樣出「✓ 匹配到」（2026-10-14）
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, false);
     }
 
     validateInputs();

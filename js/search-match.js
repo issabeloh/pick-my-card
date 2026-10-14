@@ -11,7 +11,7 @@
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
  *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage"
+ *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
  * ============================================================ */
 // Fuzzy search mapping for common terms
 const fuzzySearchMap = {
@@ -749,11 +749,13 @@ function syncMatchedItemToInput() {
         showMatchedItem(matchedItems, input, getCardsForComparison());
         toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems;
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, true);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
         // 精準搜尋下沒有完全一致、但放寬後有相近結果 → 提示用戶可取消勾選
         toggleExactSearchEmptyHint(exactOnly && (findMatchingItem(input) || []).length > 0);
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, false);
     }
 }
 
@@ -840,8 +842,47 @@ function buildBasicCashbackResult(card, amount) {
 //   ・搜尋詞與排除詞**全等**，或搜尋詞**包含**排除詞即命中（「台電電費」命中「電費」）
 //   ・勾了「精準搜尋」（exactOnly）時只認**全等**——跟活動匹配同一個開關、同一種嚴格度
 //   ・少於 2 字的排除詞一律忽略（「稅」會誤殺「免稅店」）
-function getBasicExclusionSearchTerms(merchantValue) {
-    return expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
+//   ・快捷搜尋（多關鍵詞，如「醫療費用」）：每個關鍵詞各自展開後取聯集，再加上顯示名本身——
+//     跟 handleQuickSearch 對活動做的多關鍵詞聯集同一個意思（2026-10-14）
+function getBasicExclusionSearchTerms(merchantValue, quickOption = null) {
+    const terms = expandSearchTerms(String(merchantValue || '').toLowerCase().trim()).filter(Boolean);
+    if (quickOption && Array.isArray(quickOption.merchants)) {
+        quickOption.merchants.forEach(m => {
+            expandSearchTerms(String(m || '').toLowerCase().trim()).forEach(t => {
+                if (t && !terms.includes(t)) terms.push(t);
+            });
+        });
+    }
+    return terms;
+}
+
+// 輸入時的匹配提示也要講排除名單（2026-10-14 站長要求：匹配到指定通路商家會出「✓ 匹配到」，
+// 匹配到排除項目卻什麼都不講）。比較中的卡命中的排除項目（確定＋可能）合併去重，最多列 5 個。
+// 有商家匹配時接在下一行，沒有時單獨顯示；有顯示回 true
+const BASIC_EXCLUSION_PREVIEW_LIMIT = 5;
+function showBasicExclusionPreview(searchTerms, exactOnly, hasItemMatch) {
+    if (!matchedItemDiv) return false;
+    const items = [];
+    getCardsForComparison().forEach(card => {
+        [...getBasicExclusionHits(card, searchTerms, exactOnly), ...getBasicExclusionMaybeHits(card, searchTerms, exactOnly)]
+            .forEach(item => { if (!items.includes(item)) items.push(item); });
+    });
+    if (items.length === 0) return false;
+    let list = items.slice(0, BASIC_EXCLUSION_PREVIEW_LIMIT).join('、');
+    if (items.length > BASIC_EXCLUSION_PREVIEW_LIMIT) list += ` 等 ${items.length} 項`;
+    // 全程 DOM API（textContent），不碰 innerHTML（鐵則 3）
+    if (hasItemMatch) {
+        matchedItemDiv.appendChild(document.createElement('br'));
+    } else {
+        matchedItemDiv.textContent = '';
+        matchedItemDiv.className = 'matched-item';
+    }
+    matchedItemDiv.appendChild(document.createTextNode('✓ 匹配到一般消費排除項目: '));
+    const strong = document.createElement('strong');
+    strong.textContent = list;
+    matchedItemDiv.appendChild(strong);
+    matchedItemDiv.style.display = 'block';
+    return true;
 }
 
 // 回傳這張卡命中的排除項目（原寫法，去重）；沒命中回空陣列。
