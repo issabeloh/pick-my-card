@@ -1126,14 +1126,19 @@
                         <ul class="card-changelog-list" id="card-changelog-content"></ul>
                     </div>
 
-                    <div class="card-info-section" id="card-special-section">
-                        <h4>指定通路回饋</h4>
+                    <!-- 詳情頁搜尋（2026-10-14 移到所有回饋區上方）：一次過濾指定通路／即將開始／一般回饋／領券四區，
+                         沒命中的區整區收起（filterCashbackItems） -->
+                    <div class="cashback-search-bar" id="cashback-search-bar">
                         <input type="text" id="cashback-search-input" class="cashback-search-input"
-                               placeholder="搜尋通路或方案（如：全聯、童樂匯）"
+                               placeholder="搜尋通路或排除項目（如：全聯、罰單）"
                                oninput="filterCashbackItems(this.value)">
                         <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
-                            找不到符合的活動
+                            找不到符合的通路或項目
                         </div>
+                    </div>
+
+                    <div class="card-info-section" id="card-special-section">
+                        <h4>指定通路回饋</h4>
                         <div id="card-special-cashback"></div>
                     </div>
 

@@ -267,22 +267,35 @@ const META = readFixtureMeta();
     run('罰');
     const hit = { visible: visible(), list: box().querySelector('strong.merchant-list').textContent,
       marks: [...box().querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent) };
+    hit.specialShown = document.getElementById('card-special-section').style.display;
     run('zzzz不存在');
-    const miss = { sectionShown: document.getElementById('card-basic-cashback-section').style.display };
+    const miss = { sectionShown: document.getElementById('card-basic-cashback-section').style.display,
+      empty: document.getElementById('cashback-search-empty').style.display };
+    // 搜尋中換卡：上一張卡收起的區要回來
+    run('罰');
+    await showCardDetail(cardsData.cards[1].id);
+    await new Promise(res => setTimeout(res, 300));
+    const switched = { special: document.getElementById('card-special-section').style.display,
+      basic: document.getElementById('card-basic-cashback-section').style.display, input: input.value };
+    await showCardDetail(card.id);
+    await new Promise(res => setTimeout(res, 300));
     run('');
     const cleared = { visible: visible(), sectionShown: document.getElementById('card-basic-cashback-section').style.display,
       marks: basic.querySelectorAll('mark').length, list: box().querySelector('strong.merchant-list').textContent,
       btn: box().querySelector('.show-more-btn')?.innerText.trim() };
     delete card.basicExclusions;
     document.querySelector('#card-detail-modal .close, #card-detail-modal [data-close]')?.click();
-    return { hit, miss, cleared, totalBasic };
+    return { hit, miss, cleared, totalBasic, switched };
   });
   check('詳情頁搜尋：「罰」→ 一般回饋區只留排除灰卡（國內／海外一般消費藏起來）',
     dsearch.totalBasic > 1 && dsearch.hit.visible === 1, JSON.stringify(dsearch));
   check('詳情頁搜尋：清單只留命中項目，沒命中的段落縮成「…」',
     dsearch.hit.list === '…、交通罰單、…、停車罰單、…', dsearch.hit.list);
   check('詳情頁搜尋：命中字標記', dsearch.hit.marks.length === 2, JSON.stringify(dsearch.hit.marks));
-  check('詳情頁搜尋：一般回饋區一張不剩 → 整區收起', dsearch.miss.sectionShown === 'none', JSON.stringify(dsearch.miss));
+  check('詳情頁搜尋：沒命中的區整區收起（指定通路回饋）', dsearch.hit.specialShown === 'none', JSON.stringify(dsearch.hit));
+  check('詳情頁搜尋：四區都沒命中 → 各區收起、出「找不到」', dsearch.miss.sectionShown === 'none' && dsearch.miss.empty === 'block', JSON.stringify(dsearch.miss));
+  check('詳情頁搜尋：搜尋中換卡 → 搜尋框清空、收起的區回來', dsearch.switched.input === '' && dsearch.switched.special === '' &&
+    dsearch.switched.basic === '', JSON.stringify(dsearch.switched));
   check('詳情頁搜尋：清空 → 全部回來、清單還原收合、標記清掉',
     dsearch.cleared.visible === dsearch.totalBasic && dsearch.cleared.sectionShown === '' && dsearch.cleared.marks === 0 &&
     dsearch.cleared.list.split('、').length === 10 && /顯示全部/.test(dsearch.cleared.btn || ''), JSON.stringify(dsearch.cleared));

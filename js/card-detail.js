@@ -23,11 +23,15 @@ async function showCardDetail(cardId) {
         });
     }
 
-    // 重置指定通路回饋的搜尋框
+    // 重置詳情頁搜尋框（含上一張卡搜尋時收起的區，不還原的話換卡後那幾區會一直藏著）
     const cashbackSearchInput = document.getElementById('cashback-search-input');
     if (cashbackSearchInput) cashbackSearchInput.value = '';
     const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
     if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
+    DETAIL_SEARCH_SECTIONS.forEach(([, sectionId]) => {
+        const section = document.getElementById(sectionId);
+        if (section && section._searchHidden) { section.style.display = ''; section._searchHidden = false; }
+    });
 
     const modal = document.getElementById('card-detail-modal');
 
@@ -1326,26 +1330,37 @@ function syncMerchantListsForSearch(container, hasTerm) {
     });
 }
 
-// 詳情頁搜尋：即時過濾「指定通路回饋」與「一般回饋」兩區的回饋卡，並把命中的字詞即時 highlight
-// （不然使用者看不出是配對到哪個通路／條件）。一般回饋區（2026-10-14 站長要求）：國內／海外一般消費、
-// 一般消費排除項目灰卡一樣照字過濾——搜「罰」只留下排除灰卡；一張都不剩時整區（含標題）收起。
+// 詳情頁搜尋：搜尋框在所有回饋區上方（2026-10-14 站長要求從「指定通路回饋」標題下移上來），
+// 一次過濾指定通路／即將開始／一般回饋／領券四區的回饋卡，並把命中的字詞即時 highlight
+// （不然使用者看不出是配對到哪個通路／條件）。一般回饋區的國內／海外一般消費、排除灰卡一樣照字過濾——
+// 搜「罰」只留下排除灰卡。沒命中的區整區（含標題）收起；四區都沒有才出「找不到」。
+// 本來就沒顯示的區（例：沒有即將開始的活動）不動它。
 // 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
+const DETAIL_SEARCH_SECTIONS = [
+    ['card-special-cashback', 'card-special-section'],
+    ['card-upcoming-cashback', 'card-upcoming-section'],
+    ['card-basic-cashback', 'card-basic-cashback-section'],
+    ['card-coupon-cashback', 'card-coupon-section']
+];
 function filterCashbackItems(searchTerm) {
     const term = (searchTerm || '').toLowerCase().trim();
-    const container = document.getElementById('card-special-cashback');
     const emptyMsg = document.getElementById('cashback-search-empty');
-    if (!container) return;
+    let total = 0;
 
-    const visibleCount = filterDetailCards(container, term);
+    DETAIL_SEARCH_SECTIONS.forEach(([containerId, sectionId]) => {
+        const container = document.getElementById(containerId);
+        const section = document.getElementById(sectionId);
+        if (!container || !section) return;
+        // 先還原上一次搜尋收起的區，才分得出「本來就沒顯示」的區
+        if (section._searchHidden) { section.style.display = ''; section._searchHidden = false; }
+        if (section.style.display === 'none') return;
+        const visible = filterDetailCards(container, term);
+        total += visible;
+        if (term && visible === 0) { section.style.display = 'none'; section._searchHidden = true; }
+    });
+
     if (emptyMsg) {
-        emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
-    }
-
-    const basic = document.getElementById('card-basic-cashback');
-    if (basic) {
-        const basicVisible = filterDetailCards(basic, term);
-        const section = document.getElementById('card-basic-cashback-section');
-        if (section) section.style.display = (term && basicVisible === 0) ? 'none' : '';
+        emptyMsg.style.display = (term && total === 0) ? 'block' : 'none';
     }
 }
 
