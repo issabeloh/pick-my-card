@@ -595,8 +595,7 @@ function refreshMappingsEntry() {
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
-    if (currentUser && MP.pendingFeedback) { MP.pendingFeedback = false; setTimeout(openFeedbackModal, 300); }
-    else if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
+    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
 }
 
 // ============================================
@@ -1733,12 +1732,6 @@ function mpBind() {
         if (b.id === 'mp-intro-toggle') {
             const steps = mpEl('mp-steps'), open = steps.hidden;
             steps.hidden = !open; b.setAttribute('aria-expanded', String(open));
-            return;
-        }
-        if (b.id === 'mp-feedback-btn') {
-            // 回報表單只給登入用戶（同頭像選單「回報錯誤」）；未登入先開登入視窗，登入後自動打開表單
-            if (!currentUser) { MP.pendingFeedback = true; if (typeof openAuthModal === 'function') openAuthModal('login'); return; }
-            openFeedbackModal();
             return;
         }
         if (b.hasAttribute('data-mp-help')) { if (document.getElementById('mp-help-pop')) mpCloseHelp(); else mpOpenHelp(b); return; }

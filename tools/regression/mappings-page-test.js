@@ -204,20 +204,16 @@ const PAIRS = [
       sideCountHidden: getComputedStyle(document.getElementById('mp-count')).display === 'none', count: c.textContent }; });
   check('手機：［存成圖片｜編輯本頁］→ 搜尋框 → 小抄；商家數在小抄下方右側', erow.aboveSearch && erow.searchAboveList && erow.countBelowList && erow.countRight && erow.sideCountHidden && /^已加入 \d+ 家商家$/.test(erow.count), JSON.stringify(erow));
   const intro = await pg.evaluate(() => ({ steps: document.querySelectorAll('.mp-intro .mp-steps li').length, text: document.querySelector('.mp-intro').textContent }));
-  const beta = await pg.evaluate(() => ({ tab: !!document.querySelector('#home-view-switch-mappings .mp-beta'), note: !!document.querySelector('.mp-intro .mp-beta'), fb: !document.getElementById('mp-feedback-wrap').hidden }));
-  check('「新功能 Beta」標籤：頁籤與說明卡都有；登入用戶看得到「回報給我們」', beta.tab && beta.note && beta.fb, JSON.stringify(beta));
-  await pg.click('#mp-feedback-btn');
-  const fbOpen = await pg.evaluate(() => { const m = document.getElementById('feedback-modal'); const o = getComputedStyle(m).display !== 'none'; m.style.display = 'none'; if (typeof enableBodyScroll === 'function') enableBodyScroll(); return o; });
-  check('點「回報給我們」→ 打開回報表單', fbOpen);
+  check('Beta 標籤與「回報給我們」已移除（頁籤、說明卡都沒有）', await pg.evaluate(() => !document.querySelector('.mp-beta, .mp-beta-note, #mp-feedback-btn') && !document.querySelector('.mp-intro').textContent.includes('最後測試中')));
   check('頁面說明改成三步驟說明卡', intro.steps === 3 && intro.text.includes('在查詢回饋的結果中按「加到小抄」') && intro.text.includes('活動自動存入以下刷卡小抄') && intro.text.includes('結帳前看一眼'), JSON.stringify(intro.steps));
   const ro = await pg.evaluate(() => ({ nameBtns: document.querySelectorAll('#mp-list [data-mp-edit]').length, pens: document.querySelectorAll('#mp-list .mp-pen, #mp-list .mp-title-pen').length, titleTag: document.getElementById('mp-title-btn').tagName,
     acts: [...document.querySelectorAll('.mp-actions .mp-act')].map(a => [a.querySelector('button').textContent.trim(), a.querySelector('.mp-act-note').textContent.trim()]),
     searchIcon: getComputedStyle(document.getElementById('mp-search')).backgroundImage.includes('svg'), phSize: getComputedStyle(document.getElementById('mp-search'), '::placeholder').fontSize,
-    introCollapsed: document.getElementById('mp-steps').hidden, betaVisible: getComputedStyle(document.querySelector('.mp-beta-note')).display !== 'none' }));
+    introCollapsed: document.getElementById('mp-steps').hidden }));
   check('未按編輯：商家名稱、標題都不能點，也沒有鉛筆', ro.nameBtns === 0 && ro.pens === 0 && ro.titleTag === 'SPAN', JSON.stringify(ro));
   check('小抄上方兩個按鈕＋備註：存成圖片（進入存圖編輯器）／編輯本頁（只編輯本頁顯示的小抄）', JSON.stringify(ro.acts) === JSON.stringify([['存成圖片', '進入存圖編輯器'], ['編輯本頁', '只編輯本頁顯示的小抄']]), JSON.stringify(ro.acts));
   check('搜尋框左側有放大鏡、預覽字大小不變（14px）', ro.searchIcon && ro.phSize === '14px', JSON.stringify({ icon: ro.searchIcon, ph: ro.phSize }));
-  check('使用教學預設收合，「新功能 Beta 最後測試中」那行照樣顯示', ro.introCollapsed && ro.betaVisible, JSON.stringify(ro));
+  check('使用教學預設收合', ro.introCollapsed, JSON.stringify(ro));
   await pg.click('#mp-intro-toggle');
   check('點「使用方法」→ 展開三步驟', await pg.evaluate(() => !document.getElementById('mp-steps').hidden && document.getElementById('mp-intro-toggle').getAttribute('aria-expanded') === 'true'));
   await pg.click('#mp-intro-toggle');
@@ -499,7 +495,7 @@ const PAIRS = [
   await pg.setViewportSize({ width: 430, height: 932 });
   const tabs430 = await pg.evaluate(() => ({ a: document.getElementById('home-view-switch-search').getBoundingClientRect().height, b: document.getElementById('home-view-switch-mappings').getBoundingClientRect().height }));
   // 選中的頁籤本來就比另一個高 2px（文件夾分頁）；擠成兩行時會差 20px 以上
-  check('430px（iPhone Pro Max）：Beta 不會把「我的刷卡小抄」擠成兩行', Math.abs(tabs430.a - tabs430.b) <= 4, JSON.stringify(tabs430));
+  check('430px（iPhone Pro Max）：「我的刷卡小抄」不會擠成兩行', Math.abs(tabs430.a - tabs430.b) <= 4, JSON.stringify(tabs430));
   await pg.setViewportSize({ width: 390, height: 844 });
   const split = await pg.evaluate(() => { const g = mpBuildGroups().find(x => !x.dead); const e = { ...g.entries[0], labels: ['切換甲方案', '切換乙方案', '切換丙方案', '切換丁方案', '切換戊方案'], cap: '消費上限 NT$300,000+' };
     const c = document.createElement('canvas').getContext('2d'); const lay = mpLayoutReceipt(c, [{ key: null, title: null, items: [{ ...g, entries: [e] }] }], { ...mpExportOpts(), layout: 'F', labels: true, caps: true, cardNames: true, fmt: 'wall', big: false });
@@ -709,8 +705,8 @@ const PAIRS = [
   check('登入後一次性提示：前兩次出現氣泡，第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
   await hp.click('#home-view-switch-mappings');
   await hp.waitForSelector('#mappings-page:not([hidden])');
-  const note = await hp.evaluate(() => { const n = document.getElementById('mp-moved-note'); return { shown: !n.hidden, text: n.textContent.trim(), top: n.getBoundingClientRect().top <= document.querySelector('.mp-intro').getBoundingClientRect().top, beta: document.querySelector('.mp-beta-note').textContent }; });
-  check('刷卡小抄頁最上方有改版備註；Beta 文字「最後測試中，遇到問題請回報給我們」', note.shown && note.top && note.text === '原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。' && note.beta.includes('最後測試中，遇到問題請回報給我們'), JSON.stringify(note));
+  const note = await hp.evaluate(() => { const n = document.getElementById('mp-moved-note'); return { shown: !n.hidden, text: n.textContent.trim(), top: n.getBoundingClientRect().top <= document.querySelector('.mp-intro').getBoundingClientRect().top }; });
+  check('刷卡小抄頁最上方有改版備註', note.shown && note.top && note.text === '原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。', JSON.stringify(note));
   await hp.context().close();
 
   // ============ E. 未登入 ============
@@ -721,11 +717,8 @@ const PAIRS = [
   await gp.waitForSelector('#mappings-page:not([hidden])');
   await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
   const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login'), noUpd: !document.getElementById('mp-update-btn') }));
-  const gNote = await gp.evaluate(() => ({ note: getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none', fb: getComputedStyle(document.getElementById('mp-feedback-wrap')).display !== 'none' }));
-  check('未登入：也看得到改版備註與「遇到問題請回報給我們」', gNote.note && gNote.fb, JSON.stringify(gNote));
-  await gp.evaluate(() => { window.__authOpened = null; window.openAuthModal = m => { window.__authOpened = m; }; });
-  await gp.click('#mp-feedback-btn');
-  check('未登入點「回報給我們」→ 先開登入視窗（不開回報表單）', await gp.evaluate(() => window.__authOpened === 'login' && getComputedStyle(document.getElementById('feedback-modal')).display === 'none'));
+  const gNote = await gp.evaluate(() => getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none');
+  check('未登入：也看得到改版備註', gNote);
   check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
   check('未登入的範例小抄：不顯示「更新活動」（範例不能存）', gs.noUpd, JSON.stringify(gs));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
