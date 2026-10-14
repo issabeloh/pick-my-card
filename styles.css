@@ -4840,6 +4840,31 @@ label.personal-field-check input[type="checkbox"] {
 }
 
 /* Real-time search input above special cashback */
+/* 詳情頁搜尋框區塊（2026-10-14）：放在所有回饋區上方、自成一塊——淺藍底＋標籤，
+   跟上方「近期異動」的淺灰清單分得開（站長回報兩塊看起來像同一區）。
+   「指定通路回饋」導覽鈕捲到這裡（data-anchor） */
+.cashback-search-bar {
+    margin: 8px 0 24px;
+    padding: 12px 14px;
+    background: #f5f9ff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+}
+.cashback-search-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+.cashback-search-bar .cashback-search-input {
+    margin-bottom: 0;
+    background-color: #fff;
+}
+.cashback-search-bar .cashback-search-empty {
+    margin: 10px 0 0;
+}
+
 .cashback-search-input {
     width: 100%;
     padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
