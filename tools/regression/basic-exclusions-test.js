@@ -210,6 +210,36 @@ const META = readFixtureMeta();
     detail.out.shown.split('、').length === 10, JSON.stringify(detail.out));
   check('詳情頁：沒有名單就不出現', detail.gone, '沒名單仍出現排除卡');
 
+  // 詳情頁搜尋框也查排除項目（2026-10-14）：第 11 項以後的名單要能搜到（收合時不在 DOM 裡）
+  const dsearch = await page.evaluate(async () => {
+    const card = cardsData.cards[0];
+    card.basicExclusions = [...Array.from({ length: 10 }, (_, i) => 'zzz項目' + (i + 1)), '交通罰單', '停車罰單'];
+    await showCardDetail(card.id);
+    await new Promise(res => setTimeout(res, 300));
+    const input = document.getElementById('cashback-search-input');
+    const run = v => { input.value = v; filterCashbackItems(v); };
+    const note = () => document.getElementById('cashback-search-excluded');
+    const box = () => document.querySelector('#card-basic-cashback .rate-card-excluded');
+    run('罰');
+    const hit = { shown: note().style.display, text: note().innerText.trim(),
+      marks: [...box().querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent),
+      expanded: box().querySelector('.show-more-btn')?.innerText.trim() };
+    run('zzzz不存在');
+    const miss = { shown: note().style.display, boxVisible: box().style.display !== 'none' };
+    run('');
+    const cleared = { shown: note().style.display, marks: box().querySelectorAll('mark').length,
+      btn: box().querySelector('.show-more-btn')?.innerText.trim() };
+    delete card.basicExclusions;
+    document.querySelector('#card-detail-modal .close, #card-detail-modal [data-close]')?.click();
+    return { hit, miss, cleared };
+  });
+  check('詳情頁搜尋：「罰」命中排除項目 → 搜尋框下方提示、列出命中的項目',
+    dsearch.hit.shown === 'block' && dsearch.hit.text.includes('交通罰單、停車罰單') && !dsearch.hit.text.includes('zzz'), JSON.stringify(dsearch.hit));
+  check('詳情頁搜尋：排除灰卡自動展開並標記命中字', dsearch.hit.expanded === '收起' && dsearch.hit.marks.length === 2, JSON.stringify(dsearch.hit));
+  check('詳情頁搜尋：沒命中 → 不出提示、灰卡不隱藏', dsearch.miss.shown === 'none' && dsearch.miss.boxVisible, JSON.stringify(dsearch.miss));
+  check('詳情頁搜尋：清空 → 提示收掉、標記清掉、灰卡收回', dsearch.cleared.shown === 'none' && dsearch.cleared.marks === 0 &&
+    /顯示全部/.test(dsearch.cleared.btn || ''), JSON.stringify(dsearch.cleared));
+
   check('沒有 console error', errors.length === 0, errors.join(' | '));
 
   await browser.close();

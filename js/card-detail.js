@@ -7,7 +7,7 @@
  *  - onclick 轉義               → "escapeForOnclick"
  *  - 詳情頁回饋卡（版面比照搜尋結果）→ "renderRateCard" / "formatRateCardCap"
  *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
- *  - 詳情頁項目過濾            → "filterCashbackItems"
+ *  - 詳情頁項目過濾            → "filterCashbackItems" / "filterBasicExclusionsForSearch"
  *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
 async function showCardDetail(cardId) {
@@ -28,6 +28,8 @@ async function showCardDetail(cardId) {
     if (cashbackSearchInput) cashbackSearchInput.value = '';
     const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
     if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
+    const cashbackSearchExcluded = document.getElementById('cashback-search-excluded');
+    if (cashbackSearchExcluded) { cashbackSearchExcluded.textContent = ''; cashbackSearchExcluded.style.display = 'none'; }
 
     const modal = document.getElementById('card-detail-modal');
 
@@ -1363,6 +1365,44 @@ function filterCashbackItems(searchTerm) {
     if (emptyMsg) {
         emptyMsg.style.display = (term && visibleCount === 0) ? 'block' : 'none';
     }
+
+    filterBasicExclusionsForSearch(term);
+}
+
+// 詳情頁搜尋也查「一般消費排除項目」（2026-10-14 站長要求）：那張灰卡在「一般回饋」區，
+// 不在上面的活動清單裡，所以另外處理——灰卡本身不隱藏（它是名單不是活動），只展開＋標記命中處，
+// 並在搜尋框下方補一行提示（灰卡常在畫面外，不講用戶不會知道）。
+// term 已是小寫去空白；提示全程 DOM API 組，不碰 innerHTML（鐵則 3）
+function filterBasicExclusionsForSearch(term) {
+    const note = document.getElementById('cashback-search-excluded');
+    const basic = document.getElementById('card-basic-cashback');
+    const exclCard = basic ? basic.querySelector('.rate-card-excluded') : null;
+    if (note) { note.textContent = ''; note.style.display = 'none'; }
+    if (!exclCard) return;
+
+    clearCashbackHighlights(exclCard);
+    syncMerchantListsForSearch(exclCard, !!term);
+    if (!term) return;
+
+    const listEl = exclCard.querySelector('.activity-info-line strong');
+    const hits = (listEl ? listEl.textContent.split('、') : [])
+        .map(s => s.trim()).filter(s => s && s.toLowerCase().includes(term));
+    if (hits.length === 0) return;
+    highlightCashbackTerm(listEl, term);
+
+    if (!note) return;
+    note.appendChild(document.createTextNode('本卡的一般消費排除項目有：'));
+    const strong = document.createElement('strong');
+    strong.textContent = hits.join('、');
+    note.appendChild(strong);
+    note.appendChild(document.createTextNode('，刷卡沒有任何回饋（包含基本回饋；有指定活動的項目以活動為準）'));
+    const link = document.createElement('button');
+    link.type = 'button';
+    link.className = 'cashback-search-excluded-link';
+    link.textContent = '看排除項目';
+    link.onclick = () => exclCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    note.appendChild(link);
+    note.style.display = 'block';
 }
 
 // 將 toggleMerchants 暴露到全局作用域，確保 renderRateCard 產生的 onclick 可以訪問

@@ -4938,6 +4938,31 @@ input[type="text"].cashback-search-input {
     margin-bottom: 12px;
 }
 
+/* 詳情頁搜尋命中「一般消費排除項目」的提示（filterBasicExclusionsForSearch）：
+   灰色調同排除灰卡（ui-display.md 1j），不用藍色——藍色是「有得刷」的語氣 */
+.cashback-search-excluded {
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.cashback-search-excluded strong {
+    color: #374151;
+}
+.cashback-search-excluded-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 6px;
+    color: #374151;
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 /* 詳情頁搜尋命中字詞的即時 highlight（filterCashbackItems 動態插入 <mark>）：
    琥珀底＋深色字，蓋掉瀏覽器 <mark> 預設的螢光黃 */
 mark.cashback-search-hl {
