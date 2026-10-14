@@ -148,6 +148,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
     // 這裡清掉的是殘留值）
     const guestExact = [
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
+        'merchantAliases_guest', 'mappingsTitle_guest',
         'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
     ];
     const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
@@ -445,7 +446,7 @@ function ensureAuthSubscribed() {
             populatePaymentChips();
         }
 
-        // 首頁「我的刷卡小抄」切換鈕（登入才顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）
+        // 首頁「我的刷卡小抄」切換鈕（登入與否都顯示）＋網址是 /mappings 時開頁（js/mappings-page.js）
         if (typeof refreshMappingsEntry === 'function') refreshMappingsEntry();
 
         // 登入成功後預熱級別快取（見 warmCardLevelCache 定義處的說明），
@@ -514,20 +515,58 @@ async function absorbGuestPersonalData(userData) {
 
     const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
 
-    // 1. 消費配卡表（訪客 key: spendingMappings）
+    // 1. 刷卡小抄（訪客 key: spendingMappings）——2026-10-14 起訪客也能加小抄，登入時「合併」而不是雲端有值就丟掉：
+    //    以雲端（現讀）為底，補上訪客清單裡雲端沒有的「卡片 × 商家」。訪客清單是用戶親手加的 → 高價值，
+    //    雲端讀不到或寫入失敗都保留 key，下次登入重試（絕不拿可能過期的 userData 覆寫雲端）。
     if (allKeys.includes('spendingMappings')) {
         const guestMappings = readLocalJSONArray('spendingMappings');
-        localStorage.removeItem('spendingMappings');
-        const cloudHasMappings = Array.isArray(userData?.spendingMappings) && userData.spendingMappings.length > 0;
-        if (!cloudHasMappings && guestMappings.length > 0 && canWrite) {
+        if (guestMappings.length === 0) {
+            localStorage.removeItem('spendingMappings');
+        } else if (canRead && canWrite) {
             try {
-                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                    spendingMappings: guestMappings,
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
-                console.log('🔀 雲端無配卡表，已帶入訪客的配卡表:', guestMappings.length, '筆');
-            } catch (e) { console.error('帶入訪客配卡表失敗:', e); }
+                const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
+                const cloud = (snap.exists() && Array.isArray(snap.data().spendingMappings)) ? snap.data().spendingMappings : [];
+                const has = new Set(cloud.map(m => `${m.cardId}\u0000${m.merchant}`));
+                const extra = guestMappings.filter(m => m && m.cardId && m.merchant && !has.has(`${m.cardId}\u0000${m.merchant}`));
+                if (extra.length) {
+                    await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                        spendingMappings: cloud.concat(extra),
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                    console.log('🔀 已把訪客的刷卡小抄併入帳號:', extra.length, '筆');
+                }
+                localStorage.removeItem('spendingMappings');
+            } catch (e) { console.error('併入訪客刷卡小抄失敗（保留本機，下次登入重試）:', e); }
         }
+    }
+
+    // 1b. 刷卡小抄的自訂商家名稱／標題（訪客 key: merchantAliases_guest、mappingsTitle_guest）
+    //     雲端沒有的商家名稱才帶入；標題只在雲端沒設定時帶入。best-effort，處理完即移除。
+    if (canWrite && userData && (allKeys.includes('merchantAliases_guest') || allKeys.includes('mappingsTitle_guest'))) {
+        const guestAliases = readLocalJSON('merchantAliases_guest', {});
+        let guestTitle = '';
+        try { guestTitle = (localStorage.getItem('mappingsTitle_guest') || '').trim(); } catch (e) { /* ignore */ }
+        const cloudAliases = (userData && userData.merchantAliases && typeof userData.merchantAliases === 'object') ? userData.merchantAliases : {};
+        const patch = {};
+        const addAliases = {};
+        if (guestAliases && typeof guestAliases === 'object' && !Array.isArray(guestAliases)) {
+            Object.keys(guestAliases).forEach(k => {
+                const v = guestAliases[k];
+                if (typeof v === 'string' && v.trim() && !(k in cloudAliases)) addAliases[k] = v.trim().slice(0, 20);
+            });
+        }
+        if (Object.keys(addAliases).length) patch.merchantAliases = addAliases;
+        if (guestTitle && !(userData && typeof userData.mappingsTitle === 'string' && userData.mappingsTitle.trim())) patch.mappingsTitle = guestTitle;
+        try {
+            if (Object.keys(patch).length) {
+                await window.setDoc(window.doc(window.db, 'users', currentUser.uid), { ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+                if (userData) {
+                    if (patch.merchantAliases) userData.merchantAliases = { ...cloudAliases, ...patch.merchantAliases };
+                    if (patch.mappingsTitle) userData.mappingsTitle = patch.mappingsTitle;
+                }
+            }
+        } catch (e) { console.error('帶入訪客小抄名稱／標題失敗:', e); }
+        try { localStorage.removeItem('merchantAliases_guest'); localStorage.removeItem('mappingsTitle_guest'); } catch (e) { /* ignore */ }
     }
 
     // 2. 卡片級別（訪客 key: cardLevel-<cardId>；登入後鏡像是 cardLevel_<uid>_<cardId>）

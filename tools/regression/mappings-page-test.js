@@ -60,6 +60,7 @@ function stub(url, guest) {
         const cardId = String(ref.id).replace(/^testuid_/, '');
         if (LEVELS[cardId]) return Promise.resolve({ exists:()=>true, data:()=>({ level: LEVELS[cardId] }) });
       }
+      if (ref.coll === 'users' && globalThis.__cloudMappings) return Promise.resolve({ exists:()=>true, data:()=>({ spendingMappings: globalThis.__cloudMappings }) });
       if (ref.coll === 'users' && globalThis.__limits) return Promise.resolve({ exists:()=>true, data:()=>({ creditLimits: globalThis.__limits }) });
       return Promise.resolve({ exists:()=>false, data:()=>undefined });
     }
@@ -709,40 +710,76 @@ const PAIRS = [
   check('刷卡小抄頁最上方有改版備註', note.shown && note.top && note.text === '原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。', JSON.stringify(note));
   await hp.context().close();
 
-  // ============ E. 未登入 ============
+  // ============ E. 未登入（2026-10-14 起：訪客也能加、能存本機，只多一句登入提示） ============
   console.log('\n【E】未登入');
   const gp = await newPage(VIEWPORTS[1], '/index.html?start', true);
   check('未登入也看得到切換鈕', await gp.isVisible('#home-view-switch-mappings'));
   await gp.click('#home-view-switch-mappings');
   await gp.waitForSelector('#mappings-page:not([hidden])');
-  await gp.waitForFunction(() => document.querySelector('#mp-list .mp-rc'), null, { timeout: 15000 });
-  const gs = await gp.evaluate(() => ({ guest: !document.getElementById('mp-guest').hidden, demoRows: document.querySelectorAll('#mp-list [data-mp-row]').length, tag: !document.getElementById('mp-demo-tag').hidden, search: !document.getElementById('mp-searchbox').hidden, edit: !!document.getElementById('mp-edit-toggle'), loginBtn: !!document.getElementById('mp-guest-login'), noUpd: !document.getElementById('mp-update-btn') }));
-  const gNote = await gp.evaluate(() => getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none');
-  check('未登入：也看得到改版備註', gNote);
-  check('未登入：顯示範例小抄（標示範例）＋登入提示＋搜尋框＋編輯鈕', gs.guest && gs.demoRows >= 3 && gs.tag && gs.search && gs.edit && gs.loginBtn, JSON.stringify(gs));
-  check('未登入的範例小抄：不顯示「更新活動」（範例不能存）', gs.noUpd, JSON.stringify(gs));
+  const gStart = await gp.evaluate(() => ({ note: !document.getElementById('mp-guest-note').hidden, noteText: document.getElementById('mp-guest-note').textContent.trim(),
+    oldBox: !!document.getElementById('mp-guest') || !!document.getElementById('mp-demo-tag'), rows: document.querySelectorAll('#mp-list [data-mp-row]').length, empty: !!document.querySelector('#mp-list .mp-empty'),
+    moved: getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none' }));
+  check('未登入：一句登入提示（儲存到帳號、一鍵更新活動）', gStart.note && gStart.noteText === '登入後才能把小抄儲存到帳號，下次回來可一鍵更新小抄裡的活動（期限、變動），方便管理。', JSON.stringify(gStart));
+  check('未登入：沒有範例清單、沒有「登入解鎖此功能」框，是空的小抄', !gStart.oldBox && gStart.rows === 0 && gStart.empty && gStart.moved, JSON.stringify(gStart));
+  await gp.evaluate(() => { window.__authOpened = null; window.openAuthModal = m => { window.__authOpened = m; }; });
+  await gp.click('#mp-guest-login');
+  check('未登入：點提示裡的「登入」→ 開登入視窗', await gp.evaluate(() => window.__authOpened === 'login'));
+  // 回查詢回饋 → 搜尋 → 按「加到我的小抄」
+  await gp.click('#home-view-switch-search');
+  await gp.evaluate(() => { window.__alerts = []; window.alert = m => window.__alerts.push(m); });
+  await gp.fill('#merchant-input', 'Line Pay');
+  await gp.click('#calculate-btn');
+  await gp.waitForSelector('.pin-btn', { timeout: 15000 });
+  await gp.click('.pin-btn');
+  await gp.waitForFunction(() => document.querySelector('.pin-btn.pinned'), null, { timeout: 5000 }).catch(() => {});
+  const gPin = await gp.evaluate(() => ({ pinned: !!document.querySelector('.pin-btn.pinned'), alerts: window.__alerts.length, local: (JSON.parse(localStorage.getItem('spendingMappings') || '[]')).length, writes: (globalThis.__setDocs || []).length }));
+  check('未登入：按「加到我的小抄」直接加入、存本機（不跳登入、不寫雲端）', gPin.pinned && gPin.alerts === 0 && gPin.local === 1 && gPin.writes === 0, JSON.stringify(gPin));
+  await gp.click('#home-view-switch-mappings');
+  await gp.waitForFunction(() => document.querySelectorAll('#mp-list [data-mp-row]').length === 1, null, { timeout: 15000 });
+  const gUi = await gp.evaluate(() => ({ search: !document.getElementById('mp-searchbox').hidden, noUpd: !document.getElementById('mp-update-btn'), save: !document.querySelector('[data-mp-open-export]').disabled }));
+  check('未登入：小抄出現剛加的活動；可搜尋、可存成圖片；沒有「更新活動」（登入才有）', gUi.search && gUi.noUpd && gUi.save, JSON.stringify(gUi));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-iphone13.png'), fullPage: false });
   await gp.click('#mp-edit-toggle');
-  await gp.click('#mp-tools [data-mp-sort="az"]');
-  const gEdit = await gp.evaluate(() => ({ tools: !document.getElementById('mp-tools').hidden, sort: MP.prefs.sort, ltr: document.querySelectorAll('#mp-list .mp-ltr').length }));
-  check('未登入：按「編輯」看得到全部設定、可以切換排列', gEdit.tools && gEdit.sort === 'az' && gEdit.ltr > 0, JSON.stringify(gEdit));
-  const gPos = await gp.evaluate(() => document.getElementById('mp-tools').getBoundingClientRect().top >= document.getElementById('mp-guest').getBoundingClientRect().bottom - 1);
-  check('未登入：設定出現在「登入解鎖此功能」框的下方', gPos);
   const gk = await gp.$eval('#mp-list [data-mp-row]', r => r.dataset.mpRow);
   await gp.click(`#mp-list [data-mp-edit="${gk}"]`);
-  await gp.fill('#mp-edit-input', '範例改名');
+  await gp.fill('#mp-edit-input', '我的LP');
   await gp.click('#mp-edit-save');
-  const gRen = await gp.evaluate((k) => ({ shown: document.querySelector(`#mp-list [data-mp-edit="${k}"]`).textContent, noWrite: !(globalThis.__setDocs || []).length, noLocal: !Object.keys(localStorage).some(x => x.startsWith('merchantAliases_')) }), gk);
-  check('未登入：範例可以改名，但不寫雲端、不存本機', gRen.shown.includes('範例改名') && gRen.noWrite && gRen.noLocal, JSON.stringify(gRen));
+  const gRen = await gp.evaluate(() => ({ local: JSON.parse(localStorage.getItem('merchantAliases_guest') || '{}'), writes: (globalThis.__setDocs || []).length }));
+  check('未登入：改商家名稱存本機（訪客 key），不寫雲端', Object.values(gRen.local).includes('我的LP') && gRen.writes === 0, JSON.stringify(gRen));
   if (SHOTS) await gp.screenshot({ path: path.join(SHOTS, 'guest-editing-iphone13.png'), fullPage: false });
+  // 重新整理（直接開 /mappings）：小抄與改名都還在
+  await gp.goto(base + '/mappings?start', { waitUntil: 'domcontentloaded' });
+  const reOk = await gp.waitForFunction(() => document.querySelectorAll('#mp-list [data-mp-row]').length === 1, null, { timeout: 20000 }).then(() => true).catch(() => false);
+  check('未登入重新整理（直接開 /mappings）：小抄與改名都還在', reOk && await gp.evaluate(() => document.getElementById('mp-list').textContent.includes('我的LP')));
+  // 登入時：訪客小抄併入帳號（雲端已有的保留，補上雲端沒有的；同卡同商家不重複）
+  const merge = await gp.evaluate(async () => {
+    const guest = JSON.parse(localStorage.getItem('spendingMappings'));
+    globalThis.__cloudMappings = [{ id: 'cloud_1', cardId: 'cathay-cube', cardName: 'CUBE', merchant: '全聯', cashbackRate: 2 }, { ...guest[0], id: 'cloud_dup' }];
+    localStorage.setItem('spendingMappings', JSON.stringify(guest.concat([{ id: 'g2', cardId: 'yushan-unicard', cardName: 'Unicard', merchant: '高鐵', cashbackRate: 3 }])));
+    const u = currentUser; currentUser = { uid: 'testuid' }; globalThis.__setDocs = [];
+    await absorbGuestPersonalData({ merchantAliases: {} });
+    currentUser = u;
+    const w = globalThis.__setDocs.find(d => d.data.spendingMappings);
+    const a = globalThis.__setDocs.find(d => d.data.merchantAliases);
+    return { ids: w ? w.data.spendingMappings.map(m => m.id) : null, alias: a ? Object.values(a.data.merchantAliases) : null,
+      keysLeft: ['spendingMappings', 'merchantAliases_guest'].filter(k => localStorage.getItem(k) !== null) };
+  });
+  check('登入時：訪客小抄併入帳號（保留雲端、補上新的、不重複），改名一併帶入，訪客 key 清掉', JSON.stringify(merge.ids) === JSON.stringify(['cloud_1', 'cloud_dup', 'g2']) && merge.alias && merge.alias.includes('我的LP') && merge.keysLeft.length === 0, JSON.stringify(merge));
+  const mergeFail = await gp.evaluate(async () => {
+    localStorage.setItem('spendingMappings', JSON.stringify([{ id: 'g3', cardId: 'yushan-unicard', merchant: '高鐵', cashbackRate: 3 }]));
+    const og = window.getDoc; window.getDoc = () => Promise.reject(new Error('offline'));
+    const u = currentUser; currentUser = { uid: 'testuid' }; globalThis.__setDocs = [];
+    await absorbGuestPersonalData({});
+    currentUser = u; window.getDoc = og;
+    const r = { writes: globalThis.__setDocs.length, kept: localStorage.getItem('spendingMappings') !== null };
+    localStorage.removeItem('spendingMappings'); delete globalThis.__cloudMappings;
+    return r;
+  });
+  check('登入時雲端讀不到：不覆寫雲端，訪客小抄保留在本機下次重試', mergeFail.writes === 0 && mergeFail.kept, JSON.stringify(mergeFail));
   await gp.context().close();
-  const gd = await newPage(VIEWPORTS[1], '/mappings?start', true);
-  const demoOk = await gd.waitForFunction(() => document.querySelectorAll('#mp-list [data-mp-row]').length >= 3, null, { timeout: 20000 }).then(() => true).catch(() => false);
-  check('未登入直接開 /mappings：範例小抄會載入（不會卡在「範例載入中…」）', demoOk);
-  await gd.context().close();
 
   // 登出後：上一位用戶的標題／改名不能留在記憶體（共用裝置）
-  const lo = await pg.evaluate(() => { userMappingsTitle = '小明的刷卡表'; userMerchantAliases = { 'line pay': '我的LP' }; const u = currentUser; currentUser = null; refreshMappingsEntry(); const r = { title: userMappingsTitle, aliases: Object.keys(userMerchantAliases).length }; currentUser = u; return r; });
+  const lo = await pg.evaluate(() => { localStorage.removeItem('merchantAliases_guest'); localStorage.removeItem('mappingsTitle_guest'); userMappingsTitle = '小明的刷卡表'; userMerchantAliases = { 'line pay': '我的LP' }; const u = currentUser; currentUser = null; refreshMappingsEntry(); const r = { title: userMappingsTitle, aliases: Object.keys(userMerchantAliases).length }; currentUser = u; return r; });
   check('登出後清掉上一位用戶的小抄標題與自訂商家名', lo.title === '' && lo.aliases === 0, JSON.stringify(lo));
   check('過程中沒有 JavaScript 錯誤', pageErrors === 0, `${pageErrors} 個`);
 
