@@ -891,7 +891,7 @@ Apple Pay 國內消費 2026 下半年推薦永豐 Sport 卡 5%（消費 NT$10,00
                     <button class="close-modal" id="close-payments-modal">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇你使用的行動支付方式，只有選中的支付方式會出現在清單中。</p>
+                    <p class="modal-description">選擇你會使用的行動支付，方便一鍵比較</p>
                     <div class="modal-controls">
                         <input type="text" id="search-payments-input" class="search-modal-input" placeholder="搜尋行動支付...">
                         <button id="toggle-all-payments" class="toggle-all-btn">全選</button>
@@ -1124,9 +1124,9 @@ Apple Pay 國內消費 2026 下半年推薦永豐 Sport 卡 5%（消費 NT$10,00
                     <!-- 詳情頁搜尋（2026-10-14 移到所有回饋區上方）：一次過濾指定通路／即將開始／一般回饋／領券四區，
                          沒命中的區整區收起（filterCashbackItems） -->
                     <div class="cashback-search-bar" id="cashback-search-bar">
-                        <label class="cashback-search-label" for="cashback-search-input">搜尋這張卡的所有回饋</label>
+                        <label class="cashback-search-label" for="cashback-search-input">搜尋這張卡的所有回饋商家</label>
                         <input type="text" id="cashback-search-input" class="cashback-search-input"
-                               placeholder="搜尋通路或排除項目（如：全聯、罰單）"
+                               placeholder="輸入通路名稱（如：全聯、水費）"
                                oninput="filterCashbackItems(this.value)">
                         <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
                             找不到符合的通路或項目

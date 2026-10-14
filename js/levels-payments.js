@@ -498,9 +498,9 @@ async function showComparePaymentsModal() {
     modal.style.display = 'flex';
     disableBodyScroll();
 
-    const paymentsToCompare = currentUser ?
-        paymentsData.payments.filter(p => userSelectedPayments.has(p.id)) :
-        paymentsData.payments;
+    // 只比用戶選的行動支付——沒登入也一樣（訪客的選擇存在 localStorage，首頁清單也照它顯示）。
+    // 以前訪客會比全部（2026-10-14 站長回報：沒登入測試，所有支付都被比出結果）
+    const paymentsToCompare = paymentsData.payments.filter(p => userSelectedPayments.has(p.id));
 
     if (paymentsToCompare.length === 0) {
         contentContainer.innerHTML = '<p style="text-align: center; color: #666;">請先選擇要比較的行動支付</p>';
