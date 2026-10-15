@@ -123,6 +123,8 @@ async function loadCardsData() {
 
         // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
         mergeDataSearchExclusions(cardsData);
+        // 併入「統一詞」工作表的其他寫法／搜尋別名（選填）→ 模糊搜尋
+        mergeDataTermAliases(cardsData);
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);

@@ -1928,6 +1928,22 @@ input[type="number"]:focus {
     opacity: 0.8;
 }
 
+/* 狀態列「見下方灰色卡片 ↓」：跟著所在那行的字色（紅字警告行就是紅的），底線＋粗體表示可點 */
+.excluded-jump-link {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 600;
+    cursor: pointer;
+}
+.excluded-jump-link:hover {
+    opacity: 0.8;
+}
+/* 捲到後短暫標亮第一張灰卡 */
+.card-result.excluded-card-flash {
+    box-shadow: 0 0 0 3px #9ca3af;
+    transition: box-shadow 0.3s ease;
+}
+
 
 /* Calculate button */
 .calculate-btn {
@@ -3434,6 +3450,11 @@ input[type="number"]:focus {
     gap: 12px;
     align-items: center;
 }
+/* 搜尋框（或包著它的清除鈕 wrapper）可以縮，按鈕才保得住一行 */
+.modal-controls > .search-modal-input,
+.modal-controls > .input-clear-wrap {
+    min-width: 0;
+}
 
 .search-modal-input[type="text"] {
     flex: 1;
@@ -3486,7 +3507,10 @@ input[type="number"]:focus {
     background: #e5e7eb;
     color: #6b7280;
     border: 1px solid #d1d5db;
-    padding: 6px 12px;
+    padding: 6px 14px;
+    /* 任何寬度都只能一行（2026-10-14 站長：手機「全選」被擠成兩行）；讓搜尋框去縮 */
+    white-space: nowrap;
+    flex-shrink: 0;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 400;
@@ -3627,6 +3651,21 @@ input[type="number"]:focus {
     align-items: center;
     gap: 8px;
     width: 100%;
+}
+/* 手機：「詳情」鈕擠在卡名旁邊會把卡名壓成一字一行（2026-10-14 站長回報），
+   改成卡名獨佔一行、詳情鈕換到下一行（左邊對齊卡名，跟卡圖同一個縮排） */
+@media (max-width: 768px) {
+    .card-checkbox-row {
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+    .card-checkbox-row .card-checkbox-label {
+        flex: 1 1 calc(100% - 22px);
+        min-width: 0;
+    }
+    .card-checkbox-row .card-detail-peek-btn {
+        margin-left: 22px;
+    }
 }
 
 .card-checkbox:hover {
@@ -5773,6 +5812,11 @@ mark.cashback-search-hl {
 }
 
 /* Card Tags Styles */
+/* 詳情頁的卡片標籤先藏起來（2026-10-14 站長要求；程式先留著，見 card-detail.js renderCardTags） */
+#card-detail-modal .card-tags-container {
+    display: none;
+}
+
 .card-tags-container {
     display: flex;
     flex-wrap: wrap;

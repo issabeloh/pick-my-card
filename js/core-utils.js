@@ -7,6 +7,7 @@
  *  - 全域狀態                  → "Global variables"
  *  - GA4 版位標記              → "getAnalyticsSurface"
  *  - Body scroll lock          → "disableBodyScroll"
+ *  - Modal 每次打開都從最上方   → "setupModalScrollReset"
  *  - 全域 loading overlay      → "loadingOverlay"
  *  - WebView 內建瀏覽器警告     → "isInAppBrowser" / "showWebViewWarning"
  *  - 台灣時區日期工具           → "getTaiwanToday" / "parseISODate"
@@ -89,6 +90,27 @@ function getAnalyticsSurface() {
 // Refcounted so stacked modals (e.g. card detail opened from inside another modal)
 // don't release the scroll lock while an outer modal is still open.
 let bodyScrollLockDepth = 0;
+// Modal 每次打開都從最上方開始（2026-10-14 站長要求）：以前關掉再開，多數 modal 會停在上次捲到的位置。
+// 一條共用規則蓋所有 .modal（含日後新增的）：觀察 .modal 的 style／class／hidden 變化，
+// 從「關」變「開」的那一刻把 modal 本身與裡面所有捲動過的區塊歸零；開著時的變化不動
+// （不會干擾開啟後才捲到指定區塊的功能——那些都在下一幀 requestAnimationFrame 才捲，晚於這裡）
+(function setupModalScrollReset() {
+    if (typeof MutationObserver !== 'function' || typeof document === 'undefined') return;
+    const openModals = new WeakSet();
+    const isShown = el => el.isConnected && !el.hidden && getComputedStyle(el).display !== 'none';
+    const check = el => {
+        if (!el.classList || !el.classList.contains('modal')) return;
+        if (!isShown(el)) { openModals.delete(el); return; }
+        if (openModals.has(el)) return;
+        openModals.add(el);
+        if (el.scrollTop) el.scrollTop = 0;
+        el.querySelectorAll('*').forEach(child => { if (child.scrollTop) child.scrollTop = 0; });
+    };
+    const start = () => new MutationObserver(records => records.forEach(r => check(r.target)))
+        .observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
+
 function disableBodyScroll() {
     if (bodyScrollLockDepth === 0) {
         const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;

@@ -79,11 +79,12 @@ function createEngine(cardsData) {
 
   // 從 context 內部指派，才吃得到模組頂層的 let 綁定（見檔頭坑 2）。
   //
-  // ⚠️ 這四步是照抄 js/data-loader.js 的 loadCardsData()，順序與內容都不能改：
+  // ⚠️ 這幾步是照抄 js/data-loader.js 的 loadCardsData()，順序與內容都不能改：
   //   1. cardsData = 解碼結果
   //   2. filterExpiredRates —— 濾掉過期活動。少了它，已結束的活動會出現在清單裡
   //   3. mergeDataSearchExclusions —— 併入 SearchExclusions 工作表的排除規則。少了它，
   //      被排除的項目會被誤匹配（2026-08-16 linepay 頁多出「LINE Pay 找體驗 APP」就是這個）
+  //   3b. mergeDataTermAliases —— 併入「統一詞」工作表的別名（2026-10-14）。少了它，搜別名的結果會跟畫面不同
   //   4. buildCardItemsIndex —— 建每張卡的搜尋索引，沒有它 findMatchingItem 全部落空
   // 前端載入流程若有變動，這裡要跟著改，否則生成的清單會與畫面分岔。
   ctx.__cardsData = cardsData;
@@ -91,6 +92,7 @@ function createEngine(cardsData) {
     'cardsData = __cardsData;',
     'cardsData = filterExpiredRates(cardsData);',
     'mergeDataSearchExclusions(cardsData);',
+    'mergeDataTermAliases(cardsData);',
     'cardsData.cards.forEach(function (c) { buildCardItemsIndex(c); });',
     '__cardsData = cardsData;'
   ].join('\n'), ctx);

@@ -115,7 +115,7 @@ const META = readFixtureMeta();
   check('部分排除：灰卡墊底', r.lastIsExcluded, '灰卡後面還有一般卡');
   check('部分排除：標題兩種都講', r.title === '一般回饋與一般消費排除項目', r.title);
   check('部分排除：狀態列補「另有 5 張卡…見下方灰色卡片」',
-    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）'), r.status);
+    r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）'), r.status);
 
   // 3. 搜尋詞「包含」排除詞也算（用造的詞：真實詞如「人壽保費」會先匹配到保費活動，走活動路徑）
   r = await search('zzz國泰qq代繳費', { all: ['qq代繳'] });
@@ -144,7 +144,7 @@ const META = readFixtureMeta();
     `excluded=${r.excluded.length} 預期 ${total - activityCards}`);
   check('有指定通路結果時：活動筆數不含灰卡、補一行排除說明',
     r.status.includes(`有 ${baseline.cards.length} 筆活動符合你的選項`) &&
-    r.status.includes(`另有 ${total - activityCards} 張卡把「家樂福」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）`), r.status);
+    r.status.includes(`另有 ${total - activityCards} 張卡把「家樂福」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）`), r.status);
   check('有指定通路結果時：標題是「指定通路回饋與一般消費排除項目」', r.title === '指定通路回饋與一般消費排除項目', r.title);
   r = await search('家樂福');
   check('沒名單時：有指定通路結果也不出灰卡', r.excluded.length === 0 && !/排除項目/.test(r.status), r.status);
@@ -170,7 +170,7 @@ const META = readFixtureMeta();
   check('可能排除：標籤「可能屬於排除項目」、徽章維持「一般消費排除」、寫出完整項目、不出回饋欄位',
     r.excluded.every(e => e.label === '可能屬於排除項目' && e.badge === '一般消費排除' && e.items === '臺北醫學大學附設zzz醫院費用' && !e.hasRateFields),
     JSON.stringify(r.excluded[0]));
-  check('可能排除：狀態列補「另有 2 張卡可能排除…」', r.status.includes('另有 2 張卡可能排除「zzz醫院費用」（見下方灰色卡片）'), r.status);
+  check('可能排除：狀態列補「另有 2 張卡可能排除…」', r.status.includes('另有 2 張卡可能排除「zzz醫院費用」（見下方灰色卡片 ↓）'), r.status);
   r = await search('zzz醫院費用', { all: ['臺北醫學大學附設zzz醫院費用'] });
   check('可能排除：全部都是灰卡時用專用狀態列（不說「都列為排除」、也不說「以下顯示基本回饋」）',
     r.excluded.length === total && r.status.includes(`有 ${total} 張卡可能排除「zzz醫院費用」，請看下方灰色卡片確認`) &&

@@ -550,7 +550,7 @@ function basicExWriteReview_(sheet, page, groups) {
     g.card_ids.forEach(function (id) {
       covered[id] = true;
       const note = refreshNote(id);
-      rows.push(['', now, id, page.bank, page.url, g.items.join(','),
+      rows.push(['', now, id, page.bank, page.url, pmcUnifyList_(g.items.join(',')),
         [note, g.review_question].filter(function (x) { return x; }).join('\n'), String(g.evidence).slice(0, BASICEX_CONFIG.maxEvidenceChars)]);
       flags.push(g.needs_review || g.items.length === 0 || !!note);
     });
@@ -1081,12 +1081,12 @@ function applyBasicExclusionChanges() {
     if (r < 0) {
       const row = BASICEX_REVIEW_HEADERS.map(function () { return ''; });
       row[iApprove] = '覆蓋'; row[iTime] = now; row[iId] = id; row[BASICEX_REVIEW_HEADERS.indexOf('bank')] = meta[id].bank;
-      row[iUrl] = meta[id].url; row[iItems] = value[id]; row[iQ] = note;
+      row[iUrl] = meta[id].url; row[iItems] = pmcUnifyList_(value[id]); row[iQ] = note;
       review.appendRow(row);
       return;
     }
     const sheetRow = r + 1;
-    review.getRange(sheetRow, iItems + 1).setValue(value[id]);
+    review.getRange(sheetRow, iItems + 1).setValue(pmcUnifyList_(value[id]));
     review.getRange(sheetRow, iQ + 1).setValue(note);
     review.getRange(sheetRow, iTime + 1).setValue(now);
     review.getRange(sheetRow, iApprove + 1).setValue('覆蓋');

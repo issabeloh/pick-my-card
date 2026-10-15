@@ -3,6 +3,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
+ *  - 統一詞的搜尋別名          → "mergeDataTermAliases"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
@@ -37,9 +38,11 @@ const fuzzySearchMap = {
     '全家': '全家',
     'familymart': '全家',
     '全家便利商店': '全家',
-    '萊爾富': 'ok mart',
-    '莱尔富': 'ok mart',
+    // 萊爾富（Hi-Life）與 OK超商（OK mart）是兩家不同的超商（2026-10-15 站長確認；以前錯把萊爾富對到 ok mart）
+    '莱尔富': '萊爾富',
+    'hi-life': '萊爾富',
     'okmart': 'ok mart',
+    'ok mart': 'ok超商',
     'pxmart': '全聯福利中心',
     '全聯': '全聯福利中心',
     '全聯小時達': '全聯小時達',
@@ -102,7 +105,7 @@ const fuzzySearchMap = {
     '韓亞': '韓亞航空',
     'asiana airlines': '韓亞航空',
     '國泰航空': 'cathay pacific',
-    '國泰': 'cathay pacific',
+    // 「國泰」不對到國泰航空：國泰也是銀行與其他通路名（2026-10-15 站長決定）
     '新加坡航空': 'singapore airlines',
     '新航': '新加坡航空',
     'sia': '新加坡航空',
@@ -169,7 +172,7 @@ const fuzzySearchMap = {
     'google 廣告': 'google廣告',
     'google ads': 'google廣告',
     'abc mart': 'abc-mart',
-    'MAC': 'M.A.C',
+    'mac': 'M.A.C', // 原本寫成大寫 'MAC'，搜尋詞一律小寫所以一直沒生效（2026-10-15 修）
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
     'tomods': 'Tomod\'s',
@@ -183,7 +186,10 @@ const fuzzySearchMap = {
     '公路養管費': '公路養管費(原燃料費)',
     '燃料費': '公路養管費(原燃料費)',
     '汽燃費': '公路養管費(原燃料費)',
-    '小額支付特約商家': '小額支付特約商店'
+    '小額支付特約商家': '小額支付特約商店',
+    // 同一件事兩種說法，資料裡兩種都有（2026-10-14 站長要求）：搜哪個都要找得到另一個
+    '寵物醫院': '動物醫院',
+    '動物醫院': '寵物醫院'
 };
 
 // 詞素級同義詞（片語展開用）。
@@ -245,6 +251,27 @@ function mergeDataSearchExclusions(data) {
     });
     if (mergedCount > 0) {
         console.log(`🚫 已從 cards.data 併入 ${mergedCount} 條搜尋排除規則`);
+    }
+}
+
+// 將 cards.data 匯出的 termAliases（「統一詞」工作表，2026-10-14）併入模糊搜尋表。
+// 格式：[{ term: 統一詞, aliases: [其他寫法…, 搜尋別名…] }]。別名 → 統一詞，
+// expandSearchTerms 的反向查表會讓搜統一詞也帶出別名，兩個方向都通。資料蓋過程式內建的同名別名
+function mergeDataTermAliases(data) {
+    if (!data || !Array.isArray(data.termAliases)) return;
+    let mergedCount = 0;
+    data.termAliases.forEach(entry => {
+        const term = String(entry && entry.term || '').toLowerCase().trim();
+        if (!term) return;
+        (Array.isArray(entry.aliases) ? entry.aliases : []).forEach(a => {
+            const alias = String(a || '').toLowerCase().trim();
+            if (!alias || alias === term) return;
+            fuzzySearchMap[alias] = term;
+            mergedCount++;
+        });
+    });
+    if (mergedCount > 0) {
+        console.log(`🔤 已從 cards.data 併入 ${mergedCount} 個搜尋別名`);
     }
 }
 
@@ -690,6 +717,15 @@ function hideMatchedItem() {
 }
 
 // Scroll to parking benefits section
+// 狀態列「見下方灰色卡片」的導引（2026-10-14 站長要求）：捲到第一張灰色排除卡、短暫標亮
+function scrollToFirstExcludedCard() {
+    const card = document.querySelector('#results-container .card-result.excluded-card');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('excluded-card-flash');
+    setTimeout(() => card.classList.remove('excluded-card-flash'), 1600);
+}
+
 function scrollToParkingBenefits() {
     const parkingSection = document.getElementById('parking-benefits-section');
     if (parkingSection && parkingSection.style.display !== 'none') {
@@ -955,7 +991,7 @@ async function showBasicExcludedMessage(merchantValue, excludedCount, matchedIte
         ? `✓ 匹配到 <strong>${safeName}</strong>`
         : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
 
-    let warn = `✘ 你比較的 ${excludedCount} 張卡都沒有「${safeName}」的活動，而且都把它列為一般消費排除項目，刷卡不會有任何回饋（包含基本回饋）`;
+    let warn = `✘ 你比較的 ${excludedCount} 張卡都沒有「${safeName}」的活動，而且都把它列為<strong>一般消費排除項目</strong>，刷卡不會有任何回饋（包含基本回饋）`;
     // 匹配得到＝別張卡可能真的有這個活動（只是沒加入比較），跟 showMatchedButNoActivityMessage 一樣提示
     if (matchedItems) {
         const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
@@ -983,9 +1019,9 @@ function showMaybeExcludedMessage(merchantValue, definiteCount, maybeCount, matc
         ? `✓ 匹配到 <strong>${safeName}</strong>`
         : `✘ 沒有匹配到 <strong>${safeName}</strong> 的活動`;
     if (definiteCount > 0) {
-        messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為一般消費排除項目，刷卡無回饋</span>`;
+        messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為<strong>一般消費排除項目</strong>，刷卡無回饋</span>`;
     }
-    messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認</span>`;
+    messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">點擊查看 ↓</a>）</span>`;
     matchedItemDiv.innerHTML = messageHtml;
     matchedItemDiv.className = matchedItems ? 'matched-item' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
@@ -998,8 +1034,8 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
     const count = Number(excludedCount) || 0;
     const name = escapeHtml(String(merchantValue || '').trim());
     const note = isMaybe
-        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（見下方灰色卡片）</span>`
-        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）</span>`;
+        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`
+        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為<strong>一般消費排除項目</strong>，刷卡無回饋（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }

@@ -105,6 +105,29 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
   check('名稱照字面顯示、不當 HTML（鐵則 3）', xss && await page.evaluate(() =>
     !document.querySelector('#merchant-suggest img') && !window.__x), 'img 被解析了');
 
+  // 統一詞的搜尋別名（termAliases → 模糊搜尋，2026-10-14）
+  const alias = await page.evaluate(() => {
+    mergeDataTermAliases({ termAliases: [{ term: 'zzz動物醫院', aliases: ['zzz寵物醫院', 'zzzUberEats'] }] });
+    return { a: expandSearchTerms('zzz寵物醫院'), b: expandSearchTerms('zzz動物醫院') };
+  });
+  check('統一詞別名：搜別名帶出統一詞、搜統一詞帶出別名', alias.a.includes('zzz動物醫院') &&
+    alias.b.includes('zzz寵物醫院') && alias.b.includes('zzzubereats'), JSON.stringify(alias));
+
+  // 所有 modal 每次打開都從最上方（core-utils.js setupModalScrollReset，2026-10-14）
+  const modalTop = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const m = document.getElementById('manage-cards-modal');
+    openManageCardsModal(); await wait(300);
+    const box = m.querySelector('.modal-content');
+    box.style.maxHeight = '200px'; box.scrollTop = 150; const scrolled = box.scrollTop;
+    m.style.display = 'none'; await wait(50);
+    openManageCardsModal(); await wait(300);
+    const after = box.scrollTop;
+    box.style.maxHeight = ''; m.style.display = 'none'; if (typeof enableBodyScroll === 'function') enableBodyScroll();
+    return { scrolled, after };
+  });
+  check('modal 關掉再開會回到最上方', modalTop.scrolled > 0 && modalTop.after === 0, JSON.stringify(modalTop));
+
   check('沒有 page error', errors.length === 0, errors.join(' | '));
   await browser.close();
   srv.close();
