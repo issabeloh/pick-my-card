@@ -106,10 +106,10 @@ function seedTermDictionary() {
   });
   const rows = [TERM_DICT_HEADERS];
   TERM_UNIFY_SEED.forEach(function(t) {
-    rows.push([t, (extraByTerm[t] || []).join(', '), (TERM_UNIFY_SEED_ALIASES[t] || []).join(', '), '']);
+    rows.push([t, (extraByTerm[t] || []).join(','), (TERM_UNIFY_SEED_ALIASES[t] || []).join(','), '']);
   });
   Object.keys(TERM_UNIFY_SEED_ALIASES).forEach(function(t) {
-    if (TERM_UNIFY_SEED.indexOf(t) < 0) rows.push([t, '', TERM_UNIFY_SEED_ALIASES[t].join(', '), '']);
+    if (TERM_UNIFY_SEED.indexOf(t) < 0) rows.push([t, '', TERM_UNIFY_SEED_ALIASES[t].join(','), '']);
   });
   sheet.getRange(1, 1, rows.length, TERM_DICT_HEADERS.length).setValues(rows);
   sheet.setFrozenRows(1);
@@ -212,6 +212,7 @@ function applyTermUnify() {
 // 一次性：模糊搜尋清單搬進「統一詞」表（2026-10-15 站長逐條確認）
 // ==========================================
 // importFuzzyAliases：表上已有的統一詞 → 把缺的其他寫法／搜尋別名補進那一列；沒有的 → 加新列；
+// 清單一律用半形逗號、不加空格（跟 Cards Data 同一個寫法，2026-10-15 站長要求）；表上既有的「, 」重跑時也會順手改掉。
 // FUZZY_IMPORT_REMOVE 列的統一詞整列刪掉。重複執行不會重複加（已有的就跳過）。
 // 跑完照常 previewTermUnify → applyTermUnify（「其他寫法」那幾個會改資料）→ exportToJSON
 const FUZZY_IMPORT_REMOVE = ['PChome'];   // 站長：不要「PChome」，分成 PChome 24h購物／PChome商店街
@@ -249,7 +250,8 @@ const FUZZY_IMPORT = [
   { term: 'Apple Pay', aliases: ['applepay', 'apple wallet'] },
   { term: 'Google Pay', aliases: ['googlepay'] },
   { term: 'Samsung Pay', aliases: ['samsungpay'] },
-  { term: 'Apple Store 線上商店', variants: ['Apple官網', 'Apple Store 在線商城'] },
+  // 站長 2026-10-15：Apple 這兩個放搜尋別名、不改資料（「Apple 官網」有空格要另列，搜尋不會忽略空格）
+  { term: 'Apple Store 線上商店', aliases: ['Apple官網', 'Apple 官網', 'Apple Store 在線商城'] },
   { term: 'Pi拍錢包', aliases: ['pi錢包', 'pi wallet'] },
   { term: '國外', aliases: ['海外', 'overseas'] },
   { term: '愛奇藝', aliases: ['iqiyi'] },
@@ -315,7 +317,7 @@ function importFuzzyAliases() {
     const list = split(cell);
     const lower = list.map(function(x) { return x.toLowerCase(); });
     (add || []).forEach(function(a) { if (lower.indexOf(a.toLowerCase()) < 0) { list.push(a); lower.push(a.toLowerCase()); } });
-    return list.join(', ');
+    return list.join(',');
   };
   let log = [];
   // 1. 刪列（由下往上刪，列號才不會跑掉）
@@ -340,7 +342,7 @@ function importFuzzyAliases() {
     const r = rowOf[termUnifyKey_(e.term)];
     if (r === undefined) {
       const row = h.map(function() { return ''; });
-      row[cT - 1] = e.term; row[cV - 1] = (e.variants || []).join(', '); row[cA - 1] = (e.aliases || []).join(', ');
+      row[cT - 1] = e.term; row[cV - 1] = (e.variants || []).join(','); row[cA - 1] = (e.aliases || []).join(',');
       newRows.push(row);
       return;
     }
