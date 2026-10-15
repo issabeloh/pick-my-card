@@ -38,9 +38,11 @@ const fuzzySearchMap = {
     '全家': '全家',
     'familymart': '全家',
     '全家便利商店': '全家',
-    '萊爾富': 'ok mart',
-    '莱尔富': 'ok mart',
+    // 萊爾富（Hi-Life）與 OK超商（OK mart）是兩家不同的超商（2026-10-15 站長確認；以前錯把萊爾富對到 ok mart）
+    '莱尔富': '萊爾富',
+    'hi-life': '萊爾富',
     'okmart': 'ok mart',
+    'ok mart': 'ok超商',
     'pxmart': '全聯福利中心',
     '全聯': '全聯福利中心',
     '全聯小時達': '全聯小時達',
@@ -103,7 +105,7 @@ const fuzzySearchMap = {
     '韓亞': '韓亞航空',
     'asiana airlines': '韓亞航空',
     '國泰航空': 'cathay pacific',
-    '國泰': 'cathay pacific',
+    // 「國泰」不對到國泰航空：國泰也是銀行與其他通路名（2026-10-15 站長決定）
     '新加坡航空': 'singapore airlines',
     '新航': '新加坡航空',
     'sia': '新加坡航空',
@@ -170,7 +172,7 @@ const fuzzySearchMap = {
     'google 廣告': 'google廣告',
     'google ads': 'google廣告',
     'abc mart': 'abc-mart',
-    'MAC': 'M.A.C',
+    'mac': 'M.A.C', // 原本寫成大寫 'MAC'，搜尋詞一律小寫所以一直沒生效（2026-10-15 修）
     'nitori': '宜得利',
     'mia cbon': 'Mia C\'bon',
     'tomods': 'Tomod\'s',
