@@ -1928,6 +1928,22 @@ input[type="number"]:focus {
     opacity: 0.8;
 }
 
+/* 狀態列「見下方灰色卡片 ↓」：跟著所在那行的字色（紅字警告行就是紅的），底線＋粗體表示可點 */
+.excluded-jump-link {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 600;
+    cursor: pointer;
+}
+.excluded-jump-link:hover {
+    opacity: 0.8;
+}
+/* 捲到後短暫標亮第一張灰卡 */
+.card-result.excluded-card-flash {
+    box-shadow: 0 0 0 3px #9ca3af;
+    transition: box-shadow 0.3s ease;
+}
+
 
 /* Calculate button */
 .calculate-btn {

@@ -715,6 +715,15 @@ function hideMatchedItem() {
 }
 
 // Scroll to parking benefits section
+// 狀態列「見下方灰色卡片」的導引（2026-10-14 站長要求）：捲到第一張灰色排除卡、短暫標亮
+function scrollToFirstExcludedCard() {
+    const card = document.querySelector('#results-container .card-result.excluded-card');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('excluded-card-flash');
+    setTimeout(() => card.classList.remove('excluded-card-flash'), 1600);
+}
+
 function scrollToParkingBenefits() {
     const parkingSection = document.getElementById('parking-benefits-section');
     if (parkingSection && parkingSection.style.display !== 'none') {
@@ -1010,7 +1019,7 @@ function showMaybeExcludedMessage(merchantValue, definiteCount, maybeCount, matc
     if (definiteCount > 0) {
         messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(definiteCount) || 0} 張卡把「${safeName}」列為<strong>一般消費排除項目</strong>，刷卡無回饋</span>`;
     }
-    messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認</span>`;
+    messageHtml += `<br><span class="matched-item-warn">✘ 有 ${Number(maybeCount) || 0} 張卡可能排除「${safeName}」，請看下方灰色卡片確認（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">點擊查看 ↓</a>）</span>`;
     matchedItemDiv.innerHTML = messageHtml;
     matchedItemDiv.className = matchedItems ? 'matched-item' : 'matched-item no-match';
     matchedItemDiv.style.display = 'block';
@@ -1023,8 +1032,8 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
     const count = Number(excludedCount) || 0;
     const name = escapeHtml(String(merchantValue || '').trim());
     const note = isMaybe
-        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（見下方灰色卡片）</span>`
-        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為<strong>一般消費排除項目</strong>，刷卡無回饋（見下方灰色卡片）</span>`;
+        ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`
+        : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為<strong>一般消費排除項目</strong>，刷卡無回饋（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`;
     matchedItemDiv.innerHTML += note;
     matchedItemDiv.style.display = 'block';
 }
