@@ -5,7 +5,7 @@
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
  *  - 統一詞的搜尋別名          → "mergeDataTermAliases"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
- *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms"
+ *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms" / "findSearchHits"（找、算、顯示三步之「找」）
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
@@ -298,32 +298,20 @@ function findMatchingItem(searchTerm, options = {}) {
     
     if (allMatches.length === 0) return null;
 
-    // Remove duplicates (same item appearing in multiple cards)
-    // 使用 itemLower 並考慮 fuzzySearchMap 映射關係去重
-    // 這樣"KLOOK"和"klook"會被視為相同，"海外"和"國外"也會被視為相同
+    // 去重（2026-10-17 改）：只合併「小寫後完全相同」的名字（同一個商家名出現在多張卡、或只差大小寫）。
+    // ⚠️ 不能再用統一詞／別名把不同的名字併成一個：這份名單就是「算」那一步的輸入，計算時每張卡是用
+    //    名字查索引（小寫全等），名單上少一個名字，寫那個名字的卡就可能算不到。以前「海外／國外」「三井outlet／
+    //    三井 MITSUI OUTLET PARK」會被併成一個，結果要靠別名剛好連得回去，是架構上的漏洞。
+    //    只差空格的名字（Uber Eats／UberEats）也**不能**併：索引是小寫全等，兩個是不同的鍵。
+    //    名字寫法不一致請在「統一詞」工作表統一資料，不要在程式裡藏起來。
+    // 精準搜尋先篩再去重，避免先出現的非完全一致項目把後面完全一致的同名項目擋掉
     const uniqueMatches = [];
     const seenItems = new Set();
-
-    // Helper function to get normalized key considering fuzzy search mappings
-    const getNormalizedKey = (itemLower) => {
-        // If this item maps to another term in fuzzySearchMap, use the mapped term
-        // This ensures "海外" and "國外" get the same key
-        if (fuzzySearchMap[itemLower]) {
-            const mappedTerm = fuzzySearchMap[itemLower].toLowerCase();
-            // Use the alphabetically first term as the canonical key to avoid circular mapping
-            return itemLower < mappedTerm ? itemLower : mappedTerm;
-        }
-        return itemLower;
-    };
-
     for (const match of allMatches) {
-        const itemKey = getNormalizedKey(match.itemLower);
-
-        if (!seenItems.has(itemKey)) {
-            seenItems.add(itemKey);
-            if (exactOnly && !match.isExactMatch) continue;
-            uniqueMatches.push(match);
-        }
+        if (exactOnly && !match.isExactMatch) continue;
+        if (seenItems.has(match.itemLower)) continue;
+        seenItems.add(match.itemLower);
+        uniqueMatches.push(match);
     }
 
     // 添加調試日誌
@@ -350,6 +338,31 @@ function findMatchingItem(searchTerm, options = {}) {
     
     // Return all matches for comprehensive results
     return uniqueMatches;
+}
+
+// ============================================================
+// 搜尋三步之一「找」（2026-10-17 架構調整：找、算、顯示分三步）
+// 一次找出完整的命中清單（商家名＋匹配品質），之後「算」（calculateHitResults，js/cashback-engine.js）
+// 與「顯示」（showMatchedItem 等）都只用這份清單，不再各自重新搜尋或刪減。
+// options.quickOption：多關鍵詞快捷搜尋——每個關鍵詞各找一次再合併（同名只留一個，保留先到先得的順序）
+// options.exactOnly：精準搜尋（快捷搜尋不受影響）
+// 回傳陣列；一個都沒有回 null（與 findMatchingItem 相同）
+// ============================================================
+function findSearchHits(query, options = {}) {
+    const option = options.quickOption;
+    if (option && Array.isArray(option.merchants) && option.merchants.length > 1) {
+        const seen = new Set();
+        const hits = [];
+        option.merchants.forEach(keyword => {
+            (findMatchingItem(String(keyword).trim()) || []).forEach(m => {
+                if (seen.has(m.itemLower)) return;
+                seen.add(m.itemLower);
+                hits.push(m);
+            });
+        });
+        return hits.length > 0 ? hits : null;
+    }
+    return findMatchingItem(String(query || ''), { exactOnly: !!options.exactOnly });
 }
 
 // Show matched item(s)
@@ -623,7 +636,7 @@ function syncMatchedItemToInput() {
 
     const input = raw.toLowerCase();
     const exactOnly = isExactSearchEnabled();
-    const matchedItems = findMatchingItem(input, { exactOnly });
+    const matchedItems = findSearchHits(input, { exactOnly });   // 「找」：完整命中清單
 
     if (matchedItems && matchedItems.length > 0) {
         showMatchedItem(matchedItems, input, getCardsForComparison());
