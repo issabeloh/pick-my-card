@@ -47,6 +47,14 @@ function readTermDictionary_(ss) {
   const split = function(v) { return String(v || '').split(/[,，\n]/).map(function(x) { return x.trim(); }).filter(Boolean); };
   const out = [];
   for (let r = 1; r < data.length; r++) {
+    // 試算表會把「7-11」這種格子自動變成日期（2026-10-17 實際發生：匯出成「Sat Jul 11 2026…」）。
+    // 讀到日期／數字就跳過整列並寫進執行記錄，不要把亂碼匯出去；修法：格子前面加 ' 改成文字
+    const cells = [data[r][iT], iV >= 0 ? data[r][iV] : '', iA >= 0 ? data[r][iA] : ''];
+    if (cells.some(function(v) { return Object.prototype.toString.call(v) === '[object Date]' || typeof v === 'number'; })) {
+      Logger.log('⚠️「' + TERM_DICT_SHEET + '」第 ' + (r + 1) + ' 列有格子被試算表轉成日期或數字，整列跳過。' +
+        '請在那格前面加一個 \' 再重打（例：\'7-11），讓它變成文字');
+      continue;
+    }
     const term = String(data[r][iT] || '').trim();
     if (!term) continue;
     out.push({ term: term, variants: iV >= 0 ? split(data[r][iV]) : [], aliases: iA >= 0 ? split(data[r][iA]) : [] });
