@@ -965,9 +965,12 @@ function renderMerchantSuggest(input) {
     const box = document.getElementById('merchant-suggest');
     if (!box) return;
     const query = input.value.trim();
-    merchantSuggestItems = getMerchantSuggestions(query);
+    const suggestions = getMerchantSuggestions(query);
     merchantSuggestActive = -1;
-    if (merchantSuggestItems.length === 0) { closeMerchantSuggest(); return; }
+    if (suggestions.length === 0) { closeMerchantSuggest(); return; }
+    // 第一行固定是「搜尋「用戶打的字」」（2026-10-17 站長要求）：讓用戶知道直接搜自己打的也可以，
+    // 不是一定要選下面的建議。點它＝按 Enter／計算
+    merchantSuggestItems = [{ isQuery: true, name: query }].concat(suggestions);
 
     const q = query.toLowerCase();
     box.textContent = '';
@@ -976,6 +979,18 @@ function renderMerchantSuggest(input) {
         li.id = `merchant-suggest-${i}`;
         li.className = 'merchant-suggest-item';
         li.setAttribute('role', 'option');
+        if (entry.isQuery) {
+            li.classList.add('merchant-suggest-query');
+            li.appendChild(document.createTextNode('搜尋「'));
+            const strong = document.createElement('strong');
+            strong.textContent = entry.name;
+            li.appendChild(strong);
+            li.appendChild(document.createTextNode('」'));
+            li.addEventListener('mousedown', e => e.preventDefault());
+            li.addEventListener('click', () => pickMerchantSuggestion(i));
+            box.appendChild(li);
+            return;
+        }
         // 命中的字加粗（跟 Google／購物網站的建議清單一樣，看得出是對到哪裡）
         const pos = entry.lower.indexOf(q);
         if (pos === -1) {
@@ -1016,6 +1031,13 @@ function pickMerchantSuggestion(i) {
     const input = document.getElementById('merchant-input');
     closeMerchantSuggest();
     if (!entry || !input) return;
+    if (entry.isQuery) {
+        // 照用戶打的字直接計算（跟在輸入框按 Enter 一樣）
+        input.blur();
+        const btn = document.getElementById('calculate-btn');
+        if (btn && !btn.disabled && typeof calculateCashback === 'function') calculateCashback();
+        return;
+    }
     if (entry.option && typeof handleQuickSearch === 'function') {
         handleQuickSearch(entry.option);
     } else {
