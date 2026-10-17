@@ -151,6 +151,19 @@ function expandSearchTerms(searchLower) {
     return searchTerms;
 }
 
+// 3 個字以內的純英數搜尋詞（ana、jal、gu、net…）只認「字首」：前面要是開頭或非英文字母
+// （2026-10-17 站長要求：搜「ana」要找到 ana全日空，不要誤中 jeANAsis、hANA pay）。
+// 中文字、符號、數字前面都算字首（「ana全日空」「三井3C」照樣命中）；4 個字以上照舊任意位置都算（eats → UberEats）
+function shortTermStartsWord(itemLower, term) {
+    if (!/^[a-z0-9]{1,3}$/.test(term)) return true;
+    let idx = itemLower.indexOf(term);
+    while (idx !== -1) {
+        if (idx === 0 || !/[a-z]/.test(itemLower[idx - 1])) return true;
+        idx = itemLower.indexOf(term, idx + 1);
+    }
+    return false;
+}
+
 function findMatchingItem(searchTerm, options = {}) {
     if (!cardsData) return null;
     const exactOnly = !!options.exactOnly;
@@ -201,7 +214,7 @@ function findMatchingItem(searchTerm, options = {}) {
 
                 // Check for matches with word boundary awareness
                 const exactMatch = itemLower === term;
-                const itemContainsTerm = itemLower.includes(term);
+                const itemContainsTerm = itemLower.includes(term) && shortTermStartsWord(itemLower, term);
 
                 // For term.includes(itemLower), check if it's a word boundary match
                 // to prevent "singapore airlines" from matching "gap"
@@ -940,7 +953,7 @@ function getMerchantSuggestions(query) {
     }
     const hits = [];
     merchantSuggestIndex.forEach((entry, order) => {
-        const pos = entry.lower.indexOf(q);
+        const pos = shortTermStartsWord(entry.lower, q) ? entry.lower.indexOf(q) : -1;
         if (pos !== -1) { hits.push({ entry, rank: pos === 0 ? 0 : 1, order }); return; }
         // 同義詞群組：打的是某個銀行寫法的一部分（「醫指」）→ 列出代表名稱，排在名稱本身命中的後面
         if (entry.aliases && entry.aliases.some(a => a.includes(q))) hits.push({ entry, rank: 2, order });
