@@ -1015,6 +1015,30 @@ if (faqSheet) {
     );
   }
 
+  // 寫法一致性：同一個名字只差空白／大小寫／全半形／臺台 → 提醒、不擋匯出（OK 按鈕，按完照常往下匯出）。
+  // 比的範圍＝網站真的會拿來搜尋、比對的商家名；判斷與修法說明在 term-unify.gs 的 termConsistencyIssues_。
+  // 那支還沒貼進來時跳過
+  if (typeof termConsistencyIssues_ === 'function') {
+    const nameEntries = [];
+    const addNames = function(names, source) {
+      names.forEach(function(n) { nameEntries.push({ name: n, source: source }); });
+    };
+    cards.forEach(function(card) {
+      (card.cashbackRates || []).forEach(function(g) { addNames(g.items || [], card.name); });
+      (card.couponCashbacks || []).forEach(function(c) { addNames(splitMerchantCell_(c.merchant), card.name + '（領券）'); });
+      addNames(card.basicExclusions || [], card.name + '（一般消費排除）');
+    });
+    quickSearchOptions.forEach(function(q) { addNames(q.merchants || [], '快捷選項「' + q.displayName + '」'); });
+    addNames(Object.keys(merchantPayments), 'Merchant Payments');
+    spotlights.forEach(function(s) { addNames(splitMerchantCell_(s.merchant), '精選活動'); });
+    const termIssues = termConsistencyIssues_(nameEntries, readTermDictionary_(ss));
+    if (termIssues.length > 0) {
+      Logger.log('⚠️ 寫法不一致 ' + termIssues.length + ' 組：\n' + termConsistencyMessage_(termIssues, termIssues.length));
+      ui.alert('⚠️ 同一個名字有 ' + termIssues.length + ' 組不同寫法（不影響匯出）',
+        termConsistencyMessage_(termIssues, 12), ui.ButtonSet.OK);
+    }
+  }
+
   // 新戶活動「更新日期」：只有 newCardholderPromos 內容真的變動時才蓋今天，否則沿用上次那天。
   // 上次的指紋＋日期存在 Script Properties（Apps Script 端持久化，不佔 repo 檔案、不多一個
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後

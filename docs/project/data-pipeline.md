@@ -85,7 +85,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     **分類**（如「醫療費用」⊃ 醫指付、長庚醫療體系…）：打 name 才展開成整組；**同義詞**（如交通罰單＝罰款＝罰鍰）：打 name 或任一寫法都展開。
     只影響排除判斷、詳情頁搜尋、下拉選單（只列 name），不進活動匹配。前端 `expandExclusionGroupTerms()`（`js/search-match.js`）；規則見 cashback-engine.md 第 10 節
 12d. **統一詞**（2026-10-14，資料檔「PMC 管理系統」）—— 統一詞, 其他寫法, 搜尋別名, 備註。站長維護的商家統一寫法（品牌原大小寫、中英不空格、臺→台）。三個地方讀它：
-    ①`apps-script/term-unify.gs`：`seedTermDictionary` 建表（只第一次）、`previewTermUnify`／`applyTermUnify` 把試算表既有資料改成統一寫法（只換整項；忽略大小寫／空白／臺台比對；不掃 MerchantPages）；
+    ①`apps-script/term-unify.gs`：`previewTermUnify`／`applyTermUnify` 把試算表既有資料改成統一寫法（只換整項；忽略大小寫／空白／臺台比對；不掃 MerchantPages；2026-10-17 起掃 Highlights）；
+    同檔的 `termConsistencyIssues_` 是**寫法一致性檢查**（2026-10-17）：`exportToJSON` 每次匯出自動跑，網站用到的商家名（各卡 items、領券、一般消費排除、快捷選項、Merchant Payments、精選活動）裡同一個名字有兩種以上寫法（同一個 `termUnifyKey_`）就跳提醒、不擋匯出。
+    為什麼要有：前端「算」是拿名字查每張卡的清單，只忽略大小寫、不忽略空白；寫法不一，「匹配到」會重複列，名字改過的話用戶刷卡小抄存的舊寫法也對不上。修法一律在源頭（統一詞表加列 → applyTermUnify），不在程式裡做空白合併；
     ②`cards-export.gs` 匯出 `termAliases`（其他寫法＋搜尋別名）→ 前端 `mergeDataTermAliases` 併入模糊搜尋；
     ③自動化檔 `benefits-parser.gs` 的 `pmcUnifyList_`：新戶 bonus_merchants、新卡／活動更新 items、一般消費排除 basicExclusions 寫進待審核前先統一（跟 term-unify 的 `termUnifyCell_` 同規則，兩專案各一份，改一邊要同步）。
     「其他寫法」＝會被改寫的；「搜尋別名」＝不改資料、只讓用戶搜得到（寵物醫院 → 動物醫院）

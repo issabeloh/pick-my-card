@@ -17,15 +17,18 @@
 //   1. previewTermUnify：只看不改。把「會改哪些格、改前改後」寫進「用詞統一預覽」工作表
 //   2. 看過沒問題 → applyTermUnify：真的改，改完預覽表標「已套用」
 //   3. 跑一次 exportToJSON
+//   （不用手動跑）exportToJSON 每次都會呼叫 termConsistencyIssues_：網站用到的商家名裡，同一個名字有兩種以上寫法
+//     （只差空白／大小寫／全半形／臺台）就跳提醒，照提醒在統一詞表處理再跑 1、2 步。見檔尾「寫法一致性檢查」
 //
 // 比對規則（刻意保守）：
 //   ・一格裡用 , ， 、 換行 切成一項一項（括號裡的「、」不切），**整項**等於某個寫法才換——句子裡夾著品牌名不會被動到
 //   ・「等於」＝忽略大小寫、空白、全半形、臺/台之後相同
 //   ・公式格、第 1 列表頭不動；只掃 TERM_UNIFY_SHEETS（MerchantPages 刻意不掃：牽涉商家頁網址）
+//   ・Highlights（精選活動）2026-10-17 加入：寫法一致性檢查抓到精選活動寫「LINE Pay」、卡片寫「Line Pay」，沒掃就永遠改不到
 const TERM_DICT_SHEET = '統一詞';
 const TERM_DICT_HEADERS = ['統一詞', '其他寫法', '搜尋別名', '備註'];
 const TERM_UNIFY_SHEETS = ['Cards Data', 'QuickSearch', 'Search Hints', 'searchExclusions', 'SearchExclusions',
-  'Card Benefits', 'Merchant Payments', 'ExclusionGroups'];
+  'Card Benefits', 'Merchant Payments', 'ExclusionGroups', 'Highlights'];
 const TERM_UNIFY_REPORT = '用詞統一預覽';
 
 function termUnifyKey_(s) {
@@ -157,4 +160,61 @@ function applyTermUnify() {
   const report = termUnifyWriteReport_(changes, '已套用');
   ss.setActiveSheet(report);
   Logger.log('用詞統一完成：改了 ' + changes.length + ' 格。記得再跑一次 exportToJSON');
+}
+
+// ==========================================
+// 寫法一致性檢查（2026-10-17）：exportToJSON 每次匯出自動呼叫
+// ==========================================
+// 抓「同一個名字、只差空白／大小寫／全半形／臺台」的不同寫法（例：Line Pay ⇄ LINE Pay、台灣 Pay ⇄ 台灣Pay）。
+// 為什麼要抓：網站每張卡是「拿名字查清單」，只忽略大小寫、**不忽略空白**。同一家店寫成兩種樣子，
+// 搜尋的「匹配到」會列兩次；名字改過的話，用戶存在刷卡小抄的舊寫法也會對不上。
+// 正確做法是資料源頭只有一種寫法——這支只負責每次匯出時把漏網的列出來（不擋匯出），由站長在源頭修：
+//   ・統一詞表已有這個字 → 跑 previewTermUnify → applyTermUnify，所有寫法會改成表上那種
+//   ・還沒有 → 在統一詞表加一列（統一詞寫你要的那種），再跑上面兩步
+// 「同一個名字」的判斷跟 applyTermUnify 同一個 termUnifyKey_，所以提醒的每一組，照上面做都改得到。
+// 比的是匯出後網站真的會用到的商家名（呼叫端決定範圍，見 cards-export.gs）；Search Hints／ExclusionGroups
+// 刻意不比：那兩張本來就會故意列好幾種寫法讓用戶搜得到。
+//
+// entries：[{ name, source }]（source＝給人看的出處，例：卡名、「精選活動」）
+// dict：readTermDictionary_() 的結果，用來判斷統一詞表是不是已經有這個字
+// 回傳：[{ term: 統一詞表上的寫法或 null, writings: [{ name, sources: [...] }] }]，只回傳有兩種以上寫法的
+function termConsistencyIssues_(entries, dict) {
+  const groups = {};   // key -> { name -> { source: true } }
+  entries.forEach(function(e) {
+    const name = String(e.name || '').trim();
+    if (!name) return;
+    const key = termUnifyKey_(name);
+    if (!groups[key]) groups[key] = {};
+    if (!groups[key][name]) groups[key][name] = {};
+    groups[key][name][e.source] = true;
+  });
+  const termByKey = {};
+  (dict || []).forEach(function(d) { termByKey[termUnifyKey_(d.term)] = d.term; });
+  const issues = [];
+  Object.keys(groups).sort().forEach(function(key) {
+    const names = Object.keys(groups[key]);
+    if (names.length < 2) return;
+    issues.push({
+      term: termByKey[key] || null,
+      writings: names.map(function(n) { return { name: n, sources: Object.keys(groups[key][n]) }; })
+    });
+  });
+  return issues;
+}
+
+// termConsistencyIssues_ 的結果 → 提醒視窗的文字（max 組以後只寫「其餘 N 組見執行記錄」）
+function termConsistencyMessage_(issues, max) {
+  const lines = ['下面每一組是同一個名字的不同寫法（只差空白／大小寫／全半形／臺台）。請在源頭統一成一種：', ''];
+  issues.slice(0, max).forEach(function(issue, i) {
+    lines.push((i + 1) + '. ' + issue.writings.map(function(w) {
+      const shown = w.sources.slice(0, 2).join('、') + (w.sources.length > 2 ? ' 等 ' + w.sources.length + ' 處' : '');
+      return '「' + w.name + '」（' + shown + '）';
+    }).join(' ⇄ '));
+    lines.push(issue.term
+      ? '   → 統一詞表已有「' + issue.term + '」：跑 previewTermUnify → applyTermUnify 就會改好'
+      : '   → 在「' + TERM_DICT_SHEET + '」表加一列，統一詞寫你要的那種，再跑 previewTermUnify → applyTermUnify');
+  });
+  if (issues.length > max) lines.push('', '…其餘 ' + (issues.length - max) + ' 組見執行記錄（Apps Script 編輯器 → 執行作業）');
+  lines.push('', '改好後再匯出一次，這個提醒就會消失。');
+  return lines.join('\n');
 }
