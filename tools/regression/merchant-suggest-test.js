@@ -39,11 +39,14 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
     await page.type('#merchant-input', q);
     await page.waitForTimeout(100);
     return page.evaluate(() => { const b = document.getElementById('merchant-suggest');
-      return { open: !b.hidden, items: [...b.querySelectorAll('li')].map(li => li.textContent), bold: [...b.querySelectorAll('li mark')].map(m => m.textContent) }; });
+      return { open: !b.hidden, query: b.querySelector('li.merchant-suggest-query')?.textContent,
+        first: b.querySelector('li')?.classList.contains('merchant-suggest-query'),
+        items: [...b.querySelectorAll('li:not(.merchant-suggest-query)')].map(li => li.textContent), bold: [...b.querySelectorAll('li mark')].map(m => m.textContent) }; });
   };
 
   let r = await typeAndList('zzz');
   check('排除項目也列進建議', r.open && r.items.includes('zzz交通罰單') && r.items.includes('zzz停車罰單'), JSON.stringify(r));
+  check('第一行是「搜尋「用戶打的字」」', r.first && r.query === '搜尋「zzz」', JSON.stringify(r));
   r = await typeAndList('罰');
   check('單一個字就提示（中段命中也算）', r.items.includes('zzz交通罰單') && r.bold.every(b => b === '罰'), JSON.stringify(r));
   r = await typeAndList('全聯');
@@ -51,8 +54,9 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
   const lens = r.items.filter(i => i.startsWith('全聯')).map(i => i.length);
   check('同級短的在前', lens.every((l, i) => i === 0 || lens[i - 1] <= l), JSON.stringify(r.items));
 
-  // 鍵盤選：↓ Enter → 填入、出匹配狀態列、不自動計算、選單收起
+  // 鍵盤選：↓↓ Enter（第一行是「搜尋…」）→ 填入、出匹配狀態列、不自動計算、選單收起
   await typeAndList('zzz交');
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(300);
@@ -73,9 +77,23 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
     open: !document.getElementById('merchant-suggest').hidden }));
   check('沒選建議直接 Enter → 照常計算、選單收起', calc.results > 0 && !calc.open, JSON.stringify(calc));
 
+  // 「搜尋「…」」那一行：↓ 選它按 Enter、或直接點 → 照打的字計算
+  for (const how of ['keyboard', 'click']) {
+    await page.evaluate(() => { document.getElementById('results-container').innerHTML = ''; });
+    await typeAndList('全聯');
+    if (how === 'keyboard') { await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter'); }
+    else await page.click('#merchant-suggest li.merchant-suggest-query');
+    await page.waitForTimeout(800);
+    const q = await page.evaluate(() => ({ value: document.getElementById('merchant-input').value,
+      results: document.querySelectorAll('#results-container .card-result').length,
+      open: !document.getElementById('merchant-suggest').hidden }));
+    check(`「搜尋「全聯」」（${how === 'keyboard' ? '↓＋Enter' : '點選'}）→ 照打的字計算、選單收起`,
+      q.value === '全聯' && q.results > 0 && !q.open, JSON.stringify(q));
+  }
+
   // 點選
   await typeAndList('zzz停');
-  await page.click('#merchant-suggest li');
+  await page.click('#merchant-suggest li:not(.merchant-suggest-query)');
   const clicked = await page.inputValue('#merchant-input');
   check('滑鼠點選建議 → 填入', clicked === 'zzz停車罰單', clicked);
 
@@ -91,7 +109,7 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
   });
   r = await typeAndList('zzz醫');
   check('快捷選項名稱也列', quick && r.items[0] === 'zzz醫療費用', JSON.stringify(r));
-  await page.click('#merchant-suggest li');
+  await page.click('#merchant-suggest li:not(.merchant-suggest-query)');
   const qs = await page.evaluate(() => ({ opt: currentQuickSearchOption && currentQuickSearchOption.id,
     status: document.getElementById('matched-item').innerText.trim() }));
   check('點快捷選項 → 走快捷搜尋（排除名單用全部關鍵詞）', qs.opt === 'zzz-quick' && qs.status.includes('zzz交通罰單、zzz停車罰單'), JSON.stringify(qs));

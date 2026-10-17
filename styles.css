@@ -9307,6 +9307,15 @@ mark.cashback-search-hl {
 .merchant-suggest-item.active {
     background: #f1f5f9;
 }
+/* 第一行「搜尋「用戶打的字」」：跟下面的建議用細線隔開，打的字粗體 */
+.merchant-suggest-query {
+    color: #374151;
+    border-bottom: 1px solid #eef2f7;
+}
+.merchant-suggest-query strong {
+    color: #111827;
+    font-weight: 700;
+}
 .merchant-suggest-item mark {
     background: none;
     color: #111827;
