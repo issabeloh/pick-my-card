@@ -540,36 +540,8 @@ function handleQuickSearch(option) {
     console.log(`\n🔍 快捷搜索: ${option.displayName}`);
     console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
 
-    // Search for all merchants and combine results
-    const allMatches = [];
-    const processedItems = new Set(); // Avoid duplicates
-
-    option.merchants.forEach((merchant, index) => {
-        const trimmedMerchant = merchant.trim();
-        console.log(`   [${index + 1}/${option.merchants.length}] 搜尋: "${trimmedMerchant}"`);
-
-        const matches = findMatchingItem(trimmedMerchant);
-
-        if (matches && matches.length > 0) {
-            console.log(`      ✅ 找到 ${matches.length} 個匹配項目`);
-            let addedCount = 0;
-            matches.forEach(match => {
-                // Use originalItem (the actual item name) as the unique key
-                const key = match.originalItem.toLowerCase();
-                if (!processedItems.has(key)) {
-                    processedItems.add(key);
-                    allMatches.push(match);
-                    addedCount++;
-                    console.log(`         ➕ 添加: ${match.originalItem}`);
-                } else {
-                    console.log(`         ⏭️ 跳過重複: ${match.originalItem}`);
-                }
-            });
-            console.log(`      📌 新增 ${addedCount} 個結果（已去重）`);
-        } else {
-            console.log(`      ❌ 無匹配結果 - 請檢查 Cards Data 中是否有 "${trimmedMerchant}"`);
-        }
-    });
+    // 「找」：每個關鍵詞各找一次再合併（同名只留一個、保留先到先得的順序），規則在 findSearchHits
+    const allMatches = findSearchHits(option.displayName, { quickOption: option }) || [];
 
     console.log(`\n   ✨ 總計找到 ${allMatches.length} 個唯一的匹配結果\n`);
 

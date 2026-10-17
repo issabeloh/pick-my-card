@@ -108,30 +108,15 @@ function resolveMatchedItems(engine, merchant) {
   const options = engine.__cardsData.quickSearchOptions || [];
   const normalized = String(merchant).trim().toLowerCase();
   const option = options.find(o => o.displayName && String(o.displayName).trim().toLowerCase() === normalized);
-  if (!option || engine.isTypingHelperQuickOption(option)) {
-    return engine.findMatchingItem(String(merchant), { exactOnly: false });
-  }
-
-  // handleQuickSearch：逐個關鍵詞查，依 originalItem 去重，保留先到先得的順序
-  const seen = new Set();
-  const out = [];
-  for (const keyword of (option.merchants || [])) {
-    const matches = engine.findMatchingItem(String(keyword).trim()) || [];
-    for (const m of matches) {
-      const key = String(m.originalItem).toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(m);
-    }
-  }
-  return out;
+  // 「找」直接呼叫前端的 findSearchHits（2026-10-17 起不再自己抄一份 handleQuickSearch 的聯集邏輯）
+  const quickOption = option && !engine.isTypingHelperQuickOption(option) ? option : null;
+  return engine.findSearchHits(String(merchant), { exactOnly: false, quickOption });
 }
 
 /**
  * 算出某商家頁會顯示哪些卡片，順序與頁面一致（回饋金額高到低）。
- * 走的路徑與 js/cashback-engine.js 的 calculateCashback() 完全相同：
- * findMatchingItem → 逐卡 calculateCardCashback → 濾掉 cashbackAmount<=0 →
- * mergeResultsByActivity → 依金額排序。
+ * 走的路徑與 js/cashback-engine.js 的 calculateCashback() 相同，而且是直接呼叫同一批函數：
+ * findSearchHits（找）→ calculateHitResults（算：逐名逐卡計算、濾掉 0、合併）→ 依金額排序。
  *
  * @returns {Promise<{names: string[], top: {rate: number, cardName: string}|null}>}
  *   names＝卡片名稱（已去重，保留頁面順序）；top＝第一名那列的回饋率與卡名，
@@ -143,27 +128,10 @@ async function computeMerchantCards(engine, merchant, amount) {
   const matched = resolveMatchedItems(engine, merchant);
   if (!matched || matched.length === 0) return { names: [], top: null };
 
-  // ⚠️ 這裡的兩段排序都是照抄 calculateCashback()，順序不能省：它每處理完一個匹配項
-  // 就先把該項結果排一次序才累加，最後合併完再排一次。JS 的 sort 是穩定排序，所以
-  // 同分的卡片最終順序取決於「進入陣列時的順序」——少了那個先排，同分的卡就會換位置
-  // （2026-08-16 linepay 頁前三名對不上瀏覽器，就是漏了這一步）。
+  // 「算」直接呼叫前端的 calculateHitResults（2026-10-17 起不再照抄 calculateCashback 的逐名計算與排序；
+  // 以前抄的版本漏過一次排序，2026-08-16 linepay 頁前三名就對不上瀏覽器）
   const cards = engine.getCardsForComparison();
-  const all = [];
-  for (const item of matched) {
-    const term = String(item.originalItem).toLowerCase();
-    const itemResults = [];
-    for (const card of cards) {
-      const results = await engine.calculateCardCashback(card, term, amount);
-      (results || []).forEach(r => itemResults.push(Object.assign({}, r, { card: card, matchedItemName: r.matchedItem })));
-    }
-    const positive = itemResults.filter(r => r.cashbackAmount > 0);
-    if (positive.length > 0) {
-      positive.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-      all.push(...positive);
-    }
-  }
-
-  const merged = engine.mergeResultsByActivity(all);
+  const { results: merged } = await engine.calculateHitResults(matched, cards, amount, { upcoming: false });
   merged.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
 
   // 同一張卡可能因多個活動出現多列（頁面上是這樣顯示的）；清單只留第一次出現，

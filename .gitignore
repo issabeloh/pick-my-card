@@ -2,6 +2,7 @@ node_modules/
 package.json
 package-lock.json
 tools/regression/last-run.json
+tools/regression/search-compare-last.json
 
 # functions/ 是要部署的 Cloud Functions 專案，它的 package.json 必須進版控
 # （上面的 package.json 是不帶斜線的樣式，會匹配所有層級）。
