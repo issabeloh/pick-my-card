@@ -3,6 +3,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
  *  - 釘選/取消釘選             → "togglePin" / "addMapping"
+ *  - 小抄存的名字認回改名後的寫法 → "resolveMappingMerchant" / "resolveMappingItemName" / "findPinnedMapping"
  *  - 我的刷卡小抄頁面           → 見 js/mappings-page.js（2026-09-28 由 modal 改成完整頁面）
  *  - 免年費狀態                → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
  *  - 我的額度相關功能           → "loadCreditLimit" / "setupCreditLimit"
@@ -146,11 +147,62 @@ async function removeMapping(mappingId) {
     }
 }
 
+// ============================================
+// 小抄存的名字 → 這張卡現在資料裡的名字（2026-10-18）
+// ============================================
+// 小抄存的是釘選當下資料裡的名字（不是用戶打的字）。之後 Google Sheets「統一詞」可能把那個名字改寫
+// （2026-10-14～17 那一輪改了卡片活動裡 34 個名字），而計算是「拿名字查這張卡的清單」、不忽略空白，
+// 存的舊寫法就查不到 → 小抄誤判「已下架」、搜尋結果的加入鈕顯示沒加過（實測 34 個裡 18 個中招）。
+// 這裡在「這張卡」裡認回改過名的寫法，規則跟 Apps Script 的 termUnifyKey_（apps-script/term-unify.gs）一致：
+// 忽略大小寫、空白、全半形、臺/台；再加上統一詞表的其他寫法／搜尋別名（cardsData.termAliases）。
+// 順序很重要：存的名字這張卡還有 → 原樣用，不會被別名帶去別的活動。只用來查，不改寫用戶存的資料
+function mappingNameKey(s) {
+    return String(s || '')
+        .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+        .replace(/臺/g, '台')
+        .replace(/[\s　]/g, '')
+        .toLowerCase();
+}
+
+// 找到就回傳這張卡索引裡的名字（小寫），找不到回傳原名
+function resolveMappingItemName(card, name) {
+    const index = card && card._itemsIndex;
+    const saved = String(name || '').trim();
+    if (!index || !saved || index.has(saved.toLowerCase())) return saved;
+    const findByKey = key => [...index.keys()].find(item => mappingNameKey(item) === key) || null;
+    const key = mappingNameKey(saved);
+    let found = findByKey(key);
+    if (!found) {
+        const aliases = cardsData && Array.isArray(cardsData.termAliases) ? cardsData.termAliases : [];
+        const entry = aliases.find(e => [e.term].concat(e.aliases || []).some(n => mappingNameKey(n) === key));
+        if (entry) found = findByKey(mappingNameKey(entry.term));
+    }
+    return found || saved;
+}
+
+// 存的 merchant 可能是一個名字，也可能是同一筆活動命中的幾個名字用「、」接起來（results-display.js 的 merchantForPin）；
+// 名字本身也可能含「、」（Apple錢包指定交通卡(Suica、PASMO、ICOCA)，現有資料 10 個）→ 先當一整個名字查，查不到才拆。
+// 2026-10-18 前一律先拆，這 10 個名字一釘選就被小抄判成已下架
+function resolveMappingMerchant(card, merchant) {
+    const whole = resolveMappingItemName(card, merchant);
+    if (card && card._itemsIndex && card._itemsIndex.has(whole.toLowerCase())) return [whole];
+    return String(merchant || '').split('、').map(p => resolveMappingItemName(card, p));
+}
+
+// 搜尋結果帶的是現在資料的寫法、存的可能是改名前的 → 兩邊都換成這張卡現在的名字再比
+function findPinnedMapping(cardId, merchant) {
+    const exact = userSpendingMappings.find(m => m.cardId === cardId && m.merchant === merchant);
+    if (exact) return exact;
+    const card = cardsData && cardsData.cards ? cardsData.cards.find(c => c.id === cardId) : null;
+    if (!card) return null;
+    const current = name => resolveMappingMerchant(card, name).map(s => s.toLowerCase()).join('、');
+    const target = current(merchant);
+    return userSpendingMappings.find(m => m.cardId === cardId && current(m.merchant) === target) || null;
+}
+
 // 檢查是否已釘選
 function isPinned(cardId, merchant) {
-    return userSpendingMappings.some(m =>
-        m.cardId === cardId && m.merchant === merchant
-    );
+    return !!findPinnedMapping(cardId, merchant);
 }
 
 // 切換釘選狀態
@@ -159,9 +211,7 @@ async function togglePin(button, cardId, cardName, merchant, rate, periodEnd = n
 
     if (alreadyPinned) {
         // 取消釘選
-        const mapping = userSpendingMappings.find(m =>
-            m.cardId === cardId && m.merchant === merchant
-        );
+        const mapping = findPinnedMapping(cardId, merchant);
         if (mapping) {
             await removeMapping(mapping.id);
             button.classList.remove('pinned');

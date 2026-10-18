@@ -440,6 +440,58 @@ const PAIRS = [
   check('還沒開始的活動：不當成下架', probes.upcoming.dead === null, JSON.stringify(probes.upcoming.dead));
   check('卡片資料裡真的沒有的商家：仍判定已下架', probes.gone.dead === 'gone');
 
+  // 統一詞改過名：存的是改名前的寫法也要認得（2026-10-18；實際發生：2026-10-14～17 改了 34 個名字，18 個在小抄被誤判已下架）
+  // 從凍結資料現場挑例子，並先確認「舊做法查不到」，這兩項才真的在測新規則
+  const dataRenamed = await pg.evaluate(async () => {
+    const pick = async (makeSaved) => {
+      for (const card of cardsData.cards) {
+        for (const item of card._itemsIndex.keys()) {
+          const saved = makeSaved(card, item);
+          if (!saved || card._itemsIndex.has(saved.toLowerCase())) continue;
+          const now = await calculateCardCashback(card, item, 1000);
+          if (!now.length || (await calculateCardCashback(card, saved, 1000)).length) continue;
+          return { card, item, saved, rate: now[0].rate, shown: now[0].matchedItem };
+        }
+      }
+      return null;
+    };
+    // ① 只差空白／大小寫：資料寫「Uber Eats」，存的是「UBEREATS」
+    const spaced = await pick((card, item) => /\s/.test(item) ? item.replace(/\s+/g, '').toUpperCase() : null);
+    // ② 統一詞的其他寫法／別名，而且空白跟表上不一樣：存「X  別名中間多一格」，資料現在是統一詞
+    const aliasOf = {};
+    (cardsData.termAliases || []).forEach(e => (e.aliases || []).forEach(a => { if (a.length >= 2 && !/\s/.test(a)) aliasOf[mappingNameKey(e.term)] = a; }));
+    const viaAlias = await pick((card, item) => aliasOf[mappingNameKey(item)] ? aliasOf[mappingNameKey(item)].slice(0, 1) + ' ' + aliasOf[mappingNameKey(item)].slice(1) : null);
+    const run = async (c) => {
+      if (!c) return null;
+      const m = { id: 'rn_' + c.card.id, cardId: c.card.id, cardName: c.card.name, merchant: c.saved, cashbackRate: c.rate, periodEnd: '2026-12-31' };
+      const probe = await mpProbe(m);
+      // 加入鈕只看這一筆（前面種的配對可能剛好有同卡同商家，會讓這項白綠）
+      const backup = userSpendingMappings.splice(0, userSpendingMappings.length, m);
+      const pinned = isPinned(c.card.id, c.shown);
+      userSpendingMappings.splice(0, userSpendingMappings.length, ...backup);
+      return { saved: c.saved, now: c.item, dead: probe.dead, next: !!probe.next, pinned };
+    };
+    // ③ 存的名字這張卡還有 → 原樣使用（不會被別名帶去別的活動）
+    const card = cardsData.cards.find(c => c._itemsIndex.size > 0);
+    const keep = [...card._itemsIndex.keys()].every(item => resolveMappingItemName(card, item) === item);
+    // ④ 名字本身含「、」（括號裡）：以前一律先拆，一釘選就被判已下架
+    const paren = [];
+    for (const card of cardsData.cards) for (const item of card._itemsIndex.keys()) {
+      if (!/[(（][^)）]*、/.test(item)) continue;
+      const now = await calculateCardCashback(card, item, 1000);
+      if (!now.length) continue;
+      const probe = await mpProbe({ id: 'pr', cardId: card.id, cardName: card.name, merchant: now[0].matchedItem, cashbackRate: now[0].rate, periodEnd: '2026-12-31' });
+      paren.push({ card: card.id, item, ok: probe.dead === null && !!probe.next });
+    }
+    return { spaced: await run(spaced), viaAlias: await run(viaAlias), keep, paren };
+  });
+  const dataRenamedOk = r => r && r.dead === null && r.next && r.pinned;
+  check('改名（只差空白／大小寫）：小抄不判已下架、回饋率對得上、加入鈕顯示已加', dataRenamedOk(dataRenamed.spaced), JSON.stringify(dataRenamed.spaced));
+  check('改名（統一詞別名、空白不同）：同上', dataRenamedOk(dataRenamed.viaAlias), JSON.stringify(dataRenamed.viaAlias));
+  check('存的名字資料裡還有：原樣使用', dataRenamed.keep);
+  check('名字括號裡有「、」（Apple錢包指定交通卡(Suica、…)）：小抄不判已下架', dataRenamed.paren.length > 0 && dataRenamed.paren.every(p => p.ok),
+    dataRenamed.paren.map(p => (p.ok ? '' : '✗') + p.item).join('、'));
+
   // 雲端沒讀到時不能寫回（避免舊快取蓋掉雲端）
   const guard = await pg.evaluate(async () => {
     const before = (globalThis.__setDocs || []).length; const alerts = []; const oa = window.alert; window.alert = m => alerts.push(m);
