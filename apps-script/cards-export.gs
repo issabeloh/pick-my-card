@@ -911,11 +911,30 @@ if (exclusionGroupsSheet) {
 // 那支還沒貼進來時跳過，不擋匯出
 const termAliases = [];
 if (typeof readTermDictionary_ === 'function') {
-  readTermDictionary_(ss).forEach(function(d) {
+  const termDict = readTermDictionary_(ss);
+  // 中英之間加空白的版本自動補進別名（termSpacedVariants_，term-unify.gs；台灣Pay → 台灣 Pay）。
+  // 表上已經有人手填的寫法（任何一列）不重複補，免得兩列搶同一個別名
+  const listed = {};
+  termDict.forEach(function(d) {
+    [d.term].concat(d.variants, d.aliases).forEach(function(n) { listed[String(n).toLowerCase()] = true; });
+  });
+  let spacedCount = 0;
+  termDict.forEach(function(d) {
     const aliases = d.variants.concat(d.aliases);
+    if (typeof termSpacedVariants_ === 'function') {
+      [d.term].concat(d.variants, d.aliases).forEach(function(n) {
+        termSpacedVariants_(n).forEach(function(v) {
+          const k = v.toLowerCase();
+          if (listed[k]) return;
+          listed[k] = true;
+          aliases.push(v);
+          spacedCount++;
+        });
+      });
+    }
     if (aliases.length > 0) termAliases.push({ term: d.term, aliases: aliases });
   });
-  Logger.log('統一詞搜尋別名載入成功：' + termAliases.length + ' 組');
+  Logger.log('統一詞搜尋別名載入成功：' + termAliases.length + ' 組（含自動補的中英加空白寫法 ' + spacedCount + ' 個）');
 }
 
 // ========== 新增讀取FAQ資料 ==========

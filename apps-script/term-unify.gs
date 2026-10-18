@@ -4,7 +4,8 @@
 // 站長維護一份「統一詞」：每列一個統一寫法＋它的其他寫法＋搜尋別名。這支把它套回試算表本身。
 //   統一詞    ：品牌原本的大小寫、中英不空格、臺→台（例：Uber Eats）
 //   其他寫法  ：會被**改寫**成統一詞的寫法。只差大小寫／空白／全半形／臺台的不用列，程式自己認得；
-//              要列的是真的不一樣的（ezTravel → ezTravel易遊網）
+//              要列的是真的不一樣的（ezTravel → ezTravel易遊網）。
+//              中英之間加空白的寫法（台灣 Pay）匯出時也會自動補進搜尋別名（termSpacedVariants_，見檔尾），不用列
 //   搜尋別名  ：**不改資料**，只讓用戶搜得到（寵物醫院 → 動物醫院）。匯出時跟其他寫法一起變成網站的模糊搜尋
 //
 // 同一份表還有兩個地方在用：
@@ -217,4 +218,34 @@ function termConsistencyMessage_(issues, max) {
   if (issues.length > max) lines.push('', '…其餘 ' + (issues.length - max) + ' 組見執行記錄（Apps Script 編輯器 → 執行作業）');
   lines.push('', '改好後再匯出一次，這個提醒就會消失。');
   return lines.join('\n');
+}
+
+// ==========================================
+// 中英之間加空白的寫法（2026-10-18）：exportToJSON 匯出 termAliases 時自動補進搜尋別名
+// ==========================================
+// 網站搜尋不忽略空白：資料寫「台灣Pay」，用戶打「台灣 pay」找不到。統一詞「只差空白的不用列」只對
+// applyTermUnify（改資料）成立，所以匯出時替統一詞、其他寫法、搜尋別名裡「中文緊貼英數」的地方
+// 自動補上加空白的版本，站長不用一個個手打。只進匯出的搜尋別名，不寫回統一詞工作表（表保持乾淨）。
+// 例：台灣Pay → 台灣 Pay；POYA寶雅 → POYA 寶雅；PChome 24h購物 → PChome 24h 購物
+// 一個名字有 1～2 個中英交界：每種加法都補（2 個交界＝3 種）；3 個以上只補「全部都加」那一種，避免組合爆量
+function termSpacedVariants_(name) {
+  const s = String(name || '');
+  const cjk = /[㐀-鿿豈-﫿]/, alnum = /[A-Za-z0-9]/;
+  const cuts = [];   // 在第 i 個字元前面可以加空白
+  for (let i = 1; i < s.length; i++) {
+    const a = s[i - 1], b = s[i];
+    if ((cjk.test(a) && alnum.test(b)) || (alnum.test(a) && cjk.test(b))) cuts.push(i);
+  }
+  if (cuts.length === 0) return [];
+  const build = function(chosen) {
+    let out = '', last = 0;
+    chosen.forEach(function(i) { out += s.slice(last, i) + ' '; last = i; });
+    return out + s.slice(last);
+  };
+  if (cuts.length > 2) return [build(cuts)];
+  const out = [];
+  for (let mask = 1; mask < (1 << cuts.length); mask++) {
+    out.push(build(cuts.filter(function(_, k) { return mask & (1 << k); })));
+  }
+  return out;
 }
