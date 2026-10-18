@@ -1819,7 +1819,7 @@ function handleMerchantInput() {
 
     // Find matching items (now returns array)
     const exactOnly = isExactSearchEnabled();
-    const matchedItems = findMatchingItem(input, { exactOnly });
+    const matchedItems = findSearchHits(input, { exactOnly });   // 「找」：完整命中清單
 
     console.log('  findMatchingItem 結果:', matchedItems ? matchedItems.length : 0);
 

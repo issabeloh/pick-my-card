@@ -58,6 +58,20 @@ if (!card.specialItems || card.specialItems.length === 0)
 2. **無 specialItems 的卡（含 hasLevels）**：先取 levelData（若 hasLevels）→ 查 cashbackRates 並把 levelData 傳給解析函數
 3. **一般卡（hasLevels=false）**：直接查 cashbackRates，levelData 為 null（不用 placeholder）
 
+## 3b. 搜尋三步：找、算、顯示（2026-10-17 架構調整）
+
+首頁搜尋、快捷搜尋、商家頁生成器都走同一條路，**三步各自獨立、後一步只吃前一步的輸出**：
+
+1. **找**（`findSearchHits`，`js/search-match.js`）：一次找出**完整**命中清單（商家名＋匹配品質）。去重只合併「小寫後完全相同」的名字；**不可**用統一詞／別名把不同名字併成一個，也**不可**合併只差空格的名字（下一步用名字查索引，索引是小寫全等，少一個名字＝寫那個名字的卡算不到）。快捷搜尋（多關鍵詞）＝每個關鍵詞各找一次再合併
+2. **算**（`calculateHitResults`，`js/cashback-engine.js`）：**逐個名字**對每張卡 `calculateCardCashback`，再 `mergeResultsByActivity`；進行中與即將開始一起算。不能把所有名字丟進同一次計算——分級卡（國泰 CUBE）「先 cashbackRates、沒有才 specialItems、再沒有才 generalItems」的優先順序是對每個名字各自成立的
+3. **顯示**（`showMatchedItem` 等）：只負責把命中清單排成文字，怎麼縮短都不影響計算
+
+- 以前「找」會把互為別名的名字併成一個（為了「✓ 匹配到」好看），「算」卻拿這份刪減過的名單重搜，被併掉的名字要靠別名剛好連得回去——2026-10-17 改掉。當時用線上資料 1,882 個詞比對：結果零差異，只有 10 個詞的「✓ 匹配到」／匹配項目多列出原本被藏起來的名字
+- `getAllSearchVariants`（計算用）現在只是 `expandSearchTerms`（搜尋用）的小寫包裝，展開規則只有一份
+- 商家頁生成器 `tools/lib/merchant-cards.js` 直接呼叫 `findSearchHits`／`calculateHitResults`，不要再在那邊抄一份流程
+- 還沒併進這三步的路徑（各自直接拿詞去算，第二階段再處理）：行動支付詳情／比較（`levels-payments.js`）、配卡組合頁重算（`mappings-page.js`）；停車、付款方式、導購連結用另一套嚴格比對（`merchantMatchesStrict`）
+- **改搜尋／計算邏輯前後一律跑 `node tools/regression/search-compare.js`**（加 `--ui` 連畫面一起比），看「進行中結果變了／即將開始變了」是不是 0，其餘差異逐條確認（見 docs/ops/regression.md）
+
 ## 4. findMatchingItem 搜尋範圍（約 script.js:1215-1400）
 
 搜尋涵蓋：cashbackRates items、specialItems、generalItems（CUBE）、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
@@ -210,4 +224,5 @@ if (!card.specialItems || card.specialItems.length === 0)
 - [2026-07-30] CUBE 慶生月方案不論月份都出現在搜尋結果（篩選完全失效） → 篩選用 `category === '切換「慶生月」方案'` 全等比對，但資料早已改成帶子類別後綴（`切換「慶生月」方案 - 購物/體驗`／`- 美食`／`- 娛樂`／`- 遊樂園`），全等永不成立 → 方案類別判斷一律用前綴/`includes` 比對（`isBirthdayPlanCategory()`）；同時改成「用戶有設定生日月份才篩選（只在該月顯示），未設定＝不篩選一律顯示」（舊行為是未設定就全部隱藏，對訪客反而少給資訊）。同款全等比對還剩 `切換「童樂匯」方案`（`切換「JCB日本賞」方案` 的發卡組織篩選已於同日移除——活動下架、國泰目前無發卡組織限定活動；`cubeIssuer` 只留作用戶資料），資料若也加後綴會同樣失效——改資料類別名前先 Grep 前端的全等比對
 - [2026-08-16] 本檔與 `cross-slot-ref-and-minspend-spec.md` 都寫著 Fix B「線上 0 張卡受影響」，但 pmc-vault 補填專案 README 記錄實際影響 9 槽（uniopen 5＋dbs-eco 4，含 eco 品牌 12.5→10%） → 當初的影響掃描用舊 `cards.data`（20260713）跑，main 已到 20260716、dbs-eco 的 model 不同，回歸測試（對最新資料）才抓出來 → **任何「零影響」結論都必須標註掃描時的 `cards.version`，並在上線前用當下最新 `cards.data` 重掃**；同批更正還發現該 spec 寫「Layer 1 不 gate」但實作有 gate（`applyBase`）——**設計文件寫的是提案，行為正本永遠是程式碼與本檔第 6 節**
 - [2026-09-30] 大戶卡搜「國外」顯示「回饋消費上限: 無上限」，但海外加碼 4% 實際受級別 `overseasBonusCap`=25,000 限制（金額算對、只有那一格騙人；同症狀還有 kgi-eslite、hsbc-liveplus 共 3 卡 6 槽） → 「消費上限」一路只讀槽位自己的 `cap` 欄，而骨幹槽的標準配方就是 cap 留空（第 5 節），加碼層的上限住在 `resolveBonusComponent()` 取的卡片級/級別欄位，兩者從來沒接起來（一般回饋卡那條路早就顯示加碼 cap，只有活動槽沒有，同一張卡兩處數字打架） → **顯示上限一律走 `resolveDisplayCap()`（詳情頁/Spotlight，用成分表）或 `resolveDisplayCapFromLayers()`（搜尋結果卡，用計算層）**：槽位 cap 有值照舊，留空時取「計算真的會咬到的最小正值上限」，沒有任何層有上限才是「無上限」。不要改資料去填 `{overseasBonusCap}` 補顯示——那會在該槽日後 rate>0 時變成「指定通路加碼」層的上限進入計算
+- [2026-10-17] 「✓ 匹配到」只寫「動物醫院」不寫用戶打的「寵物醫院」；搜「三井」的狀態列漏列「三井 MITSUI OUTLET PARK」 → `findMatchingItem` 去重時用 fuzzySearchMap 把互為別名的名字併成一個，而這份為顯示刪減過的名單同時是計算的輸入（計算用名字查索引），被併掉的名字只能靠別名剛好連回去，是潛在漏算 → 改成「找、算、顯示分三步」（第 3b 節）：找出完整清單、逐名計算、顯示另外處理；改動前後用 `search-compare.js` 比對證明結果零差異
 - [2026-09-02] 遠東樂家+卡、中信 Uniopen 已於 2026/6/30 到期的停車折抵，搜尋結果與詳情頁都還照常顯示 → `cardsData.benefits` 是全站唯一沒做期限判斷的活動類資料（cashbackRates／couponCashbacks／新戶活動都有），四個消費端各自只檢查 `active` → 新增的活動類 top-level 陣列一律在 `filterExpiredRates()` 裡加一段期限過濾，不要讓各消費端自己判斷；期限欄位是自由文字時（無日期）一律當「不設限」，不可以當成過期
