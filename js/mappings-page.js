@@ -403,7 +403,10 @@ function mpShortLevel(level) {
 async function mpProbe(m) {
     const card = cardsData && cardsData.cards ? cardsData.cards.find(c => c.id === m.cardId) : null;
     if (!card) return { dead: 'gone', labels: [], next: null, hasMatches: false, cap: null };
-    const term = optimizeMerchantName(m.merchant).split('、')[0].trim();
+    // 存的是釘選當下的名字；統一詞改過名的話換成這張卡現在的寫法（resolveMappingMerchant，spending-mappings.js）。
+    // 存的是好幾個名字時沿用原本的挑法（optimizeMerchantName 挑最完整的那個）
+    const names = resolveMappingMerchant(card, m.merchant);
+    const term = names.length === 1 ? names[0] : resolveMappingItemName(card, optimizeMerchantName(m.merchant).split('、')[0].trim());
     let matches = [];
     try {
         // 除了 1000 元，也用這張卡各活動的滿額門檻各算一次：「單筆滿 N」的活動在 1000 元時不會出現，不能因此當成下架
