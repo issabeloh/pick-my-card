@@ -756,15 +756,22 @@
         </div><!-- /#view-search-extras -->
 
         <!-- 廣告列（精選活動下方、警語橫條上方）
-             回應式：桌機最寬 728x90，手機自動縮成滿版橫幅。
-             loader script 已在 <head> 載入，這裡只放版位本身。 -->
+             回應式：桌機最寬 728x90，手機依框內寬度挑尺寸。
+             data-full-width-responsive 2026-10-21 改 false：true 會讓手機廣告撐到螢幕全寬、
+             超出外框（.ad-row 又是 overflow:hidden，左右會被切掉）。
+             loader script 已在 <head> 載入，這裡只放版位本身。
+             2026-10-21：外框與「廣告」標籤只在 AdSense 回報填到廣告（data-ad-status="filled"）
+             時才出現；沒填到、被擋廣告外掛擋掉時整塊收合，不留空框（styles.css 的 .ad-row）。 -->
         <div class="ad-row">
-            <ins class="adsbygoogle ad-row-unit"
-                 style="display:block"
-                 data-ad-client="ca-pub-3478658382505422"
-                 data-ad-slot="3212827559"
-                 data-ad-format="auto"
-                 data-full-width-responsive="true"></ins>
+            <div class="ad-row-frame">
+                <span class="ad-row-label">廣告</span>
+                <ins class="adsbygoogle ad-row-unit"
+                     style="display:block"
+                     data-ad-client="ca-pub-3478658382505422"
+                     data-ad-slot="3212827559"
+                     data-ad-format="auto"
+                     data-full-width-responsive="false"></ins>
+            </div>
         </div>
         <script>
             (adsbygoogle = window.adsbygoogle || []).push({});
@@ -1178,11 +1185,14 @@
          沒有任何樣式（display:block），視覺零影響。faq/privacy/terms 沒有「資料更新」
          列，所以那幾頁維持 <footer class="social-media-footer"> 單層就夠。 -->
     <footer>
-    <!-- 社群媒體與贊助區塊 -->
+    <!-- 社群媒體與贊助區塊（2026-10-21 手機版重排，站長選「格狀」案）：
+         追蹤＋贊助併成一組兩顆並排；探索更多也是兩欄，奇數顆時最後一顆自動佔滿一列
+         （styles.css 的 .social-media-links 手機規則）。法務連結縮成底部一行小字
+         （.footer-legal）——要找得到、不要搶戲。faq/privacy/terms 的頁尾是同一套結構，改這裡記得一起改。 -->
     <div class="social-media-footer">
         <div class="social-media-container">
             <div class="social-section">
-                <p class="social-media-title">追蹤我們</p>
+                <p class="social-media-title">追蹤與支持我們</p>
                 <div class="social-media-links">
                     <a href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer" class="social-link threads" aria-label="Threads">
                         <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
@@ -1190,11 +1200,6 @@
                         </svg>
                         <span class="social-text">@pickmycard_tw</span>
                     </a>
-                </div>
-            </div>
-            <div class="sponsor-section">
-                <p class="social-media-title">支持我們</p>
-                <div class="social-media-links">
                     <a href="https://portaly.cc/pickmycard/support" target="_blank" rel="noopener noreferrer" class="social-link sponsor" aria-label="贊助支持">
                         <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
                             <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/>
@@ -1203,7 +1208,7 @@
                     </a>
                 </div>
             </div>
-                    <div class="explore-section">
+            <div class="explore-section">
                 <p class="social-media-title">探索更多</p>
                 <div class="social-media-links">
                     <a href="/promos" target="_blank" rel="noopener noreferrer" class="social-link promos" aria-label="新戶活動一覽">
@@ -1215,21 +1220,15 @@
                     <a href="/landing" target="_blank" rel="noopener noreferrer" class="social-link about" aria-label="認識 Pick My Card">
                         <span class="social-text">Pick My Card 是什麼？↗</span>
                     </a>
-                    <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。
-                         AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的
-                         告知義務也需要常設入口——新增頁面時記得一起帶上。 -->
-                    <a href="/privacy" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="隱私權政策">
-                        <span class="social-text">隱私權政策</span>
-                    </a>
-                    <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁。
-                         內容原本只存在於首頁的折疊區塊，檢測工具與搜尋引擎都看不到，
-                         所以獨立成 /terms 並在每一頁的頁尾留入口——新增頁面時記得一起帶上。 -->
-                    <a href="/terms" target="_blank" rel="noopener noreferrer" class="social-link privacy" aria-label="使用須知與免責聲明">
-                        <span class="social-text">使用須知與免責聲明</span>
-                    </a>
                 </div>
             </div>
-</div>
+        </div>
+        <!-- 法務連結：全站每頁都要有的入口，新增頁面時記得一起帶上。
+             隱私權政策（2026-08-20）：AdSense／Analytics 服務條款要求發布商提供，個資法第 8 條的告知義務也需要常設入口。
+             使用須知與免責聲明（2026-09-02）：原本只在首頁折疊區，檢測工具與搜尋引擎看不到，所以獨立成 /terms。 -->
+        <p class="footer-legal">
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">隱私權政策</a><span class="footer-legal-dot" aria-hidden="true">·</span><a href="/terms" target="_blank" rel="noopener noreferrer">使用須知與免責聲明</a>
+        </p>
     </div>
 
     <!-- 最後資料更新日期。「收錄 N 張」那句 2026-09-03 起不顯示，但整段 DOM 必須留著：
