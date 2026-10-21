@@ -5761,6 +5761,15 @@ mark.cashback-search-hl {
     align-items: start; /* 確保所有項目從頂部對齊 */
 }
 
+/* 窄手機改單欄（2026-10-21）：360px 寬時兩欄各剩約 130px，年費說明被擠成 6–8 行小字。
+   單欄順序＝銀行名稱 → 回饋類型 → 年費訊息（左欄整塊在前）。 */
+@media (max-width: 480px) {
+    .info-grid-2col {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
 /* 信息項目樣式 - 標題和內容上下排列 */
 .info-item {
     display: flex;
@@ -5967,13 +5976,13 @@ mark.cashback-search-hl {
 .social-media-container {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;   /* 平板寬放不下兩組並排時整組換行，而不是組內按鈕各自折行 */
     align-items: flex-start;
     justify-content: center;
-    gap: 48px;
+    gap: 20px 48px;
 }
 
 .social-section,
-.sponsor-section,
 .explore-section {
     display: flex;
     flex-direction: column;
@@ -5981,10 +5990,12 @@ mark.cashback-search-hl {
     gap: 12px;
 }
 
+/* 2026-10-21：頁尾文字由白字改深色字。白字放在 body 灰漸層上對比只有約 1.5:1
+   （WCAG 要 4.5:1），手機上 10–11px 的小標幾乎看不見；#374151 在漸層最深處約 5.4:1。 */
 .social-media-title {
-    color: rgba(255, 255, 255, 0.7);
+    color: #374151;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -5992,7 +6003,7 @@ mark.cashback-search-hl {
 
 .social-media-links {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 16px;
     align-items: center;
     justify-content: center;
@@ -6003,10 +6014,10 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.75);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
     text-decoration: none;
     font-size: 13px;
     transition: all 0.3s ease;
@@ -6014,8 +6025,8 @@ mark.cashback-search-hl {
 }
 
 .social-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.95);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -6052,14 +6063,6 @@ mark.cashback-search-hl {
     color: white;
 }
 
-/* 隱私權政策：同一組膠囊，但刻意不給品牌色。它是法務連結不是行銷連結——
-   要找得到、不要搶戲。也因此文字不帶 emoji 與 ↗（其餘站內連結都有）。 */
-.social-link.privacy:hover {
-    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-    border-color: transparent;
-    color: white;
-}
-
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -6085,37 +6088,104 @@ mark.cashback-search-hl {
     font-size: 12px;
 }
 
-/* Mobile responsiveness for social media */
+/* 法務連結（隱私權政策／使用須知與免責聲明）：2026-10-21 由膠囊按鈕改成頁尾一行小字。
+   它是法務入口不是行銷連結——要找得到、不要搶戲，所以不給按鈕外框也不帶 ↗。 */
+.footer-legal {
+    margin: 20px 0 0;
+    font-size: 12px;
+    color: #374151;
+}
+
+.footer-legal a {
+    color: #1f2937;
+    text-decoration: underline;
+    text-decoration-color: rgba(31, 41, 55, 0.35);
+    text-underline-offset: 3px;
+}
+
+.footer-legal a:hover {
+    color: #1e40af;
+    text-decoration-color: currentColor;
+}
+
+.footer-legal-dot {
+    margin: 0 8px;
+    color: #6b7280;
+}
+
+/* Mobile responsiveness for social media
+   2026-10-21 重排（站長選「格狀」案）：每組都是兩欄格線、按鈕 44px 高（好點）；
+   奇數顆時最後一顆佔滿一列，不會有落單的半顆（首頁「探索更多」3 顆、faq 頁 2 顆都靠這條）。 */
 @media (max-width: 768px) {
     .social-media-footer {
-        padding: 0 16px;
-        margin: 16px auto 10px;
+        padding: 0 16px 80px;   /* 下方讓出「回到頂部」浮標（48px＋距底 16px）的位置 */
+        margin: 24px auto 0;
+    }
+
+    /* 首頁的頁尾後面還有「最後資料更新」一行，讓位交給它 */
+    footer > .social-media-footer {
+        padding-bottom: 0;
     }
 
     .social-media-container {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 20px;
+        align-items: stretch;
+        gap: 22px;
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    .social-section,
+    .explore-section {
+        align-items: stretch;
+        gap: 10px;
     }
 
     .social-media-title {
-        font-size: 10px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+    }
+
+    .social-media-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .social-media-links > :last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    /* 「探索更多」只有兩顆時（faq 頁不列自己）改成上下兩列：
+       「Pick My Card 是什麼？↗」放半欄會在 390px 以下折行、↗ 單獨掉到第二行 */
+    .explore-section .social-media-links:has(> :nth-child(2):last-child) {
+        grid-template-columns: 1fr;
     }
 
     .social-link {
-        padding: 7px 10px;
-        font-size: 12px;
-        gap: 5px;
+        justify-content: center;
+        min-height: 44px;
+        padding: 6px 10px;
+        border-radius: 12px;
+        gap: 6px;
+        text-align: center;
+        line-height: 1.3;
     }
 
     .social-link svg {
-        width: 15px;
-        height: 15px;
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
     }
 
     .social-text {
-        font-size: 11px;
+        font-size: 14px;
+    }
+
+    .footer-legal {
+        margin-top: 22px;
+        font-size: 12.5px;
     }
 }
 
@@ -6157,7 +6227,14 @@ mark.cashback-search-hl {
     padding: 0 24px 28px;   /* 下方留白：這是全頁最後一行，貼著螢幕底緣很擠 */
     text-align: center;
     font-size: 12px;
-    color: #6b7280;
+    color: #374151;   /* 原 #6b7280：灰底上對比不足，見 .social-media-title 註解 */
+}
+
+@media (max-width: 768px) {
+    .data-update-footer {
+        margin-top: 8px;
+        padding: 0 16px 80px;   /* 讓出「回到頂部」浮標的位置，最後一行不被它擋住 */
+    }
 }
 
 /* 「收錄 N 張台灣主流信用卡」2026-09-03 起不顯示。
@@ -6169,22 +6246,60 @@ mark.cashback-search-hl {
 
 /* 廣告列 — 精選活動下方、警語橫條上方
    桌機：置中、最寬 728px（對齊 leaderboard 尺寸）
-   手機：滿版扣掉左右留白，由 AdSense 回應式自動挑合適尺寸
-   min-height 是刻意保留的位子，避免廣告載入時把下面的內容往下推。 */
+   手機：滿版扣掉左右留白，由 AdSense 回應式依框內寬度挑尺寸
+   2026-10-21 改：外框＋「廣告」標籤，且只在 AdSense 回報填到廣告時才出現。
+   - 原本 min-height:100px 預留位子，但沒填到廣告或被擋廣告外掛擋掉時就是一塊白洞
+     （實測手機上 116px 空白）；這塊在頁面最下方、首屏看不到，載入時往下推的代價很小，
+     所以拿掉預留高度，改成「沒廣告＝高度 0」。
+   - data-ad-status 是 AdSense 自己寫在 <ins> 上的（filled / unfilled）。
+   - 框的左右內距與邊框粗細在「沒廣告」時也保留（只是透明）：<ins> 的寬度從頭到尾不變，
+     AdSense 依載入當下寬度挑的廣告尺寸才不會在加框後被切到。 */
 .ad-row {
     box-sizing: border-box;
     width: 100%;
-    max-width: 760px;      /* 728 廣告 + 左右 16px padding */
-    margin: 16px auto 0;
+    max-width: 778px;      /* 728 廣告 + 框內距 2×8 + 邊框 2×1 + 左右 16px padding */
+    margin: 0 auto;
     padding: 0 16px;
-    min-height: 100px;
     overflow: hidden;
     text-align: center;
+}
+
+.ad-row-frame {
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+}
+
+.ad-row-label {
+    display: none;
 }
 
 .ad-row-unit {
     display: block;
     width: 100%;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+    margin: 16px auto;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-frame {
+    padding: 6px 8px 8px;
+    border-color: #e5e7eb;
+    background: #f9fafb;
+    text-align: left;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-label {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 0 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 16px;
 }
 
 @media (max-width: 600px) {
@@ -10528,7 +10643,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         gap: 41px;   /* 原 48px */
     }
 
-    .social-section, .sponsor-section, .explore-section {
+    .social-section, .explore-section {
         gap: 10px;   /* 原 12px */
     }
 
@@ -10548,7 +10663,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .ad-row {
         padding: 0px 14px;   /* 原 0px 16px */
-        margin: 14px auto 0px;   /* 原 16px auto 0px */
+    }
+
+    .ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+        margin: 14px auto;   /* 原 16px auto */
     }
 
     .finance-warning-row {
@@ -10979,8 +11097,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         min-height: 17px;   /* 原 20px */
     }
 
-    .social-media-footer,
-    .ad-row {
+    .social-media-footer {
         min-height: 85px;   /* 原 100px */
     }
 }
