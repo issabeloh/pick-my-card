@@ -781,3 +781,4 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-10-21] promos 頁尾隨主站重排、首刷禮多選一改懸掛縮排（`pmcGiftNameHtml_` 包 `.promo-gift-item`）→ 這類「生成器標記＋promos.css」一起改的變更，**兩邊上線時間不同**：promos.css merge 就上線，promos.html 要等站長把 `cards-export.gs` 貼回 Sheets、下一次匯出才換新標記（期間每次匯出都會用舊生成器蓋回舊標記）→ promos.css 的新規則必須同時讓舊標記排得能看（這次保留 `.sponsor-section`、`.social-link.privacy` 相關選擇器並用舊標記實測截圖），等新標記上線後再清掉相容規則；驗收時兩種標記都要看
