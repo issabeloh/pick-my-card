@@ -2224,6 +2224,21 @@ function pmcEscapeHtmlMultiline_(s) {
   return pmcEscapeHtml_(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
+// 首刷禮名稱（2026-10-21）：「①A②B③C」這種多選一寫法，每個選項包成一個
+// <span class="promo-gift-item">，CSS 用懸掛縮排讓折行對齊在品名起點、編號凸出來
+// （原本用 <br> 分行，長品名折行後第二行會跑到 ② 底下，三個選項的界線看不清楚）。
+// 沒有圈號的寫法照舊（keepBreaks＝主活動大字：換行轉 <br>；附屬列：不轉，維持原本的單行）。
+// 切法與 pmcGiftOptions_ 相同（換行或圈號前切），但保留圈號本身。
+function pmcGiftNameHtml_(s, keepBreaks) {
+  const text = String(s || '').trim();
+  if (!/[①-⑩]/.test(text)) return keepBreaks ? pmcEscapeHtmlMultiline_(text) : pmcEscapeHtml_(text);
+  return text.split(/\r\n|\r|\n|(?=[①②③④⑤⑥⑦⑧⑨⑩])/)
+    .map(function (x) { return x.trim(); })
+    .filter(function (x) { return x; })
+    .map(function (x) { return '<span class="promo-gift-item">' + pmcEscapeHtml_(x) + '</span>'; })
+    .join('');
+}
+
 // 外部連結防護：只允許 http/https 開頭，杜絕 javascript: 等危險 scheme（連結值來自
 // Google Sheets 資料，多一層保險；語義同 script.js 的 sanitizeUrl）
 function pmcSanitizeUrl_(url) {
@@ -2330,7 +2345,7 @@ function pmcRewardBig_(promo) {
   const v = pmcPromoValue_(promo);
   if (v === null) {
     const gift = String(promo.gift_content || '').trim();
-    return { html: gift ? pmcEscapeHtmlMultiline_(gift) : '首刷禮', isGift: true };
+    return { html: gift ? pmcGiftNameHtml_(gift, true) : '首刷禮', isGift: true };
   }
   return { html: pmcEscapeHtml_(pmcMoney_(v)), isGift: false };
 }
@@ -2879,7 +2894,7 @@ function pmcRenderPromoSubRow_(p, actId) {
 
   // 上排右側的「值」
   const amt = isBonus ? pmcEscapeHtml_(pmcRateDisplay_(promo))
-    : isGift ? pmcEscapeHtml_(giftName || '首刷禮')
+    : isGift ? (giftName ? pmcGiftNameHtml_(giftName) : '首刷禮')
     : pmcEscapeHtml_(pmcMoney_(value));
 
   // 詳情最上方的補充說明（收合時看不到）。首刷禮不需要——它的摘要就在下排，
@@ -3295,27 +3310,24 @@ o.cardsHtml + '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
 // 複製自 index.html 的 .social-media-footer——主站改動這塊時，這裡要手動同步（同一句
 // 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
+// 2026-10-21 隨主站重排：追蹤＋贊助併成一組；探索更多不列本頁（新戶活動）；
+// 隱私權／使用須知改成 .footer-legal 一行小字。樣式在 promos.css「抄自 styles.css」那段。
 '<footer class="social-media-footer">\n' +
 '  <div class="social-media-container">\n' +
 '    <div class="social-section">\n' +
-'      <p class="social-media-title">追蹤我們</p>\n' +
+'      <p class="social-media-title">追蹤與支持我們</p>\n' +
 '      <div class="social-media-links">\n' +
 '        <a href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer" class="social-link threads" aria-label="Threads">\n' +
 '          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/></svg>\n' +
 '          <span class="social-text">@pickmycard_tw</span>\n' +
 '        </a>\n' +
-'      </div>\n' +
-'    </div>\n' +
-'    <div class="sponsor-section">\n' +
-'      <p class="social-media-title">支持我們</p>\n' +
-'      <div class="social-media-links">\n' +
 '        <a href="https://portaly.cc/pickmycard/support" target="_blank" rel="noopener noreferrer" class="social-link sponsor" aria-label="贊助支持">\n' +
 '          <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/></svg>\n' +
 '          <span class="social-text">小額抖內</span>\n' +
 '        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'      <div class="explore-section">\n' +
+'    <div class="explore-section">\n' +
 '      <p class="social-media-title">探索更多</p>\n' +
 '      <div class="social-media-links">\n' +
 '        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
@@ -3324,20 +3336,14 @@ o.cardsHtml + '\n' +
 '        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
 '          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
 '        </a>\n' +
-'        <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。\n' +
-'             AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的\n' +
-'             告知義務也需要常設入口——新增頁面時記得一起帶上。 -->\n' +
-'        <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">\n' +
-'            <span class="social-text">隱私權政策</span>\n' +
-'        </a>\n' +
-'        <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁 /terms。\n' +
-'             同樣是每一頁都要有的入口——新增頁面時記得一起帶上。 -->\n' +
-'        <a href="/terms" class="social-link privacy" aria-label="使用須知與免責聲明">\n' +
-'            <span class="social-text">使用須知與免責聲明</span>\n' +
-'        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'</div>\n' +
+'  </div>\n' +
+'  <!-- 法務連結：全站每頁都要有的入口（隱私權政策：AdSense／Analytics 條款與個資法第 8 條告知義務；\n' +
+'       使用須知與免責聲明：/terms 為唯一正本），新增頁面時記得一起帶上。 -->\n' +
+'  <p class="footer-legal">\n' +
+'    <a href="/privacy">隱私權政策</a><span class="footer-legal-dot" aria-hidden="true">·</span><a href="/terms">使用須知與免責聲明</a>\n' +
+'  </p>\n' +
 '</footer>\n' +
 '\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到
