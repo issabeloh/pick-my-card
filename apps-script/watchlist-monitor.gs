@@ -290,13 +290,13 @@ function checkWatchlist() {
       errors.push({ text: label + ' ' + url + '：' + e.message, streak: streak });
       continue;
     }
-    resetFailStreak_(sheet, headers, i + 1, row);
 
     const oldText = String(row[cSnap] || '');
 
     if (!oldText) {
       // 第一次抓這個網址：只存基準快照，不通知
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -306,6 +306,7 @@ function checkWatchlist() {
     // 這種情況整頁都會被算成「新增」，AI 一定誤判成大量新活動 → 只重建基準、不通知。
     if (oldText.length * 3 < text.length) {
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       rebaselined.push(label + ' ' + url +
         '（舊基準 ' + oldText.length + ' 字 → 本次 ' + text.length + ' 字）');
@@ -317,10 +318,12 @@ function checkWatchlist() {
     // 一旦覆寫，好的基準就沒了，下一次會再誤報一次「大量新增」。
     // 若確認是網頁真的整頁改版，人工把該列 last_snapshot 清空即可重建基準。
     if (oldText.length >= 300 && text.length * 3 < oldText.length) {
-      errors.push(label + ' ' + url +
+      // 抓到了但內容殘缺，一樣算失敗——遠銀樂家+卡頁 10/18、10/22 連續撞這條，
+      // 不計次的話信裡永遠只是「偶發」，看不出它已經壞好幾週了
+      errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
         '：這次只抓到 ' + text.length + ' 字（舊基準 ' + oldText.length +
         ' 字），疑似抓取失敗，已略過並保留原基準。請人工開網頁確認；' +
-        '若確實整頁改版，請把該列 last_snapshot 清空後重跑');
+        '若確實整頁改版，請把該列 last_snapshot 清空後重跑' });
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -353,11 +356,11 @@ function checkWatchlist() {
     // 處理方式比照上面那個反方向落差：回報錯誤、**絕不覆寫 last_snapshot**——
     // 一旦把殘缺快照存成基準，好的基準就沒了，下次還會再誤報一次「大量新增」。
     if (refined.removedRatio >= 0.5 && refined.addedChars < 200) {
-      errors.push(label + ' ' + url +
+      errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
         '：舊基準有 ' + Math.round(refined.removedRatio * 100) + '% 的內容在這次抓取中消失，' +
         '而新增內容只有 ' + refined.addedChars + ' 字，疑似只抓到摺疊/未展開的版本（常見於注意事項、活動明細放在展開區）。' +
         '已略過並保留原基準，不會誤報成活動下架。請人工開網頁確認；' +
-        '若確認銀行真的砍掉這些內容，把該列 last_snapshot 清空後重跑即可');
+        '若確認銀行真的砍掉這些內容，把該列 last_snapshot 清空後重跑即可' });
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -427,6 +430,7 @@ function checkWatchlist() {
 
     // 不論是不是事件，都把快照更新成最新版
     sheet.getRange(i + 1, cSnap + 1).setValue(text);
+    resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
   }
 
