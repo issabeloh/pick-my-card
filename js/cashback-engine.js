@@ -4,6 +4,7 @@
  * 區塊目錄（Grep 關鍵字）：
  *  - 回饋計算總調度            → "calculateCashback"
  *  - 搜尋變體/邊界判斷          → "getAllSearchVariants" / "merchantMatchesStrict"
+ *  - 搜尋三步之「算」          → "calculateHitResults"
  *  - 類別顯示                  → "getCategoryDisplayName"
  *  - 基礎/加碼率解析            → "resolveBaseRate" / "resolveBonusComponent"
  *  - 溢出率                    → "getOverflowRate"
@@ -79,91 +80,11 @@ async function calculateCashback() {
     console.log(`比較 ${cardsToCompare.length} 張卡片`);
     
     if (currentMatchedItem) {
-        // User input matched specific items - show special cashback rates for ALL matched items
-        let allResults = [];
-        
-        if (Array.isArray(currentMatchedItem)) {
-            // Multiple matches - calculate for all items and show best card for EACH item
-            const allItemResults = [];
-
-            console.log(`🔍 處理 ${currentMatchedItem.length} 個匹配項目`);
-
-            for (const matchedItem of currentMatchedItem) {
-                const searchTerm = matchedItem.originalItem.toLowerCase();
-                console.log(`  📝 計算項目: ${matchedItem.originalItem}`);
-
-                const itemResults = await Promise.all(cardsToCompare.map(async card => {
-                    const results = await calculateCardCashback(card, searchTerm, amount);
-                    // calculateCardCashback now returns an array of all matching activities
-                    return results.map(result => ({
-                        ...result,
-                        card: card,
-                        matchedItemName: result.matchedItem // 使用卡片實際匹配到的item，而非搜尋詞
-                    }));
-                })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
-
-                if (itemResults.length > 0) {
-                    // Sort by cashback amount (highest first)
-                    itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
-
-                    // Add ALL cards with cashback, not just the best one
-                    allItemResults.push(...itemResults);
-                }
-            }
-
-            // Merge results from same card and same activity
-            allResults = mergeResultsByActivity(allItemResults);
-
-            console.log(`📊 合併前: ${allItemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
-        } else {
-            // Single match - backward compatibility
-            const searchTerm = currentMatchedItem.originalItem.toLowerCase();
-            const itemResults = await Promise.all(cardsToCompare.map(async card => {
-                const results = await calculateCardCashback(card, searchTerm, amount);
-                // calculateCardCashback now returns an array of all matching activities
-                return results.map(result => ({
-                    ...result,
-                    card: card,
-                    matchedItemName: result.matchedItem
-                }));
-            })).then(results => results.flat().filter(result => result.cashbackAmount > 0));
-
-            // Merge results from same card and same activity
-            allResults = mergeResultsByActivity(itemResults);
-
-            console.log(`📊 合併前: ${itemResults.length} 個結果，合併後: ${allResults.length} 個結果`);
-        }
-        
-        results = allResults;
-
+        // 「算」：用「找」那一步的完整命中清單逐名計算（calculateHitResults），進行中與即將開始一起算
+        const hitResults = await calculateHitResults(currentMatchedItem, cardsToCompare, amount);
+        results = hitResults.results;
+        uniqueUpcomingResults = hitResults.upcoming;
         diagStage('主要結果完成');
-        // Also find upcoming activities (within 30 days)
-        const upcomingResults = [];
-        if (currentMatchedItem) {
-            const searchTermsForUpcoming = Array.isArray(currentMatchedItem)
-                ? currentMatchedItem.map(item => item.originalItem.toLowerCase())
-                : [currentMatchedItem.originalItem.toLowerCase()];
-
-            for (const searchTerm of searchTermsForUpcoming) {
-                const upcomingActivities = await Promise.all(cardsToCompare.map(async card => {
-                    const activities = await findUpcomingActivity(card, searchTerm, amount);
-                    // findUpcomingActivity now returns an array
-                    return activities.map(activity => ({
-                        card: card,
-                        ...activity,
-                        isUpcoming: true,
-                        matchedItemName: activity.matchedItem
-                    }));
-                }));
-
-                upcomingResults.push(...upcomingActivities.flat());
-            }
-        }
-
-        // Merge upcoming results from same card and same activity
-        uniqueUpcomingResults = mergeResultsByActivity(upcomingResults);
-
-        console.log(`📊 Upcoming 合併前: ${upcomingResults.length} 個結果，合併後: ${uniqueUpcomingResults.length} 個結果`);
 
         // 走到這裡代表**匹配成功**（currentMatchedItem 有值），只是算不出任何結果——
         // 最常見的原因是有這個活動的卡不在「加入比較的卡片」裡。這跟「沒匹配到」是兩件事，
@@ -361,34 +282,51 @@ async function calculateCashback() {
     }
 }
 
-// Get all search term variants for comprehensive matching
+// 搜尋詞展開（fuzzy／統一詞別名／片語同義詞）。2026-10-17 起只是 expandSearchTerms（js/search-match.js）
+// 的小寫包裝——以前兩邊各有一份幾乎一樣的程式，要靠人記得同步
 function getAllSearchVariants(searchTerm) {
-    const searchLower = searchTerm.toLowerCase().trim();
-    let searchTerms = [searchLower];
-    
-    // Add fuzzy search mapping if exists
-    if (fuzzySearchMap[searchLower]) {
-        const mappedTerm = fuzzySearchMap[searchLower].toLowerCase();
-        if (!searchTerms.includes(mappedTerm)) {
-            searchTerms.push(mappedTerm);
+    return expandSearchTerms(String(searchTerm || '').toLowerCase().trim());
+}
+
+// ============================================================
+// 搜尋三步之二「算」（2026-10-17 架構調整：找、算、顯示分三步）
+// 輸入：findSearchHits() 的完整命中清單（每個元素至少有 originalItem）。
+// **逐個名字**算每張卡（calculateCardCashback 用名字查索引），不能把所有名字丟進同一次計算：
+// 分級卡（國泰 CUBE 等）的優先順序是「先看 cashbackRates、沒有才看方案 specialItems、再沒有才看 generalItems」，
+// 這個順序是對「每個名字」各自成立的；一起算的話，A 名字命中活動會把 B 名字的方案項目擋掉。
+// 排序與合併照舊：每個名字的結果先依金額排一次再累加（JS sort 穩定，同分順序取決於進入順序），
+// 最後 mergeResultsByActivity 把同卡同活動併成一列（matchedItems 收齊所有命中的名字）。
+// 回傳 { results, upcoming }，皆已合併、未做最終排序（呼叫端照原本流程排序）。
+// options.upcoming === false 時不算即將開始（商家頁生成器用不到）
+// 首頁 calculateCashback 與商家頁生成器（tools/lib/merchant-cards.js）共用這一支，不要再各自抄一份
+// ============================================================
+async function calculateHitResults(hits, cards, amount, options = {}) {
+    const list = Array.isArray(hits) ? hits : (hits ? [hits] : []);
+    const all = [];
+    for (const hit of list) {
+        const searchTerm = String(hit.originalItem).toLowerCase();
+        const itemResults = (await Promise.all(cards.map(async card => {
+            const rs = await calculateCardCashback(card, searchTerm, amount);
+            return rs.map(r => ({ ...r, card, matchedItemName: r.matchedItem }));
+        }))).flat().filter(r => r.cashbackAmount > 0);
+        if (itemResults.length > 0) {
+            itemResults.sort((a, b) => b.cashbackAmount - a.cashbackAmount);
+            all.push(...itemResults);
         }
     }
-    
-    // Also add reverse mappings (find all terms that map to current search)
-    Object.entries(fuzzySearchMap).forEach(([key, value]) => {
-        if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
-            searchTerms.push(key);
-        }
-    });
+    const results = mergeResultsByActivity(all);
+    if (options.upcoming === false) return { results, upcoming: [] };
 
-    // 片語級同義詞展開：「海外消費」→「國外消費」（定義在 search-match.js，載入順序在前）
-    if (typeof expandSynonymPhrases === 'function') {
-        expandSynonymPhrases(searchLower).forEach(variant => {
-            if (!searchTerms.includes(variant)) searchTerms.push(variant);
-        });
+    const upcoming = [];
+    for (const hit of list) {
+        const searchTerm = String(hit.originalItem).toLowerCase();
+        const acts = await Promise.all(cards.map(async card => {
+            const as = await findUpcomingActivity(card, searchTerm, amount);
+            return as.map(a => ({ card, ...a, isUpcoming: true, matchedItemName: a.matchedItem }));
+        }));
+        upcoming.push(...acts.flat());
     }
-
-    return searchTerms;
+    return { results, upcoming: mergeResultsByActivity(upcoming) };
 }
 
 // 判斷搜尋詞是否「包含」某個項目名稱（term ⊇ item）。
