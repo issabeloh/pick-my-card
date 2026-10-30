@@ -79,11 +79,12 @@ function createEngine(cardsData) {
 
   // 從 context 內部指派，才吃得到模組頂層的 let 綁定（見檔頭坑 2）。
   //
-  // ⚠️ 這四步是照抄 js/data-loader.js 的 loadCardsData()，順序與內容都不能改：
+  // ⚠️ 這幾步是照抄 js/data-loader.js 的 loadCardsData()，順序與內容都不能改：
   //   1. cardsData = 解碼結果
   //   2. filterExpiredRates —— 濾掉過期活動。少了它，已結束的活動會出現在清單裡
   //   3. mergeDataSearchExclusions —— 併入 SearchExclusions 工作表的排除規則。少了它，
   //      被排除的項目會被誤匹配（2026-08-16 linepay 頁多出「LINE Pay 找體驗 APP」就是這個）
+  //   3b. mergeDataTermAliases —— 併入「統一詞」工作表的別名（2026-10-14）。少了它，搜別名的結果會跟畫面不同
   //   4. buildCardItemsIndex —— 建每張卡的搜尋索引，沒有它 findMatchingItem 全部落空
   // 前端載入流程若有變動，這裡要跟著改，否則生成的清單會與畫面分岔。
   ctx.__cardsData = cardsData;
@@ -91,6 +92,7 @@ function createEngine(cardsData) {
     'cardsData = __cardsData;',
     'cardsData = filterExpiredRates(cardsData);',
     'mergeDataSearchExclusions(cardsData);',
+    'mergeDataTermAliases(cardsData);',
     'cardsData.cards.forEach(function (c) { buildCardItemsIndex(c); });',
     '__cardsData = cardsData;'
   ].join('\n'), ctx);
@@ -98,13 +100,17 @@ function createEngine(cardsData) {
 }
 
 // 商家字串 → 匹配項清單。照抄 compareSpotlightMerchant() 的分支：商家名剛好等於某個
-// 快捷搜尋的 displayName（如 LinePay、廣告費）就走 handleQuickSearch 的多關鍵詞路徑，
-// 否則當一般單一商家搜尋。少了這個分支，LinePay 這種頁的匹配項會跟畫面不一樣。
+// 「一次比多家」型快捷搜尋的 displayName（如 所有計程車、廣告費）就走 handleQuickSearch 的
+// 多關鍵詞路徑；「協助輸入」型（只有一個關鍵詞，如 LinePay）在頁面上等同用戶打字，
+// 這裡也當一般單一商家搜尋。兩型的分界由前端的 isTypingHelperQuickOption() 決定（直接呼叫，不另寫）。
+// 少了這個分支，LinePay／所有計程車這種頁的匹配項會跟畫面不一樣。
 function resolveMatchedItems(engine, merchant) {
   const options = engine.__cardsData.quickSearchOptions || [];
   const normalized = String(merchant).trim().toLowerCase();
   const option = options.find(o => o.displayName && String(o.displayName).trim().toLowerCase() === normalized);
-  if (!option) return engine.findMatchingItem(String(merchant), { exactOnly: false });
+  if (!option || engine.isTypingHelperQuickOption(option)) {
+    return engine.findMatchingItem(String(merchant), { exactOnly: false });
+  }
 
   // handleQuickSearch：逐個關鍵詞查，依 originalItem 去重，保留先到先得的順序
   const seen = new Set();

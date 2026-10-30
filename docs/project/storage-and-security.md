@@ -37,18 +37,20 @@
 - 訪客 key 兩種情況都會被「消化移除」（避免留在共用電腦洩漏給下一位使用者）
 - 信用卡/行動支付/我的信用卡：在各自的 load 函數內處理
 - 配卡表/級別/筆記/免年費/結帳日/CUBE 發卡組織：統一在 `absorbGuestPersonalData(userData)`
+- **例外：刷卡小抄（`spendingMappings`）是合併、不是雲端為準**（2026-10-14 起訪客也能加小抄）：現讀雲端為底，補上訪客清單裡雲端沒有的「cardId × merchant」；雲端讀不到或寫入失敗 → 保留訪客 key 下次重試，絕不拿 userData 覆寫。小抄的訪客自訂名稱 `merchantAliases_guest`（雲端沒有的商家才帶入）與標題 `mappingsTitle_guest`（雲端沒設才帶入）best-effort，處理完即移除
 - 高價值資料（級別、筆記）上傳失敗時**保留 key 下次重試**；低價值資料 best-effort
 
 ## 5. 登出清理
 
 - `clearPersonalLocalDataOnSignOut(uid)`：清所有帶 uid 的鏡像＋非 uid 區分的個人 key
 - **只能在「用戶親自按登出」時呼叫**，不能放進 onAuthStateChanged 的登出分支（訪客每次開頁都會觸發該分支，會誤刪訪客資料）
-- 新增帶 uid 的本機 key 時要同步加進清理清單。2026-09-28 加了配卡組合頁的 `merchantAliases_<uid>`（自訂商家名稱鏡像，正本在 Firestore `users/<uid>.merchantAliases`）、`mappingsPrefs_<uid>`（排列／字級／存圖偏好，只存本機）與 `mappingsTitle_<uid>`（小抄標題鏡像，正本在 `users/<uid>.mappingsTitle`）
+- 新增帶 uid 的本機 key 時要同步加進清理清單。2026-09-28 加了配卡組合頁的 `merchantAliases_<uid>`（自訂商家名稱鏡像，正本在 Firestore `users/<uid>.merchantAliases`）、`mappingsPrefs_<uid>`（排列／字級／存圖偏好，只存本機）與 `mappingsTitle_<uid>`（小抄標題鏡像，正本在 `users/<uid>.mappingsTitle`）；2026-10-14 加了訪客 key `merchantAliases_guest`、`mappingsTitle_guest`（在非 uid 清單）
 
 ## 6. XSS 與連結安全
 
 - **所有動態 innerHTML 內容一律 `escapeHtml()`**；多行文字用 `escapeHtmlMultiline()`
 - **例外（刻意允許 HTML）僅兩處**：公告 modal 的 `fullText`、FAQ 的 `answer`——都是管理者控制的 Google Sheets 內容，程式內有註解標明；**絕不**把用戶輸入餵進這兩個欄位
+- **搜尋提示 `display_message`（2026-10-13）可含 HTML，但不是原樣放行**：`renderHintMessage()`（js/home-ui.js）沒標籤就 escape；有標籤走白名單（b/strong/i/em/u/br/a/span/small/mark/code）、屬性全丟、`<a>` 的 href 過 `sanitizeUrl()` 並強制新分頁。要開放新標籤改 `HINT_ALLOWED_TAGS`，**不要**改成直接 innerHTML
 - **動態 href 一律先過 `sanitizeUrl()`**（只允許 http/https，擋 `javascript:`）
 - **Firestore 安全規則唯一正確版本在 repo 的 `firestore.rules`**；改規則先改 repo 再貼 console（教學見 `FIRESTORE-RULES-README.md`）
 

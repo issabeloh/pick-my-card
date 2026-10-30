@@ -381,13 +381,19 @@ function updateFixture() {
   return 0;
 }
 
-if (process.argv.includes('--update-fixture')) {
-  process.exit(updateFixture());
-}
+// 共用給其他測試（card-detail-test.js）：凍結資料伺服器、Firebase 替身、凍結時鐘。
+// 只有直接執行本檔才跑回歸——被 require 時不能自己啟動，否則會跑兩套測試。
+module.exports = { REPO, startServer, firebaseStub, freezeClockScript, readFixtureMeta };
 
-run({
-  updateBaseline: process.argv.includes('--update-baseline'),
-  useLive: process.argv.includes('--live'),
-})
-  .then(code => process.exit(code))
-  .catch(e => { console.error('❌ 測試框架本身出錯（非回歸差異）：', e.message); process.exit(2); });
+if (require.main === module) {
+  if (process.argv.includes('--update-fixture')) {
+    process.exit(updateFixture());
+  }
+
+  run({
+    updateBaseline: process.argv.includes('--update-baseline'),
+    useLive: process.argv.includes('--live'),
+  })
+    .then(code => process.exit(code))
+    .catch(e => { console.error('❌ 測試框架本身出錯（非回歸差異）：', e.message); process.exit(2); });
+}

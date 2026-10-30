@@ -7,7 +7,6 @@
  *  - 錯誤訊息                  → "showErrorMessage"
  *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
  *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
- *  - 問卷邀請 modal（登入後）   → "maybeShowSurveyInvite" / "survey invite"
  *  - 主初始化（DOMContentLoaded）→ "DOMContentLoaded"
  *  - 圖片 lazy loading          → "initializeLazyLoading"
  *  - 卡片/支付 chips            → "populateCardChips" / "populatePaymentChips"
@@ -654,6 +653,53 @@ function closeSpotlightModal() {
 // Auto-fill the merchant search and run the comparison. If the merchant matches
 // a quick-search option's displayName (e.g. 所有加油站), trigger that multi-keyword
 // search; otherwise do a plain single-merchant search.
+// ===== 計算鈕提醒（calc-nudge）=====
+// 讓「計算回饋」閃一下，指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
+// 用在兩個地方：推薦活動「帶入查詢」之後；以及「條件已變更」——算過一次之後，商家、金額、
+// 精準搜尋、新戶活動、快捷搜尋任一改了，畫面上的結果就是舊條件算的（站長 2026-10-08 定案：
+// 一律按「計算」才更新、不自動重算，所以用閃一下提醒）。
+function nudgeCalculateBtn() {
+    const calcBtn = document.getElementById('calculate-btn');
+    if (!calcBtn || calcBtn.disabled) return;
+    calcBtn.classList.remove('calc-nudge');
+    void calcBtn.offsetWidth; // 重新觸發動畫（連續修改時從頭再閃）
+    calcBtn.classList.add('calc-nudge');
+    clearTimeout(nudgeCalculateBtn._timer);
+    nudgeCalculateBtn._timer = setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
+}
+
+// 上一次計算時的條件快照；null＝還沒算過（還沒有結果，不需要提醒）。
+// 精準搜尋只在非快捷搜尋時影響結果（見 isTypingHelperQuickOption 的說明），快捷搜尋時不列入；
+// 金額空白＝預設 1000，兩者視為相同
+let lastCalcConditions = null;
+function currentCalcConditions() {
+    const merchantEl = document.getElementById('merchant-input');
+    const amountEl = document.getElementById('amount-input');
+    return JSON.stringify([
+        merchantEl ? merchantEl.value.trim().toLowerCase() : '',
+        amountEl ? (amountEl.value.trim() || '1000') : '1000',
+        currentQuickSearchOption ? null : isExactSearchEnabled(),
+        typeof showCardholderPromos !== 'undefined' ? showCardholderPromos : false
+    ]);
+}
+// calculateCashback() 開頭呼叫：記下這次用的條件，並停掉進行中的提醒（已經在算了）
+function rememberCalcConditions() {
+    lastCalcConditions = currentCalcConditions();
+    const calcBtn = document.getElementById('calculate-btn');
+    if (calcBtn) calcBtn.classList.remove('calc-nudge');
+}
+// 各條件的變更處呼叫：算過、而且條件跟上次不同才閃；改回跟上次一樣就停（逐字打回原商家時，
+// 打到一半的字會先觸發閃動，打完那一下要收掉）
+function nudgeIfCalcConditionsChanged() {
+    if (lastCalcConditions === null) return;
+    if (currentCalcConditions() === lastCalcConditions) {
+        const calcBtn = document.getElementById('calculate-btn');
+        if (calcBtn) calcBtn.classList.remove('calc-nudge');
+        return;
+    }
+    nudgeCalculateBtn();
+}
+
 function compareSpotlightMerchant(merchant, opts) {
     if (!merchant) return;
     opts = opts || {};
@@ -682,13 +728,7 @@ function compareSpotlightMerchant(merchant, opts) {
         if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // 不 focus 輸入框：手機上會彈出鍵盤蓋住「計算回饋」。改成讓計算鈕閃一下，
         // 指出下一步在哪（動畫本身尊重 prefers-reduced-motion，見 styles.css）。
-        const calcBtn = document.getElementById('calculate-btn');
-        if (calcBtn) {
-            calcBtn.classList.remove('calc-nudge');
-            void calcBtn.offsetWidth;
-            calcBtn.classList.add('calc-nudge');
-            setTimeout(() => calcBtn.classList.remove('calc-nudge'), 1600);
-        }
+        nudgeCalculateBtn();
         return;
     }
 
@@ -881,148 +921,6 @@ function showAnnouncementModal(index) {
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
-}
-
-// ==========================================
-// 問卷邀請 Modal（survey invite，2026-09-03）
-// ==========================================
-// 登入用戶「一次性」邀請填問卷：按「沒問題！」直接開問卷那則公告的 modal
-// （問卷連結寫在該公告的 fullText 裡，這裡不另外維護一份連結）。
-// 設計取捨：
-//  - 只記在 localStorage（每台裝置問一次），不寫 Firestore——問卷是短期活動，
-//    不值得為它在 users 文件加一個永久欄位；換裝置多問一次可以接受。
-//  - 找不到問卷公告就完全不彈（見 findSurveyAnnouncementIndex）：Sheets 把那則
-//    公告下架後這個邀請自動失效，不用回頭改程式。
-//  - 受眾：登入用戶 ＋ 回訪訪客（見 isSurveyInviteAudience），首訪的人不問。
-//  - 兩道自動下架保險：期限（只在 2026/9 整月）＋ 公告還在不在。任一不成立就完全不彈。
-//  - 只在主站首頁彈：/promos 的 iframe 與 /merchant/xxx 落地頁不打擾。
-const SURVEY_INVITE_SEEN_KEY = 'pmc_survey_invite_seen_v1';
-const SURVEY_ANNOUNCEMENT_KEYWORD = '問卷';
-const SURVEY_INVITE_DELAY_MS = 1200;
-// 只在 2026/9/1–10/11 彈（原訂 9 月整月；9/30 刷卡小抄上線當天單日收到 25 份回覆，
-// 站長 2026-10-01 決定延長到 10/11 底，讓那波新流量回訪時也問得到）。時區固定寫死 +08:00（台灣時間）——不能省略時區後綴，
-// 那樣會變成「裝置本地時間」，人在國外或裝置時區設錯的用戶起訖點會整個偏掉。
-// 寫成帶時區的絕對時刻後，全世界同一瞬間開關。過期自動變 no-op，不用月底手動下架。
-const SURVEY_INVITE_START = '2026-09-01T00:00:00+08:00';
-const SURVEY_INVITE_END   = '2026-10-12T00:00:00+08:00';  // 不含這一刻＝10/11 23:59 為止
-let surveyInviteHandledThisSession = false;
-
-function isSurveyInvitePeriod() {
-    const now = Date.now();
-    return now >= new Date(SURVEY_INVITE_START).getTime() &&
-           now <  new Date(SURVEY_INVITE_END).getTime();
-}
-
-// 問卷公告在 announcements 裡的位置。目前是第一則，但不寫死 index 0——
-// 公告順序由 Sheets 決定，之後插新公告時 index 會漂掉。
-function findSurveyAnnouncementIndex() {
-    if (!Array.isArray(announcements)) return -1;
-    return announcements.findIndex(a =>
-        a && typeof a.text === 'string' && a.text.includes(SURVEY_ANNOUNCEMENT_KEYWORD));
-}
-
-function markSurveyInviteSeen(outcome) {
-    surveyInviteHandledThisSession = true;
-    try {
-        localStorage.setItem(SURVEY_INVITE_SEEN_KEY, outcome);
-    } catch (e) {
-        // localStorage 不可用（無痕/被封鎖）：至少靠 session flag 不在同一次瀏覽重複打擾
-    }
-}
-
-function logSurveyInviteEvent(outcome) {
-    if (!window.logEvent || !window.firebaseAnalytics) return;
-    try {
-        window.logEvent(window.firebaseAnalytics, 'survey_invite', {
-            outcome: outcome,
-            user_state: currentUser ? 'logged_in' : 'guest',
-            surface: typeof getAnalyticsSurface === 'function' ? getAnalyticsSurface() : 'site',
-        });
-    } catch (e) {
-        // 追蹤失敗不影響功能
-    }
-}
-
-// 這次進站的人算不算「該問的對象」（2026-09-06 擴大受眾）。
-// 原本只問登入用戶，兩天只收到 1 份回覆，所以訪客也問——但仍避開「這輩子第一次來」
-// 的人：他們還沒用過工具，沒有體驗可以分享，問了只是擋路。
-// 訪客判準 ＝「這次不是從 landing 點進來的」＋「這台裝置已經有本站的 localStorage 痕跡」。
-// 首訪動線一定是「進 index → 被首屏路由導去 landing → 帶 ?start 回來」（見 index.html
-// 開頭的 pre-paint script），所以帶 start 參數的這一輪＝首訪，不問；反過來說，沒帶
-// start 又已經有痕跡，就是以前來過的人。
-function isSurveyInviteAudience() {
-    if (currentUser) return true;   // 登入用戶一律算
-    try {
-        if (new URLSearchParams(location.search).has('start')) return false;
-        return localStorage.length > 0;
-    } catch (e) {
-        return false;  // localStorage 被封鎖：既判斷不了回訪，也記不住「問過了」
-    }
-}
-
-// 由 onAuthStateChanged 的登入／訪客兩個分支呼叫（auth-user-data.js）。
-function maybeShowSurveyInvite() {
-    if (surveyInviteHandledThisSession) return;
-    if (!isSurveyInvitePeriod()) return;  // 只在 9/1–10/11
-    if (!isSurveyInviteAudience()) return;  // 登入用戶或回訪訪客，首訪不問
-    // 只在主站首頁問。getAnalyticsSurface() 已經把兩種「不是首頁」的脈絡分好了：
-    // promos_embed（/promos 的 iframe）與 merchant_page（/merchant/xxx 落地頁與
-    // ?merchant= 深連結）——那些頁面用戶是帶著任務進來的，不彈 modal 擋路。
-    if (typeof getAnalyticsSurface === 'function' && getAnalyticsSurface() !== 'site') return;
-    if (!document.getElementById('survey-invite-modal')) return;
-    if (findSurveyAnnouncementIndex() < 0) return;  // 問卷公告已下架
-    let seen = null;
-    try {
-        seen = localStorage.getItem(SURVEY_INVITE_SEEN_KEY);
-    } catch (e) {
-        // 讀不到就當作沒問過，靠 surveyInviteHandledThisSession 收斂
-    }
-    if (seen) return;
-
-    surveyInviteHandledThisSession = true;  // 先佔位，避免 auth 狀態抖動時排兩次
-    // 等登入後的資料渲染安定下來再問，避免蓋在剛畫出來的內容上。
-    setTimeout(showSurveyInviteModal, SURVEY_INVITE_DELAY_MS);
-}
-
-function showSurveyInviteModal() {
-    const modal = document.getElementById('survey-invite-modal');
-    const acceptBtn = document.getElementById('survey-invite-accept');
-    const cancelBtn = document.getElementById('survey-invite-cancel');
-    const closeBtn = document.getElementById('survey-invite-close');
-    if (!modal || !acceptBtn) return;
-
-    // 顯示的當下就記帳：用戶直接關分頁沒回答，下次也不再問。
-    markSurveyInviteSeen('shown');
-
-    modal.style.display = 'flex';
-    disableBodyScroll();
-
-    let closed = false;
-    const close = (outcome) => {
-        if (closed) return;
-        closed = true;
-        markSurveyInviteSeen(outcome);
-        modal.style.display = 'none';
-        enableBodyScroll();
-        document.removeEventListener('keydown', onKeydown);
-        logSurveyInviteEvent(outcome);
-    };
-    const onKeydown = (e) => {
-        if (e.key === 'Escape') close('dismissed');
-    };
-
-    acceptBtn.onclick = () => {
-        close('accepted');
-        // 接到公告 modal（公告 modal 自己不上 scroll lock，與點公告列的行為一致）
-        const index = findSurveyAnnouncementIndex();
-        if (index >= 0) showAnnouncementModal(index);
-    };
-    if (cancelBtn) cancelBtn.onclick = () => close('dismissed');
-    if (closeBtn) closeBtn.onclick = () => close('dismissed');
-    modal.onclick = (e) => {
-        if (e.target === modal) close('dismissed');
-    };
-    document.addEventListener('keydown', onKeydown);
 }
 
 // 手機版圓點指示：一則一顆，點擊可直接跳到該則（點擊區用 padding 撐到 ~20px）
@@ -1564,7 +1462,7 @@ function setupSearchClearButtons() {
         'search-cards-input',      // 管理卡片
         'search-owned-cards-input',// 我的信用卡
         'search-payments-input',   // 行動支付
-        'cashback-search-input'    // 卡片詳情頁：指定通路回饋
+        'cashback-search-input'    // 卡片詳情頁：所有回饋區上方的搜尋框
         // 我的刷卡小抄頁的搜尋框是 type=search（瀏覽器自帶清除鈕），不在此列
     ].forEach(id => attachInputClearButton(document.getElementById(id)));
 }
@@ -1590,6 +1488,8 @@ function setupEventListeners() {
 
     // Merchant input with real-time matching
     merchantInput.addEventListener('input', handleMerchantInput);
+    // 邊打邊列出資料裡有的名稱（search-match.js「輸入建議下拉選單」）
+    setupMerchantSuggest(merchantInput);
 
     // 一鍵清除輸入的 ✕：有內容才顯示；清除後回到未輸入狀態並保持焦點
     const merchantClearBtn = document.getElementById('merchant-clear-btn');
@@ -1611,7 +1511,7 @@ function setupEventListeners() {
         });
         if (currentQuickSearchOption) return;
         if (merchantInput.value.trim()) {
-            handleMerchantInput();
+            handleMerchantInput(); // 結尾會判斷要不要提醒按計算
         } else {
             toggleExactSearchEmptyHint(false);
         }
@@ -1646,6 +1546,7 @@ function setupEventListeners() {
     amountInput.addEventListener('input', () => {
         amountInput.dataset.userModified = 'true';
         validateInputs();
+        nudgeIfCalcConditionsChanged();
     });
 
     // Calculate button
@@ -1776,6 +1677,45 @@ function setupEventListeners() {
 // 浮層、蓋在下方勾選/按鈕上，給關閉鈕才不會擋到操作）。清空輸入時歸零。
 let dismissedHintTerm = null;
 
+// 搜尋提示文案（display_message）的顯示（2026-10-13 站長要求兼容 HTML）：
+// 沒有任何 HTML 標籤 → 跟以前一樣當純文字 escape；有標籤 → 走白名單淨化後才放進 innerHTML。
+// 跟公告 fullText 不同，這裡**不是**原樣放行：只留下列格式標籤，其他標籤拆掉留文字、所有屬性都丟掉，
+// <a> 只保留過 sanitizeUrl() 的 href（只准 http/https）並強制開新分頁。所以就算表格被貼進 <script>、
+// onclick、javascript: 也不會執行（鐵則 3 精神：動態內容不可未經處理進 innerHTML）
+const HINT_ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'A', 'SPAN', 'SMALL', 'MARK', 'CODE']);
+function renderHintMessage(message) {
+    // 判斷「有 HTML」要看到結尾標籤 </x> 或 <br>：只看 <字母…> 會把「a<b 與 5>3」這種純文字誤判成標籤
+    if (!/<\/[a-z][a-z0-9]*\s*>|<br\s*\/?>/i.test(message)) return escapeHtml(message);
+    const tpl = document.createElement('template');
+    tpl.innerHTML = message;   // template 內容是惰性的：不載圖、不跑 script、不觸發事件
+    const clean = (node) => {
+        const out = document.createDocumentFragment();
+        node.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) {
+                out.appendChild(document.createTextNode(child.textContent));
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                const tag = child.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE') return;   // 連內容一起丟
+                if (!HINT_ALLOWED_TAGS.has(tag)) { out.appendChild(clean(child)); return; }   // 拆標籤留文字
+                const el = document.createElement(tag.toLowerCase());
+                if (tag === 'A') {
+                    const href = sanitizeUrl(child.getAttribute('href') || '');
+                    if (!href) { out.appendChild(clean(child)); return; }
+                    el.setAttribute('href', href);
+                    el.setAttribute('target', '_blank');
+                    el.setAttribute('rel', 'noopener noreferrer');
+                }
+                el.appendChild(clean(child));
+                out.appendChild(el);
+            }
+        });
+        return out;
+    };
+    const wrap = document.createElement('div');
+    wrap.appendChild(clean(tpl.content));
+    return wrap.innerHTML;
+}
+
 // Check and show search hints
 function checkAndShowSearchHint(searchTerm) {
     const searchHintsContainer = document.getElementById('search-hints-container');
@@ -1796,19 +1736,26 @@ function checkAndShowSearchHint(searchTerm) {
     }
 
     const hint = cardsData.searchHints?.[key];
+    const suggestions = (hint && Array.isArray(hint.suggestions)) ? hint.suggestions.filter(Boolean) : [];
+    // 沒填 suggestions 也要顯示 display_message（2026-10-08 站長要求：有些提示只是要講一句話）。
+    // 文案一定是編輯寫的：Apps Script 對啟用的列要求 display_message 必填，空白的列根本不匯出
+    // （以前會補預設句「💡 建議也搜尋：」，前端得猜那句是不是系統補的，已拿掉）
+    const message = hint && hint.message ? String(hint.message).trim() : '';
 
-    if (hint && hint.suggestions.length > 0) {
+    if (message || suggestions.length > 0) {
         const hintDiv = document.createElement('div');
-        hintDiv.className = 'search-hint';
+        hintDiv.className = 'search-hint' + (suggestions.length === 0 ? ' search-hint-message-only' : '');
         // 關閉鈕（手機版浮層蓋在勾選/計算鈕上時，讓使用者能收起提示）
+        // 鐵則 3：文案走 renderHintMessage（純文字 escape／有標籤走白名單淨化）、建議詞 escape；
+        // 建議詞走 data 屬性，含單引號（如 Tomod's）也不會弄壞 onclick
         hintDiv.innerHTML = `
             <button type="button" class="search-hint-close" aria-label="關閉提示" onclick="dismissSearchHint()">✕</button>
-            <span class="hint-message">${hint.message}</span>
-            <div class="hint-suggestions">
-                ${hint.suggestions.map(s =>
-                    `<button class="hint-button" onclick="searchFromHint('${s}')">${s}</button>`
+            <span class="hint-message">${renderHintMessage(message)}</span>
+            ${suggestions.length > 0 ? `<div class="hint-suggestions">
+                ${suggestions.map(s =>
+                    `<button class="hint-button" data-suggestion="${escapeHtml(s)}" onclick="searchFromHint(this.dataset.suggestion)">${escapeHtml(s)}</button>`
                 ).join('')}
-            </div>
+            </div>` : ''}
         `;
         searchHintsContainer.appendChild(hintDiv);
     }
@@ -1818,6 +1765,12 @@ function checkAndShowSearchHint(searchTerm) {
 function dismissSearchHint() {
     const merchantInput = document.getElementById('merchant-input');
     dismissedHintTerm = merchantInput ? (merchantInput.value || '').trim().toLowerCase() : null;
+    clearSearchHints();
+}
+
+// 收掉畫面上的搜尋提示（不記住關鍵詞）。「一次比多家」型快捷搜尋換掉輸入框內容時用：
+// 那條路不走 handleMerchantInput，舊詞的提示不收會留著誤導（2026-10-08 站長回報）
+function clearSearchHints() {
     const searchHintsContainer = document.getElementById('search-hints-container');
     if (searchHintsContainer) {
         searchHintsContainer.innerHTML = '';
@@ -1877,6 +1830,7 @@ function handleMerchantInput() {
         toggleExactSearchEmptyHint(false);
         currentMatchedItem = matchedItems; // Now stores array of matches
         console.log('  ✅ 設定 currentMatchedItem:', currentMatchedItem.length);
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, true);
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
@@ -1885,8 +1839,11 @@ function handleMerchantInput() {
             (findMatchingItem(input) || []).length > 0;
         toggleExactSearchEmptyHint(relaxedWouldMatch);
         console.log('  ❌ 無匹配，清除 currentMatchedItem');
+        // 沒有指定通路商家，但命中排除名單：一樣出「✓ 匹配到」（2026-10-14）
+        showBasicExclusionPreview(getBasicExclusionSearchTerms(input), exactOnly, false);
     }
 
     validateInputs();
+    nudgeIfCalcConditionsChanged();
 }
 

@@ -130,8 +130,11 @@ header {
     color: inherit;
 }
 
+/* 2026-10 品牌標誌 v1.0：logo-header.svg 是緊貼外框的反白標誌（舊 PNG 四周留白約 10%），
+   所以高度比舊版小一號、看起來一樣大。規範第 04 節：32px 以下要換小尺寸版——
+   這裡各斷點最小就是 32px，別再往下調。 */
 .header-logo {
-    height: 40px;
+    height: 34px;
     width: auto;
     display: block;
     flex-shrink: 0;
@@ -859,16 +862,14 @@ header h1 {
     max-width: 500px;
 }
 
-/* 公告／問卷邀請的標題列刻意比其他 modal 矮一截（2026-09-03 站長指定）：
-   這兩個 modal 的重點是內文，標題只是個名牌，不需要 20px padding + 1.25rem。
-   只提這兩個 content class 的特異性，不動全站共用的 .modal-header。 */
-.announcement-modal-content .modal-header,
-.survey-invite-content .modal-header {
+/* 公告的標題列刻意比其他 modal 矮一截（2026-09-03 站長指定）：
+   公告 modal 的重點是內文，標題只是個名牌，不需要 20px padding + 1.25rem。
+   只提這個 content class 的特異性，不動全站共用的 .modal-header。 */
+.announcement-modal-content .modal-header {
     padding: 10px 20px;
 }
 
-.announcement-modal-content .modal-header h3,
-.survey-invite-content .modal-header h3 {
+.announcement-modal-content .modal-header h3 {
     font-size: 1.05rem;
 }
 
@@ -926,31 +927,6 @@ header h1 {
     justify-content: flex-end;
     padding: 16px 20px;
     border-top: 1px solid #e5e7eb;
-}
-
-/* 問卷邀請 Modal（2026-09-03）：登入後一次性彈出，按「沒問題！」接到公告 modal。
-   刻意比一般 modal 窄（420px），視覺上是「一句話的請求」不是設定面板。 */
-.survey-invite-content {
-    max-width: 420px;
-}
-
-.survey-invite-content .modal-body {
-    padding: 20px;
-}
-
-.survey-invite-lead {
-    margin: 0 0 10px;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1f2937;
-    line-height: 1.6;
-}
-
-.survey-invite-sub {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #6b7280;
-    line-height: 1.6;
 }
 
 .btn-primary {
@@ -1952,6 +1928,22 @@ input[type="number"]:focus {
     opacity: 0.8;
 }
 
+/* 狀態列「見下方灰色卡片 ↓」：跟著所在那行的字色（紅字警告行就是紅的），底線＋粗體表示可點 */
+.excluded-jump-link {
+    color: inherit;
+    text-decoration: underline;
+    font-weight: 600;
+    cursor: pointer;
+}
+.excluded-jump-link:hover {
+    opacity: 0.8;
+}
+/* 捲到後短暫標亮第一張灰卡 */
+.card-result.excluded-card-flash {
+    box-shadow: 0 0 0 3px #9ca3af;
+    transition: box-shadow 0.3s ease;
+}
+
 
 /* Calculate button */
 .calculate-btn {
@@ -2150,7 +2142,9 @@ input[type="number"]:focus {
 
 .coupon-results-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 
@@ -2233,7 +2227,9 @@ input[type="number"]:focus {
 
 .parking-benefits-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* auto-fill（不是 auto-fit）：只有一張時保留空欄，卡片維持跟搜尋結果 .results-container
+       一行兩張時同寬，不橫跨整欄（2026-10-08 站長要求）。欄寬規則與 .results-container 相同 */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
 }
 
@@ -2906,6 +2902,60 @@ input[type="number"]:focus {
     background: #f9fafb;
 }
 
+/* 一般消費排除卡（2026-10-11 站長要求）：整張灰色調、只有卡名＋排除項目。
+   不用 opacity（no-cashback 那招）——ⓘ 詳情鈕要維持可點、項目文字要讀得清楚 */
+.card-result.excluded-card {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+
+.card-result.excluded-card .card-name {
+    color: #6b7280;
+}
+
+.excluded-badge {
+    background: #9ca3af;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.excluded-card-body {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* 排除項目是這張卡的重點：深灰粗體（不用一般匹配項目的藍色，藍色是「有得刷」的語氣） */
+.excluded-card-body strong,
+.rate-card-excluded .matched-merchant strong {
+    color: #374151;
+    font-weight: 700;
+}
+
+.excluded-card-note {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* 詳情頁「一般回饋」區的排除項目卡 */
+.cashback-detail-item.rate-card-excluded {
+    background: #f3f4f6;
+}
+
+.rate-card-excluded .rate-card-title {
+    color: #6b7280;
+}
+
+.excluded-detail-note {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -2931,6 +2981,27 @@ input[type="number"]:focus {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 結果卡（各寬度一致，2026-10-13 站長選定）：卡名獨佔上方、可換行、不截斷，
+   詳情鈕／小抄鈕整組落到下一行。原本只有手機這樣排，桌機卡名會被兩顆鈕擠成「玉山 P…」。
+   卡名 flex-basis:100% 把後面的鈕擠到次行。兩顆鈕同時放大（22→26px），在次行比較好按；
+   桌機密度區塊另有對應的縮小值（Grep「結果卡次行按鈕」）。 */
+.card-name-with-pin {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+.card-name-with-pin .card-name {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+.card-name-with-pin .card-detail-peek-btn,
+.card-name-with-pin .pin-btn {
+    height: 26px;
+    padding: 0 11px 0 9px;
+    font-size: 13px;
 }
 
 .badges-container {
@@ -3027,6 +3098,17 @@ input[type="number"]:focus {
     color: #3b82f6;
 }
 
+/* 資訊區第一行「活動: ○○」的內容：黑色粗體，比照 .spend-threshold-note 的強調（2026-10-08） */
+.matched-merchant .activity-name {
+    color: #111827;
+    font-weight: 700;
+}
+
+/* 回饋率下方的「(分級: Level 1)」：兩段各自不折行，避免只剩「1)」掉到下一行 */
+.level-label-seg {
+    white-space: nowrap;
+}
+
 /* 「活動期間 / 條件」在 results-display.js 是用 <small> 包的，瀏覽器預設 0.83em 讓它
    縮到約 10px 讀不清。2026-08-16 用戶定案：與同一區塊的「匹配項目」同字級。 */
 .matched-merchant small {
@@ -3066,7 +3148,8 @@ input[type="number"]:focus {
 }
 
 .cardholder-promo-item .ending-soon-badge,
-.card-result .matched-merchant .ending-soon-badge {
+.card-result .matched-merchant .ending-soon-badge,
+.rate-card .rate-card-info .ending-soon-badge {
     background: #ffffff;
     color: #dc2626;
     border: 1px solid #dc2626;
@@ -3236,17 +3319,6 @@ input[type="number"]:focus {
         text-overflow: clip;
     }
 
-    /* 手機版：卡名獨佔上方（可換行），詳情鈕／釘選鈕整組落到下一行，
-       避免單行塞太多元素太擁擠。卡名 flex-basis:100% 把後面的鈕擠到次行。 */
-    .card-name-with-pin {
-        flex-wrap: wrap;
-        align-items: center;
-        row-gap: 8px;
-    }
-    .card-name-with-pin .card-name {
-        flex: 1 1 100%;
-    }
-
     .cards-selection {
         grid-template-columns: repeat(2, 1fr);
         gap: 6px;
@@ -3378,6 +3450,11 @@ input[type="number"]:focus {
     gap: 12px;
     align-items: center;
 }
+/* 搜尋框（或包著它的清除鈕 wrapper）可以縮，按鈕才保得住一行 */
+.modal-controls > .search-modal-input,
+.modal-controls > .input-clear-wrap {
+    min-width: 0;
+}
 
 .search-modal-input[type="text"] {
     flex: 1;
@@ -3430,7 +3507,10 @@ input[type="number"]:focus {
     background: #e5e7eb;
     color: #6b7280;
     border: 1px solid #d1d5db;
-    padding: 6px 12px;
+    padding: 6px 14px;
+    /* 任何寬度都只能一行（2026-10-14 站長：手機「全選」被擠成兩行）；讓搜尋框去縮 */
+    white-space: nowrap;
+    flex-shrink: 0;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 400;
@@ -3571,6 +3651,21 @@ input[type="number"]:focus {
     align-items: center;
     gap: 8px;
     width: 100%;
+}
+/* 手機：「詳情」鈕擠在卡名旁邊會把卡名壓成一字一行（2026-10-14 站長回報），
+   改成卡名獨佔一行、詳情鈕換到下一行（左邊對齊卡名，跟卡圖同一個縮排） */
+@media (max-width: 768px) {
+    .card-checkbox-row {
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+    .card-checkbox-row .card-checkbox-label {
+        flex: 1 1 calc(100% - 22px);
+        min-width: 0;
+    }
+    .card-checkbox-row .card-detail-peek-btn {
+        margin-left: 22px;
+    }
 }
 
 .card-checkbox:hover {
@@ -4783,11 +4878,32 @@ label.personal-field-check input[type="checkbox"] {
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
-.cashback-detail-item:last-child {
+/* Real-time search input above special cashback */
+/* 詳情頁搜尋框區塊（2026-10-14）：放在所有回饋區上方、自成一塊——淺藍底＋標籤，
+   跟上方「近期異動」的淺灰清單分得開（站長回報兩塊看起來像同一區）。
+   「指定通路回饋」導覽鈕捲到這裡（data-anchor） */
+.cashback-search-bar {
+    margin: 8px 0 24px;
+    padding: 12px 14px;
+    background: #f5f9ff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+}
+.cashback-search-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e40af;
+}
+.cashback-search-bar .cashback-search-input {
     margin-bottom: 0;
+    background-color: #fff;
+}
+.cashback-search-bar .cashback-search-empty {
+    margin: 10px 0 0;
 }
 
-/* Real-time search input above special cashback */
 .cashback-search-input {
     width: 100%;
     padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
@@ -4921,15 +5037,6 @@ mark.cashback-search-hl {
     margin-bottom: 0;
 }
 
-/* Force ending-soon / upcoming badges onto a new line within the rate row */
-#card-special-cashback .ending-soon-badge,
-#card-special-cashback .upcoming-badge,
-#card-coupon-cashback .ending-soon-badge,
-#card-coupon-cashback .upcoming-badge {
-    display: block;
-    width: fit-content;
-    margin-top: 4px;
-}
 
 @media (max-width: 540px) {
     #card-basic-cashback,
@@ -4985,11 +5092,6 @@ mark.cashback-search-hl {
     flex-shrink: 0;
     /* 方框箭頭在視覺上比同字級的中文字重，縮一點並往上對齊字的中線 */
     opacity: 0.85;
-}
-
-/* 滿額/未滿門檻（詳情頁）：只改黑色並置於消費上限上方，字級/斜體維持不變 */
-.cashback-condition.spend-threshold {
-    color: #111827;
 }
 
 /* 近期異動（#card-changelog-section）。「連續清單」樣式：整區一塊淺灰底，
@@ -5069,20 +5171,6 @@ mark.cashback-search-hl {
     text-decoration: underline;
 }
 
-.cashback-merchants {
-    font-size: 12px; /* 縮小字體 */
-    color: #3b82f6; /* 適用通路內容：藍色粗體，比照 .matched-merchant strong（2026-07-19 用戶定案，字級不需與 matched-merchant 一致） */
-    font-weight: bold;
-    line-height: 1.6; /* 增加行高改善易讀性 */
-    margin-top: 6px;
-}
-
-/* 適用通路標籤粗體 */
-.cashback-merchants-label {
-    font-weight: 600;
-    color: #374151;
-}
-
 .show-more-btn {
     background: none;
     border: none;
@@ -5103,6 +5191,151 @@ mark.cashback-search-hl {
 .show-more-btn:focus {
     outline: none;
     color: #1d4ed8;
+}
+
+/* ============================================
+   詳情頁回饋卡 .rate-card（2026-10-05，renderRateCard 產生）
+   排版比照搜尋結果卡片 .card-result：直接沿用 .card-details / .detail-item /
+   .detail-label / .detail-value / .spend-threshold-note / .matched-merchant，
+   這裡只補「詳情頁才有的差異」——欄數（少回饋金額，2 欄）、標題列、回饋率的強調色，
+   以及把 .cashback-condition（條件列／登錄連結）調成 .matched-merchant 的字樣。
+   ⚠️ 必須在檔尾「桌機密度調整」區塊之前（同特異性靠源碼順序）。
+   ============================================ */
+.rate-card {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 標題列以外的內容。維持 flex column：block 版面會讓上下 margin 合併，間距會變 */
+.rate-card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* CUBE「慶生月」提示（generateCubeSpecialContent）：下方間距寫在這裡而不是 inline，
+   兩欄對齊模式要改它（見下方「同排對齊」） */
+.cube-birthday-note {
+    margin-bottom: 16px;
+}
+
+/* 沒有標題也沒有徽章：單欄時不佔位（與 2026-10-05 版面相同） */
+.rate-card-header:empty {
+    display: none;
+}
+
+/* 同排對齊（2026-10-06，站長要求）：兩欄時，同一排只要有一張卡有標題（活動類別），
+   另一張就在同樣位置留白，下面的「回饋率｜回饋消費上限」才會對齊；同一排都沒有標題
+   就跟以前一樣。做法是 subgrid：每張卡跨兩列（標題列｜其餘），列高由同一排的卡共用，
+   空的標題列高度 0，同排都空時整列就是 0。
+   - 外層的 row-gap 必須是 0：外層的 gap 會落在每張卡「標題列｜其餘」兩列之間（卡片自己設
+     row-gap: 0 也只是把那 12px 平分到兩邊，實測無標題的排會往下掉約 3–6px）。排與排之間的
+     間距改由每張卡的 margin-bottom（--rate-row-gap：12px，桌機密度區間 10px）提供，容器再用
+     負的同值抵掉最後一排；慶生月提示原本吃外層 gap，這裡補成 16px＋同值
+   - 只在兩欄（≥541px）且瀏覽器支援 subgrid 時啟用；不支援就是原本的版面
+   - 卡片底下只能有 .rate-card-header 與 .rate-card-body 兩個子元素（回饋組成的彈出表
+     由 toggleRateComposition 掛在 body 裡），多一個就會多佔一列 */
+@media (min-width: 541px) {
+    @supports (grid-template-rows: subgrid) {
+        /* 選擇器多掛 #card-detail-modal：檔尾「桌機密度調整」第 2 類把這三個容器的 gap
+           改成 10px（同特異性、源碼在後），不提高特異性 row-gap: 0 會被它蓋回去 */
+        #card-detail-modal #card-basic-cashback,
+        #card-detail-modal #card-special-cashback,
+        #card-detail-modal #card-coupon-cashback {
+            --rate-row-gap: 12px;
+            row-gap: 0;
+            margin-bottom: calc(-1 * var(--rate-row-gap));
+        }
+
+        #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+        #card-detail-modal #card-special-cashback > .cashback-detail-item,
+        #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
+            margin-bottom: var(--rate-row-gap);
+        }
+
+        #card-detail-modal #card-special-cashback > .cube-birthday-note {
+            margin-bottom: calc(16px + var(--rate-row-gap));
+        }
+
+        #card-basic-cashback .rate-card,
+        #card-special-cashback .rate-card,
+        #card-coupon-cashback .rate-card {
+            display: grid;
+            grid-row: span 2;
+            grid-template-rows: subgrid;
+            row-gap: 0;
+        }
+
+        #card-basic-cashback .rate-card-header:empty,
+        #card-special-cashback .rate-card-header:empty,
+        #card-coupon-cashback .rate-card-header:empty {
+            display: block;
+            margin-bottom: 0;
+        }
+    }
+}
+
+/* 桌機密度調整把這三個容器的 gap 縮成 10px（12 × 0.85），排距跟著縮 */
+@media (min-width: 1025px) {
+    @supports (grid-template-rows: subgrid) {
+        #card-detail-modal #card-basic-cashback,
+        #card-detail-modal #card-special-cashback,
+        #card-detail-modal #card-coupon-cashback {
+            --rate-row-gap: 10px;
+        }
+    }
+}
+
+.rate-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+/* 活動類別＝這張回饋卡的「名字」，地位相當於搜尋結果的卡名；
+   字比卡名小一階（這裡是 modal 內的子卡片，類別常是一整句話，要能換行） */
+.rate-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+.rate-card-details {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* 搜尋結果的主角是綠色的「回饋金額」；詳情頁沒有這欄，改由回饋率接手同一個強調樣式 */
+.rate-card .rate-card-rate {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #10b981;
+    font-size: 16px;
+}
+
+.rate-card-info > * + * {
+    margin-top: 2px;
+}
+
+.rate-card-info .show-more-btn {
+    font-size: inherit;
+}
+
+/* 條件列／登錄連結（renderConditionLine / renderRegisterLinkLine）在別處是斜體灰小字；
+   在回饋卡裡改成與「活動期間」同一套字樣，跟搜尋結果一樣整塊讀起來是同一段 */
+.rate-card .cashback-condition {
+    font-size: inherit;
+    font-style: normal;
+    color: inherit;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.rate-card .cond-toggle {
+    font-size: inherit;
 }
 
 /* User Notes Styles */
@@ -5528,6 +5761,15 @@ mark.cashback-search-hl {
     align-items: start; /* 確保所有項目從頂部對齊 */
 }
 
+/* 窄手機改單欄（2026-10-21）：360px 寬時兩欄各剩約 130px，年費說明被擠成 6–8 行小字。
+   單欄順序＝銀行名稱 → 回饋類型 → 年費訊息（左欄整塊在前）。 */
+@media (max-width: 480px) {
+    .info-grid-2col {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
 /* 信息項目樣式 - 標題和內容上下排列 */
 .info-item {
     display: flex;
@@ -5579,6 +5821,11 @@ mark.cashback-search-hl {
 }
 
 /* Card Tags Styles */
+/* 詳情頁的卡片標籤先藏起來（2026-10-14 站長要求；程式先留著，見 card-detail.js renderCardTags） */
+#card-detail-modal .card-tags-container {
+    display: none;
+}
+
 .card-tags-container {
     display: flex;
     flex-wrap: wrap;
@@ -5729,13 +5976,13 @@ mark.cashback-search-hl {
 .social-media-container {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;   /* 平板寬放不下兩組並排時整組換行，而不是組內按鈕各自折行 */
     align-items: flex-start;
     justify-content: center;
-    gap: 48px;
+    gap: 20px 48px;
 }
 
 .social-section,
-.sponsor-section,
 .explore-section {
     display: flex;
     flex-direction: column;
@@ -5743,10 +5990,12 @@ mark.cashback-search-hl {
     gap: 12px;
 }
 
+/* 2026-10-21：頁尾文字由白字改深色字。白字放在 body 灰漸層上對比只有約 1.5:1
+   （WCAG 要 4.5:1），手機上 10–11px 的小標幾乎看不見；#374151 在漸層最深處約 5.4:1。 */
 .social-media-title {
-    color: rgba(255, 255, 255, 0.7);
+    color: #374151;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -5754,7 +6003,7 @@ mark.cashback-search-hl {
 
 .social-media-links {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 16px;
     align-items: center;
     justify-content: center;
@@ -5765,10 +6014,10 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.75);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.9);
+    color: #1f2937;
     text-decoration: none;
     font-size: 13px;
     transition: all 0.3s ease;
@@ -5776,8 +6025,8 @@ mark.cashback-search-hl {
 }
 
 .social-link:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.95);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -5814,14 +6063,6 @@ mark.cashback-search-hl {
     color: white;
 }
 
-/* 隱私權政策：同一組膠囊，但刻意不給品牌色。它是法務連結不是行銷連結——
-   要找得到、不要搶戲。也因此文字不帶 emoji 與 ↗（其餘站內連結都有）。 */
-.social-link.privacy:hover {
-    background: linear-gradient(135deg, #475569 0%, #64748b 100%);
-    border-color: transparent;
-    color: white;
-}
-
 .social-link svg {
     width: 16px;
     height: 16px;
@@ -5847,37 +6088,104 @@ mark.cashback-search-hl {
     font-size: 12px;
 }
 
-/* Mobile responsiveness for social media */
+/* 法務連結（隱私權政策／使用須知與免責聲明）：2026-10-21 由膠囊按鈕改成頁尾一行小字。
+   它是法務入口不是行銷連結——要找得到、不要搶戲，所以不給按鈕外框也不帶 ↗。 */
+.footer-legal {
+    margin: 20px 0 0;
+    font-size: 12px;
+    color: #374151;
+}
+
+.footer-legal a {
+    color: #1f2937;
+    text-decoration: underline;
+    text-decoration-color: rgba(31, 41, 55, 0.35);
+    text-underline-offset: 3px;
+}
+
+.footer-legal a:hover {
+    color: #1e40af;
+    text-decoration-color: currentColor;
+}
+
+.footer-legal-dot {
+    margin: 0 8px;
+    color: #6b7280;
+}
+
+/* Mobile responsiveness for social media
+   2026-10-21 重排（站長選「格狀」案）：每組都是兩欄格線、按鈕 44px 高（好點）；
+   奇數顆時最後一顆佔滿一列，不會有落單的半顆（首頁「探索更多」3 顆、faq 頁 2 顆都靠這條）。 */
 @media (max-width: 768px) {
     .social-media-footer {
-        padding: 0 16px;
-        margin: 16px auto 10px;
+        padding: 0 16px 80px;   /* 下方讓出「回到頂部」浮標（48px＋距底 16px）的位置 */
+        margin: 24px auto 0;
+    }
+
+    /* 首頁的頁尾後面還有「最後資料更新」一行，讓位交給它 */
+    footer > .social-media-footer {
+        padding-bottom: 0;
     }
 
     .social-media-container {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 20px;
+        align-items: stretch;
+        gap: 22px;
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    .social-section,
+    .explore-section {
+        align-items: stretch;
+        gap: 10px;
     }
 
     .social-media-title {
-        font-size: 10px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+    }
+
+    .social-media-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .social-media-links > :last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    /* 「探索更多」只有兩顆時（faq 頁不列自己）改成上下兩列：
+       「Pick My Card 是什麼？↗」放半欄會在 390px 以下折行、↗ 單獨掉到第二行 */
+    .explore-section .social-media-links:has(> :nth-child(2):last-child) {
+        grid-template-columns: 1fr;
     }
 
     .social-link {
-        padding: 7px 10px;
-        font-size: 12px;
-        gap: 5px;
+        justify-content: center;
+        min-height: 44px;
+        padding: 6px 10px;
+        border-radius: 12px;
+        gap: 6px;
+        text-align: center;
+        line-height: 1.3;
     }
 
     .social-link svg {
-        width: 15px;
-        height: 15px;
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
     }
 
     .social-text {
-        font-size: 11px;
+        font-size: 14px;
+    }
+
+    .footer-legal {
+        margin-top: 22px;
+        font-size: 12.5px;
     }
 }
 
@@ -5919,7 +6227,14 @@ mark.cashback-search-hl {
     padding: 0 24px 28px;   /* 下方留白：這是全頁最後一行，貼著螢幕底緣很擠 */
     text-align: center;
     font-size: 12px;
-    color: #6b7280;
+    color: #374151;   /* 原 #6b7280：灰底上對比不足，見 .social-media-title 註解 */
+}
+
+@media (max-width: 768px) {
+    .data-update-footer {
+        margin-top: 8px;
+        padding: 0 16px 80px;   /* 讓出「回到頂部」浮標的位置，最後一行不被它擋住 */
+    }
 }
 
 /* 「收錄 N 張台灣主流信用卡」2026-09-03 起不顯示。
@@ -5931,22 +6246,60 @@ mark.cashback-search-hl {
 
 /* 廣告列 — 精選活動下方、警語橫條上方
    桌機：置中、最寬 728px（對齊 leaderboard 尺寸）
-   手機：滿版扣掉左右留白，由 AdSense 回應式自動挑合適尺寸
-   min-height 是刻意保留的位子，避免廣告載入時把下面的內容往下推。 */
+   手機：滿版扣掉左右留白，由 AdSense 回應式依框內寬度挑尺寸
+   2026-10-21 改：外框＋「廣告」標籤，且只在 AdSense 回報填到廣告時才出現。
+   - 原本 min-height:100px 預留位子，但沒填到廣告或被擋廣告外掛擋掉時就是一塊白洞
+     （實測手機上 116px 空白）；這塊在頁面最下方、首屏看不到，載入時往下推的代價很小，
+     所以拿掉預留高度，改成「沒廣告＝高度 0」。
+   - data-ad-status 是 AdSense 自己寫在 <ins> 上的（filled / unfilled）。
+   - 框的左右內距與邊框粗細在「沒廣告」時也保留（只是透明）：<ins> 的寬度從頭到尾不變，
+     AdSense 依載入當下寬度挑的廣告尺寸才不會在加框後被切到。 */
 .ad-row {
     box-sizing: border-box;
     width: 100%;
-    max-width: 760px;      /* 728 廣告 + 左右 16px padding */
-    margin: 16px auto 0;
+    max-width: 778px;      /* 728 廣告 + 框內距 2×8 + 邊框 2×1 + 左右 16px padding */
+    margin: 0 auto;
     padding: 0 16px;
-    min-height: 100px;
     overflow: hidden;
     text-align: center;
+}
+
+.ad-row-frame {
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+}
+
+.ad-row-label {
+    display: none;
 }
 
 .ad-row-unit {
     display: block;
     width: 100%;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+    margin: 16px auto;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-frame {
+    padding: 6px 8px 8px;
+    border-color: #e5e7eb;
+    background: #f9fafb;
+    text-align: left;
+}
+
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-label {
+    display: inline-block;
+    margin-bottom: 6px;
+    padding: 0 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #6b7280;
+    font-size: 11px;
+    line-height: 16px;
 }
 
 @media (max-width: 600px) {
@@ -6008,10 +6361,49 @@ mark.cashback-search-hl {
 }
 
 .compare-payment-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: #111827;
     margin-bottom: 8px;
+}
+
+/* 前三名支付的名次獎牌（2026-10-08，renderPaymentRankMedal）：藍色彩帶＋金／銀／銅牌面 */
+.payment-rank-medal {
+    width: 30px;
+    height: 36px;
+    flex-shrink: 0;
+    margin-top: -6px; /* 彩帶往上凸，牌面對齊支付名稱 */
+}
+.payment-rank-medal .prm-ribbon-l { fill: #3b82f6; }
+.payment-rank-medal .prm-ribbon-r { fill: #1d4ed8; }
+.payment-rank-medal .prm-face { stroke-width: 2; }
+.payment-rank-medal .prm-ring { fill: none; stroke-width: 1; opacity: .55; }
+.payment-rank-medal .prm-num { font-size: 12px; font-weight: 800; font-family: inherit; }
+.payment-rank-medal-1 .prm-face { fill: #fcd34d; stroke: #d97706; }
+.payment-rank-medal-1 .prm-ring { stroke: #b45309; }
+.payment-rank-medal-1 .prm-num  { fill: #92400e; }
+.payment-rank-medal-2 .prm-face { fill: #e2e8f0; stroke: #94a3b8; }
+.payment-rank-medal-2 .prm-ring { stroke: #64748b; }
+.payment-rank-medal-2 .prm-num  { fill: #334155; }
+.payment-rank-medal-3 .prm-face { fill: #f0b183; stroke: #b45309; }
+.payment-rank-medal-3 .prm-ring { stroke: #9a3412; }
+.payment-rank-medal-3 .prm-num  { fill: #7c2d12; }
+
+/* 行動支付的一張卡（renderPaymentCardResult；單一支付詳情與比較 modal 共用）：
+   沿用搜尋結果卡片 .card-result 的整套樣式（含「最優回饋」角標），這裡只補差異——
+   白底（比較 modal 外層支付卡是灰底）、卡名比支付名稱小一階 */
+.payment-card-result {
+    background: #ffffff;
+}
+.payment-card-result .card-name {
+    font-size: 1rem;
+}
+/* 比較 modal：同一個支付底下兩張卡上下排，靠 margin 隔開（單一支付詳情是 grid，用 gap） */
+.compare-payment-card .payment-card-result {
+    margin-top: 8px;
 }
 
 /* Mobile responsiveness for compare payments */
@@ -6065,7 +6457,7 @@ mark.cashback-search-hl {
     height: 12px;
 }
 .pin-btn::after {
-    content: '加到我的小抄';
+    content: '加到小抄';
 }
 
 .pin-btn:hover {
@@ -6080,7 +6472,7 @@ mark.cashback-search-hl {
     color: #ffffff;
 }
 .pin-btn.pinned::after {
-    content: '已加到我的小抄';
+    content: '已加到小抄';
 }
 
 .pin-btn.pinned:hover {
@@ -6673,11 +7065,28 @@ mark.cashback-search-hl {
 .auth-link-note {
     margin: 4px 0 12px;
     padding: 10px 12px;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.6;
     color: #1e3a8a;
     background: #eff6ff;
     border-radius: 8px;
+}
+
+/* 登入視窗底部的信任說明（2026-10-13） */
+.auth-trust-note {
+    margin: 16px 0 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #5f6368;
+}
+
+.auth-trust-note a {
+    color: #1a73e8;
+    text-decoration: none;
+}
+
+.auth-trust-note a:hover {
+    text-decoration: underline;
 }
 
 .auth-error {
@@ -7501,6 +7910,11 @@ mark.cashback-search-hl {
     margin-bottom: 8px;
 }
 
+/* 只有文案、沒有建議詞的提示（Search Hints 的 suggestions 留空）：文案下方不留按鈕列的間距 */
+.search-hint-message-only .hint-message {
+    margin-bottom: 0;
+}
+
 /* 建議按鈕容器 */
 .hint-suggestions {
     display: flex;
@@ -7716,7 +8130,9 @@ mark.cashback-search-hl {
 }
 
 .sidebar-changelog-item {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     width: 100%;
     padding: 8px 10px;
     background: none;
@@ -7732,13 +8148,36 @@ mark.cashback-search-hl {
     background: #f1f3f5;
 }
 
-/* 卡名也可能很長（「台新街口卡(豬富卡)」等），同樣單行截斷不換行 */
-.sidebar-changelog-card,
-.sidebar-changelog-summary {
+/* 最左側卡片圖（2026-09-28）：橫式 8:5，直式卡 contain 自動 letterbox；缺圖時 JS 移除 img */
+.sidebar-changelog-img {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 30px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.sidebar-changelog-text {
+    flex: 1 1 auto;
+    min-width: 0; /* 讓子元素的截斷在 flex 裡生效 */
+}
+
+/* 卡名也可能很長（「台新街口卡(豬富卡)」等），單行截斷不換行 */
+.sidebar-changelog-card {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* 摘要最多兩行，超過以 … 截斷（2026-09-28 由單行改兩行） */
+.sidebar-changelog-summary {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 .sidebar-changelog-card {
@@ -8444,7 +8883,6 @@ mark.cashback-search-hl {
 
     .auth-modal-content,
     .announcement-modal-content,
-    .survey-invite-content,
     #feedback-modal .modal-content {
         max-height: 75vh;
         max-height: 75dvh;
@@ -8465,8 +8903,8 @@ mark.cashback-search-hl {
     cursor: pointer;
 }
 
-/* 「帶入查詢」把條件填進搜尋框後，讓「計算回饋」閃一下指出下一步在哪。
-   （見 js/home-ui.js 的 compareSpotlightMerchant fillOnly 分支） */
+/* 讓「計算回饋」閃一下指出下一步在哪：推薦活動「帶入查詢」之後、以及算過之後條件又被改了
+   （見 js/home-ui.js「計算鈕提醒」nudgeCalculateBtn） */
 .calculate-btn.calc-nudge {
     animation: calcNudgePulse 0.8s ease-out 2;
 }
@@ -8953,6 +9391,52 @@ mark.cashback-search-hl {
     position: relative;
 }
 
+/* 輸入建議下拉選單（setupMerchantSuggest，2026-10-14）：貼在輸入框正下方、蓋在快捷選項上 */
+.merchant-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin: 4px 0 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #dbe1ea;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 60;
+}
+.merchant-suggest[hidden] {
+    display: none;
+}
+.merchant-suggest-item {
+    padding: 10px 14px;
+    font-size: 15px;
+    color: #4b5563;
+    cursor: pointer;
+    line-height: 1.4;
+}
+.merchant-suggest-item:hover,
+.merchant-suggest-item.active {
+    background: #f1f5f9;
+}
+/* 第一行「搜尋「用戶打的字」」：跟下面的建議用細線隔開，打的字粗體 */
+.merchant-suggest-query {
+    color: #374151;
+    border-bottom: 1px solid #eef2f7;
+}
+.merchant-suggest-query strong {
+    color: #111827;
+    font-weight: 700;
+}
+.merchant-suggest-item mark {
+    background: none;
+    color: #111827;
+    font-weight: 700;
+}
+
 .merchant-input-wrap #merchant-input {
     padding-right: 44px; /* 讓長輸入不會壓在 ✕ 底下 */
 }
@@ -9218,16 +9702,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-intro-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
-/* 「新功能 Beta」標籤（頁籤、頭像選單、說明卡）：琥珀色系＝和「加到我的小抄」按鈕同一組顏色 */
-.mp-beta { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; font-size: 10.5px; font-weight: 800; line-height: 1.4; letter-spacing: .02em; vertical-align: middle; white-space: nowrap; }
-.mp-beta-full { margin-right: .3em; }
-/* 手機：頁籤寬度不夠，Beta 改成右上角的小角標，不擠到「我的刷卡小抄」 */
-@media (max-width: 480px) {
-    .home-view-switch .mp-beta-full { display: none; }
-    #home-view-switch-mappings { position: relative; }
-    /* 放左上角：右上角是釘選時「+1」徽章的位置（.pin-badge），避免疊在一起 */
-    #home-view-switch-mappings .mp-beta { position: absolute; top: -9px; left: 10px; margin: 0; padding: 0 5px; font-size: 9.5px; z-index: 2; }
-}
 /* 改版告知：頁面最上方一行備註（所有人） */
 .mp-moved-note { max-width: 738px; margin: 0 auto 12px; padding: 7px 4px; box-sizing: border-box; border-top: 1px dashed #cfd4dc; border-bottom: 1px dashed #cfd4dc; font: 500 12px/1.7 ui-monospace, Menlo, monospace; letter-spacing: .02em; color: #6b7280; text-align: center; }   /* 2026-09-30 站長從 5 案選 2「收據小字」：與小抄的收據風格一致 */
 /* 一次性提示：頁籤下方的說明氣泡 */
@@ -9237,9 +9711,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-hint-bubble button { pointer-events: auto; flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .15); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
 @keyframes mp-bubble-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .mp-hint-bubble { animation: none; } }
-.mp-beta-note { margin: 10px 0 0; padding-top: 9px; border-top: 1px dashed #bfdbfe; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: #4b5563; }
-.mp-beta-note .mp-beta { margin-left: 0; }
-.mp-linkbtn2 { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
 /* 手機／平板：單欄，依序＝存圖／編輯鈕 → 搜尋 → 提示 → 設定 → 小抄 → 商家數（右側）（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
 .mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }
@@ -9249,7 +9720,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-tip { order: 3; }
 .mp-tools { order: 4; }
 .mp-notice { order: 5; }
-.mp-demo-tag { order: 6; }
 .mp-paper { order: 7; }
 .mp-count-m { order: 8; }
 .mp-deadbar { order: 9; }
@@ -9273,18 +9743,15 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-edit-btn.on { background: #1e40af; color: #fff; }
 .mp-tools:not([hidden]) { width: 100%; max-width: 460px; margin: 0 auto 10px; box-sizing: border-box; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 14px; padding: 10px 12px; }
 .mp-tools[hidden] { display: none; }
-.mp-demo-tag[hidden] { display: none; }
 .mp-searchbox { position: relative; width: 100%; max-width: 460px; margin: 0 auto 8px; }
 .mp-search-clear {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%;
     border: 0; background: #e5e7eb; color: #4b5563; font-size: 13px; cursor: pointer; display: grid; place-items: center;
 }
 .mp-search-clear[hidden] { display: none; }
-.mp-guest { max-width: 460px; margin: 0 auto 12px; background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: inset 0 0 0 1.5px #bfdbfe; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.6; color: #374151; }
-.mp-guest[hidden] { display: none; }
-.mp-guest p { margin: 0; }
-.mp-guest-title { font-size: 16px; font-weight: 900; color: #1e3a8a; }
-.mp-demo-tag { text-align: center; font: 700 10px ui-monospace, Menlo, monospace; letter-spacing: .3em; color: #b45309; margin-bottom: 4px; }
+.mp-guest-note { max-width: 460px; margin: 0 auto 12px; padding: 9px 12px; box-sizing: border-box; border-radius: 10px; background: #eff6ff; font-size: 13px; line-height: 1.6; color: #374151; }
+.mp-guest-note[hidden] { display: none; }
+.mp-guest-login { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 #mappings-page .mp-search {
     flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font-size: 16px; padding: 9px 40px 9px 38px;
     /* 左側放大鏡：與查詢頁 .cashback-search-input 同一個圖示 */
@@ -9607,8 +10074,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-layout { display: grid; grid-template-columns: 250px minmax(0, 460px); gap: 28px; justify-content: center; align-items: start; }
     .mp-side { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 12px; padding: 0; }
     .mp-main { display: block; padding: 0 0 12px; }
-    .mp-guest { max-width: 738px; }
     .mp-steps { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .mp-guest-note { max-width: 738px; }
     .mp-steps li { align-items: flex-start; }
     .mp-actions { grid-template-columns: 1fr; gap: 10px; margin: 0; padding: 12px; background: #f5f7fa; border: 1px solid #e3e7ee; border-radius: 16px; }
     .mp-actions .mp-count { display: block; order: -1; margin-top: 0; font-size: 12px; }
@@ -9626,3 +10093,1023 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-exp-head { padding-top: 16px; }
 }
 
+
+
+/* ============================================
+   桌機密度調整 ─ 第 1 類：字級（≥1025px，2026-10-05）
+   （站長回報「桌機要縮到 75% 才舒服」的第二步；第一步「放寬容器與側欄」在
+     上面的「寬螢幕（≥1400px）」區塊，只動可用寬度、不動字級。）
+
+   為什麼是逐條列舉而不是一個開關：
+   - `html { font-size: X% }` 只拉得動 rem 那一半（本檔 px 與 rem 字級各約一半），比例會歪
+   - `zoom` / `transform: scale()` 會讓詳情頁 sticky nav 的 getBoundingClientRect 與
+     scrollTop 對不上（js/results-display.js 的 setupCardDetailNav）
+   清單由 1920×1080 實跑首頁／搜尋結果／詳情頁／推薦活動／faq，掃 document.styleSheets
+   取出「桌機會套用且元素真的存在」的規則產生（流程見 ui-display.md 第 1g 節）。
+
+   比例約 0.87×：24→21 / 20→17.5 / 18→15.5 / 16→14 / 15→13 / 14→12.5 / 13→11.5 / 12→11 / 11→10.5，
+   rem 同比例（2.5→2.1、1.25→1.1、0.9→0.79、0.75→0.68…）。
+
+   **刻意不納入**：
+   - 我的刷卡小抄（#mappings-page / .mp-*）：有自己的字級設定與存圖排版
+   - promos.css：新戶活動頁 2026-09-18 與 PR #481 已人工調過桌機尺寸，再疊一層會縮兩次
+
+   ⚠️ 選擇器照抄原規則（含 `.app-layout main xxx` 這種較高特異性的版本），靠「同特異性、
+      源碼在後」取勝——**這個區塊必須留在本檔最後**（之後的密度區塊除外）。
+   ⚠️ 斷點 1025px：手機（≤768）與平板（769–1024）完全不受影響；桌機專屬也是輸入框能從
+      16px 降到 14px 的前提（16px 是防 iOS 聚焦縮放用的）。
+   ⚠️ faq.css 在 styles.css **之後**載入，FAQ 專屬選擇器寫在 faq.css 的同名區塊。
+   ============================================ */
+@media (min-width: 1025px) {
+    /* 2.5rem → 2.1rem */
+    header h1 {
+        font-size: 2.1rem;
+    }
+
+    /* 1.6rem → 1.4rem */
+    .spotlight-rate-num {
+        font-size: 1.4rem;
+    }
+
+    /* 1.5rem → 1.3rem */
+    .results-section h2,
+    .parking-benefits-section h2 {
+        font-size: 1.3rem;
+    }
+
+    /* 24px → 21px */
+    .close-modal {
+        font-size: 21px;
+    }
+
+    /* 1.25rem → 1.1rem */
+    .header-content h1,
+    .spotlight-title,
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    /* 20px → 17.5px */
+    .cashback-rate-num {
+        font-size: 17.5px;
+    }
+
+    /* 1.2rem → 1.05rem */
+    .card-name,
+    .app-layout main .results-section h2, .app-layout main .coupon-results-section h2, .app-layout main .parking-benefits-section h2 {
+        font-size: 1.05rem;
+    }
+
+    /* 18px → 15.5px */
+    .calculate-btn {
+        font-size: 15.5px;
+    }
+
+    /* 1.1rem → 0.97rem */
+    .parking-card-name,
+    .parking-benefit-highlight,
+    .app-layout main label,
+    .card-info-section h4 {
+        font-size: 0.97rem;
+    }
+
+    /* 1.05rem → 0.92rem */
+    .announcement-btn,
+    .merchant-clear-btn {
+        font-size: 0.92rem;
+    }
+
+    /* 16px → 14px */
+    input[type="text"], input[type="search"], input[type="number"],
+    .cashback-amount {
+        font-size: 14px;
+    }
+
+    /* 0.95rem → 0.84rem */
+    .spotlight-merchant {
+        font-size: 0.84rem;
+    }
+
+    /* 15px → 13px */
+    .calculate-btn.compact,
+    .finance-warning-row,
+    .app-layout main input[type="text"], .app-layout main input[type="search"], .app-layout main input[type="number"],
+    .home-view-switch > button,
+    .card-apply-cta-text,
+    .cashback-rate {
+        font-size: 13px;
+    }
+
+    /* 0.9rem → 0.79rem */
+    .cards-header p,
+    .app-layout main,
+    .app-layout main .calculate-btn.compact,
+    .spotlight-info-btn {
+        font-size: 0.79rem;
+    }
+
+    /* 14px → 12.5px */
+    .avatar-btn,
+    .quick-search-btn .icon,
+    .parking-detail-item,
+    .show-promos-toggle,
+    .show-promos-toggle, .show-promos-toggle label,
+    .detail-value,
+    .card-apply-cta-btn,
+    .personal-field-title,
+    .card-detail-apply-header-btn,
+    .info-value,
+    .user-notes-textarea,
+    .btn-icon {
+        font-size: 12.5px;
+    }
+
+    /* 0.85rem → 0.75rem */
+    .header-nav-link,
+    .announcement-text,
+    .sidebar .cards-header p,
+    .sidebar-changelog-title {
+        font-size: 0.75rem;
+    }
+
+    /* 13px → 11.5px */
+    .quick-search-dropdown-footer .manage-quick-options-btn,
+    .quick-search-btn,
+    .matched-item,
+    .btn-text,
+    .social-link,
+    .amount-input-wrap .amount-prefix,
+    .mc-related,
+    #card-benefits-section .cashback-condition.parking-strong-line,
+    input[type="text"].credit-limit-input,
+    .personal-level-select,
+    .card-detail-nav-btn,
+    .info-label,
+    .card-changelog-item,
+    .fee-waiver-checkbox,
+    .save-notes-btn {
+        font-size: 11.5px;
+    }
+
+    /* 0.8rem → 0.72rem */
+    .app-layout main .quick-search-btn,
+    .app-layout main #payment-disclaimer,
+    .spotlight-compare-btn {
+        font-size: 0.72rem;
+    }
+
+    /* 0.78rem → 0.7rem */
+    .sidebar-changelog-card {
+        font-size: 0.7rem;
+    }
+
+    /* 0.75rem → 0.68rem */
+    .announcement-date-badge,
+    .announcement-indicator,
+    .card-chip,
+    .merchant-payment-info,
+    .scroll-to-spotlight-btn .btn-text {
+        font-size: 0.68rem;
+    }
+
+    /* 12px → 11px */
+    .card-chips-count,
+    .quick-search-expand-btn,
+    .promo-help-btn,
+    .best-badge,
+    .detail-label,
+    .matched-merchant,
+    .card-detail-peek-btn,
+    .help-btn,
+    .social-media-title,
+    .social-text,
+    .data-update-footer,
+    .pin-btn,
+    .credit-limit-prefix,
+    .level-help-btn,
+    .cashback-search-input,
+    .card-changelog-date,
+    .show-more-btn,
+    .info-value-small {
+        font-size: 11px;
+    }
+
+    /* 0.72rem → 0.66rem */
+    .sidebar-changelog-summary,
+    .spotlight-info-row {
+        font-size: 0.66rem;
+    }
+
+    /* 0.7rem → 0.65rem */
+    .sidebar .card-chip,
+    .spotlight-cardname {
+        font-size: 0.65rem;
+    }
+
+    /* 11px → 10.5px */
+    .cashback-type-label,
+    .personal-field-hint,
+    .cashback-condition,
+    .cond-toggle,
+    .card-tag {
+        font-size: 10.5px;
+    }
+
+    /* 0.68rem → 0.64rem */
+    .spotlight-hype-tag {
+        font-size: 0.64rem;
+    }
+
+    /* 刷卡小抄不納入密度調整，但它沒有自己的根字級、會繼承上面縮過的 `.app-layout main`
+       （0.9rem → 0.79rem）。釘回原值，整棵子樹就跟調整前逐元素一致（用計算樣式比對驗證過）。 */
+    #mappings-page {
+        font-size: 0.9rem;
+    }
+}
+
+
+/* ============================================
+   桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-10-05）
+
+   字級縮了但盒子留白沒縮，看起來只是「小字配大框」，密度沒真的變高——
+   這一輪把 padding / margin / gap 縮到約 0.85×。機械規則：
+   - 只縮 >3px 的值，下限 3px；`auto` / `0` / `em` / `%` 一律不動
+   - 負值同比例：例如 .home-view-switch 的 `margin: 12px -20px -10px` 是用來吃掉
+     header 的 `padding: 10px 20px`，兩邊同比例縮（-17/-9 對 17/9）才接得起來
+   - 排除範圍同第 1 類（刷卡小抄、promos.css）
+
+   **刻意不縮**：替絕對定位的圖示／徽章保留的空間——那是位置不是留白，縮了文字會
+   壓到圖示上：#merchant-input 的 padding-right:44px（清除鈕）、.cashback-search-input
+   的 padding-left:30px（放大鏡）、.input-clear-wrap > input 的 padding-right:30px、
+   .card-result.best-card .card-header 的 padding-right:64px（最優回饋徽章）、
+   .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）。
+   ============================================ */
+@media (min-width: 1025px) {
+    body {
+        padding: 17px;   /* 原 20px */
+    }
+
+    header {
+        padding: 9px 17px;   /* 原 10px 20px */
+    }
+
+    .header-top {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .header-content {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .header-content h1 {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .header-page-links {
+        margin-right: 5px;   /* 原 6px */
+        gap: 15px;   /* 原 18px */
+    }
+
+    .header-page-links {
+        padding-right: 14px;   /* 原 16px */
+    }
+
+    .header-nav-link + .header-nav-link {
+        margin-left: 15px;   /* 原 18px */
+    }
+
+    .header-nav-link {
+        padding: 3px 2px;   /* 原 4px 2px */
+    }
+
+    .auth-section {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .avatar-btn {
+        padding: 3px 9px 3px 3px;   /* 原 4px 10px 4px 4px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    header h1 {
+        margin-bottom: 7px;   /* 原 8px */
+    }
+
+    .announcement-bar {
+        padding: 7px 14px;   /* 原 8px 16px */
+        margin-top: 7px;   /* 原 8px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .announcement-content {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .announcement-date-badge {
+        padding: 2px 7px;   /* 原 2px 8px */
+        margin-right: 7px;   /* 原 8px */
+    }
+
+    .announcement-controls {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .announcement-btn {
+        padding: 9px 8px;   /* 原 10px 9px */
+        margin: -7px 0px;   /* 原 -8px 0px */
+    }
+
+    .cards-header {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .card-chips {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-chips-count {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .card-chip-bank {
+        padding: 3px 3px 3px 7px;   /* 原 3px 3px 3px 8px */
+    }
+
+    .card-chip-name {
+        padding: 3px 7px 3px 3px;   /* 原 3px 8px 3px 3px */
+    }
+
+    .card-chip {
+        padding: 3px 9px;   /* 原 4px 10px */
+    }
+
+    main {
+        padding: 26px;   /* 原 30px */
+    }
+
+    .input-section {
+        margin-bottom: 26px;   /* 原 30px */
+    }
+
+    .input-row-with-button {
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 14px;   /* 原 16px */
+    }
+
+    .form-group {
+        margin-bottom: 17px;   /* 原 20px */
+    }
+
+    .quick-search-wrapper {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-visible {
+        padding: 3px 0px;   /* 原 4px 0px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-expand-btn {
+        padding: 5px 9px;   /* 原 6px 10px */
+        gap: 3px;   /* 原 4px */
+    }
+
+    .quick-search-dropdown-content {
+        padding: 10px;   /* 原 12px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .quick-search-dropdown-footer {
+        padding: 9px 10px;   /* 原 10px 12px */
+    }
+
+    .quick-search-dropdown-footer .manage-quick-options-btn {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .quick-search-btn {
+        padding: 5px 10px;   /* 原 6px 12px */
+        gap: 3px;   /* 原 4px */
+    }
+
+    label {
+        margin-bottom: 12px;   /* 原 14px */
+    }
+
+    input[type="text"], input[type="search"], input[type="number"] {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .calculate-btn {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .calculate-btn.compact {
+        padding: 10px 17px;   /* 原 12px 20px */
+    }
+
+    .results-section {
+        padding-top: 17px;   /* 原 20px */
+    }
+
+    .results-section h2 {
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .merchant-payment-info {
+        padding: 9px 12px;   /* 原 10px 14px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .merchant-payment-title {
+        margin-bottom: 5px;   /* 原 6px */
+    }
+
+    .merchant-payment-item {
+        margin-bottom: 3px;   /* 原 4px */
+    }
+
+    .merchant-payment-item .payment-label {
+        margin-right: 3px;   /* 原 4px */
+    }
+
+    .merchant-info-row {
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .parking-benefits-section {
+        padding-top: 17px;   /* 原 20px */
+        margin-top: 26px;   /* 原 30px */
+    }
+
+    .parking-benefits-section h2 {
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .parking-benefits-container {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .parking-benefit-item {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .parking-header {
+        padding-bottom: 7px;   /* 原 8px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .parking-benefit-highlight {
+        padding: 10px 14px;   /* 原 12px 16px */
+        margin: 10px 0px;   /* 原 12px 0px */
+    }
+
+    .parking-details {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .parking-detail-item {
+        padding: 3px 0px;   /* 原 4px 0px */
+    }
+
+    .show-promos-toggle {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .promo-toggle-row {
+        padding: 3px 10px;   /* 原 4px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .show-promos-toggle label {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .results-container {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .card-result {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .card-header {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .card-name-with-pin {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .best-badge {
+        padding: 3px 10px;   /* 原 4px 12px */
+    }
+
+    .card-result .best-badge {
+        padding: 4px 10px 5px;   /* 原 5px 12px 6px */
+    }
+
+    .card-details {
+        margin-bottom: 7px;   /* 原 8px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .matched-merchant {
+        margin-top: 5px;   /* 原 6px */
+    }
+
+    .card-detail-peek-btn {
+        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
+    }
+
+    .calc-breakdown-btn {
+        margin-left: 5px;   /* 原 6px */
+    }
+
+    .help-btn {
+        margin-left: 5px;   /* 原 6px */
+    }
+
+    .social-media-footer {
+        padding: 0px 20px;   /* 原 0px 24px */
+        margin: 17px auto 9px;   /* 原 20px auto 10px */
+    }
+
+    .social-media-container {
+        gap: 41px;   /* 原 48px */
+    }
+
+    .social-section, .explore-section {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .social-media-links {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .social-link {
+        padding: 7px 10px;   /* 原 8px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .data-update-footer {
+        padding: 0px 20px 24px;   /* 原 0px 24px 28px */
+        margin: 14px auto 0px;   /* 原 16px auto 0px */
+    }
+
+    .ad-row {
+        padding: 0px 14px;   /* 原 0px 16px */
+    }
+
+    .ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+        margin: 14px auto;   /* 原 16px auto */
+    }
+
+    .finance-warning-row {
+        padding: 12px 20px;   /* 原 14px 24px */
+    }
+
+    .pin-btn {
+        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
+    }
+
+    .scroll-to-spotlight-btn .btn-text {
+        padding: 3px 9px;   /* 原 4px 10px */
+    }
+
+    .sidebar-content {
+        padding: 14px;   /* 原 16px */
+    }
+
+    .sidebar .supported-cards {
+        margin-bottom: 17px;   /* 原 20px */
+    }
+
+    .sidebar .cards-header {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .sidebar-changelog {
+        padding-top: 12px;   /* 原 14px */
+        margin-bottom: 14px;   /* 原 16px */
+    }
+
+    .sidebar-changelog-title {
+        margin: 0px 0px 7px;   /* 原 0px 0px 8px */
+    }
+
+    .sidebar-changelog-item {
+        padding: 7px 9px;   /* 原 8px 10px */
+    }
+
+    .sidebar .card-chips {
+        gap: 4px;   /* 原 5px */
+    }
+
+    .sidebar .card-chip {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    .app-layout main label {
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .app-layout main input[type="text"], .app-layout main input[type="search"], .app-layout main input[type="number"] {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .app-layout main .calculate-btn.compact {
+        padding: 9px 14px;   /* 原 10px 16px */
+    }
+
+    .spotlight-section {
+        padding: 20px 26px 26px;   /* 原 24px 30px 30px */
+    }
+
+    .spotlight-header {
+        margin-bottom: 12px;   /* 原 14px */
+        gap: 10px;   /* 原 12px */
+    }
+
+    .spotlight-title {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .spotlight-nav {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .spotlight-track {
+        gap: 12px;   /* 原 14px */
+    }
+
+    .spotlight-card {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .spotlight-ccwrap {
+        padding: 5px;   /* 原 6px */
+        margin-bottom: 9px;   /* 原 10px */
+    }
+
+    .spotlight-rate-row {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .spotlight-hype-tag {
+        padding: 2px 7px;   /* 原 2px 8px */
+    }
+
+    .spotlight-merchant {
+        margin-top: 4px;   /* 原 5px */
+    }
+
+    .spotlight-cardname {
+        padding: 2px 5px;   /* 原 2px 6px */
+    }
+
+    .spotlight-info-row {
+        margin: 6px 0px 9px;   /* 原 7px 0px 10px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .spotlight-compare-btn {
+        padding: 0px 7px;   /* 原 0px 8px */
+    }
+
+    .spotlight-dots {
+        margin-top: 12px;   /* 原 14px */
+        gap: 6px;   /* 原 7px */
+    }
+
+    .merchant-search-box .quick-search-wrapper {
+        padding: 9px 10px;   /* 原 10px 12px */
+    }
+
+    .mc-related {
+        padding: 9px 26px;   /* 原 11px 30px */
+        gap: 5px 12px;   /* 原 6px 14px */
+    }
+
+    .mc-related-list {
+        gap: 3px 22px;   /* 原 4px 26px */
+    }
+
+    .mc-related-link {
+        gap: 3px;   /* 原 4px */
+    }
+
+    .home-view-switch {
+        padding: 0px 17px;   /* 原 0px 20px */
+        margin: 10px -17px -9px;   /* 原 12px -20px -10px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .home-view-switch > button {
+        padding: 9px 7px 9px;   /* 原 11px 8px 10px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .home-view-switch > button.on {
+        padding-top: 11px;   /* 原 13px */
+    }
+
+    .card-apply-cta {
+        padding: 10px 12px;   /* 原 12px 14px */
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 12px 7px;   /* 原 14px 8px */
+    }
+
+    .card-apply-cta-btn {
+        padding: 7px 14px;   /* 原 8px 16px */
+    }
+
+    .modal-header {
+        padding: 17px;   /* 原 20px */
+    }
+
+    .card-detail-title-group {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .modal-body {
+        padding: 17px;   /* 原 20px */
+    }
+
+    .credit-limit-row {
+        gap: 9px;   /* 原 10px */
+    }
+
+    .credit-limit-field {
+        padding: 0px 10px;   /* 原 0px 12px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-settings-box {
+        padding: 10px 12px;   /* 原 12px 14px */
+    }
+
+    .personal-settings-box > #cube-level-section {
+        padding-bottom: 10px;   /* 原 12px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .personal-field-title {
+        margin-bottom: 4px;   /* 原 5px */
+    }
+
+    .personal-field-hint {
+        margin-top: 3px;   /* 原 4px */
+    }
+
+    label.personal-field-check {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-level-select {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    .personal-level-row {
+        gap: 5px;   /* 原 6px */
+    }
+
+    .personal-fields-row {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .personal-fields-row {
+        gap: 17px;   /* 原 20px */
+    }
+
+    .card-detail-nav {
+        padding: 9px 17px;   /* 原 10px 20px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-detail-nav-btn {
+        padding: 5px 10px;   /* 原 6px 12px */
+    }
+
+    .card-detail-apply-header-btn {
+        padding: 5px 14px;   /* 原 6px 16px */
+    }
+
+    .card-info-section {
+        margin-bottom: 20px;   /* 原 24px */
+    }
+
+    .card-info-section h4 {
+        margin: 0px 0px 14px;   /* 原 0px 0px 16px */
+    }
+
+    .card-info-section h4.section-title-with-icon {
+        gap: 6px;   /* 原 7px */
+    }
+
+    .cube-settings-grid {
+        gap: 10px 17px;   /* 原 12px 20px */
+    }
+
+    .info-grid-2col {
+        gap: 17px;   /* 原 20px */
+    }
+
+    .info-column-left {
+        gap: 14px;   /* 原 16px */
+    }
+
+    .info-item {
+        gap: 3px;   /* 原 4px */
+    }
+
+    .cashback-detail-item {
+        padding: 14px;   /* 原 16px */
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    .input-clear-wrap[data-for="cashback-search-input"] {
+        margin-bottom: 10px;   /* 原 12px */
+    }
+
+    #card-basic-cashback, #card-special-cashback, #card-coupon-cashback {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .cashback-rate {
+        margin-bottom: 7px;   /* 原 8px */
+    }
+
+    .card-changelog-list {
+        padding: 0px 10px;   /* 原 0px 12px */
+    }
+
+    .card-changelog-item {
+        padding: 8px 0px;   /* 原 9px 0px */
+        gap: 9px;   /* 原 10px */
+    }
+
+    .show-more-btn {
+        padding: 2px 3px;   /* 原 2px 4px */
+        margin-left: 4px;   /* 原 5px */
+    }
+
+    .notes-input-row {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .fee-waiver-status {
+        margin-top: 3px;   /* 原 4px */
+    }
+
+    .fee-waiver-checkbox {
+        gap: 7px;   /* 原 8px */
+    }
+
+    .user-notes-textarea {
+        padding: 10px;   /* 原 12px */
+    }
+
+    .notes-status {
+        margin-top: 3px;   /* 原 4px */
+        gap: 7px;   /* 原 8px */
+    }
+
+    .save-notes-btn {
+        padding: 7px 9px;   /* 原 8px 10px */
+    }
+
+    .fee-annual-section {
+        gap: 10px;   /* 原 12px */
+    }
+
+    .card-tags-container {
+        margin-top: 14px;   /* 原 16px */
+        margin-bottom: 14px;   /* 原 16px */
+        gap: 5px;   /* 原 6px */
+    }
+
+    .card-tag {
+        padding: 3px 7px;   /* 原 3px 8px */
+    }
+
+    /* 密度變高的副作用：膠囊變小後，快捷搜尋可視列（overflow:hidden 硬切）會多擠進
+       「半顆」膠囊，看起來像壞掉。不用隱藏或截字（站長否決過為了整齊犧牲內容），改成
+       右緣漸淡：被切到的那顆讀起來是「後面還有」，而它本來就完整收在「更多」下拉裡。
+       沒溢出時右緣 24px 是 gap 的空白，漸淡看不出來。 */
+    .quick-search-visible {
+        -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+        mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+    }
+}
+
+
+/* ============================================
+   桌機密度調整 ─ 第 3 類：控制項高度（≥1025px，2026-10-05）
+
+   第 1、2 類之後，剩下一批用固定 px 寫死高度的控制項還是原尺寸，跟旁邊縮過的
+   東西不成比例。這一輪縮到約 0.87×。
+
+   規則：
+   - **width 與 height 成對的圓形／方形按鈕一定一起改**，只改一邊會從圓變橢圓
+   - **18px 以下的圖示與核取方塊一律不動**：再縮就從「小」變成「看不清也點不到」，
+     而且它們佔的版面本來就微不足道
+   - .calculate-btn.compact 的 height:53.5px **不用改**——桌機被更具體的
+     `.app-layout main .calculate-btn.compact { height: auto }` 蓋掉，實際高度由
+     第 2 類縮過的 padding 決定（實測 35px）
+
+   .matched-item-row 是特例：原本 46px 並註明「與計算按鈕同高，讓文字垂直置中對齊
+   按鈕」。按鈕在第 2 類之後實測 35px，所以填 35px——照乘 0.87× 會得到 40px，
+   反而讓那句註解描述的對齊關係失效。
+   ============================================ */
+@media (min-width: 1025px) {
+    .header-logo {
+        height: 32px;   /* 原 35px（舊 PNG 40px×0.87）；新標誌最小 32px，見 .header-logo 註解 */
+    }
+
+    .auth-section {
+        min-height: 38px;   /* 原 44px */
+    }
+
+    .guest-avatar-icon {
+        width: 24px;    /* 原 28px */
+        height: 24px;   /* 原 28px */
+    }
+
+    /* 原 46px＝「與計算按鈕同高」；按鈕在第 2 類之後實測 35px，跟著對齊 */
+    .matched-item-row {
+        min-height: 35px;
+    }
+
+    .merchant-clear-btn {
+        width: 31px;    /* 原 36px */
+        height: 31px;   /* 原 36px */
+    }
+
+    .pin-btn,
+    .card-detail-peek-btn {
+        height: 19px;   /* 原 22px */
+    }
+
+    .scroll-to-spotlight-btn {
+        width: 42px;    /* 原 48px */
+        height: 42px;   /* 原 48px */
+    }
+
+    .spotlight-nav-btn,
+    .spotlight-info-btn {
+        width: 30px;    /* 原 34px */
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-compare-btn {
+        height: 30px;   /* 原 34px */
+    }
+
+    .spotlight-rate-row {
+        min-height: 23px;   /* 原 26px */
+    }
+
+    .card-detail-image {
+        height: 48px;   /* 原 56px（width:auto，不用動） */
+    }
+
+    .close-modal {
+        width: 26px;    /* 原 30px */
+        height: 26px;   /* 原 30px */
+    }
+
+    .credit-limit-field {
+        height: 33px;   /* 原 38px */
+    }
+
+    .user-notes-textarea {
+        height: 52px;        /* 原 60px */
+        min-height: 52px;    /* 原 60px */
+        max-height: 174px;   /* 原 200px */
+    }
+
+    .notes-status {
+        min-height: 17px;   /* 原 20px */
+    }
+
+    .social-media-footer {
+        min-height: 85px;   /* 原 100px */
+    }
+}
+
+/* 結果卡次行按鈕（桌機密度）：上方 .card-name-with-pin 的放大值特異性較高，
+   第 1／3 類的 .pin-btn／.card-detail-peek-btn 縮小值蓋不到，在這裡照比例另給
+   （26→23px、13→11.5px、內距 0.85×）。必須留在檔案最後。 */
+@media (min-width: 1025px) {
+    .card-name-with-pin .card-detail-peek-btn,
+    .card-name-with-pin .pin-btn {
+        height: 23px;
+        padding: 0 9px 0 8px;
+        font-size: 11.5px;
+    }
+}

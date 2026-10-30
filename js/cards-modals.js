@@ -898,8 +898,20 @@ function renderSidebarChangelog() {
         btn.type = 'button';
         btn.className = 'sidebar-changelog-item';
         btn.dataset.cardId = e.cardId;
-        // 摘要在畫面上是單行截斷的，title 讓桌機 hover 看得到日期與全文
+        // 摘要在畫面上最多兩行截斷，title 讓桌機 hover 看得到日期與全文
         btn.title = `${formatChangelogDate(e.date)}　${e.summary}`;
+
+        // 最左側卡片圖（2026-09-28）：缺圖就整個 img 拿掉，版面退回純文字（ui-display.md 第 2 節）
+        const img = document.createElement('img');
+        img.className = 'sidebar-changelog-img';
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = `assets/images/cards/${e.cardId}.png`;
+        img.addEventListener('error', () => img.remove());
+
+        const textEl = document.createElement('span');
+        textEl.className = 'sidebar-changelog-text';
 
         const nameEl = document.createElement('span');
         nameEl.className = 'sidebar-changelog-card';
@@ -909,8 +921,10 @@ function renderSidebarChangelog() {
         summaryEl.className = 'sidebar-changelog-summary';
         summaryEl.textContent = e.summary;
 
-        btn.appendChild(nameEl);
-        btn.appendChild(summaryEl);
+        textEl.appendChild(nameEl);
+        textEl.appendChild(summaryEl);
+        btn.appendChild(img);
+        btn.appendChild(textEl);
         btn.addEventListener('click', () => openCardDetailAtChangelog(e.cardId));
 
         li.appendChild(btn);

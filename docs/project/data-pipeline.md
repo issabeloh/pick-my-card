@@ -34,11 +34,16 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
        那種連結在沒裝 App 的手機上是一個看不懂的錯誤畫面，而且各家 App 的 scheme 沒有公開保證、改版就失效
      - **只能在 App 內操作的活動**（「打開 App → 我的優惠 → 登錄」）→ 把步驟寫成文字放進 `conditions_N`，這一欄留空
      - 這欄不存在時匯出直接跳過（`addOptionalField`），舊表完全相容；不必 22 個槽位一次補齊，用到哪個補哪個
+   - 一般消費排除項目：`basicExclusions`（選填，2026-09-30 新增）——這張卡「一般消費定義」明文排除、**完全沒有回饋**
+     的交易（繳稅、學費、保費、儲值…），一格多項、**半形逗號分隔**（頓號／全形逗號／換行也吃，但請統一用 `,`），同一個東西各銀行要寫成同一個字，匯出成 `card.basicExclusions` 字串陣列
+     （空白格不輸出）。前端只在「退回基本回饋」時使用，命中的卡不顯示基本回饋（規則見 cashback-engine.md 第 10 節）。
+     初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」；官網變動後由監控自動分析、站長在 `2-變動通知` 刪行填 V 再「套用修改到待審核」（2026-10-13，`apps-script/basic-exclusions-extractor.gs` 第 ③ 段，操作見 `apps-script/README.md`）。
+     ⚠️ 項目要寫成**使用者會搜尋的詞**且保留限定詞：前端是「搜尋詞包含排除詞就算」，寫「超商」會誤殺所有超商搜尋，要寫「超商代收」；單一個字的項目一律被忽略
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
 3. **QuickSearch** —— 快捷搜尋（id, displayName, icon, merchants 逗號分隔, order）
 4. **Merchant Payments** —— 商家付款方式（merchant, online_payment, offline_payment, source_url, last_updated）
-5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）
+5. **Search Hints** —— 搜尋提示（keywords 逗號分隔會展開成多 key, suggestions, display_message, active）。**active 為 TRUE 的列 keywords、display_message 必填**，缺一整列不匯出、`runQACheck()` 檢查 11 列出來（⚠️ 不擋匯出）；suggestions 選填，留空時前端只顯示文案。2026-10-08 以前 display_message 留空會補預設句「💡 建議也搜尋：」，已拿掉（前端分不出那句是不是系統補的）。display_message 可寫簡單 HTML（2026-10-13）：粗體 `<b>`、換行 `<br>`、連結 `<a href="https://…">`（只收 http/https、自動開新分頁）等，沒寫標籤就當純文字；其他標籤會被拆掉只留文字（見 storage-and-security.md 第 6 節）
 6. **FAQ** —— id, category, question, answer, order, isActive（依 order 排序）
 7. **announcements** —— text, fullText, link, active, priority, date（依 priority，最多 5 則）
 8. **Card Benefits** —— 停車折抵等（id, benefit_type, benefit_desc, merchants, conditions, benefit_period, notes, active）。**同一張卡可有多筆**（不同地點/優惠），ID 重複是正常的
@@ -76,6 +81,16 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
       回饋率會跟著 `cards.data` 走，這句話不會
     - 用途是講自動規則講不出來的事，例如台新 Richart 卡的「每月選一個方案綁生活場景」
       （那五行都掛著〔切換○○刷方案〕，但「只能選一個」這件事沒有任何一行講得出來）
+12c. **ExclusionGroups** —— 一般消費排除項目的同義詞群組（2026-10-14；name, variants 逗號或換行分隔, type＝分類／同義詞（空白＝分類）, active）。
+    **分類**（如「醫療費用」⊃ 醫指付、長庚醫療體系…）：打 name 才展開成整組；**同義詞**（如交通罰單＝罰款＝罰鍰）：打 name 或任一寫法都展開。
+    只影響排除判斷、詳情頁搜尋、下拉選單（只列 name），不進活動匹配。前端 `expandExclusionGroupTerms()`（`js/search-match.js`）；規則見 cashback-engine.md 第 10 節
+12d. **統一詞**（2026-10-14，資料檔「PMC 管理系統」）—— 統一詞, 其他寫法, 搜尋別名, 備註。站長維護的商家統一寫法（品牌原大小寫、中英不空格、臺→台）。三個地方讀它：
+    ①`apps-script/term-unify.gs`：`previewTermUnify`／`applyTermUnify` 把試算表既有資料改成統一寫法（只換整項；忽略大小寫／空白／臺台比對；不掃 MerchantPages；2026-10-17 起掃 Highlights）；
+    同檔的 `termConsistencyIssues_` 是**寫法一致性檢查**（2026-10-17）：`exportToJSON` 每次匯出自動跑，網站用到的商家名（各卡 items、領券、一般消費排除、快捷選項、Merchant Payments、精選活動）裡同一個名字有兩種以上寫法（同一個 `termUnifyKey_`）就跳提醒、不擋匯出。
+    為什麼要有：前端「算」是拿名字查每張卡的清單，只忽略大小寫、不忽略空白；寫法不一，「匹配到」會重複列，名字改過的話用戶刷卡小抄存的舊寫法也對不上。修法一律在源頭（統一詞表加列 → applyTermUnify），不在程式裡做空白合併；
+    ②`cards-export.gs` 匯出 `termAliases`（其他寫法＋搜尋別名＋自動補的「中英之間加空白」寫法，`termSpacedVariants_`，2026-10-18：網站搜尋不忽略空白，「台灣 pay」原本找不到「台灣Pay」；只進匯出、不寫回工作表；表上已有的寫法不重複補）→ 前端 `mergeDataTermAliases` 併入模糊搜尋；
+    ③自動化檔 `benefits-parser.gs` 的 `pmcUnifyList_`：新戶 bonus_merchants、新卡／活動更新 items、一般消費排除 basicExclusions 寫進待審核前先統一（跟 term-unify 的 `termUnifyCell_` 同規則，兩專案各一份，改一邊要同步）。
+    「其他寫法」＝會被改寫的；「搜尋別名」＝不改資料、只讓用戶搜得到（寵物醫院 → 動物醫院）
 13. **BankColors** —— 側欄膠囊左緣雙色帶的銀行 CI 色（bank, color, accent, active），
     2026-09-08 新增，2026-09-09 加 `accent` 欄。
     - `bank` 必須與 Cards Data 的 `bank` 欄**字串完全一致**（前端就是拿 bank 欄的字去查這張表）
@@ -563,6 +578,11 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 | `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
 | `/merchant/<slug>` | 同 `homeUpdatedIso`——商家頁＝index.html 版面 ＋ cards.data 算出的卡片清單，會變的來源就是 cards.data，與首頁同一個訊號 |
 
+**`homeUpdatedIso` 也寫進 `cards.data`（欄位 `contentUpdatedIso`，2026-10-30）**：商家頁生成器把它烤進 HTML
+（頁尾可見日期＋JSON-LD `dateModified`），前端頁尾也優先顯示它——頁面上看到的日期、`dateModified`、
+sitemap `lastmod` 三處同源。它由指紋算出、本身不在指紋裡，所以不會造成「每次匯出都變」。
+⚠️ 這欄要等 `cards-export.gs` 貼回 Google Sheets 後的下一次匯出才會出現；之前生成器與前端都退回 `lastUpdated`。
+
 收哪些商家頁由 `MerchantPages` 工作表的 `active` 欄決定（見第 11 節）；工作表不存在時退回
 `MERCHANT_FALLBACK_SLUGS`，避免 sitemap 把現有 6 頁整組移除。
 
@@ -628,6 +648,19 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 2. **SEO 說明區**（`<section class="mc-seo-footer">`）——H1 ＋ 說明文，卡片清單跟著資料走。
 3. **`bodyHtml`**（`<section class="mc-body">`）——站長在工作表手寫的正文，留空就不輸出。
 
+**日期直接寫進 HTML（2026-10-30）**：讓 Google 不執行 JS 也讀得到「這頁哪天更新」。兩處都由
+`resolveUpdatedIso()` 取 `cards.data` 的 `contentUpdatedIso`（沒有就退回 `lastUpdated`，都沒有就不輸出）：
+
+- 頁尾 `<span id="last-update-date">` 烤成 `最後資料更新：<time datetime="2026-10-18">2026/10/18</time>`；
+  `js/data-loader.js` 載入資料後用同樣結構重寫一次（兩邊格式要一起改）
+- JSON-LD 從 `ItemList` 改成外層 `CollectionPage`（帶 `dateModified`、`url`、`isPartOf` → 首頁的 `#website`），
+  卡片清單放進 `mainEntity`。⚠️ 別把 `dateModified` 直接掛回 `ItemList`：ItemList 是 Intangible、不是
+  CreativeWork，schema.org 沒有這個屬性，Google 會當無效欄位
+- 日期 span 跟 JSON-LD 一樣列進 `stripDataRegions()`——日期隨匯出變動，沒挖掉就會被判成「版面不一致」擋 commit
+- 首頁（index.html）也烤頁尾日期（同一個值），所以 index.html 的生成區＝工具列＋日期 span 兩塊；
+  但首頁**不**注入 `dateModified`——首頁 JSON-LD 是手寫的，工具首頁靠 sitemap lastmod 就夠，
+  不值得在手寫 `<head>` 裡再開一塊生成區
+
 ### index.html 既是模板、也是輸出（2026-08-18 起）
 
 首頁也要有推薦比較工具列（站長要求：首頁是權重最高的頁，從這裡發出的內鏈最有價值，
@@ -646,7 +679,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 - `tools/deploy-version.sh` 是**先跑生成器、再注入 `?v=`**，所以生成器寫回的 index.html
   帶的是 `?v=dev` 佔位，之後被同一支腳本換掉——順序不能對調
 - 資料落後時 index.html 走的是 **dataDrift（⚠️ 提醒、exit 0）而不是 shellDrift（❌ 擋）**：
-  首頁只有工具列這一塊是生成的，其餘全手寫，所以差異一律當資料面看待——理由同商家頁，
+  首頁只有工具列與頁尾日期是生成的，其餘全手寫，所以差異一律當資料面看待——理由同商家頁，
   每次 Apps Script 匯出都擋住不相干的 commit 只會讓人習慣性忽略 preflight
 
 **`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
@@ -667,7 +700,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 1. `filterExpiredRates` —— 濾過期活動
 2. `mergeDataSearchExclusions` —— 併入 SearchExclusions 排除規則
 3. `buildCardItemsIndex` —— 建搜尋索引
-4. 商家名若等於某快捷搜尋的 `displayName` → 走 `handleQuickSearch` 的多關鍵詞路徑
+4. 商家名若等於某個「一次比多家」型快捷搜尋的 `displayName`（如「所有計程車」）→ 走 `handleQuickSearch` 的多關鍵詞路徑；「協助輸入」型（`merchants` 只有一個關鍵詞，如 LinePay）在頁面上等同用戶打字，這裡也當一般搜尋。分界由前端 `isTypingHelperQuickOption()`（`js/data-loader.js`）決定，這支工具直接呼叫它、不另寫一份（2026-10-08；之前 LinePay 頁走快捷路徑，因而不受精準搜尋影響、也不顯示 Search Hints，跟首頁打字不一致）
 
 **踩過的坑（都會讓清單與畫面對不上，且不會報錯）**：
 
@@ -766,3 +799,4 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 - [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-10-21] promos 頁尾隨主站重排、首刷禮多選一改懸掛縮排（`pmcGiftNameHtml_` 包 `.promo-gift-item`）→ 這類「生成器標記＋promos.css」一起改的變更，**兩邊上線時間不同**：promos.css merge 就上線，promos.html 要等站長把 `cards-export.gs` 貼回 Sheets、下一次匯出才換新標記（期間每次匯出都會用舊生成器蓋回舊標記）→ promos.css 的新規則必須同時讓舊標記排得能看（這次保留 `.sponsor-section`、`.social-link.privacy` 相關選擇器並用舊標記實測截圖），等新標記上線後再清掉相容規則；驗收時兩種標記都要看

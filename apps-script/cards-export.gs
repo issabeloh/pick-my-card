@@ -42,6 +42,11 @@ function onOpen() {
 // QA 檢查功能（保持不變）
 // ==========================================
 
+// Search Hints 的 active 欄：勾選框（true）或文字 TRUE/true 都算啟用（匯出與 QA 檢查 11 共用）
+function isSearchHintActive(active) {
+  return active === true || active === 'TRUE' || active === 'true';
+}
+
 function runQACheck() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dataSheet = ss.getSheetByName('Cards Data');
@@ -216,6 +221,24 @@ function runQACheck() {
     }
   }
 
+  // 檢查 11: Search Hints 啟用的列必填 keywords 與 display_message（2026-10-08 新增）
+  // 匯出端會直接跳過這種列（見「匯出 Search Hints 資料」），這裡讓編輯知道哪幾列沒上線。
+  // 一律 ⚠️ 不擋匯出：少一則提示不該卡住整次發布。
+  const hintsQaSheet = ss.getSheetByName('Search Hints');
+  if (hintsQaSheet) {
+    const hData = hintsQaSheet.getDataRange().getValues();
+    const hHeaders = hData[0];
+    for (let i = 1; i < hData.length; i++) {
+      if (!isSearchHintActive(getValue(hData[i], hHeaders, 'active'))) continue;
+      const missing = ['keywords', 'display_message']
+        .filter(col => !String(getValue(hData[i], hHeaders, col) || '').trim());
+      if (missing.length > 0) {
+        issues.push(['(Search Hints)', '', '缺少必填欄位', missing.join('、'),
+          `Search Hints 第 ${i + 1} 列 active 為 TRUE，但 ${missing.join('、')} 空白——這列不會匯出`, '⚠️']);
+      }
+    }
+  }
+
   // 寫入 QA 報告
   if (issues.length > 0) {
     qaSheet.getRange(2, 1, issues.length, 6).setValues(issues);
@@ -287,6 +310,34 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
   return problems;
 }
 
+// 精選活動 order 檢查（2026-10-11）。只回傳「警告」字串陣列，呼叫端絕不可擋匯出：
+// 前端依 order 排序（js/home-ui.js renderSpotlights），重複時同號維持試算表列順序、
+// 0／空白會被當 999 排到最後——不會壞，只是順序不再由編輯者掌控，所以只提醒。
+// 只看 active 的列（inactive 前端不顯示，order 填 0 很正常）。純函數，空陣列＝沒問題。
+function validateSpotlightOrder_(spotlights) {
+  const warnings = [];
+  const byOrder = {};
+
+  (spotlights || []).forEach(function(s, i) {
+    if (!s || s.active === false) return;
+    const who = s.merchant || s.card_name || ('第 ' + (i + 1) + ' 列');
+    const n = Number(s.order);
+    if (!(n > 0) || Math.floor(n) !== n) {
+      warnings.push('精選活動（Highlights）「' + who + '」的 order「' + s.order + '」（0 或空白視同未填）不是正整數，會被排到最後');
+      return;
+    }
+    (byOrder[n] = byOrder[n] || []).push(who);
+  });
+
+  Object.keys(byOrder).forEach(function(n) {
+    if (byOrder[n].length > 1) {
+      warnings.push('精選活動（Highlights）order ' + n + ' 重複：' + byOrder[n].join('、') + '（同號會依試算表列順序排）');
+    }
+  });
+
+  return warnings;
+}
+
 // 手動版：不做完整匯出，只跑參照完整性檢查並用對話框回報（給選單用）。
 // 重用既有 reader，所以欄位版面改了也不會失準。
 function runReferentialIntegrityCheck() {
@@ -298,7 +349,12 @@ function runReferentialIntegrityCheck() {
     const problems = validateReferentialIntegrity_(
       cards, spotlights, promoData.newCardholderPromos, promoData.cardApplyCtas
     );
-    if (problems.length === 0) {
+    const orderWarnings = validateSpotlightOrder_(spotlights);
+    if (problems.length === 0 && orderWarnings.length > 0) {
+      ui.alert('✅ 參照完整性檢查通過（但有 order 提醒）',
+        '所有 card_id 都對得到卡片。\n\n⚠️ 精選活動排序提醒（不影響匯出）：\n' + orderWarnings.join('\n'),
+        ui.ButtonSet.OK);
+    } else if (problems.length === 0) {
       ui.alert('✅ 參照完整性檢查通過', '所有 card_id 都對得到卡片。', ui.ButtonSet.OK);
     } else {
       ui.alert('⚠️ 發現 ' + problems.length + ' 個參照問題',
@@ -538,6 +594,13 @@ function exportToJSON() {
     // ⚠️ 只寫性格、不寫數字——句子裡一旦出現「6%」，它就變成第二份會漂移的回饋率。
     addOptionalField(card, row, headers, 'cardUseCase');
 
+    // basicExclusions（選填，2026-09-30 新增）：一般消費排除項目（繳稅、保費、儲值…），
+    // 一格填多個、逗號／頓號／換行分隔。前端搜尋走到「基本回饋」fallback 時，命中的卡
+    // 不再顯示基本回饋（實際刷下去是 0）。沒填或整格空白 → 不輸出這個欄位（省 cards.data 體積）。
+    // 初次建立：自動化檔選單「其他工具 ▸ 一般消費排除 1／2」（basic-exclusions-extractor.gs）。
+    const basicExclusions = splitMerchantCell_(getValue(row, headers, 'basicExclusions'));
+    if (basicExclusions.length > 0) card.basicExclusions = basicExclusions;
+
     // cashbackRates - 處理 rate_N（槽位上限依表頭自動偵測，加新欄不用改程式）
     card.cashbackRates = [];
     const maxRateSlot = maxSlotIndex(headers, 'rate');
@@ -744,24 +807,29 @@ if (searchHintsSheet) {
 
   for (let i = 1; i < hintsData.length; i++) {
     const row = hintsData[i];
-    const keywordsStr = getValue(row, hintsHeaders, 'keywords');  // ← 改成 keywords
-    const active = getValue(row, hintsHeaders, 'active');
+    const keywordsStr = String(getValue(row, hintsHeaders, 'keywords') || '').trim();
+    const displayMessage = String(getValue(row, hintsHeaders, 'display_message') || '').trim();
 
     // 只匯出啟用的提示
-    if (!keywordsStr || (active !== true && active !== 'TRUE' && active !== 'true')) {
+    if (!isSearchHintActive(getValue(row, hintsHeaders, 'active'))) continue;
+
+    // 啟用的列 keywords、display_message 必填（2026-10-08）：缺一就不匯出，runQACheck 檢查 11 會列出來。
+    // 以前 display_message 留空會補預設句「💡 建議也搜尋：」，但前端分不出那是編輯寫的還是系統補的；
+    // 改成必填之後文案永遠是編輯自己寫的，前端有文案就顯示、不用再猜
+    if (!keywordsStr || !displayMessage) {
+      Logger.log('⚠️ Search Hints 第 ' + (i + 1) + ' 列已啟用但 keywords 或 display_message 空白，未匯出');
       continue;
     }
 
     const suggestions = getValue(row, hintsHeaders, 'suggestions');
-    const displayMessage = getValue(row, hintsHeaders, 'display_message');
 
     // 🔥 新增：將 keywords 字串分割成陣列
     const keywordsList = keywordsStr.split(',').map(k => k.trim().toLowerCase());
 
-    // 為每個 keyword 建立相同的提示
+    // 為每個 keyword 建立相同的提示（suggestions 選填：留空時前端只顯示文案）
     const hintObj = {
-      suggestions: suggestions ? suggestions.split(',').map(s => s.trim()) : [],
-      message: displayMessage || '💡 建議也搜尋：'
+      suggestions: suggestions ? String(suggestions).split(',').map(s => s.trim()).filter(Boolean) : [],
+      message: displayMessage
     };
 
     // 將每個 keyword 都對應到相同的提示
@@ -809,6 +877,64 @@ if (searchExclusionsSheet) {
   }
 
   Logger.log('搜尋排除規則載入成功：' + searchExclusions.length + ' 條');
+}
+
+// ========== 匯出排除項目同義詞群組（ExclusionGroups 工作表，2026-10-14） ==========
+// 各銀行對同一件排除項目的寫法不同（醫指付／公部門醫療服務費用／長庚醫療體系…）。
+// 一列一組：name＝代表名稱（用戶會打的詞，如「醫療費用」），variants＝銀行寫法（逗號或換行分隔），
+// type＝「分類」（預設；打 name 才展開）或「同義詞」（打 name 或任一寫法都展開），active 勾選才匯出。
+// 前端：展開時排除判斷與詳情頁搜尋把整組寫法一起比；下拉選單只列 name（js/search-match.js expandExclusionGroupTerms）。
+// 寫法要跟 Cards Data 的 basicExclusions 一字不差（大小寫不拘）。
+const exclusionGroups = [];
+const exclusionGroupsSheet = ss.getSheetByName('ExclusionGroups');
+if (exclusionGroupsSheet) {
+  const groupData = exclusionGroupsSheet.getDataRange().getValues();
+  const groupHeaders = groupData[0];
+  for (let i = 1; i < groupData.length; i++) {
+    const row = groupData[i];
+    if (!isSearchHintActive(getValue(row, groupHeaders, 'active'))) continue;
+    const name = String(getValue(row, groupHeaders, 'name') || '').trim();
+    const variants = String(getValue(row, groupHeaders, 'variants') || '')
+      .split(/[,，\n]/).map(v => v.trim()).filter(Boolean);
+    if (!name || variants.length === 0) {
+      Logger.log('⚠️ ExclusionGroups 第 ' + (i + 1) + ' 列已啟用但 name 或 variants 空白，未匯出');
+      continue;
+    }
+    const type = String(getValue(row, groupHeaders, 'type') || '').trim() === '同義詞' ? '同義詞' : '分類';
+    exclusionGroups.push({ name: name, type: type, variants: variants });
+  }
+  Logger.log('排除項目同義詞群組載入成功：' + exclusionGroups.length + ' 組');
+}
+
+// ========== 匯出統一詞的搜尋別名（「統一詞」工作表，2026-10-14） ==========
+// 其他寫法＋搜尋別名 → 網站模糊搜尋（前端 mergeDataTermAliases）。讀表的函數在 term-unify.gs；
+// 那支還沒貼進來時跳過，不擋匯出
+const termAliases = [];
+if (typeof readTermDictionary_ === 'function') {
+  const termDict = readTermDictionary_(ss);
+  // 中英之間加空白的版本自動補進別名（termSpacedVariants_，term-unify.gs；台灣Pay → 台灣 Pay）。
+  // 表上已經有人手填的寫法（任何一列）不重複補，免得兩列搶同一個別名
+  const listed = {};
+  termDict.forEach(function(d) {
+    [d.term].concat(d.variants, d.aliases).forEach(function(n) { listed[String(n).toLowerCase()] = true; });
+  });
+  let spacedCount = 0;
+  termDict.forEach(function(d) {
+    const aliases = d.variants.concat(d.aliases);
+    if (typeof termSpacedVariants_ === 'function') {
+      [d.term].concat(d.variants, d.aliases).forEach(function(n) {
+        termSpacedVariants_(n).forEach(function(v) {
+          const k = v.toLowerCase();
+          if (listed[k]) return;
+          listed[k] = true;
+          aliases.push(v);
+          spacedCount++;
+        });
+      });
+    }
+    if (aliases.length > 0) termAliases.push({ term: d.term, aliases: aliases });
+  });
+  Logger.log('統一詞搜尋別名載入成功：' + termAliases.length + ' 組（含自動補的中英加空白寫法 ' + spacedCount + ' 個）');
 }
 
 // ========== 新增讀取FAQ資料 ==========
@@ -897,6 +1023,41 @@ if (faqSheet) {
     }
   }
 
+  // 精選活動 order 重複／非正整數：只提醒、不擋匯出（OK 按鈕，按完照常往下匯出）
+  const orderWarnings = validateSpotlightOrder_(spotlights);
+  if (orderWarnings.length > 0) {
+    ui.alert(
+      '⚠️ 精選活動排序提醒（不影響匯出）',
+      orderWarnings.slice(0, 10).join('\n') +
+        (orderWarnings.length > 10 ? '\n…（其餘 ' + (orderWarnings.length - 10) + ' 個略）' : ''),
+      ui.ButtonSet.OK
+    );
+  }
+
+  // 寫法一致性：同一個名字只差空白／大小寫／全半形／臺台 → 提醒、不擋匯出（OK 按鈕，按完照常往下匯出）。
+  // 比的範圍＝網站真的會拿來搜尋、比對的商家名；判斷與修法說明在 term-unify.gs 的 termConsistencyIssues_。
+  // 那支還沒貼進來時跳過
+  if (typeof termConsistencyIssues_ === 'function') {
+    const nameEntries = [];
+    const addNames = function(names, source) {
+      names.forEach(function(n) { nameEntries.push({ name: n, source: source }); });
+    };
+    cards.forEach(function(card) {
+      (card.cashbackRates || []).forEach(function(g) { addNames(g.items || [], card.name); });
+      (card.couponCashbacks || []).forEach(function(c) { addNames(splitMerchantCell_(c.merchant), card.name + '（領券）'); });
+      addNames(card.basicExclusions || [], card.name + '（一般消費排除）');
+    });
+    quickSearchOptions.forEach(function(q) { addNames(q.merchants || [], '快捷選項「' + q.displayName + '」'); });
+    addNames(Object.keys(merchantPayments), 'Merchant Payments');
+    spotlights.forEach(function(s) { addNames(splitMerchantCell_(s.merchant), '精選活動'); });
+    const termIssues = termConsistencyIssues_(nameEntries, readTermDictionary_(ss));
+    if (termIssues.length > 0) {
+      Logger.log('⚠️ 寫法不一致 ' + termIssues.length + ' 組：\n' + termConsistencyMessage_(termIssues, termIssues.length));
+      ui.alert('⚠️ 同一個名字有 ' + termIssues.length + ' 組不同寫法（不影響匯出）',
+        termConsistencyMessage_(termIssues, 12), ui.ButtonSet.OK);
+    }
+  }
+
   // 新戶活動「更新日期」：只有 newCardholderPromos 內容真的變動時才蓋今天，否則沿用上次那天。
   // 上次的指紋＋日期存在 Script Properties（Apps Script 端持久化，不佔 repo 檔案、不多一個
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
@@ -927,6 +1088,8 @@ if (faqSheet) {
     announcements: announcements,
     searchHints: searchHints,
     searchExclusions: searchExclusions,
+    exclusionGroups: exclusionGroups,
+    termAliases: termAliases,
     benefits: benefits,
     referralLinks: referralLinks,
     cashbackSites: cashbackSites,
@@ -950,6 +1113,10 @@ if (faqSheet) {
   // 生成 cards.json 內容
   const jsonContent = JSON.stringify({
   lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/M/d"),
+  // 內容真的變動才前進的日期（＝sitemap 首頁／商家頁 lastmod）。商家頁生成器把它烤進
+  // HTML（可見日期＋JSON-LD dateModified），前端頁尾也優先顯示它（2026-10-30）。
+  // 它由上面的指紋算出，本身不在指紋裡，不會造成「每次都變」。
+  contentUpdatedIso: homeUpdatedIso,
   cards: cards,
   payments: payments,
   quickSearchOptions: quickSearchOptions,
@@ -958,6 +1125,8 @@ if (faqSheet) {
   announcements: announcements,
   searchHints: searchHints,
   searchExclusions: searchExclusions,
+  exclusionGroups: exclusionGroups,
+  termAliases: termAliases,
   benefits: benefits,
   referralLinks: referralLinks,
   cashbackSites: cashbackSites,
@@ -1755,7 +1924,7 @@ function generateSearchTerms(id, name) {
 // 詳見 docs/project/data-pipeline.md「promos.html 靜態生成」一節。
 
 const PMC_SITE_URL = 'https://pickmycard.app';
-const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516';
+const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2';
 
 const PMC_CHIP_DEFS = [
   { key: 'gift', label: '首刷禮' },
@@ -2059,6 +2228,21 @@ function pmcEscapeHtmlMultiline_(s) {
   return pmcEscapeHtml_(s).replace(/\r\n|\r|\n/g, '<br>');
 }
 
+// 首刷禮名稱（2026-10-21）：「①A②B③C」這種多選一寫法，每個選項包成一個
+// <span class="promo-gift-item">，CSS 用懸掛縮排讓折行對齊在品名起點、編號凸出來
+// （原本用 <br> 分行，長品名折行後第二行會跑到 ② 底下，三個選項的界線看不清楚）。
+// 沒有圈號的寫法照舊（keepBreaks＝主活動大字：換行轉 <br>；附屬列：不轉，維持原本的單行）。
+// 切法與 pmcGiftOptions_ 相同（換行或圈號前切），但保留圈號本身。
+function pmcGiftNameHtml_(s, keepBreaks) {
+  const text = String(s || '').trim();
+  if (!/[①-⑩]/.test(text)) return keepBreaks ? pmcEscapeHtmlMultiline_(text) : pmcEscapeHtml_(text);
+  return text.split(/\r\n|\r|\n|(?=[①②③④⑤⑥⑦⑧⑨⑩])/)
+    .map(function (x) { return x.trim(); })
+    .filter(function (x) { return x; })
+    .map(function (x) { return '<span class="promo-gift-item">' + pmcEscapeHtml_(x) + '</span>'; })
+    .join('');
+}
+
 // 外部連結防護：只允許 http/https 開頭，杜絕 javascript: 等危險 scheme（連結值來自
 // Google Sheets 資料，多一層保險；語義同 script.js 的 sanitizeUrl）
 function pmcSanitizeUrl_(url) {
@@ -2165,7 +2349,7 @@ function pmcRewardBig_(promo) {
   const v = pmcPromoValue_(promo);
   if (v === null) {
     const gift = String(promo.gift_content || '').trim();
-    return { html: gift ? pmcEscapeHtmlMultiline_(gift) : '首刷禮', isGift: true };
+    return { html: gift ? pmcGiftNameHtml_(gift, true) : '首刷禮', isGift: true };
   }
   return { html: pmcEscapeHtml_(pmcMoney_(v)), isGift: false };
 }
@@ -2714,7 +2898,7 @@ function pmcRenderPromoSubRow_(p, actId) {
 
   // 上排右側的「值」
   const amt = isBonus ? pmcEscapeHtml_(pmcRateDisplay_(promo))
-    : isGift ? pmcEscapeHtml_(giftName || '首刷禮')
+    : isGift ? (giftName ? pmcGiftNameHtml_(giftName) : '首刷禮')
     : pmcEscapeHtml_(pmcMoney_(value));
 
   // 詳情最上方的補充說明（收合時看不到）。首刷禮不需要——它的摘要就在下排，
@@ -2947,6 +3131,9 @@ function pmcPageTemplate_(o) {
 '<meta property="og:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta property="og:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
 '<meta property="og:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta property="og:image:width" content="1200">\n' +
+'<meta property="og:image:height" content="630">\n' +
+'<meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
 '<meta property="og:locale" content="zh_TW">\n' +
 '<meta property="og:site_name" content="信用卡回饋大師">\n' +
 '\n' +
@@ -2955,6 +3142,7 @@ function pmcPageTemplate_(o) {
 '<meta name="twitter:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta name="twitter:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
 '<meta name="twitter:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
 '\n' +
 '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
@@ -2962,8 +3150,10 @@ function pmcPageTemplate_(o) {
 '\n' +
 '<link rel="stylesheet" href="promos.css?v=' + o.versionTag + '">\n' +
 '\n' +
-'<link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">\n' +
-'<link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">\n' +
+'<link rel="icon" href="/favicon.ico" sizes="32x32">\n' +
+'<link rel="icon" href="assets/images/favicon.svg?v=' + o.versionTag + '" type="image/svg+xml">\n' +
+'<link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=' + o.versionTag + '">\n' +
+'<meta name="theme-color" content="#1e40af">\n' +
 '\n' +
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
@@ -2987,7 +3177,7 @@ function pmcPageTemplate_(o) {
 '      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>\n' +
 '    </button>\n' +
 '    <a href="/" class="promos-header-content">\n' +
-'      <img src="assets/images/logo-header.png?v=' + o.versionTag + '" alt="" class="promos-header-logo">\n' +
+'      <img src="assets/images/logo-header.svg?v=' + o.versionTag + '" alt="" class="promos-header-logo" width="79" height="83">\n' +
 '      <span class="promos-header-title">信用卡回饋大師</span>\n' +
 '    </a>\n' +
 '    <nav class="promos-header-links" aria-label="站內頁面">\n' +
@@ -3124,27 +3314,24 @@ o.cardsHtml + '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
 // 複製自 index.html 的 .social-media-footer——主站改動這塊時，這裡要手動同步（同一句
 // 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
+// 2026-10-21 隨主站重排：追蹤＋贊助併成一組；探索更多不列本頁（新戶活動）；
+// 隱私權／使用須知改成 .footer-legal 一行小字。樣式在 promos.css「抄自 styles.css」那段。
 '<footer class="social-media-footer">\n' +
 '  <div class="social-media-container">\n' +
 '    <div class="social-section">\n' +
-'      <p class="social-media-title">追蹤我們</p>\n' +
+'      <p class="social-media-title">追蹤與支持我們</p>\n' +
 '      <div class="social-media-links">\n' +
 '        <a href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer" class="social-link threads" aria-label="Threads">\n' +
 '          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/></svg>\n' +
 '          <span class="social-text">@pickmycard_tw</span>\n' +
 '        </a>\n' +
-'      </div>\n' +
-'    </div>\n' +
-'    <div class="sponsor-section">\n' +
-'      <p class="social-media-title">支持我們</p>\n' +
-'      <div class="social-media-links">\n' +
 '        <a href="https://portaly.cc/pickmycard/support" target="_blank" rel="noopener noreferrer" class="social-link sponsor" aria-label="贊助支持">\n' +
 '          <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/></svg>\n' +
 '          <span class="social-text">小額抖內</span>\n' +
 '        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'      <div class="explore-section">\n' +
+'    <div class="explore-section">\n' +
 '      <p class="social-media-title">探索更多</p>\n' +
 '      <div class="social-media-links">\n' +
 '        <a href="/faq" class="social-link faq" aria-label="常見問題">\n' +
@@ -3153,20 +3340,14 @@ o.cardsHtml + '\n' +
 '        <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">\n' +
 '          <span class="social-text">Pick My Card 是什麼？↗</span>\n' +
 '        </a>\n' +
-'        <!-- 法務連結（2026-08-20）：全站每頁都要有的隱私權政策入口。\n' +
-'             AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的\n' +
-'             告知義務也需要常設入口——新增頁面時記得一起帶上。 -->\n' +
-'        <a href="/privacy" class="social-link privacy" aria-label="隱私權政策">\n' +
-'            <span class="social-text">隱私權政策</span>\n' +
-'        </a>\n' +
-'        <!-- 法務連結（2026-09-02）：使用須知與免責聲明獨立頁 /terms。\n' +
-'             同樣是每一頁都要有的入口——新增頁面時記得一起帶上。 -->\n' +
-'        <a href="/terms" class="social-link privacy" aria-label="使用須知與免責聲明">\n' +
-'            <span class="social-text">使用須知與免責聲明</span>\n' +
-'        </a>\n' +
 '      </div>\n' +
 '    </div>\n' +
-'</div>\n' +
+'  </div>\n' +
+'  <!-- 法務連結：全站每頁都要有的入口（隱私權政策：AdSense／Analytics 條款與個資法第 8 條告知義務；\n' +
+'       使用須知與免責聲明：/terms 為唯一正本），新增頁面時記得一起帶上。 -->\n' +
+'  <p class="footer-legal">\n' +
+'    <a href="/privacy">隱私權政策</a><span class="footer-legal-dot" aria-hidden="true">·</span><a href="/terms">使用須知與免責聲明</a>\n' +
+'  </p>\n' +
 '</footer>\n' +
 '\n' +
 // 申辦前 FAQ 收合區塊（<details>，預設關閉，2026-07-29 新增；同日從 <main> 內搬到

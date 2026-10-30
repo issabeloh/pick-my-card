@@ -14,7 +14,10 @@
     <meta property="og:url" content="https://pickmycard.app/privacy">
     <meta property="og:title" content="隱私權政策｜信用卡回饋大師">
     <meta property="og:description" content="我們蒐集哪些資料、如何使用、存放在哪裡，以及你如何自助刪除帳號與全部資料。">
-    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta property="og:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
     <meta property="og:locale" content="zh_TW">
     <meta property="og:site_name" content="信用卡回饋大師">
 
@@ -23,7 +26,8 @@
     <meta name="twitter:url" content="https://pickmycard.app/privacy">
     <meta name="twitter:title" content="隱私權政策｜信用卡回饋大師">
     <meta name="twitter:description" content="我們蒐集哪些資料、如何使用、存放在哪裡，以及你如何自助刪除帳號與全部資料。">
-    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20260516">
+    <meta name="twitter:image" content="https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2">
+    <meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">
 
     <!-- Google Fonts Preconnect for better performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,11 +37,11 @@
     <link rel="stylesheet" href="styles.css?v=dev">
     <link rel="stylesheet" href="privacy.css?v=dev">
 
-    <!-- iOS Home Screen Icons -->
-    <link rel="apple-touch-icon" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="assets/images/icon-pickmycard.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/icon-pickmycard.png">
+    <!-- Favicon／主畫面圖示：同 index.html（2026-10 品牌標誌 v1.0） -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="assets/images/favicon.svg?v=20261007-2" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=20261007-2">
+    <meta name="theme-color" content="#1e40af">
 
     <!-- iOS Web App Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,8 +49,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="信用卡回饋大師">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="assets/images/icon-pickmycard.png">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -81,7 +83,7 @@
             <!-- header-top 結構抄自 faq.html（logo+站名/導覽/返回首頁），手動同步。 -->
             <div class="header-top">
                 <a href="/" class="header-content">
-                    <img src="assets/images/logo-header.png?v=20260516" alt="" class="header-logo">
+                    <img src="assets/images/logo-header.svg?v=20261007" alt="" class="header-logo" width="79" height="83">
                     <span class="header-title">信用卡回饋大師</span>
                 </a>
                 <nav class="header-page-links" aria-label="站內頁面">
@@ -376,30 +378,27 @@
 
     <!-- 社群媒體與贊助區塊（結構與 index.html 一致，手動同步） -->
     <footer class="social-media-footer">
+        <!-- 結構同首頁頁尾（2026-10-21 手機版重排）：追蹤＋贊助一組、探索更多一組，法務連結在底部一行小字。
+             探索更多與法務連結都不列「本頁自己」。改這裡記得對照 index.html 的頁尾。 -->
         <div class="social-media-container">
             <div class="social-section">
-                <p class="social-media-title">追蹤我們</p>
+                <p class="social-media-title">追蹤與支持我們</p>
                 <div class="social-media-links">
                     <a href="https://www.threads.com/@pickmycard_tw" target="_blank" rel="noopener noreferrer" class="social-link threads" aria-label="Threads">
                         <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/>
+                        <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.78 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.214.094.318.143 1.46.685 2.527 1.724 3.087 3.005.78 1.787.852 4.7-1.523 7.082-1.815 1.78-4.019 2.582-7.227 2.605zm1.063-11.046l-.379.012c-1.085.06-2.97.42-2.928 2.105.022.39.196.825.535 1.05.452.293 1.067.41 1.806.359 1.118-.063 1.94-.45 2.512-1.171.421-.527.668-1.21.737-2.034a11.405 11.405 0 0 0-2.283-.32z"/>
                         </svg>
                         <span class="social-text">@pickmycard_tw</span>
                     </a>
-                </div>
-            </div>
-            <div class="sponsor-section">
-                <p class="social-media-title">支持我們</p>
-                <div class="social-media-links">
                     <a href="https://portaly.cc/pickmycard/support" target="_blank" rel="noopener noreferrer" class="social-link sponsor" aria-label="贊助支持">
                         <svg width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/>
+                        <path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.885.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/>
                         </svg>
                         <span class="social-text">小額抖內</span>
                     </a>
                 </div>
             </div>
-                    <div class="explore-section">
+            <div class="explore-section">
                 <p class="social-media-title">探索更多</p>
                 <div class="social-media-links">
                     <a href="/promos" class="social-link promos" aria-label="新戶活動一覽">
@@ -411,12 +410,14 @@
                     <a href="/landing" class="social-link about" aria-label="認識 Pick My Card">
                         <span class="social-text">Pick My Card 是什麼？↗</span>
                     </a>
-                    <a href="/terms" class="social-link privacy" aria-label="使用須知與免責聲明">
-                        <span class="social-text">使用須知與免責聲明</span>
-                    </a>
                 </div>
             </div>
-</div>
+        </div>
+        <!-- 法務連結：全站每頁都要有的入口（隱私權政策：AdSense／Analytics 條款與個資法第 8 條告知義務；
+             使用須知與免責聲明：/terms 為唯一正本），新增頁面時記得一起帶上。 -->
+        <p class="footer-legal">
+            <a href="/terms">使用須知與免責聲明</a>
+        </p>
     </footer>
 </body>
 </html>

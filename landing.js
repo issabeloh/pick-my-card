@@ -11,6 +11,68 @@
 
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    /* ---------- 開場介紹影片（2026-09-28） ----------
+       標語下方一顆小按鈕，點了才開全螢幕影片層並播放；沒點就不下載影片（preload="none"，
+       src 按了才設）。預設靜音，使用者用原生控制列取消靜音。
+       支援 Fullscreen API 的（Android、桌機）順便進真全螢幕、藏掉網址列；
+       不支援的（iPhone Safari 對 div 不支援）靠 100dvh 的 fixed 層蓋滿視窗。
+       放在 reduced 判斷之前：減少動態模式下影片也要能看。 */
+    var introBtn = document.getElementById('lp-intro-btn');
+    var videoLayer = document.getElementById('lp-video-layer');
+    var introVideo = document.getElementById('lp-video-el');
+    var videoClose = document.getElementById('lp-video-close');
+    var introSrc = introBtn ? (introBtn.getAttribute('data-src') || '').trim() : '';
+    var videoOpen = false;
+    function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    }
+    function closeVideo() {
+        if (!videoOpen) return;
+        videoOpen = false;
+        introVideo.pause();
+        videoLayer.hidden = true;
+        document.documentElement.classList.remove('lp-video-open');
+        if (isFullscreen()) {
+            try {
+                var r = (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                if (r && r.catch) r.catch(function () {});
+            } catch (e) { /* 忽略 */ }
+        }
+        introBtn.focus();
+    }
+    if (introBtn && videoLayer && introVideo && videoClose && introSrc) {
+        var introPoster = (introBtn.getAttribute('data-poster') || '').trim();
+        document.getElementById('lp-hint').classList.add('lp-hint--video');
+
+        introBtn.addEventListener('click', function () {
+            // poster 也等按了才設：隱藏的 <video> 有 poster 屬性一樣會被下載
+            if (introPoster && !introVideo.getAttribute('poster')) introVideo.setAttribute('poster', introPoster);
+            if (!introVideo.getAttribute('src')) introVideo.setAttribute('src', introSrc);
+            videoOpen = true;
+            videoLayer.hidden = false;
+            document.documentElement.classList.add('lp-video-open');
+            try {
+                var req = videoLayer.requestFullscreen || videoLayer.webkitRequestFullscreen;
+                var r = req && req.call(videoLayer);
+                if (r && r.catch) r.catch(function () { /* 被拒就用 fixed 層 */ });
+            } catch (e) { /* 不支援就用 fixed 層 */ }
+            introVideo.muted = true;
+            introVideo.currentTime = 0;
+            var pr = introVideo.play();
+            if (pr && pr.catch) pr.catch(function (err) { console.error('介紹影片播放失敗', err); });
+            videoClose.focus();
+        });
+        videoClose.addEventListener('click', closeVideo);
+        introVideo.addEventListener('ended', closeVideo);
+        document.addEventListener('keydown', function (e) {
+            if (videoOpen && e.key === 'Escape') closeVideo();
+        });
+        // 使用者用系統手勢／返回鍵退出真全螢幕 → 一併關掉影片層
+        var onFsChange = function () { if (videoOpen && !isFullscreen()) closeVideo(); };
+        document.addEventListener('fullscreenchange', onFsChange);
+        document.addEventListener('webkitfullscreenchange', onFsChange);
+    }
+
     var typedEl = document.getElementById('lp-typed');
     var typedText = typedEl ? (typedEl.getAttribute('data-text') || '') : '';
 
@@ -336,6 +398,7 @@
     // 滑鼠滾輪 / trackpad：自由區內直接跟著滾（收斂由捲動位置驅動）；
     // 自由區外一個手勢一幕
     window.addEventListener('wheel', function (e) {
+        if (videoOpen) return; // 影片層開著：不接管捲動
         e.preventDefault();
         var now = performance.now();
         lastGestureTime = now;
@@ -370,6 +433,7 @@
         touchFree = currentY() < freeMax() - 1;
     }, { passive: true });
     window.addEventListener('touchmove', function (e) {
+        if (videoOpen) return; // 影片層開著：讓原生控制列（進度條拖曳）正常運作
         e.preventDefault();
         lastGestureTime = performance.now(); // 手指還在動就持續刷新，解鎖要等真的停下
         if (touchFired || locked || touchY === null || !e.touches.length) return;
@@ -396,6 +460,8 @@
 
     // 鍵盤：方向鍵 / PgUp、PgDn / Space / Home、End
     window.addEventListener('keydown', function (e) {
+        // 影片層開著：空白鍵與方向鍵留給播放器
+        if (videoOpen) return;
         var k = e.key;
         var next = (k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Spacebar');
         var prev = (k === 'ArrowUp' || k === 'PageUp');

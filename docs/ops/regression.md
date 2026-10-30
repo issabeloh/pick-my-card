@@ -129,6 +129,31 @@ node tools/regression/mappings-page-test.js --shots DIR  # 另存各尺寸截圖
 桌布留白（不蓋時鐘與底部按鈕）、淺深色、返回與上一頁。**改 `js/mappings-page.js`、配卡相關 CSS、`spending-mappings.js` 的載存後必跑。**
 Chromium 跑不到 iPhone Safari 的差異（拼音排序、分享面板、存到相簿），那部分靠實機人工驗。
 
+## 卡片詳情頁（獨立一支，2026-10-06 新增）
+
+```bash
+node tools/regression/card-detail-test.js                   # 2 個日期 × 全部卡片，差異 → exit 1
+node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只在「改動前」版本跑！）
+```
+
+每張卡打開詳情頁，抓「一般回饋／指定通路回饋／即將開始／領券」四區每一張回饋卡的畫面文字（逐行 innerText）＋ class，
+與 `card-detail-baseline.json` 比對。沿用 run-regression.js 的凍結資料、訪客替身、凍結時鐘（三者由該檔 `module.exports` 提供）。
+**跑兩個日期**：fixture 的 frozenDate，加上 2026-08-25——凍結日期那天沒有 30 天內即將開始、也沒有 10 天內即將結束的活動，
+不加第二個日期，「即將開始」區與兩種徽章完全測不到。抓文字不抓 HTML，所以標記重構只要畫面內容與順序不變就是綠燈。
+**改 `renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」、或詳情頁任何一條回饋 render 路徑（含 CUBE）後必跑。**
+重拍 fixture 之後，這份基準也要跟著重拍。
+
+## 一般消費排除項目（獨立一支，2026-09-30 新增）
+
+```bash
+node tools/regression/basic-exclusions-test.js   # 16 項，全過 → exit 0
+```
+
+凍結的 `fixture.data` 拍攝時還沒有 `basicExclusions` 欄，所以 run-regression.js 完全碰不到這條路徑（也應該如此：沒填名單時行為必須逐字不變）。
+這支載入同一份凍結資料＋凍結時鐘，在頁面裡對 `cardsData.cards` 臨時塞名單，驗：沒名單不變、全部排除（無結果卡＋說明＋不出空結果框）、
+部分排除（其餘照常＋補一行）、包含規則、反方向不算、單字忽略、有活動的卡不受影響。
+**改基本回饋 fallback、`expandSearchTerms`、`calculateCashback` 的狀態列分支時必跑。**規則正本見 `docs/project/cashback-engine.md` 第 10 節。
+
 ## 人工備援流程（只在腳本壞掉時用）
 
 ```bash

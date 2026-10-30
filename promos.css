@@ -26,6 +26,16 @@
      分開放：那個是「跟主站回饋率同色」的語意，這個是本頁自己的視覺決定，
      日後只想動其中一個時不會互相牽連。 */
   --pmc-hero-green: #10b981;
+  /* 主活動獎勵大字的字級——**只在這裡改**，各處規則只讀變數。
+     金額 24px、禮物名稱 17px，全寬度一致（站長 2026-10-05：桌機的禮物名稱 20px 仍太大，
+     降到跟手機、附屬列 .promo-sub-amt 同為 17px；金額型與回饋率型維持 24px）。
+     金額一律大於禮物名稱。
+     日後要分寬度，在對應的 @media 裡覆寫 :root 的變數就好，不要另寫 font-size 規則。
+     改用變數的原因：以前每個斷點各寫一條 font-size，多檔卡桌機那條
+     （.promo-card[...] .promo-card-main .promo-act-reward）specificity 比 .is-gift 高，
+     把禮物名稱也撐到 26/24px。現在斷點只換變數值，誰也蓋不到誰。 */
+  --promo-reward-size: 24px;       /* 金額（如「$500」） */
+  --promo-reward-gift-size: 17px;  /* 禮物名稱（.is-gift） */
   --pmc-white: #ffffff;
   --pmc-page-bg-1: #e4e5e8;
   --pmc-page-bg-2: #b0b2b8;
@@ -133,7 +143,7 @@ a {
 }
 
 .promos-header-logo {
-  height: 40px;
+  height: 34px;   /* 跟主站 .header-logo 同步（2026-10 品牌標誌 v1.0，緊貼外框的 SVG） */
   width: auto;
   display: block;
   flex-shrink: 0;
@@ -1261,7 +1271,12 @@ a {
 }
 
 /* 抄自 styles.css .social-media-footer 一整段（含 .social-media-container /
-   .social-section 等），配色/間距逐一比照 */
+   .social-section 等），配色/間距逐一比照。
+   2026-10-21 隨主站重排同步：白字改深色字（灰底上白字對比只有約 1.5:1）、手機兩欄格線、
+   法務連結改 .footer-legal 一行小字。舊版標記（.sponsor-section、.social-link.privacy）
+   的規則刻意保留到 Apps Script 換成新版生成器為止——promos.css 一 merge 就上線，
+   promos.html 卻要等站長把 cards-export.gs 貼回 Sheets 後的下一次匯出才換新標記，
+   中間這段時間兩種標記都要排得好看。換完之後可以刪掉。 */
 .social-media-footer {
   max-width: 1200px;
   margin: 20px auto 10px;
@@ -1273,9 +1288,10 @@ a {
 .social-media-container {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;   /* 平板寬放不下兩組並排時整組換行，而不是組內按鈕各自折行 */
   align-items: flex-start;
   justify-content: center;
-  gap: 48px;
+  gap: 20px 48px;
 }
 
 .social-section,
@@ -1288,9 +1304,9 @@ a {
 }
 
 .social-media-title {
-  color: rgba(255, 255, 255, 0.7);
+  color: #374151;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1298,7 +1314,7 @@ a {
 
 .social-media-links {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 16px;
   align-items: center;
   justify-content: center;
@@ -1309,10 +1325,10 @@ a {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.75);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
   text-decoration: none;
   font-size: 13px;
   transition: all 0.3s ease;
@@ -1320,8 +1336,8 @@ a {
 }
 
 .social-link:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.95);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -1379,6 +1395,30 @@ a {
 .social-text {
   font-weight: 500;
   font-size: 12px;
+}
+
+/* 法務連結一行小字（抄自 styles.css .footer-legal） */
+.footer-legal {
+  margin: 20px 0 0;
+  font-size: 12px;
+  color: #374151;
+}
+
+.footer-legal a {
+  color: #1f2937;
+  text-decoration: underline;
+  text-decoration-color: rgba(31, 41, 55, 0.35);
+  text-underline-offset: 3px;
+}
+
+.footer-legal a:hover {
+  color: #1e40af;
+  text-decoration-color: currentColor;
+}
+
+.footer-legal-dot {
+  margin: 0 8px;
+  color: #6b7280;
 }
 
 /* 最後資料更新日期（抄自 styles.css .data-update-footer） */
@@ -1624,34 +1664,71 @@ a {
     letter-spacing: 1px;
   }
 
+  /* 頁尾手機版（抄自 styles.css 同段，2026-10-21）：每組兩欄格線、按鈕 44px 高；
+     奇數顆最後一顆佔滿一列；「探索更多」只有兩顆時改上下兩列（本頁不列自己，只剩 FAQ／
+     Pick My Card 是什麼，後者放半欄會折行） */
   .social-media-footer {
     padding: 0 16px;
-    margin: 16px auto 10px;
+    margin: 24px auto 10px;
   }
 
   .social-media-container {
     flex-direction: column;
-    align-items: center;
-    gap: 20px;
+    align-items: stretch;
+    gap: 22px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .social-section,
+  .sponsor-section,
+  .explore-section {
+    align-items: stretch;
+    gap: 10px;
   }
 
   .social-media-title {
-    font-size: 10px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+  }
+
+  .social-media-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .social-media-links > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .explore-section .social-media-links:has(> :nth-child(2):last-child) {
+    grid-template-columns: 1fr;
   }
 
   .social-link {
-    padding: 7px 10px;
-    font-size: 12px;
-    gap: 5px;
+    justify-content: center;
+    min-height: 44px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    gap: 6px;
+    text-align: center;
+    line-height: 1.3;
   }
 
   .social-link svg {
-    width: 15px;
-    height: 15px;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
   }
 
   .social-text {
-    font-size: 11px;
+    font-size: 14px;
+  }
+
+  .footer-legal {
+    margin-top: 22px;
+    font-size: 12.5px;
   }
 
 
@@ -1768,7 +1845,7 @@ a {
 @media (max-width: 640px) {
   .promos-faq {
     margin: 14px auto;
-    padding: 0 12px 18px;
+    padding: 0 12px 80px;   /* 全頁最後一塊：讓出「回到頂部」浮標的位置（原 18px，2026-10-21） */
   }
 
   .promos-faq-summary {
@@ -1873,6 +1950,10 @@ a {
   color: var(--pmc-muted);
 }
 .promo-rail-count b { color: var(--pmc-green, #059669); font-size: 12.5px; }
+/* 金額那段與「・需分別達成」各自不拆行（2026-10-21）：原本會斷在「首刷／禮」中間，
+   「禮」一個字掉到下一行。整段放不下就整段換行，斷點落在「最多可拿」後面。 */
+.promo-rail-count b,
+.promo-rail-caveat { white-space: nowrap; }
 
 /* 單檔卡的身分區塊＝**橫向身分列**：小卡圖在左、卡名在右（站長 2026-09-21 選定
    三案中的方案 3），底下接兩顆按鈕，再往下才是分割線與活動內容。
@@ -1967,7 +2048,7 @@ a {
 /* 獎勵大字：整個改版的重點，它上面不放任何東西 */
 .promo-act-reward {
   display: block;
-  font-size: 27px;
+  font-size: var(--promo-reward-size);
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.02em;
@@ -1977,16 +2058,23 @@ a {
 }
 /* 獎品沒有金額，大字改放贈品全名（不截斷）——字級比金額小一階才排得下。
    **顏色**要跟附屬列的禮物名稱（.promo-sub-row.is-gift .promo-sub-amt）一致：
-   同一張卡上一橘一綠就是壞掉的。**字級**則刻意分兩階——主活動 20px、附屬列 17px
-   （站長 2026-09-21 晚上指定），對齊「主活動大、附屬列小」的既有層級，也跟附屬列
-   金額欄 .promo-sub-amt 的 17px 同高。
+   同一張卡上一橘一綠就是壞掉的。**字級**看 :root 的 --promo-reward-gift-size
+   （目前全寬度 17px，站長 2026-10-05），與附屬列 .promo-sub-amt 的 17px 同大。
    ⚠️ 配色沿革：#8a5c00 深金褐 → #c2410c 燒橘（2026-09-21 早上）→ #10b981
    （2026-09-21 晚上，站長指定 --pmc-hero-green，與獎勵數字同色）。 */
 .promo-act-reward.is-gift {
-  font-size: 20px;
+  font-size: var(--promo-reward-gift-size);
   line-height: 1.45;
   letter-spacing: 0;
   color: var(--pmc-hero-green);
+}
+/* 多選一首刷禮的每個選項（生成器 pmcGiftNameHtml_ 包的 .promo-gift-item，2026-10-21）：
+   懸掛縮排——折行對齊在品名起點、圈號凸出來，三個選項的界線一眼看得出來。
+   主活動大字（.promo-act-reward）與附屬列（.promo-sub-amt）共用。 */
+.promo-gift-item {
+  display: block;
+  padding-left: 1.1em;
+  text-indent: -1.1em;
 }
 .promo-act-reward small {
   display: block;
@@ -2404,7 +2492,6 @@ a {
   .promo-card-main { padding: 13px 14px 14px; }
   .promo-act-detail { margin-inline: -14px; padding-inline: 14px; }
   .promo-act-thumb { width: 72px; }
-  .promo-act-reward { font-size: 24px; }
   .promo-card-feat { padding: 13px 14px; }
   .promo-act-row.promo-sub-row { padding-inline: 14px; }
 }
@@ -2482,10 +2569,7 @@ a {
   .promo-act-thumb { width: 84px; }
   .promo-act-thumb--gift { width: 70px; }
 
-  .promo-act-reward { font-size: 24px; }
-  /* .promo-act-reward.is-gift 不在這裡降級：禮物名稱的規格（20px／hero-green）
-     兩個寬度一致，顏色要跟附屬列的 .promo-sub-amt 一致（2026-09-21）。
-     先前這裡寫 12.5px，結果桌機的主活動禮物名比附屬列的還小一半。 */
+  /* 獎勵大字的字級不在這裡設——統一看 :root 的 --promo-reward-size／-gift-size。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
   .promo-act-summary { font-size: 12px; line-height: 1.6; margin-top: 8px; }
   .promo-act-more { font-size: 11.5px; margin-top: 8px; }
@@ -2597,11 +2681,6 @@ a {
      直排的按鈕要置中（站長 2026-09-21）。 */
   .promo-card-rail--side .promo-feat-btn { justify-content: center; }
 
-
-  /* 跨 2 欄時主卡更寬，獎勵大字可以回到舒服的尺寸 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
-    font-size: 26px;
-  }
 }
 
 /* 寬螢幕（≥1400px）：一列放得下 4 張活動卡（站長 2026-09-21）。
@@ -2627,9 +2706,6 @@ a {
      兩邊都選不中（2026-09-22 實測 1280/1440/1500 三個寬度，side 恆 140、solo 恆 84）。
      真要縮就得寫成 `.promo-card-rail--side .promo-rail-thumb`；但 rail 從 236px 縮到
      208px 之後，扣掉 32px 內距還有 176px，140px 的卡圖放得下，所以直接刪掉不補。 */
-  .promo-card[data-act-count]:not([data-act-count="1"]) .promo-card-main .promo-act-reward {
-    font-size: 24px;
-  }
 }
 
 /* ⚠️ [hidden] 安全網（2026-09-18 立）
@@ -3321,6 +3397,11 @@ a {
   white-space: nowrap;
 }
 .pmc-lg-jump::after { content: " ↓"; }
+/* 點擊範圍加大（2026-10-21）：文字只有 21px 高，用透明 ::before 往外撐到約 39×83px，
+   外觀不變。撐出去的距離是量過的：下方最近的可點元素（站長推薦的「立即申辦」）距 13px、
+   右方「卡片特色」距 63px 以上，上下各 9px／左右各 8px 不會蓋到別人。 */
+.pmc-lg-jump { position: relative; }
+.pmc-lg-jump::before { content: ""; position: absolute; inset: -9px -8px; }
 .pmc-lg-jump:hover { text-decoration: underline; text-underline-offset: 3px; }
 .pmc-lg-jump:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; border-radius: 4px; }
 

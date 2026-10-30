@@ -45,6 +45,13 @@ if (!card.specialItems)
 if (!card.specialItems || card.specialItems.length === 0)
 ```
 
+**級別專屬槽位 `onlySlots` / `keepSlots`**（2026-10-07，國泰 CUBE「固定回饋」方案）：levelSettings 的某級別可寫
+`"onlySlots": [17, 18], "keepSlots": [14]`——選這個級別時只有 onlySlots＋keepSlots 的槽適用（其他槽在搜尋、
+即將開始、詳情頁全部不出現）；onlySlots 的槽被「認領」，其他沒寫 onlySlots 的級別就不適用它們；keepSlots
+是共用槽、不被認領。沒被任何級別認領的槽自動歸一般級別（新增槽不用標記）。判斷集中在
+`isRateGroupInLevel()`（js/cashback-engine.js），新增任何「逐槽列出活動」的路徑都要走它，否則會出現
+「詳情頁有、搜尋沒有」。槽號用 `.slot`（Sheet 真實槽號）。
+
 ## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
 
 1. **有 specialItems 的 hasLevels 卡**：先查 cashbackRates（支援 placeholder）→ 無匹配再查 specialItems。CUBE 卡特殊處理：用 specialRate 和 generalItems
@@ -56,6 +63,8 @@ if (!card.specialItems || card.specialItems.length === 0)
 搜尋涵蓋：cashbackRates items、specialItems、generalItems（CUBE）、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
 
 **誤傷防範**：
+- **短英數詞只認字首**（2026-10-17，`shortTermStartsWord`）：3 個字以內的純英數搜尋詞（ana、jal、gu、net）在「item 包含搜尋詞」方向要出現在字首（前面是開頭或非英文字母），搜「ana」不再誤中 jeANAsis、hANA pay；中文、數字、符號前面都算字首。4 字以上照舊任意位置（eats → UberEats）。下拉選單用同一條規則
+- **2026-10-15 起 `fuzzySearchMap` 在程式裡是空的**，內容全部來自 Google Sheets「統一詞」工作表（其他寫法＋搜尋別名 → `termAliases` → `mergeDataTermAliases`）；新增別名改工作表，不要寫回程式。回歸的凍結資料 `fixture.data` 已補上同一份 termAliases
 - 搜尋詞會經 `fuzzySearchMap` 雙向展開（含反向：所有映射到同值的 key）。**展開出的短英文別名可能子字串誤中無關 item**（例：「新加坡航空」→ 別名 `sia` → 誤中 a"sia"yo）。英文字界保護（Grep "word boundary"）只做在 `term.includes(item)` 方向，`item.includes(term)` 方向刻意不做——因為用戶手打部分字串（如 `eats`）要能命中連寫 item（如 `UberEats`）
 - 個案誤傷用 `searchExclusionMap` 修（搜尋詞→排除 item 小寫全等清單）；規則可從 SearchExclusions 工作表維護（→ `docs/project/data-pipeline.md` 第 2 節第 12 項）
 
@@ -114,7 +123,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 - `getOverflowRate(card)`：簡單路徑與 findUpcomingActivity 共用的溢出率＝`basicCashback`（2026-07-12 移除 `meta廣告/google廣告 → overseasCashback` 寫死特例：全部廣告槽位已改用明確 cashbackModel、走 stacking，不再進簡單路徑；海外與否一律由 cashbackModel 決定）
 - `resolveBaseRate(card, isOverseas)` / `resolveBonusComponent(...)`：waterfall/stacking 共用
 - 領券活動的溢出直接用 `basicCashback`（與 getOverflowRate 現值等價；不共用只是避免依賴，程式內有註解）
-- 無匹配 fallback：`buildBasicCashbackResult(card, amount)`；搜尋結果合併：`mergeResultsByActivity(resultList)`
+- 無匹配 fallback：`buildBasicCashbackResult(card, amount)`（**只算 `basicCashback`，不加 `domesticBonusRate`**——2026-10-13 站長決定；國內加碼只在 cashbackModel 明確列出的槽才算）；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
 **計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
@@ -167,7 +176,31 @@ if (!card.specialItems || card.specialItems.length === 0)
 - [ ] `specialItems = []`（空陣列）的卡是否走對分支？
 - [ ] 停車折抵的快捷搜尋是否還帶著 searchKeywords？
 - [ ] 跑 `docs/ops/regression.md` 的回歸清單比對前後結果
+- [ ] 動到基本回饋 fallback、搜尋詞展開（`expandSearchTerms`）或狀態列訊息 → 另跑 `tools/regression/basic-exclusions-test.js`（第 10 節）
 - [ ] 跑 `bash tools/preflight.sh`
+
+## 10. 一般消費排除項目（basicExclusions，2026-09-30）
+
+- **語義**：`card.basicExclusions`（字串陣列，Sheets 欄位見 data-pipeline.md 第 2 節）＝這張卡刷了**完全沒有回饋**的交易類型
+- **作用範圍**：基本回饋 fallback（沒匹配到、匹配到但比較中的卡沒活動）時，命中的卡標成灰卡；**有指定通路結果時**（2026-10-11 起），比較卡裡**沒有進行中活動**的那些也照名單補灰卡墊底。
+  某卡對這個詞有指定活動時**永遠照常顯示活動**，名單不影響
+- **比對**（`isBasicExcludedForSearch`，`js/search-match.js`；2026-10-11 站長逐條確認）：
+  - 搜尋詞＝用戶輸入經 `expandSearchTerms()`（與 `findMatchingItem` 共用的 fuzzy／同義詞展開），**不含**匹配到的 item 名（商家匹配會補完短詞，會繞過下一條）
+  - 搜尋詞**等於或包含**排除詞即命中；反方向不判排除（名單「路邊停車費」不影響搜「停車費」，停車場可能有回饋）
+  - **可能排除**（2026-10-11 站長選 B，`getBasicExclusionMaybeHits`）：搜尋詞（≥2 字）被名單項目包含時，同樣變灰卡、標 `isMaybeExcluded`（只有標籤換成「可能屬於排除項目」，徽章與說明維持原字；搜「醫院費用」← 「臺北醫學大學附設醫院費用」），排在一般卡之後、確定排除之前；狀態列另起一行「另有 M 張卡可能排除「X」」；結果全是灰卡且含可能排除時用 `showMaybeExcludedMessage`；`allBasicExcluded` 不含可能排除；確定命中優先；勾精準搜尋時不算
+  - 勾「精準搜尋」時只認**全等**（同一個開關、同一種嚴格度）
+  - 括號內容**照樣參與比對**（2026-10-11 站長決定不忽略）：名單寫「全聯福利中心 (含PX Pay及全支付)」時，搜「全聯福利中心」只會得到「可能排除」提示
+  - 少於 2 字的排除詞忽略
+- **顯示**（2026-10-11 起命中的卡**不拿掉**，改標 `isExcluded`／`excludedItems`、回饋金額歸 0、墊在進行中結果最後；畫面見 ui-display.md 1j 節）：
+  - 比較中的卡**全部**命中、且沒有領券／即將開始可看 → 結果只剩灰色排除卡，狀態列 `showBasicExcludedMessage` 講「沒有活動＋一般消費排除項目＋不會有任何回饋（包含基本回饋）」
+  - **部分**命中 → 其餘照常顯示基本回饋、灰卡墊底，狀態列末尾補「另有 N 張卡把「X」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片）」（`appendBasicExcludedNote`；文案由站長指定）
+  - 有指定通路結果、或只有領券／即將開始 → 狀態列沿用原本訊息（「有 N 筆活動…」的 N 不含灰卡）＋補同一行；1e 節清場規則只收基本回饋，灰卡留著
+  - `allBasicExcluded`＝結果**全是**灰卡（有指定通路結果時不算）
+- **輸入時的匹配提示**（2026-10-14 站長要求，`showBasicExclusionPreview`）：打字當下除了「✓ 匹配到: 商家」，比較中的卡命中排除名單（確定＋可能，合併去重，最多列 5 個＋「等 N 項」）時再補一行「✓ 匹配到一般消費排除項目: …」；沒有商家匹配時單獨顯示這行（同綠色 matched-item）。按「計算」之後狀態列照上面原規則重寫
+- **狀態列「見下方灰色卡片 ↓」**（2026-10-14）：可點，`scrollToFirstExcludedCard()` 捲到第一張灰卡並短暫標框
+- **快捷搜尋（多關鍵詞）**（2026-10-14）：`getBasicExclusionSearchTerms(merchantValue, quickOption)` 用全部關鍵詞各自展開的聯集比名單、不受精準搜尋影響。關鍵詞全是排除項目（例「醫療費用」：公部門醫療服務費用、醫指付…）時沒有活動可匹配，`handleQuickSearch` 仍**保留** `currentQuickSearchOption`（以前會清掉，計算時就只剩顯示名去比名單）
+- **同義詞群組**（2026-10-14，ExclusionGroups 工作表 → `cardsData.exclusionGroups`，`expandExclusionGroupTerms`）：`getBasicExclusionSearchTerms` 最後一步展開。分類型只認 name 全等；同義詞型 name 或任一寫法全等都展開成整組。不進 `findMatchingItem`。下拉選單只列 name、只出現在排除名單的寫法不單獨列；詳情頁搜尋同樣展開
+- **測試**：`node tools/regression/basic-exclusions-test.js`（凍結資料沒有這個欄位，所以 run-regression.js 碰不到這條路徑；這支在頁面裡臨時塞名單驗 16 項）。改這一塊必跑
 
 ## 教訓記錄
 

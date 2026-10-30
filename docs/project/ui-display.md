@@ -20,13 +20,13 @@
 
 **回饋內容區域**（2026-07-09 起逐筆顯示，不再按 rate+cap 合併）：
 - 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（CUBE 用自己的 `generateCubeSpecialContent`，不受影響）
-- `category` 一律以藍色 chip 顯示在回饋率旁，條件直接顯示；`getCategoryDisplayName()` 做 chip 名稱轉換
+- `category` 顯示為回饋卡的標題列（2026-10-05 起，原為回饋率旁的藍色 chip；見 1h 節），`getCategoryDisplayName()` 做名稱轉換
 - 回饋率顯示 `getDisplayRate()` 加總值（stacking = 指定+基本+加碼，與搜尋結果一致）
 - stacking 模型（cashbackModel 含 `+`）回饋率旁有「回饋組成」計算機按鈕（`rateCompositionButtonHtml` + `toggleRateComposition`）
 
 **仍存在的合併只有兩處**：CUBE 專屬產生器（按 rate+category+period 合併，category 不會被吃掉）與搜尋結果的 `mergeResultsByActivity`。
 
-**特殊處理**：玉山 Uni Card 條件可展開/收起（toggleConditions，只有 Uni Card 用）；CUBE 用 specialRate、顯示「無上限」；DBS Eco 有特殊 cap 說明格式。
+**特殊處理**：~~玉山 Uni Card 條件可展開/收起（toggleConditions）~~ 2026-10-05 起改由條件列統一的「...展開」處理（`toggleConditions` 已於 2026-10-06 刪除）；CUBE 用 specialRate、顯示「無上限」；DBS Eco 有特殊 cap 說明格式。
 
 **Header 與連結**：modal 標題就是 `card.name`（無「詳情」後綴）；header 左上有卡片圖；卡全名純文字（無「信用卡官網連結:」標籤）；新戶活動區塊無「官網連結」。
 
@@ -70,6 +70,8 @@
 - ⚠️ **那份隱藏清單是黑名單不是白名單**：index.html 在 body 層級新增任何區塊，都要同步加進 `html.pmc-embed` 的選擇器清單，否則會在 promos 的詳情遮罩背景透出來（詳情 modal 自己的遮罩只有 `rgba(0,0,0,0.5)`，蓋不掉、只會壓暗）。見教訓記錄 2026-09-23。
 - 不動 auth／登出流程：`onAuthStateChanged` 在 embed 模式下照常跑，iframe 與主站同網域，個人化資料（分級、筆記、額度等）自然可用。
 
+- **銀行名稱**（2026-10-17）：詳情頁最上方 `#card-full-name-link` 顯示的是 Cards Data 的 `fullName`，站長已把它改成銀行全名（例：玉山商業銀行），前面加 info-label「銀行名稱:」
+
 ## 1b. 寬螢幕桌機版面（≥1400px，2026-09-08 新增）
 
 站長回報「桌機一切都太大、要縮到 75% 才正常，很浪費顯示空間」。量到的現況：1920px 螢幕上 `.container` 被 `max-width: 1200px` 釘死，**720px（37%）是純背景**；側欄 280px、卡片膠囊平均寬 102px（最寬 143px），一行只排得下 2 顆。
@@ -87,7 +89,7 @@
 - 🚫 **不要把膠囊改成等寬 grid**：2026-09-08 曾用 `repeat(3, minmax(0,1fr))` 去「保證一行 3 顆」，站長當天就否決——等寬格線會把長卡名（「彰銀｜My樂現金回饋卡」）折成兩行，膠囊高低不齊、不再是原本的樣子。要一行多塞幾顆就把側欄加寬，讓 flex 自己決定
 - 搜尋結果卡片跟著受惠：`.results-container`（以及 `.coupon-results-container` / `.parking-benefits-container` / `.cardholder-promos-container`）都是 `repeat(auto-fit, minmax(300px, 1fr))`，主內容 1180px 時自動從一排 2 張變成一排 3 張——不用另外改
 - 這幾條 CSS **必須排在本檔前段無媒體查詢的 `.container` / `.app-layout` 之後**——媒體查詢不加特異性，同特異性靠源碼順序決勝
-- ⚠️ **還沒做的是「字級/密度」那一半**：`styles.css` 有 191 條 px 字級 ＋ 170 條 rem 字級，`html { font-size }` 只會拉動 rem 那一半、把比例扯歪，沒有單一開關可以整體縮小。真要做得逐條盤點桌機專屬的字級與內距，屬於獨立任務（見教訓記錄 2026-09-08 條）
+- 「字級/密度」那一半已於 2026-10-05 補上，見第 1g 節
 
 ## 1c. 側欄卡片膠囊的銀行雙色帶（2026-09-08 建立，2026-09-09 改版）
 
@@ -181,6 +183,78 @@ Grep `titleParts`）：
 - ⚠️ 凍結資料（`tools/regression/fixture.data`，時鐘鎖 2026-09-11）裡**一個 30 天內即將開始的槽都沒有**，
   所以這條規則**回歸測不到**，13 組全綠只證明「沒誤傷既有路徑」。要驗證得用線上資料手動實測
 
+## 1g. 桌機密度調整（≥1025px，2026-10-05）
+
+1b 只放寬了「可用寬度」，站長仍要把瀏覽器縮到 75% 才舒服——剩下的是**字級與留白的密度**。（2026-09-08 曾在當時的 main 上做過一版，但沒合併就過期了：之後 main 改了 454 個 commit，所以在 2026-10-05 的 main 上重新盤點、重做。）
+
+**沒有單一開關，這是前提不是偷懶**：
+
+| 想過的做法 | 為什麼不行 |
+|---|---|
+| `html { font-size: 87.5% }` | `styles.css` 的 px 與 rem 字級各約一半，只拉得動 rem 那一半，比例會歪 |
+| `zoom` / `transform: scale()` | 詳情頁 sticky nav 的捲動靠 `getBoundingClientRect` 與 `scrollTop` 換算（`setupCardDetailNav`），縮放會讓兩個單位對不上 |
+
+**做法：三個 `@media (min-width: 1025px)` 區塊，放在 `styles.css` 最後（`faq.css` 另有對應區塊），逐條覆寫**（Grep「桌機密度調整」）：
+
+| 類別 | 內容 | 比例 |
+|---|---|---|
+| 第 1 類 字級 | `font-size`（styles 100 條、faq 7 條） | ~0.87×（24→21 / 16→14 / 15→13 / 13→11.5 / 12→11，rem 同比例） |
+| 第 2 類 內距 | `padding` / `margin` / `gap`（styles 152 條、faq 9 條） | ~0.85×，只縮 >3px、下限 3px，`auto`/`0`/`em`/`%` 不動，負值同比例 |
+| 第 3 類 控制項高度 | 寫死 px 的 `width`/`height`/`min-height` | ~0.87×，手挑 |
+
+- **清單怎麼來的**：Playwright 在 1920×1080 實跑首頁／搜尋結果「家樂福」／詳情 modal（`?card=cathay-cube`）／推薦活動／faq，掃 `document.styleSheets` 取「桌機會套用且元素真的存在」的規則，再機械套比例。要往下再縮一階就照同流程重產，不要手動維護
+- **選擇器照抄原規則**（含 `.app-layout main xxx` 這種高特異性版本），靠「同特異性、源碼在後」取勝——**這三個區塊必須留在檔案最後**；之後在 styles.css 末尾新增桌機規則時，若跟這裡的選擇器重疊，要寫在密度區塊之前或把值一起改
+- **faq.css 在 styles.css 之後載入**：FAQ 專屬選擇器寫進 styles.css 會被蓋掉，所以 faq.css 有自己的同名區塊
+- **斷點 1025px**：手機與平板完全不受影響。也是輸入框能從 16px 降到 14px 的前提（16px 防 iOS 聚焦縮放，只在手機有意義）
+
+**刻意不納入的兩塊**：
+- **promos.css**：新戶活動頁 2026-09-18 與 PR #481 已人工調過桌機尺寸（站長實測要縮到 80% 才順眼，整組改成比手機再小一階），再疊一層會縮兩次
+- **我的刷卡小抄（`#mappings-page` / `.mp-*`）**：有自己的字級設定與存圖排版。⚠️ 它**沒有自己的根字級**、會繼承縮過的 `.app-layout main`（0.9rem → 0.79rem），所以密度區塊裡另把 `#mappings-page` 釘回 `0.9rem`。驗證方式是比對 `#mappings-page` 內每個元素的計算樣式（一般＋編輯模式 250 個元素），前後只差置中用的 auto 外距 4px（main 左右 padding 30→26 造成）
+
+**刻意不縮**（縮了就是 bug）：
+1. 替絕對定位的圖示／徽章保留的空間——`#merchant-input` 的 `padding-right:44px`（清除鈕）、`.cashback-search-input` 的 `padding-left:30px`（放大鏡）、`.input-clear-wrap > input` 的 30px、`.card-result.best-card .card-header` 的 64px（最優回饋徽章）、`.personal-field-hint-indent` 的 20px
+2. 18px 以下的圖示與核取方塊
+3. `em` / `%` / `auto` 的值——會自己跟著縮過的字級走
+
+**成對規則**：`width`、`height` 都寫死的圓形／方形按鈕一起改，只改一邊會從圓變橢圓。**耦合規則**：頁籤 `.home-view-switch` 的 `margin: 12px -20px -10px` 是用來吃掉 header 的 `padding: 10px 20px`，兩邊同比例縮（-17/-9 對 17/9）才接得回頁首底邊。
+
+**不能照乘比例的特例**：`.matched-item-row` 的 `min-height` 原為 46px 並註明「與計算按鈕同高」；按鈕縮完實測 35px，所以填 35px。**凡是註解寫「與 X 同高／同寬」的值，要去量 X 的新尺寸，不能照乘比例。**
+
+**副作用與處理**：膠囊變小後，快捷搜尋可視列（`overflow:hidden` 硬切）會多擠進「半顆」膠囊。不隱藏不截字（站長否決過為了整齊犧牲內容），改右緣 24px 漸淡（`mask-image`）——它本來就完整收在「更多」下拉裡。
+
+## 1h. 詳情頁回饋卡比照搜尋結果卡片（2026-10-05）
+
+站長要求：詳情頁每一筆回饋（`.cashback-detail-item`）的資料排版要跟搜尋結果卡片一樣，用戶讀過一種就會讀另一種（產品目標「省腦力」）。差別只有少了「回饋金額」。
+
+- **唯一產生器** `renderRateCard(o)`（`js/card-detail.js`；2026-10-05 初版放在 cards-modals.js，10-06 搬回詳情頁模組）＋ `formatRateCardCap(cap)`。詳情頁七條路徑全走它：一般回饋（國內／海外／國內加碼／海外加碼）、分級卡 `renderCashbackRatesIndividually()`、分級卡 specialItems 區塊與無 cashbackRates 的級別卡、非分級卡、即將開始、領券、CUBE 四個區塊。**要加欄位改這支，不要在呼叫端拼 HTML**——之前就是七份各自拼的 HTML，順序與字樣各不相同
+- **對應關係**：卡名 → 活動類別（category；一般回饋用「國內一般消費」「海外加碼」等名稱，沒有類別就不長標題列）；右上徽章 → 「即將開始」；三欄 → 兩欄「回饋率｜回饋消費上限」；`✔ 單筆滿 NT$X`（`.spend-threshold-note`，同一個 class）；「匹配項目／活動期間／條件／登錄連結」→「適用通路／活動期間／條件／登錄連結」，順序相同；「即將結束」接在活動期間後面（同搜尋結果）
+- **CSS 直接沿用搜尋結果的 class**（`.card-details` `.detail-item` `.detail-label` `.detail-value` `.matched-merchant` `.spend-threshold-note`），`.rate-card*` 只補差異：2 欄、標題列、回饋率改用綠色（搜尋結果的綠色主角是回饋金額，這裡沒有那欄，由回饋率接手）、把 `.cashback-condition` 調成 `.matched-merchant` 字樣。規則放在 `.show-more-btn` 之後、檔尾密度區塊之前
+- **連帶改變**：加碼沒填 cap 時以前整行不顯示，現在固定顯示「無上限」（與 `resolveBonusComponent` 計算一致）；上限一律取整（iLEO 海外加碼由 NT$33,333.333 變 NT$33,333，同搜尋結果）；條件一律用 `renderConditionLine()` 可收合列，基本回饋與即將開始區也補呼叫 `initConditionClamps()`；類別、通路、期間改經 `escapeHtml()`（鐵則 3；通路展開走 textContent，不影響顯示）
+- **驗證方式**：33 張卡詳情頁每一筆的文字，前後去掉標籤後逐字比對，只有上述兩項預期差異；時鐘設 2026-08-25 實測「即將開始」「即將結束」徽章位置
+- **與搜尋結果共用的片段**（2026-10-06）：徽章文字 `renderUpcomingBadge()`／`renderEndingSoonBadge()`、門檻句 `renderSpendThresholdNote()`、下方資訊區 `renderActivityInfo()`（行序固定：通路 → 活動期間＋即將結束 → 條件 → 登錄連結），都在 `js/results-display.js` 的「回饋卡共用片段」，`createCardResultElement()` 與 `renderRateCard()` 都呼叫它們；領券型卡片 `createCouponResultElement()` 的下方資訊區也走 `renderActivityInfo()`（2026-10-08 統一行序，以前是自拼的「條件 → 匹配項目 → 活動期間」），行動支付卡片見 1i 節。**兩種卡片的「一致」由這幾支函式保證，不是靠兩份模板手動同步**——改行序、改徽章字樣只改這裡。兩邊刻意不同的只有：條件在詳情頁可收合（`collapsibleConditions`）、詳情頁通路清單可展開
+- **同排對齊（2026-10-06，站長要求）**：兩欄（≥541px）時，同一排只要有一張卡有標題（活動類別），另一張就在同位置留同高的空白，讓「回饋率｜回饋消費上限」對齊；同一排都沒標題就跟以前一樣。做法是 CSS subgrid（Grep「同排對齊」）：每張卡跨兩列「`.rate-card-header`｜`.rate-card-body`」，列高同排共用；`renderRateCard` 因此**一律輸出標題列**（空的單欄時 `display:none`）、其餘內容包在 `.rate-card-body`。⚠️ 卡片底下只能有這兩個子元素——回饋組成彈出表由 `toggleRateComposition` 掛在 body 裡。⚠️ 外層容器 row-gap 必須是 0（外層 gap 會落在卡片兩列之間），排距改由卡片 margin-bottom（`--rate-row-gap`：12px，≥1025px 跟著密度區塊 10px）提供；選擇器多掛 `#card-detail-modal` 是為了壓過檔尾密度區塊的 `gap: 10px`。CUBE 慶生月提示的下方間距因此從 inline 移到 `.cube-birthday-note`。驗證：手機版 143 張截圖逐像素不變；桌機只有混排的排改變
+- **搜尋結果的「活動:」行（2026-10-08，站長從 4 個 mockup 選 C）**：活動類別原本是「匹配項目: X (類別: Y)」的尾巴灰字，太不顯眼；改由 `renderActivityInfo({ activityName })` 輸出成資訊區**第一行**「活動: **Y**」（`.activity-name` 黑色粗體），行序變成 活動 → 通路 → 期間 → 條件 → 登錄連結。只有搜尋結果傳 `activityName`——詳情頁回饋卡的類別已經是卡片標題，不重複。同一張卡出現兩次（如 Richart 數趣刷／Chill刷）時就靠這行分辨。同日：回饋率下的「(分級: Level 1)」以 `{level}` 為界切成兩段 `.level-label-seg`（各自 nowrap），手機回饋率欄只有約 59px，以前會折成「(分級: Level」＋孤零零的「1)」；現在只會在「分級:」後整齊斷開，「固定回饋方案」這類長級別名由 grid 自動把欄位撐寬（320/360px 實測金額與上限欄仍維持一行）
+- **自動化回歸**：`node tools/regression/card-detail-test.js`（見 `docs/ops/regression.md`「卡片詳情頁」節）。改 `renderRateCard`、上述共用片段、或詳情頁任何一條 render 路徑後必跑
+- **不受影響**：停車折抵區塊維持原樣（不是回饋率）。（行動支付的兩個 modal 原本也用 `.cashback-detail-item`，2026-10-08 起改成搜尋結果卡片樣式，見 1i 節）
+
+## 1i. 行動支付卡片（單一支付詳情／比較所有行動支付回饋，2026-10-08）
+
+- 兩個 modal 的每張卡都由 `renderPaymentCardResult(mc, isBest)`（`js/levels-payments.js`）產生＝**搜尋結果卡片的縮小版**：直接沿用 `.card-result`／`.card-header`／`.card-details.rate-card-details`（兩欄：回饋率｜回饋消費上限；沒有消費金額所以沒有回饋金額欄，回饋率接手綠色）／`renderActivityInfo({ activityName })` 的「活動: ○○」行，「最優回饋」角標也是 `.card-result .best-badge` 原樣；上限字樣用詳情頁的 `formatRateCardCap()`。差異只補在 `.payment-card-result`（白底、卡名 1rem；比較 modal 另加卡與卡的 margin，單一支付詳情是 grid 用 gap）。**要改卡片長相改這支，不要在兩個 modal 各自拼**
+- ⚠️ `.card-result` 因此不只存在於搜尋結果區：現有用 `.card-result` 找元素的程式（`closest('.card-result')`）都是從按鈕往上找，不受影響；新增「全頁掃 `.card-result`」的程式要限定在 `#results-container`
+- 比較 modal 前三名支付在名稱前加獎牌 `renderPaymentRankMedal(rank)`（SVG：藍彩帶＋金／銀／銅牌面＋數字，顏色在 `.payment-rank-medal-N`）。名次用**並列名次（標準競賽排名 1、2、2、2、5）**：依序比最優卡回饋率 → 最優卡消費上限（無上限最高）→ 第二張卡回饋率，三者全同才並列；並列第 2 之後就沒有第 3（2026-10-08 實測 Apple／Google／Samsung Pay 並列第 2，當天沒有銅牌）
+
+- 「比較所有行動支付回饋」只比用戶選的行動支付（`userSelectedPayments`），**訪客也一樣**（2026-10-14 修：以前訪客會比全部）
+
+## 1j. 一般消費排除卡（灰色，2026-10-11 站長要求）
+
+規則與比對見 `docs/project/cashback-engine.md` 第 10 節。目的：用戶自己也能判斷——看得到「匹配到哪個排除項目」才排除，又不用讀一堆數字。
+- **搜尋結果**：`createExcludedCardResultElement()`（`js/results-display.js`）。只有卡名＋ⓘ詳情＋右上灰色徽章「一般消費排除」＋「排除項目: **命中的項目**」＋一行小字；**不出**回饋率／回饋金額／上限／活動期間／計算明細／釘選。墊在進行中結果最後（即將開始之前）。**有指定通路結果時也會出現**（沒活動、名單命中的比較卡）；1e 節清場只收基本回饋、不收灰卡。結果標題多一段「一般消費排除項目」（1f 節的 `titleParts`）
+- **可能排除**（搜尋詞只是名單項目的一部分）：同一個灰卡產生器，多 `.maybe-excluded-card`；只有標籤換成「可能屬於排除項目: **完整項目**」，徽章「一般消費排除」與說明維持原字（站長要求）
+- **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
+- **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
+- **詳情頁搜尋框**（外觀：淺藍底區塊＋「搜尋這張卡的所有回饋商家」標籤、提示字「輸入通路名稱（如：全聯、水費）」，跟上方近期異動的灰色清單分開；導覽列「指定通路回饋」靠 `data-anchor="cashback-search-bar"` 捲到搜尋框，`setupCardDetailNav` 的點擊與高亮都認 anchor）（2026-10-14 站長要求改版，`filterCashbackItems()`→`filterDetailCards()`）：搜尋框 `#cashback-search-bar` 放在**所有回饋區上方**（原本在「指定通路回饋」標題下，但它也搜得到下面的區，位置會誤導），一次過濾指定通路／即將開始／一般回饋／領券四區（`DETAIL_SEARCH_SECTIONS`）；國內／海外一般消費卡、排除灰卡跟活動卡一樣照字過濾。沒命中的區整區（含標題）收起（`section._searchHidden`，本來就沒顯示的區不動），四區都沒命中才出「找不到符合的通路或項目」；換卡時 `showCardDetail` 還原。命中卡片裡的通路／排除清單（`strong.merchant-list`）只留命中項目、沒命中的段落縮成「…」（`condenseMerchantList()`；括號裡的頓號不切，見 `splitMerchantList()`），清空搜尋還原。曾試過在搜尋框下方加提示句，站長看過後拿掉
+- 測試：`tools/regression/basic-exclusions-test.js`
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**
@@ -188,6 +262,18 @@ Grep `titleParts`）：
 - 兩個位置：詳情頁 header `.card-detail-image`（56px 高、max-width 96px、contain）；選擇 modal tile `.card-checkbox-image`（70px 高、max-width 140px、margin-left 22px 對齊卡名）
 - 直/橫卡都支援（object-fit: contain 自動 letterbox）
 - **解析度規範**：橫式 800×500（直式 500×800）PNG，壓在 ~150KB 內。舊 320×200 在 Retina 會糊
+
+## 2b. 品牌標誌資產（2026-10-07，《Pick My Card 品牌標誌規範 v1.0》）
+
+- **唯一來源**：`tools/build-logo-assets.js` 的幾何／色彩常數。所有標誌檔都由它生成，**不手改輸出檔**；要改標誌改常數後重跑（需 `npm install playwright opentype.js --no-save`；字標與分享圖要網路抓字型，離線用 `--marks-only`）
+- 幾何（規範單位，原點＝前卡中心）：前卡 52、圓角 7、傾 31°；晶片 13×10、圓角 2.5、距卡邊 7；後方兩卡 45°、邊長 50、圓角 7，中心 (9,12)／(13,17)；間隙 2.6 是真的鏤空（mask），任何底色都透得出來
+- 色彩版本（`assets/brand/pmc-mark*.svg`）：主要（漸層前卡＋`#60A5FA`/`#BFDBFE`，淺底用）、單色藍、墨色單色（後兩卡同色 50%/22%）、反白（**藍底一律用它**）、反白深色底（晶片填 `#3B82F6`）
+- 晶片孔（規範「03 晶片孔」）：13×10、圓角 2.5、距前卡上緣與左緣各 7，**尺寸、位置、色彩皆固定，小尺寸版也不放大**。反白・藍底的晶片是挖空透出背景——背景跟標誌同一個檔（App 圖示、社群頭像）就真的挖空（`cutout: true`）；透明底檔（header、`pmc-mark-reverse.svg`、反白字標組合）看不到背景，填 `#2563EB`
+- **32px 以下用小尺寸版**（`pmc-mark-small*.svg`：去底層、間隙 5；晶片不變）。header 各斷點最小 32px 所以用完整版；landing 22px 的小 logo、分頁 favicon 用小尺寸版
+- 網站引用：header＝`assets/images/logo-header.svg`（緊貼外框，CSS 只設高度）；`logo-header.png` 只留給舊版 Apps Script 匯出的 promos.html；favicon＝根目錄 `favicon.ico`（16/24 小尺寸、32/48 完整）＋`assets/images/favicon.svg`；apple-touch／manifest maskable＝`icon-pickmycard-ios.png`（漸層滿版，標誌落在中央 80% 安全圓內）；manifest any＝`icon-192/512.png`（圓角方塊）
+- 圖片引用的 `?v=` 不歸 deploy-version.sh 管：換圖時手動改日期（og:image、favicon.svg、apple-touch、logo-header 一起改；Apps Script `cards-export.gs` 的 `PMC_OG_IMAGE` 也要同步）
+- SEO：首頁 JSON-LD 有 `WebSite`（站名「信用卡回饋大師」）＋`Organization.logo`＝`assets/images/icon-pickmycard.png`（512 透明底主要版本），faq 的 publisher 同一張——**這個檔名／網址別改**，Google 是照網址抓品牌標誌；所有頁的 og:image 帶 `og:image:width/height/alt`；header／landing 的標誌 `<img>` 帶 width/height 屬性（只為寬高比，防版面跳動，實際大小仍由 CSS 高度決定）
+- 禁止：改傾角、拿掉間隙、換色、拉伸、加陰影、放在低對比底上（規範第 08 節）
 
 ## 3. 選卡 modals（我的信用卡／管理加入比較的卡片）
 
@@ -197,6 +283,11 @@ Grep `titleParts`）：
 - Grid：`repeat(auto-fit, minmax(200px, 1fr))`
 - **Body scroll lock 是 refcount**（`bodyScrollLockDepth`）：疊層 modal 關掉上層不會誤放開捲動鎖。改 modal 開關邏輯時必須維持 disableBodyScroll/enableBodyScroll 成對呼叫
 
+- **手機版卡片勾選列**（2026-10-14）：≤768px 時「詳情」鈕換到卡名下一行（`.card-checkbox-row` flex-wrap，鈕縮排 22px 對齊卡名）——擠在旁邊會把卡名壓成一字一行
+- **「全選／全不選」鈕**（`.toggle-all-btn`）任何寬度都一行（nowrap＋不縮），由搜尋框縮（`.modal-controls` 子層 min-width:0）
+- **詳情頁卡片標籤**（`.card-tags-container`）2026-10-14 起先用 CSS 藏起來（`#card-detail-modal .card-tags-container`），`renderCardTags` 程式保留
+- **所有 modal 每次打開都從最上方**（2026-10-14，`setupModalScrollReset`，`js/core-utils.js`）：MutationObserver 看 `.modal` 由關變開的那一刻，把 modal 與裡面捲過的區塊歸零；新 modal 只要掛 `.modal` class 就自動適用。開啟後才捲到指定區塊的功能（`openCardDetailAtChangelog` 等）都在下一幀才捲，不受影響。測試在 `merchant-suggest-test.js`
+
 ## 4. 推薦活動（Spotlight，UI 名稱 2026-09-03 由「精選活動」改為「推薦活動」）
 
 > ⚠️ UI 字串是「推薦活動」，**程式內部命名一律沿用 `spotlight`**（id/class/函數/資料 key），改名時刻意不動——牽動十幾個檔案卻沒有好處。
@@ -204,6 +295,8 @@ Grep `titleParts`）：
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
 
 **資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
+
+**order 防呆（2026-10-11，只警告不擋）**：前端依 `order` 排序（`js/home-ui.js renderSpotlights`），重複時同號依試算表列順序、0／空白被當 999 排最後。匯出前（`validateSpotlightOrder_`，`cards-export.gs`）與 `tools/check-spotlights.js`（preflight 4c）都只對 active 的列提醒，規則兩邊一致；前端不改排序。
 
 **Highlights 只存「編輯決定」（2026-09-30 起）**：`cap`／`deadline`／`category` 三欄已從工作表刪除——它們與卡片真實資料重複，實測 20 則有 2 則上限、3 則期限對不上。現在：
 - **`rate` 是選擇器**：`resolveSpotlightPick(item, card)` 把「活動 × 級別」逐一試算，取回饋率等於 rate 的組合（多個相等取上限最大）。它同時表達站長選的級別（分級卡有時推中間、有時推最高）與活動（同通路多個活動時，例如夢時代 3%/7%/11%/7%）。**不能改成 level 欄**——level 表達不了「選哪個活動」。
@@ -232,7 +325,7 @@ Grep `titleParts`）：
 - **純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播；依 order 升冪，**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12`；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；單頁時自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
 **兩個動作**：
-- **「帶入查詢」**（`compareSpotlightMerchant(merchant, { fillOnly: true })`）：**只把商家帶進搜尋框、補上預設金額、捲回搜尋框，不自動計算**（2026-09-03 改；原本叫「比較這個通路 →」且點了就算完並捲到結果，站長依 GA4 使用情況判斷「直接跳到結果很不直觀，會迷失」）。merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。
+- **「帶入查詢」**（`compareSpotlightMerchant(merchant, { fillOnly: true })`）：**只把商家帶進搜尋框、補上預設金額、捲回搜尋框，不自動計算**（2026-09-03 改；原本叫「比較這個通路 →」且點了就算完並捲到結果，站長依 GA4 使用情況判斷「直接跳到結果很不直觀，會迷失」）。merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞；協助輸入型如 LinePay 在裡面會轉成打字，見第 7 節）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。
   - 不 focus 輸入框——手機上會彈出鍵盤蓋住「計算回饋」；改成讓計算鈕閃兩下藍光暈（`.calc-nudge`，尊重 `prefers-reduced-motion`）指出下一步。
   - ⚠️ **`fillOnly` 以外的呼叫端維持自動計算**：商家落地頁的 `?merchant=` 深連結（`{ noScroll: true }`）走的是同一支函數，那個情境使用者從外部連結進來、本來就預期看到結果。要改自動計算行為前先確認是哪一條路徑。
   - 🔴 **自動計算的範圍屬產品決策，要復原或擴大一律先問用戶**（沿用 2026-07-12 起的產品決策：計算由用戶按「計算」觸發，快捷搜尋按鈕與 `handleQuickSearch` 只填入關鍵詞不自動計算）。2026-09-03 把推薦活動這條路徑從「自動計算」改成「只帶入」也是站長決定的，不是實作方自行判斷——這條規則沒有因為那次改動而失效。
@@ -264,19 +357,26 @@ Grep `titleParts`）：
 - **狀態列與浮層鐵則**（2026-07-13）：匹配狀態列（`.matched-item-row`，含 `#matched-item` 與 `#exact-search-empty-hint`）一次只顯示一行——✘/部分匹配訊息出現時 JS 會收起橙色提示；桌機 search hint（`#search-hints-container`）與「?」說明（`.promo-help-text`）都是**浮層**（absolute，不參與版面），出現時按鈕/勾選不得跑位；「?」說明一次只開一個、點外部收合（`closeAllInlineHelp`）
 - 版面順序（桌機 grid `2fr 1fr`，2026-07-12 定稿 2:1 版）：左欄合併框跨 3 列；右欄由上而下「金額(1,2)→toggles(2,2 橫排兩框)→計算按鈕(3,2 整欄寬、align-self:end)」——按鈕在表單動線收尾。手機（`1fr auto`）：合併框整列→toggles 整列（左右各半）→金額＋按鈕同列。改排版時注意 toggles 與 button-group 的 grid 定位規則（styles.css 搜 "show-promos-toggle"）；`#search-hints-container:empty` margin 歸零是桌機對位的前提
 - 語義：勾選時 `handleMerchantInput` 以 `findMatchingItem(input, { exactOnly: true })` 過濾，只留 `isExactMatch`（**fuzzy 同義詞展開後全等也算**，如搜「國外」時 item「海外」視為一致）
-- **快捷搜尋不受影響**：`handleQuickSearch` 不傳 exactOnly；快捷結果存在（`currentQuickSearchOption` 非 null）時切換核取方塊不重跑匹配
+- **快捷搜尋分兩型**（2026-10-08 站長定義，判斷集中在 `isTypingHelperQuickOption()`，`js/data-loader.js`）：
+  - **一次比多家**（`merchants` 多個關鍵詞，如所有計程車）：不受精準搜尋影響（`handleQuickSearch` 不傳 exactOnly；`currentQuickSearchOption` 非 null 時切換核取方塊不重跑匹配），也不跳 Search Hints——按下時會收掉前一個詞留下的提示（`clearSearchHints()`，2026-10-08；以前會留著誤導）。理由：關鍵詞清單靠模糊比對把同一家的各種寫法收進來（「台灣大車隊」→「55688台灣大車隊」），套精準會砍掉變體；輸入框顯示的是類別名，拿它查提示或精準比對沒有意義
+  - **協助輸入**（只有一個關鍵詞，如 LinePay、街口支付、ApplePay、悠遊卡、日本網購）：按下＝把 displayName 打進搜尋框再走 `handleMerchantInput()`，精準搜尋、Search Hints 全照打字規則。（導入時驗過這 5 個：打 displayName 與查關鍵詞的匹配完全相同，所以不精準時結果不變；勾精準時「悠遊卡」會變成零結果，因為資料裡的 item 是「悠遊卡自動加值」——跟自己打字一樣）。用戶自訂快捷同樣適用
+  - 勾／取消精準搜尋只更新匹配狀態列，**不自動重算**結果卡片，要用戶再按「計算」（2026-10-08 站長確認，自動重算的做法被否決；理由：精準搜尋跟商家、金額、快捷搜尋同屬送出前的查詢條件，同一組條件一律按「計算」才生效）
+- **條件已變更提醒**（2026-10-08，`js/home-ui.js`「計算鈕提醒」）：算過一次之後，商家、金額、精準搜尋（快捷搜尋時不算）、新戶活動、快捷搜尋任一改了，「計算回饋」鈕閃一下（`.calc-nudge`，同推薦活動「帶入查詢」那個動畫）；改回跟上次計算一樣就停。條件快照在 `calculateCashback()` 開頭由 `rememberCalcConditions()` 記下。**新增會影響結果的查詢條件時，要加進 `currentCalcConditions()`，並在它的變更處呼叫 `nudgeIfCalcConditionsChanged()`**
+- **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有文案就顯示，建議詞選填（沒有建議詞時只顯示文案，`.search-hint-message-only`，2026-10-08）。文案必填由 Apps Script 保證（見 data-pipeline.md 第 2 節 Search Hints），前端不做預設句。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
+
+- **輸入建議下拉選單**（2026-10-14 站長要求，`setupMerchantSuggest()`／`getMerchantSuggestions()`，`js/search-match.js`）：打第 1 個字就列出資料裡**真的存在**的名稱——快捷選項名稱、指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目。目的：用戶不知道銀行怎麼命名（打「罰」→ 交通罰單、違規罰鍰…）。規則：子字串命中、開頭相符排前、同級短的在前、最多 8 筆；**不標類別**（站長決定）；命中字加粗。點選＝替用戶打好（走 `handleMerchantInput`），快捷選項走 `handleQuickSearch`，**不自動計算**（同快捷搜尋產品決策）。鍵盤 ↑↓／Enter／Esc；沒選建議直接 Enter 照常計算。**第一行固定是「搜尋「用戶打的字」」**（2026-10-17 站長要求，`.merchant-suggest-query`）：讓用戶知道直接搜自己打的也可以，點它／↓＋Enter＝照打的字計算；沒有任何建議時整個選單不出。中文輸入法選字中不更新。名稱表在 cardsData 或 quickSearchOptions 換了才重建。測試：`node tools/regression/merchant-suggest-test.js`
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）
 
 **程式與入口**：`js/mappings-page.js`（第 13 支模組，Grep 檔頭區塊目錄）。`#mappings-page` 放在 `<main>` 裡、頁籤正下方（2026-09-28 站長要求不要蓋住整頁）；改名／標題／回饋率面板與存圖對話框才是 fixed 覆蓋層（z-index 1060，卡片詳情 1100 疊在上面）；網址 `/mappings`（`_redirects` 改寫回首頁、`_headers` 設 `X-Robots-Tag: noindex`、不進 sitemap），`history.pushState`，返回手勢／上一頁會關頁。入口：**文件夾分頁** `#home-view-switch`（「查詢回饋｜我的刷卡小抄」；2026-09-29 全站由「我的配卡組合」改名「我的刷卡小抄」，搜尋結果按鈕「加到我的小抄」，網址 `/mappings` 與程式名稱不變，2026-09-28 第二版：放在 `<header>` 裡最底下、佔滿整列；未選中＝半透明白底白字，選中＝白底藍字、上圓角＋`::before/::after` 反向圓角，和下方白色內容接成一片；有分頁時 header 拿掉陰影；不顯示數量；**登入與否都顯示**，取代舊浮動按鈕 `#my-mappings-btn`）＋頭像選單。**畫面分區**：index.html 每個畫面的容器標 `data-view`，頁籤用 `setAppView(name)` 整組切換（不用 CSS 逐塊藏；同時設 `body.dataset.appView`）。查詢回饋＝`#view-search`（main 欄內的搜尋與結果）＋`#view-search-extras`（推薦活動、推薦比較、跳推薦活動浮標；放在 app-layout 外面是為了桌機跨整個版面寬）＋**左側「加入比較的卡片」欄 `aside.sidebar` 與手機 ☰ `#sidebar-toggle-btn`**（它們只服務查詢；側欄藏起來時 `.app-layout:has(> .sidebar[hidden])` 改單欄）；我的配卡組合＝`#mappings-page`。新增屬於某畫面的區塊，放進對應容器。
 **版面（2026-09-29 第三版）**：頁面說明＝三步驟說明卡 `.mp-intro .mp-steps`。桌機＝左欄 250px 常駐（`.mp-actions`：商家數、「編輯」、「存成圖片」；按編輯後提示與設定也出現在左欄）＋右欄 460px（搜尋、小抄），說明卡與兩欄同寬 738px 一起置中；按編輯時小抄不跳位置；小抄下方不放存成圖片。手機＝`.mp-side/.mp-main` 用 `display: contents` 攤平，用 CSS `order` 排成：按鈕列 → 搜尋 → 提示 → 設定（灰底卡片）→ 小抄 → 商家數（靠右，`#mp-count-m`）。商家數有兩個元素：`#mp-count` 在按鈕卡片裡只給桌機左欄顯示、`#mp-count-m` 在小抄下方只給手機顯示，JS 同時寫兩個（2026-09-30）。
 
-**2026-09-30 調整**（站長要求）：①小抄上方兩顆鈕 `.mp-actions`＝「存成圖片」（`.mp-act-save`，下方小字「進入存圖編輯器」）＋「編輯本頁」（下方小字「只編輯本頁顯示的小抄」），小字放在按鈕下方（`.mp-act-note`）；小抄下方的存成圖片鈕（原 `#mp-savebar`）已移除。②**商家名稱與標題只有編輯模式才能點**：非編輯時是 `<span>`、沒有鉛筆；編輯中才是 `<button>`＋鉛筆。③搜尋框 `.mp-search` 左側放大鏡＝與 `.cashback-search-input` 同一個 SVG（用 `background-image`；同一條規則的底色**必須寫 `background-color`**，寫 `background:` 簡寫會把圖示蓋掉）。④說明卡的三步驟 `#mp-steps` 預設收合，由 `#mp-intro-toggle`「使用方法」展開；「新功能 Beta 最後測試中」那行在 ol 外面，不跟著收合。
-**上線告知（2026-09-30，舊「我的配卡組合」下架）**：①頁面最上方 `#mp-moved-note` 一行備註（所有人都看得到；收據小字風格：上下虛線、置中等寬字）；②一次性提示 `mpShowMovedHint()`：登入後 1.2 秒在頁籤下方冒出黑色氣泡「原『我的配卡組合』搬到這裡了」（6 秒、捲動、點畫面任何地方或 × 就關）；每個瀏覽器 2 次（`localStorage.mpMovedHintCount`，不含 uid、登出不清）。曾做過「按鈕飛進頁籤」動畫，站長 2026-09-30 決定拿掉，只留氣泡。③「新功能 Beta」標籤：頁籤（≤480px 是左上角角標，右上角留給釘選的 +1 徽章）、說明卡底部「最後測試中，遇到問題請回報給我們」（`openFeedbackModal()`，與頭像選單共用；訪客先開登入，登入後自動打開表單）。頭像選單不加 Beta。提示氣泡會等其他 modal（問卷邀請等）關掉才出現，氣泡不擋點擊（pointer-events: none，只有 × 可按）。Beta 結束時刪 `.mp-beta`／`.mp-beta-note`；改版告知可在幾週後移除。回歸測試用 `?hinttest` 以外的網址都預設計數＝2，避免氣泡擋點擊。
+**2026-09-30 調整**（站長要求）：①小抄上方兩顆鈕 `.mp-actions`＝「存成圖片」（`.mp-act-save`，下方小字「進入存圖編輯器」）＋「編輯本頁」（下方小字「只編輯本頁顯示的小抄」），小字放在按鈕下方（`.mp-act-note`）；小抄下方的存成圖片鈕（原 `#mp-savebar`）已移除。②**商家名稱與標題只有編輯模式才能點**：非編輯時是 `<span>`、沒有鉛筆；編輯中才是 `<button>`＋鉛筆。③搜尋框 `.mp-search` 左側放大鏡＝與 `.cashback-search-input` 同一個 SVG（用 `background-image`；同一條規則的底色**必須寫 `background-color`**，寫 `background:` 簡寫會把圖示蓋掉）。④說明卡的三步驟 `#mp-steps` 預設收合，由 `#mp-intro-toggle`「使用方法」展開。
+**上線告知（2026-09-30，舊「我的配卡組合」下架）**：①頁面最上方 `#mp-moved-note` 一行備註（所有人都看得到；收據小字風格：上下虛線、置中等寬字）；②一次性提示 `mpShowMovedHint()`：登入後 1.2 秒在頁籤下方冒出黑色氣泡「原『我的配卡組合』搬到這裡了」（6 秒、捲動、點畫面任何地方或 × 就關）；每個瀏覽器 2 次（`localStorage.mpMovedHintCount`，不含 uid、登出不清）。曾做過「按鈕飛進頁籤」動畫，站長 2026-09-30 決定拿掉，只留氣泡。③「新功能 Beta」標籤（頁籤角標＋說明卡底部「最後測試中，遇到問題請回報給我們」）**已於 2026-10-14 Beta 結束移除**（`.mp-beta`／`.mp-beta-note`／`#mp-feedback-btn` 與其 CSS、`MP.pendingFeedback` 全刪；回報入口只剩頭像選單）。提示氣泡會等其他 modal 關掉才出現，氣泡不擋點擊（pointer-events: none，只有 × 可按）。改版告知可在幾週後移除。回歸測試用 `?hinttest` 以外的網址都預設計數＝2，避免氣泡擋點擊。
 **編輯模式**（`MP.editing`，2026-09-28 站長要求）：預設只顯示說明 → 搜尋框（含 ✕）＋右側「編輯」鈕（同一列 `.mp-searchrow`）→ 乾淨的小抄 → 存成圖片。「顯示等級／方案」勾選常駐在設定裡（`mpLabelsChk()`），雙欄時變灰不可勾（不改存的值）。按「編輯」（變「完成」）才出現：提示列（點商家名稱改名・點卡圖看詳情・自訂時拖曳）、工具列（排列／字級／版面／顯示等級；「更新活動」2026-09-30 起移到小抄右上角常駐）、⋮⋮ 拖曳把手、「刪除全部失效活動」。桌機：平常小抄單欄 460px 置中；編輯中左邊多一欄 300px 設定（`.mp-layout.editing`）。點卡圖在非編輯時也能用；點商家名稱改名、點標題改標題只在編輯中（2026-09-30 起）。
-**未登入**：「登入解鎖此功能」框在版面最上方（`.mp-layout` 之前），所以按「編輯」後的設定出現在它下方。一樣有「編輯」鈕與全部設定，範例小抄（`mpBuildDemo()` 用真計算＋訪客預設級別產生**記憶體內**的配對，`mpList()`/`mpSetList()`/`mpPersist()` 讓範例與真資料走同一套程式）可以排列、改名、改標題、存圖，只是不寫雲端、不存本機；鎖起來的只有搜尋結果上的「加到我的配卡」。上方有「登入解鎖此功能／以下顯示範例清單」提示、小抄標「範例」。
-**搜尋結果的按鈕**（`.pin-btn`，程式名稱沿用 pin）：文字「加到我的配卡」／已加入「已加到我的配卡」（CSS `::after`），琥珀配色不變，圖示＝分頁上同一個收據圖示；提示「已加到我的配卡組合 ✓」／「已從我的配卡組合移除」；未登入點擊 alert 請登入。登入／登出完成後 `refreshMappingsEntry()` 更新狀態、網址是 `/mappings` 時開頁。
+**未登入**（2026-10-14 改版，站長要求）：小抄**照常可用**——搜尋結果「加到我的小抄」直接加入、可排列／改名／改標題／存圖，清單存本機訪客 key `spendingMappings`（`saveSpendingMappings()` 未登入分支），自訂名稱／標題存 `merchantAliases_guest`／`mappingsTitle_guest`（`mpAliasesKey()`/`mpTitleKey()`）。唯一差別：版面上方一句提示 `#mp-guest-note`（「登入後，小抄內容會儲存到帳號，下次回來就可以一鍵更新小抄裡的活動！」，「登入」可點開登入視窗），且不顯示「更新活動」。登入時由 `absorbGuestPersonalData()` **合併**進帳號（見 storage-and-security.md 第 4 節）。舊的範例清單（`mpBuildDemo`）、「登入解鎖此功能」框、「範例」標籤已整套移除。
+**搜尋結果的按鈕**（`.pin-btn`，程式名稱沿用 pin）：文字「加到我的配卡」／已加入「已加到我的配卡」（CSS `::after`），琥珀配色不變，圖示＝分頁上同一個收據圖示；提示「已加到我的配卡組合 ✓」／「已從我的配卡組合移除」；未登入也能直接加入（存本機）。登入／登出完成後 `refreshMappingsEntry()` 更新狀態、網址是 `/mappings` 時開頁。
 
 **視圖**：收據風格（上下鋸齒撕邊、`PICK MY CARD ▪ 年-月` 抬頭、`=====`、欄位標題、底部 Code 128 條碼＝`PICKMYCARD.APP`，已用 python-barcode 比對模組序列）。**以商家為單位**（同一商家不分大小寫合併；同商家多張卡時回饋率高的在前、其餘半透明），順序：商家 → 卡圖 → 回饋率 → 期限。三種排列：自訂（`order` 欄位，只有這模式有 ⋮⋮ 拖曳）／A–Z（瀏覽器內建 pinyin collation＋破音字表 `MP_POLY`）／分類（`MP_CAT_RULES` 關鍵字對原名比對；行動支付橘、其他分類藍）。預設單欄＋分類＋小字；偏好存 `mappingsPrefs_<uid>`（本機）。
 
@@ -286,8 +386,9 @@ Grep `titleParts`）：
 - **卡片名稱**（勾「顯示卡片名稱」，`prefs.cardNames`，預設關；2026-09-30 站長從三案選 A）：卡名＝Cards Data 的 `name`（`mpCardName()`），放在第二行最前面：`[卡名][等級／方案][封頂金額]` 靠右，和封頂金額共用 `.mp-row2`（兩者任一勾選就啟用第二行）；雙欄時卡名、封頂金額各自一行（欄太窄）。存圖（`mpLayoutReceipt`）同順序。
 - **活動封頂金額**（勾「顯示活動封頂金額」，`prefs.caps`，預設關，單欄雙欄都可）：值＝查詢結果「回饋消費上限」同一個 `calculateCardCashback()` 的 `cap`（`mpCapText()`：消費上限 NT$x／無消費上限；Richart 加「+」同查詢結果）。單欄時放在第二行，等級／方案標籤一起移到這行；第二行橫跨整列（`.mp-f-pick.has-row2` 用 `display: contents` 讓子元素進 `.mp-f-row` 格線），不擠壓商家名稱。這組 CSS 要放在大字規則之後，否則大字的 `order` 會打亂順序（同特異性，後者勝）。存圖時名稱換兩行且第二行夠寬，就把第二行排到名稱下方。
 - **失效 `*`**：期限已過＝已結束。「已下架」只在**卡片資料裡完全找不到這個商家**時才判定（`mpProbe`：`JSON.stringify(card)` 找不到 `"商家"`，且活動不是還沒開始）——因為它會被「刪除全部失效活動」刪掉，寧可漏判不可誤判。重算時除了 1000 元，也用該卡各活動的 `minSpend` 各算一次（「單筆滿 N」活動在 1000 元時不會出現）。失效的留在原位、回饋率劃線、卡圖變灰、收據底部註腳；存圖時不能勾。
+- **存的名字＝釘選當下資料裡的名字**（不是用戶打的字、也不是自訂名稱）。重查與加入鈕一律經 `resolveMappingMerchant()`／`resolveMappingItemName()`（spending-mappings.js，2026-10-18）：先把整串當一個名字查（名字本身可能含「、」），這張卡還有就原樣用；沒有才用統一詞同一套規則（忽略大小寫／空白／全半形／臺台，加上 `termAliases`）在**這張卡**裡找改名後的寫法。只用來查，不改寫存的資料（自訂名稱的鍵是原名小寫，改寫會讓它對不上）。不走搜尋的「找」：小抄已綁定卡與名字，模糊比對反而會帶到別的活動
 - **寫入保護**：登入但 `mappingsLoadState !== 'ok'`（雲端這次沒讀到，手上可能是舊快取）時，更新活動／拖曳／刪除／更新回饋率一律擋下並提示（`mpCanWrite()`），避免舊快取蓋掉別台裝置新增的配對。單筆刪除要按兩次（4 秒內）。
-- **更新活動**（原名「更新期限」，2026-09-30 改名並從編輯模式的工具列移到小抄右上角 `.mp-rc-head .mp-upd`，不用按編輯就看得到；未登入的範例小抄不顯示）：重算後回饋率相同 → 改成最新活動期限（條件改了也算）；回饋率不同 → 不改、列出提醒；存回 `spendingMappings`。按過後變「已是最新」（資料變動時 `MP.updated` 會重設）。
+- **更新活動**（原名「更新期限」，2026-09-30 改名並從編輯模式的工具列移到小抄右上角 `.mp-rc-head .mp-upd`，不用按編輯就看得到；未登入不顯示，由 `#mp-guest-note` 提示登入後可用）：重算後回饋率相同 → 改成最新活動期限（條件改了也算）；回饋率不同 → 不改、列出提醒；存回 `spendingMappings`。按過後變「已是最新」（資料變動時 `MP.updated` 會重設）。
 - **回饋已變**：開頁重算時就標出（按鈕）；點了顯示原本回饋率與目前資料裡的候選（同卡同商家、依回饋率去重），用戶選一個才更新回饋率＋期限。
 - **失效清理**：點商家名稱的面板裡每筆都有「刪除這個（失效）活動」按鈕；收據下方「刪除全部失效活動（N）」兩段式確認（不用 `confirm()`）。
 - **小抄標題**：點「刷卡小抄」可改，上限 10 單位（中文字 1、英數 0.6，大字也不換行），存 `users/<uid>.mappingsTitle`＋本機 `mappingsTitle_<uid>`，存圖同步使用。
@@ -312,35 +413,15 @@ Grep `titleParts`）：
   改 `cards-export.gs` 後要把整份貼回 Google Sheets，否則下次匯出又會長回來
 - 驗證方式（同一份資料跑新舊兩版生成器比對輸出差異）記在下方教訓記錄
 
-## 10. 問卷邀請 Modal（#survey-invite-modal，2026-09-03）
+## 10. 問卷邀請 Modal（已下架，2026-10-12 整套移除；原設計全文見 `docs/archive/ui-display.md-2026-10-12.bak`）
 
-> 標題列：公告 modal 與這個 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，
-> 2026-09-03 站長指定）。特異性掛在 `.announcement-modal-content` / `.survey-invite-content` 上，沒動全站 `.modal-header`。
+- 期間 2026/9/1–10/11（台灣時間）。登入後／進站時一次性彈出，「沒問題！」直接開問卷那則公告的 modal
+- 受眾＝登入用戶＋回訪訪客（沒帶 `?start` 且 localStorage 有本站痕跡）；首訪不問。原本只問登入用戶，兩天只收 1 份，9/6 擴大
+- 原訂 9 月整月；9/30 刷卡小抄上線當天單日 25 份回覆，10/1 站長決定延長到 10/11 底
+- 結果：共 43 份回覆、7 位願意 coffee chat。用戶瀏覽器殘留的 `pmc_survey_invite_seen_v1` 無害，刻意不清
 
-「一次性」邀請填問卷，兩顆按鈕：**沒問題！**（`#survey-invite-accept`）→ 關掉自己並直接開問卷那則公告的
-modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.js` 的 `maybeShowSurveyInvite` / `survey invite`。
-
-- **受眾＝登入用戶 ＋ 回訪訪客**（`isSurveyInviteAudience()`，2026-09-06 由「只問登入用戶」擴大——原本兩天只收到
-  1 份回覆）。訪客的「回訪」判準：**這次沒帶 `?start`** ＋ **localStorage 有本站痕跡**。首訪動線一定是
-  「進 index → 被首屏路由導去 landing → 帶 `?start` 回來」（見 `index.html` 開頭的 pre-paint script），所以帶
-  `start` 的那一輪就是首訪，不問——沒用過工具的人沒有體驗可以分享
-- **觸發點在 `onAuthStateChanged` 的登入分支與訪客分支尾端**（`js/auth-user-data.js`，所有資料載完之後），另外
-  **Firebase 逾時 fallback 也補呼叫一次**（廣告阻擋器擋掉 Firebase 時 `onAuthStateChanged` 永遠不觸發，
-  這些人否則永遠問不到）。三處都靠 `surveyInviteHandledThisSession` 收斂成一次。延遲
-  `SURVEY_INVITE_DELAY_MS`（1200ms）再彈，避免蓋在剛渲染完的畫面上
-- **有期限：2026/9/1–10/11**（原訂 9 月整月；9/30 刷卡小抄上線當天單日 25 份回覆、前面每天 1–2 份，2026-10-01 站長決定延長到 10/11 底，`END`＝`2026-10-12T00:00:00+08:00`；10/11 後整套下架清理）（`isSurveyInvitePeriod()`，`SURVEY_INVITE_START`／`END` 兩個常數）。時區**寫死
-  `+08:00`（台灣時間）**——省略時區後綴會退化成「裝置本地時間」，人在國外或時區設錯的用戶起訖點會整個偏掉。
-  過期自動變 no-op，不用趕在月底手動下架
-- **只在主站首頁彈**：用 `getAnalyticsSurface() !== 'site'` 一次擋掉 `/promos` 的 iframe（promos_embed）與
-  `/merchant/xxx` 落地頁、`?merchant=` 深連結（merchant_page）——那些頁面的用戶帶著任務進來，不擋路
-- **問卷連結不在程式裡**：按鈕只負責開公告 modal，問卷網址／iframe 都寫在該則公告的 `fullText`（Sheets 公告工作表）
-- **公告用關鍵字找、不寫死 index 0**：`findSurveyAnnouncementIndex()` 比對 `text` 含「問卷」。找不到就整個不彈——
-  Sheets 把那則公告下架後邀請自動失效，不用回頭改程式
-- **只記 localStorage `pmc_survey_invite_seen_v1`**（值 `shown`/`accepted`/`dismissed`），不寫 Firestore：短期活動不值得
-  在 users 文件加永久欄位，換裝置多問一次可接受。**顯示的當下就記帳**，用戶關分頁沒回答也不再問第二次
-- 開啟時 `disableBodyScroll()`、關閉時 `enableBodyScroll()` 成對呼叫（背景頁不會跟著捲）；公告 modal 本來就不上鎖，
-  維持原樣
-- 埋點：GA4 `survey_invite` 事件帶 `outcome`（accepted/dismissed）、`user_state`（logged_in/guest）與 `surface`
+> 仍有效：公告 modal 的 `.modal-header` 刻意比全站矮（padding 10px、h3 1.05rem、公告標題不放 emoji，2026-09-03 站長指定），
+> 特異性掛在 `.announcement-modal-content` 上，沒動全站 `.modal-header`。
 
 ## 教訓記錄
 
@@ -370,3 +451,8 @@ modal；**取消**（`#survey-invite-cancel`）→ 只關閉。Grep `js/home-ui.
 - [2026-09-29] 上線前 code review 抓到「已下架」誤判會導致資料被刪：原本重算回傳空就判已下架，但 `calculateCardCashback` 只回傳「現在、這個金額、這位用戶條件下」有效的活動——單筆滿額（1000 元試算不到）、還沒開始、生日月等都會是空的 → 被列進「刪除全部失效活動」。改成只有卡片資料裡完全沒有這個商家才算下架。凡是「判定結果會觸發刪除」的邏輯，都要用最保守的條件
 - [2026-09-30] 推薦活動玉山 Uni 卡支付寶：卡片寫 4.5%，ⓘ 活動詳情卻顯示 3%（CUBE 全球迪士尼飯店同樣 3.3%→2%）→ `buildSpotlightModalBody()` 一律拿 `Object.keys(levelSettings)[0]` 解析 placeholder，而推薦活動是編輯挑的特定級別（UP選／Level 3），第一個級別剛好是最低的 → 分級卡的級別不能預設取第一個，要用手上已知的目標值（sheet rate）反推級別；新增任何「代替用戶選級別來顯示」的地方都照此辦理，且只顯示、絕不存回（鐵則 1）
 - [2026-10-04] 站長回報進首頁時「頁籤以下一片空白」→ boot loader `#pmc-boot-loader` 是 `position:fixed` 置中的小灰 spinner，疊在「推薦比較」連結上看起來像文字重疊，工具區位置則是空的 → loader 改成頁籤正下方的一般區塊（`min-height:45vh`，文字「正在載入卡片資料…」），`showToolSections()`、商家落地頁深連結、資料載入失敗三處都會收掉 `pmc-returning-user`。⚠️ 它現在會佔版面：任何「工具區先顯示、auth 還沒判定」的新路徑都要自己移除這個 class，不然 loader 會把搜尋框往下推
+- [2026-10-05] 密度調整把 `.app-layout main` 的字級從 0.9rem 縮成 0.79rem 後，刷卡小抄裡沒寫死字級的元素全跟著變小（它沒有根字級，一路繼承 main）→ 「排除某區塊」不能只靠「選擇器不含它」，繼承下來的值一樣會流進去 → 排除一個區塊時，在它的根節點把被改到的可繼承屬性（font-size、line-height、color…）釘回原值，並用計算樣式逐元素比對前後，不要只看截圖
+- [2026-10-07] favicon 晶片孔看起來太大 → 小尺寸版照「32px 以下放大晶片」做成 20×16，但新版規範「03 晶片孔」規定晶片尺寸固定 → 晶片一律 13×10、距邊 7，小尺寸版只去底層＋加寬間隙
+- [2026-10-13] 站長回報 Safari 開首頁「loading 動畫很快消失，停在空白很久」→ `ensureGuestUIBound()` 在 Firebase SDK 一就緒（正常路徑也會跑到）就收掉 `pmc-returning-user`，但 `onAuthStateChanged` 還要等 Firebase 線上驗證帳號好幾秒才 `showToolSections()`；auth 永不回應時更是永遠空白 → 拿掉那行，改由 `showToolSections()`／`onAuthStateChanged` 收 loader，並加「auth 判定逾時」fallback（`initializeAuthListeners()`，`FIREBASE_FALLBACK_MS` 後以訪客模式顯示）→ 收 loader 的時機必須和「工具區出現」綁在一起，不能綁在「某個中間步驟完成」。站長裁定：不依 `pmc_known_logged_in` 先當登入用戶顯示工具區
+- [2026-10-18] 統一詞一輪（10-14～17）把卡片活動裡 34 個名字改寫，其中 18 個（只差空白／大小寫／臺台，統一詞表照規定不列）存在刷卡小抄的舊寫法查不到 → 被判「已下架」、會被「刪除全部失效活動」刪掉；另查出名字括號裡含「、」的 10 個名字（Apple錢包指定交通卡(Suica、PASMO、ICOCA) 等）一釘選就被判已下架，因為重查前一律先用「、」拆 → 小抄重查與加入鈕改走 `resolveMappingMerchant()`（見第 8 節「存的名字」）。資料改名是正常維護動作，任何「拿存下來的名字回頭查資料」的功能都要認得改名前的寫法，且判定會觸發刪除時要用真實改名清單驗過（這次用 10-13 與 10-17 的 cards.data 對照）
+- [2026-10-21] 手機版頁尾白字放在 body 灰漸層上對比只有約 1.5:1（小標 10px 幾乎看不見）、廣告沒填到時「推薦比較」下方留一塊 116px 白洞 → 白字是當初配深色背景的寫法、灰底換上來後沒人重量對比；廣告列用 `min-height:100px` 預留位子，但擋廣告外掛／沒填到時位子永遠空著 → 頁尾改深色字（`#374151` 約 5.4:1）＋手機兩欄格線（奇數顆最後一顆佔滿一列）＋法務連結縮成 `.footer-legal` 一行小字；廣告列拿掉預留高度，外框與「廣告」標籤只在 `<ins data-ad-status="filled">` 時出現，`data-full-width-responsive` 改 false（true 會讓手機廣告撐出外框）。⚠️ 頁尾是**同一套結構手抄在 4 頁**（index／faq／privacy／terms）＋商家頁由生成器從 index 產生＋promos.html 由 `cards-export.gs` 生成（用自己的 promos.css，要手動同步）；改頁尾要全部對一遍。另：站長實測確認 AdSense **錨定廣告收合後，原本預留的空間不會收回**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），這不是本站版面造成的，改 CSS 前先分清楚是不是廣告插的

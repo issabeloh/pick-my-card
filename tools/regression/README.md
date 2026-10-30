@@ -16,6 +16,9 @@ node tools/regression/run-regression.js --live            # 用線上 cards.data
 標準流程：**改 script.js 的計算/搜尋/顯示邏輯之前**先跑一次比對模式確認綠燈（基準有效）→ 改動 → 再跑比對模式。
 改動「本來就預期改變結果」時：先確認差異報告裡的每一條都是預期內的，再 `--update-baseline` 並把新基準連同改動一起 commit。
 
+另有獨立的 `card-detail-test.js`（卡片詳情頁，2026-10-06 新增）與 `mappings-page-test.js`、`delete-account-test.js`，
+用法與各自守的範圍見 `docs/ops/regression.md`。
+
 ## 退出碼
 
 - `0` 通過；`1` 與基準有差異（報告會列出哪一組、哪張卡、基準 vs 現在）；`2` 測試框架本身出錯（環境問題，不是回歸差異）

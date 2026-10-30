@@ -10,6 +10,7 @@
  *  - 級別解析                  → "resolveCardLevel"
  *  - 行動支付管理              → "Payment Management" / "openMyPaymentsModal"
  *  - 支付詳情/比較             → "showPaymentDetail" / "showComparePaymentsModal"
+ *  - 支付卡片/名次獎牌          → "renderPaymentCardResult" / "renderPaymentRankMedal"
  *  - 用戶支付載存              → "loadUserPayments" / "saveUserPayments"
  * ============================================================ */
 // ========== Card Level Management Functions ==========
@@ -391,6 +392,7 @@ async function showPaymentDetail(paymentId) {
                             card: card,
                             rate: result.rate,
                             cap: result.cap,
+                            category: result.matchedCategory || null,
                             rateGroup: null // Not needed for display
                         });
                     }
@@ -420,30 +422,10 @@ async function showPaymentDetail(paymentId) {
     } else {
         const maxRate = uniqueCards[0].rate;
 
-        uniqueCards.forEach((mc, index) => {
-            const cardDiv = document.createElement('div');
-            const isBest = index === 0 && maxRate > 0;
-            cardDiv.className = `cashback-detail-item ${isBest ? 'best-cashback' : ''}`;
-
-            let capText = mc.cap ? `NT$${Math.floor(mc.cap).toLocaleString()}` : '無上限';
-            let periodText = mc.rateGroup?.period ? `<div class="cashback-condition">活動期間: ${mc.rateGroup.period}</div>` : '';
-            let conditionsText = mc.rateGroup?.conditions ? `<div class="cashback-condition">條件: ${mc.rateGroup.conditions}</div>` : '';
-            let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
-
-            cardDiv.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
-                        ${bestBadge}
-                    </div>
-                    <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
-                </div>
-                <div class="cashback-condition">消費上限: ${capText}</div>
-                ${periodText}
-                ${conditionsText}
-            `;
-            detailsContainer.appendChild(cardDiv);
-        });
+        // 卡片樣式與「比較所有行動支付回饋」共用 renderPaymentCardResult（2026-10-08）
+        detailsContainer.innerHTML = uniqueCards
+            .map((mc, index) => renderPaymentCardResult(mc, index === 0 && maxRate > 0))
+            .join('');
     }
 
     // Setup close events
@@ -462,6 +444,45 @@ async function showPaymentDetail(paymentId) {
     disableBodyScroll();
 }
 
+// 行動支付的一張卡（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用，2026-10-08）：
+// 搜尋結果卡片的縮小版——直接沿用 .card-result／.card-header／.card-details／.matched-merchant
+// 與「最優回饋」角標。三欄少了「回饋金額」（這裡沒有消費金額），回饋率接手綠色強調（同詳情頁回饋卡）。
+// mc = { card, rate, cap, category }
+function renderPaymentCardResult(mc, isBest) {
+    const capText = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
+    return `
+        <div class="card-result payment-card-result${isBest ? ' best-card' : ''}">
+            <div class="card-header">
+                <div class="card-name-with-pin"><div class="card-name">${escapeHtml(mc.card.name)}</div></div>
+                <div class="badges-container">${isBest ? '<div class="best-badge">最優回饋</div>' : ''}</div>
+            </div>
+            <div class="card-details rate-card-details">
+                <div class="detail-item">
+                    <div class="detail-label">回饋率</div>
+                    <div class="detail-value cashback-amount">${escapeHtml(String(mc.rate))}%</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">回饋消費上限</div>
+                    <div class="detail-value">${capText}</div>
+                </div>
+            </div>
+            ${renderActivityInfo({ activityName: mc.category ? getCategoryDisplayName(mc.category) : '' })}
+        </div>
+    `;
+}
+
+// 名次獎牌（行動支付比較前三名）：彩帶＋金／銀／銅牌面＋名次數字，一眼看得出是「名次」不是序號。
+// 顏色在 styles.css「.payment-rank-medal」
+function renderPaymentRankMedal(rank) {
+    return `<svg class="payment-rank-medal payment-rank-medal-${rank}" viewBox="0 0 28 34" role="img" aria-label="第 ${rank} 名">` +
+        `<path class="prm-ribbon-l" d="M6 0h7l4 13h-7z"/>` +
+        `<path class="prm-ribbon-r" d="M22 0h-7l-4 13h7z"/>` +
+        `<circle class="prm-face" cx="14" cy="22" r="11"/>` +
+        `<circle class="prm-ring" cx="14" cy="22" r="8"/>` +
+        `<text class="prm-num" x="14" y="26.4" text-anchor="middle">${rank}</text>` +
+        `</svg>`;
+}
+
 // Show compare payments modal
 async function showComparePaymentsModal() {
     console.log('📊 showComparePaymentsModal 被調用');
@@ -477,9 +498,9 @@ async function showComparePaymentsModal() {
     modal.style.display = 'flex';
     disableBodyScroll();
 
-    const paymentsToCompare = currentUser ?
-        paymentsData.payments.filter(p => userSelectedPayments.has(p.id)) :
-        paymentsData.payments;
+    // 只比用戶選的行動支付——沒登入也一樣（訪客的選擇存在 localStorage，首頁清單也照它顯示）。
+    // 以前訪客會比全部（2026-10-14 站長回報：沒登入測試，所有支付都被比出結果）
+    const paymentsToCompare = paymentsData.payments.filter(p => userSelectedPayments.has(p.id));
 
     if (paymentsToCompare.length === 0) {
         contentContainer.innerHTML = '<p style="text-align: center; color: #666;">請先選擇要比較的行動支付</p>';
@@ -517,6 +538,7 @@ async function showComparePaymentsModal() {
                                     card: card,
                                     rate: result.rate,
                                     cap: result.cap,
+                                    category: result.matchedCategory || null,
                                     rateGroup: null
                                 });
                             }
@@ -549,7 +571,20 @@ async function showComparePaymentsModal() {
         }
 
         // Sort payments by highest rate
-        paymentsWithCards.sort((a, b) => b.cards[0].rate - a.cards[0].rate);
+        // 前三名要標名次徽章（2026-10-08）。同回饋率的支付常常一大串，
+        // 只比回饋率的話名次等於原始清單順序。同分依序再比：最優那張的消費上限（高者勝，無上限最高）
+        // → 第二名卡片的回饋率——都是「這個支付實際上能拿多少」，名次才講得出道理。
+        // 三者全同＝真的並列，給同一個名次（標準競賽排名 1、2、2、2、5：並列第 2 之後沒有第 3）
+        const capOf = mc => (mc.cap ? mc.cap : Infinity);
+        const comparePayments = (a, b) =>
+            (b.cards[0].rate - a.cards[0].rate) ||
+            (capOf(b.cards[0]) === capOf(a.cards[0]) ? 0 : (capOf(b.cards[0]) > capOf(a.cards[0]) ? 1 : -1)) ||
+            ((b.cards[1] ? b.cards[1].rate : 0) - (a.cards[1] ? a.cards[1].rate : 0));
+        paymentsWithCards.sort(comparePayments);
+        paymentsWithCards.forEach((pwc, i) => {
+            const prev = paymentsWithCards[i - 1];
+            pwc.rank = (prev && comparePayments(prev, pwc) === 0) ? prev.rank : i + 1;
+        });
 
         // Display compact comparison with 2-column grid
         contentContainer.innerHTML = '';
@@ -565,29 +600,11 @@ async function showComparePaymentsModal() {
                 const paymentCard = document.createElement('div');
                 paymentCard.className = 'compare-payment-card';
 
-                let cardsHTML = '';
-                pwc.cards.forEach((mc, index) => {
-                    const isBest = index === 0;
-                    let capText = mc.cap ? `NT$${Math.floor(mc.cap).toLocaleString()}` : '無上限';
-                    let bestBadge = isBest ? '<div class="best-badge">最優回饋</div>' : '';
-
-                    cardsHTML += `
-                        <div class="cashback-detail-item ${isBest ? 'best-cashback' : ''}" style="margin-top: 8px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                    <span style="color: #1f2937; font-weight: 600; font-size: 15px;">${mc.card.name}</span>
-                                    ${bestBadge}
-                                </div>
-                                <span style="color: #059669; font-weight: 700; font-size: 1.15rem;">${mc.rate}%</span>
-                            </div>
-                            <div class="cashback-condition">消費上限: ${capText}</div>
-                        </div>
-                    `;
-                });
+                const cardsHTML = pwc.cards.map((mc, index) => renderPaymentCardResult(mc, index === 0)).join('');
 
                 paymentCard.innerHTML = `
                     <div class="compare-payment-name">
-                        ${pwc.payment.name}
+                        ${pwc.rank <= 3 ? renderPaymentRankMedal(pwc.rank) : ''}<span>${escapeHtml(pwc.payment.name)}</span>
                     </div>
                     ${cardsHTML}
                 `;

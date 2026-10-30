@@ -7,7 +7,7 @@
  *  - 快捷選項初始化/偏好載存    → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
  *  - 舊版偏好遷移              → "migrateLegacyQuickSearchOptions"
  *  - 快捷按鈕渲染/下拉         → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
- *  - 快捷搜尋觸發              → "handleQuickSearch"
+ *  - 快捷搜尋觸發／兩型判斷     → "handleQuickSearch" / "isTypingHelperQuickOption"
  * ============================================================ */
 function buildCardItemsIndex(card) {
     const itemsMap = new Map();
@@ -123,6 +123,8 @@ async function loadCardsData() {
 
         // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
         mergeDataSearchExclusions(cardsData);
+        // 併入「統一詞」工作表的其他寫法／搜尋別名（選填）→ 模糊搜尋
+        mergeDataTermAliases(cardsData);
 
         console.log('✅ 信用卡資料已從 cards.data 載入');
         console.log(`📊 載入了 ${cardsData.cards.length} 張信用卡`);
@@ -150,8 +152,20 @@ async function loadCardsData() {
         }
 
         // Display last update date
+        // 優先用 contentUpdatedIso（內容真的變動才前進，與 sitemap lastmod、商家頁烤進 HTML 的
+        // 日期同源；結構與 tools/build-merchant-pages.js 的 buildUpdateDate() 一致，重寫一次
+        // 看不出差別）。舊版 cards.data 沒有這欄就退回 lastUpdated（匯出當天）。
         const lastUpdateElement = document.getElementById('last-update-date');
-        if (lastUpdateElement && cardsData.lastUpdated) {
+        const contentIso = cardsData.contentUpdatedIso;
+        if (lastUpdateElement && typeof contentIso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(contentIso)) {
+            const [y, m, d] = contentIso.split('-');
+            const timeEl = document.createElement('time');
+            timeEl.dateTime = contentIso;
+            timeEl.textContent = `${y}/${Number(m)}/${Number(d)}`;
+            lastUpdateElement.textContent = '最後資料更新：';
+            lastUpdateElement.appendChild(timeEl);
+            console.log(`📅 最後資料更新：${contentIso}`);
+        } else if (lastUpdateElement && cardsData.lastUpdated) {
             lastUpdateElement.textContent = `最後資料更新：${cardsData.lastUpdated}`;
             console.log(`📅 最後資料更新：${cardsData.lastUpdated}`);
         }
@@ -510,9 +524,30 @@ function closeQuickSearchDropdown() {
 }
 
 // Handle quick search button click
+// 快捷搜尋按鈕分兩種（2026-10-08 站長定義）：
+// - 「一次比多家」：merchants 有多個關鍵詞（所有計程車、三大電商平台…），把各關鍵詞的匹配聯集起來比較。
+//   這種刻意不受精準搜尋影響、也不跳 Search Hints：關鍵詞清單是編輯挑好的，靠模糊比對把同一家的
+//   各種寫法一起收進來（「台灣大車隊」→「55688台灣大車隊」），套精準搜尋會把這些變體砍掉、
+//   結果變少；輸入框顯示的又是類別名（所有計程車），拿它查提示或做精準比對都沒有意義。
+// - 「協助輸入」：merchants 只有一個關鍵詞（LinePay、街口支付、ApplePay…），沒有一次比多家的功能，
+//   按鈕只是替用戶把名稱打進搜尋框——之後的一切（精準搜尋、Search Hints、送出時重新匹配）
+//   都要跟用戶自己打字完全一樣。用戶自訂的快捷選項同樣適用這條規則。
+// ⚠️ tools/lib/merchant-cards.js（商家頁卡片清單）直接呼叫這支判斷，規則只寫在這裡
+function isTypingHelperQuickOption(option) {
+    return !!(option && Array.isArray(option.merchants) && option.merchants.length === 1);
+}
+
 function handleQuickSearch(option) {
     const merchantInput = document.getElementById('merchant-input');
     if (!merchantInput || !cardsData) return;
+
+    // 協助輸入型：等同用戶在搜尋框打了這個名稱（handleMerchantInput 會清掉 currentQuickSearchOption、
+    // 套用精準搜尋、顯示 Search Hints、更新清除鈕與計算鈕），不走下面的多關鍵詞聯集
+    if (isTypingHelperQuickOption(option)) {
+        merchantInput.value = option.displayName;
+        handleMerchantInput();
+        return;
+    }
 
     console.log(`\n🔍 快捷搜索: ${option.displayName}`);
     console.log(`   包含 ${option.merchants.length} 個關鍵詞:`);
@@ -554,24 +589,36 @@ function handleQuickSearch(option) {
     merchantInput.value = option.displayName;
     // 快捷搜尋不走 handleMerchantInput，清除 ✕ 的顯示要自己更新
     if (typeof updateMerchantClearBtn === 'function') updateMerchantClearBtn();
-    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示
+    // 快捷搜尋不受精準搜尋影響，清掉手動輸入殘留的零結果提示；
+    // 也不跳 Search Hints，上一個詞的提示一起收掉（協助輸入型走 handleMerchantInput，會自己換成新詞的提示）
     toggleExactSearchEmptyHint(false);
+    if (typeof clearSearchHints === 'function') clearSearchHints();
 
+    // 排除名單用全部關鍵詞的聯集比（快捷搜尋不受精準搜尋影響 → exactOnly=false）
+    const exclusionTerms = getBasicExclusionSearchTerms(option.displayName, option);
     if (allMatches.length > 0) {
         // Get cards to compare for parking benefits check
         const cardsToCompare = getCardsForComparison();
         showMatchedItem(allMatches, option.displayName, cardsToCompare);
         currentMatchedItem = allMatches;
         currentQuickSearchOption = option; // Store quick search option for parking benefits
+        showBasicExclusionPreview(exclusionTerms, false, true);
 
         // 快捷搜尋只填入、不自動計算（2026-07-12 產品決策）：計算一律由用戶按「計算」觸發。
         // 需要點了就出結果的入口（Spotlight 的比較按鈕）由呼叫端自行觸發計算。
+    } else if (showBasicExclusionPreview(exclusionTerms, false, false)) {
+        // 關鍵詞全是排除項目（如「醫療費用」）：沒有活動可匹配，但選項要留著，
+        // 計算時排除判斷才會用全部關鍵詞（calculateCashback 讀 currentQuickSearchOption）
+        currentMatchedItem = null;
+        currentQuickSearchOption = option;
     } else {
         hideMatchedItem();
         currentMatchedItem = null;
         currentQuickSearchOption = null;
         console.warn(`   ⚠️ 沒有找到任何匹配項目，請檢查 QuickSearch sheet 的 merchants 欄位\n`);
     }
+    // 已經算過時提醒按「計算」（協助輸入型走 handleMerchantInput，那邊自己會判斷）
+    if (typeof nudgeIfCalcConditionsChanged === 'function') nudgeIfCalcConditionsChanged();
 
     merchantInput.focus();
     validateInputs();

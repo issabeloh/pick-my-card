@@ -48,7 +48,17 @@ const PARSER_CONFIG = {
   changelogSheet: '變動紀錄',         // 發布目的地（在「資料檔」，跨檔寫；沒有會自動建）
   changelogMaxChars: 60,             // 「公開摘要」上限：一句話。超過＝站長沒改寫，整列跳過
   notifyEmail: '',                   // 留空 = 寄給你自己
-  model: 'gemini-2.5-flash',         // 免費額度夠用；要更省可改 gemini-2.5-flash-lite
+  // 模型備援順序（2026-10-13）：免費額度是**每個模型分開算**的（Flash 系列各 5 RPM／每天 20 次，
+  // 3.x Flash Lite 各 15 RPM／每天 500 次）。前面的模型額度用完（429）、名稱不存在或已停用（404）、
+  // 伺服器忙（5xx）就自動換下一個。新的 Flash 放前面（比較聰明），Flash Lite 放最後當保底（次數多但較不精準）。
+  // 要換順序或模型：「專案設定 → 指令碼屬性」新增 GEMINI_MODELS，填模型 id、逗號分隔，會蓋過這裡（不用改程式）。
+  // Gemma 4 不能放：每分鐘 token 上限只有 1.6 萬，我們一次 prompt 就 1～4 萬
+  // 2026-10-13 站長查官方停用頁確認：
+  //   ・gemini-3-flash 不存在；gemini-3.7-flash／3.5-flash 已不能選，API 會自動轉到 3.8／3.6——放了也只是重複，拿掉
+  //   ・gemini-3.1-flash-lite 2027/5/7 停用（官方建議改 3.5-flash-lite），到時從清單拿掉即可
+  //   ・2.5 系列只開放給用過的專案（本專案有用過），沒有停用日
+  //   新模型在免費層常回 503（太忙），程式會自動換下一個
+  models: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
   maxTextChars: 30000,               // 送給 AI 的原文長度上限
   maxRowsPerRun: 5,                  // 入口 B 一次最多解析幾列（Apps Script 單次 6 分鐘上限；剩下的再按一次選單接著跑）
   statusCol: 4                       // 入口 B 輸入分頁的「狀態」欄＝D 欄（程式回填「已解析…」／「失敗：…」）
@@ -81,14 +91,25 @@ function buildAutomationMenu_() {
     .addSeparator()
     .addSubMenu(ui.createMenu('其他工具')
       .addItem('檢查監控清單有沒有填錯', 'checkWatchlistConfig')                // watchlist-monitor.gs，只讀不寫
-      .addItem('檢查廣告排除（每月一次）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
+      .addItem('檢查廣告排除（比對正式表）', 'checkAdExclusionsForAllCards')      // card-benefits-parser.gs
       .addSeparator()
-      // 登錄連結四步（register-link-finder.gs）；③ 是整個自動化檔裡唯一會寫入正式
-      // Cards Data 的動作（只寫 registerLink_N 欄，寫前跳確認視窗）
+      // 登錄連結四步（register-link-finder.gs）；3 與下方「一般消費排除 2」是整個自動化檔裡
+      // 僅有的兩個會寫入正式 Cards Data 的動作（各自只寫 registerLink_N／basicExclusions 欄，
+      // 後者打 V 只寫空白格、打「覆蓋」才換掉已有名單；都會先跳確認視窗）
       .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
       .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
       .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
-      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive'))
+      .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive')
+      .addSeparator()
+      // 一般消費排除兩步（basic-exclusions-extractor.gs，2026-09-30）：
+      // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄（V＝只寫空白格、覆蓋＝整格換掉）
+      .addItem('一般消費排除 1：AI 從監控快照抽', 'extractBasicExclusionsFromSnapshots')
+      // 官網變動流程（2026-10-13）：監控把逐項修改寫進 2-變動通知 → 站長刪行、填 V → 套用到待審核 → 2 寫回
+      .addItem('一般消費排除：套用修改到待審核', 'applyBasicExclusionChanges')
+      .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData')
+      .addItem('一般消費排除：補分析變動', 'analyzePendingBasicExclusionChanges')
+      .addSeparator()
+      .addItem('測試 AI 模型（看哪些可用）', 'testGeminiModels'))
     .addSeparator()
     .addItem('📖 使用說明', 'openSheetGuide')                                    // sheet-guide.gs
     .addToUi();
@@ -645,14 +666,36 @@ function extractNewPromos_(rawText, cardHint) {
   return promos;
 }
 
-/************** 呼叫 Gemini API（結構化輸出） **************/
+/************** 呼叫 Gemini API（結構化輸出，多模型備援） **************/
+// 所有 AI 功能（監控分類、權益解析、一般消費排除、登錄連結）都走這一支，所以備援只要做在這裡。
+// 本次執行的狀態（哪個模型剛撞到額度、用了幾次）記在全域變數：Apps Script 每次執行都是新的環境，
+// 不會跨執行殘留——明天額度重置後自然又從第一個模型開始試。
+var GEMINI_COOLDOWN_ = {};   // 模型 → 撞到 429 的時間（毫秒）；60 秒內先跳過，避免每次都白打一次
+var GEMINI_DEAD_ = {};       // 模型 → 404／400 不存在：這次執行不再試
+var GEMINI_USAGE_ = {};      // 模型 → 成功次數（通知信最後一行會列出）
+var GEMINI_FALLBACKS_ = [];  // 換過模型的紀錄（模型：原因）
+
+function geminiModels_() {
+  const own = PropertiesService.getScriptProperties().getProperty('GEMINI_MODELS');
+  const list = String(own || '').split(/[,，、\s]+/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+  return list.length ? list : PARSER_CONFIG.models;
+}
+
+// 「這次執行用了哪些模型」一行字，給通知信／結果視窗用。沒呼叫過 AI 回空字串
+function geminiUsageSummary_() {
+  const used = Object.keys(GEMINI_USAGE_).map(function (m) { return m + ' ×' + GEMINI_USAGE_[m]; });
+  if (!used.length && !GEMINI_FALLBACKS_.length) return '';
+  return 'AI 模型：' + (used.join('、') || '（全部失敗）') +
+    (GEMINI_FALLBACKS_.length ? '；換過模型：' + GEMINI_FALLBACKS_.slice(0, 8).join('、') : '');
+}
+
 function callGemini_(systemPrompt, userText, responseSchema) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) {
     throw new Error('尚未設定 GEMINI_API_KEY——到「專案設定 → 指令碼屬性」新增（金鑰到 https://aistudio.google.com/apikey 免費申請）');
   }
 
-  const payload = {
+  const payload = JSON.stringify({
     contents: [{ role: 'user', parts: [{ text: userText }] }],
     systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
@@ -660,34 +703,106 @@ function callGemini_(systemPrompt, userText, responseSchema) {
       responseMimeType: 'application/json',
       responseSchema: responseSchema
     }
-  };
+  });
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-    PARSER_CONFIG.model + ':generateContent?key=' + apiKey;
+  const models = geminiModels_();
+  const tried = [];
+  // 一次呼叫最多花 100 秒在換模型上：監控有 6 分鐘硬上限（見 watchlist-monitor.gs 的 maxRunSeconds 算法），
+  // 七個模型都碰上伺服器忙時不能一路試下去把整段執行拖垮
+  const startedAt = Date.now();
+  for (let k = 0; k < models.length; k++) {
+    const model = models[k];
+    if (k > 0 && Date.now() - startedAt > 100000) { tried.push('換模型已花超過 100 秒，停止'); break; }
+    if (GEMINI_DEAD_[model]) continue;
+    if (GEMINI_COOLDOWN_[model] && Date.now() - GEMINI_COOLDOWN_[model] < 60000) continue;
 
-  let res;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    res = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + apiKey;
+    let res = null, code = 0;
+    // 5xx（伺服器忙）同一個模型多等一次；429／404 直接換下一個
+    for (let attempt = 0; attempt < 2; attempt++) {
+      res = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', payload: payload, muteHttpExceptions: true });
+      code = res.getResponseCode();
+      if (code < 500) break;
+      Utilities.sleep(3000);
+    }
+
+    if (code === 200) {
+      const body = JSON.parse(res.getContentText());
+      const part = body.candidates && body.candidates[0] &&
+        body.candidates[0].content && body.candidates[0].content.parts &&
+        body.candidates[0].content.parts.filter(function (p) { return p.text && !p.thought; })[0];
+      if (!part) { tried.push(model + '：回應沒有內容'); GEMINI_FALLBACKS_.push(model + ' 空回應'); continue; }
+      GEMINI_USAGE_[model] = (GEMINI_USAGE_[model] || 0) + 1;
+      return JSON.parse(part.text);
+    }
+
+    const msg = res.getContentText().slice(0, 200);
+    if (code === 429) {
+      GEMINI_COOLDOWN_[model] = Date.now();
+      GEMINI_FALLBACKS_.push(model + ' 額度用完');
+    } else if (code === 404 || (code === 400 && /not found|not supported|is not available|unknown model/i.test(msg))) {
+      GEMINI_DEAD_[model] = true;
+      GEMINI_FALLBACKS_.push(model + ' 不存在');
+    } else if (code >= 500) {
+      // 新模型在免費層常回 503（太多人用）。重試過還是忙就同樣冷卻 60 秒，
+      // 不然這次執行的每一次呼叫都要先在它身上白等一輪
+      GEMINI_COOLDOWN_[model] = Date.now();
+      GEMINI_FALLBACKS_.push(model + ' 伺服器忙');
+    } else {
+      // 其他 4xx（金鑰錯、內容格式錯）換模型也沒用，直接報錯
+      throw new Error('Gemini API HTTP ' + code + '（' + model + '）：' + msg);
+    }
+    tried.push(model + '：HTTP ' + code);
+  }
+  throw new Error('所有 AI 模型都暫時不能用（' + (tried.join('；') || '全部在冷卻中') +
+    '）。多半是今天的免費額度用完了，明天會自動恢復；要調整模型清單到指令碼屬性 GEMINI_MODELS');
+}
+
+// 選單「測試 AI 模型」：
+//   ① 先問 Google 這把金鑰「現在有哪些 Flash 文字模型」（ListModels，不花額度）——模型 id 以這份為準，不用猜名稱
+//   ② 再對目前清單的每個模型各送一次極短請求（每個用掉 1 次當天額度），看實際能不能用
+function testGeminiModels() {
+  const ui = SpreadsheetApp.getUi();
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const models = geminiModels_();
+
+  let available = [];
+  try {
+    let token = '';
+    for (let page = 0; page < 5; page++) {
+      const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + apiKey +
+        (token ? '&pageToken=' + encodeURIComponent(token) : ''), { muteHttpExceptions: true });
+      if (res.getResponseCode() !== 200) break;
+      const body = JSON.parse(res.getContentText());
+      (body.models || []).forEach(function (m) {
+        const id = String(m.name || '').replace(/^models\//, '');
+        const canGen = (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0;
+        // 只列 Flash／Flash Lite 的文字模型（排除 TTS、圖片、Live、embedding）
+        if (canGen && /flash/i.test(id) && !/tts|image|live|audio|embed|transcribe/i.test(id)) available.push(id);
+      });
+      token = body.nextPageToken;
+      if (!token) break;
+    }
+  } catch (e) { available = []; }
+
+  const ans = ui.alert('測試 AI 模型',
+    (available.length ? '這把金鑰目前可用的 Flash 模型 id（Google 回報，不花額度）：\n' + available.join('\n') + '\n\n' : '') +
+    '接著會對目前清單的 ' + models.length + ' 個模型各送一次極短的請求（每個用掉 1 次當天額度）：\n' +
+    models.join('\n') + '\n\n要繼續嗎？（按取消只看上面的清單）', ui.ButtonSet.OK_CANCEL);
+  if (ans !== ui.Button.OK) return;
+
+  const lines = models.map(function (m) {
+    const res = UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent?key=' + apiKey, {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      payload: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '回答 OK' }] }] })
     });
     const code = res.getResponseCode();
-    if (code === 200) break;
-    if (code === 429 || code >= 500) { Utilities.sleep(3000 * (attempt + 1)); continue; }
-    throw new Error('Gemini API HTTP ' + code + '：' + res.getContentText().slice(0, 300));
-  }
-  if (res.getResponseCode() !== 200) {
-    throw new Error('Gemini API 重試後仍失敗（HTTP ' + res.getResponseCode() + '）');
-  }
-
-  const body = JSON.parse(res.getContentText());
-  const part = body.candidates && body.candidates[0] &&
-    body.candidates[0].content && body.candidates[0].content.parts &&
-    body.candidates[0].content.parts[0];
-  if (!part || !part.text) throw new Error('Gemini 回應裡沒有內容：' + res.getContentText().slice(0, 300));
-  return JSON.parse(part.text);
+    const why = code === 429 ? '，今天額度用完或太頻繁' : code === 404 ? '，名稱不存在' : code >= 500 ? '，伺服器忙，通常過一陣子就好，可以保留' : '';
+    return (code === 200 ? '✅ ' : code >= 500 || code === 429 ? '⏳ ' : '❌ ') + m + (code === 200 ? '' : '（HTTP ' + code + why + '）');
+  });
+  ui.alert('測試 AI 模型', lines.join('\n') +
+    '\n\n❌ 名稱不存在的模型要從指令碼屬性 GEMINI_MODELS 拿掉或改成上面清單裡的正確 id；⏳ 是暫時的，程式遇到會自動換下一個。' +
+    '（沒設 GEMINI_MODELS 時用程式內建的清單）', ui.ButtonSet.OK);
 }
 
 /************** 程式負責的部分：公式、格式，然後寫進待審核表 **************/
@@ -752,7 +867,7 @@ function writePromosToReview_(promos, source, link) {
       p.gift_content || '',                      // gift_content
       '',                                        // gift_image_url（你手動貼圖片網址）
       bonusRate,                                 // bonus_rate
-      (p.bonus_merchants || []).join(','),       // bonus_merchants
+      pmcUnifyList_((p.bonus_merchants || []).join(',')), // bonus_merchants（統一詞）
       bonusCap,                                  // bonus_cap
       p.voucher_amount || '',                    // voucher_amount
       p.voucher_usage || '',                     // voucher_usage
@@ -779,6 +894,70 @@ function buildCapFormula_(capAmount, ratePercent) {
 }
 
 /************** 跨檔開啟「資料檔」試算表（唯讀讀 Cards Data 用） **************/
+// ==========================================
+// 統一商家名（2026-10-14 站長要求）
+// ==========================================
+// AI 解析出來的商家清單寫進 4-／5-待審核 之前，照資料檔「統一詞」工作表換成統一寫法，
+// 站長審核時看到的就已經是統一的（不然核准後會把各銀行的大小寫、空格又帶回 Cards Data）。
+// 規則跟資料檔 term-unify.gs 的 termUnifyCell_ 相同（兩個專案不能共用程式，只好各放一份，改一邊要同步）：
+//   ・, ， 、 換行 切成一項一項（括號裡的「、」不切），**整項**對到才換
+//   ・忽略大小寫、空白、全半形、臺/台比對；「其他寫法」欄列的寫法也換
+// 讀不到表（沒設 CARDS_SPREADSHEET_ID、還沒建「統一詞」）→ 照原樣寫，不擋解析流程
+// 呼叫端：benefits-parser（新戶 bonus_merchants）、card-benefits-parser（新卡／活動更新 items）、
+//        basic-exclusions-extractor（一般消費排除 basicExclusions）
+let pmcTermMapCache_ = null;
+function pmcTermKey_(s) {
+  return String(s)
+    .replace(/[！-～]/g, function (ch) { return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
+    .replace(/臺/g, '台')
+    .replace(/[\s　]/g, '')
+    .toLowerCase();
+}
+function pmcTermMap_() {
+  if (pmcTermMapCache_) return pmcTermMapCache_;
+  pmcTermMapCache_ = {};
+  try {
+    const sheet = getCardsSheet_().getParent().getSheetByName('統一詞');
+    if (!sheet) return pmcTermMapCache_;
+    const data = sheet.getDataRange().getValues();
+    const h = data[0].map(function (x) { return String(x).trim(); });
+    const iT = h.indexOf('統一詞'), iV = h.indexOf('其他寫法');
+    if (iT < 0) return pmcTermMapCache_;
+    for (let r = 1; r < data.length; r++) {
+      const term = String(data[r][iT] || '').trim();
+      if (!term) continue;
+      pmcTermMapCache_[pmcTermKey_(term)] = term;
+      if (iV >= 0) String(data[r][iV] || '').split(/[,，\n]/).forEach(function (v) {
+        if (v.trim()) pmcTermMapCache_[pmcTermKey_(v.trim())] = term;
+      });
+    }
+  } catch (e) {
+    Logger.log('讀「統一詞」失敗，商家名照原樣寫：' + e.message);
+  }
+  return pmcTermMapCache_;
+}
+function pmcUnifyList_(value) {
+  if (value === null || value === undefined || value === '') return value;
+  const text = String(value);
+  const map = pmcTermMap_();
+  const parts = [];
+  let depth = 0, cur = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(' || ch === '（') depth++;
+    else if ((ch === ')' || ch === '）') && depth > 0) depth--;
+    if (depth === 0 && (ch === ',' || ch === '，' || ch === '、' || ch === '\n')) { parts.push({ raw: cur, sep: ch }); cur = ''; }
+    else cur += ch;
+  }
+  parts.push({ raw: cur, sep: '' });
+  return parts.map(function (p) {
+    const core = p.raw.trim();
+    const term = core ? map[pmcTermKey_(core)] : null;
+    if (!term || term === core) return p.raw + p.sep;
+    return p.raw.match(/^\s*/)[0] + term + p.raw.match(/\s*$/)[0] + p.sep;
+  }).join('');
+}
+
 function getCardsSheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('CARDS_SPREADSHEET_ID');
   if (!id) {

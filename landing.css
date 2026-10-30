@@ -53,6 +53,97 @@ body {
     pointer-events: none;
 }
 .lp-hint.gone { opacity: 0; }
+.lp-hint-title { margin: 0; }
+
+/* 開場介紹影片入口（2026-09-28）：標語下方的小按鈕，JS 確認 data-src 有值才加
+   .lp-hint--video 顯示。整個 .lp-hint 是 pointer-events:none，只有按鈕可點（淡出後也關掉）。 */
+.lp-intro-btn { display: none; }
+.lp-hint--video .lp-intro-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 7px 14px 7px 8px;
+    border: 1px solid #dbe3ef;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #334155;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.lp-hint--video .lp-intro-btn:hover { background: #fff; box-shadow: 0 3px 12px rgba(15, 23, 42, 0.14); }
+.lp-intro-btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.lp-hint--video.gone .lp-intro-btn { pointer-events: none; }
+/* 小圓形 play 符號 */
+.lp-intro-btn-icon {
+    position: relative;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+.lp-intro-btn-icon::after {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    margin: -5px 0 0 -3px;
+    border-style: solid;
+    border-width: 5px 0 5px 8px;
+    border-color: transparent transparent transparent #fff;
+}
+
+/* 全螢幕影片層：蓋滿視窗（100dvh 避開手機網址列），影片 contain 置中 */
+.lp-video-layer {
+    position: fixed;
+    inset: 0;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.lp-video-layer[hidden] { display: none; }
+.lp-video-layer video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+.lp-video-close {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+}
+.lp-video-close::before,
+.lp-video-close::after {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 18px; height: 2px;
+    margin: -1px 0 0 -9px;
+    background: #fff;
+    border-radius: 1px;
+    transform: rotate(45deg);
+}
+.lp-video-close::after { transform: rotate(-45deg); }
+.lp-video-close:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+html.lp-video-open, html.lp-video-open body { overflow: hidden; }
 /* 拉長的向下箭頭（直線 + 箭頭尖） */
 .lp-hint-arrow {
     display: block;
@@ -1098,6 +1189,15 @@ body {
 .lp-reduced .lp-progress,
 .lp-reduced .lp-scrollcue,
 .lp-reduced .lp-hint { display: none; }
+/* 減少動態：有影片時開場區改成頁首靜態區塊（不固定、不淡出），影片照樣可播 */
+.lp-reduced .lp-hint.lp-hint--video {
+    display: block;
+    position: static;
+    transform: none;
+    padding: 80px 16px 8px;
+}
+.lp-reduced .lp-hint--video .lp-hint-arrow,
+.lp-reduced .lp-hint--video .lp-hint-sub { display: none; }
 
 .lp-reduced .lp-scrolly { height: auto; }
 .lp-reduced .lp-stage { position: static; height: auto; overflow: visible; }
