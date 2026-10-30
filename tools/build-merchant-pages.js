@@ -318,19 +318,24 @@ async function main() {
       '.html（' + cardNames.length + ' 張卡，首位 ' + cardNames[0] + '）' + kind + '\n');
   }
 
-  // 首頁：同一條工具列，列出全部商家頁（沒有「自己」要排除，所以 currentSlug 傳 null）
-  const indexOut = replaceOnce(indexHtml, RELATED_RE,
+  // 首頁：同一條工具列，列出全部商家頁（沒有「自己」要排除，所以 currentSlug 傳 null）；
+  // 頁尾日期也烤進去（2026-10-30）。首頁的 JSON-LD 是手寫的，刻意不注入 dateModified：
+  // 工具首頁靠 sitemap lastmod 就夠，多一塊生成區只會讓「既是模板也是輸出」更難維護。
+  // （拿 index.html 當模板時不用先清日期：buildPage() 會整段換掉 span。）
+  let indexOut = replaceOnce(indexHtml, RELATED_RE,
     () => buildRelatedBar(null, computed),
     '推薦比較工具列佔位（index.html 的 <nav class="mc-related">）');
+  indexOut = replaceOnce(indexOut, UPDATE_DATE_RE, () => buildUpdateDate(updatedIso),
+    '頁尾最後資料更新日期（<span id="last-update-date">）');
   const indexSame = indexOnDisk === indexOut;
   if (!indexSame) {
     changed++;
-    // 首頁只有工具列這一塊是生成的，其餘全是手寫——所以差異一律當資料面看待
-    // （手改版面不會動到 <nav class="mc-related">，動到了也是這裡重生就好）
+    // 首頁只有工具列與頁尾日期是生成的，其餘全是手寫——所以差異一律當資料面看待
+    // （手改版面不會動到這兩塊，動到了也是這裡重生就好）
     dataDrift++;
     if (!CHECK_ONLY) fs.writeFileSync(indexFile, indexOut);
   }
-  process.stdout.write('  ' + (indexSame ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' index.html（首頁工具列，' +
+  process.stdout.write('  ' + (indexSame ? '＝' : (CHECK_ONLY ? '≠' : '✍')) + ' index.html（首頁工具列＋頁尾日期，' +
     computed.length + ' 個商家頁）\n');
 
   if (VERIFY) await verifyAgainstBrowser(results);

@@ -657,7 +657,9 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
   卡片清單放進 `mainEntity`。⚠️ 別把 `dateModified` 直接掛回 `ItemList`：ItemList 是 Intangible、不是
   CreativeWork，schema.org 沒有這個屬性，Google 會當無效欄位
 - 日期 span 跟 JSON-LD 一樣列進 `stripDataRegions()`——日期隨匯出變動，沒挖掉就會被判成「版面不一致」擋 commit
-- 首頁（index.html）目前**不**烤日期，仍由 JS 填
+- 首頁（index.html）也烤頁尾日期（同一個值），所以 index.html 的生成區＝工具列＋日期 span 兩塊；
+  但首頁**不**注入 `dateModified`——首頁 JSON-LD 是手寫的，工具首頁靠 sitemap lastmod 就夠，
+  不值得在手寫 `<head>` 裡再開一塊生成區
 
 ### index.html 既是模板、也是輸出（2026-08-18 起）
 
@@ -677,7 +679,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 - `tools/deploy-version.sh` 是**先跑生成器、再注入 `?v=`**，所以生成器寫回的 index.html
   帶的是 `?v=dev` 佔位，之後被同一支腳本換掉——順序不能對調
 - 資料落後時 index.html 走的是 **dataDrift（⚠️ 提醒、exit 0）而不是 shellDrift（❌ 擋）**：
-  首頁只有工具列這一塊是生成的，其餘全手寫，所以差異一律當資料面看待——理由同商家頁，
+  首頁只有工具列與頁尾日期是生成的，其餘全手寫，所以差異一律當資料面看待——理由同商家頁，
   每次 Apps Script 匯出都擋住不相干的 commit 只會讓人習慣性忽略 preflight
 
 **`MerchantPages` 工作表**（`readMerchantPages()` 讀取，匯出成 `cards.data` 的 `merchantPages`）：
