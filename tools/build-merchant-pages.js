@@ -61,16 +61,53 @@ function replaceOnce(html, pattern, build, what) {
   return html.replace(pattern, (...args) => build(...args));
 }
 
-function buildJsonLd(displayName, cardNames) {
+// 頁面層級 JSON-LD（2026-10-30 起包一層 CollectionPage）：dateModified 不能直接掛在
+// ItemList 上——ItemList 屬於 Intangible、不是 CreativeWork，schema.org 沒有這個屬性，
+// Google 會當無效欄位略過。做法同 promos：外層 CollectionPage 帶日期，卡片清單放 mainEntity。
+// updatedIso 為 null（cards.data 拿不到任何日期）就不輸出 dateModified，不瞎填今天。
+function buildJsonLd(displayName, cardNames, url, title, desc, updatedIso) {
   const ld = {
     '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: displayName + ' 信用卡回饋比較',
-    itemListElement: cardNames.map((name, i) => ({
-      '@type': 'ListItem', position: i + 1, name: name
-    }))
+    '@type': 'CollectionPage',
+    name: title,
+    description: desc,
+    url: url,
+    inLanguage: 'zh-TW',
+    isPartOf: { '@id': SITE + '/#website' },
+    mainEntity: {
+      '@type': 'ItemList',
+      name: displayName + ' 信用卡回饋比較',
+      itemListElement: cardNames.map((name, i) => ({
+        '@type': 'ListItem', position: i + 1, name: name
+      }))
+    }
   };
+  if (updatedIso) ld.dateModified = updatedIso;
   return JSON.stringify(ld).replace(/<\//g, '<\\/');
+}
+
+// 頁面「最後資料更新」日期（2026-10-30）。優先用 cards.data 的 contentUpdatedIso——
+// Apps Script 依內容指紋決定、內容沒變就不前進，與 sitemap 的 lastmod 同源（data-pipeline.md
+// 第 10 節）。舊版匯出沒有這個欄位時退回 lastUpdated（匯出當天，每次匯出都會前進），
+// 過渡用；兩個都沒有就回 null，頁面維持原本「等 JS 填」的空 span。
+function resolveUpdatedIso(cardsData) {
+  const iso = cardsData && cardsData.contentUpdatedIso;
+  if (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const m = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec(String((cardsData && cardsData.lastUpdated) || ''));
+  if (m) return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+  return null;
+}
+
+// 頁尾的「最後資料更新」直接烤進 HTML，Google 不執行 JS 也讀得到。顯示格式與
+// js/data-loader.js 一致（2026/10/18，不補零），<time datetime> 給機器讀。
+// js/data-loader.js 載入資料後會用同樣結構重寫一次（內容相同就看不出差別）。
+const UPDATE_DATE_RE = /<span id="last-update-date">[\s\S]*?<\/span>/;
+
+function buildUpdateDate(updatedIso) {
+  if (!updatedIso) return '<span id="last-update-date"></span>';
+  const [y, mo, d] = updatedIso.split('-');
+  return '<span id="last-update-date">最後資料更新：<time datetime="' + updatedIso + '">' +
+    y + '/' + Number(mo) + '/' + Number(d) + '</time></span>';
 }
 
 function buildSeoFooter(displayName, cardNames) {
@@ -146,7 +183,7 @@ const MERCHANT_PAGE_STYLE =
 // 註：.mc-related（推薦比較工具列）的樣式**不在這裡**——首頁也要用，所以收在
 // styles.css，兩種頁共用同一份。這個 <style> 只放 merchant 頁專屬的兩塊。
 
-function buildPage(indexHtml, page, cardNames, allPages) {
+function buildPage(indexHtml, page, cardNames, allPages, updatedIso) {
   const merchant = String(page.merchant);
   const displayName = String(page.displayName || page.merchant);
   const slug = String(page.slug);
@@ -190,8 +227,13 @@ function buildPage(indexHtml, page, cardNames, allPages) {
   // 4) SEO footer 樣式 ＋ JSON-LD（塞在 </head> 前）
   html = replaceOnce(html, /(\n<\/head>)/,
     (m, p1) => '\n' + MERCHANT_PAGE_STYLE +
-      '<script type="application/ld+json">' + buildJsonLd(displayName, cardNames) + '</script>' + p1,
+      '<script type="application/ld+json">' +
+      buildJsonLd(displayName, cardNames, url, page.title, page.description, updatedIso) + '</script>' + p1,
     '</head>');
+
+  // 4b) 頁尾「最後資料更新」日期直接寫進 HTML（見 buildUpdateDate）
+  html = replaceOnce(html, UPDATE_DATE_RE, () => buildUpdateDate(updatedIso),
+    '頁尾最後資料更新日期（<span id="last-update-date">）');
 
   // 5) 換掉 index.html 的推薦比較佔位，並在它後面接上 SEO 說明區與 bodyHtml。
   //    三塊都掛在同一個錨點，順序才保證是：
@@ -205,13 +247,14 @@ function buildPage(indexHtml, page, cardNames, allPages) {
   return html;
 }
 
-// 把「跟著 cards.data 走」的兩塊挖掉，剩下的就是版面。用來分辨「資料更新造成的落後」
+// 把「跟著 cards.data 走」的幾塊挖掉，剩下的就是版面。用來分辨「資料更新造成的落後」
 // 與「有人手改了版面」——前者部署時自己會修好，後者一定要擋。
 function stripDataRegions(html) {
   return html
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
     .replace(/<section class="mc-seo-footer"[\s\S]*?<\/section>/g, '')
-    .replace(/<nav class="mc-related"[\s\S]*?<\/nav>/g, '');
+    .replace(/<nav class="mc-related"[\s\S]*?<\/nav>/g, '')
+    .replace(/<span id="last-update-date">[\s\S]*?<\/span>/g, '');
 }
 
 async function main() {
@@ -224,6 +267,10 @@ async function main() {
   const indexHtml = stripRelatedBar(indexOnDisk);
 
   process.stdout.write('商家頁設定來源：' + source + '（' + active.length + ' 頁）\n');
+
+  const updatedIso = resolveUpdatedIso(cardsData);
+  process.stdout.write('最後資料更新日期：' + (updatedIso || '（cards.data 沒有日期，維持空白）') +
+    (cardsData.contentUpdatedIso ? '' : '（⚠️ cards.data 尚無 contentUpdatedIso，暫用 lastUpdated）') + '\n');
 
   const engine = createEngine(cardsData);
   const results = [];
@@ -250,7 +297,7 @@ async function main() {
 
   for (const entry of computed) {
     const { page, cardNames } = entry;
-    const html = buildPage(indexHtml, page, cardNames, computed);
+    const html = buildPage(indexHtml, page, cardNames, computed, updatedIso);
     const file = path.join(REPO, 'merchant', page.slug + '.html');
     const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
     const same = before === html;

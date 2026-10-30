@@ -152,8 +152,20 @@ async function loadCardsData() {
         }
 
         // Display last update date
+        // 優先用 contentUpdatedIso（內容真的變動才前進，與 sitemap lastmod、商家頁烤進 HTML 的
+        // 日期同源；結構與 tools/build-merchant-pages.js 的 buildUpdateDate() 一致，重寫一次
+        // 看不出差別）。舊版 cards.data 沒有這欄就退回 lastUpdated（匯出當天）。
         const lastUpdateElement = document.getElementById('last-update-date');
-        if (lastUpdateElement && cardsData.lastUpdated) {
+        const contentIso = cardsData.contentUpdatedIso;
+        if (lastUpdateElement && typeof contentIso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(contentIso)) {
+            const [y, m, d] = contentIso.split('-');
+            const timeEl = document.createElement('time');
+            timeEl.dateTime = contentIso;
+            timeEl.textContent = `${y}/${Number(m)}/${Number(d)}`;
+            lastUpdateElement.textContent = '最後資料更新：';
+            lastUpdateElement.appendChild(timeEl);
+            console.log(`📅 最後資料更新：${contentIso}`);
+        } else if (lastUpdateElement && cardsData.lastUpdated) {
             lastUpdateElement.textContent = `最後資料更新：${cardsData.lastUpdated}`;
             console.log(`📅 最後資料更新：${cardsData.lastUpdated}`);
         }

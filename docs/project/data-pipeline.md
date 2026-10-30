@@ -578,6 +578,11 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 | `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
 | `/merchant/<slug>` | 同 `homeUpdatedIso`——商家頁＝index.html 版面 ＋ cards.data 算出的卡片清單，會變的來源就是 cards.data，與首頁同一個訊號 |
 
+**`homeUpdatedIso` 也寫進 `cards.data`（欄位 `contentUpdatedIso`，2026-10-30）**：商家頁生成器把它烤進 HTML
+（頁尾可見日期＋JSON-LD `dateModified`），前端頁尾也優先顯示它——頁面上看到的日期、`dateModified`、
+sitemap `lastmod` 三處同源。它由指紋算出、本身不在指紋裡，所以不會造成「每次匯出都變」。
+⚠️ 這欄要等 `cards-export.gs` 貼回 Google Sheets 後的下一次匯出才會出現；之前生成器與前端都退回 `lastUpdated`。
+
 收哪些商家頁由 `MerchantPages` 工作表的 `active` 欄決定（見第 11 節）；工作表不存在時退回
 `MERCHANT_FALLBACK_SLUGS`，避免 sitemap 把現有 6 頁整組移除。
 
@@ -642,6 +647,17 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
    樣式在 `styles.css`（首頁與商家頁共用），**不在**生成器注入的那個 `<style>` 裡。
 2. **SEO 說明區**（`<section class="mc-seo-footer">`）——H1 ＋ 說明文，卡片清單跟著資料走。
 3. **`bodyHtml`**（`<section class="mc-body">`）——站長在工作表手寫的正文，留空就不輸出。
+
+**日期直接寫進 HTML（2026-10-30）**：讓 Google 不執行 JS 也讀得到「這頁哪天更新」。兩處都由
+`resolveUpdatedIso()` 取 `cards.data` 的 `contentUpdatedIso`（沒有就退回 `lastUpdated`，都沒有就不輸出）：
+
+- 頁尾 `<span id="last-update-date">` 烤成 `最後資料更新：<time datetime="2026-10-18">2026/10/18</time>`；
+  `js/data-loader.js` 載入資料後用同樣結構重寫一次（兩邊格式要一起改）
+- JSON-LD 從 `ItemList` 改成外層 `CollectionPage`（帶 `dateModified`、`url`、`isPartOf` → 首頁的 `#website`），
+  卡片清單放進 `mainEntity`。⚠️ 別把 `dateModified` 直接掛回 `ItemList`：ItemList 是 Intangible、不是
+  CreativeWork，schema.org 沒有這個屬性，Google 會當無效欄位
+- 日期 span 跟 JSON-LD 一樣列進 `stripDataRegions()`——日期隨匯出變動，沒挖掉就會被判成「版面不一致」擋 commit
+- 首頁（index.html）目前**不**烤日期，仍由 JS 填
 
 ### index.html 既是模板、也是輸出（2026-08-18 起）
 
