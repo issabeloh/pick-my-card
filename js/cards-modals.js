@@ -858,6 +858,7 @@ function initConditionClamps(container) {
 // ⚠️ 每張卡只取「最新 1 筆」（站長 2026-09-08 定案）：同一張卡連續佔掉兩三列時，
 //    點哪一列都是進同一張卡的詳情頁，等於用掉名額卻沒多給一個去處；一卡一列才能讓
 //    這 5 列涵蓋到 5 張不同的卡。該卡其餘異動在詳情頁的「近期異動」區看得到。
+// ⚠️ 跨卡同一件事也只留一列（2026-10-30）：同日期＋同摘要視為同一則異動，見下方 seenChange。
 // ⚠️ 鐵則 4：空陣列不是 falsy，`!card.changelog` 擋不掉 `[]`，長度也要判。
 // ⚠️ 鐵則 3：cardName／summary 都是站長在 Sheets 自由輸入的文字，這裡刻意不走
 //    innerHTML，用 createElement + textContent（與 renderCardDetailChangelog 同理由）。
@@ -891,7 +892,18 @@ function renderSidebarChangelog() {
     // ISO 日期字串可直接比大小；回 0 的同日組維持原順序（穩定排序）
     entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
-    entries.slice(0, SIDEBAR_CHANGELOG_MAX).forEach(e => {
+    // 同一天、同一句摘要的多張卡只留第一張（2026-10-30 站長要求）：聯邦 5 張卡同天
+    // 「一般消費排除項目新增 TikTok (抖音) 平台交易」會把 5 個名額全佔掉，內容卻是同一件事。
+    // 留下的是 cardsData.cards 順序最前面那張（上面排序是穩定的）；其他卡的這筆在各自詳情頁看得到
+    const seenChange = new Set();
+    const shown = entries.filter(e => {
+        const key = e.date + '\u0000' + e.summary;
+        if (seenChange.has(key)) return false;
+        seenChange.add(key);
+        return true;
+    });
+
+    shown.slice(0, SIDEBAR_CHANGELOG_MAX).forEach(e => {
         const li = document.createElement('li');
 
         const btn = document.createElement('button');

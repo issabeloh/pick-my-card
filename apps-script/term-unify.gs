@@ -203,20 +203,23 @@ function termConsistencyIssues_(entries, dict) {
   return issues;
 }
 
-// termConsistencyIssues_ 的結果 → 提醒視窗的文字（max 組以後只寫「其餘 N 組見執行記錄」）
+// termConsistencyIssues_ 的結果 → 提醒視窗的文字（max 組以後只寫「其餘 N 組見執行記錄」）。
+// 修法說明只在最後寫一次（2026-10-30 站長要求：每組重複同一句太囉嗦）；統一詞表已有的組在行尾標出來
 function termConsistencyMessage_(issues, max) {
   const lines = ['下面每一組是同一個名字的不同寫法（只差空白／大小寫／全半形／臺台）。請在源頭統一成一種：', ''];
   issues.slice(0, max).forEach(function(issue, i) {
     lines.push((i + 1) + '. ' + issue.writings.map(function(w) {
       const shown = w.sources.slice(0, 2).join('、') + (w.sources.length > 2 ? ' 等 ' + w.sources.length + ' 處' : '');
       return '「' + w.name + '」（' + shown + '）';
-    }).join(' ⇄ '));
-    lines.push(issue.term
-      ? '   → 統一詞表已有「' + issue.term + '」：跑 previewTermUnify → applyTermUnify 就會改好'
-      : '   → 在「' + TERM_DICT_SHEET + '」表加一列，統一詞寫你要的那種，再跑 previewTermUnify → applyTermUnify');
+    }).join(' ⇄ ') + (issue.term ? '　［統一詞表已有「' + issue.term + '」］' : ''));
   });
-  if (issues.length > max) lines.push('', '…其餘 ' + (issues.length - max) + ' 組見執行記錄（Apps Script 編輯器 → 執行作業）');
-  lines.push('', '改好後再匯出一次，這個提醒就會消失。');
+  if (issues.length > max) lines.push('…其餘 ' + (issues.length - max) + ' 組見執行記錄（Apps Script 編輯器 → 執行作業）');
+  const hasTerm = issues.some(function(x) { return x.term; });
+  const noTerm = issues.some(function(x) { return !x.term; });
+  lines.push('', '修法：');
+  if (noTerm) lines.push((hasTerm ? '・沒標［統一詞表已有］的：' : '・') + '在「' + TERM_DICT_SHEET + '」表各加一列，統一詞寫你要的那種');
+  if (hasTerm) lines.push((noTerm ? '・標［統一詞表已有］的：不用加列' : '・統一詞表都已有，不用加列'));
+  lines.push('・然後跑 previewTermUnify → applyTermUnify，再匯出一次，這個提醒就會消失。');
   return lines.join('\n');
 }
 
