@@ -140,12 +140,14 @@ function expandSearchTerms(searchLower) {
     bases.forEach(base => {
         add(base);
 
-        // Add fuzzy search mapping if exists
-        if (fuzzySearchMap[base]) add(fuzzySearchMap[base].toLowerCase());
-
-        // Also add reverse mappings (find all terms that map to current search)
+        // 同一列互相帶出（2026-10-30 站長要求）：統一詞表的一列（統一詞＋其他寫法＋搜尋別名）是同一件事，
+        // 搜其中任何一個都找整列。以前只做「別名 → 統一詞」與「統一詞 → 別名」，搜別名帶不出同列的其他別名
+        // （搜「三井outlet」找不到只寫 MITSUI OUTLET PARK(林口…) 的活動）。
+        // 別名寫太廣會跟著擴散（「泰航」帶出國泰航空），在統一詞表改窄或在 SearchExclusions 排除
+        const rowTerm = fuzzySearchMap[base] ? fuzzySearchMap[base].toLowerCase() : base;
+        add(rowTerm);
         Object.entries(fuzzySearchMap).forEach(([key, value]) => {
-            if (value.toLowerCase() === base) add(key);
+            if (value.toLowerCase() === rowTerm) add(key);
         });
 
         // 片語級同義詞展開：「海外消費」→「國外消費」
