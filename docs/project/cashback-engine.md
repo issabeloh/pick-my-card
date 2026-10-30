@@ -79,6 +79,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 **誤傷防範**：
 - **短英數詞只認字首**（2026-10-17，`shortTermStartsWord`）：3 個字以內的純英數搜尋詞（ana、jal、gu、net）在「item 包含搜尋詞」方向要出現在字首（前面是開頭或非英文字母），搜「ana」不再誤中 jeANAsis、hANA pay；中文、數字、符號前面都算字首。4 字以上照舊任意位置（eats → UberEats）。下拉選單用同一條規則
 - **2026-10-15 起 `fuzzySearchMap` 在程式裡是空的**，內容全部來自 Google Sheets「統一詞」工作表（其他寫法＋搜尋別名 → `termAliases` → `mergeDataTermAliases`）；新增別名改工作表，不要寫回程式。回歸的凍結資料 `fixture.data` 已補上同一份 termAliases
+- **搜尋詞展開 `expandSearchTerms`（2026-10-30）**：①臺／台視為同一個字（原詞的全台、全臺版本都當起點）；②**同一列互相帶出**——統一詞表一列（統一詞＋其他寫法＋搜尋別名）搜任何一個都找整列（以前別名只帶出統一詞，帶不出同列其他別名）。別名寫太廣會擴散到整列（「泰航」→國泰航空、「長榮」→台糖長榮酒店），處理方式是改窄統一詞表的別名或在 SearchExclusions 排除（excludedItems 要寫資料裡的**完整名稱**），不要在程式裡特判
 - 搜尋詞會經 `fuzzySearchMap` 雙向展開（含反向：所有映射到同值的 key）。**展開出的短英文別名可能子字串誤中無關 item**（例：「新加坡航空」→ 別名 `sia` → 誤中 a"sia"yo）。英文字界保護（Grep "word boundary"）只做在 `term.includes(item)` 方向，`item.includes(term)` 方向刻意不做——因為用戶手打部分字串（如 `eats`）要能命中連寫 item（如 `UberEats`）
 - 個案誤傷用 `searchExclusionMap` 修（搜尋詞→排除 item 小寫全等清單）；規則可從 SearchExclusions 工作表維護（→ `docs/project/data-pipeline.md` 第 2 節第 12 項）
 
