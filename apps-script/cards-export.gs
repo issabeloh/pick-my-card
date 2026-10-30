@@ -1113,6 +1113,10 @@ if (faqSheet) {
   // 生成 cards.json 內容
   const jsonContent = JSON.stringify({
   lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/M/d"),
+  // 內容真的變動才前進的日期（＝sitemap 首頁／商家頁 lastmod）。商家頁生成器把它烤進
+  // HTML（可見日期＋JSON-LD dateModified），前端頁尾也優先顯示它（2026-10-30）。
+  // 它由上面的指紋算出，本身不在指紋裡，不會造成「每次都變」。
+  contentUpdatedIso: homeUpdatedIso,
   cards: cards,
   payments: payments,
   quickSearchOptions: quickSearchOptions,
