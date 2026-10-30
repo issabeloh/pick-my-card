@@ -284,7 +284,10 @@ function checkWatchlist() {
     try {
       text = fetchPageText_(url, fetchVia).slice(0, MONITOR_CONFIG.snapshotMaxChars);
     } catch (e) {
-      errors.push(label + ' ' + url + '：' + e.message);
+      // 連續失敗次數（2026-10-08）：偶爾一次是對方網站抖動，連續好幾次才是真的壞了。
+      // 記在 fail_streak 欄，信裡分開列，站長才知道哪些要處理、哪些不用理
+      const streak = bumpFailStreak_(sheet, headers, i + 1, row);
+      errors.push({ text: label + ' ' + url + '：' + e.message, streak: streak });
       continue;
     }
 
@@ -293,6 +296,7 @@ function checkWatchlist() {
     if (!oldText) {
       // 第一次抓這個網址：只存基準快照，不通知
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -302,6 +306,7 @@ function checkWatchlist() {
     // 這種情況整頁都會被算成「新增」，AI 一定誤判成大量新活動 → 只重建基準、不通知。
     if (oldText.length * 3 < text.length) {
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       rebaselined.push(label + ' ' + url +
         '（舊基準 ' + oldText.length + ' 字 → 本次 ' + text.length + ' 字）');
@@ -313,10 +318,12 @@ function checkWatchlist() {
     // 一旦覆寫，好的基準就沒了，下一次會再誤報一次「大量新增」。
     // 若確認是網頁真的整頁改版，人工把該列 last_snapshot 清空即可重建基準。
     if (oldText.length >= 300 && text.length * 3 < oldText.length) {
-      errors.push(label + ' ' + url +
+      // 抓到了但內容殘缺，一樣算失敗——遠銀樂家+卡頁 10/18、10/22 連續撞這條，
+      // 不計次的話信裡永遠只是「偶發」，看不出它已經壞好幾週了
+      errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
         '：這次只抓到 ' + text.length + ' 字（舊基準 ' + oldText.length +
         ' 字），疑似抓取失敗，已略過並保留原基準。請人工開網頁確認；' +
-        '若確實整頁改版，請把該列 last_snapshot 清空後重跑');
+        '若確實整頁改版，請把該列 last_snapshot 清空後重跑' });
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -349,11 +356,11 @@ function checkWatchlist() {
     // 處理方式比照上面那個反方向落差：回報錯誤、**絕不覆寫 last_snapshot**——
     // 一旦把殘缺快照存成基準，好的基準就沒了，下次還會再誤報一次「大量新增」。
     if (refined.removedRatio >= 0.5 && refined.addedChars < 200) {
-      errors.push(label + ' ' + url +
+      errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
         '：舊基準有 ' + Math.round(refined.removedRatio * 100) + '% 的內容在這次抓取中消失，' +
         '而新增內容只有 ' + refined.addedChars + ' 字，疑似只抓到摺疊/未展開的版本（常見於注意事項、活動明細放在展開區）。' +
         '已略過並保留原基準，不會誤報成活動下架。請人工開網頁確認；' +
-        '若確認銀行真的砍掉這些內容，把該列 last_snapshot 清空後重跑即可');
+        '若確認銀行真的砍掉這些內容，把該列 last_snapshot 清空後重跑即可' });
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -423,6 +430,7 @@ function checkWatchlist() {
 
     // 不論是不是事件，都把快照更新成最新版
     sheet.getRange(i + 1, cSnap + 1).setValue(text);
+    resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
     if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
   }
 
@@ -660,11 +668,50 @@ function fetchDirect_(url) {
   return html;
 }
 
+/************** 連續抓取失敗次數（1-監控清單 的 fail_streak 欄，程式自己維護） **************/
+const FAIL_STREAK_HEADER = 'fail_streak';
+const FAIL_STREAK_ALERT = 3;   // 連續失敗幾次以上算「持續失敗」，信裡要站長處理
+
+// 回傳這次之後的連續失敗次數。欄不存在就補在最右邊（照欄名找欄，加欄不影響其他欄）
+function bumpFailStreak_(sheet, headers, rowNo, row) {
+  let c = headers.indexOf(FAIL_STREAK_HEADER);
+  if (c < 0) {
+    c = headers.length;
+    sheet.getRange(1, c + 1).setValue(FAIL_STREAK_HEADER);
+    headers.push(FAIL_STREAK_HEADER);
+  }
+  const n = (parseInt(row[c], 10) || 0) + 1;
+  sheet.getRange(rowNo, c + 1).setValue(n);
+  return n;
+}
+
+function resetFailStreak_(sheet, headers, rowNo, row) {
+  const c = headers.indexOf(FAIL_STREAK_HEADER);
+  if (c >= 0 && row[c] !== '' && row[c] != null) sheet.getRange(rowNo, c + 1).setValue('');
+}
+
 /************** 備援：透過 Jina Reader 抓（處理 JS 動態網頁與部分擋機器人的站） **************/
 // 原理：把網址接在 https://r.jina.ai/ 後面，Jina 會用真的瀏覽器開這一頁、等 JS 跑完，
 // 回傳純文字。免申請可直接用；有金鑰（指令碼屬性 JINA_API_KEY）額度更高。
+// ⚠️ 2026-10-08：聯邦（ubot）幾頁反覆回空殼——頁面先出導覽列、內容晚一步才用 JS 補上，
+//    Jina 預設抓得太早。第一次拿到空殼時，改用「真瀏覽器、等頁面載完（最多 30 秒）、不吃快取」
+//    再抓一次；第二次還是空殼才算失敗。只有空殼時才多花這一次 Jina 額度。
 function fetchViaJina_(url) {
+  try {
+    return fetchViaJinaOnce_(url, false);
+  } catch (e) {
+    if (!/空殼/.test(e.message)) throw e;
+    return fetchViaJinaOnce_(url, true);
+  }
+}
+
+function fetchViaJinaOnce_(url, slow) {
   const headers = { 'X-Return-Format': 'text' };  // 只要純文字，不要 markdown 連結雜訊
+  if (slow) {
+    headers['X-Engine'] = 'browser';
+    headers['X-Timeout'] = '30';
+    headers['X-No-Cache'] = 'true';
+  }
   const key = PropertiesService.getScriptProperties().getProperty('JINA_API_KEY');
   if (key) headers['Authorization'] = 'Bearer ' + key;
 
@@ -684,7 +731,8 @@ function fetchViaJina_(url) {
   const body = jinaBodyOnly_(text);
   if (body === 'undefined' || body.length < 100) {
     throw new Error('Jina 回傳空殼（內文只有 ' + body.length + ' 字：「' +
-      body.slice(0, 40) + '」），這一頁渲染失敗。請稍後重跑，或把該列 fetch_via 改回 direct');
+      body.slice(0, 40) + '」）' + (slow ? '，等 30 秒重抓也一樣' : '') +
+      '，這一頁渲染失敗。請稍後重跑，或把該列 fetch_via 改回 direct');
   }
   return text;
 }
@@ -1315,10 +1363,22 @@ function sendDigest_(alerts, errors, rebaselined, skipped, resume) {
             rebaselined.join('\n') + '\n\n';
   }
   if (errors.length) {
-    body += '⚠ 以下網址抓取失敗（可能是動態網頁或擋機器人，見規劃書 §2.4）：\n' +
-            errors.join('\n') + '\n\n' +
-            '提示：在「' + MONITOR_CONFIG.watchlistSheet + '」該列的 fetch_via 欄填 jina 可強制走備援抓法；' +
-            '若備援也失敗，把 url 換成該銀行的公告/最新消息列表頁。\n';
+    // 錯誤有兩種形狀：抓取失敗是 {text, streak}（帶連續失敗次數），其他（基準防呆等）是字串
+    const norm = errors.map(function (e) { return typeof e === 'string' ? { text: e, streak: 0 } : e; });
+    const stuck = norm.filter(function (e) { return e.streak >= FAIL_STREAK_ALERT; });
+    const blip = norm.filter(function (e) { return e.streak < FAIL_STREAK_ALERT; });
+    if (stuck.length) {
+      body += '🔴 持續抓不到（連續 ' + FAIL_STREAK_ALERT + ' 次以上，要處理）：\n' +
+              stuck.map(function (e) { return '・［連續 ' + e.streak + ' 次］' + e.text; }).join('\n') + '\n\n' +
+              '怎麼處理：用瀏覽器打開那個網址——\n' +
+              '  ・頁面不見了／活動結束 → 該列 active 改 FALSE（或刪掉那列）\n' +
+              '  ・瀏覽器看得到、程式抓不到 → 把 url 換成該銀行的公告／最新消息列表頁\n' +
+              '恢復正常後，該列的 fail_streak 會自動清空。\n\n';
+    }
+    if (blip.length) {
+      body += '⚠ 這次抓取失敗（偶發，通常下次就好，不用處理）：\n' +
+              blip.map(function (e) { return e.streak ? '・［第 ' + e.streak + ' 次］' + e.text : '・' + e.text; }).join('\n') + '\n\n';
+    }
   }
 
   if (skipped) {

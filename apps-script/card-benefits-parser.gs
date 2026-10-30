@@ -425,8 +425,15 @@ function extractCard_(rawText, idHint, generalText, opts) {
   if (activityOnly) {
     const focus = opts.focus;
     let userText;
-    if (focus && (focus.scope || focus.diff)) {
-      // 來自 2-變動通知：新文字是整頁，要靠「所屬活動」「變動段落」鎖定站長要的那一檔，
+    if (focus && focus.pick) {
+      // 站長在「寫入活動」欄打了字＝一列有好幾個變動，只要其中這幾檔
+      userText = '卡片「' + (idHint || '') + '」的官網這次有變動。站長**只要下面點名的活動**' +
+        '（可能是簡稱或關鍵字，請對到官網上的完整活動）；沒被點名的一律不要輸出，就算它也有變動。\n\n' +
+        '【站長點名要寫的活動】' + focus.pick + '\n\n' +
+        '【這次變動的段落】（參考用）\n' + (focus.diff || '（無）') + '\n\n' +
+        '【新版全文】（用來找點名的活動與它的完整條件、上限、期間）\n' + rawText;
+    } else if (focus && (focus.scope || focus.diff)) {
+      // 來自 2-變動通知、打 V：新文字是整頁，要靠「所屬活動」「變動段落」鎖定這次變動的那幾檔，
       // 否則會把整頁每一檔活動都抽出來（那正是 2026-10-04 拿掉整頁解析的原因）
       userText = '卡片「' + (idHint || '') + '」的官網這次有變動。**只抽下面「要抽的活動」那一檔**' +
         '（以及變動段落直接提到的活動）；頁面上其他活動一律不要輸出。\n\n' +
@@ -1053,11 +1060,18 @@ function parseCardActivities() {
   ui.alert(msg);
 }
 
-// 「寫入活動」欄算不算打勾：V / ✓ / 核取方塊 true 都算；已解析、失敗等程式回填的字不算
-function isWriteActivityMark_(v) {
-  if (v === true) return true;
-  const s = String(v == null ? '' : v).trim().toUpperCase().replace(/Ｖ/g, 'V');
-  return s === 'V' || s === '✓' || s === '✔' || s === 'TRUE';
+// 「寫入活動」欄怎麼讀（2026-10-04 站長：一列常有好幾個變動，只想寫其中幾個）：
+//   ・空白、或程式回填的「已解析…／失敗…」→ 不處理，回 null
+//   ・V / ✓ / 核取方塊 true          → 這列變動提到的活動全部寫，回 { all: true }
+//   ・其他文字（如「日本加碼、超市 3%」）→ 只寫這幾檔，回 { pick: '那段文字' }
+// 寫入跟公開是兩件獨立的事：公開哪些由「公開摘要」的字決定，這格只管寫進卡片資料的是哪些。
+function readWriteActivityMark_(v) {
+  if (v === true) return { all: true };
+  const raw = String(v == null ? '' : v).trim();
+  if (!raw || /^(已解析|失敗|略過)/.test(raw)) return null;
+  const s = raw.toUpperCase().replace(/Ｖ/g, 'V');
+  if (s === 'V' || s === '✓' || s === '✔' || s === 'TRUE') return { all: true };
+  return { pick: raw };
 }
 
 // A. 2-變動通知：「寫入活動」打 V 的列。
@@ -1089,10 +1103,14 @@ function collectInboxActivityJobs_(ss, knownIds) {
     return c < 0 ? '' : inbox.getRange(row, c + 1).getValue();
   };
   for (let i = 0; i < n; i++) {
-    if (!isWriteActivityMark_(marks[i][0])) continue;
+    const mark = readWriteActivityMark_(marks[i][0]);
+    if (!mark) continue;
     const row = i + 2;
     const label = '變動通知 列' + row;
-    const setStatus = function (v) { inbox.getRange(row, cMark + 1).setValue(v); };
+    // 有指定活動時，狀態後面留著原本打的字——失敗了要重跑不用回想當初寫什麼
+    const setStatus = function (v) {
+      inbox.getRange(row, cMark + 1).setValue(mark.pick ? v + '｜指定：' + mark.pick : v);
+    };
 
     // card_id：先看「公開卡片」（站長可能改過），沒有或不只一張再看「card_id」
     const pickOne = function (raw) {
@@ -1111,7 +1129,8 @@ function collectInboxActivityJobs_(ss, knownIds) {
     }
     out.jobs.push({
       label: label, cardId: cardId, text: text, url: String(cell(row, '網址') || ''),
-      focus: { scope: String(cell(row, '所屬活動') || '').trim(), diff: String(cell(row, '變動段落') || '').trim() },
+      focus: { scope: String(cell(row, '所屬活動') || '').trim(), diff: String(cell(row, '變動段落') || '').trim(),
+        pick: mark.pick || '' },
       setStatus: setStatus
     });
   }
