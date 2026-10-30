@@ -125,27 +125,31 @@ function toggleExactSearchEmptyHint(show) {
 // 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
 // 搜尋詞展開：原詞＋fuzzy 正反向對照＋片語級同義詞。第一個元素永遠是原詞。
 // findMatchingItem 與一般消費排除判斷（isBasicExcludedForSearch）共用，兩邊才認得同一組別名。
+// 臺／台視為同一個字（2026-10-30 站長要求）：搜「臺北捷運」要找到「台北捷運」，反過來也一樣。
+// 做法是把原詞的「全台」「全臺」兩個版本都當成起點，各自再走一次別名與片語展開；
+// 比對與計算都吃這份清單（getAllSearchVariants），所以資料名稱寫哪個字都對得到，不用再為每個詞列臺字別名。
+// 只影響比對，畫面上的名字不變
 function expandSearchTerms(searchLower) {
     const searchTerms = [searchLower]; // Always include original search term
-
-    // Add fuzzy search mapping if exists
-    if (fuzzySearchMap[searchLower]) {
-        const mappedTerm = fuzzySearchMap[searchLower].toLowerCase();
-        if (!searchTerms.includes(mappedTerm)) {
-            searchTerms.push(mappedTerm);
-        }
+    const add = t => { if (t && !searchTerms.includes(t)) searchTerms.push(t); };
+    const bases = [searchLower];
+    if (/[台臺]/.test(searchLower)) {
+        [searchLower.replace(/臺/g, '台'), searchLower.replace(/台/g, '臺')].forEach(v => { if (!bases.includes(v)) bases.push(v); });
     }
 
-    // Also add reverse mappings (find all terms that map to current search)
-    Object.entries(fuzzySearchMap).forEach(([key, value]) => {
-        if (value.toLowerCase() === searchLower && !searchTerms.includes(key)) {
-            searchTerms.push(key);
-        }
-    });
+    bases.forEach(base => {
+        add(base);
 
-    // 片語級同義詞展開：「海外消費」→「國外消費」
-    expandSynonymPhrases(searchLower).forEach(variant => {
-        if (!searchTerms.includes(variant)) searchTerms.push(variant);
+        // Add fuzzy search mapping if exists
+        if (fuzzySearchMap[base]) add(fuzzySearchMap[base].toLowerCase());
+
+        // Also add reverse mappings (find all terms that map to current search)
+        Object.entries(fuzzySearchMap).forEach(([key, value]) => {
+            if (value.toLowerCase() === base) add(key);
+        });
+
+        // 片語級同義詞展開：「海外消費」→「國外消費」
+        expandSynonymPhrases(base).forEach(add);
     });
 
     return searchTerms;
