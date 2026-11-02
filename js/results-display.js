@@ -375,7 +375,6 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
     const matchingBenefits = [];
 
     // Find matching benefits
-    const exactParking = isExactSearchActive();
     for (const benefit of cardsData.benefits) {
         // Skip inactive benefits
         if (!benefit.active) continue;
@@ -388,12 +387,10 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
                 // 注意：停車的商家名稱是長描述字串、關鍵詞常在中間（如「中興嘟嘟房」⊇「嘟嘟房」、
                 // 「全台遠東百貨停車」⊇「遠東」），因此這裡刻意用 substring 而非 startsWith，
                 // 否則會漏掉大量停車場。停車資料皆為台灣停車場專名，誤匹配風險低。
-                // 精準搜尋時只認全等（2026-11-02）
-                const isMatch = exactParking
-                    ? searchTerms.includes(merchantItemLower)
-                    : searchTerms.some(searchTerm =>
-                        searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
-                    );
+                // 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉
+                const isMatch = searchTerms.some(searchTerm =>
+                    searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
+                );
 
                 if (isMatch) {
                     // Check if this card is in the user's selection

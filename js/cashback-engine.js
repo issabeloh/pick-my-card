@@ -370,10 +370,10 @@ function getMerchantSearchUnits(merchantName) {
 // 避免 "Line Pay" 誤配到完全不同的產品 "Line Pay Money"（"money" 是新單字，不是同一商家的註記）。
 // 雙語商家名稱請統一寫成 "中文 (English)" 括號格式（見 getMerchantSearchUnits），
 // 才會被拆成獨立 unit 做 exact 比對，不會受此規則影響。
-// 精準搜尋時（isExactSearchActive）只認某個單元與搜尋詞全等
-function merchantMatchesStrict(merchantName, searchVariants, exactOnly = isExactSearchActive()) {
+// 刻意不理精準搜尋（2026-11-02 站長裁定）：付款方式、導購、推薦連結是補充資訊，只認全等會少掉
+// 家樂福→家樂福線上購物、摩斯→摩斯漢堡 這類正確結果
+function merchantMatchesStrict(merchantName, searchVariants) {
     const units = getMerchantSearchUnits(merchantName);
-    if (exactOnly) return units.some(unit => searchVariants.includes(unit));
     return units.some(unit =>
         searchVariants.some(term => {
             if (term === unit) return true;

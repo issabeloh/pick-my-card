@@ -115,7 +115,8 @@ function isExactSearchEnabled() {
 }
 
 // 這次搜尋要不要「只認完全一致」：勾了精準搜尋、而且不是快捷搜尋（快捷搜尋不受精準搜尋影響，同 calculateCashback）。
-// 主結果以外的各區（領券、停車、商家付款方式、導購、推薦連結、新戶活動）共用（2026-11-02 站長要求：勾了精準搜尋，這幾區也只認完全一致）
+// 領券與新戶活動也用（2026-11-02 站長裁定：這兩區跟主結果一樣是回饋活動，勾了精準搜尋也只認完全一致；
+// 停車、商家付款方式、導購、推薦連結是補充資訊，刻意不套用）
 function isExactSearchActive() {
     return (typeof currentQuickSearchOption !== 'undefined' && currentQuickSearchOption) ? false : isExactSearchEnabled();
 }
