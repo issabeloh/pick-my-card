@@ -245,6 +245,24 @@ function parseCashbackCap(cap, card, levelSettings) {
     return isNaN(parsed) ? null : parsed;
 }
 
+// 領券的一個商家名稱有沒有對到這次搜尋（2026-11-02 起跟主結果 findMatchingItem 同一套保護）：
+//   ・項目包含搜尋詞：3 字以內的英數詞要在字首（shortTermStartsWord；以前搜「ana」會中 jeANAsis）
+//   ・搜尋詞包含項目：英文要詞彙邊界（termContainsItemWithBoundary，避免 "singapore" 誤含 "gap"）
+//   ・SearchExclusions 工作表的排除照樣生效（以前領券不吃排除）
+//   ・精準搜尋時只認全等
+function couponMerchantMatches(item, searchVariants, merchantValue, exactOnly) {
+    const itemLower = String(item || '').toLowerCase().trim();
+    if (!itemLower) return false;
+    const searchLower = String(merchantValue || '').toLowerCase().trim();
+    const excludedFor = key => (searchExclusionMap[key] || []).some(x => String(x).toLowerCase() === itemLower);
+    if (excludedFor(searchLower)) return false;
+    return searchVariants.some(term => {
+        if (excludedFor(term)) return false;
+        if (exactOnly) return itemLower === term;
+        return (itemLower.includes(term) && shortTermStartsWord(itemLower, term)) || termContainsItemWithBoundary(term, itemLower);
+    });
+}
+
 // Display coupon cashback results
 async function displayCouponCashbacks(amount, merchantValue) {
     couponResultsContainer.innerHTML = '';
@@ -257,6 +275,7 @@ async function displayCouponCashbacks(amount, merchantValue) {
 
     // Pre-compute search variants once (含 fuzzy 別名，e.g. "711" → ["711","7-eleven"])
     const searchVariants = getAllSearchVariants(merchantValue);
+    const couponExact = isExactSearchActive();
 
     for (const card of cardsToCheck) {
         if (card.couponCashbacks) {
@@ -267,17 +286,8 @@ async function displayCouponCashbacks(amount, merchantValue) {
                 const merchantItems = String(coupon.merchant).split(',').map(m => m.trim());
 
                 // Find all matching merchant items
-                const matchedMerchants = [];
-                for (const item of merchantItems) {
-                    const itemLower = item.toLowerCase();
-                    // itemLower.includes(term): 項目包含搜尋詞（允許）
-                    // term ⊇ item: 用詞彙邊界判斷，避免 "singapore" 誤含 "gap"
-                    if (searchVariants.some(term =>
-                        itemLower.includes(term) || termContainsItemWithBoundary(term, itemLower)
-                    )) {
-                        matchedMerchants.push(item);
-                    }
-                }
+                const matchedMerchants = merchantItems.filter(item =>
+                    couponMerchantMatches(item, searchVariants, merchantValue, couponExact));
 
                 // If any merchants matched, add this coupon
                 if (matchedMerchants.length > 0) {
@@ -377,6 +387,7 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
                 // 注意：停車的商家名稱是長描述字串、關鍵詞常在中間（如「中興嘟嘟房」⊇「嘟嘟房」、
                 // 「全台遠東百貨停車」⊇「遠東」），因此這裡刻意用 substring 而非 startsWith，
                 // 否則會漏掉大量停車場。停車資料皆為台灣停車場專名，誤匹配風險低。
+                // 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉
                 const isMatch = searchTerms.some(searchTerm =>
                     searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
                 );
@@ -533,25 +544,11 @@ function setupCardholderPromoToggle() {
 
 // Parse a rate string like "5%" or "+3%" into a decimal (0.05).
 // Expand a search term to include fuzzy aliases (e.g., 'linepay' ↔ 'line pay').
+// 2026-11-02 起直接用主搜尋那支 expandSearchTerms（search-match.js）：以前這裡自己抄一份，
+// 沒跟上臺／台視為同字、統一詞同一列互相帶出
 function expandSearchTerm(term) {
     const t = String(term || '').toLowerCase().trim();
-    if (!t) return [];
-    const variants = new Set([t]);
-    // Forward map: t → mapped
-    if (typeof fuzzySearchMap !== 'undefined' && fuzzySearchMap[t]) {
-        variants.add(String(fuzzySearchMap[t]).toLowerCase());
-    }
-    // Reverse map: any key whose value is t
-    if (typeof fuzzySearchMap !== 'undefined') {
-        Object.entries(fuzzySearchMap).forEach(([k, v]) => {
-            if (String(v).toLowerCase() === t) variants.add(k.toLowerCase());
-        });
-    }
-    // 片語級同義詞展開：「海外消費」→「國外消費」（定義在 search-match.js，載入順序在前）
-    if (typeof expandSynonymPhrases === 'function') {
-        expandSynonymPhrases(t).forEach(variant => variants.add(variant));
-    }
-    return Array.from(variants);
+    return t ? expandSearchTerms(t) : [];
 }
 
 // Does a promo's bonus_merchants list match the current search term/keywords?
@@ -577,11 +574,12 @@ function promoMerchantsMatchSearch(promo, card, merchantValue, quickKeywords) {
     const merchants = expandPromoMerchants(promo, card);
     if (!merchants || merchants.length === 0) return false;
 
-    // Substring match either way (also against each merchant's fuzzy variants)
+    // Substring match either way (also against each merchant's fuzzy variants)；精準搜尋時只認全等（2026-11-02）
+    const exactOnly = !(Array.isArray(quickKeywords) && quickKeywords.length > 0) && isExactSearchActive();
     return merchants.some(m => {
         const ml = String(m).toLowerCase();
         const mlVariants = expandSearchTerm(ml);
-        return terms.some(t => mlVariants.some(mv => mv.includes(t) || t.includes(mv)));
+        return terms.some(t => mlVariants.some(mv => exactOnly ? mv === t : (mv.includes(t) || t.includes(mv))));
     });
 }
 
