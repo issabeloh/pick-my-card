@@ -338,6 +338,33 @@ function openManagePaymentsModal() {
 }
 
 // Show payment detail modal
+// 一個行動支付 → 每張卡的最高回饋，由高到低（單一支付詳情與「比較所有行動支付回饋」共用，2026-11-02 由兩份抄本合併）。
+// 走搜尋三步的「找、算」：每個 searchTerm 先 findSearchHits 拿資料裡的名字，再逐名計算（以前直接拿 searchTerm 去算）。
+// 刻意只認完全一致（exactOnly）：包含式比對會把「Line Pay 韓國」（韓國限定 19%）當成 LINE Pay 的一般回饋。
+// 改版前後用 2026-10-30 線上資料比過：21 個行動支付結果完全相同
+async function computePaymentCards(payment, cards) {
+    const matchingCards = [];
+    for (const term of payment.searchTerms || []) {
+        const hits = findSearchHits(term, { exactOnly: true }) || [];
+        for (const hit of hits) {
+            for (const card of cards) {
+                const results = await calculateCardCashback(card, String(hit.originalItem).toLowerCase(), 1000); // 沒有消費金額，用 1000 試算
+                results.forEach(result => {
+                    if (result.rate > 0) {
+                        matchingCards.push({ card, rate: result.rate, cap: result.cap, category: result.matchedCategory || null, rateGroup: null });
+                    }
+                });
+            }
+        }
+    }
+    // 同一張卡只留回饋最高的那個活動
+    const cardMap = new Map();
+    matchingCards.forEach(mc => {
+        if (!cardMap.has(mc.card.id) || cardMap.get(mc.card.id).rate < mc.rate) cardMap.set(mc.card.id, mc);
+    });
+    return Array.from(cardMap.values()).sort((a, b) => b.rate - a.rate);
+}
+
 async function showPaymentDetail(paymentId) {
     console.log('🔍 showPaymentDetail 被調用:', paymentId);
     const payment = paymentsData.payments.find(p => p.id === paymentId);
@@ -370,49 +397,7 @@ async function showPaymentDetail(paymentId) {
     // Get matching cards for this payment
     const cardsToCheck = getCardsForComparison();
 
-    let matchingCards = [];
-
-    // Search for matches using all payment search terms
-    console.log(`🔎 搜尋 ${payment.name} 的匹配卡片...`);
-    console.log('searchTerms:', payment.searchTerms);
-    console.log('cardsToCheck 數量:', cardsToCheck.length);
-
-    for (const term of payment.searchTerms) {
-        const matches = findMatchingItem(term);
-        console.log(`  term "${term}" 找到 ${matches ? matches.length : 0} 個匹配`);
-        if (matches && matches.length > 0) {
-            // For each matched item, calculate cashback for all cards
-            for (const card of cardsToCheck) {
-                const results = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
-                // calculateCardCashback now returns an array of all matching activities
-                for (const result of results) {
-                    if (result.rate > 0) {
-                        console.log(`    ✅ ${card.name}: ${result.rate}%`);
-                        matchingCards.push({
-                            card: card,
-                            rate: result.rate,
-                            cap: result.cap,
-                            category: result.matchedCategory || null,
-                            rateGroup: null // Not needed for display
-                        });
-                    }
-                }
-            }
-        }
-    }
-
-    // Remove duplicates - keep highest rate per card
-    const cardMap = new Map();
-    matchingCards.forEach(mc => {
-        if (!cardMap.has(mc.card.id) || cardMap.get(mc.card.id).rate < mc.rate) {
-            cardMap.set(mc.card.id, mc);
-        }
-    });
-
-    const uniqueCards = Array.from(cardMap.values());
-
-    // Sort by rate descending
-    uniqueCards.sort((a, b) => b.rate - a.rate);
+    const uniqueCards = await computePaymentCards(payment, cardsToCheck);
 
     // Display matching cards
     detailsContainer.innerHTML = '';
@@ -522,42 +507,7 @@ async function showComparePaymentsModal() {
         for (const payment of paymentsToCompare) {
             const cardsToCheck = getCardsForComparison();
 
-            let matchingCards = [];
-
-            // Search for matches using all payment search terms
-            for (const term of payment.searchTerms) {
-                const matches = findMatchingItem(term);
-                if (matches && matches.length > 0) {
-                    // For each matched item, calculate cashback for all cards
-                    for (const card of cardsToCheck) {
-                        const results = await calculateCardCashback(card, term, 1000); // Use 1000 as dummy amount
-                        // calculateCardCashback now returns an array of all matching activities
-                        for (const result of results) {
-                            if (result.rate > 0) {
-                                matchingCards.push({
-                                    card: card,
-                                    rate: result.rate,
-                                    cap: result.cap,
-                                    category: result.matchedCategory || null,
-                                    rateGroup: null
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Remove duplicates - keep highest rate per card
-            const cardMap = new Map();
-            matchingCards.forEach(mc => {
-                if (!cardMap.has(mc.card.id) || cardMap.get(mc.card.id).rate < mc.rate) {
-                    cardMap.set(mc.card.id, mc);
-                }
-            });
-
-            const uniqueCards = Array.from(cardMap.values());
-
-            uniqueCards.sort((a, b) => b.rate - a.rate);
+            const uniqueCards = await computePaymentCards(payment, cardsToCheck);
 
             // Only keep top 2
             const top2 = uniqueCards.slice(0, 2);
