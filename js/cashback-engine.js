@@ -370,11 +370,20 @@ function getMerchantSearchUnits(merchantName) {
 // 避免 "Line Pay" 誤配到完全不同的產品 "Line Pay Money"（"money" 是新單字，不是同一商家的註記）。
 // 雙語商家名稱請統一寫成 "中文 (English)" 括號格式（見 getMerchantSearchUnits），
 // 才會被拆成獨立 unit 做 exact 比對，不會受此規則影響。
-function merchantMatchesStrict(merchantName, searchVariants) {
+// 精準搜尋時（isExactSearchActive）只認某個單元與搜尋詞全等
+function merchantMatchesStrict(merchantName, searchVariants, exactOnly = isExactSearchActive()) {
     const units = getMerchantSearchUnits(merchantName);
+    if (exactOnly) return units.some(unit => searchVariants.includes(unit));
     return units.some(unit =>
         searchVariants.some(term => {
-            if (term === unit || term.startsWith(unit)) return true;
+            if (term === unit) return true;
+            // 反方向也要擋「接著是另一個英文字」（2026-11-02）：以前 costco 對到「COS」、netflix 對到「NET」、
+            // uber eats 對到「Uber Rider (Uber)」。pchome24h ⊇ pchome（接數字）、yahoo購物 ⊇ yahoo（接中文）照樣算
+            if (term.startsWith(unit)) {
+                const rest = term.slice(unit.length);
+                if (/[a-z0-9]$/i.test(unit) && /^[a-z]/i.test(rest)) return false;
+                return !/^\s+[a-z]/i.test(rest);
+            }
             if (unit.startsWith(term)) {
                 const rest = unit.slice(term.length);
                 const isNewEnglishWord = /^\s+[a-z]/i.test(rest);
