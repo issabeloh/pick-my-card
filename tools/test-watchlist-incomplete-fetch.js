@@ -14,6 +14,7 @@
 //   2. 拿掉訊號詞防呆時，同一份資料**會**漏網（證明這個測試真的重現了當時的 bug）
 //   3. 真的回饋變動（上限 500→300）照樣通知，不被新防呆誤擋
 //   4. 首次建立的基準若零訊號詞 → 信裡提醒
+//   5. 防機器人驗證頁（同日臺灣企銀 F5 驗證碼）永遠不會被存成基準；直接抓被擋會改走 Jina
 
 'use strict';
 const fs = require('fs');
@@ -84,7 +85,18 @@ global.SpreadsheetApp = { getActiveSpreadsheet: () => ({
 })};
 
 let page = '';
-global.UrlFetchApp = { fetch: () => ({ getResponseCode: () => 200, getContentText: () => '<main>' + page + '</main>' }) };
+let jinaPage = null;   // null＝Jina 回跟直接抓一樣的內容
+const fetched = [];
+global.UrlFetchApp = { fetch: (u) => {
+  const viaJina = u.indexOf('https://r.jina.ai/') === 0;
+  fetched.push(viaJina ? 'jina' : 'direct');
+  const body = viaJina
+    ? 'Title: 藝FUN URL Source: ' + u.slice(18) + ' Markdown Content: ' + (jinaPage === null ? page : jinaPage)
+    : '<main>' + page + '</main>';
+  return { getResponseCode: () => 200, getContentText: () => body };
+}};
+// 2026-11-03 臺灣企銀直接抓拿到的 F5 驗證碼頁（原文）
+const CAPTCHA = 'This question is for testing whether you are a human visitor and to prevent automated spam submission. What code is in the image? submit Your support ID is: 2700987182123304638 .';
 const mails = [];
 global.MailApp = { sendEmail: (to, subject, body) => mails.push({ subject, body }) };
 global.Session = { getActiveUser: () => ({ getEmail: () => 'test@example.com' }) };
@@ -94,8 +106,9 @@ const DRIVER = `
 const inboxRows = [];
 appendToInbox_ = function (ss, info) { inboxRows.push(info); };
 const ok = (label, got, want) => console.log((String(got) === String(want) ? '  ✅ ' : '  ❌ ') + label + ': ' + got + ' (應為 ' + want + ')');
-const run = (oldSnap, newPage) => {
-  grid[1][3] = oldSnap; page = newPage; inboxRows.length = 0; mails.length = 0;
+const run = (oldSnap, newPage, jina) => {
+  grid[1][3] = oldSnap; page = newPage; jinaPage = jina === undefined ? null : jina;
+  inboxRows.length = 0; mails.length = 0; fetched.length = 0;
   Object.keys(store).forEach(k => delete store[k]);
   checkWatchlist();
 };
@@ -126,6 +139,24 @@ console.log('=== 4. 首次建基準就只抓到殼 → 信裡提醒 ===');
 run('', SHELL);
 ok('基準照存', grid[1][3] === SHELL, true);
 ok('信裡有提醒', /剛建立的基準快照/.test(lastMail()), true);
+
+console.log('=== 5. 直接抓拿到驗證碼頁 → 自動改走 Jina，Jina 抓得到就用它 ===');
+run(OLD, CAPTCHA, OLD);
+ok('先直接抓、再走 Jina', fetched.join('>'), 'direct>jina');
+ok('沒有誤報', inboxRows.length, 0);
+ok('基準沒被驗證頁覆蓋', grid[1][3].indexOf('What code is in the image') === -1, true);
+
+console.log('=== 6. 直接抓與 Jina（含真瀏覽器重試）都被擋 → 錯誤、基準不動 ===');
+run(OLD, CAPTCHA, CAPTCHA);
+ok('Jina 有用真瀏覽器重試一次', fetched.join('>'), 'direct>jina>jina');
+ok('基準保留原樣', grid[1][3] === OLD, true);
+ok('信裡寫明被防機器人擋', /防機器人/.test(lastMail()), true);
+ok('不寫進變動通知', inboxRows.length, 0);
+
+console.log('=== 7. 舊程式存下的驗證碼頁基準 → 自動當空的重建、不誤報 ===');
+run(CAPTCHA, OLD);
+ok('改存成真正的正文', grid[1][3] === OLD, true);
+ok('不寫進變動通知', inboxRows.length, 0);
 `;
 
 const SRC = path.join(__dirname, '..', 'apps-script', 'watchlist-monitor.gs');

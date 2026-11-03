@@ -295,7 +295,9 @@ function checkWatchlist() {
       continue;
     }
 
-    const oldText = String(row[cSnap] || '');
+    let oldText = String(row[cSnap] || '');
+    // 舊版程式可能把防機器人驗證頁存成了基準（2026-11-03 前沒有偵測）——那不是基準，當成空的重建
+    if (botWallMatch_(oldText)) oldText = '';
 
     if (!oldText) {
       // 第一次抓這個網址：只存基準快照，不通知
@@ -694,7 +696,38 @@ function fetchDirect_(url) {
   if (html.length < 100) {
     throw new Error('抓到的正文太短（' + html.length + ' 字），可能是動態網頁或被擋');
   }
+  const wall = botWallMatch_(html);
+  if (wall) {
+    // 丟錯才會走 Jina 備援（fetch_via 留空/auto 時）；也確保驗證碼頁永遠不會被存成 last_snapshot
+    throw new Error('被網站的防機器人機制擋下，回的是驗證頁（「' + wall + '」）');
+  }
   return html;
+}
+
+/************** 防機器人驗證頁偵測（2026-11-03） **************/
+// 實例：臺灣企銀官網改版後，直接抓拿到 F5 防火牆的驗證碼頁——HTTP 200、長度過 100 字，
+// 舊程式把它當正常內容存成 last_snapshot，而且因為「沒失敗」根本不會改走 Jina 備援。
+// 驗證頁的特徵句很固定，認得出來就當成抓取失敗處理。
+// 只比對頁面**前 600 字**：真的權益頁正文不會一開頭就講驗證碼，避免正文裡碰巧出現「Access Denied」誤判。
+// 遇到新的驗證頁樣式，把特徵句加進這個清單即可。
+const BOT_WALL_PATTERNS = [
+  /testing whether you are a human/i,          // F5 BIG-IP ASM（臺灣企銀）
+  /What code is in the image/i,                // F5 驗證碼
+  /Your support ID is/i,                       // F5 / Imperva 拒絕頁
+  /Request Rejected/i,                         // F5 拒絕頁
+  /Just a moment\.\.\./i,                       // Cloudflare 驗證
+  /Attention Required!? \| Cloudflare/i,        // Cloudflare 封鎖
+  /Checking your browser before accessing/i,   // Cloudflare 舊版
+  /Incapsula incident ID/i,                    // Imperva
+  /請(完成|進行)(安全|人機)驗證|驗證您是真人|您的請求已被拒絕/
+];
+function botWallMatch_(text) {
+  const head = String(text || '').slice(0, 600);
+  for (let i = 0; i < BOT_WALL_PATTERNS.length; i++) {
+    const m = head.match(BOT_WALL_PATTERNS[i]);
+    if (m) return m[0];
+  }
+  return '';
 }
 
 /************** 連續抓取失敗次數（1-監控清單 的 fail_streak 欄，程式自己維護） **************/
@@ -729,7 +762,8 @@ function fetchViaJina_(url) {
   try {
     return fetchViaJinaOnce_(url, false);
   } catch (e) {
-    if (!/空殼/.test(e.message)) throw e;
+    // 空殼或防機器人頁都值得用「真瀏覽器、等載完、不吃快取」再試一次（後者有時是 Jina 快取到的舊驗證頁）
+    if (!/空殼|防機器人/.test(e.message)) throw e;
     return fetchViaJinaOnce_(url, true);
   }
 }
@@ -762,6 +796,11 @@ function fetchViaJinaOnce_(url, slow) {
     throw new Error('Jina 回傳空殼（內文只有 ' + body.length + ' 字：「' +
       body.slice(0, 40) + '」）' + (slow ? '，等 30 秒重抓也一樣' : '') +
       '，這一頁渲染失敗。請稍後重跑，或把該列 fetch_via 改回 direct');
+  }
+  const wall = botWallMatch_(body);
+  if (wall) {
+    throw new Error('Jina 也被網站的防機器人機制擋下（「' + wall + '」）' +
+      (slow ? '，用真瀏覽器重抓也一樣' : '') + '。這家銀行擋自動抓取，見通知信建議');
   }
   return text;
 }
