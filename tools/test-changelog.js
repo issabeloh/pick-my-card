@@ -10,6 +10,9 @@
  * 邊界：取最新 5 筆、由新到舊、active=FALSE 排除、工作表不存在時安全降級、
  * 多卡列自動拆列、重複按不重寫、驗證失敗的列不寫入。
  *
+ * 2026-11-03：「2-變動通知」改版（多「所屬活動」欄、動作欄改名「公開／封存／刪除」、照欄名找欄、
+ * 自動排版）後這支一直沒跟上，7 項紅燈都是測試過時、不是程式壞掉；已照現行版面更新預期值。
+ *
  * ⚠️ 這不是完整的 Apps Script 模擬器——stub 只做到夠這幾個函數用。改到別的函數時
  *    請照樣貼回 Sheets 實測，不要把這支的綠燈當成「線上一定會動」。
  */
@@ -44,6 +47,9 @@ function makeSheet(name, rows, maxColumns) {
     insertColumnsAfter(afterCol, n) { this.maxColumns += n; },
     appendRow(r) { this.rows.push(r.slice()); },
     setFrozenRows() {},
+    getFrozenRows() { return 1; },
+    getMaxRows() { return Math.max(this.rows.length, 1000); },
+    setColumnWidth() {},
     getRange(row, col, numRows, numCols) {
       const s = this;
       return {
@@ -73,7 +79,9 @@ function makeSheet(name, rows, maxColumns) {
           }
           return out;
         },
-        setBackground() { return this; }
+        setBackground() { return this; },
+        setFontWeight() { return this; },
+        setWrapStrategy() { return this; }
       };
     },
     getParent() { return this.parent; }
@@ -104,6 +112,7 @@ function baseSandbox(activeSS) {
         createMenu: () => { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; }
       }),
       flush: () => {},
+      WrapStrategy: { CLIP: 'CLIP' },
       openById: (id) => sandboxState.cardsSS
     },
     Utilities: {
@@ -224,7 +233,7 @@ let ctxRows = null;
   vm.runInContext('publishChangelog()', ctx);   // 再按一次
   const afterSecond = dataSS.getSheetByName('變動紀錄').rows.length;
   check('重複按選單不會重寫（1 筆 → 還是 1 筆）', afterFirst === 2 && afterSecond === 2, { afterFirst, afterSecond });
-  check('第二次跳「沒有打勾的列」提示', alerts[alerts.length - 1].indexOf('沒有任何打勾') >= 0, alerts[alerts.length - 1]);
+  check('第二次跳「沒有任何指示」提示', alerts[alerts.length - 1].indexOf('沒有任何指示') >= 0, alerts[alerts.length - 1]);
 }
 
 // B3: 驗證失敗的列完整列在訊息裡且未寫入
@@ -258,16 +267,19 @@ const OLD_HEADER = ['日期時間', 'card_id', '銀行', '網址', '實質變動
   '信心', '變動段落', '舊文字', '新文字', '狀態'];
 const oldRow = [T, 'yushan-unicard', '玉山', 'https://x', '是', 'AI內部視角摘要', '文案', '高', 'd', 'o', 'n', '已處理'];
 r = runPublish([OLD_HEADER.slice(), oldRow.slice()], CARDS_DATA, null);
-check('舊 12 欄分頁：自動補上表尾三欄（不用刪分頁）',
-  JSON.stringify(r.inbox[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), r.inbox[0]);
+// 2026-08-20 起多補一欄「所屬活動」，動作欄也改名「公開／封存／刪除」（見 watchlist-monitor.gs 的 INBOX_HEADERS）
+const NEW_TAIL = ['所屬活動', '公開摘要', '公開卡片', '公開／封存／刪除'];
+check('舊 12 欄分頁：自動補上表尾四欄（不用刪分頁）',
+  JSON.stringify(r.inbox[0].slice(12)) === JSON.stringify(NEW_TAIL), r.inbox[0]);
 check('舊分頁的既有內容一格都沒動',
   JSON.stringify(r.inbox[1].slice(0, 12)) === JSON.stringify(oldRow), r.inbox[1]);
-check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有打勾」提示',
-  !r.changelog && r.alerts.join('').indexOf('沒有任何打勾') >= 0, r.alerts);
+check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有任何指示」提示',
+  !r.changelog && r.alerts.join('').indexOf('沒有任何指示') >= 0, r.alerts);
 
 // B5a: 舊列的「公開摘要／公開卡片」自動從 AI摘要／card_id 回填
-check('舊列「公開卡片」自動回填 card_id', r.inbox[1][13] === 'yushan-unicard', r.inbox[1].slice(12));
-check('舊列「公開摘要」自動回填 AI摘要', r.inbox[1][12] === 'AI內部視角摘要', r.inbox[1].slice(12));
+// 第 13 欄是新補的「所屬活動」（舊列留空），公開摘要／公開卡片在第 14／15 欄
+check('舊列「公開卡片」自動回填 card_id', r.inbox[1][14] === 'yushan-unicard', r.inbox[1].slice(12));
+check('舊列「公開摘要」自動回填 AI摘要', r.inbox[1][13] === 'AI內部視角摘要', r.inbox[1].slice(12));
 check('回填筆數有寫進結果視窗', r.alerts.join('').indexOf('回填了 2 格') >= 0, r.alerts);
 
 // 回填只填空格：站長已經改寫過的摘要不能被 AI 摘要蓋掉；「已發布」的列整列不碰
@@ -292,16 +304,18 @@ check('舊列手動補兩格後可正常發布',
   !!r.changelog && r.changelog.rows.length === 2 && r.changelog.rows[1][2] === '手動補寫的一句話',
   r.changelog && r.changelog.rows);
 
-// B5c: 表頭跟程式預期對不上 → 什麼都不寫，改給手動補表頭的指示
-r = runPublish([['日期時間', 'card_id', '銀行', '網址', '狀態'], [T, 'yushan-unicard', '玉山', 'u', '待解析']], CARDS_DATA, null);
+// B5c: 表頭跟程式預期對不上（連「狀態」欄都沒有，認不出是變動通知表）→ 什麼都不寫，改給手動補表頭的指示
+// （有「狀態」欄的表會自動補欄，見 B5；這裡測的是認不出來的那條路）
+r = runPublish([['日期時間', 'card_id', '銀行', '網址'], [T, 'yushan-unicard', '玉山', 'u']], CARDS_DATA, null);
 check('表頭對不上 → 不亂寫、指示手動補三格（不叫人刪分頁）',
-  r.inbox[0].length === 5 && r.alerts.join('').indexOf('手動補即可') >= 0 && !r.changelog, r.alerts);
+  r.inbox[0].length === 4 && r.alerts.join('').indexOf('手動補即可') >= 0 && !r.changelog, r.alerts);
 
-// B5d: 第 13~15 欄已被站長自己的欄位佔用 → 不覆蓋
+// B5d: 第 13 欄已被站長自己的欄位佔用 → 不覆蓋，缺的欄接在它後面
+// （2026-08-15 起照欄名找欄，所以不必再叫站長手動補——舊版這裡會跳「手動補即可」）
 r = runPublish([OLD_HEADER.concat(['我的備註']), oldRow.concat(['別動我'])], CARDS_DATA, null);
-check('第 13 欄已有站長自己的欄位 → 不覆蓋、改指示手動補',
+check('第 13 欄已有站長自己的欄位 → 不覆蓋、缺的欄補在後面',
   r.inbox[0][12] === '我的備註' && r.inbox[1][12] === '別動我' &&
-  r.alerts.join('').indexOf('手動補即可') >= 0, r.inbox[0]);
+  JSON.stringify(r.inbox[0].slice(13)) === JSON.stringify(NEW_TAIL), r.inbox[0]);
 
 // B6: 效能防呆——publishChangelog 不可以整張表讀進來。
 // 「舊文字／新文字」各上限 4 萬字，log 長到幾百列時 getDataRange() 會吞進數十 MB，
@@ -340,12 +354,15 @@ check('功能不受影響：大欄位的列照樣發得出去',
   };
   vm.runInContext('appendToInbox_(SpreadsheetApp.getActiveSpreadsheet(), __info)', ctx);
   const sheet = autoSS.getSheetByName('2-變動通知');
-  check('appendToInbox_ 表頭尾巴新增三欄',
-    JSON.stringify(sheet.rows[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), sheet.rows[0]);
-  check('公開摘要預填 AI 摘要、公開卡片預填 inboxCardId、公開留空',
-    sheet.rows[1][12] === '純版面調整，回饋未變' &&
-    sheet.rows[1][13] === 'febank-jaccard,cathay-cube' &&
-    sheet.rows[1][14] === '', sheet.rows[1].slice(12));
+  // 新建分頁的欄序是 INBOX_HEADERS（2026-08-15 起人要看的欄擠在左邊），所以一律照欄名找
+  const h = sheet.rows[0];
+  const at = (row, name) => sheet.rows[row][h.indexOf(name)];
+  check('appendToInbox_ 新建分頁就有發布三欄＋所屬活動',
+    ['所屬活動', '公開摘要', '公開卡片', '公開／封存／刪除'].every(n => h.indexOf(n) >= 0), h);
+  check('公開摘要預填 AI 摘要、公開卡片預填 inboxCardId、動作欄留空',
+    at(1, '公開摘要') === '純版面調整，回饋未變' &&
+    at(1, '公開卡片') === 'febank-jaccard,cathay-cube' &&
+    !at(1, '公開／封存／刪除'), sheet.rows[1]);
 }
 
 // C2: 監控寫入舊的 12 欄分頁時，也會自動補表頭、舊列不動
@@ -361,11 +378,11 @@ check('功能不受影響：大欄位的列照樣發得出去',
   };
   vm.runInContext('appendToInbox_(SpreadsheetApp.getActiveSpreadsheet(), __info)', ctx);
   check('監控寫入舊分頁時自動補表頭',
-    JSON.stringify(oldSheet.rows[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), oldSheet.rows[0]);
+    JSON.stringify(oldSheet.rows[0].slice(12)) === JSON.stringify(NEW_TAIL), oldSheet.rows[0]);
   check('舊分頁的舊列不受影響',
     JSON.stringify(oldSheet.rows[1].slice(0, 12)) === JSON.stringify(oldRow), oldSheet.rows[1]);
   check('新寫入的列三欄預填正確',
-    oldSheet.rows[2][12] === '新的一筆' && oldSheet.rows[2][13] === 'yushan-unicard' && oldSheet.rows[2][14] === '',
+    oldSheet.rows[2][13] === '新的一筆' && oldSheet.rows[2][14] === 'yushan-unicard' && !oldSheet.rows[2][15],
     oldSheet.rows[2].slice(12));
 }
 
