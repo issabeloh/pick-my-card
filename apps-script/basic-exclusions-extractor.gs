@@ -448,7 +448,7 @@ function basicExRulesText_() {
     '8k. 廣告（2026-10-13 站長規則）：照原文列之外，再補「Meta廣告」「Google廣告」：',
     '    原文有 Facebook、Meta、Meta Ads、Facebook Ads → 補「Meta廣告」；原文有 Google產品或服務 → 補「Google廣告」（同 8e）；',
     '    原文有「廣告費」→ 列「廣告費」「Meta廣告」「Google廣告」三項；原文有「MCC 7311（廣告服務）」→ 「Meta廣告」「Google廣告」兩項都補。',
-    '8l. 公用事業費用（2026-11-03 站長規則）：原文有「公用事業費用」或「公共事業費用」時，照原文列之外，',
+    '8l. 公用事業費用（2026-11-03 站長規則）：原文有「公用事業費用」「公共事業費用」或「各項事業費用（或繳款）」時，照原文列之外，',
     '    **一律再補「電費」「水費」「瓦斯費」「中華電信電信費」**（原文括號沒逐一點名也要補）。',
     '    但名單裡已有「電信費」或「電信資費」時，**不要**再列「中華電信電信費」（電信費已涵蓋中華電信）。',
     '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
@@ -539,11 +539,12 @@ function basicExAskGemini_(bank, text, candidates, vocab) {
 }
 
 // 規則 8l 的程式保險（2026-11-03 站長規則）：prompt 講了 AI 還是可能漏，比照全聯的補法由程式再補一次。
-// 原文（優先看該組 evidence）有「公用事業費用／公共事業費用」→ 補電費、水費、瓦斯費、中華電信電信費；
+// 原文（優先看該組 evidence）有「公用事業費用／公共事業費用／各項事業費用」→ 補電費、水費、瓦斯費、中華電信電信費；
 // 名單已有「電信費」或「電信資費」時，中華電信電信費是多餘的（電信費已涵蓋）→ 不補，AI 已列的也拿掉。
 // 直接改傳入的 items 陣列，回傳同一個陣列。
 function basicExUtilityFix_(items, sourceText) {
-  if (!/公[用共]事業費用/.test(String(sourceText || ''))) return items;
+  // 2026-11-03 同日補「各項事業費用（或繳款）」：站長看到有銀行這樣寫，意思同公用事業費用
+  if (!/(公用|公共|各項)事業費用/.test(String(sourceText || ''))) return items;
   const has = function (name) { return items.indexOf(name) >= 0; };
   const broadTelecom = has('電信費') || has('電信資費');
   ['電費', '水費', '瓦斯費'].forEach(function (x) { if (!has(x)) items.push(x); });
