@@ -31,6 +31,9 @@ function load(env) {
   const src = ['benefits-parser.gs', 'watchlist-monitor.gs', 'basic-exclusions-extractor.gs'].map(f => fs.readFileSync(R + f, 'utf8')).join('\n');
   const fn = new Function('env', `
     const { SpreadsheetApp, PropertiesService, MailApp, Utilities, Session, ScriptApp, UrlFetchApp } = env;
+    // Logger：2026-10-14 benefits-parser 加了「統一詞」(pmcTermMap_)，假環境讀不到那張表時會 Logger.log，
+    // 沒有這個假的就整支測試當掉（2026-11-03 發現：那之後這支測試一直是壞的）
+    const Logger = env.Logger || { log: function () {} };
     ${src}
     return { getCardsSheet_: () => env.cards,
       run: (name, ...a) => eval(name)(...a), set: (k, v) => { eval(k + ' = v'); } };
