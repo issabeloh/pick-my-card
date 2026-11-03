@@ -146,6 +146,30 @@ const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
   });
   check('modal 關掉再開會回到最上方', modalTop.scrolled > 0 && modalTop.after === 0, JSON.stringify(modalTop));
 
+  // 只列加入比較的卡的名稱（2026-11-02）：挑一個只有某張卡有的名稱，只比別張卡時不該出現；快捷選項照列
+  const onlyCompared = await page.evaluate(() => {
+    const owner = new Map();
+    cardsData.cards.forEach(c => (c.cashbackRates || []).forEach(g => (g.items || []).forEach(i => {
+      const k = i.toLowerCase(); if (!owner.has(k)) owner.set(k, new Set()); owner.get(k).add(c.id);
+    })));
+    const [name, ids] = [...owner.entries()].find(([k, s]) => s.size === 1 && k.length >= 4 && !/[、,]/.test(k));
+    const ownerId = [...ids][0];
+    const other = cardsData.cards.find(c => c.id !== ownerId && !(c.cashbackRates || []).some(g => (g.items || []).some(i => i.toLowerCase() === name)));
+    const backup = new Set(cardsInComparison);
+    // 打少一個字（打完整、只剩自己時選單刻意不出）
+    const has = () => getMerchantSuggestions(name.slice(0, -1)).some(e => e.lower === name);
+    cardsInComparison = new Set([other.id]);
+    const hiddenWhenOther = !has();
+    const quickStill = (typeof quickSearchOptions !== 'undefined' && quickSearchOptions.length)
+      ? getMerchantSuggestions(quickSearchOptions[0].displayName.slice(0, -1)).some(e => e.option) : true;
+    cardsInComparison = new Set([ownerId, other.id]);
+    const shownWhenOwner = has();
+    cardsInComparison = backup;
+    return { name, hiddenWhenOther, shownWhenOwner, quickStill };
+  });
+  check('只列加入比較的卡的名稱：別張卡獨有的不出現、加回那張卡就出現、快捷選項照列',
+    onlyCompared.hiddenWhenOther && onlyCompared.shownWhenOwner && onlyCompared.quickStill, JSON.stringify(onlyCompared));
+
   check('沒有 page error', errors.length === 0, errors.join(' | '));
   await browser.close();
   srv.close();

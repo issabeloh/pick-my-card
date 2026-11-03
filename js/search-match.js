@@ -922,6 +922,7 @@ const MERCHANT_SUGGEST_LIMIT = 8;
 let merchantSuggestIndex = null;      // [{ name, lower, option? }]
 let merchantSuggestIndexSource = null; // 建表時的 cardsData（換了就重建）
 let merchantSuggestOptionsSource = null; // 建表時的 quickSearchOptions（用戶改快捷選項會整個換新陣列）
+let merchantSuggestCardsKey = null;    // 建表時比較中的卡（id 串起來；用戶改比較的卡就重建，2026-11-02）
 let merchantSuggestActive = -1;
 let merchantSuggestItems = [];
 
@@ -940,7 +941,9 @@ function buildMerchantSuggestIndex() {
     options.forEach(o => { if (o && o.displayName) add(o.displayName, o); });
     // 排除項目同義詞群組：只列代表名稱（aliases 讓打銀行寫法的一部分也找得到它），
     // 群組裡的銀行寫法如果**只**出現在排除名單，就不再單獨列——不然打「醫」會並列二十幾種寫法
-    const cards = (cardsData && cardsData.cards) || [];
+    // 只列「加入比較的卡」的名稱（2026-11-02 站長要求：列出別張卡的商家，點下去卻沒有結果，不直觀）。
+    // 沒選任何卡時 getCardsForComparison 回全部卡，跟計算一致。快捷選項照列（站長裁定不藏）
+    const cards = cardsData ? getCardsForComparison() : [];
     const groupedVariants = new Set();
     getExclusionGroups().forEach(g => {
         const aliases = (g.variants || []).map(v => String(v || '').trim().toLowerCase()).filter(Boolean);
@@ -972,10 +975,12 @@ function getMerchantSuggestions(query) {
     const q = String(query || '').trim().toLowerCase();
     if (!q || !cardsData) return [];
     const options = typeof quickSearchOptions !== 'undefined' ? quickSearchOptions : null;
-    if (!merchantSuggestIndex || merchantSuggestIndexSource !== cardsData || merchantSuggestOptionsSource !== options) {
+    const cardsKey = getCardsForComparison().map(c => c.id).join(',');
+    if (!merchantSuggestIndex || merchantSuggestIndexSource !== cardsData || merchantSuggestOptionsSource !== options || merchantSuggestCardsKey !== cardsKey) {
         merchantSuggestIndex = buildMerchantSuggestIndex();
         merchantSuggestIndexSource = cardsData;
         merchantSuggestOptionsSource = options;
+        merchantSuggestCardsKey = cardsKey;
     }
     const hits = [];
     merchantSuggestIndex.forEach((entry, order) => {
