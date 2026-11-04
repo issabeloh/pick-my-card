@@ -560,7 +560,8 @@ function buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap
     const { rate: bonusRate, cap: bonusCap, name: bonusName } = resolveBonusComponent(card, levelSettings, isOverseas);
 
     const rows = [];
-    if (designatedRate > 0) rows.push({ name: '指定通路加碼', rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
+    // 本槽自己的成分以 category 命名（與跨槽引用行一致）；category 空才退回通用名。
+    if (designatedRate > 0) rows.push({ name: (rateGroup.category || '指定通路加碼'), rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
     if (basicRate > 0) rows.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, cap: null });
     if (applyBonus && bonusRate > 0) rows.push({ name: bonusName, rate: bonusRate, cap: bonusCap });
     // 跨槽引用（rate_N）：每個被引用槽是獨立一行，各自的 category + rate + cap
@@ -763,7 +764,7 @@ function calculateLayeredCashback(card, levelSettings, amount, displayedRate, ca
 // （見 resolveCrossSlotLayers）。每層都吃自己的 cap、獨立作用於全額，
 // 與 Layer 1-3 完全對等地加入 totalCashback/totalRate。空陣列/未傳都安全（鐵則4：
 // 用 length 判斷，不靠陣列本身的 truthiness）。
-function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false, extraLayers = [], applyBonus = true, applyBase = true) {
+function calculateStackedCashback(card, levelSettings, amount, designatedRate, cap, isOverseas = false, extraLayers = [], applyBonus = true, applyBase = true, designatedName = '指定通路加碼') {
     const layers = [];
     let totalCashback = 0;
 
@@ -794,7 +795,7 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     if (designatedRate > 0) {
         const designatedAmount = (cap && cap > 0) ? Math.min(amount, cap) : amount;
         const designatedCashback = Math.floor(designatedAmount * designatedRate / 100);
-        layers.push({ name: '指定通路加碼', rate: designatedRate, applicableAmount: designatedAmount, cashback: designatedCashback, cap: (cap && cap > 0) ? cap : null });
+        layers.push({ name: designatedName || '指定通路加碼', rate: designatedRate, applicableAmount: designatedAmount, cashback: designatedCashback, cap: (cap && cap > 0) ? cap : null });
         totalCashback += designatedCashback;
     }
 
@@ -1267,7 +1268,9 @@ async function calculateCardCashback(card, searchTerm, amount) {
                     stackedIsOverseas,
                     stackedExtraLayers,
                     stackedApplyBonus,
-                    stackedApplyBase
+                    stackedApplyBase,
+                    // 指定層以該槽 category 命名（顯示用，與詳情頁回饋組成一致）
+                    (matchedRateGroup && matchedRateGroup.category) || '指定通路加碼'
                 );
                 cashbackAmount = stackedResult.cashbackAmount;
                 calculationLayers = stackedResult.layers;
