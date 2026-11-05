@@ -6251,7 +6251,10 @@ mark.cashback-search-hl {
    - 原本 min-height:100px 預留位子，但沒填到廣告或被擋廣告外掛擋掉時就是一塊白洞
      （實測手機上 116px 空白）；這塊在頁面最下方、首屏看不到，載入時往下推的代價很小，
      所以拿掉預留高度，改成「沒廣告＝高度 0」。
-   - data-ad-status 是 AdSense 自己寫在 <ins> 上的（filled / unfilled）。
+   - data-ad-status 是 AdSense 自己寫在 <ins> 上的（filled / unfilled / unfill-optimized）。
+     2026-11-05：unfill-optimized＝沒填到一般廣告、Google 改放「相關搜尋」（深入瞭解列表，
+     內層 .goog-rentries），也是廣告內容，同樣要框＋標籤。刻意逐一列值、不寫成「非 unfilled」，
+     免得 Google 日後新增狀態值時冒出空框。
    - 框的左右內距與邊框粗細在「沒廣告」時也保留（只是透明）：<ins> 的寬度從頭到尾不變，
      AdSense 依載入當下寬度挑的廣告尺寸才不會在加框後被切到。 */
 .ad-row {
@@ -6279,18 +6282,21 @@ mark.cashback-search-hl {
     width: 100%;
 }
 
-.ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]),
+.ad-row:has(.ad-row-unit[data-ad-status="unfill-optimized"]) {
     margin: 16px auto;
 }
 
-.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-frame {
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-frame,
+.ad-row:has(.ad-row-unit[data-ad-status="unfill-optimized"]) .ad-row-frame {
     padding: 6px 8px 8px;
     border-color: #e5e7eb;
     background: #f9fafb;
     text-align: left;
 }
 
-.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-label {
+.ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-label,
+.ad-row:has(.ad-row-unit[data-ad-status="unfill-optimized"]) .ad-row-label {
     display: inline-block;
     margin-bottom: 6px;
     padding: 0 6px;
@@ -10665,7 +10671,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         padding: 0px 14px;   /* 原 0px 16px */
     }
 
-    .ad-row:has(.ad-row-unit[data-ad-status="filled"]) {
+    .ad-row:has(.ad-row-unit[data-ad-status="filled"]),
+    .ad-row:has(.ad-row-unit[data-ad-status="unfill-optimized"]) {
         margin: 14px auto;   /* 原 16px auto */
     }
 
