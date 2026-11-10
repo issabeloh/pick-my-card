@@ -693,6 +693,23 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 ⚠️ 改 `slug` ＝換網址，舊網址變 404，非必要別動。
 工作表還沒建立時退回 `tools/merchant-pages.fallback.json`（與 `.gs` 的 `MERCHANT_FALLBACK_SLUGS` 同一份清單）。
 
+**title／description 代換字（2026-11-10）**：工作表裡可以寫下列代換字，生成器部署時換成當下的值
+（`resolveTokens()`），烤進 `<title>`、meta description、og／twitter、JSON-LD——Google 只看得到成品：
+
+| 代換字 | 換成 | 例 |
+|---|---|---|
+| `{年}` | 台灣時間的年份 | 2026 |
+| `{半年}` | 1–6 月「上半年」、7–12 月「下半年」 | 下半年 |
+| `{第一名卡}` | 這頁排第一的卡名（同推薦比較工具列） | 永豐 Sport 卡 |
+| `{第一名回饋}` | 第一名那列的回饋率 | 5% |
+
+- 只在**部署時**更新：跨年後第一次匯出（＝部署）之前，頁面還是舊年份（站長確認可接受）
+- 日期用台灣時間算（CF build 跑在 UTC），1/1 00:00–08:00 部署也會是新年份
+- ⚠️ **打錯字會讓 build 掛掉**（如 `{年份}`、全形 `｛年｝`、落單的 `{`）：這是刻意的，否則那串字會原封不動出現在
+  Google 搜尋結果的標題上。build 掛掉時線上維持舊版，錯誤訊息會寫出哪一頁、哪個欄位、支援哪些字；到工作表改好再匯出一次
+- 標題與描述因此也列進 `stripDataRegions()`——會隨日期與 cards.data 變，不挖掉就會被判成「版面不一致」擋 commit
+- 代換字只對 `title`／`description` 有效，`bodyHtml` 不換
+
 **卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那 12 個模組
 **原封不動載進來跑**，不另寫一套比對規則——另寫一套就是「頁面講一套、JSON-LD 講另一套」的病根。
 它照抄 `loadCardsData()` 與 `calculateCashback()` 的完整流程，四個步驟一個都不能少：

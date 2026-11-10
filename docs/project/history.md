@@ -4,6 +4,13 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-11-10 首訪轉址保留來源（GA 把 Google 自然搜尋算成 Direct）＋ 商家頁標題代換字
+- 症狀：GA4 自然搜尋 6→8 月 442→366，同期 Search Console 點擊翻倍
+- 根因：`index.html` 首屏腳本把全新訪客 `location.replace` 到 landing，跑在 GA 載入之前；landing 收到的 referrer 是自己網域，GA4 忽略 → (direct)。轉址也丟掉整串查詢字串（utm_*／gclid）
+- 修法：轉址保留查詢字串，外站 referrer 放 `pmc_ref` 帶過去；`landing.html` 交給 gtag 的 `page_referrer` 後用 `history.replaceState` 從網址拿掉。修正前的 GA 資料無法回補
+- 商家頁 title/description 可寫 `{年}{半年}{第一名卡}{第一名回饋}`，部署時換成當下值（見 data-pipeline.md 第 11 節）
+- 待部署後確認：Cloudflare 把 `/landing.html` 308 到 `/landing` 時有沒有保留查詢字串（容器連不到正式站，沒能先驗）
+
 ## 2026-10-07 品牌標誌 v1.0 全站換新
 - 舊標誌（三張 45° 半透明疊層）易被讀成通用「圖層」圖示；新版前卡傾 31°＋與後方兩卡之間留間隙，表現「從牌堆抽出一張」
 - 設計師只交 2000px 點陣稿＋規範 PDF：以規範的 100 單位網格重建向量，逐層與原稿擬合（IoU ≥ 0.99），寫成生成器 `tools/build-logo-assets.js`，此後所有標誌檔都由它產出

@@ -61,6 +61,45 @@ function replaceOnce(html, pattern, build, what) {
   return html.replace(pattern, (...args) => build(...args));
 }
 
+// title／description 裡的代換字（2026-11-10）：工作表寫「{年}」「{半年}」，部署時才換成
+// 當下的值，標題不會在跨年／跨半年後過期（站長發現 Apple Pay 頁寫死「2026 下半年」）。
+// 換完的字直接烤進 HTML，Google 看到的是成品，不會看到大括號。
+// 日期以台灣時間為準：CF build 跑在 UTC，不換算的話 1/1 00:00–08:00 部署會晚一個年份。
+// 只在部署時更新——跨年後第一次匯出／部署之前，頁面仍是舊年份（站長 2026-11-10 確認可接受）。
+function taipeiNow() {
+  return new Date(Date.now() + 8 * 3600 * 1000); // 之後只讀 getUTC*，等於台灣時間
+}
+
+function buildTokenValues(top, now) {
+  const month = now.getUTCMonth() + 1;
+  return {
+    '年': String(now.getUTCFullYear()),
+    '半年': month <= 6 ? '上半年' : '下半年',
+    '第一名卡': top ? String(top.cardName) : '',
+    '第一名回饋': top ? String(top.rate) + '%' : ''
+  };
+}
+
+// 換不掉的 {…}（打錯字、多空格、全形括號）一律讓 build 掛掉：否則像「{年份}」這種字樣會
+// 原封不動出現在 Google 搜尋結果的標題裡，而且沒人會發現——跟下面「生成失敗直接掛」同一個理由。
+function resolveTokens(text, values, slug, field) {
+  const s = String(text == null ? '' : text);
+  const out = s.replace(/\{([^{}]*)\}/g, (m, name) => {
+    if (!Object.prototype.hasOwnProperty.call(values, name)) {
+      throw new Error(`商家頁「${slug}」的 ${field} 有不認得的代換字 ${m}——只支援 ` +
+        Object.keys(values).map(k => '{' + k + '}').join(' ') + '（請到 MerchantPages 工作表修正）');
+    }
+    if (values[name] === '') {
+      throw new Error(`商家頁「${slug}」的 ${field} 用了 ${m}，但這頁算不出第一名卡片`);
+    }
+    return values[name];
+  });
+  if (/[{}｛｝]/.test(out)) {
+    throw new Error(`商家頁「${slug}」的 ${field} 有落單或全形的大括號：${out}（請到 MerchantPages 工作表修正）`);
+  }
+  return out;
+}
+
 // 頁面層級 JSON-LD（2026-10-30 起包一層 CollectionPage）：dateModified 不能直接掛在
 // ItemList 上——ItemList 屬於 Intangible、不是 CreativeWork，schema.org 沒有這個屬性，
 // Google 會當無效欄位略過。做法同 promos：外層 CollectionPage 帶日期，卡片清單放 mainEntity。
@@ -254,7 +293,11 @@ function stripDataRegions(html) {
     .replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '')
     .replace(/<section class="mc-seo-footer"[\s\S]*?<\/section>/g, '')
     .replace(/<nav class="mc-related"[\s\S]*?<\/nav>/g, '')
-    .replace(/<span id="last-update-date">[\s\S]*?<\/span>/g, '');
+    .replace(/<span id="last-update-date">[\s\S]*?<\/span>/g, '')
+    // 標題與描述（2026-11-10 起可含 {年}{半年}{第一名卡}，會隨日期與 cards.data 變）：
+    // 不挖掉的話跨半年或每次匯出都會被判成「版面不一致」擋 commit。內容本來就來自工作表、不是版面。
+    .replace(/<title>[^<]*<\/title>/g, '')
+    .replace(/(<meta (?:name|property)="(?:description|og:title|og:description|twitter:title|twitter:description)" content=")[^"]*(")/g, '$1$2');
 }
 
 async function main() {
@@ -292,6 +335,16 @@ async function main() {
       slug: String(page.slug),
       displayName: String(page.displayName || page.merchant),
       top
+    });
+  }
+
+  // 代換字先全部換完再組頁：任一頁打錯字就整個 build 掛掉，不會只寫出一半的檔
+  const now = taipeiNow();
+  for (const entry of computed) {
+    const values = buildTokenValues(entry.top, now);
+    entry.page = Object.assign({}, entry.page, {
+      title: resolveTokens(entry.page.title, values, entry.slug, 'title'),
+      description: resolveTokens(entry.page.description, values, entry.slug, 'description')
     });
   }
 
