@@ -70,19 +70,29 @@ function taipeiNow() {
   return new Date(Date.now() + 8 * 3600 * 1000); // 之後只讀 getUTC*，等於台灣時間
 }
 
-function buildTokenValues(top, now) {
+// 名次代換字：{第一名卡}{第一名回饋}…{第三名回饋}。名次＝頁面上「不同卡片」的順序（同一張卡
+// 因多個活動出現多列時只算第一列），回饋率取那一列，與點進頁面看到的一致。
+const RANK_LABELS = ['第一名', '第二名', '第三名'];
+
+function buildTokenValues(ranked, now) {
   const month = now.getUTCMonth() + 1;
-  return {
+  const values = {
     '年': String(now.getUTCFullYear()),
-    '半年': month <= 6 ? '上半年' : '下半年',
-    '第一名卡': top ? String(top.cardName) : '',
-    '第一名回饋': top ? String(top.rate) + '%' : ''
+    '半年': month <= 6 ? '上半年' : '下半年'
   };
+  RANK_LABELS.forEach((label, i) => {
+    const r = ranked[i];
+    values[label + '卡'] = r ? String(r.cardName) : '';
+    values[label + '回饋'] = r ? String(r.rate) + '%' : '';
+  });
+  return values;
 }
 
 // 換不掉的 {…}（打錯字、多空格、全形括號）一律讓 build 掛掉：否則像「{年份}」這種字樣會
 // 原封不動出現在 Google 搜尋結果的標題裡，而且沒人會發現——跟下面「生成失敗直接掛」同一個理由。
-function resolveTokens(text, values, slug, field) {
+// asHtml：bodyHtml 是直接烤進頁面的 HTML，換進去的卡名要先 escape（卡名可能含 &）。
+// title／description 不用——buildPage() 之後會整串 escape，這裡先 escape 會變成雙重轉義。
+function resolveTokens(text, values, slug, field, asHtml) {
   const s = String(text == null ? '' : text);
   const out = s.replace(/\{([^{}]*)\}/g, (m, name) => {
     if (!Object.prototype.hasOwnProperty.call(values, name)) {
@@ -90,9 +100,9 @@ function resolveTokens(text, values, slug, field) {
         Object.keys(values).map(k => '{' + k + '}').join(' ') + '（請到 MerchantPages 工作表修正）');
     }
     if (values[name] === '') {
-      throw new Error(`商家頁「${slug}」的 ${field} 用了 ${m}，但這頁算不出第一名卡片`);
+      throw new Error(`商家頁「${slug}」的 ${field} 用了 ${m}，但這頁的卡片不到那個名次`);
     }
-    return values[name];
+    return asHtml ? escapeHtml(values[name]) : values[name];
   });
   if (/[{}｛｝]/.test(out)) {
     throw new Error(`商家頁「${slug}」的 ${field} 有落單或全形的大括號：${out}（請到 MerchantPages 工作表修正）`);
@@ -297,6 +307,8 @@ function stripDataRegions(html) {
     // 標題與描述（2026-11-10 起可含 {年}{半年}{第一名卡}，會隨日期與 cards.data 變）：
     // 不挖掉的話跨半年或每次匯出都會被判成「版面不一致」擋 commit。內容本來就來自工作表、不是版面。
     .replace(/<title>[^<]*<\/title>/g, '')
+    // 站長手寫正文（2026-11-10 起同樣可含代換字，名次會隨 cards.data 變）
+    .replace(/<section class="mc-body"[\s\S]*?<\/section>/g, '')
     .replace(/(<meta (?:name|property)="(?:description|og:title|og:description|twitter:title|twitter:description)" content=")[^"]*(")/g, '$1$2');
 }
 
@@ -325,7 +337,7 @@ async function main() {
   // 所以任何一頁都得等全部算完才組得出來，不能邊算邊寫檔。
   const computed = [];
   for (const page of active) {
-    const { names, top } = await computeMerchantCards(engine, page.merchant, AMOUNT);
+    const { names, top, ranked } = await computeMerchantCards(engine, page.merchant, AMOUNT);
     if (names.length === 0) {
       throw new Error(`商家「${page.merchant}」（${page.slug}）算不出任何卡片——搜尋詞可能打錯或資料已無對應項目`);
     }
@@ -334,17 +346,19 @@ async function main() {
       cardNames: names,
       slug: String(page.slug),
       displayName: String(page.displayName || page.merchant),
-      top
+      top,
+      ranked
     });
   }
 
   // 代換字先全部換完再組頁：任一頁打錯字就整個 build 掛掉，不會只寫出一半的檔
   const now = taipeiNow();
   for (const entry of computed) {
-    const values = buildTokenValues(entry.top, now);
+    const values = buildTokenValues(entry.ranked, now);
     entry.page = Object.assign({}, entry.page, {
       title: resolveTokens(entry.page.title, values, entry.slug, 'title'),
-      description: resolveTokens(entry.page.description, values, entry.slug, 'description')
+      description: resolveTokens(entry.page.description, values, entry.slug, 'description'),
+      bodyHtml: resolveTokens(entry.page.bodyHtml, values, entry.slug, 'bodyHtml', true)
     });
   }
 
