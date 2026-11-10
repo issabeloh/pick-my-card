@@ -308,7 +308,7 @@ function stripDataRegions(html) {
     // 不挖掉的話跨半年或每次匯出都會被判成「版面不一致」擋 commit。內容本來就來自工作表、不是版面。
     .replace(/<title>[^<]*<\/title>/g, '')
     // 站長手寫正文（2026-11-10 起同樣可含代換字，名次會隨 cards.data 變）
-    .replace(/<section class="mc-body"[\s\S]*?<\/section>/g, '')
+    .replace(/[ \t]*<section class="mc-body"[\s\S]*?<\/section>\n?/g, '')
     .replace(/(<meta (?:name|property)="(?:description|og:title|og:description|twitter:title|twitter:description)" content=")[^"]*(")/g, '$1$2');
 }
 
