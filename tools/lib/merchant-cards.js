@@ -118,15 +118,17 @@ function resolveMatchedItems(engine, merchant) {
  * 走的路徑與 js/cashback-engine.js 的 calculateCashback() 相同，而且是直接呼叫同一批函數：
  * findSearchHits（找）→ calculateHitResults（算：逐名逐卡計算、濾掉 0、合併）→ 依金額排序。
  *
- * @returns {Promise<{names: string[], top: {rate: number, cardName: string}|null}>}
+ * @returns {Promise<{names: string[], top: {rate: number, cardName: string}|null, ranked: {rate: number, cardName: string}[]}>}
  *   names＝卡片名稱（已去重，保留頁面順序）；top＝第一名那列的回饋率與卡名，
  *   給「推薦比較」內鏈區塊寫「最高 X%（某某卡）」用。rate 直接取結果物件的
  *   `rate` 欄，與畫面上那張卡顯示的「回饋率」是同一個數字（見 results-display.js
  *   的 rateDisplay），不另外用金額回推，否則兩邊會對不上。
+ *   ranked＝每張卡第一次出現那列的 {rate, cardName}，順序同 names（2026-11-10，
+ *   給商家頁代換字 {第二名卡}{第三名回饋} 等用；ranked[0] 與 top 是同一列）。
  */
 async function computeMerchantCards(engine, merchant, amount) {
   const matched = resolveMatchedItems(engine, merchant);
-  if (!matched || matched.length === 0) return { names: [], top: null };
+  if (!matched || matched.length === 0) return { names: [], top: null, ranked: [] };
 
   // 「算」直接呼叫前端的 calculateHitResults（2026-10-17 起不再照抄 calculateCashback 的逐名計算與排序；
   // 以前抄的版本漏過一次排序，2026-08-16 linepay 頁前三名就對不上瀏覽器）
@@ -138,17 +140,19 @@ async function computeMerchantCards(engine, merchant, amount) {
   // 保持頁面順序——JSON-LD 的 ItemList 列同名兩次沒有意義。
   const seen = new Set();
   const names = [];
+  const ranked = [];
   for (const r of merged) {
     const name = r.card && r.card.name;
     if (!name || seen.has(name)) continue;
     seen.add(name);
     names.push(name);
+    ranked.push({ rate: r.rate, cardName: name });
   }
   const first = merged[0];
   const top = first && first.card
     ? { rate: first.rate, cardName: first.card.name }
     : null;
-  return { names, top };
+  return { names, top, ranked };
 }
 
 module.exports = { createEngine, computeMerchantCards, MODULES };

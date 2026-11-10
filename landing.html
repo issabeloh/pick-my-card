@@ -58,7 +58,23 @@
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-RW8F159L52');
+        // 首頁首訪轉址帶來的真正來源（2026-11-10）：index.html 轉過來時 referrer 只剩自己網域，
+        // GA4 會把 Google 自然搜尋算成 Direct。首頁把原始 referrer 放在 pmc_ref，這裡交給 GA 當
+        // page_referrer，並在 config 前從網址列拿掉（page_location 才乾淨；utm_* 原樣保留）。
+        var pmcGaConfig = {};
+        try {
+            var pmcParams = new URLSearchParams(location.search);
+            var pmcRef = pmcParams.get('pmc_ref');
+            if (pmcRef && /^https?:\/\//i.test(pmcRef)) pmcGaConfig.page_referrer = pmcRef;
+            if (pmcParams.has('pmc_ref')) {
+                pmcParams.delete('pmc_ref');
+                var pmcQs = pmcParams.toString();
+                history.replaceState(null, '', location.pathname + (pmcQs ? '?' + pmcQs : '') + location.hash);
+            }
+        } catch (e) {
+            // 舊瀏覽器沒有 URLSearchParams：照舊送，最差就是跟以前一樣算 Direct
+        }
+        gtag('config', 'G-RW8F159L52', pmcGaConfig);
     </script>
 
     <!-- Structured Data (JSON-LD) for SEO -->
