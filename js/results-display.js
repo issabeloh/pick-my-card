@@ -139,7 +139,8 @@ async function calculateCouponRate(coupon, card) {
     }
 
     // 取得用戶的 Level 設定
-    const { data: levelSettings } = await resolveCardLevel(card, 'Level 1');
+    // 預設級別＝工作表第一個級別（與全站一致；站長 2026-11-10 把 CUBE 預設改為 Level 2）
+    const { data: levelSettings } = await resolveCardLevel(card, Object.keys(card.levelSettings)[0]);
 
     // 處理純 "specialRate" 或 "generalRate" 的情況
     if (rate === 'specialRate') {
