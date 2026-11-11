@@ -36,10 +36,17 @@ const CE_RATE_ORDER_ = ['rate', 'items', 'cap', 'category', 'conditions', 'perio
 const CE_COUPON_ORDER_ = ['couponMerchant', 'couponRate', 'couponCap', 'couponConditions',
   'couponPeriodStart', 'couponPeriodEnd', 'couponPeriod'];
 
+// 編輯器視窗大小（像素）。螢幕比較小、視窗超出畫面時，把這兩個數字改小再存檔即可
+const CE_DIALOG_WIDTH_ = 1060;
+const CE_DIALOG_HEIGHT_ = 660;
+
 // ---------- 選單入口 ----------
+// 2026-11-11 改成大視窗（非強制回應對話框）：側邊欄固定 300px 太窄。
+// 開著視窗時仍可點試算表；版面會隨寬度調整，窄的時候左側索引改到上方。
 function openCardEditor() {
-  const html = HtmlService.createHtmlOutputFromFile('CardEditor').setTitle('📝 單卡編輯器');
-  SpreadsheetApp.getUi().showSidebar(html);
+  const html = HtmlService.createHtmlOutputFromFile('CardEditor')
+    .setWidth(CE_DIALOG_WIDTH_).setHeight(CE_DIALOG_HEIGHT_);
+  SpreadsheetApp.getUi().showModelessDialog(html, '📝 單卡編輯器');
 }
 
 // ---------- 給側邊欄呼叫的函式 ----------
