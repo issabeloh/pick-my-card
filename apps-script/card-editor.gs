@@ -261,8 +261,9 @@ function ceIsNumericField_(name) {
   return CE_NUMERIC_FIELDS_.indexOf(name) >= 0 || CE_NUMERIC_SLOT_RE_.test(name);
 }
 
-// 側邊欄字串 → 要寫進儲存格的值
-function ceToCell_(name, kind, value, originalRaw) {
+// 畫面上的字串 → 要寫進儲存格的值。numericField 不給時依 Cards Data 的數字欄判斷
+// （新戶活動編輯器 promo-editor.gs 也共用這支，會自己傳 numericField）
+function ceToCell_(name, kind, value, originalRaw, numericField) {
   const v = String(value);
   if (kind === 'bool') {
     if (v === 'TRUE') return true;
@@ -270,7 +271,8 @@ function ceToCell_(name, kind, value, originalRaw) {
   }
   if (v.trim() === '') return '';
   if (kind === 'date') return v.trim();  // 已通過驗證的 2026/7/1 或 2026-07-01，交給試算表解讀成日期
-  if ((ceIsNumericField_(name) || typeof originalRaw === 'number') && /^-?\d+(\.\d+)?$/.test(v.trim())) {
+  const numeric = numericField === undefined ? ceIsNumericField_(name) : numericField;
+  if ((numeric || typeof originalRaw === 'number') && /^-?\d+(\.\d+)?$/.test(v.trim())) {
     return parseFloat(v.trim());
   }
   // 文字欄：看起來會被試算表自動轉成數字／日期／公式的，前面加 ' 強制存成文字
