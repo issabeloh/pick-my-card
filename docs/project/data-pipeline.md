@@ -117,6 +117,13 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - ⚠️ **工作表不存在時安全降級**：整段跳過、不丟例外（可以先貼程式、之後再建表）
     - `runQACheck` 檢查 10 會列出對不到 `Cards Data` 的 `id`（⚠️ 警告，不擋匯出）
 
+15. **單卡編輯器**（2026-11-11）—— 不是工作表，是 Cards Data 的側邊欄操作介面（`apps-script/card-editor.gs` ＋
+    `CardEditor.html`，選單「🎯 卡片管理 ▸ 📝 單卡編輯器」）。依標題名稱動態對應欄位、只寫改過的格子、公式欄唯讀、
+    存檔前跑 `pmcValidateCardRow_`（`cards-export.gs`，與 `runQACheck` 檢查 12 共用）、級別改名／刪除／預設級別換人要確認。
+    **改 Cards Data 的欄位命名規則（如新增 `xxx_N` 槽位欄）時**：編輯器自動吃新欄，但若新欄是數字／日期／勾選框，
+    要把它加進 `card-editor.gs` 頂部的 `CE_NUMERIC_*`／`CE_DATE_RE_`／`CE_BOOL_RE_`，否則會被當成文字寫入。
+    安裝與保護機制見 `apps-script/README.md`「單卡編輯器」
+
 ## 3. exportToJSON() 匯出流程
 
 順序：`runQACheck()` → Cards Data → Payments → QuickSearch → Merchant Payments → Search Hints → FAQ → announcements → `readCardBenefits()` → `readReferralLinks()` → `readChangelog()`（掛進 `card.changelog`） → 組 JSON → Base64 輸出。
