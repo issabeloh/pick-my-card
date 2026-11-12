@@ -20,11 +20,18 @@
 //      過期判斷失效）；且未過 formatDateToISO（Date 儲存格會序列化成
 //      "2026-06-29T16:00:00.000Z" UTC 字串，前端字串比較會提早一天過期）。
 //      現統一走 resolvePeriodBounds，與 cashbackRates 相同。
+//
+// 2026-11-11 單卡編輯器（card-editor.gs ＋ CardEditor.html）：
+//    - 新增共用驗證 pmcValidateCardRow_（檔案後段「單卡資料驗證」），runQACheck 檢查 12 與
+//      編輯器存檔前共用。levelSettings 壞掉／空白（hasLevels 勾了）→ ❌ 擋匯出；其他新規則 ⚠️
+//    - onOpen 選單：有貼 card-editor.gs 才多一個「📝 單卡編輯器」；有貼 promo-editor.gs 才多「🎁 新戶活動編輯器」
+//    - 新增 pmcValidatePromoRow_ ＋ runQACheck 檢查 13（新戶活動，一律 ⚠️）
+//    - exportToJSON 的讀取邏輯沒有任何改動
 
 // 建立自訂選單
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('🎯 卡片管理')
+  const menu = ui.createMenu('🎯 卡片管理')
     .addItem('✅ 檢查資料品質', 'runQACheck')
     .addItem('🔗 檢查 card_id 參照完整性', 'runReferentialIntegrityCheck')
     .addItem('🏷️ 檢查通路名稱一致性', 'runMerchantNamingCheck')
@@ -33,8 +40,14 @@ function onOpen() {
     .addItem('🗑️ 清除 QA 報告', 'clearQAReport')
     .addSeparator()
     .addItem('📦 立即寄送試算表備份', 'sendBackupEmail')
-    .addItem('⏰ 啟用每月自動備份', 'setupMonthlyBackupTrigger')
-    .addToUi();
+    .addItem('⏰ 啟用每月自動備份', 'setupMonthlyBackupTrigger');
+  // 單卡編輯器（card-editor.gs ＋ CardEditor.html，2026-11-11 新增）：
+  // 只有貼了 card-editor.gs 才出現這個選項，沒貼也不會壞。
+  if (typeof openCardEditor === 'function' || typeof openPromoEditor === 'function') menu.addSeparator();
+  if (typeof openCardEditor === 'function') menu.addItem('📝 單卡編輯器', 'openCardEditor');
+  // 新戶活動編輯器（promo-editor.gs ＋ PromoEditor.html，2026-11-11 新增），同樣沒貼就不出現
+  if (typeof openPromoEditor === 'function') menu.addItem('🎁 新戶活動編輯器', 'openPromoEditor');
+  menu.addToUi();
     buildAutomationMenu_();
 }
 
@@ -161,6 +174,15 @@ function runQACheck() {
         }
       }
     }
+
+    // 檢查 12: 單卡資料驗證（2026-11-11 新增，與「單卡編輯器」存檔前共用同一套規則，
+    // 見 pmcValidateCardRow_）。日期格式／結束早於開始／rate、cap 非數字／items 沒 rate／
+    // 領券缺商家或 rate／{變數} 對不到級別 → ⚠️；levelSettings 壞掉或空白 → ❌ 擋匯出
+    // （匯出遇到壞 JSON 會悄悄變成 {}，整組級別消失）。qa 為 null 的已由上面既有檢查涵蓋。
+    pmcValidateCardRow_(headers, row).forEach(function(it) {
+      if (!it.qa) return;
+      issues.push([cardId, cardName, it.slotLabel, it.field, it.message, it.qa]);
+    });
   }
 
   // 檢查 7: ID 重複
@@ -237,6 +259,46 @@ function runQACheck() {
           `Search Hints 第 ${i + 1} 列 active 為 TRUE，但 ${missing.join('、')} 空白——這列不會匯出`, '⚠️']);
       }
     }
+  }
+
+  // 檢查 13: 新戶活動（2026-11-11 新增，與「新戶活動編輯器」存檔前共用 pmcValidatePromoRow_）
+  // 一律 ⚠️ 不擋匯出。另加兩個跨列檢查：同一張卡的申辦按鈕各列不一致（匯出只取第一個）、
+  // 啟用中的活動 pick_rank 1–5 重複（站長推薦同一個位置兩檔）。
+  const promoQaSheet = ss.getSheetByName('New Cardholder Promos');
+  if (promoQaSheet) {
+    const pData = promoQaSheet.getDataRange().getValues();
+    const pHeaders = pData[0];
+    const ctaByCard = {}, rankSeen = {};
+    for (let i = 1; i < pData.length; i++) {
+      const pRow = pData[i];
+      const pid = String(getValue(pRow, pHeaders, 'id') || '').trim();
+      if (!pid) continue;
+      const where = '新戶活動第 ' + (i + 1) + ' 列';
+      pmcValidatePromoRow_(pHeaders, pRow, where).forEach(function(it) {
+        issues.push([pid, '', where, it.field, it.message, it.qa]);
+      });
+      if (!pmcIsTrueCell_(getValue(pRow, pHeaders, 'active'))) continue;
+      ['apply_cta_text', 'apply_cta_link'].forEach(function(f) {
+        const v = String(getValue(pRow, pHeaders, f) || '').trim();
+        if (!v) return;
+        const k = pid + '|' + f;
+        ctaByCard[k] = ctaByCard[k] || {};
+        (ctaByCard[k][v] = ctaByCard[k][v] || []).push(i + 1);
+      });
+      const rank = String(getValue(pRow, pHeaders, 'pick_rank') || '').trim();
+      if (/^[1-5]$/.test(rank) && isPromoRow_(pRow, pHeaders)) (rankSeen[rank] = rankSeen[rank] || []).push(pid + '（第 ' + (i + 1) + ' 列）');
+    }
+    Object.keys(ctaByCard).forEach(function(k) {
+      const vals = Object.keys(ctaByCard[k]);
+      if (vals.length < 2) return;
+      const parts = k.split('|');
+      issues.push([parts[0], '', '新戶活動申辦按鈕', parts[1],
+        parts[1] + ' 各列填的不一樣（' + vals.map(function(v) { return '第 ' + ctaByCard[k][v].join('、') + ' 列「' + v + '」'; }).join('；') + '），匯出只取第一個', '⚠️']);
+    });
+    Object.keys(rankSeen).forEach(function(r) {
+      if (rankSeen[r].length > 1) issues.push(['(新戶活動)', '', '站長推薦', 'pick_rank',
+        'pick_rank ' + r + ' 有 ' + rankSeen[r].length + ' 檔：' + rankSeen[r].join('、'), '⚠️']);
+    });
   }
 
   // 寫入 QA 報告
@@ -1253,6 +1315,276 @@ function resolvePeriodBounds(obj, periodStr, typedStart, typedEnd) {
     const iso = formatDateToISO(endRaw);
     if (iso) obj.periodEnd = iso;
   }
+}
+
+// ==========================================
+// 單卡資料驗證（runQACheck 檢查 12 與「單卡編輯器」存檔前共用，2026-11-11 新增）
+// ==========================================
+// 一張卡（Cards Data 的一列）丟進來，回傳問題清單。兩邊共用同一套規則，
+// 避免「編輯器放行、匯出擋下」或反過來的不一致。
+//
+// ⚠️ 本段放在 cards-export.gs（而不是 card-editor.gs）是刻意的：runQACheck 依賴它，
+//    沒貼編輯器檔案的試算表也必須能正常 QA／匯出。
+// ⚠️ 只「讀」不改資料，也不改 exportToJSON 的讀取邏輯；規則照 exportToJSON 實際
+//    會怎麼讀來寫（例如 rate 非數字＝整槽不匯出、levelSettings 壞掉＝悄悄變成 {}）。
+//
+// 每個問題：{ code, field, slotLabel, message, qa }
+//   qa = '❌'（擋匯出）／'⚠️'（只警告）／null（runQACheck 已有既有檢查涵蓋，QA 不重複列）
+//   單卡編輯器存檔時「不論 qa 為何」一律擋下（只擋正在存的那張卡）。
+//
+// 欄位一律依標題名稱對應（getValue／maxSlotIndex），不寫死欄號。
+
+// 判斷儲存格是否「看起來是數字」（parseFloat 會讀對的那種）。
+// "1,000" 不算：parseFloat("1,000") = 1，會悄悄讀錯。
+function pmcIsNumberLike_(v) {
+  if (typeof v === 'number') return !isNaN(v);
+  return /^-?\d+(\.\d+)?$/.test(String(v).trim());
+}
+
+// 不是乾淨數字時，說明匯出實際會怎麼讀（parseFloat 讀得出來 → 讀成某數；讀不出來 → whenNaN）
+function pmcNumberProblem_(v, whenNaN) {
+  const n = parseFloat(v);
+  return isNaN(n) ? whenNaN : '匯出會讀成 ' + n + '，請只填數字';
+}
+
+// {欄位名} 變數寫法（級別 placeholder），回傳欄位名；不是則回 null
+function pmcPlaceholderKey_(v) {
+  const m = String(v).trim().match(/^\{(.+)\}$/);
+  return m ? m[1] : null;
+}
+
+function pmcIsBlank_(v) {
+  return v === null || v === undefined || String(v).trim() === '';
+}
+
+// 日期儲存格 → 'YYYY-MM-DD'；空白回 ''；格式錯誤回 null。
+// 接受：日期型儲存格（Date）、"YYYY/M/D"、"YYYY-MM-DD"（月日可不補零）。
+// 不存在的日期（2026/2/30）也算錯——new Date 會默默滾成 3/2。
+function pmcParseDateCell_(v) {
+  if (pmcIsBlank_(v)) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return null;
+    return Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd');
+  }
+  const m = String(v).trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (!m) return null;
+  const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d;
+}
+
+// hasLevels 的真假判斷，與 exportToJSON 的 addOptionalField(…, 'boolean') 一致
+function pmcIsTrueCell_(v) {
+  return v === true || v === 'TRUE' || v === 'true';
+}
+
+// 解析 levelSettings。回傳 { ok, value, error }；空白回 { ok:true, value:null }
+function pmcParseLevelSettings_(raw) {
+  if (pmcIsBlank_(raw)) return { ok: true, value: null };
+  try {
+    return { ok: true, value: JSON.parse(String(raw)) };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message || e) };
+  }
+}
+
+function pmcValidateCardRow_(headers, row) {
+  const issues = [];
+  const add = function(code, field, slotLabel, message, qa) {
+    issues.push({ code: code, field: field, slotLabel: slotLabel, message: message, qa: qa });
+  };
+  const val = function(name) { return getValue(row, headers, name); };
+
+  // ---------- 級別（先算，下面 placeholder 檢查要用） ----------
+  const hasLevels = pmcIsTrueCell_(val('hasLevels'));
+  const lsRaw = val('levelSettings');
+  const ls = pmcParseLevelSettings_(lsRaw);
+  let levelObj = null;
+  const LV = '級別設定';
+  if (hasLevels) {
+    if (headers.indexOf('levelSettings') < 0) {
+      add('LEVELS_NO_COLUMN', 'levelSettings', LV, 'hasLevels 已勾選，但表上找不到 levelSettings 欄', '❌');
+    } else if (!ls.ok) {
+      add('LEVELS_BAD_JSON', 'levelSettings', LV,
+        'levelSettings 不是正確的 JSON（' + ls.error + '）。匯出時整組級別會悄悄變成空的', '❌');
+    } else if (ls.value === null) {
+      add('LEVELS_EMPTY', 'levelSettings', LV, 'hasLevels 已勾選，但 levelSettings 是空的', '❌');
+    } else if (typeof ls.value !== 'object' || Array.isArray(ls.value)) {
+      add('LEVELS_NOT_OBJECT', 'levelSettings', LV, 'levelSettings 必須是 { "級別名稱": { … } } 的格式', '❌');
+    } else if (Object.keys(ls.value).length === 0) {
+      add('LEVELS_EMPTY', 'levelSettings', LV, 'levelSettings 裡一個級別都沒有', '❌');
+    } else {
+      levelObj = ls.value;
+      Object.keys(levelObj).forEach(function(name) {
+        const lv = levelObj[name];
+        if (String(name).trim() === '') {
+          add('LEVEL_NAME_BLANK', 'levelSettings', LV, '有一個級別的名稱是空白', '❌');
+        } else if (String(name) !== String(name).trim()) {
+          add('LEVEL_NAME_SPACES', 'levelSettings', LV, '級別「' + name + '」名稱前後有空格（級別名稱是識別碼，請小心）', '⚠️');
+        }
+        if (!lv || typeof lv !== 'object' || Array.isArray(lv)) {
+          add('LEVEL_NOT_OBJECT', 'levelSettings', LV, '級別「' + name + '」的內容必須是 { "rate": …, … } 的格式', '❌');
+        }
+      });
+    }
+  } else if (!pmcIsBlank_(lsRaw)) {
+    add('LEVELS_UNUSED', 'levelSettings', LV,
+      'levelSettings 有內容，但 hasLevels 沒勾選——匯出時會被忽略，網站上不會有級別選單', '⚠️');
+  }
+
+  // {欄位} 變數寫法：只有分級卡能用，且至少要有一個級別有這個欄位。
+  // （只有部分級別有是刻意的，例如國泰 CUBE 的「固定回饋方案」沒有 specialRate，不報）
+  const checkPlaceholder = function(field, slotLabel, v) {
+    const key = pmcPlaceholderKey_(v);
+    if (!key) return false;
+    if (!hasLevels) {
+      add('PLACEHOLDER_NO_LEVELS', field, slotLabel,
+        field + ' 填了 {' + key + '}，但這張卡沒勾 hasLevels——網站會算成 0', '⚠️');
+    } else if (levelObj) {
+      const found = Object.keys(levelObj).some(function(n) {
+        return levelObj[n] && typeof levelObj[n] === 'object' &&
+          Object.prototype.hasOwnProperty.call(levelObj[n], key);
+      });
+      if (!found) {
+        add('PLACEHOLDER_NOT_IN_LEVELS', field, slotLabel,
+          field + ' 填了 {' + key + '}，但沒有任何一個級別有「' + key + '」——網站會算成 0', '⚠️');
+      }
+    }
+    return true;
+  };
+
+  // 日期一組檢查（回饋槽與領券槽共用）
+  const checkDates = function(startField, endField, slotLabel, endNoStartQa) {
+    const sRaw = val(startField), eRaw = val(endField);
+    const s = pmcParseDateCell_(sRaw), e = pmcParseDateCell_(eRaw);
+    if (s === null) add('DATE_INVALID', startField, slotLabel, startField + '「' + sRaw + '」不是正確的日期（請用 2026/7/1 這種格式）', '⚠️');
+    if (e === null) add('DATE_INVALID', endField, slotLabel, endField + '「' + eRaw + '」不是正確的日期（請用 2026/7/1 這種格式）', '⚠️');
+    if (s && e && e < s) add('END_BEFORE_START', endField, slotLabel, '結束日 ' + e + ' 早於開始日 ' + s, '⚠️');
+    if (e && s === '' && headers.indexOf(startField) >= 0) {
+      add('END_NO_START', startField, slotLabel, '有結束日但沒填開始日', endNoStartQa);
+    }
+  };
+
+  // ---------- 回饋槽位 rate_N ----------
+  const maxRate = maxSlotIndex(headers, 'rate');
+  for (let j = 1; j <= maxRate; j++) {
+    const label = '回饋槽位 ' + j;
+    const rate = val('rate_' + j);
+    const items = val('items_' + j);
+    const cap = val('cap_' + j);
+    const rateBlank = pmcIsBlank_(rate), itemsBlank = pmcIsBlank_(items);
+
+    if (!rateBlank && itemsBlank) {
+      // 既有檢查 6 已涵蓋（rate 為 0 時檢查 6 不會報，但 0 沒 items 本來就不匯出，這裡補上）
+      add('RATE_NO_ITEMS', 'items_' + j, label, '有 rate 卻沒填 items（這個槽位不會匯出）',
+        (rate === 0 || String(rate).trim() === '0') ? '⚠️' : null);
+    }
+    if (rateBlank && !itemsBlank) {
+      add('ITEMS_NO_RATE', 'rate_' + j, label, '有 items 卻沒填 rate（這個槽位不會匯出）', '⚠️');
+    }
+    if (!rateBlank && !checkPlaceholder('rate_' + j, label, rate) && !pmcIsNumberLike_(rate)) {
+      add('RATE_NOT_NUMBER', 'rate_' + j, label, 'rate「' + rate + '」不是數字也不是 {變數}（' + pmcNumberProblem_(rate, '這個槽位不會匯出') + '）', '⚠️');
+    }
+    if (!pmcIsBlank_(cap) && !checkPlaceholder('cap_' + j, label, cap) && !pmcIsNumberLike_(cap)) {
+      add('CAP_NOT_NUMBER', 'cap_' + j, label, 'cap「' + cap + '」不是數字也不是 {變數}（' + pmcNumberProblem_(cap, '匯出會變成空值') + '）', '⚠️');
+    }
+    ['minSpend_', 'maxSpend_'].forEach(function(p) {
+      const v = val(p + j);
+      if (!pmcIsBlank_(v) && !pmcIsNumberLike_(v)) {
+        add('NOT_NUMBER', p + j, label, p + j + '「' + v + '」不是數字（' + pmcNumberProblem_(v, '匯出會變成空值') + '）', '⚠️');
+      }
+    });
+    // 結束日但沒開始日：回饋槽已有既有檢查 8a，QA 不重複列
+    checkDates('periodStart_' + j, 'periodEnd_' + j, label, null);
+  }
+
+  // ---------- 領券槽位 couponMerchant_N ----------
+  const maxCoupon = maxSlotIndex(headers, 'couponMerchant');
+  for (let j = 1; j <= maxCoupon; j++) {
+    const label = '領券槽位 ' + j;
+    const merchant = val('couponMerchant_' + j);
+    const rate = val('couponRate_' + j);
+    const cap = val('couponCap_' + j);
+    const mBlank = pmcIsBlank_(merchant), rBlank = pmcIsBlank_(rate);
+    if (!rBlank && mBlank) add('COUPON_NO_MERCHANT', 'couponMerchant_' + j, label, '有 couponRate 卻沒填 couponMerchant（不會匯出）', '⚠️');
+    if (!mBlank && rBlank) add('COUPON_NO_RATE', 'couponRate_' + j, label, '有 couponMerchant 卻沒填 couponRate（不會匯出）', '⚠️');
+    if (!rBlank) {
+      const rs = String(rate).trim();
+      // 與匯出一致：含 '+' 或 specialRate/generalRate 保持字串，其餘必須是數字
+      const okString = rs.indexOf('+') !== -1 || rs === 'specialRate' || rs === 'generalRate';
+      if (!okString && !pmcIsNumberLike_(rate)) {
+        add('COUPON_RATE_NOT_NUMBER', 'couponRate_' + j, label, 'couponRate「' + rate + '」不是數字（' + pmcNumberProblem_(rate, '匯出會變成空值') + '）', '⚠️');
+      }
+    }
+    if (!pmcIsBlank_(cap) && !pmcIsNumberLike_(cap)) {
+      add('NOT_NUMBER', 'couponCap_' + j, label, 'couponCap「' + cap + '」不是數字（' + pmcNumberProblem_(cap, '匯出會變成空值') + '）', '⚠️');
+    }
+    checkDates('couponPeriodStart_' + j, 'couponPeriodEnd_' + j, label, '⚠️');
+  }
+
+  return issues;
+}
+
+// ==========================================
+// 新戶活動單列驗證（runQACheck 檢查 13 與「新戶活動編輯器」存檔前共用，2026-11-11 新增）
+// ==========================================
+// 一列「New Cardholder Promos」丟進來，回傳問題清單（格式同 pmcValidateCardRow_，qa 一律 ⚠️——
+// 少一檔活動不該卡住整次發布）。規則照 pmcRowToPromo_ 實際怎麼讀來寫。
+// 只有「申辦按鈕」沒有活動內容的列（isPromoRow_ 為 false）只檢查申辦連結。
+const PMC_PROMO_KNOWN_TYPES = ['回饋加碼', '定額回饋', '首刷禮'];
+
+function pmcValidatePromoRow_(headers, row, label) {
+  const issues = [];
+  const add = function(code, field, message) {
+    issues.push({ code: code, field: field, slotLabel: label, message: message, qa: '⚠️' });
+  };
+  const val = function(name) { return getValue(row, headers, name); };
+  const urlCheck = function(f) {
+    const v = val(f);
+    if (!pmcIsBlank_(v) && !/^https?:\/\//i.test(String(v).trim())) {
+      add('URL_BAD', f, f + ' 不是 https:// 開頭的網址（網站上會被擋掉、不顯示）');
+    }
+  };
+  urlCheck('apply_cta_link');
+  if (!isPromoRow_(row, headers)) return issues;
+
+  urlCheck('link');
+  urlCheck('gift_image_url');
+
+  const s = pmcParseDateCell_(val('period_start')), e = pmcParseDateCell_(val('period_end'));
+  if (s === null) add('DATE_INVALID', 'period_start', 'period_start「' + val('period_start') + '」不是正確的日期（請用 2026/7/1 這種格式）');
+  if (e === null) add('DATE_INVALID', 'period_end', 'period_end「' + val('period_end') + '」不是正確的日期（請用 2026/7/1 這種格式）');
+  if (s && e && e < s) add('END_BEFORE_START', 'period_end', '結束日 ' + e + ' 早於開始日 ' + s);
+  const ex = pmcParseDateCell_(val('apply_cta_expiry'));
+  if (ex === null) add('DATE_INVALID', 'apply_cta_expiry', 'apply_cta_expiry「' + val('apply_cta_expiry') + '」不是正確的日期');
+
+  // 匯出用 parseFloat 讀的欄位："12,000" 會變 12
+  ['bonus_cap', 'voucher_amount'].forEach(function(f) {
+    const v = val(f);
+    if (!pmcIsBlank_(v) && !pmcIsNumberLike_(v)) add('NOT_NUMBER', f, f + '「' + v + '」不是數字（' + pmcNumberProblem_(v, '匯出會變成空值') + '）');
+  });
+  // 匯出容錯讀的欄位（"NT$3,280"、"24吋" 都可以），只擋完全讀不出數字的
+  ['min_spend', 'luggage_inch', 'luggage_value'].forEach(function(f) {
+    const v = val(f);
+    if (!pmcIsBlank_(v) && pmcParseNumber_(v) === null) add('NOT_NUMBER', f, f + '「' + v + '」讀不出數字（匯出會略過這格）');
+  });
+  const pr = val('priority');
+  if (!pmcIsBlank_(pr) && !/^\d+$/.test(String(pr).trim())) add('NOT_NUMBER', 'priority', 'priority「' + pr + '」要填整數（空白＝99）');
+  const rank = val('pick_rank');
+  if (!pmcIsBlank_(rank) && !/^([1-5]|x)$/i.test(String(rank).trim())) add('PICK_RANK_BAD', 'pick_rank', 'pick_rank 只能填 1–5 或 x（空白＝交給自動）');
+
+  const types = String(val('promo_types') || '').split(',').map(function(t) { return t.trim(); }).filter(String);
+  if (types.length === 0) add('NO_TYPE', 'promo_types', '沒填 promo_types（活動類型）');
+  types.forEach(function(t) {
+    if (PMC_PROMO_KNOWN_TYPES.indexOf(t) < 0 && t.indexOf('贈') < 0 && t.indexOf('定額') < 0) {
+      add('TYPE_UNKNOWN', 'promo_types', '活動類型「' + t + '」不是 ' + PMC_PROMO_KNOWN_TYPES.join('／') + '，在新戶活動頁會被歸到「其他」');
+    }
+  });
+  if (pmcIsTrueCell_(val('active')) && pmcIsBlank_(val('new_customer_summary'))) {
+    add('NO_SUMMARY', 'new_customer_summary', '已啟用，但 new_customer_summary（活動摘要）是空的——搜尋結果的新戶活動會沒有說明');
+  }
+  return issues;
 }
 
 function clearQAReport() {

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<!--
+  新戶活動編輯器（搭配 promo-editor.gs，2026-11-11 新增）。
+  在 Apps Script 編輯器裡要建成「HTML」檔，檔名必須是 PromoEditor（不含 .html）。
+  樣式沿用 CardEditor.html（兩個檔案各自獨立，改版面時兩邊對照著改）。
+  所有來自試算表的文字一律用 textContent 放進畫面，不用 innerHTML。
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font: 13px/1.45 Arial, "Noto Sans TC", sans-serif; color: #202124; background: #fff;
+         display: flex; flex-direction: column; overflow: hidden; }
+  #top { flex: none; background: #fff; padding: 10px 12px 8px; border-bottom: 1px solid #e0e0e0; }
+  .top-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #filter { flex: 1 1 160px; }
+  #cardSelect { flex: 2 1 240px; }
+  #jump { flex: 1 1 160px; }
+  #filter, #cardSelect, #jump { min-width: 0; padding: 6px 8px; border: 1px solid #c4c7c5; border-radius: 6px; font: inherit; }
+  #status { margin-top: 6px; font-size: 12px; color: #5f6368; min-height: 1em; }
+  #layout { flex: 1; display: flex; min-height: 0; }
+  #nav { flex: none; width: 230px; overflow-y: auto; border-right: 1px solid #e0e0e0; padding: 8px 6px 16px; background: #f8f9fa; }
+  #nav:empty { display: none; }
+  #nav .nav-sec { display: block; width: 100%; text-align: left; font-weight: bold; color: #1a73e8; border: none; background: none; padding: 6px 6px 2px; margin-top: 4px; }
+  #nav .nav-item { display: flex; gap: 6px; width: 100%; text-align: left; border: none; background: none; padding: 3px 6px; border-radius: 5px; font-size: 12px; }
+  #nav .nav-item:hover, #nav .nav-sec:hover { background: #e8f0fe; }
+  #nav .nav-item .n { font-weight: bold; white-space: nowrap; min-width: 1.6em; }
+  #nav .nav-item .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3c4043; }
+  #nav .chips { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 6px 4px; }
+  #nav .chips .lbl { font-size: 11px; color: #80868b; width: 100%; }
+  #nav .chip { font-size: 11px; padding: 0 6px; border-radius: 9px; color: #5f6368; border: 1px solid #dadce0; background: #fff; }
+  #nav .dirty { box-shadow: inset 3px 0 #f9ab00; }
+  #nav .err { box-shadow: inset 3px 0 #d93025; color: #c5221f; }
+  #nav .chip.dirty { border-color: #f9ab00; box-shadow: none; }
+  #nav .chip.err { border-color: #d93025; box-shadow: none; }
+  #main { flex: 1; overflow-y: auto; padding: 4px 16px 24px; min-width: 0; }
+  details.section { border-top: 1px solid #e0e0e0; margin-top: 8px; }
+  details.section > summary { cursor: pointer; list-style: none; font-size: 14px; font-weight: bold; color: #1a73e8; padding: 10px 0 6px; }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary::before { content: "▸ "; }
+  details.section[open] > summary::before { content: "▾ "; }
+  details.section > summary .meta { font-weight: normal; font-size: 12px; color: #5f6368; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); column-gap: 12px; }
+  .grid > .field.wide { grid-column: 1 / -1; }
+  .flash { animation: flash 1.2s ease-out; }
+  @keyframes flash { from { background: #fef7e0; } to { background: transparent; } }
+  @media (max-width: 640px) {
+    #layout { flex-direction: column; }
+    #nav { width: auto; max-height: 96px; border-right: none; border-bottom: 1px solid #e0e0e0; }
+  }
+  #status.err { color: #c5221f; }
+  #status.ok { color: #188038; }
+  details.slot { border: 1px solid #e0e0e0; border-radius: 8px; margin: 6px 0; background: #fff; }
+  details.slot > summary { cursor: pointer; padding: 6px 8px; list-style: none; display: flex; gap: 6px; align-items: baseline; }
+  details.slot > summary::-webkit-details-marker { display: none; }
+  details.slot > summary::before { content: "▸"; color: #80868b; }
+  details.slot[open] > summary::before { content: "▾"; }
+  details.slot.empty > summary { color: #9aa0a6; padding: 3px 8px; }
+  details.slot.dirty { border-color: #f9ab00; }
+  details.slot.has-err { border-color: #d93025; }
+  .sum-n { font-weight: bold; white-space: nowrap; }
+  .sum-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .slot-body { padding: 2px 8px 8px; }
+  .field { margin: 6px 0; padding-left: 6px; border-left: 3px solid transparent; }
+  .field.dirty { border-left-color: #f9ab00; }
+  .field.err { border-left-color: #d93025; }
+  .field label { display: block; font-size: 11px; color: #5f6368; margin-bottom: 2px; word-break: break-all; }
+  .field textarea, .field input[type=text] { width: 100%; padding: 5px 7px; border: 1px solid #c4c7c5; border-radius: 5px; font: inherit; resize: vertical; }
+  .field textarea { min-height: 30px; overflow: hidden; }
+  .field .ro { padding: 5px 7px; background: #f1f3f4; border-radius: 5px; color: #5f6368; white-space: pre-wrap; word-break: break-all; min-height: 28px; }
+  .field .msg { font-size: 11px; color: #d93025; margin-top: 2px; }
+  .hint { font-size: 11px; color: #5f6368; margin: 4px 0; }
+  .warn { font-size: 12px; color: #b06000; background: #fef7e0; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+  button { font: inherit; border-radius: 6px; border: 1px solid #c4c7c5; background: #fff; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #f1f3f4; }
+  button.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+  button.primary:disabled { background: #a8c7fa; border-color: #a8c7fa; cursor: default; }
+  button.link { border: none; background: none; color: #1a73e8; padding: 2px 4px; }
+  button.danger { color: #c5221f; }
+  .add-slot { width: 100%; margin-top: 4px; border-style: dashed; color: #1a73e8; }
+  /* 級別 */
+  .level { border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px; margin: 8px 0; }
+  .level.renamed { border-color: #f9ab00; }
+  .level-head { display: flex; gap: 6px; align-items: center; }
+  .level-head input { flex: 1; font-weight: bold; padding: 5px 7px; border: 1px solid #c4c7c5; border-radius: 5px; font-size: 13px; }
+  .tag { font-size: 11px; background: #e8f0fe; color: #1967d2; border-radius: 10px; padding: 1px 7px; white-space: nowrap; }
+  .kv { display: grid; grid-template-columns: 38% 1fr auto; gap: 4px; margin-top: 4px; align-items: start; }
+  .kv input, .kv textarea { width: 100%; padding: 4px 6px; border: 1px solid #c4c7c5; border-radius: 5px; font: inherit; font-size: 12px; resize: vertical; }
+  .kv textarea { min-height: 26px; overflow: hidden; }
+  .kv button { padding: 2px 6px; }
+  #rawLevels { width: 100%; min-height: 220px; font: 12px/1.4 monospace; padding: 6px; border: 1px solid #c4c7c5; border-radius: 6px; }
+  /* 底部存檔列 */
+  #bar { flex: none; background: #fff; border-top: 1px solid #e0e0e0; padding: 8px 12px; }
+  #bar .row { display: flex; gap: 6px; justify-content: flex-end; }
+  #bar .row button.primary { flex: 0 1 320px; }
+  #issues { max-height: 38vh; overflow: auto; margin-bottom: 6px; }
+  #issues:empty { display: none; }
+  .issue { font-size: 12px; padding: 5px 7px; margin: 3px 0; background: #fce8e6; border-radius: 6px; cursor: pointer; }
+  .issue b { color: #c5221f; }
+  .issue.conflict { background: #fef7e0; cursor: default; }
+  /* 確認視窗 */
+  #modal { position: fixed; inset: 0; background: rgba(32,33,36,.45); display: none; align-items: center; justify-content: center; z-index: 20; padding: 12px; }
+  #modal.show { display: flex; }
+  #modal .box { background: #fff; border-radius: 10px; padding: 14px; max-width: 520px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+  #modal .box h3 { margin: 0 0 8px; font-size: 14px; color: #c5221f; }
+  #modal .box .body { white-space: pre-wrap; font-size: 12.5px; }
+  #modal .box .btns { display: flex; gap: 6px; justify-content: flex-end; margin-top: 12px; }
+  .empty-state { color: #5f6368; padding: 24px 4px; text-align: center; }
+  /* 新戶活動編輯器專用 */
+  .grp { font-size: 11px; font-weight: bold; color: #5f6368; margin: 10px 0 0; padding-top: 6px; border-top: 1px dashed #e0e0e0; }
+  .grp:first-child { border-top: none; margin-top: 0; }
+  .slot > summary .where { font-size: 11px; color: #80868b; white-space: nowrap; }
+  .tag-off { background: #f1f3f4; color: #5f6368; }
+  .tag-old { background: #fce8e6; color: #c5221f; }
+  .tag-soon { background: #e6f4ea; color: #137333; }
+  #nav .nav-item.muted .t { color: #9aa0a6; }
+  .type-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .chip-btn { font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+  .chip-btn.on { background: #e8f0fe; border-color: #1a73e8; color: #1967d2; }
+</style>
+
+</head>
+<body>
+<div id="top">
+  <div class="top-row">
+    <input id="filter" type="text" placeholder="🔍 打字篩選卡片（id 或名稱）">
+    <select id="cardSelect"><option value="">載入卡片清單中…</option></select>
+  </div>
+  <div id="status"></div>
+</div>
+
+<div id="layout">
+  <nav id="nav"></nav>
+  <div id="main"><div class="empty-state">選一張卡，列出它所有的新戶活動</div></div>
+</div>
+
+<div id="bar" style="display:none">
+  <div id="issues"></div>
+  <div class="row">
+    <button id="saveBtn" class="primary" disabled>沒有修改</button>
+    <button id="revertBtn" title="放棄所有還沒存的修改">還原</button>
+  </div>
+</div>
+
+<div id="modal"><div class="box">
+  <h3 id="modalTitle"></h3>
+  <div class="body" id="modalBody"></div>
+  <div class="btns"><button id="modalCancel">取消</button><button id="modalOk" class="primary">確定</button></div>
+</div></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---------- 狀態 ----------
+  var allCards = [];
+  var data = null;     // promoEditorLoad 的結果
+  var rows = [];       // 既有列：{ key, rowNumber, fingerprint, isPromo, info, orig, cur }
+  var newRows = [];    // 新活動：{ cur, copied }
+  var cta = {};        // 申辦按鈕：欄位 → { orig, cur, values:[{v, rows:[]}], forced }
+  var fieldEls = {};   // 'rowKey|欄位' → .field
+  var rowEls = {};     // rowKey → details
+  var busy = false;
+
+  var $ = function(id) { return document.getElementById(id); };
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function status(msg, kind) { var s = $('status'); s.textContent = msg || ''; s.className = kind || ''; }
+  function run(fn, args, ok) {
+    busy = true;
+    var runner = google.script.run
+      .withSuccessHandler(function(r) { busy = false; ok(r); })
+      .withFailureHandler(function(e) { busy = false; status('❌ ' + (e && e.message || e), 'err'); refreshBar(); });
+    runner[fn].apply(runner, args);
+  }
+  function confirmBox(title, body, okText, onOk, onCancel) {
+    $('modalTitle').textContent = title;
+    $('modalBody').textContent = body;
+    $('modalOk').textContent = okText || '確定';
+    $('modal').className = 'show';
+    $('modalOk').onclick = function() { $('modal').className = ''; onOk && onOk(); };
+    $('modalCancel').onclick = function() { $('modal').className = ''; onCancel && onCancel(); };
+  }
+  function autoSize(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
+  document.addEventListener('toggle', function(e) {
+    if (e.target.open) e.target.querySelectorAll('textarea').forEach(autoSize);
+  }, true);
+  // '2026/7/1' 或 '2026-07-01' → '2026-07-01'；看不懂回 ''
+  function iso(v) {
+    var m = String(v || '').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    return m ? m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2) : '';
+  }
+
+  // 長欄位整行
+  var WIDE_RE = /^(promo_types|new_customer_summary|new_customer_definition|promo_condition|bonus_merchants|gift_content|gift_image_url|voucher_usage|notes|link|pick_question|pick_reason|apply_cta_text|apply_cta_link)$/;
+
+  // ---------- 卡片清單 ----------
+  function renderCardList() {
+    var q = $('filter').value.trim().toLowerCase();
+    var sel = $('cardSelect');
+    var keep = data ? data.id : '';
+    sel.textContent = '';
+    var first = el('option', null, '— 選擇卡片（共 ' + allCards.length + ' 張）—');
+    first.value = '';
+    sel.appendChild(first);
+    allCards.forEach(function(c) {
+      if (q && (c.id + ' ' + c.name).toLowerCase().indexOf(q) < 0 && c.id !== keep) return;
+      var o = el('option', null, (c.name ? c.name + '（' + c.id + '）' : c.id) + ' · ' + (c.count ? c.count + ' 檔' : '沒有活動'));
+      o.value = c.id;
+      sel.appendChild(o);
+    });
+    sel.value = keep;
+  }
+  $('filter').addEventListener('input', renderCardList);
+  $('cardSelect').addEventListener('change', function() {
+    var id = this.value, sel = this;
+    if (!id || (data && id === data.id)) return;
+    var go = function() { loadCard(id); };
+    if (countChanges() > 0) {
+      confirmBox('還有沒存的修改', '換卡片的話，「' + data.id + '」還沒存的修改會不見。', '不存了，換卡片', go, function() { sel.value = data.id; });
+    } else go();
+  });
+  function loadCard(id) {
+    status('讀取「' + id + '」…');
+    run('promoEditorLoad', [id], function(d) { setData(d); status('已載入「' + id + '」：' + d.rows.length + ' 列', 'ok'); });
+  }
+
+  // ---------- 載入 ----------
+  function setData(d) {
+    data = d; newRows = []; fieldEls = {}; rowEls = {};
+    rows = d.rows.map(function(r) {
+      var orig = {}, cur = {};
+      Object.keys(r.fields).forEach(function(f) { orig[f] = r.fields[f].value; cur[f] = r.fields[f].value; });
+      return { key: 'r' + r.rowNumber, rowNumber: r.rowNumber, fingerprint: r.fingerprint, isPromo: r.isPromo, info: r.fields, orig: orig, cur: cur };
+    });
+    // 申辦按鈕：跟匯出一樣取「啟用列」裡第一個有填的；各列不一樣時列出來
+    cta = {};
+    d.ctaFields.forEach(function(f) {
+      var groups = {}, order = [];
+      rows.forEach(function(r) {
+        var v = (r.orig[f] || '').trim();
+        if (!v) return;
+        if (!groups[v]) { groups[v] = []; order.push(v); }
+        groups[v].push(r.rowNumber);
+      });
+      var eff = '';
+      rows.some(function(r) { if (r.orig.active === 'TRUE' && (r.orig[f] || '').trim()) { eff = r.orig[f].trim(); return true; } });
+      if (!eff && order.length) eff = order[0];
+      cta[f] = { orig: eff, cur: eff, forced: false, values: order.map(function(v) { return { v: v, rows: groups[v] }; }) };
+    });
+    $('issues').textContent = '';
+    render();
+    renderCardList();
+  }
+
+  // ---------- 畫面 ----------
+  function rowState(r) {   // r 可能是既有列或新活動
+    var c = r.cur, out = [];
+    if (c.active !== 'TRUE') out.push(['off', '未啟用']);
+    var e = iso(c.period_end), s = iso(c.period_start);
+    if (e && e < data.today) out.push(['old', '已過期']);
+    else if (s && s > data.today) out.push(['soon', '即將開始']);
+    return out;
+  }
+  function rowTitle(r) {
+    var c = r.cur;
+    var dates = (c.period_start || c.period_end) ? (c.period_start || '?') + '–' + (c.period_end || '?') : '';
+    return [c.promo_types || '（沒填類型）', dates, c.new_customer_summary].filter(String).join(' · ');
+  }
+  function isDirtyRow(r) { return r.orig ? Object.keys(r.cur).some(function(f) { return r.cur[f] !== r.orig[f]; }) : true; }
+
+  function render() {
+    var main = $('main');
+    main.textContent = '';
+    renderCta(main);
+
+    var sec = el('details', 'section'); sec.open = true; sec.id = 'secPromos';
+    var promoRows = rows.filter(function(r) { return r.isPromo; });
+    var sum = el('summary', null, '新戶活動 ');
+    sum.appendChild(el('span', 'meta', '（' + promoRows.length + ' 檔' + (newRows.length ? '＋新增 ' + newRows.length + ' 檔' : '') + '）'));
+    sec.appendChild(sum);
+    var body = el('div', 'sec-body');
+    sec.appendChild(body);
+    main.appendChild(sec);
+    if (!promoRows.length && !newRows.length) body.appendChild(el('div', 'hint', '這張卡目前沒有新戶活動。'));
+    promoRows.forEach(function(r, i) { body.appendChild(promoBlock(r, '活動 ' + (i + 1), '第 ' + r.rowNumber + ' 列')); });
+    newRows.forEach(function(r, i) { r.key = 'n' + i; body.appendChild(promoBlock(r, '新活動 ' + (i + 1), '存檔後新增')); });
+    var add = el('button', 'add-slot', '＋ 新增一檔活動（從上一檔複製新戶定義、條件、連結等）');
+    add.onclick = addPromo;
+    body.appendChild(add);
+    body.appendChild(el('div', 'hint', '要下架活動：取消勾選 active。編輯器不提供刪除（誤刪救不回來），真的要刪請到表上刪整列。'));
+
+    buildNav();
+    $('bar').style.display = '';
+    refreshBar();
+  }
+
+  function renderCta(main) {
+    if (!data.ctaFields.length) return;
+    var sec = el('details', 'section'); sec.open = true; sec.id = 'secCta';
+    sec.appendChild(el('summary', null, '申辦按鈕（卡片層級）'));
+    var body = el('div', 'sec-body');
+    sec.appendChild(body);
+    main.appendChild(sec);
+    body.appendChild(el('div', 'hint', '整張卡共用一組。改這裡會寫到這張卡「原本有填這欄」的每一列（都沒填就寫第一列），各列會變一致。'));
+    var grid = el('div', 'grid');
+    data.ctaFields.forEach(function(f) {
+      var st = cta[f];
+      var w = el('div', 'field' + (WIDE_RE.test(f) ? ' wide' : ''));
+      w.dataset.field = 'cta|' + f;
+      w.appendChild(el('label', null, f));
+      var inp = el(f === 'apply_cta_expiry' ? 'input' : 'textarea');
+      if (inp.tagName === 'INPUT') { inp.type = 'text'; inp.placeholder = '例：2026/12/31'; } else inp.rows = 1;
+      inp.value = st.cur;
+      inp.oninput = function() { st.cur = inp.value; if (inp.tagName === 'TEXTAREA') autoSize(inp); w.classList.toggle('dirty', st.cur !== st.orig || st.forced); refreshBar(); };
+      w.appendChild(inp);
+      if (st.values.length > 1) {
+        var warn = el('div', 'warn', '⚠️ 各列填的不一樣（匯出只取第一個）：' +
+          st.values.map(function(x) { return '第 ' + x.rows.join('、') + ' 列「' + x.v + '」'; }).join('；'));
+        var fix = el('button', 'link', '用上面這個值統一所有列');
+        fix.onclick = function() { st.forced = true; w.classList.add('dirty'); warn.textContent = '✅ 存檔時會把有填的列統一成上面的值'; refreshBar(); };
+        warn.appendChild(fix);
+        w.appendChild(warn);
+      }
+      fieldEls['cta|' + f] = w;
+      grid.appendChild(w);
+      if (inp.tagName === 'TEXTAREA') setTimeout(function() { autoSize(inp); }, 0);
+    });
+    body.appendChild(grid);
+    var only = rows.filter(function(r) { return !r.isPromo; });
+    if (only.length) body.appendChild(el('div', 'hint', '第 ' + only.map(function(r) { return r.rowNumber; }).join('、') + ' 列只放申辦按鈕、沒有活動內容。'));
+  }
+
+  function promoBlock(r, title, where) {
+    var d = el('details', 'slot');
+    var states = rowState(r);
+    d.open = !r.orig || !states.some(function(s) { return s[0] === 'off' || s[0] === 'old'; });
+    if (!d.open) d.classList.add('empty');
+    var s = el('summary');
+    s.appendChild(el('span', 'sum-n', title));
+    states.forEach(function(st) { s.appendChild(el('span', 'tag tag-' + st[0], st[1])); });
+    var t = el('span', 'sum-txt', rowTitle(r));
+    s.appendChild(t);
+    s.appendChild(el('span', 'where', where));
+    d.appendChild(s);
+    var body = el('div', 'slot-body');
+    data.groups.forEach(function(g) {
+      if (!g.fields.length) return;
+      body.appendChild(el('div', 'grp', g.title));
+      var grid = el('div', 'grid');
+      g.fields.forEach(function(f) { grid.appendChild(fieldWidget(r, f, d)); });
+      body.appendChild(grid);
+    });
+    if (!r.orig) {
+      var rm = el('button', 'link danger', '不要新增這檔（還沒存，直接拿掉）');
+      rm.onclick = function() { newRows.splice(newRows.indexOf(r), 1); render(); };
+      body.appendChild(rm);
+    }
+    d.appendChild(body);
+    d._row = r; d._sum = t; d._head = s;
+    rowEls[r.key] = d;
+    if (r.orig) d.classList.toggle('dirty', isDirtyRow(r)); else d.classList.add('dirty');
+    return d;
+  }
+
+  function fieldWidget(r, f, d) {
+    // 新活動沒有 info：型別照欄名判斷；既有列這欄是公式的話，新列也唯讀（存檔時會從上一列複製公式）
+    var info = r.info ? r.info[f] : {
+      kind: data.dateFields.indexOf(f) >= 0 ? 'date' : (f === 'active' ? 'bool' : 'text'),
+      formula: rows.some(function(x) { return x.info[f] && x.info[f].formula; }) ? '（自動複製）' : ''
+    };
+    if (!r.info) info.readonly = !!info.formula;
+    var key = r.key + '|' + f;
+    var w = el('div', 'field' + (WIDE_RE.test(f) ? ' wide' : ''));
+    w.dataset.field = key;
+    var lab = el('label', null, f);
+    w.appendChild(lab);
+    var changed = function(v) {
+      r.cur[f] = v;
+      w.classList.toggle('dirty', !r.orig || v !== r.orig[f]);
+      w.classList.remove('err'); var m = w.querySelector('.msg'); if (m) m.remove();
+      d.classList.toggle('dirty', isDirtyRow(r));
+      d._sum.textContent = rowTitle(r);
+      refreshNav();
+      refreshBar();
+    };
+    if (info.readonly) {
+      w.appendChild(el('div', 'ro', r.cur[f] || '（空）'));
+      lab.textContent = f + '　🔒 ' + (info.formula ? '公式' : '唯讀');
+    } else if (info.kind === 'bool') {
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = r.cur[f] === 'TRUE';
+      cb.onchange = function() { changed(cb.checked ? 'TRUE' : ''); };
+      lab.textContent = ''; lab.appendChild(cb); lab.appendChild(document.createTextNode(' ' + f + (f === 'active' ? '（勾＝上線）' : '')));
+    } else if (info.kind === 'date') {
+      var di = el('input'); di.type = 'text'; di.value = r.cur[f] || ''; di.placeholder = '例：2026/7/1';
+      di.oninput = function() { changed(di.value); };
+      w.appendChild(di);
+    } else {
+      var ta = el('textarea'); ta.rows = 1; ta.value = r.cur[f] || '';
+      ta.oninput = function() { autoSize(ta); changed(ta.value); };
+      w.appendChild(ta);
+      setTimeout(function() { autoSize(ta); }, 0);
+      if (f === 'promo_types') {
+        // 常用類型快選：點一下加入／拿掉
+        var chips = el('div', 'type-chips');
+        data.knownTypes.forEach(function(t) {
+          var b = el('button', 'chip-btn', t);
+          var sync = function() {
+            var list = (r.cur[f] || '').split(',').map(function(x) { return x.trim(); }).filter(String);
+            b.classList.toggle('on', list.indexOf(t) >= 0);
+          };
+          b.onclick = function() {
+            var list = (r.cur[f] || '').split(',').map(function(x) { return x.trim(); }).filter(String);
+            var i = list.indexOf(t);
+            if (i >= 0) list.splice(i, 1); else list.push(t);
+            ta.value = list.join(',');
+            changed(ta.value);
+            chips.querySelectorAll('button').forEach(function(x) { x._sync(); });
+          };
+          b._sync = sync; sync();
+          chips.appendChild(b);
+        });
+        ta.addEventListener('input', function() { chips.querySelectorAll('button').forEach(function(x) { x._sync(); }); });
+        w.appendChild(chips);
+      }
+    }
+    if (!r.orig && r.copied && r.copied[f]) w.appendChild(el('div', 'hint', '↑ 從上一檔複製'));
+    if (!r.orig && r.cur[f]) w.classList.add('dirty');
+    fieldEls[key] = w;
+    return w;
+  }
+
+  function addPromo() {
+    // 「上一檔」：剛新增的那檔 → 否則最後一檔啟用中的活動 → 否則最後一檔活動
+    var fromNew = newRows.length ? newRows[newRows.length - 1] : null;
+    var promoRows = rows.filter(function(r) { return r.isPromo; });
+    var activeRows = promoRows.filter(function(r) { return r.cur.active === 'TRUE'; });
+    var src = fromNew || (activeRows.length ? activeRows[activeRows.length - 1] : (promoRows.length ? promoRows[promoRows.length - 1] : null));
+    var nr = { cur: {}, copied: {} };
+    data.copyFields.forEach(function(f) {
+      if (f === 'active') return;
+      if (src && src.cur[f]) { nr.cur[f] = src.cur[f]; nr.copied[f] = true; }
+    });
+    if (data.copyFields.indexOf('active') >= 0) nr.cur.active = 'TRUE';   // 新活動預設上線，不要的話取消勾選
+    newRows.push(nr);
+    render();
+    var d = rowEls[nr.key];
+    if (d) { d.scrollIntoView({ block: 'start', behavior: 'smooth' }); var i = d.querySelector('textarea'); if (i) i.focus({ preventScroll: true }); }
+    status(src ? '已從上一檔複製：' + Object.keys(nr.copied).join('、') + '（改完記得存檔）' : '已新增空白活動（改完記得存檔）');
+  }
+
+  // ---------- 左側索引 ----------
+  function buildNav() {
+    var nav = $('nav');
+    nav.textContent = '';
+    if (data.ctaFields.length) {
+      var c = el('button', 'nav-sec', '申辦按鈕');
+      c.onclick = function() { reveal($('secCta')); };
+      nav.appendChild(c);
+    }
+    var p = el('button', 'nav-sec', '新戶活動');
+    p.onclick = function() { reveal($('secPromos')); };
+    nav.appendChild(p);
+    Object.keys(rowEls).forEach(function(k) {
+      var d = rowEls[k];
+      var item = el('button', 'nav-item');
+      item.appendChild(el('span', 'n', d._head.querySelector('.sum-n').textContent.replace('活動 ', '')));
+      item._t = el('span', 't', rowTitle(d._row));
+      item.appendChild(item._t);
+      item.title = item._t.textContent;
+      item.onclick = function() { reveal(d); };
+      d._nav = item;
+      nav.appendChild(item);
+    });
+    var add = el('button', 'nav-item', '＋ 新增一檔');
+    add.onclick = addPromo;
+    nav.appendChild(add);
+    refreshNav();
+  }
+  function refreshNav() {
+    Object.keys(rowEls).forEach(function(k) {
+      var d = rowEls[k];
+      if (!d._nav) return;
+      d._nav._t.textContent = rowTitle(d._row);
+      d._nav.title = d._nav._t.textContent;
+      d._nav.classList.toggle('dirty', d.classList.contains('dirty'));
+      d._nav.classList.toggle('err', d.classList.contains('has-err'));
+      var st = rowState(d._row).map(function(s) { return s[0]; });
+      d._nav.classList.toggle('muted', st.indexOf('off') >= 0 || st.indexOf('old') >= 0);
+    });
+  }
+  function reveal(target) {
+    var sec = target.closest('details.section'); if (sec) sec.open = true;
+    if (target.tagName === 'DETAILS') { target.open = true; target.classList.remove('empty'); }
+    target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+  }
+
+  // ---------- 存檔 ----------
+  function ctaChanges() {
+    var out = {};
+    Object.keys(cta).forEach(function(f) { if (cta[f].cur !== cta[f].orig || cta[f].forced) out[f] = cta[f].cur; });
+    return out;
+  }
+  function countChanges() {
+    if (!data) return 0;
+    var n = Object.keys(ctaChanges()).length + newRows.length;
+    rows.forEach(function(r) { Object.keys(r.cur).forEach(function(f) { if (r.cur[f] !== r.orig[f]) n++; }); });
+    return n;
+  }
+  function refreshBar() {
+    var n = countChanges(), b = $('saveBtn');
+    b.disabled = busy || n === 0;
+    b.textContent = busy ? '處理中…' : n === 0 ? '沒有修改' : '💾 儲存（' + n + ' 項' + (newRows.length ? '，含新增 ' + newRows.length + ' 檔' : '') + '）';
+  }
+  function gotoField(key) {
+    var w = fieldEls[key]; if (!w) return;
+    var d = w.closest('details.slot'); if (d) { d.open = true; d.classList.remove('empty'); }
+    var sec = w.closest('details.section'); if (sec) sec.open = true;
+    w.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    w.classList.remove('flash'); void w.offsetWidth; w.classList.add('flash');
+    var i = w.querySelector('textarea, input'); if (i) i.focus({ preventScroll: true });
+  }
+  function clearMarks() {
+    $('issues').textContent = '';
+    document.querySelectorAll('.field.err').forEach(function(w) { w.classList.remove('err'); var m = w.querySelector('.msg'); if (m) m.remove(); });
+    document.querySelectorAll('details.has-err').forEach(function(d) { d.classList.remove('has-err'); });
+  }
+
+  function save() {
+    if (!countChanges()) return;
+    var payload = {
+      id: data.id,
+      rows: rows.map(function(r) {
+        var ch = {};
+        Object.keys(r.cur).forEach(function(f) { if (r.cur[f] !== r.orig[f]) ch[f] = { original: r.orig[f], value: r.cur[f] }; });
+        return { rowNumber: r.rowNumber, fingerprint: r.fingerprint, changes: ch };
+      }),
+      cta: ctaChanges(),
+      newRows: newRows.map(function(r) {
+        var v = {};
+        Object.keys(r.cur).forEach(function(f) { if (r.cur[f] !== '' && r.cur[f] !== undefined) v[f] = r.cur[f]; });
+        return { values: v };
+      })
+    };
+    clearMarks();
+    status('存檔中…');
+    refreshBar();
+    run('promoEditorSave', [payload], function(res) {
+      if (res.ok) {
+        setData(res.card);
+        status('✅ 已存檔：改了 ' + res.written + ' 格' + (res.added ? '、新增 ' + res.added + ' 檔活動' : ''), 'ok');
+        allCards.forEach(function(c) { if (c.id === res.card.id) c.count = res.card.rows.filter(function(r) { return r.isPromo; }).length; });
+        renderCardList();
+        return;
+      }
+      refreshBar();
+      var box = $('issues');
+      if (res.conflict) {
+        box.appendChild(el('div', 'issue conflict', '⚠️ ' + res.conflict));
+        var rl = el('button', null, '重新載入這張卡（會放棄你還沒存的修改）');
+        rl.onclick = function() { loadCard(data.id); };
+        box.appendChild(rl);
+        status('❌ 有衝突，沒有存檔', 'err');
+        return;
+      }
+      if (res.errors) {
+        box.appendChild(el('div', 'hint', '❌ 有 ' + res.errors.length + ' 個問題，這次什麼都沒寫入。點一下可跳到該欄：'));
+        res.errors.forEach(function(it) {
+          var key = it.rowKey + '|' + it.field;
+          if (!fieldEls[key] && fieldEls['cta|' + it.field]) key = 'cta|' + it.field;
+          var dEl = el('div', 'issue');
+          dEl.appendChild(el('b', null, it.slotLabel + '：'));
+          dEl.appendChild(document.createTextNode(it.message));
+          dEl.onclick = function() { gotoField(key); };
+          box.appendChild(dEl);
+          var w = fieldEls[key];
+          if (w) {
+            w.classList.add('err'); w.appendChild(el('div', 'msg', it.message));
+            var d = w.closest('details.slot'); if (d) { d.classList.add('has-err'); d.open = true; d.classList.remove('empty'); }
+          }
+        });
+        refreshNav();
+        status('❌ 驗證沒過，沒有存檔', 'err');
+        return;
+      }
+      status('❌ ' + (res.message || '存檔失敗'), 'err');
+    });
+  }
+  $('saveBtn').onclick = save;
+  $('revertBtn').onclick = function() {
+    if (!countChanges()) return;
+    confirmBox('放棄修改？', '還沒存的修改（含新增的活動）會全部還原。', '還原', function() { setData(data); status('已還原'); });
+  };
+
+  run('promoEditorListCards', [], function(list) {
+    allCards = list;
+    renderCardList();
+    status('共 ' + list.length + ' 張卡');
+  });
+})();
+</script>
+</body>
+</html>
