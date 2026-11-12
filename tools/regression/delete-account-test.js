@@ -6,7 +6,7 @@
  * 模式），跑不到任何登入後的路徑。刪除帳號是全站唯一會「永久毀掉用戶資料」的功能，
  * 沒有測試等於沒有底線，所以這裡自帶一組會回傳「已登入用戶」的 Firebase 替身。
  *
- * 用法（repo 根目錄，需先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/delete-account-test.js      # 全部通過 → exit 0，任一失敗 → exit 1
  *
  * 守的機制（改 js/auth-user-data.js 的刪除區塊後必跑，這些是規格不是實作細節）：
@@ -21,7 +21,10 @@
  */
 const http=require('http'),fs=require('fs'),path=require('path');
 const REPO=require('path').resolve(__dirname,'..','..');
-const {chromium}=require(path.join(REPO,'node_modules','playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.data':'text/plain','.version':'text/plain','.json':'application/json','.txt':'text/plain'};
 
 function stub(url, provider){

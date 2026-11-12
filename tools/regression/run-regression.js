@@ -2,7 +2,7 @@
 /**
  * 自動化回歸測試：把 docs/ops/regression.md 的檢查清單跑成機器比對（組數以 CHECKS 陣列為準）。
  *
- * 用法（repo 根目錄，需先 npm install playwright；瀏覽器用預裝的 /opt/pw-browsers/chromium，
+ * 用法（repo 根目錄，playwright 用環境預裝的即可，本機沒有才 npm install playwright；瀏覽器用預裝的 /opt/pw-browsers/chromium，
  * 沒有預裝時退回 playwright 自帶的 chromium——本機要先 npx playwright install chromium）：
  *   node tools/regression/run-regression.js                  # 跑並與 baseline.json 比對（差異→exit 1）
  *   node tools/regression/run-regression.js --update-baseline # 重拍基準（改動「前」的版本跑！）

@@ -24,7 +24,7 @@
 | `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest` 每日回饋摘要；`sendLoginLink` 寄 Email 連結登入信；`guardSignup`／`guardEmails` 註冊與寄信把關）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。中間三支由 CF Pages build command 執行，開發不用跑；商家頁生成器改了 `js/` 後要跑 `--verify` |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。`deploy-version.sh` 與 `build-promos-features.js` 由 CF Pages build command 執行，開發不用跑。**`build-merchant-pages.js` 在改了 `index.html` 之後要自己跑**（見「部署前必做」第 5 條）；改了 `js/` 另跑 `--verify` |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
@@ -33,7 +33,9 @@
 1. `?v=` 一律是 `dev` 佔位、**任何情況都不要手動 bump**（2026-07-21 起版本號由 Cloudflare Pages 部署時執行 `tools/deploy-version.sh` 注入 commit hash；repo 內出現時間戳＝違規，preflight 會擋）
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（先 `npm install playwright --no-fund --no-audit --loglevel=error`；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（playwright 用環境預裝的，**不必 npm install**；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`
+5. 改了 `index.html` → 跑 `node tools/build-merchant-pages.js` 重新生成商家頁，生成結果一起 commit。preflight 顯示「⚠️ 卡片清單落後 cards.data」是資料匯出造成的落後，部署時會自動重生，**不用處理**；顯示「❌ 版面不一致」才要重新生成
+6. 收尾串成一個指令：`bash tools/preflight.sh && git add -A && git commit … && git push -u origin <分支>`，不要拆成三、四次呼叫
 
 ## 鐵則（違反＝bug 或資料事故；詳細說明在括號內的檔案）
 
@@ -47,11 +49,20 @@
 8. 錯誤處理用 `console.error`（永遠輸出）；`console.log/warn` 正式環境被靜音（`?debug=1` 開啟）
 9. 登出清理 `clearPersonalLocalDataOnSignOut()` 只能在用戶親自按登出時呼叫，不能進 onAuthStateChanged 登出分支（→ storage-and-security.md 第 5 節）
 
+## Session 成本規則（依據：2026-11 審計，見 docs/ops/efficiency-review.md）
+
+每個 request 都會重讀整個對話。對話越長，每一步越貴：上下文 10 萬 token 時每個工具呼叫約 $0.09，40 萬時約 $0.33。
+
+- **互不相依的讀取與搜尋，同一輪平行發出**；同一個檔的多個區段寫進同一個指令（`sed -n 'a,bp;c,dp'`）。一次只看一個結果再決定下一步，只用在下一步真的取決於這個結果的時候
+- **一個 session 一件事**。上一件事已 commit+push、用戶提出不相關的新任務，而這個 session 已經「長」了——已跨天、已超過約 150 次工具呼叫、或已收到成本提醒 hook 的提醒（任一成立；無法判斷是否跨天就只看後兩項） → 回覆開頭用一句話建議開新 session，並附 3–5 行交接 prompt（分支、已完成、待辦、必讀檔）。只提一次；用戶說繼續就繼續
+- **長 session 裡的定位工作派 `scout`**（站長常設授權，不必先問）：需要 5 次以上搜尋或讀檔才找得到位置、且本 session 已符合上一條的「長」→ 派 scout，主對話只收結論＋檔案:行號。細節見 `docs/ops/dispatch.md` 第 1 節
+- **成本提醒 hook**：`.claude/settings.json` 掛了 `tools/hooks/session-cost-reminder.py`。對話變長（約 30 萬 token 起）或停超過一小時再回來時，你會在用戶訊息旁收到一段「對話成本提醒」。照它的指示做：先用一句話告訴站長金額，需要動手的新任務先問要不要開新對話
+
 ## 大檔案使用規則（防上下文塞爆，依據見 docs/ops/diagnosis.md）
 
-- `js/*.js`（13 檔，單檔 565–1,530 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（一次 ≤200 行）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
-- `cards.data`（488KB base64 單行）與 `tools/regression/fixture.data`（回歸測試的凍結副本，同格式）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）
-- `styles.css`（7,300 行）/ `index.html`（1,350 行）：同樣先 Grep 再讀區段
+- `js/*.js`（13 檔，單檔 600–1,850 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（單段 ≤400 行；這一步需要的區段一次讀齊，不要 30 行 30 行分次讀）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
+- `cards.data`（488KB base64 單行）與 `tools/regression/fixture.data`（回歸測試的凍結副本，同格式）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）。jq 寫不出來的分析：`base64 -d cards.data > <scratchpad>/cards.json` 後用 python 處理，**解碼結果不得直接印到輸出**
+- `styles.css`（11,100 行）/ `index.html`（1,750 行）：同樣先 Grep 再讀區段
 - 廣度未知的搜尋（不確定在哪幾個檔）→ 派 `Explore` subagent，主對話只收結論＋檔案:行號（→ `docs/ops/dispatch.md`）
 - `docs/project/` 領域檔：先 `grep -n '^## ' <檔>` 看節標題＋行號，**只讀與任務相關的節**（鐵則括號裡的「第 N 節」即節編號）；教訓記錄區一律連帶讀
 - 文件裡的行號都是快照、會漂移：**以 Grep 關鍵字為準**，行號只當起點
@@ -65,23 +76,22 @@
 | 改顯示/UI（詳情頁、Spotlight、我的信用卡、我的配卡組合頁、各 modal、卡圖） | `docs/project/ui-display.md` |
 | 改資料（Google Sheets、Apps Script、cards.data、級別設定、新工作表） | `docs/project/data-pipeline.md` |
 | 改用戶資料/登入登出/localStorage/Firestore/XSS 相關 | `docs/project/storage-and-security.md` |
-| 任何多步驟任務開工前（派工、選模型、subagent） | `docs/ops/dispatch.md` |
+| 要派 subagent 時（選 agent、選模型、驗收分級） | `docs/ops/dispatch.md`（派工 prompt 模板在 `docs/ops/templates.md`） |
 | 拿不準「該不該升級/算不算完成/要不要問用戶/方向對不對」 | `docs/ops/judgment.md` |
-| 要寫派工 prompt | `docs/ops/templates.md`（直接套模板填空） |
 | 要更新任何 docs/ 制度檔或本檔 | `docs/ops/maintenance.md` |
 | 安全掃描報錯、要改掃描規則或 security-baseline | `docs/ops/security-monitoring.md` |
 | 考古「為什麼當初這樣設計」 | `docs/project/history.md` |
-| 新 session 開工、或發現制度怪怪的 | `docs/ops/letter.md` |
+| 審計 token 使用效率、檢討規則檔有沒有用 | `docs/ops/efficiency-review.md`（照步驟跑 `tools/audit/`） |
 
 其他既有文件：`CARDS-DATA-CACHE-README.md`（快取教學）、`FIRESTORE-RULES-README.md`、`FAQ-README.md`、`BENEFITS-AUTOMATION-PLAN.md`＋`apps-script/README.md`（權益監控）。
 
 ## 環境事實（remote session 必知）
 
 - 這是**短命容器**：session 結束即回收。**沒 commit+push 的工作等於沒發生**——每完成一個獨立單位就 commit+push
-- 無自動化測試：品質底線靠 `tools/preflight.sh` ＋ `docs/ops/regression.md` 人工回歸
+- 品質底線：`tools/preflight.sh` ＋ `tools/regression/` 的自動化回歸（「部署前必做」第 4 條）；兩者不涵蓋的才照 `docs/ops/regression.md` 人工驗
 - Chromium/Playwright 已預裝（executablePath `/opt/pw-browsers/chromium`），本機驗證可起 `python3 -m http.server`
 - `.claude/agents/` 有專案自訂 subagent（scout/builder/verifier），用法見 `docs/ops/dispatch.md`
 - **預覽部署只認 `preview/*` 分支**（站長的 Cloudflare Pages 設定；`claude/*` 工作分支推了**不會**有預覽）：要給站長看效果 → 從工作分支開或更新 `preview/<主題>` 並 push。需要真實資料時，請站長把 Apps Script `cards-export.gs` 的 `GITHUB_BRANCH` 暫時改成該 preview 分支再匯出，看完改回 `main`
 
 ---
-**更新日期**：2026-07-20（script.js 模組化拆分 session；改寫前版本在 `docs/archive/CLAUDE.md-2026-07-20.bak`）
+**更新日期**：2026-11-12（效率審計後修訂；改寫前版本在 `docs/archive/CLAUDE.md-2026-11-12.bak`）

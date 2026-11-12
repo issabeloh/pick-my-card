@@ -6,7 +6,7 @@
  * 這裡自帶「已登入用戶」替身（仿 delete-account-test.js），並沿用凍結資料＋凍結時鐘
  * （tools/regression/fixture.data／fixture.json），所以結果不會隨線上資料或日期漂移。
  *
- * 用法（repo 根目錄，需先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/mappings-page-test.js            # 全部通過 → exit 0，任一失敗 → exit 1
  *   node tools/regression/mappings-page-test.js --shots D  # 另外把各尺寸截圖存到資料夾 D（人工目視用）
  *

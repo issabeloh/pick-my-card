@@ -6,7 +6,7 @@
 ## 用法（repo 根目錄）
 
 ```bash
-npm install playwright        # 只需一次；node_modules 與 package.json 已在 .gitignore
+# 雲端容器已預裝 playwright，不必安裝。本機沒裝時才需要：npm install playwright（node_modules 與 package.json 已在 .gitignore）
 node tools/regression/run-regression.js                   # 比對模式：差異 → exit 1
 node tools/regression/run-regression.js --update-baseline # 重拍基準（只在「改動前」版本跑！）
 node tools/regression/run-regression.js --update-fixture  # 重拍凍結資料（少見，時機見下）

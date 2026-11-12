@@ -109,7 +109,7 @@ python3 tools/audit/stats.py --data $D/data --session <代號末6碼> --min-turn
 
 | 日期 | 挑選條件 | session 數 | 總花費 | 每 request | C1 | C2 | C3 | FLAG 數 | C7 低於門檻的文件 | C9 沒人讀的檔 | 採取的動作 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 2026-11-12 | updated_at ≥ 09-01 | 40 | $878.79 | $0.191 | 79% | 32% | 81% | 11 | cashback-engine.md、storage-and-security.md | diagnosis.md、letter.md、script-split-plan.md、templates.md、cross-slot-ref-and-minspend-spec.md、ui-review-2026-07-20.md | 立制；規則檔修改提案待站長確認 |
+| 2026-11-12 | updated_at ≥ 09-01 | 40 | $878.79 | $0.191 | 79% | 32% | 81% | 11 | cashback-engine.md、storage-and-security.md | diagnosis.md、letter.md、script-split-plan.md、templates.md、cross-slot-ref-and-minspend-spec.md、ui-review-2026-07-20.md | 立制。同日站長核准並套用：規則檔修改（CLAUDE.md 新增 Session 成本規則等）、商家頁檢查誤判修正、測試改用預裝 playwright、新增成本提醒 hook（`tools/hooks/session-cost-reminder.py`） |
 
 C7、C9 的「連續兩次」就是和這張表的上一列比：同一個檔名連續兩列都出現才算。
 

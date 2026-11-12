@@ -7,7 +7,7 @@
  * （一般回饋、分級卡、非分級卡、即將開始、領券、CUBE…，統一走 renderRateCard()），
  * 改壞其中一條（例如某條路徑漏了條件）搜尋回歸完全測不到。
  *
- * 用法（repo 根目錄，先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/card-detail-test.js                   # 比對模式：差異 → exit 1
  *   node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只在「改動前」版本跑！）
  *
