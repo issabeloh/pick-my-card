@@ -6,7 +6,7 @@
  * 完全碰不到這條路徑（那也正是它應有的樣子——沒填名單時行為必須逐字不變）。這支載入同一份
  * 凍結資料＋凍結時鐘，再在頁面裡對 cardsData.cards 臨時塞排除名單，逐情境驗證。
  *
- * 用法（repo 根目錄，需先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/basic-exclusions-test.js     # 全部通過 → exit 0，任一失敗 → exit 1
  *
  * 規則的正本在 js/search-match.js「一般消費排除項目」區塊。
@@ -14,7 +14,10 @@
 const fs = require('fs'), path = require('path');
 // 凍結資料伺服器、Firebase 訪客替身、凍結時鐘一律沿用 run-regression.js（index.html 的 Firebase import 增修時只改那一份）
 const { REPO, startServer, firebaseStub, freezeClockScript, readFixtureMeta } = require('./run-regression.js');
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const META = readFixtureMeta();
 
 (async () => {

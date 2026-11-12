@@ -6,7 +6,8 @@
 ## 怎麼跑（正常情況只需要這個）
 
 ```bash
-npm install playwright --no-fund --no-audit --loglevel=error   # 一次性；靜音參數必帶（省下數百行安裝雜訊）
+# 雲端容器已預裝 playwright，直接跑即可（2026-11-12 起測試腳本會自動改用預裝版）。
+# 只有本機沒裝時才需要：npm install playwright --no-fund --no-audit --loglevel=error
 node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組哪張卡不同
 ```
 

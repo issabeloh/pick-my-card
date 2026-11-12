@@ -6,7 +6,7 @@
  * 這裡自帶「已登入用戶」替身（仿 delete-account-test.js），並沿用凍結資料＋凍結時鐘
  * （tools/regression/fixture.data／fixture.json），所以結果不會隨線上資料或日期漂移。
  *
- * 用法（repo 根目錄，需先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/mappings-page-test.js            # 全部通過 → exit 0，任一失敗 → exit 1
  *   node tools/regression/mappings-page-test.js --shots D  # 另外把各尺寸截圖存到資料夾 D（人工目視用）
  *
@@ -20,7 +20,10 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const REPO = path.resolve(__dirname, '..', '..');
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.data': 'text/plain', '.version': 'text/plain', '.json': 'application/json', '.txt': 'text/plain', '.svg': 'image/svg+xml' };
 const argv = process.argv.slice(2);
 const SHOTS = argv.includes('--shots') ? path.resolve(argv[argv.indexOf('--shots') + 1] || path.join(os.tmpdir(), 'mappings-page-shots')) : null;

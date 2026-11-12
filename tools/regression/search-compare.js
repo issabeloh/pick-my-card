@@ -6,7 +6,7 @@
  * 列出每個搜尋詞的差異。用途是改動前後的影響評估——跟 run-regression.js（凍結資料、逐字比對基準）互補：
  * 這支覆蓋的詞多得多（常用詞＋統一詞表所有詞＋資料裡所有活動商家名，約 1,900 個），但不存基準、只比兩版程式。
  *
- * 用法（repo 根目錄，先 npm install playwright）：
+ * 用法（repo 根目錄；playwright 用環境預裝的即可，本機沒有才 npm install playwright）：
  *   node tools/regression/search-compare.js                 # 函數層：所有搜尋詞＋多關鍵詞快捷搜尋
  *   node tools/regression/search-compare.js --ui            # 另外實際操作畫面跑 search-terms.txt 與快捷搜尋（較慢）
  *   node tools/regression/search-compare.js --base <git ref>  # 換基準版（預設 origin/main）
@@ -32,7 +32,10 @@ const baseIdx = args.indexOf('--base');
 const BASE_REF = baseIdx >= 0 ? args[baseIdx + 1] : 'origin/main';
 const TERMS = fs.readFileSync(path.join(__dirname, 'search-terms.txt'), 'utf8')
   .split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const EXEC = fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
 
 async function openPage(root) {
