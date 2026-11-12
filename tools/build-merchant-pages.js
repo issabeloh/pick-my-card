@@ -307,8 +307,11 @@ function stripDataRegions(html) {
     // 標題與描述（2026-11-10 起可含 {年}{半年}{第一名卡}，會隨日期與 cards.data 變）：
     // 不挖掉的話跨半年或每次匯出都會被判成「版面不一致」擋 commit。內容本來就來自工作表、不是版面。
     .replace(/<title>[^<]*<\/title>/g, '')
-    // 站長手寫正文（2026-11-10 起同樣可含代換字，名次會隨 cards.data 變）
-    .replace(/<section class="mc-body"[\s\S]*?<\/section>/g, '')
+    // 站長手寫正文（2026-11-10 起同樣可含代換字，名次會隨 cards.data 變）。
+    // 連同前面的縮排與後面的換行一起挖（2026-11-12）：工作表「新增或清空」某頁的正文時，整個
+    // <section> 會出現或消失，只挖標籤會留下一行空白，兩邊比起來就不相等，被誤判成「版面不一致」
+    // 擋住所有不相干的 commit（審計期間 49 次 preflight 失敗有 28 條訊息是這個）。
+    .replace(/[ \t]*<section class="mc-body"[\s\S]*?<\/section>\n?/g, '')
     .replace(/(<meta (?:name|property)="(?:description|og:title|og:description|twitter:title|twitter:description)" content=")[^"]*(")/g, '$1$2');
 }
 

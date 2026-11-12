@@ -24,7 +24,10 @@
 const fs = require('fs');
 const path = require('path');
 const { REPO, startServer, firebaseStub, freezeClockScript, readFixtureMeta } = require('./run-regression.js');
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 
 // 2026-08-25：凍結資料裡有 9/1 開始（30 天內即將開始）與 8/31 結束（即將結束）的活動
 const EXTRA_DATES = ['2026-08-25T12:00:00+08:00'];

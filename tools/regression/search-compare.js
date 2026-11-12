@@ -32,7 +32,10 @@ const baseIdx = args.indexOf('--base');
 const BASE_REF = baseIdx >= 0 ? args[baseIdx + 1] : 'origin/main';
 const TERMS = fs.readFileSync(path.join(__dirname, 'search-terms.txt'), 'utf8')
   .split('\n').map(s => s.trim()).filter(s => s && !s.startsWith('#'));
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const EXEC = fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
 
 async function openPage(root) {

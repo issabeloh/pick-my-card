@@ -20,7 +20,10 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const REPO = path.resolve(__dirname, '..', '..');
-const { chromium } = require(path.join(REPO, 'node_modules', 'playwright'));
+// 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
+let chromium;
+try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
+catch (e) { ({ chromium } = require('playwright')); }
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.data': 'text/plain', '.version': 'text/plain', '.json': 'application/json', '.txt': 'text/plain', '.svg': 'image/svg+xml' };
 const argv = process.argv.slice(2);
 const SHOTS = argv.includes('--shots') ? path.resolve(argv[argv.indexOf('--shots') + 1] || path.join(os.tmpdir(), 'mappings-page-shots')) : null;
