@@ -770,24 +770,48 @@ def checklist(sessions):
     T = THRESHOLDS
     rows = []
 
-    def add(code, name, value, limit, bad, note=""):
-        rows.append(("FLAG" if bad else "ok", code, name, value, limit, note))
+    def add(code, name, value, limit, bad, note="", ev=""):
+        rows.append(("FLAG" if bad else "ok", code, name, value, limit, note, ev if bad else ""))
 
     F = collections.defaultdict(lambda: [0, 0.0, set()])
+    per = collections.defaultdict(lambda: collections.defaultdict(lambda: [0, 0.0, -1, -1.0]))  # kind -> sid -> [次數, 成本, 最貴的輪, 該次成本]
     for S in sessions:
         for f in S["flags"]:
             x = F[f["kind"]]
             x[0] += 1; x[1] += f["cost"]; x[2].add(S["id"])
+            y = per[f["kind"]][S["id"]]
+            y[0] += 1; y[1] += f["cost"]
+            if f["cost"] > y[3]:
+                y[2], y[3] = f["turn"], f["cost"]
+
+    def ev_kind(kind):
+        top = sorted(per[kind].items(), key=lambda kv: (-kv[1][0], -kv[1][1]))[:3]
+        return "、".join(f"{sid[-6:]}×{v[0]}" + (f"（第{v[2]}輪）" if v[2] >= 0 else "") for sid, v in top)
+
+    def mx(S):
+        return max((r["ctx"] for r in S["requests"] if r["thread"] == "main"), default=0)
+
+    ev_c1 = "、".join(f"{S['id'][-6:]} ${S['cost']:.0f} 最大{fmt_tok(mx(S))}"
+                      for S in sorted((S for S in sessions if mx(S) > 300000), key=lambda S: -S["cost"])[:3])
+    cold_s = sorted(((sum(c["cost"] for c in S["cold"]), S) for S in sessions if S["cold"]), key=lambda x: -x[0])[:3]
+    ev_c2 = "、".join(f"{S['id'][-6:]} ${c:.0f}/{len(S['cold'])}次（第{max(S['cold'], key=lambda k: k['cost'])['turn']}輪最貴）" for c, S in cold_s)
+    single_s = []
+    for S in sessions:
+        main = [r for r in S["requests"] if r["thread"] == "main"]
+        one = sum(1 for r in main if len(r["triggers"]) == 1 and r["triggers"][0] in S["calls"])
+        if len(main) >= 50:
+            single_s.append((one / len(main), one, S))
+    ev_c3 = "、".join(f"{S['id'][-6:]} {share:.0%}（{one}個）" for share, one, S in sorted(single_s, key=lambda x: -x[1])[:3])
     v = M["big_ctx"] / total
-    add("C1", "花費發生在上下文>200K 的比例", f"{v:.0%}", f"{T['big_ctx_share']:.0%}", v > T["big_ctx_share"])
+    add("C1", "花費發生在上下文>200K 的比例", f"{v:.0%}", f"{T['big_ctx_share']:.0%}", v > T["big_ctx_share"], ev=ev_c1)
     v = M["cold"] / total
-    add("C2", "快取重建多付的比例", f"{v:.0%}", f"{T['cold_share']:.0%}", v > T["cold_share"])
+    add("C2", "快取重建多付的比例", f"{v:.0%}", f"{T['cold_share']:.0%}", v > T["cold_share"], ev=ev_c2)
     v = M["single"] / max(1, M["n_main"])
-    add("C3", "一次只看一個工具結果的 request 比例", f"{v:.0%}", f"{T['single_step_share']:.0%}", v > T["single_step_share"])
+    add("C3", "一次只看一個工具結果的 request 比例", f"{v:.0%}", f"{T['single_step_share']:.0%}", v > T["single_step_share"], ev=ev_c3)
     v = F["tool_error"][1] / total
-    add("C4", "工具失敗的回合成本比例", f"{v:.1%}", f"{T['error_share']:.0%}", v > T["error_share"], f"{F['tool_error'][0]} 次")
+    add("C4", "工具失敗的回合成本比例", f"{v:.1%}", f"{T['error_share']:.0%}", v > T["error_share"], f"{F['tool_error'][0]} 次", ev_kind("tool_error"))
     v = F["dup_read"][1] / total
-    add("C5", "重複讀檔的回合成本比例", f"{v:.1%}", f"{T['dup_read_share']:.0%}", v > T["dup_read_share"], f"{F['dup_read'][0]} 次")
+    add("C5", "重複讀檔的回合成本比例", f"{v:.1%}", f"{T['dup_read_share']:.0%}", v > T["dup_read_share"], f"{F['dup_read'][0]} 次", ev_kind("dup_read"))
     runs = sum(1 for S in sessions for c in S["calls"].values() if c.name == "Bash" and "preflight.sh" in c.inp.get("command", ""))
     fails = F["preflight_fail"][0]
     v = fails / max(1, runs)
@@ -800,15 +824,19 @@ def checklist(sessions):
                         reasons[re.sub(r"\d+", "#", line.strip())[:60]] += 1
     top = reasons.most_common(1)
     add("C6", "preflight 失敗率", f"{v:.0%}（{fails}/{runs}）", f"{T['preflight_fail_rate']:.0%}", v > T["preflight_fail_rate"],
-        f"最常見：{top[0][0]}×{top[0][1]}" if top else "")
+        f"最常見：{top[0][0]}×{top[0][1]}" if top else "", ev_kind("preflight_fail"))
     route = collections.defaultdict(lambda: [0, 0])
+    skipped = collections.defaultdict(list)
     for S in sessions:
         for r in S["route"]:
             route[r["doc"]][0] += 1
             route[r["doc"]][1] += r["read"]
+            if not r["read"]:
+                skipped[r["doc"]].append(S["id"][-6:])
     for doc, (n, ok) in sorted(route.items()):
         if n >= 5:
-            add("C7", f"路由表遵守率 {doc.split('/')[-1]}", f"{ok / n:.0%}（{ok}/{n}）", f"{T['route_min']:.0%}", ok / n < T["route_min"])
+            add("C7", f"路由表遵守率 {doc.split('/')[-1]}", f"{ok / n:.0%}（{ok}/{n}）", f"{T['route_min']:.0%}", ok / n < T["route_min"],
+                ev="沒讀的：" + "、".join(skipped[doc][:5]))
     mem = [mf["tokens"] for S in sessions if S["ctx_usage"] for mf in S["ctx_usage"].get("memoryFiles", []) if mf["path"].endswith("CLAUDE.md")]
     if mem:
         v = max(mem)
@@ -822,7 +850,8 @@ def checklist(sessions):
         docs.update(S["docs_read"])
     here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     unread = sorted(os.path.relpath(p, here) for p in glob.glob(os.path.join(here, "docs", "*", "*.md"))
-                    if "/archive/" not in p and os.path.relpath(p, here) not in docs)
+                    if "/archive/" not in p and os.path.relpath(p, here) not in docs
+                    and not p.endswith("efficiency-review.md"))   # 本流程自己的文件只在審查時讀，不算
     add("C9", "期間內沒有任何 session 讀過的 docs 檔", f"{len(unread)} 個", "0", bool(unread), "、".join(u.split("/")[-1] for u in unread))
     sub_cost = sum(s["cost"] for S in sessions for s in S["subs"])
     tiny = sum(1 for S in sessions for s in S["subs"] if s["calls"] <= 3)
@@ -831,10 +860,10 @@ def checklist(sessions):
     for kind in sorted(F):
         if kind.startswith("rule_"):
             n_s = len(F[kind][2])
-            add("C11", f"規則違反 {kind}", f"{F[kind][0]} 次／{n_s} 個 session", f"{T['rule_sessions']} 個 session", n_s >= T["rule_sessions"])
+            add("C11", f"規則違反 {kind}", f"{F[kind][0]} 次／{n_s} 個 session", f"{T['rule_sessions']} 個 session", n_s >= T["rule_sessions"], ev=ev_kind(kind))
     print(f"# 檢查表（{len(sessions)} 個 session，總花費 ${total:,.2f}，每個 request 平均 ${total / max(1, sum(len(S['requests']) for S in sessions)):.3f}）")
-    print("| 結果 | 代碼 | 項目 | 數值 | 門檻 | 備註 |")
-    print("|---|---|---|---|---|---|")
+    print("| 結果 | 代碼 | 項目 | 數值 | 門檻 | 備註 | 證據（session 末6碼，FLAG 才列） |")
+    print("|---|---|---|---|---|---|---|")
     for r in rows:
         print("| " + " | ".join(r) + " |")
     print(f"\nFLAG 共 {sum(1 for r in rows if r[0] == 'FLAG')} 項。每項的處置照 docs/ops/efficiency-review.md 第 4 節的對照表，不在表上的不要動。")
@@ -881,6 +910,13 @@ def detail(S, args):
     print("\n## 旗標證據（依成本排序，前 %d 筆）" % args.max_flags)
     for f in sorted(S["flags"], key=lambda f: -f["cost"])[:args.max_flags]:
         print(f"  [{f['turn']}] {f['kind']} ${f['cost']:.2f} ~{f['tokens']:,}tok｜{f['detail'][:170]}")
+    pf = [(c.turn, [l.strip()[:110] for l in c.res_text.splitlines() if "❌" in l and "未通過" not in l])
+          for c in S["calls"].values() if c.name == "Bash" and "preflight.sh" in c.inp.get("command", "")]
+    pf = [(t, lines) for t, lines in pf if lines]
+    if pf:
+        print("\n## preflight 失敗原因")
+        for t, lines in sorted(pf)[:12]:
+            print(f"  [{t}] " + "｜".join(lines[:2]))
     if S["subs"]:
         print("\n## Subagent")
         for s in S["subs"]:
