@@ -49,7 +49,7 @@ function openCardEditor() {
   SpreadsheetApp.getUi().showModelessDialog(html, '📝 單卡編輯器');
 }
 
-// ---------- 給側邊欄呼叫的函式 ----------
+// ---------- 給編輯器視窗呼叫的函式 ----------
 
 // 卡片清單（下拉選單用）
 function cardEditorListCards() {
@@ -69,7 +69,7 @@ function cardEditorListCards() {
   return list;
 }
 
-// 讀一張卡，整理成側邊欄要的直式結構
+// 讀一張卡，整理成編輯器要的直式結構
 function cardEditorLoad(cardId) {
   const sheet = ceSheet_();
   const headers = ceHeaders_(sheet);
@@ -247,7 +247,7 @@ function ceKind_(name, raw) {
   return 'text';
 }
 
-// 儲存格值 → 側邊欄顯示用字串（也用來比對「有沒有被別人改過」）
+// 儲存格值 → 編輯器顯示用字串（也用來比對「有沒有被別人改過」）
 function ceNormalize_(raw, kind, tz) {
   if (raw === null || raw === undefined) return '';
   if (kind === 'bool') return pmcIsTrueCell_(raw) ? 'TRUE' : '';
