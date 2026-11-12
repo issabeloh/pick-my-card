@@ -306,7 +306,7 @@ function checkWatchlist() {
       // 照樣存（不存就永遠卡住）；下次抓到完整正文時會走「舊基準不到 1/3」那條自動重建。
       if (countBenefitSignals_(text) === 0) {
         errors.push(label + ' ' + url + '：剛建立的基準快照裡完全沒有「回饋/加碼/%」等字詞，' +
-          '疑似只抓到導覽列／頁尾。請人工檢查該列 last_snapshot；抓不到可把 fetch_via 改成 jina 再清空重跑');
+          '疑似只抓到導覽列／頁尾。請人工檢查該列 last_snapshot；抓不到正文可把 fetch_via 改成 jina 再清空重跑');
       }
       resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
