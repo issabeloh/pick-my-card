@@ -67,6 +67,10 @@ const MONITOR_CONFIG = {
   // 關鍵字閘門：變動段落至少要含一個才算事件
   keywords: ['回饋', '加碼', '%', '％', '權益', '活動', '調整', '終止', '停止', '新戶', '上限', '登錄', '延長', '生效'],
   minDiffChars: 30,        // 變動總字數少於這個門檻視為雜訊
+  // 抓取殘缺的訊號詞防呆（2026-11-03，見 checkWatchlist 裡 countBenefitSignals_ 那段）：
+  // 舊基準至少有 signalMinOld 個回饋訊號詞，這次卻不到舊的 signalMinRatio 倍 → 當成沒抓到正文
+  signalMinOld: 8,
+  signalMinRatio: 0.25,
   snapshotMaxChars: 45000, // 快照長度上限（Sheets 一格上限 5 萬字，留餘裕）
   // 動態網頁/擋機器人的備援：直接抓失敗時改走 Jina Reader（免費的「網頁轉純文字」服務，
   // 會用真的瀏覽器幫你渲染 JS 動態網頁）。不需申請就能用（每分鐘額度較低）；
@@ -291,11 +295,19 @@ function checkWatchlist() {
       continue;
     }
 
-    const oldText = String(row[cSnap] || '');
+    let oldText = String(row[cSnap] || '');
+    // 舊版程式可能把防機器人驗證頁存成了基準（2026-11-03 前沒有偵測）——那不是基準，當成空的重建
+    if (botWallMatch_(oldText)) oldText = '';
 
     if (!oldText) {
       // 第一次抓這個網址：只存基準快照，不通知
       sheet.getRange(i + 1, cSnap + 1).setValue(text);
+      // 基準本身就殘缺的話（只抓到導覽列/頁尾），之後每次比對都沒意義——信裡提醒一聲。
+      // 照樣存（不存就永遠卡住）；下次抓到完整正文時會走「舊基準不到 1/3」那條自動重建。
+      if (countBenefitSignals_(text) === 0) {
+        errors.push(label + ' ' + url + '：剛建立的基準快照裡完全沒有「回饋/加碼/%」等字詞，' +
+          '疑似只抓到導覽列／頁尾。請人工檢查該列 last_snapshot；抓不到可把 fetch_via 改成 jina 再清空重跑');
+      }
       resetFailStreak_(sheet, headers, i + 1, row);   // 有存下快照＝這列這次算成功
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
@@ -324,6 +336,25 @@ function checkWatchlist() {
         '：這次只抓到 ' + text.length + ' 字（舊基準 ' + oldText.length +
         ' 字），疑似抓取失敗，已略過並保留原基準。請人工開網頁確認；' +
         '若確實整頁改版，請把該列 last_snapshot 清空後重跑' });
+      if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+      continue;
+    }
+
+    // 抓取殘缺防呆・訊號詞版（2026-11-03 新增）：
+    // 實例：臺灣企銀藝FUN卡官網改版，這次只抓到新版的導覽列＋頁尾，整個正文（指定通路、
+    // 6,000 元門檻、注意事項）都沒抓到。上面「字數 1/3」與下面「消失 ≥50% 且新增 <200 字」兩道
+    // 都被騙過——新版導覽列變長，字數沒掉那麼多、「新增」也超過 200 字。AI 就把它寫成「移除門檻條件」。
+    // 字數會被頁首頁尾灌水，但導覽列幾乎不會有「回饋/加碼/%」這些詞，所以改數訊號詞：
+    // 舊版有一定數量、這次卻掉到不到 1/4 → 視為沒抓到正文。處理方式同上：回報錯誤、絕不覆寫基準。
+    const oldSignals = countBenefitSignals_(oldText);
+    const newSignals = countBenefitSignals_(text);
+    if (oldSignals >= MONITOR_CONFIG.signalMinOld &&
+        newSignals < oldSignals * MONITOR_CONFIG.signalMinRatio) {
+      errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
+        '：回饋相關字詞（回饋/加碼/上限/登錄/刷卡金/%）舊基準有 ' + oldSignals + ' 個，這次只剩 ' +
+        newSignals + ' 個，疑似只抓到導覽列／頁尾、沒抓到正文（網站改版或分頁內容要靠 JS 載入）。' +
+        '已略過並保留原基準，不會誤報成條件移除。請人工開網頁確認；抓不到可把該列 fetch_via 改成 jina。' +
+        '若確認銀行真的大幅刪減內容，把該列 last_snapshot 清空後重跑即可' });
       if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
@@ -665,7 +696,38 @@ function fetchDirect_(url) {
   if (html.length < 100) {
     throw new Error('抓到的正文太短（' + html.length + ' 字），可能是動態網頁或被擋');
   }
+  const wall = botWallMatch_(html);
+  if (wall) {
+    // 丟錯才會走 Jina 備援（fetch_via 留空/auto 時）；也確保驗證碼頁永遠不會被存成 last_snapshot
+    throw new Error('被網站的防機器人機制擋下，回的是驗證頁（「' + wall + '」）');
+  }
   return html;
+}
+
+/************** 防機器人驗證頁偵測（2026-11-03） **************/
+// 實例：臺灣企銀官網改版後，直接抓拿到 F5 防火牆的驗證碼頁——HTTP 200、長度過 100 字，
+// 舊程式把它當正常內容存成 last_snapshot，而且因為「沒失敗」根本不會改走 Jina 備援。
+// 驗證頁的特徵句很固定，認得出來就當成抓取失敗處理。
+// 只比對頁面**前 600 字**：真的權益頁正文不會一開頭就講驗證碼，避免正文裡碰巧出現「Access Denied」誤判。
+// 遇到新的驗證頁樣式，把特徵句加進這個清單即可。
+const BOT_WALL_PATTERNS = [
+  /testing whether you are a human/i,          // F5 BIG-IP ASM（臺灣企銀）
+  /What code is in the image/i,                // F5 驗證碼
+  /Your support ID is/i,                       // F5 / Imperva 拒絕頁
+  /Request Rejected/i,                         // F5 拒絕頁
+  /Just a moment\.\.\./i,                       // Cloudflare 驗證
+  /Attention Required!? \| Cloudflare/i,        // Cloudflare 封鎖
+  /Checking your browser before accessing/i,   // Cloudflare 舊版
+  /Incapsula incident ID/i,                    // Imperva
+  /請(完成|進行)(安全|人機)驗證|驗證您是真人|您的請求已被拒絕/
+];
+function botWallMatch_(text) {
+  const head = String(text || '').slice(0, 600);
+  for (let i = 0; i < BOT_WALL_PATTERNS.length; i++) {
+    const m = head.match(BOT_WALL_PATTERNS[i]);
+    if (m) return m[0];
+  }
+  return '';
 }
 
 /************** 連續抓取失敗次數（1-監控清單 的 fail_streak 欄，程式自己維護） **************/
@@ -700,7 +762,8 @@ function fetchViaJina_(url) {
   try {
     return fetchViaJinaOnce_(url, false);
   } catch (e) {
-    if (!/空殼/.test(e.message)) throw e;
+    // 空殼或防機器人頁都值得用「真瀏覽器、等載完、不吃快取」再試一次（後者有時是 Jina 快取到的舊驗證頁）
+    if (!/空殼|防機器人/.test(e.message)) throw e;
     return fetchViaJinaOnce_(url, true);
   }
 }
@@ -734,6 +797,11 @@ function fetchViaJinaOnce_(url, slow) {
       body.slice(0, 40) + '」）' + (slow ? '，等 30 秒重抓也一樣' : '') +
       '，這一頁渲染失敗。請稍後重跑，或把該列 fetch_via 改回 direct');
   }
+  const wall = botWallMatch_(body);
+  if (wall) {
+    throw new Error('Jina 也被網站的防機器人機制擋下（「' + wall + '」）' +
+      (slow ? '，用真瀏覽器重抓也一樣' : '') + '。這家銀行擋自動抓取，見通知信建議');
+  }
   return text;
 }
 
@@ -742,6 +810,14 @@ function jinaBodyOnly_(text) {
   const m = text.match(/Markdown Content:\s*([\s\S]*)$/);
   if (m) return m[1].trim();
   return text.replace(/^Title:\s*[\s\S]*?URL Source:\s*\S+\s*/, '').trim();
+}
+
+/************** 回饋訊號詞計數（抓取殘缺防呆用，2026-11-03） **************/
+// 權益頁正文一定滿是這些詞；導覽列、頁尾、客服電話幾乎一個都沒有。
+// 所以「訊號詞數量驟降」比「字數驟降」更能分辨「沒抓到正文」——字數會被改版後變長的頁首頁尾灌水。
+function countBenefitSignals_(text) {
+  const m = String(text || '').match(/回饋|加碼|上限|登錄|刷卡金|[%％]/g);
+  return m ? m.length : 0;
 }
 
 /************** 比對新舊：回傳「新增的句子」與「消失的句子」 **************/
