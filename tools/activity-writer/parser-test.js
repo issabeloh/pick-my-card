@@ -42,6 +42,20 @@ has('摘要草稿', f.new_customer_summary, '核卡後30日內');
 r = run(S.promoBonus); f = r.fields;
 eq('加碼率小數', f.bonus_rate, '0.1'); eq('加碼消費上限', f.bonus_cap, '12000'); has('加碼通路', f.bonus_merchants.toLowerCase(), 'momo');
 
+// 特定族群新戶（保險新戶）＋領券型＋「最高 8% ＝ 加碼 6% ＋ 原權益 2%」——站長 2026-11-13 實測回報
+r = run(S.promoInsurance); f = r.fields;
+eq('保險新戶：卡片偵測', P.detectCard(idx, S.promoInsurance.text), 'taishin-richart');
+eq('保險新戶：定義用原文的、不沿用全行新戶', f.new_customer_definition, '2025/11/1~2026/10/31期間未以任一台新卡刷保費或累積金額1,000元(含)以下');
+eq('保險新戶：摘要', f.new_customer_summary, '保險新戶刷首筆保費，符合條件享最高8%');
+eq('保險新戶：bonus_rate 只填加碼的 6%', f.bonus_rate, '0.06');
+eq('保險新戶：通路只留類別詞', f.bonus_merchants, '保險,保費');
+eq('保險新戶：cap 用加碼率換算', f.bonus_cap, '8333.33');
+eq('保險新戶：條件草稿', f.promo_condition, '①保險新戶刷首筆保費一次付清，享6%台新Point\n②節假日搭配切換「假日刷」+2%；免切換+1.3%\n③需領券，限量200,000張\n④完成設定「台新銀行帳戶扣繳台新銀行信用卡帳款」，且於回饋當時須持續使用未取消');
+eq('保險新戶：notes 只抄原文寫的', f.notes, '與保費分期0利率僅可擇一適用');
+eq('保險新戶：priority 留空', f.priority, '');
+eq('排除字在清單後面', r.chips.items.filter(x => /line ?pay/i.test(x.name))[0].excluded, true);
+eq('提到別的活動的登錄不算條件', P.findConditions('若同時領券及登錄分期活動，優先適用分期').some(c => /登錄/.test(c.text)), false);
+
 // 輸出
 const row = P.buildRateRow(run(S.ubearBonusOnly).fields, 'value', new Date(2026, 0, 1));
 eq('一般活動 13 欄', row.length, 13); eq('period 純值', row[12], '2026/1/1~2026/3/31'); eq('daysRemaining 純值', row[11], '89');

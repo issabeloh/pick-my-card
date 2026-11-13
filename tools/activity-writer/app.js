@@ -15,7 +15,7 @@
 
   var state = {
     index: null, kind: 'rate', kindManual: false, cardId: '', cardManual: false,
-    rows: [], active: 0,          // rows[i] = { result, fields, dirty:{}, itemSel:{}, condSel:{}, headline }
+    openNotes: {}, rows: [], active: 0,          // rows[i] = { result, fields, dirty:{}, itemSel:{}, condSel:{}, headline }
     aiBusy: false
   };
 
@@ -169,20 +169,24 @@
   }
 
   // ---------- 畫面：欄位 ----------
+  // [欄名, 提示, 型別, 佔幾格（12 格一列）]——順序＝試算表欄位順序，改順序要連 parser.js 的 RATE_COLS／PROMO_COLS 一起看
   var RATE_FIELDS = [
-    ['rate', '這一槽自己的率', 'text'], ['cashbackModel', '怎麼跟基本回饋疊', 'model'], ['cap', '消費上限（不是回饋上限）', 'text'],
-    ['minSpend', '單筆門檻', 'text'], ['maxSpend', '級距上界（排他）', 'text'], ['items', '通路，半形逗號分隔', 'area'],
-    ['category', '分類標題', 'text'], ['conditions', '全形分號分隔', 'area'], ['registerLink', '官方登錄頁', 'text'],
-    ['periodStart', 'YYYY/M/D', 'text'], ['periodEnd', 'YYYY/M/D', 'text']
+    ['rate', '這一槽自己的率', 'text', 2], ['cashbackModel', '怎麼跟基本回饋疊', 'model', 4], ['cap', '消費上限', 'text', 2],
+    ['minSpend', '單筆門檻', 'text', 2], ['maxSpend', '級距上界', 'text', 2],
+    ['items', '通路，半形逗號分隔', 'area', 8], ['category', '分類標題', 'text', 4],
+    ['conditions', '全形分號分隔', 'area', 5], ['registerLink', '官方登錄頁', 'text', 3],
+    ['periodStart', 'YYYY/M/D', 'text', 2], ['periodEnd', 'YYYY/M/D', 'text', 2]
   ];
   var PROMO_FIELDS = [
-    ['id', '', 'text'], ['promo_types', '可複選', 'types'], ['new_customer_definition', '', 'area'], ['new_customer_summary', '核卡後X天內＋門檻＋獎勵', 'area'],
-    ['promo_condition', '兩項以上用①②③', 'area'], ['period_start', 'YYYY/M/D', 'text'], ['period_end', 'YYYY/M/D', 'text'], ['min_spend', '', 'text'],
-    ['gift_content', '首刷禮品名', 'area'], ['gift_image_url', '自己補', 'text'], ['luggage_inch', '', 'text'], ['luggage_value', '', 'text'],
-    ['bonus_rate', '小數（10% → 0.1）', 'text'], ['bonus_merchants', '半形逗號；不限通路填 *general', 'area'], ['bonus_cap', '消費上限', 'text'],
-    ['voucher_amount', '', 'text'], ['voucher_usage', '', 'text'], ['notes', '全形分號分隔', 'area'], ['link', '活動頁', 'text'],
-    ['priority', '', 'text'], ['active', '', 'text'], ['apply_cta_text', '', 'text'], ['apply_cta_link', '沿用同卡', 'text'],
-    ['pick_question', '一句鉤子', 'text'], ['pick_reason', '一句理由', 'area']
+    ['id', '', 'text', 2], ['promo_types', '可複選', 'types', 4], ['new_customer_definition', '', 'area', 6],
+    ['new_customer_summary', '誰＋門檻＋獎勵', 'area', 6], ['promo_condition', '兩項以上用①②③', 'area', 6],
+    ['period_start', 'YYYY/M/D', 'text', 2], ['period_end', 'YYYY/M/D', 'text', 2], ['min_spend', '', 'text', 2],
+    ['gift_content', '首刷禮品名', 'area', 4], ['gift_image_url', '自己補', 'text', 2],
+    ['luggage_inch', '', 'text', 2], ['luggage_value', '', 'text', 2], ['bonus_rate', '小數，只填加碼', 'text', 2],
+    ['bonus_merchants', '半形逗號；不限通路填 *general', 'area', 4], ['bonus_cap', '消費上限', 'text', 2],
+    ['voucher_amount', '', 'text', 2], ['voucher_usage', '', 'text', 4], ['notes', '全形分號分隔', 'area', 6],
+    ['link', '活動頁', 'text', 4], ['priority', '留空＝99', 'text', 2], ['active', '', 'text', 2], ['apply_cta_text', '', 'text', 4],
+    ['apply_cta_link', '沿用同卡', 'text', 4], ['pick_question', '一句鉤子', 'text', 4], ['pick_reason', '一句理由', 'area', 4]
   ];
   var MODELS = ['', 'rate', 'rate+basic', 'basic+domesticBonusRate', 'rate+basic+domesticBonusRate', 'rate+overseasCashback',
     'overseasCashback+overseasBonusRate', 'rate+overseasCashback+overseasBonusRate', 'basic', 'overseasCashback'];
@@ -213,7 +217,10 @@
     var name = def[0], type = def[2], val = row.fields[name] == null ? '' : row.fields[name];
     var onInput = function (e) { setField(name, e.target.value, true); renderBar(); if (name === 'rate') syncDependents(); };
     if (type === 'area') {
-      var ta = el('textarea', { id: 'f_' + name, rows: String(Math.min(6, Math.max(1, String(val).split('\n').length, Math.ceil(String(val).length / 46)))), oninput: onInput });
+      // 列數照內容估：一格大約塞 4.6 個全形字（12 格 ≈ 55 字）
+      var perLine = Math.max(8, Math.floor((def[3] || 12) * 4.6));
+      var lines = String(val).split('\n').reduce(function (n, l) { return n + Math.max(1, Math.ceil(l.length / perLine)); }, 0);
+      var ta = el('textarea', { id: 'f_' + name, rows: String(Math.min(6, Math.max(1, lines))), oninput: onInput });
       ta.value = val; return ta;
     }
     if (type === 'model') {
@@ -233,35 +240,38 @@
     if (capEl && !row.dirty.cap) capEl.value = row.fields.cap || '';
   }
 
+  // 「官網標榜 X% 怎麼組成」的選項：整列寬、選項橫排（原本一個選項佔一行）
+  function structBlock(row) {
+    if (!row.options.length) return null;
+    var hl = el('div', { class: 'headline' }, ['官網標榜', el('input', { type: 'text', id: 'headline', value: row.headline == null ? '' : String(row.headline),
+      onchange: function (e) {
+        var v = parseFloat(e.target.value); if (isNaN(v)) return;
+        var card = P.getCard(state.index, state.cardId) || {};
+        row.headline = v; row.options = P.structureOptions(card, v, false); row.structChoice = -1;
+        renderResult();
+      } }), '% ——這個數字怎麼組成？選一個：']);
+    var box = el('div', { class: 'struct' });
+    // 跨槽疊加（rate+rate_N）少用，收進折疊區；被選中時才展開
+    var crossBox = el('div', { class: 'struct' }), crossOn = false;
+    row.options.forEach(function (o, i) {
+      var on = row.fields.cashbackModel === o.model && Number(row.fields.rate) === o.rate;
+      var cross = /rate_\d/.test(o.model);
+      if (cross && on) crossOn = true;
+      (cross ? crossBox : box).appendChild(el('label', { class: on ? 'on' : '' }, [
+        el('input', { type: 'radio', name: 'struct', checked: on, onchange: function () { chooseStructure(i); } }),
+        el('code', { text: 'rate=' + o.rate + '｜' + (o.model || '留空') }), el('span', { class: 'lab', text: o.label })
+      ]));
+    });
+    var more = crossBox.children.length ? el('details', { class: 'more', open: crossOn }, [el('summary', { text: '疊在這張卡其他槽位之上（跨槽疊加，' + crossBox.children.length + ' 個）' }), crossBox]) : null;
+    return el('div', { class: 'structwrap' }, [hl, box, more]);
+  }
+
   function fieldBlock(def, row) {
     var name = def[0], note = row.result.notes[name];
     if (note && row.dirty[name] && note.level !== 'ok' && String(row.fields[name] || '').trim()) note = { level: 'ok', text: '已手動修改' };
     var body = el('div', {}, [inputFor(def, row)]);
     var chips = row.result.chips || {};
 
-    if (name === 'rate' && row.options.length) {
-      var hl = el('div', { class: 'headline' }, ['官網標榜', el('input', { type: 'text', id: 'headline', value: row.headline == null ? '' : String(row.headline),
-        onchange: function (e) {
-          var v = parseFloat(e.target.value); if (isNaN(v)) return;
-          var card = P.getCard(state.index, state.cardId) || {};
-          row.headline = v; row.options = P.structureOptions(card, v, false); row.structChoice = -1;
-          renderResult();
-        } }), '% ——這個數字怎麼組成？選一個：']);
-      var box = el('div', { class: 'struct' });
-      // 跨槽疊加（rate+rate_N）少用，收進折疊區；被選中時才展開
-      var crossBox = el('div', { class: 'struct' }), crossOn = false;
-      row.options.forEach(function (o, i) {
-        var on = row.fields.cashbackModel === o.model && Number(row.fields.rate) === o.rate;
-        var cross = /rate_\d/.test(o.model);
-        if (cross && on) crossOn = true;
-        (cross ? crossBox : box).appendChild(el('label', { class: on ? 'on' : '' }, [
-          el('input', { type: 'radio', name: 'struct', checked: on, onchange: function () { chooseStructure(i); } }),
-          el('code', { text: 'rate=' + o.rate + '｜' + (o.model || '留空') }), el('span', { class: 'lab', text: o.label })
-        ]));
-      });
-      var more = crossBox.children.length ? el('details', { class: 'more', open: crossOn }, [el('summary', { text: '疊在這張卡其他槽位之上（跨槽疊加，' + crossBox.children.length + ' 個）' }), crossBox]) : null;
-      body.appendChild(el('div', { style: 'margin-top:6px' }, [hl, box, more]));
-    }
     if ((name === 'items' || name === 'bonus_merchants') && chips.items && chips.items.length) {
       var inList = splitList(row.fields[name]).map(P.termKey);
       body.appendChild(chipList(chips.items, function (n) { return inList.indexOf(P.termKey(n)) >= 0; },
@@ -286,8 +296,12 @@
     if (name === 'voucher_usage' && chips.usages) {
       body.appendChild(chipList(chips.usages, function (n) { return row.fields.voucher_usage === n; }, function (n) { setField('voucher_usage', n, true); renderResult(); renderBar(); }));
     }
-    if (note && note.text) body.appendChild(el('div', { class: 'note ' + note.level, text: (note.level === 'ok' ? '✓ ' : note.level === 'check' ? '請確認：' : '要填：') + note.text }));
-    return el('div', { class: 'field' + (note ? ' lv-' + note.level : '') }, [
+    if (note && note.text) {
+      var full = (note.level === 'ok' ? '✓ ' : note.level === 'check' ? '請確認：' : '要填：') + note.text;
+      body.appendChild(el('div', { class: 'note ' + note.level + (state.openNotes[name] ? ' open' : ''), text: full, title: full + '\n（點一下展開／收合）',
+        onclick: function (e) { state.openNotes[name] = !state.openNotes[name]; e.currentTarget.classList.toggle('open'); } }));
+    }
+    return el('div', { class: 'field s' + (def[3] || 12) + (note ? ' lv-' + note.level : '') }, [
       el('label', { for: 'f_' + name }, [name, def[1] ? el('small', { text: def[1] }) : null]), body
     ]);
   }
@@ -309,10 +323,15 @@
       if (row.result.viaAi) tabs.appendChild(el('span', { class: 'auto', text: 'AI 解析' }));
       box.appendChild(tabs);
     }
-    if (row.result.skipped) box.appendChild(el('div', { class: 'note check', style: 'margin-bottom:8px', text: row.result.skipped }));
+    if (row.result.skipped) box.appendChild(el('div', { class: 'note check banner', style: 'margin-bottom:6px', text: row.result.skipped }));
     if (row.result.evidence) box.appendChild(el('p', { class: 'evidence', text: 'AI 引用的原文：' + row.result.evidence }));
-    (state.kind === 'rate' ? RATE_FIELDS : PROMO_FIELDS).forEach(function (def) { box.appendChild(fieldBlock(def, row)); });
-    if (state.kind === 'rate') box.appendChild(el('p', { class: 'hint', text: 'daysRemaining、period 兩欄由程式產生（設定裡可改成公式／純值／留空）。' }));
+    var grid = el('div', { id: 'fields' });
+    (state.kind === 'rate' ? RATE_FIELDS : PROMO_FIELDS).forEach(function (def) {
+      grid.appendChild(fieldBlock(def, row));
+      if (def[0] === 'maxSpend') { var sb = structBlock(row); if (sb) grid.appendChild(sb); }   // 第一列（rate…maxSpend）排完後接結構選項
+    });
+    box.appendChild(grid);
+    if (state.kind === 'rate') box.appendChild(el('p', { class: 'hint', style: 'margin:6px 0 0', text: 'daysRemaining、period 兩欄由程式產生（設定裡可改成公式／純值／留空）。' }));
     if (focusId && $(focusId)) { $(focusId).focus(); try { $(focusId).setSelectionRange(pos, pos); } catch (e) { /* select 沒有游標 */ } }
   }
 
