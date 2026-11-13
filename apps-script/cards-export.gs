@@ -1569,8 +1569,6 @@ function pmcValidatePromoRow_(headers, row, label) {
     const v = val(f);
     if (!pmcIsBlank_(v) && pmcParseNumber_(v) === null) add('NOT_NUMBER', f, f + '「' + v + '」讀不出數字（匯出會略過這格）');
   });
-  const pr = val('priority');
-  if (!pmcIsBlank_(pr) && !/^\d+$/.test(String(pr).trim())) add('NOT_NUMBER', 'priority', 'priority「' + pr + '」要填整數（空白＝99）');
   const rank = val('pick_rank');
   if (!pmcIsBlank_(rank) && !/^([1-5]|x)$/i.test(String(rank).trim())) add('PICK_RANK_BAD', 'pick_rank', 'pick_rank 只能填 1–5 或 x（空白＝交給自動）');
 
@@ -1705,7 +1703,7 @@ function pmcRowToPromo_(row, headers, id) {
   const periodEnd = getValue(row, headers, 'period_end');
   promo.period_end = periodEnd ? formatDateToISO(periodEnd) : null;
 
-  // 處理 priority (預設為 99)
+  // priority 欄 2026-11-13 已從表上刪除 → 這裡一律得到 99（前端與 promos 頁仍用它當同日期的次序，保留欄位不改資料格式）
   const priorityVal = getValue(row, headers, 'priority');
   promo.priority = (priorityVal !== null && priorityVal !== '') ? parseInt(priorityVal) : 99;
 

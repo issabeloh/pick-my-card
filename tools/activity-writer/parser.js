@@ -28,7 +28,7 @@
     'registerLink', 'periodStart', 'periodEnd', 'daysRemaining', 'period'];
   var PROMO_COLS = ['id', 'promo_types', 'new_customer_definition', 'new_customer_summary', 'promo_condition',
     'period_start', 'period_end', 'min_spend', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value',
-    'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link', 'priority',
+    'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link',   // priority 欄 2026-11-13 站長決定刪除（全表都是 99）
     'active', 'apply_cta_text', 'apply_cta_link', 'pick_question', 'pick_reason'];
   var PROMO_TYPES = ['首刷禮', '回饋加碼', '定額回饋'];
 
@@ -856,8 +856,6 @@
 
     f.link = normalizeLink(extra.url || urls[0] || '');
     if (!f.link) note('link', 'empty', '貼上活動頁網址');
-    // priority 留空＝匯出時當 99（目前全表都是 99）；同卡現有活動填了別的數字才沿用
-    f.priority = prev.length && prev[0].priority != null && Number(prev[0].priority) !== 99 ? String(prev[0].priority) : '';
     f.active = 'TRUE';
     var cta = (index.data.cardApplyCtas || {})[cardId];
     f.apply_cta_text = (cta && cta.text) || (card.name ? '申辦' + card.name : '');
@@ -976,7 +974,7 @@
       if (!String(f.new_customer_summary || '').trim()) issues.push('new_customer_summary 是空的');
       ['period_start', 'period_end'].forEach(function (c) { if (!isDate(f[c])) issues.push(c + ' 不是日期'); });
       if (ts(f.period_start) && ts(f.period_end) && ts(f.period_end) < ts(f.period_start)) issues.push('結束日早於開始日');
-      ['min_spend', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_cap', 'voucher_amount', 'priority'].forEach(function (c) { if (!isNum(f[c])) issues.push(c + '「' + f[c] + '」不是數字'); });
+      ['min_spend', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_cap', 'voucher_amount'].forEach(function (c) { if (!isNum(f[c])) issues.push(c + '「' + f[c] + '」不是數字'); });
       if (f.bonus_rate !== '' && Number(f.bonus_rate) >= 1) issues.push('bonus_rate 要填小數（10% → 0.1），現在是 ' + f.bonus_rate);
       ['link', 'gift_image_url', 'apply_cta_link'].forEach(function (c) { if (!isUrl(f[c])) issues.push(c + ' 不是 https:// 網址'); });
       ['new_customer_summary', 'promo_condition', 'notes', 'new_customer_definition'].forEach(function (c) { if (/。\s*$/.test(String(f[c] || ''))) issues.push(c + ' 結尾不要句號'); });

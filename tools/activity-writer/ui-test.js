@@ -77,10 +77,10 @@ const server = http.createServer((req, res) => {
     if (q) { if (ch === '"' && tsv[i + 1] === '"') { curCell += '"'; i++; } else if (ch === '"') q = false; else curCell += ch; }
     else if (ch === '"' && curCell === '') q = true; else if (ch === '\t') { cells.push(curCell); curCell = ''; } else curCell += ch; }
   cells.push(curCell);
-  eq('複製 25 欄', cells.length, 25);
-  eq('active 欄', cells[20], 'TRUE');
+  eq('複製 24 欄', cells.length, 24);
+  eq('active 欄', cells[19], 'TRUE');
 
-  // 站長實測的保險新戶原文：欄位值，以及「新戶 25 欄不用捲很多次」（1400×1000 下整頁不超過兩個畫面高）
+  // 站長實測的保險新戶原文：欄位值，以及「新戶 24 欄不用捲很多次」（1400×1000 下整頁不超過兩個畫面高）
   await page.click('#resetBtn');
   await page.fill('#source', S.promoInsurance.text);
   await page.waitForSelector('#f_bonus_rate');

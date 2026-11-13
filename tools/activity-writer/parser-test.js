@@ -52,7 +52,7 @@ eq('保險新戶：通路只留類別詞', f.bonus_merchants, '保險,保費');
 eq('保險新戶：cap 用加碼率換算', f.bonus_cap, '8333.33');
 eq('保險新戶：條件草稿', f.promo_condition, '①保險新戶刷首筆保費一次付清，享6%台新Point\n②節假日搭配切換「假日刷」+2%；免切換+1.3%\n③需領券，限量200,000張\n④完成設定「台新銀行帳戶扣繳台新銀行信用卡帳款」，且於回饋當時須持續使用未取消');
 eq('保險新戶：notes 只抄原文寫的', f.notes, '與保費分期0利率僅可擇一適用');
-eq('保險新戶：priority 留空', f.priority, '');
+eq('priority 欄已刪', P.PROMO_COLS.indexOf('priority'), -1);
 eq('排除字在清單後面', r.chips.items.filter(x => /line ?pay/i.test(x.name))[0].excluded, true);
 eq('提到別的活動的登錄不算條件', P.findConditions('若同時領券及登錄分期活動，優先適用分期').some(c => /登錄/.test(c.text)), false);
 
@@ -67,7 +67,7 @@ eq('站長公式 period', own[12].formula, '=IF(OR(ISBLANK(CK15),ISBLANK(CL15)),
 eq('站長公式貼上不加引號', P.toTsv([own]).split('\t')[11], '=IF(ISBLANK(CL15),"",CL15-TODAY())');
 eq('跨 Z 欄', P.sheetFormulas('Q3').days, '=IF(ISBLANK(AA3),"",AA3-TODAY())');
 const ptsv = P.toTsv([P.buildPromoRow(run(S.promoGift).fields)]);
-eq('新戶 25 欄', P.PROMO_COLS.length, 25); has('多行格子加引號', ptsv, '"①');
+eq('新戶 24 欄', P.PROMO_COLS.length, 24); has('多行格子加引號', ptsv, '"①');
 eq('文字以 = 開頭要跳脫', P.toTsv([['=abc', '+1%']]), "'=abc\t'+1%");
 eq('卡片偵測', P.detectCard(idx, S.promoBonus.text), 'yushan-ubear'); eq('類型偵測', P.detectKind(S.promoBonus.text), 'promo');
 eq('驗證：bonus_rate 填成百分比', P.validate('promo', Object.assign({}, f, { bonus_rate: '10' })).some(x => /小數/.test(x)), true);
