@@ -71,6 +71,19 @@ const BASICEX_CONFIG = {
 const BASICEX_NO_UNIFY_ITEMS = ['違規罰鍰', '電信費', '悠遊卡自動加值', '一卡通自動加值', 'icash卡自動加值', 'eTag自動儲值',
   '基金交易', '基金交易及其手續費', '基金扣繳'];
 
+// 超商收單限制（2026-11-13 站長規則）：7-11、全家的刷卡機只收合作銀行的信用卡，非合作銀行的卡刷不過＝拿不到回饋。
+// 這件事銀行官網的排除條款不會寫，AI 從原文抽不出來，所以由程式補進名單（規則 8m）。
+// 寫法：item＝要補進 basicExclusions 的字；cardPrefixes＝**站長已確認刷不過**的卡片 id 開頭（一家銀行一個開頭）。
+// ・目前只確認滙豐（hsbc-）：實體卡不能刷，LINE Pay 在 7-11／全家也只收特定銀行（不含滙豐）。
+// ・要加別家銀行：確認該行實體卡與行動支付都刷不過之後，把卡片 id 開頭加進對應那一列的 cardPrefixes。
+//   只有一家超商刷不過就只加那一列（例：只有 7-11 不收 → 只加在 '7-11' 那列）。
+// ・哪天銀行變成合作銀行 → 從 cardPrefixes 拿掉，並到正式表把那幾張卡的「7-11」「全家」刪掉（程式只補不刪）。
+// ・合作銀行名單來源穩定後，預計改成「超商 → 合作銀行」對照表、不在表內的銀行一律補（通則）；結構先留成表就是為了這個。
+const BASICEX_STORE_NO_ACCEPT = [
+  { item: '7-11', cardPrefixes: ['hsbc-'] },
+  { item: '全家', cardPrefixes: ['hsbc-'] }
+];
+
 const BASICEX_REVIEW_HEADERS = [
   '核准', '解析時間', 'card_id', 'bank', '來源網址',
   'basicExclusions', 'AI想問的問題', '原文引用'
@@ -451,6 +464,9 @@ function basicExRulesText_() {
     '8l. 公用事業費用（2026-11-03 站長規則）：原文有「公用事業費用」「公共事業費用」或「各項事業費用（或繳款）」時，照原文列之外，',
     '    **一律再補「電費」「水費」「瓦斯費」「中華電信電信費」**（原文括號沒逐一點名也要補）。',
     '    但名單裡已有「電信費」或「電信資費」時，**不要**再列「中華電信電信費」（電信費已涵蓋中華電信）。',
+    '8m. 超商收單限制（2026-11-13 站長規則）：7-11、全家只收合作銀行的信用卡，非合作銀行（例：滙豐）的卡在這兩家刷不過。',
+    '    這類卡的名單裡會有程式補上的「7-11」「全家」，官網原文**不會**寫到。',
+    '    所以：**不要**因為原文沒提到便利商店就把名單裡的「7-11」「全家」remove 或改寫；你也不必自己補（程式會補）。',
     '8i. 基金類（2026-10-13 站長規則）：**照各家原文**，不跨行統一（範圍不同）。例：玉山「基金扣繳」、聯邦「基金申購」、',
     '    「代扣基金」「基金扣款」「信用卡申購基金」照原文列；不可改寫成「基金交易」。',
     '    原文結構是「A、A及其手續費」時只寫「A及其手續費」（例：星展「基金交易、基金交易及其手續費」→ 只列「基金交易及其手續費」）。',
@@ -557,6 +573,24 @@ function basicExUtilityFix_(items, sourceText) {
   return items;
 }
 
+// 規則 8m 的程式部分（2026-11-13 站長規則）：這張卡依 BASICEX_STORE_NO_ACCEPT 該補哪幾項（沒有就回空陣列）
+function basicExStoreNoAcceptItems_(cardId) {
+  const id = String(cardId || '').trim().toLowerCase();
+  if (!id) return [];
+  return BASICEX_STORE_NO_ACCEPT.filter(function (r) {
+    return (r.cardPrefixes || []).some(function (p) { return p && id.indexOf(String(p).toLowerCase()) === 0; });
+  }).map(function (r) { return r.item; });
+}
+
+// 把該補的超商接在名單最後（已經有就不重複）。名單是空的（這頁沒抽到東西）就不補——
+// 不然那一列看起來像抽成功、只有兩項。回傳**新陣列**，不改傳入的（同一組 items 會給多張卡共用）。
+function basicExStoreAcceptFix_(items, cardId) {
+  const out = (items || []).slice();
+  if (!out.length) return out;
+  basicExStoreNoAcceptItems_(cardId).forEach(function (x) { if (out.indexOf(x) < 0) out.push(x); });
+  return out;
+}
+
 /************** 寫待審核表（一張卡一列） **************/
 function basicExWriteReview_(sheet, page, groups) {
   const now = new Date();
@@ -573,7 +607,7 @@ function basicExWriteReview_(sheet, page, groups) {
     g.card_ids.forEach(function (id) {
       covered[id] = true;
       const note = refreshNote(id);
-      rows.push(['', now, id, page.bank, page.url, pmcUnifyList_(g.items.join(',')),
+      rows.push(['', now, id, page.bank, page.url, pmcUnifyList_(basicExStoreAcceptFix_(g.items, id).join(',')),
         [note, g.review_question].filter(function (x) { return x; }).join('\n'), String(g.evidence).slice(0, BASICEX_CONFIG.maxEvidenceChars)]);
       flags.push(g.needs_review || g.items.length === 0 || !!note);
     });
@@ -895,10 +929,15 @@ function basicExRenderChange_(result, ids, lists) {
   groups.forEach(function (g) {
     const gIds = (g.card_ids || []).filter(function (x) { return ids.indexOf(x) >= 0; });
     if (!gIds.length) return;
+    // 規則 8m：程式補的「7-11」「全家」官網原文不會寫，AI 提議刪掉或改寫一律不採用（只對受保護的卡擋）
+    const guarded = {};
+    gIds.forEach(function (id) { basicExStoreNoAcceptItems_(id).forEach(function (x) { guarded[x] = true; }); });
+    const head = lines.length;
     lines.push('▸ ' + gIds.join(', '));
     g.ops.forEach(function (o) {
       const item = clean(o.item);
       if (!item) return;
+      if ((o.op === 'remove' || o.op === 'rename') && guarded[item]) return;
       const ev = o.evidence ? '｜原文：' + clean(o.evidence).slice(0, 60) : '';
       // remove／rename 的舊項目在名單裡找不到 → 先標出來，站長改字或刪行（套用時也會再擋一次）
       const missing = (o.op === 'remove' || o.op === 'rename') && gIds.some(function (id) {
@@ -911,6 +950,7 @@ function basicExRenderChange_(result, ids, lists) {
         if (to.length) lines.push('✎ 改寫：' + item + ' → ' + to.join('、') + ev + missing);
       }
     });
+    if (lines.length === head + 1) lines.pop();   // 這組的動作全被擋掉 → 連卡片標題也不留
   });
   if (!lines.length) return '無影響（只是文字潤飾，或跟排除項目無關）';
   if (result.note) lines.push('（AI 備註：' + clean(result.note).slice(0, 200) + '）');
