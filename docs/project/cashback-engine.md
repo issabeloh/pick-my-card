@@ -215,6 +215,12 @@ if (!card.specialItems || card.specialItems.length === 0)
 - **狀態列「見下方灰色卡片 ↓」**（2026-10-14）：可點，`scrollToFirstExcludedCard()` 捲到第一張灰卡並短暫標框
 - **快捷搜尋（多關鍵詞）**（2026-10-14）：`getBasicExclusionSearchTerms(merchantValue, quickOption)` 用全部關鍵詞各自展開的聯集比名單、不受精準搜尋影響。關鍵詞全是排除項目（例「醫療費用」：公部門醫療服務費用、醫指付…）時沒有活動可匹配，`handleQuickSearch` 仍**保留** `currentQuickSearchOption`（以前會清掉，計算時就只剩顯示名去比名單）
 - **同義詞群組**（2026-10-14，ExclusionGroups 工作表 → `cardsData.exclusionGroups`，`expandExclusionGroupTerms`）：`getBasicExclusionSearchTerms` 最後一步展開。分類型只認 name 全等；同義詞型 name 或任一寫法全等都展開成整組。不進 `findMatchingItem`。下拉選單只列 name、只出現在排除名單的寫法不單獨列；詳情頁搜尋同樣展開
+- **NCCC 小額支付品牌**（2026-11-13 站長決定，`findMicropaymentBrand`／`classifyBasicExclusion`，`js/search-match.js`）：名單寫的是交易類型「小額支付特約商店」，用戶搜的是品牌名（麥當勞），字面對不上，另用品牌清單 `js/micropayment-brands.js`（生成檔，來源與更新流程見 `data/nccc/README.md`）橋接：
+  - 搜尋詞命中清單上的品牌時，名單裡有含「小額支付特約商店」項目的卡也算命中：**全門市**品牌＝確定排除、**部分門市**品牌＝可能排除。之後的灰卡、計數、狀態列、排序全走上面同一套（`classify` 只多傳一個品牌）
+  - 灰卡寫的是卡片名單的**原文**（小額支付特約商店），不是品牌名；有指定活動的卡照常顯示活動
+  - 品牌比對比一般排除更保守：只認用戶自己打的字＋統一詞表展開（**不看**快捷選項底下的其他關鍵詞）；搜尋詞等於別名或以別名開頭才算；兩個字的別名（青山、龍角）開頭命中時後面要接空白或括號；英數結尾的別名後面不能直接接英數；精準搜尋只認全等
+  - 輸入時的匹配提示（`showBasicExclusionPreview`）同樣會列出這一項
+  - 清單沒載入（`MICROPAYMENT_BRANDS` 不存在）時整段不作用，行為與 2026-11-13 前相同
 - **測試**：`node tools/regression/basic-exclusions-test.js`（凍結資料沒有這個欄位，所以 run-regression.js 碰不到這條路徑；這支在頁面裡臨時塞名單驗 16 項）。改這一塊必跑
 
 ## 教訓記錄
