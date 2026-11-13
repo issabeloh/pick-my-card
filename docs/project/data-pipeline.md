@@ -130,7 +130,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     想在畫面上分到某組就加進 `PE_GROUPS_`（沒加的欄位自動出現在「其他欄位」）。說明見 `apps-script/README.md`「新戶活動編輯器」
 17. **活動快寫工具**（2026-11-12）—— 不是工作表，是「貼一段活動原文 → 產出一列可直接貼進試算表」的單頁工具
     （`tools/activity-writer/`，網址 `/tools/activity-writer/`，noindex；少量活動用，批量仍走自動化檔的 3-貼上原文 → 4-待審核）。
-    - 兩種輸出：一般活動＝`rate … period` 13 欄（貼在該卡的 `rate_N` 那格）；新戶活動＝`id … pick_reason` 25 欄（貼在 New Cardholder Promos 的 id 欄）
+    - 兩種輸出：一般活動＝`rate … period` 13 欄（貼在該卡的 `rate_N` 那格）；新戶活動＝`id … pick_reason` 24 欄（貼在 New Cardholder Promos 的 id 欄）
     - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰存瀏覽器 localStorage，從瀏覽器直接打 Google）
     - 讀線上 `cards.data` 當詞庫（通路既有寫法、卡片基本回饋、同卡的新戶定義與申辦連結）→ **剛改完試算表還沒匯出的內容它看不到**
     - `daysRemaining`／`period` 兩欄：底部填了「rate 那格的位置」（如 CB15）就輸出試算表原本的公式寫法（`=IF(ISBLANK(CL15),"",CL15-TODAY())` 那種）；沒填用不含引號的相對公式（`ADDRESS(ROW(),COLUMN()-n)`），結果相同。設定裡可改純值或留空
@@ -141,9 +141,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
       **`bonus_rate` 只填這檔活動自己加碼的部分**（最高 8% ＝ 加碼 6% ＋ 原權益 2% → 0.06，合計數字只放摘要）；
       **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
       **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
-      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 留空（＝99）
+      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 欄 2026-11-13 已刪（全表都是 99；匯出找不到這欄一樣當 99，前端排序不受影響）
     - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
-      `ui-test.js` 會擋「新戶 25 欄排不進一個畫面」
+      `ui-test.js` 會擋「新戶 24 欄排不進一個畫面」
     - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面，AI 用假回應）
 
 ## 3. exportToJSON() 匯出流程

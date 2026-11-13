@@ -153,7 +153,7 @@ Cards Data 寬表（26 組回饋槽、20 組領券槽，五百多欄）的**另�
 - **每一檔活動一張卡片**：過期／未啟用的自動收合並標示；左側索引點一下跳過去
 - `promo_types` 下方有「回饋加碼／定額回饋／首刷禮」快選，點一下加入或拿掉
 - **「＋ 新增一檔活動」**：插在這張卡最後一列的下面（同卡的列保持在一起），並從上一檔
-  （最後一檔啟用中的）複製 `new_customer_definition`、`promo_condition`、`link`、`priority`；
+  （最後一檔啟用中的）複製 `new_customer_definition`、`promo_condition`、`link`；
   active 預設勾選。複製來的欄位下方有「↑ 從上一檔複製」提示。還沒存的新活動可以按「不要新增這檔」拿掉
 - **不提供刪除**（2026-11-11 站長決定）：下架請取消勾選 active；真的要刪請到表上刪整列
 
@@ -173,7 +173,7 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 ### runQACheck 檢查 13（同次新增，一律 ⚠️ 不擋匯出）
 
 - 每一列：日期格式／結束早於開始、`bonus_cap`・`voucher_amount` 不是數字（"12,000" 會被讀成 12）、
-  `min_spend`・`luggage_*` 讀不出數字、`priority` 不是整數、`pick_rank` 不是 1–5 或 x、
+  `min_spend`・`luggage_*` 讀不出數字、`pick_rank` 不是 1–5 或 x、
   網址不是 http(s)、沒填 `promo_types` 或類型不認得（會被歸到「其他」）、啟用但沒填 `new_customer_summary`
 - 跨列：同一張卡啟用中的列 `apply_cta_text`／`apply_cta_link` 不一致（匯出只取第一個）、
   啟用中的活動 `pick_rank` 1–5 重複
@@ -1200,7 +1200,7 @@ Gemini 呼叫。沒跑完會在結果視窗說「還有 N 列沒跑」，**再�
 待審核表「id」之後的欄位順序與正式新戶活動表一致：
 `id / promo_types / new_customer_definition / new_customer_summary / promo_condition /
 period_start / period_end / gift_content / gift_image_url / bonus_rate / bonus_merchants / bonus_cap /
-voucher_amount / voucher_usage / notes / link / priority / active / apply_cta_text / apply_cta_link / apply_cta_expiry`
+voucher_amount / voucher_usage / notes / link / active / apply_cta_text / apply_cta_link / apply_cta_expiry`
 
 - **promo_condition**（AI 填）：達成獎勵的任務，兩項以上用 ①②③ 編號逐項簡述、只有一項不編號；已寫這裡的任務不會再重複進 notes
 - **new_customer_summary**（AI 填）：一句話「核卡後X天內＋最關鍵門檻＋獎勵」，細節在 promo_condition，summary 只點關鍵門檻

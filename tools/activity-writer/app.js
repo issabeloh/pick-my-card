@@ -185,7 +185,7 @@
     ['luggage_inch', '', 'text', 2], ['luggage_value', '', 'text', 2], ['bonus_rate', '小數，只填加碼', 'text', 2],
     ['bonus_merchants', '半形逗號；不限通路填 *general', 'area', 4], ['bonus_cap', '消費上限', 'text', 2],
     ['voucher_amount', '', 'text', 2], ['voucher_usage', '', 'text', 4], ['notes', '全形分號分隔', 'area', 6],
-    ['link', '活動頁', 'text', 4], ['priority', '留空＝99', 'text', 2], ['active', '', 'text', 2], ['apply_cta_text', '', 'text', 4],
+    ['link', '活動頁', 'text', 5], ['active', '', 'text', 2], ['apply_cta_text', '', 'text', 5],
     ['apply_cta_link', '沿用同卡', 'text', 4], ['pick_question', '一句鉤子', 'text', 4], ['pick_reason', '一句理由', 'area', 4]
   ];
   var MODELS = ['', 'rate', 'rate+basic', 'basic+domesticBonusRate', 'rate+basic+domesticBonusRate', 'rate+overseasCashback',
@@ -378,7 +378,7 @@
       var where = state.kind === 'rate'
         ? (row.result.existing ? '到 Cards Data 這張卡的 rate_' + row.result.existing.slot + ' 那格貼上（覆蓋）' : '到 Cards Data 這張卡第一個空的 rate_N 那格貼上')
         : '到 New Cardholder Promos 的 id 欄那格貼上';
-      toast('已複製 ' + rows.length + ' 列 × ' + (state.kind === 'rate' ? 13 : 25) + ' 欄 → ' + where);
+      toast('已複製 ' + rows.length + ' 列 × ' + (state.kind === 'rate' ? P.RATE_COLS.length : P.PROMO_COLS.length) + ' 欄 → ' + where);
     }).catch(function (e) { console.error('複製失敗', e); toast('複製失敗——請手動選取下方預覽'); });
   }
 

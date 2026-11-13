@@ -9,7 +9,7 @@
 //   - 申辦按鈕（apply_cta_text／apply_cta_link／apply_cta_expiry）是「卡片層級」，只顯示一次；
 //     改它會寫到這張卡「原本有填這欄」的每一列（都沒填就寫第一列），順便讓各列一致
 //   - 每一檔活動一張可收合的卡片；「＋ 新增一檔活動」插在這張卡最後一列的下面，
-//     並從上一檔（最後一檔啟用中的）複製新戶定義、條件、連結、priority 當起點；active 預設勾選
+//     並從上一檔（最後一檔啟用中的）複製新戶定義、條件、連結當起點；active 預設勾選
 //   - **不提供刪除**（站長 2026-11-11 決定）：下架請取消 active；真的要刪到表上刪
 //   - 只寫改過的格子；公式欄唯讀；存檔前跑 pmcValidatePromoRow_（cards-export.gs，與
 //     runQACheck 檢查 13 共用），有任何問題就整筆擋下
@@ -21,12 +21,12 @@
 const PE_SHEET_NAME_ = 'New Cardholder Promos';  // getSheetByName 不分大小寫，表上叫 New CardHolder Promos 也找得到
 const PE_CTA_FIELDS_ = ['apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'];
 const PE_DATE_FIELDS_ = ['period_start', 'period_end', 'apply_cta_expiry'];
-const PE_NUMERIC_FIELDS_ = ['bonus_cap', 'voucher_amount', 'priority', 'luggage_inch', 'luggage_value'];
+const PE_NUMERIC_FIELDS_ = ['bonus_cap', 'voucher_amount', 'luggage_inch', 'luggage_value'];
 // 新增活動時從上一檔複製的欄位（站長 2026-11-11 同意）
-const PE_COPY_FIELDS_ = ['new_customer_definition', 'promo_condition', 'link', 'priority', 'active'];
+const PE_COPY_FIELDS_ = ['new_customer_definition', 'promo_condition', 'link', 'active'];
 // 畫面上的分組（沒列到的欄位放「其他欄位」，表上新加欄也會自動出現）
 const PE_GROUPS_ = [
-  ['活動內容', ['promo_types', 'new_customer_summary', 'new_customer_definition', 'promo_condition', 'period_start', 'period_end', 'min_spend', 'active', 'priority']],
+  ['活動內容', ['promo_types', 'new_customer_summary', 'new_customer_definition', 'promo_condition', 'period_start', 'period_end', 'min_spend', 'active']],
   ['回饋／獎勵', ['bonus_rate', 'bonus_cap', 'bonus_merchants', 'voucher_amount', 'voucher_usage', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value']],
   ['備註與連結', ['notes', 'link']],
   ['站長推薦', ['pick_rank', 'pick_question', 'pick_reason']]

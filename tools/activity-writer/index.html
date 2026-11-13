@@ -22,7 +22,7 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   button.primary:hover { filter: brightness(1.08); }
   button:disabled { opacity: .5; cursor: not-allowed; }
-  /* 緊湊版面（2026-11-13）：左欄固定在畫面上、右欄欄位排成 12 欄格線，新戶 25 欄在一個畫面內看完 */
+  /* 緊湊版面（2026-11-13）：左欄固定在畫面上、右欄欄位排成 12 欄格線，新戶 24 欄在一個畫面內看完 */
   main { display: grid; grid-template-columns: minmax(300px, 4fr) minmax(420px, 9fr); gap: 10px; padding: 10px 14px calc(var(--bar-h) + 14px); max-width: 1800px; margin: 0 auto; align-items: start; }
   main > section:first-child { position: sticky; top: 8px; max-height: calc(100vh - var(--bar-h) - 24px); overflow: auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } main > section:first-child { position: static; max-height: none; } }
