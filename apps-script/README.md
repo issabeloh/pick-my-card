@@ -589,7 +589,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 程式檔案 | Apps Script 專案內的 `權益監控.gs`（備份：`watchlist-monitor.gs`） |
 | 主函數 | `checkWatchlist`（觸發器叫醒的就是它） |
 | 觸發器 | 時間驅動（Time-driven）→ Week timer，每週自動執行；設定位置：Apps Script 左側鬧鐘圖示「觸發條件」。清單長到一次跑不完時會自動分段接續，見下方「分段執行與自動接續」 |
-| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars / check_days`（`cards` 為 2026-07-29、`check_days` 為 2026-07-31 新增，沒有這兩欄也照跑） |
+| 監控清單 | 試算表分頁 `1-監控清單`，第一列表頭必須是小寫：`card_id / bank / url / watch_type / cards / css_selector / last_snapshot / last_checked / active / fetch_via / keywords / min_diff_chars / check_days / scope`（`cards` 為 2026-07-29、`check_days` 為 2026-07-31、`scope` 為 2026-11-13 新增，沒有這三欄也照跑） |
 | 偵測結果 | 自動寫入分頁 `2-變動通知`（不存在會自動建立），並寄 Email 通知 |
 | 通知信箱 | `MONITOR_CONFIG.notifyEmail` 留空 = 寄給試算表登入帳號 |
 
@@ -606,6 +606,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | `keywords` | 這一列專用關鍵字，覆蓋全域 | 逗號分隔（半形/全形逗號、頓號皆可）。公告標題頁填該行卡名，例：`永豐SPORT卡,夢行,幣倍` |
 | `min_diff_chars` | 這一列專用雜訊門檻，覆蓋全域 30 | 公告標題頁填 `10`（一條新標題常見 15~30 字，30 會漏掉短標題） |
 | `check_days` | 這一列**最少隔幾天才抓一次**（2026-07-31 新增） | 正整數。走 Jina 的列建議填 `7`；不急的頁可填 `14`／`30`。留空＝每次觸發器跑到都抓 |
+| `scope` | **名單頁專用**（2026-11-13 新增，`watch_type=list` 才讀）：只留網頁其中一段來存快照與比對 | `起點文字\|終點文字`，照網頁上的字抄，空白多寡不影響。留空＝比對整頁。欄位放最右邊即可，沒有這欄也照跑 |
 
 三欄留空 = 沿用全域設定／每次都抓，舊列完全不受影響。
 
@@ -632,7 +633,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 | 欄位 | 語意 | 填法 |
 |---|---|---|
 | `card_id` | **只填 Cards Data 的正式卡片 id** | 單卡權益頁填正式 id；**多卡頁一律留空**（不要再填 `febank-basic` 這種標籤） |
-| `watch_type` | 這一列監控的是哪種頁（**程式會讀了**） | `card`＝單卡權益頁、`bank`＝多卡公告／一般消費頁。**留空**＝依 `card_id` 有沒有填自動推斷（有＝card、沒有＝bank），不會報錯 |
+| `watch_type` | 這一列監控的是哪種頁（**程式會讀了**） | `card`＝單卡權益頁、`bank`＝多卡公告／一般消費頁、`list`＝名單頁（見下面「名單頁」一節）。**留空**＝依 `card_id` 有沒有填自動推斷（有＝card、沒有＝bank），不會報錯 |
 | `cards` | 多卡頁涵蓋哪幾張卡（選填，新增欄） | 逗號分隔的**正式 id**（半形/全形逗號、頓號都吃），例：`febank-jaccard,febank-giftcard`。留空也能跑，只是解析階段少了卡片線索 |
 | `bank` | 銀行名稱 | 維持現狀。多卡頁**一定要填**——通知信靠它認人 |
 | `css_selector` | 仍是備註／預留欄，程式不會讀 | — |
@@ -643,6 +644,19 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - **舊表格完全相容**：沒有 `cards` 欄、`watch_type` 全空、`card_id` 全填 → 行為與改版前一模一樣。可以先貼程式、隔幾天再整理表格（或反過來）
 - 公告頁**一頁只填一列**，不要每張卡複製一列——同 URL 多列會重複抓取、同一變動寄多封通知
 
+### 名單頁：`watch_type=list`（2026-11-13 新增）
+
+給「整頁只在乎其中一小段名單」的網頁用。現有兩列：7-11、全家支付頁的**信用卡合作銀行名單**
+（一般消費排除規則 8m 的資料來源）。這種頁其餘部分是每月換檔的活動表，照一般流程比對會每次都報。
+
+- 填法：`watch_type` 填 `list`、`bank` 填商家名（信裡靠它認）、`scope` 填起訖、`check_days` 建議 `7`。`card_id`／`cards`／`keywords`／`min_diff_chars` 都不用填（填了也不讀）
+- 行為：抓下來只留 `scope` 那一段 → 跟上次存的那一段**逐詞比對** → 有詞新增或消失就寄信，信裡列出新增／消失的詞與新舊名單全文。
+  **不叫 AI、不寫 `2-變動通知`**（那個分頁的下游是卡片權益解析，名單頁沒有卡可對）
+- 找不到起點或終點 → 當成抓取失敗寫進信裡、`fail_streak` 加一、基準不動。連續出現＝網頁改版，開網頁重填 `scope`
+- 舊基準是填 `scope` 之前存的整頁 → 程式會用同一組起訖切出同一段再比，不用手動清空 `last_snapshot`
+- 收到名單變動信之後要做的事：改 `basic-exclusions-extractor.gs` 的 `BASICEX_STORE_NO_ACCEPT`（見規則 8m）
+- 驗證腳本：`node tools/test-watchlist-list.js`（改了名單頁分支、`scopeText_`、`exclusionTermDiff_` 要跑）
+
 ### 體檢填法：1-監控清單（2026-07-29 新增選單）
 
 選單「🤖 權益自動化 → 體檢填法：1-監控清單（只讀不寫）」（函數 `checkWatchlistConfig`，在 `watchlist-monitor.gs`）。**只讀不寫**——不碰 `last_snapshot`、不寫任何分頁，結果直接跳視窗。會抓：
@@ -651,7 +665,7 @@ cards.data 的 git 歷史只涵蓋匯出內容——這是備份鏈上唯一的 
 - `watch_type=bank` 卻沒填 `bank`（多卡頁沒有 card_id，`bank` 是信裡唯一能認人的欄位；單卡列不報，免噪音）
 - `card_id` 填了但不在 Cards Data（單卡列才報；多卡列併進上一條，同一件事不講兩次）
 - `cards` 欄有不存在的 id
-- `watch_type` 填了 `card`/`bank` 以外的值／`watch_type=card` 卻沒填 `card_id`
+- `watch_type` 填了 `card`/`bank`/`list` 以外的值／`watch_type=card` 卻沒填 `card_id`
 - 同一個 url 出現在兩列
 - `active` 不是 `TRUE`/`FALSE`
 - `check_days` 不是正整數；或填了 `check_days` 但表格沒有 `last_checked` 欄（算不出間隔，設定不會生效）

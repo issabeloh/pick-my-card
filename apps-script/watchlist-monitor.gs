@@ -43,12 +43,23 @@
  * 卡片欄位語意（2026-07-29 改版；css_selector 仍只是備註欄，程式不會讀）：
  *   card_id    —— **只填 Cards Data 的正式卡片 id**（第二階段解析靠它對資料）。
  *                 多卡頁（公告頁／一般消費頁）**留空**，不要填 febank-basic 這種頁級標籤
- *   watch_type —— card＝單卡權益頁；bank＝多卡公告／一般消費頁。
+ *   watch_type —— card＝單卡權益頁；bank＝多卡公告／一般消費頁；list＝名單頁（見下面「名單頁」）。
  *                 留空會依 card_id 有沒有填自動推斷（有＝card、沒有＝bank），不會報錯
  *   cards      —— 選填。多卡頁涵蓋哪幾張卡的**正式 id**，逗號分隔
  *                 （半形/全形逗號、頓號都吃）。這一欄會寫進「2-變動通知」的 card_id 欄，
  *                 讓第二階段解析知道候選卡片有哪幾張
  *   bank       —— 銀行名稱，通知信與 AI 分類都會用到；多卡頁一定要填（信裡靠它認人）
+ *
+ * 名單頁（watch_type=list ＋ scope 欄，2026-11-13 新增）：
+ *   給「整頁只在乎其中一小段名單」的網頁用（例：7-11／全家支付頁的信用卡合作銀行名單）。
+ *   這種頁其餘部分是每月換檔的活動表，照一般流程比對會每次都報變動。
+ *   watch_type —— 填 list
+ *   scope      —— 選填新欄（放最右邊即可）。格式「起點文字|終點文字」，只留兩者之間那一段來存快照與比對。
+ *                 起點／終點照網頁上的字抄，空白多寡不影響；找不到 → 當成抓取失敗回報、不動基準
+ *                 （代表網頁改版了，要人看一眼重設）。留空＝比對整頁
+ *   行為差異   —— 逐詞比對（名單多一家少一家只有幾個字，一般流程的 30 字門檻會漏掉）、
+ *                 不叫 AI、不寫「2-變動通知」，名單有詞增減就直接在通知信裡列出新舊名單。
+ *                 keywords／min_diff_chars 對這種列無效；check_days 照常有效（建議填 7）
  *
  * 舊表格相容：沒有 cards 欄、watch_type 全空、card_id 全填 → 行為與改版前完全相同。
  *
@@ -205,6 +216,7 @@ function checkWatchlist() {
   const cKeywords = col('keywords');
   const cMinDiff = col('min_diff_chars');
   const cMinDays = col('check_days');   // 選填新欄，舊表格沒有時是 -1，下面安全降級成「每次都跑」
+  const cScope = col('scope');          // 選填新欄（名單頁用），沒有時是 -1＝比對整頁
   if (cUrl < 0 || cSnap < 0) {
     throw new Error('「' + MONITOR_CONFIG.watchlistSheet + '」第一列必須有 url 與 last_snapshot 這兩個表頭（小寫）');
   }
@@ -279,9 +291,11 @@ function checkWatchlist() {
     const cardList = cCards >= 0 ? splitList_(row[cCards]) : [];
     // watch_type=bank ＝站長明講「這是多卡頁」：即使 card_id 還留著舊的頁級標籤，
     // 也不要拿它當卡片用（信裡顯示銀行頁講法、下游 card_id 優先用 cards 清單）
-    const isBankPage = resolveWatchType_(cType >= 0 ? row[cType] : '', cardId) === 'bank';
+    const rowType = resolveWatchType_(cType >= 0 ? row[cType] : '', cardId);
+    const isBankPage = rowType === 'bank';
+    const isListPage = rowType === 'list';
     // 通知信／錯誤訊息的顯示名稱；「2-變動通知」的 card_id 欄則要寫下游解析用得到的 id
-    const label = buildRowLabel_(isBankPage ? '' : cardId, bank);
+    const label = isListPage ? (bank || '') + ' 名單頁' : buildRowLabel_(isBankPage ? '' : cardId, bank);
     const inboxCardId = isBankPage ? (cardList.join(',') || cardId) : (cardId || cardList.join(','));
 
     let text;
@@ -292,6 +306,49 @@ function checkWatchlist() {
       // 記在 fail_streak 欄，信裡分開列，站長才知道哪些要處理、哪些不用理
       const streak = bumpFailStreak_(sheet, headers, i + 1, row);
       errors.push({ text: label + ' ' + url + '：' + e.message, streak: streak });
+      continue;
+    }
+
+    // 名單頁（watch_type=list）：只比對 scope 那一段、逐詞比對、不叫 AI、不寫分頁。
+    // 整段獨立處理完就 continue——下面那些防呆（訊號詞、字數比例、關鍵字閘門）都是為
+    // 銀行權益頁寫的，套在一段兩三百字的名單上不是誤擋就是漏報
+    if (isListPage) {
+      const scopeRaw = cScope >= 0 ? String(row[cScope] || '').trim() : '';
+      const scoped = scopeText_(text, scopeRaw);
+      if (scoped === null) {
+        errors.push({ streak: bumpFailStreak_(sheet, headers, i + 1, row), text: label + ' ' + url +
+          '：這次抓到的內容裡找不到 scope 欄指定的起點或終點（' + scopeRaw + '）。' +
+          '可能是這次沒抓好，也可能是網頁改版。已略過並保留原基準；連續出現請開網頁確認，改版了就重填 scope' });
+        if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
+        continue;
+      }
+      const oldRaw = String(row[cSnap] || '');
+      // 舊基準有兩種：平常是上次存的那一段（裡面沒有起訖文字，切不出來 → 直接拿來比）；
+      // 也可能是填 scope 之前存的整頁（切得出來 → 切同一段再比，不用站長手動清空）
+      const oldCut = oldRaw ? scopeText_(oldRaw, scopeRaw) : null;
+      const oldScoped = oldCut === null ? oldRaw : oldCut;
+      if (oldRaw && oldCut === null && oldRaw.length > scoped.length * 3 + 300) {
+        // 切不出來、又比這次的段落長很多＝舊基準是別種版面的整頁，沒有可比的東西，只重建不通知
+        rebaselined.push(label + ' ' + url + '（舊基準裡找不到 scope 指定的段落，已用本次內容重建）');
+      } else if (oldRaw) {
+        const listDiff = exclusionTermDiff_(oldScoped, scoped);
+        if (listDiff.lines.length) {
+          const summary = '名單有變動（這種列不寫進「' + MONITOR_CONFIG.inboxSheet + '」，新舊名單如下）\n' +
+            (listDiff.added.length ? '新增：' + listDiff.added.slice(0, 30).join('、') + '\n' : '') +
+            (listDiff.removed.length ? '消失：' + listDiff.removed.slice(0, 30).join('、') + '\n' : '') +
+            '【舊】' + oldScoped.slice(0, 1500) + '\n【新】' + scoped.slice(0, 1500);
+          alerts.push({
+            cardId: '', label: label, bank: '', url: url,
+            diffText: listDiff.lines.join('\n').slice(0, 300),
+            // 不叫 AI：新增／消失的詞是字串比對算出來的事實，直接當摘要
+            cls: { material: true, scope: '', summary: summary, change_types: ['名單'], confidence: '高' },
+            exclusion: '', cosmetic: false
+          });
+        }
+      }
+      sheet.getRange(i + 1, cSnap + 1).setValue(scoped);
+      resetFailStreak_(sheet, headers, i + 1, row);
+      if (cChecked >= 0) sheet.getRange(i + 1, cChecked + 1).setValue(now);
       continue;
     }
 
@@ -636,8 +693,35 @@ function splitList_(raw) {
 // 留空或填了看不懂的值 → 依 card_id 有沒有填自動推斷，不報錯（表格還沒整理好也要能跑）
 function resolveWatchType_(raw, cardId) {
   const v = String(raw || '').trim().toLowerCase();
-  if (v === 'card' || v === 'bank') return v;
+  if (v === 'card' || v === 'bank' || v === 'list') return v;
   return cardId ? 'card' : 'bank';
+}
+
+// 名單頁的 scope 欄：「起點文字|終點文字」→ 回傳兩者之間那一段（不含起訖本身）。
+// 起訖裡的空白視為「零到多個空白」——直接抓與走 Jina 的空白多寡不同，不該因此找不到。
+// 回傳值：scope 留空 → 原文；找不到起點或終點 → null（呼叫端當抓取失敗，不動基準）
+function scopeText_(text, scopeRaw) {
+  const t = String(text || '');
+  const raw = String(scopeRaw || '').trim();
+  if (!raw) return t;
+  const parts = raw.split(/[|｜]/);
+  const toRe = function (m) {
+    return String(m || '').trim().split(/\s+/).filter(function (x) { return x; })
+      .map(function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('\\s*');
+  };
+  let from = 0;
+  const startSrc = toRe(parts[0]);
+  if (startSrc) {
+    const m = new RegExp(startSrc).exec(t);
+    if (!m) return null;
+    from = m.index + m[0].length;
+  }
+  const rest = t.slice(from);
+  const endSrc = toRe(parts[1]);
+  if (!endSrc) return rest.trim();
+  const e = new RegExp(endSrc).exec(rest);
+  if (!e) return null;
+  return rest.slice(0, e.index).trim();
 }
 
 // 通知信／錯誤訊息裡這一列叫什麼：有 card_id 就用 card_id，
@@ -1556,7 +1640,7 @@ function checkWatchlistConfig() {
     const cardsRaw = cCards >= 0 ? splitList_(row[cCards]) : [];
     const rawType = cType >= 0 ? String(row[cType] || '').trim() : '';
     const type = rawType.toLowerCase();
-    const knownType = (type === 'card' || type === 'bank');
+    const knownType = (type === 'card' || type === 'bank' || type === 'list');
     if (rawType && !knownType) g.badWatchType.push({ row: rowNo, raw: rawType });
 
     if (type === 'bank') {
@@ -1565,6 +1649,9 @@ function checkWatchlistConfig() {
       if (cardId) g.bankKeepsCardId.push({ row: rowNo, cardId: cardId, hasCards: cardsRaw.length > 0 });
       else if (cCards >= 0 && !cardsRaw.length) g.bankNoCards.push(rowNo);
       // 多卡頁沒有 card_id，bank 就是通知信裡唯一能認人的欄位，空著等於信裡沒署名
+      if (cBank >= 0 && !String(row[cBank] || '').trim()) g.bankNoBank.push(rowNo);
+    } else if (type === 'list') {
+      // 名單頁：不屬於任何卡，card_id／cards 本來就空著；bank 欄是信裡唯一的署名
       if (cBank >= 0 && !String(row[cBank] || '').trim()) g.bankNoBank.push(rowNo);
     } else {
       if (type === 'card' && !cardId) g.cardNoCardId.push(rowNo);
@@ -1612,13 +1699,13 @@ function checkWatchlistConfig() {
     g.bankKeepsCardId.map(function (x) {
       return '  第 ' + x.row + ' 列：card_id=' + x.cardId + (x.hasCards ? '（cards 已填好）' : '（cards 也還沒填）');
     }));
-  block('多卡頁（watch_type=bank）沒填 bank → 通知信只會顯示「一般消費/公告頁」，認不出是哪家，請補銀行名',
+  block('多卡頁或名單頁（watch_type=bank／list）沒填 bank → 通知信只會顯示「一般消費/公告頁」，認不出是哪家，請補銀行名',
     g.bankNoBank.map(function (r) { return '  第 ' + r + ' 列'; }));
   block('card_id 不在 Cards Data → 單卡頁請改成正式 id；若其實是多卡頁，watch_type 填 bank 並清空 card_id',
     g.unknownCardId.map(function (x) { return '  第 ' + x.row + ' 列：' + x.cardId; }));
   block('cards 欄的 id 不在 Cards Data → 打錯字，或該卡還沒建',
     g.unknownCards.map(function (x) { return '  第 ' + x.row + ' 列：' + x.id; }));
-  block('watch_type 值不合法（只能 card / bank，留空＝自動推斷）',
+  block('watch_type 值不合法（只能 card / bank / list，留空＝自動推斷）',
     g.badWatchType.map(function (x) { return '  第 ' + x.row + ' 列：' + x.raw; }));
   block('watch_type=card 卻沒填 card_id',
     g.cardNoCardId.map(function (r) { return '  第 ' + r + ' 列'; }));
