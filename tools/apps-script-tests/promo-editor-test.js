@@ -66,8 +66,8 @@ function load(sheets) {
   return Object.assign(ctx.X, { menus });
 }
 
-// 真實表頭（2026-11-11 讀自試算表）
-const PH = ['id', 'promo_types', 'new_customer_definition', 'new_customer_summary', 'promo_condition', 'period_start', 'period_end', 'min_spend', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link', 'priority', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry', 'pick_rank', 'pick_question', 'pick_reason'];
+// 真實表頭（2026-11-11 讀自試算表；2026-11-13 刪 priority 欄）
+const PH = ['id', 'promo_types', 'new_customer_definition', 'new_customer_summary', 'promo_condition', 'period_start', 'period_end', 'min_spend', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry', 'pick_rank', 'pick_question', 'pick_reason'];
 const prow = o => PH.map(h => (h in o ? o[h] : ''));
 const tw = (y, m, d) => new Date(Date.UTC(y, m - 1, d) - 8 * 3600e3);
 const A = { id: 'card-a', promo_types: '回饋加碼', new_customer_definition: '六個月內未持卡', new_customer_summary: '加碼 10%', promo_condition: '①開戶', period_start: tw(2026, 10, 1), period_end: tw(2026, 12, 31), bonus_rate: '10%', bonus_cap: 5000, link: 'https://a', active: true, apply_cta_text: '申辦 A', apply_cta_link: 'https://apply/a' };
@@ -89,9 +89,9 @@ console.log('1. pmcValidatePromoRow_');
   const g = fresh()['New Cardholder Promos'].grid;
   eq(s.pmcValidatePromoRow_(PH, g[1], 'x'), [], '正常活動沒問題');
   eq(s.pmcValidatePromoRow_(PH, g[4], 'x'), [], '只放 CTA 的列不檢查活動欄位');
-  const bad = prow({ id: 'x', promo_types: '回饋加碼,神秘', new_customer_summary: 's', period_start: '2026/9/1', period_end: '2026/8/1', bonus_cap: '12,000', min_spend: 'NT$10,000', priority: '1.5', pick_rank: '6', link: 'www.x.com', active: true });
+  const bad = prow({ id: 'x', promo_types: '回饋加碼,神秘', new_customer_summary: 's', period_start: '2026/9/1', period_end: '2026/8/1', bonus_cap: '12,000', min_spend: 'NT$10,000', pick_rank: '6', link: 'www.x.com', active: true });
   eq(s.pmcValidatePromoRow_(PH, bad, 'x').map(i => i.code + '@' + i.field).sort(),
-    ['END_BEFORE_START@period_end', 'NOT_NUMBER@bonus_cap', 'NOT_NUMBER@priority', 'PICK_RANK_BAD@pick_rank', 'TYPE_UNKNOWN@promo_types', 'URL_BAD@link'], '各種錯誤；min_spend「NT$10,000」合法');
+    ['END_BEFORE_START@period_end', 'NOT_NUMBER@bonus_cap', 'PICK_RANK_BAD@pick_rank', 'TYPE_UNKNOWN@promo_types', 'URL_BAD@link'], '各種錯誤；min_spend「NT$10,000」合法');
   eq(s.pmcValidatePromoRow_(PH, prow({ id: 'x', promo_types: '首刷禮', active: true }), 'x').map(i => i.code), ['NO_SUMMARY'], '啟用但沒摘要');
   eq(s.pmcValidatePromoRow_(PH, prow({ id: 'x', new_customer_summary: 's', pick_rank: 'X' }), 'x').map(i => i.code), ['NO_TYPE'], 'pick_rank 大寫 X 合法、沒類型要報');
 }
@@ -135,7 +135,7 @@ console.log('5. 存檔');
   let r = s.promoEditorSave({ id: 'card-a', rows, cta: { apply_cta_text: '立即申辦' }, newRows: [] });
   ok(r.ok, '改一格＋CTA 存檔成功 ' + JSON.stringify(r).slice(0, 200));
   const sets = sh['New Cardholder Promos'].log.filter(x => x.startsWith('set'));
-  eq(sets.sort(), ['set 2,15=6000', 'set 2,22="立即申辦"', 'set 3,22="立即申辦"', 'set 5,22="立即申辦"'], 'bonus_cap 寫數字；CTA 寫到所有原本有填的列');
+  eq(sets.sort(), ['set 2,15=6000', 'set 2,21="立即申辦"', 'set 3,21="立即申辦"', 'set 5,21="立即申辦"'], 'bonus_cap 寫數字；CTA 寫到所有原本有填的列');
 
   // 被插列擠下去：用指紋找回來
   sh = fresh(); s = load(sh); d = s.promoEditorLoad('card-a');
@@ -161,7 +161,7 @@ console.log('5. 存檔');
   // 驗證擋下
   sh = fresh(); s = load(sh); d = s.promoEditorLoad('card-a');
   rows = base(); rows[0].changes.period_end = { original: '2026/12/31', value: '2026/9/1' };
-  r = s.promoEditorSave({ id: 'card-a', rows, cta: {}, newRows: [{ values: { priority: '1' } }] });
+  r = s.promoEditorSave({ id: 'card-a', rows, cta: {}, newRows: [{ values: { link: 'https://x' } }] });
   ok(!r.ok && r.errors, '驗證不過');
   eq(r.errors.map(e => e.rowKey + ':' + e.code).sort(), ['n0:NEW_EMPTY', 'r2:END_BEFORE_START'], '指出哪一列／哪一檔新活動（空白新活動只報一條）');
 
@@ -176,7 +176,7 @@ console.log('5. 存檔');
   ok(L.indexOf('copy FMT 5->6') >= 0 && L.indexOf('copy DV 5->6') >= 0, '複製格式與勾選框');
   ok(L.indexOf('copyCell 5,24->6,24') >= 0, '公式欄從上一列複製');
   const g6 = sh['New Cardholder Promos'].grid[5];
-  eq([g6[0], g6[1], g6[5], g6[14], g6[20]], ['card-a', '首刷禮', '2026/12/1', 300, true], '新列內容（id 自動帶、數字、勾選框）');
+  eq([g6[0], g6[1], g6[5], g6[14], g6[19]], ['card-a', '首刷禮', '2026/12/1', 300, true], '新列內容（id 自動帶、數字、勾選框）');
   eq(r.card.rows.length, 4, '回傳重新載入的資料');
 
   // 還沒有任何列的卡：CTA 跟著第一檔新活動寫

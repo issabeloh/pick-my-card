@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>活動快寫｜Pick My Card 站長工具</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #fff; --line: #dfe3e8; --text: #1c2430; --muted: #6b7785;
+    --accent: #1f6feb; --accent-soft: #e8f0fe; --ok: #1a7f4b; --ok-soft: #e6f4ec;
+    --check: #9a6700; --check-soft: #fff5d6; --empty: #b42318; --empty-soft: #fdecea;
+    --bar-h: 92px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 5px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0; }
+  header .meta { color: var(--muted); font-size: 12px; flex: 1; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 4px 10px; }
+  button:hover { border-color: #b6bec9; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  /* 緊湊版面（2026-11-13）：左欄固定在畫面上、右欄欄位排成 12 欄格線，新戶 26 欄在一個畫面內看完 */
+  main { display: grid; grid-template-columns: minmax(300px, 4fr) minmax(420px, 9fr); gap: 10px; padding: 10px 14px calc(var(--bar-h) + 14px); max-width: 1800px; margin: 0 auto; align-items: start; }
+  main > section:first-child { position: sticky; top: 8px; max-height: calc(100vh - var(--bar-h) - 24px); overflow: auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } main > section:first-child { position: static; max-height: none; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+  .panel + .panel { margin-top: 8px; }
+  .panel h2 { font-size: 12px; margin: 0 0 4px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 4px 12px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  select, input[type=text], input[type=password], textarea { font: inherit; color: inherit; width: 100%; border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; background: #fff; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  #cardSel { flex: 1; min-width: 200px; width: auto; }
+  #source { height: 34vh; min-height: 150px; resize: vertical; line-height: 1.5; display: block; }
+  .hint { color: var(--muted); font-size: 12px; }
+  .auto { font-size: 11px; color: var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 1px 8px; }
+  .ctx { font-size: 12px; }
+  .ctx b { font-weight: 600; }
+  .ctx ul { margin: 2px 0 0; padding-left: 16px; max-height: 150px; overflow: auto; }
+  .ctx .hit { background: var(--check-soft); border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; }
+
+  #fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 7px 10px; align-items: start; }
+  .field { grid-column: span 12; min-width: 0; }
+  .field.s2 { grid-column: span 2; } .field.s3 { grid-column: span 3; } .field.s4 { grid-column: span 4; }
+  .field.s5 { grid-column: span 5; } .field.s6 { grid-column: span 6; } .field.s8 { grid-column: span 8; }
+  @media (max-width: 1000px) { .field.s2, .field.s3 { grid-column: span 4; } .field.s4, .field.s5, .field.s6, .field.s8 { grid-column: span 12; } }
+  .field label { display: flex; gap: 6px; align-items: baseline; white-space: nowrap; overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 600; margin-bottom: 1px; }
+  .field label small { color: var(--muted); font-size: 10.5px; font-weight: 400; font-family: -apple-system, "Noto Sans TC", sans-serif; overflow: hidden; text-overflow: ellipsis; }
+  .field textarea { min-height: 26px; resize: vertical; display: block; line-height: 1.4; }
+  /* 說明預設收成一行（滑過去或點一下看全文），欄位才不會被撐高 */
+  .field .note { font-size: 11px; border-radius: 4px; padding: 1px 6px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .field .note.open { white-space: normal; word-break: break-all; }
+  .note.ok { color: var(--ok); background: var(--ok-soft); }
+  .note.check { color: var(--check); background: var(--check-soft); }
+  .note.empty { color: var(--empty); background: var(--empty-soft); }
+  .note.banner { font-size: 12px; padding: 3px 8px; }
+  .field.lv-check input, .field.lv-check textarea, .field.lv-check select { border-color: #e3b341; }
+  .field.lv-empty input, .field.lv-empty textarea { border-color: #f1a7a0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; max-height: 44px; overflow-y: auto; }
+  .chip { font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 10px; border: 1px solid var(--line); background: #fff; cursor: pointer; user-select: none; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .chip.on { background: var(--accent-soft); border-color: #a9c5f7; color: #0b4fc4; }
+  .chip.new::after { content: " 新"; color: var(--check); font-size: 10px; }
+  .chip.ex { text-decoration: line-through; color: var(--muted); }
+  .structwrap { grid-column: 1 / -1; background: #fafbfc; border: 1px solid #eef0f3; border-radius: 6px; padding: 4px 8px 6px; }
+  .struct { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .struct label { display: inline-flex; gap: 5px; align-items: baseline; font: inherit; padding: 1px 8px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: #fff; }
+  .struct label.on { border-color: var(--accent); background: var(--accent-soft); }
+  .struct code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; }
+  details.more summary { cursor: pointer; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+  .struct .lab { color: var(--muted); font-size: 11px; }
+  .headline { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .headline input { width: 60px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; align-items: center; }
+  .tabs button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .evidence { font-size: 12px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 8px; margin: 0 0 6px; white-space: pre-wrap; max-height: 3.2em; overflow: auto; }
+
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,.06); padding: 6px 14px; }
+  #bar .inner { max-width: 1772px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; align-items: center; }
+  #issues { font-size: 12px; max-height: 2.9em; overflow: auto; }
+  #issues .bad { color: var(--empty); }
+  #issues .good { color: var(--ok); font-weight: 600; }
+  #preview { grid-column: 1 / -1; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: #f1f3f5; border-radius: 5px; padding: 3px 6px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+  #preview .cell { border-right: 1px solid #c9d0d8; padding: 0 6px; display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+  #preview .cell.blank::before { content: "∅"; color: #b6bec9; }
+  #copyBtn.primary, #writeBtn { font-size: 14px; padding: 6px 18px; }
+  #toast { position: fixed; bottom: calc(var(--bar-h) + 16px); left: 50%; transform: translateX(-50%); background: #1c2430; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
+  #toast.show { opacity: 1; }
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(560px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog h3 { margin: 0 0 10px; font-size: 15px; }
+  dialog label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 13px; }
+  dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  .loadfail { padding: 30px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>活動快寫</h1>
+  <span class="meta" id="dataMeta">載入卡片資料中…</span>
+  <button id="settingsBtn" type="button">⚙ 設定</button>
+</header>
+
+<main id="app" hidden>
+  <section>
+    <div class="panel">
+      <div class="row">
+        <div class="seg" id="kindSeg">
+          <button type="button" data-kind="rate">一般活動（rate_N）</button>
+          <button type="button" data-kind="promo">新戶活動</button>
+        </div>
+        <span class="auto" id="kindAuto" hidden>自動判斷</span>
+      </div>
+      <div class="row">
+        <select id="cardSel" aria-label="卡片"></select>
+        <span class="auto" id="cardAuto" hidden>從原文認出</span>
+      </div>
+      <textarea id="source" placeholder="把活動原文貼在這裡（官網段落、公告、DM 文字都可以）。&#10;貼上就會解析，不用按任何按鈕。" spellcheck="false"></textarea>
+      <div class="row" id="urlRow" style="margin-top:6px" hidden>
+        <input type="text" id="sourceUrl" placeholder="活動頁網址（填進 link 欄；原文裡有網址會自動帶）">
+      </div>
+      <div class="row" style="margin:6px 0 0">
+        <button type="button" id="aiBtn">✨ 用 AI 重新解析（選用）</button>
+        <button type="button" id="resetBtn">清空，寫下一個</button>
+        <span class="hint" id="aiStatus"></span>
+      </div>
+    </div>
+    <div class="panel ctx" id="ctx"></div>
+  </section>
+
+  <section>
+    <div class="panel" id="result">
+      <p class="hint">貼上原文後，這裡會照試算表的欄位順序列出每一格。黃色＝請看一眼原文確認，紅色＝要自己填。</p>
+    </div>
+  </section>
+</main>
+
+<div class="loadfail panel" id="loadFail" hidden style="max-width:520px;margin:40px auto">
+  <p>讀不到 <code>cards.data</code>（直接用檔案開啟時瀏覽器不讓讀）。</p>
+  <p>選一下 repo 根目錄的 <code>cards.data</code>：<input type="file" id="dataFile"></p>
+</div>
+
+<div id="bar" hidden>
+  <div class="inner">
+    <div id="issues"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="slotSel" style="width:auto;max-width:300px" hidden title="要寫進這張卡的哪一槽"></select>
+      <button type="button" id="reloadBtn" hidden title="表被改過、或寫入被擋下時按這個">重新讀表</button>
+      <input type="text" id="anchorCell" style="width:230px" placeholder="rate 那格的位置，如 CB15（選填）" title="填了，daysRemaining／period 就用你試算表原本的公式寫法；沒填用通用公式，結果一樣">
+      <button type="button" id="copyAllBtn" hidden>複製全部列</button>
+      <button type="button" class="primary" id="copyBtn">複製這一列</button>
+      <button type="button" class="primary" id="writeBtn" hidden>寫進試算表</button>
+    </div>
+    <div id="preview"></div>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<dialog id="settings">
+  <h3>設定（只存在這台電腦的這個瀏覽器）</h3>
+  <label for="setDerived">daysRemaining／period 兩欄怎麼出</label>
+  <select id="setDerived">
+    <option value="formula">公式（貼在哪一欄都會自己算，預設）</option>
+    <option value="value">純值（今天算出來的數字與期間字串）</option>
+    <option value="blank">留空（貼完自己把旁邊的公式拉過來）</option>
+  </select>
+  <div id="setAiBox">
+  <label for="setKey">Gemini API 金鑰（選用，只有按「用 AI 重新解析」才會用到）</label>
+  <input type="password" id="setKey" autocomplete="off" placeholder="跟 Apps Script 的 GEMINI_API_KEY 同一把即可">
+  <div class="hint">金鑰只存在瀏覽器的 localStorage，呼叫時直接從你的瀏覽器送到 Google，不經過本站。</div>
+  <label for="setModels">模型備援順序（逗號分隔）</label>
+  <input type="text" id="setModels">
+  </div>
+  <div class="actions">
+    <button type="button" id="setCancel">取消</button>
+    <button type="button" class="primary" id="setSave">儲存</button>
+  </div>
+</dialog>
+
+<script src="parser.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
