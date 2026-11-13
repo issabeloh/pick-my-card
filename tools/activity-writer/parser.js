@@ -765,7 +765,22 @@
   }
 
   // derivedMode：'formula'（預設）｜'value'｜'blank'
-  function buildRateRow(fields, derivedMode, today) {
+  // 欄號 ↔ 欄名（A=1 … Z=26, AA=27）
+  function colToNum(c) { var n = 0; for (var i = 0; i < c.length; i++) n = n * 26 + (c.charCodeAt(i) - 64); return n; }
+  function numToCol(n) { var s = ''; while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; }
+  // 「rate 那格的位置」（如 CB15）→ 站長試算表原本的公式寫法；沒給或看不懂就回 null
+  function sheetFormulas(anchor) {
+    var m = /^\s*\$?([A-Za-z]{1,3})\$?(\d{1,5})\s*$/.exec(String(anchor || ''));
+    if (!m) return null;
+    var base = colToNum(m[1].toUpperCase()), row = m[2];
+    var s = numToCol(base + RATE_COLS.indexOf('periodStart')) + row, e = numToCol(base + RATE_COLS.indexOf('periodEnd')) + row;
+    return {
+      days: '=IF(ISBLANK(' + e + '),"",' + e + '-TODAY())',
+      period: '=IF(OR(ISBLANK(' + s + '),ISBLANK(' + e + ')),"",TEXT(' + s + ',"yyyy/m/d")&"~"&TEXT(' + e + ',"yyyy/m/d"))'
+    };
+  }
+
+  function buildRateRow(fields, derivedMode, today, anchor) {
     var f = fields || {};
     var row = RATE_COLS.map(function (c) { return f[c] == null ? '' : String(f[c]); });
     var iDays = RATE_COLS.indexOf('daysRemaining'), iPeriod = RATE_COLS.indexOf('period');
@@ -773,7 +788,10 @@
     else if (derivedMode === 'value') {
       row[iDays] = daysBetween(f.periodEnd, today);
       row[iPeriod] = (f.periodStart || f.periodEnd) ? (f.periodStart || '') + '~' + (f.periodEnd || '') : '';
-    } else { row[iDays] = { formula: FORMULA_DAYS }; row[iPeriod] = { formula: FORMULA_PERIOD }; }
+    } else {
+      var own = sheetFormulas(anchor);
+      row[iDays] = { formula: own ? own.days : FORMULA_DAYS }; row[iPeriod] = { formula: own ? own.period : FORMULA_PERIOD };
+    }
     return row;
   }
 
@@ -1033,7 +1051,7 @@
     parsePeriod: parsePeriod, findRates: findRates, structureOptions: structureOptions, findCaps: findCaps,
     matchItems: matchItems, findConditions: findConditions, capFromReward: capFromReward,
     parseActivity: parseActivity, parsePromo: parsePromo,
-    buildRateRow: buildRateRow, buildPromoRow: buildPromoRow, toTsv: toTsv, validate: validate,
+    buildRateRow: buildRateRow, sheetFormulas: sheetFormulas, buildPromoRow: buildPromoRow, toTsv: toTsv, validate: validate,
     buildAiRequest: buildAiRequest, applyAiActivity: applyAiActivity, applyAiPromo: applyAiPromo, unifyItems: unifyItems
   };
 });

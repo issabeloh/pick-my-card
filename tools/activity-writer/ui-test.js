@@ -53,12 +53,14 @@ const server = http.createServer((req, res) => {
   await page.fill('#source', S.artfunComposition.text + '\n補一行');
   await page.waitForTimeout(400);
   eq('手動修改保留', await page.inputValue('#f_category'), '我改的分類');
+  await page.fill('#anchorCell', 'CB15');
   await page.click('#copyBtn');
   let tsv = await page.evaluate(() => window.__lastCopied);
   eq('剪貼簿內容＝輸出', await page.evaluate(() => navigator.clipboard.readText()), tsv);
   eq('複製 13 欄', tsv.split('\t').length, 13);
   eq('第一欄是 rate', tsv.split('\t')[0], '3');
   eq('單列不換行', tsv.includes('\n'), false);
+  eq('用站長的公式', tsv.split('\t')[11], '=IF(ISBLANK(CL15),"",CL15-TODAY())');
 
   // 新戶活動
   await page.click('#resetBtn');

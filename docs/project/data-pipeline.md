@@ -133,7 +133,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - 兩種輸出：一般活動＝`rate … period` 13 欄（貼在該卡的 `rate_N` 那格）；新戶活動＝`id … pick_reason` 25 欄（貼在 New Cardholder Promos 的 id 欄）
     - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰存瀏覽器 localStorage，從瀏覽器直接打 Google）
     - 讀線上 `cards.data` 當詞庫（通路既有寫法、卡片基本回饋、同卡的新戶定義與申辦連結）→ **剛改完試算表還沒匯出的內容它看不到**
-    - `daysRemaining`／`period` 兩欄預設輸出不含引號的相對公式（`ADDRESS(ROW(),COLUMN()-n)`），設定裡可改純值或留空
+    - `daysRemaining`／`period` 兩欄：底部填了「rate 那格的位置」（如 CB15）就輸出試算表原本的公式寫法（`=IF(ISBLANK(CL15),"",CL15-TODAY())` 那種）；沒填用不含引號的相對公式（`ADDRESS(ROW(),COLUMN()-n)`），結果相同。設定裡可改純值或留空
     - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）；
       **試算表欄位順序變了要改 `parser.js` 頂部的 `RATE_COLS`／`PROMO_COLS`**
     - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面，AI 用假回應）

@@ -318,7 +318,7 @@
 
   // ---------- 畫面：底部輸出 ----------
   function rowCells(row) {
-    return state.kind === 'rate' ? P.buildRateRow(row.fields, store.get('derived', 'formula')) : P.buildPromoRow(row.fields);
+    return state.kind === 'rate' ? P.buildRateRow(row.fields, store.get('derived', 'formula'), null, $('anchorCell').value) : P.buildPromoRow(row.fields);
   }
 
   function renderBar() {
@@ -326,6 +326,7 @@
     issues.textContent = ''; prev.textContent = '';
     $('copyBtn').disabled = !row;
     $('copyAllBtn').hidden = !(state.kind === 'promo' && state.rows.length > 1);
+    $('anchorCell').hidden = state.kind !== 'rate' || store.get('derived', 'formula') !== 'formula';
     if (!row) { issues.appendChild(el('span', { class: 'hint', text: '還沒有內容' })); return; }
     var list = P.validate(state.kind, row.fields);
     var pending = Object.keys(row.result.notes).filter(function (k) {
@@ -336,7 +337,7 @@
     if (pending.length) issues.appendChild(el('span', { class: 'hint', text: '　還沒確認的黃色欄位：' + pending.join('、') }));
     var cols = state.kind === 'rate' ? P.RATE_COLS : P.PROMO_COLS;
     rowCells(row).forEach(function (c, i) {
-      var text = c && c.formula ? '=公式' : String(c);
+      var text = c && c.formula ? c.formula : String(c);
       prev.appendChild(el('span', { class: 'cell' + (text ? '' : ' blank'), text: text.replace(/\n/g, '⏎'), title: cols[i] + '：' + text }));
     });
   }
@@ -438,6 +439,7 @@
     state.rows = []; state.kindManual = false; state.cardManual = false; state.cardId = ''; state.active = 0;
     renderAll(); $('source').focus();
   });
+  $('anchorCell').addEventListener('input', renderBar);
   $('aiBtn').addEventListener('click', runAi);
   $('copyBtn').addEventListener('click', function () { if (cur()) copyRows([cur()]); });
   $('copyAllBtn').addEventListener('click', function () { copyRows(state.rows); });

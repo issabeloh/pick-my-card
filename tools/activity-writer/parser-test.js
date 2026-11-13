@@ -47,6 +47,11 @@ const row = P.buildRateRow(run(S.ubearBonusOnly).fields, 'value', new Date(2026,
 eq('一般活動 13 欄', row.length, 13); eq('period 純值', row[12], '2026/1/1~2026/3/31'); eq('daysRemaining 純值', row[11], '89');
 const tsv = P.toTsv([P.buildRateRow(run(S.ubearBonusOnly).fields, 'formula')]);
 eq('TSV 欄數', tsv.split('\t').length, 13); eq('公式不含引號', /"/.test(tsv), false);
+const own = P.buildRateRow(run(S.ubearBonusOnly).fields, 'formula', null, 'cb15');
+eq('站長公式 daysRemaining', own[11].formula, '=IF(ISBLANK(CL15),"",CL15-TODAY())');
+eq('站長公式 period', own[12].formula, '=IF(OR(ISBLANK(CK15),ISBLANK(CL15)),"",TEXT(CK15,"yyyy/m/d")&"~"&TEXT(CL15,"yyyy/m/d"))');
+eq('站長公式貼上不加引號', P.toTsv([own]).split('\t')[11], '=IF(ISBLANK(CL15),"",CL15-TODAY())');
+eq('跨 Z 欄', P.sheetFormulas('Q3').days, '=IF(ISBLANK(AA3),"",AA3-TODAY())');
 const ptsv = P.toTsv([P.buildPromoRow(run(S.promoGift).fields)]);
 eq('新戶 25 欄', P.PROMO_COLS.length, 25); has('多行格子加引號', ptsv, '"①');
 eq('文字以 = 開頭要跳脫', P.toTsv([['=abc', '+1%']]), "'=abc\t'+1%");
