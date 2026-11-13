@@ -11,6 +11,7 @@
  * 用法（repo 根目錄）：
  *   node tools/build-nccc-brands.js           # 重新生成兩個輸出檔
  *   node tools/build-nccc-brands.js --check   # 只比對，輸出檔落後就 exit 1（preflight 用）
+ *   node tools/build-nccc-brands.js --report <舊 summary.json>   # 印出新舊差異（每週更新 PR 的說明文字）
  *
  * 規則：
  *   ・比對對象＝門市的「對外名稱」或「登記名稱」（NFKC 正規化＋轉小寫後套對照表的「比對規則」regex）
@@ -149,7 +150,41 @@ function build() {
     return { js, summary, brands, dropped, candidateList, storeCount: stores.length };
 }
 
+// 每週更新 PR 的說明文字：新舊 summary.json 的差異（給人看的 Markdown，輸出到 stdout）
+function report(oldPath) {
+    const before = JSON.parse(fs.readFileSync(oldPath, 'utf8'));
+    const after = JSON.parse(fs.readFileSync(OUT_SUMMARY, 'utf8'));
+    const lines = [
+        `聯卡中心小額支付平台通路名單更新：**截至 ${before.asOf} → 截至 ${after.asOf}**`,
+        '',
+        `- 有效門市列數：${before.activeStoreRows} → ${after.activeStoreRows}`,
+        `- 網站收錄品牌數：${before.brandCount} → ${after.brandCount}`,
+        ''
+    ];
+    const changed = [];
+    Object.keys(after.brands).forEach(name => {
+        const a = after.brands[name].addresses, b = (before.brands[name] || {}).addresses;
+        if (b === undefined) { changed.push(`| ${name} | （新） | ${a} | ${after.brands[name].level} |`); return; }
+        const big = a === 0 || b === 0 || Math.abs(a - b) >= Math.max(5, b * 0.1);
+        if (a !== b && big) changed.push(`| ${name} | ${b} | ${a} | ${after.brands[name].level} |`);
+    });
+    if (changed.length) {
+        lines.push('### 門市數變化較大的品牌（±10% 且至少 5 家，或歸零）', '', '| 品牌 | 原本地址數 | 現在地址數 | 目前級別 |', '|---|---|---|---|', ...changed, '',
+            '級別要不要跟著改（全門市↔部分門市）請人工判斷：改 `data/nccc/brand-map.csv` 後跑 `node tools/build-nccc-brands.js`。', '');
+    } else {
+        lines.push('各品牌門市數沒有明顯變化。', '');
+    }
+    if (after.droppedBrands.length) lines.push(`### 已從名單消失、網站不再提示的品牌`, '', after.droppedBrands.join('、'), '');
+    const known = new Set((before.unmappedCandidates || []).map(c => c.prefix));
+    const fresh = (after.unmappedCandidates || []).filter(c => !known.has(c.prefix));
+    if (fresh.length) lines.push('### 對照表沒收、這次新冒出來的名稱開頭（可能是新加入的品牌）', '', fresh.map(c => `${c.prefix}（${c.rows} 列）`).join('、'), '');
+    lines.push('合併前不用做別的事：`js/micropayment-brands.js` 已一併重新生成。');
+    console.log(lines.join('\n'));
+}
+
 function main() {
+    const reportAt = process.argv.indexOf('--report');
+    if (reportAt >= 0) { report(process.argv[reportAt + 1]); return; }
     const check = process.argv.includes('--check');
     const out = build();
     const current = f => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null);
