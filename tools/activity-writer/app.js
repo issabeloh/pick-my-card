@@ -1,5 +1,8 @@
 /* 活動快寫工具：介面（解析規則都在 parser.js）
- * 流程只有一個畫面：選卡（自動）→ 貼原文 → 逐格確認 → 複製一列。
+ * 流程只有一個畫面：選卡（自動）→ 貼原文 → 逐格確認 → 寫進試算表（或複製一列）。
+ * 同一份程式跑在兩個地方（HOST 判斷）：
+ *   試算表視窗（apps-script/ActivityWriter.html，由 build-apps-script.js 生成）——資料讀表上現況、可直接寫入、AI 走伺服器端
+ *   本機網頁（index.html，開發與測試用）——資料讀 cards.data、只能複製
  * 畫面上的動態文字一律用 textContent／DOM API 建立，不組 HTML 字串。
  */
 (function () {
@@ -12,6 +15,18 @@
     get: function (k, d) { try { var v = localStorage.getItem('pmcw.' + k); return v == null ? d : v; } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('pmcw.' + k, v); } catch (e) { /* 無痕模式等情況：設定不保存而已 */ } }
   };
+
+  // 在試算表的視窗裡（HtmlService）才有 google.script.run
+  var HOST = !!(window.google && window.google.script && window.google.script.run);
+  // 呼叫 apps-script/activity-writer.gs 的函式；伺服器一律回 JSON 字串
+  function server(fn, arg) {
+    return new Promise(function (resolve, reject) {
+      var run = window.google.script.run
+        .withSuccessHandler(function (s) { try { resolve(typeof s === 'string' ? JSON.parse(s) : s); } catch (e) { reject(e); } })
+        .withFailureHandler(function (e) { reject(new Error((e && e.message) || String(e))); });
+      if (arg === undefined) run[fn](); else run[fn](arg);
+    });
+  }
 
   var state = {
     index: null, kind: 'rate', kindManual: false, cardId: '', cardManual: false,
@@ -47,8 +62,9 @@
 
   function boot(data) {
     state.index = P.buildIndex(data);
-    $('dataMeta').textContent = '卡片資料：' + state.index.cards.length + ' 張卡｜匯出於 ' + (data.lastUpdated || '（未知）') +
-      '｜通路詞庫 ' + state.index.vocabKeys.length + ' 個寫法';
+    $('dataMeta').textContent = (HOST ? '讀自試算表現況：' : '卡片資料：') + state.index.cards.length + ' 張卡' +
+      (HOST ? '' : '｜匯出於 ' + (data.lastUpdated || '（未知）')) + '｜通路詞庫 ' + state.index.vocabKeys.length + ' 個寫法' +
+      (data.host && data.host.vocabNote ? '｜⚠ ' + data.host.vocabNote : '');
     var sel = $('cardSel');
     sel.textContent = '';
     sel.appendChild(el('option', { value: '', text: '— 選卡片（貼上原文會自動認）—' }));
@@ -64,6 +80,12 @@
   }
 
   function loadData() {
+    if (HOST) {
+      return server('activityWriterInit').then(boot).catch(function (e) {
+        console.error('讀試算表失敗', e);
+        $('dataMeta').textContent = '讀不到試算表：' + e.message;
+      });
+    }
     fetch('../../cards.data?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(function (t) { boot(decodeData(t)); })
@@ -186,7 +208,8 @@
     ['bonus_merchants', '半形逗號；不限通路填 *general', 'area', 4], ['bonus_cap', '消費上限', 'text', 2],
     ['voucher_amount', '', 'text', 2], ['voucher_usage', '', 'text', 4], ['notes', '全形分號分隔', 'area', 6],
     ['link', '活動頁', 'text', 5], ['active', '', 'text', 2], ['apply_cta_text', '', 'text', 5],
-    ['apply_cta_link', '沿用同卡', 'text', 4], ['pick_question', '一句鉤子', 'text', 4], ['pick_reason', '一句理由', 'area', 4]
+    ['apply_cta_link', '沿用同卡', 'text', 4], ['apply_cta_expiry', '連結到期日', 'text', 2], ['pick_rank', '1–5 或 x', 'text', 2],
+    ['pick_question', '一句鉤子', 'text', 4], ['pick_reason', '一句理由', 'area', 12]
   ];
   var MODELS = ['', 'rate', 'rate+basic', 'basic+domesticBonusRate', 'rate+basic+domesticBonusRate', 'rate+overseasCashback',
     'overseasCashback+overseasBonusRate', 'rate+overseasCashback+overseasBonusRate', 'basic', 'overseasCashback'];
@@ -345,8 +368,10 @@
     issues.textContent = ''; prev.textContent = '';
     $('copyBtn').disabled = !row;
     $('copyAllBtn').hidden = !(state.kind === 'promo' && state.rows.length > 1);
-    $('anchorCell').hidden = state.kind !== 'rate' || store.get('derived', 'formula') !== 'formula';
+    $('anchorCell').hidden = HOST || state.kind !== 'rate' || store.get('derived', 'formula') !== 'formula';
+    renderWrite(row);
     if (!row) { issues.appendChild(el('span', { class: 'hint', text: '還沒有內容' })); return; }
+    if (row.serverMsg) issues.appendChild(el('span', { class: row.serverMsg.ok ? 'good' : 'bad', text: (row.serverMsg.ok ? '✓ ' : '⛔ ') + row.serverMsg.text + '　' }));
     var list = P.validate(state.kind, row.fields);
     var pending = Object.keys(row.result.notes).filter(function (k) {
       var n = row.result.notes[k]; return n.level === 'check' && !row.dirty[k];
@@ -358,6 +383,76 @@
     rowCells(row).forEach(function (c, i) {
       var text = c && c.formula ? c.formula : String(c);
       prev.appendChild(el('span', { class: 'cell' + (text ? '' : ' blank'), text: text.replace(/\n/g, '⏎'), title: cols[i] + '：' + text }));
+    });
+  }
+
+  // ---------- 寫進試算表（只在試算表視窗裡） ----------
+  function slotsOf() { var c = state.index && P.getCard(state.index, state.cardId); return (c && c.slots) || []; }
+
+  function defaultSlot(row) {
+    if (row.result.existing) return row.result.existing.slot;
+    var reserved = (state.index.data.host && state.index.data.host.reservedSlots) || [];
+    var free = slotsOf().filter(function (s) { return s.empty && reserved.indexOf(s.n) < 0; })[0];
+    return free ? free.n : '';
+  }
+
+  function renderWrite(row) {
+    var btn = $('writeBtn'), sel = $('slotSel');
+    btn.hidden = !HOST; $('reloadBtn').hidden = !HOST;
+    $('copyBtn').classList.toggle('primary', !HOST);
+    sel.hidden = !HOST || !row || state.kind !== 'rate';
+    if (!HOST) return;
+    btn.disabled = !row || state.busy || !!row.written;
+    if (!row) { btn.textContent = '寫進試算表'; return; }
+    if (row.written) { btn.textContent = '已寫入 ✓'; return; }
+    if (state.kind !== 'rate') { btn.textContent = state.busy ? '寫入中…' : '新增到新戶活動表'; return; }
+    if (row.slot == null) row.slot = defaultSlot(row);
+    var reserved = (state.index.data.host && state.index.data.host.reservedSlots) || [];
+    sel.textContent = '';
+    if (row.slot === '') sel.appendChild(el('option', { value: '', text: '沒有空槽——選一槽覆蓋' }));
+    slotsOf().forEach(function (s) {
+      sel.appendChild(el('option', { value: String(s.n), text: 'rate_' + s.n + (s.empty ? '（空' + (reserved.indexOf(s.n) >= 0 ? '・骨幹槽' : '') + '）' : '｜' + s.rate + '%｜' + s.items) }));
+    });
+    sel.value = String(row.slot);
+    var slot = slotsOf().filter(function (s) { return String(s.n) === String(row.slot); })[0];
+    btn.disabled = btn.disabled || !slot;
+    btn.textContent = state.busy ? '寫入中…' : !slot ? '先選槽位' : slot.empty ? '寫進 rate_' + slot.n
+      : (row.armed === slot.n ? '再按一次：確定覆蓋 rate_' + slot.n : '覆蓋 rate_' + slot.n + '（有內容）');
+  }
+
+  function writeRow() {
+    var row = cur(); if (!row || state.busy || row.written) return;
+    if (!state.cardId) return toast('先選卡片');
+    var problems = P.validate(state.kind, row.fields);
+    if (problems.length) return toast('先處理下方的格式問題：' + problems[0]);
+    var call;
+    if (state.kind === 'rate') {
+      var slot = slotsOf().filter(function (s) { return String(s.n) === String(row.slot); })[0];
+      if (!slot) return toast('先選要寫進哪一槽');
+      if (!slot.empty && row.armed !== slot.n) {   // 覆蓋要按兩次
+        row.armed = slot.n; renderBar();
+        return toast('rate_' + slot.n + ' 現在是 ' + slot.rate + '%｜' + slot.items + '——再按一次就覆蓋');
+      }
+      call = server('activityWriterSaveRate', JSON.stringify({ id: state.cardId, slot: slot.n, fields: row.fields, overwrite: !slot.empty }));
+    } else {
+      call = server('activityWriterSavePromo', JSON.stringify({ id: state.cardId, values: row.fields }));
+    }
+    state.busy = true; row.serverMsg = null; renderBar();
+    call.then(function (res) {
+      row.serverMsg = { ok: !!res.ok, text: res.message || (res.ok ? '已寫入' : '寫入失敗') };
+      row.armed = null;
+      if (res.ok) { row.written = true; toast(res.message || '已寫入'); return refreshIndex(); }
+    }).catch(function (e) {
+      console.error('寫入失敗', e);
+      row.serverMsg = { ok: false, text: '寫入失敗：' + e.message };
+    }).then(function () { state.busy = false; renderLeft(); renderBar(); });
+  }
+
+  // 寫入後或按「重新讀表」：重讀表上現況（槽位空不空、既有活動），不動右邊已經填好的格子
+  function refreshIndex() {
+    return server('activityWriterInit').then(function (data) {
+      state.index = P.buildIndex(data);
+      state.rows.forEach(function (r) { if (!r.written) { r.slot = null; r.armed = null; } });
     });
   }
 
@@ -378,12 +473,20 @@
       var where = state.kind === 'rate'
         ? (row.result.existing ? '到 Cards Data 這張卡的 rate_' + row.result.existing.slot + ' 那格貼上（覆蓋）' : '到 Cards Data 這張卡第一個空的 rate_N 那格貼上')
         : '到 New Cardholder Promos 的 id 欄那格貼上';
+      if (HOST) where += '（視窗裡建議直接按「寫進試算表」，會依欄名寫入）';
       toast('已複製 ' + rows.length + ' 列 × ' + (state.kind === 'rate' ? P.RATE_COLS.length : P.PROMO_COLS.length) + ' 欄 → ' + where);
     }).catch(function (e) { console.error('複製失敗', e); toast('複製失敗——請手動選取下方預覽'); });
   }
 
   // ---------- AI（選用） ----------
   function callGemini(req) {
+    if (HOST) {   // 試算表視窗：金鑰在指令碼屬性，從伺服器端呼叫
+      $('aiStatus').textContent = '解析中…';
+      return server('activityWriterAi', JSON.stringify(req)).then(function (res) {
+        if (!res.ok) throw new Error(res.message || 'AI 解析失敗');
+        return { model: res.model, data: res.data };
+      });
+    }
     var key = store.get('geminiKey', '');
     var models = store.get('models', DEFAULT_MODELS).split(/[,，\s]+/).filter(Boolean);
     var body = JSON.stringify({
@@ -414,7 +517,7 @@
     var text = $('source').value;
     if (!text.trim()) return toast('先貼原文');
     if (!state.cardId) return toast('先選卡片');
-    if (!store.get('geminiKey', '')) { openSettings(); return toast('要用 AI 得先填 Gemini 金鑰（規則解析不需要）'); }
+    if (!HOST && !store.get('geminiKey', '')) { openSettings(); return toast('要用 AI 得先填 Gemini 金鑰（規則解析不需要）'); }
     state.aiBusy = true; $('aiBtn').disabled = true;
     var base = cur() ? cur().result : null;
     callGemini(P.buildAiRequest(state.index, state.kind, state.cardId, text)).then(function (out) {
@@ -437,6 +540,7 @@
     $('setDerived').value = store.get('derived', 'formula');
     $('setKey').value = store.get('geminiKey', '');
     $('setModels').value = store.get('models', DEFAULT_MODELS);
+    $('setAiBox').hidden = HOST;   // 試算表視窗的金鑰與模型在指令碼屬性
     $('settings').showModal();
   }
 
@@ -459,6 +563,13 @@
     renderAll(); $('source').focus();
   });
   $('anchorCell').addEventListener('input', renderBar);
+  $('writeBtn').addEventListener('click', writeRow);
+  $('slotSel').addEventListener('change', function (e) { var row = cur(); if (row) { row.slot = e.target.value === '' ? '' : Number(e.target.value); row.armed = null; renderBar(); } });
+  $('reloadBtn').addEventListener('click', function () {
+    $('reloadBtn').disabled = true;
+    refreshIndex().then(function () { toast('已重新讀表'); }).catch(function (e) { console.error(e); toast('重新讀表失敗：' + e.message); })
+      .then(function () { $('reloadBtn').disabled = false; renderAll(); });
+  });
   $('aiBtn').addEventListener('click', runAi);
   $('copyBtn').addEventListener('click', function () { if (cur()) copyRows([cur()]); });
   $('copyAllBtn').addEventListener('click', function () { copyRows(state.rows); });

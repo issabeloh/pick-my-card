@@ -178,6 +178,41 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 - 跨列：同一張卡啟用中的列 `apply_cta_text`／`apply_cta_link` 不一致（匯出只取第一個）、
   啟用中的活動 `pick_rank` 1–5 重複
 
+## 活動快寫（`activity-writer.gs` ＋ `ActivityWriter.html`，2026-11-13 新增）
+
+貼一段活動原文 → 程式解析成各欄 → 逐格確認 → **直接寫進表**。選單「🎯 卡片管理 ▸ ✍️ 活動快寫」。
+住在「PMC 管理系統」（跟兩個編輯器同一個專案，寫入就是呼叫它們的存檔函式，所以衝突偵測與存檔前檢查是同一套）。
+
+- **`ActivityWriter.html` 是生成檔**，來源在 repo 的 `tools/activity-writer/`，不要在網頁編輯器改
+- **這兩支走自動部署**（合併進 main 就更新），是「PMC 管理系統」裡唯二自動部署的檔；其他檔照舊手動貼
+
+### 安裝（一次性，站長做）
+
+1. 「PMC 管理系統」試算表 →「擴充功能」→「Apps Script」
+2. 左側「檔案」旁的 ＋ →「指令碼」，命名 `activity-writer`；再 ＋ →「HTML」，命名 `ActivityWriter`。
+   **兩個檔都不用貼內容**（留著預設的樣子就好，自動部署會填；大小寫要一樣）
+3. 手動貼一次最新的 `cards-export.gs`（選單多了「✍️ 活動快寫」）與 `promo-editor.gs`（新增列時 `bonus_rate` 寫成數字）
+4. 左側齒輪「專案設定」→ 複製「指令碼 ID」給 Claude，填進 `apps-script/deploy.json` 第二個專案的 `scriptId`
+   （沒填之前自動部署會跳過這個專案，不影響自動化檔）
+5. （要用 AI 重新解析才需要）同一頁最下面「指令碼屬性」新增 `GEMINI_API_KEY`，值跟自動化檔那把一樣
+6. 合併進 main 後到 GitHub Actions 看 `apps-script-deploy` 是綠的 → 重新整理試算表 → 選單出現「✍️ 活動快寫」。
+   第一次開會要求授權（多了「連到外部服務」：讀線上 cards.data 當詞庫、呼叫 Gemini）
+
+### 使用
+
+- 貼上原文就解析；卡片與「一般／新戶」會自動判斷，可手動改
+- **一般活動**：底部選要寫進哪一槽。通路跟既有槽位重疊時預設選那一槽（＝更新），否則選第一個空槽（跳過骨幹槽 14／21／22）。
+  **有內容的槽要按兩次才覆蓋**。只寫 rate／cashbackModel／cap／minSpend／maxSpend／items／category／conditions／registerLink／periodStart／periodEnd
+  這 11 欄；`daysRemaining_N`、`period_N` 是空的才補公式，已有內容不動
+- **新戶活動**：插在這張卡最後一列的下面。這張卡已經有申辦按鈕（`apply_cta_*`）就不在新列重複寫——要改按鈕請用新戶活動編輯器
+- 寫入被擋（格式不對、視窗開著時表被改過）會在底部顯示原因，**什麼都不會寫入**；按「重新讀表」再試
+- 「複製這一列」還在，但視窗裡建議直接寫入（依欄名、不怕欄位順序變動）
+
+### 上線後的自我檢查（第一次用時做一次）
+
+假試算表測不到的三件事，請在真的表上各看一眼：寫進空槽後 `periodStart_N`／`periodEnd_N` 是**日期**（靠右對齊）不是文字；
+補上的 `period_N` 公式顯示出期間；新戶新增的那一列 `active` 是勾選框、`bonus_rate` 是數字。
+
 ## pmc-analytics-sync 完整同步腳本（`pmc-analytics-sync.gs`，2026-07-22 新增）
 
 > ⚠️ **貼進 Sheets 前先確認拿對版本**（2026-09-03 實際踩到：從 `main` 取檔，貼下去等於
@@ -908,12 +943,13 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
 
 ## 自動部署：GitHub → 「PMC 資料自動化」的 Apps Script（2026-10-04 新增）
 
-**做什麼**：main 上的 `apps-script/*.gs` 一有變，GitHub Actions 就把新版推到「PMC 資料自動化」的 Apps Script 專案，
+**做什麼**：main 上的 `apps-script/*.gs`（或 `ActivityWriter.html`）一有變，GitHub Actions 就把新版推到 `deploy.json` 列的 Apps Script 專案，
 不用再手動複製貼上。設定檔 `apps-script/deploy.json`、程式 `tools/apps-script-deploy/deploy.js`、
 流程 `.github/workflows/apps-script-deploy.yml`。
 
 **只部署自動化檔**：`watchlist-monitor` / `benefits-parser` / `card-benefits-parser` / `register-link-finder` / `sheet-guide`。
-**「PMC 管理系統」（`cards-export.gs` 等）刻意不自動部署**：它產生上線資料，而且看預覽時要在線上暫時改
+**2026-11-13 起也部署「PMC 管理系統」的活動快寫兩支**（`activity-writer.gs`＋`ActivityWriter.html`，見上方「活動快寫」一節）。
+**「PMC 管理系統」的其他檔（`cards-export.gs` 等）刻意不自動部署**：它產生上線資料，而且看預覽時要在線上暫時改
 `GITHUB_BRANCH`，自動部署會把那個暫時改動蓋掉。維持手動貼。
 
 ### 三道保護（任何一道沒過就整批不推，一支都不改）
@@ -922,7 +958,7 @@ Title: 聯邦銀行信用卡 URL Source: … Published Time: … Markdown Conten
    對不到、對到兩個 → 停。**絕不自動新建檔案**（新建＝同一個函數定義兩次，整個專案會壞）。
    同時對得上兩個 repo 檔名時歸給較長的那個（`…-card-benefits-parser` 不會被 `benefits-parser` 認走）。
 2. **不蓋掉線上手改**：線上現在的內容必須是 repo 歷史裡出現過的某一版（忽略行尾空白與換行格式）。
-   不是 → 代表有人直接在網頁編輯器改過 → 停。確定不要那些手改，手動執行流程並勾 `force`。
+   不是 → 代表有人直接在網頁編輯器改過 → 停（例外：剛建立、還是空白或預設樣子的檔可以直接更新）。確定不要那些手改，手動執行流程並勾 `force`。
 3. **只動清單裡的檔**：線上其他檔案、`appsscript.json` 原封不動。
 
 ⚠️ **新規則**：自動化檔的程式**不要再直接在網頁編輯器改**，要改就在 repo 改（叫 Claude）。真的在網頁改了，保護 2 會擋下下一次部署，不會默默蓋掉。

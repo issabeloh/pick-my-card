@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Apps Script 自動部署：把 repo 的 apps-script/*.gs 推到線上的 Apps Script 專案。
+ * Apps Script 自動部署：把 repo 的 apps-script/*.gs（與列在 deploy.json 的 *.html）推到線上的 Apps Script 專案。
  * 由 .github/workflows/apps-script-deploy.yml 在 main 更新時執行；也可手動跑（見 README）。
  *
  * 為什麼不用 clasp push：clasp 是「本機資料夾＝整個專案」，線上檔名必須跟本機一樣。
@@ -33,7 +33,18 @@ function normalize(src) {
     .map(function (l) { return l.replace(/\s+$/, ''); }).join('\n').replace(/\n+$/, '');
 }
 
-function baseName(repoFile) { return repoFile.replace(/\.gs$/, ''); }
+function baseName(repoFile) { return repoFile.replace(/\.(gs|html)$/, ''); }
+// repo 副檔名 → 線上檔案類型（.html 2026-11-13 加入：活動快寫的視窗檔）
+function onlineType(repoFile) { return /\.html$/.test(repoFile) ? 'HTML' : 'SERVER_JS'; }
+
+// 線上還是「剛建立、什麼都沒寫」的樣子（空白，或編輯器預設的 myFunction／空 HTML 骨架）。
+// 自動部署絕不新建檔案，所以新檔要站長先在線上建一個空的；空檔不是 repo 任何一版，
+// 不放行的話第一次部署一定被「線上被手改過」擋下、得勾 force。
+function isPlaceholder(src) {
+  const s = String(src || '').replace(/\s+/g, '');
+  return s === '' || s === 'functionmyFunction(){}' ||
+    s === '<!DOCTYPEhtml><html><head><basetarget="_top"></head><body></body></html>';
+}
 
 // 線上檔名對 repo 檔名：同名，或以「-檔名」結尾。
 // ⚠️ 一個線上檔只歸給「最長」那個對得上的 repo 檔名：「權益解析-新卡-card-benefits-parser」
@@ -52,7 +63,7 @@ function ownerOf(onlineName, allRepoFiles) {
 function matchOnline(onlineFiles, repoFile, allRepoFiles) {
   const all = allRepoFiles || [repoFile];
   return onlineFiles.filter(function (f) {
-    return f.type === 'SERVER_JS' && ownerOf(f.name, all) === repoFile;
+    return f.type === onlineType(repoFile) && ownerOf(f.name, all.filter(function (rf) { return onlineType(rf) === f.type; })) === repoFile;
   });
 }
 
@@ -115,8 +126,8 @@ function buildPlan(onlineFiles, repoFiles, readRepo, versionsOf) {
   repoFiles.forEach(function (file) {
     const hits = matchOnline(onlineFiles, file, repoFiles);
     if (hits.length === 0) {
-      errors.push('線上找不到對應「' + file + '」的檔案。請把線上那支改名成「' + baseName(file) +
-        '」或「〇〇-' + baseName(file) + '」（例：使用說明-' + baseName(file) + '）。');
+      errors.push('線上找不到對應「' + file + '」的' + (onlineType(file) === 'HTML' ? ' HTML ' : '指令碼') + '檔案。請把線上那支改名成「' + baseName(file) +
+        '」或「〇〇-' + baseName(file) + '」（例：使用說明-' + baseName(file) + '）；還沒有這個檔就先在線上新增一個同名的空檔。');
       return;
     }
     if (hits.length > 1) {
@@ -133,7 +144,7 @@ function buildPlan(onlineFiles, repoFiles, readRepo, versionsOf) {
     const cur = normalize(online.source);
     let status;
     if (cur === normalize(repoSrc)) status = 'same';
-    else if (versionsOf(file).has(cur)) status = 'update';
+    else if (versionsOf(file).has(cur) || isPlaceholder(online.source)) status = 'update';
     else status = 'drift';   // 線上內容不是 repo 任何一版 → 有人在網頁上直接改過
     items.push({ file: file, online: online.name, status: status, newSource: repoSrc, onlineSource: online.source });
   });
@@ -242,6 +253,10 @@ async function main() {
 
   let failed = false;
   for (const project of config.projects) {
+    if (!project.scriptId) {   // 設定還沒填完的專案：跳過、不算失敗（其他專案照常部署）
+      out('### ' + project.name + '\n\n⚠️ deploy.json 還沒填這個專案的 scriptId，這次不部署它（' + project.files.join('、') + '）。');
+      continue;
+    }
     const url = 'https://script.googleapis.com/v1/projects/' + project.scriptId + '/content';
     const content = await api('GET', url, token);
     const onlineFiles = content.files || [];
@@ -283,4 +298,4 @@ if (require.main === module) {
   main().catch(function (e) { console.error('❌ ' + e.message); flushSummary(['❌ ' + e.message]); process.exit(1); });
 }
 
-module.exports = { normalize, matchOnline, buildPlan, applyPlan, readCredentials, historicalVersions, closestVersion, diffText };
+module.exports = { normalize, matchOnline, isPlaceholder, onlineType, buildPlan, applyPlan, readCredentials, historicalVersions, closestVersion, diffText };

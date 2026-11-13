@@ -43,10 +43,12 @@ function onOpen() {
     .addItem('⏰ 啟用每月自動備份', 'setupMonthlyBackupTrigger');
   // 單卡編輯器（card-editor.gs ＋ CardEditor.html，2026-11-11 新增）：
   // 只有貼了 card-editor.gs 才出現這個選項，沒貼也不會壞。
-  if (typeof openCardEditor === 'function' || typeof openPromoEditor === 'function') menu.addSeparator();
+  if (typeof openCardEditor === 'function' || typeof openPromoEditor === 'function' || typeof openActivityWriter === 'function') menu.addSeparator();
   if (typeof openCardEditor === 'function') menu.addItem('📝 單卡編輯器', 'openCardEditor');
   // 新戶活動編輯器（promo-editor.gs ＋ PromoEditor.html，2026-11-11 新增），同樣沒貼就不出現
   if (typeof openPromoEditor === 'function') menu.addItem('🎁 新戶活動編輯器', 'openPromoEditor');
+  // 活動快寫（activity-writer.gs ＋ ActivityWriter.html，2026-11-13 新增）：貼原文 → 解析 → 寫進表。同樣沒貼就不出現
+  if (typeof openActivityWriter === 'function') menu.addItem('✍️ 活動快寫', 'openActivityWriter');
   menu.addToUi();
     buildAutomationMenu_();
 }
