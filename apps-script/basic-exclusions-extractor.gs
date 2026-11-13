@@ -73,15 +73,19 @@ const BASICEX_NO_UNIFY_ITEMS = ['違規罰鍰', '電信費', '悠遊卡自動加
 
 // 超商收單限制（2026-11-13 站長規則）：7-11、全家的刷卡機只收合作銀行的信用卡，非合作銀行的卡刷不過＝拿不到回饋。
 // 這件事銀行官網的排除條款不會寫，AI 從原文抽不出來，所以由程式補進名單（規則 8m）。
-// 寫法：item＝要補進 basicExclusions 的字；cardPrefixes＝**站長已確認刷不過**的卡片 id 開頭（一家銀行一個開頭）。
-// ・目前只確認滙豐（hsbc-）：實體卡不能刷，LINE Pay 在 7-11／全家也只收特定銀行（不含滙豐）。
-// ・要加別家銀行：確認該行實體卡與行動支付都刷不過之後，把卡片 id 開頭加進對應那一列的 cardPrefixes。
-//   只有一家超商刷不過就只加那一列（例：只有 7-11 不收 → 只加在 '7-11' 那列）。
-// ・哪天銀行變成合作銀行 → 從 cardPrefixes 拿掉，並到正式表把那幾張卡的「7-11」「全家」刪掉（程式只補不刪）。
-// ・合作銀行名單來源穩定後，預計改成「超商 → 合作銀行」對照表、不在表內的銀行一律補（通則）；結構先留成表就是為了這個。
-const BASICEX_STORE_NO_ACCEPT = [
-  { item: '7-11', cardPrefixes: ['hsbc-'] },
-  { item: '全家', cardPrefixes: ['hsbc-'] }
+// 同日改成通則：表裡記的是**合作銀行**（卡片 id 開頭），不在表內的卡一律補那一家超商。
+// ・名單來源＝兩家超商官網支付頁的「信用卡」那一行（不是 OPEN錢包／icash Pay／My FamiPay 那幾行）。
+//   「1-監控清單」有兩列 watch_type=list 在盯，名單一變會寄信——收到信就來改這張表。
+// ・銀行變成合作銀行 → 把 id 開頭加進 partnerPrefixes，並到正式表把那幾張卡的超商項目刪掉（程式只補不刪）。
+//   銀行被踢出名單 → 從 partnerPrefixes 拿掉，下次抽取就會補；已在正式表的卡要手動加。
+// ・⚠️ 新光（兩家都收）、華南（只有 7-11 收）目前站上沒有卡，所以沒有 id 開頭可填。
+//   建這兩家的卡時要把 id 開頭加進來，不然會被當成非合作銀行補上超商
+//   （tools/test-basic-exclusions-changes.js 會拿 cards.data 的 bank 欄對這張表，漏了會紅）。
+// ・非合作銀行的卡綁行動支付在超商有回饋 → 名單照補，回饋另外列在該卡的指定通路（站長 2026-11-13 決定：
+//   「一般消費刷不到」與「特定條件下有回饋」同時給用戶看）。
+const BASICEX_STORE_PARTNERS = [
+  { item: '7-11', partnerPrefixes: ['cathay-', 'ctbc-', 'yushan-', 'taishin-', 'fubon-', 'sinopac-', 'ubot-'] },
+  { item: '全家', partnerPrefixes: ['cathay-', 'ctbc-', 'yushan-', 'taishin-', 'fubon-', 'sinopac-', 'ubot-'] }
 ];
 
 const BASICEX_REVIEW_HEADERS = [
@@ -573,12 +577,13 @@ function basicExUtilityFix_(items, sourceText) {
   return items;
 }
 
-// 規則 8m 的程式部分（2026-11-13 站長規則）：這張卡依 BASICEX_STORE_NO_ACCEPT 該補哪幾項（沒有就回空陣列）
+// 規則 8m 的程式部分（2026-11-13 站長規則）：這張卡依 BASICEX_STORE_PARTNERS 該補哪幾項（沒有就回空陣列）。
+// 不是任何一家超商合作銀行的卡 → 那家超商就要補
 function basicExStoreNoAcceptItems_(cardId) {
   const id = String(cardId || '').trim().toLowerCase();
   if (!id) return [];
-  return BASICEX_STORE_NO_ACCEPT.filter(function (r) {
-    return (r.cardPrefixes || []).some(function (p) { return p && id.indexOf(String(p).toLowerCase()) === 0; });
+  return BASICEX_STORE_PARTNERS.filter(function (r) {
+    return !(r.partnerPrefixes || []).some(function (p) { return p && id.indexOf(String(p).toLowerCase()) === 0; });
   }).map(function (r) { return r.item; });
 }
 

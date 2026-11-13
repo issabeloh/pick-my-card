@@ -36,7 +36,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
      - 這欄不存在時匯出直接跳過（`addOptionalField`），舊表完全相容；不必 22 個槽位一次補齊，用到哪個補哪個
    - 一般消費排除項目：`basicExclusions`（選填，2026-09-30 新增）——這張卡「一般消費定義」明文排除、**完全沒有回饋**
      的交易（繳稅、學費、保費、儲值…），一格多項、**半形逗號分隔**（頓號／全形逗號／換行也吃，但請統一用 `,`），同一個東西各銀行要寫成同一個字，匯出成 `card.basicExclusions` 字串陣列
-     ⚠️ 名單裡不全是官網原文：滙豐卡的「7-11」「全家」是程式依「超商只收合作銀行的卡」補的（2026-11-13，`basic-exclusions-extractor.gs` 的 `BASICEX_STORE_NO_ACCEPT`，細節見 `apps-script/README.md` 規則 8m），對照原文找不到是正常的，別刪
+     ⚠️ 名單裡不全是官網原文：非合作銀行的卡（滙豐、遠東、企銀、星展、兆豐、凱基、陽信、一銀、彰銀…）的「7-11」「全家」是程式依「超商只收合作銀行的卡」補的（2026-11-13，`basic-exclusions-extractor.gs` 的 `BASICEX_STORE_PARTNERS`，細節見 `apps-script/README.md` 規則 8m），對照原文找不到是正常的，別刪
      （空白格不輸出）。前端只在「退回基本回饋」時使用，命中的卡不顯示基本回饋（規則見 cashback-engine.md 第 10 節）。
      初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」；官網變動後由監控自動分析、站長在 `2-變動通知` 刪行填 V 再「套用修改到待審核」（2026-10-13，`apps-script/basic-exclusions-extractor.gs` 第 ③ 段，操作見 `apps-script/README.md`）。
      ⚠️ 項目要寫成**使用者會搜尋的詞**且保留限定詞：前端是「搜尋詞包含排除詞就算」，寫「超商」會誤殺所有超商搜尋，要寫「超商代收」；單一個字的項目一律被忽略

@@ -278,17 +278,35 @@ const cardsSheet = () => makeSheet('Cards Data', [
   ok(!r.known, '沒有名單＝無法判斷');
 }
 
-// ── 超商收單限制（規則 8m，2026-11-13）：滙豐卡補 7-11、全家；AI 想刪／改寫這兩項一律不採用
+// ── 超商收單限制（規則 8m，2026-11-13）：非合作銀行的卡補 7-11、全家；AI 想刪／改寫這兩項一律不採用
 {
   const e = env({ sheets: {}, cards: cardsSheet() }); const G = load(e);
   ok(G.run('basicExStoreNoAcceptItems_', 'hsbc-liveplus').join() === '7-11,全家', '滙豐卡該補 7-11、全家');
-  ok(G.run('basicExStoreNoAcceptItems_', 'ubot-green').length === 0, '別家銀行不補');
+  ok(G.run('basicExStoreNoAcceptItems_', 'ubot-green').length === 0, '合作銀行不補');
+  // 通則：表裡是合作銀行，不在表內一律補。拿 cards.data 每張卡的 bank 欄對一次，
+  // 防「新建了合作銀行的卡、id 開頭沒加進表」（會被誤補超商）
+  {
+    const cards = JSON.parse(Buffer.from(fs.readFileSync(path.join(__dirname, '..', 'cards.data'), 'utf8'), 'base64').toString('utf8')).cards;
+    const PARTNER = { '7-11': ['國泰', '中信', '玉山', '台新', '富邦', '永豐', '聯邦', '新光', '華南'],
+      '全家': ['國泰', '中信', '玉山', '台新', '富邦', '永豐', '聯邦', '新光'] };
+    const wrong = [];
+    cards.forEach(c => {
+      const got = G.run('basicExStoreNoAcceptItems_', c.id);
+      Object.keys(PARTNER).forEach(store => {
+        const isPartner = PARTNER[store].some(b => String(c.bank || '').indexOf(b) >= 0);
+        if (isPartner === (got.indexOf(store) >= 0)) wrong.push(c.id + '@' + store);
+      });
+    });
+    ok(cards.length > 0 && wrong.length === 0, 'cards.data 每張卡的補法與 bank 欄一致（' + cards.length + ' 張）' + (wrong.length ? '：' + wrong.join(',') : ''));
+    const add = cards.filter(c => G.run('basicExStoreNoAcceptItems_', c.id).length).map(c => c.id);
+    ok(add.length === 14, '非合作銀行共 14 張：' + add.join(','));
+  }
   const src = ['信用卡年費', '學費'];
   ok(G.run('basicExStoreAcceptFix_', src, 'hsbc-titanium').join() === '信用卡年費,學費,7-11,全家', '接在名單最後');
   ok(src.length === 2, '不改傳入的陣列（同一組 items 多張卡共用）');
   ok(G.run('basicExStoreAcceptFix_', ['全家', '學費'], 'HSBC-Titanium').join() === '全家,學費,7-11', '已有的不重複、id 大小寫不影響');
   ok(G.run('basicExStoreAcceptFix_', [], 'hsbc-titanium').length === 0, '空名單（這頁沒抽到）不補');
-  ok(G.run('basicExStoreAcceptFix_', src, 'ubot-green').join() === '信用卡年費,學費', '別家銀行原樣');
+  ok(G.run('basicExStoreAcceptFix_', src, 'ubot-green').join() === '信用卡年費,學費', '合作銀行原樣');
 
   // 抽取寫待審核：滙豐列補上、同頁別家卡不補
   const review = makeSheet('5-待審核（一般消費排除）', [REVIEW_H]);
@@ -307,7 +325,9 @@ const cardsSheet = () => makeSheet('Cards Data', [
   t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['hsbc-liveplus'], ops: [{ op: 'remove', item: '7-11' }] }] }, ['hsbc-liveplus'], lists);
   ok(/^無影響/.test(t), '動作全被擋 → 無影響：' + t);
   t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['ubot-green'], ops: [{ op: 'remove', item: '7-11' }] }] }, ['ubot-green'], lists);
-  ok(/－ 刪除：7-11/.test(t), '別家銀行刪 7-11 不擋：' + t);
+  ok(/－ 刪除：7-11/.test(t), '合作銀行刪 7-11 不擋：' + t);
+  t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['dbs-eco'], ops: [{ op: 'remove', item: '全家' }] }] }, ['dbs-eco'], { 'dbs-eco': '學費,全家' });
+  ok(/^無影響/.test(t), '通則：星展（非合作）刪全家也擋：' + t);
   ok(/8m\./.test(G.run('basicExRulesText_')), 'prompt 有規則 8m');
 }
 
