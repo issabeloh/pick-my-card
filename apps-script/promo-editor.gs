@@ -21,7 +21,9 @@
 const PE_SHEET_NAME_ = 'New Cardholder Promos';  // getSheetByName 不分大小寫，表上叫 New CardHolder Promos 也找得到
 const PE_CTA_FIELDS_ = ['apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'];
 const PE_DATE_FIELDS_ = ['period_start', 'period_end', 'apply_cta_expiry'];
-const PE_NUMERIC_FIELDS_ = ['bonus_cap', 'voucher_amount', 'luggage_inch', 'luggage_value'];
+// bonus_rate／min_spend 2026-11-13 加入：新增列時「0.06」要寫成數字（原本會被當文字加上 ' 前綴，匯出成字串）；
+// 「10%」「NT$10,000」這種不是純數字的照舊存成文字
+const PE_NUMERIC_FIELDS_ = ['bonus_cap', 'voucher_amount', 'luggage_inch', 'luggage_value', 'bonus_rate', 'min_spend'];
 // 新增活動時從上一檔複製的欄位（站長 2026-11-11 同意）
 const PE_COPY_FIELDS_ = ['new_customer_definition', 'promo_condition', 'link', 'active'];
 // 畫面上的分組（沒列到的欄位放「其他欄位」，表上新加欄也會自動出現）

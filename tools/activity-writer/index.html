@@ -22,7 +22,7 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   button.primary:hover { filter: brightness(1.08); }
   button:disabled { opacity: .5; cursor: not-allowed; }
-  /* 緊湊版面（2026-11-13）：左欄固定在畫面上、右欄欄位排成 12 欄格線，新戶 24 欄在一個畫面內看完 */
+  /* 緊湊版面（2026-11-13）：左欄固定在畫面上、右欄欄位排成 12 欄格線，新戶 26 欄在一個畫面內看完 */
   main { display: grid; grid-template-columns: minmax(300px, 4fr) minmax(420px, 9fr); gap: 10px; padding: 10px 14px calc(var(--bar-h) + 14px); max-width: 1800px; margin: 0 auto; align-items: start; }
   main > section:first-child { position: sticky; top: 8px; max-height: calc(100vh - var(--bar-h) - 24px); overflow: auto; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } main > section:first-child { position: static; max-height: none; } }
@@ -49,7 +49,7 @@
   .field { grid-column: span 12; min-width: 0; }
   .field.s2 { grid-column: span 2; } .field.s3 { grid-column: span 3; } .field.s4 { grid-column: span 4; }
   .field.s5 { grid-column: span 5; } .field.s6 { grid-column: span 6; } .field.s8 { grid-column: span 8; }
-  @media (max-width: 1150px) { .field.s2, .field.s3 { grid-column: span 4; } .field.s4, .field.s5, .field.s6, .field.s8 { grid-column: span 12; } }
+  @media (max-width: 1000px) { .field.s2, .field.s3 { grid-column: span 4; } .field.s4, .field.s5, .field.s6, .field.s8 { grid-column: span 12; } }
   .field label { display: flex; gap: 6px; align-items: baseline; white-space: nowrap; overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; font-weight: 600; margin-bottom: 1px; }
   .field label small { color: var(--muted); font-size: 10.5px; font-weight: 400; font-family: -apple-system, "Noto Sans TC", sans-serif; overflow: hidden; text-overflow: ellipsis; }
   .field textarea { min-height: 26px; resize: vertical; display: block; line-height: 1.4; }
@@ -88,7 +88,7 @@
   #preview { grid-column: 1 / -1; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; background: #f1f3f5; border-radius: 5px; padding: 3px 6px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
   #preview .cell { border-right: 1px solid #c9d0d8; padding: 0 6px; display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
   #preview .cell.blank::before { content: "∅"; color: #b6bec9; }
-  #copyBtn { font-size: 14px; padding: 6px 18px; }
+  #copyBtn.primary, #writeBtn { font-size: 14px; padding: 6px 18px; }
   #toast { position: fixed; bottom: calc(var(--bar-h) + 16px); left: 50%; transform: translateX(-50%); background: #1c2430; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
   #toast.show { opacity: 1; }
   dialog { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(560px, 92vw); }
@@ -149,9 +149,12 @@
   <div class="inner">
     <div id="issues"></div>
     <div style="display:flex;gap:8px;align-items:center">
+      <select id="slotSel" style="width:auto;max-width:300px" hidden title="要寫進這張卡的哪一槽"></select>
+      <button type="button" id="reloadBtn" hidden title="表被改過、或寫入被擋下時按這個">重新讀表</button>
       <input type="text" id="anchorCell" style="width:230px" placeholder="rate 那格的位置，如 CB15（選填）" title="填了，daysRemaining／period 就用你試算表原本的公式寫法；沒填用通用公式，結果一樣">
       <button type="button" id="copyAllBtn" hidden>複製全部列</button>
       <button type="button" class="primary" id="copyBtn">複製這一列</button>
+      <button type="button" class="primary" id="writeBtn" hidden>寫進試算表</button>
     </div>
     <div id="preview"></div>
   </div>
@@ -166,11 +169,13 @@
     <option value="value">純值（今天算出來的數字與期間字串）</option>
     <option value="blank">留空（貼完自己把旁邊的公式拉過來）</option>
   </select>
+  <div id="setAiBox">
   <label for="setKey">Gemini API 金鑰（選用，只有按「用 AI 重新解析」才會用到）</label>
   <input type="password" id="setKey" autocomplete="off" placeholder="跟 Apps Script 的 GEMINI_API_KEY 同一把即可">
   <div class="hint">金鑰只存在瀏覽器的 localStorage，呼叫時直接從你的瀏覽器送到 Google，不經過本站。</div>
   <label for="setModels">模型備援順序（逗號分隔）</label>
   <input type="text" id="setModels">
+  </div>
   <div class="actions">
     <button type="button" id="setCancel">取消</button>
     <button type="button" class="primary" id="setSave">儲存</button>

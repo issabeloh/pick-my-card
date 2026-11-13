@@ -67,7 +67,7 @@ eq('站長公式 period', own[12].formula, '=IF(OR(ISBLANK(CK15),ISBLANK(CL15)),
 eq('站長公式貼上不加引號', P.toTsv([own]).split('\t')[11], '=IF(ISBLANK(CL15),"",CL15-TODAY())');
 eq('跨 Z 欄', P.sheetFormulas('Q3').days, '=IF(ISBLANK(AA3),"",AA3-TODAY())');
 const ptsv = P.toTsv([P.buildPromoRow(run(S.promoGift).fields)]);
-eq('新戶 24 欄', P.PROMO_COLS.length, 24); has('多行格子加引號', ptsv, '"①');
+eq('新戶 26 欄（正式表表頭）', P.PROMO_COLS.join(','), 'id,promo_types,new_customer_definition,new_customer_summary,promo_condition,period_start,period_end,min_spend,gift_content,gift_image_url,luggage_inch,luggage_value,bonus_rate,bonus_merchants,bonus_cap,voucher_amount,voucher_usage,notes,link,active,apply_cta_text,apply_cta_link,apply_cta_expiry,pick_rank,pick_question,pick_reason'); has('多行格子加引號', ptsv, '"①');
 eq('文字以 = 開頭要跳脫', P.toTsv([['=abc', '+1%']]), "'=abc\t'+1%");
 eq('卡片偵測', P.detectCard(idx, S.promoBonus.text), 'yushan-ubear'); eq('類型偵測', P.detectKind(S.promoBonus.text), 'promo');
 eq('驗證：bonus_rate 填成百分比', P.validate('promo', Object.assign({}, f, { bonus_rate: '10' })).some(x => /小數/.test(x)), true);

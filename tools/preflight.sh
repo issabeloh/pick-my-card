@@ -58,6 +58,13 @@ else
   echo "⚠️  找不到 node 或生成器，略過商家頁一致性檢查"; warn=1
 fi
 
+# ---- 1e) 活動快寫的試算表版是生成檔（2026-11-13）----
+# apps-script/ActivityWriter.html 由 tools/activity-writer/ 的 index.html＋parser.js＋app.js 併成；
+# 來源改了沒重新生成，自動部署推上去的就是舊版。
+if command -v node >/dev/null 2>&1 && [ -f tools/activity-writer/build-apps-script.js ]; then
+  if ! node tools/activity-writer/build-apps-script.js --check; then fail=1; fi
+fi
+
 # ---- 1e) 內部連結禁止指向 *.html（會 301 到 clean URL，GSC 報 Page with redirect）----
 # Cloudflare Pages 把 /faq.html 301 到 /faq，所以站內連 faq.html 等於每次都多繞一跳：
 # 浪費爬取預算、GSC「Page with redirect」報表被自家連結灌爆。一律寫 /、/faq、/promos、/landing。

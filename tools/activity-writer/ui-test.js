@@ -77,10 +77,10 @@ const server = http.createServer((req, res) => {
     if (q) { if (ch === '"' && tsv[i + 1] === '"') { curCell += '"'; i++; } else if (ch === '"') q = false; else curCell += ch; }
     else if (ch === '"' && curCell === '') q = true; else if (ch === '\t') { cells.push(curCell); curCell = ''; } else curCell += ch; }
   cells.push(curCell);
-  eq('複製 24 欄', cells.length, 24);
+  eq('複製 26 欄', cells.length, 26);
   eq('active 欄', cells[19], 'TRUE');
 
-  // 站長實測的保險新戶原文：欄位值，以及「新戶 24 欄不用捲很多次」（1400×1000 下整頁不超過兩個畫面高）
+  // 站長實測的保險新戶原文：欄位值，以及「新戶 26 欄不用捲很多次」（1400×1000 下整頁不超過兩個畫面高）
   await page.click('#resetBtn');
   await page.fill('#source', S.promoInsurance.text);
   await page.waitForSelector('#f_bonus_rate');
@@ -107,6 +107,64 @@ const server = http.createServer((req, res) => {
   await page.locator('.tabs button').nth(1).click();
   eq('AI 第二列 model', await page.inputValue('#f_cashbackModel'), 'rate');
   await shot('ai');
+
+  // 試算表視窗版（生成檔 apps-script/ActivityWriter.html）：假的 google.script.run，走一遍「貼上 → 寫進試算表」
+  const hp = await ctx.newPage();
+  hp.on('pageerror', e => errors.push('host: ' + e)); hp.on('console', m => { if (m.type() === 'error') errors.push('host: ' + m.text()); });
+  await hp.setViewportSize({ width: 1240, height: 700 });   // 同 activity-writer.gs 的視窗大小
+  await hp.addInitScript(() => {
+    window.__calls = [];
+    const handlers = {
+      activityWriterInit: () => fetch('/cards.data').then(r => r.text()).then(t => {
+        const d = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(t.trim()), c => c.charCodeAt(0))));
+        d.cards.forEach(c => { c.slots = [1, 2, 3, 4, 5, 6, 14].map(n => { const r = (c.cashbackRates || []).find(x => x.slot === n);
+          return { n, empty: !r && !(window.__filled || {})[c.id + n], rate: r ? String(r.rate) : '', items: r ? r.items.slice(0, 3).join('、') : '' }; }); });
+        d.host = { reservedSlots: [14, 21, 22], vocabNote: '', hasAiKey: true };
+        return JSON.stringify(d);
+      }),
+      activityWriterSaveRate: p => { const o = JSON.parse(p); (window.__filled = window.__filled || {})[o.id + o.slot] = true; return Promise.resolve(JSON.stringify({ ok: true, message: '已寫進 Cards Data 第 9 列的 rate_' + o.slot })); },
+      activityWriterSavePromo: p => Promise.resolve(JSON.stringify(window.__failNext ? { ok: false, message: 'period_end：結束日早於開始日' } : { ok: true, message: '已新增到 New Cardholder Promos 第 40 列' })),
+    };
+    const runner = () => { let okH = () => {}, failH = () => {}; const r = { withSuccessHandler: f => { okH = f; return r; }, withFailureHandler: f => { failH = f; return r; } };
+      Object.keys(handlers).forEach(k => { r[k] = arg => { window.__calls.push([k, arg]); handlers[k](arg).then(okH, failH); }; }); return r; };
+    window.google = { script: {} }; Object.defineProperty(window.google.script, 'run', { get: runner });
+  });
+  await hp.goto(url.replace('/tools/activity-writer/', '/apps-script/ActivityWriter.html'));
+  await hp.waitForSelector('#app:not([hidden])');
+  eq('視窗版：讀表', (await hp.textContent('#dataMeta')).includes('讀自試算表現況'), true);
+  await hp.fill('#source', S.artfunComposition.text);
+  await hp.waitForSelector('#f_rate');
+  eq('視窗版：有寫入鈕、沒有貼上位置欄', [await hp.isVisible('#writeBtn'), await hp.isVisible('#anchorCell')].join(), 'true,false');
+  // 通路跟既有的 rate_2 重疊 → 預設選那一槽、要按兩次才覆蓋
+  eq('視窗版：預設選重疊的槽', await hp.inputValue('#slotSel'), '2');
+  await hp.click('#writeBtn');
+  eq('視窗版：第一次按不寫', await hp.evaluate(() => window.__calls.filter(c => c[0] === 'activityWriterSaveRate').length), 0);
+  eq('視窗版：按鈕變成確認', (await hp.textContent('#writeBtn')).includes('再按一次'), true);
+  // 改選空槽 → 一次就寫
+  const freeSlot = await hp.evaluate(() => Array.from(document.querySelectorAll('#slotSel option')).find(o => /（空）/.test(o.textContent)).value);
+  await hp.selectOption('#slotSel', freeSlot);
+  await hp.click('#writeBtn');
+  await hp.waitForFunction(() => document.getElementById('writeBtn').textContent.includes('已寫入'));
+  const sent = await hp.evaluate(() => JSON.parse(window.__calls.find(c => c[0] === 'activityWriterSaveRate')[1]));
+  eq('視窗版：送出的槽位與欄位', [sent.id, String(sent.slot), sent.overwrite, sent.fields.rate, sent.fields.cashbackModel].join('|'), ['tbb-artfun', freeSlot, false, '2.5', 'rate+basic'].join('|'));
+  eq('視窗版：寫完不能再按', await hp.isDisabled('#writeBtn'), true);
+  eq('視窗版：寫完重新讀表', await hp.evaluate(() => window.__calls.filter(c => c[0] === 'activityWriterInit').length), 2);
+  // 新戶活動：伺服器擋下時把原因顯示出來、可以再試
+  await hp.click('#resetBtn');
+  await hp.fill('#source', S.promoInsurance.text);
+  await hp.waitForSelector('#f_bonus_rate');
+  await hp.evaluate(() => { window.__failNext = true; });
+  await hp.click('#writeBtn');
+  await hp.waitForFunction(() => document.getElementById('issues').textContent.includes('結束日早於開始日'));
+  eq('視窗版：被擋下後還能再寫', await hp.isDisabled('#writeBtn'), false);
+  await hp.evaluate(() => { window.__failNext = false; });
+  await hp.click('#writeBtn');
+  await hp.waitForFunction(() => document.getElementById('writeBtn').textContent.includes('已寫入'));
+  const pv = await hp.evaluate(() => JSON.parse(window.__calls.filter(c => c[0] === 'activityWriterSavePromo').pop()[1]));
+  eq('視窗版：新戶送出依欄名', [pv.id, pv.values.bonus_rate, pv.values.bonus_merchants].join('|'), 'taishin-richart|0.06|保險,保費');
+  const hd = await hp.evaluate(() => document.getElementById('f_pick_reason').getBoundingClientRect().bottom + window.scrollY);
+  eq('視窗版：1240×700 的視窗裡欄位排得完（最後一欄底部 ' + Math.round(hd) + '，上限 1000）', hd < 1000, true);
+  if (shotDir) await hp.screenshot({ path: path.join(shotDir, 'host-promo.png'), fullPage: true });
 
   eq('頁面沒有錯誤', errors.join(' | '), '');
   await browser.close(); server.close();

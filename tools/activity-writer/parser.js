@@ -28,8 +28,9 @@
     'registerLink', 'periodStart', 'periodEnd', 'daysRemaining', 'period'];
   var PROMO_COLS = ['id', 'promo_types', 'new_customer_definition', 'new_customer_summary', 'promo_condition',
     'period_start', 'period_end', 'min_spend', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value',
-    'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link',   // priority 欄 2026-11-13 站長決定刪除（全表都是 99）
-    'active', 'apply_cta_text', 'apply_cta_link', 'pick_question', 'pick_reason'];
+    'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link',
+    'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry', 'pick_rank', 'pick_question', 'pick_reason'];
+  // ↑ 2026-11-13 照站長貼的正式表表頭對齊（26 欄；priority 欄同日刪除）。試算表版依欄名寫入，這個順序只影響「複製一列」
   var PROMO_TYPES = ['首刷禮', '回饋加碼', '定額回饋'];
 
   // ===== 文字正規化 =====
@@ -977,6 +978,8 @@
       ['min_spend', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_cap', 'voucher_amount'].forEach(function (c) { if (!isNum(f[c])) issues.push(c + '「' + f[c] + '」不是數字'); });
       if (f.bonus_rate !== '' && Number(f.bonus_rate) >= 1) issues.push('bonus_rate 要填小數（10% → 0.1），現在是 ' + f.bonus_rate);
       ['link', 'gift_image_url', 'apply_cta_link'].forEach(function (c) { if (!isUrl(f[c])) issues.push(c + ' 不是 https:// 網址'); });
+      if (!isDate(f.apply_cta_expiry)) issues.push('apply_cta_expiry 不是日期');
+      if (String(f.pick_rank || '').trim() && !/^([1-5]|x)$/i.test(String(f.pick_rank).trim())) issues.push('pick_rank 只能填 1–5 或 x');
       ['new_customer_summary', 'promo_condition', 'notes', 'new_customer_definition'].forEach(function (c) { if (/。\s*$/.test(String(f[c] || ''))) issues.push(c + ' 結尾不要句號'); });
     }
     return issues;

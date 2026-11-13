@@ -12,7 +12,15 @@
         "sheet-guide.gs",
         "basic-exclusions-extractor.gs"
       ]
+    },
+    {
+      "name": "PMC 管理系統（只部署活動快寫，其他檔維持手動貼）",
+      "scriptId": "",
+      "files": [
+        "activity-writer.gs",
+        "ActivityWriter.html"
+      ]
     }
   ],
-  "_刻意不列": "PMC 管理系統（cards-export.gs 等）：它產生上線資料，而且站長會在線上暫時改 GITHUB_BRANCH 看預覽——自動部署會把那個暫時的改動蓋掉。維持手動貼。"
+  "_刻意不列": "PMC 管理系統的 cards-export.gs、card-editor.gs、promo-editor.gs 等（活動快寫那兩支除外，2026-11-13 起自動部署）：它產生上線資料，而且站長會在線上暫時改 GITHUB_BRANCH 看預覽——自動部署會把那個暫時的改動蓋掉。維持手動貼。"
 }
