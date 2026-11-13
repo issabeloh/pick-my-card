@@ -12,7 +12,7 @@
 //
 // 這支只做四件事，寫入全部交給既有的兩個編輯器（同一套衝突偵測與存檔前檢查）：
 //   activityWriterInit      讀表上現況，組成解析器要的資料（卡片、槽位、新戶活動、通路詞庫）
-//   activityWriterSaveRate  一般活動 → cardEditorSave（寫進指定的 rate_N 那一組欄位）
+//   activityWriterSaveRate  一般活動／領券活動 → cardEditorSave（寫進指定的 rate_N 或 couponMerchant_N 那一組欄位）
 //   activityWriterSavePromo 新戶活動 → promoEditorSave（插在同卡最後一列下面）
 //   activityWriterAi        選用的 AI 重新解析（Gemini；金鑰放指令碼屬性 GEMINI_API_KEY）
 //
@@ -24,6 +24,8 @@ const AW_DIALOG_HEIGHT_ = 700;
 // 一組回饋槽裡這支會寫的欄位（daysRemaining／period 是公式欄，另外處理）
 const AW_RATE_FIELDS_ = ['rate', 'cashbackModel', 'cap', 'minSpend', 'maxSpend', 'items', 'category', 'conditions',
   'registerLink', 'periodStart', 'periodEnd'];
+// 領券槽（couponPeriod_N 是公式欄，另外處理）
+const AW_COUPON_FIELDS_ = ['couponMerchant', 'couponRate', 'couponCap', 'couponConditions', 'couponPeriodStart', 'couponPeriodEnd'];
 // 骨幹槽（cashbackmodel-fill-guide.md 第 4 節）：不當成「第一個空槽」的候選
 const AW_RESERVED_SLOTS_ = [14, 21, 22];
 const AW_DEFAULT_MODELS_ = 'gemini-3.8-flash,gemini-3.6-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite';
@@ -53,21 +55,25 @@ function activityWriterInit() {
   });
 }
 
-// payload（JSON 字串）= { id, slot, fields:{ rate, cashbackModel, … }, overwrite }
+// payload（JSON 字串）= { id, group:'rate'|'coupon', slot, fields:{ rate, cashbackModel, … }, overwrite }
 function activityWriterSaveRate(payloadJson) {
   const p = JSON.parse(payloadJson);
   const slot = parseInt(p.slot, 10);
+  const coupon = p.group === 'coupon';
+  const FIELDS = coupon ? AW_COUPON_FIELDS_ : AW_RATE_FIELDS_;
+  const label = (coupon ? 'couponMerchant_' : 'rate_') + slot;
   const card = cardEditorLoad(p.id);
-  const info = card.rateSlots.filter(function(s) { return s.n === slot; })[0];
-  if (!info) return JSON.stringify({ ok: false, message: '表上沒有 rate_' + slot + ' 這一組欄位' });
+  const info = (coupon ? card.couponSlots : card.rateSlots).filter(function(s) { return s.n === slot; })[0];
+  if (!info) return JSON.stringify({ ok: false, message: '表上沒有 ' + label + ' 這一組欄位' });
   const cur = function(f) { return card.fields[f + '_' + slot]; };
-  const filled = AW_RATE_FIELDS_.some(function(f) { return cur(f) && !cur(f).formula && cur(f).value !== ''; });
+  const filled = FIELDS.some(function(f) { return cur(f) && !cur(f).formula && cur(f).value !== ''; });
   if (filled && !p.overwrite) {
-    return JSON.stringify({ ok: false, needConfirm: true, message: 'rate_' + slot + ' 現在有內容（' +
-      (cur('rate') ? cur('rate').value : '') + '%｜' + String(cur('items') ? cur('items').value : '').slice(0, 40) + '）。視窗開著的時候表被改過，請重新確認要不要覆蓋' });
+    const r = cur(coupon ? 'couponRate' : 'rate'), it = cur(coupon ? 'couponMerchant' : 'items');
+    return JSON.stringify({ ok: false, needConfirm: true, message: label + ' 現在有內容（' +
+      (r ? r.value : '') + '%｜' + String(it ? it.value : '').slice(0, 40) + '）。視窗開著的時候表被改過，請重新確認要不要覆蓋' });
   }
   const changes = {}, missing = [], skipped = [];
-  AW_RATE_FIELDS_.forEach(function(f) {
+  FIELDS.forEach(function(f) {
     const name = f + '_' + slot;
     const want = String(p.fields[f] == null ? '' : p.fields[f]).trim();
     const fld = card.fields[name];
@@ -82,9 +88,9 @@ function activityWriterSaveRate(payloadJson) {
     if (!res.ok) return JSON.stringify(awFlatten_(res));
     saved = res.saved;
   }
-  const added = awEnsureSlotFormulas_(p.id, slot);
+  const added = awEnsureSlotFormulas_(p.id, slot, coupon);
   return JSON.stringify({ ok: true, slot: slot, rowNumber: card.rowNumber, saved: saved, skipped: skipped, formulasAdded: added,
-    message: '已寫進 Cards Data 第 ' + card.rowNumber + ' 列的 rate_' + slot + '（' + saved.length + ' 格' +
+    message: '已寫進 Cards Data 第 ' + card.rowNumber + ' 列的 ' + label + '（' + saved.length + ' 格' +
       (added.length ? '，補上 ' + added.join('、') + ' 的公式' : '') + '）' +
       (skipped.length ? '｜' + skipped.join('、') + ' 是公式欄，沒有寫' : '') });
 }
@@ -169,7 +175,7 @@ function awReadCards_() {
       basicCashback: num(getValue(row, headers, 'basicCashback')) || 0,
       overseasCashback: num(getValue(row, headers, 'overseasCashback')), domesticBonusRate: num(getValue(row, headers, 'domesticBonusRate')),
       overseasBonusRate: num(getValue(row, headers, 'overseasBonusRate')), hasLevels: pmcIsTrueCell_(getValue(row, headers, 'hasLevels')),
-      cashbackRates: [], couponCashbacks: [], slots: [] };
+      cashbackRates: [], couponCashbacks: [], slots: [], couponSlots: [] };
     for (let j = 1; j <= maxRate; j++) {
       const rateRaw = getValue(row, headers, 'rate_' + j);
       const items = str(getValue(row, headers, 'items_' + j));
@@ -184,7 +190,10 @@ function awReadCards_() {
     }
     for (let k = 1; k <= maxCoupon; k++) {
       const m = str(getValue(row, headers, 'couponMerchant_' + k));
-      if (m) card.couponCashbacks.push({ merchant: m });
+      const cr = str(getValue(row, headers, 'couponRate_' + k));
+      const cEmpty = AW_COUPON_FIELDS_.every(function(f) { const v = getValue(row, headers, f + '_' + k); return v === null || v === ''; });
+      card.couponSlots.push({ n: k, empty: cEmpty, rate: cr, items: m.split(',').slice(0, 3).join('、') });
+      if (m) card.couponCashbacks.push({ slot: k, merchant: m, rate: cr, period: str(getValue(row, headers, 'couponPeriod_' + k)) });
     }
     cards.push(card);
   }
@@ -204,18 +213,17 @@ function awSiteVocab_() {
   }
 }
 
-// 新填的槽位若 daysRemaining_N／period_N 是空的，補上跟其他槽位同一種寫法的公式；已有內容（公式或手填）就不動
-function awEnsureSlotFormulas_(cardId, slot) {
+// 新填的槽位若 daysRemaining_N／period_N（領券槽：couponPeriod_N）是空的，補上跟其他槽位同一種寫法的公式；
+// 已有內容（公式或手填）就不動
+function awEnsureSlotFormulas_(cardId, slot, coupon) {
   const sheet = ceSheet_();
   const headers = ceHeaders_(sheet);
   const row = ceFindRow_(sheet, headers, cardId);
   const a1 = function(name) { const c = headers.indexOf(name + '_' + slot); return c < 0 ? '' : sheet.getRange(row, c + 1).getA1Notation(); };
-  const s = a1('periodStart'), e = a1('periodEnd');
+  const s = a1(coupon ? 'couponPeriodStart' : 'periodStart'), e = a1(coupon ? 'couponPeriodEnd' : 'periodEnd');
   if (!e) return [];
-  const want = {
-    daysRemaining: '=IF(ISBLANK(' + e + '),"",' + e + '-TODAY())',
-    period: s ? '=IF(OR(ISBLANK(' + s + '),ISBLANK(' + e + ')),"",TEXT(' + s + ',"yyyy/m/d")&"~"&TEXT(' + e + ',"yyyy/m/d"))' : ''
-  };
+  const periodF = s ? '=IF(OR(ISBLANK(' + s + '),ISBLANK(' + e + ')),"",TEXT(' + s + ',"yyyy/m/d")&"~"&TEXT(' + e + ',"yyyy/m/d"))' : '';
+  const want = coupon ? { couponPeriod: periodF } : { daysRemaining: '=IF(ISBLANK(' + e + '),"",' + e + '-TODAY())', period: periodF };
   const added = [];
   Object.keys(want).forEach(function(name) {
     const c = headers.indexOf(name + '_' + slot);

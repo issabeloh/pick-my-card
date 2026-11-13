@@ -64,13 +64,15 @@ function load(sheets, opts) {
 
 const SLOT = ['rate', 'items', 'cap', 'category', 'conditions', 'periodStart', 'periodEnd', 'daysRemaining', 'period', 'cashbackModel', 'minSpend', 'maxSpend', 'registerLink'];
 const CH = ['id', 'name', 'fullName', 'basicCashback', 'annualFee', 'feeWaiver', 'website', 'tags', 'bank', 'hasLevels', 'overseasCashback']
-  .concat(SLOT.map(f => f + '_1'), SLOT.map(f => f + '_2'), SLOT.filter(f => f !== 'registerLink').map(f => f + '_3'));
+  .concat(SLOT.map(f => f + '_1'), SLOT.map(f => f + '_2'), SLOT.filter(f => f !== 'registerLink').map(f => f + '_3'),
+    ...[1, 2].map(n => ['couponMerchant', 'couponRate', 'couponCap', 'couponConditions', 'couponPeriodStart', 'couponPeriodEnd', 'couponPeriod'].map(f => f + '_' + n)));
 const crow = o => CH.map(h => (h in o ? o[h] : ''));
 const PH = ['id', 'promo_types', 'new_customer_definition', 'new_customer_summary', 'promo_condition', 'period_start', 'period_end', 'min_spend', 'gift_content', 'gift_image_url', 'luggage_inch', 'luggage_value', 'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry', 'pick_rank', 'pick_question', 'pick_reason'];
 const prow = o => PH.map(h => (h in o ? o[h] : ''));
 function fresh() {
   const cards = [CH,
     crow({ id: 'card-a', name: 'A卡', fullName: 'A', basicCashback: 0.5, annualFee: '免', feeWaiver: '免', website: 'https://a', tags: 't', bank: '甲銀',
+      couponMerchant_1: '金豬食堂', couponRate_1: 7, couponPeriod_1: '2026/1/1~2026/6/30',
       rate_1: 2.5, items_1: '威秀影城,誠品書店', cashbackModel_1: 'rate+basic', category_1: '藝文', period_1: '2026/1/1~2026/12/31', periodStart_1: '2026/1/1', periodEnd_1: '2026/12/31' }),
     crow({ id: 'card-b', name: 'B卡', fullName: 'B', basicCashback: 1, annualFee: '免', feeWaiver: '免', website: 'https://b', tags: 't', bank: '乙銀' })];
   const cf = {};
@@ -125,6 +127,22 @@ console.log('2. 一般活動寫進槽位');
   ok(!r.ok && /registerLink_3/.test(r.message), '表上沒有的欄位 → 講清楚缺哪一欄');
   r = call(s.activityWriterSaveRate, { id: 'card-b', slot: 9, fields: NEW, overwrite: false });
   ok(!r.ok && /rate_9/.test(r.message), '不存在的槽');
+}
+
+console.log('2b. 領券活動寫進領券槽');
+{
+  const sh = fresh(), s = load(sh), g = sh['Cards Data'];
+  const d = JSON.parse(s.activityWriterInit());
+  eq([d.cards[0].couponSlots.map(x => x.n + ':' + x.empty), d.cards[0].couponCashbacks[0].slot], [['1:false', '2:true'], 1], '領券槽空不空、既有的券帶槽號');
+  const C = { couponMerchant: '小樹購', couponRate: '7', couponCap: '10000', couponConditions: '排除電子票券；需至 CUBE App 領券', couponPeriodStart: '2026/11/1', couponPeriodEnd: '2026/11/30' };
+  let r = call(s.activityWriterSaveRate, { id: 'card-a', group: 'coupon', slot: 2, fields: C, overwrite: false });
+  ok(r.ok && /couponMerchant_2/.test(r.message), '寫進空的領券槽 ' + JSON.stringify(r).slice(0, 200));
+  const at = f => g.grid[1][CH.indexOf(f + '_2')];
+  eq([at('couponMerchant'), at('couponRate'), at('couponCap'), at('couponPeriodEnd')], ['小樹購', 7, 10000, '2026/11/30'], '領券欄位依欄名寫入');
+  ok(/TEXT\(/.test(g.formulas['2,' + (CH.indexOf('couponPeriod_2') + 1)] || ''), '補 couponPeriod 公式');
+  eq([g.grid[1][CH.indexOf('rate_2')], g.grid[1][CH.indexOf('couponMerchant_1')]], ['', '金豬食堂'], '沒碰到回饋槽與別張券');
+  r = call(s.activityWriterSaveRate, { id: 'card-a', group: 'coupon', slot: 1, fields: C, overwrite: false });
+  ok(!r.ok && r.needConfirm, '有內容的領券槽、沒確認 → 不寫');
 }
 
 console.log('3. 新戶活動新增一列');

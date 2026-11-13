@@ -134,7 +134,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
       **生成檔 `apps-script/ActivityWriter.html`（禁止手改，preflight 會擋不一致）**；試算表端是 `apps-script/activity-writer.gs`
     - **改了 `tools/activity-writer/` 任何一支 → 跑 `node tools/activity-writer/build-apps-script.js`、生成檔一起 commit**；
       合併進 main 後 GitHub 自動部署到「PMC 管理系統」（`deploy.json` 第二個專案，**只列這兩支**；`cards-export.gs` 等仍手動貼）
-    - 寫入不自己做，交給兩個編輯器：一般活動 → `cardEditorSave`（寫進選定的 `rate_N`，有內容的槽要按兩次才覆蓋，
+    - **三種活動**：一般活動（`rate_N` 那組）、領券活動（`couponMerchant_N` 那組，2026-11-13 加入，只有規則解析、沒有 AI）、新戶活動。
+      自動判斷順序：有新戶字樣 → 新戶；否則有領券／優惠券 → 領券；其餘一般
+    - 寫入不自己做，交給兩個編輯器：一般／領券活動 → `cardEditorSave`（寫進選定的 `rate_N` 或 `couponMerchant_N`，有內容的槽要按兩次才覆蓋，
       空的 `daysRemaining_N`／`period_N` 補公式）；新戶活動 → `promoEditorSave`（插在同卡最後一列下面）。
       **依欄名寫入**，所以欄位順序變動不影響寫入（只影響「複製一列」→ 那個要改 `parser.js` 的 `RATE_COLS`／`PROMO_COLS`）
     - 資料讀**表上現況**（`activityWriterInit`）；只有快捷搜尋／統一詞表／行動支付別名沿用線上 `cards.data`，讀不到照樣能用
@@ -148,6 +150,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
       **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
       **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
       **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 欄 2026-11-13 已刪（全表都是 99；匯出找不到這欄一樣當 99，前端排序不受影響）
+    - 一般／領券共用的判讀規則（2026-11-13 第二個實測樣本 `cubeCoupon`）：**`category` 只在原文整個出現既有分類名、或有短的【】標題時才填，
+      其餘留空**（不取第一行、不猜）；排除條款只取到逗號、去重、最多 3 條，不收「等排除商品」這種形容詞用法、括號內補充、分期利率樣板；
+      「本活動限…」整句照抄成條件；有具體商家時支付工具與時段（假日）不進通路；認卡看別名出現次數與後面有沒有接「卡」
     - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
       `ui-test.js` 會擋「新戶 26 欄排不進一個畫面」
     - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面：本機版＋試算表視窗版，伺服器與 AI 用假回應）、

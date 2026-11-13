@@ -114,7 +114,7 @@
     if (!state.kindManual) state.kind = P.detectKind(P.normalizeText(text));
     if (!state.cardManual) { var id = P.detectCard(state.index, text); if (id) state.cardId = id; }
     var extra = { url: $('sourceUrl').value };
-    var result = state.kind === 'rate' ? P.parseActivity(state.index, state.cardId, text, extra) : P.parsePromo(state.index, state.cardId, text, extra);
+    var result = K().parse(state.index, state.cardId, text, extra);
     state.rows = [makeRow(result, state.rows[0])];
     state.active = 0;
     renderAll();
@@ -168,7 +168,18 @@
       (card.domesticBonusRate ? '｜國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '｜海外加碼 ' + card.overseasBonusRate + '%' : '') +
       (card.hasLevels ? '｜分級卡' : '');
     box.appendChild(el('div', { text: base }));
-    if (state.kind === 'rate') {
+    if (state.kind === 'coupon') {
+      if (row && row.result.existing) {
+        var cx = row.result.existing;
+        box.appendChild(el('div', { class: 'hit', style: 'margin-top:8px',
+          text: '這個通路已經有一張券（' + (cx.slot ? 'couponMerchant_' + cx.slot : '第 ' + cx.index + ' 張') + '，現在 ' + cx.rate + '%' + (cx.period ? '、' + cx.period : '') + '）→ 多半是更新它' }));
+      }
+      var cul = el('ul');
+      (card.couponCashbacks || []).forEach(function (c, i) {
+        cul.appendChild(el('li', { text: (c.slot ? 'coupon_' + c.slot : '第 ' + (i + 1) + ' 張') + '｜' + c.rate + '%｜' + c.merchant + (c.period ? '｜' + c.period : '') }));
+      });
+      box.appendChild(el('h2', { text: '這張卡現有的領券活動（' + (card.couponCashbacks || []).length + ' 張）', style: 'margin-top:10px' })); box.appendChild(cul);
+    } else if (state.kind === 'rate') {
       if (row && row.result.existing) {
         var ex = row.result.existing;
         box.appendChild(el('div', { class: 'hit', style: 'margin-top:8px',
@@ -211,6 +222,19 @@
     ['apply_cta_link', '沿用同卡', 'text', 4], ['apply_cta_expiry', '連結到期日', 'text', 2], ['pick_rank', '1–5 或 x', 'text', 2],
     ['pick_question', '一句鉤子', 'text', 4], ['pick_reason', '一句理由', 'area', 12]
   ];
+  var COUPON_FIELDS = [
+    ['couponMerchant', '通路，半形逗號分隔', 'area', 8], ['couponRate', '領券加碼的率', 'text', 2], ['couponCap', '消費上限', 'text', 2],
+    ['couponConditions', '全形分號分隔；最後寫去哪領券', 'area', 8], ['couponPeriodStart', 'YYYY/M/D', 'text', 2], ['couponPeriodEnd', 'YYYY/M/D', 'text', 2]
+  ];
+  // 三種活動各自的欄位、輸出欄、解析函式、貼上位置、試算表版寫入的那組槽位
+  var KINDS = {
+    rate: { fields: RATE_FIELDS, cols: P.RATE_COLS, parse: P.parseActivity, slotKey: 'slots', prefix: 'rate_',
+      row: function (f) { return P.buildRateRow(f, store.get('derived', 'formula'), null, $('anchorCell').value); } },
+    coupon: { fields: COUPON_FIELDS, cols: P.COUPON_COLS, parse: P.parseCoupon, slotKey: 'couponSlots', prefix: 'couponMerchant_',
+      row: function (f) { return P.buildCouponRow(f); } },
+    promo: { fields: PROMO_FIELDS, cols: P.PROMO_COLS, parse: P.parsePromo, row: function (f) { return P.buildPromoRow(f); } }
+  };
+  function K() { return KINDS[state.kind] || KINDS.rate; }
   var MODELS = ['', 'rate', 'rate+basic', 'basic+domesticBonusRate', 'rate+basic+domesticBonusRate', 'rate+overseasCashback',
     'overseasCashback+overseasBonusRate', 'rate+overseasCashback+overseasBonusRate', 'basic', 'overseasCashback'];
 
@@ -295,15 +319,15 @@
     var body = el('div', {}, [inputFor(def, row)]);
     var chips = row.result.chips || {};
 
-    if ((name === 'items' || name === 'bonus_merchants') && chips.items && chips.items.length) {
+    if ((name === 'items' || name === 'bonus_merchants' || name === 'couponMerchant') && chips.items && chips.items.length) {
       var inList = splitList(row.fields[name]).map(P.termKey);
       body.appendChild(chipList(chips.items, function (n) { return inList.indexOf(P.termKey(n)) >= 0; },
         function (n) { toggleInList(name, n, ','); },
         function (it) { return (it.known ? '' : 'new') + (it.excluded ? ' ex' : ''); }));
     }
-    if (name === 'conditions' && chips.conditions && chips.conditions.length) {
-      var have = String(row.fields.conditions || '').split('；');
-      body.appendChild(chipList(chips.conditions, function (n) { return have.indexOf(n) >= 0; }, function (n) { toggleInList('conditions', n, '；'); }));
+    if ((name === 'conditions' || name === 'couponConditions') && chips.conditions && chips.conditions.length) {
+      var have = String(row.fields[name] || '').split('；');
+      body.appendChild(chipList(chips.conditions, function (n) { return have.indexOf(n) >= 0; }, function (n) { toggleInList(name, n, '；'); }));
     }
     if (name === 'category' && chips.category && chips.category.length) {
       body.appendChild(chipList(chips.category.slice(0, 14), function (n) { return row.fields.category === n; },
@@ -349,7 +373,7 @@
     if (row.result.skipped) box.appendChild(el('div', { class: 'note check banner', style: 'margin-bottom:6px', text: row.result.skipped }));
     if (row.result.evidence) box.appendChild(el('p', { class: 'evidence', text: 'AI 引用的原文：' + row.result.evidence }));
     var grid = el('div', { id: 'fields' });
-    (state.kind === 'rate' ? RATE_FIELDS : PROMO_FIELDS).forEach(function (def) {
+    K().fields.forEach(function (def) {
       grid.appendChild(fieldBlock(def, row));
       if (def[0] === 'maxSpend') { var sb = structBlock(row); if (sb) grid.appendChild(sb); }   // 第一列（rate…maxSpend）排完後接結構選項
     });
@@ -360,7 +384,7 @@
 
   // ---------- 畫面：底部輸出 ----------
   function rowCells(row) {
-    return state.kind === 'rate' ? P.buildRateRow(row.fields, store.get('derived', 'formula'), null, $('anchorCell').value) : P.buildPromoRow(row.fields);
+    return K().row(row.fields);
   }
 
   function renderBar() {
@@ -379,7 +403,7 @@
     if (list.length) issues.appendChild(el('span', { class: 'bad', text: '⚠ ' + list.join('；') }));
     else issues.appendChild(el('span', { class: 'good', text: '格式檢查通過' }));
     if (pending.length) issues.appendChild(el('span', { class: 'hint', text: '　還沒確認的黃色欄位：' + pending.join('、') }));
-    var cols = state.kind === 'rate' ? P.RATE_COLS : P.PROMO_COLS;
+    var cols = K().cols;
     rowCells(row).forEach(function (c, i) {
       var text = c && c.formula ? c.formula : String(c);
       prev.appendChild(el('span', { class: 'cell' + (text ? '' : ' blank'), text: text.replace(/\n/g, '⏎'), title: cols[i] + '：' + text }));
@@ -387,11 +411,11 @@
   }
 
   // ---------- 寫進試算表（只在試算表視窗裡） ----------
-  function slotsOf() { var c = state.index && P.getCard(state.index, state.cardId); return (c && c.slots) || []; }
+  function slotsOf() { var c = state.index && P.getCard(state.index, state.cardId); return (c && K().slotKey && c[K().slotKey]) || []; }
 
   function defaultSlot(row) {
-    if (row.result.existing) return row.result.existing.slot;
-    var reserved = (state.index.data.host && state.index.data.host.reservedSlots) || [];
+    if (row.result.existing && row.result.existing.slot) return row.result.existing.slot;
+    var reserved = state.kind === 'rate' ? ((state.index.data.host && state.index.data.host.reservedSlots) || []) : [];
     var free = slotsOf().filter(function (s) { return s.empty && reserved.indexOf(s.n) < 0; })[0];
     return free ? free.n : '';
   }
@@ -400,24 +424,25 @@
     var btn = $('writeBtn'), sel = $('slotSel');
     btn.hidden = !HOST; $('reloadBtn').hidden = !HOST;
     $('copyBtn').classList.toggle('primary', !HOST);
-    sel.hidden = !HOST || !row || state.kind !== 'rate';
+    sel.hidden = !HOST || !row || state.kind === 'promo';
     if (!HOST) return;
     btn.disabled = !row || state.busy || !!row.written;
     if (!row) { btn.textContent = '寫進試算表'; return; }
     if (row.written) { btn.textContent = '已寫入 ✓'; return; }
-    if (state.kind !== 'rate') { btn.textContent = state.busy ? '寫入中…' : '新增到新戶活動表'; return; }
+    if (state.kind === 'promo') { btn.textContent = state.busy ? '寫入中…' : '新增到新戶活動表'; return; }
     if (row.slot == null) row.slot = defaultSlot(row);
-    var reserved = (state.index.data.host && state.index.data.host.reservedSlots) || [];
+    var reserved = state.kind === 'rate' ? ((state.index.data.host && state.index.data.host.reservedSlots) || []) : [];
+    var pre = K().prefix;
     sel.textContent = '';
     if (row.slot === '') sel.appendChild(el('option', { value: '', text: '沒有空槽——選一槽覆蓋' }));
     slotsOf().forEach(function (s) {
-      sel.appendChild(el('option', { value: String(s.n), text: 'rate_' + s.n + (s.empty ? '（空' + (reserved.indexOf(s.n) >= 0 ? '・骨幹槽' : '') + '）' : '｜' + s.rate + '%｜' + s.items) }));
+      sel.appendChild(el('option', { value: String(s.n), text: pre + s.n + (s.empty ? '（空' + (reserved.indexOf(s.n) >= 0 ? '・骨幹槽' : '') + '）' : '｜' + s.rate + '%｜' + s.items) }));
     });
     sel.value = String(row.slot);
     var slot = slotsOf().filter(function (s) { return String(s.n) === String(row.slot); })[0];
     btn.disabled = btn.disabled || !slot;
-    btn.textContent = state.busy ? '寫入中…' : !slot ? '先選槽位' : slot.empty ? '寫進 rate_' + slot.n
-      : (row.armed === slot.n ? '再按一次：確定覆蓋 rate_' + slot.n : '覆蓋 rate_' + slot.n + '（有內容）');
+    btn.textContent = state.busy ? '寫入中…' : !slot ? '先選槽位' : slot.empty ? '寫進 ' + pre + slot.n
+      : (row.armed === slot.n ? '再按一次：確定覆蓋 ' + pre + slot.n : '覆蓋 ' + pre + slot.n + '（有內容）');
   }
 
   function writeRow() {
@@ -426,14 +451,14 @@
     var problems = P.validate(state.kind, row.fields);
     if (problems.length) return toast('先處理下方的格式問題：' + problems[0]);
     var call;
-    if (state.kind === 'rate') {
+    if (state.kind !== 'promo') {
       var slot = slotsOf().filter(function (s) { return String(s.n) === String(row.slot); })[0];
       if (!slot) return toast('先選要寫進哪一槽');
       if (!slot.empty && row.armed !== slot.n) {   // 覆蓋要按兩次
         row.armed = slot.n; renderBar();
-        return toast('rate_' + slot.n + ' 現在是 ' + slot.rate + '%｜' + slot.items + '——再按一次就覆蓋');
+        return toast(K().prefix + slot.n + ' 現在是 ' + slot.rate + '%｜' + slot.items + '——再按一次就覆蓋');
       }
-      call = server('activityWriterSaveRate', JSON.stringify({ id: state.cardId, slot: slot.n, fields: row.fields, overwrite: !slot.empty }));
+      call = server('activityWriterSaveRate', JSON.stringify({ id: state.cardId, group: state.kind, slot: slot.n, fields: row.fields, overwrite: !slot.empty }));
     } else {
       call = server('activityWriterSavePromo', JSON.stringify({ id: state.cardId, values: row.fields }));
     }
@@ -470,11 +495,11 @@
     window.__lastCopied = tsv;   // 測試用
     copyText(tsv).then(function () {
       var row = cur();
-      var where = state.kind === 'rate'
+      var where = state.kind === 'coupon' ? '到 Cards Data 這張卡的 couponMerchant_N 那格貼上（欄位順序：' + P.COUPON_COLS.join('、') + '）' : state.kind === 'rate'
         ? (row.result.existing ? '到 Cards Data 這張卡的 rate_' + row.result.existing.slot + ' 那格貼上（覆蓋）' : '到 Cards Data 這張卡第一個空的 rate_N 那格貼上')
         : '到 New Cardholder Promos 的 id 欄那格貼上';
       if (HOST) where += '（視窗裡建議直接按「寫進試算表」，會依欄名寫入）';
-      toast('已複製 ' + rows.length + ' 列 × ' + (state.kind === 'rate' ? P.RATE_COLS.length : P.PROMO_COLS.length) + ' 欄 → ' + where);
+      toast('已複製 ' + rows.length + ' 列 × ' + K().cols.length + ' 欄 → ' + where);
     }).catch(function (e) { console.error('複製失敗', e); toast('複製失敗——請手動選取下方預覽'); });
   }
 
@@ -517,6 +542,7 @@
     var text = $('source').value;
     if (!text.trim()) return toast('先貼原文');
     if (!state.cardId) return toast('先選卡片');
+    if (state.kind === 'coupon') return toast('領券活動目前只有規則解析（欄位少，直接改比較快）');
     if (!HOST && !store.get('geminiKey', '')) { openSettings(); return toast('要用 AI 得先填 Gemini 金鑰（規則解析不需要）'); }
     state.aiBusy = true; $('aiBtn').disabled = true;
     var base = cur() ? cur().result : null;
