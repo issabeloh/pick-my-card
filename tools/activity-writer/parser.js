@@ -7,9 +7,9 @@
  *   "回饋率解析"      findRates / structureOptions
  *   "上限與門檻"      findCaps / findMinSpend
  *   "通路比對"        matchItems
- *   "條件片語"        findConditions
+ *   "條件片語"        findConditions / needsRegister
  *   "一般活動"        parseActivity
- *   "新戶活動"        parsePromo
+ *   "新戶活動"        parsePromo（"特定族群新戶" audienceOf、"條件草稿" draftTasks）
  *   "輸出一列"        buildRateRow / buildPromoRow / toTsv
  *   "AI 提示詞"       buildAiRequest / applyAiActivity / applyAiPromo
  *
@@ -86,6 +86,8 @@
   // ===== 卡片索引 =====
   var GENERIC_ITEM = /^(國內|國外|海外|一般|日本|韓國)?(一般)?(消費|實體消費|線上消費|網路消費)?$|^(網購|保費|保險|餐廳|百貨|超商|加油|交通|國內餐廳|行動支付)$/;
 
+  var GENERIC_CATEGORY = /^(網購|保費|保險|餐廳|百貨|超商|加油|交通|國內餐廳)$/;   // 類別詞：沒有具體商家時可以當通路
+
   function buildIndex(data) {
     data = data || {};
     var cards = data.cards || [];
@@ -134,6 +136,11 @@
     });
 
     var vocabKeys = Object.keys(vocab).sort(function (a, b) { return b.length - a.length; });
+    var paymentKeys = {};            // 行動支付（付款工具，不是通路）——新戶活動的 bonus_merchants 預設不選
+    (data.payments || []).forEach(function (p) {
+      [p.name].concat(p.searchTerms || []).forEach(function (s) { paymentKeys[termKey(s)] = true; });
+      paymentKeys[termKey(vocab[termKey(p.name)] || p.name)] = true;
+    });
 
     var cardAliases = cards.map(function (c) {
       var names = {};
@@ -152,7 +159,7 @@
     var usages = {};
     (data.newCardholderPromos || []).forEach(function (p) { if (p.voucher_usage) usages[termKey(p.voucher_usage)] = p.voucher_usage; });
 
-    return { data: data, cards: cards, vocab: vocab, vocabKeys: vocabKeys, cardAliases: cardAliases, usages: usages };
+    return { data: data, cards: cards, vocab: vocab, vocabKeys: vocabKeys, paymentKeys: paymentKeys, cardAliases: cardAliases, usages: usages };
   }
 
   function getCard(index, id) {
@@ -212,12 +219,14 @@
     while ((m = re.exec(text))) {
       var v = parseFloat(m[1]);
       var before = text.slice(Math.max(0, m.index - 14), m.index);
-      var after = text.slice(m.index + m[0].length, m.index + m[0].length + 8);
+      var after = text.slice(m.index + m[0].length, m.index + m[0].length + 20);
       var kind = 'plain';
       if (/(服務費|手續費|利率|年息|分期)[^%]{0,6}$/.test(before) || /^\s*(國外交易)?(服務費|手續費|利率)/.test(after) || /^\s*OFF/i.test(after)) kind = 'fee';
+      else if (/(原權益|原回饋|原有回饋|基本回饋)[^%，。\n]{0,6}$/.test(before)) kind = 'base';   // 「原權益最高 2%」是原本就有的，不是這檔的標榜數字
       else if (/最高[^%，。\n]{0,10}$/.test(before)) kind = 'max';
       else if (/(原|基本|一般消費)[^%，。\n]{0,8}$/.test(before)) kind = 'base';
       else if (/(加碼|再享|再加|額外|加贈)[^%，。\n]{0,8}$/.test(before)) kind = 'bonus';
+      else if (/^[^，。\n%]{0,16}?加碼/.test(after)) kind = 'bonus';                               // 「6%台新Point(信用卡)加碼回饋」
       if (v > 0 && v <= 100) out.push({ value: v, kind: kind, index: m.index, len: m[0].length });
     }
     return out;
@@ -397,10 +406,13 @@
     // 清單句裡沒見過的通路：含兩個以上頓號的句子，逐項切開
     var seenKey = {};
     found.forEach(function (f) { seenKey[termKey(f.name)] = true; });
+    var bodyLen = splitBody(text).body.length;   // 注意事項裡的清單多半是排除項與罰則，不拿來猜新通路
     var lineRe = /[^\n。；]+/g, lm;
-    while ((lm = lineRe.exec(text))) {
+    while ((lm = lineRe.exec(text)) && lm.index < bodyLen) {
       var seg = lm[0];
       if ((seg.match(/、/g) || []).length < 2) continue;
+      // 上一行是「不列入…之交易如下：」→ 這一行整串都是排除項
+      if (/(不列入|排除|不適用|不含|不回饋|不予回饋)[^\n]*[:：]\s*\n\s*$/.test(text.slice(Math.max(0, lm.index - 60), lm.index))) continue;
       var marked = /(指定|適用|合作|特約)(通路|商店|商家|店家|特店|品牌)|包含|如下|[:：]/.test(seg);
       var body = seg.replace(/^.*?[:：]/, '');
       var offset = lm.index + (seg.length - body.length);
@@ -429,9 +441,21 @@
       var clauseStart = Math.max(text.lastIndexOf('。', f.at), text.lastIndexOf('\n', f.at), text.lastIndexOf('；', f.at)) + 1;
       var clause = text.slice(clauseStart, f.at);
       var excluded = /(排除|不含|不包含|不包括|不適用|恕不|除外|不列入|不予)/.test(clause);
+      // 排除字寫在清單後面：「其他支付工具(如A、B、C等)不適用本活動」——只看到下一個括號外的逗號為止
+      if (!excluded) {
+        var depth = 0, end = f.at;
+        for (; end < text.length; end++) {
+          var ch = text[end];
+          if (ch === '(' || ch === '（') depth++; else if (ch === ')' || ch === '）') depth = Math.max(0, depth - 1);
+          else if (ch === '。' || ch === '\n' || ch === '；' || (depth === 0 && ch === '，')) break;
+        }
+        excluded = /(不適用|不列入|不予回饋|不回饋|不計入|除外)[^，]{0,8}$/.test(text.slice(f.at, end));
+      }
+      if (excluded && !f.known) return;            // 沒見過又被排除的詞，列出來只是雜訊
       var k = termKey(f.name);
       if (dedupe[k]) { if (!excluded) dedupe[k].excluded = false; return; }
-      var item = { name: f.name, known: !!f.known, excluded: excluded, generic: GENERIC_ITEM.test(f.name), weak: !!f.weak };
+      var item = { name: f.name, known: !!f.known, excluded: excluded, generic: GENERIC_ITEM.test(f.name), weak: !!f.weak,
+        payment: !!index.paymentKeys[k] || /(pay|支付|錢包)$/i.test(f.name) };
       dedupe[k] = item; out.push(item);
     });
     var hasSpecific = out.some(function (x) { return !x.excluded && !x.generic && !x.weak; });
@@ -439,7 +463,21 @@
     return out;
   }
 
+  // 本文／注意事項分界：獨立一行的「注意事項」之後是細則，條件草稿與新通路只從本文找
+  function splitBody(text) {
+    var m = /(?:^|\n)[ \t]*[【\[]?[ \t]*(?:活動)?(?:注意事項|謹慎理財[^\n]*)[ \t]*[】\]]?[:：]?[ \t]*(?=\n)/.exec(text);
+    return m && m.index > 0 ? { body: text.slice(0, m.index), fine: text.slice(m.index) } : { body: text, fine: '' };
+  }
+
   // ===== 條件片語 =====
+  // 「登錄」要是參加條件才算：「若同時領券及登錄分期活動」這種只是提到別的活動
+  function needsRegister(text) {
+    return /(?:需|須|應|請)(?:先|事先|每月|於[^，。\n]{0,20})?(?:皆)?(?:需|須)?(?:重新)?(?:完成)?(?:活動)?登錄|完成(?:活動)?登錄|登錄(?:成功)?(?:後|始|方|才)|登錄(?:網址|連結|頁|期間|時間|名額)|限量登錄|每月(?:皆)?(?:需|須)?(?:重新)?登錄/.test(text);
+  }
+  function quotaOf(text) {
+    var m = /(?:限量|名額|前)\s*(\d{1,3}(?:,\d{3})+|\d+)\s*(名|位|人|份|張|組)/.exec(text);
+    return m ? { n: m[1], unit: m[2] } : null;
+  }
   function normalizeConditions(s) {
     return String(s == null ? '' : s)
       .replace(/\s*[;；]\s*/g, '；').replace(/；+/g, '；').replace(/^；|[；。\s]+$/g, '').trim();
@@ -454,7 +492,7 @@
       if (!t || out.some(function (o) { return o.text === t; })) return;
       out.push({ text: t, on: on !== false, why: why || '' });
     };
-    if (/登錄/.test(text)) {
+    if (needsRegister(text)) {
       var quota = /(?:限量|名額|前)\s*(\d{1,3}(?:,\d{3})*|\d+)\s*(名|位|人)/.exec(text);
       var monthly = /每月(?:皆)?(?:需|須)?(?:重新)?登錄/.test(text);
       add((monthly ? '需每月登錄' : '需登錄') + (quota ? '，限量' + quota[1] + '名' : (/限量|額滿/.test(text) ? '，限量' : '')), true, '原文提到登錄');
@@ -584,8 +622,8 @@
     if (cat.value) note('category', 'check', cat.why);
     f.conditions = normalizeConditions(conds.filter(function (c) { return c.on; }).map(function (c) { return c.text; }).join('；'));
     var linkFromText = urls.filter(function (u) { return /regist|登錄|signup|apply|event|activity/i.test(u); })[0] || '';
-    f.registerLink = /登錄/.test(text) ? normalizeLink(linkFromText || (urls.length === 1 ? urls[0] : '')) : '';
-    if (/登錄/.test(text) && !f.registerLink) note('registerLink', 'empty', '需登錄但原文沒有網址——有官方登錄頁就貼上（只收 https://）');
+    f.registerLink = needsRegister(text) ? normalizeLink(linkFromText || (urls.length === 1 ? urls[0] : '')) : '';
+    if (needsRegister(text) && !f.registerLink) note('registerLink', 'empty', '需登錄但原文沒有網址——有官方登錄頁就貼上（只收 https://）');
     else if (f.registerLink) note('registerLink', 'check', '確認這是登錄頁、不是活動說明頁');
     f.periodStart = period.start; f.periodEnd = period.end;
     if (period.end) note('periodEnd', 'ok', '原文：' + period.evidence);
@@ -624,6 +662,68 @@
   function sameCardPromos(index, cardId) {
     return ((index.data.newCardholderPromos) || []).filter(function (p) { return p.id === cardId; })
       .sort(function (a, b) { return String(b.period_start || '').localeCompare(String(a.period_start || '')); });
+  }
+
+  // 特定族群新戶：「保險新戶」「數位帳戶新戶」這種只看某一類交易的新戶，不是全行信用卡新戶
+  // 回傳 { name:'保險新戶', definition:'原文定義（精簡過）' }；一般的「新戶定義：」回 null（沿用同卡現有寫法）
+  function audienceOf(text) {
+    var m = /([\u4e00-\u9fa5]{2,4})新戶(?:之|的)?定義\s*[:：]\s*([^\n。]+)/.exec(text);
+    if (!m || /^(本行|本卡|信用卡|卡片|銀行|所稱|活動|以下)$/.test(m[1])) return null;
+    return { name: m[1] + '新戶', definition: condenseDefinition(m[2]) };
+  }
+
+  // 新戶定義精簡成站長的寫法：去逗號、去句尾「者」、「未曾使用任一張X信用卡」→「未以任一X卡」
+  function condenseDefinition(d) {
+    return String(d || '').trim()
+      .replace(/[，]\s*/g, '').replace(/者$/, '')
+      .replace(/未曾?使用/g, '未以').replace(/任一張/g, '任一').replace(/信用卡(?!正卡|附卡)/g, '卡')
+      .replace(/刷?累[積計]保費金額|刷?保費累[積計]金額/g, '累積金額');
+  }
+
+  function cardNameRe(card) {
+    var parts = String((card && card.name) || '').split(/\s+/).filter(Boolean).map(function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    return parts.length ? new RegExp('(?:使用|持|以)?' + parts.join('\\s*') + '(?:信用卡)?[，,]?', 'i') : null;
+  }
+
+  // 條件草稿：本文沒有條列任務時，從本文挑「獎勵句／疊加句／領券或登錄／帳戶設定」四種句子拼成 ①②③
+  // 回傳 { tasks:[], coupon:bool }；找不到獎勵句回 null（退回舊做法：抓全文的條列）
+  function draftTasks(text, body, card, rates) {
+    var lines = body.split('\n').map(function (l) { return l.replace(/^[\s\-–—‧•●▪■◆*※＊]+/, '').trim(); }).filter(Boolean);
+    var bonusVals = rates.filter(function (r) { return r.kind === 'bonus'; }).map(function (r) { return r.value; });
+    var hasRate = function (l, v) { return new RegExp('(^|[^\\d.])' + String(v).replace('.', '\\.') + '\\s*%').test(l); };
+    var rewardLine = '';
+    lines.forEach(function (l) {
+      if (rewardLine || !/享|贈|回饋/.test(l) || /合計/.test(l)) return;
+      if (bonusVals.some(function (v) { return hasRate(l, v); })) rewardLine = l;
+    });
+    if (!rewardLine) return null;
+    var nameRe = cardNameRe(card);
+    var t1 = rewardLine.split('。')[0]
+      .replace(/^\d{2,4}\/\d{1,2}\/\d{1,2}\s*[-~]\s*(?:\d{2,4}\/)?\d{1,2}\/\d{1,2}\s*/, '');
+    if (nameRe) t1 = t1.replace(nameRe, '');
+    t1 = t1.replace(/[(（](?:回饋)?上限[^)）]*[)）]/g, '').replace(/[(（]信用卡[)）]/g, '')
+      .replace(/[，,](?:回饋|加碼)?上限[^，。]*$/, '').replace(/([^%\d])(?:加碼)?回饋$/, '$1').replace(/[！!。\s]+$/, '');
+    var tasks = [t1];
+
+    // 疊加句：「搭配切換「假日刷」，原權益最高2%，合計最高回饋8%」→「搭配切換「假日刷」+2%」
+    var stack = [], seen = {};
+    lines.forEach(function (l) {
+      if (!/合計/.test(l)) return;
+      var head = l.split(/[，,]/)[0].replace(/[！!。\s]+$/, '');
+      var pct = /(\d+(?:\.\d+)?)\s*%/.exec(l.slice(head.length));
+      if (!pct || /%/.test(head) || seen[pct[1]]) return;
+      seen[pct[1]] = true; stack.push(head + '+' + pct[1] + '%');
+    });
+    if (stack.length) tasks.push(stack.join('；'));
+
+    var coupon = /領券|領取[^，。\n]{0,8}券/.test(text), q = quotaOf(text);
+    if (coupon) tasks.push('需領券' + (q ? '，限量' + q.n + '張' : (/限量/.test(text) ? '，限量' : '')));
+    else if (needsRegister(text)) tasks.push('需登錄' + (q ? '，限量' + q.n + q.unit : (/限量|額滿/.test(text) ? '，限量' : '')));
+
+    var setup = /完成設定\s*([^。\n]{4,70})/.exec(text);
+    if (setup) tasks.push(('完成設定' + setup[1]).replace(/【/g, '「').replace(/】/g, '」').replace(/者$/, ''));
+    else if (/自動扣繳|自動轉帳扣繳/.test(text)) tasks.push('設定自動扣繳信用卡帳款');
+    return { tasks: tasks, coupon: coupon };
   }
 
   function parsePromo(index, cardId, rawText, extra) {
@@ -673,15 +773,23 @@
 
     // 新戶定義：先抄同卡現有的
     var def = /([^。\n]{0,30}(?:未曾?持有|不曾持有|未持有)[^。\n]{0,40})/.exec(text);
-    if (prev.length && prev[0].new_customer_definition) {
+    var audience = audienceOf(text);
+    if (audience) {
+      f.new_customer_definition = audience.definition;
+      note('new_customer_definition', 'check', '原文有自己的「' + audience.name + '」定義（不是全行新戶），所以不沿用這張卡現有的新戶定義；已精簡，請順一下');
+    } else if (prev.length && prev[0].new_customer_definition) {
       f.new_customer_definition = prev[0].new_customer_definition;
       note('new_customer_definition', def ? 'check' : 'ok', '沿用這張卡現有活動的寫法' + (def ? '｜這次原文：' + def[1].trim() : ''));
     } else if (def) { f.new_customer_definition = def[1].trim().replace(/^[（(:：\s]+/, ''); note('new_customer_definition', 'check', '摘自原文，請順一下'); }
     else note('new_customer_definition', 'empty', '原文沒寫新戶定義');
 
-    var tasks = extractTasks(text);
+    // 條件：本文有條列就用條列；沒有就從本文挑句子拼草稿；注意事項的 (1)(2)(3) 是細則，最後才考慮
+    var parts = splitBody(text);
+    var tasks = extractTasks(parts.body), draft = null;
+    if (!tasks.length) { draft = draftTasks(text, parts.body, card, rates); tasks = draft ? draft.tasks : extractTasks(text); }
     f.promo_condition = numbered(tasks);
-    note('promo_condition', tasks.length ? 'check' : 'empty', tasks.length ? '依原文的條列整理，請精簡成最短講法' : '原文沒有條列的任務——請自己寫（兩項以上用①②③）');
+    note('promo_condition', tasks.length ? 'check' : 'empty', !tasks.length ? '原文沒有條列的任務——請自己寫（兩項以上用①②③）'
+      : (draft ? '原文沒有條列任務，這是從本文挑「獎勵／疊加／領券或登錄／帳戶設定」的句子拼的草稿，請順一下' : '依原文的條列整理，請精簡成最短講法'));
 
     f.period_start = period.start; f.period_end = period.end;
     note('period_end', period.end ? 'ok' : 'empty', period.end ? '原文：' + period.evidence : '找不到活動期間');
@@ -696,16 +804,33 @@
     }
     if (rates.length) {
       var top = rates.reduce(function (a, b) { return b.value > a.value ? b : a; });
-      f.bonus_rate = String(Math.round(top.value * 10000) / 1000000);
-      note('bonus_rate', rates.length > 1 ? 'check' : 'ok', '原文 ' + top.value + '% → 填小數 ' + f.bonus_rate + (rates.length > 1 ? '（原文有多個 %：' + rates.map(function (r) { return r.value; }).join('、') + '）' : ''));
-      var sel = items.filter(function (x) { return x.selected && !x.generic; }).map(function (x) { return x.name; });
+      // bonus_rate 只填「這檔活動自己加碼的部分」：最高 8% ＝ 加碼 6% ＋ 原權益 2% → 填 6%
+      var uniq = rates.map(function (r) { return r.value; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+      var bonuses = rates.filter(function (r) { return r.kind === 'bonus' && r.value < top.value; });
+      var comp = bonuses.length ? findComposition(top.value, uniq) : null;
+      var own = top, split = '';
+      if (comp) {
+        var hit = bonuses.filter(function (b) { return comp.some(function (c) { return near(c, b.value); }); })[0];
+        if (hit) { own = hit; split = '原文 ' + top.value + '% ＝ ' + comp.join('% ＋ ') + '%，其中這檔活動加碼的是 ' + hit.value + '%，其餘是原權益疊上去的'; }
+      }
+      f.bonus_rate = String(Math.round(own.value * 10000) / 1000000);
+      note('bonus_rate', uniq.length > 1 ? 'check' : 'ok', split ? split + ' → 填小數 ' + f.bonus_rate
+        : '原文 ' + own.value + '% → 填小數 ' + f.bonus_rate + (uniq.length > 1 ? '（原文有多個 %：' + uniq.join('、') + '）' : ''));
+      // 通路：有具體商家就用商家（連同提到的支付工具）；沒有就用類別詞（保費、網購…）；再沒有才用支付工具
+      // 付款方式（可用 Apple Pay 繳）與時段（假日）不是通路
+      var cand = items.filter(function (x) { return !x.excluded && !x.weak && !/^(假日|平日|週末|周末|節假日)$/.test(x.name); });
+      var specific = cand.filter(function (x) { return !x.generic && !x.payment; });
+      var category = cand.filter(function (x) { return GENERIC_CATEGORY.test(x.name); });
+      var pays = cand.filter(function (x) { return x.payment; });
+      var sel = (specific.length ? cand.filter(function (x) { return !x.generic; }) : (category.length ? category : pays)).map(function (x) { return x.name; });
       f.bonus_merchants = sel.length ? sel.join(',') : (/一般消費|不限通路/.test(text) ? '*general' : '');
       if (!f.bonus_merchants) note('bonus_merchants', 'empty', '加碼適用哪些通路？不限通路填 *general');
+      else if (!specific.length) note('bonus_merchants', 'check', category.length ? '原文沒有具體商家，用類別詞；支付工具與時段不算通路（要加就點下面的標籤）' : '只找到支付工具，確認它是通路而不是付款方式');
       var cap = findCaps(text);
       if (cap.spend != null) f.bonus_cap = trimNum(cap.spend);
       else if (cap.reward != null) {
-        f.bonus_cap = capFromReward(cap.reward, top.value);
-        note('bonus_cap', 'check', '回饋上限 ' + cap.reward + ' ÷ ' + top.value + '% ＝ ' + f.bonus_cap + '（消費上限）');
+        f.bonus_cap = capFromReward(cap.reward, own.value);
+        note('bonus_cap', 'check', '回饋上限 ' + cap.reward + ' ÷ ' + own.value + '% ＝ ' + f.bonus_cap + '（消費上限）');
       }
     }
     if (voucher && voucher.amount) {
@@ -715,18 +840,24 @@
 
     // notes
     var n = [];
-    if (/登錄/.test(text)) n.push(/限量|名額/.test(text) ? '需登錄，限量' : '需登錄');
+    // 領券／登錄已經寫進條件草稿就不重複；「登錄」要是參加條件才算（見 needsRegister）
+    if (!draft) {
+      var q = quotaOf(text);
+      if (/領券/.test(text)) n.push('需領券' + (q ? '，限量' + q.n + '張' : (/限量/.test(text) ? '，限量' : '')));
+      else if (needsRegister(text)) n.push(/限量|名額/.test(text) ? '需登錄，限量' : '需登錄');
+    }
     var deadline = new RegExp('(?:限|須|需)?(?:於)?\\s*(\\d{2,4}\\s*[\\/.年]\\s*\\d{1,2}\\s*[\\/.月]\\s*\\d{1,2})\\s*日?\\s*\\(?含?\\)?\\s*前(?:完成)?核卡').exec(text);
     if (deadline) n.push('限於' + normalizeDate(deadline[1]) + '前核卡');
-    if (/不[得可]與[^。\n]{0,30}(並行|併用|同時|重複)|擇一/.test(text)) {
-      var mm = /(不[得可]與[^。\n；]{0,40}(?:並行|併用|同時[^。\n；]{0,6}|重複[^。\n；]{0,6}))/.exec(text);
-      n.push(mm ? mm[1] : '與其他新戶活動擇一');
-    }
+    // 只抄原文真的寫出來的那一句，抓不到就不寫（不自己編「與其他新戶活動擇一」）
+    var mm = /(不[得可]與[^。\n；]{0,40}(?:並行|併用|同時[^。\n；]{0,6}|重複[^。\n；]{0,6}))/.exec(text) ||
+      /((?:與|和)[^，。；\n]{2,30}?(?:僅可|只能|須|需)?擇[一優](?:適用|回饋|參加)?)/.exec(text);
+    if (mm) n.push(mm[1]);
     f.notes = normalizeConditions(n.join('；'));
 
     f.link = normalizeLink(extra.url || urls[0] || '');
     if (!f.link) note('link', 'empty', '貼上活動頁網址');
-    f.priority = String(prev.length && prev[0].priority != null ? prev[0].priority : 99);
+    // priority 留空＝匯出時當 99（目前全表都是 99）；同卡現有活動填了別的數字才沿用
+    f.priority = prev.length && prev[0].priority != null && Number(prev[0].priority) !== 99 ? String(prev[0].priority) : '';
     f.active = 'TRUE';
     var cta = (index.data.cardApplyCtas || {})[cardId];
     f.apply_cta_text = (cta && cta.text) || (card.name ? '申辦' + card.name : '');
@@ -737,8 +868,13 @@
     var days = /核卡後\s*(\d+)\s*(天|日)內/.exec(text);
     var reward = giftName ? '贈' + (giftName.length > 14 && /行李箱|登機箱/.test(giftName) ? '行李箱' : giftName)
       : (voucher && voucher.amount ? '享' + voucher.amount + (voucher.usage === '刷卡金' ? '元刷卡金' : (voucher.usage ? '點' + voucher.usage : '元回饋'))
-        : (rates.length ? '享' + rates.reduce(function (a, b) { return b.value > a.value ? b : a; }).value + '%回饋' : ''));
-    if (reward) {
+        : (rates.length ? (function (t) { return '享' + (t.kind === 'max' ? '最高' : '') + t.value + '%' + (t.kind === 'max' ? '' : '回饋'); })(rates.reduce(function (a, b) { return b.value > a.value ? b : a; })) : ''));
+    var firstBuy = /首筆([\u4e00-\u9fa5]{2,4}?)(?=[，,、。\s一享刷]|$)/.exec(text);
+    if (reward && audience && !giftName && !(voucher && voucher.amount)) {
+      // 特定族群新戶：「誰＋做什麼，符合條件享最高X%」（標榜的合計數字放摘要，bonus_rate 才是加碼的部分）
+      f.new_customer_summary = audience.name + (firstBuy ? '刷首筆' + firstBuy[1] : '') + '，符合條件' + reward;
+      note('new_customer_summary', 'check', '程式拼的草稿——請順成一句話');
+    } else if (reward) {
       f.new_customer_summary = (days ? '核卡後' + days[1] + days[2] + '內' : '') +
         (f.min_spend ? (days ? '，' : '') + '消費滿NT$' + Number(f.min_spend).toLocaleString('en-US') + '元' : (days ? '符合條件' : '符合條件')) + '，' + reward;
       note('new_customer_summary', 'check', '程式拼的草稿——請順成一句話');
@@ -916,15 +1052,18 @@
         ''
       ].concat(common, [
         '1. promo_types 只能選：首刷禮（實體或虛擬禮品）、回饋加碼（特定消費有額外百分比回饋）、定額回饋（固定金額的點數或刷卡金）。',
-        '2. new_customer_definition：官網對「新戶」的定義，一句話；沒寫就省略。',
+        '2. new_customer_definition：官網對「新戶」的定義，一句話；沒寫就省略。活動若針對特定族群（保險新戶、數位帳戶新戶…），抄那個族群的定義，不要寫成全行信用卡新戶。',
         '3. promo_condition：為了拿到獎勵必須完成的任務。兩項以上用①②③編號、一項一行（約25字內）；只有一項不編號。',
         '   寫法精簡：「新增N筆一般消費且每筆金額均滿NT$X」→「新增N筆NT$X元(含)以上的一般消費」。',
         '4. new_customer_summary：一句話「核卡後X天內＋最關鍵門檻＋獎勵」，不要把每個條件都塞進來。',
         '5. min_spend：最關鍵的消費門檻金額（原始數字）。',
         '6. gift_content：首刷禮的實際品名（多選一用①②③分行）。行李箱另填 luggage_inch（吋數）、luggage_value（官網寫的市價）。',
+        '   bonus_rate_percent 只填這檔活動「自己加碼」的百分比：最高8%＝加碼6%＋原權益2% → 填 6（合計數字寫在 summary）。',
         '7. bonus_rate_percent、bonus_cap_reward（加碼的回饋金額上限）、bonus_cap_spend（官網直接講的消費上限）、voucher_amount 只填原始數字，不要換算。',
-        '8. bonus_merchants：加碼適用通路；一般消費都算填 *general；其餘逐一列通路名稱。',
+        '8. bonus_merchants：加碼適用通路；一般消費都算填 *general；其餘逐一列通路名稱；沒有具體商家就填類別（保費、網購）。',
+        '   可用的付款方式（Apple Pay…）、不適用的支付工具、時段（假日）都不是通路，不要列。',
         '9. voucher_usage：定額回饋的形式（刷卡金、LINE POINTS、玉山e point…）。',
+        '   「領券」與「登錄」是兩件事，原文寫哪個就寫哪個；原文沒寫的限制（例如與其他活動擇一）不要自己加。',
         '10. notes：「非任務」的重要限制，用全形分號「；」分隔：回饋結構拆解、核卡期限、不可與其他活動並行、排除條款、發放規則與名額。',
         '    已寫進 promo_condition 的不要重複；喪失資格、銀行保留權利這類通用樣板不要寫。',
         '11. pick_question／pick_reason：給想辦卡的人看的一句鉤子與一句理由（例：「小額就想拿回饋？」／「刷滿 NT$600 就拿 NT$300，換算回饋率約 50%。」）。只用原文有的數字。',

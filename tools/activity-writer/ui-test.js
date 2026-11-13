@@ -80,6 +80,16 @@ const server = http.createServer((req, res) => {
   eq('複製 25 欄', cells.length, 25);
   eq('active 欄', cells[20], 'TRUE');
 
+  // 站長實測的保險新戶原文：欄位值，以及「新戶 25 欄不用捲很多次」（1400×1000 下整頁不超過兩個畫面高）
+  await page.click('#resetBtn');
+  await page.fill('#source', S.promoInsurance.text);
+  await page.waitForSelector('#f_bonus_rate');
+  eq('保險新戶 bonus_rate', await page.inputValue('#f_bonus_rate'), '0.06');
+  eq('保險新戶 bonus_merchants', await page.inputValue('#f_bonus_merchants'), '保險,保費');
+  const dims = await page.evaluate(() => ({ h: document.documentElement.scrollHeight, last: document.getElementById('f_pick_reason').getBoundingClientRect().bottom + window.scrollY }));
+  eq('新戶欄位在一個畫面內排完（最後一欄底部 < 920px，實際 ' + Math.round(dims.last) + '）', dims.last < 920, true);
+  await shot('promo-insurance');
+
   // AI（假回應）
   await page.route('https://generativelanguage.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'application/json',
     body: JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ groups: [

@@ -136,6 +136,14 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - `daysRemaining`／`period` 兩欄：底部填了「rate 那格的位置」（如 CB15）就輸出試算表原本的公式寫法（`=IF(ISBLANK(CL15),"",CL15-TODAY())` 那種）；沒填用不含引號的相對公式（`ADDRESS(ROW(),COLUMN()-n)`），結果相同。設定裡可改純值或留空
     - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）；
       **試算表欄位順序變了要改 `parser.js` 頂部的 `RATE_COLS`／`PROMO_COLS`**
+    - 新戶活動的幾條判讀規則（2026-11-13 依站長實測調整，樣本是 `samples.js` 的 `promoInsurance`）：
+      **特定族群新戶**（原文有「保險新戶定義：」這種帶族群名的定義）用原文的定義、不沿用同卡現有的全行新戶定義；
+      **`bonus_rate` 只填這檔活動自己加碼的部分**（最高 8% ＝ 加碼 6% ＋ 原權益 2% → 0.06，合計數字只放摘要）；
+      **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
+      **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
+      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 留空（＝99）
+    - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
+      `ui-test.js` 會擋「新戶 25 欄排不進一個畫面」
     - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面，AI 用假回應）
 
 ## 3. exportToJSON() 匯出流程
