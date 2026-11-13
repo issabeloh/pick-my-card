@@ -838,6 +838,10 @@ cards.push(card);
 
 // ========== 匯出商家付款方式資料 ==========
   const merchantPayments = {};
+  // 小額支付提示（2026-11-13）：micropayment_note 欄放各商家的說明文字。
+  // merchant 填 _default 的那一列不是商家，是「通用提示」：名單上的品牌自己那格空白時，網站用這段文字。
+  // 另外匯出成 micropaymentDefaultNote，不放進 merchantPayments（不然會被當成商家拿去比對搜尋詞）。
+  let micropaymentDefaultNote = '';
 
   const merchantPaymentsSheet = ss.getSheetByName('Merchant Payments');
   if (merchantPaymentsSheet) {
@@ -846,9 +850,15 @@ cards.push(card);
 
     for (let i = 1; i < merchantData.length; i++) {
       const row = merchantData[i];
-      const merchant = getValue(row, merchantHeaders, 'merchant');
+      const merchant = String(getValue(row, merchantHeaders, 'merchant') || '').trim();
 
       if (!merchant) continue;
+
+      const micropaymentNote = String(getValue(row, merchantHeaders, 'micropayment_note') || '').trim();
+      if (merchant === '_default') {
+        micropaymentDefaultNote = micropaymentNote;
+        continue;
+      }
 
       merchantPayments[merchant] = {
         online: getValue(row, merchantHeaders, 'online_payment') || '',
@@ -856,6 +866,8 @@ cards.push(card);
         source_url: getValue(row, merchantHeaders, 'source_url') || '',
         last_updated: getValue(row, merchantHeaders, 'last_updated') || ''
       };
+      // 沒寫就不輸出這個欄位（絕大多數商家沒有，省 cards.data 體積）
+      if (micropaymentNote) merchantPayments[merchant].micropayment_note = micropaymentNote;
     }
   }
 
@@ -1146,6 +1158,7 @@ if (faqSheet) {
     payments: payments,
     quickSearchOptions: quickSearchOptions,
     merchantPayments: merchantPayments,
+    micropaymentDefaultNote: micropaymentDefaultNote,
     faq: faqList,
     announcements: announcements,
     searchHints: searchHints,
@@ -1183,6 +1196,7 @@ if (faqSheet) {
   payments: payments,
   quickSearchOptions: quickSearchOptions,
   merchantPayments: merchantPayments,
+  micropaymentDefaultNote: micropaymentDefaultNote,
   faq: faqList,
   announcements: announcements,
   searchHints: searchHints,

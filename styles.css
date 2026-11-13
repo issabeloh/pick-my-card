@@ -2024,6 +2024,22 @@ input[type="number"]:focus {
     margin-right: 4px;
 }
 
+/* 小額支付提示（2026-11-13）：跟付款方式同一個灰框；上面有付款方式時用細線隔開 */
+.merchant-payment-note.with-divider {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.merchant-payment-note-text {
+    color: #4b5563;
+}
+
+.merchant-payment-note-source {
+    margin-top: 4px;
+    color: #9ca3af;
+}
+
 /* 推薦連結樣式 */
 .referral-link-info {
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);

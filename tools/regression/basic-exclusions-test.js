@@ -120,6 +120,62 @@ const META = readFixtureMeta();
   check('部分排除：狀態列補「另有 5 張卡…見下方灰色卡片」',
     r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）'), r.status);
 
+  // ---- NCCC 小額支付品牌（2026-11-13）：搜品牌名 → 排除「小額支付特約商店」的卡變灰卡；規則見 search-match.js ----
+  const MP = '小額支付特約商店';
+  const noteInfo = () => page.evaluate(() => ({
+    text: document.querySelector('#merchant-payment-info .merchant-payment-note-text')?.innerText.trim() || null,
+    source: document.querySelector('#merchant-payment-info .merchant-payment-note-source')?.innerText.trim() || null,
+  }));
+  await page.evaluate(() => { cardsData.micropaymentDefaultNote = '此商家{部分}門市被列為小額支付特約商店（測試）'; });
+
+  r = await search('麥當勞');
+  let note = await noteInfo();
+  check('小額支付：沒有卡排除這一項 → 沒有灰卡', r.excluded.length === 0, JSON.stringify(r.excluded.slice(0, 2)));
+  check('小額支付：全門市品牌的提示不出現「部分」、附資料來源與截止日',
+    note.text === '此商家門市被列為小額支付特約商店（測試）' && /聯卡中心/.test(note.source || '') && /截至/.test(note.source || ''),
+    JSON.stringify(note));
+
+  r = await search('麥當勞', { all: [MP, '學費'] });
+  check('小額支付：全門市品牌 → 確定排除的灰卡，寫名單原文、墊底',
+    r.excluded.length > 0 && r.excluded.every(e => e.items === MP && !e.maybe && e.label === '排除項目') && r.lastIsExcluded,
+    `excluded=${r.excluded.length} ${JSON.stringify(r.excluded.slice(0, 2))}`);
+  check('小額支付：對這個商家有指定活動的卡照常顯示活動（不變灰卡）', r.cards.length + r.excluded.length >= total && r.status.includes('匹配到'),
+    `cards=${r.cards.length} excluded=${r.excluded.length} total=${total} status=${r.status}`);
+
+  r = await search('zzz麥當勞', { all: [MP] });
+  check('小額支付：品牌名不在開頭不算（保守）', r.excluded.length === 0, `excluded=${r.excluded.length}`);
+
+  r = await search('50嵐', { all: [MP] });
+  note = await noteInfo();
+  check('小額支付：部分門市品牌 → 「可能屬於排除項目」灰卡',
+    r.excluded.length > 0 && r.excluded.every(e => e.items === MP && e.maybe && e.label === '可能屬於排除項目'),
+    `excluded=${r.excluded.length} ${JSON.stringify(r.excluded.slice(0, 2))}`);
+  check('小額支付：部分門市品牌的提示帶「部分」', note.text === '此商家部分門市被列為小額支付特約商店（測試）', JSON.stringify(note));
+
+  r = await search('青山洋服', { all: [MP] });
+  note = await noteInfo();
+  check('小額支付：兩個字的別名要全等或後面接空白（青山洋服不是青山）', r.excluded.length === 0 && note.text === null,
+    `excluded=${r.excluded.length} note=${JSON.stringify(note)}`);
+  r = await search('青山', { all: [MP] });
+  check('小額支付：兩個字的別名全等照樣命中', r.excluded.length > 0 && r.excluded.every(e => e.maybe), `excluded=${r.excluded.length}`);
+
+  r = await search('繳稅', { all: [MP] });
+  check('小額支付：搜的不是名單上的品牌 → 這一項不影響任何卡', r.excluded.length === 0 && r.cards.length === total,
+    `excluded=${r.excluded.length} cards=${r.cards.length}`);
+
+  await page.evaluate(() => { delete cardsData.micropaymentDefaultNote; });
+  r = await search('麥當勞', { all: [MP] });
+  note = await noteInfo();
+  check('小額支付：Sheets 沒填通用提示 → 不出提示區塊（灰卡照常）', note.text === null && r.excluded.length > 0, JSON.stringify(note));
+  const unit = await page.evaluate(() => ({
+    kfc: findMicropaymentBrand('KFC 桃園')?.name, subways: findMicropaymentBrand('subways')?.name || null,
+    exactMiss: findMicropaymentBrand('麥當勞 信義', true)?.name || null, exactHit: findMicropaymentBrand('麥當勞', true)?.name,
+    underscore: findMerchantPaymentInfo(['_default']),
+  }));
+  check('小額支付：別名比對（英文別名、英數接續、精準搜尋）',
+    unit.kfc === '肯德基 KFC' && unit.subways === null && unit.exactMiss === null && unit.exactHit === '麥當勞', JSON.stringify(unit));
+  check('小額支付：商家付款表的底線開頭列不當成商家', unit.underscore === null, JSON.stringify(unit.underscore));
+
   // 3. 搜尋詞「包含」排除詞也算（用造的詞：真實詞如「人壽保費」會先匹配到保費活動，走活動路徑）
   r = await search('zzz國泰qq代繳費', { all: ['qq代繳'] });
   check('包含規則：搜尋詞含排除詞 → 排除', r.cards.length === 0 && r.status.includes('一般消費排除項目'),

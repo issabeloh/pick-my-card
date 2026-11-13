@@ -140,12 +140,13 @@ async function calculateCashback() {
         const toExcluded = (base, hits, isMaybe) => ({ ...base, isBasic: true, isExcluded: true, isMaybeExcluded: isMaybe,
             excludedItems: hits, cashbackAmount: 0, rate: 0, calculationLayers: null });
         // 確定命中優先；沒有才看可能命中。都沒有回 null
+        // NCCC 小額支付品牌（2026-11-13）：搜到名單上的品牌時，排除「小額支付特約商店」的卡也算命中
+        // （全門市品牌＝確定、部分門市品牌＝可能）。只認用戶自己打的字，規則見 search-match.js 同名區塊
+        const micropaymentBrand = findMicropaymentBrand(merchantValue, exactOnly);
         const classify = card => {
-            const hits = getBasicExclusionHits(card, exclusionTerms, exactOnly);
-            if (hits.length) { basicExcludedCount++; return { hits, isMaybe: false }; }
-            const maybe = getBasicExclusionMaybeHits(card, exclusionTerms, exactOnly);
-            if (maybe.length) { maybeExcludedCount++; return { hits: maybe, isMaybe: true }; }
-            return null;
+            const c = classifyBasicExclusion(card, exclusionTerms, exactOnly, micropaymentBrand);
+            if (c) { if (c.isMaybe) maybeExcludedCount++; else basicExcludedCount++; }
+            return c;
         };
         if (isBasicCashback) {
             results = results.map(r => {
@@ -1471,6 +1472,7 @@ function findMerchantPaymentInfo(searchVariants) {
     // e.g. "好市多 (Costco)" 可用「好市多」或「Costco」搜到；
     //      "日本7-ELEVEN門市" 不會誤匹配 "7-ELEVEN"
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        if (merchantName.startsWith('_')) continue;   // 底線開頭＝設定列（如 _default），不是商家
         if (merchantMatchesStrict(merchantName, searchVariants)) {
             console.log('✅ 匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
@@ -1506,6 +1508,30 @@ function removeMerchantInfoRowIfEmpty() {
     }
 }
 
+// 小額支付提示的文字（2026-11-13）。來源順序：該商家列自己的 micropayment_note → 通用提示
+// （Merchant Payments 的 _default 列，匯出成 cardsData.micropaymentDefaultNote；只給名單上的品牌用）。
+// 文字裡的「{部分}」：部分門市品牌顯示「部分」兩字，其餘拿掉——「此商家{部分}門市被列為…」一份文字兩種級別共用
+function getMicropaymentNoteText(merchantInfo, micropaymentBrand) {
+    const own = String((merchantInfo && merchantInfo.micropayment_note) || '').trim();
+    const fallback = micropaymentBrand ? String((cardsData && cardsData.micropaymentDefaultNote) || '').trim() : '';
+    const text = own || fallback;
+    if (!text) return '';
+    return text.replace(/\{部分\}/g, micropaymentBrand && micropaymentBrand.level === 'partial' ? '部分' : '');
+}
+
+// 提示本體；文字來自 Sheets，一律 escapeHtml（鐵則 3）。名單上的品牌另附資料來源與截止日
+function renderMicropaymentNote(noteText, micropaymentBrand, hasPaymentInfo) {
+    let html = `<div class="merchant-payment-note${hasPaymentInfo ? ' with-divider' : ''}">`;
+    html += '<div class="merchant-payment-title">＊ 小額支付提醒</div>';
+    html += `<div class="merchant-payment-note-text">${escapeHtml(noteText)}</div>`;
+    const source = (micropaymentBrand && typeof MICROPAYMENT_BRANDS !== 'undefined') ? MICROPAYMENT_BRANDS : null;
+    if (source && sanitizeUrl(source.sourceUrl)) {
+        const asOf = source.asOfLabel ? `（截至 ${escapeHtml(source.asOfLabel)}）` : '';
+        html += `<div class="merchant-payment-note-source">資料來源：<a href="${escapeHtml(sanitizeUrl(source.sourceUrl))}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">聯卡中心小額支付平台通路名單</a>${asOf}</div>`;
+    }
+    return html + '</div>';
+}
+
 function displayMerchantPaymentInfo(searchedItem) {
     // 移除舊的商家付款方式區塊（如果存在）
     const existingBlock = document.getElementById('merchant-payment-info');
@@ -1524,8 +1550,12 @@ function displayMerchantPaymentInfo(searchedItem) {
     console.log('🔍 展開後的搜尋詞:', searchTerms);
 
     const merchantInfo = findMerchantPaymentInfo(searchTerms);
+    // 小額支付提示（2026-11-13）：品牌在聯卡中心小額支付名單上，或這一列自己寫了 micropayment_note 時顯示。
+    // 補充資訊，跟付款方式一樣不理精準搜尋
+    const micropaymentBrand = findMicropaymentBrand(searchedItem, false);
+    const micropaymentNote = getMicropaymentNoteText(merchantInfo, micropaymentBrand);
 
-    if (!merchantInfo) {
+    if (!merchantInfo && !micropaymentNote) {
         console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
         removeMerchantInfoRowIfEmpty();
         return;
@@ -1536,21 +1566,29 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
+    let infoHTML = '';
 
-    // 計算有多少個付款方式
-    const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
-    const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
-    const bothExist = hasOnline && hasOffline;
+    if (merchantInfo) {
+        infoHTML += `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
 
-    if (hasOnline) {
-        const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
+        // 計算有多少個付款方式
+        const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
+        const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
+        const bothExist = hasOnline && hasOffline;
+
+        if (hasOnline) {
+            const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
+            infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
+        }
+
+        if (hasOffline) {
+            const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
+            infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
+        }
     }
 
-    if (hasOffline) {
-        const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
+    if (micropaymentNote) {
+        infoHTML += renderMicropaymentNote(micropaymentNote, micropaymentBrand, !!merchantInfo);
     }
 
     infoBlock.innerHTML = infoHTML;
