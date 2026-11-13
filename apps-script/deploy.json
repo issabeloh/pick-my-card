@@ -15,7 +15,7 @@
     },
     {
       "name": "PMC 管理系統（只部署活動快寫，其他檔維持手動貼）",
-      "scriptId": "",
+      "scriptId": "1QXMO9t_422Bcf9vd8wGyhVApD1jVBlJ6fkZfFZsNZlkBm3ARy1cSVV6M",
       "files": [
         "activity-writer.gs",
         "ActivityWriter.html"
