@@ -81,7 +81,7 @@ function onOpen() {
 function buildAutomationMenu_() {
   const ui = SpreadsheetApp.getUi();
   ui.createMenu('🤖 權益自動化')
-    .addItem('① 查官網變動', 'checkWatchlist')                                  // watchlist-monitor.gs
+    .addItem('① 檢查監控清單的網頁有沒有改', 'checkWatchlist')            // watchlist-monitor.gs
     .addItem('② 處理變動通知（公開／封存／刪除）', 'processInboxRows')
     .addSeparator()
     .addItem('AI 拆卡片活動：打 V 的＋我貼的', 'parseCardActivities')            // card-benefits-parser.gs
@@ -98,16 +98,19 @@ function buildAutomationMenu_() {
       // 後者打 V 只寫空白格、打「覆蓋」才換掉已有名單；都會先跳確認視窗）
       .addItem('登錄連結 1：標出要登錄的活動', 'markRegisterSlotsInDraft')
       .addItem('登錄連結 2：找連結', 'fillRegisterLinksFromSnapshots')
-      .addItem('登錄連結 3：打勾的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
+      .addItem('登錄連結 3：打 V 的寫回正式 Cards Data', 'applyRegisterLinksToCardsData')
       .addItem('登錄連結 4：檢查死連結', 'checkRegisterLinksAlive')
       .addSeparator()
       // 一般消費排除兩步（basic-exclusions-extractor.gs，2026-09-30）：
       // 1 只寫自動化檔的 5-待審核；2 只寫正式 Cards Data 的 basicExclusions 欄（V＝只寫空白格、覆蓋＝整格換掉）
-      .addItem('一般消費排除 1：AI 從監控快照抽', 'extractBasicExclusionsFromSnapshots')
-      // 官網變動流程（2026-10-13）：監控把逐項修改寫進 2-變動通知 → 站長刪行、填 V → 套用到待審核 → 2 寫回
-      .addItem('一般消費排除：套用修改到待審核', 'applyBasicExclusionChanges')
-      .addItem('一般消費排除 2：打勾的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData')
-      .addItem('一般消費排除：補分析變動', 'analyzePendingBasicExclusionChanges')
+      // 照做事順序排（2026-11-14）：第一次建名單走 1 → 2；官網改版走（補分析）→ 套用 → 2
+      .addItem('一般消費排除 1：AI 從監控快照抽（第一次建名單）', 'extractBasicExclusionsFromSnapshots')
+      // 官網改版流程（2026-10-13）：監控把逐項修改寫進 2-變動通知（時間不夠的標 ⏳ 待分析，先補分析）
+      // → 站長刪行、在「一般消費排除確認」欄填 V → 套用到待審核 → 2 寫回
+      .addItem('一般消費排除（官網改版）：補分析 ⏳ 的列', 'analyzePendingBasicExclusionChanges')
+      .addItem('一般消費排除（官網改版）：確認填 V 的套用到待審核', 'applyBasicExclusionChanges')
+      // 2 收兩種標記：V＝只寫正式表空白格；覆蓋＝整格換掉（官網改版的「套用」會自動標覆蓋）
+      .addItem('一般消費排除 2：V／覆蓋的寫回正式 Cards Data', 'applyBasicExclusionsToCardsData')
       .addSeparator()
       .addItem('測試 AI 模型（看哪些可用）', 'testGeminiModels'))
     .addSeparator()

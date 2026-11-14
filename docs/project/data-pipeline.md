@@ -38,7 +38,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
      的交易（繳稅、學費、保費、儲值…），一格多項、**半形逗號分隔**（頓號／全形逗號／換行也吃，但請統一用 `,`），同一個東西各銀行要寫成同一個字，匯出成 `card.basicExclusions` 字串陣列
      ⚠️ 名單裡不全是官網原文：滙豐卡的「7-11」「全家」是程式依「超商只收合作銀行的卡」補的（2026-11-13，`basic-exclusions-extractor.gs` 的 `BASICEX_STORE_NO_ACCEPT`，細節見 `apps-script/README.md` 規則 8m），對照原文找不到是正常的，別刪
      （空白格不輸出）。前端只在「退回基本回饋」時使用，命中的卡不顯示基本回饋（規則見 cashback-engine.md 第 10 節）。
-     初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」；官網變動後由監控自動分析、站長在 `2-變動通知` 刪行填 V 再「套用修改到待審核」（2026-10-13，`apps-script/basic-exclusions-extractor.gs` 第 ③ 段，操作見 `apps-script/README.md`）。
+     初次建立用自動化檔選單「其他工具 ▸ 一般消費排除 1／2」；官網變動後由監控自動分析、站長在 `2-變動通知` 刪行填 V 再「一般消費排除（官網改版）：確認填 V 的套用到待審核」（2026-10-13，`apps-script/basic-exclusions-extractor.gs` 第 ③ 段，操作見 `apps-script/README.md`）。
      ⚠️ 項目要寫成**使用者會搜尋的詞**且保留限定詞：前端是「搜尋詞包含排除詞就算」，寫「超商」會誤殺所有超商搜尋，要寫「超商代收」；單一個字的項目一律被忽略
    - 隱藏活動：一般槽位加 `hideInDisplay_N=TRUE`（詳情頁不顯示但可搜尋；配方見 cashback-engine.md 第 5 節。舊 `_hide`/`_hide_1` 專用欄位與其 Apps Script 特例迴圈已於 2026-07-11 移除）
 2. **Payments** —— 行動支付（id, name, website；自動生成 searchTerms 別名）
