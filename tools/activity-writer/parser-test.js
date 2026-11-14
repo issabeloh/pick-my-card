@@ -6,7 +6,7 @@ const idx = P.buildIndex(data);
 let fail = 0;
 const eq = (label, got, want) => { if (String(got) !== String(want)) { fail++; console.error('❌ ' + label + '\n   得到：' + got + '\n   應為：' + want); } };
 const has = (label, got, part) => { if (String(got).indexOf(part) < 0) { fail++; console.error('❌ ' + label + '\n   得到：' + got + '\n   應包含：' + part); } };
-const run = (s) => (s.kind === 'rate' ? P.parseActivity : P.parsePromo)(idx, s.card, s.text);
+const run = (s) => (s.kind === 'promo' ? P.parsePromo : s.kind === 'coupon' ? P.parseCoupon : P.parseActivity)(idx, s.card, s.text);
 
 let r = run(S.artfunComposition), f = r.fields;
 eq('組成句 rate', f.rate, '2.5'); eq('組成句 model', f.cashbackModel, 'rate+basic');
@@ -55,6 +55,22 @@ eq('保險新戶：notes 只抄原文寫的', f.notes, '與保費分期0利率�
 eq('priority 欄已刪', P.PROMO_COLS.indexOf('priority'), -1);
 eq('排除字在清單後面', r.chips.items.filter(x => /line ?pay/i.test(x.name))[0].excluded, true);
 eq('提到別的活動的登錄不算條件', P.findConditions('若同時領券及登錄分期活動，優先適用分期').some(c => /登錄/.test(c.text)), false);
+
+// 領券活動（CUBE App 領券加碼 7%）——站長 2026-11-13 第二個實測原文
+eq('領券：卡片偵測（不被清單裡的 LINE Pay 帶走）', P.detectCard(idx, S.cubeCoupon.text), 'cathay-cube');
+eq('領券：類型偵測', P.detectKind(P.normalizeText(S.cubeCoupon.text)), 'coupon');
+eq('新戶＋領券仍是新戶', P.detectKind(P.normalizeText(S.promoInsurance.text)), 'promo');
+r = run(S.cubeCoupon); f = r.fields;
+eq('領券：通路只有小樹購（不含 Apple Pay、假日）', f.couponMerchant, '小樹購');
+eq('領券：率', f.couponRate, '7'); eq('領券：cap＝700÷7%', f.couponCap, '10000');
+eq('領券：條件', f.couponConditions, '排除含有「小樹購電子票券商品」之整筆訂單消費；限直接使用CUBE信用卡刷卡或使用該卡加入 Apple Pay / Samsung Pay / Google Pay等消費；可與「玩數位」權益疊加；需至 CUBE App 領券');
+eq('領券：期間', f.couponPeriodStart + '~' + f.couponPeriodEnd, '2026/11/1~2026/11/30');
+eq('領券：輸出 6 欄', P.buildCouponRow(f).length, 6); eq('領券：格式檢查通過', P.validate('coupon', f).length, 0);
+r = P.parseActivity(idx, 'cathay-cube', S.cubeCoupon.text); f = r.fields;
+eq('同一段當一般活動：category 留空（不取第一行、不猜）', f.category, '');
+eq('同一段當一般活動：items', f.items, '小樹購');
+eq('同一段當一般活動：排除條款不重複、不收雜句', f.conditions, '排除含有「小樹購電子票券商品」之整筆訂單消費；限直接使用CUBE信用卡刷卡或使用該卡加入 Apple Pay / Samsung Pay / Google Pay等消費；可與「玩數位」權益疊加');
+eq('「遇假日順延」不是限假日', /限假日/.test(f.conditions), false);
 
 // 輸出
 const row = P.buildRateRow(run(S.ubearBonusOnly).fields, 'value', new Date(2026, 0, 1));

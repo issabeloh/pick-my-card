@@ -9,6 +9,7 @@
  *   "通路比對"        matchItems
  *   "條件片語"        findConditions / needsRegister
  *   "一般活動"        parseActivity
+ *   "領券活動"        parseCoupon（couponMerchant_N 那一組）
  *   "新戶活動"        parsePromo（"特定族群新戶" audienceOf、"條件草稿" draftTasks）
  *   "輸出一列"        buildRateRow / buildPromoRow / toTsv
  *   "AI 提示詞"       buildAiRequest / applyAiActivity / applyAiPromo
@@ -31,6 +32,8 @@
     'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage', 'notes', 'link',
     'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry', 'pick_rank', 'pick_question', 'pick_reason'];
   // ↑ 2026-11-13 照站長貼的正式表表頭對齊（26 欄；priority 欄同日刪除）。試算表版依欄名寫入，這個順序只影響「複製一列」
+  // 領券活動（couponMerchant_N 那一組）。順序只影響「複製一列」；試算表版依欄名寫入
+  var COUPON_COLS = ['couponMerchant', 'couponRate', 'couponCap', 'couponConditions', 'couponPeriodStart', 'couponPeriodEnd'];
   var PROMO_TYPES = ['首刷禮', '回饋加碼', '定額回饋'];
 
   // ===== 文字正規化 =====
@@ -171,16 +174,23 @@
   function detectCard(index, text) {
     var t = termKey(normalizeText(text));
     var best = null;
+    // 分數＝別名長度 × 出現次數，後面接「卡／信用卡」再加分——
+    // 只在「不適用的支付工具」清單裡出現一次的 LINE Pay，不該贏過全文講了十幾次的「CUBE信用卡」
     index.cardAliases.forEach(function (c) {
       c.keys.forEach(function (k) {
-        if (t.indexOf(k) >= 0 && (!best || k.length > best.len)) best = { id: c.id, len: k.length };
+        var n = 0, card = false, at = -1;
+        while ((at = t.indexOf(k, at + 1)) >= 0) { n++; if (/^(信用)?卡/.test(t.slice(at + k.length, at + k.length + 3)) || /卡$/.test(k)) card = true; }
+        if (!n) return;
+        var score = k.length * Math.min(n, 5) + (card ? 20 : 0);
+        if (!best || score > best.score) best = { id: c.id, score: score };
       });
     });
     return best ? best.id : '';
   }
 
   function detectKind(text) {
-    return /新戶|首刷|核卡後|新卡友|新申辦|首次申辦/.test(text) ? 'promo' : 'rate';
+    if (/新戶|首刷|核卡後|新卡友|新申辦|首次申辦/.test(text)) return 'promo';
+    return /領券|領取[^，。\n]{0,14}(優惠)?券|優惠券/.test(text) ? 'coupon' : 'rate';
   }
 
   // ===== 日期解析 =====
@@ -429,7 +439,8 @@
           // 保留「國家＋品牌」這種更精確的寫法，但預設不選
           found.push({ name: name, at: at, known: false, weak: true });
         } else {
-          found.push({ name: name, at: at, known: false, weak: !marked });
+          if (!marked) return;   // 沒有「指定通路：」這類標記的頓號句多半是罰則與說明，列出來只是雜訊
+          found.push({ name: name, at: at, known: false, weak: false });
         }
         seenKey[k] = true;
       });
@@ -459,8 +470,11 @@
         payment: !!index.paymentKeys[k] || /(pay|支付|錢包)$/i.test(f.name) };
       dedupe[k] = item; out.push(item);
     });
+    // 時段（假日、平日）不是通路；有具體商家時，支付工具多半只是「可以用它付」，預設不選（點標籤可加回）
+    out.forEach(function (x) { if (/^(假日|平日|週末|周末|節假日)$/.test(x.name)) x.weak = true; });
     var hasSpecific = out.some(function (x) { return !x.excluded && !x.generic && !x.weak; });
-    out.forEach(function (x) { x.selected = !x.excluded && !x.weak && (!x.generic || !hasSpecific); });
+    var hasMerchant = out.some(function (x) { return !x.excluded && !x.generic && !x.weak && !x.payment; });
+    out.forEach(function (x) { x.selected = !x.excluded && !x.weak && (!x.generic || !hasSpecific) && !(x.payment && hasMerchant); });
     return out;
   }
 
@@ -506,16 +520,37 @@
     var acc = opts.accumulated;
     if (acc) add(acc.text.replace(/\s+/g, ''), true, '累積門檻不是單筆門檻，寫條件、不填 minSpend');
 
-    var day = /(每週[一二三四五六日]|每周[一二三四五六日]|週[一二三四五六日](?:、週?[一二三四五六日])*|每月\s*\d+\s*[日號]|偶數日|奇數日|假日|平日)/.exec(text);
-    if (day) add('限' + day[1].replace(/\s+/g, ''));
+    // 「假日／平日」要是條件才算（限假日、假日刷…享）；「遇假日順延」不是
+    var day = /(每週[一二三四五六日]|每周[一二三四五六日]|週[一二三四五六日](?:、週?[一二三四五六日])*|每月\s*\d+\s*[日號]|偶數日|奇數日)/.exec(text) ||
+      /(?:限|逢|於)(假日|平日)|(假日|平日)(?:消費|刷卡|享|加碼)/.exec(text);
+    if (day) add('限' + (day[1] || day[2]).replace(/\s+/g, ''));
+    // 「本活動限直接使用…等消費」：官網自己寫的適用範圍，整句照抄
+    var scope = /本活動限(?:以)?([^，。；\n]{6,60})/.exec(text);
 
     var pay = /(?:限|需|須)?(?:以|使用|透過)?綁定([^，。；\n]{2,24}?)(?:消費|支付|付款|結帳|交易|感應)/.exec(text);
     if (pay) add('限綁定' + pay[1].trim(), false, '若這個支付工具本身就是通路（已在 items），不必重複寫');
     if (/限(於)?實體(門市|店|商店|通路)|實體(門市|店面)(消費)?(方|才|始)/.test(text)) add('限實體門市');
     if (/限(於)?(官網|官方網站|網路|線上|APP)/i.test(text)) add('限官網／APP', false);
 
-    var exRe = /(排除|不含|不包含|不包括)([^。；\n]{2,60})/g, em;
-    while ((em = exRe.exec(text))) add('排除' + em[2].replace(/^[:：\s]+/, '').replace(/[，,]\s*$/, '').replace(/(等)?(交易|消費|項目)?$/, ''), true);
+    // 排除條款：只取到逗號為止的一小句；同一件事官網常講兩三遍（去掉虛字後互相包含就算重複）；
+    // 「電子票券等排除商品」的排除是形容詞、括號裡的補充、分期利率樣板、已被「本活動限…」涵蓋的支付工具清單都不收
+    var exRe = /(排除|不含|不包含|不包括)([^。；\n，]{2,40})/g, em, exKeys = [];
+    var exKey = function (s) { return s.replace(/[有之的「」『』\s]|整筆訂單|消費|交易/g, ''); };
+    while ((em = exRe.exec(text)) && exKeys.length < 3) {
+      var body = em[2].replace(/^[:：\s]+/, '');
+      if (/^(商品|項目|條款|名單|通路)/.test(body)) continue;
+      var sentStart = Math.max(text.lastIndexOf('。', em.index), text.lastIndexOf('\n', em.index)) + 1;
+      var sentEnd = (function (a, b) { return Math.min(a < 0 ? text.length : a, b < 0 ? text.length : b); })(text.indexOf('。', em.index), text.indexOf('\n', em.index));
+      var before = text.slice(sentStart, em.index);
+      if ((before.match(/[(（]/g) || []).length > (before.match(/[)）]/g) || []).length) continue;
+      if (/分期年利率|帳單分期|總費用年百分率/.test(text.slice(sentStart, sentEnd))) continue;
+      if (scope && /^(透過)?綁定/.test(body)) continue;
+      var k = exKey(body);
+      if (exKeys.some(function (x) { return x.indexOf(k) >= 0 || k.indexOf(x) >= 0; })) continue;
+      exKeys.push(k);
+      add('排除' + body.replace(/(等)?(交易|項目)?$/, ''), true);
+    }
+    if (scope) add('限' + scope[1].trim());
 
     var fee = /(免收|需收取|加收|另收)[^。；\n]{0,6}?(\d+(?:\.\d+)?)\s*%[^。；\n]{0,4}?(國外交易)?(服務費|手續費)/.exec(text);
     if (fee) add(fee[1] + fee[2] + '%國外交易服務費', true, '手續費不算進 rate，只寫條件');
@@ -525,6 +560,13 @@
     if (either) add(either[1]);
     if (opts.cap && opts.cap.rewardText) add(opts.cap.rewardText, false, '一般上限已由 cap 表達；想讓人看到週期才加');
     if (/認列為國外|視為國外(交易|消費)/.test(text)) add('認列為國外消費', false);
+    // 提到別的權益方案（「玩數位」權益）：領券加碼多半可以跟它疊，但原文通常沒寫死 → 寫進去、標成要確認
+    var plan = /「([^」%\d]{2,8})」權益/.exec(text);
+    if (plan && !stack) add('可與「' + plan[1] + '」權益疊加', true, '原文提到這個權益方案；能不能疊、疊多少請自己確認（要寫回饋率就補在這句裡）');
+    if (opts.coupon) {
+      var where = /(?:至|於|在)\s*([^，。；\n]{2,24}?(?:App|APP|Wallet|網銀|官網))\s*(?:完成)?領[取券]/.exec(text);
+      add(where ? '需至 ' + where[1].trim().replace(/\s+/g, ' ') + ' 領券' : '需領券', true, '領券活動的慣例寫法，放最後');
+    }
     return out;
   }
 
@@ -559,16 +601,12 @@
     var cats = [];
     ((card && card.cashbackRates) || []).forEach(function (r) { if (r.category && cats.indexOf(r.category) < 0) cats.push(r.category); });
     var compact = termKey(text);
+    // 只在原文「整個」出現既有分類名時沿用；猜錯比留空糟（2026-11-13：不再用分類裡的「」關鍵字比對、也不取原文第一行）
     for (var i = 0; i < cats.length; i++) {
-      var q = /[「『]([^」』]{2,12})[」』]/.exec(cats[i]);
-      if (q && compact.indexOf(termKey(q[1])) >= 0) return { value: cats[i], why: '原文提到「' + q[1] + '」，沿用這張卡既有的分類', options: cats };
       if (cats[i].length >= 3 && compact.indexOf(termKey(cats[i])) >= 0) return { value: cats[i], why: '沿用這張卡既有的分類', options: cats };
     }
     var bracket = /[【\[]([^】\]\n]{2,18})[】\]]/.exec(text);
     if (bracket && !/注意|說明|期間|活動(辦法|內容|期間)/.test(bracket[1])) return { value: bracket[1].trim(), why: '取自原文的【】標題', options: cats };
-    var first = (text.split('\n').filter(function (l) { return l.trim(); })[0] || '').trim();
-    first = first.replace(/^[^\s，。：:]{0,14}?卡\s+/, '').replace(/^[\s\-｜|:：]+/, '');
-    if (first && first.length <= 18 && !/[%\d]{3,}/.test(first)) return { value: first, why: '取自原文第一行', options: cats };
     return { value: '', why: '', options: cats };
   }
 
@@ -590,7 +628,7 @@
     var minSpend = findMinSpend(text);
     var acc = findAccumulated(text);
     var period = parsePeriod(text);
-    var conds = findConditions(text, { cap: cap, accumulated: acc });
+    var conds = findConditions(text, { cap: cap, accumulated: acc, coupon: !!(extra && extra.coupon) });
     var urls = findUrls(text);
     var cat = guessCategory(card, text);
 
@@ -636,8 +674,43 @@
         rates: rates.filter(function (r) { return r.kind !== 'fee'; }).map(function (r) { return r.value; }) },
       structure: st, capInfo: cap,
       existing: matchExistingSlot(card, selected),
-      skipped: /折價券|優惠券|領券/.test(text) ? '原文提到領券／優惠券：領券型活動要寫 couponMerchant_N 那組，不是 rate_N' : ''
+      skipped: /折價券|優惠券|領券/.test(text) && !(extra && extra.coupon) ? '原文提到領券／優惠券：領券型活動要寫 couponMerchant_N 那組——上面切到「領券活動」' : ''
     };
+  }
+
+  // ===== 領券活動 =====
+  // couponMerchant_N 那一組：通路、領券加碼的率、消費上限、條件（最後一句是去哪領券）、期間
+  function parseCoupon(index, cardId, rawText, extra) {
+    var base = parseActivity(index, cardId, rawText, { coupon: true });
+    var text = normalizeText(rawText);
+    var card = getCard(index, cardId) || {};
+    var notes = {};
+    var note = function (f, level, t) { notes[f] = { level: level, text: t }; };
+    var f = {};
+    f.couponMerchant = base.fields.items;
+    if (base.notes.items) notes.couponMerchant = base.notes.items;
+    var rates = findRates(text).filter(function (r) { return r.kind !== 'fee' && r.kind !== 'base'; });
+    var own = rates.filter(function (r) { return r.kind === 'bonus' || r.kind === 'max'; })[0] || rates[0];
+    f.couponRate = own ? trimNum(own.value) : '';
+    if (!own) note('couponRate', 'empty', '文字裡找不到回饋率（%）');
+    else note('couponRate', 'check', '填領券加碼的率（' + own.value + '%）；若這個數字是含原權益的合計，要扣掉原權益｜原文：' + snippet(text, own.index, own.len));
+    var cap = base.capInfo;
+    if (cap.spend != null) { f.couponCap = trimNum(cap.spend); note('couponCap', 'ok', '官網直接給消費上限'); }
+    else if (cap.reward != null && own) { f.couponCap = capFromReward(cap.reward, own.value); note('couponCap', 'check', '回饋上限 ' + cap.reward + ' ÷ ' + own.value + '% ＝ ' + f.couponCap + '（消費上限）'); }
+    else { f.couponCap = ''; note('couponCap', 'empty', '原文沒寫上限（無上限就留空）'); }
+    f.couponConditions = base.fields.conditions;
+    note('couponConditions', 'check', '程式挑的句子，請順一下（慣例：最後一句寫去哪領券）');
+    f.couponPeriodStart = base.fields.periodStart; f.couponPeriodEnd = base.fields.periodEnd;
+    if (base.notes.periodEnd) notes.couponPeriodEnd = base.notes.periodEnd;
+    // 同通路已經有一張券 → 多半是更新它
+    var keys = {};
+    String(f.couponMerchant).split(',').forEach(function (n) { if (n.trim()) keys[termKey(n)] = true; });
+    var existing = null;
+    (card.couponCashbacks || []).forEach(function (c, i) {
+      var hit = String(c.merchant || '').split(/[,，]/).filter(function (m) { return keys[termKey(m)]; }).length;
+      if (hit && !existing) existing = { slot: c.slot || null, index: i + 1, hit: hit, total: String(c.merchant || '').split(/[,，]/).length, rate: c.rate, period: c.period || '', coupon: true };
+    });
+    return { kind: 'coupon', fields: f, notes: notes, chips: { items: base.chips.items, conditions: base.chips.conditions }, capInfo: cap, existing: existing, skipped: '' };
   }
 
   // ===== 新戶活動 =====
@@ -930,6 +1003,11 @@
     return row;
   }
 
+  function buildCouponRow(fields) {
+    var f = fields || {};
+    return COUPON_COLS.map(function (c) { return f[c] == null ? '' : String(f[c]); });
+  }
+
   function buildPromoRow(fields) {
     var f = fields || {};
     return PROMO_COLS.map(function (c) { return f[c] == null ? '' : String(f[c]); });
@@ -967,6 +1045,15 @@
       if (ts(f.periodStart) && ts(f.periodEnd) && ts(f.periodEnd) < ts(f.periodStart)) issues.push('結束日早於開始日');
       if (f.cashbackModel && !/^(rate|basic|overseasCashback|overseasBonusRate|domesticBonusRate|rate_\d+)([+>](rate|basic|overseasCashback|overseasBonusRate|domesticBonusRate|rate_\d+))*$/.test(f.cashbackModel)) issues.push('cashbackModel「' + f.cashbackModel + '」不是認得的寫法');
       if (Number(f.minSpend) && Number(f.maxSpend) && Number(f.maxSpend) <= Number(f.minSpend)) issues.push('maxSpend 要大於 minSpend');
+    } else if (kind === 'coupon') {
+      if (!String(f.couponMerchant || '').trim()) issues.push('couponMerchant 是空的——沒有通路就搜不到');
+      if (/[，、]/.test(String(f.couponMerchant || '').replace(/[(（][^)）]*[)）]/g, ''))) issues.push('couponMerchant 要用半形逗號分隔');
+      if (f.couponRate === '' || f.couponRate == null) issues.push('couponRate 是空的');
+      else if (!isNum(f.couponRate) && !/^[A-Za-z_]\w*\+\d+(\.\d+)?$/.test(String(f.couponRate).trim())) issues.push('couponRate「' + f.couponRate + '」不是數字（分級卡可寫 specialRate+1 這種）');
+      if (!isNum(f.couponCap)) issues.push('couponCap「' + f.couponCap + '」不是數字');
+      if (!isDate(f.couponPeriodStart)) issues.push('couponPeriodStart 不是日期');
+      if (!isDate(f.couponPeriodEnd)) issues.push('couponPeriodEnd 不是日期');
+      if (ts(f.couponPeriodStart) && ts(f.couponPeriodEnd) && ts(f.couponPeriodEnd) < ts(f.couponPeriodStart)) issues.push('結束日早於開始日');
     } else {
       if (!f.id) issues.push('id 是空的（先選卡片）');
       var types = String(f.promo_types || '').split(',').map(function (t) { return t.trim(); }).filter(Boolean);
@@ -1185,12 +1272,12 @@
   }
 
   return {
-    RATE_COLS: RATE_COLS, PROMO_COLS: PROMO_COLS, PROMO_TYPES: PROMO_TYPES,
+    RATE_COLS: RATE_COLS, COUPON_COLS: COUPON_COLS, PROMO_COLS: PROMO_COLS, PROMO_TYPES: PROMO_TYPES,
     normalizeText: normalizeText, normalizeDate: normalizeDate, normalizeConditions: normalizeConditions, termKey: termKey,
     buildIndex: buildIndex, getCard: getCard, detectCard: detectCard, detectKind: detectKind,
     parsePeriod: parsePeriod, findRates: findRates, structureOptions: structureOptions, findCaps: findCaps,
     matchItems: matchItems, findConditions: findConditions, capFromReward: capFromReward,
-    parseActivity: parseActivity, parsePromo: parsePromo,
+    parseActivity: parseActivity, parseCoupon: parseCoupon, parsePromo: parsePromo, buildCouponRow: buildCouponRow,
     buildRateRow: buildRateRow, sheetFormulas: sheetFormulas, buildPromoRow: buildPromoRow, toTsv: toTsv, validate: validate,
     buildAiRequest: buildAiRequest, applyAiActivity: applyAiActivity, applyAiPromo: applyAiPromo, unifyItems: unifyItems
   };
