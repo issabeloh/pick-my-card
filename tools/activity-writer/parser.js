@@ -8,6 +8,7 @@
  *   "上限與門檻"      findCaps / findMinSpend
  *   "通路比對"        matchItems
  *   "條件片語"        findConditions / needsRegister
+ *   "多個活動"        splitActivities（有【活動1】【活動2】這種編號標題才拆；其餘只給提示）
  *   "一般活動"        parseActivity
  *   "領券活動"        parseCoupon（couponMerchant_N 那一組）
  *   "新戶活動"        parsePromo（"特定族群新戶" audienceOf、"條件草稿" draftTasks）
@@ -191,6 +192,73 @@
   function detectKind(text) {
     if (/新戶|首刷|核卡後|新卡友|新申辦|首次申辦/.test(text)) return 'promo';
     return /領券|領取[^，。\n]{0,14}(優惠)?券|優惠券/.test(text) ? 'coupon' : 'rate';
+  }
+
+  // ===== 多個活動 =====
+  // 一段原文裡有好幾個活動時：只有「行首、方括號、帶編號」的標題（【活動1】【活動2：…】）才算明確、才拆；
+  // 其餘（只在內文提到活動2、或幾個【】段落的回饋率不同）只回提示，不拆——拆錯比不拆糟。
+  // 拆的規則：標題前的共用段（活動期間）與最後的注意事項每份都帶；內文點名「活動N」的句子只給被點名的那幾份。
+  var CN_NUM = '一二三四五六七八九十';
+  function actNo(s) { var n = parseInt(s, 10); if (!isNaN(n)) return n; return CN_NUM.indexOf(s) + 1; }
+  var ACT_NO = '([0-9]{1,2}|[' + CN_NUM + '])';
+  var ACT_HEAD = new RegExp('^\\s*【\\s*(活動|優惠|方案)\\s*' + ACT_NO + '\\s*(?:[：:、.\\-—｜| ]\\s*([^】\\n]*))?】');
+  function actRefs(line) {
+    var re = new RegExp('(?:活動|優惠|方案)\\s*' + ACT_NO + '(?![0-9年月日天個項次種檔倍折元%])', 'g'), m, out = [];
+    while ((m = re.exec(line))) { var n = actNo(m[1]); if (n && out.indexOf(n) < 0) out.push(n); }
+    return out;
+  }
+  function splitActivities(rawText) {
+    var text = normalizeText(rawText), lines = text.split('\n');
+    var heads = [], seen = {};
+    lines.forEach(function (line, i) {
+      var m = ACT_HEAD.exec(line); if (!m) return;
+      var no = actNo(m[2]); if (!no || seen[no]) return;
+      seen[no] = true;
+      heads.push({ line: i, no: no, word: m[1], title: m[1] + no + (m[3] && m[3].trim() ? '：' + m[3].trim() : '') });
+    });
+    if (heads.length < 2) {
+      var refs = actRefs(text).sort(function (a, b) { return a - b; });
+      if (refs.length >= 2) {
+        return { explicit: false, parts: [], hint: '原文提到 ' + refs.length + ' 個活動（' + refs.map(function (n) { return '活動' + n; }).join('、') +
+          '），但沒有各自的【活動N】標題，所以不自動拆——現在整段當成一個活動解析。建議一次只貼一個活動的段落' };
+      }
+      // 幾個【】段落各自標榜不同的回饋率 → 可能是多個活動（同一活動重複講兩次的不算）
+      var secs = [], cur = null;
+      lines.forEach(function (line) {
+        var h = /^\s*【([^】\n]{2,40})】/.exec(line);
+        if (h) { cur = { title: h[1].trim(), max: 0 }; secs.push(cur); }
+        if (!cur) return;
+        var re = /(\d+(?:\.\d+)?)\s*[%％]/g, m;
+        while ((m = re.exec(line))) cur.max = Math.max(cur.max, parseFloat(m[1]));
+      });
+      var byRate = {}, titles = [];
+      secs.forEach(function (s) { if (s.max && !byRate[s.max]) { byRate[s.max] = true; titles.push('【' + s.title + '】'); } });
+      if (titles.length >= 2) {
+        return { explicit: false, parts: [], hint: '原文可能有 ' + titles.length + ' 個活動（' + titles.join('、') +
+          ' 的回饋率不同），但沒有【活動1】【活動2】這種編號標題，所以不自動拆——現在整段當成一個活動解析。建議一次只貼一個' };
+      }
+      return { explicit: false, parts: [], hint: '' };
+    }
+    // 每一行屬於哪一段：-1＝標題前的共用段，heads 的索引＝那個活動，heads.length＝最後的共用注意事項
+    var owner = [], at = -1, tail = false;
+    lines.forEach(function (line, i) {
+      if (at + 1 < heads.length && heads[at + 1].line === i) at++;
+      else if (at === heads.length - 1 && !tail && /^\s*[【\[（(]?\s*(共同|活動)?(注意事項|備註|其他說明)/.test(line)) tail = true;
+      owner.push(tail ? heads.length : at);
+    });
+    var parts = heads.map(function (h, k) {
+      var keep = lines.filter(function (line, i) {
+        if (i === h.line) return true;
+        var refs = actRefs(line), o = owner[i];
+        if (o >= 0 && o < heads.length && heads[o].line === i) return false;          // 別的活動的標題
+        if (!refs.length) return o === k || o === -1 || o === heads.length;
+        return refs.indexOf(h.no) >= 0;
+      });
+      // own＝只有這個活動自己那一段（判斷類型用：共用句子裡別的活動的「領券」不該把這一份帶成領券活動）
+      var own = lines.filter(function (line, i) { return owner[i] === k; }).join('\n');
+      return { no: h.no, title: h.title, own: own, text: keep.join('\n').replace(/\n{3,}/g, '\n\n').trim() };
+    });
+    return { explicit: true, parts: parts, hint: '原文有 ' + parts.length + ' 個活動（' + parts.map(function (x) { return x.title.split('：')[0]; }).join('、') + '）' };
   }
 
   // ===== 日期解析 =====
@@ -1274,7 +1342,7 @@
   return {
     RATE_COLS: RATE_COLS, COUPON_COLS: COUPON_COLS, PROMO_COLS: PROMO_COLS, PROMO_TYPES: PROMO_TYPES,
     normalizeText: normalizeText, normalizeDate: normalizeDate, normalizeConditions: normalizeConditions, termKey: termKey,
-    buildIndex: buildIndex, getCard: getCard, detectCard: detectCard, detectKind: detectKind,
+    buildIndex: buildIndex, getCard: getCard, detectCard: detectCard, detectKind: detectKind, splitActivities: splitActivities,
     parsePeriod: parsePeriod, findRates: findRates, structureOptions: structureOptions, findCaps: findCaps,
     matchItems: matchItems, findConditions: findConditions, capFromReward: capFromReward,
     parseActivity: parseActivity, parseCoupon: parseCoupon, parsePromo: parsePromo, buildCouponRow: buildCouponRow,

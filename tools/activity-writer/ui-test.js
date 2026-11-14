@@ -41,6 +41,21 @@ const server = http.createServer((req, res) => {
   eq('model', await page.inputValue('#f_cashbackModel'), 'rate+basic');
   eq('cap', await page.inputValue('#f_cap'), '20000');
   await shot('rate');
+  // 審核區：黃色的格子＋條件欄集中在一塊，各有勾選框；綠色的不在裡面
+  eq('審核區有 cap／conditions／registerLink', await page.evaluate(() => Array.from(document.querySelectorAll('#reviewFields .okbox')).map(b => b.id.slice(3)).join()), 'cap,conditions,registerLink');
+  eq('綠色的 rate 不在審核區', await page.locator('#fields #f_rate').count(), 1);
+  eq('預設都沒勾', await page.locator('#reviewFields .okbox:checked').count(), 0);
+  eq('底部列出沒勾的', (await page.textContent('#pendingMsg')).includes('cap、conditions、registerLink'), true);
+  await page.click('#copyBtn');
+  let raw = (await page.evaluate(() => window.__lastCopied)).split('\t');
+  eq('沒勾的審核格輸出留空（cap／conditions／registerLink）', [raw[2], raw[7], raw[8]].join('|'), '||');
+  eq('綠色的照寫', [raw[0], raw[1]].join('|'), '2.5|rate+basic');
+  await page.check('#ok_conditions');
+  await page.click('#copyBtn');
+  raw = (await page.evaluate(() => window.__lastCopied)).split('\t');
+  eq('勾了的才輸出', [raw[2] === '', raw[7] !== ''].join(), 'true,true');
+  await page.click('#okAllBtn');
+  eq('全部勾選', await page.locator('#reviewFields .okbox:checked').count(), 3);
   // 改選結構「完整率」→ rate 變 3、cap 重算
   await page.locator('.struct label', { hasText: 'rate=3｜rate' }).first().click();
   eq('換結構後 rate', await page.inputValue('#f_rate'), '3');
@@ -53,6 +68,9 @@ const server = http.createServer((req, res) => {
   await page.fill('#source', S.artfunComposition.text + '\n補一行');
   await page.waitForTimeout(400);
   eq('手動修改保留', await page.inputValue('#f_category'), '我改的分類');
+  eq('重新解析後勾選要重來（原文變了）', await page.locator('#reviewFields .okbox:checked').count(), 0);
+  await page.fill('#f_cap', '16000');
+  eq('親手改過的審核格自動打勾', await page.isChecked('#ok_cap'), true);
   await page.fill('#anchorCell', 'CB15');
   await page.click('#copyBtn');
   let tsv = await page.evaluate(() => window.__lastCopied);
@@ -89,6 +107,34 @@ const server = http.createServer((req, res) => {
   const dims = await page.evaluate(() => ({ h: document.documentElement.scrollHeight, last: document.getElementById('f_pick_reason').getBoundingClientRect().bottom + window.scrollY }));
   eq('新戶欄位在一個畫面內排完（最後一欄底部 < 920px，實際 ' + Math.round(dims.last) + '）', dims.last < 920, true);
   await shot('promo-insurance');
+
+  // 多個活動：只在內文提到活動2 → 只提示、沒有拆分鈕
+  await page.click('#resetBtn');
+  await page.fill('#source', S.cubeCoupon.text);
+  await page.waitForSelector('#f_couponRate');
+  eq('沒有編號標題：有提示、沒有拆分鈕', [await page.locator('#multiHint').count(), await page.locator('#splitBtn').count()].join(), '1,0');
+  eq('領券的率在審核區', await page.locator('#reviewFields #f_couponRate').count(), 1);
+  // 有【活動1】【活動2】→ 一鍵拆成分頁，一頁一個活動
+  await page.fill('#source', S.cubeTwoActivities.text);
+  await page.waitForSelector('#splitBtn');
+  eq('拆之前只有一列', await page.locator('.tabs button').count(), 0);
+  await page.click('#splitBtn');
+  eq('拆成兩個分頁', await page.evaluate(() => Array.from(document.querySelectorAll('.tabs button:not(#unsplitBtn)')).map(b => b.textContent).join('|')), '活動1（7%）|活動2（3%）');
+  eq('第一頁是領券活動、只顯示這一頁', [await page.locator('#kindSeg button.on').getAttribute('data-kind'), await page.locator('#f_couponRate').count(), await page.locator('#f_rate').count()].join(), 'coupon,1,0');
+  eq('左邊換成這一頁的原文', [(await page.inputValue('#source')).includes('【活動1：'), (await page.inputValue('#source')).includes('【活動2：')].join(), 'true,false');
+  await page.check('#ok_couponRate');
+  await shot('split-1');
+  await page.locator('.tabs button', { hasText: '活動2' }).click();
+  eq('第二頁是一般活動', [await page.locator('#kindSeg button.on').getAttribute('data-kind'), await page.inputValue('#f_rate'), (await page.inputValue('#f_items')).split(',')[0]].join(), 'rate,3,蝦皮購物');
+  eq('第二頁的原文', (await page.inputValue('#source')).includes('【活動2：蝦皮購物加碼3%】'), true);
+  await page.fill('#f_category', '蝦皮加碼');
+  await shot('split-2');
+  await page.locator('.tabs button', { hasText: '活動1' }).click();
+  eq('切回第一頁：勾選還在', await page.isChecked('#ok_couponRate'), true);
+  await page.locator('.tabs button', { hasText: '活動2' }).click();
+  eq('切回第二頁：改過的格子還在', await page.inputValue('#f_category'), '蝦皮加碼');
+  await page.click('#unsplitBtn');
+  eq('回到整段', [await page.locator('.tabs button').count(), await page.locator('#splitBtn').count(), (await page.inputValue('#source')).includes('【活動2：')].join(), '0,1,true');
 
   // AI（假回應）
   await page.route('https://generativelanguage.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'application/json',
@@ -154,6 +200,11 @@ const server = http.createServer((req, res) => {
   await hp.fill('#source', S.promoInsurance.text);
   await hp.waitForSelector('#f_bonus_rate');
   await hp.evaluate(() => { window.__failNext = true; });
+  // 率、通路（與必填）在審核區沒勾 → 擋下，什麼都不送
+  await hp.click('#writeBtn');
+  eq('視窗版：率與通路沒勾就擋下', [await hp.evaluate(() => window.__calls.filter(c => c[0] === 'activityWriterSavePromo').length), (await hp.textContent('#mustMsg')).includes('bonus_rate、bonus_merchants')].join(), '0,true');
+  await hp.click('#okAllBtn');
+  await hp.uncheck('#ok_bonus_cap');
   await hp.click('#writeBtn');
   await hp.waitForFunction(() => document.getElementById('issues').textContent.includes('結束日早於開始日'));
   eq('視窗版：被擋下後還能再寫', await hp.isDisabled('#writeBtn'), false);
@@ -162,10 +213,28 @@ const server = http.createServer((req, res) => {
   await hp.waitForFunction(() => document.getElementById('writeBtn').textContent.includes('已寫入'));
   const pv = await hp.evaluate(() => JSON.parse(window.__calls.filter(c => c[0] === 'activityWriterSavePromo').pop()[1]));
   eq('視窗版：新戶送出依欄名', [pv.id, pv.values.bonus_rate, pv.values.bonus_merchants].join('|'), 'taishin-richart|0.06|保險,保費');
+  eq('視窗版：沒勾的那格送空值、勾了的照送', [pv.values.bonus_cap, pv.values.promo_condition !== ''].join('|'), '|true');
   const hd = await hp.evaluate(() => document.getElementById('f_pick_reason').getBoundingClientRect().bottom + window.scrollY);
   eq('視窗版：1240×700 的視窗裡欄位排得完（最後一欄底部 ' + Math.round(hd) + '，上限 1000）', hd < 1000, true);
   if (shotDir) await hp.screenshot({ path: path.join(shotDir, 'host-promo.png'), fullPage: true });
 
+  // 分頁各自寫入：寫完第一頁只鎖第一頁，第二頁照常可寫
+  await hp.click('#resetBtn');
+  await hp.fill('#source', S.cubeTwoActivities.text);
+  await hp.waitForSelector('#splitBtn');
+  await hp.click('#splitBtn');
+  await hp.locator('.tabs button', { hasText: '活動2' }).click();
+  await hp.waitForSelector('#f_rate');
+  await hp.click('#okAllBtn');
+  const before = await hp.evaluate(() => window.__calls.filter(c => c[0] === 'activityWriterSaveRate').length);
+  if ((await hp.textContent('#writeBtn')).includes('覆蓋')) await hp.click('#writeBtn');
+  await hp.click('#writeBtn');
+  await hp.waitForFunction(() => document.getElementById('writeBtn').textContent.includes('已寫入'));
+  const s2 = await hp.evaluate(() => JSON.parse(window.__calls.filter(c => c[0] === 'activityWriterSaveRate').pop()[1]));
+  eq('視窗版分頁：只送這一頁（一般活動、3%）', [await hp.evaluate(() => window.__calls.filter(c => c[0] === 'activityWriterSaveRate').length) - before, s2.group, s2.fields.rate].join('|'), '1|rate|3');
+  eq('視窗版分頁：寫過的那頁有 ✓', await hp.locator('.tabs button', { hasText: '活動2' }).textContent().then(t => t.includes('✓')), true);
+  await hp.locator('.tabs button', { hasText: '活動1' }).click();
+  eq('視窗版分頁：另一頁還沒寫、可以寫', [(await hp.textContent('#writeBtn')).includes('已寫入'), await hp.locator('#f_couponRate').count()].join(), 'false,1');
   eq('頁面沒有錯誤', errors.join(' | '), '');
   await browser.close(); server.close();
   console.log(fail ? `\n${fail} 項不符` : '✅ ui-test 全部通過');
