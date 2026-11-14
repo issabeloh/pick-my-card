@@ -83,5 +83,6 @@ const MICROPAYMENT_BRANDS = {
         {"name":"黑松販賣機","level":"partial","aliases":["黑松販賣機"]},
         {"name":"統一速邁販賣機","level":"partial","aliases":["統一速邁"]},
         {"name":"松佳飲料販賣機","level":"partial","aliases":["松佳飲料","松佳vm"]},
+        {"name":"俥亭停車","level":"partial","aliases":["俥亭停車","俥亭"]},
     ]
 };
