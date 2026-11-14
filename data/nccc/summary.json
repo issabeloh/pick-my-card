@@ -1,7 +1,7 @@
 {
   "asOf": "2026-10-31",
   "activeStoreRows": 19603,
-  "brandCount": 74,
+  "brandCount": 75,
   "droppedBrands": [],
   "brands": {
     "麥當勞": {
@@ -373,6 +373,11 @@
       "level": "部分門市",
       "rows": 179,
       "addresses": 21
+    },
+    "俥亭停車": {
+      "level": "部分門市",
+      "rows": 49,
+      "addresses": 48
     }
   },
   "unmappedCandidates": [
