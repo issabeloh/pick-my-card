@@ -278,5 +278,38 @@ const cardsSheet = () => makeSheet('Cards Data', [
   ok(!r.known, '沒有名單＝無法判斷');
 }
 
+// ── 超商收單限制（規則 8m，2026-11-13）：滙豐卡補 7-11、全家；AI 想刪／改寫這兩項一律不採用
+{
+  const e = env({ sheets: {}, cards: cardsSheet() }); const G = load(e);
+  ok(G.run('basicExStoreNoAcceptItems_', 'hsbc-liveplus').join() === '7-11,全家', '滙豐卡該補 7-11、全家');
+  ok(G.run('basicExStoreNoAcceptItems_', 'ubot-green').length === 0, '別家銀行不補');
+  const src = ['信用卡年費', '學費'];
+  ok(G.run('basicExStoreAcceptFix_', src, 'hsbc-titanium').join() === '信用卡年費,學費,7-11,全家', '接在名單最後');
+  ok(src.length === 2, '不改傳入的陣列（同一組 items 多張卡共用）');
+  ok(G.run('basicExStoreAcceptFix_', ['全家', '學費'], 'HSBC-Titanium').join() === '全家,學費,7-11', '已有的不重複、id 大小寫不影響');
+  ok(G.run('basicExStoreAcceptFix_', [], 'hsbc-titanium').length === 0, '空名單（這頁沒抽到）不補');
+  ok(G.run('basicExStoreAcceptFix_', src, 'ubot-green').join() === '信用卡年費,學費', '別家銀行原樣');
+
+  // 抽取寫待審核：滙豐列補上、同頁別家卡不補
+  const review = makeSheet('5-待審核（一般消費排除）', [REVIEW_H]);
+  G.run('basicExWriteReview_', review, { bank: '滙豐', url: 'u', candidates: ['hsbc-liveplus', 'ubot-green'] },
+    [{ card_ids: ['hsbc-liveplus', 'ubot-green'], items: ['信用卡年費', '學費'], evidence: 'ev', needs_review: false, review_question: '' }]);
+  const h = review.rows.find(r => r[2] === 'hsbc-liveplus'), u = review.rows.find(r => r[2] === 'ubot-green');
+  ok(h && /7-11,全家$/.test(h[5]), '待審核的滙豐列有 7-11、全家：' + (h && h[5]));
+  ok(u && !/7-11|全家/.test(u[5]), '同頁別家卡不補：' + (u && u[5]));
+
+  // 變動分析：刪／改寫 7-11、全家被擋，其他動作照留
+  const lists = { 'hsbc-liveplus': '學費,7-11,全家', 'ubot-green': '學費,7-11' };
+  let t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['hsbc-liveplus'], ops: [
+    { op: 'remove', item: '7-11' }, { op: 'rename', item: '全家', to: ['全家便利商店'] }, { op: 'add', item: '保費' }] }] },
+    ['hsbc-liveplus'], lists);
+  ok(!/刪除：7-11|改寫：全家/.test(t) && /＋ 新增：保費/.test(t), '滙豐：刪 7-11／改寫全家被擋、新增照留：' + t);
+  t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['hsbc-liveplus'], ops: [{ op: 'remove', item: '7-11' }] }] }, ['hsbc-liveplus'], lists);
+  ok(/^無影響/.test(t), '動作全被擋 → 無影響：' + t);
+  t = G.run('basicExRenderChange_', { groups: [{ card_ids: ['ubot-green'], ops: [{ op: 'remove', item: '7-11' }] }] }, ['ubot-green'], lists);
+  ok(/－ 刪除：7-11/.test(t), '別家銀行刪 7-11 不擋：' + t);
+  ok(/8m\./.test(G.run('basicExRulesText_')), 'prompt 有規則 8m');
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 一般消費排除變動流程：${pass} 通過、${fail} 失敗`);
 process.exit(fail ? 1 : 0);
