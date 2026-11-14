@@ -1,5 +1,7 @@
 /* 活動快寫工具：介面（解析規則都在 parser.js）
- * 流程只有一個畫面：選卡（自動）→ 貼原文 → 逐格確認 → 寫進試算表（或複製一列）。
+ * 流程只有一個畫面：選卡（自動）→ 貼原文 → 審核區打勾 → 寫進試算表（或複製一列）。
+ * 審核（2026-11-14）：黃色（信心不夠）的格子＋條件欄集中在「需要你審核」，勾了才寫入、沒勾留空；率與通路沒勾不給寫。
+ * 多個活動（2026-11-14）：原文有【活動1】【活動2】這種編號標題 → 可一鍵拆成分頁（一頁一個活動、各自寫入）；沒有就只提示。
  * 同一份程式跑在兩個地方（HOST 判斷）：
  *   試算表視窗（apps-script/ActivityWriter.html，由 build-apps-script.js 生成）——資料讀表上現況、可直接寫入、AI 走伺服器端
  *   本機網頁（index.html，開發與測試用）——資料讀 cards.data、只能複製
@@ -30,7 +32,9 @@
 
   var state = {
     index: null, kind: 'rate', kindManual: false, cardId: '', cardManual: false,
-    openNotes: {}, rows: [], active: 0,          // rows[i] = { result, fields, dirty:{}, itemSel:{}, condSel:{}, headline }
+    openNotes: {}, rows: [], active: 0,          // rows[i] = { result, fields, dirty:{}, review:{}, approved:{}, kind, headline }
+    multi: null,                                 // P.splitActivities() 的結果（原文裡有幾個活動）
+    split: null,                                 // 拆成分頁後 = { whole: 拆之前的整段原文 }；每一頁的原文在 rows[i].text
     aiBusy: false
   };
 
@@ -97,26 +101,85 @@
   }
 
   // ---------- 解析 ----------
-  function makeRow(result, keepFrom) {
-    var row = { result: result, fields: {}, dirty: {}, headline: result.structure ? result.structure.headline : null,
+  // 「需要你審核」：信心不夠（黃色）的格子，加上固定要看的條件欄。勾了才會寫入，沒勾的那格留空。
+  var ALWAYS_REVIEW = { conditions: 1, promo_condition: 1, couponConditions: 1 };
+  // 率與通路是活動的骨幹：在審核區卻沒勾就不給寫（留空會寫出一個搜不到、或沒有回饋率的活動）。
+  // 新戶活動的類型與摘要是必填，同樣處理
+  var MUST_CONFIRM = ['rate', 'items', 'couponRate', 'couponMerchant', 'bonus_rate', 'bonus_merchants', 'promo_types', 'new_customer_summary'];
+
+  function makeRow(result, keepFrom, kind) {
+    var row = { result: result, fields: {}, dirty: {}, review: {}, approved: {}, kind: kind || state.kind,
+      headline: result.structure ? result.structure.headline : null,
       structChoice: result.structure ? result.structure.choice : -1, options: result.structure ? result.structure.options : [] };
     Object.keys(result.fields).forEach(function (k) { row.fields[k] = result.fields[k]; });
+    KINDS[row.kind].fields.forEach(function (def) {
+      var n = result.notes[def[0]];
+      if (ALWAYS_REVIEW[def[0]] || (n && n.level === 'check')) row.review[def[0]] = true;
+    });
     if (keepFrom) Object.keys(keepFrom.dirty).forEach(function (k) {   // 手動改過的格子不被重新解析蓋掉
-      if (k in row.fields) { row.fields[k] = keepFrom.fields[k]; row.dirty[k] = true; }
+      if (k in row.fields) { row.fields[k] = keepFrom.fields[k]; row.dirty[k] = true; if (row.review[k]) row.approved[k] = !!keepFrom.approved[k]; }
     });
     return row;
   }
 
+  function hasValue(row, name) { return String(row.fields[name] == null ? '' : row.fields[name]).trim() !== ''; }
+  // 還沒勾的審核格（有內容的才算；空的本來就不會寫東西）
+  function unapproved(row) { return Object.keys(row.review).filter(function (k) { return !row.approved[k] && hasValue(row, k); }); }
+  function blockers(row) { var u = unapproved(row); return MUST_CONFIRM.filter(function (k) { return u.indexOf(k) >= 0; }); }
+  // 實際會寫出去（或複製）的值：沒勾的審核格留空
+  function outFields(row) {
+    var f = {}; Object.keys(row.fields).forEach(function (k) { f[k] = row.fields[k]; });
+    unapproved(row).forEach(function (k) { f[k] = ''; });
+    return f;
+  }
+
+  function parseText(kind, text) { return KINDS[kind].parse(state.index, state.cardId, text, { url: $('sourceUrl').value }); }
+
   function reparse() {
     if (!state.index) return;
     var text = $('source').value;
+    if (state.split) {   // 分頁模式：左邊的原文是目前這一頁的，只重新解析這一頁
+      var old = cur(); if (!old || old.written) return;
+      old.text = text;
+      var fresh = makeRow(parseText(old.kind, text), old, old.kind);
+      fresh.text = text; fresh.title = old.title; fresh.fullTitle = old.fullTitle;
+      state.rows[state.active] = fresh;
+      renderAll(); return;
+    }
+    state.multi = null;
     if (!text.trim()) { state.rows = []; state.active = 0; renderAll(); return; }
     if (!state.kindManual) state.kind = P.detectKind(P.normalizeText(text));
     if (!state.cardManual) { var id = P.detectCard(state.index, text); if (id) state.cardId = id; }
-    var extra = { url: $('sourceUrl').value };
-    var result = K().parse(state.index, state.cardId, text, extra);
-    state.rows = [makeRow(result, state.rows[0])];
+    state.multi = P.splitActivities(text);
+    state.rows = [makeRow(parseText(state.kind, text), state.rows[0])];
     state.active = 0;
+    renderAll();
+  }
+
+  // 有【活動1】【活動2】這種編號標題時：一個活動一頁，各自確認、各自寫入
+  function doSplit() {
+    var m = state.multi; if (!m || !m.explicit) return;
+    state.split = { whole: $('source').value };
+    state.rows = m.parts.map(function (p) {
+      var kind = state.kindManual ? state.kind : P.detectKind(P.normalizeText(p.own));
+      var row = makeRow(parseText(kind, p.text), null, kind);
+      row.text = p.text; row.title = p.title.split('：')[0]; row.fullTitle = p.title;
+      return row;
+    });
+    state.multi = null;
+    activate(0);
+  }
+
+  function unsplit() {
+    if (!state.split) return;
+    $('source').value = state.split.whole; state.split = null; state.rows = [];
+    reparse();
+  }
+
+  function activate(i) {
+    state.active = i;
+    var row = cur();
+    if (row && state.split) { state.kind = row.kind; $('source').value = row.text; }
     renderAll();
   }
 
@@ -127,7 +190,7 @@
   function setField(name, value, fromUser) {
     var row = cur(); if (!row) return;
     row.fields[name] = value;
-    if (fromUser) row.dirty[name] = true;
+    if (fromUser) { row.dirty[name] = true; if (row.review[name]) row.approved[name] = hasValue(row, name); }   // 親手改過＝看過了
     if (name === 'rate' && !row.dirty.cap) recomputeCap(row);
   }
 
@@ -142,6 +205,8 @@
     row.structChoice = i;
     row.fields.rate = String(o.rate); row.fields.cashbackModel = o.model;
     row.dirty.rate = true; row.dirty.cashbackModel = true;
+    if (row.review.rate) row.approved.rate = true;
+    if (row.review.cashbackModel) row.approved.cashbackModel = true;
     row.result.notes.rate = { level: 'ok', text: '你選的結構：合計 ' + o.total + '%（' + o.label + '）' };
     row.result.notes.cashbackModel = { level: 'ok', text: '顯示合計 ' + o.total + '%' };
     if (!row.dirty.cap) recomputeCap(row);
@@ -262,7 +327,7 @@
 
   function inputFor(def, row) {
     var name = def[0], type = def[2], val = row.fields[name] == null ? '' : row.fields[name];
-    var onInput = function (e) { setField(name, e.target.value, true); renderBar(); if (name === 'rate') syncDependents(); };
+    var onInput = function (e) { setField(name, e.target.value, true); syncCheck(name); renderBar(); if (name === 'rate') syncDependents(); };
     if (type === 'area') {
       // 列數照內容估：一格大約塞 4.6 個全形字（12 格 ≈ 55 字）
       var perLine = Math.max(8, Math.floor((def[3] || 12) * 4.6));
@@ -271,7 +336,7 @@
       ta.value = val; return ta;
     }
     if (type === 'model') {
-      var sel = el('select', { id: 'f_' + name, onchange: function (e) { setField(name, e.target.value, true); renderBar(); } });
+      var sel = el('select', { id: 'f_' + name, onchange: function (e) { setField(name, e.target.value, true); syncCheck(name); renderBar(); } });
       var opts = MODELS.slice();
       row.options.forEach(function (o) { if (opts.indexOf(o.model) < 0) opts.push(o.model); });
       if (opts.indexOf(val) < 0) opts.push(val);
@@ -280,6 +345,13 @@
     }
     var inp = el('input', { type: 'text', id: 'f_' + name, oninput: onInput });
     inp.value = val; return inp;
+  }
+
+  // 打字時不重畫整塊（會跳游標），只把那一格的勾選框對齊
+  function syncCheck(name) {
+    var row = cur(), box = $('ok_' + name); if (!box || !row) return;
+    box.disabled = !hasValue(row, name); box.checked = !!row.approved[name];
+    box.closest('.field').classList.toggle('rv-on', box.checked);
   }
 
   function syncDependents() {
@@ -348,8 +420,17 @@
       body.appendChild(el('div', { class: 'note ' + note.level + (state.openNotes[name] ? ' open' : ''), text: full, title: full + '\n（點一下展開／收合）',
         onclick: function (e) { state.openNotes[name] = !state.openNotes[name]; e.currentTarget.classList.toggle('open'); } }));
     }
-    return el('div', { class: 'field s' + (def[3] || 12) + (note ? ' lv-' + note.level : '') }, [
-      el('label', { for: 'f_' + name }, [name, def[1] ? el('small', { text: def[1] }) : null]), body
+    var box = null;
+    if (row.review[name]) {
+      box = el('input', { type: 'checkbox', class: 'okbox', id: 'ok_' + name, checked: !!row.approved[name], disabled: !hasValue(row, name),
+        title: '勾了才會寫入這一格；沒勾就留空', onchange: function (e) {
+          row.approved[name] = e.target.checked;
+          e.target.closest('.field').classList.toggle('rv-on', e.target.checked);
+          renderBar();
+        } });
+    }
+    return el('div', { class: 'field s' + (def[3] || 12) + (note ? ' lv-' + note.level : '') + (row.review[name] ? ' rv' + (row.approved[name] ? ' rv-on' : '') : '') }, [
+      el('label', { for: 'f_' + name }, [box, name, def[1] ? el('small', { text: def[1] }) : null]), body
     ]);
   }
 
@@ -361,53 +442,88 @@
       box.appendChild(el('p', { class: 'hint', text: '貼上原文後，這裡會照試算表的欄位順序列出每一格。綠色＝有原文依據，黃色＝請看一眼原文確認，紅色＝要自己填。' }));
       return;
     }
-    if (state.rows.length > 1 || row.result.viaAi) {
+    if (state.rows.length > 1 || row.result.viaAi || state.split) {
       var tabs = el('div', { class: 'tabs' });
       state.rows.forEach(function (r, i) {
-        tabs.appendChild(el('button', { type: 'button', class: i === state.active ? 'on' : '',
-          text: '第 ' + (i + 1) + ' 列' + (r.fields.rate ? '（' + r.fields.rate + '%）' : ''), onclick: function () { state.active = i; renderAll(); } }));
+        var rateText = r.fields.rate || r.fields.couponRate;
+        tabs.appendChild(el('button', { type: 'button', class: i === state.active ? 'on' : '', title: r.fullTitle || '',
+          text: (r.title || '第 ' + (i + 1) + ' 列') + (rateText ? '（' + rateText + '%）' : '') + (r.written ? ' ✓' : ''), onclick: function () { activate(i); } }));
       });
       if (row.result.viaAi) tabs.appendChild(el('span', { class: 'auto', text: 'AI 解析' }));
+      if (state.split) {
+        tabs.appendChild(el('span', { class: 'hint', text: '一頁一個活動，各自確認、各自寫入；左邊是這一頁的原文' }));
+        tabs.appendChild(el('button', { type: 'button', id: 'unsplitBtn', text: '回到整段', title: '放棄分頁，回到拆之前的整段原文', onclick: unsplit }));
+      }
       box.appendChild(tabs);
+    }
+    if (!state.split && state.multi && state.multi.hint) {
+      box.appendChild(el('div', { class: 'note check banner multi', id: 'multiHint', style: 'margin-bottom:6px' }, [
+        el('span', { text: state.multi.explicit ? state.multi.hint + '。現在整段當成一個活動解析——建議拆開，一個活動一頁、各自寫入　' : '⚠ ' + state.multi.hint }),
+        state.multi.explicit ? el('button', { type: 'button', class: 'primary', id: 'splitBtn', text: '拆成 ' + state.multi.parts.length + ' 個分頁', onclick: doSplit }) : null
+      ]));
     }
     if (row.result.skipped) box.appendChild(el('div', { class: 'note check banner', style: 'margin-bottom:6px', text: row.result.skipped }));
     if (row.result.evidence) box.appendChild(el('p', { class: 'evidence', text: 'AI 引用的原文：' + row.result.evidence }));
-    var grid = el('div', { id: 'fields' });
-    K().fields.forEach(function (def) {
-      grid.appendChild(fieldBlock(def, row));
-      if (def[0] === 'maxSpend') { var sb = structBlock(row); if (sb) grid.appendChild(sb); }   // 第一列（rate…maxSpend）排完後接結構選項
-    });
-    box.appendChild(grid);
+    // 審核區在上：信心不夠的格子集中在這裡，一格一個勾選框
+    var rv = K().fields.filter(function (def) { return row.review[def[0]]; });
+    var structAfter = row.review.rate ? 'rate' : 'maxSpend';
+    var fill = function (grid, defs) {
+      defs.forEach(function (def) {
+        grid.appendChild(fieldBlock(def, row));
+        if (def[0] === structAfter) { var sb = structBlock(row); if (sb) grid.appendChild(sb); }
+      });
+      return grid;
+    };
+    if (rv.length) {
+      box.appendChild(el('div', { class: 'review', id: 'review' }, [
+        el('div', { class: 'rvhead' }, [
+          el('b', { text: '需要你審核（' + rv.length + ' 格）' }),
+          el('span', { class: 'hint', text: '看過、沒問題就打勾。寫入時只寫綠色的格子＋這裡有勾的；沒勾的那格留空' }),
+          el('button', { type: 'button', id: 'okAllBtn', text: '全部勾選', onclick: function () {
+            rv.forEach(function (def) { if (hasValue(row, def[0])) row.approved[def[0]] = true; });
+            renderResult(); renderBar();
+          } })
+        ]),
+        fill(el('div', { class: 'grid', id: 'reviewFields' }), rv)
+      ]));
+    }
+    box.appendChild(fill(el('div', { class: 'grid', id: 'fields' }), K().fields.filter(function (def) { return !row.review[def[0]]; })));
     if (state.kind === 'rate') box.appendChild(el('p', { class: 'hint', style: 'margin:6px 0 0', text: 'daysRemaining、period 兩欄由程式產生（設定裡可改成公式／純值／留空）。' }));
     if (focusId && $(focusId)) { $(focusId).focus(); try { $(focusId).setSelectionRange(pos, pos); } catch (e) { /* select 沒有游標 */ } }
   }
 
   // ---------- 畫面：底部輸出 ----------
   function rowCells(row) {
-    return K().row(row.fields);
+    return K().row(outFields(row));
   }
 
   function renderBar() {
     var row = cur(), issues = $('issues'), prev = $('preview');
     issues.textContent = ''; prev.textContent = '';
     $('copyBtn').disabled = !row;
-    $('copyAllBtn').hidden = !(state.kind === 'promo' && state.rows.length > 1);
+    $('copyAllBtn').hidden = !(state.kind === 'promo' && state.rows.length > 1 && state.rows.every(function (r) { return r.kind === 'promo'; }));
     $('anchorCell').hidden = HOST || state.kind !== 'rate' || store.get('derived', 'formula') !== 'formula';
     renderWrite(row);
     if (!row) { issues.appendChild(el('span', { class: 'hint', text: '還沒有內容' })); return; }
     if (row.serverMsg) issues.appendChild(el('span', { class: row.serverMsg.ok ? 'good' : 'bad', text: (row.serverMsg.ok ? '✓ ' : '⛔ ') + row.serverMsg.text + '　' }));
-    var list = P.validate(state.kind, row.fields);
-    var pending = Object.keys(row.result.notes).filter(function (k) {
-      var n = row.result.notes[k]; return n.level === 'check' && !row.dirty[k];
-    });
+    var list = problemsOf(row), must = blockers(row);
+    var pending = unapproved(row).filter(function (k) { return must.indexOf(k) < 0; });
+    if (must.length) issues.appendChild(el('span', { class: 'bad', id: 'mustMsg', text: '⛔ ' + must.join('、') + ' 在審核區還沒勾——這幾格（率、通路、必填）要勾了才能寫入　' }));
     if (list.length) issues.appendChild(el('span', { class: 'bad', text: '⚠ ' + list.join('；') }));
-    else issues.appendChild(el('span', { class: 'good', text: '格式檢查通過' }));
-    if (pending.length) issues.appendChild(el('span', { class: 'hint', text: '　還沒確認的黃色欄位：' + pending.join('、') }));
+    else if (!must.length) issues.appendChild(el('span', { class: 'good', text: '格式檢查通過' }));
+    if (pending.length) issues.appendChild(el('span', { class: 'hint', id: 'pendingMsg', text: '　沒勾、會留空：' + pending.join('、') }));
     var cols = K().cols;
     rowCells(row).forEach(function (c, i) {
       var text = c && c.formula ? c.formula : String(c);
       prev.appendChild(el('span', { class: 'cell' + (text ? '' : ' blank'), text: text.replace(/\n/g, '⏎'), title: cols[i] + '：' + text }));
     });
+  }
+
+  // 格式檢查看「實際會寫出去的值」；率與通路沒勾另外擋（不讓它變成一句「rate 是空的」）
+  function problemsOf(row) {
+    var f = outFields(row);
+    blockers(row).forEach(function (k) { f[k] = row.fields[k]; });
+    return P.validate(state.kind, f);
   }
 
   // ---------- 寫進試算表（只在試算表視窗裡） ----------
@@ -448,8 +564,11 @@
   function writeRow() {
     var row = cur(); if (!row || state.busy || row.written) return;
     if (!state.cardId) return toast('先選卡片');
-    var problems = P.validate(state.kind, row.fields);
+    var must = blockers(row);
+    if (must.length) return toast(must.join('、') + ' 在「需要你審核」區還沒勾——這幾格（率、通路、必填）要勾了才能寫入');
+    var problems = problemsOf(row);
     if (problems.length) return toast('先處理下方的格式問題：' + problems[0]);
+    var out = outFields(row);
     var call;
     if (state.kind !== 'promo') {
       var slot = slotsOf().filter(function (s) { return String(s.n) === String(row.slot); })[0];
@@ -458,9 +577,9 @@
         row.armed = slot.n; renderBar();
         return toast(K().prefix + slot.n + ' 現在是 ' + slot.rate + '%｜' + slot.items + '——再按一次就覆蓋');
       }
-      call = server('activityWriterSaveRate', JSON.stringify({ id: state.cardId, group: state.kind, slot: slot.n, fields: row.fields, overwrite: !slot.empty }));
+      call = server('activityWriterSaveRate', JSON.stringify({ id: state.cardId, group: state.kind, slot: slot.n, fields: out, overwrite: !slot.empty }));
     } else {
-      call = server('activityWriterSavePromo', JSON.stringify({ id: state.cardId, values: row.fields }));
+      call = server('activityWriterSavePromo', JSON.stringify({ id: state.cardId, values: out }));
     }
     state.busy = true; row.serverMsg = null; renderBar();
     call.then(function (res) {
@@ -470,7 +589,7 @@
     }).catch(function (e) {
       console.error('寫入失敗', e);
       row.serverMsg = { ok: false, text: '寫入失敗：' + e.message };
-    }).then(function () { state.busy = false; renderLeft(); renderBar(); });
+    }).then(function () { state.busy = false; renderAll(); });
   }
 
   // 寫入後或按「重新讀表」：重讀表上現況（槽位空不空、既有活動），不動右邊已經填好的格子
@@ -499,7 +618,8 @@
         ? (row.result.existing ? '到 Cards Data 這張卡的 rate_' + row.result.existing.slot + ' 那格貼上（覆蓋）' : '到 Cards Data 這張卡第一個空的 rate_N 那格貼上')
         : '到 New Cardholder Promos 的 id 欄那格貼上';
       if (HOST) where += '（視窗裡建議直接按「寫進試算表」，會依欄名寫入）';
-      toast('已複製 ' + rows.length + ' 列 × ' + K().cols.length + ' 欄 → ' + where);
+      var blank = rows.reduce(function (n, r) { return n + unapproved(r).length; }, 0);
+      toast('已複製 ' + rows.length + ' 列 × ' + K().cols.length + ' 欄' + (blank ? '（審核區沒勾的 ' + blank + ' 格留空）' : '') + ' → ' + where);
     }).catch(function (e) { console.error('複製失敗', e); toast('複製失敗——請手動選取下方預覽'); });
   }
 
@@ -549,10 +669,14 @@
     callGemini(P.buildAiRequest(state.index, state.kind, state.cardId, text)).then(function (out) {
       var list = state.kind === 'rate' ? (out.data.groups || []) : (out.data.promos || []);
       if (!list.length) { $('aiStatus').textContent = 'AI 沒有抽出活動：' + (out.data.note || '（沒說原因）'); return; }
-      state.rows = list.map(function (g) {
-        return makeRow(state.kind === 'rate' ? P.applyAiActivity(state.index, state.cardId, g, base) : P.applyAiPromo(state.index, state.cardId, g, base));
+      var page = state.split ? cur() : null;
+      var made = list.map(function (g, i) {
+        var r = makeRow(state.kind === 'rate' ? P.applyAiActivity(state.index, state.cardId, g, base) : P.applyAiPromo(state.index, state.cardId, g, base));
+        if (page) { r.text = page.text; r.fullTitle = page.fullTitle; r.title = page.title + (list.length > 1 ? '-' + (i + 1) : ''); }
+        return r;
       });
-      state.active = 0;
+      if (page) Array.prototype.splice.apply(state.rows, [state.active, 1].concat(made));   // 分頁模式：只換掉這一頁
+      else { state.rows = made; state.active = 0; }
       $('aiStatus').textContent = '完成（' + out.model + '）：' + list.length + ' 列' + (out.data.note ? '｜' + out.data.note : '');
       renderAll();
     }).catch(function (e) {
@@ -580,12 +704,24 @@
   });
   $('kindSeg').addEventListener('click', function (e) {
     var k = e.target.getAttribute('data-kind'); if (!k) return;
-    state.kind = k; state.kindManual = true; state.rows = []; reparse();
+    state.kind = k; state.kindManual = true;
+    if (state.split && cur()) { if (cur().written) return renderAll(); cur().kind = k; cur().dirty = {}; } else state.rows = [];
+    reparse();
   });
-  $('cardSel').addEventListener('change', function (e) { state.cardId = e.target.value; state.cardManual = !!e.target.value; reparse(); if (!$('source').value.trim()) renderAll(); });
+  $('cardSel').addEventListener('change', function (e) {
+    state.cardId = e.target.value; state.cardManual = !!e.target.value;
+    if (state.split) {   // 換卡：每一頁（還沒寫入的）都重新解析
+      state.rows = state.rows.map(function (r) {
+        if (r.written) return r;
+        var n = makeRow(parseText(r.kind, r.text), r, r.kind); n.text = r.text; n.title = r.title; n.fullTitle = r.fullTitle; return n;
+      });
+      return renderAll();
+    }
+    reparse(); if (!$('source').value.trim()) renderAll();
+  });
   $('resetBtn').addEventListener('click', function () {
     $('source').value = ''; $('sourceUrl').value = ''; $('aiStatus').textContent = '';
-    state.rows = []; state.kindManual = false; state.cardManual = false; state.cardId = ''; state.active = 0;
+    state.rows = []; state.kindManual = false; state.cardManual = false; state.cardId = ''; state.active = 0; state.split = null; state.multi = null;
     renderAll(); $('source').focus();
   });
   $('anchorCell').addEventListener('input', renderBar);

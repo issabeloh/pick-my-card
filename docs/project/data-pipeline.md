@@ -142,7 +142,17 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - 資料讀**表上現況**（`activityWriterInit`）；只有快捷搜尋／統一詞表／行動支付別名沿用線上 `cards.data`，讀不到照樣能用
     - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰＝該專案的指令碼屬性 `GEMINI_API_KEY`）
     - `tools/activity-writer/index.html` 直接開是**本機開發／測試版**（讀 `cards.data`、只能複製、不能寫入）。
-      ⚠️ 它目前還掛在正式網址 `/tools/activity-writer/`（noindex）——站長 2026-11-13 決定「試算表版確認可用後下架」，尚未執行
+      **正式網址 `/tools/activity-writer/` 已於 2026-11-14 下架**：`tools/deploy-version.sh` 在 Cloudflare Pages 部署時（`CF_PAGES=1`）
+      把整個 `tools/activity-writer/` 從部署內容刪掉；repo 裡的檔照留（生成檔的來源＋測試）
+    - **審核區**（2026-11-14）：黃色（`notes[欄].level === 'check'`）的格子集中在「需要你審核」，每格一個勾選框；
+      `conditions`／`promo_condition`／`couponConditions` 不論信心一律進審核區。**寫入與複製只出綠色＋有勾的，沒勾的那格送空值**
+      （`app.js` 的 `outFields()`；覆蓋既有槽時空值會把那格清掉）。親手改過的格子自動打勾；原文變了重新解析，勾選重來。
+      率、通路與新戶必填（`MUST_CONFIRM`：rate／items／couponRate／couponMerchant／bonus_rate／bonus_merchants／promo_types／new_customer_summary）
+      在審核區沒勾 → 擋下不寫。要讓某欄「預設就要審核」→ 在 `parser.js` 把它的 note 設成 `check`，或加進 `app.js` 的 `ALWAYS_REVIEW`
+    - **一次貼進多個活動**（2026-11-14，`parser.js` 的 `splitActivities()`）：只有**行首、【】、帶編號**的標題（【活動1】【活動2：…】，
+      也收「優惠／方案」＋數字）出現兩個以上才提供「拆成 N 個分頁」——一頁一個活動、各自判斷類型、各自寫入，不同畫面顯示；
+      標題前的共用段（活動期間）與最後的注意事項每頁都帶，內文點名「活動N」的句子只給被點名的那幾頁。
+      其餘情況（只在內文提到活動2、幾個【】段落的回饋率不同）**只提示不拆**——拆錯比不拆糟，別放寬成自動拆
     - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）
     - 新戶活動的幾條判讀規則（2026-11-13 依站長實測調整，樣本是 `samples.js` 的 `promoInsurance`）：
       **特定族群新戶**（原文有「保險新戶定義：」這種帶族群名的定義）用原文的定義、不沿用同卡現有的全行新戶定義；

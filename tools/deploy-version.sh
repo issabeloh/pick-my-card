@@ -45,6 +45,14 @@ if [ "${PMC_SKIP_MERCHANT_BUILD:-0}" != "1" ]; then
   fi
 fi
 
+# 活動快寫的本機開發版不上線（2026-11-14 下架正式網址 /tools/activity-writer/）：站長用的是試算表裡的視窗
+# （apps-script/ActivityWriter.html，GitHub 自動部署），這個資料夾只留在 repo 給開發與測試用。
+# 只在 Cloudflare Pages 的部署環境刪（CF_PAGES=1 是它內建的環境變數）——本機跑這支腳本不會動到原始檔。
+if [ "${CF_PAGES:-}" = "1" ]; then
+  rm -rf tools/activity-writer
+  echo "🧹 已從部署內容移除 tools/activity-writer/（不上線）"
+fi
+
 count=0
 for page in *.html merchant/*.html; do
   [ -e "$page" ] || continue

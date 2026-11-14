@@ -72,6 +72,23 @@ eq('同一段當一般活動：items', f.items, '小樹購');
 eq('同一段當一般活動：排除條款不重複、不收雜句', f.conditions, '排除含有「小樹購電子票券商品」之整筆訂單消費；限直接使用CUBE信用卡刷卡或使用該卡加入 Apple Pay / Samsung Pay / Google Pay等消費；可與「玩數位」權益疊加');
 eq('「遇假日順延」不是限假日', /限假日/.test(f.conditions), false);
 
+// 多個活動：有【活動1】【活動2】才拆；只在內文提到活動2 → 只提示
+let sp = P.splitActivities(S.cubeCoupon.text);
+eq('單一標題不拆', [sp.explicit, sp.parts.length].join(), 'false,0'); eq('內文提到活動2 → 有提示', /活動1、活動2/.test(sp.hint), true);
+eq('一般單一活動沒有提示', P.splitActivities(S.artfunComposition.text).hint, '');
+eq('同一活動講兩次的【】段落不算多個', P.splitActivities(S.promoInsurance.text).hint, '');
+eq('回饋率不同的【】段落 → 只提示不拆', (sp = P.splitActivities('【超商加碼】\n7-ELEVEN 享3%回饋\n【網購加碼】\nmomo 享5%回饋'), [sp.explicit, /可能有 2 個活動/.test(sp.hint)].join()), 'false,true');
+sp = P.splitActivities(S.cubeTwoActivities.text);
+eq('兩個編號標題 → 拆成兩份', [sp.explicit, sp.parts.map(x => x.title).join('|')].join(), 'true,活動1：CUBE信用卡領券加碼最高享7%回饋|活動2：蝦皮購物加碼3%');
+eq('每份都帶共用的活動期間', sp.parts.every(x => x.text.includes('2026/11/01 ~ 2026/11/30')), true);
+eq('每份都帶最後的共用注意事項', sp.parts.every(x => x.text.includes('不可歸責於本行及小樹購之事由')), true);
+eq('點名活動1 的句子不進活動2', [sp.parts[1].text.includes('雙11限定加碼7%'), sp.parts[0].text.includes('雙11限定加碼7%')].join(), 'false,true');
+eq('點名活動2 的句子不進活動1', [sp.parts[0].text.includes('店到店運費'), sp.parts[1].text.includes('店到店運費')].join(), 'false,true');
+eq('別的活動的標題與內文不混進來', [sp.parts[0].text.includes('蝦皮購物消費'), sp.parts[1].text.includes('雙11限時加碼')].join(), 'false,false');
+r = P.parseCoupon(idx, 'cathay-cube', sp.parts[0].text); eq('拆開後活動1：率／cap 同單獨貼', r.fields.couponRate + '|' + r.fields.couponCap, '7|10000');
+r = P.parseActivity(idx, 'cathay-cube', sp.parts[1].text); eq('拆開後活動2：通路與期間', [r.fields.items.split(',')[0], r.fields.rate, r.fields.periodStart, r.fields.periodEnd].join('|'), '蝦皮購物|3|2026/11/1|2026/11/30');
+eq('拆開後各自的類型（只看自己那一段）', sp.parts.map(x => P.detectKind(P.normalizeText(x.own))).join(), 'coupon,rate');
+
 // 輸出
 const row = P.buildRateRow(run(S.ubearBonusOnly).fields, 'value', new Date(2026, 0, 1));
 eq('一般活動 13 欄', row.length, 13); eq('period 純值', row[12], '2026/1/1~2026/3/31'); eq('daysRemaining 純值', row[11], '89');
