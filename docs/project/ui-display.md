@@ -256,6 +256,40 @@ Grep `titleParts`）：
 - **小額支付提示**（2026-11-13，`displayMerchantPaymentInfo()`／`renderMicropaymentNote()`，`js/cashback-engine.js`）：搜到 NCCC 小額支付名單上的品牌時，搜尋結果上方「商家付款方式」灰框多一行提示文字＋「?」鈕；按「?」才展開說明（`MICROPAYMENT_HELP_HTML`，站長指定、寫死在程式）與資料來源連結（聯卡中心頁面，附「截至」日期，隨名單更新自動變）。2026-11-14 站長要求從整段攤開改成這樣，並拿掉標題。該品牌在 Merchant Payments 沒有列時，灰框只出這一段；有付款方式時用細線隔開。文字來源順序：該商家列的 `micropayment_note` → `_default` 列的通用提示（`cardsData.micropaymentDefaultNote`）；兩者都空就不出這一段（灰卡照常）。文字裡的 `{部分}` 在部分門市品牌顯示「部分」、其餘拿掉。跟付款方式一樣不理精準搜尋。排除這類交易的卡變灰卡的規則見 cashback-engine.md 第 10 節
 - 測試：`tools/regression/basic-exclusions-test.js`
 
+## 1k. 未達門檻的活動區 ＋ 結果分類導覽（2026-11-14 站長要求）
+
+**為什麼**：金額未滿 `minSpend` 的活動以前直接不出現。預設金額是 1000，「momo 單筆滿 5,000」「國內飯店滿 20,000」這類活動多數搜尋都看不到；
+只有這種活動的商家（瓦斯通、台灣電力公司…）還會被說成「你的選項中沒有符合的活動」。
+
+**未達門檻區**（`#threshold-results-section`，`displayUnmetSpendResults()`，`js/results-display.js`）：
+- 資料來自 `calculateUnmetSpendResults()`（計算端規則見 `docs/project/cashback-engine.md` 第 6 節）。**不進排名、不會是「最優回饋」**，
+  不放進 `#results-container`（回歸的 `extract()` 與商家頁生成器都只讀那個容器）
+- 卡片跟一般結果同一支 `createCardResultElement()`，差別：「未達門檻」徽章、`✘ 單筆滿 NT$X 才適用・還差 NT$Y`
+  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）、回饋金額下方「以單筆 NT$X 試算」。
+  **回饋金額用門檻金額算**（計算明細的 Total 也是門檻金額），不是用戶輸入的金額
+- 排序：門檻低的在前，同門檻回饋高的在前。**級距每一級都列**（站長決定，不只列最近的一級）
+- 位置：預設緊接結果區之後、領券之前。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
+  （`data-placed-first="1"`；`displayResults()` 的捲動目標跟著改）。領券／即將開始已清場（1e 節）時不搬
+- 按鈕（ⓘ、計算明細、加到小抄）跟結果區掛同一支事件處理（`js/home-ui.js`，Grep `thresholdResultsContainer`）
+
+**結果卡上的提示行**（`↑ 單筆滿 NT$199 可享 7%（活動名）・還差 NT$99`，`renderSpendUpgradeNotes`）：同一張卡已經有符合的活動、
+而且門檻接得上（進行中那槽的 `maxSpend` === 未達那槽的 `minSpend`）時，不另開卡片，掛在那張結果卡上。認定規則在 `attachSpendUpgrades()`
+
+**狀態列**（`js/search-match.js`）：
+- 有其他結果時補一行灰字「另有 N 筆活動要單筆滿額才適用（點此查看 ↓）」（`appendUnmetSpendNote`）
+- 只有未達門檻時，第二行紅字改成「✘ 單筆 NT$1,000 還沒有符合的活動，有 N 筆活動要單筆滿額才適用（點此查看 ↓）」
+  （`showMatchedButNoActivityMessage` 的 `unmetCount`），不再說「試看看修改信用卡選項」
+
+**結果分類導覽**（`#results-nav`，`updateResultsNav()`／`scrollToResultsGroup()`）：
+- 這次搜尋有**兩類以上**結果時，結果上方出一排標籤（含筆數）：指定通路回饋或一般回饋／一般消費排除／即將開始／未達門檻／領券型活動／停車折抵／新戶活動。
+  點了捲到那一類並短暫標亮；標籤列 `position: sticky`，捲到哪都能跳去別類
+- **只讀畫面上真的有的東西**（各 section 的顯示狀態＋結果卡的 `data-group`），不另外記狀態——各區塊顯示／隱藏規則改了，這裡不用跟著改
+- 一般消費排除與即將開始沒有自己的 section（跟主結果同在 `#results-container`），捲到該類第一張卡
+- 導覽列在時，各區塊加 `scroll-margin-top`（`.has-results-nav …`）讓出它的高度
+- ⚠️ 還沒做的：排除卡與即將開始沒有自己的小標題；未達門檻區排在灰色排除卡**之後**（搜「水費」要捲過 30 張灰卡，靠導覽與狀態列連結跳過去）
+- ⚠️ 凍結資料下 13 組回歸不會碰到這一區（它在 `#results-container` 外面），**回歸測不到**；驗證靠線上資料實測：
+  「水費」1000（三類並存）、「瓦斯通」1000（只有未達門檻）、「統一超商」100（提示行）、「MOMO購物網」1000（同卡多個門檻）
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**

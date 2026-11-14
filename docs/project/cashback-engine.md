@@ -159,6 +159,11 @@ if (!card.specialItems || card.specialItems.length === 0)
 - 互斥用法：高回饋槽填 `minSpend`（只在 ≥門檻匹配）、替代槽填 `maxSpend`（只在 <門檻匹配），同商家兩槽二選一命中，邊界值只有 minSpend 那槽命中。
 - 實作在 `calculateCardCashback()` 命中槽後、計算前判斷（`amount < rateGroup.minSpend` 或 `amount >= rateGroup.maxSpend` → 跳過此槽，純 `continue`，不設任何 fallback 旗標）。
 - 顯示：詳情頁（`renderCashbackRatesIndividually` 等）與搜尋結果卡片（`createCardResultElement`）都會標註「單筆滿 NT$X 起」/「單筆未滿 NT$X」。
+- **未達 `minSpend` 的活動另外算一份給「未達門檻」區**（2026-11-14，`calculateUnmetSpendResults()`，`calculateHitResults()` 回傳多一個 `unmet`）：
+  `calculateCardCashback()` 的門檻判斷**沒動**（未滿照樣跳過，進行中結果與排名不變）；另外對「這張卡比輸入金額高的每個 `minSpend`」各算一次、金額就用門檻本身，
+  只留 `matchedRateGroup.minSpend === 門檻` 的結果。所以那一區的回饋率／上限／計算明細都是引擎算的真結果。同門檻內照 `mergeResultsByActivity` 合併（合併鍵不含門檻，不同門檻分開併）。
+  `options.upcoming === false`（商家頁生成器）時不算。`attachSpendUpgrades()` 再把「門檻接得上」的（進行中槽 `maxSpend` === 未達槽 `minSpend`、同商家，級距一路接下去）
+  改掛到進行中的結果卡上當提示。顯示規則見 `docs/project/ui-display.md` 第 1k 節
 
 ## 7. 停車折抵優惠（Parking Benefits）
 

@@ -5,6 +5,7 @@
  *  - 回饋計算總調度            → "calculateCashback"
  *  - 搜尋變體/邊界判斷          → "getAllSearchVariants" / "merchantMatchesStrict"
  *  - 搜尋三步之「算」          → "calculateHitResults"
+ *  - 未達單筆門檻的活動        → "calculateUnmetSpendResults" / "attachSpendUpgrades"
  *  - 類別顯示                  → "getCategoryDisplayName"
  *  - 基礎/加碼率解析            → "resolveBaseRate" / "resolveBonusComponent"
  *  - 溢出率                    → "getOverflowRate"
@@ -73,6 +74,7 @@ async function calculateCashback() {
     let isBasicCashback = false;
     let matchedButNoActivity = false;  // 匹配成功、但這次的卡片選擇下算不出任何活動
     let uniqueUpcomingResults = [];  // Define here for proper scope
+    let unmetSpendResults = [];      // 未達單筆門檻的活動（另列一區，不進排名；見 calculateUnmetSpendResults）
 
     // Get cards to compare (user selected or all)
     const cardsToCompare = getCardsForComparison();
@@ -84,6 +86,10 @@ async function calculateCashback() {
         const hitResults = await calculateHitResults(currentMatchedItem, cardsToCompare, amount);
         results = hitResults.results;
         uniqueUpcomingResults = hitResults.upcoming;
+        // 同卡已有符合的活動、門檻接得上的，改掛在那張結果卡上當提示；其餘留給「未達門檻」區
+        unmetSpendResults = attachSpendUpgrades(results, hitResults.unmet || []);
+        // 門檻低的在前（最接近用戶金額的先看到），同門檻回饋高的在前
+        unmetSpendResults.sort((a, b) => a.unmetSpend - b.unmetSpend || b.cashbackAmount - a.cashbackAmount);
         diagStage('主要結果完成');
 
         // 走到這裡代表**匹配成功**（currentMatchedItem 有值），只是算不出任何結果——
@@ -204,6 +210,8 @@ async function calculateCashback() {
     // 那批槽）一定走 matchedButNoActivity，這正是最需要清場的情境。
     // 兩者都不是 isBasic，所以同一行 filter 就留得下來。
     const upcomingCount = uniqueUpcomingResults.length;
+    const unmetCount = unmetSpendResults.length;
+    let unmetNoteShown = false;
     const couponOnly = matchedButNoActivity && couponCount > 0;
     const upcomingOnly = matchedButNoActivity && upcomingCount > 0;
     if (couponOnly || upcomingOnly) {
@@ -246,10 +254,14 @@ async function calculateCashback() {
     } else if (allBasicExcluded) {
         await showBasicExcludedMessage(merchantValue, basicExcludedCount, currentMatchedItem, cardsToCompare, amount);
     } else if (currentMatchedItem && matchedButNoActivity) {
-        await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount);
+        // 有未達門檻的活動時訊息不同：不是「你的卡沒有活動」，而是「這個金額還不到門檻」
+        await showMatchedButNoActivityMessage(currentMatchedItem, cardsToCompare, amount, unmetCount);
+        unmetNoteShown = unmetCount > 0;
     } else if (merchantValue.length > 0) {
         showNoMatchMessage(merchantValue, cardsToCompare);
     }
+    // 還有未達單筆門檻的活動：狀態列交代一行，點了跳到那一區（上面那條已經講過就不重複）
+    if (unmetCount > 0 && !unmetNoteShown) appendUnmetSpendNote(unmetCount);
     // 有灰色排除卡、但不是「全部排除」時：狀態列最後交代一行（有指定通路結果、只有即將開始／領券時也一樣）
     if (basicExcludedCount > 0 && !allBasicExcluded && !allGreyWithMaybe) {
         appendBasicExcludedNote(merchantValue, basicExcludedCount);
@@ -258,6 +270,13 @@ async function calculateCashback() {
         appendBasicExcludedNote(merchantValue, maybeExcludedCount, true);
     }
 
+    // 未達門檻區要在 displayResults 之前畫好：那支負責捲動，要知道這一區在不在、排在哪。
+    // 沒有任何進行中活動、畫面上只剩一般回饋那一大串時，未達門檻區排到它前面
+    // （用戶要查的就是這個商家的活動；排在三十幾張一般回饋後面等於看不到）。
+    // 領券／即將開始已經清場的情況不用搬——一般回饋本來就收起來了。
+    displayUnmetSpendResults(unmetSpendResults, amount, displayedMatchItem,
+        matchedButNoActivity && !couponOnly && !upcomingOnly);
+
     displayResults(results, amount, displayedMatchItem, isBasicCashback, couponOnly || allBasicExcluded);
 
     // Display parking benefits - pass quick search keywords if available
@@ -265,6 +284,9 @@ async function calculateCashback() {
 
     // Display new cardholder promos (filtered by user toggle, ownership, and merchant match)
     displayCardholderPromos(merchantValue, amount, currentQuickSearchOption?.merchants);
+
+    // 結果分類導覽：所有區塊都畫完才知道有哪幾類
+    updateResultsNav();
 
     const duration = performance.now() - startTime;
     diagStage('全部完成');
@@ -327,7 +349,80 @@ async function calculateHitResults(hits, cards, amount, options = {}) {
         }));
         upcoming.push(...acts.flat());
     }
-    return { results, upcoming: mergeResultsByActivity(upcoming) };
+    return { results, upcoming: mergeResultsByActivity(upcoming), unmet: await calculateUnmetSpendResults(list, cards, amount) };
+}
+
+// ============================================================
+// 未達單筆門檻的活動（2026-11-14 站長要求：金額未滿 minSpend 的活動不要直接消失，另列一區供參考）
+// 做法：不動 calculateCardCashback 的門檻判斷（金額未滿照樣跳過，進行中結果與排名完全不變），
+// 而是對「這張卡比輸入金額高的每個 minSpend」各再算一次——金額就用門檻本身，
+// 只留下「剛好在這個門檻解鎖」的槽（matchedRateGroup.minSpend === 門檻）。
+// 所以回饋率、上限、計算明細都是計算引擎用門檻金額算出來的真結果，不是另外抄的一套。
+// 級距活動（同一活動多個門檻）每一級都列（站長決定：全列）。
+// 回傳的每筆多帶 isUnmetSpend＝true、unmetSpend＝門檻金額；同門檻內照 mergeResultsByActivity 合併。
+// ============================================================
+async function calculateUnmetSpendResults(hits, cards, amount) {
+    const byThreshold = new Map();   // 門檻金額 → 結果清單（分開合併：合併鍵不含門檻，不同門檻不能併成一張）
+    for (const card of cards) {
+        const thresholds = [...new Set((card.cashbackRates || [])
+            .map(g => Number(g.minSpend))
+            .filter(t => t > amount))];
+        if (thresholds.length === 0) continue;
+        for (const hit of hits) {
+            const searchTerm = String(hit.originalItem).toLowerCase();
+            for (const t of thresholds) {
+                const rs = await calculateCardCashback(card, searchTerm, t);
+                for (const r of rs) {
+                    if (!r.matchedRateGroup || Number(r.matchedRateGroup.minSpend) !== t || !(r.cashbackAmount > 0)) continue;
+                    if (!byThreshold.has(t)) byThreshold.set(t, []);
+                    byThreshold.get(t).push({ ...r, card, matchedItemName: r.matchedItem, isUnmetSpend: true, unmetSpend: t });
+                }
+            }
+        }
+    }
+    const unmet = [];
+    for (const list of byThreshold.values()) unmet.push(...mergeResultsByActivity(list));
+    return unmet;
+}
+
+// 同一張卡「已經有符合的活動、再多刷一點就換到下一級」的未達門檻活動：不另開卡片，
+// 改掛在那張進行中的結果卡上當一行提示（result.spendUpgrades）。
+// 認定方式＝門檻數字接得上：進行中那槽的 maxSpend === 未達那槽的 minSpend（互斥槽／級距的寫法，
+// 見 docs/project/cashback-engine.md 第 6 節），而且兩邊命中的是同一個商家。級距會一路接下去
+// （A.max=B.min、B.max=C.min → B、C 都掛在 A 上）。不用活動類別比對：同一組互斥槽的類別名常常不同
+// （中信 Uniopen「統一集團消費」／「統一集團踩點任務」）。
+// 同一張卡有兩張以上接得上時，掛在類別名開頭最像的那張。回傳「沒被掛走」的未達門檻結果。
+function attachSpendUpgrades(results, unmet) {
+    if (!unmet || unmet.length === 0 || !results || results.length === 0) return unmet || [];
+    const itemsOf = r => (r.matchedItems && r.matchedItems.length ? r.matchedItems : [r.matchedItem])
+        .filter(Boolean).map(x => String(x).toLowerCase());
+    const commonPrefix = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+    const anchors = new Map();   // `${cardId}|${門檻}` → 可以掛的進行中結果
+    const addAnchor = (cardId, bound, r) => {
+        const key = `${cardId}|${bound}`;
+        if (!anchors.has(key)) anchors.set(key, []);
+        if (!anchors.get(key).includes(r)) anchors.get(key).push(r);
+    };
+    results.forEach(r => {
+        const max = Number(r.matchedRateGroup && r.matchedRateGroup.maxSpend);
+        if (max > 0 && !r.isUpcoming) addAnchor(r.card.id, max, r);
+    });
+    const rest = [];
+    [...unmet].sort((a, b) => a.unmetSpend - b.unmetSpend).forEach(u => {
+        const uItems = itemsOf(u);
+        const candidates = (anchors.get(`${u.card.id}|${u.unmetSpend}`) || [])
+            .filter(r => itemsOf(r).some(x => uItems.includes(x)));
+        if (candidates.length === 0) { rest.push(u); return; }
+        const cat = String(u.matchedCategory || '');
+        const target = candidates.reduce((best, r) =>
+            commonPrefix(String(r.matchedCategory || ''), cat) > commonPrefix(String(best.matchedCategory || ''), cat) ? r : best);
+        (target.spendUpgrades = target.spendUpgrades || []).push({
+            minSpend: u.unmetSpend, rate: u.rate, cashbackAmount: u.cashbackAmount, category: u.matchedCategory || ''
+        });
+        const nextBound = Number(u.matchedRateGroup && u.matchedRateGroup.maxSpend);
+        if (nextBound > 0) addAnchor(u.card.id, nextBound, target);
+    });
+    return rest;
 }
 
 // 判斷搜尋詞是否「包含」某個項目名稱（term ⊇ item）。

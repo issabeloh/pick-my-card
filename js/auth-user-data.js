@@ -302,6 +302,10 @@ function ensureGuestUIBound() {
         if (t.announcementBar) t.announcementBar.style.display = 'none';
         if (t.resultsSection) t.resultsSection.style.display = 'none';
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
+        // 未達門檻區與結果分類導覽跟著結果一起收
+        const thresholdSection = document.getElementById('threshold-results-section');
+        if (thresholdSection) thresholdSection.style.display = 'none';
+        if (typeof updateResultsNav === 'function') updateResultsNav();
         if (t.spotlightSection) t.spotlightSection.style.display = 'none';
         if (t.financeWarningRow) t.financeWarningRow.style.display = 'none';
         // 結果收起 → 收起「精選活動」快速跳轉浮標

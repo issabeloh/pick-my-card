@@ -496,17 +496,21 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
 // 不要顯示「有 0 張卡有」。
 // 只在「匹配成功、但你選的卡連一筆活動都算不出來，而且也沒有領券」時使用——
 // 有領券的情況在呼叫端（calculateCashback 的 couponOnly）就先接走了，不會走到這裡。
-async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000) {
+// unmetCount > 0：比較中的卡其實有這個商家的活動，只是輸入金額還不到單筆門檻（2026-11-14）。
+// 這時說「你的選項中沒有符合的活動，試看看修改信用卡選項」是錯的——該講的是金額，並給連結跳到未達門檻區。
+async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], amount = 1000, unmetCount = 0) {
     const list = Array.isArray(matchedItems) ? matchedItems : [matchedItems];
     const names = [...new Set(list.map(m => (m && m.originalItem) || '').filter(Boolean))];
     const displayName = names.join('、');
 
-    const outsideCount = await countCardsWithActivityOutside(names, cardsToCheck, amount);
+    const outsideCount = unmetCount > 0 ? 0 : await countCardsWithActivityOutside(names, cardsToCheck, amount);
 
     // 兩行分工：第一行只講「詞認得」（綠色，跟打字時同一句，不推翻它）；
     // 第二行才講「你的設定下沒有結果」（紅色）。合成一句會變成「✓ 開頭、否定結尾」，
     // 要讀完整句才懂——那正是 2026-09-11 用戶回報的困惑點。
-    const warn = outsideCount > 0
+    const warn = unmetCount > 0
+        ? `✘ 單筆 NT$${escapeHtml(Math.floor(Number(amount) || 0).toLocaleString())} 還沒有符合的活動，有 ${Number(unmetCount)} 筆活動要單筆滿額才適用（${unmetSpendJumpLinkHtml()}）`
+        : outsideCount > 0
         ? `✘ 你的選項中沒有符合的活動，試看看修改信用卡選項！（其他卡片中有 ${outsideCount} 張卡符合）`
         : '✘ 目前沒有卡片有這個商家的活動';
 
@@ -974,6 +978,30 @@ function appendBasicExcludedNote(merchantValue, excludedCount, isMaybe = false) 
         ? `<br><span class="matched-item-warn">另有 ${count} 張卡可能排除「${name}」（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`
         : `<br><span class="matched-item-warn">另有 ${count} 張卡把「${name}」列為<strong>一般消費排除項目</strong>，刷卡無回饋（<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToFirstExcludedCard()">見下方灰色卡片 ↓</a>）</span>`;
     matchedItemDiv.innerHTML += note;
+    matchedItemDiv.style.display = 'block';
+}
+
+// 未達單筆門檻的活動（2026-11-14）：狀態列的跳轉連結與附註。
+// 連結沿用 .excluded-jump-link 的樣式（跟著那一行的字色、底線粗體）；捲動走結果分類導覽的同一支
+function unmetSpendJumpLinkHtml() {
+    return `<a href="javascript:void(0)" class="excluded-jump-link" onclick="scrollToResultsGroup('unmet')">點此查看 ↓</a>`;
+}
+
+// 已經有其他結果時補一行：「另有 N 筆活動要單筆滿額才適用」。不是警告，用中性灰字（.matched-item-note）
+function appendUnmetSpendNote(unmetCount) {
+    const count = Number(unmetCount) || 0;
+    if (!matchedItemDiv || count <= 0) return;
+    // 用 DOM API 組（不碰 innerHTML）：這一行沒有任何外部字串，連結走跟上面同一支捲動
+    const note = document.createElement('span');
+    note.className = 'matched-item-note';
+    const link = document.createElement('a');
+    link.href = 'javascript:void(0)';
+    link.className = 'excluded-jump-link';
+    link.textContent = '點此查看 ↓';
+    // 用 onclick 屬性、不用 addEventListener：後面 appendBasicExcludedNote 會 `innerHTML +=` 重建整列，監聽器會掉
+    link.setAttribute('onclick', "scrollToResultsGroup('unmet')");
+    note.append(`另有 ${count} 筆活動要單筆滿額才適用（`, link, '）');
+    matchedItemDiv.append(document.createElement('br'), note);
     matchedItemDiv.style.display = 'block';
 }
 

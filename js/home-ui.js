@@ -1600,9 +1600,11 @@ function setupEventListeners() {
     }
 
     // 釘選按鈕事件委託
+    // 「未達門檻」區的卡片是同一種結果卡（createCardResultElement），按鈕行為要一樣，兩個容器掛同一支
     const resultsContainer = document.getElementById('results-container');
-    if (resultsContainer) {
-        resultsContainer.addEventListener('click', async (e) => {
+    const thresholdResultsContainer = document.getElementById('threshold-results-container');
+    [resultsContainer, thresholdResultsContainer].filter(Boolean).forEach(container => {
+        container.addEventListener('click', async (e) => {
             const peekBtn = e.target.closest('.card-detail-peek-btn');
             if (peekBtn) {
                 e.preventDefault();
@@ -1631,7 +1633,7 @@ function setupEventListeners() {
                 await togglePin(pinBtn, cardId, cardName, merchant, rate, periodEnd, periodStart);
             }
         });
-    }
+    });
 
     // 領券活動卡片的計算明細按鈕
     const couponResultsContainerEl = document.getElementById('coupon-results-container');

@@ -228,7 +228,7 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Apple Pay 信用卡推薦！一次比較出 2026 下半年最高回饋信用卡 - Pick My Card","description":"Apple Pay 綁哪張信用卡回饋最高？2026 下半年推薦永豐 Sport 卡 5% 及兆豐 BT21 卡 4%，限國內消費。到 Pick My Card 即時試算你持有的信用卡中，指定消費金額可以拿到多少回饋金！","url":"https://pickmycard.app/merchant/Apple%20Pay","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"Apple Pay 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"永豐 Sport 卡"},{"@type":"ListItem","position":2,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":3,"name":"一銀 iLEO 信用卡"}]},"dateModified":"2026-11-13"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"Apple Pay 信用卡推薦！一次比較出 2026 下半年最高回饋信用卡 - Pick My Card","description":"Apple Pay 綁哪張信用卡回饋最高？2026 下半年推薦永豐 Sport 卡 5% 及兆豐 BT21 卡 4%，限國內消費。到 Pick My Card 即時試算你持有的信用卡中，指定消費金額可以拿到多少回饋金！","url":"https://pickmycard.app/merchant/Apple%20Pay","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"Apple Pay 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"永豐 Sport 卡"},{"@type":"ListItem","position":2,"name":"兆豐 BT21 卡"},{"@type":"ListItem","position":3,"name":"一銀 iLEO 信用卡"}]},"dateModified":"2026-11-14"}</script>
 </head>
 <body>
     <div class="container">
@@ -672,6 +672,10 @@
 
             </section>
 
+            <!-- 結果分類導覽（2026-11-14）：這次搜尋有兩類以上的結果時才出現，內容由 updateResultsNav()
+                 照畫面上真的有的區塊產生；捲動時黏在畫面上緣 -->
+            <nav class="results-nav" id="results-nav" aria-label="結果分類" style="display: none;"></nav>
+
             <section class="results-section" id="results-section" style="display: none;">
                 <h2>一般回饋與指定通路回饋</h2>
                 <p id="payment-disclaimer" style="text-align: center; color: #6b7280; font-size: 0.875rem; margin-bottom: 16px;">
@@ -682,6 +686,16 @@
                 </div>
             </section>
             
+            <!-- 未達單筆門檻的活動（2026-11-14）：金額未滿 minSpend 的活動另列在這裡，不進排名。
+                 沒有進行中活動時 JS 會把這一區搬到結果區前面（displayUnmetSpendResults） -->
+            <section class="threshold-results-section" id="threshold-results-section" style="display: none;">
+                <h2>未達門檻的活動</h2>
+                <p class="threshold-results-desc" id="threshold-results-desc"></p>
+                <div class="results-container threshold-results-container" id="threshold-results-container">
+                    <!-- Unmet-threshold results will be dynamically inserted here -->
+                </div>
+            </section>
+
             <section class="coupon-results-section" id="coupon-results-section" style="display: none;">
                 <h2>領券型活動</h2>
                 <div class="coupon-results-container" id="coupon-results-container">
@@ -1254,7 +1268,7 @@ Apple Pay 國內消費 2026 下半年首選永豐 Sport 卡 5%；兆豐 BT21 卡
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-13">2026/11/13</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-14">2026/11/14</time></span>
     </div>
     </footer>
 

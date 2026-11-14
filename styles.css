@@ -11150,3 +11150,152 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         font-size: 11.5px;
     }
 }
+
+/* ============================================================
+   未達單筆門檻的活動區 ＋ 結果分類導覽（2026-11-14，js/results-display.js：
+   displayUnmetSpendResults／updateResultsNav；設計紀錄見 docs/project/ui-display.md 第 1k 節）
+   ============================================================ */
+.threshold-results-section {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 20px;
+    margin-top: 30px;
+}
+/* 搬到結果區前面時（沒有進行中活動），上方是搜尋表單：不需要隔那麼開；後面的結果區補回間距 */
+.threshold-results-section[data-placed-first="1"] {
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+.threshold-results-section h2 {
+    margin-bottom: 8px;
+    color: #111827;
+    font-size: 1.5rem;
+}
+.app-layout main .threshold-results-section h2 {
+    font-size: 1.2rem;
+}
+.threshold-results-desc {
+    margin-bottom: 16px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.6;
+}
+/* 未達門檻的結果卡：淺灰底＋虛線框表示「參考用」。不用 .upcoming-activity 那種整張半透明——
+   這一區就是要讓人讀的，字要清楚 */
+.card-result.unmet-spend-activity {
+    background: #fafafa;
+    border-style: dashed;
+    border-color: #d1d5db;
+}
+.card-result.unmet-spend-activity .cashback-amount {
+    color: #6b7280;
+}
+.unmet-spend-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.unmet-spend-trial-label {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: normal;
+}
+.unmet-threshold-note {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #b45309;
+}
+/* 進行中的結果卡上「↑ 單筆滿 X 可享 Y%」提示 */
+.spend-upgrade-note {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #b45309;
+}
+/* 狀態列「另有 N 筆活動要單筆滿額才適用」：不是警告，中性灰字 */
+.matched-item-note {
+    color: #4b5563;
+}
+
+/* 結果分類導覽：一排標籤，捲動時黏在畫面上緣；手機放不下就橫向捲 */
+.results-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    margin: 0 0 4px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.results-nav::-webkit-scrollbar {
+    display: none;
+}
+.results-nav-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.results-nav-chip:hover,
+.results-nav-chip:focus-visible {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+.results-nav-chip[data-group="unmet"] {
+    border-color: #fcd34d;
+    background: #fffbeb;
+    color: #92400e;
+}
+.results-nav-count {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+}
+/* 導覽列在時，捲到各區塊／卡片要讓出它的高度，不然標題被蓋住 */
+.has-results-nav .results-section,
+.has-results-nav .threshold-results-section,
+.has-results-nav .coupon-results-section,
+.has-results-nav .parking-benefits-section,
+.has-results-nav .cardholder-promos-section,
+.has-results-nav .results-container > .card-result {
+    scroll-margin-top: 56px;
+}
+/* 捲到後短暫標亮 */
+.results-group-flash {
+    box-shadow: 0 0 0 3px #fcd34d;
+    transition: box-shadow 0.3s ease;
+}
+/* 導覽列底線就是分隔線：緊接在後的那一區不再畫自己的上框線（不然兩條線疊在一起） */
+.results-nav + section {
+    border-top: none;
+}
