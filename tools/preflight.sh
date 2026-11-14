@@ -58,6 +58,15 @@ else
   echo "⚠️  找不到 node 或生成器，略過商家頁一致性檢查"; warn=1
 fi
 
+# ---- 1d-2) NCCC 小額支付品牌清單必須與來源一致（2026-11-13）----
+# js/micropayment-brands.js 由 tools/build-nccc-brands.js 從 data/nccc/ 生成、禁止手改。
+# 改了對照表（brand-map.csv）或門市清單卻沒重跑生成器，網站讀到的就是舊清單。
+if command -v node >/dev/null 2>&1 && [ -f tools/build-nccc-brands.js ]; then
+  if ! node tools/build-nccc-brands.js --check > /dev/null 2>&1; then
+    echo "❌ js/micropayment-brands.js 或 data/nccc/summary.json 與生成結果不一致——跑 node tools/build-nccc-brands.js 後再 commit"; fail=1
+  fi
+fi
+
 # ---- 1e) 活動快寫的試算表版是生成檔（2026-11-13）----
 # apps-script/ActivityWriter.html 由 tools/activity-writer/ 的 index.html＋parser.js＋app.js 併成；
 # 來源改了沒重新生成，自動部署推上去的就是舊版。

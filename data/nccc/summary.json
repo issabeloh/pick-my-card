@@ -1,0 +1,480 @@
+{
+  "asOf": "2026-10-31",
+  "activeStoreRows": 19603,
+  "brandCount": 74,
+  "droppedBrands": [],
+  "brands": {
+    "麥當勞": {
+      "level": "全門市",
+      "rows": 1962,
+      "addresses": 655
+    },
+    "肯德基 KFC": {
+      "level": "全門市",
+      "rows": 397,
+      "addresses": 264
+    },
+    "必勝客": {
+      "level": "全門市",
+      "rows": 332,
+      "addresses": 331
+    },
+    "八方雲集": {
+      "level": "全門市",
+      "rows": 1587,
+      "addresses": 1133
+    },
+    "梁社漢排骨": {
+      "level": "全門市",
+      "rows": 465,
+      "addresses": 293
+    },
+    "麻古茶坊": {
+      "level": "全門市",
+      "rows": 455,
+      "addresses": 305
+    },
+    "Q Burger": {
+      "level": "全門市",
+      "rows": 409,
+      "addresses": 408
+    },
+    "可不可熟成紅茶": {
+      "level": "全門市",
+      "rows": 245,
+      "addresses": 245
+    },
+    "85度C": {
+      "level": "全門市",
+      "rows": 349,
+      "addresses": 349
+    },
+    "三商巧福": {
+      "level": "全門市",
+      "rows": 190,
+      "addresses": 179
+    },
+    "錢都日式涮涮鍋": {
+      "level": "全門市",
+      "rows": 121,
+      "addresses": 106
+    },
+    "鬍鬚張": {
+      "level": "全門市",
+      "rows": 118,
+      "addresses": 99
+    },
+    "漢堡王": {
+      "level": "全門市",
+      "rows": 86,
+      "addresses": 85
+    },
+    "SUKIYA": {
+      "level": "全門市",
+      "rows": 81,
+      "addresses": 81
+    },
+    "Subway": {
+      "level": "全門市",
+      "rows": 112,
+      "addresses": 112
+    },
+    "晨間廚房": {
+      "level": "部分門市",
+      "rows": 410,
+      "addresses": 275
+    },
+    "六扇門時尚湯鍋": {
+      "level": "部分門市",
+      "rows": 95,
+      "addresses": 95
+    },
+    "龜記": {
+      "level": "部分門市",
+      "rows": 98,
+      "addresses": 98
+    },
+    "CoMeBuy": {
+      "level": "部分門市",
+      "rows": 153,
+      "addresses": 153
+    },
+    "五桐號": {
+      "level": "部分門市",
+      "rows": 69,
+      "addresses": 69
+    },
+    "鶴茶樓": {
+      "level": "部分門市",
+      "rows": 68,
+      "addresses": 68
+    },
+    "50嵐": {
+      "level": "部分門市",
+      "rows": 525,
+      "addresses": 444
+    },
+    "拉亞漢堡": {
+      "level": "部分門市",
+      "rows": 177,
+      "addresses": 176
+    },
+    "TEATOP第一味": {
+      "level": "部分門市",
+      "rows": 138,
+      "addresses": 137
+    },
+    "弘爺漢堡": {
+      "level": "部分門市",
+      "rows": 101,
+      "addresses": 90
+    },
+    "大苑子": {
+      "level": "部分門市",
+      "rows": 83,
+      "addresses": 83
+    },
+    "烏弄": {
+      "level": "部分門市",
+      "rows": 84,
+      "addresses": 84
+    },
+    "大茗本位製茶堂": {
+      "level": "部分門市",
+      "rows": 74,
+      "addresses": 74
+    },
+    "萬波島嶼紅茶": {
+      "level": "部分門市",
+      "rows": 74,
+      "addresses": 71
+    },
+    "珍煮丹": {
+      "level": "部分門市",
+      "rows": 64,
+      "addresses": 64
+    },
+    "蛋白盒子": {
+      "level": "部分門市",
+      "rows": 63,
+      "addresses": 63
+    },
+    "先喝道": {
+      "level": "部分門市",
+      "rows": 54,
+      "addresses": 54
+    },
+    "水巷茶弄": {
+      "level": "部分門市",
+      "rows": 47,
+      "addresses": 47
+    },
+    "迷客夏": {
+      "level": "部分門市",
+      "rows": 46,
+      "addresses": 46
+    },
+    "茶聚": {
+      "level": "部分門市",
+      "rows": 43,
+      "addresses": 43
+    },
+    "黑沃咖啡": {
+      "level": "部分門市",
+      "rows": 40,
+      "addresses": 40
+    },
+    "拾汣茶屋": {
+      "level": "部分門市",
+      "rows": 39,
+      "addresses": 38
+    },
+    "胖老爹美式炸雞": {
+      "level": "部分門市",
+      "rows": 38,
+      "addresses": 38
+    },
+    "頂呱呱": {
+      "level": "部分門市",
+      "rows": 37,
+      "addresses": 37
+    },
+    "玉津咖啡": {
+      "level": "部分門市",
+      "rows": 37,
+      "addresses": 37
+    },
+    "五花馬水餃館": {
+      "level": "部分門市",
+      "rows": 33,
+      "addresses": 33
+    },
+    "白巷子": {
+      "level": "部分門市",
+      "rows": 33,
+      "addresses": 30
+    },
+    "鮮五丼": {
+      "level": "部分門市",
+      "rows": 30,
+      "addresses": 25
+    },
+    "蕃茄村": {
+      "level": "部分門市",
+      "rows": 27,
+      "addresses": 27
+    },
+    "特好喝": {
+      "level": "部分門市",
+      "rows": 25,
+      "addresses": 25
+    },
+    "金茶伍": {
+      "level": "部分門市",
+      "rows": 24,
+      "addresses": 24
+    },
+    "拎茶": {
+      "level": "部分門市",
+      "rows": 29,
+      "addresses": 19
+    },
+    "九初": {
+      "level": "部分門市",
+      "rows": 33,
+      "addresses": 19
+    },
+    "丸龜製麵": {
+      "level": "部分門市",
+      "rows": 15,
+      "addresses": 15
+    },
+    "十二韻": {
+      "level": "部分門市",
+      "rows": 14,
+      "addresses": 14
+    },
+    "龍角": {
+      "level": "部分門市",
+      "rows": 14,
+      "addresses": 14
+    },
+    "老賴茶棧": {
+      "level": "部分門市",
+      "rows": 13,
+      "addresses": 13
+    },
+    "功夫茶": {
+      "level": "部分門市",
+      "rows": 11,
+      "addresses": 11
+    },
+    "Popeyes": {
+      "level": "部分門市",
+      "rows": 16,
+      "addresses": 10
+    },
+    "青山": {
+      "level": "部分門市",
+      "rows": 87,
+      "addresses": 86
+    },
+    "Touch Cafe": {
+      "level": "部分門市",
+      "rows": 203,
+      "addresses": 202
+    },
+    "鹿上點": {
+      "level": "部分門市",
+      "rows": 120,
+      "addresses": 120
+    },
+    "邦柏智慧": {
+      "level": "部分門市",
+      "rows": 215,
+      "addresses": 212
+    },
+    "JIT快速剪髮": {
+      "level": "部分門市",
+      "rows": 35,
+      "addresses": 35
+    },
+    "24Hi": {
+      "level": "部分門市",
+      "rows": 22,
+      "addresses": 22
+    },
+    "Times 停車場": {
+      "level": "全門市",
+      "rows": 992,
+      "addresses": 988
+    },
+    "台灣聯通停車場": {
+      "level": "部分門市",
+      "rows": 342,
+      "addresses": 342
+    },
+    "遠創智慧停車": {
+      "level": "部分門市",
+      "rows": 259,
+      "addresses": 254
+    },
+    "博客停車場": {
+      "level": "部分門市",
+      "rows": 140,
+      "addresses": 139
+    },
+    "和雲停車場": {
+      "level": "部分門市",
+      "rows": 126,
+      "addresses": 126
+    },
+    "國雲停車": {
+      "level": "部分門市",
+      "rows": 88,
+      "addresses": 87
+    },
+    "168停車聯盟": {
+      "level": "部分門市",
+      "rows": 82,
+      "addresses": 80
+    },
+    "全之駐停車場": {
+      "level": "部分門市",
+      "rows": 61,
+      "addresses": 38
+    },
+    "歐特儀停車場": {
+      "level": "部分門市",
+      "rows": 40,
+      "addresses": 39
+    },
+    "日月亭停車場": {
+      "level": "部分門市",
+      "rows": 22,
+      "addresses": 21
+    },
+    "Unibuy智販機": {
+      "level": "部分門市",
+      "rows": 184,
+      "addresses": 178
+    },
+    "黑松販賣機": {
+      "level": "部分門市",
+      "rows": 129,
+      "addresses": 44
+    },
+    "統一速邁販賣機": {
+      "level": "部分門市",
+      "rows": 110,
+      "addresses": 103
+    },
+    "松佳飲料販賣機": {
+      "level": "部分門市",
+      "rows": 179,
+      "addresses": 21
+    }
+  },
+  "unmappedCandidates": [
+    {
+      "prefix": "自助洗衣-23",
+      "rows": 313
+    },
+    {
+      "prefix": "006-0",
+      "rows": 83
+    },
+    {
+      "prefix": "owlocker",
+      "rows": 81
+    },
+    {
+      "prefix": "蜂鳥生活圈",
+      "rows": 59
+    },
+    {
+      "prefix": "ishop摩寶智慧商",
+      "rows": 58
+    },
+    {
+      "prefix": "新長越企業有限公司",
+      "rows": 50
+    },
+    {
+      "prefix": "co",
+      "rows": 46
+    },
+    {
+      "prefix": "鮮自然-",
+      "rows": 41
+    },
+    {
+      "prefix": "立璨-",
+      "rows": 39
+    },
+    {
+      "prefix": "詮營股份有限公司",
+      "rows": 34
+    },
+    {
+      "prefix": "uspace",
+      "rows": 31
+    },
+    {
+      "prefix": "嘉申智能櫃(",
+      "rows": 30
+    },
+    {
+      "prefix": "mi",
+      "rows": 29
+    },
+    {
+      "prefix": "野獸國bibi智販機",
+      "rows": 28
+    },
+    {
+      "prefix": "優豈-",
+      "rows": 27
+    },
+    {
+      "prefix": "幸福",
+      "rows": 27
+    },
+    {
+      "prefix": "自在軒-",
+      "rows": 27
+    },
+    {
+      "prefix": "tea",
+      "rows": 26
+    },
+    {
+      "prefix": "寶盛停車場-",
+      "rows": 26
+    },
+    {
+      "prefix": "立特事業有限公司",
+      "rows": 26
+    },
+    {
+      "prefix": "富山停車",
+      "rows": 25
+    },
+    {
+      "prefix": "哈堡堡",
+      "rows": 24
+    },
+    {
+      "prefix": "ca",
+      "rows": 21
+    },
+    {
+      "prefix": "mr。",
+      "rows": 21
+    },
+    {
+      "prefix": "vivi park",
+      "rows": 21
+    }
+  ]
+}

@@ -15,6 +15,7 @@
  *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
  *  - 排除項目同義詞群組          → "expandExclusionGroupTerms"
  *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
+ *  - NCCC 小額支付品牌           → "findMicropaymentBrand" / "classifyBasicExclusion"
  * ============================================================ */
 // 模糊搜尋對照表：2026-10-15 起全部搬到 Google Sheets「統一詞」工作表（其他寫法＋搜尋別名），
 // 匯出成 cardsData.termAliases，載入時由 mergeDataTermAliases 填進來（別名 → 統一詞）。
@@ -794,8 +795,11 @@ const BASIC_EXCLUSION_PREVIEW_LIMIT = 5;
 function showBasicExclusionPreview(searchTerms, exactOnly, hasItemMatch) {
     if (!matchedItemDiv) return false;
     const items = [];
+    // searchTerms[0] 永遠是用戶原本打的字（expandSearchTerms 的保證），拿它認小額支付品牌
+    const micropaymentBrand = findMicropaymentBrand(searchTerms[0], exactOnly);
     getCardsForComparison().forEach(card => {
-        [...getBasicExclusionHits(card, searchTerms, exactOnly), ...getBasicExclusionMaybeHits(card, searchTerms, exactOnly)]
+        [...getBasicExclusionHits(card, searchTerms, exactOnly), ...getBasicExclusionMaybeHits(card, searchTerms, exactOnly),
+            ...(micropaymentBrand ? getMicropaymentExclusionItems(card) : [])]
             .forEach(item => { if (!items.includes(item)) items.push(item); });
     });
     if (items.length === 0) return false;
@@ -849,6 +853,71 @@ function getBasicExclusionMaybeHits(card, searchTerms, exactOnly = false) {
 
 function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
     return getBasicExclusionHits(card, searchTerms, exactOnly).length > 0;
+}
+
+// ============================================================
+// NCCC 小額支付品牌（2026-11-13 站長決定）
+// 聯卡中心「小額支付平台」的門市（麥當勞、八方雲集…）直接刷卡時，請款方是 NCCC 小額支付平台，
+// 多數銀行把「小額支付特約商店」列為一般消費排除項目。用戶搜的是品牌名、名單寫的是交易類型，
+// 兩邊字面對不上，所以另外用品牌清單橋接：
+//   ・清單＝js/micropayment-brands.js（由 tools/build-nccc-brands.js 從聯卡中心名單生成，一個品牌一行）
+//   ・level full（幾乎全門市在名單上）→ 排除這類交易的卡變「確定排除」灰卡
+//   ・level partial（只有部分門市）   → 「可能屬於排除項目」灰卡
+//   ・灰卡上寫的是卡片名單的原文（「小額支付特約商店」），不是品牌名——用戶對得回銀行條款
+//   ・某卡對這個商家有指定活動時照常顯示活動（跟一般排除名單同一條規則，在呼叫端）
+// 品牌比對刻意保守（誤判成沒回饋比漏判更糟）：
+//   ・只認用戶自己打的字（＋統一詞表展開），不看快捷選項底下的其他關鍵詞——「速食」不該整組變灰
+//   ・搜尋詞等於別名，或以別名開頭（「麥當勞 信義」「kfc桃園」）才算
+//   ・兩個字的別名（青山、龍角）後面要接空白或括號才算開頭命中——「青山洋服」「龍角散」不是飲料店
+//   ・英數結尾的別名後面不能直接接英數（subway ≠ subways）
+//   ・精準搜尋只認全等
+// ============================================================
+const MICROPAYMENT_EXCLUSION_KEY = '小額支付特約商店';
+
+function getMicropaymentBrands() {
+    return (typeof MICROPAYMENT_BRANDS !== 'undefined' && MICROPAYMENT_BRANDS && Array.isArray(MICROPAYMENT_BRANDS.brands))
+        ? MICROPAYMENT_BRANDS.brands : [];
+}
+
+function micropaymentAliasMatches(term, alias, exactOnly) {
+    if (term === alias) return true;
+    if (exactOnly || !term.startsWith(alias)) return false;
+    const rest = term.slice(alias.length);
+    if ([...alias].length < 3) return /^[\s(（]/.test(rest);
+    return !(/[a-z0-9]$/i.test(alias) && /^[a-z0-9]/i.test(rest));
+}
+
+// 回傳命中的品牌 { name, level, aliases }，沒有回 null
+function findMicropaymentBrand(merchantValue, exactOnly = false) {
+    const input = String(merchantValue || '').toLowerCase().trim();
+    const brands = getMicropaymentBrands();
+    if (input.length < 2 || brands.length === 0) return null;
+    const terms = expandSearchTerms(input).filter(Boolean);
+    return brands.find(b => (b.aliases || []).some(alias => terms.some(t => micropaymentAliasMatches(t, alias, exactOnly)))) || null;
+}
+
+// 這張卡的排除名單裡講小額支付特約商店的項目（原寫法，去重）
+function getMicropaymentExclusionItems(card) {
+    if (!card || !Array.isArray(card.basicExclusions)) return [];
+    const items = [];
+    card.basicExclusions.forEach(ex => {
+        const raw = String(ex || '').trim();
+        if (raw.includes(MICROPAYMENT_EXCLUSION_KEY) && !items.includes(raw)) items.push(raw);
+    });
+    return items;
+}
+
+// 一張卡對這次搜尋的排除判定：{ hits, isMaybe } 或 null。確定命中優先；沒有才看可能命中。
+// micropaymentBrand＝findMicropaymentBrand() 的結果（沒命中品牌傳 null，行為與 2026-11-13 前完全相同）
+function classifyBasicExclusion(card, searchTerms, exactOnly = false, micropaymentBrand = null) {
+    const micropaymentItems = micropaymentBrand ? getMicropaymentExclusionItems(card) : [];
+    const merge = (list, extra) => { extra.forEach(item => { if (!list.includes(item)) list.push(item); }); return list; };
+    const hits = merge(getBasicExclusionHits(card, searchTerms, exactOnly),
+        micropaymentBrand && micropaymentBrand.level === 'full' ? micropaymentItems : []);
+    if (hits.length) return { hits, isMaybe: false };
+    const maybe = merge(getBasicExclusionMaybeHits(card, searchTerms, exactOnly),
+        micropaymentBrand && micropaymentBrand.level !== 'full' ? micropaymentItems : []);
+    return maybe.length ? { hits: maybe, isMaybe: true } : null;
 }
 
 // 比較中的卡**全部**都把這個詞列為排除、下方也沒有領券／即將開始可看時的狀態列。

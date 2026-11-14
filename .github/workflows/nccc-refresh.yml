@@ -1,0 +1,59 @@
+# NCCC 小額支付平台通路名單：每週檢查一次，來源頁的「截至」日期變了才下載新名單、重算品牌清單、開 PR。
+# 日期沒變就什麼都不做（多數週是這個結果，整個 job 約 20 秒）。
+# 做事的是 tools/nccc-refresh.sh（本機也能跑）；背景與站長決定見 data/nccc/README.md。
+#
+# 開 PR 而不是直接進 main：品牌級別（全門市／部分門市）要不要跟著門市數調整，需要人看過。
+# 需要 repo 設定：Settings → Actions → General → Workflow permissions 勾
+# 「Allow GitHub Actions to create and approve pull requests」，否則最後一步會失敗。
+name: nccc-refresh
+
+on:
+  schedule:
+    # 每週三 10:23 台北時間（02:23 UTC）。聯卡中心通常月初更新上月底的名單
+    - cron: '23 2 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: nccc-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check source date and refresh data
+        id: refresh
+        env:
+          NCCC_REPORT_FILE: ${{ runner.temp }}/nccc-report.md
+        run: bash tools/nccc-refresh.sh
+
+      - name: Open pull request
+        if: steps.refresh.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AS_OF: ${{ steps.refresh.outputs.as_of }}
+          REPORT_FILE: ${{ runner.temp }}/nccc-report.md
+        run: |
+          # AS_OF 來自外部網頁，進到指令前再驗一次格式
+          if ! [[ "$AS_OF" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then echo "❌ 日期格式不對：$AS_OF"; exit 1; fi
+          BRANCH="auto/nccc-$AS_OF"
+          if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null; then
+            echo "這一期（$AS_OF）的分支已經存在，PR 應該還開著等審，這次不重複開"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add data/nccc js/micropayment-brands.js
+          git commit -m "data: NCCC 小額支付平台通路名單更新（截至 $AS_OF）"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "NCCC 小額支付名單更新（截至 $AS_OF）" \
+            --body-file "$REPORT_FILE"

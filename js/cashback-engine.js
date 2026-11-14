@@ -140,12 +140,13 @@ async function calculateCashback() {
         const toExcluded = (base, hits, isMaybe) => ({ ...base, isBasic: true, isExcluded: true, isMaybeExcluded: isMaybe,
             excludedItems: hits, cashbackAmount: 0, rate: 0, calculationLayers: null });
         // 確定命中優先；沒有才看可能命中。都沒有回 null
+        // NCCC 小額支付品牌（2026-11-13）：搜到名單上的品牌時，排除「小額支付特約商店」的卡也算命中
+        // （全門市品牌＝確定、部分門市品牌＝可能）。只認用戶自己打的字，規則見 search-match.js 同名區塊
+        const micropaymentBrand = findMicropaymentBrand(merchantValue, exactOnly);
         const classify = card => {
-            const hits = getBasicExclusionHits(card, exclusionTerms, exactOnly);
-            if (hits.length) { basicExcludedCount++; return { hits, isMaybe: false }; }
-            const maybe = getBasicExclusionMaybeHits(card, exclusionTerms, exactOnly);
-            if (maybe.length) { maybeExcludedCount++; return { hits: maybe, isMaybe: true }; }
-            return null;
+            const c = classifyBasicExclusion(card, exclusionTerms, exactOnly, micropaymentBrand);
+            if (c) { if (c.isMaybe) maybeExcludedCount++; else basicExcludedCount++; }
+            return c;
         };
         if (isBasicCashback) {
             results = results.map(r => {
@@ -1471,6 +1472,7 @@ function findMerchantPaymentInfo(searchVariants) {
     // e.g. "好市多 (Costco)" 可用「好市多」或「Costco」搜到；
     //      "日本7-ELEVEN門市" 不會誤匹配 "7-ELEVEN"
     for (const [merchantName, paymentInfo] of Object.entries(cardsData.merchantPayments)) {
+        if (merchantName.startsWith('_')) continue;   // 底線開頭＝設定列（如 _default），不是商家
         if (merchantMatchesStrict(merchantName, searchVariants)) {
             console.log('✅ 匹配到:', merchantName);
             return { merchantName, ...paymentInfo };
@@ -1506,6 +1508,40 @@ function removeMerchantInfoRowIfEmpty() {
     }
 }
 
+// 小額支付提示的文字（2026-11-13）。來源順序：該商家列自己的 micropayment_note → 通用提示
+// （Merchant Payments 的 _default 列，匯出成 cardsData.micropaymentDefaultNote；只給名單上的品牌用）。
+// 文字裡的「{部分}」：部分門市品牌顯示「部分」兩字，其餘拿掉——「此商家{部分}門市被列為…」一份文字兩種級別共用
+function getMicropaymentNoteText(merchantInfo, micropaymentBrand) {
+    const own = String((merchantInfo && merchantInfo.micropayment_note) || '').trim();
+    const fallback = micropaymentBrand ? String((cardsData && cardsData.micropaymentDefaultNote) || '').trim() : '';
+    const text = own || fallback;
+    if (!text) return '';
+    return text.replace(/\{部分\}/g, micropaymentBrand && micropaymentBrand.level === 'partial' ? '部分' : '');
+}
+
+// 「?」展開的說明（2026-11-14 站長指定文字，寫死在程式；Sheets 那一格只放平常看到的那一行）。
+// 資料來源那行的「截至」日期讀 MICROPAYMENT_BRANDS，名單每週更新時自動跟著變
+const MICROPAYMENT_HELP_TEXT = '多數銀行會將「小額支付特約商店」排除在「一般消費」之外，也就是連基本回饋都拿不到。在這些門市直接刷卡、用 Apple Pay、Google Pay 等感應支付，或用TWQR掃QR code支付，請款方都會是 NCCC 小額支付平台。改用掃碼型行動支付（如街口支付、LINE Pay）時，請款方會變成該行動支付，大部分情況就有機會拿到回饋。';
+
+// 提示本體；文字來自 Sheets，一律 escapeHtml（鐵則 3）。平常只出一行字；名單上的品牌多一顆「?」，
+// 按了才展開說明與資料來源（2026-11-14 站長要求：原本整段攤開太長）。開合由 displayMerchantPaymentInfo 綁的點擊處理
+function renderMicropaymentNote(noteText, micropaymentBrand, hasPaymentInfo) {
+    let html = `<div class="merchant-payment-note${hasPaymentInfo ? ' with-divider' : ''}">`;
+    const source = (micropaymentBrand && typeof MICROPAYMENT_BRANDS !== 'undefined') ? MICROPAYMENT_BRANDS : null;
+    const helpBtn = source
+        ? ' <button type="button" class="promo-help-btn merchant-payment-note-help" aria-expanded="false" aria-label="小額支付說明">?</button>' : '';
+    html += `<div class="merchant-payment-note-line"><span class="merchant-payment-note-text">${escapeHtml(noteText)}</span>${helpBtn}</div>`;
+    if (source) {
+        html += `<div class="merchant-payment-note-detail" hidden><div>${escapeHtml(MICROPAYMENT_HELP_TEXT)}</div>`;
+        if (sanitizeUrl(source.sourceUrl)) {
+            const asOf = source.asOfLabel ? `（截至 ${escapeHtml(source.asOfLabel)}）` : '';
+            html += `<div class="merchant-payment-note-source">資料來源：<a href="${escapeHtml(sanitizeUrl(source.sourceUrl))}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">聯卡中心小額支付平台通路名單</a>${asOf}</div>`;
+        }
+        html += '</div>';
+    }
+    return html + '</div>';
+}
+
 function displayMerchantPaymentInfo(searchedItem) {
     // 移除舊的商家付款方式區塊（如果存在）
     const existingBlock = document.getElementById('merchant-payment-info');
@@ -1524,8 +1560,12 @@ function displayMerchantPaymentInfo(searchedItem) {
     console.log('🔍 展開後的搜尋詞:', searchTerms);
 
     const merchantInfo = findMerchantPaymentInfo(searchTerms);
+    // 小額支付提示（2026-11-13）：品牌在聯卡中心小額支付名單上，或這一列自己寫了 micropayment_note 時顯示。
+    // 補充資訊，跟付款方式一樣不理精準搜尋
+    const micropaymentBrand = findMicropaymentBrand(searchedItem, false);
+    const micropaymentNote = getMicropaymentNoteText(merchantInfo, micropaymentBrand);
 
-    if (!merchantInfo) {
+    if (!merchantInfo && !micropaymentNote) {
         console.log('❌ 所有搜尋詞都未匹配到商家付款方式');
         removeMerchantInfoRowIfEmpty();
         return;
@@ -1536,24 +1576,40 @@ function displayMerchantPaymentInfo(searchedItem) {
     infoBlock.id = 'merchant-payment-info';
     infoBlock.className = 'merchant-payment-info';
 
-    let infoHTML = `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
+    let infoHTML = '';
 
-    // 計算有多少個付款方式
-    const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
-    const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
-    const bothExist = hasOnline && hasOffline;
+    if (merchantInfo) {
+        infoHTML += `<div class="merchant-payment-title">＊ ${escapeHtml(merchantInfo.merchantName)}也支援以下行動支付</div>`;
 
-    if (hasOnline) {
-        const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
+        // 計算有多少個付款方式
+        const hasOnline = merchantInfo.online && merchantInfo.online.trim() !== '';
+        const hasOffline = merchantInfo.offline && merchantInfo.offline.trim() !== '';
+        const bothExist = hasOnline && hasOffline;
+
+        if (hasOnline) {
+            const label = bothExist ? '<span class="payment-label">線上：</span>' : '';
+            infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.online)}</div>`;
+        }
+
+        if (hasOffline) {
+            const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
+            infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
+        }
     }
 
-    if (hasOffline) {
-        const label = bothExist ? '<span class="payment-label">門市：</span>' : '';
-        infoHTML += `<div class="merchant-payment-item">${label}${escapeHtml(merchantInfo.offline)}</div>`;
+    if (micropaymentNote) {
+        infoHTML += renderMicropaymentNote(micropaymentNote, micropaymentBrand, !!merchantInfo);
     }
 
     infoBlock.innerHTML = infoHTML;
+    // 小額支付提示的「?」：按一下展開／收合說明
+    infoBlock.addEventListener('click', e => {
+        const btn = e.target.closest('.merchant-payment-note-help');
+        const detail = btn && infoBlock.querySelector('.merchant-payment-note-detail');
+        if (!detail) return;
+        detail.hidden = !detail.hidden;
+        btn.setAttribute('aria-expanded', String(!detail.hidden));
+    });
 
     // 插入到 merchant-info-row 容器（左欄）
     const row = getOrCreateMerchantInfoRow();
