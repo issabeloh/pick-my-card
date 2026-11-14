@@ -1,7 +1,7 @@
 {
   "asOf": "2026-10-31",
   "activeStoreRows": 19603,
-  "brandCount": 60,
+  "brandCount": 74,
   "droppedBrands": [],
   "brands": {
     "麥當勞": {
@@ -303,52 +303,82 @@
       "level": "部分門市",
       "rows": 22,
       "addresses": 22
+    },
+    "Times 停車場": {
+      "level": "全門市",
+      "rows": 992,
+      "addresses": 988
+    },
+    "台灣聯通停車場": {
+      "level": "部分門市",
+      "rows": 342,
+      "addresses": 342
+    },
+    "遠創智慧停車": {
+      "level": "部分門市",
+      "rows": 259,
+      "addresses": 254
+    },
+    "博客停車場": {
+      "level": "部分門市",
+      "rows": 140,
+      "addresses": 139
+    },
+    "和雲停車場": {
+      "level": "部分門市",
+      "rows": 126,
+      "addresses": 126
+    },
+    "國雲停車": {
+      "level": "部分門市",
+      "rows": 88,
+      "addresses": 87
+    },
+    "168停車聯盟": {
+      "level": "部分門市",
+      "rows": 82,
+      "addresses": 80
+    },
+    "全之駐停車場": {
+      "level": "部分門市",
+      "rows": 61,
+      "addresses": 38
+    },
+    "歐特儀停車場": {
+      "level": "部分門市",
+      "rows": 40,
+      "addresses": 39
+    },
+    "日月亭停車場": {
+      "level": "部分門市",
+      "rows": 22,
+      "addresses": 21
+    },
+    "Unibuy智販機": {
+      "level": "部分門市",
+      "rows": 184,
+      "addresses": 178
+    },
+    "黑松販賣機": {
+      "level": "部分門市",
+      "rows": 129,
+      "addresses": 44
+    },
+    "統一速邁販賣機": {
+      "level": "部分門市",
+      "rows": 110,
+      "addresses": 103
+    },
+    "松佳飲料販賣機": {
+      "level": "部分門市",
+      "rows": 179,
+      "addresses": 21
     }
   },
   "unmappedCandidates": [
     {
-      "prefix": "台灣普客二四股份有限",
-      "rows": 991
-    },
-    {
       "prefix": "自助洗衣-23",
       "rows": 313
-    },
-    {
-      "prefix": "遠創-",
-      "rows": 256
-    },
-    {
-      "prefix": "unibuy智販機-",
-      "rows": 165
-    },
-    {
-      "prefix": "博客停車場開發股份有",
-      "rows": 139
-    },
-    {
-      "prefix": "松佳vm",
-      "rows": 139
-    },
-    {
-      "prefix": "黑松販賣機(",
-      "rows": 128
-    },
-    {
-      "prefix": "35",
-      "rows": 117
-    },
-    {
-      "prefix": "統一速邁-",
-      "rows": 110
-    },
-    {
-      "prefix": "和雲",
-      "rows": 105
-    },
-    {
-      "prefix": "國雲",
-      "rows": 88
     },
     {
       "prefix": "006-0",
@@ -357,18 +387,6 @@
     {
       "prefix": "owlocker",
       "rows": 81
-    },
-    {
-      "prefix": "168停車聯盟-",
-      "rows": 79
-    },
-    {
-      "prefix": "36",
-      "rows": 65
-    },
-    {
-      "prefix": "全之駐停車場-",
-      "rows": 59
     },
     {
       "prefix": "蜂鳥生活圈",
@@ -387,24 +405,76 @@
       "rows": 46
     },
     {
-      "prefix": "33",
-      "rows": 43
-    },
-    {
       "prefix": "鮮自然-",
       "rows": 41
-    },
-    {
-      "prefix": "歐特儀carin停車",
-      "rows": 39
     },
     {
       "prefix": "立璨-",
       "rows": 39
     },
     {
-      "prefix": "32",
-      "rows": 38
+      "prefix": "詮營股份有限公司",
+      "rows": 34
+    },
+    {
+      "prefix": "uspace",
+      "rows": 31
+    },
+    {
+      "prefix": "嘉申智能櫃(",
+      "rows": 30
+    },
+    {
+      "prefix": "mi",
+      "rows": 29
+    },
+    {
+      "prefix": "野獸國bibi智販機",
+      "rows": 28
+    },
+    {
+      "prefix": "優豈-",
+      "rows": 27
+    },
+    {
+      "prefix": "幸福",
+      "rows": 27
+    },
+    {
+      "prefix": "自在軒-",
+      "rows": 27
+    },
+    {
+      "prefix": "tea",
+      "rows": 26
+    },
+    {
+      "prefix": "寶盛停車場-",
+      "rows": 26
+    },
+    {
+      "prefix": "立特事業有限公司",
+      "rows": 26
+    },
+    {
+      "prefix": "富山停車",
+      "rows": 25
+    },
+    {
+      "prefix": "哈堡堡",
+      "rows": 24
+    },
+    {
+      "prefix": "ca",
+      "rows": 21
+    },
+    {
+      "prefix": "mr。",
+      "rows": 21
+    },
+    {
+      "prefix": "vivi park",
+      "rows": 21
     }
   ]
 }
