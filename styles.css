@@ -2035,6 +2035,20 @@ input[type="number"]:focus {
     color: #4b5563;
 }
 
+.merchant-payment-note-help {
+    margin-left: 2px;
+    vertical-align: middle;
+}
+
+.merchant-payment-note-detail {
+    margin-top: 6px;
+    color: #6b7280;
+}
+
+.merchant-payment-note-detail[hidden] {
+    display: none;
+}
+
 .merchant-payment-note-source {
     margin-top: 4px;
     color: #9ca3af;

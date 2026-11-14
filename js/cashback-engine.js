@@ -1519,15 +1519,25 @@ function getMicropaymentNoteText(merchantInfo, micropaymentBrand) {
     return text.replace(/\{部分\}/g, micropaymentBrand && micropaymentBrand.level === 'partial' ? '部分' : '');
 }
 
-// 提示本體；文字來自 Sheets，一律 escapeHtml（鐵則 3）。名單上的品牌另附資料來源與截止日
+// 「?」展開的說明（2026-11-14 站長指定文字，寫死在程式；Sheets 那一格只放平常看到的那一行）。
+// 資料來源那行的「截至」日期讀 MICROPAYMENT_BRANDS，名單每週更新時自動跟著變
+const MICROPAYMENT_HELP_TEXT = '多數銀行會將「小額支付特約商店」排除在「一般消費」之外，也就是連基本回饋都拿不到。在這些門市直接刷卡、用 Apple Pay、Google Pay 等感應支付，或用TWQR掃QR code支付，請款方都會是 NCCC 小額支付平台。改用掃碼型行動支付（如街口支付、LINE Pay）時，請款方會變成該行動支付，大部分情況就有機會拿到回饋。';
+
+// 提示本體；文字來自 Sheets，一律 escapeHtml（鐵則 3）。平常只出一行字；名單上的品牌多一顆「?」，
+// 按了才展開說明與資料來源（2026-11-14 站長要求：原本整段攤開太長）。開合由 displayMerchantPaymentInfo 綁的點擊處理
 function renderMicropaymentNote(noteText, micropaymentBrand, hasPaymentInfo) {
     let html = `<div class="merchant-payment-note${hasPaymentInfo ? ' with-divider' : ''}">`;
-    html += '<div class="merchant-payment-title">＊ 小額支付提醒</div>';
-    html += `<div class="merchant-payment-note-text">${escapeHtml(noteText)}</div>`;
     const source = (micropaymentBrand && typeof MICROPAYMENT_BRANDS !== 'undefined') ? MICROPAYMENT_BRANDS : null;
-    if (source && sanitizeUrl(source.sourceUrl)) {
-        const asOf = source.asOfLabel ? `（截至 ${escapeHtml(source.asOfLabel)}）` : '';
-        html += `<div class="merchant-payment-note-source">資料來源：<a href="${escapeHtml(sanitizeUrl(source.sourceUrl))}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">聯卡中心小額支付平台通路名單</a>${asOf}</div>`;
+    const helpBtn = source
+        ? ' <button type="button" class="promo-help-btn merchant-payment-note-help" aria-expanded="false" aria-label="小額支付說明">?</button>' : '';
+    html += `<div class="merchant-payment-note-line"><span class="merchant-payment-note-text">${escapeHtml(noteText)}</span>${helpBtn}</div>`;
+    if (source) {
+        html += `<div class="merchant-payment-note-detail" hidden><div>${escapeHtml(MICROPAYMENT_HELP_TEXT)}</div>`;
+        if (sanitizeUrl(source.sourceUrl)) {
+            const asOf = source.asOfLabel ? `（截至 ${escapeHtml(source.asOfLabel)}）` : '';
+            html += `<div class="merchant-payment-note-source">資料來源：<a href="${escapeHtml(sanitizeUrl(source.sourceUrl))}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">聯卡中心小額支付平台通路名單</a>${asOf}</div>`;
+        }
+        html += '</div>';
     }
     return html + '</div>';
 }
@@ -1592,6 +1602,14 @@ function displayMerchantPaymentInfo(searchedItem) {
     }
 
     infoBlock.innerHTML = infoHTML;
+    // 小額支付提示的「?」：按一下展開／收合說明
+    infoBlock.addEventListener('click', e => {
+        const btn = e.target.closest('.merchant-payment-note-help');
+        const detail = btn && infoBlock.querySelector('.merchant-payment-note-detail');
+        if (!detail) return;
+        detail.hidden = !detail.hidden;
+        btn.setAttribute('aria-expanded', String(!detail.hidden));
+    });
 
     // 插入到 merchant-info-row 容器（左欄）
     const row = getOrCreateMerchantInfoRow();

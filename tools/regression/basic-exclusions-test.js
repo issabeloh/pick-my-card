@@ -124,7 +124,9 @@ const META = readFixtureMeta();
   const MP = '小額支付特約商店';
   const noteInfo = () => page.evaluate(() => ({
     text: document.querySelector('#merchant-payment-info .merchant-payment-note-text')?.innerText.trim() || null,
-    source: document.querySelector('#merchant-payment-info .merchant-payment-note-source')?.innerText.trim() || null,
+    source: document.querySelector('#merchant-payment-info .merchant-payment-note-source')?.textContent.trim() || null,
+    hasTitle: /小額支付提醒/.test(document.getElementById('merchant-payment-info')?.textContent || ''),
+    detailHidden: document.querySelector('#merchant-payment-info .merchant-payment-note-detail')?.hidden,
   }));
   await page.evaluate(() => { cardsData.micropaymentDefaultNote = '此商家{部分}門市被列為小額支付特約商店（測試）'; });
 
@@ -134,6 +136,13 @@ const META = readFixtureMeta();
   check('小額支付：全門市品牌的提示不出現「部分」、附資料來源與截止日',
     note.text === '此商家門市被列為小額支付特約商店（測試）' && /聯卡中心/.test(note.source || '') && /截至/.test(note.source || ''),
     JSON.stringify(note));
+
+  await page.click('#merchant-payment-info .merchant-payment-note-help');
+  const opened = await noteInfo();
+  await page.click('#merchant-payment-info .merchant-payment-note-help');
+  check('小額支付：平常只出一行、沒有標題；按「?」展開說明與資料來源，再按收合',
+    note.detailHidden === true && !note.hasTitle && opened.detailHidden === false && (await noteInfo()).detailHidden === true,
+    JSON.stringify({ note, opened }));
 
   r = await search('麥當勞', { all: [MP, '學費'] });
   check('小額支付：全門市品牌 → 確定排除的灰卡，寫名單原文、墊底',
