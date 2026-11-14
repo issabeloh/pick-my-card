@@ -180,7 +180,7 @@ function markRegisterSlotsInDraft() {
   // 下一步提示：看還有沒有黃格子決定。沒有黃格子就別叫人去跑 AI。
   const stillYellow = needSlots - greenSlots;
   const nextStep = stillYellow > 0
-    ? '👉 下一步：按選單「② 找登錄連結」。\n' +
+    ? '👉 下一步：按選單「其他工具 ▸ 登錄連結 2：找連結」。\n' +
       '   還有 ' + stillYellow + ' 個黃格子要補連結，一次跑最多 ' +
       REGLINK_CONFIG.maxCardsPerRun + ' 張卡，重複按到它說「都跑完了」為止。'
     : '👉 下一步：不用跑 ②，沒有缺連結的槽位。\n' +
@@ -259,7 +259,7 @@ function fillRegisterLinksFromSnapshots() {
 
   const draft = dataFile.getSheetByName(REGLINK_CONFIG.draftSheetName);
   if (!draft) {
-    ui.alert('還沒有草稿分頁——先按選單「標出需登錄的活動（不用 AI）」跑第一階段。');
+    ui.alert('還沒有草稿分頁——先按選單「其他工具 ▸ 登錄連結 1：標出要登錄的活動」。');
     return;
   }
   regLinkAssertDraft_(draft);
@@ -410,7 +410,7 @@ function fillRegisterLinksFromSnapshots() {
         '   連結配到那個槽位。抓錯就直接在該格 registerLink_N 改成正確的網址\n' +
         '   （你改的優先，③ 不會覆蓋你手動填的值）。\n' +
         '   一次配了很多個連結的那張卡最值得看。\n\n' +
-        '   複核完在「' + REGLINK_CONFIG.applyHeader + '」欄打 V，再按選單 ③。'
+        '   複核完在「' + REGLINK_CONFIG.applyHeader + '」欄打 V，再按選單「登錄連結 3」。'
   ].filter(function (x) { return x; }).join('\n'));
 }
 

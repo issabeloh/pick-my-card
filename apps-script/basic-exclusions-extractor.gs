@@ -298,7 +298,7 @@ function extractBasicExclusionsFromSnapshots() {
     skipped.length ? '\n略過：\n・' + skipped.join('\n・') : '',
     alreadyDone ? '\n已經抽過、跳過 ' + alreadyDone + ' 頁（超過 ' + BASICEX_CONFIG.refreshAfterDays +
       ' 天且監控記錄過變動的頁才會重抽；要重抽某張卡，把待審核表裡那張卡的列刪掉，下次只補抽那張）' : '',
-    '\n👉 下一步：到「' + BASICEX_CONFIG.reviewSheet + '」逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V，',
+    '\n👉 下一步：到「' + BASICEX_CONFIG.reviewSheet + '」逐列檢查 basicExclusions（可直接改那格），沒問題在「核准」打 V（正式表已有名單、要整格換掉就填「覆蓋」），',
     '   再按選單「其他工具 ▸ 一般消費排除 2」。標黃的列是 AI 有疑問的，看「AI想問的問題」欄。'
   ];
 
@@ -682,7 +682,7 @@ function applyBasicExclusionsToCardsData() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const review = ss.getSheetByName(BASICEX_CONFIG.reviewSheet);
-  if (!review) { ui.alert('找不到「' + BASICEX_CONFIG.reviewSheet + '」——先跑「① 抽取」。'); return; }
+  if (!review) { ui.alert('找不到「' + BASICEX_CONFIG.reviewSheet + '」——先按選單「其他工具 ▸ 一般消費排除 1」。'); return; }
   basicExEnsureReviewSheet_(ss);   // 表頭驗證
 
   const rData = review.getDataRange().getValues();
@@ -747,7 +747,7 @@ function applyBasicExclusionsToCardsData() {
       const oldItems = basicExSplit_(existing);
       let added = entry.items.filter(function (t) { return oldItems.indexOf(t) < 0; });
       let removed = oldItems.filter(function (t) { return entry.items.indexOf(t) < 0; });
-      // 改寫（2026-10-13）：「套用修改到待審核」會在 AI想問的問題 欄記下「✎ 改寫：A → B」，
+      // 改寫（2026-10-13）：「確認填 V 的套用到待審核」會在 AI想問的問題 欄記下「✎ 改寫：A → B」，
       // 這裡把對得上的一增一減合併成「A → B」，站長才看得出是改寫不是刪一項又加一項
       const renamed = [];
       entry.renames.forEach(function (rn) {
@@ -817,7 +817,7 @@ function applyBasicExclusionsToCardsData() {
 //     → 當場呼叫 basicExAnalyzeChange_，結果寫進「2-變動通知」同一列的「一般消費排除修改」欄、信裡也附一份
 //   2 站長看信判斷要不要更新
 //   3 在 2-變動通知 刪掉不要的行、改用詞，「一般消費排除確認」欄填 V
-//   4 選單「一般消費排除：套用修改到待審核」（applyBasicExclusionChanges）
+//   4 選單「一般消費排除（官網改版）：確認填 V 的套用到待審核」（applyBasicExclusionChanges）
 //     → 以**正式表現有名單**為底，只做留下來的那幾行，寫進 5-待審核 的 basicExclusions、核准欄標「覆蓋」
 //   5 選單「一般消費排除 2」寫回正式表（確認視窗會把改寫列成 A → B）
 // 為什麼不整份重抽：重抽是照規則從頭寫，會把站長手改過的地方洗掉。這條路只改官網真的動到的那幾項。
@@ -1062,7 +1062,7 @@ function basicExApplyOp_(raw, op) {
   return { value: parts.join(','), ok: true };
 }
 
-// 選單「一般消費排除：套用修改到待審核」
+// 選單「一般消費排除（官網改版）：確認填 V 的套用到待審核」
 function applyBasicExclusionChanges() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
