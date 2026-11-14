@@ -1521,7 +1521,10 @@ function getMicropaymentNoteText(merchantInfo, micropaymentBrand) {
 
 // 「?」展開的說明（2026-11-14 站長指定文字，寫死在程式；Sheets 那一格只放平常看到的那一行）。
 // 資料來源那行的「截至」日期讀 MICROPAYMENT_BRANDS，名單每週更新時自動跟著變
-const MICROPAYMENT_HELP_TEXT = '多數銀行會將「小額支付特約商店」排除在「一般消費」之外，也就是連基本回饋都拿不到。在這些門市直接刷卡、用 Apple Pay、Google Pay 等感應支付，或用TWQR掃QR code支付，請款方都會是 NCCC 小額支付平台。改用掃碼型行動支付（如街口支付、LINE Pay）時，請款方會變成該行動支付，大部分情況就有機會拿到回饋。';
+const MICROPAYMENT_HELP_HTML = '別直接刷卡！因為多數銀行將「小額支付特約商店」排除在「一般消費」之外，會連基本回饋都拿不到。直接刷卡、用 Apple Pay、Google Pay 等感應支付，或用TWQR掃QR code支付，請款方都會是 NCCC 小額支付平台。'
+    + '<br><strong>那怎麼辦？</strong>'
+    + '<br>1. 改用掃碼型行動支付（如街口支付、LINE Pay），請款方會變成該行動支付，大部分情況可以拿到回饋（但如果是便利商店和超商，條件會更嚴格！）'
+    + '<br>2. 在下方搜尋結果如果有看到指定此商家的回饋，可以拿到回饋';   // 寫死的常數、不含任何動態值，所以直接當 HTML 用
 
 // 提示本體；文字來自 Sheets，一律 escapeHtml（鐵則 3）。平常只出一行字；名單上的品牌多一顆「?」，
 // 按了才展開說明與資料來源（2026-11-14 站長要求：原本整段攤開太長）。開合由 displayMerchantPaymentInfo 綁的點擊處理
@@ -1532,7 +1535,7 @@ function renderMicropaymentNote(noteText, micropaymentBrand, hasPaymentInfo) {
         ? ' <button type="button" class="promo-help-btn merchant-payment-note-help" aria-expanded="false" aria-label="小額支付說明">?</button>' : '';
     html += `<div class="merchant-payment-note-line"><span class="merchant-payment-note-text">${escapeHtml(noteText)}</span>${helpBtn}</div>`;
     if (source) {
-        html += `<div class="merchant-payment-note-detail" hidden><div>${escapeHtml(MICROPAYMENT_HELP_TEXT)}</div>`;
+        html += `<div class="merchant-payment-note-detail" hidden><div>${MICROPAYMENT_HELP_HTML}</div>`;
         if (sanitizeUrl(source.sourceUrl)) {
             const asOf = source.asOfLabel ? `（截至 ${escapeHtml(source.asOfLabel)}）` : '';
             html += `<div class="merchant-payment-note-source">資料來源：<a href="${escapeHtml(sanitizeUrl(source.sourceUrl))}" target="_blank" rel="noopener noreferrer" class="cashback-site-link">聯卡中心小額支付平台通路名單</a>${asOf}</div>`;

@@ -62,7 +62,7 @@ Google Sheets「Merchant Payments」的 micropayment_note 欄 ─(exportToJSON)�
 - 不收：清心福全（7 家）、繼光香香雞（1 家）——涵蓋太少，提示反而誤導。
 - 提示分兩層（2026-11-14 站長改版，原本整段攤開太長）：
   - 平常看到的一行，放 Sheets 的 `_default` 列：「此商家{部分}門市是聯卡中心「小額支付特約商店」。」
-  - 按「?」才展開的說明，寫死在 `js/cashback-engine.js` 的 `MICROPAYMENT_HELP_TEXT`（TWQR 一句由站長自行查證後決定保留），後面接資料來源與「截至」日期（自動跟著名單更新）
+  - 按「?」才展開的說明，寫死在 `js/cashback-engine.js` 的 `MICROPAYMENT_HELP_HTML`（TWQR 一句由站長自行查證後決定保留），後面接資料來源與「截至」日期（自動跟著名單更新）
 
 ## 尚未查證、不得寫進文案的事
 
