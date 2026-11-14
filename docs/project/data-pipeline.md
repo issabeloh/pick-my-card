@@ -128,6 +128,30 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     不提供刪除（下架＝取消 active）、存檔前跑 `pmcValidatePromoRow_`（與 `runQACheck` 檢查 13 共用，一律 ⚠️）。
     改這張表的欄位時：數字欄要加進 `promo-editor.gs` 的 `PE_NUMERIC_FIELDS_`、日期欄加進 `PE_DATE_FIELDS_`，
     想在畫面上分到某組就加進 `PE_GROUPS_`（沒加的欄位自動出現在「其他欄位」）。說明見 `apps-script/README.md`「新戶活動編輯器」
+17. **活動快寫**（2026-11-12；11-13 搬進試算表）—— 不是工作表，是「貼一段活動原文 → 解析 → 寫進表」的工具，
+    選單「🎯 卡片管理 ▸ ✍️ 活動快寫」（少量活動用，批量仍走自動化檔的 3-貼上原文 → 4-待審核）。
+    - **三層檔案**：來源在 `tools/activity-writer/`（`index.html`＋`parser.js`＋`app.js`）→ `build-apps-script.js` 併成
+      **生成檔 `apps-script/ActivityWriter.html`（禁止手改，preflight 會擋不一致）**；試算表端是 `apps-script/activity-writer.gs`
+    - **改了 `tools/activity-writer/` 任何一支 → 跑 `node tools/activity-writer/build-apps-script.js`、生成檔一起 commit**；
+      合併進 main 後 GitHub 自動部署到「PMC 管理系統」（`deploy.json` 第二個專案，**只列這兩支**；`cards-export.gs` 等仍手動貼）
+    - 寫入不自己做，交給兩個編輯器：一般活動 → `cardEditorSave`（寫進選定的 `rate_N`，有內容的槽要按兩次才覆蓋，
+      空的 `daysRemaining_N`／`period_N` 補公式）；新戶活動 → `promoEditorSave`（插在同卡最後一列下面）。
+      **依欄名寫入**，所以欄位順序變動不影響寫入（只影響「複製一列」→ 那個要改 `parser.js` 的 `RATE_COLS`／`PROMO_COLS`）
+    - 資料讀**表上現況**（`activityWriterInit`）；只有快捷搜尋／統一詞表／行動支付別名沿用線上 `cards.data`，讀不到照樣能用
+    - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰＝該專案的指令碼屬性 `GEMINI_API_KEY`）
+    - `tools/activity-writer/index.html` 直接開是**本機開發／測試版**（讀 `cards.data`、只能複製、不能寫入）。
+      ⚠️ 它目前還掛在正式網址 `/tools/activity-writer/`（noindex）——站長 2026-11-13 決定「試算表版確認可用後下架」，尚未執行
+    - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）
+    - 新戶活動的幾條判讀規則（2026-11-13 依站長實測調整，樣本是 `samples.js` 的 `promoInsurance`）：
+      **特定族群新戶**（原文有「保險新戶定義：」這種帶族群名的定義）用原文的定義、不沿用同卡現有的全行新戶定義；
+      **`bonus_rate` 只填這檔活動自己加碼的部分**（最高 8% ＝ 加碼 6% ＋ 原權益 2% → 0.06，合計數字只放摘要）；
+      **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
+      **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
+      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 欄 2026-11-13 已刪（全表都是 99；匯出找不到這欄一樣當 99，前端排序不受影響）
+    - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
+      `ui-test.js` 會擋「新戶 26 欄排不進一個畫面」
+    - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面：本機版＋試算表視窗版，伺服器與 AI 用假回應）、
+      `node tools/apps-script-tests/activity-writer-test.js`（試算表端寫入＋自動部署，假試算表）
 
 ## 3. exportToJSON() 匯出流程
 

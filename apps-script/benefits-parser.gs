@@ -820,7 +820,7 @@ function writePromosToReview_(promos, source, link) {
       'id', 'promo_types', 'new_customer_definition', 'new_customer_summary',
       'promo_condition', 'period_start', 'period_end', 'gift_content', 'gift_image_url',
       'bonus_rate', 'bonus_merchants', 'bonus_cap', 'voucher_amount', 'voucher_usage',
-      'notes', 'link', 'priority', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'
+      'notes', 'link', 'active', 'apply_cta_text', 'apply_cta_link', 'apply_cta_expiry'
     ]);
     sheet.setFrozenRows(1);
   } else {
@@ -833,6 +833,12 @@ function writePromosToReview_(promos, source, link) {
       throw new Error('「' + PARSER_CONFIG.reviewSheet + '」還有 promo_id 欄，但程式 2026-08-15 起不再產生它。' +
         '請先把該分頁的 promo_id 欄刪掉（或整個分頁刪掉讓它自動重建），' +
         '並確認正式「新戶活動」表的 promo_id 欄也刪了，再跑一次解析。');
+    }
+    // 同理：priority 欄 2026-11-13 刪除（全表都是 99，站長決定不用了）
+    if (cur.indexOf('priority') >= 0) {
+      throw new Error('「' + PARSER_CONFIG.reviewSheet + '」還有 priority 欄，但程式 2026-11-13 起不再產生它。' +
+        '請先把該分頁的 priority 欄刪掉（或整個分頁刪掉讓它自動重建），' +
+        '並確認正式「新戶活動」表的 priority 欄也刪了，再跑一次解析。');
     }
   }
 
@@ -873,7 +879,6 @@ function writePromosToReview_(promos, source, link) {
       p.voucher_usage || '',                     // voucher_usage
       p.notes || '',                             // notes
       p.link || link || '',                      // link
-      '',                                        // priority 固定留空
       'TRUE',                                    // active
       applyCtaText,                              // apply_cta_text（預設值，可改）
       '',                                        // apply_cta_link（你手動貼推薦連結）
