@@ -30,6 +30,12 @@
 
 **Header 與連結**：modal 標題就是 `card.name`（無「詳情」後綴）；header 左上有卡片圖；卡全名純文字（無「信用卡官網連結:」標籤）；新戶活動區塊無「官網連結」。
 
+**信用卡官網連結（2026-11-15，站長從 A–E 五種 mockup 選定 A「銀行名稱底下一行」）**：`#card-official-site-link`，灰色 13px「前往信用卡官網頁面 ⧉」，hover 才變藍加底線，資料用 `card.website`。
+- 擺在 `.card-full-name-bold` **外面**（同一個 `.info-item` 內）：那裡的 `a` 規則是粗體藍字 `!important`，放進去就不低調了。`.info-item` 是直向 flex，連結要 `align-self: flex-start`，否則整欄寬都可點
+- `showCardDetail()` 每次都重設：`sanitizeUrl(card.website)` 不合法就 `hidden` ＋ 移除 href，避免上一張卡的連結沿用
+- GA4：`button_click`，`button_type = detail_official_site`（帶 card_id/card_name）。7 月曾因少人點擊拿掉卡全名連結與新戶活動區「官網連結」，這次加追蹤就是為了能用數據判斷去留
+- 沒選的方案：B 基本資訊右上角、C sticky 標題列卡名下（會把手機標題列從 57px 撐高，否決）、D 頁底附「以官網為準」、E 新增「官方網站:」欄
+
 **Sticky 標題列（桌機 2026-09-18、手機 2026-09-23）**：`#card-detail-modal .modal-header` 是 `position: sticky; top: 0`（`z-index: 11` > nav 的 10），捲動時卡名、卡圖與右上角 ✕ 都留在畫面上。**手機是精簡版**：卡圖 56→36px、padding 20→10px/16px、卡名 1.25→1.05rem，整列 97→57px（iPhone 13 實測）。
 - **為什麼手機要精簡**：手機 modal 只有 80dvh（iPhone 13 可視 531px），照桌機的 97px 釘，標題＋導覽列會吃掉 28% 可讀高度——2026-09-18 首次上線時就是為此只給桌機；收到 57px 後降到 11%，才換得回「捲到一半還看得到自己在看哪張卡、也隨時按得到 ✕」。
 - **`.card-detail-nav` 的 `top` ＝ `var(--pmc-detail-header-h)`**，才會黏在標題底下而不是蓋住它。這個變數由 `setupCardDetailNav()` 的 `syncHeaderHeight()`（`js/results-display.js`）寫入，且**掛了 ResizeObserver 持續同步**：卡圖是 `height:36px; width:auto`，圖片 load 完才開始佔寬度，窄螢幕上會把卡名擠成兩行（320px ×「中信 Uniopen 聯名卡」實測 57→75px），只量開啟當下的話 nav 會蓋掉半條標題。ResizeObserver 順帶涵蓋轉向與視窗縮放。
