@@ -2,6 +2,8 @@
  * Pick My Card — js/results-display.js（載入順序 6/12）
  * 區塊目錄（Grep 關鍵字）：
  *  - 結果列表顯示              → "displayResults"
+ *  - 未達單筆門檻的活動區      → "displayUnmetSpendResults" / "renderUnmetThresholdNote" / "renderSpendUpgradeNotes"
+ *  - 結果分類導覽              → "updateResultsNav" / "scrollToResultsGroup"
  *  - 領券回饋計算              → "calculateCouponRate"
  *  - Placeholder 解析（必傳 levelSettings，見鐵則 5）→ "extractPlaceholderField" / "parseCashbackRate"
  *  - 領券結果顯示              → "displayCouponCashbacks"
@@ -20,6 +22,11 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     console.log('📊 displayResults 被調用');
     console.log('results 數量:', results.length);
     console.log('isBasicCashback:', isBasicCashback);
+    // 未達門檻區平常嵌在 #results-container 裡（見下方「結果分區」）；清空前先搬出去，不然整個節點被清掉
+    const thresholdSectionEl = getThresholdSectionEl();
+    if (thresholdSectionEl && resultsContainer.contains(thresholdSectionEl) && resultsSection.parentNode) {
+        resultsSection.parentNode.insertBefore(thresholdSectionEl, resultsSection.nextSibling);
+    }
     resultsContainer.innerHTML = '';
 
     // Check if searchedItem is a payment method
@@ -51,12 +58,27 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
         const maxCashback = results[0].cashbackAmount;
 
         // Use DocumentFragment to batch DOM operations and reduce reflows
+        // 結果分區（2026-11-14 站長決定）：主結果 → 未達門檻 → 一般消費排除 → 即將開始，各有標題。
+        // results 進來時已經照這個順序排好（灰卡墊底、即將開始接在最後），這裡只在每一類的第一張卡前面
+        // 插一列橫跨整排的小標題。主結果那一類的標題就是結果區自己的 <h2>，不另外插。
+        // 全部仍放在 #results-container 裡（回歸與商家頁生成器都讀它的直接子元素 .card-result）。
         const fragment = document.createDocumentFragment();
+        const groupOf = r => (r.isExcluded ? 'excluded' : r.isUpcoming ? 'upcoming' : 'main');
+        let lastGroup = 'main';
         results.forEach((result, index) => {
+            const group = groupOf(result);
+            if (group !== lastGroup) {
+                fragment.appendChild(createResultsGroupHeading(group));
+                lastGroup = group;
+            }
             const cardElement = createCardResultElement(result, originalAmount, searchedItem, index === 0 && maxCashback > 0, isBasicCashback);
             fragment.appendChild(cardElement);
         });
         resultsContainer.appendChild(fragment);
+    }
+    // 未達門檻區嵌進來：排在主結果之後、排除卡與即將開始之前（搬到結果區前面的那種情況不動，見 displayUnmetSpendResults）
+    if (thresholdSectionEl && thresholdSectionEl.style.display !== 'none' && thresholdSectionEl.dataset.placedFirst !== '1') {
+        resultsContainer.insertBefore(thresholdSectionEl, resultsContainer.querySelector(':scope > .results-group-heading'));
     }
 
     // 顯示商家付款方式資訊 / 導購網站 / 推薦連結
@@ -72,18 +94,18 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
     // 舊寫法固定寫「一般回饋與指定通路回饋」，但有匹配時結果裡根本沒有一般回饋那幾張，
     // 只有即將開始的活動時也照喊——標題與畫面對不上。
     // ⚠️ 領券與停車折抵各有自己的 section 與 h2，不歸這條管；這裡只描述 #results-container。
-    const resultsTitle = resultsSection.querySelector('h2');
+    // 2026-11-14 起結果分區：<h2> 只講主結果那一類（一般回饋／指定通路回饋）；排除卡與即將開始各有自己的小標題
+    // （createResultsGroupHeading）。沒有主結果時 <h2> 收起來，讓第一個小標題當開頭；
+    // 整個是空的、要顯示「無符合的信用卡」時維持中性的「搜尋結果」。
+    // ⚠️ 要用 :scope > h2：未達門檻區嵌在裡面時也有自己的 <h2>
+    const resultsTitle = resultsSection.querySelector(':scope > h2');
     if (resultsTitle) {
-        const titleParts = [];
-        if (results.some(r => r.isBasic && !r.isExcluded)) titleParts.push('一般回饋');
-        if (results.some(r => !r.isBasic && !r.isUpcoming)) titleParts.push('指定通路回饋');
-        if (results.some(r => r.isUpcoming)) titleParts.push('即將開始的活動');
-        if (results.some(r => r.isExcluded)) titleParts.push('一般消費排除項目');
-        resultsTitle.textContent = titleParts.length === 0
-            ? '搜尋結果'   // 一張卡都沒有、又要顯示「無符合的信用卡」那塊時的中性標題
-            : titleParts.length === 1
-                ? titleParts[0]
-                : titleParts.slice(0, -1).join('、') + '與' + titleParts[titleParts.length - 1];
+        const mainResults = results.filter(r => !r.isExcluded && !r.isUpcoming);
+        const mainLabel = mainResults.some(r => !r.isBasic) ? '指定通路回饋'
+            : mainResults.length > 0 ? '一般回饋'
+            : results.length === 0 ? '搜尋結果' : '';
+        resultsTitle.textContent = mainLabel;
+        resultsTitle.style.display = mainLabel ? '' : 'none';
     }
 
     // 一張卡都沒有、又不該顯示「無符合的信用卡」（只有領券的情況）：整個 section 收起來。
@@ -117,12 +139,142 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
             // 結果區被收起來時（只有領券）不能捲它——scrollIntoView 對 display:none 是
             // no-op，用戶會留在頁面頂端看不到券。改捲下一個真的有內容的區塊。
             const couponSection = document.getElementById('coupon-results-section');
-            const scrollTarget = !hideEmptyResults ? resultsSection
+            // 未達門檻區排在結果區前面時（沒有進行中活動、只剩一般回饋），捲到它——捲結果區會直接跳過它
+            const thresholdSection = getThresholdSectionEl();
+            const thresholdFirst = thresholdSection && thresholdSection.style.display !== 'none' &&
+                thresholdSection.dataset.placedFirst === '1';
+            const scrollTarget = thresholdFirst ? thresholdSection
+                : !hideEmptyResults ? resultsSection
                 : (couponSection && couponSection.style.display !== 'none' ? couponSection : null);
             if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 }
+
+// ============================================================
+// 未達單筆門檻的活動區（#threshold-results-section，2026-11-14 站長要求）
+// 金額未滿 minSpend 的活動以前直接不出現；現在另列一區：不進排名、不會是「最優回饋」，
+// 卡片與一般結果同一支 createCardResultElement（多「未達門檻」徽章與「✘ 單筆滿 X 才適用・還差 Y」），
+// 回饋金額用門檻金額試算（卡片上寫明「以單筆 NT$X 試算」，計算明細的 Total 也是門檻金額）。
+// placeFirst：沒有任何進行中活動、結果區只剩一般回饋時，把這一區搬到結果區前面。
+// 資料來源見 js/cashback-engine.js 的 calculateUnmetSpendResults。
+// ============================================================
+// 這一區的節點會在結果區內外搬來搬去，displayResults 清空容器時還可能暫時離開文件——
+// 第一次拿到就留著，不要每次 getElementById
+let _thresholdSectionEl = null;
+function getThresholdSectionEl() {
+    if (!_thresholdSectionEl) _thresholdSectionEl = document.getElementById('threshold-results-section');
+    return _thresholdSectionEl;
+}
+
+// 結果分區的小標題（一般消費排除項目／即將開始的活動）：橫跨整排的一列，放在該類第一張卡前面
+function createResultsGroupHeading(group) {
+    const el = document.createElement('div');
+    el.className = 'results-group-heading';
+    el.dataset.groupHeading = group;
+    const h = document.createElement('h2');
+    h.textContent = group === 'excluded' ? '一般消費排除項目' : '即將開始的活動';
+    el.appendChild(h);
+    return el;
+}
+
+function displayUnmetSpendResults(unmetResults, inputAmount, searchedItem, placeFirst = false) {
+    const section = getThresholdSectionEl();
+    const container = section && section.querySelector('#threshold-results-container');
+    if (!section || !container) return;   // 舊版 HTML（快取）沒有這一區：安靜略過
+    container.innerHTML = '';
+    const list = Array.isArray(unmetResults) ? unmetResults : [];
+    if (list.length === 0) {
+        section.style.display = 'none';
+        section.dataset.placedFirst = '';
+        return;
+    }
+    const desc = section.querySelector('#threshold-results-desc');
+    if (desc) {
+        desc.textContent = `以下活動要單筆消費滿額才適用，目前金額 NT$${Math.floor(Number(inputAmount) || 0).toLocaleString()} 還沒達到。回饋以門檻金額試算，僅供參考，不列入排名。`;
+    }
+    const fragment = document.createDocumentFragment();
+    list.forEach(r => {
+        fragment.appendChild(createCardResultElement({ ...r, inputAmount }, r.unmetSpend, searchedItem, false, false));
+    });
+    container.appendChild(fragment);
+
+    // 位置：placeFirst 時搬到結果區前面；否則先停在結果區後面，displayResults 畫完卡片後會把它
+    // 嵌進 #results-container（主結果之後、排除卡與即將開始之前）
+    if (resultsSection && resultsSection.parentNode) {
+        resultsSection.parentNode.insertBefore(section, placeFirst ? resultsSection : resultsSection.nextSibling);
+    }
+    section.dataset.placedFirst = placeFirst ? '1' : '';
+    section.style.display = 'block';
+}
+
+// ============================================================
+// 結果分類導覽（#results-nav，2026-11-14 站長要求）
+// 一次搜尋可能同時有：指定通路回饋／一般回饋、一般消費排除、即將開始、未達門檻、領券、停車折抵、新戶活動。
+// 有兩類以上時在結果上方出一排標籤（含筆數），點了捲到那一類；標籤列捲動時黏在畫面上緣，
+// 所以看到哪一類都能直接跳去別類。**只看畫面上真的有的東西**（讀 DOM），不另外記狀態——
+// 各區塊各自顯示／隱藏的規則改了，這裡不用跟著改。
+// 一般消費排除與即將開始沒有自己的 section（跟主結果同一個 #results-container），捲到該類的小標題。
+// ============================================================
+function collectResultsGroups() {
+    const shown = el => !!el && el.isConnected && el.style.display !== 'none';
+    const byId = id => document.getElementById(id);
+    const groups = [];
+    const threshold = getThresholdSectionEl();
+    const unmet = shown(threshold)
+        ? { key: 'unmet', label: '未達門檻', count: threshold.querySelectorAll('.card-result').length, target: threshold } : null;
+    // 搬到結果區前面時排第一個
+    if (unmet && threshold.dataset.placedFirst === '1') groups.push(unmet);
+    const rc = byId('results-container');
+    if (shown(byId('results-section')) && rc) {
+        const cards = [...rc.children].filter(el => el.classList.contains('card-result'));
+        const of = g => cards.filter(c => c.dataset.group === g);
+        const heading = g => rc.querySelector(`:scope > .results-group-heading[data-group-heading="${g}"]`);
+        const activity = of('activity'), basic = of('basic'), excluded = of('excluded'), upcoming = of('upcoming');
+        if (activity.length) groups.push({ key: 'activity', label: '指定通路回饋', count: activity.length, target: byId('results-section') });
+        else if (basic.length) groups.push({ key: 'basic', label: '一般回饋', count: basic.length, target: byId('results-section') });
+        if (unmet && threshold.dataset.placedFirst !== '1') groups.push(unmet);
+        if (excluded.length) groups.push({ key: 'excluded', label: '一般消費排除', count: excluded.length, target: heading('excluded') || excluded[0] });
+        if (upcoming.length) groups.push({ key: 'upcoming', label: '即將開始', count: upcoming.length, target: heading('upcoming') || upcoming[0] });
+    } else if (unmet && threshold.dataset.placedFirst !== '1') {
+        groups.push(unmet);
+    }
+    const coupon = byId('coupon-results-section');
+    if (shown(coupon)) groups.push({ key: 'coupon', label: '領券型活動', count: coupon.querySelectorAll('.coupon-item').length, target: coupon });
+    const parking = byId('parking-benefits-section');
+    if (shown(parking)) groups.push({ key: 'parking', label: '停車折抵', count: parking.querySelectorAll('.parking-benefit-item').length, target: parking });
+    const promos = byId('cardholder-promos-section');
+    if (shown(promos)) groups.push({ key: 'promos', label: '新戶活動', count: promos.querySelectorAll('.cardholder-promo-item').length, target: promos });
+    return groups.filter(g => g.count > 0);
+}
+
+function updateResultsNav() {
+    const nav = document.getElementById('results-nav');
+    if (!nav) return;
+    const groups = collectResultsGroups();
+    const show = groups.length >= 2;
+    nav.style.display = show ? 'flex' : 'none';
+    // 導覽列出現時，各區塊的捲動定位要讓出它的高度（CSS：.has-results-nav … scroll-margin-top）
+    if (nav.parentNode && nav.parentNode.classList) nav.parentNode.classList.toggle('has-results-nav', show);
+    // 標籤文字全是程式裡寫死的字與數字；仍照鐵則 3 escape
+    nav.innerHTML = show ? groups.map(g =>
+        `<button type="button" class="results-nav-chip" data-group="${escapeHtml(g.key)}">${escapeHtml(g.label)}<span class="results-nav-count">${Number(g.count)}</span></button>`
+    ).join('') : '';
+}
+
+// 捲到某一類結果（導覽標籤與狀態列的「點此查看 ↓」共用），到了之後短暫標亮
+function scrollToResultsGroup(key) {
+    const group = collectResultsGroups().find(g => g.key === key);
+    if (!group || !group.target) return;
+    group.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    group.target.classList.add('results-group-flash');
+    setTimeout(() => group.target.classList.remove('results-group-flash'), 1600);
+}
+
+document.addEventListener('click', (e) => {
+    const chip = e.target.closest && e.target.closest('.results-nav-chip');
+    if (chip) scrollToResultsGroup(chip.dataset.group);
+});
 
 // 計算 coupon 的實際回饋率（支援固定+分級回饋率）
 async function calculateCouponRate(coupon, card) {
@@ -1310,6 +1462,28 @@ function renderSpendThresholdNote(minSpend) {
     return `<div class="spend-threshold-note">✔ 單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())}</div>`;
 }
 
+// 未達單筆門檻的卡片用（2026-11-14）：「✘ 單筆滿 NT$X 才適用・還差 NT$Y」。
+// 刻意不沿用 .spend-threshold-note 的 class：那是「✔ 已符合」的語氣，回歸也用它擷取門檻欄
+function renderUnmetThresholdNote(minSpend, inputAmount) {
+    if (!minSpend) return '';
+    const gap = Math.ceil(Number(minSpend) - (Number(inputAmount) || 0));
+    const gapText = gap > 0 ? `・還差 NT$${escapeHtml(gap.toLocaleString())}` : '';
+    return `<div class="unmet-threshold-note">✘ 單筆滿 NT$${escapeHtml(Math.floor(minSpend).toLocaleString())} 才適用${gapText}</div>`;
+}
+
+// 進行中的結果卡：同一張卡還有「再多刷一點就換到下一級」的門檻時，每一級一行提示
+// （資料由 attachSpendUpgrades 掛在 result.spendUpgrades；回饋率是引擎用門檻金額算出來的總回饋率）。
+// 活動名來自 Sheets，一律 escapeHtml（鐵則 3）
+function renderSpendUpgradeNotes(upgrades, amount) {
+    if (!Array.isArray(upgrades) || upgrades.length === 0) return '';
+    return upgrades.map(u => {
+        const gap = Math.ceil(Number(u.minSpend) - (Number(amount) || 0));
+        const name = u.category ? `（${escapeHtml(getCategoryDisplayName(u.category))}）` : '';
+        const gapText = gap > 0 ? `・還差 NT$${escapeHtml(gap.toLocaleString())}` : '';
+        return `<div class="spend-upgrade-note">↑ 單筆滿 NT$${escapeHtml(Math.floor(u.minSpend).toLocaleString())} 可享 ${escapeHtml(String(u.rate))}%${name}${gapText}</div>`;
+    }).join('');
+}
+
 // 卡片下方的資訊區 .matched-merchant。行序固定：
 //   活動（activityName：搜尋結果、行動支付卡片 renderPaymentCardResult 會傳；
 //         詳情頁回饋卡的類別已經是卡片標題，不重複）
@@ -1352,6 +1526,7 @@ function createExcludedCardResultElement(result) {
     //  徽章與說明刻意維持原字）
     const isMaybe = result.isMaybeExcluded === true;
     cardDiv.className = 'card-result fade-in excluded-card' + (isMaybe ? ' maybe-excluded-card' : '');
+    cardDiv.dataset.group = 'excluded';
     const items = (result.excludedItems || []).map(escapeHtml).join('、');
     cardDiv.innerHTML = `
         <div class="card-header">
@@ -1373,7 +1548,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     if (result.isExcluded) return createExcludedCardResultElement(result);
     const cardDiv = document.createElement('div');
     const isUpcoming = result.isUpcoming === true;
-    cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''} ${isUpcoming ? 'upcoming-activity' : ''}`;
+    // 未達單筆門檻（2026-11-14）：呼叫端傳進來的 originalAmount 是「門檻金額」（回饋就是用它試算的），
+    // 用戶實際輸入的金額在 result.inputAmount
+    const isUnmetSpend = result.isUnmetSpend === true;
+    cardDiv.className = `card-result fade-in ${isBest ? 'best-card' : ''} ${result.cashbackAmount === 0 ? 'no-cashback' : ''} ${isUpcoming ? 'upcoming-activity' : ''} ${isUnmetSpend ? 'unmet-spend-activity' : ''}`;
+    // 結果分類導覽（updateResultsNav）靠這個分組
+    cardDiv.dataset.group = isUnmetSpend ? 'unmet' : isUpcoming ? 'upcoming' : (isBasicCashback || result.isBasic) ? 'basic' : 'activity';
 
     // 槽位自己沒填 cap 時不代表無上限：stacking 模型的加碼層可能有自己的上限
     // （大戶卡海外 4% 加碼受該級別 overseasBonusCap 限制，計算時確實有套）。
@@ -1444,6 +1624,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             <div class="badges-container">
                 ${isBest ? '<div class="best-badge">最優回饋</div>' : ''}
                 ${isUpcoming ? renderUpcomingBadge(result.periodStart) : ''}
+                ${isUnmetSpend ? '<div class="unmet-spend-badge">未達門檻</div>' : ''}
             </div>
         </div>
         <div class="card-details">
@@ -1466,6 +1647,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     }
                     return '';
                 })()}
+                ${isUnmetSpend ? `<div class="unmet-spend-trial-label">以單筆 NT$${escapeHtml(Math.floor(originalAmount).toLocaleString())} 試算</div>` : ''}
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>
@@ -1522,7 +1704,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                 // 滿額門檻：搜尋結果卡片是獨立於詳情頁的 render 路徑，門檻標註要在這裡另外補上，
                 // 否則使用者在搜尋結果看不出這個活動有消費金額限制
                 // （見 docs/project/cross-slot-ref-and-minspend-spec.md）
-                return renderSpendThresholdNote(group && group.minSpend) + renderActivityInfo({
+                // 未達門檻的卡：✔ 換成「✘ 單筆滿 X 才適用・還差 Y」；進行中的卡若還有接得上的下一級門檻，補提示行
+                const thresholdNote = isUnmetSpend
+                    ? renderUnmetThresholdNote(group && group.minSpend, result.inputAmount)
+                    : renderSpendThresholdNote(group && group.minSpend) + renderSpendUpgradeNotes(result.spendUpgrades, originalAmount);
+                return thresholdNote + renderActivityInfo({
                     activityName: result.matchedCategory ? getCategoryDisplayName(result.matchedCategory) : '',
                     matchHtml: `匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}`,
                     period: periodText,

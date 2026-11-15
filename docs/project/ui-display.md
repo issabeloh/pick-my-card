@@ -143,6 +143,9 @@ const group = result.matchedRateGroup;
 
 ## 1f. 結果區標題照內容組（2026-09-29）
 
+> **2026-11-14 改版（站長決定結果分區）**：`<h2>` 現在只講主結果那一類（`一般回饋`／`指定通路回饋`；空的是`搜尋結果`），
+> 不再用「、」「與」串接；排除卡與即將開始改由各自的小標題交代，沒有主結果時 `<h2>` 收起來。下表「兩種以上」那列已不適用。見第 1k 節。
+
 `#results-section` 的 `<h2>` 以前寫死兩種：`isBasicCashback ? '一般回饋' : '一般回饋與指定通路回饋'`。
 後者從來就不準——有匹配時結果裡根本沒有一般回饋那幾張（實測搜「全聯福利中心」只有 2 筆指定通路），
 只有即將開始的活動時也照喊。現改成看 `results` 裡真的有什麼就寫什麼（`js/results-display.js`，
@@ -255,6 +258,41 @@ Grep `titleParts`）：
 - **詳情頁搜尋框**（外觀：淺藍底區塊＋「搜尋這張卡的所有回饋商家」標籤、提示字「輸入通路名稱（如：全聯、水費）」，跟上方近期異動的灰色清單分開；導覽列「指定通路回饋」靠 `data-anchor="cashback-search-bar"` 捲到搜尋框，`setupCardDetailNav` 的點擊與高亮都認 anchor）（2026-10-14 站長要求改版，`filterCashbackItems()`→`filterDetailCards()`）：搜尋框 `#cashback-search-bar` 放在**所有回饋區上方**（原本在「指定通路回饋」標題下，但它也搜得到下面的區，位置會誤導），一次過濾指定通路／即將開始／一般回饋／領券四區（`DETAIL_SEARCH_SECTIONS`）；國內／海外一般消費卡、排除灰卡跟活動卡一樣照字過濾。沒命中的區整區（含標題）收起（`section._searchHidden`，本來就沒顯示的區不動），四區都沒命中才出「找不到符合的通路或項目」；換卡時 `showCardDetail` 還原。命中卡片裡的通路／排除清單（`strong.merchant-list`）只留命中項目、沒命中的段落縮成「…」（`condenseMerchantList()`；括號裡的頓號不切，見 `splitMerchantList()`），清空搜尋還原。曾試過在搜尋框下方加提示句，站長看過後拿掉
 - **小額支付提示**（2026-11-13，`displayMerchantPaymentInfo()`／`renderMicropaymentNote()`，`js/cashback-engine.js`）：搜到 NCCC 小額支付名單上的品牌時，搜尋結果上方「商家付款方式」灰框多一行提示文字＋「?」鈕；按「?」才展開說明（`MICROPAYMENT_HELP_HTML`，站長指定、寫死在程式）與資料來源連結（聯卡中心頁面，附「截至」日期，隨名單更新自動變）。2026-11-14 站長要求從整段攤開改成這樣，並拿掉標題。該品牌在 Merchant Payments 沒有列時，灰框只出這一段；有付款方式時用細線隔開。文字來源順序：該商家列的 `micropayment_note` → `_default` 列的通用提示（`cardsData.micropaymentDefaultNote`）；兩者都空就不出這一段（灰卡照常）。文字裡的 `{部分}` 在部分門市品牌顯示「部分」、其餘拿掉。跟付款方式一樣不理精準搜尋。排除這類交易的卡變灰卡的規則見 cashback-engine.md 第 10 節
 - 測試：`tools/regression/basic-exclusions-test.js`
+
+## 1k. 未達門檻的活動區 ＋ 結果分類導覽（2026-11-14 站長要求）
+
+**為什麼**：金額未滿 `minSpend` 的活動以前直接不出現。預設金額是 1000，「momo 單筆滿 5,000」「國內飯店滿 20,000」這類活動多數搜尋都看不到；
+只有這種活動的商家（瓦斯通、台灣電力公司…）還會被說成「你的選項中沒有符合的活動」。
+
+**未達門檻區**（`#threshold-results-section`，`displayUnmetSpendResults()`，`js/results-display.js`）：
+- 資料來自 `calculateUnmetSpendResults()`（計算端規則見 `docs/project/cashback-engine.md` 第 6 節）。**不進排名、不會是「最優回饋」**，
+  它的卡片不是 `#results-container` 的**直接子元素**——回歸、排除測試、商家頁生成器一律用 `#results-container > .card-result` 讀主結果，寫新測試時照用，不要寫成後代選擇器
+- 卡片跟一般結果同一支 `createCardResultElement()`，差別：「未達門檻」徽章、`✘ 單筆滿 NT$X 才適用・還差 NT$Y`
+  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）、回饋金額下方「以單筆 NT$X 試算」。
+  **回饋金額用門檻金額算**（計算明細的 Total 也是門檻金額），不是用戶輸入的金額
+- 排序：門檻低的在前，同門檻回饋高的在前。**級距每一級都列**（站長決定，不只列最近的一級）
+- 位置：平常**嵌在 `#results-container` 裡**，主結果之後、排除卡與即將開始之前（`displayResults()` 畫完卡片後搬進去；清空容器前會先搬出來，節點用 `getThresholdSectionEl()` 留著）。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
+  （`data-placed-first="1"`；`displayResults()` 的捲動目標跟著改）。領券／即將開始已清場（1e 節）時不搬
+- 按鈕（ⓘ、計算明細、加到小抄）跟結果區掛同一支事件處理（`js/home-ui.js`，Grep `thresholdResultsContainer`）
+
+**結果卡上的提示行**（`↑ 單筆滿 NT$199 可享 7%（活動名）・還差 NT$99`，`renderSpendUpgradeNotes`）：同一張卡已經有符合的活動、
+而且門檻接得上（進行中那槽的 `maxSpend` === 未達那槽的 `minSpend`）時，不另開卡片，掛在那張結果卡上。認定規則在 `attachSpendUpgrades()`
+
+**狀態列**（`js/search-match.js`）：
+- 有其他結果時補一行灰字「另有 N 筆活動要單筆滿額才適用（點此查看 ↓）」（`appendUnmetSpendNote`）
+- 只有未達門檻時，第二行紅字改成「✘ 單筆 NT$1,000 還沒有符合的活動，有 N 筆活動要單筆滿額才適用（點此查看 ↓）」
+  （`showMatchedButNoActivityMessage` 的 `unmetCount`），不再說「試看看修改信用卡選項」
+
+**結果分類導覽**（`#results-nav`，`updateResultsNav()`／`scrollToResultsGroup()`）：
+- 這次搜尋有**兩類以上**結果時，結果上方出一排標籤（含筆數）：指定通路回饋或一般回饋／一般消費排除／即將開始／未達門檻／領券型活動／停車折抵／新戶活動。
+  點了捲到那一類並短暫標亮；標籤列 `position: sticky`，捲到哪都能跳去別類
+- **只讀畫面上真的有的東西**（各 section 的顯示狀態＋結果卡的 `data-group`），不另外記狀態——各區塊顯示／隱藏規則改了，這裡不用跟著改
+- 導覽列在時，各區塊加 `scroll-margin-top`（`.has-results-nav …`）讓出它的高度
+- **結果分區**（同日站長決定）：順序固定為 主結果 → 未達門檻 → 一般消費排除項目 → 即將開始的活動 → 領券 → 停車 → 新戶。
+  排除卡與即將開始仍在 `#results-container` 裡，各在第一張卡前插一列橫跨整排的小標題（`createResultsGroupHeading()`，`.results-group-heading`）；導覽標籤捲到小標題
+- 同一個點擊會冒泡經過未達門檻容器與 `#results-container` 兩個監聽器，用 `e._pmcResultClickHandled` 只處理一次（不然「加到小抄」會加了又移除）
+- ⚠️ 凍結資料下 13 組回歸不擷取這一區與小標題，**回歸測不到**（小標題與主標題由 `basic-exclusions-test.js` 測到一部分）；驗證靠線上資料實測：
+  「水費」1000（三類並存）、「瓦斯通」1000（只有未達門檻）、「統一超商」100（提示行）、「MOMO購物網」1000（同卡多個門檻）
 
 ## 2. 卡片圖片資產
 

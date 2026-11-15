@@ -164,7 +164,7 @@ function freezeClockScript(iso) {
 const norm = s => (s || '').replace(/\s+/g, ' ').trim();
 
 async function extract(page) {
-  const results = await page.$$eval('#results-container .card-result', els => els.map(el => {
+  const results = await page.$$eval('#results-container > .card-result', els => els.map(el => {
     const fields = {};
     el.querySelectorAll('.detail-item').forEach(d => {
       const label = d.querySelector('.detail-label')?.innerText?.replace(/\s+/g, ' ').trim();
@@ -280,7 +280,7 @@ async function run(opts) {
       await page.click('#calculate-btn');
     }
     await page.waitForFunction(() =>
-      document.querySelector('#results-container .card-result') ||
+      document.querySelector('#results-container > .card-result') ||
       document.querySelector('#coupon-results-container .coupon-item') ||
       document.querySelector('#parking-benefits-container .parking-benefit-item'),
       null, { timeout: 10000 });

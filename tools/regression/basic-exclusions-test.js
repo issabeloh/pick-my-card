@@ -64,9 +64,9 @@ const META = readFixtureMeta();
     await page.waitForTimeout(400);
     return page.evaluate(() => ({
       // cards＝一般結果卡；excluded＝灰色「一般消費排除」卡（2026-10-11 起排除的卡不拿掉、改成灰卡墊底）
-      cards: [...document.querySelectorAll('#results-container .card-result:not(.excluded-card)')].map(el =>
+      cards: [...document.querySelectorAll('#results-container > .card-result:not(.excluded-card)')].map(el =>
         el.querySelector('.card-name')?.innerText.trim()),
-      excluded: [...document.querySelectorAll('#results-container .card-result.excluded-card')].map(el => ({
+      excluded: [...document.querySelectorAll('#results-container > .card-result.excluded-card')].map(el => ({
         name: el.querySelector('.card-name')?.innerText.trim(),
         items: el.querySelector('.excluded-card-match strong')?.innerText.trim(),
         label: el.querySelector('.excluded-card-match')?.innerText.split(':')[0].trim(),
@@ -74,14 +74,15 @@ const META = readFixtureMeta();
         maybe: el.classList.contains('maybe-excluded-card'),
         hasRateFields: !!el.querySelector('.detail-label, .cashback-amount, .calc-breakdown-btn'),
       })),
-      lastIsExcluded: (() => { const all = [...document.querySelectorAll('#results-container .card-result')];
+      lastIsExcluded: (() => { const all = [...document.querySelectorAll('#results-container > .card-result')];
         const firstEx = all.findIndex(el => el.classList.contains('excluded-card'));
         return firstEx < 0 || all.slice(firstEx).every(el => el.classList.contains('excluded-card')); })(),
-      title: document.querySelector('#results-section h2')?.innerText.trim(),
-      maybe: [...document.querySelectorAll('#results-container .card-result:not(.excluded-card) .maybe-excluded-note')].map(el => ({
+      title: (h => (h && h.style.display !== 'none' ? h.innerText.trim() : ''))(document.querySelector('#results-section > h2')),
+      maybe: [...document.querySelectorAll('#results-container > .card-result:not(.excluded-card) .maybe-excluded-note')].map(el => ({
         name: el.closest('.card-result').querySelector('.card-name')?.innerText.trim(), text: el.innerText.trim() })),
       status: document.getElementById('matched-item').innerText.replace(/\s+/g, ' ').trim(),
       noResultsBox: !!document.querySelector('#results-container .no-results'),
+      headings: [...document.querySelectorAll('#results-container > .results-group-heading')].map(el => el.innerText.trim()),
       firstNames: cardsData.cards.slice(0, 5).map(c => c.name),
     }));
   }
@@ -103,7 +104,7 @@ const META = readFixtureMeta();
     `cards=${r.cards.length} excluded=${r.excluded.length}`);
   check('全部排除：灰卡只寫命中的排除項目，不出回饋率/金額/上限', r.excluded.every(e => e.items === '繳稅' && !e.hasRateFields),
     JSON.stringify(r.excluded.slice(0, 2)));
-  check('全部排除：結果標題是「一般消費排除項目」', r.title === '一般消費排除項目', r.title);
+  check('全部排除：主標題收起、小標題是「一般消費排除項目」', r.title === '' && r.headings.join('|') === '一般消費排除項目', `${r.title} / ${r.headings.join('|')}`);
   check('全部排除：狀態列說明是一般消費排除項目、沒有任何回饋',
     r.status.includes(`你比較的 ${total} 張卡都沒有「繳稅」的活動`) && r.status.includes('一般消費排除項目') &&
     r.status.includes('包含基本回饋'), r.status);
@@ -116,7 +117,7 @@ const META = readFixtureMeta();
     r.firstNames.every(n => !r.cards.includes(n) && r.excluded.some(e => e.name === n)) && r.excluded.length === 5,
     `excluded=${r.excluded.map(e => e.name).join('、')}`);
   check('部分排除：灰卡墊底', r.lastIsExcluded, '灰卡後面還有一般卡');
-  check('部分排除：標題兩種都講', r.title === '一般回饋與一般消費排除項目', r.title);
+  check('部分排除：主標題「一般回饋」＋小標題「一般消費排除項目」', r.title === '一般回饋' && r.headings.join('|') === '一般消費排除項目', `${r.title} / ${r.headings.join('|')}`);
   check('部分排除：狀態列補「另有 5 張卡…見下方灰色卡片」',
     r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）'), r.status);
 
@@ -213,7 +214,7 @@ const META = readFixtureMeta();
   check('有指定通路結果時：活動筆數不含灰卡、補一行排除說明',
     r.status.includes(`有 ${baseline.cards.length} 筆活動符合你的選項`) &&
     r.status.includes(`另有 ${total - activityCards} 張卡把「家樂福」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）`), r.status);
-  check('有指定通路結果時：標題是「指定通路回饋與一般消費排除項目」', r.title === '指定通路回饋與一般消費排除項目', r.title);
+  check('有指定通路結果時：主標題「指定通路回饋」＋小標題「一般消費排除項目」', r.title === '指定通路回饋' && r.headings.join('|') === '一般消費排除項目', `${r.title} / ${r.headings.join('|')}`);
   r = await search('家樂福');
   check('沒名單時：有指定通路結果也不出灰卡', r.excluded.length === 0 && !/排除項目/.test(r.status), r.status);
 
@@ -313,8 +314,8 @@ const META = readFixtureMeta();
   await page.click('#calculate-btn');
   await page.waitForTimeout(600);
   const quickRes = await page.evaluate(() => ({
-    excluded: document.querySelectorAll('#results-container .card-result.excluded-card').length,
-    normal: document.querySelectorAll('#results-container .card-result:not(.excluded-card)').length }));
+    excluded: document.querySelectorAll('#results-container > .card-result.excluded-card').length,
+    normal: document.querySelectorAll('#results-container > .card-result:not(.excluded-card)').length }));
   check('快捷搜尋：計算時用全部關鍵詞比名單 → 全部卡變灰卡', quickRes.normal === 0 && quickRes.excluded === total, JSON.stringify(quickRes));
   await page.evaluate(() => { cardsData.cards.forEach(c => delete c.basicExclusions); currentQuickSearchOption = null; });
   await page.fill('#merchant-input', '');
