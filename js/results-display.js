@@ -191,7 +191,8 @@ function displayUnmetSpendResults(unmetResults, inputAmount, searchedItem, place
     }
     const desc = section.querySelector('#threshold-results-desc');
     if (desc) {
-        desc.textContent = `以下活動要單筆消費滿額才適用，目前金額 NT$${Math.floor(Number(inputAmount) || 0).toLocaleString()} 還沒達到。回饋以門檻金額試算，僅供參考，不列入排名。`;
+        // 手機版最多兩行（站長要求）：360px 寬一行約 22 個字，別再加長
+        desc.textContent = `單筆滿額才適用（目前 NT$${Math.floor(Number(inputAmount) || 0).toLocaleString()} 未達）。回饋以門檻金額試算，不列入排名。`;
     }
     const fragment = document.createDocumentFragment();
     list.forEach(r => {
