@@ -1049,6 +1049,11 @@
                                 <div class="info-item">
                                     <div class="info-label">銀行名稱:</div>
                                     <div class="info-value card-full-name-bold"><span id="card-full-name-link"></span></div>
+                                    <!-- 信用卡官網連結（2026-11-15，站長從五種 mockup 選定「銀行名稱底下一行」）：
+                                         Cards Data 的 website 欄，showCardDetail() 填 href、沒網址就 hidden。
+                                         刻意放在 .card-full-name-bold 外面——那裡的 a 規則是粗體藍字，這條要低調灰字。
+                                         GA4 button_type = detail_official_site -->
+                                    <a id="card-official-site-link" class="card-official-site-link" target="_blank" rel="noopener noreferrer" hidden>前往信用卡官網頁面<svg class="external-link-icon" width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/></svg></a>
                                 </div>
                                 <div class="info-item" id="cashback-type-expiry-section">
                                     <div class="info-label">回饋類型:</div>
@@ -1246,7 +1251,7 @@
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-14">2026/11/14</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-15">2026/11/15</time></span>
     </div>
     </footer>
 

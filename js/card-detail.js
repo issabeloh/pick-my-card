@@ -95,6 +95,21 @@ async function showCardDetail(cardId) {
     const fullNameLink = document.getElementById('card-full-name-link');
     fullNameLink.textContent = card.fullName || card.name;
 
+    // 信用卡官網連結（銀行名稱底下的灰色小字）：沒有合法網址就藏起來並清掉 href，
+    // 免得上一張卡的連結沿用到這張
+    const officialSiteLink = document.getElementById('card-official-site-link');
+    if (officialSiteLink) {
+        if (sanitizeUrl(card.website)) {
+            officialSiteLink.href = sanitizeUrl(card.website);
+            officialSiteLink.dataset.cardId = card.id;
+            officialSiteLink.dataset.cardName = card.name;
+            officialSiteLink.hidden = false;
+        } else {
+            officialSiteLink.removeAttribute('href');
+            officialSiteLink.hidden = true;
+        }
+    }
+
     // Render tags after card full name
     const cardInfoSection = modal.querySelector('.card-info-section');
     const existingTags = cardInfoSection.querySelector('.card-tags-container');

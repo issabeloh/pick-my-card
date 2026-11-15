@@ -5698,6 +5698,28 @@ mark.cashback-search-hl {
     text-decoration: underline;
 }
 
+/* 詳情頁「前往信用卡官網頁面」（2026-11-15）：銀行名稱底下一行低調灰字，
+   hover 才變藍加底線。圖示沿用 .external-link-icon（＝會開新分頁） */
+.card-official-site-link {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start; /* .info-item 是直向 flex，不加會撐滿整欄寬、整條都可點 */
+    gap: 3px;
+    margin-top: -2px; /* .info-item 的 gap 4px，收回一點讓它貼著銀行名稱 */
+    font-size: 13px;
+    color: #6b7280;
+    text-decoration: none;
+}
+
+.card-official-site-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.card-official-site-link[hidden] {
+    display: none;
+}
+
 /* 年費和免年費條件縮小文字 */
 .info-value-small {
     font-size: 12px !important;
