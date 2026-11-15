@@ -123,6 +123,9 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     存檔前跑 `pmcValidateCardRow_`（`cards-export.gs`，與 `runQACheck` 檢查 12 共用）、級別改名／刪除／預設級別換人要確認。
     **改 Cards Data 的欄位命名規則（如新增 `xxx_N` 槽位欄）時**：編輯器自動吃新欄，但若新欄是數字／日期／勾選框，
     要把它加進 `card-editor.gs` 頂部的 `CE_NUMERIC_*`／`CE_DATE_RE_`／`CE_BOOL_RE_`，否則會被當成文字寫入。
+    2026-11-15 加槽位工具列：複製到空槽位／清空／還原這個槽位（純畫面操作，存檔路徑不變）。**刻意不做槽位搬移**——
+    槽位編號被 `cashbackModel` 的 `rate_N` 與 `levelSettings` 的 `onlySlots`／`keepSlots` 引用，搬了會悄悄錯位。
+    改 `CardEditor.html` 後跑 `node tools/apps-script-tests/card-editor-ui-test.js`。
     安裝與保護機制見 `apps-script/README.md`「單卡編輯器」
 16. **新戶活動編輯器**（2026-11-11）—— New Cardholder Promos 的「一張卡一頁」介面（`apps-script/promo-editor.gs` ＋
     `PromoEditor.html`，選單「🎁 新戶活動編輯器」）。申辦按鈕視為卡片層級（改了寫到原本有填的每一列）、新增活動插在同卡最後一列下、
