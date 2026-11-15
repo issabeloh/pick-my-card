@@ -82,7 +82,10 @@ const META = readFixtureMeta();
         name: el.closest('.card-result').querySelector('.card-name')?.innerText.trim(), text: el.innerText.trim() })),
       status: document.getElementById('matched-item').innerText.replace(/\s+/g, ' ').trim(),
       noResultsBox: !!document.querySelector('#results-container .no-results'),
-      headings: [...document.querySelectorAll('#results-container > .results-group-heading')].map(el => el.innerText.trim()),
+      headings: [...document.querySelectorAll('#results-container > .results-group-heading')].map(el => (el.querySelector('h2') || el).innerText.trim()),
+      // 排除區說明（2026-11-15 起）：整區只在小標題下出現一次，灰卡上不再重複
+      groupNotes: [...document.querySelectorAll('#results-container > .results-group-heading .results-group-note')].map(el => el.innerText.trim()),
+      cardNotes: [...document.querySelectorAll('#results-container .excluded-card .excluded-card-note')].length,
       firstNames: cardsData.cards.slice(0, 5).map(c => c.name),
     }));
   }
@@ -118,6 +121,9 @@ const META = readFixtureMeta();
     `excluded=${r.excluded.map(e => e.name).join('、')}`);
   check('部分排除：灰卡墊底', r.lastIsExcluded, '灰卡後面還有一般卡');
   check('部分排除：主標題「一般回饋」＋小標題「一般消費排除項目」', r.title === '一般回饋' && r.headings.join('|') === '一般消費排除項目', `${r.title} / ${r.headings.join('|')}`);
+  check('部分排除：說明只出現在小標題下、灰卡上沒有',
+    r.groupNotes.join('|') === '此卡的一般消費不含這個項目，刷卡無回饋' && r.cardNotes === 0,
+    `${JSON.stringify(r.groupNotes)} / cardNotes=${r.cardNotes}`);
   check('部分排除：狀態列補「另有 5 張卡…見下方灰色卡片」',
     r.status.includes('另有 5 張卡把「繳稅」列為一般消費排除項目，刷卡無回饋（見下方灰色卡片 ↓）'), r.status);
 

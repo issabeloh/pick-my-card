@@ -175,6 +175,13 @@ function createResultsGroupHeading(group) {
     const h = document.createElement('h2');
     h.textContent = group === 'excluded' ? '一般消費排除項目' : '即將開始的活動';
     el.appendChild(h);
+    // 排除區的說明（2026-11-15 站長要求）：原本每張灰卡都重複一次，改成整區只在小標題下寫一次
+    if (group === 'excluded') {
+        const note = document.createElement('div');
+        note.className = 'results-group-note';
+        note.textContent = '此卡的一般消費不含這個項目，刷卡無回饋';
+        el.appendChild(note);
+    }
     return el;
 }
 
@@ -1518,6 +1525,7 @@ function renderActivityInfo({ activityName = '', matchHtml = '', period = '', en
 }
 
 // 一般消費排除卡（2026-10-11 站長要求）：灰色、只寫「匹配到哪個排除項目」，
+// 「此卡的一般消費不含這個項目，刷卡無回饋」那句 2026-11-15 移到整區小標題下方（createResultsGroupHeading），卡上不再重複，
 // 回饋率／回饋金額／上限／活動期間一律不出——這張卡刷這個項目就是 0，那些欄位只會讓人以為有得算。
 // 用戶靠它自己確認「是因為什麼被排除」（例：搜「台電電費」→ 排除項目「電費」）。
 // 卡名與項目都來自 Sheets，一律 escapeHtml（鐵則 3）。ⓘ 詳情鈕沿用全站委派（data-card-id）
@@ -1539,7 +1547,6 @@ function createExcludedCardResultElement(result) {
         </div>
         <div class="excluded-card-body">
             <div class="excluded-card-match">${isMaybe ? '可能屬於排除項目' : '排除項目'}: <strong>${items}</strong></div>
-            <div class="excluded-card-note">此卡的一般消費不含這個項目，刷卡無回饋</div>
         </div>
     `;
     return cardDiv;

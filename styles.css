@@ -2967,11 +2967,6 @@ input[type="number"]:focus {
     font-weight: 700;
 }
 
-.excluded-card-note {
-    font-size: 12px;
-    color: #9ca3af;
-}
-
 /* 詳情頁「一般回饋」區的排除項目卡 */
 .cashback-detail-item.rate-card-excluded {
     background: #f3f4f6;
@@ -11311,6 +11306,12 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 .results-container > .results-group-heading h2 {
     margin-bottom: 0;
+}
+/* 排除區說明（2026-11-15）：整區只出現一次，語氣與原本卡上的小字一致 */
+.results-group-heading .results-group-note {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #9ca3af;
 }
 /* 前面沒有主結果（<h2> 收起來）時，第一個小標題／未達門檻區就是開頭，不要再畫線留白 */
 .results-container > .results-group-heading:first-child,
