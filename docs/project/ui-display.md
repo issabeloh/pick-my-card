@@ -143,6 +143,9 @@ const group = result.matchedRateGroup;
 
 ## 1f. 結果區標題照內容組（2026-09-29）
 
+> **2026-11-14 改版（站長決定結果分區）**：`<h2>` 現在只講主結果那一類（`一般回饋`／`指定通路回饋`；空的是`搜尋結果`），
+> 不再用「、」「與」串接；排除卡與即將開始改由各自的小標題交代，沒有主結果時 `<h2>` 收起來。下表「兩種以上」那列已不適用。見第 1k 節。
+
 `#results-section` 的 `<h2>` 以前寫死兩種：`isBasicCashback ? '一般回饋' : '一般回饋與指定通路回饋'`。
 後者從來就不準——有匹配時結果裡根本沒有一般回饋那幾張（實測搜「全聯福利中心」只有 2 筆指定通路），
 只有即將開始的活動時也照喊。現改成看 `results` 裡真的有什麼就寫什麼（`js/results-display.js`，
@@ -263,12 +266,12 @@ Grep `titleParts`）：
 
 **未達門檻區**（`#threshold-results-section`，`displayUnmetSpendResults()`，`js/results-display.js`）：
 - 資料來自 `calculateUnmetSpendResults()`（計算端規則見 `docs/project/cashback-engine.md` 第 6 節）。**不進排名、不會是「最優回饋」**，
-  不放進 `#results-container`（回歸的 `extract()` 與商家頁生成器都只讀那個容器）
+  它的卡片不是 `#results-container` 的**直接子元素**——回歸、排除測試、商家頁生成器一律用 `#results-container > .card-result` 讀主結果，寫新測試時照用，不要寫成後代選擇器
 - 卡片跟一般結果同一支 `createCardResultElement()`，差別：「未達門檻」徽章、`✘ 單筆滿 NT$X 才適用・還差 NT$Y`
   （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）、回饋金額下方「以單筆 NT$X 試算」。
   **回饋金額用門檻金額算**（計算明細的 Total 也是門檻金額），不是用戶輸入的金額
 - 排序：門檻低的在前，同門檻回饋高的在前。**級距每一級都列**（站長決定，不只列最近的一級）
-- 位置：預設緊接結果區之後、領券之前。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
+- 位置：平常**嵌在 `#results-container` 裡**，主結果之後、排除卡與即將開始之前（`displayResults()` 畫完卡片後搬進去；清空容器前會先搬出來，節點用 `getThresholdSectionEl()` 留著）。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
   （`data-placed-first="1"`；`displayResults()` 的捲動目標跟著改）。領券／即將開始已清場（1e 節）時不搬
 - 按鈕（ⓘ、計算明細、加到小抄）跟結果區掛同一支事件處理（`js/home-ui.js`，Grep `thresholdResultsContainer`）
 
@@ -284,10 +287,11 @@ Grep `titleParts`）：
 - 這次搜尋有**兩類以上**結果時，結果上方出一排標籤（含筆數）：指定通路回饋或一般回饋／一般消費排除／即將開始／未達門檻／領券型活動／停車折抵／新戶活動。
   點了捲到那一類並短暫標亮；標籤列 `position: sticky`，捲到哪都能跳去別類
 - **只讀畫面上真的有的東西**（各 section 的顯示狀態＋結果卡的 `data-group`），不另外記狀態——各區塊顯示／隱藏規則改了，這裡不用跟著改
-- 一般消費排除與即將開始沒有自己的 section（跟主結果同在 `#results-container`），捲到該類第一張卡
 - 導覽列在時，各區塊加 `scroll-margin-top`（`.has-results-nav …`）讓出它的高度
-- ⚠️ 還沒做的：排除卡與即將開始沒有自己的小標題；未達門檻區排在灰色排除卡**之後**（搜「水費」要捲過 30 張灰卡，靠導覽與狀態列連結跳過去）
-- ⚠️ 凍結資料下 13 組回歸不會碰到這一區（它在 `#results-container` 外面），**回歸測不到**；驗證靠線上資料實測：
+- **結果分區**（同日站長決定）：順序固定為 主結果 → 未達門檻 → 一般消費排除項目 → 即將開始的活動 → 領券 → 停車 → 新戶。
+  排除卡與即將開始仍在 `#results-container` 裡，各在第一張卡前插一列橫跨整排的小標題（`createResultsGroupHeading()`，`.results-group-heading`）；導覽標籤捲到小標題
+- 同一個點擊會冒泡經過未達門檻容器與 `#results-container` 兩個監聽器，用 `e._pmcResultClickHandled` 只處理一次（不然「加到小抄」會加了又移除）
+- ⚠️ 凍結資料下 13 組回歸不擷取這一區與小標題，**回歸測不到**（小標題與主標題由 `basic-exclusions-test.js` 測到一部分）；驗證靠線上資料實測：
   「水費」1000（三類並存）、「瓦斯通」1000（只有未達門檻）、「統一超商」100（提示行）、「MOMO購物網」1000（同卡多個門檻）
 
 ## 2. 卡片圖片資產

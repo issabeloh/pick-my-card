@@ -124,8 +124,8 @@ async function uiLevel(root) {
     const t = el => el ? el.innerText.replace(/\s+/g, ' ').trim() : '';
     return {
       status: t(document.getElementById('matched-item')),
-      title: t(document.querySelector('#results-section h2')),
-      cards: [...document.querySelectorAll('#results-container .card-result')].map(t),
+      title: t(document.querySelector('#results-section > h2')),
+      cards: [...document.querySelectorAll('#results-container > .card-result')].map(t),
       coupons: [...document.querySelectorAll('#coupon-results-container .coupon-item')].map(t),
       parking: t(document.getElementById('parking-benefits-container')),
       promos: t(document.querySelector('.cardholder-promos-container'))

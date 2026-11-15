@@ -592,7 +592,7 @@ function hideMatchedItem() {
 // Scroll to parking benefits section
 // 狀態列「見下方灰色卡片」的導引（2026-10-14 站長要求）：捲到第一張灰色排除卡、短暫標亮
 function scrollToFirstExcludedCard() {
-    const card = document.querySelector('#results-container .card-result.excluded-card');
+    const card = document.querySelector('#results-container > .card-result.excluded-card');
     if (!card) return;
     card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     card.classList.add('excluded-card-flash');

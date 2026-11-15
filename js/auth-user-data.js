@@ -303,7 +303,7 @@ function ensureGuestUIBound() {
         if (t.resultsSection) t.resultsSection.style.display = 'none';
         if (t.couponResultsSection) t.couponResultsSection.style.display = 'none';
         // 未達門檻區與結果分類導覽跟著結果一起收
-        const thresholdSection = document.getElementById('threshold-results-section');
+        const thresholdSection = typeof getThresholdSectionEl === 'function' ? getThresholdSectionEl() : null;
         if (thresholdSection) thresholdSection.style.display = 'none';
         if (typeof updateResultsNav === 'function') updateResultsNav();
         if (t.spotlightSection) t.spotlightSection.style.display = 'none';

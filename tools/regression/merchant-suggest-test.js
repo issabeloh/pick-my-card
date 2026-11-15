@@ -67,7 +67,7 @@ catch (e) { ({ chromium } = require('playwright')); }
     value: document.getElementById('merchant-input').value,
     open: !document.getElementById('merchant-suggest').hidden,
     status: document.getElementById('matched-item').innerText.trim(),
-    results: document.querySelectorAll('#results-container .card-result').length }));
+    results: document.querySelectorAll('#results-container > .card-result').length }));
   check('↓＋Enter 選建議：填入、選單收起', picked.value === 'zzz交通罰單' && !picked.open, JSON.stringify(picked));
   check('選建議後出「✓ 匹配到一般消費排除項目」、不自動計算',
     picked.status.includes('✓ 匹配到一般消費排除項目: zzz交通罰單') && picked.results === 0, JSON.stringify(picked));
@@ -76,7 +76,7 @@ catch (e) { ({ chromium } = require('playwright')); }
   await typeAndList('全聯');
   await page.keyboard.press('Enter');
   await page.waitForTimeout(800);
-  const calc = await page.evaluate(() => ({ results: document.querySelectorAll('#results-container .card-result').length,
+  const calc = await page.evaluate(() => ({ results: document.querySelectorAll('#results-container > .card-result').length,
     open: !document.getElementById('merchant-suggest').hidden }));
   check('沒選建議直接 Enter → 照常計算、選單收起', calc.results > 0 && !calc.open, JSON.stringify(calc));
 
@@ -88,7 +88,7 @@ catch (e) { ({ chromium } = require('playwright')); }
     else await page.click('#merchant-suggest li.merchant-suggest-query');
     await page.waitForTimeout(800);
     const q = await page.evaluate(() => ({ value: document.getElementById('merchant-input').value,
-      results: document.querySelectorAll('#results-container .card-result').length,
+      results: document.querySelectorAll('#results-container > .card-result').length,
       open: !document.getElementById('merchant-suggest').hidden }));
     check(`「搜尋「全聯」」（${how === 'keyboard' ? '↓＋Enter' : '點選'}）→ 照打的字計算、選單收起`,
       q.value === '全聯' && q.results > 0 && !q.open, JSON.stringify(q));

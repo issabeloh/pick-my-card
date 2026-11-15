@@ -473,9 +473,9 @@ async function verifyAgainstBrowser(results) {
       return route.abort();
     });
     await page.goto(base + '/merchant/' + encodeURIComponent(r.slug) + '.html', { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('#results-container .card-name', { timeout: 30000 });
+    await page.waitForSelector('#results-container > .card-result .card-name', { timeout: 30000 });
     await page.waitForTimeout(800);
-    const shown = await page.$$eval('#results-container .card-name',
+    const shown = await page.$$eval('#results-container > .card-result .card-name',
       els => els.map(e => e.innerText.replace(/\s+/g, ' ').trim()));
     const uniqueShown = shown.filter((n, i) => shown.indexOf(n) === i);
     const ok = JSON.stringify(uniqueShown) === JSON.stringify(r.cards);
