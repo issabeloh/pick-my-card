@@ -272,53 +272,109 @@ function updateGA4Daily() {
   return { headers: headers, values: values, window: win };
 }
 
-// ---------- GA4：近 30 天流量來源 ----------
+// ---------- GA4：近 30 天流量來源（2026/11/16 改：自訂管道，對齊 Looker）----------
+// 舊版用 GA4 預設的 sessionDefaultChannelGroup。問題：Threads／IG 是本站主要流量入口，
+// 在預設分類裡卻被拆散或埋進 Direct，Sheet 跟 Looker《PMC Dashboard》（已有自訂分類）
+// 對不起來，週報／月報讀 Sheet 會跟站長在 Looker 上看到的不一樣。
+// 現在改成用 sessionSource × sessionMedium 查回來，在指令碼內照 CHANNEL_RULES 分組。
+//
+// ⚠️ 規則只有 CHANNEL_RULES 一處。Looker 的自訂欄位公式改了，這裡要同步改，否則兩邊又會分家。
+//    由上往下比對、第一條命中就停（跟 Looker 的 CASE WHEN 一樣有順序性）。
+//    source／medium 比對前一律轉小寫。
+// ⚠️ 數字口徑：
+//   - Sessions、互動工作階段：各來源直接相加，精確。
+//   - 互動率＝互動工作階段 ÷ Sessions（**重新計算**，不是把各來源的比率平均）。
+//   - 活躍用戶：各 source/medium 的活躍用戶**加總**。同一人 30 天內從兩個來源進站會被算兩次，
+//     所以這欄是上限值、略大於實際；欄名已標註，不要拿它跟 GA4_每日趨勢 的用戶數直接比。
+// ⚠️ 歷史快照改寫到「GA4_自訂管道_歷史」。舊的「GA4_流量來源_歷史」是預設管道口徑，
+//    兩種分類混在同一張表會讓趨勢線在改版那週無聲斷層，所以舊表保留不再寫入（凍結存檔）。
+const CHANNEL_RULES = [
+  { name: 'Threads 社群', source: /threads/ },
+  { name: 'IG 社群',      source: /instagram|^ig$/ },
+  { name: 'LLM',          source: /chatgpt|openai|perplexity|gemini|claude|copilot|deepseek|grok|poe\.com/ },
+  { name: '自然',         medium: /^organic$/ },
+  { name: '直接',         source: /^\(direct\)$/, medium: /^\((none|not set)\)$/ },
+];
+const CHANNEL_FALLBACK = '其他';
+const CHANNEL_SOURCE_ROW_LIMIT = 1000;  // source × medium 組合數；目前遠低於此
+
+function classifyChannel_(source, medium) {
+  const s = String(source == null ? '' : source).trim().toLowerCase();
+  const m = String(medium == null ? '' : medium).trim().toLowerCase();
+  for (let i = 0; i < CHANNEL_RULES.length; i++) {
+    const r = CHANNEL_RULES[i];
+    if (r.source && !r.source.test(s)) continue;
+    if (r.medium && !r.medium.test(m)) continue;
+    return r.name;
+  }
+  return CHANNEL_FALLBACK;
+}
+
 function updateGA4Channels() {
   const win = ga4Window_();
 
-  const dimension = AnalyticsData.newDimension();
-  dimension.name = 'sessionDefaultChannelGroup';
+  const dSource = AnalyticsData.newDimension(); dSource.name = 'sessionSource';
+  const dMedium = AnalyticsData.newDimension(); dMedium.name = 'sessionMedium';
 
   const metricSessions = AnalyticsData.newMetric();
   metricSessions.name = 'sessions';
+  const metricEngaged = AnalyticsData.newMetric();
+  metricEngaged.name = 'engagedSessions';
   const metricUsers = AnalyticsData.newMetric();
   metricUsers.name = 'activeUsers';
-  const metricEngagement = AnalyticsData.newMetric();
-  metricEngagement.name = 'engagementRate';
 
   const dateRange = AnalyticsData.newDateRange();
   dateRange.startDate = win.startSpec;
   dateRange.endDate = win.endSpec;
 
   const request = AnalyticsData.newRunReportRequest();
-  request.dimensions = [dimension];
-  request.metrics = [metricSessions, metricUsers, metricEngagement];
+  request.dimensions = [dSource, dMedium];
+  request.metrics = [metricSessions, metricEngaged, metricUsers];
   request.dateRanges = [dateRange];
+  request.limit = CHANNEL_SOURCE_ROW_LIMIT;
 
   const report = AnalyticsData.Properties.runReport(request, 'properties/' + GA4_PROPERTY_ID);
-
   const rows = report.rows || [];
-  const sortedRows = rows.slice().sort((a, b) =>
-    Number(b.metricValues[0].value) - Number(a.metricValues[0].value)
-  );
 
-  const values = sortedRows.map(row => [
-    row.dimensionValues[0].value,
-    row.metricValues[0].value,
-    row.metricValues[1].value,
-    row.metricValues[2].value,
-  ]);
+  const byChannel = {};
+  rows.forEach(row => {
+    const source = row.dimensionValues[0].value;
+    const medium = row.dimensionValues[1].value;
+    const sessions = Number(row.metricValues[0].value) || 0;
+    const engaged  = Number(row.metricValues[1].value) || 0;
+    const users    = Number(row.metricValues[2].value) || 0;
+    const name = classifyChannel_(source, medium);
+    if (!byChannel[name]) byChannel[name] = { name: name, sessions: 0, engaged: 0, users: 0, sources: [] };
+    const c = byChannel[name];
+    c.sessions += sessions;
+    c.engaged  += engaged;
+    c.users    += users;
+    c.sources.push({ label: source + ' / ' + medium, sessions: sessions });
+  });
 
-  const headers = ['流量來源', 'Sessions', '活躍用戶', '互動率'];
-  writeSnapshotSheet_('GA4_流量來源', {
+  const values = Object.keys(byChannel).map(k => byChannel[k])
+    .sort((a, b) => b.sessions - a.sessions)
+    .map(c => {
+      // 前 3 大來源：拿來對照 Looker、抓分錯類的來源（例如新冒出的 LLM 網域落到「其他」）
+      const top = c.sources.slice().sort((a, b) => b.sessions - a.sessions).slice(0, 3)
+        .map(x => x.label + '（' + x.sessions + '）').join('、');
+      return [c.name, c.sessions, c.users, c.sessions > 0 ? c.engaged / c.sessions : 0, top];
+    });
+
+  const headers = ['管道（自訂）', 'Sessions', '活躍用戶（各來源加總）', '互動率', '主要來源（前 3）'];
+  const sheet = writeSnapshotSheet_('GA4_流量來源', {
     window: WINDOW_ROLLING,
     start: win.start,
     end: win.end,
     days: win.days,
-    source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 sessionDefaultChannelGroup（' +
-      win.startSpec + ' ~ ' + win.endSpec + '）',
-    note: '區間日界線由 GA4 資源時區判定；本表為區間**加總**，非日均值',
+    source: 'GA4 property ' + GA4_PROPERTY_ID + '，維度 sessionSource × sessionMedium，' +
+      '於指令碼內依 CHANNEL_RULES 分組（' + win.startSpec + ' ~ ' + win.endSpec + '）',
+    note: '管道分類對齊 Looker《PMC Dashboard》的自訂分類（2026/11/16 起；之前是 GA4 預設管道）' +
+      '｜本表為區間**加總**，非日均值｜互動率＝互動工作階段÷Sessions' +
+      '｜活躍用戶是各來源加總，跨來源的同一人會重複計，略大於實際' +
+      '｜每週快照存進「GA4_自訂管道_歷史」（舊的 GA4_流量來源_歷史 是預設管道口徑，已停寫）',
   }, headers, values);
+  if (values.length > 0) sheet.getRange(DATA_START_ROW, 4, values.length, 1).setNumberFormat('0.0%');
 
   return { headers: headers, values: values, window: win };
 }
@@ -469,6 +525,11 @@ function writeLastUpdated(clarityMessage, results, historyMessage, monthlyMessag
 //   而每列已有日期、時間座標本來就不缺。
 
 function syncClarityData() {
+  // 2026/11/15 停用 Sheet 同步（網站追蹤碼保留；決策見 vault projects/pmc-行銷數據架構.md）。
+  // 下面程式先留著，確認停用無副作用後再刪。
+  return { message: 'Clarity 已停用（2026/11/15）' };
+
+  // eslint-disable-next-line no-unreachable
   const props = PropertiesService.getScriptProperties();
   const today = formatDate(new Date()); // 沿用既有 formatDate（Session 時區、yyyy-MM-dd）
 
@@ -730,7 +791,7 @@ function appendHistorySnapshots_(collected, force) {
     { key: 'gscQueries',  sheet: 'GSC_關鍵字_歷史',     topN: HISTORY_KEYWORD_TOP_N },
     { key: 'gscPages',    sheet: 'GSC_頁面_歷史',       topN: HISTORY_TOP_N },
     { key: 'ga4Pages',    sheet: 'GA4_頁面成效_歷史',   topN: HISTORY_TOP_N },
-    { key: 'ga4Channels', sheet: 'GA4_流量來源_歷史',   topN: HISTORY_TOP_N },
+    { key: 'ga4Channels', sheet: 'GA4_自訂管道_歷史',   topN: HISTORY_TOP_N },  // 2026/11/16 改分類口徑，舊表 GA4_流量來源_歷史 凍結
     { key: 'ga4Events',   sheet: 'GA4_事件成效_歷史',   topN: HISTORY_TOP_N },
     { key: 'cardClicks',  sheet: 'GA4_申辦點擊_歷史',   topN: HISTORY_TOP_N },
     { key: 'searches',    sheet: 'GA4_熱門搜尋_歷史',   topN: HISTORY_TOP_N },
@@ -1955,6 +2016,30 @@ const UNCOVERED_SOURCE_COLS = {
 // 送出試算時輸入框是空的，GA4 會回這幾個字串——那是「空框按了試算」，不是覆蓋缺口，要跳過
 const UNCOVERED_SKIP_TERMS = { '(not set)': true, '(not provided)': true, '(other)': true };
 
+// 注入測試字串（2026/11/16 新增）。2026/11/03–04 有人往試算框灌 SQL／XSS 測試片語，
+// 它們不是商家、不該進追蹤表；而且其中以單引號開頭的（' OR '1'='1、' UNION SELECT 1,2,3--）
+// 寫進試算表時**開頭的 ' 會被 Sheets 當成「強制文字」前綴吃掉**，讀回來變成
+// 「 OR '1'='1」（看起來像前導空白），跟 GA4 的原字串永遠對不上 → 每次執行都被當新詞再 append
+// 一列（2026/11/04 起每天多 2 列）。直接不寫入就從根本斷掉。
+// 規則：長度 < 2，或含 < > -- javascript:（不分大小寫），或單引號旁邊緊貼空白或等號就略過。
+// ⚠️ 單引號刻意不一律擋：cards.data 裡有真的商家帶撇號（Komeda's Coffee、Lulu's、Tomod's），
+//    一律擋會把用戶查這幾家的落空記錄也吃掉。注入片語的單引號一定跟空白或 = 相鄰
+//    （' OR '1'='1、' UNION …），商家名的撇號後面接的是字母（'s），兩者分得開。
+const UNCOVERED_JUNK_PATTERN = /[<>]|--|javascript:|'\s|\s'|'=|='|^'|'$/i;
+
+// 商家詞的唯一正規化入口：GA4 來源、落空日期查詢、表內 A 欄三處都走這支，比對才會一致。
+// trim() 之外再去掉零寬字元（​-‍、﻿），那些 trim() 不處理、肉眼也看不到。
+function uncoveredNormTerm_(raw) {
+  return String(raw == null ? '' : raw).replace(/[​-‍﻿]/g, '').trim();
+}
+
+// true＝這個詞不寫進追蹤表（空框佔位字串、太短、注入測試字串）
+function uncoveredIsJunk_(term) {
+  if (term.length < 2) return true;
+  if (UNCOVERED_SKIP_TERMS[term.toLowerCase()]) return true;
+  return UNCOVERED_JUNK_PATTERN.test(term);
+}
+
 // merchant × date，一個詞一天一列。多數詞只在少數幾天落空，實際遠小於上限。
 const UNCOVERED_MISS_DATE_ROW_LIMIT = 10000;
 
@@ -2017,10 +2102,8 @@ function uncoveredLastMissDates_() {
 
   const latest = {};   // term → 'YYYYMMDD'（字串比大小就是日期比大小，不必先轉物件）
   rows.forEach(row => {
-    const raw = row.dimensionValues[0].value;
-    const term = String(raw == null ? '' : raw).trim();
-    if (!term) return;
-    if (UNCOVERED_SKIP_TERMS[term.toLowerCase()]) return;
+    const term = uncoveredNormTerm_(row.dimensionValues[0].value);
+    if (uncoveredIsJunk_(term)) return;
     const d = String(row.dimensionValues[1].value);
     if (!/^\d{8}$/.test(d)) return;
     if (!latest[term] || d > latest[term]) latest[term] = d;
@@ -2085,6 +2168,7 @@ function updateUncoveredMerchants(searchData) {
     '標記待確認 ' + outcome.resolved + ' 個（⚠️ 需人工查證後改成「' + UNCOVERED_STATUS_DONE + '」）',
     '更新 ' + outcome.updated + ' 列既有記錄',
     '本次視窗未對到詞共 ' + outcome.missTerms + ' 個',
+    '略過非商家詞 ' + (stats.skipped || 0) + ' 個（空框／太短／注入測試字串）',
   ];
   if (dateError) {
     parts.push('⚠️ 落空日期查詢失敗（' + dateError + '）——最近出現日這次整欄未更新，' +
@@ -2122,16 +2206,18 @@ function uncoveredSourceRows_(searchData) {
   });
 
   const out = [];
+  let skipped = 0;
   (searchData.values || []).forEach(row => {
-    const term = String(row[idx.term] == null ? '' : row[idx.term]).trim();
-    if (!term) return;                                          // 空字串＝空框送出
-    if (UNCOVERED_SKIP_TERMS[term.toLowerCase()]) return;        // (not set) 等佔位字串同理
+    const term = uncoveredNormTerm_(row[idx.term]);
+    // 空框送出、(not set) 等佔位字串、太短的詞、注入測試字串一律不寫（見 uncoveredIsJunk_）
+    if (uncoveredIsJunk_(term)) { skipped++; return; }
     out.push({
       term: term,
       matched: Number(row[idx.matched]) || 0,
       unmatched: Number(row[idx.unmatched]) || 0,
     });
   });
+  out.skipped = skipped;   // 掛在陣列上回報給更新紀錄，不改既有回傳型別
   return out;
 }
 
@@ -2229,6 +2315,7 @@ function uncoveredWriteBanner_(sheet, layout, win) {
     '已覆蓋的詞若再度落空：程式不會自動翻回「' + UNCOVERED_STATUS_OPEN + '」（狀態是人工欄），' +
       '但「最近視窗未對到次數」會 > 0，用它就篩得出退步的項目',
     '空框送出（GA4 的 (not set)）不列入：那是沒輸入，不是覆蓋缺口',
+    '不寫入的詞：長度 <2，或含 < > -- javascript:、單引號緊貼空白或等號的注入測試字串（Komeda\'s 這類撇號照常寫入）（2026/11/16 起；之前寫進來的那幾列請手動刪除，不會再長回來）',
     '商家詞欄由程式設成純文字格式：不這樣做的話「7-11」會被試算表判讀成日期，那列就再也對不到' +
       '來源資料、每天被重複新增（欄位靠左對齊＝文字，靠右＝被轉型了，看到就刪掉讓它重建）',
     '本次更新：' + formatStamp_(new Date()),
@@ -2268,7 +2355,7 @@ function uncoveredApply_(sheet, layout, stats, today, missDates) {
     // 這種列永遠對不到 GA4 的字串、會每天被重複 append，所以點出來請人工刪掉重建。
     // （數字沒這個問題：711 轉回字串還是 '711'，對得回去。）
     if (raw instanceof Date) { coerced++; return; }
-    const term = String(raw).trim();
+    const term = uncoveredNormTerm_(raw);   // 跟來源端同一支正規化，兩邊才比得起來
     if (!term) return;
     if (indexOf[term] === undefined) indexOf[term] = i;
     else duplicates++;
