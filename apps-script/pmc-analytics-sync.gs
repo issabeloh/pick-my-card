@@ -276,11 +276,15 @@ function updateGA4Daily() {
 // 舊版用 GA4 預設的 sessionDefaultChannelGroup。問題：Threads／IG 是本站主要流量入口，
 // 在預設分類裡卻被拆散或埋進 Direct，Sheet 跟 Looker《PMC Dashboard》（已有自訂分類）
 // 對不起來，週報／月報讀 Sheet 會跟站長在 Looker 上看到的不一樣。
-// 現在改成用 sessionSource × sessionMedium 查回來，在指令碼內照 CHANNEL_RULES 分組。
+// 現在改成用 sessionSource × sessionMedium 查回來，在指令碼內照 CHANNEL_RULES 分組（分類名稱與 Looker 完全相同）。
 //
-// ⚠️ 規則只有 CHANNEL_RULES 一處。Looker 的自訂欄位公式改了，這裡要同步改，否則兩邊又會分家。
-//    由上往下比對、第一條命中就停（跟 Looker 的 CASE WHEN 一樣有順序性）。
-//    source／medium 比對前一律轉小寫。
+// ⚠️ 規則只有 CHANNEL_RULES 一處，**逐條照抄** Looker《PMC Dashboard》的群組欄位
+//    （欄位 Session source / medium，2026/11/16 截圖核對）。Looker 那邊改了，這裡要同步改。
+//    比對對象＝「source / medium」字串（與 Looker 欄位同格式），由上往下、第一條命中就停，
+//    跟 Looker「Each value will be included in the first group in matches」一致。
+//    Looker 的 Contains／RegExp Contains 都分大小寫，這裡也不轉小寫，才會分得一模一樣。
+//    注意 IG 那條是照抄的 /instagram|ig/：任何含「ig」的字串都會命中（例如 digg），
+//    要改就兩邊一起改，不要只改這裡。
 // ⚠️ 數字口徑：
 //   - Sessions、互動工作階段：各來源直接相加，精確。
 //   - 互動率＝互動工作階段 ÷ Sessions（**重新計算**，不是把各來源的比率平均）。
@@ -289,23 +293,22 @@ function updateGA4Daily() {
 // ⚠️ 歷史快照改寫到「GA4_自訂管道_歷史」。舊的「GA4_流量來源_歷史」是預設管道口徑，
 //    兩種分類混在同一張表會讓趨勢線在改版那週無聲斷層，所以舊表保留不再寫入（凍結存檔）。
 const CHANNEL_RULES = [
-  { name: 'Threads 社群', source: /threads/ },
-  { name: 'IG 社群',      source: /instagram|^ig$/ },
-  { name: 'LLM',          source: /chatgpt|openai|perplexity|gemini|claude|copilot|deepseek|grok|poe\.com/ },
-  { name: '自然',         medium: /^organic$/ },
-  { name: '直接',         source: /^\(direct\)$/, medium: /^\((none|not set)\)$/ },
+  { name: '自然流量',        pattern: /organic/ },
+  { name: '直接流量',        pattern: /direct/ },
+  { name: '廣告流量',        pattern: /paid/ },
+  { name: '社群流量',        pattern: /facebook|linkedin|youtube|lnkd|x\.com/ },
+  { name: 'LLM流量',         pattern: /chatgpt|perplexity|gemini|claude/ },
+  { name: 'Threads社群流量', pattern: /threads/ },
+  { name: 'IG社群流量',      pattern: /instagram|ig/ },
+  { name: 'Google探索',      pattern: /search\.google\.com/ },
 ];
-const CHANNEL_FALLBACK = '其他';
+const CHANNEL_FALLBACK = '其他流量';
 const CHANNEL_SOURCE_ROW_LIMIT = 1000;  // source × medium 組合數；目前遠低於此
 
 function classifyChannel_(source, medium) {
-  const s = String(source == null ? '' : source).trim().toLowerCase();
-  const m = String(medium == null ? '' : medium).trim().toLowerCase();
+  const key = String(source == null ? '' : source) + ' / ' + String(medium == null ? '' : medium);
   for (let i = 0; i < CHANNEL_RULES.length; i++) {
-    const r = CHANNEL_RULES[i];
-    if (r.source && !r.source.test(s)) continue;
-    if (r.medium && !r.medium.test(m)) continue;
-    return r.name;
+    if (CHANNEL_RULES[i].pattern.test(key)) return CHANNEL_RULES[i].name;
   }
   return CHANNEL_FALLBACK;
 }
