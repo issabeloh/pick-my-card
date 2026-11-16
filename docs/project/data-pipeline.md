@@ -611,6 +611,42 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
 寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
 
+### 9c. 安心申辦：信任區塊／按鈕去向／大師加碼說明（2026-11-16）
+
+這頁是辦卡轉換的主要入口，但原本沒有任何一句話交代「按鈕去哪、資料給誰、本站怎麼賺錢」
+（唯一的揭露在 /privacy 5.2）。全部由 `generatePromosPageHtml()` 生成，樣式在 `promos.css` 最後一段。
+
+- **信任區塊**（`pmcRenderTrust_`，`<details class="pmc-trust" id="trust">`）：hero 下方、頁內索引列上方。
+  收合時只有一列（`PMC_TRUST_POINTS` 三個重點＋「申辦前想知道的事 ▾」），點開是 `PMC_TRUST_QA` 五題問答。
+  同一份 `PMC_TRUST_QA` 也輸出成 `<head>` 的 FAQPage JSON-LD（`pmcBuildTrustJsonLd_`），兩邊不會分岔。
+  ⚠️ 三個重點各 6～7 個字是量過的：390px 剛好排成一列，多一個字就折成兩列（360px 的手機本來就會折）。
+  ⚠️ 問答裡寫的是**事實**，要跟程式一致：排序規則＝`pmcPromoSortKey_`、推薦名單＝`pmcSelectPicks_`、
+  去向標示＝`pmcApplyDest_`。那幾支改了，文案要跟著改。
+- **按鈕去向**（`pmcApplyDest_` → `.promo-apply-dest`）：清單卡的動作列、站長推薦的申辦鈕下方、
+  活動詳情底部各一行。只看網址判斷，Sheets 不必多填欄位：
+  合作平台網域（`PMC_PARTNER_HOSTS`）→「合作連結・經 Money101 前往申辦頁」；
+  與該卡 `website` 同一個品牌網域 →「直達銀行官網・esunbank.com.tw」；其餘 →「前往 <完整網域>」。
+  比的是主網域**第一段**（esunbank），因為同一家銀行 `.com` 與 `.com.tw` 混用；連第一段都不同的
+  （國泰 cathay-cube／cathaybk）列在 `PMC_BANK_DOMAIN_ALIASES`。
+  **看到「前往 xxx」就是連結網域跟卡片的銀行對不上**——不是新增別名，就是 Sheets 的連結填錯了。
+  新的合作平台要加進 `PMC_PARTNER_HOSTS`，否則會落到「前往 <網域>」。行李箱專區的動作列太擠，沒有放。
+- **【大師加碼】說明**（`.promo-exclusive-note`）：站長定義＝本站有分潤、且透過本站連結申辦才有的
+  專屬首刷禮或活動；從本頁按鈕申辦並完成該檔全部達成條件就拿得到。摘要（`new_customer_summary`）
+  含「大師加碼」四個字的活動，詳情最上面會多一句說明；Sheets 拿掉那四個字就跟著消失。
+  用主站藍——黃、紅、綠都被類型徽章／倒數徽章／獎勵數字佔走了（見 9a 的選色禁區）。
+- **詳情底部的申辦鈕**（`.promo-detail-cta`）：讀完條件不必往回捲。只給有 `cardApplyCtas` 連結的卡；
+  GA 的 `section` 記成 `detail`（原有 picks／luggage／list）。
+- **每檔活動有自己的 id**（`…-a1`、`…-a2`）：ItemList JSON-LD 的網址從 2026-09-17 改版起就指向這組錨點，
+  但元素上一直只有 `…-a1-detail`，55 個網址全部落空。
+- **搜尋涵蓋獎勵與摘要**（`promos.js` 的 `promoRewardText`）：原本只比卡名與適用通路，搜「行李箱」
+  「氣炸鍋」是 0 筆。這幾段文字本來就顯示在卡片上，命中只標色、不代為展開。
+- **GA4 事件**（`promos.js` 的 `track()`）：`promos_detail_open`（只記親手點的）、`promos_feat_open`、
+  `promos_filter`、`promos_search`（停手 1.2 秒才送，帶 `results`，0＝找不到）、`promos_trust_open`。
+- **向後相容**：`promos.css`／`promos.js` 這一輪只有新增的 class 與有判空的程式，Sheets 還沒貼新版生成器、
+  匯出的仍是舊 HTML 時不會壞，只是看不到新區塊（搜尋範圍與 GA 事件不靠新標記，會直接生效）。
+- **刻意沒動**：頁尾之後的「申辦前先確認這幾件事」（站長 2026-07-29 定的位置）、hero 引言、
+  meta title。description 只改掉一句與現況不符的「依即將截止時間排序」。
+
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
 `sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**

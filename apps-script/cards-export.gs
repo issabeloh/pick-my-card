@@ -2402,7 +2402,7 @@ function generatePromosPageHtml(exportData) {
   const sampleNames = sampleNameList.join('、');
   // 不寫檔數：活動數每次匯出都變，放進描述會讓搜尋結果摘要跟頁面實況對不上（2026-09-23）
   const description = '信用卡新戶活動一次看' + (sampleNames ? '，含' + sampleNames + '等' : '') +
-    '首刷禮、新戶回饋加碼、定額回饋活動，依即將截止時間排序，持續更新。';
+    '首刷禮、新戶回饋加碼、定額回饋活動，附達成條件與截止日，持續更新。';
   // 版本含台北時間的時分：同一天多次匯出／改版也能破 promos.css/js 快取
   // （2026-07-16 教訓：純日期版本讓當天稍早的舊 CSS/JS 被瀏覽器快取住）。
   // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 data-pipeline.md 第 9 節）。
@@ -2782,6 +2782,111 @@ function pmcThresholdText_(promo) {
 
 // 申辦連結：有分潤 CTA 用「立即申辦」，沒有就退用銀行活動頁「活動頁面」（同清單的規則；
 // 2026-09-24 站長：所有卡都已有辦卡連結，這只是退路，且不能跟卡片內展開用的「活動詳情」撞名）
+// ---- 申辦連結的「去向」標示（2026-11-16）----
+// 有辦卡意願的人最容易在「按下去會到哪裡」這一步退縮：同樣寫「立即申辦」，有的直連銀行官網、
+// 有的先經過合作平台的追蹤網址（網址列會出現沒看過的網域）。每顆按鈕下面明講去向。
+// 判斷只看網址本身，不需要 Sheets 多填欄位：
+//   - 合作平台網域（PMC_PARTNER_HOSTS）→「合作連結・經 ○○ 前往申辦頁」
+//   - 與該卡 website 同一個品牌網域 →「直達銀行官網・<主網域>」。比的是主網域的第一段
+//     （esunbank／kgibank），不是整串——同一家銀行常常 .com 與 .com.tw 混用
+//     （卡片介紹在 esunbank.com、線上申辦在 card.esunbank.com.tw）。
+//     連第一段都不同的同一家銀行（國泰：cathay-cube／cathaybk）列在 PMC_BANK_DOMAIN_ALIASES
+//   - 其餘 →「前往 <完整網域>」（不替它背書是哪裡；連結填錯銀行時也會在這裡露出來）
+const PMC_PARTNER_HOSTS = [
+  { test: /(^|\.)money101\.com\.tw$/, name: 'Money101' },
+  { test: /(^|\.)creatory\.biz$/, name: '' }
+];
+const PMC_BANK_DOMAIN_ALIASES = { 'cathay-cube': ['cathaybk'] };
+function pmcHostOf_(url) {
+  const m = /^https?:\/\/([^\/?#:]+)/i.exec(String(url || ''));
+  return m ? m[1].toLowerCase() : '';
+}
+// 主網域：esunbank.com.tw／ctbcbank.com。台灣的二級網域（com.tw 等）取後三段，其餘取後兩段。
+function pmcBaseDomain_(host) {
+  const parts = String(host || '').split('.');
+  if (parts.length <= 2) return parts.join('.');
+  return parts.slice(/\.(com|net|org|gov|edu|idv)\.tw$/.test(host) ? -3 : -2).join('.');
+}
+function pmcApplyDest_(href, card) {
+  const host = pmcHostOf_(href);
+  if (!host) return null;
+  for (let i = 0; i < PMC_PARTNER_HOSTS.length; i++) {
+    if (PMC_PARTNER_HOSTS[i].test.test(host)) {
+      const name = PMC_PARTNER_HOSTS[i].name;
+      return { kind: 'partner', text: '合作連結・經' + (name ? ' ' + name + ' ' : '合作平台') + '前往申辦頁' };
+    }
+  }
+  const siteHost = card ? pmcHostOf_(card.website) : '';
+  const siteBrand = siteHost ? pmcBaseDomain_(siteHost).split('.')[0] : '';
+  const hostBrand = pmcBaseDomain_(host).split('.')[0];
+  if (siteBrand && (siteBrand === hostBrand || (PMC_BANK_DOMAIN_ALIASES[siteBrand] || []).indexOf(hostBrand) !== -1)) {
+    return { kind: 'bank', text: '直達銀行官網・' + pmcBaseDomain_(host) };
+  }
+  return { kind: 'other', text: '前往 ' + host };
+}
+// 輸出成 <span>：會出現在 flex 動作列與一般區塊兩種容器裡，CSS 統一把它當 block/flex 項目排。
+function pmcApplyDestHtml_(href, card, extraCls) {
+  const d = pmcApplyDest_(href, card);
+  if (!d) return '';
+  return '<span class="promo-apply-dest promo-apply-dest--' + d.kind + (extraCls ? ' ' + extraCls : '') + '">' +
+    '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5H2.5v7h7v-2M7 2.5h2.5V5M9.5 2.5L5.5 6.5" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+    pmcEscapeHtml_(d.text) + '</span>';
+}
+
+// ---- 「安心申辦」說明區塊（2026-11-16）----
+// 這頁是辦卡轉換的主要入口，但原本整頁沒有任何一句話交代：按鈕去哪、資料給誰、本站怎麼賺錢、
+// 【大師加碼】是什麼。這四件事的唯一說明在 /privacy 5.2，沒有人會在申辦前去翻。
+// 同一份問答同時輸出成可見內容與 FAQPage JSON-LD（pmcBuildTrustJsonLd_），兩邊不會分岔。
+// a＝純文字答案（JSON-LD 用同一段）；link＝答案後面附的站內連結（選填）。
+// ⚠️ 文案裡的事實要跟程式一致：排序規則＝pmcPromoSortKey_、推薦名單＝pmcSelectPicks_、
+//    去向標示＝pmcApplyDest_；那幾支改了，這裡要跟著改。
+// 三句都壓在 6～7 個字：手機（390px）要能排成一列，多一個字就會折成兩列、把推薦區往下推。
+const PMC_TRUST_POINTS = ['本站不經手個資', '按鈕標示去向', '排序不看分潤'];
+const PMC_TRUST_QA = [
+  { q: '點「立即申辦」會去哪裡？',
+    a: '每顆申辦按鈕下方都標示了去向。「直達銀行官網」會直接開啟該銀行的線上申辦頁；「合作連結」會先經過合作平台（例如 Money101）的追蹤網址，再前往申辦頁。兩種都是另開新分頁，這一頁會留著。' },
+  { q: '從這裡申辦，個人資料安全嗎？',
+    a: '本站不代辦信用卡，這一頁也沒有任何填寫申請資料的欄位。你的姓名、身分證字號、收入等申請資料，只會填在銀行或合作平台自己的頁面上，本站看不到、也拿不到。點擊離開之後，資料由對方的隱私權政策規範。',
+    link: { href: '/privacy', text: '隱私權政策' } },
+  { q: '本站怎麼賺錢？會影響排序嗎？',
+    a: '部分申辦連結是推薦連結：你透過它完成申辦，本站可能獲得推薦報酬，這是本站能免費提供的營運來源之一，不會改變你的申辦條件。下方清單的順序由程式依活動內容排列（首刷禮優先，再依回饋率、回饋金額由高到低），與有沒有報酬無關；「站長推薦」是站長指定加上依回饋率與門檻自動遞補的名單。' },
+  { q: '什麼是【大師加碼】？',
+    a: '標有【大師加碼】的活動，是透過本站（信用卡回饋大師）連結申辦才有的專屬首刷禮或加碼活動。只要從本頁的「立即申辦」按鈕進入申辦，並完成該活動「達成條件」列出的每一項，就能獲得。這類連結本站會獲得推薦報酬。' },
+  { q: '這些活動資料可靠嗎？',
+    a: '活動內容整理自各發卡銀行公開的活動辦法，清單上方標示最近一次的資料更新日期。銀行可能隨時調整名額、期間或條件，實際內容以銀行官方公告為準；發現不一致，歡迎到首頁用問題回報告訴我們。',
+    link: { href: '/terms', text: '使用須知與免責聲明' } }
+];
+function pmcRenderTrust_() {
+  const check = '<svg class="pmc-trust-check" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#d1fae5"/>' +
+    '<path d="M4.5 8.2l2.2 2.2 4.8-4.8" fill="none" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const points = PMC_TRUST_POINTS.map(function (t) {
+    return '<span class="pmc-trust-point">' + check + pmcEscapeHtml_(t) + '</span>';
+  }).join('');
+  const qa = PMC_TRUST_QA.map(function (x) {
+    // 一題包一個 div：桌機排兩欄時，題目與答案才不會被拆到不同欄
+    return '      <div class="pmc-trust-item"><h3>' + pmcEscapeHtml_(x.q) + '</h3><p>' + pmcEscapeHtml_(x.a) +
+      (x.link ? ' <a href="' + pmcEscapeHtml_(x.link.href) + '">' + pmcEscapeHtml_(x.link.text) + '</a>' : '') + '</p></div>';
+  }).join('\n');
+  return '  <details class="pmc-trust" id="trust">\n' +
+    '    <summary class="pmc-trust-summary">\n' +
+    '      <span class="pmc-trust-points">' + points + '</span>\n' +
+    '      <span class="pmc-trust-more">申辦前想知道的事<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
+    '    </summary>\n' +
+    '    <div class="pmc-trust-body">\n' + qa + '\n    </div>\n' +
+    '  </details>\n';
+}
+function pmcBuildTrustJsonLd_() {
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: PMC_TRUST_QA.map(function (x) {
+      return { '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: x.a } };
+    })
+  };
+  return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
+}
+
 function pmcApplyLink_(p) {
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
   if (ctaLink) return { href: ctaLink, label: '立即申辦', sponsored: true };
@@ -2991,6 +3096,7 @@ function pmcRenderPicks_(picks, monthLabel) {
         '">活動詳情</a><button type="button" class="promo-feat-btn pmc-pick-feat" aria-expanded="false" data-feat-card="' +
         pmcEscapeHtml_(p.promo.id) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button></div>\n' +
       '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
+      (c.link.sponsored ? '      ' + pmcApplyDestHtml_(c.link.href, p.card, 'pmc-pick-dest') + '\n' : '') +
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-picks" id="picks" aria-labelledby="pmc-picks-title">\n' +
@@ -3123,10 +3229,26 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
     ? '<div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div>' +
       '<div class="promo-notes-text">' + pmcEscapeHtmlMultiline_(promo.notes) + '</div></div>'
     : '';
+  // 【大師加碼】＝本站連結限定的活動（站長 2026-11-16 定義）：摘要裡只有這四個字，
+  // 沒看過的人不知道那是什麼、也不知道怎樣才算數——在條件正上方用一句話講完。
+  // 判斷只認摘要裡的標記，站長在 Sheets 拿掉【大師加碼】這句就跟著消失。
+  const exclusiveHtml = /大師加碼/.test(String(promo.new_customer_summary || ''))
+    ? '<p class="promo-exclusive-note"><b>大師加碼</b>本站連結限定：從本頁「立即申辦」進入申辦，' +
+      '並完成下列全部達成條件，即可獲得。</p>'
+    : '';
+  // 讀完條件的地方再放一顆申辦鈕（2026-11-16）：條件與備註常常比一個螢幕長，
+  // 原本唯一的按鈕在卡片最上面，讀完要往回捲才按得到。GA 的 section 記成 detail。
+  // 只給有分潤連結的卡——退用銀行活動頁（「活動頁面」）的不重複放。
+  const detailLink = pmcApplyLink_(p);
+  const detailCtaHtml = (detailLink && detailLink.sponsored)
+    ? '<div class="promo-detail-cta">' +
+      pmcApplyLinkHtml_(detailLink, p, 'promo-apply-btn promo-detail-apply', 'detail') +
+      pmcApplyDestHtml_(detailLink.href, p.card, '') + '</div>'
+    : '';
   return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
-    (leadHtml || '') +
+    (leadHtml || '') + exclusiveHtml +
     '<dl class="promo-card-meta">' + (leadRowHtml || '') + rows.join('') + '</dl>' +
-    notesHtml + '</div>';
+    notesHtml + detailCtaHtml + '</div>';
 }
 
 // 一檔活動（主活動與堆疊層共用同一份標記，只差外層 class）。
@@ -3155,7 +3277,9 @@ function pmcRenderPromoAct_(p, actId) {
   const summary = promo.new_customer_summary || '';
   const rewardSub = pmcRewardSub_(promo);
 
-  return '<div class="promo-act is-main" data-period-end="' +
+  // id＝ItemList JSON-LD 與 data-jump-act 用的那個錨點（…-a1）。2026-11-16 前只有
+  // 詳情區有 id（…-a1-detail），JSON-LD 的 55 個網址全部指向不存在的元素。
+  return '<div class="promo-act is-main" id="' + pmcEscapeHtml_(actId) + '" data-period-end="' +
       (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
       pmcEscapeHtml_(detailId) + '">\n' +
@@ -3262,7 +3386,7 @@ function pmcRenderPromoSubRow_(p, actId) {
 
   // is-gift 掛在整列上，CSS 靠它處理「獎品名不是數字，字重輕一階且可換行」。
   // 刻意輸出成 class 而不是靠 :has()，對舊瀏覽器是確定的行為。
-  return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
+  return '<div class="promo-act is-sub" id="' + pmcEscapeHtml_(actId) + '" data-period-end="' + (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
       '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     // 倒數徽章跟著上排（類型 chip、值）走，跟主活動「chip 旁邊掛徽章」同一個位置
@@ -3299,10 +3423,12 @@ function pmcRenderCardGroup_(group) {
   const ctaLink = group.cta ? pmcSanitizeUrl_(group.cta.link) : '';
   const promoLink = pmcSanitizeUrl_(main.promo.link);
   let ctaHtml = '';
+  let destHtml = '';   // 「立即申辦」會去哪（pmcApplyDest_）；退用銀行活動頁時按鈕自己就寫「活動頁面」，不必再標
   if (ctaLink) {
     ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) +
       '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-card-id="' +
       pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) + '">立即申辦</a>';
+    destHtml = pmcApplyDestHtml_(ctaLink, group.card, '');
   } else if (promoLink) {
     ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) +
       '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動頁面</a>';
@@ -3340,7 +3466,8 @@ function pmcRenderCardGroup_(group) {
   // 兩顆按鈕跟多檔卡一樣住在 rail 裡（站長 2026-09-21）：桌機與手機都是
   // 「卡片圖＋名稱 → 按鈕 → 分割線 → 活動內容」。放進 rail 才會在分割線**上方**
   // ——rail 的 border-bottom 就是那條線，按鈕留在 .promo-card-main 裡怎麼排都在線下。
-  const actionsHtml = '  <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n  </div>\n';
+  const actionsHtml = '  <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn +
+    (destHtml ? '\n      ' + destHtml : '') + '\n  </div>\n';
   if (acts.length === 1) {
     return openTag +
       '  <div class="promo-card-rail promo-card-rail--solo">\n' +
@@ -3370,7 +3497,8 @@ function pmcRenderCardGroup_(group) {
     '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
     '      </div>\n' +
     '    </div>\n' +
-    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
+    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn +
+      (destHtml ? '\n      ' + destHtml : '') + '\n' +
     '    </div>\n' +
     '  </div>\n' +
     '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
@@ -3504,6 +3632,7 @@ function pmcPageTemplate_(o) {
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.webPageJsonLd + '\n</script>\n' +
+'<script type="application/ld+json">\n' + pmcBuildTrustJsonLd_() + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
@@ -3580,6 +3709,9 @@ function pmcPageTemplate_(o) {
 '    </div>\n' +
 '  </section>\n' +
 '\n' +
+// 「安心申辦」說明（2026-11-16）：放在第一顆申辦鈕（站長推薦）之前。收合時只有一列，
+// 點開才是完整問答——首屏要留給獎勵，不能被說明文字佔掉。
+pmcRenderTrust_() +
 // 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
 // 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。
 (o.picksHtml || o.luggageHtml ? pmcJumpNav_(!!o.picksHtml, !!o.luggageHtml) : '') +
@@ -3597,7 +3729,7 @@ function pmcPageTemplate_(o) {
 '  <div class="promos-search-box">\n' +
 '    <div class="promos-search-input-wrap">\n' +
 '      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
-'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片、贈品或通路名稱" aria-label="搜尋卡片、贈品或通路名稱">\n' +
 '      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
 '    </div>\n' +
 '  </div>\n' +
