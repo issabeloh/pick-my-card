@@ -1452,8 +1452,8 @@ function renderCardThumb(cardId) {
 // Create card result element
 // ===== 回饋卡共用片段（2026-10-06）=====
 // 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（renderRateCard，js/card-detail.js）
-// 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。領券型卡片（createCouponResultElement）、
-// 行動支付卡片（renderPaymentCardResult，js/levels-payments.js）的下方資訊區也走這裡的 renderActivityInfo。兩邊共同的部分——徽章文字、
+// 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。領券型卡片（createCouponResultElement）
+// 的下方資訊區也走這裡的 renderActivityInfo（行動支付 2026-11-16 改成清單列 renderPaymentRow，不再走這裡）。兩邊共同的部分——徽章文字、
 // 滿額門檻句、下方資訊區的行序——只寫在這裡，改一次兩邊一起變；不要在任一邊另外拼。
 
 // 「即將開始 (N天後)」徽章（放在卡片右上 .badges-container）；沒有 periodStart 回空字串
@@ -1503,7 +1503,7 @@ function renderSpendUpgradeNotes(upgrades, amount) {
 }
 
 // 卡片下方的資訊區 .matched-merchant。行序固定：
-//   活動（activityName：搜尋結果、行動支付卡片 renderPaymentCardResult 會傳；
+//   活動（activityName：搜尋結果會傳；
 //         詳情頁回饋卡的類別已經是卡片標題，不重複）
 //   → 通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
 //   → 條件 → 銀行官方登錄連結
