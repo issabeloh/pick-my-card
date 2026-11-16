@@ -3036,7 +3036,6 @@ input[type="number"]:focus {
     overflow: visible;
     text-overflow: clip;
 }
-.card-name-with-pin .card-detail-peek-btn,
 .card-name-with-pin .pin-btn {
     height: 26px;
     padding: 0 11px 0 9px;
@@ -3162,15 +3161,11 @@ input[type="number"]:focus {
         font-size: 24px;
     }
 }
-.card-result .card-detail-peek-btn,
-.coupon-item .card-detail-peek-btn,
 .card-result .pin-btn:not(.pinned) {
     background: #fff;
     border-color: #d1d5db;
     color: #374151;
 }
-.card-result .card-detail-peek-btn:hover,
-.coupon-item .card-detail-peek-btn:hover,
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
     border-color: #9ca3af;
@@ -3797,19 +3792,21 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
-/* 卡片詳情鈕：原本是淡灰 ⓘ 純字符，用戶反映太低調找不到。改成淺藍膠囊＋
-   「詳情」文字，明顯是可點按鈕（搜尋結果／領券卡共用）。 */
+/* 卡片詳情鈕（ⓘ 詳情）：全站只有這一組樣式——白底灰框膠囊、26px 高（2026-11-16 站長要求一致化）。
+   搜尋結果卡、領券卡、選卡 modal（管理我的信用卡／管理加入比較的卡片）、推薦活動 modal 都吃這裡，
+   **不要再依所在位置另開顏色或尺寸的覆寫**；桌機密度的縮小值在檔尾「結果卡次行按鈕」。
+   沿革：最早是淡灰 ⓘ 純字符（用戶反映找不到）→ 淺藍膠囊 → 結果卡先改白底灰框 → 全站跟進。 */
 .card-detail-peek-btn {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    height: 22px;
-    padding: 0 9px 0 7px;
-    border: 1px solid #93c5fd;
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-size: 12px;
+    height: 26px;
+    padding: 0 11px 0 9px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
@@ -3820,9 +3817,9 @@ input[type="number"]:focus {
     content: '詳情';
 }
 .card-detail-peek-btn:hover {
-    color: #1e3a8a;
-    background: #dbeafe;
-    border-color: #60a5fa;
+    color: #111827;
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 /* ── Calculation breakdown button + popup ───────────────────────────────── */
@@ -9581,7 +9578,7 @@ html.pmc-onboard #search-hints-container {
 #spotlight-modal-actions {
     flex-basis: 100%;
 }
-/* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
+/* 卡片詳情鈕（modal 內）：沿用全站 .card-detail-peek-btn 樣式，
    僅把標籤文字覆蓋成「卡片詳情」。 */
 .spotlight-modal-actions .card-detail-peek-btn::after {
     content: '卡片詳情';
@@ -10616,7 +10613,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .best-badge,
     .detail-label,
     .matched-merchant,
-    .card-detail-peek-btn,
     .help-btn,
     .social-media-title,
     .social-text,
@@ -10952,10 +10948,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .matched-merchant {
         margin-top: 5px;   /* 原 6px */
-    }
-
-    .card-detail-peek-btn {
-        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
     }
 
     .calc-breakdown-btn {
@@ -11383,8 +11375,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         height: 31px;   /* 原 36px */
     }
 
-    .pin-btn,
-    .card-detail-peek-btn {
+    .pin-btn {
         height: 19px;   /* 原 22px */
     }
 
@@ -11436,10 +11427,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 
 /* 結果卡次行按鈕（桌機密度）：上方 .card-name-with-pin 的放大值特異性較高，
-   第 1／3 類的 .pin-btn／.card-detail-peek-btn 縮小值蓋不到，在這裡照比例另給
-   （26→23px、13→11.5px、內距 0.85×）。必須留在檔案最後。 */
+   第 1／3 類的 .pin-btn 縮小值蓋不到，在這裡照比例另給（26→23px、13→11.5px、內距 0.85×）。
+   ⓘ 詳情鈕全站同一個尺寸（不分位置），桌機縮小值也只有這一條。必須留在檔案最後。 */
 @media (min-width: 1025px) {
-    .card-name-with-pin .card-detail-peek-btn,
+    .card-detail-peek-btn,
     .card-name-with-pin .pin-btn {
         height: 23px;
         padding: 0 9px 0 8px;
