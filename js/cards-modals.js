@@ -54,6 +54,9 @@ function playSidebarPeekHint(sidebar, toggleBtn) {
 
     const runPeek = () => {
         if (sidebar.classList.contains('open')) return;   // 使用者已自己打開，提示就沒必要了
+        // 首次引導導覽進行中（js/home-ui.js「首次引導」）：不演，側欄會滑進打亮的區域裡；導覽最後一步本來就在講選卡。
+        // 這次不算次數，下次來照常演
+        if (document.documentElement.classList.contains('pmc-onboard')) return;
         try { localStorage.setItem(SIDEBAR_PEEK_FLAG, String(played + 1)); } catch (e) { /* 寫不進去就算了 */ }
 
         sidebar.classList.add('peek');

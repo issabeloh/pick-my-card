@@ -8,7 +8,8 @@
     <title>Apple Pay 信用卡推薦！一次比較出 2026 下半年最高回饋信用卡 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
-         - 全新訪客（完全無本站痕跡、非從 landing 來）→ 先看 landing 故事頁
+         - 全新訪客（完全無本站痕跡、非從 landing 來）→ 對半分流（2026-11-16）：一半先看 landing 故事頁，
+           一半留在工具看首次引導；localStorage 被封鎖的人存不了分組，照舊去 landing
          - 其餘所有人（登入過 / 用過工具的舊用戶 / 從 landing 點「開始使用」來）
            → 直接進工具，並加上 pmc-returning-user 讓首屏顯示 boot loader（等 auth 判定）
          hero（product-intro）已於 2026-07-20 正式從 DOM 移除：landing 全面接手行銷敘事。
@@ -52,12 +53,37 @@
             }
             return 'landing.html' + qs;
         }
+        // ===== 對半分流：landing 對上「工具＋首次引導」（2026-11-16，設計見 docs/project/ui-refresh-diagnosis.md 5.4、5.5）=====
+        // 只有「本來會被轉去 landing 的全新訪客」擲一次骰子，結果存 localStorage pmc_ab_landing：
+        //   A＝照舊轉去 landing；B＝留在工具，跑一次逐步導覽（js/home-ui.js「首次引導」；html.pmc-onboard 是它的開關）
+        // PMC_AB_TOOL_SHARE＝分到 B 的比例。測試結束改成 0（全部去 landing）或 1（取消強制轉址）就是定案。
+        // ?ab=A／?ab=B：站長看預覽用，強制指定分組並記 pmc_ab_forced，這種情況不送 ab_assigned（不汙染數字）。
+        // GA 事件在別處送：A 由 landing.html、B 由下方 Firebase module script（都讀這裡存的分組）。
+        var PMC_AB_TOOL_SHARE = 0.5;
+        function pmcShowOnboardIfNeeded() {
+            // 首次引導只給 B 組、還沒算過也沒關掉的人；商家頁與 embed 不出
+            if (localStorage.getItem('pmc_ab_landing') !== 'B' || localStorage.getItem('pmc_onboard_done') === '1') return;
+            if (location.pathname.indexOf('/merchant/') !== -1 || /[?&](merchant|embed)=/.test(location.search)) return;
+            document.documentElement.classList.add('pmc-onboard');
+        }
         try {
-            if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+            var pmcAbForced = pmcFromLanding ? null : /[?&]ab=([AB])(&|$)/.exec(location.search);
+            if (pmcAbForced) {
                 localStorage.setItem('pmc_seen_landing', '1');
-                location.replace(pmcLandingUrl());
+                localStorage.setItem('pmc_ab_landing', pmcAbForced[1]);
+                localStorage.setItem('pmc_ab_forced', '1');
+                localStorage.removeItem('pmc_onboard_done');
+                if (pmcAbForced[1] === 'A') location.replace('landing.html');
+                else { document.documentElement.classList.add('pmc-returning-user'); pmcShowOnboardIfNeeded(); }
+            } else if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
+                var pmcAbGroup = Math.random() < PMC_AB_TOOL_SHARE ? 'B' : 'A';
+                localStorage.setItem('pmc_seen_landing', '1');
+                localStorage.setItem('pmc_ab_landing', pmcAbGroup);
+                if (pmcAbGroup === 'A') location.replace(pmcLandingUrl());
+                else { document.documentElement.classList.add('pmc-returning-user'); pmcShowOnboardIfNeeded(); }
             } else {
                 document.documentElement.classList.add('pmc-returning-user');
+                pmcShowOnboardIfNeeded();
             }
         } catch (e) {
             // localStorage 不可用（無痕強化/隱私封鎖）
@@ -530,6 +556,8 @@
                  （推薦活動、推薦比較——桌機要跨整個版面寬，所以放在側欄外面）。 -->
             <div class="app-view" id="view-search" data-view="search">
             <section class="input-section" style="display: none;">
+                <!-- 首次引導（2026-11-16）：分流 B 組第一次來時的逐步導覽（背景暗化＋打亮目標），整組由
+                     js/home-ui.js「首次引導」動態建立，這裡沒有對應的靜態標記。 -->
                 <div class="input-row-with-button">
                     <div class="form-group compact">
                         <label for="merchant-input">
@@ -1320,7 +1348,7 @@ Apple Pay 國內消費 2026 下半年首選永豐 Sport 卡 5%；兆豐 BT21 卡
     <script type="module" async>
       // Import the functions you need from the SDKs you need
       import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-      import { getAnalytics, logEvent } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+      import { getAnalytics, logEvent, setUserProperties } from"https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
       import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, reauthenticateWithPopup, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
       import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, deleteField, deleteDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
       import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-storage.js";
@@ -1356,6 +1384,22 @@ Apple Pay 國內消費 2026 下半年首選永豐 Sport 卡 5%；兆豐 BT21 卡
       window.firebaseAuth = auth;
       window.firebaseAnalytics = analytics;
       window.logEvent = logEvent;
+
+      // 對半分流（<head> 首屏路由 script 擲的骰子）：告訴 GA 這個人是哪一組。
+      // 使用者屬性 ab_landing 每次載入都設；ab_assigned 事件每人只送一次（pmc_ab_sent），
+      // A 組通常已經在 landing.html 送過。站長用 ?ab= 強制指定的不送。
+      try {
+        const abGroup = localStorage.getItem('pmc_ab_landing');
+        if ((abGroup === 'A' || abGroup === 'B') && localStorage.getItem('pmc_ab_forced') !== '1') {
+          setUserProperties(analytics, { ab_landing: abGroup });
+          if (localStorage.getItem('pmc_ab_sent') !== '1') {
+            localStorage.setItem('pmc_ab_sent', '1');
+            logEvent(analytics, 'ab_assigned', { ab_group: abGroup });
+          }
+        }
+      } catch (e) {
+        // localStorage 讀不到＝這個人本來就沒進分流
+      }
       window.db = db;
       window.storage = storage;
       window.googleProvider = provider;

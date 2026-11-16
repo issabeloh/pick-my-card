@@ -155,7 +155,8 @@ function displayResults(results, originalAmount, searchedItem, isBasicCashback =
 // 未達單筆門檻的活動區（#threshold-results-section，2026-11-14 站長要求）
 // 金額未滿 minSpend 的活動以前直接不出現；現在另列一區：不進排名、不會是「最優回饋」，
 // 卡片與一般結果同一支 createCardResultElement（多「未達門檻」徽章與「✘ 單筆滿 X 才適用・還差 Y」），
-// 回饋金額用門檻金額試算（卡片上寫明「以單筆 NT$X 試算」，計算明細的 Total 也是門檻金額）。
+// 回饋金額用門檻金額試算（區塊說明那行寫「回饋以門檻金額試算」，計算明細的 Total 也是門檻金額；
+// 卡片上原本另有一行「以單筆 NT$X 試算」，2026-11-16 站長要求移除——重複了）。
 // placeFirst：沒有任何進行中活動、結果區只剩一般回饋時，把這一區搬到結果區前面。
 // 資料來源見 js/cashback-engine.js 的 calculateUnmetSpendResults。
 // ============================================================
@@ -1664,7 +1665,6 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     }
                     return '';
                 })()}
-                ${isUnmetSpend ? `<div class="unmet-spend-trial-label">以單筆 NT$${escapeHtml(Math.floor(originalAmount).toLocaleString())} 試算</div>` : ''}
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋消費上限</div>

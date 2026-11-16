@@ -274,7 +274,7 @@ Grep `titleParts`）：
 - 資料來自 `calculateUnmetSpendResults()`（計算端規則見 `docs/project/cashback-engine.md` 第 6 節）。**不進排名、不會是「最優回饋」**，
   它的卡片不是 `#results-container` 的**直接子元素**——回歸、排除測試、商家頁生成器一律用 `#results-container > .card-result` 讀主結果，寫新測試時照用，不要寫成後代選擇器
 - 卡片跟一般結果同一支 `createCardResultElement()`，差別：「未達門檻」徽章、`✘ 單筆滿 NT$X 才適用・還差 NT$Y`
-  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）、回饋金額下方「以單筆 NT$X 試算」。
+  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）。（回饋金額下方原本有一行「以單筆 NT$X 試算」，2026-11-16 站長要求移除：區塊說明與計算明細都已經寫了，不要加回來。）
   **回饋金額用門檻金額算**（計算明細的 Total 也是門檻金額），不是用戶輸入的金額
 - 排序：門檻低的在前，同門檻回饋高的在前。**級距每一級都列**（站長決定，不只列最近的一級）
 - 位置：平常**嵌在 `#results-container` 裡**，主結果之後、排除卡與即將開始之前（`displayResults()` 畫完卡片後搬進去；清空容器前會先搬出來，節點用 `getThresholdSectionEl()` 留著）。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
@@ -312,6 +312,8 @@ Grep `titleParts`）：
 - **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
 - **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
 - **公告列在頁首外面**（2026-11-16 第二批，站長選的方案）：`#announcement-bar` 是 `.container` 的直系子節點、緊接 `</header>`，灰底單行，寬度自己管（左右各 20px、手機 16px）。兩個頁籤畫面都顯示；embed 模式靠 `html.pmc-embed .announcement-bar` 隱藏。手機單行截斷、不顯示圓點（`buildAnnouncementDots()` 與圓點樣式留著沒刪）。日期仍必須是文字的兄弟元素
+- **手機結果卡三欄比例**（≤768px，2026-11-16 站長回報金額欄太靠左）：`.card-details` 是 `0.8fr 1.2fr 1fr`，<360px 才用舊的 `0.65fr 1.35fr 1fr`。改比例前量 360～768 幾種寬度，回饋率、金額＋計算機鈕、上限都要各在一行。已知代價：富邦 J 卡金額下方的小字「(現金回饋或LINE POINTS)」在 375～390px 變兩行
+- **首次引導**（2026-11-16）：分流 B 組第一次來時的四步導覽（背景暗化＋打亮目標），沒有靜態標記，整組由 `js/home-ui.js`「首次引導」建立；要不要跑由 `index.html` 首屏路由 script 加的 `html.pmc-onboard` 決定。打亮的目標是 `.merchant-search-box`、`#calculate-btn`、`#results-container > .card-result`、`#supported-cards`／`#sidebar-toggle-btn`——**改這些元素的 id／class 或搬位置時要一起看導覽**。來龍去脈、被否決的第一版與「測試期間不能改」的規定見 `ui-refresh-diagnosis.md` 5.4、5.6 節
 - **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 
@@ -422,6 +424,7 @@ Grep `titleParts`）：
   - **協助輸入**（只有一個關鍵詞，如 LinePay、街口支付、ApplePay、悠遊卡、日本網購）：按下＝把 displayName 打進搜尋框再走 `handleMerchantInput()`，精準搜尋、Search Hints 全照打字規則。（導入時驗過這 5 個：打 displayName 與查關鍵詞的匹配完全相同，所以不精準時結果不變；勾精準時「悠遊卡」會變成零結果，因為資料裡的 item 是「悠遊卡自動加值」——跟自己打字一樣）。用戶自訂快捷同樣適用
   - 勾／取消精準搜尋只更新匹配狀態列，**不自動重算**結果卡片，要用戶再按「計算」（2026-10-08 站長確認，自動重算的做法被否決；理由：精準搜尋跟商家、金額、快捷搜尋同屬送出前的查詢條件，同一組條件一律按「計算」才生效）
 - **條件已變更提醒**（2026-10-08，`js/home-ui.js`「計算鈕提醒」）：算過一次之後，商家、金額、精準搜尋（快捷搜尋時不算）、新戶活動、快捷搜尋任一改了，「計算回饋」鈕閃一下（`.calc-nudge`，同推薦活動「帶入查詢」那個動畫）；改回跟上次計算一樣就停。條件快照在 `calculateCashback()` 開頭由 `rememberCalcConditions()` 記下。**新增會影響結果的查詢條件時，要加進 `currentCalcConditions()`，並在它的變更處呼叫 `nudgeIfCalcConditionsChanged()`**
+- **Search Hints 手機字級**（2026-11-16 站長回報太小）：文案 14px、建議鈕 13px（原本 12／11px，比桌機還小）。不要再縮
 - **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有文案就顯示，建議詞選填（沒有建議詞時只顯示文案，`.search-hint-message-only`，2026-10-08）。文案必填由 Apps Script 保證（見 data-pipeline.md 第 2 節 Search Hints），前端不做預設句。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 

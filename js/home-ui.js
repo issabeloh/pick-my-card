@@ -4,6 +4,7 @@
  *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
  *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"
  *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
+ *  - 首次引導（分流 B 組的逐步導覽）→ "首次引導" / "ONBOARD_STEPS" / "beginOnboardTour"
  *  - 錯誤訊息                  → "showErrorMessage"
  *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
  *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
@@ -732,6 +733,7 @@ function rememberCalcConditions() {
     lastCalcConditions = currentCalcConditions();
     const calcBtn = document.getElementById('calculate-btn');
     if (calcBtn) calcBtn.classList.remove('calc-nudge');
+    onboardTourOnCalc();   // 首次引導：算過一次就不再出現；導覽停在「按計算」那一步時接著講結果
 }
 // 各條件的變更處呼叫：算過、而且條件跟上次不同才閃；改回跟上次一樣就停（逐字打回原商家時，
 // 打到一半的字會先觸發閃動，打完那一下要收掉）
@@ -789,6 +791,332 @@ function compareSpotlightMerchant(merchant, opts) {
         if (target) target.scrollIntoView({ behavior: 'smooth', block: results === target ? 'start' : 'center' });
     }, 200);
 }
+
+// ============ 首次引導（2026-11-16，分流測試 B 組；設計見 docs/project/ui-refresh-diagnosis.md 5.5、5.6）============
+// 背景暗化、一次只打亮一樣東西的逐步導覽。第一版是在搜尋框上方加一塊說明＋範例鈕，站長看完否決
+// （畫面更亂、點範例直接跳到結果不知道發生什麼事），所以改成帶著用戶把「選商家 → 按計算 → 看結果」親手走一遍。
+// 要不要跑由 index.html <head> 的首屏路由 script 決定（html.pmc-onboard）；樣式在 styles.css「首次引導」。
+// ⚠️ 分流測試期間不要改步驟、文案與範例（只有 B 組看得到，改了前後數字不能比）。
+//  - 第 2 步用戶按的是真的「計算回饋」鈕；那一次 calculate_cashback 的 surface 是 onboard_example
+//    （getAnalyticsSurface 讀 window.pmcOnboardCalc），看分流結果時要排除，不然 B 組的試算率是被導覽墊高的。
+//  - 算過任何一次、按「跳過」、或走完，都記 pmc_onboard_done：下次來不再出現。
+const ONBOARD_EXAMPLES = ['蝦皮', '中華航空', 'Apple Pay'];
+const ONBOARD_STEPS = [
+    {
+        id: 'pick',
+        target: () => document.querySelector('.merchant-search-box'),
+        title: '結帳前，先 Pick My Card。',
+        text: '一鍵比較你的信用卡哪張回饋最高！先選一個商家或行動支付試看看：',
+        examples: true
+    },
+    {
+        id: 'calc',
+        target: () => document.getElementById('calculate-btn'),
+        interactive: true,   // 這一步要用戶親手按打亮的按鈕
+        title: '按「計算回饋」',
+        text: (tour) => `已經幫你填好「${tour.example}」，消費金額先用預設的 NT$1,000，之後可以改成實際要刷的金額。`
+    },
+    {
+        id: 'result',
+        target: () => document.querySelector('#results-container > .card-result'),
+        title: '回饋最高的卡排在最前面',
+        text: '依照試算的回饋金額排列，越往下滑回饋金額越低。',
+        next: '下一步'
+    },
+    {
+        id: 'cards',
+        // 桌機側欄常駐 → 打亮選卡區；手機／平板側欄收在抽屜裡 → 打亮漢堡鈕
+        target: () => {
+            const chips = document.getElementById('supported-cards');
+            const sidebar = document.getElementById('sidebar');
+            if (chips && chips.offsetParent && sidebar && getComputedStyle(sidebar).position !== 'fixed') return chips;
+            const toggle = document.getElementById('sidebar-toggle-btn');
+            return toggle && toggle.offsetParent ? toggle : null;
+        },
+        title: '只比較你有的卡',
+        text: (tour, el) => el && el.id === 'sidebar-toggle-btn'
+            ? '目前正在比較站內的所有信用卡。點擊左上角的選單，可以篩選你持有的卡片，只看到與你相關的結果。'
+            // 桌機沒有左上角選單（側欄常駐），同一句話改指打亮的選卡區
+            : '目前正在比較站內的所有信用卡。在這裡可以篩選你持有的卡片，只看到與你相關的結果。',
+        next: '開始使用'
+    }
+];
+let onboardTour = null;   // 導覽進行中才有值：{ index, example, dim, hole, block, panel, target, raf, lastBox }
+
+function logOnboardEvent(name, params) {
+    if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, name, params || {});
+}
+function markOnboardDone() {
+    if (!document.documentElement.classList.contains('pmc-onboard')) return;
+    try {
+        localStorage.setItem('pmc_onboard_done', '1');
+    } catch (e) {
+        // 存不了就只是下次還會再看到一次導覽
+    }
+}
+// 等工具畫面真的出來（卡片資料載完、開場 loader 收掉）才開始；等太久就放棄，把收起來的快捷選項還回去
+function startOnboardTourWhenReady() {
+    if (!document.documentElement.classList.contains('pmc-onboard')) return;
+    let waited = 0;
+    const timer = setInterval(() => {
+        waited += 200;
+        const section = document.querySelector('.input-section');
+        const loader = document.getElementById('pmc-boot-loader');
+        const ready = cardsData && section && section.offsetParent &&
+            (!loader || getComputedStyle(loader).display === 'none' || getComputedStyle(loader).visibility === 'hidden' || getComputedStyle(loader).opacity === '0');
+        if (ready) {
+            clearInterval(timer);
+            beginOnboardTour();
+        } else if (waited >= 15000) {
+            clearInterval(timer);
+            document.documentElement.classList.remove('pmc-onboard');
+        }
+    }, 200);
+}
+function beginOnboardTour() {
+    if (onboardTour) return;
+    const dim = document.createElement('div');
+    dim.className = 'tour-dim';
+    const hole = document.createElement('div');
+    hole.className = 'tour-hole';
+    const block = document.createElement('div');
+    block.className = 'tour-block';
+    const panel = document.createElement('div');
+    panel.className = 'tour-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', '使用說明');
+    document.body.append(dim, hole, block, panel);
+    onboardTour = { index: -1, example: '', dim, hole, block, panel, target: null, raf: 0, lastBox: '' };
+    document.addEventListener('keydown', onboardTourKeydown);
+    logOnboardEvent('onboard_start');
+    showOnboardStep(0);
+    requestAnimationFrame(() => dim.classList.add('on'));
+    const follow = () => {
+        if (!onboardTour) return;
+        positionOnboardTour();
+        onboardTour.raf = requestAnimationFrame(follow);
+    };
+    onboardTour.raf = requestAnimationFrame(follow);
+}
+function onboardTourKeydown(e) {
+    if (e.key === 'Escape') endOnboardTour('skip');
+}
+function showOnboardStep(index, dir) {
+    const tour = onboardTour;
+    if (!tour) return;
+    dir = dir === -1 ? -1 : 1;
+    // 找不到目標的步驟直接跳過（例如某個寬度下沒有漢堡鈕也沒有常駐側欄）；往回走時同樣往回跳
+    while (index >= 0 && index < ONBOARD_STEPS.length && !ONBOARD_STEPS[index].target()) index += dir;
+    if (index < 0) return;
+    if (index >= ONBOARD_STEPS.length) { endOnboardTour('complete'); return; }
+    if (index === 0) tour.example = '';   // 回到第 1 步：範例可以重選
+    const step = ONBOARD_STEPS[index];
+    const el = step.target();
+    tour.index = index;
+    tour.target = el;
+    tour.lastBox = '';
+    window.pmcOnboardCalc = step.id === 'calc';
+
+    // 說明框內容一律用 createElement／textContent 組（沒有 innerHTML）
+    const panel = tour.panel;
+    panel.classList.remove('on');
+    panel.textContent = '';
+    const stepLabel = document.createElement('p');
+    stepLabel.className = 'tour-step';
+    stepLabel.textContent = `${index + 1} / ${ONBOARD_STEPS.length}`;
+    const title = document.createElement('h2');
+    title.className = 'tour-title';
+    title.textContent = step.title;
+    const text = document.createElement('p');
+    text.className = 'tour-text';
+    text.textContent = typeof step.text === 'function' ? step.text(tour, el) : step.text;
+    panel.append(stepLabel, title, text);
+    if (step.examples) {
+        const list = document.createElement('div');
+        list.className = 'tour-examples';
+        ONBOARD_EXAMPLES.forEach(term => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'tour-example';
+            btn.textContent = term;
+            btn.addEventListener('click', () => pickOnboardExample(term));
+            list.appendChild(btn);
+        });
+        panel.appendChild(list);
+    }
+    const foot = document.createElement('div');
+    foot.className = 'tour-foot';
+    const skip = document.createElement('button');
+    skip.type = 'button';
+    skip.className = 'tour-skip';
+    skip.textContent = index === ONBOARD_STEPS.length - 1 ? '關閉' : '跳過';
+    skip.addEventListener('click', () => endOnboardTour('skip'));
+    foot.appendChild(skip);
+    if (index === 0) {
+        const intro = document.createElement('a');
+        intro.className = 'tour-intro';
+        intro.href = '/landing';
+        intro.target = '_blank';              // 開新分頁：導覽留在原分頁，看完回來可以接著走
+        intro.rel = 'noopener noreferrer';
+        intro.textContent = '看完整介紹 ↗';
+        intro.addEventListener('click', () => logOnboardEvent('onboard_intro_click'));
+        foot.appendChild(intro);
+    }
+    if (index > 0) {
+        const back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'tour-back';
+        back.textContent = '上一步';
+        back.addEventListener('click', () => showOnboardStep(index - 1, -1));
+        foot.appendChild(back);
+    }
+    if (step.next) {
+        const next = document.createElement('button');
+        next.type = 'button';
+        next.className = 'tour-next';
+        next.textContent = step.next;
+        next.addEventListener('click', () => showOnboardStep(index + 1));
+        foot.appendChild(next);
+    }
+    panel.appendChild(foot);
+
+    // 目標不在畫面裡就先捲過去（第 3 步的結果卡、第 4 步回到頁首）
+    const r = el.getBoundingClientRect();
+    if (r.top < 70 || r.bottom > window.innerHeight - 20) {
+        el.scrollIntoView({ behavior: 'smooth', block: r.height > window.innerHeight * 0.6 ? 'start' : 'center' });
+    }
+    requestAnimationFrame(() => {
+        if (!onboardTour) return;
+        tour.hole.classList.add('on');
+        panel.classList.add('on');
+    });
+}
+// 暗化層的形狀：整片（比視窗四邊各多出 ONBOARD_DIM_BLEED）挖掉一個圓角矩形。
+// 外框順時針、洞逆時針，預設的 nonzero 規則就會挖空，不必用 evenodd 參數（舊版 Safari 不一定認）。
+// 座標要加上 BLEED，因為暗化層的左上角在視窗外（styles.css .tour-dim 的 inset 要跟這個數字一致）。
+const ONBOARD_DIM_BLEED = 400;
+function onboardDimPath(x, y, w, h) {
+    const B = ONBOARD_DIM_BLEED;
+    const W = window.innerWidth + B * 2, H = window.innerHeight + B * 2;
+    let d = `M0 0H${W}V${H}H0Z`;
+    if (w > 0 && h > 0) {
+        const r = Math.min(14, w / 2, h / 2);
+        const x0 = x + B, y0 = y + B, x1 = x0 + w, y1 = y0 + h;
+        d += `M${x0} ${y0 + r}V${y1 - r}A${r} ${r} 0 0 0 ${x0 + r} ${y1}H${x1 - r}A${r} ${r} 0 0 0 ${x1} ${y1 - r}` +
+             `V${y0 + r}A${r} ${r} 0 0 0 ${x1 - r} ${y0}H${x0 + r}A${r} ${r} 0 0 0 ${x0} ${y0 + r}Z`;
+    }
+    return `path("${d}")`;
+}
+// 每個畫格跟著目標的位置走（捲動、縮放、結果載入造成的位移都不用另外處理）；位置沒變就不動 DOM
+function positionOnboardTour() {
+    const tour = onboardTour;
+    if (!tour || !tour.target) return;
+    const step = ONBOARD_STEPS[tour.index];
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const r = tour.target.getBoundingClientRect();
+    const pad = 6;
+    // 洞不超出視窗（側欄選卡區可能比視窗高）
+    const top = Math.max(8, r.top - pad), left = Math.max(8, r.left - pad);
+    const right = Math.min(vw - 8, r.right + pad), bottom = Math.min(vh - 8, r.bottom + pad);
+    const pw = tour.panel.offsetWidth, ph = tour.panel.offsetHeight;
+    const key = [top, left, right, bottom, pw, ph, vw, vh].map(Math.round).join(',');
+    if (key === tour.lastBox) return;
+    tour.lastBox = key;
+
+    const w = Math.max(0, right - left), h = Math.max(0, bottom - top);
+    Object.assign(tour.hole.style, { top: top + 'px', left: left + 'px', width: w + 'px', height: h + 'px' });
+    tour.dim.style.clipPath = onboardDimPath(left, top, w, h);
+    // 要親手按的步驟：拿掉擋在洞上面的那一層（洞以外仍被暗化層擋住）
+    tour.block.style.display = step.interactive ? 'none' : '';
+
+    // 說明框：依序試下方、上方、右側、左側，都放不下就貼在視窗底部
+    const gap = 14;
+    const clampX = (x) => Math.min(Math.max(12, x), vw - pw - 12);
+    const clampY = (y) => Math.min(Math.max(12, y), vh - ph - 12);
+    const alignX = w > pw ? left : left + w / 2 - pw / 2;
+    // 又高又窄的目標（桌機側欄的選卡區）先試右側：放下方會壓到旁邊不相干的內容
+    const tall = h > vh * 0.5 && right + gap + pw <= vw - 12;
+    let px, py;
+    if (tall) { px = right + gap; py = clampY(top); }
+    else if (bottom + gap + ph <= vh - 12) { px = clampX(alignX); py = bottom + gap; }
+    else if (top - gap - ph >= 12) { px = clampX(alignX); py = top - gap - ph; }
+    else if (right + gap + pw <= vw - 12) { px = right + gap; py = clampY(top); }
+    else if (left - gap - pw >= 12) { px = left - gap - pw; py = clampY(top); }
+    else { px = clampX(vw / 2 - pw / 2); py = vh - ph - 12; }
+    tour.panel.style.left = px + 'px';
+    tour.panel.style.top = py + 'px';
+}
+// 第 1 步選了範例：把字一個一個打進搜尋框（讓人看得出「是這裡被填了」），再走站上原本的帶入流程
+function pickOnboardExample(term) {
+    const tour = onboardTour;
+    if (!tour || tour.example) return;
+    tour.example = term;
+    tour.panel.querySelectorAll('.tour-example').forEach(b => { b.disabled = true; });
+    logOnboardEvent('onboard_example_click', { example: term });
+    const input = document.getElementById('merchant-input');
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const finish = () => {
+        if (!onboardTour) return;
+        compareSpotlightMerchant(term, { fillOnly: true });   // 只帶入、不計算；計算留給第 2 步讓用戶自己按
+        if (input) input.blur();                             // 手機不要彈鍵盤
+        setTimeout(() => showOnboardStep(1), reduceMotion ? 0 : 450);
+    };
+    if (!input || reduceMotion) { finish(); return; }
+    const chars = Array.from(term);
+    let i = 0;
+    const typer = setInterval(() => {
+        if (!onboardTour) { clearInterval(typer); return; }
+        i++;
+        input.value = chars.slice(0, i).join('');
+        if (i >= chars.length) { clearInterval(typer); finish(); }
+    }, Math.max(40, Math.round(480 / chars.length)));
+}
+// calculateCashback() 一開始會呼叫（經 rememberCalcConditions）：導覽停在第 2 步時，等結果卡出來再進第 3 步
+function onboardTourOnCalc() {
+    markOnboardDone();   // 算過一次，下次來就不再出現
+    const tour = onboardTour;
+    if (!tour || ONBOARD_STEPS[tour.index].id !== 'calc') return;
+    tour.target = null;                 // 計算期間先全暗
+    tour.hole.classList.remove('on');
+    tour.panel.classList.remove('on');
+    tour.dim.style.clipPath = onboardDimPath(0, 0, 0, 0);
+    tour.block.style.display = '';
+    // 舊的結果卡會被整批換掉，所以等「這次計算」的卡：先記下現在的第一張，換成別的節點才算數
+    const before = document.querySelector('#results-container > .card-result');
+    let waited = 0;
+    const timer = setInterval(() => {
+        waited += 100;
+        if (!onboardTour) { clearInterval(timer); return; }
+        const card = document.querySelector('#results-container > .card-result');
+        if (card && card !== before && card.offsetParent) {
+            clearInterval(timer);
+            // 站上自己會把結果區捲到畫面上方，等它捲完再打亮
+            setTimeout(() => showOnboardStep(tour.index + 1), 500);
+        } else if (waited >= 8000) {
+            clearInterval(timer);
+            endOnboardTour('complete');   // 沒有結果卡可以講解：安靜收掉
+        }
+    }, 100);
+}
+function endOnboardTour(reason) {
+    const tour = onboardTour;
+    if (!tour) return;
+    logOnboardEvent(reason === 'skip' ? 'onboard_dismiss' : 'onboard_complete', { onboard_step: ONBOARD_STEPS[Math.max(0, tour.index)].id });
+    cancelAnimationFrame(tour.raf);
+    document.removeEventListener('keydown', onboardTourKeydown);
+    tour.dim.remove();
+    tour.hole.remove();
+    tour.block.remove();
+    tour.panel.remove();
+    onboardTour = null;
+    window.pmcOnboardCalc = false;
+    markOnboardDone();
+    // 導覽期間藏起來的 Search Hint（範例商家帶出來的）直接清掉，不要在導覽結束那一刻突然冒出來
+    if (typeof clearSearchHints === 'function') clearSearchHints();
+    document.documentElement.classList.remove('pmc-onboard');
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startOnboardTourWhenReady);
+else startOnboardTourWhenReady();
 
 // Show error message to user
 function showErrorMessage(message) {

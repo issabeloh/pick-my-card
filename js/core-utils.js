@@ -78,6 +78,8 @@ try {
 function getAnalyticsSurface() {
     try {
         if (isEmbedMode) return 'promos_embed';
+        // 首次引導導覽裡、用範例商家按出來的那一次計算（js/home-ui.js「首次引導」）：不是用戶自己要查的，分流結果要排除
+        if (window.pmcOnboardCalc) return 'onboard_example';
         if (window.__PMC_MERCHANT__) return 'merchant_page';
         if (new URLSearchParams(location.search).get('merchant')) return 'merchant_page';
     } catch (e) {

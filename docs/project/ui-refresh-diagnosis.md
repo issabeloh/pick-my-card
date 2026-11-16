@@ -222,7 +222,7 @@
 - 工具端有 `calculate_cashback`、`view_card_detail`、`button_click`（申辦類）
 - 分流測試需要新增：分組的 user property、landing CTA 點擊事件
 
-### 5.4 對半分流怎麼做（2026-11-16 設計，**尚未實作**，等站長說開始）
+### 5.4 對半分流怎麼做（2026-11-16 設計；同日實作，細節見 5.6）
 
 - **分組的地方只有一個**：`index.html` 首屏路由 script 裡「全新訪客 → 轉去 landing」那個分支。符合原條件（沒有 `?start`、localStorage 全空）的人擲一次骰子，
   結果寫進 localStorage `pmc_ab_landing`（`A`＝照舊轉去 landing、`B`＝留在工具），之後不再重擲。比例用一個常數控制，測試結束把它改成 0 或 1 就是定案
@@ -237,7 +237,7 @@
 - **開跑前檢查兩組人數**：頭幾天 A、B 的 `ab_assigned` 人數應該接近 1:1。差很多代表其中一頁的事件掉了（兩頁載入 GA 的方式不同），先修埋點再算天數
 - **測試期間不動 landing 與工具首屏**（所以 2-1～2-3 要先做完）；改了 `index.html` 要跑 `node tools/build-merchant-pages.js`（商家頁的 `pmcFromLanding` 被生成器寫死成 true，不受影響，但版面要一致）
 
-### 5.5 分流要比什麼（2026-11-16 站長同意：比「landing」對上「工具＋首次引導」；引導尚未實作）
+### 5.5 分流要比什麼（2026-11-16 站長同意：比「landing」對上「工具＋首次引導」；引導已實作，見 5.6）
 
 站長的顧慮：landing 的功能是向新用戶介紹產品，直接進工具會迷惘（工具沒有 onboarding）；所以想知道「現在就做對半分流」和「先做一版 HeyMax 式的行銷頁再比」哪個有意義。
 
@@ -251,6 +251,44 @@
 - **順序**：不必等「去 AI 感」全部做完才開始測。測試要四週，是最長的一段，引導做好就開跑；2-4、2-5 在測試期間照做——兩組最後用的是同一個工具，改動對兩組的影響相同。
   測試期間只有兩樣不能動：landing 本身、首次引導那一段（各只有一組看得到）
 - HeyMax、AwardWallet 需要行銷頁，是因為產品在註冊之後；本站不用登入、打幾個字就有答案，兩者的處境不同
+
+### 5.6 實際做出來的樣子（2026-11-16 實作，在 preview 等站長看；上線日＝分流開跑日）
+
+- **分組**：`index.html` 首屏路由 script，常數 `PMC_AB_TOOL_SHARE = 0.5`（分到 B 的比例）。定案時改成 0 或 1
+- **localStorage 鍵**：`pmc_ab_landing`（`A`／`B`）、`pmc_ab_sent`（`ab_assigned` 送過了）、`pmc_onboard_done`（引導看完了）、`pmc_ab_forced`（站長強制指定）。都是純字串，不走 `readLocalJSON`
+- **站長看兩組的方法**：網址加 `?ab=A` 或 `?ab=B`（例：`/?ab=B`）。強制指定的不送 `ab_assigned`、不設使用者屬性，不會汙染數字。
+  ⚠️ 用過 `?ab=` 的瀏覽器之後都不算進測試；想當一般訪客重來，要清掉本站的網站資料
+- **事件**（工具頁走 Firebase Analytics、landing 走 gtag）：
+
+  | 事件 | 參數 | 哪裡送 | 用途 |
+  |---|---|---|---|
+  | `ab_assigned` | `ab_group`＝A／B | A 在 landing、B 在工具，每人一次 | 漏斗步驟 1 |
+  | （使用者屬性）`ab_landing` | A／B | 兩頁每次載入 | 區隔 |
+  | `landing_cta_click` | `cta_position`＝skip／final | landing 的兩顆「開始使用」 | 5.3 缺的那個 |
+  | `onboard_start` | — | 導覽開始 | B 組有多少人真的看到導覽 |
+  | `onboard_example_click` | `example` | 第 1 步選了範例 | |
+  | `onboard_dismiss`／`onboard_complete` | `onboard_step`＝停在哪一步 | 按「跳過」或 Esc／走完 | 看人在哪一步離開 |
+  | `onboard_intro_click` | — | 第 1 步的「看完整介紹」 | |
+
+- **導覽裡按出來的計算怎麼排除**：第 2 步用戶按的是真的「計算回饋」鈕，那一次 `calculate_cashback` 的 `surface` 是 `onboard_example`（`surface` 早就註冊成自訂維度了）。
+  主指標的步驟 2 要加條件 `surface` 不等於 `onboard_example`，同時也排除 `merchant_page`
+- **引導的形式：背景暗化、一次打亮一樣東西的四步導覽**（DOM 由 `js/home-ui.js`「首次引導」動態建立，步驟定義在 `ONBOARD_STEPS`）：
+  1. 打亮搜尋框：「結帳前，先 Pick My Card。一鍵比較你的信用卡哪張回饋最高！」＋範例蝦皮／中華航空／Apple Pay（點了把字打進搜尋框，不計算）
+  2. 打亮「計算回饋」鈕，用戶親手按（只有這一步的打亮區可以點）
+  3. 打亮第一張結果卡：講這張卡上有什麼
+  4. 打亮選卡的地方（桌機＝側欄選卡區；手機＝漢堡鈕）：講「只比較你有的卡」
+- **第一版被站長否決**（2026-11-16）：在搜尋框上方加一塊說明＋三個「點了直接出結果」的範例鈕。理由：桌機手機都更亂、不知道要做什麼；
+  點範例直接跳到結果區，不懂發生什麼事。站長指定改成暗化＋逐步打亮。**不要再做回「在工具畫面上多加一塊說明」**
+- 每一步都有「跳過」；第 2 步起有「上一步」（回到第 1 步可以重選範例）。「看完整介紹 ↗」開新分頁
+- **導覽期間收起的東西**：搜尋框裡的快捷選項（`html.pmc-onboard .quick-search-wrapper`），導覽結束還原；Search Hint（範例「中華航空」會跳，手機上會蓋到計算鈕），導覽結束時清掉；
+  手機首訪的側欄「探頭」提示不演（`playSidebarPeekHint`）
+- **暗化層的寫法是被 iPhone 逼出來的**：第一版用「洞本身的超大 box-shadow」壓暗，站長的 iPhone 13 Safari 畫面最下面有一截沒蓋到（桌機正常）。
+  現在是一片比視窗四邊各多 400px 的 `.tour-dim`，用 clip-path 挖洞。⚠️ 這個環境只有 Chromium，改完**沒辦法在 Safari 上驗**，要請站長用手機看
+- **導覽什麼時候不再出現**：算過任何一次、按「跳過」、或走完 → 記 `pmc_onboard_done`。
+  商家頁、embed 不出。A 組從 landing 點「開始使用」進工具**不會**看到導覽（那一組比的是 landing）
+- **文案**：站長草稿寫「結賬」，實作用「結帳」（本站其他地方、landing 都用這個字）
+- **GA4 後台要註冊的自訂定義**：`ab_group`（範圍＝事件，事件參數 `ab_group`）、`ab_landing`（範圍＝使用者，使用者屬性 `ab_landing`）。
+  想在報表裡看 `cta_position`、`example` 的值才需要另外註冊，不註冊也看得到事件次數。註冊畫面沒有時間相關的欄位
 
 ## 教訓記錄
 
