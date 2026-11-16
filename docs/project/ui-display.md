@@ -300,6 +300,18 @@ Grep `titleParts`）：
 - ⚠️ 凍結資料下 13 組回歸不擷取這一區與小標題，**回歸測不到**（小標題與主標題由 `basic-exclusions-test.js` 測到一部分）；驗證靠線上資料實測：
   「水費」1000（三類並存）、「瓦斯通」1000（只有未達門檻）、「統一超商」100（提示行）、「MOMO購物網」1000（同卡多個門檻）
 
+## 1l. 全幅版面與結果卡層級（2026-11-16，「AI 感」改善第一批）
+
+成因、對照站觀察、分批清單與還沒做的項目都在 `docs/project/ui-refresh-diagnosis.md`，這裡只記會踩到的規則：
+
+- **`.container` 不再有 max-width、圓角、陰影，`body` 不再有灰漸層與外圈留白**。內容寬度上限改由 `--page-w` 管（1200／1360／1560，第 1b 節那張表的 `.container` 欄現在指的是這個變數）
+- **新增直接掛在 `.container` 底下的區塊時要自己決定寬度**：內容型 → `max-width: var(--page-w); margin: 0 auto`；底色要滿版 → 左右 padding 加 `var(--page-gutter)`（照 `header`、`.mc-related` 的寫法）。漏了就會從視窗最左邊排到最右邊
+- **頁首與「推薦比較」的左右 padding 在檔尾密度區塊有另一份值**，兩邊都帶 `var(--page-gutter)`，改一邊要改另一邊
+- **桌機頁籤不撐滿**（`.home-view-switch` 在 ≥769px 是 `max-content max-content` 靠左）；手機照舊各佔一半
+- **快捷選項圖示**：Sheets 的 icon 欄照舊填 emoji，前端 `renderQuickOptionIcon()`（`js/data-loader.js`）對到線條圖示；對照表沒有的 emoji 原樣顯示。Sheets 新增了新的 emoji → 在 `QUICK_ICON_PATHS` 補一列
+- **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
+- **最優卡角標**：兩欄以上卡名右側留 64px；單欄（≤640px）角標自己一列。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**

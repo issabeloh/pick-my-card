@@ -90,7 +90,7 @@ function createTagElement(option, type, index) {
     tag.dataset.isCustom = option.isCustom ? 'true' : 'false';
 
     // Icon HTML（鐵則 3：icon/displayName 含用戶自訂輸入，必須轉義）
-    const iconHtml = option.icon ? `<span class="tag-icon">${escapeHtml(option.icon)}</span>` : '';
+    const iconHtml = renderQuickOptionIcon(option.icon, 'tag-icon');
 
     // Expand button (only when merchants exist)
     const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
@@ -395,7 +395,7 @@ function renderCustomOptionsList() {
         item.className = 'custom-option-item';
 
         // 構建icon HTML（如果有的話；鐵則 3：用戶自訂輸入必須轉義）
-        const iconHtml = option.icon ? `<span class="tag-icon">${escapeHtml(option.icon)}</span>` : '';
+        const iconHtml = renderQuickOptionIcon(option.icon, 'tag-icon');
         const hasMerchants = Array.isArray(option.merchants) && option.merchants.length > 1;
 
         item.innerHTML = `

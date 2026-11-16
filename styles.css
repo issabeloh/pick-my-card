@@ -9,9 +9,27 @@ body {
     font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     color: #333;
-    background: linear-gradient(135deg, #e4e5e8 0%, #b0b2b8 100%);
+    /* 2026-11-16 全幅版面：原本是 135° 灰漸層＋20px 外圈留白，白色內容像一張浮在灰底上的卡片
+       （站長：「主要內容都浮在灰色背景前面，很怪」）。現在內容直接鋪在頁面上，這個底色只在
+       .container 之外的頁尾看得到。成因與整套計畫見 docs/project/ui-refresh-diagnosis.md */
+    background: #f9fafb;
     min-height: 100vh;
-    padding: 20px;
+}
+
+/* 全幅版面的兩個尺寸（2026-11-16）：
+   --page-w      內容寬度上限。原本寫在 .container 的 max-width，寬螢幕區塊（Grep「寬螢幕（≥1400px）」）分三段放寬
+   --page-gutter 內容兩側到視窗邊的距離。頁首、「推薦比較」這種「底色要滿版、內容要對齊」的區塊，
+                 把它加進左右 padding；其餘區塊直接 max-width: var(--page-w) 置中
+   ⚠️ --page-gutter 裡的 100% 是在「使用處」才解析（相對該元素的包含區塊寬度），所以只能用在
+      padding／margin 這類以包含區塊寬度計算百分比的屬性上，而且該元素的父層必須是滿版寬。 */
+:root {
+    --page-w: 1200px;
+    --page-gutter: 0px;
+}
+@media (min-width: 769px) {
+    :root {
+        --page-gutter: max(0px, calc((100% - var(--page-w)) / 2));
+    }
 }
 
 /* 鍵盤導覽焦點指示：:focus-visible 只在鍵盤操作時顯示外框，滑鼠/觸控點擊不出現。
@@ -91,19 +109,23 @@ html.pmc-embed .modal:not(#card-detail-modal) {
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    /* 滿版（2026-11-16）：寬度上限改由裡面各區塊用 --page-w 自己管，見檔頭 :root 註解 */
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     overflow: clip; /* Use clip instead of hidden to allow sticky positioning */
+}
+/* faq／privacy／terms 的 <main> 直接掛在 .container 底下（首頁的 main 在 .app-layout 裡，不吃這條） */
+.container > main {
+    max-width: var(--page-w);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    /* 2026-11-16：原本是 #1e40af → #3b82f6 的 135° 漸層，改單色（診斷見 ui-refresh-diagnosis.md） */
+    background: #1e40af;
     color: white;
-    padding: 10px 20px;
+    padding: 10px calc(var(--page-gutter) + 20px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -1124,6 +1146,12 @@ main {
     box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
     min-width: 0; /* Prevent grid blowout */
 }
+@media (min-width: 769px) {
+    /* 全幅版面下這道上緣陰影會在側欄分隔線右邊畫出半截灰影，桌機拿掉；手機維持原樣 */
+    main {
+        box-shadow: none;
+    }
+}
 
 /* Input section */
 .input-section {
@@ -1797,9 +1825,10 @@ main {
     gap: 4px;
     padding: 6px 12px;
     background: #fff;
-    color: #0369a1;
-    border: 1px solid #7dd3fc;
-    border-radius: 16px;
+    /* 2026-11-16：原本是天藍字＋天藍框的膠囊，改中性色。顏色留給「計算回饋」這種主要動作 */
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
@@ -1809,10 +1838,8 @@ main {
 }
 
 .quick-search-btn:hover {
-    background: #f0f9ff;
-    border-color: #38bdf8;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(3, 105, 161, 0.1);
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 .quick-search-btn:active {
@@ -1823,6 +1850,24 @@ main {
 .quick-search-btn .icon {
     font-size: 14px;
     line-height: 1;
+}
+
+/* 快捷選項的線條圖示（2026-11-16，取代 emoji；對照表在 js/data-loader.js 的 QUICK_ICON_PATHS）。
+   對照表沒有的 emoji（用戶自訂的快捷選項）照原樣顯示，不會套到這個 class。 */
+.line-icon {
+    display: inline-flex;
+    align-items: center;
+    color: #6b7280;
+}
+.line-icon svg {
+    width: 1.1em;
+    height: 1.1em;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* Matched item row */
@@ -2923,9 +2968,11 @@ input[type="number"]:focus {
 }
 
 .card-result.best-card {
+    /* 2026-11-16：原本是淺綠漸層底＋綠色光暈，改成白底＋加粗的綠框（1px 邊框＋1px 外圈，不佔版面，
+       同排其他卡片的內容不會因此錯開 1px）。「最優」由綠框、角標、綠色回饋率三者表達就夠了 */
     border-color: #10b981;
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    background: #fff;
+    box-shadow: 0 0 0 1px #10b981;
 }
 
 .card-result.no-cashback {
@@ -3070,6 +3117,66 @@ input[type="number"]:focus {
 .card-result.best-card .card-header {
     padding-right: 64px;
 }
+/* 最優卡多了 1px 外圈（見 .card-result.best-card），角標往外多蓋 1px 才會貼齊外緣 */
+.card-result.best-card .best-badge {
+    top: -2px;
+    right: -2px;
+    border-radius: 0 9px 0 10px;
+}
+/* 單欄（手機）時最優卡改成「角標自己一列」（2026-11-16）：卡名前面多了卡面縮圖，右邊再替角標留 64px，
+   360px 寬的手機上 9 個字的卡名就會被擠成兩行。單欄沒有「同排卡片要對齊」的問題，
+   所以讓內容整個往下讓出角標的高度、把右邊還給卡名。
+   640px 是 .results-container（minmax(300px, 1fr)）變成兩欄的寬度；兩欄以上維持右側留白，
+   同排卡片的卡名才會在同一條線上。 */
+@media (max-width: 640px) {
+    .card-result.best-card {
+        padding-top: 34px;
+    }
+    .card-result.best-card .card-header {
+        padding-right: 0;
+    }
+}
+
+/* ── 結果卡的三個層級調整（2026-11-16，診斷見 docs/project/ui-refresh-diagnosis.md 第 1 節 #4 #6）──
+   1. 卡面縮圖：卡名前面一張小圖（renderCardThumb，js/results-display.js）
+   2. 回饋率是主數字：原本和「回饋消費上限」同為 14px
+   3. 「詳情／加到小抄」降成中性色：原本一藍一橘，每張卡都搶一次注意力。已加到小抄的橘色實心保留（那是狀態） */
+.card-thumb {
+    flex: none;
+    width: 44px;
+    height: 28px;
+    object-fit: contain;
+}
+.card-name-with-pin .card-name:has(> .card-thumb) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-result.excluded-card .card-thumb {
+    filter: grayscale(1);
+    opacity: .6;
+}
+.card-result .detail-value.rate-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+}
+.card-result.best-card .detail-value.rate-value {
+    color: #047857;
+}
+.card-result .card-detail-peek-btn,
+.card-result .pin-btn:not(.pinned) {
+    background: #fff;
+    border-color: #d1d5db;
+    color: #374151;
+}
+.card-result .card-detail-peek-btn:hover,
+.card-result .pin-btn:not(.pinned):hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
 
 .card-details {
     display: grid;
@@ -3198,22 +3305,10 @@ input[type="number"]:focus {
 
 /* Responsive design */
 @media (max-width: 768px) {
-    /* 手機版滿版：拿掉 body 的灰漸層底與 10px 內距，.container 也不再是「浮在灰底上
-       的白卡片」（圓角＋陰影）。手機螢幕窄，那圈灰邊框只是白白吃掉左右各 10px 的
-       可用寬度，也讓 header／main／各 section 看起來像三塊互不相連的浮板。
-       ⚠️ body 的灰漸層要留著：.container 之外的 <footer>（社群區塊）文字是白色的，
-       靠的就是這層灰底；把 body 洗白會讓那些按鈕整組看不見（2026-09-03 站長回報）。
-       container 滿版後灰底只剩頁尾那一段看得到，正是原本的設計。
-       桌機維持原本的灰底＋白卡片外觀，不受影響。 */
-    body {
-        padding: 0;
-    }
-
-    .container {
-        border-radius: 0;
-        box-shadow: none;
-    }
-
+    /* 手機版滿版（2026-09-03）當時在這裡拿掉 body 內距與 .container 的圓角陰影；
+       2026-11-16 桌機也改全幅後，那些已經是預設值，覆寫移除。
+       ⚠️ .container 之外的 <footer> 現在落在 body 的淺灰底（#f9fafb）上，頁尾文字必須是深色
+       （2026-10-21 已改 #374151）；不要再放白字。 */
     main {
         padding: 20px;
     }
@@ -6062,19 +6157,20 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.75);
+    /* 2026-11-16：原本是半透明白＋毛玻璃，配的是灰漸層底；頁尾底色改成 #f9fafb 之後
+       半透明白幾乎看不出按鈕外形，改實心白底＋灰框 */
+    background: #fff;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     color: #1f2937;
     text-decoration: none;
     font-size: 13px;
     transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
 }
 
 .social-link:hover {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(255, 255, 255, 0.95);
+    background: #fff;
+    border-color: #d1d5db;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -6373,17 +6469,9 @@ mark.cashback-search-hl {
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
-    border-radius: 0 0 12px 12px;
+    /* 四角直角：.container 是滿版（手機 2026-09-03、桌機 2026-11-16），留下圓角會在左右下角露出缺口 */
+    border-radius: 0;
     margin-top: 0;
-}
-
-@media (max-width: 768px) {
-    /* 手機版 .container 已拿掉圓角（滿版），警語橫條再留 12px 下圓角就會在
-       左右下角露出兩塊白色缺口。桌機容器仍是圓角卡片，那裡維持原樣。 */
-    .finance-warning-row {
-        border-radius: 0;
-    }
 }
 
 @media (max-width: 600px) {
@@ -8079,6 +8167,8 @@ mark.cashback-search-hl {
     display: grid;
     grid-template-columns: 280px 1fr;
     min-height: 0;
+    max-width: var(--page-w);   /* 全幅版面：內容置中，見檔頭 :root 註解 */
+    margin: 0 auto;
 }
 
 /* When sidebar is hidden (landing page), collapse to single column */
@@ -8511,8 +8601,8 @@ mark.cashback-search-hl {
       媒體查詢不加特異性，同特異性靠源碼順序決勝（教訓見 ui-display.md）。
    ============================================ */
 @media (min-width: 1400px) {
-    .container {
-        max-width: 1360px;
+    :root {
+        --page-w: 1360px;   /* 2026-11-16 起寬度上限是變數（原本寫在 .container 的 max-width） */
     }
 
     .app-layout {
@@ -8521,8 +8611,8 @@ mark.cashback-search-hl {
 }
 
 @media (min-width: 1700px) {
-    .container {
-        max-width: 1560px;
+    :root {
+        --page-w: 1560px;
     }
 
     .app-layout {
@@ -8978,7 +9068,8 @@ mark.cashback-search-hl {
 .spotlight-section {
     box-sizing: border-box;
     width: 100%;
-    margin: 0;
+    max-width: var(--page-w);   /* 全幅版面：內容置中 */
+    margin: 0 auto;
     padding: 24px 30px 30px;
 }
 .spotlight-header {
@@ -9589,7 +9680,7 @@ mark.cashback-search-hl {
    空的 <nav>（還沒生成、或只有一個商家頁時）靠 :empty 整條收起來，不留空白條。
    ============================================================ */
 .mc-related {
-    padding: 11px 30px;
+    padding: 11px calc(var(--page-gutter) + 30px);   /* 底色滿版、內容對齊 */
     background: #f3f4f6;
     border-top: 1px solid #e5e7eb;
     border-bottom: 1px solid #e5e7eb;
@@ -9722,6 +9813,13 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .home-view-switch > button.on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, #fff 12.5px); }
 .home-view-switch > button:first-child.on::before, .home-view-switch > button:last-child.on::after { display: none; }
 .home-view-switch svg { width: 17px; height: 17px; flex: none; }
+/* 桌機頁籤不撐滿（2026-11-16 站長選定「方案二」）：全幅版面下兩個頁籤各佔半個內容寬
+   （1440 螢幕各約 680px），像兩顆巨大的按鈕。保留資料夾造型，寬度改跟著文字、靠左。
+   手機照舊各佔一半。按鈕左右內距在檔尾密度區塊另有 ≥1025px 的值（Grep「頁籤左右內距」）。 */
+@media (min-width: 769px) {
+    .home-view-switch { grid-template-columns: max-content max-content; justify-content: start; }
+    .home-view-switch > button { padding-left: 40px; padding-right: 40px; }
+}
 @media (max-width: 768px) {
     .home-view-switch { margin: 12px -16px -12px; padding: 0 12px; }
     .home-view-switch > button { font-size: 14.5px; padding: 10px 6px 9px; }
@@ -10402,12 +10500,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
    .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）。
    ============================================ */
 @media (min-width: 1025px) {
-    body {
-        padding: 17px;   /* 原 20px */
-    }
-
     header {
-        padding: 9px 17px;   /* 原 10px 20px */
+        padding: 9px calc(var(--page-gutter) + 17px);   /* 原 10px 20px；--page-gutter 見檔頭 :root 註解 */
     }
 
     .header-top {
@@ -10850,7 +10944,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .mc-related {
-        padding: 9px 26px;   /* 原 11px 30px */
+        padding: 9px calc(var(--page-gutter) + 26px);   /* 原 11px 30px */
         gap: 5px 12px;   /* 原 6px 14px */
     }
 
@@ -10869,7 +10963,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .home-view-switch > button {
-        padding: 9px 7px 9px;   /* 原 11px 8px 10px */
+        padding: 9px 34px 9px;   /* 頁籤左右內距：原 11px 40px 10px（2026-11-16 桌機頁籤不撐滿，左右由 8px 改 40px） */
         gap: 7px;   /* 原 8px */
     }
 
