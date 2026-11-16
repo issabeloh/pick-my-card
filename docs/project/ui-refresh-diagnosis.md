@@ -222,7 +222,7 @@
 - 工具端有 `calculate_cashback`、`view_card_detail`、`button_click`（申辦類）
 - 分流測試需要新增：分組的 user property、landing CTA 點擊事件
 
-### 5.4 對半分流怎麼做（2026-11-16 設計，**尚未實作**，等站長說開始）
+### 5.4 對半分流怎麼做（2026-11-16 設計；同日實作，細節見 5.6）
 
 - **分組的地方只有一個**：`index.html` 首屏路由 script 裡「全新訪客 → 轉去 landing」那個分支。符合原條件（沒有 `?start`、localStorage 全空）的人擲一次骰子，
   結果寫進 localStorage `pmc_ab_landing`（`A`＝照舊轉去 landing、`B`＝留在工具），之後不再重擲。比例用一個常數控制，測試結束把它改成 0 或 1 就是定案
@@ -237,7 +237,7 @@
 - **開跑前檢查兩組人數**：頭幾天 A、B 的 `ab_assigned` 人數應該接近 1:1。差很多代表其中一頁的事件掉了（兩頁載入 GA 的方式不同），先修埋點再算天數
 - **測試期間不動 landing 與工具首屏**（所以 2-1～2-3 要先做完）；改了 `index.html` 要跑 `node tools/build-merchant-pages.js`（商家頁的 `pmcFromLanding` 被生成器寫死成 true，不受影響，但版面要一致）
 
-### 5.5 分流要比什麼（2026-11-16 站長同意：比「landing」對上「工具＋首次引導」；引導尚未實作）
+### 5.5 分流要比什麼（2026-11-16 站長同意：比「landing」對上「工具＋首次引導」；引導已實作，見 5.6）
 
 站長的顧慮：landing 的功能是向新用戶介紹產品，直接進工具會迷惘（工具沒有 onboarding）；所以想知道「現在就做對半分流」和「先做一版 HeyMax 式的行銷頁再比」哪個有意義。
 
@@ -251,6 +251,30 @@
 - **順序**：不必等「去 AI 感」全部做完才開始測。測試要四週，是最長的一段，引導做好就開跑；2-4、2-5 在測試期間照做——兩組最後用的是同一個工具，改動對兩組的影響相同。
   測試期間只有兩樣不能動：landing 本身、首次引導那一段（各只有一組看得到）
 - HeyMax、AwardWallet 需要行銷頁，是因為產品在註冊之後；本站不用登入、打幾個字就有答案，兩者的處境不同
+
+### 5.6 實際做出來的樣子（2026-11-16 實作，在 preview 等站長看；上線日＝分流開跑日）
+
+- **分組**：`index.html` 首屏路由 script，常數 `PMC_AB_TOOL_SHARE = 0.5`（分到 B 的比例）。定案時改成 0 或 1
+- **localStorage 鍵**：`pmc_ab_landing`（`A`／`B`）、`pmc_ab_sent`（`ab_assigned` 送過了）、`pmc_onboard_done`（引導看完了）、`pmc_ab_forced`（站長強制指定）。都是純字串，不走 `readLocalJSON`
+- **站長看兩組的方法**：網址加 `?ab=A` 或 `?ab=B`（例：`/?ab=B`）。強制指定的不送 `ab_assigned`、不設使用者屬性，不會汙染數字。
+  ⚠️ 用過 `?ab=` 的瀏覽器之後都不算進測試；想當一般訪客重來，要清掉本站的網站資料
+- **事件**（工具頁走 Firebase Analytics、landing 走 gtag）：
+
+  | 事件 | 參數 | 哪裡送 | 用途 |
+  |---|---|---|---|
+  | `ab_assigned` | `ab_group`＝A／B | A 在 landing、B 在工具，每人一次 | 漏斗步驟 1 |
+  | （使用者屬性）`ab_landing` | A／B | 兩頁每次載入 | 區隔 |
+  | `landing_cta_click` | `cta_position`＝skip／final | landing 的兩顆「開始使用」 | 5.3 缺的那個 |
+  | `onboard_example_click` | `example` | 引導的範例鈕 | |
+  | `onboard_intro_click`／`onboard_dismiss` | — | 「看完整介紹」／× | |
+
+- **範例帶出來的計算怎麼排除**：那一次 `calculate_cashback` 的 `surface` 是 `onboard_example`（`surface` 早就註冊成自訂維度了）。
+  主指標的步驟 2 要加條件 `surface` 不等於 `onboard_example`，同時也排除 `merchant_page`
+- **引導什麼時候消失**：算過任何一次 → 記 `pmc_onboard_done`，下次來不出現（當下那一頁先留著，可以再點別的範例）；按 × 立刻收起。
+  商家頁、embed 不出。A 組從 landing 點「開始使用」進工具**不會**看到引導（那一組比的是 landing）
+- **文案**：站長草稿寫「結賬」，實作用「結帳」（本站其他地方、landing 都用這個字）
+- **GA4 後台要註冊的自訂定義**：`ab_group`（範圍＝事件，事件參數 `ab_group`）、`ab_landing`（範圍＝使用者，使用者屬性 `ab_landing`）。
+  想在報表裡看 `cta_position`、`example` 的值才需要另外註冊，不註冊也看得到事件次數。註冊畫面沒有時間相關的欄位
 
 ## 教訓記錄
 

@@ -74,7 +74,43 @@
         } catch (e) {
             // 舊瀏覽器沒有 URLSearchParams：照舊送，最差就是跟以前一樣算 Direct
         }
+        // 對半分流（2026-11-16，設計見 docs/project/ui-refresh-diagnosis.md 5.4）：首頁首屏路由 script 擲的骰子
+        // 存在 localStorage pmc_ab_landing（同網域讀得到）。使用者屬性 ab_landing 要在 config 之前設；
+        // ab_assigned 事件每人只送一次（送達才記 pmc_ab_sent；首頁那邊看到已記就不再送）。
+        // 直接開 /landing 的人沒有分組，什麼都不送。站長用 ?ab= 強制指定的（pmc_ab_forced）也不送。
+        var pmcAbGroup = null;
+        try {
+            var pmcAbStored = localStorage.getItem('pmc_ab_landing');
+            if ((pmcAbStored === 'A' || pmcAbStored === 'B') && localStorage.getItem('pmc_ab_forced') !== '1') pmcAbGroup = pmcAbStored;
+        } catch (e) {
+            // localStorage 被封鎖＝沒進分流
+        }
+        if (pmcAbGroup) gtag('set', 'user_properties', { ab_landing: pmcAbGroup });
         gtag('config', 'G-RW8F159L52', pmcGaConfig);
+        if (pmcAbGroup) {
+            try {
+                if (localStorage.getItem('pmc_ab_sent') !== '1') {
+                    gtag('event', 'ab_assigned', {
+                        ab_group: pmcAbGroup,
+                        event_callback: function () {
+                            try { localStorage.setItem('pmc_ab_sent', '1'); } catch (e) { /* 存不了頂多重送一次 */ }
+                        }
+                    });
+                }
+            } catch (e) {
+                // 同上
+            }
+        }
+        // 「開始使用」點擊（右上角 lp-skip＝skip、最後一幕 lp-cta＝final）。連結是同分頁換頁，
+        // 用 beacon 傳輸才不會在換頁時掉事件。
+        document.addEventListener('click', function (e) {
+            var a = e.target && e.target.closest ? e.target.closest('a.lp-skip, a.lp-cta') : null;
+            if (!a) return;
+            gtag('event', 'landing_cta_click', {
+                cta_position: a.classList.contains('lp-skip') ? 'skip' : 'final',
+                transport_type: 'beacon'
+            });
+        });
     </script>
 
     <!-- Structured Data (JSON-LD) for SEO -->

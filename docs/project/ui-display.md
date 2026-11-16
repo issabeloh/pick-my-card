@@ -274,7 +274,7 @@ Grep `titleParts`）：
 - 資料來自 `calculateUnmetSpendResults()`（計算端規則見 `docs/project/cashback-engine.md` 第 6 節）。**不進排名、不會是「最優回饋」**，
   它的卡片不是 `#results-container` 的**直接子元素**——回歸、排除測試、商家頁生成器一律用 `#results-container > .card-result` 讀主結果，寫新測試時照用，不要寫成後代選擇器
 - 卡片跟一般結果同一支 `createCardResultElement()`，差別：「未達門檻」徽章、`✘ 單筆滿 NT$X 才適用・還差 NT$Y`
-  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）、回饋金額下方「以單筆 NT$X 試算」。
+  （`renderUnmetThresholdNote`，不沿用 `.spend-threshold-note`——那是「✔ 已符合」）。（回饋金額下方原本有一行「以單筆 NT$X 試算」，2026-11-16 站長要求移除：區塊說明與計算明細都已經寫了，不要加回來。）
   **回饋金額用門檻金額算**（計算明細的 Total 也是門檻金額），不是用戶輸入的金額
 - 排序：門檻低的在前，同門檻回饋高的在前。**級距每一級都列**（站長決定，不只列最近的一級）
 - 位置：平常**嵌在 `#results-container` 裡**，主結果之後、排除卡與即將開始之前（`displayResults()` 畫完卡片後搬進去；清空容器前會先搬出來，節點用 `getThresholdSectionEl()` 留著）。**沒有任何進行中活動、結果區只剩一般回饋時搬到結果區前面**
@@ -312,6 +312,8 @@ Grep `titleParts`）：
 - **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
 - **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
 - **公告列在頁首外面**（2026-11-16 第二批，站長選的方案）：`#announcement-bar` 是 `.container` 的直系子節點、緊接 `</header>`，灰底單行，寬度自己管（左右各 20px、手機 16px）。兩個頁籤畫面都顯示；embed 模式靠 `html.pmc-embed .announcement-bar` 隱藏。手機單行截斷、不顯示圓點（`buildAnnouncementDots()` 與圓點樣式留著沒刪）。日期仍必須是文字的兄弟元素
+- **手機結果卡三欄比例**（≤768px，2026-11-16 站長回報金額欄太靠左）：`.card-details` 是 `0.8fr 1.2fr 1fr`，<360px 才用舊的 `0.65fr 1.35fr 1fr`。改比例前量 360／390／440 三種寬度，金額＋計算機鈕、上限都要各在一行
+- **首次引導** `#onboard` 在 `.input-section` 最上面（2026-11-16）：只有分流 B 組、還沒算過也沒關掉的人看得到，由 `index.html` 首屏路由 script 加 `html.pmc-onboard` 控制；點擊行為在 `js/home-ui.js`「首次引導」。來龍去脈與「測試期間不能改」的規定見 `ui-refresh-diagnosis.md` 5.4、5.6 節
 - **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 

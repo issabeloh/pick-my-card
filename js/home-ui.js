@@ -4,6 +4,7 @@
  *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
  *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"
  *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
+ *  - 首次引導（分流 B 組）      → "首次引導" / "markOnboardDone"
  *  - 錯誤訊息                  → "showErrorMessage"
  *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
  *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
@@ -732,6 +733,7 @@ function rememberCalcConditions() {
     lastCalcConditions = currentCalcConditions();
     const calcBtn = document.getElementById('calculate-btn');
     if (calcBtn) calcBtn.classList.remove('calc-nudge');
+    markOnboardDone();   // 首次引導：算過一次，下次來就不再出現
 }
 // 各條件的變更處呼叫：算過、而且條件跟上次不同才閃；改回跟上次一樣就停（逐字打回原商家時，
 // 打到一半的字會先觸發閃動，打完那一下要收掉）
@@ -789,6 +791,49 @@ function compareSpotlightMerchant(merchant, opts) {
         if (target) target.scrollIntoView({ behavior: 'smooth', block: results === target ? 'start' : 'center' });
     }, 200);
 }
+
+// ============ 首次引導（2026-11-16，分流測試 B 組；設計見 docs/project/ui-refresh-diagnosis.md 5.5）============
+// 搜尋框上方的 #onboard：一句話＋三個「點了就出結果」的範例＋連到 landing 的介紹。
+// 顯示與否由 index.html <head> 的首屏路由 script 決定（html.pmc-onboard），這裡只管點擊與收起。
+//  - 範例：帶入商家並直接計算（這是全站少數「點了就算」的入口，另一個是商家頁深連結）。
+//    這一次的 calculate_cashback 會帶 surface=onboard_example（getAnalyticsSurface 讀 window.pmcOnboardCalc），
+//    看分流結果時要把它排除——不然 B 組的試算率是被範例墊高的。
+//  - 算過任何一次（不管是不是範例）就記 pmc_onboard_done：下次來不再出現；當下那一頁先留著，
+//    讓人可以再點別的範例，也避免結果剛出來版面就往上跳。按 × 則立刻收起。
+function logOnboardEvent(name, params) {
+    if (window.logEvent && window.firebaseAnalytics) window.logEvent(window.firebaseAnalytics, name, params || {});
+}
+function markOnboardDone() {
+    if (!document.documentElement.classList.contains('pmc-onboard')) return;
+    try {
+        localStorage.setItem('pmc_onboard_done', '1');
+    } catch (e) {
+        // 存不了就只是下次還會再看到一次引導
+    }
+}
+document.addEventListener('click', (e) => {
+    if (!e.target || !e.target.closest) return;
+    const example = e.target.closest('.onboard-example');
+    if (example) {
+        const term = example.dataset.example || '';
+        logOnboardEvent('onboard_example_click', { example: term });
+        window.pmcOnboardCalc = true;
+        try {
+            compareSpotlightMerchant(term);
+        } finally {
+            // calculate_cashback 在 calculateCashback() 的第一個 await 之前就送出，這裡可以馬上還原
+            window.pmcOnboardCalc = false;
+        }
+        return;
+    }
+    if (e.target.closest('#onboard-close')) {
+        logOnboardEvent('onboard_dismiss');
+        markOnboardDone();
+        document.documentElement.classList.remove('pmc-onboard');
+        return;
+    }
+    if (e.target.closest('#onboard-intro')) logOnboardEvent('onboard_intro_click');
+});
 
 // Show error message to user
 function showErrorMessage(message) {
