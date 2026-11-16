@@ -1403,14 +1403,14 @@ function createCouponResultElement(coupon, amount) {
     couponDiv.innerHTML = `
         <div class="coupon-header">
             <div class="card-name-with-pin">
-                <div class="coupon-merchant">${escapeHtml(coupon.cardName)}</div>
+                <div class="coupon-merchant with-thumb">${renderCardThumb(coupon.cardId)}${escapeHtml(coupon.cardName)}</div>
                 <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(coupon.cardId)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
             </div>
         </div>
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${coupon.actualRate}%</div>
+                <div class="detail-value rate-value"><span class="rate-num">${coupon.actualRate}%</span></div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
@@ -1437,6 +1437,15 @@ function createCouponResultElement(coupon, amount) {
     `;
 
     return couponDiv;
+}
+
+// 結果卡卡名前的卡面縮圖（2026-11-16）：圖在 assets/images/cards/<card.id>.png，缺圖時整個移除
+// （同 Spotlight／我的信用卡的做法）。alt 留空——卡名文字就在旁邊，不讓報讀軟體念兩次；
+// 也因此 .card-name 的 textContent 不變。有 7 張是直式卡面，CSS 用 object-fit: contain 收在同一個框裡。
+// 呼叫端要在卡名元素加 class「with-thumb」（縮圖與文字並排靠它；不用 :has() 是為了舊瀏覽器）。
+function renderCardThumb(cardId) {
+    if (!cardId) return '';
+    return `<img class="card-thumb" src="assets/images/cards/${escapeHtml(cardId)}.png" alt="" loading="lazy" onerror="this.remove()">`;
 }
 
 // Create card result element
@@ -1540,7 +1549,7 @@ function createExcludedCardResultElement(result) {
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
-                <div class="card-name">${escapeHtml(result.card.name)}</div>
+                <div class="card-name with-thumb">${renderCardThumb(result.card.id)}${escapeHtml(result.card.name)}</div>
                 <button type="button" class="card-detail-peek-btn" data-card-id="${escapeHtml(result.card.id)}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
             </div>
             <div class="badges-container"><div class="excluded-badge">一般消費排除</div></div>
@@ -1612,7 +1621,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     cardDiv.innerHTML = `
         <div class="card-header">
             <div class="card-name-with-pin">
-                <div class="card-name">${result.card.name}</div>
+                <div class="card-name with-thumb">${renderCardThumb(result.card.id)}${result.card.name}</div>
                 <button type="button" class="card-detail-peek-btn" data-card-id="${result.card.id}" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
                 ${merchantForPin && !isBasicCashback ? `
                     <button class="pin-btn ${pinned ? 'pinned' : ''}"
@@ -1638,7 +1647,7 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value">${rateDisplay}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">${levelLabel}</small>` : ''}</div>
+                <div class="detail-value rate-value"><span class="rate-num">${rateDisplay}</span>${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">${levelLabel}</small>` : ''}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>

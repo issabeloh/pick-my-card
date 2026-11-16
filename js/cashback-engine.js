@@ -46,6 +46,8 @@ async function calculateCashback() {
     const loadingShowTimer = setTimeout(() => {
         loadingOverlay.show('正在計算回饋...');
     }, 150);
+    // 桌機空狀態時推薦活動在搜尋框正下方，結果出來前先搬回原位（原因見 home-ui.js 的 placeSpotlightSection）
+    if (typeof beginSpotlightCalc === 'function') beginSpotlightCalc();
 
     try {
 
@@ -302,6 +304,7 @@ async function calculateCashback() {
         // 若 timer 已經顯示了 overlay，這裡負責收尾隱藏。
         clearTimeout(loadingShowTimer);
         loadingOverlay.hide();
+        if (typeof endSpotlightCalc === 'function') endSpotlightCalc();
     }
 }
 

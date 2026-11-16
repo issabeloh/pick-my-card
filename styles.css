@@ -9,9 +9,27 @@ body {
     font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     color: #333;
-    background: linear-gradient(135deg, #e4e5e8 0%, #b0b2b8 100%);
+    /* 2026-11-16 全幅版面：原本是 135° 灰漸層＋20px 外圈留白，白色內容像一張浮在灰底上的卡片
+       （站長：「主要內容都浮在灰色背景前面，很怪」）。現在內容直接鋪在頁面上，這個底色只在
+       .container 之外的頁尾看得到。成因與整套計畫見 docs/project/ui-refresh-diagnosis.md */
+    background: #f9fafb;
     min-height: 100vh;
-    padding: 20px;
+}
+
+/* 全幅版面的兩個尺寸（2026-11-16）：
+   --page-w      內容寬度上限。原本寫在 .container 的 max-width，寬螢幕區塊（Grep「寬螢幕（≥1400px）」）分三段放寬
+   --page-gutter 內容兩側到視窗邊的距離。頁首、「推薦比較」這種「底色要滿版、內容要對齊」的區塊，
+                 把它加進左右 padding；其餘區塊直接 max-width: var(--page-w) 置中
+   ⚠️ --page-gutter 裡的 100% 是在「使用處」才解析（相對該元素的包含區塊寬度），所以只能用在
+      padding／margin 這類以包含區塊寬度計算百分比的屬性上，而且該元素的父層必須是滿版寬。 */
+:root {
+    --page-w: 1200px;
+    --page-gutter: 0px;
+}
+@media (min-width: 769px) {
+    :root {
+        --page-gutter: max(0px, calc((100% - var(--page-w)) / 2));
+    }
 }
 
 /* 鍵盤導覽焦點指示：:focus-visible 只在鍵盤操作時顯示外框，滑鼠/觸控點擊不出現。
@@ -73,6 +91,7 @@ html.pmc-embed .container {
    （.mc-related，2026-08-18 新增）漏加，手機上直排成 315px 高的灰塊面積卡在
    詳情彈窗上方，連結還點得下去（會把 iframe 導到商家頁），2026-09-23 才修。 */
 html.pmc-embed header,
+html.pmc-embed .announcement-bar,
 html.pmc-embed .sidebar-overlay,
 html.pmc-embed .app-layout,
 html.pmc-embed .spotlight-section,
@@ -91,19 +110,23 @@ html.pmc-embed .modal:not(#card-detail-modal) {
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    /* 滿版（2026-11-16）：寬度上限改由裡面各區塊用 --page-w 自己管，見檔頭 :root 註解 */
     background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     overflow: clip; /* Use clip instead of hidden to allow sticky positioning */
+}
+/* faq／privacy／terms 的 <main> 直接掛在 .container 底下（首頁的 main 在 .app-layout 裡，不吃這條） */
+.container > main {
+    max-width: var(--page-w);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    /* 2026-11-16：原本是 #1e40af → #3b82f6 的 135° 漸層，改單色（診斷見 ui-refresh-diagnosis.md） */
+    background: #1e40af;
     color: white;
-    padding: 10px 20px;
+    padding: 10px calc(var(--page-gutter) + 20px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -694,13 +717,18 @@ header h1 {
 }
 
 /* Announcement Bar */
+/* 公告列（2026-11-16 改版，站長選的方案 C）：從藍色頁首裡搬到白底內容區的第一列，灰底、單行、沒有陰影。
+   原本是頁首裡的深藍漸層盒子＋陰影＋白色日期膠囊，手機佔兩行＋圓點。
+   它現在是 .container 的直系子節點，所以寬度自己管（見檔頭 :root 註解）：左右各留 20px，和頁首內容對齊。
+   ⚠️ 檔尾桌機密度區塊有另一份 padding／margin，改這裡要一起改（Grep「.announcement-bar」）。 */
 .announcement-bar {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-    padding: 8px 16px;
-    margin-top: 8px;
-    margin-bottom: 16px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    width: calc(100% - 40px);
+    max-width: calc(var(--page-w) - 40px);
+    margin: 12px auto 0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #f3f4f6;
 }
 
 .announcement-content {
@@ -714,7 +742,7 @@ header h1 {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #e0f2fe;
+    color: #6b7280;
 }
 
 .announcement-text-wrapper {
@@ -726,7 +754,7 @@ header h1 {
 }
 
 .announcement-text {
-    color: #e0f2fe;
+    color: #111827;
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 400;
@@ -761,17 +789,14 @@ header h1 {
 .announcement-date-badge {
     display: inline-block;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    padding: 2px 8px;
-    border-radius: 12px;
+    /* 2026-11-16：原本是半透明白底的膠囊，改成純文字（灰），不再是盒子裡的盒子 */
+    color: #6b7280;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     margin-right: 8px;
     white-space: nowrap;
     cursor: pointer;
     transition: opacity 0.15s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .announcement-controls {
@@ -784,7 +809,7 @@ header h1 {
 /* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
     font-size: 0.75rem;
-    color: #cbd5e1;
+    color: #6b7280;
     white-space: nowrap;
     padding: 0 2px;
 }
@@ -792,7 +817,7 @@ header h1 {
 .announcement-btn {
     background: none;
     border: none;
-    color: #cbd5e1;
+    color: #6b7280;
     font-size: 1.05rem;
     cursor: pointer;
     /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
@@ -806,7 +831,7 @@ header h1 {
 }
 
 .announcement-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: #e5e7eb;
     opacity: 1;
 }
 
@@ -814,7 +839,8 @@ header h1 {
     display: none;
 }
 
-/* 手機版圓點指示（方案 B）：桌機隱藏、沿用箭頭；手機隱藏箭頭、改滑動＋圓點 */
+/* 圓點指示：2026-11-16 起各寬度都不顯示（手機改成單行＋「n/N ›」，仍可左右滑動換則）。
+   JS 照舊會產生圓點（buildAnnouncementDots），這裡的樣式留著，之後要恢復只要把 display 打開 */
 .announcement-dots {
     display: none;
     justify-content: center;
@@ -1121,8 +1147,15 @@ header h1 {
 /* Main content */
 main {
     padding: 30px;
-    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
+    /* 2026-11-16 拿掉 box-shadow: 0 -4px 6px（往上的淡陰影）：公告列搬到頁首和 main 之間後，
+       手機上這道陰影會橫在公告列正下方。桌機有側欄那一版本來就蓋掉了（.app-layout main） */
     min-width: 0; /* Prevent grid blowout */
+}
+@media (min-width: 769px) {
+    /* 全幅版面下這道上緣陰影會在側欄分隔線右邊畫出半截灰影，桌機拿掉；手機維持原樣 */
+    main {
+        box-shadow: none;
+    }
 }
 
 /* Input section */
@@ -1797,9 +1830,10 @@ main {
     gap: 4px;
     padding: 6px 12px;
     background: #fff;
-    color: #0369a1;
-    border: 1px solid #7dd3fc;
-    border-radius: 16px;
+    /* 2026-11-16：原本是天藍字＋天藍框的膠囊，改中性色。顏色留給「計算回饋」這種主要動作 */
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
@@ -1809,10 +1843,8 @@ main {
 }
 
 .quick-search-btn:hover {
-    background: #f0f9ff;
-    border-color: #38bdf8;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(3, 105, 161, 0.1);
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 .quick-search-btn:active {
@@ -1823,6 +1855,24 @@ main {
 .quick-search-btn .icon {
     font-size: 14px;
     line-height: 1;
+}
+
+/* 快捷選項的線條圖示（2026-11-16，取代 emoji；對照表在 js/data-loader.js 的 QUICK_ICON_PATHS）。
+   對照表沒有的 emoji（用戶自訂的快捷選項）照原樣顯示，不會套到這個 class。 */
+.line-icon {
+    display: inline-flex;
+    align-items: center;
+    color: #6b7280;
+}
+.line-icon svg {
+    width: 1.1em;
+    height: 1.1em;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* Matched item row */
@@ -2179,68 +2229,29 @@ input[type="number"]:focus {
     gap: 16px;
 }
 
-/* Coupon card styling */
+/* Coupon card styling
+   2026-11-16 站長要求比照一般結果卡：原本是琥珀色漸層底＋琥珀框＋褐色卡名＋hover 浮起，
+   現在白底灰框、卡名字級與顏色同 .card-name、沒有 hover 效果（.card-result 本來就沒有）。
+   「這是領券型」靠區塊標題（領券型活動）表達，不靠卡片顏色。
+   同日刪掉沒有任何地方在用的 .coupon-rate／.coupon-details／.coupon-detail-*（舊版自拼模板的殘留）。 */
 .coupon-item {
-    border: 1px solid #f59e0b;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    transition: all 0.3s ease;
-}
-
-.coupon-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    background: #fff;
 }
 
 .coupon-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .coupon-merchant {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: #92400e;
-}
-
-.coupon-rate {
-    background: #f59e0b;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.coupon-details {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.coupon-detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 4px 0;
-}
-
-.coupon-detail-label {
-    font-size: 13px;
-    color: #92400e;
-    font-weight: 500;
-    min-width: 60px;
-}
-
-.coupon-detail-value {
-    font-size: 13px;
-    color: #451a03;
-    text-align: right;
-    flex: 1;
-    margin-left: 8px;
+    color: #111827;
 }
 
 /* Parking Benefits Styles */
@@ -2923,8 +2934,10 @@ input[type="number"]:focus {
 }
 
 .card-result.best-card {
+    /* 淺綠底色是站長指定保留的（2026-11-16：第一批曾改成白底綠框，站長看預覽後要求改回）。
+       原本寫成 #f0fdf4 → #ecfdf5 的 135° 漸層，兩端幾乎同色，這裡直接用單色 */
     border-color: #10b981;
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    background: #f0fdf4;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
@@ -3070,6 +3083,99 @@ input[type="number"]:focus {
 .card-result.best-card .card-header {
     padding-right: 64px;
 }
+/* 手機（單欄）的角標改顯示「BEST」（2026-11-16 站長選定）：卡名前面多了卡面縮圖，右邊再替
+   「最優回饋」四個字留 64px，窄手機上長卡名會被擠成兩行。試過讓角標自己佔一列，站長否決
+   （吃掉直向空間）；改成字比較短的 BEST、留在原位，角標只伸進內容區 32px（寬 48px 扣掉卡片內距 16px）。
+   做法是把原字縮到 0、用 ::after 補上 BEST——DOM 文字仍是「最優回饋」（報讀軟體、回歸基準都不變）。
+   640px 是 .results-container（minmax(300px, 1fr)）變成兩欄的寬度；兩欄以上字照舊。 */
+@media (max-width: 640px) {
+    .card-result .best-badge {
+        font-size: 0;
+        padding: 5px 9px 6px;
+    }
+    .card-result .best-badge::after {
+        content: 'BEST';
+        font-size: 11px;
+        line-height: 1.6;
+        letter-spacing: .06em;
+    }
+    .card-result.best-card .card-header {
+        /* 角標伸進內容區 32px。.card-header 本身還有 12px 的 flex gap（卡名與右側空的
+           .badges-container 之間），所以這裡只要再補 24px，卡名右緣就離角標 4px */
+        padding-right: 24px;
+    }
+    /* 縮圖在手機小一號，把寬度讓給卡名 */
+    .card-thumb {
+        width: 36px;
+        height: 23px;
+    }
+    .card-name-with-pin .with-thumb {
+        gap: 6px;
+    }
+}
+/* 340px 以下（舊款小螢幕手機）不放縮圖：放了之後 9 個字的卡名一定換行。
+   量測（2026-11-16，卡名 19.2px 粗體）：最長的「企銀藝FUN悠遊御璽卡」寬 193px；最優卡的卡名可用寬度
+   在 360px 手機是 200px、320px 手機不放縮圖是 202px。之後有更長的卡名、或改了卡名字級，要重量。 */
+@media (max-width: 340px) {
+    .card-thumb {
+        display: none;
+    }
+}
+
+/* ── 結果卡的三個層級調整（2026-11-16，診斷見 docs/project/ui-refresh-diagnosis.md 第 1 節 #4 #6）──
+   1. 卡面縮圖：卡名前面一張小圖（renderCardThumb，js/results-display.js）
+   2. 回饋率是主數字：原本和「回饋消費上限」同為 14px
+   3. 「詳情／加到小抄」降成中性色：原本一藍一橘，每張卡都搶一次注意力。已加到小抄的橘色實心保留（那是狀態） */
+.card-thumb {
+    flex: none;
+    width: 44px;
+    height: 28px;
+    object-fit: contain;
+}
+/* .with-thumb 由 JS 加在卡名元素上（結果卡的 .card-name、領券卡的 .coupon-merchant） */
+.card-name-with-pin .with-thumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-result.excluded-card .card-thumb {
+    filter: grayscale(1);
+    opacity: .6;
+}
+/* 顏色沿用 .detail-value 的 #111827，最優卡也一樣——不為回饋率另外開一個顏色
+   （第一批曾給最優卡的回饋率深綠 #047857，站長指出那等於又多一種顏色，2026-11-16 拿掉）。 */
+.card-result .detail-value.rate-value,
+.coupon-item .detail-value.rate-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -.01em;
+}
+/* 數字和 % 不可以拆行：手機的回饋率欄只有 0.65fr（約 60px），「4.88%」放大後 % 會掉到第二行
+   （站長 2026-11-16 回報）。nowrap 會把這一欄撐到數字的寬度，其餘兩欄照比例分剩下的。 */
+.rate-value .rate-num {
+    white-space: nowrap;
+}
+@media (max-width: 640px) {
+    .card-result .detail-value.rate-value,
+    .coupon-item .detail-value.rate-value {
+        font-size: 24px;
+    }
+}
+.card-result .card-detail-peek-btn,
+.coupon-item .card-detail-peek-btn,
+.card-result .pin-btn:not(.pinned) {
+    background: #fff;
+    border-color: #d1d5db;
+    color: #374151;
+}
+.card-result .card-detail-peek-btn:hover,
+.coupon-item .card-detail-peek-btn:hover,
+.card-result .pin-btn:not(.pinned):hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
 
 .card-details {
     display: grid;
@@ -3198,76 +3304,48 @@ input[type="number"]:focus {
 
 /* Responsive design */
 @media (max-width: 768px) {
-    /* 手機版滿版：拿掉 body 的灰漸層底與 10px 內距，.container 也不再是「浮在灰底上
-       的白卡片」（圓角＋陰影）。手機螢幕窄，那圈灰邊框只是白白吃掉左右各 10px 的
-       可用寬度，也讓 header／main／各 section 看起來像三塊互不相連的浮板。
-       ⚠️ body 的灰漸層要留著：.container 之外的 <footer>（社群區塊）文字是白色的，
-       靠的就是這層灰底；把 body 洗白會讓那些按鈕整組看不見（2026-09-03 站長回報）。
-       container 滿版後灰底只剩頁尾那一段看得到，正是原本的設計。
-       桌機維持原本的灰底＋白卡片外觀，不受影響。 */
-    body {
-        padding: 0;
-    }
-
-    .container {
-        border-radius: 0;
-        box-shadow: none;
-    }
-
+    /* 手機版滿版（2026-09-03）當時在這裡拿掉 body 內距與 .container 的圓角陰影；
+       2026-11-16 桌機也改全幅後，那些已經是預設值，覆寫移除。
+       ⚠️ .container 之外的 <footer> 現在落在 body 的淺灰底（#f9fafb）上，頁尾文字必須是深色
+       （2026-10-21 已改 #374151）；不要再放白字。 */
     main {
         padding: 20px;
     }
 
     /* Announcement Bar Mobile */
+    /* 公告列（2026-11-16）：手機也是單行，放不下就截斷（點文字開全文 modal）；右邊顯示「n/N ›」，左右滑動照舊可換則。
+       原本是兩行＋圓點，佔掉首屏 80px。單行 nowrap＋ellipsis 不用 line-clamp，iOS 的殘影問題也跟著消失 */
     .announcement-bar {
-        padding: 8px 12px;
-        margin-top: 6px;
-        margin-bottom: 8px;
+        width: calc(100% - 32px);
+        padding: 7px 6px 7px 12px;
+        margin-top: 10px;
     }
 
     .announcement-content {
         gap: 8px;
-        align-items: flex-start;
     }
 
     .announcement-icon {
         width: 14px;
         height: 14px;
-        margin-top: 2px;
-    }
-
-    .announcement-text {
-        font-size: 0.85rem;
-        white-space: normal;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        line-height: 1.4;
-    }
-
-    /* Date badge on mobile（badge 是兄弟元素，貼齊文字第一行） */
-    .announcement-text-wrapper {
-        align-items: flex-start;
     }
 
     .announcement-date-badge {
         font-size: 0.7rem;
-        padding: 1px 6px;
         margin-right: 6px;
-        margin-top: 2px;
     }
 
-    /* 方案 B：手機隱藏箭頭/則數，文字吃滿寬度，改用滑動＋圓點指示 */
     .announcement-controls {
+        gap: 0;
+    }
+
+    #announcement-prev {
         display: none;
     }
 
-    .announcement-dots {
-        display: flex;
-    }
-
-    #announcement-close {
-        font-size: 1rem;
+    .announcement-btn {
+        min-width: 30px;
+        padding: 10px 6px;
     }
 
     /* 金額欄只放「NT$ 1000」這種短數字，不需要吃掉大半列寬；
@@ -6062,19 +6140,20 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 6px;
     padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.75);
+    /* 2026-11-16：原本是半透明白＋毛玻璃，配的是灰漸層底；頁尾底色改成 #f9fafb 之後
+       半透明白幾乎看不出按鈕外形，改實心白底＋灰框 */
+    background: #fff;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     color: #1f2937;
     text-decoration: none;
     font-size: 13px;
     transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
 }
 
 .social-link:hover {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(255, 255, 255, 0.95);
+    background: #fff;
+    border-color: #d1d5db;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -6373,17 +6452,9 @@ mark.cashback-search-hl {
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
-    /* 上緣直角（貼齊上方區塊），下緣保留圓角——四角全圓會像一顆按鈕 */
-    border-radius: 0 0 12px 12px;
+    /* 四角直角：.container 是滿版（手機 2026-09-03、桌機 2026-11-16），留下圓角會在左右下角露出缺口 */
+    border-radius: 0;
     margin-top: 0;
-}
-
-@media (max-width: 768px) {
-    /* 手機版 .container 已拿掉圓角（滿版），警語橫條再留 12px 下圓角就會在
-       左右下角露出兩塊白色缺口。桌機容器仍是圓角卡片，那裡維持原樣。 */
-    .finance-warning-row {
-        border-radius: 0;
-    }
 }
 
 @media (max-width: 600px) {
@@ -8079,6 +8150,8 @@ mark.cashback-search-hl {
     display: grid;
     grid-template-columns: 280px 1fr;
     min-height: 0;
+    max-width: var(--page-w);   /* 全幅版面：內容置中，見檔頭 :root 註解 */
+    margin: 0 auto;
 }
 
 /* When sidebar is hidden (landing page), collapse to single column */
@@ -8511,8 +8584,8 @@ mark.cashback-search-hl {
       媒體查詢不加特異性，同特異性靠源碼順序決勝（教訓見 ui-display.md）。
    ============================================ */
 @media (min-width: 1400px) {
-    .container {
-        max-width: 1360px;
+    :root {
+        --page-w: 1360px;   /* 2026-11-16 起寬度上限是變數（原本寫在 .container 的 max-width） */
     }
 
     .app-layout {
@@ -8521,8 +8594,8 @@ mark.cashback-search-hl {
 }
 
 @media (min-width: 1700px) {
-    .container {
-        max-width: 1560px;
+    :root {
+        --page-w: 1560px;
     }
 
     .app-layout {
@@ -8978,9 +9051,30 @@ mark.cashback-search-hl {
 .spotlight-section {
     box-sizing: border-box;
     width: 100%;
-    margin: 0;
+    max-width: var(--page-w);   /* 全幅版面：內容置中 */
+    margin: 0 auto;
     padding: 24px 30px 30px;
 }
+/* 桌機空狀態（2026-11-16）：還沒有搜尋結果時，JS 把整個區塊搬進主欄、放在搜尋框正下方
+   （placeSpotlightSection()，js/home-ui.js），填掉原本搜尋框底下的大片空白。這時它在 <main> 裡面，
+   左右留白由 main 負責，自己不再加。特異性高於檔尾密度區塊的 .spotlight-section，不用同步改那邊 */
+.spotlight-section.in-main {
+    max-width: none;
+    padding: 8px 0 0;
+}
+
+/* 信任列（2026-11-16）：搜尋區最下面一行小字，講資料有多深、多新 */
+.trust-line {
+    margin: 14px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+.trust-line b {
+    font-weight: 600;
+    color: #374151;
+}
+
 .spotlight-header {
     display: flex;
     align-items: center;
@@ -9589,7 +9683,7 @@ mark.cashback-search-hl {
    空的 <nav>（還沒生成、或只有一個商家頁時）靠 :empty 整條收起來，不留空白條。
    ============================================================ */
 .mc-related {
-    padding: 11px 30px;
+    padding: 11px calc(var(--page-gutter) + 30px);   /* 底色滿版、內容對齊 */
     background: #f3f4f6;
     border-top: 1px solid #e5e7eb;
     border-bottom: 1px solid #e5e7eb;
@@ -9722,6 +9816,13 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .home-view-switch > button.on::after { right: -12px; background: radial-gradient(circle at 100% 0, transparent 12px, #fff 12.5px); }
 .home-view-switch > button:first-child.on::before, .home-view-switch > button:last-child.on::after { display: none; }
 .home-view-switch svg { width: 17px; height: 17px; flex: none; }
+/* 桌機頁籤不撐滿（2026-11-16 站長選定「方案二」）：全幅版面下兩個頁籤各佔半個內容寬
+   （1440 螢幕各約 680px），像兩顆巨大的按鈕。保留資料夾造型，寬度改跟著文字、靠左。
+   手機照舊各佔一半。按鈕左右內距在檔尾密度區塊另有 ≥1025px 的值（Grep「頁籤左右內距」）。 */
+@media (min-width: 769px) {
+    .home-view-switch { grid-template-columns: max-content max-content; justify-content: start; }
+    .home-view-switch > button { padding-left: 40px; padding-right: 40px; }
+}
 @media (max-width: 768px) {
     .home-view-switch { margin: 12px -16px -12px; padding: 0 12px; }
     .home-view-switch > button { font-size: 14.5px; padding: 10px 6px 9px; }
@@ -10402,12 +10503,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
    .personal-field-hint-indent 的 padding-left:20px（對齊核取方塊）。
    ============================================ */
 @media (min-width: 1025px) {
-    body {
-        padding: 17px;   /* 原 20px */
-    }
-
     header {
-        padding: 9px 17px;   /* 原 10px 20px */
+        padding: 9px calc(var(--page-gutter) + 17px);   /* 原 10px 20px；--page-gutter 見檔頭 :root 註解 */
     }
 
     .header-top {
@@ -10453,9 +10550,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .announcement-bar {
-        padding: 7px 14px;   /* 原 8px 16px */
-        margin-top: 7px;   /* 原 8px */
-        margin-bottom: 14px;   /* 原 16px */
+        padding: 7px 14px;   /* 原 8px 14px */
+        margin-top: 10px;   /* 原 12px；2026-11-16 公告列搬出頁首後不再有 margin-bottom */
     }
 
     .announcement-content {
@@ -10463,7 +10559,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .announcement-date-badge {
-        padding: 2px 7px;   /* 原 2px 8px */
         margin-right: 7px;   /* 原 8px */
     }
 
@@ -10850,7 +10945,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .mc-related {
-        padding: 9px 26px;   /* 原 11px 30px */
+        padding: 9px calc(var(--page-gutter) + 26px);   /* 原 11px 30px */
         gap: 5px 12px;   /* 原 6px 14px */
     }
 
@@ -10869,7 +10964,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .home-view-switch > button {
-        padding: 9px 7px 9px;   /* 原 11px 8px 10px */
+        padding: 9px 34px 9px;   /* 頁籤左右內距：原 11px 40px 10px（2026-11-16 桌機頁籤不撐滿，左右由 8px 改 40px） */
         gap: 7px;   /* 原 8px */
     }
 
@@ -11282,11 +11377,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     border-color: #93c5fd;
     color: #1d4ed8;
 }
-.results-nav-chip[data-group="unmet"] {
-    border-color: #fcd34d;
-    background: #fffbeb;
-    color: #92400e;
-}
+/* 「未達門檻」膠囊原本是黃色，2026-11-16 站長要求和其他膠囊同色（這一列只是導覽，不需要用顏色分類） */
 .results-nav-count {
     min-width: 18px;
     padding: 0 5px;

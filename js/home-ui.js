@@ -403,6 +403,51 @@ function updateScrollToSpotlightBtn() {
     btn.classList.toggle('is-visible', resultsVisible && spotlightVisible);
 }
 
+// ===== 桌機空狀態：推薦活動放在搜尋框正下方（2026-11-16）=====
+// 桌機兩欄版面還沒有搜尋結果時，搜尋框底下有一整片空白，而推薦活動排在整個兩欄版面的下方（首屏外）。
+// 這裡把 #spotlight-section 搬進主欄的 #spotlight-empty-slot；一有結果就搬回原位（#view-search-extras 的第一個，
+// 跨兩欄的全寬橫帶，ui-display.md 第 4 節）。手機與平板（≤1024px）不搬——單欄時它本來就緊接在搜尋區下面。
+// 搬的是同一個節點，上面綁的事件、輪播狀態都跟著走。
+//
+// 「計算中」為什麼要另外記：displayResults() 讓結果區出現後，同一個同步流程裡就呼叫 scrollIntoView 捲過去。
+// 如果等 MutationObserver（微任務）才把推薦活動搬走，結果區會在捲動目標算好之後往上跳一截、捲過頭。
+// 所以按下計算的當下就先搬回原位（beginSpotlightCalc，同步），計算結束再照畫面上有沒有結果決定（endSpotlightCalc）。
+let spotlightCalcInFlight = false;
+const SPOTLIGHT_IN_MAIN_MQ = '(min-width: 1025px)';
+
+function hasVisibleSearchResults() {
+    return [...document.querySelectorAll('#view-search > section:not(.input-section)')]
+        .some(el => el.style.display !== 'none');
+}
+
+function placeSpotlightSection() {
+    const section = document.getElementById('spotlight-section');
+    const slot = document.getElementById('spotlight-empty-slot');
+    const home = document.getElementById('view-search-extras');
+    if (!section || !slot || !home) return;
+    const wantInMain = !spotlightCalcInFlight
+        && window.matchMedia(SPOTLIGHT_IN_MAIN_MQ).matches
+        && !hasVisibleSearchResults();
+    if (wantInMain === (section.parentNode === slot)) return;
+    if (wantInMain) slot.appendChild(section);
+    else home.insertBefore(section, home.firstChild);
+    section.classList.toggle('in-main', wantInMain);
+}
+
+function beginSpotlightCalc() { spotlightCalcInFlight = true; placeSpotlightSection(); }
+function endSpotlightCalc() { spotlightCalcInFlight = false; placeSpotlightSection(); }
+
+function setupSpotlightPlacement() {
+    // 結果區塊收起來時（清空、登出、切換條件）沒有單一的呼叫點，直接盯各區塊的 style
+    const observer = new MutationObserver(placeSpotlightSection);
+    document.querySelectorAll('#view-search > section:not(.input-section)')
+        .forEach(el => observer.observe(el, { attributes: true, attributeFilter: ['style'] }));
+    const mq = window.matchMedia(SPOTLIGHT_IN_MAIN_MQ);
+    if (mq.addEventListener) mq.addEventListener('change', placeSpotlightSection);
+    else if (mq.addListener) mq.addListener(placeSpotlightSection);   // 舊版 Safari
+    placeSpotlightSection();
+}
+
 function setupScrollToSpotlightButton() {
     const btn = document.getElementById('scroll-to-spotlight-btn');
     if (!btn) return;
@@ -1528,6 +1573,7 @@ function setupEventListeners() {
     setupGiftImageLightbox();
     setupBackToTopButton();
     setupScrollToSpotlightButton();
+    setupSpotlightPlacement();
 
     // Amount input: clear default on focus, restore on blur if empty
     amountInput.addEventListener('focus', () => {

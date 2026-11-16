@@ -169,6 +169,7 @@ async function loadCardsData() {
             lastUpdateElement.textContent = `最後資料更新：${cardsData.lastUpdated}`;
             console.log(`📅 最後資料更新：${cardsData.lastUpdated}`);
         }
+        renderTrustLine();
 
         return true;
     } catch (error) {
@@ -383,6 +384,48 @@ async function saveUserQuickSearchPrefs(prefs) {
 }
 
 // Render quick search buttons
+// 快捷選項的線條圖示（2026-11-16，取代 emoji——站長：「很有 AI 感」，見 docs/project/ui-refresh-diagnosis.md）。
+// 快捷選項的 icon 欄在 Sheets 裡填的是 emoji；這裡把已知的 emoji 對到線條圖示，Sheets 不用改。
+// 對照表沒有的（用戶自訂選項自己挑的 emoji、之後 Sheets 新增的）照原樣顯示 emoji——
+// 要換成線條圖示就在這張表加一列。內容是寫死的 SVG 路徑，不含任何外部輸入。
+// viewBox 一律 0 0 24 24；線寬、端點、顏色由 styles.css 的 .line-icon 決定。
+const QUICK_ICON_PATHS = {
+    '💳': '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 14.5h3"/>',
+    '📢': '<path d="M4 10v4h3l7 4V6l-7 4H4zM17.5 9.5a3.5 3.5 0 0 1 0 5"/>',
+    '🏪': '<path d="M4 10v9h16v-9M3 10l1.5-5h15L21 10H3zM10 19v-5h4v5"/>',
+    '🛒': '<path d="M3 4h2.5l2.2 10.5h9.6L19.5 7H6.3"/><circle cx="9" cy="18.5" r="1.3"/><circle cx="16.5" cy="18.5" r="1.3"/>',
+    '🎏': '<path d="M4 6c5 1.5 11 1.5 16 0M5 10h14M8 6.8V20M16 6.8V20"/>',
+    '🌍': '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
+    '🌐': '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
+    '🥡': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6.5a3 3 0 0 1 6 0V8"/>',
+    '💊': '<rect x="3.5" y="8.5" width="17" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="M9.5 9.5l5 5"/>',
+    '🚕': '<path d="M4 17v-4l2-5.2A1.5 1.5 0 0 1 7.4 7h9.2a1.5 1.5 0 0 1 1.4.8l2 5.2v4H4zM4.5 13h15M6.5 17v1.8M17.5 17v1.8"/>',
+    '🎤': '<rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11.5a6 6 0 0 0 12 0M12 17.5V21M9 21h6"/>',
+    '🏨': '<path d="M3 18V7M3 14h18v4M21 14v-1.5a3 3 0 0 0-3-3h-7V14"/><circle cx="7" cy="11" r="1.6"/>',
+    '✈': '<path d="M12 3c.9 0 1.5 1 1.5 2.3V9l6.5 4v2l-6.5-2v4l2 1.5V20l-3.5-1L8.5 20v-1.5l2-1.5v-4L4 15v-2l6.5-4V5.3C10.5 4 11.1 3 12 3z"/>',
+    '🧳': '<rect x="5" y="7.5" width="14" height="12" rx="2"/><path d="M9.5 7.5V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2.5M9.5 11v5M14.5 11v5"/>',
+    '⛽': '<path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h6A1.5 1.5 0 0 1 14 5.5V20M3.5 20h12M7.5 7.5h4V11h-4zM14 12h1.5a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 0 3 0V9.5L17.5 7"/>',
+    '📱': '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17.5h2"/>',
+    '🎬': '<rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M8 5v14M16 5v14M3.5 9.5H8M3.5 14.5H8M16 9.5h4.5M16 14.5h4.5"/>',
+    '🏬': '<path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5V20M3 20h18M9 8h1.5M13.5 8H15M9 12h1.5M13.5 12H15M10.5 20v-4h3v4"/>',
+    '🏢': '<path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5V20M3 20h18M9 8h1.5M13.5 8H15M9 12h1.5M13.5 12H15M10.5 20v-4h3v4"/>',
+    '🎡': '<circle cx="12" cy="10.5" r="6.5"/><path d="M12 4v13M5.5 10.5h13M12 10.5L8 20.5h8l-4-10"/>',
+    '🎟': '<path d="M4 8a1.5 1.5 0 0 1 1.5-1.5h13A1.5 1.5 0 0 1 20 8v2a2 2 0 0 0 0 4v2a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16v-2a2 2 0 0 0 0-4V8zM14 6.5v2M14 11v2M14 15.5v2"/>',
+    '🍽': '<path d="M7 3.5v6a2 2 0 0 0 4 0v-6M9 3.5v17M16.5 20.5v-17c-2 1.2-3 3.5-3 6.5v2.5h3"/>'
+};
+
+// 產生快捷選項圖示的 HTML。className 是外層 span 的 class（膠囊用 "icon"、管理視窗用 "tag-icon"）。
+// 鐵則 3：對照表以外的 icon 可能是用戶自訂輸入，一律 escapeHtml。
+function renderQuickOptionIcon(icon, className) {
+    if (!icon) return '';
+    // emoji 常帶變體選擇符（U+FE0F，如 ✈️ 🎟️ 🍽️），對照表的 key 不帶，比對前先去掉
+    const key = String(icon).replace(/\uFE0F/g, '').trim();
+    if (Object.prototype.hasOwnProperty.call(QUICK_ICON_PATHS, key)) {
+        return `<span class="${className} line-icon" aria-hidden="true"><svg viewBox="0 0 24 24">${QUICK_ICON_PATHS[key]}</svg></span>`;
+    }
+    return `<span class="${className}">${escapeHtml(icon)}</span>`;
+}
+
 function renderQuickSearchButtons() {
     const visibleContainer = document.getElementById('quick-search-visible');
     const dropdownContent = document.getElementById('quick-search-dropdown-content');
@@ -410,7 +453,7 @@ function renderQuickSearchButtons() {
         button.dataset.merchants = option.merchants.join(',');
 
         // 鐵則 3：displayName/icon 含用戶自訂快捷選項輸入，必須轉義
-        const iconHtml = option.icon ? `<span class="icon">${escapeHtml(option.icon)}</span>` : '';
+        const iconHtml = renderQuickOptionIcon(option.icon, 'icon');
         button.innerHTML = `${iconHtml}<span>${escapeHtml(option.displayName)}</span>`;
 
         button.addEventListener('click', () => {
@@ -596,3 +639,27 @@ function handleQuickSearch(option) {
     validateInputs();
 }
 
+// ===== 信任列（2026-11-16）=====
+// 搜尋區最下面那行「收錄 N 家銀行、N 張信用卡・資料更新 YYYY/M/D」（index.html #trust-line）。
+// 數字直接從 cardsData 算，不寫死；日期和頁尾「最後資料更新」同一個來源（contentUpdatedIso，沒有就退回 lastUpdated）。
+// 全部用 textContent／createElement 組，沒有 innerHTML。算不出張數就維持隱藏。
+function renderTrustLine() {
+    const el = document.getElementById('trust-line');
+    if (!el || !cardsData || !Array.isArray(cardsData.cards) || cardsData.cards.length === 0) return;
+    const bankCount = new Set(cardsData.cards.map(c => c && c.bank).filter(Boolean)).size;
+    const iso = cardsData.contentUpdatedIso;
+    let dateText = '';
+    if (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        const [y, m, d] = iso.split('-');
+        dateText = `${y}/${Number(m)}/${Number(d)}`;
+    } else if (cardsData.lastUpdated) {
+        dateText = String(cardsData.lastUpdated);
+    }
+    const bold = (n) => { const b = document.createElement('b'); b.textContent = String(n); return b; };
+    el.textContent = '';
+    el.append('收錄 ');
+    if (bankCount > 0) el.append(bold(bankCount), ' 家銀行、');
+    el.append(bold(cardsData.cards.length), ' 張信用卡');
+    if (dateText) el.append('・資料更新 ' + dateText);
+    el.hidden = false;
+}

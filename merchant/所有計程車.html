@@ -228,7 +228,7 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"所有計程車的信用卡回饋比較 2026｜哪張卡刷計程車最高回饋 - Pick My Card","description":"Uber、LINE GO、台灣大車隊、Bolt叫車刷哪張信用卡回饋最高？一鍵比較你手上的卡，並試算回饋金額，一眼看懂消費上限與達成條件。","url":"https://pickmycard.app/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"所有計程車 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"聯邦 M 卡"},{"@type":"ListItem","position":2,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":3,"name":"企銀朝天宮卡"},{"@type":"ListItem","position":4,"name":"永豐 Green 卡"},{"@type":"ListItem","position":5,"name":"玉山 UniCard"},{"@type":"ListItem","position":6,"name":"遠東樂家+卡"},{"@type":"ListItem","position":7,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":8,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":9,"name":"台新 Richart 卡"},{"@type":"ListItem","position":10,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-15"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"所有計程車的信用卡回饋比較 2026｜哪張卡刷計程車最高回饋 - Pick My Card","description":"Uber、LINE GO、台灣大車隊、Bolt叫車刷哪張信用卡回饋最高？一鍵比較你手上的卡，並試算回饋金額，一眼看懂消費上限與達成條件。","url":"https://pickmycard.app/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"所有計程車 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"聯邦 M 卡"},{"@type":"ListItem","position":2,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":3,"name":"企銀朝天宮卡"},{"@type":"ListItem","position":4,"name":"永豐 Green 卡"},{"@type":"ListItem","position":5,"name":"玉山 UniCard"},{"@type":"ListItem","position":6,"name":"遠東樂家+卡"},{"@type":"ListItem","position":7,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":8,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":9,"name":"台新 Richart 卡"},{"@type":"ListItem","position":10,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-16"}</script>
 </head>
 <body>
     <div class="container">
@@ -316,30 +316,6 @@
                 </div>
             </div>
 
-            <!-- Announcement Bar -->
-            <div class="announcement-bar" id="announcement-bar" style="display: none;">
-                <div class="announcement-content">
-                    <svg class="announcement-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 11l18-5v12L3 13v-2z"></path>
-                        <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
-                    </svg>
-                    <div class="announcement-text-wrapper">
-                        <!-- 日期 badge 必須是 announcement-text 的「兄弟」而非子元素：
-                             iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字 -->
-                        <span class="announcement-date-badge" id="announcement-date" style="display: none;"></span>
-                        <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
-                    </div>
-                    <div class="announcement-controls">
-                        <span class="announcement-indicator" id="announcement-indicator"></span>
-                        <button class="announcement-btn" id="announcement-prev" title="上一則" aria-label="上一則公告">‹</button>
-                        <button class="announcement-btn" id="announcement-next" title="下一則" aria-label="下一則公告">›</button>
-                        <button class="announcement-btn" id="announcement-close" title="關閉" aria-label="關閉公告">×</button>
-                    </div>
-                </div>
-                <!-- 手機版：圓點指示＋左右滑動換則（桌機隱藏、沿用箭頭） -->
-                <div class="announcement-dots" id="announcement-dots"></div>
-            </div>
-
             <!-- Announcement Detail Modal -->
             <div id="announcement-modal" class="modal" style="display: none;">
                 <div class="modal-content announcement-modal-content">
@@ -363,6 +339,32 @@
                 <button type="button" id="home-view-switch-mappings" aria-pressed="false"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 1h10a1 1 0 0 1 1 1v13l-2-1.3L10 15l-2-1.3L6 15l-2-1.3L2 15V2a1 1 0 0 1 1-1Zm2 4v1.2h6V5H5Zm0 3v1.2h6V8H5Z"/></svg>我的刷卡小抄</button>
             </nav>
         </header>
+
+        <!-- Announcement Bar
+             2026-11-16 起在頁首「外面」（站長選的方案 C）：白底內容區第一列的灰底提示，不再是藍色頁首裡的深藍盒子。
+             頁籤切到「我的刷卡小抄」時照樣顯示（沒有標 data-view）。embed 模式要隱藏 → styles.css 的 html.pmc-embed 清單。 -->
+        <div class="announcement-bar" id="announcement-bar" style="display: none;">
+            <div class="announcement-content">
+                <svg class="announcement-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 11l18-5v12L3 13v-2z"></path>
+                    <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path>
+                </svg>
+                <div class="announcement-text-wrapper">
+                    <!-- 日期 badge 必須是 announcement-text 的「兄弟」而非子元素：
+                         iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字 -->
+                    <span class="announcement-date-badge" id="announcement-date" style="display: none;"></span>
+                    <a href="#" class="announcement-text" id="announcement-text" target="_blank" rel="noopener noreferrer"></a>
+                </div>
+                <div class="announcement-controls">
+                    <span class="announcement-indicator" id="announcement-indicator"></span>
+                    <button class="announcement-btn" id="announcement-prev" title="上一則" aria-label="上一則公告">‹</button>
+                    <button class="announcement-btn" id="announcement-next" title="下一則" aria-label="下一則公告">›</button>
+                    <button class="announcement-btn" id="announcement-close" title="關閉" aria-label="關閉公告">×</button>
+                </div>
+            </div>
+            <!-- 手機版：圓點指示＋左右滑動換則（桌機隱藏、沿用箭頭） -->
+            <div class="announcement-dots" id="announcement-dots"></div>
+        </div>
 
         <!-- Boot loader：html.pmc-returning-user 存在時顯示（CSS 控制），工具區出現或 auth 判定完成時收掉。
              2026-10-04 起放在頁籤正下方、佔住工具區的位置（原本 fixed 在視窗正中央，
@@ -670,7 +672,15 @@
                     </div>
                 </div>
 
+                <!-- 信任列（2026-11-16）：收錄幾家銀行幾張卡＋資料更新日，數字由 renderTrustLine()（js/data-loader.js）
+                     從 cardsData 算出來；算出來之前不顯示。放在 .input-section 裡面，跟著工具區一起出現／收起。 -->
+                <p class="trust-line" id="trust-line" hidden></p>
+
             </section>
+
+            <!-- 桌機空狀態（2026-11-16）：還沒有搜尋結果時，placeSpotlightSection()（js/home-ui.js）把
+                 #spotlight-section 搬進這個空位（搜尋框正下方）；有結果或手機／平板寬度時搬回 #view-search-extras。 -->
+            <div id="spotlight-empty-slot"></div>
 
             <!-- 結果分類導覽（2026-11-14）：這次搜尋有兩類以上的結果時才出現，內容由 updateResultsNav()
                  照畫面上真的有的區塊產生；捲動時黏在畫面上緣 -->
@@ -1273,7 +1283,7 @@
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-15">2026/11/15</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-16">2026/11/16</time></span>
     </div>
     </footer>
 
