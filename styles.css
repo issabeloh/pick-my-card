@@ -8101,18 +8101,20 @@ mark.cashback-search-hl {
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
     }
 
+    /* 2026-11-16 站長回報手機上字太小（原本文案 12px、建議鈕 11px，比桌機還小）：文案 14px、建議鈕 13px */
     .hint-message {
-        font-size: 12px;
-        margin-bottom: 6px;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 8px;
     }
 
     .hint-button {
-        padding: 5px 10px;
-        font-size: 11px;
+        padding: 7px 13px;
+        font-size: 13px;
     }
 
     .hint-suggestions {
-        gap: 4px;
+        gap: 6px;
     }
 }
 
@@ -9073,19 +9075,38 @@ mark.cashback-search-hl {
 
 /* 首次引導（2026-11-16，分流 B 組）：背景暗化＋一步一步打亮目標的導覽，DOM 由 js/home-ui.js「首次引導」建立。
    站長看過第一版（搜尋框上方加一塊說明＋範例鈕）後否決：畫面更亂、不知道要做什麼。所以改成一次只看一樣東西。
-   - .tour-hole   打亮的洞：自己透明，用超大的 box-shadow 把洞以外全部壓暗（圓角才做得出來）
-   - .tour-block  擋點擊的透明層：洞以外一律點不到；需要用戶親手按的步驟，JS 用 clip-path 在洞的位置開口
+   - .tour-dim    暗化層：四邊各比視窗多出 400px，JS 用 clip-path 在目標的位置挖一個圓角洞。
+                  ⚠️ 不要改回「洞本身用超大 box-shadow 壓暗」或 inset:0：站長的 iPhone 13 Safari 上，
+                  那種寫法畫面最下面會有一截沒被蓋到（網址列收合時多出來的區域），多出去的 400px 就是為了蓋它。
+                  -400px 要跟 js/home-ui.js 的 ONBOARD_DIM_BLEED 一致
+   - .tour-hole   洞的白色外框（只是裝飾，不擋點擊）
+   - .tour-block  擋點擊的透明層：一般步驟整片擋住（連洞裡也點不到）；要用戶親手按的步驟 JS 把它收掉，
+                  洞以外仍被 .tour-dim 擋住（clip-path 挖掉的地方收不到點擊，剛好讓洞裡的按鈕可以按）
    - .tour-panel  說明框
    z-index 9000：高於所有 modal（最高 3000），低於全站 loading overlay（10000）
    html.pmc-onboard 由 index.html 首屏路由 script 在首屏前加上，導覽結束時移除 */
 html.pmc-onboard .quick-search-wrapper {
     display: none;   /* 導覽期間收起快捷選項：打亮搜尋框時裡面只剩輸入框，不跟說明框裡的範例混在一起 */
 }
+html.pmc-onboard #search-hints-container {
+    display: none;   /* 範例「中華航空」會跳 Search Hint，手機上它是浮層、會蓋到要打亮的計算鈕；導覽結束時 JS 清掉 */
+}
+.tour-dim {
+    position: fixed;
+    inset: -400px;
+    z-index: 9000;
+    background: rgba(15, 23, 42, 0.74);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.tour-dim.on {
+    opacity: 1;
+}
 .tour-hole {
     position: fixed;
-    z-index: 9000;
+    z-index: 9001;
     border-radius: 14px;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 0 0 200vmax rgba(15, 23, 42, 0.74);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95);
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -9095,7 +9116,7 @@ html.pmc-onboard .quick-search-wrapper {
 }
 .tour-block {
     position: fixed;
-    inset: 0;
+    inset: -400px;
     z-index: 9001;
 }
 .tour-panel {
@@ -9167,7 +9188,8 @@ html.pmc-onboard .quick-search-wrapper {
     margin-top: 16px;
 }
 .tour-skip,
-.tour-intro {
+.tour-intro,
+.tour-back {
     padding: 6px 0;
     font: inherit;
     font-size: 13px;
@@ -9179,8 +9201,23 @@ html.pmc-onboard .quick-search-wrapper {
     text-underline-offset: 2px;
 }
 .tour-skip:hover,
-.tour-intro:hover {
+.tour-intro:hover,
+.tour-back:hover {
     color: #374151;
+}
+/* 上一步：小按鈕，靠右排在「下一步」前面；沒有「下一步」的步驟（第 2 步）自己靠右 */
+.tour-back {
+    margin-left: auto;
+    padding: 6px 12px;
+    text-decoration: none;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
+.tour-back:hover {
+    background: #f3f4f6;
+}
+.tour-back + .tour-next {
+    margin-left: 0;
 }
 .tour-next {
     margin-left: auto;
@@ -9198,6 +9235,7 @@ html.pmc-onboard .quick-search-wrapper {
     background: #1d4ed8;
 }
 @media (prefers-reduced-motion: reduce) {
+    .tour-dim,
     .tour-hole,
     .tour-panel {
         transition: none;
