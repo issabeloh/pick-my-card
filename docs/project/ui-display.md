@@ -312,8 +312,8 @@ Grep `titleParts`）：
 - **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
 - **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
 - **公告列在頁首外面**（2026-11-16 第二批，站長選的方案）：`#announcement-bar` 是 `.container` 的直系子節點、緊接 `</header>`，灰底單行，寬度自己管（左右各 20px、手機 16px）。兩個頁籤畫面都顯示；embed 模式靠 `html.pmc-embed .announcement-bar` 隱藏。手機單行截斷、不顯示圓點（`buildAnnouncementDots()` 與圓點樣式留著沒刪）。日期仍必須是文字的兄弟元素
-- **手機結果卡三欄比例**（≤768px，2026-11-16 站長回報金額欄太靠左）：`.card-details` 是 `0.8fr 1.2fr 1fr`，<360px 才用舊的 `0.65fr 1.35fr 1fr`。改比例前量 360／390／440 三種寬度，金額＋計算機鈕、上限都要各在一行
-- **首次引導** `#onboard` 在 `.input-section` 最上面（2026-11-16）：只有分流 B 組、還沒算過也沒關掉的人看得到，由 `index.html` 首屏路由 script 加 `html.pmc-onboard` 控制；點擊行為在 `js/home-ui.js`「首次引導」。來龍去脈與「測試期間不能改」的規定見 `ui-refresh-diagnosis.md` 5.4、5.6 節
+- **手機結果卡三欄比例**（≤768px，2026-11-16 站長回報金額欄太靠左）：`.card-details` 是 `0.8fr 1.2fr 1fr`，<360px 才用舊的 `0.65fr 1.35fr 1fr`。改比例前量 360～768 幾種寬度，回饋率、金額＋計算機鈕、上限都要各在一行。已知代價：富邦 J 卡金額下方的小字「(現金回饋或LINE POINTS)」在 375～390px 變兩行
+- **首次引導**（2026-11-16）：分流 B 組第一次來時的四步導覽（背景暗化＋打亮目標），沒有靜態標記，整組由 `js/home-ui.js`「首次引導」建立；要不要跑由 `index.html` 首屏路由 script 加的 `html.pmc-onboard` 決定。打亮的目標是 `.merchant-search-box`、`#calculate-btn`、`#results-container > .card-result`、`#supported-cards`／`#sidebar-toggle-btn`——**改這些元素的 id／class 或搬位置時要一起看導覽**。來龍去脈、被否決的第一版與「測試期間不能改」的規定見 `ui-refresh-diagnosis.md` 5.4、5.6 節
 - **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 

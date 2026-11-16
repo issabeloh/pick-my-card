@@ -265,13 +265,23 @@
   | `ab_assigned` | `ab_group`＝A／B | A 在 landing、B 在工具，每人一次 | 漏斗步驟 1 |
   | （使用者屬性）`ab_landing` | A／B | 兩頁每次載入 | 區隔 |
   | `landing_cta_click` | `cta_position`＝skip／final | landing 的兩顆「開始使用」 | 5.3 缺的那個 |
-  | `onboard_example_click` | `example` | 引導的範例鈕 | |
-  | `onboard_intro_click`／`onboard_dismiss` | — | 「看完整介紹」／× | |
+  | `onboard_start` | — | 導覽開始 | B 組有多少人真的看到導覽 |
+  | `onboard_example_click` | `example` | 第 1 步選了範例 | |
+  | `onboard_dismiss`／`onboard_complete` | `onboard_step`＝停在哪一步 | 按「跳過」或 Esc／走完 | 看人在哪一步離開 |
+  | `onboard_intro_click` | — | 第 1 步的「看完整介紹」 | |
 
-- **範例帶出來的計算怎麼排除**：那一次 `calculate_cashback` 的 `surface` 是 `onboard_example`（`surface` 早就註冊成自訂維度了）。
+- **導覽裡按出來的計算怎麼排除**：第 2 步用戶按的是真的「計算回饋」鈕，那一次 `calculate_cashback` 的 `surface` 是 `onboard_example`（`surface` 早就註冊成自訂維度了）。
   主指標的步驟 2 要加條件 `surface` 不等於 `onboard_example`，同時也排除 `merchant_page`
-- **引導什麼時候消失**：算過任何一次 → 記 `pmc_onboard_done`，下次來不出現（當下那一頁先留著，可以再點別的範例）；按 × 立刻收起。
-  商家頁、embed 不出。A 組從 landing 點「開始使用」進工具**不會**看到引導（那一組比的是 landing）
+- **引導的形式：背景暗化、一次打亮一樣東西的四步導覽**（DOM 由 `js/home-ui.js`「首次引導」動態建立，步驟定義在 `ONBOARD_STEPS`）：
+  1. 打亮搜尋框：「結帳前，先 Pick My Card。一鍵比較你的信用卡哪張回饋最高！」＋範例蝦皮／中華航空／Apple Pay（點了把字打進搜尋框，不計算）
+  2. 打亮「計算回饋」鈕，用戶親手按（只有這一步的打亮區可以點）
+  3. 打亮第一張結果卡：講這張卡上有什麼
+  4. 打亮選卡的地方（桌機＝側欄選卡區；手機＝漢堡鈕）：講「只比較你有的卡」
+- **第一版被站長否決**（2026-11-16）：在搜尋框上方加一塊說明＋三個「點了直接出結果」的範例鈕。理由：桌機手機都更亂、不知道要做什麼；
+  點範例直接跳到結果區，不懂發生什麼事。站長指定改成暗化＋逐步打亮。**不要再做回「在工具畫面上多加一塊說明」**
+- **導覽期間收起的東西**：搜尋框裡的快捷選項（`html.pmc-onboard .quick-search-wrapper`），導覽結束還原；手機首訪的側欄「探頭」提示不演（`playSidebarPeekHint`）
+- **導覽什麼時候不再出現**：算過任何一次、按「跳過」、或走完 → 記 `pmc_onboard_done`。
+  商家頁、embed 不出。A 組從 landing 點「開始使用」進工具**不會**看到導覽（那一組比的是 landing）
 - **文案**：站長草稿寫「結賬」，實作用「結帳」（本站其他地方、landing 都用這個字）
 - **GA4 後台要註冊的自訂定義**：`ab_group`（範圍＝事件，事件參數 `ab_group`）、`ab_landing`（範圍＝使用者，使用者屬性 `ab_landing`）。
   想在報表裡看 `cta_position`、`example` 的值才需要另外註冊，不註冊也看得到事件次數。註冊畫面沒有時間相關的欄位

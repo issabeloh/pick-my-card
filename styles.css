@@ -9071,96 +9071,136 @@ mark.cashback-search-hl {
     padding: 8px 0 0;
 }
 
-/* 首次引導（2026-11-16，分流 B 組）：搜尋框上方一句話＋三個範例。預設不顯示，
-   index.html 首屏路由 script 加 html.pmc-onboard 才出現（首屏前就決定，不會閃）。
-   刻意不做成有底色的框：這是一句開場白，不是公告；顏色只用既有的灰與輸入框的藍 */
-.onboard {
-    display: none;
+/* 首次引導（2026-11-16，分流 B 組）：背景暗化＋一步一步打亮目標的導覽，DOM 由 js/home-ui.js「首次引導」建立。
+   站長看過第一版（搜尋框上方加一塊說明＋範例鈕）後否決：畫面更亂、不知道要做什麼。所以改成一次只看一樣東西。
+   - .tour-hole   打亮的洞：自己透明，用超大的 box-shadow 把洞以外全部壓暗（圓角才做得出來）
+   - .tour-block  擋點擊的透明層：洞以外一律點不到；需要用戶親手按的步驟，JS 用 clip-path 在洞的位置開口
+   - .tour-panel  說明框
+   z-index 9000：高於所有 modal（最高 3000），低於全站 loading overlay（10000）
+   html.pmc-onboard 由 index.html 首屏路由 script 在首屏前加上，導覽結束時移除 */
+html.pmc-onboard .quick-search-wrapper {
+    display: none;   /* 導覽期間收起快捷選項：打亮搜尋框時裡面只剩輸入框，不跟說明框裡的範例混在一起 */
 }
-html.pmc-onboard .onboard {
-    display: block;
-    position: relative;
-    margin: 0 0 18px;
-    padding-right: 36px;   /* 留給右上角的 × */
+.tour-hole {
+    position: fixed;
+    z-index: 9000;
+    border-radius: 14px;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 0 0 200vmax rgba(15, 23, 42, 0.74);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
-.onboard-title {
-    margin: 0;
-    font-size: 22px;
-    line-height: 1.35;
-    font-weight: 700;
+.tour-hole.on {
+    opacity: 1;
+}
+.tour-block {
+    position: fixed;
+    inset: 0;
+    z-index: 9001;
+}
+.tour-panel {
+    position: fixed;
+    z-index: 9002;
+    box-sizing: border-box;
+    width: min(360px, calc(100vw - 24px));
+    padding: 18px 18px 14px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
     color: #111827;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
-.onboard-sub {
-    margin: 2px 0 0;
-    font-size: 15px;
-    line-height: 1.5;
-    color: #4b5563;
+.tour-panel.on {
+    opacity: 1;
 }
-.onboard-examples {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-}
-.onboard-examples-label {
-    font-size: 13px;
+.tour-step {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     color: #6b7280;
 }
-.onboard-example {
-    padding: 6px 14px;
-    font: inherit;
+.tour-title {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.4;
+    font-weight: 700;
+}
+.tour-text {
+    margin: 6px 0 0;
     font-size: 14px;
+    line-height: 1.65;
+    color: #4b5563;
+}
+.tour-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+.tour-example {
+    padding: 9px 16px;
+    font: inherit;
+    font-size: 15px;
     font-weight: 600;
     color: #1d4ed8;
-    background: #fff;
+    background: #eff6ff;
     border: 1.5px solid #bfdbfe;
     border-radius: 999px;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
-.onboard-example:hover,
-.onboard-example:focus-visible {
-    background: #eff6ff;
+.tour-example:hover,
+.tour-example:focus-visible {
+    background: #dbeafe;
     border-color: #60a5fa;
 }
-.onboard-intro {
-    margin-left: 4px;
+.tour-example:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.tour-foot {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+}
+.tour-skip,
+.tour-intro {
+    padding: 6px 0;
+    font: inherit;
     font-size: 13px;
     color: #6b7280;
+    background: none;
+    border: 0;
+    cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 2px;
 }
-.onboard-intro:hover {
+.tour-skip:hover,
+.tour-intro:hover {
     color: #374151;
 }
-.onboard-close {
-    position: absolute;
-    top: -4px;
-    right: -6px;
-    width: 32px;
-    height: 32px;
-    font-size: 20px;
-    line-height: 1;
-    color: #9ca3af;
-    background: none;
+.tour-next {
+    margin-left: auto;
+    padding: 9px 20px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: #1e40af;
     border: 0;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
 }
-.onboard-close:hover {
-    color: #4b5563;
-    background: #f3f4f6;
+.tour-next:hover {
+    background: #1d4ed8;
 }
-@media (max-width: 768px) {
-    html.pmc-onboard .onboard {
-        margin-bottom: 14px;
-    }
-    .onboard-title {
-        font-size: 19px;
-    }
-    .onboard-sub {
-        font-size: 14px;
+@media (prefers-reduced-motion: reduce) {
+    .tour-hole,
+    .tour-panel {
+        transition: none;
     }
 }
 

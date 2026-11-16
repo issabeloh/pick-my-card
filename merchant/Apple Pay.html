@@ -55,7 +55,7 @@
         }
         // ===== 對半分流：landing 對上「工具＋首次引導」（2026-11-16，設計見 docs/project/ui-refresh-diagnosis.md 5.4、5.5）=====
         // 只有「本來會被轉去 landing 的全新訪客」擲一次骰子，結果存 localStorage pmc_ab_landing：
-        //   A＝照舊轉去 landing；B＝留在工具，搜尋框上方出現首次引導（#onboard）
+        //   A＝照舊轉去 landing；B＝留在工具，跑一次逐步導覽（js/home-ui.js「首次引導」；html.pmc-onboard 是它的開關）
         // PMC_AB_TOOL_SHARE＝分到 B 的比例。測試結束改成 0（全部去 landing）或 1（取消強制轉址）就是定案。
         // ?ab=A／?ab=B：站長看預覽用，強制指定分組並記 pmc_ab_forced，這種情況不送 ab_assigned（不汙染數字）。
         // GA 事件在別處送：A 由 landing.html、B 由下方 Firebase module script（都讀這裡存的分組）。
@@ -556,21 +556,8 @@
                  （推薦活動、推薦比較——桌機要跨整個版面寬，所以放在側欄外面）。 -->
             <div class="app-view" id="view-search" data-view="search">
             <section class="input-section" style="display: none;">
-                <!-- 首次引導（2026-11-16）：只有分流 B 組、還沒算過也沒關掉的人看得到——<head> 首屏路由 script 加
-                     html.pmc-onboard 才顯示（styles.css「首次引導」）。行為在 js/home-ui.js「首次引導」。
-                     ⚠️ 分流測試期間不要改這一段的文案與範例（只有一組看得到，改了前後數字不能比）。 -->
-                <div class="onboard" id="onboard">
-                    <button type="button" class="onboard-close" id="onboard-close" aria-label="關閉說明">&times;</button>
-                    <p class="onboard-title">結帳前，先 Pick My Card。</p>
-                    <p class="onboard-sub">一鍵比較你的信用卡哪張回饋最高！</p>
-                    <div class="onboard-examples">
-                        <span class="onboard-examples-label">點一個試試看</span>
-                        <button type="button" class="onboard-example" data-example="蝦皮">蝦皮</button>
-                        <button type="button" class="onboard-example" data-example="中華航空">中華航空</button>
-                        <button type="button" class="onboard-example" data-example="LINE Pay">LINE Pay</button>
-                        <a class="onboard-intro" id="onboard-intro" href="/landing">看完整介紹</a>
-                    </div>
-                </div>
+                <!-- 首次引導（2026-11-16）：分流 B 組第一次來時的逐步導覽（背景暗化＋打亮目標），整組由
+                     js/home-ui.js「首次引導」動態建立，這裡沒有對應的靜態標記。 -->
                 <div class="input-row-with-button">
                     <div class="form-group compact">
                         <label for="merchant-input">
