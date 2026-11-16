@@ -248,7 +248,7 @@ Grep `titleParts`）：
 
 ## 1i. 行動支付卡片（單一支付詳情／比較所有行動支付回饋，2026-10-08）
 
-- 兩個 modal 的每張卡都由 `renderPaymentCardResult(mc, isBest)`（`js/levels-payments.js`）產生＝**搜尋結果卡片的縮小版**：直接沿用 `.card-result`／`.card-header`／`.card-details.rate-card-details`（兩欄：回饋率｜回饋消費上限；沒有消費金額所以沒有回饋金額欄，回饋率接手綠色）／`renderActivityInfo({ activityName })` 的「活動: ○○」行，「最優回饋」角標也是 `.card-result .best-badge` 原樣；上限字樣用詳情頁的 `formatRateCardCap()`。差異只補在 `.payment-card-result`（白底、卡名 1rem；比較 modal 另加卡與卡的 margin，單一支付詳情是 grid 用 gap）。**要改卡片長相改這支，不要在兩個 modal 各自拼**
+- 兩個 modal 的每張卡都由 `renderPaymentCardResult(mc, isBest)`（`js/levels-payments.js`）產生＝**搜尋結果卡片的縮小版**：直接沿用 `.card-result`／`.card-header`／`.card-details.rate-card-details`（兩欄：回饋率｜回饋消費上限；沒有消費金額所以沒有回饋金額欄，回饋率接手綠色）／`renderActivityInfo({ activityName })` 的「活動: ○○」行，「最優回饋」角標也是 `.card-result .best-badge` 原樣；上限字樣用詳情頁的 `formatRateCardCap()`。差異只補在 `.payment-card-result`（白底、卡名 1rem；比較 modal 另加卡與卡的 margin，單一支付詳情是 grid 用 gap）。**要改卡片長相改這支，不要在兩個 modal 各自拼**。卡名前的卡面縮圖也是搜尋結果卡那支 `renderCardThumb()`（2026-11-16 補上；≤340px 不顯示，同結果卡）
 - ⚠️ `.card-result` 因此不只存在於搜尋結果區：現有用 `.card-result` 找元素的程式（`closest('.card-result')`）都是從按鈕往上找，不受影響；新增「全頁掃 `.card-result`」的程式要限定在 `#results-container`
 - 比較 modal 前三名支付在名稱前加獎牌 `renderPaymentRankMedal(rank)`（SVG：藍彩帶＋金／銀／銅牌面＋數字，顏色在 `.payment-rank-medal-N`）。名次用**並列名次（標準競賽排名 1、2、2、2、5）**：依序比最優卡回饋率 → 最優卡消費上限（無上限最高）→ 第二張卡回饋率，三者全同才並列；並列第 2 之後就沒有第 3（2026-10-08 實測 Apple／Google／Samsung Pay 並列第 2，當天沒有銅牌）
 

@@ -432,13 +432,14 @@ async function showPaymentDetail(paymentId) {
 // 行動支付的一張卡（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用，2026-10-08）：
 // 搜尋結果卡片的縮小版——直接沿用 .card-result／.card-header／.card-details／.matched-merchant
 // 與「最優回饋」角標。三欄少了「回饋金額」（這裡沒有消費金額），回饋率接手綠色強調（同詳情頁回饋卡）。
+// 卡名前的卡面縮圖與搜尋結果卡同一支 renderCardThumb（js/results-display.js，2026-11-16 補上）。
 // mc = { card, rate, cap, category }
 function renderPaymentCardResult(mc, isBest) {
     const capText = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
     return `
         <div class="card-result payment-card-result${isBest ? ' best-card' : ''}">
             <div class="card-header">
-                <div class="card-name-with-pin"><div class="card-name">${escapeHtml(mc.card.name)}</div></div>
+                <div class="card-name-with-pin"><div class="card-name with-thumb">${renderCardThumb(mc.card.id)}${escapeHtml(mc.card.name)}</div></div>
                 <div class="badges-container">${isBest ? '<div class="best-badge">最優回饋</div>' : ''}</div>
             </div>
             <div class="card-details rate-card-details">
