@@ -91,6 +91,7 @@ html.pmc-embed .container {
    （.mc-related，2026-08-18 新增）漏加，手機上直排成 315px 高的灰塊面積卡在
    詳情彈窗上方，連結還點得下去（會把 iframe 導到商家頁），2026-09-23 才修。 */
 html.pmc-embed header,
+html.pmc-embed .announcement-bar,
 html.pmc-embed .sidebar-overlay,
 html.pmc-embed .app-layout,
 html.pmc-embed .spotlight-section,
@@ -716,13 +717,18 @@ header h1 {
 }
 
 /* Announcement Bar */
+/* 公告列（2026-11-16 改版，站長選的方案 C）：從藍色頁首裡搬到白底內容區的第一列，灰底、單行、沒有陰影。
+   原本是頁首裡的深藍漸層盒子＋陰影＋白色日期膠囊，手機佔兩行＋圓點。
+   它現在是 .container 的直系子節點，所以寬度自己管（見檔頭 :root 註解）：左右各留 20px，和頁首內容對齊。
+   ⚠️ 檔尾桌機密度區塊有另一份 padding／margin，改這裡要一起改（Grep「.announcement-bar」）。 */
 .announcement-bar {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-    padding: 8px 16px;
-    margin-top: 8px;
-    margin-bottom: 16px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    width: calc(100% - 40px);
+    max-width: calc(var(--page-w) - 40px);
+    margin: 12px auto 0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #f3f4f6;
 }
 
 .announcement-content {
@@ -736,7 +742,7 @@ header h1 {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #e0f2fe;
+    color: #6b7280;
 }
 
 .announcement-text-wrapper {
@@ -748,7 +754,7 @@ header h1 {
 }
 
 .announcement-text {
-    color: #e0f2fe;
+    color: #111827;
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 400;
@@ -783,17 +789,14 @@ header h1 {
 .announcement-date-badge {
     display: inline-block;
     flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    padding: 2px 8px;
-    border-radius: 12px;
+    /* 2026-11-16：原本是半透明白底的膠囊，改成純文字（灰），不再是盒子裡的盒子 */
+    color: #6b7280;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     margin-right: 8px;
     white-space: nowrap;
     cursor: pointer;
     transition: opacity 0.15s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .announcement-controls {
@@ -806,7 +809,7 @@ header h1 {
 /* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
     font-size: 0.75rem;
-    color: #cbd5e1;
+    color: #6b7280;
     white-space: nowrap;
     padding: 0 2px;
 }
@@ -814,7 +817,7 @@ header h1 {
 .announcement-btn {
     background: none;
     border: none;
-    color: #cbd5e1;
+    color: #6b7280;
     font-size: 1.05rem;
     cursor: pointer;
     /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
@@ -828,7 +831,7 @@ header h1 {
 }
 
 .announcement-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: #e5e7eb;
     opacity: 1;
 }
 
@@ -836,7 +839,8 @@ header h1 {
     display: none;
 }
 
-/* 手機版圓點指示（方案 B）：桌機隱藏、沿用箭頭；手機隱藏箭頭、改滑動＋圓點 */
+/* 圓點指示：2026-11-16 起各寬度都不顯示（手機改成單行＋「n/N ›」，仍可左右滑動換則）。
+   JS 照舊會產生圓點（buildAnnouncementDots），這裡的樣式留著，之後要恢復只要把 display 打開 */
 .announcement-dots {
     display: none;
     justify-content: center;
@@ -1143,7 +1147,8 @@ header h1 {
 /* Main content */
 main {
     padding: 30px;
-    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.05);
+    /* 2026-11-16 拿掉 box-shadow: 0 -4px 6px（往上的淡陰影）：公告列搬到頁首和 main 之間後，
+       手機上這道陰影會橫在公告列正下方。桌機有側欄那一版本來就蓋掉了（.app-layout main） */
     min-width: 0; /* Prevent grid blowout */
 }
 @media (min-width: 769px) {
@@ -3308,55 +3313,39 @@ input[type="number"]:focus {
     }
 
     /* Announcement Bar Mobile */
+    /* 公告列（2026-11-16）：手機也是單行，放不下就截斷（點文字開全文 modal）；右邊顯示「n/N ›」，左右滑動照舊可換則。
+       原本是兩行＋圓點，佔掉首屏 80px。單行 nowrap＋ellipsis 不用 line-clamp，iOS 的殘影問題也跟著消失 */
     .announcement-bar {
-        padding: 8px 12px;
-        margin-top: 6px;
-        margin-bottom: 8px;
+        width: calc(100% - 32px);
+        padding: 7px 6px 7px 12px;
+        margin-top: 10px;
     }
 
     .announcement-content {
         gap: 8px;
-        align-items: flex-start;
     }
 
     .announcement-icon {
         width: 14px;
         height: 14px;
-        margin-top: 2px;
-    }
-
-    .announcement-text {
-        font-size: 0.85rem;
-        white-space: normal;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        line-height: 1.4;
-    }
-
-    /* Date badge on mobile（badge 是兄弟元素，貼齊文字第一行） */
-    .announcement-text-wrapper {
-        align-items: flex-start;
     }
 
     .announcement-date-badge {
         font-size: 0.7rem;
-        padding: 1px 6px;
         margin-right: 6px;
-        margin-top: 2px;
     }
 
-    /* 方案 B：手機隱藏箭頭/則數，文字吃滿寬度，改用滑動＋圓點指示 */
     .announcement-controls {
+        gap: 0;
+    }
+
+    #announcement-prev {
         display: none;
     }
 
-    .announcement-dots {
-        display: flex;
-    }
-
-    #announcement-close {
-        font-size: 1rem;
+    .announcement-btn {
+        min-width: 30px;
+        padding: 10px 6px;
     }
 
     /* 金額欄只放「NT$ 1000」這種短數字，不需要吃掉大半列寬；
@@ -9066,6 +9055,26 @@ mark.cashback-search-hl {
     margin: 0 auto;
     padding: 24px 30px 30px;
 }
+/* 桌機空狀態（2026-11-16）：還沒有搜尋結果時，JS 把整個區塊搬進主欄、放在搜尋框正下方
+   （placeSpotlightSection()，js/home-ui.js），填掉原本搜尋框底下的大片空白。這時它在 <main> 裡面，
+   左右留白由 main 負責，自己不再加。特異性高於檔尾密度區塊的 .spotlight-section，不用同步改那邊 */
+.spotlight-section.in-main {
+    max-width: none;
+    padding: 8px 0 0;
+}
+
+/* 信任列（2026-11-16）：搜尋區最下面一行小字，講資料有多深、多新 */
+.trust-line {
+    margin: 14px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6b7280;
+}
+.trust-line b {
+    font-weight: 600;
+    color: #374151;
+}
+
 .spotlight-header {
     display: flex;
     align-items: center;
@@ -10541,9 +10550,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .announcement-bar {
-        padding: 7px 14px;   /* 原 8px 16px */
-        margin-top: 7px;   /* 原 8px */
-        margin-bottom: 14px;   /* 原 16px */
+        padding: 7px 14px;   /* 原 8px 14px */
+        margin-top: 10px;   /* 原 12px；2026-11-16 公告列搬出頁首後不再有 margin-bottom */
     }
 
     .announcement-content {
@@ -10551,7 +10559,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     }
 
     .announcement-date-badge {
-        padding: 2px 7px;   /* 原 2px 8px */
         margin-right: 7px;   /* 原 8px */
     }
 

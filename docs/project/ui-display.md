@@ -311,6 +311,8 @@ Grep `titleParts`）：
 - **快捷選項圖示**：Sheets 的 icon 欄照舊填 emoji，前端 `renderQuickOptionIcon()`（`js/data-loader.js`）對到線條圖示；對照表沒有的 emoji 原樣顯示。Sheets 新增了新的 emoji → 在 `QUICK_ICON_PATHS` 補一列
 - **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
 - **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
+- **公告列在頁首外面**（2026-11-16 第二批，站長選的方案）：`#announcement-bar` 是 `.container` 的直系子節點、緊接 `</header>`，灰底單行，寬度自己管（左右各 20px、手機 16px）。兩個頁籤畫面都顯示；embed 模式靠 `html.pmc-embed .announcement-bar` 隱藏。手機單行截斷、不顯示圓點（`buildAnnouncementDots()` 與圓點樣式留著沒刪）。日期仍必須是文字的兄弟元素
+- **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 
 ## 2. 卡片圖片資產
@@ -350,7 +352,7 @@ Grep `titleParts`）：
 
 > ⚠️ UI 字串是「推薦活動」，**程式內部命名一律沿用 `spotlight`**（id/class/函數/資料 key），改名時刻意不動——牽動十幾個檔案卻沒有好處。
 
-**位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
+**位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。**例外（2026-11-16，桌機空狀態）**：≥1025px 且畫面上沒有任何搜尋結果時，`placeSpotlightSection()`（`js/home-ui.js`）把同一個節點搬進 `<main>` 的 `#spotlight-empty-slot`（搜尋框正下方，加 class `in-main`）；按下計算的當下同步搬回原位（`beginSpotlightCalc()`，由 `calculateCashback()` 呼叫——不能等結果出現才搬，會讓 `displayResults()` 的捲動捲過頭），結果收起時由 MutationObserver 搬回主欄。新增結果區塊時放在 `#view-search` 底下當直系 `<section>` 並用 inline `display` 開關，這套判斷才認得到。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
 
 **資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
 

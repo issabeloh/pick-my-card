@@ -169,6 +169,7 @@ async function loadCardsData() {
             lastUpdateElement.textContent = `最後資料更新：${cardsData.lastUpdated}`;
             console.log(`📅 最後資料更新：${cardsData.lastUpdated}`);
         }
+        renderTrustLine();
 
         return true;
     } catch (error) {
@@ -638,3 +639,27 @@ function handleQuickSearch(option) {
     validateInputs();
 }
 
+// ===== 信任列（2026-11-16）=====
+// 搜尋區最下面那行「收錄 N 家銀行、N 張信用卡・資料更新 YYYY/M/D」（index.html #trust-line）。
+// 數字直接從 cardsData 算，不寫死；日期和頁尾「最後資料更新」同一個來源（contentUpdatedIso，沒有就退回 lastUpdated）。
+// 全部用 textContent／createElement 組，沒有 innerHTML。算不出張數就維持隱藏。
+function renderTrustLine() {
+    const el = document.getElementById('trust-line');
+    if (!el || !cardsData || !Array.isArray(cardsData.cards) || cardsData.cards.length === 0) return;
+    const bankCount = new Set(cardsData.cards.map(c => c && c.bank).filter(Boolean)).size;
+    const iso = cardsData.contentUpdatedIso;
+    let dateText = '';
+    if (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+        const [y, m, d] = iso.split('-');
+        dateText = `${y}/${Number(m)}/${Number(d)}`;
+    } else if (cardsData.lastUpdated) {
+        dateText = String(cardsData.lastUpdated);
+    }
+    const bold = (n) => { const b = document.createElement('b'); b.textContent = String(n); return b; };
+    el.textContent = '';
+    el.append('收錄 ');
+    if (bankCount > 0) el.append(bold(bankCount), ' 家銀行、');
+    el.append(bold(cardsData.cards.length), ' 張信用卡');
+    if (dateText) el.append('・資料更新 ' + dateText);
+    el.hidden = false;
+}
