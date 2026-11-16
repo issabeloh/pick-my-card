@@ -2224,68 +2224,29 @@ input[type="number"]:focus {
     gap: 16px;
 }
 
-/* Coupon card styling */
+/* Coupon card styling
+   2026-11-16 站長要求比照一般結果卡：原本是琥珀色漸層底＋琥珀框＋褐色卡名＋hover 浮起，
+   現在白底灰框、卡名字級與顏色同 .card-name、沒有 hover 效果（.card-result 本來就沒有）。
+   「這是領券型」靠區塊標題（領券型活動）表達，不靠卡片顏色。
+   同日刪掉沒有任何地方在用的 .coupon-rate／.coupon-details／.coupon-detail-*（舊版自拼模板的殘留）。 */
 .coupon-item {
-    border: 1px solid #f59e0b;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 16px;
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    transition: all 0.3s ease;
-}
-
-.coupon-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    background: #fff;
 }
 
 .coupon-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .coupon-merchant {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: #92400e;
-}
-
-.coupon-rate {
-    background: #f59e0b;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.coupon-details {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-}
-
-.coupon-detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 4px 0;
-}
-
-.coupon-detail-label {
-    font-size: 13px;
-    color: #92400e;
-    font-weight: 500;
-    min-width: 60px;
-}
-
-.coupon-detail-value {
-    font-size: 13px;
-    color: #451a03;
-    text-align: right;
-    flex: 1;
-    margin-left: 8px;
+    color: #111827;
 }
 
 /* Parking Benefits Styles */
