@@ -300,6 +300,19 @@ Grep `titleParts`）：
 - ⚠️ 凍結資料下 13 組回歸不擷取這一區與小標題，**回歸測不到**（小標題與主標題由 `basic-exclusions-test.js` 測到一部分）；驗證靠線上資料實測：
   「水費」1000（三類並存）、「瓦斯通」1000（只有未達門檻）、「統一超商」100（提示行）、「MOMO購物網」1000（同卡多個門檻）
 
+## 1l. 全幅版面與結果卡層級（2026-11-16，「AI 感」改善第一批）
+
+成因、對照站觀察、分批清單與還沒做的項目都在 `docs/project/ui-refresh-diagnosis.md`，這裡只記會踩到的規則：
+
+- **`.container` 不再有 max-width、圓角、陰影，`body` 不再有灰漸層與外圈留白**。內容寬度上限改由 `--page-w` 管（1200／1360／1560，第 1b 節那張表的 `.container` 欄現在指的是這個變數）
+- **新增直接掛在 `.container` 底下的區塊時要自己決定寬度**：內容型 → `max-width: var(--page-w); margin: 0 auto`；底色要滿版 → 左右 padding 加 `var(--page-gutter)`（照 `header`、`.mc-related` 的寫法）。漏了就會從視窗最左邊排到最右邊
+- **頁首與「推薦比較」的左右 padding 在檔尾密度區塊有另一份值**，兩邊都帶 `var(--page-gutter)`，改一邊要改另一邊
+- **桌機頁籤不撐滿**（`.home-view-switch` 在 ≥769px 是 `max-content max-content` 靠左）；手機照舊各佔一半
+- **快捷選項圖示**：Sheets 的 icon 欄照舊填 emoji，前端 `renderQuickOptionIcon()`（`js/data-loader.js`）對到線條圖示；對照表沒有的 emoji 原樣顯示。Sheets 新增了新的 emoji → 在 `QUICK_ICON_PATHS` 補一列
+- **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
+- **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
+- **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**
@@ -501,3 +514,4 @@ Grep `titleParts`）：
 - [2026-10-13] 站長回報 Safari 開首頁「loading 動畫很快消失，停在空白很久」→ `ensureGuestUIBound()` 在 Firebase SDK 一就緒（正常路徑也會跑到）就收掉 `pmc-returning-user`，但 `onAuthStateChanged` 還要等 Firebase 線上驗證帳號好幾秒才 `showToolSections()`；auth 永不回應時更是永遠空白 → 拿掉那行，改由 `showToolSections()`／`onAuthStateChanged` 收 loader，並加「auth 判定逾時」fallback（`initializeAuthListeners()`，`FIREBASE_FALLBACK_MS` 後以訪客模式顯示）→ 收 loader 的時機必須和「工具區出現」綁在一起，不能綁在「某個中間步驟完成」。站長裁定：不依 `pmc_known_logged_in` 先當登入用戶顯示工具區
 - [2026-10-18] 統一詞一輪（10-14～17）把卡片活動裡 34 個名字改寫，其中 18 個（只差空白／大小寫／臺台，統一詞表照規定不列）存在刷卡小抄的舊寫法查不到 → 被判「已下架」、會被「刪除全部失效活動」刪掉；另查出名字括號裡含「、」的 10 個名字（Apple錢包指定交通卡(Suica、PASMO、ICOCA) 等）一釘選就被判已下架，因為重查前一律先用「、」拆 → 小抄重查與加入鈕改走 `resolveMappingMerchant()`（見第 8 節「存的名字」）。資料改名是正常維護動作，任何「拿存下來的名字回頭查資料」的功能都要認得改名前的寫法，且判定會觸發刪除時要用真實改名清單驗過（這次用 10-13 與 10-17 的 cards.data 對照）
 - [2026-10-21] 手機版頁尾白字放在 body 灰漸層上對比只有約 1.5:1（小標 10px 幾乎看不見）、廣告沒填到時「推薦比較」下方留一塊 116px 白洞 → 白字是當初配深色背景的寫法、灰底換上來後沒人重量對比；廣告列用 `min-height:100px` 預留位子，但擋廣告外掛／沒填到時位子永遠空著 → 頁尾改深色字（`#374151` 約 5.4:1）＋手機兩欄格線（奇數顆最後一顆佔滿一列）＋法務連結縮成 `.footer-legal` 一行小字；廣告列拿掉預留高度，外框與「廣告」標籤只在 `<ins data-ad-status="filled">` 時出現，`data-full-width-responsive` 改 false（true 會讓手機廣告撐出外框）。⚠️ 頁尾是**同一套結構手抄在 4 頁**（index／faq／privacy／terms）＋商家頁由生成器從 index 產生＋promos.html 由 `cards-export.gs` 生成（用自己的 promos.css，要手動同步）；改頁尾要全部對一遍。另：站長實測確認 AdSense **錨定廣告收合後，原本預留的空間不會收回**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），這不是本站版面造成的，改 CSS 前先分清楚是不是廣告插的
+- [2026-11-16] 站長反映全站「很有 AI 感、不專業」→ 成因是一整組手法疊加（灰底浮卡、預設色票、emoji 圖示、尺度不一致），不是單一元件 → 動全站視覺（底色、頁首、頁籤、結果卡、色票）前先讀 `docs/project/ui-refresh-diagnosis.md`：有成因排序、分批清單與進度、示意用 CSS、實作注意事項
