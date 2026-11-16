@@ -310,7 +310,8 @@ Grep `titleParts`）：
 - **桌機頁籤不撐滿**（`.home-view-switch` 在 ≥769px 是 `max-content max-content` 靠左）；手機照舊各佔一半
 - **快捷選項圖示**：Sheets 的 icon 欄照舊填 emoji，前端 `renderQuickOptionIcon()`（`js/data-loader.js`）對到線條圖示；對照表沒有的 emoji 原樣顯示。Sheets 新增了新的 emoji → 在 `QUICK_ICON_PATHS` 補一列
 - **結果卡縮圖** `renderCardThumb()`（`js/results-display.js`）放在 `.card-name` 裡面最前面，`alt=""`，所以 `.card-name` 的 textContent 不變（回歸基準不受影響）
-- **最優卡角標**：兩欄以上卡名右側留 64px；單欄（≤640px）角標自己一列。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
+- **最優卡角標**：兩欄以上是「最優回饋」、卡名右側留 64px；單欄（≤640px）用 CSS 改顯示「BEST」（DOM 文字不變）、留在原位。改 `.results-container` 的欄寬下限（現在 300px）時，這個 640px 斷點要跟著算
+- **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 
 ## 2. 卡片圖片資產
 
