@@ -499,15 +499,17 @@ async function setupFeeWaiverStatus(cardId) {
 
 // 我的額度相關功能（選填金額；比照免年費狀態的儲存方式）
 
+// 額度字串／數字 → 正數，其餘（null、undefined、''、0、負數、非數字）一律 null＝未填寫。
+// 讀額度的兩個地方共用：loadCreditLimit（本檔）、mpLoadLimits（js/mappings-page.js，載入順序在後）
+function parseCreditLimit(v) {
+    const n = Number(v);
+    return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // 讀取我的額度（回傳數字，未填寫回傳 null）
 async function loadCreditLimit(cardId) {
-    const parse = (v) => {
-        const n = Number(v);
-        return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
-    };
-
     if (!currentUser) {
-        return parse(localStorage.getItem(`creditLimit_local_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_local_${cardId}`));
     }
 
     try {
@@ -515,16 +517,16 @@ async function loadCreditLimit(cardId) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
             if (docSnap.exists() && docSnap.data().creditLimits) {
-                const amount = parse(docSnap.data().creditLimits[cardId]);
+                const amount = parseCreditLimit(docSnap.data().creditLimits[cardId]);
                 const localKey = `creditLimit_${currentUser.uid}_${cardId}`;
                 localStorage.setItem(localKey, amount === null ? '' : String(amount));
                 return amount;
             }
         }
-        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
     } catch (error) {
         console.error('❌ 讀取我的額度失敗:', error);
-        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
     }
 }
 

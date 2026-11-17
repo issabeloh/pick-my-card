@@ -321,17 +321,16 @@ function mpOwnedIds() {
 async function mpLoadLimits() {
     const out = new Map();
     const ids = mpOwnedIds();
-    const parse = v => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
     // 本機鏡像（saveCreditLimit／loadCreditLimit 寫的）：雲端讀不到或離線時用它
     const readLocal = () => {
         const pre = currentUser ? `creditLimit_${currentUser.uid}_` : 'creditLimit_local_';
-        ids.forEach(id => { let v = null; try { v = localStorage.getItem(pre + id); } catch (e) { /* ignore */ } const n = parse(v); if (n !== null) out.set(id, n); });
+        ids.forEach(id => { let v = null; try { v = localStorage.getItem(pre + id); } catch (e) { /* ignore */ } const n = parseCreditLimit(v); if (n !== null) out.set(id, n); });
     };
     try {
         if (currentUser && window.db && window.doc && window.getDoc) {
             const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
             const map = snap.exists() && snap.data().creditLimits;
-            if (map) ids.forEach(id => { const n = parse(map[id]); if (n !== null) out.set(id, n); });
+            if (map) ids.forEach(id => { const n = parseCreditLimit(map[id]); if (n !== null) out.set(id, n); });
             else readLocal();
         } else {
             readLocal();
