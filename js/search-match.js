@@ -6,9 +6,9 @@
  *  - 統一詞的搜尋別名            → "mergeDataTermAliases"
  *  - 精準搜尋開關                → "isExactSearchEnabled"
  *  - 搜尋匹配核心                → "expandSearchTerms" / "findMatchingItem" / "findSearchHits"（找、算、顯示三步之「找」）
+ *  - 停車折抵比對（四處共用）     → "findMatchingParkingBenefits"
  *  - 匹配結果提示 UI             → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
- *  - 停車折抵比對（四處共用）     → "findMatchingParkingBenefits"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
  *  - 輸入驗證                    → "validateInputs"
  *  - 同活動合併                  → "mergeResultsByActivity"
