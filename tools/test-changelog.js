@@ -44,9 +44,17 @@ function makeSheet(name, rows, maxColumns) {
     insertColumnsAfter(afterCol, n) { this.maxColumns += n; },
     appendRow(r) { this.rows.push(r.slice()); },
     setFrozenRows() {},
+    // applyInboxLayout_（watchlist-monitor.gs）新建分頁時會套欄寬／凍結／樣式；測試不驗排版，給空實作即可。
+    // 少了這幾支，「第一次自動建分頁」的路徑會整支測試拋錯（2026-11-17 補）
+    getFrozenRows() { return 0; },
+    getMaxRows() { return Math.max(this.rows.length, 1000); },
+    setColumnWidth() {},
     getRange(row, col, numRows, numCols) {
       const s = this;
       return {
+        setFontWeight() { return this; },
+        setBackground() { return this; },
+        setWrapStrategy() { return this; },
         setValue(v) {
           while (s.rows.length < row) s.rows.push([]);
           s.rows[row - 1][col - 1] = v;
@@ -96,6 +104,7 @@ function baseSandbox(activeSS) {
     console,
     Logger: { log: () => {} },
     SpreadsheetApp: {
+      WrapStrategy: { CLIP: 'CLIP', WRAP: 'WRAP', OVERFLOW: 'OVERFLOW' },
       getActiveSpreadsheet: () => activeSS,
       getUi: () => ({
         alert: (...a) => { alerts.push(a.join(' | ')); },

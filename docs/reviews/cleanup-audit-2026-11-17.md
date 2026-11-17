@@ -31,7 +31,8 @@
 | C4 上限（cap）顯示 6 種寫法 | ✅ 完成（`formatCapText`；各處對 0／空字串的差異用選項原樣保留，「上限 NT$無」待站長裁決） | `b3aadc1` |
 | C6 卡片標籤清單 3 處要同步 | ✅ 完成（`CARD_TAG_DEFS` 一張表；另抽 `CHILDREN_PLAN_CATEGORY` 常數） | `74db0c1`、`71d82c1` |
 | C7 額度字串解析 2 份 | ✅ 完成（`parseCreditLimit`） | `b02153d` |
-| B3 舊儲存格式遷移碼 | ⏳ 待站長確認 | |
+| B3 舊儲存格式遷移碼 | ✅ 已裁決 | `mpMovedHintCount`（搬家提示氣泡＋頁面備註）已移除；`selectedCards` 相關**站長指示不做任何改動**；快捷選項舊格式遷移碼保留 |
+| C4 的「上限 NT$無」 | ✅ 完成 | 改成「無上限」（站長同意） |
 | B4 防呆用的退路分支 | ⏳ 待站長確認 | |
 | B6-3 `debugGSC`、B6-4 `importHistoricalData`、B6-5 `createDailyTrigger`、B6-6 `publishChangelog`、B6-8 匯出但前端不讀的欄位 | ⏳ 待站長確認 | |
 | B7 其餘三項（訪客登入帶入額度、`saveFeeWaiverStatus` 沒包 try、`pmc_ab_sent` 時機） | ⏳ 待站長確認 | 未複核 |

@@ -9310,15 +9310,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-intro-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
-/* 改版告知：頁面最上方一行備註（所有人） */
-.mp-moved-note { max-width: 738px; margin: 0 auto 12px; padding: 7px 4px; box-sizing: border-box; border-top: 1px dashed #cfd4dc; border-bottom: 1px dashed #cfd4dc; font: 500 12px/1.7 ui-monospace, Menlo, monospace; letter-spacing: .02em; color: #6b7280; text-align: center; }   /* 2026-09-30 站長從 5 案選 2「收據小字」：與小抄的收據風格一致 */
-/* 一次性提示：頁籤下方的說明氣泡 */
-.mp-hint-bubble { position: fixed; z-index: 1300; pointer-events: none; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: 12px; background: #111827; color: #fff; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 30px rgba(0, 0, 0, .28); animation: mp-bubble-in .25s ease-out; }
-.mp-hint-bubble::before { content: ""; position: absolute; top: -6px; left: calc(var(--arrow-x, 50%) - 6px); border: 6px solid transparent; border-top: 0; border-bottom-color: #111827; }
-.mp-hint-bubble span { flex: 1; }
-.mp-hint-bubble button { pointer-events: auto; flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .15); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
-@keyframes mp-bubble-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .mp-hint-bubble { animation: none; } }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
 /* 手機／平板：單欄，依序＝存圖／編輯鈕 → 搜尋 → 提示 → 設定 → 小抄 → 商家數（右側）（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
 .mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }

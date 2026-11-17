@@ -7,7 +7,6 @@
  *  - 分組／分類／拼音字首        → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
  *  - 失效檢查與「更新活動」      → "mpProbeAll" / "mpUpdateDeadlines"
  *  - 頁面開關與網址 /mappings    → "openMappingsPage" / "closeMappingsPage"
- *  - 一次性「已搬家」提示        → "mpShowMovedHint"
  *  - 收據 HTML                   → "mpReceiptHtml"
  *  - 頁面渲染                    → "mpRender"
  *  - 拖曳排序（自訂）            → "mpStartDrag"
@@ -599,46 +598,6 @@ function refreshMappingsEntry() {
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
-    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
-}
-
-// ============================================
-// 一次性改版提示（2026-09-30）：登入後在「我的刷卡小抄」頁籤下方冒出說明氣泡（站長決定不要飛入動畫）。
-// 每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
-// ============================================
-const MP_HINT_KEY = 'mpMovedHintCount';
-const MP_HINT_TIMES = 2;
-function mpAnyModalOpen() {
-    return [...document.querySelectorAll('.modal')].some(m => getComputedStyle(m).display !== 'none');
-}
-function mpShowMovedHint(attempt = 0) {
-    if (!currentUser || MP.open || document.querySelector('.mp-hint-bubble')) return;
-    const n = Number(readLocalJSON(MP_HINT_KEY, 0)) || 0;
-    if (n >= MP_HINT_TIMES) return;
-    // 登入後可能有其他 modal 同時開著 → 等它們關掉再播，最多等約 30 秒；沒播出來就不扣次數
-    if (mpAnyModalOpen()) { if (attempt < 20) setTimeout(() => mpShowMovedHint(attempt + 1), 1500); return; }
-    const tab = mpEl('home-view-switch-mappings');
-    if (!tab) return;
-    const tr = tab.getBoundingClientRect();
-    if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
-    try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'mp-hint-bubble';
-    bubble.setAttribute('role', 'status');
-    bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
-    document.body.appendChild(bubble);
-    const w = Math.min(280, innerWidth - 24);
-    bubble.style.width = w + 'px';
-    bubble.style.left = Math.max(12, Math.min(tr.left + tr.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
-    bubble.style.top = (tr.bottom + 10) + 'px';
-    bubble.style.setProperty('--arrow-x', (tr.left + tr.width / 2 - parseFloat(bubble.style.left)) + 'px');
-    // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
-    const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
-    bubble.querySelector('button').addEventListener('click', close);
-    document.addEventListener('pointerdown', close, true);
-    window.addEventListener('scroll', close, { once: true, passive: true });
-    setTimeout(close, 6000);
 }
 
 // ============================================

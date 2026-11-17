@@ -291,7 +291,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 // Default formatting for other cards (like Uni card)
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (${formatCapText(data.cap, { prefix: '上限 ', unlimitedText: '上限 NT$無' })})</div>`;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (${formatCapText(data.cap, { prefix: '上限 ' })})</div>`;
                 });
             }
             levelRatesInfo += '</div>';

@@ -33,7 +33,7 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 | `tools/activity-writer/`（`parser.js`、`app.js`、`index.html`） | `node tools/activity-writer/parser-test.js`、`ui-test.js`，再 `node tools/activity-writer/build-apps-script.js` 重生 `apps-script/ActivityWriter.html` | preflight 會檢查生成檔是不是最新 |
 | `apps-script/watchlist-monitor.gs` 的 `checkWatchlist` 分段執行 | `node tools/test-watchlist-chunking.js` | 零依賴 |
 | `apps-script/basic-exclusions-extractor.gs`（官網變動→逐項修改）、`watchlist-monitor.gs` 呼叫它的地方 | `node tools/test-basic-exclusions-changes.js` | 零依賴 |
-| `apps-script/` 的「近期異動」資料層（`readChangelog`、`publishChangelog`、`appendToInbox_`） | `node tools/test-changelog.js` | 零依賴 |
+| `apps-script/` 的「近期異動」資料層（`readChangelog`、`publishChangelog`、`appendToInbox_`） | `node tools/test-changelog.js` | 零依賴。⚠️ 2026-11-17 現況：29 項過、**11 項紅**——測試的假環境已補齊可以跑完，但這 11 項的預期還停在 2026-08-15「公開／封存／刪除」改版前的流程，尚未逐項判定是測試過時還是程式有問題；改這塊之前先處理 |
 
 ## 為什麼測試不讀線上 cards.data（2026-09-11 改）
 

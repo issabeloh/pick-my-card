@@ -125,8 +125,6 @@ const PAIRS = [
     pg.on('pageerror', e => { pageErrors++; console.log('   PAGE ERROR:', e.message); });
     pg.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) console.log('   CONSOLE ERROR:', m.text()); });
     await pg.addInitScript(freezeClockScript(META.frozenDate));
-    // 「刷卡小抄」提示泡泡會擋住點擊，除了專測它的 hinttest 以外都當作已經播完
-    await pg.addInitScript(() => { try { if (!location.search.includes('hinttest')) localStorage.setItem('mpMovedHintCount', '2'); } catch (e) {} });
     await pg.route('**/*', route => {
       const u = route.request().url();
       if (u.startsWith(base)) return route.continue();
@@ -748,24 +746,6 @@ const PAIRS = [
     await pg.evaluate(() => { MP.prefs.layout = 'F'; MP.prefs.size = 'small'; MP.prefs.sort = 'cat'; });
     await pg.screenshot({ path: path.join(SHOTS, 'home-switch-iphone13.png') });
   }
-  // 一次性改版提示：登入後頁籤下方冒出說明氣泡，每個瀏覽器 2 次
-  const hp = await newPage(VIEWPORTS[1], '/index.html?start&hinttest');
-  const seen = [];
-  for (let k = 0; k < 3; k++) {
-    if (k) await hp.reload();
-    const got = await hp.waitForSelector('.mp-hint-bubble', { timeout: 6000 }).then(() => true).catch(() => false);
-    seen.push({ got, count: await hp.evaluate(() => localStorage.getItem('mpMovedHintCount')), text: got ? await hp.textContent('.mp-hint-bubble span') : '',
-      passThrough: got ? await hp.evaluate(() => { const b = document.querySelector('.mp-hint-bubble span').getBoundingClientRect(); const el = document.elementFromPoint(b.left + 10, b.top + b.height / 2); return !!el && !el.closest('.mp-hint-bubble'); }) : null });
-    if (got && SHOTS && k === 0) await hp.screenshot({ path: path.join(SHOTS, 'moved-hint-iphone13.png') });
-  }
-  check('提示氣泡不擋點擊（點得到底下的東西）', seen[0].passThrough === true, JSON.stringify(seen[0]));
-  check('登入後一次性提示：只有說明氣泡（沒有飛入動畫）', await hp.evaluate(() => !document.querySelector('.mp-fly')));
-  check('登入後一次性提示：前兩次出現氣泡，第三次不再出現', seen[0].got && seen[1].got && !seen[2].got && seen[1].count === '2' && seen[0].text.includes('我的配卡組合'), JSON.stringify(seen));
-  await hp.click('#home-view-switch-mappings');
-  await hp.waitForSelector('#mappings-page:not([hidden])');
-  const note = await hp.evaluate(() => { const n = document.getElementById('mp-moved-note'); return { shown: !n.hidden, text: n.textContent.trim(), top: n.getBoundingClientRect().top <= document.querySelector('.mp-intro').getBoundingClientRect().top }; });
-  check('刷卡小抄頁最上方有改版備註', note.shown && note.top && note.text === '原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。', JSON.stringify(note));
-  await hp.context().close();
 
   // ============ E. 未登入（2026-10-14 起：訪客也能加、能存本機，只多一句登入提示） ============
   console.log('\n【E】未登入');
@@ -774,10 +754,9 @@ const PAIRS = [
   await gp.click('#home-view-switch-mappings');
   await gp.waitForSelector('#mappings-page:not([hidden])');
   const gStart = await gp.evaluate(() => ({ note: !document.getElementById('mp-guest-note').hidden, noteText: document.getElementById('mp-guest-note').textContent.trim(),
-    oldBox: !!document.getElementById('mp-guest') || !!document.getElementById('mp-demo-tag'), rows: document.querySelectorAll('#mp-list [data-mp-row]').length, empty: !!document.querySelector('#mp-list .mp-empty'),
-    moved: getComputedStyle(document.getElementById('mp-moved-note')).display !== 'none' }));
+    oldBox: !!document.getElementById('mp-guest') || !!document.getElementById('mp-demo-tag'), rows: document.querySelectorAll('#mp-list [data-mp-row]').length, empty: !!document.querySelector('#mp-list .mp-empty') }));
   check('未登入：一句登入提示（儲存到帳號、一鍵更新活動）', gStart.note && gStart.noteText === '登入後，小抄內容會儲存到帳號，下次回來就可以一鍵更新小抄裡的活動！', JSON.stringify(gStart));
-  check('未登入：沒有範例清單、沒有「登入解鎖此功能」框，是空的小抄', !gStart.oldBox && gStart.rows === 0 && gStart.empty && gStart.moved, JSON.stringify(gStart));
+  check('未登入：沒有範例清單、沒有「登入解鎖此功能」框，是空的小抄', !gStart.oldBox && gStart.rows === 0 && gStart.empty, JSON.stringify(gStart));
   await gp.evaluate(() => { window.__authOpened = null; window.openAuthModal = m => { window.__authOpened = m; }; });
   await gp.click('#mp-guest-login');
   check('未登入：點提示裡的「登入」→ 開登入視窗', await gp.evaluate(() => window.__authOpened === 'login'));
