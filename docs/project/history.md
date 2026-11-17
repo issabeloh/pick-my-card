@@ -33,8 +33,8 @@
 ## 2026-09-17 /promos 改版：一張卡一組 ＋ 卡片特色（站長逐輪定案）
 
 起因：站長回報資訊層級不對——「應該馬上看到獎勵，被吸引後才看到是哪張卡送的」，
-且想在活動頁直接看到卡片的常態回饋。經五輪 mockup 定案（過程與取證留在
-`docs/mockups/promos-2026-09/`，實作完成後可整包刪）。
+且想在活動頁直接看到卡片的常態回饋。經五輪 mockup 定案（過程與取證原放在
+`docs/mockups/promos-2026-09/`，實作完成後於 2026-11-17 刪除，要考古查 git 歷史）。
 
 - 一張卡一組、同卡多檔活動「卡疊卡」堆疊；排序固定依「最高可拿」倒序，**排序切換 UI 移除**
 - 三種獎勵換算成同一單位：定額＝票面金額、加碼＝`bonus_rate × bonus_cap`、首刷禮無現金定價
@@ -80,6 +80,7 @@
 - 載入順序＝依賴順序：載入期跨檔依賴只有 window.toggleMerchants/toggleConditions 賦值（與定義同檔）；其餘跨檔呼叫都在事件/DOMContentLoaded 之後，DOM ready 時 12 檔已全數載入
 - 消費者三頁：index.html＋merchant/*.html（`<base href="/">` 共用根目錄 js/）；update-version.sh 從此連 merchant 頁一起 bump（模組版本必須 lockstep），preflight 新增規則 1c 查覆蓋與順序一致
 - 每階段（P1–P5）獨立 commit＋preflight＋regression 12/12 綠；分支 claude/script-js-modularization-czrvtu
+- 原拆分計畫書 `docs/ops/script-split-plan.md`（硬約束與分階段流程）已於 2026-11-17 刪除，要考古查 git 歷史；上面幾條就是它的結論摘要（現況是 13 支，第 13 支 mappings-page 2026-09-28 新增）
 
 ## 2026-07-12 getOverflowRate 移除 meta/google 廣告寫死特例
 - 舊特例：簡單路徑溢出遇 meta/google 廣告通路改用 overseasCashback（台新 Richart 除外）——用通路名稱判斷海外的 cashbackModel 前遺物

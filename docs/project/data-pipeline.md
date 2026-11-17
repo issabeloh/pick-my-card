@@ -340,7 +340,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     「卡片圖＋名稱 → 按鈕 → 分割線 → 活動內容」。放進 rail 才會在分割線**上方**——
     rail 的 `border-bottom` 就是那條線，按鈕留在 `.promo-card-main` 裡怎麼排都在線下。
     刻意與多檔卡**在手機上**的身分區塊長得一模一樣，零件／尺寸／間距全部共用
-    （站長從三案中選定「方案 3 橫向身分列」，見 docs/mockups 的實測比較）。
+    （站長從三案中選定「方案 3 橫向身分列」，實測比較原放在 docs/mockups，已於 2026-11-17 刪除，見 git 歷史）。
     **不放「1 檔新戶活動」那一行**（站長指定）：只有一檔時它跟正下方的獎勵數字重複
   - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最多可拿 …（需分別達成）」／立即申辦／
     卡片特色）＋ `.promo-card-main`（最高那一檔的完整卡）＋ `.promo-card-stack`
