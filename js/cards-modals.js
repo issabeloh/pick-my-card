@@ -744,7 +744,6 @@ function setupMyOwnedCardsModal() {
     });
 }
 
-// Show card detail modal
 // ===== 卡片標籤總表（顯示順序＋CSS class，唯一正本）=====
 // 陣列順序＝卡片選擇 modal 標籤篩選列的排列順序；cls 是 styles.css 裡 `.card-tag.tag-xxx` 的 class 名。
 // 新增一個標籤要做三件事：
