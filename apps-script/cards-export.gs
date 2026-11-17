@@ -2854,7 +2854,7 @@ function pmcApplyDestHtml_(href, card, extraCls) {
 
 // ---- 信任列（2026-11-16 建立；2026-11-17 定案為「一行字＋灰底＋連到 FAQ」）----
 // 這頁是辦卡轉換的主要入口，要讓人在按「立即申辦」之前看到一句資安上的交代。
-// 只有一行：盾牌＋PMC_TRUST_LINE＋「防護說明 ›」，整列是一個連結，連到 FAQ 頁並直接選好
+// 只有一行：盾牌＋PMC_TRUST_LINE＋「｜了解更多 ›」，整列是一個連結，連到 FAQ 頁並直接選好
 // 「安全說明」分類（faq.js 認 ?category=）。完整說明由站長寫在 Sheets 的 FAQ 工作表、分類填
 // PMC_TRUST_FAQ_CATEGORY 那兩個字——**兩邊的分類名稱要一字不差**，對不上時 FAQ 頁會停在「全部」。
 // 第一版是原地展開六題問答＋FAQPage JSON-LD，站長改成連到 FAQ：說明只維護一份、這頁也不必變長。
@@ -2870,7 +2870,7 @@ function pmcRenderTrust_() {
   return '  <a class="pmc-trust" id="trust" href="/faq?category=' + encodeURIComponent(PMC_TRUST_FAQ_CATEGORY) +
     '" target="_blank" rel="noopener">' + shield +
     '<span class="pmc-trust-line">' + pmcEscapeHtml_(PMC_TRUST_LINE) + '</span>' +
-    '<span class="pmc-trust-more">防護說明 ›</span></a>\n';
+    '<span class="pmc-trust-more">了解更多 ›</span></a>\n';   // 「｜」分隔線由 promos.css 的 ::before 畫
 }
 
 function pmcApplyLink_(p) {

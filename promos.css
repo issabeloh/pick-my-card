@@ -3471,13 +3471,19 @@ mark.promos-search-hl {
   line-height: 1.5;
   color: var(--pmc-label);
 }
+/* 「了解更多」緊貼在那句話後面、細字，用「｜」隔開（站長 2026-11-17：靠最右在桌機上
+   離那句話太遠、看起來像另一個東西；粗體又會跟前面那句連成一句）。 */
 .pmc-trust-more {
-  margin-left: auto;
   flex: none;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--pmc-label);
   white-space: nowrap;
+}
+.pmc-trust-more::before {
+  content: "|";
+  margin: 0 8px 0 2px;
+  color: #c4c8d0;
 }
 @media (max-width: 380px) {
   .pmc-trust-line { font-size: 12.5px; }
