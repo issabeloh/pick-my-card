@@ -4,7 +4,7 @@
  *  - 手機側選單                → "setupSidebarDrawer"
  *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal"
  *  - 管理比較卡/持有卡入口      → "openManageCardsModal" / "openMyOwnedCardsModal"
- *  - 持有卡總覽（wallet stack） → "renderOwnedCardsOverview"
+ *  - 持有卡總覽（卡片格）       → "renderOwnedCardsOverview" / "openCardDetailAtPersonal"
  *  - 持有卡管理 modal           → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
  *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderConditionLine"
  *  - 側選單「最近異動」          → "renderSidebarChangelog"
@@ -325,12 +325,17 @@ function openMyOwnedCardsModal() {
     disableBodyScroll();
 }
 
-// Render the owned-cards overview tiles (image + name, click opens card detail).
-// Shows an empty-state prompt with a "新增信用卡" button when nothing is selected.
+// 「我的信用卡」總覽（2026-11-17 站長選定的「卡片格」；取代 2026-07-07 的錢包堆疊＋單卡頁）。
+// 版面：摘要列（持有／總額度／免年費門檻）＋卡片格（卡面、卡名、級別・額度）＋最後一格「新增信用卡」。
+// 這一頁唯讀：點卡片 → 開該卡詳情頁並捲到「個人設定」。
+// 個人資料（級別／額度／免年費）是非同步讀的：先畫卡面與卡名，讀到再補字；每個讀取都包 safe()，
+// Firebase 被擋也照樣渲染。🔒 級別只「讀來顯示」，這裡絕不呼叫 saveCardLevel()（鐵則 1）。
+// 空狀態：沒有持有卡時顯示提示＋「新增信用卡」鈕。
 function renderOwnedCardsOverview() {
     const container = document.getElementById('owned-cards-overview');
     if (!container) return;
     container.innerHTML = '';
+    const token = (renderOwnedCardsOverview._token = (renderOwnedCardsOverview._token || 0) + 1);
 
     const ownedCards = [...cardsData.cards]
         .filter(card => myOwnedCards.has(card.id))
@@ -362,44 +367,47 @@ function renderOwnedCardsOverview() {
         badge.style.display = '';
     }
 
-    // --- View 1: wallet stack — all cards at a glance, no names.
-    // Tap a covered card to reveal its full face in place; tap a fully
-    // visible card to open the solo view. ---
-    const stack = document.createElement('div');
-    stack.className = 'ow-stack';
-    container.appendChild(stack);
+    const mk = (tag, cls, text) => {
+        const el = document.createElement(tag);
+        if (cls) el.className = cls;
+        if (text !== undefined) el.textContent = text;
+        return el;
+    };
 
-    // "收合" pill: appears only while a card is revealed, folds the
-    // stack fully closed again.
-    const collapseBtn = document.createElement('button');
-    collapseBtn.type = 'button';
-    collapseBtn.className = 'ow-collapse-btn';
-    collapseBtn.textContent = '收合';
-    collapseBtn.style.display = 'none';
-    container.appendChild(collapseBtn);
+    // --- 摘要列：張數馬上有；總額度與免年費等資料讀到再填 ---
+    const sum = mk('dl', 'ow-sum');
+    const mkStat = (label, value) => {
+        const cell = mk('div');
+        cell.appendChild(mk('dt', '', label));
+        const dd = mk('dd', '', value);
+        const small = mk('small');
+        cell.appendChild(dd);
+        cell.appendChild(small);
+        sum.appendChild(cell);
+        return { dd, small };
+    };
+    mkStat('持有', `${count} 張`);
+    const limitStat = mkStat('總額度', '—');
+    const feeStat = mkStat('免年費門檻', '—');
+    container.appendChild(sum);
 
-    // --- View 2: solo card + personal info area (hidden until opened) ---
-    const solo = document.createElement('div');
-    solo.className = 'ow-solo';
-    solo.style.display = 'none';
-    container.appendChild(solo);
+    // --- 卡片格 ---
+    const grid = mk('div', 'ow-grid');
+    container.appendChild(grid);
 
-    const GAP = 40;    // breathing room under a revealed card
-    let expanded = null;
-    let soloIndex = 0;
-
-    // Builds a card-face frame; portrait art is auto-rotated to landscape.
+    // Card-face frame; portrait art is auto-rotated to landscape.
     const makeFace = (card) => {
-        const frame = document.createElement('div');
-        frame.className = 'ow-frame';
+        const frame = mk('div', 'ow-frame');
         const img = document.createElement('img');
         img.className = 'ow-img';
-        img.alt = card.name;
+        img.alt = '';
+        img.loading = 'lazy';
         img.src = `assets/images/cards/${card.id}.png`;
         img.addEventListener('load', () => {
             if (img.naturalHeight > img.naturalWidth) frame.classList.add('ow-portrait');
         });
         img.addEventListener('error', () => {
+            img.remove();
             frame.classList.add('ow-noimg');
             frame.textContent = card.name;
         });
@@ -407,228 +415,83 @@ function renderOwnedCardsOverview() {
         return frame;
     };
 
-    const slots = ownedCards.map((card, i) => {
-        const slot = document.createElement('div');
-        slot.className = 'ow-slot';
-        slot.style.zIndex = String(i + 1);
-        slot.setAttribute('role', 'button');
-        slot.setAttribute('tabindex', '0');
-        slot.setAttribute('aria-label', card.name);
-        slot.appendChild(makeFace(card));
-        // Tap-again affordance: pill fades in on the revealed card.
-        const hint = document.createElement('div');
-        hint.className = 'ow-hint';
-        hint.textContent = '查看個人資訊 ›';
-        slot.appendChild(hint);
-        const activate = () => {
-            // Fully visible cards (revealed, or the bottom-most) open solo view.
-            if (i === expanded || i === count - 1) openSolo(i);
-            else { expanded = i; layoutStack(); }
-        };
-        slot.addEventListener('click', activate);
-        slot.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
-        });
-        stack.appendChild(slot);
-        return slot;
+    const tiles = ownedCards.map(card => {
+        const tile = mk('button', 'ow-tile');
+        tile.type = 'button';
+        tile.title = `查看 ${card.name} 的個人設定`;
+        const pic = mk('span', 'ow-pic');
+        pic.appendChild(makeFace(card));
+        tile.appendChild(pic);
+        tile.appendChild(mk('span', 'ow-name', card.name));
+        const meta = mk('span', 'ow-meta', ' ');
+        tile.appendChild(meta);
+        tile.addEventListener('click', () => openCardDetailAtPersonal(card.id));
+        grid.appendChild(tile);
+        return { card, pic, meta };
     });
 
-    const layoutStack = () => {
-        const h = stack.clientWidth / 1.586; // standard card aspect ratio
-        // Budget ~320px for the whole stack: the more cards, the thinner
-        // each visible strip (floor of 12px).
-        const peek = Math.max(12, Math.min(40, Math.round((320 - h) / Math.max(1, count - 1))));
-        let shift = 0, maxBottom = 0;
-        slots.forEach((slot, i) => {
-            slot.classList.toggle('ow-open', expanded === i);
-            const top = i * peek + shift;
-            slot.style.top = `${top}px`;
-            maxBottom = Math.max(maxBottom, top + h);
-            if (expanded === i) shift = h - peek + GAP;
-        });
-        stack.style.height = `${Math.ceil(maxBottom)}px`;
-        collapseBtn.style.display = expanded === null ? 'none' : '';
+    const addTile = mk('button', 'ow-tile ow-tile-add');
+    addTile.type = 'button';
+    addTile.appendChild(mk('span', 'ow-add', '＋ 新增信用卡'));
+    addTile.addEventListener('click', openManageOwnedCardsModal);
+    grid.appendChild(addTile);
+
+    // --- 個人資料：讀到再補 ---
+    const safe = (fn, fallback) => {
+        try { return Promise.resolve(fn()).catch(() => fallback); }
+        catch (_) { return Promise.resolve(fallback); }
     };
+    const fmtLimit = (n) => (n >= 10000 && n % 1000 === 0)
+        ? `額度 ${n / 10000} 萬`
+        : `額度 NT$${n.toLocaleString('en-US')}`;
 
-    collapseBtn.addEventListener('click', () => {
-        expanded = null;
-        layoutStack();
-    });
-
-    const openSolo = (i) => {
-        soloIndex = i;
-        renderSolo();
-        stack.style.display = 'none';
-        collapseBtn.style.display = 'none';
-        solo.style.display = '';
-    };
-
-    const backToStack = () => {
-        solo.style.display = 'none';
-        stack.style.display = '';
-        expanded = soloIndex; // keep the card you were viewing revealed
-        layoutStack();
-    };
-
-    let soloToken = 0;
-
-    const renderSolo = () => {
-        const card = ownedCards[soloIndex];
-        const token = ++soloToken;
-        solo.innerHTML = '';
-
-        const top = document.createElement('div');
-        top.className = 'ow-solo-top';
-        const back = document.createElement('button');
-        back.type = 'button';
-        back.className = 'ow-back';
-        back.innerHTML = '‹ 所有卡片';
-        back.addEventListener('click', backToStack);
-        top.appendChild(back);
-        solo.appendChild(top);
-
-        const row = document.createElement('div');
-        row.className = 'ow-solo-row';
-        // Arrows and swipe wrap around (last → first, first → last).
-        const step = (dir) => {
-            soloIndex = (soloIndex + dir + count) % count;
-            renderSolo();
-        };
-        const mkArrow = (dir) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'ow-arrow';
-            b.innerHTML = dir < 0 ? '‹' : '›';
-            b.setAttribute('aria-label', dir < 0 ? '上一張' : '下一張');
-            b.disabled = count <= 1;
-            b.addEventListener('click', () => step(dir));
-            return b;
-        };
-        row.appendChild(mkArrow(-1));
-        const face = makeFace(card);
-        face.classList.add('ow-solo-face');
-        // Swipe left/right to switch cards.
-        let sx = null;
-        face.addEventListener('pointerdown', (e) => { sx = e.clientX; });
-        face.addEventListener('pointerup', (e) => {
-            if (sx === null) return;
-            const dx = e.clientX - sx;
-            sx = null;
-            if (dx < -40 && count > 1) step(1);
-            else if (dx > 40 && count > 1) step(-1);
-        });
-        row.appendChild(face);
-        row.appendChild(mkArrow(1));
-        solo.appendChild(row);
-
-        const name = document.createElement('div');
-        name.className = 'ow-solo-name';
-        name.textContent = card.name;
-        solo.appendChild(name);
-
-        const dots = document.createElement('div');
-        dots.className = 'ow-dots';
-        ownedCards.forEach((_, i) => {
-            const d = document.createElement('i');
-            if (i === soloIndex) d.className = 'on';
-            dots.appendChild(d);
-        });
-        solo.appendChild(dots);
-
-        // --- Read-only personal info (editing lives in the card detail page) ---
-        const info = document.createElement('div');
-        info.className = 'ow-solo-info';
-        const infoHead = document.createElement('div');
-        infoHead.className = 'ow-info-head';
-        infoHead.textContent = '個人化設定';
-        info.appendChild(infoHead);
-        const list = document.createElement('div');
-        list.className = 'ow-info-list';
-        list.innerHTML = '<div class="ow-info-loading">載入中…</div>';
-        info.appendChild(list);
-        const detailBtn = document.createElement('button');
-        detailBtn.type = 'button';
-        detailBtn.className = 'ow-detail-btn';
-        detailBtn.textContent = '前往卡片介紹頁編輯 ›';
-        detailBtn.addEventListener('click', () => showCardDetail(card.id));
-        info.appendChild(detailBtn);
-        solo.appendChild(info);
-
-        fillSoloInfo(card, list, token);
-    };
-
-    const fillSoloInfo = async (card, list, token) => {
+    Promise.all(tiles.map(async ({ card, pic, meta }) => {
         const hasLevels = !!(card.hasLevels && card.levelSettings);
-        // Each load falls back to a default if storage (e.g. Firebase) is
-        // unavailable, so the panel always renders.
-        const safe = (fn, fallback) => {
-            try { return Promise.resolve(fn()).catch(() => fallback); }
-            catch (_) { return Promise.resolve(fallback); }
-        };
         const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
-        const [level, notes, feeWaived, creditLimit] = await Promise.all([
+        const [level, feeWaived, creditLimit] = await Promise.all([
             hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
-            safe(() => loadUserNotes(card.id), ''),
             safe(() => loadFeeWaiverStatus(card.id), false),
             safe(() => loadCreditLimit(card.id), null)
         ]);
-        if (token !== soloToken) return; // user switched cards while loading
+        if (token !== renderOwnedCardsOverview._token) return null; // 期間重畫過，這批作廢
+        const limit = (typeof creditLimit === 'number' && isFinite(creditLimit)) ? creditLimit : null;
 
-        list.innerHTML = '';
-        const addRow = (label, value, cls) => {
-            const row = document.createElement('div');
-            row.className = 'ow-info-row';
-            const l = document.createElement('span');
-            l.className = 'ow-info-label';
-            l.textContent = label;
-            const v = document.createElement('span');
-            v.className = 'ow-info-value' + (cls ? ' ' + cls : '');
-            v.textContent = value;
-            row.appendChild(l);
-            row.appendChild(v);
-            list.appendChild(row);
-        };
-
+        meta.textContent = '';
         if (hasLevels && level) {
-            const label = card.levelLabelFormat
-                ? card.levelLabelFormat.replace('{level}', level)
-                : level;
-            addRow('卡片分級', label);
+            meta.appendChild(document.createTextNode(`${level} ・ `));
         }
-        // 發卡組織／生日月份／童樂匯 are CUBE-specific settings today.
-        if (card.id === 'cathay-cube') {
-            addRow('發卡組織', cubeIssuer);
-            addRow('生日月份', userBirthdayMonth ? `${userBirthdayMonth} 月` : '未填寫',
-                userBirthdayMonth ? '' : 'ow-muted');
-            addRow('童樂匯權益', isChildrenEligible ? '✓ 符合' : '不符合',
-                isChildrenEligible ? 'ow-ok' : 'ow-muted');
+        if (limit !== null) meta.appendChild(document.createTextNode(fmtLimit(limit)));
+        else meta.appendChild(mk('span', 'ow-faint', '額度未填'));
+
+        if (!feeWaived) pic.appendChild(mk('span', 'ow-flag', '年費未達標'));
+        return { limit, feeWaived: !!feeWaived };
+    })).then(rows => {
+        if (token !== renderOwnedCardsOverview._token || rows.some(r => r === null)) return;
+        const filled = rows.filter(r => r.limit !== null);
+        const total = filled.reduce((s, r) => s + r.limit, 0);
+        if (filled.length === 0) {
+            limitStat.dd.textContent = '未填寫';
+            limitStat.dd.classList.add('ow-faint');
+        } else {
+            limitStat.dd.textContent = `NT$${total.toLocaleString('en-US')}`;
+            limitStat.small.textContent = filled.length === count ? '全部已填' : `${count - filled.length} 張未填額度`;
         }
-        addRow('免年費門檻', feeWaived ? '✓ 已達成' : '尚未達成', feeWaived ? 'ow-ok' : 'ow-warn');
-        addRow('我的額度', creditLimit !== null ? `NT$ ${creditLimit.toLocaleString()}` : '未填寫',
-            creditLimit !== null ? '' : 'ow-muted');
+        const met = rows.filter(r => r.feeWaived).length;
+        feeStat.dd.textContent = `${met}／${count} 張`;
+        feeStat.small.textContent = met === count ? '全部已達成' : `${count - met} 張尚未達成`;
+        feeStat.small.classList.toggle('ow-warn', met !== count);
+    });
+}
 
-        const noteText = (notes || '').trim();
-        const noteRow = document.createElement('div');
-        noteRow.className = 'ow-info-note';
-        const noteLabel = document.createElement('div');
-        noteLabel.className = 'ow-info-label';
-        noteLabel.textContent = '我的筆記';
-        const noteBody = document.createElement('div');
-        noteBody.className = 'ow-note-text' + (noteText ? '' : ' ow-note-empty');
-        noteBody.textContent = noteText || '未填寫';
-        noteRow.appendChild(noteLabel);
-        noteRow.appendChild(noteBody);
-        list.appendChild(noteRow);
-    };
-
-    // The modal isn't displayed yet when this runs; lay out on the next
-    // frame (and again on resize) so clientWidth is real.
-    requestAnimationFrame(() => requestAnimationFrame(layoutStack));
-    if (renderOwnedCardsOverview._onResize) {
-        window.removeEventListener('resize', renderOwnedCardsOverview._onResize);
-    }
-    renderOwnedCardsOverview._onResize = layoutStack;
-    window.addEventListener('resize', renderOwnedCardsOverview._onResize);
+// 從「我的信用卡」點卡片：開詳情頁並捲到「個人設定」。捲動交給該區塊的 nav 按鈕（它知道 sticky nav
+// 的高度），理由同下方 openCardDetailAtChangelog。按鈕被藏起來＝那張卡沒有這一區，停在頁首即可。
+async function openCardDetailAtPersonal(cardId) {
+    await showCardDetail(cardId);
+    requestAnimationFrame(() => {
+        const navBtn = document.querySelector(
+            '#card-detail-nav .card-detail-nav-btn[data-section="card-personal-section"]');
+        if (navBtn && !navBtn.hidden && typeof navBtn.onclick === 'function') navBtn.onclick();
+    });
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
@@ -696,6 +559,18 @@ function setupMyOwnedCardsModal() {
     };
 
     closeOverviewBtn.addEventListener('click', closeOverview);
+
+    // 用戶從總覽進詳情頁改了額度／級別／免年費再關掉 → 下面這層要跟著更新。
+    // 詳情頁有好幾個關閉入口，直接看它由開變關的那一刻最不會漏。
+    const detailModal = document.getElementById('card-detail-modal');
+    if (detailModal && typeof MutationObserver === 'function') {
+        let detailWasOpen = false;
+        new MutationObserver(() => {
+            const isOpen = detailModal.style.display !== 'none' && detailModal.style.display !== '';
+            if (detailWasOpen && !isOpen && overviewModal.style.display === 'flex') renderOwnedCardsOverview();
+            detailWasOpen = isOpen;
+        }).observe(detailModal, { attributes: true, attributeFilter: ['style'] });
+    }
     overviewModal.addEventListener('click', (e) => { if (e.target === overviewModal) closeOverview(); });
     manageBtn.addEventListener('click', openManageOwnedCardsModal);
 

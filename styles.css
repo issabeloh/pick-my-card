@@ -3981,36 +3981,38 @@ input[type="number"]:focus {
     display: block;
 }
 
-/* --- "我的信用卡" modal: wallet stack + solo card views --- */
-.ow-gear-btn {
-    margin-left: 10px;
-    margin-right: auto; /* sit right beside the title; close btn stays far right */
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 50%;
-    background: #f1f5f9;
-    color: #475569;
-    cursor: pointer;
-    display: flex;
+/* --- 「我的信用卡」modal：摘要列＋卡片格（2026-11-17 站長選定；設計紀錄見 docs/project/ui-display.md 第 5 節） --- */
+.ow-manage-btn {
+    margin-left: auto;
+    margin-right: 6px;
+    flex-shrink: 0;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    transition: background 0.15s ease, color 0.15s ease, transform 0.3s ease;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
-.ow-gear-btn:hover {
-    background: #e2e8f0;
-    color: #1e293b;
-    transform: rotate(30deg);
+.ow-manage-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 #my-owned-cards-modal .modal-body {
     background: #ffffff;
     border-radius: 0 0 12px 12px;
+    padding: 0;
 }
-/* Reserve scrollbar space even when nothing scrolls, so the modal's
-   content width doesn't jump when expanding a card makes it scrollable. */
 #my-owned-cards-modal .modal-content {
-    scrollbar-gutter: stable;
+    max-width: 660px;
 }
 
 .ow-count-badge {
@@ -4020,32 +4022,7 @@ input[type="number"]:focus {
     letter-spacing: 0.02em;
 }
 
-.ow-collapse-btn {
-    /* sticks to the bottom of the modal's visible area while the
-       expanded stack is taller than the viewport — always reachable
-       without scrolling */
-    position: sticky;
-    bottom: 12px;
-    z-index: 2000; /* above every stacked card (cards use z-index 1..N) */
-    display: block;
-    margin: 16px auto 0;
-    padding: 5px 20px;
-    border-radius: 999px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #475569;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.16);
-    transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ow-collapse-btn:hover {
-    border-color: #cbd5e1;
-    color: #1e293b;
-}
-
-/* Card face frame (shared by stack slots and solo view) */
+/* 卡面框：直式卡圖自動轉成橫式（.ow-portrait）、缺圖顯示卡名（.ow-noimg） */
 .ow-frame {
     width: 100%;
     aspect-ratio: 1.586;
@@ -4082,220 +4059,125 @@ input[type="number"]:focus {
     background: linear-gradient(135deg, #e2e8f0, #f8fafc);
 }
 
-/* --- Wallet stack --- */
-.ow-stack {
-    position: relative;
-    width: min(252px, 92%);
-    margin: 0 auto;
-    transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+/* 摘要列 */
+.ow-sum {
+    display: grid;
+    grid-template-columns: 0.75fr 1.35fr 1.2fr;
+    margin: 0;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
 }
-.ow-slot {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    cursor: pointer;
-    outline: none;
-    transition: top 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
-                transform 0.25s ease;
-}
-.ow-slot .ow-frame {
-    /* bright hairline edge + a short, light seam: the 0/-1px shadow keeps
-       a dark gap right at the edge so stacked cards' white borders never
-       touch. Strips are thin, so heavier seams would pile up and read
-       almost black. */
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow:
-        0 -1px 0 rgba(0, 0, 0, 0.28),
-        0 -3px 4px -2px rgba(0, 0, 0, 0.26),
-        0 -6px 9px -7px rgba(0, 0, 0, 0.28);
-    transition: box-shadow 0.25s ease;
-}
-.ow-slot:hover {
-    transform: translateY(-5px);
-}
-.ow-slot:focus-visible .ow-frame {
-    outline: 2px solid #60a5fa;
-    outline-offset: 2px;
-}
-.ow-slot.ow-open .ow-frame {
-    box-shadow:
-        0 -1px 0 rgba(0, 0, 0, 0.45),
-        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
-        0 -18px 26px -18px rgba(0, 0, 0, 0.8),
-        0 16px 32px -12px rgba(0, 0, 0, 0.55);
-}
-
-/* "tap again" affordance pill on the revealed card */
-.ow-hint {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%) translateY(6px);
-    background: rgba(15, 23, 42, 0.72);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 999px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    backdrop-filter: blur(2px);
-    transition: opacity 0.3s ease 0.4s, transform 0.3s ease 0.4s;
-    z-index: 2;
-}
-.ow-slot.ow-open .ow-hint {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
-
-/* --- Solo view --- */
-.ow-solo-top {
-    display: flex;
-    margin-bottom: 10px;
-}
-.ow-back {
-    background: none;
-    border: none;
-    color: #2563eb;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 4px 6px 4px 0;
-}
-.ow-back:hover {
-    text-decoration: underline;
-}
-.ow-solo-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.ow-solo-face {
-    flex: 1;
+.ow-sum > div {
+    padding: 11px 12px 12px;
     min-width: 0;
-    border-radius: 16px;
-    box-shadow: 0 20px 44px -14px rgba(15, 23, 42, 0.38),
-                0 4px 12px rgba(15, 23, 42, 0.10);
-    touch-action: pan-y;
 }
-.ow-arrow {
-    flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
-    color: #334155;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.ow-sum > div:first-child { padding-left: 20px; }
+.ow-sum > div + div { border-left: 1px solid #e5e7eb; }
+.ow-sum dt {
+    font-size: 11.5px;
+    color: #4b5563;
 }
-.ow-arrow:hover:not(:disabled) {
-    background: #f1f5f9;
-}
-.ow-arrow:disabled {
-    opacity: 0.25;
-    cursor: default;
-}
-.ow-solo-name {
-    text-align: center;
+.ow-sum dd {
+    margin: 1px 0 0;
     font-size: 16px;
     font-weight: 700;
-    color: #0f172a;
-    margin-top: 14px;
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
-.ow-dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 8px;
+.ow-sum dd.ow-faint { font-weight: 500; }
+.ow-sum small {
+    display: block;
+    min-height: 1.4em;
+    font-size: 11px;
+    color: #4b5563;
 }
-.ow-dots i {
-    width: 6px;
-    height: 6px;
-    border-radius: 3px;
-    background: #cbd5e1;
-    transition: width 0.2s ease, background 0.2s ease;
+.ow-sum small.ow-warn { color: #b45309; }
+.ow-faint { color: #9ca3af; }
+
+/* 卡片格：手機 2 欄、≥600px 3 欄 */
+.ow-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 12px;
+    padding: 16px 20px 20px;
 }
-.ow-dots i.on {
-    width: 18px;
-    background: #2563eb;
+@media (min-width: 600px) {
+    .ow-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px 16px;
+    }
 }
-.ow-solo-info {
-    margin-top: 16px;
-    padding: 16px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+.ow-tile {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
     text-align: left;
+    cursor: pointer;
 }
-.ow-info-head {
+.ow-pic {
+    display: block;
+    position: relative;
+}
+.ow-tile .ow-frame {
+    border-radius: 9px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.15s ease;
+}
+.ow-tile:hover .ow-frame,
+.ow-tile:focus-visible .ow-frame {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+.ow-tile:focus-visible {
+    outline: 2px solid #1e40af;
+    outline-offset: 4px;
+    border-radius: 9px;
+}
+.ow-flag {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    padding: 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.ow-name {
+    display: block;
+    margin-top: 8px;
     font-size: 13.5px;
     font-weight: 700;
-    color: #334155;
-    margin-bottom: 10px;
+    line-height: 1.4;
+    color: #111827;
 }
-.ow-info-loading {
-    color: #94a3b8;
-    font-size: 13px;
-    text-align: center;
-    padding: 10px 0;
-}
-.ow-info-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 7px 0;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 13.5px;
-}
-.ow-info-label {
-    color: #64748b;
-    flex: 0 0 auto;
-}
-.ow-info-value {
-    color: #0f172a;
-    font-weight: 600;
-    text-align: right;
-}
-.ow-info-value.ow-ok { color: #059669; }
-.ow-info-value.ow-warn { color: #d97706; }
-.ow-info-value.ow-muted { color: #94a3b8; font-weight: 500; }
-.ow-info-note {
-    padding: 9px 0 2px;
-}
-.ow-info-note .ow-info-label {
-    font-size: 13.5px;
-    margin-bottom: 5px;
-}
-.ow-note-text {
-    font-size: 13px;
-    color: #334155;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-break: break-word;
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 9px 11px;
-    max-height: 7.8em;
-    overflow-y: auto;
-}
-.ow-note-text.ow-note-empty {
-    color: #94a3b8;
-    background: none;
-    padding: 0;
-}
-.ow-solo-info .ow-detail-btn {
+.ow-meta {
     display: block;
-    margin: 14px auto 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #4b5563;
 }
+.ow-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1.586;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 9px;
+    color: #1e40af;
+    font-size: 13.5px;
+    font-weight: 700;
+    transition: background 0.15s ease;
+}
+.ow-tile-add:hover .ow-add { background: #eff6ff; }
 
 /* --- 我的額度 (card detail page) --- */
 .credit-limit-row {
@@ -4551,21 +4433,6 @@ label.personal-field-check input[type="checkbox"] {
 .personal-level-row > .level-help-note:empty {
     display: none;
 }
-.ow-detail-btn {
-    padding: 8px 18px;
-    border: 1px solid #3b82f6;
-    border-radius: 999px;
-    background: #fff;
-    color: #2563eb;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-.ow-detail-btn:hover {
-    background: #eff6ff;
-}
-
 .owned-overview-empty {
     grid-column: 1 / -1;
     display: flex;

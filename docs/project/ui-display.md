@@ -397,13 +397,23 @@ Grep `titleParts`）：
 
 **相關檔案**：index.html `#spotlight-section` `#spotlight-modal`（merchant/*.html 有同一組容器標記，卡片由 js 動態生成、不需同步改）；styles.css `.spotlight-*`；js/home-ui.js（`renderSpotlights` 一帶）。
 
-## 5. 「我的信用卡」modal（錢包堆疊＋單卡頁，2026-07-07 重造）
+## 5. 「我的信用卡」modal（摘要列＋卡片格，2026-11-17 改版；舊的錢包堆疊＋單卡頁設計見 `docs/archive/ui-display.md-2026-11-17.bak`）
 
-**兩層視圖**（`renderOwnedCardsOverview()`，Grep "wallet stack"）：
-1. **一覽（錢包堆疊）**：所有卡直向疊放、只露上緣色條、不顯示卡名。總高固定 ~320px，卡越多每條越窄（peek 12~40px 自動算）。點被蓋住的卡 → 原位展開（下方卡滑開 40px）＋「查看個人資訊 ›」pill。點全貌卡 → 進單卡頁。有卡展開時「收合」pill `position: sticky; bottom`（z-index 2000 > 卡片的 1..N——**曾因層級太低被卡蓋住**）
-2. **單卡頁（solo）**：大卡置中、左右箭頭＋滑動換卡（循環）、頁點、卡名。下方「個人化設定」**唯讀面板**（分級、CUBE 專屬、免年費門檻、我的額度、我的筆記；空值顯示「未填寫」）。**這裡不給編輯**，「前往卡片介紹頁編輯 ›」開 showCardDetail()。所有讀取包 `safe()` fallback（Firebase 被擋也能渲染）
+**為什麼改**：站長裁定錢包堆疊「只是在展示動畫」——不顯示卡名、整頁唯一的資訊是「N 張」。這一頁的定位是**個人後台**：一覽自己有哪些卡，並從這裡進各卡的個人設定。三個設計稿（清單式／卡片格／主從式）中站長選卡片格：清單式資訊太多偏亂、主從式失去一覽。
 
-**視覺定案（歷經多輪迭代，勿隨意回退）**：純白背景（皮革框/毛玻璃/漸層已否決）；卡片邊緣＝白色髮絲邊＋貼緣暗縫（`0 -1px` + `-3px` 短陰影，大範圍模糊陰影在細條上會疊成死黑）；卡數＝標題列淡灰小字「我的信用卡 ・N 張」（`#owned-count-badge`，藍膠囊已否決）；「管理我的信用卡」＝標題旁齒輪鈕（`#manage-owned-cards-btn`，沿用原 id）；`#my-owned-cards-modal .modal-content` 有 `scrollbar-gutter: stable`；直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）。
+**版面**（`renderOwnedCardsOverview()`，`js/cards-modals.js`，Grep「卡片格」）：
+1. **標題列**：「我的信用卡 ・N 張」（`#owned-count-badge`，淡灰小字；`mappings-page-test.js` 會讀它）＋「管理卡片」膠囊鈕（`#manage-owned-cards-btn`，沿用原 id，開勾選清單）
+2. **摘要列** `.ow-sum`：持有張數／總額度（只加總有填的卡，另註幾張未填）／免年費門檻（達成幾張，有未達成時小字變琥珀色）
+3. **卡片格** `.ow-grid`：手機 2 欄、≥600px 3 欄（modal 最寬 660px）。每格＝卡面＋卡名＋一行「級別 ・ 額度」；沒勾「我已過免年費門檻」的卡，卡面左上角有「年費未達標」標記（`.ow-flag`）。最後一格是虛線框「＋ 新增信用卡」
+4. **點卡片** → `openCardDetailAtPersonal(cardId)`：開詳情頁並捲到「個人設定」（借該區塊 nav 按鈕的 onclick，理由同 `openCardDetailAtChangelog`）
+
+**規則**：
+- **這一頁唯讀**（站長 2026-11-16 裁定）：編輯一律在詳情頁。級別只讀來顯示，**這裡不得呼叫 `saveCardLevel()`**（鐵則 1）
+- 個人資料是非同步讀的：卡面與卡名先畫，級別／額度／免年費讀到再補。所有讀取包 `safe()` fallback（Firebase 被擋也能渲染）；重畫用 `_token` 作廢舊批次
+- **詳情頁關閉時總覽會重畫**（`setupMyOwnedCardsModal()` 裡的 MutationObserver 看 `#card-detail-modal` 由開變關）——用戶改完額度回來，數字要是新的
+- 直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）；缺圖顯示卡名（`.ow-noimg`）
+- **結帳日／繳款期限還沒放**：站長要加，但資料面先不碰——`loadBillingDates()`／`saveBillingDates()` 已存在，詳情頁卻沒有輸入欄位（`#billing-date`／`#statement-date` 不在 index.html），用戶目前填不了。要做時先補詳情頁欄位，再回來在卡片格加一行
+- 已否決、勿回退：錢包堆疊與堆疊動畫、不顯示卡名的一覽、皮革框／毛玻璃／漸層背景、藍膠囊卡數、標題旁只有圖示的齒輪鈕
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
@@ -411,7 +421,7 @@ Grep `titleParts`）：
 - NT$ 前綴輸入框：只收數字、自動千分位、失焦或 Enter 即存（`✓ 已儲存` 2 秒）；`inputmode="numeric"`+pattern
 - 儲存比照免年費：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）＋本機鏡像 `creditLimit_<uid>_<cardId>`；清空＝刪除
 - 函數：`loadCreditLimit()`/`saveCreditLimit()`/`setupCreditLimit()`（Grep "我的額度相關功能"）
-- 單卡頁唯讀顯示 `NT$ x,xxx` 或「未填寫」
+- 「我的信用卡」卡片格唯讀顯示「額度 N 萬」（非整千則 `NT$x,xxx`）或「額度未填」；摘要列顯示總額度（第 5 節）
 
 ## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
 
