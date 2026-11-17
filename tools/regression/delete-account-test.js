@@ -30,7 +30,7 @@ const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png'
 function stub(url, provider){
   const R='Promise.resolve()';
   if(url.includes('firebase-app'))return 'export function initializeApp(){return {};}';
-  if(url.includes('firebase-analytics'))return 'export function getAnalytics(){return {};} export function logEvent(){}';
+  if(url.includes('firebase-analytics'))return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';
   if(url.includes('firebase-auth'))return `
     globalThis.__calls = { reauth:0, deleteUser:0 };
     const USER = { uid:'testuid', email:'test@example.com', displayName:'測試用戶', photoURL:'',
