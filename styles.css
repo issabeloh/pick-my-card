@@ -173,7 +173,6 @@ header {
     line-height: 1.2;
 }
 
-
 .beta-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -1000,7 +999,6 @@ header h1 {
     margin: 0;
     opacity: 0.8;
 }
-
 
 /* 行動支付區塊 */
 .header-section {
@@ -1994,7 +1992,6 @@ input[type="number"]:focus {
     transition: box-shadow 0.3s ease;
 }
 
-
 /* Calculate button */
 .calculate-btn {
     width: 100%;
@@ -2451,7 +2448,6 @@ input[type="number"]:focus {
 .promo-help-btn:hover {
     background: #6b7280;
 }
-
 
 .show-promos-toggle,
 .show-promos-toggle label {
@@ -4275,173 +4271,345 @@ input[type="number"]:focus {
     margin: 14px auto 0;
 }
 
-/* --- 我的額度 (card detail page) --- */
-.credit-limit-row {
+/* ============================================
+   個人設定（#card-personal-section，2026-11-17 詳情頁三輪改版的第三輪）
+   統一自動儲存＋常駐儲存狀態列（.cd-sv）＋兩組一欄一列（.cd-set-box／.cd-st-r）。
+   取代 2026-08-01 的單一灰底框（.personal-settings-box）與舊的 💾 儲存鈕、#save-indicator。
+   ⚠️ 選擇器多半掛 #card-detail-modal：蓋過全站 input[type="text"]／label／select 預設與手機 16px 規則
+   （手機的 16px 是防 iOS 聚焦自動放大，刻意不蓋）。
+   ============================================ */
+
+/* 手機：個人設定本身是頁籤，不再重複一個「個人設定」標題；桌機左欄才要（見 ≥1025px 區塊） */
+#card-detail-modal .cd-pan-set > .cd-set-h { display: none; }
+
+/* 儲存狀態列：一直都在。data-state＝ok（綠）／local（黃）／busy（灰）／err（紅），由 cdSaveStatusRender 切 */
+.cd-sv {
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-.credit-limit-field {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #fff;
-    /* 2026-08-01：高度 60px → 38px。原本是為了跟 .user-notes-textarea 齊高才做那麼高，
-       但額度只是一行數字，60px 有一半是空的；併進「個人設定」後整區要 compact，
-       改矮之後與筆記框改為靠上對齊（.personal-fields-row 的 align-items: flex-start） */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 0 12px;
-    height: 38px;
-    box-sizing: border-box;
-    flex: 1;
-}
-.credit-limit-field:focus-within {
-    border-color: #6bb6ff;
-    box-shadow: 0 0 0 3px rgba(107, 182, 255, 0.1);
-}
-.credit-limit-prefix {
-    color: #64748b;
-    font-size: 12px;
-    font-weight: 600;
-    flex: 0 0 auto;
-}
-/* input[type="text"] 全站通用樣式特異度較高，這裡用 input.credit-limit-input 蓋回 */
-input[type="text"].credit-limit-input {
-    border: none;
-    border-radius: 0;
-    outline: none;
-    box-shadow: none;
-    width: 100%;
-    min-width: 0;
-    padding: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: #0f172a;
-    background: transparent;
-}
-input[type="text"].credit-limit-input:focus {
-    border: none;
-    box-shadow: none;
-}
-.credit-limit-input::placeholder {
-    color: #cbd5e1;
-    font-size: 12px;
-    font-weight: 400;
-}
-.credit-limit-saved {
-    color: #059669;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 9px 12px;
     font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-/* --- 個人設定（#card-personal-section，2026-08-01 合併）---
-   原本是分開的兩塊：分級卡的級別區自帶一個灰底框、額度/筆記另外一塊 .personal-fields-row。
-   兩者都是「這張卡在我身上的設定」，切成兩塊只是把同一件事拆開，也讓詳情頁上半部被撐得很長。
-   現在共用同一個灰底框（.personal-settings-box），內層欄位標題一律 .personal-field-title
-   同字級，不再有 h4 與 14px label 混用。 */
-.personal-settings-box {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    line-height: 1.5;
     border-radius: 8px;
-    padding: 12px 14px;
+    border: 1px solid #a7f3d0;
+    background: #ecfdf5;
+    color: #065f46;
 }
-
-/* 級別/CUBE 設定與下方額度/筆記之間的分隔線。掛在級別區身上而不是額度區身上，
-   是因為非分級卡的 #cube-level-section 是 display:none——邊框跟著整塊消失，
-   不會在框內留一條孤兒線 */
-.personal-settings-box > #cube-level-section {
-    padding-bottom: 12px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
+.cd-sv-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #059669; }
+.cd-sv-t { flex: 1; min-width: 0; }
+.cd-sv[data-state="local"] { background: #fffbeb; border-color: #f3dfa6; color: #92400e; }
+.cd-sv[data-state="local"] .cd-sv-dot { background: #d97706; }
+.cd-sv[data-state="busy"] { background: #f9fafb; border-color: #e5e7eb; color: #6b7280; }
+.cd-sv[data-state="busy"] .cd-sv-dot { background: #9ca3af; }
+.cd-sv[data-state="err"] { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.cd-sv[data-state="err"] .cd-sv-dot { background: #dc2626; }
+/* 「登入」連結：是 button（開登入視窗），畫成底線文字連結 */
+#card-detail-modal .cd-sv-login {
+    flex: none;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    white-space: nowrap;
+    cursor: pointer;
 }
+#card-detail-modal .cd-sv-login[hidden] { display: none; }
+#card-detail-modal .cd-sv-login:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 2px; }
 
-.personal-field-title {
+/* 儲存狀態列的「登入」會開登入視窗；詳情頁是 z-index 1100 的全頁，登入視窗（.modal 預設 1000）要疊在它上面 */
+#auth-modal { z-index: 1200; }
+
+/* 組標題：「計算條件」＋灰字副標 */
+.cd-set-sec { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; margin: 18px 4px 8px; }
+.cd-set-sec-t { margin: 0; font-size: 17px; font-weight: 600; color: #374151; }
+.cd-set-sec-s { font-size: 12px; color: #6b7280; }
+
+/* 一組一個白底灰框盒子；一欄一列：標籤左、控制項右、說明小字在下一行（跨兩欄） */
+.cd-set-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+.cd-st-r {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+    align-items: center;
+    padding: 10px 14px;
+}
+.cd-st-r + .cd-st-r { border-top: 1px solid #f0f1f3; }
+.cd-st-l { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#card-detail-modal .cd-st-l label {
+    display: block;
+    margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #374151;
-    margin-bottom: 5px;
-    display: block;
-}
-
-.personal-field-hint {
-    font-size: 11px;
-    color: #9ca3af;
-    line-height: 1.5;
-    margin-top: 4px;
-}
-
-.personal-field-hint-indent {
-    padding-left: 20px;
-}
-
-/* 童樂匯那格：標題本身就是 checkbox 的 label，字級與其他欄位標題一致 */
-label.personal-field-check {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 0;
+    line-height: 1.4;
+    color: #111827;
     cursor: pointer;
-    user-select: none;
 }
-label.personal-field-check input[type="checkbox"] {
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
-    accent-color: #3b82f6;
-}
+.cd-st-c { display: flex; justify-content: flex-end; }
+.cd-st-s { grid-column: 1 / -1; font-size: 12px; line-height: 1.5; color: #6b7280; }
+.cd-st-s:empty { display: none; }
+/* 單一級別且沒有備註時沒有「i」按鈕，備註節點（切級別時就地改寫的目標）一定存在但不佔位 */
+.cd-st-l > .level-help-note:empty { display: none; }
 
-/* 級別/生日月份/發卡組織共用的下拉選單 */
-.personal-level-select {
-    padding: 3px 8px;
-    border: 1px solid #d1d5db;
-    border-radius: 5px;
-    font-size: 13px;
+/* 下拉與輸入框同高 36px、寬約 132px、靠右、同框色 */
+#card-detail-modal .cd-st-sel,
+#card-detail-modal input[type="text"].cd-st-inp {
+    box-sizing: border-box;
+    width: 132px;
+    height: 36px;
     max-width: 100%;
+    margin: 0;
+    padding: 0 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: #fff;
+    box-shadow: none;
+    color: #111827;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: right;
+    text-align-last: right;
+    font-variant-numeric: tabular-nums;
+}
+#card-detail-modal input.cd-st-inp::placeholder { color: #9ca3af; font-weight: 400; }
+#card-detail-modal .cd-st-sel:focus-visible,
+#card-detail-modal input[type="text"].cd-st-inp:focus,
+#card-detail-modal .cd-st-ta:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+#card-detail-modal .cd-st-sel:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+
+/* 筆記：整列寬的 textarea（標題在上） */
+.cd-st-notes .cd-st-l { grid-column: 1 / -1; }
+#card-detail-modal .cd-st-ta {
+    grid-column: 1 / -1;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 66px;
+    margin: 4px 0 0;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    color: #111827;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+}
+#card-detail-modal .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
+
+/* 開關：仍是 input type=checkbox（id 不變；Tab 聚焦、空白鍵切換），只換外觀 */
+#card-detail-modal input[type="checkbox"].cd-sw {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    position: relative;
+    flex: none;
+    width: 40px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: #cfd4dc;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+#card-detail-modal input[type="checkbox"].cd-sw::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s;
+}
+#card-detail-modal input[type="checkbox"].cd-sw:checked { background: #1d4ed8; }
+#card-detail-modal input[type="checkbox"].cd-sw:checked::after { transform: translateX(16px); }
+#card-detail-modal input[type="checkbox"].cd-sw:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+    #card-detail-modal input[type="checkbox"].cd-sw,
+    #card-detail-modal input[type="checkbox"].cd-sw::after { transition: none; }
 }
 
-/* 未登入的生日月份：保留選單外型但停用，讓人看得出「這裡本來可以選」。
-   不用 opacity 調淡——各瀏覽器對 disabled select 的預設淡化程度差很多，
-   直接指定顏色比較可控 */
-.personal-level-select:disabled {
+.cd-set-foot { padding: 12px 4px 0; font-size: 12px; line-height: 1.5; color: #6b7280; }
+
+/* ============================================
+   新戶活動票券（#card-promos-content，2026-11-17 第三輪；js/card-detail.js renderCardDetailPromoTickets）
+   左邊亮黃票根＋虛線＋上下半圓缺口，右邊白底「資料有什麼畫什麼」。缺口的圓用頁面底色（#f3f4f6）＋灰框，
+   被 .cd-tk 的 overflow:hidden 切成半圓。多筆活動：每張票券下一顆「達成條件與備註」膠囊（.cd-pm-t）。
+   ============================================ */
+.cd-pm + .cd-pm { margin-top: 16px; }
+/* 手機／平板：窗格的第一張票券離頁籤列留一點空（桌機右欄 .cd-main 自己有 14px 內距） */
+@media (max-width: 1024px) {
+    #card-detail-modal .cd-pan.cd-pan-promo { padding-top: 14px; }
+}
+.cd-tk {
+    position: relative;
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.cd-tk::before,
+.cd-tk::after {
+    content: "";
+    position: absolute;
+    left: 71px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
     background: #f3f4f6;
-    color: #9ca3af;
-    cursor: not-allowed;
+    border: 1px solid #e5e7eb;
 }
-
-/* 下拉選單 ＋ 說明「i」按鈕同一行 */
-.personal-level-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-/* 非分級卡沒有 cube-settings-grid，級別那格自己撐一行 */
-.personal-field-level {
-    min-width: 0;
-}
-
-/* 我的額度 + 我的筆記: side by side on desktop, stacked on mobile. */
-.personal-fields-row {
+.cd-tk::before { top: -9px; }
+.cd-tk::after { bottom: -9px; }
+.cd-tk-stub {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: #ffd84a;
+    color: #7a4e00;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.3;
+    text-align: center;
 }
-@media (min-width: 768px) {
-    .personal-fields-row {
-        flex-direction: row;
-        gap: 20px;
-        align-items: flex-start;
+.cd-tk-main {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-left: 2px dashed #e9d68c;
+}
+.cd-pt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cd-pt-chips span {
+    padding: 0 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.7;
+}
+.cd-pt-chips .cd-pt-soon { background: #fef3c7; color: #92400e; }
+.cd-hz-amt { display: flex; align-items: baseline; gap: 6px; line-height: 1.15; }
+.cd-hz-amt b { font-size: 30px; font-weight: 800; color: #111827; font-variant-numeric: tabular-nums; }
+.cd-hz-amt small { font-size: 13px; font-weight: 600; color: #374151; }
+.cd-gname { font-size: 17px; font-weight: 800; line-height: 1.35; color: #111827; }
+.cd-gopts {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 2px 0 0;
+    padding-left: 1.5em;
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+.cd-tk-main .cd-ch { font-size: 12px; color: #6b7280; }
+.cd-pt-sum { margin: 0; font-size: 13px; line-height: 1.5; color: #374151; }
+.cd-pt-img {
+    display: block;
+    width: 100%;
+    max-height: 140px;
+    margin-top: 2px;
+    border-radius: 6px;
+    object-fit: contain;
+    cursor: zoom-in;
+}
+
+/* 票券下方的說明區：標題、白底灰框盒子、黃色圓圈數字的步驟、備註條列 */
+.cd-pm-h { margin: 18px 4px 8px; font-size: 17px; font-weight: 600; color: #374151; }
+.cd-pm-box, .cd-pm-d {
+    box-sizing: border-box;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+.cd-steps { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.5; color: #374151; }
+.cd-steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; }
+.cd-steps i {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ffd84a;
+    color: #7a4e00;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 800;
+}
+.cd-step-sub { display: block; margin-top: 2px; color: #6b7280; }
+.cd-pt-plain { margin: 0; font-size: 12.5px; line-height: 1.5; color: #374151; }
+.cd-kv { display: flex; flex-direction: column; gap: 10px; }
+.cd-notes { display: flex; flex-direction: column; gap: 3px; margin: 0; padding-left: 1.2em; font-size: 12.5px; line-height: 1.5; color: #6b7280; }
+.cd-pm-box > .cd-kv:not(:first-child) { margin-top: 10px; }
+
+/* 多筆活動：每張票券下的「達成條件與備註 ⌄」膠囊（和「顯示全部」「展開」同一種灰框小膠囊） */
+#card-detail-modal .cd-pm-t {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    margin: 8px 0 0;
+    padding: 0 5px 0 9px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: #374151;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 18px;
+    cursor: pointer;
+}
+#card-detail-modal .cd-pm-t:hover { background: #f9fafb; }
+#card-detail-modal .cd-pm-t:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.cd-pm-t[aria-expanded="true"] .cd-chev { transform: rotate(180deg); }
+.cd-pm-d { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.cd-pm-d[hidden] { display: none; }
+#card-promos-foot:not(:empty) { margin-top: 16px; }
+/* 「謹慎理財、信用至上」（既有 #card-promo-disclaimer，有活動才顯示）：2026-11-17 起在活動區最下面、灰色小字 */
+#card-promos-section .promo-disclaimer {
+    margin: 16px 0 0;
+    padding: 0 4px;
+    background: none;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 400;
+    text-align: left;
+}
+
+@media (min-width: 1025px) {
+    /* 桌機右欄：多筆活動排成兩欄（票券最窄 340px）；單筆活動限寬，不要把票券拉成一整條 */
+    #card-promos-content.cd-promos-multi {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+        align-items: start;
     }
-    .personal-fields-row #credit-limit-section {
-        flex: 0 0 200px;
-    }
-    .personal-fields-row #card-notes-section {
-        flex: 1;
-        min-width: 0;
-    }
+    #card-promos-content.cd-promos-multi .cd-pm + .cd-pm { margin-top: 0; }
+    #card-promos-content.cd-promos-multi > .card-apply-cta { grid-column: 1 / -1; }
+    #card-promos-content:not(.cd-promos-multi) > .cd-pm { max-width: 640px; }
 }
 
 /* --- 級別說明「i」按鈕與浮動說明窗 --- */
@@ -4525,10 +4693,7 @@ label.personal-field-check input[type="checkbox"] {
     padding-top: 8px;
     border-top: 1px solid #f3f4f6;
 }
-/* 沒有「i」按鈕時（單一級別且沒有備註）備註節點直接藏起來，不要在框裡留空行 */
-.personal-level-row > .level-help-note:empty {
-    display: none;
-}
+
 .ow-detail-btn {
     padding: 8px 18px;
     border: 1px solid #3b82f6;
@@ -4881,22 +5046,6 @@ label.personal-field-check input[type="checkbox"] {
     font-weight: 600;
     color: #374151;
 }
-#card-detail-modal .personal-settings-box { background: #fff; }
-/* 個人設定在窄欄（手機／桌機 316px 左欄）一律直排：加了「免年費條件」之後三格並排會太擠 */
-#card-detail-modal .personal-fields-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-}
-#card-detail-modal .personal-fields-row #credit-limit-section,
-#card-detail-modal .personal-fields-row #card-notes-section { flex: none; }
-.cd-fee-field {
-    padding-top: 12px;
-    border-top: 1px solid #e5e7eb;
-}
-.cd-fee-field .personal-field-title { margin-bottom: 2px; }
-.cd-fee-waiver-text { margin: 0 0 4px; color: #6b7280; font-size: 12px; line-height: 1.55; }
-.cd-fee-waiver-text:empty { display: none; }
 
 /* --- 「回饋」頁籤最上面：近期異動（一行通知）＋搜尋框 --- */
 .cd-bar { display: block; }
@@ -5111,8 +5260,7 @@ label.personal-field-check input[type="checkbox"] {
     .cd-pan-set,
     .cd-pan-set[hidden] { display: block; }
     #card-detail-modal .cd-pan-set { order: 0; }
-    #card-detail-modal .cd-pan-set h4 { margin: 6px 4px 8px; }
-    #card-detail-modal .cube-settings-grid { grid-template-columns: 1fr; }
+    #card-detail-modal .cd-pan-set > .cd-set-h { display: block; margin: 6px 4px 8px; }
 
     /* 近期異動與搜尋框同一排：通知佔滿剩餘寬度，搜尋框固定 260px；展開的清單獨佔下一排。
        沒有異動的卡（.cd-bar 沒有 .has-news）搜尋框自己一排、限寬 */
@@ -5191,23 +5339,6 @@ label.personal-field-check input[type="checkbox"] {
    inline style 抽出來，因為要用 media query 分桌機/手機兩種分隔線方向。
    桌機：三欄等寬（原本 repeat(auto-fit, minmax(190px,1fr)) 在寬容器下會切出 6 欄、
    三個區塊只擠在左邊 60%），欄與欄之間垂直線；手機：單欄，區塊之間水平線。 */
-/* CUBE 設定四格（選擇級別／生日月份／童樂匯／發卡組織）。
-   2026-08-01 改版：原本三欄、欄間有垂直分隔線；「選擇級別」搬進來後變四格，
-   四欄在 modal 寬度下每欄只剩約 150px——生日月份那格的說明文字會斷成四五行
-   （原本三欄 199px 就已經要靠 nowrap 鎖字了）。改成桌機 2×2、手機單欄，
-   分隔線也一併拿掉：外層 .personal-settings-box 已經把這些欄位框成一組，
-   格線只是再切一次。 */
-.cube-settings-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 20px;
-}
-
-@media (max-width: 768px) {
-    .cube-settings-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 .info-grid {
     display: grid;
@@ -5925,79 +6056,6 @@ mark.cashback-search-hl {
 }
 .cd-cc .cd-chev { transform: rotate(-90deg); }
 
-/* User Notes Styles */
-.user-notes-container {
-    position: relative;
-}
-
-.notes-input-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-/* Fee Waiver Checkbox Styles */
-.fee-waiver-status {
-    margin-top: 4px; /* 減少頂部間距 */
-}
-
-.fee-waiver-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #6b7280;
-    transition: color 0.2s;
-    opacity: 0.8;
-}
-
-.fee-waiver-checkbox:hover {
-    color: #374151;
-    opacity: 1;
-}
-
-.fee-waiver-checkbox input[type="checkbox"] {
-    display: none;
-}
-
-.checkmark {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #d1d5db;
-    border-radius: 3px;
-    position: relative;
-    background: white;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.fee-waiver-checkbox:hover .checkmark {
-    border-color: #3b82f6;
-}
-
-.fee-waiver-checkbox input:checked + .checkmark {
-    background: #10b981;
-    border-color: #10b981;
-}
-
-.fee-waiver-checkbox input:checked + .checkmark::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 4px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.checkbox-label {
-    font-weight: 500;
-    user-select: none;
-}
-
 /* Billing Dates Section Styles */
 .billing-dates-section {
     margin-top: 12px;
@@ -6098,119 +6156,6 @@ mark.cashback-search-hl {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-}
-
-.user-notes-textarea {
-    flex: 1;
-    min-width: 0;
-    min-height: 60px; /* 縮小初始高度 */
-    height: 60px; /* 設定預設高度 */
-    max-height: 200px; /* 增加最大高度 */
-    padding: 12px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: vertical; /* 保持可拉伸功能 */
-    transition: border-color 0.2s;
-}
-
-.user-notes-textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.user-notes-textarea::placeholder {
-    color: #9ca3af;
-    /* Keep the textarea element at 16px on mobile (prevents iOS focus auto-zoom),
-       but render the placeholder at 14px. iOS decides zoom from the element's
-       own font-size, not the ::placeholder pseudo-element, so this is safe.
-       A direct rule on ::placeholder overrides the 16px !important the element
-       inherits from the max-width:768px input rule (inheritance loses to a
-       directly-applied value). */
-    font-size: 14px;
-}
-
-.notes-status {
-    margin-top: 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 20px;
-}
-
-.save-indicator {
-    color: #059669;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.save-indicator.show {
-    opacity: 1;
-}
-
-.save-indicator.saving {
-    color: #f59e0b;
-    opacity: 1;
-}
-
-.save-indicator.error {
-    color: #dc2626;
-    opacity: 1;
-}
-
-.unsaved-indicator {
-    color: #f59e0b;
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 12px;
-}
-
-.save-notes-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    color: white;
-    border: none;
-    padding: 8px 10px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0;
-    min-width: unset;
-    width: auto;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.save-notes-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.save-notes-btn:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.save-notes-btn:disabled {
-    background: #e5e7eb;
-    color: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.save-notes-btn.saving {
-    background: #f59e0b;
-    cursor: wait;
-}
-
-.save-notes-btn.success {
-    background: #10b981;
 }
 
 .btn-icon {
@@ -6324,20 +6269,13 @@ mark.cashback-search-hl {
     gap: 12px;
 }
 
-.fee-annual-item, .fee-waiver-item {
+.fee-annual-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
 /* 筆記區域額外間距 */
-/* .user-notes-section 的 margin-top/padding-top !important 已於 2026-08-01 移除：
-   那是筆記區還是獨立區塊時用來擠掉上方間距的，併進「個人設定」後只會把「我的筆記」
-   標題壓得比同一列的「我的額度」低一截。原本靠 .personal-fields-row 再寫一次
-   !important 抵銷，兩條互打不如兩條都拿掉。 */
-.user-notes-section {
-    padding-bottom: 0; /* 桌機版本移除底部內距 */
-}
 
 /* .cube-level-selector / .level-label / .level-select 已於 2026-08-01 移除：
    那是 index.html 裡寫死的 CUBE 等級下拉選單的樣式，但那段標記早就被
@@ -8134,8 +8072,6 @@ mark.cashback-search-hl {
     text-align: left;
 }
 
-
-
 .use-case-title {
     font-size: 1.25rem;
     font-weight: 600;
@@ -8249,7 +8185,6 @@ mark.cashback-search-hl {
     .use-case-content {
         text-align: center;
     }
-
 
     .use-case-title {
         font-size: 1.125rem;
@@ -8438,8 +8373,6 @@ mark.cashback-search-hl {
     text-transform: uppercase;
     white-space: nowrap;
 }
-
-
 
 /* ============================================
    搜尋提示 (Search Hints)
@@ -9049,7 +8982,6 @@ mark.cashback-search-hl {
     color: #374151;
 }
 
-
 /* ============================================
    寬螢幕（≥1400px）：把 .container 的 1200px 上限放寬，並讓側欄變寬
    （2026-09-08 站長回報「桌機一切都太大、很浪費顯示空間」的第一步）
@@ -9243,7 +9175,6 @@ mark.cashback-search-hl {
         65%      { transform: rotate(-6deg) scale(1.06); }
         85%      { transform: rotate(3deg) scale(1.03); }
     }
-
 
     .sidebar-header {
         display: flex;
@@ -10898,8 +10829,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .mp-exp-head { padding-top: 16px; }
 }
 
-
-
 /* ============================================
    桌機密度調整 ─ 第 1 類：字級（≥1025px，2026-10-05）
    （站長回報「桌機要縮到 75% 才舒服」的第二步；第一步「放寬容器與側欄」在
@@ -11023,9 +10952,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .show-promos-toggle, .show-promos-toggle label,
     .detail-value,
     .card-apply-cta-btn,
-    .personal-field-title,
     .info-value,
-    .user-notes-textarea,
     .btn-icon {
         font-size: 12.5px;
     }
@@ -11047,12 +10974,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .amount-input-wrap .amount-prefix,
     .mc-related,
     #card-benefits-section .cashback-condition.parking-strong-line,
-    input[type="text"].credit-limit-input,
-    .personal-level-select,
     .info-label,
-    .card-changelog-item,
-    .fee-waiver-checkbox,
-    .save-notes-btn {
+    .card-changelog-item {
         font-size: 11.5px;
     }
 
@@ -11090,7 +11013,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .social-text,
     .data-update-footer,
     .pin-btn,
-    .credit-limit-prefix,
     .level-help-btn,
     .cashback-search-input,
     .card-changelog-date,
@@ -11113,7 +11035,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     /* 11px → 10.5px */
     .cashback-type-label,
-    .personal-field-hint,
     .cashback-condition,
     .cond-toggle,
     .card-tag {
@@ -11131,7 +11052,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         font-size: 0.9rem;
     }
 }
-
 
 /* ============================================
    桌機密度調整 ─ 第 2 類：內距／外距／格線間距（≥1025px，2026-10-05）
@@ -11637,52 +11557,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         padding: 17px;   /* 原 20px */
     }
 
-    .credit-limit-row {
-        gap: 9px;   /* 原 10px */
-    }
-
-    .credit-limit-field {
-        padding: 0px 10px;   /* 原 0px 12px */
-        gap: 5px;   /* 原 6px */
-    }
-
-    .personal-settings-box {
-        padding: 10px 12px;   /* 原 12px 14px */
-    }
-
-    .personal-settings-box > #cube-level-section {
-        padding-bottom: 10px;   /* 原 12px */
-        margin-bottom: 10px;   /* 原 12px */
-    }
-
-    .personal-field-title {
-        margin-bottom: 4px;   /* 原 5px */
-    }
-
-    .personal-field-hint {
-        margin-top: 3px;   /* 原 4px */
-    }
-
-    label.personal-field-check {
-        gap: 5px;   /* 原 6px */
-    }
-
-    .personal-level-select {
-        padding: 3px 7px;   /* 原 3px 8px */
-    }
-
-    .personal-level-row {
-        gap: 5px;   /* 原 6px */
-    }
-
-    .personal-fields-row {
-        gap: 10px;   /* 原 12px */
-    }
-
-    .personal-fields-row {
-        gap: 17px;   /* 原 20px */
-    }
-
     .card-info-section {
         margin-bottom: 20px;   /* 原 24px */
     }
@@ -11693,10 +11567,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .card-info-section h4.section-title-with-icon {
         gap: 6px;   /* 原 7px */
-    }
-
-    .cube-settings-grid {
-        gap: 10px 17px;   /* 原 12px 20px */
     }
 
     .info-grid-2col {
@@ -11742,31 +11612,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         margin-left: 4px;   /* 原 5px */
     }
 
-    .notes-input-row {
-        gap: 7px;   /* 原 8px */
-    }
-
-    .fee-waiver-status {
-        margin-top: 3px;   /* 原 4px */
-    }
-
-    .fee-waiver-checkbox {
-        gap: 7px;   /* 原 8px */
-    }
-
-    .user-notes-textarea {
-        padding: 10px;   /* 原 12px */
-    }
-
-    .notes-status {
-        margin-top: 3px;   /* 原 4px */
-        gap: 7px;   /* 原 8px */
-    }
-
-    .save-notes-btn {
-        padding: 7px 9px;   /* 原 8px 10px */
-    }
-
     .fee-annual-section {
         gap: 10px;   /* 原 12px */
     }
@@ -11790,7 +11635,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
     }
 }
-
 
 /* ============================================
    桌機密度調整 ─ 第 3 類：控制項高度（≥1025px，2026-10-05）
@@ -11861,20 +11705,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .close-modal {
         width: 26px;    /* 原 30px */
         height: 26px;   /* 原 30px */
-    }
-
-    .credit-limit-field {
-        height: 33px;   /* 原 38px */
-    }
-
-    .user-notes-textarea {
-        height: 52px;        /* 原 60px */
-        min-height: 52px;    /* 原 60px */
-        max-height: 174px;   /* 原 200px */
-    }
-
-    .notes-status {
-        min-height: 17px;   /* 原 20px */
     }
 
     .social-media-footer {

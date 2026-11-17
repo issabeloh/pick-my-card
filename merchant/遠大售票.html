@@ -1143,63 +1143,51 @@
                             <p class="card-use-case" id="card-use-case" hidden></p>
                         </div>
 
-                        <!-- 個人設定：級別/CUBE 專屬設定 ＋ 我的額度 ＋ 我的筆記 ＋（2026-11-17 搬來）免年費條件與勾選。
-                             都是「這張卡在我身上的設定」，共用同一個灰底框。內層標題一律 .personal-field-title，
-                             與 showCardDetail() 注入的級別區欄位標題同字級。
+                        <!-- 個人設定（2026-11-17 第三輪改版：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列）。
+                             ① #cd-save-status 最上面一條狀態列，一直都在：已登入＝綠「已儲存到你的帳號」、訪客＝黃「只存在這台裝置…」
+                                ＋「登入」連結、儲存中＝灰、失敗＝紅（js/card-detail.js 的 cdTrackSave／cdSaveStatusRender）
+                             ② 「計算條件」組（級別／發卡組織／生日月份／童樂匯）由 showCardDetail() 注入 #cube-level-section，
+                                非分級卡不長這一組；③ 「我的紀錄」組（額度／免年費／筆記）是下面的靜態標記
+                             每組一個白底灰框盒子 .cd-set-box，一欄一列：標籤左、控制項右、說明小字在下一行。
+                             全部欄位自動儲存，沒有儲存鈕。勾選一律是開關樣式（仍是 input type=checkbox）。
                              桌機（≥1025px）常駐左欄；手機是第四個頁籤（data-pan="set"）。 -->
                         <div class="card-info-section cd-pan cd-pan-set" id="card-personal-section" data-pan="set" role="tabpanel" aria-labelledby="cd-tab-set">
-                            <h4>個人設定</h4>
-                            <div class="personal-settings-box">
-                                <!-- 分級卡的級別選擇器／CUBE 三欄設定由 showCardDetail() 注入；
-                                     非分級卡這塊 display:none，框內只剩額度與筆記 -->
-                                <div id="cube-level-section" style="display: none;"></div>
+                            <h4 class="cd-set-h">個人設定</h4>
+                            <div class="cd-sv" id="cd-save-status" role="status" aria-live="polite" data-state="local">
+                                <span class="cd-sv-dot" aria-hidden="true"></span>
+                                <span class="cd-sv-t">只存在這台裝置。登入後會同步到帳號</span>
+                                <button type="button" class="cd-sv-login" id="cd-save-login">登入</button>
+                            </div>
 
-                                <div class="personal-fields-row">
-                                    <div class="personal-field" id="credit-limit-section">
-                                        <div class="personal-field-title">我的額度</div>
-                                        <div class="credit-limit-row">
-                                            <div class="credit-limit-field">
-                                                <span class="credit-limit-prefix">NT$</span>
-                                                <input type="text" id="credit-limit-input" class="credit-limit-input"
-                                                       inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
-                                                       placeholder="選填">
-                                            </div>
-                                            <span class="credit-limit-saved" id="credit-limit-saved"></span>
-                                        </div>
-                                    </div>
+                            <div id="cube-level-section" style="display: none;"></div>
 
-                                    <div class="personal-field user-notes-section" id="card-notes-section">
-                                        <div class="personal-field-title">我的筆記</div>
-                                        <div class="user-notes-container">
-                                            <div class="notes-input-row">
-                                                <textarea id="user-notes-input"
-                                                          placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                                          class="user-notes-textarea"></textarea>
-                                                <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                                    <span class="btn-icon">💾</span>
-                                                </button>
-                                            </div>
-                                            <div class="notes-status" id="notes-status">
-                                                <span class="save-indicator" id="save-indicator"></span>
-                                            </div>
-                                        </div>
+                            <div class="cd-set-sec"><h5 class="cd-set-sec-t">我的紀錄</h5><span class="cd-set-sec-s">只有你看得到</span></div>
+                            <div class="cd-set-box">
+                                <div class="cd-st-r" id="credit-limit-section">
+                                    <div class="cd-st-l"><label for="credit-limit-input">我的額度</label></div>
+                                    <div class="cd-st-c">
+                                        <input type="text" id="credit-limit-input" class="cd-st-inp"
+                                               inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                               placeholder="未設定" autocomplete="off">
                                     </div>
+                                    <small class="cd-st-s">單位 NT$。會計入刷卡小抄的額度合計</small>
+                                </div>
 
-                                    <!-- 免年費條件（feeWaiver 原文）＋「我已過免年費門檻」勾選：2026-11-17 從摘要區搬到這裡
-                                         （只搬 DOM 位置；#fee-waiver-checked 的 id 與儲存邏輯見 js/spending-mappings.js 不動） -->
-                                    <div class="personal-field cd-fee-field" id="card-fee-section">
-                                        <div class="personal-field-title">免年費條件</div>
-                                        <div class="personal-field-hint cd-fee-waiver-text" id="card-fee-waiver"></div>
-                                        <div class="fee-waiver-status">
-                                            <label class="fee-waiver-checkbox">
-                                                <input type="checkbox" id="fee-waiver-checked">
-                                                <span class="checkmark"></span>
-                                                <span class="checkbox-label">我已過免年費門檻</span>
-                                            </label>
-                                        </div>
-                                    </div>
+                                <!-- 免年費：說明小字＝feeWaiver 原文（#card-fee-waiver 由 showCardDetail 用 textContent 填；
+                                     空字串時整行不佔位）。#fee-waiver-checked 的 id 與儲存邏輯見 js/spending-mappings.js -->
+                                <div class="cd-st-r" id="card-fee-section">
+                                    <div class="cd-st-l"><label for="fee-waiver-checked">我已過免年費門檻</label></div>
+                                    <div class="cd-st-c"><input type="checkbox" role="switch" class="cd-sw" id="fee-waiver-checked"></div>
+                                    <small class="cd-st-s" id="card-fee-waiver"></small>
+                                </div>
+
+                                <div class="cd-st-r cd-st-notes" id="card-notes-section">
+                                    <div class="cd-st-l"><label for="user-notes-input">我的筆記</label></div>
+                                    <textarea id="user-notes-input" class="cd-st-ta"
+                                              placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."></textarea>
                                 </div>
                             </div>
+                            <div class="cd-set-foot">所有卡片的設定可以在「我的信用卡」一次看。</div>
                         </div>
                     </div>
 
@@ -1272,12 +1260,15 @@
                             </div>
                         </div>
 
-                        <!-- 頁籤三「新戶活動」（內部版面第三輪處理） -->
+                        <!-- 頁籤三「新戶活動」（2026-11-17 第三輪：每筆活動一張「票券」，見 js/card-detail.js 的
+                             renderCardDetailPromoTickets）。#card-promos-content 的直接子項＝活動筆數（頁籤筆數讀它，CTA 盒除外）；
+                             #card-promos-foot 放多筆活動共用的「新戶資格」（在 content 之外，不算筆數）；
+                             #card-promo-disclaimer 顯示規則不變（有活動才顯示），位置移到最下面 -->
                         <div class="cd-pan cd-pan-promo" id="cd-pan-promo" data-pan="promo" role="tabpanel" aria-labelledby="cd-tab-promo" hidden>
                             <div class="card-info-section" id="card-promos-section" style="display: none;">
-                                <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
-                                <h4>新戶活動</h4>
                                 <div id="card-promos-content"></div>
+                                <div id="card-promos-foot"></div>
+                                <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
                             </div>
                         </div>
                     </div>

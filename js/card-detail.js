@@ -10,6 +10,8 @@
  *  - 計算條件列（分級卡）        → "updateCardCalcConditions"
  *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
  *  - 詳情頁項目過濾            → "filterCashbackItems" / "condenseMerchantList"
+ *  - 個人設定儲存狀態列（2026-11-17 第三輪）→ "cdTrackSave" / "cdSaveStatusRender" / "cdSettingRowHtml" / "cdFlushNotes"
+ *  - 新戶活動票券（2026-11-17 第三輪）→ "renderCardDetailPromoTickets" / "cdRenderPromoTicket" / "cdParsePromoSteps"
  *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
 // ============================================================
@@ -103,8 +105,141 @@ function refreshCardDetailApply() {
     const show = !!_cdApply && !owned;
     if (headerBtn) headerBtn.hidden = !show;
     if (fab) fab.hidden = !show;
+    // 登入／登出（js/auth-user-data.js 的 onAuthStateChanged 兩個分支都會呼叫這裡）時，個人設定的
+    // 儲存狀態列也要跟著從「只存在這台裝置」切成「已儲存到你的帳號」（反之亦然）
+    cdSaveStatusRender();
 }
 document.addEventListener('pmc:mappings-data-changed', refreshCardDetailApply);
+
+// ============================================================
+// 個人設定：統一自動儲存＋常駐儲存狀態列（2026-11-17，三輪改版的第三輪）
+// ============================================================
+// 個人設定每一欄都是「改了就存」（級別／發卡組織／生日月份／童樂匯／免年費＝onchange；額度＝失焦或 Enter；
+// 筆記＝停止輸入約 1 秒、離開輸入框、關閉詳情頁）。最上面一條狀態列（#cd-save-status）一直都在，
+// 把「存好了沒」說清楚：已登入＝綠「已儲存到你的帳號」；訪客＝黃「只存在這台裝置…」＋「登入」連結；
+// 任何一欄儲存時變灰「儲存中…」，成功後回到綠／黃並接上「・今天 HH:MM」；失敗＝紅，寫明原因。
+// ⚠️ 狀態只反映「真正的儲存結果」：各欄既有的 save 函數回傳結果物件（見 js/levels-payments.js「儲存結果」），
+//    cdTrackSave(key, promise) 等那個 promise 結案才換狀態；沒有任何「假裝成功」的計時器。
+//    唯一的計時器是「儲存中…」至少顯示 CD_SAVE_MIN_BUSY_MS——訪客的本機儲存不到 1ms 就完成，不留一下的話
+//    用戶永遠看不到「儲存中」那一格；結果仍是等真正結案後才顯示（失敗不會被吃掉）
+// ⚠️ 錯誤依「欄位」記帳（key）：A 欄失敗後 B 欄成功，紅字不能被 B 的成功洗掉；同一欄之後存成功才清掉
+const CD_SAVE_MIN_BUSY_MS = 350;
+const CD_SAVE_LABELS = { level: '級別', issuer: '發卡組織', birthday: '生日月份', children: '童樂匯', fee: '免年費', credit: '額度', notes: '筆記' };
+const _cdSv = { busy: 0, busySince: 0, errors: {}, volatile: {}, at: null, cardId: null, seq: 0 };
+
+// 一列設定：標籤（左）／控制項（右）／說明小字（下一行）。標籤與控制項由呼叫端組好（已 escape 的 HTML）
+function cdSettingRowHtml(labelHtml, controlHtml, subText) {
+    return `<div class="cd-st-r"><div class="cd-st-l">${labelHtml}</div><div class="cd-st-c">${controlHtml}</div>` +
+        (subText ? `<small class="cd-st-s">${escapeHtml(subText)}</small>` : '') + `</div>`;
+}
+
+function cdSaveTimeText(d) {
+    const pad = n => String(n).padStart(2, '0');
+    return `今天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// 依目前狀態重畫狀態列。狀態來源：busy（儲存中的筆數）→ errors（有欄位失敗）→ 登入與否
+function cdSaveStatusRender() {
+    const el = document.getElementById('cd-save-status');
+    if (!el) return;
+    const textEl = el.querySelector('.cd-sv-t');
+    const loginBtn = el.querySelector('.cd-sv-login');
+    const loggedIn = !!(typeof currentUser !== 'undefined' && currentUser);
+    const errKeys = Object.keys(_cdSv.errors);
+    const volKeys = Object.keys(_cdSv.volatile);
+    const when = _cdSv.at ? `・${cdSaveTimeText(_cdSv.at)}` : '';
+    let state, text, showLogin = false;
+    if (_cdSv.busy > 0) {
+        state = 'busy';
+        text = '儲存中…';
+    } else if (errKeys.length > 0) {
+        // 多個欄位都失敗時顯示最近一個的原因，並註明還有幾項沒存成功
+        const latest = errKeys.reduce((a, b) => (_cdSv.errors[b].seq > _cdSv.errors[a].seq ? b : a));
+        const e = _cdSv.errors[latest];
+        state = 'err';
+        text = `儲存失敗（${CD_SAVE_LABELS[latest] || '設定'}）：${e.reason}。` + (e.local ? '已先存在這台裝置，請稍後再試。' : '請重試。') +
+            (errKeys.length > 1 ? `另有 ${errKeys.length - 1} 項也沒存成功。` : '');
+    } else if (volKeys.length > 0) {
+        // 訪客且這項設定沒有本機備份（目前只有「童樂匯」）：照實說，不假裝存好了
+        state = 'local';
+        text = '這項設定只在這次瀏覽有效，登入後才會保存';
+        showLogin = true;
+    } else if (loggedIn) {
+        state = 'ok';
+        text = '已儲存到你的帳號' + when;
+    } else {
+        state = 'local';
+        text = '只存在這台裝置。登入後會同步到帳號' + when;
+        showLogin = true;
+    }
+    el.dataset.state = state;
+    if (textEl) textEl.textContent = text;
+    if (loginBtn) loginBtn.hidden = !showLogin;
+}
+
+// 換卡時清掉上一張卡的儲存記帳（錯誤、時間）；同一張卡重繪（級別切換）保留
+function cdSaveStatusReset(cardId) {
+    if (_cdSv.cardId !== cardId) {
+        _cdSv.cardId = cardId;
+        _cdSv.errors = {};
+        _cdSv.volatile = {};
+        _cdSv.at = null;
+    }
+    cdSaveStatusRender();
+}
+
+// 追蹤一次儲存：key＝欄位名，promise＝該欄既有 save 函數的回傳（結果物件）。
+// 立刻切成「儲存中…」，真正結案後記帳（成功→清該欄錯誤、記時間；失敗→記原因），回傳原結果
+function cdTrackSave(key, promise) {
+    if (_cdSv.busy === 0) _cdSv.busySince = Date.now();
+    _cdSv.busy++;
+    cdSaveStatusRender();
+    return Promise.resolve(promise)
+        .then(r => r || { ok: true }, err => ({ ok: false, reason: describeSaveError(err), local: false }))
+        .then(r => {
+            const settle = () => {
+                _cdSv.busy = Math.max(0, _cdSv.busy - 1);
+                if (r.ok === false) {
+                    _cdSv.errors[key] = { reason: r.reason || '儲存失敗', local: !!r.local, seq: ++_cdSv.seq };
+                } else {
+                    delete _cdSv.errors[key];
+                    _cdSv.at = new Date();
+                    if (r.volatile) _cdSv.volatile[key] = true; else delete _cdSv.volatile[key];
+                }
+                cdSaveStatusRender();
+            };
+            const wait = CD_SAVE_MIN_BUSY_MS - (Date.now() - _cdSv.busySince);
+            if (wait > 0 && _cdSv.busy === 1) setTimeout(settle, wait); else settle();
+            return r;
+        });
+}
+
+// 筆記自動儲存：停止輸入約 1 秒存一次；離開輸入框、關閉詳情頁、換卡、分頁轉背景時立刻存一次。
+// 待存內容（含卡片 id）記在 _cdNotesPending，不從輸入框現讀——換卡時輸入框已經換成另一張卡的內容
+const CD_NOTES_DEBOUNCE_MS = 1000;
+let _cdNotesPending = null;   // { cardId, text, timer }
+function cdQueueNotesSave(cardId, text) {
+    if (_cdNotesPending && _cdNotesPending.cardId !== cardId) cdFlushNotes();
+    if (!_cdNotesPending) _cdNotesPending = { cardId, text, timer: 0 };
+    _cdNotesPending.text = text;
+    clearTimeout(_cdNotesPending.timer);
+    _cdNotesPending.timer = setTimeout(cdFlushNotes, CD_NOTES_DEBOUNCE_MS);
+}
+function cdFlushNotes() {
+    const p = _cdNotesPending;
+    if (!p) return Promise.resolve(null);
+    clearTimeout(p.timer);
+    _cdNotesPending = null;
+    if (!hasNotesChanged(p.cardId, p.text)) return Promise.resolve(null);   // 沒變（例如打了又改回原樣）就不存
+    return cdTrackSave('notes', saveUserNotes(p.cardId, p.text));
+}
+// 分頁轉到背景（切分頁、鎖屏、關分頁）時把待存的筆記送出去（本機備份在每次輸入時就已經寫了）
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') cdFlushNotes(); });
+    // 「登入」連結：開既有的登入視窗
+    const login = document.getElementById('cd-save-login');
+    if (login) login.addEventListener('click', () => { if (typeof openAuthModal === 'function') openAuthModal('login'); });
+});
 
 // 摘要三格的前兩格。數字直接讀畫面上已經畫好的回饋卡（.cd-rate 的文字就是畫回饋卡時傳進
 // planCardsHtml 的 getDisplayRate 結果，分級卡切換級別重畫後也跟著變）——不另寫一套算法，
@@ -323,93 +458,54 @@ async function showCardDetail(cardId) {
             </div>
         ` : levelNote;   // 沒東西可看時仍保留 level-note 節點（切換級別的更新目標），CSS 讓它不佔位
 
-        let levelSelectorHTML;
+        // 個人設定「計算條件」組（2026-11-17 第三輪）：一欄一列——標籤左、控制項右（下拉 36px 高、132px 寬靠右），
+        // 說明小字在下一行；整組一個白底灰框盒子（.cd-set-box，樣式見 styles.css「個人設定」）。
+        // 級別的「i」說明窗按鈕跟在標籤後面。⚠️ 動態內容一律 escapeHtml（鐵則 3）
+        const lvOptions = levelNames.map(level =>
+            `<option value="${escapeHtml(level)}" ${level === savedLevel ? 'selected' : ''}>${escapeHtml(level)}</option>`
+        ).join('');
+        const rows = [cdSettingRowHtml(
+            `<label for="card-level-select">選擇級別</label>${levelHelpHtml}`,
+            `<select id="card-level-select" class="cd-st-sel">${lvOptions}</select>`
+        )];
 
         if (card.id === 'cathay-cube') {
-            // CUBE card: all three settings rows in one unified card
-            const monthOptions = !currentUser ? '' :
-                '<option value="">-- 未設定 --</option>' +
-                Array.from({length: 12}, (_, i) => {
-                    const m = i + 1;
-                    return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m}月</option>`;
-                }).join('');
-
-            // 「慶生月」方案活動 用 nowrap 包成一個單位：這欄桌機只有約 199px（三欄格線），
-            // 不鎖的話會斷在「慶生／月」把方案名切兩半，或讓尾行只剩「活動」兩字
-            const birthdayPlan = '<span style="white-space: nowrap;">「慶生月」方案活動</span>';
-            const birthdayRow = currentUser ? `
-                <div class="personal-field">
-                    <div class="personal-field-title">我的生日月份</div>
-                    <select id="birthday-month-select" class="personal-level-select">
-                        ${monthOptions}
-                    </select>
-                    <div class="personal-field-hint">設定後僅於生日月份配對${birthdayPlan}</div>
-                </div>
-            ` : `
-                <div class="personal-field">
-                    <div class="personal-field-title">我的生日月份</div>
-                    <!-- 未登入也擺一個下拉選單（disabled、只有一個說明用選項）：
-                         這格若只剩一行灰字，四格排在一起時會看不出它其實是個可設定的欄位，
-                         只以為是說明文字。留著選單的外型 ＋ disabled，一眼就知道
-                         「這裡本來可以選，但要先登入」 -->
-                    <select class="personal-level-select" disabled aria-label="我的生日月份（需登入）">
-                        <option>登入後即可設定</option>
-                    </select>
-                    <div class="personal-field-hint">自動在你的生日月份配對${birthdayPlan}</div>
-                </div>
-            `;
-
-            // ⚠️ 外層灰底框已由 index.html 的 .personal-settings-box 提供（2026-08-01
-            //    級別區與額度/筆記併成同一區），這裡不再自帶邊框背景，否則會框中框。
-            //    欄位標題一律 .personal-field-title，與額度/筆記同字級
-            levelSelectorHTML = `
-                <div class="cube-settings-grid">
-                    <div class="personal-field">
-                        <div class="personal-field-title">選擇級別</div>
-                        <div class="personal-level-row">
-                            <select id="card-level-select" class="personal-level-select">
-                                ${levelNames.map(level =>
-                                    `<option value="${escapeHtml(level)}" ${level === savedLevel ? 'selected' : ''}>${escapeHtml(level)}</option>`
-                                ).join('')}
-                            </select>
-                            ${levelHelpHtml}
-                        </div>
-                    </div>
-                    ${birthdayRow}
-                    <div class="personal-field">
-                        <label class="personal-field-title personal-field-check">
-                            <input type="checkbox" id="children-eligible-checkbox" ${isChildrenEligible ? 'checked' : ''}>
-                            <span>我符合「童樂匯」權益</span>
-                        </label>
-                        <div class="personal-field-hint personal-field-hint-indent">
-                            勾選後才會在比較結果納入「童樂匯」方案的活動
-                        </div>
-                    </div>
-                    <div class="personal-field">
-                        <label for="cube-issuer-select" class="personal-field-title">發卡組織</label>
-                        <select id="cube-issuer-select" class="personal-level-select">
-                            ${['Visa', 'Mastercard', 'JCB'].map(issuer =>
-                                `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                </div>
-            `;
-        } else {
-            levelSelectorHTML = `
-                <div class="personal-field personal-field-level">
-                    <div class="personal-field-title">選擇級別</div>
-                    <div class="personal-level-row">
-                        <select id="card-level-select" class="personal-level-select">
-                            ${levelNames.map(level =>
-                                `<option value="${escapeHtml(level)}" ${level === savedLevel ? 'selected' : ''}>${escapeHtml(level)}</option>`
-                            ).join('')}
-                        </select>
-                        ${levelHelpHtml}
-                    </div>
-                </div>
-            `;
+            rows.push(cdSettingRowHtml(
+                '<label for="cube-issuer-select">發卡組織</label>',
+                `<select id="cube-issuer-select" class="cd-st-sel">${['Visa', 'Mastercard', 'JCB'].map(issuer =>
+                    `<option value="${issuer}" ${issuer === cubeIssuer ? 'selected' : ''}>${issuer}</option>`
+                ).join('')}</select>`
+            ));
+            // 生日月份：已登入才能設定。訪客仍擺一個 disabled 的下拉（「登入後即可設定」），
+            // 一眼就知道「這裡本來可以選，但要先登入」，不會誤以為只是說明文字
+            if (currentUser) {
+                const monthOptions = '<option value="">未設定</option>' +
+                    Array.from({length: 12}, (_, i) => {
+                        const m = i + 1;
+                        return `<option value="${m}" ${userBirthdayMonth === m ? 'selected' : ''}>${m} 月</option>`;
+                    }).join('');
+                rows.push(cdSettingRowHtml(
+                    '<label for="birthday-month-select">我的生日月份</label>',
+                    `<select id="birthday-month-select" class="cd-st-sel">${monthOptions}</select>`,
+                    '設定後，「慶生月」只在你的生日月份納入比較'
+                ));
+            } else {
+                rows.push(cdSettingRowHtml(
+                    '<label for="birthday-month-guest">我的生日月份</label>',
+                    '<select id="birthday-month-guest" class="cd-st-sel" disabled><option>需先登入</option></select>',
+                    '登入並設定後，「慶生月」只在你的生日月份納入比較'
+                ));
+            }
+            rows.push(cdSettingRowHtml(
+                '<label for="children-eligible-checkbox">我符合「童樂匯」權益</label>',
+                `<input type="checkbox" role="switch" class="cd-sw" id="children-eligible-checkbox" ${isChildrenEligible ? 'checked' : ''}>`,
+                '開啟後才會在比較結果納入「童樂匯」方案的活動'
+            ));
         }
+
+        const levelSelectorHTML =
+            '<div class="cd-set-sec"><h5 class="cd-set-sec-t">計算條件</h5><span class="cd-set-sec-s">會改變這張卡的回饋數字</span></div>' +
+            `<div class="cd-set-box">${rows.join('')}</div>`;
 
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
@@ -426,7 +522,10 @@ async function showCardDetail(cardId) {
                 levelNoteElement.textContent = noteText;
             }
 
-            await saveCardLevel(card.id, this.value);
+            // 🔒 鐵則 1：saveCardLevel 的合法呼叫點只有這裡（用戶親自改級別下拉）。
+            // 先發出儲存、交給儲存狀態列追蹤真正的結果（cdTrackSave），再重繪
+            const levelSaving = saveCardLevel(card.id, this.value);
+            await cdTrackSave('level', levelSaving);
             // Refresh card detail display
             if (card.id === 'cathay-cube') {
                 await updateCubeSpecialCashback(card);
@@ -441,7 +540,7 @@ async function showCardDetail(cardId) {
         if (birthdayMonthSelect) {
             birthdayMonthSelect.onchange = async function() {
                 const val = this.value;
-                await saveBirthdayMonth(val ? parseInt(val) : null);
+                await cdTrackSave('birthday', saveBirthdayMonth(val ? parseInt(val) : null));
             };
         }
 
@@ -449,7 +548,7 @@ async function showCardDetail(cardId) {
         const childrenCheckbox = document.getElementById('children-eligible-checkbox');
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
-                await saveChildrenEligible(this.checked);
+                await cdTrackSave('children', saveChildrenEligible(this.checked));
                 updateCardCalcConditions(card);   // 「計算條件」列的「童樂匯」標籤
             };
         }
@@ -458,7 +557,7 @@ async function showCardDetail(cardId) {
         const cubeIssuerSelect = document.getElementById('cube-issuer-select');
         if (cubeIssuerSelect) {
             cubeIssuerSelect.onchange = async function() {
-                await saveCubeIssuer(this.value);
+                await cdTrackSave('issuer', saveCubeIssuer(this.value));
                 updateCardCalcConditions(card);   // 「計算條件」列的發卡組織標籤
             };
         }
@@ -769,33 +868,27 @@ async function showCardDetail(cardId) {
     // 近期異動（權益變化 log）
     renderCardDetailChangelog(card);
 
-    // Load and setup user notes
+    // Load and setup user notes（2026-11-17 起自動儲存：停止輸入約 1 秒存、離開輸入框存、關閉詳情頁存；
+    // 沒有儲存鈕了，結果由個人設定最上面的儲存狀態列表達——見 cdTrackSave／cdFlushNotes）
+    cdFlushNotes();   // 上一張卡還沒送出的筆記先存（輸入框馬上要換成這張卡的內容）
     currentNotesCardId = card.id;
     const notesTextarea = document.getElementById('user-notes-input');
-    const saveIndicator = document.getElementById('save-indicator');
-    
+
     // 讀取當前筆記
     loadUserNotes(card.id).then(notes => {
         notesTextarea.value = notes;
     });
-    
-    // 設置輸入監聽
+
+    // 設置輸入監聽：先備份到本機（每個字都寫，維持既有行為），再排自動儲存
     notesTextarea.oninput = (e) => {
         const notes = e.target.value;
-        
-        // 自動本地備份
         autoBackupNotes(card.id, notes);
-        
-        // 更新按鈕狀態
-        updateSaveButtonState(card.id, notes);
+        cdQueueNotesSave(card.id, notes);
     };
-    
-    // 設置儲存按鈕監聽
-    const saveBtn = document.getElementById('save-notes-btn');
-    saveBtn.onclick = () => {
-        const currentNotes = notesTextarea.value;
-        saveUserNotes(card.id, currentNotes);
-    };
+    notesTextarea.onblur = () => { cdFlushNotes(); };
+
+    // 個人設定的儲存狀態列：換卡清掉上一張卡的記帳，重繪同一張卡（級別切換）保留
+    cdSaveStatusReset(card.id);
 
     // 設置免年費狀態功能
     setupFeeWaiverStatus(card.id);
@@ -850,6 +943,7 @@ async function showCardDetail(cardId) {
     const closeBtn = document.getElementById('close-card-detail');
     const closeModal = (closeOpts = {}) => {
         if (modal.style.display === 'none') return;   // 關閉鈕與 popstate 可能各來一次，只收一次
+        cdFlushNotes();   // 打完字立刻關閉：還沒送出的筆記先存（見 cdQueueNotesSave）
         modal.style.display = 'none';
         enableBodyScroll();
         currentNotesCardId = null;
@@ -1343,7 +1437,7 @@ function renderCdCondition(text) {
 
 // ---- 量寬度後才收的部分 ----
 const CD_CH_MAX_H = 54;   // 三行（.cd-ch 的 line-height 是 18px）
-const CD_FIT_IDS = ['card-special-cashback', 'card-upcoming-cashback', 'card-basic-cashback', 'card-coupon-cashback'];
+const CD_FIT_IDS = ['card-special-cashback', 'card-upcoming-cashback', 'card-basic-cashback', 'card-coupon-cashback', 'card-promos-content'];
 
 // 適用通路收成最多三行（「… 顯示全部N個」算在三行內，放不下就少列幾個通路名）。
 // 量不到寬度（元素或祖先 display:none）就保留完整內容、不動它；展開中的也不動
@@ -1424,6 +1518,15 @@ function cdToggleChannel(btn) {
         btn.setAttribute('aria-expanded', 'false');
         cdFitChannel(el);
     }
+}
+
+// 新戶活動多筆模式：「達成條件與備註」膠囊展開／收起該筆的說明
+function cdTogglePromoDetail(btn) {
+    const d = btn.nextElementSibling;
+    if (!d) return;
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', String(open));
+    d.hidden = !open;
 }
 
 function cdToggleCond(btn) {
@@ -1514,6 +1617,8 @@ function setupCardDetailFit() {
         if (more) { cdToggleChannel(more); return; }
         const cond = t.closest('.cd-cond-t');
         if (cond) { cdToggleCond(cond); return; }
+        const pm = t.closest('.cd-pm-t');
+        if (pm) { cdTogglePromoDetail(pm); return; }
         if (t.closest('.cd-cc-chg')) cdGoToPersonalSettings();
     });
 
@@ -2018,39 +2123,25 @@ async function loadUserNotes(cardId) {
     }
 }
 
-// 本地儲存（自動備份）
+// 本地儲存（自動備份）；回傳寫入有沒有成功（私密模式／配額滿時 setItem 會丟錯，不再讓它中斷輸入流程）
 function autoBackupNotes(cardId, notes) {
     const cacheKey = (auth && auth.currentUser) ? `notes_${auth.currentUser.uid}_${cardId}` : `notes_${cardId}`;
-    localStorage.setItem(cacheKey, notes);
+    try { localStorage.setItem(cacheKey, notes); return true; } catch (e) { return false; }
 }
 
-// 手動儲存筆記
+// 儲存筆記（自動儲存呼叫；2026-11-17 起沒有儲存鈕與 #save-indicator）。回傳儲存結果
+// （見 js/levels-payments.js「儲存結果」）：訪客＝存在這台裝置；登入者＝寫入雲端（本機備份每次輸入時已寫）
 async function saveUserNotes(cardId, notes) {
-    const saveBtn = document.getElementById('save-notes-btn');
-    const saveIndicator = document.getElementById('save-indicator');
-    const btnText = document.querySelector('.btn-text');
-    const btnIcon = document.querySelector('.btn-icon');
-    
+    const local = autoBackupNotes(cardId, notes);
+
     if (!auth || !auth.currentUser) {
         // 未登入時僅儲存在本地
-        autoBackupNotes(cardId, notes);
+        if (!local) return { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
         lastSavedNotes.set(cardId, notes);
-        
-        // 更新按鈕狀態
-        saveBtn.disabled = true;
-        saveIndicator.textContent = '已儲存在本地 (未登入)';
-        saveIndicator.style.color = '#6b7280';
-        return true;
+        return { ok: true };
     }
-    
+
     try {
-        // 更新按鈕為儲存中狀態
-        saveBtn.className = 'save-notes-btn saving';
-        saveBtn.disabled = true;
-        if (btnIcon) btnIcon.textContent = '⏳';
-        if (btnText) btnText.textContent = '儲存中...';
-        saveIndicator.textContent = '';
-        
         const docRef = window.doc ? window.doc(db, 'userNotes', `${auth.currentUser.uid}_${cardId}`) : null;
         if (!docRef || !window.setDoc) throw new Error('Firestore not available');
         await window.setDoc(docRef, {
@@ -2058,51 +2149,194 @@ async function saveUserNotes(cardId, notes) {
             updatedAt: new Date(),
             cardId: cardId
         });
-        
-        // 也儲存在本地作為快取
-        autoBackupNotes(cardId, notes);
         lastSavedNotes.set(cardId, notes);
-        
-        // 成功狀態
-        saveBtn.className = 'save-notes-btn success';
-        if (btnIcon) btnIcon.textContent = '✓';
-        if (btnText) btnText.textContent = '已儲存';
-        saveIndicator.textContent = '✓ 雲端同步成功';
-        saveIndicator.style.color = '#10b981';
-
-        // 2秒後恢復正常狀態
-        setTimeout(() => {
-            saveBtn.className = 'save-notes-btn';
-            saveBtn.disabled = true; // 沒有變更時保持禁用
-            if (btnIcon) btnIcon.textContent = '💾';
-            if (btnText) btnText.textContent = '儲存筆記';
-            saveIndicator.textContent = '';
-        }, 2000);
-        
-        return true;
-        
+        return { ok: true };
     } catch (error) {
         console.error('雲端儲存失敗:', error);
-        
-        // 失敗時仍然儲存在本地
-        autoBackupNotes(cardId, notes);
-        
-        // 錯誤狀態
-        saveBtn.className = 'save-notes-btn';
-        saveBtn.disabled = false; // 可以再次嘗試
-        if (btnIcon) btnIcon.textContent = '⚠️';
-        if (btnText) btnText.textContent = '重試儲存';
-        saveIndicator.textContent = '雲端儲存失敗，已本地儲存';
-        saveIndicator.style.color = '#dc2626';
-
-        // 5秒後恢復
-        setTimeout(() => {
-            if (btnIcon) btnIcon.textContent = '💾';
-            if (btnText) btnText.textContent = '儲存筆記';
-            saveIndicator.textContent = '';
-        }, 5000);
-        
-        return false;
+        return { ok: false, reason: describeSaveError(error), local };   // 本機備份已先寫（local）
     }
 }
 
+// ============================================================
+// 新戶活動票券（2026-11-17，三輪改版的第三輪）
+// ============================================================
+// 詳情頁「新戶活動」頁籤：每筆活動一張票券（renderCardDetailPromoTickets，由 js/results-display.js 的
+// renderCardDetailPromos 呼叫）。搜尋結果的活動卡（createCardholderPromoElement）不動、輸出不變。
+//   左邊亮黃票根（#ffd84a）＝第一個活動類型的線條圖示＋文字；中間虛線、上下兩個半圓缺口；
+//   右邊白底「資料有什麼畫什麼」：首刷禮（單一／N 選 1）、定額回饋（大字金額＋單位）、回饋率＋回饋消費上限、
+//   適用通路（重用同方案回饋卡的三行收合 renderCdChannels／cdFitChannel）、new_customer_summary、首刷禮圖片
+//   右上小標：快結束「剩 N 天」／未開始「N 天後開始」（getPromoTimeBadge，與搜尋結果同一份判斷）；
+//   第二個以後的活動類型只有「右邊沒有對應數值」時才顯示成小標（避免「首刷禮＋定額回饋」把金額寫兩遍）
+//   票券下方：只有一筆活動 → 直接攤開「達成條件」與「活動說明」；多筆 → 每張票券下一顆「達成條件與備註」
+//   膠囊，點開才展開該筆；新戶資格各筆相同就在最下面寫一次（#card-promos-foot），不同就放進各筆展開內容
+// ⚠️ 欄位空白（空字串、null、空陣列——鐵則 4）的項目整列不顯示；所有文字 escapeHtml、連結 sanitizeUrl（鐵則 3）
+// ⚠️ 頁籤筆數＝活動筆數＝#card-promos-content 的直接子項 .cd-pm 個數（CTA 盒除外）；共用新戶資格放在
+//    #card-promos-foot（content 之外），所以不會被算進筆數。每筆活動的內容（票券＋說明）都包在同一個 .cd-pm 裡
+// ⚠️ 達成條件（promo_condition）「照換行拆」：以 ①②③／「1.」開頭的是一步（去掉開頭符號、前面加黃色圓圈數字）；
+//    沒有符號的行若前面已有步驟（例如「-消費條件A…」「→…」「↓…」「持有凱基銀行帳戶」）併進上一步當附註，
+//    不另編號——否則子條件會被編成獨立的一步；整段只有一行且不是步驟 → 直接一段文字
+
+const CD_PT_ICONS = {
+    gift: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>',
+    voucher: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.3c-.5-.8-1.4-1.3-2.5-1.3-1.5 0-2.5.7-2.5 1.8 0 2.4 5 1.2 5 3.6 0 1.1-1 1.8-2.5 1.8-1.2 0-2.1-.5-2.6-1.3M12 6.3v11.4"/></svg>',
+    bonus: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/><path d="M18 6 6 18"/></svg>'
+};
+
+// 活動類型 → 圖示（沿用 promoTypeClass：贈品＝首刷禮、定額抵用＝定額回饋；沒見過的類型用禮物圖示）
+function cdPromoIcon(type) {
+    const cls = promoTypeClass(type);
+    return CD_PT_ICONS[cls] || CD_PT_ICONS.gift;
+}
+
+// 去掉行首的步驟符號：①～⑳、⑴～⒇、❶～❿、「1.」「1、」「1)」「(1)」
+const CD_STEP_MARK = /^\s*(?:[①-⑳⑴-⒇❶-❿]|[（(]\d{1,2}[）)]|\d{1,2}[.、)）](?!\d))\s*/;
+
+// promo_condition → { plain: 一段文字 } 或 { steps: [{ text, subs: [附註行…] }] }
+function cdParsePromoSteps(text) {
+    const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return null;
+    const marked = lines.some(l => CD_STEP_MARK.test(l));
+    if (lines.length === 1 && !marked) return { plain: lines[0] };
+    const steps = [];
+    lines.forEach(l => {
+        if (CD_STEP_MARK.test(l)) steps.push({ text: l.replace(CD_STEP_MARK, ''), subs: [] });
+        else if (marked && steps.length > 0) steps[steps.length - 1].subs.push(l);
+        else steps.push({ text: l, subs: [] });
+    });
+    return { steps };
+}
+
+// 備註 notes：照全形「；」與半形「;」拆成條列
+function cdParsePromoNotes(text) {
+    return String(text || '').split(/[；;]/).map(s => s.trim()).filter(Boolean);
+}
+
+// 首刷禮 gift_content：換行分隔、可能以 ①②③ 開頭 → 項目陣列（只有一項＝單一贈品）
+function cdParseGiftItems(text) {
+    return String(text || '').split(/\r?\n/).map(l => l.replace(CD_STEP_MARK, '').trim()).filter(Boolean);
+}
+
+function cdPromoCapText(promo) {
+    return (typeof promo.bonus_cap === 'number' && !isNaN(promo.bonus_cap))
+        ? `NT$${Math.round(Number(promo.bonus_cap)).toLocaleString()}` : '';
+}
+
+// 一張票券（HTML 字串；item＝{ promo, merchantList }）
+function cdRenderPromoTicket(item) {
+    const promo = item.promo;
+    const gifts = promo.gift_content ? cdParseGiftItems(promo.gift_content) : [];
+    const hasAmt = !!promo.voucher_amount;
+    const rate = (promo.bonus_rate != null && promo.bonus_rate !== '') ? formatBonusRate(promo.bonus_rate) : '';
+    const cap = cdPromoCapText(promo);
+
+    // 票根：第一個活動類型；沒有類型名稱就依有的內容補一個
+    let types = (Array.isArray(promo.promo_types) ? promo.promo_types : []).map(t => String(t || '').trim()).filter(Boolean);
+    if (types.length === 0) types = [gifts.length ? '首刷禮' : hasAmt ? '定額回饋' : rate ? '回饋加碼' : '新戶活動'];
+
+    // 右上小標：時間（剩 N 天／N 天後開始）＋第二個以後、右邊沒有對應數值的活動類型
+    const chips = [];
+    const tb = getPromoTimeBadge(promo);
+    if (tb.kind === 'ending') chips.push(['soon', tb.days === 0 ? '今天截止' : `剩 ${tb.days} 天`]);
+    else if (tb.kind === 'upcoming') chips.push(['soon', tb.days === 0 ? '今天開始' : `${tb.days} 天後開始`]);
+    types.slice(1).forEach(t => {
+        const cls = promoTypeClass(t);
+        const shown = (cls === 'gift' && gifts.length) || (cls === 'voucher' && hasAmt) || (cls === 'bonus' && rate);
+        if (!shown) chips.push(['', t]);
+    });
+
+    let body = '';
+    if (chips.length > 0) {
+        body += `<div class="cd-pt-chips">${chips.map(c => `<span${c[0] ? ` class="cd-pt-${c[0]}"` : ''}>${escapeHtml(c[1])}</span>`).join('')}</div>`;
+    }
+    if (gifts.length === 1) {
+        body += `<div><div class="cd-lb">首刷禮</div><div class="cd-gname">${escapeHtml(gifts[0])}</div></div>`;
+    } else if (gifts.length > 1) {
+        body += `<div><div class="cd-lb">首刷禮 ${gifts.length} 選 1</div><ol class="cd-gopts">${gifts.map(g => `<li>${escapeHtml(g)}</li>`).join('')}</ol></div>`;
+    }
+    if (hasAmt) {
+        body += `<div><div class="cd-lb">定額回饋</div><div class="cd-hz-amt"><b>NT$${escapeHtml(Math.round(Number(promo.voucher_amount)).toLocaleString())}</b>` +
+            (promo.voucher_usage ? `<small>${escapeHtml(promo.voucher_usage)}</small>` : '') + `</div></div>`;
+    }
+    if (rate || cap) {
+        body += `<div class="cd-meta">` +
+            (rate ? `<div><div class="cd-lb">回饋率</div><div class="cd-hz-amt"><b>${escapeHtml(rate)}</b>` +
+                // 有 voucher_usage 但沒有定額金額（例如「回饋 6％ LINE POINTS」）：單位跟在回饋率旁，不讓這個欄位消失
+                (promo.voucher_usage && !hasAmt ? `<small>${escapeHtml(promo.voucher_usage)}</small>` : '') + `</div></div>` : '') +
+            (cap ? `<div><div class="cd-lb">回饋消費上限</div><div class="cd-val">${escapeHtml(cap)}</div></div>` : '') +
+            `</div>`;
+    }
+    if (item.merchantList && item.merchantList.length > 0) {
+        body += renderCdChannels({ items: item.merchantList }, '適用通路');
+    }
+    if (promo.new_customer_summary) body += `<p class="cd-pt-sum">${escapeHtml(promo.new_customer_summary)}</p>`;
+    // 首刷禮圖片放最下面；可以點擊放大（js/home-ui.js 的 setupGiftImageLightbox 認 .promo-gift-image）。鐵則 3：src 一律 sanitizeUrl
+    const imgUrl = sanitizeUrl(promo.gift_image_url);
+    if (imgUrl) {
+        body += `<img class="cd-pt-img promo-gift-image" src="${escapeHtml(sanitizeUrl(promo.gift_image_url))}" alt="首刷禮圖片" loading="lazy" onerror="this.style.display='none'">`;
+    }
+
+    return `<div class="cd-tk"><div class="cd-tk-stub">${cdPromoIcon(types[0])}<span>${escapeHtml(types[0])}</span></div>` +
+        `<div class="cd-tk-main">${body}</div></div>`;
+}
+
+// 一筆活動的「說明內容」：達成條件、新戶資格（opts.withDef）、活動期間、備註。
+// 回傳 { steps, facts }：steps＝達成條件區塊 HTML（沒有條件回空字串）；facts＝期間／備註（與新戶資格）列 HTML
+function cdRenderPromoDetails(promo, opts = {}) {
+    let steps = '';
+    const parsed = cdParsePromoSteps(promo.promo_condition);
+    if (parsed && parsed.plain) {
+        steps = `<p class="cd-pt-plain">${escapeHtml(parsed.plain)}</p>`;
+    } else if (parsed && parsed.steps) {
+        steps = '<ol class="cd-steps">' + parsed.steps.map((st, i) =>
+            `<li><i aria-hidden="true">${i + 1}</i><span>${escapeHtml(st.text)}` +
+            st.subs.map(l => `<span class="cd-step-sub">${escapeHtml(l)}</span>`).join('') + `</span></li>`
+        ).join('') + '</ol>';
+    }
+    const def = String(promo.new_customer_definition || '').trim();
+    const notes = cdParsePromoNotes(promo.notes);
+    const hasPeriod = !!(promo.period_start || promo.period_end);
+    // 空白的項目整列不顯示；全空就回空字串（呼叫端據此略過整塊）
+    const facts = (opts.withDef && def ? `<div><div class="cd-lb">新戶資格</div><div class="cd-val">${escapeHtml(def)}</div></div>` : '') +
+        (hasPeriod ? `<div><div class="cd-lb">活動期間</div><div class="cd-val">${escapeHtml(formatPromoPeriod(promo))}</div></div>` : '') +
+        (notes.length > 0 ? `<div><div class="cd-lb">備註</div><ul class="cd-notes">${notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul></div>` : '');
+    return { steps, facts: facts ? `<div class="cd-kv">${facts}</div>` : '' };
+}
+
+// 把 items（[{ promo, merchantList }]）畫進 #card-promos-content（與多筆時的 #card-promos-foot）
+function renderCardDetailPromoTickets(card, items) {
+    const content = document.getElementById('card-promos-content');
+    const foot = document.getElementById('card-promos-foot');
+    if (!content) return;
+    const multi = items.length > 1;
+    content.classList.toggle('cd-promos-multi', multi);
+
+    // 多筆：新戶資格各筆都有且完全相同 → 最下面寫一次；否則各筆自己放進展開內容
+    const defs = items.map(it => String(it.promo.new_customer_definition || '').trim());
+    const commonDef = multi && defs.every(d => d && d === defs[0]) ? defs[0] : '';
+
+    let html = '';
+    items.forEach((it, i) => {
+        const ticket = cdRenderPromoTicket(it);
+        const d = cdRenderPromoDetails(it.promo, { withDef: multi ? !commonDef : true });
+        if (!multi) {
+            html += `<div class="cd-pm">${ticket}` +
+                (d.steps ? `<h5 class="cd-pm-h">達成條件</h5><div class="cd-pm-box">${d.steps}</div>` : '') +
+                (d.facts ? `<h5 class="cd-pm-h">活動說明</h5><div class="cd-pm-box">${d.facts}</div>` : '') + `</div>`;
+        } else {
+            const detId = `cd-pm-d-${i}`;
+            html += `<div class="cd-pm">${ticket}` + ((d.steps || d.facts)
+                ? `<button type="button" class="cd-pm-t" aria-expanded="false" aria-controls="${detId}"><span>達成條件與備註</span>${CD_CHEV_SVG}</button>` +
+                  `<div class="cd-pm-d" id="${detId}" hidden>` +
+                  (d.steps ? `<div class="cd-lb">達成條件</div>${d.steps}` : '') + d.facts + '</div>'
+                : '') + '</div>';
+        }
+    });
+    content.insertAdjacentHTML('beforeend', html);
+
+    if (foot) {
+        const footHtml = commonDef
+            ? `<div class="cd-pm-box cd-pm-foot"><div class="cd-lb">新戶資格</div><div class="cd-val">${escapeHtml(commonDef)}</div></div>` : '';
+        foot.innerHTML = footHtml;
+    }
+    cdFitAll(content);   // 窗格還藏著（寬度 0）時量不到，什麼都不做；顯示時由 selectCardDetailTab 補收
+}

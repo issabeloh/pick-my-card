@@ -7,12 +7,8 @@
 
 > ⚠️ **2026-11-17 起外殼已改版（第 1m 節）**：詳情頁從浮窗改成全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊。下面這節裡關於「sticky 標題列／`.card-detail-nav` 八顆錨點導覽／`#card-detail-apply-bar` 底部申辦列／`.modal-content` 捲動容器／近期異動區塊樣式／導覽鈕被借用來捲動」的描述是舊版，以第 1m 節為準；回饋卡、個人設定、級別「i」說明窗、登錄連結、官網連結的規則仍有效。
 
-**個人設定區塊**（`#card-personal-section`，2026-08-01 合併；Grep `personal-settings-box`）：
-「這張卡在我身上的設定」全部收在同一個灰底框裡——級別選擇器／CUBE 專屬設定（發卡組織、生日月份、童樂匯）＋ 我的額度 ＋ 我的筆記。合併前是分開的兩塊（級別區自帶灰底框、`.personal-fields-row` 另一塊），等於把同一件事切成兩半、還把詳情頁上半部撐長。
-- **標題一律同字級**：區塊標題是 `h4`「個人設定」（無 emoji），內層欄位標題一律 `.personal-field-title`（14px/600），不再有 h4 與 inline 14px label 混用
-- **級別區與額度/筆記之間的分隔線掛在 `#cube-level-section` 身上**，不是掛在額度區——非分級卡那塊是 `display:none`，邊框跟著整塊消失，框內不會留一條孤兒線
-- `cube-settings-grid` 桌機 **2×2**（「選擇級別」搬進來後變四格，四欄每欄只剩約 150px，生日月份的說明會斷成四五行）、手機單欄，欄間分隔線移除（外框已經把它們框成一組）
-- 非分級卡：`showCardDetail()` 會把 `#cube-level-section` 的 **innerHTML 一起清掉**（不只 `display:none`），免得上一張卡的級別選擇器與說明窗留在 DOM 裡
+**個人設定區塊**（`#card-personal-section`）：⚠️ **2026-11-17 第三輪整個改寫，見第 1o 節**（統一自動儲存、常駐儲存狀態列、兩組一欄一列；舊的單一灰底框 `.personal-settings-box`、`.personal-field*`、`.cube-settings-grid`、💾 儲存鈕、`#save-indicator`、`#credit-limit-saved` 都已刪除，CSS 一併清掉）。下面「級別選擇器與『i』說明窗」仍有效，只是選擇器與說明窗現在掛在「計算條件」組的第一列。
+- 非分級卡：`showCardDetail()` 會把 `#cube-level-section` 的 **innerHTML 一起清掉**（不只 `display:none`），整區只剩「我的紀錄」一組，免得上一張卡的級別選擇器與說明窗留在 DOM 裡
 
 **級別選擇器與「i」說明窗**（Grep `setupLevelHelpPopover`）：
 - 下拉選單選級別；「各級別回饋率」與該級別的 `level-note` **收在下拉選單旁的「i」按鈕裡**，點擊開浮動說明窗（2026-08-01 改；原本兩段小字攤在選擇器旁/下方，把個人設定區撐高又擠掉真正要操作的選單）。兩段都沒內容時不長按鈕
@@ -366,6 +362,40 @@ Grep `titleParts`）：
 
 **自動化回歸**（`card-detail-test.js`，見 docs/ops/regression.md）：同方案卡不抓逐行 innerText（收成幾個通路、有沒有「顯示全部」鈕取決於字型寬度），改抓語意欄位（標題、小標與徽章、上限、期間、註記、每列的回饋率／分級／子標／門檻／通路完整清單與總數／條件／登錄連結）；另跑 390px 的**版面不變式**（通路 ≤ 三行且非空、同區無「標題＋上限＋期間」相同的兩張卡、卡與列由高到低、回饋率 24px/#111827）與造資料驗併卡規則。
 
+## 1o. 詳情頁個人設定與新戶活動票券（2026-11-17，三輪改版的第三輪）
+
+動機：站長說個人設定「排版有點亂，看起來資料像是會不見一樣，沒有填寫後會被存好的感覺」；新戶活動要「更有獎勵感，資料要更完整」。示意圖 `detail-proposal/preview.html`（`#p2` 個人設定、`#p3`／`#gal`／`#multi` 票券），站長逐項核定，照做。
+
+### 個人設定：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列
+
+**結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定可以在「我的信用卡」一次看。」。每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
+- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
+- **開關**：勾選一律是 `input type="checkbox" role="switch" class="cd-sw"`（`appearance:none` 畫外觀；id 不變、Tab 可聚焦、空白鍵切換、`:focus-visible` 有 2px 外框）。舊的 `.fee-waiver-checkbox`／`.checkmark` 已刪
+- **訪客的生日月份**仍是 disabled 下拉（只有「需先登入」一個選項）——一眼看出「這裡可以選，但要先登入」。文字別寫長：16px 下 132px 放不下「登入後即可設定」（會被截成「登入後即可設」）
+
+**常駐儲存狀態列**（`cdSaveStatusRender`／`cdTrackSave`／`cdSaveStatusReset`，`js/card-detail.js`「個人設定：統一自動儲存」區塊）：一直都在，`data-state` 四態——已登入＝綠「已儲存到你的帳號」；訪客＝黃「只存在這台裝置。登入後會同步到帳號」＋「登入」連結（`openAuthModal('login')`；`#auth-modal` z-index 提到 1200，否則被 1100 的詳情頁蓋住）；任何一欄儲存中＝灰「儲存中…」；失敗＝紅「儲存失敗（欄位）：原因。已先存在這台裝置，請稍後再試。」（沒有本機備援的欄位改寫「請重試。」）。成功後回綠／黃並接上「・今天 HH:MM」。
+- ⚠️ **狀態只反映真正的儲存結果，沒有假成功**：各欄既有的 save 函數都改成**回傳結果物件**（`{ok:true}`／`{ok:true, volatile:true}`／`{ok:false, reason, local}`；`describeSaveError()` 把 Firestore 錯誤碼翻成人話，在 `js/levels-payments.js`）——`saveCardLevel`／`saveCubeIssuer`／`saveBirthdayMonth`／`saveChildrenEligible`／`saveFeeWaiverStatus`／`saveCreditLimit`／`saveUserNotes`。寫入邏輯（key、文件路徑、格式）一律沒動，只是把原本吞掉的結果回傳出來；舊呼叫端不看回傳值照常運作。UI 端 `cdTrackSave(key, promise)` 立刻切「儲存中…」，等 promise 結案才記帳
+- 唯一的計時器是「儲存中…」至少顯示 `CD_SAVE_MIN_BUSY_MS`（350ms）：訪客的本機儲存不到 1ms 就完成，不留一下的話永遠看不到那一格；結果仍是真正結案後才顯示
+- **錯誤依「欄位」記帳**（`_cdSv.errors[key]`）：A 欄失敗後 B 欄成功，紅字不會被洗掉；同一欄之後存成功才清掉。多欄失敗顯示最近一個並註明「另有 N 項也沒存成功」。換卡清掉記帳、同一張卡重繪（級別切換）保留
+- **`volatile`**：訪客改「童樂匯」沒有任何本機備份（`isChildrenEligible` 只存 Firestore，既有行為；生日月份訪客不能設）。狀態列照實寫「這項設定只在這次瀏覽有效，登入後才會保存」，不假裝存好。要不要替訪客補一個本機 key 是產品決定（會新增儲存 key，且要進 `absorbGuestPersonalData`／登出清理），本輪沒做
+- **auth 變化**：`refreshCardDetailApply()`（`js/auth-user-data.js` 的 onAuthStateChanged 兩個分支本來就會呼叫）尾端順手呼叫 `cdSaveStatusRender()`，狀態列跟著切登入／訪客，不必動 auth-user-data.js
+
+**全部自動儲存**：級別／發卡組織／生日月份／童樂匯／免年費＝onchange；額度＝失焦或 Enter；筆記＝停止輸入約 1 秒（`CD_NOTES_DEBOUNCE_MS`），並在離開輸入框、關閉詳情頁（`closeModal`）、換卡（`showCardDetail` 開頭）、分頁轉背景（`visibilitychange`）時立刻存一次（`cdQueueNotesSave`／`cdFlushNotes`；待存內容含卡片 id 記在 `_cdNotesPending`，不從輸入框現讀——換卡時輸入框已是另一張卡）。每次輸入照舊先 `autoBackupNotes` 寫本機（所以雲端失敗時「已先存在這台裝置」是真的）。💾 儲存鈕、`#save-indicator`、`#credit-limit-saved` 已拿掉
+- 🔒 鐵則 1：`saveCardLevel` 的呼叫點**沒有增加**——仍只有級別下拉的 `onchange`（那一行只是改成先拿回傳 promise 再交給 `cdTrackSave`）。「存的級別找不到」時 `resolveCardLevel` 只顯示預設、不寫回（`card-settings-promo-test.js` 有驗：本機與雲端都沒被改）
+
+### 新戶活動：每筆活動一張「票券」
+
+`renderCardDetailPromos`（`js/results-display.js`）收集要畫的活動（沿用舊規則：沒有首刷禮／定額回饋／回饋率任何一項的整筆略過）後交給 `renderCardDetailPromoTickets(card, items)`（`js/card-detail.js` 檔尾「新戶活動票券」區塊）。**搜尋結果的活動卡（`createCardholderPromoElement`）輸出完全不變**——只抽了兩個共用小函數 `getPromoTimeBadge(promo)`（`{kind:'upcoming'|'ending'|'', days}`）與 `formatPromoPeriod(promo)`，新舊 HTML 逐字比對過 7 個日期 × 55 筆 × 2 模式（run-regression.js **不涵蓋**活動卡，要改它時自己比，見教訓）。
+- **票券**（`.cd-tk`）：左邊亮黃票根 `#ffd84a`（78px，第一個活動類型的線條圖示＋文字：首刷禮＝禮物、定額回饋＝錢幣、回饋加碼＝百分比，`promoTypeClass` 把贈品／定額抵用歸到同類；不認得的類型用禮物），中間虛線、上下兩個半圓缺口（用頁面底色 #f3f4f6 的圓＋`overflow:hidden` 切成半圓）；右邊白底**資料有什麼畫什麼**：`gift_content`（一項＝「首刷禮」小標＋17px 粗體品名；多項＝「首刷禮 N 選 1」＋編號清單，`cdParseGiftItems` 去掉 ①②③）、`voucher_amount`（「定額回饋」＋大字 NT$ 千分位＋`voucher_usage` 小字）、`bonus_rate`（兩格「回饋率」大字＋「回饋消費上限」，`bonus_cap` 取整千分位；有 `voucher_usage` 但沒有定額金額時，單位跟在回饋率旁——例：永豐大戶「6% LINE POINTS」）、`bonus_merchants`（重用同方案回饋卡的 `renderCdChannels`／`cdFitChannel` 三行收合；`*general`＝「一般消費」、`*all_items`＝「本卡所有指定通路」）、`new_customer_summary`（13px）、`gift_image_url`（`sanitizeUrl`、最大高 140px、lazy、onerror 隱藏，另掛 `.promo-gift-image` 讓 `setupGiftImageLightbox` 點擊放大）。
+- **右上小標**（`.cd-pt-chips`）：快結束「剩 N 天」（14 天內、當天「今天截止」）、未開始「N 天後開始」（當天「今天開始」）；第二個以後的活動類型只有「右邊沒有對應數值」時才顯示成小標（「首刷禮＋定額回饋」右邊已有金額就不再標）
+- **票券下方**：只有一筆 → 直接攤開「達成條件」（`cdParsePromoSteps`）與「活動說明」盒子（新戶資格、活動期間、備註）；多筆 → 每張票券下一顆「達成條件與備註 ⌄」灰框膠囊（`.cd-pm-t`，委派點擊 `cdTogglePromoDetail`），點開展開該筆；新戶資格若**每一筆都有且完全相同**就在最下面寫一次（`#card-promos-foot`），否則放進各筆展開內容。欄位空白（空字串、null、空陣列）整列不顯示；「謹慎理財、信用至上」（`#card-promo-disclaimer`，顯示規則不變）移到活動區最下面、改灰色小字
+- **達成條件照換行拆**：`①②③`／「1.」「1、」「(1)」開頭＝一步（去符號、黃色圓圈數字）；**沒有符號的行若前面已有步驟，併進上一步當附註**（`-消費條件A`、`→`、`↓ 以下與…一樣 ↓`、`持有凱基銀行帳戶` 這類子條件，不另編號，否則會被編成獨立的一步）；整段只有一行且不是步驟＝一段文字（例：「此活動不限新戶」）。備註 `notes` 照全形「；」與半形「;」拆條列
+- **頁籤筆數＝活動筆數**：`cdTabCount('promo')` 數 `#card-promos-content > *:not(.card-apply-cta)`，所以每筆活動（含單筆時下面的說明）都包在同一個 `.cd-pm` 裡，共用的新戶資格放在 `#card-promos-foot`（content 之外）。桌機右欄多筆排兩欄（`.cd-promos-multi`），單筆限寬 640px
+- 圖片網址在測試環境（無外網）載不到，onerror 會隱藏；截圖時用 Playwright route 換成本地圖檔（`scratchpad/gift/`）
+
+### 驗證
+`node tools/regression/card-settings-promo-test.js`（28 項）：訪客／已登入（Firestore 替身可讓下一次 setDoc 失敗）的狀態列各態、無假成功、筆記 1 秒自動存與關閉即存、鐵則 1、auth 切換，以及對**所有**有新戶活動的卡逐欄比對詳情頁文字（summary、每一步條件、每條備註、新戶資格、期間、金額／回饋率／上限／贈品／通路／圖片）。`card-detail-test.js`（回饋卡）與 `mappings-page-test.js`（額度合計）沒變。
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**
@@ -455,10 +485,10 @@ Grep `titleParts`）：
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
-- **編輯處只有詳情頁**：`#credit-limit-section`（我的筆記左側，`.personal-fields-row` 桌機並排/手機直排）
-- NT$ 前綴輸入框：只收數字、自動千分位、失焦或 Enter 即存（`✓ 已儲存` 2 秒）；`inputmode="numeric"`+pattern
+- **編輯處只有詳情頁**：`#credit-limit-section`（個人設定「我的紀錄」組的第一列）
+- 輸入框（2026-11-17 起在個人設定「我的紀錄」第一列，標籤左、36px 高 132px 寬的輸入框靠右；沒有 NT$ 前綴，單位寫在說明小字）：只收數字、自動千分位（墨色）、失焦或 Enter 即存；沒值顯示 placeholder「未設定」；`inputmode="numeric"`+pattern。儲存結果由儲存狀態列表達（`cdTrackSave('credit', …)`），不再有 2 秒就消失的「✓ 已儲存」
 - 儲存比照免年費：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）＋本機鏡像 `creditLimit_<uid>_<cardId>`；清空＝刪除
-- 函數：`loadCreditLimit()`/`saveCreditLimit()`/`setupCreditLimit()`（Grep "我的額度相關功能"）
+- 函數：`loadCreditLimit()`/`saveCreditLimit()`（2026-11-17 起回傳儲存結果）/`setupCreditLimit()`（Grep "我的額度相關功能"）
 - 單卡頁唯讀顯示 `NT$ x,xxx` 或「未填寫」
 
 ## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
@@ -575,4 +605,9 @@ Grep `titleParts`）：
 - [2026-11-17] 把「量寬度」放進 `ResizeObserver` 回呼裡直接改版面 → 容器高度因此改變、再觸發自己，Chrome 會吐 "ResizeObserver loop completed with undelivered notifications"（Playwright 當成 pageerror）→ 回呼裡只比對寬度是否改變、需要重收就丟 `requestAnimationFrame`；觀察目標寬度沒變就不動
 - [2026-11-17] 規格說「一般回饋區：國內一般消費＋一般回饋特列項目同卡」，但那些組別（`一般回饋特列項目`／`一般消費特列項目`／`國外消費特列項目`，共 30 筆、約 25 張卡）原本在**指定通路區**（它們在 cashbackRates 裡）→ 照站長核定的示意圖把它們搬到一般回饋區（見 1n）。「CUBE 指定通路 19 張變約 11 張」的 11 含特列項目那張，搬走後是 10 張。**驗收數字要說明口徑**；之後若有人問「特列項目怎麼不見了」，答案在這節
 - [2026-11-17] `card-detail-test.js` 在這輪改完之後單獨跑會偶發紅燈：`console.error: ⏱️ Firebase 載入逾時（4000ms）` 掉進某張卡的取樣視窗 → `run-regression.js` 的 Firebase 替身缺 `setUserProperties`（#561 起 index.html import 它），整支 analytics 模組載入失敗、4 秒後吐逾時錯誤；整個測試一超過 4 秒就會落進視窗（以前剛好跑不到）→ 這支測試的路由補上 `setUserProperties`（`mappings-page-test.js` 早就補了）。替身缺符號時**症狀是計時型噪音**，先看頁面載入時有沒有 "does not provide an export named" 的 pageerror
-
+- [2026-11-17] 個人設定「看起來資料會不見」→ 根因不是版面，是**存好了沒有任何回饋**：額度只有 2 秒就消失的「✓ 已儲存」、筆記要按 💾、級別／發卡組織／免年費改了完全沒反應，而各 save 函數把成功／失敗全吞掉（失敗只有 `console.error`）→ 要讓用戶「感覺存好了」，先讓 save 函數**回傳結果**再接常駐狀態列，狀態只反映真結果；別用計時器假裝成功，也別在 UI 層另寫一份判斷
+- [2026-11-17] 訪客的「童樂匯」勾選沒有任何本機備份（只存 Firestore、訪客只在記憶體），狀態列若統一寫「只存在這台裝置」就是說謊 → 儲存結果多一個 `volatile` 旗標，狀態列照實寫「只在這次瀏覽有效」。加狀態列前先盤點**每一欄到底存在哪**，不要預設「訪客＝localStorage」
+- [2026-11-17] 狀態列的「登入」連結點了沒反應 → `#auth-modal` 是 `.modal`（z-index 1000），詳情頁是全頁 z-index 1100，登入視窗開在詳情頁後面 → 從詳情頁（或任何 ≥1000 的全頁層）開登入視窗要確認疊序；本輪把 `#auth-modal` 提到 1200。配卡組合頁（1050）的「登入」按鈕理論上有同樣問題（本輪沒測、沒動）
+- [2026-11-17] 錯誤用「單一 lastError」記會被別欄的成功洗掉（A 欄存失敗、B 欄隨後成功 → 紅字消失，用戶以為 A 也存好了）→ 錯誤依欄位 key 記帳，同一欄之後成功才清
+- [2026-11-17] run-regression.js **不涵蓋搜尋結果的新戶活動卡**（它只抓 `#results-container`／停車／領券）；抽 `createCardholderPromoElement` 的共用函數時，「逐字一致」要自己比：載入 `git show HEAD:js/results-display.js` 的舊版，對所有活動 × 兩種模式（搜尋／詳情）比 outerHTML，並換好幾個凍結日期（徽章依日期而變）。本輪用 7 個日期 × 55 筆 × 2 模式比過全一致
+- [2026-11-17] 票券頁籤筆數若把「共用新戶資格」放在 `#card-promos-content` 底下，`cdTabCount` 的 `> *:not(.card-apply-cta)` 會多算一個 → 共用的東西放在 content 之外（`#card-promos-foot`），每筆活動的所有內容包進同一個 `.cd-pm`

@@ -895,6 +895,40 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
     section.style.display = 'block';
 }
 
+// 新戶活動的期間文字（搜尋結果的 createCardholderPromoElement 與詳情頁票券共用）：
+// 「開始~結束」、只有結束日＝「~結束」、都沒有＝「不限期」
+function formatPromoPeriod(promo) {
+    return (promo.period_start || promo.period_end)
+        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
+        : '不限期';
+}
+
+// 新戶活動的時間狀態（搜尋結果的 createCardholderPromoElement 與詳情頁票券 renderPromoTicket 共用）。
+// 回傳 { kind: 'upcoming' | 'ending' | '', days }：
+//   upcoming＝尚未開始（days＝幾天後開始，0＝今天）；ending＝進行中且 14 天內結束（days＝剩幾天，0＝今天截止）
+// promo 日期已是 ISO YYYY-MM-DD；舊格式（斜線）轉 ISO 後再比
+function getPromoTimeBadge(promo) {
+    const isoStart = promo.period_start
+        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
+        : '';
+    const isoEnd = promo.period_end
+        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
+        : '';
+    let promoStatus = getRateStatus(isoStart, isoEnd);
+    // getRateStatus 對「只有開始日、沒有結束日」回 'always'，這裡補判尚未開始的情況
+    if (promoStatus === 'always' && isoStart && isoStart > getTaiwanToday()) {
+        promoStatus = 'upcoming';
+    }
+    if (promoStatus === 'upcoming' && isoStart) {
+        const daysUntil = getDaysUntilStart(isoStart);
+        if (daysUntil != null) return { kind: 'upcoming', days: daysUntil };
+    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 14)) {
+        const daysUntil = getDaysUntilEnd(isoEnd);
+        if (daysUntil != null) return { kind: 'ending', days: daysUntil };
+    }
+    return { kind: '', days: null };
+}
+
 // Build the DOM element for a single cardholder promo result.
 // Display order:
 //   (卡名) → new_customer_summary → 重點 detail rows + 回饋消費上限(若有)
@@ -918,36 +952,18 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
 
     const summary = promo.new_customer_summary || '';
 
-    const period = (promo.period_start || promo.period_end)
-        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
-        : '不限期';
+    const period = formatPromoPeriod(promo);
 
-    // Upcoming / ending-soon badges (same logic as card activities)
-    // promo dates are already ISO YYYY-MM-DD; fall back to slash-to-ISO conversion
+    // Upcoming / ending-soon badges (same logic as card activities)——判斷邏輯抽成 getPromoTimeBadge()，
+    // 詳情頁的票券（js/card-detail.js）共用同一份判斷；這裡的輸出文字不變
     let promoBadgeHtml = '';
-    const isoStart = promo.period_start
-        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
-        : '';
-    const isoEnd = promo.period_end
-        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
-        : '';
-    let promoStatus = getRateStatus(isoStart, isoEnd);
-    // getRateStatus 對「只有開始日、沒有結束日」回 'always'，這裡補判尚未開始的情況
-    if (promoStatus === 'always' && isoStart && isoStart > getTaiwanToday()) {
-        promoStatus = 'upcoming';
-    }
-    if (promoStatus === 'upcoming' && isoStart) {
-        const daysUntil = getDaysUntilStart(isoStart);
-        if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-            promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
-        }
-    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 14)) {
-        const daysUntil = getDaysUntilEnd(isoEnd);
-        if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天截止' : `剩 ${daysUntil} 天`;
-            promoBadgeHtml = ` <span class="ending-soon-badge">${daysText}</span>`;
-        }
+    const timeBadge = getPromoTimeBadge(promo);
+    if (timeBadge.kind === 'upcoming') {
+        const daysText = timeBadge.days === 0 ? '今天開始' : `${timeBadge.days}天後`;
+        promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
+    } else if (timeBadge.kind === 'ending') {
+        const daysText = timeBadge.days === 0 ? '今天截止' : `剩 ${timeBadge.days} 天`;
+        promoBadgeHtml = ` <span class="ending-soon-badge">${daysText}</span>`;
     }
 
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
@@ -1184,7 +1200,7 @@ function selectCardDetailTab(name, opts = {}) {
     if (pan && typeof initConditionClamps === 'function') {
         pan.querySelectorAll('[id$="-cashback"]').forEach(c => initConditionClamps(c));
         // 同方案卡：適用通路收三行、條件一行省略（這時才量得到寬度）
-        if (typeof cdFitAll === 'function') pan.querySelectorAll('[id$="-cashback"]').forEach(c => cdFitAll(c));
+        if (typeof cdFitAll === 'function') pan.querySelectorAll('[id$="-cashback"], #card-promos-content').forEach(c => cdFitAll(c));
     }
 
     // 手機：已經捲過摘要的話，讓新頁籤的內容從頁籤列正下方開始（不留在上一個頁籤的捲動位置）
@@ -1287,8 +1303,11 @@ function renderCardDetailPromos(card) {
     if (!section || !content) return;
 
     content.innerHTML = '';
+    const footEl = document.getElementById('card-promos-foot');   // 多筆活動共用的「新戶資格」（renderCardDetailPromoTickets 寫入）
+    if (footEl) footEl.innerHTML = '';
+    content.classList.remove('cd-promos-multi');
 
-    // Regulatory warning sits above the 新戶活動 heading; hidden until we
+    // Regulatory warning（謹慎理財、信用至上）；hidden until we
     // actually render promo cards below.
     const disclaimerEl = document.getElementById('card-promo-disclaimer');
     if (disclaimerEl) disclaimerEl.style.display = 'none';
@@ -1340,8 +1359,10 @@ function renderCardDetailPromos(card) {
     const amountInputEl = document.getElementById('amount-input');
     const amount = amountInputEl && amountInputEl.value !== '' ? parseFloat(amountInputEl.value) : 1000;
 
-    const fragment = document.createDocumentFragment();
-
+    // 2026-11-17 起詳情頁每筆活動畫成一張「票券」（renderCardDetailPromoTickets，js/card-detail.js），
+    // 不再借用搜尋結果的活動卡（createCardholderPromoElement 只剩搜尋結果在用，輸出不變）。
+    // 哪些活動會畫沿用舊規則：buildPromoDetailRows 沒有任何列（沒有首刷禮／定額回饋／回饋率）的整筆略過
+    const items = [];
     promos.forEach(promo => {
         // In detail page, no merchant search context — show bonus regardless.
         const bonusApplies = !!promo.bonus_rate;
@@ -1349,23 +1370,21 @@ function renderCardDetailPromos(card) {
         const rows = buildPromoDetailRows(promo, card, amount, bonusApplies);
         if (rows.length === 0) return;
 
-        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items, "一般消費皆適用" for *general)
+        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items, "一般消費" for *general)
         let merchantList = [];
         if (promo.bonus_merchants) {
             if (isGeneralSpendingMarker(promo.bonus_merchants)) {
-                merchantList = [GENERAL_SPENDING_LABEL];
+                merchantList = ['一般消費'];
             } else if (isAllItemsMarker(promo.bonus_merchants)) {
                 merchantList = ['本卡所有指定通路'];
             } else {
                 merchantList = expandPromoMerchants(promo, card);
             }
         }
-
-        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true, showExtras: true });
-        fragment.appendChild(el);
+        items.push({ promo, merchantList });
     });
 
-    if (!fragment.hasChildNodes()) {
+    if (items.length === 0) {
         if (hasCta) {
             section.style.display = 'block';
         } else {
@@ -1374,10 +1393,10 @@ function renderCardDetailPromos(card) {
         return;
     }
 
-    // Promo cards exist → reveal the warning above the 新戶活動 heading.
+    // Promo cards exist → reveal the warning（謹慎理財、信用至上；2026-11-17 起在活動區最下面）
     if (disclaimerEl) disclaimerEl.style.display = 'block';
 
-    content.appendChild(fragment);
+    renderCardDetailPromoTickets(card, items);
     section.style.display = 'block';
 }
 
