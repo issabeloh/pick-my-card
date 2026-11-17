@@ -37,7 +37,7 @@ const LEVELS = { 'cathay-cube': 'Level 3', 'yushan-unicard': 'UP選', 'sinopac-d
 function stub(url, guest) {
   const R = 'Promise.resolve()';
   if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
-  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
+  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';
   if (url.includes('firebase-auth')) return `
     const USER = { uid:'testuid', email:'test@example.com', displayName:'測試用戶', photoURL:'', providerData:[{ providerId:'google.com' }] };
     const AUTH = { currentUser: USER };

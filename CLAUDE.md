@@ -61,7 +61,7 @@
 
 ## 大檔案使用規則（防上下文塞爆，依據見 docs/ops/diagnosis.md）
 
-- `js/*.js`（13 檔，單檔 600–1,850 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（單段 ≤400 行；這一步需要的區段一次讀齊，不要 30 行 30 行分次讀）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
+- `js/*.js`（13 檔，單檔 600–1,850 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"卡片格"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（單段 ≤400 行；這一步需要的區段一次讀齊，不要 30 行 30 行分次讀）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
 - `cards.data`（488KB base64 單行）與 `tools/regression/fixture.data`（回歸測試的凍結副本，同格式）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）。jq 寫不出來的分析：`base64 -d cards.data > <scratchpad>/cards.json` 後用 python 處理，**解碼結果不得直接印到輸出**
 - `styles.css`（11,100 行）/ `index.html`（1,750 行）：同樣先 Grep 再讀區段
 - 廣度未知的搜尋（不確定在哪幾個檔）→ 派 `Explore` subagent，主對話只收結論＋檔案:行號（→ `docs/ops/dispatch.md`）
