@@ -3069,7 +3069,6 @@ input[type="number"]:focus {
     overflow: visible;
     text-overflow: clip;
 }
-.card-name-with-pin .card-detail-peek-btn,
 .card-name-with-pin .pin-btn {
     height: 26px;
     padding: 0 11px 0 9px;
@@ -3195,15 +3194,11 @@ input[type="number"]:focus {
         font-size: 24px;
     }
 }
-.card-result .card-detail-peek-btn,
-.coupon-item .card-detail-peek-btn,
 .card-result .pin-btn:not(.pinned) {
     background: #fff;
     border-color: #d1d5db;
     color: #374151;
 }
-.card-result .card-detail-peek-btn:hover,
-.coupon-item .card-detail-peek-btn:hover,
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
     border-color: #9ca3af;
@@ -3820,19 +3815,21 @@ input[type="number"]:focus {
     flex-shrink: 0;
 }
 
-/* 卡片詳情鈕：原本是淡灰 ⓘ 純字符，用戶反映太低調找不到。改成淺藍膠囊＋
-   「詳情」文字，明顯是可點按鈕（搜尋結果／領券卡共用）。 */
+/* 卡片詳情鈕（ⓘ 詳情）：全站只有這一組樣式——白底灰框膠囊、26px 高（2026-11-16 站長要求一致化）。
+   搜尋結果卡、領券卡、選卡 modal（管理我的信用卡／管理加入比較的卡片）、推薦活動 modal 都吃這裡，
+   **不要再依所在位置另開顏色或尺寸的覆寫**；桌機密度的縮小值在檔尾「結果卡次行按鈕」。
+   沿革：最早是淡灰 ⓘ 純字符（用戶反映找不到）→ 淺藍膠囊 → 結果卡先改白底灰框 → 全站跟進。 */
 .card-detail-peek-btn {
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    height: 22px;
-    padding: 0 9px 0 7px;
-    border: 1px solid #93c5fd;
-    background: #eff6ff;
-    color: #1d4ed8;
-    font-size: 12px;
+    height: 26px;
+    padding: 0 11px 0 9px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
@@ -3843,9 +3840,9 @@ input[type="number"]:focus {
     content: '詳情';
 }
 .card-detail-peek-btn:hover {
-    color: #1e3a8a;
-    background: #dbeafe;
-    border-color: #60a5fa;
+    color: #111827;
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 /* ── Calculation breakdown button + popup ───────────────────────────────── */
@@ -4007,36 +4004,38 @@ input[type="number"]:focus {
     display: block;
 }
 
-/* --- "我的信用卡" modal: wallet stack + solo card views --- */
-.ow-gear-btn {
-    margin-left: 10px;
-    margin-right: auto; /* sit right beside the title; close btn stays far right */
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 50%;
-    background: #f1f5f9;
-    color: #475569;
-    cursor: pointer;
-    display: flex;
+/* --- 「我的信用卡」modal：摘要列＋卡片格（2026-11-17 站長選定；設計紀錄見 docs/project/ui-display.md 第 5 節） --- */
+.ow-manage-btn {
+    margin-left: auto;
+    margin-right: 6px;
+    flex-shrink: 0;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    transition: background 0.15s ease, color 0.15s ease, transform 0.3s ease;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
-.ow-gear-btn:hover {
-    background: #e2e8f0;
-    color: #1e293b;
-    transform: rotate(30deg);
+.ow-manage-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
 }
 
 #my-owned-cards-modal .modal-body {
     background: #ffffff;
     border-radius: 0 0 12px 12px;
+    padding: 0;
 }
-/* Reserve scrollbar space even when nothing scrolls, so the modal's
-   content width doesn't jump when expanding a card makes it scrollable. */
 #my-owned-cards-modal .modal-content {
-    scrollbar-gutter: stable;
+    max-width: 660px;
 }
 
 .ow-count-badge {
@@ -4046,32 +4045,7 @@ input[type="number"]:focus {
     letter-spacing: 0.02em;
 }
 
-.ow-collapse-btn {
-    /* sticks to the bottom of the modal's visible area while the
-       expanded stack is taller than the viewport — always reachable
-       without scrolling */
-    position: sticky;
-    bottom: 12px;
-    z-index: 2000; /* above every stacked card (cards use z-index 1..N) */
-    display: block;
-    margin: 16px auto 0;
-    padding: 5px 20px;
-    border-radius: 999px;
-    border: 1px solid #e2e8f0;
-    background: #fff;
-    color: #475569;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.16);
-    transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ow-collapse-btn:hover {
-    border-color: #cbd5e1;
-    color: #1e293b;
-}
-
-/* Card face frame (shared by stack slots and solo view) */
+/* 卡面框：直式卡圖自動轉成橫式（.ow-portrait）、缺圖顯示卡名（.ow-noimg） */
 .ow-frame {
     width: 100%;
     aspect-ratio: 1.586;
@@ -4108,220 +4082,119 @@ input[type="number"]:focus {
     background: linear-gradient(135deg, #e2e8f0, #f8fafc);
 }
 
-/* --- Wallet stack --- */
-.ow-stack {
-    position: relative;
-    width: min(252px, 92%);
-    margin: 0 auto;
-    transition: height 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+/* 摘要列 */
+.ow-sum {
+    display: grid;
+    grid-template-columns: 0.75fr 1.35fr 1.2fr;
+    margin: 0;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
 }
-.ow-slot {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    cursor: pointer;
-    outline: none;
-    transition: top 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
-                transform 0.25s ease;
-}
-.ow-slot .ow-frame {
-    /* bright hairline edge + a short, light seam: the 0/-1px shadow keeps
-       a dark gap right at the edge so stacked cards' white borders never
-       touch. Strips are thin, so heavier seams would pile up and read
-       almost black. */
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow:
-        0 -1px 0 rgba(0, 0, 0, 0.28),
-        0 -3px 4px -2px rgba(0, 0, 0, 0.26),
-        0 -6px 9px -7px rgba(0, 0, 0, 0.28);
-    transition: box-shadow 0.25s ease;
-}
-.ow-slot:hover {
-    transform: translateY(-5px);
-}
-.ow-slot:focus-visible .ow-frame {
-    outline: 2px solid #60a5fa;
-    outline-offset: 2px;
-}
-.ow-slot.ow-open .ow-frame {
-    box-shadow:
-        0 -1px 0 rgba(0, 0, 0, 0.45),
-        0 -3px 5px -2px rgba(0, 0, 0, 0.55),
-        0 -18px 26px -18px rgba(0, 0, 0, 0.8),
-        0 16px 32px -12px rgba(0, 0, 0, 0.55);
-}
-
-/* "tap again" affordance pill on the revealed card */
-.ow-hint {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%) translateY(6px);
-    background: rgba(15, 23, 42, 0.72);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 5px 12px;
-    border-radius: 999px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    backdrop-filter: blur(2px);
-    transition: opacity 0.3s ease 0.4s, transform 0.3s ease 0.4s;
-    z-index: 2;
-}
-.ow-slot.ow-open .ow-hint {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
-
-/* --- Solo view --- */
-.ow-solo-top {
-    display: flex;
-    margin-bottom: 10px;
-}
-.ow-back {
-    background: none;
-    border: none;
-    color: #2563eb;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 4px 6px 4px 0;
-}
-.ow-back:hover {
-    text-decoration: underline;
-}
-.ow-solo-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.ow-solo-face {
-    flex: 1;
+.ow-sum > div {
+    padding: 11px 12px 12px;
     min-width: 0;
-    border-radius: 16px;
-    box-shadow: 0 20px 44px -14px rgba(15, 23, 42, 0.38),
-                0 4px 12px rgba(15, 23, 42, 0.10);
-    touch-action: pan-y;
 }
-.ow-arrow {
-    flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
-    color: #334155;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.ow-sum > div:first-child { padding-left: 20px; }
+.ow-sum > div + div { border-left: 1px solid #e5e7eb; }
+.ow-sum dt {
+    font-size: 11.5px;
+    color: #4b5563;
 }
-.ow-arrow:hover:not(:disabled) {
-    background: #f1f5f9;
-}
-.ow-arrow:disabled {
-    opacity: 0.25;
-    cursor: default;
-}
-.ow-solo-name {
-    text-align: center;
+.ow-sum dd {
+    margin: 1px 0 0;
     font-size: 16px;
     font-weight: 700;
-    color: #0f172a;
-    margin-top: 14px;
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
-.ow-dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 8px;
+.ow-sum dd.ow-faint { font-weight: 500; }
+.ow-sum small {
+    display: block;
+    min-height: 1.4em;
+    font-size: 11px;
+    color: #4b5563;
 }
-.ow-dots i {
-    width: 6px;
-    height: 6px;
-    border-radius: 3px;
-    background: #cbd5e1;
-    transition: width 0.2s ease, background 0.2s ease;
+.ow-faint { color: #9ca3af; }
+
+/* 卡片格：手機 2 欄、≥600px 3 欄 */
+.ow-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* 每格行數不同（有沒有「已過免年費門檻」那一行）：靠上對齊，否則 button 會把內容垂直置中、同列卡面高低不齊 */
+    align-items: start;
+    gap: 16px 12px;
+    padding: 16px 20px 20px;
 }
-.ow-dots i.on {
-    width: 18px;
-    background: #2563eb;
+@media (min-width: 600px) {
+    .ow-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px 16px;
+    }
 }
-.ow-solo-info {
-    margin-top: 16px;
-    padding: 16px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.85);
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+.ow-tile {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
     text-align: left;
+    cursor: pointer;
 }
-.ow-info-head {
+.ow-pic {
+    display: block;
+    position: relative;
+}
+.ow-tile .ow-frame {
+    border-radius: 9px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.15s ease;
+}
+.ow-tile:hover .ow-frame,
+.ow-tile:focus-visible .ow-frame {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+.ow-tile:focus-visible {
+    outline: 2px solid #1e40af;
+    outline-offset: 4px;
+    border-radius: 9px;
+}
+.ow-ok {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: #047857;
+}
+.ow-name {
+    display: block;
+    margin-top: 8px;
     font-size: 13.5px;
     font-weight: 700;
-    color: #334155;
-    margin-bottom: 10px;
+    line-height: 1.4;
+    color: #111827;
 }
-.ow-info-loading {
-    color: #94a3b8;
-    font-size: 13px;
-    text-align: center;
-    padding: 10px 0;
-}
-.ow-info-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 7px 0;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 13.5px;
-}
-.ow-info-label {
-    color: #64748b;
-    flex: 0 0 auto;
-}
-.ow-info-value {
-    color: #0f172a;
-    font-weight: 600;
-    text-align: right;
-}
-.ow-info-value.ow-ok { color: #059669; }
-.ow-info-value.ow-warn { color: #d97706; }
-.ow-info-value.ow-muted { color: #94a3b8; font-weight: 500; }
-.ow-info-note {
-    padding: 9px 0 2px;
-}
-.ow-info-note .ow-info-label {
-    font-size: 13.5px;
-    margin-bottom: 5px;
-}
-.ow-note-text {
-    font-size: 13px;
-    color: #334155;
-    line-height: 1.55;
-    white-space: pre-wrap;
-    word-break: break-word;
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 9px 11px;
-    max-height: 7.8em;
-    overflow-y: auto;
-}
-.ow-note-text.ow-note-empty {
-    color: #94a3b8;
-    background: none;
-    padding: 0;
-}
-.ow-solo-info .ow-detail-btn {
+.ow-meta {
     display: block;
-    margin: 14px auto 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #4b5563;
 }
+.ow-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1.586;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 9px;
+    color: #1e40af;
+    font-size: 13.5px;
+    font-weight: 700;
+    transition: background 0.15s ease;
+}
+.ow-tile-add:hover .ow-add { background: #eff6ff; }
 
 /* --- 我的額度 (card detail page) --- */
 .credit-limit-row {
@@ -4577,21 +4450,6 @@ label.personal-field-check input[type="checkbox"] {
 .personal-level-row > .level-help-note:empty {
     display: none;
 }
-.ow-detail-btn {
-    padding: 8px 18px;
-    border: 1px solid #3b82f6;
-    border-radius: 999px;
-    background: #fff;
-    color: #2563eb;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-.ow-detail-btn:hover {
-    background: #eff6ff;
-}
-
 .owned-overview-empty {
     grid-column: 1 / -1;
     display: flex;
@@ -9678,7 +9536,7 @@ html.pmc-onboard #search-hints-container {
 #spotlight-modal-actions {
     flex-basis: 100%;
 }
-/* 卡片詳情鈕（modal 內）：沿用結果卡 .card-detail-peek-btn 藍膠囊樣式，
+/* 卡片詳情鈕（modal 內）：沿用全站 .card-detail-peek-btn 樣式，
    僅把標籤文字覆蓋成「卡片詳情」。 */
 .spotlight-modal-actions .card-detail-peek-btn::after {
     content: '卡片詳情';
@@ -10713,7 +10571,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .best-badge,
     .detail-label,
     .matched-merchant,
-    .card-detail-peek-btn,
     .help-btn,
     .social-media-title,
     .social-text,
@@ -11049,10 +10906,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .matched-merchant {
         margin-top: 5px;   /* 原 6px */
-    }
-
-    .card-detail-peek-btn {
-        padding: 0px 8px 0px 6px;   /* 原 0px 9px 0px 7px */
     }
 
     .calc-breakdown-btn {
@@ -11480,8 +11333,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         height: 31px;   /* 原 36px */
     }
 
-    .pin-btn,
-    .card-detail-peek-btn {
+    .pin-btn {
         height: 19px;   /* 原 22px */
     }
 
@@ -11533,10 +11385,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 
 /* 結果卡次行按鈕（桌機密度）：上方 .card-name-with-pin 的放大值特異性較高，
-   第 1／3 類的 .pin-btn／.card-detail-peek-btn 縮小值蓋不到，在這裡照比例另給
-   （26→23px、13→11.5px、內距 0.85×）。必須留在檔案最後。 */
+   第 1／3 類的 .pin-btn 縮小值蓋不到，在這裡照比例另給（26→23px、13→11.5px、內距 0.85×）。
+   ⓘ 詳情鈕全站同一個尺寸（不分位置），桌機縮小值也只有這一條。必須留在檔案最後。 */
 @media (min-width: 1025px) {
-    .card-name-with-pin .card-detail-peek-btn,
+    .card-detail-peek-btn,
     .card-name-with-pin .pin-btn {
         height: 23px;
         padding: 0 9px 0 8px;

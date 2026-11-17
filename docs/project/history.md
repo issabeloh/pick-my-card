@@ -102,7 +102,7 @@
 - 發現並修正匯出迴圈 `if (rate && items)` 把 rate=0 stacking 槽整組丟掉的 bug（見 data-pipeline.md 第 4 節）
 
 ## 2026-07-07 「我的信用卡」modal 重造 + 我的額度
-- 錢包堆疊一覽 → 原位展開 → 單卡頁（唯讀個人化面板）；視覺多輪迭代定案（見 ui-display.md 第 5 節）
+- 錢包堆疊一覽 → 原位展開 → 單卡頁（唯讀個人化面板）；視覺多輪迭代定案（原文見 docs/archive/ui-display.md-2026-11-17.bak）。2026-11-17 站長裁定堆疊「只是在展示動畫」，改成摘要列＋卡片格（現行設計見 ui-display.md 第 5 節）
 - 新增 creditLimit（詳情頁編輯、Firestore users/{uid}.creditLimits 同步）；卡圖規範 800×500
 
 ## 2026-07-06 全站清理（資料穩定性/安全/速度/整併）
