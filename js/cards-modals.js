@@ -427,7 +427,7 @@ function renderOwnedCardsOverview() {
         tile.appendChild(meta);
         tile.addEventListener('click', () => openCardDetailAtPersonal(card.id));
         grid.appendChild(tile);
-        return { card, pic, meta };
+        return { card, tile, meta };
     });
 
     const addTile = mk('button', 'ow-tile ow-tile-add');
@@ -445,7 +445,7 @@ function renderOwnedCardsOverview() {
         ? `額度 ${n / 10000} 萬`
         : `額度 NT$${n.toLocaleString('en-US')}`;
 
-    Promise.all(tiles.map(async ({ card, pic, meta }) => {
+    Promise.all(tiles.map(async ({ card, tile, meta }) => {
         const hasLevels = !!(card.hasLevels && card.levelSettings);
         const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
         const [level, feeWaived, creditLimit] = await Promise.all([
@@ -463,7 +463,8 @@ function renderOwnedCardsOverview() {
         if (limit !== null) meta.appendChild(document.createTextNode(fmtLimit(limit)));
         else meta.appendChild(mk('span', 'ow-faint', '額度未填'));
 
-        if (!feeWaived) pic.appendChild(mk('span', 'ow-flag', '年費未達標'));
+        // 只標正面訊息（2026-11-17 站長裁定）：沒勾過的人不該整排被標「未達標」，本來就免年費的卡也會被誤標
+        if (feeWaived) tile.appendChild(mk('span', 'ow-ok', '✓ 已過免年費門檻'));
         return { limit, feeWaived: !!feeWaived };
     })).then(rows => {
         if (token !== renderOwnedCardsOverview._token || rows.some(r => r === null)) return;
@@ -478,8 +479,7 @@ function renderOwnedCardsOverview() {
         }
         const met = rows.filter(r => r.feeWaived).length;
         feeStat.dd.textContent = `${met}／${count} 張`;
-        feeStat.small.textContent = met === count ? '全部已達成' : `${count - met} 張尚未達成`;
-        feeStat.small.classList.toggle('ow-warn', met !== count);
+        feeStat.small.textContent = met === count ? '全部已達成' : '已達成';
     });
 }
 

@@ -4092,13 +4092,14 @@ input[type="number"]:focus {
     font-size: 11px;
     color: #4b5563;
 }
-.ow-sum small.ow-warn { color: #b45309; }
 .ow-faint { color: #9ca3af; }
 
 /* 卡片格：手機 2 欄、≥600px 3 欄 */
 .ow-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* 每格行數不同（有沒有「已過免年費門檻」那一行）：靠上對齊，否則 button 會把內容垂直置中、同列卡面高低不齊 */
+    align-items: start;
     gap: 16px 12px;
     padding: 16px 20px 20px;
 }
@@ -4137,19 +4138,12 @@ input[type="number"]:focus {
     outline-offset: 4px;
     border-radius: 9px;
 }
-.ow-flag {
-    position: absolute;
-    left: 6px;
-    top: 6px;
-    padding: 0 7px;
-    font-size: 11px;
+.ow-ok {
+    display: block;
+    font-size: 12px;
     font-weight: 700;
-    line-height: 18px;
-    color: #b45309;
-    background: #fffbeb;
-    border: 1px solid #fcd34d;
-    border-radius: 999px;
-    white-space: nowrap;
+    line-height: 1.5;
+    color: #047857;
 }
 .ow-name {
     display: block;
