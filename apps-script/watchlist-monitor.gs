@@ -1320,17 +1320,6 @@ function applyInboxRowActions_(ss, sheet, headers, archiveRows, deleteRows) {
   return { archived: archived, deleted: deleted, remaining: all.length - done };
 }
 
-// [3,4,5,9,10] → [{start:3,count:3},{start:9,count:2}]。整批搬比一列一列搬快得多
-function toContiguousBlocks_(rows) {
-  const blocks = [];
-  rows.forEach(function (r) {
-    const last = blocks[blocks.length - 1];
-    if (last && last.start + last.count === r) last.count++;
-    else blocks.push({ start: r, count: 1 });
-  });
-  return blocks;
-}
-
 // 封存分頁（沒有就建）。⚠️ 欄序必須跟主分頁一模一樣——copyTo 是照位置貼的，
 // 對不齊就會把「新文字」貼到「公開摘要」那一欄。所以每次都先對齊表頭再搬。
 function getInboxArchiveSheet_(ss, headers) {
