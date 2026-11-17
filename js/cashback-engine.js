@@ -502,7 +502,7 @@ function getCategoryDisplayName(category) {
         '趣旅行': '切換「趣旅行」方案',
         '集精選': '切換「集精選」方案',
         '來支付': '切換「來支付」方案',
-        '童樂匯': '切換「童樂匯」方案'
+        '童樂匯': CHILDREN_PLAN_CATEGORY
     };
     return categoryMap[category] || category;
 }
@@ -1000,7 +1000,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
                 }
 
                 // 童樂匯方案只對符合資格的用戶配對
-                if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                if (rateGroup.category === CHILDREN_PLAN_CATEGORY && !isChildrenEligible) {
                     continue;
                 }
 

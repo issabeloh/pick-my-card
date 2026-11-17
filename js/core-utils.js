@@ -57,6 +57,8 @@ let quickSearchOptions = [];
 let userBirthdayMonth = null; // 用戶生日月份 (1-12)，null 表示未設定
 let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為生日月份
 let isChildrenEligible = true; // 用戶是否符合「童樂匯」權益（預設為是）
+// 國泰 CUBE 卡「童樂匯」方案在資料（cards.data 的 category 欄）裡的類別字串；是比對用的識別碼，一個字都不能改
+const CHILDREN_PLAN_CATEGORY = '切換「童樂匯」方案';
 let cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa'; // 國泰CUBE卡發卡組織（Visa/Mastercard/JCB）
 
 // Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：URL 帶 ?embed=1 時
