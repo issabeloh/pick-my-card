@@ -459,33 +459,8 @@ basicCashbackDiv.innerHTML = basicContent;
 
     if (card.hasLevels && card.id === 'cathay-cube') {
         specialContent = await generateCubeSpecialContent(card);
-    } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-        // Handle generic level-based cards with specialItems (like Uni card and DBS Eco)
-        const levelNames = Object.keys(card.levelSettings);
-        const { data: levelData } = await resolveCardLevel(card, levelNames[0]);
-
-        // First, display any cashbackRates if they exist (like DBS Eco's 10% cashback)
-        // 2026-07-09 起逐筆顯示（不再按 rate+cap 合併），category 以 chip 顯示在回饋率旁
-        if (card.cashbackRates && card.cashbackRates.length > 0) {
-            const rendered = await renderCashbackRatesIndividually(card, levelData, { idPrefix: 'lvA' });
-            specialContent += rendered.html;
-
-            // Store upcoming groups for later display in separate section
-            window._currentUpcomingGroups1 = rendered.upcoming;
-            window._currentCard = card;
-            window._currentLevelData1 = levelData;
-        }
-
-        // Then display the level-based cashback with specialItems
-        // （通路多，先顯示 30 個，其餘收在「顯示全部」）
-        specialContent += renderRateCard({
-            rate: levelData.rate,
-            capText: formatRateCardCap(levelData.cap),
-            merchants: { items: card.specialItems, id: `uni-${card.id}`, initialCount: 30 },
-            conditions: levelData.condition
-        });
-    } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
-        // Handle level-based cards without specialItems (or with empty specialItems array)
+    } else if (card.hasLevels) {
+        // 分級卡（CUBE 以外）：所有通路都在 cashbackRates 裡，用級別設定解析 placeholder
         const levelNames = Object.keys(card.levelSettings);
         const { level: savedLevel, data: levelData } = await resolveCardLevel(card, levelNames[0]);
 
@@ -500,7 +475,6 @@ basicCashbackDiv.innerHTML = basicContent;
             // Store upcoming groups for later display in separate section
             window._currentUpcomingGroups2 = rendered.upcoming;
             window._currentCard = card;
-            window._currentLevelData2 = levelData;
 
             // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
         } else {
@@ -609,7 +583,7 @@ basicCashbackDiv.innerHTML = basicContent;
     // Update upcoming cashback section
     const upcomingSection = document.getElementById('card-upcoming-section');
     const upcomingCashbackDiv = document.getElementById('card-upcoming-cashback');
-    const upcomingGroups = window._currentUpcomingGroups1 || window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || window._currentUpcomingGroups3 || [];
+    const upcomingGroups = window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || window._currentUpcomingGroups3 || [];
     const upcomingCard = window._currentCard;
 
     if (upcomingGroups.length > 0) {
@@ -642,13 +616,10 @@ basicCashbackDiv.innerHTML = basicContent;
     }
 
     // Clean up temporary variables
-    delete window._currentUpcomingGroups1;
     delete window._currentUpcomingGroups2;
     delete window._currentUpcomingGroupsCube;
     delete window._currentUpcomingGroups3;
     delete window._currentCard;
-    delete window._currentLevelData1;
-    delete window._currentLevelData2;
 
     // Update coupon cashback
     const couponSection = document.getElementById('card-coupon-section');

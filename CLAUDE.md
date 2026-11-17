@@ -43,7 +43,7 @@
 1. 🔒 **絕不擅自覆寫用戶已存的級別**：`saveCardLevel()` 只有兩個合法呼叫場景——用戶親自點選、大小寫/空格正規化。「存的級別找不到」時用預設值**顯示**可以，**存回去**絕對不行（→ `docs/project/storage-and-security.md` 第 2 節，這是本專案最高等級鐵則）
 2. **localStorage 一律走 `readLocalJSON()`/`readLocalJSONArray()`**，禁止直接 `JSON.parse(localStorage.getItem(...))`（→ storage-and-security.md 第 1 節）
 3. **動態 innerHTML 一律 `escapeHtml()`、動態 href 一律 `sanitizeUrl()`**；唯二例外（公告 fullText、FAQ answer）有註解標明（→ storage-and-security.md 第 6 節）
-4. **空陣列不是 falsy**：判斷 specialItems 要 `!card.specialItems || card.specialItems.length === 0`
+4. **空陣列不是 falsy**：判斷陣列欄位（`basicExclusions`、`cashbackRates`、`couponCashbacks`…）有沒有內容要 `arr && arr.length > 0`，不能只寫 `if (arr)`
 5. **placeholder 解析必傳 levelSettings**，傳 null 會解析成 0（→ `docs/project/cashback-engine.md` 第 1 節）
 6. **級別名稱字串＝識別碼**，改名會讓用戶偏好對不上；能不改就不改（→ `docs/project/data-pipeline.md` 第 6 節）
 7. **Apps Script 匯出 guard 禁用 `if (rate && items)`**——會把 rate=0 的槽整組丟掉（→ data-pipeline.md 第 4 節）

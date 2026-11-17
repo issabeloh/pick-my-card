@@ -90,7 +90,7 @@ for x in r:
 | # | 搜尋詞 | 守的機制 |
 |---|---|---|
 | 1 | `日本` | waterfall 海外三層計算 ＋ levelSettings（DBS Eco 應出現） |
-| 2 | `禾乃川` | DBS Eco specialItems ＋ hideInDisplay 不干擾搜尋 |
+| 2 | `禾乃川` | DBS Eco 指定通路 ＋ hideInDisplay 不干擾搜尋 |
 | 3 | `Apple Pay`（Sport 卡 5%） | stacking（rate+basic+domesticBonusRate）加總顯示 |
 | 4 | `悠遊卡自動加值`（大戶卡） | `rate` 排除型模型：溢出算 0 不是 basic |
 | 5 | `meta廣告` | rate=0 stacking 槽有被匯出＋overseasCashback 特例 |

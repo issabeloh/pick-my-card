@@ -27,22 +27,20 @@
 
 ## 2. 卡片分級系統（hasLevels）
 
-兩種類型：
-
-**Type A: hasLevels + specialItems**（如 DBS Eco）
-- `specialItems` 是特定通路名單；`levelSettings` 定義各級別 rate/cap
-- 顯示順序：先 cashbackRates（如果有），再 specialItems
-
-**Type B: hasLevels + cashbackRates**（如玉山 Uni Card）
-- 無 specialItems（或空陣列）；`cashbackRates` 內用 `{rate}`/`{cap}` placeholder
+只有一種形狀：**hasLevels + cashbackRates**（玉山 Uni Card、國泰 CUBE、永豐大戶、凱基誠品）
+- 所有通路都在 `cashbackRates`；槽內用 `{rate}`/`{cap}`/`{specialRate}` 等 placeholder 取 `levelSettings` 當前級別的值
 - 每個 rate 可有自己的 items 和 conditions；`category` 欄位標記條件所屬類別
 
-**鐵則——空陣列不是 falsy**：
+> **已移除的形狀（2026-11-17）**：以前還有「hasLevels + `specialItems`」（卡片層級的通路名單，級別只給一個 rate；
+> CUBE 另有 `generalItems`）。匯出端早就不產生這兩個欄位，所有卡都改用上面的形狀，前端對應的計算、索引、
+> 詳情頁分支一併刪除。Sheets 若要再表達「整張卡一份通路名單」，做法是加一個 cashbackRates 槽，不是恢復這個欄位。
+
+**鐵則——空陣列不是 falsy**（CLAUDE.md 鐵則 4）：判斷陣列欄位有沒有內容要連長度一起看。
 ```javascript
-// ❌ 錯誤
-if (!card.specialItems)
+// ❌ 錯誤：[] 是 truthy，空名單會被當成「有」
+if (card.basicExclusions)
 // ✅ 正確
-if (!card.specialItems || card.specialItems.length === 0)
+if (card.basicExclusions && card.basicExclusions.length > 0)
 ```
 
 **級別專屬槽位 `onlySlots` / `keepSlots`**（2026-10-07，國泰 CUBE「固定回饋」方案）：levelSettings 的某級別可寫
@@ -54,16 +52,16 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 ## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
 
-1. **有 specialItems 的 hasLevels 卡**：先查 cashbackRates（支援 placeholder）→ 無匹配再查 specialItems。CUBE 卡特殊處理：用 specialRate 和 generalItems
-2. **無 specialItems 的卡（含 hasLevels）**：先取 levelData（若 hasLevels）→ 查 cashbackRates 並把 levelData 傳給解析函數
-3. **一般卡（hasLevels=false）**：直接查 cashbackRates，levelData 為 null（不用 placeholder）
+單一路徑（2026-11-17 起；以前「有 specialItems 的分級卡」另有一條分支，已隨該資料形狀移除）：
+1. **分級卡（hasLevels）**：先用 `resolveCardLevel()` 取 levelData → 查 cashbackRates 並把 levelData 傳給解析函數
+2. **一般卡（hasLevels=false）**：直接查 cashbackRates，levelData 為 null（不用 placeholder）
 
 ## 3b. 搜尋三步：找、算、顯示（2026-10-17 架構調整）
 
 首頁搜尋、快捷搜尋、商家頁生成器都走同一條路，**三步各自獨立、後一步只吃前一步的輸出**：
 
 1. **找**（`findSearchHits`，`js/search-match.js`）：一次找出**完整**命中清單（商家名＋匹配品質）。去重只合併「小寫後完全相同」的名字；**不可**用統一詞／別名把不同名字併成一個，也**不可**合併只差空格的名字（下一步用名字查索引，索引是小寫全等，少一個名字＝寫那個名字的卡算不到）。快捷搜尋（多關鍵詞）＝每個關鍵詞各找一次再合併
-2. **算**（`calculateHitResults`，`js/cashback-engine.js`）：**逐個名字**對每張卡 `calculateCardCashback`，再 `mergeResultsByActivity`；進行中與即將開始一起算。不能把所有名字丟進同一次計算——分級卡（國泰 CUBE）「先 cashbackRates、沒有才 specialItems、再沒有才 generalItems」的優先順序是對每個名字各自成立的
+2. **算**（`calculateHitResults`，`js/cashback-engine.js`）：**逐個名字**對每張卡 `calculateCardCashback`，再 `mergeResultsByActivity`；進行中與即將開始一起算。不能把所有名字丟進同一次計算——`calculateCardCashback` 的介面是一次一個名字（當初的理由是分級卡 specialItems／generalItems 的優先順序要逐名字成立；那個資料形狀已於 2026-11-17 移除，逐名字計算維持不變）
 3. **顯示**（`showMatchedItem` 等）：只負責把命中清單排成文字，怎麼縮短都不影響計算
 
 - 以前「找」會把互為別名的名字併成一個（為了「✓ 匹配到」好看），「算」卻拿這份刪減過的名單重搜，被併掉的名字要靠別名剛好連得回去——2026-10-17 改掉。當時用線上資料 1,882 個詞比對：結果零差異，只有 10 個詞的「✓ 匹配到」／匹配項目多列出原本被藏起來的名字
@@ -74,7 +72,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 ## 4. findMatchingItem 搜尋範圍（約 script.js:1215-1400）
 
-搜尋涵蓋：cashbackRates items、specialItems、generalItems（CUBE）、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
+搜尋涵蓋：cashbackRates items、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
 
 **誤傷防範**：
 - **短英數詞只認字首**（2026-10-17，`shortTermStartsWord`）：3 個字以內的純英數搜尋詞（ana、jal、gu、net）在「item 包含搜尋詞」方向要出現在字首（前面是開頭或非英文字母），搜「ana」不再誤中 jeANAsis、hANA pay；中文、數字、符號前面都算字首。4 字以上照舊任意位置（eats → UberEats）。下拉選單用同一條規則
@@ -184,7 +182,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 ## 8. 性能機制（改邏輯時不要破壞）
 
-- **Items Index**（約 script.js:365-426）：載入時為所有卡建 Map 索引（cashbackRates/specialItems/generalItems 的 items）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
+- **Items Index**（約 script.js:365-426）：載入時為所有卡建 Map 索引（cashbackRates 的 items；`buildCardItemsIndex()`，`js/data-loader.js`）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
 - **Rate Status Cache**（約 script.js:192-202）：`rateStatusCache` Map 快取活動期間狀態，`calculateCashback()` 開始時清空，用 `getCachedRateStatus()` 不要直接叫 `getRateStatus()`
 - **DocumentFragment**：displayResults / displayCouponCashbacks 批量 DOM，維持單次 reflow
 - 熱迴圈（每卡片/每項目路徑）不要為了 log 做額外計算（如 `.map().join()`）
@@ -193,7 +191,6 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 - [ ] hasLevels 卡是否正確取得 levelData 並傳給解析函數？
 - [ ] placeholder 是否正確解析（不是 0、不是 NaN）？
-- [ ] `specialItems = []`（空陣列）的卡是否走對分支？
 - [ ] 停車折抵的快捷搜尋是否還帶著 searchKeywords？
 - [ ] 跑 `docs/ops/regression.md` 的回歸清單比對前後結果
 - [ ] 動到基本回饋 fallback、搜尋詞展開（`expandSearchTerms`）或狀態列訊息 → 另跑 `tools/regression/basic-exclusions-test.js`（第 10 節）

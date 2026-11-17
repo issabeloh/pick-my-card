@@ -318,8 +318,9 @@ function getAllSearchVariants(searchTerm) {
 // 搜尋三步之二「算」（2026-10-17 架構調整：找、算、顯示分三步）
 // 輸入：findSearchHits() 的完整命中清單（每個元素至少有 originalItem）。
 // **逐個名字**算每張卡（calculateCardCashback 用名字查索引），不能把所有名字丟進同一次計算：
-// 分級卡（國泰 CUBE 等）的優先順序是「先看 cashbackRates、沒有才看方案 specialItems、再沒有才看 generalItems」，
-// 這個順序是對「每個名字」各自成立的；一起算的話，A 名字命中活動會把 B 名字的方案項目擋掉。
+// （當初的理由：分級卡有「cashbackRates 沒命中才看 specialItems／generalItems」的優先順序，那個順序是對
+// 「每個名字」各自成立的。specialItems／generalItems 這種資料形狀已於 2026-11-17 移除——匯出端早就不產生，
+// 所有通路都在 cashbackRates 裡；逐名字計算維持不變，calculateCardCashback 的介面就是一次一個名字。）
 // 排序與合併照舊：每個名字的結果先依金額排一次再累加（JS sort 穩定，同分順序取決於進入順序），
 // 最後 mergeResultsByActivity 把同卡同活動併成一列（matchedItems 收齊所有命中的名字）。
 // 回傳 { results, upcoming }，皆已合併、未做最終排序（呼叫端照原本流程排序）。
@@ -961,283 +962,86 @@ async function calculateCardCashback(card, searchTerm, amount) {
     // Get all possible search variants
     const searchVariants = getAllSearchVariants(searchTerm);
 
-    // Handle cards with levels and specialItems (CUBE or Uni card)
-    if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-        const availableLevels = Object.keys(card.levelSettings || {});
-        const defaultLevel = availableLevels[0];
-        let savedLevel = await getCardLevel(card.id, defaultLevel);
+    // Get level settings if card has levels
+    let levelData = null;
+    if (card.hasLevels) {
+        const defaultLevel = Object.keys(card.levelSettings)[0];
+        const resolved = await resolveCardLevel(card, defaultLevel);
+        levelData = resolved.data;
+        selectedLevel = resolved.level; // Store selected level for display
+    }
 
-        // Try to find matching level if savedLevel doesn't exist
-        if (!card.levelSettings?.[savedLevel]) {
-            // Try case-insensitive match
-            const matchedLevel = availableLevels.find(level =>
-                level.toLowerCase().replace(/\s+/g, '') === savedLevel.toLowerCase().replace(/\s+/g, '')
-            );
-            if (matchedLevel) {
-                savedLevel = matchedLevel;
-                // Same level, just a formatting difference (e.g. "level1" vs
-                // "Level 1") — safe to persist the normalized form.
-                await saveCardLevel(card.id, savedLevel);
-            } else {
-                // Genuinely not found — use default for this calculation only,
-                // but do NOT persist it, so the user's stored choice survives a
-                // transient data mismatch (see resolveCardLevel for rationale).
-                savedLevel = defaultLevel;
-            }
-        }
+    // Check exact matches for all search variants using index
+    if (card._itemsIndex) {
+        const processedRateGroups = new Set();
 
-        selectedLevel = savedLevel; // Store selected level
-        const levelSettings = card.levelSettings?.[savedLevel];
+        for (const variant of searchVariants) {
+            const indexMatches = card._itemsIndex.get(variant);
+            if (!indexMatches) continue;
 
-        // Safety check: if levelSettings is still undefined, return 0 cashback
-        if (!levelSettings) {
-            console.warn(`⚠️ ${card.name}: levelSettings 未定義 for level "${savedLevel}"`);
-            return [];
-        }
+            const cashbackMatches = indexMatches.filter(match => match.type === 'cashbackRate');
 
-        // First, check cashbackRates if they exist (for cards like DBS Eco with special promotions)
-        // Use index for fast lookup
-        if (card.cashbackRates && card.cashbackRates.length > 0 && card._itemsIndex) {
-            const processedRateGroups = new Set(); // Track processed rate groups to avoid duplicates
+            for (const match of cashbackMatches) {
+                const rateGroup = match.rateGroup;
 
-            for (const variant of searchVariants) {
-                const indexMatches = card._itemsIndex.get(variant);
-                if (!indexMatches) continue;
+                // Skip if already processed
+                if (processedRateGroups.has(rateGroup)) continue;
+                processedRateGroups.add(rateGroup);
 
-                // Filter for cashbackRate matches only
-                const cashbackMatches = indexMatches.filter(match => match.type === 'cashbackRate');
-
-                for (const match of cashbackMatches) {
-                    const rateGroup = match.rateGroup;
-
-                    // Skip if already processed this rate group
-                    if (processedRateGroups.has(rateGroup)) continue;
-                    processedRateGroups.add(rateGroup);
-
-                    // Only consider active rates for cashback calculation (not upcoming)
-                    const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
-                    if (rateStatus !== 'active' && rateStatus !== 'always') {
-                        continue;
-                    }
-
-                    // 慶生月方案：用戶有設定生日月份時只在該月份配對；未設定則不篩選
-                    if (shouldSkipBirthdayPlan(rateGroup.category)) {
-                        continue;
-                    }
-
-                    // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
-                        continue;
-                    }
-
-                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
-                    if (!isRateGroupInLevel(card, rateGroup, levelSettings)) {
-                        continue;
-                    }
-
-                    // 滿額門檻 minSpend/maxSpend：金額 < minSpend 或 amount >= maxSpend
-                    // 時此槽不符資格——純粹不匹配，不貢獻此活動回饋，也不退回 basic
-                    // （退回 basic 的邏輯已移除：用戶會用另一槽的 maxSpend 負責未滿門檻
-                    // 的回饋，退回 basic 會跟那槽打架、產生重複結果。見
-                    // docs/project/cross-slot-ref-and-minspend-spec.md 2026-07-16 更正）。
-                    if (rateGroup.minSpend && amount < rateGroup.minSpend) {
-                        continue;
-                    }
-                    if (rateGroup.maxSpend && amount >= rateGroup.maxSpend) {
-                        continue;
-                    }
-
-                    // 解析 rate 值（支援 {specialRate}）
-                    let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelSettings);
-                    let applicableCap = rateGroup.cap;
-
-                    // Find the exact matched item name
-                    const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-
-                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
-                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
-                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
-                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
-
-                    // Add this match to allMatches array
-                    allMatches.push({
-                        rate: parsedRate,
-                        cap: applicableCap,
-                        matchedItem: exactMatch,
-                        matchedCategory: rateGroup.category || null,
-                        matchedRateGroup: rateGroup
-                    });
-                }
-            }
-        }
-
-        // If no cashbackRates match, check specialItems
-        if (allMatches.length === 0) {
-            let matchedSpecialItem = null;
-            let matchedVariant = null;
-
-            // Use index for fast lookup
-            if (card._itemsIndex) {
-                for (const variant of searchVariants) {
-                    const indexMatches = card._itemsIndex.get(variant);
-                    if (indexMatches) {
-                        const specialMatch = indexMatches.find(match => match.type === 'specialItem');
-                        if (specialMatch) {
-                            matchedSpecialItem = typeof specialMatch.specialItem === 'string'
-                                ? specialMatch.specialItem
-                                : specialMatch.specialItem.item;
-                            matchedVariant = variant;
-                            console.log(`✅ ${card.name}: 匹配到 specialItem "${matchedSpecialItem}" (搜索詞: "${variant}")`);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (matchedSpecialItem) {
-                // CUBE card uses specialRate, other cards use rate
-                let rate = levelSettings.specialRate || levelSettings.rate;
-                let matchedCategory = null;
-
-                // Set category from levelSettings
-                if (levelSettings.category) {
-                    matchedCategory = levelSettings.category;
-                } else {
-                    matchedCategory = null;
+                // Only consider active rates for cashback calculation (not upcoming)
+                const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
+                if (rateStatus !== 'active' && rateStatus !== 'always') {
+                    continue;
                 }
 
-                // Set cap based on card type
-                let cap = levelSettings.cap || null;
-
-                // Set period from levelSettings if available
-                let rateGroup = null;
-                if (levelSettings.period) {
-                    rateGroup = { period: levelSettings.period };
+                // 慶生月方案：用戶有設定生日月份時只在該月份配對；未設定則不篩選
+                if (shouldSkipBirthdayPlan(rateGroup.category)) {
+                    continue;
                 }
+
+                // 童樂匯方案只對符合資格的用戶配對
+                if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
+                    continue;
+                }
+
+                // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
+                if (!isRateGroupInLevel(card, rateGroup, levelData)) {
+                    continue;
+                }
+
+                // 滿額門檻 minSpend/maxSpend：金額 < minSpend 或 amount >= maxSpend
+                // 時此槽不符資格——純粹不匹配，不貢獻此活動回饋，也不退回 basic
+                // （退回 basic 的邏輯已移除：用戶會用另一槽的 maxSpend 負責未滿門檻
+                // 的回饋，退回 basic 會跟那槽打架、產生重複結果。見
+                // docs/project/cross-slot-ref-and-minspend-spec.md 2026-07-16 更正）。
+                if (rateGroup.minSpend && amount < rateGroup.minSpend) {
+                    continue;
+                }
+                if (rateGroup.maxSpend && amount >= rateGroup.maxSpend) {
+                    continue;
+                }
+
+                // 解析 rate 值（支援 {rate}、{specialRate} 等任意 levelSettings 欄位）
+                let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
+                let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
+
+                // Find the exact matched item name
+                const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
+
+                // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
+                // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
+                // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
+                const applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
+                console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
 
                 // Add this match to allMatches array
                 allMatches.push({
-                    rate: rate,
-                    cap: cap,
-                    matchedItem: matchedSpecialItem,
-                    matchedCategory: matchedCategory,
+                    rate: parsedRate,
+                    cap: applicableCap,
+                    matchedItem: exactMatch,
+                    matchedCategory: rateGroup.category || null,
                     matchedRateGroup: rateGroup
                 });
-            }
-        }
-
-        // If still no match and this is CUBE card, check generalItems
-        if (allMatches.length === 0 && card.id === 'cathay-cube') {
-            // CUBE card: check general items for 2% reward using index
-            let matchedGeneralItem = null;
-            let matchedGeneralCategory = null;
-
-            if (card.generalItems && card._itemsIndex) {
-                for (const variant of searchVariants) {
-                    const indexMatches = card._itemsIndex.get(variant);
-                    if (indexMatches) {
-                        const generalMatch = indexMatches.find(match => match.type === 'generalItem');
-                        if (generalMatch) {
-                            matchedGeneralItem = generalMatch.item;
-                            matchedGeneralCategory = generalMatch.category;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (matchedGeneralItem) {
-                allMatches.push({
-                    rate: levelSettings.generalRate,
-                    cap: null, // CUBE card has no cap
-                    matchedItem: matchedGeneralItem,
-                    matchedCategory: matchedGeneralCategory,
-                    matchedRateGroup: null
-                });
-            }
-        }
-        // For other level-based cards: if no match found, allMatches will be empty
-    } else {
-        // Handle cards without specialItems (or with empty specialItems)
-        // Get level settings if card has levels
-        let levelData = null;
-        if (card.hasLevels) {
-            const defaultLevel = Object.keys(card.levelSettings)[0];
-            const resolved = await resolveCardLevel(card, defaultLevel);
-            levelData = resolved.data;
-            selectedLevel = resolved.level; // Store selected level for display
-        }
-
-        // Check exact matches for all search variants using index
-        if (card._itemsIndex) {
-            const processedRateGroups = new Set();
-
-            for (const variant of searchVariants) {
-                const indexMatches = card._itemsIndex.get(variant);
-                if (!indexMatches) continue;
-
-                const cashbackMatches = indexMatches.filter(match => match.type === 'cashbackRate');
-
-                for (const match of cashbackMatches) {
-                    const rateGroup = match.rateGroup;
-
-                    // Skip if already processed
-                    if (processedRateGroups.has(rateGroup)) continue;
-                    processedRateGroups.add(rateGroup);
-
-                    // Only consider active rates for cashback calculation (not upcoming)
-                    const rateStatus = getCachedRateStatus(rateGroup.periodStart, rateGroup.periodEnd);
-                    if (rateStatus !== 'active' && rateStatus !== 'always') {
-                        continue;
-                    }
-
-                    // 慶生月方案：用戶有設定生日月份時只在該月份配對；未設定則不篩選
-                    if (shouldSkipBirthdayPlan(rateGroup.category)) {
-                        continue;
-                    }
-
-                    // 童樂匯方案只對符合資格的用戶配對
-                    if (rateGroup.category === '切換「童樂匯」方案' && !isChildrenEligible) {
-                        continue;
-                    }
-
-                    // 級別專屬槽位（onlySlots）：不屬於目前級別的槽不配對
-                    if (!isRateGroupInLevel(card, rateGroup, levelData)) {
-                        continue;
-                    }
-
-                    // 滿額門檻 minSpend/maxSpend：金額 < minSpend 或 amount >= maxSpend
-                    // 時此槽不符資格——純粹不匹配，不貢獻此活動回饋，也不退回 basic
-                    // （見上方 hasLevels 分支同款判斷的註解與 spec 2026-07-16 更正）。
-                    if (rateGroup.minSpend && amount < rateGroup.minSpend) {
-                        continue;
-                    }
-                    if (rateGroup.maxSpend && amount >= rateGroup.maxSpend) {
-                        continue;
-                    }
-
-                    // 解析 rate 值（支援 {rate}、{specialRate} 等任意 levelSettings 欄位）
-                    let parsedRate = await parseCashbackRate(rateGroup.rate, card, levelData);
-                    let parsedCap = parseCashbackCap(rateGroup.cap, card, levelData);
-
-                    // Find the exact matched item name
-                    const exactMatch = rateGroup.items.find(item => item.toLowerCase() === variant);
-
-                    // 隱藏槽（hideInDisplay）與一般活動走完全相同的計算與匹配邏輯：
-                    // cashbackModel 空 → 預設行為；有值 → 以 model 為準（rate=0 表示
-                    // 「無指定通路加碼成分」，如純 basic+加碼 的一般消費槽）。
-                    const applicableCap = parsedCap !== null ? parsedCap : rateGroup.cap;
-                    console.log(`✅ ${card.name}: 匹配到 cashbackRates "${exactMatch}" (${parsedRate}%)`);
-
-                    // Add this match to allMatches array
-                    allMatches.push({
-                        rate: parsedRate,
-                        cap: applicableCap,
-                        matchedItem: exactMatch,
-                        matchedCategory: rateGroup.category || null,
-                        matchedRateGroup: rateGroup
-                    });
-                }
             }
         }
     }

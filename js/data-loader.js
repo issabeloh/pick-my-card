@@ -31,42 +31,6 @@ function buildCardItemsIndex(card) {
         });
     }
 
-    // Index specialItems (can be string array or object array)
-    if (card.specialItems && card.specialItems.length > 0) {
-        card.specialItems.forEach((specialItem, specialIndex) => {
-            const itemLower = (typeof specialItem === 'string' ? specialItem : specialItem.item || '').toLowerCase();
-            if (itemLower) {
-                if (!itemsMap.has(itemLower)) {
-                    itemsMap.set(itemLower, []);
-                }
-                itemsMap.get(itemLower).push({
-                    type: 'specialItem',
-                    index: specialIndex,
-                    specialItem: specialItem
-                });
-            }
-        });
-    }
-
-    // Index generalItems (for cards like CUBE - object with category keys)
-    if (card.generalItems && typeof card.generalItems === 'object') {
-        for (const [category, items] of Object.entries(card.generalItems)) {
-            if (Array.isArray(items)) {
-                items.forEach(item => {
-                    const itemLower = item.toLowerCase();
-                    if (!itemsMap.has(itemLower)) {
-                        itemsMap.set(itemLower, []);
-                    }
-                    itemsMap.get(itemLower).push({
-                        type: 'generalItem',
-                        category: category,
-                        item: item
-                    });
-                });
-            }
-        }
-    }
-
     card._itemsIndex = itemsMap;
     return itemsMap.size; // Return number of indexed items
 }

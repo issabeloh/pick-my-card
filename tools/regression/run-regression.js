@@ -42,7 +42,7 @@ catch (e) { ({ chromium } = require('playwright')); }
 const AMOUNT = '30000'; // 全清單統一金額（docs/ops/regression.md）
 const CHECKS = [
   { id: 1,  type: 'search', query: '日本',          guards: 'waterfall 海外三層 + levelSettings（DBS Eco 應出現）' },
-  { id: 2,  type: 'search', query: '禾乃川',        guards: 'DBS Eco specialItems + hideInDisplay 不干擾搜尋' },
+  { id: 2,  type: 'search', query: '禾乃川',        guards: 'DBS Eco 指定通路 + hideInDisplay 不干擾搜尋' },
   { id: 3,  type: 'search', query: 'Apple Pay',     guards: 'stacking 加總顯示（Sport 卡應為 5%）' },
   { id: 4,  type: 'search', query: '悠遊卡自動加值', guards: 'rate 排除型模型：溢出算 0（大戶卡）' },
   { id: 5,  type: 'search', query: 'meta廣告',      guards: 'rate=0 stacking 槽有匯出 + overseasCashback 特例' },

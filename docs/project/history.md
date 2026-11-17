@@ -4,6 +4,14 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-11-17 移除 specialItems／generalItems 資料形狀（站長核定）
+- 背景：早期分級卡有「卡片層級的通路名單 `specialItems`」（CUBE 另有 `generalItems`），級別只給一個 rate。後來所有卡改成「通路都在 cashbackRates、槽內用 placeholder」，匯出端不再輸出這兩欄，前端的分支成了約 340 行死碼
+- 風險：`calculateCardCashback` 的死分支和現役分支有 60 行近乎相同的迴圈，而且已經不一致（死分支的 cap 沒經過 `parseCashbackCap`、級別解析是內聯的另一套），接手的模型很容易改錯邊
+- 刪除範圍：`js/cashback-engine.js`（計算分支，含一個 `saveCardLevel` 呼叫點）、`js/data-loader.js`（索引）、`js/card-detail.js`（詳情頁分支）、`js/search-match.js`（搜尋與輸入建議）
+- 保留：`specialRate`／`generalRate` 是 placeholder 名稱，跟這件事無關，CUBE 還在用
+- 驗證：六支回歸全綠；`search-compare.js` 用線上資料比 1,955 個搜尋詞＋265 個畫面，改動前後零差異
+- CLAUDE.md 鐵則 4 改寫成一般的陣列判斷（原本只講 specialItems）；全貌見 `docs/reviews/cleanup-audit-2026-11-17.md` B1
+
 ## 2026-11-10 首訪轉址保留來源（GA 把 Google 自然搜尋算成 Direct）＋ 商家頁標題代換字
 - 症狀：GA4 自然搜尋 6→8 月 442→366，同期 Search Console 點擊翻倍
 - 根因：`index.html` 首屏腳本把全新訪客 `location.replace` 到 landing，跑在 GA 載入之前；landing 收到的 referrer 是自己網域，GA4 忽略 → (direct)。轉址也丟掉整串查詢字串（utm_*／gclid）

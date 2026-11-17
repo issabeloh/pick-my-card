@@ -285,18 +285,6 @@ function findMatchingItem(searchTerm, options = {}) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
         }
 
-        // Check specialItems for CUBE card
-        if (card.specialItems) {
-            checkItemMatches(card.specialItems, searchTerms, searchLower, allMatches, searchTerm);
-        }
-
-        // Check generalItems for CUBE card
-        if (card.generalItems) {
-            for (const [category, items] of Object.entries(card.generalItems)) {
-                checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
-            }
-        }
-
         // Check couponCashbacks merchant field
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
@@ -546,7 +534,7 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
 
 // 比較清單「以外」、真的有東西可看的卡有幾張（理由見 showMatchedButNoActivityMessage）。
 // 一般活動與領券活動要分開查：領券的商家欄不會進 _itemsIndex（那支索引只收
-// cashbackRates／specialItems／generalItems），只看索引會把「只有券的卡」算成 0，
+// cashbackRates），只看索引會把「只有券的卡」算成 0，
 // 於是明明別張卡有券，卻對使用者說「沒有卡片有這個商家的活動」。
 async function countCardsWithActivityOutside(itemNames, cardsToCheck, amount) {
     if (!cardsData || !Array.isArray(cardsData.cards)) return 0;
@@ -1004,7 +992,7 @@ function appendUnmetSpendNote(unmetCount) {
 // ============================================================
 // 輸入建議下拉選單（2026-10-14 站長要求）
 // 用戶不知道銀行怎麼命名（打「罰」想找「交通罰單」），邊打邊列出資料裡**真的存在**的名稱讓用戶挑：
-// 指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目、快捷選項名稱。
+// 指定通路商家（cashbackRates／領券商家）、一般消費排除項目、快捷選項名稱。
 // 只列名稱、不標類別（站長決定）。點選＝替用戶打好這個字（走 handleMerchantInput），不自動計算——
 // 跟快捷搜尋「只填入、不自動計算」同一個產品決策；快捷選項走 handleQuickSearch。
 // 效能：名稱表（約 2 千筆）只在 cardsData 換了才重建；每次輸入只做子字串掃描（< 1ms）。
@@ -1053,8 +1041,6 @@ function buildMerchantSuggestIndex() {
     });
     cards.forEach(card => {
         (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
-        (card.specialItems || []).forEach(i => add(i));
-        if (card.generalItems) Object.values(card.generalItems).forEach(items => (items || []).forEach(i => add(i)));
         (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
     });
     cards.forEach(card => (card.basicExclusions || []).forEach(i => {

@@ -235,7 +235,7 @@ Grep `titleParts`）：
 
 站長要求：詳情頁每一筆回饋（`.cashback-detail-item`）的資料排版要跟搜尋結果卡片一樣，用戶讀過一種就會讀另一種（產品目標「省腦力」）。差別只有少了「回饋金額」。
 
-- **唯一產生器** `renderRateCard(o)`（`js/card-detail.js`；2026-10-05 初版放在 cards-modals.js，10-06 搬回詳情頁模組）＋ `formatRateCardCap(cap)`。詳情頁七條路徑全走它：一般回饋（國內／海外／國內加碼／海外加碼）、分級卡 `renderCashbackRatesIndividually()`、分級卡 specialItems 區塊與無 cashbackRates 的級別卡、非分級卡、即將開始、領券、CUBE 四個區塊。**要加欄位改這支，不要在呼叫端拼 HTML**——之前就是七份各自拼的 HTML，順序與字樣各不相同
+- **唯一產生器** `renderRateCard(o)`（`js/card-detail.js`；2026-10-05 初版放在 cards-modals.js，10-06 搬回詳情頁模組）＋ `formatRateCardCap(cap)`。詳情頁七條路徑全走它：一般回饋（國內／海外／國內加碼／海外加碼）、分級卡 `renderCashbackRatesIndividually()`、無 cashbackRates 的級別卡、非分級卡、即將開始、領券、CUBE 四個區塊。**要加欄位改這支，不要在呼叫端拼 HTML**——之前就是七份各自拼的 HTML，順序與字樣各不相同
 - **對應關係**：卡名 → 活動類別（category；一般回饋用「國內一般消費」「海外加碼」等名稱，沒有類別就不長標題列）；右上徽章 → 「即將開始」；三欄 → 兩欄「回饋率｜回饋消費上限」；`✔ 單筆滿 NT$X`（`.spend-threshold-note`，同一個 class）；「匹配項目／活動期間／條件／登錄連結」→「適用通路／活動期間／條件／登錄連結」，順序相同；「即將結束」接在活動期間後面（同搜尋結果）
 - **CSS 直接沿用搜尋結果的 class**（`.card-details` `.detail-item` `.detail-label` `.detail-value` `.matched-merchant` `.spend-threshold-note`），`.rate-card*` 只補差異：2 欄、標題列、回饋率改用綠色（搜尋結果的綠色主角是回饋金額，這裡沒有那欄，由回饋率接手）、把 `.cashback-condition` 調成 `.matched-merchant` 字樣。規則放在 `.show-more-btn` 之後、檔尾密度區塊之前
 - **連帶改變**：加碼沒填 cap 時以前整行不顯示，現在固定顯示「無上限」（與 `resolveBonusComponent` 計算一致）；上限一律取整（iLEO 海外加碼由 NT$33,333.333 變 NT$33,333，同搜尋結果）；條件一律用 `renderConditionLine()` 可收合列，基本回饋與即將開始區也補呼叫 `initConditionClamps()`；類別、通路、期間改經 `escapeHtml()`（鐵則 3；通路展開走 textContent，不影響顯示）
@@ -392,7 +392,7 @@ Grep `titleParts`）：
   - ⚠️ **`fillOnly` 以外的呼叫端維持自動計算**：商家落地頁的 `?merchant=` 深連結（`{ noScroll: true }`）走的是同一支函數，那個情境使用者從外部連結進來、本來就預期看到結果。要改自動計算行為前先確認是哪一條路徑。
   - 🔴 **自動計算的範圍屬產品決策，要復原或擴大一律先問用戶**（沿用 2026-07-12 起的產品決策：計算由用戶按「計算」觸發，快捷搜尋按鈕與 `handleQuickSearch` 只填入關鍵詞不自動計算）。2026-09-03 把推薦活動這條路徑從「自動計算」改成「只帶入」也是站長決定的，不是實作方自行判斷——這條規則沒有因為那次改動而失效。
   - **class 名稱刻意不改**（仍是 `.spotlight-compare-btn`），GA4 的 `button_click` / `button_type: spotlight_compare` 事件才能延續、比對得出改版前後的差異。
-- **ⓘ「活動詳情」**（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap 解析；**分級卡的級別（2026-09-30 起）＝`resolveSpotlightPick` 選中的級別**（所有活動都用同一個級別解析），對不到才退回第一個級別，且回饋率旁標「(級別名)」（活動 rate/cap 含 placeholder 才標）；選中的活動排第一個，與小卡數字對應。**找不到活動 → 退回 sheet 編輯文字**。⚠️ 只比對 cashbackRates，通路在 specialItems 的分級卡會退回編輯文字。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）。
+- **ⓘ「活動詳情」**（`openSpotlightModal`）：顯示**卡片的真實活動**（不是 sheet 編輯文字）——用 card_id 找卡，`findSpotlightCardActivities(card, merchant)` 從 `card._itemsIndex` 找涵蓋該 merchant 的 cashbackRate；關鍵字來源：merchant 對到快捷 displayName 時用該選項 merchants，否則用 merchant 本身；先精確比對再退子字串。顯示真實 rate/cap/period/conditions/items；placeholder 用 parseCashbackRateSync/parseCashbackCap 解析；**分級卡的級別（2026-09-30 起）＝`resolveSpotlightPick` 選中的級別**（所有活動都用同一個級別解析），對不到才退回第一個級別，且回饋率旁標「(級別名)」（活動 rate/cap 含 placeholder 才標）；選中的活動排第一個，與小卡數字對應。**找不到活動 → 退回 sheet 編輯文字**。modal 內唯一動作按鈕是「馬上辦卡」（來自 `cardsData.cardApplyCtas[card_id]`，無連結不顯示）。
 
 **相關檔案**：index.html `#spotlight-section` `#spotlight-modal`（merchant/*.html 有同一組容器標記，卡片由 js 動態生成、不需同步改）；styles.css `.spotlight-*`；js/home-ui.js（`renderSpotlights` 一帶）。
 
@@ -428,7 +428,7 @@ Grep `titleParts`）：
 - **Search Hints**（`checkAndShowSearchHint()`，打字時依整個輸入詞查 `cardsData.searchHints`）：有文案就顯示，建議詞選填（沒有建議詞時只顯示文案，`.search-hint-message-only`，2026-10-08）。文案必填由 Apps Script 保證（見 data-pipeline.md 第 2 節 Search Hints），前端不做預設句。文案與建議詞都經 escapeHtml，建議詞走 `data-suggestion`
 - 零結果提示 `#exact-search-empty-hint`（「無完全一致項目，可取消勾選看相近結果」）：只在「勾選＋放寬後有結果」時顯示；輸入清空、匹配成功、快捷搜尋都會清掉
 
-- **輸入建議下拉選單**（2026-10-14 站長要求，`setupMerchantSuggest()`／`getMerchantSuggestions()`，`js/search-match.js`）：打第 1 個字就列出資料裡**真的存在**的名稱——快捷選項名稱、指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目。目的：用戶不知道銀行怎麼命名（打「罰」→ 交通罰單、違規罰鍰…）。規則：子字串命中、開頭相符排前、同級短的在前、最多 8 筆；**不標類別**（站長決定）；命中字加粗。點選＝替用戶打好（走 `handleMerchantInput`），快捷選項走 `handleQuickSearch`，**不自動計算**（同快捷搜尋產品決策）。鍵盤 ↑↓／Enter／Esc；沒選建議直接 Enter 照常計算。**第一行固定是「搜尋「用戶打的字」」**（2026-10-17 站長要求，`.merchant-suggest-query`）：讓用戶知道直接搜自己打的也可以，點它／↓＋Enter＝照打的字計算；沒有任何建議時整個選單不出。中文輸入法選字中不更新。名稱表在 cardsData 或 quickSearchOptions 換了才重建。測試：`node tools/regression/merchant-suggest-test.js`
+- **輸入建議下拉選單**（2026-10-14 站長要求，`setupMerchantSuggest()`／`getMerchantSuggestions()`，`js/search-match.js`）：打第 1 個字就列出資料裡**真的存在**的名稱——快捷選項名稱、指定通路商家（cashbackRates／領券商家）、一般消費排除項目。目的：用戶不知道銀行怎麼命名（打「罰」→ 交通罰單、違規罰鍰…）。規則：子字串命中、開頭相符排前、同級短的在前、最多 8 筆；**不標類別**（站長決定）；命中字加粗。點選＝替用戶打好（走 `handleMerchantInput`），快捷選項走 `handleQuickSearch`，**不自動計算**（同快捷搜尋產品決策）。鍵盤 ↑↓／Enter／Esc；沒選建議直接 Enter 照常計算。**第一行固定是「搜尋「用戶打的字」」**（2026-10-17 站長要求，`.merchant-suggest-query`）：讓用戶知道直接搜自己打的也可以，點它／↓＋Enter＝照打的字計算；沒有任何建議時整個選單不出。中文輸入法選字中不更新。名稱表在 cardsData 或 quickSearchOptions 換了才重建。測試：`node tools/regression/merchant-suggest-test.js`
 
 ## 8. 「我的配卡組合」完整頁面「刷卡小抄」（2026-09-28 由 modal 改版；舊 modal 設計見 `docs/archive/ui-display.md-2026-09-28.bak`）
 
