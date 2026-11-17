@@ -500,8 +500,8 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
       把熱門搜尋表截斷。
   - 空框送出（GA4 的 `(not set)`）不列入——那是沒輸入，不是覆蓋缺口。
   - **「未覆蓋」＝全站所有卡片都沒有這個項目，與用戶選了哪幾張卡無關**（站長 2026-09-14 問過）：
-    `findMatchingItem()` 掃的是整個 `cardsData.cards`（`js/search-match.js:377`），比對範圍是每張卡的
-    `cashbackRates.items` ＋ `specialItems` ＋ `generalItems`（連隱藏 rate 也算），
+    `findMatchingItem()` 掃的是整個 `cardsData.cards`（`js/search-match.js`），比對範圍是每張卡的
+    `cashbackRates.items`（連隱藏 rate 也算）與領券商家，
     只要**任何一張卡**對得上 `has_match` 就是 true。所以這張表上的詞是真正的資料缺口，
     不會因為用戶剛好沒勾到那張卡而被誤記。
   - **剛標成已覆蓋的詞，「最近視窗未對到次數」不會馬上歸零**：來源是滾動 30 天，補好之前那些

@@ -21,7 +21,7 @@
 **嚴禁的反模式**：「用戶存的級別在目前 levelSettings 找不到」時，用預設值**顯示**是對的（防詳情頁當機），
 但**絕不可以順手把預設值 saveCardLevel() 存回去**——「找不到」常是暫時的（剛更新 cards.data 的瞬間、
 匯出短暫不完整），存回去會**永久抹掉**用戶真正的選擇且無法還原。levelSettings 之後含回該級別時會自己恢復。
-參考實作：`resolveCardLevel()`（script.js 尾段）——它**刻意不**呼叫 saveCardLevel。
+參考實作：`resolveCardLevel()`（`js/levels-payments.js`）——它**刻意不**呼叫 saveCardLevel。
 
 **「防當機」與「改寫記憶」是兩件事**：防當機靠「顯示時退回預設值」，不是「把記憶改寫成預設值」。修 bug 時不要把這兩件事重新綁在一起。
 
