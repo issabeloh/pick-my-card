@@ -21,7 +21,11 @@
 | `_redirects` | Cloudflare Pages 改寫規則：`/mappings` → 首頁（配卡組合頁；`_headers` 對它設 noindex） |
 | `_headers` | Cloudflare Pages 讀的回應標頭設定（安全標頭）。⚠️ CSP 在 `-Report-Only` 觀察模式（轉正條件見檔內註解）；HSTS 已上到一年，**日後新增任何用瀏覽器開的子網域前必讀該條註解**（沒有 HTTPS 會直接連不上且無回報） |
 | `firestore.rules` | Firestore 安全規則唯一正確版本（套用教學：`FIRESTORE-RULES-README.md`） |
-| `apps-script/` | Apps Script 備份（`cards-export.gs`＝主匯出程式 exportToJSON 的備份副本；⚠️ 實際執行版在 Google Sheets，改匯出邏輯兩邊必同步） |
+| `apps-script/` | Apps Script 原始碼（`cards-export.gs`＝主匯出程式 exportToJSON）。⚠️ **不是純備份**：`deploy.json` 列的 8 個檔（資料自動化 6 支＋活動快寫 `activity-writer.gs`／`ActivityWriter.html`）在 main 有變動時**會自動部署到線上**（見下一列）；`cards-export.gs`、`card-editor.gs`、`promo-editor.gs`、`term-unify.gs` 等不在名單上的**仍是手動貼進 Sheets**，改這些檔兩邊必同步 |
+| `tools/apps-script-deploy/`＋`.github/workflows/apps-script-deploy.yml`＋`apps-script/deploy.json` | main 上 `apps-script/` 變動 → GitHub Actions 把 deploy.json 列的檔推到線上 Apps Script（三道保護：檔名對照、不蓋線上手改、只動名單內的檔）。`cards-export.gs` 刻意不在名單（站長會在線上暫改 `GITHUB_BRANCH` 看預覽）。細節見 `apps-script/README.md`「自動部署」 |
+| `tools/activity-writer/` | 活動快寫工具原始碼。`apps-script/ActivityWriter.html` 是它的**生成檔、禁手改**（改完跑 `node tools/activity-writer/build-apps-script.js`，preflight 會擋不一致） |
+| `tools/build-logo-assets.js` | 品牌標誌資產生成器；`assets/images/` 的標誌檔**禁手改**，改常數後重跑（見 `docs/project/ui-display.md` 品牌標誌） |
+| `storage.rules`／`firebase.json`／`manifest.json` | Firebase Storage 規則（意見回報附圖；套用見 `FIRESTORE-RULES-README.md`）／Firebase CLI 設定（只管 `functions/`）／PWA manifest |
 | `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest` 每日回饋摘要；`sendLoginLink` 寄 Email 連結登入信；`guardSignup`／`guardEmails` 註冊與寄信把關）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
@@ -34,7 +38,7 @@
 1. `?v=` 一律是 `dev` 佔位、**任何情況都不要手動 bump**（2026-07-21 起版本號由 Cloudflare Pages 部署時執行 `tools/deploy-version.sh` 注入 commit hash；repo 內出現時間戳＝違規，preflight 會擋）
 2. 改了 `cards.data` → 同步改 `cards.version`（任何不同短字串，建議 `YYYYMMDD-N`）
 3. commit 前跑 `bash tools/preflight.sh`——上面兩條＋禁用模式它都會機械檢查，**輸出要貼進回報**
-4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（playwright 用環境預裝的，**不必 npm install**；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`
+4. 改了計算/搜尋/顯示邏輯 → 跑自動化回歸：`node tools/regression/run-regression.js`（playwright 用環境預裝的，**不必 npm install**；改動**前**先跑一次確認綠燈。差異→exit 1）。**資料與時鐘都凍結**（讀 `tools/regression/fixture.data`，不讀線上 cards.data），所以改 `cards.data` 不會讓回歸變紅、也不需要重拍基準；任何差異都代表程式行為變了。語義與凍結資料的重拍時機見 `docs/ops/regression.md`。改了配卡組合頁（`js/mappings-page.js`、配卡載存）→ 另跑 `node tools/regression/mappings-page-test.js`；改了詳情頁回饋卡（`renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」）→ 另跑 `node tools/regression/card-detail-test.js`；改了登入／刪除帳號（`js/auth-user-data.js`）→ 另跑 `node tools/regression/delete-account-test.js`。測試的 Firebase 替身漏了 `index.html` 新 import 的名字時，`tools/lib/firebase-stub-guard.js` 會當場補洞並印警告，看到警告就去替身補上實作。改搜尋／計算邏輯另可用 `node tools/regression/search-compare.js --base <ref> --ui` 做改動前後的大量搜尋詞比對。完整「改什麼 → 跑哪支測試」對照表見 `docs/ops/regression.md`
 5. 改了 `index.html` → 跑 `node tools/build-merchant-pages.js` 重新生成商家頁，生成結果一起 commit。preflight 顯示「⚠️ 卡片清單落後 cards.data」是資料匯出造成的落後，部署時會自動重生，**不用處理**；顯示「❌ 版面不一致」才要重新生成
 6. 收尾串成一個指令：`bash tools/preflight.sh && git add -A && git commit … && git push -u origin <分支>`，不要拆成三、四次呼叫
 
@@ -61,9 +65,9 @@
 
 ## 大檔案使用規則（防上下文塞爆，依據見 docs/ops/diagnosis.md）
 
-- `js/*.js`（13 檔，單檔 600–1,850 行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（單段 ≤400 行；這一步需要的區段一次讀齊，不要 30 行 30 行分次讀）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
-- `cards.data`（488KB base64 單行）與 `tools/regression/fixture.data`（回歸測試的凍結副本，同格式）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）。jq 寫不出來的分析：`base64 -d cards.data > <scratchpad>/cards.json` 後用 python 處理，**解碼結果不得直接印到輸出**
-- `styles.css`（11,100 行）/ `index.html`（1,750 行）：同樣先 Grep 再讀區段
+- `js/*.js`（13 檔，單檔數百到兩千多行）：先照專案地圖挑對模組檔，Grep 該檔頂部區塊目錄關鍵字（如 "Placeholder 解析"、"wallet stack"、"我的額度相關功能"）拿行號，再 Read 指定 offset/limit（單段 ≤400 行；這一步需要的區段一次讀齊，不要 30 行 30 行分次讀）；不確定在哪檔就 `Grep path=js/` 全模組搜。舊文件裡的 `script.js:行號` 引用＝拆分前快照，一律用 Grep 關鍵字重新定位
+- `cards.data`（數百 KB 的 base64 單行）與 `tools/regression/fixture.data`（回歸測試的凍結副本，同格式）：**永遠不 Read**。查內容：`bash tools/cards-query.sh '<jq 運算式>'`（自動解碼＋截斷長輸出）。jq 寫不出來的分析：`base64 -d cards.data > <scratchpad>/cards.json` 後用 python 處理，**解碼結果不得直接印到輸出**
+- `styles.css`（上萬行）/ `index.html`（近兩千行）：同樣先 Grep 再讀區段
 - 廣度未知的搜尋（不確定在哪幾個檔）→ 派 `Explore` subagent，主對話只收結論＋檔案:行號（→ `docs/ops/dispatch.md`）
 - `docs/project/` 領域檔：先 `grep -n '^## ' <檔>` 看節標題＋行號，**只讀與任務相關的節**（鐵則括號裡的「第 N 節」即節編號）；教訓記錄區一律連帶讀
 - 文件裡的行號都是快照、會漂移：**以 Grep 關鍵字為準**，行號只當起點
@@ -95,4 +99,4 @@
 - **預覽部署只認 `preview/*` 分支**（站長的 Cloudflare Pages 設定；`claude/*` 工作分支推了**不會**有預覽）：要給站長看效果 → 從工作分支開或更新 `preview/<主題>` 並 push。需要真實資料時，請站長把 Apps Script `cards-export.gs` 的 `GITHUB_BRANCH` 暫時改成該 preview 分支再匯出，看完改回 `main`
 
 ---
-**更新日期**：2026-11-12（效率審計後修訂；改寫前版本在 `docs/archive/CLAUDE.md-2026-11-12.bak`）
+**更新日期**：2026-11-17（清理稽核後修訂：補專案地圖漏列項目、數字改不寫精確值；2026-11-12 改寫前版本在 `docs/archive/CLAUDE.md-2026-11-12.bak`）

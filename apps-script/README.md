@@ -3,7 +3,8 @@
 此資料夾存放 Google Sheets Apps Script 專案的程式備份副本，目前涵蓋兩個**不同**的 Sheet 專案：
 **「PMC 管理系統」**（cards.data 匯出／權益監控／權益解析）與 **「PMC數據集中」**
 （GA4+GSC+Clarity 分析同步，見 `pmc-analytics-sync.gs`）。
-**實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
+**實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步；
+但 `deploy.json` 列的檔案在 main 變動後會由 GitHub 自動推上去（見「自動部署」一節），其餘仍是手動貼。
 
 ## 匯出主程式（`cards-export.gs`）
 
@@ -227,6 +228,19 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 
 假試算表測不到的三件事，請在真的表上各看一眼：寫進空槽後 `periodStart_N`／`periodEnd_N` 是**日期**（靠右對齊）不是文字；
 補上的 `period_N` 公式顯示出期間；新戶新增的那一列 `active` 是勾選框、`bonus_rate` 是數字。
+
+## 用詞統一（`term-unify.gs`，2026-10-14 新增）
+
+**用途**：站長在「PMC 管理系統」的「統一詞」工作表維護商家統一寫法（品牌原大小寫、中英不空格、臺→台；欄位＝統一詞／其他寫法／搜尋別名／備註），這支把表套回試算表本身，並檢查寫法有沒有分岔。
+**安裝**：貼進「PMC 管理系統」專案（不在 `deploy.json` 名單上，維持手動貼）。`cards-export.gs` 與自動化檔的 `benefits-parser.gs`（`pmcUnifyList_`，同規則各一份）也讀同一張統一詞表。
+
+| 函數 | 做什麼 |
+|---|---|
+| `previewTermUnify` | 只看不改：把「會改哪些格、改前改後」寫進「用詞統一預覽」工作表 |
+| `applyTermUnify` | 預覽沒問題後真的改（整項等於某個寫法才換；忽略大小寫／空白／全半形／臺台；MerchantPages 刻意不掃），改完預覽表標「已套用」 |
+| `termConsistencyIssues_` | 寫法一致性檢查，`exportToJSON` 每次匯出自動跑，同一個名字有兩種以上寫法就跳提醒、不擋匯出 |
+
+使用順序：`previewTermUnify` → 看過 → `applyTermUnify` → 再跑一次 `exportToJSON`。設計背景與為什麼要在源頭統一見 `docs/project/data-pipeline.md` 的「統一詞」（12d）。
 
 ## pmc-analytics-sync 完整同步腳本（`pmc-analytics-sync.gs`，2026-07-22 新增）
 

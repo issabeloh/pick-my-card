@@ -11,7 +11,7 @@
 - 開始需要「取捨」而不是「執行」：兩個規則都對但互相擠壓，要決定犧牲哪個
 
 **正例**：haiku scout 回報 `parseCashbackRate` 在 script.js:800，實際 Grep 是 1,100 一帶——定位錯 1 次，下次同類搜尋直接派 sonnet。
-**反例**：builder 跑 preflight 失敗，原因是自己忘了跑 update-version.sh——這是流程沒走完，不是能力不足；補跑即可，**不升級**。升級是用來對付「能力邊界」，不是用來逃避「沒照 checklist」。
+**反例**：builder 跑 preflight 失敗，原因是自己改了 index.html 卻忘了跑 `node tools/build-merchant-pages.js`（preflight 報「版面不一致」）——這是流程沒走完，不是能力不足；補跑即可，**不升級**。升級是用來對付「能力邊界」，不是用來逃避「沒照 checklist」。
 
 ## 2. 何時算真的完成
 

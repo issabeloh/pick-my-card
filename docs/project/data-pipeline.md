@@ -556,10 +556,8 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 所以差異只會是生成邏輯本身的差異。⚠️ 這不改變「實際執行版在 Sheets」：
 改了 `cards-export.gs` 仍然必須把整份貼回 Sheets，否則下次匯出會用舊邏輯蓋掉。
 
-**待清理**：`promos.css` 前段還留著舊卡片版型的死碼（`.promo-card-toggle`／
-`.promo-card-detail`／`.promo-card-header`／`.promo-card-mainline`／
-`.promo-quick-highlight`／`.promo-gift-thumb`／`.promo-card-info-btn` 等），對應的 class 已經不再出現在
-生成的 HTML 裡。留著不影響畫面，下次動這支 CSS 時應一併刪掉。
+**已完成**：`promos.css` 舊卡片版型的死碼（`.promo-card-toggle`／`.promo-card-detail` 等）已於
+2026-09-21 清完（見本檔教訓記錄 2026-09-21 條與 `promos.css` 內的記錄），不用再處理。
 
 ### 9b. 站長推薦＋行李箱專區（2026-09-23）
 

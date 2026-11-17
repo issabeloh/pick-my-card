@@ -1,7 +1,7 @@
-# 回饋計算與搜尋引擎（script.js 核心邏輯）
+# 回饋計算與搜尋引擎（js/ 核心邏輯）
 
-> 改「搜尋、回饋計算、匹配邏輯」前必讀。行號是 2026-07-11 快照，可能漂移——
-> **一律先 Grep 關鍵字定位**（script.js 檔案頂部有區塊目錄），行號只當參考。
+> 改「搜尋、回饋計算、匹配邏輯」前必讀。舊的 `script.js:行號` 引用已隨 2026-07-20 拆分全部換成模組檔與函式名，文中若還有行號都只是快照——
+> **一律先 Grep 關鍵字定位**（`js/` 各模組檔頂部有區塊目錄；計算在 `js/cashback-engine.js`，匹配在 `js/search-match.js`）。
 
 ## 1. Placeholder 解析系統
 
@@ -50,7 +50,7 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 `isRateGroupInLevel()`（js/cashback-engine.js），新增任何「逐槽列出活動」的路徑都要走它，否則會出現
 「詳情頁有、搜尋沒有」。槽號用 `.slot`（Sheet 真實槽號）。
 
-## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
+## 3. 搜尋計算流程（`calculateCardCashback`，`js/cashback-engine.js`）
 
 單一路徑（2026-11-17 起；以前「有 specialItems 的分級卡」另有一條分支，已隨該資料形狀移除）：
 1. **分級卡（hasLevels）**：先用 `resolveCardLevel()` 取 levelData → 查 cashbackRates 並把 levelData 傳給解析函數
@@ -70,7 +70,7 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 - 還沒併進這三步的路徑（各自直接拿詞去算，第二階段再處理）：行動支付詳情／比較（`levels-payments.js`）、配卡組合頁重算（`mappings-page.js`）；停車、付款方式、導購連結用另一套嚴格比對（`merchantMatchesStrict`）
 - **改搜尋／計算邏輯前後一律跑 `node tools/regression/search-compare.js`**（加 `--ui` 連畫面一起比），看「進行中結果變了／即將開始變了」是不是 0，其餘差異逐條確認（見 docs/ops/regression.md）
 
-## 4. findMatchingItem 搜尋範圍（約 script.js:1215-1400）
+## 4. findMatchingItem 搜尋範圍（`js/search-match.js`）
 
 搜尋涵蓋：cashbackRates items、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
 
@@ -125,12 +125,12 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
     - 基本層（Layer 1）：`applyBase = model.includes('basic') || model.includes('overseasCashback')`（海外 model 用 `basic` 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。例：`rate+basic` 加基本；`rate+domesticBonusRate`（沒寫 basic）**不加**基本。
       - **注意 `applyBase`（要不要加基準）與 `isOverseas`（基準取哪個值）是兩個 flag，兩者都必須認 `overseasCashback`**——否則 `rate+overseasCashback` 會「加了基準層、卻用國內基準值」，少算海外基準（2026-07-21 修正的 bug 就是 `isOverseas` 漏認 `overseasCashback`，見上方 token 說明與教訓記錄）。
     - 注意「單獨 `rate`」與「留空」不走 stacking、不受此 gate：單獨 `rate`＝排除型（cap 內 rate、溢出 0，不加 basic）；留空＝簡單路徑（cap 內 rate、溢出 basic）。
-  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這些 flag（含 `isOverseas`——三處的 `isOverseas = includes('overseasBonusRate') || includes('overseasCashback')` 也必須同步）。呼叫端（約 script.js:4040 附近）算 `stackedApplyBonus`/`stackedApplyBase`／`isOverseasModel` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
+  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這些 flag（含 `isOverseas`——三處的 `isOverseas = includes('overseasBonusRate') || includes('overseasCashback')` 也必須同步）。呼叫端（`calculateCardCashback()` 內）算 `stackedApplyBonus`/`stackedApplyBase`／`isOverseasModel` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
   - 背景：舊版無條件加卡片級加碼，與「model 字串列出所有適用成分」的文法矛盾；ctbc-uniopen 改採明確槽＋跨槽引用後第一次觸發（slot1 `rate+basic` 被誤加 dbr）。詳見 `docs/project/cross-slot-ref-and-minspend-spec.md` 功能三。
   - **⚠️ 別再引用「線上 0 張卡受影響」這個數字**（2026-08-16 更正）：那是用舊 `cards.data`（20260713）掃出來的，當時 main 已到 20260716。**實際影響 9 槽**——uniopen 5 槽＋dbs-eco 4 槽（eco 品牌 12.5→10%、海外 7.5→5%，對照官網＝修正舊引擎灌水，已由資料擁有者確認）。改 stacking gate 這類邏輯**不是零風險改動**，影響範圍要用當下最新 `cards.data` 重掃。
-- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
+- `calculateLayeredCashback()`（waterfall，`js/cashback-engine.js`）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
 - 簡單路徑（無加碼卡的空白預設）：cap 內 rate_N、溢出 basicCashback
-- 選擇邏輯（約 script.js:3554 `const cashbackModel = matchedRateGroup?.cashbackModel`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
+- 選擇邏輯（`calculateCardCashback()` 內 `const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
 
 **共用邏輯**（2026-07-06 整併完成，改動時不要再複製一份）：
 - `getOverflowRate(card)`：簡單路徑與 findUpcomingActivity 共用的溢出率＝`basicCashback`（2026-07-12 移除 `meta廣告/google廣告 → overseasCashback` 寫死特例：全部廣告槽位已改用明確 cashbackModel、走 stacking，不再進簡單路徑；海外與否一律由 cashbackModel 決定）
@@ -138,16 +138,16 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 - 領券活動的溢出直接用 `basicCashback`（與 getOverflowRate 現值等價；不共用只是避免依賴，程式內有註解）
 - 無匹配 fallback：`buildBasicCashbackResult(card, amount)`（**只算 `basicCashback`，不加 `domesticBonusRate`**——2026-10-13 站長決定；國內加碼只在 cashbackModel 明確列出的槽才算）；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
-**計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
+**計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（`js/results-display.js`）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
-**分層計算的觸發**（約 script.js:2186-2208）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
+**分層計算的觸發**（`calculateCardCashback()` 內）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
 
 **跨槽引用 `rate_N`**（2026-07-16 起，設計決策見 `docs/project/cross-slot-ref-and-minspend-spec.md`）：
 - 只在 stacking（`+`）分支有效，寫成裸 `rate_N`（無大括號），如 `rate+rate_5+rate_1+basic`。N＝同卡 `card.cashbackRates` 陣列的 1-based 槽位編號。
 - 解析為讀 `card.cashbackRates[N-1]` 的原始 rate/cap，當成獨立一層加進 stacking（自己吃自己的 cap，作用於全額）——**非遞迴**，不會執行被引用槽自己的 cashbackModel，所以不會循環引用、不會重複算 basic。
 - 與 `{rate_1}`（大括號、在 rate/cap **值欄位**、hasLevels 卡讀 levelSettings）是完全不同的兩套語法，不衝突。
 - `waterfall`（`>`）與裸 `rate` 分支不支援，偵測到會 `console.error` 並忽略該 token（不會靜默算錯）。
-- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（約 script.js:3317-3364）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
+- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（`js/cashback-engine.js`）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
 - **定位方式（2026-07-16 更正）**：`rate_N` 用 Sheet 真實槽號 `.slot` 定位（`findRateGroupBySlot()`），不是陣列位置——中間跳號（如 slot 1,3,5）時陣列位置會漂移，slot 號不會。相容：若這張卡的 `cashbackRates` 都沒有 `.slot` 欄（舊 `cards.data` 尚未重匯出），退回舊的陣列位置 `[N-1]` 邏輯。匯出端見 `apps-script/cards-export.gs` 的 `rateObj.slot = j`。
 - 安全網：`tools/check-cross-slot-refs.js`（`tools/preflight.sh` 會跑）掃 `cards.data` 抓引用不存在槽的 `rate_N`，擋 commit；同樣優先用 `.slot` 驗證存在，無 `.slot` 欄退回陣列長度。
 
@@ -184,8 +184,8 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 
 ## 8. 性能機制（改邏輯時不要破壞）
 
-- **Items Index**（約 script.js:365-426）：載入時為所有卡建 Map 索引（cashbackRates 的 items；`buildCardItemsIndex()`，`js/data-loader.js`）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
-- **Rate Status Cache**（約 script.js:192-202）：`rateStatusCache` Map 快取活動期間狀態，`calculateCashback()` 開始時清空，用 `getCachedRateStatus()` 不要直接叫 `getRateStatus()`
+- **Items Index**：載入時為所有卡建 Map 索引（cashbackRates 的 items；`buildCardItemsIndex()`，`js/data-loader.js`）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
+- **Rate Status Cache**（`js/core-utils.js`）：`rateStatusCache` Map 快取活動期間狀態，`calculateCashback()` 開始時清空，用 `getCachedRateStatus()` 不要直接叫 `getRateStatus()`
 - **DocumentFragment**：displayResults / displayCouponCashbacks 批量 DOM，維持單次 reflow
 - 熱迴圈（每卡片/每項目路徑）不要為了 log 做額外計算（如 `.map().join()`）
 
