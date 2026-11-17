@@ -617,21 +617,21 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 這頁是辦卡轉換的主要入口，但原本沒有任何一句話交代「按鈕去哪、資料給誰、本站怎麼賺錢」
 （唯一的揭露在 /privacy 5.2）。全部由 `generatePromosPageHtml()` 生成，樣式在 `promos.css` 最後一段。
 
-- **信任區塊**（`pmcRenderTrust_`，`<details class="pmc-trust" id="trust">`）：引言下方、頁內索引列上方。
-  **版面＝一行字＋灰底**（站長 2026-11-17 從三案選定；第一版「三個勾勾＋藍框」被評為不好看）：
-  盾牌＋`PMC_TRUST_LINE`（「連結防竄改・全站加密・不經手個資」）＋「防護說明 ▾」，點開是 `PMC_TRUST_QA` 六題問答。
-  同一份 `PMC_TRUST_QA` 也輸出成 `<head>` 的 FAQPage JSON-LD（`pmcBuildTrustJsonLd_`），兩邊不會分岔。
-  - 站長指定：那一行**只講資安防護**，不提分潤、也不提按鈕去向（這兩件事留在問答裡）。
-    16 個字是量過的：360～390px 都是一行，再長會折行。
+- **信任列**（`pmcRenderTrust_`，`<a class="pmc-trust" id="trust">`）：引言下方、頁內索引列上方。
+  **定案＝一行字＋灰底＋連到 FAQ**（站長 2026-11-17）：盾牌＋`PMC_TRUST_LINE`
+  （「不經手個資・全站加密・連結防竄改」）＋「防護說明 ›」，整列是連結，另開分頁到
+  `/faq?category=安全`，FAQ 頁會直接選好那個分類（`faq.js` 的 `pendingUrlCategory`）。
+  - **完整說明不在這頁**：由站長寫在 Sheets 的 FAQ 工作表、分類填「安全」。分類名稱要跟
+    `PMC_TRUST_FAQ_CATEGORY` 一字不差；對不上（或分類還沒建立）時 FAQ 頁停在「全部」，不會壞。
+  - 改過三版，別走回頭路：①三個勾勾＋藍框＋原地展開（站長：不好看）②一行字＋原地展開六題問答＋
+    FAQPage JSON-LD ③現在這版——說明只維護一份，這頁也不必變長。promos 頁因此**沒有** FAQPage JSON-LD。
+  - 那一行**只講資安防護**，不提分潤、也不提按鈕去向（站長指定）。16 個字是量過的：360～390px 都是一行。
   - 灰底是必要的：白底時跟上下文字連成一片、分不出這是一塊。用 `--pmc-tint`；引言同日改成沒有底色的
     一句話（`.promos-hero-lede`），所以不會兩塊灰疊在一起。
-  - 「申辦連結安全嗎？網站做了哪些防護？」那一題**刻意寫到技術名詞的層級**（站長：一般人看不懂沒關係，
-    寫到這個程度才看得出真的有做）。五項都對得到實作，改了實作要回來改文案：固定網址、只收 http/https
-    ＝`pmcSanitizeUrl_`；網域核對＝`validateReferentialIntegrity_`；base-uri／frame-ancestors／
-    X-Frame-Options／HSTS＝`_headers` 的**強制版**標頭（不是 `-Report-Only` 那條）；
-    noopener noreferrer＝申辦連結的 `rel`。🔴 `_headers` 那幾條若被拿掉或降回只回報，這一題就變成不實聲明。
-  - 「清單順序依實際回饋率排行」是站長 2026-11-17 指定的說法；站長推薦怎麼選，同日裁定不在這裡說明。
-  - 第六題的回報方式寫「到首頁點擊頭像，按『回報錯誤』」——這一頁的 header 沒有頭像，所以要帶「到首頁」。
+  - 🔴 **FAQ「安全」分類裡的資安聲明都對得到實作，改了實作要請站長改 FAQ**：固定網址、只收 http/https
+    ＝`pmcSanitizeUrl_`；每次更新逐一核對網域＝`validateReferentialIntegrity_`；base-uri／frame-ancestors／
+    X-Frame-Options／HSTS＝`_headers` 的**強制版**標頭（不是 `-Report-Only` 那條）；noopener noreferrer＝
+    申辦連結的 `rel`。`_headers` 那幾條若被拿掉或降回只回報，FAQ 那一題就變成不實聲明。
 - **按鈕去向**（`pmcApplyDest_` → `.promo-apply-dest`）：清單卡的動作列、站長推薦的申辦鈕下方各一行。
   **每次匯出都從當下的連結網址重新判斷**，Sheets 換連結它就跟著變，不必多填欄位。
   站長 2026-11-17 確認連結只有兩種，而且最後都到銀行官網申辦：
@@ -657,7 +657,7 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 - **搜尋涵蓋獎勵與摘要**（`promos.js` 的 `promoRewardText`）：原本只比卡名與適用通路，搜「行李箱」
   「氣炸鍋」是 0 筆。這幾段文字本來就顯示在卡片上，命中只標色、不代為展開。
 - **GA4 事件**（`promos.js` 的 `track()`）：`promos_detail_open`（只記親手點的）、`promos_feat_open`、
-  `promos_filter`、`promos_search`（停手 1.2 秒才送，帶 `results`，0＝找不到）、`promos_trust_open`。
+  `promos_filter`、`promos_search`（停手 1.2 秒才送，帶 `results`，0＝找不到）、`promos_trust_open`（點了信任列）。
 - **顏色減量**（2026-11-17 站長確認，**取代 9a 的糖果色方案**）：全頁只留三個有意義的顏色——
   藍＝可以按（申辦鈕、選取中的篩選鈕）、綠＝你拿到的（獎勵）、紅＝快截止。類型徽章
   （`.promo-type-badge`／`.promo-sub-type`／`.pmc-kind`）三種一律用 `--pmc-candy-slate-*` 灰，靠文字分辨；

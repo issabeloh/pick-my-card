@@ -371,8 +371,8 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
     }
   });
 
-  // 申辦連結的網域把關（2026-11-17）：新戶活動頁對用戶聲明「連結只會前往發卡銀行官網或
-  // Money101、每次更新都會逐一核對」，核對就在這裡。判斷與頁面上的去向標示共用 pmcApplyDest_，
+  // 申辦連結的網域把關（2026-11-17）：FAQ「安全」分類對用戶聲明「連結只會前往發卡銀行官網或
+  // Money101、每次更新都會逐一核對」（文案在 Sheets 的 FAQ 工作表），核對就在這裡。判斷與頁面上的去向標示共用 pmcApplyDest_，
   // 所以「這裡沒報」＝「頁面上不會出現『前往 <陌生網域>』」。
   // 只在卡片帶 website 時檢查——手動檢查用的精簡 reader 可能沒讀這一欄，沒有比對基準就不報。
   const cardById = {};
@@ -2852,64 +2852,25 @@ function pmcApplyDestHtml_(href, card, extraCls) {
     pmcEscapeHtml_(d.text) + '</span>';
 }
 
-// ---- 「安心申辦」說明區塊（2026-11-16）----
-// 這頁是辦卡轉換的主要入口，但原本整頁沒有任何一句話交代：按鈕去哪、資料給誰、本站怎麼賺錢、
-// 【大師加碼】是什麼。這四件事的唯一說明在 /privacy 5.2，沒有人會在申辦前去翻。
-// 同一份問答同時輸出成可見內容與 FAQPage JSON-LD（pmcBuildTrustJsonLd_），兩邊不會分岔。
-// a＝純文字答案（JSON-LD 用同一段）；link＝答案後面附的站內連結（選填）。
-// ⚠️ 文案裡的事實要跟程式一致：去向標示＝pmcApplyDest_、「逐一核對連結網域」＝
-//    validateReferentialIntegrity_ 裡的申辦連結檢查；那幾支改了，這裡要跟著改。
-//    「清單順序依實際回饋率排行」是站長 2026-11-17 指定的說法（實際規則見 pmcPromoSortKey_：
-//    首刷禮優先，再依回饋率、回饋金額）；站長推薦怎麼選不在這裡說明（同日裁定）。
-// 收合時那一行字（站長 2026-11-17：只講資安防護，不提分潤、也不提按鈕去向）。
-// 16 個字是量過的：390px 的手機剛好一行，再長就會折行。
-const PMC_TRUST_LINE = '連結防竄改・全站加密・不經手個資';
-const PMC_TRUST_QA = [
-  { q: '點「立即申辦」會去哪裡？',
-    a: '都是到發卡銀行官網的線上申辦頁，每顆按鈕下方有標示走哪一種：「直達銀行官網」直接開啟銀行的申辦頁；「經 Money101 合作連結」會先經過合作平台 Money101 的追蹤網址，再自動轉到銀行官網。兩種都是另開新分頁。' },
-  // 這一題刻意寫到技術名詞的層級（站長 2026-11-17：一般人看不懂沒關係，寫到這個程度才看得出真的有做）。
-  // 每一項都對得到實作，改了實作要回來改這裡：
-  //   固定網址、只收 http/https → pmcSanitizeUrl_；網域核對 → validateReferentialIntegrity_；
-  //   base-uri／frame-ancestors／X-Frame-Options／HSTS → repo 根目錄 _headers 的**強制版**標頭
-  //   （不是 -Report-Only 那條）；noopener noreferrer → pmcApplyLinkHtml_ 與 pmcRenderCardGroup_ 的 rel。
-  { q: '申辦連結安全嗎？網站做了哪些防護？',
-    a: '本站在連結與連線上做了五層防護。（1）連結防竄改：申辦連結是資料更新時直接寫進網頁的固定網址，只接受 http／https 格式；網站並以內容安全政策（CSP 的 base-uri 指令）禁止任何程式改寫整頁連結的指向。（2）網域核對：每次更新資料，系統都會逐一核對每個連結的網域，必須屬於該卡的發卡銀行或合作平台 Money101，不符就會被攔下確認。（3）全程加密：全站強制 HTTPS（HSTS，有效期一年），瀏覽器不會用未加密的連線開啟本站。（4）防偽裝嵌入：以 CSP 的 frame-ancestors 與 X-Frame-Options 禁止其他網站把本頁嵌進自己的頁面，防止點擊劫持。（5）分頁隔離：申辦頁另開新分頁時加上 noopener noreferrer，兩個分頁互相無法操控。到了申辦頁，也建議看一眼網址列，確認是該銀行的網域再填寫資料。' },
-  { q: '從這裡申辦，個人資料安全嗎？',
-    a: '本站不代辦信用卡，這一頁也沒有任何填寫申請資料的欄位。你的姓名、身分證字號、收入等申請資料，只會填在銀行自己的頁面上，本站看不到、也拿不到。點擊離開之後，資料由對方的隱私權政策規範。',
-    link: { href: '/privacy', text: '隱私權政策' } },
-  { q: '本站怎麼賺錢？會影響排序嗎？',
-    a: '部分申辦連結是推薦連結：你透過它完成申辦，本站可能獲得推薦報酬，這是本站能免費提供的營運來源之一，不會改變你的申辦條件。清單順序依實際回饋率排行，與有沒有報酬無關。' },
-  { q: '什麼是【大師加碼】？',
-    a: '標有【大師加碼】的活動，是透過本站（信用卡回饋大師）連結申辦才有的專屬首刷禮或加碼活動。只要從本頁的「立即申辦」按鈕進入申辦，並完成該活動「達成條件」列出的每一項，就能獲得。這類連結本站會獲得推薦報酬。' },
-  { q: '這些活動資料可靠嗎？',
-    a: '活動內容整理自各發卡銀行公開的活動辦法，清單上方標示最近一次的資料更新日期。銀行可能隨時調整名額、期間或條件，實際內容以銀行官方公告為準；發現不一致，歡迎到首頁點擊頭像，按「回報錯誤」告訴我們。',
-    link: { href: '/terms', text: '使用須知與免責聲明' } }
-];
+// ---- 信任列（2026-11-16 建立；2026-11-17 定案為「一行字＋灰底＋連到 FAQ」）----
+// 這頁是辦卡轉換的主要入口，要讓人在按「立即申辦」之前看到一句資安上的交代。
+// 只有一行：盾牌＋PMC_TRUST_LINE＋「防護說明 ›」，整列是一個連結，連到 FAQ 頁並直接選好
+// 「安全」分類（faq.js 認 ?category=）。完整說明由站長寫在 Sheets 的 FAQ 工作表、分類填
+// PMC_TRUST_FAQ_CATEGORY 那兩個字——**兩邊的分類名稱要一字不差**，對不上時 FAQ 頁會停在「全部」。
+// 第一版是原地展開六題問答＋FAQPage JSON-LD，站長改成連到 FAQ：說明只維護一份、這頁也不必變長。
+// 16 個字是量過的：360～390px 的手機都是一行，再長就會折行。
+// 文字只講資安防護，不提分潤、也不提按鈕去向（站長 2026-11-17 指定）。
+const PMC_TRUST_LINE = '不經手個資・全站加密・連結防竄改';
+const PMC_TRUST_FAQ_CATEGORY = '安全';
 function pmcRenderTrust_() {
   const shield = '<svg class="pmc-trust-icon" viewBox="0 0 20 20" aria-hidden="true">' +
     '<path d="M10 2l6 2.2v4.6c0 3.9-2.5 7.2-6 8.7-3.5-1.5-6-4.8-6-8.7V4.2L10 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
     '<path d="M7.2 10.1l2 2 3.6-3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const qa = PMC_TRUST_QA.map(function (x) {
-    // 一題包一個 div：桌機排兩欄時，題目與答案才不會被拆到不同欄
-    return '      <div class="pmc-trust-item"><h3>' + pmcEscapeHtml_(x.q) + '</h3><p>' + pmcEscapeHtml_(x.a) +
-      (x.link ? ' <a href="' + pmcEscapeHtml_(x.link.href) + '">' + pmcEscapeHtml_(x.link.text) + '</a>' : '') + '</p></div>';
-  }).join('\n');
-  return '  <details class="pmc-trust" id="trust">\n' +
-    '    <summary class="pmc-trust-summary">' + shield +
+  // 另開新分頁：讀完說明關掉就回到原本看到一半的清單
+  return '  <a class="pmc-trust" id="trust" href="/faq?category=' + encodeURIComponent(PMC_TRUST_FAQ_CATEGORY) +
+    '" target="_blank" rel="noopener">' + shield +
     '<span class="pmc-trust-line">' + pmcEscapeHtml_(PMC_TRUST_LINE) + '</span>' +
-    '<span class="pmc-trust-more">防護說明<span class="promo-chevron" aria-hidden="true"></span></span></summary>\n' +
-    '    <div class="pmc-trust-body">\n' + qa + '\n    </div>\n' +
-    '  </details>\n';
-}
-function pmcBuildTrustJsonLd_() {
-  const ld = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: PMC_TRUST_QA.map(function (x) {
-      return { '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: x.a } };
-    })
-  };
-  return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
+    '<span class="pmc-trust-more">防護說明 ›</span></a>\n';
 }
 
 function pmcApplyLink_(p) {
@@ -3649,7 +3610,6 @@ function pmcPageTemplate_(o) {
 '<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
 '<script type="application/ld+json">\n' + o.webPageJsonLd + '\n</script>\n' +
-'<script type="application/ld+json">\n' + pmcBuildTrustJsonLd_() + '\n</script>\n' +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
@@ -3724,8 +3684,7 @@ function pmcPageTemplate_(o) {
 '    <p class="promos-hero-lede">新戶辦卡推薦！一次比較信用卡首刷禮、加碼回饋及刷卡金回饋，並排比較。</p>\n' +
 '  </section>\n' +
 '\n' +
-// 「安心申辦」說明（2026-11-16）：放在第一顆申辦鈕（站長推薦）之前。收合時只有一列，
-// 點開才是完整問答——首屏要留給獎勵，不能被說明文字佔掉。
+// 信任列（2026-11-16）：放在第一顆申辦鈕（站長推薦）之前，只有一行，連到 FAQ 的「安全」分類。
 pmcRenderTrust_() +
 // 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
 // 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。

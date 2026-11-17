@@ -2294,7 +2294,7 @@ a {
   margin-top: 1px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--pmc-blue-deep);
+  color: var(--pmc-label);   /* 2026-11-17 顏色減量：跟主活動的「活動詳情」同為深灰 */
   white-space: nowrap;
 }
 /* 附屬列的倒數徽章（在上排值的後面）要壓小：沿用主活動那顆 0.8rem 的樣式會比
@@ -3442,30 +3442,27 @@ mark.promos-search-hl {
 }
 
 /* ==========================================================================
-   安心申辦（2026-11-16）：信任區塊／按鈕去向／大師加碼說明
+   安心申辦（2026-11-16）：信任列／按鈕去向／大師加碼說明
    標記由 apps-script/cards-export.gs 生成（pmcRenderTrust_／pmcApplyDestHtml_／
    pmcRenderPromoDetail_）。⚠️ 這一段只有「新增」的 class——Sheets 還沒貼新版生成器時，
    匯出的是沒有這些標記的舊 HTML，這裡的規則一條都不會命中，舊版面不受影響。
    ========================================================================== */
 
-/* ---- 信任區塊：收合時就是一行字（盾牌＋一句話＋「防護說明」），點開是完整問答。
-   站長 2026-11-17 從三案選定「一行字」並指定灰底——白底時跟上下文字連成一片，分不出這是一塊。
-   灰用 hero 引言塊同一個 --pmc-tint（引言同日改成沒有底色的一句話，所以不會兩塊灰疊在一起）。 ---- */
+/* ---- 信任列：一行字＋灰底，整列是連到 FAQ「安全」分類的連結（站長 2026-11-17 定案）。
+   灰底是必要的——白底時跟上下文字連成一片，分不出這是一塊。用 hero 引言塊原本那個
+   --pmc-tint（引言同日改成沒有底色的一句話，所以不會兩塊灰疊在一起）。 ---- */
 .pmc-trust {
-  margin: 12px 0 4px;
-  border-radius: 10px;
-  background: var(--pmc-tint);
-}
-.pmc-trust-summary {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 12px 0 4px;
   padding: 10px 12px;
-  cursor: pointer;
-  list-style: none;
+  border-radius: 10px;
+  background: var(--pmc-tint);
+  text-decoration: none;
 }
-.pmc-trust-summary::-webkit-details-marker { display: none; }
-.pmc-trust-summary:focus-visible { outline: 2px solid var(--pmc-blue); outline-offset: 2px; border-radius: 10px; }
+.pmc-trust:hover { background: #eceef2; }
+.pmc-trust:focus-visible { outline: 2px solid var(--pmc-blue); outline-offset: 2px; }
 .pmc-trust-icon { flex: none; width: 18px; height: 18px; color: var(--pmc-blue-deep); }
 .pmc-trust-line {
   min-width: 0;
@@ -3477,47 +3474,14 @@ mark.promos-search-hl {
 .pmc-trust-more {
   margin-left: auto;
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
   font-size: 13px;
   font-weight: 700;
   color: var(--pmc-label);
   white-space: nowrap;
 }
-/* <details> 沒有 aria-expanded，箭頭翻轉要自己認 [open] */
-.pmc-trust[open] .pmc-trust-more .promo-chevron { transform: rotate(180deg); }
-.pmc-trust-body {
-  padding: 2px 14px 14px;
-  border-top: 1px solid #e5e7eb;
-}
-.pmc-trust-item h3 {
-  margin: 14px 0 4px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--pmc-ink);
-}
-.pmc-trust-item p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.75;
-  color: #4b5563;
-}
-.pmc-trust-item a {
-  color: var(--pmc-blue-deep);
-  font-weight: 600;
-  white-space: nowrap;
-}
 @media (max-width: 380px) {
   .pmc-trust-line { font-size: 12.5px; }
   .pmc-trust-more { font-size: 12.5px; }
-}
-@media (min-width: 900px) {
-  .pmc-trust-body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 32px;
-  }
 }
 
 /* ---- 引言：一句話、沒有底色（站長 2026-11-17 定稿）。用新 class，舊的 .promos-hero-intro

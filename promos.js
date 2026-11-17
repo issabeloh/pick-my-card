@@ -831,14 +831,11 @@
     });
   }
 
-  // 「安心申辦」說明是 <details>，開合交給瀏覽器；這裡只記「有人點開來看」。
-  // toggle 事件不冒泡，要直接掛在元素上。
+  // 信任列是一個連到 FAQ「安全」分類的連結（另開分頁）；這裡只記「有人點了」。
   function setupTrustTracking() {
     var trust = document.getElementById('trust');
     if (!trust) return;   // 舊版 HTML（Sheets 還沒貼新版生成器）沒有這一塊
-    trust.addEventListener('toggle', function () {
-      if (trust.open) track('promos_trust_open', {});
-    });
+    trust.addEventListener('click', function () { track('promos_trust_open', {}); });
   }
 
   // 「立即申辦」點擊 → GA4 button_click（promos.html 內嵌的精簡版 Firebase
