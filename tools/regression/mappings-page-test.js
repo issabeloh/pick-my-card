@@ -20,6 +20,7 @@
  */
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const REPO = path.resolve(__dirname, '..', '..');
+const { completeFirebaseStub } = require('../lib/firebase-stub-guard');
 // 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
 let chromium;
 try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
@@ -34,10 +35,11 @@ const META = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixture.json'), 'u
 // 已登入用戶；級別存在 cardSettings/<uid>_<cardId>（同正式站）
 const LEVELS = { 'cathay-cube': 'Level 3', 'yushan-unicard': 'UP選', 'sinopac-dawho': '大戶Plus等級', 'kgi-eslite': '黑卡' };
 
-function stub(url, guest) {
+function stub(url, guest) { return completeFirebaseStub(url, stubRaw(url, guest)); }
+function stubRaw(url, guest) {
   const R = 'Promise.resolve()';
   if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
-  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
+  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';
   if (url.includes('firebase-auth')) return `
     const USER = { uid:'testuid', email:'test@example.com', displayName:'測試用戶', photoURL:'', providerData:[{ providerId:'google.com' }] };
     const AUTH = { currentUser: USER };

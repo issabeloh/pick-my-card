@@ -20,8 +20,10 @@
  *   期限，日期一天天往前走，凍結資料裡的活動照樣會到期，結果一樣漂移。
  * - 要驗「線上資料有沒有把引擎弄壞」是另一件事，用 --live 跑（那是資料驗證，不是程式回歸）
  * - 攔截 gstatic 的 Firebase SDK 回傳替身模組：onAuthStateChanged 立刻回 null → 確定性進訪客模式
- *   ⚠️ index.html 的 import 清單一旦新增名稱，firebaseStub() 必須同步補上同名 export——
- *      ES module 找不到具名 export 會整支 script 失敗，全站等於沒載入（症狀是全部檢查掛掉）
+ *   ⚠️ index.html 的 import 清單一旦新增名稱，firebaseStub() 要同步補上同名 export——
+ *      ES module 找不到具名 export 會整支 script 失敗。漏補時 tools/lib/firebase-stub-guard.js
+ *      會自動補空函式並印警告（看到警告就來這裡補正式的 export）；配卡組合頁測試與刪除帳號
+ *      測試各有自己的替身，同樣經過這個補洞器
  * - 其餘外部請求全部 abort（廣告/字型/analytics 不影響測試也不外洩流量）
  * - localStorage 全空的訪客 + ?start（跳過 landing 轉址）+ ?debug=1（console.error 可見）
  * - 基準綁定的是「凍結資料的版本 ＋ 凍結日期」，不是線上 cards.version——兩者對不上時會示警
@@ -31,6 +33,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const REPO = path.resolve(__dirname, '..', '..');
+const { completeFirebaseStub } = require('../lib/firebase-stub-guard');
 // 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
 let chromium;
 try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
@@ -99,10 +102,11 @@ function startServer(useLive) {
 }
 
 // Firebase SDK 替身（依 index.html 實際 import 的符號提供；訪客模式只會用到 onAuthStateChanged）
-function firebaseStub(url) {
+function firebaseStub(url) { return completeFirebaseStub(url, firebaseStubRaw(url)); }
+function firebaseStubRaw(url) {
   const resolveP = 'Promise.resolve()';
   if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
-  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
+  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';
   if (url.includes('firebase-auth')) return `
     export function getAuth(){return {};}
     export function onAuthStateChanged(auth, cb){ setTimeout(() => cb(null), 0); }

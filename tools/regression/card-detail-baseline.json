@@ -1211,10 +1211,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "sinopac-dawho": {
     "card-basic-cashback": [
@@ -3472,10 +3469,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "firstbank-ileo": {
     "card-basic-cashback": [
@@ -4998,10 +4992,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "sinopac-dawho": {
     "card-basic-cashback": [
@@ -5315,10 +5306,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "tbb-chaotian": {
     "card-basic-cashback": [
@@ -5382,10 +5370,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "tbb-artfun": {
     "card-basic-cashback": [
@@ -7281,10 +7266,7 @@
      }
     ],
     "card-upcoming-cashback": [],
-    "card-coupon-cashback": [],
-    "consoleErrors": [
-     "console.error: Failed to load resource: net::ERR_FAILED"
-    ]
+    "card-coupon-cashback": []
    },
    "firstbank-ileo": {
     "card-basic-cashback": [
