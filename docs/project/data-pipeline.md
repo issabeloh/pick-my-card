@@ -245,7 +245,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 混用時不會報錯，活動會**被靜默濾掉**（看起來像「根本沒這活動」）：ASCII `-` < `/`，原始字串比較會把任何日期誤判成「即將開始」；`.split('-')` 遇 `/` 格式解析成 `Invalid Date`，最後被 `filterExpiredRates()` 整個濾掉（2026-07-03 教訓）。
 
-**規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
+**規則**：前端任何日期比較/解析，一律走 `taiwanDaysUntil()`（天數差）／ `getRateStatus()`（是否進行中）（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
 
 ## 9. promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
 

@@ -385,7 +385,7 @@ function ensureAuthSubscribed() {
 
             // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
             userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
-            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === (new Date().getMonth() + 1);
+            isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === getTaiwanMonth();
 
             // Load children eligibility flag (defaults to true if not set)
             isChildrenEligible = (userData && userData.isChildrenEligible != null) ? userData.isChildrenEligible : true;

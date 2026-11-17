@@ -243,12 +243,9 @@ function mpISO(d) {
     return s.includes('-') ? s : (typeof slashDateToISO === 'function' ? slashDateToISO(s) : s);
 }
 
+// 到期日當天＝0、已過期＝負數。算法在 core-utils 的 taiwanDaysUntil（台灣的今天）。
 function mpDaysLeft(end) {
-    const iso = mpISO(end);
-    if (!iso) return null;
-    const endDate = parseISODate(iso), today = parseISODate(getTaiwanToday());
-    if (!endDate || !today) return null;
-    return Math.round((endDate - today) / 86400000);
+    return taiwanDaysUntil(end);
 }
 
 // 配對 → 以商家分組。組序＝組內最小 order；組內依回饋率高→低。

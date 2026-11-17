@@ -51,12 +51,12 @@ function spotlightTotalPages() {
     return spotlightPages.length;
 }
 
+// 亮點卡「剩 N 天」的 N 把今天算進去：到期日當天＝1、已過期＝0 或負數。
+// （比 getDaysUntilEnd 的「當天＝0」多 1，是亮點卡一直以來的算法，刻意保留。）
+// 今天＝台灣的今天，走 core-utils 的 taiwanDaysUntil，不看裝置時區。
 function getSpotlightDaysLeft(deadline) {
-    if (!deadline) return null;
-    const end = new Date(deadline);
-    if (isNaN(end.getTime())) return null;
-    end.setHours(23, 59, 59, 999);
-    return Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+    const days = taiwanDaysUntil(deadline);
+    return days === null ? null : days + 1;
 }
 
 // 亮點卡的期限：一律用「這張卡在這個通路的真實活動期限」（Highlights 工作表的

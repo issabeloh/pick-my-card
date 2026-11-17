@@ -58,7 +58,9 @@
     var from = parseLocalDate(fromISO);
     var to = parseLocalDate(toDateStr);
     if (!from || !to) return null;
-    return Math.ceil((to - from) / 86400000);
+    // 兩邊都是「某一天的本地午夜」，相減理論上是整數天；用 round 是為了吸收日光節約造成的 ±1 小時
+    // （海外裝置跨過換日光節約的那一天時，ceil 會多算一天）。台灣沒有日光節約，結果不變。
+    return Math.round((to - from) / 86400000);
   }
 
   // 「最後 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「最後 N 天」，其餘隱藏；

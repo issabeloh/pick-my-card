@@ -10,7 +10,7 @@
  *  - Modal 每次打開都從最上方   → "setupModalScrollReset"
  *  - 全域 loading overlay      → "loadingOverlay"
  *  - WebView 內建瀏覽器警告     → "isInAppBrowser" / "showWebViewWarning"
- *  - 台灣時區日期工具           → "getTaiwanToday" / "parseISODate"
+ *  - 台灣時區日期工具           → "getTaiwanToday" / "taiwanDaysUntil"
  *  - 活動期間狀態＋快取         → "getRateStatus" / "rateStatusCache"
  *  - 級別快取                  → "cardLevelCache"
  *  - localStorage 安全讀取      → "localStorage 安全讀取 helpers" / "readLocalJSON"
@@ -326,16 +326,6 @@ function getTaiwanToday() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
-// 解析日期字串為本地午夜 Date 物件（供天數差計算用）
-// 相容 ISO "YYYY-MM-DD" 與台灣慣用 "YYYY/M/D"（Apps Script 匯出的 periodStart/periodEnd 兩種格式都會出現）
-function parseISODate(dateStr) {
-    if (!dateStr) return null;
-    const isoStr = dateStr.includes('-') ? dateStr : slashDateToISO(dateStr);
-    if (!isoStr) return null;
-    const [y, m, d] = isoStr.split('-').map(Number);
-    return new Date(y, m - 1, d);
-}
-
 // 將 ISO 日期 YYYY-MM-DD 格式化為台灣慣用顯示 YYYY/M/D（去補零）
 function formatISODateForDisplay(isoDate) {
     if (!isoDate) return '';
@@ -467,64 +457,53 @@ function getCachedRateStatus(periodStart, periodEnd) {
     return rateStatusCache.get(key);
 }
 
+// ============================================================
+// 「還有幾天」的唯一算法（2026-11-17 合併；原本 core-utils 四支、home-ui、mappings-page 各算各的，
+// 其中亮點卡用的是裝置時區）。
+// 台灣今天到指定日期的天數（整數）：當天 0、明天 1、昨天 -1；日期字串不合法回 null。
+// 接受 ISO "YYYY-MM-DD" 與台式 "YYYY/M/D"。
+// ⚠️「今天」一律是台灣的今天（getTaiwanToday），而且用 UTC 日曆日相減——結果跟使用者裝置的
+//    時區、日光節約時間都無關。新增任何「剩 N 天／N 天後開始」的顯示都走這支，不要再自己 new Date() 相減。
+function taiwanDaysUntil(dateStr) {
+    if (!dateStr) return null;
+    const utcDay = (value) => {
+        const str = String(value);
+        const iso = str.includes('-') ? str : slashDateToISO(str);
+        if (!iso) return NaN;
+        const [y, m, d] = iso.split('-').map(Number);
+        return Date.UTC(y, m - 1, d);
+    };
+    const diff = (utcDay(dateStr) - utcDay(getTaiwanToday())) / 86400000;
+    return Number.isFinite(diff) ? Math.round(diff) : null;
+}
+
+// 台灣現在是幾月（1–12）。慶生月方案的判斷用，不看裝置時區。
+function getTaiwanMonth() {
+    return Number(getTaiwanToday().slice(5, 7));
+}
+
 // Check if upcoming activity starts within N days
 function isUpcomingWithinDays(periodStart, days = 30) {
-    if (!periodStart) return false;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const startDate = parseISODate(periodStart);
-        const diffDays = Math.ceil((startDate - today) / 86400000);
-        return diffDays >= 0 && diffDays <= days;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodStart });
-        return false;
-    }
+    const diffDays = taiwanDaysUntil(periodStart);
+    return diffDays !== null && diffDays >= 0 && diffDays <= days;
 }
 
 // Get days until activity starts (returns number or null if error)
 function getDaysUntilStart(periodStart) {
-    if (!periodStart) return null;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const startDate = parseISODate(periodStart);
-        const diffDays = Math.ceil((startDate - today) / 86400000);
-        return diffDays >= 0 ? diffDays : null;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodStart });
-        return null;
-    }
+    const diffDays = taiwanDaysUntil(periodStart);
+    return diffDays !== null && diffDays >= 0 ? diffDays : null;
 }
 
 // Check if activity is ending soon (within N days)
 function isEndingSoon(periodEnd, days = 10) {
-    if (!periodEnd) return false;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const endDate = parseISODate(periodEnd);
-        const diffDays = Math.ceil((endDate - today) / 86400000);
-        return diffDays >= 0 && diffDays <= days;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodEnd });
-        return false;
-    }
+    const diffDays = taiwanDaysUntil(periodEnd);
+    return diffDays !== null && diffDays >= 0 && diffDays <= days;
 }
 
 // Get days until activity ends (returns number or null if error)
 function getDaysUntilEnd(periodEnd) {
-    if (!periodEnd) return null;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const endDate = parseISODate(periodEnd);
-        const diffDays = Math.ceil((endDate - today) / 86400000);
-        return diffDays >= 0 ? diffDays : null;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodEnd });
-        return null;
-    }
+    const diffDays = taiwanDaysUntil(periodEnd);
+    return diffDays !== null && diffDays >= 0 ? diffDays : null;
 }
 
 // 卡片權益（cardsData.benefits，停車折抵那類）的期限欄位只有一個自由格式字串
@@ -632,13 +611,10 @@ function filterExpiredRates(cardsData) {
         cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
             // Keep if no end date (ongoing) or end date >= today
             if (!promo.period_end) return true;
-            // 一律走 parseISODate（相容 ISO 與台式斜線，見 data-pipeline.md 第 8 節）——
-            // 舊 parseDateString 只認 "/"，ISO 的 period_end 解析成 null 被當永久有效，過期活動永遠濾不掉
-            const endDate = parseISODate(promo.period_end);
-            if (!endDate) return true;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const isActive = endDate >= today;
+            // period_end 相容 ISO 與台式斜線兩種寫法（見 data-pipeline.md 第 8 節）；格式不對的當作沒寫、不隱藏
+            // 「今天」用台灣的今天（getRateStatus 內部走 getTaiwanToday），不看裝置時區——
+            // 原本拿裝置的本地午夜來比，海外用戶會早一天或晚一天看到活動下架
+            const isActive = getRateStatus(null, promo.period_end) !== 'expired';
             if (!isActive) {
                 console.log(`🕒 隱藏過期新戶活動 - ${promo.id} ${promo.promo_name} (~${promo.period_end})`);
             }

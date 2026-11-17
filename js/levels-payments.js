@@ -110,7 +110,7 @@ async function getCardLevelUncached(cardId, defaultLevel) {
 // Save user's birthday month to Firestore and update pre-computed flag
 async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
-    isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
+    isBirthdayMonth = month !== null && month === getTaiwanMonth();
 
     if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
 
