@@ -523,52 +523,9 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
         return;
     }
 
-    // Determine search terms to use (含 fuzzy 別名展開)
-    const searchTerms = searchKeywords
-        ? [...new Set(searchKeywords.flatMap(k => getAllSearchVariants(k)))]
-        : getAllSearchVariants(merchantValue);
-
-    if (searchKeywords) {
-        console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
-    } else {
-        console.log(`🅿️ 使用輸入值匹配停車折抵: "${searchTerms[0]}"`);
-    }
-
-    const matchingBenefits = [];
-
-    // Find matching benefits
-    for (const benefit of cardsData.benefits) {
-        // Skip inactive benefits
-        if (!benefit.active) continue;
-
-        // Check if merchants match using any search term
-        if (benefit.merchants && Array.isArray(benefit.merchants)) {
-            for (const merchant of benefit.merchants) {
-                const merchantItemLower = merchant.toLowerCase();
-
-                // 注意：停車的商家名稱是長描述字串、關鍵詞常在中間（如「中興嘟嘟房」⊇「嘟嘟房」、
-                // 「全台遠東百貨停車」⊇「遠東」），因此這裡刻意用 substring 而非 startsWith，
-                // 否則會漏掉大量停車場。停車資料皆為台灣停車場專名，誤匹配風險低。
-                // 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉
-                const isMatch = searchTerms.some(searchTerm =>
-                    searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
-                );
-
-                if (isMatch) {
-                    // Check if this card is in the user's selection
-                    const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-
-                    if (shouldShow) {
-                        matchingBenefits.push({
-                            ...benefit,
-                            matchedMerchant: merchant
-                        });
-                    }
-                    break; // Found a match for this benefit, move to next
-                }
-            }
-        }
-    }
+    // 搜尋詞含 fuzzy 別名展開；快捷搜尋時 searchKeywords 是整組關鍵詞（比對規則與選項說明見 findMatchingParkingBenefits）
+    const matchingBenefits = findMatchingParkingBenefits(
+        searchKeywords || merchantValue, cardsToCheck, { expandAliases: true });
 
     // If no matches, hide the section
     const parkingSection = document.getElementById('parking-benefits-section');

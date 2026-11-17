@@ -171,10 +171,12 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 
 **期限過濾（2026-09-02 新增）**：`benefit_period` 過期的權益在載入時就被 `filterExpiredRates()` 濾掉（與 cashbackRates／couponCashbacks／新戶活動同一支），四個消費端（`displayParkingBenefits`、卡片詳情頁權益區、`showMatchedItem`／`showNoMatchMessage` 兩處搜尋提示）因此一次到位、不需各自判斷。解析走 `parseBenefitPeriod()`（core-utils）：`benefit_period` 是自由格式字串，用「抓出字串裡所有日期樣式」拆 `{start, end}`——0 個日期（如「依官網公告」）→ 不設限、**永不隱藏**（自由文字不可以被當成過期）；1 個日期 → 只當結束日（現行資料全是這種）；≥2 個 → 頭尾當起訖。只濾 `expired`，`upcoming` 留著。
 
-`displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)`（約 script.js:3193-3269）：
+**比對只有一支：`findMatchingParkingBenefits(searchInput, cardsToCheck, { expandAliases })`（`js/search-match.js`，2026-11-17 由四份各抄一份的迴圈合併）**，四個呼叫端共用：`showMatchedItem`、`showNoMatchMessage`、`showMatchedButNoActivityMessage`（三者是匹配狀態列的「停車折抵優惠 (N張卡片)」連結，`expandAliases` 不開，用原始輸入比）與 `displayParkingBenefits`（下方結果區塊，`expandAliases: true`，搜尋詞過 `getAllSearchVariants` 展開別名）。**這兩種用法現行行為不同、刻意原樣保留**：搜「carrefour」下方區塊有停車、狀態列沒連結；快捷搜尋狀態列傳顯示名稱、區塊傳關鍵詞，所以「所有停車」下方 14 筆、狀態列沒連結。要不要統一是產品決定（歸站長），不要順手改成一致。差異的完整說明在函式上方註解。
+- 比對：`searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)`（substring、雙向；刻意不理精準搜尋）；空輸入會比到全部，由呼叫端決定要不要擋（狀態列兩處擋，區塊不擋）
+
+`displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)`（`js/results-display.js`，只負責畫區塊）：
 - 快捷搜尋時 `searchKeywords` 是關鍵詞陣列（如 `["停車","嘟嘟房","台灣聯通","24TPS永固","VIVI PARK"]`），任一匹配即成功
 - 一般搜尋時只用 merchantValue
-- 匹配：`searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)`
 - **鐵則**：快捷搜尋必須傳 `currentQuickSearchOption?.merchants` 進來，否則只會拿顯示名稱（如 "所有停車"）去比對，必定失敗：
   ```javascript
   displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);

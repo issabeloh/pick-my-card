@@ -8,6 +8,7 @@
  *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms" / "findSearchHits"（找、算、顯示三步之「找」）
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
+ *  - 停車折抵比對（四處共用）     → "findMatchingParkingBenefits"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
  *  - 輸入驗證                  → "validateInputs"
  *  - 同活動合併                → "mergeResultsByActivity"
@@ -367,6 +368,62 @@ function findSearchHits(query, options = {}) {
     return findMatchingItem(String(query || ''), { exactOnly: !!options.exactOnly });
 }
 
+// ============================================================
+// 停車折抵（cardsData.benefits）比對——全站唯一一支（2026-11-17 由四份各抄一份的迴圈合併）
+// 回傳符合的權益陣列（每筆是 benefit 的淺拷貝＋matchedMerchant＝第一個命中的地點名）。
+// 一筆 benefit 最多回一次；一張卡可有多筆（ID 重複是正常的），數量＝權益筆數，不是卡片張數。
+//
+// 共通規則（四個呼叫端都一樣）：active 才算；登入且有比較清單時，只算清單內的卡（!currentUser 時不篩）；
+// 比對是「搜尋詞包含地點名 或 地點名包含搜尋詞」的 substring（雙向、小寫）。
+// 刻意用 substring 而非 startsWith：停車的商家名稱是長描述字串、關鍵詞常在中間（「中興嘟嘟房」⊇「嘟嘟房」、
+// 「全台遠東百貨停車」⊇「遠東」），否則會漏掉大量停車場；停車資料皆為台灣停車場專名，誤匹配風險低。
+// 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉。
+//
+// searchInput：字串，或字串陣列（快捷搜尋的關鍵詞）。傳進來的字串一律先轉小寫＋去頭尾空白。
+// 空字串不在這裡擋——它會比對到所有權益（地點名 ⊇ ''），要不要擋由呼叫端決定（見下表）。
+//
+// options.expandAliases（預設 false）——各呼叫端現行行為不同，這裡原樣保留，不要擅自統一（產品決定歸站長）：
+//   ・false：只用原始輸入比，不展開別名。showMatchedItem／showNoMatchMessage（匹配狀態列的
+//     「停車折抵優惠 (N張卡片)」連結）、showMatchedButNoActivityMessage 用這個；
+//     前兩者另外自己擋掉空輸入（merchantValue 為空字串就不比）。
+//   ・true：每個輸入先過 getAllSearchVariants() 展開（fuzzy 別名、臺／台、海外／國外片語），
+//     任一展開詞命中即成立。displayParkingBenefits（結果區的停車折抵區塊）用這個，
+//     快捷搜尋時輸入是 currentQuickSearchOption.merchants 整組關鍵詞（傳 displayName 必定失敗，見 cashback-engine.md 第 7 節）。
+//   後果（2026-11-17 實測，都是合併前就存在的現況，留給站長裁決，這支函式不去統一）：
+//   ・搜「carrefour」：下方區塊靠別名展開命中 1 筆，狀態列沒有「停車折抵優惠」連結。
+//   ・快捷搜尋（所有停車／所有超市／所有百貨公司／統一企業集團）：狀態列傳的是顯示名稱而非關鍵詞，
+//     下方區塊有權益（所有停車 14 筆）、狀態列卻沒有連結。
+//   ・結果區塊對空白輸入不擋（按計算但商家欄空白時，14 筆全部列出）；狀態列兩處有 merchantValue 守門。
+// ============================================================
+function findMatchingParkingBenefits(searchInput, cardsToCheck = [], options = {}) {
+    if (!cardsData || !Array.isArray(cardsData.benefits) || cardsData.benefits.length === 0) return [];
+
+    const inputs = Array.isArray(searchInput) ? searchInput : [searchInput];
+    const searchTerms = options.expandAliases
+        ? [...new Set(inputs.flatMap(k => getAllSearchVariants(k)))]
+        : inputs.map(k => String(k == null ? '' : k).toLowerCase().trim());
+
+    const matchingBenefits = [];
+    for (const benefit of cardsData.benefits) {
+        if (!benefit.active) continue;
+        if (!(benefit.merchants && Array.isArray(benefit.merchants))) continue;
+        // 是否在用戶的比較清單內（沒登入時不篩）
+        const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+        if (!shouldShow) continue;
+
+        const matchedMerchant = benefit.merchants.find(merchant => {
+            const merchantItemLower = merchant.toLowerCase();
+            return searchTerms.some(searchTerm =>
+                searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
+            );
+        });
+        if (matchedMerchant !== undefined) {
+            matchingBenefits.push({ ...benefit, matchedMerchant });
+        }
+    }
+    return matchingBenefits;
+}
+
 // Show matched item(s)
 // summaryText：送出後才知道「你的選項下符合幾筆」，打字時不傳（打字階段還沒算結果）。
 // 由呼叫端組好字串（活動與領券的量詞不同），這裡只負責接在 ✓ 那行後面。
@@ -397,25 +454,9 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = [], su
         messageHtml += ` | ${escapeHtml(summaryText)}`;
     }
 
-    // Check if there are parking benefits matches
-    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = merchantValue.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-
-            // Check if this card is in the user's selection
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-
-            // Check if merchants match
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // Check if there are parking benefits matches（原始輸入比對、不展開別名；見 findMatchingParkingBenefits）
+    if (merchantValue) {
+        const matchingBenefits = findMatchingParkingBenefits(merchantValue, cardsToCheck);
 
         if (matchingBenefits.length > 0) {
             messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
@@ -435,25 +476,9 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     let messageHtml = `✘ 沒有匹配到 ${merchantPart} 的活動（以下結果顯示基本回饋）`;
     let hasParkingMatch = false;
 
-    // Check if there are parking benefits matches
-    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = merchantValue.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-
-            // Check if this card is in the user's selection
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-
-            // Check if merchants match
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // Check if there are parking benefits matches（原始輸入比對、不展開別名；見 findMatchingParkingBenefits）
+    if (merchantValue) {
+        const matchingBenefits = findMatchingParkingBenefits(merchantValue, cardsToCheck);
 
         if (matchingBenefits.length > 0) {
             hasParkingMatch = true;
@@ -506,20 +531,9 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
     messageHtml += `<br><span class="matched-item-warn">${warn}</span>`;
 
     // 停車折抵與一般活動是兩套資料，這裡沒活動不代表停車也沒有——沿用 showNoMatchMessage 的附加
-    if (cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = displayName.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // （這裡用匹配到的名稱串接當搜尋詞，不像前兩處用用戶輸入；也不擋空字串——現行行為，見 findMatchingParkingBenefits）
+    {
+        const matchingBenefits = findMatchingParkingBenefits(displayName, cardsToCheck);
         if (matchingBenefits.length > 0) {
             messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
         }
