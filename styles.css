@@ -46,9 +46,7 @@ body {
     --ui-fill: #f3f4f6;         /* 灰色填色：資訊標籤的底（36）。2026-11-16 徽章收斂時補上 */
     /* 語意色 */
     --ui-green: #10b981;        /* 最優卡的框與角標（10） */
-    --ui-yellow: #f59e0b;       /* 已加到小抄、未儲存提示（11） */
-    --ui-yellow-soft: #fef3c7;  /* 提醒標籤的底 */
-    --ui-yellow-ink: #92400e;   /* 提醒標籤的字（黃底上對比 7:1） */
+    --ui-yellow: #f59e0b;       /* 已加到小抄、未儲存提示（11）；提醒標籤的框與圓點 */
 
     /* 圓角 */
     --ui-radius-sm: 6px;        /* 小按鈕、輸入框內的小元件（27） */
@@ -8026,7 +8024,9 @@ mark.cashback-search-hl {
 
 /* ── 標籤的兩種樣式（2026-11-16，「去 AI 感」2-4；站長選定「灰＋黃」）──
    資訊（灰底墨字）：推薦活動的類型標籤（全場最高／壓倒性神卡／獨家回饋／無腦刷）、一般消費排除
-   提醒（黃底深褐字）：即將開始、即將結束／剩 N 天、未達門檻
+   提醒（白底、金黃細框、字前一個黃點、墨字）：即將開始、即將結束／剩 N 天、未達門檻
+     站長 2026-11-17 選定。試過又否決的：淡黃底深褐字（太淡、深褐不好看）、檸檬黃／金黃／橘的實色底（刺眼）、
+     暖黃或檸檬淡黃底配墨字。不要改回色塊底。框用 inset box-shadow 而不是 border，標籤尺寸才不會多 2px
    以前是橘實心、橘框、紅框、紅底、黃底、灰實心，加上類型標籤的四種顏色。
    新增標籤時先歸到這兩類之一，不要再開第三種顏色；紅色留給錯誤訊息。
    形狀一律膠囊。各標籤自己的規則只管尺寸（padding／font-size），顏色都在這裡。
@@ -8042,10 +8042,24 @@ mark.cashback-search-hl {
 .ending-soon-badge,
 .unmet-spend-badge,
 .spotlight-days-badge {
-    background: var(--ui-yellow-soft);
-    color: var(--ui-yellow-ink);
+    background: #fff;
+    color: var(--ui-ink-1);
+    box-shadow: inset 0 0 0 1px var(--ui-yellow);
     border-radius: var(--ui-radius-pill);
     font-weight: 600;
+}
+.upcoming-badge::before,
+.ending-soon-badge::before,
+.unmet-spend-badge::before,
+.spotlight-days-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--ui-yellow);
+    vertical-align: 1px;
 }
 
 .upcoming-badge,
