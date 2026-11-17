@@ -1,5 +1,7 @@
 node_modules/
 __pycache__/
+# subagent 用 isolation: worktree 時的暫存工作副本（agent 結束後自動清掉），不進版控
+.claude/worktrees/
 package.json
 package-lock.json
 tools/regression/last-run.json
