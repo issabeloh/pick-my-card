@@ -1126,11 +1126,11 @@ function cdSectionHasContent(id) {
     return el.textContent.trim().length > 0;
 }
 
-// 各頁籤的筆數：回饋＝三區的回饋卡數；領券・停車＝領券卡＋停車折抵項目；新戶活動＝活動卡（不含申辦 CTA 盒）
+// 各頁籤的筆數：回饋＝三區的「回饋率列數」（2026-11-17 起一張卡可有好幾列，不是卡片數）；領券・停車＝領券卡＋停車折抵項目；新戶活動＝活動卡（不含申辦 CTA 盒）
 function cdTabCount(name) {
     const count = (sel) => document.querySelectorAll(sel).length;
     if (name === 'rates') {
-        return count('#card-special-cashback .rate-card, #card-upcoming-cashback .rate-card, #card-basic-cashback .rate-card');
+        return count('#card-special-cashback .cd-rr, #card-upcoming-cashback .cd-rr, #card-basic-cashback .cd-rr');
     }
     if (name === 'coupon') {
         return count('#card-coupon-cashback .cashback-detail-item, #card-benefits-content .cashback-detail-item');
@@ -1183,6 +1183,8 @@ function selectCardDetailTab(name, opts = {}) {
     const pan = document.querySelector(`#card-detail-modal .cd-pan[data-pan="${name}"]`);
     if (pan && typeof initConditionClamps === 'function') {
         pan.querySelectorAll('[id$="-cashback"]').forEach(c => initConditionClamps(c));
+        // 同方案卡：適用通路收三行、條件一行省略（這時才量得到寬度）
+        if (typeof cdFitAll === 'function') pan.querySelectorAll('[id$="-cashback"]').forEach(c => cdFitAll(c));
     }
 
     // 手機：已經捲過摘要的話，讓新頁籤的內容從頁籤列正下方開始（不留在上一個頁籤的捲動位置）
@@ -1491,7 +1493,7 @@ function renderCardThumb(cardId) {
 
 // Create card result element
 // ===== 回饋卡共用片段（2026-10-06）=====
-// 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（renderRateCard，js/card-detail.js）
+// 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（planCardsHtml／renderPlanCard，js/card-detail.js）
 // 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。領券型卡片（createCouponResultElement）、
 // 行動支付卡片（renderPaymentCardResult，js/levels-payments.js）的下方資訊區也走這裡的 renderActivityInfo。兩邊共同的部分——徽章文字、
 // 滿額門檻句、下方資訊區的行序——只寫在這裡，改一次兩邊一起變；不要在任一邊另外拼。
@@ -1909,9 +1911,10 @@ function toggleRateComposition(btn) {
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
-    // 詳情頁回饋卡要放進 .rate-card-body：卡片本身是「標題列｜其餘」兩列的 subgrid，
-    // 直接掛在卡片底下會變成第三個格子、把版面擠亂
-    (item.querySelector('.rate-card-body') || item).appendChild(popup);
+    // 同方案卡（.cd-rc）：面板掛在這一列（.cd-rr，grid 跨滿兩欄）下方，不是整張卡的底部。
+    // 舊樣式的 .rate-card（一般消費排除卡）放進 .rate-card-body（卡片是「標題列｜其餘」兩列的 subgrid，
+    // 直接掛在卡片底下會變成第三個格子）
+    (btn.closest('.cd-rr') || item.querySelector('.rate-card-body') || item).appendChild(popup);
     btn.classList.add('active');
 }
 
