@@ -6523,24 +6523,33 @@ mark.cashback-search-hl {
     margin-bottom: 10px;
 }
 
-/* 名次（renderPaymentRank，2026-11-16）：圓形數字，第 1 名墨色實心、其餘灰底。
-   取代原本的彩帶＋金銀銅獎牌——站長：有 AI 感、讓畫面亂 */
+/* 名次（renderPaymentRank）：斜體「NO.1」，沒有底色；第 1 名墨色、其餘灰色（站長 2026-11-17 選定，
+   沿革見 js/levels-payments.js 該函式的註解）。
+   min-width＋margin-right：個位數名次寬度都落在 min-width 內，支付名稱的起點才會對齊；
+   和名稱之間總共留 16px（.compare-payment-name 的 gap 8px＋這裡 8px）——站長要求拉開一點才好讀 */
 .payment-rank {
     flex: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--ui-fill);
-    color: var(--ui-ink-2);
-    font-size: var(--ui-text-12);
-    font-weight: 700;
-    line-height: 22px;
-    text-align: center;
+    min-width: 36px;
+    margin-right: 8px;
+    color: #9ca3af;
+    font-size: 20px;
+    font-weight: 800;
+    font-style: italic;
+    line-height: 1;
+    letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.payment-rank small {
+    margin-right: 1px;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: 0;
+    vertical-align: 1px;
 }
 .payment-rank-first {
-    background: var(--ui-ink-1);
-    color: #fff;
+    color: var(--ui-ink-1);
 }
 
 /* 行動支付的一張卡＝一列（renderPaymentRow；單一支付詳情與比較 modal 共用，2026-11-16）。

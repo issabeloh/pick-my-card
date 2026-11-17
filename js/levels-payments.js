@@ -455,10 +455,11 @@ function renderPaymentRow(mc, showBest) {
     `;
 }
 
-// 名次（行動支付比較，每個支付名稱前面）：一個圓形數字，第 1 名墨色實心、其餘灰底。
-// 2026-11-16 取代原本的彩帶＋金銀銅獎牌 SVG（站長：有 AI 感、讓畫面亂）。樣式在 styles.css「.payment-rank」
+// 名次（行動支付比較，每個支付名稱前面）：斜體「NO.1」，沒有底色；第 1 名墨色、其餘灰色。
+// 沿革：彩帶＋金銀銅獎牌 SVG（2026-10-08）→ 圓形數字（2026-11-16，站長：獎牌有 AI 感、讓畫面亂）
+// → 現在這個（2026-11-17，站長：圓形數字不夠像名次；三個示意裡選的）。樣式在 styles.css「.payment-rank」
 function renderPaymentRank(rank) {
-    return `<span class="payment-rank${rank === 1 ? ' payment-rank-first' : ''}" role="img" aria-label="第 ${rank} 名">${rank}</span>`;
+    return `<span class="payment-rank${rank === 1 ? ' payment-rank-first' : ''}" role="img" aria-label="第 ${rank} 名"><small>NO.</small>${rank}</span>`;
 }
 
 // Show compare payments modal
