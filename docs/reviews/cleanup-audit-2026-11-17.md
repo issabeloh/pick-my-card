@@ -1,8 +1,41 @@
 # 程式碼清理稽核報告（2026-11-17）
 
 **目的**：找出沒在用的舊程式碼、重複邏輯、會誤導接手模型的文件與註解。
-**狀態**：只稽核，**沒有改任何程式碼**。站長勾選後另開 session 分批清理。
+**狀態**：清理進行中（稽核本身沒改程式碼；各批清理的進度見下方「處理進度」）。
 **行號都是當日快照**，動手前用 Grep 關鍵字重新定位。
+
+## 處理進度（2026-11-17）
+
+下表的狀態以 commit 為準。A／B／C 編號的內容見後文，**行號仍是稽核當日快照**。
+
+| 項目 | 狀態 | commit／備註 |
+|---|---|---|
+| 第 0 節、C1 的 Firebase 替身補洞器 | ✅ 完成 | `bc52a3c`（`tools/lib/firebase-stub-guard.js`）。C1 的另一半（抽 `tools/lib/test-harness.js` 合併三份替身與伺服器）尚未做 |
+| A1、A2、A9 死 CSS | ✅ 完成 | `1c7e4f8`。結帳日相關樣式刻意保留（見 B2） |
+| A3–A8 死函式、未用變數、圖片、`.pyc` | ✅ 完成 | `1144891` |
+| A10 過時註解與數字 | ✅ 完成 | `77b6511`（載入順序分母、`script.js` 舊引用、12 支／12 組）、`5430238`（檔頭目錄）。`landing.html:44` 的註解實際寫的已是 Clarity，不用改 |
+| A11 文件裡確定過時的事實 | ✅ 完成 | `7b73957`（`.claude/agents/scout.md` 屬 🟡，改動小，請主對話派 verifier 覆核） |
+| B1 `specialItems`／`generalItems` | ✅ 刪除 | `a6ee777`（站長決定刪；鐵則 4 已由主對話改寫） |
+| B2 結帳日功能 | ⏸ 保留 | 站長決定：功能之後要加回來，**JS 與 CSS 都保留**，不刪 |
+| B5 文件與資料夾 | ✅ 完成 | `57ecf9d`：刪 `docs/archive/` 12 個無人引用的備份（保留 4 個仍被連結的）、`docs/mockups/promos-2026-09/`、`docs/ops/script-split-plan.md`；`maintenance.md` 改成「git 歷史即備份」。`BENEFITS-AUTOMATION-PLAN.md`、`assets/brand/` 依指示保留；弱引用測試腳本不刪，已列進 `regression.md` 的對照表（`7b73957`） |
+| B6-1 `onOpen` 的 `buildAutomationMenu_()` | ✅ 完成 | `1144891` |
+| B6-2 `toContiguousBlocks_` | ✅ 完成 | `830f153` |
+| B6-7 `TERM_DICT_HEADERS` | ✅ 完成 | `830f153` |
+| B6-9 `apps-script/README.md` 補 `term-unify.gs` | ✅ 完成 | `7b73957` |
+| B7 `renderCardTags` 的 `escapeHtml` | ✅ 完成 | `1144891` |
+| C3 剩餘天數統一 | ✅ 完成 | `0036631`（`taiwanDaysUntil`；`promos.js` 依計畫不併） |
+| S1 檔頭區塊目錄補齊並對齊順序 | ✅ 完成 | `5430238` |
+| S2 preflight 檢查「N/13」與 `<script>` 標籤數 | 不需要 | 檔頭已改成不含分母（`77b6511`），不會再因新增模組過時 |
+| S3、S4、S5 `CLAUDE.md`、`regression.md` | ✅ 完成 | `7b73957` |
+| C2 停車折抵比對 4 份 | 🔄 進行中 | 其他 agent |
+| C4 上限（cap）顯示 6 種寫法 | 🔄 進行中 | 其他 agent |
+| C6 卡片標籤清單 3 處要同步 | 🔄 進行中 | 其他 agent |
+| C7 額度字串解析 2 份 | 🔄 進行中 | 其他 agent |
+| B3 舊儲存格式遷移碼 | ⏳ 待站長確認 | |
+| B4 防呆用的退路分支 | ⏳ 待站長確認 | |
+| B6-3 `debugGSC`、B6-4 `importHistoricalData`、B6-5 `createDailyTrigger`、B6-6 `publishChangelog`、B6-8 匯出但前端不讀的欄位 | ⏳ 待站長確認 | |
+| B7 其餘三項（訪客登入帶入額度、`saveFeeWaiverStatus` 沒包 try、`pmc_ab_sent` 時機） | ⏳ 待站長確認 | 未複核 |
+| C5、C8、C9、C10 | 未處理 | C5 併入 B1 的後續；C8–C10 不急 |
 
 ## 怎麼查的
 
