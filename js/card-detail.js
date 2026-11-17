@@ -611,7 +611,6 @@ basicCashbackDiv.innerHTML = basicContent;
     const upcomingCashbackDiv = document.getElementById('card-upcoming-cashback');
     const upcomingGroups = window._currentUpcomingGroups1 || window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || window._currentUpcomingGroups3 || [];
     const upcomingCard = window._currentCard;
-    const upcomingLevelData = window._currentLevelData1 || window._currentLevelData2;
 
     if (upcomingGroups.length > 0) {
         let upcomingContent = '';
@@ -740,7 +739,6 @@ basicCashbackDiv.innerHTML = basicContent;
     // Load and setup user notes
     currentNotesCardId = card.id;
     const notesTextarea = document.getElementById('user-notes-input');
-    const saveIndicator = document.getElementById('save-indicator');
     
     // 讀取當前筆記
     loadUserNotes(card.id).then(notes => {
@@ -824,7 +822,7 @@ basicCashbackDiv.innerHTML = basicContent;
 async function generateCubeSpecialContent(card) {
     // Get level from Firestore or default to first level
     const defaultLevel = Object.keys(card.levelSettings)[0];
-    const { level: savedLevel, data: levelSettings } = await resolveCardLevel(card, defaultLevel);
+    const { data: levelSettings } = await resolveCardLevel(card, defaultLevel);
 
     // 使用 specialRate（如果有）或 rate
     const specialRate = levelSettings.specialRate || levelSettings.rate;
@@ -982,7 +980,7 @@ async function generateCubeSpecialContent(card) {
 
         // Display merged rates
         let index = 0;
-        for (const [mergeKey, mergedRate] of mergedActiveRates) {
+        for (const [, mergedRate] of mergedActiveRates) {
             // 銀行官方登錄連結：這條路徑會把 rate+category+period 相同的組別合併成
             // 一列，合併後只留第一個有登錄連結的（同一個活動的不同槽位不該有兩個登錄頁；
             // 真的出現時以先遇到的為準，其餘在 Cards Data 裡就該修掉）。

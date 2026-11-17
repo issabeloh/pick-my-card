@@ -229,8 +229,6 @@ function openMyPaymentsModal() {
         modal.style.display = 'none';
         enableBodyScroll();
     };
-    window.closeMyPaymentsModal = closeModal;
-
     closeBtn.onclick = closeModal;
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
@@ -242,8 +240,6 @@ function openManagePaymentsModal() {
     const paymentsSelection = document.getElementById('payments-selection');
     const saveBtn = document.getElementById('save-payments-btn');
     const toggleAllBtn = document.getElementById('toggle-all-payments');
-
-    const isLoggedIn = currentUser !== null;
 
     paymentsSelection.innerHTML = '';
 

@@ -506,12 +506,6 @@ function getCategoryDisplayName(category) {
     return categoryMap[category] || category;
 }
 
-// Helper function to get category display style (blue chip)
-function getCategoryStyle(category) {
-    if (!category) return '';
-    return 'display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; vertical-align: middle;';
-}
-
 // Base cashback rate for a domestic vs overseas transaction. Overseas falls
 // back to basicCashback if the card has no dedicated overseasCashback field.
 function resolveBaseRate(card, isOverseas) {

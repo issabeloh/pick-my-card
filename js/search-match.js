@@ -132,7 +132,7 @@ function toggleExactSearchEmptyHint(show) {
 // options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
 // 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
 // 搜尋詞展開：原詞＋fuzzy 正反向對照＋片語級同義詞。第一個元素永遠是原詞。
-// findMatchingItem 與一般消費排除判斷（isBasicExcludedForSearch）共用，兩邊才認得同一組別名。
+// findMatchingItem 與一般消費排除判斷（getBasicExclusionHits）共用，兩邊才認得同一組別名。
 // 臺／台視為同一個字（2026-10-30 站長要求）：搜「臺北捷運」要找到「台北捷運」，反過來也一樣。
 // 做法是把原詞的「全台」「全臺」兩個版本都當成起點，各自再走一次別名與片語展開；
 // 比對與計算都吃這份清單（getAllSearchVariants），所以資料名稱寫哪個字都對得到，不用再為每個詞列臺字別名。
@@ -853,10 +853,6 @@ function getBasicExclusionMaybeHits(card, searchTerms, exactOnly = false) {
         if (terms.some(t => t !== exLower && exLower.includes(t))) hits.push(raw);
     });
     return hits;
-}
-
-function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
-    return getBasicExclusionHits(card, searchTerms, exactOnly).length > 0;
 }
 
 // ============================================================

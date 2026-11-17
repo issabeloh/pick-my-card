@@ -781,7 +781,7 @@ function renderCardTags(tags) {
     if (!tags || tags.length === 0) return '';
 
     const tagsHtml = tags.map(tag =>
-        `<span class="card-tag ${getTagClass(tag)}">${tag}</span>`
+        `<span class="card-tag ${getTagClass(tag)}">${escapeHtml(tag)}</span>`
     ).join('');
 
     return `<div class="card-tags-container">${tagsHtml}</div>`;

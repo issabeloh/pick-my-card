@@ -204,7 +204,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 - **語義**：`card.basicExclusions`（字串陣列，Sheets 欄位見 data-pipeline.md 第 2 節）＝這張卡刷了**完全沒有回饋**的交易類型
 - **作用範圍**：基本回饋 fallback（沒匹配到、匹配到但比較中的卡沒活動）時，命中的卡標成灰卡；**有指定通路結果時**（2026-10-11 起），比較卡裡**沒有進行中活動**的那些也照名單補灰卡墊底。
   某卡對這個詞有指定活動時**永遠照常顯示活動**，名單不影響
-- **比對**（`isBasicExcludedForSearch`，`js/search-match.js`；2026-10-11 站長逐條確認）：
+- **比對**（`getBasicExclusionHits`，`js/search-match.js`；2026-10-11 站長逐條確認）：
   - 搜尋詞＝用戶輸入經 `expandSearchTerms()`（與 `findMatchingItem` 共用的 fuzzy／同義詞展開），**不含**匹配到的 item 名（商家匹配會補完短詞，會繞過下一條）
   - 搜尋詞**等於或包含**排除詞即命中；反方向不判排除（名單「路邊停車費」不影響搜「停車費」，停車場可能有回饋）
   - **可能排除**（2026-10-11 站長選 B，`getBasicExclusionMaybeHits`）：搜尋詞（≥2 字）被名單項目包含時，同樣變灰卡、標 `isMaybeExcluded`（只有標籤換成「可能屬於排除項目」，徽章與說明維持原字；搜「醫院費用」← 「臺北醫學大學附設醫院費用」），排在一般卡之後、確定排除之前；狀態列另起一行「另有 M 張卡可能排除「X」」；結果全是灰卡且含可能排除時用 `showMaybeExcludedMessage`；`allBasicExcluded` 不含可能排除；確定命中優先；勾精準搜尋時不算

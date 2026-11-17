@@ -1173,7 +1173,6 @@ function initializeAnnouncements() {
 function setupAnnouncementBar() {
     const announcementBar = document.getElementById('announcement-bar');
     const announcementText = document.getElementById('announcement-text');
-    const announcementIndicator = document.getElementById('announcement-indicator');
     const prevBtn = document.getElementById('announcement-prev');
     const nextBtn = document.getElementById('announcement-next');
     const closeBtn = document.getElementById('announcement-close');
