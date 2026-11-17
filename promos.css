@@ -114,7 +114,8 @@ a {
 /* ---------------- Header（抄自 styles.css header/.header-top/.header-content）---------------- */
 
 .promos-header {
-  background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
+  /* 2026-11-17 跟主站同步改單色（styles.css 的 header 在 2026-11-16 拿掉 135° 漸層） */
+  background: var(--pmc-blue-deep);
   color: white;
   padding: 10px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -3462,7 +3463,7 @@ mark.promos-search-hl {
 }
 
 /* ==========================================================================
-   安心申辦（2026-11-16）：信任區塊／按鈕去向／大師加碼說明／詳情底部申辦鈕
+   安心申辦（2026-11-16）：信任區塊／按鈕去向／大師加碼說明
    標記由 apps-script/cards-export.gs 生成（pmcRenderTrust_／pmcApplyDestHtml_／
    pmcRenderPromoDetail_）。⚠️ 這一段只有「新增」的 class——Sheets 還沒貼新版生成器時，
    匯出的是沒有這些標記的舊 HTML，這裡的規則一條都不會命中，舊版面不受影響。
@@ -3606,32 +3607,7 @@ mark.promos-search-hl {
   white-space: nowrap;
 }
 
-/* ---- 詳情底部的申辦鈕：讀完條件不用往回捲。長相同清單的主按鈕 ---- */
-.promo-detail-cta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 7px 12px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--pmc-border);
-}
-.promo-detail-cta .promo-apply-btn {
-  background-image: none;
-  background-color: var(--pmc-blue-deep);
-  color: var(--pmc-white);
-  border-radius: 10px;
-  padding: 9px 22px;
-  box-shadow: none;
-  text-shadow: none;
-}
-.promo-detail-cta .promo-apply-btn:hover { background-color: #1b3a9c; }
-.promo-detail-cta .promo-apply-btn:active { transform: scale(0.98); box-shadow: none; }
-@media (max-width: 1024px) {
-  .promo-detail-cta .promo-apply-btn { flex: 1 1 100%; }
-}
 @media (min-width: 1025px) {
   .promo-exclusive-note { font-size: 11.5px; padding: 7px 9px; }
   .promo-exclusive-note b { font-size: 11px; }
-  .promo-detail-cta .promo-apply-btn { padding: 8px 18px; font-size: 13px; }
 }

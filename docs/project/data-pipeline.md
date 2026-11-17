@@ -620,22 +620,30 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
   收合時只有一列（`PMC_TRUST_POINTS` 三個重點＋「申辦前想知道的事 ▾」），點開是 `PMC_TRUST_QA` 五題問答。
   同一份 `PMC_TRUST_QA` 也輸出成 `<head>` 的 FAQPage JSON-LD（`pmcBuildTrustJsonLd_`），兩邊不會分岔。
   ⚠️ 三個重點各 6～7 個字是量過的：390px 剛好排成一列，多一個字就折成兩列（360px 的手機本來就會折）。
-  ⚠️ 問答裡寫的是**事實**，要跟程式一致：排序規則＝`pmcPromoSortKey_`、推薦名單＝`pmcSelectPicks_`、
-  去向標示＝`pmcApplyDest_`。那幾支改了，文案要跟著改。
-- **按鈕去向**（`pmcApplyDest_` → `.promo-apply-dest`）：清單卡的動作列、站長推薦的申辦鈕下方、
-  活動詳情底部各一行。只看網址判斷，Sheets 不必多填欄位：
-  合作平台網域（`PMC_PARTNER_HOSTS`）→「合作連結・經 Money101 前往申辦頁」；
+  ⚠️ 問答裡寫的是**事實**，要跟程式一致：去向標示＝`pmcApplyDest_`、「每次更新都逐一核對連結網域」＝
+  `validateReferentialIntegrity_` 的申辦連結檢查。那幾支改了，文案要跟著改。
+  「清單順序依實際回饋率排行」是站長 2026-11-17 指定的說法；站長推薦怎麼選，同日裁定不在這裡說明。
+  ⚠️ **版面未定案**：站長 2026-11-17 回饋「不好看」，替代設計在 mockup 階段，定案後這一條要重寫。
+- **按鈕去向**（`pmcApplyDest_` → `.promo-apply-dest`）：清單卡的動作列、站長推薦的申辦鈕下方各一行。
+  **每次匯出都從當下的連結網址重新判斷**，Sheets 換連結它就跟著變，不必多填欄位。
+  站長 2026-11-17 確認連結只有兩種，而且最後都到銀行官網申辦：
+  合作平台網域（`PMC_PARTNER_HOSTS`）→「經 Money101 合作連結前往銀行官網」；
   與該卡 `website` 同一個品牌網域 →「直達銀行官網・esunbank.com.tw」；其餘 →「前往 <完整網域>」。
   比的是主網域**第一段**（esunbank），因為同一家銀行 `.com` 與 `.com.tw` 混用；連第一段都不同的
   （國泰 cathay-cube／cathaybk）列在 `PMC_BANK_DOMAIN_ALIASES`。
   **看到「前往 xxx」就是連結網域跟卡片的銀行對不上**——不是新增別名，就是 Sheets 的連結填錯了。
   新的合作平台要加進 `PMC_PARTNER_HOSTS`，否則會落到「前往 <網域>」。行李箱專區的動作列太擠，沒有放。
+- **申辦連結網域把關**（`validateReferentialIntegrity_`，2026-11-17）：匯出前逐一檢查每個 `cardApplyCtas`
+  連結，網域不是該卡銀行、也不是 Money101 的（＝`pmcApplyDest_` 判成 `other`）會列進匯出前的確認對話框。
+  信任問答對用戶說「每次更新都會逐一核對」，指的就是這一步——**拿掉這段檢查就要連那句話一起拿掉**。
+  只在本機用 `tools/build-promos-page.js` 重生時不會跑這個檢查（那支不經過 `exportToJSON`）。
 - **【大師加碼】說明**（`.promo-exclusive-note`）：站長定義＝本站有分潤、且透過本站連結申辦才有的
   專屬首刷禮或活動；從本頁按鈕申辦並完成該檔全部達成條件就拿得到。摘要（`new_customer_summary`）
   含「大師加碼」四個字的活動，詳情最上面會多一句說明；Sheets 拿掉那四個字就跟著消失。
   用主站藍——黃、紅、綠都被類型徽章／倒數徽章／獎勵數字佔走了（見 9a 的選色禁區）。
-- **詳情底部的申辦鈕**（`.promo-detail-cta`）：讀完條件不必往回捲。只給有 `cardApplyCtas` 連結的卡；
-  GA 的 `section` 記成 `detail`（原有 picks／luggage／list）。
+- ⚠️ **詳情底部不放第二顆申辦鈕**：2026-11-16 做過，站長隔天裁定拿掉——直向空間比少捲一次重要。
+- **header 單色**（2026-11-17）：`.promos-header` 是手抄件，主站 `header` 在 2026-11-16 拿掉漸層時沒跟到。
+  faq／privacy／terms／商家頁直接吃 `styles.css` 所以自動跟上；landing 沒有 header bar。
 - **每檔活動有自己的 id**（`…-a1`、`…-a2`）：ItemList JSON-LD 的網址從 2026-09-17 改版起就指向這組錨點，
   但元素上一直只有 `…-a1-detail`，55 個網址全部落空。
 - **搜尋涵蓋獎勵與摘要**（`promos.js` 的 `promoRewardText`）：原本只比卡名與適用通路，搜「行李箱」

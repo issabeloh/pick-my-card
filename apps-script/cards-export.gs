@@ -371,6 +371,23 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
     }
   });
 
+  // 申辦連結的網域把關（2026-11-17）：新戶活動頁對用戶聲明「連結只會前往發卡銀行官網或
+  // Money101、每次更新都會逐一核對」，核對就在這裡。判斷與頁面上的去向標示共用 pmcApplyDest_，
+  // 所以「這裡沒報」＝「頁面上不會出現『前往 <陌生網域>』」。
+  // 只在卡片帶 website 時檢查——手動檢查用的精簡 reader 可能沒讀這一欄，沒有比對基準就不報。
+  const cardById = {};
+  (cards || []).forEach(function(c) { if (c && c.id) cardById[c.id] = c; });
+  Object.keys(cardApplyCtas || {}).forEach(function(cid) {
+    const card = cardById[cid];
+    const link = cardApplyCtas[cid] && cardApplyCtas[cid].link;
+    if (!card || !card.website || !link) return;
+    const dest = pmcApplyDest_(link, card);
+    if (!dest || dest.kind === 'other') {
+      problems.push('申辦 CTA「' + cid + '」的連結網域（' + (pmcHostOf_(link) || '無法解析') +
+        '）不是這張卡的銀行官網、也不是 Money101——請確認連結有沒有貼錯卡');
+    }
+  });
+
   return problems;
 }
 
@@ -1087,7 +1104,7 @@ if (faqSheet) {
   const refProblems = validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas);
   if (refProblems.length > 0) {
     const proceed = ui.alert(
-      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片）',
+      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片，或申辦連結網域不對）',
       refProblems.slice(0, 20).join('\n') +
         (refProblems.length > 20 ? '\n…（其餘 ' + (refProblems.length - 20) + ' 個略）' : '') +
         '\n\n這些引用會讓前端靜默退回手打文字或不顯示申辦按鈕。\n仍要繼續匯出嗎？',
@@ -2786,7 +2803,9 @@ function pmcThresholdText_(promo) {
 // 有辦卡意願的人最容易在「按下去會到哪裡」這一步退縮：同樣寫「立即申辦」，有的直連銀行官網、
 // 有的先經過合作平台的追蹤網址（網址列會出現沒看過的網域）。每顆按鈕下面明講去向。
 // 判斷只看網址本身，不需要 Sheets 多填欄位：
-//   - 合作平台網域（PMC_PARTNER_HOSTS）→「合作連結・經 ○○ 前往申辦頁」
+//   - 合作平台網域（PMC_PARTNER_HOSTS）→「經 Money101 合作連結前往銀行官網」
+//     （站長 2026-11-17 確認：連結只有「銀行」與「Money101」兩種，後者點下去也是轉到銀行官網申辦，
+//      例：apply.creatory.money101.com.tw/click?… → iapp.feib.com.tw/…）
 //   - 與該卡 website 同一個品牌網域 →「直達銀行官網・<主網域>」。比的是主網域的第一段
 //     （esunbank／kgibank），不是整串——同一家銀行常常 .com 與 .com.tw 混用
 //     （卡片介紹在 esunbank.com、線上申辦在 card.esunbank.com.tw）。
@@ -2794,7 +2813,7 @@ function pmcThresholdText_(promo) {
 //   - 其餘 →「前往 <完整網域>」（不替它背書是哪裡；連結填錯銀行時也會在這裡露出來）
 const PMC_PARTNER_HOSTS = [
   { test: /(^|\.)money101\.com\.tw$/, name: 'Money101' },
-  { test: /(^|\.)creatory\.biz$/, name: '' }
+  { test: /(^|\.)creatory\.biz$/, name: 'Money101' }   // 同一個平台的另一個網域（追蹤參數 a= 相同）
 ];
 const PMC_BANK_DOMAIN_ALIASES = { 'cathay-cube': ['cathaybk'] };
 function pmcHostOf_(url) {
@@ -2812,8 +2831,7 @@ function pmcApplyDest_(href, card) {
   if (!host) return null;
   for (let i = 0; i < PMC_PARTNER_HOSTS.length; i++) {
     if (PMC_PARTNER_HOSTS[i].test.test(host)) {
-      const name = PMC_PARTNER_HOSTS[i].name;
-      return { kind: 'partner', text: '合作連結・經' + (name ? ' ' + name + ' ' : '合作平台') + '前往申辦頁' };
+      return { kind: 'partner', text: '經 ' + PMC_PARTNER_HOSTS[i].name + ' 合作連結前往銀行官網' };
     }
   }
   const siteHost = card ? pmcHostOf_(card.website) : '';
@@ -2839,18 +2857,22 @@ function pmcApplyDestHtml_(href, card, extraCls) {
 // 【大師加碼】是什麼。這四件事的唯一說明在 /privacy 5.2，沒有人會在申辦前去翻。
 // 同一份問答同時輸出成可見內容與 FAQPage JSON-LD（pmcBuildTrustJsonLd_），兩邊不會分岔。
 // a＝純文字答案（JSON-LD 用同一段）；link＝答案後面附的站內連結（選填）。
-// ⚠️ 文案裡的事實要跟程式一致：排序規則＝pmcPromoSortKey_、推薦名單＝pmcSelectPicks_、
-//    去向標示＝pmcApplyDest_；那幾支改了，這裡要跟著改。
+// ⚠️ 文案裡的事實要跟程式一致：去向標示＝pmcApplyDest_、「逐一核對連結網域」＝
+//    validateReferentialIntegrity_ 裡的申辦連結檢查；那幾支改了，這裡要跟著改。
+//    「清單順序依實際回饋率排行」是站長 2026-11-17 指定的說法（實際規則見 pmcPromoSortKey_：
+//    首刷禮優先，再依回饋率、回饋金額）；站長推薦怎麼選不在這裡說明（同日裁定）。
 // 三句都壓在 6～7 個字：手機（390px）要能排成一列，多一個字就會折成兩列、把推薦區往下推。
 const PMC_TRUST_POINTS = ['本站不經手個資', '按鈕標示去向', '排序不看分潤'];
 const PMC_TRUST_QA = [
   { q: '點「立即申辦」會去哪裡？',
-    a: '每顆申辦按鈕下方都標示了去向。「直達銀行官網」會直接開啟該銀行的線上申辦頁；「合作連結」會先經過合作平台（例如 Money101）的追蹤網址，再前往申辦頁。兩種都是另開新分頁，這一頁會留著。' },
+    a: '都是到發卡銀行官網的線上申辦頁，每顆按鈕下方有標示走哪一種：「直達銀行官網」直接開啟銀行的申辦頁；「經 Money101 合作連結」會先經過合作平台 Money101 的追蹤網址，再自動轉到銀行官網。兩種都是另開新分頁，這一頁會留著。' },
+  { q: '申辦連結安全嗎？會不會被動手腳？',
+    a: '申辦連結是固定寫在這一頁裡的網址，只會前往發卡銀行官網或合作平台 Money101。每次更新資料時，系統都會逐一核對每個連結的網域是否屬於該銀行或 Money101。本站全程使用 HTTPS 加密連線。到了申辦頁，也可以看一眼網址列，確認是該銀行的網域再填寫資料。' },
   { q: '從這裡申辦，個人資料安全嗎？',
-    a: '本站不代辦信用卡，這一頁也沒有任何填寫申請資料的欄位。你的姓名、身分證字號、收入等申請資料，只會填在銀行或合作平台自己的頁面上，本站看不到、也拿不到。點擊離開之後，資料由對方的隱私權政策規範。',
+    a: '本站不代辦信用卡，這一頁也沒有任何填寫申請資料的欄位。你的姓名、身分證字號、收入等申請資料，只會填在銀行自己的頁面上，本站看不到、也拿不到。點擊離開之後，資料由對方的隱私權政策規範。',
     link: { href: '/privacy', text: '隱私權政策' } },
   { q: '本站怎麼賺錢？會影響排序嗎？',
-    a: '部分申辦連結是推薦連結：你透過它完成申辦，本站可能獲得推薦報酬，這是本站能免費提供的營運來源之一，不會改變你的申辦條件。下方清單的順序由程式依活動內容排列（首刷禮優先，再依回饋率、回饋金額由高到低），與有沒有報酬無關；「站長推薦」是站長指定加上依回饋率與門檻自動遞補的名單。' },
+    a: '部分申辦連結是推薦連結：你透過它完成申辦，本站可能獲得推薦報酬，這是本站能免費提供的營運來源之一，不會改變你的申辦條件。清單順序依實際回饋率排行，與有沒有報酬無關。' },
   { q: '什麼是【大師加碼】？',
     a: '標有【大師加碼】的活動，是透過本站（信用卡回饋大師）連結申辦才有的專屬首刷禮或加碼活動。只要從本頁的「立即申辦」按鈕進入申辦，並完成該活動「達成條件」列出的每一項，就能獲得。這類連結本站會獲得推薦報酬。' },
   { q: '這些活動資料可靠嗎？',
@@ -3236,19 +3258,11 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
     ? '<p class="promo-exclusive-note"><b>大師加碼</b>本站連結限定：從本頁「立即申辦」進入申辦，' +
       '並完成下列全部達成條件，即可獲得。</p>'
     : '';
-  // 讀完條件的地方再放一顆申辦鈕（2026-11-16）：條件與備註常常比一個螢幕長，
-  // 原本唯一的按鈕在卡片最上面，讀完要往回捲才按得到。GA 的 section 記成 detail。
-  // 只給有分潤連結的卡——退用銀行活動頁（「活動頁面」）的不重複放。
-  const detailLink = pmcApplyLink_(p);
-  const detailCtaHtml = (detailLink && detailLink.sponsored)
-    ? '<div class="promo-detail-cta">' +
-      pmcApplyLinkHtml_(detailLink, p, 'promo-apply-btn promo-detail-apply', 'detail') +
-      pmcApplyDestHtml_(detailLink.href, p.card, '') + '</div>'
-    : '';
+  // ⚠️ 詳情底部不放第二顆申辦鈕：2026-11-16 做過，站長隔天裁定拿掉——直向空間比少捲一次重要。
   return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
     (leadHtml || '') + exclusiveHtml +
     '<dl class="promo-card-meta">' + (leadRowHtml || '') + rows.join('') + '</dl>' +
-    notesHtml + detailCtaHtml + '</div>';
+    notesHtml + '</div>';
 }
 
 // 一檔活動（主活動與堆疊層共用同一份標記，只差外層 class）。
