@@ -289,7 +289,7 @@ basicCashbackDiv.innerHTML = basicContent;
                 // Default formatting for other cards (like Uni card)
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (上限 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (${formatCapText(data.cap, { prefix: '上限 ', unlimitedText: '上限 NT$無' })})</div>`;
                 });
             }
             levelRatesInfo += '</div>';
@@ -1093,8 +1093,9 @@ function renderBasicExclusionsCard(card, initialCount = 10) {
 }
 
 // 「NT$7,500」／「無上限」：詳情頁回饋卡的上限欄（cap 是 null/0/'' 都算無上限）
+// 實作在 js/core-utils.js 的 formatCapText（預設選項＝falsy 判斷，與舊寫法逐字相同）
 function formatRateCardCap(cap) {
-    return cap ? `NT$${Math.floor(cap).toLocaleString()}` : '無上限';
+    return formatCapText(cap);
 }
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.

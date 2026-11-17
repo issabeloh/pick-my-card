@@ -534,7 +534,8 @@ function getSpotlightCardName(item) {
 }
 
 function formatSpotlightCap(cap) {
-    return (cap === null || cap === undefined || isNaN(cap)) ? '無上限' : `NT$${Math.floor(cap).toLocaleString()}`;
+    // 與詳情頁不同：cap=0 或 '' 這裡會顯示「NT$0」（沿用舊行為；見 formatCapText 的 unlimitedWhen 說明）
+    return formatCapText(cap, { unlimitedWhen: 'nullishOrNaN' });
 }
 
 // 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal

@@ -385,9 +385,12 @@ function mpOpenOwnedCards() {
 
 // 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
 function mpCapText(cardId, cap) {
-    const n = Number(cap);
-    if (!cap || isNaN(n) || n <= 0) return '無消費上限';
-    return `消費上限 NT$${Math.floor(n).toLocaleString()}${cardId === 'taishin-richart' ? '+' : ''}`;
+    return formatCapText(cap, {
+        unlimitedWhen: 'nonPositive',
+        unlimitedText: '無消費上限',
+        prefix: '消費上限 ',
+        suffix: cardId === 'taishin-richart' ? '+' : ''
+    });
 }
 
 function mpShortLevel(level) {

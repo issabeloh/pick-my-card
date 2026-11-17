@@ -746,3 +746,33 @@ window.pmcOnFirestoreError = function (err) {
     bar.append(text, close);
     document.body.appendChild(bar);
 };
+
+// ========== 回饋上限文字 formatCapText（2026-11-17 由六種寫法合併）==========
+// 把「回饋消費上限」數字轉成畫面文字：有上限 → 「NT$7,500」，沒有 → 「無上限」。
+// ⚠️ 合併時各處對 0／空字串／非數字字串的處理本來就不一致，為了「畫面逐字不變」，用
+// unlimitedWhen 保留各自的判斷，**不要自行統一**（要不要統一由站長決定）。
+//
+// opts.unlimitedWhen（什麼值算「無上限」）：
+//   'falsy'        （預設）!cap：null／undefined／''／0／NaN 算無上限；字串 '0' 與 'abc' 不算
+//                  （會印成 NT$0／NT$NaN）。→ formatRateCardCap（詳情頁回饋卡、搜尋結果卡上限欄）、
+//                    搜尋結果卡 capText、「回饋組成」彈窗每列上限、詳情頁級別說明（card-detail 的 levelSettings）
+//   'falsyOrNaN'   !cap 或 isNaN(cap)：多擋掉非數字字串；'0'、負數照印。→ 領券結果卡（createCouponResultElement）
+//   'nullishOrNaN' 只有 null／undefined／NaN／非數字字串算無上限；**0 與 '' 會印成 NT$0**。→ formatSpotlightCap（推薦活動）
+//   'nonPositive'  凡不是「大於 0 的數」都算無上限（0、負數、非數字都是）。→ mpCapText（刷卡小抄）、
+//                  搜尋結果卡「計算明細」上限欄（layer.cap）
+// opts.unlimitedText  無上限時的字樣，預設 '無上限'（可傳 '' 留白）
+// opts.currency       false＝數字前不加「NT$」（計算明細的上限欄，欄位標題已有幣別）
+// opts.prefix/suffix  只加在「有上限」的字樣前後（例：'上限 '、台新 Richart 的 '+'）
+function formatCapText(cap, opts) {
+    const o = opts || {};
+    const unlimitedText = o.unlimitedText !== undefined ? o.unlimitedText : '無上限';
+    let unlimited;
+    switch (o.unlimitedWhen) {
+        case 'falsyOrNaN': unlimited = !cap || isNaN(cap); break;
+        case 'nullishOrNaN': unlimited = cap === null || cap === undefined || isNaN(cap); break;
+        case 'nonPositive': unlimited = !(cap != null && cap > 0); break;
+        default: unlimited = !cap;
+    }
+    if (unlimited) return unlimitedText;
+    return `${o.prefix || ''}${o.currency === false ? '' : 'NT$'}${Math.floor(cap).toLocaleString()}${o.suffix || ''}`;
+}

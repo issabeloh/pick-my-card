@@ -1389,7 +1389,7 @@ function createCouponResultElement(coupon, amount) {
 
     // Handle cap display - same as regular cards
     // Check if cap exists and is a valid number
-    const capText = (coupon.cap && !isNaN(coupon.cap)) ? `NT$${Math.floor(Number(coupon.cap)).toLocaleString()}` : '無上限';
+    const capText = formatCapText(coupon.cap, { unlimitedWhen: 'falsyOrNaN' });
 
     // Debug log to check cap value
     if (coupon.merchant.includes('星巴克')) {
@@ -1577,10 +1577,10 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     // （大戶卡海外 4% 加碼受該級別 overseasBonusCap 限制，計算時確實有套）。
     // 計算層已帶著每層實際套用的 cap，取真的會咬到的那個顯示——只改顯示，金額不變。
     const displayCap = result.cap || resolveDisplayCapFromLayers(result.calculationLayers);
-    let capText = displayCap ? `NT$${Math.floor(displayCap).toLocaleString()}` : '無上限';
+    let capText = formatCapText(displayCap);
     // Special handling for Taishin Richart card cap display
     if (result.card.id === 'taishin-richart' && result.cap) {
-        capText = `NT$${Math.floor(result.cap).toLocaleString()}+`;
+        capText = formatCapText(result.cap, { suffix: '+' });
     }
     const cashbackText = result.cashbackAmount > 0 ? 
                         `NT$${result.cashbackAmount.toLocaleString()}` : 
@@ -1784,8 +1784,10 @@ function showCalcBreakdown(btn, cardResult) {
         // （左邊「適用金額」欄已經帶著幣別）。省下的寬度是 5 欄能在 360px 手機排下的關鍵。
         // rate=0 的層是「超過上限」那種剩餘額度桶，不是會給回饋的層——對它寫「無上限」
         // 會讀成「這段無上限地給」，正好相反，所以留白。
-        const capLabel = hasCap ? Math.floor(layer.cap).toLocaleString()
-            : (parseFloat(layer.rate) > 0 ? '無上限' : '');
+        const capLabel = formatCapText(layer.cap, {
+            unlimitedWhen: 'nonPositive', currency: false,
+            unlimitedText: parseFloat(layer.rate) > 0 ? '無上限' : ''
+        });
         // 封頂＝適用金額被上限夾住。原本在回饋金額後面掛紅字「（封頂）」，有了上限欄
         // 之後那是同一件事講兩遍（適用金額會等於上限），而 5 欄在 360px 手機上寬度吃緊——
         // 改成上限欄轉紅表示，省下約 60px。
@@ -1862,7 +1864,7 @@ function toggleRateComposition(btn) {
     const rows = comp.rows.map(r => `<tr>
         <td class="bd-name">${escapeHtml(String(r.name))}</td>
         <td class="bd-rate">${r.rate}%</td>
-        <td class="bd-amt">${r.cap ? `上限 NT$${Math.floor(r.cap).toLocaleString()}` : '無上限'}</td>
+        <td class="bd-amt">${formatCapText(r.cap, { prefix: '上限 ' })}</td>
     </tr>`).join('');
     const totalRow = `<tr class="bd-total"><td class="bd-name">合計</td><td class="bd-rate">${comp.total}%</td><td class="bd-amt"></td></tr>`;
 
