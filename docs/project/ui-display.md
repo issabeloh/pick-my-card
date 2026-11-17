@@ -5,6 +5,8 @@
 
 ## 1. 卡片詳情頁（#card-detail-modal，showCardDetail(cardId) 開啟）
 
+> ⚠️ **2026-11-17 起外殼已改版（第 1m 節）**：詳情頁從浮窗改成全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊。下面這節裡關於「sticky 標題列／`.card-detail-nav` 八顆錨點導覽／`#card-detail-apply-bar` 底部申辦列／`.modal-content` 捲動容器／近期異動區塊樣式／導覽鈕被借用來捲動」的描述是舊版，以第 1m 節為準；回饋卡、個人設定、級別「i」說明窗、登錄連結、官網連結的規則仍有效。
+
 **個人設定區塊**（`#card-personal-section`，2026-08-01 合併；Grep `personal-settings-box`）：
 「這張卡在我身上的設定」全部收在同一個灰底框裡——級別選擇器／CUBE 專屬設定（發卡組織、生日月份、童樂匯）＋ 我的額度 ＋ 我的筆記。合併前是分開的兩塊（級別區自帶灰底框、`.personal-fields-row` 另一塊），等於把同一件事切成兩半、還把詳情頁上半部撐長。
 - **標題一律同字級**：區塊標題是 `h4`「個人設定」（無 emoji），內層欄位標題一律 `.personal-field-title`（14px/600），不再有 h4 與 inline 14px label 混用
@@ -317,6 +319,22 @@ Grep `titleParts`）：
 - **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 
+## 1m. 詳情頁全頁改版——外殼（2026-11-17，三輪改版的第一輪）
+
+動機：CUBE 卡手機 8,790px（13 個畫面）、浮窗只佔 80% 高，第一個回饋數字在第三個畫面；手機返回鍵關不掉浮窗。第二輪＝回饋卡內部（計算條件標籤列等）、第三輪＝個人設定與新戶活動內部。本輪只做外殼，那些內容沒動。
+
+**結構**（`index.html`「Card Detail Modal」註解有全圖；命名一律 `cd-` 前綴）：`#card-detail-modal` 全頁（100dvh、底色 #f3f4f6、無遮罩）→ 捲動容器 `#card-detail-scroll`（`.card-detail-content`）→ `.cd-top` 藍色頁首（sticky，返回箭頭 `#close-card-detail`、卡名、桌機申辦鈕）／`.cd-tabsbar` 頁籤列（sticky）／`.cd-layout` ┬ `.cd-side`（摘要 `.cd-sum`＋個人設定 `#card-personal-section`）└ `.cd-main`（三個窗格 `.cd-pan`：`#cd-pan-rates`、`#cd-pan-coupon`、`#cd-pan-promo`）；浮動膠囊 `#card-detail-apply-bar`（`.cd-fab`）在捲動容器外、modal 內。
+- **同一份 DOM 兩種排法**：手機 `.cd-layout/.cd-side/.cd-main` 是 `display:contents`，摘要、頁籤列、窗格變成捲動容器的直接子項，靠 `order` 排（sticky 的作用範圍才是整頁）；≥1025px 是 grid（左欄 316px sticky＝摘要卡＋個人設定，右欄＝頁籤＋內容），**不在 JS 搬節點**。桌機不顯示「個人設定」頁籤（它常駐左欄；`.cd-pan-set[hidden]` 在桌機不生效）；769–1024px 用手機的單欄＋四頁籤
+- **頁籤**（`setupCardDetailNav`／`refreshCardDetailTabs`／`selectCardDetailTab`，`js/results-display.js`）：回饋（指定通路＋即將開始＋一般回饋）／領券・停車／新戶活動／個人設定；帶筆數（個人設定不帶）；底下沒內容就不顯示（依各區 computed display＋textContent 判斷，**不依賴尺寸**——沒選中的窗格是 display:none，量到的尺寸是 0）。條件列「展開」鈕要等窗格顯示後才量得到，`selectCardDetailTab` 會對剛顯示的窗格重跑 `initConditionClamps`
+- **「落在某區塊」一律走 `cardDetailGoToSection(sectionId)`**（找出包含該區塊的頁籤、切過去、扣掉 sticky 高度捲到位；`card-changelog-section` 會同時展開異動清單）。呼叫端：側欄「最近異動」（`openCardDetailAtChangelog`）、embed 的 `pmc-open-card` 的 `section`（`js/home-ui.js`）。舊的「用 section id 去點導覽鈕」已不存在
+- **摘要三格**：最高回饋＝`#card-special-cashback` 內最大的 `.rate-card-rate`、一般消費＝`#card-basic-cashback` 第一個 `.rate-card-rate`，都是**讀畫面上已畫好的回饋卡**（`updateCardDetailFacts()`，與回饋卡用同一份 `getDisplayRate` 結果，不另寫算法；CUBE 切級別後 `updateCubeSpecialCashback` 會重算）。年費＝`annualFee` 原文（小字三行），免年費條件與「我已過免年費門檻」勾選搬到個人設定最下面（id、儲存邏輯不動）
+- **申辦**（`setupCardDetailApply`／`refreshCardDetailApply`，`js/card-detail.js`）：手機（≤768px）白底膠囊（亮黃禮物圖示＋文字＋「立即申辦」），捲過 150px 縮成右下角；桌機頁首亮黃鈕。文字＝第一筆新戶活動（`{promo_types[0]} NT$金額`／`{promo_types[0]} 回饋率`／`{promo_types[0]}`），沒有新戶活動用 `applyCta.text`。**持卡人（`myOwnedCards` 含這張卡）兩者都不顯示**——預設先顯示，`loadMyOwnedCards` 完成後（`js/auth-user-data.js` 兩處呼叫端）與「我的信用卡」增刪卡後（`pmc:mappings-data-changed`）重新判斷；沒有 `applyCta.link` 的卡每次 `showCardDetail` 都明確重設為隱藏。GA4 `button_type` 沿用 `detail_header_apply`／`detail_sticky_apply`，選擇器改成 `.cd-apply-header-btn`／`.cd-fab-btn`
+- **返回鍵**：開啟時 `pushState`（網址不變）、`popstate` 關閉、按返回箭頭關閉時若這次 push 過就 `history.back()`（`_cdPushed`／`_cdExpectPop`，寫法照 `js/mappings-page.js`）。**embed 模式不 push**。關閉的兩條路徑共用 `showCardDetail` 內的 `closeModal`（embed 的 `pmc-detail-closed` 掛在那裡）。疊在選卡 modal／配卡組合頁上開啟時，網址沒變，返回只關詳情頁。`popstate` 監聽掛在 `DOMContentLoaded` 裡，因為 `tools/lib/merchant-cards.js` 的 vm 沙箱 `window` 沒有 `addEventListener`
+- **近期異動**：「回饋」頁籤最上面一行通知（最新一筆日期＋文字＋「共 N 則」），點了展開完整清單；仍用 `textContent`。顯示用 `style.display = ''`（不是 `'block'`），桌機 CSS 對它設了 `display:contents`
+- **搜尋**：`filterCashbackItems` 仍過濾四區；「回饋」頁籤（指定通路／即將開始／一般）沒命中、領券區有命中時，顯示 `#cashback-search-hint` 一行可點的提示切到「領券・停車」。注意 `filterDetailCards` 會自動展開被截斷的通路清單，所以「Expedia」這種字可能同時命中回饋頁籤（CUBE 秋日遊的完整通路清單裡有它），不會出提示
+- **重繪同一張卡**（非 CUBE 切級別會重呼叫 `showCardDetail`）：`keepView` 保留目前頁籤與捲動位置；開新卡／換卡回到「回饋」頁籤最上面
+- 回歸測試：`card-detail-test.js` 取樣前把所有窗格攤開（`innerText` 對不在版面上的元素退回 `textContent`，沒有換行）；比對時濾掉 `Failed to load resource` 類 console error（時序噪音，docs/ops/regression.md 2026-11-16 教訓的根治）。`mappings-page-test.js` 的 Firebase 替身補了 `setUserProperties`（#561 起 index.html 會 import 它，缺了整支 firebase 模組載入失敗）
+
 ## 2. 卡片圖片資產
 
 - 路徑慣例：`assets/images/cards/<card.id>.png`——前端直接組路徑，**不用改 Sheet/Apps Script**
@@ -520,3 +538,6 @@ Grep `titleParts`）：
 - [2026-10-18] 統一詞一輪（10-14～17）把卡片活動裡 34 個名字改寫，其中 18 個（只差空白／大小寫／臺台，統一詞表照規定不列）存在刷卡小抄的舊寫法查不到 → 被判「已下架」、會被「刪除全部失效活動」刪掉；另查出名字括號裡含「、」的 10 個名字（Apple錢包指定交通卡(Suica、PASMO、ICOCA) 等）一釘選就被判已下架，因為重查前一律先用「、」拆 → 小抄重查與加入鈕改走 `resolveMappingMerchant()`（見第 8 節「存的名字」）。資料改名是正常維護動作，任何「拿存下來的名字回頭查資料」的功能都要認得改名前的寫法，且判定會觸發刪除時要用真實改名清單驗過（這次用 10-13 與 10-17 的 cards.data 對照）
 - [2026-10-21] 手機版頁尾白字放在 body 灰漸層上對比只有約 1.5:1（小標 10px 幾乎看不見）、廣告沒填到時「推薦比較」下方留一塊 116px 白洞 → 白字是當初配深色背景的寫法、灰底換上來後沒人重量對比；廣告列用 `min-height:100px` 預留位子，但擋廣告外掛／沒填到時位子永遠空著 → 頁尾改深色字（`#374151` 約 5.4:1）＋手機兩欄格線（奇數顆最後一顆佔滿一列）＋法務連結縮成 `.footer-legal` 一行小字；廣告列拿掉預留高度，外框與「廣告」標籤只在 `<ins data-ad-status="filled">` 時出現，`data-full-width-responsive` 改 false（true 會讓手機廣告撐出外框）。⚠️ 頁尾是**同一套結構手抄在 4 頁**（index／faq／privacy／terms）＋商家頁由生成器從 index 產生＋promos.html 由 `cards-export.gs` 生成（用自己的 promos.css，要手動同步）；改頁尾要全部對一遍。另：站長實測確認 AdSense **錨定廣告收合後，原本預留的空間不會收回**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），這不是本站版面造成的，改 CSS 前先分清楚是不是廣告插的
 - [2026-11-16] 站長反映全站「很有 AI 感、不專業」→ 成因是一整組手法疊加（灰底浮卡、預設色票、emoji 圖示、尺度不一致），不是單一元件 → 動全站視覺（底色、頁首、頁籤、結果卡、色票）前先讀 `docs/project/ui-refresh-diagnosis.md`：有成因排序、分批清單與進度、示意用 CSS、實作注意事項
+- [2026-11-17] 詳情頁改全頁後，`#card-personal-section` 手機窗格的左右內距消失 → 它同時是 `.card-info-section`（詳情頁內重設 `padding:0`，id 特異性 1-1-0）與窗格 `.cd-pan`（內距 0-1-0）→ 窗格的內距與 `order` 一律用 `#card-detail-modal .cd-pan…` 寫，重設通用區塊樣式時不要連 padding 一起歸零
+- [2026-11-17] 「個人設定」頁籤一直不出現 → 判斷頁籤有沒有內容用 computed display，而個人設定的區塊本身就是窗格（沒被選中時有 `hidden`）→ 窗格＝區塊的頁籤不能用 display 判斷，個人設定固定視為有內容
+

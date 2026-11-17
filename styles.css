@@ -76,8 +76,8 @@ html.pmc-returning-user #pmc-boot-loader {
    可見，全站其餘 UI（header/sidebar/main/其他 modal/footer/回報鈕/回頂鈕/spotlight/
    推薦比較工具列）隱藏，頁面背景透明——iframe 蓋在父頁（promos.js 的
    .promo-detail-overlay）遮罩區時，
-   視覺上就像原生彈窗。#card-detail-modal 本身的樣式（position:fixed 全螢幕深色遮罩）
-   完全不用改，它天生就會蓋滿 iframe viewport。 */
+   視覺上就像原生彈窗。#card-detail-modal 本身是 position:fixed 的全頁（2026-11-17 起不再是半透明遮罩＋浮窗，
+   底色 #f3f4f6、100dvh），天生蓋滿 iframe viewport，embed 模式不用另外改它的樣式。 */
 html.pmc-embed body {
     background: transparent;
     padding: 0;
@@ -2684,15 +2684,14 @@ input[type="number"]:focus {
     color: #b45309;
 }
 
-/* 「立即申辦」按鈕共用底座（bottom CTA / header btn / sticky bar btn 三處共用）。
+/* 「立即申辦」按鈕共用底座（新戶活動區 CTA 盒用；詳情頁頁首鈕與浮動膠囊 2026-11-17 起改用
+   .cd-apply-btn 的亮黃樣式，見「卡片詳情頁」一節）。
    2026-07-19 站長定案改版：奶油蛋蜜「糖衣亮面」（mockup 代號 C3b＋H4）——蛋黃橘→
    奶油黃斜向漸層＋頂部透明亮膜＋1.5px 細白內圈（糖衣），扁平無厚底、深蜜糖字。
    與 promos.css .promo-apply-btn 同配方，改配方時兩檔要手動同步。
    hover＝糖衣變厚（內圈 1.5→2.5px 變白＋微提亮），無位移無掠光；active＝原地
    縮小回彈。個別位置的 padding/font-size 留在各自的規則裡。 */
-.card-apply-cta-btn,
-.card-detail-apply-header-btn,
-.card-detail-apply-bar-btn {
+.card-apply-cta-btn {
     background-image:
         radial-gradient(130% 70% at 50% 0%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 58%),
         linear-gradient(115deg, #ffce66 0%, #ffe28a 55%, #fff0bd 100%);
@@ -2708,9 +2707,7 @@ input[type="number"]:focus {
     transition: transform 0.15s ease, box-shadow 0.3s ease, filter 0.25s ease;
 }
 
-.card-apply-cta-btn:hover,
-.card-detail-apply-header-btn:hover,
-.card-detail-apply-bar-btn:hover {
+.card-apply-cta-btn:hover {
     filter: brightness(1.03);
     box-shadow:
         inset 0 0 0 2.5px rgba(255, 255, 255, 1),
@@ -2719,15 +2716,11 @@ input[type="number"]:focus {
 
 /* 「減少動態」用戶 hover 完全靜態：半成品動畫（縮放中途的模糊感）比不動更難看 */
 @media (prefers-reduced-motion: reduce) {
-    .card-apply-cta-btn,
-    .card-detail-apply-header-btn,
-    .card-detail-apply-bar-btn {
+    .card-apply-cta-btn {
         transition: none;
     }
 
-    .card-apply-cta-btn:hover,
-    .card-detail-apply-header-btn:hover,
-    .card-detail-apply-bar-btn:hover {
+    .card-apply-cta-btn:hover {
         filter: none;
         box-shadow:
             inset 0 0 0 1.5px rgba(255, 255, 255, 0.75),
@@ -2735,9 +2728,7 @@ input[type="number"]:focus {
     }
 }
 
-.card-apply-cta-btn:active,
-.card-detail-apply-header-btn:active,
-.card-detail-apply-bar-btn:active {
+.card-apply-cta-btn:active {
     transform: scale(0.95);
     box-shadow:
         inset 0 0 0 1.5px rgba(255, 255, 255, 0.6),
@@ -2752,7 +2743,7 @@ input[type="number"]:focus {
     white-space: nowrap;
 }
 
-/* Mobile: 詳情頁已有底部 sticky 申辦列（.card-detail-apply-bar），新戶活動區
+/* Mobile: 詳情頁已有浮動申辦膠囊（.cd-fab），新戶活動區
    上方的 CTA 盒重複，整個隱藏（2026-07-19 站長指示，原本是置中顯示）。
    若該卡只有 CTA、沒有任何活動卡（renderCardPromos 的 CTA-only 分支），
    整個新戶活動區在手機上也一併隱藏，避免剩一個空標題——:has() 全站已在用
@@ -3488,22 +3479,6 @@ input[type="number"]:focus {
     margin: 0;
     color: #111827;
     font-size: 1.25rem;
-}
-
-/* Card detail modal: image + title group at top-left */
-.card-detail-title-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-}
-.card-detail-image {
-    border-radius: 6px;
-    height: 56px;
-    width: auto;
-    max-width: 96px;
-    object-fit: contain;
-    flex-shrink: 0;
 }
 
 .close-modal {
@@ -4635,200 +4610,525 @@ label.personal-field-check input[type="checkbox"] {
     background: #e5e7eb;
 }
 
-/* Card Detail Modal Styles */
+/* ============================================================
+   卡片詳情頁（#card-detail-modal，2026-11-17 改版第一輪：外殼）
+   浮窗 → 全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊。設計規格來自站長核定的七版示意圖；
+   命名一律 cd- 前綴（避開全站 label/header/nav 等元素樣式與 .big 這類通用 class，見 ui-display.md 教訓記錄）。
+   結構與各區 id 見 index.html「Card Detail Modal」註解。
+
+   - 手機單欄：頁首 → 摘要（藍底、跟著捲走）→ 頁籤（sticky）→ 內容。靠 flex 的 order 排列：
+     .cd-layout/.cd-side/.cd-main 在手機是 display:contents，讓摘要、頁籤、各頁籤內容成為
+     捲動容器的直接子項（sticky 的作用範圍才是整頁，不只是某個欄位）
+   - ≥1025px 兩欄：左欄 316px（sticky）放摘要卡＋個人設定，右欄是頁籤與內容；同一份 DOM、
+     靠 CSS grid 排，不在 JS 搬節點。「個人設定」頁籤在桌機隱藏（它常駐左欄）
+   - 捲動容器是 #card-detail-scroll（.card-detail-content）；頁首高度由 setupCardDetailNav()
+     的 ResizeObserver 寫進 --pmc-detail-header-h（卡名換行會改變高度），頁籤列的 top 跟著它
+   - ⚠️ 回饋卡（.rate-card）、個人設定內部、新戶活動卡的內部版面這一輪沒動（第二、三輪處理）
+   ============================================================ */
+#card-detail-modal {
+    background: #f3f4f6;
+    align-items: stretch;
+    justify-content: stretch;
+    /* 全頁：蓋滿整個視窗（手機網址列收合時 100vh 比可視區大，dvh 才對；vh 只當舊瀏覽器 fallback） */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
 .card-detail-content {
-    max-width: 700px;
-    max-height: 90vh;
-}
-
-/* 卡片詳情的標題列釘住，捲動時不要被捲走（站長 2026-09-18 先上桌機；
-   2026-09-23 手機補上，改用下面的精簡版標題列）。
-   z-index 要高於 .card-detail-nav 的 10，否則 nav 捲上來會蓋住標題。
-   nav 的 top 改成「標題高度」，才會黏在標題底下而不是蓋住它；標題高度隨卡名
-   長度變動，由 setupCardDetailNav() 量完寫進 --pmc-detail-header-h，
-   這裡的 97px 只是量不到時的 fallback（桌機實測值；手機見下方 57px）。
-   ⚠️ 捲動落點的計算（js/results-display.js 的 stickyOffset()）會自己判斷標題
-   是不是 sticky、也直接讀實際 offsetHeight，改這裡不需要動 JS。 */
-#card-detail-modal .modal-header {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 11;
-    border-top-left-radius: inherit;
-    border-top-right-radius: inherit;
-}
-#card-detail-modal .card-detail-nav {
-    top: var(--pmc-detail-header-h, 97px);
-}
-
-/* 手機精簡標題列（2026-09-23）：卡圖 56→36px、左右 padding 20→16px、上下 20→10px、
-   卡名 1.25→1.05rem，整列從 97px 收到 57px。當初（2026-09-18）手機不釘就是因為
-   97px 太貴——手機 modal 只有 80dvh（iPhone 13 實測可視 531px），97px 標題＋53px
-   導覽列要吃掉 28%；收到 57px 後標題只佔 11%，換回來的是捲動時看得到卡名、
-   也隨時按得到右上角的 ✕
-   （✕ 在標題列裡，之前一捲下去就沒有關閉鈕，只能點遮罩或 Esc）。
-   卡圖不整個藏掉：它是「現在看的是哪張卡」最快的辨識物，縮小比消失好。 */
-@media (max-width: 768px) {
-    #card-detail-modal .modal-header {
-        padding: 10px 16px;
-    }
-    /* 卡名 1.25rem → 1.05rem（同公告 modal 的精簡標題規格）：長卡名在窄螢幕上
-       會折成兩行把標題列撐高，20px 時 85px、17px 時 75px（iPhone SE 320px
-       ×「中信 Uniopen 聯名卡」實測，320px 上最長的卡名仍然會折）。折行本身
-       不會壞——ResizeObserver 會把實際高度同步給 nav 的 top（見
-       js/results-display.js 的 syncHeaderHeight）——只是會吃掉可讀高度。 */
-    #card-detail-modal .modal-header h3 {
-        font-size: 1.05rem;
-    }
-    #card-detail-modal .card-detail-image {
-        height: 36px;
-        max-width: 64px;
-    }
-    #card-detail-modal .card-detail-nav {
-        top: var(--pmc-detail-header-h, 57px);
-    }
-}
-
-/* Sticky section nav lives between modal-header and modal-body so it sticks
-   flush to the top of the modal-content scroll viewport. */
-.card-detail-nav {
-    position: sticky;
-    top: 0;
-    background: white;
-    padding: 10px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    z-index: 10;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-}
-
-.card-detail-nav::-webkit-scrollbar {
-    height: 4px;
-}
-
-.card-detail-nav::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 2px;
-}
-
-.card-detail-nav-btn {
-    flex-shrink: 0;
-    background: transparent;
-    color: #6b7280;
-    border: 1px solid transparent;
-    padding: 6px 12px;
-    border-radius: 16px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.15s, color 0.15s;
-}
-
-.card-detail-nav-btn:hover {
+    flex-direction: column;
     background: #f3f4f6;
     color: #111827;
-}
-
-.card-detail-nav-btn.active {
-    background: #dbeafe;
-    color: #1d4ed8;
-    border-color: #93c5fd;
-}
-
-.card-detail-nav-btn[hidden] {
-    display: none;
-}
-
-/* 桌機版「立即申辦」按鈕，緊鄰卡名（詳情頁 header）。
-   配色沿用上方共用底座的糖衣亮面樣式。 */
-.card-detail-apply-header-btn {
-    flex-shrink: 0;
-    display: inline-block;
-    padding: 6px 16px;
     font-size: 14px;
-    white-space: nowrap;
+    line-height: 1.5;
+    -webkit-overflow-scrolling: touch;
 }
 
-.card-detail-apply-header-btn[hidden] {
-    display: none;
-}
-
-@media (max-width: 768px) {
-    /* 手機改用底部 sticky bar，header 按鈕不重複顯示 */
-    .card-detail-apply-header-btn {
-        display: none;
-    }
-}
-
-/* 手機版底部常駐申辦列，貼在 .modal-content（捲動容器）底部。
-   是 modal-content 的最後一個子節點，in-flow，不需額外 padding hack。
-   2026-07-15：改成「好康通知」語氣——淡奶油黃底＋暖色邊框，跟內文區塊拉開視覺區隔。 */
-.card-detail-apply-bar {
+/* --- 藍色頁首（sticky）：返回箭頭、卡名、桌機申辦鈕 --- */
+.cd-top {
     position: sticky;
-    bottom: 0;
+    top: 0;
+    z-index: 12;
+    order: 0;
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: #fffbeb;
-    padding: 10px 16px;
-    border-top: 1px solid #fde68a;
-    box-shadow: 0 -4px 10px rgba(234, 179, 8, 0.15);
-    z-index: 10;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 12px 0 4px;
+    background: #1e40af;
+    color: #fff;
 }
-
-.card-detail-apply-bar[hidden] {
-    display: none;
+.cd-back {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
 }
-
-/* 靜態禮物 emoji，純裝飾（aria-hidden）。文字被截斷隱藏時（applyCta.text 為空）
-   一併隱藏，避免只剩孤零零一個 emoji。 */
-.card-detail-apply-bar-emoji {
-    flex: 0 0 auto;
-    font-size: 20px;
-    line-height: 1;
-}
-
-.card-detail-apply-bar:has(.card-detail-apply-bar-text[hidden]) .card-detail-apply-bar-emoji {
-    display: none;
-}
-
-.card-detail-apply-bar-text {
+.cd-back:hover { background: rgba(255, 255, 255, 0.14); }
+.cd-name {
     flex: 1;
     min-width: 0;
-    font-size: 15px;
+    margin: 0;
+    font-size: 16.5px;
     font-weight: 700;
-    line-height: 1.5;
-    color: #92400e;
+    line-height: 1.3;
+    color: #fff;
+    /* 長卡名最多兩行（頁首高度跟著變，--pmc-detail-header-h 由 ResizeObserver 同步） */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    padding: 4px 0;
 }
 
-.card-detail-apply-bar-text[hidden] {
-    display: none;
+/* --- 申辦：亮黃色（手機膠囊的按鈕、桌機頁首鈕共用） --- */
+.cd-apply-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: none;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border-bottom: 2px solid #f2bd16;
+    background: #ffd84a;
+    color: #7a4e00;
+    font-size: 14.5px;
+    font-weight: 800;
+    line-height: 1.3;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cd-apply-btn:hover { filter: brightness(1.03); }
+.cd-apply-btn:active { transform: scale(0.96); }
+.cd-apply-btn[hidden] { display: none !important; }
+.cd-apply-header-btn {
+    display: none;            /* 手機（≤768px）用 .cd-fab */
+    padding: 5px 14px;
+    font-size: 13px;
 }
 
-.card-detail-apply-bar-btn {
-    flex-shrink: 0;
-    display: inline-block;
-    padding: 10px 18px;
-    font-size: 14px;
+/* --- 摘要（手機：藍底、跟著捲走；桌機：左欄白卡） --- */
+.cd-sum {
+    order: 1;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 2px 16px 14px;
+    background: #1e40af;
+    color: #fff;
+}
+.cd-id { display: flex; align-items: center; gap: 12px; }
+.cd-thumb {
+    flex: none;
+    width: 80px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: #fff;
+}
+.cd-thumb[hidden] { display: none; }
+.cd-id-tx { min-width: 0; }
+.cd-bank { font-size: 14px; font-weight: 700; line-height: 1.4; }
+.cd-type { font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.82); }
+/* 官網連結沿用 #card-official-site-link（GA4 detail_official_site），這裡只改顏色與位置 */
+#card-detail-modal .cd-type .card-official-site-link {
+    display: inline;
+    margin: 0 0 0 6px;
+    font-size: inherit;
+    color: inherit;
+    text-decoration: underline;
     white-space: nowrap;
 }
+#card-detail-modal .cd-type .card-official-site-link:hover { color: #fff; }
+#card-detail-modal .cd-type .card-official-site-link[hidden] { display: none; }
 
+.cd-facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.cd-fact {
+    min-width: 0;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+}
+.cd-fact dt { margin: 0; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.8); }
+.cd-fact dd {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+}
+/* 年費：annualFee 原文（不解析），小字最多三行 */
+.cd-fact-fee dd {
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    margin-top: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+#card-detail-modal .cd-sum .card-use-case {
+    margin: 0;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.13);
+    border-left: 3px solid rgba(255, 255, 255, 0.5);
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.55;
+}
+#card-detail-modal .cd-sum .card-use-case[hidden] { display: none; }
+
+/* --- 頁籤列（sticky，在頁首下方）：照首頁 .home-view-switch——藍底上的文件夾頁籤，選中的那張是頁面底色 --- */
+.cd-tabsbar {
+    position: sticky;
+    top: var(--pmc-detail-header-h, 48px);
+    z-index: 11;
+    order: 2;
+    flex: none;
+    background: #1e40af;
+    padding: 0 8px;
+}
+.cd-tabs {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    align-items: end;
+}
+.cd-tab {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 3px;
+    padding: 9px 2px 8px;
+    border: 0;
+    border-radius: 12px 12px 0 0;
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.92);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cd-tab:hover { background: rgba(255, 255, 255, 0.26); }
+.cd-tab[hidden] { display: none; }
+.cd-tab[aria-selected="true"] {
+    background: #f3f4f6;
+    color: #1e40af;
+    font-weight: 800;
+    padding-top: 11px;
+}
+/* 選中頁籤下緣兩側的小圓角，讓頁籤跟頁面底色接成一體 */
+.cd-tab[aria-selected="true"]::before,
+.cd-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: 10px;
+    height: 10px;
+    pointer-events: none;
+}
+.cd-tab[aria-selected="true"]::before { left: -10px; background: radial-gradient(circle at 0 0, transparent 10px, #f3f4f6 10.5px); }
+.cd-tab[aria-selected="true"]::after { right: -10px; background: radial-gradient(circle at 100% 0, transparent 10px, #f3f4f6 10.5px); }
+.cd-tab.cd-tab-first[aria-selected="true"]::before,
+.cd-tab.cd-tab-last[aria-selected="true"]::after { display: none; }
+.cd-tab-n { font-style: normal; font-size: 10.5px; font-weight: 500; opacity: 0.85; }
+.cd-tab-n:empty { display: none; }
+
+/* --- 手機：三層容器攤平成捲動容器的直接子項，順序由 order 決定 --- */
+.cd-layout,
+.cd-side,
+.cd-main { display: contents; }
+#card-detail-modal .cd-pan { order: 3; padding: 0 12px calc(88px + env(safe-area-inset-bottom, 0px)); }   /* 下方留白：避免被浮動膠囊蓋住 */
+.cd-pan[hidden] { display: none; }
+#card-detail-modal .cd-pan-set { order: 4; }
+
+/* 各區（沿用 .card-info-section 的 id，只在詳情頁內換掉底線與間距） */
+#card-detail-modal .card-info-section {
+    margin: 0;
+    border: 0;
+}
+#card-detail-modal .card-info-section h4 {
+    margin: 18px 4px 8px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #374151;
+}
+#card-detail-modal .personal-settings-box { background: #fff; }
+/* 個人設定在窄欄（手機／桌機 316px 左欄）一律直排：加了「免年費條件」之後三格並排會太擠 */
+#card-detail-modal .personal-fields-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+#card-detail-modal .personal-fields-row #credit-limit-section,
+#card-detail-modal .personal-fields-row #card-notes-section { flex: none; }
+.cd-fee-field {
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+.cd-fee-field .personal-field-title { margin-bottom: 2px; }
+.cd-fee-waiver-text { margin: 0 0 4px; color: #6b7280; font-size: 12px; line-height: 1.55; }
+.cd-fee-waiver-text:empty { display: none; }
+
+/* --- 「回饋」頁籤最上面：近期異動（一行通知）＋搜尋框 --- */
+.cd-bar { display: block; }
+.cd-news-wrap { margin: 0; }
+/* 近期異動：無外框、整條橫跨（抵銷內容區左右 12px）、下方一條細線 */
+.cd-news {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% + 24px);
+    margin: 0 -12px;
+    padding: 10px 16px;
+    border: 0;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 0;
+    background: none;
+    color: #374151;
+    font: inherit;
+    font-size: 12.5px;
+    text-align: left;
+    cursor: pointer;
+}
+.cd-news-icon { flex: none; color: #374151; }
+.cd-news-date { flex: none; color: #9ca3af; font-variant-numeric: tabular-nums; }
+.cd-news-tx { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cd-news-more { margin-left: auto; flex: none; color: #3b82f6; font-weight: 600; }
+.cd-news[aria-expanded="true"] .cd-news-more::after { content: " ▲"; font-size: 10px; }
+.cd-news[aria-expanded="false"] .cd-news-more::after { content: " ▼"; font-size: 10px; }
+#card-detail-modal .card-changelog-list { margin-top: 8px; }
+
+/* 搜尋框：這一區唯一的框（白底灰框、左邊放大鏡、高 44px），沿用 #cashback-search-input */
+#card-detail-modal .cashback-search-bar {
+    margin: 12px 0 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+/* 標籤改成只給輔助科技讀（placeholder 已經說明用途） */
+#card-detail-modal .cashback-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+/* 型別＋id＋class 的特異性：蓋過全域 input[type="text"]、桌機密度區塊與框內清除鈕的 padding */
+#card-detail-modal input[type="text"].cashback-search-input {
+    height: 44px;
+    margin: 0;
+    padding: 0 34px 0 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #fff;
+    background-position: 14px center;
+    background-size: 16px 16px;
+    font-size: 14px;
+    color: #111827;
+}
+#card-detail-modal input[type="text"].cashback-search-input::placeholder { font-size: 14px; color: #9ca3af; }
+#card-detail-modal .input-clear-wrap[data-for="cashback-search-input"] { margin-bottom: 0; }
+#card-detail-modal .cashback-search-bar .cashback-search-empty { margin: 10px 0 0; }
+/* 回饋頁籤沒命中、領券・停車有命中時的提示 */
+.cd-find-hint {
+    display: block;
+    width: 100%;
+    margin: 10px 0 0;
+    padding: 9px 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.cd-find-hint[hidden] { display: none; }
+
+/* --- 手機浮動申辦膠囊（≤768px） --- */
+.cd-fab {
+    position: absolute;
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+    padding: 6px 6px 6px 8px;
+    background: #fff;
+    border: 1.5px solid #ffe184;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(122, 78, 0, 0.2);
+    color: #7a4e00;
+    font-size: 13.5px;
+    white-space: nowrap;
+}
+.cd-fab[hidden] { display: none; }
+/* 捲動超過約 150px 後縮成右下角：只剩圖示＋按鈕 */
+.cd-fab.is-min { left: auto; right: 12px; transform: none; }
+.cd-fab.is-min .cd-fab-tx { display: none; }
+.cd-fab-tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cd-fab-tx b { font-size: 15.5px; font-weight: 800; }
+.cd-gift {
+    position: relative;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ffd84a;
+    color: #7a4e00;
+    display: grid;
+    place-items: center;
+}
+.cd-gift::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    right: -4px;
+    width: 11px;
+    height: 11px;
+    background: #ff8a3d;
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+}
 @media (min-width: 769px) {
-    /* 桌機用 header 按鈕，sticky bar 不顯示 */
-    .card-detail-apply-bar {
-        display: none;
+    .cd-fab { display: none; }
+    .cd-apply-header-btn { display: inline-flex; }
+}
+
+/* --- 平板（769–1024px）：維持手機的單欄＋四頁籤，只放寬頁籤與內容的寬度上限 --- */
+@media (min-width: 769px) {
+    .cd-top,
+    .cd-tabsbar {
+        padding-left: calc(var(--page-gutter) + 20px);
+        padding-right: calc(var(--page-gutter) + 20px);
     }
+    .cd-tabs { grid-auto-columns: max-content; gap: 6px; }
+    .cd-tab { padding: 11px 28px 10px; font-size: 15px; border-radius: 14px 14px 0 0; gap: 6px; }
+    .cd-tab[aria-selected="true"] { padding-top: 13px; }
+    .cd-tab-n { font-size: 12px; }
+    .cd-sum,
+    #card-detail-modal .cd-pan {
+        padding-left: calc(var(--page-gutter) + 20px);
+        padding-right: calc(var(--page-gutter) + 20px);
+    }
+    #card-detail-modal .cd-pan { padding-bottom: 48px; }
+    /* 單欄時摘要的藍底滿版、內容靠左對齊頁籤 */
+    .cd-news { width: 100%; margin: 0; padding: 10px 4px; }
+}
+
+/* --- 桌機（≥1025px）兩欄：左欄（sticky）摘要卡＋個人設定，右欄頁籤與內容 --- */
+@media (min-width: 1025px) {
+    .card-detail-content { display: block; }
+    .cd-top { min-height: 58px; }
+    .cd-name { font-size: 19px; }
+    .cd-tabsbar { padding-left: calc(var(--page-gutter) + 330px); }
+    .cd-tab[data-tab="set"] { display: none; }
+
+    .cd-layout {
+        display: grid;
+        grid-template-columns: 316px minmax(0, 1fr);
+        align-items: start;
+        max-width: var(--page-w);
+        margin: 0 auto;
+    }
+    .cd-side {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px 0 16px 14px;
+        position: sticky;
+        /* 頁首＋頁籤列的高度由 setupCardDetailNav() 量完寫進變數，再空 14px */
+        top: calc(var(--pmc-detail-header-h, 58px) + var(--cd-tabs-h, 40px));
+        max-height: calc(100vh - var(--pmc-detail-header-h, 58px) - var(--cd-tabs-h, 40px));
+        max-height: calc(100dvh - var(--pmc-detail-header-h, 58px) - var(--cd-tabs-h, 40px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+    .cd-main { display: block; min-width: 0; padding: 14px 14px 40px; }
+
+    .cd-sum {
+        order: 0;
+        padding: 14px;
+        background: #fff;
+        color: #111827;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+    .cd-thumb { width: 104px; height: 65px; border-color: #e5e7eb; }
+    .cd-type { color: #6b7280; }
+    #card-detail-modal .cd-type .card-official-site-link:hover { color: #2563eb; }
+    .cd-fact { background: #f9fafb; border-color: #e5e7eb; }
+    .cd-fact dt { color: #6b7280; }
+    .cd-fact dd { font-size: 19px; }
+    .cd-fact-fee dd { font-size: 11.5px; }
+    #card-detail-modal .cd-sum .card-use-case {
+        background: #f8fafc;
+        border-left-color: #1e3a8a;
+        color: #1e3a5f;
+    }
+
+    /* 個人設定：桌機常駐左欄，不受頁籤切換影響（.cd-pan-set 的 hidden 在桌機不生效） */
+    #card-detail-modal .cd-pan { padding: 0; }
+    .cd-pan-set,
+    .cd-pan-set[hidden] { display: block; }
+    #card-detail-modal .cd-pan-set { order: 0; }
+    #card-detail-modal .cd-pan-set h4 { margin: 6px 4px 8px; }
+    #card-detail-modal .cube-settings-grid { grid-template-columns: 1fr; }
+
+    /* 近期異動與搜尋框同一排：通知佔滿剩餘寬度，搜尋框固定 260px；展開的清單獨佔下一排。
+       沒有異動的卡（.cd-bar 沒有 .has-news）搜尋框自己一排、限寬 */
+    .cd-bar { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: center; column-gap: 10px; }
+    .cd-bar .cd-news-wrap { display: contents; }
+    .cd-bar .cd-news { grid-column: 1; grid-row: 1; margin: 0; padding: 0 4px; border-bottom: 0; }
+    .cd-bar .cashback-search-bar { grid-column: 2; grid-row: 1; margin: 0; }
+    .cd-bar .card-changelog-list { grid-column: 1 / -1; grid-row: 2; }
+    .cd-bar:not(.has-news) { grid-template-columns: 320px; }
+    .cd-bar:not(.has-news) .cashback-search-bar { grid-column: 1; }
+    #card-detail-modal .cd-bar input[type="text"].cashback-search-input { height: 38px; font-size: 13px; }
+    #card-detail-modal .cd-bar input[type="text"].cashback-search-input::placeholder { font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cd-apply-btn:active { transform: none; }
 }
 
 .card-info-section {
@@ -9006,17 +9306,12 @@ mark.cashback-search-hl {
    Mobile modal sizing: shrink to leave room
    around the dimmed backdrop for easy dismissal.
    Also use dvh so iOS Chrome's collapsing URL
-   bar doesn't break the sticky card-detail-nav.
+   bar doesn't break sticky elements.
    ============================================ */
 @media (max-width: 768px) {
     .modal-content {
         max-height: 75vh;
         max-height: 75dvh;
-    }
-
-    .card-detail-content {
-        max-height: 80vh;
-        max-height: 80dvh;
     }
 
     .auth-modal-content,
@@ -10554,7 +10849,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .detail-value,
     .card-apply-cta-btn,
     .personal-field-title,
-    .card-detail-apply-header-btn,
     .info-value,
     .user-notes-textarea,
     .btn-icon {
@@ -10580,7 +10874,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     #card-benefits-section .cashback-condition.parking-strong-line,
     input[type="text"].credit-limit-input,
     .personal-level-select,
-    .card-detail-nav-btn,
     .info-label,
     .card-changelog-item,
     .fee-waiver-checkbox,
@@ -11165,10 +11458,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
         padding: 17px;   /* 原 20px */
     }
 
-    .card-detail-title-group {
-        gap: 10px;   /* 原 12px */
-    }
-
     .modal-body {
         padding: 17px;   /* 原 20px */
     }
@@ -11217,19 +11506,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .personal-fields-row {
         gap: 17px;   /* 原 20px */
-    }
-
-    .card-detail-nav {
-        padding: 9px 17px;   /* 原 10px 20px */
-        gap: 5px;   /* 原 6px */
-    }
-
-    .card-detail-nav-btn {
-        padding: 5px 10px;   /* 原 6px 12px */
-    }
-
-    .card-detail-apply-header-btn {
-        padding: 5px 14px;   /* 原 6px 16px */
     }
 
     .card-info-section {
@@ -11405,10 +11681,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .spotlight-rate-row {
         min-height: 23px;   /* 原 26px */
-    }
-
-    .card-detail-image {
-        height: 48px;   /* 原 56px（width:auto，不用動） */
     }
 
     .close-modal {

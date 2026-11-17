@@ -58,6 +58,10 @@ async function captureAtDate(browser, base, frozenDate) {
     const errBefore = errors.length;
     await page.evaluate(id => showCardDetail(id), id);
     cards[id] = await page.evaluate(sections => {
+      // 2026-11-17 詳情頁改頁籤：一次只顯示一個頁籤，沒被選中的窗格是 display:none，innerText 對
+      // 「不在版面上」的元素會退回 textContent（沒有換行），逐行比對就會對不上基準。取樣前把所有窗格
+      // 攤開（只改取樣方式，回饋卡文字本身沒變；下一張卡 showCardDetail 會重設頁籤）
+      document.querySelectorAll('#card-detail-modal .cd-pan').forEach(p => { p.hidden = false; });
       const out = {};
       for (const sec of sections) {
         const el = document.getElementById(sec);
@@ -79,6 +83,14 @@ async function captureAtDate(browser, base, frozenDate) {
   }
   await page.close();
   return cards;
+}
+
+function stripLoadNoise(card) {
+  if (!card || !card.consoleErrors) return card;
+  const rest = card.consoleErrors.filter(e => !/Failed to load resource/.test(e));
+  const out = { ...card };
+  if (rest.length) out.consoleErrors = rest; else delete out.consoleErrors;
+  return out;
 }
 
 async function main() {
@@ -120,7 +132,9 @@ async function main() {
     const refRun = baseline.runs[d];
     if (!refRun) { console.error(`❌ 基準裡沒有日期 ${d}`); failed++; continue; }
     for (const id of new Set([...Object.keys(refRun), ...Object.keys(runs[d])])) {
-      const ref = refRun[id], cur = runs[d][id];
+      // 資源載入類的 console error（外部字型／廣告被測試擋掉的 ERR_FAILED）出現在哪一張卡的取樣視窗內
+      // 取決於時序，與程式無關（docs/ops/regression.md 2026-11-16 教訓）——比對時兩邊都濾掉，不動基準檔
+      const ref = stripLoadNoise(refRun[id]), cur = stripLoadNoise(runs[d][id]);
       if (JSON.stringify(ref) === JSON.stringify(cur)) continue;
       failed++;
       console.error(`\n❌ ${d}｜${id}`);

@@ -1297,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('click', function(e) {
     if (!window.logEvent || !window.firebaseAnalytics) return;
     const btn = e.target.closest(
-        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn, .card-detail-apply-header-btn, .card-detail-apply-bar-btn, .card-official-site-link'
+        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn, .cd-apply-header-btn, .cd-fab-btn, .card-official-site-link'
     );
     if (!btn) return;
 
@@ -1305,8 +1305,8 @@ document.addEventListener('click', function(e) {
     if (btn.classList.contains('spotlight-compare-btn'))        buttonType = 'spotlight_compare';
     else if (btn.classList.contains('spotlight-info-btn'))      buttonType = 'spotlight_info';
     else if (btn.classList.contains('spotlight-apply-cta-btn')) buttonType = 'spotlight_apply';
-    else if (btn.classList.contains('card-detail-apply-header-btn')) buttonType = 'detail_header_apply';
-    else if (btn.classList.contains('card-detail-apply-bar-btn'))    buttonType = 'detail_sticky_apply';
+    else if (btn.classList.contains('cd-apply-header-btn')) buttonType = 'detail_header_apply';
+    else if (btn.classList.contains('cd-fab-btn'))    buttonType = 'detail_sticky_apply';
     else if (btn.classList.contains('card-official-site-link'))      buttonType = 'detail_official_site';
     else if (btn.classList.contains('card-apply-cta-btn'))      buttonType = 'card_apply';
     else                                                         buttonType = 'search_result_apply';

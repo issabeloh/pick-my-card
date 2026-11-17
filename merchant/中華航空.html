@@ -1075,182 +1075,218 @@
             </div>
         </div>
 
-        <!-- Card Detail Modal -->
-        <div id="card-detail-modal" class="modal" style="display: none;">
-            <div class="modal-content card-detail-content">
-                <div class="modal-header">
-                    <div class="card-detail-title-group">
-                        <img id="card-detail-image" class="card-detail-image" alt="" hidden>
-                        <h3 id="card-detail-title">卡片詳情</h3>
-                        <a id="card-detail-apply-header-btn" class="card-detail-apply-header-btn" target="_blank" rel="noopener noreferrer" hidden>立即申辦</a>
-                    </div>
-                    <button class="close-modal" id="close-card-detail">&times;</button>
+        <!-- Card Detail Modal（2026-11-17 改版第一輪：浮窗 → 全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊）
+             結構（由上到下；手機單欄、≥1025px 兩欄，同一份 DOM 靠 CSS 排，不在 JS 搬節點）：
+               .cd-top        藍色頁首（sticky）：返回、卡名、桌機申辦鈕
+               .cd-tabsbar    頁籤列（sticky，在頁首下方）
+               .cd-layout     ┬ .cd-side：摘要（.cd-sum）＋「個人設定」（桌機常駐左欄，手機是第四個頁籤）
+                              └ .cd-main：回饋／領券・停車／新戶活動三個頁籤內容（.cd-pan）
+               .cd-fab        手機浮動申辦膠囊（≤768px）
+             捲動容器是 #card-detail-scroll（.card-detail-content）。各區 id 都沿用舊版，
+             舊的八顆錨點導覽（#card-detail-nav）已拿掉，改成頁籤。
+             ⚠️ 摘要裡的三格數字由 showCardDetail() 取自畫回饋卡時用的同一份顯示回饋率，不要另寫算法。 -->
+        <div id="card-detail-modal" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="card-detail-title">
+            <div class="card-detail-content" id="card-detail-scroll">
+                <div class="cd-top">
+                    <button type="button" class="cd-back" id="close-card-detail" aria-label="返回">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l-6 6 6 6"/></svg>
+                    </button>
+                    <h3 id="card-detail-title" class="cd-name">卡片詳情</h3>
+                    <!-- 桌機申辦鈕（≥769px）；手機用下面的 .cd-fab。持卡人不顯示（見 refreshCardDetailApply） -->
+                    <a id="card-detail-apply-header-btn" class="cd-apply-btn cd-apply-header-btn" target="_blank" rel="noopener noreferrer" hidden>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>
+                        立即申辦
+                    </a>
                 </div>
-                <!-- Sticky 跳轉列 (在 modal-body 之外，避免被 body 的 padding 切掉) -->
-                <nav class="card-detail-nav" id="card-detail-nav" aria-label="卡片區塊導覽">
-                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-info-section">基本資訊</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-personal-section">個人設定</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-changelog-section">近期異動</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-special-section" data-anchor="cashback-search-bar">指定通路回饋</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-basic-cashback-section">一般回饋</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-coupon-section">領券型活動</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-benefits-section">停車折抵</button>
-                    <button type="button" class="card-detail-nav-btn" data-section="card-promos-section">新戶活動</button>
-                </nav>
-                <div class="modal-body">
-                    <div class="card-info-section" id="card-basic-info-section">
-                        <!-- 卡片用途：Cards Data 的 cardUseCase 欄（選填），一句話講這張卡
-                             適合什麼情境。由 showCardDetail() 用 textContent 填入、沒填就
-                             hidden。擺在最上面是因為它是讀下面那些數字之前的前提，
-                             同 #card-changelog-section 的版位理由。 -->
-                        <p class="card-use-case" id="card-use-case" hidden></p>
-                        <div class="info-grid-2col">
-                            <div class="info-column-left">
-                                <div class="info-item">
-                                    <div class="info-label">銀行名稱:</div>
-                                    <div class="info-value card-full-name-bold"><span id="card-full-name-link"></span></div>
-                                    <!-- 信用卡官網連結（2026-11-15，站長從五種 mockup 選定「銀行名稱底下一行」）：
-                                         Cards Data 的 website 欄，showCardDetail() 填 href、沒網址就 hidden。
-                                         刻意放在 .card-full-name-bold 外面——那裡的 a 規則是粗體藍字，這條要低調灰字。
-                                         GA4 button_type = detail_official_site -->
-                                    <a id="card-official-site-link" class="card-official-site-link" target="_blank" rel="noopener noreferrer" hidden>前往信用卡官網頁面<svg class="external-link-icon" width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/></svg></a>
-                                </div>
-                                <div class="info-item" id="cashback-type-expiry-section">
-                                    <div class="info-label">回饋類型:</div>
-                                    <div class="info-value info-value-small" id="card-cashback-type"></div>
+
+                <!-- 頁籤（照首頁 .home-view-switch：藍底上的文件夾頁籤，選中的那張是頁面底色）。
+                     筆數與「沒有內容就不顯示」由 setupCardDetailNav() 依渲染結果決定 -->
+                <div class="cd-tabsbar">
+                    <div class="cd-tabs" id="card-detail-tabs" role="tablist" aria-label="卡片內容分頁">
+                        <button type="button" class="cd-tab" role="tab" id="cd-tab-rates" data-tab="rates" aria-controls="cd-pan-rates" aria-selected="true">回饋<em class="cd-tab-n"></em></button>
+                        <button type="button" class="cd-tab" role="tab" id="cd-tab-coupon" data-tab="coupon" aria-controls="cd-pan-coupon" aria-selected="false">領券・停車<em class="cd-tab-n"></em></button>
+                        <button type="button" class="cd-tab" role="tab" id="cd-tab-promo" data-tab="promo" aria-controls="cd-pan-promo" aria-selected="false">新戶活動<em class="cd-tab-n"></em></button>
+                        <button type="button" class="cd-tab" role="tab" id="cd-tab-set" data-tab="set" aria-controls="card-personal-section" aria-selected="false">個人設定</button>
+                    </div>
+                </div>
+
+                <div class="cd-layout">
+                    <div class="cd-side">
+                        <!-- 摘要（手機在藍色頁首裡、跟著捲走；桌機是左欄的白卡）。
+                             年費：直接顯示 annualFee 原文，不解析；免年費條件與勾選搬到個人設定最下面 -->
+                        <div class="cd-sum" id="card-basic-info-section">
+                            <div class="cd-id">
+                                <img id="card-detail-image" class="cd-thumb" alt="" hidden>
+                                <div class="cd-id-tx">
+                                    <!-- 銀行名稱＝Cards Data 的 fullName -->
+                                    <div class="cd-bank" id="card-full-name-link"></div>
+                                    <div class="cd-type">
+                                        <span id="card-cashback-type"></span>
+                                        <!-- 信用卡官網連結：Cards Data 的 website 欄，showCardDetail() 填 href、沒網址就 hidden。
+                                             GA4 button_type = detail_official_site -->
+                                        <a id="card-official-site-link" class="card-official-site-link" target="_blank" rel="noopener noreferrer" hidden>信用卡官網 ↗</a>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="info-item fee-annual-section">
-                                <div class="info-label">年費訊息:</div>
-                                <div class="fee-combined-info">
-                                    <div class="info-value info-value-small" id="card-annual-fee"></div>
-                                    <div class="info-value info-value-small fee-waiver-text" id="card-fee-waiver"></div>
-                                    <div class="fee-waiver-status">
-                                        <label class="fee-waiver-checkbox">
-                                            <input type="checkbox" id="fee-waiver-checked">
-                                            <span class="checkmark"></span>
-                                            <span class="checkbox-label">我已過免年費門檻</span>
-                                        </label>
+                            <dl class="cd-facts">
+                                <div class="cd-fact"><dt>最高回饋</dt><dd id="card-fact-max">—</dd></div>
+                                <div class="cd-fact"><dt>一般消費</dt><dd id="card-fact-basic">—</dd></div>
+                                <div class="cd-fact cd-fact-fee"><dt>年費</dt><dd id="card-annual-fee"></dd></div>
+                            </dl>
+                            <!-- 卡片用途：Cards Data 的 cardUseCase 欄（選填），由 showCardDetail() 用 textContent 填入、
+                                 沒填就 hidden -->
+                            <p class="card-use-case" id="card-use-case" hidden></p>
+                        </div>
+
+                        <!-- 個人設定：級別/CUBE 專屬設定 ＋ 我的額度 ＋ 我的筆記 ＋（2026-11-17 搬來）免年費條件與勾選。
+                             都是「這張卡在我身上的設定」，共用同一個灰底框。內層標題一律 .personal-field-title，
+                             與 showCardDetail() 注入的級別區欄位標題同字級。
+                             桌機（≥1025px）常駐左欄；手機是第四個頁籤（data-pan="set"）。 -->
+                        <div class="card-info-section cd-pan cd-pan-set" id="card-personal-section" data-pan="set" role="tabpanel" aria-labelledby="cd-tab-set">
+                            <h4>個人設定</h4>
+                            <div class="personal-settings-box">
+                                <!-- 分級卡的級別選擇器／CUBE 三欄設定由 showCardDetail() 注入；
+                                     非分級卡這塊 display:none，框內只剩額度與筆記 -->
+                                <div id="cube-level-section" style="display: none;"></div>
+
+                                <div class="personal-fields-row">
+                                    <div class="personal-field" id="credit-limit-section">
+                                        <div class="personal-field-title">我的額度</div>
+                                        <div class="credit-limit-row">
+                                            <div class="credit-limit-field">
+                                                <span class="credit-limit-prefix">NT$</span>
+                                                <input type="text" id="credit-limit-input" class="credit-limit-input"
+                                                       inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
+                                                       placeholder="選填">
+                                            </div>
+                                            <span class="credit-limit-saved" id="credit-limit-saved"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="personal-field user-notes-section" id="card-notes-section">
+                                        <div class="personal-field-title">我的筆記</div>
+                                        <div class="user-notes-container">
+                                            <div class="notes-input-row">
+                                                <textarea id="user-notes-input"
+                                                          placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
+                                                          class="user-notes-textarea"></textarea>
+                                                <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
+                                                    <span class="btn-icon">💾</span>
+                                                </button>
+                                            </div>
+                                            <div class="notes-status" id="notes-status">
+                                                <span class="save-indicator" id="save-indicator"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 免年費條件（feeWaiver 原文）＋「我已過免年費門檻」勾選：2026-11-17 從摘要區搬到這裡
+                                         （只搬 DOM 位置；#fee-waiver-checked 的 id 與儲存邏輯見 js/spending-mappings.js 不動） -->
+                                    <div class="personal-field cd-fee-field" id="card-fee-section">
+                                        <div class="personal-field-title">免年費條件</div>
+                                        <div class="personal-field-hint cd-fee-waiver-text" id="card-fee-waiver"></div>
+                                        <div class="fee-waiver-status">
+                                            <label class="fee-waiver-checkbox">
+                                                <input type="checkbox" id="fee-waiver-checked">
+                                                <span class="checkmark"></span>
+                                                <span class="checkbox-label">我已過免年費門檻</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 個人設定：級別/CUBE 專屬設定 ＋ 我的額度 ＋ 我的筆記。
-                         原本是分開的兩塊（級別區自帶灰底框、personal-fields-row 另一塊），
-                         2026-08-01 併成同一個灰底框——都是「這張卡在我身上的設定」，
-                         分兩塊只是把同一件事切開。內層標題一律 .personal-field-title，
-                         與 showCardDetail() 注入的級別區欄位標題同字級。 -->
-                    <div class="card-info-section" id="card-personal-section">
-                        <h4>個人設定</h4>
-                        <div class="personal-settings-box">
-                            <!-- 分級卡的級別選擇器／CUBE 三欄設定由 showCardDetail() 注入；
-                                 非分級卡這塊 display:none，框內只剩額度與筆記 -->
-                            <div id="cube-level-section" style="display: none;"></div>
 
-                            <div class="personal-fields-row">
-                                <div class="personal-field" id="credit-limit-section">
-                                    <div class="personal-field-title">我的額度</div>
-                                    <div class="credit-limit-row">
-                                        <div class="credit-limit-field">
-                                            <span class="credit-limit-prefix">NT$</span>
-                                            <input type="text" id="credit-limit-input" class="credit-limit-input"
-                                                   inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
-                                                   placeholder="選填">
-                                        </div>
-                                        <span class="credit-limit-saved" id="credit-limit-saved"></span>
-                                    </div>
+                    <div class="cd-main">
+                        <!-- 頁籤一「回饋」：近期異動（一行通知）＋搜尋框＋指定通路／即將開始／一般回饋 -->
+                        <div class="cd-pan cd-pan-rates" id="cd-pan-rates" data-pan="rates" role="tabpanel" aria-labelledby="cd-tab-rates">
+                            <div class="cd-bar" id="cd-bar">
+                                <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
+                                     由新到舊）。一行通知（最新一筆），點了展開既有的完整清單。
+                                     沒有異動的卡整塊不渲染（空陣列不是 falsy，見 renderCardDetailChangelog()）。
+                                     大聲公用 inline SVG 而不是 emoji（造型隨 OS/字型變）。 -->
+                                <div class="card-info-section cd-news-wrap" id="card-changelog-section" style="display: none;">
+                                    <button type="button" class="cd-news" id="card-changelog-toggle" aria-expanded="false" aria-controls="card-changelog-content">
+                                        <svg class="cd-news-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false">
+                                            <path d="M3.4 10.7 17.6 5.6v12.8L3.4 13.3Z"/>
+                                            <path d="M11.3 16.1a2.9 2.9 0 1 1-5.5-1.6"/>
+                                            <path d="M20.4 9.6a4 4 0 0 1 0 4.8"/>
+                                        </svg>
+                                        <time class="cd-news-date" id="card-changelog-latest-date"></time>
+                                        <span class="cd-news-tx" id="card-changelog-latest-text"></span>
+                                        <span class="cd-news-more" id="card-changelog-count"></span>
+                                    </button>
+                                    <ul class="card-changelog-list" id="card-changelog-content" hidden></ul>
                                 </div>
 
-                                <div class="personal-field user-notes-section" id="card-notes-section">
-                                    <div class="personal-field-title">我的筆記</div>
-                                    <div class="user-notes-container">
-                                        <div class="notes-input-row">
-                                            <textarea id="user-notes-input"
-                                                      placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."
-                                                      class="user-notes-textarea"></textarea>
-                                            <button class="save-notes-btn" id="save-notes-btn" title="儲存筆記" disabled>
-                                                <span class="btn-icon">💾</span>
-                                            </button>
-                                        </div>
-                                        <div class="notes-status" id="notes-status">
-                                            <span class="save-indicator" id="save-indicator"></span>
-                                        </div>
+                                <!-- 詳情頁搜尋：一次過濾指定通路／即將開始／一般回饋／領券四區，
+                                     沒命中的區整區收起（filterCashbackItems）。這一區唯一的框 -->
+                                <div class="cashback-search-bar" id="cashback-search-bar">
+                                    <label class="cashback-search-label" for="cashback-search-input">搜尋這張卡的所有回饋商家</label>
+                                    <input type="text" id="cashback-search-input" class="cashback-search-input"
+                                           placeholder="輸入通路名稱（如：全聯、水費）"
+                                           oninput="filterCashbackItems(this.value)">
+                                    <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
+                                        找不到符合的通路或項目
                                     </div>
                                 </div>
                             </div>
+                            <!-- 回饋頁籤沒命中、但領券區有命中時的提示（filterCashbackItems 填字、顯示） -->
+                            <button type="button" class="cd-find-hint" id="cashback-search-hint" hidden></button>
+
+                            <div class="card-info-section" id="card-special-section">
+                                <h4>指定通路回饋</h4>
+                                <div id="card-special-cashback"></div>
+                            </div>
+
+                            <div class="card-info-section" id="card-upcoming-section" style="display: none;">
+                                <h4>即將開始的指定通路回饋</h4>
+                                <div id="card-upcoming-cashback"></div>
+                            </div>
+
+                            <div class="card-info-section" id="card-basic-cashback-section">
+                                <h4>一般回饋</h4>
+                                <div id="card-basic-cashback"></div>
+                            </div>
+                        </div>
+
+                        <!-- 頁籤二「領券・停車」 -->
+                        <div class="cd-pan cd-pan-coupon" id="cd-pan-coupon" data-pan="coupon" role="tabpanel" aria-labelledby="cd-tab-coupon" hidden>
+                            <div class="card-info-section" id="card-coupon-section">
+                                <h4>領券型活動</h4>
+                                <div id="card-coupon-cashback"></div>
+                            </div>
+
+                            <div class="card-info-section" id="card-benefits-section" style="display: none;">
+                                <h4>停車折抵</h4>
+                                <div id="card-benefits-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- 頁籤三「新戶活動」（內部版面第三輪處理） -->
+                        <div class="cd-pan cd-pan-promo" id="cd-pan-promo" data-pan="promo" role="tabpanel" aria-labelledby="cd-tab-promo" hidden>
+                            <div class="card-info-section" id="card-promos-section" style="display: none;">
+                                <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
+                                <h4>新戶活動</h4>
+                                <div id="card-promos-content"></div>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- 近期異動：資料來自 card.changelog（Apps Script「變動紀錄」表，最多 5 筆、
-                         由新到舊）。放在回饋內容上方——權益剛變過是讀下面數字時的前提。
-                         沒有異動的卡整塊不渲染（空陣列不是 falsy，見 renderCardDetailChangelog()） -->
-                    <div class="card-info-section" id="card-changelog-section" style="display: none;">
-                        <h4 class="section-title-with-icon">
-                            近期異動
-                            <!-- 大聲公：inline SVG 而不是 emoji，理由同 .card-apply-cta-arrow——
-                                 emoji 造型隨 OS/字型變，且沒有可靠的單色呈現。stroke 走
-                                 currentColor，跟著標題顏色走 -->
-                            <svg class="section-title-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M3.4 10.7 17.6 5.6v12.8L3.4 13.3Z"/>
-                                <path d="M11.3 16.1a2.9 2.9 0 1 1-5.5-1.6"/>
-                                <path d="M20.4 9.6a4 4 0 0 1 0 4.8"/>
-                            </svg>
-                        </h4>
-                        <ul class="card-changelog-list" id="card-changelog-content"></ul>
-                    </div>
-
-                    <!-- 詳情頁搜尋（2026-10-14 移到所有回饋區上方）：一次過濾指定通路／即將開始／一般回饋／領券四區，
-                         沒命中的區整區收起（filterCashbackItems） -->
-                    <div class="cashback-search-bar" id="cashback-search-bar">
-                        <label class="cashback-search-label" for="cashback-search-input">搜尋這張卡的所有回饋商家</label>
-                        <input type="text" id="cashback-search-input" class="cashback-search-input"
-                               placeholder="輸入通路名稱（如：全聯、水費）"
-                               oninput="filterCashbackItems(this.value)">
-                        <div class="cashback-search-empty" id="cashback-search-empty" style="display: none;">
-                            找不到符合的通路或項目
-                        </div>
-                    </div>
-
-                    <div class="card-info-section" id="card-special-section">
-                        <h4>指定通路回饋</h4>
-                        <div id="card-special-cashback"></div>
-                    </div>
-
-                    <div class="card-info-section" id="card-upcoming-section" style="display: none;">
-                        <h4>即將開始的指定通路回饋</h4>
-                        <div id="card-upcoming-cashback"></div>
-                    </div>
-
-                    <div class="card-info-section" id="card-basic-cashback-section">
-                        <h4>一般回饋</h4>
-                        <div id="card-basic-cashback"></div>
-                    </div>
-                    
-                    <div class="card-info-section" id="card-coupon-section">
-                        <h4>領券型活動</h4>
-                        <div id="card-coupon-cashback"></div>
-                    </div>
-
-                    <div class="card-info-section" id="card-benefits-section" style="display: none;">
-                        <h4>🅿️ 停車折抵優惠</h4>
-                        <div id="card-benefits-content"></div>
-                    </div>
-
-                    <div class="card-info-section" id="card-promos-section" style="display: none;">
-                        <div class="promo-disclaimer" id="card-promo-disclaimer" style="display: none;">謹慎理財、信用至上</div>
-                        <h4>新戶活動</h4>
-                        <div id="card-promos-content"></div>
-                    </div>
+                </div>
             </div>
-            <div id="card-detail-apply-bar" class="card-detail-apply-bar" hidden>
-                <span class="card-detail-apply-bar-emoji" aria-hidden="true">🎁</span>
-                <span class="card-detail-apply-bar-text"></span>
-                <a class="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
+
+            <!-- 手機浮動申辦膠囊（≤768px）：浮在畫面底部中間、不佔版面高度；捲動超過約 150px 後
+                 縮成右下角（只剩圖示＋按鈕），回到頂端再展開。文字由 showCardDetail() 用 textContent 組。
+                 持卡人隱藏、沒有申辦連結時 hidden（refreshCardDetailApply）。GA4 button_type = detail_sticky_apply -->
+            <div id="card-detail-apply-bar" class="cd-fab" hidden>
+                <span class="cd-gift" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>
+                </span>
+                <span class="cd-fab-tx" id="card-detail-apply-bar-text"></span>
+                <a class="cd-apply-btn cd-fab-btn" id="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
             </div>
         </div>
-    </div>
 </div>
     </div>
 
