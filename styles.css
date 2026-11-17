@@ -26,6 +26,42 @@ body {
     --page-w: 1200px;
     --page-gutter: 0px;
 }
+
+/* ── 設計 token（2026-11-16，「去 AI 感」2-4）──
+   之後一區一個 commit 把寫死的值換成這些變數；進度、併值規則與待站長裁定的項目見
+   docs/project/ui-refresh-diagnosis.md 3.6 節。值都取自本檔現在用得最多的那一個（括號內是定義當天的出現次數）。
+   ⚠️ 前綴一律 --ui-：promos.css 有自己的一套 --pmc-*（--pmc-blue、--pmc-ink…），值不同，不要混用也不要撞名。
+   ⚠️ 換用時，同一個值不代表同一個意思（例：#6b7280 既是次要文字也是「即將結束」徽章的底色）——照用途選 token，不要整檔取代。 */
+:root {
+    /* 品牌藍 2 階 */
+    --ui-brand: #1e40af;        /* 頁首、計算鈕、主要按鈕（33） */
+    --ui-brand-bright: #2563eb; /* 連結、焦點框、選取狀態（20）；標誌晶片也是這個藍 */
+    /* 墨色 3 階（由深到淺） */
+    --ui-ink-1: #111827;        /* 標題、卡名、回饋率（64） */
+    --ui-ink-2: #374151;        /* 內文（75） */
+    --ui-ink-3: #6b7280;        /* 次要說明、欄位標籤（88） */
+    /* 線、底 */
+    --ui-line: #e5e7eb;         /* 卡片框線、分隔線（73） */
+    --ui-bg: #f9fafb;           /* 頁面底色、淺灰區塊（22） */
+    --ui-fill: #f3f4f6;         /* 灰色填色：資訊標籤的底（36）。2026-11-16 徽章收斂時補上 */
+    /* 語意色 */
+    --ui-green: #10b981;        /* 最優卡的框與角標（10） */
+    --ui-yellow: #f59e0b;       /* 已加到小抄、未儲存提示（11）；提醒標籤的框與圓點 */
+
+    /* 圓角 */
+    --ui-radius-sm: 6px;        /* 小按鈕、輸入框內的小元件（27） */
+    --ui-radius-md: 8px;        /* 結果卡、輸入框、一般按鈕（48） */
+    --ui-radius-lg: 12px;       /* modal、大區塊（29） */
+    --ui-radius-pill: 999px;    /* 膠囊（21） */
+
+    /* 字級。用 px：本檔 px 與 rem 各半，結果卡的寬度量測（卡名不換行那幾條）都是以 px 算的 */
+    --ui-text-12: 12px;         /* 徽章、註記（64） */
+    --ui-text-13: 13px;         /* 次要文字、小按鈕（58） */
+    --ui-text-14: 14px;         /* 內文（53；0.875rem 另有 15） */
+    --ui-text-16: 16px;         /* 輸入框、強調內文（10；1rem 另有 9） */
+    --ui-text-19: 19px;         /* 卡名（現在是 1.2rem＝19.2px） */
+    --ui-text-28: 28px;         /* 回饋率主數字 */
+}
 @media (min-width: 769px) {
     :root {
         --page-gutter: max(0px, calc((100% - var(--page-w)) / 2));
@@ -2957,13 +2993,10 @@ input[type="number"]:focus {
     color: #6b7280;
 }
 
+/* 顏色、圓角、字重由「標籤的兩種樣式」統一給（Grep 該標題） */
 .excluded-badge {
-    background: #9ca3af;
-    color: #fff;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 3px 10px;
+    font-size: var(--ui-text-12);
     white-space: nowrap;
 }
 
@@ -3264,25 +3297,15 @@ input[type="number"]:focus {
     line-height: 1.6;
 }
 
+/* 文字行裡的小一號標籤（活動期間後面的「即將結束」、持卡禮的「即將開始／剩 N 天」）：只縮尺寸，
+   顏色同「標籤的兩種樣式」。2026-11-16 以前是橘框與紅框兩種 */
 .cardholder-promo-item .upcoming-badge,
-.card-result .matched-merchant .upcoming-badge {
-    background: #fff7ed;
-    color: #c2410c;
-    border: 1px solid #fdba74;
-    padding: 1px 8px;
-    font-size: 11px;
-    font-weight: 500;
-}
-
+.card-result .matched-merchant .upcoming-badge,
 .cardholder-promo-item .ending-soon-badge,
 .card-result .matched-merchant .ending-soon-badge,
 .rate-card .rate-card-info .ending-soon-badge {
-    background: #ffffff;
-    color: #dc2626;
-    border: 1px solid #dc2626;
     padding: 1px 8px;
     font-size: 11px;
-    font-weight: 500;
 }
 
 /* No results styling */
@@ -4817,16 +4840,10 @@ label.personal-field-check input[type="checkbox"] {
 }
 
 /* Grid layout for payment detail modal on desktop */
+/* 單一支付詳情的卡片清單：一列一張卡（.payment-row），由上到下就是回饋高到低。
+   2026-11-16 以前是兩欄 grid 的卡片 */
 #payment-cashback-details {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-@media (max-width: 768px) {
-    #payment-cashback-details {
-        grid-template-columns: 1fr;
-    }
+    display: block;
 }
 
 .cashback-detail-item {
@@ -6344,11 +6361,12 @@ mark.cashback-search-hl {
     gap: 20px;
 }
 
+/* 一個支付一個白底框，裡面是清單列（2026-11-16 以前是灰底框包著一張張白底卡） */
 .compare-payment-card {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
+    padding: 14px 16px 4px;
 }
 
 .compare-payment-name {
@@ -6358,43 +6376,98 @@ mark.cashback-search-hl {
     font-weight: 700;
     font-size: 1.1rem;
     color: #111827;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-/* 前三名支付的名次獎牌（2026-10-08，renderPaymentRankMedal）：藍色彩帶＋金／銀／銅牌面 */
-.payment-rank-medal {
-    width: 30px;
-    height: 36px;
-    flex-shrink: 0;
-    margin-top: -6px; /* 彩帶往上凸，牌面對齊支付名稱 */
+/* 名次（renderPaymentRank）：斜體「NO.1」，沒有底色；第 1 名墨色、其餘灰色（站長 2026-11-17 選定，
+   沿革見 js/levels-payments.js 該函式的註解）。
+   min-width＋margin-right：個位數名次寬度都落在 min-width 內，支付名稱的起點才會對齊；
+   和名稱之間總共留 16px（.compare-payment-name 的 gap 8px＋這裡 8px）——站長要求拉開一點才好讀 */
+.payment-rank {
+    flex: none;
+    min-width: 36px;
+    margin-right: 8px;
+    color: #9ca3af;
+    font-size: 20px;
+    font-weight: 800;
+    font-style: italic;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
-.payment-rank-medal .prm-ribbon-l { fill: #3b82f6; }
-.payment-rank-medal .prm-ribbon-r { fill: #1d4ed8; }
-.payment-rank-medal .prm-face { stroke-width: 2; }
-.payment-rank-medal .prm-ring { fill: none; stroke-width: 1; opacity: .55; }
-.payment-rank-medal .prm-num { font-size: 12px; font-weight: 800; font-family: inherit; }
-.payment-rank-medal-1 .prm-face { fill: #fcd34d; stroke: #d97706; }
-.payment-rank-medal-1 .prm-ring { stroke: #b45309; }
-.payment-rank-medal-1 .prm-num  { fill: #92400e; }
-.payment-rank-medal-2 .prm-face { fill: #e2e8f0; stroke: #94a3b8; }
-.payment-rank-medal-2 .prm-ring { stroke: #64748b; }
-.payment-rank-medal-2 .prm-num  { fill: #334155; }
-.payment-rank-medal-3 .prm-face { fill: #f0b183; stroke: #b45309; }
-.payment-rank-medal-3 .prm-ring { stroke: #9a3412; }
-.payment-rank-medal-3 .prm-num  { fill: #7c2d12; }
+.payment-rank small {
+    margin-right: 1px;
+    font-size: 11px;
+    font-weight: 700;
+    font-style: normal;
+    letter-spacing: 0;
+    vertical-align: 1px;
+}
+.payment-rank-first {
+    color: var(--ui-ink-1);
+}
 
-/* 行動支付的一張卡（renderPaymentCardResult；單一支付詳情與比較 modal 共用）：
-   沿用搜尋結果卡片 .card-result 的整套樣式（含「最優回饋」角標），這裡只補差異——
-   白底（比較 modal 外層支付卡是灰底）、卡名比支付名稱小一階 */
-.payment-card-result {
-    background: #ffffff;
+/* 行動支付的一張卡＝一列（renderPaymentRow；單一支付詳情與比較 modal 共用，2026-11-16）。
+   列與列之間一條細線、沒有各自的框；回饋率是墨色，不用綠色（同結果卡，ui-refresh-diagnosis.md 3.5）。
+   縮圖沿用 .card-thumb 的尺寸規則（手機 36×23、≤340px 不顯示） */
+.payment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid var(--ui-line);
 }
-.payment-card-result .card-name {
-    font-size: 1rem;
+.payment-row-main {
+    flex: 1;
+    min-width: 0;
 }
-/* 比較 modal：同一個支付底下兩張卡上下排，靠 margin 隔開（單一支付詳情是 grid，用 gap） */
-.compare-payment-card .payment-card-result {
-    margin-top: 8px;
+.payment-row-name {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ui-ink-1);
+}
+.payment-row-activity {
+    margin-top: 1px;
+    font-size: var(--ui-text-12);
+    line-height: 1.4;
+    color: var(--ui-ink-3);
+}
+.payment-row-nums {
+    flex: none;
+    text-align: right;
+}
+.payment-row-rate {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--ui-ink-1);
+    font-variant-numeric: tabular-nums;
+}
+.payment-row-cap {
+    font-size: var(--ui-text-12);
+    line-height: 1.4;
+    color: var(--ui-ink-3);
+    white-space: nowrap;
+}
+/* 「最優」只出現在單一支付詳情的第一列。綠色與結果卡的「最優回饋」角標同一個 */
+.payment-row-best {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 7px;
+    border-radius: var(--ui-radius-pill);
+    background: var(--ui-green);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    vertical-align: 2px;
+    white-space: nowrap;
+}
+/* 單一支付詳情：清單直接鋪在 modal 裡，第一列上面不要線 */
+#payment-cashback-details > .payment-row:first-child {
+    border-top: 0;
 }
 
 /* Mobile responsiveness for compare payments */
@@ -7794,31 +7867,63 @@ mark.cashback-search-hl {
     }
 }
 
-/* Upcoming activity styles */
+/* 即將開始的卡（搜尋結果 .card-result、詳情頁 .rate-card 都會掛這個 class）：整張淡化，
+   **但右上角的「即將開始」標籤不淡化**——它是這張卡上唯一要被看到的東西（站長 2026-11-16）。
+   所以半透明不能下在卡片本身（子元素沒辦法把父層的 opacity 加回來），改成下在標籤以外的每一塊。
+   底色 #f9fafb＝原本「#f3f4f6 整張 50%」疊在白底上的結果。 */
 .upcoming-activity {
-    background-color: #f3f4f6;
+    background-color: var(--ui-bg);
+}
+.upcoming-activity > :not(.card-header):not(.rate-card-header),
+.upcoming-activity > .card-header > :not(.badges-container),
+.upcoming-activity > .rate-card-header > :not(.badges-container) {
     opacity: 0.5;
 }
 
-.upcoming-badge {
-    background: #f97316;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
+/* ── 標籤的兩種樣式（2026-11-16，「去 AI 感」2-4；站長選定「灰＋黃」）──
+   資訊（灰底墨字）：推薦活動的類型標籤（全場最高／壓倒性神卡／獨家回饋／無腦刷）、一般消費排除
+   提醒（白底、金黃細框、字前一個黃點、墨字）：即將開始、即將結束／剩 N 天、未達門檻
+     站長 2026-11-17 選定。試過又否決的：淡黃底深褐字（太淡、深褐不好看）、檸檬黃／金黃／橘的實色底（刺眼）、
+     暖黃或檸檬淡黃底配墨字。不要改回色塊底。框用 inset box-shadow 而不是 border，標籤尺寸才不會多 2px
+   以前是橘實心、橘框、紅框、紅底、黃底、灰實心，加上類型標籤的四種顏色。
+   新增標籤時先歸到這兩類之一，不要再開第三種顏色；紅色留給錯誤訊息。
+   形狀一律膠囊。各標籤自己的規則只管尺寸（padding／font-size），顏色都在這裡。
+   「最優回饋」綠色角標不在此列（站長裁定保留，ui-refresh-diagnosis.md 3.5）。 */
+.excluded-badge,
+.spotlight-hype-tag {
+    background: var(--ui-fill);
+    color: var(--ui-ink-2);
+    border-radius: var(--ui-radius-pill);
     font-weight: 600;
-    text-transform: uppercase;
-    white-space: nowrap;
+}
+.upcoming-badge,
+.ending-soon-badge,
+.unmet-spend-badge,
+.spotlight-days-badge {
+    background: #fff;
+    color: var(--ui-ink-1);
+    box-shadow: inset 0 0 0 1px var(--ui-yellow);
+    border-radius: var(--ui-radius-pill);
+    font-weight: 600;
+}
+.upcoming-badge::before,
+.ending-soon-badge::before,
+.unmet-spend-badge::before,
+.spotlight-days-badge::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--ui-yellow);
+    vertical-align: 1px;
 }
 
+.upcoming-badge,
 .ending-soon-badge {
-    background: #6b7280;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
+    padding: 3px 10px;
+    font-size: var(--ui-text-12);
     white-space: nowrap;
 }
 
@@ -9223,20 +9328,16 @@ html.pmc-onboard #search-hints-container {
     color: #111827;
     font-variant-numeric: tabular-nums;
 }
+/* 顏色由「標籤的兩種樣式」統一給（Grep 該標題）。四種類型原本各一色（hype-top／god／excl／easy，
+   2026-11-16 收成同一種灰）；class 還留在 DOM 上，日後要讓某一種特別醒目可以直接用 */
 .spotlight-hype-tag {
     display: inline-block;
     font-size: 0.68rem;
-    font-weight: 800;
     letter-spacing: .02em;
-    border-radius: 999px;
     padding: 2px 8px;
     margin-left: auto;
     white-space: nowrap;
 }
-.spotlight-hype-tag.hype-top  { color: #b45309; background: #fef3c7; }
-.spotlight-hype-tag.hype-god  { color: #be123c; background: #ffe4e6; }
-.spotlight-hype-tag.hype-excl { color: #6d28d9; background: #ede9fe; }
-.spotlight-hype-tag.hype-easy { color: #0f766e; background: #ccfbf1; }
 .spotlight-merchant {
     font-size: 0.95rem;
     font-weight: 700;
@@ -9298,10 +9399,6 @@ html.pmc-onboard #search-hints-container {
 .spotlight-days-badge {
     display: inline-block;
     font-size: 0.68rem;
-    font-weight: 600;
-    color: #dc2626;
-    background: #fee2e2;
-    border-radius: 999px;
     padding: 1px 7px;
 }
 .spotlight-card-actions {
@@ -11333,13 +11430,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     color: #6b7280;
 }
 .unmet-spend-badge {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fcd34d;
-    padding: 3px 11px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 3px 10px;
+    font-size: var(--ui-text-12);
     white-space: nowrap;
 }
 .unmet-threshold-note {

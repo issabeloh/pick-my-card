@@ -102,7 +102,7 @@ function startServer(useLive) {
 function firebaseStub(url) {
   const resolveP = 'Promise.resolve()';
   if (url.includes('firebase-app')) return 'export function initializeApp(){return {};}';
-  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){}';
+  if (url.includes('firebase-analytics')) return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';
   if (url.includes('firebase-auth')) return `
     export function getAuth(){return {};}
     export function onAuthStateChanged(auth, cb){ setTimeout(() => cb(null), 0); }

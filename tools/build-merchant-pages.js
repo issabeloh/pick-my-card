@@ -465,7 +465,7 @@ async function verifyAgainstBrowser(results) {
           : u.includes('firebase-firestore')
           ? 'export function getFirestore(){return {};} export function doc(){return {};} export function getDoc(){return Promise.resolve({exists:function(){return false;},data:function(){}});} export function setDoc(){return Promise.resolve({});} export function addDoc(){return Promise.resolve({});} export function collection(){return {};} export function serverTimestamp(){return 0;} export function deleteField(){return 0;}'
           : u.includes('firebase-app') ? 'export function initializeApp(){return {};}'
-          : u.includes('firebase-analytics') ? 'export function getAnalytics(){return {};} export function logEvent(){}'
+          : u.includes('firebase-analytics') ? 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}'
           : u.includes('firebase-storage') ? 'export function getStorage(){return {};} export function ref(){return {};} export function uploadBytes(){return Promise.resolve({});} export function getDownloadURL(){return Promise.resolve("");}'
           : stub;
         return route.fulfill({ status: 200, contentType: 'text/javascript', body: body });
