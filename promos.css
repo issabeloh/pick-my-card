@@ -2011,7 +2011,7 @@ a {
   aspect-ratio: 1 / 1;
   width: 72px;
   cursor: zoom-in;
-  order: 2;
+  order: 2;   /* 主活動的那張 2026-11-17 起改放左邊並放大，見檔尾「贈品圖放大」；這裡是基底 */
 }
 .promo-act-thumb--gift img { object-fit: cover; }
 
@@ -2547,7 +2547,7 @@ a {
 
   .promo-act-row { gap: 11px; }
   .promo-act-thumb { width: 84px; }
-  .promo-act-thumb--gift { width: 70px; }
+  .promo-act-thumb--gift { width: 70px; }   /* 主活動那張由檔尾「贈品圖放大」蓋成 118px */
 
   /* 獎勵大字的字級不在這裡設——統一看 :root 的 --promo-reward-size／-gift-size。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
@@ -3554,3 +3554,41 @@ mark.promos-search-hl {
   .promo-exclusive-note { font-size: 11.5px; padding: 7px 9px; }
   .promo-exclusive-note b { font-size: 11px; }
 }
+
+/* ==========================================================================
+   贈品圖放大（2026-11-17，站長看過全部 9 張首刷禮卡的範例後確認）
+   主活動的活動宣傳圖從右邊 70px 改成左邊 118px。站長拿得到的多半只有銀行的行銷圖
+   （不是去背商品照），放大之後圖上的大標與商品輪廓才看得出來；細節仍然點開 lightbox。
+   ⚠️ 這推翻 2026-09-18「圖放右邊，免得把文字擠成窄長條」：圖變大之後獎品名稱那一欄
+      確實變窄，所以同一列的獎品名稱字級降一階（17 → 15px）來換行數。
+   ⚠️ 選擇器刻意寫成 .promo-card-main .promo-act-thumb--gift（兩個 class）：
+      @media (max-width: 480px) 與桌機各有一條 .promo-act-thumb { width } 排在後面，
+      只寫一個 class 會被它們蓋回 72／70px。
+   ⚠️ 版面用原本的 flex，不要改成 grid 固定欄寬：圖片載入失敗時 onerror 會把
+      .promo-act-thumb 整個藏掉，grid 會留下一條 118px 的空欄，flex 則是文字自動補滿。
+   只動主活動；附屬列的小獎品圖（.promo-sub-thumb--gift，42px）不變。
+   ========================================================================== */
+.promo-card-main .promo-act-thumb--gift {
+  position: relative;
+  width: 118px;
+  order: 0;
+  border-radius: 10px;
+}
+.promo-card-main .promo-act-thumb--gift::after {
+  content: "點圖放大";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 10.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+/* 有贈品圖的那一列，獎品名稱降一階。字級走 :root 那個變數（見檔頭說明），在這一列覆寫它。
+   生成器會在列上加 .promo-act-row--gift；第二條 :has() 是給還沒重新匯出的舊 HTML 用的，
+   兩條分開寫——不支援 :has() 的瀏覽器會把整條選擇器清單一起丟掉。 */
+.promo-act-row--gift { --promo-reward-gift-size: 15px; }
+.promo-card-main .promo-act-row:has(> .promo-act-thumb--gift) { --promo-reward-gift-size: 15px; }

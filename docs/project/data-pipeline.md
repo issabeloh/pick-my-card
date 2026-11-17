@@ -620,15 +620,15 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 - **信任列**（`pmcRenderTrust_`，`<a class="pmc-trust" id="trust">`）：引言下方、頁內索引列上方。
   **定案＝一行字＋灰底＋連到 FAQ**（站長 2026-11-17）：盾牌＋`PMC_TRUST_LINE`
   （「不經手個資・全站加密・連結防竄改」）＋「防護說明 ›」，整列是連結，另開分頁到
-  `/faq?category=安全`，FAQ 頁會直接選好那個分類（`faq.js` 的 `pendingUrlCategory`）。
-  - **完整說明不在這頁**：由站長寫在 Sheets 的 FAQ 工作表、分類填「安全」。分類名稱要跟
+  `/faq?category=安全說明`，FAQ 頁會直接選好那個分類（`faq.js` 的 `pendingUrlCategory`）。
+  - **完整說明不在這頁**：由站長寫在 Sheets 的 FAQ 工作表、分類填「安全說明」（站長同日另建了「一般說明」放沒有合適分類的題目）。分類名稱要跟
     `PMC_TRUST_FAQ_CATEGORY` 一字不差；對不上（或分類還沒建立）時 FAQ 頁停在「全部」，不會壞。
   - 改過三版，別走回頭路：①三個勾勾＋藍框＋原地展開（站長：不好看）②一行字＋原地展開六題問答＋
     FAQPage JSON-LD ③現在這版——說明只維護一份，這頁也不必變長。promos 頁因此**沒有** FAQPage JSON-LD。
   - 那一行**只講資安防護**，不提分潤、也不提按鈕去向（站長指定）。16 個字是量過的：360～390px 都是一行。
   - 灰底是必要的：白底時跟上下文字連成一片、分不出這是一塊。用 `--pmc-tint`；引言同日改成沒有底色的
     一句話（`.promos-hero-lede`），所以不會兩塊灰疊在一起。
-  - 🔴 **FAQ「安全」分類裡的資安聲明都對得到實作，改了實作要請站長改 FAQ**：固定網址、只收 http/https
+  - 🔴 **FAQ「安全說明」分類裡的資安聲明都對得到實作，改了實作要請站長改 FAQ**：固定網址、只收 http/https
     ＝`pmcSanitizeUrl_`；每次更新逐一核對網域＝`validateReferentialIntegrity_`；base-uri／frame-ancestors／
     X-Frame-Options／HSTS＝`_headers` 的**強制版**標頭（不是 `-Report-Only` 那條）；noopener noreferrer＝
     申辦連結的 `rel`。`_headers` 那幾條若被拿掉或降回只回報，FAQ 那一題就變成不實聲明。
@@ -663,6 +663,11 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
   （`.promo-type-badge`／`.promo-sub-type`／`.pmc-kind`）三種一律用 `--pmc-candy-slate-*` 灰，靠文字分辨；
   三顆類型篩選鈕的專屬配色整組移除，跟「全部」同一套（灰框深字、選取＝主站藍實心）；
   「活動詳情」「卡片特色」等次要連結與按鈕改深灰。`--pmc-candy-purple/yellow/brown-*` token 目前沒有人用，先留著。
+- **贈品圖放大**（2026-11-17，站長看過全部 9 張首刷禮卡的範例後確認）：主活動的活動宣傳圖從右邊 70px
+  改成左邊 118px，右下角加「點圖放大」小標；同一列的獎品名稱 17 → 15px。**這推翻 9a「圖放右邊」的決定**
+  ——站長拿得到的多半只有銀行的行銷圖，不是商品照，太小看不出是什麼。附屬列的小獎品圖不變。
+  規則在 `promos.css` 檔尾，三個坑都寫在那段註解裡（specificity、不能用 grid、`:has()` 要分開寫）。
+  「每個選項一張商品圖＋市價」的做法（E3）評估後不做：圖不好取得。
 - **引言一句話**（`.promos-hero-lede`，站長 2026-11-17 定稿）：取代原本淡底卡片裡的兩段。舊的
   `.promos-hero-intro` 規則留著給舊 HTML 用。
 - **向後相容**：`promos.css`／`promos.js` 這一輪只有新增的 class 與有判空的程式，Sheets 還沒貼新版生成器、

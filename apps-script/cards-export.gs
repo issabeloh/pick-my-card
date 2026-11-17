@@ -2855,13 +2855,13 @@ function pmcApplyDestHtml_(href, card, extraCls) {
 // ---- 信任列（2026-11-16 建立；2026-11-17 定案為「一行字＋灰底＋連到 FAQ」）----
 // 這頁是辦卡轉換的主要入口，要讓人在按「立即申辦」之前看到一句資安上的交代。
 // 只有一行：盾牌＋PMC_TRUST_LINE＋「防護說明 ›」，整列是一個連結，連到 FAQ 頁並直接選好
-// 「安全」分類（faq.js 認 ?category=）。完整說明由站長寫在 Sheets 的 FAQ 工作表、分類填
+// 「安全說明」分類（faq.js 認 ?category=）。完整說明由站長寫在 Sheets 的 FAQ 工作表、分類填
 // PMC_TRUST_FAQ_CATEGORY 那兩個字——**兩邊的分類名稱要一字不差**，對不上時 FAQ 頁會停在「全部」。
 // 第一版是原地展開六題問答＋FAQPage JSON-LD，站長改成連到 FAQ：說明只維護一份、這頁也不必變長。
 // 16 個字是量過的：360～390px 的手機都是一行，再長就會折行。
 // 文字只講資安防護，不提分潤、也不提按鈕去向（站長 2026-11-17 指定）。
 const PMC_TRUST_LINE = '不經手個資・全站加密・連結防竄改';
-const PMC_TRUST_FAQ_CATEGORY = '安全';
+const PMC_TRUST_FAQ_CATEGORY = '安全說明';   // 站長 2026-11-17 在 Sheets 建立的分類名稱
 function pmcRenderTrust_() {
   const shield = '<svg class="pmc-trust-icon" viewBox="0 0 20 20" aria-hidden="true">' +
     '<path d="M10 2l6 2.2v4.6c0 3.9-2.5 7.2-6 8.7-3.5-1.5-6-4.8-6-8.7V4.2L10 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
@@ -3259,8 +3259,10 @@ function pmcRenderPromoAct_(p, actId) {
   // 詳情區有 id（…-a1-detail），JSON-LD 的 55 個網址全部指向不存在的元素。
   return '<div class="promo-act is-main" id="' + pmcEscapeHtml_(actId) + '" data-period-end="' +
       (p.periodEndIso || '') + '">\n' +
-    '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
-      pmcEscapeHtml_(detailId) + '">\n' +
+    // promo-act-row--gift：這一列有活動宣傳圖（2026-11-17 起放大到 118px、放左邊），
+    // CSS 靠它把獎品名稱降一階字級，不必用 :has()
+    '  <button type="button" class="promo-act-row' + (giftImgUrl ? ' promo-act-row--gift' : '') +
+      '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     '    <span class="' + thumbCls + '"><img src="' + pmcEscapeHtml_(thumbSrc) + '" alt="' +
       pmcEscapeHtml_(thumbAlt) + '" loading="lazy" onerror="this.closest(\'.promo-act-thumb\').style.display=\'none\'"></span>\n' +
     '    <span class="promo-act-body">\n' +
