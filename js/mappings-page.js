@@ -2,15 +2,18 @@
  * Pick My Card — js/mappings-page.js（載入順序第 13 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 「我的刷卡小抄」完整頁面（2026-09-28 由 modal 改版：收據風格「刷卡小抄」）
  * 區塊目錄（Grep 關鍵字）：
- *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"
- *  - 商家顯示名稱（改名／重設，存雲端）    → "loadMerchantAliases" / "mpSetAlias"
- *  - 分組／分類／拼音字首                 → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
- *  - 失效檢查與「更新活動」              → "mpProbeAll" / "mpUpdateDeadlines"
- *  - 頁面開關與網址 /mappings            → "openMappingsPage" / "closeMappingsPage"
- *  - 收據 HTML                         → "mpReceiptHtml"
- *  - 拖曳排序（自訂）                   → "mpStartDrag"
- *  - 改名面板                          → "mpOpenEditSheet"
- *  - 存成圖片（canvas 繪製、桌布尺寸）     → "mpOpenExport" / "mpRenderCanvas" / "mpWallSize"
+ *  - 狀態與偏好（排列/版面/字級/存圖設定） → "mpLoadPrefs" / "mpSavePrefs"
+ *  - 商家顯示名稱（改名／重設，存雲端） → "loadMerchantAliases" / "mpSetAlias"
+ *  - 分組／分類／拼音字首        → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
+ *  - 失效檢查與「更新活動」      → "mpProbeAll" / "mpUpdateDeadlines"
+ *  - 頁面開關與網址 /mappings    → "openMappingsPage" / "closeMappingsPage"
+ *  - 一次性「已搬家」提示        → "mpShowMovedHint"
+ *  - 收據 HTML                   → "mpReceiptHtml"
+ *  - 頁面渲染                    → "mpRender"
+ *  - 拖曳排序（自訂）            → "mpStartDrag"
+ *  - 改名面板                    → "mpOpenEditSheet"
+ *  - 存成圖片（canvas 繪製、桌布尺寸） → "mpWallSize" / "mpRenderCanvas" / "mpOpenExport"
+ *  - 事件綁定                    → "mpBind"
  *
  * 設計紀錄：docs/project/ui-display.md 第 8 節。
  * ⚠️ 這支檔案也會被 tools/lib/merchant-cards.js 用 vm 載入（build 期間），頂層不可以直接

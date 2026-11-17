@@ -1,18 +1,22 @@
 /* ============================================================
  * Pick My Card — js/home-ui.js（載入順序第 3 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
- *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"
- *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
- *  - 首次引導（分流 B 組的逐步導覽）→ "首次引導" / "ONBOARD_STEPS" / "beginOnboardTour"
- *  - 錯誤訊息                  → "showErrorMessage"
- *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
- *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
- *  - 主初始化（DOMContentLoaded）→ "DOMContentLoaded"
- *  - 圖片 lazy loading          → "initializeLazyLoading"
- *  - 卡片/支付 chips            → "populateCardChips" / "populatePaymentChips"
- *  - 全站事件綁定              → "setupEventListeners"
- *  - 搜尋提示                  → "checkAndShowSearchHint" / "handleMerchantInput"
+ *  - 本週亮點活動 Spotlight      → "spotlightItems" / "renderSpotlights"
+ *  - 亮點期限自動匹配真實活動    → "resolveSpotlightDeadline"
+ *  - 禮物圖 lightbox／回頂鈕     → "setupGiftImageLightbox" / "setupBackToTopButton"
+ *  - 桌機空狀態：推薦活動放搜尋框正下方 → "placeSpotlightSection" / "setupSpotlightPlacement"
+ *  - 亮點詳情 modal              → "findSpotlightCardActivities" / "openSpotlightModal"
+ *  - 計算鈕提醒 calc-nudge       → "nudgeCalculateBtn" / "nudgeIfCalcConditionsChanged"
+ *  - 商家亮點比較                → "compareSpotlightMerchant"
+ *  - 首次引導（分流 B 組的逐步導覽） → "ONBOARD_STEPS" / "beginOnboardTour" / "首次引導"
+ *  - 錯誤訊息                    → "showErrorMessage"
+ *  - 主要 DOM 元素參照           → "merchantInput" / "calculateBtn"
+ *  - 公告列＋公告 modal          → "initializeAnnouncements" / "setupAnnouncementBar" / "displayAnnouncement"
+ *  - 主初始化（DOMContentLoaded） → "DOMContentLoaded"
+ *  - 圖片 lazy loading           → "initializeLazyLoading"
+ *  - 卡片/支付 chips             → "populateCardChips" / "populatePaymentChips"
+ *  - 全站事件綁定                → "setupEventListeners"
+ *  - 搜尋提示                    → "checkAndShowSearchHint" / "handleMerchantInput"
  * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
 // Editorial highlights from cardsData.spotlights. Shows 3 per page in a

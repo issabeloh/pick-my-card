@@ -1,22 +1,23 @@
 /* ============================================================
  * Pick My Card — js/search-match.js（載入順序第 4 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 模糊搜尋對照表            → "fuzzySearchMap"
- *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
- *  - 統一詞的搜尋別名          → "mergeDataTermAliases"
- *  - 精準搜尋開關              → "isExactSearchEnabled"
- *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms" / "findSearchHits"（找、算、顯示三步之「找」）
- *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
+ *  - 模糊搜尋對照表              → "fuzzySearchMap" / "expandSynonymPhrases"
+ *  - 搜尋排除表                  → "searchExclusionMap" / "mergeDataSearchExclusions"
+ *  - 統一詞的搜尋別名            → "mergeDataTermAliases"
+ *  - 精準搜尋開關                → "isExactSearchEnabled"
+ *  - 搜尋匹配核心                → "expandSearchTerms" / "findMatchingItem" / "findSearchHits"（找、算、顯示三步之「找」）
+ *  - 匹配結果提示 UI             → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
  *  - 停車折抵比對（四處共用）     → "findMatchingParkingBenefits"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
- *  - 輸入驗證                  → "validateInputs"
- *  - 同活動合併                → "mergeResultsByActivity"
- *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
- *  - 排除項目同義詞群組          → "expandExclusionGroupTerms"
- *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
+ *  - 輸入驗證                    → "validateInputs"
+ *  - 同活動合併                  → "mergeResultsByActivity"
+ *  - 無匹配 fallback             → "buildBasicCashbackResult"
+ *  - 排除項目同義詞群組          → "getBasicExclusionSearchTerms" / "expandExclusionGroupTerms"
+ *  - 一般消費排除項目            → "showBasicExclusionPreview" / "getBasicExclusionHits" / "getBasicExclusionMaybeHits"
  *  - NCCC 小額支付品牌           → "findMicropaymentBrand" / "classifyBasicExclusion"
+ *  - 排除／未達門檻的提示訊息    → "showBasicExcludedMessage" / "appendUnmetSpendNote"
+ *  - 輸入建議下拉選單            → "MERCHANT_SUGGEST_LIMIT" / "getMerchantSuggestions" / "setupMerchantSuggest"
  * ============================================================ */
 // 模糊搜尋對照表：2026-10-15 起全部搬到 Google Sheets「統一詞」工作表（其他寫法＋搜尋別名），
 // 匯出成 cardsData.termAliases，載入時由 mergeDataTermAliases 填進來（別名 → 統一詞）。

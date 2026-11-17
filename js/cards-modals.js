@@ -1,13 +1,13 @@
 /* ============================================================
  * Pick My Card — js/cards-modals.js（載入順序第 8 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 手機側選單                → "setupSidebarDrawer"
- *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal"
- *  - 管理比較卡/持有卡入口      → "openManageCardsModal" / "openMyOwnedCardsModal"
- *  - 持有卡總覽（wallet stack） → "renderOwnedCardsOverview"
- *  - 持有卡管理 modal           → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
- *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderConditionLine"
- *  - 側選單「最近異動」          → "renderSidebarChangelog"
+ *  - 手機側選單                  → "setupSidebarDrawer"
+ *  - 卡片選擇 modal 共用渲染     → "_renderCardSelectionModal"
+ *  - 管理比較卡/持有卡入口       → "openManageCardsModal" / "openMyOwnedCardsModal"
+ *  - 持有卡總覽（wallet stack）  → "renderOwnedCardsOverview"
+ *  - 持有卡管理 modal            → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
+ *  - 卡片標籤/條件顯示 helpers   → "getTagClass" / "renderCardTags" / "renderConditionLine"
+ *  - 側選單「最近異動」          → "renderSidebarChangelog" / "openCardDetailAtChangelog"
  * ============================================================ */
 // ==========================================
 // Sidebar Drawer (Mobile)

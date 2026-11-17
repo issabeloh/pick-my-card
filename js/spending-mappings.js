@@ -1,13 +1,13 @@
 /* ============================================================
  * Pick My Card — js/spending-mappings.js（載入順序第 10 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
- *  - 釘選/取消釘選             → "togglePin" / "addMapping"
+ *  - 消費配卡表載存              → "loadSpendingMappings" / "saveSpendingMappings"
+ *  - 釘選/取消釘選               → "addMapping" / "togglePin"
  *  - 小抄存的名字認回改名後的寫法 → "resolveMappingMerchant" / "resolveMappingItemName" / "findPinnedMapping"
  *  - 我的刷卡小抄頁面           → 見 js/mappings-page.js（2026-09-28 由 modal 改成完整頁面）
- *  - 免年費狀態                → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
- *  - 我的額度相關功能           → "loadCreditLimit" / "setupCreditLimit"
- *  - 結帳日/繳款日             → "loadBillingDates" / "setupBillingDates"
+ *  - 免年費狀態                  → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
+ *  - 我的額度相關功能            → "loadCreditLimit" / "setupCreditLimit"
+ *  - 結帳日/繳款日               → "loadBillingDates" / "setupBillingDates"
  * ============================================================ */
 // ============================================
 // 消費配卡表功能

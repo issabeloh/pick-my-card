@@ -1,20 +1,21 @@
 /* ============================================================
  * Pick My Card — js/results-display.js（載入順序第 6 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 結果列表顯示              → "displayResults"
- *  - 未達單筆門檻的活動區      → "displayUnmetSpendResults" / "renderUnmetThresholdNote" / "renderSpendUpgradeNotes"
- *  - 結果分類導覽              → "updateResultsNav" / "scrollToResultsGroup"
- *  - 領券回饋計算              → "calculateCouponRate"
- *  - Placeholder 解析（必傳 levelSettings，見鐵則 5）→ "extractPlaceholderField" / "parseCashbackRate"
- *  - 領券結果顯示              → "displayCouponCashbacks"
- *  - 停車折抵顯示              → "displayParkingBenefits"
- *  - 新戶活動顯示              → "displayCardholderPromos" / "createCardholderPromoElement"
- *  - HTML 轉義與連結防護（鐵則 3）→ "escapeHtml" / "sanitizeUrl"
- *  - 詳情頁導覽                → "setupCardDetailNav" / "renderCardDetailPromos"
- *  - 結果卡片元素              → "createCardResultElement" / "createCouponResultElement"
- *  - 回饋卡共用片段（搜尋結果＋詳情頁）→ "renderActivityInfo" / "renderUpcomingBadge" / "renderEndingSoonBadge" / "renderSpendThresholdNote"
- *  - 計算明細 popover           → "showCalcBreakdown"
- *  - 率組成展開                → "toggleRateComposition"
+ *  - 結果列表顯示                → "displayResults"
+ *  - 未達單筆門檻的活動區        → "displayUnmetSpendResults" / "renderUnmetThresholdNote" / "renderSpendUpgradeNotes"
+ *  - 結果分類導覽                → "updateResultsNav" / "scrollToResultsGroup"
+ *  - 領券回饋計算                → "calculateCouponRate"
+ *  - Placeholder 解析（必傳 levelSettings，見鐵則 5） → "extractPlaceholderField" / "parseCashbackRate"
+ *  - 領券結果顯示                → "displayCouponCashbacks"
+ *  - 停車折抵顯示                → "displayParkingBenefits"
+ *  - 新戶活動顯示                → "New Cardholder Promos" / "displayCardholderPromos" / "createCardholderPromoElement"
+ *  - HTML 轉義與連結防護（鐵則 3） → "escapeHtml" / "sanitizeUrl"
+ *  - 詳情頁導覽                  → "setupCardDetailNav" / "renderCardDetailPromos"
+ *  - 停車/領券結果元素           → "createParkingBenefitElement" / "createCouponResultElement"
+ *  - 回饋卡共用片段（搜尋結果＋詳情頁） → "renderUpcomingBadge" / "renderEndingSoonBadge" / "renderSpendThresholdNote" / "renderActivityInfo"
+ *  - 結果卡片元素                → "createExcludedCardResultElement" / "createCardResultElement"
+ *  - 計算明細 popover            → "showCalcBreakdown"
+ *  - 率組成展開                  → "toggleRateComposition"
  * ============================================================ */
 // suppressEmptyMessage：結果是空的、但畫面上別處已經有東西可看時（目前唯一情況是
 // 「只有領券優惠」），不要印「無符合的信用卡」——那會與下方列出來的領券結果矛盾。

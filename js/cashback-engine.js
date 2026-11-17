@@ -14,7 +14,7 @@
  *  - 瀑布/疊加計算              → "calculateLayeredCashback" / "calculateStackedCashback"
  *  - 單卡計算引擎              → "calculateCardCashback"
  *  - 即將開始活動              → "findUpcomingActivity"
- *  - 商家付款資訊/導購連結      → "displayMerchantPaymentInfo" / "displayReferralLink"
+ *  - 商家付款資訊/導購連結       → "displayMerchantPaymentInfo" / "displayReferralLink" / "displayCashbackSites"
  * ============================================================ */
 // Calculate cashback for all cards
 async function calculateCashback() {

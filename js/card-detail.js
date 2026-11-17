@@ -1,14 +1,16 @@
 /* ============================================================
  * Pick My Card — js/card-detail.js（載入順序第 9 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 卡片詳情頁主體            → "showCardDetail"
- *  - 近期異動（changelog）      → "renderCardDetailChangelog"
- *  - CUBE 卡專屬內容            → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
- *  - onclick 轉義               → "escapeForOnclick"
- *  - 詳情頁回饋卡（版面比照搜尋結果）→ "renderRateCard" / "formatRateCardCap"
- *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
- *  - 詳情頁項目過濾            → "filterCashbackItems" / "condenseMerchantList"
- *  - 用戶筆記                  → "loadUserNotes" / "saveUserNotes"
+ *  - 卡片詳情頁主體              → "showCardDetail"
+ *  - CUBE 卡專屬內容             → "generateCubeSpecialContent" / "updateCubeSpecialCashback"
+ *  - 詳情頁回饋卡（版面比照搜尋結果） → "renderRateCard" / "formatRateCardCap"
+ *  - 一般消費排除項目卡          → "renderBasicExclusionsCard"
+ *  - 級別說明 popover            → "setupLevelHelpPopover"
+ *  - 近期異動（changelog）       → "renderCardDetailChangelog"
+ *  - onclick 轉義                → "escapeForOnclick"
+ *  - 商家清單展開收合（含 window 賦值） → "toggleMerchants"
+ *  - 詳情頁項目過濾              → "filterCashbackItems" / "condenseMerchantList"
+ *  - 用戶筆記                    → "loadUserNotes" / "saveUserNotes"
  * ============================================================ */
 async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
