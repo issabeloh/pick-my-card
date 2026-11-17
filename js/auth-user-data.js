@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/auth-user-data.js（載入順序 7/12）
+ * Pick My Card — js/auth-user-data.js（載入順序第 7 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 改這檔前必讀 docs/project/storage-and-security.md（登出清理鐵則 9）。
  * 區塊目錄（Grep 關鍵字）：
  *  - 認證入口/訪客 UI           → "setupAuthentication" / "ensureGuestUIBound"

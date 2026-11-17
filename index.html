@@ -1318,9 +1318,9 @@
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
          script 完全 fetch+執行完才會觸發 DOMContentLoaded——Firebase 網路慢（不是被擋，只是慢）
-         時，script.js 的 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
+         時，js/home-ui.js 的主初始化 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
          fallback 本身）會被這個 script 卡住，逾時 fallback 永遠等不到執行的機會。改 async 讓這個
-         module 獨立非同步載入，不阻塞 DOMContentLoaded；script.js 原本就用輪詢等
+         module 獨立非同步載入，不阻塞 DOMContentLoaded；js/auth-user-data.js 原本就用輪詢等
          window.firebaseAuth/window.db 就緒，不依賴執行順序，這裡只設定 window.* 屬性、不碰 DOM，
          async 對它是安全的。 -->
     <script type="module" async>

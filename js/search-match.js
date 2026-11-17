@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/search-match.js（載入順序 4/12）
+ * Pick My Card — js/search-match.js（載入順序第 4 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"

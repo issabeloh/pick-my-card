@@ -769,7 +769,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 - `bodyHtml` 換進去的卡名會先 `escapeHtml`（卡名可能含 `&`）；title／description 不先 escape，因為 `buildPage()` 會整串 escape
 - 標題、描述、`mc-body` 正文因此都列進 `stripDataRegions()`——會隨日期與 cards.data 變，不挖掉就會被判成「版面不一致」擋 commit
 
-**卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那 12 個模組
+**卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那些模組
 **原封不動載進來跑**，不另寫一套比對規則——另寫一套就是「頁面講一套、JSON-LD 講另一套」的病根。
 它照抄 `loadCardsData()` 與 `calculateCashback()` 的完整流程，四個步驟一個都不能少：
 

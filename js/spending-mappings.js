@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/spending-mappings.js（載入順序 10/12）
+ * Pick My Card — js/spending-mappings.js（載入順序第 10 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
  *  - 釘選/取消釘選             → "togglePin" / "addMapping"

@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/levels-payments.js（載入順序 11/12）
+ * Pick My Card — js/levels-payments.js（載入順序第 11 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * ⚠️ 本檔含 saveCardLevel()——CLAUDE.md 鐵則 1（🔒 最高等級）：
  * 只有「用戶親自點選」與「大小寫/空格正規化」兩個合法呼叫場景。
  * 區塊目錄（Grep 關鍵字）：

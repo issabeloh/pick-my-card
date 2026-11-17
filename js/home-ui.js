@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/home-ui.js（載入順序 3/12）
+ * Pick My Card — js/home-ui.js（載入順序第 3 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
  *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"

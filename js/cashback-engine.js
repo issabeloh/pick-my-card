@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/cashback-engine.js（載入順序 5/12）
+ * Pick My Card — js/cashback-engine.js（載入順序第 5 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 改這檔前必讀 docs/project/cashback-engine.md。
  * 區塊目錄（Grep 關鍵字）：
  *  - 回饋計算總調度            → "calculateCashback"

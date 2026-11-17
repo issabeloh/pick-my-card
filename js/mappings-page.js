@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/mappings-page.js（載入順序 13/13）
+ * Pick My Card — js/mappings-page.js（載入順序第 13 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 「我的刷卡小抄」完整頁面（2026-09-28 由 modal 改版：收據風格「刷卡小抄」）
  * 區塊目錄（Grep 關鍵字）：
  *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"

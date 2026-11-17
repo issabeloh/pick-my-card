@@ -1,6 +1,6 @@
 // FAQ Page Script
 
-// Debug 日誌閘門：正式環境靜音 log/warn，?debug=1 重新開啟（同 script.js）
+// Debug 日誌閘門：正式環境靜音 log/warn，?debug=1 重新開啟（同 js/core-utils.js 的 Debug 日誌閘門）
 (function () {
     try {
         if (!new URLSearchParams(location.search).has('debug')) {
@@ -29,8 +29,8 @@ const retryBtn = document.getElementById('retry-btn');
 // 已退回「返回首頁」鈕（純 <a> 連結，不需要 JS 狀態切換）。
 // ------------------------------------------------------------------
 
-// 手機漢堡側選單開合：比照 script.js setupSidebarDrawer()（script.js:6727-6772）。
-// faq.js 獨立載入、不共用 script.js 的 disableBodyScroll/enableBodyScroll（那組有
+// 手機漢堡側選單開合：比照 js/cards-modals.js 的 setupSidebarDrawer()。
+// faq.js 獨立載入、不共用 js/core-utils.js 的 disableBodyScroll/enableBodyScroll（那組有
 // refcount 是為了主站多層 modal 疊加），這裡頁面單純，簡化成直接鎖/解鎖 body 捲動。
 function setupSidebarDrawer() {
     const sidebar = document.getElementById('sidebar');
@@ -60,7 +60,7 @@ function setupSidebarDrawer() {
     });
 }
 
-// 回到頂部浮標（手機版）：比照 script.js setupBackToTopButton()（script.js:1409-1430）——
+// 回到頂部浮標（手機版）：比照 js/home-ui.js 的 setupBackToTopButton()——
 // 捲動超過 300px 才顯示，點擊平滑捲回頂部。樣式/顯示門檻沿用 styles.css 既有的
 // .back-to-top-btn（faq.html 已載入 styles.css），這裡只負責行為邏輯。
 function setupBackToTopButton() {
@@ -130,7 +130,7 @@ async function loadFAQData() {
         // Read encoded text (cards.data is Base64 encoded)
         const encoded = await response.text();
 
-        // Decode function (same as script.js)
+        // Decode function (same as js/data-loader.js loadCardsData)
         const decoded = decodeURIComponent(escape(atob(encoded)));
         const parsedData = JSON.parse(decoded);
 
@@ -253,7 +253,7 @@ function renderFAQItems(category) {
     });
 }
 
-// HTML 轉義（faq.js 獨立載入，不共用 script.js 的 helper）
+// HTML 轉義（faq.js 獨立載入，不共用 js/results-display.js 的 escapeHtml）
 function escapeHtml(s) {
     if (s == null) return '';
     return String(s)

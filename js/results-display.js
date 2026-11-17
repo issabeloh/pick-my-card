@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/results-display.js（載入順序 6/12）
+ * Pick My Card — js/results-display.js（載入順序第 6 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 結果列表顯示              → "displayResults"
  *  - 未達單筆門檻的活動區      → "displayUnmetSpendResults" / "renderUnmetThresholdNote" / "renderSpendUpgradeNotes"

@@ -1,6 +1,6 @@
 /* ============================================================
- * Pick My Card — js/core-utils.js（載入順序 1/12）
- * 12 個模組檔為傳統全域 script（非 ES module），依 index.html 標籤
+ * Pick My Card — js/core-utils.js（載入順序第 1 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
+ * js/ 的模組檔為傳統全域 script（非 ES module），依 index.html 標籤
  * 順序載入，被依賴的在前；模組地圖見 CLAUDE.md 專案地圖。
  * 區塊目錄（Grep 關鍵字）：
  *  - Debug 日誌閘門            → "Debug 日誌閘門"

@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/data-loader.js（載入順序 2/12）
+ * Pick My Card — js/data-loader.js（載入順序第 2 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 卡片搜尋索引              → "buildCardItemsIndex"
  *  - 資料載入（cards.data）     → "loadCardsData"

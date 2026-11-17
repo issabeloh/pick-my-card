@@ -64,7 +64,7 @@
   }
 
   // 「最後 N 天」徽章：0 天顯示「今天截止」、1-14 天顯示「最後 N 天」，其餘隱藏；
-  // 文案與主站搜尋結果一致（script.js 的 isEndingSoon / getDaysUntilEnd 語義）。
+  // 文案與主站搜尋結果一致（js/core-utils.js 的 isEndingSoon / getDaysUntilEnd 語義）。
   // 順便隱藏已過期活動（data-expired 標記，篩選/排序都不會再讓它重新出現）。
   // 「最後 N 天」徽章與過期隱藏：2026-09-17 改版後改成**逐檔活動**判斷——一張卡
   // 可能有 4 檔活動、到期日各不相同（中信 uniopen 就是），掛在卡片上會算錯。
@@ -524,7 +524,7 @@
   // 安全解析 localStorage 的 myOwnedCards_*（訪客 key「myOwnedCards_guest」＋
   // 所有登入者本機鏡像「myOwnedCards_<uid>」的聯集）。純讀取、絕不寫入/刪除任何
   // localStorage key（唯讀鐵則，見 CLAUDE.md 鐵則 2 精神／docs/project/
-  // storage-and-security.md 第 1 節）；這頁不載入 script.js，沒有共用的
+  // storage-and-security.md 第 1 節）；這頁不載入 js/ 模組，沒有共用的
   // readLocalJSON() 可用，因此自己寫一個容錯的小函數：壞資料一律 try/catch
   // 吞掉、回空陣列，絕不讓 JSON.parse 拋錯中斷頁面其餘互動。
   function readOwnedCardIdsSafe() {
@@ -931,8 +931,8 @@
   // 的 pmcPageTemplate_）。
   // ------------------------------------------------------------------
 
-  // 手機漢堡側選單開合：比照 script.js setupSidebarDrawer()（script.js:6727-6772）。
-  // promos.js 獨立載入、不共用 script.js 的 disableBodyScroll/enableBodyScroll
+  // 手機漢堡側選單開合：比照 js/cards-modals.js 的 setupSidebarDrawer()。
+  // promos.js 獨立載入、不共用 js/core-utils.js 的 disableBodyScroll/enableBodyScroll
   // （那組有 refcount 是為了主站多層 modal 疊加），這裡頁面單純，簡化成直接
   // 鎖/解鎖 body 捲動。
   function setupSidebarDrawer() {
@@ -963,8 +963,8 @@
     });
   }
 
-  // 回到頂部浮標（手機版，2026-07-16 新增）：比照 script.js setupBackToTopButton()
-  // （script.js:1409-1430）——捲動超過 300px 才顯示，點擊平滑捲回頂部。
+  // 回到頂部浮標（手機版，2026-07-16 新增）：比照 js/home-ui.js 的 setupBackToTopButton()
+  // ——捲動超過 300px 才顯示，點擊平滑捲回頂部。
   function setupBackToTopButton() {
     var btn = document.getElementById('promos-back-to-top-btn');
     if (!btn) return;
@@ -993,10 +993,10 @@
   // 張以後的卡「秒開」。協定（origin 兩端都檢查，只信 location.origin）：
   //   iframe → 父頁：{type:'pmc-embed-ready'}（初始化完成）、
   //            {type:'pmc-detail-closed'}（modal 被關閉，兩條關閉路徑共用同一個
-  //            closeModal，見 script.js showCardDetail）
+  //            closeModal，見 js/card-detail.js showCardDetail）
   //   父頁 → iframe：{type:'pmc-open-card', cardId}（開/換卡）
   // 逾時 fallback：首次點擊後 8 秒內沒收到 ready，視為 iframe 內嵌不可行（例如
-  // script.js 初始化卡住），放棄攔截、改用原本 <a> 的 href 開新分頁（target="_blank"
+  // 主站 js/ 模組初始化卡住），放棄攔截、改用原本 <a> 的 href 開新分頁（target="_blank"
   // 已內建在生成的 HTML 裡），並記下「已放棄」——之後的點擊完全不再攔截、直接讓瀏覽器
   // 原生開新分頁，不會每次都空等 8 秒。
   function setupCardDetailOverlay() {
