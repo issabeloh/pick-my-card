@@ -154,6 +154,16 @@ node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只
 **改 `renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」、或詳情頁任何一條回饋 render 路徑（含 CUBE）後必跑。**
 重拍 fixture 之後，這份基準也要跟著重拍。
 
+## 詳情頁個人設定與新戶活動票券（獨立一支，2026-11-17 新增）
+
+```bash
+node tools/regression/card-settings-promo-test.js   # 有 ❌ → exit 1
+```
+
+訪客／已登入（自帶 Firebase 替身，可讓 setDoc 失敗）兩種情況下的儲存狀態列、筆記自動儲存、額度格式、開關可用鍵盤操作、鐵則 1（存的級別找不到不寫回），以及所有新戶活動的欄位都出現在詳情頁票券裡。沿用 run-regression.js 的凍結資料與時鐘。
+**改個人設定的欄位或儲存接線（js/card-detail.js「儲存狀態列」、js/spending-mappings.js 額度／免年費、js/levels-payments.js 各 save 函數）或詳情頁新戶活動（renderCardDetailPromoTickets）後必跑。**
+⚠️ `run-regression.js` 不比對搜尋結果的新戶活動卡；改 `createCardholderPromoElement` 時要另外比對前後輸出（第三輪的做法：載入舊版函數，對所有活動 × 多個凍結日期比 outerHTML）。
+
 ## 一般消費排除項目（獨立一支，2026-09-30 新增）
 
 ```bash
