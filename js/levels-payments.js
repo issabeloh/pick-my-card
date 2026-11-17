@@ -514,10 +514,11 @@ async function showComparePaymentsModal() {
         }
 
         // Sort payments by highest rate
-        // 前三名要標名次徽章（2026-10-08）。同回饋率的支付常常一大串，
+        // 每個支付名稱前面標名次。同回饋率的支付常常一大串，
         // 只比回饋率的話名次等於原始清單順序。同分依序再比：最優那張的消費上限（高者勝，無上限最高）
         // → 第二名卡片的回饋率——都是「這個支付實際上能拿多少」，名次才講得出道理。
-        // 三者全同＝真的並列，給同一個名次（標準競賽排名 1、2、2、2、5：並列第 2 之後沒有第 3）
+        // 三者全同＝真的並列，給同一個名次。並列之後接下一個數字（1、1、1、2、3），不跳號——
+        // 2026-10-08～11-16 是跳號的競賽排名（1、1、1、4），站長 2026-11-17 裁定那是錯的
         const capOf = mc => (mc.cap ? mc.cap : Infinity);
         const comparePayments = (a, b) =>
             (b.cards[0].rate - a.cards[0].rate) ||
@@ -526,7 +527,7 @@ async function showComparePaymentsModal() {
         paymentsWithCards.sort(comparePayments);
         paymentsWithCards.forEach((pwc, i) => {
             const prev = paymentsWithCards[i - 1];
-            pwc.rank = (prev && comparePayments(prev, pwc) === 0) ? prev.rank : i + 1;
+            pwc.rank = !prev ? 1 : (comparePayments(prev, pwc) === 0 ? prev.rank : prev.rank + 1);
         });
 
         // Display compact comparison with 2-column grid
