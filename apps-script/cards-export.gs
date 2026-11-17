@@ -2861,13 +2861,19 @@ function pmcApplyDestHtml_(href, card, extraCls) {
 //    validateReferentialIntegrity_ 裡的申辦連結檢查；那幾支改了，這裡要跟著改。
 //    「清單順序依實際回饋率排行」是站長 2026-11-17 指定的說法（實際規則見 pmcPromoSortKey_：
 //    首刷禮優先，再依回饋率、回饋金額）；站長推薦怎麼選不在這裡說明（同日裁定）。
-// 三句都壓在 6～7 個字：手機（390px）要能排成一列，多一個字就會折成兩列、把推薦區往下推。
-const PMC_TRUST_POINTS = ['本站不經手個資', '按鈕標示去向', '排序不看分潤'];
+// 收合時那一行字（站長 2026-11-17：只講資安防護，不提分潤、也不提按鈕去向）。
+// 16 個字是量過的：390px 的手機剛好一行，再長就會折行。
+const PMC_TRUST_LINE = '連結防竄改・全站加密・不經手個資';
 const PMC_TRUST_QA = [
   { q: '點「立即申辦」會去哪裡？',
-    a: '都是到發卡銀行官網的線上申辦頁，每顆按鈕下方有標示走哪一種：「直達銀行官網」直接開啟銀行的申辦頁；「經 Money101 合作連結」會先經過合作平台 Money101 的追蹤網址，再自動轉到銀行官網。兩種都是另開新分頁，這一頁會留著。' },
-  { q: '申辦連結安全嗎？會不會被動手腳？',
-    a: '申辦連結是固定寫在這一頁裡的網址，只會前往發卡銀行官網或合作平台 Money101。每次更新資料時，系統都會逐一核對每個連結的網域是否屬於該銀行或 Money101。本站全程使用 HTTPS 加密連線。到了申辦頁，也可以看一眼網址列，確認是該銀行的網域再填寫資料。' },
+    a: '都是到發卡銀行官網的線上申辦頁，每顆按鈕下方有標示走哪一種：「直達銀行官網」直接開啟銀行的申辦頁；「經 Money101 合作連結」會先經過合作平台 Money101 的追蹤網址，再自動轉到銀行官網。兩種都是另開新分頁。' },
+  // 這一題刻意寫到技術名詞的層級（站長 2026-11-17：一般人看不懂沒關係，寫到這個程度才看得出真的有做）。
+  // 每一項都對得到實作，改了實作要回來改這裡：
+  //   固定網址、只收 http/https → pmcSanitizeUrl_；網域核對 → validateReferentialIntegrity_；
+  //   base-uri／frame-ancestors／X-Frame-Options／HSTS → repo 根目錄 _headers 的**強制版**標頭
+  //   （不是 -Report-Only 那條）；noopener noreferrer → pmcApplyLinkHtml_ 與 pmcRenderCardGroup_ 的 rel。
+  { q: '申辦連結安全嗎？網站做了哪些防護？',
+    a: '本站在連結與連線上做了五層防護。（1）連結防竄改：申辦連結是資料更新時直接寫進網頁的固定網址，只接受 http／https 格式；網站並以內容安全政策（CSP 的 base-uri 指令）禁止任何程式改寫整頁連結的指向。（2）網域核對：每次更新資料，系統都會逐一核對每個連結的網域，必須屬於該卡的發卡銀行或合作平台 Money101，不符就會被攔下確認。（3）全程加密：全站強制 HTTPS（HSTS，有效期一年），瀏覽器不會用未加密的連線開啟本站。（4）防偽裝嵌入：以 CSP 的 frame-ancestors 與 X-Frame-Options 禁止其他網站把本頁嵌進自己的頁面，防止點擊劫持。（5）分頁隔離：申辦頁另開新分頁時加上 noopener noreferrer，兩個分頁互相無法操控。到了申辦頁，也建議看一眼網址列，確認是該銀行的網域再填寫資料。' },
   { q: '從這裡申辦，個人資料安全嗎？',
     a: '本站不代辦信用卡，這一頁也沒有任何填寫申請資料的欄位。你的姓名、身分證字號、收入等申請資料，只會填在銀行自己的頁面上，本站看不到、也拿不到。點擊離開之後，資料由對方的隱私權政策規範。',
     link: { href: '/privacy', text: '隱私權政策' } },
@@ -2876,25 +2882,22 @@ const PMC_TRUST_QA = [
   { q: '什麼是【大師加碼】？',
     a: '標有【大師加碼】的活動，是透過本站（信用卡回饋大師）連結申辦才有的專屬首刷禮或加碼活動。只要從本頁的「立即申辦」按鈕進入申辦，並完成該活動「達成條件」列出的每一項，就能獲得。這類連結本站會獲得推薦報酬。' },
   { q: '這些活動資料可靠嗎？',
-    a: '活動內容整理自各發卡銀行公開的活動辦法，清單上方標示最近一次的資料更新日期。銀行可能隨時調整名額、期間或條件，實際內容以銀行官方公告為準；發現不一致，歡迎到首頁用問題回報告訴我們。',
+    a: '活動內容整理自各發卡銀行公開的活動辦法，清單上方標示最近一次的資料更新日期。銀行可能隨時調整名額、期間或條件，實際內容以銀行官方公告為準；發現不一致，歡迎到首頁點擊頭像，按「回報錯誤」告訴我們。',
     link: { href: '/terms', text: '使用須知與免責聲明' } }
 ];
 function pmcRenderTrust_() {
-  const check = '<svg class="pmc-trust-check" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#d1fae5"/>' +
-    '<path d="M4.5 8.2l2.2 2.2 4.8-4.8" fill="none" stroke="#059669" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const points = PMC_TRUST_POINTS.map(function (t) {
-    return '<span class="pmc-trust-point">' + check + pmcEscapeHtml_(t) + '</span>';
-  }).join('');
+  const shield = '<svg class="pmc-trust-icon" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<path d="M10 2l6 2.2v4.6c0 3.9-2.5 7.2-6 8.7-3.5-1.5-6-4.8-6-8.7V4.2L10 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M7.2 10.1l2 2 3.6-3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const qa = PMC_TRUST_QA.map(function (x) {
     // 一題包一個 div：桌機排兩欄時，題目與答案才不會被拆到不同欄
     return '      <div class="pmc-trust-item"><h3>' + pmcEscapeHtml_(x.q) + '</h3><p>' + pmcEscapeHtml_(x.a) +
       (x.link ? ' <a href="' + pmcEscapeHtml_(x.link.href) + '">' + pmcEscapeHtml_(x.link.text) + '</a>' : '') + '</p></div>';
   }).join('\n');
   return '  <details class="pmc-trust" id="trust">\n' +
-    '    <summary class="pmc-trust-summary">\n' +
-    '      <span class="pmc-trust-points">' + points + '</span>\n' +
-    '      <span class="pmc-trust-more">申辦前想知道的事<span class="promo-chevron" aria-hidden="true"></span></span>\n' +
-    '    </summary>\n' +
+    '    <summary class="pmc-trust-summary">' + shield +
+    '<span class="pmc-trust-line">' + pmcEscapeHtml_(PMC_TRUST_LINE) + '</span>' +
+    '<span class="pmc-trust-more">防護說明<span class="promo-chevron" aria-hidden="true"></span></span></summary>\n' +
     '    <div class="pmc-trust-body">\n' + qa + '\n    </div>\n' +
     '  </details>\n';
 }
@@ -3717,10 +3720,8 @@ function pmcPageTemplate_(o) {
 '  </nav>\n' +
 '  <section class="promos-hero">\n' +
 '    <h1>信用卡新戶活動一覽</h1>\n' +
-'    <div class="promos-hero-intro">\n' +
-'      <p>信用卡首刷禮排行榜！新戶辦卡推薦</p>\n' +
-'      <p>各大銀行信用卡新戶活動一次比較，為你列出刷卡金、加碼回饋及首刷禮，一次比較多張信用卡新戶活動、快速看懂活動條件及回饋方式。</p>\n' +
-'    </div>\n' +
+// 引言一句話（站長 2026-11-17 定稿，原本是淡底卡片裡的兩段）。手機首屏要留給獎勵。
+'    <p class="promos-hero-lede">新戶辦卡推薦！一次比較信用卡首刷禮、加碼回饋及刷卡金回饋，並排比較。</p>\n' +
 '  </section>\n' +
 '\n' +
 // 「安心申辦」說明（2026-11-16）：放在第一顆申辦鈕（站長推薦）之前。收合時只有一列，
