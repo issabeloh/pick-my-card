@@ -680,6 +680,50 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 - **刻意沒動**：頁尾之後的「申辦前先確認這幾件事」（站長 2026-07-29 定的位置）、hero 引言、
   meta title。description 只改掉一句與現況不符的「依即將截止時間排序」。
 
+### 9d. 收藏＋單卡頁 /promos/<card id>（2026-11-18，站長同意 mockup F／G）
+
+mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
+
+**收藏（純前端，`promos.js` 的 `setupFavorites()`）**
+- 卡名旁一顆愛心（清單頁插在 `.promo-rail-id` 尾端；桌機多檔卡的直式品牌欄改釘右上角）、單卡頁在頁首 `.pmc-fav-slot`。
+  **生成器不輸出任何標記**，舊版 HTML 一樣有這個功能。
+- 存在 localStorage `pmcPromoFavorites`（卡片 id 陣列，最多 50），清單頁與單卡頁共用。這頁沒有 `readLocalJSON()`，
+  讀寫一律 try/catch、壞資料當成沒收藏（鐵則 2 的精神）。不登入、不同步——口袋名單那行「存在這台裝置，下次來還在」就是在講這件事。
+- 底部口袋名單 `.pmc-fav-bar`：前 3 張卡圖＋「已收藏 N 張」＋「並排比較」。並排比較＝清單只留收藏的卡
+  （`filterState.favOnly`，進入時先清掉其他篩選），再按一次「看全部活動」回來。單卡頁的按鈕是連到 `/promos?fav=1`，清單頁讀到就直接進入。
+  `clearAllFilters()`（站長推薦／行李箱的跳轉會用）也會退出只看收藏。
+- 清單頁載入時會把「已不在清單上」的收藏清掉（活動下架），口袋名單只放比得到的卡。
+- 口袋名單出現時 `body.has-fav-bar`：頁尾多留 76px、回到頂部鈕往上讓。
+- 愛心只在收藏中才上玫瑰紅（實心）——這頁的紅是「快截止」，沒收藏時一律灰。
+- GA4：`promos_fav`（card_id、action add/remove、page list/card）、`promos_fav_compare`。
+
+**單卡頁**
+- **生成邏輯**在 `cards-export.gs` 的 `generatePromoCardPages()`（＋`pmcCardPageHtml_`／`pmcCardPageEndedHtml_` 等），
+  跟清單頁共用 `pmcPreparePromoGroups_`（過期過濾／分組／排序／錨點，從 `generatePromosPageHtml` 抽出）、
+  `pmcRenderCardGroup_(group, {page:true})`（不輸出 rail 與特色容器）、`pmcPageShell_`（head／header／footer，從 `pmcPageTemplate_` 拆出）。
+  ⚠️ **Apps Script 不會呼叫它**：頁面在 Cloudflare Pages 部署時由 `tools/build-promo-card-pages.js` 用 vm 載入 repo 的 `.gs` 生成到
+  `promos/<id>.html`，**不進 repo**（`.gitignore` 的 `/promos/`）。理由：頁數跟著資料增減、匯出不必多 commit 30 個檔、
+  不必等站長重貼 Apps Script 才有頁面。所以改單卡頁版面只要改 repo，不用重貼。
+- `tools/deploy-version.sh` 的順序：商家頁 → **單卡頁** → 卡片特色注入（`build-promos-features.js` 也會填 `promos/*.html` 的容器）→ `?v=` 注入（迴圈含 `promos/*.html`）。
+- **站內資源一律絕對路徑**（`/promos.css`、`/assets/…`）：單卡頁在子目錄，相對路徑會落空。清單頁跟著改，2026-11-18 用
+  `build-promos-page.js` 重生比對過：除了路徑多一個 `/` 之外逐位元相同。
+- **卡片 id 只收 `^[a-z0-9][a-z0-9-]*$`**（`pmcCardPagePath_`）：它同時是網址與檔名，不合規的卡沒有頁、清單上的卡名也不加連結。
+- 內容：麵包屑（三層）→ h1「<卡名>新戶活動（YYYY 年 M 月，部署當天）」→ 一句引言（1 檔＝該檔摘要＋截止日；多檔＝檔數＋最快截止）
+  → 卡圖＋申辦鈕（去向同清單、GA 帶 `section=card_page`）＋愛心 → 三格（檔數／主活動獎勵／截止）→ 資料更新於 → 信任列
+  → 這張卡的活動（同清單的活動卡）→ 卡片特色（直接攤開，不開 modal；沒注入就整節藏）→ 也可以看看（同主活動類型優先，3 張，連到各自的單卡頁）。
+  JSON-LD：WebPage（dateModified）＋BreadcrumbList。canonical＝`/promos/<id>`。
+- **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
+  部署之後才到期的：`promos.js` 的 `setupCardPage()` 在整張卡被藏起來時顯示 `#pmc-cp-ended` 那一句。
+- **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，
+  **要站長重貼 `cards-export.gs` 才會出現**；之前頁面已經存在、只是沒有連結。
+- **每頁自己的更新日**：`exportToJSON` 用 `pmcPromoCardSignature_`（該卡活動＋申辦連結＋卡名）配 `pmcStampedDate_('PROMOCARD_<id hash>')`，
+  寫進 `cards.data` 的 `promoCardUpdatedIso`，部署端烤進頁面（資料更新於／dateModified），sitemap 的 lastmod 同源。
+  一張卡改活動不會讓其他頁的 lastmod 一起前進。貼新版之前沒有這欄，部署端退回清單頁的「資料更新於」。
+- 樣式在 `promos.css` 檔尾（`.pmc-cp*`）。`.pmc-cp .promo-card[data-act-count]:not([hidden])` 要跟清單那條多檔 grid 規則同分、排在後面才蓋得過，別往前搬。
+- ⚠️ 特色容器的 class 只能寫 `promo-card-feat` 一個字：注入器比對的是 `class="promo-card-feat"` 整串（2026-11-18 多加一個 class 就 0 組命中）。
+- 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-features.js`，再開 `python3 -m http.server`
+  的 `/promos/<id>.html`（本機沒有 clean URL）。看完 `git status` 應該乾淨——`promos/` 被忽略，但 promos.html 被注入過特色，記得 `node tools/build-promos-page.js` 還原。
+
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
 `sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**
@@ -687,7 +731,7 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 **改生成邏輯要把整份 `cards-export.gs` 貼回 Google Sheets**，否則下次匯出照樣蓋回舊格式。
 `robots.txt` 指向它，不需另外維護。
 
-**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
+**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/promos/<card id>`（2026-11-18）、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
 首頁 2026-08-16 才補進去——它是全站最重要的頁、`index.html` 本來就 self-canonical 到 `https://pickmycard.app/`，
 先前漏收純粹是疏忽（漏收不會讓 Google 不索引首頁，但少一個明確信號）。
 
@@ -701,6 +745,7 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 | `/landing` `/faq` | 寫死的常數（不隨匯出變動；改版時手動更新 `generateSitemapXml_` 裡的日期） |
 | `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
 | `/merchant/<slug>` | 同 `homeUpdatedIso`——商家頁＝index.html 版面 ＋ cards.data 算出的卡片清單，會變的來源就是 cards.data，與首頁同一個訊號 |
+| `/promos/<card id>` | `promoCardUpdatedIso[id]`＝該卡自己的指紋（2026-11-18，見 9d）。只收今天還有進行中活動的卡 |
 
 **`homeUpdatedIso` 也寫進 `cards.data`（欄位 `contentUpdatedIso`，2026-10-30）**：商家頁生成器把它烤進 HTML
 （頁尾可見日期＋JSON-LD `dateModified`），前端頁尾也優先顯示它——頁面上看到的日期、`dateModified`、

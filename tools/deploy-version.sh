@@ -9,7 +9,7 @@
 #   無參數（部署）：CF_PAGES_COMMIT_SHA（CF Pages 內建環境變數）→ git short sha → 時間戳
 #   有參數（本機）：注入指定字串；`bash tools/deploy-version.sh dev` 可還原佔位
 #
-# 涵蓋：根目錄與 merchant/ 的所有 *.html 裡本站 .css/.js 的 ?v=；
+# 涵蓋：根目錄、merchant/ 與 promos/（單卡頁，部署時生成）的所有 *.html 裡本站 .css/.js 的 ?v=；
 # 圖片等資產引用（.png?v= 等）刻意不動。promos.html 由 Apps Script 匯出生成、
 # 自帶時間戳版本——本腳本照樣覆寫，部署後以 commit 版本為準，匯出端不需配合。
 set -euo pipefail
@@ -34,6 +34,9 @@ fi
 if [ "${PMC_SKIP_MERCHANT_BUILD:-0}" != "1" ]; then
   if command -v node >/dev/null 2>&1; then
     node tools/build-merchant-pages.js
+    # 單卡頁 /promos/<card id>（2026-11-18 起，見 tools/build-promo-card-pages.js）：只在部署時生成、
+    # 不進 repo。要排在卡片特色注入之前——單卡頁也有特色容器，下一步一起填。
+    node tools/build-promo-card-pages.js
     # 新戶活動頁的「卡片特色」區塊（2026-09-17 起）：Apps Script 只生成空容器，
     # 內容在這裡注入——回饋率必須用主站自己的 getDisplayRate()，而那支函數住在
     # js/，Apps Script 讀不到。同樣要在注入 ?v= 之前跑。
@@ -54,7 +57,7 @@ if [ "${CF_PAGES:-}" = "1" ]; then
 fi
 
 count=0
-for page in *.html merchant/*.html; do
+for page in *.html merchant/*.html promos/*.html; do
   [ -e "$page" ] || continue
   sed -i.bak -E "s/((styles|faq|landing|promos|privacy)\.css|(script|faq|landing|promos)\.js|js\/[A-Za-z0-9_-]+\.js)\?v=[A-Za-z0-9]+/\1?v=$VERSION/g" "$page"
   rm -f "$page.bak"
