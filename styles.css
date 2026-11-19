@@ -5262,17 +5262,13 @@ input[type="number"]:focus {
     #card-detail-modal .cd-pan-set { order: 0; }
     #card-detail-modal .cd-pan-set > .cd-set-h { display: block; margin: 6px 4px 8px; }
 
-    /* 近期異動與搜尋框同一排：通知佔滿剩餘寬度，搜尋框固定 260px；展開的清單獨佔下一排。
-       沒有異動的卡（.cd-bar 沒有 .has-news）搜尋框自己一排、限寬 */
-    .cd-bar { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: center; column-gap: 10px; }
-    .cd-bar .cd-news-wrap { display: contents; }
-    .cd-bar .cd-news { grid-column: 1; grid-row: 1; margin: 0; padding: 0 4px; border-bottom: 0; }
-    .cd-bar .cashback-search-bar { grid-column: 2; grid-row: 1; margin: 0; }
-    .cd-bar .card-changelog-list { grid-column: 1 / -1; grid-row: 2; }
-    .cd-bar:not(.has-news) { grid-template-columns: 320px; }
-    .cd-bar:not(.has-news) .cashback-search-bar { grid-column: 1; }
-    #card-detail-modal .cd-bar input[type="text"].cashback-search-input { height: 38px; font-size: 13px; }
-    #card-detail-modal .cd-bar input[type="text"].cashback-search-input::placeholder { font-size: 13px; }
+    /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
+       2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，
+       所以要貼著回饋卡放 */
+    .cd-bar { display: block; }
+    .cd-bar .cd-news { width: 100%; margin: 0; padding: 4px 4px 10px; }
+    .cd-bar .cashback-search-bar { margin: 12px 0 0; }
+    #card-detail-modal .cd-bar input[type="text"].cashback-search-input { height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
