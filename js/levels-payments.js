@@ -10,7 +10,7 @@
  *  - 級別解析                  → "resolveCardLevel"
  *  - 行動支付管理              → "Payment Management" / "openMyPaymentsModal"
  *  - 支付詳情/比較             → "showPaymentDetail" / "showComparePaymentsModal"
- *  - 支付卡片/名次獎牌          → "renderPaymentCardResult" / "renderPaymentRankMedal"
+ *  - 支付清單列/名次            → "renderPaymentRow" / "renderPaymentRank"
  *  - 用戶支付載存              → "loadUserPayments" / "saveUserPayments"
  * ============================================================ */
 // ========== Card Level Management Functions ==========
@@ -445,9 +445,9 @@ async function showPaymentDetail(paymentId) {
     } else {
         const maxRate = uniqueCards[0].rate;
 
-        // 卡片樣式與「比較所有行動支付回饋」共用 renderPaymentCardResult（2026-10-08）
+        // 每一列與「比較所有行動支付回饋」共用 renderPaymentRow
         detailsContainer.innerHTML = uniqueCards
-            .map((mc, index) => renderPaymentCardResult(mc, index === 0 && maxRate > 0))
+            .map((mc, index) => renderPaymentRow(mc, index === 0 && maxRate > 0))
             .join('');
     }
 
@@ -467,43 +467,37 @@ async function showPaymentDetail(paymentId) {
     disableBodyScroll();
 }
 
-// 行動支付的一張卡（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用，2026-10-08）：
-// 搜尋結果卡片的縮小版——直接沿用 .card-result／.card-header／.card-details／.matched-merchant
-// 與「最優回饋」角標。三欄少了「回饋金額」（這裡沒有消費金額），回饋率接手綠色強調（同詳情頁回饋卡）。
+// 行動支付的一張卡＝一列（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用）。
+// 2026-11-16 由「搜尋結果卡片的縮小版」改成清單列：縮圖｜卡名（下方灰字＝活動名）｜右側回饋率大字＋上限小字。
+// 原本每張卡一個框、每個支付一張綠底「最優回饋」，加上縮圖後畫面太亂（站長裁定，示意圖比較見
+// docs/project/ui-display.md 第 1i 節）。列與列之間只有一條細線，排第一列就是最優。
+// showBest：只有單一支付詳情的第一列傳 true（卡名後面一個小的「最優」）；比較 modal 每個支付的第一列
+// 都是最優，標了等於沒標，所以不傳。
 // mc = { card, rate, cap, category }
-function renderPaymentCardResult(mc, isBest) {
-    const capText = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
+function renderPaymentRow(mc, showBest) {
+    const cap = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
+    const capText = mc.cap ? `上限 ${cap}` : cap; // 無上限就不再加「上限」兩個字
+    const activity = mc.category ? getCategoryDisplayName(mc.category) : '';
     return `
-        <div class="card-result payment-card-result${isBest ? ' best-card' : ''}">
-            <div class="card-header">
-                <div class="card-name-with-pin"><div class="card-name">${escapeHtml(mc.card.name)}</div></div>
-                <div class="badges-container">${isBest ? '<div class="best-badge">最優回饋</div>' : ''}</div>
+        <div class="payment-row">
+            ${renderCardThumb(mc.card.id)}
+            <div class="payment-row-main">
+                <div class="payment-row-name">${escapeHtml(mc.card.name)}${showBest ? ' <span class="payment-row-best">最優</span>' : ''}</div>
+                ${activity ? `<div class="payment-row-activity">${escapeHtml(activity)}</div>` : ''}
             </div>
-            <div class="card-details rate-card-details">
-                <div class="detail-item">
-                    <div class="detail-label">回饋率</div>
-                    <div class="detail-value cashback-amount">${escapeHtml(String(mc.rate))}%</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">回饋消費上限</div>
-                    <div class="detail-value">${capText}</div>
-                </div>
+            <div class="payment-row-nums">
+                <div class="payment-row-rate">${escapeHtml(String(mc.rate))}%</div>
+                <div class="payment-row-cap">${escapeHtml(capText)}</div>
             </div>
-            ${renderActivityInfo({ activityName: mc.category ? getCategoryDisplayName(mc.category) : '' })}
         </div>
     `;
 }
 
-// 名次獎牌（行動支付比較前三名）：彩帶＋金／銀／銅牌面＋名次數字，一眼看得出是「名次」不是序號。
-// 顏色在 styles.css「.payment-rank-medal」
-function renderPaymentRankMedal(rank) {
-    return `<svg class="payment-rank-medal payment-rank-medal-${rank}" viewBox="0 0 28 34" role="img" aria-label="第 ${rank} 名">` +
-        `<path class="prm-ribbon-l" d="M6 0h7l4 13h-7z"/>` +
-        `<path class="prm-ribbon-r" d="M22 0h-7l-4 13h7z"/>` +
-        `<circle class="prm-face" cx="14" cy="22" r="11"/>` +
-        `<circle class="prm-ring" cx="14" cy="22" r="8"/>` +
-        `<text class="prm-num" x="14" y="26.4" text-anchor="middle">${rank}</text>` +
-        `</svg>`;
+// 名次（行動支付比較，每個支付名稱前面）：斜體「NO.1」，沒有底色；第 1 名墨色、其餘灰色。
+// 沿革：彩帶＋金銀銅獎牌 SVG（2026-10-08）→ 圓形數字（2026-11-16，站長：獎牌有 AI 感、讓畫面亂）
+// → 現在這個（2026-11-17，站長：圓形數字不夠像名次；三個示意裡選的）。樣式在 styles.css「.payment-rank」
+function renderPaymentRank(rank) {
+    return `<span class="payment-rank${rank === 1 ? ' payment-rank-first' : ''}" role="img" aria-label="第 ${rank} 名"><small>NO.</small>${rank}</span>`;
 }
 
 // Show compare payments modal
@@ -559,10 +553,11 @@ async function showComparePaymentsModal() {
         }
 
         // Sort payments by highest rate
-        // 前三名要標名次徽章（2026-10-08）。同回饋率的支付常常一大串，
+        // 每個支付名稱前面標名次。同回饋率的支付常常一大串，
         // 只比回饋率的話名次等於原始清單順序。同分依序再比：最優那張的消費上限（高者勝，無上限最高）
         // → 第二名卡片的回饋率——都是「這個支付實際上能拿多少」，名次才講得出道理。
-        // 三者全同＝真的並列，給同一個名次（標準競賽排名 1、2、2、2、5：並列第 2 之後沒有第 3）
+        // 三者全同＝真的並列，給同一個名次。並列之後接下一個數字（1、1、1、2、3），不跳號——
+        // 2026-10-08～11-16 是跳號的競賽排名（1、1、1、4），站長 2026-11-17 裁定那是錯的
         const capOf = mc => (mc.cap ? mc.cap : Infinity);
         const comparePayments = (a, b) =>
             (b.cards[0].rate - a.cards[0].rate) ||
@@ -571,7 +566,7 @@ async function showComparePaymentsModal() {
         paymentsWithCards.sort(comparePayments);
         paymentsWithCards.forEach((pwc, i) => {
             const prev = paymentsWithCards[i - 1];
-            pwc.rank = (prev && comparePayments(prev, pwc) === 0) ? prev.rank : i + 1;
+            pwc.rank = !prev ? 1 : (comparePayments(prev, pwc) === 0 ? prev.rank : prev.rank + 1);
         });
 
         // Display compact comparison with 2-column grid
@@ -588,11 +583,11 @@ async function showComparePaymentsModal() {
                 const paymentCard = document.createElement('div');
                 paymentCard.className = 'compare-payment-card';
 
-                const cardsHTML = pwc.cards.map((mc, index) => renderPaymentCardResult(mc, index === 0)).join('');
+                const cardsHTML = pwc.cards.map(mc => renderPaymentRow(mc, false)).join('');
 
                 paymentCard.innerHTML = `
                     <div class="compare-payment-name">
-                        ${pwc.rank <= 3 ? renderPaymentRankMedal(pwc.rank) : ''}<span>${escapeHtml(pwc.payment.name)}</span>
+                        ${renderPaymentRank(pwc.rank)}<span>${escapeHtml(pwc.payment.name)}</span>
                     </div>
                     ${cardsHTML}
                 `;

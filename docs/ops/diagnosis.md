@@ -36,7 +36,7 @@
 harness 觸發壓縮 → 早期讀到的鐵則被壓掉 → 後半段開始犯 CLAUDE.md 明文禁止的錯。
 
 **修法**（規則已寫進改寫後的 CLAUDE.md「大檔案使用規則」）：
-1. `script.js` 永遠不整檔 Read。檔案頂部有區塊目錄：先 `Grep` 關鍵字（如 "Placeholder 解析"、"wallet stack"）拿到行號，再 `Read` 指定 offset/limit（一次 ≤200 行）
+1. `script.js` 永遠不整檔 Read。檔案頂部有區塊目錄：先 `Grep` 關鍵字（如 "Placeholder 解析"、"卡片格"）拿到行號，再 `Read` 指定 offset/limit（一次 ≤200 行）
 2. `cards.data` 永遠不 Read。要查資料內容：`base64 -d cards.data > <scratchpad>/cards.json` 之後用 `jq`/`grep` 查
 3. 「廣度未知」的搜尋（不知道在哪幾個檔）一律派 `Explore` subagent，主對話只收結論＋檔案:行號——詳見 `docs/ops/dispatch.md`
 

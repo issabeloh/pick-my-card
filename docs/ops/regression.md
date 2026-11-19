@@ -187,6 +187,7 @@ python3 -m http.server 8000   # 開 http://localhost:8000/index.html?start&debug
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-11-19] 合併 main 後 card-detail-test 穩定紅 2 張卡，都是「Firebase 載入逾時」→ main 在 run-regression.js 的替身補了 setUserProperties，這支測試自己又用 replace 補一次，重複 export 讓模組語法錯誤 → 測試替身只在 run-regression.js 一處補，各支測試直接用它，不要各自 replace 加 export
 - [2026-09-11] 基準每 1–2 天就要重拍一次，而每次紅燈幾乎都不是程式問題（9/10 那次 6 組紅燈，0 組是回歸）→ 基準存的是「答案」，答案＝程式 × 資料 × 日期；線上 cards.data 一天更新 3–5 次，基準的壽命因此只有一天，真正的程式回歸被埋在資料噪音裡 → **測試改讀凍結的 `tools/regression/fixture.data`、並把瀏覽器時鐘固定在 `fixture.json` 的 `frozenDate`**。只凍資料不凍時鐘沒有用（`filterExpiredRates()`／`getRateStatus()` 拿「今天」比期限，活動照樣會到期）。凍結後任何差異都代表程式行為變了，不再有「資料漂移、重拍就好」這個選項；要驗線上資料改用 `--live`（那是資料驗證，不做逐字比對）
 - [2026-07-12] 快捷搜尋自動計算在測試中不觸發 → handleQuickSearch 檢查 calculateBtn.disabled 的時機早於 validateInputs()（script.js:1181 vs 1193 的時序）→ 自動化腳本比照真實用戶：點快捷按鈕後自己按計算鈕；此時序若要修屬 UX 行為變更，先問用戶
 - [2026-09-08] 基準停在 20260902-155444 沒重拍，資料一路更新到 20260908-165106，12 組長期紅 2→4→5 組 → 每次改動都要靠「stash 後再跑一次比對」才知道差異是不是新的，等於這套機制暫時失效 → **基準過期就當天重拍**，不要累積；重拍前一定逐條看差異報告（本次 6 條差異全部只動到 `matched` 文字欄，回饋率／回饋金額／回饋消費上限／筆數／排序／threshold／parking／coupons 全部逐字相同，才敢重拍）

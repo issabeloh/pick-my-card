@@ -9,7 +9,8 @@
    3. 活動類型篩選 chips
    4. 活動詳情展開／收合（一張卡一組、組內一次只開一檔）
    5. 卡片特色抽屜（與活動堆疊互斥）＋「查看全部 ›」開內嵌詳情並捲到指定通路回饋
-   6. 「立即申辦」點擊送 GA4 button_click 事件
+   6. 「立即申辦」點擊送 GA4 button_click 事件；另有 promos_detail_open／promos_feat_open／
+      promos_filter／promos_search／promos_trust_open（2026-11-16，一律走 track()）
    7. 活動宣傳圖縮圖點擊 → lightbox 放大原圖（2026-07-15 新增）
    8. 備註／適用通路客戶端量測：scrollHeight 超過 N 行高才收合＋加「展開 ▾」
       toggle。⚠️ 2026-09-17 起詳情預設收合，量測改到「展開之後」才做——
@@ -22,6 +23,19 @@
 
 (function () {
   'use strict';
+
+  // GA4 事件（2026-11-16）：原本整頁只記「立即申辦」點擊，看不出用戶卡在哪一步。
+  // 補上展開詳情、卡片特色、篩選、搜尋（含找不到結果的字）、打開安心說明。
+  // 一律走這支：Analytics 沒載到或被擋時安靜跳過，絕不影響頁面操作。
+  function track(name, params) {
+    try {
+      if (window.firebaseAnalytics && typeof window.logEvent === 'function') {
+        window.logEvent(window.firebaseAnalytics, name, params || {});
+      }
+    } catch (err) {
+      console.error('❌ promos.js GA4 logEvent failed:', err);
+    }
+  }
 
   // 與 apps-script/cards-export.gs 的 pmcTodayISO_() 同一套算法：先轉 UTC 再
   // 固定加 8 小時換算台北時間，不論使用者裝置時區為何都得到一致的「今天」。
@@ -347,6 +361,7 @@
       });
       filterState.typeFilter = btn.getAttribute('data-filter') || 'all';
       refreshVisibility();
+      track('promos_filter', { filter: filterState.typeFilter });
     });
   }
 
@@ -361,10 +376,22 @@
     var input = document.getElementById('promos-search-input');
     var clearBtn = document.getElementById('promos-search-clear-btn');
     if (!input) return;
+    var trackTimer = null;
     function apply() {
       filterState.searchQuery = input.value.trim().toLowerCase();
       if (clearBtn) clearBtn.hidden = !input.value;
       refreshVisibility();
+      // 停手 1.2 秒才記一次，免得每個字都送；results＝0 的字就是「用戶想找但這頁找不到」的清單
+      clearTimeout(trackTimer);
+      var term = filterState.searchQuery;
+      if (!term) return;
+      trackTimer = setTimeout(function () {
+        if (filterState.searchQuery !== term) return;
+        track('promos_search', {
+          search_term: term.slice(0, 40),
+          results: document.querySelectorAll('.promo-card:not([hidden])').length
+        });
+      }, 1200);
     }
     input.addEventListener('input', apply);
     if (clearBtn) {
@@ -393,6 +420,20 @@
         function (el) { return (el.textContent || '').toLowerCase(); }).join('\n');
     }
     return card.__pmcMerchantsText;
+  }
+
+  // 獎勵與活動摘要也要搜得到（2026-11-16）：用戶記得的常常是「行李箱」「氣炸鍋」
+  // 「LINE Points」這種獎品，不是卡名——原本搜這些全部 0 筆。這幾段文字本來就顯示在
+  // 卡片上（不在收合的詳情裡），所以命中只需要標色，不必代為展開。同樣讀已渲染的文字、
+  // 每張卡快取一次，理由同 promoMerchantsText。
+  var REWARD_TEXT_SELECTOR = '.promo-act-reward, .promo-act-summary, .promo-sub-amt, .promo-sub-title';
+  function promoRewardText(card) {
+    if (card.__pmcRewardText === undefined) {
+      card.__pmcRewardText = Array.prototype.map.call(
+        card.querySelectorAll(REWARD_TEXT_SELECTOR),
+        function (el) { return (el.textContent || '').toLowerCase(); }).join('\n');
+    }
+    return card.__pmcRewardText;
   }
 
   // ---- 搜尋命中字詞 highlight（站長 2026-10-04，比照主站卡片詳情頁的搜尋標記）----
@@ -453,6 +494,11 @@
     document.querySelectorAll('.promo-card:not([hidden])').forEach(function (card) {
       var name = card.querySelector('.promo-card-name');
       if (name) markSearchTerm(name, term);
+      // 獎勵與摘要：已過期被藏起來的那幾檔不標
+      Array.prototype.forEach.call(card.querySelectorAll(REWARD_TEXT_SELECTOR), function (el) {
+        var act = el.closest('.promo-act');
+        if (!act || !act.hidden) markSearchTerm(el, term);
+      });
       var hits = Array.prototype.filter.call(card.querySelectorAll('.promo-merchants-value'), function (v) {
         var act = v.closest('.promo-act');
         return (!act || !act.hidden) && (v.textContent || '').toLowerCase().indexOf(term) !== -1;
@@ -507,7 +553,8 @@
       if (filterState.searchQuery) {
         var cardName = (card.getAttribute('data-card-name') || '').toLowerCase();
         searchMatch = cardName.indexOf(filterState.searchQuery) !== -1 ||
-          promoMerchantsText(card).indexOf(filterState.searchQuery) !== -1;
+          promoMerchantsText(card).indexOf(filterState.searchQuery) !== -1 ||
+          promoRewardText(card).indexOf(filterState.searchQuery) !== -1;
       }
       var show = typeMatch && ownedMatch && searchMatch;
       card.hidden = !show;
@@ -646,6 +693,13 @@
       // ⚠️ 收合時 display:none，scrollHeight 恆為 0——量測一定要等展開之後才做，
       // 否則備註／適用通路會全部被判定成「不需要收合」（2026-09-17 實測踩到）。
       clampWithin(detail);
+      // 只記用戶親手點的；搜尋命中、「活動詳情 ↓」跳轉代為展開的不算
+      if (e.isTrusted) {
+        track('promos_detail_open', {
+          card_id: card.getAttribute('data-card-id') || '',
+          act_id: (row.getAttribute('aria-controls') || '').replace(/-detail$/, '')
+        });
+      }
     });
   }
 
@@ -742,7 +796,10 @@
     var btn = btnOverride || card.querySelector('.promo-feat-btn');
     var drawer = card.querySelector('.promo-card-feat');
     if (!btn || !drawer) return;
-    if (open) { if (!openFeatModal(card, btn)) return; }
+    if (open) {
+      if (!openFeatModal(card, btn)) return;
+      track('promos_feat_open', { card_id: card.getAttribute('data-card-id') || '' });
+    }
     else closeFeatModal(false);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     drawer.hidden = true;              // 抽屜永遠收著，內容一律由 modal 呈現
@@ -772,6 +829,13 @@
       if (!card) return;
       setFeatOpen(card, btn.getAttribute('aria-expanded') !== 'true', btn);
     });
+  }
+
+  // 信任列是一個連到 FAQ「安全」分類的連結（另開分頁）；這裡只記「有人點了」。
+  function setupTrustTracking() {
+    var trust = document.getElementById('trust');
+    if (!trust) return;   // 舊版 HTML（Sheets 還沒貼新版生成器）沒有這一塊
+    trust.addEventListener('click', function () { track('promos_trust_open', {}); });
   }
 
   // 「立即申辦」點擊 → GA4 button_click（promos.html 內嵌的精簡版 Firebase
@@ -1149,6 +1213,7 @@
     setupFeatToggle();
     setupLuggageJump();
     setupApplyTracking();
+    setupTrustTracking();
     setupGiftLightbox();
     setupShineTrial();
     setupCardDetailOverlay();

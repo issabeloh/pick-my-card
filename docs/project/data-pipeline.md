@@ -190,6 +190,12 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 「變動紀錄」沒有頂層 key——它掛在每張卡身上：`card.changelog = [{ date, summary }, ...]`（最多 5 筆、由新到舊；**沒有異動的卡沒有這個欄位**，前端判斷要 `!card.changelog || card.changelog.length === 0`，鐵則 4）。
 
+**手機匯出**（2026-11-18）：`getUi()` 只有從試算表選單執行才拿得到，手機只能在 Apps Script 編輯器按「執行」，
+以前會在第一行丟 `Cannot call SpreadsheetApp.getUi() from this context`。現在 `exportToJSON`／`runQACheck`
+改用 `pmcUi_()`：拿不到真 UI 時換成 `PMC_HEADLESS_UI_`，對話框改寫進執行記錄、是／否一律當「否」——
+❌ 照樣擋、參照問題（card_id／申辦連結網域）**一律取消**、只提醒的照常匯出。從選單執行時行為不變。
+**新增會在匯出途中被呼叫、又直接用 `SpreadsheetApp.getUi()` 的函式，手機匯出就會再壞一次**——一律改用 `pmcUi_()`。
+
 **重要輔助函數**：`getValue(row, headers, fieldName)` 安全讀欄位；`addOptionalField(obj, row, headers, fieldName, type, targetName)`；`formatDateToSlash(dateValue)`（YYYY/M/D）；`generateSearchTerms(id, name)`。
 
 ## 4. 匯出 guard 鐵則（rate=0 陷阱，2026-07-09 血淚教訓）
@@ -407,6 +413,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     2026-09-21 就是因為附屬列自己硬寫顏色，同一張卡上「首刷禮」出現兩種顏色。
     **形狀不共用**：主活動那顆是「從卡框長出來的 label」（只有右下圓角），
     放進列裡要用一般 pill
+  - ⚠️ **2026-11-17 起類型徽章與篩選鈕已全部改灰（見 9c「顏色減量」），以下配色是歷史紀錄。**
   - 🔴 **類型徽章的選色有兩個禁區**（2026-09-21 晚上站長回報後定案）：
     **紅／粉**會跟「最後 N 天」倒數徽章（`#dc2626` 紅字紅框）混淆、**綠**會跟獎勵數值的
     文字色（`--pmc-hero-green` `#10b981`）撞在一起。現行配色＝首刷禮**紫**
@@ -610,6 +617,74 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 **`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
 寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
 寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
+
+### 9c. 安心申辦：信任區塊／按鈕去向／大師加碼說明（2026-11-16）
+
+這頁是辦卡轉換的主要入口，但原本沒有任何一句話交代「按鈕去哪、資料給誰、本站怎麼賺錢」
+（唯一的揭露在 /privacy 5.2）。全部由 `generatePromosPageHtml()` 生成，樣式在 `promos.css` 最後一段。
+
+- **信任列**（`pmcRenderTrust_`，`<a class="pmc-trust" id="trust">`）：引言下方、頁內索引列上方。
+  **定案＝一行字＋灰底＋連到 FAQ**（站長 2026-11-17）：盾牌＋`PMC_TRUST_LINE`
+  （「不經手個資・全站加密・連結防竄改」）＋「｜了解更多 ›」，整列是連結，另開分頁到
+  `/faq?category=安全說明`，FAQ 頁會直接選好那個分類（`faq.js` 的 `pendingUrlCategory`）。
+  - **完整說明不在這頁**：由站長寫在 Sheets 的 FAQ 工作表、分類填「安全說明」（站長同日另建了「一般說明」放沒有合適分類的題目）。分類名稱要跟
+    `PMC_TRUST_FAQ_CATEGORY` 一字不差；對不上（或分類還沒建立）時 FAQ 頁停在「全部」，不會壞。
+  - 改過三版，別走回頭路：①三個勾勾＋藍框＋原地展開（站長：不好看）②一行字＋原地展開六題問答＋
+    FAQPage JSON-LD ③現在這版——說明只維護一份，這頁也不必變長。promos 頁因此**沒有** FAQPage JSON-LD。
+  - 「了解更多」**緊貼在那句話後面、細字、用 CSS `::before` 畫的「|」隔開**（站長 2026-11-17：原本
+    `margin-left:auto` 靠最右，桌機上離那句話太遠很怪；粗體又跟前面那句分不開）。原本叫「防護說明」。
+  - FAQ 分類（站長 2026-11-17 定）：信用卡回饋／網站功能／安全說明／一般說明 四類。「支付方式」取消
+    （那題改一般說明）；`faq.html` 寫死的前三題分類**要跟 Sheets 那三題一致**——寫死的題目會蓋掉同 id
+    的資料題（faq.js 跳過 prerender id），兩邊不一致時線上就會冒出 Sheets 裡沒有的分類（曾有「使用說明」）。
+  - 那一行**只講資安防護**，不提分潤、也不提按鈕去向（站長指定）。16 個字是量過的：360～390px 都是一行。
+  - 灰底是必要的：白底時跟上下文字連成一片、分不出這是一塊。用 `--pmc-tint`；引言同日改成沒有底色的
+    一句話（`.promos-hero-lede`），所以不會兩塊灰疊在一起。
+  - 🔴 **FAQ「安全說明」分類裡的資安聲明都對得到實作，改了實作要請站長改 FAQ**：固定網址、只收 http/https
+    ＝`pmcSanitizeUrl_`；每次更新逐一核對網域＝`validateReferentialIntegrity_`；base-uri／frame-ancestors／
+    X-Frame-Options／HSTS＝`_headers` 的**強制版**標頭（不是 `-Report-Only` 那條）；noopener noreferrer＝
+    申辦連結的 `rel`。`_headers` 那幾條若被拿掉或降回只回報，FAQ 那一題就變成不實聲明。
+- **按鈕去向**（`pmcApplyDest_` → `.promo-apply-dest`）：清單卡的動作列、站長推薦的申辦鈕下方各一行。
+  **每次匯出都從當下的連結網址重新判斷**，Sheets 換連結它就跟著變，不必多填欄位。
+  站長 2026-11-17 確認連結只有兩種，而且最後都到銀行官網申辦：
+  合作平台網域（`PMC_PARTNER_HOSTS`）→「經 Money101 合作連結前往銀行官網」；
+  與該卡 `website` 同一個品牌網域 →「直達銀行官網・esunbank.com.tw」；其餘 →「前往 <完整網域>」。
+  比的是主網域**第一段**（esunbank），因為同一家銀行 `.com` 與 `.com.tw` 混用；連第一段都不同的
+  （國泰 cathay-cube／cathaybk）列在 `PMC_BANK_DOMAIN_ALIASES`。
+  **看到「前往 xxx」就是連結網域跟卡片的銀行對不上**——不是新增別名，就是 Sheets 的連結填錯了。
+  新的合作平台要加進 `PMC_PARTNER_HOSTS`，否則會落到「前往 <網域>」。行李箱專區的動作列太擠，沒有放。
+- **申辦連結網域把關**（`validateReferentialIntegrity_`，2026-11-17）：匯出前逐一檢查每個 `cardApplyCtas`
+  連結，網域不是該卡銀行、也不是 Money101 的（＝`pmcApplyDest_` 判成 `other`）會列進匯出前的確認對話框。
+  信任問答對用戶說「每次更新都會逐一核對」，指的就是這一步——**拿掉這段檢查就要連那句話一起拿掉**。
+  只在本機用 `tools/build-promos-page.js` 重生時不會跑這個檢查（那支不經過 `exportToJSON`）。
+- **【大師加碼】說明**（`.promo-exclusive-note`）：站長定義＝本站有分潤、且透過本站連結申辦才有的
+  專屬首刷禮或活動；從本頁按鈕申辦並完成該檔全部達成條件就拿得到。摘要（`new_customer_summary`）
+  含「大師加碼」四個字的活動，詳情最上面會多一句說明；Sheets 拿掉那四個字就跟著消失。
+  用主站藍——黃、紅、綠都被類型徽章／倒數徽章／獎勵數字佔走了（見 9a 的選色禁區）。
+- ⚠️ **詳情底部不放第二顆申辦鈕**：2026-11-16 做過，站長隔天裁定拿掉——直向空間比少捲一次重要。
+- **header 單色**（2026-11-17）：`.promos-header` 是手抄件，主站 `header` 在 2026-11-16 拿掉漸層時沒跟到。
+  faq／privacy／terms／商家頁直接吃 `styles.css` 所以自動跟上；landing 沒有 header bar。
+- **每檔活動有自己的 id**（`…-a1`、`…-a2`）：ItemList JSON-LD 的網址從 2026-09-17 改版起就指向這組錨點，
+  但元素上一直只有 `…-a1-detail`，55 個網址全部落空。
+- **搜尋涵蓋獎勵與摘要**（`promos.js` 的 `promoRewardText`）：原本只比卡名與適用通路，搜「行李箱」
+  「氣炸鍋」是 0 筆。這幾段文字本來就顯示在卡片上，命中只標色、不代為展開。
+- **GA4 事件**（`promos.js` 的 `track()`）：`promos_detail_open`（只記親手點的）、`promos_feat_open`、
+  `promos_filter`、`promos_search`（停手 1.2 秒才送，帶 `results`，0＝找不到）、`promos_trust_open`（點了信任列）。
+- **顏色減量**（2026-11-17 站長確認，**取代 9a 的糖果色方案**）：全頁只留三個有意義的顏色——
+  藍＝可以按（申辦鈕、選取中的篩選鈕）、綠＝你拿到的（獎勵）、紅＝快截止。類型徽章
+  （`.promo-type-badge`／`.promo-sub-type`／`.pmc-kind`）三種一律用 `--pmc-candy-slate-*` 灰，靠文字分辨；
+  三顆類型篩選鈕的專屬配色整組移除，跟「全部」同一套（灰框深字、選取＝主站藍實心）；
+  「活動詳情」「卡片特色」等次要連結與按鈕改深灰。`--pmc-candy-purple/yellow/brown-*` token 目前沒有人用，先留著。
+- **贈品圖放大**（2026-11-17，站長看過全部 9 張首刷禮卡的範例後確認）：主活動的活動宣傳圖從右邊 70px
+  改成左邊 118px，右下角加「點圖放大」小標；同一列的獎品名稱 17 → 15px。**這推翻 9a「圖放右邊」的決定**
+  ——站長拿得到的多半只有銀行的行銷圖，不是商品照，太小看不出是什麼。附屬列的小獎品圖不變。
+  規則在 `promos.css` 檔尾，三個坑都寫在那段註解裡（specificity、不能用 grid、`:has()` 要分開寫）。
+  「每個選項一張商品圖＋市價」的做法（E3）評估後不做：圖不好取得。
+- **引言一句話**（`.promos-hero-lede`，站長 2026-11-17 定稿）：取代原本淡底卡片裡的兩段。舊的
+  `.promos-hero-intro` 規則留著給舊 HTML 用。
+- **向後相容**：`promos.css`／`promos.js` 這一輪只有新增的 class 與有判空的程式，Sheets 還沒貼新版生成器、
+  匯出的仍是舊 HTML 時不會壞，只是看不到新區塊（搜尋範圍與 GA 事件不靠新標記，會直接生效）。
+- **刻意沒動**：頁尾之後的「申辦前先確認這幾件事」（站長 2026-07-29 定的位置）、hero 引言、
+  meta title。description 只改掉一句與現況不符的「依即將截止時間排序」。
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 

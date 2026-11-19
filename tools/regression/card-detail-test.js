@@ -44,10 +44,10 @@ async function captureAtDate(browser, base, frozenDate) {
     const url = route.request().url();
     if (url.startsWith(base)) return route.continue();
     if (url.includes('gstatic.com/firebasejs')) {
-      // run-regression.js 的替身少了 setUserProperties（#561 起 index.html 會 import 它，缺了整支 analytics 模組載入失敗，
-      // 4 秒後吐一條「Firebase 載入逾時」console.error——掉在哪張卡的取樣視窗取決於跑多快）。這裡補上，詳情頁不依賴它
+      // 替身直接用 run-regression.js 的（2026-11-17 起已含 setUserProperties）。不要在這裡再補 export：
+      // 重複的 export 會讓整支模組語法錯誤，4 秒後吐「Firebase 載入逾時」console.error，詳情頁回歸隨機變紅
       return route.fulfill({ status: 200, contentType: 'text/javascript',
-        body: firebaseStub(url).replace('export function logEvent(){}', 'export function logEvent(){} export function setUserProperties(){}') });
+        body: firebaseStub(url) });
     }
     return route.abort();
   });
@@ -130,7 +130,7 @@ async function checkLayoutInvariants(browser, base, frozenDate) {
     if (url.startsWith(base)) return route.continue();
     if (url.includes('gstatic.com/firebasejs')) {
       return route.fulfill({ status: 200, contentType: 'text/javascript',
-        body: firebaseStub(url).replace('export function logEvent(){}', 'export function logEvent(){} export function setUserProperties(){}') });
+        body: firebaseStub(url) });
     }
     return route.abort();
   });

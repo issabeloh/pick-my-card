@@ -114,7 +114,8 @@ a {
 /* ---------------- Header（抄自 styles.css header/.header-top/.header-content）---------------- */
 
 .promos-header {
-  background: linear-gradient(135deg, var(--pmc-blue-deep) 0%, var(--pmc-blue) 100%);
+  /* 2026-11-17 跟主站同步改單色（styles.css 的 header 在 2026-11-16 拿掉 135° 漸層） */
+  background: var(--pmc-blue-deep);
   color: white;
   padding: 10px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -794,18 +795,18 @@ a {
   font-family: inherit;
   font-size: 0.82rem;
   font-weight: 600;
-  border: 1px solid var(--pmc-chip-border);
+  border: 1px solid #d1d5db;   /* 2026-11-17 顏色減量：篩選鈕一律中性灰，只有選取那顆是藍 */
   border-radius: 16px;
   padding: 6px 14px;
   background: var(--pmc-white);
-  color: var(--pmc-chip-text);
+  color: var(--pmc-label);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
 
 .promo-chip:hover{
-  background: var(--pmc-chip-hover-bg);
-  border-color: var(--pmc-blue);
+  background: #f9fafb;
+  border-color: #9ca3af;
   transform: translateY(-1px);
 }
 
@@ -831,34 +832,13 @@ a {
    ⚠️ 顏色一律引用 token，不要硬寫——徽章改色時這裡要跟著動，硬寫就會分岔
       （2026-09-21 附屬列的「首刷禮」出現粉、綠兩色就是這樣來的）。
    邊框是底色與文字色之間的中間調，沒有 token（只有這裡用得到）。 */
-.promo-chip--gift { border-color: #cbbdf2; color: var(--pmc-candy-purple-text); }
-.promo-chip--gift:hover { background: var(--pmc-candy-purple-bg); border-color: var(--pmc-candy-purple-text); }
-.promo-chip--gift.is-active {
-  background: var(--pmc-candy-purple-bg);
-  border-color: var(--pmc-candy-purple-text);
-  color: var(--pmc-candy-purple-text);
-  box-shadow: inset 0 0 0 1px var(--pmc-candy-purple-text);
-}
-.promo-chip--bonus { border-color: #e8c86a; color: var(--pmc-candy-yellow-text); }
-.promo-chip--bonus:hover { background: var(--pmc-candy-yellow-bg); border-color: var(--pmc-candy-yellow-text); }
-.promo-chip--bonus.is-active {
-  background: var(--pmc-candy-yellow-bg);
-  border-color: var(--pmc-candy-yellow-text);
-  color: var(--pmc-candy-yellow-text);
-  box-shadow: inset 0 0 0 1px var(--pmc-candy-yellow-text);
-}
-.promo-chip--voucher { border-color: #d2bba6; color: var(--pmc-candy-brown-text); }
-.promo-chip--voucher:hover { background: var(--pmc-candy-brown-bg); border-color: var(--pmc-candy-brown-text); }
-.promo-chip--voucher.is-active {
-  background: var(--pmc-candy-brown-bg);
-  border-color: var(--pmc-candy-brown-text);
-  color: var(--pmc-candy-brown-text);
-  box-shadow: inset 0 0 0 1px var(--pmc-candy-brown-text);
-}
+/* 2026-11-17 顏色減量（站長確認）：.promo-chip--gift/--bonus/--voucher 原本各有一組糖果色
+   （未選取＝彩色字＋彩色框、選取＝徽章的淺底），整組移除。三顆現在跟「全部」同一套：
+   未選取灰框深字、選取主站藍實心。全頁只留三個有意義的顏色——藍＝可以按、
+   綠＝你拿到的、紅＝快截止；類型靠文字分辨，不靠顏色。 */
 
-/* 「即將結束」用紅字底色，跟三個「類型」chip 一眼分得開——它篩的是狀態不是類型 */
 .promo-chip--ending {
-  border-color: #f3c0c0;
+  border-color: #d1d5db;
   color: #b91c1c;
 }
 .promo-chip--ending:hover { background: #fef2f2; border-color: #dc2626; }
@@ -910,9 +890,9 @@ a {
    所以 首刷禮＝紫、回饋加碼＝黃、定額回饋＝棕（站長 2026-09-21 指定棕色）。
    ⚠️ 棕與黃是鄰近色，分辨靠的是**底色的飽和度**：黃底 #fff3c4 是鮮明的糖果黃，
       棕底 #ece0d6 是去飽和的米灰，兩者並排一眼就分得開；只改文字色會分不出來。 */
-.promo-type-badge--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
-.promo-type-badge--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-type-badge--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+.promo-type-badge--gift { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.promo-type-badge--bonus { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.promo-type-badge--voucher { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
 
 
 /* 「最後 N 天」倒數徽章：可愛點綴 2/2 靠 wiggle 動畫保留，不是靠顏色。
@@ -2031,7 +2011,7 @@ a {
   aspect-ratio: 1 / 1;
   width: 72px;
   cursor: zoom-in;
-  order: 2;
+  order: 2;   /* 主活動的那張 2026-11-17 起改放左邊並放大，見檔尾「贈品圖放大」；這裡是基底 */
 }
 .promo-act-thumb--gift img { object-fit: cover; }
 
@@ -2105,7 +2085,7 @@ a {
   margin-top: 9px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--pmc-blue-deep);
+  color: var(--pmc-label);   /* 2026-11-17：次要連結改深灰，藍留給申辦鈕 */
 }
 
 .promo-chevron {
@@ -2147,9 +2127,9 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f0f4ff;
-  color: var(--pmc-blue-deep);
-  border: 1px solid #c7d6f7;
+  background: var(--pmc-white);
+  color: var(--pmc-label);
+  border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 9px 13px;
   font: inherit;
@@ -2249,9 +2229,9 @@ a {
   background: var(--pmc-candy-slate-bg);
   color: var(--pmc-candy-slate-text);
 }
-.promo-sub-type--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
-.promo-sub-type--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.promo-sub-type--voucher { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+.promo-sub-type--gift { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.promo-sub-type--bonus { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.promo-sub-type--voucher { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
 /* 「值」＝這一檔能拿到什麼。三種類型同一個起點，這就是對齊的來源。
    與主活動大字 .promo-act-reward 同一個綠（--pmc-hero-green）。 */
 .promo-sub-amt {
@@ -2314,7 +2294,7 @@ a {
   margin-top: 1px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--pmc-blue-deep);
+  color: var(--pmc-label);   /* 2026-11-17 顏色減量：跟主活動的「活動詳情」同為深灰 */
   white-space: nowrap;
 }
 /* 附屬列的倒數徽章（在上排值的後面）要壓小：沿用主活動那顆 0.8rem 的樣式會比
@@ -2567,7 +2547,7 @@ a {
 
   .promo-act-row { gap: 11px; }
   .promo-act-thumb { width: 84px; }
-  .promo-act-thumb--gift { width: 70px; }
+  .promo-act-thumb--gift { width: 70px; }   /* 主活動那張由檔尾「贈品圖放大」蓋成 118px */
 
   /* 獎勵大字的字級不在這裡設——統一看 :root 的 --promo-reward-size／-gift-size。 */
   .promo-act-reward small { font-size: 11px; margin-top: 4px; }
@@ -2912,9 +2892,9 @@ a {
   border-radius: 999px;
   white-space: nowrap;
 }
-.pmc-kind--gift { background: var(--pmc-candy-purple-bg); color: var(--pmc-candy-purple-text); }
-.pmc-kind--bonus { background: var(--pmc-candy-yellow-bg); color: var(--pmc-candy-yellow-text); }
-.pmc-kind--fixed { background: var(--pmc-candy-brown-bg); color: var(--pmc-candy-brown-text); }
+.pmc-kind--gift { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.pmc-kind--bonus { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
+.pmc-kind--fixed { background: var(--pmc-candy-slate-bg); color: var(--pmc-candy-slate-text); }
 
 /* 倒數徽章：跟清單卡片內（.promo-act-badges .promo-ending-badge）同一款——
    淺紅底深紅字實心 pill、不抖動（站長 2026-09-23：兩區要跟卡片內一致） */
@@ -2960,7 +2940,7 @@ a {
   font-size: 13px;
   font-weight: 900;
   line-height: 1.4;
-  color: var(--pmc-blue-deep);
+  color: #111827;
 }
 
 .pmc-pick-img {
@@ -3392,7 +3372,7 @@ a {
   margin-right: auto;               /* 靠左，另外兩顆按鈕維持靠右 */
   font-size: 13px;
   font-weight: 700;
-  color: var(--pmc-blue-deep);
+  color: var(--pmc-label);
   text-decoration: none;
   white-space: nowrap;
 }
@@ -3460,3 +3440,161 @@ mark.promos-search-hl {
   padding: 0 1px;
   border-radius: 3px;
 }
+
+/* ==========================================================================
+   安心申辦（2026-11-16）：信任列／按鈕去向／大師加碼說明
+   標記由 apps-script/cards-export.gs 生成（pmcRenderTrust_／pmcApplyDestHtml_／
+   pmcRenderPromoDetail_）。⚠️ 這一段只有「新增」的 class——Sheets 還沒貼新版生成器時，
+   匯出的是沒有這些標記的舊 HTML，這裡的規則一條都不會命中，舊版面不受影響。
+   ========================================================================== */
+
+/* ---- 信任列：一行字＋灰底，整列是連到 FAQ「安全」分類的連結（站長 2026-11-17 定案）。
+   灰底是必要的——白底時跟上下文字連成一片，分不出這是一塊。用 hero 引言塊原本那個
+   --pmc-tint（引言同日改成沒有底色的一句話，所以不會兩塊灰疊在一起）。 ---- */
+.pmc-trust {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--pmc-tint);
+  text-decoration: none;
+}
+.pmc-trust:hover { background: #eceef2; }
+.pmc-trust:focus-visible { outline: 2px solid var(--pmc-blue); outline-offset: 2px; }
+.pmc-trust-icon { flex: none; width: 18px; height: 18px; color: var(--pmc-blue-deep); }
+.pmc-trust-line {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--pmc-label);
+}
+/* 「了解更多」緊貼在那句話後面、細字，用「｜」隔開（站長 2026-11-17：靠最右在桌機上
+   離那句話太遠、看起來像另一個東西；粗體又會跟前面那句連成一句）。 */
+.pmc-trust-more {
+  flex: none;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pmc-label);
+  white-space: nowrap;
+}
+.pmc-trust-more::before {
+  content: "|";
+  margin: 0 8px 0 2px;
+  color: #c4c8d0;
+}
+@media (max-width: 380px) {
+  .pmc-trust-line { font-size: 12.5px; }
+  .pmc-trust-more { font-size: 12.5px; }
+}
+
+/* ---- 引言：一句話、沒有底色（站長 2026-11-17 定稿）。用新 class，舊的 .promos-hero-intro
+   規則留著——Sheets 還沒貼新版生成器時匯出的仍是舊的兩段式引言 ---- */
+.promos-hero-lede {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: #4b5563;
+}
+
+/* ---- 按鈕去向：「直達銀行官網・esunbank.com.tw」／「合作連結・經 Money101 前往申辦頁」 ---- */
+.promo-apply-dest {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--pmc-muted);
+}
+.promo-apply-dest svg {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin-top: 3px;
+}
+/* 清單卡：住在動作列裡，自己佔一整行（排在兩顆按鈕下面） */
+.promo-card-actions { flex-wrap: wrap; }
+.promo-card-actions .promo-apply-dest {
+  flex: 0 0 100%;
+  margin-top: -2px;
+}
+/* 站長推薦：置中貼在申辦鈕下方 */
+.pmc-pick-dest {
+  justify-content: center;
+  margin-top: 6px;
+}
+@media (min-width: 1025px) {
+  /* 多檔卡的桌機品牌欄是直排：去向緊跟在「立即申辦」下面，「卡片特色」排最後 */
+  .promo-card-rail--side .promo-card-actions { flex-wrap: nowrap; }
+  .promo-card-rail--side .promo-card-actions .promo-apply-dest { flex: none; order: 1; margin-top: -3px; }
+  .promo-card-rail--side .promo-feat-btn { order: 2; }
+}
+
+/* ---- 大師加碼說明：條件正上方一句話。用主站藍——黃是「回饋加碼」徽章、
+   紅是倒數徽章、綠是獎勵數字，三個都不能撞（見 data-pipeline.md 9a 的選色禁區） ---- */
+.promo-exclusive-note {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #1e3a8a;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.promo-exclusive-note b {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--pmc-blue-deep);
+  color: var(--pmc-white);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (min-width: 1025px) {
+  .promo-exclusive-note { font-size: 11.5px; padding: 7px 9px; }
+  .promo-exclusive-note b { font-size: 11px; }
+}
+
+/* ==========================================================================
+   贈品圖放大（2026-11-17，站長看過全部 9 張首刷禮卡的範例後確認）
+   主活動的活動宣傳圖從右邊 70px 改成左邊 118px。站長拿得到的多半只有銀行的行銷圖
+   （不是去背商品照），放大之後圖上的大標與商品輪廓才看得出來；細節仍然點開 lightbox。
+   ⚠️ 這推翻 2026-09-18「圖放右邊，免得把文字擠成窄長條」：圖變大之後獎品名稱那一欄
+      確實變窄，所以同一列的獎品名稱字級降一階（17 → 15px）來換行數。
+   ⚠️ 選擇器刻意寫成 .promo-card-main .promo-act-thumb--gift（兩個 class）：
+      @media (max-width: 480px) 與桌機各有一條 .promo-act-thumb { width } 排在後面，
+      只寫一個 class 會被它們蓋回 72／70px。
+   ⚠️ 版面用原本的 flex，不要改成 grid 固定欄寬：圖片載入失敗時 onerror 會把
+      .promo-act-thumb 整個藏掉，grid 會留下一條 118px 的空欄，flex 則是文字自動補滿。
+   只動主活動；附屬列的小獎品圖（.promo-sub-thumb--gift，42px）不變。
+   ========================================================================== */
+.promo-card-main .promo-act-thumb--gift {
+  position: relative;
+  width: 118px;
+  order: 0;
+  border-radius: 10px;
+}
+.promo-card-main .promo-act-thumb--gift::after {
+  content: "點圖放大";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 10.5px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+/* 有贈品圖的那一列，獎品名稱降一階。字級走 :root 那個變數（見檔頭說明），在這一列覆寫它。
+   生成器會在列上加 .promo-act-row--gift；第二條 :has() 是給還沒重新匯出的舊 HTML 用的，
+   兩條分開寫——不支援 :has() 的瀏覽器會把整條選擇器清單一起丟掉。 */
+.promo-act-row--gift { --promo-reward-gift-size: 15px; }
+.promo-card-main .promo-act-row:has(> .promo-act-thumb--gift) { --promo-reward-gift-size: 15px; }

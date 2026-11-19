@@ -12,6 +12,7 @@
 
 let faqData = [];
 let currentCategory = 'all';
+let pendingUrlCategory = new URLSearchParams(location.search).get('category');
 let prerenderFAQIds = []; // Track pre-rendered FAQ IDs
 
 // DOM Elements
@@ -178,6 +179,14 @@ function buildCategoryFilter() {
     // Combine and get unique categories
     const categories = ['all', ...new Set([...dynamicCategories, ...prerenderCategories])];
 
+    // 網址帶 ?category=安全 時直接選好那個分類（2026-11-17，新戶活動頁的「防護說明」連結用）。
+    // 分類是資料載入後才齊的，所以每次重建篩選鈕都再對一次，對到為止；
+    // 分類不存在（Sheets 還沒建立）就維持「全部」。用戶自己點過篩選鈕之後不再套用。
+    if (pendingUrlCategory && categories.includes(pendingUrlCategory)) {
+        currentCategory = pendingUrlCategory;
+        pendingUrlCategory = null;
+    }
+
     // Clear existing buttons
     categoryFilter.innerHTML = '';
 
@@ -193,6 +202,7 @@ function buildCategoryFilter() {
         }
 
         button.addEventListener('click', () => {
+            pendingUrlCategory = null;
             currentCategory = category;
             updateCategoryFilter();
             renderFAQItems(category);
