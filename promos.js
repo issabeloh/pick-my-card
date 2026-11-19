@@ -17,7 +17,7 @@
       display:none 時 scrollHeight 恆為 0
    9. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
       不寫入/刪除任何 key（2026-07-16 第四輪新增）
-  10. 收藏（2026-11-18）：卡名旁愛心＋底部口袋名單＋「並排比較」（只看收藏的卡）。
+  10. 收藏（2026-11-18）：卡名旁愛心＋底部口袋名單＋「看我的收藏」（只看收藏的卡）。
       存在這台裝置的 localStorage（pmcPromoFavorites），清單頁與單卡頁共用
   11. 單卡頁 /promos/<id>（2026-11-18）：沒注入卡片特色就藏那一節、活動部署後才到期就顯示「已結束」
 
@@ -1211,8 +1211,8 @@
   }
 
   // ---------- 收藏（2026-11-18，站長同意 mockup F）----------
-  // 卡名旁一顆愛心；收藏了任何一張，底部就出現「口袋名單」：卡圖＋「已收藏 N 張」＋「並排比較」。
-  // 並排比較＝清單只留收藏的卡（它們本來就是並排的卡片格），不另做比較表。
+  // 卡名旁一顆愛心；收藏了任何一張，底部就出現「口袋名單」：卡圖＋「已收藏 N 張」＋「看我的收藏」。
+  // 「看我的收藏」＝清單只留收藏的卡，不另做比較表（站長 2026-11-19 從「並排比較」改名：手機上是上下排，不是並排）。
   // 存在這台裝置（localStorage），不登入、不同步——口袋名單上那行小字就是在講這件事。
   // ⚠️ 這頁不載入 js/，沒有 readLocalJSON() 可用：讀寫一律 try/catch，壞資料當成沒收藏
   //    （同 readOwnedCardIdsSafe 的作法；CLAUDE.md 鐵則 2 的精神）。只動自己這一個 key。
@@ -1274,12 +1274,12 @@
     favBar.setAttribute('role', 'region');
     favBar.setAttribute('aria-label', '收藏的卡片');
     favBar.hidden = true;
-    // 單卡頁沒有清單可篩，按鈕改成連回清單頁並直接進入「並排比較」（/promos?fav=1）
+    // 單卡頁沒有清單可篩，按鈕改成連回清單頁並直接進入「看我的收藏」（/promos?fav=1）
     favBar.innerHTML = '<span class="pmc-fav-bar-imgs" aria-hidden="true"></span>' +
       '<span class="pmc-fav-bar-text"><b></b><small></small></span>' +
       (isCardPage
-        ? '<a class="pmc-fav-bar-go" href="/promos?fav=1">並排比較</a>'
-        : '<button type="button" class="pmc-fav-bar-go">並排比較</button>');
+        ? '<a class="pmc-fav-bar-go" href="/promos?fav=1">看我的收藏</a>'
+        : '<button type="button" class="pmc-fav-bar-go">看我的收藏</button>');
     document.body.appendChild(favBar);
     var go = favBar.querySelector('.pmc-fav-bar-go');
     go.addEventListener('click', function () {
@@ -1318,7 +1318,7 @@
     } else {
       title.textContent = '已收藏 ' + n + ' 張';
       sub.textContent = '存在這台裝置，下次來還在';
-      go.textContent = '並排比較';
+      go.textContent = '看我的收藏';
       if (!isCardPage) go.setAttribute('aria-pressed', 'false');
     }
   }
@@ -1344,7 +1344,7 @@
     favIds = favIds.slice(0, FAV_MAX);
     writeFavIds();
     syncFavButtons();
-    showToast(adding ? '已收藏，底部可以並排比較' : '已取消收藏');
+    showToast(adding ? '已收藏，可以從底部看我的收藏' : '已取消收藏');
     track('promos_fav', { card_id: cardId, action: adding ? 'add' : 'remove', page: isCardPage ? 'card' : 'list' });
     if (filterState.favOnly && !favIds.length) setFavOnly(false);
     else if (filterState.favOnly) refreshVisibility();
@@ -1384,7 +1384,7 @@
       toggleFav(btn.getAttribute('data-fav-card'), btn.getAttribute('data-card-name'));
     });
     renderFavBar();
-    // 單卡頁的「並排比較」帶 ?fav=1 過來：直接進入只看收藏
+    // 單卡頁的「看我的收藏」帶 ?fav=1 過來：直接進入只看收藏
     if (!isCardPage && favIds.length) {
       var params = null;
       try { params = new URLSearchParams(location.search); } catch (err) { params = null; }
