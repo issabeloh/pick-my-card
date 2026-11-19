@@ -389,19 +389,6 @@ function hasNotesChanged(cardId, currentNotes) {
     return currentNotes !== lastSaved;
 }
 
-// 更新儲存按鈕狀態
-function updateSaveButtonState(cardId, currentNotes) {
-    const saveBtn = document.getElementById('save-notes-btn');
-    if (!saveBtn) return;
-    
-    const hasChanged = hasNotesChanged(cardId, currentNotes);
-    saveBtn.disabled = !hasChanged;
-    
-    if (hasChanged && !saveBtn.className.includes('saving')) {
-        saveBtn.className = 'save-notes-btn';
-    }
-}
-
 // 免年費狀態相關功能
 
 // 讀取免年費狀態
@@ -439,13 +426,16 @@ async function loadFeeWaiverStatus(cardId) {
     }
 }
 
-// 儲存免年費狀態
+// 儲存免年費狀態（回傳儲存結果，見 js/levels-payments.js「儲存結果」；寫入邏輯不變）
 async function saveFeeWaiverStatus(cardId, isWaived) {
     const localKey = `feeWaiver_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, isWaived.toString());
+    let local = true;
+    try { localStorage.setItem(localKey, isWaived.toString()); } catch (e) { local = false; }
     console.log('✅ [免年費] 已保存到本地快取:', cardId, isWaived);
 
-    if (!currentUser) return;
+    if (!currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
     try {
         // 保存到 Firestore 的 users collection
@@ -466,13 +456,16 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
             }, { merge: true });
 
             console.log('☁️ [免年費] 已同步到 Firestore:', cardId, isWaived);
+            return { ok: true };
         }
+        return { ok: false, reason: '雲端連線尚未就緒', local };
     } catch (error) {
         console.error('❌ [免年費] Firestore 保存失敗:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
-// 設置免年費狀態功能
+// 設置免年費狀態功能（勾選＝開關樣式，改了就存；儲存結果交給詳情頁的儲存狀態列 cdTrackSave）
 async function setupFeeWaiverStatus(cardId) {
     const checkbox = document.getElementById('fee-waiver-checked');
     if (!checkbox) return;
@@ -483,17 +476,8 @@ async function setupFeeWaiverStatus(cardId) {
 
     // 設置變更監聽
     checkbox.onchange = (e) => {
-        const newStatus = e.target.checked;
-        saveFeeWaiverStatus(cardId, newStatus);
-
-        // 更新視覺提示 (可選)
-        const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
-        if (newStatus) {
-            checkboxLabel.style.color = '#10b981';
-            setTimeout(() => {
-                checkboxLabel.style.color = '';
-            }, 1000);
-        }
+        const saving = saveFeeWaiverStatus(cardId, e.target.checked);
+        if (typeof cdTrackSave === 'function') cdTrackSave('fee', saving);
     };
 }
 
@@ -528,12 +512,17 @@ async function loadCreditLimit(cardId) {
     }
 }
 
-// 儲存我的額度（amount 為數字，null 表示清空）
+// 儲存我的額度（amount 為數字，null 表示清空；回傳儲存結果，寫入邏輯不變）
 async function saveCreditLimit(cardId, amount) {
     const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, amount === null ? '' : String(amount));
-    if (!currentUser) { notifyMappingsDataChanged(); return; }
+    let local = true;
+    try { localStorage.setItem(localKey, amount === null ? '' : String(amount)); } catch (e) { local = false; }
+    if (!currentUser) {
+        notifyMappingsDataChanged();
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
+    let result = { ok: false, reason: '雲端連線尚未就緒', local };
     try {
         if (window.db && window.doc && window.setDoc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
@@ -553,35 +542,31 @@ async function saveCreditLimit(cardId, amount) {
             }, { merge: true });
 
             console.log('☁️ [我的額度] 已同步到 Firestore:', cardId, amount);
+            result = { ok: true };
         }
     } catch (error) {
         console.error('❌ [我的額度] Firestore 保存失敗:', error);
+        result = { ok: false, reason: describeSaveError(error), local };
     }
     notifyMappingsDataChanged();   // 刷卡小抄底部的「額度合計」跟著更新
+    return result;
 }
 
-// 設置我的額度輸入（卡片詳情頁）
+// 設置我的額度輸入（卡片詳情頁）：失焦或按 Enter 即儲存；只留數字、顯示千分位；
+// 儲存結果交給詳情頁的儲存狀態列（cdTrackSave），不再有 2 秒就消失的「✓ 已儲存」
 async function setupCreditLimit(cardId) {
     const input = document.getElementById('credit-limit-input');
-    const savedTag = document.getElementById('credit-limit-saved');
     if (!input) return;
 
-    if (savedTag) savedTag.textContent = '';
     const current = await loadCreditLimit(cardId);
     input.value = current !== null ? current.toLocaleString() : '';
 
-    // 失焦或按 Enter 即儲存；只留數字，顯示千分位
     input.onchange = () => {
         const raw = input.value.replace(/[^\d]/g, '');
         const amount = raw ? Number(raw) : null;
         input.value = amount !== null ? amount.toLocaleString() : '';
-        saveCreditLimit(cardId, amount);
-        if (savedTag) {
-            savedTag.textContent = '✓ 已儲存';
-            setTimeout(() => {
-                if (savedTag.textContent === '✓ 已儲存') savedTag.textContent = '';
-            }, 2000);
-        }
+        const saving = saveCreditLimit(cardId, amount);
+        if (typeof cdTrackSave === 'function') cdTrackSave('credit', saving);
     };
     input.onkeydown = (e) => {
         if (e.key === 'Enter') { e.preventDefault(); input.blur(); }

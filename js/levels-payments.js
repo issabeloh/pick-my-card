@@ -107,35 +107,65 @@ async function getCardLevelUncached(cardId, defaultLevel) {
     }
 }
 
+// ===== 儲存結果（2026-11-17，個人設定「統一自動儲存＋常駐儲存狀態列」）=====
+// 下面四個 save 函數、js/spending-mappings.js 的 saveFeeWaiverStatus／saveCreditLimit、
+// js/card-detail.js 的 saveUserNotes 都回傳同一種結果物件，詳情頁的儲存狀態列（cdTrackSave）據此顯示，
+// 不再是「存了沒反應」：
+//   { ok: true }                        成功（訪客＝存在這台裝置；登入者＝已寫入雲端）
+//   { ok: true, volatile: true }        訪客且這項設定沒有本機備份（只在這次瀏覽有效；目前只有「童樂匯」）
+//   { ok: false, reason, local }        失敗；reason 是給人看的原因，local＝失敗前是否已先存在這台裝置
+// 邏輯本身（寫哪個 key、哪份文件、什麼格式）一律不變，只是把原本吞掉的結果回傳出來。
+// 呼叫端不看結果也沒事（absorbGuestPersonalData 等舊呼叫端照舊）。
+function describeSaveError(error) {
+    const code = error && error.code ? String(error.code) : '';
+    const msg = error && error.message ? String(error.message) : '';
+    if (/permission-denied/.test(code)) return '沒有寫入權限（可能需要重新登入）';
+    if (/unauthenticated/.test(code)) return '登入已失效（請重新登入）';
+    if (/unavailable|deadline-exceeded|network/i.test(code) || /network|offline|Failed to fetch/i.test(msg)) return '網路連線不穩';
+    if (/resource-exhausted/.test(code)) return '寫入太頻繁，請稍後再試';
+    if (/Firestore not available/.test(msg)) return '雲端連線尚未就緒';
+    return '雲端寫入失敗';
+}
+
 // Save user's birthday month to Firestore and update pre-computed flag
 async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    // 訪客：生日月份只有登入後才能設定（詳情頁的下拉是 disabled），這裡不會有東西要存
+    if (!auth || !auth.currentUser) return { ok: true, volatile: true };
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local: false };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { birthdayMonth: month, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Birthday month saved: ${month}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save birthday month:', error);
+        return { ok: false, reason: describeSaveError(error), local: false };   // 沒有本機備份
     }
 }
 
 // Save user's CUBE card issuer (Visa/Mastercard/JCB) to Firestore + localStorage and update global flag
 async function saveCubeIssuer(issuer) {
     cubeIssuer = issuer;
-    try { localStorage.setItem('cubeIssuer', issuer); } catch (e) {}
+    let local = true;
+    try { localStorage.setItem('cubeIssuer', issuer); } catch (e) { local = false; }
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { cubeIssuer: issuer, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Cube issuer saved: ${issuer}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save cube issuer:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
@@ -143,31 +173,37 @@ async function saveCubeIssuer(issuer) {
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    // 訪客：這項設定沒有本機備份（既有行為，儲存格式不動）——只在這次瀏覽有效，回報 volatile 讓狀態列照實說
+    if (!auth || !auth.currentUser) return { ok: true, volatile: true };
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local: false };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { isChildrenEligible: eligible, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Children eligibility saved: ${eligible}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save children eligibility:', error);
+        return { ok: false, reason: describeSaveError(error), local: false };
     }
 }
 
 // Save card level to Firestore (with localStorage backup)
+// 回傳儲存結果（見上方「儲存結果」說明）；寫入邏輯不變。⚠️ 呼叫點的限制見檔頭（鐵則 1）
 async function saveCardLevel(cardId, level) {
-    if (!cardId || !level) return;
+    if (!cardId || !level) return { ok: false, reason: '缺少資料', local: false };
 
     // Write-through to the in-memory cache so subsequent reads see the new value.
     cardLevelCache.set(cardLevelCacheKey(cardId), level);
 
     // Always save to localStorage as backup（登入者用 uid 區分的 key，見 cardLevelLocalKey）
-    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
+    let local = true;
+    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) { local = false; }
 
     // If user not logged in, only save locally
     if (!auth || !auth.currentUser) {
         console.log(`Card level saved locally for ${cardId}: ${level}`);
-        return;
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
     }
 
     try {
@@ -181,8 +217,10 @@ async function saveCardLevel(cardId, level) {
         });
 
         console.log(`Card level synced to Firestore for ${cardId}: ${level}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save card level to Firestore:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 

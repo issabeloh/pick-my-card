@@ -5,12 +5,10 @@
 
 ## 1. 卡片詳情頁（#card-detail-modal，showCardDetail(cardId) 開啟）
 
-**個人設定區塊**（`#card-personal-section`，2026-08-01 合併；Grep `personal-settings-box`）：
-「這張卡在我身上的設定」全部收在同一個灰底框裡——級別選擇器／CUBE 專屬設定（發卡組織、生日月份、童樂匯）＋ 我的額度 ＋ 我的筆記。合併前是分開的兩塊（級別區自帶灰底框、`.personal-fields-row` 另一塊），等於把同一件事切成兩半、還把詳情頁上半部撐長。
-- **標題一律同字級**：區塊標題是 `h4`「個人設定」（無 emoji），內層欄位標題一律 `.personal-field-title`（14px/600），不再有 h4 與 inline 14px label 混用
-- **級別區與額度/筆記之間的分隔線掛在 `#cube-level-section` 身上**，不是掛在額度區——非分級卡那塊是 `display:none`，邊框跟著整塊消失，框內不會留一條孤兒線
-- `cube-settings-grid` 桌機 **2×2**（「選擇級別」搬進來後變四格，四欄每欄只剩約 150px，生日月份的說明會斷成四五行）、手機單欄，欄間分隔線移除（外框已經把它們框成一組）
-- 非分級卡：`showCardDetail()` 會把 `#cube-level-section` 的 **innerHTML 一起清掉**（不只 `display:none`），免得上一張卡的級別選擇器與說明窗留在 DOM 裡
+> ⚠️ **2026-11-17 起外殼已改版（第 1m 節）**：詳情頁從浮窗改成全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊。下面這節裡關於「sticky 標題列／`.card-detail-nav` 八顆錨點導覽／`#card-detail-apply-bar` 底部申辦列／`.modal-content` 捲動容器／近期異動區塊樣式／導覽鈕被借用來捲動」的描述是舊版，以第 1m 節為準；回饋卡、個人設定、級別「i」說明窗、登錄連結、官網連結的規則仍有效。
+
+**個人設定區塊**（`#card-personal-section`）：⚠️ **2026-11-17 第三輪整個改寫，見第 1o 節**（統一自動儲存、常駐儲存狀態列、兩組一欄一列；舊的單一灰底框 `.personal-settings-box`、`.personal-field*`、`.cube-settings-grid`、💾 儲存鈕、`#save-indicator`、`#credit-limit-saved` 都已刪除，CSS 一併清掉）。下面「級別選擇器與『i』說明窗」仍有效，只是選擇器與說明窗現在掛在「計算條件」組的第一列。
+- 非分級卡：`showCardDetail()` 會把 `#cube-level-section` 的 **innerHTML 一起清掉**（不只 `display:none`），整區只剩「我的紀錄」一組，免得上一張卡的級別選擇器與說明窗留在 DOM 裡
 
 **級別選擇器與「i」說明窗**（Grep `setupLevelHelpPopover`）：
 - 下拉選單選級別；「各級別回饋率」與該級別的 `level-note` **收在下拉選單旁的「i」按鈕裡**，點擊開浮動說明窗（2026-08-01 改；原本兩段小字攤在選擇器旁/下方，把個人設定區撐高又擠掉真正要操作的選單）。兩段都沒內容時不長按鈕
@@ -19,7 +17,7 @@
 - **鐵則：級別回饋率只在「i」說明窗顯示一次，回饋內容區（specialContent）不再重複顯示**
 
 **回饋內容區域**（2026-07-09 起逐筆顯示，不再按 rate+cap 合併）：
-- 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（CUBE 用自己的 `generateCubeSpecialContent`，不受影響）
+- 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（2026-11-17 起回傳 `{ entries, upcoming }`，entry 交給 `planCardsHtml` 併成同方案卡；CUBE 用自己的 `generateCubeSpecialContent`，回傳 `{ html, general }`）
 - `category` 顯示為回饋卡的標題列（2026-10-05 起，原為回饋率旁的藍色 chip；見 1h 節），`getCategoryDisplayName()` 做名稱轉換
 - 回饋率顯示 `getDisplayRate()` 加總值（stacking = 指定+基本+加碼，與搜尋結果一致）
 - stacking 模型（cashbackModel 含 `+`）回饋率旁有「回饋組成」計算機按鈕（`rateCompositionButtonHtml` + `toggleRateComposition`）
@@ -233,6 +231,8 @@ Grep `titleParts`）：
 
 ## 1h. 詳情頁回饋卡比照搜尋結果卡片（2026-10-05）
 
+> ⚠️ **2026-11-17 起「同方案一張卡」**（三輪改版第二輪，規則與函數見 1n 節）：回饋卡的產生器從 `renderRateCard(o)`（一個回饋組一張卡）換成 `planCardsHtml(entries)` ＋ `renderPlanCard`（標題、回饋消費上限、活動期間相同的併成一張、每個回饋率一列），class 從 `.rate-card*` 換成 `.cd-rc*`／`.cd-rr*`，兩欄 grid＋subgrid「同排對齊」也拿掉了。下面這節裡關於 `renderRateCard`、`.rate-card-header/-body`、subgrid、「回饋率改綠色」的描述是舊版；**「與搜尋結果共用的片段」（徽章／門檻句／登錄連結）、「條件原樣輸出不 escape」、驗證方式與自動化回歸仍有效**。`.rate-card*` 現在只剩「一般消費排除卡」（1j）在用。
+
 站長要求：詳情頁每一筆回饋（`.cashback-detail-item`）的資料排版要跟搜尋結果卡片一樣，用戶讀過一種就會讀另一種（產品目標「省腦力」）。差別只有少了「回饋金額」。
 
 - **唯一產生器** `renderRateCard(o)`（`js/card-detail.js`；2026-10-05 初版放在 cards-modals.js，10-06 搬回詳情頁模組）＋ `formatRateCardCap(cap)`。詳情頁七條路徑全走它：一般回饋（國內／海外／國內加碼／海外加碼）、分級卡 `renderCashbackRatesIndividually()`、分級卡 specialItems 區塊與無 cashbackRates 的級別卡、非分級卡、即將開始、領券、CUBE 四個區塊。**要加欄位改這支，不要在呼叫端拼 HTML**——之前就是七份各自拼的 HTML，順序與字樣各不相同
@@ -320,7 +320,86 @@ Grep `titleParts`）：
 - **信任列** `#trust-line` 在 `.input-section` 最下面，`renderTrustLine()`（`js/data-loader.js`）填字，資料沒載到就維持 `hidden`
 - **站長看預覽後的幾項裁定**（最優卡淺綠底保留、回饋率不另外上色、頁尾 🎁 保留等）記在 `ui-refresh-diagnosis.md` 3.5 節，改結果卡前先看
 
-## 1m. 標籤只有兩種樣式（2026-11-16，站長選定「灰＋黃」）
+## 1m. 詳情頁全頁改版——外殼（2026-11-17，三輪改版的第一輪）
+
+動機：CUBE 卡手機 8,790px（13 個畫面）、浮窗只佔 80% 高，第一個回饋數字在第三個畫面；手機返回鍵關不掉浮窗。第二輪＝回饋卡內部（計算條件標籤列等）、第三輪＝個人設定與新戶活動內部。本輪只做外殼，那些內容沒動。
+
+**結構**（`index.html`「Card Detail Modal」註解有全圖；命名一律 `cd-` 前綴）：`#card-detail-modal` 全頁（100dvh、底色 #f3f4f6、無遮罩）→ 捲動容器 `#card-detail-scroll`（`.card-detail-content`）→ `.cd-top` 藍色頁首（sticky，返回箭頭 `#close-card-detail`、卡名、桌機申辦鈕）／`.cd-tabsbar` 頁籤列（sticky）／`.cd-layout` ┬ `.cd-side`（摘要 `.cd-sum`＋個人設定 `#card-personal-section`）└ `.cd-main`（三個窗格 `.cd-pan`：`#cd-pan-rates`、`#cd-pan-coupon`、`#cd-pan-promo`）；浮動膠囊 `#card-detail-apply-bar`（`.cd-fab`）在捲動容器外、modal 內。
+- **同一份 DOM 兩種排法**：手機 `.cd-layout/.cd-side/.cd-main` 是 `display:contents`，摘要、頁籤列、窗格變成捲動容器的直接子項，靠 `order` 排（sticky 的作用範圍才是整頁）；≥1025px 是 grid（左欄 316px sticky＝摘要卡＋個人設定，右欄＝頁籤＋內容），**不在 JS 搬節點**。桌機不顯示「個人設定」頁籤（它常駐左欄；`.cd-pan-set[hidden]` 在桌機不生效）；769–1024px 用手機的單欄＋四頁籤
+- **頁籤**（`setupCardDetailNav`／`refreshCardDetailTabs`／`selectCardDetailTab`，`js/results-display.js`）：回饋（指定通路＋即將開始＋一般回饋）／領券・停車／新戶活動／個人設定；帶筆數（個人設定不帶；「回饋」是回饋率列數，見 1n）；底下沒內容就不顯示（依各區 computed display＋textContent 判斷，**不依賴尺寸**——沒選中的窗格是 display:none，量到的尺寸是 0）。條件列「展開」鈕要等窗格顯示後才量得到，`selectCardDetailTab` 會對剛顯示的窗格重跑 `initConditionClamps`
+- **「落在某區塊」一律走 `cardDetailGoToSection(sectionId)`**（找出包含該區塊的頁籤、切過去、扣掉 sticky 高度捲到位；`card-changelog-section` 會同時展開異動清單）。呼叫端：側欄「最近異動」（`openCardDetailAtChangelog`）、embed 的 `pmc-open-card` 的 `section`（`js/home-ui.js`）。舊的「用 section id 去點導覽鈕」已不存在
+- **摘要三格**：最高回饋＝`#card-special-cashback` 內最大的 `.cd-rate`（2026-11-17 起另含搬到一般回饋區的特列項目列）、一般消費＝`#card-basic-cashback` 內 `data-role="basic"` 那一列的 `.cd-rate`（原為 `.rate-card-rate`，見 1n），都是**讀畫面上已畫好的回饋卡**（`updateCardDetailFacts()`，與回饋卡用同一份 `getDisplayRate` 結果，不另寫算法；CUBE 切級別後 `updateCubeSpecialCashback` 會重算）。年費＝`annualFee` 原文（小字三行），免年費條件與「我已過免年費門檻」勾選搬到個人設定最下面（id、儲存邏輯不動）
+- **申辦**（`setupCardDetailApply`／`refreshCardDetailApply`，`js/card-detail.js`）：手機（≤768px）白底膠囊（亮黃禮物圖示＋文字＋「立即申辦」），捲過 150px 縮成右下角；桌機頁首亮黃鈕。文字＝第一筆新戶活動（`{promo_types[0]} NT$金額`／`{promo_types[0]} 回饋率`／`{promo_types[0]}`），沒有新戶活動用 `applyCta.text`。**持卡人（`myOwnedCards` 含這張卡）兩者都不顯示**——預設先顯示，`loadMyOwnedCards` 完成後（`js/auth-user-data.js` 兩處呼叫端）與「我的信用卡」增刪卡後（`pmc:mappings-data-changed`）重新判斷；沒有 `applyCta.link` 的卡每次 `showCardDetail` 都明確重設為隱藏。GA4 `button_type` 沿用 `detail_header_apply`／`detail_sticky_apply`，選擇器改成 `.cd-apply-header-btn`／`.cd-fab-btn`
+- **返回鍵**：開啟時 `pushState`（網址不變）、`popstate` 關閉、按返回箭頭關閉時若這次 push 過就 `history.back()`（`_cdPushed`／`_cdExpectPop`，寫法照 `js/mappings-page.js`）。**embed 模式不 push**。關閉的兩條路徑共用 `showCardDetail` 內的 `closeModal`（embed 的 `pmc-detail-closed` 掛在那裡）。疊在選卡 modal／配卡組合頁上開啟時，網址沒變，返回只關詳情頁。`popstate` 監聽掛在 `DOMContentLoaded` 裡，因為 `tools/lib/merchant-cards.js` 的 vm 沙箱 `window` 沒有 `addEventListener`
+- **近期異動**：「回饋」頁籤最上面一行通知（最新一筆日期＋文字＋「共 N 則」），點了展開完整清單；仍用 `textContent`。顯示用 `style.display = ''`（不是 `'block'`），桌機 CSS 對它設了 `display:contents`
+- **搜尋**：`filterCashbackItems` 仍過濾四區；「回饋」頁籤（指定通路／即將開始／一般）沒命中、領券區有命中時，顯示 `#cashback-search-hint` 一行可點的提示切到「領券・停車」。注意 `filterDetailCards` 會自動展開被截斷的通路清單，所以「Expedia」這種字可能同時命中回饋頁籤（CUBE 秋日遊的完整通路清單裡有它），不會出提示
+- **重繪同一張卡**（非 CUBE 切級別會重呼叫 `showCardDetail`）：`keepView` 保留目前頁籤與捲動位置；開新卡／換卡回到「回饋」頁籤最上面
+- 回歸測試：`card-detail-test.js` 取樣前把所有窗格攤開（`innerText` 對不在版面上的元素退回 `textContent`，沒有換行）；比對時濾掉 `Failed to load resource` 類 console error（時序噪音，docs/ops/regression.md 2026-11-16 教訓的根治）。`mappings-page-test.js` 的 Firebase 替身補了 `setUserProperties`（#561 起 index.html 會 import 它，缺了整支 firebase 模組載入失敗）
+
+## 1n. 詳情頁回饋卡「同方案一張卡」（2026-11-17，三輪改版的第二輪）
+
+動機：CUBE 指定通路回饋 19 張卡、平均 247px，同一個方案（秋日遊 5 張、慶生月 3 張…）被拆散、每張重寫一次上限與期間。站長逐項核定設計（示意圖 `detail-proposal/preview.html` 第七版），照做。
+
+**併卡規則**（`planCardsHtml(entries, opts)`，`js/card-detail.js`）：各條 render 路徑只把每個回饋組整理成一筆 entry（＝卡裡的一列），**標題、回饋消費上限、活動期間三者都相同才併成同一張**（鍵再加徽章用的開始／結束日、`extraClass`、`tagText`）；三者任一不同就各自一張，絕不能把一筆的上限或期間寫成別人的。實例：台新 Richart「Pay著刷」三筆同標題同上限、期間不同 → 三張；玉山 Pi「滿額登錄加碼」上限 NT$150,000／無上限 → 兩張；玉山 Ubear「網購 - …」標題各不同 → 各自一張。
+- **排序**：卡片依「卡內最高顯示回饋率」由高到低、同分維持原順序；卡內各列由高到低（`Array.sort` 穩定）。`opts.sort=false` 只排卡內列（一般回饋區用，固定順序：國內一般消費、海外一般消費、國內加碼、海外加碼）
+- **領券區**每筆仍一張卡（`planCardsHtml([entry])`），標題＝商家名（只有一個商家時）＋灰小標「需領券」；一般消費排除卡（`renderBasicExclusionsCard`）不走這裡，維持灰色獨立一張（1j）
+- **CUBE**：列內合併（同回饋率＋類別＋期間＋**上限**的槽串成一列，鍵多了上限）照舊；`generateCubeSpecialContent` 現在回傳 `{ html, general }`
+- **一般回饋特列項目搬到「一般回饋」區**：`CD_GENERAL_LIST`（`一般回饋特列項目`／`一般消費特列項目`→國內一般消費；`國外消費特列項目`→海外一般消費）。這些組別的回饋率就是一般回饋（rate=0＋基本回饋＋加碼），以前混在指定通路區。上限無上限且沒有期間 → 併進「國內／海外一般消費」那張卡（右欄上方標原類別名 `.cd-sub`）；上限或期間不同 → 在一般回饋區自己一張。分流在 `splitGeneralListEntries`（指定通路各路徑共用 `composeSpecialArea`），一般回饋區由 `renderBasicArea(card, extra)` 重畫（CUBE 切級別時也要重畫它，因為特列項目的回饋率隨級別）。**摘要「最高回饋」仍把這些列算進去**（`data-sl`）、「一般消費」讀 `data-role="basic"` 那一列
+- 指定通路區沒有任何進行中的列 → 顯示「無指定通路回饋」說明（以前只有「無 cashbackRates」的卡有）
+
+**卡片長相**（字級顏色照搜尋結果卡）：標題「切換「X」方案」→「X」＋灰小標「需切換方案」（只轉這個固定句型，`/^切換「([^」]+)」方案$/`，「切換「慶生月」方案 - 美食」這種帶尾巴的原樣）；即將開始／即將結束徽章（與搜尋結果共用 `renderUpcomingBadge`／`renderEndingSoonBadge`）放標題旁，縮成黃色小標；標題下兩格 `.cd-meta`「回饋消費上限｜活動期間」（沒期間不顯示那格）；CUBE「※ 慶生月…」註記搬到慶生月那張卡標題下一行灰字（`noteFor` 回呼；不斜體；生日月那句粉紅）；每列 `.cd-rr`：左欄回饋率 24px/800 #111827＋計算機鈕（沿用 `rateCompositionButtonHtml`／`toggleRateComposition`，面板掛在該列下方）＋「(分級: Level 3)」，右欄「適用通路: 」藍色粗體通路／條件／銀行官方登錄連結。**「(分級: …)」只標回饋率由級別決定的列**（`rate` 寫 `{specialRate}`／`{rate}` 的槽，`cdRateUsesLevel`）——搜尋結果對 hasLevels 卡一律標，詳情頁照示意圖只標會隨級別變的列，固定數字的列標了反而誤導。條件文字照舊**原樣輸出不 escape**（與 1h 同，沿用既有行為）
+- **「顯示全部N個」「展開／收起」「變更 ›」＝同一種 `.cd-pill`**：白底 #d1d5db 框、#374151 字、11px/600、帶向下箭頭（展開後轉 180°），和藍色粗體通路名分得開
+
+**適用通路最多三行、條件一行省略——先畫完整內容、量得到寬度才收**（`cdFitChannel`／`cdFitCond`／`cdFitAll`，`setupCardDetailFit`）：
+- ⚠️ 詳情頁打開前是 `display:none`、沒選中的頁籤也是 `display:none`，那時 `clientWidth` 是 0。量不到就**保留完整內容**（CSS `.cd-ch{max-height:54px;overflow:hidden}` 先夾住三行，不會畫成空白），不可以先收再說。收的時機：①`showCardDetail` 在 modal 顯示、`setupCardDetailNav` 之後呼叫 `cdFitAllContainers()`；②`selectCardDetailTab` 對剛顯示的窗格呼叫 `cdFitAll`；③`ResizeObserver` 盯四個回饋容器的**寬度**（寬度沒變就不動，免得自己改高度又觸發自己；收的動作丟 `requestAnimationFrame`，在 observer 回呼裡直接改版面會吐 "ResizeObserver loop" 錯誤）；④`document.fonts` 的 `loadingdone`／`ready`；⑤清空搜尋後（見教訓 11-17）
+- 算法：全部放得下就不長鈕；否則二分搜尋最多能列幾個通路名（含「… 顯示全部N個」鈕算在三行內），至少留一個。通路完整清單記在元素的 JS 屬性 `_cdFull`（`strong._fullText` 是搜尋 `condenseMerchantList` 暫存的原文，優先取它），不放 data-* 屬性
+- 「顯示全部」走委派點擊 `cdToggleChannel`（行為同 `toggleMerchants`：展開成全文、鈕變「收起」，收起時重收），不再用 inline `onclick`；`toggleMerchants` 只剩排除卡用。條件「展開」只在真的被截斷時才長出來
+
+**計算條件列**（`#card-calc-cond`，index.html 在「指定通路回饋」`h4` 下；`updateCardCalcConditions(card)`）：分級卡才有；灰字「計算條件」＋各值灰底小標籤（級別；CUBE 另有發卡組織、勾了童樂匯時「童樂匯」）＋「變更 ›」小膠囊。值**讀個人設定欄位的目前值**（`#card-level-select`／`#cube-issuer-select`／`#children-eligible-checkbox`），不另存一份；`showCardDetail` 結尾、`updateCubeSpecialCashback`、發卡組織與童樂匯的 `onchange` 都會重呼叫，所以設定一改標籤即時更新。「變更」→ 手機 `selectCardDetailTab('set')`，桌機（個人設定常駐左欄）捲到左欄並聚焦級別下拉。搜尋中隱藏（`filterCashbackItems`）。⚠️ 不得為了這條新增 `saveCardLevel` 呼叫（鐵則 1）——這裡只讀不寫
+
+**搜尋**（`filterDetailCards`）：同方案卡以「列」為單位——命中的列留、沒命中的列藏，卡內全部列都沒命中整張藏；標題列（標題／註記／上限／期間）本身命中就整張的列都留（搜「慶生月」看得到整個方案）；清空全部恢復。其他卡（排除卡、領券、停車、說明）整張比對。自動展開被截斷的通路（`syncMerchantListsForSearch` 也認 `.cd-more`）、命中字高亮、只在領券區命中的提示（`#cashback-search-hint`）都照舊
+
+**版面容器**：`#card-*-cashback` 手機 flex 直排、≥769px 兩欄 CSS columns（由上而下再換欄，最高回饋的卡在左欄最上面；`break-inside: avoid`）。舊的 2 欄 grid＋subgrid（1h「同排對齊」）已移除——卡片高度由內容決定，不需要同排對齊。541–768px 維持單欄（兩欄會讓右欄只剩約 110px 放通路）
+
+**摘要與頁籤筆數**：`updateCardDetailFacts` 讀 `.cd-rate`（見 1m）；**「回饋」頁籤筆數＝三區的「回饋率列數」（`.cd-rr`），不是卡片數**。CUBE（活動資料 2026-11-17、Level 3）：指定通路 18 列（10 張卡）＋一般回饋 2 列（國內一般消費 0.3%＋特列項目 0.3%）＝20；排除卡沒有回饋率列、不計。領券頁籤仍是卡片數（每筆一張）
+
+**自動化回歸**（`card-detail-test.js`，見 docs/ops/regression.md）：同方案卡不抓逐行 innerText（收成幾個通路、有沒有「顯示全部」鈕取決於字型寬度），改抓語意欄位（標題、小標與徽章、上限、期間、註記、每列的回饋率／分級／子標／門檻／通路完整清單與總數／條件／登錄連結）；另跑 390px 的**版面不變式**（通路 ≤ 三行且非空、同區無「標題＋上限＋期間」相同的兩張卡、卡與列由高到低、回饋率 24px/#111827）與造資料驗併卡規則。
+
+## 1o. 詳情頁個人設定與新戶活動票券（2026-11-17，三輪改版的第三輪）
+
+動機：站長說個人設定「排版有點亂，看起來資料像是會不見一樣，沒有填寫後會被存好的感覺」；新戶活動要「更有獎勵感，資料要更完整」。示意圖 `detail-proposal/preview.html`（`#p2` 個人設定、`#p3`／`#gal`／`#multi` 票券），站長逐項核定，照做。
+
+### 個人設定：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列
+
+**結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定可以在「我的信用卡」一次看。」。每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
+- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
+- **開關**：勾選一律是 `input type="checkbox" role="switch" class="cd-sw"`（`appearance:none` 畫外觀；id 不變、Tab 可聚焦、空白鍵切換、`:focus-visible` 有 2px 外框）。舊的 `.fee-waiver-checkbox`／`.checkmark` 已刪
+- **訪客的生日月份**仍是 disabled 下拉（只有「需先登入」一個選項）——一眼看出「這裡可以選，但要先登入」。文字別寫長：16px 下 132px 放不下「登入後即可設定」（會被截成「登入後即可設」）
+
+**常駐儲存狀態列**（`cdSaveStatusRender`／`cdTrackSave`／`cdSaveStatusReset`，`js/card-detail.js`「個人設定：統一自動儲存」區塊）：一直都在，`data-state` 四態——已登入＝綠「已儲存到你的帳號」；訪客＝黃「只存在這台裝置。登入後會同步到帳號」＋「登入」連結（`openAuthModal('login')`；`#auth-modal` z-index 提到 1200，否則被 1100 的詳情頁蓋住）；任何一欄儲存中＝灰「儲存中…」；失敗＝紅「儲存失敗（欄位）：原因。已先存在這台裝置，請稍後再試。」（沒有本機備援的欄位改寫「請重試。」）。成功後回綠／黃並接上「・今天 HH:MM」。
+- ⚠️ **狀態只反映真正的儲存結果，沒有假成功**：各欄既有的 save 函數都改成**回傳結果物件**（`{ok:true}`／`{ok:true, volatile:true}`／`{ok:false, reason, local}`；`describeSaveError()` 把 Firestore 錯誤碼翻成人話，在 `js/levels-payments.js`）——`saveCardLevel`／`saveCubeIssuer`／`saveBirthdayMonth`／`saveChildrenEligible`／`saveFeeWaiverStatus`／`saveCreditLimit`／`saveUserNotes`。寫入邏輯（key、文件路徑、格式）一律沒動，只是把原本吞掉的結果回傳出來；舊呼叫端不看回傳值照常運作。UI 端 `cdTrackSave(key, promise)` 立刻切「儲存中…」，等 promise 結案才記帳
+- 唯一的計時器是「儲存中…」至少顯示 `CD_SAVE_MIN_BUSY_MS`（350ms）：訪客的本機儲存不到 1ms 就完成，不留一下的話永遠看不到那一格；結果仍是真正結案後才顯示
+- **錯誤依「欄位」記帳**（`_cdSv.errors[key]`）：A 欄失敗後 B 欄成功，紅字不會被洗掉；同一欄之後存成功才清掉。多欄失敗顯示最近一個並註明「另有 N 項也沒存成功」。換卡清掉記帳、同一張卡重繪（級別切換）保留
+- **`volatile`**：訪客改「童樂匯」沒有任何本機備份（`isChildrenEligible` 只存 Firestore，既有行為；生日月份訪客不能設）。狀態列照實寫「這項設定只在這次瀏覽有效，登入後才會保存」，不假裝存好。要不要替訪客補一個本機 key 是產品決定（會新增儲存 key，且要進 `absorbGuestPersonalData`／登出清理），本輪沒做
+- **auth 變化**：`refreshCardDetailApply()`（`js/auth-user-data.js` 的 onAuthStateChanged 兩個分支本來就會呼叫）尾端順手呼叫 `cdSaveStatusRender()`，狀態列跟著切登入／訪客，不必動 auth-user-data.js
+
+**全部自動儲存**：級別／發卡組織／生日月份／童樂匯／免年費＝onchange；額度＝失焦或 Enter；筆記＝停止輸入約 1 秒（`CD_NOTES_DEBOUNCE_MS`），並在離開輸入框、關閉詳情頁（`closeModal`）、換卡（`showCardDetail` 開頭）、分頁轉背景（`visibilitychange`）時立刻存一次（`cdQueueNotesSave`／`cdFlushNotes`；待存內容含卡片 id 記在 `_cdNotesPending`，不從輸入框現讀——換卡時輸入框已是另一張卡）。每次輸入照舊先 `autoBackupNotes` 寫本機（所以雲端失敗時「已先存在這台裝置」是真的）。💾 儲存鈕、`#save-indicator`、`#credit-limit-saved` 已拿掉
+- 🔒 鐵則 1：`saveCardLevel` 的呼叫點**沒有增加**——仍只有級別下拉的 `onchange`（那一行只是改成先拿回傳 promise 再交給 `cdTrackSave`）。「存的級別找不到」時 `resolveCardLevel` 只顯示預設、不寫回（`card-settings-promo-test.js` 有驗：本機與雲端都沒被改）
+
+### 新戶活動：每筆活動一張「票券」
+
+`renderCardDetailPromos`（`js/results-display.js`）收集要畫的活動（沿用舊規則：沒有首刷禮／定額回饋／回饋率任何一項的整筆略過）後交給 `renderCardDetailPromoTickets(card, items)`（`js/card-detail.js` 檔尾「新戶活動票券」區塊）。**搜尋結果的活動卡（`createCardholderPromoElement`）輸出完全不變**——只抽了兩個共用小函數 `getPromoTimeBadge(promo)`（`{kind:'upcoming'|'ending'|'', days}`）與 `formatPromoPeriod(promo)`，新舊 HTML 逐字比對過 7 個日期 × 55 筆 × 2 模式（run-regression.js **不涵蓋**活動卡，要改它時自己比，見教訓）。
+- **票券**（`.cd-tk`）：左邊亮黃票根 `#ffd84a`（78px，第一個活動類型的線條圖示＋文字：首刷禮＝禮物、定額回饋＝錢幣、回饋加碼＝百分比，`promoTypeClass` 把贈品／定額抵用歸到同類；不認得的類型用禮物），中間虛線、上下兩個半圓缺口（用頁面底色 #f3f4f6 的圓＋`overflow:hidden` 切成半圓）；右邊白底**資料有什麼畫什麼**：`gift_content`（一項＝「首刷禮」小標＋17px 粗體品名；多項＝「首刷禮 N 選 1」＋編號清單，`cdParseGiftItems` 去掉 ①②③）、`voucher_amount`（「定額回饋」＋大字 NT$ 千分位＋`voucher_usage` 小字）、`bonus_rate`（兩格「回饋率」大字＋「回饋消費上限」，`bonus_cap` 取整千分位；有 `voucher_usage` 但沒有定額金額時，單位跟在回饋率旁——例：永豐大戶「6% LINE POINTS」）、`bonus_merchants`（重用同方案回饋卡的 `renderCdChannels`／`cdFitChannel` 三行收合；`*general`＝「一般消費」、`*all_items`＝「本卡所有指定通路」）、`new_customer_summary`（13px）、`gift_image_url`（`sanitizeUrl`、最大高 140px、lazy、onerror 隱藏，另掛 `.promo-gift-image` 讓 `setupGiftImageLightbox` 點擊放大）。
+- **右上小標**（`.cd-pt-chips`）：快結束「剩 N 天」（14 天內、當天「今天截止」）、未開始「N 天後開始」（當天「今天開始」）；第二個以後的活動類型只有「右邊沒有對應數值」時才顯示成小標（「首刷禮＋定額回饋」右邊已有金額就不再標）
+- **票券下方**：只有一筆 → 直接攤開「達成條件」（`cdParsePromoSteps`）與「活動說明」盒子（新戶資格、活動期間、備註）；多筆 → 每張票券下一顆「達成條件與備註 ⌄」灰框膠囊（`.cd-pm-t`，委派點擊 `cdTogglePromoDetail`），點開展開該筆；新戶資格若**每一筆都有且完全相同**就在最下面寫一次（`#card-promos-foot`），否則放進各筆展開內容。欄位空白（空字串、null、空陣列）整列不顯示；「謹慎理財、信用至上」（`#card-promo-disclaimer`，顯示規則不變）移到活動區最下面、改灰色小字
+- **達成條件照換行拆**：`①②③`／「1.」「1、」「(1)」開頭＝一步（去符號、黃色圓圈數字）；**沒有符號的行若前面已有步驟，併進上一步當附註**（`-消費條件A`、`→`、`↓ 以下與…一樣 ↓`、`持有凱基銀行帳戶` 這類子條件，不另編號，否則會被編成獨立的一步）；整段只有一行且不是步驟＝一段文字（例：「此活動不限新戶」）。備註 `notes` 照全形「；」與半形「;」拆條列
+- **頁籤筆數＝活動筆數**：`cdTabCount('promo')` 數 `#card-promos-content > *:not(.card-apply-cta)`，所以每筆活動（含單筆時下面的說明）都包在同一個 `.cd-pm` 裡，共用的新戶資格放在 `#card-promos-foot`（content 之外）。桌機右欄多筆排兩欄（`.cd-promos-multi`），單筆限寬 640px
+- 圖片網址在測試環境（無外網）載不到，onerror 會隱藏；截圖時用 Playwright route 換成本地圖檔（`scratchpad/gift/`）
+
+### 驗證
+`node tools/regression/card-settings-promo-test.js`（28 項）：訪客／已登入（Firestore 替身可讓下一次 setDoc 失敗）的狀態列各態、無假成功、筆記 1 秒自動存與關閉即存、鐵則 1、auth 切換，以及對**所有**有新戶活動的卡逐欄比對詳情頁文字（summary、每一步條件、每條備註、新戶資格、期間、金額／回饋率／上限／贈品／通路／圖片）。`card-detail-test.js`（回饋卡）與 `mappings-page-test.js`（額度合計）沒變。
+
+## 1p. 標籤只有兩種樣式（2026-11-16，站長選定「灰＋黃」）
 
 - **資訊（灰底墨字）**：推薦活動的類型標籤、一般消費排除。**提醒（白底、金黃細框、字前一個黃點、墨字；站長 2026-11-17 從兩輪共六個配色裡選的，不要改回色塊底）**：即將開始、即將結束／剩 N 天、未達門檻。顏色集中在 `styles.css`「標籤的兩種樣式」一處，各標籤自己的規則只管尺寸
 - **新增標籤先歸到這兩類之一，不要開第三種顏色**；紅色留給錯誤訊息。「最優回饋」綠色角標是例外（站長裁定保留）
@@ -426,10 +505,10 @@ Grep `titleParts`）：
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
-- **編輯處只有詳情頁**：`#credit-limit-section`（我的筆記左側，`.personal-fields-row` 桌機並排/手機直排）
-- NT$ 前綴輸入框：只收數字、自動千分位、失焦或 Enter 即存（`✓ 已儲存` 2 秒）；`inputmode="numeric"`+pattern
+- **編輯處只有詳情頁**：`#credit-limit-section`（個人設定「我的紀錄」組的第一列）
+- 輸入框（2026-11-17 起在個人設定「我的紀錄」第一列，標籤左、36px 高 132px 寬的輸入框靠右；沒有 NT$ 前綴，單位寫在說明小字）：只收數字、自動千分位（墨色）、失焦或 Enter 即存；沒值顯示 placeholder「未設定」；`inputmode="numeric"`+pattern。儲存結果由儲存狀態列表達（`cdTrackSave('credit', …)`），不再有 2 秒就消失的「✓ 已儲存」
 - 儲存比照免年費：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）＋本機鏡像 `creditLimit_<uid>_<cardId>`；清空＝刪除
-- 函數：`loadCreditLimit()`/`saveCreditLimit()`/`setupCreditLimit()`（Grep "我的額度相關功能"）
+- 函數：`loadCreditLimit()`/`saveCreditLimit()`（2026-11-17 起回傳儲存結果）/`setupCreditLimit()`（Grep "我的額度相關功能"）
 - 「我的信用卡」卡片格唯讀顯示「額度 N 萬」（非整千則 `NT$x,xxx`）或「額度未填」；摘要列顯示總額度（第 5 節）
 
 ## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
@@ -540,3 +619,15 @@ Grep `titleParts`）：
 - [2026-10-18] 統一詞一輪（10-14～17）把卡片活動裡 34 個名字改寫，其中 18 個（只差空白／大小寫／臺台，統一詞表照規定不列）存在刷卡小抄的舊寫法查不到 → 被判「已下架」、會被「刪除全部失效活動」刪掉；另查出名字括號裡含「、」的 10 個名字（Apple錢包指定交通卡(Suica、PASMO、ICOCA) 等）一釘選就被判已下架，因為重查前一律先用「、」拆 → 小抄重查與加入鈕改走 `resolveMappingMerchant()`（見第 8 節「存的名字」）。資料改名是正常維護動作，任何「拿存下來的名字回頭查資料」的功能都要認得改名前的寫法，且判定會觸發刪除時要用真實改名清單驗過（這次用 10-13 與 10-17 的 cards.data 對照）
 - [2026-10-21] 手機版頁尾白字放在 body 灰漸層上對比只有約 1.5:1（小標 10px 幾乎看不見）、廣告沒填到時「推薦比較」下方留一塊 116px 白洞 → 白字是當初配深色背景的寫法、灰底換上來後沒人重量對比；廣告列用 `min-height:100px` 預留位子，但擋廣告外掛／沒填到時位子永遠空著 → 頁尾改深色字（`#374151` 約 5.4:1）＋手機兩欄格線（奇數顆最後一顆佔滿一列）＋法務連結縮成 `.footer-legal` 一行小字；廣告列拿掉預留高度，外框與「廣告」標籤只在 `<ins data-ad-status="filled">` 時出現，`data-full-width-responsive` 改 false（true 會讓手機廣告撐出外框）。⚠️ 頁尾是**同一套結構手抄在 4 頁**（index／faq／privacy／terms）＋商家頁由生成器從 index 產生＋promos.html 由 `cards-export.gs` 生成（用自己的 promos.css，要手動同步）；改頁尾要全部對一遍。另：站長實測確認 AdSense **錨定廣告收合後，原本預留的空間不會收回**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），這不是本站版面造成的，改 CSS 前先分清楚是不是廣告插的
 - [2026-11-16] 站長反映全站「很有 AI 感、不專業」→ 成因是一整組手法疊加（灰底浮卡、預設色票、emoji 圖示、尺度不一致），不是單一元件 → 動全站視覺（底色、頁首、頁籤、結果卡、色票）前先讀 `docs/project/ui-refresh-diagnosis.md`：有成因排序、分批清單與進度、示意用 CSS、實作注意事項
+- [2026-11-17] 詳情頁改全頁後，`#card-personal-section` 手機窗格的左右內距消失 → 它同時是 `.card-info-section`（詳情頁內重設 `padding:0`，id 特異性 1-1-0）與窗格 `.cd-pan`（內距 0-1-0）→ 窗格的內距與 `order` 一律用 `#card-detail-modal .cd-pan…` 寫，重設通用區塊樣式時不要連 padding 一起歸零
+- [2026-11-17] 「個人設定」頁籤一直不出現 → 判斷頁籤有沒有內容用 computed display，而個人設定的區塊本身就是窗格（沒被選中時有 `hidden`）→ 窗格＝區塊的頁籤不能用 display 判斷，個人設定固定視為有內容
+- [2026-11-17] 詳情頁「同方案一張卡」上線前自測：搜尋後清空，13 條適用通路超過三行 → 搜尋自動展開的清單在清空時被收回（`syncMerchantListsForSearch`），那一刻整列還是 `display:none`（列的顯示由後面的迴圈才還原），`cdFitChannel` 量到寬度 0 跳過重收，留下整串完整清單 → 凡是「先藏後顯示」的流程，收通路／量寬度一定要放在**元素重新顯示之後**（`filterDetailCards` 結尾補 `cdFitAll`）；自動化的版面不變式（390px 通路 ≤ 三行）就是為了擋這類「量不到就跳過」的漏洞
+- [2026-11-17] 把「量寬度」放進 `ResizeObserver` 回呼裡直接改版面 → 容器高度因此改變、再觸發自己，Chrome 會吐 "ResizeObserver loop completed with undelivered notifications"（Playwright 當成 pageerror）→ 回呼裡只比對寬度是否改變、需要重收就丟 `requestAnimationFrame`；觀察目標寬度沒變就不動
+- [2026-11-17] 規格說「一般回饋區：國內一般消費＋一般回饋特列項目同卡」，但那些組別（`一般回饋特列項目`／`一般消費特列項目`／`國外消費特列項目`，共 30 筆、約 25 張卡）原本在**指定通路區**（它們在 cashbackRates 裡）→ 照站長核定的示意圖把它們搬到一般回饋區（見 1n）。「CUBE 指定通路 19 張變約 11 張」的 11 含特列項目那張，搬走後是 10 張。**驗收數字要說明口徑**；之後若有人問「特列項目怎麼不見了」，答案在這節
+- [2026-11-17] `card-detail-test.js` 在這輪改完之後單獨跑會偶發紅燈：`console.error: ⏱️ Firebase 載入逾時（4000ms）` 掉進某張卡的取樣視窗 → `run-regression.js` 的 Firebase 替身缺 `setUserProperties`（#561 起 index.html import 它），整支 analytics 模組載入失敗、4 秒後吐逾時錯誤；整個測試一超過 4 秒就會落進視窗（以前剛好跑不到）→ 這支測試的路由補上 `setUserProperties`（`mappings-page-test.js` 早就補了）。替身缺符號時**症狀是計時型噪音**，先看頁面載入時有沒有 "does not provide an export named" 的 pageerror
+- [2026-11-17] 個人設定「看起來資料會不見」→ 根因不是版面，是**存好了沒有任何回饋**：額度只有 2 秒就消失的「✓ 已儲存」、筆記要按 💾、級別／發卡組織／免年費改了完全沒反應，而各 save 函數把成功／失敗全吞掉（失敗只有 `console.error`）→ 要讓用戶「感覺存好了」，先讓 save 函數**回傳結果**再接常駐狀態列，狀態只反映真結果；別用計時器假裝成功，也別在 UI 層另寫一份判斷
+- [2026-11-17] 訪客的「童樂匯」勾選沒有任何本機備份（只存 Firestore、訪客只在記憶體），狀態列若統一寫「只存在這台裝置」就是說謊 → 儲存結果多一個 `volatile` 旗標，狀態列照實寫「只在這次瀏覽有效」。加狀態列前先盤點**每一欄到底存在哪**，不要預設「訪客＝localStorage」
+- [2026-11-17] 狀態列的「登入」連結點了沒反應 → `#auth-modal` 是 `.modal`（z-index 1000），詳情頁是全頁 z-index 1100，登入視窗開在詳情頁後面 → 從詳情頁（或任何 ≥1000 的全頁層）開登入視窗要確認疊序；本輪把 `#auth-modal` 提到 1200。配卡組合頁（1050）的「登入」按鈕理論上有同樣問題（本輪沒測、沒動）
+- [2026-11-17] 錯誤用「單一 lastError」記會被別欄的成功洗掉（A 欄存失敗、B 欄隨後成功 → 紅字消失，用戶以為 A 也存好了）→ 錯誤依欄位 key 記帳，同一欄之後成功才清
+- [2026-11-17] run-regression.js **不涵蓋搜尋結果的新戶活動卡**（它只抓 `#results-container`／停車／領券）；抽 `createCardholderPromoElement` 的共用函數時，「逐字一致」要自己比：載入 `git show HEAD:js/results-display.js` 的舊版，對所有活動 × 兩種模式（搜尋／詳情）比 outerHTML，並換好幾個凍結日期（徽章依日期而變）。本輪用 7 個日期 × 55 筆 × 2 模式比過全一致
+- [2026-11-17] 票券頁籤筆數若把「共用新戶資格」放在 `#card-promos-content` 底下，`cdTabCount` 的 `> *:not(.card-apply-cta)` 會多算一個 → 共用的東西放在 content 之外（`#card-promos-foot`），每筆活動的所有內容包進同一個 `.cd-pm`

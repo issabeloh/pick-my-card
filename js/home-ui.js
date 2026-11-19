@@ -1502,17 +1502,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!data || data.type !== 'pmc-open-card') return;
             const cardId = data.cardId;
             if (cardId && cardsData && cardsData.cards.some(c => c.id === cardId)) {
-                showCardDetail(cardId);
-                // data.section（2026-09-17）：新戶活動頁的「查看全部 ›」要求開完詳情
-                // 直接捲到指定區塊（目前只用 card-special-section＝指定通路回饋）。
-                // 刻意重用詳情頁自己的導覽鈕而不是另寫一套捲動：那顆鈕已經處理好
-                // sticky header 的偏移與 active 狀態同步。showCardDetail 是 async、
-                // 內容要等渲染完才捲得到，所以放在 requestAnimationFrame 後面。
+                // data.section（2026-09-17）：新戶活動頁的「查看全部 ›」要求開完詳情直接落在指定區塊
+                // （目前只用 card-special-section＝指定通路回饋）。2026-11-17 詳情頁改頁籤後，
+                // 一律走 cardDetailGoToSection()：它切到「包含該區塊的頁籤」再捲到位。
+                // 要等 showCardDetail（async）把內容畫完才找得到區塊與頁籤，所以接在它的 promise 後面。
+                const opened = showCardDetail(cardId);
                 if (data.section) {
-                    requestAnimationFrame(() => {
-                        const navBtn = document.querySelector(
-                            '#card-detail-nav .card-detail-nav-btn[data-section="' + data.section + '"]');
-                        if (navBtn) navBtn.click();
+                    Promise.resolve(opened).then(() => {
+                        requestAnimationFrame(() => {
+                            if (typeof cardDetailGoToSection === 'function') cardDetailGoToSection(data.section);
+                        });
                     });
                 }
             }

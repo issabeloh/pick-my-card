@@ -401,6 +401,7 @@ function ensureAuthSubscribed() {
             // 雲端沒值 → 靜默帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
+            if (typeof refreshCardDetailApply === 'function') refreshCardDetailApply();   // 詳情頁開著時，持卡人要收起申辦鈕
             await loadUserPayments(userData);
             await absorbGuestPersonalData(userData);
             await loadSpendingMappings();
@@ -424,6 +425,7 @@ function ensureAuthSubscribed() {
             // Load guest data from localStorage
             await loadCardsInComparison();
             await loadMyOwnedCards();
+            if (typeof refreshCardDetailApply === 'function') refreshCardDetailApply();
             userSelectedPayments.clear();
             await loadUserPayments();  // loads guest payments from localStorage
             await loadSpendingMappings();
