@@ -269,6 +269,20 @@ function updateCardDetailFacts() {
     }
 }
 
+// 詳情頁摘要「年費」格的短版（2026-11-19）。Sheets 的 annualFee 是自由文字，但目前 34 張卡都是
+// 「首年免年費，…NT$X…」或「(正卡)(年費)NT$X」兩種寫法。整理不了回 null，呼叫端顯示原文。
+// 回傳 { main: 大字, sub: 小字（可為空字串） }
+function summarizeAnnualFee(text) {
+    const s = String(text || '').trim();
+    if (!s) return null;
+    const m = s.match(/NT\$\s*([\d,]+)/);
+    const amount = m ? `NT$${m[1]}` : '';
+    if (/^首年免年費/.test(s)) return { main: '首年免', sub: amount ? `次年 ${amount}` : '' };
+    if (/^(終身)?免年費/.test(s) && !amount) return { main: '免年費', sub: '' };
+    if (amount && /^(正卡)?(年費)?\s*NT\$/.test(s)) return { main: amount, sub: '每年' };
+    return null;
+}
+
 async function showCardDetail(cardId) {
     const card = cardsData.cards.find(c => c.id === cardId);
     if (!card) return;
@@ -357,10 +371,27 @@ async function showCardDetail(cardId) {
         }
     }
 
-    // 年費：直接顯示 annualFee 原文（不解析）；免年費條件（feeWaiver 原文）與「我已過免年費門檻」
-    // 勾選在個人設定最下面（#card-fee-waiver／#fee-waiver-checked，儲存邏輯不動）
+    // 年費（2026-11-19 改短版）：annualFee 整理得了就顯示「大字＋一行小字」（首年免／次年 NT$X、NT$X／每年），
+    // 整理不了就照舊顯示原文小字——寧可長一點，也不要顯示錯的數字。完整原文放在 title。
+    // 免年費條件（feeWaiver 原文）與「我已過免年費門檻」勾選在個人設定（#card-fee-waiver／#fee-waiver-checked）
     const annualFeeEl = document.getElementById('card-annual-fee');
-    annualFeeEl.textContent = card.annualFee || '無資料';
+    const feeShort = summarizeAnnualFee(card.annualFee);
+    annualFeeEl.textContent = '';
+    annualFeeEl.classList.toggle('is-raw', !feeShort);
+    if (feeShort) {
+        const feeMain = document.createElement('span');
+        feeMain.className = feeShort.main.startsWith('NT$') ? 'cd-fee-main is-amount' : 'cd-fee-main';
+        feeMain.textContent = feeShort.main;
+        annualFeeEl.appendChild(feeMain);
+        if (feeShort.sub) {
+            const feeSub = document.createElement('small');
+            feeSub.className = 'cd-fee-sub';
+            feeSub.textContent = feeShort.sub;
+            annualFeeEl.appendChild(feeSub);
+        }
+    } else {
+        annualFeeEl.textContent = card.annualFee || '無資料';
+    }
     annualFeeEl.title = card.annualFee || '';
     document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '';
 

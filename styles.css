@@ -4826,8 +4826,16 @@ input[type="number"]:focus {
     line-height: 1.3;
     font-variant-numeric: tabular-nums;
 }
-/* 年費：annualFee 原文（不解析），小字最多三行 */
-.cd-fact-fee dd {
+/* 年費（2026-11-19 改短版）：summarizeAnnualFee() 整理得了 → 大字＋一行小字，和另外兩格同字級；
+   整理不了（.is-raw）→ 原文小字最多三行 */
+.cd-fact-fee dd:not(.is-raw) { display: flex; flex-direction: column; }
+.cd-fee-main { white-space: nowrap; }
+/* 大字是金額（NT$4,500）時比「首年免」寬一倍，360px 手機與桌機左欄的格子放不下 22px → 縮一號 */
+.cd-fee-main.is-amount { font-size: 17px; }
+@media (max-width: 359px) { .cd-fee-main.is-amount { font-size: 15px; } }
+/* 桌機左欄格子很窄（約 70px），「次年 NT$3,000」放不下時在空白處換行 */
+.cd-fee-sub { font-size: 11px; font-weight: 500; line-height: 1.35; opacity: 0.8; }
+.cd-fact-fee dd.is-raw {
     font-size: 11.5px;
     font-weight: 500;
     line-height: 1.4;
@@ -5128,7 +5136,7 @@ input[type="number"]:focus {
     .cd-fact { background: #f9fafb; border-color: #e5e7eb; }
     .cd-fact dt { color: #6b7280; }
     .cd-fact dd { font-size: 19px; }
-    .cd-fact-fee dd { font-size: 11.5px; }
+    .cd-fact-fee dd.is-raw { font-size: 11.5px; }
     #card-detail-modal .cd-sum .card-use-case {
         background: #f8fafc;
         border-left-color: #1e3a8a;
