@@ -739,7 +739,7 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - **部署時注入**：`tools/build-promos-card-index.js`（`deploy-version.sh` 裡排在單卡頁之後，因為只列 `promos/<id>.html` 存在的卡）。
   不在 Apps Script，改這區不用重貼。冪等：`<!-- CARDINDEX:START/END -->`＋分頁列那顆 `data-jump-cardindex`。
 - 卡片＝清單裡的 `article.promo-card` 順序；銀行＝`cards.data` 的 `cards[].bank` 短名；銀行依卡數多到少，同數照清單先後。
-- 樣式 `promos.css` 的 `.pmc-cardindex`／`.pmc-ci-*`（手機 2 欄、≥769px 4 欄、≥1100px 5 欄）；只看收藏時跟其他區一起藏。
+- 樣式 `promos.css` 的 `.pmc-cardindex`／`.pmc-ci-*`（手機 2 欄、≥769px 4 欄、≥1100px 5 欄）；整區用活動卡同款外框框起來（站長 2026-11-22：要看得出是一個區塊）；說明文字「點擊任一卡名看單張信用卡的新戶活動」；只看收藏時跟其他區一起藏。
 - `setupJumpSpy()`：最後一區比畫面矮、頂端碰不到分頁列，**捲到底就標最後一顆**（不然點了「依卡片找」會標在「新戶活動」）。
 - GA4：`promos_card_index`（card_id）。
 - 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-card-index.js`；看完 `node tools/build-promos-page.js` 還原 promos.html，**注入結果不 commit**。
