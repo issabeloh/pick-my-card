@@ -16,7 +16,7 @@
 | `cards.data` / `cards.version` | 卡片資料（base64，由 Apps Script 生成）／其版本指標，**兩者必同步更新** |
 | `faq.html` `faq.js` `faq.css` | FAQ 頁（獨立載入，不共用 js/ 模組；也引用 styles.css） |
 | `landing.html` `landing.js` `landing.css` | 到達頁 |
-| `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 data-pipeline.md 第 9 節，repo 版只是初版備份，別手改卡片內容） |
+| `promos.html` `promos.js` `promos.css` | 新戶活動一覽頁（SEO／社群入口，糖果果凍風；HTML 由 Apps Script 匯出時生成，見 `docs/project/promos.md`，repo 版只是初版備份，別手改卡片內容） |
 | `privacy.html` `privacy.css` `terms.html` | 隱私權政策／使用須知與免責聲明（兩頁共用 `privacy.css` 的 `pp-*` 版面，都刻意零 JavaScript）。`terms.html` 是免責聲明與資料收錄原則的**唯一正本**（2026-09-02 起；首頁那份重複的折疊區同日移除）。改文案只改這裡 |
 | `_redirects` | Cloudflare Pages 改寫規則：`/mappings` → 首頁（配卡組合頁；`_headers` 對它設 noindex） |
 | `_headers` | Cloudflare Pages 讀的回應標頭設定（安全標頭）。⚠️ CSP 在 `-Report-Only` 觀察模式（轉正條件見檔內註解）；HSTS 已上到一年，**日後新增任何用瀏覽器開的子網域前必讀該條註解**（沒有 HTTPS 會直接連不上且無回報） |
@@ -25,7 +25,7 @@
 | `functions/` | Firebase Cloud Functions（`dailyFeedbackDigest` 每日回饋摘要；`sendLoginLink` 寄 Email 連結登入信；`guardSignup`／`guardEmails` 註冊與寄信把關）；需 Blaze 方案，部署與參數設定見 `functions/README.md`。前端不引用它，改前端不用動這裡 |
 | `assets/images/cards/<card.id>.png` | 卡片圖（缺圖自動隱藏；橫式 800×500 規範） |
 | `docs/project/` `docs/ops/` | 領域知識文件／工作制度文件（見路由表） |
-| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 data-pipeline.md 第 9a 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。`deploy-version.sh` 與 `build-promos-features.js` 由 CF Pages build command 執行，開發不用跑。**`build-merchant-pages.js` 在改了 `index.html` 之後要自己跑**（見「部署前必做」第 5 條）；改了 `js/` 另跑 `--verify` |
+| `tools/preflight.sh`、`tools/cards-query.sh`、`tools/deploy-version.sh`、`tools/build-merchant-pages.js`、`tools/build-promos-features.js`、`tools/build-promos-page.js` | 部署前機械檢查／cards.data 查詢／部署時注入 `?v=`／商家頁生成／**promos 卡片特色注入**（部署時；用 vm 載入 `js/` 跑真 `getDisplayRate()`，見 `docs/project/promos.md` 第 4 節）／**本機重生 promos.html**（改了 `cards-export.gs` 的生成邏輯後用它看結果）。`deploy-version.sh` 與 `build-promos-features.js` 由 CF Pages build command 執行，開發不用跑。**`build-merchant-pages.js` 在改了 `index.html` 之後要自己跑**（見「部署前必做」第 5 條）；改了 `js/` 另跑 `--verify` |
 
 資料流：Google Sheets → Apps Script `exportToJSON()` → `cards.data`(base64) ＋ `cards.version` → 前端。
 
@@ -76,6 +76,7 @@
 | **填**（不是改邏輯）某張卡的 cashbackModel／加碼欄位／骨幹槽 | `docs/project/cashbackmodel-fill-guide.md`（官網「回饋組成」句 → 欄位的填表範本） |
 | 改顯示/UI（詳情頁、Spotlight、我的信用卡、我的配卡組合頁、各 modal、卡圖） | `docs/project/ui-display.md` |
 | 改資料（Google Sheets、Apps Script、cards.data、級別設定、新工作表） | `docs/project/data-pipeline.md` |
+| 改 /promos 新戶活動頁（生成器、版型、排序、卡片特色注入、單卡頁、站長推薦） | `docs/project/promos.md` |
 | 改用戶資料/登入登出/localStorage/Firestore/XSS 相關 | `docs/project/storage-and-security.md` |
 | 要派 subagent 時（選 agent、選模型、驗收分級） | `docs/ops/dispatch.md`（派工 prompt 模板在 `docs/ops/templates.md`） |
 | 拿不準「該不該升級/算不算完成/要不要問用戶/方向對不對」 | `docs/ops/judgment.md` |
@@ -95,4 +96,4 @@
 - **預覽部署只認 `preview/*` 分支**（站長的 Cloudflare Pages 設定；`claude/*` 工作分支推了**不會**有預覽）：要給站長看效果 → 從工作分支開或更新 `preview/<主題>` 並 push。需要真實資料時，請站長把 Apps Script `cards-export.gs` 的 `GITHUB_BRANCH` 暫時改成該 preview 分支再匯出，看完改回 `main`
 
 ---
-**更新日期**：2026-11-12（效率審計後修訂；改寫前版本在 `docs/archive/CLAUDE.md-2026-11-12.bak`）
+**更新日期**：2026-11-22（路由表加 promos.md）；上次整檔改寫 2026-11-12（改寫前版本在 `docs/archive/CLAUDE.md-2026-11-12.bak`）

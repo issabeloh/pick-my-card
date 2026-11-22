@@ -2,7 +2,7 @@
  * 新戶活動頁生成器的 Node 載入器（2026-11-18 從 tools/build-promos-page.js 抽出）
  *
  * promos.html 與單卡頁 /promos/<id> 的生成邏輯都住在 apps-script/cards-export.gs
- * （純函數，見 docs/project/data-pipeline.md 第 9 節）。這裡用 Node 的 vm 把整份
+ * （純函數，見 docs/project/promos.md 第 1 節）。這裡用 Node 的 vm 把整份
  * .gs 原封不動載進來，讓 tools/ 底下的腳本呼叫同一支函數——不另抄一份邏輯。
  * ============================================================ */
 const fs = require('fs');
