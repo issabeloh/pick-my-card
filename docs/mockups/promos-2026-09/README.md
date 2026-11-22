@@ -1,7 +1,7 @@
 # /promos 資訊層級改版提案（2026-09-16 起，最新＝v5 可互動原型）
 
 > 一次性的提案資料夾，不是制度檔。方案定案、實作完成後可整包刪除
-> （刪之前把「定案內容」寫進 `docs/project/data-pipeline.md` 第 9 節與 `docs/project/history.md`）。
+> （刪之前把「定案內容」寫進 `docs/project/promos.md`與 `docs/project/history.md`）。
 
 ## 這裡有什麼
 
