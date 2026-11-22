@@ -10083,6 +10083,33 @@ html.pmc-onboard #search-hints-container {
     line-height: 1.5;
     margin: 0 0 16px;
 }
+/* 推薦活動 modal 最下面的「新戶」連結（buildSpotlightPromoLink，2026-11-22 站長選：Uber／Klook 式優惠標籤、
+   放在 Amazon 信用卡優惠列的位置）：細線分隔＋綠色小標籤＋一行字＋›，不做成框，不跟上面的通路活動搶 */
+.spotlight-promo-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 0;
+    padding: 14px 0 2px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: #111827;
+    text-decoration: none;
+}
+.spotlight-promo-tag {
+    flex: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #059669;
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+.spotlight-promo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spotlight-promo-go { flex: none; color: #6b7280; font-size: 18px; }
+.spotlight-promo-link:hover .spotlight-promo-text { text-decoration: underline; }
+.spotlight-promo-link:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
 .spotlight-modal-info {
     display: flex;
     flex-direction: column;

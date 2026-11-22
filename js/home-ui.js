@@ -552,6 +552,34 @@ function buildSpotlightModalActions(item, card) {
     return `${cardDetailBtn}${applyCtaHtml}`;
 }
 
+// 推薦活動 modal 最下面一行「新戶」連到這張卡的新戶活動單卡頁 /promos/<id>（2026-11-22 站長選 R4 樣式、R1 位置）。
+// 只在：這張卡有進行中的新戶活動（過期的載入時已濾掉）、id 合法（＝單卡頁存在，規則同 cards-export.gs 的
+// pmcCardPagePath_）、使用者沒有持有這張卡（持卡人不是新戶，同詳情頁申辦膠囊的規則）時出現。
+// 文字規則同詳情頁申辦膠囊（setupCardDetailApply）：「{類型} NT$金額／回饋率」，首刷禮多選一加「N 選 1」。
+function buildSpotlightPromoLink(card) {
+    if (!card || !/^[a-z0-9][a-z0-9-]*$/.test(card.id || '')) return '';
+    if (typeof myOwnedCards !== 'undefined' && myOwnedCards && myOwnedCards.has(card.id)) return '';
+    const promos = getActiveCardholderPromos(card.id).filter(p => Array.isArray(p.promo_types) && p.promo_types[0]);
+    if (!promos.length) return '';
+    const promo = promos[0];
+    let text = String(promo.promo_types[0]);
+    if (promo.voucher_amount) text += ` NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`;
+    else if (promo.bonus_rate != null && promo.bonus_rate !== '') text += ' ' + formatBonusRate(promo.bonus_rate);
+    else {
+        const opts = String(promo.gift_content || '').split(/\n|[①②③④⑤⑥⑦⑧⑨]/).map(x => x.trim()).filter(Boolean);
+        if (opts.length > 1) text += ` ${opts.length} 選 1`;
+    }
+    if (promos.length > 1) text += ` 等 ${promos.length} 檔`;
+    const ends = promos.map(p => (p.period_end ? String(p.period_end).replace(/\//g, '-') : '')).filter(Boolean).sort();
+    if (ends.length) {
+        const parts = ends[0].split('-');
+        if (parts[1] && parts[2]) text += `・至 ${Number(parts[1])}/${Number(parts[2])}`;
+    }
+    return `<a class="spotlight-promo-link" href="/promos/${escapeHtml(card.id)}" data-card-id="${escapeHtml(card.id)}">` +
+        `<span class="spotlight-promo-tag">新戶</span><span class="spotlight-promo-text">${escapeHtml(text)}</span>` +
+        `<span class="spotlight-promo-go" aria-hidden="true">›</span></a>`;
+}
+
 function buildSpotlightModalBody(item, card) {
     const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
 
@@ -668,7 +696,7 @@ function openSpotlightModal(index) {
     }
     if (actionsEl) actionsEl.innerHTML = buildSpotlightModalActions(item, card);
 
-    bodyEl.innerHTML = buildSpotlightModalBody(item, card);
+    bodyEl.innerHTML = buildSpotlightModalBody(item, card) + buildSpotlightPromoLink(card);
 
     // ⓘ「卡片詳情」按鈕 → 開啟卡片詳情頁（疊在本 modal 之上）；卡名本身不再可點
     const cardDetailBtn = (actionsEl || bodyEl).querySelector('.spotlight-carddetail-btn');
