@@ -254,7 +254,7 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"中油加油刷哪張信用卡回饋最高？2026 比較 - Pick My Card","description":"中油直營站加油、綁中油 Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在中油消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。","url":"https://pickmycard.app/merchant/%E4%B8%AD%E6%B2%B9","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"中油 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":2,"name":"玉山 UniCard"},{"@type":"ListItem","position":3,"name":"台新 Richart 卡"},{"@type":"ListItem","position":4,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":5,"name":"國泰 CUBE 卡"}]},"dateModified":"2026-11-17"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"中油加油刷哪張信用卡回饋最高？2026 比較 - Pick My Card","description":"中油直營站加油、綁中油 Pay 刷哪張信用卡回饋最高？即時試算你的信用卡中，在中油消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。","url":"https://pickmycard.app/merchant/%E4%B8%AD%E6%B2%B9","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"中油 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":2,"name":"玉山 UniCard"},{"@type":"ListItem","position":3,"name":"台新 Richart 卡"},{"@type":"ListItem","position":4,"name":"玉山 Ubear 卡"},{"@type":"ListItem","position":5,"name":"國泰 CUBE 卡"}]},"dateModified":"2026-11-22"}</script>
 </head>
 <body>
     <div class="container">
@@ -1327,12 +1327,17 @@
 
             <!-- 手機浮動申辦膠囊（≤768px）：浮在畫面底部中間、不佔版面高度；捲動超過約 150px 後
                  縮成右下角（只剩圖示＋按鈕），回到頂端再展開。文字由 showCardDetail() 用 textContent 組。
-                 持卡人隱藏、沒有申辦連結時 hidden（refreshCardDetailApply）。GA4 button_type = detail_sticky_apply -->
+                 持卡人隱藏、沒有申辦連結時 hidden（refreshCardDetailApply）；「個人設定」頁籤時加 .is-off-tab 隱藏
+                 （selectCardDetailTab）。GA4 button_type = detail_sticky_apply -->
             <div id="card-detail-apply-bar" class="cd-fab" hidden>
                 <span class="cd-gift" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>
                 </span>
-                <span class="cd-fab-tx" id="card-detail-apply-bar-text"></span>
+                <!-- 左側文字可點（虛線底線示意）：展開下一行信任文字（cdApplyTrustText 依連結網域決定），再點收回 -->
+                <button type="button" class="cd-fab-info" id="card-detail-apply-bar-info" aria-expanded="false" aria-controls="card-detail-apply-bar-trust">
+                    <span class="cd-fab-tx" id="card-detail-apply-bar-text"></span>
+                    <span class="cd-fab-trust" id="card-detail-apply-bar-trust"></span>
+                </button>
                 <a class="cd-apply-btn cd-fab-btn" id="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
             </div>
         </div>
@@ -1396,7 +1401,7 @@
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-17">2026/11/17</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-22">2026/11/22</time></span>
     </div>
     </footer>
 

@@ -38,6 +38,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// 申辦連結的去向文字（2026-11-22 站長）：寫法與 /promos 的按鈕去向一致，判斷邏輯照抄
+// apps-script/cards-export.gs 的 pmcApplyDest_()（⚠️ 改其中一邊要兩邊同步）：
+//   - 合作平台網域 →「經 Money101 合作連結前往銀行官網」（2026-11 約三分之一的卡）
+//   - 與該卡 website 同一個品牌網域（比主網域第一段，國泰 cathay-cube／cathaybk 走別名表）→「直達銀行官網・<主網域>」
+//   - 其餘 →「前往 <完整網域>」（不替它背書是哪裡；連結填錯銀行時也會在這裡露出來）
+// 用在手機膠囊（點文字展開）與桌機新戶活動頁籤的申辦列（js/results-display.js renderCardDetailPromos）
+const CD_PARTNER_HOSTS = [
+    { test: /(^|\.)money101\.com\.tw$/, name: 'Money101' },
+    { test: /(^|\.)creatory\.biz$/, name: 'Money101' }
+];
+const CD_BANK_DOMAIN_ALIASES = { 'cathay-cube': ['cathaybk'] };
+function cdHostOf(url) {
+    const m = /^https?:\/\/([^\/?#:]+)/i.exec(String(url || ''));
+    return m ? m[1].toLowerCase() : '';
+}
+function cdBaseDomain(host) {
+    const parts = String(host || '').split('.');
+    if (parts.length <= 2) return parts.join('.');
+    return parts.slice(/\.(com|net|org|gov|edu|idv)\.tw$/.test(host) ? -3 : -2).join('.');
+}
+function cdApplyTrustText(link, card) {
+    const host = cdHostOf(link);
+    if (!host) return '';
+    const partner = CD_PARTNER_HOSTS.find(p => p.test.test(host));
+    if (partner) return '經 ' + partner.name + ' 合作連結前往銀行官網';
+    const siteHost = card ? cdHostOf(card.website) : '';
+    const siteBrand = siteHost ? cdBaseDomain(siteHost).split('.')[0] : '';
+    const hostBrand = cdBaseDomain(host).split('.')[0];
+    if (siteBrand && (siteBrand === hostBrand || (CD_BANK_DOMAIN_ALIASES[siteBrand] || []).indexOf(hostBrand) !== -1)) {
+        return '直達銀行官網・' + cdBaseDomain(host);
+    }
+    return '前往 ' + host;
+}
+
+// 手機膠囊左側文字：點了在下面展開信任文字，再點收回；膠囊縮成右下角時一律收回（js/results-display.js _cdFabScrollHandler）
+function setCardDetailApplyTrustOpen(open) {
+    const fab = document.getElementById('card-detail-apply-bar');
+    const info = document.getElementById('card-detail-apply-bar-info');
+    if (!fab || !info) return;
+    fab.classList.toggle('is-open', !!open);
+    info.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
 // 申辦資料 → 桌機頁首鈕＋手機膠囊。href 一律 sanitizeUrl（鐵則 3）；文字全走 textContent。
 // 膠囊文字：這張卡有新戶活動時用第一筆（getActiveCardholderPromos 的既有排序）組字——
 //   有 voucher_amount：「{promo_types[0]} NT$金額」；有 bonus_rate：「{promo_types[0]} 回饋率」；
@@ -49,6 +92,9 @@ function setupCardDetailApply(card) {
     const fab = document.getElementById('card-detail-apply-bar');
     const fabText = document.getElementById('card-detail-apply-bar-text');
     const fabBtn = document.getElementById('card-detail-apply-bar-btn');
+    const fabInfo = document.getElementById('card-detail-apply-bar-info');
+    const fabTrust = document.getElementById('card-detail-apply-bar-trust');
+    setCardDetailApplyTrustOpen(false);   // 每次開卡都從收合開始
 
     if (!applyLink) {
         _cdApply = null;
@@ -88,7 +134,11 @@ function setupCardDetailApply(card) {
         } else {
             fabText.textContent = (applyCta && applyCta.text) || '';
         }
-        fabText.hidden = !fabText.textContent;
+        if (fabInfo) fabInfo.hidden = !fabText.textContent;
+    }
+    if (fabTrust) fabTrust.textContent = cdApplyTrustText(applyLink, card);
+    if (fabInfo && !fabInfo.onclick) {
+        fabInfo.onclick = () => setCardDetailApplyTrustOpen(fabInfo.getAttribute('aria-expanded') !== 'true');
     }
     if (fab) fab.classList.remove('is-min');   // 每次開卡都從展開狀態開始
     refreshCardDetailApply();
@@ -1885,6 +1935,7 @@ function renderCardDetailChangelog(card) {
 
     const entries = (card && card.changelog) || [];
     const shown = [];
+    let sidebarLatestMarked = false;
 
     entries.forEach(entry => {
         if (!entry) return;
@@ -1904,6 +1955,12 @@ function renderCardDetailChangelog(card) {
 
         li.appendChild(dateEl);
         li.appendChild(textEl);
+        // 側欄「最近異動」顯示的那一則＝第一筆「日期與摘要都有」的（js/cards-modals.js 側欄那段的 find 條件）。
+        // 這裡的清單只要求摘要，兩邊第一筆可能不同，所以照側欄的條件另外標
+        if (!sidebarLatestMarked && String(entry.date || '').trim()) {
+            li.dataset.sidebarLatest = '1';
+            sidebarLatestMarked = true;
+        }
         list.appendChild(li);
         shown.push({ date: formatChangelogDate(entry.date), summary });
     });
@@ -1938,6 +1995,17 @@ function setCardDetailChangelogOpen(open) {
     if (!list || !toggle) return;
     list.hidden = !open;
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+// 從側欄「最近異動」（或 embed 指定 changelog）進來：把那一則標成淡黃底＋左側黃條。
+// ⚠️ 2026-11-22 站長否決「亮 2 秒再淡掉」：用戶切去別的 app 再回來，動畫早就跑完，回來看不懂自己在看什麼。
+//    所以是固定標記，不計時；清單每次 showCardDetail 都重建，換卡或重開詳情頁時自然消失
+function markCardDetailChangelogArrival() {
+    const list = document.getElementById('card-changelog-content');
+    if (!list) return;
+    list.querySelectorAll('.card-changelog-item.is-arrived').forEach(li => li.classList.remove('is-arrived'));
+    const li = list.querySelector('.card-changelog-item[data-sidebar-latest="1"]');
+    if (li) li.classList.add('is-arrived');
 }
 
 // ISO "2026-07-31" → "2026/07/31"（站內日期慣例是斜線）。
