@@ -5133,6 +5133,9 @@ input[type="number"]:focus {
     .cd-thumb { width: 104px; height: 65px; border-color: #e5e7eb; }
     .cd-type { color: #6b7280; }
     #card-detail-modal .cd-type .card-official-site-link:hover { color: #2563eb; }
+    /* 桌機左欄每格內容只有約 63px，年費小字「次年 NT$1,800」（11px 約 72px）會折成兩行、整格三行。
+       縮字要到 9.5px 才放得下，低於可讀下限 → 改讓年費那格寬一點（2026-11-22 站長） */
+    .cd-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr); }
     .cd-fact { background: #f9fafb; border-color: #e5e7eb; }
     .cd-fact dt { color: #6b7280; }
     .cd-fact dd { font-size: 19px; }
