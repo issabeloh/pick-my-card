@@ -1928,7 +1928,12 @@ function setupEventListeners() {
     });
     
     // Enter key support (disabled when any modal is open)
+    // 焦點在按鈕／連結／下拉／多行文字框等可操作元素上時，Enter 是在操作那個元素（例：鍵盤使用者在結果卡上
+    // 按「加到小抄」「詳情」或回饋率），不要再觸發計算——否則會重算、重畫結果區，剛按的東西像沒反應（2026-11-23）。
+    // 在輸入框（商家、金額）裡按 Enter 照舊計算。
+    const ENTER_OWN_ACTION = 'button, a[href], select, textarea, summary, [role="button"], [role="switch"], [role="tab"], [contenteditable="true"]';
     document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest(ENTER_OWN_ACTION)) return;
         if (e.key === 'Enter' && !calculateBtn.disabled) {
             const anyModalOpen = document.querySelector('[id$="-modal"][style*="display: flex"], [id$="-modal"][style*="display:flex"]');
             if (anyModalOpen) return;

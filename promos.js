@@ -17,6 +17,9 @@
       display:none 時 scrollHeight 恆為 0
    9. 「隱藏我持有的卡片」篩選：唯讀讀取主站 localStorage 的 myOwnedCards_*，
       不寫入/刪除任何 key（2026-07-16 第四輪新增）
+  10. 收藏（2026-11-18）：卡名旁愛心＋底部口袋名單＋「看我的收藏」（只看收藏的卡）。
+      存在這台裝置的 localStorage（pmcPromoFavorites），清單頁與單卡頁共用
+  11. 單卡頁 /promos/<id>（2026-11-18）：沒注入卡片特色就藏那一節、活動部署後才到期就顯示「已結束」
 
    ⚠️ 排序切換已於 2026-09-17 移除（站長裁定）：清單固定依「最高可拿」倒序。
    ========================================================================== */
@@ -160,6 +163,11 @@
       targets.forEach(function (t, i) {
         if (t && t.getBoundingClientRect().top <= line) current = i;
       });
+      // 已經捲到底：最後一區（依卡片找）比畫面矮，頂端永遠碰不到分頁列，到底了就標它
+      var doc = document.documentElement;
+      var last = targets[targets.length - 1];
+      if (last && window.innerHeight + window.scrollY >= doc.scrollHeight - 2 &&
+          last.getBoundingClientRect().top < window.innerHeight) current = targets.length - 1;
       mark(current);
     }
     update();
@@ -198,6 +206,10 @@
       owned.checked = false;
       owned.dispatchEvent(new Event('change'));
       r.owned = true;
+    }
+    if (filterState.favOnly) {
+      setFavOnly(false);
+      r.other = true;
     }
     return r;
   }
@@ -347,7 +359,7 @@
   // 篩選狀態：類型 chips（typeFilter）與「隱藏我持有的卡片」（hideOwned）疊加
   // 運作，統一由 refreshVisibility() 依兩個條件重算每張卡的 hidden，取代原本
   // 只看類型的 applyFilter()（2026-07-16 第四輪站長回饋新增持有卡篩選）。
-  var filterState = { typeFilter: 'all', hideOwned: false, searchQuery: '' };
+  var filterState = { typeFilter: 'all', hideOwned: false, searchQuery: '', favOnly: false };
   var ownedCardIds = null; // 讀到的持有卡 id 清單（Array），沒有持有資料時維持 null
 
   function setupFilters() {
@@ -556,7 +568,8 @@
           promoMerchantsText(card).indexOf(filterState.searchQuery) !== -1 ||
           promoRewardText(card).indexOf(filterState.searchQuery) !== -1;
       }
-      var show = typeMatch && ownedMatch && searchMatch;
+      var favMatch = !filterState.favOnly || favIds.indexOf(card.getAttribute('data-card-id') || '') !== -1;
+      var show = typeMatch && ownedMatch && searchMatch && favMatch;
       card.hidden = !show;
       if (show) anyVisible = true;
     });
@@ -1202,6 +1215,209 @@
     });
   }
 
+  // ---------- 收藏（2026-11-18，站長同意 mockup F）----------
+  // 卡名旁一顆愛心；收藏了任何一張，底部就出現「口袋名單」：卡圖＋「已收藏 N 張」＋「看我的收藏」。
+  // 「看我的收藏」＝清單只留收藏的卡，不另做比較表（站長 2026-11-19 從「並排比較」改名：手機上是上下排，不是並排）。
+  // 存在這台裝置（localStorage），不登入、不同步——口袋名單上那行小字就是在講這件事。
+  // ⚠️ 這頁不載入 js/，沒有 readLocalJSON() 可用：讀寫一律 try/catch，壞資料當成沒收藏
+  //    （同 readOwnedCardIdsSafe 的作法；CLAUDE.md 鐵則 2 的精神）。只動自己這一個 key。
+  var FAV_KEY = 'pmcPromoFavorites';
+  var FAV_MAX = 50;
+  var FAV_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+  var favIds = [];
+  var favBar = null;
+  var isCardPage = false;
+
+  function readFavIds() {
+    try {
+      var raw = localStorage.getItem(FAV_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      var seen = {};
+      return parsed.filter(function (id) {
+        if (typeof id !== 'string' || !FAV_ID_RE.test(id) || seen[id]) return false;
+        seen[id] = true;
+        return true;
+      }).slice(0, FAV_MAX);
+    } catch (err) {
+      console.error('❌ promos.js 讀取收藏失敗:', err);
+      return [];
+    }
+  }
+  function writeFavIds() {
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(favIds.slice(0, FAV_MAX))); }
+    catch (err) { console.error('❌ promos.js 儲存收藏失敗:', err); }
+  }
+
+  var HEART_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20s-7-4.4-7-9.6A4 4 0 0112 8a4 4 0 017 2.4C19 15.6 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  function favButton(cardId, cardName) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pmc-fav-btn';
+    btn.setAttribute('data-fav-card', cardId);
+    btn.setAttribute('data-card-name', cardName || '');
+    btn.innerHTML = HEART_SVG;
+    return btn;
+  }
+  function syncFavButtons() {
+    document.querySelectorAll('.pmc-fav-btn').forEach(function (btn) {
+      var on = favIds.indexOf(btn.getAttribute('data-fav-card')) !== -1;
+      var name = btn.getAttribute('data-card-name') || '這張卡';
+      btn.classList.toggle('is-on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-label', (on ? '取消收藏 ' : '收藏 ') + name);
+      btn.title = on ? '取消收藏' : '收藏這張卡';
+    });
+  }
+
+  function ensureFavBar() {
+    if (favBar) return favBar;
+    favBar = document.createElement('div');
+    favBar.className = 'pmc-fav-bar';
+    favBar.id = 'pmc-fav-bar';
+    favBar.setAttribute('role', 'region');
+    favBar.setAttribute('aria-label', '收藏的卡片');
+    favBar.hidden = true;
+    // 單卡頁沒有清單可篩，按鈕改成連回清單頁並直接進入「看我的收藏」（/promos?fav=1）
+    favBar.innerHTML = '<span class="pmc-fav-bar-imgs" aria-hidden="true"></span>' +
+      '<span class="pmc-fav-bar-text"><b></b><small></small></span>' +
+      (isCardPage
+        ? '<a class="pmc-fav-bar-go" href="/promos?fav=1">看我的收藏</a>'
+        : '<button type="button" class="pmc-fav-bar-go">看我的收藏</button>');
+    document.body.appendChild(favBar);
+    var go = favBar.querySelector('.pmc-fav-bar-go');
+    go.addEventListener('click', function () {
+      track('promos_fav_compare', { count: favIds.length, on: isCardPage ? 1 : (filterState.favOnly ? 0 : 1) });
+      if (isCardPage) return;               // 連結照常前往
+      setFavOnly(!filterState.favOnly);
+      var head = document.getElementById('all-promos');
+      if (head) { head.scrollIntoView({ behavior: 'smooth', block: 'start' }); alignAfterScroll(head); }
+    });
+    return favBar;
+  }
+
+  function renderFavBar() {
+    var bar = ensureFavBar();
+    var n = favIds.length;
+    bar.hidden = n === 0;
+    document.body.classList.toggle('has-fav-bar', n > 0);
+    if (!n) return;
+    var imgs = bar.querySelector('.pmc-fav-bar-imgs');
+    imgs.innerHTML = '';
+    favIds.slice(0, 3).forEach(function (id) {
+      var img = document.createElement('img');
+      img.src = '/assets/images/cards/' + encodeURIComponent(id) + '.png';
+      img.alt = '';
+      img.onerror = function () { img.remove(); };
+      imgs.appendChild(img);
+    });
+    var title = bar.querySelector('.pmc-fav-bar-text b');
+    var sub = bar.querySelector('.pmc-fav-bar-text small');
+    var go = bar.querySelector('.pmc-fav-bar-go');
+    if (filterState.favOnly) {
+      title.textContent = '只顯示收藏的 ' + n + ' 張';
+      sub.textContent = '點愛心可以取消收藏';
+      go.textContent = '看全部活動';
+      go.setAttribute('aria-pressed', 'true');
+    } else {
+      title.textContent = '已收藏 ' + n + ' 張';
+      sub.textContent = '存在這台裝置，下次來還在';
+      go.textContent = '看我的收藏';
+      if (!isCardPage) go.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  function setFavOnly(on) {
+    filterState.favOnly = !!on && favIds.length > 0;
+    if (filterState.favOnly) {
+      // 進入比較時把其他篩選清掉，收藏的卡才會全部出現（clearAllFilters 會呼叫回來，先設好狀態避免遞迴）
+      var keep = filterState.favOnly;
+      filterState.favOnly = false;
+      clearAllFilters();
+      filterState.favOnly = keep;
+    }
+    // 只看收藏＝整頁只剩收藏的卡（站長 2026-11-22）：頁內索引列、站長推薦、行李箱專區、搜尋列、
+    // 篩選列都由 promos.css 的 body.is-fav-only 藏起來；清單標題改成「我的收藏」。
+    // 要回去就按口袋名單上的「看全部活動」——頁面上沒有其他出口，所以口袋名單永遠在。
+    document.body.classList.toggle('is-fav-only', filterState.favOnly);
+    var listTitle = document.querySelector('#all-promos h2');
+    if (listTitle) {
+      if (!listTitle.hasAttribute('data-default-title')) listTitle.setAttribute('data-default-title', listTitle.textContent);
+      listTitle.textContent = filterState.favOnly ? '我的收藏' : listTitle.getAttribute('data-default-title');
+    }
+    refreshVisibility();
+    renderFavBar();
+  }
+
+  function toggleFav(cardId, name) {
+    var i = favIds.indexOf(cardId);
+    var adding = i === -1;
+    if (adding) favIds.unshift(cardId); else favIds.splice(i, 1);
+    favIds = favIds.slice(0, FAV_MAX);
+    writeFavIds();
+    syncFavButtons();
+    showToast(adding ? '已收藏，可以從底部看我的收藏' : '已取消收藏');
+    track('promos_fav', { card_id: cardId, action: adding ? 'add' : 'remove', page: isCardPage ? 'card' : 'list' });
+    if (filterState.favOnly && !favIds.length) setFavOnly(false);
+    else if (filterState.favOnly) refreshVisibility();
+    renderFavBar();
+  }
+
+  function setupFavorites() {
+    isCardPage = !!document.querySelector('.pmc-cp');
+    favIds = readFavIds();
+    if (!isCardPage) {
+      // 清單頁：每張卡的身分區塊放一顆愛心。單卡頁的活動卡（promo-card--page）沒有身分區塊，愛心在頁首
+      var present = {};
+      document.querySelectorAll('.promo-card').forEach(function (card) {
+        var id = card.getAttribute('data-card-id') || '';
+        var slot = card.querySelector('.promo-rail-id');
+        if (!FAV_ID_RE.test(id) || !slot) return;
+        if (card.getAttribute('data-expired') !== '1') present[id] = true;
+        slot.appendChild(favButton(id, card.getAttribute('data-card-name')));
+      });
+      // 活動下架（卡片不在清單上）的收藏順手清掉：口袋名單只放比得到的卡
+      if (Object.keys(present).length) {
+        var kept = favIds.filter(function (id) { return present[id]; });
+        if (kept.length !== favIds.length) { favIds = kept; writeFavIds(); }
+      }
+    } else {
+      document.querySelectorAll('.pmc-fav-slot').forEach(function (slot) {
+        var id = slot.getAttribute('data-card-id') || '';
+        if (FAV_ID_RE.test(id)) slot.appendChild(favButton(id, slot.getAttribute('data-card-name')));
+      });
+    }
+    syncFavButtons();
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.pmc-fav-btn');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleFav(btn.getAttribute('data-fav-card'), btn.getAttribute('data-card-name'));
+    });
+    renderFavBar();
+    // 單卡頁的「看我的收藏」帶 ?fav=1 過來：直接進入只看收藏
+    if (!isCardPage && favIds.length) {
+      var params = null;
+      try { params = new URLSearchParams(location.search); } catch (err) { params = null; }
+      if (params && params.get('fav') === '1') setFavOnly(true);
+    }
+  }
+
+  // ---------- 單卡頁 /promos/<id>（2026-11-18）----------
+  function setupCardPage() {
+    if (!document.querySelector('.pmc-cp')) return;
+    // 卡片特色要等部署時注入；沒注入（本機、或注入器沒跑）就整節藏起來，不留空標題
+    var featSec = document.getElementById('pmc-cp-feat-sec');
+    var feat = featSec && featSec.querySelector('.promo-card-feat');
+    if (featSec && (!feat || !feat.innerHTML.trim())) featSec.hidden = true;
+    // 部署之後活動才到期：refreshBadgesAndExpiry 會把整張卡藏起來，這裡補一句話
+    var card = document.querySelector('.pmc-cp .promo-card');
+    var ended = document.getElementById('pmc-cp-ended');
+    if (card && ended && card.getAttribute('data-expired') === '1') ended.hidden = false;
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     setupSidebarDrawer();
     setupBackToTopButton();
@@ -1217,5 +1433,19 @@
     setupGiftLightbox();
     setupShineTrial();
     setupCardDetailOverlay();
+    setupCardPage();
+    setupFavorites();
+    setupCardIndexTracking();
   });
+
+  // 依卡片找（2026-11-22）：內容由 tools/build-promos-card-index.js 部署時注入，沒注入就沒有這區、這裡什麼都不做。
+  // 只記點了哪張卡（看「從卡名進單卡頁」這條路有沒有人走），連結照常前往。
+  function setupCardIndexTracking() {
+    var box = document.querySelector('.pmc-cardindex');
+    if (!box) return;
+    box.addEventListener('click', function (e) {
+      var a = e.target.closest('a[data-ci-card]');
+      if (a) track('promos_card_index', { card_id: a.getAttribute('data-ci-card') });
+    });
+  }
 })();

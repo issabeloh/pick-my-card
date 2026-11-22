@@ -72,6 +72,7 @@
 - [ ] **2-5 文案**：去掉「活動: ／匹配項目: ／活動期間: ／條件:」的冒號欄位感。標籤集中在 `renderActivityInfo()`（`js/results-display.js`）與各呼叫端的 `matchHtml`，
       一處改四種卡片一起變。**會動到回歸基準**（`baseline.json`、`card-detail-baseline.json` 都抓這些字）→ 照 `docs/ops/regression.md` 重拍，並在 commit 說明差異只有標籤字樣。
       ＊ ※ ✓ 開頭的註記大多在 Sheets 的條件欄（資料端），先盤點哪些是前端寫死、哪些要站長在 Sheets 改。**待決定：標籤改成什麼**（建議：灰色小標籤、不帶冒號，「匹配項目」→「通路」、「活動期間」→「期間」）
+- [ ] **分流測試結束後**：首次引導加一步「點回饋率可以看試算」（站長 2026-11-23 決定等測試結束再加；2026-11-22 起回饋率本身是按鈕，見 ui-display.md 1q 節）。測試期間不能動引導（5.5 節）
 - [x] 第一批的尾巴：行動支付卡補縮圖——2026-11-16。`renderPaymentCardResult()`（`js/levels-payments.js`）卡名前加 `renderCardThumb()`，單一支付詳情與「比較所有行動支付回饋」兩個 modal 一起有
 
 ### 3.1 頁籤為什麼怪、怎麼改

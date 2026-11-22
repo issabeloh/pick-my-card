@@ -140,7 +140,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 - 領券活動的溢出直接用 `basicCashback`（與 getOverflowRate 現值等價；不共用只是避免依賴，程式內有註解）
 - 無匹配 fallback：`buildBasicCashbackResult(card, amount)`（**只算 `basicCashback`，不加 `domesticBonusRate`**——2026-10-13 站長決定；國內加碼只在 cashbackModel 明確列出的槽才算）；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
-**計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
+**計算明細（回饋率按鈕，2026-11-22 起不再是計算機圖示，見 ui-display.md 1q）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），回饋率永遠是可點的按鈕。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
 **分層計算的觸發**（約 script.js:2186-2208）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
 

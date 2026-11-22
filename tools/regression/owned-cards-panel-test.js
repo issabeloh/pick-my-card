@@ -71,7 +71,8 @@ if (require.main === module) (async () => {
       detailOpen: document.getElementById('card-detail-modal').style.display === 'flex',
       ownedOpen: document.getElementById('my-owned-cards-modal').style.display === 'flex',
       status: document.getElementById('cd-save-status').dataset.state,
-      statusText: document.querySelector('#cd-save-status .cd-sv-t').textContent
+      // 2026-11-22 起狀態是標題列右側小字，整句分在幾個節點裡：讀 innerText 去空白（同 card-settings-promo-test.js）
+      statusText: document.getElementById('cd-save-status').innerText.replace(/\s+/g, '')
     };
   });
   const tile = (p, id) => p.evaluate(id => { const c = cardsData.cards.find(x => x.id === id); return [...document.querySelectorAll('.ow-tile')].find(t => t.querySelector('.ow-name') && t.querySelector('.ow-name').textContent === c.name).textContent; }, id);
@@ -87,16 +88,23 @@ if (require.main === module) (async () => {
   check('設定區是詳情頁那一份搬進來的（整頁只有 1 份），詳情頁沒有被打開', st.inPanel && !st.inDetail && st.secCount === 1 && !st.detailOpen);
   check('面板顯示卡名與 CUBE 的計算條件欄位', await p.evaluate(() => document.getElementById('owned-panel-name').textContent === cardsData.cards.find(c => c.id === 'cathay-cube').name &&
     !!document.getElementById('card-level-select') && !!document.getElementById('cube-issuer-select') && !!document.getElementById('children-eligible-checkbox')));
-  check('控制項樣式跟詳情頁一樣（下拉 36px 高、開關是自訂外觀）', await p.evaluate(() => {
-    const sel = getComputedStyle(document.getElementById('statement-date')); const sw = getComputedStyle(document.getElementById('fee-waiver-checked'));
-    return sel.height === '36px' && sel.width === '132px' && sw.appearance === 'none' && sw.width === '40px'; }));
-  check('面板裡不顯示「個人設定」標題與「可以在我的信用卡…」提示', await p.evaluate(() => getComputedStyle(document.querySelector('#card-personal-section .cd-set-h')).display === 'none' && getComputedStyle(document.querySelector('#card-personal-section .cd-set-foot')).display === 'none'));
+  // 控制項樣式：面板裡量一次，等一下在詳情頁再量一次，兩邊要一樣（不寫死數字：手機／桌機的高度、字級本來就不同）
+  const ctlStyle = () => p.evaluate(() => {
+    const pick = (id, props) => { const c = getComputedStyle(document.getElementById(id)); return props.map(k => c[k]).join('|'); };
+    return [pick('statement-date', ['height', 'width', 'fontSize', 'color', 'borderTopColor', 'borderRadius']),
+      pick('fee-waiver-checked', ['appearance', 'width', 'height', 'backgroundColor']),
+      pick('credit-limit-input', ['height', 'width', 'color', 'textAlign']),
+      getComputedStyle(document.querySelector('label[for="statement-date"]')).fontSize].join(' / ');
+  });
+  const panelStyle = await ctlStyle();
+  check('面板裡的控制項是自訂外觀（開關 appearance:none、下拉 132px 寬）', /^[^|]+\|132px\|/.test(panelStyle) && /none\|40px\|24px/.test(panelStyle), panelStyle);
+  check('面板裡保留「個人設定」標題列（儲存狀態住在那裡），不顯示「到首頁點我的信用卡」提示', await p.evaluate(() => document.querySelector('#card-personal-section .cd-set-hd').offsetParent !== null && getComputedStyle(document.querySelector('#card-personal-section .cd-set-foot')).display === 'none'));
   check('結帳日／繳款截止日：未設定＋每月 1–31 日', await p.evaluate(() => ['statement-date', 'billing-date'].every(id => { const o = [...document.getElementById(id).options]; return o.length === 32 && o[0].textContent === '未設定' && o[0].value === '' && o[31].textContent === '每月 31 日'; })));
   await p.selectOption('#statement-date', '5'); await p.waitForTimeout(500);
   await p.selectOption('#billing-date', '20'); await p.waitForTimeout(600);
   st = await state(p);
-  check('選結帳日 5、繳款日 20 → 訪客 key 存 {billingDate:"20", statementDate:"5"}，狀態列黃色帶時間',
-    await p.evaluate(() => localStorage.getItem('billingDates_local_cathay-cube')) === '{"billingDate":"20","statementDate":"5"}' && st.status === 'local' && /・今天/.test(st.statusText), st.statusText);
+  check('選結帳日 5、繳款日 20 → 訪客 key 存 {billingDate:"20", statementDate:"5"}，狀態列回到訪客「存在這台裝置」',
+    await p.evaluate(() => localStorage.getItem('billingDates_local_cathay-cube')) === '{"billingDate":"20","statementDate":"5"}' && st.status === 'local' && /存在這台裝置/.test(st.statusText), st.statusText);
   await p.fill('#credit-limit-input', '200000'); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
   await p.click('label[for="fee-waiver-checked"]'); await p.waitForTimeout(500);
   await p.selectOption('#cube-issuer-select', 'JCB'); await p.waitForTimeout(500);
@@ -130,6 +138,8 @@ if (require.main === module) (async () => {
   st = await state(p);
   check('「查看回饋詳情 ›」→ 詳情頁打開、設定區回到詳情頁、下層回到卡片格', st.detailOpen && st.inDetail && !st.inPanel && st.grid && !st.panel);
   await p.evaluate(() => selectCardDetailTab('set')); await p.waitForTimeout(200);
+  const detailStyle = await ctlStyle();
+  check('控制項樣式在面板與詳情頁完全一樣（高、寬、字級、顏色、框線、開關）', detailStyle === panelStyle, detailStyle === panelStyle ? '' : panelStyle + '  ≠  ' + detailStyle);
   check('詳情頁的個人設定頁籤照常可見、有提示行', await p.evaluate(() => { const s = document.getElementById('card-personal-section'); return !s.hidden && s.offsetParent !== null && getComputedStyle(s.querySelector('.cd-set-foot')).display !== 'none'; }));
   await p.evaluate(() => document.getElementById('close-card-detail').click()); await p.waitForTimeout(400);
   check('關掉詳情頁 → 回到「我的信用卡」卡片格', (await state(p)).grid && (await state(p)).ownedOpen);
@@ -211,11 +221,11 @@ if (require.main === module) (async () => {
   check('面板讀到雲端日期', await p.evaluate(() => document.getElementById('statement-date').value === '7' && document.getElementById('billing-date').value === '25'));
   await p.selectOption('#billing-date', '15'); await p.waitForTimeout(800);
   st = await state(p);
-  check('改繳款日 → 寫入 users/testuid.billingDates，狀態列綠＋時間', await p.evaluate(() => { const x = __sets.filter(s => s.path === 'users/testuid' && s.data.billingDates).pop(); return !!x && x.data.billingDates['cathay-cube'].billingDate === '15' && x.data.billingDates['cathay-cube'].statementDate === '7'; }) && st.status === 'ok' && /・今天/.test(st.statusText), st.statusText);
+  check('改繳款日 → 寫入 users/testuid.billingDates，狀態列綠＋時間', await p.evaluate(() => { const x = __sets.filter(s => s.path === 'users/testuid' && s.data.billingDates).pop(); return !!x && x.data.billingDates['cathay-cube'].billingDate === '15' && x.data.billingDates['cathay-cube'].statementDate === '7'; }) && st.status === 'ok' && /^已儲存・\d\d:\d\d$/.test(st.statusText), st.statusText);
   await p.evaluate(() => { __failSets = 1; __failCode = 'unavailable'; });
   await p.selectOption('#statement-date', '9'); await p.waitForTimeout(800);
   st = await state(p);
-  check('雲端失敗 → 紅字（結帳日／繳款日）＋已先存在這台裝置', st.status === 'err' && /（結帳日／繳款日）/.test(st.statusText) && /已先存在這台裝置/.test(st.statusText) &&
+  check('雲端失敗 → 紅字「結帳日／繳款日沒存成功」＋第二行「已先存在這台裝置」', st.status === 'err' && /^結帳日／繳款日沒存成功/.test(st.statusText) && /已先存在這台裝置/.test(st.statusText) &&
     await p.evaluate(() => JSON.parse(localStorage.getItem('billingDates_testuid_cathay-cube')).statementDate === '9'), st.statusText);
   await p.context().close();
 
