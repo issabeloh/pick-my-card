@@ -4902,16 +4902,30 @@ input[type="number"]:focus {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+/* 卡片用途＝引言（2026-11-23 站長選設計 4-B）：拿掉左側色條與半透明框，中文引號「」框住整句，
+   下一行靠右小字署名「— 大師點評」。手機在藍色頁首裡用白字，桌機白色側欄用深灰字＋品牌藍引號 */
 #card-detail-modal .cd-sum .card-use-case {
     margin: 0;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.13);
-    border-left: 3px solid rgba(255, 255, 255, 0.5);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
     color: #fff;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.65;
 }
-#card-detail-modal .cd-sum .card-use-case[hidden] { display: none; }
+#card-detail-modal .cd-sum .card-use-case::before { content: "「"; font-weight: 800; opacity: 0.6; }
+#card-detail-modal .cd-sum .card-use-case::after { content: "」"; font-weight: 800; opacity: 0.6; }
+#card-detail-modal .cd-sum .card-use-case-cite {
+    margin: -8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.4;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.75);
+}
+#card-detail-modal .cd-sum .card-use-case[hidden],
+#card-detail-modal .cd-sum .card-use-case-cite[hidden] { display: none; }
 
 /* --- 頁籤列（sticky，在頁首下方）：照首頁 .home-view-switch——藍底上的文件夾頁籤，選中的那張是頁面底色 --- */
 .cd-tabsbar {
@@ -5209,11 +5223,10 @@ input[type="number"]:focus {
     .cd-fact dt { color: #6b7280; }
     .cd-fact dd { font-size: 19px; }
     .cd-fact-fee dd.is-raw { font-size: 11.5px; }
-    #card-detail-modal .cd-sum .card-use-case {
-        background: #f8fafc;
-        border-left-color: #1e3a8a;
-        color: #1e3a5f;
-    }
+    #card-detail-modal .cd-sum .card-use-case { color: #374151; }
+    #card-detail-modal .cd-sum .card-use-case::before,
+    #card-detail-modal .cd-sum .card-use-case::after { color: #1e40af; opacity: 1; }
+    #card-detail-modal .cd-sum .card-use-case-cite { color: #6b7280; }
 
     /* 個人設定：桌機常駐左欄，不受頁籤切換影響（.cd-pan-set 的 hidden 在桌機不生效） */
     #card-detail-modal .cd-pan { padding: 0; }
