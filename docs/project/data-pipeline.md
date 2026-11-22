@@ -442,7 +442,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，「詳情」才對齊
   - 🔴 **`.promo-sub-meta` 跨兩排、垂直置中**，所以獎品圖與「詳情」的位置**與文字行數無關**，
     展開收合都不動。改成 grid 之前這裡靠 `[aria-expanded="true"]` 切 `align-items`
-    再補 `margin-top: 1px`，結果每一列點開瞬間整排跳位（見教訓記錄）。
+    再補 `margin-top: 1px`，結果每一列點開瞬間整排跳位（通則見 9f「CSS」：對齊方式與展開狀態無關）。
     **別再把排版綁回互動狀態**
   - 下排摘要兩行封頂（最長一筆 79 字），展開後整段攤開；兩個寬度共用同一組規則
   - 收合那行的右側固定是「詳情 ▾」（主活動那顆維持全稱「活動詳情 ▾」）。補充說明
@@ -563,10 +563,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 所以差異只會是生成邏輯本身的差異。⚠️ 這不改變「實際執行版在 Sheets」：
 改了 `cards-export.gs` 仍然必須把整份貼回 Sheets，否則下次匯出會用舊邏輯蓋掉。
 
-**待清理**：`promos.css` 前段還留著舊卡片版型的死碼（`.promo-card-toggle`／
-`.promo-card-detail`／`.promo-card-header`／`.promo-card-mainline`／
-`.promo-quick-highlight`／`.promo-gift-thumb`／`.promo-card-info-btn` 等），對應的 class 已經不再出現在
-生成的 HTML 裡。（2026-11-22 查：2026-09-21 已清掉大半，`promos.css` 只剩 `.promo-card-toggle`、`.promo-quick-highlight`、`.promo-gift-thumb` 還出現，刪前先照 9f 的判準確認。）留著不影響畫面，下次動這支 CSS 時應一併刪掉。
+**舊卡片版型的死碼已清完**：2026-09-21 刪掉 53 條（`.promo-card-toggle`／`-detail`／`-header`／`-mainline`／`.promo-hero*`／`.promo-quick-highlight`／`.promo-gift-thumb` 等，判準見 9f「CSS」）。2026-11-22 查 `promos.css` 已無以這些 class 為選擇器的規則，只剩幾行註解提到舊名。
 
 ### 9b. 站長推薦＋行李箱專區（2026-09-23）
 
@@ -765,7 +762,7 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 
 **生成器**
 - 任何就地改寫 HTML 的生成器都要能重複執行，部署流程不保證只跑一次。找配對的結尾標籤要數巢狀深度，不能用非貪婪 regex 配第一個 `</div>`（2026-09-18 卡片特色在 preview 上每張卡都變兩份）。repo 只 commit 空容器版（見 9a），注入只在部署時發生
-- 改 `cards-export.gs` 的生成邏輯要兩手都做：整份貼回 Sheets，**並且**用 `node tools/build-promos-page.js` 把 repo 的 `promos.html` 重生成與生成器輸出逐字一致（`sitemap.xml` 同理）。線上服務的是 repo 這份，改生成器不會讓線上立刻變；驗收是請站長觸發一次匯出後 grep 關鍵字（2026-09-02）
+- 改 `cards-export.gs` 的生成邏輯要兩手都做：整份貼回 Sheets，**並且**用 `node tools/build-promos-page.js` 把 repo 的 `promos.html` 重生成與生成器輸出逐字一致；`sitemap.xml` 沒有本機重生腳本，要手動補成與 `cards-export.gs` 的 `generateSitemapXml_()` 輸出逐字一致（不一致會在下次匯出來回打架）。線上服務的是 repo 這份，改生成器不會讓線上立刻變；驗收是請站長觸發一次匯出後 grep 關鍵字（2026-09-02）
 - 生成器標記與 `promos.css` 一起改時，兩邊上線時間不同：`promos.css` merge 就上線，新標記要等貼回 Sheets、下一次匯出才換上（期間每次匯出都會蓋回舊標記）。`promos.css` 的新規則必須同時讓舊標記排得能看，兩種標記都要實測；新標記上線後再清相容規則（2026-10-21）
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
