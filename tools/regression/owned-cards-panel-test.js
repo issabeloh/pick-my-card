@@ -11,6 +11,7 @@
  *    訪客存 billingDates_local_<id>、登入者存 users/<uid>.billingDates；失敗照實顯示紅字；卡片格多一行
  *  - 🔒 鐵則 1：開面板不呼叫 saveCardLevel；存的級別找不到只顯示預設、不寫回；用戶改級別才存一次，且不打開詳情頁
  *  - 打完筆記立刻按「‹ 所有卡片」或關閉 → 筆記照樣存
+ *  - 選卡 modal（管理我的信用卡／管理加入比較的卡片）的儲存列：有改動才出現、固定在底部；管理視窗跟「我的信用卡」同寬
  * 沿用 run-regression.js 的凍結資料與時鐘、card-settings-promo-test.js 的 Firebase 替身。
  */
 'use strict';
@@ -145,6 +146,44 @@ if (require.main === module) (async () => {
   await p.evaluate(() => document.getElementById('close-owned-modal').click());
   await p.evaluate(() => showCardDetail('cathay-cube')); await p.waitForTimeout(600);
   check('詳情頁也有結帳日／繳款日，值是剛剛在面板存的', await p.evaluate(() => document.getElementById('statement-date').value === '5' && document.getElementById('billing-date').value === '20'));
+  await p.context().close();
+
+  console.log('A3. 選卡 modal 的儲存列（2026-11-22：有改動才出現、固定在底部）');
+  p = await open(true, 1280);
+  await p.evaluate(() => openMyOwnedCardsModal()); await p.waitForTimeout(400);
+  await p.click('#manage-owned-cards-btn'); await p.waitForTimeout(400);
+  const foot = (p, id) => p.evaluate(id => { const f = document.getElementById(id).closest('.modal').querySelector('.sel-footer'); return { shown: !f.hidden && f.offsetParent !== null, text: f.querySelector('.sel-dirty').textContent }; }, id);
+  check('上方的儲存鈕拿掉了', await p.evaluate(() => !document.getElementById('save-owned-cards-btn-top') && !document.getElementById('save-cards-btn-quick')));
+  check('桌機：「管理我的信用卡」跟後面的「我的信用卡」同寬（蓋得住）', await p.evaluate(() => {
+    const a = document.querySelector('#my-owned-cards-modal .modal-content').getBoundingClientRect(); const b = document.querySelector('#manage-owned-cards-modal .modal-content').getBoundingClientRect();
+    return Math.abs(a.width - b.width) < 1 && b.left <= a.left + 1 && b.right >= a.right - 1; }));
+  check('沒改動 → 沒有儲存列', !(await foot(p, 'owned-cards-selection')).shown);
+  const firstOff = await p.evaluate(() => [...document.querySelectorAll('#owned-cards-selection input')].find(c => !c.checked).id);
+  await p.click('#' + firstOff); await p.waitForTimeout(100);
+  let f = await foot(p, 'owned-cards-selection');
+  check('勾一張 → 出現「已變更 1 張」儲存列', f.shown && f.text === '已變更 1 張', f.text);
+  check('儲存列固定在視窗底部（捲到最上面也看得到）', await p.evaluate(() => {
+    const m = document.querySelector('#manage-owned-cards-modal .modal-content'); m.scrollTop = 0;
+    const fr = m.querySelector('.sel-footer').getBoundingClientRect(); const mr = m.getBoundingClientRect();
+    return m.scrollHeight > m.clientHeight && Math.abs(fr.bottom - mr.bottom) < 2; }));
+  await p.click('#' + firstOff); await p.waitForTimeout(100);
+  check('勾回原樣 → 儲存列消失', !(await foot(p, 'owned-cards-selection')).shown);
+  await p.click('#toggle-all-owned-cards'); await p.waitForTimeout(100);
+  f = await foot(p, 'owned-cards-selection');
+  check('「全選」也會更新（已變更 N 張）', f.shown && /^已變更 \d+ 張$/.test(f.text), f.text);
+  await p.click('#save-owned-cards-btn'); await p.waitForTimeout(500);
+  check('儲存 → 關掉管理、持有卡＝全部', await p.evaluate(() => document.getElementById('manage-owned-cards-modal').style.display === 'none' && myOwnedCards.size === cardsData.cards.length));
+  await p.click('#manage-owned-cards-btn'); await p.waitForTimeout(400);
+  check('再打開 → 以新的勾選為基準，沒有儲存列', !(await foot(p, 'owned-cards-selection')).shown);
+  await p.evaluate(() => { document.getElementById('close-manage-owned-modal').click(); document.getElementById('close-owned-modal').click(); });
+  // 管理加入比較的卡片：同一套
+  await p.evaluate(() => openManageCardsModal()); await p.waitForTimeout(400);
+  check('加入比較：沒改動 → 沒有儲存列', !(await foot(p, 'cards-selection')).shown);
+  await p.evaluate(() => { const c = document.querySelector('#cards-selection .card-checkbox-image'); c.click(); });
+  f = await foot(p, 'cards-selection');
+  check('加入比較：點卡圖切換 → 「已變更 1 張」', f.shown && f.text === '已變更 1 張', f.text);
+  await p.click('#cancel-cards-btn'); await p.waitForTimeout(200);
+  check('取消 → 關閉、沒有存', await p.evaluate(() => document.getElementById('manage-cards-modal').style.display === 'none'));
   await p.context().close();
 
   console.log('B. 已登入');

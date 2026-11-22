@@ -3591,18 +3591,6 @@ input[type="number"]:focus {
     flex-wrap: wrap;
     align-items: center;
 }
-/* compact save button on the 全選 row (mirrors the bottom save button) */
-.save-btn-top {
-    margin-left: auto;
-    padding: 6px 16px;
-    font-size: 13.5px;
-}
-
-.modal-action-save-btn {
-    margin-left: auto;
-    padding: 6px 14px !important;
-    font-size: 13px !important;
-}
 
 .toggle-all-btn {
     background: #e5e7eb;
@@ -4005,9 +3993,25 @@ input[type="number"]:focus {
     border-radius: 0 0 12px 12px;
     padding: 0;
 }
-#my-owned-cards-modal .modal-content {
+#my-owned-cards-modal .modal-content,
+#manage-owned-cards-modal .modal-content {
+    /* 「管理我的信用卡」疊在「我的信用卡」上面：同寬才蓋得住（2026-11-22，桌機原本左右露出後面那層） */
     max-width: 660px;
 }
+
+/* 選卡 modal 的儲存列（2026-11-22）：勾選有改動才出現（hidden 由 updateSelectionDirtyState 切），
+   固定在 .modal-content 捲動容器的底部 */
+.sel-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    align-items: center;
+    padding: 12px 20px;
+    background: #fff;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+.sel-footer[hidden] { display: none; }
+.sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: #374151; }
 
 .ow-count-badge {
     color: #94a3b8;

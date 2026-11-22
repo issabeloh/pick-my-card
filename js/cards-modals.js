@@ -2,7 +2,7 @@
  * Pick My Card — js/cards-modals.js（載入順序 8/12）
  * 區塊目錄（Grep 關鍵字）：
  *  - 手機側選單                → "setupSidebarDrawer"
- *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal"
+ *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal" / "updateSelectionDirtyState"
  *  - 管理比較卡/持有卡入口      → "openManageCardsModal" / "openMyOwnedCardsModal"
  *  - 持有卡總覽（卡片格）       → "renderOwnedCardsOverview"
  *  - 單卡面板（點卡片直接編輯）→ "openOwnedCardPanel" / "ownedPanelExit"
@@ -219,6 +219,7 @@ function _renderCardSelectionModal(config) {
         if (canEdit) {
             checkbox.addEventListener('change', () => {
                 cardDiv.classList.toggle('selected', checkbox.checked);
+                updateSelectionDirtyState(config.selectionId);
             });
         }
         const peekBtn = cardDiv.querySelector('.card-detail-peek-btn');
@@ -234,10 +235,15 @@ function _renderCardSelectionModal(config) {
                 e.stopPropagation();
                 checkbox.checked = !checkbox.checked;
                 cardDiv.classList.toggle('selected', checkbox.checked);
+                updateSelectionDirtyState(config.selectionId);
             });
         }
         cardsSelection.appendChild(cardDiv);
     });
+
+    // 打開當下的勾選＝比較基準：之後跟它不同才出現儲存列（只算現有資料裡的卡，下架卡不算改動）
+    cardsSelection._initialSelection = new Set(sortedCards.filter(c => currentSelection.has(c.id)).map(c => c.id));
+    updateSelectionDirtyState(config.selectionId);
 
     // Enable/disable footer buttons based on edit permission
     if (!canEdit) {
@@ -285,6 +291,26 @@ function _renderCardSelectionModal(config) {
     }
     searchInput._cardSelectionListener = applyFilters;
     searchInput.addEventListener('input', applyFilters);
+}
+
+// 儲存列（2026-11-22，站長：儲存鈕有改動才出現、固定在下方，不用上下捲去找）。
+// 「管理我的信用卡」與「管理加入比較的卡片」共用：數一數跟打開當下不同的勾選有幾張，
+// 0 張 → 藏起儲存列（沒改就用右上角 × 關）；≥1 張 → 顯示「已變更 N 張　取消　儲存設定」。
+// 勾選框的 change 會觸發；用程式改勾選的地方（點卡圖、全選、套用我的信用卡）要自己呼叫這支
+function updateSelectionDirtyState(selectionId) {
+    const box = document.getElementById(selectionId);
+    const modal = box && box.closest('.modal');
+    const footer = modal && modal.querySelector('.sel-footer');
+    if (!box || !footer) return 0;
+    const initial = box._initialSelection || new Set();
+    let changed = 0;
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (cb.checked !== initial.has(cb.value)) changed++;
+    });
+    footer.hidden = changed === 0;
+    const label = footer.querySelector('.sel-dirty');
+    if (label) label.textContent = changed ? `已變更 ${changed} 張` : '';
+    return changed;
 }
 
 // Open the "管理加入比較的卡片" modal
@@ -665,11 +691,6 @@ function setupMyOwnedCardsModal() {
     cancelBtn.addEventListener('click', closeManage);
     manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
 
-    // Top save button (on the 全選 row) proxies the bottom one so users
-    // don't have to scroll to the footer to save.
-    const saveBtnTop = document.getElementById('save-owned-cards-btn-top');
-    if (saveBtnTop) saveBtnTop.addEventListener('click', () => saveBtn.click());
-
     saveBtn.addEventListener('click', async () => {
         const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
         const newSelection = new Set();
@@ -691,6 +712,7 @@ function setupMyOwnedCardsModal() {
             checkboxes.forEach(cb => { cb.checked = true; cb.parentElement.classList.add('selected'); });
             toggleAllBtn.textContent = '全不選';
         }
+        updateSelectionDirtyState('owned-cards-selection');
     });
 }
 

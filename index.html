@@ -865,15 +865,16 @@
                     <div class="modal-action-buttons">
                         <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">套用我的信用卡選項</button>
                         <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
-                        <button id="save-cards-btn-quick" class="save-btn modal-action-save-btn">儲存</button>
                     </div>
                     <div class="cards-selection" id="cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
+                <div class="modal-footer sel-footer" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-cards-btn" class="cancel-btn">取消</button>
+                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -937,15 +938,16 @@
                     </div>
                     <div class="modal-action-buttons">
                         <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
-                        <button id="save-owned-cards-btn-top" class="save-btn save-btn-top" type="button">儲存設定</button>
                     </div>
                     <div class="cards-selection" id="owned-cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
+                <div class="modal-footer sel-footer" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-owned-cards-btn" class="cancel-btn">取消</button>
+                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
