@@ -419,12 +419,19 @@ async function showCardDetail(cardId) {
     annualFeeEl.title = card.annualFee || '';
     document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '';
 
-    // 回饋類型＋點數效期（摘要裡的一行小字）；沒資料就整行文字不出現
-    const cashbackTypeSpan = document.getElementById('card-cashback-type');
-    const typeParts = [];
-    if (card.basicCashbackType) typeParts.push(card.basicCashbackType);
-    if (card.pointsExpiry) typeParts.push(card.pointsExpiry);
-    cashbackTypeSpan.textContent = typeParts.join('｜');
+    // 回饋類型＋點數效期（2026-11-23 起在「回饋」頁籤最下面的收合區塊 #card-reward-info，各有小標）。
+    // textContent 填（Sheets 自由文字，鐵則 3）；沒資料的那一列藏起來，兩列都沒有就整塊不顯示；換卡時收回去
+    const rewardInfo = document.getElementById('card-reward-info');
+    if (rewardInfo) {
+        const cbType = String(card.basicCashbackType || '').trim();
+        const expiry = String(card.pointsExpiry || '').trim();
+        document.getElementById('card-cashback-type').textContent = cbType;
+        document.getElementById('card-points-expiry').textContent = expiry;
+        document.getElementById('card-cashback-type-row').hidden = !cbType;
+        document.getElementById('card-points-expiry-row').hidden = !expiry;
+        rewardInfo.hidden = !cbType && !expiry;
+        rewardInfo.open = false;
+    }
 
     // 一般回饋區：先不畫——「一般回饋特列項目」這類組別在下面各條指定通路路徑裡才分得出來，
     // 它們要併進這一區的「國內一般消費」卡（見 splitGeneralListEntries），所以等指定通路算完再畫
