@@ -541,7 +541,7 @@ Grep `titleParts`）：
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
 - **編輯處只有詳情頁**：`#credit-limit-section`（個人設定「我的紀錄」組的第一列）
-- 輸入框（2026-11-17 起在個人設定「我的紀錄」第一列，標籤左、36px 高 132px 寬的輸入框靠右；沒有 NT$ 前綴，單位寫在說明小字）：只收數字、自動千分位（墨色）、失焦或 Enter 即存；沒值顯示 placeholder「未設定」；`inputmode="numeric"`+pattern。儲存結果由儲存狀態列表達（`cdTrackSave('credit', …)`），不再有 2 秒就消失的「✓ 已儲存」
+- 輸入框（2026-11-17 起在個人設定「我的紀錄」第一列，標籤左、36px 高 132px 寬的輸入框靠右；沒有 NT$ 前綴，單位寫在說明小字）：只收數字、自動千分位（深灰 #374151，2026-11-23 起；原為墨色）、失焦或 Enter 即存；沒值顯示 placeholder「未設定」；`inputmode="numeric"`+pattern。儲存結果由儲存狀態列表達（`cdTrackSave('credit', …)`），不再有 2 秒就消失的「✓ 已儲存」
 - 儲存比照免年費：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）＋本機鏡像 `creditLimit_<uid>_<cardId>`；清空＝刪除
 - 函數：`loadCreditLimit()`/`saveCreditLimit()`（2026-11-17 起回傳儲存結果）/`setupCreditLimit()`（Grep "我的額度相關功能"）
 - 「我的信用卡」卡片格唯讀顯示「額度 N 萬」（非整千則 `NT$x,xxx`）或「額度未填」；摘要列顯示總額度（第 5 節）

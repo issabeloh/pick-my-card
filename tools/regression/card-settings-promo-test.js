@@ -120,8 +120,8 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   check('筆記：停 1 秒自動存（localStorage＋狀態列 busy→回訪客狀態）', await p.evaluate(() => localStorage.getItem('notes_cathay-cube')) === '第一行筆記' && q.some(x => x.s === 'busy') && q[q.length - 1].s === 'local');
   check('沒有 💾／#save-indicator／#credit-limit-saved', await p.evaluate(() => !document.getElementById('save-notes-btn') && !document.getElementById('save-indicator') && !document.getElementById('credit-limit-saved') && !document.getElementById('card-detail-modal').textContent.includes('💾')));
   await p.fill('#credit-limit-input', '150000'); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
-  check('額度 150000 → 顯示 150,000、墨色、存 localStorage', await p.inputValue('#credit-limit-input') === '150,000' &&
-    await p.evaluate(() => getComputedStyle(document.getElementById('credit-limit-input')).color) === 'rgb(17, 24, 39)' &&
+  check('額度 150000 → 顯示 150,000、深灰 #374151、存 localStorage', await p.inputValue('#credit-limit-input') === '150,000' &&
+    await p.evaluate(() => getComputedStyle(document.getElementById('credit-limit-input')).color) === 'rgb(55, 65, 81)' &&   // 2026-11-23 起值用深灰 #374151（不搶標籤）
     await p.evaluate(() => localStorage.getItem('creditLimit_local_cathay-cube')) === '150000');
   await p.fill('#credit-limit-input', ''); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
   check('額度清空 → placeholder「未設定」', await p.getAttribute('#credit-limit-input', 'placeholder') === '未設定' && await p.inputValue('#credit-limit-input') === '');
