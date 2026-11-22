@@ -17,7 +17,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 1. **Cards Data** —— 信用卡基本資料和回饋規則
    - 必填：`id, name, fullName, basicCashback, annualFee, feeWaiver, website, tags`
-   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
+   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。`register-link-finder.gs` 同理用 `regLinkMaxSlot_()`：凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭偵測、禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限（2026-09-29 slot 23–26 的「需登錄」活動靜默漏抓登錄連結）。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
@@ -251,7 +251,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 混用時不會報錯，活動會**被靜默濾掉**（看起來像「根本沒這活動」）：ASCII `-` < `/`，原始字串比較會把任何日期誤判成「即將開始」；`.split('-')` 遇 `/` 格式解析成 `Invalid Date`，最後被 `filterExpiredRates()` 整個濾掉（2026-07-03 教訓）。
 
-**規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
+**規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。看到「過期活動還在顯示」，先查日期解析格式，並 Grep 手刻 `.split('/')`／`.split('-')` 的日期比較（2026-07-15 舊 `parseDateString()` 只認「/」，ISO 截止日解析成 null 被當成無截止日，6/30 過期的新戶活動一直顯示；該函數已刪）。
 
 ## 9. promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
 
@@ -442,7 +442,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
     同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，「詳情」才對齊
   - 🔴 **`.promo-sub-meta` 跨兩排、垂直置中**，所以獎品圖與「詳情」的位置**與文字行數無關**，
     展開收合都不動。改成 grid 之前這裡靠 `[aria-expanded="true"]` 切 `align-items`
-    再補 `margin-top: 1px`，結果每一列點開瞬間整排跳位（見教訓記錄）。
+    再補 `margin-top: 1px`，結果每一列點開瞬間整排跳位（通則見 9f「CSS」：對齊方式與展開狀態無關）。
     **別再把排版綁回互動狀態**
   - 下排摘要兩行封頂（最長一筆 79 字），展開後整段攤開；兩個寬度共用同一組規則
   - 收合那行的右側固定是「詳情 ▾」（主活動那顆維持全稱「活動詳情 ▾」）。補充說明
@@ -487,7 +487,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
   `.promo-feat-modal-foot`（搬節點而不是複製字串，`setupCardDetailOverlay` 的 document
   委派才收得到點擊）。連結搬走後抬頭可能整列空掉，所以會 `head.hidden = true`——
   ⚠️ `.promo-feat-head` 是 `display:flex`，CSS 必須補
-  `.promo-feat-head[hidden]{display:none}`（這頁第五次踩同一個坑）
+  `.promo-feat-head[hidden]{display:none}`（這頁第五次踩同一個坑，通則見 9f）
 - **同一列的卡片等高 ＋ 空白遞補**（2026-09-21 站長）：
   - `.promo-card` 不再 `align-self: start`，改成直向 flex＋`align-self: stretch`；
     單檔卡的 `.promo-card-main` `flex: 1`、按鈕列 `margin-top: auto`，所以同一列的
@@ -545,7 +545,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 🔴 **repo 一律 commit「空容器」版**（＝`tools/build-promos-page.js` 的原樣輸出），
 注入只發生在部署時。本機注入過要驗畫面沒問題，但 commit 前要用
-`node tools/build-promos-page.js` 還原。理由見下方教訓記錄 2026-09-18。
+`node tools/build-promos-page.js` 還原。理由見 9f「生成器」。
 
 **卡片特色的選題規則**（全部在 `tools/build-promos-features.js`，逐條有註解）
 
@@ -563,10 +563,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 所以差異只會是生成邏輯本身的差異。⚠️ 這不改變「實際執行版在 Sheets」：
 改了 `cards-export.gs` 仍然必須把整份貼回 Sheets，否則下次匯出會用舊邏輯蓋掉。
 
-**待清理**：`promos.css` 前段還留著舊卡片版型的死碼（`.promo-card-toggle`／
-`.promo-card-detail`／`.promo-card-header`／`.promo-card-mainline`／
-`.promo-quick-highlight`／`.promo-gift-thumb`／`.promo-card-info-btn` 等），對應的 class 已經不再出現在
-生成的 HTML 裡。留著不影響畫面，下次動這支 CSS 時應一併刪掉。
+**舊卡片版型的死碼已清完**：2026-09-21 刪掉 53 條（`.promo-card-toggle`／`-detail`／`-header`／`-mainline`／`.promo-hero*`／`.promo-quick-highlight`／`.promo-gift-thumb` 等，判準見 9f「CSS」）。2026-11-22 查 `promos.css` 已無以這些 class 為選擇器的規則，只剩幾行註解提到舊名。
 
 ### 9b. 站長推薦＋行李箱專區（2026-09-23）
 
@@ -729,7 +726,7 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
   寫進 `cards.data` 的 `promoCardUpdatedIso`，部署端烤進頁面（資料更新於／dateModified），sitemap 的 lastmod 同源。
   一張卡改活動不會讓其他頁的 lastmod 一起前進。貼新版之前沒有這欄，部署端退回清單頁的「資料更新於」。
 - **三格的收藏格**（2026-11-22 站長：拿掉「回饋金額」——正下方活動卡就有；愛心從卡圖列搬進來）：`.pmc-cp-fact-fav` 裡的 `.pmc-fav-slot`，
-  按鈕 `::after` 蓋滿整格＝整格都點得到。⚠️ 按下的縮放動畫套在 svg、**不能套在按鈕上**（見教訓）。
+  按鈕 `::after` 蓋滿整格＝整格都點得到。⚠️ 按下的縮放動畫套在 svg、**不能套在按鈕上**（見 9f）。
   愛心搬走後卡圖列的右欄變寬；窄手機另讓卡圖縮（`clamp(88px, 100% - 222px, 128px)`），「經 Money101 合作連結前往銀行官網」340px 以上不折行。
 - **卡片特色的「卡片用途」＝大師點評引言**（2026-11-22，比照詳情頁 1q 的 `.card-use-case` 桌機版）：注入器在 `.promo-feat-usage` 後面
   一律輸出 `.promo-feat-usage-cite`「— 大師點評」，`promos.css` 預設藏起來，只有 `.pmc-cp-feat-sec` 裡顯示並改成引號樣式。清單頁 modal 仍是色條樣式。
@@ -749,6 +746,24 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - `setupJumpSpy()`：最後一區比畫面矮、頂端碰不到分頁列，**捲到底就標最後一顆**（不然點了「依卡片找」會標在「新戶活動」）。
 - GA4：`promos_card_index`（card_id）。
 - 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-card-index.js`；看完 `node tools/build-promos-page.js` 還原 promos.html，**注入結果不 commit**。
+
+### 9f. promos 維護通則（2026-11-22 由教訓記錄歸納）
+
+> 括號裡的日期是當初踩到的那次，完整經過見 `docs/archive/data-pipeline.md-2026-11-22.bak` 的教訓記錄。
+
+**CSS**
+- 靠 `el.hidden` 控制顯示的元素，只要 CSS 給了 `display`，就同時補 `[hidden] { display: none; }`。驗收看 `getComputedStyle(el).display`，不看 `el.hidden`。這頁已踩五次：倒數徽章、堆疊層、類型篩選、「即將結束」chip（2026-09-20）、`.promo-feat-head`
+- 沿用既有 class 換一套樣式時，覆寫選擇器寫成雙 class（`.promo-act-row.promo-sub-row`）：同分時後定義的贏，單 class 覆寫可能整個沒生效。驗收讀 `getComputedStyle(el).padding`，不要只看原始碼有沒有寫（2026-09-21）
+- 元素換了角色（從「卡片」變「外框」）或搬到別的容器後，`grep` 舊 class 在所有 media query 與 `.祖先 .那個 class` 組合裡的出現位置，逐條確認。2026-09-21 踩兩次：`.promo-act` 每列多出 28px 內距、單檔卡按鈕的 `margin-top: 0` 吃掉 rail 的間距
+- 對齊方式要與展開狀態無關，只有「因為內容變高而不得不動」的東西可以動。根治做法是把不該動的東西放進它動不了的格子（附屬列改 grid、獎品圖與「詳情」放進跨兩排垂直置中的 `.promo-sub-meta`），不要逐條補償。驗收用 Playwright 量展開前後的 `x/y`，要逐字相同（2026-09-21）
+- 會變長的 flex 欄位一定要可壓縮：用 `flex: 0 1 auto`＋`max-width` 封頂，不用 `flex: none`（2026-09-21 長 meta 把 `flex: 1 1 0` 的標題擠成 0 寬）
+- 用 `::after` 擴大點擊範圍的按鈕，按壓縮放套在內層 svg，不套在按鈕上：按鈕有 `transform` 時會變成 `::after` 的定位容器，按下瞬間覆蓋層縮回按鈕大小，放開時已不在按鈕上（2026-11-22 收藏格）
+- 清死 CSS 的判準：選擇器裡只要有一個 class 不會出現在生成的 HTML，整條就永遠不會命中（2026-09-21 用它掃出 53 條）。用腳本刪規則前先剝掉註解再分析選擇器，也不要用 regex 直接刪：逗號分隔的選擇器群組會被切壞（2026-09-17 刪掉過 chips 的樣式）
+
+**生成器**
+- 任何就地改寫 HTML 的生成器都要能重複執行，部署流程不保證只跑一次。找配對的結尾標籤要數巢狀深度，不能用非貪婪 regex 配第一個 `</div>`（2026-09-18 卡片特色在 preview 上每張卡都變兩份）。repo 只 commit 空容器版（見 9a），注入只在部署時發生
+- 改 `cards-export.gs` 的生成邏輯要兩手都做：整份貼回 Sheets，**並且**用 `node tools/build-promos-page.js` 把 repo 的 `promos.html` 重生成與生成器輸出逐字一致；`sitemap.xml` 沒有本機重生腳本，要手動補成與 `cards-export.gs` 的 `generateSitemapXml_()` 輸出逐字一致（不一致會在下次匯出來回打架）。線上服務的是 repo 這份，改生成器不會讓線上立刻變；驗收是請站長觸發一次匯出後 grep 關鍵字（2026-09-02）
+- 生成器標記與 `promos.css` 一起改時，兩邊上線時間不同：`promos.css` merge 就上線，新標記要等貼回 Sheets、下一次匯出才換上（期間每次匯出都會蓋回舊標記）。`promos.css` 的新規則必須同時讓舊標記排得能看，兩種標記都要實測；新標記上線後再清相容規則（2026-10-21）
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
@@ -942,78 +957,14 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 
 ## 12. Apps Script 相關的既有文件
 
-- `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
+- `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）。2026-08-16 監控摘要「假新增」的修法（`refineDiff_` 比詞、prompt 規則 D1–D4：要說新增，該詞必須在程式算出的新詞清單裡）與 6 分鐘執行上限的接力設計都在那裡
+- **凡是「每列都打外部 API」的 Apps Script 迴圈**，一律照 `checkWatchlist` 加「開跑前看錶」煞車（`maxRunSeconds`）＋指令碼屬性進度游標（要設過期時間）＋一次性觸發器接續。Apps Script 單次 6 分鐘硬上限是直接砍掉，收尾的寄信會無聲消失；清接力觸發器只能比對 `uniqueId`，掃著刪會把週期觸發器一起刪掉（2026-09-11）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃
 - `CARDS-DATA-CACHE-README.md`：快取機制教學
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
 ## 教訓記錄
-- [2026-09-21] 上線前清 `/promos` 死碼，一併修掉兩個沒被發現的 bug：
-  `.promo-card-stack .promo-act { padding: 17px 16px 11px }`（桌機）與
-  `{ padding-inline: 14px }`（≤480px）是「卡疊卡」時代寫給活動卡本體的，改成附屬列之後
-  `.promo-act` 只剩一層外框，那些內距變成**多出來的**——每一列白白高了 28px。
-  → 規則：**把一個 class 的角色換掉（從「卡片」變成「外框」）時，要把所有
-  `.祖先 .那個 class` 的規則重新掃一遍**，不是只改新寫的那幾條。
-  清理判準（可重複使用）：**選擇器裡只要有一個 class 不會出現在生成的 HTML，
-  整條就永遠不可能命中**——用這個判準掃出 53 條死規則（改版前的 `.promo-hero*` /
-  `.promo-card-toggle` / `.promo-card-detail` 那一整套）。
-  ⚠️ 用腳本刪 CSS 規則時**必須先剝掉註解再分析選擇器**：註解裡出現的 class
-  （例如提到 `.cashback-rate-num`）會讓判斷失準，也不能用 regex 直接刪，
-  逗號分隔的選擇器群組會被切壞（2026-09-17 就是這樣把 chips 的樣式刪掉過）。
-- [2026-09-21] `/promos` 附屬列「點開之後上面的小標和獎品圖跟著跑位」：兇手是把
-  **排版**綁在互動狀態上的一組規則——`.promo-sub-row[aria-expanded="true"]` 同時改了
-  `align-items`（center → flex-start）並給金額欄／meta／獎品圖各加 `margin-top: 1px`。
-  本意是「展開後標題攤成多行，金額要對到第一行」，但它對**每一列**生效：首刷禮列的
-  標題本來就不截斷、展開前後一樣高，卻照樣被整排推上去；手機上非首刷禮列也常常前後
-  同高（2 行 clamp 展開後還是 2 行），一樣白跳。
-  **通則：只有「因為內容變高而不得不動」的東西可以動，對齊方式本身要與展開狀態無關。**
-  改法是把 `align-items: flex-start` 寫成 `:not(.is-gift)` 的常駐規則、首刷禮列維持置中，
-  展開時只留下換底色。順手發現同一組還有一顆地雷：沒有獎品圖時補的
-  `.promo-sub-thumb.is-empty` 是 34px **見方**，齊頂之後會在文字底下留一塊空白——
-  它只負責「把標題欄對齊」，所以改成留寬度、`height: 0`（桌機列高 53px → 41px）。
-  驗收方式：Playwright 量同一顆類型 chip 與獎品圖展開前後的 `x/y`，要**逐字相同**，
-  不能只用肉眼看。
-  **後續（同日晚上）**：附屬列改成 grid 一列兩排之後，獎品圖與「詳情」搬進跨兩排、
-  垂直置中的 `.promo-sub-meta`，位置在結構上就與文字行數無關，這類補償規則一條都不需要。
-  這才是根治——把「不該動的東西」放進一個它動不了的格子，而不是逐條補償。
-- [2026-09-21] `/promos` 手機版單檔卡按鈕貼死在卡片圖下緣：`@media (max-width: 1024px)`
-  裡那條 `.promo-card[data-act-count="1"] .promo-card-actions { order: -1; margin-top: 0 }`
-  是「按鈕還住在 `.promo-card-main` 時」寫的，按鈕搬進 `.promo-card-rail--solo` 之後
-  `order` 已經沒有意義，`margin-top: 0` 卻還在生效、把 rail 給的間距清成 0。
-  **這就是「元素換了角色，舊規則沒跟著掃」的第二次**（第一次是 `.promo-card-name`）。
-  搬動任何節點之後，一定要 `grep` 舊 class 在所有 media query 裡的出現位置逐條確認。
-- [2026-09-21] `/promos` 附屬列「NT$500 貼死左緣、箭頭貼死右緣」：`.promo-sub-row`
-  寫了 `padding: 9px 16px`，但它同時掛著 `promo-act-row`，而 `.promo-act-row`（0,1,0）
-  設了 `padding: 0`——**兩條同分，後定義的 `.promo-act-row` 贏**，內距整個沒生效 →
-  規則：**沿用既有 class 換一套樣式時，覆寫選擇器一律寫成雙 class**
-  （`.promo-act-row.promo-sub-row`），並在驗收時直接讀 `getComputedStyle(el).padding`，
-  不要只看 CSS 原始碼有沒有寫。這是本頁第二類 specificity 陷阱，與
-  「author `display` 蓋掉 `[hidden]`」並列。
-  同一輪還踩到 flex 版的同類問題：`.promo-sub-meta` 設 `flex: none` 時，
-  首刷禮那幾列的長 meta 會把 `flex: 1 1 0` 的標題擠成 0 寬（整列只剩徽章）；
-  改成 `flex: 0 1 auto` ＋ `max-width` 封頂才對——**會變長的欄位一定要可壓縮**。
-- [2026-09-20] `/promos` 第四次踩「author 的 `display` 蓋掉 `[hidden]`」：新增的「即將結束」
-  chip 在沒有任何即將到期的卡時仍然露出來，因為 `.promo-chip` 設了 `display:inline-flex`。
-  前三次是倒數徽章、堆疊層、卡片本身的類型篩選 → 通則：**這頁（以及任何 author 大量設
-  `display` 的頁）每新增一個「靠 `el.hidden` 控制顯示」的元素，就要同時補一條
-  `[hidden] { display: none; }`**；驗收一律看 `getComputedStyle(el).display`，
-  不要看 `el.hidden`（屬性是 true 不代表真的沒顯示，2026-09-18 就是這樣驗錯過）。
-- [2026-09-18] `tools/build-promos-features.js` 的注入用 `/<div ...>([\s\S]*?)<\/div>/`（非貪婪配第一個
-  `</div>`）**不具冪等性**：容器裝進帶巢狀 `<div>` 的內容後，第二次執行時「第一個 `</div>`」
-  變成內層元素的結尾，只換掉前半段、後半段原地留下 → 卡片特色整份變兩份。上線才發現：
-  repo commit 的是已注入版，Cloudflare build 又跑一次，preview 上每張卡都重複。
-  兩個修法都要做：(1) 改成**數 `<div>` 巢狀深度**找配對的結尾標籤；
-  (2) **repo 只 commit 空容器版**，注入僅發生在部署時——即使冪等，repo 與匯出端的內容
-  也不該分岔。通則：**任何「就地改寫 HTML」的生成器都要能重複執行**，
-  因為部署流程沒有保證只跑一次。
-
-
-- [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()` 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
-- [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
-- [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
-- [2026-09-11] `checkWatchlist` 每週寄回 Apps Script 失敗信（`Exceeded maximum execution time`，起訖剛好 6 分 00 秒），一度以為是「排程要人工重新授權」 → 不是授權問題，是 Apps Script 單次執行 6 分鐘硬上限：監控清單一長，每列一次網頁抓取（Jina 渲染 30~60 秒）＋一次 Gemini 呼叫就撞得到；超時是**直接砍掉**，逐列即時寫的快照與分頁都在，但收尾的 `sendDigest_` 整個不執行＝通知信無聲消失 → 凡是「每列都要打外部 API」的 Apps Script 迴圈，一律加「開跑前看錶」的煞車（`maxRunSeconds`，比照 `register-link-finder.gs`）＋指令碼屬性存進度游標＋一次性觸發器自動接續；游標一定要設過期時間（排程觸發器撿到舊游標會靜悄悄跳過清單前半段），清除接力觸發器**只能比對 uniqueId**（Trigger API 分辨不出一次性與週期性，掃著刪會把每週觸發器一起刪掉）
-- [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
-- [2026-10-21] promos 頁尾隨主站重排、首刷禮多選一改懸掛縮排（`pmcGiftNameHtml_` 包 `.promo-gift-item`）→ 這類「生成器標記＋promos.css」一起改的變更，**兩邊上線時間不同**：promos.css merge 就上線，promos.html 要等站長把 `cards-export.gs` 貼回 Sheets、下一次匯出才換新標記（期間每次匯出都會用舊生成器蓋回舊標記）→ promos.css 的新規則必須同時讓舊標記排得能看（這次保留 `.sponsor-section`、`.social-link.privacy` 相關選擇器並用舊標記實測截圖），等新標記上線後再清掉相容規則；驗收時兩種標記都要看
-- [2026-11-22] 單卡頁收藏格點「收藏」字樣沒反應 → 按鈕 `:active{transform:scale()}` 讓按鈕變成 `::after` 覆蓋層的定位容器，按下瞬間覆蓋層縮回按鈕大小、放開時不在按鈕上 → 用 `::after` 擴大點擊範圍的按鈕，按壓動畫改套在內層 svg
+
+> 2026-11-22 精簡：原有 13 條已全數歸入正文（promos 的 CSS 與生成器坑進 9f，其餘進第 2、8、12 節；監控兩條的細節本來就在 `apps-script/README.md`），原文見 `docs/archive/data-pipeline.md-2026-11-22.bak`。新教訓照常追加在這行下面。
