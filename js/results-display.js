@@ -1126,7 +1126,7 @@ let _cdScrollEl = null;
 let _cdActiveTab = 'rates';
 
 const CD_TAB_SECTIONS = {
-    rates: ['card-special-section', 'card-upcoming-section', 'card-basic-cashback-section'],
+    rates: ['card-special-section', 'card-upcoming-section', 'card-basic-cashback-section', 'card-basic-exclusions-section'],
     coupon: ['card-coupon-section', 'card-benefits-section'],
     promo: ['card-promos-section'],
     set: ['card-personal-section']

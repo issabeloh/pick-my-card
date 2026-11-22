@@ -257,16 +257,18 @@ const META = readFixtureMeta();
   check('可能排除：勾精準搜尋時不出', r.excluded.length === 0, JSON.stringify(r.excluded));
   await page.evaluate(() => { const cb = document.getElementById('exact-search-checkbox'); if (cb && cb.checked) cb.click(); });
 
-  // 9. 詳情頁「一般回饋」區最後一張是灰色「一般消費排除項目」卡；項目多時先收合
+  // 9. 詳情頁「一般回饋排除項目」獨立一區（2026-11-22 起；原本是一般回饋區最後一張），裡面是灰色「一般消費排除項目」卡；項目多時先收合
   const detail = await page.evaluate(async () => {
     const card = cardsData.cards[0];
     card.basicExclusions = Array.from({ length: 12 }, (_, i) => 'zzz項目' + (i + 1));
     await showCardDetail(card.id);
     await new Promise(res => setTimeout(res, 300));
-    const box = document.querySelector('#card-basic-cashback .rate-card-excluded');
-    const last = document.querySelector('#card-basic-cashback > .cashback-detail-item:last-child');
+    const box = document.querySelector('#card-basic-exclusions .rate-card-excluded');
+    const sec = document.getElementById('card-basic-exclusions-section');
     const out = box ? {
-      isLast: last === box,
+      ownSection: sec.style.display !== 'none' && sec.querySelector('h4').textContent.trim() === '一般回饋排除項目' &&
+        !document.querySelector('#card-basic-cashback .rate-card-excluded'),
+      note: box.querySelector('.excluded-detail-note')?.innerText.trim(),
       title: box.querySelector('.rate-card-title')?.innerText.trim(),
       shown: box.querySelector('.matched-merchant strong')?.innerText.trim(),
       btn: box.querySelector('.show-more-btn')?.innerText.trim(),
@@ -275,15 +277,17 @@ const META = readFixtureMeta();
     delete card.basicExclusions;
     await showCardDetail(card.id);
     await new Promise(res => setTimeout(res, 300));
-    const gone = !document.querySelector('#card-basic-cashback .rate-card-excluded');
+    const gone = !document.querySelector('#card-basic-exclusions .rate-card-excluded') &&
+      document.getElementById('card-basic-exclusions-section').style.display === 'none';
     document.querySelector('#card-detail-modal .close, #card-detail-modal [data-close]')?.click();
     return { out, gone };
   });
-  check('詳情頁：一般回饋區最後一張是「一般消費排除項目」灰卡、沒有回饋率欄',
-    detail.out && detail.out.isLast && detail.out.title === '一般消費排除項目' && !detail.out.hasRate, JSON.stringify(detail.out));
+  check('詳情頁：獨立一區「一般回饋排除項目」，裡面是「一般消費排除項目」灰卡、沒有回饋率欄、不在一般回饋區',
+    detail.out && detail.out.ownSection && detail.out.title === '一般消費排除項目' && !detail.out.hasRate, JSON.stringify(detail.out));
+  check('詳情頁：說明文字是「刷以下項目沒有任何回饋（包含基本回饋）」', detail.out && detail.out.note === '刷以下項目沒有任何回饋（包含基本回饋）', JSON.stringify(detail.out));
   check('詳情頁：超過 10 項先收合、有「顯示全部12個」', detail.out && detail.out.btn && detail.out.btn.includes('顯示全部12個') &&
     detail.out.shown.split('、').length === 10, JSON.stringify(detail.out));
-  check('詳情頁：沒有名單就不出現', detail.gone, '沒名單仍出現排除卡');
+  check('詳情頁：沒有名單就整區不出現', detail.gone, '沒名單仍出現排除區');
 
   // 輸入時的匹配提示也講排除名單（2026-10-14）
   // 上面詳情頁的測試會留著 modal（它的關閉鈕選擇器對不到），蓋住計算鈕
@@ -366,7 +370,7 @@ const META = readFixtureMeta();
     await new Promise(res => setTimeout(res, 300));
     const input = document.getElementById('cashback-search-input');
     input.value = 'zzz醫療'; filterCashbackItems('zzz醫療');
-    const box = document.querySelector('#card-basic-cashback .rate-card-excluded');
+    const box = document.querySelector('#card-basic-exclusions .rate-card-excluded');
     const out = { shown: box && box.style.display !== 'none', list: box && box.querySelector('strong.merchant-list').textContent,
       marks: box ? [...box.querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent) : [] };
     input.value = ''; filterCashbackItems('');
@@ -389,13 +393,17 @@ const META = readFixtureMeta();
     const input = document.getElementById('cashback-search-input');
     const run = v => { input.value = v; filterCashbackItems(v); };
     const basic = document.getElementById('card-basic-cashback');
-    const box = () => basic.querySelector('.rate-card-excluded');
-    const visible = () => [...basic.querySelectorAll('.cashback-detail-item')].filter(el => el.style.display !== 'none').length;
-    const totalBasic = basic.querySelectorAll('.cashback-detail-item').length;
+    const exArea = document.getElementById('card-basic-exclusions');
+    const box = () => exArea.querySelector('.rate-card-excluded');
+    const items = () => [...basic.querySelectorAll('.cashback-detail-item'), ...exArea.querySelectorAll('.cashback-detail-item')];
+    const visible = () => items().filter(el => el.style.display !== 'none').length;
+    const totalBasic = items().length;
     run('罰');
     const hit = { visible: visible(), list: box().querySelector('strong.merchant-list').textContent,
       marks: [...box().querySelectorAll('mark.cashback-search-hl')].map(m => m.textContent) };
     hit.specialShown = document.getElementById('card-special-section').style.display;
+    hit.basicShown = document.getElementById('card-basic-cashback-section').style.display;
+    hit.exShown = document.getElementById('card-basic-exclusions-section').style.display;
     run('zzzz不存在');
     const miss = { sectionShown: document.getElementById('card-basic-cashback-section').style.display,
       empty: document.getElementById('cashback-search-empty').style.display };
@@ -409,14 +417,14 @@ const META = readFixtureMeta();
     await new Promise(res => setTimeout(res, 300));
     run('');
     const cleared = { visible: visible(), sectionShown: document.getElementById('card-basic-cashback-section').style.display,
-      marks: basic.querySelectorAll('mark').length, list: box().querySelector('strong.merchant-list').textContent,
+      marks: basic.querySelectorAll('mark').length + exArea.querySelectorAll('mark').length, list: box().querySelector('strong.merchant-list').textContent,
       btn: box().querySelector('.show-more-btn')?.innerText.trim() };
     delete card.basicExclusions;
     document.querySelector('#card-detail-modal .close, #card-detail-modal [data-close]')?.click();
     return { hit, miss, cleared, totalBasic, switched };
   });
-  check('詳情頁搜尋：「罰」→ 一般回饋區只留排除灰卡（國內／海外一般消費藏起來）',
-    dsearch.totalBasic > 1 && dsearch.hit.visible === 1, JSON.stringify(dsearch));
+  check('詳情頁搜尋：「罰」→ 只留排除灰卡（一般回饋區沒命中整區收起、排除區留著）',
+    dsearch.totalBasic > 1 && dsearch.hit.visible === 1 && dsearch.hit.basicShown === 'none' && dsearch.hit.exShown === '', JSON.stringify(dsearch));
   check('詳情頁搜尋：清單只留命中項目，沒命中的段落縮成「…」',
     dsearch.hit.list === '…、交通罰單、…、停車罰單、…', dsearch.hit.list);
   check('詳情頁搜尋：命中字標記', dsearch.hit.marks.length === 2, JSON.stringify(dsearch.hit.marks));

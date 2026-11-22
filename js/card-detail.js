@@ -1355,14 +1355,22 @@ function mergeGeneralListEntries(base, extra) {
     return out;
 }
 
-// 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目，最後是灰色的「一般消費排除項目」卡。
+// 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目。灰色的「一般消費排除項目」卡
+// 2026-11-22 起放在下一區「一般回饋排除項目」（#card-basic-exclusions），沒有名單時整區不顯示。
 // 一般回饋區的卡片維持固定順序（國內一般消費、海外一般消費、國內加碼、海外加碼），不依回饋率重排
 async function renderBasicArea(card, extra = []) {
     const div = document.getElementById('card-basic-cashback');
     if (!div) return;
     const entries = mergeGeneralListEntries(await buildBasicEntries(card), extra);
-    // 一般消費排除項目（2026-10-11 站長要求）：放在一般回饋區最後一張，灰色，只列項目
-    div.innerHTML = planCardsHtml(entries, { sort: false }) + renderBasicExclusionsCard(card);
+    div.innerHTML = planCardsHtml(entries, { sort: false });
+    // 一般消費排除項目（2026-10-11 站長要求；2026-11-22 改成獨立一區）：灰色，只列項目
+    const exDiv = document.getElementById('card-basic-exclusions');
+    const exSection = document.getElementById('card-basic-exclusions-section');
+    if (exDiv && exSection) {
+        const exHtml = renderBasicExclusionsCard(card);
+        exDiv.innerHTML = exHtml;
+        exSection.style.display = exHtml ? '' : 'none';
+    }
 }
 
 // entries → 同方案卡的 HTML。entry 欄位：
@@ -1702,7 +1710,7 @@ function renderBasicExclusionsCard(card, initialCount = 10) {
     return `<div class="cashback-detail-item rate-card rate-card-excluded">` +
         `<div class="rate-card-header"><div class="rate-card-title">一般消費排除項目</div></div>` +
         `<div class="rate-card-body">` +
-        `<div class="excluded-detail-note">刷以下項目沒有任何回饋（包含基本回饋）；有指定活動的項目以活動為準</div>` +
+        `<div class="excluded-detail-note">刷以下項目沒有任何回饋（包含基本回饋）</div>` +
         `<div class="matched-merchant rate-card-info"><div class="activity-info-line">排除項目: ${listHtml}</div></div>` +
         `</div></div>`;
 }
@@ -1973,6 +1981,7 @@ const DETAIL_SEARCH_SECTIONS = [
     ['card-special-cashback', 'card-special-section'],
     ['card-upcoming-cashback', 'card-upcoming-section'],
     ['card-basic-cashback', 'card-basic-cashback-section'],
+    ['card-basic-exclusions', 'card-basic-exclusions-section'],
     ['card-coupon-cashback', 'card-coupon-section']
 ];
 function filterCashbackItems(searchTerm) {

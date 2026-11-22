@@ -5443,6 +5443,7 @@ mark.cashback-search-hl {
 #card-detail-modal #card-special-cashback,
 #card-detail-modal #card-upcoming-cashback,
 #card-detail-modal #card-basic-cashback,
+#card-detail-modal #card-basic-exclusions,
 #card-detail-modal #card-coupon-cashback {
     display: flex;
     flex-direction: column;
@@ -5452,6 +5453,7 @@ mark.cashback-search-hl {
 #card-detail-modal #card-special-cashback > .cashback-detail-item,
 #card-detail-modal #card-upcoming-cashback > .cashback-detail-item,
 #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+#card-detail-modal #card-basic-exclusions > .cashback-detail-item,
 #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
     margin-bottom: 0;
 }
@@ -5460,6 +5462,7 @@ mark.cashback-search-hl {
     #card-detail-modal #card-special-cashback,
     #card-detail-modal #card-upcoming-cashback,
     #card-detail-modal #card-basic-cashback,
+#card-detail-modal #card-basic-exclusions,
     #card-detail-modal #card-coupon-cashback {
         display: block;
         column-count: 2;
@@ -5469,6 +5472,7 @@ mark.cashback-search-hl {
     #card-detail-modal #card-special-cashback > .cashback-detail-item,
     #card-detail-modal #card-upcoming-cashback > .cashback-detail-item,
     #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+#card-detail-modal #card-basic-exclusions > .cashback-detail-item,
     #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
         break-inside: avoid;
         margin-bottom: 10px;

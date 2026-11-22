@@ -31,7 +31,7 @@ catch (e) { ({ chromium } = require('playwright')); }
 
 // 2026-08-25：凍結資料裡有 9/1 開始（30 天內即將開始）與 8/31 結束（即將結束）的活動
 const EXTRA_DATES = ['2026-08-25T12:00:00+08:00'];
-const SECTIONS = ['card-basic-cashback', 'card-special-cashback', 'card-upcoming-cashback', 'card-coupon-cashback'];
+const SECTIONS = ['card-basic-cashback', 'card-basic-exclusions', 'card-special-cashback', 'card-upcoming-cashback', 'card-coupon-cashback'];
 const BASELINE_FILE = path.join(__dirname, 'card-detail-baseline.json');
 
 async function captureAtDate(browser, base, frozenDate) {
@@ -162,7 +162,7 @@ async function checkLayoutInvariants(browser, base, frozenDate) {
       cdFitAllContainers();
       const out = [];
       const num = t => parseFloat((t || '').replace(/[^0-9.\-]/g, ''));
-      for (const cid of ['card-special-cashback', 'card-upcoming-cashback', 'card-basic-cashback', 'card-coupon-cashback']) {
+      for (const cid of ['card-special-cashback', 'card-upcoming-cashback', 'card-basic-cashback', 'card-basic-exclusions', 'card-coupon-cashback']) {
         const box = document.getElementById(cid);
         if (!box || box.closest('.card-info-section')?.style.display === 'none') continue;
         const seen = new Set();
