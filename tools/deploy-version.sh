@@ -37,6 +37,7 @@ if [ "${PMC_SKIP_MERCHANT_BUILD:-0}" != "1" ]; then
     # 單卡頁 /promos/<card id>（2026-11-18 起，見 tools/build-promo-card-pages.js）：只在部署時生成、
     # 不進 repo。要排在卡片特色注入之前——單卡頁也有特色容器，下一步一起填。
     node tools/build-promo-card-pages.js
+    node tools/build-promos-card-index.js   # 要在單卡頁之後：只列有單卡頁的卡
     # 新戶活動頁的「卡片特色」區塊（2026-09-17 起）：Apps Script 只生成空容器，
     # 內容在這裡注入——回饋率必須用主站自己的 getDisplayRate()，而那支函數住在
     # js/，Apps Script 讀不到。同樣要在注入 ?v= 之前跑。

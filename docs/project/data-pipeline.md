@@ -732,6 +732,18 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-features.js`，再開 `python3 -m http.server`
   的 `/promos/<id>.html`（本機沒有 clean URL）。看完 `git status` 應該乾淨——`promos/` 被忽略，但 promos.html 被注入過特色，記得 `node tools/build-promos-page.js` 還原。
 
+### 9e. 依卡片找（2026-11-22，站長選定 mockup J2「分欄目錄」）
+
+給「心裡已經有想看的卡」的人：新戶活動頁**最後一區**（清單之後、`</main>` 前），依銀行分欄列卡名（完整卡名＋藍色「›」），
+連到單卡頁；頁內分頁列多一顆「依卡片找」排最後。站長否決 H1 的膠囊外框（不好看）、否決放在清單前面。
+- **部署時注入**：`tools/build-promos-card-index.js`（`deploy-version.sh` 裡排在單卡頁之後，因為只列 `promos/<id>.html` 存在的卡）。
+  不在 Apps Script，改這區不用重貼。冪等：`<!-- CARDINDEX:START/END -->`＋分頁列那顆 `data-jump-cardindex`。
+- 卡片＝清單裡的 `article.promo-card` 順序；銀行＝`cards.data` 的 `cards[].bank` 短名；銀行依卡數多到少，同數照清單先後。
+- 樣式 `promos.css` 的 `.pmc-cardindex`／`.pmc-ci-*`（手機 2 欄、≥769px 4 欄、≥1100px 5 欄）；只看收藏時跟其他區一起藏。
+- `setupJumpSpy()`：最後一區比畫面矮、頂端碰不到分頁列，**捲到底就標最後一顆**（不然點了「依卡片找」會標在「新戶活動」）。
+- GA4：`promos_card_index`（card_id）。
+- 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-card-index.js`；看完 `node tools/build-promos-page.js` 還原 promos.html，**注入結果不 commit**。
+
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
 `sitemap.xml` 由 `generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso)` 在**每次匯出時整份重生**

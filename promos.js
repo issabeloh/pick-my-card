@@ -163,6 +163,11 @@
       targets.forEach(function (t, i) {
         if (t && t.getBoundingClientRect().top <= line) current = i;
       });
+      // 已經捲到底：最後一區（依卡片找）比畫面矮，頂端永遠碰不到分頁列，到底了就標它
+      var doc = document.documentElement;
+      var last = targets[targets.length - 1];
+      if (last && window.innerHeight + window.scrollY >= doc.scrollHeight - 2 &&
+          last.getBoundingClientRect().top < window.innerHeight) current = targets.length - 1;
       mark(current);
     }
     update();
@@ -1430,5 +1435,17 @@
     setupCardDetailOverlay();
     setupCardPage();
     setupFavorites();
+    setupCardIndexTracking();
   });
+
+  // 依卡片找（2026-11-22）：內容由 tools/build-promos-card-index.js 部署時注入，沒注入就沒有這區、這裡什麼都不做。
+  // 只記點了哪張卡（看「從卡名進單卡頁」這條路有沒有人走），連結照常前往。
+  function setupCardIndexTracking() {
+    var box = document.querySelector('.pmc-cardindex');
+    if (!box) return;
+    box.addEventListener('click', function (e) {
+      var a = e.target.closest('a[data-ci-card]');
+      if (a) track('promos_card_index', { card_id: a.getAttribute('data-ci-card') });
+    });
+  }
 })();

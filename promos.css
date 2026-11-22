@@ -3304,7 +3304,7 @@ a {
 .pmc-jump a[aria-current="true"]::after { background: var(--pmc-blue-deep); }
 .pmc-jump a:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: -2px; border-radius: 6px; }
 /* 錨點跳過來時，要讓出貼頂分頁列的高度 */
-#picks, #luggage, #all-promos { scroll-margin-top: 60px; }
+#picks, #luggage, #all-promos, #by-card { scroll-margin-top: 60px; }
 
 .pmc-list-head { margin-top: 6px; }
 
@@ -3825,6 +3825,38 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
 body.is-fav-only .pmc-jump,
 body.is-fav-only .pmc-picks,
 body.is-fav-only .pmc-luggage,
+body.is-fav-only .pmc-cardindex,
 body.is-fav-only .promos-search-row,
 body.is-fav-only .promos-controls,
 body.is-fav-only .pmc-dots { display: none !important; }
+
+/* 依卡片找（2026-11-22，站長選定 mockup J2「分欄目錄」）：清單之後的最後一區，
+   依銀行分欄列卡名、連到單卡頁。內容由 tools/build-promos-card-index.js 部署時注入。
+   刻意不用膠囊外框（站長：H1 的膠囊不好看）：灰色小字銀行名＋一行一張卡＋藍色「›」。 */
+.pmc-cardindex { margin: 36px 0 8px; }
+.pmc-ci-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  margin: 0 4px;
+}
+.pmc-ci-bank h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.04em;
+}
+.pmc-ci-bank ul { list-style: none; margin: 0; padding: 0; }
+.pmc-ci-bank a {
+  display: block;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--pmc-ink);
+  text-decoration: none;
+}
+.pmc-ci-bank a::after { content: " ›"; color: #2563eb; font-weight: 700; }
+.pmc-ci-bank a:hover { color: #1e40af; text-decoration: underline; }
+@media (min-width: 769px) { .pmc-ci-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .pmc-ci-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
