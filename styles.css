@@ -1093,7 +1093,7 @@ header h1 {
    .card-chip 原本的左右 padding 移到兩個半邊上，銀行色塊才會齊邊、滿高。
    ⚠️ 後面的 `.sidebar .card-chip`（0-2-0、padding:3px 8px）與本規則同特異性
    且位置更後面會蓋掉 padding:0，所以這裡一併列出帶 .sidebar 的選擇器（0-3-0）
-   讓它與檔案順序無關（教訓見 docs/project/ui-display.md「改了沒反應先查特異性」）。 */
+   讓它與檔案順序無關（見 docs/project/ui-display.md 第 11 節「CSS 特異性」）。 */
 .card-chip.card-chip-split,
 .sidebar .card-chip.card-chip-split {
     display: inline-flex;
@@ -4718,7 +4718,7 @@ input[type="number"]:focus {
 /* ============================================================
    卡片詳情頁（#card-detail-modal，2026-11-17 改版第一輪：外殼）
    浮窗 → 全頁＋藍色頁首＋摘要＋頁籤＋浮動申辦膠囊。設計規格來自站長核定的七版示意圖；
-   命名一律 cd- 前綴（避開全站 label/header/nav 等元素樣式與 .big 這類通用 class，見 ui-display.md 教訓記錄）。
+   命名一律 cd- 前綴（避開全站 label/header/nav 等元素樣式與 .big 這類通用 class，見 ui-display.md 第 11 節「CSS 特異性」）。
    結構與各區 id 見 index.html「Card Detail Modal」註解。
 
    - 手機單欄：頁首 → 摘要（藍底、跟著捲走）→ 頁籤（sticky）→ 內容。靠 flex 的 order 排列：
@@ -5518,7 +5518,7 @@ input[type="number"]:focus {
 
 /* 全域 input[type="text"]（特異性 0-1-1、padding:16px）會壓過上面的純 class
    規則（0-1-0），導致左內距只剩 16px、輸入文字壓在放大鏡圖示上。這裡用
-   型別+class（0-2-1）把左內距搶回來（教訓見 docs/project/ui-display.md）。 */
+   型別+class（0-2-1）把左內距搶回來（見 docs/project/ui-display.md 第 11 節「CSS 特異性」）。 */
 input[type="text"].cashback-search-input {
     padding-left: 30px;
 }
@@ -9164,7 +9164,7 @@ mark.cashback-search-hl {
    ⚠️ 斷點刻意壓在 1400px：1280/1366 這類常見筆電維持現狀（容器 1200 / 側欄 280），
       不會因為側欄變寬反而把主內容區擠窄。
    ⚠️ 這幾條必須排在本檔前段無媒體查詢的 .container / .app-layout 之後——
-      媒體查詢不加特異性，同特異性靠源碼順序決勝（教訓見 ui-display.md）。
+      媒體查詢不加特異性，同特異性靠源碼順序決勝（見 ui-display.md 第 11 節「CSS 特異性」）。
    ============================================ */
 @media (min-width: 1400px) {
     :root {
@@ -10669,7 +10669,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-a-s { font-size: 11px; }
 .mp-a-l { font-size: 16px; }
 .mp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; white-space: nowrap; }
-/* 配卡區在 main 裡，全站 label 樣式會套上來；用 id 提特異性蓋回（見 ui-display.md 教訓：特異性） */
+/* 配卡區在 main 裡，全站 label 樣式會套上來；用 id 提特異性蓋回（見 ui-display.md 第 11 節「CSS 特異性」） */
 #mappings-page label.mp-chk { font-size: 13px; font-weight: 700; margin: 0; display: inline-flex; color: #374151; }
 #mappings-page .mp-sheet label { font-size: 12px; font-weight: 500; margin: 0; color: #6b7280; display: grid; gap: 6px; }
 #mappings-page label.mp-pk { font-size: 14px; font-weight: 500; margin: 0; color: #111827; display: flex; }
