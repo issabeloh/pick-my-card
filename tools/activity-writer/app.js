@@ -230,7 +230,7 @@
     var row = cur();
     box.appendChild(el('h2', { text: card.name }));
     var base = '基本 ' + card.basicCashback + '%' + (card.overseasCashback ? '｜海外基本 ' + card.overseasCashback + '%' : '') +
-      (card.domesticBonusRate ? '｜國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '｜海外加碼 ' + card.overseasBonusRate + '%' : '') +
+      (card.domesticBonusRate ? '｜國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '｜國外加碼 ' + card.overseasBonusRate + '%' : '') +
       (card.hasLevels ? '｜分級卡' : '');
     box.appendChild(el('div', { text: base }));
     if (state.kind === 'coupon') {
