@@ -4,7 +4,8 @@
  *  - 手機側選單                → "setupSidebarDrawer"
  *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal"
  *  - 管理比較卡/持有卡入口      → "openManageCardsModal" / "openMyOwnedCardsModal"
- *  - 持有卡總覽（卡片格）       → "renderOwnedCardsOverview" / "openCardDetailAtPersonal"
+ *  - 持有卡總覽（卡片格）       → "renderOwnedCardsOverview"
+ *  - 單卡面板（點卡片直接編輯）→ "openOwnedCardPanel" / "ownedPanelExit"
  *  - 持有卡管理 modal           → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
  *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderConditionLine"
  *  - 側選單「最近異動」          → "renderSidebarChangelog"
@@ -318,6 +319,7 @@ function openManageCardsModal() {
 // Open the "我的信用卡" modal (avatar dropdown) — shows the owned-cards overview.
 // Guests are allowed to edit; data persists to localStorage and asks to merge on login.
 function openMyOwnedCardsModal() {
+    ownedPanelExit({ render: false });   // 每次打開都從卡片格開始
     renderOwnedCardsOverview();
 
     const modal = document.getElementById('my-owned-cards-modal');
@@ -327,8 +329,9 @@ function openMyOwnedCardsModal() {
 
 // 「我的信用卡」總覽（2026-11-17 站長選定的「卡片格」；取代 2026-07-07 的錢包堆疊＋單卡頁）。
 // 版面：摘要列（持有／總額度／免年費門檻）＋卡片格（卡面、卡名、級別・額度）＋最後一格「新增信用卡」。
-// 這一頁唯讀：點卡片 → 開該卡詳情頁並捲到「個人設定」。
-// 個人資料（級別／額度／免年費）是非同步讀的：先畫卡面與卡名，讀到再補字；每個讀取都包 safe()，
+// 點卡片 → 同一個視窗換成該卡的個人設定（單卡面板，openOwnedCardPanel；2026-11-22 起，取代「這頁唯讀、
+// 點卡片開詳情頁」）。這一層只負責顯示，編輯全在單卡面板、也就是詳情頁那一份個人設定。
+// 個人資料（級別／額度／免年費／結帳日）是非同步讀的：先畫卡面與卡名，讀到再補字；每個讀取都包 safe()，
 // Firebase 被擋也照樣渲染。🔒 級別只「讀來顯示」，這裡絕不呼叫 saveCardLevel()（鐵則 1）。
 // 空狀態：沒有持有卡時顯示提示＋「新增信用卡」鈕。
 function renderOwnedCardsOverview() {
@@ -418,14 +421,14 @@ function renderOwnedCardsOverview() {
     const tiles = ownedCards.map(card => {
         const tile = mk('button', 'ow-tile');
         tile.type = 'button';
-        tile.title = `查看 ${card.name} 的個人設定`;
+        tile.title = `編輯 ${card.name} 的個人設定`;
         const pic = mk('span', 'ow-pic');
         pic.appendChild(makeFace(card));
         tile.appendChild(pic);
         tile.appendChild(mk('span', 'ow-name', card.name));
         const meta = mk('span', 'ow-meta', ' ');
         tile.appendChild(meta);
-        tile.addEventListener('click', () => openCardDetailAtPersonal(card.id));
+        tile.addEventListener('click', () => openOwnedCardPanel(card.id));
         grid.appendChild(tile);
         return { card, tile, meta };
     });
@@ -448,10 +451,11 @@ function renderOwnedCardsOverview() {
     Promise.all(tiles.map(async ({ card, tile, meta }) => {
         const hasLevels = !!(card.hasLevels && card.levelSettings);
         const defaultLevel = hasLevels ? Object.keys(card.levelSettings)[0] : null;
-        const [level, feeWaived, creditLimit] = await Promise.all([
+        const [level, feeWaived, creditLimit, dates] = await Promise.all([
             hasLevels ? safe(() => getCardLevel(card.id, defaultLevel), defaultLevel) : Promise.resolve(null),
             safe(() => loadFeeWaiverStatus(card.id), false),
-            safe(() => loadCreditLimit(card.id), null)
+            safe(() => loadCreditLimit(card.id), null),
+            safe(() => loadBillingDates(card.id), null)
         ]);
         if (token !== renderOwnedCardsOverview._token) return null; // 期間重畫過，這批作廢
         const limit = (typeof creditLimit === 'number' && isFinite(creditLimit)) ? creditLimit : null;
@@ -462,6 +466,14 @@ function renderOwnedCardsOverview() {
         }
         if (limit !== null) meta.appendChild(document.createTextNode(fmtLimit(limit)));
         else meta.appendChild(mk('span', 'ow-faint', '額度未填'));
+
+        // 結帳日／繳款日：有填才多一行（只標有的資訊，同免年費）。statementDate＝結帳日、billingDate＝繳款日
+        const sd = dates ? billingDayNumber(dates.statementDate) : null;
+        const bd = dates ? billingDayNumber(dates.billingDate) : null;
+        if (sd || bd) {
+            tile.appendChild(mk('span', 'ow-dates',
+                [sd ? `${sd} 日結帳` : '', bd ? `${bd} 日繳款` : ''].filter(Boolean).join('・')));
+        }
 
         // 只標正面訊息（2026-11-17 站長裁定）：沒勾過的人不該整排被標「未達標」，本來就免年費的卡也會被誤標
         if (feeWaived) tile.appendChild(mk('span', 'ow-ok', '✓ 已過免年費門檻'));
@@ -483,15 +495,71 @@ function renderOwnedCardsOverview() {
     });
 }
 
-// 從「我的信用卡」點卡片：開詳情頁並捲到「個人設定」。捲動交給該區塊的 nav 按鈕（它知道 sticky nav
-// 的高度），理由同下方 openCardDetailAtChangelog。按鈕被藏起來＝那張卡沒有這一區，停在頁首即可。
-async function openCardDetailAtPersonal(cardId) {
-    await showCardDetail(cardId);
-    requestAnimationFrame(() => {
-        const navBtn = document.querySelector(
-            '#card-detail-nav .card-detail-nav-btn[data-section="card-personal-section"]');
-        if (navBtn && !navBtn.hidden && typeof navBtn.onclick === 'function') navBtn.onclick();
-    });
+// 單卡面板（2026-11-22，站長推翻「這頁唯讀」）：點卡片 → 同一個視窗換成該卡的個人設定，可以直接改。
+// 編輯介面＝詳情頁那唯一一份 #card-personal-section，搬進 #owned-panel-settings（cdMountPersonalSection），
+// 由 renderCardPersonalSettings(card, { context: 'owned' }) 填值、接自動儲存——沒有第二套畫面或存檔邏輯。
+// 🔒 鐵則 1：這裡不呼叫 saveCardLevel()；級別只在用戶親自改下拉時由那支共用函數存。
+// 離開面板（‹ 所有卡片、關閉、開詳情頁、重開 modal）一律走 ownedPanelExit：先送出還沒存的筆記、
+// 把設定區搬回詳情頁、回到卡片格。手機返回鍵不處理（站長 2026-11-22：這次不做）
+let _owPanelCardId = null;
+let _owGridScroll = 0;
+
+async function openOwnedCardPanel(cardId) {
+    const card = cardsData.cards.find(c => c.id === cardId);
+    const panel = document.getElementById('owned-card-panel');
+    const host = document.getElementById('owned-panel-settings');
+    if (!card || !panel || !host) return;
+    const modal = document.getElementById('my-owned-cards-modal');
+    const scroller = modal.querySelector('.modal-content');
+    if (_owPanelCardId === null && scroller) _owGridScroll = scroller.scrollTop;
+    _owPanelCardId = cardId;
+
+    // 卡面＋卡名（textContent；缺圖顯示卡名，同卡片格）
+    const pic = document.getElementById('owned-panel-pic');
+    pic.textContent = '';
+    const img = document.createElement('img');
+    img.className = 'ow-img';
+    img.alt = '';
+    img.src = `assets/images/cards/${card.id}.png`;
+    const frame = document.createElement('div');
+    frame.className = 'ow-frame';
+    img.addEventListener('load', () => { if (img.naturalHeight > img.naturalWidth) frame.classList.add('ow-portrait'); });
+    img.addEventListener('error', () => { img.remove(); frame.classList.add('ow-noimg'); frame.textContent = card.name; });
+    frame.appendChild(img);
+    pic.appendChild(frame);
+    document.getElementById('owned-panel-name').textContent = card.name;
+
+    document.getElementById('owned-cards-overview').hidden = true;
+    document.getElementById('owned-modal-title').hidden = true;
+    document.getElementById('manage-owned-cards-btn').hidden = true;
+    document.getElementById('owned-panel-back').hidden = false;
+    panel.hidden = false;
+
+    cdMountPersonalSection(host);
+    if (scroller) scroller.scrollTop = 0;
+    await renderCardPersonalSettings(card, { context: 'owned' });
+}
+
+// 離開單卡面板、回到卡片格。沒開著就什麼都不做（showCardDetail 每次開都會叫它）。
+// opts.render=false：呼叫端自己會重畫卡片格
+function ownedPanelExit(opts = {}) {
+    if (_owPanelCardId === null) return false;
+    _owPanelCardId = null;
+    if (typeof cdFlushNotes === 'function') cdFlushNotes();
+    currentNotesCardId = null;
+    cdMountPersonalSection(null);
+    const panel = document.getElementById('owned-card-panel');
+    if (panel) panel.hidden = true;
+    document.getElementById('owned-cards-overview').hidden = false;
+    document.getElementById('owned-modal-title').hidden = false;
+    document.getElementById('manage-owned-cards-btn').hidden = false;
+    document.getElementById('owned-panel-back').hidden = true;
+    if (opts.render !== false) {
+        renderOwnedCardsOverview();   // 剛改的級別／額度／日期要馬上看得到
+        const scroller = document.querySelector('#my-owned-cards-modal .modal-content');
+        if (scroller) scroller.scrollTop = _owGridScroll;
+    }
+    return true;
 }
 
 // Open the "管理我的信用卡" modal (stacked on top of the overview).
@@ -554,11 +622,18 @@ function setupMyOwnedCardsModal() {
     const manageBtn = document.getElementById('manage-owned-cards-btn');
 
     const closeOverview = () => {
+        ownedPanelExit({ render: false });   // 面板開著就先把設定區搬回詳情頁、送出還沒存的筆記
         overviewModal.style.display = 'none';
         enableBodyScroll();
     };
 
     closeOverviewBtn.addEventListener('click', closeOverview);
+
+    // 單卡面板：「‹ 所有卡片」回卡片格；「查看回饋詳情 ›」開詳情頁（showCardDetail 會先讓面板回到卡片格）
+    document.getElementById('owned-panel-back').addEventListener('click', () => ownedPanelExit());
+    document.getElementById('owned-panel-detail').addEventListener('click', () => {
+        if (_owPanelCardId) showCardDetail(_owPanelCardId);
+    });
 
     // 用戶從總覽進詳情頁改了額度／級別／免年費再關掉 → 下面這層要跟著更新。
     // 詳情頁有好幾個關閉入口，直接看它由開變關的那一刻最不會漏。

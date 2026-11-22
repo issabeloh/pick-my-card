@@ -164,6 +164,15 @@ node tools/regression/card-settings-promo-test.js   # 有 ❌ → exit 1
 **改個人設定的欄位或儲存接線（js/card-detail.js「儲存狀態列」、js/spending-mappings.js 額度／免年費、js/levels-payments.js 各 save 函數）或詳情頁新戶活動（renderCardDetailPromoTickets）後必跑。**
 ⚠️ `run-regression.js` 不比對搜尋結果的新戶活動卡；改 `createCardholderPromoElement` 時要另外比對前後輸出（第三輪的做法：載入舊版函數，對所有活動 × 多個凍結日期比 outerHTML）。
 
+## 「我的信用卡」單卡面板（獨立一支，2026-11-22 新增）
+
+```bash
+node tools/regression/owned-cards-panel-test.js   # 29 項，有 ❌ → exit 1
+```
+
+點卡片 → 同一個視窗直接編輯：唯一一份 `#card-personal-section` 搬進面板／搬回詳情頁、詳情頁不被彈出、樣式兩邊一致、結帳日／繳款截止日的欄位對應（`statementDate`＝結帳日、`billingDate`＝繳款日）與存取、雲端失敗紅字、鐵則 1（開面板不寫級別、改了才存一次）、筆記離開面板即存、桌機寬度。Firebase 替身借 `card-settings-promo-test.js` 的 `stub`（該檔 `module.exports`，require 時不跑測試）。
+**改 `js/cards-modals.js` 的單卡面板（`openOwnedCardPanel`／`ownedPanelExit`）、`renderCardPersonalSettings`／`cdMountPersonalSection`、或結帳日存取後必跑**；改個人設定欄位時跟 `card-settings-promo-test.js` 一起跑。
+
 ## 一般消費排除項目（獨立一支，2026-09-30 新增）
 
 ```bash

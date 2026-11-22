@@ -124,7 +124,7 @@ document.addEventListener('pmc:mappings-data-changed', refreshCardDetailApply);
 //    用戶永遠看不到「儲存中」那一格；結果仍是等真正結案後才顯示（失敗不會被吃掉）
 // ⚠️ 錯誤依「欄位」記帳（key）：A 欄失敗後 B 欄成功，紅字不能被 B 的成功洗掉；同一欄之後存成功才清掉
 const CD_SAVE_MIN_BUSY_MS = 350;
-const CD_SAVE_LABELS = { level: '級別', issuer: '發卡組織', birthday: '生日月份', children: '童樂匯', fee: '免年費', credit: '額度', notes: '筆記' };
+const CD_SAVE_LABELS = { level: '級別', issuer: '發卡組織', birthday: '生日月份', children: '童樂匯', fee: '免年費', credit: '額度', dates: '結帳日／繳款日', notes: '筆記' };
 const _cdSv = { busy: 0, busySince: 0, errors: {}, volatile: {}, at: null, cardId: null, seq: 0 };
 
 // 一列設定：標籤（左）／控制項（右）／說明小字（下一行）。標籤與控制項由呼叫端組好（已 escape 的 HTML）
@@ -283,129 +283,20 @@ function summarizeAnnualFee(text) {
     return null;
 }
 
-async function showCardDetail(cardId) {
-    const card = cardsData.cards.find(c => c.id === cardId);
-    if (!card) return;
+// ============================================================
+// 個人設定：詳情頁與「我的信用卡」單卡面板共用（2026-11-22）
+// ============================================================
+// 整頁只有一份 #card-personal-section（欄位 id 都是唯一的），誰要用就把它搬到誰那裡
+// （cdMountPersonalSection）；這支負責把「這張卡」的值填進去並接上自動儲存。
+// 存檔一律走各欄既有的 save 函數，沒有第二套存檔邏輯。
+// opts.context：'detail'（預設，詳情頁）／'owned'（我的信用卡單卡面板）——
+//   差別只在「改了設定之後要不要重畫詳情頁的回饋卡／計算條件列」，單卡面板沒有那些東西。
+// 🔒 鐵則 1：saveCardLevel 的呼叫點仍只有級別下拉的 onchange（用戶親自改）
+async function renderCardPersonalSettings(card, opts = {}) {
+    const inDetail = opts.context !== 'owned';
 
-    // 追蹤卡片詳情查看
-    if (window.logEvent && window.firebaseAnalytics) {
-        window.logEvent(window.firebaseAnalytics, 'view_card_detail', {
-            card_id: cardId,
-            card_name: card.name,
-            surface: getAnalyticsSurface()
-        });
-    }
-
-    // 重置詳情頁搜尋框（含上一張卡搜尋時收起的區，不還原的話換卡後那幾區會一直藏著）
-    const cashbackSearchInput = document.getElementById('cashback-search-input');
-    if (cashbackSearchInput) cashbackSearchInput.value = '';
-    const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
-    if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
-    const cashbackSearchHint = document.getElementById('cashback-search-hint');
-    if (cashbackSearchHint) cashbackSearchHint.hidden = true;
-    DETAIL_SEARCH_SECTIONS.forEach(([, sectionId]) => {
-        const section = document.getElementById(sectionId);
-        if (section && section._searchHidden) { section.style.display = ''; section._searchHidden = false; }
-    });
-
-    const modal = document.getElementById('card-detail-modal');
-
-    // Update basic information
-    document.getElementById('card-detail-title').textContent = card.name;
-
-    // 卡片用途（Cards Data 的 cardUseCase 欄，選填）：一句話講這張卡適合什麼情境。
-    // 用 textContent 不用 innerHTML——這是站長在 Sheets 自由輸入的文字（鐵則 3），
-    // textContent 比事後 escapeHtml() 少一個「哪天改成字串拼接就破功」的失誤面
-    // （同 renderCardDetailChangelog 的作法）。
-    // 每次呼叫都要明確設 hidden：上一張卡有、這張沒有時不能沿用舊狀態。
-    const useCaseEl = document.getElementById('card-use-case');
-    if (useCaseEl) {
-        const useCase = (card.cardUseCase || '').trim();
-        useCaseEl.textContent = useCase;
-        useCaseEl.hidden = !useCase;
-    }
-
-    // 申辦：桌機頁首亮黃鈕（#card-detail-apply-header-btn）＋手機浮動膠囊（#card-detail-apply-bar），
-    // 兩者共用同一份 applyCta 資料。
-    // 每次呼叫都要明確重設——上一張卡有 CTA、這張沒有時不能沿用舊狀態。
-    // 持卡人（myOwnedCards 含這張卡）兩者都不顯示：預設先顯示，loadMyOwnedCards 完成後與
-    // 「我的信用卡」增刪卡後由 refreshCardDetailApply() 重新判斷（見該函數）。
-    setupCardDetailApply(card);
-
-    // 卡圖（assets/images/cards/<card.id>.png）：缺圖自動隱藏
-    const headerImg = document.getElementById('card-detail-image');
-    if (headerImg) {
-        headerImg.hidden = false;
-        headerImg.onerror = () => { headerImg.hidden = true; };
-        headerImg.src = `assets/images/cards/${card.id}.png`;
-    }
-
-    // 銀行名稱＝Cards Data 的 fullName
-    const fullNameLink = document.getElementById('card-full-name-link');
-    fullNameLink.textContent = card.fullName || card.name;
-
-    // 信用卡官網連結（回饋類型那行旁的「信用卡官網 ↗」）：沒有合法網址就藏起來並清掉 href，
-    // 免得上一張卡的連結沿用到這張
-    const officialSiteLink = document.getElementById('card-official-site-link');
-    if (officialSiteLink) {
-        if (sanitizeUrl(card.website)) {
-            officialSiteLink.href = sanitizeUrl(card.website);
-            officialSiteLink.dataset.cardId = card.id;
-            officialSiteLink.dataset.cardName = card.name;
-            officialSiteLink.hidden = false;
-        } else {
-            officialSiteLink.removeAttribute('href');
-            officialSiteLink.hidden = true;
-        }
-    }
-
-    // 卡片標籤：詳情頁先不顯示（2026-10-14 站長要求；程式先留著，見 renderCardTags）。
-    // 2026-11-17 改版後摘要區沒有 .info-grid-2col 可以掛，插入點不存在就整段略過
-    const cardInfoSection = modal.querySelector('#card-basic-info-section');
-    if (cardInfoSection) {
-        const existingTags = cardInfoSection.querySelector('.card-tags-container');
-        if (existingTags) existingTags.remove();
-        if (card.tags && card.tags.length > 0) {
-            const infoGrid = cardInfoSection.querySelector('.cd-facts');
-            if (infoGrid) infoGrid.insertAdjacentHTML('afterend', renderCardTags(card.tags));
-        }
-    }
-
-    // 年費（2026-11-19 改短版）：annualFee 整理得了就顯示「大字＋一行小字」（首年免／次年 NT$X、NT$X／每年），
-    // 整理不了就照舊顯示原文小字——寧可長一點，也不要顯示錯的數字。完整原文放在 title。
-    // 免年費條件（feeWaiver 原文）與「我已過免年費門檻」勾選在個人設定（#card-fee-waiver／#fee-waiver-checked）
-    const annualFeeEl = document.getElementById('card-annual-fee');
-    const feeShort = summarizeAnnualFee(card.annualFee);
-    annualFeeEl.textContent = '';
-    annualFeeEl.classList.toggle('is-raw', !feeShort);
-    if (feeShort) {
-        const feeMain = document.createElement('span');
-        feeMain.className = feeShort.main.startsWith('NT$') ? 'cd-fee-main is-amount' : 'cd-fee-main';
-        feeMain.textContent = feeShort.main;
-        annualFeeEl.appendChild(feeMain);
-        if (feeShort.sub) {
-            const feeSub = document.createElement('small');
-            feeSub.className = 'cd-fee-sub';
-            feeSub.textContent = feeShort.sub;
-            annualFeeEl.appendChild(feeSub);
-        }
-    } else {
-        annualFeeEl.textContent = card.annualFee || '無資料';
-    }
-    annualFeeEl.title = card.annualFee || '';
     document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '';
 
-    // 回饋類型＋點數效期（摘要裡的一行小字）；沒資料就整行文字不出現
-    const cashbackTypeSpan = document.getElementById('card-cashback-type');
-    const typeParts = [];
-    if (card.basicCashbackType) typeParts.push(card.basicCashbackType);
-    if (card.pointsExpiry) typeParts.push(card.pointsExpiry);
-    cashbackTypeSpan.textContent = typeParts.join('｜');
-
-    // 一般回饋區：先不畫——「一般回饋特列項目」這類組別在下面各條指定通路路徑裡才分得出來，
-    // 它們要併進這一區的「國內一般消費」卡（見 splitGeneralListEntries），所以等指定通路算完再畫
-    const generalExtra = [];
-    
     // Handle level selection for all cards with levels
     const cubeLevelSection = document.getElementById('cube-level-section');
 
@@ -557,7 +448,9 @@ async function showCardDetail(cardId) {
             // 先發出儲存、交給儲存狀態列追蹤真正的結果（cdTrackSave），再重繪
             const levelSaving = saveCardLevel(card.id, this.value);
             await cdTrackSave('level', levelSaving);
-            // Refresh card detail display
+            // 詳情頁：重畫回饋卡。「我的信用卡」單卡面板：只存檔——那裡沒有回饋卡，
+            // 呼叫 showCardDetail() 會把詳情頁整個打開（2026-11-22）
+            if (!inDetail) return;
             if (card.id === 'cathay-cube') {
                 await updateCubeSpecialCashback(card);
             } else {
@@ -580,7 +473,7 @@ async function showCardDetail(cardId) {
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
                 await cdTrackSave('children', saveChildrenEligible(this.checked));
-                updateCardCalcConditions(card);   // 「計算條件」列的「童樂匯」標籤
+                if (inDetail) updateCardCalcConditions(card);   // 「計算條件」列的「童樂匯」標籤
             };
         }
 
@@ -589,7 +482,7 @@ async function showCardDetail(cardId) {
         if (cubeIssuerSelect) {
             cubeIssuerSelect.onchange = async function() {
                 await cdTrackSave('issuer', saveCubeIssuer(this.value));
-                updateCardCalcConditions(card);   // 「計算條件」列的發卡組織標籤
+                if (inDetail) updateCardCalcConditions(card);   // 「計算條件」列的發卡組織標籤
             };
         }
     } else {
@@ -599,6 +492,180 @@ async function showCardDetail(cardId) {
         cubeLevelSection.innerHTML = '';
         cubeLevelSection.style.display = 'none';
     }
+
+    // Load and setup user notes（2026-11-17 起自動儲存：停止輸入約 1 秒存、離開輸入框存、關閉詳情頁存；
+    // 沒有儲存鈕了，結果由個人設定最上面的儲存狀態列表達——見 cdTrackSave／cdFlushNotes）
+    cdFlushNotes();   // 上一張卡還沒送出的筆記先存（輸入框馬上要換成這張卡的內容）
+    currentNotesCardId = card.id;
+    const notesTextarea = document.getElementById('user-notes-input');
+
+    // 讀取當前筆記
+    loadUserNotes(card.id).then(notes => {
+        notesTextarea.value = notes;
+    });
+
+    // 設置輸入監聽：先備份到本機（每個字都寫，維持既有行為），再排自動儲存
+    notesTextarea.oninput = (e) => {
+        const notes = e.target.value;
+        autoBackupNotes(card.id, notes);
+        cdQueueNotesSave(card.id, notes);
+    };
+    notesTextarea.onblur = () => { cdFlushNotes(); };
+
+    // 個人設定的儲存狀態列：換卡清掉上一張卡的記帳，重繪同一張卡（級別切換）保留
+    cdSaveStatusReset(card.id);
+
+    // 設置免年費狀態功能
+    setupFeeWaiverStatus(card.id);
+
+    // 設置我的額度輸入
+    setupCreditLimit(card.id);
+
+    // 設置結帳日期功能
+    setupBillingDates(card.id);
+}
+
+// 把唯一的 #card-personal-section 搬到 host（null＝搬回詳情頁原位）。
+// 原位在第一次搬動前記下來（那時它一定還在詳情頁裡）
+let _cdPersonalHome = null;
+function cdMountPersonalSection(host) {
+    const sec = document.getElementById('card-personal-section');
+    if (!sec) return null;
+    if (!_cdPersonalHome) _cdPersonalHome = sec.parentElement;
+    const target = host || _cdPersonalHome;
+    if (sec.parentElement !== target) target.appendChild(sec);
+    sec.classList.toggle('cd-set-owned', !!host);
+    if (host) sec.hidden = false;   // 詳情頁手機版的頁籤會把它設成 hidden；搬回去時 setupCardDetailNav 會重設
+    return sec;
+}
+
+async function showCardDetail(cardId) {
+    const card = cardsData.cards.find(c => c.id === cardId);
+    if (!card) return;
+
+    // 追蹤卡片詳情查看
+    if (window.logEvent && window.firebaseAnalytics) {
+        window.logEvent(window.firebaseAnalytics, 'view_card_detail', {
+            card_id: cardId,
+            card_name: card.name,
+            surface: getAnalyticsSurface()
+        });
+    }
+
+    // 重置詳情頁搜尋框（含上一張卡搜尋時收起的區，不還原的話換卡後那幾區會一直藏著）
+    const cashbackSearchInput = document.getElementById('cashback-search-input');
+    if (cashbackSearchInput) cashbackSearchInput.value = '';
+    const cashbackSearchEmpty = document.getElementById('cashback-search-empty');
+    if (cashbackSearchEmpty) cashbackSearchEmpty.style.display = 'none';
+    const cashbackSearchHint = document.getElementById('cashback-search-hint');
+    if (cashbackSearchHint) cashbackSearchHint.hidden = true;
+    DETAIL_SEARCH_SECTIONS.forEach(([, sectionId]) => {
+        const section = document.getElementById(sectionId);
+        if (section && section._searchHidden) { section.style.display = ''; section._searchHidden = false; }
+    });
+
+    const modal = document.getElementById('card-detail-modal');
+
+    // Update basic information
+    document.getElementById('card-detail-title').textContent = card.name;
+
+    // 卡片用途（Cards Data 的 cardUseCase 欄，選填）：一句話講這張卡適合什麼情境。
+    // 用 textContent 不用 innerHTML——這是站長在 Sheets 自由輸入的文字（鐵則 3），
+    // textContent 比事後 escapeHtml() 少一個「哪天改成字串拼接就破功」的失誤面
+    // （同 renderCardDetailChangelog 的作法）。
+    // 每次呼叫都要明確設 hidden：上一張卡有、這張沒有時不能沿用舊狀態。
+    const useCaseEl = document.getElementById('card-use-case');
+    if (useCaseEl) {
+        const useCase = (card.cardUseCase || '').trim();
+        useCaseEl.textContent = useCase;
+        useCaseEl.hidden = !useCase;
+    }
+
+    // 申辦：桌機頁首亮黃鈕（#card-detail-apply-header-btn）＋手機浮動膠囊（#card-detail-apply-bar），
+    // 兩者共用同一份 applyCta 資料。
+    // 每次呼叫都要明確重設——上一張卡有 CTA、這張沒有時不能沿用舊狀態。
+    // 持卡人（myOwnedCards 含這張卡）兩者都不顯示：預設先顯示，loadMyOwnedCards 完成後與
+    // 「我的信用卡」增刪卡後由 refreshCardDetailApply() 重新判斷（見該函數）。
+    setupCardDetailApply(card);
+
+    // 卡圖（assets/images/cards/<card.id>.png）：缺圖自動隱藏
+    const headerImg = document.getElementById('card-detail-image');
+    if (headerImg) {
+        headerImg.hidden = false;
+        headerImg.onerror = () => { headerImg.hidden = true; };
+        headerImg.src = `assets/images/cards/${card.id}.png`;
+    }
+
+    // 銀行名稱＝Cards Data 的 fullName
+    const fullNameLink = document.getElementById('card-full-name-link');
+    fullNameLink.textContent = card.fullName || card.name;
+
+    // 信用卡官網連結（回饋類型那行旁的「信用卡官網 ↗」）：沒有合法網址就藏起來並清掉 href，
+    // 免得上一張卡的連結沿用到這張
+    const officialSiteLink = document.getElementById('card-official-site-link');
+    if (officialSiteLink) {
+        if (sanitizeUrl(card.website)) {
+            officialSiteLink.href = sanitizeUrl(card.website);
+            officialSiteLink.dataset.cardId = card.id;
+            officialSiteLink.dataset.cardName = card.name;
+            officialSiteLink.hidden = false;
+        } else {
+            officialSiteLink.removeAttribute('href');
+            officialSiteLink.hidden = true;
+        }
+    }
+
+    // 卡片標籤：詳情頁先不顯示（2026-10-14 站長要求；程式先留著，見 renderCardTags）。
+    // 2026-11-17 改版後摘要區沒有 .info-grid-2col 可以掛，插入點不存在就整段略過
+    const cardInfoSection = modal.querySelector('#card-basic-info-section');
+    if (cardInfoSection) {
+        const existingTags = cardInfoSection.querySelector('.card-tags-container');
+        if (existingTags) existingTags.remove();
+        if (card.tags && card.tags.length > 0) {
+            const infoGrid = cardInfoSection.querySelector('.cd-facts');
+            if (infoGrid) infoGrid.insertAdjacentHTML('afterend', renderCardTags(card.tags));
+        }
+    }
+
+    // 年費（2026-11-19 改短版）：annualFee 整理得了就顯示「大字＋一行小字」（首年免／次年 NT$X、NT$X／每年），
+    // 整理不了就照舊顯示原文小字——寧可長一點，也不要顯示錯的數字。完整原文放在 title。
+    // 免年費條件（feeWaiver 原文）與「我已過免年費門檻」勾選在個人設定（#card-fee-waiver／#fee-waiver-checked）
+    const annualFeeEl = document.getElementById('card-annual-fee');
+    const feeShort = summarizeAnnualFee(card.annualFee);
+    annualFeeEl.textContent = '';
+    annualFeeEl.classList.toggle('is-raw', !feeShort);
+    if (feeShort) {
+        const feeMain = document.createElement('span');
+        feeMain.className = feeShort.main.startsWith('NT$') ? 'cd-fee-main is-amount' : 'cd-fee-main';
+        feeMain.textContent = feeShort.main;
+        annualFeeEl.appendChild(feeMain);
+        if (feeShort.sub) {
+            const feeSub = document.createElement('small');
+            feeSub.className = 'cd-fee-sub';
+            feeSub.textContent = feeShort.sub;
+            annualFeeEl.appendChild(feeSub);
+        }
+    } else {
+        annualFeeEl.textContent = card.annualFee || '無資料';
+    }
+    annualFeeEl.title = card.annualFee || '';
+
+    // 回饋類型＋點數效期（摘要裡的一行小字）；沒資料就整行文字不出現
+    const cashbackTypeSpan = document.getElementById('card-cashback-type');
+    const typeParts = [];
+    if (card.basicCashbackType) typeParts.push(card.basicCashbackType);
+    if (card.pointsExpiry) typeParts.push(card.pointsExpiry);
+    cashbackTypeSpan.textContent = typeParts.join('｜');
+
+    // 一般回饋區：先不畫——「一般回饋特列項目」這類組別在下面各條指定通路路徑裡才分得出來，
+    // 它們要併進這一區的「國內一般消費」卡（見 splitGeneralListEntries），所以等指定通路算完再畫
+    const generalExtra = [];
+    
+    // 個人設定（級別／CUBE／額度／結帳日／免年費／筆記）：與「我的信用卡」單卡面板共用同一支
+    // 「我的信用卡」單卡面板開著 → 先讓它回到卡片格（設定區只有一份，要搬回詳情頁）
+    if (typeof ownedPanelExit === 'function') ownedPanelExit();
+    cdMountPersonalSection(null);
+    await renderCardPersonalSettings(card, { context: 'detail' });
     
     // Update special cashback
     // 2026-11-17 起「同方案一張卡」：下面各條路徑只負責把每個回饋組整理成一筆 entry（一列回饋：
@@ -899,36 +966,6 @@ async function showCardDetail(cardId) {
     // 近期異動（權益變化 log）
     renderCardDetailChangelog(card);
 
-    // Load and setup user notes（2026-11-17 起自動儲存：停止輸入約 1 秒存、離開輸入框存、關閉詳情頁存；
-    // 沒有儲存鈕了，結果由個人設定最上面的儲存狀態列表達——見 cdTrackSave／cdFlushNotes）
-    cdFlushNotes();   // 上一張卡還沒送出的筆記先存（輸入框馬上要換成這張卡的內容）
-    currentNotesCardId = card.id;
-    const notesTextarea = document.getElementById('user-notes-input');
-
-    // 讀取當前筆記
-    loadUserNotes(card.id).then(notes => {
-        notesTextarea.value = notes;
-    });
-
-    // 設置輸入監聽：先備份到本機（每個字都寫，維持既有行為），再排自動儲存
-    notesTextarea.oninput = (e) => {
-        const notes = e.target.value;
-        autoBackupNotes(card.id, notes);
-        cdQueueNotesSave(card.id, notes);
-    };
-    notesTextarea.onblur = () => { cdFlushNotes(); };
-
-    // 個人設定的儲存狀態列：換卡清掉上一張卡的記帳，重繪同一張卡（級別切換）保留
-    cdSaveStatusReset(card.id);
-
-    // 設置免年費狀態功能
-    setupFeeWaiverStatus(card.id);
-
-    // 設置我的額度輸入
-    setupCreditLimit(card.id);
-
-    // 設置結帳日期功能
-    setupBillingDates(card.id);
 
     // Show modal
     // 級別切換等重繪路徑會在 modal 已開啟時重呼叫 showCardDetail()；

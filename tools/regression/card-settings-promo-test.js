@@ -55,7 +55,10 @@ function stub(url, guest) {
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok }); console.log((ok ? '  ✅ ' : '  ❌ ') + name + (extra ? ' — ' + extra : '')); };
 
-(async () => {
+// 給 owned-cards-panel-test.js 共用同一個 Firebase 替身（require 時不執行本檔測試）
+module.exports = { stub };
+
+if (require.main === module) (async () => {
   const srv = await startServer(false);
   const base = `http://127.0.0.1:${srv.address().port}`;
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());

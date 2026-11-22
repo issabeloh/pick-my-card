@@ -372,8 +372,8 @@ Grep `titleParts`）：
 
 ### 個人設定：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列
 
-**結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定可以在「我的信用卡」一次看。」。每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
-- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
+**結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定也可以在「我的信用卡」一張一張看、直接改。」（2026-11-22 前是「…一次看。」）。⚠️ 2026-11-22 起這一整區也是「我的信用卡」單卡面板的編輯介面（同一份 DOM 搬過去，見第 5 節），填值與接線在 `renderCardPersonalSettings()`、不在 `showCardDetail()` 裡；控制項 CSS 掛 `#card-personal-section`（不是 `#card-detail-modal`）每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
+- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、結帳日、繳款截止日（2026-11-22 補上，見第 5 節）、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
 - **開關**：勾選一律是 `input type="checkbox" role="switch" class="cd-sw"`（`appearance:none` 畫外觀；id 不變、Tab 可聚焦、空白鍵切換、`:focus-visible` 有 2px 外框）。舊的 `.fee-waiver-checkbox`／`.checkmark` 已刪
 - **訪客的生日月份**仍是 disabled 下拉（只有「需先登入」一個選項）——一眼看出「這裡可以選，但要先登入」。文字別寫長：16px 下 132px 放不下「登入後即可設定」（會被截成「登入後即可設」）
 
@@ -493,24 +493,47 @@ Grep `titleParts`）：
 **版面**（`renderOwnedCardsOverview()`，`js/cards-modals.js`，Grep「卡片格」）：
 1. **標題列**：「我的信用卡 ・N 張」（`#owned-count-badge`，淡灰小字；`mappings-page-test.js` 會讀它）＋「管理卡片」膠囊鈕（`#manage-owned-cards-btn`，沿用原 id，開勾選清單）
 2. **摘要列** `.ow-sum`：持有張數／總額度（只加總有填的卡，另註幾張未填）／免年費門檻（達成幾張；不顯示「幾張未達成」）
-3. **卡片格** `.ow-grid`：手機 2 欄、≥600px 3 欄（modal 最寬 660px）。每格＝卡面＋卡名＋一行「級別 ・ 額度」；有勾「我已過免年費門檻」的卡多一行綠字「✓ 已過免年費門檻」（`.ow-ok`）；**沒勾的不標**——2026-11-17 站長裁定只顯示正面訊息，因為沒勾過的人每張卡都會被標「未達標」，本來就免年費的卡也會被誤標。最後一格是虛線框「＋ 新增信用卡」
-4. **點卡片** → `openCardDetailAtPersonal(cardId)`：開詳情頁並捲到「個人設定」（借該區塊 nav 按鈕的 onclick，理由同 `openCardDetailAtChangelog`）
+3. **卡片格** `.ow-grid`：手機 2 欄、≥600px 3 欄（modal 最寬 660px）。每格＝卡面＋卡名＋一行「級別 ・ 額度」；有填結帳日／繳款日的卡多一行藍字「5 日結帳・20 日繳款」（`.ow-dates`，只填一個就只顯示那一個）；有勾「我已過免年費門檻」的卡多一行綠字「✓ 已過免年費門檻」（`.ow-ok`）。**沒填／沒勾的不標**——2026-11-17 站長裁定只顯示正面訊息，因為沒勾過的人每張卡都會被標「未達標」，本來就免年費的卡也會被誤標。有填日期的格子因此比較高，站長 2026-11-22 同意。最後一格是虛線框「＋ 新增信用卡」
+4. **點卡片** → `openOwnedCardPanel(cardId)`：同一個視窗換成該卡的**單卡面板**（下節）
 
-**規則**：
-- **這一頁唯讀**（站長 2026-11-16 裁定）：編輯一律在詳情頁。級別只讀來顯示，**這裡不得呼叫 `saveCardLevel()`**（鐵則 1）
-- 個人資料是非同步讀的：卡面與卡名先畫，級別／額度／免年費讀到再補。所有讀取包 `safe()` fallback（Firebase 被擋也能渲染）；重畫用 `_token` 作廢舊批次
-- **詳情頁關閉時總覽會重畫**（`setupMyOwnedCardsModal()` 裡的 MutationObserver 看 `#card-detail-modal` 由開變關）——用戶改完額度回來，數字要是新的
-- 直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）；缺圖顯示卡名（`.ow-noimg`）
-- **結帳日／繳款期限還沒放**：站長要加，但資料面先不碰——`loadBillingDates()`／`saveBillingDates()` 已存在，詳情頁卻沒有輸入欄位（`#billing-date`／`#statement-date` 不在 index.html），用戶目前填不了。要做時先補詳情頁欄位，再回來在卡片格加一行
-- 已否決、勿回退：錢包堆疊與堆疊動畫、不顯示卡名的一覽、皮革框／毛玻璃／漸層背景、藍膠囊卡數、標題旁只有圖示的齒輪鈕
+### 單卡面板：點卡片直接編輯（2026-11-22，站長推翻「這頁唯讀」）
+
+**為什麼**：原本點卡片是開詳情頁再捲到個人設定，要改五張卡就要開關五次詳情頁。這一頁的定位是個人後台，就該能直接改。
+
+**畫面**：標題列換成「‹ 所有卡片」（`#owned-panel-back`）＋ ×；標題與「管理卡片」藏起來。內容＝卡面＋卡名＋「查看回饋詳情 ›」（`#owned-panel-detail`，開詳情頁）＋該卡的個人設定（儲存狀態列、計算條件、我的紀錄，跟詳情頁一模一樣，只是不顯示「個人設定」小標與「也可以在我的信用卡…」那行提示）。
+
+**共用、不複製（站長決策：編輯介面與詳情頁共用，不得複製存檔邏輯）**：
+- 整頁**只有一份** `#card-personal-section`（欄位 id 都是唯一的，做第二份就會撞 id）。開面板時用 `cdMountPersonalSection(host)` 把它**搬進** `#owned-panel-settings`；開詳情頁（`showCardDetail` 開頭）或離開面板時 `cdMountPersonalSection(null)` 搬回原位（原位在第一次搬動前記下）
+- 填值與接自動儲存：`renderCardPersonalSettings(card, { context })`（`js/card-detail.js`，從 `showCardDetail()` 抽出）。`context:'owned'` 的差別**只有**「改了之後不重畫詳情頁」：級別 onchange 存完就結束（詳情頁版會 `showCardDetail()` 重畫，在面板裡那會把詳情頁整個打開）；發卡組織／童樂匯不呼叫 `updateCardCalcConditions`
+- 樣式：控制項 CSS 掛 `#card-personal-section`（同權重取代原本的 `#card-detail-modal`），兩邊長得一樣；面板專屬的只有 `.cd-set-owned`（藏標題與提示、去掉區塊底線）
+- 🔒 鐵則 1：`saveCardLevel` 的呼叫點沒有增加，仍只有級別下拉的 onchange。開面板、存的級別找不到時只顯示預設（`owned-cards-panel-test.js` 有驗：沒呼叫、本機值沒變）
+
+**離開面板一律走 `ownedPanelExit()`**（「‹ 所有卡片」、×、點遮罩、再次打開 modal、`showCardDetail` 開頭都會叫；沒開著就什麼都不做）：先 `cdFlushNotes()` 送出還沒存的筆記 → 搬回設定區 → 回到卡片格並重畫（剛改的數字馬上看得到），捲動位置還原到點卡片前。「查看回饋詳情」＝`showCardDetail()`，它開頭會先讓面板回到卡片格，所以關掉詳情頁時下面是卡片格、不是空的面板。
+- **手機返回鍵不處理**（站長 2026-11-22）：跟這個 modal 原本一樣。全站只有詳情頁、配卡組合頁 `/mappings`、新戶活動頁行李箱專區處理返回鍵
+
+### 結帳日／繳款截止日（2026-11-22 補上欄位）
+
+- 位置：個人設定「我的紀錄」，額度下面兩列，「每月 N 日」下拉（`<option value="">未設定</option>`＋1–31，選項由 `setupBillingDates()` 填）。改了就存，結果進儲存狀態列（`cdTrackSave('dates', …)`，欄位名「結帳日／繳款日」）
+- ⚠️ **資料欄位名跟意思是反的**（站長 2026-11-22 確認）：`billingDate`＝**繳款截止日**（`#billing-date`）、`statementDate`＝**結帳日**（`#statement-date`）。已有用戶資料用這兩個名字，**不要改名**，只在畫面上對好
+- 儲存：訪客 `billingDates_local_<cardId>`；登入者 `users/{uid}.billingDates[cardId] = { billingDate, statementDate }`＋本機鏡像 `billingDates_<uid>_<cardId>`（這些 key、登入合併、登出清理、Firestore 規則都是早就有的，沒動）。`saveBillingDates()` 2026-11-22 起回傳儲存結果物件，寫入邏輯不變
+- 存的值看不懂（不是 1–31）→ 下拉顯示「未設定」、卡片格不顯示，但不寫回；`billingDayNumber()` 統一換算（"07" → 7）
+- 舊版是兩個數字輸入框、change 和 blur 各存一次（同一個值存兩次）；改成下拉後只有 onchange
+
+**其他規則**：
+- 個人資料是非同步讀的：卡面與卡名先畫，級別／額度／免年費／日期讀到再補。所有讀取包 `safe()` fallback（Firebase 被擋也能渲染）；重畫用 `_token` 作廢舊批次
+- **詳情頁關閉時總覽會重畫**（`setupMyOwnedCardsModal()` 裡的 MutationObserver 看 `#card-detail-modal` 由開變關）
+- 直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）；缺圖顯示卡名（`.ow-noimg`）。單卡面板的卡面同樣處理
+- 已否決、勿回退：錢包堆疊與堆疊動畫、不顯示卡名的一覽、皮革框／毛玻璃／漸層背景、藍膠囊卡數、標題旁只有圖示的齒輪鈕、「這頁唯讀／點卡片開詳情頁」（2026-11-22 推翻）
+
+**驗證**：`node tools/regression/owned-cards-panel-test.js`（29 項：面板開關與搬動、詳情頁不被彈出、樣式一致、日期存取與欄位對應、雲端失敗紅字、鐵則 1、筆記離開即存、桌機寬度）。
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
-- **編輯處只有詳情頁**：`#credit-limit-section`（個人設定「我的紀錄」組的第一列）
+- **編輯處**：`#credit-limit-section`（個人設定「我的紀錄」組的第一列）。這一區在詳情頁，也會被搬進「我的信用卡」單卡面板（2026-11-22，第 5 節），兩處是同一份
 - 輸入框（2026-11-17 起在個人設定「我的紀錄」第一列，標籤左、36px 高 132px 寬的輸入框靠右；沒有 NT$ 前綴，單位寫在說明小字）：只收數字、自動千分位（墨色）、失焦或 Enter 即存；沒值顯示 placeholder「未設定」；`inputmode="numeric"`+pattern。儲存結果由儲存狀態列表達（`cdTrackSave('credit', …)`），不再有 2 秒就消失的「✓ 已儲存」
 - 儲存比照免年費：訪客 `creditLimit_local_<cardId>`；登入者 `users/{uid}.creditLimits[cardId]`（Firestore map）＋本機鏡像 `creditLimit_<uid>_<cardId>`；清空＝刪除
 - 函數：`loadCreditLimit()`/`saveCreditLimit()`（2026-11-17 起回傳儲存結果）/`setupCreditLimit()`（Grep "我的額度相關功能"）
-- 「我的信用卡」卡片格唯讀顯示「額度 N 萬」（非整千則 `NT$x,xxx`）或「額度未填」；摘要列顯示總額度（第 5 節）
+- 「我的信用卡」卡片格顯示「額度 N 萬」（非整千則 `NT$x,xxx`）或「額度未填」；摘要列顯示總額度（第 5 節）
 
 ## 7. 精準搜尋核取方塊 ＆ 搜尋輸入區版面（2026-07-12 新增/重整）
 
@@ -632,3 +655,4 @@ Grep `titleParts`）：
 - [2026-11-17] 錯誤用「單一 lastError」記會被別欄的成功洗掉（A 欄存失敗、B 欄隨後成功 → 紅字消失，用戶以為 A 也存好了）→ 錯誤依欄位 key 記帳，同一欄之後成功才清
 - [2026-11-17] run-regression.js **不涵蓋搜尋結果的新戶活動卡**（它只抓 `#results-container`／停車／領券）；抽 `createCardholderPromoElement` 的共用函數時，「逐字一致」要自己比：載入 `git show HEAD:js/results-display.js` 的舊版，對所有活動 × 兩種模式（搜尋／詳情）比 outerHTML，並換好幾個凍結日期（徽章依日期而變）。本輪用 7 個日期 × 55 筆 × 2 模式比過全一致
 - [2026-11-17] 票券頁籤筆數若把「共用新戶資格」放在 `#card-promos-content` 底下，`cdTabCount` 的 `> *:not(.card-apply-cta)` 會多算一個 → 共用的東西放在 content 之外（`#card-promos-foot`），每筆活動的所有內容包進同一個 `.cd-pm`
+- [2026-11-22] 個人設定要搬進「我的信用卡」單卡面板，但控制項 CSS 全掛在 `#card-detail-modal` 底下，一搬出來下拉／開關就變回瀏覽器原生樣式 → 會被兩處共用的區塊，樣式掛在區塊自己的 id（`#card-personal-section`），不要掛在外層容器

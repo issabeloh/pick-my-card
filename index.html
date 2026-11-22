@@ -882,7 +882,10 @@
         <div id="my-owned-cards-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>我的信用卡 <span id="owned-count-badge" class="ow-count-badge" style="display: none;"></span></h3>
+                    <!-- 單卡面板（2026-11-22）：點卡片後同一個視窗換成該卡的個人設定；這顆鈕回到卡片格。
+                         面板開著時標題與「管理卡片」藏起來（js/cards-modals.js openOwnedCardPanel／ownedPanelExit） -->
+                    <button type="button" id="owned-panel-back" class="ow-back" hidden>‹ 所有卡片</button>
+                    <h3 id="owned-modal-title">我的信用卡 <span id="owned-count-badge" class="ow-count-badge" style="display: none;"></span></h3>
                     <button id="manage-owned-cards-btn" class="ow-manage-btn" type="button" title="新增或移除我的信用卡">
                         <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
@@ -894,6 +897,18 @@
                 <div class="modal-body">
                     <div class="owned-cards-overview" id="owned-cards-overview">
                         <!-- Owned card overview tiles populated by JavaScript -->
+                    </div>
+                    <!-- 單卡面板：卡面＋卡名＋「查看回饋詳情」，下面的 #owned-panel-settings 是掛載點——
+                         詳情頁那唯一一份 #card-personal-section 會被搬進來（cdMountPersonalSection），不另做一份 -->
+                    <div class="ow-panel" id="owned-card-panel" hidden>
+                        <div class="ow-panel-hd">
+                            <div class="ow-panel-pic" id="owned-panel-pic"></div>
+                            <div class="ow-panel-tx">
+                                <div class="ow-panel-name" id="owned-panel-name"></div>
+                                <button type="button" class="ow-panel-more" id="owned-panel-detail">查看回饋詳情 ›</button>
+                            </div>
+                        </div>
+                        <div id="owned-panel-settings"></div>
                     </div>
                 </div>
             </div>
@@ -1146,6 +1161,17 @@
                                     <small class="cd-st-s">單位 NT$。會計入刷卡小抄的額度合計</small>
                                 </div>
 
+                                <!-- 結帳日／繳款截止日（2026-11-22 補上）：選項由 setupBillingDates()（js/spending-mappings.js）填。
+                                     ⚠️ 資料欄位名跟意思是反的：#statement-date 存 statementDate＝結帳日、#billing-date 存 billingDate＝繳款截止日 -->
+                                <div class="cd-st-r" id="card-statement-date-row">
+                                    <div class="cd-st-l"><label for="statement-date">結帳日</label></div>
+                                    <div class="cd-st-c"><select id="statement-date" class="cd-st-sel"><option value="">未設定</option></select></div>
+                                </div>
+                                <div class="cd-st-r" id="card-billing-date-row">
+                                    <div class="cd-st-l"><label for="billing-date">繳款截止日</label></div>
+                                    <div class="cd-st-c"><select id="billing-date" class="cd-st-sel"><option value="">未設定</option></select></div>
+                                </div>
+
                                 <!-- 免年費：說明小字＝feeWaiver 原文（#card-fee-waiver 由 showCardDetail 用 textContent 填；
                                      空字串時整行不佔位）。#fee-waiver-checked 的 id 與儲存邏輯見 js/spending-mappings.js -->
                                 <div class="cd-st-r" id="card-fee-section">
@@ -1160,7 +1186,7 @@
                                               placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."></textarea>
                                 </div>
                             </div>
-                            <div class="cd-set-foot">所有卡片的設定可以在「我的信用卡」一次看。</div>
+                            <div class="cd-set-foot">所有卡片的設定也可以在「我的信用卡」一張一張看、直接改。</div>
                         </div>
                     </div>
 
