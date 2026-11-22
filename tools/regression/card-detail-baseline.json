@@ -5,7 +5,7 @@
    "2026-09-11T12:00:00+08:00",
    "2026-08-25T12:00:00+08:00"
   ],
-  "generatedAt": "2026-11-22T10:38:18.927Z"
+  "generatedAt": "2026-11-22T10:43:54.500Z"
  },
  "runs": {
   "2026-09-11T12:00:00+08:00": {
@@ -2310,7 +2310,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: NT$25,000"
@@ -4293,7 +4293,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: 無上限"
@@ -4531,7 +4531,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: 無上限"
@@ -6457,7 +6457,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: NT$33,333"
@@ -9300,7 +9300,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: NT$25,000"
@@ -11311,7 +11311,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: 無上限"
@@ -11560,7 +11560,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: 無上限"
@@ -13486,7 +13486,7 @@
      },
      {
       "classes": "cashback-detail-item cd-rc",
-      "title": "海外加碼",
+      "title": "國外加碼",
       "tags": [],
       "meta": [
        "回饋消費上限: NT$33,333"

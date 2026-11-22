@@ -1385,7 +1385,7 @@ function composeSpecialArea(entries, opts = {}) {
     return { html, general };
 }
 
-// 一般回饋區的基底列：國內／國外一般消費、國內／海外加碼
+// 一般回饋區的基底列：國內／國外一般消費、國內／國外加碼
 async function buildBasicEntries(card) {
     const entries = [{
         rate: card.basicCashback,
@@ -1450,7 +1450,7 @@ async function buildBasicEntries(card) {
             rate: overseasBonusRate,
             ratePrefix: '+',
             capText: formatRateCardCap(overseasBonusCap),
-            title: '海外加碼',
+            title: '國外加碼',   // 2026-11-24 站長：原「海外加碼」，和「國內加碼」對稱
             titleIsDisplay: true,
             conditions: overseasConditions
         });
@@ -1475,7 +1475,7 @@ function mergeGeneralListEntries(base, extra) {
 
 // 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目。灰色的「一般消費排除項目」卡
 // 2026-11-22 起放在下一區「一般回饋排除項目」（#card-basic-exclusions），沒有名單時整區不顯示。
-// 一般回饋區的卡片維持固定順序（國內一般消費、國外一般消費、國內加碼、海外加碼），不依回饋率重排
+// 一般回饋區的卡片維持固定順序（國內一般消費、國外一般消費、國內加碼、國外加碼），不依回饋率重排
 async function renderBasicArea(card, extra = []) {
     const div = document.getElementById('card-basic-cashback');
     if (!div) return;
