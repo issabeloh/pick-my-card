@@ -723,7 +723,8 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
   →「新戶活動」（同清單的活動卡；站長 2026-11-22 從「這張卡的新戶活動」改名）→ 卡片特色（直接攤開，不開 modal；沒注入就整節藏）→ 相關卡片（2026-11-22 從「也可以看看」改名；同主活動類型優先，3 張，連到各自的單卡頁）。
   JSON-LD：WebPage（dateModified）＋BreadcrumbList。canonical＝`/promos/<id>`。
   `<title>`＝「<卡名>新戶<主獎勵>[等 N 檔]｜YYYY年M月新戶活動 - Pick My Card」（月份同上）（2026-11-22：主獎勵放前面，Google 截斷前就看得到；
-  首刷禮單一品名超過 14 字只寫「首刷禮」，`pmcCardPageTitleReward_`）；description 帶逐檔獎勵＋截止日。
+  主獎勵超過 20 字：首刷禮只寫「首刷禮」、金額只寫「NT$X 回饋」，`pmcCardPageTitleReward_`）。
+  **活動結構不同時的退路**（2026-11-22 壓力測試過：抽獎類、長用途、沒摘要、沒截止日、8 檔同獎勵）：沒金額／回饋率／贈品的活動用 `promo_types[0]` 稱呼（不再一律叫「首刷禮」）；`voucher_usage` 只取括號前；1 檔卡沒摘要時引言退回獎勵本身；description 帶逐檔獎勵＋截止日。
 - **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
   部署之後才到期的：`promos.js` 的 `setupCardPage()` 在整張卡被藏起來時顯示 `#pmc-cp-ended` 那一句。
 - **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（卡名後面 CSS 加藍色「›」，站長 2026-11-22：只有滑過才出底線，手機看不出能點）（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，

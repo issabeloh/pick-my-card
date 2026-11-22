@@ -4011,7 +4011,14 @@ function pmcRewardPlain_(promo, withGiftName) {
     if (rate) return rate + ' 回饋加碼';
   }
   const v = pmcPromoValue_(promo);
-  if (v !== null) return pmcMoney_(v) + (promo.voucher_usage ? ' ' + String(promo.voucher_usage) : ' 刷卡金');
+  // 用途只取括號前那段（「LINE POINTS 點數（限新戶首次綁定…）」→「LINE POINTS 點數」），整句會撐爆標題
+  const usage = String(promo.voucher_usage || '').split(/[（(]/)[0].trim();
+  if (v !== null) return pmcMoney_(v) + ' ' + (usage || '刷卡金');
+  // 沒有金額、沒有回饋率、也沒有贈品：照活動類型寫（抽獎、贈點…），不要一律叫「首刷禮」
+  if (!pmcHasValue_(promo.gift_content)) {
+    const type = (Array.isArray(promo.promo_types) && promo.promo_types[0]) ? String(promo.promo_types[0]) : '';
+    return type || '新戶禮';
+  }
   if (!withGiftName) return '首刷禮';
   const opts = pmcGiftOptions_(promo.gift_content);
   if (opts.length > 1) return '首刷禮 ' + opts.length + ' 選 1';
@@ -4058,8 +4065,10 @@ function pmcCardPageLede_(g) {
   const name = g.cardName;
   const main = g.items[0];
   if (n === 1) {
-    const summary = String(main.promo.new_customer_summary || '').trim().replace(/[。．.\s]+$/, '');
-    return name + '目前有 1 檔新戶活動' + (summary ? '：' + summary : '') +
+    // 摘要沒填就退回獎勵本身，引言才不會只剩「目前有 1 檔新戶活動」
+    const summary = String(main.promo.new_customer_summary || '').trim().replace(/[。．.\s]+$/, '') ||
+      pmcRewardPlain_(main.promo, true);
+    return name + '目前有 1 檔新戶活動：' + summary +
       (main.periodEndIso ? '，活動到 ' + pmcFormatDateDisplay_(main.periodEndIso) : '') + '。';
   }
   const rewards = pmcRewardList_(g, 3);
@@ -4069,10 +4078,15 @@ function pmcCardPageLede_(g) {
     '。每一檔的達成條件不同、要分別達成，以下逐檔整理條件與新戶定義。';
 }
 
-// <title> 用的主獎勵（短）：首刷禮單一品名太長就只寫「首刷禮」，標題才不會被 Google 截在半路
+// <title> 用的主獎勵（≤20 字）：首刷禮單一品名太長只寫「首刷禮」、金額的用途太長只寫「NT$X 回饋」，標題才不會被 Google 截在半路
 function pmcCardPageTitleReward_(g) {
-  const r = pmcRewardPlain_(g.items[0].promo, true);
-  return r.length > 14 ? pmcRewardPlain_(g.items[0].promo, false) : r;
+  const promo = g.items[0].promo;
+  const r = pmcRewardPlain_(promo, true);
+  if (r.length <= 20) return r;
+  const short = pmcRewardPlain_(promo, false);
+  if (short.length <= 20) return short;
+  const v = pmcPromoValue_(promo);
+  return v !== null ? pmcMoney_(v) + ' 回饋' : short.slice(0, 20);
 }
 
 // 「相關卡片」（站長 2026-11-22 從「也可以看看」改名）：同類型（主活動的類型）優先，其餘照清單順序，取 3 張
