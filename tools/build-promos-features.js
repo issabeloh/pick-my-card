@@ -246,8 +246,10 @@ function blockHtml(cardId, feat, usage) {
     '" data-card-id="' + escapeHtml(cardId) + '" data-section="card-special-section"' +
     ' target="_blank" rel="noopener noreferrer">查看卡片詳情</a>';
   // 卡片用途：Sheets 的 cardUseCase 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
+  // 署名「— 大師點評」：單卡頁比照詳情頁的引言樣式顯示（2026-11-22）；清單頁 modal 仍是色條樣式、
+  // promos.css 把署名藏起來。兩頁吃同一份注入結果，所以署名一律輸出、由 CSS 決定顯示與否。
   const usageHtml = usage
-    ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p>' : '';
+    ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p><p class="promo-feat-usage-cite">— 大師點評</p>' : '';
   return '<div class="promo-feat-head"><b>卡片特色</b>' + lv + all + '</div>' + usageHtml +
     '<ul class="promo-feat-list">' +
     feat.rows.map(rowHtml).join('') +

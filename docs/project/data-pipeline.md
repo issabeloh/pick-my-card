@@ -716,8 +716,9 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - **站內資源一律絕對路徑**（`/promos.css`、`/assets/…`）：單卡頁在子目錄，相對路徑會落空。清單頁跟著改，2026-11-18 用
   `build-promos-page.js` 重生比對過：除了路徑多一個 `/` 之外逐位元相同。
 - **卡片 id 只收 `^[a-z0-9][a-z0-9-]*$`**（`pmcCardPagePath_`）：它同時是網址與檔名，不合規的卡沒有頁、清單上的卡名也不加連結。
-- 內容：麵包屑（三層）→ h1「<卡名>新戶活動（YYYY 年 M 月，部署當天）」→ 一句引言（1 檔＝該檔摘要＋截止日；多檔＝檔數＋最快截止）
-  → 卡圖＋申辦鈕（去向同清單、GA 帶 `section=card_page`）＋愛心 → 三格（檔數／主活動獎勵／截止）→ 資料更新於 → 信任列
+- 內容：麵包屑（三層）→ h1「<卡名>新戶活動」→ 一行小灰字「YYYY 年 M 月整理」（部署當天；`.pmc-cp-month`，2026-11-22 站長從 h1 移出，`<title>` 仍帶月份）
+  → 一句引言（1 檔＝該檔摘要＋截止日；多檔＝檔數＋最快截止）
+  → 卡圖＋申辦鈕（去向同清單、GA 帶 `section=card_page`）→ 三格（檔數／截止（多檔「最快截止」）／收藏愛心）→ 資料更新於 → 信任列
   →「新戶活動」（同清單的活動卡；站長 2026-11-22 從「這張卡的新戶活動」改名）→ 卡片特色（直接攤開，不開 modal；沒注入就整節藏）→ 相關卡片（2026-11-22 從「也可以看看」改名；同主活動類型優先，3 張，連到各自的單卡頁）。
   JSON-LD：WebPage（dateModified）＋BreadcrumbList。canonical＝`/promos/<id>`。
 - **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
@@ -727,6 +728,11 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - **每頁自己的更新日**：`exportToJSON` 用 `pmcPromoCardSignature_`（該卡活動＋申辦連結＋卡名）配 `pmcStampedDate_('PROMOCARD_<id hash>')`，
   寫進 `cards.data` 的 `promoCardUpdatedIso`，部署端烤進頁面（資料更新於／dateModified），sitemap 的 lastmod 同源。
   一張卡改活動不會讓其他頁的 lastmod 一起前進。貼新版之前沒有這欄，部署端退回清單頁的「資料更新於」。
+- **三格的收藏格**（2026-11-22 站長：拿掉「回饋金額」——正下方活動卡就有；愛心從卡圖列搬進來）：`.pmc-cp-fact-fav` 裡的 `.pmc-fav-slot`，
+  按鈕 `::after` 蓋滿整格＝整格都點得到。⚠️ 按下的縮放動畫套在 svg、**不能套在按鈕上**（見教訓）。
+  愛心搬走後卡圖列的右欄變寬；窄手機另讓卡圖縮（`clamp(88px, 100% - 222px, 128px)`），「經 Money101 合作連結前往銀行官網」340px 以上不折行。
+- **卡片特色的「卡片用途」＝大師點評引言**（2026-11-22，比照詳情頁 1q 的 `.card-use-case` 桌機版）：注入器在 `.promo-feat-usage` 後面
+  一律輸出 `.promo-feat-usage-cite`「— 大師點評」，`promos.css` 預設藏起來，只有 `.pmc-cp-feat-sec` 裡顯示並改成引號樣式。清單頁 modal 仍是色條樣式。
 - 樣式在 `promos.css` 檔尾（`.pmc-cp*`）。`.pmc-cp .promo-card[data-act-count]:not([hidden])` 要跟清單那條多檔 grid 規則同分、排在後面才蓋得過，別往前搬。
 - ⚠️ 特色容器的 class 只能寫 `promo-card-feat` 一個字：注入器比對的是 `class="promo-card-feat"` 整串（2026-11-18 多加一個 class 就 0 組命中）。
 - 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-features.js`，再開 `python3 -m http.server`
@@ -1010,3 +1016,4 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
 - [2026-10-21] promos 頁尾隨主站重排、首刷禮多選一改懸掛縮排（`pmcGiftNameHtml_` 包 `.promo-gift-item`）→ 這類「生成器標記＋promos.css」一起改的變更，**兩邊上線時間不同**：promos.css merge 就上線，promos.html 要等站長把 `cards-export.gs` 貼回 Sheets、下一次匯出才換新標記（期間每次匯出都會用舊生成器蓋回舊標記）→ promos.css 的新規則必須同時讓舊標記排得能看（這次保留 `.sponsor-section`、`.social-link.privacy` 相關選擇器並用舊標記實測截圖），等新標記上線後再清掉相容規則；驗收時兩種標記都要看
+- [2026-11-22] 單卡頁收藏格點「收藏」字樣沒反應 → 按鈕 `:active{transform:scale()}` 讓按鈕變成 `::after` 覆蓋層的定位容器，按下瞬間覆蓋層縮回按鈕大小、放開時不在按鈕上 → 用 `::after` 擴大點擊範圍的按鈕，按壓動畫改套在內層 svg
