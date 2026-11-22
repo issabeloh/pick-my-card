@@ -112,7 +112,7 @@ async function getCardLevelUncached(cardId, defaultLevel) {
 // js/card-detail.js 的 saveUserNotes 都回傳同一種結果物件，詳情頁的儲存狀態列（cdTrackSave）據此顯示，
 // 不再是「存了沒反應」：
 //   { ok: true }                        成功（訪客＝存在這台裝置；登入者＝已寫入雲端）
-//   { ok: true, volatile: true }        訪客且這項設定沒有本機備份（只在這次瀏覽有效；目前只有「童樂匯」）
+//   { ok: true, volatile: true }        訪客且這項設定沒有本機備份（只在這次瀏覽有效；目前只有生日月份，而訪客不能設）
 //   { ok: false, reason, local }        失敗；reason 是給人看的原因，local＝失敗前是否已先存在這台裝置
 // 邏輯本身（寫哪個 key、哪份文件、什麼格式）一律不變，只是把原本吞掉的結果回傳出來。
 // 呼叫端不看結果也沒事（absorbGuestPersonalData 等舊呼叫端照舊）。
@@ -173,8 +173,17 @@ async function saveCubeIssuer(issuer) {
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
 
-    // 訪客：這項設定沒有本機備份（既有行為，儲存格式不動）——只在這次瀏覽有效，回報 volatile 讓狀態列照實說
-    if (!auth || !auth.currentUser) return { ok: true, volatile: true };
+    // 訪客：存在這台裝置（2026-11-20 起；key childrenEligible_guest，只存 true/false）。登入時由
+    // absorbGuestPersonalData 帶進帳號並移除，登出清理也會清（js/auth-user-data.js）。
+    // ⚠️ 登入狀態下不讀寫這個訪客 key（共用電腦上那可能是別人的選擇）
+    if (!auth || !auth.currentUser) {
+        try {
+            localStorage.setItem('childrenEligible_guest', JSON.stringify(!!eligible));
+            return { ok: true };
+        } catch (e) {
+            return { ok: false, reason: '這台裝置不允許網站存資料（例如無痕模式）', local: false };
+        }
+    }
     if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local: false };
 
     try {
