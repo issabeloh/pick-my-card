@@ -17,47 +17,13 @@
  * ============================================================ */
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const { REPO, readCardsData, loadGenerator, reusePromosStamps, exportDataFrom } = require('./lib/promos-generator');
 
-const REPO = path.resolve(__dirname, '..');
 const PAGE = path.join(REPO, 'promos.html');
+const stamps = reusePromosStamps();
+const exportData = Object.assign(exportDataFrom(readCardsData()), stamps);
 
-function readCardsData() {
-  const raw = fs.readFileSync(path.join(REPO, 'cards.data'), 'utf8').trim();
-  return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
-}
-
-// 從現有 promos.html 撈出 versionTag 與「資料更新於」，避免重生時摻進今天的時間戳
-function reuseStamps() {
-  if (!fs.existsSync(PAGE)) return {};
-  const html = fs.readFileSync(PAGE, 'utf8');
-  const ver = html.match(/promos\.css\?v=([A-Za-z0-9]+)/);
-  const upd = html.match(/<time datetime="(\d{4}-\d{2}-\d{2})"[^>]*>[^<]*<\/time>\s*<\/div>/) ||
-              html.match(/資料更新於\s*<time datetime="(\d{4}-\d{2}-\d{2})"/);
-  return { versionTagOverride: ver ? ver[1] : undefined, promosUpdatedIso: upd ? upd[1] : undefined };
-}
-
-const cardsData = readCardsData();
-const ctx = {
-  console,
-  JSON, Math, Date, parseFloat, parseInt, isNaN, isFinite,
-  Object, Array, String, Number, Boolean, RegExp, Error,
-  encodeURIComponent, decodeURIComponent
-};
-vm.createContext(ctx);
-// cards-export.gs 頂層全是 function/const 宣告，載入本身不會碰到任何 Sheets API；
-// generatePromosPageHtml() 是刻意寫成的純函數（見該檔檔頭註解）。
-vm.runInContext(fs.readFileSync(path.join(REPO, 'apps-script', 'cards-export.gs'), 'utf8'),
-  ctx, { filename: 'apps-script/cards-export.gs' });
-
-const stamps = reuseStamps();
-ctx.__exportData = Object.assign({
-  cards: cardsData.cards || [],
-  newCardholderPromos: cardsData.newCardholderPromos || [],
-  cardApplyCtas: cardsData.cardApplyCtas || {}
-}, stamps);
-
-const html = vm.runInContext('generatePromosPageHtml(__exportData)', ctx);
+const html = loadGenerator()('generatePromosPageHtml', exportData);
 if (typeof html !== 'string' || html.indexOf('<!DOCTYPE html>') !== 0) {
   console.error('❌ generatePromosPageHtml 沒有回傳完整 HTML');
   process.exit(1);
