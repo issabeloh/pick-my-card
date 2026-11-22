@@ -724,7 +724,7 @@ async function showCardDetail(cardId) {
     }
     annualFeeEl.title = card.annualFee || '';
 
-    // 回饋類型＋點數效期（2026-11-23 起在「回饋」頁籤最下面的收合區塊 #card-reward-info，各有小標）。
+    // 回饋類型＋點數效期（2026-11-23 起在「回饋」頁籤最下面的 <details> #card-reward-info，各有小標；2026-11-24 起預設展開）。
     // textContent 填（Sheets 自由文字，鐵則 3）；沒資料的那一列藏起來，兩列都沒有就整塊不顯示；換卡時收回去
     const rewardInfo = document.getElementById('card-reward-info');
     if (rewardInfo) {
@@ -735,7 +735,7 @@ async function showCardDetail(cardId) {
         document.getElementById('card-cashback-type-row').hidden = !cbType;
         document.getElementById('card-points-expiry-row').hidden = !expiry;
         rewardInfo.hidden = !cbType && !expiry;
-        rewardInfo.open = false;
+        rewardInfo.open = true;   // 2026-11-24 站長：改成預設展開（仍可點標題收合）
     }
 
     // 一般回饋區：先不畫——「一般回饋特列項目」這類組別在下面各條指定通路路徑裡才分得出來，
@@ -1362,10 +1362,10 @@ function cdLevelLabel(card, level) {
 }
 
 // 「一般回饋特列項目」「國外消費特列項目」是基本回饋的特例清單（回饋率＝一般回饋，不是指定通路活動），
-// 站長核定的版面把它們放在「一般回饋」區：上限無上限、沒有期間時併進「國內／海外一般消費」那張卡
+// 站長核定的版面把它們放在「一般回饋」區：上限無上限、沒有期間時併進「國內／國外一般消費」那張卡
 // （右欄上方標原類別名）；上限或期間不同就在一般回饋區自己一張。
 // （「一般消費特列項目」是玉山 Uni Card 手填的同義寫法；前兩個是 apps-script/card-benefits-parser.gs 產出的）
-const CD_GENERAL_LIST = { '一般回饋特列項目': '國內一般消費', '一般消費特列項目': '國內一般消費', '國外消費特列項目': '海外一般消費' };
+const CD_GENERAL_LIST = { '一般回饋特列項目': '國內一般消費', '一般消費特列項目': '國內一般消費', '國外消費特列項目': '國外一般消費' };
 
 function splitGeneralListEntries(entries) {
     const special = [];
@@ -1385,7 +1385,7 @@ function composeSpecialArea(entries, opts = {}) {
     return { html, general };
 }
 
-// 一般回饋區的基底列：國內／海外一般消費、國內／海外加碼
+// 一般回饋區的基底列：國內／國外一般消費、國內／海外加碼
 async function buildBasicEntries(card) {
     const entries = [{
         rate: card.basicCashback,
@@ -1400,7 +1400,7 @@ async function buildBasicEntries(card) {
         entries.push({
             rate: card.overseasCashback,
             capText: '無上限',
-            title: '海外一般消費',
+            title: '國外一般消費',   // 2026-11-24 站長：原「海外一般消費」，改成和「國內一般消費」對稱
             titleIsDisplay: true
         });
     }
@@ -1475,7 +1475,7 @@ function mergeGeneralListEntries(base, extra) {
 
 // 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目。灰色的「一般消費排除項目」卡
 // 2026-11-22 起放在下一區「一般回饋排除項目」（#card-basic-exclusions），沒有名單時整區不顯示。
-// 一般回饋區的卡片維持固定順序（國內一般消費、海外一般消費、國內加碼、海外加碼），不依回饋率重排
+// 一般回饋區的卡片維持固定順序（國內一般消費、國外一般消費、國內加碼、海外加碼），不依回饋率重排
 async function renderBasicArea(card, extra = []) {
     const div = document.getElementById('card-basic-cashback');
     if (!div) return;
@@ -2116,7 +2116,7 @@ function syncMerchantListsForSearch(container, hasTerm) {
 
 // 詳情頁搜尋：搜尋框在所有回饋區上方（2026-10-14 站長要求從「指定通路回饋」標題下移上來），
 // 一次過濾指定通路／即將開始／一般回饋／領券四區的回饋卡，並把命中的字詞即時 highlight
-// （不然使用者看不出是配對到哪個通路／條件）。一般回饋區的國內／海外一般消費、排除灰卡一樣照字過濾——
+// （不然使用者看不出是配對到哪個通路／條件）。一般回饋區的國內／國外一般消費、排除灰卡一樣照字過濾——
 // 搜「罰」只留下排除灰卡。沒命中的區整區（含標題）收起；四區都沒有才出「找不到」。
 // 本來就沒顯示的區（例：沒有即將開始的活動）不動它。
 // 只在已渲染的 DOM 上做過濾（不重新計算或 fetch），效能 < 5ms
