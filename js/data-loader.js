@@ -121,6 +121,8 @@ async function loadCardsData() {
         // Filter out expired rates based on periodStart and periodEnd
         cardsData = filterExpiredRates(cardsData);
 
+        // 商家名稱的彎引號 ’ ‘ 換成直引號（要在下面兩個 merge 與建索引之前）
+        normalizeMerchantQuotes(cardsData);
         // 併入資料驅動的搜尋排除規則（SearchExclusions 工作表，選填）
         mergeDataSearchExclusions(cardsData);
         // 併入「統一詞」工作表的其他寫法／搜尋別名（選填）→ 模糊搜尋

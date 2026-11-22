@@ -4,6 +4,7 @@
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
  *  - 統一詞的搜尋別名          → "mergeDataTermAliases"
+ *  - 商家名稱彎引號正規化      → "normalizeMerchantQuotes" / "normalizeQuoteChars"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms" / "findSearchHits"（找、算、顯示三步之「找」）
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
@@ -105,6 +106,37 @@ function mergeDataTermAliases(data) {
     }
 }
 
+// 商家名稱的彎單引號 → 直引號（2026-11-22 站長要求）。
+// 從銀行官網複製的名稱常帶 ’ ‘（U+2019／U+2018），中文字型會把它畫成全形寬度，
+// 「city’super」看起來像中間塞了一個全形符號；用戶打的卻是直引號 '，搜不到。
+// 做法是兩頭都換成直引號：資料在載入時換（normalizeMerchantQuotes），搜尋詞在比對前換（normalizeQuoteChars）。
+// 只動商家名稱類欄位（下面的 key 清單）底下的字串值，不動物件的 key：
+// 級別名稱是識別碼（鐵則 6），條件文字等其他欄位照原樣顯示
+const MERCHANT_NAME_KEYS = new Set([
+    'items', 'specialItems', 'generalItems', 'merchant', 'merchants',
+    'basicExclusions', 'term', 'aliases', 'excludedItems'
+]);
+function normalizeQuoteChars(text) {
+    return String(text).replace(/[‘’]/g, "'");
+}
+function normalizeMerchantQuotes(data) {
+    const fixAll = v => {
+        if (typeof v === 'string') return normalizeQuoteChars(v);
+        if (Array.isArray(v)) return v.map(fixAll);
+        if (v && typeof v === 'object') { Object.keys(v).forEach(k => { v[k] = fixAll(v[k]); }); }
+        return v;
+    };
+    const walk = node => {
+        if (Array.isArray(node)) { node.forEach(walk); return; }
+        if (!node || typeof node !== 'object') return;
+        Object.keys(node).forEach(k => {
+            if (MERCHANT_NAME_KEYS.has(k)) node[k] = fixAll(node[k]);
+            else walk(node[k]);
+        });
+    };
+    walk(data);
+}
+
 // 精準搜尋核取方塊狀態（只作用於手動輸入路徑，快捷搜尋不受影響）
 // 2026-07-12 版面重整後桌機/手機共用同一個 checkbox（保留陣列形式以防未來再分裝置）
 const EXACT_SEARCH_CHECKBOX_IDS = ['exact-search-checkbox'];
@@ -138,6 +170,7 @@ function toggleExactSearchEmptyHint(show) {
 // 比對與計算都吃這份清單（getAllSearchVariants），所以資料名稱寫哪個字都對得到，不用再為每個詞列臺字別名。
 // 只影響比對，畫面上的名字不變
 function expandSearchTerms(searchLower) {
+    searchLower = normalizeQuoteChars(searchLower); // 彎引號當直引號（見 normalizeMerchantQuotes）
     const searchTerms = [searchLower]; // Always include original search term
     const add = t => { if (t && !searchTerms.includes(t)) searchTerms.push(t); };
     const bases = [searchLower];
@@ -182,7 +215,7 @@ function findMatchingItem(searchTerm, options = {}) {
     if (!cardsData) return null;
     const exactOnly = !!options.exactOnly;
 
-    let searchLower = searchTerm.toLowerCase().trim();
+    let searchLower = normalizeQuoteChars(searchTerm.toLowerCase().trim());
     let searchTerms = expandSearchTerms(searchLower);
 
     console.log(`🔎 findMatchingItem 開始搜尋:`, {
@@ -1069,7 +1102,7 @@ function buildMerchantSuggestIndex() {
 
 // 開頭相符 > 包含；同級短的在前（越短越像用戶要的那個詞）；再同就照建表順序（快捷選項在前）
 function getMerchantSuggestions(query) {
-    const q = String(query || '').trim().toLowerCase();
+    const q = normalizeQuoteChars(String(query || '').trim().toLowerCase());
     if (!q || !cardsData) return [];
     const options = typeof quickSearchOptions !== 'undefined' ? quickSearchOptions : null;
     const cardsKey = getCardsForComparison().map(c => c.id).join(',');
