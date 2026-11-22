@@ -557,7 +557,7 @@ async function showCardDetail(cardId) {
         }
 
         const levelSelectorHTML =
-            '<div class="cd-set-sec"><h5 class="cd-set-sec-t">計算條件</h5><span class="cd-set-sec-s">會改變這張卡的回饋數字</span></div>' +
+            '<div class="cd-set-sec"><span class="cd-set-sec-s">搜尋結果將依照以下條件顯示</span></div>' +   // 2026-11-23 站長：拿掉「計算條件」小標，只留一句說明
             `<div class="cd-set-box">${rows.join('')}</div>`;
 
         cubeLevelSection.innerHTML = levelSelectorHTML;

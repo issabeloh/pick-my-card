@@ -102,7 +102,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   }));
   check('沒有「我的紀錄」小標與「只有你看得到」；底部說明是新文字', await p.evaluate(() => {
     const t = document.getElementById('card-personal-section').textContent;
-    return !/我的紀錄|只有你看得到/.test(t) && document.querySelector('#card-personal-section .cd-set-foot').textContent.trim() === '想一覽所有個人設定？到首頁點擊右上角的「我的信用卡」。' && /計算條件/.test(t);
+    return !/我的紀錄|只有你看得到/.test(t) && document.querySelector('#card-personal-section .cd-set-foot').textContent.trim() === '想一覽所有個人設定？到首頁點擊右上角的「我的信用卡」。' && !/計算條件/.test(t) && /搜尋結果將依照以下條件顯示/.test(t);
   }));
   await watch(p);
   await p.selectOption('#cube-issuer-select', 'JCB'); await p.waitForTimeout(900);
@@ -213,6 +213,9 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await p.evaluate(() => showCardDetail('yushan-unicard')); await p.waitForTimeout(600);
   const nf = await p.evaluate(() => ({ sel: document.getElementById('card-level-select').value, writes: __sets.filter(x => x.path.startsWith('cardSettings')).length, ls: localStorage.getItem('cardLevel_testuid_yushan-unicard'), cloud: __docs['cardSettings/testuid_yushan-unicard'].level }));
   check('鐵則 1：存的級別找不到 → 只顯示預設、本機與雲端都沒被改寫', nf.writes === 0 && nf.ls === '不存在的級別' && nf.cloud === '不存在的級別' && nf.sel === before.opts[0], JSON.stringify(nf));
+  check('分級卡：沒有「計算條件」小標，說明是「搜尋結果將依照以下條件顯示」（站長 2026-11-23）', await p.evaluate(() =>
+    document.querySelectorAll('#card-personal-section .cd-set-sec-t').length === 0 &&
+    [...document.querySelectorAll('#card-personal-section .cd-set-sec-s')].map(e => e.textContent.trim()).join('|') === '搜尋結果將依照以下條件顯示'));
   const noLv = await p.evaluate(async () => { const c = cardsData.cards.find(c => !c.hasLevels); await showCardDetail(c.id); await new Promise(r => setTimeout(r, 400)); return { secs: [...document.querySelectorAll('#card-personal-section .cd-set-sec-t')].map(e => e.textContent).join(), rows: document.querySelectorAll('#card-personal-section .cd-st-r').length, txt: document.getElementById('card-personal-section').textContent }; });
   check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／免年費／筆記三列', noLv.secs === '' && noLv.rows === 3 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
   await p.evaluate(() => { __failSets = 0; selectCardDetailTab('set'); }); await p.fill('#user-notes-input', '成功的筆記'); await p.waitForTimeout(1700);

@@ -377,7 +377,7 @@ Grep `titleParts`）：
 ### 個人設定：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列
 
 **結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定可以在「我的信用卡」一次看。」。每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
-- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
+- **兩組**：「計算條件」（2026-11-23 起不顯示小標，只有一行灰字說明「搜尋結果將依照以下條件顯示」）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
 - **開關**：勾選一律是 `input type="checkbox" role="switch" class="cd-sw"`（`appearance:none` 畫外觀；id 不變、Tab 可聚焦、空白鍵切換、`:focus-visible` 有 2px 外框）。舊的 `.fee-waiver-checkbox`／`.checkmark` 已刪
 - **訪客的生日月份**仍是 disabled 下拉（只有「需先登入」一個選項）——一眼看出「這裡可以選，但要先登入」。文字別寫長：16px 下 132px 放不下「登入後即可設定」（會被截成「登入後即可設」）
 
