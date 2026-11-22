@@ -529,7 +529,7 @@ function resolveBonusComponent(card, levelSettings, isOverseas) {
         const rate = (levelSettings && levelSettings.overseasBonusRate) || card.overseasBonusRate || 0;
         const rawCap = (levelSettings && levelSettings.overseasBonusCap != null)
             ? levelSettings.overseasBonusCap : card.overseasBonusCap;
-        return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '海外消費加碼' };
+        return { rate, cap: (rawCap != null && rawCap > 0) ? rawCap : null, name: '國外消費加碼' };
     }
     const rate = (levelSettings && levelSettings.domesticBonusRate) || card.domesticBonusRate || 0;
     const rawCap = (levelSettings && levelSettings.domesticBonusCap != null)
@@ -661,7 +661,7 @@ function buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap
     const rows = [];
     // 本槽自己的成分以 category 命名（與跨槽引用行一致）；category 空才退回通用名。
     if (designatedRate > 0) rows.push({ name: (rateGroup.category || '指定通路加碼'), rate: designatedRate, cap: (designatedCap && designatedCap > 0) ? designatedCap : null });
-    if (basicRate > 0) rows.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, cap: null });
+    if (basicRate > 0) rows.push({ name: isOverseas ? '國外基本回饋' : '基本回饋', rate: basicRate, cap: null });
     if (applyBonus && bonusRate > 0) rows.push({ name: bonusName, rate: bonusRate, cap: bonusCap });
     // 跨槽引用（rate_N）：每個被引用槽是獨立一行，各自的 category + rate + cap
     resolveCrossSlotLayers(card, model, levelSettings).forEach(layer => {
@@ -875,7 +875,7 @@ function calculateStackedCashback(card, levelSettings, amount, designatedRate, c
     // 海外模型的 base 由 resolveBaseRate 自動給 overseasCashback。
     if (applyBase && basicRate > 0) {
         const basicCashback = Math.floor(amount * basicRate / 100);
-        layers.push({ name: isOverseas ? '海外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
+        layers.push({ name: isOverseas ? '國外基本回饋' : '基本回饋', rate: basicRate, applicableAmount: amount, cashback: basicCashback, cap: null });
         totalCashback += basicCashback;
     }
 
