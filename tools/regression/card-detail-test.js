@@ -120,7 +120,7 @@ async function captureAtDate(browser, base, frozenDate) {
 //   1. 每個「適用通路」元素最多三行（scrollHeight ≤ 3×18px），而且不是空白（先畫完整內容、量得到寬度才收）
 //   2. 同一區裡沒有兩張卡的「標題＋上限＋期間」完全相同（相同的必須併成一張；不同的不能被併）
 //   3. 指定通路／即將開始區：卡片依卡內最高回饋率由高到低、卡內各列由高到低
-//   4. 回饋率 24px、rgb(17,24,39)
+//   4. 回饋率 24px／800／rgb(17,24,39)；有組成的是帶虛線的按鈕、沒有組成的是純文字（2026-11-22）
 // 與 baseline 無關（不比對文字），所以不受「字型寬度決定收成幾個通路」影響
 async function checkLayoutInvariants(browser, base, frozenDate) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -188,8 +188,17 @@ async function checkLayoutInvariants(browser, base, frozenDate) {
         });
         box.querySelectorAll('.cd-rate').forEach(r => {
           const cs = getComputedStyle(r);
-          if (cs.fontSize !== '24px' || cs.color !== 'rgb(17, 24, 39)') out.push(`${cid}：回饋率樣式不對 ${cs.fontSize} ${cs.color}`);
+          if (cs.fontSize !== '24px' || cs.color !== 'rgb(17, 24, 39)' || cs.fontWeight !== '800') out.push(`${cid}：回饋率樣式不對 ${cs.fontSize} ${cs.fontWeight} ${cs.color}`);
+          // 2026-11-22：有組成可看的回饋率本身是按鈕（灰色虛線底線、aria-expanded／aria-label、沒有計算機圖示）；
+          // 沒有組成的是純文字（沒有虛線、不可點）
+          if (r.tagName === 'BUTTON') {
+            if (!r.classList.contains('calc-breakdown-btn') || !r.dataset.comp) out.push(`${cid}：回饋率按鈕沒有 data-comp`);
+            if (r.getAttribute('aria-expanded') !== 'false' || !/^.+%，查看回饋組成$/.test(r.getAttribute('aria-label') || '')) out.push(`${cid}：回饋率按鈕缺 aria-expanded／aria-label`);
+            if (r.querySelector('svg')) out.push(`${cid}：回饋率按鈕裡還有圖示`);
+            if (cs.textDecorationLine !== 'underline' || cs.textDecorationStyle !== 'dashed') out.push(`${cid}：回饋率按鈕沒有虛線底線 ${cs.textDecorationLine} ${cs.textDecorationStyle}`);
+          } else if (cs.textDecorationLine !== 'none') out.push(`${cid}：沒有組成的回饋率不該有底線`);
         });
+        if (box.querySelector('svg.calc-icon, .cd-rr-n > .calc-breakdown-btn:not(.cd-rate)')) out.push(`${cid}：還有舊的計算機圖示鈕`);
       }
       return out;
     });
