@@ -55,7 +55,10 @@ function stub(url, guest) {
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok }); console.log((ok ? '  ✅ ' : '  ❌ ') + name + (extra ? ' — ' + extra : '')); };
 
-(async () => {
+// 給 owned-cards-panel-test.js 共用同一個 Firebase 替身（require 時不執行本檔測試）
+module.exports = { stub };
+
+if (require.main === module) (async () => {
   const srv = await startServer(false);
   const base = `http://127.0.0.1:${srv.address().port}`;
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
@@ -217,7 +220,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
     document.querySelectorAll('#card-personal-section .cd-set-sec-t').length === 0 &&
     [...document.querySelectorAll('#card-personal-section .cd-set-sec-s')].map(e => e.textContent.trim()).join('|') === '搜尋結果將依照以下條件顯示'));
   const noLv = await p.evaluate(async () => { const c = cardsData.cards.find(c => !c.hasLevels); await showCardDetail(c.id); await new Promise(r => setTimeout(r, 400)); return { secs: [...document.querySelectorAll('#card-personal-section .cd-set-sec-t')].map(e => e.textContent).join(), rows: document.querySelectorAll('#card-personal-section .cd-st-r').length, txt: document.getElementById('card-personal-section').textContent }; });
-  check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／免年費／筆記三列', noLv.secs === '' && noLv.rows === 3 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
+  check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／結帳日／繳款截止日／免年費／筆記五列', noLv.secs === '' && noLv.rows === 5 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
   await p.evaluate(() => { __failSets = 0; selectCardDetailTab('set'); }); await p.fill('#user-notes-input', '成功的筆記'); await p.waitForTimeout(1700);
   await p.evaluate(() => { __AUTH.currentUser = null; __authCbs.forEach(cb => cb(null)); }); await p.waitForTimeout(600);
   s = await status(p);

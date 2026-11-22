@@ -3591,18 +3591,6 @@ input[type="number"]:focus {
     flex-wrap: wrap;
     align-items: center;
 }
-/* compact save button on the 全選 row (mirrors the bottom save button) */
-.save-btn-top {
-    margin-left: auto;
-    padding: 6px 16px;
-    font-size: 13.5px;
-}
-
-.modal-action-save-btn {
-    margin-left: auto;
-    padding: 6px 14px !important;
-    font-size: 13px !important;
-}
 
 .toggle-all-btn {
     background: #e5e7eb;
@@ -4018,9 +4006,25 @@ input[type="number"]:focus {
     border-radius: 0 0 12px 12px;
     padding: 0;
 }
-#my-owned-cards-modal .modal-content {
+#my-owned-cards-modal .modal-content,
+#manage-owned-cards-modal .modal-content {
+    /* 「管理我的信用卡」疊在「我的信用卡」上面：同寬才蓋得住（2026-11-22，桌機原本左右露出後面那層） */
     max-width: 660px;
 }
+
+/* 選卡 modal 的儲存列（2026-11-22）：勾選有改動才出現（hidden 由 updateSelectionDirtyState 切），
+   固定在 .modal-content 捲動容器的底部 */
+.sel-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    align-items: center;
+    padding: 12px 20px;
+    background: #fff;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+}
+.sel-footer[hidden] { display: none; }
+.sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: #374151; }
 
 .ow-count-badge {
     color: #94a3b8;
@@ -4179,12 +4183,63 @@ input[type="number"]:focus {
     transition: background 0.15s ease;
 }
 .ow-tile-add:hover .ow-add { background: #eff6ff; }
+/* 卡片格：有填結帳日／繳款日才多這一行（2026-11-22） */
+.ow-dates {
+    display: block;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #2563eb;
+}
+
+/* --- 單卡面板（2026-11-22）：點卡片後同一個視窗換成該卡的個人設定。
+   設定區是詳情頁那一份 #card-personal-section 搬進來的（.cd-set-owned），控制項樣式掛在它的 id 上、兩邊共用 --- */
+.ow-back {
+    margin-right: auto;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: #1d4ed8;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.ow-back[hidden] { display: none; }
+.ow-back:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+.ow-panel { padding: 16px 20px 24px; }
+.ow-panel[hidden] { display: none; }
+.ow-panel-hd { display: flex; align-items: center; gap: 14px; }
+.ow-panel-pic { flex: none; width: 112px; }
+.ow-panel-pic .ow-frame { border-radius: 8px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1); }
+.ow-panel-tx { min-width: 0; }
+.ow-panel-name { font-size: 16px; font-weight: 700; line-height: 1.4; color: #111827; }
+.ow-panel-more {
+    margin-top: 2px;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: #2563eb;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ow-panel-more:hover { text-decoration: underline; }
+.ow-panel-more:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+#owned-cards-overview[hidden],
+#owned-modal-title[hidden],
+#manage-owned-cards-btn[hidden] { display: none; }
+/* 搬進單卡面板時：不需要「到首頁點我的信用卡」那行提示（已經在這裡了），也不要區塊底線。
+   「個人設定」標題列保留——儲存狀態住在那一列（2026-11-22 起） */
+#card-personal-section.cd-set-owned { margin: 0; border-bottom: 0; }
+#card-personal-section.cd-set-owned .cd-set-foot { display: none; }
 
 /* ============================================
    個人設定（#card-personal-section，2026-11-17 詳情頁三輪改版的第三輪）
    統一自動儲存＋常駐儲存狀態列（.cd-sv）＋兩組一欄一列（.cd-set-box／.cd-st-r）。
    取代 2026-08-01 的單一灰底框（.personal-settings-box）與舊的 💾 儲存鈕、#save-indicator。
-   ⚠️ 選擇器多半掛 #card-detail-modal：蓋過全站 input[type="text"]／label／select 預設與手機 16px 規則
+   ⚠️ 控制項的選擇器掛 #card-personal-section（2026-11-22 前掛 #card-detail-modal；這一區會被搬進「我的信用卡」
+   單卡面板，掛在詳情頁上就失效）：蓋過全站 input[type="text"]／label／select 預設與手機 16px 規則
    （手機的 16px 是防 iOS 聚焦自動放大，刻意不蓋）。
    ============================================ */
 
@@ -4198,7 +4253,8 @@ input[type="number"]:focus {
     gap: 2px 12px;
     margin: 14px 4px 0;
 }
-#card-detail-modal .cd-pan-set .cd-set-h {
+/* 權重要高過 #card-detail-modal .card-info-section h4（1,1,1）：那條給 h4 18px 上距，標題會跟右邊狀態對不齊 */
+#card-personal-section .cd-set-hd .cd-set-h {
     margin: 0;
     font-size: 17px;
     font-weight: 600;
@@ -4242,7 +4298,7 @@ input[type="number"]:focus {
 @keyframes cd-sv-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cd-sv-spin { animation: none; } }
 /* 「登入」連結：是 button（開登入視窗），畫成底線文字連結 */
-#card-detail-modal .cd-sv-login {
+#card-personal-section .cd-sv-login {
     flex: none;
     margin: 0;
     padding: 0;
@@ -4255,8 +4311,8 @@ input[type="number"]:focus {
     white-space: nowrap;
     cursor: pointer;
 }
-#card-detail-modal .cd-sv-login[hidden] { display: none; }
-#card-detail-modal .cd-sv-login:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 2px; }
+#card-personal-section .cd-sv-login[hidden] { display: none; }
+#card-personal-section .cd-sv-login:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 2px; }
 
 /* 儲存狀態列的「登入」會開登入視窗；詳情頁是 z-index 1100 的全頁，登入視窗（.modal 預設 1000）要疊在它上面 */
 #auth-modal { z-index: 1200; }
@@ -4277,7 +4333,7 @@ input[type="number"]:focus {
 }
 .cd-st-r + .cd-st-r { border-top: 1px solid #f0f1f3; }
 .cd-st-l { display: flex; align-items: center; gap: 6px; min-width: 0; }
-#card-detail-modal .cd-st-l label {
+#card-personal-section .cd-st-l label {
     display: block;
     margin: 0;
     font-size: 14px;
@@ -4293,8 +4349,8 @@ input[type="number"]:focus {
 .cd-st-l > .level-help-note:empty { display: none; }
 
 /* 下拉與輸入框同高 36px、寬約 132px、靠右、同框色 */
-#card-detail-modal .cd-st-sel,
-#card-detail-modal input[type="text"].cd-st-inp {
+#card-personal-section .cd-st-sel,
+#card-personal-section input[type="text"].cd-st-inp {
     box-sizing: border-box;
     width: 132px;
     height: 36px;
@@ -4313,19 +4369,19 @@ input[type="number"]:focus {
     text-align-last: right;
     font-variant-numeric: tabular-nums;
 }
-#card-detail-modal input.cd-st-inp::placeholder { color: #9ca3af; font-weight: 400; }
-#card-detail-modal .cd-st-sel:focus-visible,
-#card-detail-modal input[type="text"].cd-st-inp:focus,
-#card-detail-modal .cd-st-ta:focus {
+#card-personal-section input.cd-st-inp::placeholder { color: #9ca3af; font-weight: 400; }
+#card-personal-section .cd-st-sel:focus-visible,
+#card-personal-section input[type="text"].cd-st-inp:focus,
+#card-personal-section .cd-st-ta:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
-#card-detail-modal .cd-st-sel:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+#card-personal-section .cd-st-sel:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
 
 /* 筆記：整列寬的 textarea（標題在上） */
 .cd-st-notes .cd-st-l { grid-column: 1 / -1; }
-#card-detail-modal .cd-st-ta {
+#card-personal-section .cd-st-ta {
     grid-column: 1 / -1;
     box-sizing: border-box;
     width: 100%;
@@ -4341,26 +4397,26 @@ input[type="number"]:focus {
     line-height: 1.5;
     resize: vertical;
 }
-#card-detail-modal .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
+#card-personal-section .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
 
 /* 字級整理（2026-11-23 站長：有些字特別大、看起來亂）。
    手機的輸入框／下拉被全站規則固定 16px（低於 16px 時 iPhone 聚焦會自動放大畫面，見檔尾「Prevent iOS/Android auto-zoom」），
    旁邊標籤卻只有 14px，提示字「未設定」也跟著 16px，值和提示字比標籤還大。
    做法：輸入框本身維持 16px（不能動）；提示字一律 14px 淺灰；值改深灰 #374151 不搶標籤；手機標籤 15px。
    停用的下拉（訪客的生日月份「需先登入」）聚焦不了、不會觸發放大，可以縮成 14px */
-#card-detail-modal .cd-st-sel,
-#card-detail-modal input[type="text"].cd-st-inp,
-#card-detail-modal .cd-st-ta { color: #374151; }
-#card-detail-modal input.cd-st-inp::placeholder { font-size: 14px; }
+#card-personal-section .cd-st-sel,
+#card-personal-section input[type="text"].cd-st-inp,
+#card-personal-section .cd-st-ta { color: #374151; }
+#card-personal-section input.cd-st-inp::placeholder { font-size: 14px; }
 @media (max-width: 768px) {
-    #card-detail-modal .cd-st-l label { font-size: 15px; }
-    #card-detail-modal .cd-st-sel,
-    #card-detail-modal input[type="text"].cd-st-inp { height: 38px; }
-    #card-detail-modal .cd-st-sel:disabled { font-size: 14px !important; }
+    #card-personal-section .cd-st-l label { font-size: 15px; }
+    #card-personal-section .cd-st-sel,
+    #card-personal-section input[type="text"].cd-st-inp { height: 38px; }
+    #card-personal-section .cd-st-sel:disabled { font-size: 14px !important; }
 }
 
 /* 開關：仍是 input type=checkbox（id 不變；Tab 聚焦、空白鍵切換），只換外觀 */
-#card-detail-modal input[type="checkbox"].cd-sw {
+#card-personal-section input[type="checkbox"].cd-sw {
     appearance: none;
     -webkit-appearance: none;
     box-sizing: border-box;
@@ -4376,7 +4432,7 @@ input[type="number"]:focus {
     cursor: pointer;
     transition: background-color 0.15s;
 }
-#card-detail-modal input[type="checkbox"].cd-sw::after {
+#card-personal-section input[type="checkbox"].cd-sw::after {
     content: "";
     position: absolute;
     top: 2px;
@@ -4388,12 +4444,12 @@ input[type="number"]:focus {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
     transition: transform 0.15s;
 }
-#card-detail-modal input[type="checkbox"].cd-sw:checked { background: #1d4ed8; }
-#card-detail-modal input[type="checkbox"].cd-sw:checked::after { transform: translateX(16px); }
-#card-detail-modal input[type="checkbox"].cd-sw:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+#card-personal-section input[type="checkbox"].cd-sw:checked { background: #1d4ed8; }
+#card-personal-section input[type="checkbox"].cd-sw:checked::after { transform: translateX(16px); }
+#card-personal-section input[type="checkbox"].cd-sw:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-    #card-detail-modal input[type="checkbox"].cd-sw,
-    #card-detail-modal input[type="checkbox"].cd-sw::after { transition: none; }
+    #card-personal-section input[type="checkbox"].cd-sw,
+    #card-personal-section input[type="checkbox"].cd-sw::after { transition: none; }
 }
 
 .cd-set-foot { padding: 12px 4px 0; font-size: 12px; line-height: 1.5; color: #6b7280; }

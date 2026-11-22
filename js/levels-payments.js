@@ -308,10 +308,15 @@ function openManagePaymentsModal() {
         const checkbox = paymentDiv.querySelector('input');
         checkbox.addEventListener('change', () => {
             paymentDiv.classList.toggle('selected', checkbox.checked);
+            updateSelectionDirtyState('payments-selection');
         });
 
         paymentsSelection.appendChild(paymentDiv);
     });
+
+    // 儲存列（2026-11-22，同選卡 modal）：打開當下的勾選＝比較基準，有改動才出現「已變更 N 個　取消　儲存設定」
+    paymentsSelection._initialSelection = new Set(paymentsData.payments.filter(p => userSelectedPayments.has(p.id)).map(p => p.id));
+    updateSelectionDirtyState('payments-selection');
 
     saveBtn.disabled = false;
     saveBtn.style.opacity = '1';
@@ -330,6 +335,7 @@ function openManagePaymentsModal() {
             cb.closest('.card-checkbox').classList.toggle('selected', allSelected);
         });
         toggleAllBtn.textContent = allSelected ? '取消全選' : '全選';
+        updateSelectionDirtyState('payments-selection');
     };
 
     // Setup modal controls
@@ -363,7 +369,8 @@ function openManagePaymentsModal() {
     // Setup search functionality
     const searchInput = document.getElementById('search-payments-input');
     searchInput.value = ''; // Clear search on open
-    searchInput.addEventListener('input', (e) => {
+    // 用 oninput 不用 addEventListener：這支每次打開都會跑，addEventListener 會一次疊一個監聽
+    searchInput.oninput = (e) => {
         const searchTerm = e.target.value.toLowerCase().trim();
         const paymentDivs = paymentsSelection.querySelectorAll('.card-checkbox');
 
@@ -378,7 +385,7 @@ function openManagePaymentsModal() {
                 }
             }
         });
-    });
+    };
 
     modal.style.display = 'flex';
     disableBodyScroll();

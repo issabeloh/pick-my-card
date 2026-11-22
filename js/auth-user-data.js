@@ -921,7 +921,7 @@ function setupManageCardsModal() {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards (shared handler for both footer and quick-save buttons)
+    // Save cards（儲存列只有一顆鈕；2026-11-22 拿掉「全選」旁的快速儲存鈕）
     const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
@@ -949,8 +949,6 @@ function setupManageCardsModal() {
         closeModal();
     };
     saveBtn.addEventListener('click', doSaveCards);
-    const quickSaveBtn = document.getElementById('save-cards-btn-quick');
-    if (quickSaveBtn) quickSaveBtn.addEventListener('click', doSaveCards);
     
     // Toggle all cards button
     const toggleAllBtn = document.getElementById('toggle-all-cards');
@@ -973,6 +971,7 @@ function setupManageCardsModal() {
             });
             toggleAllBtn.textContent = '全不選';
         }
+        updateSelectionDirtyState('cards-selection');
     });
 
     // "套用我的信用卡" toggle: add all myOwnedCards to current selection,
@@ -988,6 +987,7 @@ function setupManageCardsModal() {
                 cb.checked = !allOwnedChecked;
                 cb.parentElement.classList.toggle('selected', !allOwnedChecked);
             });
+            updateSelectionDirtyState('cards-selection');
         });
     }
 }

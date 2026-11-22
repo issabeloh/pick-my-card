@@ -615,7 +615,9 @@ async function loadBillingDates(cardId) {
     }
 }
 
-// 儲存結帳日期
+// 儲存結帳日期（回傳儲存結果，見 js/levels-payments.js「儲存結果」；key、文件路徑、格式都沒動）
+// ⚠️ 欄位名稱跟意思是反的（站長 2026-11-22 確認）：billingDate＝繳款截止日、statementDate＝結帳日。
+//    已經有用戶資料用這兩個名字，改名會讓舊資料對不上，所以只在畫面上對好、資料名稱不動
 async function saveBillingDates(cardId, billingDate, statementDate) {
     const dateData = {
         billingDate: billingDate || '',
@@ -623,10 +625,13 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
     };
 
     const localKey = `billingDates_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, JSON.stringify(dateData));
+    let local = true;
+    try { localStorage.setItem(localKey, JSON.stringify(dateData)); } catch (e) { local = false; }
     console.log('✅ [結帳日期] 已保存到本地快取:', cardId, dateData);
 
-    if (!currentUser) return;
+    if (!currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
     try {
         // 保存到 Firestore 的 users collection
@@ -647,60 +652,55 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
             }, { merge: true });
 
             console.log('☁️ [結帳日期] 已同步到 Firestore:', cardId, dateData);
+            return { ok: true };
         }
+        return { ok: false, reason: '雲端連線尚未就緒', local };
     } catch (error) {
         console.error('❌ [結帳日期] Firestore 保存失敗:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
-// 設置結帳日期功能
+// 存的日期字串 → 1–31 的數字；空白或看不懂回傳 null（只用來顯示，不寫回）
+function billingDayNumber(v) {
+    const n = parseInt(v, 10);
+    return Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
+}
+
+// 設置結帳日／繳款截止日（個人設定「我的紀錄」，2026-11-22 補上欄位）：兩個「每月 N 日」下拉，改了就存；
+// 儲存結果交給儲存狀態列（cdTrackSave）。#statement-date＝結帳日、#billing-date＝繳款截止日（見 saveBillingDates 上方）。
+// 存的值看不懂時下拉顯示「未設定」，但只要用戶沒動這兩格就不會寫回
 async function setupBillingDates(cardId) {
-    const billingInput = document.getElementById('billing-date');
-    const statementInput = document.getElementById('statement-date');
-    
-    if (!billingInput || !statementInput) return;
-    
-    // 讀取已儲存的日期
-    const savedDates = await loadBillingDates(cardId);
-    billingInput.value = savedDates.billingDate;
-    statementInput.value = savedDates.statementDate;
-    
-    // 為有值的輸入框加上視覺強調
-    const updateInputAppearance = (input) => {
-        if (input.value.trim() !== '') {
-            input.style.borderColor = '#10b981';
-            input.style.background = 'white';
-            input.style.fontWeight = '600';
-        }
+    const statementSel = document.getElementById('statement-date');
+    const billingSel = document.getElementById('billing-date');
+    if (!billingSel || !statementSel) return;
+
+    const fill = (sel) => {
+        if (sel.options.length > 1) return;
+        sel.innerHTML = '<option value="">未設定</option>' +
+            Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">每月 ${i + 1} 日</option>`).join('');
     };
-    
-    updateInputAppearance(billingInput);
-    updateInputAppearance(statementInput);
-    
-    // 儲存功能
-    const saveDates = () => {
-        const billing = billingInput.value;
-        const statement = statementInput.value;
-        saveBillingDates(cardId, billing, statement);
-        
-        // 更新視覺狀態
-        updateInputAppearance(billingInput);
-        updateInputAppearance(statementInput);
+    fill(statementSel);
+    fill(billingSel);
+    // 讀完之前先清空，免得顯示上一張卡的日期
+    statementSel.value = '';
+    billingSel.value = '';
+    statementSel.onchange = billingSel.onchange = null;
+
+    // 快速換卡時，晚回來的舊讀取不能蓋掉新卡的值
+    const tok = (setupBillingDates._t = (setupBillingDates._t || 0) + 1);
+    const saved = await loadBillingDates(cardId);
+    if (tok !== setupBillingDates._t) return;
+    const s = billingDayNumber(saved.statementDate);
+    const b = billingDayNumber(saved.billingDate);
+    statementSel.value = s ? String(s) : '';
+    billingSel.value = b ? String(b) : '';
+
+    const save = () => {
+        const saving = saveBillingDates(cardId, billingSel.value, statementSel.value);
+        if (typeof cdTrackSave === 'function') cdTrackSave('dates', saving);
     };
-    
-    // 設置變更監聽
-    billingInput.onchange = saveDates;
-    billingInput.onblur = saveDates;
-    statementInput.onchange = saveDates;
-    statementInput.onblur = saveDates;
-    
-    // 輸入驗證
-    [billingInput, statementInput].forEach(input => {
-        input.oninput = (e) => {
-            let value = parseInt(e.target.value);
-            if (value > 31) e.target.value = 31;
-            if (value < 1 && e.target.value !== '') e.target.value = 1;
-        };
-    });
+    statementSel.onchange = save;
+    billingSel.onchange = save;
 }
 
