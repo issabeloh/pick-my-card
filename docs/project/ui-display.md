@@ -308,6 +308,7 @@ Grep `titleParts`）：
 成因、對照站觀察、分批清單與還沒做的項目都在 `docs/project/ui-refresh-diagnosis.md`，這裡只記會踩到的規則：
 
 - **`.container` 不再有 max-width、圓角、陰影，`body` 不再有灰漸層與外圈留白**。內容寬度上限改由 `--page-w` 管（1200／1360／1560，第 1b 節那張表的 `.container` 欄現在指的是這個變數）
+- **新戶活動頁（`promos.css`）2026-11-22 比照**：它不吃 `styles.css`，另有一組同義變數 `--pmc-page-w`／`--pmc-page-gutter`（值同主站 1200／1360／1560，頁首 logo 在兩頁之間切換位置不跳）。`.promos-main`、`.social-media-footer`、`.promos-faq` 讀 `--pmc-page-w` 置中；`.promos-header` 左右 padding 帶 gutter（≥1025px 是 17px，同主站密度區塊）。頁尾按鈕實心白底灰框、警語橫條直角、申辦前 FAQ 面板實心白底灰框。**改主站版面寬度時這裡要手動同步**；landing 是另一套行銷頁設計（淡藍光暈底、沒有浮起的白卡），不在這個範圍
 - **新增直接掛在 `.container` 底下的區塊時要自己決定寬度**：內容型 → `max-width: var(--page-w); margin: 0 auto`；底色要滿版 → 左右 padding 加 `var(--page-gutter)`（照 `header`、`.mc-related` 的寫法）。漏了就會從視窗最左邊排到最右邊
 - **頁首與「推薦比較」的左右 padding 在檔尾密度區塊有另一份值**，兩邊都帶 `var(--page-gutter)`，改一邊要改另一邊
 - **桌機頁籤不撐滿**（`.home-view-switch` 在 ≥769px 是 `max-content max-content` 靠左）；手機照舊各佔一半
