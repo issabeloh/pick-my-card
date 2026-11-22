@@ -2333,7 +2333,7 @@ function generateSearchTerms(id, name) {
 // 回傳完整 HTML 字串。內部不得呼叫任何 Sheets/Apps Script API（連 Utilities 也不用），
 // 這樣同一份程式碼才能被 exportToJSON() 與 Node harness（repo 初版由
 // scratchpad 的臨時 harness 呼叫本函數，餵現有 cards.json 產生）共用、行為保證一致。
-// 詳見 docs/project/data-pipeline.md「promos.html 靜態生成」一節。
+// 詳見 docs/project/promos.md 第 1 節「promos.html 靜態生成」。
 
 const PMC_SITE_URL = 'https://pickmycard.app';
 const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2';
