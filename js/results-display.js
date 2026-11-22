@@ -415,7 +415,7 @@ function parseCashbackCap(cap, card, levelSettings) {
 function couponMerchantMatches(item, searchVariants, merchantValue, exactOnly) {
     const itemLower = String(item || '').toLowerCase().trim();
     if (!itemLower) return false;
-    const searchLower = String(merchantValue || '').toLowerCase().trim();
+    const searchLower = normalizeQuoteChars(String(merchantValue || '').toLowerCase().trim());
     const excludedFor = key => (searchExclusionMap[key] || []).some(x => String(x).toLowerCase() === itemLower);
     if (excludedFor(searchLower)) return false;
     return searchVariants.some(term => {

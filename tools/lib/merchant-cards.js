@@ -82,6 +82,7 @@ function createEngine(cardsData) {
   // ⚠️ 這幾步是照抄 js/data-loader.js 的 loadCardsData()，順序與內容都不能改：
   //   1. cardsData = 解碼結果
   //   2. filterExpiredRates —— 濾掉過期活動。少了它，已結束的活動會出現在清單裡
+  //   2b. normalizeMerchantQuotes —— 商家名稱的彎引號 ’ ‘ 換成直引號（2026-11-22）。少了它，商家頁會顯示全形寬的引號
   //   3. mergeDataSearchExclusions —— 併入 SearchExclusions 工作表的排除規則。少了它，
   //      被排除的項目會被誤匹配（2026-08-16 linepay 頁多出「LINE Pay 找體驗 APP」就是這個）
   //   3b. mergeDataTermAliases —— 併入「統一詞」工作表的別名（2026-10-14）。少了它，搜別名的結果會跟畫面不同
@@ -91,6 +92,7 @@ function createEngine(cardsData) {
   vm.runInContext([
     'cardsData = __cardsData;',
     'cardsData = filterExpiredRates(cardsData);',
+    'normalizeMerchantQuotes(cardsData);',
     'mergeDataSearchExclusions(cardsData);',
     'mergeDataTermAliases(cardsData);',
     'cardsData.cards.forEach(function (c) { buildCardItemsIndex(c); });',
