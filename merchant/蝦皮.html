@@ -991,9 +991,11 @@
                         <!-- Payment checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState；單位「個」） -->
+                <div class="modal-footer sel-footer" data-unit="個" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-payments-btn" class="cancel-btn">取消</button>
+                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>

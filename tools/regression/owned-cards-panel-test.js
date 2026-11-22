@@ -11,7 +11,7 @@
  *    訪客存 billingDates_local_<id>、登入者存 users/<uid>.billingDates；失敗照實顯示紅字；卡片格多一行
  *  - 🔒 鐵則 1：開面板不呼叫 saveCardLevel；存的級別找不到只顯示預設、不寫回；用戶改級別才存一次，且不打開詳情頁
  *  - 打完筆記立刻按「‹ 所有卡片」或關閉 → 筆記照樣存
- *  - 選卡 modal（管理我的信用卡／管理加入比較的卡片）的儲存列：有改動才出現、固定在底部；管理視窗跟「我的信用卡」同寬
+ *  - 選卡 modal（管理我的信用卡／管理加入比較的卡片／管理我的行動支付）的儲存列：有改動才出現、固定在底部；管理視窗跟「我的信用卡」同寬
  * 沿用 run-regression.js 的凍結資料與時鐘、card-settings-promo-test.js 的 Firebase 替身。
  */
 'use strict';
@@ -184,6 +184,22 @@ if (require.main === module) (async () => {
   check('加入比較：點卡圖切換 → 「已變更 1 張」', f.shown && f.text === '已變更 1 張', f.text);
   await p.click('#cancel-cards-btn'); await p.waitForTimeout(200);
   check('取消 → 關閉、沒有存', await p.evaluate(() => document.getElementById('manage-cards-modal').style.display === 'none'));
+  // 管理我的行動支付：同一套，單位「個」
+  await p.evaluate(() => openManagePaymentsModal()); await p.waitForTimeout(300);
+  check('行動支付：沒改動 → 沒有儲存列；舊的儲存／取消鈕仍在儲存列裡', !(await foot(p, 'payments-selection')).shown && await p.evaluate(() => !!document.querySelector('#manage-payments-modal .sel-footer #save-payments-btn')));
+  const pay = await p.evaluate(() => document.querySelector('#payments-selection input').id);
+  await p.click('#' + pay); await p.waitForTimeout(100);
+  f = await foot(p, 'payments-selection');
+  check('行動支付：勾一個 → 「已變更 1 個」', f.shown && f.text === '已變更 1 個', f.text);
+  await p.click('#toggle-all-payments'); await p.waitForTimeout(100);
+  f = await foot(p, 'payments-selection');
+  check('行動支付：「全選」也會更新', f.shown && /^已變更 \d+ 個$/.test(f.text), f.text);
+  const want = await p.evaluate(() => [...document.querySelectorAll('#payments-selection input:checked')].map(c => c.value).sort().join());
+  await p.click('#save-payments-btn'); await p.waitForTimeout(400);
+  check('行動支付：儲存 → 關閉並存進 userSelectedPayments', await p.evaluate(w => document.getElementById('manage-payments-modal').style.display === 'none' && [...userSelectedPayments].sort().join() === w, want));
+  await p.evaluate(() => openManagePaymentsModal()); await p.waitForTimeout(300);
+  check('行動支付：再打開以新勾選為基準、沒有儲存列', !(await foot(p, 'payments-selection')).shown);
+  await p.evaluate(() => document.getElementById('close-payments-modal').click());
   await p.context().close();
 
   console.log('B. 已登入');

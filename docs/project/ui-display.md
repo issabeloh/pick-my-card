@@ -436,7 +436,7 @@ Grep `titleParts`）：
 
 - **「ⓘ 詳情」鈕全站只有一組樣式**（2026-11-16 站長要求一致化）：`.card-detail-peek-btn` 白底灰框膠囊、26px 高（桌機 ≥1025px 是 23px，縮小值在 styles.css 檔尾「結果卡次行按鈕」）。搜尋結果卡、領券卡、兩個選卡 modal、推薦活動 modal 的「卡片詳情」都吃同一條基底規則，**不要再依所在位置另開顏色或尺寸覆寫**（之前選卡 modal 是淺藍 22px、結果卡是白底 26px，同一顆鈕兩種長相）。推薦活動卡上的方形 ⓘ（`.spotlight-info-btn`，開的是活動詳情）站長裁定先維持現狀，不在此列
 - **手機版卡片勾選列**（2026-10-14）：≤768px 時「詳情」鈕換到卡名下一行（`.card-checkbox-row` flex-wrap，鈕縮排 22px 對齊卡名）——擠在旁邊會把卡名壓成一字一行
-- **儲存列：有改動才出現、固定在底部**（2026-11-22 站長要求，兩個選卡 modal 都是）：`.modal-footer.sel-footer`（「已變更 N 張　取消　儲存設定」）預設 `hidden`，`updateSelectionDirtyState(selectionId)` 數「跟打開當下不同的勾選」有幾張，0 就藏、≥1 就顯示；`position: sticky; bottom: 0` 黏在 `.modal-content` 捲動容器底部，不用上下捲去找。比較基準在 `_renderCardSelectionModal` 存成 `cardsSelection._initialSelection`（只算現有資料裡的卡）。勾選框的 change 會自動更新；**用程式改勾選的地方要自己呼叫它**（點卡圖、兩個「全選」、「套用我的信用卡選項」），新增這類按鈕時別漏。原本「全選」旁的上方儲存鈕（`#save-owned-cards-btn-top`、`#save-cards-btn-quick`）已拿掉，別加回來
+- **儲存列：有改動才出現、固定在底部**（2026-11-22 站長要求，兩個選卡 modal 與「管理我的行動支付」都是；行動支付的儲存列 `data-unit="個"` →「已變更 N 個」，比較基準由 `openManagePaymentsModal` 設在 `#payments-selection`）：`.modal-footer.sel-footer`（「已變更 N 張　取消　儲存設定」）預設 `hidden`，`updateSelectionDirtyState(selectionId)` 數「跟打開當下不同的勾選」有幾張，0 就藏、≥1 就顯示；`position: sticky; bottom: 0` 黏在 `.modal-content` 捲動容器底部，不用上下捲去找。比較基準在 `_renderCardSelectionModal` 存成 `cardsSelection._initialSelection`（只算現有資料裡的卡）。勾選框的 change 會自動更新；**用程式改勾選的地方要自己呼叫它**（點卡圖、兩個「全選」、「套用我的信用卡選項」），新增這類按鈕時別漏。原本「全選」旁的上方儲存鈕（`#save-owned-cards-btn-top`、`#save-cards-btn-quick`）已拿掉，別加回來
 - **「管理我的信用卡」與「我的信用卡」同寬 660px**（2026-11-22）：前者疊在後者上面，寬度不同時桌機會從左右露出後面那層
 - **「全選／全不選」鈕**（`.toggle-all-btn`）任何寬度都一行（nowrap＋不縮），由搜尋框縮（`.modal-controls` 子層 min-width:0）
 - **詳情頁卡片標籤**（`.card-tags-container`）2026-10-14 起先用 CSS 藏起來（`#card-detail-modal .card-tags-container`），`renderCardTags` 程式保留
@@ -527,7 +527,7 @@ Grep `titleParts`）：
 - 直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）；缺圖顯示卡名（`.ow-noimg`）。單卡面板的卡面同樣處理
 - 已否決、勿回退：錢包堆疊與堆疊動畫、不顯示卡名的一覽、皮革框／毛玻璃／漸層背景、藍膠囊卡數、標題旁只有圖示的齒輪鈕、「這頁唯讀／點卡片開詳情頁」（2026-11-22 推翻）
 
-**驗證**：`node tools/regression/owned-cards-panel-test.js`（41 項，含第 3 節的選卡儲存列：面板開關與搬動、詳情頁不被彈出、樣式一致、日期存取與欄位對應、雲端失敗紅字、鐵則 1、筆記離開即存、桌機寬度）。
+**驗證**：`node tools/regression/owned-cards-panel-test.js`（46 項，含第 3 節的選卡／行動支付儲存列：面板開關與搬動、詳情頁不被彈出、樣式一致、日期存取與欄位對應、雲端失敗紅字、鐵則 1、筆記離開即存、桌機寬度）。
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 
