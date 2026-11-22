@@ -181,7 +181,7 @@
 - **這些規則的斷點與順序**：`styles.css` 最後有三個「桌機密度調整」區塊（≥1025px，ui-display.md 第 1g 節），靠「同特異性、源碼在後」取勝；header／頁籤的 padding、margin 在那裡被覆寫過（頁籤 `margin: 12px -20px -10px` 與 header `padding: 10px 20px` 是耦合的）。新規則要嘛寫在密度區塊之前並同步改密度區塊的值，要嘛整組一起改，不能只蓋一邊
 - **embed 模式**（`html.pmc-embed`，promos 的詳情 iframe）有自己的 body／container 覆寫，改完要開 `/promos` 點一張卡的詳情確認
 - **頁尾字色**：`.data-update-footer`、`.social-media-title` 目前的顏色是配灰底調過對比的，換白底／淺灰底要重看一次
-- **共用 styles.css 的頁面**：faq／privacy／terms 也吃到 body 與 header 的規則；頁尾結構手抄在 4 頁＋promos 另一套（見 ui-display.md 教訓記錄 2026-10-21）
+- **共用 styles.css 的頁面**：faq／privacy／terms 也吃到 body 與 header 的規則；頁尾結構手抄在 4 頁＋promos 另一套（見 ui-display.md 第 12 節「頁尾」）
 - **改了 index.html** → 跑 `node tools/build-merchant-pages.js`
 - **卡面縮圖有直式卡**（遠東樂家+、匯豐 Live+ 等），不能假設都是橫式
 - **禁用手法照舊**：不要用卡片頂部彩色條（ui-display.md 第 9 節）；卡片膠囊不要改等寬 grid（第 1b 節）

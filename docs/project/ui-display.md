@@ -198,10 +198,8 @@ Grep `titleParts`）：
 
 | 想過的做法 | 為什麼不行 |
 |---|---|
-| `html { font-size: 87.5% }` | `styles.css` 的 px 與 rem 字級各約一半，只拉得動 rem 那一半，比例會歪 |
+| `html { font-size: 87.5% }` | `styles.css` 的 px 與 rem 字級各約一半（2026-09-08 盤點：191／170 條），只拉得動 rem 那一半，比例會歪 |
 | `zoom` / `transform: scale()` | 詳情頁 sticky nav 的捲動靠 `getBoundingClientRect` 與 `scrollTop` 換算（`setupCardDetailNav`），縮放會讓兩個單位對不上 |
-
-**為什麼不用單一開關**（2026-09-08 評估）：`styles.css` 的字級 px 與 rem 約各半（當時 191／170 條），`html { font-size }` 只拉動一半、比例會歪；`zoom` 會扯到 `getBoundingClientRect` 的量測（詳情頁捲動靠它）。所以只能逐條改；只動可用寬度、不動字級的部分（1b）風險收益比最好，先做。
 
 **做法：三個 `@media (min-width: 1025px)` 區塊，放在 `styles.css` 最後（`faq.css` 另有對應區塊），逐條覆寫**（Grep「桌機密度調整」）：
 
@@ -357,7 +355,7 @@ Grep `titleParts`）：
 - **「顯示全部N個」「展開／收起」「變更 ›」＝同一種 `.cd-pill`**：白底 #d1d5db 框、#374151 字、11px/600、帶向下箭頭（展開後轉 180°），和藍色粗體通路名分得開
 
 **適用通路最多三行、條件一行省略——先畫完整內容、量得到寬度才收**（`cdFitChannel`／`cdFitCond`／`cdFitAll`，`setupCardDetailFit`）：
-- ⚠️ 詳情頁打開前是 `display:none`、沒選中的頁籤也是 `display:none`，那時 `clientWidth` 是 0。量不到就**保留完整內容**（CSS `.cd-ch{max-height:54px;overflow:hidden}` 先夾住三行，不會畫成空白），不可以先收再說。收的時機：①`showCardDetail` 在 modal 顯示、`setupCardDetailNav` 之後呼叫 `cdFitAllContainers()`；②`selectCardDetailTab` 對剛顯示的窗格呼叫 `cdFitAll`；③`ResizeObserver` 盯四個回饋容器的**寬度**（寬度沒變就不動，免得自己改高度又觸發自己；收的動作丟 `requestAnimationFrame`，在 observer 回呼裡直接改版面會吐 "ResizeObserver loop" 錯誤）；④`document.fonts` 的 `loadingdone`／`ready`；⑤清空搜尋後（見教訓 11-17）
+- ⚠️ 詳情頁打開前是 `display:none`、沒選中的頁籤也是 `display:none`，那時 `clientWidth` 是 0。量不到就**保留完整內容**（CSS `.cd-ch{max-height:54px;overflow:hidden}` 先夾住三行，不會畫成空白），不可以先收再說。收的時機：①`showCardDetail` 在 modal 顯示、`setupCardDetailNav` 之後呼叫 `cdFitAllContainers()`；②`selectCardDetailTab` 對剛顯示的窗格呼叫 `cdFitAll`；③`ResizeObserver` 盯四個回饋容器的**寬度**（寬度沒變就不動，免得自己改高度又觸發自己；收的動作丟 `requestAnimationFrame`，在 observer 回呼裡直接改版面會吐 "ResizeObserver loop" 錯誤）；④`document.fonts` 的 `loadingdone`／`ready`；⑤清空搜尋後（見第 11 節「先藏後顯示」）
 - 算法：全部放得下就不長鈕；否則二分搜尋最多能列幾個通路名（含「… 顯示全部N個」鈕算在三行內），至少留一個。通路完整清單記在元素的 JS 屬性 `_cdFull`（`strong._fullText` 是搜尋 `condenseMerchantList` 暫存的原文，優先取它），不放 data-* 屬性
 - 「顯示全部」走委派點擊 `cdToggleChannel`（行為同 `toggleMerchants`：展開成全文、鈕變「收起」，收起時重收），不再用 inline `onclick`；`toggleMerchants` 只剩排除卡用。條件「展開」只在真的被截斷時才長出來
 
@@ -396,7 +394,7 @@ Grep `titleParts`）：
 
 ### 新戶活動：每筆活動一張「票券」
 
-`renderCardDetailPromos`（`js/results-display.js`）收集要畫的活動（沿用舊規則：沒有首刷禮／定額回饋／回饋率任何一項的整筆略過）後交給 `renderCardDetailPromoTickets(card, items)`（`js/card-detail.js` 檔尾「新戶活動票券」區塊）。**搜尋結果的活動卡（`createCardholderPromoElement`）輸出完全不變**——只抽了兩個共用小函數 `getPromoTimeBadge(promo)`（`{kind:'upcoming'|'ending'|'', days}`）與 `formatPromoPeriod(promo)`，新舊 HTML 逐字比對過 7 個日期 × 55 筆 × 2 模式（run-regression.js **不涵蓋**活動卡，要改它時自己比，見教訓）。
+`renderCardDetailPromos`（`js/results-display.js`）收集要畫的活動（沿用舊規則：沒有首刷禮／定額回饋／回饋率任何一項的整筆略過）後交給 `renderCardDetailPromoTickets(card, items)`（`js/card-detail.js` 檔尾「新戶活動票券」區塊）。**搜尋結果的活動卡（`createCardholderPromoElement`）輸出完全不變**——只抽了兩個共用小函數 `getPromoTimeBadge(promo)`（`{kind:'upcoming'|'ending'|'', days}`）與 `formatPromoPeriod(promo)`，新舊 HTML 逐字比對過 7 個日期 × 55 筆 × 2 模式（run-regression.js **不涵蓋**活動卡，要改它時自己比，見 `docs/ops/regression.md`「詳情頁個人設定與新戶活動票券」節）。
 - **票券**（`.cd-tk`）：左邊亮黃票根 `#ffd84a`（78px，第一個活動類型的線條圖示＋文字：首刷禮＝禮物、定額回饋＝錢幣、回饋加碼＝百分比，`promoTypeClass` 把贈品／定額抵用歸到同類；不認得的類型用禮物），中間虛線、上下兩個半圓缺口（用頁面底色 #f3f4f6 的圓＋`overflow:hidden` 切成半圓）；右邊白底**資料有什麼畫什麼**：`gift_content`（一項＝「首刷禮」小標＋17px 粗體品名；多項＝「首刷禮 N 選 1」＋編號清單，`cdParseGiftItems` 去掉 ①②③）、`voucher_amount`（「定額回饋」＋大字 NT$ 千分位＋`voucher_usage` 小字）、`bonus_rate`（兩格「回饋率」大字＋「回饋消費上限」，`bonus_cap` 取整千分位；有 `voucher_usage` 但沒有定額金額時，單位跟在回饋率旁——例：永豐大戶「6% LINE POINTS」）、`bonus_merchants`（重用同方案回饋卡的 `renderCdChannels`／`cdFitChannel` 三行收合；`*general`＝「一般消費」、`*all_items`＝「本卡所有指定通路」）、`new_customer_summary`（13px）、`gift_image_url`（`sanitizeUrl`、最大高 140px、lazy、onerror 隱藏，另掛 `.promo-gift-image` 讓 `setupGiftImageLightbox` 點擊放大）。
 - **右上小標**（`.cd-pt-chips`）：快結束「剩 N 天」（14 天內、當天「今天截止」）、未開始「N 天後開始」（當天「今天開始」）；第二個以後的活動類型只有「右邊沒有對應數值」時才顯示成小標（「首刷禮＋定額回饋」右邊已有金額就不再標）
 - **票券下方**：只有一筆 → 直接攤開「達成條件」（`cdParsePromoSteps`）與「活動說明」盒子（新戶資格、活動期間、備註）；多筆 → 每張票券下一顆「達成條件與備註 ⌄」灰框膠囊（`.cd-pm-t`，委派點擊 `cdTogglePromoDetail`），點開展開該筆；新戶資格若**每一筆都有且完全相同**就在最下面寫一次（`#card-promos-foot`），否則放進各筆展開內容。欄位空白（空字串、null、空陣列）整列不顯示；「謹慎理財、信用至上」（`#card-promo-disclaimer`，顯示規則不變）移到活動區最下面、改灰色小字
@@ -647,7 +645,7 @@ Grep `titleParts`）：
 - 整段替換 CSS 區塊（`s[start:end]`）前，先 `grep -n` 列出 start／end 之間的選擇器，確認區間內**只有**要換掉的規則；不確定就逐條 replace（2026-09-03 誤刪 modal 樣式與手機 media query）
 
 **疊序與 modal**
-- 「modal 疊 modal」不得靠 DOM 順序（所有 `.modal` 同 z-index 1000）。目前固定值：配卡組合頁 1050、詳情頁 1100、`#auth-modal` 1200。從 ≥1000 的全頁層開另一個視窗前先確認疊序（2026-07-17、2026-11-17）
+- 「modal 疊 modal」不得靠 DOM 順序（所有 `.modal` 同 z-index 1000）。2026-11-22 的值：詳情頁 1100、`#auth-modal` 1200；小抄相關的覆蓋層與 modal 在 1060–1090（見第 8 節）。數值會變，從 ≥1000 的全頁層開另一個視窗前先 `grep -n "z-index" styles.css` 確認疊序（2026-07-17 詳情頁開在配卡 modal 後面、2026-11-17 登入視窗開在詳情頁後面）
 - modal 已開啟時重繪（例如級別 onchange 重呼叫 `showCardDetail()`）不得再上捲動鎖：先檢查 modal 是否已顯示（`wasAlreadyOpen` guard），否則 refcount 不成對、關閉後頁面鎖死（2026-07-13；refcount 本身見第 3 節）
 - 頁面上任何 `type="password"` 欄位一律要被某個 `<form>` 擁有。無主的密碼欄會讓 Chrome 把同頁不相干的輸入框（當時是 `#amount-input`，`type="number"` 也會中）當成帳號欄、跳出密碼下拉，`autocomplete="off"` 擋不住。作法：`<form id="da-form" style="display: contents;">`＋JS 攔 submit（2026-09-16）
 
@@ -671,8 +669,8 @@ Grep `titleParts`）：
 
 **頁尾（`.social-media-footer`）**
 - ⚠️ 頁尾是**同一套結構手抄在 4 頁**（index／faq／privacy／terms），商家頁由生成器從 index 產生，promos.html 由 `cards-export.gs` 生成（用自己的 promos.css，要手動同步）。改頁尾要全部對一遍（2026-10-21）
-- 現行樣式：深色字 `#374151`（約 5.4:1）、手機兩欄格線（奇數顆時最後一顆佔滿一列）、法務連結縮成 `.footer-legal` 一行小字。換底色後要重量文字對比（2026-10-21 白字在灰底上只剩約 1.5:1）
-- 廣告列不預留高度：外框與「廣告」標籤只在 `<ins data-ad-status="filled">` 時出現，`data-full-width-responsive` 用 false（true 會讓手機廣告撐出外框）。站長實測：AdSense **錨定廣告收合後不收回預留空間**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），改 CSS 前先分清楚是不是廣告插的（2026-10-21）
+- 樣式（2026-11-22 現況）：按鈕白底灰框、字 `#1f2937`，手機兩欄格線（奇數顆時最後一顆佔滿一列），法務連結縮成 `.footer-legal` 一行小字（`#374151`）。**換底色後要重量文字對比**（2026-10-21 白字在當時的灰漸層上只剩約 1.5:1）
+- 廣告列不預留高度：外框與「廣告」標籤只在 `<ins>` 的 `data-ad-status` 是 `filled` 或 `unfill-optimized` 時出現，`data-full-width-responsive` 用 false（true 會讓手機廣告撐出外框）。站長實測：AdSense **錨定廣告收合後不收回預留空間**（頂端錨定→頁頂一段空白；底部錨定→頁尾下方約 400px 空白），改 CSS 前先分清楚是不是廣告插的（2026-10-21）
 
 **整頁背景**
 - 改整頁背景前，先確認 `.container` 之外還有哪些元素（頁尾、警語列）靠 body 的底色撐對比（2026-09-03 頁尾社群鈕是白字白框，body 洗白後整組消失）。當時的「灰漸層要留著」已被 2026-11-16 全幅改版取代，現況見 1l
