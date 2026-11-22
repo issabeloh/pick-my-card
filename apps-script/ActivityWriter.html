@@ -543,8 +543,8 @@
     };
     push('rate+basic', [basic], '含基本回饋 ' + basic + '%');
     if (dom) push('rate+basic+domesticBonusRate', [basic, dom], '含基本 ' + basic + '%＋國內加碼 ' + dom + '%');
-    if (ovs) push('rate+overseasCashback', [ovs], '含海外基本 ' + ovs + '%');
-    if (ovs && ovsB) push('rate+overseasCashback+overseasBonusRate', [ovs, ovsB], '含海外基本 ' + ovs + '%＋海外加碼 ' + ovsB + '%');
+    if (ovs) push('rate+overseasCashback', [ovs], '含國外基本 ' + ovs + '%');
+    if (ovs && ovsB) push('rate+overseasCashback+overseasBonusRate', [ovs, ovsB], '含國外基本 ' + ovs + '%＋國外加碼 ' + ovsB + '%');
     push('rate', [], '這個通路的完整率（不與基本回饋併計）');
     push('', [], '留空（cap 內用 rate、超過退回基本回饋）');
     (card.cashbackRates || []).forEach(function (r) {
@@ -1345,7 +1345,7 @@
   function cardContext(index, card) {
     var lines = ['【這張卡】' + card.id + '｜' + card.name,
       '基本回饋 ' + card.basicCashback + '%' + (card.overseasCashback ? '、海外基本 ' + card.overseasCashback + '%' : '') +
-      (card.domesticBonusRate ? '、國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '、海外加碼 ' + card.overseasBonusRate + '%' : ''),
+      (card.domesticBonusRate ? '、國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '、國外加碼 ' + card.overseasBonusRate + '%' : ''),
       '既有活動（槽位｜率｜分類｜通路）：'];
     (card.cashbackRates || []).slice(0, 30).forEach(function (r) {
       lines.push('  rate_' + r.slot + '｜' + r.rate + '｜' + (r.category || '') + '｜' + (r.items || []).slice(0, 8).join(','));
@@ -1784,7 +1784,7 @@
     var row = cur();
     box.appendChild(el('h2', { text: card.name }));
     var base = '基本 ' + card.basicCashback + '%' + (card.overseasCashback ? '｜海外基本 ' + card.overseasCashback + '%' : '') +
-      (card.domesticBonusRate ? '｜國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '｜海外加碼 ' + card.overseasBonusRate + '%' : '') +
+      (card.domesticBonusRate ? '｜國內加碼 ' + card.domesticBonusRate + '%' : '') + (card.overseasBonusRate ? '｜國外加碼 ' + card.overseasBonusRate + '%' : '') +
       (card.hasLevels ? '｜分級卡' : '');
     box.appendChild(el('div', { text: base }));
     if (state.kind === 'coupon') {
