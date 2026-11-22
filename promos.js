@@ -1357,7 +1357,7 @@
     favIds = favIds.slice(0, FAV_MAX);
     writeFavIds();
     syncFavButtons();
-    showToast(adding ? '已收藏，可以從底部看我的收藏' : '已取消收藏');
+    showToast(adding ? '已收藏' : '已取消收藏');
     track('promos_fav', { card_id: cardId, action: adding ? 'add' : 'remove', page: isCardPage ? 'card' : 'list' });
     if (filterState.favOnly && !favIds.length) setFavOnly(false);
     else if (filterState.favOnly) refreshVisibility();
