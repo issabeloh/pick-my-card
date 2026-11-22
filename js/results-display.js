@@ -1246,7 +1246,7 @@ function setupCardDetailNav(modalContent, opts = {}) {
 
     // 頁首／頁籤列的高度寫進 CSS 變數：頁籤列 sticky 的 top ＝ 頁首高度，桌機左欄 sticky 的 top ＝ 兩者相加。
     // ⚠️ 頁首高度會變（長卡名換行、卡名行數、轉向、視窗縮放），只量開啟當下一次不夠——
-    //    用 ResizeObserver 持續同步（寫入前比對舊值，避免 observer 自己觸發自己；教訓見 ui-display.md 2026-09-23）
+    //    用 ResizeObserver 持續同步（寫入前比對舊值，避免 observer 自己觸發自己；見 ui-display.md 第 11 節「量測」）
     const topBar = modalContent.querySelector('.cd-top');
     const tabsBar = modalContent.querySelector('.cd-tabsbar');
     if (_cardDetailHeaderObserver) {
