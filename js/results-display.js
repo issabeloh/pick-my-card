@@ -1366,7 +1366,7 @@ function renderCardDetailPromos(card) {
             pill.appendChild(btn);
         }
         ctaEl.appendChild(pill);
-        const trust = ctaLink && typeof cdApplyTrustText === 'function' ? cdApplyTrustText(ctaLink) : '';
+        const trust = ctaLink && typeof cdApplyTrustText === 'function' ? cdApplyTrustText(ctaLink, card) : '';
         if (trust) {
             const trustEl = document.createElement('p');
             trustEl.className = 'card-apply-cta-trust';

@@ -38,13 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// 申辦連結的信任文字（2026-11-22 站長）：依連結網域判斷。2026-11 約三分之一的卡走 Money101 合作連結
-// （apply.creatory.money101.com.tw），其他直接連銀行官網——不能統一寫「經 Money101」，否則一半是錯的。
+// 申辦連結的去向文字（2026-11-22 站長）：寫法與 /promos 的按鈕去向一致，判斷邏輯照抄
+// apps-script/cards-export.gs 的 pmcApplyDest_()（⚠️ 改其中一邊要兩邊同步）：
+//   - 合作平台網域 →「經 Money101 合作連結前往銀行官網」（2026-11 約三分之一的卡）
+//   - 與該卡 website 同一個品牌網域（比主網域第一段，國泰 cathay-cube／cathaybk 走別名表）→「直達銀行官網・<主網域>」
+//   - 其餘 →「前往 <完整網域>」（不替它背書是哪裡；連結填錯銀行時也會在這裡露出來）
 // 用在手機膠囊（點文字展開）與桌機新戶活動頁籤的申辦列（js/results-display.js renderCardDetailPromos）
-function cdApplyTrustText(link) {
-    let host = '';
-    try { host = new URL(link).hostname.toLowerCase(); } catch (e) { return ''; }
-    return /(^|\.)money101\.com\.tw$/.test(host) ? '經 Money101 合作連結前往銀行官網' : '直接前往銀行官網申辦';
+const CD_PARTNER_HOSTS = [
+    { test: /(^|\.)money101\.com\.tw$/, name: 'Money101' },
+    { test: /(^|\.)creatory\.biz$/, name: 'Money101' }
+];
+const CD_BANK_DOMAIN_ALIASES = { 'cathay-cube': ['cathaybk'] };
+function cdHostOf(url) {
+    const m = /^https?:\/\/([^\/?#:]+)/i.exec(String(url || ''));
+    return m ? m[1].toLowerCase() : '';
+}
+function cdBaseDomain(host) {
+    const parts = String(host || '').split('.');
+    if (parts.length <= 2) return parts.join('.');
+    return parts.slice(/\.(com|net|org|gov|edu|idv)\.tw$/.test(host) ? -3 : -2).join('.');
+}
+function cdApplyTrustText(link, card) {
+    const host = cdHostOf(link);
+    if (!host) return '';
+    const partner = CD_PARTNER_HOSTS.find(p => p.test.test(host));
+    if (partner) return '經 ' + partner.name + ' 合作連結前往銀行官網';
+    const siteHost = card ? cdHostOf(card.website) : '';
+    const siteBrand = siteHost ? cdBaseDomain(siteHost).split('.')[0] : '';
+    const hostBrand = cdBaseDomain(host).split('.')[0];
+    if (siteBrand && (siteBrand === hostBrand || (CD_BANK_DOMAIN_ALIASES[siteBrand] || []).indexOf(hostBrand) !== -1)) {
+        return '直達銀行官網・' + cdBaseDomain(host);
+    }
+    return '前往 ' + host;
 }
 
 // 手機膠囊左側文字：點了在下面展開信任文字，再點收回；膠囊縮成右下角時一律收回（js/results-display.js _cdFabScrollHandler）
@@ -111,7 +136,7 @@ function setupCardDetailApply(card) {
         }
         if (fabInfo) fabInfo.hidden = !fabText.textContent;
     }
-    if (fabTrust) fabTrust.textContent = cdApplyTrustText(applyLink);
+    if (fabTrust) fabTrust.textContent = cdApplyTrustText(applyLink, card);
     if (fabInfo && !fabInfo.onclick) {
         fabInfo.onclick = () => setCardDetailApplyTrustOpen(fabInfo.getAttribute('aria-expanded') !== 'true');
     }
