@@ -4862,6 +4862,47 @@ input[type="number"]:focus {
 #card-detail-modal .cd-type .card-official-site-link:hover { color: #fff; }
 #card-detail-modal .cd-type .card-official-site-link[hidden] { display: none; }
 
+/* 回饋類型與點數效期（2026-11-23）：「回饋」頁籤最下面、預設收合的細節。收合時只有一行灰字＋箭頭，
+   點開是白色小卡，各列小標（11px 灰）在上、內容在下。用原生 <details>，鍵盤與報讀軟體都能操作 */
+.cd-reward-info { margin: 20px 4px 4px; }
+.cd-reward-info[hidden] { display: none; }
+.cd-reward-info > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    list-style: none;
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #374151;
+}
+.cd-reward-info > summary::-webkit-details-marker { display: none; }
+.cd-reward-info > summary::after {
+    content: "";
+    width: 7px;
+    height: 7px;
+    margin: -3px 0 0 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.15s;
+}
+.cd-reward-info[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.cd-reward-info > summary:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+.cd-reward-info dl {
+    margin: 10px 0 0;
+    padding: 4px 14px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+.cd-reward-info dl > div { padding: 9px 0; }
+.cd-reward-info dl > div + div { border-top: 1px solid #f0f1f3; }
+.cd-reward-info dl > div[hidden] { display: none; }
+.cd-reward-info dt { font-size: 11px; font-weight: 500; color: #6b7280; }
+.cd-reward-info dd { margin: 2px 0 0; font-size: 13.5px; line-height: 1.6; color: #111827; }
+@media (prefers-reduced-motion: reduce) { .cd-reward-info > summary::after { transition: none; } }
+
 .cd-facts {
     margin: 0;
     display: grid;
