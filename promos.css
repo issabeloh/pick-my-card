@@ -2409,6 +2409,8 @@ a {
   line-height: 1.6;
   color: #1e3a5f;
 }
+/* 署名「— 大師點評」只在單卡頁顯示（.pmc-cp-feat-sec 那段），清單頁 modal 維持色條樣式 */
+.promo-feat-usage-cite { display: none; }
 
 .promo-feat-list {
   list-style: none;
@@ -3736,20 +3738,21 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
 .pmc-cp { max-width: 808px; margin: 0 auto; }
 .pmc-cp-hero { padding: 16px 4px 4px; }
 .pmc-cp-hero h1 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1.35rem;
   font-weight: 800;
   line-height: 1.4;
   color: var(--pmc-ink);
 }
+.pmc-cp-month { margin: 2px 0 8px; font-size: 12.5px; line-height: 1.5; color: var(--pmc-muted); }
 .pmc-cp-lede { margin: 0 0 14px; font-size: 13.5px; line-height: 1.75; color: #4b5563; }
 .pmc-cp-top { display: flex; align-items: center; gap: 14px; margin: 0 0 12px; }
-.pmc-cp-img { flex: none; width: 128px; aspect-ratio: 8 / 5; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); background: var(--pmc-white); }
+/* 卡圖在窄手機讓出寬度：右欄至少留 222px，「經 Money101 合作連結前往銀行官網」（約 202px）才不會折行
+   （站長 2026-11-22）。≥769px 另有固定寬度 */
+.pmc-cp-img { flex: none; width: clamp(88px, calc(100% - 222px), 128px); aspect-ratio: 8 / 5; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); background: var(--pmc-white); }
 .pmc-cp-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pmc-cp-cta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .pmc-cp-cta .promo-apply-btn { width: 100%; max-width: 280px; padding: 10px 18px; font-size: 15px; }
-.pmc-cp-top .pmc-fav-slot { flex: none; align-self: flex-start; }
-.pmc-cp-top .pmc-fav-btn { margin-left: 0; }
 .pmc-cp-facts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3763,7 +3766,19 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
 .pmc-cp-facts > div + div { border-left: 1px solid #eef0f3; }
 .pmc-cp-facts small { display: block; font-size: 11.5px; color: var(--pmc-muted); }
 .pmc-cp-facts b { display: block; font-size: 14.5px; color: #111827; }
-.pmc-cp-facts b.is-green { color: var(--pmc-green); }
+/* 第三格＝收藏愛心（promos.js 填進 .pmc-fav-slot）。整格都點得到：按鈕的 ::after 蓋滿整格 */
+.pmc-cp-fact-fav { position: relative; display: flex; flex-direction: column; align-items: center; }
+.pmc-cp-fact-fav .pmc-fav-slot { display: block; height: 21px; }
+.pmc-cp-fact-fav .pmc-fav-btn { position: static; margin: -3px 0 0; width: 26px; height: 26px; border: 0; background: none; }
+.pmc-cp-fact-fav .pmc-fav-btn.is-on { background: none; }
+.pmc-cp-fact-fav .pmc-fav-btn::after { content: ""; position: absolute; inset: 0; }
+.pmc-cp-fact-fav .pmc-fav-btn svg { width: 22px; height: 22px; }
+/* ⚠️ 按下時的縮放改套在 svg：套在按鈕上，transform 會讓按鈕變成 ::after 的定位容器，
+   覆蓋層瞬間縮回 26px，在格子其他地方按下去放開就不算點擊 */
+.pmc-cp-fact-fav .pmc-fav-btn:active { transform: none; }
+.pmc-cp-fact-fav .pmc-fav-btn:active svg { transform: scale(0.88); }
+.pmc-cp-fact-fav .pmc-fav-btn svg { transition: transform 0.15s ease; }
+.pmc-cp-fact-fav:hover .pmc-fav-btn { color: #e11d48; }
 .pmc-cp-hero .promos-data-update { margin: 0; }
 .pmc-cp .pmc-section-head { margin-top: 22px; }
 /* 活動卡：清單版的多檔卡在桌機是跨兩欄的 grid（rail／main／side），單卡頁沒有 rail，
@@ -3792,6 +3807,31 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
   background: var(--pmc-white);
 }
 .pmc-cp-feat-sec .promo-feat-head > b { display: none; }   /* 標題已經是這一節的 h2 */
+/* 卡片用途＝大師點評引言（2026-11-22，比照詳情頁 .card-use-case 桌機版，見 ui-display.md 1q）：
+   不要色條與框，中文引號「」框住整句（品牌藍），下一行靠右小字署名 */
+.pmc-cp-feat-sec .promo-feat-usage {
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.65;
+  color: #374151;
+}
+.pmc-cp-feat-sec .promo-feat-usage::before,
+.pmc-cp-feat-sec .promo-feat-usage::after { font-weight: 800; color: #1e40af; }
+.pmc-cp-feat-sec .promo-feat-usage::before { content: "「"; }
+.pmc-cp-feat-sec .promo-feat-usage::after { content: "」"; }
+.pmc-cp-feat-sec .promo-feat-usage-cite {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: right;
+  color: #6b7280;
+}
 .pmc-cp-rel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .pmc-cp-rel-card {
   display: block;

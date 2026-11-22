@@ -4019,26 +4019,19 @@ function pmcRewardPlain_(promo, withGiftName) {
   return name ? '首刷禮 ' + (name.length > 18 ? name.slice(0, 18) + '…' : name) : '首刷禮';
 }
 
-// 頁首三格：活動檔數／主活動的獎勵／截止
+// 頁首三格：活動檔數／截止／收藏愛心（2026-11-22 站長：拿掉「回饋金額」——活動卡就在正下方，
+// 金額重複；愛心從卡圖那一列搬進來，申辦鈕那列才放得下去向文字）。
+// 愛心由 promos.js 的 setupFavorites() 填進 .pmc-fav-slot（生成器只留空位）。
 function pmcCardPageFacts_(g) {
-  const main = g.items[0].promo;
-  let label, value, green = true;
-  if (pmcIsBonus_(main) && pmcRateDisplay_(main)) {
-    label = '最高加碼'; value = pmcRateDisplay_(main);
-  } else if (pmcPromoValue_(main) !== null) {
-    label = '回饋金額'; value = pmcMoney_(pmcPromoValue_(main));
-  } else {
-    const n = pmcGiftOptions_(main.gift_content).length;
-    label = '首刷禮'; value = n > 1 ? n + ' 選 1' : '實體贈品'; green = false;
-  }
   const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
   const endLabel = g.items.length > 1 ? '最快截止' : '活動截止';
   const endValue = ends.length ? pmcShortDate_(ends[0]) : '不限期';
-  return '  <div class="pmc-cp-facts">\n' +
-    '    <div><small>新戶活動</small><b>' + g.items.length + ' 檔</b></div>\n' +
-    '    <div><small>' + label + '</small><b' + (green ? ' class="is-green"' : '') + '>' + pmcEscapeHtml_(value) + '</b></div>\n' +
-    '    <div><small>' + endLabel + '</small><b>' + pmcEscapeHtml_(endValue) + '</b></div>\n' +
-    '  </div>\n';
+  return '    <div class="pmc-cp-facts">\n' +
+    '      <div><small>新戶活動</small><b>' + g.items.length + ' 檔</b></div>\n' +
+    '      <div><small>' + endLabel + '</small><b>' + pmcEscapeHtml_(endValue) + '</b></div>\n' +
+    '      <div class="pmc-cp-fact-fav"><small>收藏</small>' +
+      '<span class="pmc-fav-slot" data-card-id="' + pmcEscapeHtml_(g.cardId) + '" data-card-name="' + pmcEscapeHtml_(g.cardName) + '"></span></div>\n' +
+    '    </div>\n';
 }
 
 function pmcCardPageLede_(g) {
@@ -4137,14 +4130,14 @@ function pmcCardPageHtml_(g, groups, ctx) {
   const main =
     pmcCardPageBreadcrumb_(name) +
     '  <section class="pmc-cp-hero" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '">\n' +
-    '    <h1>' + pmcEscapeHtml_(name) + '新戶活動（' + ctx.monthLabel + '）</h1>\n' +
+    // 月份不放進 h1（站長 2026-11-22：標題太長、手機折成兩行），改成標題下方一行小灰字；<title> 仍帶月份
+    '    <h1>' + pmcEscapeHtml_(name) + '新戶活動</h1>\n' +
+    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabel) + '整理</p>\n' +
     '    <p class="pmc-cp-lede">' + pmcEscapeHtml_(pmcCardPageLede_(g)) + '</p>\n' +
     '    <div class="pmc-cp-top">\n' +
     '      <span class="pmc-cp-img"><img src="/assets/images/cards/' + encodeURIComponent(cardId) + '.png" alt="' +
       pmcEscapeHtml_(name) + '" onerror="this.closest(\'.pmc-cp-img\').style.display=\'none\'"></span>\n' +
     '      <div class="pmc-cp-cta">' + ctaHtml + '</div>\n' +
-    // 收藏愛心由 promos.js 填進來（存在這台裝置，跟清單頁同一份收藏）
-    '      <span class="pmc-fav-slot" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '"></span>\n' +
     '    </div>\n' +
     pmcCardPageFacts_(g) +
     '    <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(updatedIso) + '">' +
