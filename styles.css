@@ -5220,13 +5220,26 @@ input[type="number"]:focus {
     .cd-pan-set,
     .cd-pan-set[hidden] { display: block; }
     #card-detail-modal .cd-pan-set { order: 0; }
-    /* 設定盒子同理：拿掉白框，列與列、組與組之間用細線分段 */
-    .cd-side .cd-set-box { background: none; border: 0; border-radius: 0; }
-    .cd-side .cd-st-r { padding: 10px 0; }
-    .cd-side .cd-pan-set > .cd-set-box { margin-top: 12px; border-top: 1px solid #e5e7eb; }
-    .cd-side .cd-set-sec { margin-left: 0; margin-right: 0; }
-    .cd-side .cd-set-hd { margin: 14px 0 0; }
-    .cd-side .cd-set-foot { padding-left: 0; padding-right: 0; }
+    /* 個人設定在白色側欄裡收成「一個區塊」（2026-11-23 站長：原本拿掉框、只用細線分段，看起來是零散的好幾項）：
+       整區一塊淺灰底圓角面板（標題列、說明、兩組設定、底部說明都在裡面），兩組設定各是面板裡的白色小盒子，
+       列與列之間細線。控制項在窄欄裡縮成 32px 高、120px 寬，和 14px 的標籤同一個量級 */
+    .cd-side #card-personal-section {
+        margin-top: 16px;
+        padding: 12px 12px 14px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+    }
+    .cd-side .cd-set-hd { margin: 0; }
+    .cd-side .cd-set-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .cd-side .cd-pan-set > .cd-set-box { margin-top: 10px; }
+    .cd-side .cd-st-r { padding: 9px 12px; }
+    .cd-side .cd-set-sec { margin: 6px 2px 8px; }
+    .cd-side .cd-set-foot { padding: 10px 2px 0; }
+    .cd-side .cd-st-l label { font-size: 14px; }
+    #card-detail-modal .cd-side .cd-st-sel,
+    #card-detail-modal .cd-side input[type="text"].cd-st-inp { width: 120px; height: 32px; font-size: 14px; }
+    #card-detail-modal .cd-side .cd-st-ta { min-height: 60px; font-size: 14px; }
 
     /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
        2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，

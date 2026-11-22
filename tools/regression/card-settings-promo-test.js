@@ -236,13 +236,15 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
       const pd = await open(true); await pd.setViewportSize({ width: W, height: H });
       await pd.evaluate(() => showCardDetail('cathay-cube')); await pd.waitForTimeout(700);
       const g = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); const bgc = e => getComputedStyle(e).backgroundColor; const bd = e => getComputedStyle(e).borderTopWidth + '/' + getComputedStyle(e).borderLeftWidth;
-        return { right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), sumBg: bgc(document.querySelector('.cd-sum')), sumBd: bd(document.querySelector('.cd-sum')), boxBg: bgc(document.querySelector('.cd-side .cd-set-box')), boxBd: bd(document.querySelector('.cd-side .cd-set-box')), box2Bg: bgc(document.querySelector('#card-personal-section > .cd-set-box')), box2Bd: bd(document.querySelector('#card-personal-section > .cd-set-box')),
+        return { right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), sumBg: bgc(document.querySelector('.cd-sum')), sumBd: bd(document.querySelector('.cd-sum')), boxBg: bgc(document.querySelector('.cd-side .cd-set-box')), boxBd: bd(document.querySelector('.cd-side .cd-set-box')), box2Bg: bgc(document.querySelector('#card-personal-section > .cd-set-box')), box2Bd: bd(document.querySelector('#card-personal-section > .cd-set-box')), secBg: bgc(document.getElementById('card-personal-section')), secBd: bd(document.getElementById('card-personal-section')),
           hd: document.querySelector('.cd-set-hd').getBoundingClientRect().height > 0, tabLeft: Math.round(document.querySelector('.cd-tab:not([hidden])').getBoundingClientRect().left), mainLeft: Math.round(document.querySelector('.cd-main').getBoundingClientRect().left) }; });
       const xs = g.right;   // 側欄右緣＝框線所在
       let shot = await pd.screenshot();
       let px = await pixels(shot, [[5, H - 5], [xs - 4, 600], [xs, 600], [xs + 3, 600], [xs + 3, H - 5]]);
       check(`${W}×${H}：左欄白底到最底（頭＋底）、右側 1px 細框線 #e5e7eb、右欄灰底`, px[0] === '255,255,255' && px[1] === '255,255,255' && px[2] === '229,231,235' && px[3] === '243,244,246' && px[4] === '243,244,246', JSON.stringify(px));
-      check(`${W}×${H}：左欄內沒有白框套白底（摘要與設定盒子無底色、無外框）`, g.sumBg === 'rgba(0, 0, 0, 0)' && g.boxBg === 'rgba(0, 0, 0, 0)' && g.boxBd === '0px/0px' && g.box2Bg === 'rgba(0, 0, 0, 0)' && g.box2Bd === '1px/0px' && g.sumBd.startsWith('0px/0px') && g.hd, JSON.stringify(g));
+      // 2026-11-23 起個人設定收成一個區塊：整區淺灰面板（#f9fafb＋框），兩組設定是面板裡的白色小盒子——不是白框直接疊在白色側欄上
+      check(`${W}×${H}：摘要無底色無框；個人設定是一塊淺灰面板，裡面的設定盒子是白色有框（不是白框疊白底）`, g.sumBg === 'rgba(0, 0, 0, 0)' && g.sumBd.startsWith('0px/0px') &&
+        g.secBg === 'rgb(249, 250, 251)' && g.secBd === '1px/1px' && g.boxBg === 'rgb(255, 255, 255)' && g.boxBd === '1px/1px' && g.box2Bg === 'rgb(255, 255, 255)' && g.hd, JSON.stringify(g));
       check(`${W}×${H}：頁籤列仍和右欄對齊（第一個頁籤左緣＝右欄左緣＋14）`, g.tabLeft === g.mainLeft + 14, `${g.tabLeft} vs ${g.mainLeft}`);
       await pd.evaluate(() => { document.getElementById('card-detail-scroll').scrollTop = 700; }); await pd.waitForTimeout(300);
       const g2 = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), st: document.getElementById('card-detail-scroll').scrollTop }; });
