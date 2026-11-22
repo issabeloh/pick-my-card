@@ -79,7 +79,7 @@ try {
   ).join('\n');
   const section = '\n' + START + '\n' +
     '<section class="pmc-cardindex" id="by-card" aria-labelledby="pmc-ci-title">\n' +
-    '  <div class="pmc-section-head"><h2 id="pmc-ci-title">依卡片找</h2><span>' + cards.length + ' 張卡・點卡名看單卡活動</span></div>\n' +
+    '  <div class="pmc-section-head"><h2 id="pmc-ci-title">依卡片找</h2><span>點擊任一卡名看單張信用卡的新戶活動</span></div>\n' +
     '  <div class="pmc-ci-grid">\n' + cols + '\n  </div>\n' +
     '</section>\n' + END;
 
