@@ -55,7 +55,10 @@ function stub(url, guest) {
 const results = [];
 const check = (name, ok, extra = '') => { results.push({ name, ok }); console.log((ok ? '  ✅ ' : '  ❌ ') + name + (extra ? ' — ' + extra : '')); };
 
-(async () => {
+// 給 owned-cards-panel-test.js 共用同一個 Firebase 替身（require 時不執行本檔測試）
+module.exports = { stub };
+
+if (require.main === module) (async () => {
   const srv = await startServer(false);
   const base = `http://127.0.0.1:${srv.address().port}`;
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
@@ -120,8 +123,8 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   check('筆記：停 1 秒自動存（localStorage＋狀態列 busy→回訪客狀態）', await p.evaluate(() => localStorage.getItem('notes_cathay-cube')) === '第一行筆記' && q.some(x => x.s === 'busy') && q[q.length - 1].s === 'local');
   check('沒有 💾／#save-indicator／#credit-limit-saved', await p.evaluate(() => !document.getElementById('save-notes-btn') && !document.getElementById('save-indicator') && !document.getElementById('credit-limit-saved') && !document.getElementById('card-detail-modal').textContent.includes('💾')));
   await p.fill('#credit-limit-input', '150000'); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
-  check('額度 150000 → 顯示 150,000、墨色、存 localStorage', await p.inputValue('#credit-limit-input') === '150,000' &&
-    await p.evaluate(() => getComputedStyle(document.getElementById('credit-limit-input')).color) === 'rgb(17, 24, 39)' &&
+  check('額度 150000 → 顯示 150,000、深灰 #374151、存 localStorage', await p.inputValue('#credit-limit-input') === '150,000' &&
+    await p.evaluate(() => getComputedStyle(document.getElementById('credit-limit-input')).color) === 'rgb(55, 65, 81)' &&   // 2026-11-23 起值用深灰 #374151（不搶標籤）
     await p.evaluate(() => localStorage.getItem('creditLimit_local_cathay-cube')) === '150000');
   await p.fill('#credit-limit-input', ''); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
   check('額度清空 → placeholder「未設定」', await p.getAttribute('#credit-limit-input', 'placeholder') === '未設定' && await p.inputValue('#credit-limit-input') === '');
@@ -217,7 +220,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
     document.querySelectorAll('#card-personal-section .cd-set-sec-t').length === 0 &&
     [...document.querySelectorAll('#card-personal-section .cd-set-sec-s')].map(e => e.textContent.trim()).join('|') === '搜尋結果將依照以下條件顯示'));
   const noLv = await p.evaluate(async () => { const c = cardsData.cards.find(c => !c.hasLevels); await showCardDetail(c.id); await new Promise(r => setTimeout(r, 400)); return { secs: [...document.querySelectorAll('#card-personal-section .cd-set-sec-t')].map(e => e.textContent).join(), rows: document.querySelectorAll('#card-personal-section .cd-st-r').length, txt: document.getElementById('card-personal-section').textContent }; });
-  check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／免年費／筆記三列', noLv.secs === '' && noLv.rows === 3 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
+  check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／結帳日／繳款截止日／免年費／筆記五列', noLv.secs === '' && noLv.rows === 5 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
   await p.evaluate(() => { __failSets = 0; selectCardDetailTab('set'); }); await p.fill('#user-notes-input', '成功的筆記'); await p.waitForTimeout(1700);
   await p.evaluate(() => { __AUTH.currentUser = null; __authCbs.forEach(cb => cb(null)); }); await p.waitForTimeout(600);
   s = await status(p);
@@ -236,13 +239,15 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
       const pd = await open(true); await pd.setViewportSize({ width: W, height: H });
       await pd.evaluate(() => showCardDetail('cathay-cube')); await pd.waitForTimeout(700);
       const g = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); const bgc = e => getComputedStyle(e).backgroundColor; const bd = e => getComputedStyle(e).borderTopWidth + '/' + getComputedStyle(e).borderLeftWidth;
-        return { right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), sumBg: bgc(document.querySelector('.cd-sum')), sumBd: bd(document.querySelector('.cd-sum')), boxBg: bgc(document.querySelector('.cd-side .cd-set-box')), boxBd: bd(document.querySelector('.cd-side .cd-set-box')), box2Bg: bgc(document.querySelector('#card-personal-section > .cd-set-box')), box2Bd: bd(document.querySelector('#card-personal-section > .cd-set-box')),
+        return { right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), sumBg: bgc(document.querySelector('.cd-sum')), sumBd: bd(document.querySelector('.cd-sum')), boxBg: bgc(document.querySelector('.cd-side .cd-set-box')), boxBd: bd(document.querySelector('.cd-side .cd-set-box')), box2Bg: bgc(document.querySelector('#card-personal-section > .cd-set-box')), box2Bd: bd(document.querySelector('#card-personal-section > .cd-set-box')), secBg: bgc(document.getElementById('card-personal-section')), secBd: bd(document.getElementById('card-personal-section')),
           hd: document.querySelector('.cd-set-hd').getBoundingClientRect().height > 0, tabLeft: Math.round(document.querySelector('.cd-tab:not([hidden])').getBoundingClientRect().left), mainLeft: Math.round(document.querySelector('.cd-main').getBoundingClientRect().left) }; });
       const xs = g.right;   // 側欄右緣＝框線所在
       let shot = await pd.screenshot();
       let px = await pixels(shot, [[5, H - 5], [xs - 4, 600], [xs, 600], [xs + 3, 600], [xs + 3, H - 5]]);
       check(`${W}×${H}：左欄白底到最底（頭＋底）、右側 1px 細框線 #e5e7eb、右欄灰底`, px[0] === '255,255,255' && px[1] === '255,255,255' && px[2] === '229,231,235' && px[3] === '243,244,246' && px[4] === '243,244,246', JSON.stringify(px));
-      check(`${W}×${H}：左欄內沒有白框套白底（摘要與設定盒子無底色、無外框）`, g.sumBg === 'rgba(0, 0, 0, 0)' && g.boxBg === 'rgba(0, 0, 0, 0)' && g.boxBd === '0px/0px' && g.box2Bg === 'rgba(0, 0, 0, 0)' && g.box2Bd === '1px/0px' && g.sumBd.startsWith('0px/0px') && g.hd, JSON.stringify(g));
+      // 2026-11-23 起個人設定收成一個區塊：整區淺灰面板（#f9fafb＋框），兩組設定是面板裡的白色小盒子——不是白框直接疊在白色側欄上
+      check(`${W}×${H}：摘要無底色無框；個人設定是一塊淺灰面板，裡面的設定盒子是白色有框（不是白框疊白底）`, g.sumBg === 'rgba(0, 0, 0, 0)' && g.sumBd.startsWith('0px/0px') &&
+        g.secBg === 'rgb(249, 250, 251)' && g.secBd === '1px/1px' && g.boxBg === 'rgb(255, 255, 255)' && g.boxBd === '1px/1px' && g.box2Bg === 'rgb(255, 255, 255)' && g.hd, JSON.stringify(g));
       check(`${W}×${H}：頁籤列仍和右欄對齊（第一個頁籤左緣＝右欄左緣＋14）`, g.tabLeft === g.mainLeft + 14, `${g.tabLeft} vs ${g.mainLeft}`);
       await pd.evaluate(() => { document.getElementById('card-detail-scroll').scrollTop = 700; }); await pd.waitForTimeout(300);
       const g2 = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), st: document.getElementById('card-detail-scroll').scrollTop }; });

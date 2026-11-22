@@ -254,7 +254,7 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"所有計程車的信用卡回饋比較 2026｜哪張卡刷計程車最高回饋 - Pick My Card","description":"Uber、LINE GO、台灣大車隊、Bolt叫車刷哪張信用卡回饋最高？一鍵比較你手上的卡，並試算回饋金額，一眼看懂消費上限與達成條件。","url":"https://pickmycard.app/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"所有計程車 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"聯邦 M 卡"},{"@type":"ListItem","position":2,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":3,"name":"企銀朝天宮卡"},{"@type":"ListItem","position":4,"name":"永豐 Green 卡"},{"@type":"ListItem","position":5,"name":"玉山 UniCard"},{"@type":"ListItem","position":6,"name":"遠東樂家+卡"},{"@type":"ListItem","position":7,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":8,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":9,"name":"台新 Richart 卡"},{"@type":"ListItem","position":10,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-17"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"所有計程車的信用卡回饋比較 2026｜哪張卡刷計程車最高回饋 - Pick My Card","description":"Uber、LINE GO、台灣大車隊、Bolt叫車刷哪張信用卡回饋最高？一鍵比較你手上的卡，並試算回饋金額，一眼看懂消費上限與達成條件。","url":"https://pickmycard.app/merchant/%E6%89%80%E6%9C%89%E8%A8%88%E7%A8%8B%E8%BB%8A","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"所有計程車 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"聯邦 M 卡"},{"@type":"ListItem","position":2,"name":"玉山 Pi 卡"},{"@type":"ListItem","position":3,"name":"企銀朝天宮卡"},{"@type":"ListItem","position":4,"name":"永豐 Green 卡"},{"@type":"ListItem","position":5,"name":"玉山 UniCard"},{"@type":"ListItem","position":6,"name":"遠東樂家+卡"},{"@type":"ListItem","position":7,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":8,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":9,"name":"台新 Richart 卡"},{"@type":"ListItem","position":10,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-22"}</script>
 </head>
 <body>
     <div class="container">
@@ -887,15 +887,16 @@
                     <div class="modal-action-buttons">
                         <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">套用我的信用卡選項</button>
                         <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
-                        <button id="save-cards-btn-quick" class="save-btn modal-action-save-btn">儲存</button>
                     </div>
                     <div class="cards-selection" id="cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
+                <div class="modal-footer sel-footer" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-cards-btn" class="cancel-btn">取消</button>
+                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -904,7 +905,10 @@
         <div id="my-owned-cards-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>我的信用卡 <span id="owned-count-badge" class="ow-count-badge" style="display: none;"></span></h3>
+                    <!-- 單卡面板（2026-11-22）：點卡片後同一個視窗換成該卡的個人設定；這顆鈕回到卡片格。
+                         面板開著時標題與「管理卡片」藏起來（js/cards-modals.js openOwnedCardPanel／ownedPanelExit） -->
+                    <button type="button" id="owned-panel-back" class="ow-back" hidden>‹ 所有卡片</button>
+                    <h3 id="owned-modal-title">我的信用卡 <span id="owned-count-badge" class="ow-count-badge" style="display: none;"></span></h3>
                     <button id="manage-owned-cards-btn" class="ow-manage-btn" type="button" title="新增或移除我的信用卡">
                         <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                             <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
@@ -916,6 +920,18 @@
                 <div class="modal-body">
                     <div class="owned-cards-overview" id="owned-cards-overview">
                         <!-- Owned card overview tiles populated by JavaScript -->
+                    </div>
+                    <!-- 單卡面板：卡面＋卡名＋「查看回饋詳情」，下面的 #owned-panel-settings 是掛載點——
+                         詳情頁那唯一一份 #card-personal-section 會被搬進來（cdMountPersonalSection），不另做一份 -->
+                    <div class="ow-panel" id="owned-card-panel" hidden>
+                        <div class="ow-panel-hd">
+                            <div class="ow-panel-pic" id="owned-panel-pic"></div>
+                            <div class="ow-panel-tx">
+                                <div class="ow-panel-name" id="owned-panel-name"></div>
+                                <button type="button" class="ow-panel-more" id="owned-panel-detail">查看回饋詳情 ›</button>
+                            </div>
+                        </div>
+                        <div id="owned-panel-settings"></div>
                     </div>
                 </div>
             </div>
@@ -944,15 +960,16 @@
                     </div>
                     <div class="modal-action-buttons">
                         <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
-                        <button id="save-owned-cards-btn-top" class="save-btn save-btn-top" type="button">儲存設定</button>
                     </div>
                     <div class="cards-selection" id="owned-cards-selection">
                         <!-- Card checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
+                <div class="modal-footer sel-footer" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-owned-cards-btn" class="cancel-btn">取消</button>
+                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -974,9 +991,11 @@
                         <!-- Payment checkboxes will be populated by JavaScript -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
+                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState；單位「個」） -->
+                <div class="modal-footer sel-footer" data-unit="個" hidden>
+                    <span class="sel-dirty" aria-live="polite"></span>
                     <button id="cancel-payments-btn" class="cancel-btn">取消</button>
+                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -1103,7 +1122,7 @@
                      筆數與「沒有內容就不顯示」由 setupCardDetailNav() 依渲染結果決定 -->
                 <div class="cd-tabsbar">
                     <div class="cd-tabs" id="card-detail-tabs" role="tablist" aria-label="卡片內容分頁">
-                        <button type="button" class="cd-tab" role="tab" id="cd-tab-rates" data-tab="rates" aria-controls="cd-pan-rates" aria-selected="true">回饋<em class="cd-tab-n"></em></button>
+                        <button type="button" class="cd-tab" role="tab" id="cd-tab-rates" data-tab="rates" aria-controls="cd-pan-rates" aria-selected="true">刷卡回饋<em class="cd-tab-n"></em></button>
                         <button type="button" class="cd-tab" role="tab" id="cd-tab-coupon" data-tab="coupon" aria-controls="cd-pan-coupon" aria-selected="false">領券・停車<em class="cd-tab-n"></em></button>
                         <button type="button" class="cd-tab" role="tab" id="cd-tab-promo" data-tab="promo" aria-controls="cd-pan-promo" aria-selected="false">新戶活動<em class="cd-tab-n"></em></button>
                         <button type="button" class="cd-tab" role="tab" id="cd-tab-set" data-tab="set" aria-controls="card-personal-section" aria-selected="false">個人設定</button>
@@ -1121,7 +1140,6 @@
                                     <!-- 銀行名稱＝Cards Data 的 fullName -->
                                     <div class="cd-bank" id="card-full-name-link"></div>
                                     <div class="cd-type">
-                                        <span id="card-cashback-type"></span>
                                         <!-- 信用卡官網連結：Cards Data 的 website 欄，showCardDetail() 填 href、沒網址就 hidden。
                                              GA4 button_type = detail_official_site -->
                                         <a id="card-official-site-link" class="card-official-site-link" target="_blank" rel="noopener noreferrer" hidden>信用卡官網 ↗</a>
@@ -1134,8 +1152,10 @@
                                 <div class="cd-fact cd-fact-fee"><dt>年費</dt><dd id="card-annual-fee"></dd></div>
                             </dl>
                             <!-- 卡片用途：Cards Data 的 cardUseCase 欄（選填），由 showCardDetail() 用 textContent 填入、
-                                 沒填就 hidden -->
+                                 沒填就 hidden。2026-11-23 起是「引言」：中文引號「」框住整句（CSS ::before/::after），
+                                 下面一行署名「— 大師點評」（站長選的設計 4-B），兩個節點一起顯示／隱藏 -->
                             <p class="card-use-case" id="card-use-case" hidden></p>
+                            <p class="card-use-case-cite" id="card-use-case-cite" hidden>— 大師點評</p>
                         </div>
 
                         <!-- 個人設定（2026-11-17 第三輪改版：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列）。
@@ -1172,6 +1192,17 @@
                                                placeholder="未設定" autocomplete="off">
                                     </div>
                                     <small class="cd-st-s">單位 NT$。會計入刷卡小抄的額度合計</small>
+                                </div>
+
+                                <!-- 結帳日／繳款截止日（2026-11-22 補上）：選項由 setupBillingDates()（js/spending-mappings.js）填。
+                                     ⚠️ 資料欄位名跟意思是反的：#statement-date 存 statementDate＝結帳日、#billing-date 存 billingDate＝繳款截止日 -->
+                                <div class="cd-st-r" id="card-statement-date-row">
+                                    <div class="cd-st-l"><label for="statement-date">結帳日</label></div>
+                                    <div class="cd-st-c"><select id="statement-date" class="cd-st-sel"><option value="">未設定</option></select></div>
+                                </div>
+                                <div class="cd-st-r" id="card-billing-date-row">
+                                    <div class="cd-st-l"><label for="billing-date">繳款截止日</label></div>
+                                    <div class="cd-st-c"><select id="billing-date" class="cd-st-sel"><option value="">未設定</option></select></div>
                                 </div>
 
                                 <!-- 免年費：說明小字＝feeWaiver 原文（#card-fee-waiver 由 showCardDetail 用 textContent 填；
@@ -1253,6 +1284,17 @@
                                 <h4>一般回饋排除項目</h4>
                                 <div id="card-basic-exclusions"></div>
                             </div>
+
+                            <!-- 回饋類型與點數效期（2026-11-23 站長：從摘要那行小字搬來「回饋」頁籤最下面；不常看、有些很長 → 預設收合）。
+                                 資料是 Cards Data 的 basicCashbackType／pointsExpiry，showCardDetail() 用 textContent 填；
+                                 兩個都沒有就整塊 hidden，只有一個就只顯示那一列 -->
+                            <details class="cd-reward-info" id="card-reward-info" open hidden>
+                                <summary>回饋類型與點數效期</summary>
+                                <dl>
+                                    <div id="card-cashback-type-row"><dt>回饋類型</dt><dd id="card-cashback-type"></dd></div>
+                                    <div id="card-points-expiry-row"><dt>點數效期</dt><dd id="card-points-expiry"></dd></div>
+                                </dl>
+                            </details>
                         </div>
 
                         <!-- 頁籤二「領券・停車」 -->
@@ -1285,12 +1327,17 @@
 
             <!-- 手機浮動申辦膠囊（≤768px）：浮在畫面底部中間、不佔版面高度；捲動超過約 150px 後
                  縮成右下角（只剩圖示＋按鈕），回到頂端再展開。文字由 showCardDetail() 用 textContent 組。
-                 持卡人隱藏、沒有申辦連結時 hidden（refreshCardDetailApply）。GA4 button_type = detail_sticky_apply -->
+                 持卡人隱藏、沒有申辦連結時 hidden（refreshCardDetailApply）；「個人設定」頁籤時加 .is-off-tab 隱藏
+                 （selectCardDetailTab）。GA4 button_type = detail_sticky_apply -->
             <div id="card-detail-apply-bar" class="cd-fab" hidden>
                 <span class="cd-gift" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>
                 </span>
-                <span class="cd-fab-tx" id="card-detail-apply-bar-text"></span>
+                <!-- 左側文字可點（虛線底線示意）：展開下一行信任文字（cdApplyTrustText 依連結網域決定），再點收回 -->
+                <button type="button" class="cd-fab-info" id="card-detail-apply-bar-info" aria-expanded="false" aria-controls="card-detail-apply-bar-trust">
+                    <span class="cd-fab-tx" id="card-detail-apply-bar-text"></span>
+                    <span class="cd-fab-trust" id="card-detail-apply-bar-trust"></span>
+                </button>
                 <a class="cd-apply-btn cd-fab-btn" id="card-detail-apply-bar-btn" target="_blank" rel="noopener noreferrer">立即申辦</a>
             </div>
         </div>
@@ -1354,7 +1401,7 @@
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-17">2026/11/17</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-22">2026/11/22</time></span>
     </div>
     </footer>
 
@@ -1615,7 +1662,7 @@
 
     <!-- Payment Detail Modal -->
     <div id="payment-detail-modal" class="modal" style="display: none;">
-        <div class="modal-content card-detail-content">
+        <div class="modal-content payment-modal-content">
             <div class="modal-header">
                 <h3 id="payment-detail-title">行動支付詳情</h3>
                 <button class="close-modal" id="close-payment-detail">&times;</button>
@@ -1636,7 +1683,7 @@
 
     <!-- Compare Payments Modal -->
     <div id="compare-payments-modal" class="modal" style="display: none;">
-        <div class="modal-content card-detail-content">
+        <div class="modal-content payment-modal-content">
             <div class="modal-header">
                 <h3>比較所有行動支付回饋</h3>
                 <button class="close-modal" id="close-compare-payments">&times;</button>

@@ -415,7 +415,7 @@ function parseCashbackCap(cap, card, levelSettings) {
 function couponMerchantMatches(item, searchVariants, merchantValue, exactOnly) {
     const itemLower = String(item || '').toLowerCase().trim();
     if (!itemLower) return false;
-    const searchLower = String(merchantValue || '').toLowerCase().trim();
+    const searchLower = normalizeQuoteChars(String(merchantValue || '').toLowerCase().trim());
     const excludedFor = key => (searchExclusionMap[key] || []).some(x => String(x).toLowerCase() === itemLower);
     if (excludedFor(searchLower)) return false;
     return searchVariants.some(term => {
@@ -1194,6 +1194,10 @@ function selectCardDetailTab(name, opts = {}) {
         tabsEl.querySelectorAll('.cd-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     }
     document.querySelectorAll('#card-detail-modal .cd-pan').forEach(p => { p.hidden = p.dataset.pan !== name; });
+    // 手機「個人設定」頁籤不顯示浮動申辦膠囊（會蓋住開關與筆記輸入框）。用 class 而不是 hidden：
+    // hidden 由 refreshCardDetailApply 管（持卡人／沒連結），兩者分開才不會互相蓋掉
+    const fab = document.getElementById('card-detail-apply-bar');
+    if (fab) fab.classList.toggle('is-off-tab', name === 'set');
 
     // 剛顯示出來的頁籤才量得到條件文字有沒有被截斷
     const pan = document.querySelector(`#card-detail-modal .cd-pan[data-pan="${name}"]`);
@@ -1223,7 +1227,10 @@ function cardDetailGoToSection(sectionId) {
     const name = pane ? pane.dataset.pan : 'rates';
     const tabBtn = document.getElementById('cd-tab-' + name);
     selectCardDetailTab(tabBtn && !tabBtn.hidden ? name : 'rates', { noScroll: true });
-    if (sectionId === 'card-changelog-section') setCardDetailChangelogOpen(true);
+    if (sectionId === 'card-changelog-section') {
+        setCardDetailChangelogOpen(true);
+        markCardDetailChangelogArrival();   // 標出點進來的那一則（固定標記，不靠動畫；見該函數）
+    }
 
     const scroller = _cdScrollEl || document.getElementById('card-detail-scroll');
     if (!scroller || (name === 'set' && isCardDetailDesktop())) return;
@@ -1270,7 +1277,13 @@ function setupCardDetailNav(modalContent, opts = {}) {
     // 手機浮動申辦膠囊：捲動超過約 150px 縮成右下角，回到頂端再展開（桌機不顯示膠囊，class 照切無妨）
     const fab = document.getElementById('card-detail-apply-bar');
     if (_cdFabScrollHandler) modalContent.removeEventListener('scroll', _cdFabScrollHandler);
-    _cdFabScrollHandler = () => { if (fab) fab.classList.toggle('is-min', modalContent.scrollTop > 150); };
+    // 縮成右下角時文字整個藏起來，展開中的信任文字也一起收回（setCardDetailApplyTrustOpen，js/card-detail.js）
+    _cdFabScrollHandler = () => {
+        if (!fab) return;
+        const min = modalContent.scrollTop > 150;
+        fab.classList.toggle('is-min', min);
+        if (min && fab.classList.contains('is-open') && typeof setCardDetailApplyTrustOpen === 'function') setCardDetailApplyTrustOpen(false);
+    };
     modalContent.addEventListener('scroll', _cdFabScrollHandler, { passive: true });
     _cdFabScrollHandler();
 
@@ -1321,30 +1334,44 @@ function renderCardDetailPromos(card) {
         return;
     }
 
-    // Render apply CTA (text + button) above the promo cards.
+    // 申辦列（桌機；手機由 CSS 整個隱藏、改用浮動膠囊 .cd-fab）。2026-11-22 站長：比照手機膠囊的
+    // 白底膠囊（禮物圖示＋文字＋亮黃鈕），下方一行信任文字（cdApplyTrustText，js/card-detail.js）。
+    // 文字用 applyCta.text 而不是手機膠囊的「首刷禮 NT$500」——正下方的票券已經用大字寫了金額，再寫一次是重複。
+    // ⚠️ 按鈕保留 card-apply-cta-btn class：GA4 button_type 'card_apply' 靠它認（js/quick-options-misc.js）
     if (hasCta) {
         const ctaEl = document.createElement('div');
         ctaEl.className = 'card-apply-cta';
+        const pill = document.createElement('div');
+        pill.className = 'card-apply-cta-pill';
+        // 禮物圖示與手機膠囊同一組（index.html #card-detail-apply-bar 的 .cd-gift）；常數字串，沒有動態內容
+        const gift = document.createElement('span');
+        gift.className = 'cd-gift';
+        gift.setAttribute('aria-hidden', 'true');
+        gift.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg>';
+        pill.appendChild(gift);
         const textSpan = document.createElement('span');
         textSpan.className = 'card-apply-cta-text';
         textSpan.textContent = applyCta.text || '';
-        ctaEl.appendChild(textSpan);
-        // SVG arrow keeps the glyph identical across OS / fonts.
-        const arrow = document.createElement('span');
-        arrow.className = 'card-apply-cta-arrow';
-        arrow.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h12M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-        ctaEl.appendChild(arrow);
+        pill.appendChild(textSpan);
         const ctaLink = sanitizeUrl(applyCta.link);
         if (ctaLink) {
             const btn = document.createElement('a');
-            btn.className = 'card-apply-cta-btn';
+            btn.className = 'cd-apply-btn card-apply-cta-btn';
             btn.href = ctaLink;
             btn.target = '_blank';
             btn.rel = 'noopener noreferrer';
             btn.textContent = '立即申辦';
             btn.dataset.cardId = card.id;
             btn.dataset.cardName = card.name;
-            ctaEl.appendChild(btn);
+            pill.appendChild(btn);
+        }
+        ctaEl.appendChild(pill);
+        const trust = ctaLink && typeof cdApplyTrustText === 'function' ? cdApplyTrustText(ctaLink, card) : '';
+        if (trust) {
+            const trustEl = document.createElement('p');
+            trustEl.className = 'card-apply-cta-trust';
+            trustEl.textContent = trust;
+            ctaEl.appendChild(trustEl);
         }
         content.appendChild(ctaEl);
     }
